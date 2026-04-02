@@ -119,6 +119,38 @@
       <code>Planned</code>
     </td>
   </tr>
+  <tr>
+    <td colspan="5" align="center" valign="top">
+      <strong>Public Entry</strong>
+    </td>
+  </tr>
+  <tr>
+    <td width="20%" valign="top">
+      <strong>OPL</strong><br/>
+      This repository<br/>
+      Top-level blueprint
+    </td>
+    <td width="20%" valign="top">
+      <strong>MedAutoScience</strong><br/>
+      <a href="https://github.com/gaofeng21cn/med-autoscience"><code>Repository</code></a><br/>
+      Active research-ops implementation
+    </td>
+    <td width="20%" valign="top">
+      <strong>FengGaoLab</strong><br/>
+      <a href="https://fenggaolab.org"><code>Website</code></a><br/>
+      Public academic website
+    </td>
+    <td width="20%" valign="top">
+      <strong>Profile</strong><br/>
+      <a href="https://github.com/gaofeng21cn"><code>GitHub</code></a><br/>
+      Public project entry
+    </td>
+    <td width="20%" valign="top">
+      <strong>Next Surface</strong><br/>
+      <code>Grant / Review / Thesis / Presentation</code><br/>
+      Planned expansion
+    </td>
+  </tr>
 </table>
 
 > 本仓库用于说明 `OPL` 的任务版图、共享底座与子项目关系；它不是统一运行时入口，也不是单一产品仓库。
