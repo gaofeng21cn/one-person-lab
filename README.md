@@ -2,24 +2,28 @@
   <img src="assets/branding/opl-banner.svg" alt="One Person Lab banner" width="100%" />
 </p>
 
+<p align="center">
+  <a href="./README.md"><strong>English</strong></a> | <a href="./README.zh-CN.md">中文</a>
+</p>
+
 <h1 align="center">One Person Lab</h1>
 
-<p align="center"><strong>面向一人课题组任务体系的顶层说明</strong></p>
-<p align="center">Task Topology · Shared Foundation · Project Matrix</p>
+<p align="center"><strong>A framework for the formal organization of a one-person research lab</strong></p>
+<p align="center">Task Topology · Shared Foundation · Workstream Status</p>
 
 <table>
   <tr>
     <td width="33%" valign="top">
-      <strong>适用对象</strong><br/>
-      研究型个人、PI 与小型课题组
+      <strong>Who It Serves</strong><br/>
+      Research-oriented individuals, PIs, and small labs
     </td>
     <td width="33%" valign="top">
-      <strong>说明范围</strong><br/>
-      研究、写作、评审、答辩与教学等正式任务面
+      <strong>What It Covers</strong><br/>
+      Research, writing, review, defense, and teaching workstreams
     </td>
     <td width="33%" valign="top">
-      <strong>当前实现面</strong><br/>
-      顶层总集；<code>MedAutoScience</code> 为首个已成形子项目
+      <strong>Current Reference Surface</strong><br/>
+      Top-level blueprint; <code>MedAutoScience</code> is the current established implementation
     </td>
   </tr>
 </table>
@@ -91,13 +95,13 @@
   </tr>
   <tr>
     <td colspan="5" align="center" valign="top">
-      <strong>Current Mature Project</strong><br/>
+      <strong>Current Established Workstream</strong><br/>
       <a href="https://github.com/gaofeng21cn/med-autoscience"><code>MedAutoScience</code></a>
     </td>
   </tr>
   <tr>
     <td colspan="5" align="center" valign="top">
-      <strong>Status Map</strong>
+      <strong>Workstream Status</strong>
     </td>
   </tr>
   <tr>
@@ -125,7 +129,7 @@
   </tr>
   <tr>
     <td colspan="5" align="center" valign="top">
-      <strong>Public Entry</strong>
+      <strong>Public References</strong>
     </td>
   </tr>
   <tr>
@@ -150,128 +154,136 @@
       Public project entry
     </td>
     <td width="20%" valign="top">
-      <strong>Next Surface</strong><br/>
+      <strong>Next Workstream</strong><br/>
       <code>Grant / Review / Thesis / Presentation</code><br/>
-      Planned expansion
+      Under definition
     </td>
   </tr>
 </table>
 
-> 本仓库用于说明 `OPL` 的任务版图、共享底座与子项目关系；它不是统一运行时入口，也不是单一产品仓库。
+> This repository defines the task topology, shared foundation, and workstream relationships of `OPL`. It is not the unified runtime surface, and it is not a single-product repository.
 
-## 仓库定位
+## Repository Position
 
-`One Person Lab`，简称 `OPL`，面向的不是某一个具体任务，而是“一人课题组”这个工作对象。
+`One Person Lab`, or `OPL`, is not centered on a single task. It is centered on the working object of a one-person research lab.
 
-这里所说的一人课题组，指的是研究型个人或极小团队，在 `Agent` 协助下持续承担正式科研工作，并保留清楚的人类审核面。`OPL` 关注的是这类工作的组织方式，而不是单个任务的临时自动化。
+Here, a one-person lab means a research-oriented individual or a very small team that uses `Agent` assistance to carry out formal lab work while preserving clear human review surfaces. `OPL` is concerned with how that work should be organized as a system, rather than how to automate one isolated task.
 
-从这个角度看，`OPL` 的职责是：
+From that perspective, `OPL` has three responsibilities:
 
-- 定义实验室级任务版图
-- 说明不同任务共享什么基础层
-- 标明当前已经成形的子项目和未来工作流方向
+- define a lab-level task topology
+- explain what different workstreams share underneath
+- make clear which workstreams already have an established implementation surface and which remain under definition
 
-本仓库本身不承担运行时角色，也不直接充当单个工作流的入口仓库。
+This repository itself does not act as a runtime system or as the direct entry point for every workstream.
 
-## 为什么采用顶层总集形式
+## Why A Top-Level Blueprint
 
-研究型个人或小型课题组实际承担的工作，通常不止论文生产。
+Small labs and research-oriented individuals usually do more than produce papers.
 
-同一批数据、文献、图表和研究判断，会在这些任务之间反复复用：
+The same datasets, references, figures, and research judgments are reused across:
 
-- 研究推进与论文交付
-- 基金申请与基金评审
-- 学位论文写作与答辩准备
-- 审稿、回复和修回
-- 讲课、汇报和答辩材料
+- research progression and paper delivery
+- grant writing and grant review
+- dissertation drafting and defense preparation
+- peer review, rebuttal, and revision
+- lectures, lab presentations, and defense slides
 
-如果这些任务被分别实现为彼此孤立的工具链，就会重复维护上下文、重复组织材料，也很难沉淀共享记忆和统一审核面。
+If those tasks are implemented as isolated toolchains, they will repeatedly duplicate context, duplicate materials, and fail to accumulate shared memory or consistent review surfaces.
 
-因此，`OPL` 采用的是“顶层总集 + 子项目矩阵 + 共享底座”的组织方式，而不是在单个产品仓库中持续叠加异质功能。
+That is why `OPL` uses a top-level blueprint plus workstream status plus shared foundation model, rather than continuously piling heterogeneous functions into one product repository.
 
-## 一人课题组的任务版图
+## Reference Context
 
-`OPL` 当前把核心任务版图划分为五类 workstreams：
+The current reference implementation grows out of a medical research lab, because that is where the current established workstream was first built.
+
+That reference workstream is [`MedAutoScience`](https://github.com/gaofeng21cn/med-autoscience), which focuses on medical research operations from data governance to manuscript and submission delivery.
+
+But `OPL` is not intended to be medical-only. The model remains extensible beyond medicine and can be adapted by PIs in other disciplines.
+
+## Workstreams
+
+`OPL` currently defines five core workstreams:
 
 - `Research Ops`
-  从数据治理、研究推进、证据组织到论文与投稿交付。
+  from data governance and study progression to evidence packaging and paper delivery
 - `Grant Ops`
-  从基金方向判断、申请书组织到基金申请评审。
+  from proposal planning and writing to review simulation
 - `Thesis Ops`
-  从学位论文结构化写作到答辩准备。
+  from dissertation drafting to defense preparation
 - `Review Ops`
-  从审稿、评审到 rebuttal 与 revision 组织。
+  from peer review to rebuttal and revision organization
 - `Presentation Ops`
-  从讲课、组会到汇报和答辩 PPT。
+  from lectures and lab talks to defense slides
 
-这里的拆分是任务边界划分，不是产品数量承诺。
+This split defines task boundaries. It does not imply that every workstream is already an established implementation surface.
 
-## 这些任务共享什么底座
+## Shared Foundation
 
-`OPL` 当前把共享底座概括为五层：
+`OPL` currently describes the shared foundation in five layers:
 
-| 层级 | 主要对象 | 作用 |
+| Layer | Main Objects | Role |
 | --- | --- | --- |
-| `Asset Layer` | 数据、文献、模板、图表、交付物 | 提供跨任务复用的事实底座 |
-| `Memory Layer` | 选题记忆、评审记忆、期刊与基金偏好 | 提供跨任务复用的结构化认知 |
-| `Governance Layer` | 门控、止损、改题、继续条件 | 决定何时允许进入正式执行 |
-| `Delivery Layer` | 审核面、交付目录、同步与打包规则 | 把过程性产物收束为正式输出 |
-| `Agent Execution Layer` | 稳定接口、运行监控、审计回写 | 让 Agent 成为可控执行层 |
+| `Asset Layer` | data, references, templates, figures, deliveries | shared factual base across workstreams |
+| `Memory Layer` | topic memory, review memory, venue and funder preferences | reusable structured judgment across workstreams |
+| `Governance Layer` | gates, stop rules, reframing conditions | determines when formal execution is allowed |
+| `Delivery Layer` | review surfaces, output directories, package sync rules | turns process artifacts into formal outputs |
+| `Agent Execution Layer` | stable interfaces, runtime monitoring, audit writeback | makes Agent execution controllable and reviewable |
 
-更完整说明见：
+Further reading:
 
 - [OPL Operating Model](docs/operating-model.md)
 - [OPL Task Map](docs/task-map.md)
 - [Shared Foundation](docs/shared-foundation.md)
 
-## 当前项目矩阵
+## Workstream Status
 
-| 项目 | 负责什么 | 当前状态 |
+| Workstream / Surface | What It Covers | Current Status |
 | --- | --- | --- |
-| [`MedAutoScience`](https://github.com/gaofeng21cn/med-autoscience) | 医学自动科研主线，从数据到论文交付 | Active |
-| `Grant Ops` | 基金申请与基金评审工作流 | Planned |
-| `Thesis Ops` | 学位论文与答辩工作流 | Planned |
-| `Review Ops` | 审稿、评审与回复工作流 | Planned |
-| `Presentation Ops` | 讲课、汇报与答辩材料工作流 | Planned |
+| [`MedAutoScience`](https://github.com/gaofeng21cn/med-autoscience) | medical research operations, from data to paper delivery | Active |
+| `Grant Ops` | grant writing and grant review workflows | Planned |
+| `Thesis Ops` | dissertation and defense workflows | Planned |
+| `Review Ops` | peer review, response, and revision workflows | Planned |
+| `Presentation Ops` | lecture, report, and defense material workflows | Planned |
 
-`Planned` 表示这些任务面已经被纳入正式蓝图，但当前还不是独立成熟子项目。
+`Planned` means these surfaces are part of the formal blueprint, but remain under definition rather than operating as independent established implementations.
 
-## 当前已成形子项目：MedAutoScience
+## Current Established Workstream: MedAutoScience
 
-[`MedAutoScience`](https://github.com/gaofeng21cn/med-autoscience) 是 `OPL` 体系下当前最成熟的第一个子项目。
+[`MedAutoScience`](https://github.com/gaofeng21cn/med-autoscience) is the current established research-ops implementation within the `OPL` umbrella.
 
-它聚焦医学自动科研主线，当前已经形成了较清楚的边界：
+It currently provides a clear implementation surface for:
 
-- 专病级 workspace 组织
-- 数据资产治理
-- 研究推进与运行监控
-- 证据组织
-- 论文与投稿交付
+- disease-workspace organization
+- data asset governance
+- study progression and runtime monitoring
+- evidence packaging
+- manuscript and submission delivery
 
-如果当前关注点是“如何把一批医学研究数据持续推进到论文级交付”，`MedAutoScience` 是当前最直接的实现面。
+For readers who are primarily interested in moving medical research data toward paper-grade delivery, `MedAutoScience` is the current implementation entry point.
 
-## 当前边界
+## Scope Boundary
 
-当前这个仓库主要承担顶层说明职责，不承担以下角色：
+This repository is primarily a public blueprint surface. It does not serve as:
 
-- 不作为统一运行时入口
-- 不作为所有任务的实现仓库
-- 不把尚未成形的任务面包装成已完成产品
+- the unified runtime entry point
+- the implementation repository for every workstream
+- a place where workstreams under definition are presented as finished implementations
 
-它的作用是让外部读者先理解总目标，再根据任务需要进入相应子项目。
+Its purpose is to let readers understand the overall operating idea first, and then enter the relevant implementation surface for a specific workstream.
 
-## 路线图
+## Roadmap
 
-当前阶段的重点是两件事：
+The current phase has two main priorities:
 
-- 继续推进 `MedAutoScience` 这个已经成形的研究主线子项目
-- 逐步把 `Grant Ops`、`Review Ops`、`Thesis Ops`、`Presentation Ops` 的任务边界和共享协议写清楚
+- continue to advance `MedAutoScience` as the current established research-ops implementation
+- progressively define the boundaries and shared protocols for `Grant Ops`, `Review Ops`, `Thesis Ops`, and `Presentation Ops`
 
-更详细的阶段说明见：
+For a more detailed phase breakdown:
 
 - [OPL Roadmap](docs/roadmap.md)
 
-## 延伸阅读
+## Further Reading
 
 - [OPL Operating Model](docs/operating-model.md)
 - [OPL Task Map](docs/task-map.md)

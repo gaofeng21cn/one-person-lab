@@ -1,53 +1,55 @@
+**English** | [中文](./roadmap.zh-CN.md)
+
 # OPL Roadmap
 
-## 当前阶段
+## Current Phase
 
-当前阶段的重点不是同时启动所有子项目，而是先把总蓝图和第一个成熟子项目站稳。
+The priority of the current phase is not to launch all workstreams at once. It is to stabilize the top-level blueprint and the current established reference implementation.
 
-当前已明确的状态：
+What is already clear today:
 
-- `OPL` 作为顶层总集，负责定义一人课题组的任务版图与共享底座
-- [`MedAutoScience`](https://github.com/gaofeng21cn/med-autoscience) 已经是 `OPL` 体系下当前最成熟的第一个子项目
-- `Grant Ops`、`Thesis Ops`、`Review Ops`、`Presentation Ops` 已被纳入正式规划，但仍属于 planned workstreams
+- `OPL` serves as a top-level blueprint that defines the task topology and shared foundation of a one-person research lab
+- [`MedAutoScience`](https://github.com/gaofeng21cn/med-autoscience) is already the current established reference implementation under the `OPL` umbrella
+- `Grant Ops`, `Thesis Ops`, `Review Ops`, and `Presentation Ops` are part of the formal roadmap but remain workstreams under definition
 
-当前阶段不做的事：
+What this phase does not do:
 
-- 不为尚未清楚边界的任务面创建空壳产品
-- 不把所有任务都强行塞进 `MedAutoScience`
-- 不把 `OPL` 伪装成已经完成的全家桶系统
+- create empty shells for workstreams whose boundaries are still unclear
+- force every task surface into `MedAutoScience`
+- present `OPL` as a fully implemented umbrella system
 
-## 下一阶段
+## Next Phase
 
-下一阶段应优先做这些事：
+The next phase should prioritize:
 
-- 把 `OPL` 的共享底座继续写实，尤其是 memory、governance 和 delivery 层
-- 选择第二个最值得成形的 workstream，优先明确任务边界和交付对象
-- 继续保持 `MedAutoScience` 作为医学自动科研主线的独立边界
+- making the shared foundation of `OPL` more explicit, especially the memory, governance, and delivery layers
+- choosing the most suitable next workstream to define through a clear task boundary and delivery object
+- continuing to keep `MedAutoScience` independent as the medical research-ops surface
 
-在这几个候选方向里，较自然的优先顺序通常会是：
+Among current candidates, the more natural priority order is usually:
 
 - `Grant Ops`
 - `Review Ops`
 - `Thesis Ops`
 - `Presentation Ops`
 
-原因是前两者与研究主链的复用面更直接。
+The first two are more directly reusable from the current research chain.
 
-## 更后续阶段
+## Later Phase
 
-当第二个子项目边界足够稳定后，`OPL` 才适合进入更完整的生态表达阶段，例如：
+Only after a second workstream boundary becomes sufficiently stable should `OPL` move into a fuller ecosystem expression, for example:
 
-- 增加更正式的项目矩阵维护方式
-- 建立 organization profile 或文档站作为统一入口
-- 补齐跨任务共享协议
+- a more formal workstream status maintenance model
+- an organization profile or docs site as the unified public entry point
+- more explicit cross-workstream shared protocols
 
-进入这一阶段的前提不是“想法很多”，而是至少有两个任务面已经形成清楚、可独立说明的子项目。
+The condition for entering this phase is not a large number of possible directions. It is having at least two workstreams that have become clear, independent implementation surfaces.
 
-## 当前判断标准
+## Current Evaluation Criteria
 
-如果要判断 `OPL` 是否在向正确方向推进，可以用这几条检查：
+To judge whether `OPL` is progressing in the right direction, these checks matter:
 
-- 外界是否能清楚理解 `OPL` 是总蓝图而不是单产品
-- 外界是否能清楚理解 `MedAutoScience` 只是其中一个子项目
-- 新任务面是否被定义成正式 workstream，而不是零散功能需求
-- 共享底座是否越来越清楚，而不是越来越依赖口号
+- can external readers understand that `OPL` is a blueprint rather than a single product?
+- can external readers understand that `MedAutoScience` is one implementation surface under that blueprint rather than a synonym for it?
+- are new task surfaces being defined as formal workstreams rather than scattered feature requests?
+- is the shared foundation becoming more clearly specified rather than remaining slogan-like?

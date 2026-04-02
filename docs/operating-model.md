@@ -1,75 +1,75 @@
+**English** | [中文](./operating-model.zh-CN.md)
+
 # OPL Operating Model
 
-## 核心判断
+## Core Judgment
 
-`One Person Lab` 的核心判断不是“如何让 Agent 一次性帮你做完一个任务”，而是“如何让一个研究型个人或一个极小团队，持续承担实验室级正式工作”。
+The core judgment of `One Person Lab` is not “how to make an Agent finish one task in a single shot.” It is “how to let a research-oriented individual or a very small team carry out formal lab work on a continuing basis.”
 
-因此，`OPL` 关注的不是单轮 prompt 表现，而是下面这些问题：
+As a result, `OPL` is not primarily concerned with one-off interaction performance. It is concerned with whether:
 
-- 资产是否被长期组织起来
-- 状态是否能被读取和追踪
-- 关键判断是否有明确门控
-- 输出是否能收束为正式交付物
-- 人类是否有清楚的审核面
+- assets are organized over time
+- state can be read and traced
+- key judgments have explicit gates
+- outputs can be turned into formal deliveries
+- humans have clear review surfaces
 
-## 角色分工
+## Role Split
 
-在 `OPL` 里，三个角色需要明确分开。
+`OPL` keeps three roles distinct.
 
-### 人类
+### Human
 
-人类主要负责：
+The human is primarily responsible for:
 
-- 提出研究目标和任务边界
-- 提供或授权使用数据、文献和上下文
-- 审核关键结论与正式交付物
-- 对继续、停止、改题和提交做最终决策
+- defining research goals and task boundaries
+- providing or authorizing access to data, references, and context
+- reviewing key conclusions and formal deliverables
+- making the final decision on continue, stop, reframe, and submit
 
 ### Agent
 
-Agent 主要负责：
+The Agent is primarily responsible for:
 
-- 读取当前状态
-- 调用稳定接口推进任务
-- 组织中间产物和正式产物
-- 把关键执行过程写回可审计表面
+- reading current state
+- calling stable interfaces to advance work
+- organizing intermediate and formal outputs
+- writing key execution traces back to auditable surfaces
 
-### 子项目 / 运行系统
+### Implementation Surface / Runtime Surface
 
-具体子项目负责：
+Each concrete implementation surface is responsible for:
 
-- 为某类任务提供稳定入口
-- 定义本任务面的状态与交付协议
-- 约束哪些动作允许被正式执行
+- providing a stable entry point for a specific workstream
+- defining the state and delivery protocol for that workstream
+- constraining which actions are allowed to enter formal execution
 
-## 运行原则
+## Operating Principles
 
-`OPL` 顶层采用这些运行原则：
+At the top level, `OPL` follows these principles:
 
-- 先读状态，再做变更
-- 关键动作必须留下可审计结果
-- 正式流程优先走稳定入口，不依赖临时旁路
-- 共享资产优先于一次性复制
-- 不把弱结果硬包装成完成
-- 当方向明显偏弱时，应允许止损、改题或转入补充路线
+- read state before making changes
+- leave auditable traces for important actions
+- prefer stable entry points over temporary bypasses
+- prefer shared assets over one-off duplication
+- do not package weak results as if they were complete
+- when a direction is clearly weak, allow stop, reframe, or side routes
 
-## 为什么这不是 prompt 集合
+## Scope Boundary
 
-如果一套系统只是“很多 prompt 的集合”，它通常会缺这几样东西：
+A system defined only as a collection of prompts usually lacks:
 
-- 稳定状态面
-- 共享记忆层
-- 可复用交付协议
-- 明确的继续/停止门控
+- a stable state surface
+- a shared memory layer
+- reusable delivery protocols
+- explicit continue/stop gates
 
-`OPL` 要做的恰好相反。
+`OPL` is defined instead as a lab operating model that extracts the asset, memory, governance, and delivery layers behind recurring lab tasks, and then lets concrete workstreams implement them through stable runtime surfaces.
 
-它不是把实验室工作拆成一些一次性 prompt，而是把这些任务背后的资产、记忆、门控和交付抽出来，交给具体子项目去实现。
+Therefore:
 
-因此：
+- `OPL` is not defined as a general-purpose assistant
+- `OPL` is not defined as a manuscript generator
+- `OPL` is not defined as one monolithic Agent
 
-- `OPL` 不是万能助手口号
-- `OPL` 不是论文生成器
-- `OPL` 不是把所有任务塞进同一个大 Agent
-
-它更像是一个实验室任务体系，`Agent` 只是执行层的一部分。
+It is better understood as a structured lab operating model in which `Agent` provides one layer of execution.

@@ -1,77 +1,79 @@
+**English** | [中文](./shared-foundation.zh-CN.md)
+
 # Shared Foundation
 
-`OPL` 认为，不同实验室任务之所以能被组织进同一个体系，不是因为它们都能让 Agent 参与，而是因为它们共享同一套基础层。
+`OPL` defines different lab tasks as belonging to one system not simply because they all involve Agents, but because they share the same foundational layers.
 
 ## Asset Layer
 
-`Asset Layer` 负责承载被多个任务反复消费的对象。
+The `Asset Layer` holds objects that are repeatedly consumed across multiple workstreams.
 
-典型对象包括：
+Typical objects include:
 
-- 数据资产
-- 文献与参考资料
-- 图表与模板
-- 已完成的正式交付物
+- data assets
+- references and literature
+- figures and templates
+- completed formal deliverables
 
-如果没有这一层，论文、基金、学位论文和答辩材料就会各自复制一份上下文，最终失去一致性。
+Without this layer, papers, grants, dissertations, and defense materials would each duplicate their own context and drift apart.
 
 ## Memory Layer
 
-`Memory Layer` 负责承载不适合只留在即时会话里的长期认知。
+The `Memory Layer` holds long-lived knowledge that should not remain only in transient conversations.
 
-典型对象包括：
+Typical objects include:
 
-- 选题记忆
-- 数据问题映射
-- 期刊偏好
-- 基金方偏好
-- 评审经验
-- 教学素材框架
+- topic memory
+- dataset-question mappings
+- venue preferences
+- funder preferences
+- review experience
+- teaching material structures
 
-这一层的目标不是保存所有对话，而是保存后续任务仍然会复用的结构化判断。
+The goal of this layer is not to save every conversation. It is to preserve structured judgment that later workstreams can still reuse.
 
 ## Governance Layer
 
-`Governance Layer` 负责回答“什么情况下允许继续做，什么情况下应该停下来”。
+The `Governance Layer` answers: when is work allowed to continue, and when should it stop?
 
-它关注的是：
+It focuses on:
 
-- 何时允许进入正式执行
-- 何时需要补证据
-- 何时应当止损或改题
-- 何时可以进入正式交付
+- when formal execution is allowed
+- when more evidence is needed
+- when a direction should be stopped or reframed
+- when a workstream can enter formal delivery
 
-如果没有这一层，系统就会退化成“只管往下跑”的执行器。
+Without this layer, continuity and reviewability weaken because execution loses explicit stop and continue conditions.
 
 ## Delivery Layer
 
-`Delivery Layer` 负责把过程性产物收束为正式输出。
+The `Delivery Layer` turns process artifacts into formal outputs.
 
-它关注的是：
+It focuses on:
 
-- 哪些文件构成交付包
-- 人类应该审核哪些表面
-- 上游研究资产如何同步到下游正式材料
+- which files constitute a delivery package
+- which surfaces humans should review
+- how upstream research assets sync into downstream formal materials
 
-这一层对论文、基金、学位论文和 PPT 都成立，只是具体交付协议不同。
+This layer applies to papers, grants, dissertations, and slides alike, even though the delivery protocol differs in each case.
 
 ## Agent Execution Layer
 
-`Agent Execution Layer` 负责让 Agent 真正成为可控执行者，而不是自由漂移的聊天接口。
+The `Agent Execution Layer` makes Agent execution controllable rather than free-floating.
 
-它关注的是：
+It focuses on:
 
-- 稳定入口
-- controller 或 route
-- 运行监控
-- 审计落盘
+- stable entry surfaces
+- controllers or routes
+- runtime monitoring
+- audit writeback
 
-这一层不是为了把人排除掉，而是为了让人只需要审核关键结果，而不必盯住底层执行细节。
+This layer does not remove humans. It makes it possible for humans to review key outputs without having to monitor every low-level execution detail.
 
-## 当前已经比较清楚的部分
+## What Is Already Clear Today
 
-在当前体系里，最先成形的是 `Research Ops` 对这五层的具象化，也就是：
+In the current ecosystem, the earliest mature embodiment of these five layers is `Research Ops`, namely:
 
-- `MedAutoScience` 已经在数据资产、运行治理、交付同步和 Agent 接入上形成了明确边界
+- `MedAutoScience` has already established clear boundaries around data assets, runtime governance, delivery synchronization, and Agent entry
 
-这也是为什么 `OPL` 当前不是空理念，而是有一个已经成熟的起点。
+That is why `OPL` already has a concrete reference surface today. It already has a clear starting point.

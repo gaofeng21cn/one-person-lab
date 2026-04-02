@@ -1,8 +1,10 @@
+**English** | [中文](./task-map.zh-CN.md)
+
 # OPL Task Map
 
-## 总览
+## Overview
 
-`OPL` 把一人课题组需要持续承担的正式工作，先拆成五类并列 workstreams。
+`OPL` starts by dividing the formal work of a one-person research lab into five parallel workstreams:
 
 - `Research Ops`
 - `Grant Ops`
@@ -10,91 +12,91 @@
 - `Review Ops`
 - `Presentation Ops`
 
-这个拆法不是为了制造五个孤立产品，而是为了明确每个任务面真正负责什么。
+This split is not meant to create five unrelated task surfaces. It is meant to make clear what each task surface is actually responsible for.
 
 ## Research Ops
 
-`Research Ops` 负责从数据到论文交付的主研究链。
+`Research Ops` covers the main chain from data to paper delivery.
 
-典型任务包括：
+Typical tasks include:
 
-- 数据治理
-- 研究问题形成
-- 分析与验证推进
-- 证据组织
-- 稿件与投稿交付
+- data governance
+- research question formation
+- analysis and validation progression
+- evidence packaging
+- manuscript and submission delivery
 
-当前这个任务面最成熟的项目是：
+The clearest implementation surface for this workstream today is:
 
 - [`MedAutoScience`](https://github.com/gaofeng21cn/med-autoscience)
 
 ## Grant Ops
 
-`Grant Ops` 负责基金申请及其反向评审。
+`Grant Ops` covers both grant writing and the reverse side of grant review.
 
-典型任务包括：
+Typical tasks include:
 
-- 基金方向与选题可行性判断
-- 申请书结构生成
-- 研究基础、创新点和技术路线组织
-- 模拟评审意见
-- 申请书迭代
+- feasibility assessment for grant directions and topics
+- proposal structure generation
+- organizing background, innovation claims, and technical routes
+- simulating reviewer comments
+- proposal iteration
 
-这个任务面会明显复用：
+This workstream clearly reuses:
 
-- 文献资产
-- 研究记忆
-- 评审记忆
-- 已有研究结果与图表
+- literature assets
+- research memory
+- review memory
+- existing study results and figures
 
 ## Thesis Ops
 
-`Thesis Ops` 负责学位论文与答辩准备。
+`Thesis Ops` covers dissertation writing and defense preparation.
 
-典型任务包括：
+Typical tasks include:
 
-- 章节结构组织
-- 已有论文与图表复用
-- 章节间术语和叙事同步
-- 摘要、引言和讨论层次组织
-- 答辩准备
+- chapter structure organization
+- reuse of existing papers and figures
+- terminology and narrative synchronization across chapters
+- organization of abstract, introduction, and discussion layers
+- defense preparation
 
-它和 `Research Ops` 的关系很紧，因为学位论文常常要复用同一批研究资产。
+Its relationship with `Research Ops` is especially close, because dissertations often reuse the same research assets.
 
 ## Review Ops
 
-`Review Ops` 负责“站在评审方”与“回应评审方”两种任务。
+`Review Ops` covers both “standing in the reviewer role” and “responding to reviewers.”
 
-典型任务包括：
+Typical tasks include:
 
-- 审稿
-- 基金申请评审
-- 评审意见结构化整理
-- rebuttal 与 revision 路线组织
+- peer review
+- grant review
+- structuring reviewer comments
+- organizing rebuttal and revision routes
 
-这个模块的价值不只是在“写意见”，而是在积累评审标准和反馈模式，反过来作用于研究与申请。
+This workstream also accumulates review standards and feedback patterns that can feed back into research and grant work.
 
 ## Presentation Ops
 
-`Presentation Ops` 负责讲课、组会、汇报和答辩材料。
+`Presentation Ops` covers lectures, lab talks, project reports, and defense materials.
 
-典型任务包括：
+Typical tasks include:
 
-- 从研究材料抽取讲解主线
-- 生成汇报级图表与叙事结构
-- 组织讲课和答辩 PPT
-- 复用已有论文图表、摘要和结论
+- extracting a teaching or presentation storyline from research materials
+- generating figure-ready narrative structures for reports
+- organizing lecture and defense slide decks
+- reusing paper figures, abstracts, and conclusions
 
-它的关键不是“自动排版几页 PPT”，而是让交付材料与上游研究资产保持一致。
+This workstream keeps presentation materials aligned with upstream research assets.
 
-## 这些模块如何复用彼此
+## How These Workstreams Reuse One Another
 
-这五类 workstreams 之所以能放进同一个总蓝图，是因为它们共享这些对象：
+These five workstreams belong in one blueprint because they share:
 
-- 同一批数据与图表
-- 同一批文献与外部证据
-- 同一组研究问题与判断
-- 同一套正式交付物
-- 同一层 Agent 执行接口
+- the same datasets and figures
+- the same references and external evidence
+- the same research questions and judgments
+- the same formal delivery surfaces
+- the same Agent execution layer
 
-因此，`OPL` 的任务地图不是功能清单，而是实验室任务分工图。
+That is why the OPL task map is not a feature list. It is a division of labor for lab work.
