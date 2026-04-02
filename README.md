@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/branding/opl-banner.svg" alt="One Person Lab banner" width="100%" />
+</p>
+
 <h1 align="center">One Person Lab</h1>
 
 <p align="center"><strong>面向一人课题组任务体系的顶层说明</strong></p>
