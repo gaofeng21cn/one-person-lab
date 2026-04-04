@@ -23,7 +23,7 @@
     </td>
     <td width="33%" valign="top">
       <strong>Current Reference Surface</strong><br/>
-      Top-level blueprint; <code>MedAutoScience</code> is the current established implementation
+      Top-level blueprint; <code>MedAutoScience</code> is the current active implementation, and <code>RedCube AI</code> is the current emerging implementation
     </td>
   </tr>
 </table>
@@ -124,7 +124,8 @@
     </td>
     <td width="20%" valign="top">
       <strong>Presentation Ops</strong><br/>
-      <code>Planned</code>
+      <code>Emerging</code><br/>
+      via <code>RedCube AI</code> and its <code>ppt_deck</code> family
     </td>
   </tr>
   <tr>
@@ -154,9 +155,9 @@
       Public project entry
     </td>
     <td width="20%" valign="top">
-      <strong>Next Workstream</strong><br/>
-      <code>Grant / Review / Thesis / Presentation</code><br/>
-      Under definition
+      <strong>RedCube AI</strong><br/>
+      <a href="https://github.com/gaofeng21cn/redcube-ai"><code>Repository</code></a><br/>
+      Emerging visual-deliverable surface
     </td>
   </tr>
 </table>
@@ -244,9 +245,11 @@ Further reading:
 | `Grant Ops` | grant writing and grant review workflows | Planned |
 | `Thesis Ops` | dissertation and defense workflows | Planned |
 | `Review Ops` | peer review, response, and revision workflows | Planned |
-| `Presentation Ops` | lecture, report, and defense material workflows | Planned |
+| `Presentation Ops` | lecture, report, and defense material workflows; currently surfaced through the [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) `ppt_deck` family | Emerging |
 
-`Planned` means these surfaces are part of the formal blueprint, but remain under definition rather than operating as independent established implementations.
+- `Active` means a workstream already has a stable implementation surface that can be explained independently.
+- `Emerging` means a real implementation surface already exists, but its boundary, protocols, and family split are still converging.
+- `Planned` means the workstream is part of the formal blueprint but remains under definition.
 
 ## Current Established Workstream: MedAutoScience
 
@@ -262,22 +265,40 @@ It currently provides a clear implementation surface for:
 
 For readers who are primarily interested in moving medical research data toward paper-grade delivery, `MedAutoScience` is the current implementation entry point.
 
+## Current Emerging Surface: RedCube AI
+
+[`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) is the current emerging visual-deliverable implementation surface under the `OPL` umbrella.
+
+Its correct boundary is not “the whole of `Presentation Ops`.” It is:
+
+- an Agent-first runtime for visual deliverables
+- the current most direct implementation surface for `Presentation Ops` through the `ppt_deck` family
+- a place where formal quality protocols diverge through `profile pack` rather than through ad hoc prompt phrasing
+
+At the same time:
+
+- `RedCube AI` is not the whole of `OPL`
+- `RedCube AI` is not synonymous with all of `Presentation Ops`
+- `xiaohongshu` shares the same runtime, but should not be treated as identical to `Presentation Ops` at the OPL level
+
 ## Scope Boundary
 
 This repository is primarily a public blueprint surface. It does not serve as:
 
 - the unified runtime entry point
 - the implementation repository for every workstream
+- a place where `MedAutoScience` or `RedCube AI` are treated as synonyms for `OPL`
 - a place where workstreams under definition are presented as finished implementations
 
 Its purpose is to let readers understand the overall operating idea first, and then enter the relevant implementation surface for a specific workstream.
 
 ## Roadmap
 
-The current phase has two main priorities:
+The current phase has three main priorities:
 
 - continue to advance `MedAutoScience` as the current established research-ops implementation
-- progressively define the boundaries and shared protocols for `Grant Ops`, `Review Ops`, `Thesis Ops`, and `Presentation Ops`
+- continue to stabilize `RedCube AI` as the emerging implementation surface for `Presentation Ops`
+- progressively define the boundaries and shared protocols for `Grant Ops`, `Review Ops`, and `Thesis Ops`
 
 For a more detailed phase breakdown:
 

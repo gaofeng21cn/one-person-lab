@@ -44,6 +44,11 @@ Each concrete implementation surface is responsible for:
 - defining the state and delivery protocol for that workstream
 - constraining which actions are allowed to enter formal execution
 
+For example:
+
+- `MedAutoScience` currently serves `Research Ops`
+- `RedCube AI` currently serves the visual-deliverable runtime and most directly carries `Presentation Ops` through the `ppt_deck` family
+
 ## Operating Principles
 
 At the top level, `OPL` follows these principles:
@@ -65,6 +70,12 @@ A system defined only as a collection of prompts usually lacks:
 - explicit continue/stop gates
 
 `OPL` is defined instead as a lab operating model that extracts the asset, memory, governance, and delivery layers behind recurring lab tasks, and then lets concrete workstreams implement them through stable runtime surfaces.
+
+That also means:
+
+- workstream boundaries do not have to map one-to-one to repository boundaries
+- one runtime surface can serve multiple deliverable families
+- whether a family belongs to a given `OPL` workstream remains a top-level semantic decision rather than a runtime naming issue
 
 Therefore:
 

@@ -89,6 +89,16 @@
 
 这个工作流负责让交付材料与上游研究资产保持一致。
 
+当前这个任务面最直接的 emerging implementation surface 是：
+
+- [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai)
+
+其中：
+
+- `ppt_deck` 是当前最直接承接 `Presentation Ops` 的 overlay family
+- `lecture_student`、`lecture_peer`、`executive_briefing`、`defense_deck` 这类差异，应由 `profile pack` 控制，而不是混在一个通用 deck 定义里
+- `xiaohongshu` 虽然共享同一 runtime，但在 `OPL` 顶层语义里不应直接等同于 `Presentation Ops`
+
 ## 这些工作流如何共享基础结构
 
 这五类工作流之所以能放进同一个总蓝图，是因为它们共享这些对象：
@@ -100,3 +110,8 @@
 - 同一层 Agent 执行接口
 
 因此，`OPL` 的任务地图不是功能清单，而是实验室正式工作的分工图。
+
+这也意味着任务面与实现面并不总是一一对应：
+
+- 一个实现面可以服务多个交付物 family
+- 只有其中一部分 family 直接映射到某个 `OPL` 工作流

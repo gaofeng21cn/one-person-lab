@@ -23,7 +23,7 @@
     </td>
     <td width="33%" valign="top">
       <strong>当前参考实现面</strong><br/>
-      顶层总集；<code>MedAutoScience</code> 为当前已成形实现面
+      顶层总集；<code>MedAutoScience</code> 为当前 Active 实现面，<code>RedCube AI</code> 为当前 Emerging 实现面
     </td>
   </tr>
 </table>
@@ -124,7 +124,8 @@
     </td>
     <td width="20%" valign="top">
       <strong>Presentation Ops</strong><br/>
-      <code>Planned</code>
+      <code>Emerging</code><br/>
+      由 <code>RedCube AI</code> 的 <code>ppt_deck</code> family 先行承接
     </td>
   </tr>
   <tr>
@@ -154,9 +155,9 @@
       公开项目入口
     </td>
     <td width="20%" valign="top">
-      <strong>后续方向</strong><br/>
-      <code>Grant / Review / Thesis / Presentation</code><br/>
-      后续拓展面
+      <strong>RedCube AI</strong><br/>
+      <a href="https://github.com/gaofeng21cn/redcube-ai"><code>仓库</code></a><br/>
+      Emerging 的视觉交付物实现面
     </td>
   </tr>
 </table>
@@ -244,9 +245,11 @@
 | `Grant Ops` | 基金申请与基金评审工作流 | Planned |
 | `Thesis Ops` | 学位论文与答辩工作流 | Planned |
 | `Review Ops` | 审稿、评审与回复工作流 | Planned |
-| `Presentation Ops` | 讲课、汇报与答辩材料工作流 | Planned |
+| `Presentation Ops` | 讲课、汇报与答辩材料工作流；当前由 [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) 的 `ppt_deck` family 先行承接 | Emerging |
 
-`Planned` 表示这些任务面已经被纳入正式蓝图，但当前仍处于定义阶段，尚未形成独立、成熟的实现面。
+- `Active` 表示该任务面已有稳定、可独立说明的实现面。
+- `Emerging` 表示该任务面已经出现真实实现面，但边界、协议与家族划分仍在收敛。
+- `Planned` 表示该任务面已经被纳入正式蓝图，但当前仍处于定义阶段。
 
 ## 当前已成形工作流：MedAutoScience
 
@@ -262,22 +265,40 @@
 
 如果当前关注点是“如何把一批医学研究数据持续推进到论文级交付”，`MedAutoScience` 是当前最直接的实现面。
 
+## 当前正在浮现的实现面：RedCube AI
+
+[`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) 是 `OPL` 体系下当前正在浮现的视觉交付物实现面。
+
+它的正确边界不是“整个 `Presentation Ops`”，而是：
+
+- 一个面向 Agent 的视觉交付物 runtime
+- 当前最直接承接 `Presentation Ops` 的 `ppt_deck` family
+- 通过 `profile pack` 区分学生课、同行课、领导汇报、答辩稿等正式质量协议
+
+同时需要明确：
+
+- `RedCube AI` 不是整个 `OPL`
+- `RedCube AI` 也不等于整个 `Presentation Ops`
+- `xiaohongshu` 虽然与 `ppt_deck` 共享 runtime，但在 `OPL` 顶层语义里不应直接等同于 `Presentation Ops`
+
 ## 当前边界
 
 当前这个仓库主要承担顶层说明职责，不承担以下角色：
 
 - 不作为统一运行时入口
 - 不作为所有任务的实现仓库
+- 不把 `MedAutoScience` 或 `RedCube AI` 写成 `OPL` 的同义词
 - 不把尚未成形的任务面包装成已完成产品
 
 它的作用是让外部读者先理解总目标，再根据任务需要进入相应实现面。
 
 ## 路线图
 
-当前阶段的重点是两件事：
+当前阶段的重点是三件事：
 
 - 继续推进 `MedAutoScience` 这个已经成形的研究主线实现
-- 逐步把 `Grant Ops`、`Review Ops`、`Thesis Ops`、`Presentation Ops` 的任务边界和共享协议写清楚
+- 继续把 `RedCube AI` 作为 `Presentation Ops` 的 emerging 实现面收敛清楚
+- 逐步把 `Grant Ops`、`Review Ops`、`Thesis Ops` 的任务边界和共享协议写清楚
 
 更详细的阶段说明见：
 

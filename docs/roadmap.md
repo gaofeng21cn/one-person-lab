@@ -10,30 +10,32 @@ What is already clear today:
 
 - `OPL` serves as a top-level blueprint that defines the task topology and shared foundation of a one-person research lab
 - [`MedAutoScience`](https://github.com/gaofeng21cn/med-autoscience) is already the current established reference implementation under the `OPL` umbrella
-- `Grant Ops`, `Thesis Ops`, `Review Ops`, and `Presentation Ops` are part of the formal roadmap but remain workstreams under definition
+- [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) has become the emerging implementation surface for `Presentation Ops`, with `ppt_deck` as its current most direct family
+- `Grant Ops`, `Thesis Ops`, and `Review Ops` remain workstreams under definition
 
 What this phase does not do:
 
 - create empty shells for workstreams whose boundaries are still unclear
 - force every task surface into `MedAutoScience`
+- describe `RedCube AI` as if it were the whole of `Presentation Ops` or the whole of `OPL`
 - present `OPL` as a fully implemented umbrella system
 
 ## Next Phase
 
 The next phase should prioritize:
 
+- tightening the `ppt_deck family -> profile pack -> deliverable contract` boundary inside `RedCube AI`
 - making the shared foundation of `OPL` more explicit, especially the memory, governance, and delivery layers
-- choosing the most suitable next workstream to define through a clear task boundary and delivery object
 - continuing to keep `MedAutoScience` independent as the medical research-ops surface
+- continuing to choose the next most suitable workstream to define through a clear task boundary and delivery object
 
-Among current candidates, the more natural priority order is usually:
+Among the workstreams that still remain purely at the definition stage, the more natural priority order is usually:
 
 - `Grant Ops`
 - `Review Ops`
 - `Thesis Ops`
-- `Presentation Ops`
 
-The first two are more directly reusable from the current research chain.
+The first two are more directly reusable from the current research chain, while `Presentation Ops` has already started to converge through `RedCube AI`.
 
 ## Later Phase
 
@@ -43,7 +45,7 @@ Only after a second workstream boundary becomes sufficiently stable should `OPL`
 - an organization profile or docs site as the unified public entry point
 - more explicit cross-workstream shared protocols
 
-The condition for entering this phase is not a large number of possible directions. It is having at least two workstreams that have become clear, independent implementation surfaces.
+The condition for entering this phase is not a large number of possible directions. It is having at least two workstreams that have become clear, independent implementation surfaces. `Research Ops` already satisfies this condition, and `Presentation Ops` is now moving toward it through `RedCube AI`.
 
 ## Current Evaluation Criteria
 
@@ -51,5 +53,7 @@ To judge whether `OPL` is progressing in the right direction, these checks matte
 
 - can external readers understand that `OPL` is a blueprint rather than a single product?
 - can external readers understand that `MedAutoScience` is one implementation surface under that blueprint rather than a synonym for it?
+- can external readers understand that `RedCube AI` is an implementation surface for `Presentation Ops` rather than a synonym for all of `Presentation Ops`?
+- can external readers understand that `ppt_deck` and `xiaohongshu` may share a runtime without necessarily belonging to the same top-level `OPL` workstream?
 - are new task surfaces being defined as formal workstreams rather than scattered feature requests?
 - is the shared foundation becoming more clearly specified rather than remaining slogan-like?

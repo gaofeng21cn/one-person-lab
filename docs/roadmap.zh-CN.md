@@ -10,30 +10,32 @@
 
 - `OPL` 作为顶层总集，负责定义一人课题组的任务版图与共享底座
 - [`MedAutoScience`](https://github.com/gaofeng21cn/med-autoscience) 已经是 `OPL` 体系下当前已成形的参考实现
-- `Grant Ops`、`Thesis Ops`、`Review Ops`、`Presentation Ops` 已被纳入正式规划，但仍处于工作流定义阶段
+- [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) 已经成为 `Presentation Ops` 的 emerging 实现面，其中 `ppt_deck` 是当前最直接承接的 family
+- `Grant Ops`、`Thesis Ops`、`Review Ops` 仍处于工作流定义阶段
 
 当前阶段不做的事：
 
 - 不为尚未清楚边界的任务面创建空壳实现
 - 不把所有任务都强行塞进 `MedAutoScience`
+- 不把 `RedCube AI` 误写成整个 `Presentation Ops` 或整个 `OPL`
 - 不把 `OPL` 伪装成已经完整实现的一体化体系
 
 ## 下一阶段
 
 下一阶段应优先做这些事：
 
+- 把 `RedCube AI` 的 `ppt_deck family -> profile pack -> deliverable contract` 边界继续收敛清楚
 - 把 `OPL` 的共享底座继续写实，尤其是记忆、治理和交付层
-- 选择第二个最适合作为下一步明确边界的工作流，优先确定任务边界和交付对象
 - 继续保持 `MedAutoScience` 作为医学自动科研主线的独立边界
+- 继续选择下一个最适合作为明确边界对象的工作流，优先确定任务边界和交付对象
 
-在这几个候选方向里，较自然的优先顺序通常会是：
+在仍处于纯定义阶段的几个候选方向里，较自然的优先顺序通常会是：
 
 - `Grant Ops`
 - `Review Ops`
 - `Thesis Ops`
-- `Presentation Ops`
 
-原因是前两者与研究主链的复用面更直接。
+原因是前两者与研究主链的复用面更直接；而 `Presentation Ops` 已经开始通过 `RedCube AI` 进入实现面收敛阶段。
 
 ## 更后续阶段
 
@@ -43,7 +45,7 @@
 - 建立组织主页或文档站作为统一入口
 - 补齐跨任务共享协议
 
-进入这一阶段的前提不是“想法很多”，而是至少有两个工作流已经形成清楚、可独立说明的实现面。
+进入这一阶段的前提不是“想法很多”，而是至少有两个工作流已经形成清楚、可独立说明的实现面。当前 `Research Ops` 已经达到这一点，`Presentation Ops` 则正在通过 `RedCube AI` 接近这一门槛。
 
 ## 当前判断标准
 
@@ -51,5 +53,7 @@
 
 - 外界是否能清楚理解 `OPL` 是总蓝图而不是单产品
 - 外界是否能清楚理解 `MedAutoScience` 只是其中一个实现面
+- 外界是否能清楚理解 `RedCube AI` 是 `Presentation Ops` 的实现面，而不是整个 `Presentation Ops`
+- 外界是否能清楚理解 `ppt_deck` 与 `xiaohongshu` 可以共享 runtime，但不必属于同一个 `OPL` 任务面
 - 新任务面是否被定义成正式工作流，而不是零散功能需求
 - 共享底座是否越来越清楚，而不是停留在概念口号层面

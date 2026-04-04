@@ -55,7 +55,7 @@ It focuses on:
 - which surfaces humans should review
 - how upstream research assets sync into downstream formal materials
 
-This layer applies to papers, grants, dissertations, and slides alike, even though the delivery protocol differs in each case.
+This layer applies to papers, grants, dissertations, slides, and other visual deliverables alike, even though the delivery protocol differs in each case.
 
 ## Agent Execution Layer
 
@@ -76,4 +76,8 @@ In the current ecosystem, the earliest mature embodiment of these five layers is
 
 - `MedAutoScience` has already established clear boundaries around data assets, runtime governance, delivery synchronization, and Agent entry
 
-That is why `OPL` already has a concrete reference surface today. It already has a clear starting point.
+At the same time, a second embodiment is starting to emerge:
+
+- `RedCube AI` is beginning to make the delivery layer and Agent execution layer concrete for visual deliverables, most directly through the `ppt_deck` family under `Presentation Ops`
+
+That is why `OPL` no longer remains purely conceptual. It already has one established starting point and one second surface that is actively converging.

@@ -89,6 +89,16 @@ Typical tasks include:
 
 This workstream keeps presentation materials aligned with upstream research assets.
 
+The most direct emerging implementation surface for this workstream today is:
+
+- [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai)
+
+Within that surface:
+
+- `ppt_deck` is the overlay family that most directly serves `Presentation Ops`
+- distinctions such as `lecture_student`, `lecture_peer`, `executive_briefing`, and `defense_deck` should be controlled through `profile pack`, not collapsed into one generic deck type
+- `xiaohongshu` shares the same runtime but should not be treated as identical to `Presentation Ops` at the OPL level
+
 ## How These Workstreams Reuse One Another
 
 These five workstreams belong in one blueprint because they share:
@@ -100,3 +110,8 @@ These five workstreams belong in one blueprint because they share:
 - the same Agent execution layer
 
 That is why the OPL task map is not a feature list. It is a division of labor for lab work.
+
+It also means that task surfaces and implementation surfaces are not always one-to-one:
+
+- one implementation surface can serve multiple deliverable families
+- only some of those families may map directly to a given `OPL` workstream
