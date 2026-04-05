@@ -21,6 +21,7 @@ That means this discovery gateway is defined on top of:
 - the workstream registry
 - the domain registry
 - the routing vocabulary
+- the materialized machine-readable artifacts in [`../contracts/opl-gateway/README.md`](../contracts/opl-gateway/README.md)
 
 If `G1` is not frozen, `G2` should not proceed.
 

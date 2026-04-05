@@ -1,0 +1,51 @@
+{
+  "version": "g1",
+  "intent_id": [
+    "research_progression",
+    "submission_delivery",
+    "data_asset_governance",
+    "presentation_delivery",
+    "lecture_materials",
+    "defense_materials"
+  ],
+  "workstream_id": [
+    "research_ops",
+    "presentation_ops"
+  ],
+  "domain_id": [
+    "medautoscience",
+    "redcube"
+  ],
+  "request_kind": [
+    "discover",
+    "plan",
+    "create",
+    "review",
+    "rerun",
+    "publish"
+  ],
+  "target_kind": [
+    "workspace",
+    "study",
+    "deliverable",
+    "topic",
+    "publication"
+  ],
+  "delivery_kind": [
+    "research_delivery",
+    "presentation_delivery",
+    "social_visual_delivery"
+  ],
+  "review_kind": [
+    "human_review",
+    "baseline_review",
+    "publish_gate",
+    "quality_regression"
+  ],
+  "entry_mode": [
+    "docs_only",
+    "read_only_gateway",
+    "routed_action_gateway",
+    "domain_gateway"
+  ]
+}

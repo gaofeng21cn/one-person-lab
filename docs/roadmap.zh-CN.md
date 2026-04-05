@@ -52,6 +52,8 @@
 
 - [OPL Gateway 落地路线](opl-gateway-rollout.zh-CN.md)
 - [OPL Federation Contract](opl-federation-contract.zh-CN.md)
+- [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
+- [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
 
 ## 当前判断标准
 

@@ -1,0 +1,43 @@
+{
+  "version": "g1",
+  "domains": [
+    {
+      "domain_id": "medautoscience",
+      "label": "MedAutoScience",
+      "project": "med-autoscience",
+      "role": "research_ops_gateway",
+      "gateway_surface": "Research Ops Gateway",
+      "harness_surface": "Medical Research Harness OS",
+      "standalone_allowed": true,
+      "owned_workstreams": [
+        "research_ops"
+      ],
+      "non_opl_families": [],
+      "canonical_truth_owner": [
+        "research_runs",
+        "study_deliveries",
+        "data_asset_mutations"
+      ]
+    },
+    {
+      "domain_id": "redcube",
+      "label": "RedCube AI",
+      "project": "redcube-ai",
+      "role": "visual_deliverable_gateway",
+      "gateway_surface": "Visual Deliverable Gateway",
+      "harness_surface": "Visual Deliverable Harness OS",
+      "standalone_allowed": true,
+      "owned_workstreams": [
+        "presentation_ops"
+      ],
+      "non_opl_families": [
+        "xiaohongshu"
+      ],
+      "canonical_truth_owner": [
+        "deliverable_runs",
+        "review_state",
+        "artifact_truth"
+      ]
+    }
+  ]
+}

@@ -35,6 +35,12 @@ The intended machine-readable surfaces are:
 These file paths are the canonical intent of the contract.
 They may be materialized later in a docs site, registry package, or gateway repo, but the contract shape should stay stable.
 
+For the current repository-local materialization, see [OPL Gateway Contracts](../contracts/opl-gateway/README.md).
+
+Current repository materialization:
+
+- [`../contracts/opl-gateway/README.md`](../contracts/opl-gateway/README.md)
+
 ## Workstream Registry
 
 Each workstream entry should define:

@@ -1,0 +1,185 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opl.onepersonlab/contracts/opl-gateway/handoff.schema.json",
+  "title": "OPL Gateway Handoff Payload",
+  "description": "G1 handoff payload between the OPL Gateway and a domain gateway. This is a contract-first artifact and does not imply runtime implementation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "request_id",
+    "workstream_id",
+    "domain_id",
+    "request_kind",
+    "target_kind",
+    "goal",
+    "materials",
+    "constraints",
+    "preferred_family",
+    "preferred_profile",
+    "review_expectation"
+  ],
+  "properties": {
+    "request_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Top-level OPL request identifier."
+    },
+    "workstream_id": {
+      "type": "string",
+      "enum": [
+        "research_ops",
+        "presentation_ops"
+      ]
+    },
+    "domain_id": {
+      "type": "string",
+      "enum": [
+        "medautoscience",
+        "redcube"
+      ]
+    },
+    "request_kind": {
+      "type": "string",
+      "enum": [
+        "discover",
+        "plan",
+        "create",
+        "review",
+        "rerun",
+        "publish"
+      ]
+    },
+    "target_kind": {
+      "type": "string",
+      "enum": [
+        "workspace",
+        "study",
+        "deliverable",
+        "topic",
+        "publication"
+      ]
+    },
+    "goal": {
+      "type": "string",
+      "minLength": 1
+    },
+    "materials": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "ref"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "minLength": 1
+          },
+          "ref": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "constraints": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "preferred_family": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Family preference after workstream semantics and domain ownership are resolved. ppt_deck directly maps to Presentation Ops; xiaohongshu may still route to redcube but does not automatically equal presentation_ops."
+    },
+    "preferred_profile": {
+      "type": "string",
+      "minLength": 1
+    },
+    "review_expectation": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "human_review",
+          "baseline_review",
+          "publish_gate",
+          "quality_regression"
+        ]
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "workstream_id": {
+            "const": "research_ops"
+          }
+        },
+        "required": [
+          "workstream_id"
+        ]
+      },
+      "then": {
+        "properties": {
+          "domain_id": {
+            "const": "medautoscience"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "workstream_id": {
+            "const": "presentation_ops"
+          }
+        },
+        "required": [
+          "workstream_id"
+        ]
+      },
+      "then": {
+        "properties": {
+          "domain_id": {
+            "const": "redcube"
+          }
+        }
+      }
+    }
+  ],
+  "examples": [
+    {
+      "request_id": "opl-2026-04-05-001",
+      "workstream_id": "presentation_ops",
+      "domain_id": "redcube",
+      "request_kind": "create",
+      "target_kind": "deliverable",
+      "goal": "Produce a defense-ready lecture deck from the supplied research materials.",
+      "materials": [
+        {
+          "kind": "paper",
+          "ref": "workspace://refs/paper-01"
+        },
+        {
+          "kind": "brief",
+          "ref": "workspace://briefs/defense-brief"
+        }
+      ],
+      "constraints": [
+        "audience=committee",
+        "max_length=20_slides"
+      ],
+      "preferred_family": "ppt_deck",
+      "preferred_profile": "defense_deck",
+      "review_expectation": [
+        "human_review",
+        "publish_gate"
+      ]
+    }
+  ]
+}

@@ -53,6 +53,8 @@ For the detailed gateway rollout path, see:
 
 - [OPL Gateway Rollout](opl-gateway-rollout.md)
 - [OPL Federation Contract](opl-federation-contract.md)
+- [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
+- [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
 
 ## Current Evaluation Criteria
 

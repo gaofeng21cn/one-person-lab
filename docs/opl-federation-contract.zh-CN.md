@@ -35,6 +35,12 @@
 这些路径表达的是契约意图。
 后面它们可以落在 docs site、registry package 或 gateway repo 中，但契约形状应尽量保持稳定。
 
+当前仓库内的 materialization 见 [OPL Gateway Contracts](../contracts/opl-gateway/README.md)。
+
+当前仓库中的落地位置：
+
+- [`../contracts/opl-gateway/README.md`](../contracts/opl-gateway/README.md)
+
 ## Workstream Registry
 
 每个 workstream entry 应定义：

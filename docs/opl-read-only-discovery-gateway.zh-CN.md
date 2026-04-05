@@ -21,6 +21,7 @@
 - workstream registry
 - domain registry
 - routing vocabulary
+- 当前仓库中已落地的机器可读工件：[`../contracts/opl-gateway/README.md`](../contracts/opl-gateway/README.md)
 
 如果 `G1` 没冻结，`G2` 不应继续推进。
 

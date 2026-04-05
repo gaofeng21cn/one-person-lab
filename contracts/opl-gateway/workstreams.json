@@ -1,0 +1,37 @@
+{
+  "version": "g1",
+  "workstreams": [
+    {
+      "workstream_id": "research_ops",
+      "label": "Research Ops",
+      "status": "active",
+      "description": "Formal research work from data governance to manuscript and submission delivery.",
+      "domain_id": "medautoscience",
+      "entry_mode": "domain_gateway",
+      "primary_families": [],
+      "top_level_intents": [
+        "research_progression",
+        "submission_delivery",
+        "data_asset_governance"
+      ],
+      "notes": "Maps directly to MedAutoScience."
+    },
+    {
+      "workstream_id": "presentation_ops",
+      "label": "Presentation Ops",
+      "status": "emerging",
+      "description": "Formal lecture, report, and defense material delivery.",
+      "domain_id": "redcube",
+      "entry_mode": "domain_gateway",
+      "primary_families": [
+        "ppt_deck"
+      ],
+      "top_level_intents": [
+        "presentation_delivery",
+        "lecture_materials",
+        "defense_materials"
+      ],
+      "notes": "ppt_deck maps directly; xiaohongshu routes to RedCube AI but does not automatically equal Presentation Ops."
+    }
+  ]
+}
