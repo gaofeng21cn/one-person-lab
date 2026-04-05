@@ -1,0 +1,65 @@
+{
+  "example_version": "p10.m1",
+  "flow_id": "unknown_domain_routing",
+  "description": "Canonical unknown-domain routing example for the frozen OPL routed-action gateway.",
+  "schemas": {
+    "route_request": "contracts/opl-gateway/routed-actions.schema.json",
+    "audit_routing_decision": "contracts/opl-gateway/routed-actions.schema.json",
+    "governance_audit_record": "contracts/opl-gateway/governance-audit.schema.json"
+  },
+  "route_request": {
+    "version": "g3",
+    "operation": "route_request",
+    "payload": {
+      "status": "unknown_domain",
+      "request_id": "opl-2026-04-05-302",
+      "workstream_id": "grant_ops",
+      "reason": "The grant-planning semantics are recognizable, but no registered domain gateway currently owns grant_ops."
+    }
+  },
+  "audit_routing_decision": {
+    "version": "g3",
+    "operation": "audit_routing_decision",
+    "payload": {
+      "request_id": "opl-2026-04-05-302",
+      "decision_status": "unknown_domain",
+      "request_summary": "Build a formal grant proposal operating lane from the supplied topic brief.",
+      "request_kind": "plan",
+      "candidate_workstreams": [
+        "grant_ops"
+      ],
+      "reason": "The workstream semantics are clear, but OPL has no registered domain gateway for grant_ops yet.",
+      "routing_evidence": [
+        "grant_proposal intent",
+        "grant_ops workstream semantics",
+        "no registered domain owner"
+      ],
+      "timestamp": "2026-04-05T09:06:00Z"
+    }
+  },
+  "governance_audit_record": {
+    "version": "p5.m1",
+    "record_kind": "routing_audit",
+    "record_id": "opl-routing-2026-04-05-302",
+    "request_id": "opl-2026-04-05-302",
+    "workstream_id": null,
+    "domain_id": null,
+    "summary": "Routing is blocked because the requested workstream has no formally onboarded domain gateway.",
+    "status": "blocked",
+    "evidence_refs": [
+      "workstream=grant_ops",
+      "domain_registry_owner=missing"
+    ],
+    "domain_truth_refs": [],
+    "recorded_at": "2026-04-05T09:07:00Z",
+    "routing_audit": {
+      "routing_status": "unknown_domain",
+      "entry_surface": "domain_gateway",
+      "routing_decision_ref": "opl://routing-decisions/opl-2026-04-05-302"
+    }
+  },
+  "boundary_notes": [
+    "OPL does not assign the request to an existing domain just to keep the flow moving.",
+    "The absence of a registered domain owner is surfaced explicitly instead of being hidden behind best-effort routing."
+  ]
+}

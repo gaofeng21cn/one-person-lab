@@ -57,6 +57,10 @@ If an example references a domain outcome, that outcome remains domain-owned tru
 - [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.md)
 - [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
 
+## Related Companion
+
+- [OPL Routed-Safety Example Corpus](./opl-routed-safety-example-corpus.md)
+
 ## Completion Definition
 
 The example corpus is acceptable only when:

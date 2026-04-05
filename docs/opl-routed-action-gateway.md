@@ -297,6 +297,10 @@ The machine-readable schema for this layer lives at:
 
 - [`../contracts/opl-gateway/routed-actions.schema.json`](../contracts/opl-gateway/routed-actions.schema.json)
 
+Canonical routed-safety examples for the non-success states live at:
+
+- [OPL Routed-Safety Example Corpus](./opl-routed-safety-example-corpus.md)
+
 ## Completion Definition
 
 `G3` is complete when:

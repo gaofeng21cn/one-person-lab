@@ -1,0 +1,81 @@
+{
+  "example_version": "p10.m1",
+  "flow_id": "ambiguous_task_routing",
+  "description": "Canonical ambiguous-task routing example for the frozen OPL routed-action gateway.",
+  "schemas": {
+    "route_request": "contracts/opl-gateway/routed-actions.schema.json",
+    "audit_routing_decision": "contracts/opl-gateway/routed-actions.schema.json",
+    "governance_audit_record": "contracts/opl-gateway/governance-audit.schema.json"
+  },
+  "route_request": {
+    "version": "g3",
+    "operation": "route_request",
+    "payload": {
+      "status": "ambiguous_task",
+      "request_id": "opl-2026-04-05-301",
+      "reason": "The request mixes formal manuscript packaging and committee-slide delivery semantics without a single primary deliverable.",
+      "candidate_workstreams": [
+        "research_ops",
+        "presentation_ops"
+      ],
+      "candidate_domains": [
+        "medautoscience",
+        "redcube"
+      ],
+      "required_clarification": [
+        "Is the primary output a formal research submission package or a presentation deliverable?",
+        "If presentation delivery is primary, should the family be ppt_deck or another RedCube family?"
+      ]
+    }
+  },
+  "audit_routing_decision": {
+    "version": "g3",
+    "operation": "audit_routing_decision",
+    "payload": {
+      "request_id": "opl-2026-04-05-301",
+      "decision_status": "ambiguous_task",
+      "request_summary": "Package the study for submission and also turn it into a defense-ready deck without clarifying which deliverable is primary.",
+      "request_kind": "create",
+      "candidate_workstreams": [
+        "research_ops",
+        "presentation_ops"
+      ],
+      "candidate_domains": [
+        "medautoscience",
+        "redcube"
+      ],
+      "reason": "The request mixes two top-level deliverable semantics, so OPL must stop before inventing a routed outcome.",
+      "routing_evidence": [
+        "manuscript_packaging intent",
+        "presentation_delivery intent",
+        "missing primary deliverable"
+      ],
+      "timestamp": "2026-04-05T09:01:00Z"
+    }
+  },
+  "governance_audit_record": {
+    "version": "p5.m1",
+    "record_kind": "routing_audit",
+    "record_id": "opl-routing-2026-04-05-301",
+    "request_id": "opl-2026-04-05-301",
+    "workstream_id": null,
+    "domain_id": null,
+    "summary": "Routing remains blocked pending clarification of the primary deliverable semantics.",
+    "status": "needs_human_review",
+    "evidence_refs": [
+      "clarification_required=primary_deliverable",
+      "routed_outcome=withheld"
+    ],
+    "domain_truth_refs": [],
+    "recorded_at": "2026-04-05T09:02:00Z",
+    "routing_audit": {
+      "routing_status": "ambiguous_task",
+      "entry_surface": "domain_gateway",
+      "routing_decision_ref": "opl://routing-decisions/opl-2026-04-05-301"
+    }
+  },
+  "boundary_notes": [
+    "OPL does not invent a workstream owner or build a handoff payload while the request remains ambiguous.",
+    "No domain truth is created; the only top-level artifact is the auditable unresolved-routing record."
+  ]
+}

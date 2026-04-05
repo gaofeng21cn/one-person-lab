@@ -1,5 +1,5 @@
 {
-  "version": "p9.m1",
+  "version": "p10.m1",
   "gates": [
     {
       "gate_id": "g1_registry_completeness",
@@ -156,6 +156,29 @@
       ]
     },
     {
+      "gate_id": "p10_routed_safety_example_integrity",
+      "layer": "p10",
+      "required_files": [
+        "docs/opl-routed-safety-example-corpus.md",
+        "docs/opl-routed-safety-example-corpus.zh-CN.md",
+        "examples/opl-gateway/ambiguous-task-routing.json",
+        "examples/opl-gateway/unknown-domain-routing.json",
+        "examples/opl-gateway/refusal-routing.json"
+      ],
+      "contract_assertions": [
+        "routed-safety corpus remains illustrative, non-governing, and non-executing",
+        "ambiguous-task example preserves unresolved candidate routing without inventing an owner",
+        "unknown-domain example preserves an explicit unowned workstream outcome",
+        "refusal example preserves explicit top-level boundary refusal",
+        "routed-action and governance-audit sub-objects validate against the frozen schemas"
+      ],
+      "forbidden_regressions": [
+        "routed-safety corpus implies handoff generation",
+        "routed-safety corpus implies fallback routing",
+        "routed-safety corpus moves canonical truth into OPL"
+      ]
+    },
+    {
       "gate_id": "cross_domain_wording_consistency",
       "layer": "cross_domain",
       "required_files": [
@@ -169,6 +192,8 @@
         "docs/opl-gateway-rollout.zh-CN.md",
         "docs/opl-gateway-example-corpus.md",
         "docs/opl-gateway-example-corpus.zh-CN.md",
+        "docs/opl-routed-safety-example-corpus.md",
+        "docs/opl-routed-safety-example-corpus.zh-CN.md",
         "docs/opl-public-surface-index.md",
         "docs/opl-public-surface-index.zh-CN.md",
         "contracts/opl-gateway/README.md",

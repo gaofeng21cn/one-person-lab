@@ -28,8 +28,9 @@
 ## 配套示例集
 
 - [OPL Gateway Example Corpus](../../docs/opl-gateway-example-corpus.zh-CN.md) — 展示当前已冻结 gateway layers 如何做 canonical、illustrative 的 contract-level composition
+- [OPL Routed-Safety Example Corpus](../../docs/opl-routed-safety-example-corpus.zh-CN.md) — 展示显式非成功 G3 路由状态的 canonical、illustrative safety walkthrough
 
-这组示例只是配套参考，不替代本目录中的 governing contracts。
+这两组示例都只是配套参考，不替代本目录中的 governing contracts。
 
 ## 文件
 

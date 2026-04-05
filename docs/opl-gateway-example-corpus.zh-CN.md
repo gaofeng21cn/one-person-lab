@@ -57,6 +57,10 @@
 - [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.zh-CN.md)
 - [OPL Gateway Contracts](../contracts/opl-gateway/README.zh-CN.md)
 
+## 相关配套示例
+
+- [OPL Routed-Safety Example Corpus](./opl-routed-safety-example-corpus.zh-CN.md)
+
 ## 完成定义
 
 只有当下面这些条件都成立时，这组 example corpus 才算合格：
@@ -64,4 +68,4 @@
 - 每个 example 都保持 machine-readable
 - 受 schema 约束的子对象在适用处都能通过 frozen schema 校验
 - example 不暗示 direct harness execution
-- example 不把 canonical truth 上收到 `OPL`
+- example 不把 canonical truth 上收给 `OPL`

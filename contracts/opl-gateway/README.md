@@ -28,8 +28,9 @@ It freezes machine-readable gateway surfaces that later discovery and routed-act
 ## Companion examples
 
 - [OPL Gateway Example Corpus](../../docs/opl-gateway-example-corpus.md) — canonical illustrative contract-level compositions across the frozen gateway layers
+- [OPL Routed-Safety Example Corpus](../../docs/opl-routed-safety-example-corpus.md) — canonical illustrative safety walkthroughs for the explicit non-success G3 routing states
 
-The corpus is a companion reference only. It does not replace the governing contracts in this directory.
+These corpora are companion references only. They do not replace the governing contracts in this directory.
 
 ## Files
 

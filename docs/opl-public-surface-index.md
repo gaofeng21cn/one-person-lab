@@ -51,6 +51,7 @@ These surfaces improve review and discoverability without becoming execution lay
 
 - Acceptance test spec
 - Example corpus
+- Routed-safety example corpus
 - Public surface index
 
 ### 4. Linked domain public-entry surfaces
@@ -72,14 +73,21 @@ Read this index as a **surface map**, not as an execution registry.
 If a surface is domain-owned, `OPL` only indexes its public entry role.
 Canonical runtime truth, review truth, release truth, and submission truth remain inside the owning domain system.
 
-## Governing Documents
+## Governing Gateway Documents
 
 - [Gateway Federation](./gateway-federation.md)
 - [OPL Federation Contract](./opl-federation-contract.md)
 - [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
 - [OPL Read-Only Discovery Gateway](./opl-read-only-discovery-gateway.md)
 - [OPL Routed Action Gateway](./opl-routed-action-gateway.md)
+
+## Supporting Example / Review Surfaces
+
+These supporting surfaces improve discoverability and reviewability only.
+They do not become governing gateway surfaces.
+
 - [OPL Gateway Example Corpus](./opl-gateway-example-corpus.md)
+- [OPL Routed-Safety Example Corpus](./opl-routed-safety-example-corpus.md)
 
 ## Completion Definition
 

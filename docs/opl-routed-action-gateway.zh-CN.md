@@ -34,7 +34,7 @@
 
 - 绕过 domain gateway
 - 直达 domain harness
-- 把 canonical truth ownership 上收到 `OPL`
+- 把 canonical truth ownership 上收给 `OPL`
 
 ## 必需操作
 
@@ -296,6 +296,10 @@ OPL Gateway -> Domain Harness OS
 这一层的 machine-readable schema 位于：
 
 - [`../contracts/opl-gateway/routed-actions.schema.json`](../contracts/opl-gateway/routed-actions.schema.json)
+
+显式非成功路由状态的 canonical routed-safety examples 位于：
+
+- [OPL Routed-Safety Example Corpus](./opl-routed-safety-example-corpus.zh-CN.md)
 
 ## 完成定义
 

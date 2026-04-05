@@ -1,5 +1,5 @@
 {
-  "version": "p8.m1",
+  "version": "p10.m1",
   "scope": "opl_public_gateway_surface_index",
   "description": "Machine-readable index of the current authoritative OPL gateway public surfaces and linked domain gateway public entries. This index is contract-first and does not implement a runtime.",
   "non_goals": [
@@ -323,6 +323,7 @@
         }
       ],
       "routes_to": [
+        "opl_routed_safety_example_corpus",
         "medautoscience_public_gateway",
         "redcube_public_gateway"
       ],
@@ -499,11 +500,50 @@
         }
       ],
       "routes_to": [
+        "opl_routed_safety_example_corpus",
         "medautoscience_public_gateway",
         "redcube_public_gateway"
       ],
       "notes": [
         "Illustrative companion only; examples do not become a runtime or a new truth owner."
+      ]
+    },
+    {
+      "surface_id": "opl_routed_safety_example_corpus",
+      "category_id": "opl_supporting_surface",
+      "surface_kind": "example_corpus",
+      "boundary_role": "routed_safety_walkthrough",
+      "owner_scope": "opl",
+      "truth_mode": "none",
+      "workstream_ids": [],
+      "domain_ids": [],
+      "refs": [
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/opl-routed-safety-example-corpus.md",
+          "language": "en"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/opl-routed-safety-example-corpus.zh-CN.md",
+          "language": "zh-CN"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "examples/opl-gateway/ambiguous-task-routing.json"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "examples/opl-gateway/unknown-domain-routing.json"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "examples/opl-gateway/refusal-routing.json"
+        }
+      ],
+      "routes_to": [],
+      "notes": [
+        "Illustrative safety companion only; unresolved or refused routes do not produce handoff payloads or domain truth."
       ]
     },
     {
@@ -536,6 +576,7 @@
       "routes_to": [
         "opl_public_readme",
         "opl_gateway_contract_hub",
+        "opl_routed_safety_example_corpus",
         "medautoscience_public_gateway",
         "redcube_public_gateway"
       ],
