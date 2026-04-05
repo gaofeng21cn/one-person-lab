@@ -68,9 +68,10 @@ When `owner_scope = opl`, the matrix may still expose routing, indexing, discove
 When `owner_scope = domain`, the entry marks where domain-local routing and harness execution begin behind the domain gateway boundary.
 If a follow-on surface exists, the only allowed value remains `domain_gateway`.
 
-## Companion Mapping Surface
+## Companion Mapping Surfaces
 
 - [OPL Surface Lifecycle Map](./opl-surface-lifecycle-map.md)
+- [OPL Surface Review Matrix](./opl-surface-review-matrix.md)
 
 ## Governing Sources
 
@@ -91,4 +92,5 @@ The authority matrix is acceptable only when:
 - every `governing_ref` resolves to an existing local artifact
 - `OPL` surfaces never claim domain execution, canonical-truth, review-truth, or publication-truth authority
 - linked domain public-entry surfaces remain domain-owned and do not collapse into OPL internal modules
+- it remains discoverable alongside the lifecycle map and surface review matrix without becoming an approval or execution surface
 - it remains derived, reference-only, and non-executing

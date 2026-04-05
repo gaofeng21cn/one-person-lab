@@ -1,5 +1,5 @@
 {
-  "version": "p15.m1",
+  "version": "p16.m1",
   "scope": "opl_public_gateway_surface_index",
   "description": "Machine-readable index of the current authoritative OPL gateway public surfaces and linked domain gateway public entries. This index is contract-first and does not implement a runtime.",
   "non_goals": [
@@ -255,6 +255,10 @@
         },
         {
           "ref_kind": "repo_path",
+          "ref": "contracts/opl-gateway/surface-review-matrix.json"
+        },
+        {
+          "ref_kind": "repo_path",
           "ref": "contracts/opl-gateway/public-surface-index.json"
         }
       ],
@@ -267,6 +271,7 @@
         "opl_gateway_example_corpus",
         "opl_surface_lifecycle_map",
         "opl_surface_authority_matrix",
+        "opl_surface_review_matrix",
         "opl_public_surface_index_doc",
         "opl_operating_example_corpus",
         "opl_operating_record_catalog"
@@ -487,7 +492,8 @@
         "opl_operating_example_corpus",
         "opl_operating_record_catalog",
         "opl_surface_lifecycle_map",
-        "opl_surface_authority_matrix"
+        "opl_surface_authority_matrix",
+        "opl_surface_review_matrix"
       ],
       "notes": [
         "Defines the current checkable completion gates for the frozen gateway stack."
@@ -724,7 +730,8 @@
         "opl_operating_record_catalog",
         "opl_public_surface_index_doc",
         "opl_gateway_acceptance_spec",
-        "opl_surface_authority_matrix"
+        "opl_surface_authority_matrix",
+        "opl_surface_review_matrix"
       ],
       "notes": [
         "Derived machine-readable lifecycle map for the frozen gateway, operating, and supporting surface stack.",
@@ -774,6 +781,7 @@
         "opl_operating_example_corpus",
         "opl_operating_record_catalog",
         "opl_surface_lifecycle_map",
+        "opl_surface_review_matrix",
         "opl_public_surface_index_doc",
         "opl_gateway_acceptance_spec",
         "medautoscience_public_gateway",
@@ -782,6 +790,49 @@
       "notes": [
         "Derived machine-readable authority matrix for the frozen OPL and linked domain-entry surfaces.",
         "Reference-only: does not become an authorization engine, runtime control plane, or second source of truth."
+      ]
+    },
+    {
+      "surface_id": "opl_surface_review_matrix",
+      "category_id": "opl_supporting_surface",
+      "surface_kind": "review_matrix",
+      "boundary_role": "surface_review_obligation_map",
+      "owner_scope": "opl",
+      "truth_mode": "none",
+      "workstream_ids": [
+        "research_ops",
+        "presentation_ops"
+      ],
+      "domain_ids": [
+        "medautoscience",
+        "redcube"
+      ],
+      "refs": [
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/opl-surface-review-matrix.md",
+          "language": "en"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/opl-surface-review-matrix.zh-CN.md",
+          "language": "zh-CN"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "contracts/opl-gateway/surface-review-matrix.json"
+        }
+      ],
+      "routes_to": [
+        "opl_gateway_contract_hub",
+        "opl_gateway_acceptance_spec",
+        "opl_surface_lifecycle_map",
+        "opl_surface_authority_matrix",
+        "opl_public_surface_index_doc"
+      ],
+      "notes": [
+        "Derived machine-readable review matrix for the frozen OPL public, contract, and supporting surfaces.",
+        "Reference-only: does not become an approval engine, publish controller, release engine, or second source of truth."
       ]
     },
     {
@@ -819,6 +870,7 @@
         "opl_operating_record_catalog",
         "opl_surface_lifecycle_map",
         "opl_surface_authority_matrix",
+        "opl_surface_review_matrix",
         "medautoscience_public_gateway",
         "redcube_public_gateway"
       ],

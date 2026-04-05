@@ -39,8 +39,9 @@ These corpora are companion references only. They do not replace the governing c
 
 - [OPL Surface Lifecycle Map](../../docs/opl-surface-lifecycle-map.md) — derived machine-readable lifecycle view across the frozen gateway / operating / supporting surfaces
 - [OPL Surface Authority Matrix](../../docs/opl-surface-authority-matrix.md) — derived machine-readable authority split across the frozen OPL surfaces and linked domain public-entry surfaces
+- [OPL Surface Review Matrix](../../docs/opl-surface-review-matrix.md) — derived machine-readable review obligations across the frozen OPL public, contract, and supporting surfaces
 
-These mapping surfaces are reference-only. They do not become a workflow engine, transition authority, authorization engine, or replacement for the governing contracts in this directory.
+These mapping surfaces are reference-only. They do not become a workflow engine, transition authority, authorization engine, approval engine, publish controller, or replacement for the governing contracts in this directory.
 
 ## Files
 
@@ -57,6 +58,7 @@ These mapping surfaces are reference-only. They do not become a workflow engine,
 - [`operating-record-catalog.json`](./operating-record-catalog.json) — machine-readable reference catalog for the frozen P5.M1 / P5.M2 operating record kinds
 - [`surface-lifecycle-map.json`](./surface-lifecycle-map.json) — machine-readable derived lifecycle map for the frozen gateway / operating / supporting surfaces
 - [`surface-authority-matrix.json`](./surface-authority-matrix.json) — machine-readable derived authority matrix for the frozen OPL surfaces and linked domain public-entry surfaces
+- [`surface-review-matrix.json`](./surface-review-matrix.json) — machine-readable derived review matrix for the frozen OPL public, contract, and supporting surfaces
 
 ## Frozen current mappings
 
