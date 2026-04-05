@@ -8,8 +8,8 @@
 
 <h1 align="center">One Person Lab</h1>
 
-<p align="center"><strong>面向一人课题组正式工作体系的顶层说明</strong></p>
-<p align="center">任务版图 · 共享基础结构 · 工作流状态</p>
+<p align="center"><strong>面向一人课题组、统领各 domain system 的顶层 Gateway</strong></p>
+<p align="center">任务版图 · 共享基础结构 · Gateway Federation</p>
 
 <table>
   <tr>
@@ -18,12 +18,12 @@
       研究型个人、PI 与小型课题组
     </td>
     <td width="33%" valign="top">
-      <strong>说明范围</strong><br/>
-      研究、写作、评审、答辩与教学等正式任务面
+      <strong>产品角色</strong><br/>
+      定义 OPL Gateway、任务语义，以及跨 domain 共享基础结构
     </td>
     <td width="33%" valign="top">
-      <strong>当前参考实现面</strong><br/>
-      顶层总集；<code>MedAutoScience</code> 为当前 Active 实现面，<code>RedCube AI</code> 为当前 Emerging 实现面
+      <strong>联邦状态</strong><br/>
+      <code>MedAutoScience</code> 是当前 Active 的 Research Ops surface；<code>RedCube AI</code> 是当前 Emerging 的视觉交付 surface
     </td>
   </tr>
 </table>
@@ -36,7 +36,7 @@
   <tr>
     <td colspan="5" align="center" valign="top">
       <strong>One Person Lab (OPL)</strong><br/>
-      面向一人课题组的顶层蓝图
+      顶层 Gateway 与 federation surface
     </td>
   </tr>
   <tr>
@@ -95,20 +95,14 @@
   </tr>
   <tr>
     <td colspan="5" align="center" valign="top">
-      <strong>当前已成形工作流</strong><br/>
-      <a href="https://github.com/gaofeng21cn/med-autoscience"><code>MedAutoScience</code></a>
-    </td>
-  </tr>
-  <tr>
-    <td colspan="5" align="center" valign="top">
-      <strong>工作流状态</strong>
+      <strong>当前 Domain Carrier</strong>
     </td>
   </tr>
   <tr>
     <td width="20%" valign="top">
       <strong>Research Ops</strong><br/>
       <code>Active</code><br/>
-      由 <code>MedAutoScience</code> 实现
+      由 <code>MedAutoScience</code> 承接
     </td>
     <td width="20%" valign="top">
       <strong>Grant Ops</strong><br/>
@@ -125,7 +119,7 @@
     <td width="20%" valign="top">
       <strong>Presentation Ops</strong><br/>
       <code>Emerging</code><br/>
-      由 <code>RedCube AI</code> 的 <code>ppt_deck</code> family 先行承接
+      由 <code>RedCube AI</code> 和其 <code>ppt_deck</code> family 先行承接
     </td>
   </tr>
   <tr>
@@ -137,12 +131,12 @@
     <td width="20%" valign="top">
       <strong>OPL</strong><br/>
       当前仓库<br/>
-      顶层总集
+      顶层 Gateway 的权威公开说明面
     </td>
     <td width="20%" valign="top">
       <strong>MedAutoScience</strong><br/>
       <a href="https://github.com/gaofeng21cn/med-autoscience"><code>仓库</code></a><br/>
-      当前已成形的研究主线实现
+      Research Ops domain gateway 与 harness
     </td>
     <td width="20%" valign="top">
       <strong>FengGaoLab</strong><br/>
@@ -157,32 +151,47 @@
     <td width="20%" valign="top">
       <strong>RedCube AI</strong><br/>
       <a href="https://github.com/gaofeng21cn/redcube-ai"><code>仓库</code></a><br/>
-      Emerging 的视觉交付物实现面
+      视觉交付 domain gateway 与 harness
     </td>
   </tr>
 </table>
 
-> 本仓库用于说明 `OPL` 的任务版图、共享基础结构与各任务面的关系；它不是统一运行时入口，也不是单一产品仓库。
+> `OPL` 是实验室顶层的公开 Gateway 语言。它联邦化地组织 `MedAutoScience`、`RedCube AI` 这类 domain system，而不是取代它们。
+
+## Agent 合同分层
+
+<!-- AGENT-CONTRACT-BASELINE:START -->
+- 根目录 `AGENTS.md` 仅用于本仓库开发环境中的 Codex/OMX 协作，不单独承载项目真相合同
+- 项目真相合同位于 `contracts/project-truth/AGENTS.md`
+- OMX project-scope 编排层位于 `.codex/AGENTS.md`，只供 OMX / CODEX_HOME 会话加载
+- 可选本机私有覆盖层约定为 `.omx/local/AGENTS.local.md`，保持未跟踪
+- 本地工具运行态目录 `.omx/` 与 `.codex/` 必须保持未跟踪，不进入版本库
+<!-- AGENT-CONTRACT-BASELINE:END -->
 
 ## 仓库定位
 
-`One Person Lab`，简称 `OPL`，面向的不是某一个具体任务，而是“一人课题组”这个工作对象。
+`One Person Lab`，简称 `OPL`，面向的不是某一个任务或某一个 domain runtime，而是“一人课题组”这个工作对象的顶层组织面。
 
-这里所说的一人课题组，指的是研究型个人或极小团队，在 `Agent` 协助下持续承担正式科研工作，并保留清楚的人类审核面。`OPL` 关注的是这类工作的组织方式，而不是单个任务的临时自动化。
-
-从这个角度看，`OPL` 的职责是：
+在架构层面，`OPL` 负责四件事：
 
 - 定义实验室级任务版图
-- 说明不同任务共享什么基础层
-- 标明当前已经形成实现面的工作流，以及仍在定义中的后续方向
+- 定义多个工作流共享的基础层
+- 定义把任务路由到正确 domain surface 的 gateway 语义
+- 定义当前由哪些 domain gateway 正式承接各工作流
 
-本仓库本身不承担运行时角色，也不直接充当单个工作流的入口仓库。
+因此，这个仓库承担的是 `OPL Gateway` 的文档优先、契约优先的公开说明面，而不是声称所有运行时能力已经都落在这里。
 
-## 为什么采用顶层总集形式
+## 对外一句话理解
 
-研究型个人或小型课题组实际承担的工作，通常不止论文生产。
+对外部读者来说，最简单的理解是：
 
-同一批数据、文献、图表和研究判断，会在这些任务之间反复复用：
+- 它是“一人课题组如何使用多个 domain system 持续工作”的顶层产品面
+- 它定义工作流如何映射到具体 domain system
+- 它冻结跨 domain 语义，同时保留每个 domain 独立可用
+
+## 为什么是 Gateway Federation
+
+同一批数据、文献、图表和判断，会在这些任务之间反复复用：
 
 - 研究推进与论文交付
 - 基金申请与基金评审
@@ -190,122 +199,95 @@
 - 审稿、回复和修回
 - 讲课、汇报和答辩材料
 
-如果这些任务被分别实现为彼此孤立的工具链，就会重复维护上下文、重复组织材料，也很难沉淀共享记忆和统一审核面。
+如果把这些任务拆成彼此孤立的产品，就会重复维护上下文，难以沉淀共享记忆、治理与审核面。
 
-因此，`OPL` 采用的是“顶层总集 + 工作流状态 + 共享底座”的组织方式，而不是在单个产品仓库中持续叠加异质功能。
+如果又把它们强行压成一个单体 runtime，domain 边界会变糊，后续维护也会变差。
 
-## 当前公开实践与适用范围
+所以更合理的理解是：
 
-当前最成熟的公开实践首先形成于医学研究场景，因为最先成形的工作流正是在这一环境中发展出来的。
+- `OPL` 掌握顶层任务语义与共享基础结构
+- 每个工作流保留独立的 domain gateway
+- 每个 domain gateway 再由自己的 harness 驱动
 
-这个参考实现就是 [`MedAutoScience`](https://github.com/gaofeng21cn/med-autoscience)，它聚焦医学自动科研主线，从数据治理推进到论文与投稿交付。
+## 顶层控制链
 
-但 `OPL` 的组织方式并不限于医学，也可以由其他学科领域的 `PI` 按各自研究对象加以扩展。
+理想主链应是：
 
-## 核心工作流
+```text
+Human / Agent
+  -> OPL Gateway
+      -> Domain Gateway
+          -> Domain Harness OS
+              -> Review Surfaces / Deliveries / Audit Truth
+```
 
-`OPL` 当前把核心任务版图划分为五类并列工作流：
+当前已映射的主线：
 
-- `Research Ops`
-  从数据治理、研究推进、证据组织到论文与投稿交付
-- `Grant Ops`
-  从基金方向判断、申请书组织到基金申请评审
-- `Thesis Ops`
-  从学位论文结构化写作到答辩准备
-- `Review Ops`
-  从审稿、评审到回复与修回组织
-- `Presentation Ops`
-  从讲课、组会到汇报和答辩幻灯片
+- `Research Ops` -> `MedAutoScience`
+- `Presentation Ops` -> `RedCube AI` 里的 `ppt_deck`
 
-这里的拆分是任务边界划分，不是产品数量承诺。
+关键边界：
 
-## 共享基础结构
+- `RedCube AI` 不是整个 `Presentation Ops`
+- `xiaohongshu` 与 `ppt_deck` 共享同一 harness，但在 OPL 顶层不应直接等同于 `Presentation Ops`
+- 未来 `Grant Ops`、`Review Ops`、`Thesis Ops` 也应保留独立 domain 边界，而不是被压进一个单体系统
 
-`OPL` 当前把共享底座概括为五层：
+## 当前 Domain Surface
 
-| 层级 | 主要对象 | 作用 |
-| --- | --- | --- |
-| `资产层` | 数据、文献、模板、图表、交付物 | 提供跨任务复用的事实底座 |
-| `记忆层` | 选题记忆、评审记忆、期刊与基金偏好 | 提供跨任务复用的结构化认知 |
-| `治理层` | 门控、止损、改题、继续条件 | 决定何时允许进入正式执行 |
-| `交付层` | 审核面、交付目录、同步与打包规则 | 把过程性产物收束为正式输出 |
-| `智能体执行层` | 稳定接口、运行监控、审计回写 | 让 Agent 成为可控执行层 |
+### MedAutoScience
 
-延伸阅读：
+[`MedAutoScience`](https://github.com/gaofeng21cn/med-autoscience) 是 `OPL` 体系下当前 Active 的 `Research Ops` domain gateway。
 
-- [OPL 运行模型](docs/operating-model.zh-CN.md)
-- [OPL 任务版图](docs/task-map.zh-CN.md)
-- [共享基础结构](docs/shared-foundation.zh-CN.md)
+它当前承担的是：
 
-## 当前工作流状态
+- 医学 Research Ops 的正式入口
+- 研究工作流的 domain-specific 治理与交付面
+- 其 research harness 与受控 runtime 之上的顶层控制面
 
-| 工作流 / 实现面 | 负责什么 | 当前状态 |
-| --- | --- | --- |
-| [`MedAutoScience`](https://github.com/gaofeng21cn/med-autoscience) | 医学自动科研主线，从数据到论文交付 | Active |
-| `Grant Ops` | 基金申请与基金评审工作流 | Planned |
-| `Thesis Ops` | 学位论文与答辩工作流 | Planned |
-| `Review Ops` | 审稿、评审与回复工作流 | Planned |
-| `Presentation Ops` | 讲课、汇报与答辩材料工作流；当前由 [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) 的 `ppt_deck` family 先行承接 | Emerging |
+### RedCube AI
 
-- `Active` 表示该任务面已有稳定、可独立说明的实现面。
-- `Emerging` 表示该任务面已经出现真实实现面，但边界、协议与家族划分仍在收敛。
-- `Planned` 表示该任务面已经被纳入正式蓝图，但当前仍处于定义阶段。
+[`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) 是 `OPL` 体系下当前 Emerging 的视觉交付 domain gateway。
 
-## 当前已成形工作流：MedAutoScience
+它的正确边界是：
 
-[`MedAutoScience`](https://github.com/gaofeng21cn/med-autoscience) 是 `OPL` 体系下当前已成形的研究主线实现。
-
-它当前已经形成了较清楚的实现边界：
-
-- 专病级 workspace 组织
-- 数据资产治理
-- 研究推进与运行监控
-- 证据组织
-- 论文与投稿交付
-
-如果当前关注点是“如何把一批医学研究数据持续推进到论文级交付”，`MedAutoScience` 是当前最直接的实现面。
-
-## 当前正在浮现的实现面：RedCube AI
-
-[`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) 是 `OPL` 体系下当前正在浮现的视觉交付物实现面。
-
-它的正确边界不是“整个 `Presentation Ops`”，而是：
-
-- 一个面向 Agent 的视觉交付物 runtime
-- 当前最直接承接 `Presentation Ops` 的 `ppt_deck` family
-- 通过 `profile pack` 区分学生课、同行课、领导汇报、答辩稿等正式质量协议
-
-同时需要明确：
-
-- `RedCube AI` 不是整个 `OPL`
-- `RedCube AI` 也不等于整个 `Presentation Ops`
-- `xiaohongshu` 虽然与 `ppt_deck` 共享 runtime，但在 `OPL` 顶层语义里不应直接等同于 `Presentation Ops`
+- 视觉交付物的 domain gateway
+- 通过 `ppt_deck` 最直接承接 `Presentation Ops` 的 harness surface
+- 同时可以承载不与 `Presentation Ops` 完全等同的其他视觉 family
 
 ## 当前边界
 
-当前这个仓库主要承担顶层说明职责，不承担以下角色：
+这个仓库不应被写成：
 
-- 不作为统一运行时入口
-- 不作为所有任务的实现仓库
-- 不把 `MedAutoScience` 或 `RedCube AI` 写成 `OPL` 的同义词
-- 不把尚未成形的任务面包装成已完成产品
+- 所有 runtime 行为都已经落在这里
+- `MedAutoScience` 或 `RedCube AI` 的替代品
+- 所有 domain workstream 的同义词
+- 所有 planned workstream 已经完成的证明
 
-它的作用是让外部读者先理解总目标，再根据任务需要进入相应实现面。
+它应被写成：
+
+- `OPL Gateway` 的权威公开说明面
+- 跨 domain 边界先冻结的地方
+- 外部读者理解 federation 如何拼起来的入口
 
 ## 路线图
 
-当前阶段的重点是三件事：
+当前阶段有四个重点：
 
-- 继续推进 `MedAutoScience` 这个已经成形的研究主线实现
-- 继续把 `RedCube AI` 作为 `Presentation Ops` 的 emerging 实现面收敛清楚
-- 逐步把 `Grant Ops`、`Review Ops`、`Thesis Ops` 的任务边界和共享协议写清楚
+- 冻结 `OPL Gateway` 与 domain federation 的表述
+- 继续把 `MedAutoScience` 明确为 `Research Ops` 的 domain gateway 与 harness
+- 继续把 `RedCube AI` 明确为视觉交付的 domain gateway 与 harness
+- 逐步定义 `Grant Ops`、`Review Ops`、`Thesis Ops` 的边界
 
-更详细的阶段说明见：
+更细的阶段说明见：
 
 - [OPL 路线图](docs/roadmap.zh-CN.md)
+- [OPL Gateway 落地路线](docs/opl-gateway-rollout.zh-CN.md)
 
 ## 延伸阅读
 
+- [Gateway Federation](docs/gateway-federation.zh-CN.md)
+- [OPL Federation Contract](docs/opl-federation-contract.zh-CN.md)
+- [OPL Gateway 落地路线](docs/opl-gateway-rollout.zh-CN.md)
 - [OPL 运行模型](docs/operating-model.zh-CN.md)
 - [OPL 任务版图](docs/task-map.zh-CN.md)
 - [共享基础结构](docs/shared-foundation.zh-CN.md)

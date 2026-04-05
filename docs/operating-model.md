@@ -4,83 +4,112 @@
 
 ## Core Judgment
 
-The core judgment of `One Person Lab` is not “how to make an Agent finish one task in a single shot.” It is “how to let a research-oriented individual or a very small team carry out formal lab work on a continuing basis.”
+The core judgment of `OPL` is not “how to make one Agent finish one task once.”
+It is “how to let a research-oriented individual or a very small team continuously carry formal lab work through stable surfaces.”
 
-As a result, `OPL` is not primarily concerned with one-off interaction performance. It is concerned with whether:
+That is why `OPL` should be understood as a top-level gateway and federation model rather than as a static blueprint and not as a monolithic runtime.
 
-- assets are organized over time
-- state can be read and traced
-- key judgments have explicit gates
-- outputs can be turned into formal deliveries
-- humans have clear review surfaces
+## Top-Level Chain
+
+The intended chain is:
+
+```text
+Human / Agent
+  -> OPL Gateway
+      -> Domain Gateway
+          -> Domain Harness OS
+              -> Review Surfaces / Deliveries / Audit Truth
+```
+
+Today, the clearest mapped domains are:
+
+- `Research Ops` -> `MedAutoScience`
+- `Presentation Ops` -> `RedCube AI` through `ppt_deck`
 
 ## Role Split
-
-`OPL` keeps three roles distinct.
 
 ### Human
 
 The human is primarily responsible for:
 
-- defining research goals and task boundaries
+- defining goals and task boundaries
 - providing or authorizing access to data, references, and context
-- reviewing key conclusions and formal deliverables
-- making the final decision on continue, stop, reframe, and submit
+- reviewing key conclusions and formal deliveries
+- deciding continue, stop, reframe, or submit
 
 ### Agent
 
 The Agent is primarily responsible for:
 
-- reading current state
+- reading current state before acting
 - calling stable interfaces to advance work
 - organizing intermediate and formal outputs
 - writing key execution traces back to auditable surfaces
 
-### Implementation Surface / Runtime Surface
+### OPL Gateway
 
-Each concrete implementation surface is responsible for:
+The top-level `OPL Gateway` is responsible for:
 
-- providing a stable entry point for a specific workstream
-- defining the state and delivery protocol for that workstream
-- constraining which actions are allowed to enter formal execution
+- expressing top-level task semantics
+- routing work into the correct domain surface
+- defining shared foundation expectations across domains
+- keeping cross-domain identity, governance, and delivery language aligned
+
+The current repository is the documentation-first public surface for this role.
+
+### Domain Gateway And Harness
+
+Each domain is expected to keep two distinct layers:
+
+- a `domain gateway` that serves as the stable workstream entry surface
+- a `domain harness OS` that executes, records, gates, and delivers domain work
 
 For example:
 
-- `MedAutoScience` currently serves `Research Ops`
-- `RedCube AI` currently serves the visual-deliverable runtime and most directly carries `Presentation Ops` through the `ppt_deck` family
+- `MedAutoScience` is the `Research Ops` domain gateway and harness
+- `RedCube AI` is the visual-deliverable domain gateway and harness
 
 ## Operating Principles
 
 At the top level, `OPL` follows these principles:
 
 - read state before making changes
-- leave auditable traces for important actions
-- prefer stable entry points over temporary bypasses
-- prefer shared assets over one-off duplication
-- do not package weak results as if they were complete
-- when a direction is clearly weak, allow stop, reframe, or side routes
+- keep important actions auditable
+- prefer stable gateways over ad hoc bypasses
+- prefer shared assets over duplicated context
+- preserve domain boundaries instead of collapsing everything into one runtime
+- keep humans at the review and decision surfaces rather than at low-level execution details
 
-## Scope Boundary
+## Boundary Rules
 
-A system defined only as a collection of prompts usually lacks:
+`OPL` is not:
 
-- a stable state surface
-- a shared memory layer
-- reusable delivery protocols
-- explicit continue/stop gates
+- a general-purpose assistant
+- a synonym for any single domain project
+- a claim that all runtime code already lives in one repository
+- a reason to remove domain gateways
 
-`OPL` is defined instead as a lab operating model that extracts the asset, memory, governance, and delivery layers behind recurring lab tasks, and then lets concrete workstreams implement them through stable runtime surfaces.
+`OPL` is:
 
-That also means:
+- the top-level product and control language for the lab
+- the place where cross-domain semantics are frozen first
+- the federation layer above independent domain gateways and harnesses
 
-- workstream boundaries do not have to map one-to-one to repository boundaries
-- one runtime surface can serve multiple deliverable families
-- whether a family belongs to a given `OPL` workstream remains a top-level semantic decision rather than a runtime naming issue
+## Why Domain Gateways Must Stay
 
-Therefore:
+Even with an `OPL Gateway`, domain gateways should remain because they provide:
 
-- `OPL` is not defined as a general-purpose assistant
-- `OPL` is not defined as a manuscript generator
-- `OPL` is not defined as one monolithic Agent
+- a standalone surface for independent use
+- domain-specific validation, governance, and delivery contracts
+- independent release and maintenance boundaries
+- a place where one workstream can evolve without destabilizing the whole federation
 
-It is better understood as a structured lab operating model in which `Agent` provides one layer of execution.
+That means the right direction is:
+
+- `OPL Gateway` above domains
+- thinner but explicit domain gateways
+- explicit domain harnesses underneath
+
+Not:
+
+- one giant runtime that swallows all workstreams

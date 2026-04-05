@@ -8,8 +8,8 @@
 
 <h1 align="center">One Person Lab</h1>
 
-<p align="center"><strong>A framework for the formal organization of a one-person research lab</strong></p>
-<p align="center">Task Topology · Shared Foundation · Workstream Status</p>
+<p align="center"><strong>The top-level gateway for how a one-person research lab works with domain systems</strong></p>
+<p align="center">Task Topology · Shared Foundation · Gateway Federation</p>
 
 <table>
   <tr>
@@ -18,12 +18,12 @@
       Research-oriented individuals, PIs, and small labs
     </td>
     <td width="33%" valign="top">
-      <strong>What It Covers</strong><br/>
-      Research, writing, review, defense, and teaching workstreams
+      <strong>Product Role</strong><br/>
+      Define the OPL gateway, task semantics, and cross-domain shared foundation
     </td>
     <td width="33%" valign="top">
-      <strong>Current Reference Surface</strong><br/>
-      Top-level blueprint; <code>MedAutoScience</code> is the current active implementation, and <code>RedCube AI</code> is the current emerging implementation
+      <strong>Federation State</strong><br/>
+      <code>MedAutoScience</code> is the active Research Ops surface; <code>RedCube AI</code> is the emerging visual-deliverable surface
     </td>
   </tr>
 </table>
@@ -36,7 +36,7 @@
   <tr>
     <td colspan="5" align="center" valign="top">
       <strong>One Person Lab (OPL)</strong><br/>
-      A top-level blueprint for organizing a one-person research lab
+      Top-level gateway and federation surface
     </td>
   </tr>
   <tr>
@@ -95,13 +95,7 @@
   </tr>
   <tr>
     <td colspan="5" align="center" valign="top">
-      <strong>Current Established Workstream</strong><br/>
-      <a href="https://github.com/gaofeng21cn/med-autoscience"><code>MedAutoScience</code></a>
-    </td>
-  </tr>
-  <tr>
-    <td colspan="5" align="center" valign="top">
-      <strong>Workstream Status</strong>
+      <strong>Current Domain Carriers</strong>
     </td>
   </tr>
   <tr>
@@ -137,12 +131,12 @@
     <td width="20%" valign="top">
       <strong>OPL</strong><br/>
       This repository<br/>
-      Top-level blueprint
+      Authoritative public spec surface for the top-level gateway
     </td>
     <td width="20%" valign="top">
       <strong>MedAutoScience</strong><br/>
       <a href="https://github.com/gaofeng21cn/med-autoscience"><code>Repository</code></a><br/>
-      Active research-ops implementation
+      Research Ops domain gateway and harness
     </td>
     <td width="20%" valign="top">
       <strong>FengGaoLab</strong><br/>
@@ -157,32 +151,47 @@
     <td width="20%" valign="top">
       <strong>RedCube AI</strong><br/>
       <a href="https://github.com/gaofeng21cn/redcube-ai"><code>Repository</code></a><br/>
-      Emerging visual-deliverable surface
+      Visual-deliverable domain gateway and harness
     </td>
   </tr>
 </table>
 
-> This repository defines the task topology, shared foundation, and workstream relationships of `OPL`. It is not the unified runtime surface, and it is not a single-product repository.
+> `OPL` is the public top-level gateway language for the lab. It federates domain systems such as `MedAutoScience` and `RedCube AI`; it does not replace them.
+
+## Agent 合同分层
+
+<!-- AGENT-CONTRACT-BASELINE:START -->
+- 根目录 `AGENTS.md` 仅用于本仓库开发环境中的 Codex/OMX 协作，不单独承载项目真相合同
+- 项目真相合同位于 `contracts/project-truth/AGENTS.md`
+- OMX project-scope 编排层位于 `.codex/AGENTS.md`，只供 OMX / CODEX_HOME 会话加载
+- 可选本机私有覆盖层约定为 `.omx/local/AGENTS.local.md`，保持未跟踪
+- 本地工具运行态目录 `.omx/` 与 `.codex/` 必须保持未跟踪，不进入版本库
+<!-- AGENT-CONTRACT-BASELINE:END -->
 
 ## Repository Position
 
-`One Person Lab`, or `OPL`, is not centered on a single task. It is centered on the working object of a one-person research lab.
+`One Person Lab`, or `OPL`, is centered on the working object of a one-person research lab rather than on any single task or single domain runtime.
 
-Here, a one-person lab means a research-oriented individual or a very small team that uses `Agent` assistance to carry out formal lab work while preserving clear human review surfaces. `OPL` is concerned with how that work should be organized as a system, rather than how to automate one isolated task.
+At the architecture level, `OPL` is responsible for four things:
 
-From that perspective, `OPL` has three responsibilities:
+- define the top-level task topology for formal lab work
+- define the shared foundation that multiple workstreams must reuse
+- define the gateway semantics that route work into the correct domain surface
+- define which domain gateways currently carry each workstream
 
-- define a lab-level task topology
-- explain what different workstreams share underneath
-- make clear which workstreams already have an established implementation surface and which remain under definition
+This repository therefore acts as a documentation-first and contract-first public surface for the `OPL` gateway. It does not claim that every runtime capability already lives here.
 
-This repository itself does not act as a runtime system or as the direct entry point for every workstream.
+## What OPL Means Publicly
 
-## Why A Top-Level Blueprint
+For an external reader, the simplest way to understand `OPL` is:
 
-Small labs and research-oriented individuals usually do more than produce papers.
+- it is the top-level product surface for how one-person lab work is organized
+- it defines how workstreams map to domain systems
+- it keeps cross-domain semantics stable while letting each domain stay independently usable
 
-The same datasets, references, figures, and research judgments are reused across:
+## Why A Gateway Federation
+
+The same datasets, references, figures, and judgments are reused across:
 
 - research progression and paper delivery
 - grant writing and grant review
@@ -190,122 +199,95 @@ The same datasets, references, figures, and research judgments are reused across
 - peer review, rebuttal, and revision
 - lectures, lab presentations, and defense slides
 
-If those tasks are implemented as isolated toolchains, they will repeatedly duplicate context, duplicate materials, and fail to accumulate shared memory or consistent review surfaces.
+If those tasks are implemented as isolated products, they duplicate context and fail to accumulate shared memory, governance, and review surfaces.
 
-That is why `OPL` uses a top-level blueprint plus workstream status plus shared foundation model, rather than continuously piling heterogeneous functions into one product repository.
+If they are all collapsed into one monolithic runtime, domain boundaries blur and maintenance becomes harder.
 
-## Reference Context
+That is why `OPL` should be understood as a gateway federation:
 
-The current reference implementation grows out of a medical research lab, because that is where the current established workstream was first built.
+- `OPL` holds the top-level task semantics and shared foundation
+- each workstream keeps an independent domain gateway
+- each domain gateway is driven by its own domain harness
 
-That reference workstream is [`MedAutoScience`](https://github.com/gaofeng21cn/med-autoscience), which focuses on medical research operations from data governance to manuscript and submission delivery.
+## Top-Level Control Chain
 
-But `OPL` is not intended to be medical-only. The model remains extensible beyond medicine and can be adapted by PIs in other disciplines.
+The intended high-level chain is:
 
-## Workstreams
+```text
+Human / Agent
+  -> OPL Gateway
+      -> Domain Gateway
+          -> Domain Harness OS
+              -> Review Surfaces / Deliveries / Audit Truth
+```
 
-`OPL` currently defines five core workstreams:
+Current mapped surfaces:
 
-- `Research Ops`
-  from data governance and study progression to evidence packaging and paper delivery
-- `Grant Ops`
-  from proposal planning and writing to review simulation
-- `Thesis Ops`
-  from dissertation drafting to defense preparation
-- `Review Ops`
-  from peer review to rebuttal and revision organization
-- `Presentation Ops`
-  from lectures and lab talks to defense slides
+- `Research Ops` -> `MedAutoScience`
+- `Presentation Ops` -> `RedCube AI` through `ppt_deck`
 
-This split defines task boundaries. It does not imply that every workstream is already an established implementation surface.
+Important boundary:
 
-## Shared Foundation
+- `RedCube AI` is not the whole of `Presentation Ops`
+- `xiaohongshu` shares the same RedCube harness, but it is not identical to `Presentation Ops` at the OPL level
+- future `Grant Ops`, `Review Ops`, and `Thesis Ops` should also keep domain boundaries rather than being forced into one runtime
 
-`OPL` currently describes the shared foundation in five layers:
+## Current Domain Surfaces
 
-| Layer | Main Objects | Role |
-| --- | --- | --- |
-| `Asset Layer` | data, references, templates, figures, deliveries | shared factual base across workstreams |
-| `Memory Layer` | topic memory, review memory, venue and funder preferences | reusable structured judgment across workstreams |
-| `Governance Layer` | gates, stop rules, reframing conditions | determines when formal execution is allowed |
-| `Delivery Layer` | review surfaces, output directories, package sync rules | turns process artifacts into formal outputs |
-| `Agent Execution Layer` | stable interfaces, runtime monitoring, audit writeback | makes Agent execution controllable and reviewable |
+### MedAutoScience
 
-Further reading:
+[`MedAutoScience`](https://github.com/gaofeng21cn/med-autoscience) is the active `Research Ops` domain gateway under the `OPL` umbrella.
 
-- [OPL Operating Model](docs/operating-model.md)
-- [OPL Task Map](docs/task-map.md)
-- [Shared Foundation](docs/shared-foundation.md)
+Its current role is:
 
-## Workstream Status
+- the formal entry surface for medical research operations
+- the domain-specific governance and delivery surface for research work
+- the top-level controller above its research harness and controlled runtimes
 
-| Workstream / Surface | What It Covers | Current Status |
-| --- | --- | --- |
-| [`MedAutoScience`](https://github.com/gaofeng21cn/med-autoscience) | medical research operations, from data to paper delivery | Active |
-| `Grant Ops` | grant writing and grant review workflows | Planned |
-| `Thesis Ops` | dissertation and defense workflows | Planned |
-| `Review Ops` | peer review, response, and revision workflows | Planned |
-| `Presentation Ops` | lecture, report, and defense material workflows; currently surfaced through the [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) `ppt_deck` family | Emerging |
+### RedCube AI
 
-- `Active` means a workstream already has a stable implementation surface that can be explained independently.
-- `Emerging` means a real implementation surface already exists, but its boundary, protocols, and family split are still converging.
-- `Planned` means the workstream is part of the formal blueprint but remains under definition.
+[`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) is the emerging visual-deliverable domain gateway under the `OPL` umbrella.
 
-## Current Established Workstream: MedAutoScience
+Its correct boundary is:
 
-[`MedAutoScience`](https://github.com/gaofeng21cn/med-autoscience) is the current established research-ops implementation within the `OPL` umbrella.
-
-It currently provides a clear implementation surface for:
-
-- disease-workspace organization
-- data asset governance
-- study progression and runtime monitoring
-- evidence packaging
-- manuscript and submission delivery
-
-For readers who are primarily interested in moving medical research data toward paper-grade delivery, `MedAutoScience` is the current implementation entry point.
-
-## Current Emerging Surface: RedCube AI
-
-[`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) is the current emerging visual-deliverable implementation surface under the `OPL` umbrella.
-
-Its correct boundary is not “the whole of `Presentation Ops`.” It is:
-
-- an Agent-first runtime for visual deliverables
-- the current most direct implementation surface for `Presentation Ops` through the `ppt_deck` family
-- a place where formal quality protocols diverge through `profile pack` rather than through ad hoc prompt phrasing
-
-At the same time:
-
-- `RedCube AI` is not the whole of `OPL`
-- `RedCube AI` is not synonymous with all of `Presentation Ops`
-- `xiaohongshu` shares the same runtime, but should not be treated as identical to `Presentation Ops` at the OPL level
+- the domain gateway for visual deliverables
+- the harness surface that most directly carries `Presentation Ops` through `ppt_deck`
+- a runtime family surface that can also host families not identical to `Presentation Ops`
 
 ## Scope Boundary
 
-This repository is primarily a public blueprint surface. It does not serve as:
+This repository should not be described as:
 
-- the unified runtime entry point
-- the implementation repository for every workstream
-- a place where `MedAutoScience` or `RedCube AI` are treated as synonyms for `OPL`
-- a place where workstreams under definition are presented as finished implementations
+- the one place where all runtime behavior already lives
+- a replacement for `MedAutoScience` or `RedCube AI`
+- a synonym for every domain workstream
+- proof that every planned workstream is already implemented
 
-Its purpose is to let readers understand the overall operating idea first, and then enter the relevant implementation surface for a specific workstream.
+It should be described as:
+
+- the authoritative public spec surface for the OPL gateway
+- the place where cross-domain boundaries are frozen first
+- the place where readers learn how the federation is supposed to fit together
 
 ## Roadmap
 
-The current phase has three main priorities:
+The current phase has four priorities:
 
-- continue to advance `MedAutoScience` as the current established research-ops implementation
-- continue to stabilize `RedCube AI` as the emerging implementation surface for `Presentation Ops`
-- progressively define the boundaries and shared protocols for `Grant Ops`, `Review Ops`, and `Thesis Ops`
+- freeze the OPL gateway and domain-federation language
+- keep `MedAutoScience` explicit as the `Research Ops` domain gateway and harness
+- keep `RedCube AI` explicit as the visual-deliverable domain gateway and harness
+- progressively define the boundaries for `Grant Ops`, `Review Ops`, and `Thesis Ops`
 
 For a more detailed phase breakdown:
 
 - [OPL Roadmap](docs/roadmap.md)
+- [OPL Gateway Rollout](docs/opl-gateway-rollout.md)
 
 ## Further Reading
 
+- [Gateway Federation](docs/gateway-federation.md)
+- [OPL Federation Contract](docs/opl-federation-contract.md)
+- [OPL Gateway Rollout](docs/opl-gateway-rollout.md)
 - [OPL Operating Model](docs/operating-model.md)
 - [OPL Task Map](docs/task-map.md)
 - [Shared Foundation](docs/shared-foundation.md)

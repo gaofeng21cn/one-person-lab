@@ -4,56 +4,63 @@
 
 ## Current Phase
 
-The priority of the current phase is not to launch all workstreams at once. It is to stabilize the top-level blueprint and the current established reference implementation.
+The priority of the current phase is not to launch every workstream at once.
+It is to freeze the `OPL Gateway` language and stabilize the domain federation around the workstreams that are already real.
 
 What is already clear today:
 
-- `OPL` serves as a top-level blueprint that defines the task topology and shared foundation of a one-person research lab
-- [`MedAutoScience`](https://github.com/gaofeng21cn/med-autoscience) is already the current established reference implementation under the `OPL` umbrella
-- [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) has become the emerging implementation surface for `Presentation Ops`, with `ppt_deck` as its current most direct family
-- `Grant Ops`, `Thesis Ops`, and `Review Ops` remain workstreams under definition
+- `OPL` is the top-level gateway and federation model for a one-person research lab
+- [`MedAutoScience`](https://github.com/gaofeng21cn/med-autoscience) is the active `Research Ops` domain gateway and harness
+- [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) is the emerging visual-deliverable domain gateway and harness
+- `ppt_deck` is the family that currently maps most directly to `Presentation Ops`
+- `Grant Ops`, `Thesis Ops`, and `Review Ops` remain under definition
 
 What this phase does not do:
 
-- create empty shells for workstreams whose boundaries are still unclear
-- force every task surface into `MedAutoScience`
-- describe `RedCube AI` as if it were the whole of `Presentation Ops` or the whole of `OPL`
-- present `OPL` as a fully implemented umbrella system
+- collapse all workstreams into one runtime
+- describe domain projects as if they were the whole of `OPL`
+- describe `OPL` as only a static blueprint
+- claim that planned workstreams are already implemented
 
 ## Next Phase
 
 The next phase should prioritize:
 
-- tightening the `ppt_deck family -> profile pack -> deliverable contract` boundary inside `RedCube AI`
-- making the shared foundation of `OPL` more explicit, especially the memory, governance, and delivery layers
-- continuing to keep `MedAutoScience` independent as the medical research-ops surface
-- continuing to choose the next most suitable workstream to define through a clear task boundary and delivery object
+- freezing the `OPL Gateway -> domain gateway -> domain harness` control language
+- keeping `MedAutoScience` explicit as the `Research Ops` domain surface
+- keeping `RedCube AI` explicit as the visual-deliverable domain surface
+- defining the next candidate domains through clear task boundaries and delivery objects
+- progressively turning the `OPL Gateway` from a documentation-first surface into a real entry surface
 
-Among the workstreams that still remain purely at the definition stage, the more natural priority order is usually:
+Among the still-undefined workstreams, the more natural priority order is usually:
 
 - `Grant Ops`
 - `Review Ops`
 - `Thesis Ops`
 
-The first two are more directly reusable from the current research chain, while `Presentation Ops` has already started to converge through `RedCube AI`.
-
 ## Later Phase
 
-Only after a second workstream boundary becomes sufficiently stable should `OPL` move into a fuller ecosystem expression, for example:
+Only after at least two domain surfaces are truly stable should `OPL` move toward a fuller ecosystem expression, such as:
 
-- a more formal workstream status maintenance model
-- an organization profile or docs site as the unified public entry point
-- more explicit cross-workstream shared protocols
+- more formal cross-domain status maintenance
+- a stronger public entry surface for the top-level gateway
+- clearer shared protocols across domains
 
-The condition for entering this phase is not a large number of possible directions. It is having at least two workstreams that have become clear, independent implementation surfaces. `Research Ops` already satisfies this condition, and `Presentation Ops` is now moving toward it through `RedCube AI`.
+The condition for this phase is not “many ideas.”
+It is “multiple domain surfaces with clear independent boundaries.”
+
+For the detailed gateway rollout path, see:
+
+- [OPL Gateway Rollout](opl-gateway-rollout.md)
+- [OPL Federation Contract](opl-federation-contract.md)
 
 ## Current Evaluation Criteria
 
-To judge whether `OPL` is progressing in the right direction, these checks matter:
+To judge whether `OPL` is moving in the right direction, these checks matter:
 
-- can external readers understand that `OPL` is a blueprint rather than a single product?
-- can external readers understand that `MedAutoScience` is one implementation surface under that blueprint rather than a synonym for it?
-- can external readers understand that `RedCube AI` is an implementation surface for `Presentation Ops` rather than a synonym for all of `Presentation Ops`?
-- can external readers understand that `ppt_deck` and `xiaohongshu` may share a runtime without necessarily belonging to the same top-level `OPL` workstream?
-- are new task surfaces being defined as formal workstreams rather than scattered feature requests?
-- is the shared foundation becoming more clearly specified rather than remaining slogan-like?
+- can readers understand that `OPL` is the top-level product and gateway language rather than just a static blueprint?
+- can readers understand that `OPL` is not a monolithic runtime?
+- can readers understand that `MedAutoScience` remains the independent `Research Ops` domain gateway and harness?
+- can readers understand that `RedCube AI` remains the independent visual-deliverable domain gateway and harness?
+- can readers understand that `ppt_deck` maps directly to `Presentation Ops` while `xiaohongshu` does not automatically equal `Presentation Ops`?
+- are new workstreams being defined as domain surfaces instead of scattered features?

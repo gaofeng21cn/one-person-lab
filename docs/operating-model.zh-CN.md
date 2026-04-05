@@ -4,83 +4,111 @@
 
 ## 核心判断
 
-`One Person Lab` 的核心判断不是“如何让 Agent 一次性帮你做完一个任务”，而是“如何让一个研究型个人或一个极小团队，持续承担实验室级正式工作”。
+`OPL` 的核心判断，不是“怎么让一个 Agent 一次性做完一个任务”，而是“怎么让一个研究型个人或极小团队，通过稳定表面持续承担正式实验室工作”。
 
-因此，`OPL` 关注的不是单次交互表现，而是下面这些问题：
+所以，`OPL` 更准确的理解不是静态蓝图，也不是单体 runtime，而是顶层 Gateway 与 federation model。
 
-- 资产是否被长期组织起来
-- 状态是否能被读取和追踪
-- 关键判断是否有明确门控
-- 输出是否能收束为正式交付物
-- 人类是否有清楚的审核面
+## 顶层链路
+
+理想主链应是：
+
+```text
+Human / Agent
+  -> OPL Gateway
+      -> Domain Gateway
+          -> Domain Harness OS
+              -> Review Surfaces / Deliveries / Audit Truth
+```
+
+当前最清楚的两条映射是：
+
+- `Research Ops` -> `MedAutoScience`
+- `Presentation Ops` -> `RedCube AI` 里的 `ppt_deck`
 
 ## 角色分工
-
-在 `OPL` 里，三个角色需要明确分开。
 
 ### 人类
 
 人类主要负责：
 
-- 提出研究目标和任务边界
+- 定义目标与任务边界
 - 提供或授权使用数据、文献和上下文
 - 审核关键结论与正式交付物
-- 对继续、停止、改题和提交做最终决策
+- 决定继续、停止、改题或提交
 
 ### Agent
 
 Agent 主要负责：
 
-- 读取当前状态
+- 先读状态再行动
 - 调用稳定接口推进任务
 - 组织中间产物和正式产物
 - 把关键执行过程写回可审计表面
 
-### 实现面 / 运行系统
+### OPL Gateway
 
-具体实现面负责：
+顶层 `OPL Gateway` 负责：
 
-- 为某类任务提供稳定入口
-- 定义本任务面的状态与交付协议
-- 约束哪些动作允许被正式执行
+- 表达顶层任务语义
+- 把任务路由到正确的 domain surface
+- 定义跨 domain 的共享基础结构要求
+- 让跨 domain 的身份、治理与交付语言保持一致
+
+当前仓库承担的是这个角色的文档优先公开说明面。
+
+### Domain Gateway 与 Harness
+
+每个 domain 应保持两层分开：
+
+- `domain gateway` 作为该工作流的稳定入口
+- `domain harness OS` 作为该工作流的执行、记录、治理与交付底座
 
 例如：
 
-- `MedAutoScience` 当前承接 `Research Ops`
-- `RedCube AI` 当前承接视觉交付物 runtime，并通过 `ppt_deck` family 先行承接 `Presentation Ops`
+- `MedAutoScience` 是 `Research Ops` 的 domain gateway 与 harness
+- `RedCube AI` 是视觉交付的 domain gateway 与 harness
 
 ## 运行原则
 
-`OPL` 顶层采用这些运行原则：
+`OPL` 顶层遵循这些原则：
 
 - 先读状态，再做变更
 - 关键动作必须留下可审计结果
-- 正式流程优先走稳定入口，不依赖临时旁路
-- 共享资产优先于一次性复制
-- 不把弱结果硬包装成完成
-- 当方向明显偏弱时，应允许止损、改题或转入补充路线
+- 优先走稳定 gateway，而不是临时旁路
+- 优先复用共享资产，而不是复制上下文
+- 保留 domain 边界，而不是把一切压成一个 runtime
+- 让人类停留在审核与决策面，而不是盯底层执行细节
 
-## 边界说明
+## 边界规则
 
-如果一套系统只是“很多一次性指令的集合”，它通常会缺这几样东西：
+`OPL` 不是：
 
-- 稳定状态面
-- 共享记忆层
-- 可复用交付协议
-- 明确的继续/停止门控
+- 通用助手系统
+- 某一个 domain 项目的同义词
+- 所有 runtime 代码都已经合并到一个仓库里的证明
+- 删除 domain gateway 的理由
 
-`OPL` 被定义为一种实验室运行模型。它不是把实验室工作拆成一些一次性指令，而是把这些任务背后的资产、记忆、治理和交付层抽出来，再交给具体工作流通过稳定运行面去实现。
+`OPL` 是：
 
-这也意味着：
+- 实验室顶层产品与控制语言
+- 跨 domain 语义最先冻结的地方
+- 独立 domain gateway 与 harness 之上的 federation 层
 
-- 工作流边界不一定与仓库边界一一对应
-- 一个运行面可以同时服务多个 deliverable family
-- 某个 family 是否属于某个 `OPL` 工作流，仍然是顶层任务语义判断，而不是 runtime 命名问题
+## 为什么 Domain Gateway 仍然必须保留
 
-因此：
+即使存在 `OPL Gateway`，domain gateway 仍然必须保留，因为它们提供：
 
-- `OPL` 不是通用助手系统
-- `OPL` 不是论文生成器
-- `OPL` 不是把所有任务合并为单一智能体
+- 独立使用的稳定入口
+- domain-specific 的校验、治理与交付合同
+- 独立发布与维护边界
+- 某个工作流可以独立演进而不拖垮整个 federation 的能力
 
-它更适合被理解为一种实验室运行模型，`Agent` 只是执行层的一部分。
+所以正确方向是：
+
+- `OPL Gateway` 在上层
+- 显式而精简的 domain gateway 在中层
+- 明确的 domain harness 在下层
+
+而不是：
+
+- 一个吞掉所有工作流的巨型 runtime

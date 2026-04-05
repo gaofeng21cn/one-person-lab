@@ -4,7 +4,7 @@
 
 ## Overview
 
-`OPL` starts by dividing the formal work of a one-person research lab into five parallel workstreams:
+`OPL` divides the formal work of a one-person research lab into five workstreams:
 
 - `Research Ops`
 - `Grant Ops`
@@ -12,7 +12,8 @@
 - `Review Ops`
 - `Presentation Ops`
 
-This split is not meant to create five unrelated task surfaces. It is meant to make clear what each task surface is actually responsible for.
+This split defines top-level task semantics.
+At runtime, those semantics should route through the `OPL Gateway` into independent domain gateways rather than being collapsed into one runtime.
 
 ## Research Ops
 
@@ -26,7 +27,7 @@ Typical tasks include:
 - evidence packaging
 - manuscript and submission delivery
 
-The clearest implementation surface for this workstream today is:
+The current domain gateway for this workstream is:
 
 - [`MedAutoScience`](https://github.com/gaofeng21cn/med-autoscience)
 
@@ -61,7 +62,7 @@ Typical tasks include:
 - organization of abstract, introduction, and discussion layers
 - defense preparation
 
-Its relationship with `Research Ops` is especially close, because dissertations often reuse the same research assets.
+It remains closely coupled with `Research Ops`, but it should still retain its own task boundary.
 
 ## Review Ops
 
@@ -74,7 +75,7 @@ Typical tasks include:
 - structuring reviewer comments
 - organizing rebuttal and revision routes
 
-This workstream also accumulates review standards and feedback patterns that can feed back into research and grant work.
+This workstream also accumulates review standards and feedback patterns that should remain reusable across domains.
 
 ## Presentation Ops
 
@@ -87,31 +88,25 @@ Typical tasks include:
 - organizing lecture and defense slide decks
 - reusing paper figures, abstracts, and conclusions
 
-This workstream keeps presentation materials aligned with upstream research assets.
-
-The most direct emerging implementation surface for this workstream today is:
+The current domain gateway for this workstream is:
 
 - [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai)
 
 Within that surface:
 
-- `ppt_deck` is the overlay family that most directly serves `Presentation Ops`
-- distinctions such as `lecture_student`, `lecture_peer`, `executive_briefing`, and `defense_deck` should be controlled through `profile pack`, not collapsed into one generic deck type
-- `xiaohongshu` shares the same runtime but should not be treated as identical to `Presentation Ops` at the OPL level
+- `ppt_deck` is the family that most directly maps to `Presentation Ops`
+- distinctions such as `lecture_student`, `lecture_peer`, `executive_briefing`, and `defense_deck` should be controlled through `profile pack`
+- `xiaohongshu` shares the same RedCube harness but should not be treated as identical to `Presentation Ops` at the OPL level
 
 ## How These Workstreams Reuse One Another
 
-These five workstreams belong in one blueprint because they share:
+These workstreams belong in one `OPL` federation because they share:
 
 - the same datasets and figures
 - the same references and external evidence
 - the same research questions and judgments
 - the same formal delivery surfaces
-- the same Agent execution layer
+- the same shared-foundation language
 
-That is why the OPL task map is not a feature list. It is a division of labor for lab work.
-
-It also means that task surfaces and implementation surfaces are not always one-to-one:
-
-- one implementation surface can serve multiple deliverable families
-- only some of those families may map directly to a given `OPL` workstream
+That is why the `OPL` task map is not a feature list.
+It is a division of labor above domain gateways and harnesses.

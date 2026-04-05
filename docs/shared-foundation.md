@@ -2,26 +2,25 @@
 
 # Shared Foundation
 
-`OPL` defines different lab tasks as belonging to one system not simply because they all involve Agents, but because they share the same foundational layers.
+`OPL` groups multiple workstreams into one system not simply because they all involve Agents, but because they reuse the same foundational layers through a federation model.
+
+The shared foundation does not imply one monolithic runtime.
+It means different domain gateways must speak compatible asset, memory, governance, delivery, and execution language.
 
 ## Asset Layer
 
-The `Asset Layer` holds objects that are repeatedly consumed across multiple workstreams.
-
-Typical objects include:
+The `Asset Layer` holds objects that are repeatedly consumed across workstreams:
 
 - data assets
 - references and literature
 - figures and templates
 - completed formal deliverables
 
-Without this layer, papers, grants, dissertations, and defense materials would each duplicate their own context and drift apart.
+Without this layer, every workstream duplicates its own factual base.
 
 ## Memory Layer
 
-The `Memory Layer` holds long-lived knowledge that should not remain only in transient conversations.
-
-Typical objects include:
+The `Memory Layer` holds structured judgment that should survive beyond transient sessions:
 
 - topic memory
 - dataset-question mappings
@@ -30,54 +29,65 @@ Typical objects include:
 - review experience
 - teaching material structures
 
-The goal of this layer is not to save every conversation. It is to preserve structured judgment that later workstreams can still reuse.
+Its purpose is not to save every conversation. It is to preserve reusable judgment.
 
 ## Governance Layer
 
-The `Governance Layer` answers: when is work allowed to continue, and when should it stop?
+The `Governance Layer` answers when work may continue and when it should stop.
 
-It focuses on:
+It covers:
 
-- when formal execution is allowed
-- when more evidence is needed
-- when a direction should be stopped or reframed
-- when a workstream can enter formal delivery
+- continue/stop gates
+- evidence sufficiency
+- reframe conditions
+- promotion into formal delivery
 
-Without this layer, continuity and reviewability weaken because execution loses explicit stop and continue conditions.
+Without this layer, execution loses explicit control.
 
 ## Delivery Layer
 
 The `Delivery Layer` turns process artifacts into formal outputs.
 
-It focuses on:
+It defines:
 
 - which files constitute a delivery package
 - which surfaces humans should review
-- how upstream research assets sync into downstream formal materials
+- how upstream assets sync into downstream formal materials
 
-This layer applies to papers, grants, dissertations, slides, and other visual deliverables alike, even though the delivery protocol differs in each case.
+Each workstream may use a different delivery protocol, but the need for a delivery layer stays the same.
 
 ## Agent Execution Layer
 
-The `Agent Execution Layer` makes Agent execution controllable rather than free-floating.
+The `Agent Execution Layer` makes Agent work controllable rather than free-floating.
 
 It focuses on:
 
 - stable entry surfaces
-- controllers or routes
+- routes or controllers
 - runtime monitoring
 - audit writeback
 
-This layer does not remove humans. It makes it possible for humans to review key outputs without having to monitor every low-level execution detail.
+This layer is not about removing humans. It is about letting humans review key outputs instead of babysitting low-level execution.
+
+## Federation Consumption Model
+
+In the intended `OPL` structure:
+
+- the `OPL Gateway` declares the shared-foundation language
+- each `domain gateway` hydrates that language for its own workstream
+- each `domain harness` persists, audits, and delivers according to domain rules
+
+That is why the shared foundation should stay above any single domain repository.
 
 ## What Is Already Clear Today
 
-In the current ecosystem, the earliest mature embodiment of these five layers is `Research Ops`, namely:
+Today, the clearest embodiment of these layers in `Research Ops` is:
 
-- `MedAutoScience` has already established clear boundaries around data assets, runtime governance, delivery synchronization, and Agent entry
+- `MedAutoScience` as the active research domain gateway and harness
 
-At the same time, a second embodiment is starting to emerge:
+The clearest emerging embodiment in visual delivery is:
 
-- `RedCube AI` is beginning to make the delivery layer and Agent execution layer concrete for visual deliverables, most directly through the `ppt_deck` family under `Presentation Ops`
+- `RedCube AI` as the visual-deliverable domain gateway and harness, with `ppt_deck` as the family that most directly maps to `Presentation Ops`
 
-That is why `OPL` no longer remains purely conceptual. It already has one established starting point and one second surface that is actively converging.
+This is why `OPL` is no longer only conceptual.
+It already has one active domain surface and one emerging second surface.
