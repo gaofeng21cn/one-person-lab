@@ -80,6 +80,8 @@ Onboarding contract 负责定义正式收录门槛。
 
 `Thesis Ops` 在 task map / task topology 中已经有明确的顶层语义。
 
+当前路径里冻结下来的 negative conclusion 是：Thesis Ops 的 thesis assembly 确实增加了顶层边界语义，但这种边界只以 reference-only candidate boundary 的形式存在于现有 topology / backlog / onboarding 链路中；章节草稿集、跨章节同步、答辩准备协调，并不等同于 `Research Ops` 的 manuscript / submission flow，而下游可能派生出的 `defense_deck` 也不会把这个 workstream 压缩成 `Presentation Ops` / `RedCube AI`。
+
 但它仍然缺少未来 domain boundary package：包括 thesis-specific registry material、public gateway docs、truth ownership、review surfaces、discovery readiness、routing readiness，以及 cross-domain wording。
 
 ### Review Ops
