@@ -52,6 +52,7 @@ Agent 主要负责：
 - 表达顶层任务语义
 - 把任务路由到正确的 domain surface
 - 定义跨 domain 的共享基础结构要求
+- 拥有 shared-foundation 的顶层控制语言，但不接管各 domain 的 canonical truth
 - 让跨 domain 的身份、治理与交付语言保持一致
 
 当前仓库承担的是这个角色的文档优先公开说明面。
@@ -112,3 +113,8 @@ Agent 主要负责：
 而不是：
 
 - 一个吞掉所有工作流的巨型 runtime
+
+## 延伸阅读
+
+- [共享基础结构](./shared-foundation.zh-CN.md)
+- [共享基础结构归属](./shared-foundation-ownership.zh-CN.md)

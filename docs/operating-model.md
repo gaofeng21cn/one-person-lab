@@ -53,6 +53,7 @@ The top-level `OPL Gateway` is responsible for:
 - expressing top-level task semantics
 - routing work into the correct domain surface
 - defining shared foundation expectations across domains
+- owning shared-foundation control language without taking over domain-owned canonical truth
 - keeping cross-domain identity, governance, and delivery language aligned
 
 The current repository is the documentation-first public surface for this role.
@@ -113,3 +114,8 @@ That means the right direction is:
 Not:
 
 - one giant runtime that swallows all workstreams
+
+## Further Reading
+
+- [Shared Foundation](./shared-foundation.md)
+- [Shared Foundation Ownership](./shared-foundation-ownership.md)

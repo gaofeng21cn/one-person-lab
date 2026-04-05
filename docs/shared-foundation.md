@@ -6,6 +6,7 @@
 
 The shared foundation does not imply one monolithic runtime.
 It means different domain gateways must speak compatible asset, memory, governance, delivery, and execution language.
+That compatibility does not make `OPL` the canonical truth store for every shared object; canonical truth still stays with domain-owned surfaces or with human/private materials that remain below domain admission.
 
 ## Asset Layer
 
@@ -91,3 +92,7 @@ The clearest emerging embodiment in visual delivery is:
 
 This is why `OPL` is no longer only conceptual.
 It already has one active domain surface and one emerging second surface.
+
+## Further Reading
+
+- [Shared Foundation Ownership](./shared-foundation-ownership.md)

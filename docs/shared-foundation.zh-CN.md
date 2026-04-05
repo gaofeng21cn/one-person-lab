@@ -6,6 +6,7 @@
 
 共享基础结构不等于单体 runtime。
 它的含义是：不同 domain gateway 必须使用兼容的资产、记忆、治理、交付与执行语言。
+这种兼容性并不让 `OPL` 自动变成所有共享对象的 canonical truth store；canonical truth 仍然留在 domain-owned surface，或留在尚未进入 formal domain admission 的 human/private 材料里。
 
 ## 资产层
 
@@ -91,3 +92,7 @@
 
 也正因为如此，`OPL` 已经不只是概念层。
 它已经有一个 active 的 domain surface，和一个正在收敛的第二 surface。
+
+## 延伸阅读
+
+- [共享基础结构归属](./shared-foundation-ownership.zh-CN.md)
