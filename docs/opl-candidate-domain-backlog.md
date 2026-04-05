@@ -70,6 +70,8 @@ Each entry stays reference-only and carries only:
 
 `Grant Ops` already has explicit top-level semantics in the task map / task topology.
 
+That frozen boundary is still proposal-facing: review-simulation and revision traces remain author-side grant-authoring artifacts rather than standalone reviewer-role outputs.
+
 What is still missing is a future domain boundary package that makes registry material, public gateway docs, truth ownership, review surfaces, discovery readiness, routing readiness, and cross-domain wording explicit.
 Those future packages are blockers only; they do not make `Grant Ops` currently `G2` discovery-ready or `G3` routed-action-ready.
 

@@ -62,7 +62,7 @@ The current domain gateway for this workstream is:
 
 ## Grant Ops
 
-`Grant Ops` covers both grant writing and the reverse side of grant review.
+`Grant Ops` covers grant-direction / proposal authoring plus proposal-side reviewer simulation and revision inside the grant-writing loop.
 
 Typical tasks include:
 
@@ -71,6 +71,8 @@ Typical tasks include:
 - organizing background, innovation claims, and technical routes
 - simulating reviewer comments
 - proposal iteration
+
+These simulation and revision steps remain proposal-authoring aids; they do not by themselves create a reviewer-role surface.
 
 This workstream clearly reuses:
 

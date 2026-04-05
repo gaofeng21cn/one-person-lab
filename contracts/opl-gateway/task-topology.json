@@ -84,7 +84,7 @@
         "existing_study_results_and_figures"
       ],
       "family_boundary_notes": [],
-      "notes": "Still under definition. This workstream does not imply an admitted domain or a G1 registry entry. Clear top-level requests may surface as unknown_domain, but no domain handoff is allowed before explicit domain boundaries are frozen."
+      "notes": "Still under definition. This workstream stays proposal-facing: proposal-side reviewer simulation and revision remain authoring aids rather than reviewer-role ownership. It does not imply an admitted domain or a G1 registry entry. Clear top-level requests may surface as unknown_domain, but no domain handoff is allowed before explicit domain boundaries are frozen."
     },
     {
       "workstream_id": "thesis_ops",

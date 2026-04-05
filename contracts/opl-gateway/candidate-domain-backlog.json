@@ -82,7 +82,7 @@
           "required_evidence": [
             "public domain README or equivalent gateway entry for the future Grant Ops domain",
             "explicit domain-gateway-above-harness statement",
-            "public explanation of Grant Ops workstream ownership, deliverable objects, and review semantics"
+            "public explanation of Grant Ops workstream ownership, deliverable objects, and proposal-side review-simulation semantics without claiming reviewer-role ownership"
           ],
           "forbidden_shortcuts": [
             "placeholder_domain_name_only",
@@ -93,7 +93,7 @@
           "package_id": "truth_ownership",
           "status": "missing",
           "required_evidence": [
-            "explicit declaration of proposal, review-simulation, and revision-trace truth owned by the future domain",
+            "explicit declaration of proposal, proposal-side review-simulation, and revision-trace truth owned by the future domain",
             "explicit list of what OPL may index versus what it may not claim as canonical truth"
           ],
           "forbidden_shortcuts": [
@@ -105,7 +105,7 @@
           "package_id": "review_surfaces",
           "status": "missing",
           "required_evidence": [
-            "human review surfaces for proposal and review-simulation outputs",
+            "human review surfaces for proposal and proposal-side review-simulation outputs",
             "publish/release or equivalent quality-gate surfaces inside the future domain"
           ],
           "forbidden_shortcuts": [
@@ -170,7 +170,7 @@
           "package_id": "truth_ownership",
           "status": "missing",
           "required_evidence": [
-            "explicit truth-ownership declaration for proposal, simulation, and revision records"
+            "explicit truth-ownership declaration for proposal, proposal-side simulation, and revision records"
           ],
           "forbidden_shortcuts": [
             "implicit_truth_transfer_to_opl",
@@ -272,7 +272,7 @@
           ]
         }
       },
-      "notes": "Top-level semantics are explicit, but the future Grant Ops domain boundary package is still incomplete."
+      "notes": "Top-level semantics are explicit: Grant Ops stays proposal-facing, and its review-simulation / revision traces remain author-side artifacts while the future domain boundary package is still incomplete."
     },
     {
       "workstream_id": "thesis_ops",
