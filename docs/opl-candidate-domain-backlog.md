@@ -38,6 +38,10 @@ It does **not** create `G1` registry admission, `G2` discovery readiness, or `G3
 
 This artifact keeps candidate workstreams visible without pretending their domain boundaries already exist.
 
+Companion tranche summary:
+
+- [OPL Candidate Workstream Tranche Closeout](./opl-candidate-workstream-tranche-closeout.md)
+
 ## Non-Goals
 
 This backlog does not:

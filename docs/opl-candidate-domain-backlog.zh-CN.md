@@ -38,6 +38,10 @@ Onboarding contract 负责定义正式收录门槛。
 
 这个工件让候选 workstream 保持可见，但不会假装它们的 domain boundary 已经存在。
 
+配套 tranche 总结：
+
+- [OPL Candidate Workstream Tranche Closeout](./opl-candidate-workstream-tranche-closeout.zh-CN.md)
+
 ## 非目标
 
 这份 backlog 不负责：
