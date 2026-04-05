@@ -92,6 +92,7 @@
 - 还不是正式收录 domain
 - 还不是已注册的 `G1` workstream/domain mapping
 - 还不是 `G2` discovery target
+- 还不是 `G3` routed-action target
 - 还不具备 domain handoff 资格
 - formal 收录前的 blocker 已在 [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.zh-CN.md) 中跟踪
 - 但如果顶层语义已经足够清楚，在真实 domain owner 被收录前，最多只能显式返回 `unknown_domain`，且不会构建 handoff payload
