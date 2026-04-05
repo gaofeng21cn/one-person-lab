@@ -47,6 +47,7 @@ These corpora are companion references only. They do not replace the governing c
 - [`publish-promotion.schema.json`](./publish-promotion.schema.json) — JSON Schema for the frozen P5.M2 publish / promotion operating contract
 - [`acceptance-matrix.json`](./acceptance-matrix.json) — declarative acceptance matrix for the frozen gateway and operating surfaces
 - [`public-surface-index.json`](./public-surface-index.json) — machine-readable index of current authoritative OPL public surfaces and linked domain public entries
+- [`operating-record-catalog.json`](./operating-record-catalog.json) — machine-readable reference catalog for the frozen P5.M1 / P5.M2 operating record kinds
 
 ## Frozen current mappings
 

@@ -53,6 +53,7 @@
 - Gateway example corpus
 - Routed-safety example corpus
 - Operating example corpus
+- Operating record catalog
 - Public surface index
 
 ### 4. Linked domain public-entry surfaces
@@ -90,6 +91,7 @@ canonical runtime truth、review truth、release truth 与 submission truth 仍�
 - [OPL Gateway Example Corpus](./opl-gateway-example-corpus.zh-CN.md)
 - [OPL Routed-Safety Example Corpus](./opl-routed-safety-example-corpus.zh-CN.md)
 - [OPL Operating Example Corpus](./opl-operating-example-corpus.zh-CN.md)
+- [OPL Operating Record Catalog](./opl-operating-record-catalog.zh-CN.md)
 
 ## 完成定义
 

@@ -168,6 +168,7 @@
 ## 示例 Record Shape
 
 已冻结 governance / audit record 的 canonical machine-readable example 也同步落在 [OPL Operating Example Corpus](./opl-operating-example-corpus.zh-CN.md) 与其链接的 JSON 文件中。
+全部已冻结 operating record kind 的跨层 reference map 也同步落在 [OPL Operating Record Catalog](./opl-operating-record-catalog.zh-CN.md)。
 下面这些 inline shape 仍然是本 governing surface 的 prose-side illustration。
 
 ### 示例：`routing_audit`

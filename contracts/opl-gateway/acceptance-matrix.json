@@ -1,5 +1,5 @@
 {
-  "version": "p12.m1",
+  "version": "p13.m1",
   "gates": [
     {
       "gate_id": "g1_registry_completeness",
@@ -220,6 +220,34 @@
       ]
     },
     {
+      "gate_id": "p13_operating_record_catalog_integrity",
+      "layer": "p13",
+      "required_files": [
+        "contracts/opl-gateway/operating-record-catalog.json",
+        "docs/opl-operating-record-catalog.md",
+        "docs/opl-operating-record-catalog.zh-CN.md",
+        "contracts/opl-gateway/public-surface-index.json",
+        "docs/opl-public-surface-index.md",
+        "docs/opl-public-surface-index.zh-CN.md",
+        "docs/opl-gateway-acceptance-test-spec.md",
+        "docs/opl-gateway-acceptance-test-spec.zh-CN.md",
+        "contracts/opl-gateway/README.md",
+        "contracts/opl-gateway/README.zh-CN.md"
+      ],
+      "contract_assertions": [
+        "operating-record catalog covers all frozen P5.M1/P5.M2 record kinds",
+        "catalog entries stay reference-only and derived from the frozen schemas/examples",
+        "catalog schema refs and example refs resolve to local artifacts",
+        "follow-on route surface remains domain_gateway only",
+        "catalog stays non-executing and non-authoritative above the governing docs/schemas"
+      ],
+      "forbidden_regressions": [
+        "operating-record catalog becomes a runtime manifest",
+        "operating-record catalog becomes a second source of truth",
+        "operating-record catalog authorizes direct publish/posting/submission/export by OPL"
+      ]
+    },
+    {
       "gate_id": "cross_domain_wording_consistency",
       "layer": "cross_domain",
       "required_files": [
@@ -240,7 +268,9 @@
         "contracts/opl-gateway/README.md",
         "contracts/opl-gateway/README.zh-CN.md",
         "docs/opl-operating-example-corpus.md",
-        "docs/opl-operating-example-corpus.zh-CN.md"
+        "docs/opl-operating-example-corpus.zh-CN.md",
+        "docs/opl-operating-record-catalog.md",
+        "docs/opl-operating-record-catalog.zh-CN.md"
       ],
       "contract_assertions": [
         "OPL remains the top-level gateway/federation surface",

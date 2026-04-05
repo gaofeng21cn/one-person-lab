@@ -53,6 +53,7 @@ These surfaces improve review and discoverability without becoming execution lay
 - Gateway example corpus
 - Routed-safety example corpus
 - Operating example corpus
+- Operating record catalog
 - Public surface index
 
 ### 4. Linked domain public-entry surfaces
@@ -90,6 +91,7 @@ They do not become governing gateway surfaces.
 - [OPL Gateway Example Corpus](./opl-gateway-example-corpus.md)
 - [OPL Routed-Safety Example Corpus](./opl-routed-safety-example-corpus.md)
 - [OPL Operating Example Corpus](./opl-operating-example-corpus.md)
+- [OPL Operating Record Catalog](./opl-operating-record-catalog.md)
 
 ## Completion Definition
 

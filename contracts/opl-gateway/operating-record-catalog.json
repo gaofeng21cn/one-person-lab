@@ -1,0 +1,112 @@
+{
+  "version": "p13.m1",
+  "scope": "opl_operating_record_catalog",
+  "description": "Machine-readable reference catalog of the frozen top-level OPL operating record kinds across P5.M1 and P5.M2. This catalog is derived from the governing schemas, docs, and examples, and does not implement runtime behavior.",
+  "non_goals": [
+    "runtime_manifest",
+    "truth_registry",
+    "execution_router",
+    "publish_authority_surface"
+  ],
+  "catalog_rules": [
+    "entries are reference-level only and do not restate full schema truth",
+    "domain-owned truth remains outside OPL and is only pointed to through the governing records",
+    "if any follow-on domain action exists, the only allowed route surface remains domain_gateway",
+    "the catalog does not authorize direct publish, release, export, submission, or posting by OPL"
+  ],
+  "record_kinds": [
+    {
+      "record_kind": "routing_audit",
+      "surface_layer": "p5.m1",
+      "governing_surface_id": "opl_governance_audit_operating_surface",
+      "stage_boundary": "post_routing_decision",
+      "truth_mode": "index_only",
+      "schema_ref": "contracts/opl-gateway/governance-audit.schema.json",
+      "example_refs": [
+        "examples/opl-gateway/ambiguous-task-routing.json#/governance_audit_record",
+        "examples/opl-gateway/unknown-domain-routing.json#/governance_audit_record",
+        "examples/opl-gateway/refusal-routing.json#/governance_audit_record"
+      ],
+      "domain_truth_required": true,
+      "follow_on_route_surface": "domain_gateway"
+    },
+    {
+      "record_kind": "governance_decision",
+      "surface_layer": "p5.m1",
+      "governing_surface_id": "opl_governance_audit_operating_surface",
+      "stage_boundary": "top_level_governance_review_window",
+      "truth_mode": "signal_only",
+      "schema_ref": "contracts/opl-gateway/governance-audit.schema.json",
+      "example_refs": [
+        "examples/opl-gateway/governance-decision-record.json"
+      ],
+      "domain_truth_required": true,
+      "follow_on_route_surface": "domain_gateway"
+    },
+    {
+      "record_kind": "publish_readiness_signal",
+      "surface_layer": "p5.m1",
+      "governing_surface_id": "opl_governance_audit_operating_surface",
+      "stage_boundary": "pre_domain_publish_truth",
+      "truth_mode": "signal_only",
+      "schema_ref": "contracts/opl-gateway/governance-audit.schema.json",
+      "example_refs": [
+        "examples/opl-gateway/publish-readiness-signal.json"
+      ],
+      "domain_truth_required": true,
+      "follow_on_route_surface": "domain_gateway"
+    },
+    {
+      "record_kind": "cross_domain_review_index",
+      "surface_layer": "p5.m1",
+      "governing_surface_id": "opl_governance_audit_operating_surface",
+      "stage_boundary": "cross_domain_review_coordination",
+      "truth_mode": "index_only",
+      "schema_ref": "contracts/opl-gateway/governance-audit.schema.json",
+      "example_refs": [
+        "examples/opl-gateway/cross-domain-review-index.json"
+      ],
+      "domain_truth_required": true,
+      "follow_on_route_surface": "domain_gateway"
+    },
+    {
+      "record_kind": "publish_outcome_index",
+      "surface_layer": "p5.m2",
+      "governing_surface_id": "opl_publish_promotion_operating_surface",
+      "stage_boundary": "post_domain_publish_outcome",
+      "truth_mode": "index_only",
+      "schema_ref": "contracts/opl-gateway/publish-promotion.schema.json",
+      "example_refs": [
+        "examples/opl-gateway/publish-outcome-index.json"
+      ],
+      "domain_truth_required": true,
+      "follow_on_route_surface": "domain_gateway"
+    },
+    {
+      "record_kind": "promotion_candidate_signal",
+      "surface_layer": "p5.m2",
+      "governing_surface_id": "opl_publish_promotion_operating_surface",
+      "stage_boundary": "post_domain_publish_outcome_pre_promotion_gate",
+      "truth_mode": "signal_only",
+      "schema_ref": "contracts/opl-gateway/publish-promotion.schema.json",
+      "example_refs": [
+        "examples/opl-gateway/promotion-candidate-signal.json"
+      ],
+      "domain_truth_required": true,
+      "follow_on_route_surface": "domain_gateway"
+    },
+    {
+      "record_kind": "promotion_surface_index",
+      "surface_layer": "p5.m2",
+      "governing_surface_id": "opl_publish_promotion_operating_surface",
+      "stage_boundary": "post_domain_publish_outcome_public_surface_coordination",
+      "truth_mode": "index_only",
+      "schema_ref": "contracts/opl-gateway/publish-promotion.schema.json",
+      "example_refs": [
+        "examples/opl-gateway/promotion-surface-index.json"
+      ],
+      "domain_truth_required": true,
+      "follow_on_route_surface": "domain_gateway"
+    }
+  ]
+}

@@ -168,6 +168,7 @@ It must not be used as:
 ## Example Record Shapes
 
 Canonical machine-readable operating examples for the frozen governance / audit records also live in the [OPL Operating Example Corpus](./opl-operating-example-corpus.md) and its linked JSON files.
+The cross-layer reference map for all frozen operating record kinds also lives in the [OPL Operating Record Catalog](./opl-operating-record-catalog.md).
 The inline shapes below remain the prose-side illustrations for this governing surface.
 
 ### Example: `routing_audit`

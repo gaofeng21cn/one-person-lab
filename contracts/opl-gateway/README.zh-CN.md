@@ -47,6 +47,7 @@
 - [`publish-promotion.schema.json`](./publish-promotion.schema.json) — 已冻结的 P5.M2 publish / promotion operating contract JSON Schema
 - [`acceptance-matrix.json`](./acceptance-matrix.json) — 已冻结 gateway 与 operating surface 的 declarative acceptance matrix
 - [`public-surface-index.json`](./public-surface-index.json) — 当前权威 OPL public surface 与链接 domain public entry 的 machine-readable index
+- [`operating-record-catalog.json`](./operating-record-catalog.json) — 已冻结 P5.M1 / P5.M2 operating record kind 的 machine-readable reference catalog
 
 ## 已冻结的当前映射
 
