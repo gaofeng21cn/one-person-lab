@@ -21,6 +21,8 @@ It freezes machine-readable gateway surfaces that later discovery and routed-act
 - [OPL Gateway Acceptance Test Spec（中文）](../../docs/opl-gateway-acceptance-test-spec.zh-CN.md)
 - [OPL Gateway Rollout](../../docs/opl-gateway-rollout.md)
 - [OPL Gateway Rollout（中文）](../../docs/opl-gateway-rollout.zh-CN.md)
+- [OPL Public Surface Index](../../docs/opl-public-surface-index.md)
+- [OPL Public Surface Index（中文）](../../docs/opl-public-surface-index.zh-CN.md)
 - [中文说明](./README.zh-CN.md)
 
 ## Companion examples
@@ -39,6 +41,7 @@ The corpus is a companion reference only. It does not replace the governing cont
 - [`governance-audit.schema.json`](./governance-audit.schema.json) — JSON Schema for the frozen P5.M1 governance / audit operating contract
 - [`publish-promotion.schema.json`](./publish-promotion.schema.json) — JSON Schema for the frozen P5.M2 publish / promotion operating contract
 - [`acceptance-matrix.json`](./acceptance-matrix.json) — declarative acceptance matrix for the frozen gateway and operating surfaces
+- [`public-surface-index.json`](./public-surface-index.json) — machine-readable index of current authoritative OPL public surfaces and linked domain public entries
 
 ## Frozen current mappings
 

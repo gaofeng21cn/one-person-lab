@@ -100,6 +100,7 @@ Human / Agent
 详细契约：
 
 - [OPL 只读 Discovery Gateway](opl-read-only-discovery-gateway.zh-CN.md)
+- [OPL Public Surface Index](opl-public-surface-index.zh-CN.md)
 
 ## Phase G3：Routed Action Entry
 

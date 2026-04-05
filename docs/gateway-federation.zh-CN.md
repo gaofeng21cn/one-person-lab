@@ -99,4 +99,5 @@ harness 是内部执行底座，不是顶层产品面。
 在这份边界文档之后，下一层更具体的合同是：
 
 - [OPL Federation Contract](./opl-federation-contract.zh-CN.md)
+- [OPL Public Surface Index](./opl-public-surface-index.zh-CN.md)
 - [OPL Gateway Contracts](../contracts/opl-gateway/README.zh-CN.md)

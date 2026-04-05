@@ -21,6 +21,8 @@
 - [OPL Gateway Acceptance Test Spec（中文）](../../docs/opl-gateway-acceptance-test-spec.zh-CN.md)
 - [OPL Gateway Rollout](../../docs/opl-gateway-rollout.md)
 - [OPL Gateway Rollout（中文）](../../docs/opl-gateway-rollout.zh-CN.md)
+- [OPL Public Surface Index](../../docs/opl-public-surface-index.md)
+- [OPL Public Surface Index（中文）](../../docs/opl-public-surface-index.zh-CN.md)
 - [English](./README.md)
 
 ## 配套示例集
@@ -39,6 +41,7 @@
 - [`governance-audit.schema.json`](./governance-audit.schema.json) — 已冻结的 P5.M1 governance / audit operating contract JSON Schema
 - [`publish-promotion.schema.json`](./publish-promotion.schema.json) — 已冻结的 P5.M2 publish / promotion operating contract JSON Schema
 - [`acceptance-matrix.json`](./acceptance-matrix.json) — 已冻结 gateway 与 operating surface 的 declarative acceptance matrix
+- [`public-surface-index.json`](./public-surface-index.json) — 当前权威 OPL public surface 与链接 domain public entry 的 machine-readable index
 
 ## 已冻结的当前映射
 

@@ -1,0 +1,91 @@
+**English** | [中文](./opl-public-surface-index.zh-CN.md)
+
+# OPL Public Surface Index
+
+## Purpose
+
+This document indexes the current authoritative public surfaces for the `OPL Gateway`.
+
+Its job is to make the top-level gateway easier to discover across README, roadmap, rollout, contracts, acceptance, examples, and linked domain gateway entries.
+
+It is not a runtime registry.
+
+## Machine-Readable Artifact
+
+- [`../contracts/opl-gateway/public-surface-index.json`](../contracts/opl-gateway/public-surface-index.json)
+
+## Non-Goals
+
+This index does not:
+
+- launch execution
+- register harness internals
+- move canonical truth into `OPL`
+- turn domain systems into internal modules
+
+## Indexed Surface Categories
+
+### 1. OPL public-entry surfaces
+
+These surfaces position and navigate the top-level gateway:
+
+- `README`
+- `Roadmap`
+- `Gateway Rollout`
+
+### 2. OPL contract surfaces
+
+These surfaces freeze the gateway and federation boundary:
+
+- Federation contract
+- Gateway contract hub
+- Read-only discovery gateway
+- Routed action gateway
+- Domain onboarding contract
+- Governance / audit operating surface
+- Publish / promotion operating surface
+
+### 3. OPL supporting surfaces
+
+These surfaces improve review and discoverability without becoming execution layers:
+
+- Acceptance test spec
+- Example corpus
+- Public surface index
+
+### 4. Linked domain public-entry surfaces
+
+These are indexed from `OPL`, but remain domain-owned:
+
+- `MedAutoScience` for `research_ops`
+- `RedCube AI` for `presentation_ops`
+
+Important boundary:
+
+- `ppt_deck` directly maps to `presentation_ops`
+- `xiaohongshu` may still route to `redcube`, but does not automatically equal `presentation_ops`
+
+## Reading Rule
+
+Read this index as a **surface map**, not as an execution registry.
+
+If a surface is domain-owned, `OPL` only indexes its public entry role.
+Canonical runtime truth, review truth, release truth, and submission truth remain inside the owning domain system.
+
+## Governing Documents
+
+- [Gateway Federation](./gateway-federation.md)
+- [OPL Federation Contract](./opl-federation-contract.md)
+- [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
+- [OPL Read-Only Discovery Gateway](./opl-read-only-discovery-gateway.md)
+- [OPL Routed Action Gateway](./opl-routed-action-gateway.md)
+- [OPL Gateway Example Corpus](./opl-gateway-example-corpus.md)
+
+## Completion Definition
+
+The public surface index is acceptable only when:
+
+- it stays machine-readable
+- it distinguishes OPL-owned surfaces from domain-owned public entries
+- it does not imply a launcher, runtime, or harness bypass
+- it does not move canonical truth into `OPL`

@@ -100,6 +100,7 @@ Completion signal:
 Detailed contract:
 
 - [OPL Read-Only Discovery Gateway](opl-read-only-discovery-gateway.md)
+- [OPL Public Surface Index](opl-public-surface-index.md)
 
 ## Phase G3: Routed Action Entry
 

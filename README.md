@@ -287,6 +287,7 @@ For a more detailed phase breakdown:
 
 - [Gateway Federation](docs/gateway-federation.md)
 - [OPL Federation Contract](docs/opl-federation-contract.md)
+- [OPL Public Surface Index](docs/opl-public-surface-index.md)
 - [OPL Gateway Contracts](contracts/opl-gateway/README.md)
 - [OPL Gateway Example Corpus](docs/opl-gateway-example-corpus.md)
 - [OPL Read-Only Discovery Gateway](docs/opl-read-only-discovery-gateway.md)

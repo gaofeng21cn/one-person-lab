@@ -1,0 +1,598 @@
+{
+  "version": "p8.m1",
+  "scope": "opl_public_gateway_surface_index",
+  "description": "Machine-readable index of the current authoritative OPL gateway public surfaces and linked domain gateway public entries. This index is contract-first and does not implement a runtime.",
+  "non_goals": [
+    "runtime_launcher",
+    "domain_truth_registry",
+    "harness_execution_map",
+    "internal_module_manifest"
+  ],
+  "ownership_rules": [
+    "opl indexes top-level public gateway surfaces only",
+    "domain public entry surfaces remain independently usable after opl routing",
+    "canonical truth remains inside domain systems",
+    "the index does not authorize bypassing a domain gateway to reach a harness"
+  ],
+  "surface_categories": [
+    {
+      "category_id": "opl_public_entry",
+      "owner_scope": "opl",
+      "description": "Top-level public navigation surfaces for OPL."
+    },
+    {
+      "category_id": "opl_contract_surface",
+      "owner_scope": "opl",
+      "description": "Authoritative OPL docs and machine-readable contract surfaces."
+    },
+    {
+      "category_id": "opl_supporting_surface",
+      "owner_scope": "opl",
+      "description": "Supporting acceptance and example companions for the frozen gateway stack."
+    },
+    {
+      "category_id": "domain_public_entry",
+      "owner_scope": "domain",
+      "description": "Independent domain gateway public entry surfaces linked from OPL."
+    }
+  ],
+  "surfaces": [
+    {
+      "surface_id": "opl_public_readme",
+      "category_id": "opl_public_entry",
+      "surface_kind": "readme",
+      "boundary_role": "top_level_navigation",
+      "owner_scope": "opl",
+      "truth_mode": "none",
+      "workstream_ids": [
+        "research_ops",
+        "presentation_ops"
+      ],
+      "domain_ids": [
+        "medautoscience",
+        "redcube"
+      ],
+      "refs": [
+        {
+          "ref_kind": "repo_path",
+          "ref": "README.md",
+          "language": "en"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "README.zh-CN.md",
+          "language": "zh-CN"
+        }
+      ],
+      "routes_to": [
+        "opl_roadmap",
+        "opl_gateway_contract_hub",
+        "medautoscience_public_gateway",
+        "redcube_public_gateway"
+      ],
+      "notes": [
+        "Top-level public positioning for the OPL gateway and federation.",
+        "Does not replace domain gateways."
+      ]
+    },
+    {
+      "surface_id": "opl_roadmap",
+      "category_id": "opl_public_entry",
+      "surface_kind": "roadmap",
+      "boundary_role": "phase_navigation",
+      "owner_scope": "opl",
+      "truth_mode": "none",
+      "workstream_ids": [
+        "research_ops",
+        "presentation_ops"
+      ],
+      "domain_ids": [
+        "medautoscience",
+        "redcube"
+      ],
+      "refs": [
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/roadmap.md",
+          "language": "en"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/roadmap.zh-CN.md",
+          "language": "zh-CN"
+        }
+      ],
+      "routes_to": [
+        "opl_gateway_rollout",
+        "opl_gateway_contract_hub",
+        "opl_public_surface_index_doc"
+      ],
+      "notes": [
+        "Tracks the current phase and next phase for the top-level gateway."
+      ]
+    },
+    {
+      "surface_id": "opl_gateway_rollout",
+      "category_id": "opl_public_entry",
+      "surface_kind": "rollout",
+      "boundary_role": "gateway_rollout_path",
+      "owner_scope": "opl",
+      "truth_mode": "none",
+      "workstream_ids": [
+        "research_ops",
+        "presentation_ops"
+      ],
+      "domain_ids": [
+        "medautoscience",
+        "redcube"
+      ],
+      "refs": [
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/opl-gateway-rollout.md",
+          "language": "en"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/opl-gateway-rollout.zh-CN.md",
+          "language": "zh-CN"
+        }
+      ],
+      "routes_to": [
+        "opl_read_only_discovery_gateway",
+        "opl_routed_action_gateway",
+        "opl_public_surface_index_doc"
+      ],
+      "notes": [
+        "Describes how OPL becomes a real top-level entry surface without becoming a monolithic runtime."
+      ]
+    },
+    {
+      "surface_id": "opl_federation_contract",
+      "category_id": "opl_contract_surface",
+      "surface_kind": "contract_doc",
+      "boundary_role": "federation_definition",
+      "owner_scope": "opl",
+      "truth_mode": "none",
+      "workstream_ids": [
+        "research_ops",
+        "presentation_ops"
+      ],
+      "domain_ids": [
+        "medautoscience",
+        "redcube"
+      ],
+      "refs": [
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/opl-federation-contract.md",
+          "language": "en"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/opl-federation-contract.zh-CN.md",
+          "language": "zh-CN"
+        }
+      ],
+      "routes_to": [
+        "opl_gateway_contract_hub",
+        "medautoscience_public_gateway",
+        "redcube_public_gateway"
+      ],
+      "notes": [
+        "Freezes the top-level workstream/domain mappings and domain independence boundary."
+      ]
+    },
+    {
+      "surface_id": "opl_gateway_contract_hub",
+      "category_id": "opl_contract_surface",
+      "surface_kind": "contract_index",
+      "boundary_role": "machine_readable_contract_hub",
+      "owner_scope": "opl",
+      "truth_mode": "none",
+      "workstream_ids": [
+        "research_ops",
+        "presentation_ops"
+      ],
+      "domain_ids": [
+        "medautoscience",
+        "redcube"
+      ],
+      "refs": [
+        {
+          "ref_kind": "repo_path",
+          "ref": "contracts/opl-gateway/README.md",
+          "language": "en"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "contracts/opl-gateway/README.zh-CN.md",
+          "language": "zh-CN"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "contracts/opl-gateway/workstreams.json"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "contracts/opl-gateway/domains.json"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "contracts/opl-gateway/routing-vocabulary.json"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "contracts/opl-gateway/handoff.schema.json"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "contracts/opl-gateway/routed-actions.schema.json"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "contracts/opl-gateway/governance-audit.schema.json"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "contracts/opl-gateway/publish-promotion.schema.json"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "contracts/opl-gateway/acceptance-matrix.json"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "contracts/opl-gateway/public-surface-index.json"
+        }
+      ],
+      "routes_to": [
+        "opl_read_only_discovery_gateway",
+        "opl_routed_action_gateway",
+        "opl_governance_audit_operating_surface",
+        "opl_publish_promotion_operating_surface",
+        "opl_gateway_acceptance_spec",
+        "opl_gateway_example_corpus",
+        "opl_public_surface_index_doc"
+      ],
+      "notes": [
+        "Indexes the machine-readable OPL gateway contract materialization.",
+        "Does not create a runtime or truth owner above domains."
+      ]
+    },
+    {
+      "surface_id": "opl_read_only_discovery_gateway",
+      "category_id": "opl_contract_surface",
+      "surface_kind": "contract_doc",
+      "boundary_role": "read_only_discovery",
+      "owner_scope": "opl",
+      "truth_mode": "none",
+      "workstream_ids": [
+        "research_ops",
+        "presentation_ops"
+      ],
+      "domain_ids": [
+        "medautoscience",
+        "redcube"
+      ],
+      "refs": [
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/opl-read-only-discovery-gateway.md",
+          "language": "en"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/opl-read-only-discovery-gateway.zh-CN.md",
+          "language": "zh-CN"
+        }
+      ],
+      "routes_to": [
+        "medautoscience_public_gateway",
+        "redcube_public_gateway"
+      ],
+      "notes": [
+        "Discovery is read-only and never starts runs or bypasses domain gateways."
+      ]
+    },
+    {
+      "surface_id": "opl_routed_action_gateway",
+      "category_id": "opl_contract_surface",
+      "surface_kind": "contract_doc",
+      "boundary_role": "routed_action",
+      "owner_scope": "opl",
+      "truth_mode": "none",
+      "workstream_ids": [
+        "research_ops",
+        "presentation_ops"
+      ],
+      "domain_ids": [
+        "medautoscience",
+        "redcube"
+      ],
+      "refs": [
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/opl-routed-action-gateway.md",
+          "language": "en"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/opl-routed-action-gateway.zh-CN.md",
+          "language": "zh-CN"
+        }
+      ],
+      "routes_to": [
+        "medautoscience_public_gateway",
+        "redcube_public_gateway"
+      ],
+      "notes": [
+        "Routing targets domain gateways only and never bypasses into harness internals."
+      ]
+    },
+    {
+      "surface_id": "opl_domain_onboarding_contract",
+      "category_id": "opl_contract_surface",
+      "surface_kind": "contract_doc",
+      "boundary_role": "domain_onboarding",
+      "owner_scope": "opl",
+      "truth_mode": "none",
+      "workstream_ids": [],
+      "domain_ids": [],
+      "refs": [
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/opl-domain-onboarding-contract.md",
+          "language": "en"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/opl-domain-onboarding-contract.zh-CN.md",
+          "language": "zh-CN"
+        }
+      ],
+      "routes_to": [
+        "opl_gateway_contract_hub"
+      ],
+      "notes": [
+        "Defines how future domains can be formally indexed without placeholder boundaries."
+      ]
+    },
+    {
+      "surface_id": "opl_governance_audit_operating_surface",
+      "category_id": "opl_contract_surface",
+      "surface_kind": "contract_doc",
+      "boundary_role": "governance_index",
+      "owner_scope": "opl",
+      "truth_mode": "index_only",
+      "workstream_ids": [
+        "research_ops",
+        "presentation_ops"
+      ],
+      "domain_ids": [
+        "medautoscience",
+        "redcube"
+      ],
+      "refs": [
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/opl-governance-audit-operating-surface.md",
+          "language": "en"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/opl-governance-audit-operating-surface.zh-CN.md",
+          "language": "zh-CN"
+        }
+      ],
+      "routes_to": [
+        "medautoscience_public_gateway",
+        "redcube_public_gateway"
+      ],
+      "notes": [
+        "Indexes governance and audit signals above domains without becoming runtime truth."
+      ]
+    },
+    {
+      "surface_id": "opl_publish_promotion_operating_surface",
+      "category_id": "opl_contract_surface",
+      "surface_kind": "contract_doc",
+      "boundary_role": "publish_index",
+      "owner_scope": "opl",
+      "truth_mode": "index_only",
+      "workstream_ids": [
+        "research_ops",
+        "presentation_ops"
+      ],
+      "domain_ids": [
+        "medautoscience",
+        "redcube"
+      ],
+      "refs": [
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/opl-publish-promotion-operating-surface.md",
+          "language": "en"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/opl-publish-promotion-operating-surface.zh-CN.md",
+          "language": "zh-CN"
+        }
+      ],
+      "routes_to": [
+        "medautoscience_public_gateway",
+        "redcube_public_gateway"
+      ],
+      "notes": [
+        "Indexes publish/promotion outcomes only after domain-owned publish or release truth exists."
+      ]
+    },
+    {
+      "surface_id": "opl_gateway_acceptance_spec",
+      "category_id": "opl_supporting_surface",
+      "surface_kind": "acceptance_spec",
+      "boundary_role": "acceptance_gate",
+      "owner_scope": "opl",
+      "truth_mode": "none",
+      "workstream_ids": [
+        "research_ops",
+        "presentation_ops"
+      ],
+      "domain_ids": [
+        "medautoscience",
+        "redcube"
+      ],
+      "refs": [
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/opl-gateway-acceptance-test-spec.md",
+          "language": "en"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/opl-gateway-acceptance-test-spec.zh-CN.md",
+          "language": "zh-CN"
+        }
+      ],
+      "routes_to": [
+        "opl_gateway_contract_hub",
+        "opl_gateway_example_corpus"
+      ],
+      "notes": [
+        "Defines the current checkable completion gates for the frozen gateway stack."
+      ]
+    },
+    {
+      "surface_id": "opl_gateway_example_corpus",
+      "category_id": "opl_supporting_surface",
+      "surface_kind": "example_corpus",
+      "boundary_role": "illustrative_composition",
+      "owner_scope": "opl",
+      "truth_mode": "none",
+      "workstream_ids": [
+        "research_ops",
+        "presentation_ops"
+      ],
+      "domain_ids": [
+        "medautoscience",
+        "redcube"
+      ],
+      "refs": [
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/opl-gateway-example-corpus.md",
+          "language": "en"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/opl-gateway-example-corpus.zh-CN.md",
+          "language": "zh-CN"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "examples/opl-gateway/research-ops-submission.json"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "examples/opl-gateway/presentation-ops-publish.json"
+        }
+      ],
+      "routes_to": [
+        "medautoscience_public_gateway",
+        "redcube_public_gateway"
+      ],
+      "notes": [
+        "Illustrative companion only; examples do not become a runtime or a new truth owner."
+      ]
+    },
+    {
+      "surface_id": "opl_public_surface_index_doc",
+      "category_id": "opl_supporting_surface",
+      "surface_kind": "index_doc",
+      "boundary_role": "public_surface_map",
+      "owner_scope": "opl",
+      "truth_mode": "none",
+      "workstream_ids": [
+        "research_ops",
+        "presentation_ops"
+      ],
+      "domain_ids": [
+        "medautoscience",
+        "redcube"
+      ],
+      "refs": [
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/opl-public-surface-index.md",
+          "language": "en"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/opl-public-surface-index.zh-CN.md",
+          "language": "zh-CN"
+        }
+      ],
+      "routes_to": [
+        "opl_public_readme",
+        "opl_gateway_contract_hub",
+        "medautoscience_public_gateway",
+        "redcube_public_gateway"
+      ],
+      "notes": [
+        "Human-readable companion for the machine-readable public surface index."
+      ]
+    },
+    {
+      "surface_id": "medautoscience_public_gateway",
+      "category_id": "domain_public_entry",
+      "surface_kind": "domain_gateway_entry",
+      "boundary_role": "research_ops_domain_entry",
+      "owner_scope": "domain",
+      "truth_mode": "domain_owned",
+      "workstream_ids": [
+        "research_ops"
+      ],
+      "domain_ids": [
+        "medautoscience"
+      ],
+      "refs": [
+        {
+          "ref_kind": "external_url",
+          "ref": "https://github.com/gaofeng21cn/med-autoscience"
+        }
+      ],
+      "routes_to": [],
+      "notes": [
+        "Active Research Ops domain gateway and harness entry under the OPL umbrella.",
+        "Domain-owned review and submission truth remains in MedAutoScience."
+      ]
+    },
+    {
+      "surface_id": "redcube_public_gateway",
+      "category_id": "domain_public_entry",
+      "surface_kind": "domain_gateway_entry",
+      "boundary_role": "presentation_ops_domain_entry",
+      "owner_scope": "domain",
+      "truth_mode": "domain_owned",
+      "workstream_ids": [
+        "presentation_ops"
+      ],
+      "domain_ids": [
+        "redcube"
+      ],
+      "refs": [
+        {
+          "ref_kind": "external_url",
+          "ref": "https://github.com/gaofeng21cn/redcube-ai"
+        }
+      ],
+      "routes_to": [],
+      "notes": [
+        "Emerging Presentation Ops-carrying domain gateway and harness entry under the OPL umbrella.",
+        "ppt_deck directly maps to presentation_ops.",
+        "xiaohongshu may route to redcube without auto-equating to presentation_ops."
+      ]
+    }
+  ]
+}

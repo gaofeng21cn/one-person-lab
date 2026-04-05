@@ -53,6 +53,7 @@ For the detailed gateway rollout path, see:
 
 - [OPL Gateway Rollout](opl-gateway-rollout.md)
 - [OPL Federation Contract](opl-federation-contract.md)
+- [OPL Public Surface Index](opl-public-surface-index.md)
 - [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
 - [OPL Routed Action Gateway](opl-routed-action-gateway.md)
 - [OPL Domain Onboarding Contract](opl-domain-onboarding-contract.md)

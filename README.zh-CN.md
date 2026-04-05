@@ -287,6 +287,7 @@ Human / Agent
 
 - [Gateway Federation](docs/gateway-federation.zh-CN.md)
 - [OPL Federation Contract](docs/opl-federation-contract.zh-CN.md)
+- [OPL Public Surface Index](docs/opl-public-surface-index.zh-CN.md)
 - [OPL Gateway Contracts](contracts/opl-gateway/README.zh-CN.md)
 - [OPL Gateway Example Corpus](docs/opl-gateway-example-corpus.zh-CN.md)
 - [OPL 只读 Discovery Gateway](docs/opl-read-only-discovery-gateway.zh-CN.md)
