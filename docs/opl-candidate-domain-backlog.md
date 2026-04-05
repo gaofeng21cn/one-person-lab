@@ -82,6 +82,7 @@ Those future packages are blockers only; they do not make `Grant Ops` currently 
 The negative conclusion frozen in the current path is that thesis assembly does add top-level boundary truth, but only as a reference-only candidate boundary inside the existing topology/backlog/onboarding chain: chapter-draft sets, cross-chapter synchronization, and defense-preparation coordination are not identical to `Research Ops` manuscript/submission flow, and a downstream `defense_deck` derivative does not collapse the workstream into `Presentation Ops` / `RedCube AI`.
 
 What is still missing is a future domain boundary package that makes thesis-specific registry material, public gateway docs, truth ownership, review surfaces, discovery readiness, routing readiness, and cross-domain wording explicit.
+Those future packages are blockers only; they do not make `Thesis Ops` currently `G2` discovery-ready or `G3` routed-action-ready.
 
 ### Review Ops
 
