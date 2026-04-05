@@ -561,7 +561,7 @@ The wording-consistency gate passes only when all of the following are true:
    - `review_ops`
 4. Every candidate entry preserves the current task-topology state: `boundary_state = under_definition`, `registry_state = not_registered`, `routing_state = unknown_domain_only`, `current_domain_id = null`, `entry_surface = null`, and `formal_domain_required = true`.
 5. Every candidate entry keeps `readiness_flags.discovery_ready = false`, `routing_ready = false`, `handoff_ready = false`, and `formal_inclusion_ready = false`.
-6. Every candidate entry keeps `candidate_domain_boundary.candidate_domain_id = null`, `candidate_gateway_surface = null`, and `candidate_harness_surface = null`.
+6. No candidate entry carries placeholder future `domain_id`, `gateway_surface`, or `harness_surface` fields before a real boundary package exists.
 7. Every candidate entry records these onboarding-aligned blocker package ids inside `required_onboarding_materials`:
    - `registry_material`
    - `public_documentation`
@@ -578,7 +578,7 @@ The wording-consistency gate passes only when all of the following are true:
    - `review_ready`
    - `cross_domain_wording_aligned`
 9. Every candidate entry keeps each `required_onboarding_materials` status at `missing` and each `formal_inclusion_gate` status at `blocked` until a real domain boundary package exists.
-10. No candidate entry invents an admitted domain, a non-null `candidate_domain_id`, a non-null entry surface, or domain-truth ownership as if it were already frozen.
+10. No candidate entry invents an admitted domain, a non-null entry surface, or domain-truth ownership as if it were already frozen.
 11. `Grant Ops` remains proposal-facing: task-topology, task-map, and candidate-backlog wording keep proposal-side reviewer simulation and revision as author-side grant-authoring aids/artifacts rather than reviewer-role ownership or a standalone reviewer surface.
 12. `Review Ops` keeps reviewer-role work plus response/rebuttal coordination as one under-definition semantic bundle only; this wording does not by itself admit a review domain, transfer review-truth ownership into `OPL`, create a `G2` discovery target, or create a `G3` routed-action target.
 13. No candidate entry or backlog rule collapses `Grant Ops`, `Thesis Ops`, or `Review Ops` into `MedAutoScience` or `RedCube AI`; both admitted domains remain independent gateway-and-harness surfaces.
@@ -591,6 +591,7 @@ The wording-consistency gate passes only when all of the following are true:
 - Parse `contracts/opl-gateway/candidate-domain-backlog.json` with `json.load`.
 - Confirm the exact workstream set above and the exact alignment with the under-definition entries in `task-topology.json`.
 - Confirm every candidate entry has the six onboarding-material packages above, every `required_onboarding_materials` package remains `missing`, every `formal_inclusion_gate` check remains `blocked`, and all readiness flags remain `false`.
+- Confirm no candidate entry carries placeholder future `domain_id`, `gateway_surface`, or `harness_surface` fields.
 - Confirm `Grant Ops` remains proposal-facing across `task-topology`, `task-map`, and candidate-backlog wording, so proposal-side reviewer simulation/revision stays author-side and does not become reviewer-role ownership.
 - Confirm `Review Ops` stays an under-definition semantic bundle across `task-topology`, `task-map`, and candidate-backlog wording, so reviewer-role work plus response/rebuttal coordination does not become an admitted review domain, an OPL-owned review-truth surface, a `G2` discovery target, or a `G3` routed-action target.
 - Confirm the backlog rules do not collapse candidate workstreams into `MedAutoScience` or `RedCube AI`, and therefore keep both admitted domains as independent gateway-and-harness surfaces.
@@ -926,11 +927,10 @@ for workstream_id, entry in backlog_entries.items():
         'handoff_ready': False,
         'formal_inclusion_ready': False,
     }, (workstream_id, entry['readiness_flags'])
-    assert entry['candidate_domain_boundary'] == {
-        'candidate_domain_id': None,
-        'candidate_gateway_surface': None,
-        'candidate_harness_surface': None,
-    }, (workstream_id, entry['candidate_domain_boundary'])
+    assert 'candidate_domain_boundary' not in entry, (workstream_id, entry)
+    lowered_entry = json.dumps(entry, ensure_ascii=False).lower()
+    for token in banned_future_metadata:
+        assert f'candidate_{token}' not in lowered_entry, (workstream_id, token, entry)
     package_ids = {item['package_id'] for item in entry['required_onboarding_materials']}
     assert package_ids == required_packages, (workstream_id, package_ids)
     for item in entry['required_onboarding_materials']:

@@ -432,7 +432,7 @@
       ],
       "contract_assertions": [
         "candidate-domain backlog covers exactly grant_ops, thesis_ops, and review_ops as under-definition workstreams that still require formal domain admission material",
-        "each candidate entry preserves the current task-topology state, keeps readiness flags false, and keeps candidate domain boundaries null",
+        "each candidate entry preserves the current task-topology state, keeps readiness flags false, and does not carry placeholder future domain_id, gateway_surface, or harness_surface fields",
         "Grant Ops remains proposal-facing: proposal-side reviewer simulation and revision stay author-side grant-authoring aids/artifacts rather than reviewer-role ownership",
         "Review Ops keeps reviewer-role work plus response/rebuttal coordination as one under-definition semantic bundle only; this does not by itself admit a review domain, transfer review-truth ownership into OPL, create a G2 discovery target, or create a G3 routed-action target",
         "candidate entries and backlog rules do not collapse Grant Ops, Thesis Ops, or Review Ops into MedAutoScience or RedCube AI; admitted domains remain independent gateway-and-harness surfaces",

@@ -566,7 +566,7 @@ wording-consistency gate 只有在下面全部成立时才算通过：
    - `current_domain_id = null`
    - `entry_surface = null`
    - `formal_domain_required = true`
-5. 每条 backlog entry 都把 discovery、routing、handoff 与 formal inclusion 的 `readiness_flags` 明确保持为 `false`，并把 `candidate_domain_id`、`candidate_gateway_surface`、`candidate_harness_surface` 全部保持为 `null`。
+5. 每条 backlog entry 都把 discovery、routing、handoff 与 formal inclusion 的 `readiness_flags` 明确保持为 `false`，并且在真实 boundary package 出现之前不携带占位性的未来 `domain_id`、`gateway_surface` 或 `harness_surface` 字段。
 6. 每条 backlog entry 都在 `required_onboarding_materials` 中把下面六类 package 记录为 `missing`：
    - `registry_material`
    - `public_documentation`
@@ -597,7 +597,7 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 - 用 `json.load` 解析 `contracts/opl-gateway/candidate-domain-backlog.json`。
 - 确认上面列出的精确 workstream 集合，以及它与 `task-topology.json` 中 under-definition entry 的完全对齐。
 - 确认每条 backlog entry 都包含上面六类 `required_onboarding_materials` package、上面七项 `missing_boundary_materials` 检查，以及一个全部 blocked 的 `formal_inclusion_gate` 对象。
-- 确认所有 `readiness_flags` 都保持 `false`，且所有 `candidate_domain_boundary` 字段都保持 `null`。
+- 确认所有 `readiness_flags` 都保持 `false`，并且不存在占位性的未来 `domain_id`、`gateway_surface` 或 `harness_surface` 字段。
 - 确认 `Grant Ops` 在 `task-topology`、`task-map` 与 candidate-backlog 中都保持 proposal-facing，因此作者侧模拟评审 / 修订不会升级成 reviewer-role ownership。
 - 确认 `Review Ops` 在 `task-topology`、`task-map` 与 candidate-backlog 中都仍只是 under-definition semantic bundle，因此 reviewer-role work 与 response / rebuttal coordination 不会被误写成已收录 review domain、OPL-owned review-truth surface、`G2` discovery target 或 `G3` routed-action target。
 - 确认 backlog rules 不会把候选 workstream 折叠进 `MedAutoScience` 或 `RedCube AI`，从而保持这两个已收录 domain 仍是独立的 gateway / harness surface。
@@ -933,11 +933,10 @@ for workstream_id, entry in backlog_entries.items():
         'handoff_ready': False,
         'formal_inclusion_ready': False,
     }, (workstream_id, entry['readiness_flags'])
-    assert entry['candidate_domain_boundary'] == {
-        'candidate_domain_id': None,
-        'candidate_gateway_surface': None,
-        'candidate_harness_surface': None,
-    }, (workstream_id, entry['candidate_domain_boundary'])
+    assert 'candidate_domain_boundary' not in entry, (workstream_id, entry)
+    lowered_entry = json.dumps(entry, ensure_ascii=False).lower()
+    for token in banned_future_metadata:
+        assert f'candidate_{token}' not in lowered_entry, (workstream_id, token, entry)
     package_ids = {item['package_id'] for item in entry['required_onboarding_materials']}
     assert package_ids == required_packages, (workstream_id, package_ids)
     for item in entry['required_onboarding_materials']:
