@@ -433,6 +433,9 @@
       "contract_assertions": [
         "candidate-domain backlog covers exactly grant_ops, thesis_ops, and review_ops as under-definition workstreams that still require formal domain admission material",
         "each candidate entry preserves the current task-topology state, keeps readiness flags false, and keeps candidate domain boundaries null",
+        "Grant Ops remains proposal-facing: proposal-side reviewer simulation and revision stay author-side grant-authoring aids/artifacts rather than reviewer-role ownership",
+        "candidate entries and backlog rules do not collapse Grant Ops, Thesis Ops, or Review Ops into MedAutoScience or RedCube AI; admitted domains remain independent gateway-and-harness surfaces",
+        "required_evidence and notes do not pre-assign future domain_id, gateway_surface, or harness_surface metadata before the boundary package exists",
         "required_onboarding_materials align to registry material, public documentation, truth ownership, review surfaces, discovery/routing readiness, and cross-domain wording",
         "missing_boundary_materials and formal_inclusion_gate remain aligned to the onboarding formal-inclusion checks and stay missing/blocked until the boundary package exists",
         "task-map docs, onboarding docs, contract hub, public-surface index, review matrix, lifecycle map, and authority matrix expose the backlog as a reference-only admission-blocker surface below the domain-onboarding gate"
@@ -440,6 +443,9 @@
       "forbidden_regressions": [
         "candidate-domain backlog auto-admits a domain or expands the G1 registry",
         "candidate-domain backlog creates G2 discovery readiness or G3 routed-action readiness",
+        "Grant Ops reviewer simulation or revision is described as reviewer-role ownership or a standalone reviewer surface",
+        "candidate-domain backlog collapses Grant Ops, Thesis Ops, or Review Ops into MedAutoScience or RedCube AI",
+        "candidate-domain backlog pre-assigns future domain_id, gateway_surface, or harness_surface metadata before the boundary package exists",
         "candidate-domain backlog invents candidate domain truth owners or publication authority inside OPL",
         "candidate-domain backlog becomes an approval engine, onboarding engine, or runtime control plane"
       ]

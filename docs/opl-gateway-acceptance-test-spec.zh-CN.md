@@ -584,11 +584,12 @@ wording-consistency gate 只有在下面全部成立时才算通过：
    - `cross_domain_wording_aligned`
 8. 每个 `formal_inclusion_gate` 检查项都仍保持 `status = blocked`。
 9. 任何 backlog entry 都不会虚构已冻结的 admitted domain、candidate gateway surface、candidate harness surface 或 canonical truth owner。
-10. 任何 candidate entry 或 backlog rule 都不会把 `Grant Ops`、`Thesis Ops`、`Review Ops` 折叠进 `MedAutoScience` 或 `RedCube AI`；这两个已收录 domain 仍保持独立的 gateway / harness surface。
-11. `required_evidence` 与 note 文本不会在 boundary package 存在之前预先分配未来的 `domain_id`、`gateway_surface` 或 `harness_surface` 元数据。
-12. `contracts/opl-gateway/public-surface-index.json`、`surface-review-matrix.json`、`surface-lifecycle-map.json` 与 `surface-authority-matrix.json` 都把 candidate-domain backlog 暴露为 supporting/reference surface。
-13. 在 `public-surface-index.json` 中，`opl_candidate_domain_backlog` 恰好出现一次；在 `surface-review-matrix.json` 中，对应 review entry 也恰好出现一次。
-14. contract README、task-map docs、domain-onboarding docs、public-surface index docs、review-matrix docs、lifecycle/authority docs 与 acceptance surfaces 都把这份 backlog 写成 reference-only、non-executing、non-admitting，且明确位于 onboarding gate 之下。
+10. `Grant Ops` 仍然保持 proposal-facing：task-topology、task-map 与 candidate-backlog 的 wording 都把作者侧模拟评审与修订写成 grant-authoring aid / artifact，而不是 reviewer-role ownership，也不是独立 reviewer surface。
+11. 任何 candidate entry 或 backlog rule 都不会把 `Grant Ops`、`Thesis Ops`、`Review Ops` 折叠进 `MedAutoScience` 或 `RedCube AI`；这两个已收录 domain 仍保持独立的 gateway / harness surface。
+12. `required_evidence` 与 note 文本不会在 boundary package 存在之前预先分配未来的 `domain_id`、`gateway_surface` 或 `harness_surface` 元数据。
+13. `contracts/opl-gateway/public-surface-index.json`、`surface-review-matrix.json`、`surface-lifecycle-map.json` 与 `surface-authority-matrix.json` 都把 candidate-domain backlog 暴露为 supporting/reference surface。
+14. 在 `public-surface-index.json` 中，`opl_candidate_domain_backlog` 恰好出现一次；在 `surface-review-matrix.json` 中，对应 review entry 也恰好出现一次。
+15. contract README、task-map docs、domain-onboarding docs、public-surface index docs、review-matrix docs、lifecycle/authority docs 与 acceptance surfaces 都把这份 backlog 写成 reference-only、non-executing、non-admitting，且明确位于 onboarding gate 之下。
 
 ### 验证方式
 
@@ -596,6 +597,7 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 - 确认上面列出的精确 workstream 集合，以及它与 `task-topology.json` 中 under-definition entry 的完全对齐。
 - 确认每条 backlog entry 都包含上面六类 `required_onboarding_materials` package、上面七项 `missing_boundary_materials` 检查，以及一个全部 blocked 的 `formal_inclusion_gate` 对象。
 - 确认所有 `readiness_flags` 都保持 `false`，且所有 `candidate_domain_boundary` 字段都保持 `null`。
+- 确认 `Grant Ops` 在 `task-topology`、`task-map` 与 candidate-backlog 中都保持 proposal-facing，因此作者侧模拟评审 / 修订不会升级成 reviewer-role ownership。
 - 确认 backlog rules 不会把候选 workstream 折叠进 `MedAutoScience` 或 `RedCube AI`，从而保持这两个已收录 domain 仍是独立的 gateway / harness surface。
 - 确认没有任何字段或配套 prose 把 backlog 升格成 domain registry、discovery registry、routed-action surface、handoff surface、approval engine 或 publish controller。
 - 确认 `required_evidence` 与 note 文本不会预先写入未来的 `domain_id`、`gateway_surface` 或 `harness_surface` 元数据。
@@ -860,6 +862,10 @@ public = json.loads(Path('contracts/opl-gateway/public-surface-index.json').read
 review = json.loads(Path('contracts/opl-gateway/surface-review-matrix.json').read_text())
 lifecycle = json.loads(Path('contracts/opl-gateway/surface-lifecycle-map.json').read_text())
 authority = json.loads(Path('contracts/opl-gateway/surface-authority-matrix.json').read_text())
+task_map_en = Path('docs/task-map.md').read_text()
+task_map_zh = Path('docs/task-map.zh-CN.md').read_text()
+backlog_doc_en = Path('docs/opl-candidate-domain-backlog.md').read_text()
+backlog_doc_zh = Path('docs/opl-candidate-domain-backlog.zh-CN.md').read_text()
 
 expected = {'grant_ops', 'thesis_ops', 'review_ops'}
 task_entries = {entry['workstream_id']: entry for entry in task['workstreams']}
@@ -884,8 +890,19 @@ required_checks = {
 }
 banned_future_metadata = {'domain_id', 'gateway_surface', 'harness_surface'}
 non_collapse_rule = 'entries do not fold candidate workstreams into MedAutoScience or RedCube AI; admitted domains remain independent gateway and harness surfaces'
+grant_task_note = task_entries['grant_ops']['notes'].lower()
 
 assert non_collapse_rule in backlog['backlog_rules'], backlog['backlog_rules']
+assert 'proposal-facing' in grant_task_note, grant_task_note
+assert 'proposal-side reviewer simulation and revision remain authoring aids rather than reviewer-role ownership' in grant_task_note, grant_task_note
+assert 'proposal-side reviewer simulation and revision inside the grant-writing loop' in task_map_en
+assert 'do not by themselves create a reviewer-role surface' in task_map_en
+assert 'proposal-facing' in backlog_doc_en
+assert 'author-side grant-authoring artifacts rather than standalone reviewer-role outputs' in backlog_doc_en
+assert '作者侧模拟评审与修订' in task_map_zh
+assert '不会自动变成“站在评审方”的 surface' in task_map_zh
+assert 'proposal-facing' in backlog_doc_zh
+assert '作者侧的基金写作工件，而不是独立的 reviewer-role output' in backlog_doc_zh
 
 for workstream_id, entry in backlog_entries.items():
     task_entry = task_entries[workstream_id]
