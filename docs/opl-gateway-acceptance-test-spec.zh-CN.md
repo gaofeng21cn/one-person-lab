@@ -244,13 +244,14 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 8. governance / audit wording 仍然保持 index-only，而不是 runtime-owning。
 9. publish / promotion wording 仍然保持 index-only，而不是 publish-owning 或 promotion-owning。
 10. `docs/operating-model*`、`docs/shared-foundation*` 与 `docs/shared-foundation-ownership*` 都必须把 `OPL` 保持在顶层语义 / 索引 / 复用规则层，而不能把它写成单体 runtime、共享 truth store，或 domain review/publication truth owner。
-11. `shared asset index`、`shared memory index`、`shared domain registry` 与 `shared publication / delivery catalog` 在后续显式合同与 acceptance alignment 冻结 readiness boundary 之前，都仍只是 roadmap-only、future-only、reference-only、non-admitting 的 G4 candidate。
-12. 这些 G4 candidate index 都不能被写成当前的 public-entry、discovery-ready、routed-action-ready、execution、truth-owner、approval、publish-control 或 release-control surface。
+11. 四个 G4 candidate index —— `shared asset index`、`shared memory index`、`shared domain registry`、`shared publication / delivery catalog` —— 在后续显式合同与 acceptance alignment 冻结 readiness boundary 之前，仍然只是 roadmap-only / future-only / reference-only / non-admitting candidate。
+12. 任何公开 wording 都不能把这些 G4 candidate index 升格成当前的 public-entry、discovery-ready、routed-action-ready、execution、truth-owner、approval、publish-control 或 release-control surface。
 
 ### 验证方式
 
-- 阅读 `README.md`、`README.zh-CN.md`、`docs/roadmap*.md`、`docs/operating-model*`、`docs/shared-foundation*`、`docs/shared-foundation-ownership*`、`docs/opl-gateway-rollout.md`、`docs/opl-gateway-rollout.zh-CN.md` 与相关 gateway 文档。
-- 用定向 `rg` 检查废弃 wording、必需的 domain-role wording，以及 G4 candidate-index freeze wording。
+- 阅读 `README.md`、`README.zh-CN.md`、`docs/roadmap*.md`、`docs/operating-model*`、`docs/shared-foundation*`、`docs/shared-foundation-ownership*` 与相关 gateway 文档。
+- 用定向 `rg` 检查废弃 wording 与必需的 domain-role wording。
+- 用定向 `rg` 检查 rollout / acceptance wording 中四个 G4 candidate index 的表述，确认它们保持 roadmap-only / future-only / reference-only / non-admitting 边界，而没有被写成当前的 public-entry / discovery-ready / routed-action-ready / execution / truth-owner / approval / publish-control / release-control surface。
 - 将 OPL 仓库中的公开 wording 与 `med-autoscience`、`redcube-ai`、`gaofeng21cn` 的 README 做交叉核对。
 
 ## H. P7 Example Corpus 完整性
@@ -301,7 +302,8 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 7. 这个 index 恰好暴露一个 `opl_candidate_domain_backlog` entry，并把它标成 `opl_supporting_surface`，且明确它位于 onboarding gate 之下。
 8. 这个 index 还会各自恰好暴露一个 `opl_operating_model`、`opl_shared_foundation` 与 `opl_shared_foundation_ownership` entry，并把它们保持为 OPL-owned 的 contract/reference surface。
 9. 被链接的 README / roadmap / federation / rollout / contract-hub wording 不会把 public surface index 升格成 launcher、runtime registry、truth-owner surface，或 admission-approval surface。
-10. 在后续显式 readiness contract 冻结之前，当前 public-surface index 里不会出现占位式的 `shared asset index` 或 `shared memory index` surface。
+10. 在后续显式 readiness contract 冻结之前，当前 public-surface index 里不会出现 `shared asset index`、`shared memory index`、`shared domain registry` 或 `shared publication / delivery catalog` 的占位式 / current surface。
+11. 当前 public-surface index 不会把任何 G4 candidate index materialize 成 public-entry、discovery-ready、routed-action-ready、execution、truth-owner、approval、publish-control 或 release-control surface。
 
 ### 验证方式
 
@@ -309,7 +311,7 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 - 检查 category 引用、`routes_to` 目标，以及本地 `repo_path` refs 的结构完整性。
 - 检查 `docs/opl-public-surface-index.md` 与 `.zh-CN.md` 中的 no-runtime / no-truth-shift / no-internal-module wording。
 - 确认 `surfaces[*].surface_id` 保持唯一，且 `opl_candidate_domain_backlog` 恰好以 supporting/reference surface 身份出现，而不是 admitted domain 或 execution surface；同时 `opl_operating_model`、`opl_shared_foundation` 与 `opl_shared_foundation_ownership` 也都各自恰好出现一次，并保持为 OPL-owned 的 contract/reference surface。
-- 确认当前 public-surface index 中不存在 `opl_shared_asset_index` 与 `opl_shared_memory_index`。
+- 确认当前 public-surface index 不会把 `shared asset index`、`shared memory index`、`shared domain registry` 或 `shared publication / delivery catalog` materialize 成任何当前 surface entry。
 - 验证被接入的 OPL public surface 确实在应有位置链接到 public-surface index。
 
 ## J. P10 Routed-Safety Example 完整性

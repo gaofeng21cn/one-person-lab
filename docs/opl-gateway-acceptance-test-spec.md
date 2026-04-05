@@ -244,13 +244,14 @@ The wording-consistency gate passes only when all of the following are true:
 8. Governance / audit wording remains index-only rather than runtime-owning.
 9. Publish / promotion wording remains index-only rather than publish-owning or promotion-owning.
 10. `docs/operating-model*`, `docs/shared-foundation*`, and `docs/shared-foundation-ownership*` keep `OPL` at the top-level semantic / indexing / reuse layer and do not turn it into a monolithic runtime, shared truth store, or owner of domain review/publication truth.
-11. The `shared asset index`, `shared memory index`, `shared domain registry`, and `shared publication / delivery catalog` remain roadmap-only, future-only, reference-only, and non-admitting G4 candidates until a later explicit contract and acceptance alignment freeze their readiness boundaries.
-12. None of those G4 candidate indexes is described as a current public-entry, discovery-ready, routed-action-ready, execution, truth-owner, approval, publish-control, or release-control surface.
+11. The four G4 candidate indexes — `shared asset index`, `shared memory index`, `shared domain registry`, and `shared publication / delivery catalog` — remain roadmap-only / future-only / reference-only / non-admitting candidates until a later explicit contract and acceptance alignment freeze their readiness boundary.
+12. No public wording upgrades any G4 candidate index into a current public-entry, discovery-ready, routed-action-ready, execution, truth-owner, approval, publish-control, or release-control surface.
 
 ### Verification
 
-- Read `README.md`, `README.zh-CN.md`, `docs/roadmap*.md`, `docs/operating-model*`, `docs/shared-foundation*`, `docs/shared-foundation-ownership*`, `docs/opl-gateway-rollout.md`, `docs/opl-gateway-rollout.zh-CN.md`, and the linked gateway docs.
-- Run targeted `rg` checks for deprecated wording, the required domain-role wording, and the G4 candidate-index freeze wording.
+- Read `README.md`, `README.zh-CN.md`, `docs/roadmap*.md`, `docs/operating-model*`, `docs/shared-foundation*`, `docs/shared-foundation-ownership*`, and the linked gateway docs.
+- Run targeted `rg` checks for deprecated wording and for the required domain-role wording.
+- Run targeted `rg` checks across rollout / acceptance wording for all four G4 candidate indexes and confirm they stay roadmap-only / future-only / reference-only / non-admitting rather than current public-entry / discovery-ready / routed-action-ready / execution / truth-owner / approval / publish-control / release-control surfaces.
 - Cross-check the OPL repository wording against the public READMEs in `med-autoscience`, `redcube-ai`, and `gaofeng21cn`.
 
 ## H. P7 Example-Corpus Integrity
@@ -301,7 +302,8 @@ The wording-consistency gate passes only when all of the following are true:
 7. The index exposes exactly one `opl_candidate_domain_backlog` entry as an `opl_supporting_surface` and keeps it below the onboarding gate.
 8. The index exposes exactly one `opl_operating_model`, `opl_shared_foundation`, and `opl_shared_foundation_ownership` entry each as OPL-owned contract/reference surfaces only.
 9. Linked README / roadmap / federation / rollout / contract-hub wording does not upgrade the public-surface index into a launcher, runtime registry, truth-owner surface, or admission-approval surface.
-10. No placeholder `shared asset index` or `shared memory index` surface appears in the current public-surface index before a later explicit readiness contract freezes it.
+10. No placeholder/current surface for `shared asset index`, `shared memory index`, `shared domain registry`, or `shared publication / delivery catalog` appears in the current public-surface index before a later explicit readiness contract freezes it.
+11. The current public-surface index does not materialize any G4 candidate index as a public-entry, discovery-ready, routed-action-ready, execution, truth-owner, approval, publish-control, or release-control surface.
 
 ### Verification
 
@@ -309,7 +311,7 @@ The wording-consistency gate passes only when all of the following are true:
 - Check structural integrity for category references, `routes_to` targets, and local `repo_path` refs.
 - Check `docs/opl-public-surface-index.md` and `.zh-CN.md` for no-runtime / no-truth-shift / no-internal-module wording.
 - Confirm `surfaces[*].surface_id` values remain unique, `opl_candidate_domain_backlog` resolves exactly once as a supporting/reference surface rather than as an admitted domain or execution surface, and `opl_operating_model` / `opl_shared_foundation` / `opl_shared_foundation_ownership` each resolve exactly once as OPL-owned contract/reference surfaces only.
-- Confirm `opl_shared_asset_index` and `opl_shared_memory_index` do not appear in the current public-surface index.
+- Confirm the current public-surface index does not materialize `shared asset index`, `shared memory index`, `shared domain registry`, or `shared publication / delivery catalog` as any current surface entry.
 - Verify the linked public OPL surfaces actually point to the public-surface index where intended.
 
 ## J. P10 Routed-Safety Example Integrity

@@ -166,7 +166,8 @@
         "public-surface index preserves research_ops/presentation_ops and ppt_deck/xiaohongshu routing semantics",
         "public-surface index exposes opl_candidate_domain_backlog as a supporting/reference surface for under-definition workstreams without admitting domains early",
         "public-surface index exposes opl_operating_model, opl_shared_foundation, and opl_shared_foundation_ownership as OPL-owned discoverability/reference surfaces without transferring canonical truth, mutation, review truth, or publication truth into OPL",
-        "public-surface index does not admit placeholder shared asset/memory index surfaces before a later explicit readiness contract freezes them"
+        "public-surface index keeps shared asset index, shared memory index, shared domain registry, and shared publication/delivery catalog out of the current public surface until a later explicit readiness contract freezes them",
+        "no G4 candidate index is described as a current public-entry/discovery-ready/routed-action-ready/execution/truth-owner/approval/publish-control/release-control surface"
       ],
       "forbidden_regressions": [
         "public-surface index becomes a launcher or runtime registry",
@@ -174,7 +175,8 @@
         "harness internals are indexed as public entry surfaces",
         "candidate-domain backlog is indexed as an admitted domain or execution surface",
         "shared-foundation docs are indexed as execution surfaces, shared truth stores, or domain-truth takeover points",
-        "placeholder shared asset/memory indexes appear as current public surfaces before explicit readiness alignment"
+        "a G4 candidate index appears as a current public surface before explicit readiness alignment",
+        "a G4 candidate index is described as a public-entry/discovery-ready/routed-action-ready/execution/truth-owner/approval/publish-control/release-control surface before a later explicit contract"
       ]
     },
     {
@@ -567,7 +569,7 @@
         "candidate-domain backlog remains reference-only, non-admitting, and below the domain-onboarding gate",
         "candidate backlog keeps Grant/Review/Thesis Ops blocked below the onboarding gate",
         "operating-model, shared-foundation, and shared-foundation-ownership docs keep OPL at the top-level semantic/index/reuse layer while domains keep canonical truth, mutation, runtime writeback, review truth, and delivery/publication truth",
-        "shared asset/memory/domain-registry/publication-delivery candidate indexes remain roadmap-only/future-only/reference-only/non-admitting until a later explicit readiness contract and acceptance alignment freeze them",
+        "shared asset index, shared memory index, shared domain registry, and shared publication/delivery catalog stay roadmap-only/future-only/reference-only/non-admitting candidates until a later explicit readiness contract and acceptance alignment freeze them",
         "no G4 candidate index is described as a current public-entry/discovery-ready/routed-action-ready/execution/truth-owner/approval/publish-control/release-control surface"
       ],
       "forbidden_regressions": [
@@ -582,7 +584,8 @@
         "candidate-domain backlog described as admitted-domain registry or approval surface",
         "candidate backlog described as a pre-admission domain registry",
         "shared-foundation docs describe OPL as a universal shared truth store or as taking over domain-owned canonical truth",
-        "any G4 candidate index is described as a current public-entry/discovery-ready/routed-action-ready/execution/truth-owner/approval/publish-control/release-control surface before an explicit readiness contract"
+        "a G4 candidate index is described as a current public surface without an explicit readiness contract",
+        "a G4 candidate index is described as a public-entry/discovery-ready/routed-action-ready/execution/truth-owner/approval/publish-control/release-control surface before later explicit contracts"
       ]
     }
   ]
