@@ -145,7 +145,7 @@
         "shared_foundation_language"
       ],
       "family_boundary_notes": [],
-      "notes": "Still under definition. It accumulates reusable review standards, and clear top-level requests may surface as unknown_domain, but it is not yet an admitted domain or handoff target."
+      "notes": "Still under definition. Review Ops groups reviewer-role work plus response/rebuttal coordination as a top-level semantic bundle only; that combined label does not by itself freeze a distinct domain boundary or transfer canonical truth for review artifacts into OPL. It is not yet an admitted domain, discovery target, or routed-action target. Clear top-level requests may surface only as unknown_domain until a real domain owner is admitted."
     },
     {
       "workstream_id": "presentation_ops",

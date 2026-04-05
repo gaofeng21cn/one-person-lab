@@ -84,9 +84,11 @@ Onboarding contract 负责定义正式收录门槛。
 
 ### Review Ops
 
-`Review Ops` 在 task map / task topology 中已经有明确的顶层语义。
+`Review Ops` 在 task map / task topology 中已经有明确的顶层语义：它把 reviewer-role work 与 response / rebuttal coordination 放在同一个 candidate semantic bundle 里。
 
-但它仍然缺少未来 domain boundary package：包括 review-specific registry material、public gateway docs、truth ownership、review surfaces、discovery readiness、routing readiness，以及 cross-domain wording。
+但它仍然缺少未来 domain boundary package：包括 review-specific registry material、review reports / comment structures / rebuttal plans / revision-route maps 的 truth ownership、public gateway docs、review surfaces、discovery readiness、routing readiness，以及 cross-domain wording。
+
+这里冻结下来的 negative conclusion 是：这种组合语义仍不足以推出 formal admission、discovery readiness、routed-action readiness，或把 review truth ownership 上收到 OPL。
 
 ## 阅读规则
 

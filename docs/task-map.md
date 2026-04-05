@@ -134,6 +134,8 @@ Current boundary status:
 
 `Review Ops` covers both “standing in the reviewer role” and “responding to reviewers.”
 
+This combined label remains a top-level semantic bundle only; it does not by itself admit a distinct review domain or make OPL the canonical truth owner of review artifacts.
+
 Typical tasks include:
 
 - peer review
@@ -156,6 +158,7 @@ Current boundary status:
 - not yet an admitted domain
 - not yet a registered `G1` workstream/domain mapping
 - not yet a `G2` discovery target
+- not yet a `G3` routed-action target
 - not eligible for domain handoff
 - admission blockers are tracked in [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md)
 - clear top-level requests may surface only as `unknown_domain`, without building a handoff payload, until a real domain owner is admitted

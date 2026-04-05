@@ -753,7 +753,7 @@
           ]
         }
       },
-      "notes": "Top-level semantics are explicit, but the future Review Ops domain boundary package is still incomplete."
+      "notes": "Top-level semantics are explicit: Review Ops groups reviewer-role work plus response/rebuttal coordination as one candidate semantic bundle. That combined label still does not justify admission, discovery readiness, routed-action readiness, or OPL ownership of review truth before the future Review Ops domain boundary package exists."
     }
   ]
 }

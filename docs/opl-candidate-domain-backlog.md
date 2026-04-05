@@ -84,9 +84,11 @@ What is still missing is a future domain boundary package that makes thesis-spec
 
 ### Review Ops
 
-`Review Ops` already has explicit top-level semantics in the task map / task topology.
+`Review Ops` already has explicit top-level semantics in the task map / task topology: it groups reviewer-role work plus response/rebuttal coordination under one candidate semantic bundle.
 
-What is still missing is a future domain boundary package that makes review-specific registry material, public gateway docs, truth ownership, review surfaces, discovery readiness, routing readiness, and cross-domain wording explicit.
+What is still missing is a future domain boundary package that makes review-specific registry material, public gateway docs, truth ownership for review reports / comment structures / rebuttal plans / revision-route maps, review surfaces, discovery readiness, routing readiness, and cross-domain wording explicit.
+
+The negative conclusion frozen here is that this combined label still does not justify admission, discovery readiness, routed-action readiness, or OPL ownership of review truth.
 
 ## Reading Rule
 
