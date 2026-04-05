@@ -71,6 +71,7 @@ Onboarding contract 负责定义正式收录门槛。
 `Grant Ops` 在 task map / task topology 中已经有明确的顶层语义。
 
 但它仍然缺少未来 domain boundary package：包括 registry material、public gateway docs、truth ownership、review surfaces、discovery readiness、routing readiness，以及 cross-domain wording。
+这些未来 package 只是 blocker，不代表 `Grant Ops` 现在已经具备 `G2` discovery readiness 或 `G3` routed-action readiness。
 
 ### Thesis Ops
 
