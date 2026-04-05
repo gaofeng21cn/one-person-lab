@@ -10,7 +10,7 @@
   ],
   "backlog_rules": [
     "entries stay reference-only and enumerate missing boundary materials only",
-    "entries do not assign future domain ids or expand the admitted G1 registry",
+    "entries do not assign future domain identities or expand the admitted G1 registry",
     "entries do not fold candidate workstreams into MedAutoScience or RedCube AI; admitted domains remain independent gateway and harness surfaces",
     "entries do not create G2 discovery readiness or G3 routed-action readiness",
     "package-level blockers align to the onboarding package requirements in the domain-onboarding contract",
@@ -73,7 +73,7 @@
             "routing vocabulary impact statement for grant-direction, proposal, review-simulation, and revision deliverables"
           ],
           "forbidden_shortcuts": [
-            "assign_future_domain_id_early",
+            "assign_future_domain_identity_early",
             "expand_g1_registry_without_boundary_package"
           ]
         },
@@ -150,7 +150,7 @@
             "explicit routing-vocabulary impact statement"
           ],
           "forbidden_shortcuts": [
-            "assign_future_domain_id_early",
+            "assign_future_domain_identity_early",
             "expand_g1_registry_without_boundary_package"
           ]
         },
@@ -313,7 +313,7 @@
             "routing vocabulary impact statement for chapter drafting, cross-chapter synchronization, and defense-preparation deliverables"
           ],
           "forbidden_shortcuts": [
-            "assign_future_domain_id_early",
+            "assign_future_domain_identity_early",
             "expand_g1_registry_without_boundary_package"
           ]
         },
@@ -390,7 +390,7 @@
             "explicit routing-vocabulary impact statement"
           ],
           "forbidden_shortcuts": [
-            "assign_future_domain_id_early",
+            "assign_future_domain_identity_early",
             "expand_g1_registry_without_boundary_package"
           ]
         },
@@ -553,7 +553,7 @@
             "routing vocabulary impact statement for review reports, rebuttal plans, and revision-route deliverables"
           ],
           "forbidden_shortcuts": [
-            "assign_future_domain_id_early",
+            "assign_future_domain_identity_early",
             "expand_g1_registry_without_boundary_package"
           ]
         },
@@ -630,7 +630,7 @@
             "explicit routing-vocabulary impact statement"
           ],
           "forbidden_shortcuts": [
-            "assign_future_domain_id_early",
+            "assign_future_domain_identity_early",
             "expand_g1_registry_without_boundary_package"
           ]
         },

@@ -42,7 +42,7 @@ Onboarding contract 负责定义正式收录门槛。
 
 这份 backlog 不负责：
 
-- 分配未来的 `domain_id`、`gateway_surface` 或 `harness_surface`
+- 分配未来的 domain identity 或 gateway / harness surface metadata
 - 把 `Grant Ops`、`Thesis Ops`、`Review Ops` 改写成 `MedAutoScience` 或 `RedCube AI` 的扩展分支
 - 把候选项加入 `G1` registry
 - 创造 discovery target 或 routed-action target
@@ -115,6 +115,6 @@ Onboarding contract 负责定义正式收录门槛。
 - 每个当前候选 workstream 都有显式 backlog entry
 - blocker package 与 onboarding-package 类别一一对齐
 - blocker check 与 onboarding formal-inclusion gate 一一对齐
-- 没有任何 entry 分配未来 domain identity / surface metadata 或 routed readiness state
+- 没有任何 entry 分配未来 domain identity、gateway / harness surface metadata 或 routed readiness state
 - backlog 保持可发现、可审阅，但不变成 control plane
 - backlog 仍然保持 reference-only、non-executing、non-admitting
