@@ -22,6 +22,13 @@ This review matrix does not:
 - transfer domain-owned review or publication authority into `OPL`
 - authorize direct publish, direct release, direct export, direct submission, direct posting, or direct harness access by `OPL`
 
+## Shared-Foundation Ownership Boundary
+
+This review matrix sits in the shared-foundation reviewability layer only.
+`OPL` may index human-review and companion-surface obligations here, but domain review truth, publication truth, and final continue/stop/reframe authority still remain with humans and domain-owned surfaces.
+That keeps the matrix useful for discoverability and acceptance alignment without turning it into an approval control plane or shared truth store.
+For the broader ownership split, see [Shared Foundation Ownership](./shared-foundation-ownership.md).
+
 ## Review Fields
 
 Each entry stays derived/reference-only and carries only:

@@ -21,6 +21,13 @@
 - 把 domain-owned execution、truth、review 或 publication authority 上收给 `OPL`
 - 把 domain public-entry surface 写成 OPL 的内部模块
 
+## Shared-Foundation Ownership Boundary
+
+这张 authority matrix 只位于 shared-foundation 的 boundary-language 层。
+`OPL` 在这里拥有的是命名 route、execution、truth、review 与 publication 分工的顶层词汇；但底层 authority 仍然留在 matrix 已明确标出的 domain gateway、domain harness 与 `OPL` 之外的人类 / private surface 中。
+因此，这张 matrix 只是供 ownership review 使用的 inspectable reference surface，而不是 runtime control plane 或共享 truth store。
+更完整的 ownership split 可参考[共享基础结构归属](./shared-foundation-ownership.zh-CN.md)。
+
 ## Authority 字段
 
 每个 entry 都保持 derived/reference-only，只携带：

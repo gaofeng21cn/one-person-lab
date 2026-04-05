@@ -23,6 +23,13 @@
 - 把 canonical truth 上收给 `OPL`
 - 把 domain system 写成内部模块
 
+## Shared-Foundation Ownership Boundary
+
+这个 index 只位于 shared-foundation 的 discoverability 层。
+`OPL` 在这里拥有的是顶层 surface 语言、索引方式与跨域导航提示；一旦工作跨过 domain 边界，runtime execution、canonical truth、review truth 与 publication truth 仍然由各 domain gateway / harness 持有。
+因此，这份 index 只是 discoverability 与 acceptance alignment 的 reference surface，不是 control plane、execution registry 或共享 truth store。
+更完整的 ownership split 可参考[共享基础结构归属](./shared-foundation-ownership.zh-CN.md)。
+
 ## 已索引的 Surface 类别
 
 ### 1. OPL public-entry surfaces

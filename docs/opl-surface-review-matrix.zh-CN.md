@@ -22,6 +22,13 @@
 - 把 domain-owned review 或 publication authority 上收给 `OPL`
 - 授权 `OPL` 直接执行 direct publish、direct release、direct export、direct submission、direct posting 或 direct harness access
 
+## Shared-Foundation Ownership Boundary
+
+这张 review matrix 只位于 shared-foundation 的 reviewability 层。
+`OPL` 可以在这里索引 human-review 义务与 companion-surface 关系，但 domain review truth、publication truth，以及最终的 continue/stop/reframe authority 仍然留在人类与 domain-owned surface 手中。
+因此，这张 matrix 能服务于 discoverability 与 acceptance alignment，而不会升级成 approval control plane 或共享 truth store。
+更完整的 ownership split 可参考[共享基础结构归属](./shared-foundation-ownership.zh-CN.md)。
+
 ## Review 字段
 
 每个 entry 都保持 derived/reference-only，只携带：

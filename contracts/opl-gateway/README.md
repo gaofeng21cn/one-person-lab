@@ -5,6 +5,13 @@ This directory is the repository-local materialization of the `G1` federation co
 It does **not** implement a runtime.
 It freezes machine-readable gateway surfaces that later discovery and routed-action layers can consume.
 
+## Shared-foundation ownership boundary
+
+These contract and reference artifacts live in the shared-foundation materialization layer only.
+`OPL` owns the top-level contract language, indexing, and cross-domain reuse rules frozen here, but domain gateways and domain harnesses still own runtime execution, canonical truth, review truth, and publication truth once a routed request crosses the gateway boundary.
+This directory therefore materializes gateway surfaces for discoverability / reviewability / acceptance alignment without becoming a new control plane or shared truth store.
+For the broader ownership split, see [Shared Foundation](../../docs/shared-foundation.md) and [Shared Foundation Ownership](../../docs/shared-foundation-ownership.md).
+
 ## Governing documents
 
 - [OPL Federation Contract](../../docs/opl-federation-contract.md)
