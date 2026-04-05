@@ -23,7 +23,7 @@
     </td>
     <td width="33%" valign="top">
       <strong>联邦状态</strong><br/>
-      <code>MedAutoScience</code> 是当前 Active 的 Research Ops surface；<code>RedCube AI</code> 是当前 Emerging 的视觉交付 surface
+      <code>Research Foundry -> Med Auto Science</code> 是当前 Active 的 Research Ops 主线；<code>RedCube AI</code> 是当前 Emerging 的视觉交付 surface
     </td>
   </tr>
 </table>
@@ -102,7 +102,7 @@
     <td width="20%" valign="top">
       <strong>Research Ops</strong><br/>
       <code>Active</code><br/>
-      由 <code>MedAutoScience</code> 承接
+      由 <code>Research Foundry -> Med Auto Science</code> 承接
     </td>
     <td width="20%" valign="top">
       <strong>Grant Ops</strong><br/>
@@ -134,9 +134,9 @@
       顶层 Gateway 的权威公开说明面
     </td>
     <td width="20%" valign="top">
-      <strong>MedAutoScience</strong><br/>
+      <strong>Med Auto Science</strong><br/>
       <a href="https://github.com/gaofeng21cn/med-autoscience"><code>仓库</code></a><br/>
-      Research Ops domain gateway 与 harness
+      `Research Foundry` 的医学实现，以及当前 `Research Ops` 主线的 domain gateway 与 harness
     </td>
     <td width="20%" valign="top">
       <strong>FengGaoLab</strong><br/>
@@ -156,16 +156,16 @@
   </tr>
 </table>
 
-> `OPL` 是实验室顶层的公开 Gateway 语言。它联邦化地组织 `MedAutoScience`、`RedCube AI` 这类 domain system，而不是取代它们。
+> `OPL` 是实验室顶层的公开 Gateway 语言。它联邦化地组织 `Research Foundry -> Med Auto Science`、`RedCube AI` 这类 domain framework / system，而不是取代它们。
 
 ## Agent 合同分层
 
 <!-- AGENT-CONTRACT-BASELINE:START -->
-- 根目录 `AGENTS.md` 仅用于本仓库开发环境中的 Codex/OMX 协作，不单独承载项目真相合同
+- 根目录 `AGENTS.md` 是从仓库根目录进入的直接会话所使用的仓库级合同，包括 Codex App 与 plain Codex；项目真相合同另行维护
 - 项目真相合同位于 `contracts/project-truth/AGENTS.md`
-- OMX project-scope 编排层位于 `.codex/AGENTS.md`，只供 OMX / CODEX_HOME 会话加载
-- 可选本机私有覆盖层约定为 `.omx/local/AGENTS.local.md`，保持未跟踪
-- 本地工具运行态目录 `.omx/` 与 `.codex/` 必须保持未跟踪，不进入版本库
+- 通过 OMX project-scope 方式启动仓库时，`.codex/AGENTS.md` 会在根层合同之上做补充，而不是替代它
+- `.omx/local/AGENTS.local.md` 预留给可选的本机私有覆盖层，且必须保持未跟踪
+- `.omx/` 与 `.codex/` 是本地工具运行态目录，必须保持未跟踪
 <!-- AGENT-CONTRACT-BASELINE:END -->
 
 ## 仓库定位
@@ -223,7 +223,7 @@ Human / Agent
 
 当前已映射的主线：
 
-- `Research Ops` -> `MedAutoScience`
+- `Research Ops` -> `Research Foundry` -> `Med Auto Science`
 - `Presentation Ops` -> `RedCube AI` 里的 `ppt_deck`
 
 关键边界：
@@ -234,12 +234,13 @@ Human / Agent
 
 ## 当前 Domain Surface
 
-### MedAutoScience
+### Med Auto Science
 
-[`MedAutoScience`](https://github.com/gaofeng21cn/med-autoscience) 是 `OPL` 体系下当前 Active 的 `Research Ops` domain gateway。
+[`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience) 是 `OPL` 体系下当前 Active 的 `Research Ops` 主线中，对应医学场景的成熟实现。
 
 它当前承担的是：
 
+- `Research Foundry` 在医学场景中的正式实现
 - 医学 Research Ops 的正式入口
 - 研究工作流的 domain-specific 治理与交付面
 - 其 research harness 与受控 runtime 之上的顶层控制面
@@ -259,7 +260,7 @@ Human / Agent
 这个仓库不应被写成：
 
 - 所有 runtime 行为都已经落在这里
-- `MedAutoScience` 或 `RedCube AI` 的替代品
+- `Med Auto Science` 或 `RedCube AI` 的替代品
 - 所有 domain workstream 的同义词
 - 所有 planned workstream 已经完成的证明
 
@@ -274,7 +275,7 @@ Human / Agent
 当前阶段有四个重点：
 
 - 冻结 `OPL Gateway` 与 domain federation 的表述
-- 继续把 `MedAutoScience` 明确为 `Research Ops` 的 domain gateway 与 harness
+- 继续把 `Research Foundry -> Med Auto Science` 明确为当前 `Research Ops` 主线
 - 继续把 `RedCube AI` 明确为视觉交付的 domain gateway 与 harness
 - 逐步定义 `Grant Ops`、`Review Ops`、`Thesis Ops` 的边界
 

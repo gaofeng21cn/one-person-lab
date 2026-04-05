@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <a href="./README.md"><strong>English</strong></a> | <a href="./README.zh-CN.md">中文</a>
+  <a href="./README.md"><strong>English</strong></a> | <a href="./README.zh-CN.md">Chinese</a>
 </p>
 
 <h1 align="center">One Person Lab</h1>
@@ -23,7 +23,7 @@
     </td>
     <td width="33%" valign="top">
       <strong>Federation State</strong><br/>
-      <code>MedAutoScience</code> is the active Research Ops surface; <code>RedCube AI</code> is the emerging visual-deliverable surface
+      <code>Research Foundry -> Med Auto Science</code> is the active Research Ops line; <code>RedCube AI</code> is the emerging visual-deliverable surface
     </td>
   </tr>
 </table>
@@ -102,7 +102,7 @@
     <td width="20%" valign="top">
       <strong>Research Ops</strong><br/>
       <code>Active</code><br/>
-      via <code>MedAutoScience</code>
+      via <code>Research Foundry -> Med Auto Science</code>
     </td>
     <td width="20%" valign="top">
       <strong>Grant Ops</strong><br/>
@@ -134,9 +134,9 @@
       Authoritative public spec surface for the top-level gateway
     </td>
     <td width="20%" valign="top">
-      <strong>MedAutoScience</strong><br/>
+      <strong>Med Auto Science</strong><br/>
       <a href="https://github.com/gaofeng21cn/med-autoscience"><code>Repository</code></a><br/>
-      Research Ops domain gateway and harness
+      Medical implementation of `Research Foundry`, and the current domain gateway and harness for the active Research Ops line
     </td>
     <td width="20%" valign="top">
       <strong>FengGaoLab</strong><br/>
@@ -156,16 +156,16 @@
   </tr>
 </table>
 
-> `OPL` is the public top-level gateway language for the lab. It federates domain systems such as `MedAutoScience` and `RedCube AI`; it does not replace them.
+> `OPL` is the public top-level gateway language for the lab. It federates `Research Foundry -> Med Auto Science` and sibling domain systems such as `RedCube AI`; it does not replace them.
 
-## Agent 合同分层
+## Agent Contract Layers
 
 <!-- AGENT-CONTRACT-BASELINE:START -->
-- 根目录 `AGENTS.md` 仅用于本仓库开发环境中的 Codex/OMX 协作，不单独承载项目真相合同
-- 项目真相合同位于 `contracts/project-truth/AGENTS.md`
-- OMX project-scope 编排层位于 `.codex/AGENTS.md`，只供 OMX / CODEX_HOME 会话加载
-- 可选本机私有覆盖层约定为 `.omx/local/AGENTS.local.md`，保持未跟踪
-- 本地工具运行态目录 `.omx/` 与 `.codex/` 必须保持未跟踪，不进入版本库
+- The root `AGENTS.md` is the repository-native contract for direct sessions that enter from the repository root, including Codex App and plain Codex sessions; the project truth contract lives separately.
+- The project truth contract lives at `contracts/project-truth/AGENTS.md`.
+- When the repository is launched through OMX project-scope installation, `.codex/AGENTS.md` augments the root contract rather than replacing it.
+- `.omx/local/AGENTS.local.md` is reserved for optional machine-specific private overlays and must stay untracked.
+- `.omx/` and `.codex/` are local tooling state and must stay untracked.
 <!-- AGENT-CONTRACT-BASELINE:END -->
 
 ## Repository Position
@@ -223,7 +223,7 @@ Human / Agent
 
 Current mapped surfaces:
 
-- `Research Ops` -> `MedAutoScience`
+- `Research Ops` -> `Research Foundry` -> `Med Auto Science`
 - `Presentation Ops` -> `RedCube AI` through `ppt_deck`
 
 Important boundary:
@@ -234,12 +234,13 @@ Important boundary:
 
 ## Current Domain Surfaces
 
-### MedAutoScience
+### Med Auto Science
 
-[`MedAutoScience`](https://github.com/gaofeng21cn/med-autoscience) is the active `Research Ops` domain gateway under the `OPL` umbrella.
+[`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience) is the mature medical implementation on the active `Research Ops` line under the `OPL` umbrella.
 
 Its current role is:
 
+- the formal medical implementation of `Research Foundry`
 - the formal entry surface for medical research operations
 - the domain-specific governance and delivery surface for research work
 - the top-level controller above its research harness and controlled runtimes
@@ -259,7 +260,7 @@ Its correct boundary is:
 This repository should not be described as:
 
 - the one place where all runtime behavior already lives
-- a replacement for `MedAutoScience` or `RedCube AI`
+- a replacement for `Med Auto Science` or `RedCube AI`
 - a synonym for every domain workstream
 - proof that every planned workstream is already implemented
 
@@ -274,7 +275,7 @@ It should be described as:
 The current phase has four priorities:
 
 - freeze the OPL gateway and domain-federation language
-- keep `MedAutoScience` explicit as the `Research Ops` domain gateway and harness
+- keep `Research Foundry -> Med Auto Science` explicit as the current `Research Ops` line
 - keep `RedCube AI` explicit as the visual-deliverable domain gateway and harness
 - progressively define the boundaries for `Grant Ops`, `Review Ops`, and `Thesis Ops`
 
