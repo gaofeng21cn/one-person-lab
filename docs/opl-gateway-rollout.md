@@ -159,6 +159,10 @@ Detailed contract:
 
 ## Phase G5: Real Public Product Surface
 
+Detailed contract:
+
+- [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.md)
+
 Goal:
 
 - make the `OPL Gateway` a stable public product entry for humans and agents

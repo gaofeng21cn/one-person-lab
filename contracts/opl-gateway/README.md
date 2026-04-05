@@ -15,6 +15,8 @@ It freezes machine-readable gateway surfaces that later discovery and routed-act
 - [OPL Routed Action Gateway（中文）](../../docs/opl-routed-action-gateway.zh-CN.md)
 - [OPL Governance / Audit Operating Surface](../../docs/opl-governance-audit-operating-surface.md)
 - [OPL Governance / Audit Operating Surface（中文）](../../docs/opl-governance-audit-operating-surface.zh-CN.md)
+- [OPL Publish / Promotion Operating Surface](../../docs/opl-publish-promotion-operating-surface.md)
+- [OPL Publish / Promotion Operating Surface（中文）](../../docs/opl-publish-promotion-operating-surface.zh-CN.md)
 - [OPL Gateway Rollout](../../docs/opl-gateway-rollout.md)
 - [OPL Gateway Rollout（中文）](../../docs/opl-gateway-rollout.zh-CN.md)
 - [中文说明](./README.zh-CN.md)
@@ -27,6 +29,7 @@ It freezes machine-readable gateway surfaces that later discovery and routed-act
 - [`handoff.schema.json`](./handoff.schema.json) — JSON Schema for the frozen G1 handoff payload
 - [`routed-actions.schema.json`](./routed-actions.schema.json) — JSON Schema for the frozen G3 routed action contract
 - [`governance-audit.schema.json`](./governance-audit.schema.json) — JSON Schema for the frozen P5.M1 governance / audit operating contract
+- [`publish-promotion.schema.json`](./publish-promotion.schema.json) — JSON Schema for the frozen P5.M2 publish / promotion operating contract
 
 ## Frozen current mappings
 

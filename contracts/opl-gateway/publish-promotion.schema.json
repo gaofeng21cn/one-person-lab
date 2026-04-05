@@ -1,0 +1,482 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OPL Publish Promotion Record",
+  "description": "Top-level publish/promotion operating record for OPL. This schema defines coordination/index records only and does not represent domain publish truth, release truth, export truth, submission truth, or public-channel posting truth.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "record_kind",
+    "record_id",
+    "request_id",
+    "workstream_id",
+    "domain_id",
+    "summary",
+    "status",
+    "evidence_refs",
+    "domain_truth_refs",
+    "recorded_at"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "p5.m2"
+    },
+    "record_kind": {
+      "type": "string",
+      "enum": [
+        "publish_outcome_index",
+        "promotion_candidate_signal",
+        "promotion_surface_index"
+      ]
+    },
+    "record_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "request_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "workstream_id": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "research_ops",
+            "presentation_ops"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "domain_id": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "medautoscience",
+            "redcube"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "recorded",
+        "blocked",
+        "ready_for_next_gate",
+        "needs_human_review"
+      ]
+    },
+    "evidence_refs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "domain_truth_refs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "domain_id",
+          "ref_kind",
+          "ref"
+        ],
+        "properties": {
+          "domain_id": {
+            "type": "string",
+            "enum": [
+              "medautoscience",
+              "redcube"
+            ]
+          },
+          "ref_kind": {
+            "type": "string",
+            "enum": [
+              "publish_gate_record",
+              "publish_record",
+              "release_record",
+              "export_record",
+              "submission_record",
+              "artifact_record",
+              "public_channel_record"
+            ]
+          },
+          "ref": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "recorded_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "publish_outcome_index": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "outcome_kind",
+        "public_refs"
+      ],
+      "properties": {
+        "outcome_kind": {
+          "type": "string",
+          "enum": [
+            "published",
+            "released",
+            "exported",
+            "submitted"
+          ]
+        },
+        "public_refs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "surface_id",
+              "ref"
+            ],
+            "properties": {
+              "surface_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "ref": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "promotion_candidate_signal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "promotion_readiness",
+        "target_surfaces"
+      ],
+      "properties": {
+        "promotion_readiness": {
+          "type": "string",
+          "enum": [
+            "not_ready",
+            "candidate",
+            "ready_for_promotion_gate",
+            "blocked"
+          ]
+        },
+        "target_surfaces": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "promotion_surface_index": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target_surfaces",
+        "required_human_approval",
+        "public_refs"
+      ],
+      "properties": {
+        "target_surfaces": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required_human_approval": {
+          "type": "boolean"
+        },
+        "blocking_surface": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "public_refs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "surface_id",
+              "ref"
+            ],
+            "properties": {
+              "surface_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "ref": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "record_kind": {
+          "const": "publish_outcome_index"
+        },
+        "domain_truth_refs": {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "ref_kind": {
+                "enum": [
+                  "publish_record",
+                  "release_record",
+                  "export_record",
+                  "submission_record"
+                ]
+              }
+            },
+            "required": [
+              "ref_kind"
+            ]
+          }
+        }
+      },
+      "required": [
+        "record_kind",
+        "publish_outcome_index"
+      ],
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "promotion_candidate_signal"
+            ]
+          },
+          {
+            "required": [
+              "promotion_surface_index"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "properties": {
+        "record_kind": {
+          "const": "promotion_candidate_signal"
+        },
+        "domain_truth_refs": {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "ref_kind": {
+                "enum": [
+                  "publish_record",
+                  "release_record",
+                  "export_record",
+                  "submission_record"
+                ]
+              }
+            },
+            "required": [
+              "ref_kind"
+            ]
+          }
+        }
+      },
+      "required": [
+        "record_kind",
+        "promotion_candidate_signal"
+      ],
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "publish_outcome_index"
+            ]
+          },
+          {
+            "required": [
+              "promotion_surface_index"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "properties": {
+        "record_kind": {
+          "const": "promotion_surface_index"
+        },
+        "domain_truth_refs": {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "ref_kind": {
+                "enum": [
+                  "publish_record",
+                  "release_record",
+                  "export_record",
+                  "submission_record"
+                ]
+              }
+            },
+            "required": [
+              "ref_kind"
+            ]
+          }
+        }
+      },
+      "required": [
+        "record_kind",
+        "promotion_surface_index"
+      ],
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "publish_outcome_index"
+            ]
+          },
+          {
+            "required": [
+              "promotion_candidate_signal"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "examples": [
+    {
+      "version": "p5.m2",
+      "record_kind": "publish_outcome_index",
+      "record_id": "opl-publish-2026-04-05-001",
+      "request_id": "opl-2026-04-05-020",
+      "workstream_id": "research_ops",
+      "domain_id": "medautoscience",
+      "summary": "Indexed the domain-owned manuscript submission outcome at the top level.",
+      "status": "recorded",
+      "evidence_refs": [
+        "publish_gate=complete",
+        "submission_package=sealed"
+      ],
+      "domain_truth_refs": [
+        {
+          "domain_id": "medautoscience",
+          "ref_kind": "submission_record",
+          "ref": "medautoscience://submissions/study-002"
+        }
+      ],
+      "recorded_at": "2026-04-05T07:10:00Z",
+      "publish_outcome_index": {
+        "outcome_kind": "submitted",
+        "public_refs": []
+      }
+    },
+    {
+      "version": "p5.m2",
+      "record_kind": "promotion_candidate_signal",
+      "record_id": "opl-promo-2026-04-05-001",
+      "request_id": "opl-2026-04-05-021",
+      "workstream_id": "presentation_ops",
+      "domain_id": "redcube",
+      "summary": "The released deck appears ready to enter the domain-owned promotion gate.",
+      "status": "ready_for_next_gate",
+      "evidence_refs": [
+        "release_record=complete",
+        "human_review=complete"
+      ],
+      "domain_truth_refs": [
+        {
+          "domain_id": "redcube",
+          "ref_kind": "release_record",
+          "ref": "redcube://releases/deck-002"
+        },
+        {
+          "domain_id": "redcube",
+          "ref_kind": "artifact_record",
+          "ref": "redcube://artifacts/deck-002"
+        }
+      ],
+      "recorded_at": "2026-04-05T07:11:00Z",
+      "promotion_candidate_signal": {
+        "promotion_readiness": "ready_for_promotion_gate",
+        "target_surfaces": [
+          "project_landing",
+          "announcement_post"
+        ]
+      }
+    },
+    {
+      "version": "p5.m2",
+      "record_kind": "promotion_surface_index",
+      "record_id": "opl-surface-2026-04-05-001",
+      "request_id": "opl-2026-04-05-021",
+      "workstream_id": "presentation_ops",
+      "domain_id": "redcube",
+      "summary": "Indexed the public surfaces and blockers for promoting the released deck.",
+      "status": "needs_human_review",
+      "evidence_refs": [
+        "landing_page=ready",
+        "announcement_copy=pending"
+      ],
+      "domain_truth_refs": [
+        {
+          "domain_id": "redcube",
+          "ref_kind": "release_record",
+          "ref": "redcube://releases/deck-002"
+        },
+        {
+          "domain_id": "redcube",
+          "ref_kind": "public_channel_record",
+          "ref": "redcube://channels/project-landing/deck-002"
+        }
+      ],
+      "recorded_at": "2026-04-05T07:12:00Z",
+      "promotion_surface_index": {
+        "target_surfaces": [
+          "project_landing",
+          "announcement_post"
+        ],
+        "required_human_approval": true,
+        "blocking_surface": "announcement_post",
+        "public_refs": [
+          {
+            "surface_id": "project_landing",
+            "ref": "https://example.org/decks/deck-002"
+          }
+        ]
+      }
+    }
+  ]
+}

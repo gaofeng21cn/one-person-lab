@@ -57,6 +57,7 @@
 - [OPL Domain Onboarding Contract](opl-domain-onboarding-contract.zh-CN.md)
 - [OPL Gateway Acceptance Test Spec](opl-gateway-acceptance-test-spec.zh-CN.md)
 - [OPL Governance / Audit Operating Surface](opl-governance-audit-operating-surface.zh-CN.md)
+- [OPL Publish / Promotion Operating Surface](opl-publish-promotion-operating-surface.zh-CN.md)
 
 ## 当前判断标准
 

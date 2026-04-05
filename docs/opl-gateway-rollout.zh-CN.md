@@ -159,6 +159,10 @@ Human / Agent
 
 ## Phase G5：真实公开产品面
 
+具体合同：
+
+- [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.zh-CN.md)
+
 目标：
 
 - 把 `OPL Gateway` 做成对人类和 Agent 都稳定的顶层产品入口
