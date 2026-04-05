@@ -1,0 +1,491 @@
+{
+  "version": "p16.m1",
+  "scope": "opl_surface_review_matrix",
+  "description": "Machine-readable derived review matrix for the frozen OPL public, contract, and supporting surfaces. It records human-review obligations, acceptance coverage, companion review surfaces, wording-check mode, and publishability stage without becoming an approval engine, publish controller, or second source of truth.",
+  "non_goals": [
+    "approval_engine",
+    "publish_controller",
+    "release_engine",
+    "truth_registry"
+  ],
+  "matrix_rules": [
+    "entries are derived from already frozen OPL public surfaces, contract docs, supporting reference surfaces, and the current acceptance/public-surface indices",
+    "human_review_required records whether explicit human review is required before a surface is treated as current public gateway material; it does not automate approval",
+    "required_acceptance_gates must resolve to existing gate ids in contracts/opl-gateway/acceptance-matrix.json and required_companion_surfaces must resolve to known surface ids in contracts/opl-gateway/public-surface-index.json",
+    "cross_domain_wording_check records whether wording alignment is enforced through the shared cross-domain gate or through local review obligations only",
+    "publishability_stage describes documentation-readiness stage only; it does not transfer domain review or publication authority into OPL"
+  ],
+  "covered_surface_ids": [
+    "opl_public_readme",
+    "opl_roadmap",
+    "opl_gateway_rollout",
+    "opl_federation_contract",
+    "opl_gateway_contract_hub",
+    "opl_read_only_discovery_gateway",
+    "opl_routed_action_gateway",
+    "opl_domain_onboarding_contract",
+    "opl_governance_audit_operating_surface",
+    "opl_publish_promotion_operating_surface",
+    "opl_gateway_example_corpus",
+    "opl_routed_safety_example_corpus",
+    "opl_operating_example_corpus",
+    "opl_operating_record_catalog",
+    "opl_surface_lifecycle_map",
+    "opl_surface_authority_matrix",
+    "opl_public_surface_index_doc",
+    "opl_gateway_acceptance_spec"
+  ],
+  "review_entries": [
+    {
+      "surface_id": "opl_public_readme",
+      "owner_scope": "opl",
+      "surface_role": "top_level_navigation",
+      "human_review_required": true,
+      "required_acceptance_gates": [
+        "cross_domain_wording_consistency"
+      ],
+      "required_companion_surfaces": [
+        "opl_roadmap",
+        "opl_gateway_contract_hub",
+        "opl_public_surface_index_doc"
+      ],
+      "cross_domain_wording_check": "shared_gate_required",
+      "publishability_stage": "top_level_positioning_aligned",
+      "governing_refs": [
+        "README.md",
+        "README.zh-CN.md",
+        "docs/gateway-federation.md",
+        "docs/gateway-federation.zh-CN.md"
+      ]
+    },
+    {
+      "surface_id": "opl_roadmap",
+      "owner_scope": "opl",
+      "surface_role": "phase_navigation",
+      "human_review_required": true,
+      "required_acceptance_gates": [
+        "cross_domain_wording_consistency"
+      ],
+      "required_companion_surfaces": [
+        "opl_public_readme",
+        "opl_gateway_rollout",
+        "opl_public_surface_index_doc"
+      ],
+      "cross_domain_wording_check": "shared_gate_required",
+      "publishability_stage": "top_level_positioning_aligned",
+      "governing_refs": [
+        "docs/roadmap.md",
+        "docs/roadmap.zh-CN.md",
+        "docs/opl-gateway-rollout.md",
+        "docs/opl-gateway-rollout.zh-CN.md"
+      ]
+    },
+    {
+      "surface_id": "opl_gateway_rollout",
+      "owner_scope": "opl",
+      "surface_role": "gateway_rollout_path",
+      "human_review_required": true,
+      "required_acceptance_gates": [
+        "cross_domain_wording_consistency"
+      ],
+      "required_companion_surfaces": [
+        "opl_roadmap",
+        "opl_read_only_discovery_gateway",
+        "opl_routed_action_gateway",
+        "opl_public_surface_index_doc"
+      ],
+      "cross_domain_wording_check": "shared_gate_required",
+      "publishability_stage": "top_level_positioning_aligned",
+      "governing_refs": [
+        "docs/opl-gateway-rollout.md",
+        "docs/opl-gateway-rollout.zh-CN.md",
+        "docs/opl-read-only-discovery-gateway.md",
+        "docs/opl-read-only-discovery-gateway.zh-CN.md",
+        "docs/opl-routed-action-gateway.md",
+        "docs/opl-routed-action-gateway.zh-CN.md"
+      ]
+    },
+    {
+      "surface_id": "opl_federation_contract",
+      "owner_scope": "opl",
+      "surface_role": "federation_definition",
+      "human_review_required": true,
+      "required_acceptance_gates": [
+        "g1_registry_completeness"
+      ],
+      "required_companion_surfaces": [
+        "opl_gateway_contract_hub",
+        "opl_public_surface_index_doc"
+      ],
+      "cross_domain_wording_check": "local_review_required",
+      "publishability_stage": "contract_boundary_aligned",
+      "governing_refs": [
+        "docs/opl-federation-contract.md",
+        "docs/opl-federation-contract.zh-CN.md",
+        "contracts/opl-gateway/workstreams.json",
+        "contracts/opl-gateway/domains.json",
+        "contracts/opl-gateway/routing-vocabulary.json"
+      ]
+    },
+    {
+      "surface_id": "opl_gateway_contract_hub",
+      "owner_scope": "opl",
+      "surface_role": "machine_readable_contract_hub",
+      "human_review_required": true,
+      "required_acceptance_gates": [
+        "g1_registry_completeness",
+        "g2_discovery_correctness",
+        "g3_routing_safety",
+        "domain_onboarding_gate",
+        "p5_m1_governance_audit_integrity",
+        "p5_m2_publish_promotion_integrity",
+        "p7_example_corpus_integrity",
+        "p8_public_surface_index_integrity",
+        "p10_routed_safety_example_integrity",
+        "p12_operating_example_integrity",
+        "p13_operating_record_catalog_integrity",
+        "p14_surface_lifecycle_map_integrity",
+        "p15_surface_authority_matrix_integrity",
+        "p16_surface_review_matrix_integrity",
+        "cross_domain_wording_consistency"
+      ],
+      "required_companion_surfaces": [
+        "opl_federation_contract",
+        "opl_gateway_acceptance_spec",
+        "opl_surface_lifecycle_map",
+        "opl_surface_authority_matrix",
+        "opl_surface_review_matrix",
+        "opl_public_surface_index_doc"
+      ],
+      "cross_domain_wording_check": "shared_gate_required",
+      "publishability_stage": "contract_boundary_aligned",
+      "governing_refs": [
+        "contracts/opl-gateway/README.md",
+        "contracts/opl-gateway/README.zh-CN.md",
+        "contracts/opl-gateway/acceptance-matrix.json",
+        "contracts/opl-gateway/public-surface-index.json"
+      ]
+    },
+    {
+      "surface_id": "opl_read_only_discovery_gateway",
+      "owner_scope": "opl",
+      "surface_role": "read_only_discovery",
+      "human_review_required": true,
+      "required_acceptance_gates": [
+        "g2_discovery_correctness"
+      ],
+      "required_companion_surfaces": [
+        "opl_gateway_contract_hub",
+        "opl_routed_action_gateway",
+        "opl_public_surface_index_doc"
+      ],
+      "cross_domain_wording_check": "local_review_required",
+      "publishability_stage": "contract_boundary_aligned",
+      "governing_refs": [
+        "docs/opl-read-only-discovery-gateway.md",
+        "docs/opl-read-only-discovery-gateway.zh-CN.md",
+        "contracts/opl-gateway/workstreams.json",
+        "contracts/opl-gateway/domains.json",
+        "contracts/opl-gateway/routing-vocabulary.json"
+      ]
+    },
+    {
+      "surface_id": "opl_routed_action_gateway",
+      "owner_scope": "opl",
+      "surface_role": "routed_action_gateway",
+      "human_review_required": true,
+      "required_acceptance_gates": [
+        "g3_routing_safety"
+      ],
+      "required_companion_surfaces": [
+        "opl_read_only_discovery_gateway",
+        "opl_governance_audit_operating_surface",
+        "opl_routed_safety_example_corpus",
+        "opl_public_surface_index_doc"
+      ],
+      "cross_domain_wording_check": "local_review_required",
+      "publishability_stage": "contract_boundary_aligned",
+      "governing_refs": [
+        "docs/opl-routed-action-gateway.md",
+        "docs/opl-routed-action-gateway.zh-CN.md",
+        "contracts/opl-gateway/routed-actions.schema.json",
+        "contracts/opl-gateway/handoff.schema.json"
+      ]
+    },
+    {
+      "surface_id": "opl_domain_onboarding_contract",
+      "owner_scope": "opl",
+      "surface_role": "domain_onboarding_gate",
+      "human_review_required": true,
+      "required_acceptance_gates": [
+        "domain_onboarding_gate"
+      ],
+      "required_companion_surfaces": [
+        "opl_gateway_contract_hub",
+        "opl_read_only_discovery_gateway",
+        "opl_routed_action_gateway",
+        "opl_public_surface_index_doc"
+      ],
+      "cross_domain_wording_check": "local_review_required",
+      "publishability_stage": "contract_boundary_aligned",
+      "governing_refs": [
+        "docs/opl-domain-onboarding-contract.md",
+        "docs/opl-domain-onboarding-contract.zh-CN.md",
+        "contracts/opl-gateway/domain-onboarding-readiness.schema.json"
+      ]
+    },
+    {
+      "surface_id": "opl_governance_audit_operating_surface",
+      "owner_scope": "opl",
+      "surface_role": "governance_audit_index_signal",
+      "human_review_required": true,
+      "required_acceptance_gates": [
+        "p5_m1_governance_audit_integrity"
+      ],
+      "required_companion_surfaces": [
+        "opl_routed_action_gateway",
+        "opl_operating_example_corpus",
+        "opl_operating_record_catalog",
+        "opl_public_surface_index_doc"
+      ],
+      "cross_domain_wording_check": "local_review_required",
+      "publishability_stage": "contract_boundary_aligned",
+      "governing_refs": [
+        "docs/opl-governance-audit-operating-surface.md",
+        "docs/opl-governance-audit-operating-surface.zh-CN.md",
+        "contracts/opl-gateway/governance-audit.schema.json"
+      ]
+    },
+    {
+      "surface_id": "opl_publish_promotion_operating_surface",
+      "owner_scope": "opl",
+      "surface_role": "publish_promotion_index_signal",
+      "human_review_required": true,
+      "required_acceptance_gates": [
+        "p5_m2_publish_promotion_integrity"
+      ],
+      "required_companion_surfaces": [
+        "opl_governance_audit_operating_surface",
+        "opl_operating_example_corpus",
+        "opl_operating_record_catalog",
+        "opl_public_surface_index_doc"
+      ],
+      "cross_domain_wording_check": "local_review_required",
+      "publishability_stage": "contract_boundary_aligned",
+      "governing_refs": [
+        "docs/opl-publish-promotion-operating-surface.md",
+        "docs/opl-publish-promotion-operating-surface.zh-CN.md",
+        "contracts/opl-gateway/publish-promotion.schema.json"
+      ]
+    },
+    {
+      "surface_id": "opl_gateway_example_corpus",
+      "owner_scope": "opl",
+      "surface_role": "illustrative_gateway_example_corpus",
+      "human_review_required": true,
+      "required_acceptance_gates": [
+        "p7_example_corpus_integrity",
+        "cross_domain_wording_consistency"
+      ],
+      "required_companion_surfaces": [
+        "opl_routed_action_gateway",
+        "opl_governance_audit_operating_surface",
+        "opl_publish_promotion_operating_surface",
+        "opl_public_surface_index_doc"
+      ],
+      "cross_domain_wording_check": "shared_gate_required",
+      "publishability_stage": "supporting_reference_aligned",
+      "governing_refs": [
+        "docs/opl-gateway-example-corpus.md",
+        "docs/opl-gateway-example-corpus.zh-CN.md",
+        "examples/opl-gateway/research-ops-submission.json",
+        "examples/opl-gateway/presentation-ops-publish.json"
+      ]
+    },
+    {
+      "surface_id": "opl_routed_safety_example_corpus",
+      "owner_scope": "opl",
+      "surface_role": "illustrative_routed_safety_corpus",
+      "human_review_required": true,
+      "required_acceptance_gates": [
+        "p10_routed_safety_example_integrity",
+        "cross_domain_wording_consistency"
+      ],
+      "required_companion_surfaces": [
+        "opl_routed_action_gateway",
+        "opl_public_surface_index_doc"
+      ],
+      "cross_domain_wording_check": "shared_gate_required",
+      "publishability_stage": "supporting_reference_aligned",
+      "governing_refs": [
+        "docs/opl-routed-safety-example-corpus.md",
+        "docs/opl-routed-safety-example-corpus.zh-CN.md",
+        "examples/opl-gateway/ambiguous-task-routing.json",
+        "examples/opl-gateway/unknown-domain-routing.json",
+        "examples/opl-gateway/refusal-routing.json"
+      ]
+    },
+    {
+      "surface_id": "opl_operating_example_corpus",
+      "owner_scope": "opl",
+      "surface_role": "illustrative_operating_example_corpus",
+      "human_review_required": true,
+      "required_acceptance_gates": [
+        "p12_operating_example_integrity",
+        "cross_domain_wording_consistency"
+      ],
+      "required_companion_surfaces": [
+        "opl_governance_audit_operating_surface",
+        "opl_publish_promotion_operating_surface",
+        "opl_operating_record_catalog",
+        "opl_public_surface_index_doc"
+      ],
+      "cross_domain_wording_check": "shared_gate_required",
+      "publishability_stage": "supporting_reference_aligned",
+      "governing_refs": [
+        "docs/opl-operating-example-corpus.md",
+        "docs/opl-operating-example-corpus.zh-CN.md",
+        "examples/opl-gateway/governance-decision-record.json",
+        "examples/opl-gateway/cross-domain-review-index.json",
+        "examples/opl-gateway/publish-readiness-signal.json",
+        "examples/opl-gateway/publish-outcome-index.json",
+        "examples/opl-gateway/promotion-candidate-signal.json",
+        "examples/opl-gateway/promotion-surface-index.json"
+      ]
+    },
+    {
+      "surface_id": "opl_operating_record_catalog",
+      "owner_scope": "opl",
+      "surface_role": "reference_operating_record_catalog",
+      "human_review_required": true,
+      "required_acceptance_gates": [
+        "p13_operating_record_catalog_integrity",
+        "cross_domain_wording_consistency"
+      ],
+      "required_companion_surfaces": [
+        "opl_operating_example_corpus",
+        "opl_governance_audit_operating_surface",
+        "opl_publish_promotion_operating_surface",
+        "opl_gateway_acceptance_spec",
+        "opl_public_surface_index_doc"
+      ],
+      "cross_domain_wording_check": "shared_gate_required",
+      "publishability_stage": "supporting_reference_aligned",
+      "governing_refs": [
+        "docs/opl-operating-record-catalog.md",
+        "docs/opl-operating-record-catalog.zh-CN.md",
+        "contracts/opl-gateway/operating-record-catalog.json"
+      ]
+    },
+    {
+      "surface_id": "opl_surface_lifecycle_map",
+      "owner_scope": "opl",
+      "surface_role": "derived_surface_lifecycle_map",
+      "human_review_required": true,
+      "required_acceptance_gates": [
+        "p14_surface_lifecycle_map_integrity",
+        "p16_surface_review_matrix_integrity",
+        "cross_domain_wording_consistency"
+      ],
+      "required_companion_surfaces": [
+        "opl_surface_authority_matrix",
+        "opl_surface_review_matrix",
+        "opl_gateway_acceptance_spec",
+        "opl_public_surface_index_doc"
+      ],
+      "cross_domain_wording_check": "shared_gate_required",
+      "publishability_stage": "supporting_reference_aligned",
+      "governing_refs": [
+        "docs/opl-surface-lifecycle-map.md",
+        "docs/opl-surface-lifecycle-map.zh-CN.md",
+        "contracts/opl-gateway/surface-lifecycle-map.json"
+      ]
+    },
+    {
+      "surface_id": "opl_surface_authority_matrix",
+      "owner_scope": "opl",
+      "surface_role": "derived_surface_authority_matrix",
+      "human_review_required": true,
+      "required_acceptance_gates": [
+        "p15_surface_authority_matrix_integrity",
+        "p16_surface_review_matrix_integrity",
+        "cross_domain_wording_consistency"
+      ],
+      "required_companion_surfaces": [
+        "opl_surface_lifecycle_map",
+        "opl_surface_review_matrix",
+        "opl_gateway_acceptance_spec",
+        "opl_public_surface_index_doc"
+      ],
+      "cross_domain_wording_check": "shared_gate_required",
+      "publishability_stage": "supporting_reference_aligned",
+      "governing_refs": [
+        "docs/opl-surface-authority-matrix.md",
+        "docs/opl-surface-authority-matrix.zh-CN.md",
+        "contracts/opl-gateway/surface-authority-matrix.json"
+      ]
+    },
+    {
+      "surface_id": "opl_public_surface_index_doc",
+      "owner_scope": "opl",
+      "surface_role": "public_surface_index",
+      "human_review_required": true,
+      "required_acceptance_gates": [
+        "p8_public_surface_index_integrity",
+        "p16_surface_review_matrix_integrity",
+        "cross_domain_wording_consistency"
+      ],
+      "required_companion_surfaces": [
+        "opl_gateway_contract_hub",
+        "opl_gateway_acceptance_spec",
+        "opl_surface_lifecycle_map",
+        "opl_surface_authority_matrix",
+        "opl_surface_review_matrix"
+      ],
+      "cross_domain_wording_check": "shared_gate_required",
+      "publishability_stage": "supporting_reference_aligned",
+      "governing_refs": [
+        "docs/opl-public-surface-index.md",
+        "docs/opl-public-surface-index.zh-CN.md",
+        "contracts/opl-gateway/public-surface-index.json"
+      ]
+    },
+    {
+      "surface_id": "opl_gateway_acceptance_spec",
+      "owner_scope": "opl",
+      "surface_role": "gateway_acceptance_spec",
+      "human_review_required": true,
+      "required_acceptance_gates": [
+        "g1_registry_completeness",
+        "g2_discovery_correctness",
+        "g3_routing_safety",
+        "domain_onboarding_gate",
+        "p5_m1_governance_audit_integrity",
+        "p5_m2_publish_promotion_integrity",
+        "p7_example_corpus_integrity",
+        "p8_public_surface_index_integrity",
+        "p10_routed_safety_example_integrity",
+        "p12_operating_example_integrity",
+        "p13_operating_record_catalog_integrity",
+        "p14_surface_lifecycle_map_integrity",
+        "p15_surface_authority_matrix_integrity",
+        "p16_surface_review_matrix_integrity",
+        "cross_domain_wording_consistency"
+      ],
+      "required_companion_surfaces": [
+        "opl_gateway_contract_hub",
+        "opl_public_surface_index_doc",
+        "opl_surface_lifecycle_map",
+        "opl_surface_authority_matrix",
+        "opl_surface_review_matrix"
+      ],
+      "cross_domain_wording_check": "local_review_required",
+      "publishability_stage": "acceptance_reference_aligned",
+      "governing_refs": [
+        "docs/opl-gateway-acceptance-test-spec.md",
+        "docs/opl-gateway-acceptance-test-spec.zh-CN.md",
+        "contracts/opl-gateway/acceptance-matrix.json"
+      ]
+    }
+  ]
+}

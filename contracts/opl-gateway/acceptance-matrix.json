@@ -1,5 +1,5 @@
 {
-  "version": "p15.m1",
+  "version": "p16.m1",
   "gates": [
     {
       "gate_id": "g1_registry_completeness",
@@ -311,6 +311,38 @@
       ]
     },
     {
+      "gate_id": "p16_surface_review_matrix_integrity",
+      "layer": "p16",
+      "required_files": [
+        "contracts/opl-gateway/surface-review-matrix.json",
+        "docs/opl-surface-review-matrix.md",
+        "docs/opl-surface-review-matrix.zh-CN.md",
+        "contracts/opl-gateway/public-surface-index.json",
+        "docs/opl-public-surface-index.md",
+        "docs/opl-public-surface-index.zh-CN.md",
+        "docs/opl-surface-lifecycle-map.md",
+        "docs/opl-surface-lifecycle-map.zh-CN.md",
+        "docs/opl-surface-authority-matrix.md",
+        "docs/opl-surface-authority-matrix.zh-CN.md",
+        "docs/opl-gateway-acceptance-test-spec.md",
+        "docs/opl-gateway-acceptance-test-spec.zh-CN.md",
+        "contracts/opl-gateway/README.md",
+        "contracts/opl-gateway/README.zh-CN.md"
+      ],
+      "contract_assertions": [
+        "surface review matrix covers the frozen OPL public, contract, and supporting surfaces needed for current human-review and publishability inspection",
+        "matrix entries stay derived, reference-only, and non-executing",
+        "required_acceptance_gates resolve inside acceptance-matrix.json and required_companion_surfaces resolve inside public-surface-index.json",
+        "human_review_required and publishability_stage expose review obligations only and do not create an approval engine or publish controller",
+        "contract hub, public-surface index, lifecycle map, authority matrix, and acceptance surfaces expose the review matrix as a supporting/reference surface"
+      ],
+      "forbidden_regressions": [
+        "surface review matrix becomes an approval engine",
+        "surface review matrix becomes a publish controller or release engine",
+        "surface review matrix transfers domain review or publication authority into OPL"
+      ]
+    },
+    {
       "gate_id": "cross_domain_wording_consistency",
       "layer": "cross_domain",
       "required_files": [
@@ -337,7 +369,9 @@
         "docs/opl-surface-lifecycle-map.md",
         "docs/opl-surface-lifecycle-map.zh-CN.md",
         "docs/opl-surface-authority-matrix.md",
-        "docs/opl-surface-authority-matrix.zh-CN.md"
+        "docs/opl-surface-authority-matrix.zh-CN.md",
+        "docs/opl-surface-review-matrix.md",
+        "docs/opl-surface-review-matrix.zh-CN.md"
       ],
       "contract_assertions": [
         "OPL remains the top-level gateway/federation surface",
@@ -346,14 +380,17 @@
         "governance/publish surfaces remain index-only",
         "supporting discoverability surfaces remain non-governing and non-executing",
         "surface lifecycle map remains derived/reference-only",
-        "authority matrix remains derived/reference-only"
+        "authority matrix remains derived/reference-only",
+        "surface review matrix remains derived/reference-only"
       ],
       "forbidden_regressions": [
         "OPL described as monolithic runtime",
         "domain projects reduced to private implementation details",
         "public-surface index described as a launcher",
         "surface lifecycle map described as transition authority",
-        "authority matrix described as authorization engine"
+        "authority matrix described as authorization engine",
+        "surface review matrix described as approval engine",
+        "surface review matrix described as publish controller"
       ]
     }
   ]

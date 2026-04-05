@@ -56,6 +56,7 @@
 - Operating record catalog
 - Surface lifecycle map
 - Surface authority matrix
+- Surface review matrix
 - Public surface index
 
 ### 4. Linked domain public-entry surfaces
@@ -96,6 +97,7 @@ canonical runtime truth、review truth、release truth 与 submission truth 仍�
 - [OPL Operating Record Catalog](./opl-operating-record-catalog.zh-CN.md)
 - [OPL Surface Lifecycle Map](./opl-surface-lifecycle-map.zh-CN.md)
 - [OPL Surface Authority Matrix](./opl-surface-authority-matrix.zh-CN.md)
+- [OPL Surface Review Matrix](./opl-surface-review-matrix.zh-CN.md)
 
 ## 完成定义
 
@@ -105,5 +107,6 @@ canonical runtime truth、review truth、release truth 与 submission truth 仍�
 - 它区分 OPL-owned surface 与 domain-owned public entry
 - 它把 derived 的 surface lifecycle map 暴露为 supporting/reference surface
 - 它把 derived 的 surface authority matrix 暴露为 supporting/reference surface
+- 它把 derived 的 surface review matrix 暴露为 supporting/reference surface
 - 它不暗示 launcher、runtime 或 harness bypass
 - 它不把 canonical truth 上收给 `OPL`

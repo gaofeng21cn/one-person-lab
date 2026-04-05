@@ -68,9 +68,10 @@
 只要 `owner_scope = domain`，这个 entry 就是在标记：domain-local routing 与 harness execution 从 domain gateway 边界之后开始。
 如果某个 surface 还保留 follow-on surface，唯一允许的值仍然是 `domain_gateway`。
 
-## 配套 Mapping Surface
+## 配套 Mapping Surfaces
 
 - [OPL Surface Lifecycle Map](./opl-surface-lifecycle-map.zh-CN.md)
+- [OPL Surface Review Matrix](./opl-surface-review-matrix.zh-CN.md)
 
 ## 上位依据
 
@@ -91,4 +92,5 @@
 - 每个 `governing_ref` 都能解析到存在的本地工件
 - `OPL` surfaces 不会声称自己拥有 domain execution、canonical-truth、review-truth 或 publication-truth authority
 - linked domain public-entry surfaces 仍保持 domain-owned，不会坍缩成 OPL internal module
+- 它能与 lifecycle map、surface review matrix 一起被发现，同时不会升级成 approval surface 或 execution surface
 - 它保持 derived、reference-only、non-executing

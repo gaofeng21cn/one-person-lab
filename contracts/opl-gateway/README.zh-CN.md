@@ -39,8 +39,9 @@
 
 - [OPL Surface Lifecycle Map](../../docs/opl-surface-lifecycle-map.zh-CN.md) — 对当前已冻结 gateway / operating / supporting surfaces 的 derived machine-readable lifecycle 视图
 - [OPL Surface Authority Matrix](../../docs/opl-surface-authority-matrix.zh-CN.md) — 对当前已冻结 OPL surfaces 与 linked domain public-entry surfaces 的 derived machine-readable authority split
+- [OPL Surface Review Matrix](../../docs/opl-surface-review-matrix.zh-CN.md) — 对当前已冻结 OPL public / contract / supporting surfaces 的 derived machine-readable review obligation
 
-这些 mapping surfaces 都只是 reference-only surface。它们不会变成 workflow engine、transition authority、authorization engine，也不替代本目录中的 governing contracts。
+这些 mapping surfaces 都只是 reference-only surface。它们不会变成 workflow engine、transition authority、authorization engine、approval engine、publish controller，也不替代本目录中的 governing contracts。
 
 ## 文件
 
@@ -57,6 +58,7 @@
 - [`operating-record-catalog.json`](./operating-record-catalog.json) — 已冻结 P5.M1 / P5.M2 operating record kind 的 machine-readable reference catalog
 - [`surface-lifecycle-map.json`](./surface-lifecycle-map.json) — 当前已冻结 gateway / operating / supporting surfaces 的 machine-readable derived lifecycle map
 - [`surface-authority-matrix.json`](./surface-authority-matrix.json) — 当前已冻结 OPL surfaces 与 linked domain public-entry surfaces 的 machine-readable derived authority matrix
+- [`surface-review-matrix.json`](./surface-review-matrix.json) — 当前已冻结 OPL public / contract / supporting surfaces 的 machine-readable derived review matrix
 
 ## 已冻结的当前映射
 

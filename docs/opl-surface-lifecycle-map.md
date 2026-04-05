@@ -58,9 +58,10 @@ Each entry stays derived/reference-only and carries only:
 - `opl_public_surface_index_doc`
 - `opl_gateway_acceptance_spec`
 
-## Companion Mapping Surface
+## Companion Mapping Surfaces
 
 - [OPL Surface Authority Matrix](./opl-surface-authority-matrix.md)
+- [OPL Surface Review Matrix](./opl-surface-review-matrix.md)
 
 ## Reading Rule
 
@@ -91,5 +92,5 @@ The lifecycle map is acceptable only when:
 - every `requires_surfaces` and `enables_surfaces` target resolves inside the same lifecycle map
 - every `governing_ref` resolves to an existing local artifact
 - `follow_on_route_surface` is always `null` or `domain_gateway`
-- it remains discoverable alongside the derived surface authority matrix without either map becoming an execution surface
+- it remains discoverable alongside the derived surface authority matrix and derived surface review matrix without any of these maps becoming an execution surface
 - it remains derived, reference-only, and non-executing
