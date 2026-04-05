@@ -1,5 +1,5 @@
 {
-  "version": "p18.m1",
+  "version": "p23.m4",
   "gates": [
     {
       "gate_id": "g1_registry_completeness",
@@ -490,6 +490,30 @@
       ]
     },
     {
+      "gate_id": "p23_m4_g4_candidate_index_boundary_integrity",
+      "layer": "p23.m4/g4",
+      "required_files": [
+        "docs/opl-gateway-rollout.md",
+        "docs/opl-gateway-rollout.zh-CN.md",
+        "docs/opl-gateway-acceptance-test-spec.md",
+        "docs/opl-gateway-acceptance-test-spec.zh-CN.md",
+        "contracts/opl-gateway/acceptance-matrix.json"
+      ],
+      "contract_assertions": [
+        "phase g4 covers exactly shared asset index/shared memory index/shared domain registry/shared publication-delivery catalog",
+        "all four G4 indexes remain roadmap-only/future-only/reference-only/non-admitting candidates until a later explicit readiness contract and acceptance alignment freeze them",
+        "no G4 candidate index is described as a current public-entry/discovery-ready/routed-action-ready/execution/truth-owner/approval/publish-control/release-control surface",
+        "G4 wording keeps canonical truth in the owning domain and keeps OPL as the top-level gateway/federation surface",
+        "G4 wording does not collapse MedAutoScience or RedCube AI into internal OPL modules or weaken their independence"
+      ],
+      "forbidden_regressions": [
+        "any G4 candidate index is described as a current public-entry/discovery-ready/routed-action-ready/execution/truth-owner/approval/publish-control/release-control surface before an explicit readiness contract",
+        "G4 candidate indexes are presented as already-admitted current public surfaces",
+        "G4 candidate indexes turn OPL into a monolithic runtime or shared truth owner",
+        "G4 candidate indexes weaken MedAutoScience or RedCube AI independence"
+      ]
+    },
+    {
       "gate_id": "cross_domain_wording_consistency",
       "layer": "cross_domain",
       "required_files": [
@@ -543,7 +567,8 @@
         "candidate-domain backlog remains reference-only, non-admitting, and below the domain-onboarding gate",
         "candidate backlog keeps Grant/Review/Thesis Ops blocked below the onboarding gate",
         "operating-model, shared-foundation, and shared-foundation-ownership docs keep OPL at the top-level semantic/index/reuse layer while domains keep canonical truth, mutation, runtime writeback, review truth, and delivery/publication truth",
-        "future shared asset/memory indexes stay out of the current public surface until a later explicit readiness contract and acceptance alignment freeze them"
+        "shared asset/memory/domain-registry/publication-delivery candidate indexes remain roadmap-only/future-only/reference-only/non-admitting until a later explicit readiness contract and acceptance alignment freeze them",
+        "no G4 candidate index is described as a current public-entry/discovery-ready/routed-action-ready/execution/truth-owner/approval/publish-control/release-control surface"
       ],
       "forbidden_regressions": [
         "OPL described as monolithic runtime",
@@ -557,7 +582,7 @@
         "candidate-domain backlog described as admitted-domain registry or approval surface",
         "candidate backlog described as a pre-admission domain registry",
         "shared-foundation docs describe OPL as a universal shared truth store or as taking over domain-owned canonical truth",
-        "shared asset/memory indexes are described as current public surfaces without an explicit readiness contract"
+        "any G4 candidate index is described as a current public-entry/discovery-ready/routed-action-ready/execution/truth-owner/approval/publish-control/release-control surface before an explicit readiness contract"
       ]
     }
   ]

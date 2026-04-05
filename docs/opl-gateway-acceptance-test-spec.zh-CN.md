@@ -31,6 +31,7 @@
 - `P16` surface review matrix 完整性
 - `P17` task-topology 完整性
 - `P18` candidate-domain backlog 完整性
+- `P23.M4 / G4` candidate-index rollout boundary 完整性
 - 各公开表面之间的 cross-domain wording consistency
 
 ## 上位依据
@@ -243,12 +244,13 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 8. governance / audit wording 仍然保持 index-only，而不是 runtime-owning。
 9. publish / promotion wording 仍然保持 index-only，而不是 publish-owning 或 promotion-owning。
 10. `docs/operating-model*`、`docs/shared-foundation*` 与 `docs/shared-foundation-ownership*` 都必须把 `OPL` 保持在顶层语义 / 索引 / 复用规则层，而不能把它写成单体 runtime、共享 truth store，或 domain review/publication truth owner。
-11. 未来的 `shared asset index` / `shared memory index`，在后续显式合同与 acceptance alignment 冻结 readiness boundary 之前，仍不得进入当前 public surface。
+11. `shared asset index`、`shared memory index`、`shared domain registry` 与 `shared publication / delivery catalog` 在后续显式合同与 acceptance alignment 冻结 readiness boundary 之前，都仍只是 roadmap-only、future-only、reference-only、non-admitting 的 G4 candidate。
+12. 这些 G4 candidate index 都不能被写成当前的 public-entry、discovery-ready、routed-action-ready、execution、truth-owner、approval、publish-control 或 release-control surface。
 
 ### 验证方式
 
-- 阅读 `README.md`、`README.zh-CN.md`、`docs/roadmap*.md`、`docs/operating-model*`、`docs/shared-foundation*`、`docs/shared-foundation-ownership*` 与相关 gateway 文档。
-- 用定向 `rg` 检查废弃 wording 与必需的 domain-role wording。
+- 阅读 `README.md`、`README.zh-CN.md`、`docs/roadmap*.md`、`docs/operating-model*`、`docs/shared-foundation*`、`docs/shared-foundation-ownership*`、`docs/opl-gateway-rollout.md`、`docs/opl-gateway-rollout.zh-CN.md` 与相关 gateway 文档。
+- 用定向 `rg` 检查废弃 wording、必需的 domain-role wording，以及 G4 candidate-index freeze wording。
 - 将 OPL 仓库中的公开 wording 与 `med-autoscience`、`redcube-ai`、`gaofeng21cn` 的 README 做交叉核对。
 
 ## H. P7 Example Corpus 完整性
@@ -622,6 +624,32 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 - 确认没有任何字段或配套 prose 把 backlog 升格成 domain registry、discovery registry、routed-action surface、handoff surface、approval engine 或 publish controller。
 - 确认 `required_evidence` 与 note 文本不会预先写入未来的 `domain_id`、`gateway_surface` 或 `harness_surface` 元数据。
 - 确认 `opl_candidate_domain_backlog` 在 `public-surface-index.json` 与 `surface-review-matrix.json` 中都恰好解析一次，并且也能在 `surface-lifecycle-map.json` 与 `surface-authority-matrix.json` 中解析。
+
+## R. P23.M4 / G4 Candidate-Index Rollout Boundary 完整性
+
+### 验收标准
+
+`P23.M4 / G4` 只有在下面全部成立时才算通过：
+
+1. `docs/opl-gateway-rollout.md` 与 `docs/opl-gateway-rollout.zh-CN.md` 都把 `Phase G4` 保持在 candidate-index boundary，而不是把它写成当前已收录 surface。
+2. `Phase G4` 精确覆盖这四个 candidate index：
+   - `shared asset index`
+   - `shared memory index`
+   - `shared domain registry`
+   - `shared publication / delivery catalog`
+3. 这四个 candidate index 都被显式保持为 roadmap-only、future-only、reference-only、non-admitting，直到后续显式合同与 acceptance alignment 冻结各自的 readiness boundary。
+4. 任何 G4 candidate index 都不能被写成当前的 public-entry、discovery-ready、routed-action-ready、execution、truth-owner、approval、publish-control 或 release-control surface。
+5. G4 wording 必须把 canonical truth 留在拥有它的 domain，并把 `OPL` 保持在 top-level gateway / federation layer，而不是把它改写成 monolithic runtime 或 shared truth owner。
+6. G4 wording 不能把 `MedAutoScience` 或 `RedCube AI` 折叠成 `OPL` 的内部模块，也不能削弱它们作为 domain gateway / harness surface 的独立性。
+7. `contracts/opl-gateway/acceptance-matrix.json` 必须包含一个专门的 G4 gate，用来检查 rollout/spec boundary wording，并阻止任何 G4 candidate index 被提前写成已收录 surface。
+
+### 验证方式
+
+- 阅读 `docs/opl-gateway-rollout.md` 与 `.zh-CN.md`，确认 `Phase G4` 仍保持 future candidate boundary。
+- 确认 candidate 集合精确等于上面四个 G4 index，并且在中英文里都带有 roadmap-only / future-only / reference-only / non-admitting wording。
+- 确认两份 rollout 文档都没有把任何 G4 candidate index 升格成当前的 public-entry、discovery-ready、routed-action-ready、execution、truth-owner、approval、publish-control 或 release-control surface。
+- 确认 G4 wording 继续把 canonical truth 留在各自 domain 内，并在 top-level `OPL` gateway 之下保持 `MedAutoScience` / `RedCube AI` 的独立性。
+- 解析 `contracts/opl-gateway/acceptance-matrix.json`，确认专门的 G4 gate 覆盖 rollout/spec 文件，并明确阻止提前收录 wording。
 
 ## 标准验证命令
 
@@ -1192,7 +1220,11 @@ for path in files:
             raise SystemExit(f'missing link: {path} -> {raw}')
 print('links OK')
 PY
-rg -n "top-level blueprint only|不是统一运行时入口|本仓库本身不承担运行时角色"           README.md README.zh-CN.md           docs/gateway-federation.md docs/gateway-federation.zh-CN.md           docs/opl-federation-contract.md docs/opl-federation-contract.zh-CN.md           docs/opl-read-only-discovery-gateway.md docs/opl-read-only-discovery-gateway.zh-CN.md           docs/opl-routed-action-gateway.md docs/opl-routed-action-gateway.zh-CN.md           docs/opl-domain-onboarding-contract.md docs/opl-domain-onboarding-contract.zh-CN.md           docs/opl-candidate-domain-backlog.md docs/opl-candidate-domain-backlog.zh-CN.md           docs/opl-governance-audit-operating-surface.md docs/opl-governance-audit-operating-surface.zh-CN.md           docs/opl-publish-promotion-operating-surface.md docs/opl-publish-promotion-operating-surface.zh-CN.md           docs/opl-gateway-example-corpus.md docs/opl-gateway-example-corpus.zh-CN.md           docs/opl-routed-safety-example-corpus.md docs/opl-routed-safety-example-corpus.zh-CN.md           docs/opl-operating-example-corpus.md docs/opl-operating-example-corpus.zh-CN.md           docs/opl-operating-record-catalog.md docs/opl-operating-record-catalog.zh-CN.md           docs/operating-model.md docs/operating-model.zh-CN.md           docs/shared-foundation.md docs/shared-foundation.zh-CN.md           docs/shared-foundation-ownership.md docs/shared-foundation-ownership.zh-CN.md           docs/opl-surface-lifecycle-map.md docs/opl-surface-lifecycle-map.zh-CN.md           docs/opl-surface-authority-matrix.md docs/opl-surface-authority-matrix.zh-CN.md           docs/opl-surface-review-matrix.md docs/opl-surface-review-matrix.zh-CN.md           docs/task-map.md docs/task-map.zh-CN.md           docs/opl-public-surface-index.md docs/opl-public-surface-index.zh-CN.md           docs/opl-gateway-rollout.md docs/opl-gateway-rollout.zh-CN.md           docs/roadmap.md docs/roadmap.zh-CN.md           docs/opl-candidate-domain-backlog.md docs/opl-candidate-domain-backlog.zh-CN.md           contracts/opl-gateway/README.md contracts/opl-gateway/README.zh-CN.md
+rg -n "top-level blueprint only|不是统一运行时入口|本仓库本身不承担运行时角色"
+rg -n "roadmap-only|future-only|reference-only|non-admitting|public-entry|discovery-ready|routed-action-ready|execution|truth-owner|approval|publish-control|release-control|shared asset index|shared memory index|shared domain registry|shared publication / delivery catalog" \
+  docs/opl-gateway-rollout.md docs/opl-gateway-rollout.zh-CN.md \
+  docs/opl-gateway-acceptance-test-spec.md docs/opl-gateway-acceptance-test-spec.zh-CN.md \
+  contracts/opl-gateway/acceptance-matrix.json           README.md README.zh-CN.md           docs/gateway-federation.md docs/gateway-federation.zh-CN.md           docs/opl-federation-contract.md docs/opl-federation-contract.zh-CN.md           docs/opl-read-only-discovery-gateway.md docs/opl-read-only-discovery-gateway.zh-CN.md           docs/opl-routed-action-gateway.md docs/opl-routed-action-gateway.zh-CN.md           docs/opl-domain-onboarding-contract.md docs/opl-domain-onboarding-contract.zh-CN.md           docs/opl-candidate-domain-backlog.md docs/opl-candidate-domain-backlog.zh-CN.md           docs/opl-governance-audit-operating-surface.md docs/opl-governance-audit-operating-surface.zh-CN.md           docs/opl-publish-promotion-operating-surface.md docs/opl-publish-promotion-operating-surface.zh-CN.md           docs/opl-gateway-example-corpus.md docs/opl-gateway-example-corpus.zh-CN.md           docs/opl-routed-safety-example-corpus.md docs/opl-routed-safety-example-corpus.zh-CN.md           docs/opl-operating-example-corpus.md docs/opl-operating-example-corpus.zh-CN.md           docs/opl-operating-record-catalog.md docs/opl-operating-record-catalog.zh-CN.md           docs/operating-model.md docs/operating-model.zh-CN.md           docs/shared-foundation.md docs/shared-foundation.zh-CN.md           docs/shared-foundation-ownership.md docs/shared-foundation-ownership.zh-CN.md           docs/opl-surface-lifecycle-map.md docs/opl-surface-lifecycle-map.zh-CN.md           docs/opl-surface-authority-matrix.md docs/opl-surface-authority-matrix.zh-CN.md           docs/opl-surface-review-matrix.md docs/opl-surface-review-matrix.zh-CN.md           docs/task-map.md docs/task-map.zh-CN.md           docs/opl-public-surface-index.md docs/opl-public-surface-index.zh-CN.md           docs/opl-gateway-rollout.md docs/opl-gateway-rollout.zh-CN.md           docs/roadmap.md docs/roadmap.zh-CN.md           docs/opl-candidate-domain-backlog.md docs/opl-candidate-domain-backlog.zh-CN.md           contracts/opl-gateway/README.md contracts/opl-gateway/README.zh-CN.md
 ```
 
 ## 完成定义
