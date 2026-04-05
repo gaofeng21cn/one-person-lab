@@ -242,10 +242,11 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 7. 任何公开 wording 都不能把 domain 项目降格成 OPL 的私有实现细节。
 8. governance / audit wording 仍然保持 index-only，而不是 runtime-owning。
 9. publish / promotion wording 仍然保持 index-only，而不是 publish-owning 或 promotion-owning。
+10. `docs/operating-model*`、`docs/shared-foundation*` 与 `docs/shared-foundation-ownership*` 都必须把 `OPL` 保持在顶层语义 / 索引 / 复用规则层，而不能把它写成单体 runtime、共享 truth store，或 domain review/publication truth owner。
 
 ### 验证方式
 
-- 阅读 `README.md`、`README.zh-CN.md`、`docs/roadmap*.md` 与相关 gateway 文档。
+- 阅读 `README.md`、`README.zh-CN.md`、`docs/roadmap*.md`、`docs/operating-model*`、`docs/shared-foundation*`、`docs/shared-foundation-ownership*` 与相关 gateway 文档。
 - 用定向 `rg` 检查废弃 wording 与必需的 domain-role wording。
 - 将 OPL 仓库中的公开 wording 与 `med-autoscience`、`redcube-ai`、`gaofeng21cn` 的 README 做交叉核对。
 
@@ -295,14 +296,15 @@ wording-consistency gate 只有在下面全部成立时才算通过：
    - `ppt_deck` 直接映射到 `presentation_ops`
    - `xiaohongshu` 可路由到 `redcube`，但不自动等于 `presentation_ops`
 7. 这个 index 恰好暴露一个 `opl_candidate_domain_backlog` entry，并把它标成 `opl_supporting_surface`，且明确它位于 onboarding gate 之下。
-8. 被链接的 README / roadmap / federation / rollout / contract-hub wording 不会把 public surface index 升格成 launcher、runtime registry、truth-owner surface，或 admission-approval surface。
+8. 这个 index 还会各自恰好暴露一个 `opl_operating_model`、`opl_shared_foundation` 与 `opl_shared_foundation_ownership` entry，并把它们保持为 OPL-owned 的 contract/reference surface。
+9. 被链接的 README / roadmap / federation / rollout / contract-hub wording 不会把 public surface index 升格成 launcher、runtime registry、truth-owner surface，或 admission-approval surface。
 
 ### 验证方式
 
 - 解析 `contracts/opl-gateway/public-surface-index.json`。
 - 检查 category 引用、`routes_to` 目标，以及本地 `repo_path` refs 的结构完整性。
 - 检查 `docs/opl-public-surface-index.md` 与 `.zh-CN.md` 中的 no-runtime / no-truth-shift / no-internal-module wording。
-- 确认 `surfaces[*].surface_id` 保持唯一，且 `opl_candidate_domain_backlog` 恰好以 supporting/reference surface 身份出现，而不是 admitted domain 或 execution surface。
+- 确认 `surfaces[*].surface_id` 保持唯一，且 `opl_candidate_domain_backlog` 恰好以 supporting/reference surface 身份出现，而不是 admitted domain 或 execution surface；同时 `opl_operating_model`、`opl_shared_foundation` 与 `opl_shared_foundation_ownership` 也都各自恰好出现一次，并保持为 OPL-owned 的 contract/reference surface。
 - 验证被接入的 OPL public surface 确实在应有位置链接到 public-surface index。
 
 ## J. P10 Routed-Safety Example 完整性
@@ -397,6 +399,9 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 1. `contracts/opl-gateway/surface-lifecycle-map.json` 存在，且是合法 JSON。
 2. `docs/opl-surface-lifecycle-map.md` 与 `.zh-CN.md` 存在。
 3. lifecycle map 恰好覆盖下面这些当前已冻结 surface：
+   - `opl_operating_model`
+   - `opl_shared_foundation`
+   - `opl_shared_foundation_ownership`
    - `opl_gateway_contract_hub`
    - `opl_read_only_discovery_gateway`
    - `opl_routed_action_gateway`
@@ -435,6 +440,9 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 1. `contracts/opl-gateway/surface-authority-matrix.json` 存在，且是合法 JSON。
 2. `docs/opl-surface-authority-matrix.md` 与 `.zh-CN.md` 存在。
 3. authority matrix 恰好覆盖下面这组当前 authority-review surface：
+   - `opl_operating_model`
+   - `opl_shared_foundation`
+   - `opl_shared_foundation_ownership`
    - `opl_gateway_contract_hub`
    - `opl_read_only_discovery_gateway`
    - `opl_routed_action_gateway`
@@ -481,6 +489,9 @@ wording-consistency gate 只有在下面全部成立时才算通过：
    - `opl_roadmap`
    - `opl_gateway_rollout`
    - `opl_task_map`
+   - `opl_operating_model`
+   - `opl_shared_foundation`
+   - `opl_shared_foundation_ownership`
    - `opl_federation_contract`
    - `opl_gateway_contract_hub`
    - `opl_read_only_discovery_gateway`
@@ -730,6 +741,9 @@ lifecycle = json.loads(Path('contracts/opl-gateway/surface-lifecycle-map.json').
 idx = json.loads(Path('contracts/opl-gateway/public-surface-index.json').read_text())
 
 expected = {
+    'opl_operating_model',
+    'opl_shared_foundation',
+    'opl_shared_foundation_ownership',
     'opl_gateway_contract_hub',
     'opl_read_only_discovery_gateway',
     'opl_routed_action_gateway',
@@ -767,6 +781,9 @@ matrix = json.loads(Path('contracts/opl-gateway/surface-authority-matrix.json').
 idx = json.loads(Path('contracts/opl-gateway/public-surface-index.json').read_text())
 
 expected = {
+    'opl_operating_model',
+    'opl_shared_foundation',
+    'opl_shared_foundation_ownership',
     'opl_gateway_contract_hub',
     'opl_read_only_discovery_gateway',
     'opl_routed_action_gateway',
@@ -799,6 +816,14 @@ for entry in matrix['authority_entries']:
     assert entry['allowed_follow_on_surface'] in (None, 'domain_gateway'), entry
     for ref in entry['governing_refs']:
         assert Path(ref).exists(), (entry['surface_id'], ref)
+shared_boundary_ids = {'opl_operating_model', 'opl_shared_foundation', 'opl_shared_foundation_ownership'}
+for entry in matrix['authority_entries']:
+    if entry['surface_id'] in shared_boundary_ids:
+        assert entry['route_authority'] == 'none', entry
+        assert entry['execution_authority'] == 'none', entry
+        assert entry['truth_authority'] == 'none', entry
+        assert entry['review_authority'] == 'none', entry
+        assert entry['publication_authority'] == 'none', entry
 print('surface authority matrix OK')
 PY
 python3 - <<'PY'
@@ -814,6 +839,9 @@ expected = {
     'opl_roadmap',
     'opl_gateway_rollout',
     'opl_task_map',
+    'opl_operating_model',
+    'opl_shared_foundation',
+    'opl_shared_foundation_ownership',
     'opl_federation_contract',
     'opl_gateway_contract_hub',
     'opl_read_only_discovery_gateway',
@@ -1013,7 +1041,6 @@ for surface in idx['surfaces']:
             assert ref['ref'].startswith('https://'), ref
         else:
             raise AssertionError(ref)
-    # routes_to 只要求目标在 index 中存在，不依赖声明顺序。
     for target in surface['routes_to']:
         assert target in surface_id_set, (surface['surface_id'], target)
 candidates = [surface for surface in idx['surfaces'] if surface['surface_id'] == 'opl_candidate_domain_backlog']
@@ -1021,7 +1048,80 @@ assert len(candidates) == 1, candidates
 candidate = candidates[0]
 assert candidate['category_id'] == 'opl_supporting_surface', candidate
 assert candidate['surface_kind'] == 'candidate_backlog', candidate
+expected_contract_surfaces = {
+    'opl_operating_model',
+    'opl_shared_foundation',
+    'opl_shared_foundation_ownership',
+}
+for surface_id in expected_contract_surfaces:
+    matches = [surface for surface in idx['surfaces'] if surface['surface_id'] == surface_id]
+    assert len(matches) == 1, (surface_id, matches)
+    surface = matches[0]
+    assert surface['category_id'] == 'opl_contract_surface', surface
+    assert surface['owner_scope'] == 'opl', surface
+    assert surface['truth_mode'] == 'none', surface
 print('public surface index OK')
+PY
+python3 - <<'PY'
+from pathlib import Path
+
+checks = {
+    Path('docs/operating-model.md'): [
+        'top-level gateway and federation model rather than as a static blueprint and not as a monolithic runtime',
+        'owning shared-foundation control language without taking over domain-owned canonical truth',
+        '`MedAutoScience` is the `Research Ops` domain gateway and harness',
+        '`RedCube AI` is the visual-deliverable domain gateway and harness',
+    ],
+    Path('docs/operating-model.zh-CN.md'): [
+        '不是静态蓝图，也不是单体 runtime，而是顶层 Gateway 与 federation model',
+        '拥有 shared-foundation 的顶层控制语言，但不接管各 domain 的 canonical truth',
+        '`MedAutoScience` 是 `Research Ops` 的 domain gateway 与 harness',
+        '`RedCube AI` 是视觉交付的 domain gateway 与 harness',
+    ],
+    Path('docs/shared-foundation.md'): [
+        'The shared foundation does not imply one monolithic runtime.',
+        'That compatibility does not make `OPL` the canonical truth store for every shared object;',
+        '`MedAutoScience` as the active research domain gateway and harness',
+        '`RedCube AI` as the visual-deliverable domain gateway and harness, with `ppt_deck` as the family that most directly maps to `Presentation Ops`',
+    ],
+    Path('docs/shared-foundation.zh-CN.md'): [
+        '共享基础结构不等于单体 runtime。',
+        '这种兼容性并不让 `OPL` 自动变成所有共享对象的 canonical truth store',
+        '`MedAutoScience` 作为 active 的 research domain gateway 与 harness',
+        '`RedCube AI` 作为视觉交付 domain gateway 与 harness，其中 `ppt_deck` 是最直接映射到 `Presentation Ops` 的 family',
+    ],
+    Path('docs/shared-foundation-ownership.md'): [
+        '`OPL` owns the top-level semantic, indexing, identity, and cross-domain reuse rules for shared-foundation objects',
+        'each `domain gateway` and `domain harness` owns the canonical truth, mutation, audit writeback, and delivery truth for domain-local objects',
+        'never an automatic transfer of canonical truth from domains into `OPL`',
+        '`OPL` taking domain-owned review truth, runtime truth, or publication truth',
+    ],
+    Path('docs/shared-foundation-ownership.zh-CN.md'): [
+        '`OPL` 负责 shared-foundation 对象的顶层语义、索引、身份和跨域复用规则',
+        '各 `domain gateway` 与 `domain harness` 负责 domain-local 对象的 canonical truth、mutation、审计回写与交付真相',
+        '绝不自动把 canonical truth 从 domain 转移到 `OPL`',
+        '把 domain-owned review truth、runtime truth 或 publication truth 上收给 `OPL`',
+    ],
+    Path('../med-autoscience/README.md'): [
+        '`Med Auto Science` is the medical `Research Ops` gateway',
+        'it is not the top-level `OPL` gateway either.',
+    ],
+    Path('../redcube-ai/README.md'): [
+        '`RedCube AI` is the formal gateway for the visual-deliverable domain.',
+        '`ppt_deck` is the family currently mapping most directly to `Presentation Ops`.',
+        '`xiaohongshu` shares the same harness but is not automatically equal to `Presentation Ops`.',
+    ],
+    Path('../gaofeng21cn/README.md'): [
+        'is the top-level gateway for how a one-person research lab routes work into independent domain systems and framework lines.',
+        'is the emerging visual-deliverable gateway under the same umbrella.',
+    ],
+}
+
+for path, snippets in checks.items():
+    text = path.read_text()
+    for snippet in snippets:
+        assert snippet in text, (path, snippet)
+print('shared-foundation wording alignment OK')
 PY
 python3 - <<'PY'
 import re
@@ -1051,6 +1151,12 @@ files = [
     Path('docs/opl-operating-example-corpus.zh-CN.md'),
     Path('docs/opl-operating-record-catalog.md'),
     Path('docs/opl-operating-record-catalog.zh-CN.md'),
+    Path('docs/operating-model.md'),
+    Path('docs/operating-model.zh-CN.md'),
+    Path('docs/shared-foundation.md'),
+    Path('docs/shared-foundation.zh-CN.md'),
+    Path('docs/shared-foundation-ownership.md'),
+    Path('docs/shared-foundation-ownership.zh-CN.md'),
     Path('docs/opl-surface-lifecycle-map.md'),
     Path('docs/opl-surface-lifecycle-map.zh-CN.md'),
     Path('docs/opl-surface-authority-matrix.md'),
@@ -1079,7 +1185,7 @@ for path in files:
             raise SystemExit(f'missing link: {path} -> {raw}')
 print('links OK')
 PY
-rg -n "top-level blueprint only|不是统一运行时入口|本仓库本身不承担运行时角色"           README.md README.zh-CN.md           docs/gateway-federation.md docs/gateway-federation.zh-CN.md           docs/opl-federation-contract.md docs/opl-federation-contract.zh-CN.md           docs/opl-read-only-discovery-gateway.md docs/opl-read-only-discovery-gateway.zh-CN.md           docs/opl-routed-action-gateway.md docs/opl-routed-action-gateway.zh-CN.md           docs/opl-domain-onboarding-contract.md docs/opl-domain-onboarding-contract.zh-CN.md           docs/opl-candidate-domain-backlog.md docs/opl-candidate-domain-backlog.zh-CN.md           docs/opl-governance-audit-operating-surface.md docs/opl-governance-audit-operating-surface.zh-CN.md           docs/opl-publish-promotion-operating-surface.md docs/opl-publish-promotion-operating-surface.zh-CN.md           docs/opl-gateway-example-corpus.md docs/opl-gateway-example-corpus.zh-CN.md           docs/opl-routed-safety-example-corpus.md docs/opl-routed-safety-example-corpus.zh-CN.md           docs/opl-operating-example-corpus.md docs/opl-operating-example-corpus.zh-CN.md           docs/opl-operating-record-catalog.md docs/opl-operating-record-catalog.zh-CN.md           docs/opl-surface-lifecycle-map.md docs/opl-surface-lifecycle-map.zh-CN.md           docs/opl-surface-authority-matrix.md docs/opl-surface-authority-matrix.zh-CN.md           docs/opl-surface-review-matrix.md docs/opl-surface-review-matrix.zh-CN.md           docs/task-map.md docs/task-map.zh-CN.md           docs/opl-public-surface-index.md docs/opl-public-surface-index.zh-CN.md           docs/opl-gateway-rollout.md docs/opl-gateway-rollout.zh-CN.md           docs/roadmap.md docs/roadmap.zh-CN.md           docs/opl-candidate-domain-backlog.md docs/opl-candidate-domain-backlog.zh-CN.md           contracts/opl-gateway/README.md contracts/opl-gateway/README.zh-CN.md
+rg -n "top-level blueprint only|不是统一运行时入口|本仓库本身不承担运行时角色"           README.md README.zh-CN.md           docs/gateway-federation.md docs/gateway-federation.zh-CN.md           docs/opl-federation-contract.md docs/opl-federation-contract.zh-CN.md           docs/opl-read-only-discovery-gateway.md docs/opl-read-only-discovery-gateway.zh-CN.md           docs/opl-routed-action-gateway.md docs/opl-routed-action-gateway.zh-CN.md           docs/opl-domain-onboarding-contract.md docs/opl-domain-onboarding-contract.zh-CN.md           docs/opl-candidate-domain-backlog.md docs/opl-candidate-domain-backlog.zh-CN.md           docs/opl-governance-audit-operating-surface.md docs/opl-governance-audit-operating-surface.zh-CN.md           docs/opl-publish-promotion-operating-surface.md docs/opl-publish-promotion-operating-surface.zh-CN.md           docs/opl-gateway-example-corpus.md docs/opl-gateway-example-corpus.zh-CN.md           docs/opl-routed-safety-example-corpus.md docs/opl-routed-safety-example-corpus.zh-CN.md           docs/opl-operating-example-corpus.md docs/opl-operating-example-corpus.zh-CN.md           docs/opl-operating-record-catalog.md docs/opl-operating-record-catalog.zh-CN.md           docs/operating-model.md docs/operating-model.zh-CN.md           docs/shared-foundation.md docs/shared-foundation.zh-CN.md           docs/shared-foundation-ownership.md docs/shared-foundation-ownership.zh-CN.md           docs/opl-surface-lifecycle-map.md docs/opl-surface-lifecycle-map.zh-CN.md           docs/opl-surface-authority-matrix.md docs/opl-surface-authority-matrix.zh-CN.md           docs/opl-surface-review-matrix.md docs/opl-surface-review-matrix.zh-CN.md           docs/task-map.md docs/task-map.zh-CN.md           docs/opl-public-surface-index.md docs/opl-public-surface-index.zh-CN.md           docs/opl-gateway-rollout.md docs/opl-gateway-rollout.zh-CN.md           docs/roadmap.md docs/roadmap.zh-CN.md           docs/opl-candidate-domain-backlog.md docs/opl-candidate-domain-backlog.zh-CN.md           contracts/opl-gateway/README.md contracts/opl-gateway/README.zh-CN.md
 ```
 
 ## 完成定义

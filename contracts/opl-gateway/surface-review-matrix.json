@@ -23,6 +23,7 @@
     "opl_roadmap",
     "opl_gateway_rollout",
     "opl_task_map",
+    "opl_operating_model",
     "opl_federation_contract",
     "opl_gateway_contract_hub",
     "opl_read_only_discovery_gateway",
@@ -38,7 +39,9 @@
     "opl_surface_lifecycle_map",
     "opl_surface_authority_matrix",
     "opl_public_surface_index_doc",
-    "opl_gateway_acceptance_spec"
+    "opl_gateway_acceptance_spec",
+    "opl_shared_foundation",
+    "opl_shared_foundation_ownership"
   ],
   "review_entries": [
     {
@@ -132,6 +135,70 @@
         "docs/task-map.md",
         "docs/task-map.zh-CN.md",
         "contracts/opl-gateway/task-topology.json"
+      ]
+    },
+    {
+      "surface_id": "opl_operating_model",
+      "owner_scope": "opl",
+      "surface_role": "gateway_operating_model",
+      "human_review_required": true,
+      "required_acceptance_gates": [
+        "cross_domain_wording_consistency"
+      ],
+      "required_companion_surfaces": [
+        "opl_public_readme",
+        "opl_shared_foundation",
+        "opl_shared_foundation_ownership",
+        "opl_public_surface_index_doc"
+      ],
+      "cross_domain_wording_check": "shared_gate_required",
+      "publishability_stage": "top_level_positioning_aligned",
+      "governing_refs": [
+        "docs/operating-model.md",
+        "docs/operating-model.zh-CN.md"
+      ]
+    },
+    {
+      "surface_id": "opl_shared_foundation",
+      "owner_scope": "opl",
+      "surface_role": "shared_foundation_language",
+      "human_review_required": true,
+      "required_acceptance_gates": [
+        "cross_domain_wording_consistency"
+      ],
+      "required_companion_surfaces": [
+        "opl_operating_model",
+        "opl_shared_foundation_ownership",
+        "opl_surface_authority_matrix",
+        "opl_public_surface_index_doc"
+      ],
+      "cross_domain_wording_check": "shared_gate_required",
+      "publishability_stage": "top_level_positioning_aligned",
+      "governing_refs": [
+        "docs/shared-foundation.md",
+        "docs/shared-foundation.zh-CN.md"
+      ]
+    },
+    {
+      "surface_id": "opl_shared_foundation_ownership",
+      "owner_scope": "opl",
+      "surface_role": "shared_foundation_ownership_boundary",
+      "human_review_required": true,
+      "required_acceptance_gates": [
+        "cross_domain_wording_consistency"
+      ],
+      "required_companion_surfaces": [
+        "opl_shared_foundation",
+        "opl_surface_authority_matrix",
+        "opl_surface_review_matrix",
+        "opl_gateway_acceptance_spec",
+        "opl_public_surface_index_doc"
+      ],
+      "cross_domain_wording_check": "shared_gate_required",
+      "publishability_stage": "contract_boundary_aligned",
+      "governing_refs": [
+        "docs/shared-foundation-ownership.md",
+        "docs/shared-foundation-ownership.zh-CN.md"
       ]
     },
     {

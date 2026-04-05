@@ -46,6 +46,12 @@ Each entry stays derived/reference-only and carries only:
 
 ## Current Coverage
 
+### Shared-foundation boundary surfaces
+
+- `opl_operating_model`
+- `opl_shared_foundation`
+- `opl_shared_foundation_ownership`
+
 ### OPL contract / operating / supporting surfaces
 
 - `opl_gateway_contract_hub`
@@ -73,6 +79,7 @@ Each entry stays derived/reference-only and carries only:
 Read this matrix as a **derived authority split**, not as an execution or authorization contract.
 
 When `owner_scope = opl`, the matrix may still expose routing, indexing, discoverability, or acceptance responsibility, but execution authority and domain truth/review/publication authority stay outside `OPL`.
+If the surface is `opl_operating_model`, `opl_shared_foundation`, or `opl_shared_foundation_ownership`, every authority field remains boundary-only and does not shift canonical truth, mutation, review truth, or publication truth into `OPL`.
 When `owner_scope = domain`, the entry marks where domain-local routing and harness execution begin behind the domain gateway boundary.
 If a follow-on surface exists, the only allowed value remains `domain_gateway`.
 If the surface is `opl_candidate_domain_backlog`, every authority field remains `none`; the backlog does not grant pre-admission authority over a future domain.
@@ -99,7 +106,7 @@ If the surface is `opl_candidate_domain_backlog`, every authority field remains 
 
 The authority matrix is acceptable only when:
 
-- it covers the frozen OPL surfaces plus the linked domain public-entry surfaces needed for current authority review
+- it covers the frozen OPL shared-foundation / gateway / operating / supporting surfaces plus the linked domain public-entry surfaces needed for current authority review
 - every `governing_ref` resolves to an existing local artifact
 - `OPL` surfaces never claim domain execution, canonical-truth, review-truth, or publication-truth authority
 - linked domain public-entry surfaces remain domain-owned and do not collapse into OPL internal modules

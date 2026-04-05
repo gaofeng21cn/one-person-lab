@@ -16,6 +16,9 @@
     "candidate backlog surfaces may expose blocked admission material, but they do not allocate future domain authority or routed readiness"
   ],
   "covered_surface_ids": [
+    "opl_shared_foundation_ownership",
+    "opl_shared_foundation",
+    "opl_operating_model",
     "opl_gateway_contract_hub",
     "opl_read_only_discovery_gateway",
     "opl_routed_action_gateway",
@@ -34,6 +37,66 @@
     "redcube_public_gateway"
   ],
   "authority_entries": [
+    {
+      "surface_id": "opl_operating_model",
+      "owner_scope": "opl",
+      "surface_role": "gateway_operating_model",
+      "route_authority": "none",
+      "execution_authority": "none",
+      "truth_authority": "none",
+      "review_authority": "none",
+      "publication_authority": "none",
+      "allowed_follow_on_surface": null,
+      "forbidden_actions": [
+        "claim_domain_truth",
+        "become_runtime_control_plane",
+        "become_shared_truth_store"
+      ],
+      "governing_refs": [
+        "docs/operating-model.md",
+        "docs/operating-model.zh-CN.md"
+      ]
+    },
+    {
+      "surface_id": "opl_shared_foundation",
+      "owner_scope": "opl",
+      "surface_role": "shared_foundation_language",
+      "route_authority": "none",
+      "execution_authority": "none",
+      "truth_authority": "none",
+      "review_authority": "none",
+      "publication_authority": "none",
+      "allowed_follow_on_surface": null,
+      "forbidden_actions": [
+        "claim_domain_truth",
+        "claim_mutation_ownership",
+        "become_shared_truth_store"
+      ],
+      "governing_refs": [
+        "docs/shared-foundation.md",
+        "docs/shared-foundation.zh-CN.md"
+      ]
+    },
+    {
+      "surface_id": "opl_shared_foundation_ownership",
+      "owner_scope": "opl",
+      "surface_role": "shared_foundation_ownership_boundary",
+      "route_authority": "none",
+      "execution_authority": "none",
+      "truth_authority": "none",
+      "review_authority": "none",
+      "publication_authority": "none",
+      "allowed_follow_on_surface": null,
+      "forbidden_actions": [
+        "transfer_domain_truth_to_opl",
+        "transfer_review_or_publication_ownership_to_opl",
+        "become_shared_truth_store"
+      ],
+      "governing_refs": [
+        "docs/shared-foundation-ownership.md",
+        "docs/shared-foundation-ownership.zh-CN.md"
+      ]
+    },
     {
       "surface_id": "opl_gateway_contract_hub",
       "owner_scope": "opl",

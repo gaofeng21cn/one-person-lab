@@ -46,6 +46,12 @@
 
 ## 当前 Coverage
 
+### Shared-foundation boundary surfaces
+
+- `opl_operating_model`
+- `opl_shared_foundation`
+- `opl_shared_foundation_ownership`
+
 ### OPL contract / operating / supporting surfaces
 
 - `opl_gateway_contract_hub`
@@ -73,6 +79,7 @@
 这张 matrix 必须被理解成 **derived authority split**，而不是 execution contract 或 authorization contract。
 
 当 `owner_scope = opl` 时，这张 matrix 可以暴露 routing、indexing、discoverability 或 acceptance 责任，但 execution authority 与 domain truth/review/publication authority 仍留在 `OPL` 之外。
+如果某个 surface 是 `opl_operating_model`、`opl_shared_foundation` 或 `opl_shared_foundation_ownership`，那么其中全部 authority 字段也都只能表达 boundary 约束，而不会把 canonical truth、mutation、review truth 或 publication truth 上收到 `OPL`。
 当 `owner_scope = domain` 时，对应 entry 只是在标记：domain-local routing 与 harness execution 从哪里开始，且它们都位于 domain gateway 边界之后。
 如果存在 follow-on surface，允许值也仍然只有 `domain_gateway`。
 如果某个 surface 是 `opl_candidate_domain_backlog`，那么所有 authority 字段都仍然只能是 `none`；这份 backlog 不会给未来 domain 预分配 authority。
@@ -99,7 +106,7 @@
 
 只有当下面这些条件都成立时，authority matrix 才算合格：
 
-- 它覆盖当前 authority review 所需的已冻结 OPL surface，加上 linked domain public-entry surface
+- 它覆盖当前 authority review 所需的已冻结 OPL shared-foundation / gateway / operating / supporting surface，加上 linked domain public-entry surface
 - 每个 `governing_ref` 都能解析到本地存在的工件
 - `OPL` surface 从不宣称 domain execution authority、canonical-truth authority、review-truth authority 或 publication-truth authority
 - linked domain public-entry surface 仍保持 domain-owned，不会塌缩成 OPL 内部模块

@@ -44,6 +44,12 @@ Each entry stays derived/reference-only and carries only:
 
 ## Current Coverage
 
+### Shared-foundation boundary surfaces
+
+- `opl_operating_model`
+- `opl_shared_foundation`
+- `opl_shared_foundation_ownership`
+
 ### Core gateway contract surfaces
 
 - `opl_gateway_contract_hub`
@@ -77,6 +83,7 @@ Read this lifecycle map as a **derived reference graph**, not as an execution co
 
 `requires_surfaces` and `enables_surfaces` expose frozen dependency and discoverability relationships only.
 They do not authorize automatic transitions, and they do not replace prose review.
+If the surface is `opl_operating_model`, `opl_shared_foundation`, or `opl_shared_foundation_ownership`, it remains a shared-foundation boundary document only and does not grant mutation, transition, review, or publication authority.
 When an entry keeps a follow-on route boundary, the only allowed value is `domain_gateway`.
 If no follow-on action belongs to the surface, the map uses `null`.
 If the surface is `opl_candidate_domain_backlog`, the dependency chain remains blocker-oriented only; it does not authorize automatic promotion into onboarding, discovery, or routing.
@@ -98,7 +105,7 @@ If the surface is `opl_candidate_domain_backlog`, the dependency chain remains b
 
 The lifecycle map is acceptable only when:
 
-- it covers the currently frozen gateway / operating / supporting surfaces that matter for top-level traversal
+- it covers the currently frozen shared-foundation / gateway / operating / supporting surfaces that matter for top-level traversal
 - every `requires_surfaces` and `enables_surfaces` target resolves inside the same lifecycle map
 - every `governing_ref` resolves to an existing local artifact
 - `follow_on_route_surface` is always `null` or `domain_gateway`

@@ -16,6 +16,9 @@
     "candidate backlog entries may expose blocked admission dependencies, but they do not authorize automatic promotion or routing"
   ],
   "covered_surface_ids": [
+    "opl_shared_foundation_ownership",
+    "opl_shared_foundation",
+    "opl_operating_model",
     "opl_gateway_contract_hub",
     "opl_read_only_discovery_gateway",
     "opl_routed_action_gateway",
@@ -31,6 +34,62 @@
     "opl_gateway_acceptance_spec"
   ],
   "surfaces": [
+    {
+      "surface_id": "opl_operating_model",
+      "layer_id": "supporting_shared_foundation_language",
+      "control_mode": "reference_boundary_doc",
+      "truth_mode": "none",
+      "requires_surfaces": [],
+      "enables_surfaces": [
+        "opl_shared_foundation",
+        "opl_shared_foundation_ownership",
+        "opl_public_surface_index_doc",
+        "opl_gateway_acceptance_spec"
+      ],
+      "follow_on_route_surface": null,
+      "governing_refs": [
+        "docs/operating-model.md",
+        "docs/operating-model.zh-CN.md"
+      ]
+    },
+    {
+      "surface_id": "opl_shared_foundation",
+      "layer_id": "supporting_shared_foundation_language",
+      "control_mode": "reference_boundary_doc",
+      "truth_mode": "none",
+      "requires_surfaces": [
+        "opl_operating_model"
+      ],
+      "enables_surfaces": [
+        "opl_shared_foundation_ownership",
+        "opl_public_surface_index_doc",
+        "opl_gateway_acceptance_spec"
+      ],
+      "follow_on_route_surface": null,
+      "governing_refs": [
+        "docs/shared-foundation.md",
+        "docs/shared-foundation.zh-CN.md"
+      ]
+    },
+    {
+      "surface_id": "opl_shared_foundation_ownership",
+      "layer_id": "supporting_shared_foundation_ownership",
+      "control_mode": "reference_boundary_doc",
+      "truth_mode": "none",
+      "requires_surfaces": [
+        "opl_operating_model",
+        "opl_shared_foundation"
+      ],
+      "enables_surfaces": [
+        "opl_public_surface_index_doc",
+        "opl_gateway_acceptance_spec"
+      ],
+      "follow_on_route_surface": null,
+      "governing_refs": [
+        "docs/shared-foundation-ownership.md",
+        "docs/shared-foundation-ownership.zh-CN.md"
+      ]
+    },
     {
       "surface_id": "opl_gateway_contract_hub",
       "layer_id": "gateway_contract_materialization",

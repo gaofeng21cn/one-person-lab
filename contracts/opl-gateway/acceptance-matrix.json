@@ -151,20 +151,28 @@
         "docs/opl-public-surface-index.zh-CN.md",
         "contracts/opl-gateway/candidate-domain-backlog.json",
         "docs/opl-candidate-domain-backlog.md",
-        "docs/opl-candidate-domain-backlog.zh-CN.md"
+        "docs/opl-candidate-domain-backlog.zh-CN.md",
+        "docs/operating-model.md",
+        "docs/operating-model.zh-CN.md",
+        "docs/shared-foundation.md",
+        "docs/shared-foundation.zh-CN.md",
+        "docs/shared-foundation-ownership.md",
+        "docs/shared-foundation-ownership.zh-CN.md"
       ],
       "contract_assertions": [
         "public-surface index remains machine-readable and non-executing",
         "opl-owned surfaces are distinguished from domain-owned public entries",
         "domain entries stay independently usable and truth remains domain-owned",
         "public-surface index preserves research_ops/presentation_ops and ppt_deck/xiaohongshu routing semantics",
-        "public-surface index exposes opl_candidate_domain_backlog as a supporting/reference surface for under-definition workstreams without admitting domains early"
+        "public-surface index exposes opl_candidate_domain_backlog as a supporting/reference surface for under-definition workstreams without admitting domains early",
+        "public-surface index exposes opl_operating_model, opl_shared_foundation, and opl_shared_foundation_ownership as OPL-owned discoverability/reference surfaces without transferring canonical truth, mutation, review truth, or publication truth into OPL"
       ],
       "forbidden_regressions": [
         "public-surface index becomes a launcher or runtime registry",
         "domain public entries are treated as internal OPL modules",
         "harness internals are indexed as public entry surfaces",
-        "candidate-domain backlog is indexed as an admitted domain or execution surface"
+        "candidate-domain backlog is indexed as an admitted domain or execution surface",
+        "shared-foundation docs are indexed as execution surfaces, shared truth stores, or domain-truth takeover points"
       ]
     },
     {
@@ -271,7 +279,13 @@
         "docs/opl-operating-record-catalog.zh-CN.md",
         "contracts/opl-gateway/candidate-domain-backlog.json",
         "docs/opl-candidate-domain-backlog.md",
-        "docs/opl-candidate-domain-backlog.zh-CN.md"
+        "docs/opl-candidate-domain-backlog.zh-CN.md",
+        "docs/operating-model.md",
+        "docs/operating-model.zh-CN.md",
+        "docs/shared-foundation.md",
+        "docs/shared-foundation.zh-CN.md",
+        "docs/shared-foundation-ownership.md",
+        "docs/shared-foundation-ownership.zh-CN.md"
       ],
       "contract_assertions": [
         "surface lifecycle map covers the frozen gateway, operating, and supporting surfaces needed for current top-level traversal",
@@ -279,12 +293,14 @@
         "requires_surfaces and enables_surfaces target only known lifecycle entries",
         "follow_on_route_surface is null or domain_gateway only",
         "contract hub, public-surface index, operating-record catalog, and acceptance surfaces expose the lifecycle map as a supporting/reference surface",
-        "surface lifecycle map covers the candidate-domain backlog as a supporting/reference surface without introducing execution semantics"
+        "surface lifecycle map covers the candidate-domain backlog as a supporting/reference surface without introducing execution semantics",
+        "surface lifecycle map covers opl_operating_model, opl_shared_foundation, and opl_shared_foundation_ownership as derived/reference shared-foundation boundary surfaces only"
       ],
       "forbidden_regressions": [
         "surface lifecycle map becomes a workflow engine",
         "surface lifecycle map becomes a transition authority",
-        "surface lifecycle map becomes a second source of truth or runtime manifest"
+        "surface lifecycle map becomes a second source of truth or runtime manifest",
+        "surface lifecycle map turns shared-foundation boundary docs into transition authority, execution semantics, or shared truth-transfer surfaces"
       ]
     },
     {
@@ -307,7 +323,13 @@
         "contracts/opl-gateway/README.zh-CN.md",
         "contracts/opl-gateway/candidate-domain-backlog.json",
         "docs/opl-candidate-domain-backlog.md",
-        "docs/opl-candidate-domain-backlog.zh-CN.md"
+        "docs/opl-candidate-domain-backlog.zh-CN.md",
+        "docs/operating-model.md",
+        "docs/operating-model.zh-CN.md",
+        "docs/shared-foundation.md",
+        "docs/shared-foundation.zh-CN.md",
+        "docs/shared-foundation-ownership.md",
+        "docs/shared-foundation-ownership.zh-CN.md"
       ],
       "contract_assertions": [
         "authority matrix covers the frozen OPL surfaces plus linked domain public-entry surfaces needed for current authority review",
@@ -315,12 +337,14 @@
         "OPL-owned surfaces never claim domain execution, truth, review, or publication authority",
         "linked domain public-entry surfaces remain domain-owned and mark where domain-local routing/execution begin",
         "lifecycle map, public-surface index, contract hub, and acceptance surfaces expose the authority matrix as a supporting/reference surface",
-        "authority matrix covers the candidate-domain backlog while keeping every authority field inside OPL at none"
+        "authority matrix covers the candidate-domain backlog while keeping every authority field inside OPL at none",
+        "authority matrix covers opl_operating_model, opl_shared_foundation, and opl_shared_foundation_ownership while keeping execution/truth/review/publication authority at none for those OPL-owned boundary docs"
       ],
       "forbidden_regressions": [
         "authority matrix becomes an authorization engine",
         "authority matrix becomes a runtime control plane",
-        "authority matrix transfers domain truth or publication ownership into OPL"
+        "authority matrix transfers domain truth or publication ownership into OPL",
+        "authority matrix uses shared-foundation boundary docs to transfer domain truth, mutation, review, or publication ownership into OPL"
       ]
     },
     {
@@ -343,7 +367,13 @@
         "contracts/opl-gateway/README.zh-CN.md",
         "contracts/opl-gateway/candidate-domain-backlog.json",
         "docs/opl-candidate-domain-backlog.md",
-        "docs/opl-candidate-domain-backlog.zh-CN.md"
+        "docs/opl-candidate-domain-backlog.zh-CN.md",
+        "docs/operating-model.md",
+        "docs/operating-model.zh-CN.md",
+        "docs/shared-foundation.md",
+        "docs/shared-foundation.zh-CN.md",
+        "docs/shared-foundation-ownership.md",
+        "docs/shared-foundation-ownership.zh-CN.md"
       ],
       "contract_assertions": [
         "surface review matrix covers the frozen OPL public, contract, and supporting surfaces needed for current human-review and publishability inspection",
@@ -351,13 +381,15 @@
         "required_acceptance_gates resolve inside acceptance-matrix.json and required_companion_surfaces resolve inside public-surface-index.json",
         "human_review_required and publishability_stage expose review obligations only and do not create an approval engine or publish controller",
         "contract hub, public-surface index, lifecycle map, authority matrix, and acceptance surfaces expose the review matrix as a supporting/reference surface",
-        "surface review matrix covers the candidate-domain backlog as a supporting review surface without turning it into an onboarding engine or approval surface"
+        "surface review matrix covers the candidate-domain backlog as a supporting review surface without turning it into an onboarding engine or approval surface",
+        "surface review matrix covers opl_operating_model, opl_shared_foundation, and opl_shared_foundation_ownership as human-review/reference surfaces only"
       ],
       "forbidden_regressions": [
         "surface review matrix becomes an approval engine",
         "surface review matrix becomes a publish controller or release engine",
         "surface review matrix transfers domain review or publication authority into OPL",
-        "surface review matrix turns candidate-domain backlog coverage into domain admission authority"
+        "surface review matrix turns candidate-domain backlog coverage into domain admission authority",
+        "surface review matrix turns shared-foundation boundary coverage into approval authority or OPL-owned review/publication truth"
       ]
     },
     {
@@ -488,7 +520,13 @@
         "docs/opl-candidate-domain-backlog.md",
         "docs/opl-candidate-domain-backlog.zh-CN.md",
         "docs/task-map.md",
-        "docs/task-map.zh-CN.md"
+        "docs/task-map.zh-CN.md",
+        "docs/operating-model.md",
+        "docs/operating-model.zh-CN.md",
+        "docs/shared-foundation.md",
+        "docs/shared-foundation.zh-CN.md",
+        "docs/shared-foundation-ownership.md",
+        "docs/shared-foundation-ownership.zh-CN.md"
       ],
       "contract_assertions": [
         "OPL remains the top-level gateway/federation surface",
@@ -501,7 +539,8 @@
         "surface review matrix remains derived/reference-only",
         "task map keeps current admitted workstreams explicit while keeping Grant/Review/Thesis Ops under definition",
         "candidate-domain backlog remains reference-only, non-admitting, and below the domain-onboarding gate",
-        "candidate backlog keeps Grant/Review/Thesis Ops blocked below the onboarding gate"
+        "candidate backlog keeps Grant/Review/Thesis Ops blocked below the onboarding gate",
+        "operating-model, shared-foundation, and shared-foundation-ownership docs keep OPL at the top-level semantic/index/reuse layer while domains keep canonical truth, mutation, runtime writeback, review truth, and delivery/publication truth"
       ],
       "forbidden_regressions": [
         "OPL described as monolithic runtime",
@@ -513,7 +552,8 @@
         "surface review matrix described as publish controller",
         "task map described as admitted domain registry",
         "candidate-domain backlog described as admitted-domain registry or approval surface",
-        "candidate backlog described as a pre-admission domain registry"
+        "candidate backlog described as a pre-admission domain registry",
+        "shared-foundation docs describe OPL as a universal shared truth store or as taking over domain-owned canonical truth"
       ]
     }
   ]

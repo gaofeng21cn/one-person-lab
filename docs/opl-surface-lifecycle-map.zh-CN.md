@@ -44,6 +44,12 @@
 
 ## 当前 Coverage
 
+### Shared-foundation boundary surfaces
+
+- `opl_operating_model`
+- `opl_shared_foundation`
+- `opl_shared_foundation_ownership`
+
 ### Core gateway contract surfaces
 
 - `opl_gateway_contract_hub`
@@ -77,6 +83,7 @@
 
 `requires_surfaces` 与 `enables_surfaces` 只暴露已经冻结的依赖与 discoverability 关系。
 它们不会授权自动 transition，也不会替代 prose review。
+如果某个 surface 是 `opl_operating_model`、`opl_shared_foundation` 或 `opl_shared_foundation_ownership`，它也仍然只是 shared-foundation boundary 文档，不会因此获得 mutation、transition、review 或 publication authority。
 如果某个 entry 仍保留 follow-on route boundary，唯一允许值仍然是 `domain_gateway`。
 如果某个 surface 没有后续动作边界，map 就使用 `null`。
 如果某个 surface 是 `opl_candidate_domain_backlog`，这里暴露的依赖链也仍然只是 blocker-oriented 参考关系；它不会授权自动晋升到 onboarding、discovery 或 routing。
@@ -98,7 +105,7 @@
 
 只有当下面这些条件都成立时，lifecycle map 才算合格：
 
-- 它覆盖当前真正影响顶层遍历的已冻结 gateway / operating / supporting surface
+- 它覆盖当前真正影响顶层遍历的已冻结 shared-foundation / gateway / operating / supporting surface
 - 每个 `requires_surfaces` 与 `enables_surfaces` 目标都能在同一个 lifecycle map 内解析
 - 每个 `governing_ref` 都能解析到本地存在的工件
 - `follow_on_route_surface` 始终只可能是 `null` 或 `domain_gateway`

@@ -66,6 +66,12 @@
 - `opl_gateway_rollout`
 - `opl_task_map`
 
+### Shared-foundation boundary surfaces
+
+- `opl_operating_model`
+- `opl_shared_foundation`
+- `opl_shared_foundation_ownership`
+
 ### Governing contract surfaces
 
 - `opl_federation_contract`
@@ -102,6 +108,7 @@
 `required_acceptance_gates` 只引用已经冻结的 acceptance gate。
 `required_companion_surfaces` 只指向已经被索引的 supporting 或 governing surface。
 `publishability_stage` 只说明：一个 surface 在被当成当前 public material 之前，需要先满足哪一类 gateway-surface alignment。
+如果被覆盖的 surface 是 `opl_operating_model`、`opl_shared_foundation` 或 `opl_shared_foundation_ownership`，那么这些 review coverage 也仍然只是 reference-only，不会把它们升级成 approval layer、publish controller，或 domain-truth owner。
 如果被覆盖的 surface 是 `opl_task_map`，那么其中仍在定义中的 workstream 也只保持语义候选身份，不会因为被纳入 review coverage 就自动变成正式收录 domain 或 routed target。
 如果被覆盖的 surface 是 `opl_candidate_domain_backlog`，那么它也只是一张位于 onboarding gate 之下的 blocker index，不会把 candidate workstream 升格成 domain，也不会批准 onboarding 或创造 routed readiness。
 这些字段都不会把 domain review 或 publication authority 上收给 `OPL`。
@@ -120,7 +127,7 @@
 
 只有当下面这些条件都成立时，review matrix 才算合格：
 
-- 它覆盖当前 human review 与 publishability inspection 所需的全部已冻结 OPL public / contract / supporting surface
+- 它覆盖当前 human review 与 publishability inspection 所需的全部已冻结 OPL public / shared-foundation boundary / contract / supporting surface
 - 每个 `required_acceptance_gate` 都能在 `../contracts/opl-gateway/acceptance-matrix.json` 中解析
 - 每个 `required_companion_surface` 都能在 `../contracts/opl-gateway/public-surface-index.json` 中解析
 - 每个 `governing_ref` 都能解析到存在的本地工件

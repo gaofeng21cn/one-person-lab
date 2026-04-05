@@ -47,6 +47,9 @@ These surfaces freeze the gateway and federation boundary:
 
 - Federation contract
 - Gateway contract hub
+- [OPL Operating Model](./operating-model.md)
+- [Shared Foundation](./shared-foundation.md)
+- [Shared Foundation Ownership](./shared-foundation-ownership.md)
 - Read-only discovery gateway
 - Routed action gateway
 - Domain onboarding contract + onboarding-readiness schema
@@ -88,6 +91,7 @@ Read this index as a **surface map**, not as an execution registry.
 
 If a surface is domain-owned, `OPL` only indexes its public entry role.
 Canonical runtime truth, review truth, release truth, and submission truth remain inside the owning domain system.
+If a surface is `opl_operating_model`, `opl_shared_foundation`, or `opl_shared_foundation_ownership`, it remains a shared-foundation boundary/reference surface only and does not transfer canonical truth, mutation, review truth, or publication truth into `OPL`.
 If a surface is `opl_task_map`, under-definition workstreams remain top-level semantic candidates only until the onboarding and registry gates are satisfied.
 If a surface is `opl_candidate_domain_backlog`, it remains an admission-blocker reference only and does not count as onboarding readiness, discovery readiness, or routed-action readiness.
 
@@ -123,6 +127,7 @@ The public surface index is acceptable only when:
 - it exposes the derived surface authority matrix as a supporting/reference surface
 - it exposes the derived surface review matrix as a supporting/reference surface
 - it exposes the candidate-domain backlog as a supporting/reference surface below the onboarding gate
+- it exposes `opl_operating_model`, `opl_shared_foundation`, and `opl_shared_foundation_ownership` as OPL-owned contract/reference surfaces only
 - it exposes the task-map / task-topology surface without turning under-definition workstreams into admitted domains
 - it does not imply a launcher, runtime, or harness bypass
 - it does not move canonical truth into `OPL`

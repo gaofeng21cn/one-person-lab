@@ -69,7 +69,9 @@
         "opl_gateway_contract_hub",
         "medautoscience_public_gateway",
         "redcube_public_gateway",
-        "opl_task_map"
+        "opl_task_map",
+        "opl_operating_model",
+        "opl_shared_foundation"
       ],
       "notes": [
         "Top-level public positioning for the OPL gateway and federation.",
@@ -195,6 +197,131 @@
         "Top-level task topology surface for all current OPL workstreams, including under-definition candidate workstreams.",
         "Reference-only for under-definition workstreams: does not register new domains, does not create discovery readiness, and does not create routed-action readiness.",
         "The candidate-domain backlog records what is still missing before under-definition workstreams can become formally admitted domains."
+      ]
+    },
+    {
+      "surface_id": "opl_operating_model",
+      "category_id": "opl_contract_surface",
+      "surface_kind": "operating_model",
+      "boundary_role": "gateway_operating_model",
+      "owner_scope": "opl",
+      "truth_mode": "none",
+      "workstream_ids": [
+        "research_ops",
+        "grant_ops",
+        "thesis_ops",
+        "review_ops",
+        "presentation_ops"
+      ],
+      "domain_ids": [
+        "medautoscience",
+        "redcube"
+      ],
+      "refs": [
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/operating-model.md",
+          "language": "en"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/operating-model.zh-CN.md",
+          "language": "zh-CN"
+        }
+      ],
+      "routes_to": [
+        "opl_shared_foundation",
+        "opl_shared_foundation_ownership",
+        "opl_gateway_contract_hub",
+        "opl_public_surface_index_doc"
+      ],
+      "notes": [
+        "Top-level operating-model surface for the OPL gateway and federation chain.",
+        "Freezes that OPL owns shared-foundation control language without taking over domain-owned canonical truth."
+      ]
+    },
+    {
+      "surface_id": "opl_shared_foundation",
+      "category_id": "opl_contract_surface",
+      "surface_kind": "shared_foundation_doc",
+      "boundary_role": "shared_foundation_language",
+      "owner_scope": "opl",
+      "truth_mode": "none",
+      "workstream_ids": [
+        "research_ops",
+        "grant_ops",
+        "thesis_ops",
+        "review_ops",
+        "presentation_ops"
+      ],
+      "domain_ids": [
+        "medautoscience",
+        "redcube"
+      ],
+      "refs": [
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/shared-foundation.md",
+          "language": "en"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/shared-foundation.zh-CN.md",
+          "language": "zh-CN"
+        }
+      ],
+      "routes_to": [
+        "opl_shared_foundation_ownership",
+        "opl_surface_lifecycle_map",
+        "opl_surface_authority_matrix",
+        "opl_surface_review_matrix",
+        "opl_public_surface_index_doc"
+      ],
+      "notes": [
+        "Defines the shared-foundation language for cross-domain assets, memory, governance, delivery, and execution.",
+        "Reference-only: does not make OPL a monolithic runtime or canonical truth store for every shared object."
+      ]
+    },
+    {
+      "surface_id": "opl_shared_foundation_ownership",
+      "category_id": "opl_contract_surface",
+      "surface_kind": "ownership_boundary_doc",
+      "boundary_role": "shared_foundation_ownership_boundary",
+      "owner_scope": "opl",
+      "truth_mode": "none",
+      "workstream_ids": [
+        "research_ops",
+        "grant_ops",
+        "thesis_ops",
+        "review_ops",
+        "presentation_ops"
+      ],
+      "domain_ids": [
+        "medautoscience",
+        "redcube"
+      ],
+      "refs": [
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/shared-foundation-ownership.md",
+          "language": "en"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/shared-foundation-ownership.zh-CN.md",
+          "language": "zh-CN"
+        }
+      ],
+      "routes_to": [
+        "opl_shared_foundation",
+        "opl_surface_authority_matrix",
+        "opl_surface_review_matrix",
+        "opl_gateway_acceptance_spec",
+        "opl_public_surface_index_doc"
+      ],
+      "notes": [
+        "Freezes the ownership split between OPL top-level indexing/semantic control and domain-owned canonical truth/mutation/review/delivery truth.",
+        "Future shared indexes remain index-first and reference-only unless a later explicit contract upgrades them."
       ]
     },
     {
@@ -346,7 +473,10 @@
         "opl_public_surface_index_doc",
         "opl_operating_example_corpus",
         "opl_operating_record_catalog",
-        "opl_task_map"
+        "opl_task_map",
+        "opl_operating_model",
+        "opl_shared_foundation",
+        "opl_shared_foundation_ownership"
       ],
       "notes": [
         "Indexes the machine-readable OPL gateway contract materialization.",
@@ -991,7 +1121,10 @@
         "opl_surface_review_matrix",
         "medautoscience_public_gateway",
         "redcube_public_gateway",
-        "opl_task_map"
+        "opl_task_map",
+        "opl_operating_model",
+        "opl_shared_foundation",
+        "opl_shared_foundation_ownership"
       ],
       "notes": [
         "Human-readable companion for the machine-readable public surface index."

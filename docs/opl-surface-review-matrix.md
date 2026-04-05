@@ -66,6 +66,12 @@ These values describe documentation-readiness stage only. They are not workflow 
 - `opl_gateway_rollout`
 - `opl_task_map`
 
+### Shared-foundation boundary surfaces
+
+- `opl_operating_model`
+- `opl_shared_foundation`
+- `opl_shared_foundation_ownership`
+
 ### Governing contract surfaces
 
 - `opl_federation_contract`
@@ -102,6 +108,7 @@ Read this matrix as a **derived review-boundary index**, not as an approval or p
 `required_acceptance_gates` only references already frozen acceptance gates.
 `required_companion_surfaces` only points to already indexed supporting or governing surfaces.
 `publishability_stage` tells you which kind of gateway-surface alignment must already exist before the surface is publishable as current public material.
+If the covered surface is `opl_operating_model`, `opl_shared_foundation`, or `opl_shared_foundation_ownership`, review coverage stays reference-only and does not turn those surfaces into an approval layer, publish controller, or domain-truth owner.
 If the covered surface is `opl_task_map`, under-definition workstreams remain semantic candidates only; they do not become admitted domains or routed targets through review coverage alone.
 If the covered surface is `opl_candidate_domain_backlog`, the surface remains a blocker index below the onboarding gate; it does not promote a candidate workstream into a domain, approve onboarding, or create routed readiness.
 None of these fields transfer domain review or publication authority into `OPL`.
@@ -120,7 +127,7 @@ None of these fields transfer domain review or publication authority into `OPL`.
 
 The review matrix is acceptable only when:
 
-- it covers the frozen OPL public, contract, and supporting surfaces that currently matter for human review and publishability inspection
+- it covers the frozen OPL public, shared-foundation boundary, contract, and supporting surfaces that currently matter for human review and publishability inspection
 - every `required_acceptance_gate` resolves inside `../contracts/opl-gateway/acceptance-matrix.json`
 - every `required_companion_surface` resolves inside `../contracts/opl-gateway/public-surface-index.json`
 - every `governing_ref` resolves to an existing local artifact
