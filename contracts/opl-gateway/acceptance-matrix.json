@@ -1,5 +1,5 @@
 {
-  "version": "p10.m1",
+  "version": "p11.m1",
   "gates": [
     {
       "gate_id": "g1_registry_completeness",
@@ -63,14 +63,21 @@
       "layer": "onboarding",
       "required_files": [
         "docs/opl-domain-onboarding-contract.md",
-        "docs/opl-domain-onboarding-contract.zh-CN.md"
+        "docs/opl-domain-onboarding-contract.zh-CN.md",
+        "contracts/opl-gateway/domain-onboarding-readiness.schema.json",
+        "examples/opl-gateway/domain-onboarding-readiness.json"
       ],
       "contract_assertions": [
         "new domains require complete registry material",
+        "machine-readable onboarding readiness contract exists",
+        "onboarding readiness contract remains non-executing",
+        "onboarding readiness contract does not auto-admit domains",
+        "onboarding readiness contract does not replace the prose review gate",
         "truth ownership and review surfaces are explicit",
         "formal inclusion gate covers discovery/routing/review readiness"
       ],
       "forbidden_regressions": [
+        "onboarding readiness becomes a launcher or runtime owner surface",
         "placeholder first boundary later",
         "future domains treated as internal OPL modules"
       ]

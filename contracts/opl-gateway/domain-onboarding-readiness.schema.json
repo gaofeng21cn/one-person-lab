@@ -1,0 +1,843 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opl.onepersonlab/contracts/opl-gateway/domain-onboarding-readiness.schema.json",
+  "title": "OPL Domain Onboarding Readiness Contract",
+  "description": "Machine-readable P11.M1 contract for checking whether a new domain can be formally admitted into OPL without blurring registry, routing, review, or truth boundaries.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "onboarding_id",
+    "candidate_domain",
+    "candidate_workstreams",
+    "routing_vocabulary_impact",
+    "public_documentation",
+    "truth_ownership",
+    "review_surfaces",
+    "discovery_routing_readiness",
+    "formal_inclusion_gate",
+    "boundary_guards"
+  ],
+  "properties": {
+    "version": {
+      "const": "p11.m1"
+    },
+    "onboarding_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "candidate_domain": {
+      "$ref": "#/$defs/domainRegistryCandidate"
+    },
+    "candidate_workstreams": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/workstreamRegistryCandidate"
+      }
+    },
+    "routing_vocabulary_impact": {
+      "$ref": "#/$defs/routingVocabularyImpact"
+    },
+    "public_documentation": {
+      "$ref": "#/$defs/publicDocumentationPackage"
+    },
+    "truth_ownership": {
+      "$ref": "#/$defs/truthOwnershipDeclaration"
+    },
+    "review_surfaces": {
+      "$ref": "#/$defs/reviewSurfaceDeclaration"
+    },
+    "discovery_routing_readiness": {
+      "$ref": "#/$defs/discoveryRoutingReadiness"
+    },
+    "formal_inclusion_gate": {
+      "$ref": "#/$defs/formalInclusionGate"
+    },
+    "boundary_guards": {
+      "$ref": "#/$defs/boundaryGuards"
+    }
+  },
+  "$defs": {
+    "surfaceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ref_kind",
+        "ref"
+      ],
+      "properties": {
+        "ref_kind": {
+          "enum": [
+            "repo_path",
+            "external_url"
+          ]
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "ref_kind": {
+                "const": "external_url"
+              }
+            },
+            "required": [
+              "ref_kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "ref": {
+                "type": "string",
+                "format": "uri",
+                "pattern": "^https://"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "domainRegistryCandidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "domain_id",
+        "label",
+        "project",
+        "role",
+        "gateway_surface",
+        "harness_surface",
+        "standalone_allowed",
+        "owned_workstreams",
+        "non_opl_families",
+        "canonical_truth_owner"
+      ],
+      "properties": {
+        "domain_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "project": {
+          "type": "string",
+          "minLength": 1
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1
+        },
+        "gateway_surface": {
+          "type": "string",
+          "minLength": 1
+        },
+        "harness_surface": {
+          "type": "string",
+          "minLength": 1
+        },
+        "standalone_allowed": {
+          "const": true
+        },
+        "owned_workstreams": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "non_opl_families": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "canonical_truth_owner": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "workstreamRegistryCandidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workstream_id",
+        "label",
+        "status",
+        "description",
+        "domain_id",
+        "entry_mode",
+        "primary_families",
+        "top_level_intents",
+        "notes"
+      ],
+      "properties": {
+        "workstream_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "domain_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "entry_mode": {
+          "const": "domain_gateway"
+        },
+        "primary_families": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "top_level_intents": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "routingVocabularyImpact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "impact_mode",
+        "added_intent_ids",
+        "added_delivery_kinds",
+        "added_review_kinds",
+        "added_other_vocabulary"
+      ],
+      "properties": {
+        "impact_mode": {
+          "enum": [
+            "reuse_only",
+            "extend_existing"
+          ]
+        },
+        "added_intent_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "added_delivery_kinds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "added_review_kinds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "added_other_vocabulary": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "impact_mode": {
+                "const": "reuse_only"
+              }
+            },
+            "required": [
+              "impact_mode"
+            ]
+          },
+          "then": {
+            "properties": {
+              "added_intent_ids": {
+                "maxItems": 0
+              },
+              "added_delivery_kinds": {
+                "maxItems": 0
+              },
+              "added_review_kinds": {
+                "maxItems": 0
+              },
+              "added_other_vocabulary": {
+                "maxItems": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "impact_mode": {
+                "const": "extend_existing"
+              }
+            },
+            "required": [
+              "impact_mode"
+            ]
+          },
+          "then": {
+            "anyOf": [
+              {
+                "properties": {
+                  "added_intent_ids": {
+                    "minItems": 1
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "added_delivery_kinds": {
+                    "minItems": 1
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "added_review_kinds": {
+                    "minItems": 1
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "added_other_vocabulary": {
+                    "minItems": 1
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "publicDocumentationPackage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gateway_entry_refs",
+        "states_domain_gateway_above_harness",
+        "states_independently_usable",
+        "workstream_semantics_explicit",
+        "review_semantics_explicit",
+        "opl_linkable_identity"
+      ],
+      "properties": {
+        "gateway_entry_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/surfaceRef"
+          }
+        },
+        "states_domain_gateway_above_harness": {
+          "const": true
+        },
+        "states_independently_usable": {
+          "const": true
+        },
+        "workstream_semantics_explicit": {
+          "const": true
+        },
+        "review_semantics_explicit": {
+          "const": true
+        },
+        "opl_linkable_identity": {
+          "const": true
+        }
+      }
+    },
+    "truthOwnershipDeclaration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "canonical_truth_categories",
+        "opl_may_index",
+        "opl_may_not_claim",
+        "ownership_boundary_explicit"
+      ],
+      "properties": {
+        "canonical_truth_categories": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "opl_may_index": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "opl_may_not_claim": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "ownership_boundary_explicit": {
+          "const": true
+        }
+      }
+    },
+    "reviewSurfaceDeclaration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "human_review_refs",
+        "gate_surface_refs",
+        "quality_regression_refs",
+        "opl_review_linkage_explicit"
+      ],
+      "properties": {
+        "human_review_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/surfaceRef"
+          }
+        },
+        "gate_surface_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/surfaceRef"
+          }
+        },
+        "quality_regression_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/surfaceRef"
+          }
+        },
+        "opl_review_linkage_explicit": {
+          "const": true
+        }
+      }
+    },
+    "discoveryRoutingReadiness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "discovery_entry_surface",
+        "routing_entry_surface",
+        "discovery_workstream_ids",
+        "routing_workstream_ids",
+        "direct_harness_bypass_allowed",
+        "routing_evidence_explicit"
+      ],
+      "properties": {
+        "discovery_entry_surface": {
+          "const": "domain_gateway"
+        },
+        "routing_entry_surface": {
+          "const": "domain_gateway"
+        },
+        "discovery_workstream_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "routing_workstream_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "direct_harness_bypass_allowed": {
+          "const": false
+        },
+        "routing_evidence_explicit": {
+          "const": true
+        }
+      }
+    },
+    "readinessGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "evidence_refs"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "ready",
+            "not_ready"
+          ]
+        },
+        "evidence_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "formalInclusionGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "overall_status",
+        "registry_complete",
+        "boundary_explicit",
+        "truth_ownership_explicit",
+        "discovery_ready",
+        "routing_ready",
+        "review_ready",
+        "cross_domain_wording_aligned"
+      ],
+      "properties": {
+        "overall_status": {
+          "enum": [
+            "ready_for_inclusion",
+            "not_ready"
+          ]
+        },
+        "registry_complete": {
+          "$ref": "#/$defs/readinessGate"
+        },
+        "boundary_explicit": {
+          "$ref": "#/$defs/readinessGate"
+        },
+        "truth_ownership_explicit": {
+          "$ref": "#/$defs/readinessGate"
+        },
+        "discovery_ready": {
+          "$ref": "#/$defs/readinessGate"
+        },
+        "routing_ready": {
+          "$ref": "#/$defs/readinessGate"
+        },
+        "review_ready": {
+          "$ref": "#/$defs/readinessGate"
+        },
+        "cross_domain_wording_aligned": {
+          "$ref": "#/$defs/readinessGate"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "overall_status": {
+                "const": "ready_for_inclusion"
+              }
+            },
+            "required": [
+              "overall_status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "registry_complete": {
+                "properties": {
+                  "status": {
+                    "const": "ready"
+                  }
+                }
+              },
+              "boundary_explicit": {
+                "properties": {
+                  "status": {
+                    "const": "ready"
+                  }
+                }
+              },
+              "truth_ownership_explicit": {
+                "properties": {
+                  "status": {
+                    "const": "ready"
+                  }
+                }
+              },
+              "discovery_ready": {
+                "properties": {
+                  "status": {
+                    "const": "ready"
+                  }
+                }
+              },
+              "routing_ready": {
+                "properties": {
+                  "status": {
+                    "const": "ready"
+                  }
+                }
+              },
+              "review_ready": {
+                "properties": {
+                  "status": {
+                    "const": "ready"
+                  }
+                }
+              },
+              "cross_domain_wording_aligned": {
+                "properties": {
+                  "status": {
+                    "const": "ready"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "boundaryGuards": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "placeholder_first_forbidden",
+        "internal_module_framing_forbidden",
+        "implicit_truth_transfer_forbidden",
+        "family_name_not_auto_workstream"
+      ],
+      "properties": {
+        "placeholder_first_forbidden": {
+          "const": true
+        },
+        "internal_module_framing_forbidden": {
+          "const": true
+        },
+        "implicit_truth_transfer_forbidden": {
+          "const": true
+        },
+        "family_name_not_auto_workstream": {
+          "const": true
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "version": "p11.m1",
+      "onboarding_id": "opl-onboarding-example-001",
+      "candidate_domain": {
+        "domain_id": "example_domain",
+        "label": "Example Domain",
+        "project": "example-domain",
+        "role": "example_gateway",
+        "gateway_surface": "Example Domain Gateway",
+        "harness_surface": "Example Harness OS",
+        "standalone_allowed": true,
+        "owned_workstreams": [
+          "example_ops"
+        ],
+        "non_opl_families": [
+          "example_family"
+        ],
+        "canonical_truth_owner": [
+          "example_runtime_truth",
+          "example_artifact_truth"
+        ]
+      },
+      "candidate_workstreams": [
+        {
+          "workstream_id": "example_ops",
+          "label": "Example Ops",
+          "status": "proposed",
+          "description": "Example workstream used only to demonstrate the onboarding-readiness schema shape.",
+          "domain_id": "example_domain",
+          "entry_mode": "domain_gateway",
+          "primary_families": [
+            "example_family"
+          ],
+          "top_level_intents": [
+            "example_delivery"
+          ],
+          "notes": "Illustrative schema example only; not an officially onboarded domain."
+        }
+      ],
+      "routing_vocabulary_impact": {
+        "impact_mode": "extend_existing",
+        "added_intent_ids": [
+          "example_delivery"
+        ],
+        "added_delivery_kinds": [
+          "example_domain_delivery"
+        ],
+        "added_review_kinds": [
+          "example_quality_gate"
+        ],
+        "added_other_vocabulary": []
+      },
+      "public_documentation": {
+        "gateway_entry_refs": [
+          {
+            "ref_kind": "external_url",
+            "ref": "https://example.com/example-domain",
+            "label": "Example Domain README"
+          }
+        ],
+        "states_domain_gateway_above_harness": true,
+        "states_independently_usable": true,
+        "workstream_semantics_explicit": true,
+        "review_semantics_explicit": true,
+        "opl_linkable_identity": true
+      },
+      "truth_ownership": {
+        "canonical_truth_categories": [
+          "example_runtime_truth",
+          "example_artifact_truth",
+          "example_review_truth"
+        ],
+        "opl_may_index": [
+          "routing_trace",
+          "cross_domain_review_index"
+        ],
+        "opl_may_not_claim": [
+          "runtime_truth",
+          "artifact_truth",
+          "review_truth"
+        ],
+        "ownership_boundary_explicit": true
+      },
+      "review_surfaces": {
+        "human_review_refs": [
+          {
+            "ref_kind": "external_url",
+            "ref": "https://example.com/example-domain/review"
+          }
+        ],
+        "gate_surface_refs": [
+          {
+            "ref_kind": "external_url",
+            "ref": "https://example.com/example-domain/publish-gate"
+          }
+        ],
+        "quality_regression_refs": [
+          {
+            "ref_kind": "external_url",
+            "ref": "https://example.com/example-domain/quality"
+          }
+        ],
+        "opl_review_linkage_explicit": true
+      },
+      "discovery_routing_readiness": {
+        "discovery_entry_surface": "domain_gateway",
+        "routing_entry_surface": "domain_gateway",
+        "discovery_workstream_ids": [
+          "example_ops"
+        ],
+        "routing_workstream_ids": [
+          "example_ops"
+        ],
+        "direct_harness_bypass_allowed": false,
+        "routing_evidence_explicit": true
+      },
+      "formal_inclusion_gate": {
+        "overall_status": "ready_for_inclusion",
+        "registry_complete": {
+          "status": "ready",
+          "evidence_refs": [
+            "registry_entries=complete"
+          ]
+        },
+        "boundary_explicit": {
+          "status": "ready",
+          "evidence_refs": [
+            "public_docs=linked"
+          ]
+        },
+        "truth_ownership_explicit": {
+          "status": "ready",
+          "evidence_refs": [
+            "truth_boundary=declared"
+          ]
+        },
+        "discovery_ready": {
+          "status": "ready",
+          "evidence_refs": [
+            "discovery_entry_surface=domain_gateway"
+          ]
+        },
+        "routing_ready": {
+          "status": "ready",
+          "evidence_refs": [
+            "routing_entry_surface=domain_gateway"
+          ]
+        },
+        "review_ready": {
+          "status": "ready",
+          "evidence_refs": [
+            "review_surfaces=declared"
+          ]
+        },
+        "cross_domain_wording_aligned": {
+          "status": "ready",
+          "evidence_refs": [
+            "top_level_role_language=aligned"
+          ]
+        }
+      },
+      "boundary_guards": {
+        "placeholder_first_forbidden": true,
+        "internal_module_framing_forbidden": true,
+        "implicit_truth_transfer_forbidden": true,
+        "family_name_not_auto_workstream": true
+      }
+    }
+  ]
+}

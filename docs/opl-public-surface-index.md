@@ -41,7 +41,7 @@ These surfaces freeze the gateway and federation boundary:
 - Gateway contract hub
 - Read-only discovery gateway
 - Routed action gateway
-- Domain onboarding contract
+- Domain onboarding contract + onboarding-readiness schema
 - Governance / audit operating surface
 - Publish / promotion operating surface
 

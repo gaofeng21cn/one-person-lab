@@ -134,11 +134,13 @@
 
 onboarding gate 只有在下面全部成立时才算通过：
 
-1. onboarding contract 要求新 domain 提供完整 `G1` registry material。
-2. onboarding contract 要求显式 public documentation surface。
-3. onboarding contract 要求显式 truth-ownership declaration。
-4. onboarding contract 要求显式 review surface。
-5. onboarding contract 定义了正式收录门槛，覆盖：
+1. `contracts/opl-gateway/domain-onboarding-readiness.schema.json` 存在，且是合法 JSON Schema JSON。
+2. `examples/opl-gateway/domain-onboarding-readiness.json` 存在，且能通过该 schema 校验。
+3. onboarding contract 要求新 domain 提供完整 `G1` registry material。
+4. onboarding contract 要求显式 public documentation surface。
+5. onboarding contract 要求显式 truth-ownership declaration。
+6. onboarding contract 要求显式 review surface。
+7. onboarding contract 定义了正式收录门槛，覆盖：
    - registry complete
    - boundary explicit
    - truth ownership explicit
@@ -146,11 +148,13 @@ onboarding gate 只有在下面全部成立时才算通过：
    - routing ready
    - review ready
    - cross-domain wording aligned
-6. onboarding contract 显式禁止“先挂名，后补边界”。
-7. onboarding contract 显式禁止把未来 domain 写成 `OPL` 内部模块。
+8. onboarding contract 保持 non-executing、不会自动收录 domain，也不会替代 prose review gate。
+9. onboarding contract 显式禁止“先挂名，后补边界”。
+10. onboarding contract 显式禁止把未来 domain 写成 `OPL` 内部模块。
 
 ### 验证方式
 
+- 解析 `contracts/opl-gateway/domain-onboarding-readiness.schema.json`，并用 `examples/opl-gateway/domain-onboarding-readiness.json` 校验它。
 - 检查 `docs/opl-domain-onboarding-contract.md` 与 `.zh-CN.md` 是否覆盖全部 required gate。
 - 确认 onboarding gate 建立在 G1/G2/G3 之后，而不是替代它们。
 - 确认 onboarding contract 没有把 canonical truth 上收给 `OPL`。
@@ -369,6 +373,17 @@ for rel in [
     if 'publish_promotion_record' in data:
         pub.validate(data['publish_promotion_record'])
     print('examples schema OK', rel)
+PY
+python3 - <<'PY'
+import json
+from pathlib import Path
+from jsonschema import Draft202012Validator, FormatChecker
+
+schema = json.loads(Path('contracts/opl-gateway/domain-onboarding-readiness.schema.json').read_text())
+Draft202012Validator.check_schema(schema)
+example = json.loads(Path('examples/opl-gateway/domain-onboarding-readiness.json').read_text())
+Draft202012Validator(schema, format_checker=FormatChecker()).validate(example)
+print('onboarding readiness schema OK')
 PY
 python3 - <<'PY'
 import json

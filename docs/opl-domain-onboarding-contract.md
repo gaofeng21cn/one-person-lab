@@ -22,6 +22,15 @@ Domain onboarding is downstream of the already frozen gateway layers:
 
 If the top-level registry, discovery, and routed-action layers are not stable, domain onboarding should not proceed.
 
+## Machine-Readable Companion
+
+- [`../contracts/opl-gateway/domain-onboarding-readiness.schema.json`](../contracts/opl-gateway/domain-onboarding-readiness.schema.json)
+- [`../examples/opl-gateway/domain-onboarding-readiness.json`](../examples/opl-gateway/domain-onboarding-readiness.json)
+
+This schema materializes the onboarding-readiness record as a non-executing contract surface.
+It does not admit domains automatically, and it does not replace the prose review gate in this document.
+The example record is illustrative only and does not count as a formal domain admission.
+
 ## Core Promise
 
 A new domain may be officially included in `OPL` only when:

@@ -13,6 +13,8 @@ It freezes machine-readable gateway surfaces that later discovery and routed-act
 - [OPL Read-Only Discovery Gateway（中文）](../../docs/opl-read-only-discovery-gateway.zh-CN.md)
 - [OPL Routed Action Gateway](../../docs/opl-routed-action-gateway.md)
 - [OPL Routed Action Gateway（中文）](../../docs/opl-routed-action-gateway.zh-CN.md)
+- [OPL Domain Onboarding Contract](../../docs/opl-domain-onboarding-contract.md)
+- [OPL Domain Onboarding Contract（中文）](../../docs/opl-domain-onboarding-contract.zh-CN.md)
 - [OPL Governance / Audit Operating Surface](../../docs/opl-governance-audit-operating-surface.md)
 - [OPL Governance / Audit Operating Surface（中文）](../../docs/opl-governance-audit-operating-surface.zh-CN.md)
 - [OPL Publish / Promotion Operating Surface](../../docs/opl-publish-promotion-operating-surface.md)
@@ -39,6 +41,7 @@ These corpora are companion references only. They do not replace the governing c
 - [`routing-vocabulary.json`](./routing-vocabulary.json) — shared routing vocabulary groups plus frozen routing rules
 - [`handoff.schema.json`](./handoff.schema.json) — JSON Schema for the frozen G1 handoff payload
 - [`routed-actions.schema.json`](./routed-actions.schema.json) — JSON Schema for the frozen G3 routed action contract
+- [`domain-onboarding-readiness.schema.json`](./domain-onboarding-readiness.schema.json) — JSON Schema for the machine-readable domain onboarding readiness gate
 - [`governance-audit.schema.json`](./governance-audit.schema.json) — JSON Schema for the frozen P5.M1 governance / audit operating contract
 - [`publish-promotion.schema.json`](./publish-promotion.schema.json) — JSON Schema for the frozen P5.M2 publish / promotion operating contract
 - [`acceptance-matrix.json`](./acceptance-matrix.json) — declarative acceptance matrix for the frozen gateway and operating surfaces

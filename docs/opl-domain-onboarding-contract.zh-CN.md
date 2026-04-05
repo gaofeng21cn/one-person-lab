@@ -22,6 +22,15 @@ Domain onboarding 建立在已冻结的 gateway 层之下：
 
 如果顶层 registry、discovery 与 routed-action 这几层还不稳定，domain onboarding 不应继续推进。
 
+## 机器可读配套工件
+
+- [`../contracts/opl-gateway/domain-onboarding-readiness.schema.json`](../contracts/opl-gateway/domain-onboarding-readiness.schema.json)
+- [`../examples/opl-gateway/domain-onboarding-readiness.json`](../examples/opl-gateway/domain-onboarding-readiness.json)
+
+这个 schema 把 onboarding-readiness record 落成 non-executing contract surface。
+它不会自动收录 domain，也不会取代本文件中的 prose review gate。
+这条 example record 只是 illustrative 示例，不构成正式 domain 收录。
+
 ## 核心承诺
 
 一个新 domain 只有在下面这些条件都满足时，才能被 `OPL` 正式收录：

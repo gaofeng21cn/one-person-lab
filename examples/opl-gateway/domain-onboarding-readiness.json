@@ -1,0 +1,168 @@
+{
+  "version": "p11.m1",
+  "onboarding_id": "opl-onboarding-example-001",
+  "candidate_domain": {
+    "domain_id": "example_domain",
+    "label": "Example Domain",
+    "project": "example-domain",
+    "role": "example_gateway",
+    "gateway_surface": "Example Domain Gateway",
+    "harness_surface": "Example Harness OS",
+    "standalone_allowed": true,
+    "owned_workstreams": [
+      "example_ops"
+    ],
+    "non_opl_families": [
+      "example_family"
+    ],
+    "canonical_truth_owner": [
+      "example_runtime_truth",
+      "example_artifact_truth"
+    ]
+  },
+  "candidate_workstreams": [
+    {
+      "workstream_id": "example_ops",
+      "label": "Example Ops",
+      "status": "proposed",
+      "description": "Example workstream used only to demonstrate the onboarding-readiness contract shape.",
+      "domain_id": "example_domain",
+      "entry_mode": "domain_gateway",
+      "primary_families": [
+        "example_family"
+      ],
+      "top_level_intents": [
+        "example_delivery"
+      ],
+      "notes": "Illustrative onboarding-readiness example only; not an officially onboarded domain."
+    }
+  ],
+  "routing_vocabulary_impact": {
+    "impact_mode": "extend_existing",
+    "added_intent_ids": [
+      "example_delivery"
+    ],
+    "added_delivery_kinds": [
+      "example_domain_delivery"
+    ],
+    "added_review_kinds": [
+      "example_quality_gate"
+    ],
+    "added_other_vocabulary": []
+  },
+  "public_documentation": {
+    "gateway_entry_refs": [
+      {
+        "ref_kind": "external_url",
+        "ref": "https://example.com/example-domain",
+        "label": "Example Domain README"
+      }
+    ],
+    "states_domain_gateway_above_harness": true,
+    "states_independently_usable": true,
+    "workstream_semantics_explicit": true,
+    "review_semantics_explicit": true,
+    "opl_linkable_identity": true
+  },
+  "truth_ownership": {
+    "canonical_truth_categories": [
+      "example_runtime_truth",
+      "example_artifact_truth",
+      "example_review_truth"
+    ],
+    "opl_may_index": [
+      "routing_trace",
+      "cross_domain_review_index"
+    ],
+    "opl_may_not_claim": [
+      "runtime_truth",
+      "artifact_truth",
+      "review_truth"
+    ],
+    "ownership_boundary_explicit": true
+  },
+  "review_surfaces": {
+    "human_review_refs": [
+      {
+        "ref_kind": "external_url",
+        "ref": "https://example.com/example-domain/review"
+      }
+    ],
+    "gate_surface_refs": [
+      {
+        "ref_kind": "external_url",
+        "ref": "https://example.com/example-domain/publish-gate"
+      }
+    ],
+    "quality_regression_refs": [
+      {
+        "ref_kind": "external_url",
+        "ref": "https://example.com/example-domain/quality"
+      }
+    ],
+    "opl_review_linkage_explicit": true
+  },
+  "discovery_routing_readiness": {
+    "discovery_entry_surface": "domain_gateway",
+    "routing_entry_surface": "domain_gateway",
+    "discovery_workstream_ids": [
+      "example_ops"
+    ],
+    "routing_workstream_ids": [
+      "example_ops"
+    ],
+    "direct_harness_bypass_allowed": false,
+    "routing_evidence_explicit": true
+  },
+  "formal_inclusion_gate": {
+    "overall_status": "ready_for_inclusion",
+    "registry_complete": {
+      "status": "ready",
+      "evidence_refs": [
+        "registry_entries=complete"
+      ]
+    },
+    "boundary_explicit": {
+      "status": "ready",
+      "evidence_refs": [
+        "public_docs=linked"
+      ]
+    },
+    "truth_ownership_explicit": {
+      "status": "ready",
+      "evidence_refs": [
+        "truth_boundary=declared"
+      ]
+    },
+    "discovery_ready": {
+      "status": "ready",
+      "evidence_refs": [
+        "discovery_entry_surface=domain_gateway"
+      ]
+    },
+    "routing_ready": {
+      "status": "ready",
+      "evidence_refs": [
+        "routing_entry_surface=domain_gateway"
+      ]
+    },
+    "review_ready": {
+      "status": "ready",
+      "evidence_refs": [
+        "review_surfaces=declared"
+      ]
+    },
+    "cross_domain_wording_aligned": {
+      "status": "ready",
+      "evidence_refs": [
+        "top_level_role_language=aligned"
+      ]
+    }
+  },
+  "boundary_guards": {
+    "placeholder_first_forbidden": true,
+    "internal_module_framing_forbidden": true,
+    "implicit_truth_transfer_forbidden": true,
+    "family_name_not_auto_workstream": true
+  }
+}

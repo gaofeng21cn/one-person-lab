@@ -1,5 +1,5 @@
 {
-  "version": "p10.m1",
+  "version": "p11.m1",
   "scope": "opl_public_gateway_surface_index",
   "description": "Machine-readable index of the current authoritative OPL gateway public surfaces and linked domain gateway public entries. This index is contract-first and does not implement a runtime.",
   "non_goals": [
@@ -350,13 +350,18 @@
           "ref_kind": "repo_path",
           "ref": "docs/opl-domain-onboarding-contract.zh-CN.md",
           "language": "zh-CN"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "contracts/opl-gateway/domain-onboarding-readiness.schema.json"
         }
       ],
       "routes_to": [
         "opl_gateway_contract_hub"
       ],
       "notes": [
-        "Defines how future domains can be formally indexed without placeholder boundaries."
+        "Defines how future domains can be formally indexed without placeholder boundaries.",
+        "Includes the machine-readable onboarding-readiness gate without turning OPL into a domain runtime owner."
       ]
     },
     {

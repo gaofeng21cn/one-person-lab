@@ -134,11 +134,13 @@ This corpus is illustrative and non-governing. It helps humans and agents inspec
 
 The onboarding gate passes only when all of the following are true:
 
-1. The onboarding contract requires complete `G1` registry material for any new domain.
-2. The onboarding contract requires explicit public documentation surfaces.
-3. The onboarding contract requires explicit truth-ownership declaration.
-4. The onboarding contract requires explicit review surfaces.
-5. The onboarding contract defines a formal inclusion gate covering:
+1. `contracts/opl-gateway/domain-onboarding-readiness.schema.json` exists and is valid JSON Schema JSON.
+2. `examples/opl-gateway/domain-onboarding-readiness.json` exists and validates against that schema.
+3. The onboarding contract requires complete `G1` registry material for any new domain.
+4. The onboarding contract requires explicit public documentation surfaces.
+5. The onboarding contract requires explicit truth-ownership declaration.
+6. The onboarding contract requires explicit review surfaces.
+7. The onboarding contract defines a formal inclusion gate covering:
    - registry complete
    - boundary explicit
    - truth ownership explicit
@@ -146,11 +148,13 @@ The onboarding gate passes only when all of the following are true:
    - routing ready
    - review ready
    - cross-domain wording aligned
-6. The onboarding contract explicitly forbids “placeholder first, boundary later”.
-7. The onboarding contract explicitly forbids treating future domains as internal `OPL` modules.
+8. The onboarding contract remains non-executing, does not auto-admit domains, and does not replace the prose review gate.
+9. The onboarding contract explicitly forbids “placeholder first, boundary later”.
+10. The onboarding contract explicitly forbids treating future domains as internal `OPL` modules.
 
 ### Verification
 
+- Parse `contracts/opl-gateway/domain-onboarding-readiness.schema.json` and validate `examples/opl-gateway/domain-onboarding-readiness.json` against it.
 - Check `docs/opl-domain-onboarding-contract.md` and `.zh-CN.md` for each required gate.
 - Confirm the onboarding gate stays downstream of G1/G2/G3 rather than replacing them.
 - Confirm the onboarding contract does not move canonical truth into `OPL`.
@@ -369,6 +373,17 @@ for rel in [
     if 'publish_promotion_record' in data:
         pub.validate(data['publish_promotion_record'])
     print('examples schema OK', rel)
+PY
+python3 - <<'PY'
+import json
+from pathlib import Path
+from jsonschema import Draft202012Validator, FormatChecker
+
+schema = json.loads(Path('contracts/opl-gateway/domain-onboarding-readiness.schema.json').read_text())
+Draft202012Validator.check_schema(schema)
+example = json.loads(Path('examples/opl-gateway/domain-onboarding-readiness.json').read_text())
+Draft202012Validator(schema, format_checker=FormatChecker()).validate(example)
+print('onboarding readiness schema OK')
 PY
 python3 - <<'PY'
 import json
