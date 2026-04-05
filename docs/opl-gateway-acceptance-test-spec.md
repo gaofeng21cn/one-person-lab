@@ -29,6 +29,7 @@ This acceptance spec covers:
 - `P14` surface lifecycle map integrity
 - `P15` surface authority matrix integrity
 - `P16` surface review matrix integrity
+- `P17` task-topology integrity
 - cross-domain wording consistency across public surfaces
 
 ## Governing Sources
@@ -43,6 +44,7 @@ The acceptance checks below are grounded in:
 - [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.md)
 - [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.md)
 - [OPL Public Surface Index](./opl-public-surface-index.md)
+- [OPL Task Map](./task-map.md)
 - [OPL Routed-Safety Example Corpus](./opl-routed-safety-example-corpus.md)
 - [OPL Gateway Rollout](./opl-gateway-rollout.md)
 - [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
@@ -472,6 +474,7 @@ The wording-consistency gate passes only when all of the following are true:
    - `opl_public_readme`
    - `opl_roadmap`
    - `opl_gateway_rollout`
+   - `opl_task_map`
    - `opl_federation_contract`
    - `opl_gateway_contract_hub`
    - `opl_read_only_discovery_gateway`
@@ -503,6 +506,37 @@ The wording-consistency gate passes only when all of the following are true:
 - Check that each `required_acceptance_gate` resolves in the current acceptance matrix, each `required_companion_surface` resolves in the current public-surface index, and each `governing_ref` resolves locally.
 - Confirm every covered OPL surface keeps `human_review_required = true`.
 - Confirm the contract hub, public-surface index, lifecycle map docs, authority matrix docs, and acceptance surfaces link to the review matrix where intended.
+
+## P. P17 Task-Topology Integrity
+
+### Acceptance Criteria
+
+`P17` passes only when all of the following are true:
+
+1. `contracts/opl-gateway/task-topology.json` exists and is valid JSON.
+2. `docs/task-map.md` and `docs/task-map.zh-CN.md` both exist and link to the machine-readable task-topology artifact.
+3. The task-topology artifact covers exactly these workstreams:
+   - `research_ops`
+   - `grant_ops`
+   - `thesis_ops`
+   - `review_ops`
+   - `presentation_ops`
+4. `research_ops` remains `registry_state = registered`, `routing_state = domain_gateway_ready`, `current_domain_id = medautoscience`, and `entry_surface = domain_gateway`.
+5. `presentation_ops` remains `registry_state = registered`, `routing_state = domain_gateway_ready`, `current_domain_id = redcube`, and `entry_surface = domain_gateway`.
+6. `grant_ops`, `thesis_ops`, and `review_ops` all remain `boundary_state = under_definition`, `registry_state = not_registered`, `routing_state = unknown_domain_only`, `current_domain_id = null`, and `entry_surface = null`.
+7. `presentation_ops` preserves `ppt_deck` as the direct map while keeping `xiaohongshu` in the same RedCube family/harness context without auto-equating it to `presentation_ops`.
+8. `contracts/opl-gateway/workstreams.json` and `domains.json` still register only the currently admitted workstreams/domains, and the task-topology artifact does not silently expand the G1 registry.
+9. `contracts/opl-gateway/public-surface-index.json` exposes `opl_task_map` as an `opl_public_entry` surface.
+10. `contracts/opl-gateway/surface-review-matrix.json` covers `opl_task_map` as a human-review surface without turning task topology into an approval, onboarding, discovery, or routing engine.
+11. Contract README, public-surface index docs, task-map docs, and acceptance surfaces describe under-definition workstreams as semantic candidates only, not as admitted domains.
+
+### Verification
+
+- Parse `contracts/opl-gateway/task-topology.json` with `json.load`.
+- Confirm the exact workstream set above and the registered-vs-under-definition split.
+- Confirm `workstreams.json` still contains only `research_ops` and `presentation_ops`, and `domains.json` still contains only `medautoscience` and `redcube`.
+- Confirm `opl_task_map` resolves inside `public-surface-index.json` and `surface-review-matrix.json`.
+- Confirm no field or linked prose turns under-definition workstreams into admitted domains, handoff-ready routed targets, or runtime entry surfaces.
 
 ## Standard Verification Commands
 
@@ -706,6 +740,7 @@ expected = {
     'opl_public_readme',
     'opl_roadmap',
     'opl_gateway_rollout',
+    'opl_task_map',
     'opl_federation_contract',
     'opl_gateway_contract_hub',
     'opl_read_only_discovery_gateway',
@@ -746,6 +781,51 @@ for entry in review['review_entries']:
     for ref in entry['governing_refs']:
         assert Path(ref).exists(), (entry['surface_id'], ref)
 print('surface review matrix OK')
+PY
+python3 - <<'PY'
+import json
+from pathlib import Path
+
+task = json.loads(Path('contracts/opl-gateway/task-topology.json').read_text())
+workstreams = json.loads(Path('contracts/opl-gateway/workstreams.json').read_text())
+domains = json.loads(Path('contracts/opl-gateway/domains.json').read_text())
+public = json.loads(Path('contracts/opl-gateway/public-surface-index.json').read_text())
+review = json.loads(Path('contracts/opl-gateway/surface-review-matrix.json').read_text())
+
+expected = {'research_ops', 'grant_ops', 'thesis_ops', 'review_ops', 'presentation_ops'}
+entries = {entry['workstream_id']: entry for entry in task['workstreams']}
+assert set(entries) == expected, (set(entries), expected)
+assert {entry['workstream_id'] for entry in workstreams['workstreams']} == {'research_ops', 'presentation_ops'}
+assert {entry['domain_id'] for entry in domains['domains']} == {'medautoscience', 'redcube'}
+
+research = entries['research_ops']
+assert research['registry_state'] == 'registered', research
+assert research['routing_state'] == 'domain_gateway_ready', research
+assert research['current_domain_id'] == 'medautoscience', research
+assert research['entry_surface'] == 'domain_gateway', research
+
+presentation = entries['presentation_ops']
+assert presentation['registry_state'] == 'registered', presentation
+assert presentation['routing_state'] == 'domain_gateway_ready', presentation
+assert presentation['current_domain_id'] == 'redcube', presentation
+assert presentation['entry_surface'] == 'domain_gateway', presentation
+family_notes = {item['family_id']: item['relation'] for item in presentation['family_boundary_notes']}
+assert family_notes['ppt_deck'] == 'direct_map_to_presentation_ops', family_notes
+assert family_notes['xiaohongshu'] == 'same_redcube_harness_non_equivalent_to_presentation_ops', family_notes
+
+for workstream_id in ['grant_ops', 'thesis_ops', 'review_ops']:
+    entry = entries[workstream_id]
+    assert entry['boundary_state'] == 'under_definition', entry
+    assert entry['registry_state'] == 'not_registered', entry
+    assert entry['routing_state'] == 'unknown_domain_only', entry
+    assert entry['current_domain_id'] is None, entry
+    assert entry['entry_surface'] is None, entry
+
+surface_ids = {surface['surface_id'] for surface in public['surfaces']}
+assert 'opl_task_map' in surface_ids, surface_ids
+review_surface_ids = {entry['surface_id'] for entry in review['review_entries']}
+assert 'opl_task_map' in review_surface_ids, review_surface_ids
+print('task topology OK')
 PY
 python3 - <<'PY'
 import json
@@ -805,6 +885,8 @@ files = [
     Path('docs/opl-surface-authority-matrix.zh-CN.md'),
     Path('docs/opl-surface-review-matrix.md'),
     Path('docs/opl-surface-review-matrix.zh-CN.md'),
+    Path('docs/task-map.md'),
+    Path('docs/task-map.zh-CN.md'),
     Path('docs/opl-public-surface-index.md'),
     Path('docs/opl-public-surface-index.zh-CN.md'),
     Path('docs/opl-gateway-acceptance-test-spec.md'),
@@ -823,14 +905,14 @@ for path in files:
             raise SystemExit(f'missing link: {path} -> {raw}')
 print('links OK')
 PY
-rg -n "top-level blueprint only|不是统一运行时入口|本仓库本身不承担运行时角色"           README.md README.zh-CN.md           docs/gateway-federation.md docs/gateway-federation.zh-CN.md           docs/opl-federation-contract.md docs/opl-federation-contract.zh-CN.md           docs/opl-read-only-discovery-gateway.md docs/opl-read-only-discovery-gateway.zh-CN.md           docs/opl-routed-action-gateway.md docs/opl-routed-action-gateway.zh-CN.md           docs/opl-domain-onboarding-contract.md docs/opl-domain-onboarding-contract.zh-CN.md           docs/opl-governance-audit-operating-surface.md docs/opl-governance-audit-operating-surface.zh-CN.md           docs/opl-publish-promotion-operating-surface.md docs/opl-publish-promotion-operating-surface.zh-CN.md           docs/opl-gateway-example-corpus.md docs/opl-gateway-example-corpus.zh-CN.md           docs/opl-routed-safety-example-corpus.md docs/opl-routed-safety-example-corpus.zh-CN.md           docs/opl-operating-example-corpus.md docs/opl-operating-example-corpus.zh-CN.md           docs/opl-operating-record-catalog.md docs/opl-operating-record-catalog.zh-CN.md           docs/opl-surface-lifecycle-map.md docs/opl-surface-lifecycle-map.zh-CN.md           docs/opl-surface-authority-matrix.md docs/opl-surface-authority-matrix.zh-CN.md           docs/opl-surface-review-matrix.md docs/opl-surface-review-matrix.zh-CN.md           docs/opl-public-surface-index.md docs/opl-public-surface-index.zh-CN.md           docs/opl-gateway-rollout.md docs/opl-gateway-rollout.zh-CN.md           docs/roadmap.md docs/roadmap.zh-CN.md           contracts/opl-gateway/README.md contracts/opl-gateway/README.zh-CN.md
+rg -n "top-level blueprint only|不是统一运行时入口|本仓库本身不承担运行时角色"           README.md README.zh-CN.md           docs/gateway-federation.md docs/gateway-federation.zh-CN.md           docs/opl-federation-contract.md docs/opl-federation-contract.zh-CN.md           docs/opl-read-only-discovery-gateway.md docs/opl-read-only-discovery-gateway.zh-CN.md           docs/opl-routed-action-gateway.md docs/opl-routed-action-gateway.zh-CN.md           docs/opl-domain-onboarding-contract.md docs/opl-domain-onboarding-contract.zh-CN.md           docs/opl-governance-audit-operating-surface.md docs/opl-governance-audit-operating-surface.zh-CN.md           docs/opl-publish-promotion-operating-surface.md docs/opl-publish-promotion-operating-surface.zh-CN.md           docs/opl-gateway-example-corpus.md docs/opl-gateway-example-corpus.zh-CN.md           docs/opl-routed-safety-example-corpus.md docs/opl-routed-safety-example-corpus.zh-CN.md           docs/opl-operating-example-corpus.md docs/opl-operating-example-corpus.zh-CN.md           docs/opl-operating-record-catalog.md docs/opl-operating-record-catalog.zh-CN.md           docs/opl-surface-lifecycle-map.md docs/opl-surface-lifecycle-map.zh-CN.md           docs/opl-surface-authority-matrix.md docs/opl-surface-authority-matrix.zh-CN.md           docs/opl-surface-review-matrix.md docs/opl-surface-review-matrix.zh-CN.md           docs/task-map.md docs/task-map.zh-CN.md           docs/opl-public-surface-index.md docs/opl-public-surface-index.zh-CN.md           docs/opl-gateway-rollout.md docs/opl-gateway-rollout.zh-CN.md           docs/roadmap.md docs/roadmap.zh-CN.md           contracts/opl-gateway/README.md contracts/opl-gateway/README.zh-CN.md
 ```
 
 ## Completion Definition
 
 The current OPL gateway documentation-and-contract stack is acceptance-green only when:
 
-- all sections A-O pass
+- all sections A-P pass
 - the linked machine-readable contracts are present and valid
 - discovery and routing docs still forbid direct harness bypass
 - governance / audit remains index-only
@@ -842,8 +924,9 @@ The current OPL gateway documentation-and-contract stack is acceptance-green onl
 - the surface lifecycle map remains derived, reference-only, and non-executing
 - the surface authority matrix remains derived, reference-only, and non-executing
 - the surface review matrix remains derived, reference-only, and non-executing
+- the task-topology surface remains non-admitting and non-routing for under-definition workstreams
 - the public-surface index remains discoverability-only
 - domain onboarding remains boundary-first
 - cross-domain wording remains stable
 
-If any of these fail, the stack is not yet acceptance-green for the post-P16 review/discoverability surface.
+If any of these fail, the stack is not yet acceptance-green for the post-P17 task-topology / review / discoverability surface.

@@ -1,5 +1,5 @@
 {
-  "version": "p16.m1",
+  "version": "p17.m1",
   "scope": "opl_surface_review_matrix",
   "description": "Machine-readable derived review matrix for the frozen OPL public, contract, and supporting surfaces. It records human-review obligations, acceptance coverage, companion review surfaces, wording-check mode, and publishability stage without becoming an approval engine, publish controller, or second source of truth.",
   "non_goals": [
@@ -13,12 +13,14 @@
     "human_review_required records whether explicit human review is required before a surface is treated as current public gateway material; it does not automate approval",
     "required_acceptance_gates must resolve to existing gate ids in contracts/opl-gateway/acceptance-matrix.json and required_companion_surfaces must resolve to known surface ids in contracts/opl-gateway/public-surface-index.json",
     "cross_domain_wording_check records whether wording alignment is enforced through the shared cross-domain gate or through local review obligations only",
-    "publishability_stage describes documentation-readiness stage only; it does not transfer domain review or publication authority into OPL"
+    "publishability_stage describes documentation-readiness stage only; it does not transfer domain review or publication authority into OPL",
+    "task-map review entries may cover under-definition workstreams only as top-level semantic candidates; they do not admit domains or create routed readiness"
   ],
   "covered_surface_ids": [
     "opl_public_readme",
     "opl_roadmap",
     "opl_gateway_rollout",
+    "opl_task_map",
     "opl_federation_contract",
     "opl_gateway_contract_hub",
     "opl_read_only_discovery_gateway",
@@ -103,6 +105,29 @@
         "docs/opl-read-only-discovery-gateway.zh-CN.md",
         "docs/opl-routed-action-gateway.md",
         "docs/opl-routed-action-gateway.zh-CN.md"
+      ]
+    },
+    {
+      "surface_id": "opl_task_map",
+      "owner_scope": "opl",
+      "surface_role": "task_topology_navigation",
+      "human_review_required": true,
+      "required_acceptance_gates": [
+        "p17_task_topology_integrity",
+        "cross_domain_wording_consistency"
+      ],
+      "required_companion_surfaces": [
+        "opl_roadmap",
+        "opl_federation_contract",
+        "opl_gateway_contract_hub",
+        "opl_public_surface_index_doc"
+      ],
+      "cross_domain_wording_check": "shared_gate_required",
+      "publishability_stage": "top_level_positioning_aligned",
+      "governing_refs": [
+        "docs/task-map.md",
+        "docs/task-map.zh-CN.md",
+        "contracts/opl-gateway/task-topology.json"
       ]
     },
     {

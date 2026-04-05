@@ -13,8 +13,8 @@
     "payload": {
       "status": "unknown_domain",
       "request_id": "opl-2026-04-05-302",
-      "workstream_id": "grant_ops",
-      "reason": "The grant-planning semantics are recognizable, but no registered domain gateway currently owns grant_ops."
+      "workstream_id": "candidate_ops",
+      "reason": "The candidate workstream semantics are recognizable, but no registered domain gateway currently owns candidate_ops."
     }
   },
   "audit_routing_decision": {
@@ -26,12 +26,12 @@
       "request_summary": "Build a formal grant proposal operating lane from the supplied topic brief.",
       "request_kind": "plan",
       "candidate_workstreams": [
-        "grant_ops"
+        "candidate_ops"
       ],
-      "reason": "The workstream semantics are clear, but OPL has no registered domain gateway for grant_ops yet.",
+      "reason": "The candidate workstream semantics are clear, but OPL has no registered domain gateway for candidate_ops yet.",
       "routing_evidence": [
-        "grant_proposal intent",
-        "grant_ops workstream semantics",
+        "candidate workstream intent",
+        "candidate_ops semantics",
         "no registered domain owner"
       ],
       "timestamp": "2026-04-05T09:06:00Z"
@@ -44,10 +44,10 @@
     "request_id": "opl-2026-04-05-302",
     "workstream_id": null,
     "domain_id": null,
-    "summary": "Routing is blocked because the requested workstream has no formally onboarded domain gateway.",
+    "summary": "Routing is blocked because the requested candidate workstream has no formally onboarded domain gateway.",
     "status": "blocked",
     "evidence_refs": [
-      "workstream=grant_ops",
+      "workstream=candidate_ops",
       "domain_registry_owner=missing"
     ],
     "domain_truth_refs": [],

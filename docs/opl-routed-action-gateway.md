@@ -210,7 +210,7 @@ Suggested refusal response:
 
 ### Unknown domain
 
-Use `unknown_domain` when top-level semantics are sufficiently clear but no registered domain currently owns that workstream.
+Use `unknown_domain` when top-level semantics are sufficiently clear for a candidate workstream, but no registered domain currently owns that candidate workstream.
 
 Suggested response:
 
@@ -220,8 +220,8 @@ Suggested response:
   "decision": {
     "status": "unknown_domain",
     "request_id": "opl-2026-04-05-012",
-    "workstream_id": "grant_ops",
-    "reason": "The workstream semantics are recognizable, but no registered domain gateway currently owns this workstream."
+    "workstream_id": "candidate_ops",
+    "reason": "The candidate workstream semantics are recognizable, but no registered domain gateway currently owns this candidate workstream."
   }
 }
 ```

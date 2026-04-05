@@ -1,5 +1,5 @@
 {
-  "version": "p16.m1",
+  "version": "p17.m1",
   "scope": "opl_public_gateway_surface_index",
   "description": "Machine-readable index of the current authoritative OPL gateway public surfaces and linked domain gateway public entries. This index is contract-first and does not implement a runtime.",
   "non_goals": [
@@ -68,7 +68,8 @@
         "opl_roadmap",
         "opl_gateway_contract_hub",
         "medautoscience_public_gateway",
-        "redcube_public_gateway"
+        "redcube_public_gateway",
+        "opl_task_map"
       ],
       "notes": [
         "Top-level public positioning for the OPL gateway and federation.",
@@ -105,7 +106,8 @@
       "routes_to": [
         "opl_gateway_rollout",
         "opl_gateway_contract_hub",
-        "opl_public_surface_index_doc"
+        "opl_public_surface_index_doc",
+        "opl_task_map"
       ],
       "notes": [
         "Tracks the current phase and next phase for the top-level gateway."
@@ -148,6 +150,52 @@
       ]
     },
     {
+      "surface_id": "opl_task_map",
+      "category_id": "opl_public_entry",
+      "surface_kind": "task_map",
+      "boundary_role": "top_level_task_topology",
+      "owner_scope": "opl",
+      "truth_mode": "none",
+      "workstream_ids": [
+        "research_ops",
+        "grant_ops",
+        "thesis_ops",
+        "review_ops",
+        "presentation_ops"
+      ],
+      "domain_ids": [
+        "medautoscience",
+        "redcube"
+      ],
+      "refs": [
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/task-map.md",
+          "language": "en"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/task-map.zh-CN.md",
+          "language": "zh-CN"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "contracts/opl-gateway/task-topology.json"
+        }
+      ],
+      "routes_to": [
+        "opl_roadmap",
+        "opl_federation_contract",
+        "opl_gateway_contract_hub",
+        "opl_domain_onboarding_contract",
+        "opl_public_surface_index_doc"
+      ],
+      "notes": [
+        "Top-level task topology surface for all current OPL workstreams, including under-definition candidate workstreams.",
+        "Reference-only for under-definition workstreams: does not register new domains, does not create discovery readiness, and does not create routed-action readiness."
+      ]
+    },
+    {
       "surface_id": "opl_federation_contract",
       "category_id": "opl_contract_surface",
       "surface_kind": "contract_doc",
@@ -177,7 +225,8 @@
       "routes_to": [
         "opl_gateway_contract_hub",
         "medautoscience_public_gateway",
-        "redcube_public_gateway"
+        "redcube_public_gateway",
+        "opl_task_map"
       ],
       "notes": [
         "Freezes the top-level workstream/domain mappings and domain independence boundary."
@@ -274,7 +323,8 @@
         "opl_surface_review_matrix",
         "opl_public_surface_index_doc",
         "opl_operating_example_corpus",
-        "opl_operating_record_catalog"
+        "opl_operating_record_catalog",
+        "opl_task_map"
       ],
       "notes": [
         "Indexes the machine-readable OPL gateway contract materialization.",
@@ -378,7 +428,8 @@
         }
       ],
       "routes_to": [
-        "opl_gateway_contract_hub"
+        "opl_gateway_contract_hub",
+        "opl_task_map"
       ],
       "notes": [
         "Defines how future domains can be formally indexed without placeholder boundaries.",
@@ -872,7 +923,8 @@
         "opl_surface_authority_matrix",
         "opl_surface_review_matrix",
         "medautoscience_public_gateway",
-        "redcube_public_gateway"
+        "redcube_public_gateway",
+        "opl_task_map"
       ],
       "notes": [
         "Human-readable companion for the machine-readable public surface index."

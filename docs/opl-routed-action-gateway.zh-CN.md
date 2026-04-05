@@ -210,7 +210,7 @@
 
 ### unknown-domain
 
-当顶层语义已经足够清楚，但当前没有任何已注册 domain 拥有该 workstream 时，应返回 `unknown_domain`。
+当顶层语义已经足够清楚到可以命名一个 candidate workstream，但当前没有任何已注册 domain 正式拥有这个 candidate workstream 时，应返回 `unknown_domain`。
 
 建议响应：
 
@@ -220,8 +220,8 @@
   "decision": {
     "status": "unknown_domain",
     "request_id": "opl-2026-04-05-012",
-    "workstream_id": "grant_ops",
-    "reason": "The workstream semantics are recognizable, but no registered domain gateway currently owns this workstream."
+    "workstream_id": "candidate_ops",
+    "reason": "The candidate workstream semantics are recognizable, but no registered domain gateway currently owns this candidate workstream."
   }
 }
 ```

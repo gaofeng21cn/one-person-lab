@@ -15,6 +15,13 @@
 This split defines top-level task semantics.
 At runtime, those semantics should route through the `OPL Gateway` into independent domain gateways rather than being collapsed into one runtime.
 
+## Machine-Readable Companion
+
+- [`../contracts/opl-gateway/task-topology.json`](../contracts/opl-gateway/task-topology.json)
+
+This companion materializes the task topology as a machine-readable top-level surface.
+It may describe under-definition workstreams such as `Grant Ops`, `Thesis Ops`, and `Review Ops`, but it does **not** admit new domains, create `G2` discovery readiness, or create `G3` routed-action readiness for them.
+
 ## Research Ops
 
 `Research Ops` covers the main chain from data to paper delivery.
@@ -26,6 +33,13 @@ Typical tasks include:
 - analysis and validation progression
 - evidence packaging
 - manuscript and submission delivery
+
+Typical delivery objects include:
+
+- analysis packages
+- evidence packages
+- manuscripts
+- submission packages
 
 The current domain gateway for this workstream is:
 
@@ -50,6 +64,22 @@ This workstream clearly reuses:
 - review memory
 - existing study results and figures
 
+Typical delivery objects include:
+
+- grant-direction assessments
+- proposal outlines and drafts
+- reviewer-simulation packs
+- proposal revision plans
+
+Current boundary status:
+
+- still under definition
+- not yet an admitted domain
+- not yet a registered `G1` workstream/domain mapping
+- not yet a `G2` discovery target
+- not eligible for domain handoff
+- clear top-level requests may surface only as `unknown_domain`, without building a handoff payload, until a real domain owner is admitted
+
 ## Thesis Ops
 
 `Thesis Ops` covers dissertation writing and defense preparation.
@@ -64,6 +94,22 @@ Typical tasks include:
 
 It remains closely coupled with `Research Ops`, but it should still retain its own task boundary.
 
+Typical delivery objects include:
+
+- chapter-structure plans
+- chapter draft sets
+- cross-chapter synchronization packs
+- defense-preparation packs
+
+Current boundary status:
+
+- still under definition
+- not yet an admitted domain
+- not yet a registered `G1` workstream/domain mapping
+- not yet a `G2` discovery target
+- not eligible for domain handoff
+- clear top-level requests may surface only as `unknown_domain`, without building a handoff payload, until a real domain owner is admitted
+
 ## Review Ops
 
 `Review Ops` covers both “standing in the reviewer role” and “responding to reviewers.”
@@ -77,6 +123,22 @@ Typical tasks include:
 
 This workstream also accumulates review standards and feedback patterns that should remain reusable across domains.
 
+Typical delivery objects include:
+
+- review reports
+- reviewer-comment structures
+- rebuttal plans
+- revision-route maps
+
+Current boundary status:
+
+- still under definition
+- not yet an admitted domain
+- not yet a registered `G1` workstream/domain mapping
+- not yet a `G2` discovery target
+- not eligible for domain handoff
+- clear top-level requests may surface only as `unknown_domain`, without building a handoff payload, until a real domain owner is admitted
+
 ## Presentation Ops
 
 `Presentation Ops` covers lectures, lab talks, project reports, and defense materials.
@@ -87,6 +149,13 @@ Typical tasks include:
 - generating figure-ready narrative structures for reports
 - organizing lecture and defense slide decks
 - reusing paper figures, abstracts, and conclusions
+
+Typical delivery objects include:
+
+- lecture decks
+- lab-talk decks
+- project-report decks
+- defense decks
 
 The current domain gateway for this workstream is:
 

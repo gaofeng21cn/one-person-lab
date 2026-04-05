@@ -57,6 +57,7 @@
 - `opl_public_readme`
 - `opl_roadmap`
 - `opl_gateway_rollout`
+- `opl_task_map`
 
 ### Governing contract surfaces
 
@@ -93,6 +94,7 @@
 `required_acceptance_gates` 只引用已经冻结的 acceptance gate。
 `required_companion_surfaces` 只指向已经被索引的 supporting 或 governing surface。
 `publishability_stage` 只说明：一个 surface 在被当成当前 public material 之前，需要先满足哪一类 gateway-surface alignment。
+如果被覆盖的 surface 是 `opl_task_map`，那么其中仍在定义中的 workstream 也只保持语义候选身份，不会因为被纳入 review coverage 就自动变成正式收录 domain 或 routed target。
 这些字段都不会把 domain review 或 publication authority 上收给 `OPL`。
 
 ## 上位依据
@@ -102,6 +104,7 @@
 - [OPL Public Surface Index](./opl-public-surface-index.zh-CN.md)
 - [OPL Federation Contract](./opl-federation-contract.zh-CN.md)
 - [OPL Gateway 落地路线](./opl-gateway-rollout.zh-CN.md)
+- [OPL 任务版图](./task-map.zh-CN.md)
 
 ## 完成定义
 

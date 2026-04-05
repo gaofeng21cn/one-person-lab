@@ -57,6 +57,7 @@ These values describe documentation-readiness stage only. They are not workflow 
 - `opl_public_readme`
 - `opl_roadmap`
 - `opl_gateway_rollout`
+- `opl_task_map`
 
 ### Governing contract surfaces
 
@@ -93,6 +94,7 @@ Read this matrix as a **derived review-boundary index**, not as an approval or p
 `required_acceptance_gates` only references already frozen acceptance gates.
 `required_companion_surfaces` only points to already indexed supporting or governing surfaces.
 `publishability_stage` tells you which kind of gateway-surface alignment must already exist before the surface is publishable as current public material.
+If the covered surface is `opl_task_map`, under-definition workstreams remain semantic candidates only; they do not become admitted domains or routed targets through review coverage alone.
 None of these fields transfer domain review or publication authority into `OPL`.
 
 ## Governing Sources
@@ -102,6 +104,7 @@ None of these fields transfer domain review or publication authority into `OPL`.
 - [OPL Public Surface Index](./opl-public-surface-index.md)
 - [OPL Federation Contract](./opl-federation-contract.md)
 - [OPL Gateway Rollout](./opl-gateway-rollout.md)
+- [OPL Task Map](./task-map.md)
 
 ## Completion Definition
 

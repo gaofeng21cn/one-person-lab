@@ -25,6 +25,8 @@
 - [OPL Gateway Rollout（中文）](../../docs/opl-gateway-rollout.zh-CN.md)
 - [OPL Public Surface Index](../../docs/opl-public-surface-index.md)
 - [OPL Public Surface Index（中文）](../../docs/opl-public-surface-index.zh-CN.md)
+- [OPL Task Map](../../docs/task-map.md)
+- [OPL Task Map（中文）](../../docs/task-map.zh-CN.md)
 - [English](./README.md)
 
 ## 配套示例集
@@ -55,6 +57,7 @@
 - [`publish-promotion.schema.json`](./publish-promotion.schema.json) — 已冻结的 P5.M2 publish / promotion operating contract JSON Schema
 - [`acceptance-matrix.json`](./acceptance-matrix.json) — 已冻结 gateway 与 operating surface 的 declarative acceptance matrix
 - [`public-surface-index.json`](./public-surface-index.json) — 当前权威 OPL public surface 与链接 domain public entry 的 machine-readable index
+- [`task-topology.json`](./task-topology.json) — 覆盖已收录与仍在定义中的 OPL workstream 的 machine-readable 顶层任务版图
 - [`operating-record-catalog.json`](./operating-record-catalog.json) — 已冻结 P5.M1 / P5.M2 operating record kind 的 machine-readable reference catalog
 - [`surface-lifecycle-map.json`](./surface-lifecycle-map.json) — 当前已冻结 gateway / operating / supporting surfaces 的 machine-readable derived lifecycle map
 - [`surface-authority-matrix.json`](./surface-authority-matrix.json) — 当前已冻结 OPL surfaces 与 linked domain public-entry surfaces 的 machine-readable derived authority matrix
@@ -77,9 +80,12 @@
 
 ## 当前范围
 
-这个目录只包含那些在公开 G1 contract 中已经冻结边界的 workstream 与 domain。
+这个目录包含两类内容：
 
-`Grant Ops`、`Review Ops`、`Thesis Ops` 等 planned workstream，在对应 domain 边界明确冻结之前，不进入这里。
+- 在公开 G1 contract 中已经冻结边界、并已正式收录的 workstream / domain registry 与 contract 工件
+- derived / reference-only 的 task-topology 工件；它们可以提到仍在定义中的 workstream，但不会把这些 workstream 自动纳入 `G1`、`G2` 或 `G3`
+
+`Grant Ops`、`Review Ops`、`Thesis Ops` 等 planned workstream，在对应 domain 边界明确冻结之前，不进入正式收录的 registry / discovery / routing surface。
 
 ## Materialization 说明
 

@@ -1,0 +1,206 @@
+{
+  "version": "p17.m1",
+  "scope": "opl_task_topology",
+  "description": "Machine-readable top-level task topology for OPL. It captures current admitted workstreams plus under-definition candidate workstreams without turning candidate boundaries into admitted domains, routing targets, or runtime entry surfaces.",
+  "non_goals": [
+    "domain_admission_registry",
+    "runtime_router",
+    "execution_engine",
+    "canonical_truth_source"
+  ],
+  "topology_rules": [
+    "task topology defines top-level workstream semantics above domain gateways and harnesses",
+    "registered G1 workstreams remain research_ops and presentation_ops only",
+    "grant_ops, thesis_ops, and review_ops remain under definition until explicit domain boundaries are frozen and admitted through the onboarding gate",
+    "under-definition workstreams may list delivery objects and reusable assets without becoming admitted domains, discovery targets, or handoff-ready routed-action targets; at most they may surface as unknown_domain outcomes when top-level semantics are clear",
+    "task topology complements docs/task-map.md, workstreams.json, and the onboarding contract; it does not replace them"
+  ],
+  "shared_foundation_reuse": [
+    "datasets_and_figures",
+    "references_and_external_evidence",
+    "research_questions_and_judgments",
+    "formal_delivery_surfaces",
+    "shared_foundation_language"
+  ],
+  "workstreams": [
+    {
+      "workstream_id": "research_ops",
+      "label": "Research Ops",
+      "boundary_state": "frozen",
+      "registry_state": "registered",
+      "routing_state": "domain_gateway_ready",
+      "current_domain_id": "medautoscience",
+      "entry_surface": "domain_gateway",
+      "formal_domain_required": false,
+      "delivery_objects": [
+        "analysis_package",
+        "evidence_package",
+        "manuscript",
+        "submission_package"
+      ],
+      "typical_tasks": [
+        "data_governance",
+        "research_question_formation",
+        "analysis_and_validation_progression",
+        "evidence_packaging",
+        "manuscript_and_submission_delivery"
+      ],
+      "reuse_dependencies": [
+        "datasets_and_figures",
+        "references_and_external_evidence",
+        "research_questions_and_judgments",
+        "shared_foundation_language"
+      ],
+      "family_boundary_notes": [],
+      "notes": "Currently maps directly to MedAutoScience and remains an admitted G1 workstream."
+    },
+    {
+      "workstream_id": "grant_ops",
+      "label": "Grant Ops",
+      "boundary_state": "under_definition",
+      "registry_state": "not_registered",
+      "routing_state": "unknown_domain_only",
+      "current_domain_id": null,
+      "entry_surface": null,
+      "formal_domain_required": true,
+      "delivery_objects": [
+        "grant_direction_assessment",
+        "proposal_outline",
+        "proposal_draft",
+        "review_simulation_pack",
+        "proposal_revision_plan"
+      ],
+      "typical_tasks": [
+        "grant_direction_feasibility_assessment",
+        "proposal_structure_generation",
+        "background_innovation_and_technical_route_organization",
+        "reviewer_comment_simulation",
+        "proposal_iteration"
+      ],
+      "reuse_dependencies": [
+        "literature_assets",
+        "research_memory",
+        "review_memory",
+        "existing_study_results_and_figures"
+      ],
+      "family_boundary_notes": [],
+      "notes": "Still under definition. This workstream does not imply an admitted domain or a G1 registry entry. Clear top-level requests may surface as unknown_domain, but no domain handoff is allowed before explicit domain boundaries are frozen."
+    },
+    {
+      "workstream_id": "thesis_ops",
+      "label": "Thesis Ops",
+      "boundary_state": "under_definition",
+      "registry_state": "not_registered",
+      "routing_state": "unknown_domain_only",
+      "current_domain_id": null,
+      "entry_surface": null,
+      "formal_domain_required": true,
+      "delivery_objects": [
+        "chapter_structure_plan",
+        "chapter_draft_set",
+        "cross_chapter_sync_pack",
+        "defense_preparation_pack"
+      ],
+      "typical_tasks": [
+        "chapter_structure_organization",
+        "reuse_of_existing_papers_and_figures",
+        "terminology_and_narrative_synchronization",
+        "abstract_introduction_and_discussion_organization",
+        "defense_preparation"
+      ],
+      "reuse_dependencies": [
+        "existing_papers_and_figures",
+        "research_questions_and_judgments",
+        "formal_delivery_surfaces",
+        "shared_foundation_language"
+      ],
+      "family_boundary_notes": [],
+      "notes": "Closely coupled with Research Ops but still requires an explicit independent domain boundary before admission. Clear top-level requests may surface as unknown_domain, but no domain handoff is allowed yet."
+    },
+    {
+      "workstream_id": "review_ops",
+      "label": "Review Ops",
+      "boundary_state": "under_definition",
+      "registry_state": "not_registered",
+      "routing_state": "unknown_domain_only",
+      "current_domain_id": null,
+      "entry_surface": null,
+      "formal_domain_required": true,
+      "delivery_objects": [
+        "review_report",
+        "review_comment_structure",
+        "rebuttal_plan",
+        "revision_route_map"
+      ],
+      "typical_tasks": [
+        "peer_review",
+        "grant_review",
+        "reviewer_comment_structuring",
+        "rebuttal_and_revision_route_organization"
+      ],
+      "reuse_dependencies": [
+        "review_standards",
+        "feedback_patterns",
+        "references_and_external_evidence",
+        "shared_foundation_language"
+      ],
+      "family_boundary_notes": [],
+      "notes": "Still under definition. It accumulates reusable review standards, and clear top-level requests may surface as unknown_domain, but it is not yet an admitted domain or handoff target."
+    },
+    {
+      "workstream_id": "presentation_ops",
+      "label": "Presentation Ops",
+      "boundary_state": "frozen",
+      "registry_state": "registered",
+      "routing_state": "domain_gateway_ready",
+      "current_domain_id": "redcube",
+      "entry_surface": "domain_gateway",
+      "formal_domain_required": false,
+      "delivery_objects": [
+        "lecture_deck",
+        "lab_talk_deck",
+        "project_report_deck",
+        "defense_deck"
+      ],
+      "typical_tasks": [
+        "teaching_or_presentation_storyline_extraction",
+        "figure_ready_narrative_structure_generation",
+        "lecture_and_defense_slide_organization",
+        "paper_figure_abstract_and_conclusion_reuse"
+      ],
+      "reuse_dependencies": [
+        "paper_figures",
+        "abstracts",
+        "conclusions",
+        "formal_delivery_surfaces"
+      ],
+      "family_boundary_notes": [
+        {
+          "family_id": "ppt_deck",
+          "relation": "direct_map_to_presentation_ops"
+        },
+        {
+          "family_id": "lecture_student",
+          "relation": "profile_pack_variant"
+        },
+        {
+          "family_id": "lecture_peer",
+          "relation": "profile_pack_variant"
+        },
+        {
+          "family_id": "executive_briefing",
+          "relation": "profile_pack_variant"
+        },
+        {
+          "family_id": "defense_deck",
+          "relation": "profile_pack_variant"
+        },
+        {
+          "family_id": "xiaohongshu",
+          "relation": "same_redcube_harness_non_equivalent_to_presentation_ops"
+        }
+      ],
+      "notes": "Currently maps directly to RedCube AI. ppt_deck is the direct top-level family map; xiaohongshu shares RedCube but is not automatically equal to Presentation Ops."
+    }
+  ]
+}

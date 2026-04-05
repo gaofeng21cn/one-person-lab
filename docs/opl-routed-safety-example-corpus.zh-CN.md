@@ -29,7 +29,7 @@
 ### 2. Unknown domain
 
 - 文件：[`../examples/opl-gateway/unknown-domain-routing.json`](../examples/opl-gateway/unknown-domain-routing.json)
-- 展示当顶层 workstream 语义已经可识别、但当前没有任何已注册 domain gateway 正式拥有该 workstream 时，`OPL` 如何返回 `unknown_domain`。
+- 展示当一个 candidate workstream 的顶层语义已经可识别、但当前没有任何已注册 domain gateway 正式拥有它时，`OPL` 如何返回 `unknown_domain`。
 
 ### 3. Refusal
 

@@ -1,5 +1,5 @@
 {
-  "version": "p16.m1",
+  "version": "p17.m1",
   "gates": [
     {
       "gate_id": "g1_registry_completeness",
@@ -343,6 +343,39 @@
       ]
     },
     {
+      "gate_id": "p17_task_topology_integrity",
+      "layer": "p17",
+      "required_files": [
+        "contracts/opl-gateway/task-topology.json",
+        "contracts/opl-gateway/workstreams.json",
+        "contracts/opl-gateway/domains.json",
+        "contracts/opl-gateway/public-surface-index.json",
+        "contracts/opl-gateway/surface-review-matrix.json",
+        "contracts/opl-gateway/README.md",
+        "contracts/opl-gateway/README.zh-CN.md",
+        "docs/task-map.md",
+        "docs/task-map.zh-CN.md",
+        "docs/opl-public-surface-index.md",
+        "docs/opl-public-surface-index.zh-CN.md",
+        "docs/opl-surface-review-matrix.md",
+        "docs/opl-surface-review-matrix.zh-CN.md",
+        "docs/opl-gateway-acceptance-test-spec.md",
+        "docs/opl-gateway-acceptance-test-spec.zh-CN.md"
+      ],
+      "contract_assertions": [
+        "task topology covers research_ops, grant_ops, thesis_ops, review_ops, and presentation_ops with explicit boundary, registry, and routing states",
+        "research_ops remains registered and mapped to medautoscience while presentation_ops remains registered and mapped to redcube",
+        "grant_ops, thesis_ops, and review_ops remain under_definition, not_registered, and unknown_domain_only until explicit domain boundaries are frozen",
+        "presentation_ops keeps ppt_deck as the direct map and keeps xiaohongshu inside redcube without auto-equating it to presentation_ops",
+        "task-map docs, contract hub, public-surface index, and review matrix expose task topology as a top-level semantic surface without treating candidate workstreams as admitted domains or handoff-ready routes"
+      ],
+      "forbidden_regressions": [
+        "under-definition workstreams become admitted domains or routed targets",
+        "task topology becomes a runtime router or replaces the G1 registry",
+        "xiaohongshu automatically equals presentation_ops"
+      ]
+    },
+    {
       "gate_id": "cross_domain_wording_consistency",
       "layer": "cross_domain",
       "required_files": [
@@ -371,7 +404,9 @@
         "docs/opl-surface-authority-matrix.md",
         "docs/opl-surface-authority-matrix.zh-CN.md",
         "docs/opl-surface-review-matrix.md",
-        "docs/opl-surface-review-matrix.zh-CN.md"
+        "docs/opl-surface-review-matrix.zh-CN.md",
+        "docs/task-map.md",
+        "docs/task-map.zh-CN.md"
       ],
       "contract_assertions": [
         "OPL remains the top-level gateway/federation surface",
@@ -381,7 +416,8 @@
         "supporting discoverability surfaces remain non-governing and non-executing",
         "surface lifecycle map remains derived/reference-only",
         "authority matrix remains derived/reference-only",
-        "surface review matrix remains derived/reference-only"
+        "surface review matrix remains derived/reference-only",
+        "task map keeps current admitted workstreams explicit while keeping Grant/Review/Thesis Ops under definition"
       ],
       "forbidden_regressions": [
         "OPL described as monolithic runtime",
@@ -390,7 +426,8 @@
         "surface lifecycle map described as transition authority",
         "authority matrix described as authorization engine",
         "surface review matrix described as approval engine",
-        "surface review matrix described as publish controller"
+        "surface review matrix described as publish controller",
+        "task map described as admitted domain registry"
       ]
     }
   ]

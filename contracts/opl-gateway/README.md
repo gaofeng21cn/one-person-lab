@@ -25,6 +25,8 @@ It freezes machine-readable gateway surfaces that later discovery and routed-act
 - [OPL Gateway Rollout（中文）](../../docs/opl-gateway-rollout.zh-CN.md)
 - [OPL Public Surface Index](../../docs/opl-public-surface-index.md)
 - [OPL Public Surface Index（中文）](../../docs/opl-public-surface-index.zh-CN.md)
+- [OPL Task Map](../../docs/task-map.md)
+- [OPL Task Map（中文）](../../docs/task-map.zh-CN.md)
 - [中文说明](./README.zh-CN.md)
 
 ## Companion examples
@@ -55,6 +57,7 @@ These mapping surfaces are reference-only. They do not become a workflow engine,
 - [`publish-promotion.schema.json`](./publish-promotion.schema.json) — JSON Schema for the frozen P5.M2 publish / promotion operating contract
 - [`acceptance-matrix.json`](./acceptance-matrix.json) — declarative acceptance matrix for the frozen gateway and operating surfaces
 - [`public-surface-index.json`](./public-surface-index.json) — machine-readable index of current authoritative OPL public surfaces and linked domain public entries
+- [`task-topology.json`](./task-topology.json) — machine-readable top-level task topology across admitted and under-definition OPL workstreams
 - [`operating-record-catalog.json`](./operating-record-catalog.json) — machine-readable reference catalog for the frozen P5.M1 / P5.M2 operating record kinds
 - [`surface-lifecycle-map.json`](./surface-lifecycle-map.json) — machine-readable derived lifecycle map for the frozen gateway / operating / supporting surfaces
 - [`surface-authority-matrix.json`](./surface-authority-matrix.json) — machine-readable derived authority matrix for the frozen OPL surfaces and linked domain public-entry surfaces
@@ -77,9 +80,12 @@ These mapping surfaces are reference-only. They do not become a workflow engine,
 
 ## Current scope
 
-This directory includes only the workstreams and domains whose boundaries are already frozen in the public G1 contract.
+This directory includes:
 
-Planned workstreams such as `Grant Ops`, `Review Ops`, and `Thesis Ops` remain outside this directory until their domain boundaries are explicitly frozen.
+- admitted registry / contract artifacts for the workstreams and domains whose boundaries are already frozen in the public G1 contract
+- derived / reference-only task-topology material that may mention under-definition workstreams without admitting them into `G1`, `G2`, or `G3`
+
+Planned workstreams such as `Grant Ops`, `Review Ops`, and `Thesis Ops` remain outside the admitted registry / discovery / routing surfaces until their domain boundaries are explicitly frozen.
 
 ## Materialization note
 

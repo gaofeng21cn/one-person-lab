@@ -29,7 +29,7 @@ The examples are illustrative safety compositions only.
 ### 2. Unknown domain
 
 - File: [`../examples/opl-gateway/unknown-domain-routing.json`](../examples/opl-gateway/unknown-domain-routing.json)
-- Shows how `OPL` returns `unknown_domain` when workstream semantics are recognizable but no registered domain gateway currently owns that workstream.
+- Shows how `OPL` returns `unknown_domain` when a candidate workstream is top-level recognizable but no registered domain gateway currently owns it.
 
 ### 3. Refusal
 

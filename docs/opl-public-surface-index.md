@@ -32,6 +32,7 @@ These surfaces position and navigate the top-level gateway:
 - `README`
 - `Roadmap`
 - `Gateway Rollout`
+- [OPL Task Map](./task-map.md)
 
 ### 2. OPL contract surfaces
 
@@ -70,6 +71,7 @@ Important boundary:
 
 - `ppt_deck` directly maps to `presentation_ops`
 - `xiaohongshu` may still route to `redcube`, but does not automatically equal `presentation_ops`
+- `Grant Ops`, `Review Ops`, and `Thesis Ops` may appear in the task map as under-definition workstreams, but that does not make them admitted domains or routed targets
 
 ## Reading Rule
 
@@ -77,6 +79,7 @@ Read this index as a **surface map**, not as an execution registry.
 
 If a surface is domain-owned, `OPL` only indexes its public entry role.
 Canonical runtime truth, review truth, release truth, and submission truth remain inside the owning domain system.
+If a surface is `opl_task_map`, under-definition workstreams remain top-level semantic candidates only until the onboarding and registry gates are satisfied.
 
 ## Governing Gateway Documents
 
@@ -108,5 +111,6 @@ The public surface index is acceptable only when:
 - it exposes the derived surface lifecycle map as a supporting/reference surface
 - it exposes the derived surface authority matrix as a supporting/reference surface
 - it exposes the derived surface review matrix as a supporting/reference surface
+- it exposes the task-map / task-topology surface without turning under-definition workstreams into admitted domains
 - it does not imply a launcher, runtime, or harness bypass
 - it does not move canonical truth into `OPL`
