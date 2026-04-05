@@ -11,6 +11,8 @@
 - [OPL Federation Contract（中文）](../../docs/opl-federation-contract.zh-CN.md)
 - [OPL Read-Only Discovery Gateway](../../docs/opl-read-only-discovery-gateway.md)
 - [OPL Read-Only Discovery Gateway（中文）](../../docs/opl-read-only-discovery-gateway.zh-CN.md)
+- [OPL Routed Action Gateway](../../docs/opl-routed-action-gateway.md)
+- [OPL Routed Action Gateway（中文）](../../docs/opl-routed-action-gateway.zh-CN.md)
 - [OPL Gateway Rollout](../../docs/opl-gateway-rollout.md)
 - [OPL Gateway Rollout（中文）](../../docs/opl-gateway-rollout.zh-CN.md)
 - [English](./README.md)
@@ -21,6 +23,7 @@
 - [`domains.json`](./domains.json) — machine-readable domain registry
 - [`routing-vocabulary.json`](./routing-vocabulary.json) — 共享 routing vocabulary 与已冻结的 routing rules
 - [`handoff.schema.json`](./handoff.schema.json) — 已冻结的 G1 handoff payload JSON Schema
+- [`routed-actions.schema.json`](./routed-actions.schema.json) — 已冻结的 G3 routed action contract JSON Schema
 
 ## 已冻结的当前映射
 

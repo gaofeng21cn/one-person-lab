@@ -122,6 +122,10 @@ Completion signal:
 
 - an agent can start from `OPL` and still land inside the correct domain gateway with explicit routing evidence
 
+Detailed contract:
+
+- [OPL Routed Action Gateway](opl-routed-action-gateway.md)
+
 ## Phase G4: Shared Cross-Domain Indexes
 
 Goal:

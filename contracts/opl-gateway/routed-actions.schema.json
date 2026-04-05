@@ -1,0 +1,412 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opl.onepersonlab/contracts/opl-gateway/routed-actions.schema.json",
+  "title": "OPL Routed Action Gateway Contract",
+  "description": "Machine-readable G3 contract for route_request, build_handoff_payload, and audit_routing_decision.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/routeRequestEnvelope"
+    },
+    {
+      "$ref": "#/$defs/buildHandoffEnvelope"
+    },
+    {
+      "$ref": "#/$defs/auditRoutingDecisionEnvelope"
+    }
+  ],
+  "$defs": {
+    "routeRequestEnvelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "operation",
+        "payload"
+      ],
+      "properties": {
+        "version": {
+          "const": "g3"
+        },
+        "operation": {
+          "const": "route_request"
+        },
+        "payload": {
+          "$ref": "#/$defs/routeRequestResult"
+        }
+      }
+    },
+    "buildHandoffEnvelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "operation",
+        "payload"
+      ],
+      "properties": {
+        "version": {
+          "const": "g3"
+        },
+        "operation": {
+          "const": "build_handoff_payload"
+        },
+        "payload": {
+          "$ref": "#/$defs/buildHandoffPayloadResult"
+        }
+      }
+    },
+    "auditRoutingDecisionEnvelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "operation",
+        "payload"
+      ],
+      "properties": {
+        "version": {
+          "const": "g3"
+        },
+        "operation": {
+          "const": "audit_routing_decision"
+        },
+        "payload": {
+          "$ref": "#/$defs/auditRoutingDecisionRecord"
+        }
+      }
+    },
+    "routeRequestResult": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/routedDecision"
+        },
+        {
+          "$ref": "#/$defs/ambiguousDecision"
+        },
+        {
+          "$ref": "#/$defs/unknownDomainDecision"
+        },
+        {
+          "$ref": "#/$defs/refusalDecision"
+        }
+      ]
+    },
+    "routedDecision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "request_id",
+        "request_kind",
+        "workstream_id",
+        "domain_id",
+        "entry_surface",
+        "reason",
+        "routing_evidence"
+      ],
+      "properties": {
+        "status": {
+          "const": "routed"
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "request_kind": {
+          "enum": [
+            "discover",
+            "plan",
+            "create",
+            "review",
+            "rerun",
+            "publish"
+          ]
+        },
+        "workstream_id": {
+          "enum": [
+            "research_ops",
+            "presentation_ops"
+          ]
+        },
+        "domain_id": {
+          "enum": [
+            "medautoscience",
+            "redcube"
+          ]
+        },
+        "entry_surface": {
+          "const": "domain_gateway"
+        },
+        "recommended_family": {
+          "type": "string"
+        },
+        "preferred_profile": {
+          "type": "string"
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "routing_evidence": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "workstream_id": {
+                "const": "research_ops"
+              }
+            },
+            "required": [
+              "workstream_id"
+            ]
+          },
+          "then": {
+            "properties": {
+              "domain_id": {
+                "const": "medautoscience"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "workstream_id": {
+                "const": "presentation_ops"
+              }
+            },
+            "required": [
+              "workstream_id"
+            ]
+          },
+          "then": {
+            "properties": {
+              "domain_id": {
+                "const": "redcube"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "ambiguousDecision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "request_id",
+        "reason",
+        "candidate_workstreams",
+        "candidate_domains",
+        "required_clarification"
+      ],
+      "properties": {
+        "status": {
+          "const": "ambiguous_task"
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "candidate_workstreams": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "research_ops",
+              "presentation_ops"
+            ]
+          },
+          "minItems": 1
+        },
+        "candidate_domains": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "medautoscience",
+              "redcube"
+            ]
+          },
+          "minItems": 1
+        },
+        "required_clarification": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        }
+      }
+    },
+    "unknownDomainDecision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "request_id",
+        "workstream_id",
+        "reason"
+      ],
+      "properties": {
+        "status": {
+          "const": "unknown_domain"
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "workstream_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "refusalDecision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "request_id",
+        "reason_code",
+        "reason"
+      ],
+      "properties": {
+        "status": {
+          "const": "refused"
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason_code": {
+          "enum": [
+            "direct_harness_bypass",
+            "unsupported_top_level_action",
+            "top_level_truth_violation"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "buildHandoffPayloadResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "route_status",
+        "handoff"
+      ],
+      "properties": {
+        "route_status": {
+          "const": "routed"
+        },
+        "handoff": {
+          "$ref": "./handoff.schema.json"
+        }
+      }
+    },
+    "auditRoutingDecisionRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "request_id",
+        "decision_status",
+        "request_summary",
+        "request_kind",
+        "reason",
+        "routing_evidence",
+        "timestamp"
+      ],
+      "properties": {
+        "request_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "decision_status": {
+          "enum": [
+            "routed",
+            "ambiguous_task",
+            "unknown_domain",
+            "refused"
+          ]
+        },
+        "request_summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "request_kind": {
+          "enum": [
+            "discover",
+            "plan",
+            "create",
+            "review",
+            "rerun",
+            "publish"
+          ]
+        },
+        "resolved_workstream_id": {
+          "enum": [
+            "research_ops",
+            "presentation_ops"
+          ]
+        },
+        "candidate_workstreams": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "resolved_domain_id": {
+          "enum": [
+            "medautoscience",
+            "redcube"
+          ]
+        },
+        "candidate_domains": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "routing_evidence": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  }
+}

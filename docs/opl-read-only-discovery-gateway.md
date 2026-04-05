@@ -18,9 +18,9 @@ The goal is to let humans and agents ask the top-level gateway what system they 
 That means this discovery gateway is defined on top of:
 
 - [OPL Federation Contract](./opl-federation-contract.md)
-- the workstream registry
-- the domain registry
-- the routing vocabulary
+- the [workstream registry](../contracts/opl-gateway/workstreams.json)
+- the [domain registry](../contracts/opl-gateway/domains.json)
+- the [routing vocabulary](../contracts/opl-gateway/routing-vocabulary.json)
 - the materialized machine-readable artifacts in [`../contracts/opl-gateway/README.md`](../contracts/opl-gateway/README.md)
 
 If `G1` is not frozen, `G2` should not proceed.

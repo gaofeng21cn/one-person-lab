@@ -122,6 +122,10 @@ Human / Agent
 
 - Agent 可以从 `OPL` 起步，同时带着显式 routing evidence 落到正确 domain gateway
 
+具体合同：
+
+- [OPL Routed Action Gateway](opl-routed-action-gateway.zh-CN.md)
+
 ## Phase G4：跨 Domain Shared Index
 
 目标：

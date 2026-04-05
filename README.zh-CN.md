@@ -289,6 +289,7 @@ Human / Agent
 - [OPL Federation Contract](docs/opl-federation-contract.zh-CN.md)
 - [OPL Gateway Contracts](contracts/opl-gateway/README.zh-CN.md)
 - [OPL 只读 Discovery Gateway](docs/opl-read-only-discovery-gateway.zh-CN.md)
+- [OPL Routed Action Gateway](docs/opl-routed-action-gateway.zh-CN.md)
 - [OPL Gateway 落地路线](docs/opl-gateway-rollout.zh-CN.md)
 - [OPL 运行模型](docs/operating-model.zh-CN.md)
 - [OPL 任务版图](docs/task-map.zh-CN.md)

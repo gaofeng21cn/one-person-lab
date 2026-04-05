@@ -18,10 +18,10 @@
 也就是说，这个 discovery gateway 建立在下面这些东西之上：
 
 - [OPL Federation Contract](./opl-federation-contract.zh-CN.md)
-- workstream registry
-- domain registry
-- routing vocabulary
-- 当前仓库中已落地的机器可读工件：[`../contracts/opl-gateway/README.md`](../contracts/opl-gateway/README.md)
+- [workstream registry](../contracts/opl-gateway/workstreams.json)
+- [domain registry](../contracts/opl-gateway/domains.json)
+- [routing vocabulary](../contracts/opl-gateway/routing-vocabulary.json)
+- 当前仓库中已落地的机器可读工件：[`../contracts/opl-gateway/README.zh-CN.md`](../contracts/opl-gateway/README.zh-CN.md)
 
 如果 `G1` 没冻结，`G2` 不应继续推进。
 
