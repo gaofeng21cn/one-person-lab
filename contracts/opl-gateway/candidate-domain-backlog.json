@@ -58,11 +58,6 @@
         "handoff_ready": false,
         "formal_inclusion_ready": false
       },
-      "candidate_domain_boundary": {
-        "candidate_domain_id": null,
-        "candidate_gateway_surface": null,
-        "candidate_harness_surface": null
-      },
       "required_onboarding_materials": [
         {
           "package_id": "registry_material",
@@ -298,11 +293,6 @@
         "handoff_ready": false,
         "formal_inclusion_ready": false
       },
-      "candidate_domain_boundary": {
-        "candidate_domain_id": null,
-        "candidate_gateway_surface": null,
-        "candidate_harness_surface": null
-      },
       "required_onboarding_materials": [
         {
           "package_id": "registry_material",
@@ -537,11 +527,6 @@
         "routing_ready": false,
         "handoff_ready": false,
         "formal_inclusion_ready": false
-      },
-      "candidate_domain_boundary": {
-        "candidate_domain_id": null,
-        "candidate_gateway_surface": null,
-        "candidate_harness_surface": null
       },
       "required_onboarding_materials": [
         {

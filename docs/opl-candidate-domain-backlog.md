@@ -59,7 +59,6 @@ Each entry stays reference-only and carries only:
 - `top_level_signal_refs`
 - `admission_status`
 - `readiness_flags`
-- `candidate_domain_boundary`
 - `required_onboarding_materials`
 - `missing_boundary_materials`
 - `formal_inclusion_gate`

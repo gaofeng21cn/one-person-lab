@@ -59,7 +59,6 @@ Onboarding contract 负责定义正式收录门槛。
 - `top_level_signal_refs`
 - `admission_status`
 - `readiness_flags`
-- `candidate_domain_boundary`
 - `required_onboarding_materials`
 - `missing_boundary_materials`
 - `formal_inclusion_gate`
