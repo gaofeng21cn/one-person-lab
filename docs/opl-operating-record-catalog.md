@@ -64,6 +64,7 @@ If a follow-on action exists, it still routes through `domain_gateway` only.
 - [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.md)
 - [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.md)
 - [OPL Operating Example Corpus](./opl-operating-example-corpus.md)
+- [OPL Surface Lifecycle Map](./opl-surface-lifecycle-map.md)
 - [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
 - [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.md)
 
@@ -76,3 +77,4 @@ The operating-record catalog is acceptable only when:
 - it stays non-executing and reference-only
 - it does not shift truth ownership into `OPL`
 - it keeps `domain_gateway` as the only follow-on route surface
+- it remains discoverable from the derived surface lifecycle map without becoming an execution stage

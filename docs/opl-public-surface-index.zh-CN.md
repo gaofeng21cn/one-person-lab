@@ -54,6 +54,7 @@
 - Routed-safety example corpus
 - Operating example corpus
 - Operating record catalog
+- Surface lifecycle map
 - Public surface index
 
 ### 4. Linked domain public-entry surfaces
@@ -83,7 +84,7 @@ canonical runtime truth、review truth、release truth 与 submission truth 仍�
 - [OPL 只读 Discovery Gateway](./opl-read-only-discovery-gateway.zh-CN.md)
 - [OPL Routed Action Gateway](./opl-routed-action-gateway.zh-CN.md)
 
-## 配套示例 / 审核 Surfaces
+## 配套示例 / 审核 / 映射 Surfaces
 
 这些配套 surface 只负责提升 discoverability 与 reviewability，
 不会升级成 governing gateway surface。
@@ -92,6 +93,7 @@ canonical runtime truth、review truth、release truth 与 submission truth 仍�
 - [OPL Routed-Safety Example Corpus](./opl-routed-safety-example-corpus.zh-CN.md)
 - [OPL Operating Example Corpus](./opl-operating-example-corpus.zh-CN.md)
 - [OPL Operating Record Catalog](./opl-operating-record-catalog.zh-CN.md)
+- [OPL Surface Lifecycle Map](./opl-surface-lifecycle-map.zh-CN.md)
 
 ## 完成定义
 
@@ -99,5 +101,6 @@ canonical runtime truth、review truth、release truth 与 submission truth 仍�
 
 - 它保持 machine-readable
 - 它区分 OPL-owned surface 与 domain-owned public entry
+- 它把 derived 的 surface lifecycle map 暴露为 supporting/reference surface
 - 它不暗示 launcher、runtime 或 harness bypass
 - 它不把 canonical truth 上收给 `OPL`

@@ -35,6 +35,12 @@ It freezes machine-readable gateway surfaces that later discovery and routed-act
 
 These corpora are companion references only. They do not replace the governing contracts in this directory.
 
+## Companion reference surfaces
+
+- [OPL Surface Lifecycle Map](../../docs/opl-surface-lifecycle-map.md) — derived machine-readable lifecycle view across the frozen gateway / operating / supporting surfaces
+
+This lifecycle map is reference-only. It does not become a workflow engine, transition authority, or replacement for the governing contracts in this directory.
+
 ## Files
 
 - [`workstreams.json`](./workstreams.json) — machine-readable workstream registry
@@ -48,6 +54,7 @@ These corpora are companion references only. They do not replace the governing c
 - [`acceptance-matrix.json`](./acceptance-matrix.json) — declarative acceptance matrix for the frozen gateway and operating surfaces
 - [`public-surface-index.json`](./public-surface-index.json) — machine-readable index of current authoritative OPL public surfaces and linked domain public entries
 - [`operating-record-catalog.json`](./operating-record-catalog.json) — machine-readable reference catalog for the frozen P5.M1 / P5.M2 operating record kinds
+- [`surface-lifecycle-map.json`](./surface-lifecycle-map.json) — machine-readable derived lifecycle map for the frozen gateway / operating / supporting surfaces
 
 ## Frozen current mappings
 

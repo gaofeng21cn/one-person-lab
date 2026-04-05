@@ -26,6 +26,7 @@ This acceptance spec covers:
 - `P10` routed-safety example integrity
 - `P12` operating example integrity
 - `P13` operating-record-catalog integrity
+- `P14` surface lifecycle map integrity
 - cross-domain wording consistency across public surfaces
 
 ## Governing Sources
@@ -45,13 +46,14 @@ The acceptance checks below are grounded in:
 - [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
 - [`acceptance-matrix.json`](../contracts/opl-gateway/acceptance-matrix.json)
 
-## Companion Reference Examples
+## Companion Reference Surfaces
 
 - [OPL Gateway Example Corpus](./opl-gateway-example-corpus.md)
 - [OPL Operating Example Corpus](./opl-operating-example-corpus.md)
 - [OPL Operating Record Catalog](./opl-operating-record-catalog.md)
+- [OPL Surface Lifecycle Map](./opl-surface-lifecycle-map.md)
 
-These companion surfaces are illustrative or reference-only. The gateway corpus shows cross-layer composition; the operating corpus materializes standalone `P5.M1` / `P5.M2` records; the operating-record catalog indexes the frozen record kinds. None of them replace the contracts and acceptance gates above.
+These companion surfaces are illustrative or reference-only. The gateway corpus shows cross-layer composition; the operating corpus materializes standalone `P5.M1` / `P5.M2` records; the operating-record catalog indexes the frozen record kinds; the lifecycle map exposes the frozen surface dependency/discoverability graph without adding execution semantics. None of them replace the contracts and acceptance gates above.
 
 ## A. G1 Registry Completeness
 
@@ -376,6 +378,43 @@ The wording-consistency gate passes only when all of the following are true:
 - Check `docs/opl-operating-record-catalog.md` and `.zh-CN.md` for non-executing / no-truth-shift / domain_gateway-only wording.
 - Confirm the contract hub, public-surface index, governance/publish docs, and acceptance surfaces link to the catalog where intended.
 
+## M. P14 Surface-Lifecycle-Map Integrity
+
+### Acceptance Criteria
+
+`P14` passes only when all of the following are true:
+
+1. `contracts/opl-gateway/surface-lifecycle-map.json` exists and is valid JSON.
+2. `docs/opl-surface-lifecycle-map.md` and `.zh-CN.md` exist.
+3. The lifecycle map covers exactly these currently frozen surfaces:
+   - `opl_gateway_contract_hub`
+   - `opl_read_only_discovery_gateway`
+   - `opl_routed_action_gateway`
+   - `opl_domain_onboarding_contract`
+   - `opl_governance_audit_operating_surface`
+   - `opl_publish_promotion_operating_surface`
+   - `opl_gateway_example_corpus`
+   - `opl_routed_safety_example_corpus`
+   - `opl_operating_example_corpus`
+   - `opl_operating_record_catalog`
+   - `opl_public_surface_index_doc`
+   - `opl_gateway_acceptance_spec`
+4. Each lifecycle entry stays derived/reference-only and carries only surface-boundary fields such as `layer_id`, `control_mode`, `truth_mode`, `requires_surfaces`, `enables_surfaces`, `follow_on_route_surface`, and `governing_refs`.
+5. Every `requires_surfaces` and `enables_surfaces` target resolves to another known lifecycle entry.
+6. Every `surface_id` covered by the lifecycle map also exists inside `contracts/opl-gateway/public-surface-index.json`.
+7. Every `governing_ref` resolves to an existing local artifact.
+8. `follow_on_route_surface` is always either `null` or `domain_gateway`.
+9. The lifecycle map stays non-executing, does not become a workflow engine, does not become a transition authority, and does not become a second source of truth or runtime manifest.
+10. Contract README, public-surface index, operating-record catalog, and acceptance surfaces expose the lifecycle map as a supporting/reference surface rather than an execution surface.
+
+### Verification
+
+- Parse `contracts/opl-gateway/surface-lifecycle-map.json` with `json.load`.
+- Confirm the lifecycle map covers exactly the frozen surface set above.
+- Check that each `requires_surfaces` / `enables_surfaces` target resolves inside the same map and that each `governing_ref` resolves locally.
+- Confirm `follow_on_route_surface in {null, domain_gateway}` for every entry.
+- Confirm the contract hub, public-surface index, operating-record catalog, and acceptance surfaces link to the lifecycle map where intended.
+
 ## Standard Verification Commands
 
 ```bash
@@ -493,6 +532,42 @@ python3 - <<'PY'
 import json
 from pathlib import Path
 
+lifecycle = json.loads(Path('contracts/opl-gateway/surface-lifecycle-map.json').read_text())
+idx = json.loads(Path('contracts/opl-gateway/public-surface-index.json').read_text())
+
+expected = {
+    'opl_gateway_contract_hub',
+    'opl_read_only_discovery_gateway',
+    'opl_routed_action_gateway',
+    'opl_domain_onboarding_contract',
+    'opl_governance_audit_operating_surface',
+    'opl_publish_promotion_operating_surface',
+    'opl_gateway_example_corpus',
+    'opl_routed_safety_example_corpus',
+    'opl_operating_example_corpus',
+    'opl_operating_record_catalog',
+    'opl_public_surface_index_doc',
+    'opl_gateway_acceptance_spec',
+}
+surface_ids = {entry['surface_id'] for entry in lifecycle['surfaces']}
+assert surface_ids == expected, (surface_ids, expected)
+assert set(lifecycle['covered_surface_ids']) == expected, lifecycle['covered_surface_ids']
+public_surface_ids = {surface['surface_id'] for surface in idx['surfaces']}
+assert 'opl_surface_lifecycle_map' in public_surface_ids, public_surface_ids
+assert surface_ids <= public_surface_ids, (surface_ids - public_surface_ids)
+for entry in lifecycle['surfaces']:
+    for key in ['requires_surfaces', 'enables_surfaces']:
+        for target in entry[key]:
+            assert target in surface_ids, (entry['surface_id'], key, target)
+    assert entry['follow_on_route_surface'] in (None, 'domain_gateway'), entry
+    for ref in entry['governing_refs']:
+        assert Path(ref).exists(), (entry['surface_id'], ref)
+print('surface lifecycle map OK')
+PY
+python3 - <<'PY'
+import json
+from pathlib import Path
+
 idx = json.loads(Path('contracts/opl-gateway/public-surface-index.json').read_text())
 category_ids = {category['category_id'] for category in idx['surface_categories']}
 surface_ids = [surface['surface_id'] for surface in idx['surfaces']]
@@ -541,6 +616,8 @@ files = [
     Path('docs/opl-operating-example-corpus.zh-CN.md'),
     Path('docs/opl-operating-record-catalog.md'),
     Path('docs/opl-operating-record-catalog.zh-CN.md'),
+    Path('docs/opl-surface-lifecycle-map.md'),
+    Path('docs/opl-surface-lifecycle-map.zh-CN.md'),
     Path('docs/opl-public-surface-index.md'),
     Path('docs/opl-public-surface-index.zh-CN.md'),
     Path('docs/opl-gateway-acceptance-test-spec.md'),
@@ -559,14 +636,14 @@ for path in files:
             raise SystemExit(f'missing link: {path} -> {raw}')
 print('links OK')
 PY
-rg -n "top-level blueprint only|不是统一运行时入口|本仓库本身不承担运行时角色"           README.md README.zh-CN.md           docs/gateway-federation.md docs/gateway-federation.zh-CN.md           docs/opl-federation-contract.md docs/opl-federation-contract.zh-CN.md           docs/opl-read-only-discovery-gateway.md docs/opl-read-only-discovery-gateway.zh-CN.md           docs/opl-routed-action-gateway.md docs/opl-routed-action-gateway.zh-CN.md           docs/opl-domain-onboarding-contract.md docs/opl-domain-onboarding-contract.zh-CN.md           docs/opl-governance-audit-operating-surface.md docs/opl-governance-audit-operating-surface.zh-CN.md           docs/opl-publish-promotion-operating-surface.md docs/opl-publish-promotion-operating-surface.zh-CN.md           docs/opl-gateway-example-corpus.md docs/opl-gateway-example-corpus.zh-CN.md           docs/opl-routed-safety-example-corpus.md docs/opl-routed-safety-example-corpus.zh-CN.md           docs/opl-operating-example-corpus.md docs/opl-operating-example-corpus.zh-CN.md           docs/opl-operating-record-catalog.md docs/opl-operating-record-catalog.zh-CN.md           docs/opl-public-surface-index.md docs/opl-public-surface-index.zh-CN.md           docs/opl-gateway-rollout.md docs/opl-gateway-rollout.zh-CN.md           docs/roadmap.md docs/roadmap.zh-CN.md           contracts/opl-gateway/README.md contracts/opl-gateway/README.zh-CN.md
+rg -n "top-level blueprint only|不是统一运行时入口|本仓库本身不承担运行时角色"           README.md README.zh-CN.md           docs/gateway-federation.md docs/gateway-federation.zh-CN.md           docs/opl-federation-contract.md docs/opl-federation-contract.zh-CN.md           docs/opl-read-only-discovery-gateway.md docs/opl-read-only-discovery-gateway.zh-CN.md           docs/opl-routed-action-gateway.md docs/opl-routed-action-gateway.zh-CN.md           docs/opl-domain-onboarding-contract.md docs/opl-domain-onboarding-contract.zh-CN.md           docs/opl-governance-audit-operating-surface.md docs/opl-governance-audit-operating-surface.zh-CN.md           docs/opl-publish-promotion-operating-surface.md docs/opl-publish-promotion-operating-surface.zh-CN.md           docs/opl-gateway-example-corpus.md docs/opl-gateway-example-corpus.zh-CN.md           docs/opl-routed-safety-example-corpus.md docs/opl-routed-safety-example-corpus.zh-CN.md           docs/opl-operating-example-corpus.md docs/opl-operating-example-corpus.zh-CN.md           docs/opl-operating-record-catalog.md docs/opl-operating-record-catalog.zh-CN.md           docs/opl-surface-lifecycle-map.md docs/opl-surface-lifecycle-map.zh-CN.md           docs/opl-public-surface-index.md docs/opl-public-surface-index.zh-CN.md           docs/opl-gateway-rollout.md docs/opl-gateway-rollout.zh-CN.md           docs/roadmap.md docs/roadmap.zh-CN.md           contracts/opl-gateway/README.md contracts/opl-gateway/README.zh-CN.md
 ```
 
 ## Completion Definition
 
 The current OPL gateway documentation-and-contract stack is acceptance-green only when:
 
-- all sections A-L pass
+- all sections A-M pass
 - the linked machine-readable contracts are present and valid
 - discovery and routing docs still forbid direct harness bypass
 - governance / audit remains index-only
@@ -575,8 +652,9 @@ The current OPL gateway documentation-and-contract stack is acceptance-green onl
 - the routed-safety corpus remains illustrative and explicitly unresolved where required
 - the operating example corpus remains illustrative and directly schema-validated
 - the operating-record catalog remains reference-only and resolves all schema/example refs
+- the surface lifecycle map remains derived, reference-only, and non-executing
 - the public-surface index remains discoverability-only
 - domain onboarding remains boundary-first
 - cross-domain wording remains stable
 
-If any of these fail, the stack is not yet acceptance-green for the post-P13 discoverability surface.
+If any of these fail, the stack is not yet acceptance-green for the post-P14 discoverability surface.

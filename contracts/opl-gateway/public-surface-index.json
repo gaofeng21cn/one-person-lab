@@ -1,5 +1,5 @@
 {
-  "version": "p13.m1",
+  "version": "p14.m1",
   "scope": "opl_public_gateway_surface_index",
   "description": "Machine-readable index of the current authoritative OPL gateway public surfaces and linked domain gateway public entries. This index is contract-first and does not implement a runtime.",
   "non_goals": [
@@ -247,6 +247,10 @@
         },
         {
           "ref_kind": "repo_path",
+          "ref": "contracts/opl-gateway/surface-lifecycle-map.json"
+        },
+        {
+          "ref_kind": "repo_path",
           "ref": "contracts/opl-gateway/public-surface-index.json"
         }
       ],
@@ -257,6 +261,7 @@
         "opl_publish_promotion_operating_surface",
         "opl_gateway_acceptance_spec",
         "opl_gateway_example_corpus",
+        "opl_surface_lifecycle_map",
         "opl_public_surface_index_doc",
         "opl_operating_example_corpus",
         "opl_operating_record_catalog"
@@ -475,7 +480,8 @@
         "opl_gateway_contract_hub",
         "opl_gateway_example_corpus",
         "opl_operating_example_corpus",
-        "opl_operating_record_catalog"
+        "opl_operating_record_catalog",
+        "opl_surface_lifecycle_map"
       ],
       "notes": [
         "Defines the current checkable completion gates for the frozen gateway stack."
@@ -660,11 +666,62 @@
       "routes_to": [
         "opl_governance_audit_operating_surface",
         "opl_publish_promotion_operating_surface",
-        "opl_operating_example_corpus"
+        "opl_operating_example_corpus",
+        "opl_surface_lifecycle_map"
       ],
       "notes": [
         "Derived machine-readable reference catalog for the frozen P5.M1/P5.M2 record kinds.",
         "Reference-only and non-executing; it does not supersede the governing schemas, docs, or domain-owned truth."
+      ]
+    },
+    {
+      "surface_id": "opl_surface_lifecycle_map",
+      "category_id": "opl_supporting_surface",
+      "surface_kind": "lifecycle_map",
+      "boundary_role": "surface_dependency_map",
+      "owner_scope": "opl",
+      "truth_mode": "none",
+      "workstream_ids": [
+        "research_ops",
+        "presentation_ops"
+      ],
+      "domain_ids": [
+        "medautoscience",
+        "redcube"
+      ],
+      "refs": [
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/opl-surface-lifecycle-map.md",
+          "language": "en"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/opl-surface-lifecycle-map.zh-CN.md",
+          "language": "zh-CN"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "contracts/opl-gateway/surface-lifecycle-map.json"
+        }
+      ],
+      "routes_to": [
+        "opl_gateway_contract_hub",
+        "opl_read_only_discovery_gateway",
+        "opl_routed_action_gateway",
+        "opl_domain_onboarding_contract",
+        "opl_governance_audit_operating_surface",
+        "opl_publish_promotion_operating_surface",
+        "opl_gateway_example_corpus",
+        "opl_routed_safety_example_corpus",
+        "opl_operating_example_corpus",
+        "opl_operating_record_catalog",
+        "opl_public_surface_index_doc",
+        "opl_gateway_acceptance_spec"
+      ],
+      "notes": [
+        "Derived machine-readable lifecycle map for the frozen gateway, operating, and supporting surface stack.",
+        "Reference-only: does not become a workflow engine, transition authority, or second source of truth."
       ]
     },
     {
@@ -700,6 +757,7 @@
         "opl_routed_safety_example_corpus",
         "opl_operating_example_corpus",
         "opl_operating_record_catalog",
+        "opl_surface_lifecycle_map",
         "medautoscience_public_gateway",
         "redcube_public_gateway"
       ],

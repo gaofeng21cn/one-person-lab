@@ -54,6 +54,7 @@ These surfaces improve review and discoverability without becoming execution lay
 - Routed-safety example corpus
 - Operating example corpus
 - Operating record catalog
+- Surface lifecycle map
 - Public surface index
 
 ### 4. Linked domain public-entry surfaces
@@ -83,7 +84,7 @@ Canonical runtime truth, review truth, release truth, and submission truth remai
 - [OPL Read-Only Discovery Gateway](./opl-read-only-discovery-gateway.md)
 - [OPL Routed Action Gateway](./opl-routed-action-gateway.md)
 
-## Supporting Example / Review Surfaces
+## Supporting Example / Review / Mapping Surfaces
 
 These supporting surfaces improve discoverability and reviewability only.
 They do not become governing gateway surfaces.
@@ -92,6 +93,7 @@ They do not become governing gateway surfaces.
 - [OPL Routed-Safety Example Corpus](./opl-routed-safety-example-corpus.md)
 - [OPL Operating Example Corpus](./opl-operating-example-corpus.md)
 - [OPL Operating Record Catalog](./opl-operating-record-catalog.md)
+- [OPL Surface Lifecycle Map](./opl-surface-lifecycle-map.md)
 
 ## Completion Definition
 
@@ -99,5 +101,6 @@ The public surface index is acceptable only when:
 
 - it stays machine-readable
 - it distinguishes OPL-owned surfaces from domain-owned public entries
+- it exposes the derived surface lifecycle map as a supporting/reference surface
 - it does not imply a launcher, runtime, or harness bypass
 - it does not move canonical truth into `OPL`
