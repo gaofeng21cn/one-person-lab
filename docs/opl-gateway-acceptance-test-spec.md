@@ -21,6 +21,8 @@ This acceptance spec covers:
 - domain onboarding gate readiness
 - `P5.M1` governance / audit operating-surface integrity
 - `P5.M2` publish / promotion operating-surface integrity
+- `P7` example-corpus integrity
+- `P8` public-surface-index integrity
 - cross-domain wording consistency across public surfaces
 
 ## Governing Sources
@@ -34,6 +36,7 @@ The acceptance checks below are grounded in:
 - [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.md)
 - [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.md)
 - [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.md)
+- [OPL Public Surface Index](./opl-public-surface-index.md)
 - [OPL Gateway Rollout](./opl-gateway-rollout.md)
 - [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
 - [`acceptance-matrix.json`](../contracts/opl-gateway/acceptance-matrix.json)
@@ -226,6 +229,60 @@ The wording-consistency gate passes only when all of the following are true:
 - Run targeted `rg` checks for deprecated wording and for the required domain-role wording.
 - Cross-check the OPL repository wording against the public READMEs in `med-autoscience`, `redcube-ai`, and `gaofeng21cn`.
 
+## H. P7 Example-Corpus Integrity
+
+### Acceptance Criteria
+
+`P7` passes only when all of the following are true:
+
+1. `docs/opl-gateway-example-corpus.md` and `.zh-CN.md` exist.
+2. `examples/opl-gateway/research-ops-submission.json` and `examples/opl-gateway/presentation-ops-publish.json` exist and are valid JSON.
+3. The corpus docs explicitly keep the example set illustrative, non-governing, and non-executing.
+4. The research example explicitly preserves:
+   - `research_ops -> medautoscience`
+   - `entry_surface = domain_gateway`
+   - schema-governed routing / handoff / governance / publish records aligned with the frozen contracts
+5. The presentation example explicitly preserves:
+   - `presentation_ops -> redcube`
+   - `ppt_deck` as a direct mapping to `presentation_ops`
+   - `xiaohongshu` as routable to `redcube` without auto-equating it to `presentation_ops`
+6. Example records keep domain truth inside domains rather than moving it into `OPL`.
+7. The example corpus does not imply runtime execution, direct harness targeting, or a new governing layer above the frozen contracts.
+
+### Verification
+
+- Parse the example JSON files with `json.load`.
+- Validate the schema-governed example sub-objects against the frozen routed-action, governance/audit, and publish/promotion schemas.
+- Check the example-corpus docs for illustrative / non-governing / no-runtime wording.
+- Confirm the examples preserve the `ppt_deck` / `xiaohongshu` special-case boundary.
+
+## I. P8 Public-Surface-Index Integrity
+
+### Acceptance Criteria
+
+`P8` passes only when all of the following are true:
+
+1. `contracts/opl-gateway/public-surface-index.json` exists and is valid JSON.
+2. `docs/opl-public-surface-index.md` and `.zh-CN.md` exist.
+3. The public-surface index explicitly remains machine-readable and non-executing.
+4. The public-surface index explicitly distinguishes:
+   - OPL-owned public-entry / contract / supporting surfaces
+   - domain-owned public-entry surfaces
+5. The index links domain public-entry surfaces without indexing harness internals, runtime launch surfaces, or domain canonical-truth registries.
+6. The index preserves the frozen current mapping:
+   - `research_ops -> medautoscience`
+   - `presentation_ops -> redcube`
+   - `ppt_deck` directly maps to `presentation_ops`
+   - `xiaohongshu` may route to `redcube` without auto-equating it to `presentation_ops`
+7. Linked README / roadmap / federation / rollout / contract-hub wording does not upgrade the public-surface index into a launcher, runtime registry, or truth-owner surface.
+
+### Verification
+
+- Parse `contracts/opl-gateway/public-surface-index.json`.
+- Check structural integrity for category references, `routes_to` targets, and local `repo_path` refs.
+- Check `docs/opl-public-surface-index.md` and `.zh-CN.md` for no-runtime / no-truth-shift / no-internal-module wording.
+- Verify the linked public OPL surfaces actually point to the public-surface index where intended.
+
 ## Standard Verification Commands
 
 ```bash
@@ -233,9 +290,69 @@ git diff --check
 python3 - <<'PY'
 import json
 from pathlib import Path
-for path in sorted(Path('contracts/opl-gateway').glob('*.json')):
+for path in sorted(list(Path('contracts/opl-gateway').glob('*.json')) + list(Path('examples/opl-gateway').glob('*.json'))):
     json.load(path.open())
     print('OK', path)
+PY
+python3 - <<'PY'
+import json
+from pathlib import Path
+from jsonschema import Draft202012Validator, FormatChecker
+from referencing import Registry, Resource
+
+contracts = Path('contracts/opl-gateway')
+registry = Registry()
+for path in contracts.glob('*.json'):
+    data = json.loads(path.read_text())
+    if '$id' in data:
+        registry = registry.with_resource(data['$id'], Resource.from_contents(data))
+
+routed = Draft202012Validator(
+    json.loads((contracts / 'routed-actions.schema.json').read_text()),
+    registry=registry,
+    format_checker=FormatChecker(),
+)
+gov = Draft202012Validator(
+    json.loads((contracts / 'governance-audit.schema.json').read_text()),
+    format_checker=FormatChecker(),
+)
+pub = Draft202012Validator(
+    json.loads((contracts / 'publish-promotion.schema.json').read_text()),
+    format_checker=FormatChecker(),
+)
+
+for rel in [
+    'examples/opl-gateway/research-ops-submission.json',
+    'examples/opl-gateway/presentation-ops-publish.json',
+]:
+    data = json.loads(Path(rel).read_text())
+    routed.validate(data['route_request'])
+    routed.validate(data['audit_routing_decision'])
+    routed.validate(data['build_handoff_payload'])
+    gov.validate(data['governance_audit_record'])
+    pub.validate(data['publish_promotion_record'])
+    print('examples schema OK', rel)
+PY
+python3 - <<'PY'
+import json
+from pathlib import Path
+
+idx = json.loads(Path('contracts/opl-gateway/public-surface-index.json').read_text())
+category_ids = {category['category_id'] for category in idx['surface_categories']}
+surface_ids = [surface['surface_id'] for surface in idx['surfaces']]
+assert len(surface_ids) == len(set(surface_ids)), 'duplicate surface_id'
+for surface in idx['surfaces']:
+    assert surface['category_id'] in category_ids
+    for ref in surface['refs']:
+        if ref['ref_kind'] == 'repo_path':
+            assert Path(ref['ref']).exists(), ref
+        elif ref['ref_kind'] == 'external_url':
+            assert ref['ref'].startswith('https://'), ref
+        else:
+            raise AssertionError(ref)
+    for target in surface['routes_to']:
+        assert target in surface_ids, (surface['surface_id'], target)
+print('public surface index OK')
 PY
 python3 - <<'PY'
 import re
@@ -257,6 +374,10 @@ files = [
     Path('docs/opl-governance-audit-operating-surface.zh-CN.md'),
     Path('docs/opl-publish-promotion-operating-surface.md'),
     Path('docs/opl-publish-promotion-operating-surface.zh-CN.md'),
+    Path('docs/opl-gateway-example-corpus.md'),
+    Path('docs/opl-gateway-example-corpus.zh-CN.md'),
+    Path('docs/opl-public-surface-index.md'),
+    Path('docs/opl-public-surface-index.zh-CN.md'),
     Path('docs/opl-gateway-acceptance-test-spec.md'),
     Path('docs/opl-gateway-acceptance-test-spec.zh-CN.md'),
     Path('contracts/opl-gateway/README.md'),
@@ -282,6 +403,8 @@ rg -n "top-level blueprint only|不是统一运行时入口|本仓库本身不�
   docs/opl-domain-onboarding-contract.md docs/opl-domain-onboarding-contract.zh-CN.md \
   docs/opl-governance-audit-operating-surface.md docs/opl-governance-audit-operating-surface.zh-CN.md \
   docs/opl-publish-promotion-operating-surface.md docs/opl-publish-promotion-operating-surface.zh-CN.md \
+  docs/opl-gateway-example-corpus.md docs/opl-gateway-example-corpus.zh-CN.md \
+  docs/opl-public-surface-index.md docs/opl-public-surface-index.zh-CN.md \
   docs/opl-gateway-rollout.md docs/opl-gateway-rollout.zh-CN.md \
   docs/roadmap.md docs/roadmap.zh-CN.md \
   contracts/opl-gateway/README.md contracts/opl-gateway/README.zh-CN.md
@@ -291,12 +414,14 @@ rg -n "top-level blueprint only|不是统一运行时入口|本仓库本身不�
 
 The current OPL gateway documentation-and-contract stack is acceptance-green only when:
 
-- all sections A-G pass
+- all sections A-I pass
 - the linked machine-readable contracts are present and valid
 - discovery and routing docs still forbid direct harness bypass
 - governance / audit remains index-only
 - publish / promotion remains index-only and post-publish only
+- the example corpus remains illustrative and schema-aligned
+- the public-surface index remains discoverability-only
 - domain onboarding remains boundary-first
 - cross-domain wording remains stable
 
-If any of these fail, the stack is not yet acceptance-green for the post-P5 operating surface.
+If any of these fail, the stack is not yet acceptance-green for the post-P8 discoverability surface.
