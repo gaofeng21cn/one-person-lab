@@ -22,6 +22,13 @@
 - 把 canonical truth 上收给 `OPL`
 - 授权 `OPL` 直接执行 direct harness access、direct publish、direct release、direct export、direct submission 或 direct posting
 
+## Shared-Foundation Ownership Boundary
+
+这张 lifecycle map 只位于 shared-foundation 的 reference 层。
+`OPL` 可以在这里冻结依赖与遍历语言，但 transition execution、runtime writeback、review truth 与 publication truth 仍然留在 gateway 边界之下的人类 / domain-owned surface 中。
+因此，这张 map 可以服务于 review 与 acceptance alignment 的 discoverability，而不会升级成 workflow control plane 或共享 truth store。
+更完整的 ownership split 可参考[共享基础结构归属](./shared-foundation-ownership.zh-CN.md)。
+
 ## Lifecycle 字段
 
 每个 entry 都保持 derived/reference-only，只携带：

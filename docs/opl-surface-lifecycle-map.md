@@ -22,6 +22,13 @@ This lifecycle map does not:
 - move canonical truth into `OPL`
 - authorize direct harness access, direct publish, direct release, direct export, direct submission, or direct posting by `OPL`
 
+## Shared-Foundation Ownership Boundary
+
+This lifecycle map sits in the shared-foundation reference layer only.
+`OPL` may freeze dependency and traversal language here, but transition execution, runtime writeback, review truth, and publication truth still remain with human/domain-owned surfaces below the gateway boundary.
+That keeps the map discoverable for review and acceptance alignment without turning it into a workflow control plane or shared truth store.
+For the broader ownership split, see [Shared Foundation Ownership](./shared-foundation-ownership.md).
+
 ## Lifecycle Fields
 
 Each entry stays derived/reference-only and carries only:

@@ -5,6 +5,13 @@
 它**不是** runtime 实现。
 它冻结的是后续 discovery 层与 routed-action 层可消费的 machine-readable gateway surface。
 
+## Shared-foundation ownership boundary
+
+这些 contract 与 reference 工件只位于 shared-foundation 的 materialization 层。
+`OPL` 在这里拥有的是顶层 contract 语言、索引方式与跨域复用规则；一旦 routed request 跨过 gateway 边界，runtime execution、canonical truth、review truth 与 publication truth 仍然由各 domain gateway / harness 持有。
+因此，这个目录只是在做 discoverability / reviewability / acceptance alignment 所需的 gateway surface materialization，而不会变成新的 control plane 或共享 truth store。
+更完整的 ownership split 可参考[共享基础结构](../../docs/shared-foundation.zh-CN.md)与[共享基础结构归属](../../docs/shared-foundation-ownership.zh-CN.md)。
+
 ## 上位文档
 
 - [OPL Federation Contract](../../docs/opl-federation-contract.md)

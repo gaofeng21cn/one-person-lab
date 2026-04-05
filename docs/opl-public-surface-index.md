@@ -23,6 +23,13 @@ This index does not:
 - move canonical truth into `OPL`
 - turn domain systems into internal modules
 
+## Shared-Foundation Ownership Boundary
+
+This index sits in the shared-foundation discoverability layer only.
+`OPL` owns the top-level surface language, indexing, and cross-domain navigation hints collected here, but domain gateways still own runtime execution, canonical truth, review truth, and publication truth once work crosses the domain boundary.
+That makes this index a reference surface for discoverability and acceptance alignment, not a control plane, execution registry, or shared truth store.
+For the broader ownership split, see [Shared Foundation Ownership](./shared-foundation-ownership.md).
+
 ## Indexed Surface Categories
 
 ### 1. OPL public-entry surfaces

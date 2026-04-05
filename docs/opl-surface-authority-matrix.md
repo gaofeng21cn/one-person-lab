@@ -21,6 +21,13 @@ This authority matrix does not:
 - transfer domain-owned execution, truth, review, or publication authority into `OPL`
 - turn domain public-entry surfaces into OPL internal modules
 
+## Shared-Foundation Ownership Boundary
+
+This authority matrix sits in the shared-foundation boundary-language layer only.
+`OPL` owns the top-level vocabulary that names route, execution, truth, review, and publication splits here, but the underlying authorities remain where the matrix says they remain: domain gateways, domain harnesses, and humans/private surfaces outside `OPL`.
+That makes the matrix an inspectable reference surface for ownership review, not a runtime control plane or shared truth store.
+For the broader ownership split, see [Shared Foundation Ownership](./shared-foundation-ownership.md).
+
 ## Authority Fields
 
 Each entry stays derived/reference-only and carries only:
