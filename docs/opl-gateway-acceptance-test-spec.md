@@ -31,6 +31,7 @@ This acceptance spec covers:
 - `P16` surface review matrix integrity
 - `P17` task-topology integrity
 - `P18` candidate-domain backlog integrity
+- `P23.M4 / G4` candidate-index rollout boundary integrity
 - cross-domain wording consistency across public surfaces
 
 ## Governing Sources
@@ -243,12 +244,13 @@ The wording-consistency gate passes only when all of the following are true:
 8. Governance / audit wording remains index-only rather than runtime-owning.
 9. Publish / promotion wording remains index-only rather than publish-owning or promotion-owning.
 10. `docs/operating-model*`, `docs/shared-foundation*`, and `docs/shared-foundation-ownership*` keep `OPL` at the top-level semantic / indexing / reuse layer and do not turn it into a monolithic runtime, shared truth store, or owner of domain review/publication truth.
-11. Any future `shared asset index` / `shared memory index` remains absent from the current public surface until a later explicit contract and acceptance alignment freeze its readiness boundary.
+11. The `shared asset index`, `shared memory index`, `shared domain registry`, and `shared publication / delivery catalog` remain roadmap-only, future-only, reference-only, and non-admitting G4 candidates until a later explicit contract and acceptance alignment freeze their readiness boundaries.
+12. None of those G4 candidate indexes is described as a current public-entry, discovery-ready, routed-action-ready, execution, truth-owner, approval, publish-control, or release-control surface.
 
 ### Verification
 
-- Read `README.md`, `README.zh-CN.md`, `docs/roadmap*.md`, `docs/operating-model*`, `docs/shared-foundation*`, `docs/shared-foundation-ownership*`, and the linked gateway docs.
-- Run targeted `rg` checks for deprecated wording and for the required domain-role wording.
+- Read `README.md`, `README.zh-CN.md`, `docs/roadmap*.md`, `docs/operating-model*`, `docs/shared-foundation*`, `docs/shared-foundation-ownership*`, `docs/opl-gateway-rollout.md`, `docs/opl-gateway-rollout.zh-CN.md`, and the linked gateway docs.
+- Run targeted `rg` checks for deprecated wording, the required domain-role wording, and the G4 candidate-index freeze wording.
 - Cross-check the OPL repository wording against the public READMEs in `med-autoscience`, `redcube-ai`, and `gaofeng21cn`.
 
 ## H. P7 Example-Corpus Integrity
@@ -616,6 +618,32 @@ The wording-consistency gate passes only when all of the following are true:
 - Confirm no field or linked prose turns the backlog into a domain registry, discovery registry, routed-action surface, handoff surface, approval engine, or publish controller.
 - Confirm `required_evidence` and note text do not pre-assign future `domain_id`, `gateway_surface`, or `harness_surface` metadata.
 - Confirm `opl_candidate_domain_backlog` resolves exactly once inside `public-surface-index.json` and `surface-review-matrix.json`, and resolves inside `surface-lifecycle-map.json` and `surface-authority-matrix.json`.
+
+## R. P23.M4 / G4 Candidate-Index Rollout Boundary Integrity
+
+### Acceptance Criteria
+
+`P23.M4 / G4` passes only when all of the following are true:
+
+1. `docs/opl-gateway-rollout.md` and `docs/opl-gateway-rollout.zh-CN.md` both keep `Phase G4` at the candidate-index boundary rather than describing a current admitted surface.
+2. `Phase G4` covers exactly these four candidate indexes:
+   - `shared asset index`
+   - `shared memory index`
+   - `shared domain registry`
+   - `shared publication / delivery catalog`
+3. All four candidate indexes remain explicitly roadmap-only, future-only, reference-only, and non-admitting until a later explicit contract and acceptance alignment freeze their readiness boundaries.
+4. No G4 candidate index is described as a current public-entry, discovery-ready, routed-action-ready, execution, truth-owner, approval, publish-control, or release-control surface.
+5. G4 wording keeps canonical truth inside the owning domain and keeps `OPL` at the top-level gateway / federation layer rather than turning it into a monolithic runtime or shared truth owner.
+6. G4 wording does not collapse `MedAutoScience` or `RedCube AI` into internal `OPL` modules and does not weaken their independence as domain gateway / harness surfaces.
+7. `contracts/opl-gateway/acceptance-matrix.json` contains a dedicated gate that checks the rollout/spec boundary wording and forbids premature admission of any G4 candidate index.
+
+### Verification
+
+- Read `docs/opl-gateway-rollout.md` and `.zh-CN.md` and confirm that `Phase G4` stays at the future candidate boundary.
+- Confirm the candidate set is exactly the four G4 indexes above, with roadmap-only / future-only / reference-only / non-admitting wording in both languages.
+- Confirm neither rollout doc upgrades any G4 candidate index into a current public-entry, discovery-ready, routed-action-ready, execution, truth-owner, approval, publish-control, or release-control surface.
+- Confirm G4 wording keeps canonical truth inside domains and preserves `MedAutoScience` / `RedCube AI` independence under the top-level `OPL` gateway.
+- Parse `contracts/opl-gateway/acceptance-matrix.json` and confirm the dedicated G4 gate covers the rollout/spec files and blocks premature admission wording.
 
 ## Standard Verification Commands
 
@@ -1186,7 +1214,11 @@ for path in files:
             raise SystemExit(f'missing link: {path} -> {raw}')
 print('links OK')
 PY
-rg -n "top-level blueprint only|不是统一运行时入口|本仓库本身不承担运行时角色"           README.md README.zh-CN.md           docs/gateway-federation.md docs/gateway-federation.zh-CN.md           docs/opl-federation-contract.md docs/opl-federation-contract.zh-CN.md           docs/opl-read-only-discovery-gateway.md docs/opl-read-only-discovery-gateway.zh-CN.md           docs/opl-routed-action-gateway.md docs/opl-routed-action-gateway.zh-CN.md           docs/opl-domain-onboarding-contract.md docs/opl-domain-onboarding-contract.zh-CN.md           docs/opl-candidate-domain-backlog.md docs/opl-candidate-domain-backlog.zh-CN.md           docs/opl-governance-audit-operating-surface.md docs/opl-governance-audit-operating-surface.zh-CN.md           docs/opl-publish-promotion-operating-surface.md docs/opl-publish-promotion-operating-surface.zh-CN.md           docs/opl-gateway-example-corpus.md docs/opl-gateway-example-corpus.zh-CN.md           docs/opl-routed-safety-example-corpus.md docs/opl-routed-safety-example-corpus.zh-CN.md           docs/opl-operating-example-corpus.md docs/opl-operating-example-corpus.zh-CN.md           docs/opl-operating-record-catalog.md docs/opl-operating-record-catalog.zh-CN.md           docs/operating-model.md docs/operating-model.zh-CN.md           docs/shared-foundation.md docs/shared-foundation.zh-CN.md           docs/shared-foundation-ownership.md docs/shared-foundation-ownership.zh-CN.md           docs/opl-surface-lifecycle-map.md docs/opl-surface-lifecycle-map.zh-CN.md           docs/opl-surface-authority-matrix.md docs/opl-surface-authority-matrix.zh-CN.md           docs/opl-surface-review-matrix.md docs/opl-surface-review-matrix.zh-CN.md           docs/task-map.md docs/task-map.zh-CN.md           docs/opl-public-surface-index.md docs/opl-public-surface-index.zh-CN.md           docs/opl-gateway-rollout.md docs/opl-gateway-rollout.zh-CN.md           docs/roadmap.md docs/roadmap.zh-CN.md           docs/opl-candidate-domain-backlog.md docs/opl-candidate-domain-backlog.zh-CN.md           contracts/opl-gateway/README.md contracts/opl-gateway/README.zh-CN.md
+rg -n "top-level blueprint only|不是统一运行时入口|本仓库本身不承担运行时角色"
+rg -n "roadmap-only|future-only|reference-only|non-admitting|public-entry|discovery-ready|routed-action-ready|execution|truth-owner|approval|publish-control|release-control|shared asset index|shared memory index|shared domain registry|shared publication / delivery catalog" \
+  docs/opl-gateway-rollout.md docs/opl-gateway-rollout.zh-CN.md \
+  docs/opl-gateway-acceptance-test-spec.md docs/opl-gateway-acceptance-test-spec.zh-CN.md \
+  contracts/opl-gateway/acceptance-matrix.json           README.md README.zh-CN.md           docs/gateway-federation.md docs/gateway-federation.zh-CN.md           docs/opl-federation-contract.md docs/opl-federation-contract.zh-CN.md           docs/opl-read-only-discovery-gateway.md docs/opl-read-only-discovery-gateway.zh-CN.md           docs/opl-routed-action-gateway.md docs/opl-routed-action-gateway.zh-CN.md           docs/opl-domain-onboarding-contract.md docs/opl-domain-onboarding-contract.zh-CN.md           docs/opl-candidate-domain-backlog.md docs/opl-candidate-domain-backlog.zh-CN.md           docs/opl-governance-audit-operating-surface.md docs/opl-governance-audit-operating-surface.zh-CN.md           docs/opl-publish-promotion-operating-surface.md docs/opl-publish-promotion-operating-surface.zh-CN.md           docs/opl-gateway-example-corpus.md docs/opl-gateway-example-corpus.zh-CN.md           docs/opl-routed-safety-example-corpus.md docs/opl-routed-safety-example-corpus.zh-CN.md           docs/opl-operating-example-corpus.md docs/opl-operating-example-corpus.zh-CN.md           docs/opl-operating-record-catalog.md docs/opl-operating-record-catalog.zh-CN.md           docs/operating-model.md docs/operating-model.zh-CN.md           docs/shared-foundation.md docs/shared-foundation.zh-CN.md           docs/shared-foundation-ownership.md docs/shared-foundation-ownership.zh-CN.md           docs/opl-surface-lifecycle-map.md docs/opl-surface-lifecycle-map.zh-CN.md           docs/opl-surface-authority-matrix.md docs/opl-surface-authority-matrix.zh-CN.md           docs/opl-surface-review-matrix.md docs/opl-surface-review-matrix.zh-CN.md           docs/task-map.md docs/task-map.zh-CN.md           docs/opl-public-surface-index.md docs/opl-public-surface-index.zh-CN.md           docs/opl-gateway-rollout.md docs/opl-gateway-rollout.zh-CN.md           docs/roadmap.md docs/roadmap.zh-CN.md           docs/opl-candidate-domain-backlog.md docs/opl-candidate-domain-backlog.zh-CN.md           contracts/opl-gateway/README.md contracts/opl-gateway/README.zh-CN.md
 ```
 
 ## Completion Definition

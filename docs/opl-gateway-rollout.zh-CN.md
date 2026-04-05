@@ -136,11 +136,11 @@ Human / Agent
 
 - [OPL Routed Action Gateway](opl-routed-action-gateway.zh-CN.md)
 
-## Phase G4：跨 Domain Shared Index
+## Phase G4：候选跨 Domain Shared Index
 
 目标：
 
-- 增加最小共享 index，让跨 domain 协作更容易，但不制造第二真相源
+- 冻结未来共享 index 的边界：它们后续可以帮助跨 domain 协作，但当前不能制造第二真相源
 
 候选 index：
 
@@ -149,14 +149,20 @@ Human / Agent
 - shared domain registry
 - shared publication / delivery catalog
 
+当前状态：
+
+- 这四个 G4 index 目前都只是 roadmap-only、future-only、reference-only、non-admitting 的候选项
+- 它们目前都不是 public-entry、discovery-ready、routed-action-ready、execution、truth-owner、approval、publish-control 或 release-control surface
+- 只有在后续显式合同与 acceptance alignment 冻结 readiness boundary 之后，这些候选项才可能被写成当前 surface
+
 规则：
 
-- index 可以聚合
+- 只有在后续显式合同冻结 readiness boundary 之后，candidate index 才能开始承担聚合角色
 - canonical truth 仍留在拥有它的 domain
 
 完成信号：
 
-- 跨 domain discovery 变容易，但 truth ownership 仍然单一清楚
+- 跨 domain discovery 变得更容易，同时 truth ownership 仍然单一清楚，也不会削弱 MedAutoScience 与 RedCube AI 的独立性
 
 具体合同：
 

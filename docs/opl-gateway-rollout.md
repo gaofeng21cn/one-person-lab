@@ -136,11 +136,11 @@ Detailed contract:
 
 - [OPL Routed Action Gateway](opl-routed-action-gateway.md)
 
-## Phase G4: Shared Cross-Domain Indexes
+## Phase G4: Candidate Shared Cross-Domain Indexes
 
 Goal:
 
-- add the minimum shared indexes that make cross-domain work easier without creating a second truth source
+- freeze the boundary for future shared indexes that may later make cross-domain work easier without creating a second truth source
 
 Candidate indexes:
 
@@ -149,14 +149,20 @@ Candidate indexes:
 - shared domain registry
 - shared publication / delivery catalog
 
+Current status:
+
+- all four G4 indexes remain roadmap-only, future-only, reference-only, and non-admitting candidates
+- none of them is currently a public-entry, discovery-ready, routed-action-ready, execution, truth-owner, approval, publish-control, or release-control surface
+- later explicit contracts and acceptance alignment must freeze readiness before any of these candidates appears as a current surface
+
 Rule:
 
-- indexes may aggregate
+- candidate indexes may aggregate only after a later explicit contract freezes the readiness boundary
 - canonical truth stays in the owning domain
 
 Completion signal:
 
-- cross-domain discovery becomes easier while truth ownership remains unambiguous
+- cross-domain discovery becomes easier while truth ownership remains unambiguous without weakening MedAutoScience or RedCube AI independence
 
 Detailed contract:
 
