@@ -122,6 +122,10 @@ Completion signal:
 
 - an agent can start from `OPL` and still land inside the correct domain gateway with explicit routing evidence
 
+Contract extension needed before adding more domains:
+
+- [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.md)
+
 Detailed contract:
 
 - [OPL Routed Action Gateway](opl-routed-action-gateway.md)

@@ -55,6 +55,7 @@ For the detailed gateway rollout path, see:
 - [OPL Federation Contract](opl-federation-contract.md)
 - [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
 - [OPL Routed Action Gateway](opl-routed-action-gateway.md)
+- [OPL Domain Onboarding Contract](opl-domain-onboarding-contract.md)
 
 ## Current Evaluation Criteria
 

@@ -122,6 +122,10 @@ Human / Agent
 
 - Agent 可以从 `OPL` 起步，同时带着显式 routing evidence 落到正确 domain gateway
 
+在继续新增更多 domain 之前，需要补齐的合同：
+
+- [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.zh-CN.md)
+
 具体合同：
 
 - [OPL Routed Action Gateway](opl-routed-action-gateway.zh-CN.md)

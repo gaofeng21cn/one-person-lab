@@ -54,6 +54,7 @@
 - [OPL Federation Contract](opl-federation-contract.zh-CN.md)
 - [OPL Gateway Contracts](../contracts/opl-gateway/README.zh-CN.md)
 - [OPL Routed Action Gateway](opl-routed-action-gateway.zh-CN.md)
+- [OPL Domain Onboarding Contract](opl-domain-onboarding-contract.zh-CN.md)
 
 ## 当前判断标准
 
