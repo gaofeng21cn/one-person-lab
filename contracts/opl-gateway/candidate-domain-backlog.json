@@ -67,8 +67,8 @@
           "package_id": "registry_material",
           "status": "missing",
           "required_evidence": [
-            "future Grant Ops domain registry entry with explicit gateway_surface, harness_surface, owned_workstreams, non_opl_families, and canonical_truth_owner",
-            "Grant Ops workstream registry entry or ownership transfer entry aligned to the future domain gateway",
+            "future Grant Ops domain registry package with owned_workstreams, non_opl_families, canonical_truth_owner, and public boundary documentation",
+            "Grant Ops workstream registry entry or ownership transfer entry aligned to the future domain boundary package",
             "routing vocabulary impact statement for grant-direction, proposal, review-simulation, and revision deliverables"
           ],
           "forbidden_shortcuts": [
@@ -117,8 +117,8 @@
           "package_id": "discovery_routing_readiness",
           "status": "missing",
           "required_evidence": [
-            "read-only discovery entry that points Grant Ops to the future domain gateway",
-            "explicit routed-action evidence and handoff evidence for Grant Ops -> future domain gateway with no harness bypass"
+            "read-only discovery entry that points Grant Ops to the future domain public entry",
+            "explicit routed-action evidence and handoff evidence for Grant Ops -> future domain public entry with no harness bypass"
           ],
           "forbidden_shortcuts": [
             "promote_to_g2_without_domain_gateway",
@@ -182,7 +182,7 @@
           "package_id": "discovery_routing_readiness",
           "status": "missing",
           "required_evidence": [
-            "G2 discovery surface that points Grant Ops to the future domain gateway entry"
+            "G2 discovery surface that points Grant Ops to the future domain public entry"
           ],
           "forbidden_shortcuts": [
             "promote_to_g2_without_domain_gateway",
@@ -195,7 +195,7 @@
           "package_id": "discovery_routing_readiness",
           "status": "missing",
           "required_evidence": [
-            "G3 routing evidence and stable handoff boundary for Grant Ops -> future domain gateway"
+            "G3 routing evidence and stable handoff boundary for Grant Ops -> future domain public entry"
           ],
           "forbidden_shortcuts": [
             "promote_to_g2_without_domain_gateway",
@@ -307,8 +307,8 @@
           "package_id": "registry_material",
           "status": "missing",
           "required_evidence": [
-            "future Thesis Ops domain registry entry with explicit gateway_surface, harness_surface, owned_workstreams, non_opl_families, and canonical_truth_owner",
-            "Thesis Ops workstream registry entry or ownership transfer entry aligned to the future domain gateway",
+            "future Thesis Ops domain registry package with owned_workstreams, non_opl_families, canonical_truth_owner, and public boundary documentation",
+            "Thesis Ops workstream registry entry or ownership transfer entry aligned to the future domain boundary package",
             "routing vocabulary impact statement for chapter drafting, cross-chapter synchronization, and defense-preparation deliverables"
           ],
           "forbidden_shortcuts": [
@@ -357,8 +357,8 @@
           "package_id": "discovery_routing_readiness",
           "status": "missing",
           "required_evidence": [
-            "read-only discovery entry that points Thesis Ops to the future domain gateway",
-            "explicit routed-action evidence and handoff evidence for Thesis Ops -> future domain gateway with no harness bypass"
+            "read-only discovery entry that points Thesis Ops to the future domain public entry",
+            "explicit routed-action evidence and handoff evidence for Thesis Ops -> future domain public entry with no harness bypass"
           ],
           "forbidden_shortcuts": [
             "promote_to_g2_without_domain_gateway",
@@ -422,7 +422,7 @@
           "package_id": "discovery_routing_readiness",
           "status": "missing",
           "required_evidence": [
-            "G2 discovery surface that points Thesis Ops to the future domain gateway entry"
+            "G2 discovery surface that points Thesis Ops to the future domain public entry"
           ],
           "forbidden_shortcuts": [
             "promote_to_g2_without_domain_gateway",
@@ -435,7 +435,7 @@
           "package_id": "discovery_routing_readiness",
           "status": "missing",
           "required_evidence": [
-            "G3 routing evidence and stable handoff boundary for Thesis Ops -> future domain gateway"
+            "G3 routing evidence and stable handoff boundary for Thesis Ops -> future domain public entry"
           ],
           "forbidden_shortcuts": [
             "promote_to_g2_without_domain_gateway",
@@ -547,8 +547,8 @@
           "package_id": "registry_material",
           "status": "missing",
           "required_evidence": [
-            "future Review Ops domain registry entry with explicit gateway_surface, harness_surface, owned_workstreams, non_opl_families, and canonical_truth_owner",
-            "Review Ops workstream registry entry or ownership transfer entry aligned to the future domain gateway",
+            "future Review Ops domain registry package with owned_workstreams, non_opl_families, canonical_truth_owner, and public boundary documentation",
+            "Review Ops workstream registry entry or ownership transfer entry aligned to the future domain boundary package",
             "routing vocabulary impact statement for review reports, rebuttal plans, and revision-route deliverables"
           ],
           "forbidden_shortcuts": [
@@ -597,8 +597,8 @@
           "package_id": "discovery_routing_readiness",
           "status": "missing",
           "required_evidence": [
-            "read-only discovery entry that points Review Ops to the future domain gateway",
-            "explicit routed-action evidence and handoff evidence for Review Ops -> future domain gateway with no harness bypass"
+            "read-only discovery entry that points Review Ops to the future domain public entry",
+            "explicit routed-action evidence and handoff evidence for Review Ops -> future domain public entry with no harness bypass"
           ],
           "forbidden_shortcuts": [
             "promote_to_g2_without_domain_gateway",
@@ -662,7 +662,7 @@
           "package_id": "discovery_routing_readiness",
           "status": "missing",
           "required_evidence": [
-            "G2 discovery surface that points Review Ops to the future domain gateway entry"
+            "G2 discovery surface that points Review Ops to the future domain public entry"
           ],
           "forbidden_shortcuts": [
             "promote_to_g2_without_domain_gateway",
@@ -675,7 +675,7 @@
           "package_id": "discovery_routing_readiness",
           "status": "missing",
           "required_evidence": [
-            "G3 routing evidence and stable handoff boundary for Review Ops -> future domain gateway"
+            "G3 routing evidence and stable handoff boundary for Review Ops -> future domain public entry"
           ],
           "forbidden_shortcuts": [
             "promote_to_g2_without_domain_gateway",

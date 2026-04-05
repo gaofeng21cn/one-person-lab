@@ -42,7 +42,7 @@ This artifact keeps candidate workstreams visible without pretending their domai
 
 This backlog does not:
 
-- assign a future `domain_id`
+- assign a future `domain_id`, `gateway_surface`, or `harness_surface`
 - add candidate entries to the `G1` registry
 - create a discovery target or routed-action target
 - become an approval queue, release plan, or runtime planner
@@ -111,6 +111,6 @@ The candidate backlog is acceptable only when:
 - each current candidate workstream has an explicit backlog entry
 - blocker packages align to the onboarding-package categories
 - blocker checks align to the onboarding formal-inclusion gate
-- no entry allocates a future domain identity or routed readiness state
+- no entry allocates future domain identity or surface metadata, or any routed readiness state
 - the backlog stays discoverable and reviewable without becoming a control plane
 - the backlog remains reference-only, non-executing, and non-admitting

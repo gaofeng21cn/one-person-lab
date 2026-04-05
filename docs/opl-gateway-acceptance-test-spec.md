@@ -579,8 +579,9 @@ The wording-consistency gate passes only when all of the following are true:
    - `cross_domain_wording_aligned`
 9. Every candidate entry keeps each `required_onboarding_materials` status at `missing` and each `formal_inclusion_gate` status at `blocked` until a real domain boundary package exists.
 10. No candidate entry invents an admitted domain, a non-null `candidate_domain_id`, a non-null entry surface, or domain-truth ownership as if it were already frozen.
-11. `contracts/opl-gateway/public-surface-index.json`, `surface-review-matrix.json`, `surface-lifecycle-map.json`, and `surface-authority-matrix.json` expose the candidate-domain backlog as a supporting/reference surface, with exactly one `opl_candidate_domain_backlog` entry in the public-surface index and exactly one review entry in the surface-review matrix.
-12. Contract README, task-map docs, domain-onboarding docs, public-surface index docs, review-matrix docs, lifecycle/authority docs, and acceptance surfaces describe the backlog as reference-only, non-executing, non-admitting, and below the onboarding gate.
+11. No `required_evidence` or note text assigns future `domain_id`, `gateway_surface`, or `harness_surface` metadata before the boundary package exists.
+12. `contracts/opl-gateway/public-surface-index.json`, `surface-review-matrix.json`, `surface-lifecycle-map.json`, and `surface-authority-matrix.json` expose the candidate-domain backlog as a supporting/reference surface, with exactly one `opl_candidate_domain_backlog` entry in the public-surface index and exactly one review entry in the surface-review matrix.
+13. Contract README, task-map docs, domain-onboarding docs, public-surface index docs, review-matrix docs, lifecycle/authority docs, and acceptance surfaces describe the backlog as reference-only, non-executing, non-admitting, and below the onboarding gate.
 
 ### Verification
 
@@ -588,6 +589,7 @@ The wording-consistency gate passes only when all of the following are true:
 - Confirm the exact workstream set above and the exact alignment with the under-definition entries in `task-topology.json`.
 - Confirm every candidate entry has the six onboarding-material packages above, every `required_onboarding_materials` package remains `missing`, every `formal_inclusion_gate` check remains `blocked`, and all readiness flags remain `false`.
 - Confirm no field or linked prose turns the backlog into a domain registry, discovery registry, routed-action surface, handoff surface, approval engine, or publish controller.
+- Confirm `required_evidence` and note text do not pre-assign future `domain_id`, `gateway_surface`, or `harness_surface` metadata.
 - Confirm `opl_candidate_domain_backlog` resolves exactly once inside `public-surface-index.json` and `surface-review-matrix.json`, and resolves inside `surface-lifecycle-map.json` and `surface-authority-matrix.json`.
 
 ## Standard Verification Commands
@@ -871,6 +873,7 @@ required_checks = {
     'review_ready',
     'cross_domain_wording_aligned',
 }
+banned_future_metadata = {'domain_id', 'gateway_surface', 'harness_surface'}
 
 for workstream_id, entry in backlog_entries.items():
     task_entry = task_entries[workstream_id]
@@ -899,17 +902,26 @@ for workstream_id, entry in backlog_entries.items():
         assert item['status'] == 'missing', (workstream_id, item)
         assert item['required_evidence'], (workstream_id, item)
         assert item['forbidden_shortcuts'], (workstream_id, item)
+        for evidence in item['required_evidence']:
+            lowered = evidence.lower()
+            assert not any(token in lowered for token in banned_future_metadata), (workstream_id, evidence)
     checks = {item['maps_to_formal_inclusion_check'] for item in entry['missing_boundary_materials']}
     assert checks == required_checks, (workstream_id, checks)
     for item in entry['missing_boundary_materials']:
         assert item['status'] == 'missing', (workstream_id, item)
         assert item['required_evidence'], (workstream_id, item)
         assert item['forbidden_shortcuts'], (workstream_id, item)
+        for evidence in item['required_evidence']:
+            lowered = evidence.lower()
+            assert not any(token in lowered for token in banned_future_metadata), (workstream_id, evidence)
     gate_ids = set(entry['formal_inclusion_gate'])
     assert gate_ids == required_checks, (workstream_id, gate_ids)
     for check_id, gate in entry['formal_inclusion_gate'].items():
         assert gate['status'] == 'blocked', (workstream_id, check_id, gate)
         assert gate['blocking_package_ids'], (workstream_id, check_id, gate)
+    note = entry.get('notes', '')
+    lowered_note = note.lower()
+    assert not any(token in lowered_note for token in banned_future_metadata), (workstream_id, note)
 
 assert sum(surface['surface_id'] == 'opl_candidate_domain_backlog' for surface in public['surfaces']) == 1
 assert sum(entry['surface_id'] == 'opl_candidate_domain_backlog' for entry in review['review_entries']) == 1

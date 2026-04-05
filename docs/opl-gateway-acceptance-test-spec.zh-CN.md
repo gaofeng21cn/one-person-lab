@@ -584,9 +584,10 @@ wording-consistency gate 只有在下面全部成立时才算通过：
    - `cross_domain_wording_aligned`
 8. 每个 `formal_inclusion_gate` 检查项都仍保持 `status = blocked`。
 9. 任何 backlog entry 都不会虚构已冻结的 admitted domain、candidate gateway surface、candidate harness surface 或 canonical truth owner。
-10. `contracts/opl-gateway/public-surface-index.json`、`surface-review-matrix.json`、`surface-lifecycle-map.json` 与 `surface-authority-matrix.json` 都把 candidate-domain backlog 暴露为 supporting/reference surface。
-11. 在 `public-surface-index.json` 中，`opl_candidate_domain_backlog` 恰好出现一次；在 `surface-review-matrix.json` 中，对应 review entry 也恰好出现一次。
-12. contract README、task-map docs、domain-onboarding docs、public-surface index docs、review-matrix docs、lifecycle/authority docs 与 acceptance surfaces 都把这份 backlog 写成 reference-only、non-executing、non-admitting，且明确位于 onboarding gate 之下。
+10. `required_evidence` 与 note 文本不会在 boundary package 存在之前预先分配未来的 `domain_id`、`gateway_surface` 或 `harness_surface` 元数据。
+11. `contracts/opl-gateway/public-surface-index.json`、`surface-review-matrix.json`、`surface-lifecycle-map.json` 与 `surface-authority-matrix.json` 都把 candidate-domain backlog 暴露为 supporting/reference surface。
+12. 在 `public-surface-index.json` 中，`opl_candidate_domain_backlog` 恰好出现一次；在 `surface-review-matrix.json` 中，对应 review entry 也恰好出现一次。
+13. contract README、task-map docs、domain-onboarding docs、public-surface index docs、review-matrix docs、lifecycle/authority docs 与 acceptance surfaces 都把这份 backlog 写成 reference-only、non-executing、non-admitting，且明确位于 onboarding gate 之下。
 
 ### 验证方式
 
@@ -595,6 +596,7 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 - 确认每条 backlog entry 都包含上面六类 `required_onboarding_materials` package、上面七项 `missing_boundary_materials` 检查，以及一个全部 blocked 的 `formal_inclusion_gate` 对象。
 - 确认所有 `readiness_flags` 都保持 `false`，且所有 `candidate_domain_boundary` 字段都保持 `null`。
 - 确认没有任何字段或配套 prose 把 backlog 升格成 domain registry、discovery registry、routed-action surface、handoff surface、approval engine 或 publish controller。
+- 确认 `required_evidence` 与 note 文本不会预先写入未来的 `domain_id`、`gateway_surface` 或 `harness_surface` 元数据。
 - 确认 `opl_candidate_domain_backlog` 在 `public-surface-index.json` 与 `surface-review-matrix.json` 中都恰好解析一次，并且也能在 `surface-lifecycle-map.json` 与 `surface-authority-matrix.json` 中解析。
 
 ## 标准验证命令
@@ -878,6 +880,7 @@ required_checks = {
     'review_ready',
     'cross_domain_wording_aligned',
 }
+banned_future_metadata = {'domain_id', 'gateway_surface', 'harness_surface'}
 
 for workstream_id, entry in backlog_entries.items():
     task_entry = task_entries[workstream_id]
@@ -906,17 +909,26 @@ for workstream_id, entry in backlog_entries.items():
         assert item['status'] == 'missing', (workstream_id, item)
         assert item['required_evidence'], (workstream_id, item)
         assert item['forbidden_shortcuts'], (workstream_id, item)
+        for evidence in item['required_evidence']:
+            lowered = evidence.lower()
+            assert not any(token in lowered for token in banned_future_metadata), (workstream_id, evidence)
     checks = {item['maps_to_formal_inclusion_check'] for item in entry['missing_boundary_materials']}
     assert checks == required_checks, (workstream_id, checks)
     for item in entry['missing_boundary_materials']:
         assert item['status'] == 'missing', (workstream_id, item)
         assert item['required_evidence'], (workstream_id, item)
         assert item['forbidden_shortcuts'], (workstream_id, item)
+        for evidence in item['required_evidence']:
+            lowered = evidence.lower()
+            assert not any(token in lowered for token in banned_future_metadata), (workstream_id, evidence)
     gate_ids = set(entry['formal_inclusion_gate'])
     assert gate_ids == required_checks, (workstream_id, gate_ids)
     for check_id, gate in entry['formal_inclusion_gate'].items():
         assert gate['status'] == 'blocked', (workstream_id, check_id, gate)
         assert gate['blocking_package_ids'], (workstream_id, check_id, gate)
+    note = entry.get('notes', '')
+    lowered_note = note.lower()
+    assert not any(token in lowered_note for token in banned_future_metadata), (workstream_id, note)
 
 assert sum(surface['surface_id'] == 'opl_candidate_domain_backlog' for surface in public['surfaces']) == 1
 assert sum(entry['surface_id'] == 'opl_candidate_domain_backlog' for entry in review['review_entries']) == 1
