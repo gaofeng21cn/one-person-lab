@@ -153,6 +153,10 @@ Human / Agent
 
 - 跨 domain discovery 变容易，但 truth ownership 仍然单一清楚
 
+具体合同：
+
+- [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.zh-CN.md)
+
 ## Phase G5：真实公开产品面
 
 目标：

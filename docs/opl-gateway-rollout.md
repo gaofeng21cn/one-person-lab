@@ -153,6 +153,10 @@ Completion signal:
 
 - cross-domain discovery becomes easier while truth ownership remains unambiguous
 
+Detailed contract:
+
+- [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.md)
+
 ## Phase G5: Real Public Product Surface
 
 Goal:

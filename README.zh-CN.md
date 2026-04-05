@@ -292,6 +292,7 @@ Human / Agent
 - [OPL Routed Action Gateway](docs/opl-routed-action-gateway.zh-CN.md)
 - [OPL Domain Onboarding Contract](docs/opl-domain-onboarding-contract.zh-CN.md)
 - [OPL Gateway Acceptance Test Spec](docs/opl-gateway-acceptance-test-spec.zh-CN.md)
+- [OPL Governance / Audit Operating Surface](docs/opl-governance-audit-operating-surface.zh-CN.md)
 - [OPL Gateway 落地路线](docs/opl-gateway-rollout.zh-CN.md)
 - [OPL 运行模型](docs/operating-model.zh-CN.md)
 - [OPL 任务版图](docs/task-map.zh-CN.md)

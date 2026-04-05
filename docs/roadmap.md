@@ -57,6 +57,7 @@ For the detailed gateway rollout path, see:
 - [OPL Routed Action Gateway](opl-routed-action-gateway.md)
 - [OPL Domain Onboarding Contract](opl-domain-onboarding-contract.md)
 - [OPL Gateway Acceptance Test Spec](opl-gateway-acceptance-test-spec.md)
+- [OPL Governance / Audit Operating Surface](opl-governance-audit-operating-surface.md)
 
 ## Current Evaluation Criteria
 

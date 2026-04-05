@@ -1,0 +1,443 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OPL Governance Audit Record",
+  "description": "Top-level governance/audit operating record for OPL. This schema defines coordination/index records only and does not represent domain runtime state, review truth, or publish truth.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "record_kind",
+    "record_id",
+    "request_id",
+    "workstream_id",
+    "domain_id",
+    "summary",
+    "status",
+    "evidence_refs",
+    "domain_truth_refs",
+    "recorded_at"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "p5.m1"
+    },
+    "record_kind": {
+      "type": "string",
+      "enum": [
+        "routing_audit",
+        "governance_decision",
+        "publish_readiness_signal",
+        "cross_domain_review_index"
+      ]
+    },
+    "record_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "request_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "workstream_id": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "research_ops",
+            "presentation_ops"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "domain_id": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "medautoscience",
+            "redcube"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "recorded",
+        "blocked",
+        "ready_for_next_gate",
+        "needs_human_review"
+      ]
+    },
+    "evidence_refs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "domain_truth_refs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "domain_id",
+          "ref_kind",
+          "ref"
+        ],
+        "properties": {
+          "domain_id": {
+            "type": "string",
+            "enum": [
+              "medautoscience",
+              "redcube"
+            ]
+          },
+          "ref_kind": {
+            "type": "string",
+            "enum": [
+              "routing_handoff",
+              "review_record",
+              "publish_gate_record",
+              "runtime_audit_record",
+              "artifact_record",
+              "quality_regression_record"
+            ]
+          },
+          "ref": {
+            "type": "string",
+            "minLength": 1,
+            "format": "uri-reference"
+          }
+        }
+      }
+    },
+    "recorded_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "routing_audit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "routing_status",
+        "entry_surface"
+      ],
+      "properties": {
+        "routing_status": {
+          "type": "string",
+          "enum": [
+            "routed",
+            "refused",
+            "unknown_domain",
+            "ambiguous_task"
+          ]
+        },
+        "entry_surface": {
+          "type": "string",
+          "const": "domain_gateway"
+        },
+        "routing_decision_ref": {
+          "type": "string",
+          "minLength": 1,
+          "format": "uri-reference"
+        },
+        "handoff_ref": {
+          "type": "string",
+          "minLength": 1,
+          "format": "uri-reference"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "routing_status": {
+                "const": "routed"
+              }
+            },
+            "required": [
+              "routing_status"
+            ]
+          },
+          "then": {
+            "required": [
+              "routing_decision_ref",
+              "handoff_ref"
+            ]
+          }
+        }
+      ]
+    },
+    "governance_decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decision",
+        "decision_source"
+      ],
+      "properties": {
+        "decision": {
+          "type": "string",
+          "enum": [
+            "continue",
+            "stop",
+            "reframe",
+            "gate"
+          ]
+        },
+        "decision_source": {
+          "type": "string",
+          "enum": [
+            "human",
+            "domain_review_signal"
+          ]
+        }
+      }
+    },
+    "publish_readiness_signal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "readiness"
+      ],
+      "properties": {
+        "readiness": {
+          "type": "string",
+          "enum": [
+            "not_ready",
+            "candidate",
+            "ready_for_domain_publish_gate",
+            "blocked"
+          ]
+        }
+      }
+    },
+    "cross_domain_review_index": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required_human_review",
+        "review_surface_refs"
+      ],
+      "properties": {
+        "required_human_review": {
+          "type": "boolean"
+        },
+        "blocking_gate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "review_surface_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "format": "uri-reference"
+          }
+        }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "record_kind": {
+          "const": "routing_audit"
+        }
+      },
+      "required": [
+        "record_kind",
+        "routing_audit"
+      ],
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "governance_decision"
+            ]
+          },
+          {
+            "required": [
+              "publish_readiness_signal"
+            ]
+          },
+          {
+            "required": [
+              "cross_domain_review_index"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "properties": {
+        "record_kind": {
+          "const": "governance_decision"
+        }
+      },
+      "required": [
+        "record_kind",
+        "governance_decision"
+      ],
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "routing_audit"
+            ]
+          },
+          {
+            "required": [
+              "publish_readiness_signal"
+            ]
+          },
+          {
+            "required": [
+              "cross_domain_review_index"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "properties": {
+        "record_kind": {
+          "const": "publish_readiness_signal"
+        }
+      },
+      "required": [
+        "record_kind",
+        "publish_readiness_signal"
+      ],
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "routing_audit"
+            ]
+          },
+          {
+            "required": [
+              "governance_decision"
+            ]
+          },
+          {
+            "required": [
+              "cross_domain_review_index"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "properties": {
+        "record_kind": {
+          "const": "cross_domain_review_index"
+        }
+      },
+      "required": [
+        "record_kind",
+        "cross_domain_review_index"
+      ],
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "routing_audit"
+            ]
+          },
+          {
+            "required": [
+              "governance_decision"
+            ]
+          },
+          {
+            "required": [
+              "publish_readiness_signal"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "examples": [
+    {
+      "version": "p5.m1",
+      "record_kind": "governance_decision",
+      "record_id": "opl-gov-2026-04-05-001",
+      "request_id": "opl-2026-04-05-010",
+      "workstream_id": "research_ops",
+      "domain_id": "medautoscience",
+      "summary": "Top-level decision is to reframe before further domain execution.",
+      "status": "needs_human_review",
+      "evidence_refs": [
+        "human_review=pending",
+        "governance_signal=reframe"
+      ],
+      "domain_truth_refs": [
+        {
+          "domain_id": "medautoscience",
+          "ref_kind": "review_record",
+          "ref": "medautoscience://reviews/study-001"
+        }
+      ],
+      "recorded_at": "2026-04-05T06:21:00Z",
+      "governance_decision": {
+        "decision": "reframe",
+        "decision_source": "human"
+      }
+    },
+    {
+      "version": "p5.m1",
+      "record_kind": "cross_domain_review_index",
+      "record_id": "opl-review-2026-04-05-001",
+      "request_id": "opl-2026-04-05-011",
+      "workstream_id": null,
+      "domain_id": null,
+      "summary": "The request spans research and presentation gates and still requires final human review.",
+      "status": "needs_human_review",
+      "evidence_refs": [
+        "research_review=complete",
+        "presentation_baseline=complete",
+        "final_human_review=pending"
+      ],
+      "domain_truth_refs": [
+        {
+          "domain_id": "medautoscience",
+          "ref_kind": "review_record",
+          "ref": "medautoscience://reviews/study-002"
+        },
+        {
+          "domain_id": "redcube",
+          "ref_kind": "publish_gate_record",
+          "ref": "redcube://publish-gates/deck-002"
+        }
+      ],
+      "recorded_at": "2026-04-05T06:23:00Z",
+      "cross_domain_review_index": {
+        "required_human_review": true,
+        "blocking_gate": "final_human_review",
+        "review_surface_refs": [
+          "medautoscience://reviews/study-002",
+          "redcube://publish-gates/deck-002"
+        ]
+      }
+    }
+  ]
+}

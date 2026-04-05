@@ -292,6 +292,7 @@ For a more detailed phase breakdown:
 - [OPL Routed Action Gateway](docs/opl-routed-action-gateway.md)
 - [OPL Domain Onboarding Contract](docs/opl-domain-onboarding-contract.md)
 - [OPL Gateway Acceptance Test Spec](docs/opl-gateway-acceptance-test-spec.md)
+- [OPL Governance / Audit Operating Surface](docs/opl-governance-audit-operating-surface.md)
 - [OPL Gateway Rollout](docs/opl-gateway-rollout.md)
 - [OPL Operating Model](docs/operating-model.md)
 - [OPL Task Map](docs/task-map.md)
