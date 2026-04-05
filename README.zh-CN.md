@@ -158,16 +158,6 @@
 
 > `OPL` 是实验室顶层的公开 Gateway 语言。它联邦化地组织 `Research Foundry -> Med Auto Science`、`RedCube AI` 这类 domain framework / system，而不是取代它们。
 
-## Agent 合同分层
-
-<!-- AGENT-CONTRACT-BASELINE:START -->
-- 根目录 `AGENTS.md` 是从仓库根目录进入的直接会话所使用的仓库级合同，包括 Codex App 与 plain Codex；项目真相合同另行维护
-- 项目真相合同位于 `contracts/project-truth/AGENTS.md`
-- 通过 OMX project-scope 方式启动仓库时，`.codex/AGENTS.md` 会在根层合同之上做补充，而不是替代它
-- `.omx/local/AGENTS.local.md` 预留给可选的本机私有覆盖层，且必须保持未跟踪
-- `.omx/` 与 `.codex/` 是本地工具运行态目录，必须保持未跟踪
-<!-- AGENT-CONTRACT-BASELINE:END -->
-
 ## 仓库定位
 
 `One Person Lab`，简称 `OPL`，面向的不是某一个任务或某一个 domain runtime，而是“一人课题组”这个工作对象的顶层组织面。

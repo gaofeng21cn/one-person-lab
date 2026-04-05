@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <a href="./README.md"><strong>English</strong></a> | <a href="./README.zh-CN.md">Chinese</a>
+  <a href="./README.md"><strong>English</strong></a> | <a href="./README.zh-CN.md">中文</a>
 </p>
 
 <h1 align="center">One Person Lab</h1>
@@ -157,16 +157,6 @@
 </table>
 
 > `OPL` is the public top-level gateway language for the lab. It federates `Research Foundry -> Med Auto Science` and sibling domain systems such as `RedCube AI`; it does not replace them.
-
-## Agent Contract Layers
-
-<!-- AGENT-CONTRACT-BASELINE:START -->
-- The root `AGENTS.md` is the repository-native contract for direct sessions that enter from the repository root, including Codex App and plain Codex sessions; the project truth contract lives separately.
-- The project truth contract lives at `contracts/project-truth/AGENTS.md`.
-- When the repository is launched through OMX project-scope installation, `.codex/AGENTS.md` augments the root contract rather than replacing it.
-- `.omx/local/AGENTS.local.md` is reserved for optional machine-specific private overlays and must stay untracked.
-- `.omx/` and `.codex/` are local tooling state and must stay untracked.
-<!-- AGENT-CONTRACT-BASELINE:END -->
 
 ## Repository Position
 
