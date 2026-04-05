@@ -43,6 +43,7 @@ This artifact keeps candidate workstreams visible without pretending their domai
 This backlog does not:
 
 - assign a future `domain_id`, `gateway_surface`, or `harness_surface`
+- reframe `Grant Ops`, `Thesis Ops`, or `Review Ops` as extensions of `MedAutoScience` or `RedCube AI`
 - add candidate entries to the `G1` registry
 - create a discovery target or routed-action target
 - become an approval queue, release plan, or runtime planner
@@ -94,6 +95,9 @@ Read this surface as a **reference-only blocker index**.
 If a backlog entry exists, the workstream is still below the domain-onboarding gate.
 `blocked` does not mean “almost admitted.”
 It means the required boundary package is still incomplete.
+
+It also does not let `OPL` quietly absorb these under-definition workstreams into `MedAutoScience` or `RedCube AI`.
+Those admitted domains remain independent gateway-and-harness surfaces.
 
 No backlog entry authorizes a domain handoff, discovery target, routed-action target, or harness access.
 

@@ -11,6 +11,7 @@
   "backlog_rules": [
     "entries stay reference-only and enumerate missing boundary materials only",
     "entries do not assign future domain ids or expand the admitted G1 registry",
+    "entries do not fold candidate workstreams into MedAutoScience or RedCube AI; admitted domains remain independent gateway and harness surfaces",
     "entries do not create G2 discovery readiness or G3 routed-action readiness",
     "package-level blockers align to the onboarding package requirements in the domain-onboarding contract",
     "check-level blockers align to the formal inclusion gate in the domain-onboarding contract",

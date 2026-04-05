@@ -579,15 +579,17 @@ The wording-consistency gate passes only when all of the following are true:
    - `cross_domain_wording_aligned`
 9. Every candidate entry keeps each `required_onboarding_materials` status at `missing` and each `formal_inclusion_gate` status at `blocked` until a real domain boundary package exists.
 10. No candidate entry invents an admitted domain, a non-null `candidate_domain_id`, a non-null entry surface, or domain-truth ownership as if it were already frozen.
-11. No `required_evidence` or note text assigns future `domain_id`, `gateway_surface`, or `harness_surface` metadata before the boundary package exists.
-12. `contracts/opl-gateway/public-surface-index.json`, `surface-review-matrix.json`, `surface-lifecycle-map.json`, and `surface-authority-matrix.json` expose the candidate-domain backlog as a supporting/reference surface, with exactly one `opl_candidate_domain_backlog` entry in the public-surface index and exactly one review entry in the surface-review matrix.
-13. Contract README, task-map docs, domain-onboarding docs, public-surface index docs, review-matrix docs, lifecycle/authority docs, and acceptance surfaces describe the backlog as reference-only, non-executing, non-admitting, and below the onboarding gate.
+11. No candidate entry or backlog rule collapses `Grant Ops`, `Thesis Ops`, or `Review Ops` into `MedAutoScience` or `RedCube AI`; both admitted domains remain independent gateway-and-harness surfaces.
+12. No `required_evidence` or note text assigns future `domain_id`, `gateway_surface`, or `harness_surface` metadata before the boundary package exists.
+13. `contracts/opl-gateway/public-surface-index.json`, `surface-review-matrix.json`, `surface-lifecycle-map.json`, and `surface-authority-matrix.json` expose the candidate-domain backlog as a supporting/reference surface, with exactly one `opl_candidate_domain_backlog` entry in the public-surface index and exactly one review entry in the surface-review matrix.
+14. Contract README, task-map docs, domain-onboarding docs, public-surface index docs, review-matrix docs, lifecycle/authority docs, and acceptance surfaces describe the backlog as reference-only, non-executing, non-admitting, and below the onboarding gate.
 
 ### Verification
 
 - Parse `contracts/opl-gateway/candidate-domain-backlog.json` with `json.load`.
 - Confirm the exact workstream set above and the exact alignment with the under-definition entries in `task-topology.json`.
 - Confirm every candidate entry has the six onboarding-material packages above, every `required_onboarding_materials` package remains `missing`, every `formal_inclusion_gate` check remains `blocked`, and all readiness flags remain `false`.
+- Confirm the backlog rules do not collapse candidate workstreams into `MedAutoScience` or `RedCube AI`, and therefore keep both admitted domains as independent gateway-and-harness surfaces.
 - Confirm no field or linked prose turns the backlog into a domain registry, discovery registry, routed-action surface, handoff surface, approval engine, or publish controller.
 - Confirm `required_evidence` and note text do not pre-assign future `domain_id`, `gateway_surface`, or `harness_surface` metadata.
 - Confirm `opl_candidate_domain_backlog` resolves exactly once inside `public-surface-index.json` and `surface-review-matrix.json`, and resolves inside `surface-lifecycle-map.json` and `surface-authority-matrix.json`.
@@ -874,6 +876,9 @@ required_checks = {
     'cross_domain_wording_aligned',
 }
 banned_future_metadata = {'domain_id', 'gateway_surface', 'harness_surface'}
+non_collapse_rule = 'entries do not fold candidate workstreams into MedAutoScience or RedCube AI; admitted domains remain independent gateway and harness surfaces'
+
+assert non_collapse_rule in backlog['backlog_rules'], backlog['backlog_rules']
 
 for workstream_id, entry in backlog_entries.items():
     task_entry = task_entries[workstream_id]

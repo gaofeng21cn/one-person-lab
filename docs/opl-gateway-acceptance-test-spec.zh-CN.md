@@ -584,10 +584,11 @@ wording-consistency gate 只有在下面全部成立时才算通过：
    - `cross_domain_wording_aligned`
 8. 每个 `formal_inclusion_gate` 检查项都仍保持 `status = blocked`。
 9. 任何 backlog entry 都不会虚构已冻结的 admitted domain、candidate gateway surface、candidate harness surface 或 canonical truth owner。
-10. `required_evidence` 与 note 文本不会在 boundary package 存在之前预先分配未来的 `domain_id`、`gateway_surface` 或 `harness_surface` 元数据。
-11. `contracts/opl-gateway/public-surface-index.json`、`surface-review-matrix.json`、`surface-lifecycle-map.json` 与 `surface-authority-matrix.json` 都把 candidate-domain backlog 暴露为 supporting/reference surface。
-12. 在 `public-surface-index.json` 中，`opl_candidate_domain_backlog` 恰好出现一次；在 `surface-review-matrix.json` 中，对应 review entry 也恰好出现一次。
-13. contract README、task-map docs、domain-onboarding docs、public-surface index docs、review-matrix docs、lifecycle/authority docs 与 acceptance surfaces 都把这份 backlog 写成 reference-only、non-executing、non-admitting，且明确位于 onboarding gate 之下。
+10. 任何 candidate entry 或 backlog rule 都不会把 `Grant Ops`、`Thesis Ops`、`Review Ops` 折叠进 `MedAutoScience` 或 `RedCube AI`；这两个已收录 domain 仍保持独立的 gateway / harness surface。
+11. `required_evidence` 与 note 文本不会在 boundary package 存在之前预先分配未来的 `domain_id`、`gateway_surface` 或 `harness_surface` 元数据。
+12. `contracts/opl-gateway/public-surface-index.json`、`surface-review-matrix.json`、`surface-lifecycle-map.json` 与 `surface-authority-matrix.json` 都把 candidate-domain backlog 暴露为 supporting/reference surface。
+13. 在 `public-surface-index.json` 中，`opl_candidate_domain_backlog` 恰好出现一次；在 `surface-review-matrix.json` 中，对应 review entry 也恰好出现一次。
+14. contract README、task-map docs、domain-onboarding docs、public-surface index docs、review-matrix docs、lifecycle/authority docs 与 acceptance surfaces 都把这份 backlog 写成 reference-only、non-executing、non-admitting，且明确位于 onboarding gate 之下。
 
 ### 验证方式
 
@@ -595,6 +596,7 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 - 确认上面列出的精确 workstream 集合，以及它与 `task-topology.json` 中 under-definition entry 的完全对齐。
 - 确认每条 backlog entry 都包含上面六类 `required_onboarding_materials` package、上面七项 `missing_boundary_materials` 检查，以及一个全部 blocked 的 `formal_inclusion_gate` 对象。
 - 确认所有 `readiness_flags` 都保持 `false`，且所有 `candidate_domain_boundary` 字段都保持 `null`。
+- 确认 backlog rules 不会把候选 workstream 折叠进 `MedAutoScience` 或 `RedCube AI`，从而保持这两个已收录 domain 仍是独立的 gateway / harness surface。
 - 确认没有任何字段或配套 prose 把 backlog 升格成 domain registry、discovery registry、routed-action surface、handoff surface、approval engine 或 publish controller。
 - 确认 `required_evidence` 与 note 文本不会预先写入未来的 `domain_id`、`gateway_surface` 或 `harness_surface` 元数据。
 - 确认 `opl_candidate_domain_backlog` 在 `public-surface-index.json` 与 `surface-review-matrix.json` 中都恰好解析一次，并且也能在 `surface-lifecycle-map.json` 与 `surface-authority-matrix.json` 中解析。
@@ -881,6 +883,9 @@ required_checks = {
     'cross_domain_wording_aligned',
 }
 banned_future_metadata = {'domain_id', 'gateway_surface', 'harness_surface'}
+non_collapse_rule = 'entries do not fold candidate workstreams into MedAutoScience or RedCube AI; admitted domains remain independent gateway and harness surfaces'
+
+assert non_collapse_rule in backlog['backlog_rules'], backlog['backlog_rules']
 
 for workstream_id, entry in backlog_entries.items():
     task_entry = task_entries[workstream_id]

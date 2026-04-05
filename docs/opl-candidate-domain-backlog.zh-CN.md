@@ -43,6 +43,7 @@ Onboarding contract 负责定义正式收录门槛。
 这份 backlog 不负责：
 
 - 分配未来的 `domain_id`、`gateway_surface` 或 `harness_surface`
+- 把 `Grant Ops`、`Thesis Ops`、`Review Ops` 改写成 `MedAutoScience` 或 `RedCube AI` 的扩展分支
 - 把候选项加入 `G1` registry
 - 创造 discovery target 或 routed-action target
 - 变成 approval queue、release plan 或 runtime planner
@@ -94,6 +95,9 @@ Onboarding contract 负责定义正式收录门槛。
 只要某个 backlog entry 还存在，对应 workstream 就仍然位于 domain-onboarding gate 之下。
 `blocked` 不代表“快收录了”。
 它代表必需 boundary package 仍未完整。
+
+它也不允许 `OPL` 悄悄把这些仍在定义中的 workstream 吸收进 `MedAutoScience` 或 `RedCube AI`。
+这两个已收录 domain 仍然保持独立的 gateway / harness surface。
 
 任何 backlog entry 都不授权 domain handoff、discovery target、routed-action target 或 harness access。
 
