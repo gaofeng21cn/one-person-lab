@@ -119,6 +119,19 @@ That means a future shared index may improve discoverability and reuse, but it s
 - the review owner for domain review state
 - the publish/release owner for domain deliverables
 
+### Readiness Before Public Admission
+
+A future `shared asset index` or `shared memory index` should not appear on the current `OPL` public surface until a later explicit contract freezes, at minimum:
+
+- what object classes and identifiers the index is actually allowed to cover
+- the owner split and governing refs for every indexed object family
+- a reference-only / non-executing control mode
+- explicit no-truth-shift, no-mutation-ownership, and no-review/publication-takeover rules
+- review and acceptance coverage across the public-surface index, supporting boundary surfaces, and acceptance spec
+
+Until those readiness conditions are frozen, any shared-index mention stays roadmap-level only.
+It is not a current public-entry surface, not a routed surface, not an execution surface, and not a truth-owner surface.
+
 ## Non-Goals And Anti-Regressions
 
 This ownership model does not allow:

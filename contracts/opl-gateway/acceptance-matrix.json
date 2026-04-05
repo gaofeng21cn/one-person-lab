@@ -165,14 +165,16 @@
         "domain entries stay independently usable and truth remains domain-owned",
         "public-surface index preserves research_ops/presentation_ops and ppt_deck/xiaohongshu routing semantics",
         "public-surface index exposes opl_candidate_domain_backlog as a supporting/reference surface for under-definition workstreams without admitting domains early",
-        "public-surface index exposes opl_operating_model, opl_shared_foundation, and opl_shared_foundation_ownership as OPL-owned discoverability/reference surfaces without transferring canonical truth, mutation, review truth, or publication truth into OPL"
+        "public-surface index exposes opl_operating_model, opl_shared_foundation, and opl_shared_foundation_ownership as OPL-owned discoverability/reference surfaces without transferring canonical truth, mutation, review truth, or publication truth into OPL",
+        "public-surface index does not admit placeholder shared asset/memory index surfaces before a later explicit readiness contract freezes them"
       ],
       "forbidden_regressions": [
         "public-surface index becomes a launcher or runtime registry",
         "domain public entries are treated as internal OPL modules",
         "harness internals are indexed as public entry surfaces",
         "candidate-domain backlog is indexed as an admitted domain or execution surface",
-        "shared-foundation docs are indexed as execution surfaces, shared truth stores, or domain-truth takeover points"
+        "shared-foundation docs are indexed as execution surfaces, shared truth stores, or domain-truth takeover points",
+        "placeholder shared asset/memory indexes appear as current public surfaces before explicit readiness alignment"
       ]
     },
     {
@@ -540,7 +542,8 @@
         "task map keeps current admitted workstreams explicit while keeping Grant/Review/Thesis Ops under definition",
         "candidate-domain backlog remains reference-only, non-admitting, and below the domain-onboarding gate",
         "candidate backlog keeps Grant/Review/Thesis Ops blocked below the onboarding gate",
-        "operating-model, shared-foundation, and shared-foundation-ownership docs keep OPL at the top-level semantic/index/reuse layer while domains keep canonical truth, mutation, runtime writeback, review truth, and delivery/publication truth"
+        "operating-model, shared-foundation, and shared-foundation-ownership docs keep OPL at the top-level semantic/index/reuse layer while domains keep canonical truth, mutation, runtime writeback, review truth, and delivery/publication truth",
+        "future shared asset/memory indexes stay out of the current public surface until a later explicit readiness contract and acceptance alignment freeze them"
       ],
       "forbidden_regressions": [
         "OPL described as monolithic runtime",
@@ -553,7 +556,8 @@
         "task map described as admitted domain registry",
         "candidate-domain backlog described as admitted-domain registry or approval surface",
         "candidate backlog described as a pre-admission domain registry",
-        "shared-foundation docs describe OPL as a universal shared truth store or as taking over domain-owned canonical truth"
+        "shared-foundation docs describe OPL as a universal shared truth store or as taking over domain-owned canonical truth",
+        "shared asset/memory indexes are described as current public surfaces without an explicit readiness contract"
       ]
     }
   ]

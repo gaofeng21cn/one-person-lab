@@ -243,6 +243,7 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 8. governance / audit wording 仍然保持 index-only，而不是 runtime-owning。
 9. publish / promotion wording 仍然保持 index-only，而不是 publish-owning 或 promotion-owning。
 10. `docs/operating-model*`、`docs/shared-foundation*` 与 `docs/shared-foundation-ownership*` 都必须把 `OPL` 保持在顶层语义 / 索引 / 复用规则层，而不能把它写成单体 runtime、共享 truth store，或 domain review/publication truth owner。
+11. 未来的 `shared asset index` / `shared memory index`，在后续显式合同与 acceptance alignment 冻结 readiness boundary 之前，仍不得进入当前 public surface。
 
 ### 验证方式
 
@@ -298,6 +299,7 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 7. 这个 index 恰好暴露一个 `opl_candidate_domain_backlog` entry，并把它标成 `opl_supporting_surface`，且明确它位于 onboarding gate 之下。
 8. 这个 index 还会各自恰好暴露一个 `opl_operating_model`、`opl_shared_foundation` 与 `opl_shared_foundation_ownership` entry，并把它们保持为 OPL-owned 的 contract/reference surface。
 9. 被链接的 README / roadmap / federation / rollout / contract-hub wording 不会把 public surface index 升格成 launcher、runtime registry、truth-owner surface，或 admission-approval surface。
+10. 在后续显式 readiness contract 冻结之前，当前 public-surface index 里不会出现占位式的 `shared asset index` 或 `shared memory index` surface。
 
 ### 验证方式
 
@@ -305,6 +307,7 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 - 检查 category 引用、`routes_to` 目标，以及本地 `repo_path` refs 的结构完整性。
 - 检查 `docs/opl-public-surface-index.md` 与 `.zh-CN.md` 中的 no-runtime / no-truth-shift / no-internal-module wording。
 - 确认 `surfaces[*].surface_id` 保持唯一，且 `opl_candidate_domain_backlog` 恰好以 supporting/reference surface 身份出现，而不是 admitted domain 或 execution surface；同时 `opl_operating_model`、`opl_shared_foundation` 与 `opl_shared_foundation_ownership` 也都各自恰好出现一次，并保持为 OPL-owned 的 contract/reference surface。
+- 确认当前 public-surface index 中不存在 `opl_shared_asset_index` 与 `opl_shared_memory_index`。
 - 验证被接入的 OPL public surface 确实在应有位置链接到 public-surface index。
 
 ## J. P10 Routed-Safety Example 完整性
@@ -1060,6 +1063,8 @@ for surface_id in expected_contract_surfaces:
     assert surface['category_id'] == 'opl_contract_surface', surface
     assert surface['owner_scope'] == 'opl', surface
     assert surface['truth_mode'] == 'none', surface
+for forbidden_surface in ['opl_shared_asset_index', 'opl_shared_memory_index']:
+    assert forbidden_surface not in surface_id_set, forbidden_surface
 print('public surface index OK')
 PY
 python3 - <<'PY'
@@ -1095,12 +1100,14 @@ checks = {
         'each `domain gateway` and `domain harness` owns the canonical truth, mutation, audit writeback, and delivery truth for domain-local objects',
         'never an automatic transfer of canonical truth from domains into `OPL`',
         '`OPL` taking domain-owned review truth, runtime truth, or publication truth',
+        'should not appear on the current `OPL` public surface until a later explicit contract freezes',
     ],
     Path('docs/shared-foundation-ownership.zh-CN.md'): [
         '`OPL` 负责 shared-foundation 对象的顶层语义、索引、身份和跨域复用规则',
         '各 `domain gateway` 与 `domain harness` 负责 domain-local 对象的 canonical truth、mutation、审计回写与交付真相',
         '绝不自动把 canonical truth 从 domain 转移到 `OPL`',
         '把 domain-owned review truth、runtime truth 或 publication truth 上收给 `OPL`',
+        '在后续显式合同至少冻结下面这些条件之前，不应出现在当前 `OPL` public surface 里',
     ],
     Path('../med-autoscience/README.md'): [
         '`Med Auto Science` is the medical `Research Ops` gateway',

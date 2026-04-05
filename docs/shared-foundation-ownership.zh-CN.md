@@ -119,6 +119,19 @@
 - domain review state 的 review owner
 - domain deliverable 的 publish / release owner
 
+### 进入当前 public surface 之前的 readiness 条件
+
+未来的 `shared asset index` 或 `shared memory index`，在后续显式合同至少冻结下面这些条件之前，不应出现在当前 `OPL` public surface 里：
+
+- 它究竟允许覆盖哪些 object class 与 identifier
+- 每类被索引对象的 owner split 与 governing refs
+- reference-only / non-executing 的 control mode
+- 显式禁止 truth shift、mutation ownership 转移，以及 review/publication takeover
+- public-surface index、supporting boundary surfaces 与 acceptance spec 上的 review / acceptance coverage
+
+在这些 readiness 条件冻结之前，任何 shared-index 提法都只能停留在 roadmap level。
+它不是当前 public-entry surface，不是 routed surface，不是 execution surface，也不是 truth-owner surface。
+
 ## 非目标与反回归规则
 
 这套 ownership model 不允许：
