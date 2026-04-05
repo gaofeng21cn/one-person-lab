@@ -1,0 +1,56 @@
+{
+  "baseline_name": "omx-project-installer",
+  "baseline_version": "0.2.0",
+  "contract_layout": "single-project-truth",
+  "scope": "project",
+  "display_name": "One Person Lab",
+  "project_truth_path": "contracts/project-truth/AGENTS.md",
+  "managed_files": [
+    "AGENTS.md",
+    "README.md",
+    ".gitignore",
+    "contracts/project-truth/AGENTS.md",
+    ".codex/AGENTS.md"
+  ],
+  "updated_at": "2026-04-05T04:37:18.297204+00:00",
+  "preserved_existing_root": {
+    "backed_up": false,
+    "backup_path": "",
+    "adopted_to_contract": false
+  },
+  "project_truth_migration": {
+    "migrated": false,
+    "source_path": "",
+    "removed_legacy_source": false
+  },
+  "legacy_cleanup": {
+    "removed": []
+  },
+  "gitignore_updated": false,
+  "readme_updated": true,
+  "config_reconcile": {
+    "applied": true,
+    "user_config_present": true,
+    "project_config_present": true,
+    "keys_synced": [
+      "model_provider",
+      "model_reasoning_effort",
+      "model_context_window:removed",
+      "model_auto_compact_token_limit:removed"
+    ],
+    "tables_synced": [
+      "model_providers"
+    ]
+  },
+  "legacy_alias_repair": {
+    "repaired": [
+      "analyze",
+      "build-fix",
+      "tdd",
+      "ecomode",
+      "ultraqa",
+      "swarm"
+    ],
+    "skipped": []
+  }
+}
