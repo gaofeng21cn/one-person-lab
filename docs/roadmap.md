@@ -38,6 +38,9 @@ Among the still-undefined workstreams, the more natural priority order is usuall
 - `Review Ops`
 - `Thesis Ops`
 
+This priority ordering is only a boundary-definition sequence.
+It does **not** make `Grant Ops` a `G2` discovery target or a `G3` routed-action target before its domain-onboarding evidence exists.
+
 ## Later Phase
 
 Only after at least two domain surfaces are truly stable should `OPL` move toward a fuller ecosystem expression, such as:

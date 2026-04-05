@@ -38,6 +38,8 @@
 - `Review Ops`
 - `Thesis Ops`
 
+这个优先顺序只表示边界定义的先后，不代表 `Grant Ops` 已经变成 `G2` discovery target 或 `G3` routed-action target；在对应 domain-onboarding evidence 出现前，它仍然不是这两类 target。
+
 ## 更后续阶段
 
 只有当至少两个 domain surface 真正稳定后，`OPL` 才适合进入更完整的生态表达阶段，例如：
