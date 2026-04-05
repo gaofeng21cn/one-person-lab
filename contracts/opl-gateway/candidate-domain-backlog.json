@@ -323,7 +323,7 @@
           "required_evidence": [
             "public domain README or equivalent gateway entry for the future Thesis Ops domain",
             "explicit domain-gateway-above-harness statement",
-            "public explanation of Thesis Ops workstream ownership, deliverable objects, and review semantics"
+            "public explanation of Thesis Ops workstream ownership, deliverable objects, and thesis-specific review semantics, including what remains distinct from Research Ops manuscript/submission delivery and Presentation Ops defense-deck production"
           ],
           "forbidden_shortcuts": [
             "placeholder_domain_name_only",
@@ -335,7 +335,7 @@
           "status": "missing",
           "required_evidence": [
             "explicit declaration of chapter-draft, cross-chapter synchronization, and defense-preparation truth owned by the future domain",
-            "explicit list of what OPL may index versus what it may not claim as canonical truth"
+            "explicit list of what OPL may index versus what it may not claim as canonical truth, with no silent transfer into Research Ops, MedAutoScience, or RedCube AI"
           ],
           "forbidden_shortcuts": [
             "implicit_truth_transfer_to_opl",
@@ -371,7 +371,7 @@
           "package_id": "cross_domain_wording",
           "status": "missing",
           "required_evidence": [
-            "aligned top-level role language between OPL public docs and the future Thesis Ops domain public docs"
+            "aligned top-level role language between OPL public docs and the future Thesis Ops domain public docs without equating Thesis Ops to Research Ops manuscript flow or Presentation Ops deck flow"
           ],
           "forbidden_shortcuts": [
             "prose_only_role_guesswork",
@@ -513,7 +513,7 @@
           ]
         }
       },
-      "notes": "Top-level semantics are explicit, but the future Thesis Ops domain boundary package is still incomplete."
+      "notes": "Top-level semantics are explicit, and the frozen negative boundary is that thesis assembly, cross-chapter synchronization, and defense-preparation coordination do not collapse into Research Ops manuscript flow or Presentation Ops / RedCube deck production; the future Thesis Ops domain boundary package is still incomplete."
     },
     {
       "workstream_id": "review_ops",

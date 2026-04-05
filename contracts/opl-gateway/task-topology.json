@@ -115,7 +115,7 @@
         "shared_foundation_language"
       ],
       "family_boundary_notes": [],
-      "notes": "Closely coupled with Research Ops but still requires an explicit independent domain boundary before admission. Clear top-level requests may surface as unknown_domain, but no domain handoff is allowed yet."
+      "notes": "Closely coupled with Research Ops, but the frozen boundary here is thesis assembly rather than core research execution: chapter-draft sets, cross-chapter synchronization packs, and defense-preparation packs may reuse Research Ops evidence and may later feed Presentation Ops / RedCube defense-deck outputs, yet they do not collapse Thesis Ops into Research Ops, MedAutoScience, or RedCube AI. Thesis Ops still requires an explicit independent domain boundary before admission. Clear top-level requests may surface as unknown_domain, but no domain handoff is allowed yet."
     },
     {
       "workstream_id": "review_ops",

@@ -112,6 +112,8 @@ Typical tasks include:
 - defense preparation
 
 It remains closely coupled with `Research Ops`, but it should still retain its own task boundary.
+The current negative boundary is that dissertation assembly and defense-preparation coordination are not the same as `Research Ops` manuscript/submission delivery, and they are not reducible to `Presentation Ops` / `RedCube AI` deck production either.
+Those admitted surfaces may supply reusable evidence or downstream derivatives, but they do not yet own a Thesis Ops domain boundary.
 
 Typical delivery objects include:
 
@@ -126,6 +128,7 @@ Current boundary status:
 - not yet an admitted domain
 - not yet a registered `G1` workstream/domain mapping
 - not yet a `G2` discovery target
+- not yet a `G3` routed-action target
 - not eligible for domain handoff
 - admission blockers are tracked in [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md)
 - clear top-level requests may surface only as `unknown_domain`, without building a handoff payload, until a real domain owner is admitted

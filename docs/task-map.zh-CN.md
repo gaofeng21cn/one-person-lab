@@ -112,6 +112,8 @@
 - 答辩准备
 
 它和 `Research Ops` 高度相关，但仍应保留自己的任务边界。
+当前冻结下来的 negative boundary 是：学位论文装配与答辩准备协调，并不等同于 `Research Ops` 里的 manuscript / submission delivery；它也不能因为会产出答辩 deck 衍生物，就被压缩成 `Presentation Ops` / `RedCube AI` 的 deck 生产。
+这些已收录 surface 可以提供复用证据或承接下游衍生物，但它们并不因此拥有 Thesis Ops 的 domain boundary。
 
 典型交付对象包括：
 
@@ -126,6 +128,7 @@
 - 还不是正式收录 domain
 - 还不是已注册的 `G1` workstream/domain mapping
 - 还不是 `G2` discovery target
+- 还不是 `G3` routed-action target
 - 还不具备 domain handoff 资格
 - formal 收录前的 blocker 已在 [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.zh-CN.md) 中跟踪
 - 但如果顶层语义已经足够清楚，在真实 domain owner 被收录前，最多只能显式返回 `unknown_domain`，且不会构建 handoff payload
