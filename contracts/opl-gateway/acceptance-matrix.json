@@ -1,5 +1,5 @@
 {
-  "version": "p17.m1",
+  "version": "p18.m1",
   "gates": [
     {
       "gate_id": "g1_registry_completeness",
@@ -148,18 +148,23 @@
       "required_files": [
         "contracts/opl-gateway/public-surface-index.json",
         "docs/opl-public-surface-index.md",
-        "docs/opl-public-surface-index.zh-CN.md"
+        "docs/opl-public-surface-index.zh-CN.md",
+        "contracts/opl-gateway/candidate-domain-backlog.json",
+        "docs/opl-candidate-domain-backlog.md",
+        "docs/opl-candidate-domain-backlog.zh-CN.md"
       ],
       "contract_assertions": [
         "public-surface index remains machine-readable and non-executing",
         "opl-owned surfaces are distinguished from domain-owned public entries",
         "domain entries stay independently usable and truth remains domain-owned",
-        "public-surface index preserves research_ops/presentation_ops and ppt_deck/xiaohongshu routing semantics"
+        "public-surface index preserves research_ops/presentation_ops and ppt_deck/xiaohongshu routing semantics",
+        "public-surface index exposes opl_candidate_domain_backlog as a supporting/reference surface for under-definition workstreams without admitting domains early"
       ],
       "forbidden_regressions": [
         "public-surface index becomes a launcher or runtime registry",
         "domain public entries are treated as internal OPL modules",
-        "harness internals are indexed as public entry surfaces"
+        "harness internals are indexed as public entry surfaces",
+        "candidate-domain backlog is indexed as an admitted domain or execution surface"
       ]
     },
     {
@@ -263,14 +268,18 @@
         "contracts/opl-gateway/README.zh-CN.md",
         "contracts/opl-gateway/operating-record-catalog.json",
         "docs/opl-operating-record-catalog.md",
-        "docs/opl-operating-record-catalog.zh-CN.md"
+        "docs/opl-operating-record-catalog.zh-CN.md",
+        "contracts/opl-gateway/candidate-domain-backlog.json",
+        "docs/opl-candidate-domain-backlog.md",
+        "docs/opl-candidate-domain-backlog.zh-CN.md"
       ],
       "contract_assertions": [
         "surface lifecycle map covers the frozen gateway, operating, and supporting surfaces needed for current top-level traversal",
         "lifecycle entries stay derived, reference-only, and non-executing",
         "requires_surfaces and enables_surfaces target only known lifecycle entries",
         "follow_on_route_surface is null or domain_gateway only",
-        "contract hub, public-surface index, operating-record catalog, and acceptance surfaces expose the lifecycle map as a supporting/reference surface"
+        "contract hub, public-surface index, operating-record catalog, and acceptance surfaces expose the lifecycle map as a supporting/reference surface",
+        "surface lifecycle map covers the candidate-domain backlog as a supporting/reference surface without introducing execution semantics"
       ],
       "forbidden_regressions": [
         "surface lifecycle map becomes a workflow engine",
@@ -295,14 +304,18 @@
         "docs/opl-gateway-acceptance-test-spec.md",
         "docs/opl-gateway-acceptance-test-spec.zh-CN.md",
         "contracts/opl-gateway/README.md",
-        "contracts/opl-gateway/README.zh-CN.md"
+        "contracts/opl-gateway/README.zh-CN.md",
+        "contracts/opl-gateway/candidate-domain-backlog.json",
+        "docs/opl-candidate-domain-backlog.md",
+        "docs/opl-candidate-domain-backlog.zh-CN.md"
       ],
       "contract_assertions": [
         "authority matrix covers the frozen OPL surfaces plus linked domain public-entry surfaces needed for current authority review",
         "matrix entries stay derived, reference-only, and non-executing",
         "OPL-owned surfaces never claim domain execution, truth, review, or publication authority",
         "linked domain public-entry surfaces remain domain-owned and mark where domain-local routing/execution begin",
-        "lifecycle map, public-surface index, contract hub, and acceptance surfaces expose the authority matrix as a supporting/reference surface"
+        "lifecycle map, public-surface index, contract hub, and acceptance surfaces expose the authority matrix as a supporting/reference surface",
+        "authority matrix covers the candidate-domain backlog while keeping every authority field inside OPL at none"
       ],
       "forbidden_regressions": [
         "authority matrix becomes an authorization engine",
@@ -327,19 +340,24 @@
         "docs/opl-gateway-acceptance-test-spec.md",
         "docs/opl-gateway-acceptance-test-spec.zh-CN.md",
         "contracts/opl-gateway/README.md",
-        "contracts/opl-gateway/README.zh-CN.md"
+        "contracts/opl-gateway/README.zh-CN.md",
+        "contracts/opl-gateway/candidate-domain-backlog.json",
+        "docs/opl-candidate-domain-backlog.md",
+        "docs/opl-candidate-domain-backlog.zh-CN.md"
       ],
       "contract_assertions": [
         "surface review matrix covers the frozen OPL public, contract, and supporting surfaces needed for current human-review and publishability inspection",
         "matrix entries stay derived, reference-only, and non-executing",
         "required_acceptance_gates resolve inside acceptance-matrix.json and required_companion_surfaces resolve inside public-surface-index.json",
         "human_review_required and publishability_stage expose review obligations only and do not create an approval engine or publish controller",
-        "contract hub, public-surface index, lifecycle map, authority matrix, and acceptance surfaces expose the review matrix as a supporting/reference surface"
+        "contract hub, public-surface index, lifecycle map, authority matrix, and acceptance surfaces expose the review matrix as a supporting/reference surface",
+        "surface review matrix covers the candidate-domain backlog as a supporting review surface without turning it into an onboarding engine or approval surface"
       ],
       "forbidden_regressions": [
         "surface review matrix becomes an approval engine",
         "surface review matrix becomes a publish controller or release engine",
-        "surface review matrix transfers domain review or publication authority into OPL"
+        "surface review matrix transfers domain review or publication authority into OPL",
+        "surface review matrix turns candidate-domain backlog coverage into domain admission authority"
       ]
     },
     {
@@ -360,19 +378,70 @@
         "docs/opl-surface-review-matrix.md",
         "docs/opl-surface-review-matrix.zh-CN.md",
         "docs/opl-gateway-acceptance-test-spec.md",
-        "docs/opl-gateway-acceptance-test-spec.zh-CN.md"
+        "docs/opl-gateway-acceptance-test-spec.zh-CN.md",
+        "contracts/opl-gateway/candidate-domain-backlog.json",
+        "docs/opl-candidate-domain-backlog.md",
+        "docs/opl-candidate-domain-backlog.zh-CN.md",
+        "docs/opl-domain-onboarding-contract.md",
+        "docs/opl-domain-onboarding-contract.zh-CN.md"
       ],
       "contract_assertions": [
         "task topology covers research_ops, grant_ops, thesis_ops, review_ops, and presentation_ops with explicit boundary, registry, and routing states",
         "research_ops remains registered and mapped to medautoscience while presentation_ops remains registered and mapped to redcube",
         "grant_ops, thesis_ops, and review_ops remain under_definition, not_registered, and unknown_domain_only until explicit domain boundaries are frozen",
         "presentation_ops keeps ppt_deck as the direct map and keeps xiaohongshu inside redcube without auto-equating it to presentation_ops",
-        "task-map docs, contract hub, public-surface index, and review matrix expose task topology as a top-level semantic surface without treating candidate workstreams as admitted domains or handoff-ready routes"
+        "task-map docs, contract hub, public-surface index, and review matrix expose task topology as a top-level semantic surface without treating candidate workstreams as admitted domains or handoff-ready routes",
+        "task topology remains the governing semantic source above the candidate-domain backlog, which may list admission blockers without admitting domains or handoff-ready routes"
       ],
       "forbidden_regressions": [
         "under-definition workstreams become admitted domains or routed targets",
         "task topology becomes a runtime router or replaces the G1 registry",
-        "xiaohongshu automatically equals presentation_ops"
+        "xiaohongshu automatically equals presentation_ops",
+        "candidate-domain backlog contradicts task topology by assigning admitted domains or routed-ready entry surfaces to under-definition workstreams"
+      ]
+    },
+    {
+      "gate_id": "p18_candidate_domain_backlog_integrity",
+      "layer": "p18",
+      "required_files": [
+        "contracts/opl-gateway/candidate-domain-backlog.json",
+        "contracts/opl-gateway/task-topology.json",
+        "contracts/opl-gateway/public-surface-index.json",
+        "contracts/opl-gateway/surface-review-matrix.json",
+        "contracts/opl-gateway/acceptance-matrix.json",
+        "contracts/opl-gateway/README.md",
+        "contracts/opl-gateway/README.zh-CN.md",
+        "docs/opl-candidate-domain-backlog.md",
+        "docs/opl-candidate-domain-backlog.zh-CN.md",
+        "docs/task-map.md",
+        "docs/task-map.zh-CN.md",
+        "docs/opl-domain-onboarding-contract.md",
+        "docs/opl-domain-onboarding-contract.zh-CN.md",
+        "docs/opl-public-surface-index.md",
+        "docs/opl-public-surface-index.zh-CN.md",
+        "docs/opl-surface-review-matrix.md",
+        "docs/opl-surface-review-matrix.zh-CN.md",
+        "docs/opl-gateway-acceptance-test-spec.md",
+        "docs/opl-gateway-acceptance-test-spec.zh-CN.md",
+        "contracts/opl-gateway/surface-lifecycle-map.json",
+        "contracts/opl-gateway/surface-authority-matrix.json",
+        "docs/opl-surface-lifecycle-map.md",
+        "docs/opl-surface-lifecycle-map.zh-CN.md",
+        "docs/opl-surface-authority-matrix.md",
+        "docs/opl-surface-authority-matrix.zh-CN.md"
+      ],
+      "contract_assertions": [
+        "candidate-domain backlog covers exactly grant_ops, thesis_ops, and review_ops as under-definition workstreams that still require formal domain admission material",
+        "each candidate entry preserves the current task-topology state, keeps readiness flags false, and keeps candidate domain boundaries null",
+        "required_onboarding_materials align to registry material, public documentation, truth ownership, review surfaces, discovery/routing readiness, and cross-domain wording",
+        "missing_boundary_materials and formal_inclusion_gate remain aligned to the onboarding formal-inclusion checks and stay missing/blocked until the boundary package exists",
+        "task-map docs, onboarding docs, contract hub, public-surface index, review matrix, lifecycle map, and authority matrix expose the backlog as a reference-only admission-blocker surface below the domain-onboarding gate"
+      ],
+      "forbidden_regressions": [
+        "candidate-domain backlog auto-admits a domain or expands the G1 registry",
+        "candidate-domain backlog creates G2 discovery readiness or G3 routed-action readiness",
+        "candidate-domain backlog invents candidate domain truth owners or publication authority inside OPL",
+        "candidate-domain backlog becomes an approval engine, onboarding engine, or runtime control plane"
       ]
     },
     {
@@ -405,6 +474,8 @@
         "docs/opl-surface-authority-matrix.zh-CN.md",
         "docs/opl-surface-review-matrix.md",
         "docs/opl-surface-review-matrix.zh-CN.md",
+        "docs/opl-candidate-domain-backlog.md",
+        "docs/opl-candidate-domain-backlog.zh-CN.md",
         "docs/task-map.md",
         "docs/task-map.zh-CN.md"
       ],
@@ -417,7 +488,9 @@
         "surface lifecycle map remains derived/reference-only",
         "authority matrix remains derived/reference-only",
         "surface review matrix remains derived/reference-only",
-        "task map keeps current admitted workstreams explicit while keeping Grant/Review/Thesis Ops under definition"
+        "task map keeps current admitted workstreams explicit while keeping Grant/Review/Thesis Ops under definition",
+        "candidate-domain backlog remains reference-only, non-admitting, and below the domain-onboarding gate",
+        "candidate backlog keeps Grant/Review/Thesis Ops blocked below the onboarding gate"
       ],
       "forbidden_regressions": [
         "OPL described as monolithic runtime",
@@ -427,7 +500,9 @@
         "authority matrix described as authorization engine",
         "surface review matrix described as approval engine",
         "surface review matrix described as publish controller",
-        "task map described as admitted domain registry"
+        "task map described as admitted domain registry",
+        "candidate-domain backlog described as admitted-domain registry or approval surface",
+        "candidate backlog described as a pre-admission domain registry"
       ]
     }
   ]

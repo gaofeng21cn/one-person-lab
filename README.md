@@ -284,6 +284,7 @@ For a more detailed phase breakdown:
 - [OPL Read-Only Discovery Gateway](docs/opl-read-only-discovery-gateway.md)
 - [OPL Routed Action Gateway](docs/opl-routed-action-gateway.md)
 - [OPL Domain Onboarding Contract](docs/opl-domain-onboarding-contract.md)
+- [OPL Candidate Domain Backlog](docs/opl-candidate-domain-backlog.md)
 - [OPL Gateway Acceptance Test Spec](docs/opl-gateway-acceptance-test-spec.md)
 - [OPL Governance / Audit Operating Surface](docs/opl-governance-audit-operating-surface.md)
 - [OPL Publish / Promotion Operating Surface](docs/opl-publish-promotion-operating-surface.md)

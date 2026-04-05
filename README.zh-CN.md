@@ -284,6 +284,7 @@ Human / Agent
 - [OPL 只读 Discovery Gateway](docs/opl-read-only-discovery-gateway.zh-CN.md)
 - [OPL Routed Action Gateway](docs/opl-routed-action-gateway.zh-CN.md)
 - [OPL Domain Onboarding Contract](docs/opl-domain-onboarding-contract.zh-CN.md)
+- [OPL Candidate Domain Backlog](docs/opl-candidate-domain-backlog.zh-CN.md)
 - [OPL Gateway Acceptance Test Spec](docs/opl-gateway-acceptance-test-spec.zh-CN.md)
 - [OPL Governance / Audit Operating Surface](docs/opl-governance-audit-operating-surface.zh-CN.md)
 - [OPL Publish / Promotion Operating Surface](docs/opl-publish-promotion-operating-surface.zh-CN.md)

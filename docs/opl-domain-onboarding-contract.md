@@ -18,6 +18,7 @@ Domain onboarding is downstream of the already frozen gateway layers:
 - [OPL Federation Contract](./opl-federation-contract.md)
 - [OPL Read-Only Discovery Gateway](./opl-read-only-discovery-gateway.md)
 - [OPL Routed Action Gateway](./opl-routed-action-gateway.md)
+- [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md)
 - the machine-readable contract surfaces in [`../contracts/opl-gateway/README.md`](../contracts/opl-gateway/README.md)
 
 If the top-level registry, discovery, and routed-action layers are not stable, domain onboarding should not proceed.
@@ -26,10 +27,12 @@ If the top-level registry, discovery, and routed-action layers are not stable, d
 
 - [`../contracts/opl-gateway/domain-onboarding-readiness.schema.json`](../contracts/opl-gateway/domain-onboarding-readiness.schema.json)
 - [`../examples/opl-gateway/domain-onboarding-readiness.json`](../examples/opl-gateway/domain-onboarding-readiness.json)
+- [`../contracts/opl-gateway/candidate-domain-backlog.json`](../contracts/opl-gateway/candidate-domain-backlog.json)
 
 This schema materializes the onboarding-readiness record as a non-executing contract surface.
 It does not admit domains automatically, and it does not replace the prose review gate in this document.
 The example record is illustrative only and does not count as a formal domain admission.
+The candidate-domain backlog is the upstream blocker surface for under-definition workstreams; it records what is still missing before an onboarding-readiness record can even exist. For the human-readable companion, see [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md).
 
 ## Core Promise
 

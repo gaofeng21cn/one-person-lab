@@ -6,7 +6,7 @@
 
 这份文档索引当前已冻结 `OPL Gateway` surface stack 的 derived machine-readable lifecycle map。
 
-它的作用是：把 contract、routing、operating、discoverability 与 acceptance surfaces 集中串起来，同时不把这张 map 升格成 workflow engine、transition authority 或第二真相源。
+它的作用是：把 contract、routing、operating、discoverability 与 acceptance surface 串成可遍历的关系图，同时不把这张 map 升格成 workflow engine、transition authority 或第二真相源。
 
 ## 机器可读工件
 
@@ -17,10 +17,10 @@
 这个 lifecycle map 不负责：
 
 - 执行 transition
-- 替 unresolved routing state 做决策
+- 决定 unresolved routing state
 - 替代 governing docs、schemas 或 supporting corpora
 - 把 canonical truth 上收给 `OPL`
-- 绝不授权 `OPL` 执行 direct harness access、direct publish、direct release、direct export、direct submission 或 direct posting
+- 授权 `OPL` 直接执行 direct harness access、direct publish、direct release、direct export、direct submission 或 direct posting
 
 ## Lifecycle 字段
 
@@ -51,6 +51,7 @@
 
 ### Supporting discoverability / acceptance surfaces
 
+- `opl_candidate_domain_backlog`
 - `opl_gateway_example_corpus`
 - `opl_routed_safety_example_corpus`
 - `opl_operating_example_corpus`
@@ -67,10 +68,11 @@
 
 这张 lifecycle map 必须被理解成 **derived reference graph**，而不是 execution contract。
 
-`requires_surfaces` 与 `enables_surfaces` 只暴露已冻结的 dependency / discoverability relationship。
-它们不授权 automatic transition，也不替代 prose review。
-只要某个 entry 还保留 follow-on route boundary，唯一允许的值就仍然是 `domain_gateway`。
-如果某个 surface 本身不对应 follow-on action，map 就使用 `null`。
+`requires_surfaces` 与 `enables_surfaces` 只暴露已经冻结的依赖与 discoverability 关系。
+它们不会授权自动 transition，也不会替代 prose review。
+如果某个 entry 仍保留 follow-on route boundary，唯一允许值仍然是 `domain_gateway`。
+如果某个 surface 没有后续动作边界，map 就使用 `null`。
+如果某个 surface 是 `opl_candidate_domain_backlog`，这里暴露的依赖链也仍然只是 blocker-oriented 参考关系；它不会授权自动晋升到 onboarding、discovery 或 routing。
 
 ## 上位依据
 
@@ -78,6 +80,7 @@
 - [OPL 只读 Discovery Gateway](./opl-read-only-discovery-gateway.zh-CN.md)
 - [OPL Routed Action Gateway](./opl-routed-action-gateway.zh-CN.md)
 - [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.zh-CN.md)
+- [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.zh-CN.md)
 - [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.zh-CN.md)
 - [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.zh-CN.md)
 - [OPL Public Surface Index](./opl-public-surface-index.zh-CN.md)
@@ -88,9 +91,9 @@
 
 只有当下面这些条件都成立时，lifecycle map 才算合格：
 
-- 它覆盖当前顶层 traversal 所需的全部已冻结 gateway / operating / supporting surfaces
-- 每个 `requires_surfaces` 与 `enables_surfaces` 目标都能在同一个 lifecycle map 中解析
-- 每个 `governing_ref` 都能解析到存在的本地工件
-- `follow_on_route_surface` 始终只能是 `null` 或 `domain_gateway`
-- 它能与 derived surface authority matrix、derived surface review matrix 一起被发现，但这些 map 都不会升级成 execution surface
+- 它覆盖当前真正影响顶层遍历的已冻结 gateway / operating / supporting surface
+- 每个 `requires_surfaces` 与 `enables_surfaces` 目标都能在同一个 lifecycle map 内解析
+- 每个 `governing_ref` 都能解析到本地存在的工件
+- `follow_on_route_surface` 始终只可能是 `null` 或 `domain_gateway`
+- 它能与 derived surface authority matrix、derived surface review matrix 一起被发现，但这些 map 都不会升级成执行 surface
 - 它保持 derived、reference-only、non-executing

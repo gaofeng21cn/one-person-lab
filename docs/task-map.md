@@ -15,12 +15,19 @@
 This split defines top-level task semantics.
 At runtime, those semantics should route through the `OPL Gateway` into independent domain gateways rather than being collapsed into one runtime.
 
-## Machine-Readable Companion
+## Machine-Readable Companions
 
 - [`../contracts/opl-gateway/task-topology.json`](../contracts/opl-gateway/task-topology.json)
+- [`../contracts/opl-gateway/candidate-domain-backlog.json`](../contracts/opl-gateway/candidate-domain-backlog.json)
 
-This companion materializes the task topology as a machine-readable top-level surface.
-It may describe under-definition workstreams such as `Grant Ops`, `Thesis Ops`, and `Review Ops`, but it does **not** admit new domains, create `G2` discovery readiness, or create `G3` routed-action readiness for them.
+These companions materialize:
+
+- the top-level task topology as a machine-readable semantic surface
+- the missing admission-boundary materials for the current under-definition workstreams
+
+They may describe under-definition workstreams such as `Grant Ops`, `Thesis Ops`, and `Review Ops`, but they do **not** admit new domains, create `G2` discovery readiness, or create `G3` routed-action readiness for them.
+
+For the human-readable companion to that backlog, see [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md).
 
 ## Research Ops
 
@@ -78,6 +85,7 @@ Current boundary status:
 - not yet a registered `G1` workstream/domain mapping
 - not yet a `G2` discovery target
 - not eligible for domain handoff
+- admission blockers are tracked in [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md)
 - clear top-level requests may surface only as `unknown_domain`, without building a handoff payload, until a real domain owner is admitted
 
 ## Thesis Ops
@@ -108,6 +116,7 @@ Current boundary status:
 - not yet a registered `G1` workstream/domain mapping
 - not yet a `G2` discovery target
 - not eligible for domain handoff
+- admission blockers are tracked in [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md)
 - clear top-level requests may surface only as `unknown_domain`, without building a handoff payload, until a real domain owner is admitted
 
 ## Review Ops
@@ -137,6 +146,7 @@ Current boundary status:
 - not yet a registered `G1` workstream/domain mapping
 - not yet a `G2` discovery target
 - not eligible for domain handoff
+- admission blockers are tracked in [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md)
 - clear top-level requests may surface only as `unknown_domain`, without building a handoff payload, until a real domain owner is admitted
 
 ## Presentation Ops

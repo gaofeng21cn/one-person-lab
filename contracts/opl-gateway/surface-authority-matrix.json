@@ -1,5 +1,5 @@
 {
-  "version": "p15.m1",
+  "version": "p18.m1",
   "scope": "opl_surface_authority_matrix",
   "description": "Machine-readable derived authority matrix for the frozen OPL gateway surfaces and linked domain gateway public-entry surfaces. It records routing, execution, truth, review, and publication ownership boundaries without becoming an authorization engine or runtime control plane.",
   "non_goals": [
@@ -12,13 +12,15 @@
     "entries are derived from already frozen gateway contracts, operating surfaces, supporting surfaces, and linked domain public-entry surfaces",
     "OPL-owned surfaces may expose routing, indexing, discoverability, or acceptance boundaries but do not own domain execution, canonical truth, review truth, or publication truth",
     "linked domain public-entry surfaces remain domain-owned and mark where domain-local routing and harness execution begin",
-    "allowed_follow_on_surface may be null or domain_gateway only"
+    "allowed_follow_on_surface may be null or domain_gateway only",
+    "candidate backlog surfaces may expose blocked admission material, but they do not allocate future domain authority or routed readiness"
   ],
   "covered_surface_ids": [
     "opl_gateway_contract_hub",
     "opl_read_only_discovery_gateway",
     "opl_routed_action_gateway",
     "opl_domain_onboarding_contract",
+    "opl_candidate_domain_backlog",
     "opl_governance_audit_operating_surface",
     "opl_publish_promotion_operating_surface",
     "opl_gateway_example_corpus",
@@ -120,6 +122,27 @@
         "docs/opl-domain-onboarding-contract.md",
         "docs/opl-domain-onboarding-contract.zh-CN.md",
         "contracts/opl-gateway/domain-onboarding-readiness.schema.json"
+      ]
+    },
+    {
+      "surface_id": "opl_candidate_domain_backlog",
+      "owner_scope": "opl",
+      "surface_role": "candidate_admission_blocker_index",
+      "route_authority": "none",
+      "execution_authority": "none",
+      "truth_authority": "none",
+      "review_authority": "none",
+      "publication_authority": "none",
+      "allowed_follow_on_surface": null,
+      "forbidden_actions": [
+        "assign_future_domain_identity",
+        "authorize_discovery_or_routing",
+        "claim_domain_truth"
+      ],
+      "governing_refs": [
+        "docs/opl-candidate-domain-backlog.md",
+        "docs/opl-candidate-domain-backlog.zh-CN.md",
+        "contracts/opl-gateway/candidate-domain-backlog.json"
       ]
     },
     {

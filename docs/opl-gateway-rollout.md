@@ -126,6 +126,7 @@ Completion signal:
 Contract extension needed before adding more domains:
 
 - [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.md)
+- [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md)
 - [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.md)
 
 Detailed contract:

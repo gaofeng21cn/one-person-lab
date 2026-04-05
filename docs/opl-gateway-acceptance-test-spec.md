@@ -30,6 +30,7 @@ This acceptance spec covers:
 - `P15` surface authority matrix integrity
 - `P16` surface review matrix integrity
 - `P17` task-topology integrity
+- `P18` candidate-domain backlog integrity
 - cross-domain wording consistency across public surfaces
 
 ## Governing Sources
@@ -58,8 +59,9 @@ The acceptance checks below are grounded in:
 - [OPL Surface Lifecycle Map](./opl-surface-lifecycle-map.md)
 - [OPL Surface Authority Matrix](./opl-surface-authority-matrix.md)
 - [OPL Surface Review Matrix](./opl-surface-review-matrix.md)
+- [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md)
 
-These companion surfaces are illustrative or reference-only. The gateway corpus shows cross-layer composition; the operating corpus materializes standalone `P5.M1` / `P5.M2` records; the operating-record catalog indexes the frozen record kinds; the lifecycle map exposes the frozen surface dependency/discoverability graph without adding execution semantics; the authority matrix exposes routing/execution/truth/review/publication ownership boundaries without becoming an authorization engine; the review matrix exposes human-review / acceptance / companion-surface / publishability-stage obligations without becoming an approval engine or publish controller. None of them replace the contracts and acceptance gates above.
+These companion surfaces are illustrative or reference-only. The gateway corpus shows cross-layer composition; the operating corpus materializes standalone `P5.M1` / `P5.M2` records; the operating-record catalog indexes the frozen record kinds; the lifecycle map exposes the frozen surface dependency/discoverability graph without adding execution semantics; the authority matrix exposes routing/execution/truth/review/publication ownership boundaries without becoming an authorization engine; the review matrix exposes human-review / acceptance / companion-surface / publishability-stage obligations without becoming an approval engine or publish controller; the candidate-domain backlog records missing pre-onboarding boundary materials without admitting a domain or creating routed readiness. None of them replace the contracts and acceptance gates above.
 
 ## A. G1 Registry Completeness
 
@@ -292,13 +294,15 @@ The wording-consistency gate passes only when all of the following are true:
    - `presentation_ops -> redcube`
    - `ppt_deck` directly maps to `presentation_ops`
    - `xiaohongshu` may route to `redcube` without auto-equating it to `presentation_ops`
-7. Linked README / roadmap / federation / rollout / contract-hub wording does not upgrade the public-surface index into a launcher, runtime registry, or truth-owner surface.
+7. The index exposes exactly one `opl_candidate_domain_backlog` entry as an `opl_supporting_surface` and keeps it below the onboarding gate.
+8. Linked README / roadmap / federation / rollout / contract-hub wording does not upgrade the public-surface index into a launcher, runtime registry, truth-owner surface, or admission-approval surface.
 
 ### Verification
 
 - Parse `contracts/opl-gateway/public-surface-index.json`.
 - Check structural integrity for category references, `routes_to` targets, and local `repo_path` refs.
 - Check `docs/opl-public-surface-index.md` and `.zh-CN.md` for no-runtime / no-truth-shift / no-internal-module wording.
+- Confirm `surfaces[*].surface_id` values remain unique and `opl_candidate_domain_backlog` resolves exactly once as a supporting/reference surface rather than as an admitted domain or execution surface.
 - Verify the linked public OPL surfaces actually point to the public-surface index where intended.
 
 ## J. P10 Routed-Safety Example Integrity
@@ -397,6 +401,7 @@ The wording-consistency gate passes only when all of the following are true:
    - `opl_read_only_discovery_gateway`
    - `opl_routed_action_gateway`
    - `opl_domain_onboarding_contract`
+   - `opl_candidate_domain_backlog`
    - `opl_governance_audit_operating_surface`
    - `opl_publish_promotion_operating_surface`
    - `opl_gateway_example_corpus`
@@ -434,6 +439,7 @@ The wording-consistency gate passes only when all of the following are true:
    - `opl_read_only_discovery_gateway`
    - `opl_routed_action_gateway`
    - `opl_domain_onboarding_contract`
+   - `opl_candidate_domain_backlog`
    - `opl_governance_audit_operating_surface`
    - `opl_publish_promotion_operating_surface`
    - `opl_gateway_example_corpus`
@@ -489,21 +495,22 @@ The wording-consistency gate passes only when all of the following are true:
    - `opl_surface_lifecycle_map`
    - `opl_surface_authority_matrix`
    - `opl_public_surface_index_doc`
+   - `opl_candidate_domain_backlog`
    - `opl_gateway_acceptance_spec`
 4. Each review entry stays derived/reference-only and carries only review-boundary fields such as `owner_scope`, `surface_role`, `human_review_required`, `required_acceptance_gates`, `required_companion_surfaces`, `cross_domain_wording_check`, `publishability_stage`, and `governing_refs`.
 5. Every `required_acceptance_gate` resolves inside `contracts/opl-gateway/acceptance-matrix.json`.
 6. Every `required_companion_surface` resolves inside `contracts/opl-gateway/public-surface-index.json`.
-7. Every `surface_id` covered by the review matrix also exists inside `contracts/opl-gateway/public-surface-index.json`.
+7. Every `surface_id` covered by the review matrix also exists inside `contracts/opl-gateway/public-surface-index.json`, and `review_entries[*].surface_id` values remain unique.
 8. Every `governing_ref` resolves to an existing local artifact.
 9. Every `human_review_required` value remains `true` for the covered OPL-owned surfaces.
 10. The review matrix stays non-executing, does not become an approval engine, does not become a publish controller or release engine, and does not transfer domain review or publication authority into `OPL`.
-11. Contract README, public-surface index, lifecycle map docs, authority matrix docs, and acceptance surfaces expose the review matrix as a supporting/reference surface rather than as an approval or execution surface.
+11. Contract README, public-surface index, lifecycle map docs, authority matrix docs, acceptance surfaces, and candidate-backlog docs expose the review matrix as a supporting/reference surface rather than as an approval or execution surface.
 
 ### Verification
 
 - Parse `contracts/opl-gateway/surface-review-matrix.json` with `json.load`.
 - Confirm the review matrix covers exactly the frozen surface set above.
-- Check that each `required_acceptance_gate` resolves in the current acceptance matrix, each `required_companion_surface` resolves in the current public-surface index, and each `governing_ref` resolves locally.
+- Check that each `required_acceptance_gate` resolves in the current acceptance matrix, each `required_companion_surface` resolves in the current public-surface index, each `review_entries[*].surface_id` remains unique, and each `governing_ref` resolves locally.
 - Confirm every covered OPL surface keeps `human_review_required = true`.
 - Confirm the contract hub, public-surface index, lifecycle map docs, authority matrix docs, and acceptance surfaces link to the review matrix where intended.
 
@@ -528,7 +535,8 @@ The wording-consistency gate passes only when all of the following are true:
 8. `contracts/opl-gateway/workstreams.json` and `domains.json` still register only the currently admitted workstreams/domains, and the task-topology artifact does not silently expand the G1 registry.
 9. `contracts/opl-gateway/public-surface-index.json` exposes `opl_task_map` as an `opl_public_entry` surface.
 10. `contracts/opl-gateway/surface-review-matrix.json` covers `opl_task_map` as a human-review surface without turning task topology into an approval, onboarding, discovery, or routing engine.
-11. Contract README, public-surface index docs, task-map docs, and acceptance surfaces describe under-definition workstreams as semantic candidates only, not as admitted domains.
+11. `contracts/opl-gateway/candidate-domain-backlog.json` stays aligned to the same under-definition workstreams without inventing admitted domains or routed-ready entry surfaces.
+12. Contract README, public-surface index docs, task-map docs, candidate-backlog docs, and acceptance surfaces describe under-definition workstreams as semantic candidates only, not as admitted domains.
 
 ### Verification
 
@@ -536,7 +544,51 @@ The wording-consistency gate passes only when all of the following are true:
 - Confirm the exact workstream set above and the registered-vs-under-definition split.
 - Confirm `workstreams.json` still contains only `research_ops` and `presentation_ops`, and `domains.json` still contains only `medautoscience` and `redcube`.
 - Confirm `opl_task_map` resolves inside `public-surface-index.json` and `surface-review-matrix.json`.
+- Confirm the candidate-domain backlog, when present, stays aligned to the same under-definition states.
 - Confirm no field or linked prose turns under-definition workstreams into admitted domains, handoff-ready routed targets, or runtime entry surfaces.
+
+## Q. P18 Candidate-Domain-Backlog Integrity
+
+### Acceptance Criteria
+
+`P18` passes only when all of the following are true:
+
+1. `contracts/opl-gateway/candidate-domain-backlog.json` exists and is valid JSON.
+2. `docs/opl-candidate-domain-backlog.md` and `docs/opl-candidate-domain-backlog.zh-CN.md` both exist and link to the machine-readable backlog artifact.
+3. The candidate-domain backlog covers exactly these under-definition workstreams:
+   - `grant_ops`
+   - `thesis_ops`
+   - `review_ops`
+4. Every candidate entry preserves the current task-topology state: `boundary_state = under_definition`, `registry_state = not_registered`, `routing_state = unknown_domain_only`, `current_domain_id = null`, `entry_surface = null`, and `formal_domain_required = true`.
+5. Every candidate entry keeps `readiness_flags.discovery_ready = false`, `routing_ready = false`, `handoff_ready = false`, and `formal_inclusion_ready = false`.
+6. Every candidate entry keeps `candidate_domain_boundary.candidate_domain_id = null`, `candidate_gateway_surface = null`, and `candidate_harness_surface = null`.
+7. Every candidate entry records these onboarding-aligned blocker package ids inside `required_onboarding_materials`:
+   - `registry_material`
+   - `public_documentation`
+   - `truth_ownership`
+   - `review_surfaces`
+   - `discovery_routing_readiness`
+   - `cross_domain_wording`
+8. Every candidate entry records missing boundary materials aligned to these onboarding checks inside `missing_boundary_materials`:
+   - `registry_complete`
+   - `boundary_explicit`
+   - `truth_ownership_explicit`
+   - `discovery_ready`
+   - `routing_ready`
+   - `review_ready`
+   - `cross_domain_wording_aligned`
+9. Every candidate entry keeps each `required_onboarding_materials` status at `missing` and each `formal_inclusion_gate` status at `blocked` until a real domain boundary package exists.
+10. No candidate entry invents an admitted domain, a non-null `candidate_domain_id`, a non-null entry surface, or domain-truth ownership as if it were already frozen.
+11. `contracts/opl-gateway/public-surface-index.json`, `surface-review-matrix.json`, `surface-lifecycle-map.json`, and `surface-authority-matrix.json` expose the candidate-domain backlog as a supporting/reference surface, with exactly one `opl_candidate_domain_backlog` entry in the public-surface index and exactly one review entry in the surface-review matrix.
+12. Contract README, task-map docs, domain-onboarding docs, public-surface index docs, review-matrix docs, lifecycle/authority docs, and acceptance surfaces describe the backlog as reference-only, non-executing, non-admitting, and below the onboarding gate.
+
+### Verification
+
+- Parse `contracts/opl-gateway/candidate-domain-backlog.json` with `json.load`.
+- Confirm the exact workstream set above and the exact alignment with the under-definition entries in `task-topology.json`.
+- Confirm every candidate entry has the six onboarding-material packages above, every `required_onboarding_materials` package remains `missing`, every `formal_inclusion_gate` check remains `blocked`, and all readiness flags remain `false`.
+- Confirm no field or linked prose turns the backlog into a domain registry, discovery registry, routed-action surface, handoff surface, approval engine, or publish controller.
+- Confirm `opl_candidate_domain_backlog` resolves exactly once inside `public-surface-index.json` and `surface-review-matrix.json`, and resolves inside `surface-lifecycle-map.json` and `surface-authority-matrix.json`.
 
 ## Standard Verification Commands
 
@@ -663,6 +715,7 @@ expected = {
     'opl_read_only_discovery_gateway',
     'opl_routed_action_gateway',
     'opl_domain_onboarding_contract',
+    'opl_candidate_domain_backlog',
     'opl_governance_audit_operating_surface',
     'opl_publish_promotion_operating_surface',
     'opl_gateway_example_corpus',
@@ -699,6 +752,7 @@ expected = {
     'opl_read_only_discovery_gateway',
     'opl_routed_action_gateway',
     'opl_domain_onboarding_contract',
+    'opl_candidate_domain_backlog',
     'opl_governance_audit_operating_surface',
     'opl_publish_promotion_operating_surface',
     'opl_gateway_example_corpus',
@@ -756,8 +810,11 @@ expected = {
     'opl_surface_authority_matrix',
     'opl_public_surface_index_doc',
     'opl_gateway_acceptance_spec',
+    'opl_candidate_domain_backlog',
 }
-surface_ids = {entry['surface_id'] for entry in review['review_entries']}
+surface_id_list = [entry['surface_id'] for entry in review['review_entries']]
+surface_ids = set(surface_id_list)
+assert len(surface_id_list) == len(surface_ids), 'duplicate review surface_id'
 assert surface_ids == expected, (surface_ids, expected)
 assert set(review['covered_surface_ids']) == expected, review['covered_surface_ids']
 acceptance_gate_ids = {gate['gate_id'] for gate in acceptance['gates']}
@@ -787,45 +844,78 @@ import json
 from pathlib import Path
 
 task = json.loads(Path('contracts/opl-gateway/task-topology.json').read_text())
-workstreams = json.loads(Path('contracts/opl-gateway/workstreams.json').read_text())
-domains = json.loads(Path('contracts/opl-gateway/domains.json').read_text())
+backlog = json.loads(Path('contracts/opl-gateway/candidate-domain-backlog.json').read_text())
 public = json.loads(Path('contracts/opl-gateway/public-surface-index.json').read_text())
 review = json.loads(Path('contracts/opl-gateway/surface-review-matrix.json').read_text())
+lifecycle = json.loads(Path('contracts/opl-gateway/surface-lifecycle-map.json').read_text())
+authority = json.loads(Path('contracts/opl-gateway/surface-authority-matrix.json').read_text())
 
-expected = {'research_ops', 'grant_ops', 'thesis_ops', 'review_ops', 'presentation_ops'}
-entries = {entry['workstream_id']: entry for entry in task['workstreams']}
-assert set(entries) == expected, (set(entries), expected)
-assert {entry['workstream_id'] for entry in workstreams['workstreams']} == {'research_ops', 'presentation_ops'}
-assert {entry['domain_id'] for entry in domains['domains']} == {'medautoscience', 'redcube'}
+expected = {'grant_ops', 'thesis_ops', 'review_ops'}
+task_entries = {entry['workstream_id']: entry for entry in task['workstreams']}
+backlog_entries = {entry['workstream_id']: entry for entry in backlog['candidate_workstreams']}
+assert set(backlog_entries) == expected, (set(backlog_entries), expected)
+required_packages = {
+    'registry_material',
+    'public_documentation',
+    'truth_ownership',
+    'review_surfaces',
+    'discovery_routing_readiness',
+    'cross_domain_wording',
+}
+required_checks = {
+    'registry_complete',
+    'boundary_explicit',
+    'truth_ownership_explicit',
+    'discovery_ready',
+    'routing_ready',
+    'review_ready',
+    'cross_domain_wording_aligned',
+}
 
-research = entries['research_ops']
-assert research['registry_state'] == 'registered', research
-assert research['routing_state'] == 'domain_gateway_ready', research
-assert research['current_domain_id'] == 'medautoscience', research
-assert research['entry_surface'] == 'domain_gateway', research
+for workstream_id, entry in backlog_entries.items():
+    task_entry = task_entries[workstream_id]
+    assert entry['task_topology_state'] == {
+        'boundary_state': task_entry['boundary_state'],
+        'registry_state': task_entry['registry_state'],
+        'routing_state': task_entry['routing_state'],
+        'current_domain_id': task_entry['current_domain_id'],
+        'entry_surface': task_entry['entry_surface'],
+        'formal_domain_required': True,
+    }, (workstream_id, entry['task_topology_state'])
+    assert entry['readiness_flags'] == {
+        'discovery_ready': False,
+        'routing_ready': False,
+        'handoff_ready': False,
+        'formal_inclusion_ready': False,
+    }, (workstream_id, entry['readiness_flags'])
+    assert entry['candidate_domain_boundary'] == {
+        'candidate_domain_id': None,
+        'candidate_gateway_surface': None,
+        'candidate_harness_surface': None,
+    }, (workstream_id, entry['candidate_domain_boundary'])
+    package_ids = {item['package_id'] for item in entry['required_onboarding_materials']}
+    assert package_ids == required_packages, (workstream_id, package_ids)
+    for item in entry['required_onboarding_materials']:
+        assert item['status'] == 'missing', (workstream_id, item)
+        assert item['required_evidence'], (workstream_id, item)
+        assert item['forbidden_shortcuts'], (workstream_id, item)
+    checks = {item['maps_to_formal_inclusion_check'] for item in entry['missing_boundary_materials']}
+    assert checks == required_checks, (workstream_id, checks)
+    for item in entry['missing_boundary_materials']:
+        assert item['status'] == 'missing', (workstream_id, item)
+        assert item['required_evidence'], (workstream_id, item)
+        assert item['forbidden_shortcuts'], (workstream_id, item)
+    gate_ids = set(entry['formal_inclusion_gate'])
+    assert gate_ids == required_checks, (workstream_id, gate_ids)
+    for check_id, gate in entry['formal_inclusion_gate'].items():
+        assert gate['status'] == 'blocked', (workstream_id, check_id, gate)
+        assert gate['blocking_package_ids'], (workstream_id, check_id, gate)
 
-presentation = entries['presentation_ops']
-assert presentation['registry_state'] == 'registered', presentation
-assert presentation['routing_state'] == 'domain_gateway_ready', presentation
-assert presentation['current_domain_id'] == 'redcube', presentation
-assert presentation['entry_surface'] == 'domain_gateway', presentation
-family_notes = {item['family_id']: item['relation'] for item in presentation['family_boundary_notes']}
-assert family_notes['ppt_deck'] == 'direct_map_to_presentation_ops', family_notes
-assert family_notes['xiaohongshu'] == 'same_redcube_harness_non_equivalent_to_presentation_ops', family_notes
-
-for workstream_id in ['grant_ops', 'thesis_ops', 'review_ops']:
-    entry = entries[workstream_id]
-    assert entry['boundary_state'] == 'under_definition', entry
-    assert entry['registry_state'] == 'not_registered', entry
-    assert entry['routing_state'] == 'unknown_domain_only', entry
-    assert entry['current_domain_id'] is None, entry
-    assert entry['entry_surface'] is None, entry
-
-surface_ids = {surface['surface_id'] for surface in public['surfaces']}
-assert 'opl_task_map' in surface_ids, surface_ids
-review_surface_ids = {entry['surface_id'] for entry in review['review_entries']}
-assert 'opl_task_map' in review_surface_ids, review_surface_ids
-print('task topology OK')
+assert sum(surface['surface_id'] == 'opl_candidate_domain_backlog' for surface in public['surfaces']) == 1
+assert sum(entry['surface_id'] == 'opl_candidate_domain_backlog' for entry in review['review_entries']) == 1
+assert sum(entry['surface_id'] == 'opl_candidate_domain_backlog' for entry in lifecycle['surfaces']) == 1
+assert sum(entry['surface_id'] == 'opl_candidate_domain_backlog' for entry in authority['authority_entries']) == 1
+print('candidate-domain backlog OK')
 PY
 python3 - <<'PY'
 import json
@@ -849,6 +939,11 @@ for surface in idx['surfaces']:
     # Declaration order is irrelevant.
     for target in surface['routes_to']:
         assert target in surface_id_set, (surface['surface_id'], target)
+candidates = [surface for surface in idx['surfaces'] if surface['surface_id'] == 'opl_candidate_domain_backlog']
+assert len(candidates) == 1, candidates
+candidate = candidates[0]
+assert candidate['category_id'] == 'opl_supporting_surface', candidate
+assert candidate['surface_kind'] == 'candidate_backlog', candidate
 print('public surface index OK')
 PY
 python3 - <<'PY'
@@ -885,6 +980,8 @@ files = [
     Path('docs/opl-surface-authority-matrix.zh-CN.md'),
     Path('docs/opl-surface-review-matrix.md'),
     Path('docs/opl-surface-review-matrix.zh-CN.md'),
+    Path('docs/opl-candidate-domain-backlog.md'),
+    Path('docs/opl-candidate-domain-backlog.zh-CN.md'),
     Path('docs/task-map.md'),
     Path('docs/task-map.zh-CN.md'),
     Path('docs/opl-public-surface-index.md'),
@@ -905,14 +1002,14 @@ for path in files:
             raise SystemExit(f'missing link: {path} -> {raw}')
 print('links OK')
 PY
-rg -n "top-level blueprint only|不是统一运行时入口|本仓库本身不承担运行时角色"           README.md README.zh-CN.md           docs/gateway-federation.md docs/gateway-federation.zh-CN.md           docs/opl-federation-contract.md docs/opl-federation-contract.zh-CN.md           docs/opl-read-only-discovery-gateway.md docs/opl-read-only-discovery-gateway.zh-CN.md           docs/opl-routed-action-gateway.md docs/opl-routed-action-gateway.zh-CN.md           docs/opl-domain-onboarding-contract.md docs/opl-domain-onboarding-contract.zh-CN.md           docs/opl-governance-audit-operating-surface.md docs/opl-governance-audit-operating-surface.zh-CN.md           docs/opl-publish-promotion-operating-surface.md docs/opl-publish-promotion-operating-surface.zh-CN.md           docs/opl-gateway-example-corpus.md docs/opl-gateway-example-corpus.zh-CN.md           docs/opl-routed-safety-example-corpus.md docs/opl-routed-safety-example-corpus.zh-CN.md           docs/opl-operating-example-corpus.md docs/opl-operating-example-corpus.zh-CN.md           docs/opl-operating-record-catalog.md docs/opl-operating-record-catalog.zh-CN.md           docs/opl-surface-lifecycle-map.md docs/opl-surface-lifecycle-map.zh-CN.md           docs/opl-surface-authority-matrix.md docs/opl-surface-authority-matrix.zh-CN.md           docs/opl-surface-review-matrix.md docs/opl-surface-review-matrix.zh-CN.md           docs/task-map.md docs/task-map.zh-CN.md           docs/opl-public-surface-index.md docs/opl-public-surface-index.zh-CN.md           docs/opl-gateway-rollout.md docs/opl-gateway-rollout.zh-CN.md           docs/roadmap.md docs/roadmap.zh-CN.md           contracts/opl-gateway/README.md contracts/opl-gateway/README.zh-CN.md
+rg -n "top-level blueprint only|不是统一运行时入口|本仓库本身不承担运行时角色"           README.md README.zh-CN.md           docs/gateway-federation.md docs/gateway-federation.zh-CN.md           docs/opl-federation-contract.md docs/opl-federation-contract.zh-CN.md           docs/opl-read-only-discovery-gateway.md docs/opl-read-only-discovery-gateway.zh-CN.md           docs/opl-routed-action-gateway.md docs/opl-routed-action-gateway.zh-CN.md           docs/opl-domain-onboarding-contract.md docs/opl-domain-onboarding-contract.zh-CN.md           docs/opl-candidate-domain-backlog.md docs/opl-candidate-domain-backlog.zh-CN.md           docs/opl-governance-audit-operating-surface.md docs/opl-governance-audit-operating-surface.zh-CN.md           docs/opl-publish-promotion-operating-surface.md docs/opl-publish-promotion-operating-surface.zh-CN.md           docs/opl-gateway-example-corpus.md docs/opl-gateway-example-corpus.zh-CN.md           docs/opl-routed-safety-example-corpus.md docs/opl-routed-safety-example-corpus.zh-CN.md           docs/opl-operating-example-corpus.md docs/opl-operating-example-corpus.zh-CN.md           docs/opl-operating-record-catalog.md docs/opl-operating-record-catalog.zh-CN.md           docs/opl-surface-lifecycle-map.md docs/opl-surface-lifecycle-map.zh-CN.md           docs/opl-surface-authority-matrix.md docs/opl-surface-authority-matrix.zh-CN.md           docs/opl-surface-review-matrix.md docs/opl-surface-review-matrix.zh-CN.md           docs/task-map.md docs/task-map.zh-CN.md           docs/opl-public-surface-index.md docs/opl-public-surface-index.zh-CN.md           docs/opl-gateway-rollout.md docs/opl-gateway-rollout.zh-CN.md           docs/roadmap.md docs/roadmap.zh-CN.md           docs/opl-candidate-domain-backlog.md docs/opl-candidate-domain-backlog.zh-CN.md           contracts/opl-gateway/README.md contracts/opl-gateway/README.zh-CN.md
 ```
 
 ## Completion Definition
 
 The current OPL gateway documentation-and-contract stack is acceptance-green only when:
 
-- all sections A-P pass
+- all sections A-Q pass
 - the linked machine-readable contracts are present and valid
 - discovery and routing docs still forbid direct harness bypass
 - governance / audit remains index-only
@@ -925,8 +1022,9 @@ The current OPL gateway documentation-and-contract stack is acceptance-green onl
 - the surface authority matrix remains derived, reference-only, and non-executing
 - the surface review matrix remains derived, reference-only, and non-executing
 - the task-topology surface remains non-admitting and non-routing for under-definition workstreams
+- the candidate-domain backlog remains reference-only, non-executing, non-admitting, and below the onboarding gate
 - the public-surface index remains discoverability-only
 - domain onboarding remains boundary-first
 - cross-domain wording remains stable
 
-If any of these fail, the stack is not yet acceptance-green for the post-P17 task-topology / review / discoverability surface.
+If any of these fail, the stack is not yet acceptance-green for the post-P18 candidate-domain backlog / task-topology / review / discoverability surface.

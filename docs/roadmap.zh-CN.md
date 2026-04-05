@@ -56,6 +56,7 @@
 - [OPL Gateway Contracts](../contracts/opl-gateway/README.zh-CN.md)
 - [OPL Routed Action Gateway](opl-routed-action-gateway.zh-CN.md)
 - [OPL Domain Onboarding Contract](opl-domain-onboarding-contract.zh-CN.md)
+- [OPL Candidate Domain Backlog](opl-candidate-domain-backlog.zh-CN.md)
 - [OPL Gateway Acceptance Test Spec](opl-gateway-acceptance-test-spec.zh-CN.md)
 - [OPL Governance / Audit Operating Surface](opl-governance-audit-operating-surface.zh-CN.md)
 - [OPL Publish / Promotion Operating Surface](opl-publish-promotion-operating-surface.zh-CN.md)

@@ -71,6 +71,7 @@ These values describe documentation-readiness stage only. They are not workflow 
 
 ### Supporting review / discoverability surfaces
 
+- `opl_candidate_domain_backlog`
 - `opl_gateway_example_corpus`
 - `opl_routed_safety_example_corpus`
 - `opl_operating_example_corpus`
@@ -95,6 +96,7 @@ Read this matrix as a **derived review-boundary index**, not as an approval or p
 `required_companion_surfaces` only points to already indexed supporting or governing surfaces.
 `publishability_stage` tells you which kind of gateway-surface alignment must already exist before the surface is publishable as current public material.
 If the covered surface is `opl_task_map`, under-definition workstreams remain semantic candidates only; they do not become admitted domains or routed targets through review coverage alone.
+If the covered surface is `opl_candidate_domain_backlog`, the surface remains a blocker index below the onboarding gate; it does not promote a candidate workstream into a domain, approve onboarding, or create routed readiness.
 None of these fields transfer domain review or publication authority into `OPL`.
 
 ## Governing Sources
@@ -102,6 +104,7 @@ None of these fields transfer domain review or publication authority into `OPL`.
 - [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
 - [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.md)
 - [OPL Public Surface Index](./opl-public-surface-index.md)
+- [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md)
 - [OPL Federation Contract](./opl-federation-contract.md)
 - [OPL Gateway Rollout](./opl-gateway-rollout.md)
 - [OPL Task Map](./task-map.md)

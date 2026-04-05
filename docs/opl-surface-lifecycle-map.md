@@ -51,6 +51,7 @@ Each entry stays derived/reference-only and carries only:
 
 ### Supporting discoverability / acceptance surfaces
 
+- `opl_candidate_domain_backlog`
 - `opl_gateway_example_corpus`
 - `opl_routed_safety_example_corpus`
 - `opl_operating_example_corpus`
@@ -71,6 +72,7 @@ Read this lifecycle map as a **derived reference graph**, not as an execution co
 They do not authorize automatic transitions, and they do not replace prose review.
 When an entry keeps a follow-on route boundary, the only allowed value is `domain_gateway`.
 If no follow-on action belongs to the surface, the map uses `null`.
+If the surface is `opl_candidate_domain_backlog`, the dependency chain remains blocker-oriented only; it does not authorize automatic promotion into onboarding, discovery, or routing.
 
 ## Governing Sources
 
@@ -78,6 +80,7 @@ If no follow-on action belongs to the surface, the map uses `null`.
 - [OPL Read-Only Discovery Gateway](./opl-read-only-discovery-gateway.md)
 - [OPL Routed Action Gateway](./opl-routed-action-gateway.md)
 - [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.md)
+- [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md)
 - [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.md)
 - [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.md)
 - [OPL Public Surface Index](./opl-public-surface-index.md)

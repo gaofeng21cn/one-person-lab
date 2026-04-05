@@ -1,5 +1,5 @@
 {
-  "version": "p17.m1",
+  "version": "p18.m1",
   "scope": "opl_public_gateway_surface_index",
   "description": "Machine-readable index of the current authoritative OPL gateway public surfaces and linked domain gateway public entries. This index is contract-first and does not implement a runtime.",
   "non_goals": [
@@ -188,11 +188,13 @@
         "opl_federation_contract",
         "opl_gateway_contract_hub",
         "opl_domain_onboarding_contract",
+        "opl_candidate_domain_backlog",
         "opl_public_surface_index_doc"
       ],
       "notes": [
         "Top-level task topology surface for all current OPL workstreams, including under-definition candidate workstreams.",
-        "Reference-only for under-definition workstreams: does not register new domains, does not create discovery readiness, and does not create routed-action readiness."
+        "Reference-only for under-definition workstreams: does not register new domains, does not create discovery readiness, and does not create routed-action readiness.",
+        "The candidate-domain backlog records what is still missing before under-definition workstreams can become formally admitted domains."
       ]
     },
     {
@@ -241,6 +243,9 @@
       "truth_mode": "none",
       "workstream_ids": [
         "research_ops",
+        "grant_ops",
+        "thesis_ops",
+        "review_ops",
         "presentation_ops"
       ],
       "domain_ids": [
@@ -280,6 +285,10 @@
         },
         {
           "ref_kind": "repo_path",
+          "ref": "contracts/opl-gateway/domain-onboarding-readiness.schema.json"
+        },
+        {
+          "ref_kind": "repo_path",
           "ref": "contracts/opl-gateway/governance-audit.schema.json"
         },
         {
@@ -309,6 +318,18 @@
         {
           "ref_kind": "repo_path",
           "ref": "contracts/opl-gateway/public-surface-index.json"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "contracts/opl-gateway/task-topology.json"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "contracts/opl-gateway/candidate-domain-backlog.json"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "contracts/opl-gateway/candidate-domain-backlog.json"
         }
       ],
       "routes_to": [
@@ -317,6 +338,7 @@
         "opl_governance_audit_operating_surface",
         "opl_publish_promotion_operating_surface",
         "opl_gateway_acceptance_spec",
+        "opl_candidate_domain_backlog",
         "opl_gateway_example_corpus",
         "opl_surface_lifecycle_map",
         "opl_surface_authority_matrix",
@@ -328,7 +350,8 @@
       ],
       "notes": [
         "Indexes the machine-readable OPL gateway contract materialization.",
-        "Does not create a runtime or truth owner above domains."
+        "Does not create a runtime or truth owner above domains.",
+        "Includes reference-only task-topology and candidate-domain-backlog artifacts for under-definition workstreams without admitting them."
       ]
     },
     {
@@ -429,11 +452,53 @@
       ],
       "routes_to": [
         "opl_gateway_contract_hub",
-        "opl_task_map"
+        "opl_task_map",
+        "opl_candidate_domain_backlog"
       ],
       "notes": [
         "Defines how future domains can be formally indexed without placeholder boundaries.",
         "Includes the machine-readable onboarding-readiness gate without turning OPL into a domain runtime owner."
+      ]
+    },
+    {
+      "surface_id": "opl_candidate_domain_backlog",
+      "category_id": "opl_supporting_surface",
+      "surface_kind": "candidate_backlog",
+      "boundary_role": "candidate_admission_blocker_index",
+      "owner_scope": "opl",
+      "truth_mode": "none",
+      "workstream_ids": [
+        "grant_ops",
+        "thesis_ops",
+        "review_ops"
+      ],
+      "domain_ids": [],
+      "refs": [
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/opl-candidate-domain-backlog.md",
+          "language": "en"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/opl-candidate-domain-backlog.zh-CN.md",
+          "language": "zh-CN"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "contracts/opl-gateway/candidate-domain-backlog.json"
+        }
+      ],
+      "routes_to": [
+        "opl_task_map",
+        "opl_domain_onboarding_contract",
+        "opl_gateway_contract_hub",
+        "opl_public_surface_index_doc",
+        "opl_gateway_acceptance_spec"
+      ],
+      "notes": [
+        "Reference-only admission-blocker backlog for the current under-definition workstreams.",
+        "Does not assign future domain identities, does not expand G1, and does not create G2/G3 readiness or routed-action targets."
       ]
     },
     {
@@ -539,6 +604,7 @@
       ],
       "routes_to": [
         "opl_gateway_contract_hub",
+        "opl_candidate_domain_backlog",
         "opl_gateway_example_corpus",
         "opl_operating_example_corpus",
         "opl_operating_record_catalog",
@@ -916,6 +982,7 @@
       "routes_to": [
         "opl_public_readme",
         "opl_gateway_contract_hub",
+        "opl_candidate_domain_backlog",
         "opl_routed_safety_example_corpus",
         "opl_operating_example_corpus",
         "opl_operating_record_catalog",

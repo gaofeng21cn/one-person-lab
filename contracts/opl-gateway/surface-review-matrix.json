@@ -1,5 +1,5 @@
 {
-  "version": "p17.m1",
+  "version": "p18.m1",
   "scope": "opl_surface_review_matrix",
   "description": "Machine-readable derived review matrix for the frozen OPL public, contract, and supporting surfaces. It records human-review obligations, acceptance coverage, companion review surfaces, wording-check mode, and publishability stage without becoming an approval engine, publish controller, or second source of truth.",
   "non_goals": [
@@ -14,7 +14,9 @@
     "required_acceptance_gates must resolve to existing gate ids in contracts/opl-gateway/acceptance-matrix.json and required_companion_surfaces must resolve to known surface ids in contracts/opl-gateway/public-surface-index.json",
     "cross_domain_wording_check records whether wording alignment is enforced through the shared cross-domain gate or through local review obligations only",
     "publishability_stage describes documentation-readiness stage only; it does not transfer domain review or publication authority into OPL",
-    "task-map review entries may cover under-definition workstreams only as top-level semantic candidates; they do not admit domains or create routed readiness"
+    "task-map review entries may cover under-definition workstreams only as top-level semantic candidates; they do not admit domains or create routed readiness",
+    "candidate-domain backlog review entries may cover under-definition workstreams only as admission blockers; they do not create onboarding readiness, discovery readiness, or routed readiness",
+    "candidate-domain backlog review entries may expose blocked admission material only; they do not assign future domain identities or create G2/G3 readiness"
   ],
   "covered_surface_ids": [
     "opl_public_readme",
@@ -28,6 +30,7 @@
     "opl_domain_onboarding_contract",
     "opl_governance_audit_operating_surface",
     "opl_publish_promotion_operating_surface",
+    "opl_candidate_domain_backlog",
     "opl_gateway_example_corpus",
     "opl_routed_safety_example_corpus",
     "opl_operating_example_corpus",
@@ -120,6 +123,7 @@
         "opl_roadmap",
         "opl_federation_contract",
         "opl_gateway_contract_hub",
+        "opl_candidate_domain_backlog",
         "opl_public_surface_index_doc"
       ],
       "cross_domain_wording_check": "shared_gate_required",
@@ -172,10 +176,12 @@
         "p14_surface_lifecycle_map_integrity",
         "p15_surface_authority_matrix_integrity",
         "p16_surface_review_matrix_integrity",
+        "p18_candidate_domain_backlog_integrity",
         "cross_domain_wording_consistency"
       ],
       "required_companion_surfaces": [
         "opl_federation_contract",
+        "opl_candidate_domain_backlog",
         "opl_gateway_acceptance_spec",
         "opl_surface_lifecycle_map",
         "opl_surface_authority_matrix",
@@ -247,8 +253,8 @@
       ],
       "required_companion_surfaces": [
         "opl_gateway_contract_hub",
-        "opl_read_only_discovery_gateway",
-        "opl_routed_action_gateway",
+        "opl_candidate_domain_backlog",
+        "opl_task_map",
         "opl_public_surface_index_doc"
       ],
       "cross_domain_wording_check": "local_review_required",
@@ -257,6 +263,33 @@
         "docs/opl-domain-onboarding-contract.md",
         "docs/opl-domain-onboarding-contract.zh-CN.md",
         "contracts/opl-gateway/domain-onboarding-readiness.schema.json"
+      ]
+    },
+    {
+      "surface_id": "opl_candidate_domain_backlog",
+      "owner_scope": "opl",
+      "surface_role": "reference_candidate_backlog",
+      "human_review_required": true,
+      "required_acceptance_gates": [
+        "p18_candidate_domain_backlog_integrity",
+        "cross_domain_wording_consistency"
+      ],
+      "required_companion_surfaces": [
+        "opl_task_map",
+        "opl_domain_onboarding_contract",
+        "opl_gateway_contract_hub",
+        "opl_gateway_acceptance_spec",
+        "opl_public_surface_index_doc"
+      ],
+      "cross_domain_wording_check": "shared_gate_required",
+      "publishability_stage": "supporting_reference_aligned",
+      "governing_refs": [
+        "docs/opl-candidate-domain-backlog.md",
+        "docs/opl-candidate-domain-backlog.zh-CN.md",
+        "contracts/opl-gateway/candidate-domain-backlog.json",
+        "contracts/opl-gateway/task-topology.json",
+        "docs/opl-domain-onboarding-contract.md",
+        "docs/opl-domain-onboarding-contract.zh-CN.md"
       ]
     },
     {
@@ -458,10 +491,12 @@
       "required_acceptance_gates": [
         "p8_public_surface_index_integrity",
         "p16_surface_review_matrix_integrity",
+        "p18_candidate_domain_backlog_integrity",
         "cross_domain_wording_consistency"
       ],
       "required_companion_surfaces": [
         "opl_gateway_contract_hub",
+        "opl_candidate_domain_backlog",
         "opl_gateway_acceptance_spec",
         "opl_surface_lifecycle_map",
         "opl_surface_authority_matrix",
@@ -495,10 +530,12 @@
         "p14_surface_lifecycle_map_integrity",
         "p15_surface_authority_matrix_integrity",
         "p16_surface_review_matrix_integrity",
+        "p18_candidate_domain_backlog_integrity",
         "cross_domain_wording_consistency"
       ],
       "required_companion_surfaces": [
         "opl_gateway_contract_hub",
+        "opl_candidate_domain_backlog",
         "opl_public_surface_index_doc",
         "opl_surface_lifecycle_map",
         "opl_surface_authority_matrix",

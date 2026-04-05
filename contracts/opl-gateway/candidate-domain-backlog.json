@@ -1,0 +1,758 @@
+{
+  "version": "p18.m1",
+  "scope": "opl_candidate_domain_backlog",
+  "description": "Machine-readable reference backlog for the current under-definition OPL workstreams. It records which boundary materials are still missing before Grant Ops, Thesis Ops, and Review Ops can be formally admitted through the domain-onboarding gate.",
+  "non_goals": [
+    "domain_admission_registry",
+    "discovery_target_registry",
+    "routed_action_target_registry",
+    "runtime_planner"
+  ],
+  "backlog_rules": [
+    "entries stay reference-only and enumerate missing boundary materials only",
+    "entries do not assign future domain ids or expand the admitted G1 registry",
+    "entries do not create G2 discovery readiness or G3 routed-action readiness",
+    "package-level blockers align to the onboarding package requirements in the domain-onboarding contract",
+    "check-level blockers align to the formal inclusion gate in the domain-onboarding contract",
+    "the backlog may reference top-level task semantics without admitting new domains"
+  ],
+  "required_package_ids": [
+    "registry_material",
+    "public_documentation",
+    "truth_ownership",
+    "review_surfaces",
+    "discovery_routing_readiness",
+    "cross_domain_wording"
+  ],
+  "formal_inclusion_check_ids": [
+    "registry_complete",
+    "boundary_explicit",
+    "truth_ownership_explicit",
+    "discovery_ready",
+    "routing_ready",
+    "review_ready",
+    "cross_domain_wording_aligned"
+  ],
+  "candidate_workstreams": [
+    {
+      "workstream_id": "grant_ops",
+      "label": "Grant Ops",
+      "task_topology_state": {
+        "boundary_state": "under_definition",
+        "registry_state": "not_registered",
+        "routing_state": "unknown_domain_only",
+        "current_domain_id": null,
+        "entry_surface": null,
+        "formal_domain_required": true
+      },
+      "top_level_signal_refs": [
+        "contracts/opl-gateway/task-topology.json#workstreams/grant_ops",
+        "docs/task-map.md#grant-ops",
+        "docs/task-map.zh-CN.md#grant-ops"
+      ],
+      "admission_status": "blocked",
+      "readiness_flags": {
+        "discovery_ready": false,
+        "routing_ready": false,
+        "handoff_ready": false,
+        "formal_inclusion_ready": false
+      },
+      "candidate_domain_boundary": {
+        "candidate_domain_id": null,
+        "candidate_gateway_surface": null,
+        "candidate_harness_surface": null
+      },
+      "required_onboarding_materials": [
+        {
+          "package_id": "registry_material",
+          "status": "missing",
+          "required_evidence": [
+            "future Grant Ops domain registry entry with explicit gateway_surface, harness_surface, owned_workstreams, non_opl_families, and canonical_truth_owner",
+            "Grant Ops workstream registry entry or ownership transfer entry aligned to the future domain gateway",
+            "routing vocabulary impact statement for grant-direction, proposal, review-simulation, and revision deliverables"
+          ],
+          "forbidden_shortcuts": [
+            "assign_future_domain_id_early",
+            "expand_g1_registry_without_boundary_package"
+          ]
+        },
+        {
+          "package_id": "public_documentation",
+          "status": "missing",
+          "required_evidence": [
+            "public domain README or equivalent gateway entry for the future Grant Ops domain",
+            "explicit domain-gateway-above-harness statement",
+            "public explanation of Grant Ops workstream ownership, deliverable objects, and review semantics"
+          ],
+          "forbidden_shortcuts": [
+            "placeholder_domain_name_only",
+            "internal_module_framing"
+          ]
+        },
+        {
+          "package_id": "truth_ownership",
+          "status": "missing",
+          "required_evidence": [
+            "explicit declaration of proposal, review-simulation, and revision-trace truth owned by the future domain",
+            "explicit list of what OPL may index versus what it may not claim as canonical truth"
+          ],
+          "forbidden_shortcuts": [
+            "implicit_truth_transfer_to_opl",
+            "leave_canonical_truth_unspecified"
+          ]
+        },
+        {
+          "package_id": "review_surfaces",
+          "status": "missing",
+          "required_evidence": [
+            "human review surfaces for proposal and review-simulation outputs",
+            "publish/release or equivalent quality-gate surfaces inside the future domain"
+          ],
+          "forbidden_shortcuts": [
+            "execution_claim_without_review_surface",
+            "treat_opl_review_matrix_as_domain_review_owner"
+          ]
+        },
+        {
+          "package_id": "discovery_routing_readiness",
+          "status": "missing",
+          "required_evidence": [
+            "read-only discovery entry that points Grant Ops to the future domain gateway",
+            "explicit routed-action evidence and handoff evidence for Grant Ops -> future domain gateway with no harness bypass"
+          ],
+          "forbidden_shortcuts": [
+            "promote_to_g2_without_domain_gateway",
+            "promote_to_g3_without_explicit_route_evidence",
+            "bypass_domain_gateway_to_harness"
+          ]
+        },
+        {
+          "package_id": "cross_domain_wording",
+          "status": "missing",
+          "required_evidence": [
+            "aligned top-level role language between OPL public docs and the future Grant Ops domain public docs"
+          ],
+          "forbidden_shortcuts": [
+            "prose_only_role_guesswork",
+            "admitted_domain_wording_before_boundary_freeze"
+          ]
+        }
+      ],
+      "missing_boundary_materials": [
+        {
+          "maps_to_formal_inclusion_check": "registry_complete",
+          "package_id": "registry_material",
+          "status": "missing",
+          "required_evidence": [
+            "complete future domain registry package for Grant Ops",
+            "complete workstream registry package for Grant Ops",
+            "explicit routing-vocabulary impact statement"
+          ],
+          "forbidden_shortcuts": [
+            "assign_future_domain_id_early",
+            "expand_g1_registry_without_boundary_package"
+          ]
+        },
+        {
+          "maps_to_formal_inclusion_check": "boundary_explicit",
+          "package_id": "public_documentation",
+          "status": "missing",
+          "required_evidence": [
+            "public gateway entry that makes the future Grant Ops domain boundary legible without runtime guesswork"
+          ],
+          "forbidden_shortcuts": [
+            "placeholder_domain_name_only",
+            "internal_module_framing"
+          ]
+        },
+        {
+          "maps_to_formal_inclusion_check": "truth_ownership_explicit",
+          "package_id": "truth_ownership",
+          "status": "missing",
+          "required_evidence": [
+            "explicit truth-ownership declaration for proposal, simulation, and revision records"
+          ],
+          "forbidden_shortcuts": [
+            "implicit_truth_transfer_to_opl",
+            "leave_canonical_truth_unspecified"
+          ]
+        },
+        {
+          "maps_to_formal_inclusion_check": "discovery_ready",
+          "package_id": "discovery_routing_readiness",
+          "status": "missing",
+          "required_evidence": [
+            "G2 discovery surface that points Grant Ops to the future domain gateway entry"
+          ],
+          "forbidden_shortcuts": [
+            "promote_to_g2_without_domain_gateway",
+            "promote_to_g3_without_explicit_route_evidence",
+            "bypass_domain_gateway_to_harness"
+          ]
+        },
+        {
+          "maps_to_formal_inclusion_check": "routing_ready",
+          "package_id": "discovery_routing_readiness",
+          "status": "missing",
+          "required_evidence": [
+            "G3 routing evidence and stable handoff boundary for Grant Ops -> future domain gateway"
+          ],
+          "forbidden_shortcuts": [
+            "promote_to_g2_without_domain_gateway",
+            "promote_to_g3_without_explicit_route_evidence",
+            "bypass_domain_gateway_to_harness"
+          ]
+        },
+        {
+          "maps_to_formal_inclusion_check": "review_ready",
+          "package_id": "review_surfaces",
+          "status": "missing",
+          "required_evidence": [
+            "domain-owned review surfaces and quality gates for Grant Ops outputs"
+          ],
+          "forbidden_shortcuts": [
+            "execution_claim_without_review_surface",
+            "treat_opl_review_matrix_as_domain_review_owner"
+          ]
+        },
+        {
+          "maps_to_formal_inclusion_check": "cross_domain_wording_aligned",
+          "package_id": "cross_domain_wording",
+          "status": "missing",
+          "required_evidence": [
+            "aligned OPL/domain wording for the future Grant Ops role"
+          ],
+          "forbidden_shortcuts": [
+            "prose_only_role_guesswork",
+            "admitted_domain_wording_before_boundary_freeze"
+          ]
+        }
+      ],
+      "formal_inclusion_gate": {
+        "registry_complete": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "registry_material"
+          ]
+        },
+        "boundary_explicit": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "public_documentation"
+          ]
+        },
+        "truth_ownership_explicit": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "truth_ownership"
+          ]
+        },
+        "discovery_ready": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "discovery_routing_readiness"
+          ]
+        },
+        "routing_ready": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "discovery_routing_readiness"
+          ]
+        },
+        "review_ready": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "review_surfaces"
+          ]
+        },
+        "cross_domain_wording_aligned": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "cross_domain_wording"
+          ]
+        }
+      },
+      "notes": "Top-level semantics are explicit, but the future Grant Ops domain boundary package is still incomplete."
+    },
+    {
+      "workstream_id": "thesis_ops",
+      "label": "Thesis Ops",
+      "task_topology_state": {
+        "boundary_state": "under_definition",
+        "registry_state": "not_registered",
+        "routing_state": "unknown_domain_only",
+        "current_domain_id": null,
+        "entry_surface": null,
+        "formal_domain_required": true
+      },
+      "top_level_signal_refs": [
+        "contracts/opl-gateway/task-topology.json#workstreams/thesis_ops",
+        "docs/task-map.md#thesis-ops",
+        "docs/task-map.zh-CN.md#thesis-ops"
+      ],
+      "admission_status": "blocked",
+      "readiness_flags": {
+        "discovery_ready": false,
+        "routing_ready": false,
+        "handoff_ready": false,
+        "formal_inclusion_ready": false
+      },
+      "candidate_domain_boundary": {
+        "candidate_domain_id": null,
+        "candidate_gateway_surface": null,
+        "candidate_harness_surface": null
+      },
+      "required_onboarding_materials": [
+        {
+          "package_id": "registry_material",
+          "status": "missing",
+          "required_evidence": [
+            "future Thesis Ops domain registry entry with explicit gateway_surface, harness_surface, owned_workstreams, non_opl_families, and canonical_truth_owner",
+            "Thesis Ops workstream registry entry or ownership transfer entry aligned to the future domain gateway",
+            "routing vocabulary impact statement for chapter drafting, cross-chapter synchronization, and defense-preparation deliverables"
+          ],
+          "forbidden_shortcuts": [
+            "assign_future_domain_id_early",
+            "expand_g1_registry_without_boundary_package"
+          ]
+        },
+        {
+          "package_id": "public_documentation",
+          "status": "missing",
+          "required_evidence": [
+            "public domain README or equivalent gateway entry for the future Thesis Ops domain",
+            "explicit domain-gateway-above-harness statement",
+            "public explanation of Thesis Ops workstream ownership, deliverable objects, and review semantics"
+          ],
+          "forbidden_shortcuts": [
+            "placeholder_domain_name_only",
+            "internal_module_framing"
+          ]
+        },
+        {
+          "package_id": "truth_ownership",
+          "status": "missing",
+          "required_evidence": [
+            "explicit declaration of chapter-draft, cross-chapter synchronization, and defense-preparation truth owned by the future domain",
+            "explicit list of what OPL may index versus what it may not claim as canonical truth"
+          ],
+          "forbidden_shortcuts": [
+            "implicit_truth_transfer_to_opl",
+            "leave_canonical_truth_unspecified"
+          ]
+        },
+        {
+          "package_id": "review_surfaces",
+          "status": "missing",
+          "required_evidence": [
+            "human review surfaces for chapter-draft and defense-preparation outputs",
+            "publish/release or equivalent quality-gate surfaces inside the future domain"
+          ],
+          "forbidden_shortcuts": [
+            "execution_claim_without_review_surface",
+            "treat_opl_review_matrix_as_domain_review_owner"
+          ]
+        },
+        {
+          "package_id": "discovery_routing_readiness",
+          "status": "missing",
+          "required_evidence": [
+            "read-only discovery entry that points Thesis Ops to the future domain gateway",
+            "explicit routed-action evidence and handoff evidence for Thesis Ops -> future domain gateway with no harness bypass"
+          ],
+          "forbidden_shortcuts": [
+            "promote_to_g2_without_domain_gateway",
+            "promote_to_g3_without_explicit_route_evidence",
+            "bypass_domain_gateway_to_harness"
+          ]
+        },
+        {
+          "package_id": "cross_domain_wording",
+          "status": "missing",
+          "required_evidence": [
+            "aligned top-level role language between OPL public docs and the future Thesis Ops domain public docs"
+          ],
+          "forbidden_shortcuts": [
+            "prose_only_role_guesswork",
+            "admitted_domain_wording_before_boundary_freeze"
+          ]
+        }
+      ],
+      "missing_boundary_materials": [
+        {
+          "maps_to_formal_inclusion_check": "registry_complete",
+          "package_id": "registry_material",
+          "status": "missing",
+          "required_evidence": [
+            "complete future domain registry package for Thesis Ops",
+            "complete workstream registry package for Thesis Ops",
+            "explicit routing-vocabulary impact statement"
+          ],
+          "forbidden_shortcuts": [
+            "assign_future_domain_id_early",
+            "expand_g1_registry_without_boundary_package"
+          ]
+        },
+        {
+          "maps_to_formal_inclusion_check": "boundary_explicit",
+          "package_id": "public_documentation",
+          "status": "missing",
+          "required_evidence": [
+            "public gateway entry that makes the future Thesis Ops domain boundary legible without runtime guesswork"
+          ],
+          "forbidden_shortcuts": [
+            "placeholder_domain_name_only",
+            "internal_module_framing"
+          ]
+        },
+        {
+          "maps_to_formal_inclusion_check": "truth_ownership_explicit",
+          "package_id": "truth_ownership",
+          "status": "missing",
+          "required_evidence": [
+            "explicit truth-ownership declaration for thesis drafting, synchronization, and defense-preparation records"
+          ],
+          "forbidden_shortcuts": [
+            "implicit_truth_transfer_to_opl",
+            "leave_canonical_truth_unspecified"
+          ]
+        },
+        {
+          "maps_to_formal_inclusion_check": "discovery_ready",
+          "package_id": "discovery_routing_readiness",
+          "status": "missing",
+          "required_evidence": [
+            "G2 discovery surface that points Thesis Ops to the future domain gateway entry"
+          ],
+          "forbidden_shortcuts": [
+            "promote_to_g2_without_domain_gateway",
+            "promote_to_g3_without_explicit_route_evidence",
+            "bypass_domain_gateway_to_harness"
+          ]
+        },
+        {
+          "maps_to_formal_inclusion_check": "routing_ready",
+          "package_id": "discovery_routing_readiness",
+          "status": "missing",
+          "required_evidence": [
+            "G3 routing evidence and stable handoff boundary for Thesis Ops -> future domain gateway"
+          ],
+          "forbidden_shortcuts": [
+            "promote_to_g2_without_domain_gateway",
+            "promote_to_g3_without_explicit_route_evidence",
+            "bypass_domain_gateway_to_harness"
+          ]
+        },
+        {
+          "maps_to_formal_inclusion_check": "review_ready",
+          "package_id": "review_surfaces",
+          "status": "missing",
+          "required_evidence": [
+            "domain-owned review surfaces and quality gates for Thesis Ops outputs"
+          ],
+          "forbidden_shortcuts": [
+            "execution_claim_without_review_surface",
+            "treat_opl_review_matrix_as_domain_review_owner"
+          ]
+        },
+        {
+          "maps_to_formal_inclusion_check": "cross_domain_wording_aligned",
+          "package_id": "cross_domain_wording",
+          "status": "missing",
+          "required_evidence": [
+            "aligned OPL/domain wording for the future Thesis Ops role"
+          ],
+          "forbidden_shortcuts": [
+            "prose_only_role_guesswork",
+            "admitted_domain_wording_before_boundary_freeze"
+          ]
+        }
+      ],
+      "formal_inclusion_gate": {
+        "registry_complete": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "registry_material"
+          ]
+        },
+        "boundary_explicit": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "public_documentation"
+          ]
+        },
+        "truth_ownership_explicit": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "truth_ownership"
+          ]
+        },
+        "discovery_ready": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "discovery_routing_readiness"
+          ]
+        },
+        "routing_ready": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "discovery_routing_readiness"
+          ]
+        },
+        "review_ready": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "review_surfaces"
+          ]
+        },
+        "cross_domain_wording_aligned": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "cross_domain_wording"
+          ]
+        }
+      },
+      "notes": "Top-level semantics are explicit, but the future Thesis Ops domain boundary package is still incomplete."
+    },
+    {
+      "workstream_id": "review_ops",
+      "label": "Review Ops",
+      "task_topology_state": {
+        "boundary_state": "under_definition",
+        "registry_state": "not_registered",
+        "routing_state": "unknown_domain_only",
+        "current_domain_id": null,
+        "entry_surface": null,
+        "formal_domain_required": true
+      },
+      "top_level_signal_refs": [
+        "contracts/opl-gateway/task-topology.json#workstreams/review_ops",
+        "docs/task-map.md#review-ops",
+        "docs/task-map.zh-CN.md#review-ops"
+      ],
+      "admission_status": "blocked",
+      "readiness_flags": {
+        "discovery_ready": false,
+        "routing_ready": false,
+        "handoff_ready": false,
+        "formal_inclusion_ready": false
+      },
+      "candidate_domain_boundary": {
+        "candidate_domain_id": null,
+        "candidate_gateway_surface": null,
+        "candidate_harness_surface": null
+      },
+      "required_onboarding_materials": [
+        {
+          "package_id": "registry_material",
+          "status": "missing",
+          "required_evidence": [
+            "future Review Ops domain registry entry with explicit gateway_surface, harness_surface, owned_workstreams, non_opl_families, and canonical_truth_owner",
+            "Review Ops workstream registry entry or ownership transfer entry aligned to the future domain gateway",
+            "routing vocabulary impact statement for review reports, rebuttal plans, and revision-route deliverables"
+          ],
+          "forbidden_shortcuts": [
+            "assign_future_domain_id_early",
+            "expand_g1_registry_without_boundary_package"
+          ]
+        },
+        {
+          "package_id": "public_documentation",
+          "status": "missing",
+          "required_evidence": [
+            "public domain README or equivalent gateway entry for the future Review Ops domain",
+            "explicit domain-gateway-above-harness statement",
+            "public explanation of Review Ops workstream ownership, deliverable objects, and review semantics"
+          ],
+          "forbidden_shortcuts": [
+            "placeholder_domain_name_only",
+            "internal_module_framing"
+          ]
+        },
+        {
+          "package_id": "truth_ownership",
+          "status": "missing",
+          "required_evidence": [
+            "explicit declaration of review-report, comment-structure, rebuttal, and revision-route truth owned by the future domain",
+            "explicit list of what OPL may index versus what it may not claim as canonical truth"
+          ],
+          "forbidden_shortcuts": [
+            "implicit_truth_transfer_to_opl",
+            "leave_canonical_truth_unspecified"
+          ]
+        },
+        {
+          "package_id": "review_surfaces",
+          "status": "missing",
+          "required_evidence": [
+            "human review surfaces for review reports and rebuttal-planning outputs",
+            "publish/release or equivalent quality-gate surfaces inside the future domain"
+          ],
+          "forbidden_shortcuts": [
+            "execution_claim_without_review_surface",
+            "treat_opl_review_matrix_as_domain_review_owner"
+          ]
+        },
+        {
+          "package_id": "discovery_routing_readiness",
+          "status": "missing",
+          "required_evidence": [
+            "read-only discovery entry that points Review Ops to the future domain gateway",
+            "explicit routed-action evidence and handoff evidence for Review Ops -> future domain gateway with no harness bypass"
+          ],
+          "forbidden_shortcuts": [
+            "promote_to_g2_without_domain_gateway",
+            "promote_to_g3_without_explicit_route_evidence",
+            "bypass_domain_gateway_to_harness"
+          ]
+        },
+        {
+          "package_id": "cross_domain_wording",
+          "status": "missing",
+          "required_evidence": [
+            "aligned top-level role language between OPL public docs and the future Review Ops domain public docs"
+          ],
+          "forbidden_shortcuts": [
+            "prose_only_role_guesswork",
+            "admitted_domain_wording_before_boundary_freeze"
+          ]
+        }
+      ],
+      "missing_boundary_materials": [
+        {
+          "maps_to_formal_inclusion_check": "registry_complete",
+          "package_id": "registry_material",
+          "status": "missing",
+          "required_evidence": [
+            "complete future domain registry package for Review Ops",
+            "complete workstream registry package for Review Ops",
+            "explicit routing-vocabulary impact statement"
+          ],
+          "forbidden_shortcuts": [
+            "assign_future_domain_id_early",
+            "expand_g1_registry_without_boundary_package"
+          ]
+        },
+        {
+          "maps_to_formal_inclusion_check": "boundary_explicit",
+          "package_id": "public_documentation",
+          "status": "missing",
+          "required_evidence": [
+            "public gateway entry that makes the future Review Ops domain boundary legible without runtime guesswork"
+          ],
+          "forbidden_shortcuts": [
+            "placeholder_domain_name_only",
+            "internal_module_framing"
+          ]
+        },
+        {
+          "maps_to_formal_inclusion_check": "truth_ownership_explicit",
+          "package_id": "truth_ownership",
+          "status": "missing",
+          "required_evidence": [
+            "explicit truth-ownership declaration for review reports, comment structure, rebuttal, and revision-route records"
+          ],
+          "forbidden_shortcuts": [
+            "implicit_truth_transfer_to_opl",
+            "leave_canonical_truth_unspecified"
+          ]
+        },
+        {
+          "maps_to_formal_inclusion_check": "discovery_ready",
+          "package_id": "discovery_routing_readiness",
+          "status": "missing",
+          "required_evidence": [
+            "G2 discovery surface that points Review Ops to the future domain gateway entry"
+          ],
+          "forbidden_shortcuts": [
+            "promote_to_g2_without_domain_gateway",
+            "promote_to_g3_without_explicit_route_evidence",
+            "bypass_domain_gateway_to_harness"
+          ]
+        },
+        {
+          "maps_to_formal_inclusion_check": "routing_ready",
+          "package_id": "discovery_routing_readiness",
+          "status": "missing",
+          "required_evidence": [
+            "G3 routing evidence and stable handoff boundary for Review Ops -> future domain gateway"
+          ],
+          "forbidden_shortcuts": [
+            "promote_to_g2_without_domain_gateway",
+            "promote_to_g3_without_explicit_route_evidence",
+            "bypass_domain_gateway_to_harness"
+          ]
+        },
+        {
+          "maps_to_formal_inclusion_check": "review_ready",
+          "package_id": "review_surfaces",
+          "status": "missing",
+          "required_evidence": [
+            "domain-owned review surfaces and quality gates for Review Ops outputs"
+          ],
+          "forbidden_shortcuts": [
+            "execution_claim_without_review_surface",
+            "treat_opl_review_matrix_as_domain_review_owner"
+          ]
+        },
+        {
+          "maps_to_formal_inclusion_check": "cross_domain_wording_aligned",
+          "package_id": "cross_domain_wording",
+          "status": "missing",
+          "required_evidence": [
+            "aligned OPL/domain wording for the future Review Ops role"
+          ],
+          "forbidden_shortcuts": [
+            "prose_only_role_guesswork",
+            "admitted_domain_wording_before_boundary_freeze"
+          ]
+        }
+      ],
+      "formal_inclusion_gate": {
+        "registry_complete": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "registry_material"
+          ]
+        },
+        "boundary_explicit": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "public_documentation"
+          ]
+        },
+        "truth_ownership_explicit": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "truth_ownership"
+          ]
+        },
+        "discovery_ready": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "discovery_routing_readiness"
+          ]
+        },
+        "routing_ready": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "discovery_routing_readiness"
+          ]
+        },
+        "review_ready": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "review_surfaces"
+          ]
+        },
+        "cross_domain_wording_aligned": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "cross_domain_wording"
+          ]
+        }
+      },
+      "notes": "Top-level semantics are explicit, but the future Review Ops domain boundary package is still incomplete."
+    }
+  ]
+}

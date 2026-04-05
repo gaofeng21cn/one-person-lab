@@ -19,6 +19,8 @@ It freezes machine-readable gateway surfaces that later discovery and routed-act
 - [OPL Governance / Audit Operating Surface（中文）](../../docs/opl-governance-audit-operating-surface.zh-CN.md)
 - [OPL Publish / Promotion Operating Surface](../../docs/opl-publish-promotion-operating-surface.md)
 - [OPL Publish / Promotion Operating Surface（中文）](../../docs/opl-publish-promotion-operating-surface.zh-CN.md)
+- [OPL Candidate Domain Backlog](../../docs/opl-candidate-domain-backlog.md)
+- [OPL Candidate Domain Backlog（中文）](../../docs/opl-candidate-domain-backlog.zh-CN.md)
 - [OPL Gateway Acceptance Test Spec](../../docs/opl-gateway-acceptance-test-spec.md)
 - [OPL Gateway Acceptance Test Spec（中文）](../../docs/opl-gateway-acceptance-test-spec.zh-CN.md)
 - [OPL Gateway Rollout](../../docs/opl-gateway-rollout.md)
@@ -39,11 +41,12 @@ These corpora are companion references only. They do not replace the governing c
 
 ## Companion reference surfaces
 
+- [OPL Candidate Domain Backlog](../../docs/opl-candidate-domain-backlog.md) — reference-only machine-readable admission-blocker backlog for the current under-definition workstreams
 - [OPL Surface Lifecycle Map](../../docs/opl-surface-lifecycle-map.md) — derived machine-readable lifecycle view across the frozen gateway / operating / supporting surfaces
 - [OPL Surface Authority Matrix](../../docs/opl-surface-authority-matrix.md) — derived machine-readable authority split across the frozen OPL surfaces and linked domain public-entry surfaces
 - [OPL Surface Review Matrix](../../docs/opl-surface-review-matrix.md) — derived machine-readable review obligations across the frozen OPL public, contract, and supporting surfaces
 
-These mapping surfaces are reference-only. They do not become a workflow engine, transition authority, authorization engine, approval engine, publish controller, or replacement for the governing contracts in this directory.
+These backlog and mapping surfaces are reference-only. They do not become a workflow engine, transition authority, authorization engine, approval engine, publish controller, or replacement for the governing contracts in this directory.
 
 ## Files
 
@@ -58,6 +61,7 @@ These mapping surfaces are reference-only. They do not become a workflow engine,
 - [`acceptance-matrix.json`](./acceptance-matrix.json) — declarative acceptance matrix for the frozen gateway and operating surfaces
 - [`public-surface-index.json`](./public-surface-index.json) — machine-readable index of current authoritative OPL public surfaces and linked domain public entries
 - [`task-topology.json`](./task-topology.json) — machine-readable top-level task topology across admitted and under-definition OPL workstreams
+- [`candidate-domain-backlog.json`](./candidate-domain-backlog.json) — machine-readable admission-blocker backlog for the current under-definition workstreams
 - [`operating-record-catalog.json`](./operating-record-catalog.json) — machine-readable reference catalog for the frozen P5.M1 / P5.M2 operating record kinds
 - [`surface-lifecycle-map.json`](./surface-lifecycle-map.json) — machine-readable derived lifecycle map for the frozen gateway / operating / supporting surfaces
 - [`surface-authority-matrix.json`](./surface-authority-matrix.json) — machine-readable derived authority matrix for the frozen OPL surfaces and linked domain public-entry surfaces
@@ -84,6 +88,7 @@ This directory includes:
 
 - admitted registry / contract artifacts for the workstreams and domains whose boundaries are already frozen in the public G1 contract
 - derived / reference-only task-topology material that may mention under-definition workstreams without admitting them into `G1`, `G2`, or `G3`
+- derived / reference-only candidate-domain backlog material that records missing admission boundaries without inventing placeholder domains or routed targets
 
 Planned workstreams such as `Grant Ops`, `Review Ops`, and `Thesis Ops` remain outside the admitted registry / discovery / routing surfaces until their domain boundaries are explicitly frozen.
 

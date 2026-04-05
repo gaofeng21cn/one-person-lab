@@ -51,6 +51,7 @@ These surfaces freeze the gateway and federation boundary:
 These surfaces improve review and discoverability without becoming execution layers:
 
 - Acceptance test spec
+- Candidate-domain backlog
 - Gateway example corpus
 - Routed-safety example corpus
 - Operating example corpus
@@ -72,6 +73,7 @@ Important boundary:
 - `ppt_deck` directly maps to `presentation_ops`
 - `xiaohongshu` may still route to `redcube`, but does not automatically equal `presentation_ops`
 - `Grant Ops`, `Review Ops`, and `Thesis Ops` may appear in the task map as under-definition workstreams, but that does not make them admitted domains or routed targets
+- the current admission blockers for those under-definition workstreams live in the candidate-domain backlog and remain below the onboarding gate
 
 ## Reading Rule
 
@@ -80,6 +82,7 @@ Read this index as a **surface map**, not as an execution registry.
 If a surface is domain-owned, `OPL` only indexes its public entry role.
 Canonical runtime truth, review truth, release truth, and submission truth remain inside the owning domain system.
 If a surface is `opl_task_map`, under-definition workstreams remain top-level semantic candidates only until the onboarding and registry gates are satisfied.
+If a surface is `opl_candidate_domain_backlog`, it remains an admission-blocker reference only and does not count as onboarding readiness, discovery readiness, or routed-action readiness.
 
 ## Governing Gateway Documents
 
@@ -95,6 +98,7 @@ These supporting surfaces improve discoverability and reviewability only.
 They do not become governing gateway surfaces.
 
 - [OPL Gateway Example Corpus](./opl-gateway-example-corpus.md)
+- [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md)
 - [OPL Routed-Safety Example Corpus](./opl-routed-safety-example-corpus.md)
 - [OPL Operating Example Corpus](./opl-operating-example-corpus.md)
 - [OPL Operating Record Catalog](./opl-operating-record-catalog.md)
@@ -111,6 +115,7 @@ The public surface index is acceptable only when:
 - it exposes the derived surface lifecycle map as a supporting/reference surface
 - it exposes the derived surface authority matrix as a supporting/reference surface
 - it exposes the derived surface review matrix as a supporting/reference surface
+- it exposes the candidate-domain backlog as a supporting/reference surface below the onboarding gate
 - it exposes the task-map / task-topology surface without turning under-definition workstreams into admitted domains
 - it does not imply a launcher, runtime, or harness bypass
 - it does not move canonical truth into `OPL`

@@ -45,6 +45,7 @@ Each entry stays derived/reference-only and carries only:
 - `opl_read_only_discovery_gateway`
 - `opl_routed_action_gateway`
 - `opl_domain_onboarding_contract`
+- `opl_candidate_domain_backlog`
 - `opl_governance_audit_operating_surface`
 - `opl_publish_promotion_operating_surface`
 - `opl_gateway_example_corpus`
@@ -67,6 +68,7 @@ Read this matrix as a **derived authority split**, not as an execution or author
 When `owner_scope = opl`, the matrix may still expose routing, indexing, discoverability, or acceptance responsibility, but execution authority and domain truth/review/publication authority stay outside `OPL`.
 When `owner_scope = domain`, the entry marks where domain-local routing and harness execution begin behind the domain gateway boundary.
 If a follow-on surface exists, the only allowed value remains `domain_gateway`.
+If the surface is `opl_candidate_domain_backlog`, every authority field remains `none`; the backlog does not grant pre-admission authority over a future domain.
 
 ## Companion Mapping Surfaces
 
@@ -78,6 +80,8 @@ If a follow-on surface exists, the only allowed value remains `domain_gateway`.
 - [OPL Federation Contract](./opl-federation-contract.md)
 - [OPL Read-Only Discovery Gateway](./opl-read-only-discovery-gateway.md)
 - [OPL Routed Action Gateway](./opl-routed-action-gateway.md)
+- [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.md)
+- [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md)
 - [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.md)
 - [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.md)
 - [OPL Public Surface Index](./opl-public-surface-index.md)

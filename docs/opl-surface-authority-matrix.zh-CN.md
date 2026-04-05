@@ -19,7 +19,7 @@
 - 授权动作执行
 - 替代 governing contracts 或 schemas
 - 把 domain-owned execution、truth、review 或 publication authority 上收给 `OPL`
-- 把 domain public-entry surface 写成 OPL internal module
+- 把 domain public-entry surface 写成 OPL 的内部模块
 
 ## Authority 字段
 
@@ -45,6 +45,7 @@
 - `opl_read_only_discovery_gateway`
 - `opl_routed_action_gateway`
 - `opl_domain_onboarding_contract`
+- `opl_candidate_domain_backlog`
 - `opl_governance_audit_operating_surface`
 - `opl_publish_promotion_operating_surface`
 - `opl_gateway_example_corpus`
@@ -64,9 +65,10 @@
 
 这张 matrix 必须被理解成 **derived authority split**，而不是 execution contract 或 authorization contract。
 
-只要 `owner_scope = opl`，它最多只是暴露 routing、indexing、discoverability 或 acceptance 责任，execution authority 与 domain truth/review/publication authority 仍然留在 `OPL` 之外。
-只要 `owner_scope = domain`，这个 entry 就是在标记：domain-local routing 与 harness execution 从 domain gateway 边界之后开始。
-如果某个 surface 还保留 follow-on surface，唯一允许的值仍然是 `domain_gateway`。
+当 `owner_scope = opl` 时，这张 matrix 可以暴露 routing、indexing、discoverability 或 acceptance 责任，但 execution authority 与 domain truth/review/publication authority 仍留在 `OPL` 之外。
+当 `owner_scope = domain` 时，对应 entry 只是在标记：domain-local routing 与 harness execution 从哪里开始，且它们都位于 domain gateway 边界之后。
+如果存在 follow-on surface，允许值也仍然只有 `domain_gateway`。
+如果某个 surface 是 `opl_candidate_domain_backlog`，那么所有 authority 字段都仍然只能是 `none`；这份 backlog 不会给未来 domain 预分配 authority。
 
 ## 配套 Mapping Surfaces
 
@@ -78,6 +80,8 @@
 - [OPL Federation Contract](./opl-federation-contract.zh-CN.md)
 - [OPL 只读 Discovery Gateway](./opl-read-only-discovery-gateway.zh-CN.md)
 - [OPL Routed Action Gateway](./opl-routed-action-gateway.zh-CN.md)
+- [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.zh-CN.md)
+- [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.zh-CN.md)
 - [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.zh-CN.md)
 - [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.zh-CN.md)
 - [OPL Public Surface Index](./opl-public-surface-index.zh-CN.md)
@@ -88,9 +92,9 @@
 
 只有当下面这些条件都成立时，authority matrix 才算合格：
 
-- 它覆盖当前 authority review 所需的已冻结 OPL surface 与 linked domain public-entry surface
-- 每个 `governing_ref` 都能解析到存在的本地工件
-- `OPL` surfaces 不会声称自己拥有 domain execution、canonical-truth、review-truth 或 publication-truth authority
-- linked domain public-entry surfaces 仍保持 domain-owned，不会坍缩成 OPL internal module
-- 它能与 lifecycle map、surface review matrix 一起被发现，同时不会升级成 approval surface 或 execution surface
+- 它覆盖当前 authority review 所需的已冻结 OPL surface，加上 linked domain public-entry surface
+- 每个 `governing_ref` 都能解析到本地存在的工件
+- `OPL` surface 从不宣称 domain execution authority、canonical-truth authority、review-truth authority 或 publication-truth authority
+- linked domain public-entry surface 仍保持 domain-owned，不会塌缩成 OPL 内部模块
+- 它能与 lifecycle map、surface review matrix 一起被发现，但不会升级成 approval surface 或 execution surface
 - 它保持 derived、reference-only、non-executing

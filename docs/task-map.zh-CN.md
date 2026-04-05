@@ -18,9 +18,16 @@
 ## 机器可读配套工件
 
 - [`../contracts/opl-gateway/task-topology.json`](../contracts/opl-gateway/task-topology.json)
+- [`../contracts/opl-gateway/candidate-domain-backlog.json`](../contracts/opl-gateway/candidate-domain-backlog.json)
 
-这个配套工件把任务版图 materialize 成 machine-readable 的顶层 surface。
-它可以描述 `Grant Ops`、`Thesis Ops`、`Review Ops` 这类仍在定义中的 workstream，但**不会**因此自动完成新 domain 收录，也不会为它们创造 `G2` discovery readiness 或 `G3` routed-action readiness。
+这些配套工件分别把：
+
+- 顶层 task topology materialize 成 machine-readable 的语义 surface
+- 当前 under-definition workstream 仍缺哪些 admission boundary material 写成 machine-readable backlog
+
+它们可以描述 `Grant Ops`、`Thesis Ops`、`Review Ops` 这类仍在定义中的 workstream，但**不会**因此自动完成新 domain 收录，也不会为它们创造 `G2` discovery readiness 或 `G3` routed-action readiness。
+
+如果要查看这份 backlog 的人类可读配套说明，见 [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.zh-CN.md)。
 
 ## Research Ops
 
@@ -78,6 +85,7 @@
 - 还不是已注册的 `G1` workstream/domain mapping
 - 还不是 `G2` discovery target
 - 还不具备 domain handoff 资格
+- formal 收录前的 blocker 已在 [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.zh-CN.md) 中跟踪
 - 但如果顶层语义已经足够清楚，在真实 domain owner 被收录前，最多只能显式返回 `unknown_domain`，且不会构建 handoff payload
 
 ## Thesis Ops
@@ -108,6 +116,7 @@
 - 还不是已注册的 `G1` workstream/domain mapping
 - 还不是 `G2` discovery target
 - 还不具备 domain handoff 资格
+- formal 收录前的 blocker 已在 [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.zh-CN.md) 中跟踪
 - 但如果顶层语义已经足够清楚，在真实 domain owner 被收录前，最多只能显式返回 `unknown_domain`，且不会构建 handoff payload
 
 ## Review Ops
@@ -137,6 +146,7 @@
 - 还不是已注册的 `G1` workstream/domain mapping
 - 还不是 `G2` discovery target
 - 还不具备 domain handoff 资格
+- formal 收录前的 blocker 已在 [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.zh-CN.md) 中跟踪
 - 但如果顶层语义已经足够清楚，在真实 domain owner 被收录前，最多只能显式返回 `unknown_domain`，且不会构建 handoff payload
 
 ## Presentation Ops
