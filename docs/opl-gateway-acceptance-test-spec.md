@@ -38,6 +38,12 @@ The acceptance checks below are grounded in:
 - [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
 - [`acceptance-matrix.json`](../contracts/opl-gateway/acceptance-matrix.json)
 
+## Companion Reference Examples
+
+- [OPL Gateway Example Corpus](./opl-gateway-example-corpus.md)
+
+This corpus is illustrative and non-governing. It helps humans and agents inspect how the frozen layers compose, but it does not replace the contracts and acceptance gates above.
+
 ## A. G1 Registry Completeness
 
 ### Acceptance Criteria

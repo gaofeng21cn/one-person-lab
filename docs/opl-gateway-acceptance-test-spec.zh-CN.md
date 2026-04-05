@@ -38,6 +38,12 @@
 - [OPL Gateway Contracts](../contracts/opl-gateway/README.zh-CN.md)
 - [`acceptance-matrix.json`](../contracts/opl-gateway/acceptance-matrix.json)
 
+## 配套参考示例
+
+- [OPL Gateway Example Corpus](./opl-gateway-example-corpus.zh-CN.md)
+
+这组示例只是 illustrative、non-governing 的配套参考。它帮助人类与 Agent 理解已冻结 layers 如何组合，但不替代上面的 contracts 与 acceptance gates。
+
 ## A. G1 Registry Completeness
 
 ### 验收标准

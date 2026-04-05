@@ -1,0 +1,142 @@
+{
+  "example_version": "p7.m1",
+  "flow_id": "research_ops_submission",
+  "description": "Canonical research submission example composed from the frozen OPL gateway contracts.",
+  "schemas": {
+    "route_request": "contracts/opl-gateway/routed-actions.schema.json",
+    "build_handoff_payload": "contracts/opl-gateway/routed-actions.schema.json",
+    "audit_routing_decision": "contracts/opl-gateway/routed-actions.schema.json",
+    "governance_audit_record": "contracts/opl-gateway/governance-audit.schema.json",
+    "publish_promotion_record": "contracts/opl-gateway/publish-promotion.schema.json"
+  },
+  "route_request": {
+    "version": "g3",
+    "operation": "route_request",
+    "payload": {
+      "status": "routed",
+      "request_id": "opl-2026-04-05-100",
+      "request_kind": "publish",
+      "workstream_id": "research_ops",
+      "domain_id": "medautoscience",
+      "entry_surface": "domain_gateway",
+      "recommended_family": "manuscript_submission",
+      "preferred_profile": "journal_submission",
+      "confidence": "high",
+      "reason": "The goal is a formal manuscript submission outcome owned by Research Ops.",
+      "routing_evidence": [
+        "submission_delivery intent",
+        "research_ops is owned by medautoscience",
+        "publication target requires research workflow semantics"
+      ]
+    }
+  },
+  "audit_routing_decision": {
+    "version": "g3",
+    "operation": "audit_routing_decision",
+    "payload": {
+      "request_id": "opl-2026-04-05-100",
+      "decision_status": "routed",
+      "request_summary": "Submit the finalized manuscript package for journal review.",
+      "request_kind": "publish",
+      "resolved_workstream_id": "research_ops",
+      "resolved_domain_id": "medautoscience",
+      "reason": "Formal manuscript submission stays inside the Research Ops domain gateway.",
+      "routing_evidence": [
+        "submission_delivery intent",
+        "research_ops ownership",
+        "domain_gateway entry only"
+      ],
+      "timestamp": "2026-04-05T08:10:00Z"
+    }
+  },
+  "build_handoff_payload": {
+    "version": "g3",
+    "operation": "build_handoff_payload",
+    "payload": {
+      "route_status": "routed",
+      "handoff": {
+        "request_id": "opl-2026-04-05-100",
+        "workstream_id": "research_ops",
+        "domain_id": "medautoscience",
+        "request_kind": "publish",
+        "target_kind": "publication",
+        "goal": "Prepare and hand off the manuscript submission package for journal review.",
+        "materials": [
+          {
+            "kind": "manuscript",
+            "ref": "workspace://studies/study-002/manuscript-v3"
+          },
+          {
+            "kind": "figures",
+            "ref": "workspace://studies/study-002/figures-final"
+          }
+        ],
+        "constraints": [
+          "venue=journal",
+          "package=complete"
+        ],
+        "preferred_family": "manuscript_submission",
+        "preferred_profile": "journal_submission",
+        "review_expectation": [
+          "human_review",
+          "publish_gate"
+        ]
+      }
+    }
+  },
+  "governance_audit_record": {
+    "version": "p5.m1",
+    "record_kind": "publish_readiness_signal",
+    "record_id": "opl-gov-2026-04-05-100",
+    "request_id": "opl-2026-04-05-100",
+    "workstream_id": "research_ops",
+    "domain_id": "medautoscience",
+    "summary": "The manuscript package appears ready to enter the domain-owned publish gate.",
+    "status": "ready_for_next_gate",
+    "evidence_refs": [
+      "human_review=complete",
+      "baseline_review=complete"
+    ],
+    "domain_truth_refs": [
+      {
+        "domain_id": "medautoscience",
+        "ref_kind": "review_record",
+        "ref": "medautoscience://reviews/study-002"
+      }
+    ],
+    "recorded_at": "2026-04-05T08:11:00Z",
+    "publish_readiness_signal": {
+      "readiness": "ready_for_domain_publish_gate"
+    }
+  },
+  "publish_promotion_record": {
+    "version": "p5.m2",
+    "record_kind": "publish_outcome_index",
+    "record_id": "opl-publish-2026-04-05-100",
+    "request_id": "opl-2026-04-05-100",
+    "workstream_id": "research_ops",
+    "domain_id": "medautoscience",
+    "summary": "Indexed the domain-owned manuscript submission outcome at the top level.",
+    "status": "recorded",
+    "evidence_refs": [
+      "publish_gate=complete",
+      "submission_package=sealed"
+    ],
+    "domain_truth_refs": [
+      {
+        "domain_id": "medautoscience",
+        "ref_kind": "submission_record",
+        "ref": "medautoscience://submissions/study-002"
+      }
+    ],
+    "recorded_at": "2026-04-05T08:12:00Z",
+    "publish_outcome_index": {
+      "outcome_kind": "submitted",
+      "public_refs": []
+    }
+  },
+  "boundary_notes": [
+    "OPL routes into medautoscience as the domain gateway and never targets the harness directly.",
+    "The submission record remains domain-owned truth; OPL only indexes it at P5.M2."
+  ]
+}

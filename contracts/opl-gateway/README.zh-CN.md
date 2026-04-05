@@ -23,6 +23,12 @@
 - [OPL Gateway Rollout（中文）](../../docs/opl-gateway-rollout.zh-CN.md)
 - [English](./README.md)
 
+## 配套示例集
+
+- [OPL Gateway Example Corpus](../../docs/opl-gateway-example-corpus.zh-CN.md) — 展示当前已冻结 gateway layers 如何做 canonical、illustrative 的 contract-level composition
+
+这组示例只是配套参考，不替代本目录中的 governing contracts。
+
 ## 文件
 
 - [`workstreams.json`](./workstreams.json) — machine-readable workstream registry

@@ -1,0 +1,158 @@
+{
+  "example_version": "p7.m1",
+  "flow_id": "presentation_ops_publish",
+  "description": "Canonical presentation publish/promotion example composed from the frozen OPL gateway contracts.",
+  "schemas": {
+    "route_request": "contracts/opl-gateway/routed-actions.schema.json",
+    "build_handoff_payload": "contracts/opl-gateway/routed-actions.schema.json",
+    "audit_routing_decision": "contracts/opl-gateway/routed-actions.schema.json",
+    "governance_audit_record": "contracts/opl-gateway/governance-audit.schema.json",
+    "publish_promotion_record": "contracts/opl-gateway/publish-promotion.schema.json"
+  },
+  "route_request": {
+    "version": "g3",
+    "operation": "route_request",
+    "payload": {
+      "status": "routed",
+      "request_id": "opl-2026-04-05-200",
+      "request_kind": "publish",
+      "workstream_id": "presentation_ops",
+      "domain_id": "redcube",
+      "entry_surface": "domain_gateway",
+      "recommended_family": "ppt_deck",
+      "preferred_profile": "defense_deck",
+      "confidence": "high",
+      "reason": "The goal is a formal defense-ready presentation deliverable owned by Presentation Ops.",
+      "routing_evidence": [
+        "presentation_delivery intent",
+        "ppt_deck directly maps to presentation_ops",
+        "presentation_ops is owned by redcube"
+      ]
+    }
+  },
+  "audit_routing_decision": {
+    "version": "g3",
+    "operation": "audit_routing_decision",
+    "payload": {
+      "request_id": "opl-2026-04-05-200",
+      "decision_status": "routed",
+      "request_summary": "Release and promote the defense-ready deck on the approved public surfaces.",
+      "request_kind": "publish",
+      "resolved_workstream_id": "presentation_ops",
+      "resolved_domain_id": "redcube",
+      "reason": "The requested output is a formal presentation deliverable and remains inside the RedCube domain gateway.",
+      "routing_evidence": [
+        "presentation_delivery intent",
+        "ppt_deck mapping",
+        "domain_gateway entry only"
+      ],
+      "timestamp": "2026-04-05T08:20:00Z"
+    }
+  },
+  "build_handoff_payload": {
+    "version": "g3",
+    "operation": "build_handoff_payload",
+    "payload": {
+      "route_status": "routed",
+      "handoff": {
+        "request_id": "opl-2026-04-05-200",
+        "workstream_id": "presentation_ops",
+        "domain_id": "redcube",
+        "request_kind": "publish",
+        "target_kind": "deliverable",
+        "goal": "Release the defense-ready deck and prepare it for approved promotion surfaces.",
+        "materials": [
+          {
+            "kind": "deck",
+            "ref": "workspace://deliverables/deck-002"
+          },
+          {
+            "kind": "speaker_notes",
+            "ref": "workspace://deliverables/deck-002-notes"
+          }
+        ],
+        "constraints": [
+          "audience=committee",
+          "channel=project_landing"
+        ],
+        "preferred_family": "ppt_deck",
+        "preferred_profile": "defense_deck",
+        "review_expectation": [
+          "human_review",
+          "publish_gate"
+        ]
+      }
+    }
+  },
+  "governance_audit_record": {
+    "version": "p5.m1",
+    "record_kind": "publish_readiness_signal",
+    "record_id": "opl-gov-2026-04-05-200",
+    "request_id": "opl-2026-04-05-200",
+    "workstream_id": "presentation_ops",
+    "domain_id": "redcube",
+    "summary": "The defense-ready deck appears ready to enter the domain-owned publish gate.",
+    "status": "ready_for_next_gate",
+    "evidence_refs": [
+      "human_review=complete",
+      "baseline_review=complete"
+    ],
+    "domain_truth_refs": [
+      {
+        "domain_id": "redcube",
+        "ref_kind": "publish_gate_record",
+        "ref": "redcube://publish-gates/deck-002"
+      }
+    ],
+    "recorded_at": "2026-04-05T08:21:00Z",
+    "publish_readiness_signal": {
+      "readiness": "ready_for_domain_publish_gate"
+    }
+  },
+  "publish_promotion_record": {
+    "version": "p5.m2",
+    "record_kind": "promotion_surface_index",
+    "record_id": "opl-surface-2026-04-05-200",
+    "request_id": "opl-2026-04-05-200",
+    "workstream_id": "presentation_ops",
+    "domain_id": "redcube",
+    "summary": "Indexed the approved public surfaces and blockers for promoting the released defense deck.",
+    "status": "needs_human_review",
+    "evidence_refs": [
+      "release_record=complete",
+      "announcement_copy=pending"
+    ],
+    "domain_truth_refs": [
+      {
+        "domain_id": "redcube",
+        "ref_kind": "release_record",
+        "ref": "redcube://releases/deck-002"
+      },
+      {
+        "domain_id": "redcube",
+        "ref_kind": "public_channel_record",
+        "ref": "redcube://channels/project-landing/deck-002"
+      }
+    ],
+    "recorded_at": "2026-04-05T08:22:00Z",
+    "promotion_surface_index": {
+      "target_surfaces": [
+        "project_landing",
+        "announcement_post"
+      ],
+      "required_human_approval": true,
+      "blocking_surface": "announcement_post",
+      "public_refs": [
+        {
+          "surface_id": "project_landing",
+          "ref": "https://example.org/decks/deck-002"
+        }
+      ]
+    }
+  },
+  "boundary_notes": [
+    "ppt_deck maps directly to presentation_ops in this example.",
+    "xiaohongshu remains separately routable to redcube but is not auto-equated to presentation_ops here.",
+    "The release and public-channel records remain domain-owned truth; OPL only indexes them."
+  ]
+}

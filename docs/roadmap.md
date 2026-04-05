@@ -60,6 +60,8 @@ For the detailed gateway rollout path, see:
 - [OPL Governance / Audit Operating Surface](opl-governance-audit-operating-surface.md)
 - [OPL Publish / Promotion Operating Surface](opl-publish-promotion-operating-surface.md)
 
+For canonical contract-level compositions across these frozen layers, see [OPL Gateway Example Corpus](opl-gateway-example-corpus.md).
+
 ## Current Evaluation Criteria
 
 To judge whether `OPL` is moving in the right direction, these checks matter:

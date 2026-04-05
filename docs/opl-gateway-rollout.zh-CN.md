@@ -182,6 +182,12 @@ Human / Agent
 
 - 用户和 Agent 可以从 `OPL` 作为真实入口起步，同时各 domain system 仍保持一等公民地位
 
+当前配套参考：
+
+- [OPL Gateway Example Corpus](./opl-gateway-example-corpus.zh-CN.md)
+
+这组 corpus 只能作为 illustrative 的 contract-level walkthrough，不能被理解成 execution runtime。
+
 ## Readiness Gate
 
 只要下面任何一个问题未解，就不应继续推进：

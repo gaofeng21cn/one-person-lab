@@ -59,6 +59,8 @@
 - [OPL Governance / Audit Operating Surface](opl-governance-audit-operating-surface.zh-CN.md)
 - [OPL Publish / Promotion Operating Surface](opl-publish-promotion-operating-surface.zh-CN.md)
 
+如果要查看这些已冻结 layers 如何以 contract-level composition 的方式拼起来，可参考 [OPL Gateway Example Corpus](opl-gateway-example-corpus.zh-CN.md)。
+
 ## 当前判断标准
 
 如果要判断 `OPL` 是否在向正确方向推进，可以看这些问题：

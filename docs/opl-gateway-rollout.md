@@ -182,6 +182,12 @@ Completion signal:
 
 - users and agents can begin from `OPL` as a real entry point while domain systems remain first-class
 
+Current companion reference:
+
+- [OPL Gateway Example Corpus](./opl-gateway-example-corpus.md)
+
+Use the corpus as an illustrative contract-level walkthrough, not as an execution runtime.
+
 ## Readiness Gates
 
 Do not advance the rollout if any of these are still unresolved:

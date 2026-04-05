@@ -23,6 +23,12 @@ It freezes machine-readable gateway surfaces that later discovery and routed-act
 - [OPL Gateway Rollout（中文）](../../docs/opl-gateway-rollout.zh-CN.md)
 - [中文说明](./README.zh-CN.md)
 
+## Companion examples
+
+- [OPL Gateway Example Corpus](../../docs/opl-gateway-example-corpus.md) — canonical illustrative contract-level compositions across the frozen gateway layers
+
+The corpus is a companion reference only. It does not replace the governing contracts in this directory.
+
 ## Files
 
 - [`workstreams.json`](./workstreams.json) — machine-readable workstream registry
