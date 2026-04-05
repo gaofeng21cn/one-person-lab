@@ -39,7 +39,10 @@ For the current repository-local materialization, see [OPL Gateway Contracts](..
 
 Current repository materialization:
 
-- [`../contracts/opl-gateway/README.md`](../contracts/opl-gateway/README.md)
+- [`../contracts/opl-gateway/workstreams.json`](../contracts/opl-gateway/workstreams.json)
+- [`../contracts/opl-gateway/domains.json`](../contracts/opl-gateway/domains.json)
+- [`../contracts/opl-gateway/routing-vocabulary.json`](../contracts/opl-gateway/routing-vocabulary.json)
+- [`../contracts/opl-gateway/handoff.schema.json`](../contracts/opl-gateway/handoff.schema.json)
 
 ## Workstream Registry
 

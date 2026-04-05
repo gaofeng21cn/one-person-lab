@@ -47,5 +47,25 @@
     "read_only_gateway",
     "routed_action_gateway",
     "domain_gateway"
+  ],
+  "routing_rules": [
+    "route by workstream semantics first",
+    "route by domain ownership second",
+    "route by family/profile preference third",
+    "never bypass a domain gateway and target a domain harness directly"
+  ],
+  "special_cases": [
+    {
+      "family": "ppt_deck",
+      "direct_workstream": "presentation_ops",
+      "domain_id": "redcube",
+      "notes": "ppt_deck maps directly to Presentation Ops."
+    },
+    {
+      "family": "xiaohongshu",
+      "domain_id": "redcube",
+      "auto_workstream": null,
+      "notes": "xiaohongshu may route to RedCube AI, but it must not be auto-labeled as presentation_ops unless the top-level semantics really match that workstream."
+    }
   ]
 }

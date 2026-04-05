@@ -99,3 +99,4 @@ Describe it as:
 The next concrete layer after this conceptual boundary document is:
 
 - [OPL Federation Contract](./opl-federation-contract.md)
+- [OPL Gateway Contracts](../contracts/opl-gateway/README.md)

@@ -75,6 +75,10 @@ Completion signal:
 
 - domain routing can be specified without reading prose docs
 
+Current materialization target:
+
+- [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
+
 ## Phase G2: Read-Only Entry Surface
 
 Goal:
@@ -91,6 +95,7 @@ Should support:
 Completion signal:
 
 - an agent can ask “what system should I use for this task?” and receive a stable top-level answer
+- the current G1 materialization is discoverable at [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
 
 Detailed contract:
 

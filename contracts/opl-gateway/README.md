@@ -13,13 +13,14 @@ It freezes machine-readable gateway surfaces that later discovery and routed-act
 - [OPL Read-Only Discovery Gateway（中文）](../../docs/opl-read-only-discovery-gateway.zh-CN.md)
 - [OPL Gateway Rollout](../../docs/opl-gateway-rollout.md)
 - [OPL Gateway Rollout（中文）](../../docs/opl-gateway-rollout.zh-CN.md)
+- [中文说明](./README.zh-CN.md)
 
 ## Files
 
-- `workstreams.json` — machine-readable workstream registry
-- `domains.json` — machine-readable domain registry
-- `routing-vocabulary.json` — shared routing vocabulary groups
-- `handoff.schema.json` — JSON Schema for the frozen G1 handoff payload
+- [`workstreams.json`](./workstreams.json) — machine-readable workstream registry
+- [`domains.json`](./domains.json) — machine-readable domain registry
+- [`routing-vocabulary.json`](./routing-vocabulary.json) — shared routing vocabulary groups plus frozen routing rules
+- [`handoff.schema.json`](./handoff.schema.json) — JSON Schema for the frozen G1 handoff payload
 
 ## Frozen current mappings
 
@@ -35,6 +36,12 @@ It freezes machine-readable gateway surfaces that later discovery and routed-act
 - Domain harnesses stay below domain gateways.
 - This directory does not create canonical truth ownership above domains.
 - This directory does not authorize bypassing a domain gateway to reach a harness.
+
+## Current scope
+
+This directory includes only the workstreams and domains whose boundaries are already frozen in the public G1 contract.
+
+Planned workstreams such as `Grant Ops`, `Review Ops`, and `Thesis Ops` remain outside this directory until their domain boundaries are explicitly frozen.
 
 ## Materialization note
 

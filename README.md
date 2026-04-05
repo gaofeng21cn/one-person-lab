@@ -290,7 +290,6 @@ For a more detailed phase breakdown:
 - [OPL Gateway Contracts](contracts/opl-gateway/README.md)
 - [OPL Read-Only Discovery Gateway](docs/opl-read-only-discovery-gateway.md)
 - [OPL Gateway Rollout](docs/opl-gateway-rollout.md)
-- [OPL Gateway Contracts](contracts/opl-gateway/README.md)
 - [OPL Operating Model](docs/operating-model.md)
 - [OPL Task Map](docs/task-map.md)
 - [Shared Foundation](docs/shared-foundation.md)
