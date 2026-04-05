@@ -33,6 +33,7 @@ This schema materializes the onboarding-readiness record as a non-executing cont
 It does not admit domains automatically, and it does not replace the prose review gate in this document.
 The example record is illustrative only and does not count as a formal domain admission.
 The candidate-domain backlog is the upstream blocker surface for under-definition workstreams; it records what is still missing before an onboarding-readiness record can even exist. For the human-readable companion, see [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md).
+`OPL` does not currently define a separate candidate-domain-definition contract between task topology, backlog, and onboarding; the existing three-layer composition is the current definition path unless a real missing boundary is proven.
 
 ## Core Promise
 

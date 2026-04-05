@@ -87,6 +87,7 @@
 - 在公开 G1 contract 中已经冻结边界、并已正式收录的 workstream / domain registry 与 contract 工件
 - derived / reference-only 的 task-topology 工件；它们可以提到仍在定义中的 workstream，但不会把这些 workstream 自动纳入 `G1`、`G2` 或 `G3`
 - derived / reference-only 的 candidate-domain backlog 工件；它们只记录 admission boundary 还缺什么，不会虚构 placeholder domain 或 routed target
+- 在先证明存在真实缺失边界之前，不额外新增独立的 candidate-domain-definition contract surface；当前 `task-topology + candidate-domain-backlog + domain-onboarding` 的组合就是现行定义路径
 
 `Grant Ops`、`Review Ops`、`Thesis Ops` 等 planned workstream，在对应 domain 边界明确冻结之前，不进入正式收录的 registry / discovery / routing surface。
 

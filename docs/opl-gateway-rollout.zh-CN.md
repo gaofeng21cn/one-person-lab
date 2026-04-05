@@ -129,6 +129,9 @@ Human / Agent
 - [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.zh-CN.md)
 - [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.zh-CN.md)
 
+在当前基线上，candidate-domain definition 仍由 `task-topology`、`candidate-domain backlog` 与 `domain-onboarding` 三层共同构成。
+除非先证明这三层不足以表达一个真实缺失边界，否则不要再插入一层额外的 candidate-definition control surface。
+
 具体合同：
 
 - [OPL Routed Action Gateway](opl-routed-action-gateway.zh-CN.md)

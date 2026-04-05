@@ -29,7 +29,7 @@
 - 冻结 `OPL Gateway -> domain gateway -> domain harness` 这条控制语言
 - 保持 `MedAutoScience` 明确为 `Research Ops` 的 domain surface
 - 保持 `RedCube AI` 明确为视觉交付的 domain surface
-- 用清楚的任务边界与交付对象，定义下一个候选 domain
+- 用清楚的任务边界与交付对象定义下一个候选 domain，并优先沿用当前 `task-topology + candidate-domain-backlog + domain-onboarding` 这条路径，而不是发明一层冗余中间控制面
 - 逐步把 `OPL Gateway` 从文档优先表面推进成真实入口
 
 在仍处于定义阶段的几个工作流里，更自然的优先顺序通常是：

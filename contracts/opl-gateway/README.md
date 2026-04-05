@@ -89,6 +89,7 @@ This directory includes:
 - admitted registry / contract artifacts for the workstreams and domains whose boundaries are already frozen in the public G1 contract
 - derived / reference-only task-topology material that may mention under-definition workstreams without admitting them into `G1`, `G2`, or `G3`
 - derived / reference-only candidate-domain backlog material that records missing admission boundaries without inventing placeholder domains or routed targets
+- no separate candidate-domain-definition contract surface beyond the current `task-topology + candidate-domain-backlog + domain-onboarding` composition unless a real missing boundary is first proven
 
 Planned workstreams such as `Grant Ops`, `Review Ops`, and `Thesis Ops` remain outside the admitted registry / discovery / routing surfaces until their domain boundaries are explicitly frozen.
 

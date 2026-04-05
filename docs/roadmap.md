@@ -29,7 +29,7 @@ The next phase should prioritize:
 - freezing the `OPL Gateway -> domain gateway -> domain harness` control language
 - keeping `MedAutoScience` explicit as the `Research Ops` domain surface
 - keeping `RedCube AI` explicit as the visual-deliverable domain surface
-- defining the next candidate domains through clear task boundaries and delivery objects
+- defining the next candidate domains through clear task boundaries and delivery objects, using the current `task-topology + candidate-domain-backlog + domain-onboarding` path rather than inventing a redundant intermediate control surface
 - progressively turning the `OPL Gateway` from a documentation-first surface into a real entry surface
 
 Among the still-undefined workstreams, the more natural priority order is usually:

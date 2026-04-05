@@ -27,6 +27,14 @@ These companions materialize:
 
 They may describe under-definition workstreams such as `Grant Ops`, `Thesis Ops`, and `Review Ops`, but they do **not** admit new domains, create `G2` discovery readiness, or create `G3` routed-action readiness for them.
 
+At the current baseline, `candidate-domain definition` is the composition of:
+
+- task boundaries and delivery objects in `task-topology`
+- missing boundary packages in the candidate-domain backlog
+- formal admission rules in the domain-onboarding contract
+
+`OPL` does **not** currently add a separate intermediate candidate-domain-definition surface above those layers, because doing so would risk duplicating semantic, blocker, or admission truth.
+
 For the human-readable companion to that backlog, see [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md).
 
 ## Research Ops

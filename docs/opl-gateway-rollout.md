@@ -129,6 +129,9 @@ Contract extension needed before adding more domains:
 - [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md)
 - [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.md)
 
+At the current baseline, candidate-domain definition remains the composition of `task-topology`, `candidate-domain backlog`, and `domain-onboarding`.
+Do not insert a separate intermediate candidate-definition control surface unless those layers first prove insufficient to express a real missing boundary.
+
 Detailed contract:
 
 - [OPL Routed Action Gateway](opl-routed-action-gateway.md)

@@ -27,6 +27,14 @@
 
 它们可以描述 `Grant Ops`、`Thesis Ops`、`Review Ops` 这类仍在定义中的 workstream，但**不会**因此自动完成新 domain 收录，也不会为它们创造 `G2` discovery readiness 或 `G3` routed-action readiness。
 
+在当前基线上，`candidate-domain definition` 由三部分共同构成：
+
+- `task-topology` 中的任务边界与交付对象
+- candidate-domain backlog 中仍缺的 boundary package
+- domain-onboarding contract 中的 formal admission rules
+
+`OPL` 当前**不会**在这三层之上再额外插入一层独立的 candidate-domain-definition surface，因为那样会制造重复的 semantic / blocker / admission truth。
+
 如果要查看这份 backlog 的人类可读配套说明，见 [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.zh-CN.md)。
 
 ## Research Ops

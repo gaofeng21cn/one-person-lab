@@ -22,6 +22,14 @@ The task map / task-topology layer makes top-level semantics explicit.
 The onboarding contract defines the formal admission gate.
 This backlog records what is still missing between those two layers.
 
+At the current baseline, that is enough to define the candidate-domain path:
+
+- task topology defines the workstream boundary
+- the backlog records missing boundary packages
+- onboarding defines the formal inclusion gate
+
+`OPL` therefore does **not** currently add a separate candidate-domain-definition surface between backlog and onboarding.
+
 It does **not** create `G1` registry admission, `G2` discovery readiness, or `G3` routed-action readiness.
 
 ## Machine-Readable Artifact

@@ -33,6 +33,7 @@ Domain onboarding 建立在已冻结的 gateway 层之下：
 它不会自动收录 domain，也不会取代本文件中的 prose review gate。
 这条 example record 只是 illustrative 示例，不构成正式 domain 收录。
 Candidate-domain backlog 则是位于它上游的 blocker surface，用来记录：对于仍在定义中的 workstream，在 onboarding-readiness record 出现之前还缺什么材料。它的人类可读配套说明见 [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.zh-CN.md)。
+`OPL` 当前不会在 task topology、backlog 与 onboarding 之间再定义一层独立的 candidate-domain-definition contract；除非先证明这三层之间还存在真实缺口，否则现有三层组合就是当前 definition path。
 
 ## 核心承诺
 

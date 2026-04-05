@@ -22,6 +22,14 @@ Task map / task-topology 层负责把顶层语义写清楚。
 Onboarding contract 负责定义正式收录门槛。
 这份 backlog 负责记录这两层之间还缺什么边界材料。
 
+在当前基线上，这三层已经足以表达 candidate-domain path：
+
+- task topology 定义 workstream boundary
+- backlog 记录仍缺哪些 boundary package
+- onboarding 定义 formal inclusion gate
+
+因此，`OPL` 当前**不会**再在 backlog 与 onboarding 之间额外插入一层独立的 candidate-domain-definition surface。
+
 它**不会**创造 `G1` registry admission、`G2` discovery readiness 或 `G3` routed-action readiness。
 
 ## 机器可读工件
