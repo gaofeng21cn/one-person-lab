@@ -1,0 +1,361 @@
+{
+  "version": "p15.m1",
+  "scope": "opl_surface_authority_matrix",
+  "description": "Machine-readable derived authority matrix for the frozen OPL gateway surfaces and linked domain gateway public-entry surfaces. It records routing, execution, truth, review, and publication ownership boundaries without becoming an authorization engine or runtime control plane.",
+  "non_goals": [
+    "authorization_engine",
+    "runtime_control_plane",
+    "workflow_executor",
+    "truth_registry"
+  ],
+  "matrix_rules": [
+    "entries are derived from already frozen gateway contracts, operating surfaces, supporting surfaces, and linked domain public-entry surfaces",
+    "OPL-owned surfaces may expose routing, indexing, discoverability, or acceptance boundaries but do not own domain execution, canonical truth, review truth, or publication truth",
+    "linked domain public-entry surfaces remain domain-owned and mark where domain-local routing and harness execution begin",
+    "allowed_follow_on_surface may be null or domain_gateway only"
+  ],
+  "covered_surface_ids": [
+    "opl_gateway_contract_hub",
+    "opl_read_only_discovery_gateway",
+    "opl_routed_action_gateway",
+    "opl_domain_onboarding_contract",
+    "opl_governance_audit_operating_surface",
+    "opl_publish_promotion_operating_surface",
+    "opl_gateway_example_corpus",
+    "opl_routed_safety_example_corpus",
+    "opl_operating_example_corpus",
+    "opl_operating_record_catalog",
+    "opl_surface_lifecycle_map",
+    "opl_public_surface_index_doc",
+    "opl_gateway_acceptance_spec",
+    "medautoscience_public_gateway",
+    "redcube_public_gateway"
+  ],
+  "authority_entries": [
+    {
+      "surface_id": "opl_gateway_contract_hub",
+      "owner_scope": "opl",
+      "surface_role": "machine_readable_contract_hub",
+      "route_authority": "none",
+      "execution_authority": "none",
+      "truth_authority": "none",
+      "review_authority": "none",
+      "publication_authority": "none",
+      "allowed_follow_on_surface": null,
+      "forbidden_actions": [
+        "target_domain_harness_directly",
+        "claim_domain_truth",
+        "authorize_runtime_execution"
+      ],
+      "governing_refs": [
+        "contracts/opl-gateway/README.md",
+        "contracts/opl-gateway/README.zh-CN.md",
+        "docs/opl-federation-contract.md",
+        "docs/opl-federation-contract.zh-CN.md"
+      ]
+    },
+    {
+      "surface_id": "opl_read_only_discovery_gateway",
+      "owner_scope": "opl",
+      "surface_role": "read_only_discovery",
+      "route_authority": "read_only_guidance",
+      "execution_authority": "none",
+      "truth_authority": "none",
+      "review_authority": "none",
+      "publication_authority": "none",
+      "allowed_follow_on_surface": null,
+      "forbidden_actions": [
+        "mutate_workspace",
+        "start_domain_run",
+        "target_domain_harness_directly",
+        "claim_domain_truth"
+      ],
+      "governing_refs": [
+        "docs/opl-read-only-discovery-gateway.md",
+        "docs/opl-read-only-discovery-gateway.zh-CN.md",
+        "contracts/opl-gateway/workstreams.json",
+        "contracts/opl-gateway/domains.json"
+      ]
+    },
+    {
+      "surface_id": "opl_routed_action_gateway",
+      "owner_scope": "opl",
+      "surface_role": "routed_action_gateway",
+      "route_authority": "opl_gateway_routing",
+      "execution_authority": "none",
+      "truth_authority": "none",
+      "review_authority": "none",
+      "publication_authority": "none",
+      "allowed_follow_on_surface": "domain_gateway",
+      "forbidden_actions": [
+        "target_domain_harness_directly",
+        "auto_execute_domain_runtime",
+        "claim_domain_truth",
+        "claim_domain_review_truth",
+        "claim_domain_publish_truth"
+      ],
+      "governing_refs": [
+        "docs/opl-routed-action-gateway.md",
+        "docs/opl-routed-action-gateway.zh-CN.md",
+        "contracts/opl-gateway/routed-actions.schema.json",
+        "contracts/opl-gateway/handoff.schema.json"
+      ]
+    },
+    {
+      "surface_id": "opl_domain_onboarding_contract",
+      "owner_scope": "opl",
+      "surface_role": "domain_onboarding_gate",
+      "route_authority": "none",
+      "execution_authority": "none",
+      "truth_authority": "none",
+      "review_authority": "none",
+      "publication_authority": "none",
+      "allowed_follow_on_surface": null,
+      "forbidden_actions": [
+        "auto_admit_domain",
+        "invent_placeholder_boundary",
+        "rewrite_domain_as_internal_module"
+      ],
+      "governing_refs": [
+        "docs/opl-domain-onboarding-contract.md",
+        "docs/opl-domain-onboarding-contract.zh-CN.md",
+        "contracts/opl-gateway/domain-onboarding-readiness.schema.json"
+      ]
+    },
+    {
+      "surface_id": "opl_governance_audit_operating_surface",
+      "owner_scope": "opl",
+      "surface_role": "governance_audit_index_signal",
+      "route_authority": "none",
+      "execution_authority": "none",
+      "truth_authority": "none",
+      "review_authority": "none",
+      "publication_authority": "none",
+      "allowed_follow_on_surface": "domain_gateway",
+      "forbidden_actions": [
+        "claim_review_truth",
+        "target_domain_harness_directly",
+        "direct_publish",
+        "direct_submission"
+      ],
+      "governing_refs": [
+        "docs/opl-governance-audit-operating-surface.md",
+        "docs/opl-governance-audit-operating-surface.zh-CN.md",
+        "contracts/opl-gateway/governance-audit.schema.json"
+      ]
+    },
+    {
+      "surface_id": "opl_publish_promotion_operating_surface",
+      "owner_scope": "opl",
+      "surface_role": "publish_promotion_index_signal",
+      "route_authority": "none",
+      "execution_authority": "none",
+      "truth_authority": "none",
+      "review_authority": "none",
+      "publication_authority": "none",
+      "allowed_follow_on_surface": "domain_gateway",
+      "forbidden_actions": [
+        "claim_publication_truth",
+        "direct_publish",
+        "direct_release",
+        "direct_export",
+        "direct_posting",
+        "target_domain_harness_directly"
+      ],
+      "governing_refs": [
+        "docs/opl-publish-promotion-operating-surface.md",
+        "docs/opl-publish-promotion-operating-surface.zh-CN.md",
+        "contracts/opl-gateway/publish-promotion.schema.json"
+      ]
+    },
+    {
+      "surface_id": "opl_gateway_example_corpus",
+      "owner_scope": "opl",
+      "surface_role": "illustrative_example_corpus",
+      "route_authority": "none",
+      "execution_authority": "none",
+      "truth_authority": "none",
+      "review_authority": "none",
+      "publication_authority": "none",
+      "allowed_follow_on_surface": "domain_gateway",
+      "forbidden_actions": [
+        "become_governing_contract",
+        "authorize_runtime_execution",
+        "claim_domain_truth"
+      ],
+      "governing_refs": [
+        "docs/opl-gateway-example-corpus.md",
+        "docs/opl-gateway-example-corpus.zh-CN.md"
+      ]
+    },
+    {
+      "surface_id": "opl_routed_safety_example_corpus",
+      "owner_scope": "opl",
+      "surface_role": "illustrative_safety_corpus",
+      "route_authority": "none",
+      "execution_authority": "none",
+      "truth_authority": "none",
+      "review_authority": "none",
+      "publication_authority": "none",
+      "allowed_follow_on_surface": null,
+      "forbidden_actions": [
+        "resolve_ambiguous_owner_by_heuristic",
+        "authorize_runtime_execution",
+        "claim_domain_truth"
+      ],
+      "governing_refs": [
+        "docs/opl-routed-safety-example-corpus.md",
+        "docs/opl-routed-safety-example-corpus.zh-CN.md"
+      ]
+    },
+    {
+      "surface_id": "opl_operating_example_corpus",
+      "owner_scope": "opl",
+      "surface_role": "illustrative_operating_corpus",
+      "route_authority": "none",
+      "execution_authority": "none",
+      "truth_authority": "none",
+      "review_authority": "none",
+      "publication_authority": "none",
+      "allowed_follow_on_surface": "domain_gateway",
+      "forbidden_actions": [
+        "claim_review_truth",
+        "claim_publication_truth",
+        "direct_publish",
+        "direct_posting"
+      ],
+      "governing_refs": [
+        "docs/opl-operating-example-corpus.md",
+        "docs/opl-operating-example-corpus.zh-CN.md"
+      ]
+    },
+    {
+      "surface_id": "opl_operating_record_catalog",
+      "owner_scope": "opl",
+      "surface_role": "reference_catalog",
+      "route_authority": "none",
+      "execution_authority": "none",
+      "truth_authority": "none",
+      "review_authority": "none",
+      "publication_authority": "none",
+      "allowed_follow_on_surface": "domain_gateway",
+      "forbidden_actions": [
+        "become_runtime_manifest",
+        "claim_review_truth",
+        "claim_publication_truth"
+      ],
+      "governing_refs": [
+        "docs/opl-operating-record-catalog.md",
+        "docs/opl-operating-record-catalog.zh-CN.md",
+        "contracts/opl-gateway/operating-record-catalog.json"
+      ]
+    },
+    {
+      "surface_id": "opl_surface_lifecycle_map",
+      "owner_scope": "opl",
+      "surface_role": "surface_lifecycle_map",
+      "route_authority": "none",
+      "execution_authority": "none",
+      "truth_authority": "none",
+      "review_authority": "none",
+      "publication_authority": "none",
+      "allowed_follow_on_surface": null,
+      "forbidden_actions": [
+        "become_transition_authority",
+        "become_workflow_engine",
+        "claim_domain_truth"
+      ],
+      "governing_refs": [
+        "docs/opl-surface-lifecycle-map.md",
+        "docs/opl-surface-lifecycle-map.zh-CN.md",
+        "contracts/opl-gateway/surface-lifecycle-map.json"
+      ]
+    },
+    {
+      "surface_id": "opl_public_surface_index_doc",
+      "owner_scope": "opl",
+      "surface_role": "public_surface_map",
+      "route_authority": "none",
+      "execution_authority": "none",
+      "truth_authority": "none",
+      "review_authority": "none",
+      "publication_authority": "none",
+      "allowed_follow_on_surface": null,
+      "forbidden_actions": [
+        "become_launcher",
+        "register_harness_internals",
+        "claim_domain_truth"
+      ],
+      "governing_refs": [
+        "docs/opl-public-surface-index.md",
+        "docs/opl-public-surface-index.zh-CN.md",
+        "contracts/opl-gateway/public-surface-index.json"
+      ]
+    },
+    {
+      "surface_id": "opl_gateway_acceptance_spec",
+      "owner_scope": "opl",
+      "surface_role": "acceptance_gate",
+      "route_authority": "none",
+      "execution_authority": "none",
+      "truth_authority": "none",
+      "review_authority": "none",
+      "publication_authority": "none",
+      "allowed_follow_on_surface": null,
+      "forbidden_actions": [
+        "replace_governing_contracts",
+        "authorize_runtime_execution",
+        "claim_domain_truth"
+      ],
+      "governing_refs": [
+        "docs/opl-gateway-acceptance-test-spec.md",
+        "docs/opl-gateway-acceptance-test-spec.zh-CN.md",
+        "contracts/opl-gateway/acceptance-matrix.json"
+      ]
+    },
+    {
+      "surface_id": "medautoscience_public_gateway",
+      "owner_scope": "domain",
+      "surface_role": "domain_public_gateway_entry",
+      "route_authority": "domain_gateway_local",
+      "execution_authority": "domain_harness_os",
+      "truth_authority": "domain_canonical_truth",
+      "review_authority": "domain_review_truth",
+      "publication_authority": "domain_publish_truth",
+      "allowed_follow_on_surface": null,
+      "forbidden_actions": [
+        "rewrite_as_opl_internal_module",
+        "transfer_truth_ownership_to_opl",
+        "transfer_runtime_ownership_to_opl"
+      ],
+      "governing_refs": [
+        "README.md",
+        "README.zh-CN.md",
+        "contracts/opl-gateway/domains.json",
+        "contracts/opl-gateway/public-surface-index.json"
+      ]
+    },
+    {
+      "surface_id": "redcube_public_gateway",
+      "owner_scope": "domain",
+      "surface_role": "domain_public_gateway_entry",
+      "route_authority": "domain_gateway_local",
+      "execution_authority": "domain_harness_os",
+      "truth_authority": "domain_canonical_truth",
+      "review_authority": "domain_review_truth",
+      "publication_authority": "domain_publish_truth",
+      "allowed_follow_on_surface": null,
+      "forbidden_actions": [
+        "rewrite_as_opl_internal_module",
+        "transfer_truth_ownership_to_opl",
+        "transfer_runtime_ownership_to_opl"
+      ],
+      "governing_refs": [
+        "README.md",
+        "README.zh-CN.md",
+        "contracts/opl-gateway/domains.json",
+        "contracts/opl-gateway/public-surface-index.json"
+      ]
+    }
+  ]
+}

@@ -27,6 +27,7 @@ This acceptance spec covers:
 - `P12` operating example integrity
 - `P13` operating-record-catalog integrity
 - `P14` surface lifecycle map integrity
+- `P15` surface authority matrix integrity
 - cross-domain wording consistency across public surfaces
 
 ## Governing Sources
@@ -52,8 +53,9 @@ The acceptance checks below are grounded in:
 - [OPL Operating Example Corpus](./opl-operating-example-corpus.md)
 - [OPL Operating Record Catalog](./opl-operating-record-catalog.md)
 - [OPL Surface Lifecycle Map](./opl-surface-lifecycle-map.md)
+- [OPL Surface Authority Matrix](./opl-surface-authority-matrix.md)
 
-These companion surfaces are illustrative or reference-only. The gateway corpus shows cross-layer composition; the operating corpus materializes standalone `P5.M1` / `P5.M2` records; the operating-record catalog indexes the frozen record kinds; the lifecycle map exposes the frozen surface dependency/discoverability graph without adding execution semantics. None of them replace the contracts and acceptance gates above.
+These companion surfaces are illustrative or reference-only. The gateway corpus shows cross-layer composition; the operating corpus materializes standalone `P5.M1` / `P5.M2` records; the operating-record catalog indexes the frozen record kinds; the lifecycle map exposes the frozen surface dependency/discoverability graph without adding execution semantics; the authority matrix exposes routing/execution/truth/review/publication ownership boundaries without becoming an authorization engine. None of them replace the contracts and acceptance gates above.
 
 ## A. G1 Registry Completeness
 
@@ -415,6 +417,47 @@ The wording-consistency gate passes only when all of the following are true:
 - Confirm `follow_on_route_surface in {null, domain_gateway}` for every entry.
 - Confirm the contract hub, public-surface index, operating-record catalog, and acceptance surfaces link to the lifecycle map where intended.
 
+## N. P15 Surface-Authority-Matrix Integrity
+
+### Acceptance Criteria
+
+`P15` passes only when all of the following are true:
+
+1. `contracts/opl-gateway/surface-authority-matrix.json` exists and is valid JSON.
+2. `docs/opl-surface-authority-matrix.md` and `.zh-CN.md` exist.
+3. The authority matrix covers exactly these current authority-review surfaces:
+   - `opl_gateway_contract_hub`
+   - `opl_read_only_discovery_gateway`
+   - `opl_routed_action_gateway`
+   - `opl_domain_onboarding_contract`
+   - `opl_governance_audit_operating_surface`
+   - `opl_publish_promotion_operating_surface`
+   - `opl_gateway_example_corpus`
+   - `opl_routed_safety_example_corpus`
+   - `opl_operating_example_corpus`
+   - `opl_operating_record_catalog`
+   - `opl_surface_lifecycle_map`
+   - `opl_public_surface_index_doc`
+   - `opl_gateway_acceptance_spec`
+   - `medautoscience_public_gateway`
+   - `redcube_public_gateway`
+4. Each matrix entry stays derived/reference-only and carries only authority-boundary fields such as `owner_scope`, `surface_role`, `route_authority`, `execution_authority`, `truth_authority`, `review_authority`, `publication_authority`, `allowed_follow_on_surface`, `forbidden_actions`, and `governing_refs`.
+5. Every `governing_ref` resolves to an existing local artifact.
+6. Every `surface_id` covered by the authority matrix also exists inside `contracts/opl-gateway/public-surface-index.json`.
+7. For every OPL-owned entry, `execution_authority`, `truth_authority`, `review_authority`, and `publication_authority` all remain `none`.
+8. Linked domain public-entry surfaces remain `owner_scope = domain` and keep domain-local routing/execution/truth/review/publication authority.
+9. `allowed_follow_on_surface` is always either `null` or `domain_gateway`.
+10. Contract README, lifecycle map docs, public-surface index, and acceptance surfaces expose the authority matrix as a supporting/reference surface rather than an authorization or execution surface.
+
+### Verification
+
+- Parse `contracts/opl-gateway/surface-authority-matrix.json` with `json.load`.
+- Confirm the authority matrix covers exactly the frozen surface set above.
+- Check that each `governing_ref` resolves locally and that each `surface_id` is present in the public-surface index.
+- Confirm every OPL-owned entry keeps `execution_authority = truth_authority = review_authority = publication_authority = none`.
+- Confirm linked domain public-entry entries remain domain-owned and that `allowed_follow_on_surface in {null, domain_gateway}` for every entry.
+- Confirm the contract hub, lifecycle map docs, public-surface index, and acceptance surfaces link to the authority matrix where intended.
+
 ## Standard Verification Commands
 
 ```bash
@@ -568,6 +611,47 @@ python3 - <<'PY'
 import json
 from pathlib import Path
 
+matrix = json.loads(Path('contracts/opl-gateway/surface-authority-matrix.json').read_text())
+idx = json.loads(Path('contracts/opl-gateway/public-surface-index.json').read_text())
+
+expected = {
+    'opl_gateway_contract_hub',
+    'opl_read_only_discovery_gateway',
+    'opl_routed_action_gateway',
+    'opl_domain_onboarding_contract',
+    'opl_governance_audit_operating_surface',
+    'opl_publish_promotion_operating_surface',
+    'opl_gateway_example_corpus',
+    'opl_routed_safety_example_corpus',
+    'opl_operating_example_corpus',
+    'opl_operating_record_catalog',
+    'opl_surface_lifecycle_map',
+    'opl_public_surface_index_doc',
+    'opl_gateway_acceptance_spec',
+    'medautoscience_public_gateway',
+    'redcube_public_gateway',
+}
+surface_ids = {entry['surface_id'] for entry in matrix['authority_entries']}
+assert surface_ids == expected, (surface_ids, expected)
+assert set(matrix['covered_surface_ids']) == expected, matrix['covered_surface_ids']
+public_surface_ids = {surface['surface_id'] for surface in idx['surfaces']}
+assert 'opl_surface_authority_matrix' in public_surface_ids, public_surface_ids
+assert surface_ids <= public_surface_ids, (surface_ids - public_surface_ids)
+for entry in matrix['authority_entries']:
+    if entry['owner_scope'] == 'opl':
+        for key in ['execution_authority', 'truth_authority', 'review_authority', 'publication_authority']:
+            assert entry[key] == 'none', (entry['surface_id'], key, entry[key])
+    else:
+        assert entry['owner_scope'] == 'domain', entry
+    assert entry['allowed_follow_on_surface'] in (None, 'domain_gateway'), entry
+    for ref in entry['governing_refs']:
+        assert Path(ref).exists(), (entry['surface_id'], ref)
+print('surface authority matrix OK')
+PY
+python3 - <<'PY'
+import json
+from pathlib import Path
+
 idx = json.loads(Path('contracts/opl-gateway/public-surface-index.json').read_text())
 category_ids = {category['category_id'] for category in idx['surface_categories']}
 surface_ids = [surface['surface_id'] for surface in idx['surfaces']]
@@ -618,6 +702,8 @@ files = [
     Path('docs/opl-operating-record-catalog.zh-CN.md'),
     Path('docs/opl-surface-lifecycle-map.md'),
     Path('docs/opl-surface-lifecycle-map.zh-CN.md'),
+    Path('docs/opl-surface-authority-matrix.md'),
+    Path('docs/opl-surface-authority-matrix.zh-CN.md'),
     Path('docs/opl-public-surface-index.md'),
     Path('docs/opl-public-surface-index.zh-CN.md'),
     Path('docs/opl-gateway-acceptance-test-spec.md'),
@@ -636,14 +722,14 @@ for path in files:
             raise SystemExit(f'missing link: {path} -> {raw}')
 print('links OK')
 PY
-rg -n "top-level blueprint only|不是统一运行时入口|本仓库本身不承担运行时角色"           README.md README.zh-CN.md           docs/gateway-federation.md docs/gateway-federation.zh-CN.md           docs/opl-federation-contract.md docs/opl-federation-contract.zh-CN.md           docs/opl-read-only-discovery-gateway.md docs/opl-read-only-discovery-gateway.zh-CN.md           docs/opl-routed-action-gateway.md docs/opl-routed-action-gateway.zh-CN.md           docs/opl-domain-onboarding-contract.md docs/opl-domain-onboarding-contract.zh-CN.md           docs/opl-governance-audit-operating-surface.md docs/opl-governance-audit-operating-surface.zh-CN.md           docs/opl-publish-promotion-operating-surface.md docs/opl-publish-promotion-operating-surface.zh-CN.md           docs/opl-gateway-example-corpus.md docs/opl-gateway-example-corpus.zh-CN.md           docs/opl-routed-safety-example-corpus.md docs/opl-routed-safety-example-corpus.zh-CN.md           docs/opl-operating-example-corpus.md docs/opl-operating-example-corpus.zh-CN.md           docs/opl-operating-record-catalog.md docs/opl-operating-record-catalog.zh-CN.md           docs/opl-surface-lifecycle-map.md docs/opl-surface-lifecycle-map.zh-CN.md           docs/opl-public-surface-index.md docs/opl-public-surface-index.zh-CN.md           docs/opl-gateway-rollout.md docs/opl-gateway-rollout.zh-CN.md           docs/roadmap.md docs/roadmap.zh-CN.md           contracts/opl-gateway/README.md contracts/opl-gateway/README.zh-CN.md
+rg -n "top-level blueprint only|不是统一运行时入口|本仓库本身不承担运行时角色"           README.md README.zh-CN.md           docs/gateway-federation.md docs/gateway-federation.zh-CN.md           docs/opl-federation-contract.md docs/opl-federation-contract.zh-CN.md           docs/opl-read-only-discovery-gateway.md docs/opl-read-only-discovery-gateway.zh-CN.md           docs/opl-routed-action-gateway.md docs/opl-routed-action-gateway.zh-CN.md           docs/opl-domain-onboarding-contract.md docs/opl-domain-onboarding-contract.zh-CN.md           docs/opl-governance-audit-operating-surface.md docs/opl-governance-audit-operating-surface.zh-CN.md           docs/opl-publish-promotion-operating-surface.md docs/opl-publish-promotion-operating-surface.zh-CN.md           docs/opl-gateway-example-corpus.md docs/opl-gateway-example-corpus.zh-CN.md           docs/opl-routed-safety-example-corpus.md docs/opl-routed-safety-example-corpus.zh-CN.md           docs/opl-operating-example-corpus.md docs/opl-operating-example-corpus.zh-CN.md           docs/opl-operating-record-catalog.md docs/opl-operating-record-catalog.zh-CN.md           docs/opl-surface-lifecycle-map.md docs/opl-surface-lifecycle-map.zh-CN.md           docs/opl-surface-authority-matrix.md docs/opl-surface-authority-matrix.zh-CN.md           docs/opl-public-surface-index.md docs/opl-public-surface-index.zh-CN.md           docs/opl-gateway-rollout.md docs/opl-gateway-rollout.zh-CN.md           docs/roadmap.md docs/roadmap.zh-CN.md           contracts/opl-gateway/README.md contracts/opl-gateway/README.zh-CN.md
 ```
 
 ## Completion Definition
 
 The current OPL gateway documentation-and-contract stack is acceptance-green only when:
 
-- all sections A-M pass
+- all sections A-N pass
 - the linked machine-readable contracts are present and valid
 - discovery and routing docs still forbid direct harness bypass
 - governance / audit remains index-only
@@ -653,8 +739,9 @@ The current OPL gateway documentation-and-contract stack is acceptance-green onl
 - the operating example corpus remains illustrative and directly schema-validated
 - the operating-record catalog remains reference-only and resolves all schema/example refs
 - the surface lifecycle map remains derived, reference-only, and non-executing
+- the surface authority matrix remains derived, reference-only, and non-executing
 - the public-surface index remains discoverability-only
 - domain onboarding remains boundary-first
 - cross-domain wording remains stable
 
-If any of these fail, the stack is not yet acceptance-green for the post-P14 discoverability surface.
+If any of these fail, the stack is not yet acceptance-green for the post-P15 discoverability surface.

@@ -20,7 +20,7 @@ This lifecycle map does not:
 - decide unresolved routing states
 - replace the governing docs, schemas, or supporting corpora
 - move canonical truth into `OPL`
-- never authorize direct harness access, direct publish, direct release, direct export, direct submission, or direct posting by `OPL`
+- authorize direct harness access, direct publish, direct release, direct export, direct submission, or direct posting by `OPL`
 
 ## Lifecycle Fields
 
@@ -58,6 +58,10 @@ Each entry stays derived/reference-only and carries only:
 - `opl_public_surface_index_doc`
 - `opl_gateway_acceptance_spec`
 
+## Companion Mapping Surface
+
+- [OPL Surface Authority Matrix](./opl-surface-authority-matrix.md)
+
 ## Reading Rule
 
 Read this lifecycle map as a **derived reference graph**, not as an execution contract.
@@ -87,4 +91,5 @@ The lifecycle map is acceptable only when:
 - every `requires_surfaces` and `enables_surfaces` target resolves inside the same lifecycle map
 - every `governing_ref` resolves to an existing local artifact
 - `follow_on_route_surface` is always `null` or `domain_gateway`
+- it remains discoverable alongside the derived surface authority matrix without either map becoming an execution surface
 - it remains derived, reference-only, and non-executing

@@ -1,5 +1,5 @@
 {
-  "version": "p14.m1",
+  "version": "p15.m1",
   "gates": [
     {
       "gate_id": "g1_registry_completeness",
@@ -279,6 +279,38 @@
       ]
     },
     {
+      "gate_id": "p15_surface_authority_matrix_integrity",
+      "layer": "p15",
+      "required_files": [
+        "contracts/opl-gateway/surface-authority-matrix.json",
+        "contracts/opl-gateway/surface-lifecycle-map.json",
+        "contracts/opl-gateway/domains.json",
+        "docs/opl-surface-authority-matrix.md",
+        "docs/opl-surface-authority-matrix.zh-CN.md",
+        "contracts/opl-gateway/public-surface-index.json",
+        "docs/opl-public-surface-index.md",
+        "docs/opl-public-surface-index.zh-CN.md",
+        "docs/opl-surface-lifecycle-map.md",
+        "docs/opl-surface-lifecycle-map.zh-CN.md",
+        "docs/opl-gateway-acceptance-test-spec.md",
+        "docs/opl-gateway-acceptance-test-spec.zh-CN.md",
+        "contracts/opl-gateway/README.md",
+        "contracts/opl-gateway/README.zh-CN.md"
+      ],
+      "contract_assertions": [
+        "authority matrix covers the frozen OPL surfaces plus linked domain public-entry surfaces needed for current authority review",
+        "matrix entries stay derived, reference-only, and non-executing",
+        "OPL-owned surfaces never claim domain execution, truth, review, or publication authority",
+        "linked domain public-entry surfaces remain domain-owned and mark where domain-local routing/execution begin",
+        "lifecycle map, public-surface index, contract hub, and acceptance surfaces expose the authority matrix as a supporting/reference surface"
+      ],
+      "forbidden_regressions": [
+        "authority matrix becomes an authorization engine",
+        "authority matrix becomes a runtime control plane",
+        "authority matrix transfers domain truth or publication ownership into OPL"
+      ]
+    },
+    {
       "gate_id": "cross_domain_wording_consistency",
       "layer": "cross_domain",
       "required_files": [
@@ -303,7 +335,9 @@
         "docs/opl-operating-record-catalog.md",
         "docs/opl-operating-record-catalog.zh-CN.md",
         "docs/opl-surface-lifecycle-map.md",
-        "docs/opl-surface-lifecycle-map.zh-CN.md"
+        "docs/opl-surface-lifecycle-map.zh-CN.md",
+        "docs/opl-surface-authority-matrix.md",
+        "docs/opl-surface-authority-matrix.zh-CN.md"
       ],
       "contract_assertions": [
         "OPL remains the top-level gateway/federation surface",
@@ -311,13 +345,15 @@
         "RedCube AI remains Presentation Ops-carrying domain gateway/harness",
         "governance/publish surfaces remain index-only",
         "supporting discoverability surfaces remain non-governing and non-executing",
-        "surface lifecycle map remains derived/reference-only"
+        "surface lifecycle map remains derived/reference-only",
+        "authority matrix remains derived/reference-only"
       ],
       "forbidden_regressions": [
         "OPL described as monolithic runtime",
         "domain projects reduced to private implementation details",
         "public-surface index described as a launcher",
-        "surface lifecycle map described as transition authority"
+        "surface lifecycle map described as transition authority",
+        "authority matrix described as authorization engine"
       ]
     }
   ]

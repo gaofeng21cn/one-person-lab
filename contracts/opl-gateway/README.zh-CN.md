@@ -38,8 +38,9 @@
 ## 配套参考 Surfaces
 
 - [OPL Surface Lifecycle Map](../../docs/opl-surface-lifecycle-map.zh-CN.md) — 对当前已冻结 gateway / operating / supporting surfaces 的 derived machine-readable lifecycle 视图
+- [OPL Surface Authority Matrix](../../docs/opl-surface-authority-matrix.zh-CN.md) — 对当前已冻结 OPL surfaces 与 linked domain public-entry surfaces 的 derived machine-readable authority split
 
-这张 lifecycle map 只是 reference-only surface。它不会变成 workflow engine、transition authority，也不替代本目录中的 governing contracts。
+这些 mapping surfaces 都只是 reference-only surface。它们不会变成 workflow engine、transition authority、authorization engine，也不替代本目录中的 governing contracts。
 
 ## 文件
 
@@ -55,6 +56,7 @@
 - [`public-surface-index.json`](./public-surface-index.json) — 当前权威 OPL public surface 与链接 domain public entry 的 machine-readable index
 - [`operating-record-catalog.json`](./operating-record-catalog.json) — 已冻结 P5.M1 / P5.M2 operating record kind 的 machine-readable reference catalog
 - [`surface-lifecycle-map.json`](./surface-lifecycle-map.json) — 当前已冻结 gateway / operating / supporting surfaces 的 machine-readable derived lifecycle map
+- [`surface-authority-matrix.json`](./surface-authority-matrix.json) — 当前已冻结 OPL surfaces 与 linked domain public-entry surfaces 的 machine-readable derived authority matrix
 
 ## 已冻结的当前映射
 

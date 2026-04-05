@@ -58,6 +58,10 @@
 - `opl_public_surface_index_doc`
 - `opl_gateway_acceptance_spec`
 
+## 配套 Mapping Surface
+
+- [OPL Surface Authority Matrix](./opl-surface-authority-matrix.zh-CN.md)
+
 ## 阅读规则
 
 这张 lifecycle map 必须被理解成 **derived reference graph**，而不是 execution contract。
@@ -87,4 +91,5 @@
 - 每个 `requires_surfaces` 与 `enables_surfaces` 目标都能在同一个 lifecycle map 中解析
 - 每个 `governing_ref` 都能解析到存在的本地工件
 - `follow_on_route_surface` 始终只能是 `null` 或 `domain_gateway`
+- 它能与 derived surface authority matrix 一起被发现，但两者都不会升级成 execution surface
 - 它保持 derived、reference-only、non-executing
