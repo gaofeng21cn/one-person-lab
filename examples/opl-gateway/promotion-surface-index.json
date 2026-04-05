@@ -1,0 +1,41 @@
+{
+  "version": "p5.m2",
+  "record_kind": "promotion_surface_index",
+  "record_id": "opl-surface-2026-04-05-001",
+  "request_id": "opl-2026-04-05-021",
+  "workstream_id": "presentation_ops",
+  "domain_id": "redcube",
+  "summary": "Indexed the public surfaces and blockers for promoting the released deck.",
+  "status": "needs_human_review",
+  "evidence_refs": [
+    "landing_page=ready",
+    "announcement_copy=pending"
+  ],
+  "domain_truth_refs": [
+    {
+      "domain_id": "redcube",
+      "ref_kind": "release_record",
+      "ref": "redcube://releases/deck-002"
+    },
+    {
+      "domain_id": "redcube",
+      "ref_kind": "public_channel_record",
+      "ref": "redcube://channels/project-landing/deck-002"
+    }
+  ],
+  "recorded_at": "2026-04-05T07:12:00Z",
+  "promotion_surface_index": {
+    "target_surfaces": [
+      "project_landing",
+      "announcement_post"
+    ],
+    "required_human_approval": true,
+    "blocking_surface": "announcement_post",
+    "public_refs": [
+      {
+        "surface_id": "project_landing",
+        "ref": "https://example.org/decks/deck-002"
+      }
+    ]
+  }
+}

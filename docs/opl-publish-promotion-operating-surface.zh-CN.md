@@ -195,6 +195,9 @@
 
 ## 示例 Record Shape
 
+已冻结 publish / promotion record 的 canonical machine-readable example 也同步落在 [OPL Operating Example Corpus](./opl-operating-example-corpus.zh-CN.md) 与其链接的 JSON 文件中。
+下面这些 inline shape 仍然是本 governing surface 的 prose-side illustration。
+
 ### 示例：`publish_outcome_index`
 
 ```json

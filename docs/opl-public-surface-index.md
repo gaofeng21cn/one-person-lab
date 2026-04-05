@@ -50,8 +50,9 @@ These surfaces freeze the gateway and federation boundary:
 These surfaces improve review and discoverability without becoming execution layers:
 
 - Acceptance test spec
-- Example corpus
+- Gateway example corpus
 - Routed-safety example corpus
+- Operating example corpus
 - Public surface index
 
 ### 4. Linked domain public-entry surfaces
@@ -88,6 +89,7 @@ They do not become governing gateway surfaces.
 
 - [OPL Gateway Example Corpus](./opl-gateway-example-corpus.md)
 - [OPL Routed-Safety Example Corpus](./opl-routed-safety-example-corpus.md)
+- [OPL Operating Example Corpus](./opl-operating-example-corpus.md)
 
 ## Completion Definition
 

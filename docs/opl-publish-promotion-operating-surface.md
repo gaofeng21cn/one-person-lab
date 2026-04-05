@@ -195,6 +195,9 @@ They do not transfer ownership of the corresponding publish or promotion truth i
 
 ## Example Record Shapes
 
+Canonical machine-readable operating examples for the frozen publish / promotion records also live in the [OPL Operating Example Corpus](./opl-operating-example-corpus.md) and its linked JSON files.
+The inline shapes below remain the prose-side illustrations for this governing surface.
+
 ### Example: `publish_outcome_index`
 
 ```json

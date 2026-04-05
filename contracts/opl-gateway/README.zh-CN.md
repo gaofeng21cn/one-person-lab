@@ -31,8 +31,9 @@
 
 - [OPL Gateway Example Corpus](../../docs/opl-gateway-example-corpus.zh-CN.md) — 展示当前已冻结 gateway layers 如何做 canonical、illustrative 的 contract-level composition
 - [OPL Routed-Safety Example Corpus](../../docs/opl-routed-safety-example-corpus.zh-CN.md) — 展示显式非成功 G3 路由状态的 canonical、illustrative safety walkthrough
+- [OPL Operating Example Corpus](../../docs/opl-operating-example-corpus.zh-CN.md) — 为已冻结 P5.M1 / P5.M2 surface 提供 canonical 的独立 operating-record example
 
-这两组示例都只是配套参考，不替代本目录中的 governing contracts。
+这三组示例都只是配套参考，不替代本目录中的 governing contracts。
 
 ## 文件
 

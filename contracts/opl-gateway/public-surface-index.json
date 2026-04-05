@@ -1,5 +1,5 @@
 {
-  "version": "p11.m1",
+  "version": "p12.m1",
   "scope": "opl_public_gateway_surface_index",
   "description": "Machine-readable index of the current authoritative OPL gateway public surfaces and linked domain gateway public entries. This index is contract-first and does not implement a runtime.",
   "non_goals": [
@@ -253,7 +253,8 @@
         "opl_publish_promotion_operating_surface",
         "opl_gateway_acceptance_spec",
         "opl_gateway_example_corpus",
-        "opl_public_surface_index_doc"
+        "opl_public_surface_index_doc",
+        "opl_operating_example_corpus"
       ],
       "notes": [
         "Indexes the machine-readable OPL gateway contract materialization.",
@@ -393,7 +394,8 @@
       ],
       "routes_to": [
         "medautoscience_public_gateway",
-        "redcube_public_gateway"
+        "redcube_public_gateway",
+        "opl_operating_example_corpus"
       ],
       "notes": [
         "Indexes governance and audit signals above domains without becoming runtime truth."
@@ -428,7 +430,8 @@
       ],
       "routes_to": [
         "medautoscience_public_gateway",
-        "redcube_public_gateway"
+        "redcube_public_gateway",
+        "opl_operating_example_corpus"
       ],
       "notes": [
         "Indexes publish/promotion outcomes only after domain-owned publish or release truth exists."
@@ -463,7 +466,8 @@
       ],
       "routes_to": [
         "opl_gateway_contract_hub",
-        "opl_gateway_example_corpus"
+        "opl_gateway_example_corpus",
+        "opl_operating_example_corpus"
       ],
       "notes": [
         "Defines the current checkable completion gates for the frozen gateway stack."
@@ -552,6 +556,68 @@
       ]
     },
     {
+      "surface_id": "opl_operating_example_corpus",
+      "category_id": "opl_supporting_surface",
+      "surface_kind": "example_corpus",
+      "boundary_role": "operating_record_walkthrough",
+      "owner_scope": "opl",
+      "truth_mode": "none",
+      "workstream_ids": [
+        "research_ops",
+        "presentation_ops"
+      ],
+      "domain_ids": [
+        "medautoscience",
+        "redcube"
+      ],
+      "refs": [
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/opl-operating-example-corpus.md",
+          "language": "en"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/opl-operating-example-corpus.zh-CN.md",
+          "language": "zh-CN"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "examples/opl-gateway/governance-decision-record.json"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "examples/opl-gateway/cross-domain-review-index.json"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "examples/opl-gateway/publish-readiness-signal.json"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "examples/opl-gateway/publish-outcome-index.json"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "examples/opl-gateway/promotion-candidate-signal.json"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "examples/opl-gateway/promotion-surface-index.json"
+        }
+      ],
+      "routes_to": [
+        "opl_governance_audit_operating_surface",
+        "opl_publish_promotion_operating_surface",
+        "medautoscience_public_gateway",
+        "redcube_public_gateway"
+      ],
+      "notes": [
+        "Canonical standalone operating-record examples for the frozen P5.M1/P5.M2 surfaces.",
+        "Illustrative only; follow-on review, publish, or promotion actions still route through domain gateways."
+      ]
+    },
+    {
       "surface_id": "opl_public_surface_index_doc",
       "category_id": "opl_supporting_surface",
       "surface_kind": "index_doc",
@@ -582,6 +648,7 @@
         "opl_public_readme",
         "opl_gateway_contract_hub",
         "opl_routed_safety_example_corpus",
+        "opl_operating_example_corpus",
         "medautoscience_public_gateway",
         "redcube_public_gateway"
       ],

@@ -24,6 +24,7 @@
 - `P7` example corpus 完整性
 - `P8` public surface index 完整性
 - `P10` routed-safety example 完整性
+- `P12` operating example 完整性
 - 各公开表面之间的 cross-domain wording consistency
 
 ## 上位依据
@@ -46,8 +47,9 @@
 ## 配套参考示例
 
 - [OPL Gateway Example Corpus](./opl-gateway-example-corpus.zh-CN.md)
+- [OPL Operating Example Corpus](./opl-operating-example-corpus.zh-CN.md)
 
-这组示例只是 illustrative、non-governing 的配套参考。它帮助人类与 Agent 理解已冻结 layers 如何组合，但不替代上面的 contracts 与 acceptance gates。
+这两组 corpus 都是 illustrative、non-governing 的配套参考。gateway corpus 展示跨层组合；operating corpus 则把独立的 `P5.M1` / `P5.M2` record materialize 成可直接检查的 example。它们帮助人类与 Agent 理解已冻结 surface，但不替代上面的 contracts 与 acceptance gates。
 
 ## A. G1 Registry Completeness
 
@@ -313,6 +315,35 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 - 检查 `docs/opl-routed-safety-example-corpus.md` 与 `.zh-CN.md` 中的 no-runtime / no-fallback / no-truth-shift wording。
 - 确认 public-surface index 与 routed-action 文档在应有位置链接到 routed-safety corpus。
 
+## K. P12 Operating Example 完整性
+
+### 验收标准
+
+`P12` 只有在下面全部成立时才算通过：
+
+1. `docs/opl-operating-example-corpus.md` 与 `.zh-CN.md` 存在。
+2. 六个独立 operating example 文件存在，且是合法 JSON：
+   - `examples/opl-gateway/governance-decision-record.json`
+   - `examples/opl-gateway/cross-domain-review-index.json`
+   - `examples/opl-gateway/publish-readiness-signal.json`
+   - `examples/opl-gateway/publish-outcome-index.json`
+   - `examples/opl-gateway/promotion-candidate-signal.json`
+   - `examples/opl-gateway/promotion-surface-index.json`
+3. governance 侧 example 直接通过 `contracts/opl-gateway/governance-audit.schema.json` 校验。
+4. publish / promotion 侧 example 直接通过 `contracts/opl-gateway/publish-promotion.schema.json` 校验。
+5. operating-example corpus 文档显式保持 illustrative、non-governing、non-executing。
+6. governance / audit 与 publish / promotion 文档都把该 corpus 指向为 canonical 的独立 machine-readable example surface。
+7. contract hub、public-surface index 与 acceptance surface 都把该 corpus 暴露为 supporting surface，而不是 runtime。
+8. examples 继续把 review、publish 与 promotion truth 留在 domain 内部，并把任何 follow-on action 保持在 `domain_gateway` 之后。
+9. 该 corpus 不授权 `OPL` 直接执行 publish、release、export、submission 或 public posting。
+
+### 验证方式
+
+- 使用 `json.load` 解析六个 operating-example JSON 文件。
+- 用 `governance-audit.schema.json` 校验三个 governance 侧 example，用 `publish-promotion.schema.json` 校验三个 publish 侧 example。
+- 检查 `docs/opl-operating-example-corpus.md` 与 `.zh-CN.md` 中的 illustrative / non-governing / non-executing wording。
+- 确认 governance / audit 文档、publish / promotion 文档、contract README、public-surface index 与 acceptance spec 都在应有位置链接到该 corpus。
+
 ## 标准验证命令
 
 ```bash
@@ -373,6 +404,22 @@ for rel in [
     if 'publish_promotion_record' in data:
         pub.validate(data['publish_promotion_record'])
     print('examples schema OK', rel)
+
+for rel in [
+    'examples/opl-gateway/governance-decision-record.json',
+    'examples/opl-gateway/cross-domain-review-index.json',
+    'examples/opl-gateway/publish-readiness-signal.json',
+]:
+    gov.validate(json.loads(Path(rel).read_text()))
+    print('governance example OK', rel)
+
+for rel in [
+    'examples/opl-gateway/publish-outcome-index.json',
+    'examples/opl-gateway/promotion-candidate-signal.json',
+    'examples/opl-gateway/promotion-surface-index.json',
+]:
+    pub.validate(json.loads(Path(rel).read_text()))
+    print('publish example OK', rel)
 PY
 python3 - <<'PY'
 import json
@@ -432,6 +479,8 @@ files = [
     Path('docs/opl-gateway-example-corpus.zh-CN.md'),
     Path('docs/opl-routed-safety-example-corpus.md'),
     Path('docs/opl-routed-safety-example-corpus.zh-CN.md'),
+    Path('docs/opl-operating-example-corpus.md'),
+    Path('docs/opl-operating-example-corpus.zh-CN.md'),
     Path('docs/opl-public-surface-index.md'),
     Path('docs/opl-public-surface-index.zh-CN.md'),
     Path('docs/opl-gateway-acceptance-test-spec.md'),
@@ -450,36 +499,23 @@ for path in files:
             raise SystemExit(f'missing link: {path} -> {raw}')
 print('links OK')
 PY
-rg -n "top-level blueprint only|不是统一运行时入口|本仓库本身不承担运行时角色" \
-  README.md README.zh-CN.md \
-  docs/gateway-federation.md docs/gateway-federation.zh-CN.md \
-  docs/opl-federation-contract.md docs/opl-federation-contract.zh-CN.md \
-  docs/opl-read-only-discovery-gateway.md docs/opl-read-only-discovery-gateway.zh-CN.md \
-  docs/opl-routed-action-gateway.md docs/opl-routed-action-gateway.zh-CN.md \
-  docs/opl-domain-onboarding-contract.md docs/opl-domain-onboarding-contract.zh-CN.md \
-  docs/opl-governance-audit-operating-surface.md docs/opl-governance-audit-operating-surface.zh-CN.md \
-  docs/opl-publish-promotion-operating-surface.md docs/opl-publish-promotion-operating-surface.zh-CN.md \
-  docs/opl-gateway-example-corpus.md docs/opl-gateway-example-corpus.zh-CN.md \
-  docs/opl-routed-safety-example-corpus.md docs/opl-routed-safety-example-corpus.zh-CN.md \
-  docs/opl-public-surface-index.md docs/opl-public-surface-index.zh-CN.md \
-  docs/opl-gateway-rollout.md docs/opl-gateway-rollout.zh-CN.md \
-  docs/roadmap.md docs/roadmap.zh-CN.md \
-  contracts/opl-gateway/README.md contracts/opl-gateway/README.zh-CN.md
+rg -n "top-level blueprint only|不是统一运行时入口|本仓库本身不承担运行时角色"           README.md README.zh-CN.md           docs/gateway-federation.md docs/gateway-federation.zh-CN.md           docs/opl-federation-contract.md docs/opl-federation-contract.zh-CN.md           docs/opl-read-only-discovery-gateway.md docs/opl-read-only-discovery-gateway.zh-CN.md           docs/opl-routed-action-gateway.md docs/opl-routed-action-gateway.zh-CN.md           docs/opl-domain-onboarding-contract.md docs/opl-domain-onboarding-contract.zh-CN.md           docs/opl-governance-audit-operating-surface.md docs/opl-governance-audit-operating-surface.zh-CN.md           docs/opl-publish-promotion-operating-surface.md docs/opl-publish-promotion-operating-surface.zh-CN.md           docs/opl-gateway-example-corpus.md docs/opl-gateway-example-corpus.zh-CN.md           docs/opl-routed-safety-example-corpus.md docs/opl-routed-safety-example-corpus.zh-CN.md           docs/opl-operating-example-corpus.md docs/opl-operating-example-corpus.zh-CN.md           docs/opl-public-surface-index.md docs/opl-public-surface-index.zh-CN.md           docs/opl-gateway-rollout.md docs/opl-gateway-rollout.zh-CN.md           docs/roadmap.md docs/roadmap.zh-CN.md           contracts/opl-gateway/README.md contracts/opl-gateway/README.zh-CN.md
 ```
 
 ## 完成定义
 
 只有在下面这些条件都成立时，当前 OPL gateway 文档/合同体系才算 acceptance-green：
 
-- A-J 十部分全部通过
+- A-K 十一部分全部通过
 - 关联的机器可读合同存在且有效
 - discovery 与 routing 文档仍然禁止 direct harness bypass
 - governance / audit 仍然保持 index-only
 - publish / promotion 仍然保持 index-only，且只在 post-publish 阶段生效
 - example corpus 仍然保持 illustrative 且 schema-aligned
 - routed-safety corpus 仍然保持 illustrative，且在应当 unresolved 的地方显式 unresolved
+- operating example corpus 仍然保持 illustrative，且直接通过 schema 校验
 - public surface index 仍然保持 discoverability-only
 - domain onboarding 仍然是 boundary-first
 - cross-domain wording 保持稳定
 
-只要其中任何一条不成立，这套体系就还没有达到 post-P10 discoverability surface 的 acceptance-green 状态。
+只要其中任何一条不成立，这套体系就还没有达到 post-P12 discoverability surface 的 acceptance-green 状态。

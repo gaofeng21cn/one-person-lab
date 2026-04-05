@@ -1,0 +1,34 @@
+{
+  "version": "p5.m2",
+  "record_kind": "promotion_candidate_signal",
+  "record_id": "opl-promo-2026-04-05-001",
+  "request_id": "opl-2026-04-05-021",
+  "workstream_id": "presentation_ops",
+  "domain_id": "redcube",
+  "summary": "The released deck appears ready to enter the domain-owned promotion gate.",
+  "status": "ready_for_next_gate",
+  "evidence_refs": [
+    "release_record=complete",
+    "human_review=complete"
+  ],
+  "domain_truth_refs": [
+    {
+      "domain_id": "redcube",
+      "ref_kind": "release_record",
+      "ref": "redcube://releases/deck-002"
+    },
+    {
+      "domain_id": "redcube",
+      "ref_kind": "artifact_record",
+      "ref": "redcube://artifacts/deck-002"
+    }
+  ],
+  "recorded_at": "2026-04-05T07:11:00Z",
+  "promotion_candidate_signal": {
+    "promotion_readiness": "ready_for_promotion_gate",
+    "target_surfaces": [
+      "project_landing",
+      "announcement_post"
+    ]
+  }
+}

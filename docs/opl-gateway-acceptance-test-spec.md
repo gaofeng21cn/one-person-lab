@@ -24,6 +24,7 @@ This acceptance spec covers:
 - `P7` example-corpus integrity
 - `P8` public-surface-index integrity
 - `P10` routed-safety example integrity
+- `P12` operating example integrity
 - cross-domain wording consistency across public surfaces
 
 ## Governing Sources
@@ -46,8 +47,9 @@ The acceptance checks below are grounded in:
 ## Companion Reference Examples
 
 - [OPL Gateway Example Corpus](./opl-gateway-example-corpus.md)
+- [OPL Operating Example Corpus](./opl-operating-example-corpus.md)
 
-This corpus is illustrative and non-governing. It helps humans and agents inspect how the frozen layers compose, but it does not replace the contracts and acceptance gates above.
+These corpora are illustrative and non-governing. The gateway corpus shows cross-layer composition; the operating corpus materializes standalone `P5.M1` / `P5.M2` records. They help humans and agents inspect the frozen surfaces, but they do not replace the contracts and acceptance gates above.
 
 ## A. G1 Registry Completeness
 
@@ -313,6 +315,35 @@ The wording-consistency gate passes only when all of the following are true:
 - Check `docs/opl-routed-safety-example-corpus.md` and `.zh-CN.md` for no-runtime / no-fallback / no-truth-shift wording.
 - Confirm the public-surface index and routed-action docs link to the routed-safety corpus where intended.
 
+## K. P12 Operating Example Integrity
+
+### Acceptance Criteria
+
+`P12` passes only when all of the following are true:
+
+1. `docs/opl-operating-example-corpus.md` and `.zh-CN.md` exist.
+2. The six standalone operating examples exist and are valid JSON:
+   - `examples/opl-gateway/governance-decision-record.json`
+   - `examples/opl-gateway/cross-domain-review-index.json`
+   - `examples/opl-gateway/publish-readiness-signal.json`
+   - `examples/opl-gateway/publish-outcome-index.json`
+   - `examples/opl-gateway/promotion-candidate-signal.json`
+   - `examples/opl-gateway/promotion-surface-index.json`
+3. The governance-side examples validate directly against `contracts/opl-gateway/governance-audit.schema.json`.
+4. The publish / promotion examples validate directly against `contracts/opl-gateway/publish-promotion.schema.json`.
+5. The operating-example corpus docs explicitly keep the examples illustrative, non-governing, and non-executing.
+6. The governance / audit and publish / promotion docs point to the operating-example corpus as the canonical standalone machine-readable example surface.
+7. The contract hub, public-surface index, and acceptance surfaces expose the operating-example corpus as a supporting surface rather than a runtime.
+8. The examples keep review, publish, and promotion truth inside domains and keep any follow-on action behind `domain_gateway`.
+9. The corpus does not authorize direct publish, release, export, submission, or public posting by `OPL`.
+
+### Verification
+
+- Parse the six operating-example JSON files with `json.load`.
+- Validate the three governance-side examples against `governance-audit.schema.json` and the three publish-side examples against `publish-promotion.schema.json`.
+- Check `docs/opl-operating-example-corpus.md` and `.zh-CN.md` for illustrative / non-governing / non-executing wording.
+- Confirm the governance / audit docs, publish / promotion docs, contract README, public-surface index, and acceptance spec all link to the operating-example corpus where intended.
+
 ## Standard Verification Commands
 
 ```bash
@@ -373,6 +404,22 @@ for rel in [
     if 'publish_promotion_record' in data:
         pub.validate(data['publish_promotion_record'])
     print('examples schema OK', rel)
+
+for rel in [
+    'examples/opl-gateway/governance-decision-record.json',
+    'examples/opl-gateway/cross-domain-review-index.json',
+    'examples/opl-gateway/publish-readiness-signal.json',
+]:
+    gov.validate(json.loads(Path(rel).read_text()))
+    print('governance example OK', rel)
+
+for rel in [
+    'examples/opl-gateway/publish-outcome-index.json',
+    'examples/opl-gateway/promotion-candidate-signal.json',
+    'examples/opl-gateway/promotion-surface-index.json',
+]:
+    pub.validate(json.loads(Path(rel).read_text()))
+    print('publish example OK', rel)
 PY
 python3 - <<'PY'
 import json
@@ -433,6 +480,8 @@ files = [
     Path('docs/opl-gateway-example-corpus.zh-CN.md'),
     Path('docs/opl-routed-safety-example-corpus.md'),
     Path('docs/opl-routed-safety-example-corpus.zh-CN.md'),
+    Path('docs/opl-operating-example-corpus.md'),
+    Path('docs/opl-operating-example-corpus.zh-CN.md'),
     Path('docs/opl-public-surface-index.md'),
     Path('docs/opl-public-surface-index.zh-CN.md'),
     Path('docs/opl-gateway-acceptance-test-spec.md'),
@@ -451,36 +500,23 @@ for path in files:
             raise SystemExit(f'missing link: {path} -> {raw}')
 print('links OK')
 PY
-rg -n "top-level blueprint only|不是统一运行时入口|本仓库本身不承担运行时角色" \
-  README.md README.zh-CN.md \
-  docs/gateway-federation.md docs/gateway-federation.zh-CN.md \
-  docs/opl-federation-contract.md docs/opl-federation-contract.zh-CN.md \
-  docs/opl-read-only-discovery-gateway.md docs/opl-read-only-discovery-gateway.zh-CN.md \
-  docs/opl-routed-action-gateway.md docs/opl-routed-action-gateway.zh-CN.md \
-  docs/opl-domain-onboarding-contract.md docs/opl-domain-onboarding-contract.zh-CN.md \
-  docs/opl-governance-audit-operating-surface.md docs/opl-governance-audit-operating-surface.zh-CN.md \
-  docs/opl-publish-promotion-operating-surface.md docs/opl-publish-promotion-operating-surface.zh-CN.md \
-  docs/opl-gateway-example-corpus.md docs/opl-gateway-example-corpus.zh-CN.md \
-  docs/opl-routed-safety-example-corpus.md docs/opl-routed-safety-example-corpus.zh-CN.md \
-  docs/opl-public-surface-index.md docs/opl-public-surface-index.zh-CN.md \
-  docs/opl-gateway-rollout.md docs/opl-gateway-rollout.zh-CN.md \
-  docs/roadmap.md docs/roadmap.zh-CN.md \
-  contracts/opl-gateway/README.md contracts/opl-gateway/README.zh-CN.md
+rg -n "top-level blueprint only|不是统一运行时入口|本仓库本身不承担运行时角色"           README.md README.zh-CN.md           docs/gateway-federation.md docs/gateway-federation.zh-CN.md           docs/opl-federation-contract.md docs/opl-federation-contract.zh-CN.md           docs/opl-read-only-discovery-gateway.md docs/opl-read-only-discovery-gateway.zh-CN.md           docs/opl-routed-action-gateway.md docs/opl-routed-action-gateway.zh-CN.md           docs/opl-domain-onboarding-contract.md docs/opl-domain-onboarding-contract.zh-CN.md           docs/opl-governance-audit-operating-surface.md docs/opl-governance-audit-operating-surface.zh-CN.md           docs/opl-publish-promotion-operating-surface.md docs/opl-publish-promotion-operating-surface.zh-CN.md           docs/opl-gateway-example-corpus.md docs/opl-gateway-example-corpus.zh-CN.md           docs/opl-routed-safety-example-corpus.md docs/opl-routed-safety-example-corpus.zh-CN.md           docs/opl-operating-example-corpus.md docs/opl-operating-example-corpus.zh-CN.md           docs/opl-public-surface-index.md docs/opl-public-surface-index.zh-CN.md           docs/opl-gateway-rollout.md docs/opl-gateway-rollout.zh-CN.md           docs/roadmap.md docs/roadmap.zh-CN.md           contracts/opl-gateway/README.md contracts/opl-gateway/README.zh-CN.md
 ```
 
 ## Completion Definition
 
 The current OPL gateway documentation-and-contract stack is acceptance-green only when:
 
-- all sections A-J pass
+- all sections A-K pass
 - the linked machine-readable contracts are present and valid
 - discovery and routing docs still forbid direct harness bypass
 - governance / audit remains index-only
 - publish / promotion remains index-only and post-publish only
 - the example corpus remains illustrative and schema-aligned
 - the routed-safety corpus remains illustrative and explicitly unresolved where required
+- the operating example corpus remains illustrative and directly schema-validated
 - the public-surface index remains discoverability-only
 - domain onboarding remains boundary-first
 - cross-domain wording remains stable
 
-If any of these fail, the stack is not yet acceptance-green for the post-P10 discoverability surface.
+If any of these fail, the stack is not yet acceptance-green for the post-P12 discoverability surface.

@@ -1,5 +1,5 @@
 {
-  "version": "p11.m1",
+  "version": "p12.m1",
   "gates": [
     {
       "gate_id": "g1_registry_completeness",
@@ -186,6 +186,40 @@
       ]
     },
     {
+      "gate_id": "p12_operating_example_integrity",
+      "layer": "p12",
+      "required_files": [
+        "docs/opl-operating-example-corpus.md",
+        "docs/opl-operating-example-corpus.zh-CN.md",
+        "examples/opl-gateway/governance-decision-record.json",
+        "examples/opl-gateway/cross-domain-review-index.json",
+        "examples/opl-gateway/publish-readiness-signal.json",
+        "examples/opl-gateway/publish-outcome-index.json",
+        "examples/opl-gateway/promotion-candidate-signal.json",
+        "examples/opl-gateway/promotion-surface-index.json",
+        "contracts/opl-gateway/public-surface-index.json",
+        "docs/opl-public-surface-index.md",
+        "docs/opl-public-surface-index.zh-CN.md",
+        "docs/opl-gateway-acceptance-test-spec.md",
+        "docs/opl-gateway-acceptance-test-spec.zh-CN.md",
+        "contracts/opl-gateway/README.md",
+        "contracts/opl-gateway/README.zh-CN.md"
+      ],
+      "contract_assertions": [
+        "operating-example corpus remains illustrative, non-governing, and non-executing",
+        "governance operating examples validate directly against the frozen governance-audit schema",
+        "publish/promotion operating examples validate directly against the frozen publish-promotion schema",
+        "governance and publish docs point to the canonical operating-example corpus",
+        "contract hub and public-surface index expose the operating-example corpus as a supporting surface",
+        "follow-on review/publish/promotion actions still route through domain_gateway"
+      ],
+      "forbidden_regressions": [
+        "operating example corpus becomes a workflow runtime",
+        "operating example corpus claims review/publish/promotion truth",
+        "operating example corpus authorizes direct publish/posting/submission by OPL"
+      ]
+    },
+    {
       "gate_id": "cross_domain_wording_consistency",
       "layer": "cross_domain",
       "required_files": [
@@ -204,7 +238,9 @@
         "docs/opl-public-surface-index.md",
         "docs/opl-public-surface-index.zh-CN.md",
         "contracts/opl-gateway/README.md",
-        "contracts/opl-gateway/README.zh-CN.md"
+        "contracts/opl-gateway/README.zh-CN.md",
+        "docs/opl-operating-example-corpus.md",
+        "docs/opl-operating-example-corpus.zh-CN.md"
       ],
       "contract_assertions": [
         "OPL remains the top-level gateway/federation surface",

@@ -1,0 +1,26 @@
+{
+  "version": "p5.m2",
+  "record_kind": "publish_outcome_index",
+  "record_id": "opl-publish-2026-04-05-001",
+  "request_id": "opl-2026-04-05-020",
+  "workstream_id": "research_ops",
+  "domain_id": "medautoscience",
+  "summary": "Indexed the domain-owned manuscript submission outcome at the top level.",
+  "status": "recorded",
+  "evidence_refs": [
+    "publish_gate=complete",
+    "submission_package=sealed"
+  ],
+  "domain_truth_refs": [
+    {
+      "domain_id": "medautoscience",
+      "ref_kind": "submission_record",
+      "ref": "medautoscience://submissions/study-002"
+    }
+  ],
+  "recorded_at": "2026-04-05T07:10:00Z",
+  "publish_outcome_index": {
+    "outcome_kind": "submitted",
+    "public_refs": []
+  }
+}

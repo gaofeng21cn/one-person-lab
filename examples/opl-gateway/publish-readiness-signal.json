@@ -1,0 +1,25 @@
+{
+  "version": "p5.m1",
+  "record_kind": "publish_readiness_signal",
+  "record_id": "opl-publish-2026-04-05-001",
+  "request_id": "opl-2026-04-05-010",
+  "workstream_id": "presentation_ops",
+  "domain_id": "redcube",
+  "summary": "The request appears ready to enter the domain-owned publish gate.",
+  "status": "ready_for_next_gate",
+  "evidence_refs": [
+    "human_review=complete",
+    "baseline_review=complete"
+  ],
+  "domain_truth_refs": [
+    {
+      "domain_id": "redcube",
+      "ref_kind": "publish_gate_record",
+      "ref": "redcube://publish-gates/deck-001"
+    }
+  ],
+  "recorded_at": "2026-04-05T06:22:00Z",
+  "publish_readiness_signal": {
+    "readiness": "ready_for_domain_publish_gate"
+  }
+}

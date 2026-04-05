@@ -1,0 +1,36 @@
+{
+  "version": "p5.m1",
+  "record_kind": "cross_domain_review_index",
+  "record_id": "opl-review-2026-04-05-001",
+  "request_id": "opl-2026-04-05-011",
+  "workstream_id": null,
+  "domain_id": null,
+  "summary": "The request spans research and presentation gates and still requires final human review.",
+  "status": "needs_human_review",
+  "evidence_refs": [
+    "research_review=complete",
+    "presentation_baseline=complete",
+    "final_human_review=pending"
+  ],
+  "domain_truth_refs": [
+    {
+      "domain_id": "medautoscience",
+      "ref_kind": "review_record",
+      "ref": "medautoscience://reviews/study-002"
+    },
+    {
+      "domain_id": "redcube",
+      "ref_kind": "publish_gate_record",
+      "ref": "redcube://publish-gates/deck-002"
+    }
+  ],
+  "recorded_at": "2026-04-05T06:23:00Z",
+  "cross_domain_review_index": {
+    "required_human_review": true,
+    "blocking_gate": "final_human_review",
+    "review_surface_refs": [
+      "medautoscience://reviews/study-002",
+      "redcube://publish-gates/deck-002"
+    ]
+  }
+}

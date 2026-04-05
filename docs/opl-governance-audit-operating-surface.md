@@ -167,6 +167,9 @@ It must not be used as:
 
 ## Example Record Shapes
 
+Canonical machine-readable operating examples for the frozen governance / audit records also live in the [OPL Operating Example Corpus](./opl-operating-example-corpus.md) and its linked JSON files.
+The inline shapes below remain the prose-side illustrations for this governing surface.
+
 ### Example: `routing_audit`
 
 ```json

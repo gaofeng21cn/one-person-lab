@@ -31,6 +31,7 @@ It freezes machine-readable gateway surfaces that later discovery and routed-act
 
 - [OPL Gateway Example Corpus](../../docs/opl-gateway-example-corpus.md) — canonical illustrative contract-level compositions across the frozen gateway layers
 - [OPL Routed-Safety Example Corpus](../../docs/opl-routed-safety-example-corpus.md) — canonical illustrative safety walkthroughs for the explicit non-success G3 routing states
+- [OPL Operating Example Corpus](../../docs/opl-operating-example-corpus.md) — canonical standalone operating-record examples for the frozen P5.M1 / P5.M2 surfaces
 
 These corpora are companion references only. They do not replace the governing contracts in this directory.
 
