@@ -125,6 +125,7 @@ Human / Agent
 在继续新增更多 domain 之前，需要补齐的合同：
 
 - [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.zh-CN.md)
+- [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.zh-CN.md)
 
 具体合同：
 
