@@ -287,6 +287,7 @@ For a more detailed phase breakdown:
 
 - [Gateway Federation](docs/gateway-federation.md)
 - [OPL Federation Contract](docs/opl-federation-contract.md)
+- [OPL Read-Only Discovery Gateway](docs/opl-read-only-discovery-gateway.md)
 - [OPL Gateway Rollout](docs/opl-gateway-rollout.md)
 - [OPL Operating Model](docs/operating-model.md)
 - [OPL Task Map](docs/task-map.md)

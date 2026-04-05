@@ -92,6 +92,10 @@ Completion signal:
 
 - an agent can ask “what system should I use for this task?” and receive a stable top-level answer
 
+Detailed contract:
+
+- [OPL Read-Only Discovery Gateway](opl-read-only-discovery-gateway.md)
+
 ## Phase G3: Routed Action Entry
 
 Goal:
