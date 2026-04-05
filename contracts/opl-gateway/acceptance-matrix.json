@@ -1,0 +1,141 @@
+{
+  "version": "p6.m1",
+  "gates": [
+    {
+      "gate_id": "g1_registry_completeness",
+      "layer": "g1",
+      "required_files": [
+        "contracts/opl-gateway/workstreams.json",
+        "contracts/opl-gateway/domains.json",
+        "contracts/opl-gateway/routing-vocabulary.json",
+        "contracts/opl-gateway/handoff.schema.json"
+      ],
+      "contract_assertions": [
+        "research_ops routes to medautoscience",
+        "presentation_ops routes to redcube",
+        "ppt_deck maps directly to presentation_ops",
+        "xiaohongshu routes to redcube without auto-equating to presentation_ops",
+        "handoff payload targets domain_gateway only"
+      ],
+      "forbidden_regressions": [
+        "canonical truth moved into OPL",
+        "direct harness targeting"
+      ]
+    },
+    {
+      "gate_id": "g2_discovery_correctness",
+      "layer": "g2",
+      "required_files": [
+        "docs/opl-read-only-discovery-gateway.md",
+        "docs/opl-read-only-discovery-gateway.zh-CN.md"
+      ],
+      "contract_assertions": [
+        "discovery is read-only",
+        "resolve_request_surface is grounded in frozen G1 registries",
+        "xiaohongshu may resolve to redcube without auto-equating to presentation_ops"
+      ],
+      "forbidden_regressions": [
+        "discovery mutates workspaces",
+        "discovery starts runs",
+        "discovery bypasses domain gateways"
+      ]
+    },
+    {
+      "gate_id": "g3_routing_safety",
+      "layer": "g3",
+      "required_files": [
+        "docs/opl-routed-action-gateway.md",
+        "docs/opl-routed-action-gateway.zh-CN.md",
+        "contracts/opl-gateway/routed-actions.schema.json"
+      ],
+      "contract_assertions": [
+        "route_request/build_handoff_payload/audit_routing_decision are defined",
+        "refused/unknown_domain/ambiguous_task remain explicit",
+        "handoff targets domain_gateway only"
+      ],
+      "forbidden_regressions": [
+        "direct harness bypass",
+        "hidden best-effort routing without explicit evidence"
+      ]
+    },
+    {
+      "gate_id": "domain_onboarding_gate",
+      "layer": "onboarding",
+      "required_files": [
+        "docs/opl-domain-onboarding-contract.md",
+        "docs/opl-domain-onboarding-contract.zh-CN.md"
+      ],
+      "contract_assertions": [
+        "new domains require complete registry material",
+        "truth ownership and review surfaces are explicit",
+        "formal inclusion gate covers discovery/routing/review readiness"
+      ],
+      "forbidden_regressions": [
+        "placeholder first boundary later",
+        "future domains treated as internal OPL modules"
+      ]
+    },
+    {
+      "gate_id": "p5_m1_governance_audit_integrity",
+      "layer": "p5.m1",
+      "required_files": [
+        "docs/opl-governance-audit-operating-surface.md",
+        "docs/opl-governance-audit-operating-surface.zh-CN.md",
+        "contracts/opl-gateway/governance-audit.schema.json"
+      ],
+      "contract_assertions": [
+        "allowed record kinds remain routing_audit/governance_decision/publish_readiness_signal/cross_domain_review_index",
+        "domain_truth_refs remains mandatory",
+        "decision_source excludes opl_gateway",
+        "publish_readiness_signal remains pre-publish readiness only"
+      ],
+      "forbidden_regressions": [
+        "OPL becomes runtime/review/publish truth owner",
+        "governance layer bypasses domain_gateway"
+      ]
+    },
+    {
+      "gate_id": "p5_m2_publish_promotion_integrity",
+      "layer": "p5.m2",
+      "required_files": [
+        "docs/opl-publish-promotion-operating-surface.md",
+        "docs/opl-publish-promotion-operating-surface.zh-CN.md",
+        "contracts/opl-gateway/publish-promotion.schema.json"
+      ],
+      "contract_assertions": [
+        "surface begins only after domain-owned publish/release/export/submission outcome exists",
+        "allowed record kinds remain publish_outcome_index/promotion_candidate_signal/promotion_surface_index",
+        "domain_truth_refs remains mandatory",
+        "promotion surfaces stay post-publish and index-only"
+      ],
+      "forbidden_regressions": [
+        "OPL becomes publish/release/export/submission/public-channel truth owner",
+        "OPL submits to venues or posts to public channels directly"
+      ]
+    },
+    {
+      "gate_id": "cross_domain_wording_consistency",
+      "layer": "cross_domain",
+      "required_files": [
+        "README.md",
+        "README.zh-CN.md",
+        "docs/roadmap.md",
+        "docs/roadmap.zh-CN.md",
+        "docs/opl-gateway-rollout.md",
+        "docs/opl-gateway-rollout.zh-CN.md",
+        "contracts/opl-gateway/README.md",
+        "contracts/opl-gateway/README.zh-CN.md"
+      ],
+      "contract_assertions": [
+        "OPL remains the top-level gateway/federation surface",
+        "MedAutoScience remains Research Ops domain gateway/harness",
+        "RedCube AI remains Presentation Ops-carrying domain gateway/harness",
+        "governance/publish surfaces remain index-only"
+      ],
+      "forbidden_regressions": [
+        "OPL described as monolithic runtime",
+        "domain projects reduced to private implementation details"
+      ]
+    }
+  ]
+}

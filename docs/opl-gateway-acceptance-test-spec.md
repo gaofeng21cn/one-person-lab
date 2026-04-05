@@ -19,6 +19,8 @@ This acceptance spec covers:
 - `G2` read-only discovery correctness
 - `G3` routed action safety
 - domain onboarding gate readiness
+- `P5.M1` governance / audit operating-surface integrity
+- `P5.M2` publish / promotion operating-surface integrity
 - cross-domain wording consistency across public surfaces
 
 ## Governing Sources
@@ -30,8 +32,11 @@ The acceptance checks below are grounded in:
 - [OPL Read-Only Discovery Gateway](./opl-read-only-discovery-gateway.md)
 - [OPL Routed Action Gateway](./opl-routed-action-gateway.md)
 - [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.md)
+- [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.md)
+- [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.md)
 - [OPL Gateway Rollout](./opl-gateway-rollout.md)
 - [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
+- [`acceptance-matrix.json`](../contracts/opl-gateway/acceptance-matrix.json)
 
 ## A. G1 Registry Completeness
 
@@ -139,7 +144,58 @@ The onboarding gate passes only when all of the following are true:
 - Confirm the onboarding gate stays downstream of G1/G2/G3 rather than replacing them.
 - Confirm the onboarding contract does not move canonical truth into `OPL`.
 
-## E. Cross-Domain Wording Consistency
+## E. P5.M1 Governance / Audit Operating-Surface Integrity
+
+### Acceptance Criteria
+
+`P5.M1` passes only when all of the following are true:
+
+1. `docs/opl-governance-audit-operating-surface.md` and `.zh-CN.md` exist.
+2. `contracts/opl-gateway/governance-audit.schema.json` exists and is valid JSON Schema JSON.
+3. The governance / audit surface allows only these top-level record kinds:
+   - `routing_audit`
+   - `governance_decision`
+   - `publish_readiness_signal`
+   - `cross_domain_review_index`
+4. The governance / audit doc and schema keep `OPL` at the index/signal layer rather than making it runtime truth, review truth, or publish truth owner.
+5. `domain_truth_refs` remains mandatory for the machine-readable governance / audit envelope.
+6. The governance schema keeps kind-specific records explicit and does not allow `decision_source = opl_gateway`.
+7. `publish_readiness_signal` remains explicitly non-equivalent to publication, submission, release, export, or domain approval truth.
+8. Governance / audit wording still forbids bypassing the domain gateway to reach the harness.
+
+### Verification
+
+- Parse `contracts/opl-gateway/governance-audit.schema.json`.
+- Check `docs/opl-governance-audit-operating-surface.md` and `.zh-CN.md` for the allowed record kinds and the no-truth-shift wording.
+- Confirm the schema uses kind-specific discrimination and that `decision_source` excludes `opl_gateway`.
+- Confirm governance / audit wording stays downstream of routed action and does not create a new execution runtime.
+
+## F. P5.M2 Publish / Promotion Operating-Surface Integrity
+
+### Acceptance Criteria
+
+`P5.M2` passes only when all of the following are true:
+
+1. `docs/opl-publish-promotion-operating-surface.md` and `.zh-CN.md` exist.
+2. `contracts/opl-gateway/publish-promotion.schema.json` exists and is valid JSON Schema JSON.
+3. The publish / promotion surface explicitly begins only after a domain-owned publish / release / export / submission outcome already exists.
+4. The publish / promotion doc and schema allow only these top-level record kinds:
+   - `publish_outcome_index`
+   - `promotion_candidate_signal`
+   - `promotion_surface_index`
+5. The publish / promotion doc and schema keep `OPL` at the index/signal layer rather than making it publish truth, release truth, export truth, submission truth, or public-channel posting truth owner.
+6. `domain_truth_refs` remains mandatory for the machine-readable publish / promotion envelope.
+7. Publish / promotion wording still forbids direct venue submission, direct export/release, direct public posting, and direct harness bypass.
+8. The `P5.M1 -> P5.M2` boundary remains explicit: readiness lives in `P5.M1`; post-publish indexing and promotion signaling live in `P5.M2`.
+
+### Verification
+
+- Parse `contracts/opl-gateway/publish-promotion.schema.json`.
+- Check `docs/opl-publish-promotion-operating-surface.md` and `.zh-CN.md` for the post-publish boundary and no-truth-shift wording.
+- Confirm the schema keeps kind-specific records explicit and keeps `domain_truth_refs` mandatory.
+- Confirm publish / promotion wording does not turn `OPL` into a venue-submission runtime or public-channel posting runtime.
+
+## G. Cross-Domain Wording Consistency
 
 ### Acceptance Criteria
 
@@ -155,6 +211,8 @@ The wording-consistency gate passes only when all of the following are true:
 5. `ppt_deck` remains explicitly mapped to `Presentation Ops`.
 6. `xiaohongshu` remains explicitly non-equivalent to `Presentation Ops` at the OPL layer.
 7. No public wording turns domain projects into private OPL implementation details.
+8. Governance / audit wording remains index-only rather than runtime-owning.
+9. Publish / promotion wording remains index-only rather than publish-owning or promotion-owning.
 
 ### Verification
 
@@ -189,10 +247,16 @@ files = [
     Path('docs/opl-routed-action-gateway.zh-CN.md'),
     Path('docs/opl-domain-onboarding-contract.md'),
     Path('docs/opl-domain-onboarding-contract.zh-CN.md'),
+    Path('docs/opl-governance-audit-operating-surface.md'),
+    Path('docs/opl-governance-audit-operating-surface.zh-CN.md'),
+    Path('docs/opl-publish-promotion-operating-surface.md'),
+    Path('docs/opl-publish-promotion-operating-surface.zh-CN.md'),
     Path('docs/opl-gateway-acceptance-test-spec.md'),
     Path('docs/opl-gateway-acceptance-test-spec.zh-CN.md'),
+    Path('contracts/opl-gateway/README.md'),
+    Path('contracts/opl-gateway/README.zh-CN.md'),
 ]
-link_re = re.compile(r'\\[[^\\]]+\\]\\(([^)]+)\\)')
+link_re = re.compile(r'\[[^\]]+\]\(([^)]+)\)')
 for path in files:
     text = path.read_text()
     for raw in link_re.findall(text):
@@ -210,6 +274,8 @@ rg -n "top-level blueprint only|不是统一运行时入口|本仓库本身不�
   docs/opl-read-only-discovery-gateway.md docs/opl-read-only-discovery-gateway.zh-CN.md \
   docs/opl-routed-action-gateway.md docs/opl-routed-action-gateway.zh-CN.md \
   docs/opl-domain-onboarding-contract.md docs/opl-domain-onboarding-contract.zh-CN.md \
+  docs/opl-governance-audit-operating-surface.md docs/opl-governance-audit-operating-surface.zh-CN.md \
+  docs/opl-publish-promotion-operating-surface.md docs/opl-publish-promotion-operating-surface.zh-CN.md \
   docs/opl-gateway-rollout.md docs/opl-gateway-rollout.zh-CN.md \
   docs/roadmap.md docs/roadmap.zh-CN.md \
   contracts/opl-gateway/README.md contracts/opl-gateway/README.zh-CN.md
@@ -219,10 +285,12 @@ rg -n "top-level blueprint only|不是统一运行时入口|本仓库本身不�
 
 The current OPL gateway documentation-and-contract stack is acceptance-green only when:
 
-- all sections A-E pass
+- all sections A-G pass
 - the linked machine-readable contracts are present and valid
 - discovery and routing docs still forbid direct harness bypass
+- governance / audit remains index-only
+- publish / promotion remains index-only and post-publish only
 - domain onboarding remains boundary-first
 - cross-domain wording remains stable
 
-If any of these fail, the stack is not yet frozen enough to support the next governance / audit / publish surface.
+If any of these fail, the stack is not yet acceptance-green for the post-P5 operating surface.
