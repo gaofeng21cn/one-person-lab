@@ -1242,4 +1242,4 @@ The current OPL gateway documentation-and-contract stack is acceptance-green onl
 - domain onboarding remains boundary-first
 - cross-domain wording remains stable
 
-If any of these fail, the stack is not yet acceptance-green for the post-P18 candidate-domain backlog / task-topology / review / discoverability surface.
+If any of these fail, the stack is not yet acceptance-green for the post-P23.M4 / G4 candidate-index boundary plus candidate-domain backlog / task-topology / review / discoverability surfaces.

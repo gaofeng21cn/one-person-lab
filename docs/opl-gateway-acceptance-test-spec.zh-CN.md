@@ -1248,4 +1248,4 @@ rg -n "roadmap-only|future-only|reference-only|non-admitting|public-entry|discov
 - domain onboarding 仍然是 boundary-first
 - cross-domain wording 保持稳定
 
-只要其中任何一条不成立，这套体系就还没有达到 post-P18 candidate-domain backlog / task-topology / review / discoverability surface 的 acceptance-green 状态。
+只要其中任何一条不成立，这套体系就还没有达到覆盖 post-P23.M4 / G4 candidate-index boundary 与 candidate-domain backlog / task-topology / review / discoverability surfaces 的 acceptance-green 状态。
