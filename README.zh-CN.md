@@ -63,7 +63,7 @@
     </td>
     <td width="20%" valign="top">
       <strong>智能体执行层</strong><br/>
-      稳定接口、运行监控与审计回写
+      稳定接口、执行可见性与审计回写
     </td>
   </tr>
   <tr>

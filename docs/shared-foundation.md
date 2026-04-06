@@ -80,7 +80,7 @@ It focuses on:
 
 - stable entry surfaces
 - routes or controllers
-- runtime monitoring
+- execution visibility
 - audit writeback
 
 This layer is not about removing humans. It is about letting humans review key outputs instead of babysitting low-level execution.

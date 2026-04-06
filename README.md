@@ -63,7 +63,7 @@
     </td>
     <td width="20%" valign="top">
       <strong>Agent Execution</strong><br/>
-      Stable interfaces, runtime monitoring, audit trails
+      Stable interfaces, execution visibility, audit trails
     </td>
   </tr>
   <tr>
