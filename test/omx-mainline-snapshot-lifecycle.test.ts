@@ -52,13 +52,7 @@ function collectActivePhase4SnapshotPaths(content: string) {
   return [...new Set(content.match(activePhase4SnapshotPattern) ?? [])];
 }
 
-function extractBacktickedMetadata(content: string, key: string) {
-  const match = content.match(new RegExp(`^- ${escapeForRegExp(key)}: \`([^\\\`]+)\`$`, 'm'));
-  assert.ok(match, `Expected ${key} metadata in the active Phase 4 snapshot.`);
-  return match[1]!;
-}
-
-test('CURRENT_PROGRAM, prompt, and latest status agree on the single active Phase 4 snapshot', () => {
+test('CURRENT_PROGRAM is the sole direct owner of the active Phase 4 snapshot path while prompt/status stay indirect', () => {
   const currentProgram = read(currentProgramPath);
   const prompt = read(promptPath);
   const latestStatus = read(latestStatusPath);
@@ -73,19 +67,15 @@ test('CURRENT_PROGRAM, prompt, and latest status agree on the single active Phas
   const latestStatusSnapshots = collectActivePhase4SnapshotPaths(latestStatus);
 
   assert.equal(currentProgramSnapshots.length, 1);
-  assert.deepEqual(promptSnapshots, currentProgramSnapshots);
-  assert.deepEqual(latestStatusSnapshots, currentProgramSnapshots);
+  assert.deepEqual(promptSnapshots, []);
+  assert.deepEqual(latestStatusSnapshots, []);
   assert.ok(knownSnapshots.has(currentProgramSnapshots[0]!), 'Active Phase 4 snapshot must exist on disk.');
 
+  assert.match(currentProgram, /sole direct owner of the active snapshot path|唯一直接持有 active Phase 4 snapshot path/i);
   assert.equal(
-    currentProgramSnapshots[0],
-    promptSnapshots[0],
-    'CURRENT_PROGRAM and OMX_TEAM_PROMPT must point at the same active Phase 4 snapshot.',
-  );
-  assert.equal(
-    currentProgramSnapshots[0],
-    latestStatusSnapshots[0],
-    'LATEST_STATUS must advertise the same active Phase 4 snapshot as CURRENT_PROGRAM.',
+    0,
+    promptSnapshots.length + latestStatusSnapshots.length,
+    'OMX_TEAM_PROMPT and LATEST_STATUS must stay indirect so CURRENT_PROGRAM remains the sole direct path owner.',
   );
 });
 
@@ -105,7 +95,7 @@ test('Phase 4 rollover choreography baseline records predecessor/checkpoint fact
   assert.match(activeSnapshot, /sole direct owner of the active snapshot path/i);
   assert.match(activeSnapshot, /refreshing `OMX_TEAM_PROMPT\.md` and `\.omx\/reports\/opl-mainline\/\*` in the same pass/i);
 
-  assert.match(currentProgram, /record predecessor tranche .* checkpoint base/i);
+  assert.match(currentProgram, /记录 predecessor tranche 与 checkpoint base|record predecessor(?:\/| )checkpoint facts/i);
   assert.match(prompt, /minimal deterministic re-entry pack|最小 deterministic re-entry pack/i);
   assert.match(latestStatus, /record predecessor tranche \/ checkpoint base together/i);
   assert.match(iterationLog, /same-pass pointer-move choreography/i);
@@ -115,7 +105,7 @@ test('Phase 4 rollover choreography baseline records predecessor/checkpoint fact
   );
 });
 
-test('Phase 4 snapshot lifecycle pack keeps superseded snapshots historical without promoting a new truth owner', () => {
+test('Phase 4 rollover pack keeps superseded snapshots historical without promoting a new truth owner', () => {
   const currentProgram = read(currentProgramPath);
   const prompt = read(promptPath);
   const latestStatus = read(latestStatusPath);
@@ -129,11 +119,11 @@ test('Phase 4 snapshot lifecycle pack keeps superseded snapshots historical with
     phase4SnapshotFiles.length >= 2,
     'Phase 4 snapshot lifecycle baseline should keep at least one superseded historical snapshot on disk.',
   );
-  assert.match(activeSnapshot, /historical artifacts/i);
+  assert.match(activeSnapshot, /historical-artifact status of superseded snapshots|must stay historical-only/i);
   assert.match(activeSnapshot, /truth owner/i);
   assert.match(currentProgram, /tranche-scoped continuity brief|不取代长期 governing truth 或 report truth/i);
   assert.match(prompt, /minimal deterministic re-entry pack|最小 deterministic re-entry pack/i);
-  assert.match(latestStatus, /snapshot creation \/ refresh \/ supersession/i);
+  assert.match(latestStatus, /single-pointer owner contract|same-pass routine for creating a new snapshot/i);
   assert.match(openIssues, /deterministic re-entry order explicit/i);
 });
 
