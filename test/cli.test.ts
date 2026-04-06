@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -20,7 +20,7 @@ const repoRoot = path.resolve(__dirname, '..');
 const cliPath = path.join(repoRoot, 'src', 'cli.ts');
 
 function runCli(args: string[]) {
-  const stdout = execFileSync(
+  const result = spawnSync(
     process.execPath,
     ['--experimental-strip-types', cliPath, ...args],
     {
@@ -33,27 +33,28 @@ function runCli(args: string[]) {
     },
   );
 
-  return JSON.parse(stdout);
+  assert.equal(result.status, 0, result.stderr);
+
+  return JSON.parse(result.stdout);
 }
 
 function runCliFailure(args: string[]) {
-  try {
-    runCli(args);
-    assert.fail('expected CLI to fail');
-  } catch (error) {
-    assert.equal(
-      typeof error === 'object' && error !== null && 'status' in error
-        ? error.status
-        : undefined,
-      1,
-    );
-    const stderr =
-      typeof error === 'object' && error !== null && 'stderr' in error
-        ? String(error.stderr)
-        : '';
+  const result = spawnSync(
+    process.execPath,
+    ['--experimental-strip-types', cliPath, ...args],
+    {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: '1',
+      },
+    },
+  );
 
-    return JSON.parse(stderr);
-  }
+  assert.equal(result.status, 1);
+
+  return JSON.parse(result.stderr);
 }
 
 test('loadGatewayContracts returns the frozen gateway registries', () => {
