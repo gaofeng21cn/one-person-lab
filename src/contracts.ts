@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import type {
+  ContractValidationSummary,
   DomainsRegistry,
   GatewayContracts,
   PublicSurfaceIndexContract,
@@ -542,10 +543,10 @@ function validatePublicSurfaceIndex(
   };
 }
 
-function resolveContractsDir(rootPath: string): string {
+function resolveContractsDir(rootPath: string, preferDirectRoot = false): string {
   const directPath = path.resolve(rootPath);
   const nestedPath = path.join(directPath, 'contracts', 'opl-gateway');
-  const directContractFiles = [
+  const contractFiles = [
     'workstreams.json',
     'domains.json',
     'routing-vocabulary.json',
@@ -557,8 +558,12 @@ function resolveContractsDir(rootPath: string): string {
     return nestedPath;
   }
 
+  if (preferDirectRoot) {
+    return directPath;
+  }
+
   if (
-    directContractFiles.every((fileName) =>
+    contractFiles.every((fileName) =>
       fs.existsSync(path.join(directPath, fileName)),
     )
   ) {
@@ -568,10 +573,58 @@ function resolveContractsDir(rootPath: string): string {
   return nestedPath;
 }
 
+const REQUIRED_CONTRACT_FILES = [
+  {
+    contract_id: 'workstreams',
+    file_name: 'workstreams.json',
+    schema_version: (contracts: GatewayContracts) => contracts.workstreams.version,
+  },
+  {
+    contract_id: 'domains',
+    file_name: 'domains.json',
+    schema_version: (contracts: GatewayContracts) => contracts.domains.version,
+  },
+  {
+    contract_id: 'routing_vocabulary',
+    file_name: 'routing-vocabulary.json',
+    schema_version: (contracts: GatewayContracts) => contracts.routingVocabulary.version,
+  },
+  {
+    contract_id: 'task_topology',
+    file_name: 'task-topology.json',
+    schema_version: (contracts: GatewayContracts) => contracts.taskTopology.version,
+  },
+  {
+    contract_id: 'public_surface_index',
+    file_name: 'public-surface-index.json',
+    schema_version: (contracts: GatewayContracts) => contracts.publicSurfaceIndex.version,
+  },
+] as const;
+
+export function validateGatewayContracts(
+  rootPath = process.env.OPL_CONTRACTS_DIR ?? process.cwd(),
+): ContractValidationSummary {
+  const contracts = loadGatewayContracts(rootPath);
+
+  return {
+    status: 'valid',
+    contracts_dir: contracts.contractsDir,
+    validated_contracts: REQUIRED_CONTRACT_FILES.map((contract) => ({
+      contract_id: contract.contract_id,
+      file: path.join(contracts.contractsDir, contract.file_name),
+      schema_version: contract.schema_version(contracts),
+      status: 'valid',
+    })),
+  };
+}
+
 export function loadGatewayContracts(
   rootPath = process.env.OPL_CONTRACTS_DIR ?? process.cwd(),
 ): GatewayContracts {
-  const contractsDir = resolveContractsDir(rootPath);
+  const contractsDir = resolveContractsDir(
+    rootPath,
+    process.env.OPL_CONTRACTS_DIR !== undefined || rootPath !== process.cwd(),
+  );
 
   return {
     contractsDir,

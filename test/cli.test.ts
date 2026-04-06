@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import {
   GatewayContractError,
   loadGatewayContracts,
+  validateGatewayContracts,
 } from '../src/contracts.ts';
 import {
   explainDomainBoundary,
@@ -18,12 +19,9 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
 const cliPath = path.join(repoRoot, 'src', 'cli.ts');
+const contractsDir = path.join(repoRoot, 'contracts', 'opl-gateway');
 
-function runCli(args: string[]) {
-  return runCliWithEnv(args);
-}
-
-function runCliWithEnv(args: string[], envOverrides: Record<string, string> = {}) {
+function runCli(args: string[], envOverrides: Record<string, string> = {}) {
   const result = spawnSync(
     process.execPath,
     ['--experimental-strip-types', cliPath, ...args],
@@ -39,11 +37,10 @@ function runCliWithEnv(args: string[], envOverrides: Record<string, string> = {}
   );
 
   assert.equal(result.status, 0, result.stderr);
-
   return JSON.parse(result.stdout);
 }
 
-function runCliFailure(args: string[]) {
+function runCliFailure(args: string[], envOverrides: Record<string, string> = {}) {
   const result = spawnSync(
     process.execPath,
     ['--experimental-strip-types', cliPath, ...args],
@@ -53,13 +50,24 @@ function runCliFailure(args: string[]) {
       env: {
         ...process.env,
         NODE_NO_WARNINGS: '1',
+        ...envOverrides,
       },
     },
   );
 
   assert.equal(result.status, 1);
-
   return JSON.parse(result.stderr);
+}
+
+function createContractsFixtureRoot(mutator?: (contractsRoot: string) => void) {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-contract-fixture-'));
+  const fixtureContractsRoot = path.join(fixtureRoot, 'contracts', 'opl-gateway');
+  fs.mkdirSync(fixtureContractsRoot, { recursive: true });
+  fs.cpSync(contractsDir, fixtureContractsRoot, {
+    recursive: true,
+  });
+  mutator?.(fixtureContractsRoot);
+  return { fixtureRoot, fixtureContractsRoot };
 }
 
 test('loadGatewayContracts returns the frozen gateway registries', () => {
@@ -82,15 +90,15 @@ test('loadGatewayContracts rejects missing files with a stable error', async (t)
     assert.throws(
       () => loadGatewayContracts(tempRoot),
       (error: unknown) =>
-        error instanceof GatewayContractError &&
-        error.code === 'contract_file_missing',
+        error instanceof GatewayContractError
+        && error.code === 'contract_file_missing',
     );
   });
 });
 
 test('loadGatewayContracts honors OPL_CONTRACTS_DIR when provided', () => {
   const tempContracts = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-gateway-contracts-'));
-  fs.cpSync(path.join(repoRoot, 'contracts', 'opl-gateway'), tempContracts, {
+  fs.cpSync(contractsDir, tempContracts, {
     recursive: true,
   });
 
@@ -99,11 +107,158 @@ test('loadGatewayContracts honors OPL_CONTRACTS_DIR when provided', () => {
   workstreams.workstreams[0].label = 'Research Ops Override';
   fs.writeFileSync(workstreamsPath, JSON.stringify(workstreams, null, 2));
 
-  const output = runCliWithEnv(['get-workstream', 'research_ops'], {
+  const output = runCli(['get-workstream', 'research_ops'], {
     OPL_CONTRACTS_DIR: tempContracts,
   });
 
   assert.equal(output.workstream.label, 'Research Ops Override');
+});
+
+test('validateGatewayContracts returns a stable summary for the required contract set', () => {
+  const validation = validateGatewayContracts(repoRoot);
+  const contracts = loadGatewayContracts(repoRoot);
+
+  assert.deepEqual(validation, {
+    status: 'valid',
+    contracts_dir: contractsDir,
+    validated_contracts: [
+      {
+        contract_id: 'workstreams',
+        file: path.join(contractsDir, 'workstreams.json'),
+        schema_version: 'g1',
+        status: 'valid',
+      },
+      {
+        contract_id: 'domains',
+        file: path.join(contractsDir, 'domains.json'),
+        schema_version: 'g1',
+        status: 'valid',
+      },
+      {
+        contract_id: 'routing_vocabulary',
+        file: path.join(contractsDir, 'routing-vocabulary.json'),
+        schema_version: 'g1',
+        status: 'valid',
+      },
+      {
+        contract_id: 'task_topology',
+        file: path.join(contractsDir, 'task-topology.json'),
+        schema_version: contracts.taskTopology.version,
+        status: 'valid',
+      },
+      {
+        contract_id: 'public_surface_index',
+        file: path.join(contractsDir, 'public-surface-index.json'),
+        schema_version: contracts.publicSurfaceIndex.version,
+        status: 'valid',
+      },
+    ],
+  });
+});
+
+test('validate-contracts returns a stable machine-readable contract summary', () => {
+  const output = runCli(['validate-contracts']);
+  const contracts = loadGatewayContracts(repoRoot);
+
+  assert.deepEqual(output, {
+    version: 'g2',
+    validation: {
+      status: 'valid',
+      contracts_dir: contractsDir,
+      validated_contracts: [
+        {
+          contract_id: 'workstreams',
+          file: path.join(contractsDir, 'workstreams.json'),
+          schema_version: 'g1',
+          status: 'valid',
+        },
+        {
+          contract_id: 'domains',
+          file: path.join(contractsDir, 'domains.json'),
+          schema_version: 'g1',
+          status: 'valid',
+        },
+        {
+          contract_id: 'routing_vocabulary',
+          file: path.join(contractsDir, 'routing-vocabulary.json'),
+          schema_version: 'g1',
+          status: 'valid',
+        },
+        {
+          contract_id: 'task_topology',
+          file: path.join(contractsDir, 'task-topology.json'),
+          schema_version: contracts.taskTopology.version,
+          status: 'valid',
+        },
+        {
+          contract_id: 'public_surface_index',
+          file: path.join(contractsDir, 'public-surface-index.json'),
+          schema_version: contracts.publicSurfaceIndex.version,
+          status: 'valid',
+        },
+      ],
+    },
+  });
+});
+
+test('validate-contracts surfaces stable missing-file errors', () => {
+  const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((contractsRoot) => {
+    fs.rmSync(path.join(contractsRoot, 'task-topology.json'));
+  });
+
+  try {
+    const output = runCliFailure(['validate-contracts'], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+
+    assert.equal(output.version, 'g2');
+    assert.equal(output.error.code, 'contract_file_missing');
+    assert.equal(output.error.exit_code, 1);
+    assert.match(output.error.message, /task-topology\.json/i);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('validate-contracts surfaces stable invalid-json errors', () => {
+  const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((contractsRoot) => {
+    fs.writeFileSync(path.join(contractsRoot, 'domains.json'), '{ invalid json\n');
+  });
+
+  try {
+    const output = runCliFailure(['validate-contracts'], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+
+    assert.equal(output.version, 'g2');
+    assert.equal(output.error.code, 'contract_json_invalid');
+    assert.equal(output.error.exit_code, 1);
+    assert.match(output.error.message, /domains\.json/i);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('validate-contracts surfaces stable shape-invalid errors', () => {
+  const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((contractsRoot) => {
+    const workstreamsPath = path.join(contractsRoot, 'workstreams.json');
+    const workstreams = JSON.parse(fs.readFileSync(workstreamsPath, 'utf8'));
+    delete workstreams.workstreams[0].label;
+    fs.writeFileSync(workstreamsPath, JSON.stringify(workstreams, null, 2));
+  });
+
+  try {
+    const output = runCliFailure(['validate-contracts'], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+
+    assert.equal(output.version, 'g2');
+    assert.equal(output.error.code, 'contract_shape_invalid');
+    assert.equal(output.error.exit_code, 1);
+    assert.match(output.error.message, /label/i);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
 });
 
 test('list-workstreams returns admitted workstream summaries', () => {
@@ -368,6 +523,54 @@ test('explain-domain-boundary explains under-definition requests', () => {
   assert.match(output.boundary_explanation.reason, /under definition/i);
 });
 
+test('help returns command discovery and runnable examples', () => {
+  const output = runCli(['help']);
+
+  assert.equal(output.version, 'g2');
+  assert.equal(output.help.command, null);
+  assert.equal(output.help.usage, 'opl <command> [args]');
+  assert.ok(
+    output.help.commands.some((entry: { command: string }) => entry.command === 'validate-contracts'),
+  );
+  assert.ok(
+    output.help.commands.some(
+      (entry: { command: string; examples: string[] }) =>
+        entry.command === 'validate-contracts'
+        && entry.examples.includes('opl validate-contracts'),
+    ),
+  );
+});
+
+test('root --help returns the same machine-readable help payload', () => {
+  const output = runCli(['--help']);
+
+  assert.equal(output.version, 'g2');
+  assert.equal(output.help.command, null);
+  assert.equal(output.help.usage, 'opl <command> [args]');
+  assert.ok(
+    output.help.commands.some((entry: { command: string }) => entry.command === 'get-domain'),
+  );
+});
+
+test('command --help returns command-scoped usage and examples', () => {
+  const output = runCli(['get-domain', '--help']);
+
+  assert.equal(output.version, 'g2');
+  assert.equal(output.help.command, 'get-domain');
+  assert.equal(output.help.usage, 'opl get-domain <domain_id>');
+  assert.ok(output.help.examples.includes('opl get-domain redcube'));
+});
+
+test('CLI usage errors expose machine-readable usage guidance', () => {
+  const output = runCliFailure(['get-domain']);
+
+  assert.equal(output.version, 'g2');
+  assert.equal(output.error.code, 'cli_usage_error');
+  assert.equal(output.error.details.usage, 'opl get-domain <domain_id>');
+  assert.ok(Array.isArray(output.error.details.examples));
+  assert.ok(output.error.details.examples.includes('opl get-domain redcube'));
+});
+
 test('CLI returns stable JSON errors for unknown ids', () => {
   const output = runCliFailure(['get-domain', 'unknown']);
 
@@ -392,6 +595,6 @@ test('CLI returns machine-readable JSON errors for unknown commands with availab
   assert.equal(output.error.code, 'unknown_command');
   assert.equal(output.error.exit_code, 1);
   assert.ok(Array.isArray(output.error.details.commands));
-  assert.ok(output.error.details.commands.includes('list-surfaces'));
+  assert.ok(output.error.details.commands.includes('validate-contracts'));
   assert.equal(output.error.details.command, 'unknown-command');
 });

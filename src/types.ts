@@ -129,6 +129,24 @@ export interface GatewayContracts {
   publicSurfaceIndex: PublicSurfaceIndexContract;
 }
 
+export interface ContractValidationEntry {
+  contract_id:
+    | 'workstreams'
+    | 'domains'
+    | 'routing_vocabulary'
+    | 'task_topology'
+    | 'public_surface_index';
+  file: string;
+  schema_version: string;
+  status: 'valid';
+}
+
+export interface ContractValidationSummary {
+  status: 'valid';
+  contracts_dir: string;
+  validated_contracts: ContractValidationEntry[];
+}
+
 export interface ResolveRequestInput {
   intent: string;
   target: string;
