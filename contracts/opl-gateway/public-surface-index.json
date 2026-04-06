@@ -66,30 +66,12 @@
       ],
       "routes_to": [
         "opl_roadmap",
-        "opl_gateway_federation",
-        "opl_federation_contract",
         "opl_gateway_contract_hub",
-        "opl_task_map",
-        "opl_public_surface_index_doc",
-        "opl_operating_model",
-        "opl_shared_foundation",
-        "opl_shared_foundation_ownership",
-        "opl_read_only_discovery_gateway",
-        "opl_routed_action_gateway",
-        "opl_domain_onboarding_contract",
-        "opl_candidate_domain_backlog",
-        "opl_gateway_acceptance_spec",
-        "opl_gateway_example_corpus",
-        "opl_routed_safety_example_corpus",
-        "opl_operating_example_corpus",
-        "opl_operating_record_catalog",
-        "opl_governance_audit_operating_surface",
-        "opl_publish_promotion_operating_surface",
-        "opl_surface_lifecycle_map",
-        "opl_surface_authority_matrix",
-        "opl_surface_review_matrix",
         "medautoscience_public_gateway",
-        "redcube_public_gateway"
+        "redcube_public_gateway",
+        "opl_task_map",
+        "opl_operating_model",
+        "opl_shared_foundation"
       ],
       "notes": [
         "Top-level public positioning for the OPL gateway and federation.",
@@ -215,49 +197,6 @@
         "Top-level task topology surface for all current OPL workstreams, including under-definition candidate workstreams.",
         "Reference-only for under-definition workstreams: does not register new domains, does not create discovery readiness, and does not create routed-action readiness.",
         "The candidate-domain backlog records what is still missing before under-definition workstreams can become formally admitted domains."
-      ]
-    },
-    {
-      "surface_id": "opl_gateway_federation",
-      "category_id": "opl_contract_surface",
-      "surface_kind": "federation_doc",
-      "boundary_role": "gateway_federation_model",
-      "owner_scope": "opl",
-      "truth_mode": "none",
-      "workstream_ids": [
-        "research_ops",
-        "grant_ops",
-        "thesis_ops",
-        "review_ops",
-        "presentation_ops"
-      ],
-      "domain_ids": [
-        "medautoscience",
-        "redcube"
-      ],
-      "refs": [
-        {
-          "ref_kind": "repo_path",
-          "ref": "docs/gateway-federation.md",
-          "language": "en"
-        },
-        {
-          "ref_kind": "repo_path",
-          "ref": "docs/gateway-federation.zh-CN.md",
-          "language": "zh-CN"
-        }
-      ],
-      "routes_to": [
-        "opl_federation_contract",
-        "opl_public_surface_index_doc",
-        "opl_gateway_contract_hub",
-        "opl_task_map",
-        "opl_operating_model",
-        "opl_shared_foundation"
-      ],
-      "notes": [
-        "Conceptual boundary document for the OPL gateway to domain gateway to domain harness chain.",
-        "Freezes the federation shape without turning OPL into a monolithic runtime or swallowing independent domain gateways."
       ]
     },
     {
@@ -514,12 +453,13 @@
         {
           "ref_kind": "repo_path",
           "ref": "contracts/opl-gateway/candidate-domain-backlog.json"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "contracts/opl-gateway/candidate-domain-backlog.json"
         }
       ],
       "routes_to": [
-        "opl_gateway_federation",
-        "opl_federation_contract",
-        "opl_domain_onboarding_contract",
         "opl_read_only_discovery_gateway",
         "opl_routed_action_gateway",
         "opl_governance_audit_operating_surface",
@@ -534,7 +474,6 @@
         "opl_operating_example_corpus",
         "opl_operating_record_catalog",
         "opl_task_map",
-        "opl_gateway_rollout",
         "opl_operating_model",
         "opl_shared_foundation",
         "opl_shared_foundation_ownership"
@@ -1172,22 +1111,11 @@
       ],
       "routes_to": [
         "opl_public_readme",
-        "opl_roadmap",
-        "opl_gateway_rollout",
-        "opl_gateway_federation",
-        "opl_federation_contract",
         "opl_gateway_contract_hub",
-        "opl_read_only_discovery_gateway",
-        "opl_routed_action_gateway",
-        "opl_domain_onboarding_contract",
-        "opl_gateway_acceptance_spec",
-        "opl_gateway_example_corpus",
         "opl_candidate_domain_backlog",
         "opl_routed_safety_example_corpus",
         "opl_operating_example_corpus",
         "opl_operating_record_catalog",
-        "opl_governance_audit_operating_surface",
-        "opl_publish_promotion_operating_surface",
         "opl_surface_lifecycle_map",
         "opl_surface_authority_matrix",
         "opl_surface_review_matrix",

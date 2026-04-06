@@ -9,6 +9,7 @@ This document indexes the current authoritative public surfaces for the `OPL Gat
 Its job is to make the top-level gateway easier to discover across README, roadmap, rollout, contracts, acceptance, examples, and linked domain gateway entries.
 
 It is not a runtime registry.
+It should be read as a CLI-first, read-only discoverability aid for the current Phase 1 gateway baseline.
 
 ## Machine-Readable Artifact
 
@@ -100,6 +101,7 @@ Canonical runtime truth, review truth, release truth, and submission truth remai
 If a surface is `opl_operating_model`, `opl_shared_foundation`, or `opl_shared_foundation_ownership`, it remains a shared-foundation boundary/reference surface only and does not transfer canonical truth, mutation, review truth, or publication truth into `OPL`.
 If a surface is `opl_task_map`, under-definition workstreams remain top-level semantic candidates only until the onboarding and registry gates are satisfied.
 If a surface is `opl_candidate_domain_backlog`, it remains an admission-blocker reference only and does not count as onboarding readiness, discovery readiness, or routed-action readiness.
+If a surface is the rollout, acceptance, matrix, or example layer, it remains a discoverability/review companion only; it does not become a runtime authority engine or automatically promote every listed artifact into a gate.
 
 ## Governing Gateway Documents
 
@@ -119,6 +121,7 @@ If a surface is `opl_candidate_domain_backlog`, it remains an admission-blocker 
 
 These supporting surfaces improve discoverability and reviewability only.
 They do not become governing gateway surfaces.
+They also do not become a runtime controller, authority matrix for execution, or blanket promotion gate just because they are indexed here.
 
 - [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.md)
 - [OPL Gateway Example Corpus](./opl-gateway-example-corpus.md)

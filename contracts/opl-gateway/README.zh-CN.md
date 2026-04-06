@@ -19,16 +19,8 @@
 
 ## 上位文档
 
-- [OPL Gateway Federation](../../docs/gateway-federation.md)
-- [OPL Gateway Federation（中文）](../../docs/gateway-federation.zh-CN.md)
 - [OPL Federation Contract](../../docs/opl-federation-contract.md)
 - [OPL Federation Contract（中文）](../../docs/opl-federation-contract.zh-CN.md)
-- [OPL Operating Model](../../docs/operating-model.md)
-- [OPL Operating Model（中文）](../../docs/operating-model.zh-CN.md)
-- [Shared Foundation](../../docs/shared-foundation.md)
-- [Shared Foundation（中文）](../../docs/shared-foundation.zh-CN.md)
-- [Shared Foundation Ownership](../../docs/shared-foundation-ownership.md)
-- [Shared Foundation Ownership（中文）](../../docs/shared-foundation-ownership.zh-CN.md)
 - [OPL Read-Only Discovery Gateway](../../docs/opl-read-only-discovery-gateway.md)
 - [OPL Read-Only Discovery Gateway（中文）](../../docs/opl-read-only-discovery-gateway.zh-CN.md)
 - [OPL Routed Action Gateway](../../docs/opl-routed-action-gateway.md)
