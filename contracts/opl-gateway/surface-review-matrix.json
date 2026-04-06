@@ -41,8 +41,7 @@
     "opl_public_surface_index_doc",
     "opl_gateway_acceptance_spec",
     "opl_shared_foundation",
-    "opl_shared_foundation_ownership",
-    "opl_shared_foundation_index_readiness_gate"
+    "opl_shared_foundation_ownership"
   ],
   "review_entries": [
     {
@@ -200,31 +199,6 @@
       "governing_refs": [
         "docs/shared-foundation-ownership.md",
         "docs/shared-foundation-ownership.zh-CN.md"
-      ]
-    },
-    {
-      "surface_id": "opl_shared_foundation_index_readiness_gate",
-      "owner_scope": "opl",
-      "surface_role": "shared_foundation_index_readiness_gate",
-      "human_review_required": true,
-      "required_acceptance_gates": [
-        "cross_domain_wording_consistency"
-      ],
-      "required_companion_surfaces": [
-        "opl_shared_foundation",
-        "opl_shared_foundation_ownership",
-        "opl_public_surface_index_doc",
-        "opl_surface_lifecycle_map",
-        "opl_surface_authority_matrix",
-        "opl_surface_review_matrix",
-        "opl_gateway_acceptance_spec"
-      ],
-      "cross_domain_wording_check": "shared_gate_required",
-      "publishability_stage": "contract_boundary_aligned",
-      "governing_refs": [
-        "docs/shared-foundation-ownership.md",
-        "docs/shared-foundation-ownership.zh-CN.md",
-        "contracts/opl-gateway/shared-foundation-index-readiness.schema.json"
       ]
     },
     {

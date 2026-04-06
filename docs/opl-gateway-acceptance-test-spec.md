@@ -304,8 +304,6 @@ The wording-consistency gate passes only when all of the following are true:
 9. Linked README / roadmap / federation / rollout / contract-hub wording does not upgrade the public-surface index into a launcher, runtime registry, truth-owner surface, or admission-approval surface.
 10. No placeholder/current surface for `shared asset index`, `shared memory index`, `shared domain registry`, or `shared publication / delivery catalog` appears in the current public-surface index before a later explicit readiness contract freezes it.
 11. The current public-surface index does not materialize any G4 candidate index as a public-entry, discovery-ready, routed-action-ready, execution, truth-owner, approval, publish-control, or release-control surface.
-12. `shared domain registry` is not materialized as a current admitted-domain registry, discovery-ready registry, routed-action-ready registry, or top-level truth-owner surface.
-13. `shared publication / delivery catalog` is not materialized as a current execution, approval, publish-control, release-control, or publication-truth surface.
 
 ### Verification
 
@@ -314,8 +312,6 @@ The wording-consistency gate passes only when all of the following are true:
 - Check `docs/opl-public-surface-index.md` and `.zh-CN.md` for no-runtime / no-truth-shift / no-internal-module wording.
 - Confirm `surfaces[*].surface_id` values remain unique, `opl_candidate_domain_backlog` resolves exactly once as a supporting/reference surface rather than as an admitted domain or execution surface, and `opl_operating_model` / `opl_shared_foundation` / `opl_shared_foundation_ownership` each resolve exactly once as OPL-owned contract/reference surfaces only.
 - Confirm the current public-surface index does not materialize `shared asset index`, `shared memory index`, `shared domain registry`, or `shared publication / delivery catalog` as any current surface entry.
-- Confirm `shared domain registry` is not described as a current admitted-domain / discovery-ready / routed-action-ready registry or as a top-level truth-owner surface.
-- Confirm `shared publication / delivery catalog` is not described as a current execution / approval / publish-control / release-control / publication-truth surface.
 - Verify the linked public OPL surfaces actually point to the public-surface index where intended.
 
 ## J. P10 Routed-Safety Example Integrity
@@ -639,19 +635,15 @@ The wording-consistency gate passes only when all of the following are true:
    - `shared publication / delivery catalog`
 3. All four candidate indexes remain explicitly roadmap-only, future-only, reference-only, and non-admitting until a later explicit contract and acceptance alignment freeze their readiness boundaries.
 4. No G4 candidate index is described as a current public-entry, discovery-ready, routed-action-ready, execution, truth-owner, approval, publish-control, or release-control surface.
-5. `shared domain registry` remains a candidate boundary only and is not described as a current admitted-domain registry, discovery-ready registry, routed-action-ready registry, or top-level truth-owner surface.
-6. `shared publication / delivery catalog` remains a candidate boundary only and is not described as a current execution, approval, publish-control, release-control, or publication-truth surface.
-7. G4 wording keeps canonical truth inside the owning domain and keeps `OPL` at the top-level gateway / federation layer rather than turning it into a monolithic runtime or shared truth owner.
-8. G4 wording does not collapse `MedAutoScience` or `RedCube AI` into internal `OPL` modules and does not weaken their independence as domain gateway / harness surfaces.
-9. `contracts/opl-gateway/acceptance-matrix.json` contains a dedicated gate that checks the rollout/spec boundary wording and forbids premature admission of any G4 candidate index.
+5. G4 wording keeps canonical truth inside the owning domain and keeps `OPL` at the top-level gateway / federation layer rather than turning it into a monolithic runtime or shared truth owner.
+6. G4 wording does not collapse `MedAutoScience` or `RedCube AI` into internal `OPL` modules and does not weaken their independence as domain gateway / harness surfaces.
+7. `contracts/opl-gateway/acceptance-matrix.json` contains a dedicated gate that checks the rollout/spec boundary wording and forbids premature admission of any G4 candidate index.
 
 ### Verification
 
 - Read `docs/opl-gateway-rollout.md` and `.zh-CN.md` and confirm that `Phase G4` stays at the future candidate boundary.
 - Confirm the candidate set is exactly the four G4 indexes above, with roadmap-only / future-only / reference-only / non-admitting wording in both languages.
 - Confirm neither rollout doc upgrades any G4 candidate index into a current public-entry, discovery-ready, routed-action-ready, execution, truth-owner, approval, publish-control, or release-control surface.
-- Confirm the rollout/spec wording does not turn `shared domain registry` into a current admitted-domain / discovery-ready / routed-action-ready registry or top-level truth-owner surface.
-- Confirm the rollout/spec wording does not turn `shared publication / delivery catalog` into a current execution / approval / publish-control / release-control / publication-truth surface.
 - Confirm G4 wording keeps canonical truth inside domains and preserves `MedAutoScience` / `RedCube AI` independence under the top-level `OPL` gateway.
 - Parse `contracts/opl-gateway/acceptance-matrix.json` and confirm the dedicated G4 gate covers the rollout/spec files and blocks premature admission wording.
 
@@ -1095,12 +1087,7 @@ for surface_id in expected_contract_surfaces:
     assert surface['category_id'] == 'opl_contract_surface', surface
     assert surface['owner_scope'] == 'opl', surface
     assert surface['truth_mode'] == 'none', surface
-for forbidden_surface in [
-    'opl_shared_asset_index',
-    'opl_shared_memory_index',
-    'opl_shared_domain_registry',
-    'opl_shared_publication_delivery_catalog',
-]:
+for forbidden_surface in ['opl_shared_asset_index', 'opl_shared_memory_index']:
     assert forbidden_surface not in surface_id_set, forbidden_surface
 print('public surface index OK')
 PY

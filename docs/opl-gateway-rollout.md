@@ -153,16 +153,12 @@ Current status:
 
 - all four G4 indexes remain roadmap-only, future-only, reference-only, and non-admitting candidates
 - none of them is currently a public-entry, discovery-ready, routed-action-ready, execution, truth-owner, approval, publish-control, or release-control surface
-- the future `shared domain registry` is not a current admission registry, not a future domain identity allocator, not a routed-action registry, and not a canonical truth owner
-- the future `shared publication / delivery catalog` is not a publication truth owner, not a publish controller, not a release engine, and not a delivery runtime owner
 - later explicit contracts and acceptance alignment must freeze readiness before any of these candidates appears as a current surface
 
 Rule:
 
 - candidate indexes may aggregate only after a later explicit contract freezes the readiness boundary
-- `OPL` stays the top-level gateway / federation surface rather than becoming a registry-control plane or delivery-control runtime
 - canonical truth stays in the owning domain
-- domain gateway independence stays intact for `MedAutoScience` and `RedCube AI`
 
 Completion signal:
 

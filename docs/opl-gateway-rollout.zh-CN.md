@@ -153,16 +153,12 @@ Human / Agent
 
 - 这四个 G4 index 目前都只是 roadmap-only、future-only、reference-only、non-admitting 的候选项
 - 它们目前都不是 public-entry、discovery-ready、routed-action-ready、execution、truth-owner、approval、publish-control 或 release-control surface
-- 未来的 `shared domain registry` 不是当前 admission registry，不是 future domain identity allocator，不是 routed-action registry，也不是 canonical truth owner
-- 未来的 `shared publication / delivery catalog` 不是 publication truth owner，不是 publish controller，不是 release engine，也不是 delivery runtime owner
 - 只有在后续显式合同与 acceptance alignment 冻结 readiness boundary 之后，这些候选项才可能被写成当前 surface
 
 规则：
 
 - 只有在后续显式合同冻结 readiness boundary 之后，candidate index 才能开始承担聚合角色
-- `OPL` 仍然只是 top-level gateway / federation surface，而不是 registry-control plane 或 delivery-control runtime
 - canonical truth 仍留在拥有它的 domain
-- `MedAutoScience` 与 `RedCube AI` 的 domain gateway 独立性不能被削弱
 
 完成信号：
 

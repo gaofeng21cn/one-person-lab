@@ -119,21 +119,9 @@
 - domain review state 的 review owner
 - domain deliverable 的 publish / release owner
 
-这套边界解读同样适用于 rollout `G4` 里提到的未来 `shared domain registry` 与 `shared publication / delivery catalog`。
-在后续显式合同冻结其 readiness 之前，它们都只能停留在 roadmap level，不能被理解成：
-
-- 当前 admission registry
-- future domain identity allocator
-- routed-action registry
-- canonical truth owner
-- publication truth owner
-- publish controller
-- release engine
-- delivery runtime owner
-
 ### 进入当前 public surface 之前的 readiness 条件
 
-未来的 `shared asset index`、`shared memory index`、`shared domain registry` 或 `shared publication / delivery catalog`，在后续显式合同至少冻结下面这些条件之前，不应出现在当前 `OPL` public surface 里：
+未来的 `shared asset index` 或 `shared memory index`，在后续显式合同至少冻结下面这些条件之前，不应出现在当前 `OPL` public surface 里：
 
 - 它究竟允许覆盖哪些 object class 与 identifier
 - 每类被索引对象的 owner split 与 governing refs
@@ -161,16 +149,11 @@
 在当前仓库阶段：
 
 - shared foundation 主要还是以顶层语言与边界文档的形式被冻结
-- 当前仓库还没有 materialize 出完整的 shared asset index、shared memory index、shared domain registry 或 shared publication / delivery catalog
+- 当前仓库还没有 materialize 出完整的 shared asset index 或 shared memory index
 - 但这不意味着 ownership split 还没定义
 
 所以当前更准确的解读应是：
 
 - `OPL` 已经拥有 shared-foundation 的控制语言
 - 各 domain 已经拥有各自的具体 truth surface
-- `MedAutoScience` 与 `RedCube AI` 仍然是独立 domain gateway，而不是 `OPL` 下面的内部模块
 - 如果未来增加 shared index，也必须继续服从这套分工，除非后续有新的显式合同重新定义
-
-## 配套 Closeout
-
-- [Shared-Foundation Ownership / Readiness Closeout](./opl-shared-foundation-ownership-readiness-closeout.zh-CN.md)
