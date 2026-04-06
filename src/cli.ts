@@ -61,7 +61,7 @@ function parseKeyValueArgs(args: string[]): ResolveRequestInput {
 }
 
 function main() {
-  const contracts = loadGatewayContracts(process.cwd());
+  const contracts = loadGatewayContracts();
   const [command, ...args] = process.argv.slice(2);
 
   const handlers: Record<string, CommandHandler> = {
