@@ -74,6 +74,42 @@ export interface TaskTopologyContract {
   workstreams: TaskTopologyWorkstream[];
 }
 
+export interface PublicSurfaceCategory {
+  category_id: string;
+  owner_scope: string;
+  description: string;
+}
+
+export interface PublicSurfaceRef {
+  ref_kind: string;
+  ref: string;
+  language?: string;
+}
+
+export interface PublicSurfaceContractEntry {
+  surface_id: string;
+  category_id: string;
+  surface_kind: string;
+  boundary_role: string;
+  owner_scope: string;
+  truth_mode: string;
+  workstream_ids: string[];
+  domain_ids: string[];
+  refs: PublicSurfaceRef[];
+  routes_to: string[];
+  notes: string[];
+}
+
+export interface PublicSurfaceIndexContract {
+  version: string;
+  scope: string;
+  description: string;
+  non_goals: string[];
+  ownership_rules: string[];
+  surface_categories: PublicSurfaceCategory[];
+  surfaces: PublicSurfaceContractEntry[];
+}
+
 export interface WorkstreamsRegistry {
   version: string;
   workstreams: WorkstreamContract[];
@@ -90,6 +126,7 @@ export interface GatewayContracts {
   domains: DomainsRegistry;
   routingVocabulary: RoutingVocabularyContract;
   taskTopology: TaskTopologyContract;
+  publicSurfaceIndex: PublicSurfaceIndexContract;
 }
 
 export interface ResolveRequestInput {
