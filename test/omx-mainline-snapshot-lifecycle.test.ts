@@ -95,87 +95,96 @@ test('CURRENT_PROGRAM is the sole direct active Phase 4 snapshot owner while pro
   assert.match(latestStatus, /sole direct owner of the active snapshot path|sole direct active-snapshot path owner/i);
 });
 
-test('Phase 4 rollover choreography baseline records predecessor/checkpoint facts while keeping CURRENT_PROGRAM the sole direct path owner', () => {
+test('Active Phase 4 snapshot keeps predecessor/checkpoint metadata and carried-forward invariants explicit for the onramp guardrail tranche', () => {
   const currentProgram = read(currentProgramPath);
   const prompt = read(promptPath);
   const latestStatus = read(latestStatusPath);
-  const iterationLog = read(iterationLogPath);
-  const openIssues = read(openIssuesPath);
-  const activeSnapshotPath = collectActivePhase4SnapshotPaths(currentProgram)[0];
-  const activeSnapshot = read(activeSnapshotPath!);
-
-  assert.match(activeSnapshotPath!, /phase4-snapshot-rollover-choreography/i);
-  assert.match(activeSnapshot, /^- predecessor_tranche: `[^`]+`$/m);
-  assert.match(activeSnapshot, /^- current_checkpoint_base: `[0-9a-f]{7,}`$/im);
-  assert.match(activeSnapshot, /leader-owned, same-pass rollover routine/i);
-  assert.match(activeSnapshot, /sole direct owner of the active snapshot path/i);
-  assert.match(activeSnapshot, /refreshing `OMX_TEAM_PROMPT\.md` and `\.omx\/reports\/opl-mainline\/\*` in the same pass/i);
-
-  assert.match(currentProgram, /记录 predecessor tranche 与 checkpoint base|record predecessor(?:\/| )checkpoint facts/i);
-  assert.match(prompt, /minimal deterministic re-entry pack|最小 deterministic re-entry pack/i);
-  assert.match(latestStatus, /record predecessor tranche \/ checkpoint base together/i);
-  assert.match(iterationLog, /same-pass pointer-move choreography/i);
-  assert.match(
-    openIssues,
-    /without recording the predecessor tranche and current checkpoint base, moving the `CURRENT_PROGRAM\.md` pointer, and refreshing `OMX_TEAM_PROMPT\.md` plus the current `opl-mainline` report pack in the same pass/i,
-  );
-});
-
-test('Phase 4 rollover pack keeps superseded snapshots historical without promoting a new truth owner', () => {
-  const currentProgram = read(currentProgramPath);
-  const prompt = read(promptPath);
-  const latestStatus = read(latestStatusPath);
-  const openIssues = read(openIssuesPath);
-  const phase4SnapshotFiles = fs.readdirSync(contextRoot)
-    .filter((fileName) => /^opl-mainline-phase4-.*\.md$/.test(fileName));
-  const activeSnapshotPath = collectActivePhase4SnapshotPaths(currentProgram)[0];
-  const activeSnapshot = read(activeSnapshotPath!);
-
-  assert.ok(
-    phase4SnapshotFiles.length >= 2,
-    'Phase 4 snapshot lifecycle baseline should keep at least one superseded historical snapshot on disk.',
-  );
-  assert.match(activeSnapshot, /historical-artifact status of superseded snapshots|historical-only/i);
-  assert.match(activeSnapshot, /truth owner/i);
-  assert.match(currentProgram, /tranche-scoped continuity brief|不取代长期 governing truth 或 report truth/i);
-  assert.match(prompt, /minimal deterministic re-entry pack|最小 deterministic re-entry pack/i);
-  assert.match(latestStatus, /historical-artifact status of superseded snapshots|historical artifacts only/i);
-  assert.match(openIssues, /deterministic re-entry order explicit/i);
-});
-
-test('Phase 4 rollover baseline keeps predecessor facts explicit while prompt and reports stay mirror-only', () => {
-  const currentProgram = read(currentProgramPath);
-  const prompt = read(promptPath);
-  const latestStatus = read(latestStatusPath);
-  const openIssues = read(openIssuesPath);
   const activeSnapshotPath = collectActivePhase4SnapshotPaths(currentProgram)[0];
 
   assert.ok(activeSnapshotPath, 'CURRENT_PROGRAM must still point at one active Phase 4 snapshot.');
+  assert.match(activeSnapshotPath, /multi-domain-onramp-guardrail/i);
 
   const activeSnapshot = read(activeSnapshotPath);
   const predecessorTranche = extractBacktickedMetadata(activeSnapshot, 'predecessor_tranche');
   const checkpointBase = extractBacktickedMetadata(activeSnapshot, 'current_checkpoint_base');
+  const latestStatusPredecessor = extractLatestStatusField(latestStatus, 'Predecessor tranche link');
+  const latestStatusCheckpoint = extractLatestStatusField(latestStatus, 'Current checkpoint base');
 
-  assert.match(activeSnapshot, /same-pass rollover routine|same-pass rollover choreography/i);
-  assert.match(activeSnapshot, /record predecessor\/checkpoint facts|record the predecessor tranche plus current checkpoint base/i);
-  assert.match(predecessorTranche, /^opl-mainline-phase-4-/);
+  assert.match(predecessorTranche, /^opl-mainline-phase-4-/i);
   assert.match(checkpointBase, /^[0-9a-f]{7,}$/i);
+  assert.equal(predecessorTranche, latestStatusPredecessor);
+  assert.equal(checkpointBase, latestStatusCheckpoint);
 
-  assert.match(currentProgram, /record predecessor tranche plus current checkpoint base|记录 predecessor tranche 与 checkpoint base/i);
-  assert.match(currentProgram, /sole direct active-snapshot path owner|唯一直接持有 active Phase 4 snapshot path/i);
-  assert.match(prompt, /same-pass routine|同一轮 kickoff\/closeout 内完成/i);
-  assert.match(prompt, /record predecessor tranche 与 current checkpoint base|同步记录 predecessor tranche 与 current checkpoint base/i);
-  assert.match(prompt, /mirror the rule|镜像该 pointer-owner 规则/i);
-  assert.match(prompt, /minimal deterministic re-entry pack|最小 deterministic re-entry pack/i);
-  assert.match(latestStatus, /same pass/i);
-  assert.match(latestStatus, /record predecessor tranche \/ checkpoint base together/i);
+  assert.match(activeSnapshot, /Phase 4 - multi-domain onramp guardrail baseline/i);
+  assert.match(activeSnapshot, /leader-owned, same-pass guardrail baseline/i);
   assert.match(
-    openIssues,
-    /without recording the predecessor tranche and current checkpoint base, moving the `CURRENT_PROGRAM\.md` pointer, and refreshing `OMX_TEAM_PROMPT\.md` plus the current `opl-mainline` report pack in the same pass/i,
+    activeSnapshot,
+    /deterministic re-entry order still begins with `CURRENT_PROGRAM\.md` -> active Phase 4 snapshot -> checkpoint cadence spec -> verification baseline spec -> current `opl-mainline` reports/i,
+  );
+  assert.match(activeSnapshot, /Pointer ownership stays single-surface/i);
+  assert.match(activeSnapshot, /Thin handoff stays derived/i);
+  assert.match(activeSnapshot, /Report-pack role split stays explicit/i);
+  assert.match(activeSnapshot, /Closeout ownership stays leader-held/i);
+
+  assert.match(currentProgram, /multi-domain onramp guardrail baseline/i);
+  assert.match(currentProgram, /plan-local guardrail brief/i);
+  assert.match(
+    currentProgram,
+    /不得升级成 runtime registry、payload contract、launcher workflow、audit persistence、或 domain mutation surface/i,
+  );
+  assert.match(
+    prompt,
+    /Lane C.*test\/omx-mainline-snapshot-lifecycle\.test\.ts.*OPEN_ISSUES\.md.*ITERATION_LOG\.md.*consistency refresh/i,
+  );
+  assert.match(
+    latestStatus,
+    /Current `Phase 4 - multi-domain onramp guardrail baseline` work should now be treated as the next tranche/i,
   );
 });
 
-test('Phase 4 trace / issue history baseline keeps report-pack roles explicit and report-local', () => {
+test('Onramp guardrail wording keeps API hooks and observability deferred, plan-local, and non-operative', () => {
+  const prompt = read(promptPath);
+  const latestStatus = read(latestStatusPath);
+  const openIssues = read(openIssuesPath);
+  const currentProgram = read(currentProgramPath);
+  const activeSnapshotPath = collectActivePhase4SnapshotPaths(currentProgram)[0];
+  const activeSnapshot = read(activeSnapshotPath!);
+
+  assert.match(activeSnapshot, /Guardrails are plan-local only/i);
+  assert.match(activeSnapshot, /Deferred means deferred/i);
+  assert.match(activeSnapshot, /not as executable runtime behavior/i);
+  assert.match(
+    activeSnapshot,
+    /without inventing a new runtime registry, handoff payload, or persistence ledger/i,
+  );
+
+  assert.match(
+    prompt,
+    /不得把这些词升级成 runtime API、launcher workflow、routed action、audit persistence、或第二份 active snapshot path truth/i,
+  );
+  assert.match(
+    prompt,
+    /不得承诺可执行 runtime surface、payload contract、server、launcher state、或 domain mutation/i,
+  );
+
+  assert.match(
+    latestStatus,
+    /freeze one plan-local guardrail brief for the future OMX next stage .* without introducing executable runtime surfaces/i,
+  );
+  assert.match(
+    latestStatus,
+    /treat any `API hooks` \/ `observability` language as explanatory and deferred guardrails only; no server, launcher, routed action, or audit persistence semantics may be smuggled in/i,
+  );
+  assert.match(latestStatus, /keep `CLI-first` \+ `read-only` \+ `no-runtime` \+ `no-truth-shift`/i);
+
+  assert.match(
+    openIssues,
+    /If the active or follow-on `multi-domain onramp guardrail` line turns `API hooks`, `observability`, or future-domain entry guidance into runtime API promises, launcher workflows, routed actions, payload contracts, audit persistence, or domain mutation semantics/i,
+  );
+  assert.match(openIssues, /runtime API surface/i);
+});
+
+test('Report-pack role split and Lane C consistency refresh stay explicit and report-local during the onramp guardrail tranche', () => {
   const currentProgram = read(currentProgramPath);
   const activeSnapshotPath = collectActivePhase4SnapshotPaths(currentProgram)[0];
   const activeSnapshot = read(activeSnapshotPath!);
@@ -184,51 +193,37 @@ test('Phase 4 trace / issue history baseline keeps report-pack roles explicit an
   const iterationLog = read(iterationLogPath);
   const openIssues = read(openIssuesPath);
 
-  assert.match(
-    currentProgram,
-    /LATEST_STATUS\.md`：thin checkpoint \/ predecessor \/ verification surface|LATEST_STATUS\.md`: thin checkpoint \/ predecessor \/ verification surface/i,
-  );
-  assert.match(
-    currentProgram,
-    /OPEN_ISSUES\.md`：residual-risk \/ deferred surface|OPEN_ISSUES\.md`: residual-risk \/ deferred surface/i,
-  );
-  assert.match(
-    activeSnapshot,
-    /LATEST_STATUS\.md` keeps the thin checkpoint \/ predecessor \/ verification \/ next-tranche surface/i,
-  );
-  assert.match(
-    activeSnapshot,
-    /report-local continuity metadata rather than runtime audit truth, launcher state, or any new persistence surface/i,
-  );
-  assert.match(
-    reportReadme,
-    /LATEST_STATUS\.md`：thin checkpoint \/ predecessor \/ verification surface|LATEST_STATUS\.md`: thin checkpoint \/ predecessor \/ verification surface/i,
-  );
-  assert.match(
-    reportReadme,
-    /ITERATION_LOG\.md`：append-only trace history|ITERATION_LOG\.md`: append-only trace history/i,
-  );
-  assert.match(
-    reportReadme,
-    /OPEN_ISSUES\.md`：residual-risk \/ deferred surface|OPEN_ISSUES\.md`: residual-risk \/ deferred surface/i,
-  );
-  assert.match(latestStatus, /Predecessor tranche link: `opl-mainline-phase-4-closeout`/i);
+  assert.match(currentProgram, /`LATEST_STATUS\.md`：thin checkpoint \/ predecessor \/ verification surface/i);
+  assert.match(currentProgram, /`ITERATION_LOG\.md`：append-only trace history/i);
+  assert.match(currentProgram, /`OPEN_ISSUES\.md`：residual-risk \/ deferred surface/i);
+
+  assert.match(activeSnapshot, /Report-pack role split stays explicit/i);
+  assert.match(activeSnapshot, /`LATEST_STATUS\.md` remains the thin checkpoint \/ predecessor \/ verification \/ next-tranche surface/i);
+  assert.match(activeSnapshot, /`ITERATION_LOG\.md` stays append-only trace history/i);
+  assert.match(activeSnapshot, /`OPEN_ISSUES\.md` stays the residual-risk \/ deferred surface/i);
+
+  assert.match(reportReadme, /`LATEST_STATUS\.md`：thin checkpoint \/ predecessor \/ verification surface/i);
+  assert.match(reportReadme, /`ITERATION_LOG\.md`：append-only trace history/i);
+  assert.match(reportReadme, /`OPEN_ISSUES\.md`：residual-risk \/ deferred surface/i);
+
   assert.match(
     latestStatus,
-    /LATEST_STATUS\.md` = checkpoint \/ predecessor \/ verification \/ next-tranche surface/i,
+    /`LATEST_STATUS\.md` = checkpoint \/ predecessor \/ verification \/ next-tranche surface, `ITERATION_LOG\.md` = append-only trace history, `OPEN_ISSUES\.md` = residual-risk \/ deferred surface/i,
+  );
+
+  assert.match(iterationLog, /Phase 4 multi-domain onramp guardrail baseline consistency audit refresh/i);
+  assert.match(
+    iterationLog,
+    /Audited `test\/omx-mainline-snapshot-lifecycle\.test\.ts`, `OPEN_ISSUES\.md`, and `ITERATION_LOG\.md`.*current `multi-domain onramp guardrail baseline`/i,
   );
   assert.match(
     iterationLog,
-    /LATEST_STATUS\.md` now keeps checkpoint base \+ predecessor tranche linkage \+ latest verification evidence \+ next tranche brief/i,
+    /no runtime API, launcher workflow, routed action, payload contract, audit persistence, or domain mutation expansion/i,
   );
-  assert.match(
-    openIssues,
-    /LATEST_STATUS\.md` stops keeping checkpoint base, predecessor tranche linkage, and latest verification evidence explicit/i,
-  );
-  assert.match(
-    openIssues,
-    /OPEN_ISSUES\.md` stops surfacing residual risks and deferred non-goals/i,
-  );
+
+  assert.match(openIssues, /The report routine must remain report-only/i);
+  assert.match(openIssues, /runtime API surface/i);
+  assert.match(openIssues, /handoff payload generation/i);
 });
 
 test('Phase 4 closeout and shutdown hygiene mirrors keep fallback, verification ownership, and shutdown order explicit', () => {
@@ -266,116 +261,5 @@ test('Phase 4 closeout and shutdown hygiene mirrors keep fallback, verification 
   assert.match(
     openIssues,
     /uses the leader fallback transition before integrated-head evidence is already sufficient or without recording why/i,
-  );
-});
-
-test('Phase 4 trace / issue history baseline keeps report-pack roles explicit and report-local', () => {
-  const currentProgram = read(currentProgramPath);
-  const activeSnapshotPath = collectActivePhase4SnapshotPaths(currentProgram)[0];
-  const activeSnapshot = read(activeSnapshotPath!);
-  const reportReadme = read(path.join(reportsRoot, 'README.md'));
-  const latestStatus = read(latestStatusPath);
-  const iterationLog = read(iterationLogPath);
-  const openIssues = read(openIssuesPath);
-
-  assert.match(currentProgram, /`LATEST_STATUS\.md`：thin checkpoint \/ predecessor \/ verification surface/i);
-  assert.match(currentProgram, /`ITERATION_LOG\.md`：append-only trace history/i);
-  assert.match(currentProgram, /`OPEN_ISSUES\.md`：residual-risk \/ deferred surface/i);
-
-  assert.match(activeSnapshot, /Per-file roles stay explicit/i);
-  assert.match(
-    activeSnapshot,
-    /`LATEST_STATUS\.md` keeps the thin checkpoint \/ predecessor \/ verification \/ next-tranche surface/i,
-  );
-  assert.match(activeSnapshot, /report-local continuity metadata rather than runtime audit truth/i);
-
-  assert.match(reportReadme, /`LATEST_STATUS\.md`：thin checkpoint \/ predecessor \/ verification surface/i);
-  assert.match(reportReadme, /若当前 tranche 聚焦 `Phase 4 - trace \/ issue history baseline`/i);
-  assert.match(
-    reportReadme,
-    /后续 OMX stage 应直接读取这组 report-local fields，而不是回放 stale mailbox、挂起 pane、或 verbose ad-hoc 日志/i,
-  );
-
-  assert.match(latestStatus, /keep checkpoint \/ verification \/ residual-risk continuity explicit inside the current report pack/i);
-  assert.match(
-    latestStatus,
-    /`LATEST_STATUS\.md` = checkpoint \/ predecessor \/ verification \/ next-tranche surface, `ITERATION_LOG\.md` = append-only trace history, `OPEN_ISSUES\.md` = residual-risk \/ deferred surface/i,
-  );
-
-  assert.match(iterationLog, /Phase 4 trace \/ issue history baseline discoverability refresh/i);
-  assert.match(iterationLog, /Locked the report-local role split/i);
-
-  assert.match(openIssues, /Future teams can still regress the trace \/ issue history baseline/i);
-  assert.match(openIssues, /follow-on work may drift back to stale mailbox reconstruction/i);
-});
-
-test('Phase 4 thin next-stage handoff baseline keeps CURRENT_PROGRAM and the active snapshot on one derived continuity path', () => {
-  const currentProgram = read(currentProgramPath);
-  const activeSnapshotPath = collectActivePhase4SnapshotPaths(currentProgram)[0];
-  const activeSnapshot = read(activeSnapshotPath!);
-
-  assert.match(currentProgram, /thin next-stage handoff baseline/i);
-  assert.match(
-    currentProgram,
-    /只从 `CURRENT_PROGRAM\.md` -> active Phase 4 snapshot -> checkpoint cadence spec -> verification baseline spec -> 当前 `opl-mainline` reports 派生的最小 handoff brief|derive a minimal handoff brief directly from `CURRENT_PROGRAM\.md` -> active Phase 4 snapshot -> checkpoint cadence spec -> verification baseline spec -> current `opl-mainline` reports/i,
-  );
-  assert.match(
-    currentProgram,
-    /不引入新的 handoff payload contract、runtime audit truth、launcher state、或 persistence surface|without introducing a new handoff payload contract, runtime audit truth, launcher state, or persistence surface/i,
-  );
-
-  assert.match(activeSnapshotPath!, /thin-next-stage-handoff/i);
-  assert.match(activeSnapshot, /Thin Next-Stage Handoff Baseline To Freeze/i);
-  assert.match(
-    activeSnapshot,
-    /Source order stays deterministic.*CURRENT_PROGRAM\.md.*active Phase 4 snapshot.*checkpoint cadence spec.*verification baseline spec.*current `opl-mainline` report pack/is,
-  );
-  assert.match(
-    activeSnapshot,
-    /Summary fields stay inherited.*current checkpoint base.*predecessor tranche linkage.*latest verification evidence.*residual risks \/ deferred items/is,
-  );
-  assert.match(
-    activeSnapshot,
-    /Guardrails stay mirrored, not re-owned.*must not create a second active snapshot path owner|must not create a second active snapshot path owner.*Guardrails stay mirrored, not re-owned/is,
-  );
-  assert.match(
-    activeSnapshot,
-    /Closeout memory stays unnecessary.*stale mailbox history, hung panes, or private leader notes/i,
-  );
-});
-
-test('Phase 4 thin next-stage handoff baseline keeps prompt and latest status mirror-only', () => {
-  const prompt = read(promptPath);
-  const latestStatus = read(latestStatusPath);
-
-  assert.match(
-    prompt,
-    /只能从上述 deterministic re-entry pack 直接派生一条薄的 handoff brief|derive a thin handoff brief directly from the deterministic re-entry pack/i,
-  );
-  assert.match(
-    prompt,
-    /latest verification evidence.*residual risks \/ deferred set|residual risks \/ deferred set.*latest verification evidence/i,
-  );
-  assert.match(
-    prompt,
-    /不得新增 handoff payload contract、第二份 active snapshot path truth、runtime audit truth、launcher state、或 persistence surface|must not add a handoff payload contract, second active snapshot path truth, runtime audit truth, launcher state, or persistence surface/i,
-  );
-
-  assert.match(latestStatus, /Phase 4 - thin next-stage handoff baseline/i);
-  assert.match(
-    latestStatus,
-    /freeze one compact handoff summary routine that reads only `CURRENT_PROGRAM\.md` -> active Phase 4 snapshot -> checkpoint cadence spec -> verification baseline spec -> current `opl-mainline` reports/i,
-  );
-  assert.match(
-    latestStatus,
-    /keep the handoff brief derived from existing continuity fields: current checkpoint base, predecessor tranche linkage, latest verification evidence, and residual risks \/ deferred items/i,
-  );
-  assert.match(
-    latestStatus,
-    /prompt\/report surfaces may mirror the rule, but must not become payload contracts or second path owners/i,
-  );
-  assert.match(
-    latestStatus,
-    /no handoff payload contract, no runtime audit truth, no launcher state, no persistence expansion, no domain mutation/i,
   );
 });
