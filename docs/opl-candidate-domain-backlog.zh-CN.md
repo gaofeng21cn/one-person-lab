@@ -76,7 +76,8 @@ Onboarding contract 负责定义正式收录门槛。
 
 当前冻结下来的边界仍然是 proposal-facing：模拟评审与修订轨迹仍是作者侧的基金写作工件，而不是独立的 reviewer-role output。
 
-但它仍然缺少未来 domain boundary package：包括 registry material、public gateway docs、truth ownership、review surfaces、discovery readiness、routing readiness，以及 cross-domain wording。
+但它仍然缺少未来 domain boundary package：包括 registry material、public gateway docs、truth ownership、review surfaces、显式的 execution-model declaration、discovery readiness、routing readiness，以及 cross-domain wording。
+这份 execution-model declaration 还必须明确 stable agent runtime surface、说明 `Auto` 与 `Human-in-the-loop` 如何共享同一基座、解释 code-versus-Agent responsibility split，并明确排除 `fixed-code-first` 或长期单模的 framing。
 这些未来 package 只是 blocker，不代表 `Grant Ops` 现在已经具备 `G2` discovery readiness 或 `G3` routed-action readiness。
 
 ### Thesis Ops
@@ -85,14 +86,16 @@ Onboarding contract 负责定义正式收录门槛。
 
 当前路径里冻结下来的 negative conclusion 是：Thesis Ops 的 thesis assembly 确实增加了顶层边界语义，但这种边界只以 reference-only candidate boundary 的形式存在于现有 topology / backlog / onboarding 链路中；章节草稿集、跨章节同步、答辩准备协调，并不等同于 `Research Ops` 的 manuscript / submission flow，而下游可能派生出的 `defense_deck` 也不会把这个 workstream 压缩成 `Presentation Ops` / `RedCube AI`。
 
-但它仍然缺少未来 domain boundary package：包括 thesis-specific registry material、public gateway docs、truth ownership、review surfaces、discovery readiness、routing readiness，以及 cross-domain wording。
+但它仍然缺少未来 domain boundary package：包括 thesis-specific registry material、public gateway docs、truth ownership、review surfaces、显式的 execution-model declaration、discovery readiness、routing readiness，以及 cross-domain wording。
+这份 execution-model declaration 还必须明确 stable agent runtime surface、说明 `Auto` 与 `Human-in-the-loop` 如何共享同一基座、解释 code-versus-Agent responsibility split，并明确排除 `fixed-code-first` 或长期单模的 framing。
 这些未来 package 只是 blocker，不代表 `Thesis Ops` 现在已经具备 `G2` discovery readiness 或 `G3` routed-action readiness。
 
 ### Review Ops
 
 `Review Ops` 在 task map / task topology 中已经有明确的顶层语义：它把 reviewer-role work 与 response / rebuttal coordination 放在同一个 candidate semantic bundle 里。
 
-但它仍然缺少未来 domain boundary package：包括 review-specific registry material、review reports / comment structures / rebuttal plans / revision-route maps 的 truth ownership、public gateway docs、review surfaces、discovery readiness、routing readiness，以及 cross-domain wording。
+但它仍然缺少未来 domain boundary package：包括 review-specific registry material、review reports / comment structures / rebuttal plans / revision-route maps 的 truth ownership、public gateway docs、review surfaces、显式的 execution-model declaration、discovery readiness、routing readiness，以及 cross-domain wording。
+这份 execution-model declaration 还必须明确 stable agent runtime surface、说明 `Auto` 与 `Human-in-the-loop` 如何共享同一基座、解释 code-versus-Agent responsibility split，并明确排除 `fixed-code-first` 或长期单模的 framing。
 
 这里冻结下来的 negative conclusion 是：这种组合语义仍不足以推出 formal admission、discovery readiness、routed-action readiness，或把 review truth ownership 上收到 OPL。
 
@@ -103,6 +106,7 @@ Onboarding contract 负责定义正式收录门槛。
 只要某个 backlog entry 还存在，对应 workstream 就仍然位于 domain-onboarding gate 之下。
 `blocked` 不代表“快收录了”。
 它代表必需 boundary package 仍未完整。
+如果 execution-model declaration 还缺失，该 workstream 就仍然只能停留在 under definition / deferred，而不能被写成 `ready`、`aligned` 或隐式 admitted。
 
 它也不允许 `OPL` 悄悄把这些仍在定义中的 workstream 吸收进 `MedAutoScience` 或 `RedCube AI`。
 这两个已收录 domain 仍然保持独立的 gateway / harness surface。
@@ -123,6 +127,7 @@ Onboarding contract 负责定义正式收录门槛。
 - 每个当前候选 workstream 都有显式 backlog entry
 - blocker package 与 onboarding-package 类别一一对齐
 - blocker check 与 onboarding formal-inclusion gate 一一对齐
+- public companion wording 继续把 execution-model blocker 写明：stable agent runtime surface、共享同一基座的 `Auto` / `Human-in-the-loop`、以及 code-versus-Agent responsibility split 在显式回答前，都只能保持 under definition / deferred
 - 没有任何 entry 分配未来 domain identity、gateway / harness surface metadata 或 routed readiness state
 - backlog 保持可发现、可审阅，但不变成 control plane
 - backlog 仍然保持 reference-only、non-executing、non-admitting

@@ -13,6 +13,7 @@
     "registered G1 workstreams remain research_ops and presentation_ops only",
     "grant_ops, thesis_ops, and review_ops remain under definition until explicit domain boundaries are frozen and admitted through the onboarding gate",
     "under-definition workstreams may list delivery objects and reusable assets without becoming admitted domains, discovery targets, or handoff-ready routed-action targets; at most they may surface as unknown_domain outcomes when top-level semantics are clear",
+    "future admission or alignment requires a declared stable agent runtime surface plus a shared-base Auto/Human-in-the-loop convergence path; otherwise the workstream remains under definition / deferred",
     "task topology complements docs/task-map.md, workstreams.json, and the onboarding contract; it does not replace them"
   ],
   "shared_foundation_reuse": [
@@ -84,7 +85,7 @@
         "existing_study_results_and_figures"
       ],
       "family_boundary_notes": [],
-      "notes": "Still under definition. This workstream stays proposal-facing: proposal-side reviewer simulation and revision remain authoring aids rather than reviewer-role ownership. It does not imply an admitted domain or a G1 registry entry. Clear top-level requests may surface as unknown_domain, but no domain handoff is allowed before explicit domain boundaries are frozen."
+      "notes": "Still under definition. This workstream stays proposal-facing: proposal-side reviewer simulation and revision remain authoring aids rather than reviewer-role ownership. It does not imply an admitted domain or a G1 registry entry. Clear top-level requests may surface as unknown_domain, but no domain handoff is allowed before explicit domain boundaries are frozen. It also remains under definition because no stable agent runtime surface or shared-base Auto/Human-in-the-loop convergence path has been frozen yet."
     },
     {
       "workstream_id": "thesis_ops",
@@ -115,7 +116,7 @@
         "shared_foundation_language"
       ],
       "family_boundary_notes": [],
-      "notes": "Closely coupled with Research Ops, but the frozen boundary here is thesis assembly rather than core research execution: chapter-draft sets, cross-chapter synchronization packs, and defense-preparation packs may reuse Research Ops evidence and may later feed Presentation Ops / RedCube defense-deck outputs, yet they do not collapse Thesis Ops into Research Ops, MedAutoScience, or RedCube AI. Thesis Ops still requires an explicit independent domain boundary before admission, and the future Thesis Ops domain boundary package is still incomplete. Clear top-level requests may surface as unknown_domain, but no domain handoff is allowed yet."
+      "notes": "Closely coupled with Research Ops, but the frozen boundary here is thesis assembly rather than core research execution: chapter-draft sets, cross-chapter synchronization packs, and defense-preparation packs may reuse Research Ops evidence and may later feed Presentation Ops / RedCube defense-deck outputs, yet they do not collapse Thesis Ops into Research Ops, MedAutoScience, or RedCube AI. Thesis Ops still requires an explicit independent domain boundary before admission, and the future Thesis Ops domain boundary package is still incomplete. Clear top-level requests may surface as unknown_domain, but no domain handoff is allowed yet. It also remains under definition until a stable agent runtime surface and a shared-base Auto/Human-in-the-loop convergence path are explicitly declared."
     },
     {
       "workstream_id": "review_ops",
@@ -145,7 +146,7 @@
         "shared_foundation_language"
       ],
       "family_boundary_notes": [],
-      "notes": "Still under definition. Review Ops groups reviewer-role work plus response/rebuttal coordination as a top-level semantic bundle only; that combined label does not by itself freeze a distinct domain boundary or transfer canonical truth for review artifacts into OPL. It is not yet an admitted domain, discovery target, or routed-action target. Clear top-level requests may surface only as unknown_domain until a real domain owner is admitted."
+      "notes": "Still under definition. Review Ops groups reviewer-role work plus response/rebuttal coordination as a top-level semantic bundle only; that combined label does not by itself freeze a distinct domain boundary or transfer canonical truth for review artifacts into OPL. It is not yet an admitted domain, discovery target, or routed-action target. Clear top-level requests may surface only as unknown_domain until a real domain owner is admitted. It also remains under definition because no stable agent runtime surface or shared-base Auto/Human-in-the-loop convergence path has been frozen for a Review Ops domain yet."
     },
     {
       "workstream_id": "presentation_ops",

@@ -76,7 +76,8 @@ Each entry stays reference-only and carries only:
 
 That frozen boundary is still proposal-facing: review-simulation and revision traces remain author-side grant-authoring artifacts rather than standalone reviewer-role outputs.
 
-What is still missing is a future domain boundary package that makes registry material, public gateway docs, truth ownership, review surfaces, discovery readiness, routing readiness, and cross-domain wording explicit.
+What is still missing is a future domain boundary package that makes registry material, public gateway docs, truth ownership, review surfaces, an explicit execution-model declaration, discovery readiness, routing readiness, and cross-domain wording explicit.
+That execution-model declaration must identify the stable agent runtime surface, show how `Auto` and `Human-in-the-loop` share one base, explain the code-versus-Agent responsibility split, and keep the workstream out of any `fixed-code-first` or permanently single-mode framing.
 Those future packages are blockers only; they do not make `Grant Ops` currently `G2` discovery-ready or `G3` routed-action-ready.
 
 ### Thesis Ops
@@ -85,14 +86,16 @@ Those future packages are blockers only; they do not make `Grant Ops` currently 
 
 The negative conclusion frozen in the current path is that thesis assembly does add top-level boundary truth, but only as a reference-only candidate boundary inside the existing topology/backlog/onboarding chain: chapter-draft sets, cross-chapter synchronization, and defense-preparation coordination are not identical to `Research Ops` manuscript/submission flow, and a downstream `defense_deck` derivative does not collapse the workstream into `Presentation Ops` / `RedCube AI`.
 
-What is still missing is a future domain boundary package that makes thesis-specific registry material, public gateway docs, truth ownership, review surfaces, discovery readiness, routing readiness, and cross-domain wording explicit.
+What is still missing is a future domain boundary package that makes thesis-specific registry material, public gateway docs, truth ownership, review surfaces, an explicit execution-model declaration, discovery readiness, routing readiness, and cross-domain wording explicit.
+That execution-model declaration must identify the stable agent runtime surface, show how `Auto` and `Human-in-the-loop` share one base, explain the code-versus-Agent responsibility split, and keep the workstream out of any `fixed-code-first` or permanently single-mode framing.
 Those future packages are blockers only; they do not make `Thesis Ops` currently `G2` discovery-ready or `G3` routed-action-ready.
 
 ### Review Ops
 
 `Review Ops` already has explicit top-level semantics in the task map / task topology: it groups reviewer-role work plus response/rebuttal coordination under one candidate semantic bundle.
 
-What is still missing is a future domain boundary package that makes review-specific registry material, public gateway docs, truth ownership for review reports / comment structures / rebuttal plans / revision-route maps, review surfaces, discovery readiness, routing readiness, and cross-domain wording explicit.
+What is still missing is a future domain boundary package that makes review-specific registry material, public gateway docs, truth ownership for review reports / comment structures / rebuttal plans / revision-route maps, review surfaces, an explicit execution-model declaration, discovery readiness, routing readiness, and cross-domain wording explicit.
+That execution-model declaration must identify the stable agent runtime surface, show how `Auto` and `Human-in-the-loop` share one base, explain the code-versus-Agent responsibility split, and keep the workstream out of any `fixed-code-first` or permanently single-mode framing.
 
 The negative conclusion frozen here is that this combined label still does not justify admission, discovery readiness, routed-action readiness, or OPL ownership of review truth.
 
@@ -103,6 +106,7 @@ Read this surface as a **reference-only blocker index**.
 If a backlog entry exists, the workstream is still below the domain-onboarding gate.
 `blocked` does not mean “almost admitted.”
 It means the required boundary package is still incomplete.
+If the execution-model declaration is still missing, the workstream remains under definition / deferred rather than becoming “ready,” “aligned,” or implicitly admitted.
 
 It also does not let `OPL` quietly absorb these under-definition workstreams into `MedAutoScience` or `RedCube AI`.
 Those admitted domains remain independent gateway-and-harness surfaces.
@@ -123,6 +127,7 @@ The candidate backlog is acceptable only when:
 - each current candidate workstream has an explicit backlog entry
 - blocker packages align to the onboarding-package categories
 - blocker checks align to the onboarding formal-inclusion gate
+- execution-model blockers stay explicit in the public companion wording: stable agent runtime surface, shared-base `Auto` / `Human-in-the-loop` convergence, and code-versus-Agent responsibility split must all be named before anything can move beyond under definition / deferred
 - no entry allocates future domain identity, gateway/harness surface metadata, or any routed readiness state
 - the backlog stays discoverable and reviewable without becoming a control plane
 - the backlog remains reference-only, non-executing, and non-admitting

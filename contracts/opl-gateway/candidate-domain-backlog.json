@@ -15,13 +15,15 @@
     "entries do not create G2 discovery readiness or G3 routed-action readiness",
     "package-level blockers align to the onboarding package requirements in the domain-onboarding contract",
     "check-level blockers align to the formal inclusion gate in the domain-onboarding contract",
-    "the backlog may reference top-level task semantics without admitting new domains"
+    "the backlog may reference top-level task semantics without admitting new domains",
+    "candidate workstreams remain under definition / deferred until a stable agent runtime surface plus a shared-base Auto/Human-in-the-loop convergence path is explicitly declared"
   ],
   "required_package_ids": [
     "registry_material",
     "public_documentation",
     "truth_ownership",
     "review_surfaces",
+    "execution_model",
     "discovery_routing_readiness",
     "cross_domain_wording"
   ],
@@ -32,6 +34,7 @@
     "discovery_ready",
     "routing_ready",
     "review_ready",
+    "execution_model_aligned",
     "cross_domain_wording_aligned"
   ],
   "candidate_workstreams": [
@@ -107,6 +110,21 @@
           "forbidden_shortcuts": [
             "execution_claim_without_review_surface",
             "treat_opl_review_matrix_as_domain_review_owner"
+          ]
+        },
+        {
+          "package_id": "execution_model",
+          "status": "missing",
+          "required_evidence": [
+            "stable agent runtime surface for the future Grant Ops domain",
+            "explicit Auto/Human-in-the-loop shared-base convergence path for the future Grant Ops domain",
+            "code-versus-Agent responsibility split that keeps stable objects, controllers, tools, gates, review surfaces, and audit surfaces in code without redefining the mainline as fixed-code-first"
+          ],
+          "forbidden_shortcuts": [
+            "omit_stable_agent_runtime_surface",
+            "claim_alignment_without_shared_base_convergence",
+            "fixed_code_first_mainline",
+            "single_mode_steady_state"
           ]
         },
         {
@@ -212,6 +230,22 @@
           ]
         },
         {
+          "maps_to_formal_inclusion_check": "execution_model_aligned",
+          "package_id": "execution_model",
+          "status": "missing",
+          "required_evidence": [
+            "stable agent runtime surface for the future Grant Ops domain",
+            "explicit Auto/Human-in-the-loop shared-base convergence path for the future Grant Ops domain",
+            "code-versus-Agent responsibility split that keeps stable objects, controllers, tools, gates, review surfaces, and audit surfaces in code without redefining the mainline as fixed-code-first"
+          ],
+          "forbidden_shortcuts": [
+            "omit_stable_agent_runtime_surface",
+            "claim_alignment_without_shared_base_convergence",
+            "fixed_code_first_mainline",
+            "single_mode_steady_state"
+          ]
+        },
+        {
           "maps_to_formal_inclusion_check": "cross_domain_wording_aligned",
           "package_id": "cross_domain_wording",
           "status": "missing",
@@ -259,6 +293,12 @@
           "status": "blocked",
           "blocking_package_ids": [
             "review_surfaces"
+          ]
+        },
+        "execution_model_aligned": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "execution_model"
           ]
         },
         "cross_domain_wording_aligned": {
@@ -342,6 +382,21 @@
           "forbidden_shortcuts": [
             "execution_claim_without_review_surface",
             "treat_opl_review_matrix_as_domain_review_owner"
+          ]
+        },
+        {
+          "package_id": "execution_model",
+          "status": "missing",
+          "required_evidence": [
+            "stable agent runtime surface for the future Thesis Ops domain",
+            "explicit Auto/Human-in-the-loop shared-base convergence path for the future Thesis Ops domain",
+            "code-versus-Agent responsibility split that keeps stable objects, controllers, tools, gates, review surfaces, and audit surfaces in code without redefining the mainline as fixed-code-first"
+          ],
+          "forbidden_shortcuts": [
+            "omit_stable_agent_runtime_surface",
+            "claim_alignment_without_shared_base_convergence",
+            "fixed_code_first_mainline",
+            "single_mode_steady_state"
           ]
         },
         {
@@ -447,6 +502,22 @@
           ]
         },
         {
+          "maps_to_formal_inclusion_check": "execution_model_aligned",
+          "package_id": "execution_model",
+          "status": "missing",
+          "required_evidence": [
+            "stable agent runtime surface for the future Thesis Ops domain",
+            "explicit Auto/Human-in-the-loop shared-base convergence path for the future Thesis Ops domain",
+            "code-versus-Agent responsibility split that keeps stable objects, controllers, tools, gates, review surfaces, and audit surfaces in code without redefining the mainline as fixed-code-first"
+          ],
+          "forbidden_shortcuts": [
+            "omit_stable_agent_runtime_surface",
+            "claim_alignment_without_shared_base_convergence",
+            "fixed_code_first_mainline",
+            "single_mode_steady_state"
+          ]
+        },
+        {
           "maps_to_formal_inclusion_check": "cross_domain_wording_aligned",
           "package_id": "cross_domain_wording",
           "status": "missing",
@@ -494,6 +565,12 @@
           "status": "blocked",
           "blocking_package_ids": [
             "review_surfaces"
+          ]
+        },
+        "execution_model_aligned": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "execution_model"
           ]
         },
         "cross_domain_wording_aligned": {
@@ -577,6 +654,21 @@
           "forbidden_shortcuts": [
             "execution_claim_without_review_surface",
             "treat_opl_review_matrix_as_domain_review_owner"
+          ]
+        },
+        {
+          "package_id": "execution_model",
+          "status": "missing",
+          "required_evidence": [
+            "stable agent runtime surface for the future Review Ops domain",
+            "explicit Auto/Human-in-the-loop shared-base convergence path for the future Review Ops domain",
+            "code-versus-Agent responsibility split that keeps stable objects, controllers, tools, gates, review surfaces, and audit surfaces in code without redefining the mainline as fixed-code-first"
+          ],
+          "forbidden_shortcuts": [
+            "omit_stable_agent_runtime_surface",
+            "claim_alignment_without_shared_base_convergence",
+            "fixed_code_first_mainline",
+            "single_mode_steady_state"
           ]
         },
         {
@@ -682,6 +774,22 @@
           ]
         },
         {
+          "maps_to_formal_inclusion_check": "execution_model_aligned",
+          "package_id": "execution_model",
+          "status": "missing",
+          "required_evidence": [
+            "stable agent runtime surface for the future Review Ops domain",
+            "explicit Auto/Human-in-the-loop shared-base convergence path for the future Review Ops domain",
+            "code-versus-Agent responsibility split that keeps stable objects, controllers, tools, gates, review surfaces, and audit surfaces in code without redefining the mainline as fixed-code-first"
+          ],
+          "forbidden_shortcuts": [
+            "omit_stable_agent_runtime_surface",
+            "claim_alignment_without_shared_base_convergence",
+            "fixed_code_first_mainline",
+            "single_mode_steady_state"
+          ]
+        },
+        {
           "maps_to_formal_inclusion_check": "cross_domain_wording_aligned",
           "package_id": "cross_domain_wording",
           "status": "missing",
@@ -729,6 +837,12 @@
           "status": "blocked",
           "blocking_package_ids": [
             "review_surfaces"
+          ]
+        },
+        "execution_model_aligned": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "execution_model"
           ]
         },
         "cross_domain_wording_aligned": {

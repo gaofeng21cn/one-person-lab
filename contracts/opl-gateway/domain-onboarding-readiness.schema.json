@@ -14,6 +14,7 @@
     "public_documentation",
     "truth_ownership",
     "review_surfaces",
+    "execution_model",
     "discovery_routing_readiness",
     "formal_inclusion_gate",
     "boundary_guards"
@@ -47,6 +48,9 @@
     },
     "review_surfaces": {
       "$ref": "#/$defs/reviewSurfaceDeclaration"
+    },
+    "execution_model": {
+      "$ref": "#/$defs/executionModelDeclaration"
     },
     "discovery_routing_readiness": {
       "$ref": "#/$defs/discoveryRoutingReadiness"
@@ -465,6 +469,54 @@
         }
       }
     },
+    "executionModelDeclaration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "default_executor",
+        "stable_agent_runtime_surface_refs",
+        "auto_human_share_one_base",
+        "convergence_surface_refs",
+        "code_responsibility_surface_refs",
+        "fixed_code_first_mainline_forbidden",
+        "single_mode_steady_state_forbidden"
+      ],
+      "properties": {
+        "default_executor": {
+          "const": "agent_first"
+        },
+        "stable_agent_runtime_surface_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/surfaceRef"
+          }
+        },
+        "auto_human_share_one_base": {
+          "const": true
+        },
+        "convergence_surface_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/surfaceRef"
+          }
+        },
+        "code_responsibility_surface_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/surfaceRef"
+          }
+        },
+        "fixed_code_first_mainline_forbidden": {
+          "const": true
+        },
+        "single_mode_steady_state_forbidden": {
+          "const": true
+        }
+      }
+    },
     "discoveryRoutingReadiness": {
       "type": "object",
       "additionalProperties": false,
@@ -546,6 +598,7 @@
         "discovery_ready",
         "routing_ready",
         "review_ready",
+        "execution_model_aligned",
         "cross_domain_wording_aligned"
       ],
       "properties": {
@@ -571,6 +624,9 @@
           "$ref": "#/$defs/readinessGate"
         },
         "review_ready": {
+          "$ref": "#/$defs/readinessGate"
+        },
+        "execution_model_aligned": {
           "$ref": "#/$defs/readinessGate"
         },
         "cross_domain_wording_aligned": {
@@ -627,6 +683,13 @@
                 }
               },
               "review_ready": {
+                "properties": {
+                  "status": {
+                    "const": "ready"
+                  }
+                }
+              },
+              "execution_model_aligned": {
                 "properties": {
                   "status": {
                     "const": "ready"
@@ -775,6 +838,33 @@
         ],
         "opl_review_linkage_explicit": true
       },
+      "execution_model": {
+        "default_executor": "agent_first",
+        "stable_agent_runtime_surface_refs": [
+          {
+            "ref_kind": "external_url",
+            "ref": "https://example.com/example-domain/agent-runtime",
+            "label": "Example Agent Runtime Surface"
+          }
+        ],
+        "auto_human_share_one_base": true,
+        "convergence_surface_refs": [
+          {
+            "ref_kind": "external_url",
+            "ref": "https://example.com/example-domain/auto-hitl-convergence",
+            "label": "Example Auto/HITL Convergence Note"
+          }
+        ],
+        "code_responsibility_surface_refs": [
+          {
+            "ref_kind": "external_url",
+            "ref": "https://example.com/example-domain/controllers-and-gates",
+            "label": "Example Controllers / Gates Surface"
+          }
+        ],
+        "fixed_code_first_mainline_forbidden": true,
+        "single_mode_steady_state_forbidden": true
+      },
       "discovery_routing_readiness": {
         "discovery_entry_surface": "domain_gateway",
         "routing_entry_surface": "domain_gateway",
@@ -823,6 +913,14 @@
           "status": "ready",
           "evidence_refs": [
             "review_surfaces=declared"
+          ]
+        },
+        "execution_model_aligned": {
+          "status": "ready",
+          "evidence_refs": [
+            "default_executor=agent_first",
+            "stable_agent_runtime_surface=declared",
+            "shared_base_auto_hitl=declared"
           ]
         },
         "cross_domain_wording_aligned": {
