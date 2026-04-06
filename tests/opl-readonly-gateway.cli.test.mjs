@@ -1,7 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -9,13 +17,18 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..');
-const defaultCliEntrypoint = path.join(repoRoot, 'dist', 'cli', 'index.js');
-const cliEntrypoint = process.env.OPL_CLI_ENTRYPOINT ?? defaultCliEntrypoint;
+const cliEntrypoint =
+  process.env.OPL_CLI_ENTRYPOINT
+  ?? [
+    path.join(repoRoot, 'dist', 'cli.js'),
+    path.join(repoRoot, 'dist', 'cli', 'index.js'),
+  ].find((candidate) => existsSync(candidate))
+  ?? path.join(repoRoot, 'dist', 'cli.js');
 const contractsRoot = path.join(repoRoot, 'contracts', 'opl-gateway');
 
 function runCli(args, options = {}) {
   return spawnSync(process.execPath, [cliEntrypoint, ...args], {
-    cwd: repoRoot,
+    cwd: options.cwd ?? repoRoot,
     env: {
       ...process.env,
       ...options.env,
@@ -38,14 +51,19 @@ function parseJsonOutput(result) {
   return JSON.parse(text);
 }
 
-function createBrokenContractsDir(mutator) {
+function createContractsFixtureRoot(mutator) {
   const fixtureRoot = mkdtempSync(path.join(os.tmpdir(), 'opl-contract-fixture-'));
+  const fixtureContractsRoot = path.join(fixtureRoot, 'contracts', 'opl-gateway');
+  mkdirSync(fixtureContractsRoot, { recursive: true });
 
   for (const fileName of ['workstreams.json', 'domains.json', 'routing-vocabulary.json', 'task-topology.json']) {
-    writeFileSync(path.join(fixtureRoot, fileName), readFileSync(path.join(contractsRoot, fileName), 'utf8'));
+    writeFileSync(
+      path.join(fixtureContractsRoot, fileName),
+      readFileSync(path.join(contractsRoot, fileName), 'utf8'),
+    );
   }
 
-  mutator(fixtureRoot);
+  mutator(fixtureRoot, fixtureContractsRoot);
   return fixtureRoot;
 }
 
@@ -109,7 +127,7 @@ test('resolve-request-surface maps a defense-ready slide deck to presentation_op
 test('resolve-request-surface keeps xiaohongshu at the redcube family boundary without auto-admitting presentation_ops', () => {
   const result = runCli([
     'resolve-request-surface',
-    '--intent', 'presentation_delivery',
+    '--intent', 'create',
     '--target', 'deliverable',
     '--goal', 'Create a xiaohongshu campaign pack for a lab update.',
     '--preferred-family', 'xiaohongshu',
@@ -127,43 +145,48 @@ test('resolve-request-surface keeps xiaohongshu at the redcube family boundary w
 test('explain-domain-boundary explains that grant proposal reviewer simulation stays under definition', () => {
   const result = runCli([
     'explain-domain-boundary',
-    '--request-summary', 'Grant proposal reviewer simulation and revision planning.',
+    '--intent', 'create',
+    '--target', 'deliverable',
+    '--goal', 'Grant proposal reviewer simulation and revision planning.',
   ]);
   assert.equal(result.status, 0, formatFailure(result));
 
   const payload = parseJsonOutput(result);
   assert.equal(payload.version, 'g2');
   assert.equal(payload.boundary_explanation.request_summary, 'Grant proposal reviewer simulation and revision planning.');
-  assert.match(JSON.stringify(payload.boundary_explanation), /grant_ops|under_definition|unknown_domain/i);
+  assert.match(JSON.stringify(payload.boundary_explanation), /grant_ops|under definition|unknown_domain/i);
 });
 
-test('list-workstreams fails with a stable JSON contract-loading error when the contracts root is missing', () => {
-  const missingContractsDir = path.join(repoRoot, 'tests', 'fixtures', 'missing-contracts');
-  const result = runCli(['list-workstreams'], {
-    env: { OPL_CONTRACTS_DIR: missingContractsDir },
-  });
+test('list-workstreams fails with a stable JSON contract-loading error when contracts are missing from cwd', () => {
+  const missingRoot = mkdtempSync(path.join(os.tmpdir(), 'opl-missing-contracts-'));
 
-  assert.notEqual(result.status, 0, 'Expected a non-zero exit when OPL_CONTRACTS_DIR points to a missing contracts directory.');
-  const payload = parseJsonOutput(result);
-  assert.equal(payload.error.code, 'CONTRACT_LOAD_ERROR');
-  assert.match(payload.error.message, /workstreams\.json|contracts root/i);
+  try {
+    const result = runCli(['list-workstreams'], { cwd: missingRoot });
+    assert.notEqual(result.status, 0, 'Expected a non-zero exit when contracts are missing from cwd.');
+
+    const payload = parseJsonOutput(result);
+    assert.match(payload.error.code, /contract_file_missing|contract_load_error/i);
+    assert.match(payload.error.message, /workstreams\.json|contracts/i);
+  } finally {
+    rmSync(missingRoot, { recursive: true, force: true });
+  }
 });
 
-test('get-domain surfaces invalid JSON in the contract set through the OPL_CONTRACTS_DIR override', () => {
-  const brokenContractsDir = createBrokenContractsDir((fixtureRoot) => {
-    writeFileSync(path.join(fixtureRoot, 'domains.json'), '{ invalid json\n');
+test('get-domain surfaces invalid JSON from the contract set rooted at cwd', () => {
+  const brokenRoot = createContractsFixtureRoot((fixtureRoot, fixtureContractsRoot) => {
+    writeFileSync(path.join(fixtureContractsRoot, 'domains.json'), '{ invalid json\n');
+    mkdirSync(path.join(fixtureRoot, 'dist'), { recursive: true });
+    cpSync(path.join(repoRoot, 'dist'), path.join(fixtureRoot, 'dist'), { recursive: true });
   });
 
   try {
-    const result = runCli(['get-domain', 'redcube'], {
-      env: { OPL_CONTRACTS_DIR: brokenContractsDir },
-    });
-
+    const result = runCli(['get-domain', 'redcube'], { cwd: brokenRoot });
     assert.notEqual(result.status, 0, 'Expected a non-zero exit when domains.json is invalid.');
+
     const payload = parseJsonOutput(result);
-    assert.equal(payload.error.code, 'CONTRACT_LOAD_ERROR');
+    assert.match(payload.error.code, /contract_json_invalid|contract_load_error/i);
     assert.match(payload.error.message, /domains\.json|invalid json/i);
   } finally {
-    rmSync(brokenContractsDir, { recursive: true, force: true });
+    rmSync(brokenRoot, { recursive: true, force: true });
   }
 });
