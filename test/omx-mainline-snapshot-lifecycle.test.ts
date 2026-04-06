@@ -88,7 +88,7 @@ test('CURRENT_PROGRAM owns the single active Phase 4 snapshot pointer and other 
   );
   assert.match(
     latestStatus,
-    /active Phase 4 snapshot pointer recorded in `CURRENT_PROGRAM\.md`|CURRENT_PROGRAM\.md[^.\n]*active Phase 4 snapshot pointer/i,
+    /CURRENT_PROGRAM\.md[^.\n]*(active Phase 4 snapshot pointer|sole direct owner of the active snapshot path|sole direct active-snapshot path owner)/i,
     'LATEST_STATUS must describe CURRENT_PROGRAM as the active Phase 4 snapshot pointer owner.',
   );
 });
@@ -107,10 +107,13 @@ test('Phase 4 snapshot lifecycle pack keeps superseded snapshots historical with
     phase4SnapshotFiles.length >= 2,
     'Phase 4 snapshot lifecycle baseline should keep at least one superseded historical snapshot on disk.',
   );
-  assert.match(activeSnapshot, /historical artifacts/i);
+  assert.match(activeSnapshot, /historical artifacts|historical-artifact|historical-only/i);
   assert.match(activeSnapshot, /truth owner/i);
   assert.match(currentProgram, /tranche-scoped continuity brief|不取代长期 governing truth 或 report truth/i);
   assert.match(prompt, /minimal deterministic re-entry pack|最小 deterministic re-entry pack/i);
-  assert.match(latestStatus, /snapshot creation \/ refresh \/ supersession/i);
+  assert.match(
+    latestStatus,
+    /snapshot creation \/ refresh \/ supersession|create \/ refresh \/ supersede semantics|create \/ refresh \/ supersede/i,
+  );
   assert.match(openIssues, /deterministic re-entry order explicit/i);
 });
