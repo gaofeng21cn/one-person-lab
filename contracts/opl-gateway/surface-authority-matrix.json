@@ -17,6 +17,7 @@
   ],
   "covered_surface_ids": [
     "opl_shared_foundation_ownership",
+    "opl_shared_foundation_index_readiness_gate",
     "opl_shared_foundation",
     "opl_operating_model",
     "opl_gateway_contract_hub",
@@ -95,6 +96,28 @@
       "governing_refs": [
         "docs/shared-foundation-ownership.md",
         "docs/shared-foundation-ownership.zh-CN.md"
+      ]
+    },
+    {
+      "surface_id": "opl_shared_foundation_index_readiness_gate",
+      "owner_scope": "opl",
+      "surface_role": "shared_foundation_index_readiness_gate",
+      "route_authority": "none",
+      "execution_authority": "none",
+      "truth_authority": "none",
+      "review_authority": "none",
+      "publication_authority": "none",
+      "allowed_follow_on_surface": null,
+      "forbidden_actions": [
+        "materialize_candidate_index_as_current_surface",
+        "transfer_domain_truth_to_opl",
+        "claim_mutation_ownership",
+        "transfer_review_or_publication_ownership_to_opl"
+      ],
+      "governing_refs": [
+        "docs/shared-foundation-ownership.md",
+        "docs/shared-foundation-ownership.zh-CN.md",
+        "contracts/opl-gateway/shared-foundation-index-readiness.schema.json"
       ]
     },
     {

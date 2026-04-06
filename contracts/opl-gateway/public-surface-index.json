@@ -272,6 +272,7 @@
       ],
       "routes_to": [
         "opl_shared_foundation_ownership",
+        "opl_shared_foundation_index_readiness_gate",
         "opl_surface_lifecycle_map",
         "opl_surface_authority_matrix",
         "opl_surface_review_matrix",
@@ -314,6 +315,7 @@
       ],
       "routes_to": [
         "opl_shared_foundation",
+        "opl_shared_foundation_index_readiness_gate",
         "opl_surface_authority_matrix",
         "opl_surface_review_matrix",
         "opl_gateway_acceptance_spec",
@@ -322,6 +324,54 @@
       "notes": [
         "Freezes the ownership split between OPL top-level indexing/semantic control and domain-owned canonical truth/mutation/review/delivery truth.",
         "Future shared indexes remain index-first and reference-only unless a later explicit contract upgrades them."
+      ]
+    },
+    {
+      "surface_id": "opl_shared_foundation_index_readiness_gate",
+      "category_id": "opl_contract_surface",
+      "surface_kind": "readiness_gate",
+      "boundary_role": "shared_foundation_index_readiness",
+      "owner_scope": "opl",
+      "truth_mode": "none",
+      "workstream_ids": [
+        "research_ops",
+        "grant_ops",
+        "thesis_ops",
+        "review_ops",
+        "presentation_ops"
+      ],
+      "domain_ids": [
+        "medautoscience",
+        "redcube"
+      ],
+      "refs": [
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/shared-foundation-ownership.md",
+          "language": "en"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/shared-foundation-ownership.zh-CN.md",
+          "language": "zh-CN"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "contracts/opl-gateway/shared-foundation-index-readiness.schema.json"
+        }
+      ],
+      "routes_to": [
+        "opl_shared_foundation",
+        "opl_shared_foundation_ownership",
+        "opl_public_surface_index_doc",
+        "opl_surface_lifecycle_map",
+        "opl_surface_authority_matrix",
+        "opl_surface_review_matrix",
+        "opl_gateway_acceptance_spec"
+      ],
+      "notes": [
+        "Freezes the minimum ownership and readiness boundary that future shared asset and shared memory indexes must satisfy before they can appear on the current public surface.",
+        "Keeps shared indexes reference-only and non-executing, and forbids truth-shift, mutation-ownership, review takeover, or publication takeover into OPL."
       ]
     },
     {
@@ -978,7 +1028,8 @@
         "opl_public_surface_index_doc",
         "opl_gateway_acceptance_spec",
         "opl_surface_authority_matrix",
-        "opl_surface_review_matrix"
+        "opl_surface_review_matrix",
+        "opl_shared_foundation_index_readiness_gate"
       ],
       "notes": [
         "Derived machine-readable lifecycle map for the frozen gateway, operating, and supporting surface stack.",
@@ -1032,7 +1083,8 @@
         "opl_public_surface_index_doc",
         "opl_gateway_acceptance_spec",
         "medautoscience_public_gateway",
-        "redcube_public_gateway"
+        "redcube_public_gateway",
+        "opl_shared_foundation_index_readiness_gate"
       ],
       "notes": [
         "Derived machine-readable authority matrix for the frozen OPL and linked domain-entry surfaces.",
@@ -1075,7 +1127,8 @@
         "opl_gateway_acceptance_spec",
         "opl_surface_lifecycle_map",
         "opl_surface_authority_matrix",
-        "opl_public_surface_index_doc"
+        "opl_public_surface_index_doc",
+        "opl_shared_foundation_index_readiness_gate"
       ],
       "notes": [
         "Derived machine-readable review matrix for the frozen OPL public, contract, and supporting surfaces.",
