@@ -309,8 +309,8 @@ test('resolveRequestSurface returns ambiguous_task with explicit boundary eviden
     'redcube',
   ]);
   assert.deepEqual(output.resolution.required_clarification, [
-    'Is the primary output a formal research submission package or a presentation deliverable?',
-    'If presentation delivery is primary, should the family be ppt_deck or another RedCube family?',
+    'Is the primary goal a formal research deliverable or a presentation deliverable?',
+    'If visual delivery is primary, should the family be ppt_deck or another RedCube family?',
   ]);
   assert.deepEqual(output.resolution.routing_evidence, [
     'research delivery semantics',

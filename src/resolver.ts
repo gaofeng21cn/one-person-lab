@@ -152,7 +152,7 @@ export function resolveRequestSurface(
       ],
       required_clarification: [
         'Is the primary goal a formal research deliverable or a presentation deliverable?',
-        'If presentation delivery is primary, should the family stay ppt_deck or another RedCube family?',
+        'If visual delivery is primary, should the family be ppt_deck or another RedCube family?',
       ],
     };
   }

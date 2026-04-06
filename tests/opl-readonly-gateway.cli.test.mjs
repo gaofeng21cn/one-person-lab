@@ -188,8 +188,8 @@ test('resolve-request-surface emits ambiguous_task with machine-readable clarifi
     'redcube',
   ]);
   assert.deepEqual(payload.resolution.required_clarification, [
-    'Is the primary output a formal research submission package or a presentation deliverable?',
-    'If presentation delivery is primary, should the family be ppt_deck or another RedCube family?',
+    'Is the primary goal a formal research deliverable or a presentation deliverable?',
+    'If visual delivery is primary, should the family be ppt_deck or another RedCube family?',
   ]);
   assert.deepEqual(payload.resolution.routing_evidence, [
     'research delivery semantics',
