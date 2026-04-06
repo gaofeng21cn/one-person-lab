@@ -288,7 +288,7 @@ test('resolveRequestSurface returns unknown_domain for under-definition workstre
   assert.equal(output.resolution.candidate_workstream_id, 'grant_ops');
 });
 
-test('resolveRequestSurface returns ambiguous when the primary deliverable is unclear', () => {
+test('resolveRequestSurface returns ambiguous_task with explicit boundary evidence when the primary deliverable is unclear', () => {
   const output = runCli([
     'resolve-request-surface',
     '--intent',
@@ -299,10 +299,23 @@ test('resolveRequestSurface returns ambiguous when the primary deliverable is un
     'Package the study for submission and also turn it into a defense-ready deck.',
   ]);
 
-  assert.equal(output.resolution.status, 'ambiguous');
-  assert.deepEqual(output.resolution.candidate_workstream_ids, [
+  assert.equal(output.resolution.status, 'ambiguous_task');
+  assert.deepEqual(output.resolution.candidate_workstreams, [
     'research_ops',
     'presentation_ops',
+  ]);
+  assert.deepEqual(output.resolution.candidate_domains, [
+    'medautoscience',
+    'redcube',
+  ]);
+  assert.deepEqual(output.resolution.required_clarification, [
+    'Is the primary output a formal research submission package or a presentation deliverable?',
+    'If presentation delivery is primary, should the family be ppt_deck or another RedCube family?',
+  ]);
+  assert.deepEqual(output.resolution.routing_evidence, [
+    'research delivery semantics',
+    'presentation delivery semantics',
+    'missing primary deliverable',
   ]);
 });
 
@@ -369,4 +382,16 @@ test('CLI returns stable JSON errors for unknown surface ids', () => {
   assert.equal(output.version, 'g2');
   assert.equal(output.error.code, 'surface_not_found');
   assert.equal(output.error.exit_code, 1);
+  assert.deepEqual(output.error.details, { surface_id: 'unknown_surface' });
+});
+
+test('CLI returns machine-readable JSON errors for unknown commands with available command discovery', () => {
+  const output = runCliFailure(['unknown-command']);
+
+  assert.equal(output.version, 'g2');
+  assert.equal(output.error.code, 'unknown_command');
+  assert.equal(output.error.exit_code, 1);
+  assert.ok(Array.isArray(output.error.details.commands));
+  assert.ok(output.error.details.commands.includes('list-surfaces'));
+  assert.equal(output.error.details.command, 'unknown-command');
 });
