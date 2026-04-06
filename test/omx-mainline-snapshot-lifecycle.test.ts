@@ -51,7 +51,7 @@ function collectActivePhase4SnapshotPaths(content: string) {
   return [...new Set(content.match(activePhase4SnapshotPattern) ?? [])];
 }
 
-test('CURRENT_PROGRAM owns the single active Phase 4 snapshot pointer and other surfaces route discovery through it', () => {
+test('CURRENT_PROGRAM, prompt, and latest status agree on the single active Phase 4 snapshot', () => {
   const currentProgram = read(currentProgramPath);
   const prompt = read(promptPath);
   const latestStatus = read(latestStatusPath);
@@ -66,30 +66,19 @@ test('CURRENT_PROGRAM owns the single active Phase 4 snapshot pointer and other 
   const latestStatusSnapshots = collectActivePhase4SnapshotPaths(latestStatus);
 
   assert.equal(currentProgramSnapshots.length, 1);
+  assert.deepEqual(promptSnapshots, currentProgramSnapshots);
+  assert.deepEqual(latestStatusSnapshots, currentProgramSnapshots);
   assert.ok(knownSnapshots.has(currentProgramSnapshots[0]!), 'Active Phase 4 snapshot must exist on disk.');
-  assert.ok(promptSnapshots.length <= 1, 'Prompt should not invent multiple active Phase 4 snapshot paths.');
-  assert.ok(
-    latestStatusSnapshots.length <= 1,
-    'LATEST_STATUS should not invent multiple active Phase 4 snapshot paths.',
+
+  assert.equal(
+    currentProgramSnapshots[0],
+    promptSnapshots[0],
+    'CURRENT_PROGRAM and OMX_TEAM_PROMPT must point at the same active Phase 4 snapshot.',
   );
-
-  if (promptSnapshots.length === 1) {
-    assert.deepEqual(promptSnapshots, currentProgramSnapshots);
-  }
-
-  if (latestStatusSnapshots.length === 1) {
-    assert.deepEqual(latestStatusSnapshots, currentProgramSnapshots);
-  }
-
-  assert.match(
-    prompt,
-    /CURRENT_PROGRAM\.md[^.\n]*active Phase 4 snapshot|从 `CURRENT_PROGRAM\.md` 解析 active Phase 4 snapshot/i,
-    'OMX_TEAM_PROMPT must route active Phase 4 snapshot discovery through CURRENT_PROGRAM.',
-  );
-  assert.match(
-    latestStatus,
-    /CURRENT_PROGRAM\.md[^.\n]*(active Phase 4 snapshot pointer|sole direct owner of the active snapshot path|sole direct active-snapshot path owner)/i,
-    'LATEST_STATUS must describe CURRENT_PROGRAM as the active Phase 4 snapshot pointer owner.',
+  assert.equal(
+    currentProgramSnapshots[0],
+    latestStatusSnapshots[0],
+    'LATEST_STATUS must advertise the same active Phase 4 snapshot as CURRENT_PROGRAM.',
   );
 });
 
@@ -107,13 +96,10 @@ test('Phase 4 snapshot lifecycle pack keeps superseded snapshots historical with
     phase4SnapshotFiles.length >= 2,
     'Phase 4 snapshot lifecycle baseline should keep at least one superseded historical snapshot on disk.',
   );
-  assert.match(activeSnapshot, /historical artifacts|historical-artifact|historical-only/i);
+  assert.match(activeSnapshot, /historical artifacts/i);
   assert.match(activeSnapshot, /truth owner/i);
   assert.match(currentProgram, /tranche-scoped continuity brief|不取代长期 governing truth 或 report truth/i);
   assert.match(prompt, /minimal deterministic re-entry pack|最小 deterministic re-entry pack/i);
-  assert.match(
-    latestStatus,
-    /snapshot creation \/ refresh \/ supersession|create \/ refresh \/ supersede semantics|create \/ refresh \/ supersede/i,
-  );
+  assert.match(latestStatus, /snapshot creation \/ refresh \/ supersession/i);
   assert.match(openIssues, /deterministic re-entry order explicit/i);
 });
