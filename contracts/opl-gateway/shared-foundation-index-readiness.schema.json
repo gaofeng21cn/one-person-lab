@@ -1,0 +1,445 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opl.onepersonlab/contracts/opl-gateway/shared-foundation-index-readiness.schema.json",
+  "title": "OPL Shared-Foundation Index Readiness Contract",
+  "description": "Machine-readable P23.M5 contract for freezing the ownership and readiness boundary that future shared asset and shared memory indexes must satisfy before they can appear on the current OPL public surface.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "readiness_id",
+    "shared_surface_id",
+    "governing_surface_ids",
+    "candidate_indexes",
+    "owner_split",
+    "control_mode",
+    "boundary_guards",
+    "review_acceptance_coverage",
+    "public_admission_gate"
+  ],
+  "properties": {
+    "version": {
+      "const": "p23.m5"
+    },
+    "readiness_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "shared_surface_id": {
+      "const": "opl_shared_foundation_ownership"
+    },
+    "governing_surface_ids": {
+      "type": "array",
+      "minItems": 2,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "opl_shared_foundation",
+          "opl_shared_foundation_ownership"
+        ]
+      },
+      "contains": {
+        "const": "opl_shared_foundation"
+      },
+      "allOf": [
+        {
+          "contains": {
+            "const": "opl_shared_foundation_ownership"
+          }
+        }
+      ]
+    },
+    "candidate_indexes": {
+      "type": "array",
+      "minItems": 2,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/candidateIndex"
+      }
+    },
+    "owner_split": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/ownerSplitEntry"
+      }
+    },
+    "control_mode": {
+      "$ref": "#/$defs/controlMode"
+    },
+    "boundary_guards": {
+      "$ref": "#/$defs/boundaryGuards"
+    },
+    "review_acceptance_coverage": {
+      "$ref": "#/$defs/reviewAcceptanceCoverage"
+    },
+    "public_admission_gate": {
+      "$ref": "#/$defs/publicAdmissionGate"
+    }
+  },
+  "$defs": {
+    "surfaceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ref_kind",
+        "ref"
+      ],
+      "properties": {
+        "ref_kind": {
+          "enum": [
+            "repo_path",
+            "external_url"
+          ]
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "ref_kind": {
+                "const": "external_url"
+              }
+            },
+            "required": [
+              "ref_kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "ref": {
+                "type": "string",
+                "format": "uri",
+                "pattern": "^https://"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "candidateIndex": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "index_id",
+        "current_state",
+        "indexed_families",
+        "allowed_object_classes",
+        "identifier_kinds",
+        "current_public_surface_forbidden",
+        "governing_refs"
+      ],
+      "properties": {
+        "index_id": {
+          "enum": [
+            "shared_asset_index",
+            "shared_memory_index"
+          ]
+        },
+        "current_state": {
+          "const": "roadmap_only_future_only_reference_only_non_admitting"
+        },
+        "indexed_families": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "allowed_object_classes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "identifier_kinds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "current_public_surface_forbidden": {
+          "const": true
+        },
+        "governing_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/surfaceRef"
+          }
+        }
+      }
+    },
+    "ownerSplitEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "family_id",
+        "index_ids",
+        "opl_controls",
+        "domain_controls",
+        "human_private_controls",
+        "must_not_move_into_opl_by_default",
+        "governing_refs"
+      ],
+      "properties": {
+        "family_id": {
+          "enum": [
+            "data_assets",
+            "references",
+            "templates",
+            "delivery_assets",
+            "topic_memory",
+            "review_memory",
+            "venue_memory"
+          ]
+        },
+        "index_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "shared_asset_index",
+              "shared_memory_index"
+            ]
+          }
+        },
+        "opl_controls": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "domain_controls": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "human_private_controls": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "must_not_move_into_opl_by_default": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "governing_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/surfaceRef"
+          }
+        }
+      }
+    },
+    "controlMode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "reference_only",
+        "non_executing",
+        "launch_execution",
+        "route_actions",
+        "mutate_domain_objects",
+        "become_shared_truth_store"
+      ],
+      "properties": {
+        "mode": {
+          "const": "reference_only_non_executing"
+        },
+        "reference_only": {
+          "const": true
+        },
+        "non_executing": {
+          "const": true
+        },
+        "launch_execution": {
+          "const": false
+        },
+        "route_actions": {
+          "const": false
+        },
+        "mutate_domain_objects": {
+          "const": false
+        },
+        "become_shared_truth_store": {
+          "const": false
+        }
+      }
+    },
+    "boundaryGuards": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "no_truth_shift",
+        "no_mutation_ownership",
+        "no_review_takeover",
+        "no_publication_takeover",
+        "no_domain_gateway_bypass",
+        "forbidden_surface_roles"
+      ],
+      "properties": {
+        "no_truth_shift": {
+          "const": true
+        },
+        "no_mutation_ownership": {
+          "const": true
+        },
+        "no_review_takeover": {
+          "const": true
+        },
+        "no_publication_takeover": {
+          "const": true
+        },
+        "no_domain_gateway_bypass": {
+          "const": true
+        },
+        "forbidden_surface_roles": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "public_entry",
+              "discovery_ready",
+              "routed_action_ready",
+              "execution_surface",
+              "truth_owner",
+              "approval_surface",
+              "publish_control",
+              "release_control"
+            ]
+          }
+        }
+      }
+    },
+    "reviewAcceptanceCoverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required_surface_ids",
+        "acceptance_surface_id",
+        "coverage_complete",
+        "evidence_refs"
+      ],
+      "properties": {
+        "required_surface_ids": {
+          "type": "array",
+          "minItems": 4,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "opl_public_surface_index_doc",
+              "opl_surface_lifecycle_map",
+              "opl_surface_authority_matrix",
+              "opl_surface_review_matrix"
+            ]
+          }
+        },
+        "acceptance_surface_id": {
+          "const": "opl_gateway_acceptance_spec"
+        },
+        "coverage_complete": {
+          "type": "boolean"
+        },
+        "evidence_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "readinessCondition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "condition_id",
+        "status",
+        "evidence_refs"
+      ],
+      "properties": {
+        "condition_id": {
+          "enum": [
+            "object_scope_and_identifier_rules_frozen",
+            "owner_split_frozen",
+            "reference_only_control_mode_frozen",
+            "no_takeover_guards_frozen",
+            "review_acceptance_alignment_frozen"
+          ]
+        },
+        "status": {
+          "enum": [
+            "blocked",
+            "ready"
+          ]
+        },
+        "evidence_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "publicAdmissionGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "overall_status",
+        "required_conditions"
+      ],
+      "properties": {
+        "overall_status": {
+          "enum": [
+            "blocked",
+            "ready_for_current_surface"
+          ]
+        },
+        "required_conditions": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {
+            "$ref": "#/$defs/readinessCondition"
+          }
+        }
+      }
+    }
+  }
+}
