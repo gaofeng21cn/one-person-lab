@@ -58,6 +58,12 @@ function extractBacktickedMetadata(content: string, key: string) {
   return match[1]!;
 }
 
+function extractLatestStatusField(content: string, key: string) {
+  const match = content.match(new RegExp(`^- ${escapeForRegExp(key)}: \`([^\\\`]+)\`$`, 'm'));
+  assert.ok(match, `Expected ${key} field in LATEST_STATUS.md.`);
+  return match[1]!;
+}
+
 test('CURRENT_PROGRAM is the sole direct active Phase 4 snapshot owner while prompt and latest status stay mirror-only', () => {
   const currentProgram = read(currentProgramPath);
   const prompt = read(promptPath);
@@ -260,5 +266,57 @@ test('Phase 4 closeout and shutdown hygiene mirrors keep fallback, verification 
   assert.match(
     openIssues,
     /uses the leader fallback transition before integrated-head evidence is already sufficient or without recording why/i,
+  );
+});
+
+test('Phase 4 trace and issue history baseline keeps checkpoint, verification, and residual-risk continuity report-local', () => {
+  const currentProgram = read(currentProgramPath);
+  const latestStatus = read(latestStatusPath);
+  const iterationLog = read(iterationLogPath);
+  const openIssues = read(openIssuesPath);
+  const reportReadme = read(path.join(reportsRoot, 'README.md'));
+  const activeSnapshotPath = collectActivePhase4SnapshotPaths(currentProgram)[0];
+
+  assert.ok(activeSnapshotPath, 'CURRENT_PROGRAM must still point at one active Phase 4 snapshot.');
+
+  const activeSnapshot = read(activeSnapshotPath);
+  const snapshotCheckpointBase = extractBacktickedMetadata(activeSnapshot, 'current_checkpoint_base');
+  const latestStatusCheckpointBase = extractLatestStatusField(latestStatus, 'Current checkpoint base');
+  const predecessorTrancheLink = extractLatestStatusField(latestStatus, 'Predecessor tranche link');
+
+  assert.equal(
+    latestStatusCheckpointBase,
+    snapshotCheckpointBase,
+    'LATEST_STATUS checkpoint continuity must mirror the active snapshot checkpoint base.',
+  );
+  assert.equal(
+    predecessorTrancheLink,
+    extractBacktickedMetadata(activeSnapshot, 'predecessor_tranche'),
+    'LATEST_STATUS predecessor link must mirror the active snapshot predecessor tranche.',
+  );
+
+  assert.match(currentProgram, /验证证据与残余风险|verification evidence, and residual risks/i);
+  assert.match(activeSnapshot, /verification evidence, and residual risks discoverable from the current report pack/i);
+  assert.match(activeSnapshot, /without mining mailbox-only history/i);
+  assert.match(reportReadme, /`Leader-side verification on current HEAD` 承载最新 verification evidence/i);
+  assert.match(reportReadme, /`OPEN_ISSUES\.md` 持有 residual risks \/ deferred/i);
+  assert.match(reportReadme, /stale mailbox、挂起 pane、或 verbose ad-hoc 日志/i);
+  assert.match(
+    latestStatus,
+    /`Current checkpoint base` stays at the top of `LATEST_STATUS\.md`, the active snapshot keeps predecessor tranche \+ checkpoint linkage/i,
+  );
+  assert.match(
+    latestStatus,
+    /`ITERATION_LOG\.md` = append-only trace history, `OPEN_ISSUES\.md` = residual-risk \/ deferred surface/i,
+  );
+  assert.match(iterationLog, /trace \/ issue history baseline discoverability refresh/i);
+  assert.match(
+    iterationLog,
+    /`LATEST_STATUS\.md` now keeps checkpoint base \+ predecessor tranche linkage \+ latest verification evidence \+ next tranche brief/i,
+  );
+  assert.match(openIssues, /report-local baseline now exists/i);
+  assert.match(
+    openIssues,
+    /`OPEN_ISSUES\.md` stops surfacing residual risks and deferred non-goals/i,
   );
 });
