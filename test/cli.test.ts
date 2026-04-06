@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -60,7 +62,7 @@ test('loadGatewayContracts returns the frozen gateway registries', () => {
 });
 
 test('loadGatewayContracts rejects missing files with a stable error', async (t) => {
-  const tempRoot = t.testDir;
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-gateway-missing-'));
 
   await t.test('missing contracts directory', () => {
     assert.throws(
