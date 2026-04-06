@@ -9,8 +9,14 @@ const repoRoot = path.resolve(__dirname, '..');
 const controlPlaneRoot = resolveControlPlaneRoot();
 const contextRoot = path.join(controlPlaneRoot, '.omx', 'context');
 const reportsRoot = path.join(controlPlaneRoot, '.omx', 'reports', 'opl-mainline');
+const seamInventorySpecPath = path.join(
+  controlPlaneRoot,
+  '.omx',
+  'plans',
+  'spec-opl-mainline-next-stage-api-hooks-observability-seams.md',
+);
 const activePhase4SnapshotPattern = new RegExp(
-  `${escapeForRegExp(path.join(contextRoot, 'opl-mainline-phase4-'))}[^\\s\`]+\\.md`,
+  `${escapeForRegExp(path.join(contextRoot, 'opl-mainline-phase4-'))}[^\\s]+\\.md`,
   'g',
 );
 
@@ -53,13 +59,13 @@ function collectActivePhase4SnapshotPaths(content: string) {
 }
 
 function extractBacktickedMetadata(content: string, key: string) {
-  const match = content.match(new RegExp(`^- ${escapeForRegExp(key)}: \`([^\\\`]+)\`$`, 'm'));
+  const match = content.match(new RegExp(`^- ${escapeForRegExp(key)}: \`([^\`]+)\`$`, 'm'));
   assert.ok(match, `Expected ${key} metadata in the active Phase 4 snapshot.`);
   return match[1]!;
 }
 
 function extractLatestStatusField(content: string, key: string) {
-  const match = content.match(new RegExp(`^- ${escapeForRegExp(key)}: \`([^\\\`]+)\`$`, 'm'));
+  const match = content.match(new RegExp(`^- ${escapeForRegExp(key)}: \`([^\`]+)\`$`, 'm'));
   assert.ok(match, `Expected ${key} field in LATEST_STATUS.md.`);
   return match[1]!;
 }
@@ -95,14 +101,14 @@ test('CURRENT_PROGRAM is the sole direct active Phase 4 snapshot owner while pro
   assert.match(latestStatus, /sole direct owner of the active snapshot path|sole direct active-snapshot path owner/i);
 });
 
-test('Active Phase 4 snapshot keeps predecessor/checkpoint metadata and carried-forward invariants explicit for the onramp guardrail tranche', () => {
+test('Active Phase 4 snapshot keeps predecessor/checkpoint metadata and carried-forward invariants explicit for the seam inventory tranche', () => {
   const currentProgram = read(currentProgramPath);
   const prompt = read(promptPath);
   const latestStatus = read(latestStatusPath);
   const activeSnapshotPath = collectActivePhase4SnapshotPaths(currentProgram)[0];
 
   assert.ok(activeSnapshotPath, 'CURRENT_PROGRAM must still point at one active Phase 4 snapshot.');
-  assert.match(activeSnapshotPath, /multi-domain-onramp-guardrail/i);
+  assert.match(activeSnapshotPath, /multi-domain-onramp-guardrail-api-hooks-observability-seam-inventory/i);
 
   const activeSnapshot = read(activeSnapshotPath);
   const predecessorTranche = extractBacktickedMetadata(activeSnapshot, 'predecessor_tranche');
@@ -115,22 +121,22 @@ test('Active Phase 4 snapshot keeps predecessor/checkpoint metadata and carried-
   assert.equal(predecessorTranche, latestStatusPredecessor);
   assert.equal(checkpointBase, latestStatusCheckpoint);
 
-  assert.match(activeSnapshot, /Phase 4 - multi-domain onramp guardrail baseline/i);
-  assert.match(activeSnapshot, /leader-owned, same-pass guardrail baseline/i);
+  assert.match(activeSnapshot, /Phase 4 - API hooks \/ observability seam inventory baseline/i);
+  assert.match(activeSnapshot, /leader-owned, same-pass seam inventory baseline/i);
   assert.match(
     activeSnapshot,
-    /deterministic re-entry order still begins with `CURRENT_PROGRAM\.md` -> active Phase 4 snapshot -> checkpoint cadence spec -> verification baseline spec -> current `opl-mainline` reports/i,
+    /later OMX work must still enter from `CURRENT_PROGRAM\.md` -> active Phase 4 snapshot -> checkpoint cadence spec -> verification baseline spec -> current `opl-mainline` reports/i,
   );
   assert.match(activeSnapshot, /Pointer ownership stays single-surface/i);
-  assert.match(activeSnapshot, /Thin handoff stays derived/i);
+  assert.match(activeSnapshot, /Onramp guardrail stays governing/i);
   assert.match(activeSnapshot, /Report-pack role split stays explicit/i);
   assert.match(activeSnapshot, /Closeout ownership stays leader-held/i);
 
-  assert.match(currentProgram, /multi-domain onramp guardrail baseline/i);
-  assert.match(currentProgram, /plan-local guardrail brief/i);
+  assert.match(currentProgram, /API hooks \/ observability seam inventory baseline/i);
+  assert.match(currentProgram, /plan-local seam inventory \/ boundary brief/i);
   assert.match(
     currentProgram,
-    /不得升级成 runtime registry、payload contract、launcher workflow、audit persistence、或 domain mutation surface/i,
+    /不得升级成 webhook、route handler、RPC contract、payload schema、telemetry pipeline、runtime log sink、audit persistence、dashboard SLA、或 domain mutation surface/i,
   );
   assert.match(
     prompt,
@@ -138,25 +144,33 @@ test('Active Phase 4 snapshot keeps predecessor/checkpoint metadata and carried-
   );
   assert.match(
     latestStatus,
-    /Current `Phase 4 - multi-domain onramp guardrail baseline` work should now be treated as the next tranche/i,
+    /Current `Phase 4 - API hooks \/ observability seam inventory baseline` work remains the active tranche/i,
   );
 });
 
-test('Onramp guardrail wording keeps API hooks and observability deferred, plan-local, and non-operative', () => {
+test('Seam inventory wording keeps API hooks and observability deferred, plan-local, and non-operative', () => {
   const prompt = read(promptPath);
   const latestStatus = read(latestStatusPath);
   const openIssues = read(openIssuesPath);
   const currentProgram = read(currentProgramPath);
   const activeSnapshotPath = collectActivePhase4SnapshotPaths(currentProgram)[0];
   const activeSnapshot = read(activeSnapshotPath!);
+  const seamInventorySpec = read(seamInventorySpecPath);
 
-  assert.match(activeSnapshot, /Guardrails are plan-local only/i);
-  assert.match(activeSnapshot, /Deferred means deferred/i);
-  assert.match(activeSnapshot, /not as executable runtime behavior/i);
-  assert.match(
-    activeSnapshot,
-    /without inventing a new runtime registry, handoff payload, or persistence ledger/i,
-  );
+  assert.match(activeSnapshot, /API hooks stay deferred descriptive seams only/i);
+  assert.match(activeSnapshot, /Observability stays report-local and non-operative/i);
+  assert.match(activeSnapshot, /Seam inventory does not become execution authority/i);
+  assert.match(activeSnapshot, /Expansion still requires a separately approved tranche/i);
+
+  assert.match(seamInventorySpec, /Read-only contract loading seam/i);
+  assert.match(seamInventorySpec, /Registry lookup seam/i);
+  assert.match(seamInventorySpec, /Boundary explanation seam/i);
+  assert.match(seamInventorySpec, /Report-trigger explanation seam/i);
+  assert.match(seamInventorySpec, /Verification evidence seam/i);
+  assert.match(seamInventorySpec, /Trace digest seam/i);
+  assert.match(seamInventorySpec, /Cross-domain entry diagnostics seam/i);
+  assert.match(seamInventorySpec, /webhook、route handler、RPC contract、payload schema/i);
+  assert.match(seamInventorySpec, /telemetry pipeline、metrics backend、runtime log sink、audit persistence、dashboard SLA/i);
 
   assert.match(
     prompt,
@@ -169,22 +183,26 @@ test('Onramp guardrail wording keeps API hooks and observability deferred, plan-
 
   assert.match(
     latestStatus,
-    /freeze one plan-local guardrail brief for the future OMX next stage .* without introducing executable runtime surfaces/i,
+    /freeze one narrower plan-local seam inventory brief in .*spec-opl-mainline-next-stage-api-hooks-observability-seams\.md/i,
   );
   assert.match(
     latestStatus,
-    /treat any `API hooks` \/ `observability` language as explanatory and deferred guardrails only; no server, launcher, routed action, or audit persistence semantics may be smuggled in/i,
+    /keep any future `API hooks` seam language descriptive and deferred only/i,
+  );
+  assert.match(
+    latestStatus,
+    /keep any future `observability` seam language report-local and non-operative only/i,
   );
   assert.match(latestStatus, /keep `CLI-first` \+ `read-only` \+ `no-runtime` \+ `no-truth-shift`/i);
 
   assert.match(
     openIssues,
-    /If the active or follow-on `multi-domain onramp guardrail` line turns `API hooks`, `observability`, or future-domain entry guidance into runtime API promises, launcher workflows, routed actions, payload contracts, audit persistence, or domain mutation semantics/i,
+    /If the active or follow-on `API hooks \/ observability seam inventory` line turns reserved seam names into runtime API promises, webhook\/route\/RPC contracts, payload schemas, telemetry pipelines, runtime log sinks, audit persistence, dashboard backends, server surfaces, or domain mutation semantics/i,
   );
   assert.match(openIssues, /runtime API surface/i);
 });
 
-test('Report-pack role split and Lane C consistency refresh stay explicit and report-local during the onramp guardrail tranche', () => {
+test('Report-pack role split and Lane C consistency refresh stay explicit and report-local during the seam inventory tranche', () => {
   const currentProgram = read(currentProgramPath);
   const activeSnapshotPath = collectActivePhase4SnapshotPaths(currentProgram)[0];
   const activeSnapshot = read(activeSnapshotPath!);
@@ -211,14 +229,14 @@ test('Report-pack role split and Lane C consistency refresh stay explicit and re
     /`LATEST_STATUS\.md` = checkpoint \/ predecessor \/ verification \/ next-tranche surface, `ITERATION_LOG\.md` = append-only trace history, `OPEN_ISSUES\.md` = residual-risk \/ deferred surface/i,
   );
 
-  assert.match(iterationLog, /Phase 4 multi-domain onramp guardrail baseline consistency audit refresh/i);
+  assert.match(iterationLog, /Phase 4 API hooks \/ observability seam inventory baseline leader recovery \/ consistency refresh/i);
   assert.match(
     iterationLog,
-    /Audited `test\/omx-mainline-snapshot-lifecycle\.test\.ts`, `OPEN_ISSUES\.md`, and `ITERATION_LOG\.md`.*current `multi-domain onramp guardrail baseline`/i,
+    /Added `\/Users\/gaofeng\/workspace\/one-person-lab\/.omx\/plans\/spec-opl-mainline-next-stage-api-hooks-observability-seams\.md`.*CURRENT_PROGRAM\.md.*sole direct active-snapshot path owner/i,
   );
   assert.match(
     iterationLog,
-    /no runtime API, launcher workflow, routed action, payload contract, audit persistence, or domain mutation expansion/i,
+    /Realigned `test\/omx-mainline-snapshot-lifecycle\.test\.ts` to the current `API hooks \/ observability seam inventory baseline` and removed the off-scope `test\/read-only-surface-guardrails\.test\.ts` carry-over/i,
   );
 
   assert.match(openIssues, /The report routine must remain report-only/i);
@@ -247,8 +265,7 @@ test('Phase 4 closeout and shutdown hygiene mirrors keep fallback, verification 
     latestStatus,
     /only when integrated-head evidence is already sufficient and lifecycle still lags may the leader use the official fallback transition/i,
   );
-  assert.match(latestStatus, /leader reruns the canonical verification pack on the integrated head/i);
-  assert.match(latestStatus, /call `omx team shutdown` only after `pending=0 \/ in_progress=0 \/ failed=0`/i);
+  assert.match(latestStatus, /The failed team is now treated as recovery evidence only; final tranche integration, canonical verification, and report truth remain leader-owned/i);
 
   assert.match(
     reportReadme,
@@ -258,8 +275,6 @@ test('Phase 4 closeout and shutdown hygiene mirrors keep fallback, verification 
     reportReadme,
     /worker `completed` transitions 优先、leader fallback transition 只在 integrated-head evidence 已足够时兜底且需记因、leader 先重跑 canonical verification pack 并持有 final report truth、最后才允许 shutdown -> orphan-cleanup/i,
   );
-  assert.match(
-    openIssues,
-    /uses the leader fallback transition before integrated-head evidence is already sufficient or without recording why/i,
-  );
+
+  assert.match(openIssues, /orphan-recovery work/i);
 });
