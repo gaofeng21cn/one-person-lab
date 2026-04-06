@@ -41,40 +41,41 @@ For the broader ownership split, see [Shared Foundation Ownership](./shared-foun
 
 These surfaces position and navigate the top-level gateway:
 
-- `README`
-- `Roadmap`
-- `Gateway Rollout`
+- [README](../README.md)
+- [Roadmap](./roadmap.md)
+- [Gateway Rollout](./opl-gateway-rollout.md)
 - [OPL Task Map](./task-map.md)
 
 ### 2. OPL contract surfaces
 
 These surfaces freeze the gateway and federation boundary:
 
-- Federation contract
-- Gateway contract hub
+- [Gateway Federation](./gateway-federation.md)
+- [OPL Federation Contract](./opl-federation-contract.md)
+- [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
 - [OPL Operating Model](./operating-model.md)
 - [Shared Foundation](./shared-foundation.md)
 - [Shared Foundation Ownership](./shared-foundation-ownership.md)
-- Read-only discovery gateway
-- Routed action gateway
-- Domain onboarding contract + onboarding-readiness schema
-- Governance / audit operating surface
-- Publish / promotion operating surface
+- [OPL Read-Only Discovery Gateway](./opl-read-only-discovery-gateway.md)
+- [OPL Routed Action Gateway](./opl-routed-action-gateway.md)
+- [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.md) + `domain-onboarding-readiness.schema.json`
+- [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.md)
+- [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.md)
 
 ### 3. OPL supporting surfaces
 
 These surfaces improve review and discoverability without becoming execution layers:
 
-- Acceptance test spec
-- Candidate-domain backlog
-- Gateway example corpus
-- Routed-safety example corpus
-- Operating example corpus
-- Operating record catalog
-- Surface lifecycle map
-- Surface authority matrix
-- Surface review matrix
-- Public surface index
+- [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.md)
+- [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md)
+- [OPL Gateway Example Corpus](./opl-gateway-example-corpus.md)
+- [OPL Routed-Safety Example Corpus](./opl-routed-safety-example-corpus.md)
+- [OPL Operating Example Corpus](./opl-operating-example-corpus.md)
+- [OPL Operating Record Catalog](./opl-operating-record-catalog.md)
+- [OPL Surface Lifecycle Map](./opl-surface-lifecycle-map.md)
+- [OPL Surface Authority Matrix](./opl-surface-authority-matrix.md)
+- [OPL Surface Review Matrix](./opl-surface-review-matrix.md)
+- [OPL Public Surface Index](./opl-public-surface-index.md)
 
 ### 4. Linked domain public-entry surfaces
 
@@ -104,15 +105,22 @@ If a surface is `opl_candidate_domain_backlog`, it remains an admission-blocker 
 
 - [Gateway Federation](./gateway-federation.md)
 - [OPL Federation Contract](./opl-federation-contract.md)
+- [OPL Operating Model](./operating-model.md)
+- [Shared Foundation](./shared-foundation.md)
+- [Shared Foundation Ownership](./shared-foundation-ownership.md)
 - [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
 - [OPL Read-Only Discovery Gateway](./opl-read-only-discovery-gateway.md)
 - [OPL Routed Action Gateway](./opl-routed-action-gateway.md)
+- [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.md)
+- [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.md)
+- [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.md)
 
 ## Supporting Example / Review / Mapping Surfaces
 
 These supporting surfaces improve discoverability and reviewability only.
 They do not become governing gateway surfaces.
 
+- [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.md)
 - [OPL Gateway Example Corpus](./opl-gateway-example-corpus.md)
 - [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md)
 - [OPL Routed-Safety Example Corpus](./opl-routed-safety-example-corpus.md)

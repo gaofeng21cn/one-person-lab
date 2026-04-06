@@ -41,40 +41,41 @@
 
 这类 surface 负责给顶层 gateway 做定位与导航：
 
-- `README`
-- `Roadmap`
-- `Gateway Rollout`
+- [README](../README.zh-CN.md)
+- [Roadmap](./roadmap.zh-CN.md)
+- [Gateway Rollout](./opl-gateway-rollout.zh-CN.md)
 - [OPL 任务版图](./task-map.zh-CN.md)
 
 ### 2. OPL contract surfaces
 
 这类 surface 负责冻结 gateway 与 federation 边界：
 
-- Federation contract
-- Gateway contract hub
+- [Gateway Federation](./gateway-federation.zh-CN.md)
+- [OPL Federation Contract](./opl-federation-contract.zh-CN.md)
+- [OPL Gateway Contracts](../contracts/opl-gateway/README.zh-CN.md)
 - [OPL Operating Model](./operating-model.zh-CN.md)
 - [共享基础结构](./shared-foundation.zh-CN.md)
 - [共享基础结构归属](./shared-foundation-ownership.zh-CN.md)
-- Read-only discovery gateway
-- Routed action gateway
-- Domain onboarding contract + onboarding-readiness schema
-- Governance / audit operating surface
-- Publish / promotion operating surface
+- [OPL 只读 Discovery Gateway](./opl-read-only-discovery-gateway.zh-CN.md)
+- [OPL Routed Action Gateway](./opl-routed-action-gateway.zh-CN.md)
+- [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.zh-CN.md) + `domain-onboarding-readiness.schema.json`
+- [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.zh-CN.md)
+- [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.zh-CN.md)
 
 ### 3. OPL supporting surfaces
 
 这类 surface 负责提升审核与 discoverability，但不变成执行层：
 
-- Acceptance test spec
-- Candidate-domain backlog
-- Gateway example corpus
-- Routed-safety example corpus
-- Operating example corpus
-- Operating record catalog
-- Surface lifecycle map
-- Surface authority matrix
-- Surface review matrix
-- Public surface index
+- [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.zh-CN.md)
+- [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.zh-CN.md)
+- [OPL Gateway Example Corpus](./opl-gateway-example-corpus.zh-CN.md)
+- [OPL Routed-Safety Example Corpus](./opl-routed-safety-example-corpus.zh-CN.md)
+- [OPL Operating Example Corpus](./opl-operating-example-corpus.zh-CN.md)
+- [OPL Operating Record Catalog](./opl-operating-record-catalog.zh-CN.md)
+- [OPL Surface Lifecycle Map](./opl-surface-lifecycle-map.zh-CN.md)
+- [OPL Surface Authority Matrix](./opl-surface-authority-matrix.zh-CN.md)
+- [OPL Surface Review Matrix](./opl-surface-review-matrix.zh-CN.md)
+- [OPL Public Surface Index](./opl-public-surface-index.zh-CN.md)
 
 ### 4. Linked domain public-entry surfaces
 
@@ -104,15 +105,22 @@ canonical runtime truth、review truth、release truth 与 submission truth 仍�
 
 - [Gateway Federation](./gateway-federation.zh-CN.md)
 - [OPL Federation Contract](./opl-federation-contract.zh-CN.md)
+- [OPL 运行模型](./operating-model.zh-CN.md)
+- [共享基础结构](./shared-foundation.zh-CN.md)
+- [共享基础结构归属](./shared-foundation-ownership.zh-CN.md)
 - [OPL Gateway Contracts](../contracts/opl-gateway/README.zh-CN.md)
 - [OPL 只读 Discovery Gateway](./opl-read-only-discovery-gateway.zh-CN.md)
 - [OPL Routed Action Gateway](./opl-routed-action-gateway.zh-CN.md)
+- [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.zh-CN.md)
+- [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.zh-CN.md)
+- [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.zh-CN.md)
 
 ## 配套示例 / 审核 / 映射 Surfaces
 
 这些配套 surface 只负责提升 discoverability 与 reviewability，
 不会升级成 governing gateway surface。
 
+- [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.zh-CN.md)
 - [OPL Gateway Example Corpus](./opl-gateway-example-corpus.zh-CN.md)
 - [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.zh-CN.md)
 - [OPL Routed-Safety Example Corpus](./opl-routed-safety-example-corpus.zh-CN.md)
