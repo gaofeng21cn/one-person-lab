@@ -304,6 +304,8 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 9. 被链接的 README / roadmap / federation / rollout / contract-hub wording 不会把 public surface index 升格成 launcher、runtime registry、truth-owner surface，或 admission-approval surface。
 10. 在后续显式 readiness contract 冻结之前，当前 public-surface index 里不会出现 `shared asset index`、`shared memory index`、`shared domain registry` 或 `shared publication / delivery catalog` 的占位式 / current surface。
 11. 当前 public-surface index 不会把任何 G4 candidate index materialize 成 public-entry、discovery-ready、routed-action-ready、execution、truth-owner、approval、publish-control 或 release-control surface。
+12. `shared domain registry` 不会被 materialize 成当前的 admitted-domain registry、discovery-ready registry、routed-action-ready registry，或顶层 truth-owner surface。
+13. `shared publication / delivery catalog` 不会被 materialize 成当前的 execution、approval、publish-control、release-control，或 publication-truth surface。
 
 ### 验证方式
 
@@ -312,6 +314,8 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 - 检查 `docs/opl-public-surface-index.md` 与 `.zh-CN.md` 中的 no-runtime / no-truth-shift / no-internal-module wording。
 - 确认 `surfaces[*].surface_id` 保持唯一，且 `opl_candidate_domain_backlog` 恰好以 supporting/reference surface 身份出现，而不是 admitted domain 或 execution surface；同时 `opl_operating_model`、`opl_shared_foundation` 与 `opl_shared_foundation_ownership` 也都各自恰好出现一次，并保持为 OPL-owned 的 contract/reference surface。
 - 确认当前 public-surface index 不会把 `shared asset index`、`shared memory index`、`shared domain registry` 或 `shared publication / delivery catalog` materialize 成任何当前 surface entry。
+- 确认 `shared domain registry` 没有被写成当前的 admitted-domain / discovery-ready / routed-action-ready registry，或顶层 truth-owner surface。
+- 确认 `shared publication / delivery catalog` 没有被写成当前的 execution / approval / publish-control / release-control / publication-truth surface。
 - 验证被接入的 OPL public surface 确实在应有位置链接到 public-surface index。
 
 ## J. P10 Routed-Safety Example 完整性
@@ -641,15 +645,19 @@ wording-consistency gate 只有在下面全部成立时才算通过：
    - `shared publication / delivery catalog`
 3. 这四个 candidate index 都被显式保持为 roadmap-only、future-only、reference-only、non-admitting，直到后续显式合同与 acceptance alignment 冻结各自的 readiness boundary。
 4. 任何 G4 candidate index 都不能被写成当前的 public-entry、discovery-ready、routed-action-ready、execution、truth-owner、approval、publish-control 或 release-control surface。
-5. G4 wording 必须把 canonical truth 留在拥有它的 domain，并把 `OPL` 保持在 top-level gateway / federation layer，而不是把它改写成 monolithic runtime 或 shared truth owner。
-6. G4 wording 不能把 `MedAutoScience` 或 `RedCube AI` 折叠成 `OPL` 的内部模块，也不能削弱它们作为 domain gateway / harness surface 的独立性。
-7. `contracts/opl-gateway/acceptance-matrix.json` 必须包含一个专门的 G4 gate，用来检查 rollout/spec boundary wording，并阻止任何 G4 candidate index 被提前写成已收录 surface。
+5. `shared domain registry` 仍然只是 candidate boundary，不能被写成当前的 admitted-domain registry、discovery-ready registry、routed-action-ready registry，或顶层 truth-owner surface。
+6. `shared publication / delivery catalog` 仍然只是 candidate boundary，不能被写成当前的 execution、approval、publish-control、release-control，或 publication-truth surface。
+7. G4 wording 必须把 canonical truth 留在拥有它的 domain，并把 `OPL` 保持在 top-level gateway / federation layer，而不是把它改写成 monolithic runtime 或 shared truth owner。
+8. G4 wording 不能把 `MedAutoScience` 或 `RedCube AI` 折叠成 `OPL` 的内部模块，也不能削弱它们作为 domain gateway / harness surface 的独立性。
+9. `contracts/opl-gateway/acceptance-matrix.json` 必须包含一个专门的 G4 gate，用来检查 rollout/spec boundary wording，并阻止任何 G4 candidate index 被提前写成已收录 surface。
 
 ### 验证方式
 
 - 阅读 `docs/opl-gateway-rollout.md` 与 `.zh-CN.md`，确认 `Phase G4` 仍保持 future candidate boundary。
 - 确认 candidate 集合精确等于上面四个 G4 index，并且在中英文里都带有 roadmap-only / future-only / reference-only / non-admitting wording。
 - 确认两份 rollout 文档都没有把任何 G4 candidate index 升格成当前的 public-entry、discovery-ready、routed-action-ready、execution、truth-owner、approval、publish-control 或 release-control surface。
+- 确认 rollout/spec wording 没有把 `shared domain registry` 改写成当前的 admitted-domain / discovery-ready / routed-action-ready registry，或顶层 truth-owner surface。
+- 确认 rollout/spec wording 没有把 `shared publication / delivery catalog` 改写成当前的 execution / approval / publish-control / release-control / publication-truth surface。
 - 确认 G4 wording 继续把 canonical truth 留在各自 domain 内，并在 top-level `OPL` gateway 之下保持 `MedAutoScience` / `RedCube AI` 的独立性。
 - 解析 `contracts/opl-gateway/acceptance-matrix.json`，确认专门的 G4 gate 覆盖 rollout/spec 文件，并明确阻止提前收录 wording。
 
@@ -1093,7 +1101,12 @@ for surface_id in expected_contract_surfaces:
     assert surface['category_id'] == 'opl_contract_surface', surface
     assert surface['owner_scope'] == 'opl', surface
     assert surface['truth_mode'] == 'none', surface
-for forbidden_surface in ['opl_shared_asset_index', 'opl_shared_memory_index']:
+for forbidden_surface in [
+    'opl_shared_asset_index',
+    'opl_shared_memory_index',
+    'opl_shared_domain_registry',
+    'opl_shared_publication_delivery_catalog',
+]:
     assert forbidden_surface not in surface_id_set, forbidden_surface
 print('public surface index OK')
 PY

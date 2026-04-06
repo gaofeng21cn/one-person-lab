@@ -167,6 +167,8 @@
         "public-surface index exposes opl_candidate_domain_backlog as a supporting/reference surface for under-definition workstreams without admitting domains early",
         "public-surface index exposes opl_operating_model, opl_shared_foundation, and opl_shared_foundation_ownership as OPL-owned discoverability/reference surfaces without transferring canonical truth, mutation, review truth, or publication truth into OPL",
         "public-surface index keeps shared asset index, shared memory index, shared domain registry, and shared publication/delivery catalog out of the current public surface until a later explicit readiness contract freezes them",
+        "public-surface index does not materialize shared domain registry as a current admitted-domain registry, discovery-ready registry, routed-action-ready registry, or domain-truth owner surface",
+        "public-surface index does not materialize shared publication/delivery catalog as a current execution, approval, publish-control, release-control, or publication-truth surface",
         "no G4 candidate index is described as a current public-entry/discovery-ready/routed-action-ready/execution/truth-owner/approval/publish-control/release-control surface"
       ],
       "forbidden_regressions": [
@@ -176,6 +178,8 @@
         "candidate-domain backlog is indexed as an admitted domain or execution surface",
         "shared-foundation docs are indexed as execution surfaces, shared truth stores, or domain-truth takeover points",
         "a G4 candidate index appears as a current public surface before explicit readiness alignment",
+        "shared domain registry is described as a current admitted-domain/discovery-ready/routed-action-ready registry before a later explicit contract",
+        "shared publication/delivery catalog is described as a current execution/publish-control/release-control/publication-truth surface before a later explicit contract",
         "a G4 candidate index is described as a public-entry/discovery-ready/routed-action-ready/execution/truth-owner/approval/publish-control/release-control surface before a later explicit contract"
       ]
     },
@@ -505,12 +509,16 @@
         "phase g4 covers exactly shared asset index/shared memory index/shared domain registry/shared publication-delivery catalog",
         "all four G4 indexes remain roadmap-only/future-only/reference-only/non-admitting candidates until a later explicit readiness contract and acceptance alignment freeze them",
         "no G4 candidate index is described as a current public-entry/discovery-ready/routed-action-ready/execution/truth-owner/approval/publish-control/release-control surface",
+        "shared domain registry remains a candidate boundary only and is not yet a current admitted-domain/discovery-ready/routed-action-ready registry or top-level truth-owner surface",
+        "shared publication-delivery catalog remains a candidate boundary only and is not yet a current execution/approval/publish-control/release-control/publication-truth surface",
         "G4 wording keeps canonical truth in the owning domain and keeps OPL as the top-level gateway/federation surface",
         "G4 wording does not collapse MedAutoScience or RedCube AI into internal OPL modules or weaken their independence"
       ],
       "forbidden_regressions": [
         "any G4 candidate index is described as a current public-entry/discovery-ready/routed-action-ready/execution/truth-owner/approval/publish-control/release-control surface before an explicit readiness contract",
         "G4 candidate indexes are presented as already-admitted current public surfaces",
+        "shared domain registry is presented as an already-admitted/discovery-ready/routed-action-ready current registry before readiness freeze",
+        "shared publication-delivery catalog is presented as an already-active execution/publish-control/release-control surface before readiness freeze",
         "G4 candidate indexes turn OPL into a monolithic runtime or shared truth owner",
         "G4 candidate indexes weaken MedAutoScience or RedCube AI independence"
       ]
@@ -570,6 +578,8 @@
         "candidate backlog keeps Grant/Review/Thesis Ops blocked below the onboarding gate",
         "operating-model, shared-foundation, and shared-foundation-ownership docs keep OPL at the top-level semantic/index/reuse layer while domains keep canonical truth, mutation, runtime writeback, review truth, and delivery/publication truth",
         "shared asset index, shared memory index, shared domain registry, and shared publication/delivery catalog stay roadmap-only/future-only/reference-only/non-admitting candidates until a later explicit readiness contract and acceptance alignment freeze them",
+        "shared domain registry stays below admission/discovery/routing readiness and does not become a current top-level domain registry or truth-owner surface",
+        "shared publication/delivery catalog stays below execution/publish/release readiness and does not become a current publish-control/release-control/publication-truth surface",
         "no G4 candidate index is described as a current public-entry/discovery-ready/routed-action-ready/execution/truth-owner/approval/publish-control/release-control surface"
       ],
       "forbidden_regressions": [
@@ -585,6 +595,8 @@
         "candidate backlog described as a pre-admission domain registry",
         "shared-foundation docs describe OPL as a universal shared truth store or as taking over domain-owned canonical truth",
         "a G4 candidate index is described as a current public surface without an explicit readiness contract",
+        "shared domain registry is described as a current admission/discovery/routing registry before later explicit contracts",
+        "shared publication/delivery catalog is described as a current execution/publish/release control surface before later explicit contracts",
         "a G4 candidate index is described as a public-entry/discovery-ready/routed-action-ready/execution/truth-owner/approval/publish-control/release-control surface before later explicit contracts"
       ]
     }
