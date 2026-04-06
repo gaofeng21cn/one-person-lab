@@ -99,7 +99,7 @@ test('Phase 4 snapshot lifecycle pack keeps superseded snapshots historical with
   assert.match(activeSnapshot, /historical artifacts/i);
   assert.match(activeSnapshot, /truth owner/i);
   assert.match(currentProgram, /tranche-scoped continuity brief|不取代长期 governing truth 或 report truth/i);
-  assert.match(prompt, /minimal deterministic re-entry pack/i);
+  assert.match(prompt, /minimal deterministic re-entry pack|最小 deterministic re-entry pack/i);
   assert.match(latestStatus, /snapshot creation \/ refresh \/ supersession/i);
   assert.match(openIssues, /deterministic re-entry order explicit/i);
 });
