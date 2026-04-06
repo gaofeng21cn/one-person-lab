@@ -20,6 +20,10 @@ const repoRoot = path.resolve(__dirname, '..');
 const cliPath = path.join(repoRoot, 'src', 'cli.ts');
 
 function runCli(args: string[]) {
+  return runCliWithEnv(args);
+}
+
+function runCliWithEnv(args: string[], envOverrides: Record<string, string> = {}) {
   const result = spawnSync(
     process.execPath,
     ['--experimental-strip-types', cliPath, ...args],
@@ -29,6 +33,7 @@ function runCli(args: string[]) {
       env: {
         ...process.env,
         NODE_NO_WARNINGS: '1',
+        ...envOverrides,
       },
     },
   );
@@ -77,6 +82,24 @@ test('loadGatewayContracts rejects missing files with a stable error', async (t)
         error.code === 'contract_file_missing',
     );
   });
+});
+
+test('loadGatewayContracts honors OPL_CONTRACTS_DIR when provided', () => {
+  const tempContracts = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-gateway-contracts-'));
+  fs.cpSync(path.join(repoRoot, 'contracts', 'opl-gateway'), tempContracts, {
+    recursive: true,
+  });
+
+  const workstreamsPath = path.join(tempContracts, 'workstreams.json');
+  const workstreams = JSON.parse(fs.readFileSync(workstreamsPath, 'utf8'));
+  workstreams.workstreams[0].label = 'Research Ops Override';
+  fs.writeFileSync(workstreamsPath, JSON.stringify(workstreams, null, 2));
+
+  const output = runCliWithEnv(['get-workstream', 'research_ops'], {
+    OPL_CONTRACTS_DIR: tempContracts,
+  });
+
+  assert.equal(output.workstream.label, 'Research Ops Override');
 });
 
 test('list-workstreams returns admitted workstream summaries', () => {

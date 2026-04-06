@@ -423,14 +423,21 @@ function validateTaskTopology(
 function resolveContractsDir(rootPath: string): string {
   const directPath = path.resolve(rootPath);
   const nestedPath = path.join(directPath, 'contracts', 'opl-gateway');
+  const directContractFiles = [
+    'workstreams.json',
+    'domains.json',
+    'routing-vocabulary.json',
+    'task-topology.json',
+  ];
 
   if (fs.existsSync(nestedPath)) {
     return nestedPath;
   }
 
   if (
-    path.basename(directPath) === 'opl-gateway' &&
-    fs.existsSync(path.join(directPath, 'workstreams.json'))
+    directContractFiles.every((fileName) =>
+      fs.existsSync(path.join(directPath, fileName)),
+    )
   ) {
     return directPath;
   }
@@ -438,7 +445,9 @@ function resolveContractsDir(rootPath: string): string {
   return nestedPath;
 }
 
-export function loadGatewayContracts(rootPath = process.cwd()): GatewayContracts {
+export function loadGatewayContracts(
+  rootPath = process.env.OPL_CONTRACTS_DIR ?? process.cwd(),
+): GatewayContracts {
   const contractsDir = resolveContractsDir(rootPath);
 
   return {
