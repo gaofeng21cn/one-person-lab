@@ -105,7 +105,7 @@ def verify_acceptance_matrix() -> None:
     assert_contains(
         "\n".join(boundary_gate["contract_assertions"]),
         [
-            "shared asset index, shared memory index, shared domain registry, and shared publication/delivery catalog stay roadmap-only/future-only/reference-only/non-admitting candidates until a later explicit readiness contract and acceptance alignment freeze them",
+            "all four G4 indexes remain roadmap-only/future-only/reference-only/non-admitting candidates until a later explicit readiness contract and acceptance alignment freeze them",
             "no G4 candidate index is described as a current public-entry/discovery-ready/routed-action-ready/execution/truth-owner/approval/publish-control/release-control surface",
         ],
         REPO_ROOT / "contracts/opl-gateway/acceptance-matrix.json",
