@@ -20,20 +20,6 @@ type ErrorCode =
   | 'cli_usage_error'
   | 'unknown_command';
 
-function defaultExitCodeForError(code: ErrorCode): number {
-  switch (code) {
-    case 'cli_usage_error':
-    case 'unknown_command':
-      return 2;
-    case 'workstream_not_found':
-    case 'domain_not_found':
-    case 'surface_not_found':
-      return 3;
-    default:
-      return 1;
-  }
-}
-
 export class GatewayContractError extends Error {
   readonly code: ErrorCode;
   readonly exitCode: number;
@@ -43,7 +29,7 @@ export class GatewayContractError extends Error {
     code: ErrorCode,
     message: string,
     details?: Record<string, unknown>,
-    exitCode = defaultExitCodeForError(code),
+    exitCode = 1,
   ) {
     super(message);
     this.name = 'GatewayContractError';

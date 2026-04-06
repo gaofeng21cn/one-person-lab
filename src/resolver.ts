@@ -139,10 +139,10 @@ export function resolveRequestSurface(
 
   if (research && presentation) {
     return {
-      status: 'ambiguous',
+      status: 'ambiguous_task',
       request_kind: requestKind(input),
-      candidate_workstream_ids: ['research_ops', 'presentation_ops'],
-      candidate_domain_ids: ['medautoscience', 'redcube'],
+      candidate_workstreams: ['research_ops', 'presentation_ops'],
+      candidate_domains: ['medautoscience', 'redcube'],
       reason:
         'The request mixes research-submission and presentation-delivery semantics without a single primary deliverable.',
       routing_evidence: [
@@ -215,10 +215,10 @@ export function resolveRequestSurface(
   }
 
   return {
-    status: 'ambiguous',
+    status: 'ambiguous_task',
     request_kind: requestKind(input),
-    candidate_workstream_ids: [],
-    candidate_domain_ids: [],
+    candidate_workstreams: [],
+    candidate_domains: [],
     reason:
       'The request does not contain enough top-level routing evidence to resolve a workstream or domain safely.',
     routing_evidence: ['insufficient routing evidence'],
@@ -316,14 +316,15 @@ export function explainDomainBoundary(
         ],
       };
 
-    case 'ambiguous':
+    case 'ambiguous_task':
       return {
         request_summary: summary,
         boundary_status: resolution.status,
         boundary_evidence: resolution.routing_evidence,
         resolved_domain: null,
         resolved_workstream_id: null,
-        candidate_workstream_ids: resolution.candidate_workstream_ids,
+        candidate_workstreams: resolution.candidate_workstreams,
+        candidate_domains: resolution.candidate_domains,
         reason:
           'The request combines multiple top-level semantics, so OPL must stop before inventing a single domain owner.',
         required_clarification: resolution.required_clarification,

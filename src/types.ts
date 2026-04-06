@@ -166,10 +166,10 @@ export type ResolutionResult =
       routing_evidence: string[];
     }
   | {
-      status: 'ambiguous';
+      status: 'ambiguous_task';
       request_kind: string;
-      candidate_workstream_ids: string[];
-      candidate_domain_ids: string[];
+      candidate_workstreams: string[];
+      candidate_domains: string[];
       reason: string;
       routing_evidence: string[];
       required_clarification: string[];
@@ -182,7 +182,8 @@ export interface BoundaryExplanation {
   resolved_domain: string | null;
   resolved_workstream_id: string | null;
   candidate_workstream_id?: string;
-  candidate_workstream_ids?: string[];
+  candidate_workstreams?: string[];
+  candidate_domains?: string[];
   reason: string;
   required_clarification?: string[];
   rejected_domains: Array<{
