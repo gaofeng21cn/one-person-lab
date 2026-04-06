@@ -43,6 +43,7 @@ A new domain may be officially included in `OPL` only when:
 - its truth ownership is explicit
 - its public gateway / harness boundary is explicit
 - its review surfaces are explicit
+- its execution model is explicitly aligned with `OPL`'s `Agent-first + one-base/two-modes` direction
 - top-level discovery and routing can point to it without prose-only guesswork
 
 `OPL` must not accept “placeholder first, boundary later” onboarding.
@@ -55,6 +56,7 @@ This contract does not:
 - let a domain exist only as an internal implementation detail under `OPL`
 - admit a domain based only on a product name, repository link, or future intent
 - allow a family name to stand in for workstream semantics without an explicit top-level mapping
+- admit a domain whose primary shape is `fixed-code-first` or whose long-term target is only a single execution mode
 
 ## Required Onboarding Package
 
@@ -112,6 +114,7 @@ At minimum, the onboarding package must provide:
 - an explicit statement that the domain is a `domain gateway` above its own `harness`
 - an explicit statement that the domain remains independently usable and is not merely an internal `OPL` module
 - an explanation of the workstream(s), deliverable objects, and review semantics the domain owns
+- an explanation of its stable agent runtime / gateway / tool / controller surface and the code-versus-Agent responsibility split
 - enough public wording for `OPL` docs to link to the domain without inventing its identity
 
 ## 3. Truth Ownership Declaration
@@ -140,6 +143,19 @@ The onboarding package must identify:
 
 If a domain cannot explain how work is reviewed, it is not ready for official federation admission.
 
+## 5. Execution Model Declaration
+
+A new domain must explicitly declare how its execution model aligns with `OPL`, not merely claim that it can run.
+
+The onboarding package must identify:
+
+- whether the default executor is `Agent-first` and what stable agent runtime surface it depends on
+- whether `Auto` and `Human-in-the-loop` share one base; if maturity differs today, the package must still describe the convergence path instead of implying two unrelated systems
+- which stable object / controller / tool / gate / review responsibilities stay in code
+- which parts must not be described as a `fixed-code-first` mainline with the Agent reduced to prompt fill-ins
+
+If a domain cannot explain how its execution model aligns with `OPL`'s shared operating pattern, it is not ready for official federation admission.
+
 ## Formal Inclusion Gate
 
 A domain is formally includable in `OPL` only when all of the following are true:
@@ -162,7 +178,10 @@ A domain is formally includable in `OPL` only when all of the following are true
 6. **Review ready**  
    The domain exposes explicit review semantics and not just an execution path.
 
-7. **Cross-domain wording aligned**  
+7. **Execution model aligned**
+   The domain explicitly stays `Agent-first` and provides a shared-base `Auto` / `Human-in-the-loop` path rather than defining the mainline as `fixed-code-first` or permanently single-mode.
+
+8. **Cross-domain wording aligned**
    `OPL`, the domain README, and any linked public surfaces use the same top-level role language.
 
 If any of these fail, the domain may still be under discussion, but it is not yet formally included.
@@ -176,6 +195,7 @@ The following are not allowed:
 - treating an existing domain harness as if it automatically defines a new domain gateway
 - treating a family or profile name as if it automatically defines a top-level workstream
 - describing a domain as officially onboarded before discovery and routing surfaces are updated
+- allowing a domain to dodge the `Agent-first` / shared-base `Auto`-and-`Human-in-the-loop` question or to present a `fixed-code-first` mainline at admission time
 
 ## Minimal Onboarding Review Questions
 
@@ -187,6 +207,8 @@ Before official inclusion, the top-level review should be able to answer:
 - What truth remains canonical inside the domain?
 - What families are inside the domain but not automatically equal to an OPL workstream?
 - How does `OPL` discover and route into it?
+- What stable agent runtime surface does it depend on?
+- How do `Auto` and `Human-in-the-loop` share one base instead of becoming two separate systems?
 - Why is this a new domain rather than just a family inside an existing domain?
 
 If these questions cannot be answered clearly, the onboarding is not ready.

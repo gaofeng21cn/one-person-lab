@@ -43,6 +43,7 @@ Candidate-domain backlog 则是位于它上游的 blocker surface，用来记录
 - 它的 truth ownership 是显式的
 - 它的 public gateway / harness boundary 是显式的
 - 它的 review surface 是显式的
+- 它的 execution model 与 `OPL` 的 `Agent-first + 双模共基座` 方向是显式对齐的
 - 顶层 discovery 与 routing 可以不靠 prose 猜测就指向它
 
 `OPL` 不接受“先挂名，后补边界”的 onboarding。
@@ -55,6 +56,7 @@ Candidate-domain backlog 则是位于它上游的 blocker surface，用来记录
 - 让一个 domain 只作为 `OPL` 下面的内部实现细节存在
 - 仅凭产品名、仓库链接或未来意图就完成 domain 收录
 - 用 family 名直接替代 workstream semantics，而不提供显式顶层映射
+- 收录一个把主流程定义成 `fixed-code-first`、或只打算长期提供单模执行面的 domain
 
 ## 必需的 Onboarding Package
 
@@ -112,6 +114,7 @@ Onboarding package 还必须说明这个新 domain：
 - 明确写清它是 `domain gateway`，其下还有自己的 `harness`
 - 明确写清它保持独立可用，而不是 `OPL` 的内部模块
 - 说明它拥有的 workstream、deliverable object 与 review semantics
+- 说明它的 stable agent runtime / gateway / tool / controller surface，以及代码与 Agent 的分工边界
 - 提供足够公开 wording，让 `OPL` 顶层文档可以链接它，而不需要替它发明身份
 
 ## 3. Truth Ownership Declaration
@@ -140,6 +143,19 @@ Onboarding package 必须说明：
 
 如果一个 domain 说不清工作如何被审阅，就还不具备正式联邦收录条件。
 
+## 5. Execution Model Declaration
+
+一个新 domain 必须显式声明它的执行模型如何与 `OPL` 对齐，而不是只说“能运行”。
+
+Onboarding package 必须说明：
+
+- 默认执行者是否是 `Agent-first`，以及它依赖的 stable agent runtime surface 是什么
+- `Auto` 与 `Human-in-the-loop` 是否共享同一基座；如果今天成熟度不同，也必须写清未来的收敛路径，而不是默认两套割裂系统
+- 代码承担哪些 stable object / controller / tool / gate / review 责任
+- 哪些部分绝不能被描述成 `fixed-code-first` 主流程，只让 Agent 做少量 prompt 补位
+
+如果一个 domain 说不清执行模型如何与 `OPL` 的统一范式对齐，就还不具备正式联邦收录条件。
+
 ## 正式收录门槛
 
 一个 domain 只有在下面全部成立时，才算可被 `OPL` 正式收录：
@@ -162,7 +178,10 @@ Onboarding package 必须说明：
 6. **Review ready**  
    这个 domain 暴露了显式 review semantics，而不只是执行入口。
 
-7. **Cross-domain wording aligned**  
+7. **Execution model aligned**
+   这个 domain 明确保持 `Agent-first`，并提供共享同一基座的 `Auto` / `Human-in-the-loop` 执行路径，而不是把主流程定义成 `fixed-code-first` 或长期单模。
+
+8. **Cross-domain wording aligned**
    `OPL`、该 domain README 以及相关公开表面，在顶层角色语言上保持一致。
 
 只要其中任意一条不成立，这个 domain 仍可以处于讨论或设计中，但还不能算正式收录。
@@ -176,6 +195,7 @@ Onboarding package 必须说明：
 - 把现有 domain harness 误当成自动定义了一个新 domain gateway
 - 把 family 或 profile 名误当成已经自动定义了顶层 workstream
 - 在 discovery 与 routing surface 还没更新时，就宣称 domain 已正式 onboard
+- 允许一个 domain 在 admission 时回避 `Agent-first` / `Auto` / `Human-in-the-loop` 共基座问题，或把主流程写成 `fixed-code-first`
 
 ## 最小 Onboarding 审查问题
 
@@ -187,6 +207,8 @@ Onboarding package 必须说明：
 - 哪些 truth 在这个 domain 内部保持 canonical？
 - 哪些 family 位于这个 domain 内，但不自动等于某个 OPL workstream？
 - `OPL` 如何 discover 并 route 到它？
+- 它依赖什么 stable agent runtime surface？
+- `Auto` 与 `Human-in-the-loop` 如何共享同一基座，而不是变成两套系统？
 - 为什么这应被视作一个新 domain，而不是现有 domain 里的一个 family？
 
 如果这些问题答不清，这个 onboarding 就还没准备好。

@@ -14,6 +14,8 @@ Apply this contract to the repository as a whole unless a deeper `AGENTS.md` exp
 - `OPL` is not a monolithic runtime that replaces domain gateways.
 - Humans define goals, provide data or context, review formal outputs, and decide continue/stop/reframe.
 - Agents read state, call stable gateways, organize work, and write key traces back to auditable surfaces.
+- Every `OPL` workstream must converge toward one shared base that supports both `Auto` and `Human-in-the-loop` execution.
+- The default executor is a `Codex`-class agent runtime; code exists to provide stable gateways, controllers, tools, gates, and auditable surfaces rather than to replace Agents as the primary driver.
 - Domain systems such as `MedAutoScience` and `RedCube AI` remain independent domain gateways and harnesses under the `OPL` umbrella.
 
 ## Architecture Priorities
@@ -21,7 +23,9 @@ Apply this contract to the repository as a whole unless a deeper `AGENTS.md` exp
 - Prefer the chain `Human / Agent -> OPL Gateway -> Domain Gateway -> Domain Harness OS`.
 - Keep the shared-foundation language above any one domain repository.
 - Preserve independent domain gateways instead of collapsing everything into one runtime.
+- Freeze `Agent-first` and `one base / two modes` semantics at the OPL layer before domains hydrate them.
 - Freeze cross-domain task semantics at the OPL layer first, then let domains hydrate them.
+- Do not allow any OPL workstream to drift into a fixed-code-first steady state with Agents reduced to prompt fillers.
 - Do not reintroduce “OPL is only a static blueprint” as the primary product description.
 
 ## Stability Rules
@@ -29,6 +33,8 @@ Apply this contract to the repository as a whole unless a deeper `AGENTS.md` exp
 - This repository is the documentation-first and contract-first public surface for the OPL gateway.
 - Do not describe planned workstreams as already implemented.
 - Do not describe domain projects as if they were the whole of `OPL`.
+- Do not describe a fixed-code-first pipeline or a single-mode lane as the intended steady state for any OPL workstream.
+- Current read-only control-plane phases may defer runtime build-out, but they must not weaken the long-term `Agent-first` / dual-mode architecture.
 - Large structural changes should preserve the independence of existing domain surfaces.
 
 ## Documentation Layers
@@ -54,6 +60,7 @@ Apply this contract to the repository as a whole unless a deeper `AGENTS.md` exp
 - `RedCube AI` is the emerging visual-deliverable domain gateway and harness.
 - `ppt_deck` maps directly to `Presentation Ops`; `xiaohongshu` shares the same RedCube harness but is not automatically equivalent to `Presentation Ops`.
 - Future workstreams should be added as explicit domain surfaces rather than as scattered features inside existing domains.
+- Future domains must expose an `Agent-first` execution story and a credible `Auto` / `Human-in-the-loop` convergence path before being treated as formally aligned with `OPL`.
 
 ## Conflict Handling
 
