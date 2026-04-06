@@ -14,6 +14,7 @@ What is already clear today:
 - [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) is the emerging visual-deliverable domain gateway and harness
 - `ppt_deck` is the family that currently maps most directly to `Presentation Ops`
 - `Grant Ops`, `Thesis Ops`, and `Review Ops` remain under definition
+- the shared target operating pattern is `Agent-first`, with `Auto` and `Human-in-the-loop` running on one common base; this is an architectural rule, not a claim that every domain surface already has both modes fully implemented
 
 What this phase does not do:
 
@@ -29,6 +30,7 @@ The next phase should prioritize:
 - freezing the `OPL Gateway -> domain gateway -> domain harness` control language
 - keeping `MedAutoScience` explicit as the `Research Ops` domain surface
 - keeping `RedCube AI` explicit as the visual-deliverable domain surface
+- carrying the `Agent-first` plus dual-mode doctrine into future candidate-domain definitions instead of drifting toward fixed-code-first product lines
 - defining the next candidate domains through clear task boundaries and delivery objects, using the current `task-topology + candidate-domain-backlog + domain-onboarding` path rather than inventing a redundant intermediate control surface
 - progressively turning the `OPL Gateway` from a documentation-first surface into a real entry surface
 

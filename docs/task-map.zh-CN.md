@@ -15,6 +15,13 @@
 这个拆分定义的是顶层任务语义。
 在运行时，这些语义应该先经过 `OPL Gateway`，再路由到独立的 domain gateway，而不是被压进一个 runtime。
 
+在执行层面，这些 workstream 也共享同一条目标原则：
+
+- 采用 `Agent-first` 的 domain system，而不是 fixed-code-first 的工作流引擎
+- 在同一套共享基础结构上支持 `Auto` 与 `Human-in-the-loop` 两种执行模式
+
+任务版图冻结的是工作流边界与交付对象，不要求它们共享同一个界面、同一个模型提供方，或同一套固定代码编排栈。
+
 ## 机器可读配套工件
 
 - [`../contracts/opl-gateway/task-topology.json`](../contracts/opl-gateway/task-topology.json)

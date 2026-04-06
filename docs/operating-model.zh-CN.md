@@ -69,6 +69,32 @@ Agent 主要负责：
 - `MedAutoScience` 是 `Research Ops` 的 domain gateway 与 harness
 - `RedCube AI` 是视觉交付的 domain gateway 与 harness
 
+## Agent-first 执行
+
+`OPL` 默认采用 `Agent-first` 执行，而不是 `fixed-code-first`。
+这并不要求每个 domain 直接绑定某一种 LLM API；它要求的是：主流程的默认驱动者应是 Agent runtime，由 Agent 负责读状态、调用工具和 gateway、组织中间产物、推进 gate，并把关键痕迹写回可审计表面。
+
+在这个模型里，代码的主要职责是提供：
+
+- 稳定对象模型
+- route / controller
+- 工具封装
+- gate 规则
+- 审计落盘
+- review surface 与交付协议
+
+`OPL` 应避免把 domain workstream 重新压回“固定代码流水线 + 少量 prompt 占位”的形态，否则共享 foundation 仍会存在，但各个 `Ops` 会逐步失去可编排性与可迁移性。
+
+## 双模执行
+
+`OPL` 里的 workstream，原则上应共享同一套基座，同时支持两种执行模式：
+
+- `Auto`：全自动主线，用于端到端闭环、基座测试、评估与优化
+- `Human-in-the-loop`：共享同一基座，但把高判断密度 gate 交给人，Agent 负责重复性与可编排劳动
+
+这两种模式的区别，不是两套割裂系统，而是谁来通过高判断密度 gate、谁来签署关键结论与正式交付。
+不同 domain surface 今天可以处在不同成熟度；`OPL` 只冻结统一执行方向，不把所有 planned workstream 写成已经完成双模落地。
+
 ## 运行原则
 
 `OPL` 顶层遵循这些原则：

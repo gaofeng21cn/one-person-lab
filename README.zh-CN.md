@@ -23,7 +23,7 @@
     </td>
     <td width="33%" valign="top">
       <strong>联邦状态</strong><br/>
-      <code>Research Foundry -> Med Auto Science</code> 是当前 Active 的 Research Ops 主线；<code>RedCube AI</code> 是当前 Emerging 的视觉交付 surface
+      <code>Research Foundry -> Med Auto Science</code> 是当前 Active 的 Research Ops 主线；<code>Grant Foundry -> Med Auto Grant</code> 已作为未来医学 Grant Ops surface 的公开 scaffold 开出；<code>RedCube AI</code> 是当前 Emerging 的视觉交付 surface
     </td>
   </tr>
 </table>
@@ -106,7 +106,8 @@
     </td>
     <td width="20%" valign="top">
       <strong>Grant Ops</strong><br/>
-      <code>Planned</code>
+      <code>Planned</code><br/>
+      通过 <a href="https://github.com/gaofeng21cn/med-autogrant"><code>Grant Foundry -> Med Auto Grant</code></a> 提供公开 scaffold
     </td>
     <td width="20%" valign="top">
       <strong>Thesis Ops</strong><br/>
@@ -179,6 +180,18 @@
 - 它定义工作流如何映射到具体 domain system
 - 它冻结跨 domain 语义，同时保留每个 domain 独立可用
 
+## 统一执行范式
+
+`OPL` 顶层默认采用 `Agent-first` 的设计方向，而不是把各个 `Ops` 收缩成固定代码分支驱动的僵硬流水线。
+这并不等于必须直接绑定某一种 LLM API；它的含义是：Agent 应作为默认执行者，负责读状态、调用稳定 gateway、编排步骤、组织中间产物，并把关键执行痕迹写回可审计表面，而代码主要负责提供稳定对象、控制器、工具封装、门控规则与交付表面。
+
+在这个前提下，每个 workstream 原则上应支持两种共享同一基座的执行模式：
+
+- `Auto`：全自动主线，用于端到端闭环、基座测试、评估与优化
+- `Human-in-the-loop`：与 `Auto` 共享同一基座，但把高判断密度 gate 交给人，Agent 负责重复性与可编排劳动
+
+这是一种 `OPL` 级别的统一目标执行范式，不代表所有 domain surface 今天都已经以同样成熟度落地了这两种模式。
+
 ## 为什么是 Gateway Federation
 
 同一批数据、文献、图表和判断，会在这些任务之间反复复用：
@@ -216,6 +229,10 @@ Human / Agent
 - `Research Ops` -> `Research Foundry` -> `Med Auto Science`
 - `Presentation Ops` -> `RedCube AI` 里的 `ppt_deck`
 
+当前已公开、但尚未 admitted 的 scaffold：
+
+- `Grant Ops` -> `Grant Foundry` -> `Med Auto Grant`，作为未来的医学 surface
+
 关键边界：
 
 - `RedCube AI` 不是整个 `Presentation Ops`
@@ -234,6 +251,17 @@ Human / Agent
 - 医学 Research Ops 的正式入口
 - 研究工作流的 domain-specific 治理与交付面
 - 其 research harness 与受控 runtime 之上的顶层控制面
+
+### Med Auto Grant
+
+[`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) 是 `OPL` 体系下新开的文档先行 scaffold，用于承接未来医学场景下的 `Grant Ops` surface。
+
+它当前承担的是：
+
+- `Grant Foundry` 在医学场景下的公开实现 scaffold
+- 未来作者侧、proposal-facing 的 `Grant Ops` 医学 surface
+- 第一版医学 `NSFC` 通用申请 MVP 的冻结入口
+- 但它还不是已经 admitted 的 `OPL` domain gateway 与 harness
 
 ### RedCube AI
 

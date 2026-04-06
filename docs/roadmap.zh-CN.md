@@ -14,6 +14,7 @@
 - [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) 是当前 emerging 的视觉交付 domain gateway 与 harness
 - `ppt_deck` 是当前最直接映射到 `Presentation Ops` 的 family
 - `Grant Ops`、`Thesis Ops`、`Review Ops` 仍处于定义阶段
+- `OPL` 顶层的统一目标执行范式是 `Agent-first`，并让 `Auto` 与 `Human-in-the-loop` 运行在同一套基座上；这是一条架构原则，不代表所有 domain surface 已经完成双模式落地
 
 当前阶段不做的事：
 
@@ -29,6 +30,7 @@
 - 冻结 `OPL Gateway -> domain gateway -> domain harness` 这条控制语言
 - 保持 `MedAutoScience` 明确为 `Research Ops` 的 domain surface
 - 保持 `RedCube AI` 明确为视觉交付的 domain surface
+- 把 `Agent-first` 加双模执行这套原则带入后续候选 domain 的定义，而不是逐步漂移成 fixed-code-first 的产品线
 - 用清楚的任务边界与交付对象定义下一个候选 domain，并优先沿用当前 `task-topology + candidate-domain-backlog + domain-onboarding` 这条路径，而不是发明一层冗余中间控制面
 - 逐步把 `OPL Gateway` 从文档优先表面推进成真实入口
 

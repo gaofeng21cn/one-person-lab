@@ -15,6 +15,14 @@
 This split defines top-level task semantics.
 At runtime, those semantics should route through the `OPL Gateway` into independent domain gateways rather than being collapsed into one runtime.
 
+At the operating level, these workstreams also share one target doctrine:
+
+- use `Agent-first` domain systems rather than fixed-code workflow engines
+- support both `Auto` and `Human-in-the-loop` modes on the same shared foundation
+
+The task map freezes workstream boundaries and delivery objects.
+It does not require one UI, one model provider, or one fixed-code orchestration stack.
+
 ## Machine-Readable Companions
 
 - [`../contracts/opl-gateway/task-topology.json`](../contracts/opl-gateway/task-topology.json)
