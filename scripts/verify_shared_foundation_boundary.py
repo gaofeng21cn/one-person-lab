@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
+import sys
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_REPO_ROOT = Path(__file__).resolve().parents[1]
 
 SHARED_BOUNDARY_IDS = {
     "opl_operating_model",
@@ -19,8 +21,8 @@ FORBIDDEN_G4_LABELS = {
 }
 
 
-def load_json(path: str) -> dict:
-    return json.loads((REPO_ROOT / path).read_text())
+def load_json(repo_root: Path, path: str) -> dict:
+    return json.loads((repo_root / path).read_text())
 
 
 def require(condition: bool, message: str) -> None:
@@ -33,8 +35,8 @@ def assert_contains(text: str, snippets: list[str], path: Path) -> None:
         require(snippet in text, f"missing snippet in {path}: {snippet}")
 
 
-def verify_public_surface_index() -> None:
-    doc = load_json("contracts/opl-gateway/public-surface-index.json")
+def verify_public_surface_index(repo_root: Path) -> None:
+    doc = load_json(repo_root, "contracts/opl-gateway/public-surface-index.json")
     surfaces = doc["surfaces"]
     by_id = {}
     for surface in surfaces:
@@ -56,8 +58,8 @@ def verify_public_surface_index() -> None:
         )
 
 
-def verify_surface_lifecycle_map() -> None:
-    doc = load_json("contracts/opl-gateway/surface-lifecycle-map.json")
+def verify_surface_lifecycle_map(repo_root: Path) -> None:
+    doc = load_json(repo_root, "contracts/opl-gateway/surface-lifecycle-map.json")
     require(
         SHARED_BOUNDARY_IDS.issubset(set(doc["covered_surface_ids"])),
         "surface lifecycle map missing shared boundary coverage",
@@ -79,8 +81,8 @@ def verify_surface_lifecycle_map() -> None:
         )
 
 
-def verify_surface_review_matrix() -> None:
-    doc = load_json("contracts/opl-gateway/surface-review-matrix.json")
+def verify_surface_review_matrix(repo_root: Path) -> None:
+    doc = load_json(repo_root, "contracts/opl-gateway/surface-review-matrix.json")
     require(
         SHARED_BOUNDARY_IDS.issubset(set(doc["covered_surface_ids"])),
         "surface review matrix missing shared boundary coverage",
@@ -97,8 +99,8 @@ def verify_surface_review_matrix() -> None:
         )
 
 
-def verify_acceptance_matrix() -> None:
-    doc = load_json("contracts/opl-gateway/acceptance-matrix.json")
+def verify_acceptance_matrix(repo_root: Path) -> None:
+    doc = load_json(repo_root, "contracts/opl-gateway/acceptance-matrix.json")
     gates = {gate["gate_id"]: gate for gate in doc["gates"]}
 
     boundary_gate = gates["p23_m4_g4_candidate_index_boundary_integrity"]
@@ -108,7 +110,7 @@ def verify_acceptance_matrix() -> None:
             "all four G4 indexes remain roadmap-only/future-only/reference-only/non-admitting candidates until a later explicit readiness contract and acceptance alignment freeze them",
             "no G4 candidate index is described as a current public-entry/discovery-ready/routed-action-ready/execution/truth-owner/approval/publish-control/release-control surface",
         ],
-        REPO_ROOT / "contracts/opl-gateway/acceptance-matrix.json",
+        repo_root / "contracts/opl-gateway/acceptance-matrix.json",
     )
 
     cross_domain_gate = gates["cross_domain_wording_consistency"]
@@ -124,7 +126,7 @@ def verify_acceptance_matrix() -> None:
         require(path in required_files, f"cross-domain wording gate missing required file: {path}")
 
 
-def verify_docs() -> None:
+def verify_docs(repo_root: Path) -> None:
     checks = {
         Path("docs/operating-model.md"): [
             "owning shared-foundation control language without taking over domain-owned canonical truth",
@@ -163,18 +165,31 @@ def verify_docs() -> None:
     }
 
     for relative_path, snippets in checks.items():
-        path = REPO_ROOT / relative_path
+        path = repo_root / relative_path
         assert_contains(path.read_text(), snippets, path)
 
 
-def main() -> None:
-    verify_public_surface_index()
-    verify_surface_lifecycle_map()
-    verify_surface_review_matrix()
-    verify_acceptance_matrix()
-    verify_docs()
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--repo-root", type=Path, default=DEFAULT_REPO_ROOT)
+    return parser.parse_args()
+
+
+def main() -> int:
+    args = parse_args()
+    repo_root = args.repo_root.resolve()
+    verify_public_surface_index(repo_root)
+    verify_surface_lifecycle_map(repo_root)
+    verify_surface_review_matrix(repo_root)
+    verify_acceptance_matrix(repo_root)
+    verify_docs(repo_root)
     print("shared-foundation boundary verification OK")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        raise SystemExit(main())
+    except AssertionError as exc:
+        print(str(exc), file=sys.stderr)
+        raise SystemExit(1)
