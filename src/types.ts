@@ -120,6 +120,14 @@ export interface DomainsRegistry {
   domains: DomainContract[];
 }
 
+export type ContractsRootSource = 'cwd' | 'env' | 'cli_flag' | 'api';
+
+export interface GatewayContractsLoadOptions {
+  searchFrom?: string;
+  contractsDir?: string;
+  source?: ContractsRootSource;
+}
+
 export interface GatewayContracts {
   contractsDir: string;
   workstreams: WorkstreamsRegistry;

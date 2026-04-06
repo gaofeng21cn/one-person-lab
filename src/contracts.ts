@@ -3,8 +3,10 @@ import path from 'node:path';
 
 import type {
   ContractValidationSummary,
+  ContractsRootSource,
   DomainsRegistry,
   GatewayContracts,
+  GatewayContractsLoadOptions,
   PublicSurfaceIndexContract,
   RoutingVocabularyContract,
   TaskTopologyContract,
@@ -21,6 +23,36 @@ type ErrorCode =
   | 'cli_usage_error'
   | 'unknown_command';
 
+const REQUIRED_CONTRACT_FILE_NAMES = [
+  'workstreams.json',
+  'domains.json',
+  'routing-vocabulary.json',
+  'task-topology.json',
+  'public-surface-index.json',
+] as const;
+
+type NormalizedGatewayContractsLoadOptions = {
+  searchFrom: string | null;
+  contractsDir: string | null;
+  source: ContractsRootSource;
+};
+
+function defaultExitCode(code: ErrorCode): number {
+  switch (code) {
+    case 'cli_usage_error':
+    case 'unknown_command':
+      return 2;
+    case 'contract_file_missing':
+    case 'contract_json_invalid':
+    case 'contract_shape_invalid':
+      return 3;
+    case 'workstream_not_found':
+    case 'domain_not_found':
+    case 'surface_not_found':
+      return 4;
+  }
+}
+
 export class GatewayContractError extends Error {
   readonly code: ErrorCode;
   readonly exitCode: number;
@@ -30,7 +62,7 @@ export class GatewayContractError extends Error {
     code: ErrorCode,
     message: string,
     details?: Record<string, unknown>,
-    exitCode = 1,
+    exitCode = defaultExitCode(code),
   ) {
     super(message);
     this.name = 'GatewayContractError';
@@ -543,34 +575,142 @@ function validatePublicSurfaceIndex(
   };
 }
 
-function resolveContractsDir(rootPath: string, preferDirectRoot = false): string {
-  const directPath = path.resolve(rootPath);
-  const nestedPath = path.join(directPath, 'contracts', 'opl-gateway');
-  const contractFiles = [
-    'workstreams.json',
-    'domains.json',
-    'routing-vocabulary.json',
-    'task-topology.json',
-    'public-surface-index.json',
-  ];
+function hasRequiredContractFiles(rootPath: string): boolean {
+  return REQUIRED_CONTRACT_FILE_NAMES.every((fileName) =>
+    fs.existsSync(path.join(rootPath, fileName)),
+  );
+}
 
-  if (fs.existsSync(nestedPath)) {
-    return nestedPath;
+function describeContractsRootSource(source: ContractsRootSource): string {
+  switch (source) {
+    case 'cli_flag':
+      return 'CLI flag --contracts-dir';
+    case 'env':
+      return 'environment variable OPL_CONTRACTS_DIR';
+    case 'api':
+      return 'API contractsDir option';
+    case 'cwd':
+      return 'current working directory search root';
+  }
+}
+
+function requireNonEmptyPath(
+  value: string | undefined,
+  source: ContractsRootSource,
+  detailKey: 'contracts_dir' | 'search_from',
+): string {
+  if (typeof value !== 'string' || value.length === 0) {
+    throw new GatewayContractError(
+      'cli_usage_error',
+      `${describeContractsRootSource(source)} must be a non-empty path.`,
+      {
+        source,
+        [detailKey]: value ?? null,
+      },
+    );
   }
 
-  if (preferDirectRoot) {
-    return directPath;
+  return value;
+}
+
+function resolveContractsDirFromSearchRoot(rootPath: string): string {
+  const searchRoot = path.resolve(rootPath);
+
+  if (hasRequiredContractFiles(searchRoot)) {
+    return searchRoot;
   }
 
-  if (
-    contractFiles.every((fileName) =>
-      fs.existsSync(path.join(directPath, fileName)),
-    )
-  ) {
-    return directPath;
+  return path.join(searchRoot, 'contracts', 'opl-gateway');
+}
+
+function resolveExplicitContractsDir(
+  contractsDir: string,
+  source: ContractsRootSource,
+): string {
+  const resolvedDir = path.resolve(contractsDir);
+
+  for (const fileName of REQUIRED_CONTRACT_FILE_NAMES) {
+    const filePath = path.join(resolvedDir, fileName);
+    if (!fs.existsSync(filePath)) {
+      throw new GatewayContractError(
+        'contract_file_missing',
+        `Explicit contracts directory is missing required contract file: ${fileName}.`,
+        {
+          contracts_dir: resolvedDir,
+          file: filePath,
+          source,
+        },
+      );
+    }
   }
 
-  return nestedPath;
+  return resolvedDir;
+}
+
+function normalizeLoadOptions(
+  input?: string | GatewayContractsLoadOptions,
+): NormalizedGatewayContractsLoadOptions {
+  if (typeof input === 'string') {
+    return {
+      searchFrom: requireNonEmptyPath(input, 'api', 'search_from'),
+      contractsDir: null,
+      source: 'api',
+    };
+  }
+
+  if (input && Object.hasOwn(input, 'contractsDir')) {
+    return {
+      searchFrom: null,
+      contractsDir: requireNonEmptyPath(input.contractsDir, input.source ?? 'api', 'contracts_dir'),
+      source: input.source ?? 'api',
+    };
+  }
+
+  if (input && Object.hasOwn(input, 'searchFrom')) {
+    return {
+      searchFrom: requireNonEmptyPath(input.searchFrom, input.source ?? 'api', 'search_from'),
+      contractsDir: null,
+      source: input.source ?? 'api',
+    };
+  }
+
+  if (Object.hasOwn(process.env, 'OPL_CONTRACTS_DIR')) {
+    return {
+      searchFrom: null,
+      contractsDir: requireNonEmptyPath(
+        process.env.OPL_CONTRACTS_DIR,
+        'env',
+        'contracts_dir',
+      ),
+      source: 'env',
+    };
+  }
+
+  return {
+    searchFrom: process.cwd(),
+    contractsDir: null,
+    source: 'cwd',
+  };
+}
+
+function resolveContractsDir(
+  input?: string | GatewayContractsLoadOptions,
+): string {
+  const options = normalizeLoadOptions(input);
+
+  if (options.contractsDir !== null) {
+    return resolveExplicitContractsDir(options.contractsDir, options.source);
+  }
+
+  if (options.searchFrom === null) {
+    throw new GatewayContractError(
+      'cli_usage_error',
+      'Contract root resolution requires either an explicit contracts directory or a search root.',
+      { source: options.source },
+    );
+  }
+
+  return resolveContractsDirFromSearchRoot(options.searchFrom);
 }
 
 const REQUIRED_CONTRACT_FILES = [
@@ -602,9 +742,9 @@ const REQUIRED_CONTRACT_FILES = [
 ] as const;
 
 export function validateGatewayContracts(
-  rootPath = process.env.OPL_CONTRACTS_DIR ?? process.cwd(),
+  input?: string | GatewayContractsLoadOptions,
 ): ContractValidationSummary {
-  const contracts = loadGatewayContracts(rootPath);
+  const contracts = loadGatewayContracts(input);
 
   return {
     status: 'valid',
@@ -619,12 +759,9 @@ export function validateGatewayContracts(
 }
 
 export function loadGatewayContracts(
-  rootPath = process.env.OPL_CONTRACTS_DIR ?? process.cwd(),
+  input?: string | GatewayContractsLoadOptions,
 ): GatewayContracts {
-  const contractsDir = resolveContractsDir(
-    rootPath,
-    process.env.OPL_CONTRACTS_DIR !== undefined || rootPath !== process.cwd(),
-  );
+  const contractsDir = resolveContractsDir(input);
 
   return {
     contractsDir,

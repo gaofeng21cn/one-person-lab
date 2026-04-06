@@ -9,7 +9,11 @@ import {
   validateGatewayContracts,
 } from './contracts.ts';
 import { explainDomainBoundary, resolveRequestSurface } from './resolver.ts';
-import type { GatewayContracts, ResolveRequestInput } from './types.ts';
+import type {
+  GatewayContracts,
+  GatewayContractsLoadOptions,
+  ResolveRequestInput,
+} from './types.ts';
 
 type CommandHandler = (args: string[]) => unknown;
 
@@ -18,6 +22,13 @@ type CommandSpec = {
   summary: string;
   examples: string[];
   handler: CommandHandler;
+};
+
+type ParsedCliInput = {
+  helpRequested: boolean;
+  command: string | null;
+  args: string[];
+  loadOptions?: GatewayContractsLoadOptions;
 };
 
 function printJson(payload: unknown, stream: NodeJS.WriteStream = process.stdout) {
@@ -85,6 +96,13 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
     help: {
       command: null,
       usage: 'opl <command> [args]',
+      global_options: [
+        {
+          option: '--contracts-dir <path>',
+          summary:
+            'Use an explicit OPL contract root. When omitted, the CLI resolves from cwd or cwd/contracts/opl-gateway.',
+        },
+      ],
       commands: Object.entries(commands).map(([command, spec]) => ({
         command,
         usage: spec.usage,
@@ -114,10 +132,66 @@ function buildCommandHelp(command: string, spec: CommandSpec) {
   };
 }
 
+function parseCliInput(argv: string[]): ParsedCliInput {
+  const args = [...argv];
+  const loadOptions: GatewayContractsLoadOptions = {};
+  let helpRequested = false;
+
+  while (args[0]?.startsWith('--')) {
+    const token = args[0];
+
+    if (token === '--help') {
+      helpRequested = true;
+      args.shift();
+      continue;
+    }
+
+    if (token === '--contracts-dir') {
+      args.shift();
+      const contractsDir = args.shift();
+
+      if (!contractsDir || contractsDir.startsWith('--')) {
+        throw buildUsageError(
+          'Global option --contracts-dir requires an explicit contract root path.',
+          {
+            usage: 'opl [--contracts-dir <path>] <command> [args]',
+            examples: [
+              'opl --contracts-dir /path/to/contracts/opl-gateway validate-contracts',
+              'opl --contracts-dir /path/to/contracts/opl-gateway get-domain redcube',
+            ],
+          },
+          { option: '--contracts-dir' },
+        );
+      }
+
+      loadOptions.contractsDir = contractsDir;
+      loadOptions.source = 'cli_flag';
+      continue;
+    }
+
+    throw buildUsageError(
+      `Unknown global option: ${token}.`,
+      {
+        usage: 'opl [--contracts-dir <path>] <command> [args]',
+        examples: ['opl help', 'opl --contracts-dir /path/to/contracts/opl-gateway validate-contracts'],
+      },
+      { option: token },
+    );
+  }
+
+  return {
+    helpRequested,
+    command: args.shift() ?? null,
+    args,
+    loadOptions: loadOptions.contractsDir ? loadOptions : undefined,
+  };
+}
+
 function main() {
+  const parsedInput = parseCliInput(process.argv.slice(2));
   let cachedContracts: GatewayContracts | null = null;
   const getContracts = () => {
-    cachedContracts ??= loadGatewayContracts();
+    cachedContracts ??= loadGatewayContracts(parsedInput.loadOptions);
     return cachedContracts;
   };
 
@@ -262,7 +336,7 @@ function main() {
       examples: ['opl validate-contracts'],
       handler: () => ({
         version: 'g2',
-        validation: validateGatewayContracts(),
+        validation: validateGatewayContracts(parsedInput.loadOptions),
       }),
     },
     'resolve-request-surface': {
@@ -295,20 +369,24 @@ function main() {
     },
   };
 
-  const [command, ...args] = process.argv.slice(2);
+  const { command, args, helpRequested } = parsedInput;
 
-  if (!command || command === '--help') {
-    if (!command) {
-      throw buildUsageError('A command is required.', {
-        usage: 'opl <command> [args]',
-        examples: ['opl help', 'opl validate-contracts'],
-      }, {
-        commands: Object.keys(commandSpecs),
-      });
+  if (!command) {
+    if (helpRequested) {
+      printJson(buildRootHelp(commandSpecs));
+      return;
     }
 
-    printJson(buildRootHelp(commandSpecs));
-    return;
+    throw buildUsageError('A command is required.', {
+      usage: 'opl [--contracts-dir <path>] <command> [args]',
+      examples: [
+        'opl help',
+        'opl validate-contracts',
+        'opl --contracts-dir /path/to/contracts/opl-gateway validate-contracts',
+      ],
+    }, {
+      commands: Object.keys(commandSpecs),
+    });
   }
 
   const spec = commandSpecs[command];
@@ -320,7 +398,23 @@ function main() {
     });
   }
 
-  if (args.length === 1 && (args[0] === '--help' || args[0] === 'help')) {
+  if (command !== 'help' && args.length === 1 && args[0] === 'help') {
+    throw buildUsageError(
+      `Use "opl ${command} --help" for command-scoped help.`,
+      spec,
+      {
+        token: 'help',
+        help_usage: `opl ${command} --help`,
+      },
+    );
+  }
+
+  if (helpRequested || (args.length === 1 && args[0] === '--help')) {
+    if (command === 'help') {
+      printJson(spec.handler(args));
+      return;
+    }
+
     printJson(buildCommandHelp(command, spec));
     return;
   }

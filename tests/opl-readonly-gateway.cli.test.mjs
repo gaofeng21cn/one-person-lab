@@ -260,6 +260,8 @@ test('unknown command remains machine-readable and discoverable', () => {
   assert.equal(payload.version, 'g2');
   assert.equal(payload.error.code, 'unknown_command');
   assert.ok(payload.error.details.commands.includes('validate-contracts'));
+  assert.equal(payload.error.exit_code, result.status);
+  assert.equal(result.status, 2);
 });
 
 test('help stays machine-readable and discoverable for built CLI entrypoints', () => {
@@ -290,4 +292,75 @@ test('command --help stays machine-readable for built CLI entrypoints', () => {
   assert.equal(payload.help.command, 'get-domain');
   assert.equal(payload.help.usage, 'opl get-domain <domain_id>');
   assert.ok(payload.help.examples.includes('opl get-domain redcube'));
+});
+
+test('command help literal uses the dedicated usage exit code for built CLI entrypoints', () => {
+  const result = runCli(['get-domain', 'help']);
+  assert.equal(result.status, 2, formatFailure(result));
+
+  const payload = parseJsonOutput(result);
+  assert.equal(payload.error.code, 'cli_usage_error');
+  assert.equal(payload.error.exit_code, 2);
+  assert.equal(payload.error.details.help_usage, 'opl get-domain --help');
+});
+
+test('global --contracts-dir override stays explicit and wins over OPL_CONTRACTS_DIR for built CLI entrypoints', () => {
+  const envFixture = createContractsFixtureRoot((_fixtureRoot, contractsDir) => {
+    const workstreamsPath = path.join(contractsDir, 'workstreams.json');
+    const workstreams = JSON.parse(readFileSync(workstreamsPath, 'utf8'));
+    workstreams.workstreams[0].label = 'Research Ops From Env';
+    writeFileSync(workstreamsPath, JSON.stringify(workstreams, null, 2));
+  });
+  const flagFixture = createContractsFixtureRoot((_fixtureRoot, contractsDir) => {
+    const workstreamsPath = path.join(contractsDir, 'workstreams.json');
+    const workstreams = JSON.parse(readFileSync(workstreamsPath, 'utf8'));
+    workstreams.workstreams[0].label = 'Research Ops From Flag';
+    writeFileSync(workstreamsPath, JSON.stringify(workstreams, null, 2));
+  });
+
+  try {
+    const result = runCli(
+      ['--contracts-dir', flagFixture.fixtureContractsRoot, 'get-workstream', 'research_ops'],
+      {
+        env: {
+          OPL_CONTRACTS_DIR: envFixture.fixtureContractsRoot,
+        },
+      },
+    );
+    assert.equal(result.status, 0, formatFailure(result));
+
+    const payload = parseJsonOutput(result);
+    assert.equal(payload.workstream.label, 'Research Ops From Flag');
+  } finally {
+    rmSync(envFixture.fixtureRoot, { recursive: true, force: true });
+    rmSync(flagFixture.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('contract validation failures use the dedicated contract exit code for built CLI entrypoints', () => {
+  const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((_fixtureRoot, contractsDir) => {
+    rmSync(path.join(contractsDir, 'public-surface-index.json'));
+  });
+
+  try {
+    const result = runCli(
+      ['--contracts-dir', fixtureContractsRoot, 'validate-contracts'],
+    );
+    assert.equal(result.status, 3, formatFailure(result));
+
+    const payload = parseJsonOutput(result);
+    assert.equal(payload.error.code, 'contract_file_missing');
+    assert.equal(payload.error.exit_code, 3);
+  } finally {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('usage errors use the dedicated usage exit code for built CLI entrypoints', () => {
+  const result = runCli(['get-domain']);
+  assert.equal(result.status, 2, formatFailure(result));
+
+  const payload = parseJsonOutput(result);
+  assert.equal(payload.error.code, 'cli_usage_error');
+  assert.equal(payload.error.exit_code, 2);
 });
