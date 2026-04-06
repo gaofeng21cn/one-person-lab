@@ -23,7 +23,7 @@
     </td>
     <td width="33%" valign="top">
       <strong>联邦状态</strong><br/>
-      <code>Research Foundry -> Med Auto Science</code> 是当前 Active 的 Research Ops 主线；<code>RedCube AI</code> 是当前 Emerging 的视觉交付 surface
+      <code>Research Foundry -> Med Auto Science</code> 是当前 Active 的 Research Ops 主线；<code>Grant Foundry -> Med Auto Grant</code> 已作为未来医学 Grant Ops surface 的公开 scaffold 开出；<code>RedCube AI</code> 是当前 Emerging 的视觉交付 surface
     </td>
   </tr>
 </table>
@@ -106,7 +106,8 @@
     </td>
     <td width="20%" valign="top">
       <strong>Grant Ops</strong><br/>
-      <code>Planned</code>
+      <code>Planned</code><br/>
+      通过 <a href="https://github.com/gaofeng21cn/med-autogrant"><code>Grant Foundry -> Med Auto Grant</code></a> 提供公开 scaffold
     </td>
     <td width="20%" valign="top">
       <strong>Thesis Ops</strong><br/>
@@ -179,6 +180,18 @@
 - 它定义工作流如何映射到具体 domain system
 - 它冻结跨 domain 语义，同时保留每个 domain 独立可用
 
+## 统一执行范式
+
+`OPL` 顶层默认采用 `Agent-first` 的设计方向，而不是把各个 `Ops` 收缩成固定代码分支驱动的僵硬流水线。
+这并不等于必须直接绑定某一种 LLM API；它的含义是：Agent 应作为默认执行者，负责读状态、调用稳定 gateway、编排步骤、组织中间产物，并把关键执行痕迹写回可审计表面，而代码主要负责提供稳定对象、控制器、工具封装、门控规则与交付表面。
+
+在这个前提下，每个 workstream 原则上应支持两种共享同一基座的执行模式：
+
+- `Auto`：全自动主线，用于端到端闭环、基座测试、评估与优化
+- `Human-in-the-loop`：与 `Auto` 共享同一基座，但把高判断密度 gate 交给人，Agent 负责重复性与可编排劳动
+
+这是一种 `OPL` 级别的统一目标执行范式，不代表所有 domain surface 今天都已经以同样成熟度落地了这两种模式。
+
 ## 为什么是 Gateway Federation
 
 同一批数据、文献、图表和判断，会在这些任务之间反复复用：
@@ -216,6 +229,10 @@ Human / Agent
 - `Research Ops` -> `Research Foundry` -> `Med Auto Science`
 - `Presentation Ops` -> `RedCube AI` 里的 `ppt_deck`
 
+当前已公开、但尚未 admitted 的 scaffold：
+
+- `Grant Ops` -> `Grant Foundry` -> `Med Auto Grant`，作为未来的医学 surface
+
 关键边界：
 
 - `RedCube AI` 不是整个 `Presentation Ops`
@@ -234,6 +251,17 @@ Human / Agent
 - 医学 Research Ops 的正式入口
 - 研究工作流的 domain-specific 治理与交付面
 - 其 research harness 与受控 runtime 之上的顶层控制面
+
+### Med Auto Grant
+
+[`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) 是 `OPL` 体系下新开的文档先行 scaffold，用于承接未来医学场景下的 `Grant Ops` surface。
+
+它当前承担的是：
+
+- `Grant Foundry` 在医学场景下的公开实现 scaffold
+- 未来作者侧、proposal-facing 的 `Grant Ops` 医学 surface
+- 第一版医学 `NSFC` 通用申请 MVP 的冻结入口
+- 但它还不是已经 admitted 的 `OPL` domain gateway 与 harness
 
 ### RedCube AI
 
@@ -262,12 +290,14 @@ Human / Agent
 
 ## 路线图
 
-当前阶段有四个重点：
+当前阶段有四个重点，当前主线是 `Phase 1` 的本地 `TypeScript CLI` + 只读 gateway 基线：
 
-- 冻结 `OPL Gateway` 与 domain federation 的表述
+- 把已经冻结的 `OPL Gateway` contracts 落成面向人类与 Agent 的 CLI-first、read-only discovery surface
 - 继续把 `Research Foundry -> Med Auto Science` 明确为当前 `Research Ops` 主线
 - 继续把 `RedCube AI` 明确为视觉交付的 domain gateway 与 harness
-- 逐步定义 `Grant Ops`、`Review Ops`、`Thesis Ops` 的边界
+- 在对应 domain 边界被显式冻结之前，继续让 `Grant Ops`、`Review Ops`、`Thesis Ops` 停留在 admitted gateway surface 之外
+
+当前交付目标是一条本地 CLI 基线：它读取已冻结 contracts、列出 workstream/domain、解释路由边界，但不声称 web/server runtime 行为，也不 mutation domain state。
 
 更细的阶段说明见：
 
@@ -280,15 +310,23 @@ Human / Agent
 - [OPL Federation Contract](docs/opl-federation-contract.zh-CN.md)
 - [OPL Public Surface Index](docs/opl-public-surface-index.zh-CN.md)
 - [OPL Gateway Contracts](contracts/opl-gateway/README.zh-CN.md)
-- [OPL Gateway Example Corpus](docs/opl-gateway-example-corpus.zh-CN.md)
+- [OPL 运行模型](docs/operating-model.zh-CN.md)
+- [共享基础结构](docs/shared-foundation.zh-CN.md)
+- [共享基础结构归属](docs/shared-foundation-ownership.zh-CN.md)
+- [OPL 任务版图](docs/task-map.zh-CN.md)
+- [OPL Candidate Domain Backlog](docs/opl-candidate-domain-backlog.zh-CN.md)
 - [OPL 只读 Discovery Gateway](docs/opl-read-only-discovery-gateway.zh-CN.md)
 - [OPL Routed Action Gateway](docs/opl-routed-action-gateway.zh-CN.md)
 - [OPL Domain Onboarding Contract](docs/opl-domain-onboarding-contract.zh-CN.md)
 - [OPL Gateway Acceptance Test Spec](docs/opl-gateway-acceptance-test-spec.zh-CN.md)
+- [OPL Gateway Example Corpus](docs/opl-gateway-example-corpus.zh-CN.md)
+- [OPL Routed-Safety Example Corpus](docs/opl-routed-safety-example-corpus.zh-CN.md)
+- [OPL Operating Example Corpus](docs/opl-operating-example-corpus.zh-CN.md)
+- [OPL Operating Record Catalog](docs/opl-operating-record-catalog.zh-CN.md)
 - [OPL Governance / Audit Operating Surface](docs/opl-governance-audit-operating-surface.zh-CN.md)
 - [OPL Publish / Promotion Operating Surface](docs/opl-publish-promotion-operating-surface.zh-CN.md)
+- [OPL Surface Lifecycle Map](docs/opl-surface-lifecycle-map.zh-CN.md)
+- [OPL Surface Authority Matrix](docs/opl-surface-authority-matrix.zh-CN.md)
+- [OPL Surface Review Matrix](docs/opl-surface-review-matrix.zh-CN.md)
 - [OPL Gateway 落地路线](docs/opl-gateway-rollout.zh-CN.md)
-- [OPL 运行模型](docs/operating-model.zh-CN.md)
-- [OPL 任务版图](docs/task-map.zh-CN.md)
-- [共享基础结构](docs/shared-foundation.zh-CN.md)
 - [OPL 路线图](docs/roadmap.zh-CN.md)

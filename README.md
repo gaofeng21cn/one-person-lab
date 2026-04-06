@@ -23,7 +23,7 @@
     </td>
     <td width="33%" valign="top">
       <strong>Federation State</strong><br/>
-      <code>Research Foundry -> Med Auto Science</code> is the active Research Ops line; <code>RedCube AI</code> is the emerging visual-deliverable surface
+      <code>Research Foundry -> Med Auto Science</code> is the active Research Ops line; <code>Grant Foundry -> Med Auto Grant</code> is now publicly scaffolded as a future medical Grant Ops surface; <code>RedCube AI</code> is the emerging visual-deliverable surface
     </td>
   </tr>
 </table>
@@ -106,7 +106,8 @@
     </td>
     <td width="20%" valign="top">
       <strong>Grant Ops</strong><br/>
-      <code>Planned</code>
+      <code>Planned</code><br/>
+      public scaffold via <a href="https://github.com/gaofeng21cn/med-autogrant"><code>Grant Foundry -> Med Auto Grant</code></a>
     </td>
     <td width="20%" valign="top">
       <strong>Thesis Ops</strong><br/>
@@ -179,6 +180,18 @@ For an external reader, the simplest way to understand `OPL` is:
 - it defines how workstreams map to domain systems
 - it keeps cross-domain semantics stable while letting each domain stay independently usable
 
+## Shared Operating Pattern
+
+At the top level, `OPL` defaults to an `Agent-first` design direction rather than reducing each `Ops` lane to a rigid fixed-code pipeline.
+That does not mean every domain must bind itself to one direct LLM API; it means the Agent should act as the default executor that reads state, calls stable gateways, composes steps, organizes intermediate artifacts, and writes key traces back to auditable surfaces, while code mainly provides stable objects, controllers, tool wrappers, gate rules, and delivery surfaces.
+
+Under that model, each workstream should in principle support two execution modes on top of the same shared base:
+
+- `Auto`: the autonomous primary lane for end-to-end loops, base evaluation, testing, and optimization
+- `Human-in-the-loop`: the same shared base with high-judgment gates returned to humans while Agents handle repetitive and composable work
+
+This is a shared `OPL` target operating pattern. It does not imply that every domain surface already exposes both modes at the same maturity today.
+
 ## Why A Gateway Federation
 
 The same datasets, references, figures, and judgments are reused across:
@@ -216,6 +229,10 @@ Current mapped surfaces:
 - `Research Ops` -> `Research Foundry` -> `Med Auto Science`
 - `Presentation Ops` -> `RedCube AI` through `ppt_deck`
 
+Current public but not-yet-admitted scaffold:
+
+- `Grant Ops` -> `Grant Foundry` -> `Med Auto Grant` as a future medical surface
+
 Important boundary:
 
 - `RedCube AI` is not the whole of `Presentation Ops`
@@ -234,6 +251,17 @@ Its current role is:
 - the formal entry surface for medical research operations
 - the domain-specific governance and delivery surface for research work
 - the top-level controller above its research harness and controlled runtimes
+
+### Med Auto Grant
+
+[`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) is the newly opened document-first scaffold for the future medical `Grant Ops` surface under the `OPL` umbrella.
+
+Its current role is:
+
+- the public scaffold for the medical implementation of `Grant Foundry`
+- the future author-side, proposal-facing `Grant Ops` medical surface
+- the place where the first medical `NSFC` generic application MVP is being frozen
+- not yet an admitted `OPL` domain gateway and harness
 
 ### RedCube AI
 
@@ -262,12 +290,14 @@ It should be described as:
 
 ## Roadmap
 
-The current phase has four priorities:
+The current phase has four priorities, led by a Phase 1 local `TypeScript CLI` + read-only gateway baseline:
 
-- freeze the OPL gateway and domain-federation language
+- turn the frozen OPL gateway contracts into a CLI-first, read-only discovery surface for humans and agents
 - keep `Research Foundry -> Med Auto Science` explicit as the current `Research Ops` line
 - keep `RedCube AI` explicit as the visual-deliverable domain gateway and harness
-- progressively define the boundaries for `Grant Ops`, `Review Ops`, and `Thesis Ops`
+- keep `Grant Ops`, `Review Ops`, and `Thesis Ops` below the admitted gateway surface until their domain boundaries are explicitly frozen
+
+The current delivery target is a local CLI baseline that reads frozen contracts, lists workstreams/domains, and explains routing boundaries without claiming web/server runtime behavior or mutating domain state.
 
 For a more detailed phase breakdown:
 
@@ -280,15 +310,23 @@ For a more detailed phase breakdown:
 - [OPL Federation Contract](docs/opl-federation-contract.md)
 - [OPL Public Surface Index](docs/opl-public-surface-index.md)
 - [OPL Gateway Contracts](contracts/opl-gateway/README.md)
-- [OPL Gateway Example Corpus](docs/opl-gateway-example-corpus.md)
+- [OPL Operating Model](docs/operating-model.md)
+- [Shared Foundation](docs/shared-foundation.md)
+- [Shared Foundation Ownership](docs/shared-foundation-ownership.md)
+- [OPL Task Map](docs/task-map.md)
+- [OPL Candidate Domain Backlog](docs/opl-candidate-domain-backlog.md)
 - [OPL Read-Only Discovery Gateway](docs/opl-read-only-discovery-gateway.md)
 - [OPL Routed Action Gateway](docs/opl-routed-action-gateway.md)
 - [OPL Domain Onboarding Contract](docs/opl-domain-onboarding-contract.md)
 - [OPL Gateway Acceptance Test Spec](docs/opl-gateway-acceptance-test-spec.md)
+- [OPL Gateway Example Corpus](docs/opl-gateway-example-corpus.md)
+- [OPL Routed-Safety Example Corpus](docs/opl-routed-safety-example-corpus.md)
+- [OPL Operating Example Corpus](docs/opl-operating-example-corpus.md)
+- [OPL Operating Record Catalog](docs/opl-operating-record-catalog.md)
 - [OPL Governance / Audit Operating Surface](docs/opl-governance-audit-operating-surface.md)
 - [OPL Publish / Promotion Operating Surface](docs/opl-publish-promotion-operating-surface.md)
+- [OPL Surface Lifecycle Map](docs/opl-surface-lifecycle-map.md)
+- [OPL Surface Authority Matrix](docs/opl-surface-authority-matrix.md)
+- [OPL Surface Review Matrix](docs/opl-surface-review-matrix.md)
 - [OPL Gateway Rollout](docs/opl-gateway-rollout.md)
-- [OPL Operating Model](docs/operating-model.md)
-- [OPL Task Map](docs/task-map.md)
-- [Shared Foundation](docs/shared-foundation.md)
 - [OPL Roadmap](docs/roadmap.md)

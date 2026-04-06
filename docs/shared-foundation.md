@@ -6,6 +6,22 @@
 
 The shared foundation does not imply one monolithic runtime.
 It means different domain gateways must speak compatible asset, memory, governance, delivery, and execution language.
+That compatibility does not make `OPL` the canonical truth store for every shared object; canonical truth still stays with domain-owned surfaces or with human/private materials that remain below domain admission.
+
+## One Base, Two Modes
+
+At the top level, `OPL` treats `Auto` and `Human-in-the-loop` as two execution modes on top of the same shared base rather than as two unrelated systems.
+
+- `Auto`: the autonomous primary lane for end-to-end loops, base testing, evaluation, and optimization
+- `Human-in-the-loop`: the same foundational layers with high-judgment gates returned to humans while Agents handle repetitive and composable work
+
+That means what must be reusable across workstreams is not limited to data, references, and templates. It also includes:
+
+- reusable judgment memory
+- continue/stop/reframe gates
+- review surfaces
+- audit writeback language
+- the stable route/controller/tool surface that Agent runtimes depend on
 
 ## Asset Layer
 
@@ -68,6 +84,7 @@ It focuses on:
 - audit writeback
 
 This layer is not about removing humans. It is about letting humans review key outputs instead of babysitting low-level execution.
+It also means `OPL` defaults to an `Agent-first` execution model rather than designing the main workstream as a rigid code pipeline with the Agent left to fill a few prompt slots.
 
 ## Federation Consumption Model
 
@@ -91,3 +108,7 @@ The clearest emerging embodiment in visual delivery is:
 
 This is why `OPL` is no longer only conceptual.
 It already has one active domain surface and one emerging second surface.
+
+## Further Reading
+
+- [Shared Foundation Ownership](./shared-foundation-ownership.md)

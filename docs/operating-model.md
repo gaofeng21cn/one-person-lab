@@ -53,6 +53,7 @@ The top-level `OPL Gateway` is responsible for:
 - expressing top-level task semantics
 - routing work into the correct domain surface
 - defining shared foundation expectations across domains
+- owning shared-foundation control language without taking over domain-owned canonical truth
 - keeping cross-domain identity, governance, and delivery language aligned
 
 The current repository is the documentation-first public surface for this role.
@@ -68,6 +69,32 @@ For example:
 
 - `MedAutoScience` is the `Research Ops` domain gateway and harness
 - `RedCube AI` is the visual-deliverable domain gateway and harness
+
+## Agent-First Execution
+
+`OPL` defaults to `Agent-first` execution rather than `fixed-code-first`.
+That does not require every domain to bind itself to one direct LLM API; it requires the primary workstream driver to be an Agent runtime that reads state, calls tools and gateways, organizes intermediate artifacts, advances gates, and writes key traces back to auditable surfaces.
+
+In that model, code mainly exists to provide:
+
+- stable object models
+- routes or controllers
+- tool wrappers
+- gate rules
+- audit persistence
+- review surfaces and delivery protocols
+
+`OPL` should avoid collapsing domain workstreams back into “rigid code pipelines with prompt slots,” because that keeps a shared foundation in name while weakening composability and portability across `Ops`.
+
+## Dual Execution Modes
+
+Workstreams in `OPL` should in principle share one base while supporting two execution modes:
+
+- `Auto`: the autonomous primary lane for end-to-end loops, base testing, evaluation, and optimization
+- `Human-in-the-loop`: the same base with high-judgment gates returned to humans while Agents handle repetitive and composable work
+
+The difference between these modes is not two separate systems. It is who clears high-judgment gates and who signs off on key conclusions and formal deliveries.
+Different domain surfaces may sit at different maturity levels today; `OPL` only freezes the shared execution direction and does not claim that every planned workstream already has both modes fully realized.
 
 ## Operating Principles
 
@@ -113,3 +140,8 @@ That means the right direction is:
 Not:
 
 - one giant runtime that swallows all workstreams
+
+## Further Reading
+
+- [Shared Foundation](./shared-foundation.md)
+- [Shared Foundation Ownership](./shared-foundation-ownership.md)

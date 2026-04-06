@@ -15,6 +15,36 @@
 This split defines top-level task semantics.
 At runtime, those semantics should route through the `OPL Gateway` into independent domain gateways rather than being collapsed into one runtime.
 
+At the operating level, these workstreams also share one target doctrine:
+
+- use `Agent-first` domain systems rather than fixed-code workflow engines
+- support both `Auto` and `Human-in-the-loop` modes on the same shared foundation
+
+The task map freezes workstream boundaries and delivery objects.
+It does not require one UI, one model provider, or one fixed-code orchestration stack.
+
+## Machine-Readable Companions
+
+- [`../contracts/opl-gateway/task-topology.json`](../contracts/opl-gateway/task-topology.json)
+- [`../contracts/opl-gateway/candidate-domain-backlog.json`](../contracts/opl-gateway/candidate-domain-backlog.json)
+
+These companions materialize:
+
+- the top-level task topology as a machine-readable semantic surface
+- the missing admission-boundary materials for the current under-definition workstreams
+
+They may describe under-definition workstreams such as `Grant Ops`, `Thesis Ops`, and `Review Ops`, but they do **not** admit new domains, create `G2` discovery readiness, or create `G3` routed-action readiness for them.
+
+At the current baseline, `candidate-domain definition` is the composition of:
+
+- task boundaries and delivery objects in `task-topology`
+- missing boundary packages in the candidate-domain backlog
+- formal admission rules in the domain-onboarding contract
+
+`OPL` does **not** currently add a separate intermediate candidate-domain-definition surface above those layers, because doing so would risk duplicating semantic, blocker, or admission truth.
+
+For the human-readable companion to that backlog, see [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md).
+
 ## Research Ops
 
 `Research Ops` covers the main chain from data to paper delivery.
@@ -27,13 +57,20 @@ Typical tasks include:
 - evidence packaging
 - manuscript and submission delivery
 
+Typical delivery objects include:
+
+- analysis packages
+- evidence packages
+- manuscripts
+- submission packages
+
 The current domain gateway for this workstream is:
 
 - [`MedAutoScience`](https://github.com/gaofeng21cn/med-autoscience)
 
 ## Grant Ops
 
-`Grant Ops` covers both grant writing and the reverse side of grant review.
+`Grant Ops` covers grant-direction / proposal authoring plus proposal-side reviewer simulation and revision inside the grant-writing loop.
 
 Typical tasks include:
 
@@ -43,12 +80,32 @@ Typical tasks include:
 - simulating reviewer comments
 - proposal iteration
 
+These simulation and revision steps remain proposal-authoring aids; they do not by themselves create a reviewer-role surface.
+
 This workstream clearly reuses:
 
 - literature assets
 - research memory
 - review memory
 - existing study results and figures
+
+Typical delivery objects include:
+
+- grant-direction assessments
+- proposal outlines and drafts
+- reviewer-simulation packs
+- proposal revision plans
+
+Current boundary status:
+
+- still under definition
+- not yet an admitted domain
+- not yet a registered `G1` workstream/domain mapping
+- not yet a `G2` discovery target
+- not yet a `G3` routed-action target
+- not eligible for domain handoff
+- admission blockers are tracked in [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md)
+- clear top-level requests may surface only as `unknown_domain`, without building a handoff payload, until a real domain owner is admitted
 
 ## Thesis Ops
 
@@ -63,10 +120,32 @@ Typical tasks include:
 - defense preparation
 
 It remains closely coupled with `Research Ops`, but it should still retain its own task boundary.
+The current negative boundary is that dissertation assembly and defense-preparation coordination are not the same as `Research Ops` manuscript/submission delivery, and they are not reducible to `Presentation Ops` / `RedCube AI` deck production either.
+Those admitted surfaces may supply reusable evidence or downstream derivatives, but they do not yet own a Thesis Ops domain boundary.
+
+Typical delivery objects include:
+
+- chapter-structure plans
+- chapter draft sets
+- cross-chapter synchronization packs
+- defense-preparation packs
+
+Current boundary status:
+
+- still under definition
+- not yet an admitted domain
+- not yet a registered `G1` workstream/domain mapping
+- not yet a `G2` discovery target
+- not yet a `G3` routed-action target
+- not eligible for domain handoff
+- admission blockers are tracked in [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md)
+- clear top-level requests may surface only as `unknown_domain`, without building a handoff payload, until a real domain owner is admitted
 
 ## Review Ops
 
 `Review Ops` covers both “standing in the reviewer role” and “responding to reviewers.”
+
+This combined label remains a top-level semantic bundle only; it does not by itself admit a distinct review domain or make OPL the canonical truth owner of review artifacts.
 
 Typical tasks include:
 
@@ -76,6 +155,24 @@ Typical tasks include:
 - organizing rebuttal and revision routes
 
 This workstream also accumulates review standards and feedback patterns that should remain reusable across domains.
+
+Typical delivery objects include:
+
+- review reports
+- reviewer-comment structures
+- rebuttal plans
+- revision-route maps
+
+Current boundary status:
+
+- still under definition
+- not yet an admitted domain
+- not yet a registered `G1` workstream/domain mapping
+- not yet a `G2` discovery target
+- not yet a `G3` routed-action target
+- not eligible for domain handoff
+- admission blockers are tracked in [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md)
+- clear top-level requests may surface only as `unknown_domain`, without building a handoff payload, until a real domain owner is admitted
 
 ## Presentation Ops
 
@@ -87,6 +184,13 @@ Typical tasks include:
 - generating figure-ready narrative structures for reports
 - organizing lecture and defense slide decks
 - reusing paper figures, abstracts, and conclusions
+
+Typical delivery objects include:
+
+- lecture decks
+- lab-talk decks
+- project-report decks
+- defense decks
 
 The current domain gateway for this workstream is:
 

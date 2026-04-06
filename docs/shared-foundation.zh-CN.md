@@ -6,6 +6,22 @@
 
 共享基础结构不等于单体 runtime。
 它的含义是：不同 domain gateway 必须使用兼容的资产、记忆、治理、交付与执行语言。
+这种兼容性并不让 `OPL` 自动变成所有共享对象的 canonical truth store；canonical truth 仍然留在 domain-owned surface，或留在尚未进入 formal domain admission 的 human/private 材料里。
+
+## 双模共基座
+
+`OPL` 顶层默认把 `Auto` 与 `Human-in-the-loop` 视为共享同一基座的两种执行模式，而不是两套互不相干的系统。
+
+- `Auto`：全自动主线，用于端到端闭环、基座测试、评估与优化
+- `Human-in-the-loop`：共享同一套基础层，但把高判断密度 gate 交给人，Agent 负责重复性与可编排劳动
+
+因此，真正需要跨 workstream 复用的，不只是数据、文献和模板，也包括：
+
+- 可复用的判断记忆
+- continue / stop / reframe gate
+- review surface
+- 审计回写语言
+- Agent runtime 所依赖的稳定 route / controller / tool surface
 
 ## 资产层
 
@@ -68,6 +84,7 @@
 - 审计回写
 
 这一层不是为了拿掉人类，而是为了让人类只看关键输出，不必盯住底层执行细节。
+它也意味着 `OPL` 默认采用 `Agent-first`，而不是把主流程设计成固定代码流水线，只让 Agent 做少量文本补丁。
 
 ## 联邦消费方式
 
@@ -91,3 +108,7 @@
 
 也正因为如此，`OPL` 已经不只是概念层。
 它已经有一个 active 的 domain surface，和一个正在收敛的第二 surface。
+
+## 延伸阅读
+
+- [共享基础结构归属](./shared-foundation-ownership.zh-CN.md)

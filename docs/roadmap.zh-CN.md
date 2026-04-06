@@ -14,6 +14,7 @@
 - [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) 是当前 emerging 的视觉交付 domain gateway 与 harness
 - `ppt_deck` 是当前最直接映射到 `Presentation Ops` 的 family
 - `Grant Ops`、`Thesis Ops`、`Review Ops` 仍处于定义阶段
+- `OPL` 顶层的统一目标执行范式是 `Agent-first`，并让 `Auto` 与 `Human-in-the-loop` 运行在同一套基座上；这是一条架构原则，不代表所有 domain surface 已经完成双模式落地
 
 当前阶段不做的事：
 
@@ -29,7 +30,8 @@
 - 冻结 `OPL Gateway -> domain gateway -> domain harness` 这条控制语言
 - 保持 `MedAutoScience` 明确为 `Research Ops` 的 domain surface
 - 保持 `RedCube AI` 明确为视觉交付的 domain surface
-- 用清楚的任务边界与交付对象，定义下一个候选 domain
+- 把 `Agent-first` 加双模执行这套原则带入后续候选 domain 的定义，而不是逐步漂移成 fixed-code-first 的产品线
+- 用清楚的任务边界与交付对象定义下一个候选 domain，并优先沿用当前 `task-topology + candidate-domain-backlog + domain-onboarding` 这条路径，而不是发明一层冗余中间控制面
 - 逐步把 `OPL Gateway` 从文档优先表面推进成真实入口
 
 在仍处于定义阶段的几个工作流里，更自然的优先顺序通常是：
@@ -37,6 +39,8 @@
 - `Grant Ops`
 - `Review Ops`
 - `Thesis Ops`
+
+这个优先顺序只表示边界定义的先后，不代表 `Grant Ops` 已经变成 `G2` discovery target 或 `G3` routed-action target；在对应 domain-onboarding evidence 出现前，它仍然不是这两类 target。
 
 ## 更后续阶段
 
@@ -56,6 +60,7 @@
 - [OPL Gateway Contracts](../contracts/opl-gateway/README.zh-CN.md)
 - [OPL Routed Action Gateway](opl-routed-action-gateway.zh-CN.md)
 - [OPL Domain Onboarding Contract](opl-domain-onboarding-contract.zh-CN.md)
+- [OPL Candidate Domain Backlog](opl-candidate-domain-backlog.zh-CN.md)
 - [OPL Gateway Acceptance Test Spec](opl-gateway-acceptance-test-spec.zh-CN.md)
 - [OPL Governance / Audit Operating Surface](opl-governance-audit-operating-surface.zh-CN.md)
 - [OPL Publish / Promotion Operating Surface](opl-publish-promotion-operating-surface.zh-CN.md)
