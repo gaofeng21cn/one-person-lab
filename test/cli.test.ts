@@ -73,6 +73,17 @@ function createContractsFixtureRoot(mutator?: (contractsRoot: string) => void) {
   return { fixtureRoot, fixtureContractsRoot };
 }
 
+function assertContractsContext(
+  output: { contracts_context?: { contracts_dir: string; contracts_root_source: string } },
+  contractsRootSource: string,
+  expectedContractsDir = contractsDir,
+) {
+  assert.deepEqual(output.contracts_context, {
+    contracts_dir: expectedContractsDir,
+    contracts_root_source: contractsRootSource,
+  });
+}
+
 test('loadGatewayContracts returns the frozen gateway registries', () => {
   const contracts = loadGatewayContracts(repoRoot);
 
@@ -115,6 +126,7 @@ test('loadGatewayContracts honors OPL_CONTRACTS_DIR when provided', () => {
     OPL_CONTRACTS_DIR: tempContracts,
   });
 
+  assertContractsContext(output, 'env', tempContracts);
   assert.equal(output.workstream.label, 'Research Ops Override');
 });
 
@@ -134,6 +146,7 @@ test('global --contracts-dir override uses the explicit contract root', () => {
       'research_ops',
     ]);
 
+    assertContractsContext(output, 'cli_flag', fixtureContractsRoot);
     assert.equal(output.workstream.label, 'Research Ops From Flag');
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
@@ -160,6 +173,7 @@ test('global --contracts-dir override takes precedence over OPL_CONTRACTS_DIR', 
       { OPL_CONTRACTS_DIR: envFixture.fixtureContractsRoot },
     );
 
+    assertContractsContext(output, 'cli_flag', flagFixture.fixtureContractsRoot);
     assert.equal(output.workstream.label, 'Research Ops From Flag');
   } finally {
     fs.rmSync(envFixture.fixtureRoot, { recursive: true, force: true });
@@ -379,6 +393,10 @@ test('list-workstreams returns admitted workstream summaries', () => {
 
   assert.deepEqual(output, {
     version: 'g2',
+    contracts_context: {
+      contracts_dir: contractsDir,
+      contracts_root_source: 'cwd',
+    },
     workstreams: [
       {
         workstream_id: 'research_ops',
@@ -400,6 +418,7 @@ test('get-workstream returns the full registered workstream meaning', () => {
   const output = runCli(['get-workstream', 'presentation_ops']);
 
   assert.equal(output.version, 'g2');
+  assertContractsContext(output, 'cwd');
   assert.equal(output.workstream.workstream_id, 'presentation_ops');
   assert.equal(output.workstream.domain_id, 'redcube');
   assert.deepEqual(output.workstream.primary_families, ['ppt_deck']);
@@ -410,6 +429,10 @@ test('list-domains returns the registered domain gateway summaries', () => {
 
   assert.deepEqual(output, {
     version: 'g2',
+    contracts_context: {
+      contracts_dir: contractsDir,
+      contracts_root_source: 'cwd',
+    },
     domains: [
       {
         domain_id: 'medautoscience',
@@ -429,6 +452,7 @@ test('list-surfaces returns the public gateway surface summaries', () => {
   const output = runCli(['list-surfaces']);
 
   assert.equal(output.version, 'g2');
+  assertContractsContext(output, 'cwd');
   assert.ok(Array.isArray(output.surfaces));
   assert.ok(output.surfaces.length > 10);
   assert.deepEqual(output.surfaces[0], {
@@ -456,6 +480,7 @@ test('get-domain returns the full registered domain meaning', () => {
   const output = runCli(['get-domain', 'redcube']);
 
   assert.equal(output.version, 'g2');
+  assertContractsContext(output, 'cwd');
   assert.equal(output.domain.domain_id, 'redcube');
   assert.equal(output.domain.project, 'redcube-ai');
   assert.deepEqual(output.domain.non_opl_families, ['xiaohongshu']);
@@ -465,6 +490,7 @@ test('get-surface returns the full registered public surface meaning', () => {
   const output = runCli(['get-surface', 'opl_read_only_discovery_gateway']);
 
   assert.equal(output.version, 'g2');
+  assertContractsContext(output, 'cwd');
   assert.equal(output.surface.surface_id, 'opl_read_only_discovery_gateway');
   assert.equal(output.surface.category_id, 'opl_contract_surface');
   assert.deepEqual(output.surface.routes_to, [
@@ -518,6 +544,7 @@ test('resolveRequestSurface keeps ppt_deck mapped to presentation_ops', () => {
   ]);
 
   assert.equal(output.version, 'g2');
+  assertContractsContext(output, 'cwd');
   assert.equal(output.resolution.status, 'routed');
   assert.equal(output.resolution.workstream_id, 'presentation_ops');
   assert.equal(output.resolution.domain_id, 'redcube');
@@ -536,6 +563,7 @@ test('resolveRequestSurface keeps xiaohongshu at the redcube family boundary', (
     'xiaohongshu',
   ]);
 
+  assertContractsContext(output, 'cwd');
   assert.equal(output.resolution.status, 'domain_boundary');
   assert.equal(output.resolution.domain_id, 'redcube');
   assert.equal(output.resolution.workstream_id, null);
@@ -552,6 +580,7 @@ test('resolveRequestSurface returns unknown_domain for under-definition workstre
     'Build a formal grant proposal operating lane from the supplied topic brief.',
   ]);
 
+  assertContractsContext(output, 'cwd');
   assert.equal(output.resolution.status, 'unknown_domain');
   assert.equal(output.resolution.candidate_workstream_id, 'grant_ops');
 });
@@ -567,6 +596,7 @@ test('resolveRequestSurface returns ambiguous_task with explicit boundary eviden
     'Package the study for submission and also turn it into a defense-ready deck.',
   ]);
 
+  assertContractsContext(output, 'cwd');
   assert.equal(output.resolution.status, 'ambiguous_task');
   assert.deepEqual(output.resolution.candidate_workstreams, [
     'research_ops',
@@ -615,6 +645,7 @@ test('explain-domain-boundary explains xiaohongshu non-equivalence', () => {
     'xiaohongshu',
   ]);
 
+  assertContractsContext(output, 'cwd');
   assert.equal(output.boundary_explanation.resolved_domain, 'redcube');
   assert.equal(output.boundary_explanation.resolved_workstream_id, null);
   assert.match(output.boundary_explanation.reason, /not automatically equal presentation ops/i);
@@ -631,6 +662,7 @@ test('explain-domain-boundary explains under-definition requests', () => {
     'Build a thesis defense preparation pack from the current papers.',
   ]);
 
+  assertContractsContext(output, 'cwd');
   assert.equal(output.boundary_explanation.resolved_domain, null);
   assert.equal(output.boundary_explanation.candidate_workstream_id, 'thesis_ops');
   assert.match(output.boundary_explanation.reason, /under definition/i);

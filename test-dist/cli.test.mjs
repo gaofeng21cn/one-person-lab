@@ -47,6 +47,10 @@ test('built cli lists admitted workstreams', () => {
   const output = runBuiltCli(['list-workstreams']);
 
   assert.equal(output.version, 'g2');
+  assert.deepEqual(output.contracts_context, {
+    contracts_dir: path.join(repoRoot, 'contracts', 'opl-gateway'),
+    contracts_root_source: 'cwd',
+  });
   assert.deepEqual(
     output.workstreams.map((entry) => entry.workstream_id),
     ['research_ops', 'presentation_ops'],
@@ -64,6 +68,10 @@ test('built cli resolves presentation delivery to redcube', () => {
     'Prepare a defense-ready slide deck for a thesis committee.',
   ]);
 
+  assert.deepEqual(output.contracts_context, {
+    contracts_dir: path.join(repoRoot, 'contracts', 'opl-gateway'),
+    contracts_root_source: 'cwd',
+  });
   assert.equal(output.resolution.status, 'routed');
   assert.equal(output.resolution.workstream_id, 'presentation_ops');
   assert.equal(output.resolution.domain_id, 'redcube');
@@ -160,6 +168,10 @@ test('built cli global --contracts-dir override takes precedence over OPL_CONTRA
       { OPL_CONTRACTS_DIR: envContracts },
     );
 
+    assert.deepEqual(output.contracts_context, {
+      contracts_dir: flagContracts,
+      contracts_root_source: 'cli_flag',
+    });
     assert.equal(output.workstream.label, 'Research Ops From Flag');
   } finally {
     fs.rmSync(envContracts, { recursive: true, force: true });

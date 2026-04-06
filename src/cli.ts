@@ -132,6 +132,24 @@ function buildCommandHelp(command: string, spec: CommandSpec) {
   };
 }
 
+function buildContractsContext(contracts: GatewayContracts) {
+  return {
+    contracts_dir: contracts.contractsDir,
+    contracts_root_source: contracts.contractsRootSource,
+  };
+}
+
+function withContractsContext<T extends Record<string, unknown>>(
+  contracts: GatewayContracts,
+  payload: T,
+) {
+  return {
+    version: 'g2',
+    contracts_context: buildContractsContext(contracts),
+    ...payload,
+  };
+}
+
 function parseCliInput(argv: string[]): ParsedCliInput {
   const args = [...argv];
   const loadOptions: GatewayContractsLoadOptions = {};
@@ -232,15 +250,14 @@ function main() {
       examples: ['opl list-workstreams'],
       handler: () => {
         const contracts = getContracts();
-        return {
-          version: 'g2',
+        return withContractsContext(contracts, {
           workstreams: contracts.workstreams.workstreams.map((workstream) => ({
             workstream_id: workstream.workstream_id,
             label: workstream.label,
             status: workstream.status,
             domain_id: workstream.domain_id,
           })),
-        };
+        });
       },
     },
     'get-workstream': {
@@ -255,10 +272,10 @@ function main() {
           });
         }
 
-        return {
-          version: 'g2',
-          workstream: findWorkstreamOrThrow(getContracts(), workstreamId),
-        };
+        const contracts = getContracts();
+        return withContractsContext(contracts, {
+          workstream: findWorkstreamOrThrow(contracts, workstreamId),
+        });
       },
     },
     'list-domains': {
@@ -267,14 +284,13 @@ function main() {
       examples: ['opl list-domains'],
       handler: () => {
         const contracts = getContracts();
-        return {
-          version: 'g2',
+        return withContractsContext(contracts, {
           domains: contracts.domains.domains.map((domain) => ({
             domain_id: domain.domain_id,
             gateway_surface: domain.gateway_surface,
             owned_workstreams: domain.owned_workstreams,
           })),
-        };
+        });
       },
     },
     'get-domain': {
@@ -289,10 +305,10 @@ function main() {
           });
         }
 
-        return {
-          version: 'g2',
-          domain: findDomainOrThrow(getContracts(), domainId),
-        };
+        const contracts = getContracts();
+        return withContractsContext(contracts, {
+          domain: findDomainOrThrow(contracts, domainId),
+        });
       },
     },
     'list-surfaces': {
@@ -301,15 +317,14 @@ function main() {
       examples: ['opl list-surfaces'],
       handler: () => {
         const contracts = getContracts();
-        return {
-          version: 'g2',
+        return withContractsContext(contracts, {
           surfaces: contracts.publicSurfaceIndex.surfaces.map((surface) => ({
             surface_id: surface.surface_id,
             category_id: surface.category_id,
             surface_kind: surface.surface_kind,
             owner_scope: surface.owner_scope,
           })),
-        };
+        });
       },
     },
     'get-surface': {
@@ -324,10 +339,10 @@ function main() {
           });
         }
 
-        return {
-          version: 'g2',
-          surface: findSurfaceOrThrow(getContracts(), surfaceId),
-        };
+        const contracts = getContracts();
+        return withContractsContext(contracts, {
+          surface: findSurfaceOrThrow(contracts, surfaceId),
+        });
       },
     },
     'validate-contracts': {
@@ -345,13 +360,15 @@ function main() {
       examples: [
         'opl resolve-request-surface --intent presentation_delivery --target deliverable --goal "Prepare a defense-ready slide deck."',
       ],
-      handler: (args) => ({
-        version: 'g2',
-        resolution: resolveRequestSurface(
-          parseKeyValueArgs(args, commandSpecs['resolve-request-surface']),
-          getContracts(),
-        ),
-      }),
+      handler: (args) => {
+        const contracts = getContracts();
+        return withContractsContext(contracts, {
+          resolution: resolveRequestSurface(
+            parseKeyValueArgs(args, commandSpecs['resolve-request-surface']),
+            contracts,
+          ),
+        });
+      },
     },
     'explain-domain-boundary': {
       usage: 'opl explain-domain-boundary --intent <intent> --target <target> --goal <goal> [--preferred-family <family>] [--request-kind <kind>]',
@@ -359,13 +376,15 @@ function main() {
       examples: [
         'opl explain-domain-boundary --intent create --target deliverable --goal "Grant proposal reviewer simulation and revision planning."',
       ],
-      handler: (args) => ({
-        version: 'g2',
-        boundary_explanation: explainDomainBoundary(
-          parseKeyValueArgs(args, commandSpecs['explain-domain-boundary']),
-          getContracts(),
-        ),
-      }),
+      handler: (args) => {
+        const contracts = getContracts();
+        return withContractsContext(contracts, {
+          boundary_explanation: explainDomainBoundary(
+            parseKeyValueArgs(args, commandSpecs['explain-domain-boundary']),
+            contracts,
+          ),
+        });
+      },
     },
   };
 

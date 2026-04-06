@@ -84,6 +84,10 @@ test('list-workstreams returns the admitted workstream summaries', () => {
 
   const payload = parseJsonOutput(result);
   assert.equal(payload.version, 'g2');
+  assert.deepEqual(payload.contracts_context, {
+    contracts_dir: contractsRoot,
+    contracts_root_source: 'cwd',
+  });
   assert.deepEqual(payload.workstreams, [
     {
       workstream_id: 'research_ops',
@@ -106,6 +110,10 @@ test('get-domain redcube returns gateway and harness truth', () => {
 
   const payload = parseJsonOutput(result);
   assert.equal(payload.version, 'g2');
+  assert.deepEqual(payload.contracts_context, {
+    contracts_dir: contractsRoot,
+    contracts_root_source: 'cwd',
+  });
   assert.equal(payload.domain.domain_id, 'redcube');
   assert.equal(payload.domain.project, 'redcube-ai');
   assert.equal(payload.domain.gateway_surface, 'Visual Deliverable Gateway');
@@ -126,6 +134,10 @@ test('resolve-request-surface maps a defense-ready slide deck to presentation_op
 
   const payload = parseJsonOutput(result);
   assert.equal(payload.version, 'g2');
+  assert.deepEqual(payload.contracts_context, {
+    contracts_dir: contractsRoot,
+    contracts_root_source: 'cwd',
+  });
   assert.equal(payload.resolution.workstream_id, 'presentation_ops');
   assert.equal(payload.resolution.domain_id, 'redcube');
   assert.equal(payload.resolution.entry_surface, 'domain_gateway');
@@ -145,6 +157,10 @@ test('resolve-request-surface keeps xiaohongshu at the redcube family boundary w
 
   const payload = parseJsonOutput(result);
   assert.equal(payload.version, 'g2');
+  assert.deepEqual(payload.contracts_context, {
+    contracts_dir: contractsRoot,
+    contracts_root_source: 'cwd',
+  });
   assert.equal(payload.resolution.domain_id, 'redcube');
   assert.equal(payload.resolution.workstream_id, null);
   assert.equal(payload.resolution.recommended_family, 'xiaohongshu');
@@ -346,6 +362,10 @@ test('global --contracts-dir override stays explicit and wins over OPL_CONTRACTS
     assert.equal(result.status, 0, formatFailure(result));
 
     const payload = parseJsonOutput(result);
+    assert.deepEqual(payload.contracts_context, {
+      contracts_dir: flagFixture.fixtureContractsRoot,
+      contracts_root_source: 'cli_flag',
+    });
     assert.equal(payload.workstream.label, 'Research Ops From Flag');
   } finally {
     rmSync(envFixture.fixtureRoot, { recursive: true, force: true });
