@@ -178,57 +178,71 @@ test('Phase 4 rollover baseline keeps predecessor facts explicit while prompt an
 test('Phase 4 trace / issue history baseline keeps report-pack roles explicit and report-local', () => {
   const currentProgram = read(currentProgramPath);
   const activeSnapshotPath = collectActivePhase4SnapshotPaths(currentProgram)[0];
+  assert.ok(activeSnapshotPath, 'CURRENT_PROGRAM must still point at one active Phase 4 snapshot.');
+
   const activeSnapshot = read(activeSnapshotPath!);
   const reportReadme = read(path.join(reportsRoot, 'README.md'));
   const latestStatus = read(latestStatusPath);
   const iterationLog = read(iterationLogPath);
   const openIssues = read(openIssuesPath);
 
-  assert.match(
-    currentProgram,
-    /LATEST_STATUS\.md`：thin checkpoint \/ predecessor \/ verification surface|LATEST_STATUS\.md`: thin checkpoint \/ predecessor \/ verification surface/i,
+  const snapshotCheckpointBase = extractBacktickedMetadata(activeSnapshot, 'current_checkpoint_base');
+  const snapshotPredecessor = extractBacktickedMetadata(activeSnapshot, 'predecessor_tranche');
+
+  assert.equal(
+    extractLatestStatusField(latestStatus, 'Current checkpoint base'),
+    snapshotCheckpointBase,
+    'LATEST_STATUS checkpoint continuity must mirror the active snapshot checkpoint base.',
   );
+  assert.equal(
+    extractLatestStatusField(latestStatus, 'Predecessor tranche link'),
+    snapshotPredecessor,
+    'LATEST_STATUS predecessor linkage must mirror the active snapshot predecessor tranche.',
+  );
+
+  assert.match(currentProgram, /`LATEST_STATUS\.md`：thin checkpoint \/ predecessor \/ verification surface/i);
+  assert.match(currentProgram, /`ITERATION_LOG\.md`：append-only trace history/i);
+  assert.match(currentProgram, /`OPEN_ISSUES\.md`：residual-risk \/ deferred surface/i);
+
   assert.match(
-    currentProgram,
-    /OPEN_ISSUES\.md`：residual-risk \/ deferred surface|OPEN_ISSUES\.md`: residual-risk \/ deferred surface/i,
+    activeSnapshot,
+    /verification evidence, and residual risks discoverable from the current report pack without mining mailbox-only history/i,
   );
   assert.match(
     activeSnapshot,
-    /LATEST_STATUS\.md` keeps the thin checkpoint \/ predecessor \/ verification \/ next-tranche surface/i,
+    /`LATEST_STATUS\.md` keeps the thin checkpoint \/ predecessor \/ verification \/ next-tranche surface/i,
   );
-  assert.match(
-    activeSnapshot,
-    /report-local continuity metadata rather than runtime audit truth, launcher state, or any new persistence surface/i,
-  );
-  assert.match(
-    reportReadme,
-    /LATEST_STATUS\.md`：thin checkpoint \/ predecessor \/ verification surface|LATEST_STATUS\.md`: thin checkpoint \/ predecessor \/ verification surface/i,
-  );
+  assert.match(activeSnapshot, /Per-file roles stay explicit/i);
+  assert.match(activeSnapshot, /report-local continuity metadata rather than runtime audit truth/i);
+
+  assert.match(reportReadme, /`LATEST_STATUS\.md`：thin checkpoint \/ predecessor \/ verification surface/i);
+  assert.match(reportReadme, /`ITERATION_LOG\.md`：append-only trace history/i);
+  assert.match(reportReadme, /`OPEN_ISSUES\.md`：residual-risk \/ deferred surface/i);
   assert.match(
     reportReadme,
-    /ITERATION_LOG\.md`：append-only trace history|ITERATION_LOG\.md`: append-only trace history/i,
+    /后续 OMX stage 应直接读取这组 report-local fields，而不是回放 stale mailbox、挂起 pane、或 verbose ad-hoc 日志/i,
   );
-  assert.match(
-    reportReadme,
-    /OPEN_ISSUES\.md`：residual-risk \/ deferred surface|OPEN_ISSUES\.md`: residual-risk \/ deferred surface/i,
-  );
-  assert.match(latestStatus, /Predecessor tranche link: `opl-mainline-phase-4-closeout`/i);
+
+  assert.match(latestStatus, /keep checkpoint \/ verification \/ residual-risk continuity explicit inside the current report pack/i);
   assert.match(
     latestStatus,
-    /LATEST_STATUS\.md` = checkpoint \/ predecessor \/ verification \/ next-tranche surface/i,
+    /`LATEST_STATUS\.md` = checkpoint \/ predecessor \/ verification \/ next-tranche surface, `ITERATION_LOG\.md` = append-only trace history, `OPEN_ISSUES\.md` = residual-risk \/ deferred surface/i,
   );
+
+  assert.match(iterationLog, /Phase 4 trace \/ issue history baseline discoverability refresh/i);
   assert.match(
     iterationLog,
-    /LATEST_STATUS\.md` now keeps checkpoint base \+ predecessor tranche linkage \+ latest verification evidence \+ next tranche brief/i,
+    /`LATEST_STATUS\.md` now keeps checkpoint base \+ predecessor tranche linkage \+ latest verification evidence \+ next tranche brief/i,
   );
+  assert.match(iterationLog, /Locked the report-local role split/i);
+
+  assert.match(openIssues, /Future teams can still regress the trace \/ issue history baseline/i);
   assert.match(
     openIssues,
-    /LATEST_STATUS\.md` stops keeping checkpoint base, predecessor tranche linkage, and latest verification evidence explicit/i,
+    /`LATEST_STATUS\.md` stops keeping checkpoint base, predecessor tranche linkage, and latest verification evidence explicit/i,
   );
-  assert.match(
-    openIssues,
-    /OPEN_ISSUES\.md` stops surfacing residual risks and deferred non-goals/i,
-  );
+  assert.match(openIssues, /`OPEN_ISSUES\.md` stops surfacing residual risks and deferred non-goals/i);
+  assert.match(openIssues, /follow-on work may drift back to stale mailbox reconstruction/i);
 });
 
 test('Phase 4 closeout and shutdown hygiene mirrors keep fallback, verification ownership, and shutdown order explicit', () => {
@@ -267,44 +281,4 @@ test('Phase 4 closeout and shutdown hygiene mirrors keep fallback, verification 
     openIssues,
     /uses the leader fallback transition before integrated-head evidence is already sufficient or without recording why/i,
   );
-});
-
-test('Phase 4 trace / issue history baseline keeps report-pack roles explicit and report-local', () => {
-  const currentProgram = read(currentProgramPath);
-  const activeSnapshotPath = collectActivePhase4SnapshotPaths(currentProgram)[0];
-  const activeSnapshot = read(activeSnapshotPath!);
-  const reportReadme = read(path.join(reportsRoot, 'README.md'));
-  const latestStatus = read(latestStatusPath);
-  const iterationLog = read(iterationLogPath);
-  const openIssues = read(openIssuesPath);
-
-  assert.match(currentProgram, /`LATEST_STATUS\.md`：thin checkpoint \/ predecessor \/ verification surface/i);
-  assert.match(currentProgram, /`ITERATION_LOG\.md`：append-only trace history/i);
-  assert.match(currentProgram, /`OPEN_ISSUES\.md`：residual-risk \/ deferred surface/i);
-
-  assert.match(activeSnapshot, /Per-file roles stay explicit/i);
-  assert.match(
-    activeSnapshot,
-    /`LATEST_STATUS\.md` keeps the thin checkpoint \/ predecessor \/ verification \/ next-tranche surface/i,
-  );
-  assert.match(activeSnapshot, /report-local continuity metadata rather than runtime audit truth/i);
-
-  assert.match(reportReadme, /Phase 4 trace \/ issue history baseline/i);
-  assert.match(reportReadme, /`LATEST_STATUS\.md`：当前 phase \/ tranche 状态摘要、current checkpoint base、verification evidence、以及 next-tranche guardrails/i);
-  assert.match(
-    reportReadme,
-    /后续 OMX stage 应直接读取这组 report-local fields，而不是回放 stale mailbox、挂起 pane、或 verbose ad-hoc 日志/i,
-  );
-
-  assert.match(latestStatus, /keep checkpoint \/ verification \/ residual-risk continuity explicit inside the current report pack/i);
-  assert.match(
-    latestStatus,
-    /`LATEST_STATUS\.md` = checkpoint \/ predecessor \/ verification \/ next-tranche surface, `ITERATION_LOG\.md` = append-only trace history, `OPEN_ISSUES\.md` = residual-risk \/ deferred surface/i,
-  );
-
-  assert.match(iterationLog, /Phase 4 trace \/ issue history baseline discoverability refresh/i);
-  assert.match(iterationLog, /Locked the report-local role split/i);
-
-  assert.match(openIssues, /Future teams can still regress the trace \/ issue history baseline/i);
-  assert.match(openIssues, /follow-on work may drift back to stale mailbox reconstruction/i);
 });
