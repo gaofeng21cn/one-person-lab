@@ -130,6 +130,7 @@ export interface GatewayContractsLoadOptions {
 
 export interface GatewayContracts {
   contractsDir: string;
+  contractsRootSource: ContractsRootSource;
   workstreams: WorkstreamsRegistry;
   domains: DomainsRegistry;
   routingVocabulary: RoutingVocabularyContract;
@@ -152,6 +153,7 @@ export interface ContractValidationEntry {
 export interface ContractValidationSummary {
   status: 'valid';
   contracts_dir: string;
+  contracts_root_source: ContractsRootSource;
   validated_contracts: ContractValidationEntry[];
 }
 

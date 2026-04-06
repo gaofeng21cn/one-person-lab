@@ -74,6 +74,7 @@ test('built cli validates the required contract set', () => {
 
   assert.equal(output.version, 'g2');
   assert.equal(output.validation.status, 'valid');
+  assert.equal(output.validation.contracts_root_source, 'cwd');
   assert.deepEqual(
     output.validation.validated_contracts.map((entry) => ({
       contract_id: entry.contract_id,
@@ -89,6 +90,22 @@ test('built cli validates the required contract set', () => {
       { contract_id: 'public_surface_index', file: 'public-surface-index.json', schema_version: 'p18.m1', status: 'valid' },
     ],
   );
+});
+
+test('built cli validate-contracts exposes cli-flag contract-root provenance', () => {
+  const tempContracts = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-built-validate-flag-'));
+  fs.cpSync(path.join(repoRoot, 'contracts', 'opl-gateway'), tempContracts, {
+    recursive: true,
+  });
+
+  try {
+    const output = runBuiltCli(['--contracts-dir', tempContracts, 'validate-contracts']);
+
+    assert.equal(output.validation.contracts_dir, tempContracts);
+    assert.equal(output.validation.contracts_root_source, 'cli_flag');
+  } finally {
+    fs.rmSync(tempContracts, { recursive: true, force: true });
+  }
 });
 
 test('built cli exposes machine-readable help', () => {

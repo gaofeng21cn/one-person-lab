@@ -76,6 +76,7 @@ function createContractsFixtureRoot(mutator?: (contractsRoot: string) => void) {
 test('loadGatewayContracts returns the frozen gateway registries', () => {
   const contracts = loadGatewayContracts(repoRoot);
 
+  assert.equal(contracts.contractsRootSource, 'api');
   assert.equal(contracts.workstreams.version, 'g1');
   assert.equal(contracts.domains.version, 'g1');
   assert.equal(contracts.routingVocabulary.version, 'g1');
@@ -173,6 +174,7 @@ test('validateGatewayContracts returns a stable summary for the required contrac
   assert.deepEqual(validation, {
     status: 'valid',
     contracts_dir: contractsDir,
+    contracts_root_source: 'api',
     validated_contracts: [
       {
         contract_id: 'workstreams',
@@ -217,6 +219,7 @@ test('validate-contracts returns a stable machine-readable contract summary', ()
     validation: {
       status: 'valid',
       contracts_dir: contractsDir,
+      contracts_root_source: 'cwd',
       validated_contracts: [
         {
           contract_id: 'workstreams',
@@ -251,6 +254,38 @@ test('validate-contracts returns a stable machine-readable contract summary', ()
       ],
     },
   });
+});
+
+test('validate-contracts exposes env contract-root provenance', () => {
+  const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot(() => {});
+
+  try {
+    const output = runCli(['validate-contracts'], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+
+    assert.equal(output.validation.contracts_dir, fixtureContractsRoot);
+    assert.equal(output.validation.contracts_root_source, 'env');
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('validate-contracts exposes cli-flag contract-root provenance', () => {
+  const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot(() => {});
+
+  try {
+    const output = runCli([
+      '--contracts-dir',
+      fixtureContractsRoot,
+      'validate-contracts',
+    ]);
+
+    assert.equal(output.validation.contracts_dir, fixtureContractsRoot);
+    assert.equal(output.validation.contracts_root_source, 'cli_flag');
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
 });
 
 test('validate-contracts surfaces stable missing-file errors', () => {

@@ -180,6 +180,7 @@ test('validate-contracts returns a stable machine-readable success summary', () 
   const payload = parseJsonOutput(result);
   assert.equal(payload.version, 'g2');
   assert.equal(payload.validation.status, 'valid');
+  assert.equal(payload.validation.contracts_root_source, 'cwd');
   assert.deepEqual(
     payload.validation.validated_contracts.map((entry) => ({
       contract_id: entry.contract_id,
@@ -195,6 +196,21 @@ test('validate-contracts returns a stable machine-readable success summary', () 
       { contract_id: 'public_surface_index', file: 'public-surface-index.json', schema_version: 'p18.m1', status: 'valid' },
     ],
   );
+});
+
+test('validate-contracts exposes cli-flag contract-root provenance for built CLI entrypoints', () => {
+  const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot(() => {});
+
+  try {
+    const result = runCli(['--contracts-dir', fixtureContractsRoot, 'validate-contracts']);
+    assert.equal(result.status, 0, formatFailure(result));
+
+    const payload = parseJsonOutput(result);
+    assert.equal(payload.validation.contracts_dir, fixtureContractsRoot);
+    assert.equal(payload.validation.contracts_root_source, 'cli_flag');
+  } finally {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  }
 });
 
 test('validate-contracts surfaces missing files with a stable machine-readable error envelope', () => {

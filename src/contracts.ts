@@ -37,6 +37,11 @@ type NormalizedGatewayContractsLoadOptions = {
   source: ContractsRootSource;
 };
 
+type ResolvedContractsLocation = {
+  contractsDir: string;
+  source: ContractsRootSource;
+};
+
 function defaultExitCode(code: ErrorCode): number {
   switch (code) {
     case 'cli_usage_error':
@@ -693,13 +698,16 @@ function normalizeLoadOptions(
   };
 }
 
-function resolveContractsDir(
+function resolveContractsLocation(
   input?: string | GatewayContractsLoadOptions,
-): string {
+): ResolvedContractsLocation {
   const options = normalizeLoadOptions(input);
 
   if (options.contractsDir !== null) {
-    return resolveExplicitContractsDir(options.contractsDir, options.source);
+    return {
+      contractsDir: resolveExplicitContractsDir(options.contractsDir, options.source),
+      source: options.source,
+    };
   }
 
   if (options.searchFrom === null) {
@@ -710,7 +718,10 @@ function resolveContractsDir(
     );
   }
 
-  return resolveContractsDirFromSearchRoot(options.searchFrom);
+  return {
+    contractsDir: resolveContractsDirFromSearchRoot(options.searchFrom),
+    source: options.source,
+  };
 }
 
 const REQUIRED_CONTRACT_FILES = [
@@ -749,6 +760,7 @@ export function validateGatewayContracts(
   return {
     status: 'valid',
     contracts_dir: contracts.contractsDir,
+    contracts_root_source: contracts.contractsRootSource,
     validated_contracts: REQUIRED_CONTRACT_FILES.map((contract) => ({
       contract_id: contract.contract_id,
       file: path.join(contracts.contractsDir, contract.file_name),
@@ -761,10 +773,11 @@ export function validateGatewayContracts(
 export function loadGatewayContracts(
   input?: string | GatewayContractsLoadOptions,
 ): GatewayContracts {
-  const contractsDir = resolveContractsDir(input);
+  const { contractsDir, source } = resolveContractsLocation(input);
 
   return {
     contractsDir,
+    contractsRootSource: source,
     workstreams: validateWorkstreamsRegistry(
       path.join(contractsDir, 'workstreams.json'),
       parseJsonFile(path.join(contractsDir, 'workstreams.json')),
