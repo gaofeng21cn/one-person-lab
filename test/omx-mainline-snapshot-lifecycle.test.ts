@@ -169,6 +169,62 @@ test('Phase 4 rollover baseline keeps predecessor facts explicit while prompt an
   );
 });
 
+test('Phase 4 trace / issue history baseline keeps report-pack roles explicit and report-local', () => {
+  const currentProgram = read(currentProgramPath);
+  const activeSnapshotPath = collectActivePhase4SnapshotPaths(currentProgram)[0];
+  const activeSnapshot = read(activeSnapshotPath!);
+  const reportReadme = read(path.join(reportsRoot, 'README.md'));
+  const latestStatus = read(latestStatusPath);
+  const iterationLog = read(iterationLogPath);
+  const openIssues = read(openIssuesPath);
+
+  assert.match(
+    currentProgram,
+    /LATEST_STATUS\.md`：thin checkpoint \/ predecessor \/ verification surface|LATEST_STATUS\.md`: thin checkpoint \/ predecessor \/ verification surface/i,
+  );
+  assert.match(
+    currentProgram,
+    /OPEN_ISSUES\.md`：residual-risk \/ deferred surface|OPEN_ISSUES\.md`: residual-risk \/ deferred surface/i,
+  );
+  assert.match(
+    activeSnapshot,
+    /LATEST_STATUS\.md` keeps the thin checkpoint \/ predecessor \/ verification \/ next-tranche surface/i,
+  );
+  assert.match(
+    activeSnapshot,
+    /report-local continuity metadata rather than runtime audit truth, launcher state, or any new persistence surface/i,
+  );
+  assert.match(
+    reportReadme,
+    /LATEST_STATUS\.md`：thin checkpoint \/ predecessor \/ verification surface|LATEST_STATUS\.md`: thin checkpoint \/ predecessor \/ verification surface/i,
+  );
+  assert.match(
+    reportReadme,
+    /ITERATION_LOG\.md`：append-only trace history|ITERATION_LOG\.md`: append-only trace history/i,
+  );
+  assert.match(
+    reportReadme,
+    /OPEN_ISSUES\.md`：residual-risk \/ deferred surface|OPEN_ISSUES\.md`: residual-risk \/ deferred surface/i,
+  );
+  assert.match(latestStatus, /Predecessor tranche link: `opl-mainline-phase-4-closeout`/i);
+  assert.match(
+    latestStatus,
+    /LATEST_STATUS\.md` = checkpoint \/ predecessor \/ verification \/ next-tranche surface/i,
+  );
+  assert.match(
+    iterationLog,
+    /LATEST_STATUS\.md` now keeps checkpoint base \+ predecessor tranche linkage \+ latest verification evidence \+ next tranche brief/i,
+  );
+  assert.match(
+    openIssues,
+    /LATEST_STATUS\.md` stops keeping checkpoint base, predecessor tranche linkage, and latest verification evidence explicit/i,
+  );
+  assert.match(
+    openIssues,
+    /OPEN_ISSUES\.md` stops surfacing residual risks and deferred non-goals/i,
+  );
+});
+
 test('Phase 4 closeout and shutdown hygiene mirrors keep fallback, verification ownership, and shutdown order explicit', () => {
   const prompt = read(promptPath);
   const latestStatus = read(latestStatusPath);
