@@ -57,6 +57,8 @@ The minimum discovery gateway should expose these operations:
 - `get_workstream`
 - `list_domains`
 - `get_domain`
+- `list_surfaces`
+- `get_surface`
 - `resolve_request_surface`
 - `explain_domain_boundary`
 
@@ -256,6 +258,8 @@ In that baseline, the discovery contract is exposed through commands such as:
 - `get-workstream`
 - `list-domains`
 - `get-domain`
+- `list-surfaces`
+- `get-surface`
 - `resolve-request-surface`
 - `explain-domain-boundary`
 

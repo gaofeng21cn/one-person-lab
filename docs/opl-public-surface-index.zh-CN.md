@@ -14,6 +14,11 @@
 
 - [`../contracts/opl-gateway/public-surface-index.json`](../contracts/opl-gateway/public-surface-index.json)
 
+当前 CLI-first、只读基线也可以通过下面这些命令暴露同一份工件：
+
+- `list-surfaces`
+- `get-surface`
+
 ## 非目标
 
 这个 index 不负责：

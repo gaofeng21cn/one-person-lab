@@ -14,6 +14,11 @@ It is not a runtime registry.
 
 - [`../contracts/opl-gateway/public-surface-index.json`](../contracts/opl-gateway/public-surface-index.json)
 
+The current CLI-first read-only baseline can expose this same artifact through:
+
+- `list-surfaces`
+- `get-surface`
+
 ## Non-Goals
 
 This index does not:

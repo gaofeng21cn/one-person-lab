@@ -56,7 +56,7 @@ function createContractsFixtureRoot(mutator) {
   const fixtureContractsRoot = path.join(fixtureRoot, 'contracts', 'opl-gateway');
   mkdirSync(fixtureContractsRoot, { recursive: true });
 
-  for (const fileName of ['workstreams.json', 'domains.json', 'routing-vocabulary.json', 'task-topology.json']) {
+  for (const fileName of ['workstreams.json', 'domains.json', 'routing-vocabulary.json', 'task-topology.json', 'public-surface-index.json']) {
     writeFileSync(
       path.join(fixtureContractsRoot, fileName),
       readFileSync(path.join(contractsRoot, fileName), 'utf8'),
@@ -103,6 +103,31 @@ test('get-domain redcube returns gateway and harness truth', () => {
   assert.equal(payload.domain.harness_surface, 'Visual Deliverable Harness OS');
   assert.deepEqual(payload.domain.owned_workstreams, ['presentation_ops']);
   assert.deepEqual(payload.domain.non_opl_families, ['xiaohongshu']);
+});
+
+test('list-surfaces returns the public gateway surface summaries', () => {
+  const result = runCli(['list-surfaces']);
+  assert.equal(result.status, 0, formatFailure(result));
+
+  const payload = parseJsonOutput(result);
+  assert.equal(payload.version, 'g2');
+  assert.ok(Array.isArray(payload.surfaces));
+  assert.deepEqual(payload.surfaces[0], {
+    surface_id: 'opl_public_readme',
+    category_id: 'opl_public_entry',
+    surface_kind: 'readme',
+    owner_scope: 'opl',
+  });
+});
+
+test('get-surface returns the full public surface meaning', () => {
+  const result = runCli(['get-surface', 'opl_public_surface_index_doc']);
+  assert.equal(result.status, 0, formatFailure(result));
+
+  const payload = parseJsonOutput(result);
+  assert.equal(payload.version, 'g2');
+  assert.equal(payload.surface.surface_id, 'opl_public_surface_index_doc');
+  assert.match(JSON.stringify(payload.surface.routes_to), /opl_surface_review_matrix/);
 });
 
 test('resolve-request-surface maps a defense-ready slide deck to presentation_ops via redcube', () => {
@@ -186,6 +211,25 @@ test('get-domain surfaces invalid JSON from the contract set rooted at cwd', () 
     const payload = parseJsonOutput(result);
     assert.match(payload.error.code, /contract_json_invalid|contract_load_error/i);
     assert.match(payload.error.message, /domains\.json|invalid json/i);
+  } finally {
+    rmSync(brokenRoot, { recursive: true, force: true });
+  }
+});
+
+test('get-surface surfaces invalid JSON from the contract set rooted at cwd', () => {
+  const brokenRoot = createContractsFixtureRoot((fixtureRoot, fixtureContractsRoot) => {
+    writeFileSync(path.join(fixtureContractsRoot, 'public-surface-index.json'), '{ invalid json\n');
+    mkdirSync(path.join(fixtureRoot, 'dist'), { recursive: true });
+    cpSync(path.join(repoRoot, 'dist'), path.join(fixtureRoot, 'dist'), { recursive: true });
+  });
+
+  try {
+    const result = runCli(['get-surface', 'opl_public_readme'], { cwd: brokenRoot });
+    assert.notEqual(result.status, 0, 'Expected a non-zero exit when public-surface-index.json is invalid.');
+
+    const payload = parseJsonOutput(result);
+    assert.match(payload.error.code, /contract_json_invalid|contract_load_error/i);
+    assert.match(payload.error.message, /public-surface-index\.json|invalid json/i);
   } finally {
     rmSync(brokenRoot, { recursive: true, force: true });
   }

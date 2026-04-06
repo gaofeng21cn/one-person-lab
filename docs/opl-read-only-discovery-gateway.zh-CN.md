@@ -57,6 +57,8 @@
 - `get_workstream`
 - `list_domains`
 - `get_domain`
+- `list_surfaces`
+- `get_surface`
 - `resolve_request_surface`
 - `explain_domain_boundary`
 
@@ -256,6 +258,8 @@
 - `get-workstream`
 - `list-domains`
 - `get-domain`
+- `list-surfaces`
+- `get-surface`
 - `resolve-request-surface`
 - `explain-domain-boundary`
 
