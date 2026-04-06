@@ -172,15 +172,19 @@ export type ResolutionResult =
       candidate_domain_ids: string[];
       reason: string;
       routing_evidence: string[];
+      required_clarification: string[];
     };
 
 export interface BoundaryExplanation {
   request_summary: string;
+  boundary_status: ResolutionResult['status'];
+  boundary_evidence: string[];
   resolved_domain: string | null;
   resolved_workstream_id: string | null;
   candidate_workstream_id?: string;
   candidate_workstream_ids?: string[];
   reason: string;
+  required_clarification?: string[];
   rejected_domains: Array<{
     domain_id: string;
     reason: string;

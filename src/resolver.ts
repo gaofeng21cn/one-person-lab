@@ -150,6 +150,10 @@ export function resolveRequestSurface(
         'presentation delivery semantics',
         'missing primary deliverable',
       ],
+      required_clarification: [
+        'Is the primary goal a formal research deliverable or a presentation deliverable?',
+        'If presentation delivery is primary, should the family stay ppt_deck or another RedCube family?',
+      ],
     };
   }
 
@@ -218,6 +222,10 @@ export function resolveRequestSurface(
     reason:
       'The request does not contain enough top-level routing evidence to resolve a workstream or domain safely.',
     routing_evidence: ['insufficient routing evidence'],
+    required_clarification: [
+      'What is the primary deliverable you want OPL to route?',
+      'Should OPL prefer a research deliverable, a presentation deliverable, or another explicit family boundary?',
+    ],
   };
 }
 
@@ -233,6 +241,8 @@ export function explainDomainBoundary(
       if (resolution.workstream_id === 'research_ops') {
         return {
           request_summary: summary,
+          boundary_status: resolution.status,
+          boundary_evidence: resolution.routing_evidence,
           resolved_domain: 'medautoscience',
           resolved_workstream_id: 'research_ops',
           reason:
@@ -249,6 +259,8 @@ export function explainDomainBoundary(
 
       return {
         request_summary: summary,
+        boundary_status: resolution.status,
+        boundary_evidence: resolution.routing_evidence,
         resolved_domain: 'redcube',
         resolved_workstream_id: 'presentation_ops',
         reason:
@@ -265,6 +277,8 @@ export function explainDomainBoundary(
     case 'domain_boundary':
       return {
         request_summary: summary,
+        boundary_status: resolution.status,
+        boundary_evidence: resolution.routing_evidence,
         resolved_domain: resolution.domain_id,
         resolved_workstream_id: null,
         reason:
@@ -281,6 +295,8 @@ export function explainDomainBoundary(
     case 'unknown_domain':
       return {
         request_summary: summary,
+        boundary_status: resolution.status,
+        boundary_evidence: resolution.routing_evidence,
         resolved_domain: null,
         resolved_workstream_id: null,
         candidate_workstream_id: resolution.candidate_workstream_id,
@@ -303,11 +319,14 @@ export function explainDomainBoundary(
     case 'ambiguous':
       return {
         request_summary: summary,
+        boundary_status: resolution.status,
+        boundary_evidence: resolution.routing_evidence,
         resolved_domain: null,
         resolved_workstream_id: null,
         candidate_workstream_ids: resolution.candidate_workstream_ids,
         reason:
           'The request combines multiple top-level semantics, so OPL must stop before inventing a single domain owner.',
+        required_clarification: resolution.required_clarification,
         rejected_domains: [
           {
             domain_id: 'medautoscience',
