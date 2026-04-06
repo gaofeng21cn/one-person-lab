@@ -269,54 +269,42 @@ test('Phase 4 closeout and shutdown hygiene mirrors keep fallback, verification 
   );
 });
 
-test('Phase 4 trace and issue history baseline keeps checkpoint, verification, and residual-risk continuity report-local', () => {
+test('Phase 4 trace / issue history baseline keeps report-pack roles explicit and report-local', () => {
   const currentProgram = read(currentProgramPath);
+  const activeSnapshotPath = collectActivePhase4SnapshotPaths(currentProgram)[0];
+  const activeSnapshot = read(activeSnapshotPath!);
+  const reportReadme = read(path.join(reportsRoot, 'README.md'));
   const latestStatus = read(latestStatusPath);
   const iterationLog = read(iterationLogPath);
   const openIssues = read(openIssuesPath);
-  const reportReadme = read(path.join(reportsRoot, 'README.md'));
-  const activeSnapshotPath = collectActivePhase4SnapshotPaths(currentProgram)[0];
 
-  assert.ok(activeSnapshotPath, 'CURRENT_PROGRAM must still point at one active Phase 4 snapshot.');
+  assert.match(currentProgram, /`LATEST_STATUS\.md`：thin checkpoint \/ predecessor \/ verification surface/i);
+  assert.match(currentProgram, /`ITERATION_LOG\.md`：append-only trace history/i);
+  assert.match(currentProgram, /`OPEN_ISSUES\.md`：residual-risk \/ deferred surface/i);
 
-  const activeSnapshot = read(activeSnapshotPath);
-  const snapshotCheckpointBase = extractBacktickedMetadata(activeSnapshot, 'current_checkpoint_base');
-  const latestStatusCheckpointBase = extractLatestStatusField(latestStatus, 'Current checkpoint base');
-  const predecessorTrancheLink = extractLatestStatusField(latestStatus, 'Predecessor tranche link');
-
-  assert.equal(
-    latestStatusCheckpointBase,
-    snapshotCheckpointBase,
-    'LATEST_STATUS checkpoint continuity must mirror the active snapshot checkpoint base.',
+  assert.match(activeSnapshot, /Per-file roles stay explicit/i);
+  assert.match(
+    activeSnapshot,
+    /`LATEST_STATUS\.md` keeps the thin checkpoint \/ predecessor \/ verification \/ next-tranche surface/i,
   );
-  assert.equal(
-    predecessorTrancheLink,
-    extractBacktickedMetadata(activeSnapshot, 'predecessor_tranche'),
-    'LATEST_STATUS predecessor link must mirror the active snapshot predecessor tranche.',
+  assert.match(activeSnapshot, /report-local continuity metadata rather than runtime audit truth/i);
+
+  assert.match(reportReadme, /Phase 4 trace \/ issue history baseline/i);
+  assert.match(reportReadme, /`LATEST_STATUS\.md`：当前 phase \/ tranche 状态摘要、current checkpoint base、verification evidence、以及 next-tranche guardrails/i);
+  assert.match(
+    reportReadme,
+    /后续 OMX stage 应直接读取这组 report-local fields，而不是回放 stale mailbox、挂起 pane、或 verbose ad-hoc 日志/i,
   );
 
-  assert.match(currentProgram, /验证证据与残余风险|verification evidence, and residual risks/i);
-  assert.match(activeSnapshot, /verification evidence, and residual risks discoverable from the current report pack/i);
-  assert.match(activeSnapshot, /without mining mailbox-only history/i);
-  assert.match(reportReadme, /`Leader-side verification on current HEAD` 承载最新 verification evidence/i);
-  assert.match(reportReadme, /`OPEN_ISSUES\.md` 持有 residual risks \/ deferred/i);
-  assert.match(reportReadme, /stale mailbox、挂起 pane、或 verbose ad-hoc 日志/i);
+  assert.match(latestStatus, /keep checkpoint \/ verification \/ residual-risk continuity explicit inside the current report pack/i);
   assert.match(
     latestStatus,
-    /`Current checkpoint base` stays at the top of `LATEST_STATUS\.md`, the active snapshot keeps predecessor tranche \+ checkpoint linkage/i,
+    /`LATEST_STATUS\.md` = checkpoint \/ predecessor \/ verification \/ next-tranche surface, `ITERATION_LOG\.md` = append-only trace history, `OPEN_ISSUES\.md` = residual-risk \/ deferred surface/i,
   );
-  assert.match(
-    latestStatus,
-    /`ITERATION_LOG\.md` = append-only trace history, `OPEN_ISSUES\.md` = residual-risk \/ deferred surface/i,
-  );
-  assert.match(iterationLog, /trace \/ issue history baseline discoverability refresh/i);
-  assert.match(
-    iterationLog,
-    /`LATEST_STATUS\.md` now keeps checkpoint base \+ predecessor tranche linkage \+ latest verification evidence \+ next tranche brief/i,
-  );
-  assert.match(openIssues, /report-local baseline now exists/i);
-  assert.match(
-    openIssues,
-    /`OPEN_ISSUES\.md` stops surfacing residual risks and deferred non-goals/i,
-  );
+
+  assert.match(iterationLog, /Phase 4 trace \/ issue history baseline discoverability refresh/i);
+  assert.match(iterationLog, /Locked the report-local role split/i);
+
+  assert.match(openIssues, /Future teams can still regress the trace \/ issue history baseline/i);
+  assert.match(openIssues, /follow-on work may drift back to stale mailbox reconstruction/i);
 });
