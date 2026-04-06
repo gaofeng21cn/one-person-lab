@@ -119,9 +119,21 @@ That means a future shared index may improve discoverability and reuse, but it s
 - the review owner for domain review state
 - the publish/release owner for domain deliverables
 
+The same boundary reading also applies to the future `shared domain registry` and `shared publication / delivery catalog` named in rollout `G4`.
+Until later explicit contracts freeze their readiness, they remain roadmap-level only and must not be read as:
+
+- a current admission registry
+- a future domain identity allocator
+- a routed-action registry
+- a canonical truth owner
+- a publication truth owner
+- a publish controller
+- a release engine
+- a delivery runtime owner
+
 ### Readiness Before Public Admission
 
-A future `shared asset index` or `shared memory index` should not appear on the current `OPL` public surface until a later explicit contract freezes, at minimum:
+A future `shared asset index`, `shared memory index`, `shared domain registry`, or `shared publication / delivery catalog` should not appear on the current `OPL` public surface until a later explicit contract freezes, at minimum:
 
 - what object classes and identifiers the index is actually allowed to cover
 - the owner split and governing refs for every indexed object family
@@ -149,13 +161,14 @@ This ownership model does not allow:
 At the current repository stage:
 
 - the shared foundation is primarily frozen as top-level language and boundary documentation
-- this repository does not yet materialize a full shared asset index or shared memory index
+- this repository does not yet materialize a full shared asset index, shared memory index, shared domain registry, or shared publication / delivery catalog
 - that absence does not mean the ownership split is undefined
 
 The current reading should therefore be:
 
 - `OPL` already owns the shared-foundation control language
 - domains already own their concrete truth surfaces
+- `MedAutoScience` and `RedCube AI` remain independent domain gateways rather than internal modules under `OPL`
 - future shared indexes, if added, should stay aligned with that same split unless a later explicit contract says otherwise
 
 ## Companion Closeout
