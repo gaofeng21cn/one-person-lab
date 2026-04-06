@@ -169,39 +169,40 @@ test('Phase 4 rollover baseline keeps predecessor facts explicit while prompt an
   );
 });
 
-test('Phase 4 closeout hygiene keeps lifecycle fallback, verification ownership, and shutdown order explicit', () => {
-  const currentProgram = read(currentProgramPath);
+test('Phase 4 closeout and shutdown hygiene mirrors keep fallback, verification ownership, and shutdown order explicit', () => {
   const prompt = read(promptPath);
   const latestStatus = read(latestStatusPath);
+  const reportReadme = read(path.join(reportsRoot, 'README.md'));
   const openIssues = read(openIssuesPath);
-  const activeSnapshotPath = collectActivePhase4SnapshotPaths(currentProgram)[0];
 
-  assert.ok(activeSnapshotPath, 'CURRENT_PROGRAM must still point at one active Phase 4 snapshot.');
+  assert.match(
+    prompt,
+    /only when integrated head(?:'|’)s evidence is already sufficient and lifecycle still lags|只有在 integrated head 的 evidence 已足够且 lifecycle 仍滞后时/i,
+  );
+  assert.match(prompt, /final verification \/ report truth|final verification.*report truth/i);
+  assert.match(
+    prompt,
+    /pending=0 \/ in_progress=0 \/ failed=0.*omx team shutdown.*orphan-cleanup|omx team shutdown.*orphan-cleanup/i,
+  );
 
-  const activeSnapshot = read(activeSnapshotPath);
+  assert.match(latestStatus, /workers should transition tasks to `completed`/i);
+  assert.match(
+    latestStatus,
+    /only when integrated-head evidence is already sufficient and lifecycle still lags may the leader use the official fallback transition/i,
+  );
+  assert.match(latestStatus, /leader reruns the canonical verification pack on the integrated head/i);
+  assert.match(latestStatus, /call `omx team shutdown` only after `pending=0 \/ in_progress=0 \/ failed=0`/i);
 
-  assert.match(activeSnapshotPath, /closeout-shutdown/i);
-  assert.match(activeSnapshot, /Close task lifecycles|Task lifecycle closeout/i);
-  assert.match(activeSnapshot, /official fallback transition once and record why|fallback transition 一次并记录原因/i);
-  assert.match(activeSnapshot, /Verify before shutdown/i);
-  assert.match(activeSnapshot, /Shutdown deterministically/i);
-  assert.match(activeSnapshot, /preserve the leader pane, clean only worker\/HUD panes, then run official `orphan-cleanup`/i);
-
-  assert.match(currentProgram, /worker.*`completed` transition|worker lanes 必须.*`completed` transition/i);
-  assert.match(currentProgram, /canonical verification.*leader|final verification ownership/i);
-  assert.match(currentProgram, /pending=0 \/ in_progress=0 \/ failed=0/);
-  assert.match(currentProgram, /保留 leader pane、只清 worker\/HUD panes|clean worker\/HUD panes, then run official `orphan-cleanup`/i);
-
-  assert.match(prompt, /worker.*`completed` transition|worker 把 task transition 到 `completed`/i);
-  assert.match(prompt, /leader.*fallback transition|leader 才能使用官方 fallback transition/i);
-  assert.match(prompt, /canonical verification pack.*leader|final verification.*report truth/i);
-  assert.match(prompt, /pending=0 \/ in_progress=0 \/ failed=0/);
-
-  assert.match(latestStatus, /workers should transition tasks to `completed`|worker lanes must finish their own `completed` transitions first/i);
-  assert.match(latestStatus, /leader reruns the canonical verification pack|verification ownership.*leader/i);
-  assert.match(latestStatus, /pending=0 \/ in_progress=0 \/ failed=0/);
-  assert.match(latestStatus, /preserve the leader pane, clean worker\/HUD panes only, then use official `orphan-cleanup`/i);
-
-  assert.match(openIssues, /leader fallback transition before integrated-head evidence is already sufficient|fallback transition before integration evidence is actually sufficient/i);
-  assert.match(openIssues, /leader-owned final verification \/ report refresh are complete|final verification \/ report refresh are complete/i);
+  assert.match(
+    reportReadme,
+    /task lifecycle closeout、leader fallback transition 边界、final verification ownership、以及 shutdown -> orphan-cleanup 顺序都在同一 pass 内收口/i,
+  );
+  assert.match(
+    reportReadme,
+    /worker `completed` transitions 优先、leader fallback transition 只在 integrated-head evidence 已足够时兜底且需记因、leader 先重跑 canonical verification pack 并持有 final report truth、最后才允许 shutdown -> orphan-cleanup/i,
+  );
+  assert.match(
+    openIssues,
+    /uses the leader fallback transition before integrated-head evidence is already sufficient or without recording why/i,
+  );
 });
