@@ -17,6 +17,7 @@ const activePhase4SnapshotPattern = new RegExp(
 const currentProgramPath = path.join(contextRoot, 'CURRENT_PROGRAM.md');
 const promptPath = path.join(contextRoot, 'OMX_TEAM_PROMPT.md');
 const latestStatusPath = path.join(reportsRoot, 'LATEST_STATUS.md');
+const iterationLogPath = path.join(reportsRoot, 'ITERATION_LOG.md');
 const openIssuesPath = path.join(reportsRoot, 'OPEN_ISSUES.md');
 
 function resolveControlPlaneRoot() {
@@ -79,6 +80,32 @@ test('CURRENT_PROGRAM, prompt, and latest status agree on the single active Phas
     currentProgramSnapshots[0],
     latestStatusSnapshots[0],
     'LATEST_STATUS must advertise the same active Phase 4 snapshot as CURRENT_PROGRAM.',
+  );
+});
+
+test('Phase 4 rollover choreography baseline records predecessor/checkpoint facts while keeping CURRENT_PROGRAM the sole direct path owner', () => {
+  const currentProgram = read(currentProgramPath);
+  const prompt = read(promptPath);
+  const latestStatus = read(latestStatusPath);
+  const iterationLog = read(iterationLogPath);
+  const openIssues = read(openIssuesPath);
+  const activeSnapshotPath = collectActivePhase4SnapshotPaths(currentProgram)[0];
+  const activeSnapshot = read(activeSnapshotPath!);
+
+  assert.match(activeSnapshotPath!, /phase4-snapshot-rollover-choreography/i);
+  assert.match(activeSnapshot, /^- predecessor_tranche: `[^`]+`$/m);
+  assert.match(activeSnapshot, /^- current_checkpoint_base: `[0-9a-f]{7,}`$/im);
+  assert.match(activeSnapshot, /leader-owned, same-pass rollover routine/i);
+  assert.match(activeSnapshot, /sole direct owner of the active snapshot path/i);
+  assert.match(activeSnapshot, /refreshing `OMX_TEAM_PROMPT\.md` and `\.omx\/reports\/opl-mainline\/\*` in the same pass/i);
+
+  assert.match(currentProgram, /record predecessor tranche .* checkpoint base/i);
+  assert.match(prompt, /minimal deterministic re-entry pack|最小 deterministic re-entry pack/i);
+  assert.match(latestStatus, /record predecessor tranche \/ checkpoint base together/i);
+  assert.match(iterationLog, /same-pass pointer-move choreography/i);
+  assert.match(
+    openIssues,
+    /without moving the `CURRENT_PROGRAM\.md` pointer and refreshing `OMX_TEAM_PROMPT\.md` plus the current `opl-mainline` report pack in the same pass/i,
   );
 });
 
