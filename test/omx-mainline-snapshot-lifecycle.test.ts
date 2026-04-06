@@ -52,6 +52,12 @@ function collectActivePhase4SnapshotPaths(content: string) {
   return [...new Set(content.match(activePhase4SnapshotPattern) ?? [])];
 }
 
+function extractBacktickedMetadata(content: string, key: string) {
+  const match = content.match(new RegExp(`^- ${escapeForRegExp(key)}: \`([^\\\`]+)\`$`, 'm'));
+  assert.ok(match, `Expected ${key} metadata in the active Phase 4 snapshot.`);
+  return match[1]!;
+}
+
 test('CURRENT_PROGRAM, prompt, and latest status agree on the single active Phase 4 snapshot', () => {
   const currentProgram = read(currentProgramPath);
   const prompt = read(promptPath);
@@ -129,4 +135,34 @@ test('Phase 4 snapshot lifecycle pack keeps superseded snapshots historical with
   assert.match(prompt, /minimal deterministic re-entry pack|最小 deterministic re-entry pack/i);
   assert.match(latestStatus, /snapshot creation \/ refresh \/ supersession/i);
   assert.match(openIssues, /deterministic re-entry order explicit/i);
+});
+
+test('Phase 4 rollover baseline keeps predecessor facts explicit while prompt and reports stay mirror-only', () => {
+  const currentProgram = read(currentProgramPath);
+  const prompt = read(promptPath);
+  const latestStatus = read(latestStatusPath);
+  const openIssues = read(openIssuesPath);
+  const activeSnapshotPath = collectActivePhase4SnapshotPaths(currentProgram)[0];
+
+  assert.ok(activeSnapshotPath, 'CURRENT_PROGRAM must still point at one active Phase 4 snapshot.');
+
+  const activeSnapshot = read(activeSnapshotPath);
+  const predecessorTranche = extractBacktickedMetadata(activeSnapshot, 'predecessor_tranche');
+  const checkpointBase = extractBacktickedMetadata(activeSnapshot, 'current_checkpoint_base');
+
+  assert.match(activeSnapshot, /same-pass rollover routine|same-pass rollover choreography/i);
+  assert.match(activeSnapshot, /record predecessor tranche plus current checkpoint base/i);
+  assert.match(predecessorTranche, /^opl-mainline-phase-4-/);
+  assert.match(checkpointBase, /^[0-9a-f]{7,}$/i);
+
+  assert.match(currentProgram, /record predecessor tranche plus current checkpoint base/i);
+  assert.match(currentProgram, /sole direct active-snapshot path owner|唯一直接持有 active Phase 4 snapshot path/i);
+  assert.match(prompt, /mirror the rule|镜像该 pointer-owner 规则/i);
+  assert.match(prompt, /minimal deterministic re-entry pack|最小 deterministic re-entry pack/i);
+  assert.match(latestStatus, /same pass/i);
+  assert.match(latestStatus, /record predecessor tranche \/ checkpoint base together/i);
+  assert.match(
+    openIssues,
+    /without moving the `CURRENT_PROGRAM\.md` pointer and refreshing `OMX_TEAM_PROMPT\.md` plus the current `opl-mainline` report pack in the same pass/i,
+  );
 });
