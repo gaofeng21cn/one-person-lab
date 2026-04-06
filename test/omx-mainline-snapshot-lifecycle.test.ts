@@ -168,3 +168,52 @@ test('Phase 4 rollover baseline keeps predecessor facts explicit while prompt an
     /without recording the predecessor tranche and current checkpoint base, moving the `CURRENT_PROGRAM\.md` pointer, and refreshing `OMX_TEAM_PROMPT\.md` plus the current `opl-mainline` report pack in the same pass/i,
   );
 });
+
+test('Phase 4 closeout hygiene keeps task-closeout, verification ownership, and shutdown ordering explicit', () => {
+  const currentProgram = read(currentProgramPath);
+  const prompt = read(promptPath);
+  const latestStatus = read(latestStatusPath);
+  const iterationLog = read(iterationLogPath);
+  const openIssues = read(openIssuesPath);
+  const activeSnapshotPath = collectActivePhase4SnapshotPaths(currentProgram)[0];
+
+  assert.ok(activeSnapshotPath, 'CURRENT_PROGRAM must still point at one active Phase 4 snapshot.');
+  assert.match(activeSnapshotPath, /closeout-shutdown/i);
+
+  const activeSnapshot = read(activeSnapshotPath);
+
+  assert.match(activeSnapshot, /prefer worker-owned `completed` transitions/i);
+  assert.match(activeSnapshot, /leader may use the official fallback transition once and record why/i);
+  assert.match(activeSnapshot, /rerun the canonical verification pack/i);
+  assert.match(activeSnapshot, /call `omx team shutdown` only after task closeout is complete/i);
+  assert.match(activeSnapshot, /preserve the leader pane, clean only worker\/HUD panes, then run official `orphan-cleanup`/i);
+
+  assert.match(
+    currentProgram,
+    /task lifecycle closeout、leader fallback transition、final verification ownership，以及 `omx team shutdown` \/ `orphan-cleanup` 的 deterministic hygiene path/i,
+  );
+  assert.match(
+    prompt,
+    /必须明确 task completed transitions、leader fallback transition 的使用边界，以及 `omx team shutdown` \/ `orphan-cleanup` 的收尾顺序/i,
+  );
+  assert.match(
+    latestStatus,
+    /workers transition completed \(or leader uses the official fallback transition when lifecycle lags\), leader reruns the canonical verification pack, and report truth is refreshed before shutdown/i,
+  );
+  assert.match(
+    latestStatus,
+    /prefer `omx team shutdown` only after `pending=0 \/ in_progress=0 \/ failed=0`; if runtime panes still hang, preserve the leader pane, clean worker\/HUD panes only, then use official `orphan-cleanup`/i,
+  );
+  assert.match(
+    iterationLog,
+    /confirmed the team reached `pending=0 \/ in_progress=0 \/ failed=0 \/ completed=4` before shutdown/i,
+  );
+  assert.match(
+    iterationLog,
+    /used the official `omx team api orphan-cleanup` recovery path and manually removed the leftover orphan worker\/HUD panes while preserving the leader pane/i,
+  );
+  assert.match(
+    openIssues,
+    /leaves tasks `in_progress` after work has already landed on leader `HEAD`, or calls `omx team shutdown` before lifecycle closeout \/ final verification \/ report refresh are complete/i,
+  );
+});
