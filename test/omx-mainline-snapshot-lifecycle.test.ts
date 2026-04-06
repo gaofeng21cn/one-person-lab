@@ -308,3 +308,38 @@ test('Phase 4 trace / issue history baseline keeps report-pack roles explicit an
   assert.match(openIssues, /Future teams can still regress the trace \/ issue history baseline/i);
   assert.match(openIssues, /follow-on work may drift back to stale mailbox reconstruction/i);
 });
+
+test('Phase 4 thin next-stage handoff baseline keeps CURRENT_PROGRAM and the active snapshot on one derived continuity path', () => {
+  const currentProgram = read(currentProgramPath);
+  const activeSnapshotPath = collectActivePhase4SnapshotPaths(currentProgram)[0];
+  const activeSnapshot = read(activeSnapshotPath!);
+
+  assert.match(currentProgram, /thin next-stage handoff baseline/i);
+  assert.match(
+    currentProgram,
+    /只从 `CURRENT_PROGRAM\.md` -> active Phase 4 snapshot -> checkpoint cadence spec -> verification baseline spec -> 当前 `opl-mainline` reports 派生的最小 handoff brief|derive a minimal handoff brief directly from `CURRENT_PROGRAM\.md` -> active Phase 4 snapshot -> checkpoint cadence spec -> verification baseline spec -> current `opl-mainline` reports/i,
+  );
+  assert.match(
+    currentProgram,
+    /不引入新的 handoff payload contract、runtime audit truth、launcher state、或 persistence surface|without introducing a new handoff payload contract, runtime audit truth, launcher state, or persistence surface/i,
+  );
+
+  assert.match(activeSnapshotPath!, /thin-next-stage-handoff/i);
+  assert.match(activeSnapshot, /Thin Next-Stage Handoff Baseline To Freeze/i);
+  assert.match(
+    activeSnapshot,
+    /Source order stays deterministic.*CURRENT_PROGRAM\.md.*active Phase 4 snapshot.*checkpoint cadence spec.*verification baseline spec.*current `opl-mainline` report pack/is,
+  );
+  assert.match(
+    activeSnapshot,
+    /Summary fields stay inherited.*current checkpoint base.*predecessor tranche linkage.*latest verification evidence.*residual risks \/ deferred items/is,
+  );
+  assert.match(
+    activeSnapshot,
+    /Guardrails stay mirrored, not re-owned.*must not create a second active snapshot path owner|must not create a second active snapshot path owner.*Guardrails stay mirrored, not re-owned/is,
+  );
+  assert.match(
+    activeSnapshot,
+    /Closeout memory stays unnecessary.*stale mailbox history, hung panes, or private leader notes/i,
+  );
+});
