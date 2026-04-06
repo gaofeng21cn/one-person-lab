@@ -101,7 +101,7 @@ test('Phase 4 rollover choreography baseline records predecessor/checkpoint fact
   assert.match(iterationLog, /same-pass pointer-move choreography/i);
   assert.match(
     openIssues,
-    /without moving the `CURRENT_PROGRAM\.md` pointer and refreshing `OMX_TEAM_PROMPT\.md` plus the current `opl-mainline` report pack in the same pass/i,
+    /without recording the predecessor tranche and current checkpoint base, moving the `CURRENT_PROGRAM\.md` pointer, and refreshing `OMX_TEAM_PROMPT\.md` plus the current `opl-mainline` report pack in the same pass/i,
   );
 });
 
