@@ -343,3 +343,39 @@ test('Phase 4 thin next-stage handoff baseline keeps CURRENT_PROGRAM and the act
     /Closeout memory stays unnecessary.*stale mailbox history, hung panes, or private leader notes/i,
   );
 });
+
+test('Phase 4 thin next-stage handoff baseline keeps prompt and latest status mirror-only', () => {
+  const prompt = read(promptPath);
+  const latestStatus = read(latestStatusPath);
+
+  assert.match(
+    prompt,
+    /只能从上述 deterministic re-entry pack 直接派生一条薄的 handoff brief|derive a thin handoff brief directly from the deterministic re-entry pack/i,
+  );
+  assert.match(
+    prompt,
+    /latest verification evidence.*residual risks \/ deferred set|residual risks \/ deferred set.*latest verification evidence/i,
+  );
+  assert.match(
+    prompt,
+    /不得新增 handoff payload contract、第二份 active snapshot path truth、runtime audit truth、launcher state、或 persistence surface|must not add a handoff payload contract, second active snapshot path truth, runtime audit truth, launcher state, or persistence surface/i,
+  );
+
+  assert.match(latestStatus, /Phase 4 - thin next-stage handoff baseline/i);
+  assert.match(
+    latestStatus,
+    /freeze one compact handoff summary routine that reads only `CURRENT_PROGRAM\.md` -> active Phase 4 snapshot -> checkpoint cadence spec -> verification baseline spec -> current `opl-mainline` reports/i,
+  );
+  assert.match(
+    latestStatus,
+    /keep the handoff brief derived from existing continuity fields: current checkpoint base, predecessor tranche linkage, latest verification evidence, and residual risks \/ deferred items/i,
+  );
+  assert.match(
+    latestStatus,
+    /prompt\/report surfaces may mirror the rule, but must not become payload contracts or second path owners/i,
+  );
+  assert.match(
+    latestStatus,
+    /no handoff payload contract, no runtime audit truth, no launcher state, no persistence expansion, no domain mutation/i,
+  );
+});
