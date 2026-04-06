@@ -167,6 +167,37 @@ test('resolve-request-surface keeps xiaohongshu at the redcube family boundary w
   assert.match(payload.resolution.reason, /must not auto-resolve|not automatically equal|family boundary/i);
 });
 
+test('resolve-request-surface emits ambiguous_task with machine-readable clarification evidence', () => {
+  const result = runCli([
+    'resolve-request-surface',
+    '--intent', 'create',
+    '--target', 'deliverable',
+    '--goal', 'Package the study for submission and also turn it into a defense-ready deck.',
+  ]);
+  assert.equal(result.status, 0, formatFailure(result));
+
+  const payload = parseJsonOutput(result);
+  assert.equal(payload.version, 'g2');
+  assert.equal(payload.resolution.status, 'ambiguous_task');
+  assert.deepEqual(payload.resolution.candidate_workstreams, [
+    'research_ops',
+    'presentation_ops',
+  ]);
+  assert.deepEqual(payload.resolution.candidate_domains, [
+    'medautoscience',
+    'redcube',
+  ]);
+  assert.deepEqual(payload.resolution.required_clarification, [
+    'Is the primary output a formal research submission package or a presentation deliverable?',
+    'If presentation delivery is primary, should the family be ppt_deck or another RedCube family?',
+  ]);
+  assert.deepEqual(payload.resolution.routing_evidence, [
+    'research delivery semantics',
+    'presentation delivery semantics',
+    'missing primary deliverable',
+  ]);
+});
+
 test('explain-domain-boundary explains that grant proposal reviewer simulation stays under definition', () => {
   const result = runCli([
     'explain-domain-boundary',
@@ -214,6 +245,17 @@ test('get-domain surfaces invalid JSON from the contract set rooted at cwd', () 
   } finally {
     rmSync(brokenRoot, { recursive: true, force: true });
   }
+});
+
+test('get-surface returns a stable machine-readable not-found envelope', () => {
+  const result = runCli(['get-surface', 'unknown_surface']);
+  assert.notEqual(result.status, 0, 'Expected a non-zero exit when a surface id is unknown.');
+
+  const payload = parseJsonOutput(result);
+  assert.equal(payload.version, 'g2');
+  assert.equal(payload.error.code, 'surface_not_found');
+  assert.equal(payload.error.exit_code, result.status);
+  assert.deepEqual(payload.error.details, { surface_id: 'unknown_surface' });
 });
 
 test('get-surface surfaces invalid JSON from the contract set rooted at cwd', () => {
