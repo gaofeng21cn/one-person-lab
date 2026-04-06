@@ -69,6 +69,10 @@ test('loadGatewayContracts returns the frozen gateway registries', () => {
   assert.equal(contracts.domains.version, 'g1');
   assert.equal(contracts.routingVocabulary.version, 'g1');
   assert.equal(contracts.taskTopology.scope, 'opl_task_topology');
+  assert.equal(
+    contracts.publicSurfaceIndex.scope,
+    'opl_public_gateway_surface_index',
+  );
 });
 
 test('loadGatewayContracts rejects missing files with a stable error', async (t) => {
@@ -153,6 +157,33 @@ test('list-domains returns the registered domain gateway summaries', () => {
   });
 });
 
+test('list-surfaces returns the public gateway surface summaries', () => {
+  const output = runCli(['list-surfaces']);
+
+  assert.equal(output.version, 'g2');
+  assert.ok(Array.isArray(output.surfaces));
+  assert.ok(output.surfaces.length > 10);
+  assert.deepEqual(output.surfaces[0], {
+    surface_id: 'opl_public_readme',
+    category_id: 'opl_public_entry',
+    surface_kind: 'readme',
+    owner_scope: 'opl',
+  });
+  assert.ok(
+    output.surfaces.some(
+      (surface: {
+        surface_id: string;
+        category_id: string;
+        surface_kind: string;
+        owner_scope: string;
+      }) =>
+        surface.surface_id === 'redcube_public_gateway'
+        && surface.category_id === 'domain_public_entry'
+        && surface.owner_scope === 'domain',
+    ),
+  );
+});
+
 test('get-domain returns the full registered domain meaning', () => {
   const output = runCli(['get-domain', 'redcube']);
 
@@ -160,6 +191,18 @@ test('get-domain returns the full registered domain meaning', () => {
   assert.equal(output.domain.domain_id, 'redcube');
   assert.equal(output.domain.project, 'redcube-ai');
   assert.deepEqual(output.domain.non_opl_families, ['xiaohongshu']);
+});
+
+test('get-surface returns the full registered public surface meaning', () => {
+  const output = runCli(['get-surface', 'opl_read_only_discovery_gateway']);
+
+  assert.equal(output.version, 'g2');
+  assert.equal(output.surface.surface_id, 'opl_read_only_discovery_gateway');
+  assert.equal(output.surface.category_id, 'opl_contract_surface');
+  assert.deepEqual(output.surface.routes_to, [
+    'medautoscience_public_gateway',
+    'redcube_public_gateway',
+  ]);
 });
 
 test('resolveRequestSurface routes research delivery to medautoscience', () => {
@@ -317,5 +360,13 @@ test('CLI returns stable JSON errors for unknown ids', () => {
 
   assert.equal(output.version, 'g2');
   assert.equal(output.error.code, 'domain_not_found');
+  assert.equal(output.error.exit_code, 1);
+});
+
+test('CLI returns stable JSON errors for unknown surface ids', () => {
+  const output = runCliFailure(['get-surface', 'unknown_surface']);
+
+  assert.equal(output.version, 'g2');
+  assert.equal(output.error.code, 'surface_not_found');
   assert.equal(output.error.exit_code, 1);
 });

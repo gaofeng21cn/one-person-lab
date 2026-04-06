@@ -3,6 +3,7 @@
 import {
   GatewayContractError,
   findDomainOrThrow,
+  findSurfaceOrThrow,
   findWorkstreamOrThrow,
   loadGatewayContracts,
 } from './contracts.ts';
@@ -110,6 +111,30 @@ function main() {
       return {
         version: 'g2',
         domain: findDomainOrThrow(contracts, domainId),
+      };
+    },
+    'list-surfaces': () => ({
+      version: 'g2',
+      surfaces: contracts.publicSurfaceIndex.surfaces.map((surface) => ({
+        surface_id: surface.surface_id,
+        category_id: surface.category_id,
+        surface_kind: surface.surface_kind,
+        owner_scope: surface.owner_scope,
+      })),
+    }),
+    'get-surface': (commandArgs) => {
+      const [surfaceId] = commandArgs;
+      if (!surfaceId) {
+        throw new GatewayContractError(
+          'cli_usage_error',
+          'get-surface requires a surface id.',
+          { required: ['surface_id'] },
+        );
+      }
+
+      return {
+        version: 'g2',
+        surface: findSurfaceOrThrow(contracts, surfaceId),
       };
     },
     'resolve-request-surface': (commandArgs) => ({
