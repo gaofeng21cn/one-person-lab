@@ -157,3 +157,7 @@
 - `OPL` 已经拥有 shared-foundation 的控制语言
 - 各 domain 已经拥有各自的具体 truth surface
 - 如果未来增加 shared index，也必须继续服从这套分工，除非后续有新的显式合同重新定义
+
+## 配套 Closeout
+
+- [Shared-Foundation Ownership / Readiness Closeout](./opl-shared-foundation-ownership-readiness-closeout.zh-CN.md)

@@ -157,3 +157,7 @@ The current reading should therefore be:
 - `OPL` already owns the shared-foundation control language
 - domains already own their concrete truth surfaces
 - future shared indexes, if added, should stay aligned with that same split unless a later explicit contract says otherwise
+
+## Companion Closeout
+
+- [Shared-Foundation Ownership / Readiness Closeout](./opl-shared-foundation-ownership-readiness-closeout.md)
