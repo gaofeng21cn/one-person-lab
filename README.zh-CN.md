@@ -262,12 +262,14 @@ Human / Agent
 
 ## 路线图
 
-当前阶段有四个重点：
+当前阶段有四个重点，当前主线是 `Phase 1` 的本地 `TypeScript CLI` + 只读 gateway 基线：
 
-- 冻结 `OPL Gateway` 与 domain federation 的表述
+- 把已经冻结的 `OPL Gateway` contracts 落成面向人类与 Agent 的 CLI-first、read-only discovery surface
 - 继续把 `Research Foundry -> Med Auto Science` 明确为当前 `Research Ops` 主线
 - 继续把 `RedCube AI` 明确为视觉交付的 domain gateway 与 harness
-- 逐步定义 `Grant Ops`、`Review Ops`、`Thesis Ops` 的边界
+- 在对应 domain 边界被显式冻结之前，继续让 `Grant Ops`、`Review Ops`、`Thesis Ops` 停留在 admitted gateway surface 之外
+
+当前交付目标是一条本地 CLI 基线：它读取已冻结 contracts、列出 workstream/domain、解释路由边界，但不声称 web/server runtime 行为，也不 mutation domain state。
 
 更细的阶段说明见：
 

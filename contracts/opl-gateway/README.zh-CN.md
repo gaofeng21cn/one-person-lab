@@ -12,6 +12,11 @@
 因此，这个目录只是在做 discoverability / reviewability / acceptance alignment 所需的 gateway surface materialization，而不会变成新的 control plane 或共享 truth store。
 更完整的 ownership split 可参考[共享基础结构](../../docs/shared-foundation.zh-CN.md)与[共享基础结构归属](../../docs/shared-foundation-ownership.zh-CN.md)。
 
+## 当前 Phase 1 对齐
+
+当前 `opl-mainline` 的 `Phase 1` 目标，是一条本地 `TypeScript CLI`-first、read-only gateway 基线；它只读取这个目录中已经冻结的 contract 工件。
+这个交付目标**不会**把当前目录提升成 runtime、routed-action control plane 或 canonical truth store；它只是把已有的顶层 contract language 通过本地 CLI surface 变成可执行入口。
+
 ## 上位文档
 
 - [OPL Federation Contract](../../docs/opl-federation-contract.md)

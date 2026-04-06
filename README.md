@@ -262,12 +262,14 @@ It should be described as:
 
 ## Roadmap
 
-The current phase has four priorities:
+The current phase has four priorities, led by a Phase 1 local `TypeScript CLI` + read-only gateway baseline:
 
-- freeze the OPL gateway and domain-federation language
+- turn the frozen OPL gateway contracts into a CLI-first, read-only discovery surface for humans and agents
 - keep `Research Foundry -> Med Auto Science` explicit as the current `Research Ops` line
 - keep `RedCube AI` explicit as the visual-deliverable domain gateway and harness
-- progressively define the boundaries for `Grant Ops`, `Review Ops`, and `Thesis Ops`
+- keep `Grant Ops`, `Review Ops`, and `Thesis Ops` below the admitted gateway surface until their domain boundaries are explicitly frozen
+
+The current delivery target is a local CLI baseline that reads frozen contracts, lists workstreams/domains, and explains routing boundaries without claiming web/server runtime behavior or mutating domain state.
 
 For a more detailed phase breakdown:
 

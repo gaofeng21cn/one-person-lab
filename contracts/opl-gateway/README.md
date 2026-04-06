@@ -12,6 +12,11 @@ These contract and reference artifacts live in the shared-foundation materializa
 This directory therefore materializes gateway surfaces for discoverability / reviewability / acceptance alignment without becoming a new control plane or shared truth store.
 For the broader ownership split, see [Shared Foundation](../../docs/shared-foundation.md) and [Shared Foundation Ownership](../../docs/shared-foundation-ownership.md).
 
+## Current Phase 1 alignment
+
+The current `opl-mainline` Phase 1 target is a local `TypeScript CLI`-first, read-only gateway baseline that reads the frozen contract artifacts in this directory.
+That delivery target does **not** promote this directory into a runtime, routed-action control plane, or canonical truth store; it only makes the existing top-level contract language executable through a local CLI surface.
+
 ## Governing documents
 
 - [OPL Federation Contract](../../docs/opl-federation-contract.md)

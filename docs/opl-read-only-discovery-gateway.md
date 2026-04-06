@@ -249,15 +249,19 @@ It may not mutate domain truth.
 
 ## Surface Shapes
 
-The first `G2` surface may appear as:
+The current `Phase 1` delivery target is a local `TypeScript CLI`-first surface.
+In that baseline, the discovery contract is exposed through commands such as:
 
-- docs-site navigation
-- CLI discovery commands
-- MCP discovery tools
+- `list-workstreams`
+- `get-workstream`
+- `list-domains`
+- `get-domain`
+- `resolve-request-surface`
+- `explain-domain-boundary`
 
-All three are acceptable if they keep the same contract.
+Docs-site navigation and future MCP discovery tools remain compatible transports if they keep the same contract.
 
-The contract matters more than the transport.
+The contract matters more than the transport, but the current implementation target is the local CLI surface rather than a web/server runtime.
 
 ## Completion Definition
 
