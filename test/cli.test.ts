@@ -26,6 +26,10 @@ function runCli(args: string[]) {
     {
       cwd: repoRoot,
       encoding: 'utf8',
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: '1',
+      },
     },
   );
 

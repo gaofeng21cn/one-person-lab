@@ -7,7 +7,7 @@ import type {
   RoutingVocabularyContract,
   TaskTopologyContract,
   WorkstreamsRegistry,
-} from './types.js';
+} from './types.ts';
 
 type ErrorCode =
   | 'contract_file_missing'

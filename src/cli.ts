@@ -5,9 +5,9 @@ import {
   findDomainOrThrow,
   findWorkstreamOrThrow,
   loadGatewayContracts,
-} from './contracts.js';
-import { explainDomainBoundary, resolveRequestSurface } from './resolver.js';
-import type { ResolveRequestInput } from './types.js';
+} from './contracts.ts';
+import { explainDomainBoundary, resolveRequestSurface } from './resolver.ts';
+import type { ResolveRequestInput } from './types.ts';
 
 type CommandHandler = (args: string[]) => unknown;
 

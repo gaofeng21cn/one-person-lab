@@ -10,9 +10,10 @@
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "lint": "node ./scripts/lint.mjs",
-    "test": "node --experimental-strip-types --test test/**/*.test.ts"
+    "test": "NODE_NO_WARNINGS=1 node --experimental-strip-types --test test/**/*.test.ts"
   },
   "devDependencies": {
+    "@types/node": "^24.5.2",
     "typescript": "^5.8.3"
   }
 }

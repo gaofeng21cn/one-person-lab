@@ -1,10 +1,10 @@
-import { findDomainOrThrow, findWorkstreamOrThrow } from './contracts.js';
+import { findDomainOrThrow, findWorkstreamOrThrow } from './contracts.ts';
 import type {
   BoundaryExplanation,
   GatewayContracts,
   ResolveRequestInput,
   ResolutionResult,
-} from './types.js';
+} from './types.ts';
 
 type CandidateKind = 'grant_ops' | 'thesis_ops' | 'review_ops';
 
