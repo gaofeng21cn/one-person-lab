@@ -92,7 +92,8 @@ Current frozen state:
 - under the `Phase 1` public mainline, the CLI-first / read-only gateway baseline is already runnable
 - the completed `Phase 1 / G2 release-closeout` has already closed that baseline into one stable repo-tracked `G2 stable public baseline`
 - the completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` remains closed at the planning-contract boundary
-- the current same-phase baton is `Phase 1 / Grant Ops candidate-domain backlog and onboarding-package hardening`
+- the repo-tracked `Phase 1` candidate-domain closeout order is frozen as `Review Ops` then `Thesis Ops`
+- the current follow-on is `Phase 1 exit + next-stage activation package freeze`
 
 Should support:
 
@@ -120,7 +121,8 @@ Goal:
 Current phase constraint:
 
 - the completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` remains the closeout boundary for routed-action planning, and the repository is not entering routed-action implementation
-- the current same-phase baton is `Phase 1 / Grant Ops candidate-domain backlog and onboarding-package hardening`, which keeps the candidate-domain path below admission / discovery / routing readiness while G3 stays inactive beyond planning freeze
+- the repo-tracked `Review Ops -> Thesis Ops` candidate-domain closeout keeps those candidate paths below admission / discovery / routing readiness while G3 stays inactive beyond planning freeze
+- the current follow-on is `Phase 1 exit + next-stage activation package freeze`, which records the minimal stronger-federation follow-on without activating runtime ownership
 - this is a planning gate, not a runtime gate; `route_request`, `build_handoff_payload`, and `audit_routing_decision` are frozen as planning-level contract operations only
 - the only allowed successful handoff target remains `domain_gateway`, and the no-bypass rule forbids direct domain-harness targeting
 - `routed-actions.schema.json` remains a planning dependency, not a launcher

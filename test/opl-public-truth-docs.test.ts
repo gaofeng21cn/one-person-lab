@@ -196,10 +196,10 @@ test('public surface index and routed-action docs stay aligned with the frozen g
 
   assert.match(publicSurfaceIndex, /### 1\. OPL public-entry surfaces[\s\S]{0,600}Gateway Rollout/);
   assert.match(publicSurfaceIndexZh, /### 1\. OPL 公开入口界面[\s\S]{0,600}Gateway 落地路线/);
-  assert.match(publicSurfaceIndex, /### 2\. OPL contract surfaces[\s\S]{0,900}Governance \/ Audit Operating Surface/);
-  assert.match(publicSurfaceIndex, /### 2\. OPL contract surfaces[\s\S]{0,1400}Publish \/ Promotion Operating Surface/);
-  assert.match(publicSurfaceIndexZh, /### 2\. OPL 合同界面[\s\S]{0,900}Governance \/ Audit Operating Surface/);
-  assert.match(publicSurfaceIndexZh, /### 2\. OPL 合同界面[\s\S]{0,1400}Publish \/ Promotion Operating Surface/);
+  assert.match(publicSurfaceIndex, /### 2\. OPL contract surfaces[\s\S]{0,1300}Governance \/ Audit Operating Surface/);
+  assert.match(publicSurfaceIndex, /### 2\. OPL contract surfaces[\s\S]{0,1800}Publish \/ Promotion Operating Surface/);
+  assert.match(publicSurfaceIndexZh, /### 2\. OPL 合同界面[\s\S]{0,1300}Governance \/ Audit Operating Surface/);
+  assert.match(publicSurfaceIndexZh, /### 2\. OPL 合同界面[\s\S]{0,1800}Publish \/ Promotion Operating Surface/);
   assert.doesNotMatch(publicSurfaceIndex, /### 1\. OPL public-entry surfaces[\s\S]{0,400}Unified Harness Engineering Substrate/);
   assert.doesNotMatch(publicSurfaceIndexZh, /### 1\. OPL 公开入口界面[\s\S]{0,400}Unified Harness Engineering Substrate/);
 
@@ -256,7 +256,7 @@ test('top-level positioning docs freeze the g2 release-closeout and substrate bo
   assert.match(roadmapZh, /共享代码框架/);
 });
 
-test('post-g3 public docs move the baton to grant ops candidate-domain hardening', () => {
+test('phase-1 public docs move from candidate-domain closeout to activation-package freeze', () => {
   const roadmap = read('docs/roadmap.md');
   const roadmapZh = read('docs/roadmap.zh-CN.md');
   const publicSurfaceIndex = read('docs/opl-public-surface-index.md');
@@ -267,11 +267,81 @@ test('post-g3 public docs move the baton to grant ops candidate-domain hardening
   const rolloutZh = read('docs/references/opl-gateway-rollout.zh-CN.md');
 
   for (const doc of [roadmap, publicSurfaceIndex, gatewayContracts, rollout]) {
-    assert.match(doc, /Phase 1 \/ Grant Ops candidate-domain backlog and onboarding-package hardening/i);
+    assert.match(doc, /Phase 1 exit \+ next-stage activation package freeze/i);
+    assert.match(doc, /Review Ops/i);
+    assert.match(doc, /Thesis Ops/i);
   }
 
   for (const doc of [roadmapZh, publicSurfaceIndexZh, gatewayContractsZh, rolloutZh]) {
-    assert.match(doc, /Phase 1 \/ Grant Ops candidate-domain backlog and onboarding-package hardening/);
+    assert.match(doc, /Phase 1 exit \+ next-stage activation package freeze/);
+    assert.match(doc, /Review Ops/);
+    assert.match(doc, /Thesis Ops/);
+  }
+});
+
+test('review candidate path keeps blocker packages explicit and below handoff readiness', () => {
+  const taskMap = read('docs/task-map.md');
+  const taskMapZh = read('docs/task-map.zh-CN.md');
+  const backlog = read('docs/references/opl-candidate-domain-backlog.md');
+  const backlogZh = read('docs/references/opl-candidate-domain-backlog.zh-CN.md');
+  const onboarding = read('docs/opl-domain-onboarding-contract.md');
+  const onboardingZh = read('docs/opl-domain-onboarding-contract.zh-CN.md');
+  const acceptance = read('docs/references/opl-gateway-acceptance-test-spec.md');
+  const acceptanceZh = read('docs/references/opl-gateway-acceptance-test-spec.zh-CN.md');
+
+  for (const doc of [taskMap, backlog, onboarding, acceptance]) {
+    assert.match(doc, /Review Ops/i);
+    assert.match(doc, /execution_model|execution-model/i);
+    assert.match(doc, /discovery_readiness|discovery readiness/i);
+    assert.match(doc, /routing_readiness|routing readiness/i);
+    assert.match(doc, /cross_domain_wording|cross-domain wording/i);
+    assert.match(doc, /handoff-ready|handoff readiness/i);
+    assert.match(doc, /domain_gateway/i);
+    assert.match(doc, /no-bypass|bypass/i);
+  }
+
+  for (const doc of [taskMapZh, backlogZh, onboardingZh, acceptanceZh]) {
+    assert.match(doc, /Review Ops/);
+    assert.match(doc, /execution_model|execution-model/);
+    assert.match(doc, /discovery_readiness|discovery readiness/);
+    assert.match(doc, /routing_readiness|routing readiness/);
+    assert.match(doc, /cross_domain_wording|cross-domain wording/);
+    assert.match(doc, /handoff-ready|handoff readiness/);
+    assert.match(doc, /domain_gateway/);
+    assert.match(doc, /no-bypass|bypass/);
+  }
+});
+
+test('thesis candidate path keeps blocker packages explicit and below handoff readiness', () => {
+  const taskMap = read('docs/task-map.md');
+  const taskMapZh = read('docs/task-map.zh-CN.md');
+  const backlog = read('docs/references/opl-candidate-domain-backlog.md');
+  const backlogZh = read('docs/references/opl-candidate-domain-backlog.zh-CN.md');
+  const onboarding = read('docs/opl-domain-onboarding-contract.md');
+  const onboardingZh = read('docs/opl-domain-onboarding-contract.zh-CN.md');
+  const acceptance = read('docs/references/opl-gateway-acceptance-test-spec.md');
+  const acceptanceZh = read('docs/references/opl-gateway-acceptance-test-spec.zh-CN.md');
+
+  for (const doc of [taskMap, backlog, onboarding, acceptance]) {
+    assert.match(doc, /Thesis Ops/i);
+    assert.match(doc, /execution_model|execution-model/i);
+    assert.match(doc, /discovery_readiness|discovery readiness/i);
+    assert.match(doc, /routing_readiness|routing readiness/i);
+    assert.match(doc, /cross_domain_wording|cross-domain wording/i);
+    assert.match(doc, /handoff-ready|handoff readiness/i);
+    assert.match(doc, /domain_gateway/i);
+    assert.match(doc, /no-bypass|bypass/i);
+  }
+
+  for (const doc of [taskMapZh, backlogZh, onboardingZh, acceptanceZh]) {
+    assert.match(doc, /Thesis Ops/);
+    assert.match(doc, /execution_model|execution-model/);
+    assert.match(doc, /discovery_readiness|discovery readiness/);
+    assert.match(doc, /routing_readiness|routing readiness/);
+    assert.match(doc, /cross_domain_wording|cross-domain wording/);
+    assert.match(doc, /handoff-ready|handoff readiness/);
+    assert.match(doc, /domain_gateway/);
+    assert.match(doc, /no-bypass|bypass/);
   }
 });
 
@@ -375,12 +445,14 @@ test('internal reference truth docs carry the 2026-04-07 snapshot and current OP
   assert.match(matrix, /状态锚点：`?2026-04-07`?/);
   assert.match(matrix, /G2 stable public baseline/);
   assert.match(matrix, /G3 thin handoff planning/);
-  assert.match(matrix, /Grant Ops candidate-domain backlog and onboarding-package hardening/);
+  assert.match(matrix, /Phase 1 exit \+ next-stage activation package freeze/);
+  assert.match(matrix, /Review Ops -> Thesis Ops/);
   assert.match(matrix, /formal entry.*TypeScript CLI \+ read-only gateway baseline/);
   assert.match(taskboard, /状态锚点：`?2026-04-07`?/);
   assert.match(taskboard, /G2 stable public baseline/);
   assert.match(taskboard, /G3 thin handoff planning/);
-  assert.match(taskboard, /Grant Ops candidate-domain backlog and onboarding-package hardening/);
+  assert.match(taskboard, /Phase 1 exit \+ next-stage activation package freeze/);
+  assert.match(taskboard, /Review Ops -> Thesis Ops/);
   assert.match(taskboard, /formal entry contract.*TypeScript CLI.*read-only gateway surface/);
 });
 

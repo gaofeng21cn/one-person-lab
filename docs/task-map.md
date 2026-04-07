@@ -142,6 +142,11 @@ Current boundary status:
 - not yet a `G3` routed-action target
 - not eligible for domain handoff
 - admission blockers are tracked in [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.md)
+- explicit blocker packages remain `execution_model`, `discovery_readiness`, `routing_readiness`, and `cross_domain_wording`
+- thesis-specific canonical truth remains outside `OPL` and outside the currently admitted domains until a real Thesis Ops domain boundary is frozen
+- no handoff-ready surface exists yet for this workstream
+- any future successful handoff may target only `domain_gateway`; direct harness bypass remains forbidden
+- explicit discovery, routing, and cross-domain wording declarations must exist before Thesis Ops can move above the onboarding gate or become handoff-ready
 - clear top-level requests may surface only as `unknown_domain`, without building a handoff payload, until a real domain owner is admitted
 
 ## Review Ops
@@ -175,7 +180,12 @@ Current boundary status:
 - not yet a `G3` routed-action target
 - not eligible for domain handoff
 - admission blockers are tracked in [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.md)
+- explicit blocker packages remain `execution_model`, `discovery_readiness`, `routing_readiness`, and `cross_domain_wording`
+- review truth remains outside `OPL`; this semantic bundle does not make `OPL` the canonical truth owner of review artifacts
+- no handoff-ready surface exists yet for this bundle
+- any future successful handoff may target only `domain_gateway`; direct harness bypass remains forbidden
 - clear top-level requests may surface only as `unknown_domain`, without building a handoff payload, until a real domain owner is admitted
+- explicit discovery, routing, and cross-domain wording declarations must exist before Review Ops can move above the onboarding gate or become handoff-ready
 
 ## Presentation Ops
 

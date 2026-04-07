@@ -21,7 +21,8 @@ That transport sits on top of the current `Codex-default host-agent runtime`, wh
 The completed `Phase 1 / G2 release-closeout` has already closed the `G2 stable public baseline` into one stable repo-tracked public entry.
 That repo-tracked baseline remains the current `OPL` `Phase 1` formal entry contract and public system surface.
 The completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` remains closed at the planning-contract layer: this directory only freezes the planning gate / planning-level contract around `route_request`, `build_handoff_payload`, and `audit_routing_decision`. The only allowed successful handoff target remains `domain_gateway`, the no-bypass rule still forbids direct domain-harness targeting, and `routed-actions.schema.json` remains a planning dependency rather than a launcher.
-The current same-phase baton is `Phase 1 / Grant Ops candidate-domain backlog and onboarding-package hardening`: it tightens the existing `task-topology + candidate-domain-backlog + domain-onboarding` path without admitting a domain, creating `G2` discovery readiness, or creating `G3` routed-action readiness.
+The repo-tracked `Phase 1` candidate-domain closeout order is frozen as `Review Ops` then `Thesis Ops`: both candidate paths remain below domain admission, `G2` discovery readiness, `G3` routed-action readiness, and handoff readiness.
+The current follow-on is `Phase 1 exit + next-stage activation package freeze`, which records the minimum stronger-federation follow-on without activating runtime ownership.
 The current repo-tracked formal entry at the OPL layer therefore remains the local `TypeScript CLI`-first / read-only gateway surface rather than a launcher, mutation entry, or runtime-owner surface.
 That delivery target still does **not** promote this directory into a runtime, routed-action control plane, or canonical truth store; it only keeps the existing top-level contract language executable through a local CLI surface.
 
@@ -81,6 +82,7 @@ These corpora are companion references only. They do not replace the governing c
 ## Companion reference surfaces
 
 - [OPL Candidate Domain Backlog](../../docs/references/opl-candidate-domain-backlog.md) — reference-only machine-readable admission-blocker backlog for the current under-definition workstreams
+- [OPL Phase 1 Exit Activation Package](../../docs/references/opl-phase-1-exit-activation-package.md) — reference-grade freeze for the current `Phase 1` exit thresholds, deferred surface, and minimal next-stage decision
 - [OPL Surface Lifecycle Map](../../docs/references/opl-surface-lifecycle-map.md) — derived machine-readable lifecycle view across the frozen gateway / operating / supporting surfaces
 - [OPL Surface Authority Matrix](../../docs/references/opl-surface-authority-matrix.md) — derived machine-readable authority split across the frozen OPL surfaces and linked domain public-entry surfaces
 - [OPL Surface Review Matrix](../../docs/references/opl-surface-review-matrix.md) — derived machine-readable review obligations across the frozen OPL public, contract, and supporting surfaces
@@ -101,6 +103,7 @@ These backlog and mapping surfaces are reference-only. They do not become a work
 - [`public-surface-index.json`](./public-surface-index.json) — machine-readable index of current authoritative OPL public surfaces and linked domain public entries
 - [`task-topology.json`](./task-topology.json) — machine-readable top-level task topology across admitted and under-definition OPL workstreams
 - [`candidate-domain-backlog.json`](./candidate-domain-backlog.json) — machine-readable admission-blocker backlog for the current under-definition workstreams
+- [`phase-1-exit-activation-package.json`](./phase-1-exit-activation-package.json) — machine-readable freeze for the current `Phase 1` exit thresholds, deferred surface, and minimal next-stage activation decision
 - [`operating-record-catalog.json`](./operating-record-catalog.json) — machine-readable reference catalog for the frozen P5.M1 / P5.M2 operating record kinds
 - [`surface-lifecycle-map.json`](./surface-lifecycle-map.json) — machine-readable derived lifecycle map for the frozen gateway / operating / supporting surfaces
 - [`surface-authority-matrix.json`](./surface-authority-matrix.json) — machine-readable derived authority matrix for the frozen OPL surfaces and linked domain public-entry surfaces

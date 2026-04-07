@@ -45,18 +45,20 @@
 - 保持 `MedAutoScience` 明确为 `Research Ops` 的 domain surface
 - 保持 `RedCube AI` 明确为视觉交付的 domain surface
 - 把 `Agent-first` 加双模执行这套原则带入后续候选 domain 的定义，而不是逐步漂移成 fixed-code-first 的产品线
-- 推进当前同一 phase 内的 `Phase 1 / Grant Ops candidate-domain backlog and onboarding-package hardening`：继续收紧 `task-topology + candidate-domain-backlog + domain-onboarding` 这条路径，但不 admission domain，也不创造 discovery target 或 routed-action target
+- 在 repo-tracked 的 `Review Ops -> Thesis Ops` candidate-domain closeout 之后，冻结 `Phase 1 exit + next-stage activation package`，同时继续让所有 candidate path 停留在 admission、discovery readiness、routing readiness 与 handoff readiness 之下
 - 用清楚的任务边界与交付对象定义下一个候选 domain，并优先沿用当前 `task-topology + candidate-domain-backlog + domain-onboarding` 这条路径，而不是发明一层冗余中间控制面
 - 逐步把 `OPL Gateway` 从文档优先表面推进成真实入口，但当前仍不激活 routed-action runtime
 
-在仍处于定义阶段的几个工作流里，更自然的优先顺序通常是：
+`Phase 1` candidate-domain closeout 的顺序已冻结为：
 
-- `Grant Ops`
 - `Review Ops`
 - `Thesis Ops`
 
-这个优先顺序只表示边界定义的先后。当前 `Grant Ops` 确实是候选 domain path 收紧的第一优先项，但 `Grant Foundry -> Med Auto Grant` 目前仍只提供公开 scaffold / top-level signal / domain-direction evidence。
+这个顺序本来就只表示边界定义的先后，现在已经被吸收到当前 `Phase 1 exit + next-stage activation package freeze` 中。`Grant Ops` 的 signal-only 边界已经先行冻结，但 `Grant Foundry -> Med Auto Grant` 目前仍只提供公开 scaffold / top-level signal / domain-direction evidence。
 这还不等于 registry material、discovery readiness 或 routing readiness，也不代表 `Grant Ops` 已经变成已正式收录的 domain gateway、`G2` discovery target、`G3` routed-action target 或 handoff-ready surface；在对应 domain-onboarding evidence 出现前，它仍然不是这些状态。
+`Review Ops` 仍然只是 under-definition semantic bundle，review truth 不会上收到 `OPL`，并继续显式 blocked 于 `execution_model`、`discovery_readiness`、`routing_readiness` 与 `cross_domain_wording` 四类 package。
+`Thesis Ops` 也继续显式 blocked 于 `execution_model`、`discovery_readiness`、`routing_readiness` 与 `cross_domain_wording` 四类 package，同时保持与 `Research Ops` 的 manuscript/submission flow、以及 `Presentation Ops` / `RedCube AI` 的 deck production 的边界区分。
+当前 follow-on 已切到 `Phase 1 exit + next-stage activation package freeze`；最小的更强 federation follow-on 已被冻结，但在至少两个 admitted domain surface 真正稳定前不会被激活。
 任何未来的 successful handoff 也仍然只能 targeting `domain_gateway`，并继续受不得直达 harness 的 no-bypass 规则约束。
 
 ## 更后续阶段

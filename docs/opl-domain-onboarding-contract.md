@@ -207,6 +207,10 @@ The onboarding package must identify:
 
 If this wording cannot be reviewed explicitly, the domain remains below formal inclusion.
 
+For the current `Phase 1` candidate path, both `Review Ops` and `Thesis Ops` remain below formal inclusion.
+`Review Ops` keeps `execution_model`, `discovery_readiness`, `routing_readiness`, and `cross_domain_wording` explicit as blocked packages, keeps review truth outside `OPL`, keeps no handoff-ready surface, and keeps any future successful handoff at `domain_gateway`-only / no-bypass.
+`Thesis Ops` also keeps `execution_model`, `discovery_readiness`, `routing_readiness`, and `cross_domain_wording` explicit as blocked packages; it remains distinct from `Research Ops` manuscript/submission flow and from `Presentation Ops` / `RedCube AI` deck production, keeps no handoff-ready surface, and keeps any future successful handoff at `domain_gateway`-only / no-bypass.
+
 ## Formal Inclusion Gate
 
 A domain is formally includable in `OPL` only when all of the following are true:

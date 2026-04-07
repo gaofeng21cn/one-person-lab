@@ -341,7 +341,8 @@ As of `2026-04-07`, the repository already has a runnable local `TypeScript CLI`
 The completed `Phase 1 / G2 release-closeout` has already closed the `G2 stable public baseline` into the single stable repo-tracked public entry.
 That baseline therefore remains the current `OPL` `Phase 1` formal entry contract and public system surface.
 The repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` has already frozen `G3` at a planning-only gate, so it still does not open a mutation entry, turn `OPL` into a unified runtime owner, or pull a shared execution core forward.
-The current same-phase follow-on is `Phase 1 / Grant Ops candidate-domain backlog and onboarding-package hardening`: it only tightens the `task-topology + candidate-domain-backlog + domain-onboarding` path, keeps `Grant Foundry -> Med Auto Grant` at signal-only status, and does not admit a domain or activate routed action.
+The repo-tracked `Phase 1` candidate-domain closeout order is frozen as `Review Ops` then `Thesis Ops`: both candidate paths remain below admission / discovery / routing / handoff readiness, while `Grant Foundry -> Med Auto Grant` stays signal-only.
+The current follow-on is `Phase 1 exit + next-stage activation package freeze`, which records the minimum stronger-federation follow-on without activating routed action or turning `OPL` into a runtime owner.
 
 The current delivery target uses a local `TypeScript CLI` as the Phase 1 entry transport on top of the current `Codex-default host-agent runtime`.
 At the development-control layer, `Codex Host` freezes planning and truth while `OMX` handles long-running execution inside those frozen boundaries.

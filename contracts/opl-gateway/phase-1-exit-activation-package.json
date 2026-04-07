@@ -1,0 +1,164 @@
+{
+  "version": "2026-04-07.phase1-exit.v1",
+  "package_id": "opl_phase_1_exit_activation_package",
+  "phase": "phase_1_exit",
+  "package_status": "external_readiness_blocked",
+  "phase_1_formal_entry": {
+    "entry_surface": "TypeScript CLI-first / read-only gateway surface",
+    "runtime_owner": false,
+    "mutation_entry": false,
+    "run_launch": false,
+    "workspace_write": false,
+    "shared_execution_core": false,
+    "managed_web_runtime": false
+  },
+  "phase_1_completed_tranches": [
+    {
+      "tranche_id": "g2_release_closeout",
+      "label": "Phase 1 / G2 release-closeout",
+      "status": "completed"
+    },
+    {
+      "tranche_id": "g3_thin_handoff_planning_freeze_hardening",
+      "label": "Phase 1 / G3 thin handoff planning freeze hardening",
+      "status": "completed"
+    },
+    {
+      "tranche_id": "grant_ops_candidate_closeout",
+      "label": "Phase 1 / Grant Ops candidate-domain backlog and onboarding-package hardening",
+      "status": "completed_with_signal_only_boundary"
+    },
+    {
+      "tranche_id": "review_ops_candidate_closeout",
+      "label": "Phase 1 / Review Ops candidate-domain backlog and onboarding-package hardening",
+      "status": "completed_below_onboarding"
+    },
+    {
+      "tranche_id": "thesis_ops_candidate_closeout",
+      "label": "Phase 1 / Thesis Ops candidate-domain backlog and onboarding-package hardening",
+      "status": "completed_below_onboarding"
+    }
+  ],
+  "phase_1_deferred_items": [
+    "Grant Ops domain admission",
+    "Review Ops domain admission",
+    "Thesis Ops domain admission",
+    "any Grant/Review/Thesis G2 discovery readiness",
+    "any Grant/Review/Thesis G3 routed-action readiness",
+    "any Grant/Review/Thesis handoff-ready surface",
+    "G3 mutation or routed-action runtime",
+    "mutation entry, run launch, or workspace write",
+    "shared execution core or managed web runtime",
+    "turning OPL into a runtime owner or unified truth store"
+  ],
+  "phase_exit_thresholds": [
+    {
+      "threshold_id": "opl_public_truth_contracts_and_tests_stable",
+      "status": "met",
+      "depends_on_external_domain_readiness": false,
+      "repo_evidence": [
+        "README.md",
+        "docs/roadmap.md",
+        "contracts/opl-gateway/README.md",
+        "test/opl-public-truth-docs.test.ts"
+      ]
+    },
+    {
+      "threshold_id": "candidate_domain_paths_closed_at_current_definition_layer",
+      "status": "met",
+      "depends_on_external_domain_readiness": false,
+      "repo_evidence": [
+        "contracts/opl-gateway/task-topology.json",
+        "contracts/opl-gateway/candidate-domain-backlog.json",
+        "docs/task-map.md",
+        "docs/references/opl-candidate-domain-backlog.md",
+        "docs/opl-domain-onboarding-contract.md"
+      ]
+    },
+    {
+      "threshold_id": "minimal_next_stage_tranche_honestly_frozen",
+      "status": "met",
+      "depends_on_external_domain_readiness": false,
+      "repo_evidence": [
+        "contracts/opl-gateway/phase-1-exit-activation-package.json",
+        "docs/references/opl-phase-1-exit-activation-package.md",
+        "docs/references/opl-phase-1-exit-activation-package.zh-CN.md"
+      ]
+    },
+    {
+      "threshold_id": "two_admitted_domain_surfaces_stable_enough_for_stronger_federation",
+      "status": "blocked_external",
+      "depends_on_external_domain_readiness": true,
+      "repo_evidence": [
+        "docs/references/ecosystem-status-matrix.md",
+        "docs/references/runtime-alignment-taskboard.md"
+      ]
+    },
+    {
+      "threshold_id": "no_runtime_owner_or_shared_runtime_drift",
+      "status": "met",
+      "depends_on_external_domain_readiness": false,
+      "repo_evidence": [
+        "contracts/project-truth/AGENTS.md",
+        "README.md",
+        "contracts/opl-gateway/README.md",
+        "docs/references/opl-phase-1-exit-activation-package.md"
+      ]
+    }
+  ],
+  "opl_remaining_self_service_work": [
+    "maintain repo-tracked docs/contracts/tests alignment for the admitted-domain gateway baseline",
+    "keep candidate-domain paths explicit and blocked below onboarding without inventing admission or readiness",
+    "keep reference-grade sync surfaces current without promoting them into public-mainline truth",
+    "prepare stronger federation wording/contracts only after external admitted-domain readiness turns green"
+  ],
+  "minimal_next_stage_tranche": {
+    "tranche_id": "minimal_admitted_domain_federation_activation_package",
+    "label": "Minimal admitted-domain federation activation package",
+    "scope": [
+      "strengthen top-level gateway/federation expression for already admitted domains only",
+      "freeze docs+contracts+tests first for a stronger admitted-domain federation surface",
+      "keep the formal entry CLI-first/read-only while improving federation-level public truth and contract clarity"
+    ],
+    "non_goals": [
+      "no routed-action runtime",
+      "no mutation entry, run launch, or workspace write",
+      "no Grant/Review/Thesis admission",
+      "no Grant/Review/Thesis G2 or G3 readiness",
+      "no shared execution core",
+      "no managed web runtime",
+      "no runtime-owner promotion for OPL"
+    ],
+    "verification_requirements": [
+      "git diff --check",
+      "npm run lint",
+      "npm run typecheck",
+      "npm run build",
+      "npm test",
+      "NODE_NO_WARNINGS=1 node --test tests/opl-readonly-gateway.cli.test.mjs",
+      "focused rg audit for runtime-owner, candidate-domain, and federation wording"
+    ]
+  },
+  "activation_decision": {
+    "eligible_to_activate_now": false,
+    "decision": "external_readiness_blocked",
+    "blockers": [
+      {
+        "blocker_id": "presentation_domain_surface_not_yet_stable_enough",
+        "kind": "external_domain_readiness",
+        "detail": "The current repo-tracked four-repo sync still shows `redcube-ai` in `P0 credible green baseline repair`, with active-mainline truth and formal-entry closeout still in progress, so OPL cannot honestly claim that two admitted domain surfaces are already stable enough for a stronger federation tranche.",
+        "repo_evidence": [
+          "docs/references/ecosystem-status-matrix.md",
+          "docs/references/runtime-alignment-taskboard.md"
+        ]
+      }
+    ]
+  },
+  "hard_boundaries": [
+    "OPL remains the top-level gateway/federation surface rather than a runtime owner",
+    "no mutation entry, run launch, or workspace write",
+    "no G3 mutation or routed-action runtime",
+    "no shared execution core or managed web runtime",
+    "no admission or readiness promotion for Grant Ops, Review Ops, or Thesis Ops"
+  ]
+}

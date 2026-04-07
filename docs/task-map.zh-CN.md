@@ -141,6 +141,11 @@
 - 还不是 `G3` routed-action target
 - 还不具备 domain handoff 资格
 - formal 收录前的 blocker 已在 [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.zh-CN.md) 中跟踪
+- 当前显式 blocker package 仍是 `execution_model`、`discovery_readiness`、`routing_readiness` 与 `cross_domain_wording`
+- 与 Thesis Ops 相关的 canonical truth 仍留在未来 domain 一侧，也不会在真实 Thesis Ops domain boundary 冻结前被静默转交给现有 admitted domain
+- 这个 workstream 当前也还没有 handoff-ready surface
+- 任何未来的 successful handoff 也只能 targeting `domain_gateway`；direct harness bypass 仍然被禁止
+- 在显式 discovery / routing / cross-domain wording declaration 出现前，Thesis Ops 仍然停留在 onboarding gate 之下，也不会变成 handoff-ready surface
 - 但如果顶层语义已经足够清楚，在真实 domain owner 被收录前，最多只能显式返回 `unknown_domain`，且不会构建 handoff payload
 
 ## Review Ops
@@ -174,7 +179,12 @@
 - 还不是 `G3` routed-action target
 - 还不具备 domain handoff 资格
 - formal 收录前的 blocker 已在 [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.zh-CN.md) 中跟踪
+- 当前显式 blocker package 仍是 `execution_model`、`discovery_readiness`、`routing_readiness` 与 `cross_domain_wording`
+- review truth 仍留在未来 domain 一侧；这个语义包不会让 `OPL` 成为评审工件的 canonical truth owner
+- 这个语义包当前也还没有 handoff-ready surface
+- 任何未来的 successful handoff 也只能 targeting `domain_gateway`；direct harness bypass 仍然被禁止
 - 但如果顶层语义已经足够清楚，在真实 domain owner 被收录前，最多只能显式返回 `unknown_domain`，且不会构建 handoff payload
+- 在显式 discovery / routing / cross-domain wording declaration 出现前，Review Ops 仍然停留在 onboarding gate 之下，也不会变成 handoff-ready surface
 
 ## Presentation Ops
 

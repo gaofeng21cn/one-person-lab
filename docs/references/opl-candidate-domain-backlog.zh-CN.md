@@ -93,6 +93,9 @@ Onboarding contract 负责定义正式收录门槛。
 
 但它仍然缺少未来 domain boundary package：包括 thesis-specific registry material、public gateway docs、truth ownership、review surfaces、显式的 execution-model declaration、discovery readiness、routing readiness，以及 cross-domain wording。
 这份 execution-model declaration 还必须明确 stable agent runtime surface、说明 `Auto` 与 `Human-in-the-loop` 如何共享同一基座、解释 code-versus-Agent responsibility split，并明确排除 `fixed-code-first` 或长期单模的 framing。
+其中 discovery readiness blocker 必须把只读 discovery 明确指向未来的 `domain_gateway` 入口，但不能提前暗示 handoff readiness，也不能把 Thesis Ops 静默塌缩成 `Research Ops` 或 `Presentation Ops`。
+其中 routing readiness blocker 必须冻结显式 route evidence，保持 `domain_gateway` 仍是唯一 allowed successful target，继续遵守不得直达 harness 的 no-bypass 规则，并避免把这个 workstream 静默并入其他 admitted domain。
+其中 cross-domain wording blocker 必须让 `OPL` 与未来 thesis domain 的 wording 保持对齐，同时不把 thesis assembly 等同于 `Research Ops` 的 manuscript flow 或 `Presentation Ops` / `RedCube AI` 的 deck production。
 这些未来 package 只是 blocker，不代表 `Thesis Ops` 现在已经具备 `G2` discovery readiness 或 `G3` routed-action readiness。
 
 ### Review Ops
@@ -101,8 +104,11 @@ Onboarding contract 负责定义正式收录门槛。
 
 但它仍然缺少未来 domain boundary package：包括 review-specific registry material、review reports / comment structures / rebuttal plans / revision-route maps 的 truth ownership、public gateway docs、review surfaces、显式的 execution-model declaration、discovery readiness、routing readiness，以及 cross-domain wording。
 这份 execution-model declaration 还必须明确 stable agent runtime surface、说明 `Auto` 与 `Human-in-the-loop` 如何共享同一基座、解释 code-versus-Agent responsibility split，并明确排除 `fixed-code-first` 或长期单模的 framing。
+其中 discovery readiness blocker 必须把只读 discovery 明确指向未来的 `domain_gateway` 入口，但不能提前暗示 review bundle 已具备 handoff readiness。
+其中 routing readiness blocker 必须冻结显式 route evidence，保持 `domain_gateway` 仍是唯一 allowed successful target，并继续遵守不得直达 harness 的 no-bypass 规则。
+其中 cross-domain wording blocker 必须让 `OPL` 与未来 review domain 的 reviewer-role wording 保持对齐，同时不把 review-truth ownership 上收到 `OPL`。
 
-这里冻结下来的 negative conclusion 是：这种组合语义仍不足以推出 formal admission、discovery readiness、routed-action readiness，或把 review truth ownership 上收到 OPL。
+这里冻结下来的 negative conclusion 是：这种组合语义仍不足以推出 formal admission、discovery readiness、routed-action readiness、handoff readiness，或把 review truth ownership 上收到 OPL。
 
 ## 阅读规则
 

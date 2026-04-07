@@ -207,6 +207,10 @@ Onboarding package 必须说明：
 
 如果这组 wording 不能被显式审查，这个 domain 就仍然位于 formal inclusion 之下。
 
+就当前 `Phase 1` 的 candidate path 而言，`Review Ops` 与 `Thesis Ops` 都仍然位于 formal inclusion 之下。
+`Review Ops` 会把 `execution_model`、`discovery_readiness`、`routing_readiness` 与 `cross_domain_wording` 四类 package 持续保持为显式 blocker，同时把 review truth 留在未来 domain 一侧、继续不具备 handoff-ready surface，任何未来 successful handoff 也仍只能是 `domain_gateway`-only / no-bypass。
+`Thesis Ops` 也会把 `execution_model`、`discovery_readiness`、`routing_readiness` 与 `cross_domain_wording` 四类 package 持续保持为显式 blocker；它继续区别于 `Research Ops` 的 manuscript/submission flow 与 `Presentation Ops` / `RedCube AI` 的 deck production、继续不具备 handoff-ready surface，任何未来 successful handoff 也仍只能是 `domain_gateway`-only / no-bypass。
+
 ## 正式收录门槛
 
 一个 domain 只有在下面全部成立时，才算可被 `OPL` 正式收录：

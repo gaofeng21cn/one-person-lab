@@ -93,6 +93,9 @@ The negative conclusion frozen in the current path is that thesis assembly does 
 
 What is still missing is a future domain boundary package that makes thesis-specific registry material, public gateway docs, truth ownership, review surfaces, an explicit execution-model declaration, discovery readiness, routing readiness, and cross-domain wording explicit.
 That execution-model declaration must identify the stable agent runtime surface, show how `Auto` and `Human-in-the-loop` share one base, explain the code-versus-Agent responsibility split, and keep the workstream out of any `fixed-code-first` or permanently single-mode framing.
+The discovery readiness blocker must keep read-only discovery pointed at the future `domain_gateway` entry without implying handoff readiness or collapsing Thesis Ops into `Research Ops` or `Presentation Ops`.
+The routing readiness blocker must freeze explicit routing evidence, keep the only successful target at `domain_gateway`, preserve the no-bypass rule against direct harness targeting, and avoid silently collapsing the workstream into another admitted domain.
+The cross-domain wording blocker must keep Thesis Ops wording aligned between `OPL` and any future thesis domain without equating thesis assembly to `Research Ops` manuscript flow or `Presentation Ops` / `RedCube AI` deck production.
 Those future packages are blockers only; they do not make `Thesis Ops` currently `G2` discovery-ready or `G3` routed-action-ready.
 
 ### Review Ops
@@ -101,8 +104,11 @@ Those future packages are blockers only; they do not make `Thesis Ops` currently
 
 What is still missing is a future domain boundary package that makes review-specific registry material, public gateway docs, truth ownership for review reports / comment structures / rebuttal plans / revision-route maps, review surfaces, an explicit execution-model declaration, discovery readiness, routing readiness, and cross-domain wording explicit.
 That execution-model declaration must identify the stable agent runtime surface, show how `Auto` and `Human-in-the-loop` share one base, explain the code-versus-Agent responsibility split, and keep the workstream out of any `fixed-code-first` or permanently single-mode framing.
+The discovery readiness blocker must keep read-only discovery pointed at the future `domain_gateway` entry without implying handoff readiness for the review bundle.
+The routing readiness blocker must freeze explicit routing evidence, keep the only successful target at `domain_gateway`, and preserve the no-bypass rule against direct harness targeting.
+The cross-domain wording blocker must keep reviewer-role wording aligned between `OPL` and any future review domain without transferring review-truth ownership into `OPL`.
 
-The negative conclusion frozen here is that this combined label still does not justify admission, discovery readiness, routed-action readiness, or OPL ownership of review truth.
+The negative conclusion frozen here is that this combined label still does not justify admission, discovery readiness, routed-action readiness, handoff readiness, or OPL ownership of review truth.
 
 ## Reading Rule
 

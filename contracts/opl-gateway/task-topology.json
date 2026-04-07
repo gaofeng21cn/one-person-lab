@@ -12,7 +12,7 @@
     "task topology defines top-level workstream semantics above domain gateways and harnesses",
     "registered G1 workstreams remain research_ops and presentation_ops only",
     "grant_ops, thesis_ops, and review_ops remain under definition until explicit domain boundaries are frozen and admitted through the onboarding gate",
-    "under-definition workstreams may list delivery objects and reusable assets without becoming admitted domains, discovery targets, or handoff-ready routed-action targets; at most they may surface as unknown_domain outcomes when top-level semantics are clear",
+    "under-definition workstreams may list delivery objects and reusable assets without becoming admitted domains, discovery targets, or handoff-ready routed-action targets; at most they may surface as unknown_domain outcomes when top-level semantics are clear, and any future successful handoff remains domain_gateway-only with the no-bypass rule intact",
     "future admission or alignment requires a declared stable agent runtime surface plus a shared-base Auto/Human-in-the-loop convergence path; otherwise the workstream remains under definition / deferred",
     "task topology complements docs/task-map.md, workstreams.json, and the onboarding contract; it does not replace them"
   ],
@@ -146,7 +146,7 @@
         "shared_foundation_language"
       ],
       "family_boundary_notes": [],
-      "notes": "Still under definition. Review Ops groups reviewer-role work plus response/rebuttal coordination as a top-level semantic bundle only; that combined label does not by itself freeze a distinct domain boundary or transfer canonical truth for review artifacts into OPL. It is not yet an admitted domain, discovery target, or routed-action target. Clear top-level requests may surface only as unknown_domain until a real domain owner is admitted. It also remains under definition because no stable agent runtime surface or shared-base Auto/Human-in-the-loop convergence path has been frozen for a Review Ops domain yet."
+      "notes": "Still under definition. Review Ops groups reviewer-role work plus response/rebuttal coordination as a top-level semantic bundle only; that combined label does not by itself freeze a distinct domain boundary, transfer canonical truth for review artifacts into OPL, or piggyback on another admitted domain as a hidden owner. It is not yet an admitted domain, discovery target, routed-action target, or handoff-ready surface. Clear top-level requests may surface only as unknown_domain until a real domain owner is admitted; no handoff payload is built, and any future successful handoff must remain domain_gateway-only with no harness bypass. It also remains under definition because no stable agent runtime surface, shared-base Auto/Human-in-the-loop convergence path, or explicit discovery/routing/cross-domain wording declarations have been frozen for a Review Ops domain yet."
     },
     {
       "workstream_id": "presentation_ops",

@@ -45,19 +45,21 @@ The next phase should prioritize:
 - keeping `MedAutoScience` explicit as the `Research Ops` domain surface
 - keeping `RedCube AI` explicit as the visual-deliverable domain surface
 - carrying the `Agent-first` plus dual-mode doctrine into future candidate-domain definitions instead of drifting toward fixed-code-first product lines
-- hardening the current `Phase 1 / Grant Ops candidate-domain backlog and onboarding-package hardening` follow-on: tighten the `task-topology + candidate-domain-backlog + domain-onboarding` path without admitting a domain, discovery target, or routed-action target
+- freezing the `Phase 1 exit + next-stage activation package` after the repo-tracked `Review Ops -> Thesis Ops` candidate-domain closeout, while keeping every candidate path below admission, discovery readiness, routing readiness, and handoff readiness
 - defining the next candidate domains through clear task boundaries and delivery objects, using the current `task-topology + candidate-domain-backlog + domain-onboarding` path rather than inventing a redundant intermediate control surface
 - progressively turning the `OPL Gateway` from a documentation-first surface into a real entry surface without activating a routed-action runtime yet
 
-Among the still-undefined workstreams, the more natural priority order is usually:
+The `Phase 1` candidate-domain closeout order is frozen as:
 
-- `Grant Ops`
 - `Review Ops`
 - `Thesis Ops`
 
-This priority ordering is only a boundary-definition sequence.
-`Grant Ops` is the current candidate-domain hardening focus, but `Grant Foundry -> Med Auto Grant` still contributes only public scaffold / top-level signal / domain-direction evidence.
+This ordering is a boundary-definition sequence that has now been frozen into the current `Phase 1 exit + next-stage activation package freeze`.
+`Grant Ops` has already had its signal-only boundary frozen, but `Grant Foundry -> Med Auto Grant` still contributes only public scaffold / top-level signal / domain-direction evidence.
 That does **not** satisfy registry material, discovery readiness, or routing readiness, and it does **not** make `Grant Ops` an admitted domain gateway, a `G2` discovery target, a `G3` routed-action target, or a handoff-ready surface before its domain-onboarding evidence exists.
+`Review Ops` remains an under-definition semantic bundle only, keeps review truth outside `OPL`, and remains blocked on explicit `execution_model`, `discovery_readiness`, `routing_readiness`, and `cross_domain_wording` packages.
+`Thesis Ops` also remains blocked on explicit `execution_model`, `discovery_readiness`, `routing_readiness`, and `cross_domain_wording` packages, while staying distinct from `Research Ops` manuscript/submission flow and from `Presentation Ops` / `RedCube AI` deck production.
+The current follow-on is `Phase 1 exit + next-stage activation package freeze`; the minimal stronger-federation follow-on stays frozen but cannot activate until at least two admitted domain surfaces are truly stable enough to support it.
 Any future successful handoff remains `domain_gateway`-only and subject to the no-bypass rule against direct harness targeting.
 
 ## Later Phase

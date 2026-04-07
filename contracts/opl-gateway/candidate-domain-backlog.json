@@ -17,7 +17,7 @@
     "check-level blockers align to the formal inclusion gate in the domain-onboarding contract",
     "the backlog may reference top-level task semantics without admitting new domains",
     "candidate workstreams remain under definition / deferred until a stable agent runtime surface plus a shared-base Auto/Human-in-the-loop convergence path is explicitly declared",
-    "top-level signal or domain-direction evidence may clarify a candidate path, but it does not by itself satisfy registry material, public gateway docs, discovery readiness, routing readiness, or admission"
+    "top-level signal or domain-direction evidence may clarify a candidate path, but it does not by itself satisfy registry material, public gateway docs, discovery readiness, routing readiness, handoff readiness, or admission"
   ],
   "required_package_ids": [
     "registry_material",
@@ -666,7 +666,7 @@
           "status": "missing",
           "required_evidence": [
             "explicit declaration of review-report, comment-structure, rebuttal, and revision-route truth owned by the future domain",
-            "explicit list of what OPL may index versus what it may not claim as canonical truth"
+            "explicit list of what OPL may index versus what it may not claim as canonical truth, without silently transferring review truth into OPL or another admitted domain"
           ],
           "forbidden_shortcuts": [
             "implicit_truth_transfer_to_opl",
@@ -705,7 +705,7 @@
           "status": "missing",
           "required_evidence": [
             "read-only discovery entry that points Review Ops to the future domain public entry",
-            "explicit discovery wording that keeps the entry surface at domain_gateway without implying handoff readiness"
+            "explicit discovery wording that keeps the entry surface at domain_gateway without implying handoff readiness or silently transferring review truth into OPL or another admitted domain"
           ],
           "forbidden_shortcuts": [
             "promote_to_g2_without_domain_gateway",
@@ -718,7 +718,7 @@
           "status": "missing",
           "required_evidence": [
             "explicit routed-action evidence for Review Ops -> future domain public entry",
-            "stable handoff evidence that keeps the only successful target at domain_gateway with no harness bypass"
+            "stable handoff evidence that keeps the only successful target at domain_gateway with no harness bypass and no silent transfer into another admitted domain"
           ],
           "forbidden_shortcuts": [
             "promote_to_g3_without_explicit_route_evidence",
@@ -730,7 +730,7 @@
           "package_id": "cross_domain_wording",
           "status": "missing",
           "required_evidence": [
-            "aligned top-level role language between OPL public docs and the future Review Ops domain public docs"
+            "aligned top-level role language between OPL public docs and the future Review Ops domain public docs without transferring review truth into OPL or collapsing response/rebuttal work into another admitted domain"
           ],
           "forbidden_shortcuts": [
             "prose_only_role_guesswork",
@@ -770,7 +770,7 @@
           "package_id": "truth_ownership",
           "status": "missing",
           "required_evidence": [
-            "explicit truth-ownership declaration for review reports, comment structure, rebuttal, and revision-route records"
+            "explicit truth-ownership declaration for review reports, comment structure, rebuttal, and revision-route records without silent transfer into OPL or another admitted domain"
           ],
           "forbidden_shortcuts": [
             "implicit_truth_transfer_to_opl",
@@ -782,7 +782,7 @@
           "package_id": "discovery_readiness",
           "status": "missing",
           "required_evidence": [
-            "G2 discovery surface that points Review Ops to the future domain public entry"
+            "G2 discovery surface that points Review Ops to the future domain public entry without silently transferring review truth into OPL or another admitted domain"
           ],
           "forbidden_shortcuts": [
             "promote_to_g2_without_domain_gateway",
@@ -795,7 +795,7 @@
           "package_id": "routing_readiness",
           "status": "missing",
           "required_evidence": [
-            "G3 routing evidence and stable handoff boundary for Review Ops -> future domain public entry"
+            "G3 routing evidence and stable handoff boundary for Review Ops -> future domain public entry with domain_gateway-only / no-bypass semantics"
           ],
           "forbidden_shortcuts": [
             "promote_to_g3_without_explicit_route_evidence",
@@ -836,7 +836,7 @@
           "package_id": "cross_domain_wording",
           "status": "missing",
           "required_evidence": [
-            "aligned OPL/domain wording for the future Review Ops role"
+            "aligned OPL/domain wording for the future Review Ops role without transferring review truth into OPL or collapsing response/rebuttal work into another admitted domain"
           ],
           "forbidden_shortcuts": [
             "prose_only_role_guesswork",
@@ -894,7 +894,7 @@
           ]
         }
       },
-      "notes": "Top-level semantics are explicit: Review Ops groups reviewer-role work plus response/rebuttal coordination as one candidate semantic bundle. That combined label still does not justify admission, discovery readiness, routed-action readiness, or OPL ownership of review truth before the future Review Ops domain boundary package exists."
+      "notes": "Top-level semantics are explicit: Review Ops groups reviewer-role work plus response/rebuttal coordination as one candidate semantic bundle. That combined label still does not justify admission, discovery readiness, routed-action readiness, handoff readiness, or OPL ownership of review truth before the future Review Ops domain boundary package exists. Review Ops therefore stays blocked below onboarding: `execution_model`, `discovery_readiness`, `routing_readiness`, and `cross_domain_wording` remain explicit blocker packages. Clear top-level requests may surface only as unknown_domain until an explicit future domain_gateway entry, discovery declaration, routing declaration, and cross-domain wording package are all frozen; no handoff payload is built, and no other admitted domain may silently absorb Review Ops truth."
     }
   ]
 }

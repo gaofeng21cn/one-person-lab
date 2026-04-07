@@ -337,7 +337,8 @@ Human / Agent
 已完成的 `Phase 1 / G2 release-closeout` 已把 `G2 stable public baseline` 收口成单一、稳定、repo-tracked 的公开基线。
 这条基线也因此继续构成 `OPL` 在 `Phase 1` 的 formal entry contract 与 public system surface。
 repo-tracked 的 `Phase 1 / G3 thin handoff planning freeze hardening` 已把 `G3` 冻结在 planning-only gate，因此当前仍不进入 mutation entry，不把 `OPL` 提升成统一 runtime owner，也不提前抽共享执行内核。
-当前同一 phase 内的下一棒是 `Phase 1 / Grant Ops candidate-domain backlog and onboarding-package hardening`：它只继续收紧 `task-topology + candidate-domain-backlog + domain-onboarding` 路径，让 `Grant Foundry -> Med Auto Grant` 保持 signal-only 状态，而不会 admission domain，也不会激活 routed action。
+repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review Ops` 然后 `Thesis Ops`：这两条 candidate path 都继续停留在 admission / discovery / routing / handoff readiness 之下，而 `Grant Foundry -> Med Auto Grant` 仍保持 signal-only 状态。
+当前 follow-on 是 `Phase 1 exit + next-stage activation package freeze`：它只冻结最小的更强 federation follow-on，而不会激活 routed action，也不会把 `OPL` 提升成 runtime owner。
 
 当前交付目标是：在当前 `Codex-default host-agent runtime` 之上，用本地 `TypeScript CLI` 作为 `Phase 1` 的入口 transport。
 在开发控制面上，`Codex Host` 负责规划冻结与真相裁决，`OMX` 负责在这些已冻结边界内做长时执行。

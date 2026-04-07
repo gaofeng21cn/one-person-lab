@@ -21,11 +21,12 @@
 - 这里的任务优先级只用于“统一对齐”阶段；进入手工测试后，应再按真实暴露的问题调整。
 - 若需要把任务交给 `OMX` 长线执行，执行方式以 `omx-stage-gated-longrun-guide.md` 为准。
 - 当任一仓的 `P0` 或 `P1` 明显完成后，应同步更新本表。
+- 本表中的 `P0 / P1 / P2` 只是阶段任务，不等于长线目标；当用户明确要求“长线目标 / 全自动驾驶 / 一口气做完”时，应按 `autonomous longrun program mode` 理解，而不是停留在当前 taskboard tranche。
 
 ## 一、当前统一结论
 
 当前最重要的不是继续发明新的上层名词，而是把已经冻结的统一合同真正压到各仓的 repo-durable truth 与 runtime contract 上。
-对 `one-person-lab` 而言，当前 baton 是守住已完成的 `G2 stable public baseline`、把已收口的 `G3` 保持在 thin-handoff planning freeze，并推进 `Phase 1 / Grant Ops candidate-domain backlog and onboarding-package hardening`，而不是 runtime 扩面。
+对 `one-person-lab` 而言，当前 baton 是守住已完成的 `G2 stable public baseline`、把已收口的 `G3` 保持在 thin-handoff planning freeze、把 `Review Ops -> Thesis Ops` candidate-domain closeout 固定为 blocked / under-definition truth，并冻结 `Phase 1 exit + next-stage activation package` 与 external readiness blocker，而不是 runtime 扩面。
 
 当前执行顺序已经明确为：
 
@@ -81,12 +82,13 @@
   - `contracts/opl-gateway/README.zh-CN.md`
   - `docs/references/opl-gateway-rollout.zh-CN.md`
 - 守住 OPL 当前 formal entry contract：本地 `TypeScript CLI`-first / read-only gateway surface 仍是唯一 top-level formal entry，不扩成 launcher 或 runtime-owner 入口
-- 收紧同一 phase 内的 Grant Ops candidate path：
+- 冻结同一 phase 退出前的 candidate-domain closeout truth：
   - `docs/task-map.zh-CN.md`
   - `docs/references/opl-candidate-domain-backlog.zh-CN.md`
   - `docs/opl-domain-onboarding-contract.zh-CN.md`
   - `docs/references/opl-gateway-acceptance-test-spec.zh-CN.md`
-- 明确 `Grant Foundry -> Med Auto Grant` 只算 top-level signal / domain-direction evidence，不等于 domain admission、`G2` discovery readiness、`G3` routed-action readiness 或 handoff-ready surface；任何 future follow-on route 仍只能走 `domain_gateway` 且继续遵守 no-bypass
+- 明确 `Grant Foundry -> Med Auto Grant` 只算 top-level signal / domain-direction evidence，不等于 domain admission、`G2` discovery readiness、`G3` routed-action readiness 或 handoff-ready surface；同时把 `Review Ops` 与 `Thesis Ops` 都保持为 under-definition semantic bundle / workstream，显式 blocked 于 `execution_model`、`discovery_readiness`、`routing_readiness` 与 `cross_domain_wording` 四类 package；任何 future follow-on route 仍只能走 `domain_gateway` 且继续遵守 no-bypass
+- 冻结 `Phase 1 exit + next-stage activation package`，并把“至少两个 admitted domain surface 稳定到足以支撑更强 federation 表达”写成显式外部门槛
 - 保持 `OPL` 不越界为 domain runtime owner
 
 #### P1
@@ -94,11 +96,11 @@
 - 继续把四仓共同检查项收进 `OPL` 的 onboarding / gateway 说明面
 - 形成稳定的“四仓状态更新节奏”，避免各仓单独漂移
 - `G3` 当前仅做已收口的 `thin handoff planning freeze`
-- 当前 candidate-domain 重点是 `Grant Ops candidate-domain backlog and onboarding-package hardening`
+- 当前 candidate-domain closeout 已冻结为 `Review Ops -> Thesis Ops`
 - repo-tracked planning brief：`docs/plans/2026-04-07-g3-thin-handoff-planning-brief.md`
 - repo-tracked planning closeout note：`docs/plans/2026-04-07-g3-thin-handoff-planning-closeout-note.md`
 - repo-tracked release-closeout note：`docs/plans/2026-04-07-g2-release-closeout-note.md`
-- 当前同一 phase 的 follow-on：`Phase 1 / Grant Ops candidate-domain backlog and onboarding-package hardening`
+- 当前同一 phase 的 follow-on：`Phase 1 exit + next-stage activation package freeze`
 - 当前不推进统一 runtime owner，也不抽共享执行内核
 
 #### P2
@@ -210,7 +212,7 @@
 
 ### 并行推荐
 
-1. `OPL` 先回写四仓最新状态到顶层参考同步面，守住已完成的 `G2 stable public baseline` 与已收口的 `G3 thin handoff planning freeze`，并推进 `Grant Ops candidate-domain backlog and onboarding-package hardening`
+1. `OPL` 先回写四仓最新状态到顶层参考同步面，守住已完成的 `G2 stable public baseline` 与已收口的 `G3 thin handoff planning freeze`，冻结 `Review Ops -> Thesis Ops` candidate-domain closeout truth 与 `Phase 1 exit + next-stage activation package`
 2. `Med Auto Science` 处理 `P0`
 3. `RedCube AI` 处理 `P0`
 4. `Med Auto Grant` 处理 `P0`，并并行准备 `P1` 的 formal entry freeze

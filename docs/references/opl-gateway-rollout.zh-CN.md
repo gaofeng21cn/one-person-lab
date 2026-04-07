@@ -92,7 +92,8 @@ Human / Agent
 - `Phase 1` 公开主线下，CLI-first / read-only gateway baseline 已可运行
 - 已完成的 `Phase 1 / G2 release-closeout` 已把它收口成稳定、单一、repo-tracked 的 `G2 stable public baseline`
 - 已完成的 repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` 继续停留在 planning-contract closeout 边界
-- 当前同一 phase 内的 baton 是 `Phase 1 / Grant Ops candidate-domain backlog and onboarding-package hardening`
+- repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review Ops` 然后 `Thesis Ops`
+- 当前 follow-on 是 `Phase 1 exit + next-stage activation package freeze`
 
 应支持：
 
@@ -120,7 +121,8 @@ Human / Agent
 当前阶段限定：
 
 - 已完成的 repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` 继续作为 routed-action planning 的 closeout 边界，当前不会进入 routed action implementation
-- 当前同一 phase 内的 baton 是 `Phase 1 / Grant Ops candidate-domain backlog and onboarding-package hardening`，它只收紧 candidate-domain path，不推进 admission / discovery / routing readiness
+- repo-tracked 的 `Review Ops -> Thesis Ops` candidate-domain closeout 会继续把这些 candidate path 保持在 admission / discovery / routing readiness 之下，`G3` 也仍然停在 planning freeze 之外未激活
+- 当前 follow-on 是 `Phase 1 exit + next-stage activation package freeze`：它只冻结最小的更强 federation follow-on，而不会激活 runtime ownership
 - 当前这是 planning gate，不是 runtime gate；`route_request`、`build_handoff_payload`、`audit_routing_decision` 只冻结为 planning-level contract 操作
 - 唯一允许的成功 handoff 目标仍只能是 `domain_gateway`，并且 no-bypass 规则禁止直达 domain harness
 - `routed-actions.schema.json` 仍只是 planning dependency，不是 launcher

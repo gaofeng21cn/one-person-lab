@@ -21,7 +21,8 @@
 已完成的 `Phase 1 / G2 release-closeout` 已把 `G2 stable public baseline` 收口成稳定、单一、repo-tracked 的公开基线。
 这条 repo-tracked 基线也仍然是 `OPL` 在 `Phase 1` 的 formal entry contract 与 public system surface。
 已完成的 repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` 继续停留在 planning-contract closeout 层：当前目录只冻结围绕 `route_request`、`build_handoff_payload`、`audit_routing_decision` 的 planning gate / planning-level contract。唯一允许的成功 handoff 目标仍只能是 `domain_gateway`；no-bypass 规则继续禁止直达 domain harness；`routed-actions.schema.json` 仍只是 planning dependency，不是 launcher。
-当前同一 phase 内的 baton 是 `Phase 1 / Grant Ops candidate-domain backlog and onboarding-package hardening`：它只收紧现有 `task-topology + candidate-domain-backlog + domain-onboarding` 路径，不 admission domain，也不创造 `G2` discovery readiness 或 `G3` routed-action readiness。
+repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review Ops` 然后 `Thesis Ops`：这两条 candidate path 都继续停留在 domain admission、`G2` discovery readiness、`G3` routed-action readiness 与 handoff readiness 之下。
+当前 follow-on 是 `Phase 1 exit + next-stage activation package freeze`：它只冻结最小的更强 federation follow-on，而不会激活 runtime ownership。
 因此，当前 OPL 层的 repo-tracked formal entry 也仍然只是这条本地 `TypeScript CLI`-first / read-only gateway surface，而不是 launcher、mutation entry 或 runtime-owner surface。
 这个交付目标**不会**把当前目录提升成 runtime、routed-action control plane 或 canonical truth store；它只是把已有的顶层 contract language 继续维持为本地 CLI surface 可读取的合同入口。
 
@@ -79,6 +80,7 @@
 ## 配套参考 Surfaces
 
 - [OPL Candidate Domain Backlog](../../docs/references/opl-candidate-domain-backlog.zh-CN.md) — 当前 under-definition workstream 的 reference-only machine-readable admission-blocker backlog
+- [OPL Phase 1 Exit Activation Package](../../docs/references/opl-phase-1-exit-activation-package.zh-CN.md) — 当前 `Phase 1` 离场门槛、deferred surface 与最小下一阶段判断的 reference-grade freeze
 - [OPL Surface Lifecycle Map](../../docs/references/opl-surface-lifecycle-map.zh-CN.md) — 对当前已冻结 gateway / operating / supporting surfaces 的 derived machine-readable lifecycle 视图
 - [OPL Surface Authority Matrix](../../docs/references/opl-surface-authority-matrix.zh-CN.md) — 对当前已冻结 OPL surfaces 与 linked domain public-entry surfaces 的 derived machine-readable authority split
 - [OPL Surface Review Matrix](../../docs/references/opl-surface-review-matrix.zh-CN.md) — 对当前已冻结 OPL public / contract / supporting surfaces 的 derived machine-readable review obligation
@@ -99,6 +101,7 @@
 - [`public-surface-index.json`](./public-surface-index.json) — 当前权威 OPL public surface 与链接 domain public entry 的 machine-readable index
 - [`task-topology.json`](./task-topology.json) — 覆盖已收录与仍在定义中的 OPL workstream 的 machine-readable 顶层任务版图
 - [`candidate-domain-backlog.json`](./candidate-domain-backlog.json) — 当前 under-definition workstream 的 machine-readable admission-blocker backlog
+- [`phase-1-exit-activation-package.json`](./phase-1-exit-activation-package.json) — 当前 `Phase 1` 离场门槛、deferred surface 与最小下一阶段判断的 machine-readable freeze
 - [`operating-record-catalog.json`](./operating-record-catalog.json) — 已冻结 P5.M1 / P5.M2 operating record kind 的 machine-readable reference catalog
 - [`surface-lifecycle-map.json`](./surface-lifecycle-map.json) — 当前已冻结 gateway / operating / supporting surfaces 的 machine-readable derived lifecycle map
 - [`surface-authority-matrix.json`](./surface-authority-matrix.json) — 当前已冻结 OPL surfaces 与 linked domain public-entry surfaces 的 machine-readable derived authority matrix
