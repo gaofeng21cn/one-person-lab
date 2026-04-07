@@ -7,7 +7,7 @@
 This document freezes the `G3` contract for the `OPL Gateway`.
 
 `G3` is the first phase where `OPL` may eventually accept a top-level action request and route it into the correct domain gateway.
-In the current `Phase 1`, this document is only a `G3 thin handoff planning / pre-freeze` contract reference and now serves as the planning-level contract for the `Phase 1 / G3 thin handoff planning freeze hardening`; it does not mean that the repository has already entered routed-action implementation.
+In the current `Phase 1`, this document is only a `G3 thin handoff planning` contract reference and now serves as the planning-level contract closed out by the `Phase 1 / G3 thin handoff planning freeze hardening`; it does not mean that the repository has already entered routed-action implementation.
 This is a planning gate, not a runtime gate. No mutation entry, run launch, or workspace write is added at this step.
 
 The goal is not to create a monolithic runtime.

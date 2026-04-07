@@ -23,7 +23,7 @@
     </td>
     <td width="33%" valign="top">
       <strong>Federation State</strong><br/>
-      <code>Research Foundry -> Med Auto Science</code> is the active Research Ops line; <code>Grant Foundry -> Med Auto Grant</code> is now publicly scaffolded as a future medical Grant Ops surface; <code>RedCube AI</code> is the emerging visual-deliverable surface
+      <code>Research Foundry -> Med Auto Science</code> is the active Research Ops line; <code>Grant Foundry -> Med Auto Grant</code> is now publicly scaffolded as top-level signal / domain-direction evidence for a future medical Grant Ops surface; <code>RedCube AI</code> is the emerging visual-deliverable surface
     </td>
   </tr>
 </table>
@@ -117,7 +117,7 @@
     <td width="20%" valign="top">
       <strong>Grant Ops</strong><br/>
       <code>Planned</code><br/>
-      public scaffold via <code>Grant Foundry -> Med Auto Grant</code>
+      public scaffold / top-level signal via <code>Grant Foundry -> Med Auto Grant</code>
     </td>
     <td width="20%" valign="top">
       <strong>Thesis Ops</strong><br/>
@@ -270,7 +270,7 @@ Current mapped surfaces:
 
 Current public but not-yet-admitted scaffold:
 
-- `Grant Ops` -> `Grant Foundry` -> `Med Auto Grant` as a future medical surface
+- `Grant Ops` -> `Grant Foundry` -> `Med Auto Grant` as a future medical surface, currently only as public scaffold / top-level signal / domain-direction evidence
 
 Important boundary:
 
@@ -297,10 +297,11 @@ Its current role is:
 
 Its current role is:
 
-- the public scaffold for the medical implementation of `Grant Foundry`
-- the future author-side, proposal-facing `Grant Ops` medical surface
+- the public scaffold and top-level signal for the medical implementation of `Grant Foundry`
+- domain-direction evidence for the future author-side, proposal-facing `Grant Ops` medical surface
 - the place where the first medical `NSFC` generic application MVP is being frozen
 - not yet an admitted `OPL` domain gateway and harness
+- not yet a `G2` discovery target or a `G3` routed-action target
 
 ### RedCube AI
 
@@ -338,7 +339,8 @@ The current phase has four priorities, led by a Phase 1 local `TypeScript CLI` +
 
 As of `2026-04-07`, the repository already has a runnable local `TypeScript CLI`-first / read-only gateway baseline.
 The completed `Phase 1 / G2 release-closeout` has already closed the `G2 stable public baseline` into the single stable repo-tracked public entry.
-The current baton is the `Phase 1 / G3 thin handoff planning freeze hardening`: `G3` remains a planning gate only, so this step does not open a mutation entry, turn `OPL` into a unified runtime owner, or pull a shared execution core forward.
+The repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` has already frozen `G3` at a planning-only gate, so it still does not open a mutation entry, turn `OPL` into a unified runtime owner, or pull a shared execution core forward.
+The current same-phase follow-on is `Phase 1 / Grant Ops candidate-domain backlog and onboarding-package hardening`: it only tightens the `task-topology + candidate-domain-backlog + domain-onboarding` path, keeps `Grant Foundry -> Med Auto Grant` at signal-only status, and does not admit a domain or activate routed action.
 
 The current delivery target uses a local `TypeScript CLI` as the Phase 1 entry transport on top of the current `Codex-default host-agent runtime`.
 At the development-control layer, `Codex Host` freezes planning and truth while `OMX` handles long-running execution inside those frozen boundaries.

@@ -142,7 +142,7 @@
 4. routed contract 明确禁止绕过 domain gateway 直接调用 harness。
 5. 机器可读 routed-action schema 与公开 G3 文档保持一致。
 6. routing evidence 保持显式、可审计，而不是藏在 best-effort wording 后面。
-7. 当前文档把 `G3` 限定为 `thin handoff planning / pre-freeze`，而不是当前已激活的 mutation runtime。
+7. 当前文档把 `G3` 限定为 planning-only 的 thin handoff contract wording，而不是当前已激活的 mutation runtime。
 
 ### 验证方式
 
@@ -163,17 +163,22 @@ onboarding gate 只有在下面全部成立时才算通过：
 4. onboarding contract 要求显式 public documentation surface。
 5. onboarding contract 要求显式 truth-ownership declaration。
 6. onboarding contract 要求显式 review surface。
-7. onboarding contract 定义了正式收录门槛，覆盖：
+7. onboarding contract 要求显式 discovery-readiness declaration，且 discovery 继续只指向 `domain_gateway`，不会提前暗示 handoff readiness。
+8. onboarding contract 要求显式 routing-readiness declaration，且 `domain_gateway` 继续是唯一 successful target，并保留 no-bypass 规则。
+9. onboarding contract 要求显式 cross-domain wording material，使 OPL/domain 角色语言可以被直接审查。
+10. onboarding contract 定义了正式收录门槛，覆盖：
    - registry complete
    - boundary explicit
    - truth ownership explicit
    - discovery ready
    - routing ready
    - review ready
+   - execution model aligned
    - cross-domain wording aligned
-8. onboarding contract 保持 non-executing、不会自动收录 domain，也不会替代 prose review gate。
-9. onboarding contract 显式禁止“先挂名，后补边界”。
-10. onboarding contract 显式禁止把未来 domain 写成 `OPL` 内部模块。
+11. onboarding contract 保持 non-executing、不会自动收录 domain，也不会替代 prose review gate。
+12. onboarding contract 显式禁止“先挂名，后补边界”。
+13. onboarding contract 显式禁止把未来 domain 写成 `OPL` 内部模块。
+14. 像 `Grant Foundry -> Med Auto Grant` 这样的 signal-only scaffold，本身不能满足 admission、discovery readiness 或 routing readiness。
 
 ### 验证方式
 
@@ -593,40 +598,45 @@ wording-consistency gate 只有在下面全部成立时才算通过：
    - `entry_surface = null`
    - `formal_domain_required = true`
 5. 每条 backlog entry 都把 discovery、routing、handoff 与 formal inclusion 的 `readiness_flags` 明确保持为 `false`，并且在真实 boundary package 出现之前不携带占位性的未来 `domain_id`、`gateway_surface` 或 `harness_surface` 字段。
-6. 每条 backlog entry 都在 `required_onboarding_materials` 中把下面六类 package 记录为 `missing`：
+6. 每条 backlog entry 都在 `required_onboarding_materials` 中把下面八类 package 记录为 `missing`：
    - `registry_material`
    - `public_documentation`
    - `truth_ownership`
    - `review_surfaces`
-   - `discovery_routing_readiness`
+   - `execution_model`
+   - `discovery_readiness`
+   - `routing_readiness`
    - `cross_domain_wording`
-7. 每条 backlog entry 都在 `missing_boundary_materials` 中把下面七项 formal-inclusion check 对齐出来：
+7. 每条 backlog entry 都在 `missing_boundary_materials` 中把下面八项 formal-inclusion check 对齐出来：
    - `registry_complete`
    - `boundary_explicit`
    - `truth_ownership_explicit`
    - `discovery_ready`
    - `routing_ready`
    - `review_ready`
+   - `execution_model_aligned`
    - `cross_domain_wording_aligned`
 8. 每个 `formal_inclusion_gate` 检查项都仍保持 `status = blocked`。
 9. 任何 backlog entry 都不会虚构已冻结的 admitted domain、candidate gateway surface、candidate harness surface 或 canonical truth owner。
 10. `Grant Ops` 仍然保持 proposal-facing：task-topology、task-map 与 candidate-backlog 的 wording 都把作者侧模拟评审与修订写成 grant-authoring aid / artifact，而不是 reviewer-role ownership，也不是独立 reviewer surface。
-11. `Thesis Ops` 在 task-map 与 candidate-backlog wording 中都仍位于 onboarding gate 之下；在对应 domain-onboarding evidence 出现前，这些 wording 不会让它变成 `G2` discovery target 或 `G3` routed-action target。
-12. `Thesis Ops` 的 wording 还必须把 thesis assembly 与 `Research Ops` 的 manuscript/submission flow、以及 `Presentation Ops` / `RedCube AI` 的 deck production 区分开；可复用输入或下游衍生物不会把 `Thesis Ops` 的边界转移给这些已收录 surface。
-13. `Review Ops` 仍然只把 reviewer-role work 与 response / rebuttal coordination 表达为同一个 under-definition semantic bundle；这种写法不会因此自动收录成 review domain、不会把 review-truth ownership 上收到 `OPL`，也不会创造 `G2` discovery target 或 `G3` routed-action target。
-14. 任何 candidate entry 或 backlog rule 都不会把 `Grant Ops`、`Thesis Ops`、`Review Ops` 折叠进 `MedAutoScience` 或 `RedCube AI`；这两个已收录 domain 仍保持独立的 gateway / harness surface。
-15. `required_evidence` 与 note 文本不会在 boundary package 存在之前预先分配未来的 `domain_id`、`gateway_surface` 或 `harness_surface` 元数据。
-16. `contracts/opl-gateway/public-surface-index.json`、`surface-review-matrix.json`、`surface-lifecycle-map.json` 与 `surface-authority-matrix.json` 都把 candidate-domain backlog 暴露为 supporting/reference surface。
-17. 在 `public-surface-index.json` 中，`opl_candidate_domain_backlog` 恰好出现一次；在 `surface-review-matrix.json` 中，对应 review entry 也恰好出现一次。
-18. contract README、task-map docs、domain-onboarding docs、public-surface index docs、review-matrix docs、lifecycle/authority docs 与 acceptance surfaces 都把这份 backlog 写成 reference-only、non-executing、non-admitting，且明确位于 onboarding gate 之下。
+11. 如果公开 wording 中出现 `Grant Foundry -> Med Auto Grant`，它也只会被写成 top-level signal / domain-direction evidence；不等于已收录 domain gateway，也不等于 `G2` discovery readiness，也不等于 `G3` routed-action readiness，更不等于 handoff-ready surface。
+12. `Thesis Ops` 在 task-map 与 candidate-backlog wording 中都仍位于 onboarding gate 之下；在对应 domain-onboarding evidence 出现前，这些 wording 不会让它变成 `G2` discovery target 或 `G3` routed-action target。
+13. `Thesis Ops` 的 wording 还必须把 thesis assembly 与 `Research Ops` 的 manuscript/submission flow、以及 `Presentation Ops` / `RedCube AI` 的 deck production 区分开；可复用输入或下游衍生物不会把 `Thesis Ops` 的边界转移给这些已收录 surface。
+14. `Review Ops` 仍然只把 reviewer-role work 与 response / rebuttal coordination 表达为同一个 under-definition semantic bundle；这种写法不会因此自动收录成 review domain、不会把 review-truth ownership 上收到 `OPL`，也不会创造 `G2` discovery target 或 `G3` routed-action target。
+15. 任何 candidate entry 或 backlog rule 都不会把 `Grant Ops`、`Thesis Ops`、`Review Ops` 折叠进 `MedAutoScience` 或 `RedCube AI`；这两个已收录 domain 仍保持独立的 gateway / harness surface。
+16. `required_evidence` 与 note 文本不会在 boundary package 存在之前预先分配未来的 `domain_id`、`gateway_surface` 或 `harness_surface` 元数据。
+17. `contracts/opl-gateway/public-surface-index.json`、`surface-review-matrix.json`、`surface-lifecycle-map.json` 与 `surface-authority-matrix.json` 都把 candidate-domain backlog 暴露为 supporting/reference surface。
+18. 在 `public-surface-index.json` 中，`opl_candidate_domain_backlog` 恰好出现一次；在 `surface-review-matrix.json` 中，对应 review entry 也恰好出现一次。
+19. contract README、task-map docs、domain-onboarding docs、public-surface index docs、review-matrix docs、lifecycle/authority docs 与 acceptance surfaces 都把这份 backlog 写成 reference-only、non-executing、non-admitting，且明确位于 onboarding gate 之下。
 
 ### 验证方式
 
 - 用 `json.load` 解析 `contracts/opl-gateway/candidate-domain-backlog.json`。
 - 确认上面列出的精确 workstream 集合，以及它与 `task-topology.json` 中 under-definition entry 的完全对齐。
-- 确认每条 backlog entry 都包含上面六类 `required_onboarding_materials` package、上面七项 `missing_boundary_materials` 检查，以及一个全部 blocked 的 `formal_inclusion_gate` 对象。
+- 确认每条 backlog entry 都包含上面八类 `required_onboarding_materials` package、上面八项 `missing_boundary_materials` 检查，以及一个全部 blocked 的 `formal_inclusion_gate` 对象。
 - 确认所有 `readiness_flags` 都保持 `false`，并且不存在占位性的未来 `domain_id`、`gateway_surface` 或 `harness_surface` 字段。
 - 确认 `Grant Ops` 在 `task-topology`、`task-map` 与 candidate-backlog 中都保持 proposal-facing，因此作者侧模拟评审 / 修订不会升级成 reviewer-role ownership。
+- 确认任何 `Grant Foundry -> Med Auto Grant` wording 都继续停留在 top-level signal / domain-direction evidence，而不会被误写成 admission、`G2` discovery readiness、`G3` routed-action readiness 或 handoff-ready surface。
 - 确认 `Thesis Ops` 在 `task-map` 与 candidate-backlog 中都仍位于 onboarding gate 之下，因此在对应 domain-onboarding evidence 出现前不会被误写成 `G2` discovery target 或 `G3` routed-action target。
 - 确认 `Thesis Ops` 仍然区别于 `Research Ops` 的 manuscript/submission flow 与 `Presentation Ops` / `RedCube AI` 的 deck production，因此可复用输入或下游衍生物不会把 `Thesis Ops` 的边界转移给这些已收录 surface。
 - 确认 `Review Ops` 在 `task-topology`、`task-map` 与 candidate-backlog 中都仍只是 under-definition semantic bundle，因此 reviewer-role work 与 response / rebuttal coordination 不会被误写成已收录 review domain、OPL-owned review-truth surface、`G2` discovery target 或 `G3` routed-action target。
@@ -951,7 +961,9 @@ required_packages = {
     'public_documentation',
     'truth_ownership',
     'review_surfaces',
-    'discovery_routing_readiness',
+    'execution_model',
+    'discovery_readiness',
+    'routing_readiness',
     'cross_domain_wording',
 }
 required_checks = {
@@ -961,6 +973,7 @@ required_checks = {
     'discovery_ready',
     'routing_ready',
     'review_ready',
+    'execution_model_aligned',
     'cross_domain_wording_aligned',
 }
 banned_future_metadata = {'domain_id', 'gateway_surface', 'harness_surface'}

@@ -16,7 +16,8 @@
     "package-level blockers align to the onboarding package requirements in the domain-onboarding contract",
     "check-level blockers align to the formal inclusion gate in the domain-onboarding contract",
     "the backlog may reference top-level task semantics without admitting new domains",
-    "candidate workstreams remain under definition / deferred until a stable agent runtime surface plus a shared-base Auto/Human-in-the-loop convergence path is explicitly declared"
+    "candidate workstreams remain under definition / deferred until a stable agent runtime surface plus a shared-base Auto/Human-in-the-loop convergence path is explicitly declared",
+    "top-level signal or domain-direction evidence may clarify a candidate path, but it does not by itself satisfy registry material, public gateway docs, discovery readiness, routing readiness, or admission"
   ],
   "required_package_ids": [
     "registry_material",
@@ -24,7 +25,8 @@
     "truth_ownership",
     "review_surfaces",
     "execution_model",
-    "discovery_routing_readiness",
+    "discovery_readiness",
+    "routing_readiness",
     "cross_domain_wording"
   ],
   "formal_inclusion_check_ids": [
@@ -52,7 +54,8 @@
       "top_level_signal_refs": [
         "contracts/opl-gateway/task-topology.json#workstreams/grant_ops",
         "docs/task-map.md#grant-ops",
-        "docs/task-map.zh-CN.md#grant-ops"
+        "docs/task-map.zh-CN.md#grant-ops",
+        "https://github.com/gaofeng21cn/med-autogrant"
       ],
       "admission_status": "blocked",
       "readiness_flags": {
@@ -128,15 +131,28 @@
           ]
         },
         {
-          "package_id": "discovery_routing_readiness",
+          "package_id": "discovery_readiness",
           "status": "missing",
           "required_evidence": [
             "read-only discovery entry that points Grant Ops to the future domain public entry",
-            "explicit routed-action evidence and handoff evidence for Grant Ops -> future domain public entry with no harness bypass"
+            "explicit discovery wording that keeps the entry surface at domain_gateway without implying handoff readiness"
           ],
           "forbidden_shortcuts": [
             "promote_to_g2_without_domain_gateway",
+            "treat_top_level_signal_as_discovery_ready",
+            "bypass_domain_gateway_to_harness"
+          ]
+        },
+        {
+          "package_id": "routing_readiness",
+          "status": "missing",
+          "required_evidence": [
+            "explicit routed-action evidence for Grant Ops -> future domain public entry",
+            "stable handoff evidence that keeps the only successful target at domain_gateway with no harness bypass"
+          ],
+          "forbidden_shortcuts": [
             "promote_to_g3_without_explicit_route_evidence",
+            "treat_top_level_signal_as_routing_ready",
             "bypass_domain_gateway_to_harness"
           ]
         },
@@ -193,27 +209,27 @@
         },
         {
           "maps_to_formal_inclusion_check": "discovery_ready",
-          "package_id": "discovery_routing_readiness",
+          "package_id": "discovery_readiness",
           "status": "missing",
           "required_evidence": [
             "G2 discovery surface that points Grant Ops to the future domain public entry"
           ],
           "forbidden_shortcuts": [
             "promote_to_g2_without_domain_gateway",
-            "promote_to_g3_without_explicit_route_evidence",
+            "treat_top_level_signal_as_discovery_ready",
             "bypass_domain_gateway_to_harness"
           ]
         },
         {
           "maps_to_formal_inclusion_check": "routing_ready",
-          "package_id": "discovery_routing_readiness",
+          "package_id": "routing_readiness",
           "status": "missing",
           "required_evidence": [
             "G3 routing evidence and stable handoff boundary for Grant Ops -> future domain public entry"
           ],
           "forbidden_shortcuts": [
-            "promote_to_g2_without_domain_gateway",
             "promote_to_g3_without_explicit_route_evidence",
+            "treat_top_level_signal_as_routing_ready",
             "bypass_domain_gateway_to_harness"
           ]
         },
@@ -280,13 +296,13 @@
         "discovery_ready": {
           "status": "blocked",
           "blocking_package_ids": [
-            "discovery_routing_readiness"
+            "discovery_readiness"
           ]
         },
         "routing_ready": {
           "status": "blocked",
           "blocking_package_ids": [
-            "discovery_routing_readiness"
+            "routing_readiness"
           ]
         },
         "review_ready": {
@@ -308,7 +324,7 @@
           ]
         }
       },
-      "notes": "Top-level semantics are explicit: Grant Ops stays proposal-facing, and its review-simulation / revision traces remain author-side artifacts while the future domain boundary package is still incomplete."
+      "notes": "Top-level semantics are explicit: Grant Ops stays proposal-facing, and its review-simulation / revision traces remain author-side artifacts while the future domain boundary package is still incomplete. The current Grant Foundry -> Med Auto Grant public scaffold provides top-level signal and domain-direction evidence only; it is not an admitted domain gateway, not G2 discovery-ready, not G3 routed-action-ready, and not handoff-ready."
     },
     {
       "workstream_id": "thesis_ops",
@@ -400,15 +416,28 @@
           ]
         },
         {
-          "package_id": "discovery_routing_readiness",
+          "package_id": "discovery_readiness",
           "status": "missing",
           "required_evidence": [
             "read-only discovery entry that points Thesis Ops to the future domain public entry",
-            "explicit routed-action evidence and handoff evidence for Thesis Ops -> future domain public entry with no harness bypass"
+            "explicit discovery wording that keeps the entry surface at domain_gateway without implying handoff readiness"
           ],
           "forbidden_shortcuts": [
             "promote_to_g2_without_domain_gateway",
+            "treat_top_level_signal_as_discovery_ready",
+            "bypass_domain_gateway_to_harness"
+          ]
+        },
+        {
+          "package_id": "routing_readiness",
+          "status": "missing",
+          "required_evidence": [
+            "explicit routed-action evidence for Thesis Ops -> future domain public entry",
+            "stable handoff evidence that keeps the only successful target at domain_gateway with no harness bypass"
+          ],
+          "forbidden_shortcuts": [
             "promote_to_g3_without_explicit_route_evidence",
+            "treat_top_level_signal_as_routing_ready",
             "bypass_domain_gateway_to_harness"
           ]
         },
@@ -465,27 +494,27 @@
         },
         {
           "maps_to_formal_inclusion_check": "discovery_ready",
-          "package_id": "discovery_routing_readiness",
+          "package_id": "discovery_readiness",
           "status": "missing",
           "required_evidence": [
             "G2 discovery surface that points Thesis Ops to the future domain public entry"
           ],
           "forbidden_shortcuts": [
             "promote_to_g2_without_domain_gateway",
-            "promote_to_g3_without_explicit_route_evidence",
+            "treat_top_level_signal_as_discovery_ready",
             "bypass_domain_gateway_to_harness"
           ]
         },
         {
           "maps_to_formal_inclusion_check": "routing_ready",
-          "package_id": "discovery_routing_readiness",
+          "package_id": "routing_readiness",
           "status": "missing",
           "required_evidence": [
             "G3 routing evidence and stable handoff boundary for Thesis Ops -> future domain public entry"
           ],
           "forbidden_shortcuts": [
-            "promote_to_g2_without_domain_gateway",
             "promote_to_g3_without_explicit_route_evidence",
+            "treat_top_level_signal_as_routing_ready",
             "bypass_domain_gateway_to_harness"
           ]
         },
@@ -552,13 +581,13 @@
         "discovery_ready": {
           "status": "blocked",
           "blocking_package_ids": [
-            "discovery_routing_readiness"
+            "discovery_readiness"
           ]
         },
         "routing_ready": {
           "status": "blocked",
           "blocking_package_ids": [
-            "discovery_routing_readiness"
+            "routing_readiness"
           ]
         },
         "review_ready": {
@@ -672,15 +701,28 @@
           ]
         },
         {
-          "package_id": "discovery_routing_readiness",
+          "package_id": "discovery_readiness",
           "status": "missing",
           "required_evidence": [
             "read-only discovery entry that points Review Ops to the future domain public entry",
-            "explicit routed-action evidence and handoff evidence for Review Ops -> future domain public entry with no harness bypass"
+            "explicit discovery wording that keeps the entry surface at domain_gateway without implying handoff readiness"
           ],
           "forbidden_shortcuts": [
             "promote_to_g2_without_domain_gateway",
+            "treat_top_level_signal_as_discovery_ready",
+            "bypass_domain_gateway_to_harness"
+          ]
+        },
+        {
+          "package_id": "routing_readiness",
+          "status": "missing",
+          "required_evidence": [
+            "explicit routed-action evidence for Review Ops -> future domain public entry",
+            "stable handoff evidence that keeps the only successful target at domain_gateway with no harness bypass"
+          ],
+          "forbidden_shortcuts": [
             "promote_to_g3_without_explicit_route_evidence",
+            "treat_top_level_signal_as_routing_ready",
             "bypass_domain_gateway_to_harness"
           ]
         },
@@ -737,27 +779,27 @@
         },
         {
           "maps_to_formal_inclusion_check": "discovery_ready",
-          "package_id": "discovery_routing_readiness",
+          "package_id": "discovery_readiness",
           "status": "missing",
           "required_evidence": [
             "G2 discovery surface that points Review Ops to the future domain public entry"
           ],
           "forbidden_shortcuts": [
             "promote_to_g2_without_domain_gateway",
-            "promote_to_g3_without_explicit_route_evidence",
+            "treat_top_level_signal_as_discovery_ready",
             "bypass_domain_gateway_to_harness"
           ]
         },
         {
           "maps_to_formal_inclusion_check": "routing_ready",
-          "package_id": "discovery_routing_readiness",
+          "package_id": "routing_readiness",
           "status": "missing",
           "required_evidence": [
             "G3 routing evidence and stable handoff boundary for Review Ops -> future domain public entry"
           ],
           "forbidden_shortcuts": [
-            "promote_to_g2_without_domain_gateway",
             "promote_to_g3_without_explicit_route_evidence",
+            "treat_top_level_signal_as_routing_ready",
             "bypass_domain_gateway_to_harness"
           ]
         },
@@ -824,13 +866,13 @@
         "discovery_ready": {
           "status": "blocked",
           "blocking_package_ids": [
-            "discovery_routing_readiness"
+            "discovery_readiness"
           ]
         },
         "routing_ready": {
           "status": "blocked",
           "blocking_package_ids": [
-            "discovery_routing_readiness"
+            "routing_readiness"
           ]
         },
         "review_ready": {

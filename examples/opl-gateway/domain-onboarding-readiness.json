@@ -129,18 +129,6 @@
     "fixed_code_first_mainline_forbidden": true,
     "single_mode_steady_state_forbidden": true
   },
-  "discovery_routing_readiness": {
-    "discovery_entry_surface": "domain_gateway",
-    "routing_entry_surface": "domain_gateway",
-    "discovery_workstream_ids": [
-      "example_ops"
-    ],
-    "routing_workstream_ids": [
-      "example_ops"
-    ],
-    "direct_harness_bypass_allowed": false,
-    "routing_evidence_explicit": true
-  },
   "formal_inclusion_gate": {
     "overall_status": "ready_for_inclusion",
     "registry_complete": {
@@ -199,5 +187,39 @@
     "internal_module_framing_forbidden": true,
     "implicit_truth_transfer_forbidden": true,
     "family_name_not_auto_workstream": true
+  },
+  "discovery_readiness": {
+    "discovery_entry_surface": "domain_gateway",
+    "discovery_workstream_ids": [
+      "example_ops"
+    ],
+    "discovery_evidence_explicit": true
+  },
+  "routing_readiness": {
+    "routing_entry_surface": "domain_gateway",
+    "routing_workstream_ids": [
+      "example_ops"
+    ],
+    "direct_harness_bypass_allowed": false,
+    "routing_evidence_explicit": true,
+    "handoff_payload_targets_domain_gateway_only": true
+  },
+  "cross_domain_wording": {
+    "opl_surface_refs": [
+      {
+        "ref_kind": "external_url",
+        "ref": "https://example.com/opl/grant-ops",
+        "label": "Example OPL Grant Ops Surface"
+      }
+    ],
+    "domain_surface_refs": [
+      {
+        "ref_kind": "external_url",
+        "ref": "https://example.com/example-domain/grant-ops",
+        "label": "Example Domain Grant Ops Surface"
+      }
+    ],
+    "top_level_role_language_aligned": true,
+    "signal_only_scaffold_does_not_imply_admission": true
   }
 }

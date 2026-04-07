@@ -76,8 +76,13 @@ Onboarding contract 负责定义正式收录门槛。
 
 当前冻结下来的边界仍然是 proposal-facing：模拟评审与修订轨迹仍是作者侧的基金写作工件，而不是独立的 reviewer-role output。
 
-但它仍然缺少未来 domain boundary package：包括 registry material、public gateway docs、truth ownership、review surfaces、显式的 execution-model declaration、discovery readiness、routing readiness，以及 cross-domain wording。
+当前 `Grant Foundry -> Med Auto Grant` 公开 scaffold 只提供 top-level signal / domain-direction evidence。
+它不等于已正式收录的 domain gateway，也不等于 `G2` discovery readiness，也不等于 `G3` routed-action readiness，更不等于 handoff-ready surface。
+
+但它仍然缺少未来 domain boundary package：包括 registry material、public gateway docs、truth ownership、review surfaces、显式的 execution-model declaration、discovery readiness blocker、routing readiness blocker，以及 cross-domain wording。
 这份 execution-model declaration 还必须明确 stable agent runtime surface、说明 `Auto` 与 `Human-in-the-loop` 如何共享同一基座、解释 code-versus-Agent responsibility split，并明确排除 `fixed-code-first` 或长期单模的 framing。
+其中 discovery readiness blocker 必须把只读 discovery 明确指向未来的 `domain_gateway` 入口，但不能提前暗示 handoff readiness。
+其中 routing readiness blocker 必须冻结显式 route evidence，保持 `domain_gateway` 仍是唯一 allowed successful handoff target，并继续遵守不得直达 harness 的 no-bypass 规则。
 这些未来 package 只是 blocker，不代表 `Grant Ops` 现在已经具备 `G2` discovery readiness 或 `G3` routed-action readiness。
 
 ### Thesis Ops
@@ -107,6 +112,7 @@ Onboarding contract 负责定义正式收录门槛。
 `blocked` 不代表“快收录了”。
 它代表必需 boundary package 仍未完整。
 如果 execution-model declaration 还缺失，该 workstream 就仍然只能停留在 under definition / deferred，而不能被写成 `ready`、`aligned` 或隐式 admitted。
+如果当前只存在公开 scaffold 或 domain-direction hint，它也仍然只能被解释为顶层信号/证据，而不能代替真实 boundary package。
 
 它也不允许 `OPL` 悄悄把这些仍在定义中的 workstream 吸收进 `MedAutoScience` 或 `RedCube AI`。
 这两个已收录 domain 仍然保持独立的 gateway / harness surface。
@@ -127,6 +133,7 @@ Onboarding contract 负责定义正式收录门槛。
 - 每个当前候选 workstream 都有显式 backlog entry
 - blocker package 与 onboarding-package 类别一一对齐
 - blocker check 与 onboarding formal-inclusion gate 一一对齐
+- discovery readiness blocker 与 routing readiness blocker 继续保持为两项独立 blocked check
 - public companion wording 继续把 execution-model blocker 写明：stable agent runtime surface、共享同一基座的 `Auto` / `Human-in-the-loop`、以及 code-versus-Agent responsibility split 在显式回答前，都只能保持 under definition / deferred
 - 没有任何 entry 分配未来 domain identity、gateway / harness surface metadata 或 routed readiness state
 - backlog 保持可发现、可审阅，但不变成 control plane

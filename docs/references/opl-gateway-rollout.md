@@ -91,7 +91,8 @@ Current frozen state:
 
 - under the `Phase 1` public mainline, the CLI-first / read-only gateway baseline is already runnable
 - the completed `Phase 1 / G2 release-closeout` has already closed that baseline into one stable repo-tracked `G2 stable public baseline`
-- the current baton is the `Phase 1 / G3 thin handoff planning freeze hardening`
+- the completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` remains closed at the planning-contract boundary
+- the current same-phase baton is `Phase 1 / Grant Ops candidate-domain backlog and onboarding-package hardening`
 
 Should support:
 
@@ -118,7 +119,8 @@ Goal:
 
 Current phase constraint:
 
-- the repository is only entering the `Phase 1 / G3 thin handoff planning freeze hardening`, i.e. the repo-tracked hardening pass on top of the earlier `thin handoff planning` pre-freeze, and is not entering routed-action implementation
+- the completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` remains the closeout boundary for routed-action planning, and the repository is not entering routed-action implementation
+- the current same-phase baton is `Phase 1 / Grant Ops candidate-domain backlog and onboarding-package hardening`, which keeps the candidate-domain path below admission / discovery / routing readiness while G3 stays inactive beyond planning freeze
 - this is a planning gate, not a runtime gate; `route_request`, `build_handoff_payload`, and `audit_routing_decision` are frozen as planning-level contract operations only
 - the only allowed successful handoff target remains `domain_gateway`, and the no-bypass rule forbids direct domain-harness targeting
 - `routed-actions.schema.json` remains a planning dependency, not a launcher
@@ -148,6 +150,7 @@ Contract extension needed before adding more domains:
 
 At the current baseline, candidate-domain definition remains the composition of `task-topology`, `candidate-domain backlog`, and `domain-onboarding`.
 Do not insert a separate intermediate candidate-definition control surface unless those layers first prove insufficient to express a real missing boundary.
+For the current Grant Ops path, `Grant Foundry -> Med Auto Grant` still counts only as top-level signal / domain-direction evidence; it does not by itself admit a domain gateway, create `G2` discovery readiness, or create `G3` routed-action readiness.
 
 Detailed contract:
 

@@ -23,7 +23,7 @@
     </td>
     <td width="33%" valign="top">
       <strong>联邦状态</strong><br/>
-      <code>Research Foundry -> Med Auto Science</code> 是当前 Active 的 Research Ops 主线；<code>Grant Foundry -> Med Auto Grant</code> 已作为未来医学 Grant Ops surface 的公开 scaffold 开出；<code>RedCube AI</code> 是当前 Emerging 的视觉交付 surface
+      <code>Research Foundry -> Med Auto Science</code> 是当前 Active 的 Research Ops 主线；<code>Grant Foundry -> Med Auto Grant</code> 已作为未来医学 Grant Ops surface 的 top-level signal / domain-direction evidence 公开 scaffold 开出；<code>RedCube AI</code> 是当前 Emerging 的视觉交付 surface
     </td>
   </tr>
 </table>
@@ -113,7 +113,7 @@
     <td width="20%" valign="top">
       <strong>Grant Ops</strong><br/>
       <code>Planned</code><br/>
-      通过 <code>Grant Foundry -> Med Auto Grant</code> 提供公开 scaffold
+      通过 <code>Grant Foundry -> Med Auto Grant</code> 提供公开 scaffold / top-level signal
     </td>
     <td width="20%" valign="top">
       <strong>Thesis Ops</strong><br/>
@@ -266,7 +266,7 @@ Human / Agent
 
 当前已公开、但尚未 admitted 的 scaffold：
 
-- `Grant Ops` -> `Grant Foundry` -> `Med Auto Grant`，作为未来的医学 surface
+- `Grant Ops` -> `Grant Foundry` -> `Med Auto Grant`，作为未来医学 surface 的公开 scaffold / top-level signal / domain-direction evidence
 
 关键边界：
 
@@ -293,10 +293,11 @@ Human / Agent
 
 它当前承担的是：
 
-- `Grant Foundry` 在医学场景下的公开实现 scaffold
-- 未来作者侧、proposal-facing 的 `Grant Ops` 医学 surface
+- `Grant Foundry` 在医学场景下的公开实现 scaffold 与 top-level signal
+- 未来作者侧、proposal-facing 的 `Grant Ops` 医学 surface 的 domain-direction evidence
 - 第一版医学 `NSFC` 通用申请 MVP 的冻结入口
 - 但它还不是已经 admitted 的 `OPL` domain gateway 与 harness
+- 也还不是 `G2` discovery target 或 `G3` routed-action target
 
 ### RedCube AI
 
@@ -334,7 +335,8 @@ Human / Agent
 
 截至 `2026-04-07`，当前 repo 已有可运行的本地 `TypeScript CLI`-first / read-only gateway baseline。
 已完成的 `Phase 1 / G2 release-closeout` 已把 `G2 stable public baseline` 收口成单一、稳定、repo-tracked 的公开基线。
-当前这一棒是 `Phase 1 / G3 thin handoff planning freeze hardening`：`G3` 当前仍只是 planning gate，因此不进入 mutation entry，不把 `OPL` 提升成统一 runtime owner，也不提前抽共享执行内核。
+repo-tracked 的 `Phase 1 / G3 thin handoff planning freeze hardening` 已把 `G3` 冻结在 planning-only gate，因此当前仍不进入 mutation entry，不把 `OPL` 提升成统一 runtime owner，也不提前抽共享执行内核。
+当前同一 phase 内的下一棒是 `Phase 1 / Grant Ops candidate-domain backlog and onboarding-package hardening`：它只继续收紧 `task-topology + candidate-domain-backlog + domain-onboarding` 路径，让 `Grant Foundry -> Med Auto Grant` 保持 signal-only 状态，而不会 admission domain，也不会激活 routed action。
 
 当前交付目标是：在当前 `Codex-default host-agent runtime` 之上，用本地 `TypeScript CLI` 作为 `Phase 1` 的入口 transport。
 在开发控制面上，`Codex Host` 负责规划冻结与真相裁决，`OMX` 负责在这些已冻结边界内做长时执行。

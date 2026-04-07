@@ -59,15 +59,21 @@ test('grant scaffold stays public and non-admitting across tracked public docs',
   assert.match(taskMapZh, /不会构建 handoff payload/);
 
   assert.match(roadmap, /Grant Ops`, `Thesis Ops`, and `Review Ops` remain under definition/i);
+  assert.match(roadmap, /Grant Foundry -> Med Auto Grant/i);
+  assert.match(roadmap, /top-level signal/i);
+  assert.match(roadmap, /domain-direction evidence/i);
   assert.match(
     roadmap,
-    /does \*\*not\*\* make `Grant Ops` a `G2` discovery target or a `G3` routed-action target/i,
+    /not an admitted domain gateway|does \*\*not\*\* make `Grant Ops` a `G2` discovery target or a `G3` routed-action target/i,
   );
 
   assert.match(roadmapZh, /`Grant Ops`、`Thesis Ops`、`Review Ops` 仍处于定义阶段/);
+  assert.match(roadmapZh, /Grant Foundry -> Med Auto Grant/);
+  assert.match(roadmapZh, /top-level signal|顶层信号/);
+  assert.match(roadmapZh, /domain-direction evidence|领域方向证据/);
   assert.match(
     roadmapZh,
-    /不代表 `Grant Ops` 已经变成 `G2` discovery target 或 `G3` routed-action target/,
+    /不等于已正式收录的 domain gateway|不代表 `Grant Ops` 已经变成 `G2` discovery target 或 `G3` routed-action target/,
   );
 });
 
@@ -84,6 +90,41 @@ test('tracked admission guards still require explicit execution-model evidence',
   assert.match(candidateBacklogJson, /stable agent runtime surface for the future Grant Ops domain/i);
   assert.match(candidateBacklogJson, /promote_to_g2_without_domain_gateway/i);
   assert.match(candidateBacklogJson, /promote_to_g3_without_explicit_route_evidence/i);
+});
+
+test('grant candidate path keeps med auto grant at signal-only evidence instead of admission or readiness', () => {
+  const roadmap = read('docs/roadmap.md');
+  const roadmapZh = read('docs/roadmap.zh-CN.md');
+  const taskMap = read('docs/task-map.md');
+  const taskMapZh = read('docs/task-map.zh-CN.md');
+  const backlog = read('docs/references/opl-candidate-domain-backlog.md');
+  const backlogZh = read('docs/references/opl-candidate-domain-backlog.zh-CN.md');
+  const onboarding = read('docs/opl-domain-onboarding-contract.md');
+  const onboardingZh = read('docs/opl-domain-onboarding-contract.zh-CN.md');
+  const publicSurfaceIndex = read('docs/opl-public-surface-index.md');
+  const publicSurfaceIndexZh = read('docs/opl-public-surface-index.zh-CN.md');
+  const gatewayContracts = read('contracts/opl-gateway/README.md');
+  const gatewayContractsZh = read('contracts/opl-gateway/README.zh-CN.md');
+  const acceptance = read('docs/references/opl-gateway-acceptance-test-spec.md');
+  const acceptanceZh = read('docs/references/opl-gateway-acceptance-test-spec.zh-CN.md');
+
+  for (const doc of [roadmap, taskMap, backlog, onboarding, publicSurfaceIndex, gatewayContracts, acceptance]) {
+    assert.match(doc, /Grant Foundry -> Med Auto Grant/i);
+    assert.match(doc, /top-level signal/i);
+    assert.match(doc, /domain-direction evidence/i);
+    assert.match(doc, /not an admitted domain gateway|do not satisfy admission|not indexed here as an admitted domain/i);
+    assert.match(doc, /not (?:count as|make).*G2 discovery readiness|not (?:count as|make).*G2 discovery target|G2 discovery-ready|does \*\*not\*\* satisfy.*discovery readiness|do not satisfy.*discovery readiness/i);
+    assert.match(doc, /not (?:count as|make).*G3 routed-action readiness|not (?:count as|make).*G3 routed-action target|G3 routed-action-ready|does \*\*not\*\* satisfy.*routing readiness|do not satisfy.*routing readiness/i);
+  }
+
+  for (const doc of [roadmapZh, taskMapZh, backlogZh, onboardingZh, publicSurfaceIndexZh, gatewayContractsZh, acceptanceZh]) {
+    assert.match(doc, /Grant Foundry -> Med Auto Grant/);
+    assert.match(doc, /top-level signal|顶层信号/);
+    assert.match(doc, /domain-direction evidence|领域方向证据/);
+    assert.match(doc, /不等于已正式收录的 domain gateway|不等于已经 admitted 的 domain gateway|不会被写成已收录 domain gateway|不能满足 admission/);
+    assert.match(doc, /不等于 `?G2`? discovery readiness|不等于 `?G2`? discovery target|`?G2`? discovery-ready|不能满足.*discovery readiness/);
+    assert.match(doc, /不等于 `?G3`? routed-action readiness|不等于 `?G3`? routed-action target|`?G3`? routed-action-ready|`?G3`? routed-action readiness|不能满足.*routing readiness/);
+  }
 });
 
 test('gateway and onboarding docs cross-reference the current four-repo alignment companions', () => {
@@ -133,9 +174,9 @@ test('public surface index and routed-action docs stay aligned with the frozen g
   assert.match(publicSurfaceIndex, /### 1\. OPL public-entry surfaces[\s\S]{0,600}Gateway Rollout/);
   assert.match(publicSurfaceIndexZh, /### 1\. OPL 公开入口界面[\s\S]{0,600}Gateway 落地路线/);
   assert.match(publicSurfaceIndex, /### 2\. OPL contract surfaces[\s\S]{0,900}Governance \/ Audit Operating Surface/);
-  assert.match(publicSurfaceIndex, /### 2\. OPL contract surfaces[\s\S]{0,900}Publish \/ Promotion Operating Surface/);
+  assert.match(publicSurfaceIndex, /### 2\. OPL contract surfaces[\s\S]{0,1400}Publish \/ Promotion Operating Surface/);
   assert.match(publicSurfaceIndexZh, /### 2\. OPL 合同界面[\s\S]{0,900}Governance \/ Audit Operating Surface/);
-  assert.match(publicSurfaceIndexZh, /### 2\. OPL 合同界面[\s\S]{0,900}Publish \/ Promotion Operating Surface/);
+  assert.match(publicSurfaceIndexZh, /### 2\. OPL 合同界面[\s\S]{0,1400}Publish \/ Promotion Operating Surface/);
   assert.doesNotMatch(publicSurfaceIndex, /### 1\. OPL public-entry surfaces[\s\S]{0,400}Unified Harness Engineering Substrate/);
   assert.doesNotMatch(publicSurfaceIndexZh, /### 1\. OPL 公开入口界面[\s\S]{0,400}Unified Harness Engineering Substrate/);
 
@@ -147,7 +188,7 @@ test('public surface index and routed-action docs stay aligned with the frozen g
   }
 });
 
-test('phase-1 gateway docs freeze the runnable G2 baseline separately from G3 thin handoff planning', () => {
+test('phase-1 gateway docs freeze the runnable G2 baseline while keeping G3 planning-only below runtime', () => {
   const roadmap = read('docs/roadmap.md');
   const roadmapZh = read('docs/roadmap.zh-CN.md');
   const discovery = read('docs/opl-read-only-discovery-gateway.md');
@@ -163,18 +204,16 @@ test('phase-1 gateway docs freeze the runnable G2 baseline separately from G3 th
   assert.match(roadmapZh, /截至 `?2026-04-07`?，`?OPL`? 公开主线仍是 `?Phase 1`?/);
   assert.match(discovery, /already has a runnable local `TypeScript CLI`-first \/ read-only gateway baseline/i);
   assert.match(discoveryZh, /已具备可运行的本地 `?TypeScript CLI`?-first \/ read-only gateway baseline/);
-  assert.match(publicSurfaceIndex, /`?G3`? remains in `?thin handoff planning`? pre-freeze/i);
-  assert.match(publicSurfaceIndexZh, /`?G3`? 仅处于 `?thin handoff planning`? 预冻结/);
-  assert.match(rollout, /`?thin handoff planning`? pre-freeze/i);
-  assert.match(rolloutZh, /`?thin handoff planning`? 预冻结/);
-  assert.match(
-    gatewayContracts,
-    /current work is (?:the `?Phase 1 \/ G2 release-closeout`:\s*)?close the `?G2 stable public baseline`?/i,
-  );
-  assert.match(
-    gatewayContractsZh,
-    /当前工作是(?: `?Phase 1 \/ G2 release-closeout`：)?把 `?G2 stable public baseline`? 收口/,
-  );
+  assert.match(publicSurfaceIndex, /`?G3`?.*thin handoff planning.*planning-contract closeout|planning-level contract/i);
+  assert.match(publicSurfaceIndexZh, /`?G3`?.*planning-contract closeout|planning-level contract|planning-only/);
+  assert.doesNotMatch(publicSurfaceIndex, /pre-freeze/i);
+  assert.doesNotMatch(publicSurfaceIndexZh, /预冻结/);
+  assert.match(rollout, /G3 thin handoff planning freeze hardening.*planning-contract boundary|`?G3`? remains inactive beyond the planning freeze/i);
+  assert.match(rolloutZh, /G3 thin handoff planning freeze hardening.*planning-contract closeout 边界|`?G3`? 在 planning freeze 之外仍未激活/);
+  assert.match(gatewayContracts, /G2 stable public baseline/i);
+  assert.match(gatewayContracts, /Phase 1 \/ G3 thin handoff planning freeze hardening/i);
+  assert.match(gatewayContractsZh, /G2 stable public baseline/);
+  assert.match(gatewayContractsZh, /Phase 1 \/ G3 thin handoff planning freeze hardening/);
 });
 
 test('top-level positioning docs freeze the g2 release-closeout and substrate boundary wording', () => {
@@ -194,22 +233,22 @@ test('top-level positioning docs freeze the g2 release-closeout and substrate bo
   assert.match(roadmapZh, /共享代码框架/);
 });
 
-test('post-g2 public docs move the baton to g3 thin handoff planning freeze hardening', () => {
-  const readme = read('README.md');
-  const readmeZh = read('README.zh-CN.md');
+test('post-g3 public docs move the baton to grant ops candidate-domain hardening', () => {
   const roadmap = read('docs/roadmap.md');
   const roadmapZh = read('docs/roadmap.zh-CN.md');
+  const publicSurfaceIndex = read('docs/opl-public-surface-index.md');
+  const publicSurfaceIndexZh = read('docs/opl-public-surface-index.zh-CN.md');
   const gatewayContracts = read('contracts/opl-gateway/README.md');
   const gatewayContractsZh = read('contracts/opl-gateway/README.zh-CN.md');
   const rollout = read('docs/references/opl-gateway-rollout.md');
   const rolloutZh = read('docs/references/opl-gateway-rollout.zh-CN.md');
 
-  for (const doc of [readme, roadmap, gatewayContracts, rollout]) {
-    assert.match(doc, /Phase 1 \/ G3 thin handoff planning freeze hardening/i);
+  for (const doc of [roadmap, publicSurfaceIndex, gatewayContracts, rollout]) {
+    assert.match(doc, /Phase 1 \/ Grant Ops candidate-domain backlog and onboarding-package hardening/i);
   }
 
-  for (const doc of [readmeZh, roadmapZh, gatewayContractsZh, rolloutZh]) {
-    assert.match(doc, /Phase 1 \/ G3 thin handoff planning freeze hardening/);
+  for (const doc of [roadmapZh, publicSurfaceIndexZh, gatewayContractsZh, rolloutZh]) {
+    assert.match(doc, /Phase 1 \/ Grant Ops candidate-domain backlog and onboarding-package hardening/);
   }
 });
 
@@ -247,6 +286,7 @@ test('g3 planning docs keep handoff planning-only and forbid launcher semantics'
     assert.match(doc, /domain_gateway/);
     assert.match(doc, /launcher/i);
     assert.match(doc, /no-bypass|bypass/i);
+    assert.doesNotMatch(doc, /pre-freeze/i);
   }
 
   for (const doc of [acceptanceZh, routedActionZh, gatewayContractsZh]) {
@@ -254,7 +294,30 @@ test('g3 planning docs keep handoff planning-only and forbid launcher semantics'
     assert.match(doc, /domain_gateway/);
     assert.match(doc, /launcher/);
     assert.match(doc, /不得绕过 domain gateway|绕过 domain gateway/);
+    assert.doesNotMatch(doc, /预冻结/);
   }
+});
+
+test('acceptance spec snippets keep split onboarding blockers and execution-model gate aligned', () => {
+  const acceptance = read('docs/references/opl-gateway-acceptance-test-spec.md');
+  const acceptanceZh = read('docs/references/opl-gateway-acceptance-test-spec.zh-CN.md');
+
+  assert.match(
+    acceptance,
+    /required_packages\s*=\s*\{[\s\S]{0,240}'discovery_readiness'[\s\S]{0,160}'routing_readiness'[\s\S]{0,160}'cross_domain_wording'/,
+  );
+  assert.match(
+    acceptance,
+    /required_checks\s*=\s*\{[\s\S]{0,220}'discovery_ready'[\s\S]{0,160}'routing_ready'[\s\S]{0,160}'execution_model_aligned'[\s\S]{0,160}'cross_domain_wording_aligned'/,
+  );
+  assert.match(
+    acceptanceZh,
+    /required_packages\s*=\s*\{[\s\S]{0,240}'discovery_readiness'[\s\S]{0,160}'routing_readiness'[\s\S]{0,160}'cross_domain_wording'/,
+  );
+  assert.match(
+    acceptanceZh,
+    /required_checks\s*=\s*\{[\s\S]{0,220}'discovery_ready'[\s\S]{0,160}'routing_ready'[\s\S]{0,160}'execution_model_aligned'[\s\S]{0,160}'cross_domain_wording_aligned'/,
+  );
 });
 
 test('repo-tracked g3 planning closeout note hardens the planning-only boundary', () => {
@@ -289,9 +352,11 @@ test('internal reference truth docs carry the 2026-04-07 snapshot and current OP
   assert.match(matrix, /状态锚点：`?2026-04-07`?/);
   assert.match(matrix, /G2 stable public baseline/);
   assert.match(matrix, /G3 thin handoff planning/);
+  assert.match(matrix, /Grant Ops candidate-domain backlog and onboarding-package hardening/);
   assert.match(taskboard, /状态锚点：`?2026-04-07`?/);
   assert.match(taskboard, /G2 stable public baseline/);
   assert.match(taskboard, /G3 thin handoff planning/);
+  assert.match(taskboard, /Grant Ops candidate-domain backlog and onboarding-package hardening/);
 });
 
 test('english readme exposes the opl architecture blueprint svg', () => {

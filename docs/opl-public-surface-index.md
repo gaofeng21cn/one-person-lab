@@ -10,7 +10,9 @@ Its job is to make the top-level gateway easier to discover across README, roadm
 
 It is not a runtime registry.
 It should be read as a CLI-first, read-only discoverability aid for the current Phase 1 gateway baseline.
-The completed `G2` closeout keeps the single repo-tracked top-level `G2` CLI-first / read-only baseline stable, while the current baton is the `Phase 1 / G3 thin handoff planning freeze hardening`. At this step `G3` remains in `thin handoff planning` pre-freeze semantics, i.e. a planning-level contract only rather than an activated routed-action runtime.
+The completed `G2` closeout keeps the single repo-tracked top-level `G2` CLI-first / read-only baseline stable.
+The completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` remains closed at the planning-contract layer, and `G3` remains planning-only rather than an activated routed-action runtime.
+The current same-phase baton is `Phase 1 / Grant Ops candidate-domain backlog and onboarding-package hardening`.
 Use the [Ecosystem Status Matrix](./references/ecosystem-status-matrix.md) as the internal reference-sync anchor for the current four-repo stage and maturity snapshot.
 
 For repository-wide document layering and reference-grade handling, see [Docs Index](./README.md).
@@ -64,7 +66,7 @@ These surfaces freeze the gateway and federation boundary:
 - [Shared Foundation](./shared-foundation.md)
 - [Shared Foundation Ownership](./shared-foundation-ownership.md)
 - [OPL Read-Only Discovery Gateway](./opl-read-only-discovery-gateway.md)
-- [OPL Routed Action Gateway](./opl-routed-action-gateway.md) (planning-level contract only; current `Phase 1 / G3 thin handoff planning freeze hardening`)
+- [OPL Routed Action Gateway](./opl-routed-action-gateway.md) (planning-level contract only; repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` is already closed, and the current same-phase baton is `Phase 1 / Grant Ops candidate-domain backlog and onboarding-package hardening`)
 - [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.md) + `domain-onboarding-readiness.schema.json`
 - [OPL Governance / Audit Operating Surface](./references/opl-governance-audit-operating-surface.md)
 - [OPL Publish / Promotion Operating Surface](./references/opl-publish-promotion-operating-surface.md)
@@ -100,6 +102,7 @@ Important boundary:
 - `ppt_deck` directly maps to `presentation_ops`
 - `xiaohongshu` may still route to `redcube`, but does not automatically equal `presentation_ops`
 - `Grant Ops`, `Review Ops`, and `Thesis Ops` may appear in the task map as under-definition workstreams, but that does not make them admitted domains or routed targets
+- the current `Grant Foundry -> Med Auto Grant` public scaffold is top-level signal / domain-direction evidence only; it is not indexed here as an admitted domain public-entry surface, is not an admitted domain gateway, and does not count as G2 discovery readiness or G3 routed-action readiness
 - the current admission blockers for those under-definition workstreams live in the candidate-domain backlog and remain below the onboarding gate
 
 ## Reading Rule
@@ -111,8 +114,9 @@ Canonical runtime truth, review truth, release truth, and submission truth remai
 If a surface is `opl_operating_model`, `opl_shared_foundation`, or `opl_shared_foundation_ownership`, it remains a shared-foundation boundary/reference surface only and does not transfer canonical truth, mutation, review truth, or publication truth into `OPL`.
 If a surface is `opl_task_map`, under-definition workstreams remain top-level semantic candidates only until the onboarding and registry gates are satisfied.
 If a surface is `opl_candidate_domain_backlog`, it remains an admission-blocker reference only and does not count as onboarding readiness, discovery readiness, or routed-action readiness.
+If a public scaffold such as `Grant Foundry -> Med Auto Grant` is mentioned, it still counts only as top-level signal / domain-direction evidence for a future candidate direction and not as an admitted domain gateway or routing target.
 If a surface is `opl_gateway_rollout`, it remains a top-level public-entry map and does not become a runtime authority engine or launcher.
-If a surface is the routed-action prose or schema layer, it remains a planning-level contract / planning dependency only and does not become a launcher or live runtime control plane during the current `Phase 1 / G3 thin handoff planning freeze hardening`.
+If a surface is the routed-action prose or schema layer, it remains a planning-level contract / planning dependency only and does not become a launcher or live runtime control plane after the completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening`.
 If a surface is the acceptance, matrix, or example layer, it remains a discoverability/review companion only; it does not automatically promote every listed artifact into a gate.
 
 ## Governing Gateway Documents
@@ -124,7 +128,7 @@ If a surface is the acceptance, matrix, or example layer, it remains a discovera
 - [Shared Foundation Ownership](./shared-foundation-ownership.md)
 - [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
 - [OPL Read-Only Discovery Gateway](./opl-read-only-discovery-gateway.md)
-- [OPL Routed Action Gateway](./opl-routed-action-gateway.md) (planning-level contract only; current `Phase 1 / G3 thin handoff planning freeze hardening`)
+- [OPL Routed Action Gateway](./opl-routed-action-gateway.md) (planning-level contract only; repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` is already closed, and the current same-phase baton is `Phase 1 / Grant Ops candidate-domain backlog and onboarding-package hardening`)
 - [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.md)
 - [OPL Governance / Audit Operating Surface](./references/opl-governance-audit-operating-surface.md)
 - [OPL Publish / Promotion Operating Surface](./references/opl-publish-promotion-operating-surface.md)

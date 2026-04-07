@@ -350,4 +350,4 @@ docs-site navigation 与未来的 MCP discovery tools 仍然可以作为兼容 t
 - domain ownership 仍模糊
 - gateway 开始 mutation domain state
 
-`G2` 收口之后，下一棒仅进入 `G3 thin handoff planning` 预冻结，而不是进入统一 routed-action runtime。
+`G2` 收口之后，下一棒仅进入 `G3 thin handoff planning` 冻结，而不是进入统一 routed-action runtime。

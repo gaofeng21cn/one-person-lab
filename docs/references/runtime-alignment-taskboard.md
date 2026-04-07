@@ -25,7 +25,7 @@
 ## 一、当前统一结论
 
 当前最重要的不是继续发明新的上层名词，而是把已经冻结的统一合同真正压到各仓的 repo-durable truth 与 runtime contract 上。
-对 `one-person-lab` 而言，当前 baton 是守住已完成的 `G2 stable public baseline`，并推进 `Phase 1 / G3 thin handoff planning freeze hardening`，而不是 runtime 扩面。
+对 `one-person-lab` 而言，当前 baton 是守住已完成的 `G2 stable public baseline`、把已收口的 `G3` 保持在 thin-handoff planning freeze，并推进 `Phase 1 / Grant Ops candidate-domain backlog and onboarding-package hardening`，而不是 runtime 扩面。
 
 当前执行顺序已经明确为：
 
@@ -78,16 +78,24 @@
   - `docs/opl-public-surface-index.zh-CN.md`
   - `contracts/opl-gateway/README.zh-CN.md`
   - `docs/references/opl-gateway-rollout.zh-CN.md`
+- 收紧同一 phase 内的 Grant Ops candidate path：
+  - `docs/task-map.zh-CN.md`
+  - `docs/references/opl-candidate-domain-backlog.zh-CN.md`
+  - `docs/opl-domain-onboarding-contract.zh-CN.md`
+  - `docs/references/opl-gateway-acceptance-test-spec.zh-CN.md`
+- 明确 `Grant Foundry -> Med Auto Grant` 只算 top-level signal / domain-direction evidence，不等于 domain admission、`G2` discovery readiness 或 `G3` routed-action readiness
 - 保持 `OPL` 不越界为 domain runtime owner
 
 #### P1
 
 - 继续把四仓共同检查项收进 `OPL` 的 onboarding / gateway 说明面
 - 形成稳定的“四仓状态更新节奏”，避免各仓单独漂移
-- `G3` 当前仅做 `thin handoff planning freeze hardening`
+- `G3` 当前仅做已收口的 `thin handoff planning freeze`
+- 当前 candidate-domain 重点是 `Grant Ops candidate-domain backlog and onboarding-package hardening`
 - repo-tracked planning brief：`docs/plans/2026-04-07-g3-thin-handoff-planning-brief.md`
 - repo-tracked planning closeout note：`docs/plans/2026-04-07-g3-thin-handoff-planning-closeout-note.md`
 - repo-tracked release-closeout note：`docs/plans/2026-04-07-g2-release-closeout-note.md`
+- 当前同一 phase 的 follow-on：`Phase 1 / Grant Ops candidate-domain backlog and onboarding-package hardening`
 - 当前不推进统一 runtime owner，也不抽共享执行内核
 
 #### P2
@@ -168,6 +176,7 @@
 - 当前最像“四仓开发控制面参考实现”的本地形态
 - 但按统一 runtime 合同严格看，仍只达到“最小 baseline 基本成立”，还未进入成熟长跑 runtime 阶段
 - 当前 `grant_run_id` 已进入正式执行句柄合同；下一步重点是 formal-entry / durability current truth 收口
+- 在 `OPL` 顶层当前只允许把 `med-autogrant` 写成 Grant Ops 候选方向上的 signal / evidence，不得误写成已 admitted domain gateway
 
 #### P0
 
@@ -198,7 +207,7 @@
 
 ### 并行推荐
 
-1. `OPL` 先回写四仓最新状态到顶层参考同步面，守住已完成的 `G2 stable public baseline`，并推进 `G3 thin handoff planning freeze hardening`
+1. `OPL` 先回写四仓最新状态到顶层参考同步面，守住已完成的 `G2 stable public baseline` 与已收口的 `G3 thin handoff planning freeze`，并推进 `Grant Ops candidate-domain backlog and onboarding-package hardening`
 2. `Med Auto Science` 处理 `P0`
 3. `RedCube AI` 处理 `P0`
 4. `Med Auto Grant` 处理 `P0`，并并行准备 `P1` 的 formal entry freeze

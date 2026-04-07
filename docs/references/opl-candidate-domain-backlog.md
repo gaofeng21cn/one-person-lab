@@ -76,8 +76,13 @@ Each entry stays reference-only and carries only:
 
 That frozen boundary is still proposal-facing: review-simulation and revision traces remain author-side grant-authoring artifacts rather than standalone reviewer-role outputs.
 
-What is still missing is a future domain boundary package that makes registry material, public gateway docs, truth ownership, review surfaces, an explicit execution-model declaration, discovery readiness, routing readiness, and cross-domain wording explicit.
+The current `Grant Foundry -> Med Auto Grant` public scaffold provides top-level signal / domain-direction evidence only.
+It is not an admitted domain gateway and does not count as G2 discovery readiness, G3 routed-action readiness, or a handoff-ready surface.
+
+What is still missing is a future domain boundary package that makes registry material, public gateway docs, truth ownership, review surfaces, an explicit execution-model declaration, a discovery readiness blocker, a routing readiness blocker, and cross-domain wording explicit.
 That execution-model declaration must identify the stable agent runtime surface, show how `Auto` and `Human-in-the-loop` share one base, explain the code-versus-Agent responsibility split, and keep the workstream out of any `fixed-code-first` or permanently single-mode framing.
+The discovery readiness blocker must point read-only discovery to the future `domain_gateway` entry without implying handoff readiness.
+The routing readiness blocker must freeze explicit routing evidence, keep the only successful handoff target at `domain_gateway`, and preserve the no-bypass rule against direct harness targeting.
 Those future packages are blockers only; they do not make `Grant Ops` currently `G2` discovery-ready or `G3` routed-action-ready.
 
 ### Thesis Ops
@@ -107,6 +112,7 @@ If a backlog entry exists, the workstream is still below the domain-onboarding g
 `blocked` does not mean “almost admitted.”
 It means the required boundary package is still incomplete.
 If the execution-model declaration is still missing, the workstream remains under definition / deferred rather than becoming “ready,” “aligned,” or implicitly admitted.
+If a public scaffold or domain-direction hint exists, it still counts only as top-level signal/evidence until the real boundary package is present.
 
 It also does not let `OPL` quietly absorb these under-definition workstreams into `MedAutoScience` or `RedCube AI`.
 Those admitted domains remain independent gateway-and-harness surfaces.
@@ -127,6 +133,7 @@ The candidate backlog is acceptable only when:
 - each current candidate workstream has an explicit backlog entry
 - blocker packages align to the onboarding-package categories
 - blocker checks align to the onboarding formal-inclusion gate
+- discovery readiness blockers and routing readiness blockers remain explicit as separate blocked checks
 - execution-model blockers stay explicit in the public companion wording: stable agent runtime surface, shared-base `Auto` / `Human-in-the-loop` convergence, and code-versus-Agent responsibility split must all be named before anything can move beyond under definition / deferred
 - no entry allocates future domain identity, gateway/harness surface metadata, or any routed readiness state
 - the backlog stays discoverable and reviewable without becoming a control plane

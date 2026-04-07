@@ -350,4 +350,4 @@ The current implementation target is therefore the local CLI discovery surface r
 - domain ownership is still ambiguous
 - the gateway starts mutating domain state
 
-After the `G2` closeout, the next baton is only the `G3 thin handoff planning` pre-freeze rather than a unified routed-action runtime.
+After the `G2` closeout, the next baton is only the `G3 thin handoff planning` freeze rather than a unified routed-action runtime.

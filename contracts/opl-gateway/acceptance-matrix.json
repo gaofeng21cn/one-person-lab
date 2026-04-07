@@ -54,7 +54,7 @@
         "route_request/build_handoff_payload/audit_routing_decision are defined",
         "refused/unknown_domain/ambiguous_task remain explicit",
         "handoff targets domain_gateway only",
-        "G3 remains thin handoff planning pre-freeze rather than an active mutation runtime"
+        "G3 remains frozen at the thin handoff planning boundary rather than becoming an active mutation runtime"
       ],
       "forbidden_regressions": [
         "direct harness bypass",
@@ -478,7 +478,8 @@
         "Review Ops keeps reviewer-role work plus response/rebuttal coordination as one under-definition semantic bundle only; this does not by itself admit a review domain, transfer review-truth ownership into OPL, create a G2 discovery target, or create a G3 routed-action target",
         "candidate entries and backlog rules do not collapse Grant Ops, Thesis Ops, or Review Ops into MedAutoScience or RedCube AI; admitted domains remain independent gateway-and-harness surfaces",
         "required_evidence and notes do not pre-assign future domain_id, gateway_surface, or harness_surface metadata before the boundary package exists",
-        "required_onboarding_materials align to registry material, public documentation, truth ownership, review surfaces, discovery/routing readiness, and cross-domain wording",
+        "required_onboarding_materials align to registry material, public documentation, truth ownership, review surfaces, execution model, discovery readiness, routing readiness, and cross-domain wording",
+        "Grant Foundry -> Med Auto Grant, when mentioned in public wording, stays at top-level signal / domain-direction evidence only and does not count as an admitted domain gateway, G2 discovery readiness, G3 routed-action readiness, or a handoff-ready surface",
         "missing_boundary_materials and formal_inclusion_gate remain aligned to the onboarding formal-inclusion checks and stay missing/blocked until the boundary package exists",
         "task-map docs, onboarding docs, contract hub, public-surface index, review matrix, lifecycle map, and authority matrix expose the backlog as a reference-only admission-blocker surface below the domain-onboarding gate"
       ],
@@ -491,7 +492,8 @@
         "candidate-domain backlog collapses Grant Ops, Thesis Ops, or Review Ops into MedAutoScience or RedCube AI",
         "candidate-domain backlog pre-assigns future domain_id, gateway_surface, or harness_surface metadata before the boundary package exists",
         "candidate-domain backlog invents candidate domain truth owners or publication authority inside OPL",
-        "candidate-domain backlog becomes an approval engine, onboarding engine, or runtime control plane"
+        "candidate-domain backlog becomes an approval engine, onboarding engine, or runtime control plane",
+        "Grant Foundry -> Med Auto Grant is described as an admitted domain gateway, G2 discovery-ready, G3 routed-action-ready, or handoff-ready surface"
       ]
     },
     {

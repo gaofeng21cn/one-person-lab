@@ -34,6 +34,8 @@ Domain onboarding 建立在已冻结的 gateway 层之下：
 这条 example record 只是 illustrative 示例，不构成正式 domain 收录。
 Candidate-domain backlog 则是位于它上游的 blocker surface，用来记录：对于仍在定义中的 workstream，在 onboarding-readiness record 出现之前还缺什么材料。它的人类可读配套说明见 [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.zh-CN.md)。
 `OPL` 当前不会在 task topology、backlog 与 onboarding 之间再定义一层独立的 candidate-domain-definition contract；除非先证明这三层之间还存在真实缺口，否则现有三层组合就是当前 definition path。
+公开 scaffold 或 domain-direction hint —— 例如当前 `Grant Ops` 方向上的 `Grant Foundry -> Med Auto Grant` —— 可以帮助说明 candidate path，但它们仍然只算 top-level signal / domain-direction evidence。
+它们不能替代 onboarding package，不等于已正式收录的 domain gateway，也不等于 `G2` discovery readiness，更不等于 `G3` routed-action readiness。
 
 ## 当前四仓执行对齐配套文档
 
@@ -167,6 +169,43 @@ Onboarding package 必须说明：
 - 哪些部分绝不能被描述成 `fixed-code-first` 主流程，只让 Agent 做少量 prompt 补位
 
 如果一个 domain 说不清执行模型如何与 `OPL` 的统一范式对齐，就还不具备正式联邦收录条件。
+
+## 6. Discovery Readiness Declaration
+
+一个新 domain 必须显式声明：未来 `G2` 只读 discovery 如何到达它的公开入口。
+
+Onboarding package 必须说明：
+
+- discovery 最终指向哪个 `domain_gateway` surface
+- 哪些 workstream ID 会通过这个 gateway 入口变成可 discover 的对象
+- 哪些 wording 明确把 discovery 保持在只读 / public-entry 层，而不提前暗示 handoff readiness
+
+仅有顶层信号或 domain-direction evidence，不足以满足这一 package。
+
+## 7. Routing Readiness Declaration
+
+一个新 domain 必须显式声明：当未来真的激活 `G3` routing 时，顶层路由如何只 targeting 这个 domain gateway。
+
+Onboarding package 必须说明：
+
+- 哪个 `domain_gateway` surface 是唯一允许的 successful routing target
+- 哪些 workstream ID 会进入 routing-eligible 集合
+- 哪些显式 routing / handoff evidence 能把 no-bypass 规则继续保持为硬边界
+
+如果这份 package 不能把唯一成功目标保持在 `domain_gateway`，它就还不是 routing-ready。
+公开 scaffold 或方向提示本身，也不足以满足这一 package。
+
+## 8. Cross-Domain Wording Alignment
+
+一个新 domain 必须暴露足够的 OPL/domain 双侧 linked wording，让审查者能验证双方使用的是同一套顶层角色语言。
+
+Onboarding package 必须说明：
+
+- 哪些 OPL public surface 承载这组 linked role wording
+- 哪些 domain public surface 承载匹配的 wording
+- 哪句边界声明用来防止 signal-only scaffold 被误读成 admission
+
+如果这组 wording 不能被显式审查，这个 domain 就仍然位于 formal inclusion 之下。
 
 ## 正式收录门槛
 

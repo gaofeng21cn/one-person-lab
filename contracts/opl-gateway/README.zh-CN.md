@@ -19,8 +19,8 @@
 截至 `2026-04-07`，当前 repo 已有一条可运行的本地 `TypeScript CLI`-first、read-only gateway baseline；它只读取这个目录中已经冻结的 contract 工件。
 这条 transport 建立在当前 `Codex-default host-agent runtime` 之上；在开发控制面上，`Codex Host` 负责规划冻结与真相裁决，`OMX` 负责在已冻结边界内做长时执行。
 已完成的 `Phase 1 / G2 release-closeout` 已把 `G2 stable public baseline` 收口成稳定、单一、repo-tracked 的公开基线。
-作为历史 closeout 锚点，当前工作是 `Phase 1 / G2 release-closeout`：把 `G2 stable public baseline` 收口成稳定、单一、repo-tracked 的公开基线。
-当前这一棒是 `Phase 1 / G3 thin handoff planning freeze hardening`：当前目录只收紧围绕 `route_request`、`build_handoff_payload`、`audit_routing_decision` 的 planning gate / planning-level contract。唯一允许的成功 handoff 目标仍只能是 `domain_gateway`；no-bypass 规则继续禁止直达 domain harness；`routed-actions.schema.json` 仍只是 planning dependency，不是 launcher。
+已完成的 repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` 继续停留在 planning-contract closeout 层：当前目录只冻结围绕 `route_request`、`build_handoff_payload`、`audit_routing_decision` 的 planning gate / planning-level contract。唯一允许的成功 handoff 目标仍只能是 `domain_gateway`；no-bypass 规则继续禁止直达 domain harness；`routed-actions.schema.json` 仍只是 planning dependency，不是 launcher。
+当前同一 phase 内的 baton 是 `Phase 1 / Grant Ops candidate-domain backlog and onboarding-package hardening`：它只收紧现有 `task-topology + candidate-domain-backlog + domain-onboarding` 路径，不 admission domain，也不创造 `G2` discovery readiness 或 `G3` routed-action readiness。
 这个交付目标**不会**把当前目录提升成 runtime、routed-action control plane 或 canonical truth store；它只是把已有的顶层 contract language 继续维持为本地 CLI surface 可读取的合同入口。
 
 ## 当前四仓统一对齐配套文档
@@ -89,7 +89,7 @@
 - [`domains.json`](./domains.json) — machine-readable domain registry
 - [`routing-vocabulary.json`](./routing-vocabulary.json) — 共享 routing vocabulary 与已冻结的 routing rules
 - [`handoff.schema.json`](./handoff.schema.json) — 已冻结的 G1 handoff payload JSON Schema
-- [`routed-actions.schema.json`](./routed-actions.schema.json) — `Phase 1 / G3 thin handoff planning freeze hardening` 所依赖的 planning dependency；它是 planning-level contract 工件，不是 launcher，也不表示当前主线已进入 routed-action runtime
+- [`routed-actions.schema.json`](./routed-actions.schema.json) — 停留在 `Phase 1 / G3 thin handoff planning freeze hardening` closeout 边界上的 planning dependency；它是 planning-level contract 工件，不是 launcher，也不表示当前主线已进入 routed-action runtime
 - [`domain-onboarding-readiness.schema.json`](./domain-onboarding-readiness.schema.json) — machine-readable domain onboarding readiness gate 的 JSON Schema
 - [`governance-audit.schema.json`](./governance-audit.schema.json) — 已冻结的 P5.M1 governance / audit operating contract JSON Schema
 - [`publish-promotion.schema.json`](./publish-promotion.schema.json) — 已冻结的 P5.M2 publish / promotion operating contract JSON Schema
@@ -127,6 +127,7 @@
 - 在先证明存在真实缺失边界之前，不额外新增独立的 candidate-domain-definition contract surface；当前 `task-topology + candidate-domain-backlog + domain-onboarding` 的组合就是现行定义路径
 
 `Grant Ops`、`Review Ops`、`Thesis Ops` 等 planned workstream，在对应 domain 边界明确冻结之前，不进入正式收录的 registry / discovery / routing surface。
+如果当前公开文档里提到 `Grant Foundry -> Med Auto Grant`，那也仍然只算 future Grant Ops 路径上的 top-level signal / domain-direction evidence；它不等于已正式收录的 domain gateway，也不等于 `G2` discovery readiness，也不等于 `G3` routed-action readiness，更不等于 handoff-ready surface。
 
 ## Materialization 说明
 

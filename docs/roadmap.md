@@ -17,6 +17,7 @@ What is already clear today:
 - [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) is the emerging visual-deliverable domain gateway and harness
 - `ppt_deck` is the family that currently maps most directly to `Presentation Ops`
 - `Grant Ops`, `Thesis Ops`, and `Review Ops` remain under definition
+- `Grant Foundry -> Med Auto Grant` currently provides top-level signal / domain-direction evidence for a future medical `Grant Ops` domain only; it is not an admitted domain gateway and does not count as G2 discovery readiness or G3 routed-action readiness
 - the shared target operating pattern is `Agent-first`, with `Auto` and `Human-in-the-loop` running on one common base; this is an architectural rule, not a claim that every domain surface already has both modes fully implemented
 - the current local default deployment shape is a `Codex`-default host-agent runtime, but the same substrate should remain compatible with future managed web runtimes
 - the current repository already has a runnable local `TypeScript CLI`-first / read-only gateway baseline
@@ -34,7 +35,7 @@ What this phase does not do:
 
 The next phase should prioritize:
 
-- hardening the current `Phase 1 / G3 thin handoff planning freeze hardening`: keep the completed `Phase 1 / G2 release-closeout` frozen as the `G2 stable public baseline`, and keep `G3` at a planning gate only
+- keeping the completed `Phase 1 / G2 release-closeout` frozen as the `G2 stable public baseline`, while keeping the completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` closed at the planning-contract boundary
 - freezing the `OPL Gateway -> domain gateway -> domain harness` control language
 - freezing `route_request`, `build_handoff_payload`, and `audit_routing_decision` as planning-level contract operations only
 - keeping the only allowed successful handoff target at `domain_gateway`, with a hard no-bypass rule against direct domain-harness targeting
@@ -42,6 +43,7 @@ The next phase should prioritize:
 - keeping `MedAutoScience` explicit as the `Research Ops` domain surface
 - keeping `RedCube AI` explicit as the visual-deliverable domain surface
 - carrying the `Agent-first` plus dual-mode doctrine into future candidate-domain definitions instead of drifting toward fixed-code-first product lines
+- hardening the current `Phase 1 / Grant Ops candidate-domain backlog and onboarding-package hardening` follow-on: tighten the `task-topology + candidate-domain-backlog + domain-onboarding` path without admitting a domain, discovery target, or routed-action target
 - defining the next candidate domains through clear task boundaries and delivery objects, using the current `task-topology + candidate-domain-backlog + domain-onboarding` path rather than inventing a redundant intermediate control surface
 - progressively turning the `OPL Gateway` from a documentation-first surface into a real entry surface without activating a routed-action runtime yet
 
@@ -52,7 +54,8 @@ Among the still-undefined workstreams, the more natural priority order is usuall
 - `Thesis Ops`
 
 This priority ordering is only a boundary-definition sequence.
-It does **not** make `Grant Ops` a `G2` discovery target or a `G3` routed-action target before its domain-onboarding evidence exists.
+`Grant Ops` is the current candidate-domain hardening focus, but `Grant Foundry -> Med Auto Grant` still contributes only public scaffold / top-level signal / domain-direction evidence.
+That does **not** satisfy registry material, discovery readiness, or routing readiness, and it does **not** make `Grant Ops` an admitted domain gateway, a `G2` discovery target, a `G3` routed-action target, or a handoff-ready surface before its domain-onboarding evidence exists.
 
 ## Later Phase
 

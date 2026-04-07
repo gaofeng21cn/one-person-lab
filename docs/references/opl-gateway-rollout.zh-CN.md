@@ -91,7 +91,8 @@ Human / Agent
 
 - `Phase 1` 公开主线下，CLI-first / read-only gateway baseline 已可运行
 - 已完成的 `Phase 1 / G2 release-closeout` 已把它收口成稳定、单一、repo-tracked 的 `G2 stable public baseline`
-- 当前这一棒是 `Phase 1 / G3 thin handoff planning freeze hardening`
+- 已完成的 repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` 继续停留在 planning-contract closeout 边界
+- 当前同一 phase 内的 baton 是 `Phase 1 / Grant Ops candidate-domain backlog and onboarding-package hardening`
 
 应支持：
 
@@ -118,7 +119,8 @@ Human / Agent
 
 当前阶段限定：
 
-- 当前只进入 `Phase 1 / G3 thin handoff planning freeze hardening`，也就是在更早的 `thin handoff planning` 预冻结之上继续做 repo-tracked hardening，而不进入 routed action implementation
+- 已完成的 repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` 继续作为 routed-action planning 的 closeout 边界，当前不会进入 routed action implementation
+- 当前同一 phase 内的 baton 是 `Phase 1 / Grant Ops candidate-domain backlog and onboarding-package hardening`，它只收紧 candidate-domain path，不推进 admission / discovery / routing readiness
 - 当前这是 planning gate，不是 runtime gate；`route_request`、`build_handoff_payload`、`audit_routing_decision` 只冻结为 planning-level contract 操作
 - 唯一允许的成功 handoff 目标仍只能是 `domain_gateway`，并且 no-bypass 规则禁止直达 domain harness
 - `routed-actions.schema.json` 仍只是 planning dependency，不是 launcher
@@ -148,6 +150,7 @@ Human / Agent
 
 在当前基线上，candidate-domain definition 仍由 `task-topology`、`candidate-domain backlog` 与 `domain-onboarding` 三层共同构成。
 除非先证明这三层不足以表达一个真实缺失边界，否则不要再插入一层额外的 candidate-definition control surface。
+对当前 `Grant Ops` 路径而言，`Grant Foundry -> Med Auto Grant` 仍然只算 top-level signal / domain-direction evidence；它本身不 admission domain gateway，也不创造 `G2` discovery readiness 或 `G3` routed-action readiness。
 
 具体合同：
 

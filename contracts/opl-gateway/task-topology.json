@@ -85,7 +85,7 @@
         "existing_study_results_and_figures"
       ],
       "family_boundary_notes": [],
-      "notes": "Still under definition. This workstream stays proposal-facing: proposal-side reviewer simulation and revision remain authoring aids rather than reviewer-role ownership. It does not imply an admitted domain or a G1 registry entry. Clear top-level requests may surface as unknown_domain, but no domain handoff is allowed before explicit domain boundaries are frozen. It also remains under definition because no stable agent runtime surface or shared-base Auto/Human-in-the-loop convergence path has been frozen yet."
+      "notes": "Still under definition. This workstream stays proposal-facing: proposal-side reviewer simulation and revision remain authoring aids rather than reviewer-role ownership. It does not imply an admitted domain or a G1 registry entry. Clear top-level requests may surface as unknown_domain, but no domain handoff is allowed before explicit domain boundaries are frozen. The current Grant Foundry -> Med Auto Grant public scaffold is only top-level signal and domain-direction evidence; it is not an admitted domain gateway, not G2 discovery-ready, not G3 routed-action-ready, and not handoff-ready. It also remains under definition because no stable agent runtime surface or shared-base Auto/Human-in-the-loop convergence path has been frozen yet."
     },
     {
       "workstream_id": "thesis_ops",

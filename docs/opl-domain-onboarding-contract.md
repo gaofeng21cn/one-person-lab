@@ -34,6 +34,8 @@ It does not admit domains automatically, and it does not replace the prose revie
 The example record is illustrative only and does not count as a formal domain admission.
 The candidate-domain backlog is the upstream blocker surface for under-definition workstreams; it records what is still missing before an onboarding-readiness record can even exist. For the human-readable companion, see [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.md).
 `OPL` does not currently define a separate candidate-domain-definition contract between task topology, backlog, and onboarding; the existing three-layer composition is the current definition path unless a real missing boundary is proven.
+Public scaffolds or domain-direction hints — for example `Grant Foundry -> Med Auto Grant` for the current Grant Ops direction — may clarify the candidate path, but they still count only as top-level signal / domain-direction evidence.
+They do not substitute for the onboarding package, are not an admitted domain gateway, and do not count as G2 discovery readiness or G3 routed-action readiness.
 
 ## Current Four-Repo Execution Alignment Companions
 
@@ -167,6 +169,43 @@ The onboarding package must identify:
 - which parts must not be described as a `fixed-code-first` mainline with the Agent reduced to prompt fill-ins
 
 If a domain cannot explain how its execution model aligns with `OPL`'s shared operating pattern, it is not ready for official federation admission.
+
+## 6. Discovery Readiness Declaration
+
+A new domain must explicitly declare how `G2` read-only discovery reaches its public entry.
+
+The onboarding package must identify:
+
+- which `domain_gateway` surface discovery points to
+- which workstream IDs become discoverable through that gateway entry
+- which wording keeps discovery at the read-only / public-entry layer without implying handoff readiness
+
+Top-level signal or domain-direction evidence alone does not satisfy this package.
+
+## 7. Routing Readiness Declaration
+
+A new domain must explicitly declare how `G3` routing would target the domain gateway once routing is actually activated.
+
+The onboarding package must identify:
+
+- which `domain_gateway` surface is the only allowed successful routing target
+- which workstream IDs become routing-eligible
+- which explicit routing / handoff evidence keeps the no-bypass rule intact
+
+If the package cannot keep the only successful target at `domain_gateway`, it is not routing-ready.
+Public scaffolds or direction hints alone do not satisfy this package.
+
+## 8. Cross-Domain Wording Alignment
+
+A new domain must expose enough linked OPL/domain wording that reviewers can verify the same top-level role language on both sides.
+
+The onboarding package must identify:
+
+- which OPL public surfaces carry the linked role wording
+- which domain public surfaces carry the matching wording
+- which boundary statement keeps any signal-only scaffold from being misread as admission
+
+If this wording cannot be reviewed explicitly, the domain remains below formal inclusion.
 
 ## Formal Inclusion Gate
 

@@ -23,6 +23,10 @@ test('domain-onboarding readiness schema requires execution-model alignment befo
   const schema = readJson('contracts/opl-gateway/domain-onboarding-readiness.schema.json');
 
   assert.ok(schema.required.includes('execution_model'));
+  assert.ok(schema.required.includes('discovery_readiness'));
+  assert.ok(schema.required.includes('routing_readiness'));
+  assert.ok(schema.required.includes('cross_domain_wording'));
+  assert.ok(!schema.required.includes('discovery_routing_readiness'));
   assert.ok(schema.$defs.formalInclusionGate.required.includes('execution_model_aligned'));
 
   const executionModel = schema.$defs.executionModelDeclaration;
@@ -33,6 +37,24 @@ test('domain-onboarding readiness schema requires execution-model alignment befo
   assert.ok(executionModel.required.includes('stable_agent_runtime_surface_refs'));
   assert.ok(executionModel.required.includes('convergence_surface_refs'));
   assert.ok(executionModel.required.includes('code_responsibility_surface_refs'));
+
+  const discoveryReadiness = schema.$defs.discoveryReadinessDeclaration;
+  assert.equal(discoveryReadiness.properties.discovery_entry_surface.const, 'domain_gateway');
+  assert.equal(discoveryReadiness.properties.discovery_evidence_explicit.const, true);
+  assert.ok(discoveryReadiness.required.includes('discovery_workstream_ids'));
+
+  const routingReadiness = schema.$defs.routingReadinessDeclaration;
+  assert.equal(routingReadiness.properties.routing_entry_surface.const, 'domain_gateway');
+  assert.equal(routingReadiness.properties.direct_harness_bypass_allowed.const, false);
+  assert.equal(routingReadiness.properties.routing_evidence_explicit.const, true);
+  assert.equal(routingReadiness.properties.handoff_payload_targets_domain_gateway_only.const, true);
+  assert.ok(routingReadiness.required.includes('routing_workstream_ids'));
+
+  const crossDomainWording = schema.$defs.crossDomainWordingDeclaration;
+  assert.equal(crossDomainWording.properties.top_level_role_language_aligned.const, true);
+  assert.equal(crossDomainWording.properties.signal_only_scaffold_does_not_imply_admission.const, true);
+  assert.ok(crossDomainWording.required.includes('opl_surface_refs'));
+  assert.ok(crossDomainWording.required.includes('domain_surface_refs'));
 
   const readyClause = findReadyForInclusionClause(schema);
   assert.ok(readyClause, 'Expected a ready_for_inclusion clause in formalInclusionGate.');
@@ -55,6 +77,16 @@ test('example onboarding record declares the agent-first execution model and ali
     assert.ok(record.execution_model.stable_agent_runtime_surface_refs.length > 0);
     assert.ok(record.execution_model.convergence_surface_refs.length > 0);
     assert.ok(record.execution_model.code_responsibility_surface_refs.length > 0);
+    assert.equal(record.discovery_readiness.discovery_entry_surface, 'domain_gateway');
+    assert.equal(record.discovery_readiness.discovery_evidence_explicit, true);
+    assert.equal(record.routing_readiness.routing_entry_surface, 'domain_gateway');
+    assert.equal(record.routing_readiness.direct_harness_bypass_allowed, false);
+    assert.equal(record.routing_readiness.routing_evidence_explicit, true);
+    assert.equal(record.routing_readiness.handoff_payload_targets_domain_gateway_only, true);
+    assert.equal(record.cross_domain_wording.top_level_role_language_aligned, true);
+    assert.equal(record.cross_domain_wording.signal_only_scaffold_does_not_imply_admission, true);
+    assert.ok(record.cross_domain_wording.opl_surface_refs.length > 0);
+    assert.ok(record.cross_domain_wording.domain_surface_refs.length > 0);
     assert.equal(record.formal_inclusion_gate.execution_model_aligned.status, 'ready');
     assert.match(
       record.formal_inclusion_gate.execution_model_aligned.evidence_refs.join(' '),
@@ -85,12 +117,21 @@ test('task topology keeps under-definition workstreams blocked without stable ru
     assert.match(workstream.notes, /shared-base Auto\/Human-in-the-loop convergence path/i);
     assert.match(workstream.notes, /under definition/i);
   }
+
+  const grantOps = topology.workstreams.find((entry: Json) => entry.workstream_id === 'grant_ops');
+  assert.match(grantOps.notes, /Grant Foundry -> Med Auto Grant/i);
+  assert.match(grantOps.notes, /top-level signal/i);
+  assert.match(grantOps.notes, /domain-direction evidence/i);
+  assert.match(grantOps.notes, /not an admitted domain gateway/i);
 });
 
 test('candidate-domain backlog makes execution-model blockers explicit for under-definition workstreams', () => {
   const backlog = readJson('contracts/opl-gateway/candidate-domain-backlog.json');
 
   assert.ok(backlog.required_package_ids.includes('execution_model'));
+  assert.ok(backlog.required_package_ids.includes('discovery_readiness'));
+  assert.ok(backlog.required_package_ids.includes('routing_readiness'));
+  assert.ok(!backlog.required_package_ids.includes('discovery_routing_readiness'));
   assert.ok(backlog.formal_inclusion_check_ids.includes('execution_model_aligned'));
   assert.ok(
     backlog.backlog_rules.some((rule: string) =>
@@ -123,11 +164,40 @@ test('candidate-domain backlog makes execution-model blockers explicit for under
     assert.equal(executionModelMissing.package_id, 'execution_model');
     assert.equal(executionModelMissing.status, 'missing');
 
+    const discoveryMissing = candidate.missing_boundary_materials.find(
+      (entry: Json) => entry.maps_to_formal_inclusion_check === 'discovery_ready',
+    );
+    assert.ok(discoveryMissing, `Expected discovery_ready blocker for ${workstreamId}.`);
+    assert.equal(discoveryMissing.package_id, 'discovery_readiness');
+    assert.equal(discoveryMissing.status, 'missing');
+
+    const routingMissing = candidate.missing_boundary_materials.find(
+      (entry: Json) => entry.maps_to_formal_inclusion_check === 'routing_ready',
+    );
+    assert.ok(routingMissing, `Expected routing_ready blocker for ${workstreamId}.`);
+    assert.equal(routingMissing.package_id, 'routing_readiness');
+    assert.equal(routingMissing.status, 'missing');
+
     assert.deepEqual(candidate.formal_inclusion_gate.execution_model_aligned, {
       status: 'blocked',
       blocking_package_ids: ['execution_model'],
     });
+    assert.deepEqual(candidate.formal_inclusion_gate.discovery_ready, {
+      status: 'blocked',
+      blocking_package_ids: ['discovery_readiness'],
+    });
+    assert.deepEqual(candidate.formal_inclusion_gate.routing_ready, {
+      status: 'blocked',
+      blocking_package_ids: ['routing_readiness'],
+    });
     assert.equal(candidate.formal_inclusion_gate.review_ready.status, 'blocked');
     assert.equal(candidate.formal_inclusion_gate.cross_domain_wording_aligned.status, 'blocked');
   }
+
+  const grantOps = backlog.candidate_workstreams.find((entry: Json) => entry.workstream_id === 'grant_ops');
+  assert.ok(grantOps.top_level_signal_refs.includes('https://github.com/gaofeng21cn/med-autogrant'));
+  assert.match(grantOps.notes, /Grant Foundry -> Med Auto Grant/i);
+  assert.match(grantOps.notes, /top-level signal/i);
+  assert.match(grantOps.notes, /domain-direction evidence/i);
+  assert.match(grantOps.notes, /not an admitted domain gateway/i);
 });

@@ -23,6 +23,9 @@ test('candidate-domain backlog public companions mirror execution-model blockers
   const chinese = read('docs/references/opl-candidate-domain-backlog.zh-CN.md');
 
   assert.ok(backlog.required_package_ids.includes('execution_model'));
+  assert.ok(backlog.required_package_ids.includes('discovery_readiness'));
+  assert.ok(backlog.required_package_ids.includes('routing_readiness'));
+  assert.ok(!backlog.required_package_ids.includes('discovery_routing_readiness'));
   assert.ok(backlog.formal_inclusion_check_ids.includes('execution_model_aligned'));
 
   for (const doc of [english, chinese]) {
@@ -32,6 +35,8 @@ test('candidate-domain backlog public companions mirror execution-model blockers
     assert.match(doc, /code-versus-Agent responsibility split|code-versus-Agent|code\/Agent responsibility split/i);
     assert.match(doc, /fixed-code-first/i);
     assert.match(doc, /under definition \/ deferred|under-definition \/ deferred|under definition|under-definition|仍然只能停留在 under definition \/ deferred/i);
+    assert.match(doc, /discovery readiness blocker|discovery readiness|discovery-ready|discovery readiness blocker|发现 readiness blocker/i);
+    assert.match(doc, /routing readiness blocker|routing readiness|routed-action-ready|路由 readiness blocker/i);
   }
 
   for (const label of ['Grant Ops', 'Thesis Ops', 'Review Ops']) {
@@ -47,4 +52,18 @@ test('candidate-domain backlog public companions mirror execution-model blockers
       new RegExp(`${label}[\\s\\S]{0,1200}(execution-model declaration|stable agent runtime surface)`, 'i'),
     );
   }
+
+  assert.match(english, /Grant Foundry -> Med Auto Grant/i);
+  assert.match(english, /top-level signal/i);
+  assert.match(english, /domain-direction evidence/i);
+  assert.match(english, /does not count as an admitted domain gateway|is not an admitted domain gateway/i);
+  assert.match(english, /does not count as `?G2`? discovery readiness|`?G2`? discovery-ready/i);
+  assert.match(english, /does not count as `?G3`? routed-action readiness|`?G3`? routed-action-ready/i);
+
+  assert.match(chinese, /Grant Foundry -> Med Auto Grant/);
+  assert.match(chinese, /top-level signal|顶层信号/);
+  assert.match(chinese, /domain-direction evidence|领域方向证据/);
+  assert.match(chinese, /不等于已经 admitted 的 domain gateway|不等于已正式收录的 domain gateway/);
+  assert.match(chinese, /不等于 `?G2`? discovery readiness|`?G2`? discovery-ready/);
+  assert.match(chinese, /不等于 `?G3`? routed-action readiness|`?G3`? routed-action-ready|`?G3`? routed-action readiness|`?G3`? routed-action target/);
 });

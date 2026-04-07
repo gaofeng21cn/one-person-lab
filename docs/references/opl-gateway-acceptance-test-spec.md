@@ -142,7 +142,7 @@ In the current `Phase 1`, this is a planning gate, not a runtime gate. The curre
 4. The routed contract explicitly forbids bypassing the domain gateway and directly calling the harness.
 5. The machine-readable routed-action schema stays aligned with the public G3 doc.
 6. Routing evidence remains explicit and auditable rather than hidden behind best-effort wording.
-7. The current docs constrain `G3` to `thin handoff planning / pre-freeze` rather than describing an already active mutation runtime.
+7. The current docs constrain `G3` to planning-only thin handoff contract wording rather than describing an already active mutation runtime.
 
 ### Verification
 
@@ -163,17 +163,22 @@ The onboarding gate passes only when all of the following are true:
 4. The onboarding contract requires explicit public documentation surfaces.
 5. The onboarding contract requires explicit truth-ownership declaration.
 6. The onboarding contract requires explicit review surfaces.
-7. The onboarding contract defines a formal inclusion gate covering:
+7. The onboarding contract requires an explicit discovery-readiness declaration that keeps discovery pointed at `domain_gateway` without implying handoff readiness.
+8. The onboarding contract requires an explicit routing-readiness declaration that keeps `domain_gateway` as the only successful target and preserves the no-bypass rule.
+9. The onboarding contract requires explicit cross-domain wording material so OPL/domain role language can be audited directly.
+10. The onboarding contract defines a formal inclusion gate covering:
    - registry complete
    - boundary explicit
    - truth ownership explicit
    - discovery ready
    - routing ready
    - review ready
+   - execution model aligned
    - cross-domain wording aligned
-8. The onboarding contract remains non-executing, does not auto-admit domains, and does not replace the prose review gate.
-9. The onboarding contract explicitly forbids “placeholder first, boundary later”.
-10. The onboarding contract explicitly forbids treating future domains as internal `OPL` modules.
+11. The onboarding contract remains non-executing, does not auto-admit domains, and does not replace the prose review gate.
+12. The onboarding contract explicitly forbids “placeholder first, boundary later”.
+13. The onboarding contract explicitly forbids treating future domains as internal `OPL` modules.
+14. Signal-only scaffolds such as `Grant Foundry -> Med Auto Grant` do not satisfy admission, discovery readiness, or routing readiness by themselves.
 
 ### Verification
 
@@ -593,7 +598,9 @@ The wording-consistency gate passes only when all of the following are true:
    - `public_documentation`
    - `truth_ownership`
    - `review_surfaces`
-   - `discovery_routing_readiness`
+   - `execution_model`
+   - `discovery_readiness`
+   - `routing_readiness`
    - `cross_domain_wording`
 8. Every candidate entry records missing boundary materials aligned to these onboarding checks inside `missing_boundary_materials`:
    - `registry_complete`
@@ -602,25 +609,28 @@ The wording-consistency gate passes only when all of the following are true:
    - `discovery_ready`
    - `routing_ready`
    - `review_ready`
+   - `execution_model_aligned`
    - `cross_domain_wording_aligned`
 9. Every candidate entry keeps each `required_onboarding_materials` status at `missing` and each `formal_inclusion_gate` status at `blocked` until a real domain boundary package exists.
 10. No candidate entry invents an admitted domain, a non-null entry surface, or domain-truth ownership as if it were already frozen.
 11. `Grant Ops` remains proposal-facing: task-topology, task-map, and candidate-backlog wording keep proposal-side reviewer simulation and revision as author-side grant-authoring aids/artifacts rather than reviewer-role ownership or a standalone reviewer surface.
-12. `Thesis Ops` stays below onboarding in both task-map and candidate-backlog wording; this wording does not create a `G2` discovery target or a `G3` routed-action target before domain-onboarding evidence exists.
-13. `Thesis Ops` wording keeps thesis assembly distinct from `Research Ops` manuscript/submission flow and from `Presentation Ops` / `RedCube AI` deck production; reusable inputs or downstream derivatives do not transfer the `Thesis Ops` boundary into those admitted surfaces.
-14. `Review Ops` keeps reviewer-role work plus response/rebuttal coordination as one under-definition semantic bundle only; this wording does not by itself admit a review domain, transfer review-truth ownership into `OPL`, create a `G2` discovery target, or create a `G3` routed-action target.
-15. No candidate entry or backlog rule collapses `Grant Ops`, `Thesis Ops`, or `Review Ops` into `MedAutoScience` or `RedCube AI`; both admitted domains remain independent gateway-and-harness surfaces.
-16. No `required_evidence` or note text assigns future `domain_id`, `gateway_surface`, or `harness_surface` metadata before the boundary package exists.
-17. `contracts/opl-gateway/public-surface-index.json`, `surface-review-matrix.json`, `surface-lifecycle-map.json`, and `surface-authority-matrix.json` expose the candidate-domain backlog as a supporting/reference surface, with exactly one `opl_candidate_domain_backlog` entry in the public-surface index and exactly one review entry in the surface-review matrix.
-18. Contract README, task-map docs, domain-onboarding docs, public-surface index docs, review-matrix docs, lifecycle/authority docs, and acceptance surfaces describe the backlog as reference-only, non-executing, non-admitting, and below the onboarding gate.
+12. If `Grant Foundry -> Med Auto Grant` appears in public wording, it is framed only as top-level signal / domain-direction evidence; it is not an admitted domain gateway and does not count as G2 discovery readiness, G3 routed-action readiness, or a handoff-ready surface.
+13. `Thesis Ops` stays below onboarding in both task-map and candidate-backlog wording; this wording does not create a `G2` discovery target or a `G3` routed-action target before domain-onboarding evidence exists.
+14. `Thesis Ops` wording keeps thesis assembly distinct from `Research Ops` manuscript/submission flow and from `Presentation Ops` / `RedCube AI` deck production; reusable inputs or downstream derivatives do not transfer the `Thesis Ops` boundary into those admitted surfaces.
+15. `Review Ops` keeps reviewer-role work plus response/rebuttal coordination as one under-definition semantic bundle only; this wording does not by itself admit a review domain, transfer review-truth ownership into `OPL`, create a `G2` discovery target, or create a `G3` routed-action target.
+16. No candidate entry or backlog rule collapses `Grant Ops`, `Thesis Ops`, or `Review Ops` into `MedAutoScience` or `RedCube AI`; both admitted domains remain independent gateway-and-harness surfaces.
+17. No `required_evidence` or note text assigns future `domain_id`, `gateway_surface`, or `harness_surface` metadata before the boundary package exists.
+18. `contracts/opl-gateway/public-surface-index.json`, `surface-review-matrix.json`, `surface-lifecycle-map.json`, and `surface-authority-matrix.json` expose the candidate-domain backlog as a supporting/reference surface, with exactly one `opl_candidate_domain_backlog` entry in the public-surface index and exactly one review entry in the surface-review matrix.
+19. Contract README, task-map docs, domain-onboarding docs, public-surface index docs, review-matrix docs, lifecycle/authority docs, and acceptance surfaces describe the backlog as reference-only, non-executing, non-admitting, and below the onboarding gate.
 
 ### Verification
 
 - Parse `contracts/opl-gateway/candidate-domain-backlog.json` with `json.load`.
 - Confirm the exact workstream set above and the exact alignment with the under-definition entries in `task-topology.json`.
-- Confirm every candidate entry has the six onboarding-material packages above, every `required_onboarding_materials` package remains `missing`, every `formal_inclusion_gate` check remains `blocked`, and all readiness flags remain `false`.
+- Confirm every candidate entry has the eight onboarding-material packages above, every `required_onboarding_materials` package remains `missing`, every `formal_inclusion_gate` check remains `blocked`, and all readiness flags remain `false`.
 - Confirm no candidate entry carries placeholder future `domain_id`, `gateway_surface`, or `harness_surface` fields.
 - Confirm `Grant Ops` remains proposal-facing across `task-topology`, `task-map`, and candidate-backlog wording, so proposal-side reviewer simulation/revision stays author-side and does not become reviewer-role ownership.
+- Confirm any `Grant Foundry -> Med Auto Grant` wording stays at top-level signal / domain-direction evidence and does not count as admission, `G2` discovery readiness, `G3` routed-action readiness, or a handoff-ready surface.
 - Confirm `Thesis Ops` stays below onboarding across `task-map` and candidate-backlog wording, so it does not become a `G2` discovery target or a `G3` routed-action target before its domain-onboarding evidence exists.
 - Confirm `Thesis Ops` remains distinct from `Research Ops` manuscript/submission flow and from `Presentation Ops` / `RedCube AI` deck production, so reusable inputs or downstream derivatives do not transfer the `Thesis Ops` boundary into those admitted surfaces.
 - Confirm `Review Ops` stays an under-definition semantic bundle across `task-topology`, `task-map`, and candidate-backlog wording, so reviewer-role work plus response/rebuttal coordination does not become an admitted review domain, an OPL-owned review-truth surface, a `G2` discovery target, or a `G3` routed-action target.
@@ -945,7 +955,9 @@ required_packages = {
     'public_documentation',
     'truth_ownership',
     'review_surfaces',
-    'discovery_routing_readiness',
+    'execution_model',
+    'discovery_readiness',
+    'routing_readiness',
     'cross_domain_wording',
 }
 required_checks = {
@@ -955,6 +967,7 @@ required_checks = {
     'discovery_ready',
     'routing_ready',
     'review_ready',
+    'execution_model_aligned',
     'cross_domain_wording_aligned',
 }
 banned_future_metadata = {'domain_id', 'gateway_surface', 'harness_surface'}

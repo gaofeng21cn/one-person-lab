@@ -15,7 +15,9 @@
     "truth_ownership",
     "review_surfaces",
     "execution_model",
-    "discovery_routing_readiness",
+    "discovery_readiness",
+    "routing_readiness",
+    "cross_domain_wording",
     "formal_inclusion_gate",
     "boundary_guards"
   ],
@@ -52,8 +54,14 @@
     "execution_model": {
       "$ref": "#/$defs/executionModelDeclaration"
     },
-    "discovery_routing_readiness": {
-      "$ref": "#/$defs/discoveryRoutingReadiness"
+    "discovery_readiness": {
+      "$ref": "#/$defs/discoveryReadinessDeclaration"
+    },
+    "routing_readiness": {
+      "$ref": "#/$defs/routingReadinessDeclaration"
+    },
+    "cross_domain_wording": {
+      "$ref": "#/$defs/crossDomainWordingDeclaration"
     },
     "formal_inclusion_gate": {
       "$ref": "#/$defs/formalInclusionGate"
@@ -517,22 +525,16 @@
         }
       }
     },
-    "discoveryRoutingReadiness": {
+    "discoveryReadinessDeclaration": {
       "type": "object",
       "additionalProperties": false,
       "required": [
         "discovery_entry_surface",
-        "routing_entry_surface",
         "discovery_workstream_ids",
-        "routing_workstream_ids",
-        "direct_harness_bypass_allowed",
-        "routing_evidence_explicit"
+        "discovery_evidence_explicit"
       ],
       "properties": {
         "discovery_entry_surface": {
-          "const": "domain_gateway"
-        },
-        "routing_entry_surface": {
           "const": "domain_gateway"
         },
         "discovery_workstream_ids": {
@@ -542,6 +544,25 @@
             "type": "string",
             "minLength": 1
           }
+        },
+        "discovery_evidence_explicit": {
+          "const": true
+        }
+      }
+    },
+    "routingReadinessDeclaration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "routing_entry_surface",
+        "routing_workstream_ids",
+        "direct_harness_bypass_allowed",
+        "routing_evidence_explicit",
+        "handoff_payload_targets_domain_gateway_only"
+      ],
+      "properties": {
+        "routing_entry_surface": {
+          "const": "domain_gateway"
         },
         "routing_workstream_ids": {
           "type": "array",
@@ -555,6 +576,41 @@
           "const": false
         },
         "routing_evidence_explicit": {
+          "const": true
+        },
+        "handoff_payload_targets_domain_gateway_only": {
+          "const": true
+        }
+      }
+    },
+    "crossDomainWordingDeclaration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "opl_surface_refs",
+        "domain_surface_refs",
+        "top_level_role_language_aligned",
+        "signal_only_scaffold_does_not_imply_admission"
+      ],
+      "properties": {
+        "opl_surface_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/surfaceRef"
+          }
+        },
+        "domain_surface_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/surfaceRef"
+          }
+        },
+        "top_level_role_language_aligned": {
+          "const": true
+        },
+        "signal_only_scaffold_does_not_imply_admission": {
           "const": true
         }
       }
@@ -865,18 +921,6 @@
         "fixed_code_first_mainline_forbidden": true,
         "single_mode_steady_state_forbidden": true
       },
-      "discovery_routing_readiness": {
-        "discovery_entry_surface": "domain_gateway",
-        "routing_entry_surface": "domain_gateway",
-        "discovery_workstream_ids": [
-          "example_ops"
-        ],
-        "routing_workstream_ids": [
-          "example_ops"
-        ],
-        "direct_harness_bypass_allowed": false,
-        "routing_evidence_explicit": true
-      },
       "formal_inclusion_gate": {
         "overall_status": "ready_for_inclusion",
         "registry_complete": {
@@ -935,6 +979,40 @@
         "internal_module_framing_forbidden": true,
         "implicit_truth_transfer_forbidden": true,
         "family_name_not_auto_workstream": true
+      },
+      "discovery_readiness": {
+        "discovery_entry_surface": "domain_gateway",
+        "discovery_workstream_ids": [
+          "example_ops"
+        ],
+        "discovery_evidence_explicit": true
+      },
+      "routing_readiness": {
+        "routing_entry_surface": "domain_gateway",
+        "routing_workstream_ids": [
+          "example_ops"
+        ],
+        "direct_harness_bypass_allowed": false,
+        "routing_evidence_explicit": true,
+        "handoff_payload_targets_domain_gateway_only": true
+      },
+      "cross_domain_wording": {
+        "opl_surface_refs": [
+          {
+            "ref_kind": "external_url",
+            "ref": "https://example.com/opl/grant-ops",
+            "label": "Example OPL Grant Ops Surface"
+          }
+        ],
+        "domain_surface_refs": [
+          {
+            "ref_kind": "external_url",
+            "ref": "https://example.com/example-domain/grant-ops",
+            "label": "Example Domain Grant Ops Surface"
+          }
+        ],
+        "top_level_role_language_aligned": true,
+        "signal_only_scaffold_does_not_imply_admission": true
       }
     }
   ]

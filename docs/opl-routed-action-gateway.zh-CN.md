@@ -7,7 +7,7 @@
 这份文档冻结 `OPL Gateway` 的 `G3` 合同。
 
 `G3` 是 `OPL` 后续第一次可以接收顶层 action request，并把它路由到正确 domain gateway 的阶段。
-在当前 `Phase 1`，这份文档只作为 `G3 thin handoff planning / pre-freeze` 的合同参考，并承担 `Phase 1 / G3 thin handoff planning freeze hardening` 的 planning-level contract；它不表示当前仓库已经进入 routed-action implementation。
+在当前 `Phase 1`，这份文档只作为 `G3 thin handoff planning` 的合同参考，并承担已完成 `Phase 1 / G3 thin handoff planning freeze hardening` 后留下的 planning-level contract；它不表示当前仓库已经进入 routed-action implementation。
 当前这是 planning gate，不是 runtime gate。本轮不新增 mutation entry、run launch 或 workspace write。
 
 目标不是做成单体 runtime。
