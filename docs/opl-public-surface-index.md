@@ -11,8 +11,10 @@ Its job is to make the top-level gateway easier to discover across README, roadm
 It is not a runtime registry.
 It should be read as a CLI-first, read-only discoverability aid for the current Phase 1 gateway baseline.
 The completed `G2` closeout keeps the single repo-tracked top-level `G2` CLI-first / read-only baseline stable.
+That baseline remains the current `OPL` `Phase 1` formal entry contract and public system surface.
 The completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` remains closed at the planning-contract layer, and `G3` remains planning-only rather than an activated routed-action runtime.
 The current same-phase baton is `Phase 1 / Grant Ops candidate-domain backlog and onboarding-package hardening`.
+The current top-level formal entry therefore remains the CLI-first / read-only gateway surface indexed here rather than a launcher or runtime-authority surface.
 Use the [Ecosystem Status Matrix](./references/ecosystem-status-matrix.md) as the internal reference-sync anchor for the current four-repo stage and maturity snapshot.
 
 For repository-wide document layering and reference-grade handling, see [Docs Index](./README.md).

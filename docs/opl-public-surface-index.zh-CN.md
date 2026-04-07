@@ -11,8 +11,10 @@
 它不是 runtime registry。
 它应被理解为当前 Phase 1 gateway 基线下、面向 CLI-first / read-only discovery 的辅助索引。
 已完成的 `G2` closeout 已把单一、repo-tracked 的顶层 `G2` CLI-first / read-only baseline 固定下来。
+这条基线也仍然是 `OPL` 在 `Phase 1` 的 formal entry contract 与 public system surface。
 已完成的 repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` 继续停留在 planning-contract closeout 层，`G3` 也仍然只保持 planning-only 状态，而不是已激活的 routed-action runtime。
 当前同一 phase 内的 baton 是 `Phase 1 / Grant Ops candidate-domain backlog and onboarding-package hardening`。
+因此，当前 top-level formal entry 也仍然只是这里索引到的 CLI-first / read-only gateway surface，而不是 launcher 或 runtime-authority surface。
 四仓当前阶段与成熟度判断，以 [生态四仓统一状态总表](./references/ecosystem-status-matrix.md) 作为内部参考同步锚点。
 
 如果要看仓库级文档分层与参考级处理规则，请继续看 [文档索引](./README.zh-CN.md)。

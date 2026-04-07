@@ -19,15 +19,63 @@ function findReadyForInclusionClause(schema: Json) {
   );
 }
 
+const expectedSchemaRequired = [
+  'version',
+  'onboarding_id',
+  'candidate_domain',
+  'candidate_workstreams',
+  'routing_vocabulary_impact',
+  'public_documentation',
+  'truth_ownership',
+  'review_surfaces',
+  'execution_model',
+  'discovery_readiness',
+  'routing_readiness',
+  'cross_domain_wording',
+  'formal_inclusion_gate',
+  'boundary_guards',
+];
+
+const expectedFormalGateRequired = [
+  'overall_status',
+  'registry_complete',
+  'boundary_explicit',
+  'truth_ownership_explicit',
+  'discovery_ready',
+  'routing_ready',
+  'review_ready',
+  'execution_model_aligned',
+  'cross_domain_wording_aligned',
+];
+
+const expectedRequiredPackageIds = [
+  'registry_material',
+  'public_documentation',
+  'truth_ownership',
+  'review_surfaces',
+  'execution_model',
+  'discovery_readiness',
+  'routing_readiness',
+  'cross_domain_wording',
+];
+
+const expectedMissingBoundaryMapping = {
+  registry_complete: 'registry_material',
+  boundary_explicit: 'public_documentation',
+  truth_ownership_explicit: 'truth_ownership',
+  discovery_ready: 'discovery_readiness',
+  routing_ready: 'routing_readiness',
+  review_ready: 'review_surfaces',
+  execution_model_aligned: 'execution_model',
+  cross_domain_wording_aligned: 'cross_domain_wording',
+};
+
 test('domain-onboarding readiness schema requires execution-model alignment before ready_for_inclusion', () => {
   const schema = readJson('contracts/opl-gateway/domain-onboarding-readiness.schema.json');
 
-  assert.ok(schema.required.includes('execution_model'));
-  assert.ok(schema.required.includes('discovery_readiness'));
-  assert.ok(schema.required.includes('routing_readiness'));
-  assert.ok(schema.required.includes('cross_domain_wording'));
+  assert.deepEqual(schema.required, expectedSchemaRequired);
   assert.ok(!schema.required.includes('discovery_routing_readiness'));
-  assert.ok(schema.$defs.formalInclusionGate.required.includes('execution_model_aligned'));
+  assert.deepEqual(schema.$defs.formalInclusionGate.required, expectedFormalGateRequired);
 
   const executionModel = schema.$defs.executionModelDeclaration;
   assert.equal(executionModel.properties.default_executor.const, 'agent_first');
@@ -87,7 +135,18 @@ test('example onboarding record declares the agent-first execution model and ali
     assert.equal(record.cross_domain_wording.signal_only_scaffold_does_not_imply_admission, true);
     assert.ok(record.cross_domain_wording.opl_surface_refs.length > 0);
     assert.ok(record.cross_domain_wording.domain_surface_refs.length > 0);
+    assert.equal(record.boundary_guards.placeholder_first_forbidden, true);
+    assert.equal(record.boundary_guards.internal_module_framing_forbidden, true);
+    assert.equal(record.boundary_guards.implicit_truth_transfer_forbidden, true);
+    assert.equal(record.boundary_guards.family_name_not_auto_workstream, true);
+    assert.equal(record.formal_inclusion_gate.registry_complete.status, 'ready');
+    assert.equal(record.formal_inclusion_gate.boundary_explicit.status, 'ready');
+    assert.equal(record.formal_inclusion_gate.truth_ownership_explicit.status, 'ready');
+    assert.equal(record.formal_inclusion_gate.discovery_ready.status, 'ready');
+    assert.equal(record.formal_inclusion_gate.routing_ready.status, 'ready');
+    assert.equal(record.formal_inclusion_gate.review_ready.status, 'ready');
     assert.equal(record.formal_inclusion_gate.execution_model_aligned.status, 'ready');
+    assert.equal(record.formal_inclusion_gate.cross_domain_wording_aligned.status, 'ready');
     assert.match(
       record.formal_inclusion_gate.execution_model_aligned.evidence_refs.join(' '),
       /stable_agent_runtime_surface|shared_base_auto_hitl|default_executor=agent_first/i,
@@ -128,11 +187,9 @@ test('task topology keeps under-definition workstreams blocked without stable ru
 test('candidate-domain backlog makes execution-model blockers explicit for under-definition workstreams', () => {
   const backlog = readJson('contracts/opl-gateway/candidate-domain-backlog.json');
 
-  assert.ok(backlog.required_package_ids.includes('execution_model'));
-  assert.ok(backlog.required_package_ids.includes('discovery_readiness'));
-  assert.ok(backlog.required_package_ids.includes('routing_readiness'));
+  assert.deepEqual(backlog.required_package_ids, expectedRequiredPackageIds);
   assert.ok(!backlog.required_package_ids.includes('discovery_routing_readiness'));
-  assert.ok(backlog.formal_inclusion_check_ids.includes('execution_model_aligned'));
+  assert.deepEqual(backlog.formal_inclusion_check_ids, expectedFormalGateRequired.slice(1));
   assert.ok(
     backlog.backlog_rules.some((rule: string) =>
       /under definition \/ deferred.*stable agent runtime surface.*Auto\/Human-in-the-loop convergence path/i.test(
@@ -146,6 +203,14 @@ test('candidate-domain backlog makes execution-model blockers explicit for under
       (entry: Json) => entry.workstream_id === workstreamId,
     );
     assert.ok(candidate, `Expected ${workstreamId} in candidate-domain-backlog.json.`);
+    assert.deepEqual(
+      candidate.required_onboarding_materials.map((entry: Json) => entry.package_id),
+      expectedRequiredPackageIds,
+    );
+    assert.ok(
+      candidate.required_onboarding_materials.every((entry: Json) => entry.status === 'missing'),
+      `Expected all onboarding materials to stay missing for ${workstreamId}.`,
+    );
 
     const executionModelPackage = candidate.required_onboarding_materials.find(
       (entry: Json) => entry.package_id === 'execution_model',
@@ -177,6 +242,19 @@ test('candidate-domain backlog makes execution-model blockers explicit for under
     assert.ok(routingMissing, `Expected routing_ready blocker for ${workstreamId}.`);
     assert.equal(routingMissing.package_id, 'routing_readiness');
     assert.equal(routingMissing.status, 'missing');
+    assert.deepEqual(
+      Object.fromEntries(
+        candidate.missing_boundary_materials.map((entry: Json) => [
+          entry.maps_to_formal_inclusion_check,
+          entry.package_id,
+        ]),
+      ),
+      expectedMissingBoundaryMapping,
+    );
+    assert.ok(
+      candidate.missing_boundary_materials.every((entry: Json) => entry.status === 'missing'),
+      `Expected all missing_boundary_materials to stay missing for ${workstreamId}.`,
+    );
 
     assert.deepEqual(candidate.formal_inclusion_gate.execution_model_aligned, {
       status: 'blocked',
@@ -190,8 +268,27 @@ test('candidate-domain backlog makes execution-model blockers explicit for under
       status: 'blocked',
       blocking_package_ids: ['routing_readiness'],
     });
+    assert.deepEqual(candidate.formal_inclusion_gate.registry_complete, {
+      status: 'blocked',
+      blocking_package_ids: ['registry_material'],
+    });
+    assert.deepEqual(candidate.formal_inclusion_gate.boundary_explicit, {
+      status: 'blocked',
+      blocking_package_ids: ['public_documentation'],
+    });
+    assert.deepEqual(candidate.formal_inclusion_gate.truth_ownership_explicit, {
+      status: 'blocked',
+      blocking_package_ids: ['truth_ownership'],
+    });
+    assert.deepEqual(candidate.formal_inclusion_gate.review_ready, {
+      status: 'blocked',
+      blocking_package_ids: ['review_surfaces'],
+    });
     assert.equal(candidate.formal_inclusion_gate.review_ready.status, 'blocked');
-    assert.equal(candidate.formal_inclusion_gate.cross_domain_wording_aligned.status, 'blocked');
+    assert.deepEqual(candidate.formal_inclusion_gate.cross_domain_wording_aligned, {
+      status: 'blocked',
+      blocking_package_ids: ['cross_domain_wording'],
+    });
   }
 
   const grantOps = backlog.candidate_workstreams.find((entry: Json) => entry.workstream_id === 'grant_ops');

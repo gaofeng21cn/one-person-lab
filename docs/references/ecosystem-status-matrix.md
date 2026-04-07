@@ -85,6 +85,7 @@
 #### 当前角色
 
 - 顶层 `Gateway / Federation`
+- `Phase 1` 当前 repo-tracked 的 formal entry contract / public system surface 是 `TypeScript CLI + read-only gateway baseline`
 - 文档优先、合同优先的公开说明面
 - 当前不是 domain runtime owner
 
@@ -92,11 +93,12 @@
 
 - `Phase 1`：当前公开主线已完成 `G2` closeout；repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` 也已 closeout，并继续停留在 planning freeze；当前同一 phase 的 baton 是 `Phase 1 / Grant Ops candidate-domain backlog and onboarding-package hardening`
 - 当前 repo 已有可运行的本地 `TypeScript CLI + read-only gateway baseline`
+- 当前 top-level formal entry 仍然就是这条本地 `TypeScript CLI + read-only gateway baseline`，而不是 launcher 或 runtime-owner 入口
 - 当前 baton：已完成 `G2 stable public baseline` 收口 + 已把 `G3` 关在 thin-handoff planning freeze closeout 边界 + 推进 `Phase 1 / Grant Ops candidate-domain backlog and onboarding-package hardening` + 四仓状态回写到顶层参考同步面
 - 对应 planning brief：`docs/plans/2026-04-07-g3-thin-handoff-planning-brief.md`
 - 对应 planning closeout note：`docs/plans/2026-04-07-g3-thin-handoff-planning-closeout-note.md`
 - 对应 release-closeout note：`docs/plans/2026-04-07-g2-release-closeout-note.md`
-- 当前对 `Grant Ops` 的硬边界：`Grant Foundry -> Med Auto Grant` 只算 top-level signal / domain-direction evidence，不等于已正式收录的 domain gateway，也不等于 `G2` discovery readiness 或 `G3` routed-action readiness
+- 当前对 `Grant Ops` 的硬边界：`Grant Foundry -> Med Auto Grant` 只算 top-level signal / domain-direction evidence，不等于已正式收录的 domain gateway，也不等于 `G2` discovery readiness 或 `G3` routed-action readiness，更不是 handoff-ready surface；任何 future follow-on route 仍只能指向 `domain_gateway`
 
 #### 现在已经有的东西
 

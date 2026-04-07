@@ -60,6 +60,7 @@
 #### 当前角色
 
 - 顶层 `Gateway / Federation`
+- 当前 repo-tracked 的 `TypeScript CLI + read-only gateway baseline` 仍是 `OPL` 在 `Phase 1` 的 formal entry contract 与 public system surface
 - 四仓统一语义、统一合同、统一文档治理的真相冻结面
 
 #### P0
@@ -68,6 +69,7 @@
   - `Unified Harness Engineering Substrate`
   - `Codex-default host-agent runtime`
   - `Codex Host / OMX` 开发控制面
+- 守住当前 repo-tracked `TypeScript CLI + read-only gateway baseline` 作为 `OPL` 在 `Phase 1` 的 formal entry contract 与 public system surface
 - 维持并更新四份内部参考同步面：
   - `ecosystem-status-matrix.md`
   - `host-agent-runtime-contract.md`
@@ -78,12 +80,13 @@
   - `docs/opl-public-surface-index.zh-CN.md`
   - `contracts/opl-gateway/README.zh-CN.md`
   - `docs/references/opl-gateway-rollout.zh-CN.md`
+- 守住 OPL 当前 formal entry contract：本地 `TypeScript CLI`-first / read-only gateway surface 仍是唯一 top-level formal entry，不扩成 launcher 或 runtime-owner 入口
 - 收紧同一 phase 内的 Grant Ops candidate path：
   - `docs/task-map.zh-CN.md`
   - `docs/references/opl-candidate-domain-backlog.zh-CN.md`
   - `docs/opl-domain-onboarding-contract.zh-CN.md`
   - `docs/references/opl-gateway-acceptance-test-spec.zh-CN.md`
-- 明确 `Grant Foundry -> Med Auto Grant` 只算 top-level signal / domain-direction evidence，不等于 domain admission、`G2` discovery readiness 或 `G3` routed-action readiness
+- 明确 `Grant Foundry -> Med Auto Grant` 只算 top-level signal / domain-direction evidence，不等于 domain admission、`G2` discovery readiness、`G3` routed-action readiness 或 handoff-ready surface；任何 future follow-on route 仍只能走 `domain_gateway` 且继续遵守 no-bypass
 - 保持 `OPL` 不越界为 domain runtime owner
 
 #### P1

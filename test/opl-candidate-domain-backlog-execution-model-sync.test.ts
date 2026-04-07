@@ -17,16 +17,43 @@ function readJson(relativePath: string): Json {
   return JSON.parse(read(relativePath)) as Json;
 }
 
+const expectedRequiredPackageIds = [
+  'registry_material',
+  'public_documentation',
+  'truth_ownership',
+  'review_surfaces',
+  'execution_model',
+  'discovery_readiness',
+  'routing_readiness',
+  'cross_domain_wording',
+];
+
+const expectedFormalInclusionCheckIds = [
+  'registry_complete',
+  'boundary_explicit',
+  'truth_ownership_explicit',
+  'discovery_ready',
+  'routing_ready',
+  'review_ready',
+  'execution_model_aligned',
+  'cross_domain_wording_aligned',
+];
+
 test('candidate-domain backlog public companions mirror execution-model blockers from the machine-readable backlog', () => {
   const backlog = readJson('contracts/opl-gateway/candidate-domain-backlog.json');
   const english = read('docs/references/opl-candidate-domain-backlog.md');
   const chinese = read('docs/references/opl-candidate-domain-backlog.zh-CN.md');
 
-  assert.ok(backlog.required_package_ids.includes('execution_model'));
-  assert.ok(backlog.required_package_ids.includes('discovery_readiness'));
-  assert.ok(backlog.required_package_ids.includes('routing_readiness'));
+  assert.deepEqual(backlog.required_package_ids, expectedRequiredPackageIds);
+  assert.deepEqual(backlog.formal_inclusion_check_ids, expectedFormalInclusionCheckIds);
   assert.ok(!backlog.required_package_ids.includes('discovery_routing_readiness'));
-  assert.ok(backlog.formal_inclusion_check_ids.includes('execution_model_aligned'));
+  assert.ok(
+    backlog.backlog_rules.some((rule: string) =>
+      /top-level signal.*domain-direction evidence.*does not by itself satisfy.*discovery readiness.*routing readiness.*admission/i.test(
+        rule,
+      ),
+    ),
+  );
 
   for (const doc of [english, chinese]) {
     assert.match(doc, /execution-model declaration|execution model|execution-model|执行模型/i);

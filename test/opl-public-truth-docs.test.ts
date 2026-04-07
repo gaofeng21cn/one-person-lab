@@ -167,6 +167,27 @@ test('phase-1 public gateway docs distinguish CLI transport from the host-agent 
   assert.match(discoveryGatewayZh, /不授予 route authority/);
 });
 
+test('phase-1 formal entry wording keeps OPL at the CLI-first read-only gateway surface', () => {
+  const roadmap = read('docs/roadmap.md');
+  const roadmapZh = read('docs/roadmap.zh-CN.md');
+  const publicSurfaceIndex = read('docs/opl-public-surface-index.md');
+  const publicSurfaceIndexZh = read('docs/opl-public-surface-index.zh-CN.md');
+  const gatewayContracts = read('contracts/opl-gateway/README.md');
+  const gatewayContractsZh = read('contracts/opl-gateway/README.zh-CN.md');
+
+  assert.match(roadmap, /formal entry.*TypeScript CLI.*read-only gateway surface/i);
+  assert.match(roadmapZh, /formal entry.*TypeScript CLI.*read-only gateway surface/);
+  assert.match(publicSurfaceIndex, /formal entry.*CLI-first \/ read-only gateway surface/i);
+  assert.match(publicSurfaceIndexZh, /formal entry.*CLI-first \/ read-only gateway surface/);
+  assert.match(gatewayContracts, /formal entry.*TypeScript CLI.*read-only gateway surface/i);
+  assert.match(gatewayContractsZh, /formal entry.*TypeScript CLI.*read-only gateway surface/);
+  assert.match(
+    gatewayContracts,
+    /rather than a launcher, mutation entry, or runtime-owner surface|not a launcher, mutation entry, or runtime-owner surface/i,
+  );
+  assert.match(gatewayContractsZh, /不是 launcher、mutation entry 或 runtime-owner surface/);
+});
+
 test('public surface index and routed-action docs stay aligned with the frozen gateway contracts', () => {
   const publicSurfaceIndex = read('docs/opl-public-surface-index.md');
   const publicSurfaceIndexZh = read('docs/opl-public-surface-index.zh-CN.md');
@@ -355,10 +376,12 @@ test('internal reference truth docs carry the 2026-04-07 snapshot and current OP
   assert.match(matrix, /G2 stable public baseline/);
   assert.match(matrix, /G3 thin handoff planning/);
   assert.match(matrix, /Grant Ops candidate-domain backlog and onboarding-package hardening/);
+  assert.match(matrix, /formal entry.*TypeScript CLI \+ read-only gateway baseline/);
   assert.match(taskboard, /状态锚点：`?2026-04-07`?/);
   assert.match(taskboard, /G2 stable public baseline/);
   assert.match(taskboard, /G3 thin handoff planning/);
   assert.match(taskboard, /Grant Ops candidate-domain backlog and onboarding-package hardening/);
+  assert.match(taskboard, /formal entry contract.*TypeScript CLI.*read-only gateway surface/);
 });
 
 test('english readme exposes the opl architecture blueprint svg', () => {

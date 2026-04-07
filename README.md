@@ -339,6 +339,7 @@ The current phase has four priorities, led by a Phase 1 local `TypeScript CLI` +
 
 As of `2026-04-07`, the repository already has a runnable local `TypeScript CLI`-first / read-only gateway baseline.
 The completed `Phase 1 / G2 release-closeout` has already closed the `G2 stable public baseline` into the single stable repo-tracked public entry.
+That baseline therefore remains the current `OPL` `Phase 1` formal entry contract and public system surface.
 The repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` has already frozen `G3` at a planning-only gate, so it still does not open a mutation entry, turn `OPL` into a unified runtime owner, or pull a shared execution core forward.
 The current same-phase follow-on is `Phase 1 / Grant Ops candidate-domain backlog and onboarding-package hardening`: it only tightens the `task-topology + candidate-domain-backlog + domain-onboarding` path, keeps `Grant Foundry -> Med Auto Grant` at signal-only status, and does not admit a domain or activate routed action.
 
