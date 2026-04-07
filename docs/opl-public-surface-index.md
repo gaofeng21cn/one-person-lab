@@ -11,6 +11,8 @@ Its job is to make the top-level gateway easier to discover across README, roadm
 It is not a runtime registry.
 It should be read as a CLI-first, read-only discoverability aid for the current Phase 1 gateway baseline.
 
+For repository-wide document layering and reference-grade handling, see [Docs Index](./README.md).
+
 ## Machine-Readable Artifact
 
 - [`../contracts/opl-gateway/public-surface-index.json`](../contracts/opl-gateway/public-surface-index.json)
@@ -44,8 +46,8 @@ These surfaces position and navigate the top-level gateway:
 
 - [README](../README.md)
 - [Roadmap](./roadmap.md)
-- [Gateway Rollout](./opl-gateway-rollout.md)
 - [OPL Task Map](./task-map.md)
+- [Unified Harness Engineering Substrate](./unified-harness-engineering-substrate.md)
 
 ### 2. OPL contract surfaces
 
@@ -60,19 +62,20 @@ These surfaces freeze the gateway and federation boundary:
 - [OPL Read-Only Discovery Gateway](./opl-read-only-discovery-gateway.md)
 - [OPL Routed Action Gateway](./opl-routed-action-gateway.md)
 - [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.md) + `domain-onboarding-readiness.schema.json`
-- [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.md)
-- [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.md)
 
-### 3. OPL supporting surfaces
+### 3. OPL reference-grade supporting surfaces
 
 These surfaces improve review and discoverability without becoming execution layers:
 
+- [Gateway Rollout](./opl-gateway-rollout.md)
 - [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.md)
 - [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md)
 - [OPL Gateway Example Corpus](./opl-gateway-example-corpus.md)
 - [OPL Routed-Safety Example Corpus](./opl-routed-safety-example-corpus.md)
 - [OPL Operating Example Corpus](./opl-operating-example-corpus.md)
 - [OPL Operating Record Catalog](./opl-operating-record-catalog.md)
+- [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.md)
+- [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.md)
 - [OPL Surface Lifecycle Map](./opl-surface-lifecycle-map.md)
 - [OPL Surface Authority Matrix](./opl-surface-authority-matrix.md)
 - [OPL Surface Review Matrix](./opl-surface-review-matrix.md)
@@ -114,8 +117,6 @@ If a surface is the rollout, acceptance, matrix, or example layer, it remains a 
 - [OPL Read-Only Discovery Gateway](./opl-read-only-discovery-gateway.md)
 - [OPL Routed Action Gateway](./opl-routed-action-gateway.md)
 - [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.md)
-- [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.md)
-- [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.md)
 
 ## Supporting Example / Review / Mapping Surfaces
 
@@ -123,12 +124,15 @@ These supporting surfaces improve discoverability and reviewability only.
 They do not become governing gateway surfaces.
 They also do not become a runtime controller, authority matrix for execution, or blanket promotion gate just because they are indexed here.
 
+- [Gateway Rollout](./opl-gateway-rollout.md)
 - [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.md)
 - [OPL Gateway Example Corpus](./opl-gateway-example-corpus.md)
 - [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md)
 - [OPL Routed-Safety Example Corpus](./opl-routed-safety-example-corpus.md)
 - [OPL Operating Example Corpus](./opl-operating-example-corpus.md)
 - [OPL Operating Record Catalog](./opl-operating-record-catalog.md)
+- [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.md)
+- [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.md)
 - [OPL Surface Lifecycle Map](./opl-surface-lifecycle-map.md)
 - [OPL Surface Authority Matrix](./opl-surface-authority-matrix.md)
 - [OPL Surface Review Matrix](./opl-surface-review-matrix.md)

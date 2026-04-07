@@ -54,7 +54,7 @@ Human / Agent
 
 ## Domain Harness 的职责
 
-每个 `domain harness OS` 负责：
+每个 `Domain Harness OS` 负责：
 
 - 执行
 - truth persistence

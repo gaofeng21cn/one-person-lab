@@ -166,7 +166,7 @@ Suggested response:
     "domain_id": "redcube",
     "project": "redcube-ai",
     "gateway_surface": "Visual Deliverable Gateway",
-    "harness_surface": "Visual Deliverable Harness OS",
+    "harness_surface": "Visual Deliverable Domain Harness OS",
     "standalone_allowed": true,
     "owned_workstreams": [
       "presentation_ops"

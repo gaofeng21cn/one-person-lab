@@ -10,11 +10,13 @@ It is to freeze the `OPL Gateway` language and stabilize the domain federation a
 What is already clear today:
 
 - `OPL` is the top-level gateway and federation model for a one-person research lab
+- the shared Harness Engineering base under `OPL` is now described as the `Unified Harness Engineering Substrate`
 - [`MedAutoScience`](https://github.com/gaofeng21cn/med-autoscience) is the active `Research Ops` domain gateway and harness
 - [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) is the emerging visual-deliverable domain gateway and harness
 - `ppt_deck` is the family that currently maps most directly to `Presentation Ops`
 - `Grant Ops`, `Thesis Ops`, and `Review Ops` remain under definition
 - the shared target operating pattern is `Agent-first`, with `Auto` and `Human-in-the-loop` running on one common base; this is an architectural rule, not a claim that every domain surface already has both modes fully implemented
+- the current local default deployment shape is a `Codex`-default host-agent runtime, but the same substrate should remain compatible with future managed web runtimes
 
 What this phase does not do:
 
@@ -28,6 +30,7 @@ What this phase does not do:
 The next phase should prioritize:
 
 - freezing the `OPL Gateway -> domain gateway -> domain harness` control language
+- freezing the `Unified Harness Engineering Substrate` language above the current domain repositories without pretending that a shared public code framework already exists
 - keeping `MedAutoScience` explicit as the `Research Ops` domain surface
 - keeping `RedCube AI` explicit as the visual-deliverable domain surface
 - carrying the `Agent-first` plus dual-mode doctrine into future candidate-domain definitions instead of drifting toward fixed-code-first product lines

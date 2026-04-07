@@ -63,7 +63,7 @@ The current repository is the documentation-first public surface for this role.
 Each domain is expected to keep two distinct layers:
 
 - a `domain gateway` that serves as the stable workstream entry surface
-- a `domain harness OS` that executes, records, gates, and delivers domain work
+- a `Domain Harness OS` that executes, records, gates, and delivers domain work
 
 For example:
 

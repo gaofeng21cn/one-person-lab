@@ -127,7 +127,7 @@ Each domain entry should define:
       "project": "med-autoscience",
       "role": "research_ops_gateway",
       "gateway_surface": "Research Ops Gateway",
-      "harness_surface": "Medical Research Harness OS",
+      "harness_surface": "Medical Research Domain Harness OS",
       "standalone_allowed": true,
       "owned_workstreams": [
         "research_ops"
@@ -145,7 +145,7 @@ Each domain entry should define:
       "project": "redcube-ai",
       "role": "visual_deliverable_gateway",
       "gateway_surface": "Visual Deliverable Gateway",
-      "harness_surface": "Visual Deliverable Harness OS",
+      "harness_surface": "Visual Deliverable Domain Harness OS",
       "standalone_allowed": true,
       "owned_workstreams": [
         "presentation_ops"

@@ -123,7 +123,7 @@ test('get-domain redcube returns gateway and harness truth', () => {
   assert.equal(payload.domain.domain_id, 'redcube');
   assert.equal(payload.domain.project, 'redcube-ai');
   assert.equal(payload.domain.gateway_surface, 'Visual Deliverable Gateway');
-  assert.equal(payload.domain.harness_surface, 'Visual Deliverable Harness OS');
+  assert.equal(payload.domain.harness_surface, 'Visual Deliverable Domain Harness OS');
   assert.deepEqual(payload.domain.owned_workstreams, ['presentation_ops']);
   assert.deepEqual(payload.domain.non_opl_families, ['xiaohongshu']);
 });

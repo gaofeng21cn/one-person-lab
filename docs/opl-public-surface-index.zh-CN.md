@@ -1,15 +1,17 @@
 [English](./opl-public-surface-index.md) | **中文**
 
-# OPL Public Surface Index
+# OPL 公开界面索引
 
 ## 目的
 
-这份文档索引当前 `OPL Gateway` 的 authoritative public surfaces。
+这份文档索引当前 `OPL Gateway` 的权威公开界面。
 
-它的作用是：让顶层 gateway 在 README、roadmap、rollout、contracts、acceptance、examples，以及链接出去的 domain gateway public entry 之间更容易被发现。
+它的作用是：让顶层 gateway 在 README、roadmap、rollout、contracts、acceptance、examples，以及链接出去的 domain gateway 公开入口之间更容易被发现。
 
 它不是 runtime registry。
 它应被理解为当前 Phase 1 gateway 基线下、面向 CLI-first / read-only discovery 的辅助索引。
+
+如果要看仓库级文档分层与参考级处理规则，请继续看 [文档索引](./README.zh-CN.md)。
 
 ## 机器可读工件
 
@@ -29,58 +31,59 @@
 - 把 canonical truth 上收给 `OPL`
 - 把 domain system 写成内部模块
 
-## Shared-Foundation Ownership Boundary
+## 共享基础结构归属边界
 
-这个 index 只位于 shared-foundation 的 discoverability 层。
-`OPL` 在这里拥有的是顶层 surface 语言、索引方式与跨域导航提示；一旦工作跨过 domain 边界，runtime execution、canonical truth、review truth 与 publication truth 仍然由各 domain gateway / harness 持有。
-因此，这份 index 只是 discoverability 与 acceptance alignment 的 reference surface，不是 control plane、execution registry 或共享 truth store。
-更完整的 ownership split 可参考[共享基础结构归属](./shared-foundation-ownership.zh-CN.md)。
+这个索引只位于 shared-foundation 的可发现性层。
+`OPL` 在这里拥有的是顶层界面语言、索引方式与跨域导航提示；一旦工作跨过 domain 边界，runtime execution、canonical truth、review truth 与 publication truth 仍然由各 domain gateway / harness 持有。
+因此，这份索引只是用于可发现性与验收对齐的参考界面，不是 control plane、execution registry 或共享 truth store。
+更完整的归属拆分可参考 [共享基础结构归属](./shared-foundation-ownership.zh-CN.md)。
 
-## 已索引的 Surface 类别
+## 已索引的界面类别
 
-### 1. OPL public-entry surfaces
+### 1. OPL 公开入口界面
 
-这类 surface 负责给顶层 gateway 做定位与导航：
+这类界面负责给顶层 gateway 做定位与导航：
 
-- [README](../README.zh-CN.md)
-- [Roadmap](./roadmap.zh-CN.md)
-- [Gateway Rollout](./opl-gateway-rollout.zh-CN.md)
+- [仓库首页](../README.zh-CN.md)
+- [路线图](./roadmap.zh-CN.md)
 - [OPL 任务版图](./task-map.zh-CN.md)
+- [Unified Harness Engineering Substrate](./unified-harness-engineering-substrate.zh-CN.md)
 
-### 2. OPL contract surfaces
+### 2. OPL 合同界面
 
-这类 surface 负责冻结 gateway 与 federation 边界：
+这类界面负责冻结 gateway 与 federation 边界：
 
-- [Gateway Federation](./gateway-federation.zh-CN.md)
-- [OPL Federation Contract](./opl-federation-contract.zh-CN.md)
-- [OPL Gateway Contracts](../contracts/opl-gateway/README.zh-CN.md)
-- [OPL Operating Model](./operating-model.zh-CN.md)
+- [Gateway 联邦](./gateway-federation.zh-CN.md)
+- [OPL 联邦合同](./opl-federation-contract.zh-CN.md)
+- [OPL Gateway 合同](../contracts/opl-gateway/README.zh-CN.md)
+- [OPL 运行模型](./operating-model.zh-CN.md)
 - [共享基础结构](./shared-foundation.zh-CN.md)
 - [共享基础结构归属](./shared-foundation-ownership.zh-CN.md)
 - [OPL 只读 Discovery Gateway](./opl-read-only-discovery-gateway.zh-CN.md)
 - [OPL Routed Action Gateway](./opl-routed-action-gateway.zh-CN.md)
 - [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.zh-CN.md) + `domain-onboarding-readiness.schema.json`
-- [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.zh-CN.md)
-- [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.zh-CN.md)
 
-### 3. OPL supporting surfaces
+### 3. OPL 参考级配套界面
 
-这类 surface 负责提升审核与 discoverability，但不变成执行层：
+这类界面负责提升审核与可发现性，但不变成执行层：
 
+- [Gateway 落地路线](./opl-gateway-rollout.zh-CN.md)
 - [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.zh-CN.md)
 - [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.zh-CN.md)
 - [OPL Gateway Example Corpus](./opl-gateway-example-corpus.zh-CN.md)
 - [OPL Routed-Safety Example Corpus](./opl-routed-safety-example-corpus.zh-CN.md)
 - [OPL Operating Example Corpus](./opl-operating-example-corpus.zh-CN.md)
 - [OPL Operating Record Catalog](./opl-operating-record-catalog.zh-CN.md)
+- [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.zh-CN.md)
+- [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.zh-CN.md)
 - [OPL Surface Lifecycle Map](./opl-surface-lifecycle-map.zh-CN.md)
 - [OPL Surface Authority Matrix](./opl-surface-authority-matrix.zh-CN.md)
 - [OPL Surface Review Matrix](./opl-surface-review-matrix.zh-CN.md)
-- [OPL Public Surface Index](./opl-public-surface-index.zh-CN.md)
+- [OPL 公开界面索引](./opl-public-surface-index.zh-CN.md)
 
-### 4. Linked domain public-entry surfaces
+### 4. 已链接的 domain 公开入口界面
 
-这些 surface 由 `OPL` 做顶层索引，但 ownership 仍留在各自 domain：
+这些界面由 `OPL` 做顶层索引，但 ownership 仍留在各自 domain：
 
 - `MedAutoScience` 对应 `research_ops`
 - `RedCube AI` 对应 `presentation_ops`
@@ -94,41 +97,42 @@
 
 ## 阅读规则
 
-这份 index 必须被理解成 **surface map**，而不是 execution registry。
+这份索引必须被理解成 **界面地图**，而不是 execution registry。
 
-只要某个 surface 是 domain-owned，`OPL` 就只索引它的 public entry role。
+只要某个界面是 domain-owned，`OPL` 就只索引它的 public entry role。
 canonical runtime truth、review truth、release truth 与 submission truth 仍然留在对应 domain system 内部。
-如果某个 surface 是 `opl_operating_model`、`opl_shared_foundation` 或 `opl_shared_foundation_ownership`，那么它也只是在 shared-foundation 层承担 boundary/reference 作用，不会把 canonical truth、mutation、review truth 或 publication truth 上收到 `OPL`。
-如果某个 surface 是 `opl_task_map`，那么其中仍在定义中的 workstream 也只代表顶层语义候选，不代表它们已经通过 onboarding 与 registry 门槛。
-如果某个 surface 是 `opl_candidate_domain_backlog`，那么它也只是一份 admission-blocker reference，并不代表 onboarding readiness、discovery readiness 或 routed-action readiness 已经具备。
-如果某个 surface 属于 rollout、acceptance、matrix 或 example 这一层，那么它也仍然只是 discoverability / review companion，不会自动升级成 runtime authority engine，也不会把其中列出的全部工件一并提升成 gate。
+如果某个界面是 `opl_operating_model`、`opl_shared_foundation` 或 `opl_shared_foundation_ownership`，那么它也只是在 shared-foundation 层承担 boundary/reference 作用，不会把 canonical truth、mutation、review truth 或 publication truth 上收到 `OPL`。
+如果某个界面是 `opl_task_map`，那么其中仍在定义中的 workstream 也只代表顶层语义候选，不代表它们已经通过 onboarding 与 registry 门槛。
+如果某个界面是 `opl_candidate_domain_backlog`，那么它也只是一份 admission-blocker reference，并不代表 onboarding readiness、discovery readiness 或 routed-action readiness 已经具备。
+如果某个界面属于 rollout、acceptance、matrix 或 example 这一层，那么它也仍然只是 discoverability / review companion，不会自动升级成 runtime authority engine，也不会把其中列出的全部工件一并提升成 gate。
 
 ## Gateway 上位文档
 
-- [Gateway Federation](./gateway-federation.zh-CN.md)
-- [OPL Federation Contract](./opl-federation-contract.zh-CN.md)
+- [Gateway 联邦](./gateway-federation.zh-CN.md)
+- [OPL 联邦合同](./opl-federation-contract.zh-CN.md)
 - [OPL 运行模型](./operating-model.zh-CN.md)
 - [共享基础结构](./shared-foundation.zh-CN.md)
 - [共享基础结构归属](./shared-foundation-ownership.zh-CN.md)
-- [OPL Gateway Contracts](../contracts/opl-gateway/README.zh-CN.md)
+- [OPL Gateway 合同](../contracts/opl-gateway/README.zh-CN.md)
 - [OPL 只读 Discovery Gateway](./opl-read-only-discovery-gateway.zh-CN.md)
 - [OPL Routed Action Gateway](./opl-routed-action-gateway.zh-CN.md)
 - [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.zh-CN.md)
-- [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.zh-CN.md)
-- [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.zh-CN.md)
 
-## 配套示例 / 审核 / 映射 Surfaces
+## 配套示例 / 审核 / 映射界面
 
-这些配套 surface 只负责提升 discoverability 与 reviewability，
-不会升级成 governing gateway surface。
+这些配套界面只负责提升可发现性与可审核性，
+不会升级成治理性 gateway 界面。
 它们也不会因为被索引到这里，就自动变成 runtime controller、执行授权矩阵或统一 promotion gate。
 
+- [Gateway 落地路线](./opl-gateway-rollout.zh-CN.md)
 - [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.zh-CN.md)
 - [OPL Gateway Example Corpus](./opl-gateway-example-corpus.zh-CN.md)
 - [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.zh-CN.md)
 - [OPL Routed-Safety Example Corpus](./opl-routed-safety-example-corpus.zh-CN.md)
 - [OPL Operating Example Corpus](./opl-operating-example-corpus.zh-CN.md)
 - [OPL Operating Record Catalog](./opl-operating-record-catalog.zh-CN.md)
+- [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.zh-CN.md)
+- [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.zh-CN.md)
 - [OPL Surface Lifecycle Map](./opl-surface-lifecycle-map.zh-CN.md)
 - [OPL Surface Authority Matrix](./opl-surface-authority-matrix.zh-CN.md)
 - [OPL Surface Review Matrix](./opl-surface-review-matrix.zh-CN.md)

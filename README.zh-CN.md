@@ -9,7 +9,7 @@
 <h1 align="center">One Person Lab</h1>
 
 <p align="center"><strong>面向一人课题组、统领各 domain system 的顶层 Gateway</strong></p>
-<p align="center">任务版图 · 共享基础结构 · Gateway Federation</p>
+<p align="center">任务版图 · 共享基础结构 · Gateway 联邦</p>
 
 <table>
   <tr>
@@ -19,7 +19,7 @@
     </td>
     <td width="33%" valign="top">
       <strong>产品角色</strong><br/>
-      定义 OPL Gateway、任务语义，以及跨 domain 共享基础结构
+      定义 OPL Gateway、Unified Harness Engineering Substrate，以及跨 domain 共享基础结构
     </td>
     <td width="33%" valign="top">
       <strong>联邦状态</strong><br/>
@@ -36,7 +36,13 @@
   <tr>
     <td colspan="5" align="center" valign="top">
       <strong>One Person Lab (OPL)</strong><br/>
-      顶层 Gateway 与 federation surface
+      顶层 Gateway 与联邦界面
+    </td>
+  </tr>
+  <tr>
+    <td colspan="5" align="center" valign="top">
+      <strong>Unified Harness Engineering Substrate</strong><br/>
+      由多个 Domain Harness OS 复用的共享 Harness Engineering 基座
     </td>
   </tr>
   <tr>
@@ -166,11 +172,34 @@
 在架构层面，`OPL` 负责四件事：
 
 - 定义实验室级任务版图
-- 定义多个工作流共享的基础层
+- 定义多个工作流共享的基础层与共享 Harness Engineering 基座
 - 定义把任务路由到正确 domain surface 的 gateway 语义
 - 定义当前由哪些 domain gateway 正式承接各工作流
 
 因此，这个仓库承担的是 `OPL Gateway` 的文档优先、契约优先的公开说明面，而不是声称所有运行时能力已经都落在这里。
+
+## Unified Harness Engineering Substrate
+
+在 `OPL` 体系下，当前共享的架构底座统一命名为 `Unified Harness Engineering Substrate`。
+它指的是一套可复用的 Harness Engineering 语言与稳定约束，而不是把所有 domain system 压成一个单体 runtime。
+
+这个 substrate **不**声称所有 domain 今天已经共享同一个代码仓、同一种对象模型，或完全一致的执行图。
+它冻结的是更窄、但更长期稳定的一组共享规则：
+
+- 默认采用 `Agent-first` 执行姿态
+- `Auto` 与 `Human-in-the-loop` 运行在同一套基座上
+- `MCP`、`CLI`、domain controller 等正式入口保持稳定
+- 状态迁移、审阅面与交付边界保持可审计
+- 允许从当前本地 host-agent 形态平滑走向未来托管式 Web runtime，而不改写 domain contract
+
+在这套 substrate 之上，当前几个项目应被理解成不同场景下的 `Domain Harness OS`，而不是彼此无关的独立小项目：
+
+- `Med Auto Science`：医学 `Research Ops`
+- `RedCube AI`：视觉交付，以及当前最直接映射到 `Presentation Ops` 的 family 入口
+- `Med Auto Grant`：未来医学 `Grant Ops` 的 Domain Harness OS 方向
+
+因此，`OPL` 本身**不是**第四个 `Domain Harness OS`。
+它仍然是位于 domain gateway 与 `Domain Harness OS` 之上的顶层 gateway 与 federation surface。
 
 ## 对外一句话理解
 
@@ -184,6 +213,9 @@
 
 `OPL` 顶层默认采用 `Agent-first` 的设计方向，而不是把各个 `Ops` 收缩成固定代码分支驱动的僵硬流水线。
 这并不等于必须直接绑定某一种 LLM API；它的含义是：Agent 应作为默认执行者，负责读状态、调用稳定 gateway、编排步骤、组织中间产物，并把关键执行痕迹写回可审计表面，而代码主要负责提供稳定对象、控制器、工具封装、门控规则与交付表面。
+
+这套 substrate 当前在本地的默认部署形态，是 `Codex` 优先的 host-agent runtime。
+但“当前宿主形态”并不等于“体系本体”；后续即使走向托管式 Web runtime，也应复用同一套 substrate 与 domain contract。
 
 在这个前提下，每个 workstream 原则上应支持两种共享同一基座的执行模式：
 
@@ -299,34 +331,20 @@ Human / Agent
 
 当前交付目标是一条本地 CLI 基线：它读取已冻结 contracts、列出 workstream/domain、解释路由边界，但不声称 web/server runtime 行为，也不 mutation domain state。
 
-更细的阶段说明见：
+公开阶段说明与完整文档分层见：
 
 - [OPL 路线图](docs/roadmap.zh-CN.md)
-- [OPL Gateway 落地路线](docs/opl-gateway-rollout.zh-CN.md)
+- [文档索引](docs/README.zh-CN.md)
 
 ## 延伸阅读
 
-- [Gateway Federation](docs/gateway-federation.zh-CN.md)
-- [OPL Federation Contract](docs/opl-federation-contract.zh-CN.md)
-- [OPL Public Surface Index](docs/opl-public-surface-index.zh-CN.md)
-- [OPL Gateway Contracts](contracts/opl-gateway/README.zh-CN.md)
+- [文档索引](docs/README.zh-CN.md)
+- [Gateway 联邦](docs/gateway-federation.zh-CN.md)
+- [OPL 联邦合同](docs/opl-federation-contract.zh-CN.md)
+- [Unified Harness Engineering Substrate](docs/unified-harness-engineering-substrate.zh-CN.md)
 - [OPL 运行模型](docs/operating-model.zh-CN.md)
-- [共享基础结构](docs/shared-foundation.zh-CN.md)
-- [共享基础结构归属](docs/shared-foundation-ownership.zh-CN.md)
 - [OPL 任务版图](docs/task-map.zh-CN.md)
-- [OPL Candidate Domain Backlog](docs/opl-candidate-domain-backlog.zh-CN.md)
-- [OPL 只读 Discovery Gateway](docs/opl-read-only-discovery-gateway.zh-CN.md)
-- [OPL Routed Action Gateway](docs/opl-routed-action-gateway.zh-CN.md)
-- [OPL Domain Onboarding Contract](docs/opl-domain-onboarding-contract.zh-CN.md)
-- [OPL Gateway Acceptance Test Spec](docs/opl-gateway-acceptance-test-spec.zh-CN.md)
-- [OPL Gateway Example Corpus](docs/opl-gateway-example-corpus.zh-CN.md)
-- [OPL Routed-Safety Example Corpus](docs/opl-routed-safety-example-corpus.zh-CN.md)
-- [OPL Operating Example Corpus](docs/opl-operating-example-corpus.zh-CN.md)
-- [OPL Operating Record Catalog](docs/opl-operating-record-catalog.zh-CN.md)
-- [OPL Governance / Audit Operating Surface](docs/opl-governance-audit-operating-surface.zh-CN.md)
-- [OPL Publish / Promotion Operating Surface](docs/opl-publish-promotion-operating-surface.zh-CN.md)
-- [OPL Surface Lifecycle Map](docs/opl-surface-lifecycle-map.zh-CN.md)
-- [OPL Surface Authority Matrix](docs/opl-surface-authority-matrix.zh-CN.md)
-- [OPL Surface Review Matrix](docs/opl-surface-review-matrix.zh-CN.md)
-- [OPL Gateway 落地路线](docs/opl-gateway-rollout.zh-CN.md)
 - [OPL 路线图](docs/roadmap.zh-CN.md)
+- [OPL Gateway 合同](contracts/opl-gateway/README.zh-CN.md)
+
+更深入的合同配套文档、参考级界面和历史设计记录，统一通过 `docs/README.zh-CN.md` 管理，而不再全部平铺在根 README 里。

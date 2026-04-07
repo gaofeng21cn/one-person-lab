@@ -19,7 +19,7 @@
     </td>
     <td width="33%" valign="top">
       <strong>Product Role</strong><br/>
-      Define the OPL gateway, task semantics, and cross-domain shared foundation
+      Define the OPL gateway, the Unified Harness Engineering Substrate, and the cross-domain shared foundation
     </td>
     <td width="33%" valign="top">
       <strong>Federation State</strong><br/>
@@ -37,6 +37,12 @@
     <td colspan="5" align="center" valign="top">
       <strong>One Person Lab (OPL)</strong><br/>
       Top-level gateway and federation surface
+    </td>
+  </tr>
+  <tr>
+    <td colspan="5" align="center" valign="top">
+      <strong>Unified Harness Engineering Substrate</strong><br/>
+      Shared Harness Engineering base reused by multiple Domain Harness OS implementations
     </td>
   </tr>
   <tr>
@@ -166,11 +172,34 @@
 At the architecture level, `OPL` is responsible for four things:
 
 - define the top-level task topology for formal lab work
-- define the shared foundation that multiple workstreams must reuse
+- define the shared foundation and shared Harness Engineering substrate that multiple workstreams must reuse
 - define the gateway semantics that route work into the correct domain surface
 - define which domain gateways currently carry each workstream
 
 This repository therefore acts as a documentation-first and contract-first public surface for the `OPL` gateway. It does not claim that every runtime capability already lives here.
+
+## Unified Harness Engineering Substrate
+
+Under the `OPL` umbrella, the shared architectural base is now described as the `Unified Harness Engineering Substrate`.
+It is the common Harness Engineering language reused by multiple domain systems without collapsing them into one monolithic runtime.
+
+The substrate does **not** claim that every domain already shares one code repository, one object model, or one identical execution graph.
+It freezes a narrower and more durable set of shared rules:
+
+- `Agent-first` execution as the default product posture
+- one shared base that supports both `Auto` and `Human-in-the-loop`
+- stable formal entry surfaces such as `MCP`, `CLI`, and domain controllers
+- auditable state transitions, review surfaces, and delivery boundaries
+- deployment portability from the current local host-agent shape to future managed web runtimes
+
+Under that substrate, the current domain systems should be understood as separate `Domain Harness OS` implementations rather than as unrelated projects:
+
+- `Med Auto Science` for medical `Research Ops`
+- `RedCube AI` for visual deliverables and the current `Presentation Ops` family entry
+- `Med Auto Grant` as the future medical `Grant Ops` domain harness direction
+
+`OPL` itself is therefore **not** a fourth `Domain Harness OS`.
+Its role remains the top-level gateway and federation surface above domain gateways and `Domain Harness OS` implementations.
 
 ## What OPL Means Publicly
 
@@ -184,6 +213,9 @@ For an external reader, the simplest way to understand `OPL` is:
 
 At the top level, `OPL` defaults to an `Agent-first` design direction rather than reducing each `Ops` lane to a rigid fixed-code pipeline.
 That does not mean every domain must bind itself to one direct LLM API; it means the Agent should act as the default executor that reads state, calls stable gateways, composes steps, organizes intermediate artifacts, and writes key traces back to auditable surfaces, while code mainly provides stable objects, controllers, tool wrappers, gate rules, and delivery surfaces.
+
+The current local default deployment shape for this substrate is a `Codex`-default host-agent runtime.
+That deployment choice is not the same thing as the architecture itself: the same substrate can later support a managed web runtime without changing the top-level domain contract.
 
 Under that model, each workstream should in principle support two execution modes on top of the same shared base:
 
@@ -299,34 +331,20 @@ The current phase has four priorities, led by a Phase 1 local `TypeScript CLI` +
 
 The current delivery target is a local CLI baseline that reads frozen contracts, lists workstreams/domains, and explains routing boundaries without claiming web/server runtime behavior or mutating domain state.
 
-For a more detailed phase breakdown:
+For the public phase view and the full document layering:
 
 - [OPL Roadmap](docs/roadmap.md)
-- [OPL Gateway Rollout](docs/opl-gateway-rollout.md)
+- [Docs Index](docs/README.md)
 
 ## Further Reading
 
+- [Docs Index](docs/README.md)
 - [Gateway Federation](docs/gateway-federation.md)
 - [OPL Federation Contract](docs/opl-federation-contract.md)
-- [OPL Public Surface Index](docs/opl-public-surface-index.md)
-- [OPL Gateway Contracts](contracts/opl-gateway/README.md)
+- [Unified Harness Engineering Substrate](docs/unified-harness-engineering-substrate.md)
 - [OPL Operating Model](docs/operating-model.md)
-- [Shared Foundation](docs/shared-foundation.md)
-- [Shared Foundation Ownership](docs/shared-foundation-ownership.md)
 - [OPL Task Map](docs/task-map.md)
-- [OPL Candidate Domain Backlog](docs/opl-candidate-domain-backlog.md)
-- [OPL Read-Only Discovery Gateway](docs/opl-read-only-discovery-gateway.md)
-- [OPL Routed Action Gateway](docs/opl-routed-action-gateway.md)
-- [OPL Domain Onboarding Contract](docs/opl-domain-onboarding-contract.md)
-- [OPL Gateway Acceptance Test Spec](docs/opl-gateway-acceptance-test-spec.md)
-- [OPL Gateway Example Corpus](docs/opl-gateway-example-corpus.md)
-- [OPL Routed-Safety Example Corpus](docs/opl-routed-safety-example-corpus.md)
-- [OPL Operating Example Corpus](docs/opl-operating-example-corpus.md)
-- [OPL Operating Record Catalog](docs/opl-operating-record-catalog.md)
-- [OPL Governance / Audit Operating Surface](docs/opl-governance-audit-operating-surface.md)
-- [OPL Publish / Promotion Operating Surface](docs/opl-publish-promotion-operating-surface.md)
-- [OPL Surface Lifecycle Map](docs/opl-surface-lifecycle-map.md)
-- [OPL Surface Authority Matrix](docs/opl-surface-authority-matrix.md)
-- [OPL Surface Review Matrix](docs/opl-surface-review-matrix.md)
-- [OPL Gateway Rollout](docs/opl-gateway-rollout.md)
 - [OPL Roadmap](docs/roadmap.md)
+- [OPL Gateway Contracts](contracts/opl-gateway/README.md)
+
+Deeper contract companions, reference-grade surfaces, and historical design records are organized through `docs/README.md` rather than being flattened into the root README.

@@ -62,7 +62,7 @@ Agent 主要负责：
 每个 domain 应保持两层分开：
 
 - `domain gateway` 作为该工作流的稳定入口
-- `domain harness OS` 作为该工作流的执行、记录、治理与交付底座
+- `Domain Harness OS` 作为该工作流的执行、记录、治理与交付底座
 
 例如：
 

@@ -54,7 +54,7 @@ This is why domain gateways must stay even if `OPL` exists above them.
 
 ## Domain Harness Responsibilities
 
-Each `domain harness OS` is responsible for:
+Each `Domain Harness OS` is responsible for:
 
 - execution
 - truth persistence

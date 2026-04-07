@@ -10,11 +10,13 @@
 当前已明确的状态：
 
 - `OPL` 是一人课题组的顶层 Gateway 与 federation model
+- `OPL` 之下共享的 Harness Engineering 基座，当前统一命名为 `Unified Harness Engineering Substrate`
 - [`MedAutoScience`](https://github.com/gaofeng21cn/med-autoscience) 是当前 active 的 `Research Ops` domain gateway 与 harness
 - [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) 是当前 emerging 的视觉交付 domain gateway 与 harness
 - `ppt_deck` 是当前最直接映射到 `Presentation Ops` 的 family
 - `Grant Ops`、`Thesis Ops`、`Review Ops` 仍处于定义阶段
 - `OPL` 顶层的统一目标执行范式是 `Agent-first`，并让 `Auto` 与 `Human-in-the-loop` 运行在同一套基座上；这是一条架构原则，不代表所有 domain surface 已经完成双模式落地
+- 当前本地默认部署形态是 `Codex` 优先的 host-agent runtime，但同一套 substrate 也应兼容未来托管式 Web runtime
 
 当前阶段不做的事：
 
@@ -28,6 +30,7 @@
 下一阶段应优先做这些事：
 
 - 冻结 `OPL Gateway -> domain gateway -> domain harness` 这条控制语言
+- 在当前 domain 仓库之上冻结 `Unified Harness Engineering Substrate` 这套共享语言，但不提前把它写成已经独立成型的公共代码框架
 - 保持 `MedAutoScience` 明确为 `Research Ops` 的 domain surface
 - 保持 `RedCube AI` 明确为视觉交付的 domain surface
 - 把 `Agent-first` 加双模执行这套原则带入后续候选 domain 的定义，而不是逐步漂移成 fixed-code-first 的产品线
