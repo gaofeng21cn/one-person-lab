@@ -10,7 +10,7 @@ Its job is to make human-review obligations, acceptance coverage, companion revi
 
 ## Machine-Readable Artifact
 
-- [`../contracts/opl-gateway/surface-review-matrix.json`](../contracts/opl-gateway/surface-review-matrix.json)
+- [`.../contracts/opl-gateway/surface-review-matrix.json`](.../contracts/opl-gateway/surface-review-matrix.json)
 
 ## Non-Goals
 
@@ -27,7 +27,7 @@ This review matrix does not:
 This review matrix sits in the shared-foundation reviewability layer only.
 `OPL` may index human-review and companion-surface obligations here, but domain review truth, publication truth, and final continue/stop/reframe authority still remain with humans and domain-owned surfaces.
 That keeps the matrix useful for discoverability and acceptance alignment without turning it into an approval control plane or shared truth store.
-For the broader ownership split, see [Shared Foundation Ownership](./shared-foundation-ownership.md).
+For the broader ownership split, see [Shared Foundation Ownership](../shared-foundation-ownership.md).
 
 ## Review Fields
 
@@ -98,7 +98,7 @@ These values describe documentation-readiness stage only. They are not workflow 
 
 - [OPL Surface Lifecycle Map](./opl-surface-lifecycle-map.md)
 - [OPL Surface Authority Matrix](./opl-surface-authority-matrix.md)
-- [OPL Public Surface Index](./opl-public-surface-index.md)
+- [OPL Public Surface Index](../opl-public-surface-index.md)
 
 ## Reading Rule
 
@@ -115,21 +115,21 @@ None of these fields transfer domain review or publication authority into `OPL`.
 
 ## Governing Sources
 
-- [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
+- [OPL Gateway Contracts](.../contracts/opl-gateway/README.md)
 - [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.md)
-- [OPL Public Surface Index](./opl-public-surface-index.md)
+- [OPL Public Surface Index](../opl-public-surface-index.md)
 - [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md)
-- [OPL Federation Contract](./opl-federation-contract.md)
+- [OPL Federation Contract](../opl-federation-contract.md)
 - [OPL Gateway Rollout](./opl-gateway-rollout.md)
-- [OPL Task Map](./task-map.md)
+- [OPL Task Map](../task-map.md)
 
 ## Completion Definition
 
 The review matrix is acceptable only when:
 
 - it covers the frozen OPL public, shared-foundation boundary, contract, and supporting surfaces that currently matter for human review and publishability inspection
-- every `required_acceptance_gate` resolves inside `../contracts/opl-gateway/acceptance-matrix.json`
-- every `required_companion_surface` resolves inside `../contracts/opl-gateway/public-surface-index.json`
+- every `required_acceptance_gate` resolves inside `.../contracts/opl-gateway/acceptance-matrix.json`
+- every `required_companion_surface` resolves inside `.../contracts/opl-gateway/public-surface-index.json`
 - every `governing_ref` resolves to an existing local artifact
 - it remains derived, reference-only, and non-executing
 - it does not become an approval engine, publish controller, release engine, or second source of truth

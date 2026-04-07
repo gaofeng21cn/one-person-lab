@@ -67,18 +67,18 @@
 
 这类界面负责提升审核与可发现性，但不变成执行层：
 
-- [Gateway 落地路线](./opl-gateway-rollout.zh-CN.md)
-- [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.zh-CN.md)
-- [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.zh-CN.md)
-- [OPL Gateway Example Corpus](./opl-gateway-example-corpus.zh-CN.md)
-- [OPL Routed-Safety Example Corpus](./opl-routed-safety-example-corpus.zh-CN.md)
-- [OPL Operating Example Corpus](./opl-operating-example-corpus.zh-CN.md)
-- [OPL Operating Record Catalog](./opl-operating-record-catalog.zh-CN.md)
-- [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.zh-CN.md)
-- [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.zh-CN.md)
-- [OPL Surface Lifecycle Map](./opl-surface-lifecycle-map.zh-CN.md)
-- [OPL Surface Authority Matrix](./opl-surface-authority-matrix.zh-CN.md)
-- [OPL Surface Review Matrix](./opl-surface-review-matrix.zh-CN.md)
+- [Gateway 落地路线](./references/opl-gateway-rollout.zh-CN.md)
+- [OPL Gateway Acceptance Test Spec](./references/opl-gateway-acceptance-test-spec.zh-CN.md)
+- [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.zh-CN.md)
+- [OPL Gateway Example Corpus](./references/opl-gateway-example-corpus.zh-CN.md)
+- [OPL Routed-Safety Example Corpus](./references/opl-routed-safety-example-corpus.zh-CN.md)
+- [OPL Operating Example Corpus](./references/opl-operating-example-corpus.zh-CN.md)
+- [OPL Operating Record Catalog](./references/opl-operating-record-catalog.zh-CN.md)
+- [OPL Governance / Audit Operating Surface](./references/opl-governance-audit-operating-surface.zh-CN.md)
+- [OPL Publish / Promotion Operating Surface](./references/opl-publish-promotion-operating-surface.zh-CN.md)
+- [OPL Surface Lifecycle Map](./references/opl-surface-lifecycle-map.zh-CN.md)
+- [OPL Surface Authority Matrix](./references/opl-surface-authority-matrix.zh-CN.md)
+- [OPL Surface Review Matrix](./references/opl-surface-review-matrix.zh-CN.md)
 - [OPL 公开界面索引](./opl-public-surface-index.zh-CN.md)
 
 ### 4. 已链接的 domain 公开入口界面
@@ -124,18 +124,18 @@ canonical runtime truth、review truth、release truth 与 submission truth 仍�
 不会升级成治理性 gateway 界面。
 它们也不会因为被索引到这里，就自动变成 runtime controller、执行授权矩阵或统一 promotion gate。
 
-- [Gateway 落地路线](./opl-gateway-rollout.zh-CN.md)
-- [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.zh-CN.md)
-- [OPL Gateway Example Corpus](./opl-gateway-example-corpus.zh-CN.md)
-- [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.zh-CN.md)
-- [OPL Routed-Safety Example Corpus](./opl-routed-safety-example-corpus.zh-CN.md)
-- [OPL Operating Example Corpus](./opl-operating-example-corpus.zh-CN.md)
-- [OPL Operating Record Catalog](./opl-operating-record-catalog.zh-CN.md)
-- [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.zh-CN.md)
-- [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.zh-CN.md)
-- [OPL Surface Lifecycle Map](./opl-surface-lifecycle-map.zh-CN.md)
-- [OPL Surface Authority Matrix](./opl-surface-authority-matrix.zh-CN.md)
-- [OPL Surface Review Matrix](./opl-surface-review-matrix.zh-CN.md)
+- [Gateway 落地路线](./references/opl-gateway-rollout.zh-CN.md)
+- [OPL Gateway Acceptance Test Spec](./references/opl-gateway-acceptance-test-spec.zh-CN.md)
+- [OPL Gateway Example Corpus](./references/opl-gateway-example-corpus.zh-CN.md)
+- [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.zh-CN.md)
+- [OPL Routed-Safety Example Corpus](./references/opl-routed-safety-example-corpus.zh-CN.md)
+- [OPL Operating Example Corpus](./references/opl-operating-example-corpus.zh-CN.md)
+- [OPL Operating Record Catalog](./references/opl-operating-record-catalog.zh-CN.md)
+- [OPL Governance / Audit Operating Surface](./references/opl-governance-audit-operating-surface.zh-CN.md)
+- [OPL Publish / Promotion Operating Surface](./references/opl-publish-promotion-operating-surface.zh-CN.md)
+- [OPL Surface Lifecycle Map](./references/opl-surface-lifecycle-map.zh-CN.md)
+- [OPL Surface Authority Matrix](./references/opl-surface-authority-matrix.zh-CN.md)
+- [OPL Surface Review Matrix](./references/opl-surface-review-matrix.zh-CN.md)
 
 ## 完成定义
 

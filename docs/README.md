@@ -35,20 +35,25 @@ They define gateway semantics, shared-foundation boundaries, and formal contract
 
 These documents stay repo-tracked, but they are not the default public reading path.
 They support review, acceptance, indexing, examples, or boundary inspection and must not be allowed to redefine the main storyline.
+All Layer 3 docs now live under `docs/references/` so the docs root stays readable.
 
-- `opl-gateway-rollout*`
-- `opl-gateway-acceptance-test-spec*`
-- `opl-candidate-domain-backlog*`
-- `opl-candidate-workstream-tranche-closeout*`
-- `opl-gateway-example-corpus*`
-- `opl-routed-safety-example-corpus*`
-- `opl-operating-example-corpus*`
-- `opl-operating-record-catalog*`
-- `opl-surface-lifecycle-map*`
-- `opl-surface-authority-matrix*`
-- `opl-surface-review-matrix*`
-- `opl-governance-audit-operating-surface*`
-- `opl-publish-promotion-operating-surface*`
+- `references/opl-gateway-rollout*`
+- `references/opl-gateway-acceptance-test-spec*`
+- `references/opl-candidate-domain-backlog*`
+- `references/opl-candidate-workstream-tranche-closeout*`
+- `references/opl-gateway-example-corpus*`
+- `references/opl-routed-safety-example-corpus*`
+- `references/opl-operating-example-corpus*`
+- `references/opl-operating-record-catalog*`
+- `references/ecosystem-status-matrix.md` (Chinese-only internal reference)
+- `references/host-agent-runtime-contract.md` (Chinese-only internal reference)
+- `references/development-operating-model.md` (Chinese-only internal reference)
+- `references/runtime-alignment-taskboard.md` (Chinese-only internal reference)
+- `references/opl-surface-lifecycle-map*`
+- `references/opl-surface-authority-matrix*`
+- `references/opl-surface-review-matrix*`
+- `references/opl-governance-audit-operating-surface*`
+- `references/opl-publish-promotion-operating-surface*`
 
 ## Layer 4. Historical Specs And Plans
 

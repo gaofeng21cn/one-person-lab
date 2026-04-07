@@ -77,7 +77,7 @@ Completion signal:
 
 Current materialization target:
 
-- [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
+- [OPL Gateway Contracts](.../contracts/opl-gateway/README.md)
 
 ## Phase G2: Read-Only Entry Surface
 
@@ -95,12 +95,12 @@ Should support:
 Completion signal:
 
 - an agent can ask “what system should I use for this task?” and receive a stable top-level answer
-- the current G1 materialization is discoverable at [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
+- the current G1 materialization is discoverable at [OPL Gateway Contracts](.../contracts/opl-gateway/README.md)
 
 Detailed contract:
 
-- [OPL Read-Only Discovery Gateway](opl-read-only-discovery-gateway.md)
-- [OPL Public Surface Index](opl-public-surface-index.md)
+- [OPL Read-Only Discovery Gateway](../opl-read-only-discovery-gateway.md)
+- [OPL Public Surface Index](../opl-public-surface-index.md)
 
 ## Phase G3: Routed Action Entry
 
@@ -125,7 +125,7 @@ Completion signal:
 
 Contract extension needed before adding more domains:
 
-- [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.md)
+- [OPL Domain Onboarding Contract](../opl-domain-onboarding-contract.md)
 - [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md)
 - [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.md)
 
@@ -134,7 +134,7 @@ Do not insert a separate intermediate candidate-definition control surface unles
 
 Detailed contract:
 
-- [OPL Routed Action Gateway](opl-routed-action-gateway.md)
+- [OPL Routed Action Gateway](../opl-routed-action-gateway.md)
 
 ## Phase G4: Candidate Shared Cross-Domain Indexes
 

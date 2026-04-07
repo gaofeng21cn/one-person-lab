@@ -15,13 +15,13 @@
 
 这层 operating surface 建立在已冻结的几层之上：
 
-- [OPL Federation Contract](./opl-federation-contract.zh-CN.md)
-- [OPL 只读 Discovery Gateway](./opl-read-only-discovery-gateway.zh-CN.md)
-- [OPL Routed Action Gateway](./opl-routed-action-gateway.zh-CN.md)
-- [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.zh-CN.md)
+- [OPL Federation Contract](../opl-federation-contract.zh-CN.md)
+- [OPL 只读 Discovery Gateway](../opl-read-only-discovery-gateway.zh-CN.md)
+- [OPL Routed Action Gateway](../opl-routed-action-gateway.zh-CN.md)
+- [OPL Domain Onboarding Contract](../opl-domain-onboarding-contract.zh-CN.md)
 - [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.zh-CN.md)
 - [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.zh-CN.md)
-- 当前机器可读合同目录：[`../contracts/opl-gateway/README.zh-CN.md`](../contracts/opl-gateway/README.zh-CN.md)
+- 当前机器可读合同目录：[`.../contracts/opl-gateway/README.zh-CN.md`](.../contracts/opl-gateway/README.zh-CN.md)
 
 如果这些层还不稳定，这层 operating surface 就不应被视作已冻结。
 

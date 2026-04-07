@@ -151,12 +151,12 @@
       "refs": [
         {
           "ref_kind": "repo_path",
-          "ref": "docs/opl-gateway-rollout.md",
+          "ref": "docs/references/opl-gateway-rollout.md",
           "language": "en"
         },
         {
           "ref_kind": "repo_path",
-          "ref": "docs/opl-gateway-rollout.zh-CN.md",
+          "ref": "docs/references/opl-gateway-rollout.zh-CN.md",
           "language": "zh-CN"
         }
       ],
@@ -667,12 +667,12 @@
       "refs": [
         {
           "ref_kind": "repo_path",
-          "ref": "docs/opl-candidate-domain-backlog.md",
+          "ref": "docs/references/opl-candidate-domain-backlog.md",
           "language": "en"
         },
         {
           "ref_kind": "repo_path",
-          "ref": "docs/opl-candidate-domain-backlog.zh-CN.md",
+          "ref": "docs/references/opl-candidate-domain-backlog.zh-CN.md",
           "language": "zh-CN"
         },
         {
@@ -710,12 +710,12 @@
       "refs": [
         {
           "ref_kind": "repo_path",
-          "ref": "docs/opl-governance-audit-operating-surface.md",
+          "ref": "docs/references/opl-governance-audit-operating-surface.md",
           "language": "en"
         },
         {
           "ref_kind": "repo_path",
-          "ref": "docs/opl-governance-audit-operating-surface.zh-CN.md",
+          "ref": "docs/references/opl-governance-audit-operating-surface.zh-CN.md",
           "language": "zh-CN"
         }
       ],
@@ -747,12 +747,12 @@
       "refs": [
         {
           "ref_kind": "repo_path",
-          "ref": "docs/opl-publish-promotion-operating-surface.md",
+          "ref": "docs/references/opl-publish-promotion-operating-surface.md",
           "language": "en"
         },
         {
           "ref_kind": "repo_path",
-          "ref": "docs/opl-publish-promotion-operating-surface.zh-CN.md",
+          "ref": "docs/references/opl-publish-promotion-operating-surface.zh-CN.md",
           "language": "zh-CN"
         }
       ],
@@ -784,12 +784,12 @@
       "refs": [
         {
           "ref_kind": "repo_path",
-          "ref": "docs/opl-gateway-acceptance-test-spec.md",
+          "ref": "docs/references/opl-gateway-acceptance-test-spec.md",
           "language": "en"
         },
         {
           "ref_kind": "repo_path",
-          "ref": "docs/opl-gateway-acceptance-test-spec.zh-CN.md",
+          "ref": "docs/references/opl-gateway-acceptance-test-spec.zh-CN.md",
           "language": "zh-CN"
         }
       ],
@@ -825,12 +825,12 @@
       "refs": [
         {
           "ref_kind": "repo_path",
-          "ref": "docs/opl-gateway-example-corpus.md",
+          "ref": "docs/references/opl-gateway-example-corpus.md",
           "language": "en"
         },
         {
           "ref_kind": "repo_path",
-          "ref": "docs/opl-gateway-example-corpus.zh-CN.md",
+          "ref": "docs/references/opl-gateway-example-corpus.zh-CN.md",
           "language": "zh-CN"
         },
         {
@@ -863,12 +863,12 @@
       "refs": [
         {
           "ref_kind": "repo_path",
-          "ref": "docs/opl-routed-safety-example-corpus.md",
+          "ref": "docs/references/opl-routed-safety-example-corpus.md",
           "language": "en"
         },
         {
           "ref_kind": "repo_path",
-          "ref": "docs/opl-routed-safety-example-corpus.zh-CN.md",
+          "ref": "docs/references/opl-routed-safety-example-corpus.zh-CN.md",
           "language": "zh-CN"
         },
         {
@@ -907,12 +907,12 @@
       "refs": [
         {
           "ref_kind": "repo_path",
-          "ref": "docs/opl-operating-example-corpus.md",
+          "ref": "docs/references/opl-operating-example-corpus.md",
           "language": "en"
         },
         {
           "ref_kind": "repo_path",
-          "ref": "docs/opl-operating-example-corpus.zh-CN.md",
+          "ref": "docs/references/opl-operating-example-corpus.zh-CN.md",
           "language": "zh-CN"
         },
         {
@@ -970,12 +970,12 @@
       "refs": [
         {
           "ref_kind": "repo_path",
-          "ref": "docs/opl-operating-record-catalog.md",
+          "ref": "docs/references/opl-operating-record-catalog.md",
           "language": "en"
         },
         {
           "ref_kind": "repo_path",
-          "ref": "docs/opl-operating-record-catalog.zh-CN.md",
+          "ref": "docs/references/opl-operating-record-catalog.zh-CN.md",
           "language": "zh-CN"
         },
         {
@@ -1012,12 +1012,12 @@
       "refs": [
         {
           "ref_kind": "repo_path",
-          "ref": "docs/opl-surface-lifecycle-map.md",
+          "ref": "docs/references/opl-surface-lifecycle-map.md",
           "language": "en"
         },
         {
           "ref_kind": "repo_path",
-          "ref": "docs/opl-surface-lifecycle-map.zh-CN.md",
+          "ref": "docs/references/opl-surface-lifecycle-map.zh-CN.md",
           "language": "zh-CN"
         },
         {
@@ -1064,12 +1064,12 @@
       "refs": [
         {
           "ref_kind": "repo_path",
-          "ref": "docs/opl-surface-authority-matrix.md",
+          "ref": "docs/references/opl-surface-authority-matrix.md",
           "language": "en"
         },
         {
           "ref_kind": "repo_path",
-          "ref": "docs/opl-surface-authority-matrix.zh-CN.md",
+          "ref": "docs/references/opl-surface-authority-matrix.zh-CN.md",
           "language": "zh-CN"
         },
         {
@@ -1118,12 +1118,12 @@
       "refs": [
         {
           "ref_kind": "repo_path",
-          "ref": "docs/opl-surface-review-matrix.md",
+          "ref": "docs/references/opl-surface-review-matrix.md",
           "language": "en"
         },
         {
           "ref_kind": "repo_path",
-          "ref": "docs/opl-surface-review-matrix.zh-CN.md",
+          "ref": "docs/references/opl-surface-review-matrix.zh-CN.md",
           "language": "zh-CN"
         },
         {

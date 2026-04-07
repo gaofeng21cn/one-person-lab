@@ -299,7 +299,7 @@ The machine-readable schema for this layer lives at:
 
 Canonical routed-safety examples for the non-success states live at:
 
-- [OPL Routed-Safety Example Corpus](./opl-routed-safety-example-corpus.md)
+- [OPL Routed-Safety Example Corpus](./references/opl-routed-safety-example-corpus.md)
 
 ## Completion Definition
 

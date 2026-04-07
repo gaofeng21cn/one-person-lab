@@ -113,7 +113,7 @@
     <td width="20%" valign="top">
       <strong>Grant Ops</strong><br/>
       <code>Planned</code><br/>
-      public scaffold via <a href="https://github.com/gaofeng21cn/med-autogrant"><code>Grant Foundry -> Med Auto Grant</code></a>
+      public scaffold via <code>Grant Foundry -> Med Auto Grant</code>
     </td>
     <td width="20%" valign="top">
       <strong>Thesis Ops</strong><br/>
@@ -138,6 +138,7 @@
     <td width="20%" valign="top">
       <strong>OPL</strong><br/>
       This repository<br/>
+      <a href="https://github.com/gaofeng21cn/one-person-lab"><code>Repository</code></a><br/>
       Authoritative public spec surface for the top-level gateway
     </td>
     <td width="20%" valign="top">

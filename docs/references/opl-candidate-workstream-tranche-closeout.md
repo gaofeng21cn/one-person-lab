@@ -66,9 +66,9 @@ This tranche did **not**:
 
 The frozen boundary truth lives in the existing tracked path, not in this closeout alone:
 
-- [OPL Task Map](./task-map.md)
+- [OPL Task Map](../task-map.md)
 - [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md)
-- [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.md)
+- [OPL Domain Onboarding Contract](../opl-domain-onboarding-contract.md)
 - [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.md)
 
 Checkpoint commits for the tranche workstreams:

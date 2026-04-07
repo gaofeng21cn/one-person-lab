@@ -113,7 +113,7 @@
     <td width="20%" valign="top">
       <strong>Grant Ops</strong><br/>
       <code>Planned</code><br/>
-      通过 <a href="https://github.com/gaofeng21cn/med-autogrant"><code>Grant Foundry -> Med Auto Grant</code></a> 提供公开 scaffold
+      通过 <code>Grant Foundry -> Med Auto Grant</code> 提供公开 scaffold
     </td>
     <td width="20%" valign="top">
       <strong>Thesis Ops</strong><br/>
@@ -138,6 +138,7 @@
     <td width="20%" valign="top">
       <strong>OPL</strong><br/>
       当前仓库<br/>
+      <a href="https://github.com/gaofeng21cn/one-person-lab"><code>仓库</code></a><br/>
       顶层 Gateway 的权威公开说明面
     </td>
     <td width="20%" valign="top">

@@ -299,7 +299,7 @@ OPL Gateway -> Domain Harness OS
 
 显式非成功路由状态的 canonical routed-safety examples 位于：
 
-- [OPL Routed-Safety Example Corpus](./opl-routed-safety-example-corpus.zh-CN.md)
+- [OPL Routed-Safety Example Corpus](./references/opl-routed-safety-example-corpus.zh-CN.md)
 
 ## 完成定义
 

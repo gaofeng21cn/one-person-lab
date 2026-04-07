@@ -15,8 +15,8 @@
 
 这份 backlog 位于两个已冻结层之间：
 
-- [OPL 任务版图](./task-map.zh-CN.md)
-- [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.zh-CN.md)
+- [OPL 任务版图](../task-map.zh-CN.md)
+- [OPL Domain Onboarding Contract](../opl-domain-onboarding-contract.zh-CN.md)
 
 Task map / task-topology 层负责把顶层语义写清楚。
 Onboarding contract 负责定义正式收录门槛。
@@ -34,7 +34,7 @@ Onboarding contract 负责定义正式收录门槛。
 
 ## 机器可读工件
 
-- [`../contracts/opl-gateway/candidate-domain-backlog.json`](../contracts/opl-gateway/candidate-domain-backlog.json)
+- [`.../contracts/opl-gateway/candidate-domain-backlog.json`](.../contracts/opl-gateway/candidate-domain-backlog.json)
 
 这个工件让候选 workstream 保持可见，但不会假装它们的 domain boundary 已经存在。
 
@@ -115,9 +115,9 @@ Onboarding contract 负责定义正式收录门槛。
 
 ## 上位依据
 
-- [OPL 任务版图](./task-map.zh-CN.md)
-- [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.zh-CN.md)
-- [OPL Gateway Contracts](../contracts/opl-gateway/README.zh-CN.md)
+- [OPL 任务版图](../task-map.zh-CN.md)
+- [OPL Domain Onboarding Contract](../opl-domain-onboarding-contract.zh-CN.md)
+- [OPL Gateway Contracts](.../contracts/opl-gateway/README.zh-CN.md)
 - [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.zh-CN.md)
 
 ## 完成定义

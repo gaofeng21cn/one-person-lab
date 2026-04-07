@@ -43,7 +43,7 @@ At the current baseline, `candidate-domain definition` is the composition of:
 
 `OPL` does **not** currently add a separate intermediate candidate-domain-definition surface above those layers, because doing so would risk duplicating semantic, blocker, or admission truth.
 
-For the human-readable companion to that backlog, see [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md).
+For the human-readable companion to that backlog, see [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.md).
 
 ## Research Ops
 
@@ -104,7 +104,7 @@ Current boundary status:
 - not yet a `G2` discovery target
 - not yet a `G3` routed-action target
 - not eligible for domain handoff
-- admission blockers are tracked in [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md)
+- admission blockers are tracked in [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.md)
 - clear top-level requests may surface only as `unknown_domain`, without building a handoff payload, until a real domain owner is admitted
 
 ## Thesis Ops
@@ -138,7 +138,7 @@ Current boundary status:
 - not yet a `G2` discovery target
 - not yet a `G3` routed-action target
 - not eligible for domain handoff
-- admission blockers are tracked in [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md)
+- admission blockers are tracked in [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.md)
 - clear top-level requests may surface only as `unknown_domain`, without building a handoff payload, until a real domain owner is admitted
 
 ## Review Ops
@@ -171,7 +171,7 @@ Current boundary status:
 - not yet a `G2` discovery target
 - not yet a `G3` routed-action target
 - not eligible for domain handoff
-- admission blockers are tracked in [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md)
+- admission blockers are tracked in [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.md)
 - clear top-level requests may surface only as `unknown_domain`, without building a handoff payload, until a real domain owner is admitted
 
 ## Presentation Ops

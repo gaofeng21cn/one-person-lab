@@ -24,32 +24,32 @@
 
 ### 1. Governance decision
 
-- 文件：[`../examples/opl-gateway/governance-decision-record.json`](../examples/opl-gateway/governance-decision-record.json)
+- 文件：[`.../examples/opl-gateway/governance-decision-record.json`](.../examples/opl-gateway/governance-decision-record.json)
 - 展示位于 domain-owned review truth 之上的顶层 decision record。
 
 ### 2. Cross-domain review index
 
-- 文件：[`../examples/opl-gateway/cross-domain-review-index.json`](../examples/opl-gateway/cross-domain-review-index.json)
+- 文件：[`.../examples/opl-gateway/cross-domain-review-index.json`](.../examples/opl-gateway/cross-domain-review-index.json)
 - 展示 `OPL` 如何索引跨 domain 所需的 review surface 与 blocking gate，而不复制 review truth。
 
 ### 3. Publish readiness signal
 
-- 文件：[`../examples/opl-gateway/publish-readiness-signal.json`](../examples/opl-gateway/publish-readiness-signal.json)
+- 文件：[`.../examples/opl-gateway/publish-readiness-signal.json`](.../examples/opl-gateway/publish-readiness-signal.json)
 - 展示在 domain-owned publish truth 形成之前的 pre-publish readiness index。
 
 ### 4. Publish outcome index
 
-- 文件：[`../examples/opl-gateway/publish-outcome-index.json`](../examples/opl-gateway/publish-outcome-index.json)
+- 文件：[`.../examples/opl-gateway/publish-outcome-index.json`](.../examples/opl-gateway/publish-outcome-index.json)
 - 展示对 domain-owned publish / release / export / submission outcome 的顶层索引。
 
 ### 5. Promotion candidate signal
 
-- 文件：[`../examples/opl-gateway/promotion-candidate-signal.json`](../examples/opl-gateway/promotion-candidate-signal.json)
+- 文件：[`.../examples/opl-gateway/promotion-candidate-signal.json`](.../examples/opl-gateway/promotion-candidate-signal.json)
 - 展示建立在 domain-owned outcome truth 之上的 post-publish promotion-readiness signal。
 
 ### 6. Promotion surface index
 
-- 文件：[`../examples/opl-gateway/promotion-surface-index.json`](../examples/opl-gateway/promotion-surface-index.json)
+- 文件：[`.../examples/opl-gateway/promotion-surface-index.json`](.../examples/opl-gateway/promotion-surface-index.json)
 - 展示在 domain-owned outcome 已存在之后，对 public surface reference 与 blocker 的顶层索引。
 
 ## 阅读规则
@@ -63,9 +63,9 @@
 
 - [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.zh-CN.md)
 - [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.zh-CN.md)
-- [OPL Routed Action Gateway](./opl-routed-action-gateway.zh-CN.md)
+- [OPL Routed Action Gateway](../opl-routed-action-gateway.zh-CN.md)
 - [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.zh-CN.md)
-- [OPL Gateway Contracts](../contracts/opl-gateway/README.zh-CN.md)
+- [OPL Gateway Contracts](.../contracts/opl-gateway/README.zh-CN.md)
 
 ## 相关配套示例
 

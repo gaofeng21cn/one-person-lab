@@ -10,7 +10,7 @@ Its job is to make contract, routing, operating, discoverability, and acceptance
 
 ## Machine-Readable Artifact
 
-- [`../contracts/opl-gateway/surface-lifecycle-map.json`](../contracts/opl-gateway/surface-lifecycle-map.json)
+- [`.../contracts/opl-gateway/surface-lifecycle-map.json`](.../contracts/opl-gateway/surface-lifecycle-map.json)
 
 ## Non-Goals
 
@@ -27,7 +27,7 @@ This lifecycle map does not:
 This lifecycle map sits in the shared-foundation reference layer only.
 `OPL` may freeze dependency and traversal language here, but transition execution, runtime writeback, review truth, and publication truth still remain with human/domain-owned surfaces below the gateway boundary.
 That keeps the map discoverable for review and acceptance alignment without turning it into a workflow control plane or shared truth store.
-For the broader ownership split, see [Shared Foundation Ownership](./shared-foundation-ownership.md).
+For the broader ownership split, see [Shared Foundation Ownership](../shared-foundation-ownership.md).
 
 ## Lifecycle Fields
 
@@ -90,16 +90,16 @@ If the surface is `opl_candidate_domain_backlog`, the dependency chain remains b
 
 ## Governing Sources
 
-- [OPL Federation Contract](./opl-federation-contract.md)
-- [OPL Read-Only Discovery Gateway](./opl-read-only-discovery-gateway.md)
-- [OPL Routed Action Gateway](./opl-routed-action-gateway.md)
-- [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.md)
+- [OPL Federation Contract](../opl-federation-contract.md)
+- [OPL Read-Only Discovery Gateway](../opl-read-only-discovery-gateway.md)
+- [OPL Routed Action Gateway](../opl-routed-action-gateway.md)
+- [OPL Domain Onboarding Contract](../opl-domain-onboarding-contract.md)
 - [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md)
 - [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.md)
 - [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.md)
-- [OPL Public Surface Index](./opl-public-surface-index.md)
+- [OPL Public Surface Index](../opl-public-surface-index.md)
 - [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.md)
-- [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
+- [OPL Gateway Contracts](.../contracts/opl-gateway/README.md)
 
 ## Completion Definition
 

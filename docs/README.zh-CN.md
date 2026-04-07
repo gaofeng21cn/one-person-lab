@@ -35,20 +35,25 @@
 
 这一层继续保留在仓库中，但只承担审核、验收、示例、索引或边界检查作用。
 它们不能反过来改写 `OPL` 的默认公开主线。
+为了让 `docs/` 根目录保持可读，这一层的文档现统一收拢到 `docs/references/`。
 
-- `opl-gateway-rollout*`
-- `opl-gateway-acceptance-test-spec*`
-- `opl-candidate-domain-backlog*`
-- `opl-candidate-workstream-tranche-closeout*`
-- `opl-gateway-example-corpus*`
-- `opl-routed-safety-example-corpus*`
-- `opl-operating-example-corpus*`
-- `opl-operating-record-catalog*`
-- `opl-surface-lifecycle-map*`
-- `opl-surface-authority-matrix*`
-- `opl-surface-review-matrix*`
-- `opl-governance-audit-operating-surface*`
-- `opl-publish-promotion-operating-surface*`
+- `references/opl-gateway-rollout*`
+- `references/opl-gateway-acceptance-test-spec*`
+- `references/opl-candidate-domain-backlog*`
+- `references/opl-candidate-workstream-tranche-closeout*`
+- `references/opl-gateway-example-corpus*`
+- `references/opl-routed-safety-example-corpus*`
+- `references/opl-operating-example-corpus*`
+- `references/opl-operating-record-catalog*`
+- `references/ecosystem-status-matrix.md`
+- `references/host-agent-runtime-contract.md`
+- `references/development-operating-model.md`
+- `references/runtime-alignment-taskboard.md`
+- `references/opl-surface-lifecycle-map*`
+- `references/opl-surface-authority-matrix*`
+- `references/opl-surface-review-matrix*`
+- `references/opl-governance-audit-operating-surface*`
+- `references/opl-publish-promotion-operating-surface*`
 
 ## 第四层：历史规格与计划
 

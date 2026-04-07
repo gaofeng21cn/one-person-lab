@@ -66,9 +66,9 @@
 
 当前冻结下来的边界真相，并不只存在于这份 closeout 文档里，而是落在已有 tracked path 中：
 
-- [OPL 任务版图](./task-map.zh-CN.md)
+- [OPL 任务版图](../task-map.zh-CN.md)
 - [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.zh-CN.md)
-- [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.zh-CN.md)
+- [OPL Domain Onboarding Contract](../opl-domain-onboarding-contract.zh-CN.md)
 - [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.zh-CN.md)
 
 这轮 tranche 对应的 checkpoint commit：

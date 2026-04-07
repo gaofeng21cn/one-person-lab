@@ -35,14 +35,14 @@
 - [OPL Routed Action Gateway（中文）](../../docs/opl-routed-action-gateway.zh-CN.md)
 - [OPL Domain Onboarding Contract](../../docs/opl-domain-onboarding-contract.md)
 - [OPL Domain Onboarding Contract（中文）](../../docs/opl-domain-onboarding-contract.zh-CN.md)
-- [OPL Governance / Audit Operating Surface](../../docs/opl-governance-audit-operating-surface.md)
-- [OPL Governance / Audit Operating Surface（中文）](../../docs/opl-governance-audit-operating-surface.zh-CN.md)
-- [OPL Publish / Promotion Operating Surface](../../docs/opl-publish-promotion-operating-surface.md)
-- [OPL Publish / Promotion Operating Surface（中文）](../../docs/opl-publish-promotion-operating-surface.zh-CN.md)
-- [OPL Gateway Acceptance Test Spec](../../docs/opl-gateway-acceptance-test-spec.md)
-- [OPL Gateway Acceptance Test Spec（中文）](../../docs/opl-gateway-acceptance-test-spec.zh-CN.md)
-- [OPL Gateway Rollout](../../docs/opl-gateway-rollout.md)
-- [OPL Gateway Rollout（中文）](../../docs/opl-gateway-rollout.zh-CN.md)
+- [OPL Governance / Audit Operating Surface](../../docs/references/opl-governance-audit-operating-surface.md)
+- [OPL Governance / Audit Operating Surface（中文）](../../docs/references/opl-governance-audit-operating-surface.zh-CN.md)
+- [OPL Publish / Promotion Operating Surface](../../docs/references/opl-publish-promotion-operating-surface.md)
+- [OPL Publish / Promotion Operating Surface（中文）](../../docs/references/opl-publish-promotion-operating-surface.zh-CN.md)
+- [OPL Gateway Acceptance Test Spec](../../docs/references/opl-gateway-acceptance-test-spec.md)
+- [OPL Gateway Acceptance Test Spec（中文）](../../docs/references/opl-gateway-acceptance-test-spec.zh-CN.md)
+- [OPL Gateway Rollout](../../docs/references/opl-gateway-rollout.md)
+- [OPL Gateway Rollout（中文）](../../docs/references/opl-gateway-rollout.zh-CN.md)
 - [OPL Public Surface Index](../../docs/opl-public-surface-index.md)
 - [OPL Public Surface Index（中文）](../../docs/opl-public-surface-index.zh-CN.md)
 - [OPL Task Map](../../docs/task-map.md)
@@ -51,18 +51,18 @@
 
 ## 配套示例集
 
-- [OPL Gateway Example Corpus](../../docs/opl-gateway-example-corpus.zh-CN.md) — 展示当前已冻结 gateway layers 如何做 canonical、illustrative 的 contract-level composition
-- [OPL Routed-Safety Example Corpus](../../docs/opl-routed-safety-example-corpus.zh-CN.md) — 展示显式非成功 G3 路由状态的 canonical、illustrative safety walkthrough
-- [OPL Operating Example Corpus](../../docs/opl-operating-example-corpus.zh-CN.md) — 为已冻结 P5.M1 / P5.M2 surface 提供 canonical 的独立 operating-record example
+- [OPL Gateway Example Corpus](../../docs/references/opl-gateway-example-corpus.zh-CN.md) — 展示当前已冻结 gateway layers 如何做 canonical、illustrative 的 contract-level composition
+- [OPL Routed-Safety Example Corpus](../../docs/references/opl-routed-safety-example-corpus.zh-CN.md) — 展示显式非成功 G3 路由状态的 canonical、illustrative safety walkthrough
+- [OPL Operating Example Corpus](../../docs/references/opl-operating-example-corpus.zh-CN.md) — 为已冻结 P5.M1 / P5.M2 surface 提供 canonical 的独立 operating-record example
 
 这三组示例都只是配套参考，不替代本目录中的 governing contracts。
 
 ## 配套参考 Surfaces
 
-- [OPL Candidate Domain Backlog](../../docs/opl-candidate-domain-backlog.zh-CN.md) — 当前 under-definition workstream 的 reference-only machine-readable admission-blocker backlog
-- [OPL Surface Lifecycle Map](../../docs/opl-surface-lifecycle-map.zh-CN.md) — 对当前已冻结 gateway / operating / supporting surfaces 的 derived machine-readable lifecycle 视图
-- [OPL Surface Authority Matrix](../../docs/opl-surface-authority-matrix.zh-CN.md) — 对当前已冻结 OPL surfaces 与 linked domain public-entry surfaces 的 derived machine-readable authority split
-- [OPL Surface Review Matrix](../../docs/opl-surface-review-matrix.zh-CN.md) — 对当前已冻结 OPL public / contract / supporting surfaces 的 derived machine-readable review obligation
+- [OPL Candidate Domain Backlog](../../docs/references/opl-candidate-domain-backlog.zh-CN.md) — 当前 under-definition workstream 的 reference-only machine-readable admission-blocker backlog
+- [OPL Surface Lifecycle Map](../../docs/references/opl-surface-lifecycle-map.zh-CN.md) — 对当前已冻结 gateway / operating / supporting surfaces 的 derived machine-readable lifecycle 视图
+- [OPL Surface Authority Matrix](../../docs/references/opl-surface-authority-matrix.zh-CN.md) — 对当前已冻结 OPL surfaces 与 linked domain public-entry surfaces 的 derived machine-readable authority split
+- [OPL Surface Review Matrix](../../docs/references/opl-surface-review-matrix.zh-CN.md) — 对当前已冻结 OPL public / contract / supporting surfaces 的 derived machine-readable review obligation
 
 这些 backlog 与 mapping surfaces 都只是 reference-only surface。它们不会变成 workflow engine、transition authority、authorization engine、approval engine、publish controller，也不替代本目录中的 governing contracts。
 

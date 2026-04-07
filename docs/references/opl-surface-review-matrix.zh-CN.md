@@ -10,7 +10,7 @@
 
 ## 机器可读工件
 
-- [`../contracts/opl-gateway/surface-review-matrix.json`](../contracts/opl-gateway/surface-review-matrix.json)
+- [`.../contracts/opl-gateway/surface-review-matrix.json`](.../contracts/opl-gateway/surface-review-matrix.json)
 
 ## 非目标
 
@@ -27,7 +27,7 @@
 这张 review matrix 只位于 shared-foundation 的 reviewability 层。
 `OPL` 可以在这里索引 human-review 义务与 companion-surface 关系，但 domain review truth、publication truth，以及最终的 continue/stop/reframe authority 仍然留在人类与 domain-owned surface 手中。
 因此，这张 matrix 能服务于 discoverability 与 acceptance alignment，而不会升级成 approval control plane 或共享 truth store。
-更完整的 ownership split 可参考[共享基础结构归属](./shared-foundation-ownership.zh-CN.md)。
+更完整的 ownership split 可参考[共享基础结构归属](../shared-foundation-ownership.zh-CN.md)。
 
 ## Review 字段
 
@@ -98,7 +98,7 @@
 
 - [OPL Surface Lifecycle Map](./opl-surface-lifecycle-map.zh-CN.md)
 - [OPL Surface Authority Matrix](./opl-surface-authority-matrix.zh-CN.md)
-- [OPL Public Surface Index](./opl-public-surface-index.zh-CN.md)
+- [OPL Public Surface Index](../opl-public-surface-index.zh-CN.md)
 
 ## 阅读规则
 
@@ -115,21 +115,21 @@
 
 ## 上位依据
 
-- [OPL Gateway Contracts](../contracts/opl-gateway/README.zh-CN.md)
+- [OPL Gateway Contracts](.../contracts/opl-gateway/README.zh-CN.md)
 - [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.zh-CN.md)
-- [OPL Public Surface Index](./opl-public-surface-index.zh-CN.md)
+- [OPL Public Surface Index](../opl-public-surface-index.zh-CN.md)
 - [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.zh-CN.md)
-- [OPL Federation Contract](./opl-federation-contract.zh-CN.md)
+- [OPL Federation Contract](../opl-federation-contract.zh-CN.md)
 - [OPL Gateway 落地路线](./opl-gateway-rollout.zh-CN.md)
-- [OPL 任务版图](./task-map.zh-CN.md)
+- [OPL 任务版图](../task-map.zh-CN.md)
 
 ## 完成定义
 
 只有当下面这些条件都成立时，review matrix 才算合格：
 
 - 它覆盖当前 human review 与 publishability inspection 所需的全部已冻结 OPL public / shared-foundation boundary / contract / supporting surface
-- 每个 `required_acceptance_gate` 都能在 `../contracts/opl-gateway/acceptance-matrix.json` 中解析
-- 每个 `required_companion_surface` 都能在 `../contracts/opl-gateway/public-surface-index.json` 中解析
+- 每个 `required_acceptance_gate` 都能在 `.../contracts/opl-gateway/acceptance-matrix.json` 中解析
+- 每个 `required_companion_surface` 都能在 `.../contracts/opl-gateway/public-surface-index.json` 中解析
 - 每个 `governing_ref` 都能解析到存在的本地工件
 - 它保持 derived、reference-only、non-executing
 - 它不会升级成 approval engine、publish controller、release engine 或第二真相源

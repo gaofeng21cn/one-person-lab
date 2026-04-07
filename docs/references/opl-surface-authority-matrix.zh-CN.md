@@ -10,7 +10,7 @@
 
 ## 机器可读工件
 
-- [`../contracts/opl-gateway/surface-authority-matrix.json`](../contracts/opl-gateway/surface-authority-matrix.json)
+- [`.../contracts/opl-gateway/surface-authority-matrix.json`](.../contracts/opl-gateway/surface-authority-matrix.json)
 
 ## 非目标
 
@@ -26,7 +26,7 @@
 这张 authority matrix 只位于 shared-foundation 的 boundary-language 层。
 `OPL` 在这里拥有的是命名 route、execution、truth、review 与 publication 分工的顶层词汇；但底层 authority 仍然留在 matrix 已明确标出的 domain gateway、domain harness 与 `OPL` 之外的人类 / private surface 中。
 因此，这张 matrix 只是供 ownership review 使用的 inspectable reference surface，而不是 runtime control plane 或共享 truth store。
-更完整的 ownership split 可参考[共享基础结构归属](./shared-foundation-ownership.zh-CN.md)。
+更完整的 ownership split 可参考[共享基础结构归属](../shared-foundation-ownership.zh-CN.md)。
 
 ## Authority 字段
 
@@ -91,16 +91,16 @@
 
 ## 上位依据
 
-- [OPL Federation Contract](./opl-federation-contract.zh-CN.md)
-- [OPL 只读 Discovery Gateway](./opl-read-only-discovery-gateway.zh-CN.md)
-- [OPL Routed Action Gateway](./opl-routed-action-gateway.zh-CN.md)
-- [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.zh-CN.md)
+- [OPL Federation Contract](../opl-federation-contract.zh-CN.md)
+- [OPL 只读 Discovery Gateway](../opl-read-only-discovery-gateway.zh-CN.md)
+- [OPL Routed Action Gateway](../opl-routed-action-gateway.zh-CN.md)
+- [OPL Domain Onboarding Contract](../opl-domain-onboarding-contract.zh-CN.md)
 - [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.zh-CN.md)
 - [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.zh-CN.md)
 - [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.zh-CN.md)
-- [OPL Public Surface Index](./opl-public-surface-index.zh-CN.md)
+- [OPL Public Surface Index](../opl-public-surface-index.zh-CN.md)
 - [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.zh-CN.md)
-- [OPL Gateway Contracts](../contracts/opl-gateway/README.zh-CN.md)
+- [OPL Gateway Contracts](.../contracts/opl-gateway/README.zh-CN.md)
 
 ## 完成定义
 

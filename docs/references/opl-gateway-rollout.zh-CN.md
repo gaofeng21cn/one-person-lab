@@ -77,7 +77,7 @@ Human / Agent
 
 当前 materialization 目录：
 
-- [OPL Gateway Contracts](../contracts/opl-gateway/README.zh-CN.md)
+- [OPL Gateway Contracts](.../contracts/opl-gateway/README.zh-CN.md)
 
 ## Phase G2：只读入口先落地
 
@@ -95,12 +95,12 @@ Human / Agent
 完成信号：
 
 - Agent 可以先问“这类任务该用哪个系统”，并拿到稳定顶层答案
-- 当前 G1 materialization 可在 [OPL Gateway Contracts](../contracts/opl-gateway/README.zh-CN.md) 找到
+- 当前 G1 materialization 可在 [OPL Gateway Contracts](.../contracts/opl-gateway/README.zh-CN.md) 找到
 
 详细契约：
 
-- [OPL 只读 Discovery Gateway](opl-read-only-discovery-gateway.zh-CN.md)
-- [OPL Public Surface Index](opl-public-surface-index.zh-CN.md)
+- [OPL 只读 Discovery Gateway](../opl-read-only-discovery-gateway.zh-CN.md)
+- [OPL Public Surface Index](../opl-public-surface-index.zh-CN.md)
 
 ## Phase G3：Routed Action Entry
 
@@ -125,7 +125,7 @@ Human / Agent
 
 在继续新增更多 domain 之前，需要补齐的合同：
 
-- [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.zh-CN.md)
+- [OPL Domain Onboarding Contract](../opl-domain-onboarding-contract.zh-CN.md)
 - [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.zh-CN.md)
 - [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.zh-CN.md)
 
@@ -134,7 +134,7 @@ Human / Agent
 
 具体合同：
 
-- [OPL Routed Action Gateway](opl-routed-action-gateway.zh-CN.md)
+- [OPL Routed Action Gateway](../opl-routed-action-gateway.zh-CN.md)
 
 ## Phase G4：候选跨 Domain Shared Index
 

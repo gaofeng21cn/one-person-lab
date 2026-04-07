@@ -10,7 +10,7 @@
 
 ## 机器可读工件
 
-- [`../contracts/opl-gateway/operating-record-catalog.json`](../contracts/opl-gateway/operating-record-catalog.json)
+- [`.../contracts/opl-gateway/operating-record-catalog.json`](.../contracts/opl-gateway/operating-record-catalog.json)
 
 ## 非目标
 
@@ -65,7 +65,7 @@ catalog 只是回指这些工件，并记录每种 record kind 何时才算进�
 - [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.zh-CN.md)
 - [OPL Operating Example Corpus](./opl-operating-example-corpus.zh-CN.md)
 - [OPL Surface Lifecycle Map](./opl-surface-lifecycle-map.zh-CN.md)
-- [OPL Gateway Contracts](../contracts/opl-gateway/README.zh-CN.md)
+- [OPL Gateway Contracts](.../contracts/opl-gateway/README.zh-CN.md)
 - [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.zh-CN.md)
 
 ## 完成定义

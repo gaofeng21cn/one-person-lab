@@ -24,7 +24,7 @@
 
 ### 1. Research submission flow
 
-- 文件：[`../examples/opl-gateway/research-ops-submission.json`](../examples/opl-gateway/research-ops-submission.json)
+- 文件：[`.../examples/opl-gateway/research-ops-submission.json`](.../examples/opl-gateway/research-ops-submission.json)
 - 展示一个 `research_ops` 请求如何组合：
   - `G3` routed action decision
   - `G1/G3` handoff payload
@@ -33,7 +33,7 @@
 
 ### 2. Presentation publish / promotion flow
 
-- 文件：[`../examples/opl-gateway/presentation-ops-publish.json`](../examples/opl-gateway/presentation-ops-publish.json)
+- 文件：[`.../examples/opl-gateway/presentation-ops-publish.json`](.../examples/opl-gateway/presentation-ops-publish.json)
 - 展示一个 `presentation_ops` 请求如何组合：
   - `G3` routed action decision
   - `G1/G3` handoff payload
@@ -50,12 +50,12 @@
 
 ## 上位合同
 
-- [OPL Federation Contract](./opl-federation-contract.zh-CN.md)
-- [OPL Routed Action Gateway](./opl-routed-action-gateway.zh-CN.md)
+- [OPL Federation Contract](../opl-federation-contract.zh-CN.md)
+- [OPL Routed Action Gateway](../opl-routed-action-gateway.zh-CN.md)
 - [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.zh-CN.md)
 - [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.zh-CN.md)
 - [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.zh-CN.md)
-- [OPL Gateway Contracts](../contracts/opl-gateway/README.zh-CN.md)
+- [OPL Gateway Contracts](.../contracts/opl-gateway/README.zh-CN.md)
 
 ## 相关配套示例
 

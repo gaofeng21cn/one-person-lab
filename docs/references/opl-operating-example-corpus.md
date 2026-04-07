@@ -24,32 +24,32 @@ The examples are illustrative operating-record walkthroughs only.
 
 ### 1. Governance decision
 
-- File: [`../examples/opl-gateway/governance-decision-record.json`](../examples/opl-gateway/governance-decision-record.json)
+- File: [`.../examples/opl-gateway/governance-decision-record.json`](.../examples/opl-gateway/governance-decision-record.json)
 - Shows a top-level decision record above domain-owned review truth.
 
 ### 2. Cross-domain review index
 
-- File: [`../examples/opl-gateway/cross-domain-review-index.json`](../examples/opl-gateway/cross-domain-review-index.json)
+- File: [`.../examples/opl-gateway/cross-domain-review-index.json`](.../examples/opl-gateway/cross-domain-review-index.json)
 - Shows how `OPL` indexes required review surfaces and blocking gates across domains without duplicating review truth.
 
 ### 3. Publish readiness signal
 
-- File: [`../examples/opl-gateway/publish-readiness-signal.json`](../examples/opl-gateway/publish-readiness-signal.json)
+- File: [`.../examples/opl-gateway/publish-readiness-signal.json`](.../examples/opl-gateway/publish-readiness-signal.json)
 - Shows a pre-publish readiness index before domain-owned publish truth exists.
 
 ### 4. Publish outcome index
 
-- File: [`../examples/opl-gateway/publish-outcome-index.json`](../examples/opl-gateway/publish-outcome-index.json)
+- File: [`.../examples/opl-gateway/publish-outcome-index.json`](.../examples/opl-gateway/publish-outcome-index.json)
 - Shows a top-level index of a domain-owned publish / release / export / submission outcome.
 
 ### 5. Promotion candidate signal
 
-- File: [`../examples/opl-gateway/promotion-candidate-signal.json`](../examples/opl-gateway/promotion-candidate-signal.json)
+- File: [`.../examples/opl-gateway/promotion-candidate-signal.json`](.../examples/opl-gateway/promotion-candidate-signal.json)
 - Shows a post-publish promotion-readiness signal above domain-owned outcome truth.
 
 ### 6. Promotion surface index
 
-- File: [`../examples/opl-gateway/promotion-surface-index.json`](../examples/opl-gateway/promotion-surface-index.json)
+- File: [`.../examples/opl-gateway/promotion-surface-index.json`](.../examples/opl-gateway/promotion-surface-index.json)
 - Shows public-surface references and blockers after a domain-owned outcome already exists.
 
 ## Reading Rule
@@ -63,9 +63,9 @@ Any follow-on action still routes through `domain_gateway`; this corpus never au
 
 - [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.md)
 - [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.md)
-- [OPL Routed Action Gateway](./opl-routed-action-gateway.md)
+- [OPL Routed Action Gateway](../opl-routed-action-gateway.md)
 - [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.md)
-- [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
+- [OPL Gateway Contracts](.../contracts/opl-gateway/README.md)
 
 ## Related Companions
 

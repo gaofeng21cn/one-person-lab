@@ -203,8 +203,8 @@
         "claim_domain_truth"
       ],
       "governing_refs": [
-        "docs/opl-candidate-domain-backlog.md",
-        "docs/opl-candidate-domain-backlog.zh-CN.md",
+        "docs/references/opl-candidate-domain-backlog.md",
+        "docs/references/opl-candidate-domain-backlog.zh-CN.md",
         "contracts/opl-gateway/candidate-domain-backlog.json"
       ]
     },
@@ -225,8 +225,8 @@
         "direct_submission"
       ],
       "governing_refs": [
-        "docs/opl-governance-audit-operating-surface.md",
-        "docs/opl-governance-audit-operating-surface.zh-CN.md",
+        "docs/references/opl-governance-audit-operating-surface.md",
+        "docs/references/opl-governance-audit-operating-surface.zh-CN.md",
         "contracts/opl-gateway/governance-audit.schema.json"
       ]
     },
@@ -249,8 +249,8 @@
         "target_domain_harness_directly"
       ],
       "governing_refs": [
-        "docs/opl-publish-promotion-operating-surface.md",
-        "docs/opl-publish-promotion-operating-surface.zh-CN.md",
+        "docs/references/opl-publish-promotion-operating-surface.md",
+        "docs/references/opl-publish-promotion-operating-surface.zh-CN.md",
         "contracts/opl-gateway/publish-promotion.schema.json"
       ]
     },
@@ -270,8 +270,8 @@
         "claim_domain_truth"
       ],
       "governing_refs": [
-        "docs/opl-gateway-example-corpus.md",
-        "docs/opl-gateway-example-corpus.zh-CN.md"
+        "docs/references/opl-gateway-example-corpus.md",
+        "docs/references/opl-gateway-example-corpus.zh-CN.md"
       ]
     },
     {
@@ -290,8 +290,8 @@
         "claim_domain_truth"
       ],
       "governing_refs": [
-        "docs/opl-routed-safety-example-corpus.md",
-        "docs/opl-routed-safety-example-corpus.zh-CN.md"
+        "docs/references/opl-routed-safety-example-corpus.md",
+        "docs/references/opl-routed-safety-example-corpus.zh-CN.md"
       ]
     },
     {
@@ -311,8 +311,8 @@
         "direct_posting"
       ],
       "governing_refs": [
-        "docs/opl-operating-example-corpus.md",
-        "docs/opl-operating-example-corpus.zh-CN.md"
+        "docs/references/opl-operating-example-corpus.md",
+        "docs/references/opl-operating-example-corpus.zh-CN.md"
       ]
     },
     {
@@ -331,8 +331,8 @@
         "claim_publication_truth"
       ],
       "governing_refs": [
-        "docs/opl-operating-record-catalog.md",
-        "docs/opl-operating-record-catalog.zh-CN.md",
+        "docs/references/opl-operating-record-catalog.md",
+        "docs/references/opl-operating-record-catalog.zh-CN.md",
         "contracts/opl-gateway/operating-record-catalog.json"
       ]
     },
@@ -352,8 +352,8 @@
         "claim_domain_truth"
       ],
       "governing_refs": [
-        "docs/opl-surface-lifecycle-map.md",
-        "docs/opl-surface-lifecycle-map.zh-CN.md",
+        "docs/references/opl-surface-lifecycle-map.md",
+        "docs/references/opl-surface-lifecycle-map.zh-CN.md",
         "contracts/opl-gateway/surface-lifecycle-map.json"
       ]
     },
@@ -394,8 +394,8 @@
         "claim_domain_truth"
       ],
       "governing_refs": [
-        "docs/opl-gateway-acceptance-test-spec.md",
-        "docs/opl-gateway-acceptance-test-spec.zh-CN.md",
+        "docs/references/opl-gateway-acceptance-test-spec.md",
+        "docs/references/opl-gateway-acceptance-test-spec.zh-CN.md",
         "contracts/opl-gateway/acceptance-matrix.json"
       ]
     },

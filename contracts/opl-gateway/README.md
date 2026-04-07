@@ -35,16 +35,16 @@ That delivery target does **not** promote this directory into a runtime, routed-
 - [OPL Routed Action Gateway（中文）](../../docs/opl-routed-action-gateway.zh-CN.md)
 - [OPL Domain Onboarding Contract](../../docs/opl-domain-onboarding-contract.md)
 - [OPL Domain Onboarding Contract（中文）](../../docs/opl-domain-onboarding-contract.zh-CN.md)
-- [OPL Governance / Audit Operating Surface](../../docs/opl-governance-audit-operating-surface.md)
-- [OPL Governance / Audit Operating Surface（中文）](../../docs/opl-governance-audit-operating-surface.zh-CN.md)
-- [OPL Publish / Promotion Operating Surface](../../docs/opl-publish-promotion-operating-surface.md)
-- [OPL Publish / Promotion Operating Surface（中文）](../../docs/opl-publish-promotion-operating-surface.zh-CN.md)
-- [OPL Candidate Domain Backlog](../../docs/opl-candidate-domain-backlog.md)
-- [OPL Candidate Domain Backlog（中文）](../../docs/opl-candidate-domain-backlog.zh-CN.md)
-- [OPL Gateway Acceptance Test Spec](../../docs/opl-gateway-acceptance-test-spec.md)
-- [OPL Gateway Acceptance Test Spec（中文）](../../docs/opl-gateway-acceptance-test-spec.zh-CN.md)
-- [OPL Gateway Rollout](../../docs/opl-gateway-rollout.md)
-- [OPL Gateway Rollout（中文）](../../docs/opl-gateway-rollout.zh-CN.md)
+- [OPL Governance / Audit Operating Surface](../../docs/references/opl-governance-audit-operating-surface.md)
+- [OPL Governance / Audit Operating Surface（中文）](../../docs/references/opl-governance-audit-operating-surface.zh-CN.md)
+- [OPL Publish / Promotion Operating Surface](../../docs/references/opl-publish-promotion-operating-surface.md)
+- [OPL Publish / Promotion Operating Surface（中文）](../../docs/references/opl-publish-promotion-operating-surface.zh-CN.md)
+- [OPL Candidate Domain Backlog](../../docs/references/opl-candidate-domain-backlog.md)
+- [OPL Candidate Domain Backlog（中文）](../../docs/references/opl-candidate-domain-backlog.zh-CN.md)
+- [OPL Gateway Acceptance Test Spec](../../docs/references/opl-gateway-acceptance-test-spec.md)
+- [OPL Gateway Acceptance Test Spec（中文）](../../docs/references/opl-gateway-acceptance-test-spec.zh-CN.md)
+- [OPL Gateway Rollout](../../docs/references/opl-gateway-rollout.md)
+- [OPL Gateway Rollout（中文）](../../docs/references/opl-gateway-rollout.zh-CN.md)
 - [OPL Public Surface Index](../../docs/opl-public-surface-index.md)
 - [OPL Public Surface Index（中文）](../../docs/opl-public-surface-index.zh-CN.md)
 - [OPL Task Map](../../docs/task-map.md)
@@ -53,18 +53,18 @@ That delivery target does **not** promote this directory into a runtime, routed-
 
 ## Companion examples
 
-- [OPL Gateway Example Corpus](../../docs/opl-gateway-example-corpus.md) — canonical illustrative contract-level compositions across the frozen gateway layers
-- [OPL Routed-Safety Example Corpus](../../docs/opl-routed-safety-example-corpus.md) — canonical illustrative safety walkthroughs for the explicit non-success G3 routing states
-- [OPL Operating Example Corpus](../../docs/opl-operating-example-corpus.md) — canonical standalone operating-record examples for the frozen P5.M1 / P5.M2 surfaces
+- [OPL Gateway Example Corpus](../../docs/references/opl-gateway-example-corpus.md) — canonical illustrative contract-level compositions across the frozen gateway layers
+- [OPL Routed-Safety Example Corpus](../../docs/references/opl-routed-safety-example-corpus.md) — canonical illustrative safety walkthroughs for the explicit non-success G3 routing states
+- [OPL Operating Example Corpus](../../docs/references/opl-operating-example-corpus.md) — canonical standalone operating-record examples for the frozen P5.M1 / P5.M2 surfaces
 
 These corpora are companion references only. They do not replace the governing contracts in this directory.
 
 ## Companion reference surfaces
 
-- [OPL Candidate Domain Backlog](../../docs/opl-candidate-domain-backlog.md) — reference-only machine-readable admission-blocker backlog for the current under-definition workstreams
-- [OPL Surface Lifecycle Map](../../docs/opl-surface-lifecycle-map.md) — derived machine-readable lifecycle view across the frozen gateway / operating / supporting surfaces
-- [OPL Surface Authority Matrix](../../docs/opl-surface-authority-matrix.md) — derived machine-readable authority split across the frozen OPL surfaces and linked domain public-entry surfaces
-- [OPL Surface Review Matrix](../../docs/opl-surface-review-matrix.md) — derived machine-readable review obligations across the frozen OPL public, contract, and supporting surfaces
+- [OPL Candidate Domain Backlog](../../docs/references/opl-candidate-domain-backlog.md) — reference-only machine-readable admission-blocker backlog for the current under-definition workstreams
+- [OPL Surface Lifecycle Map](../../docs/references/opl-surface-lifecycle-map.md) — derived machine-readable lifecycle view across the frozen gateway / operating / supporting surfaces
+- [OPL Surface Authority Matrix](../../docs/references/opl-surface-authority-matrix.md) — derived machine-readable authority split across the frozen OPL surfaces and linked domain public-entry surfaces
+- [OPL Surface Review Matrix](../../docs/references/opl-surface-review-matrix.md) — derived machine-readable review obligations across the frozen OPL public, contract, and supporting surfaces
 
 These backlog and mapping surfaces are reference-only. They do not become a workflow engine, transition authority, authorization engine, approval engine, publish controller, or replacement for the governing contracts in this directory.
 

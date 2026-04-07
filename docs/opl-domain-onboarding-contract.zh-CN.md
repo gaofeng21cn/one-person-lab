@@ -18,7 +18,7 @@ Domain onboarding 建立在已冻结的 gateway 层之下：
 - [OPL Federation Contract](./opl-federation-contract.zh-CN.md)
 - [OPL 只读 Discovery Gateway](./opl-read-only-discovery-gateway.zh-CN.md)
 - [OPL Routed Action Gateway](./opl-routed-action-gateway.zh-CN.md)
-- [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.zh-CN.md)
+- [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.zh-CN.md)
 - 当前仓库中的机器可读合同面：[`../contracts/opl-gateway/README.zh-CN.md`](../contracts/opl-gateway/README.zh-CN.md)
 
 如果顶层 registry、discovery 与 routed-action 这几层还不稳定，domain onboarding 不应继续推进。
@@ -32,7 +32,7 @@ Domain onboarding 建立在已冻结的 gateway 层之下：
 这个 schema 把 onboarding-readiness record 落成 non-executing contract surface。
 它不会自动收录 domain，也不会取代本文件中的 prose review gate。
 这条 example record 只是 illustrative 示例，不构成正式 domain 收录。
-Candidate-domain backlog 则是位于它上游的 blocker surface，用来记录：对于仍在定义中的 workstream，在 onboarding-readiness record 出现之前还缺什么材料。它的人类可读配套说明见 [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.zh-CN.md)。
+Candidate-domain backlog 则是位于它上游的 blocker surface，用来记录：对于仍在定义中的 workstream，在 onboarding-readiness record 出现之前还缺什么材料。它的人类可读配套说明见 [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.zh-CN.md)。
 `OPL` 当前不会在 task topology、backlog 与 onboarding 之间再定义一层独立的 candidate-domain-definition contract；除非先证明这三层之间还存在真实缺口，否则现有三层组合就是当前 definition path。
 
 ## 核心承诺

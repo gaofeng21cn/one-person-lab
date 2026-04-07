@@ -19,8 +19,8 @@ function readJson(relativePath: string): Json {
 
 test('candidate-domain backlog public companions mirror execution-model blockers from the machine-readable backlog', () => {
   const backlog = readJson('contracts/opl-gateway/candidate-domain-backlog.json');
-  const english = read('docs/opl-candidate-domain-backlog.md');
-  const chinese = read('docs/opl-candidate-domain-backlog.zh-CN.md');
+  const english = read('docs/references/opl-candidate-domain-backlog.md');
+  const chinese = read('docs/references/opl-candidate-domain-backlog.zh-CN.md');
 
   assert.ok(backlog.required_package_ids.includes('execution_model'));
   assert.ok(backlog.formal_inclusion_check_ids.includes('execution_model_aligned'));

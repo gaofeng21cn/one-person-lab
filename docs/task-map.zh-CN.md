@@ -42,7 +42,7 @@
 
 `OPL` 当前**不会**在这三层之上再额外插入一层独立的 candidate-domain-definition surface，因为那样会制造重复的 semantic / blocker / admission truth。
 
-如果要查看这份 backlog 的人类可读配套说明，见 [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.zh-CN.md)。
+如果要查看这份 backlog 的人类可读配套说明，见 [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.zh-CN.md)。
 
 ## Research Ops
 
@@ -103,7 +103,7 @@
 - 还不是 `G2` discovery target
 - 还不是 `G3` routed-action target
 - 还不具备 domain handoff 资格
-- formal 收录前的 blocker 已在 [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.zh-CN.md) 中跟踪
+- formal 收录前的 blocker 已在 [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.zh-CN.md) 中跟踪
 - 但如果顶层语义已经足够清楚，在真实 domain owner 被收录前，最多只能显式返回 `unknown_domain`，且不会构建 handoff payload
 
 ## Thesis Ops
@@ -137,7 +137,7 @@
 - 还不是 `G2` discovery target
 - 还不是 `G3` routed-action target
 - 还不具备 domain handoff 资格
-- formal 收录前的 blocker 已在 [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.zh-CN.md) 中跟踪
+- formal 收录前的 blocker 已在 [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.zh-CN.md) 中跟踪
 - 但如果顶层语义已经足够清楚，在真实 domain owner 被收录前，最多只能显式返回 `unknown_domain`，且不会构建 handoff payload
 
 ## Review Ops
@@ -170,7 +170,7 @@
 - 还不是 `G2` discovery target
 - 还不是 `G3` routed-action target
 - 还不具备 domain handoff 资格
-- formal 收录前的 blocker 已在 [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.zh-CN.md) 中跟踪
+- formal 收录前的 blocker 已在 [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.zh-CN.md) 中跟踪
 - 但如果顶层语义已经足够清楚，在真实 domain owner 被收录前，最多只能显式返回 `unknown_domain`，且不会构建 handoff payload
 
 ## Presentation Ops
