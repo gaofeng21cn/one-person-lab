@@ -68,7 +68,7 @@ Human / Agent
 
 当前默认的本地部署形态是：
 
-- `Codex` 优先的 host-agent runtime
+- `Codex-default host-agent runtime`
 
 这只是当前部署方式，不是 substrate 的本体定义。
 在后续阶段，同一套 substrate 也应兼容：

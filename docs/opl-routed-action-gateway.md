@@ -75,7 +75,8 @@ Suggested routed response:
 ```json
 {
   "version": "g3",
-  "decision": {
+  "operation": "route_request",
+  "payload": {
     "status": "routed",
     "request_id": "opl-2026-04-05-010",
     "request_kind": "create",
@@ -117,28 +118,32 @@ Suggested response:
 ```json
 {
   "version": "g3",
-  "handoff": {
-    "request_id": "opl-2026-04-05-010",
-    "workstream_id": "presentation_ops",
-    "domain_id": "redcube",
-    "request_kind": "create",
-    "target_kind": "deliverable",
-    "goal": "Produce a defense-ready lecture deck from the supplied research materials.",
-    "materials": [
-      {
-        "kind": "paper",
-        "ref": "workspace://refs/paper-01"
-      }
-    ],
-    "constraints": [
-      "audience=committee"
-    ],
-    "preferred_family": "ppt_deck",
-    "preferred_profile": "defense_deck",
-    "review_expectation": [
-      "human_review",
-      "publish_gate"
-    ]
+  "operation": "build_handoff_payload",
+  "payload": {
+    "route_status": "routed",
+    "handoff": {
+      "request_id": "opl-2026-04-05-010",
+      "workstream_id": "presentation_ops",
+      "domain_id": "redcube",
+      "request_kind": "create",
+      "target_kind": "deliverable",
+      "goal": "Produce a defense-ready lecture deck from the supplied research materials.",
+      "materials": [
+        {
+          "kind": "paper",
+          "ref": "workspace://refs/paper-01"
+        }
+      ],
+      "constraints": [
+        "audience=committee"
+      ],
+      "preferred_family": "ppt_deck",
+      "preferred_profile": "defense_deck",
+      "review_expectation": [
+        "human_review",
+        "publish_gate"
+      ]
+    }
   }
 }
 ```
@@ -166,7 +171,8 @@ Suggested response:
 ```json
 {
   "version": "g3",
-  "audit_record": {
+  "operation": "audit_routing_decision",
+  "payload": {
     "request_id": "opl-2026-04-05-010",
     "decision_status": "routed",
     "request_summary": "Create a defense-ready slide deck from the supplied research materials.",
@@ -199,7 +205,8 @@ Suggested refusal response:
 ```json
 {
   "version": "g3",
-  "decision": {
+  "operation": "route_request",
+  "payload": {
     "status": "refused",
     "request_id": "opl-2026-04-05-011",
     "reason_code": "direct_harness_bypass",
@@ -217,7 +224,8 @@ Suggested response:
 ```json
 {
   "version": "g3",
-  "decision": {
+  "operation": "route_request",
+  "payload": {
     "status": "unknown_domain",
     "request_id": "opl-2026-04-05-012",
     "workstream_id": "candidate_ops",
@@ -241,7 +249,8 @@ Suggested response:
 ```json
 {
   "version": "g3",
-  "decision": {
+  "operation": "route_request",
+  "payload": {
     "status": "ambiguous_task",
     "request_id": "opl-2026-04-05-013",
     "candidate_workstreams": [

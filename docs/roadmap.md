@@ -59,18 +59,18 @@ It is “multiple domain surfaces with clear independent boundaries.”
 
 For the detailed gateway rollout path, see:
 
-- [OPL Gateway Rollout](opl-gateway-rollout.md)
+- [OPL Gateway Rollout](./references/opl-gateway-rollout.md)
 - [OPL Federation Contract](opl-federation-contract.md)
 - [OPL Public Surface Index](opl-public-surface-index.md)
 - [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
 - [OPL Routed Action Gateway](opl-routed-action-gateway.md)
 - [OPL Domain Onboarding Contract](opl-domain-onboarding-contract.md)
-- [OPL Candidate Domain Backlog](opl-candidate-domain-backlog.md)
-- [OPL Gateway Acceptance Test Spec](opl-gateway-acceptance-test-spec.md)
-- [OPL Governance / Audit Operating Surface](opl-governance-audit-operating-surface.md)
-- [OPL Publish / Promotion Operating Surface](opl-publish-promotion-operating-surface.md)
+- [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.md)
+- [OPL Gateway Acceptance Test Spec](./references/opl-gateway-acceptance-test-spec.md)
+- [OPL Governance / Audit Operating Surface](./references/opl-governance-audit-operating-surface.md)
+- [OPL Publish / Promotion Operating Surface](./references/opl-publish-promotion-operating-surface.md)
 
-For canonical contract-level compositions across these frozen layers, see [OPL Gateway Example Corpus](opl-gateway-example-corpus.md).
+For canonical contract-level compositions across these frozen layers, see [OPL Gateway Example Corpus](./references/opl-gateway-example-corpus.md).
 
 ## Current Evaluation Criteria
 

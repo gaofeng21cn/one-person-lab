@@ -10,7 +10,7 @@ Its job is to make contract, routing, operating, discoverability, and acceptance
 
 ## Machine-Readable Artifact
 
-- [`.../contracts/opl-gateway/surface-lifecycle-map.json`](.../contracts/opl-gateway/surface-lifecycle-map.json)
+- [`../../contracts/opl-gateway/surface-lifecycle-map.json`](../../contracts/opl-gateway/surface-lifecycle-map.json)
 
 ## Non-Goals
 
@@ -99,7 +99,7 @@ If the surface is `opl_candidate_domain_backlog`, the dependency chain remains b
 - [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.md)
 - [OPL Public Surface Index](../opl-public-surface-index.md)
 - [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.md)
-- [OPL Gateway Contracts](.../contracts/opl-gateway/README.md)
+- [OPL Gateway Contracts](../../contracts/opl-gateway/README.md)
 
 ## Completion Definition
 

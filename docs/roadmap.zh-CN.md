@@ -16,7 +16,7 @@
 - `ppt_deck` 是当前最直接映射到 `Presentation Ops` 的 family
 - `Grant Ops`、`Thesis Ops`、`Review Ops` 仍处于定义阶段
 - `OPL` 顶层的统一目标执行范式是 `Agent-first`，并让 `Auto` 与 `Human-in-the-loop` 运行在同一套基座上；这是一条架构原则，不代表所有 domain surface 已经完成双模式落地
-- 当前本地默认部署形态是 `Codex` 优先的 host-agent runtime，但同一套 substrate 也应兼容未来托管式 Web runtime
+- 当前本地默认部署形态是 `Codex-default host-agent runtime`，但同一套 substrate 也应兼容未来托管式 Web runtime
 
 当前阶段不做的事：
 
@@ -57,18 +57,18 @@
 
 关于 gateway 如何逐步落地成真实入口，详见：
 
-- [OPL Gateway 落地路线](opl-gateway-rollout.zh-CN.md)
+- [OPL Gateway 落地路线](./references/opl-gateway-rollout.zh-CN.md)
 - [OPL Federation Contract](opl-federation-contract.zh-CN.md)
 - [OPL Public Surface Index](opl-public-surface-index.zh-CN.md)
 - [OPL Gateway Contracts](../contracts/opl-gateway/README.zh-CN.md)
 - [OPL Routed Action Gateway](opl-routed-action-gateway.zh-CN.md)
 - [OPL Domain Onboarding Contract](opl-domain-onboarding-contract.zh-CN.md)
-- [OPL Candidate Domain Backlog](opl-candidate-domain-backlog.zh-CN.md)
-- [OPL Gateway Acceptance Test Spec](opl-gateway-acceptance-test-spec.zh-CN.md)
-- [OPL Governance / Audit Operating Surface](opl-governance-audit-operating-surface.zh-CN.md)
-- [OPL Publish / Promotion Operating Surface](opl-publish-promotion-operating-surface.zh-CN.md)
+- [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.zh-CN.md)
+- [OPL Gateway Acceptance Test Spec](./references/opl-gateway-acceptance-test-spec.zh-CN.md)
+- [OPL Governance / Audit Operating Surface](./references/opl-governance-audit-operating-surface.zh-CN.md)
+- [OPL Publish / Promotion Operating Surface](./references/opl-publish-promotion-operating-surface.zh-CN.md)
 
-如果要查看这些已冻结 layers 如何以 contract-level composition 的方式拼起来，可参考 [OPL Gateway Example Corpus](opl-gateway-example-corpus.zh-CN.md)。
+如果要查看这些已冻结 layers 如何以 contract-level composition 的方式拼起来，可参考 [OPL Gateway Example Corpus](./references/opl-gateway-example-corpus.zh-CN.md)。
 
 ## 当前判断标准
 

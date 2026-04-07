@@ -48,6 +48,7 @@ All Layer 3 docs now live under `docs/references/` so the docs root stays readab
 - `references/ecosystem-status-matrix.md` (Chinese-only internal reference)
 - `references/host-agent-runtime-contract.md` (Chinese-only internal reference)
 - `references/development-operating-model.md` (Chinese-only internal reference)
+- `references/omx-stage-gated-longrun-guide.md` (Chinese-only internal reference)
 - `references/runtime-alignment-taskboard.md` (Chinese-only internal reference)
 - `references/opl-surface-lifecycle-map*`
 - `references/opl-surface-authority-matrix*`

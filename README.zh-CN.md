@@ -215,7 +215,8 @@
 `OPL` 顶层默认采用 `Agent-first` 的设计方向，而不是把各个 `Ops` 收缩成固定代码分支驱动的僵硬流水线。
 这并不等于必须直接绑定某一种 LLM API；它的含义是：Agent 应作为默认执行者，负责读状态、调用稳定 gateway、编排步骤、组织中间产物，并把关键执行痕迹写回可审计表面，而代码主要负责提供稳定对象、控制器、工具封装、门控规则与交付表面。
 
-这套 substrate 当前在本地的默认部署形态，是 `Codex` 优先的 host-agent runtime。
+这套 substrate 当前在本地的默认部署形态，是 `Codex-default host-agent runtime`。
+在当前四仓统一的开发控制面上，`Codex Host` 负责规划冻结与真相裁决，`OMX` 负责在这些已冻结边界内做长时执行。
 但“当前宿主形态”并不等于“体系本体”；后续即使走向托管式 Web runtime，也应复用同一套 substrate 与 domain contract。
 
 在这个前提下，每个 workstream 原则上应支持两种共享同一基座的执行模式：
@@ -330,7 +331,9 @@ Human / Agent
 - 继续把 `RedCube AI` 明确为视觉交付的 domain gateway 与 harness
 - 在对应 domain 边界被显式冻结之前，继续让 `Grant Ops`、`Review Ops`、`Thesis Ops` 停留在 admitted gateway surface 之外
 
-当前交付目标是一条本地 CLI 基线：它读取已冻结 contracts、列出 workstream/domain、解释路由边界，但不声称 web/server runtime 行为，也不 mutation domain state。
+当前交付目标是：在当前 `Codex-default host-agent runtime` 之上，用本地 `TypeScript CLI` 作为 `Phase 1` 的入口 transport。
+在开发控制面上，`Codex Host` 负责规划冻结与真相裁决，`OMX` 负责在这些已冻结边界内做长时执行。
+这条基线读取已冻结 contracts、列出 workstream/domain、解释路由边界，但不声称 web/server runtime 行为，也不 mutation domain state。
 
 公开阶段说明与完整文档分层见：
 

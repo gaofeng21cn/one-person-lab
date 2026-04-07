@@ -34,7 +34,7 @@ It does **not** create `G1` registry admission, `G2` discovery readiness, or `G3
 
 ## Machine-Readable Artifact
 
-- [`.../contracts/opl-gateway/candidate-domain-backlog.json`](.../contracts/opl-gateway/candidate-domain-backlog.json)
+- [`../../contracts/opl-gateway/candidate-domain-backlog.json`](../../contracts/opl-gateway/candidate-domain-backlog.json)
 
 This artifact keeps candidate workstreams visible without pretending their domain boundaries already exist.
 
@@ -117,7 +117,7 @@ No backlog entry authorizes a domain handoff, discovery target, routed-action ta
 
 - [OPL Task Map](../task-map.md)
 - [OPL Domain Onboarding Contract](../opl-domain-onboarding-contract.md)
-- [OPL Gateway Contracts](.../contracts/opl-gateway/README.md)
+- [OPL Gateway Contracts](../../contracts/opl-gateway/README.md)
 - [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.md)
 
 ## Completion Definition

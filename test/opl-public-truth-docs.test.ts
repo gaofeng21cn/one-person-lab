@@ -86,6 +86,67 @@ test('tracked admission guards still require explicit execution-model evidence',
   assert.match(candidateBacklogJson, /promote_to_g3_without_explicit_route_evidence/i);
 });
 
+test('gateway and onboarding docs cross-reference the current four-repo alignment companions', () => {
+  const onboardingContract = read('docs/opl-domain-onboarding-contract.md');
+  const onboardingContractZh = read('docs/opl-domain-onboarding-contract.zh-CN.md');
+  const gatewayContracts = read('contracts/opl-gateway/README.md');
+  const gatewayContractsZh = read('contracts/opl-gateway/README.zh-CN.md');
+
+  for (const doc of [onboardingContract, onboardingContractZh]) {
+    assert.match(doc, /references\/host-agent-runtime-contract\.md/);
+    assert.match(doc, /references\/development-operating-model\.md/);
+    assert.match(doc, /Codex Host/i);
+    assert.match(doc, /OMX/);
+  }
+
+  for (const doc of [gatewayContracts, gatewayContractsZh]) {
+    assert.match(doc, /docs\/references\/ecosystem-status-matrix\.md/);
+    assert.match(doc, /docs\/references\/host-agent-runtime-contract\.md/);
+    assert.match(doc, /docs\/references\/development-operating-model\.md/);
+    assert.match(doc, /docs\/references\/runtime-alignment-taskboard\.md/);
+    assert.match(doc, /docs\/references\/omx-stage-gated-longrun-guide\.md/);
+  }
+});
+
+test('phase-1 public gateway docs distinguish CLI transport from the host-agent and control-plane defaults', () => {
+  const readme = read('README.md');
+  const readmeZh = read('README.zh-CN.md');
+  const discoveryGateway = read('docs/opl-read-only-discovery-gateway.md');
+  const discoveryGatewayZh = read('docs/opl-read-only-discovery-gateway.zh-CN.md');
+
+  for (const doc of [readme, readmeZh, discoveryGateway, discoveryGatewayZh]) {
+    assert.match(doc, /Codex-default host-agent runtime/);
+    assert.match(doc, /Codex Host/i);
+    assert.match(doc, /OMX/);
+  }
+
+  assert.match(discoveryGateway, /does not grant route authority/i);
+  assert.match(discoveryGatewayZh, /不授予 route authority/);
+});
+
+test('public surface index and routed-action docs stay aligned with the frozen gateway contracts', () => {
+  const publicSurfaceIndex = read('docs/opl-public-surface-index.md');
+  const publicSurfaceIndexZh = read('docs/opl-public-surface-index.zh-CN.md');
+  const routedActionGateway = read('docs/opl-routed-action-gateway.md');
+  const routedActionGatewayZh = read('docs/opl-routed-action-gateway.zh-CN.md');
+
+  assert.match(publicSurfaceIndex, /### 1\. OPL public-entry surfaces[\s\S]{0,600}Gateway Rollout/);
+  assert.match(publicSurfaceIndexZh, /### 1\. OPL 公开入口界面[\s\S]{0,600}Gateway 落地路线/);
+  assert.match(publicSurfaceIndex, /### 2\. OPL contract surfaces[\s\S]{0,900}Governance \/ Audit Operating Surface/);
+  assert.match(publicSurfaceIndex, /### 2\. OPL contract surfaces[\s\S]{0,900}Publish \/ Promotion Operating Surface/);
+  assert.match(publicSurfaceIndexZh, /### 2\. OPL 合同界面[\s\S]{0,900}Governance \/ Audit Operating Surface/);
+  assert.match(publicSurfaceIndexZh, /### 2\. OPL 合同界面[\s\S]{0,900}Publish \/ Promotion Operating Surface/);
+  assert.doesNotMatch(publicSurfaceIndex, /### 1\. OPL public-entry surfaces[\s\S]{0,400}Unified Harness Engineering Substrate/);
+  assert.doesNotMatch(publicSurfaceIndexZh, /### 1\. OPL 公开入口界面[\s\S]{0,400}Unified Harness Engineering Substrate/);
+
+  for (const doc of [routedActionGateway, routedActionGatewayZh]) {
+    assert.match(doc, /"operation": "route_request"/);
+    assert.match(doc, /"operation": "build_handoff_payload"/);
+    assert.match(doc, /"operation": "audit_routing_decision"/);
+    assert.match(doc, /"route_status": "routed"/);
+  }
+});
+
 test('english readme exposes the opl architecture blueprint svg', () => {
   const readme = read('README.md');
   const assetPath = path.join(repoRoot, 'assets', 'branding', 'opl-architecture-blueprint.svg');

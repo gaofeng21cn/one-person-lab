@@ -16,6 +16,7 @@
 - 这是 `OPL docs` 下的内部参考文档，默认中文维护。
 - 它不替代各仓自己的 `README`、`contracts/project-truth/AGENTS.md`、`CURRENT_PROGRAM.md` 或 domain 内主线文档。
 - 这里的任务优先级只用于“统一对齐”阶段；进入手工测试后，应再按真实暴露的问题调整。
+- 若需要把任务交给 `OMX` 长线执行，执行方式以 `omx-stage-gated-longrun-guide.md` 为准。
 - 当任一仓的 `P0` 或 `P1` 明显完成后，应同步更新本表。
 
 ## 一、当前统一结论

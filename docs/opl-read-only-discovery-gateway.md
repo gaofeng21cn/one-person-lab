@@ -251,7 +251,8 @@ It may not mutate domain truth.
 
 ## Surface Shapes
 
-The current `Phase 1` delivery target is a local `TypeScript CLI`-first surface.
+The current `Phase 1` delivery target uses a local `TypeScript CLI` as the current discovery transport on top of the `Codex-default host-agent runtime`.
+At the development-control layer, `Codex Host` freezes planning and truth while `OMX` handles long-running execution inside those frozen boundaries.
 In that baseline, the discovery contract is exposed through commands such as:
 
 - `list-workstreams`
@@ -265,7 +266,9 @@ In that baseline, the discovery contract is exposed through commands such as:
 
 Docs-site navigation and future MCP discovery tools remain compatible transports if they keep the same contract.
 
-The contract matters more than the transport, but the current implementation target is the local CLI surface rather than a web/server runtime.
+The contract matters more than the transport.
+Conceptually, the next formal entry after a successful discovery remains the domain gateway, but `G2` itself does not grant route authority; it only identifies the correct boundary.
+The current implementation target is therefore the local CLI discovery surface rather than a web/server runtime.
 
 ## Completion Definition
 

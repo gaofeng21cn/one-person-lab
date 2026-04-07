@@ -77,7 +77,7 @@ Human / Agent
 
 当前 materialization 目录：
 
-- [OPL Gateway Contracts](.../contracts/opl-gateway/README.zh-CN.md)
+- [OPL Gateway Contracts](../../contracts/opl-gateway/README.zh-CN.md)
 
 ## Phase G2：只读入口先落地
 
@@ -95,7 +95,7 @@ Human / Agent
 完成信号：
 
 - Agent 可以先问“这类任务该用哪个系统”，并拿到稳定顶层答案
-- 当前 G1 materialization 可在 [OPL Gateway Contracts](.../contracts/opl-gateway/README.zh-CN.md) 找到
+- 当前 G1 materialization 可在 [OPL Gateway Contracts](../../contracts/opl-gateway/README.zh-CN.md) 找到
 
 详细契约：
 

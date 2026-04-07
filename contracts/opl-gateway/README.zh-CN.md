@@ -15,7 +15,18 @@
 ## 当前 Phase 1 对齐
 
 当前 `opl-mainline` 的 `Phase 1` 目标，是一条本地 `TypeScript CLI`-first、read-only gateway 基线；它只读取这个目录中已经冻结的 contract 工件。
+这条 transport 建立在当前 `Codex-default host-agent runtime` 之上；在开发控制面上，`Codex Host` 负责规划冻结与真相裁决，`OMX` 负责在已冻结边界内做长时执行。
 这个交付目标**不会**把当前目录提升成 runtime、routed-action control plane 或 canonical truth store；它只是把已有的顶层 contract language 通过本地 CLI surface 变成可执行入口。
+
+## 当前四仓统一对齐配套文档
+
+下面这些 reference-grade 配套文档用于冻结当前四仓的状态、runtime 口径与开发控制面分工；它们不会把当前目录升级成 runtime owner，也不会形成第二真相源。
+
+- [生态四仓统一状态总表](../../docs/references/ecosystem-status-matrix.md) — 当前四仓阶段/状态总览（中文内部参考）
+- [Codex-default Host-Agent Runtime 合同](../../docs/references/host-agent-runtime-contract.md) — 当前本地默认 runtime 口径（中文内部参考）
+- [四仓统一开发运行合同](../../docs/references/development-operating-model.md) — `Codex Host` / `OMX` 规划冻结与长时执行分工（中文内部参考）
+- [四仓统一对齐检查表与任务板](../../docs/references/runtime-alignment-taskboard.md) — 当前 P0 / P1 对齐检查项（中文内部参考）
+- [OMX 长线执行门控指引](../../docs/references/omx-stage-gated-longrun-guide.md) — 阶段门控长跑规则（中文内部参考）
 
 ## 上位文档
 

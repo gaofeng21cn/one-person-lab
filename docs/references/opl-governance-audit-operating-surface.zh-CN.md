@@ -20,7 +20,7 @@
 - [OPL Routed Action Gateway](../opl-routed-action-gateway.zh-CN.md)
 - [OPL Domain Onboarding Contract](../opl-domain-onboarding-contract.zh-CN.md)
 - [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.zh-CN.md)
-- 当前机器可读合同目录：[`.../contracts/opl-gateway/README.zh-CN.md`](.../contracts/opl-gateway/README.zh-CN.md)
+- 当前机器可读合同目录：[`../../contracts/opl-gateway/README.zh-CN.md`](../../contracts/opl-gateway/README.zh-CN.md)
 
 如果这些层还不稳定，这层 operating surface 就不应被视作已冻结。
 

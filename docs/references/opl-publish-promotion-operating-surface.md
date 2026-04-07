@@ -21,7 +21,7 @@ This operating surface is downstream of the already frozen layers:
 - [OPL Domain Onboarding Contract](../opl-domain-onboarding-contract.md)
 - [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.md)
 - [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.md)
-- the machine-readable contracts in [`.../contracts/opl-gateway/README.md`](.../contracts/opl-gateway/README.md)
+- the machine-readable contracts in [`../../contracts/opl-gateway/README.md`](../../contracts/opl-gateway/README.md)
 
 If those layers are not stable, this operating surface should not be treated as frozen.
 

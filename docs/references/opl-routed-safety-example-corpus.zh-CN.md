@@ -23,17 +23,17 @@
 
 ### 1. Ambiguous task
 
-- 文件：[`.../examples/opl-gateway/ambiguous-task-routing.json`](.../examples/opl-gateway/ambiguous-task-routing.json)
+- 文件：[`../../examples/opl-gateway/ambiguous-task-routing.json`](../../examples/opl-gateway/ambiguous-task-routing.json)
 - 展示当一个请求同时混合 `research_ops` 与 `presentation_ops` 语义、且缺少关键信息时，`OPL` 如何保持 routing unresolved。
 
 ### 2. Unknown domain
 
-- 文件：[`.../examples/opl-gateway/unknown-domain-routing.json`](.../examples/opl-gateway/unknown-domain-routing.json)
+- 文件：[`../../examples/opl-gateway/unknown-domain-routing.json`](../../examples/opl-gateway/unknown-domain-routing.json)
 - 展示当一个 candidate workstream 的顶层语义已经可识别、但当前没有任何已注册 domain gateway 正式拥有它时，`OPL` 如何返回 `unknown_domain`。
 
 ### 3. Refusal
 
-- 文件：[`.../examples/opl-gateway/refusal-routing.json`](.../examples/opl-gateway/refusal-routing.json)
+- 文件：[`../../examples/opl-gateway/refusal-routing.json`](../../examples/opl-gateway/refusal-routing.json)
 - 展示当一个顶层请求试图绕过 domain gateway 边界时，`OPL` 如何直接拒绝。
 
 ## 阅读规则
@@ -47,7 +47,7 @@
 
 - [OPL Routed Action Gateway](../opl-routed-action-gateway.zh-CN.md)
 - [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.zh-CN.md)
-- [OPL Gateway Contracts](.../contracts/opl-gateway/README.zh-CN.md)
+- [OPL Gateway Contracts](../../contracts/opl-gateway/README.zh-CN.md)
 - [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.zh-CN.md)
 
 ## 完成定义

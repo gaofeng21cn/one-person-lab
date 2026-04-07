@@ -10,7 +10,7 @@ Its job is to make routing, execution, truth, review, and publication ownership 
 
 ## Machine-Readable Artifact
 
-- [`.../contracts/opl-gateway/surface-authority-matrix.json`](.../contracts/opl-gateway/surface-authority-matrix.json)
+- [`../../contracts/opl-gateway/surface-authority-matrix.json`](../../contracts/opl-gateway/surface-authority-matrix.json)
 
 ## Non-Goals
 
@@ -100,7 +100,7 @@ If the surface is `opl_candidate_domain_backlog`, every authority field remains 
 - [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.md)
 - [OPL Public Surface Index](../opl-public-surface-index.md)
 - [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.md)
-- [OPL Gateway Contracts](.../contracts/opl-gateway/README.md)
+- [OPL Gateway Contracts](../../contracts/opl-gateway/README.md)
 
 ## Completion Definition
 

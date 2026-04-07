@@ -49,8 +49,8 @@ The acceptance checks below are grounded in:
 - [OPL Task Map](../task-map.md)
 - [OPL Routed-Safety Example Corpus](./opl-routed-safety-example-corpus.md)
 - [OPL Gateway Rollout](./opl-gateway-rollout.md)
-- [OPL Gateway Contracts](.../contracts/opl-gateway/README.md)
-- [`acceptance-matrix.json`](.../contracts/opl-gateway/acceptance-matrix.json)
+- [OPL Gateway Contracts](../../contracts/opl-gateway/README.md)
+- [`acceptance-matrix.json`](../../contracts/opl-gateway/acceptance-matrix.json)
 
 ## Companion Reference Surfaces
 

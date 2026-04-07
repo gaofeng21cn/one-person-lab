@@ -35,6 +35,18 @@ The example record is illustrative only and does not count as a formal domain ad
 The candidate-domain backlog is the upstream blocker surface for under-definition workstreams; it records what is still missing before an onboarding-readiness record can even exist. For the human-readable companion, see [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.md).
 `OPL` does not currently define a separate candidate-domain-definition contract between task topology, backlog, and onboarding; the existing three-layer composition is the current definition path unless a real missing boundary is proven.
 
+## Current Four-Repo Execution Alignment Companions
+
+When a reviewer checks whether an onboarding package really aligns with the current `OPL` execution direction, the current Phase 1 companion references are:
+
+- [Codex-default Host-Agent Runtime Contract](./references/host-agent-runtime-contract.md) — Chinese-only internal reference for the current local default runtime wording
+- [Development Operating Model](./references/development-operating-model.md) — Chinese-only internal reference for the current `Codex Host` / `OMX` planning-vs-longrun split
+- [Runtime Alignment Taskboard](./references/runtime-alignment-taskboard.md) — Chinese-only internal reference for the current P0/P1 gap checklist
+- [OMX Stage-Gated Longrun Guide](./references/omx-stage-gated-longrun-guide.md) — Chinese-only internal reference for stage-gated long-running execution rules
+
+These companions help reviewers evaluate execution-model wording during onboarding.
+They do **not** turn `OPL` into the runtime owner of a candidate domain.
+
 ## Core Promise
 
 A new domain may be officially included in `OPL` only when:

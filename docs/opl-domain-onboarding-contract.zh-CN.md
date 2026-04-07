@@ -35,6 +35,18 @@ Domain onboarding 建立在已冻结的 gateway 层之下：
 Candidate-domain backlog 则是位于它上游的 blocker surface，用来记录：对于仍在定义中的 workstream，在 onboarding-readiness record 出现之前还缺什么材料。它的人类可读配套说明见 [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.zh-CN.md)。
 `OPL` 当前不会在 task topology、backlog 与 onboarding 之间再定义一层独立的 candidate-domain-definition contract；除非先证明这三层之间还存在真实缺口，否则现有三层组合就是当前 definition path。
 
+## 当前四仓执行对齐配套文档
+
+当审查者判断一个 onboarding package 是否真的与当前 `OPL` 的执行方向对齐时，当前 `Phase 1` 应结合下面这些配套参考：
+
+- [Codex-default Host-Agent Runtime 合同](./references/host-agent-runtime-contract.md) — 当前本地默认 runtime 口径（中文内部参考）
+- [四仓统一开发运行合同](./references/development-operating-model.md) — 当前 `Codex Host` / `OMX` 规划冻结与长时执行分工（中文内部参考）
+- [四仓统一对齐检查表与任务板](./references/runtime-alignment-taskboard.md) — 当前 P0 / P1 缺口检查表（中文内部参考）
+- [OMX 长线执行门控指引](./references/omx-stage-gated-longrun-guide.md) — 阶段门控长跑规则（中文内部参考）
+
+这些配套文档只用于帮助审查 execution-model wording。
+它们**不会**把 `OPL` 变成候选 domain 的 runtime owner。
+
 ## 核心承诺
 
 一个新 domain 只有在下面这些条件都满足时，才能被 `OPL` 正式收录：

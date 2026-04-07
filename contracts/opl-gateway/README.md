@@ -15,7 +15,18 @@ For the broader ownership split, see [Shared Foundation](../../docs/shared-found
 ## Current Phase 1 alignment
 
 The current `opl-mainline` Phase 1 target is a local `TypeScript CLI`-first, read-only gateway baseline that reads the frozen contract artifacts in this directory.
+That transport sits on top of the current `Codex-default host-agent runtime`, while `Codex Host` freezes planning/truth and `OMX` handles long-running execution inside those frozen boundaries.
 That delivery target does **not** promote this directory into a runtime, routed-action control plane, or canonical truth store; it only makes the existing top-level contract language executable through a local CLI surface.
+
+## Current four-repo alignment companions
+
+These reference-grade companions freeze the current four-repo status, runtime wording, and development-control split without turning this directory into a runtime owner or second source of truth.
+
+- [Ecosystem Status Matrix](../../docs/references/ecosystem-status-matrix.md) — Chinese-only internal reference for the current four-repo stage/status picture
+- [Codex-default Host-Agent Runtime Contract](../../docs/references/host-agent-runtime-contract.md) — Chinese-only internal reference for the current local default runtime wording
+- [Development Operating Model](../../docs/references/development-operating-model.md) — Chinese-only internal reference for the `Codex Host` / `OMX` planning-vs-longrun split
+- [Runtime Alignment Taskboard](../../docs/references/runtime-alignment-taskboard.md) — Chinese-only internal reference for the current P0/P1 alignment checks
+- [OMX Stage-Gated Longrun Guide](../../docs/references/omx-stage-gated-longrun-guide.md) — Chinese-only internal reference for stage-gated long-running execution rules
 
 ## Governing documents
 

@@ -24,7 +24,7 @@ The examples are illustrative contract compositions only.
 
 ### 1. Research submission flow
 
-- File: [`.../examples/opl-gateway/research-ops-submission.json`](.../examples/opl-gateway/research-ops-submission.json)
+- File: [`../../examples/opl-gateway/research-ops-submission.json`](../../examples/opl-gateway/research-ops-submission.json)
 - Shows how a `research_ops` request composes:
   - `G3` routed action decision
   - `G1/G3` handoff payload
@@ -33,7 +33,7 @@ The examples are illustrative contract compositions only.
 
 ### 2. Presentation publish / promotion flow
 
-- File: [`.../examples/opl-gateway/presentation-ops-publish.json`](.../examples/opl-gateway/presentation-ops-publish.json)
+- File: [`../../examples/opl-gateway/presentation-ops-publish.json`](../../examples/opl-gateway/presentation-ops-publish.json)
 - Shows how a `presentation_ops` request composes:
   - `G3` routed action decision
   - `G1/G3` handoff payload
@@ -55,7 +55,7 @@ If an example references a domain outcome, that outcome remains domain-owned tru
 - [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.md)
 - [OPL Publish / Promotion Operating Surface](./opl-publish-promotion-operating-surface.md)
 - [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.md)
-- [OPL Gateway Contracts](.../contracts/opl-gateway/README.md)
+- [OPL Gateway Contracts](../../contracts/opl-gateway/README.md)
 
 ## Related Companion
 

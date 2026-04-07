@@ -10,7 +10,7 @@ Its job is to make human-review obligations, acceptance coverage, companion revi
 
 ## Machine-Readable Artifact
 
-- [`.../contracts/opl-gateway/surface-review-matrix.json`](.../contracts/opl-gateway/surface-review-matrix.json)
+- [`../../contracts/opl-gateway/surface-review-matrix.json`](../../contracts/opl-gateway/surface-review-matrix.json)
 
 ## Non-Goals
 
@@ -115,7 +115,7 @@ None of these fields transfer domain review or publication authority into `OPL`.
 
 ## Governing Sources
 
-- [OPL Gateway Contracts](.../contracts/opl-gateway/README.md)
+- [OPL Gateway Contracts](../../contracts/opl-gateway/README.md)
 - [OPL Gateway Acceptance Test Spec](./opl-gateway-acceptance-test-spec.md)
 - [OPL Public Surface Index](../opl-public-surface-index.md)
 - [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md)
@@ -128,8 +128,8 @@ None of these fields transfer domain review or publication authority into `OPL`.
 The review matrix is acceptable only when:
 
 - it covers the frozen OPL public, shared-foundation boundary, contract, and supporting surfaces that currently matter for human review and publishability inspection
-- every `required_acceptance_gate` resolves inside `.../contracts/opl-gateway/acceptance-matrix.json`
-- every `required_companion_surface` resolves inside `.../contracts/opl-gateway/public-surface-index.json`
+- every `required_acceptance_gate` resolves inside `../../contracts/opl-gateway/acceptance-matrix.json`
+- every `required_companion_surface` resolves inside `../../contracts/opl-gateway/public-surface-index.json`
 - every `governing_ref` resolves to an existing local artifact
 - it remains derived, reference-only, and non-executing
 - it does not become an approval engine, publish controller, release engine, or second source of truth

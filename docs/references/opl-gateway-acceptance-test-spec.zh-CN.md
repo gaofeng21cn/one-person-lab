@@ -49,8 +49,8 @@
 - [OPL 任务版图](../task-map.zh-CN.md)
 - [OPL Routed-Safety Example Corpus](./opl-routed-safety-example-corpus.zh-CN.md)
 - [OPL Gateway 落地路线](./opl-gateway-rollout.zh-CN.md)
-- [OPL Gateway Contracts](.../contracts/opl-gateway/README.zh-CN.md)
-- [`acceptance-matrix.json`](.../contracts/opl-gateway/acceptance-matrix.json)
+- [OPL Gateway Contracts](../../contracts/opl-gateway/README.zh-CN.md)
+- [`acceptance-matrix.json`](../../contracts/opl-gateway/acceptance-matrix.json)
 
 ## 配套参考 Surfaces
 

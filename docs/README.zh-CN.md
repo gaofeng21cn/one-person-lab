@@ -48,6 +48,7 @@
 - `references/ecosystem-status-matrix.md`
 - `references/host-agent-runtime-contract.md`
 - `references/development-operating-model.md`
+- `references/omx-stage-gated-longrun-guide.md`
 - `references/runtime-alignment-taskboard.md`
 - `references/opl-surface-lifecycle-map*`
 - `references/opl-surface-authority-matrix*`

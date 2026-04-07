@@ -251,7 +251,8 @@
 
 ## Surface 形态
 
-当前 `Phase 1` 的交付目标是一条本地 `TypeScript CLI`-first surface。
+当前 `Phase 1` 的交付目标，是在 `Codex-default host-agent runtime` 之上，用本地 `TypeScript CLI` 作为当前 discovery transport。
+在开发控制面上，`Codex Host` 负责规划冻结与真相裁决，`OMX` 负责在这些已冻结边界内做长时执行。
 在这条基线里，discovery contract 通过下面这些命令暴露：
 
 - `list-workstreams`
@@ -265,7 +266,9 @@
 
 docs-site navigation 与未来的 MCP discovery tools 仍然可以作为兼容 transport，只要共享同一份 contract。
 
-重要的是 contract，不是 transport；但当前实现目标是本地 CLI surface，而不是 web/server runtime。
+重要的是 contract，不是 transport。
+在概念上，discovery 之后的下一层 formal entry 仍然是 domain gateway；但 `G2` 本身**不授予 route authority**，它只负责识别正确边界。
+因此，当前实现目标是本地 CLI discovery surface，而不是 web/server runtime。
 
 ## 完成定义
 

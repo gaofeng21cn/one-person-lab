@@ -77,7 +77,7 @@ Completion signal:
 
 Current materialization target:
 
-- [OPL Gateway Contracts](.../contracts/opl-gateway/README.md)
+- [OPL Gateway Contracts](../../contracts/opl-gateway/README.md)
 
 ## Phase G2: Read-Only Entry Surface
 
@@ -95,7 +95,7 @@ Should support:
 Completion signal:
 
 - an agent can ask “what system should I use for this task?” and receive a stable top-level answer
-- the current G1 materialization is discoverable at [OPL Gateway Contracts](.../contracts/opl-gateway/README.md)
+- the current G1 materialization is discoverable at [OPL Gateway Contracts](../../contracts/opl-gateway/README.md)
 
 Detailed contract:
 
