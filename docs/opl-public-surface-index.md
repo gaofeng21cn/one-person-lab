@@ -10,6 +10,8 @@ Its job is to make the top-level gateway easier to discover across README, roadm
 
 It is not a runtime registry.
 It should be read as a CLI-first, read-only discoverability aid for the current Phase 1 gateway baseline.
+The current stable public target is the `G2` CLI-first / read-only baseline; `G3` remains in `thin handoff planning` pre-freeze only.
+Use the [Ecosystem Status Matrix](./references/ecosystem-status-matrix.md) as the reference-truth anchor for the current four-repo stage and maturity snapshot.
 
 For repository-wide document layering and reference-grade handling, see [Docs Index](./README.md).
 
@@ -30,6 +32,8 @@ This index does not:
 - register harness internals
 - move canonical truth into `OPL`
 - turn domain systems into internal modules
+- make `OPL` a unified runtime owner
+- abstract into a shared execution core
 
 ## Shared-Foundation Ownership Boundary
 
@@ -60,7 +64,7 @@ These surfaces freeze the gateway and federation boundary:
 - [Shared Foundation](./shared-foundation.md)
 - [Shared Foundation Ownership](./shared-foundation-ownership.md)
 - [OPL Read-Only Discovery Gateway](./opl-read-only-discovery-gateway.md)
-- [OPL Routed Action Gateway](./opl-routed-action-gateway.md)
+- [OPL Routed Action Gateway](./opl-routed-action-gateway.md) (currently only a `G3 thin handoff planning / pre-freeze` contract reference)
 - [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.md) + `domain-onboarding-readiness.schema.json`
 - [OPL Governance / Audit Operating Surface](./references/opl-governance-audit-operating-surface.md)
 - [OPL Publish / Promotion Operating Surface](./references/opl-publish-promotion-operating-surface.md)
@@ -119,7 +123,7 @@ If a surface is the acceptance, matrix, or example layer, it remains a discovera
 - [Shared Foundation Ownership](./shared-foundation-ownership.md)
 - [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
 - [OPL Read-Only Discovery Gateway](./opl-read-only-discovery-gateway.md)
-- [OPL Routed Action Gateway](./opl-routed-action-gateway.md)
+- [OPL Routed Action Gateway](./opl-routed-action-gateway.md) (currently only a `G3 thin handoff planning / pre-freeze` contract reference)
 - [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.md)
 - [OPL Governance / Audit Operating Surface](./references/opl-governance-audit-operating-surface.md)
 - [OPL Publish / Promotion Operating Surface](./references/opl-publish-promotion-operating-surface.md)

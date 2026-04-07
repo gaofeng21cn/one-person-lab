@@ -7,6 +7,7 @@
 This document freezes the `G2` target for the `OPL Gateway`.
 
 `G2` is the first phase where `OPL` becomes a real entry surface, but only in a read-only discovery sense.
+As of `2026-04-07`, the public `OPL` mainline remains `Phase 1`, and the repository already has a runnable local `TypeScript CLI`-first / read-only gateway baseline; the current job is to close it into one stable repo-tracked `G2 stable public baseline`.
 
 The goal is not to mutate domain state.
 The goal is to let humans and agents ask the top-level gateway what system they should use, what a workstream means, and how a request maps into a domain.
@@ -52,6 +53,8 @@ It is discovery-only.
 ## Required Read-Only Operations
 
 The minimum discovery gateway should expose these operations:
+
+These operations are both the minimum `G2` contract and the public discovery surface already exposed by the current `Phase 1` CLI baseline.
 
 - `list_workstreams`
 - `get_workstream`
@@ -178,6 +181,58 @@ Suggested response:
 }
 ```
 
+### `list_surfaces`
+
+Purpose:
+
+- return summaries for the currently indexed top-level public surfaces
+
+Suggested response:
+
+```json
+{
+  "version": "g2",
+  "surfaces": [
+    {
+      "surface_id": "opl_public_readme",
+      "category_id": "opl_public_entry",
+      "surface_kind": "readme",
+      "owner_scope": "opl"
+    },
+    {
+      "surface_id": "opl_read_only_discovery_gateway",
+      "category_id": "opl_contract_surface",
+      "surface_kind": "contract_doc",
+      "owner_scope": "opl"
+    }
+  ]
+}
+```
+
+### `get_surface`
+
+Purpose:
+
+- return the full registered meaning of one public surface
+
+Suggested response:
+
+```json
+{
+  "version": "g2",
+  "surface": {
+    "surface_id": "opl_read_only_discovery_gateway",
+    "category_id": "opl_contract_surface",
+    "surface_kind": "contract_doc",
+    "owner_scope": "opl",
+    "routes_to": [
+      "medautoscience_public_gateway",
+      "redcube_public_gateway"
+    ]
+  }
+}
+```
+
 ### `resolve_request_surface`
 
 Purpose:
@@ -202,11 +257,15 @@ Suggested response:
     "domain_id": "redcube",
     "entry_surface": "domain_gateway",
     "recommended_family": "ppt_deck",
-    "confidence": "high",
+    "confidence": "medium",
     "reason": "The goal is a defense-oriented presentation deliverable."
   }
 }
 ```
+
+Note:
+
+- in the current `Phase 1`, `confidence` remains an illustrative field and is not frozen as a separately versioned public contract value
 
 Special rule:
 
@@ -264,10 +323,16 @@ In that baseline, the discovery contract is exposed through commands such as:
 - `resolve-request-surface`
 - `explain-domain-boundary`
 
+Companion transport commands also include:
+
+- `help`
+- `validate-contracts`
+
 Docs-site navigation and future MCP discovery tools remain compatible transports if they keep the same contract.
 
 The contract matters more than the transport.
 Conceptually, the next formal entry after a successful discovery remains the domain gateway, but `G2` itself does not grant route authority; it only identifies the correct boundary.
+The current baseline does not turn `OPL` into a unified runtime owner or pull a shared execution core forward; the CLI only carries read-only discovery here.
 The current implementation target is therefore the local CLI discovery surface rather than a web/server runtime.
 
 ## Completion Definition
@@ -284,3 +349,5 @@ The current implementation target is therefore the local CLI discovery surface r
 - the gateway still answers only with free-form prose
 - domain ownership is still ambiguous
 - the gateway starts mutating domain state
+
+After the `G2` closeout, the next baton is only the `G3 thin handoff planning` pre-freeze rather than a unified routed-action runtime.

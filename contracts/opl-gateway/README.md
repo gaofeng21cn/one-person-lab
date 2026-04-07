@@ -14,13 +14,16 @@ For the broader ownership split, see [Shared Foundation](../../docs/shared-found
 
 ## Current Phase 1 alignment
 
-The current `opl-mainline` Phase 1 target is a local `TypeScript CLI`-first, read-only gateway baseline that reads the frozen contract artifacts in this directory.
+The public `opl-mainline` mainline remains `Phase 1`.
+As of `2026-04-07`, the repository already has a runnable local `TypeScript CLI`-first, read-only gateway baseline that reads the frozen contract artifacts in this directory.
 That transport sits on top of the current `Codex-default host-agent runtime`, while `Codex Host` freezes planning/truth and `OMX` handles long-running execution inside those frozen boundaries.
+The current work is to close the `G2 stable public baseline` into one stable repo-tracked public entry while pre-freezing `G3 thin handoff planning` only.
 That delivery target does **not** promote this directory into a runtime, routed-action control plane, or canonical truth store; it only makes the existing top-level contract language executable through a local CLI surface.
 
 ## Current four-repo alignment companions
 
 These reference-grade companions freeze the current four-repo status, runtime wording, and development-control split without turning this directory into a runtime owner or second source of truth.
+This companion set is anchored to `2026-04-07` and carries the responsibility of writing the latest four-repo status back into the top-level OPL reference-truth surfaces.
 
 - [Ecosystem Status Matrix](../../docs/references/ecosystem-status-matrix.md) — Chinese-only internal reference for the current four-repo stage/status picture
 - [Codex-default Host-Agent Runtime Contract](../../docs/references/host-agent-runtime-contract.md) — Chinese-only internal reference for the current local default runtime wording
@@ -85,7 +88,7 @@ These backlog and mapping surfaces are reference-only. They do not become a work
 - [`domains.json`](./domains.json) — machine-readable domain registry
 - [`routing-vocabulary.json`](./routing-vocabulary.json) — shared routing vocabulary groups plus frozen routing rules
 - [`handoff.schema.json`](./handoff.schema.json) — JSON Schema for the frozen G1 handoff payload
-- [`routed-actions.schema.json`](./routed-actions.schema.json) — JSON Schema for the frozen G3 routed action contract
+- [`routed-actions.schema.json`](./routed-actions.schema.json) — schema dependency for the `G3 thin handoff planning` pre-freeze; it does not mean the current mainline has entered a routed-action runtime
 - [`domain-onboarding-readiness.schema.json`](./domain-onboarding-readiness.schema.json) — JSON Schema for the machine-readable domain onboarding readiness gate
 - [`governance-audit.schema.json`](./governance-audit.schema.json) — JSON Schema for the frozen P5.M1 governance / audit operating contract
 - [`publish-promotion.schema.json`](./publish-promotion.schema.json) — JSON Schema for the frozen P5.M2 publish / promotion operating contract

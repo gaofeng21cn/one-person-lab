@@ -554,8 +554,10 @@ test('resolveRequestSurface routes presentation delivery to redcube', () => {
   );
 
   assert.equal(resolution.status, 'routed');
+  assert.equal(resolution.request_kind, 'discover');
   assert.equal(resolution.workstream_id, 'presentation_ops');
   assert.equal(resolution.domain_id, 'redcube');
+  assert.equal(resolution.entry_surface, 'domain_gateway');
   assert.equal(resolution.recommended_family, 'ppt_deck');
 });
 
@@ -656,8 +658,11 @@ test('explainDomainBoundary explains admitted presentation routing', () => {
     loadGatewayContracts(repoRoot),
   );
 
+  assert.equal(explanation.boundary_status, 'routed');
   assert.equal(explanation.resolved_domain, 'redcube');
   assert.equal(explanation.resolved_workstream_id, 'presentation_ops');
+  assert.equal(explanation.rejected_domains[0]?.domain_id, 'medautoscience');
+  assert.match(explanation.rejected_domains[0]?.reason ?? '', /research evidence/i);
   assert.match(explanation.reason, /visual deliverable/i);
 });
 
@@ -705,6 +710,11 @@ test('help returns command discovery and runnable examples', () => {
   assert.equal(output.help.command, null);
   assert.equal(output.help.usage, 'opl <command> [args]');
   assert.ok(
+    ['list-workstreams', 'get-workstream', 'list-domains', 'get-domain', 'list-surfaces', 'get-surface', 'resolve-request-surface', 'explain-domain-boundary'].every((command) =>
+      output.help.commands.some((entry: { command: string }) => entry.command === command),
+    ),
+  );
+  assert.ok(
     output.help.commands.some((entry: { command: string }) => entry.command === 'validate-contracts'),
   );
   assert.ok(
@@ -712,6 +722,12 @@ test('help returns command discovery and runnable examples', () => {
       (entry: { command: string; examples: string[] }) =>
         entry.command === 'validate-contracts'
         && entry.examples.includes('opl validate-contracts'),
+    ),
+  );
+  assert.ok(output.help.examples.includes('opl get-workstream presentation_ops'));
+  assert.ok(
+    output.help.examples.includes(
+      'opl explain-domain-boundary --intent create --target deliverable --goal "Prepare a xiaohongshu campaign pack." --preferred-family xiaohongshu',
     ),
   );
 });
@@ -736,6 +752,26 @@ test('command --help returns command-scoped usage and examples', () => {
   assert.equal(output.help.command, 'get-domain');
   assert.equal(output.help.usage, 'opl get-domain <domain_id>');
   assert.ok(output.help.examples.includes('opl get-domain redcube'));
+});
+
+test('help <command> returns the same payload as command --help', () => {
+  const viaHelp = runCli(['help', 'get-domain']);
+  const viaFlag = runCli(['get-domain', '--help']);
+
+  assert.deepEqual(viaHelp, viaFlag);
+});
+
+test('explain-domain-boundary --help advertises the xiaohongshu family-boundary example', () => {
+  const output = runCli(['explain-domain-boundary', '--help']);
+
+  assertNoContractsProvenance(output);
+  assert.equal(output.version, 'g2');
+  assert.equal(output.help.command, 'explain-domain-boundary');
+  assert.ok(
+    output.help.examples.includes(
+      'opl explain-domain-boundary --intent create --target deliverable --goal "Prepare a xiaohongshu campaign pack." --preferred-family xiaohongshu',
+    ),
+  );
 });
 
 test('command help literal returns a usage error instead of command-scoped help', () => {

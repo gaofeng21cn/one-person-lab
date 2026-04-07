@@ -31,8 +31,10 @@
       ],
       "contract_assertions": [
         "discovery is read-only",
+        "list_surfaces/get_surface are defined",
         "resolve_request_surface is grounded in frozen G1 registries",
-        "xiaohongshu may resolve to redcube without auto-equating to presentation_ops"
+        "xiaohongshu may resolve to redcube without auto-equating to presentation_ops",
+        "Phase 1 CLI baseline exposes machine-readable help/validation/discovery output"
       ],
       "forbidden_regressions": [
         "discovery mutates workspaces",
@@ -51,7 +53,8 @@
       "contract_assertions": [
         "route_request/build_handoff_payload/audit_routing_decision are defined",
         "refused/unknown_domain/ambiguous_task remain explicit",
-        "handoff targets domain_gateway only"
+        "handoff targets domain_gateway only",
+        "G3 remains thin handoff planning pre-freeze rather than an active mutation runtime"
       ],
       "forbidden_regressions": [
         "direct harness bypass",

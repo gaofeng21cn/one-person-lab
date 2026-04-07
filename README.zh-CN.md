@@ -331,6 +331,9 @@ Human / Agent
 - 继续把 `RedCube AI` 明确为视觉交付的 domain gateway 与 harness
 - 在对应 domain 边界被显式冻结之前，继续让 `Grant Ops`、`Review Ops`、`Thesis Ops` 停留在 admitted gateway surface 之外
 
+截至 `2026-04-07`，当前 repo 已有可运行的本地 `TypeScript CLI`-first / read-only gateway baseline。
+当前这一棒是：把 `G2 stable public baseline` 收口成稳定、单一、repo-tracked 的公开基线，同时仅对 `G3 thin handoff planning` 做预冻结；不进入 mutation entry，不把 `OPL` 提升成统一 runtime owner，也不提前抽共享执行内核。
+
 当前交付目标是：在当前 `Codex-default host-agent runtime` 之上，用本地 `TypeScript CLI` 作为 `Phase 1` 的入口 transport。
 在开发控制面上，`Codex Host` 负责规划冻结与真相裁决，`OMX` 负责在这些已冻结边界内做长时执行。
 这条基线读取已冻结 contracts、列出 workstream/domain、解释路由边界，但不声称 web/server runtime 行为，也不 mutation domain state。

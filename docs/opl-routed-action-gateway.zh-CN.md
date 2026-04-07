@@ -7,6 +7,7 @@
 这份文档冻结 `OPL Gateway` 的 `G3` 合同。
 
 `G3` 是 `OPL` 第一次可以接收顶层 action request，并把它路由到正确 domain gateway 的阶段。
+在当前 `Phase 1`，这份文档只作为 `G3 thin handoff planning / pre-freeze` 的合同参考；它不表示当前仓库已经进入 routed-action implementation。
 
 目标不是做成单体 runtime。
 目标是把顶层路由做成显式、可审计、可安全执行的合同。

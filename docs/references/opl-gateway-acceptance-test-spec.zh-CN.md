@@ -100,6 +100,8 @@
    - `get_workstream`
    - `list_domains`
    - `get_domain`
+   - `list_surfaces`
+   - `get_surface`
    - `resolve_request_surface`
    - `explain_domain_boundary`
 2. `G2` discovery 被显式写成 read-only。
@@ -111,10 +113,12 @@
    - 拥有 canonical runtime truth
 4. `resolve_request_surface` 明确建立在已冻结的 G1 registries 与 routing vocabulary 之上。
 5. `xiaohongshu` 可以解析到 `redcube`，但不能被自动标记成 `presentation_ops`。
+6. 当前 `Phase 1` CLI baseline 以 machine-readable help / validation / discovery output 暴露这些能力，而不是退回 prose-only transport。
 
 ### 验证方式
 
 - 检查 `docs/opl-read-only-discovery-gateway.md` 与 `.zh-CN.md` 中的必需操作和非目标。
+- 检查 `list_surfaces` / `get_surface` 的操作定义与 CLI transport 命令说明。
 - 验证 discovery 文档反向链接到机器可读 G1 工件。
 - 验证 discovery wording 没有把 `G2` 提升成 mutation surface。
 
@@ -123,6 +127,8 @@
 ### 验收标准
 
 `G3` 只有在下面全部成立时才算通过：
+
+当前 `Phase 1` 里，这一 gate 只冻结 contract / planning 边界，不证明 routed-action runtime 已落地。
 
 1. routed action contract 定义了：
    - `route_request`
@@ -136,6 +142,7 @@
 4. routed contract 明确禁止绕过 domain gateway 直接调用 harness。
 5. 机器可读 routed-action schema 与公开 G3 文档保持一致。
 6. routing evidence 保持显式、可审计，而不是藏在 best-effort wording 后面。
+7. 当前文档把 `G3` 限定为 `thin handoff planning / pre-freeze`，而不是当前已激活的 mutation runtime。
 
 ### 验证方式
 

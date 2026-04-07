@@ -5,6 +5,7 @@
 ## 目的
 
 这份文档说明：`OPL Gateway` 应该如何从“文档优先的公开表面”，逐步推进成“真实入口”，同时又不压扁 domain 边界。
+状态锚点：`2026-04-07`。
 
 目标不是单体 runtime。
 目标是一个能把任务路由到独立 domain system 的真实顶层 gateway。
@@ -85,6 +86,11 @@ Human / Agent
 
 - 先把 `OPL Gateway` 做成 discovery 与只读入口，再做 mutation 入口
 
+当前冻结状态：
+
+- `Phase 1` 公开主线下，CLI-first / read-only gateway baseline 已可运行
+- 当前任务是把它收口成稳定、单一、repo-tracked 的 `G2 stable public baseline`
+
 应支持：
 
 - 列出 workstream
@@ -107,6 +113,11 @@ Human / Agent
 目标：
 
 - 让 `OPL Gateway` 能接收顶层任务意图，并把它路由到正确 domain gateway
+
+当前阶段限定：
+
+- 当前仅进入 `thin handoff planning` 预冻结，不进入 routed action implementation
+- 这意味着当前不会新增 mutation entry，也不会把 `OPL` 升格成 runtime owner
 
 应支持：
 
@@ -182,7 +193,7 @@ Human / Agent
 
 - docs site
 - MCP 风格顶层工具面
-- CLI 风格顶层 routing surface
+- CLI 风格顶层 routing surface（这里指更成熟的产品化形态，不等同于当前 `G2` 已存在的 CLI-first read-only baseline）
 
 规则：
 
@@ -207,6 +218,8 @@ Human / Agent
 - 顶层词汇和 domain 词汇冲突
 - 出现重复 truth source
 - 试图绕过 domain gateway
+- 试图把 `OPL` 提前写成统一 runtime owner
+- 在四仓未稳定前提前抽共享执行内核
 
 ## 理想终态
 

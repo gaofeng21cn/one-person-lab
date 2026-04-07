@@ -1,5 +1,7 @@
 # 四仓统一对齐检查表与任务板
 
+状态锚点：`2026-04-07`
+
 ## 文档目的
 
 这份文档把当前已经冻结的统一构架，压缩成一份可执行的对齐任务板。
@@ -22,6 +24,7 @@
 ## 一、当前统一结论
 
 当前最重要的不是继续发明新的上层名词，而是把已经冻结的统一合同真正压到各仓的 repo-durable truth 与 runtime contract 上。
+对 `one-person-lab` 而言，当前 baton 是 `G2 stable public baseline` 收口与 `G3 thin handoff planning` 预冻结，而不是 runtime 扩面。
 
 当前执行顺序已经明确为：
 
@@ -69,12 +72,20 @@
   - `host-agent-runtime-contract.md`
   - `development-operating-model.md`
   - `runtime-alignment-taskboard.md`
+- 同步回写 `OPL` 顶层参考真相面：
+  - `docs/roadmap.zh-CN.md`
+  - `docs/opl-public-surface-index.zh-CN.md`
+  - `contracts/opl-gateway/README.zh-CN.md`
+  - `docs/references/opl-gateway-rollout.zh-CN.md`
 - 保持 `OPL` 不越界为 domain runtime owner
 
 #### P1
 
 - 继续把四仓共同检查项收进 `OPL` 的 onboarding / gateway 说明面
 - 形成稳定的“四仓状态更新节奏”，避免各仓单独漂移
+- `G3` 当前仅做 `thin handoff planning` 预冻结
+- repo-tracked planning brief：`docs/plans/2026-04-07-g3-thin-handoff-planning-brief.md`
+- 当前不推进统一 runtime owner，也不抽共享执行内核
 
 #### P2
 
@@ -85,7 +96,7 @@
 #### 当前判断
 
 - formal entry、结构化 hydration、`quest_id`、watch/status/review/gate 与 `MedDeepScientist` 受控 execution surface 已基本对齐
-- 当前核心问题不在入口层，而在 outer-loop 决策闭环、legacy transport 单一路径化、以及 repo-durable handoff surface
+- 当前核心问题不在入口层，而在 `delivery plane contract map`、outer-loop 决策闭环、legacy transport 单一路径化、以及 repo-durable handoff surface
 
 #### P0
 
@@ -116,15 +127,16 @@
 #### 当前判断
 
 - 结构化 hydration、显式 `run_id`、durable artifact/review/gate surface 已较完整
-- 当前最大问题不是执行内核，而是 authoritative truth surface 与 gate surface 已出现明显漂移
+- 当前 formal entry 真相应固定为 `MCP / CLI`
+- 当前 active mainline 是 `redcube-runtime-program / P0 credible green baseline repair`；`Phase 2 / source intake + shared source truth` 尚未重新开工
+- 当前最大问题不是执行内核，而是 authoritative truth surface、formal entry 口径与 green baseline 已出现明显漂移
 
 #### P0
 
 - 收敛 `CURRENT_PROGRAM`、`LATEST_STATUS`、`OPEN_ISSUES`、测试 gate 与实际实现状态的主线口径
 - 重新建立可信的 green baseline，让 `npm test` 或正式测试 gate 再次可用
-- 冻结 formal entry 真相：
-  - 若当前未实现 `controller`，就把正式入口降为 `MCP / CLI`
-  - 若坚持三入口，就补成真正可验证的 `controller` surface
+- 冻结 formal entry 真相为当前已验证的 `MCP / CLI`
+- 在 `truth drift` 收敛前，不重开 `Phase 2 / source intake + shared source truth`
 
 #### P1
 
@@ -152,12 +164,14 @@
 
 - 当前最像“四仓开发控制面参考实现”的本地形态
 - 但按统一 runtime 合同严格看，仍只达到“最小 baseline 基本成立”，还未进入成熟长跑 runtime 阶段
+- 当前 `grant_run_id` 已进入正式执行句柄合同；下一步重点是 formal-entry / durability current truth 收口
 
 #### P0
 
-- 引入 `grant_run_id` 或等价稳定执行句柄
+- 守住 `grant_run_id` 作为当前正式执行句柄
 - 明确它与 `workspace_id`、`draft_id`、`program_id` 的边界
 - 让 CLI 输出、runtime reports 与未来恢复入口统一携带同一 handle
+- 把 formal entry matrix 与 durability current truth 收口到 repo-tracked surfaces
 
 #### P1
 
@@ -181,7 +195,7 @@
 
 ### 并行推荐
 
-1. `OPL` 继续维护统一合同与任务板
+1. `OPL` 先回写四仓最新状态到顶层参考真相，完成 `G2` 收口并预冻结 `G3 thin handoff planning`
 2. `Med Auto Science` 处理 `P0`
 3. `RedCube AI` 处理 `P0`
 4. `Med Auto Grant` 处理 `P0`，并并行准备 `P1` 的 formal entry freeze
@@ -193,7 +207,7 @@
 1. `RedCube AI P0`
 2. `Med Auto Science P0`
 3. `Med Auto Grant P0`
-4. `OPL` 持续同步口径
+4. `OPL` 回写顶层参考真相并持续同步口径
 
 原因不是 `redcube-ai` 最重要，而是它当前 truth drift 最大；如果不先收敛，后续测试与口径都会继续失真。
 

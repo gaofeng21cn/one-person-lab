@@ -147,6 +147,52 @@ test('public surface index and routed-action docs stay aligned with the frozen g
   }
 });
 
+test('phase-1 gateway docs freeze the runnable G2 baseline separately from G3 thin handoff planning', () => {
+  const roadmap = read('docs/roadmap.md');
+  const roadmapZh = read('docs/roadmap.zh-CN.md');
+  const discovery = read('docs/opl-read-only-discovery-gateway.md');
+  const discoveryZh = read('docs/opl-read-only-discovery-gateway.zh-CN.md');
+  const publicSurfaceIndex = read('docs/opl-public-surface-index.md');
+  const publicSurfaceIndexZh = read('docs/opl-public-surface-index.zh-CN.md');
+  const rollout = read('docs/references/opl-gateway-rollout.md');
+  const rolloutZh = read('docs/references/opl-gateway-rollout.zh-CN.md');
+  const gatewayContracts = read('contracts/opl-gateway/README.md');
+  const gatewayContractsZh = read('contracts/opl-gateway/README.zh-CN.md');
+
+  assert.match(roadmap, /2026-04-07[\s\S]{0,40}public `OPL` mainline remains `Phase 1`/i);
+  assert.match(roadmapZh, /截至 `?2026-04-07`?，`?OPL`? 公开主线仍是 `?Phase 1`?/);
+  assert.match(discovery, /already has a runnable local `TypeScript CLI`-first \/ read-only gateway baseline/i);
+  assert.match(discoveryZh, /已具备可运行的本地 `?TypeScript CLI`?-first \/ read-only gateway baseline/);
+  assert.match(publicSurfaceIndex, /`?G3`? remains in `?thin handoff planning`? pre-freeze/i);
+  assert.match(publicSurfaceIndexZh, /`?G3`? 仅处于 `?thin handoff planning`? 预冻结/);
+  assert.match(rollout, /`?thin handoff planning`? pre-freeze/i);
+  assert.match(rolloutZh, /`?thin handoff planning`? 预冻结/);
+  assert.match(gatewayContracts, /current work is to close the `?G2 stable public baseline`?/i);
+  assert.match(gatewayContractsZh, /当前工作是把 `?G2 stable public baseline`? 收口/);
+});
+
+test('repo-tracked thin handoff planning brief freezes route_request without activating a routed-action runtime', () => {
+  const brief = read('docs/plans/2026-04-07-g3-thin-handoff-planning-brief.md');
+
+  assert.match(brief, /route_request/);
+  assert.match(brief, /build_handoff_payload/);
+  assert.match(brief, /audit_routing_decision/);
+  assert.match(brief, /不得绕过 domain gateway/);
+  assert.match(brief, /不实现真正的 `?G3 mutation\/routed-action runtime`?/);
+});
+
+test('internal reference truth docs carry the 2026-04-07 snapshot and current OPL baton', () => {
+  const matrix = read('docs/references/ecosystem-status-matrix.md');
+  const taskboard = read('docs/references/runtime-alignment-taskboard.md');
+
+  assert.match(matrix, /状态锚点：`?2026-04-07`?/);
+  assert.match(matrix, /G2 stable public baseline/);
+  assert.match(matrix, /G3 thin handoff planning/);
+  assert.match(taskboard, /状态锚点：`?2026-04-07`?/);
+  assert.match(taskboard, /G2 stable public baseline/);
+  assert.match(taskboard, /G3 thin handoff planning/);
+});
+
 test('english readme exposes the opl architecture blueprint svg', () => {
   const readme = read('README.md');
   const assetPath = path.join(repoRoot, 'assets', 'branding', 'opl-architecture-blueprint.svg');

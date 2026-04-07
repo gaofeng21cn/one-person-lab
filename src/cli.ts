@@ -113,8 +113,10 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl help',
         'opl validate-contracts',
         'opl list-workstreams',
+        'opl get-workstream presentation_ops',
         'opl get-domain redcube',
         'opl resolve-request-surface --intent presentation_delivery --target deliverable --goal "Prepare a defense-ready slide deck."',
+        'opl explain-domain-boundary --intent create --target deliverable --goal "Prepare a xiaohongshu campaign pack." --preferred-family xiaohongshu',
       ],
     },
   };
@@ -374,6 +376,7 @@ function main() {
       usage: 'opl explain-domain-boundary --intent <intent> --target <target> --goal <goal> [--preferred-family <family>] [--request-kind <kind>]',
       summary: 'Explain why a request routes to a domain, stays under definition, or stops at a family boundary.',
       examples: [
+        'opl explain-domain-boundary --intent create --target deliverable --goal "Prepare a xiaohongshu campaign pack." --preferred-family xiaohongshu',
         'opl explain-domain-boundary --intent create --target deliverable --goal "Grant proposal reviewer simulation and revision planning."',
       ],
       handler: (args) => {

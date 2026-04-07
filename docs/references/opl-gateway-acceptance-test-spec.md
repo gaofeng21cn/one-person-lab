@@ -100,6 +100,8 @@ These companion surfaces are illustrative or reference-only. The gateway corpus 
    - `get_workstream`
    - `list_domains`
    - `get_domain`
+   - `list_surfaces`
+   - `get_surface`
    - `resolve_request_surface`
    - `explain_domain_boundary`
 2. `G2` discovery is explicitly described as read-only.
@@ -111,10 +113,12 @@ These companion surfaces are illustrative or reference-only. The gateway corpus 
    - own canonical runtime truth
 4. `resolve_request_surface` is grounded on the frozen G1 registries and routing vocabulary.
 5. `xiaohongshu` is allowed to resolve to `redcube` without being automatically labeled as `presentation_ops`.
+6. The current `Phase 1` CLI baseline exposes these capabilities through machine-readable help / validation / discovery output rather than prose-only transport.
 
 ### Verification
 
 - Check `docs/opl-read-only-discovery-gateway.md` and `.zh-CN.md` for the required operations and non-goals.
+- Check the `list_surfaces` / `get_surface` definitions and the documented CLI transport commands.
 - Verify that discovery docs link back to the machine-readable G1 surfaces.
 - Verify that discovery wording never upgrades `G2` into a mutation surface.
 
@@ -123,6 +127,8 @@ These companion surfaces are illustrative or reference-only. The gateway corpus 
 ### Acceptance Criteria
 
 `G3` passes only when all of the following are true:
+
+In the current `Phase 1`, this gate freezes contract / planning boundaries only; it does not prove that a routed-action runtime has already been implemented.
 
 1. The routed action contract defines:
    - `route_request`
@@ -136,6 +142,7 @@ These companion surfaces are illustrative or reference-only. The gateway corpus 
 4. The routed contract explicitly forbids bypassing the domain gateway and directly calling the harness.
 5. The machine-readable routed-action schema stays aligned with the public G3 doc.
 6. Routing evidence remains explicit and auditable rather than hidden behind best-effort wording.
+7. The current docs constrain `G3` to `thin handoff planning / pre-freeze` rather than describing an already active mutation runtime.
 
 ### Verification
 

@@ -14,13 +14,16 @@
 
 ## 当前 Phase 1 对齐
 
-当前 `opl-mainline` 的 `Phase 1` 目标，是一条本地 `TypeScript CLI`-first、read-only gateway 基线；它只读取这个目录中已经冻结的 contract 工件。
+当前 `opl-mainline` 的公开主线仍是 `Phase 1`。
+截至 `2026-04-07`，当前 repo 已有一条可运行的本地 `TypeScript CLI`-first、read-only gateway baseline；它只读取这个目录中已经冻结的 contract 工件。
 这条 transport 建立在当前 `Codex-default host-agent runtime` 之上；在开发控制面上，`Codex Host` 负责规划冻结与真相裁决，`OMX` 负责在已冻结边界内做长时执行。
+当前工作是把 `G2 stable public baseline` 收口成稳定、单一、repo-tracked 的公开基线，同时仅对 `G3 thin handoff planning` 做预冻结。
 这个交付目标**不会**把当前目录提升成 runtime、routed-action control plane 或 canonical truth store；它只是把已有的顶层 contract language 通过本地 CLI surface 变成可执行入口。
 
 ## 当前四仓统一对齐配套文档
 
 下面这些 reference-grade 配套文档用于冻结当前四仓的状态、runtime 口径与开发控制面分工；它们不会把当前目录升级成 runtime owner，也不会形成第二真相源。
+下面这组文档以 `2026-04-07` 为日期锚点，并承担把四仓最新状态回写到 `OPL` 顶层参考真相面的责任。
 
 - [生态四仓统一状态总表](../../docs/references/ecosystem-status-matrix.md) — 当前四仓阶段/状态总览（中文内部参考）
 - [Codex-default Host-Agent Runtime 合同](../../docs/references/host-agent-runtime-contract.md) — 当前本地默认 runtime 口径（中文内部参考）
@@ -83,7 +86,7 @@
 - [`domains.json`](./domains.json) — machine-readable domain registry
 - [`routing-vocabulary.json`](./routing-vocabulary.json) — 共享 routing vocabulary 与已冻结的 routing rules
 - [`handoff.schema.json`](./handoff.schema.json) — 已冻结的 G1 handoff payload JSON Schema
-- [`routed-actions.schema.json`](./routed-actions.schema.json) — 已冻结的 G3 routed action contract JSON Schema
+- [`routed-actions.schema.json`](./routed-actions.schema.json) — `G3 thin handoff planning` 预冻结所依赖的 contract schema；不表示当前主线已进入 routed-action runtime
 - [`domain-onboarding-readiness.schema.json`](./domain-onboarding-readiness.schema.json) — machine-readable domain onboarding readiness gate 的 JSON Schema
 - [`governance-audit.schema.json`](./governance-audit.schema.json) — 已冻结的 P5.M1 governance / audit operating contract JSON Schema
 - [`publish-promotion.schema.json`](./publish-promotion.schema.json) — 已冻结的 P5.M2 publish / promotion operating contract JSON Schema

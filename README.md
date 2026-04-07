@@ -335,6 +335,9 @@ The current phase has four priorities, led by a Phase 1 local `TypeScript CLI` +
 - keep `RedCube AI` explicit as the visual-deliverable domain gateway and harness
 - keep `Grant Ops`, `Review Ops`, and `Thesis Ops` below the admitted gateway surface until their domain boundaries are explicitly frozen
 
+As of `2026-04-07`, the repository already has a runnable local `TypeScript CLI`-first / read-only gateway baseline.
+The current baton is to close the `G2 stable public baseline` into one stable repo-tracked public entry while pre-freezing `G3 thin handoff planning` only; this does not open a mutation entry, turn `OPL` into a unified runtime owner, or pull a shared execution core forward.
+
 The current delivery target uses a local `TypeScript CLI` as the Phase 1 entry transport on top of the current `Codex-default host-agent runtime`.
 At the development-control layer, `Codex Host` freezes planning and truth while `OMX` handles long-running execution inside those frozen boundaries.
 That baseline reads frozen contracts, lists workstreams/domains, and explains routing boundaries without claiming web/server runtime behavior or mutating domain state.

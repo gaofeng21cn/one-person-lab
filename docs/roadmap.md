@@ -7,6 +7,8 @@
 The priority of the current phase is not to launch every workstream at once.
 It is to freeze the `OPL Gateway` language and stabilize the domain federation around the workstreams that are already real.
 
+As of `2026-04-07`, the public `OPL` mainline remains `Phase 1`.
+
 What is already clear today:
 
 - `OPL` is the top-level gateway and federation model for a one-person research lab
@@ -17,6 +19,7 @@ What is already clear today:
 - `Grant Ops`, `Thesis Ops`, and `Review Ops` remain under definition
 - the shared target operating pattern is `Agent-first`, with `Auto` and `Human-in-the-loop` running on one common base; this is an architectural rule, not a claim that every domain surface already has both modes fully implemented
 - the current local default deployment shape is a `Codex`-default host-agent runtime, but the same substrate should remain compatible with future managed web runtimes
+- the current repository already has a runnable local `TypeScript CLI`-first / read-only gateway baseline
 
 What this phase does not do:
 
@@ -24,11 +27,14 @@ What this phase does not do:
 - describe domain projects as if they were the whole of `OPL`
 - describe `OPL` as only a static blueprint
 - claim that planned workstreams are already implemented
+- turn `OPL` into a unified runtime owner
+- pull a shared execution core forward before the domains are ready
 
 ## Next Phase
 
 The next phase should prioritize:
 
+- closing the `G2 stable public baseline` into one stable repo-tracked public entry while pre-freezing `G3 thin handoff planning`
 - freezing the `OPL Gateway -> domain gateway -> domain harness` control language
 - freezing the `Unified Harness Engineering Substrate` language above the current domain repositories without pretending that a shared public code framework already exists
 - keeping `MedAutoScience` explicit as the `Research Ops` domain surface
@@ -69,6 +75,7 @@ For the detailed gateway rollout path, see:
 - [OPL Gateway Acceptance Test Spec](./references/opl-gateway-acceptance-test-spec.md)
 - [OPL Governance / Audit Operating Surface](./references/opl-governance-audit-operating-surface.md)
 - [OPL Publish / Promotion Operating Surface](./references/opl-publish-promotion-operating-surface.md)
+- [Ecosystem Status Matrix](./references/ecosystem-status-matrix.md)
 
 For canonical contract-level compositions across these frozen layers, see [OPL Gateway Example Corpus](./references/opl-gateway-example-corpus.md).
 

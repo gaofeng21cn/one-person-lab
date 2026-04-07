@@ -7,6 +7,8 @@
 当前阶段的重点，不是同时启动所有工作流。
 而是先冻结 `OPL Gateway` 语言，并把已经真实存在的 domain federation 站稳。
 
+截至 `2026-04-07`，`OPL` 公开主线仍是 `Phase 1`。
+
 当前已明确的状态：
 
 - `OPL` 是一人课题组的顶层 Gateway 与 federation model
@@ -17,6 +19,7 @@
 - `Grant Ops`、`Thesis Ops`、`Review Ops` 仍处于定义阶段
 - `OPL` 顶层的统一目标执行范式是 `Agent-first`，并让 `Auto` 与 `Human-in-the-loop` 运行在同一套基座上；这是一条架构原则，不代表所有 domain surface 已经完成双模式落地
 - 当前本地默认部署形态是 `Codex-default host-agent runtime`，但同一套 substrate 也应兼容未来托管式 Web runtime
+- 当前 repo 已有可运行的本地 `TypeScript CLI`-first / read-only gateway baseline
 
 当前阶段不做的事：
 
@@ -24,11 +27,14 @@
 - 把 domain 项目写成整个 `OPL`
 - 把 `OPL` 继续只写成静态蓝图
 - 把 planned 的工作流包装成已经实现
+- 把 `OPL` 写成统一 runtime owner
+- 提前抽共享执行内核
 
 ## 下一阶段
 
 下一阶段应优先做这些事：
 
+- 把 `G2 stable public baseline` 收口成稳定、单一、repo-tracked 的公开基线，并仅对 `G3 thin handoff planning` 做预冻结
 - 冻结 `OPL Gateway -> domain gateway -> domain harness` 这条控制语言
 - 在当前 domain 仓库之上冻结 `Unified Harness Engineering Substrate` 这套共享语言，但不提前把它写成已经独立成型的公共代码框架
 - 保持 `MedAutoScience` 明确为 `Research Ops` 的 domain surface
@@ -67,6 +73,7 @@
 - [OPL Gateway Acceptance Test Spec](./references/opl-gateway-acceptance-test-spec.zh-CN.md)
 - [OPL Governance / Audit Operating Surface](./references/opl-governance-audit-operating-surface.zh-CN.md)
 - [OPL Publish / Promotion Operating Surface](./references/opl-publish-promotion-operating-surface.zh-CN.md)
+- [生态四仓统一状态总表](./references/ecosystem-status-matrix.md)
 
 如果要查看这些已冻结 layers 如何以 contract-level composition 的方式拼起来，可参考 [OPL Gateway Example Corpus](./references/opl-gateway-example-corpus.zh-CN.md)。
 

@@ -5,6 +5,7 @@
 ## Purpose
 
 This document describes how the `OPL Gateway` should move from a documentation-first public surface into a real entry surface without collapsing domain boundaries.
+Snapshot anchor: `2026-04-07`.
 
 The target is not a monolithic runtime.
 The target is a real top-level gateway that can route work into independent domain systems.
@@ -85,6 +86,11 @@ Goal:
 
 - make `OPL Gateway` real as a discovery and read-only entry surface before it becomes a mutation surface
 
+Current frozen state:
+
+- under the `Phase 1` public mainline, the CLI-first / read-only gateway baseline is already runnable
+- the current task is to close that baseline into one stable repo-tracked `G2 stable public baseline`
+
 Should support:
 
 - listing workstreams
@@ -107,6 +113,11 @@ Detailed contract:
 Goal:
 
 - let the `OPL Gateway` accept top-level task intents and route them into the right domain gateway
+
+Current phase constraint:
+
+- the repository is only entering the `thin handoff planning` pre-freeze and is not entering routed-action implementation
+- that means no mutation entry is added here, and `OPL` does not become a runtime owner
 
 Should support:
 
@@ -182,7 +193,7 @@ Possible surfaces:
 
 - docs site
 - MCP-style top-level tool surface
-- CLI-style top-level routing surface
+- CLI-style top-level routing surface (this refers to a more productized future shape, not to the current `G2` CLI-first read-only baseline)
 
 Rule:
 
@@ -207,6 +218,8 @@ Do not advance the rollout if any of these are still unresolved:
 - top-level vocabulary that conflicts with domain vocabulary
 - duplicate truth sources
 - attempts to bypass domain gateways
+- attempts to describe `OPL` too early as a unified runtime owner
+- attempts to pull a shared execution core forward before the four-repo baseline is stable
 
 ## Ideal End State
 

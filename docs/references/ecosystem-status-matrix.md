@@ -1,5 +1,7 @@
 # OPL 生态四仓统一状态总表
 
+状态锚点：`2026-04-07`
+
 ## 文档目的
 
 这份文档用于给后续开发提供一个统一、可复查的当前状态视图。
@@ -15,6 +17,13 @@
 - 它属于 `OPL docs` 的参考级配套文档，不进入默认公开主线。
 - 这里的判断必须尽量引用四仓已冻结的真相文档，而不是基于印象口述。
 - 当四仓阶段发生明显变化时，应同步更新本表。
+
+## 快照依据
+
+- `one-person-lab`：`README*`、`contracts/project-truth/AGENTS.md`、`docs/roadmap*`、`contracts/opl-gateway/README*`
+- `med-autoscience`：`README*`、`contracts/project-truth/AGENTS.md`、`.omx/context/CURRENT_PROGRAM.md`
+- `redcube-ai`：`README*`、`contracts/project-truth/AGENTS.md`、`.omx/context/CURRENT_PROGRAM.md`
+- `med-autogrant`：`README*`、`contracts/project-truth/AGENTS.md`、`.omx/context/CURRENT_PROGRAM.md`
 
 ## 一、统一框架的当前落地层级
 
@@ -63,10 +72,10 @@
 
 | 仓库 | 角色 | 当前阶段 | 当前成熟度判断 | 当前重点 |
 | --- | --- | --- | --- | --- |
-| `one-person-lab` | 顶层 `Gateway / Federation` | `Phase 1` 本地只读 gateway 基线 | 顶层合同稳定，runtime owner 尚未开始 | 冻结顶层语义、保持只读入口、管理 docs/control-plane |
-| `med-autoscience` | 医学 `Research Ops` `Domain Harness OS` | `Phase 1 / Harness Authority Convergence` | 业务最成熟，架构收紧仍在继续 | 收紧 authority boundary、input contract、delivery plane |
-| `redcube-ai` | 视觉交付 `Domain Harness OS` | `P19/P20` 已完成，当前进入 `P21` 前后段 | 两条交付主线已稳定可用，评估/运营面未收口 | 稳定 `ppt_deck`、`xiaohongshu`，补 runtime evaluation、poster 合同 |
-| `med-autogrant` | 医学 `Grant Ops` `Domain Harness OS` 方向 | `P1 / Reality Convergence And NSFC Baseline Freeze`，活跃子线 `P1.B` | 方向清楚但仍早期 | 守住 baseline、继续 runtime hardening，不抢前两仓的产品打磨优先级 |
+| `one-person-lab` | 顶层 `Gateway / Federation` | `Phase 1 / G2 read-only gateway baseline` | 顶层合同稳定，已具 runnable CLI-first baseline，但仍停留在只读 / planning 层 | 收口 `G2 stable public baseline`、预冻结 `G3 thin handoff planning`、回写四仓最新状态到 OPL 顶层参考真相 |
+| `med-autoscience` | 医学 `Research Ops` `Domain Harness OS` | `research-foundry-medical-mainline / harness authority convergence` | 业务最成熟，当前从 `charter-parameterized input contract` 收口转入 `delivery plane contract map` | 继续收紧 `MedAutoScience -> MedDeepScientist` runtime protocol、delivery plane contract 与 outer-loop durable decision loop |
+| `redcube-ai` | 视觉交付 `Domain Harness OS` | `redcube-runtime-program / P0 credible green baseline repair` | `ppt_deck` / `xiaohongshu` 主线可用，但 active mainline truth 与 formal entry 仍在收口 | 固定 `MCP / CLI` formal entry 真相、修复 green baseline、暂不重开 `Phase 2 / source intake + shared source truth` |
+| `med-autogrant` | 医学 `Grant Ops` `Domain Harness OS` 方向 | `med-autogrant-mainline / P1.B runtime baseline hardening` | 已有最小 runtime baseline，但仍是 baseline freeze / runtime hardening | 守住 `grant_run_id` / formal-entry / durability current truth，不抢前两仓的产品打磨优先级 |
 
 ## 三、各仓库的统一判断
 
@@ -80,7 +89,10 @@
 
 #### 当前阶段
 
-- `Phase 1`：本地 `TypeScript CLI + read-only gateway baseline`
+- `Phase 1`：当前公开主线对应 `G2` read-only gateway baseline 的阶段
+- 当前 repo 已有可运行的本地 `TypeScript CLI + read-only gateway baseline`
+- 当前 baton：`G2 stable public baseline` 收口 + `G3 thin handoff planning` 预冻结 + 四仓状态回写到顶层参考真相
+- 对应 planning brief：`docs/plans/2026-04-07-g3-thin-handoff-planning-brief.md`
 
 #### 现在已经有的东西
 
@@ -106,7 +118,8 @@
 
 - 主线：`research-foundry-medical-mainline`
 - 当前 phase：`harness authority convergence`
-- 当前唯一活跃子线：`charter-parameterized input contract`
+- 已完成收口：`charter-parameterized input contract`
+- 当前切换重点：`delivery plane contract map`
 
 #### 冻结状态
 
@@ -116,8 +129,8 @@
 
 #### 当前最自然的后续顺序
 
-1. 收紧 `study_charter -> charter-parameterized input contract`
-2. 收紧 `delivery plane contract map`
+1. 收紧 `delivery plane contract map`
+2. 收紧 `outer-loop wakeup and decision loop`
 3. 再做 `real-study relaunch`
 
 #### 当前最适合做的产品动作
@@ -137,8 +150,9 @@
 
 - `P19 / 创作主导权修复`：已完成
 - `P20 / 第三类交付物接入证明`：已完成
-- 当前后续主线：`P21 / 运行评估与运营面`
-- 后续还有：海报能力完善、`P22 / OPL 联动`
+- `P21 / 运行评估与运营面`：已有 closeout artifact，可视为已完成范围，但不是当前 active mainline
+- 当前 active mainline：`redcube-runtime-program / P0 credible green baseline repair`
+- `Phase 2 / source intake + shared source truth`：尚未重新开工
 
 #### 当前稳定能力
 
@@ -148,9 +162,9 @@
 
 #### 当前最适合做的产品动作
 
-- 优先对 `ppt_deck` 与 `xiaohongshu` 做一轮正式手工测试
-- `poster_onepager` 作为次优先测试对象
-- 把测试发现的问题用于补运行评估面、审阅面与导出收口，而不是先抽共享框架
+- 先收敛 formal entry 真相为 `MCP / CLI`
+- 先重新建立可信 green baseline
+- 在上述两项通过后，再安排 `ppt_deck` 与 `xiaohongshu` 的正式手工测试
 
 ### 4. Med Auto Grant
 
@@ -169,12 +183,13 @@
 - `NSFCWorkspace` schema 校验
 - summarize / next-step / critique-summary / stage-route-report
 - 基本 route / gate 一致性检查
+- `grant_run_id` 已进入 CLI/runtime formal execution handle 合同
 
 #### 当前不应误判的点
 
 - 控制面已经可用，不等于产品 runtime 已成熟
 - 当前不应进入“效果打磨优先”的产品阶段
-- 当前重点仍是 baseline hardening
+- 当前重点仍是 baseline hardening 与 formal-entry / durability current truth 收口
 
 ## 四、对“先继续收紧，还是先开始测试”的统一解释
 
@@ -220,7 +235,7 @@
 
 #### 对 `OPL`
 
-继续维持为顶层控制语言、合同与只读入口，不扩成 runtime owner。
+继续维持为顶层控制语言、合同与只读入口；先完成 `G2 stable public baseline` 收口、`G3 thin handoff planning` 预冻结与四仓状态回写，不扩成 runtime owner。
 
 ## 五、进入第 3 步前的建议门槛
 
@@ -235,7 +250,7 @@
 
 ## 六、当前建议的实际顺序
 
-1. `OPL` 保持顶层控制语言 + 合同 + 只读入口，不扩 runtime owner
+1. `OPL` 先完成 `G2` 收口、预冻结 `G3 thin handoff planning`，并把四仓最新状态回写到顶层参考真相
 2. 三个业务仓先完成本轮最小统一对齐，优先处理 formal entry、显式执行句柄、durable truth 与 handoff surface 的缺口
 3. `Med Auto Science` 与 `RedCube AI` 在 `P0` 对齐完成后进入“手工测试驱动的稳定化收口”
 4. `Med Auto Grant` 继续守住 `P1.B / runtime baseline hardening`
@@ -247,6 +262,9 @@
 后续每次阶段明显变化时，优先更新：
 
 - 本文档
+- `docs/roadmap*`
+- `docs/opl-public-surface-index*`
+- `contracts/opl-gateway/README*`
 - 各仓自己的 `README*`
 - 各仓自己的 `contracts/project-truth/AGENTS.md`
 - 若存在 active program，则同步 `CURRENT_PROGRAM.md`

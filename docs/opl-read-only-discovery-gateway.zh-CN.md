@@ -7,6 +7,7 @@
 这份文档冻结 `OPL Gateway` 的 `G2` 目标。
 
 `G2` 是 `OPL` 第一次成为真实入口表面，但仅限于只读 discovery。
+截至 `2026-04-07`，`OPL` 公开主线仍是 `Phase 1`，且当前仓库已具备可运行的本地 `TypeScript CLI`-first / read-only gateway baseline；当前重点是把它收口成稳定、单一、repo-tracked 的 `G2 stable public baseline`。
 
 目标不是 mutation domain state。
 目标是让人类和 Agent 能先问顶层 gateway：我该用哪个系统、这个 workstream 是什么、这个请求应该落到哪个 domain。
@@ -52,6 +53,8 @@
 ## 必需的只读操作
 
 最小 discovery gateway 应暴露这些操作：
+
+这些操作既是 `G2` 的最小合同，也是当前 `Phase 1` CLI baseline 已暴露的公开 discovery surface。
 
 - `list_workstreams`
 - `get_workstream`
@@ -178,6 +181,58 @@
 }
 ```
 
+### `list_surfaces`
+
+目的：
+
+- 返回当前已索引的顶层 public surface 摘要
+
+建议响应：
+
+```json
+{
+  "version": "g2",
+  "surfaces": [
+    {
+      "surface_id": "opl_public_readme",
+      "category_id": "opl_public_entry",
+      "surface_kind": "readme",
+      "owner_scope": "opl"
+    },
+    {
+      "surface_id": "opl_read_only_discovery_gateway",
+      "category_id": "opl_contract_surface",
+      "surface_kind": "contract_doc",
+      "owner_scope": "opl"
+    }
+  ]
+}
+```
+
+### `get_surface`
+
+目的：
+
+- 返回某一个 public surface 的完整注册含义
+
+建议响应：
+
+```json
+{
+  "version": "g2",
+  "surface": {
+    "surface_id": "opl_read_only_discovery_gateway",
+    "category_id": "opl_contract_surface",
+    "surface_kind": "contract_doc",
+    "owner_scope": "opl",
+    "routes_to": [
+      "medautoscience_public_gateway",
+      "redcube_public_gateway"
+    ]
+  }
+}
+```
+
 ### `resolve_request_surface`
 
 目的：
@@ -202,11 +257,15 @@
     "domain_id": "redcube",
     "entry_surface": "domain_gateway",
     "recommended_family": "ppt_deck",
-    "confidence": "high",
+    "confidence": "medium",
     "reason": "The goal is a defense-oriented presentation deliverable."
   }
 }
 ```
+
+说明：
+
+- `confidence` 在当前 `Phase 1` 只作为示意性字段，不单独冻结成需要逐字逐值匹配的公开契约
 
 特殊规则：
 
@@ -264,10 +323,16 @@
 - `resolve-request-surface`
 - `explain-domain-boundary`
 
+配套 transport 命令还包括：
+
+- `help`
+- `validate-contracts`
+
 docs-site navigation 与未来的 MCP discovery tools 仍然可以作为兼容 transport，只要共享同一份 contract。
 
 重要的是 contract，不是 transport。
 在概念上，discovery 之后的下一层 formal entry 仍然是 domain gateway；但 `G2` 本身**不授予 route authority**，它只负责识别正确边界。
+当前不把 `OPL` 提升成统一 runtime owner，也不抽共享执行内核；CLI 在这里只承载只读 discovery。
 因此，当前实现目标是本地 CLI discovery surface，而不是 web/server runtime。
 
 ## 完成定义
@@ -284,3 +349,5 @@ docs-site navigation 与未来的 MCP discovery tools 仍然可以作为兼容 t
 - gateway 仍只会返回自由 prose
 - domain ownership 仍模糊
 - gateway 开始 mutation domain state
+
+`G2` 收口之后，下一棒仅进入 `G3 thin handoff planning` 预冻结，而不是进入统一 routed-action runtime。
