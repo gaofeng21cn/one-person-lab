@@ -12,7 +12,7 @@ As of `2026-04-07`, the public `OPL` mainline remains `Phase 1`.
 What is already clear today:
 
 - `OPL` is the top-level gateway and federation model for a one-person research lab
-- the shared Harness Engineering base under `OPL` is now described as the `Unified Harness Engineering Substrate`
+- the shared Harness Engineering base under `OPL` is now described as the `Unified Harness Engineering Substrate`, which remains a shared architectural substrate rather than a shared public code framework
 - [`MedAutoScience`](https://github.com/gaofeng21cn/med-autoscience) is the active `Research Ops` domain gateway and harness
 - [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) is the emerging visual-deliverable domain gateway and harness
 - `ppt_deck` is the family that currently maps most directly to `Presentation Ops`
@@ -34,7 +34,7 @@ What this phase does not do:
 
 The next phase should prioritize:
 
-- closing the `G2 stable public baseline` into one stable repo-tracked public entry while pre-freezing `G3 thin handoff planning`
+- completing the current `Phase 1 / G2 release-closeout` by closing the `G2 stable public baseline` into one stable repo-tracked public entry while pre-freezing `G3 thin handoff planning`
 - freezing the `OPL Gateway -> domain gateway -> domain harness` control language
 - freezing the `Unified Harness Engineering Substrate` language above the current domain repositories without pretending that a shared public code framework already exists
 - keeping `MedAutoScience` explicit as the `Research Ops` domain surface

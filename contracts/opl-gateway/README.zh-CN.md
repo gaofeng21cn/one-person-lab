@@ -10,6 +10,7 @@
 这些 contract 与 reference 工件只位于 shared-foundation 的 materialization 层。
 `OPL` 在这里拥有的是顶层 contract 语言、索引方式与跨域复用规则；一旦 routed request 跨过 gateway 边界，runtime execution、canonical truth、review truth 与 publication truth 仍然由各 domain gateway / harness 持有。
 因此，这个目录只是在做 discoverability / reviewability / acceptance alignment 所需的 gateway surface materialization，而不会变成新的 control plane 或共享 truth store。
+围绕这一层命名的 `Unified Harness Engineering Substrate` 仍然只是共享架构基座，不是共享代码框架。
 更完整的 ownership split 可参考[共享基础结构](../../docs/shared-foundation.zh-CN.md)与[共享基础结构归属](../../docs/shared-foundation-ownership.zh-CN.md)。
 
 ## 当前 Phase 1 对齐
@@ -17,13 +18,13 @@
 当前 `opl-mainline` 的公开主线仍是 `Phase 1`。
 截至 `2026-04-07`，当前 repo 已有一条可运行的本地 `TypeScript CLI`-first、read-only gateway baseline；它只读取这个目录中已经冻结的 contract 工件。
 这条 transport 建立在当前 `Codex-default host-agent runtime` 之上；在开发控制面上，`Codex Host` 负责规划冻结与真相裁决，`OMX` 负责在已冻结边界内做长时执行。
-当前工作是把 `G2 stable public baseline` 收口成稳定、单一、repo-tracked 的公开基线，同时仅对 `G3 thin handoff planning` 做预冻结。
+当前工作是 `Phase 1 / G2 release-closeout`：把 `G2 stable public baseline` 收口成稳定、单一、repo-tracked 的公开基线，同时仅对 `G3 thin handoff planning` 做预冻结。
 这个交付目标**不会**把当前目录提升成 runtime、routed-action control plane 或 canonical truth store；它只是把已有的顶层 contract language 通过本地 CLI surface 变成可执行入口。
 
 ## 当前四仓统一对齐配套文档
 
 下面这些 reference-grade 配套文档用于冻结当前四仓的状态、runtime 口径与开发控制面分工；它们不会把当前目录升级成 runtime owner，也不会形成第二真相源。
-下面这组文档以 `2026-04-07` 为日期锚点，并承担把四仓最新状态回写到 `OPL` 顶层参考真相面的责任。
+下面这组文档以 `2026-04-07` 为日期锚点，并承担把四仓最新状态回写到 `OPL` 顶层参考同步面的责任；这些参考面不会反向抬升为公开主线真相。
 
 - [生态四仓统一状态总表](../../docs/references/ecosystem-status-matrix.md) — 当前四仓阶段/状态总览（中文内部参考）
 - [Codex-default Host-Agent Runtime 合同](../../docs/references/host-agent-runtime-contract.md) — 当前本地默认 runtime 口径（中文内部参考）

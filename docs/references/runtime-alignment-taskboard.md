@@ -17,6 +17,7 @@
 
 - 这是 `OPL docs` 下的内部参考文档，默认中文维护。
 - 它不替代各仓自己的 `README`、`contracts/project-truth/AGENTS.md`、`CURRENT_PROGRAM.md` 或 domain 内主线文档。
+- 它只作为内部参考同步面，不反向抬升为 `OPL` 公开主线真相。
 - 这里的任务优先级只用于“统一对齐”阶段；进入手工测试后，应再按真实暴露的问题调整。
 - 若需要把任务交给 `OMX` 长线执行，执行方式以 `omx-stage-gated-longrun-guide.md` 为准。
 - 当任一仓的 `P0` 或 `P1` 明显完成后，应同步更新本表。
@@ -67,12 +68,12 @@
   - `Unified Harness Engineering Substrate`
   - `Codex-default host-agent runtime`
   - `Codex Host / OMX` 开发控制面
-- 维持并更新四份内部参考真相：
+- 维持并更新四份内部参考同步面：
   - `ecosystem-status-matrix.md`
   - `host-agent-runtime-contract.md`
   - `development-operating-model.md`
   - `runtime-alignment-taskboard.md`
-- 同步回写 `OPL` 顶层参考真相面：
+- 同步回写 `OPL` 顶层参考同步面：
   - `docs/roadmap.zh-CN.md`
   - `docs/opl-public-surface-index.zh-CN.md`
   - `contracts/opl-gateway/README.zh-CN.md`
@@ -85,6 +86,7 @@
 - 形成稳定的“四仓状态更新节奏”，避免各仓单独漂移
 - `G3` 当前仅做 `thin handoff planning` 预冻结
 - repo-tracked planning brief：`docs/plans/2026-04-07-g3-thin-handoff-planning-brief.md`
+- repo-tracked release-closeout note：`docs/plans/2026-04-07-g2-release-closeout-note.md`
 - 当前不推进统一 runtime owner，也不抽共享执行内核
 
 #### P2
@@ -195,7 +197,7 @@
 
 ### 并行推荐
 
-1. `OPL` 先回写四仓最新状态到顶层参考真相，完成 `G2` 收口并预冻结 `G3 thin handoff planning`
+1. `OPL` 先回写四仓最新状态到顶层参考同步面，完成 `G2` 收口并预冻结 `G3 thin handoff planning`
 2. `Med Auto Science` 处理 `P0`
 3. `RedCube AI` 处理 `P0`
 4. `Med Auto Grant` 处理 `P0`，并并行准备 `P1` 的 formal entry freeze
@@ -207,7 +209,7 @@
 1. `RedCube AI P0`
 2. `Med Auto Science P0`
 3. `Med Auto Grant P0`
-4. `OPL` 回写顶层参考真相并持续同步口径
+4. `OPL` 回写顶层参考同步面并持续同步口径
 
 原因不是 `redcube-ai` 最重要，而是它当前 truth drift 最大；如果不先收敛，后续测试与口径都会继续失真。
 

@@ -40,6 +40,7 @@ This rollout is not for:
 - keep domain gateways independently usable
 - move top-level semantics upward before moving execution upward
 - prefer routing contracts before shared runtime code
+- treat the `Unified Harness Engineering Substrate` as shared architectural substrate language rather than as an already-extracted shared public code framework
 - keep shared truth indexes above domains, but keep canonical truth inside domains
 - add a real top-level gateway only when it reduces duplication without flattening domain boundaries
 
@@ -89,7 +90,7 @@ Goal:
 Current frozen state:
 
 - under the `Phase 1` public mainline, the CLI-first / read-only gateway baseline is already runnable
-- the current task is to close that baseline into one stable repo-tracked `G2 stable public baseline`
+- the current `Phase 1 / G2 release-closeout` is to close that baseline into one stable repo-tracked `G2 stable public baseline`
 
 Should support:
 
@@ -118,6 +119,7 @@ Current phase constraint:
 
 - the repository is only entering the `thin handoff planning` pre-freeze and is not entering routed-action implementation
 - that means no mutation entry is added here, and `OPL` does not become a runtime owner
+- in other words, `G3` remains inactive beyond the planning freeze
 
 Should support:
 

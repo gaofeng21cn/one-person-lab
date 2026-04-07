@@ -40,6 +40,7 @@ Human / Agent
 - 保持 domain gateway 独立可用
 - 先上收顶层语义，再上收执行入口
 - 先冻结 routing contract，再考虑共享 runtime 代码
+- 把 `Unified Harness Engineering Substrate` 理解为共享架构基座语言，而不是已经抽出的共享代码框架
 - 共享 index 可以上收，canonical truth 仍留在各自 domain
 - 只有当顶层 gateway 真正减少重复而不压扁边界时，才让它继续变厚
 
@@ -89,7 +90,7 @@ Human / Agent
 当前冻结状态：
 
 - `Phase 1` 公开主线下，CLI-first / read-only gateway baseline 已可运行
-- 当前任务是把它收口成稳定、单一、repo-tracked 的 `G2 stable public baseline`
+- 当前这一轮 `Phase 1 / G2 release-closeout` 的任务，是把它收口成稳定、单一、repo-tracked 的 `G2 stable public baseline`
 
 应支持：
 
@@ -118,6 +119,7 @@ Human / Agent
 
 - 当前仅进入 `thin handoff planning` 预冻结，不进入 routed action implementation
 - 这意味着当前不会新增 mutation entry，也不会把 `OPL` 升格成 runtime owner
+- 换句话说，`G3` 在 planning freeze 之外仍未激活
 
 应支持：
 

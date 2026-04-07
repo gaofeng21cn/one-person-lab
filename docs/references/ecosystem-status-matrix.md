@@ -15,6 +15,7 @@
 
 - 这是一份仓库跟踪的内部参考文档，默认中文维护。
 - 它属于 `OPL docs` 的参考级配套文档，不进入默认公开主线。
+- 它只作为内部参考同步面，不反向抬升为 `OPL` 公开主线真相。
 - 这里的判断必须尽量引用四仓已冻结的真相文档，而不是基于印象口述。
 - 当四仓阶段发生明显变化时，应同步更新本表。
 
@@ -72,7 +73,7 @@
 
 | 仓库 | 角色 | 当前阶段 | 当前成熟度判断 | 当前重点 |
 | --- | --- | --- | --- | --- |
-| `one-person-lab` | 顶层 `Gateway / Federation` | `Phase 1 / G2 read-only gateway baseline` | 顶层合同稳定，已具 runnable CLI-first baseline，但仍停留在只读 / planning 层 | 收口 `G2 stable public baseline`、预冻结 `G3 thin handoff planning`、回写四仓最新状态到 OPL 顶层参考真相 |
+| `one-person-lab` | 顶层 `Gateway / Federation` | `Phase 1 / G2 read-only gateway baseline` | 顶层合同稳定，已具 runnable CLI-first baseline，但仍停留在只读 / planning 层 | 收口 `G2 stable public baseline`、预冻结 `G3 thin handoff planning`、回写四仓最新状态到 OPL 顶层参考同步面 |
 | `med-autoscience` | 医学 `Research Ops` `Domain Harness OS` | `research-foundry-medical-mainline / harness authority convergence` | 业务最成熟，当前从 `charter-parameterized input contract` 收口转入 `delivery plane contract map` | 继续收紧 `MedAutoScience -> MedDeepScientist` runtime protocol、delivery plane contract 与 outer-loop durable decision loop |
 | `redcube-ai` | 视觉交付 `Domain Harness OS` | `redcube-runtime-program / P0 credible green baseline repair` | `ppt_deck` / `xiaohongshu` 主线可用，但 active mainline truth 与 formal entry 仍在收口 | 固定 `MCP / CLI` formal entry 真相、修复 green baseline、暂不重开 `Phase 2 / source intake + shared source truth` |
 | `med-autogrant` | 医学 `Grant Ops` `Domain Harness OS` 方向 | `med-autogrant-mainline / P1.B runtime baseline hardening` | 已有最小 runtime baseline，但仍是 baseline freeze / runtime hardening | 守住 `grant_run_id` / formal-entry / durability current truth，不抢前两仓的产品打磨优先级 |
@@ -91,8 +92,9 @@
 
 - `Phase 1`：当前公开主线对应 `G2` read-only gateway baseline 的阶段
 - 当前 repo 已有可运行的本地 `TypeScript CLI + read-only gateway baseline`
-- 当前 baton：`G2 stable public baseline` 收口 + `G3 thin handoff planning` 预冻结 + 四仓状态回写到顶层参考真相
+- 当前 baton：`G2 stable public baseline` 收口 + `G3 thin handoff planning` 预冻结 + 四仓状态回写到顶层参考同步面
 - 对应 planning brief：`docs/plans/2026-04-07-g3-thin-handoff-planning-brief.md`
+- 对应 release-closeout note：`docs/plans/2026-04-07-g2-release-closeout-note.md`
 
 #### 现在已经有的东西
 
@@ -250,7 +252,7 @@
 
 ## 六、当前建议的实际顺序
 
-1. `OPL` 先完成 `G2` 收口、预冻结 `G3 thin handoff planning`，并把四仓最新状态回写到顶层参考真相
+1. `OPL` 先完成 `G2` 收口、预冻结 `G3 thin handoff planning`，并把四仓最新状态回写到顶层参考同步面
 2. 三个业务仓先完成本轮最小统一对齐，优先处理 formal entry、显式执行句柄、durable truth 与 handoff surface 的缺口
 3. `Med Auto Science` 与 `RedCube AI` 在 `P0` 对齐完成后进入“手工测试驱动的稳定化收口”
 4. `Med Auto Grant` 继续守住 `P1.B / runtime baseline hardening`

@@ -183,6 +183,7 @@
 
 在 `OPL` 体系下，当前共享的架构底座统一命名为 `Unified Harness Engineering Substrate`。
 它指的是一套可复用的 Harness Engineering 语言与稳定约束，而不是把所有 domain system 压成一个单体 runtime。
+它仍然只是共享架构基座，不是已经独立抽出的共享代码框架。
 
 这个 substrate **不**声称所有 domain 今天已经共享同一个代码仓、同一种对象模型，或完全一致的执行图。
 它冻结的是更窄、但更长期稳定的一组共享规则：
@@ -332,7 +333,7 @@ Human / Agent
 - 在对应 domain 边界被显式冻结之前，继续让 `Grant Ops`、`Review Ops`、`Thesis Ops` 停留在 admitted gateway surface 之外
 
 截至 `2026-04-07`，当前 repo 已有可运行的本地 `TypeScript CLI`-first / read-only gateway baseline。
-当前这一棒是：把 `G2 stable public baseline` 收口成稳定、单一、repo-tracked 的公开基线，同时仅对 `G3 thin handoff planning` 做预冻结；不进入 mutation entry，不把 `OPL` 提升成统一 runtime owner，也不提前抽共享执行内核。
+当前这一棒是 `Phase 1 / G2 release-closeout`：把 `G2 stable public baseline` 收口成稳定、单一、repo-tracked 的公开基线，同时仅对 `G3 thin handoff planning` 做预冻结；不进入 mutation entry，不把 `OPL` 提升成统一 runtime owner，也不提前抽共享执行内核。
 
 当前交付目标是：在当前 `Codex-default host-agent runtime` 之上，用本地 `TypeScript CLI` 作为 `Phase 1` 的入口 transport。
 在开发控制面上，`Codex Host` 负责规划冻结与真相裁决，`OMX` 负责在这些已冻结边界内做长时执行。

@@ -12,7 +12,7 @@
 当前已明确的状态：
 
 - `OPL` 是一人课题组的顶层 Gateway 与 federation model
-- `OPL` 之下共享的 Harness Engineering 基座，当前统一命名为 `Unified Harness Engineering Substrate`
+- `OPL` 之下共享的 Harness Engineering 基座，当前统一命名为 `Unified Harness Engineering Substrate`，它仍然只是共享架构基座，不是共享代码框架
 - [`MedAutoScience`](https://github.com/gaofeng21cn/med-autoscience) 是当前 active 的 `Research Ops` domain gateway 与 harness
 - [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) 是当前 emerging 的视觉交付 domain gateway 与 harness
 - `ppt_deck` 是当前最直接映射到 `Presentation Ops` 的 family
@@ -34,7 +34,7 @@
 
 下一阶段应优先做这些事：
 
-- 把 `G2 stable public baseline` 收口成稳定、单一、repo-tracked 的公开基线，并仅对 `G3 thin handoff planning` 做预冻结
+- 完成当前 `Phase 1 / G2 release-closeout`：把 `G2 stable public baseline` 收口成稳定、单一、repo-tracked 的公开基线，并仅对 `G3 thin handoff planning` 做预冻结
 - 冻结 `OPL Gateway -> domain gateway -> domain harness` 这条控制语言
 - 在当前 domain 仓库之上冻结 `Unified Harness Engineering Substrate` 这套共享语言，但不提前把它写成已经独立成型的公共代码框架
 - 保持 `MedAutoScience` 明确为 `Research Ops` 的 domain surface

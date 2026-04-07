@@ -167,8 +167,31 @@ test('phase-1 gateway docs freeze the runnable G2 baseline separately from G3 th
   assert.match(publicSurfaceIndexZh, /`?G3`? 仅处于 `?thin handoff planning`? 预冻结/);
   assert.match(rollout, /`?thin handoff planning`? pre-freeze/i);
   assert.match(rolloutZh, /`?thin handoff planning`? 预冻结/);
-  assert.match(gatewayContracts, /current work is to close the `?G2 stable public baseline`?/i);
-  assert.match(gatewayContractsZh, /当前工作是把 `?G2 stable public baseline`? 收口/);
+  assert.match(
+    gatewayContracts,
+    /current work is (?:the `?Phase 1 \/ G2 release-closeout`:\s*)?close the `?G2 stable public baseline`?/i,
+  );
+  assert.match(
+    gatewayContractsZh,
+    /当前工作是(?: `?Phase 1 \/ G2 release-closeout`：)?把 `?G2 stable public baseline`? 收口/,
+  );
+});
+
+test('top-level positioning docs freeze the g2 release-closeout and substrate boundary wording', () => {
+  const readme = read('README.md');
+  const readmeZh = read('README.zh-CN.md');
+  const roadmap = read('docs/roadmap.md');
+  const roadmapZh = read('docs/roadmap.zh-CN.md');
+
+  assert.match(readme, /Phase 1 \/ G2 release-closeout/i);
+  assert.match(readmeZh, /Phase 1 \/ G2 release-closeout/);
+  assert.match(roadmap, /Phase 1 \/ G2 release-closeout/i);
+  assert.match(roadmapZh, /Phase 1 \/ G2 release-closeout/);
+
+  assert.match(readme, /shared public code framework/i);
+  assert.match(readmeZh, /共享代码框架/);
+  assert.match(roadmap, /shared public code framework/i);
+  assert.match(roadmapZh, /共享代码框架/);
 });
 
 test('repo-tracked thin handoff planning brief freezes route_request without activating a routed-action runtime', () => {
@@ -179,6 +202,29 @@ test('repo-tracked thin handoff planning brief freezes route_request without act
   assert.match(brief, /audit_routing_decision/);
   assert.match(brief, /不得绕过 domain gateway/);
   assert.match(brief, /不实现真正的 `?G3 mutation\/routed-action runtime`?/);
+});
+
+test('repo-tracked g2 release closeout note freezes the public baseline without activating g3', () => {
+  const closeout = read('docs/plans/2026-04-07-g2-release-closeout-note.md');
+
+  assert.match(closeout, /G2 stable public baseline/);
+  assert.match(closeout, /已具备可运行的本地 `?TypeScript CLI`?-first \/ read-only gateway baseline/);
+  assert.match(closeout, /`?G3`? 仍未激活/);
+  assert.match(closeout, /不实现真正的 `?G3 mutation\/routed-action runtime`?/);
+  assert.match(closeout, /Unified Harness Engineering Substrate/);
+  assert.match(closeout, /不是共享代码框架/);
+});
+
+test('reference-grade sync docs stay below the public mainline truth surface', () => {
+  const gatewayContracts = read('contracts/opl-gateway/README.zh-CN.md');
+  const publicSurfaceIndex = read('docs/opl-public-surface-index.zh-CN.md');
+  const matrix = read('docs/references/ecosystem-status-matrix.md');
+  const taskboard = read('docs/references/runtime-alignment-taskboard.md');
+
+  assert.match(gatewayContracts, /顶层参考同步面/);
+  assert.match(publicSurfaceIndex, /内部参考同步锚点/);
+  assert.match(matrix, /不反向抬升为 `?OPL`? 公开主线真相/);
+  assert.match(taskboard, /不反向抬升为 `?OPL`? 公开主线真相/);
 });
 
 test('internal reference truth docs carry the 2026-04-07 snapshot and current OPL baton', () => {

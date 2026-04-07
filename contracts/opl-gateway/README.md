@@ -10,6 +10,7 @@ It freezes machine-readable gateway surfaces that later discovery and routed-act
 These contract and reference artifacts live in the shared-foundation materialization layer only.
 `OPL` owns the top-level contract language, indexing, and cross-domain reuse rules frozen here, but domain gateways and domain harnesses still own runtime execution, canonical truth, review truth, and publication truth once a routed request crosses the gateway boundary.
 This directory therefore materializes gateway surfaces for discoverability / reviewability / acceptance alignment without becoming a new control plane or shared truth store.
+The `Unified Harness Engineering Substrate` named around this layer remains a shared architectural substrate, not a shared public code framework.
 For the broader ownership split, see [Shared Foundation](../../docs/shared-foundation.md) and [Shared Foundation Ownership](../../docs/shared-foundation-ownership.md).
 
 ## Current Phase 1 alignment
@@ -17,13 +18,13 @@ For the broader ownership split, see [Shared Foundation](../../docs/shared-found
 The public `opl-mainline` mainline remains `Phase 1`.
 As of `2026-04-07`, the repository already has a runnable local `TypeScript CLI`-first, read-only gateway baseline that reads the frozen contract artifacts in this directory.
 That transport sits on top of the current `Codex-default host-agent runtime`, while `Codex Host` freezes planning/truth and `OMX` handles long-running execution inside those frozen boundaries.
-The current work is to close the `G2 stable public baseline` into one stable repo-tracked public entry while pre-freezing `G3 thin handoff planning` only.
+The current work is the `Phase 1 / G2 release-closeout`: close the `G2 stable public baseline` into one stable repo-tracked public entry while pre-freezing `G3 thin handoff planning` only.
 That delivery target does **not** promote this directory into a runtime, routed-action control plane, or canonical truth store; it only makes the existing top-level contract language executable through a local CLI surface.
 
 ## Current four-repo alignment companions
 
 These reference-grade companions freeze the current four-repo status, runtime wording, and development-control split without turning this directory into a runtime owner or second source of truth.
-This companion set is anchored to `2026-04-07` and carries the responsibility of writing the latest four-repo status back into the top-level OPL reference-truth surfaces.
+This companion set is anchored to `2026-04-07` and carries the responsibility of writing the latest four-repo status back into the top-level OPL reference-sync companions without promoting those reference surfaces into public-mainline truth.
 
 - [Ecosystem Status Matrix](../../docs/references/ecosystem-status-matrix.md) — Chinese-only internal reference for the current four-repo stage/status picture
 - [Codex-default Host-Agent Runtime Contract](../../docs/references/host-agent-runtime-contract.md) — Chinese-only internal reference for the current local default runtime wording

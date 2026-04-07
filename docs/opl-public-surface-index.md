@@ -10,8 +10,8 @@ Its job is to make the top-level gateway easier to discover across README, roadm
 
 It is not a runtime registry.
 It should be read as a CLI-first, read-only discoverability aid for the current Phase 1 gateway baseline.
-The current stable public target is the `G2` CLI-first / read-only baseline; `G3` remains in `thin handoff planning` pre-freeze only.
-Use the [Ecosystem Status Matrix](./references/ecosystem-status-matrix.md) as the reference-truth anchor for the current four-repo stage and maturity snapshot.
+The current stable public target is now the single repo-tracked top-level `G2` CLI-first / read-only baseline; `G3` remains in `thin handoff planning` pre-freeze only and is not activated.
+Use the [Ecosystem Status Matrix](./references/ecosystem-status-matrix.md) as the internal reference-sync anchor for the current four-repo stage and maturity snapshot.
 
 For repository-wide document layering and reference-grade handling, see [Docs Index](./README.md).
 
@@ -86,7 +86,7 @@ These surfaces improve review and discoverability without becoming execution lay
 
 Related positioning companion:
 
-- [Unified Harness Engineering Substrate](./unified-harness-engineering-substrate.md) — a top-level shared-substrate explanation that remains outside the current machine-readable indexed surface set
+- [Unified Harness Engineering Substrate](./unified-harness-engineering-substrate.md) — a top-level shared-architectural-substrate explanation, not a shared public code framework, and it remains outside the current machine-readable indexed surface set
 
 ### 4. Linked domain public-entry surfaces
 

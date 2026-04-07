@@ -10,8 +10,8 @@
 
 它不是 runtime registry。
 它应被理解为当前 Phase 1 gateway 基线下、面向 CLI-first / read-only discovery 的辅助索引。
-当前稳定公开目标是 `G2` 的 CLI-first / read-only baseline；`G3` 仅处于 `thin handoff planning` 预冻结。
-四仓当前阶段与成熟度判断，以 [生态四仓统一状态总表](./references/ecosystem-status-matrix.md) 作为参考真相锚点。
+当前稳定公开目标已经锁定为单一、repo-tracked 的顶层 `G2` CLI-first / read-only baseline；`G3` 仅处于 `thin handoff planning` 预冻结，且尚未激活。
+四仓当前阶段与成熟度判断，以 [生态四仓统一状态总表](./references/ecosystem-status-matrix.md) 作为内部参考同步锚点。
 
 如果要看仓库级文档分层与参考级处理规则，请继续看 [文档索引](./README.zh-CN.md)。
 
@@ -86,7 +86,7 @@
 
 相关定位配套文档：
 
-- [Unified Harness Engineering Substrate](./unified-harness-engineering-substrate.zh-CN.md) — 用于解释共享 substrate 语言，但当前不单列进机器可读 indexed surface 集合
+- [Unified Harness Engineering Substrate](./unified-harness-engineering-substrate.zh-CN.md) — 用于解释共享架构基座语言，而不是共享代码框架；当前也不单列进机器可读 indexed surface 集合
 
 ### 4. 已链接的 domain 公开入口界面
 
