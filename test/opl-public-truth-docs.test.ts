@@ -85,3 +85,11 @@ test('tracked admission guards still require explicit execution-model evidence',
   assert.match(candidateBacklogJson, /promote_to_g2_without_domain_gateway/i);
   assert.match(candidateBacklogJson, /promote_to_g3_without_explicit_route_evidence/i);
 });
+
+test('english readme exposes the opl architecture blueprint svg', () => {
+  const readme = read('README.md');
+  const assetPath = path.join(repoRoot, 'assets', 'branding', 'opl-architecture-blueprint.svg');
+
+  assert.match(readme, /assets\/branding\/opl-architecture-blueprint\.svg/);
+  assert.ok(fs.existsSync(assetPath));
+});

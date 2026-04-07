@@ -1,0 +1,173 @@
+<svg width="1600" height="1080" viewBox="0 0 1600 1080" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="opl-bg" x1="140" y1="80" x2="1460" y2="1000" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F7FBFF"/>
+      <stop offset="1" stop-color="#EEF5FF"/>
+    </linearGradient>
+    <linearGradient id="opl-top" x1="270" y1="132" x2="1330" y2="270" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0F2A43"/>
+      <stop offset="1" stop-color="#1D4F7A"/>
+    </linearGradient>
+    <linearGradient id="opl-substrate" x1="250" y1="278" x2="1350" y2="386" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#174A73"/>
+      <stop offset="1" stop-color="#2C6DA4"/>
+    </linearGradient>
+    <filter id="soft-shadow" x="-40" y="-40" width="1680" height="1160" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="16" stdDeviation="22" flood-color="#1A3E66" flood-opacity="0.12"/>
+    </filter>
+    <marker id="arrow-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#3B6EA5"/>
+    </marker>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M 32 0 L 0 0 0 32" stroke="#C9D8EA" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <rect x="0" y="0" width="1600" height="1080" fill="url(#opl-bg)"/>
+  <rect x="60" y="60" width="1480" height="1000" rx="28" fill="url(#grid)" opacity="0.34"/>
+  <rect x="80" y="80" width="1440" height="980" rx="30" stroke="#A9C1DD" stroke-width="2" stroke-dasharray="10 10"/>
+
+  <text x="800" y="112" text-anchor="middle" fill="#14314F" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="34" font-weight="700">
+    OPL Architecture Blueprint
+  </text>
+  <text x="800" y="148" text-anchor="middle" fill="#42627F" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="18">
+    Design-first overview of the top-level gateway, shared base, and planned federation lanes
+  </text>
+
+  <g filter="url(#soft-shadow)">
+    <rect x="250" y="178" width="1100" height="98" rx="24" fill="url(#opl-top)"/>
+    <text x="800" y="217" text-anchor="middle" fill="#F7FBFF" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="36" font-weight="700">
+      One Person Lab (OPL)
+    </text>
+    <text x="800" y="248" text-anchor="middle" fill="#D9EAFB" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="18">
+      Top-level gateway and federation surface for one-person lab work
+    </text>
+
+    <rect x="230" y="318" width="1140" height="92" rx="22" fill="url(#opl-substrate)"/>
+    <text x="800" y="354" text-anchor="middle" fill="#FFFFFF" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="32" font-weight="700">
+      Unified Harness Engineering Substrate
+    </text>
+    <text x="800" y="383" text-anchor="middle" fill="#DCEEFF" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="17">
+      One shared base for Agent-first execution, stable entry surfaces, and Auto / Human-in-the-loop convergence
+    </text>
+  </g>
+
+  <path d="M 800 276 L 800 318" stroke="#3B6EA5" stroke-width="4" marker-end="url(#arrow-head)"/>
+  <path d="M 800 410 L 800 454" stroke="#3B6EA5" stroke-width="4" marker-end="url(#arrow-head)"/>
+
+  <rect x="130" y="468" width="1340" height="174" rx="24" fill="#F8FBFF" stroke="#B5CBE2" stroke-width="2"/>
+  <text x="160" y="506" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="24" font-weight="700">
+    Shared Foundation
+  </text>
+  <text x="160" y="532" fill="#597793" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="16">
+    The reusable lab-wide layers that keep assets, memory, decisions, and delivery surfaces coherent across domains
+  </text>
+
+  <rect x="150" y="554" width="244" height="66" rx="18" fill="#E8F0FA" stroke="#C7D7E8"/>
+  <rect x="410" y="554" width="244" height="66" rx="18" fill="#E8F0FA" stroke="#C7D7E8"/>
+  <rect x="670" y="554" width="244" height="66" rx="18" fill="#E8F0FA" stroke="#C7D7E8"/>
+  <rect x="930" y="554" width="244" height="66" rx="18" fill="#E8F0FA" stroke="#C7D7E8"/>
+  <rect x="1190" y="554" width="260" height="66" rx="18" fill="#E8F0FA" stroke="#C7D7E8"/>
+
+  <text x="172" y="582" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">Asset</text>
+  <text x="172" y="604" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Data, references, templates</text>
+
+  <text x="432" y="582" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">Memory</text>
+  <text x="432" y="604" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Topic, venue, and review memory</text>
+
+  <text x="692" y="582" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">Governance</text>
+  <text x="692" y="604" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Go, stop, reframe, gate logic</text>
+
+  <text x="952" y="582" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">Delivery</text>
+  <text x="952" y="604" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Review surfaces and final outputs</text>
+
+  <text x="1212" y="582" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">Agent Execution</text>
+  <text x="1212" y="604" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Stable entry surfaces and audit traces</text>
+
+  <path d="M 800 642 L 800 686" stroke="#3B6EA5" stroke-width="4" marker-end="url(#arrow-head)"/>
+
+  <rect x="100" y="700" width="1400" height="318" rx="24" fill="#F8FBFF" stroke="#B5CBE2" stroke-width="2"/>
+  <text x="130" y="738" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="24" font-weight="700">
+    Workstream Federation
+  </text>
+  <text x="130" y="764" fill="#597793" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="16">
+    All five lanes are part of the design surface; current federation maturity differs by lane, but the architectural pattern stays shared
+  </text>
+
+  <g>
+    <rect x="120" y="786" width="256" height="86" rx="20" fill="#F2F8FF" stroke="#A9C3DF"/>
+    <rect x="136" y="800" width="66" height="22" rx="11" fill="#DDF7E8"/>
+    <text x="169" y="815" text-anchor="middle" fill="#22674B" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="700">ACTIVE</text>
+    <text x="136" y="844" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">Research Ops</text>
+    <text x="136" y="860" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Data to paper and evidence delivery</text>
+  </g>
+
+  <g>
+    <rect x="392" y="786" width="256" height="86" rx="20" fill="#FFF8ED" stroke="#D7C6A4"/>
+    <rect x="408" y="800" width="76" height="22" rx="11" fill="#FFF0D1"/>
+    <text x="446" y="815" text-anchor="middle" fill="#8A6415" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="700">PLANNED</text>
+    <text x="408" y="844" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">Grant Ops</text>
+    <text x="408" y="860" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Proposal writing and review support</text>
+  </g>
+
+  <g>
+    <rect x="664" y="786" width="256" height="86" rx="20" fill="#FFF8ED" stroke="#D7C6A4"/>
+    <rect x="680" y="800" width="76" height="22" rx="11" fill="#FFF0D1"/>
+    <text x="718" y="815" text-anchor="middle" fill="#8A6415" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="700">PLANNED</text>
+    <text x="680" y="844" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">Thesis Ops</text>
+    <text x="680" y="860" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Dissertation and defense delivery</text>
+  </g>
+
+  <g>
+    <rect x="936" y="786" width="256" height="86" rx="20" fill="#FFF8ED" stroke="#D7C6A4"/>
+    <rect x="952" y="800" width="76" height="22" rx="11" fill="#FFF0D1"/>
+    <text x="990" y="815" text-anchor="middle" fill="#8A6415" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="700">PLANNED</text>
+    <text x="952" y="844" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">Review Ops</text>
+    <text x="952" y="860" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Review, rebuttal, and revision flow</text>
+  </g>
+
+  <g>
+    <rect x="1208" y="786" width="272" height="86" rx="20" fill="#EEF5FF" stroke="#9DBBE0"/>
+    <rect x="1224" y="800" width="84" height="22" rx="11" fill="#DCEAFF"/>
+    <text x="1266" y="815" text-anchor="middle" fill="#2A5C96" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="700">EMERGING</text>
+    <text x="1224" y="844" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">Presentation Ops</text>
+    <text x="1224" y="860" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Lecture, report, and slide delivery</text>
+  </g>
+
+  <path d="M 248 872 L 248 928" stroke="#3B6EA5" stroke-width="3" marker-end="url(#arrow-head)"/>
+  <path d="M 520 872 L 520 928" stroke="#B38C3D" stroke-width="3" stroke-dasharray="7 6" marker-end="url(#arrow-head)"/>
+  <path d="M 792 872 L 792 928" stroke="#B38C3D" stroke-width="3" stroke-dasharray="7 6" marker-end="url(#arrow-head)"/>
+  <path d="M 1064 872 L 1064 928" stroke="#B38C3D" stroke-width="3" stroke-dasharray="7 6" marker-end="url(#arrow-head)"/>
+  <path d="M 1344 872 L 1344 928" stroke="#3B6EA5" stroke-width="3" marker-end="url(#arrow-head)"/>
+
+  <rect x="585" y="894" width="430" height="38" rx="19" fill="#F8FBFF"/>
+  <text x="800" y="919" text-anchor="middle" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="22" font-weight="700">
+    Domain Carrier Surfaces
+  </text>
+
+  <rect x="120" y="928" width="256" height="80" rx="18" fill="#FFFFFF" stroke="#9FBFE0" stroke-width="2"/>
+  <rect x="392" y="928" width="256" height="80" rx="18" fill="#FFFFFF" stroke="#CBB48B" stroke-width="2" stroke-dasharray="8 8"/>
+  <rect x="664" y="928" width="256" height="80" rx="18" fill="#FFFFFF" stroke="#CBB48B" stroke-width="2" stroke-dasharray="8 8"/>
+  <rect x="936" y="928" width="256" height="80" rx="18" fill="#FFFFFF" stroke="#CBB48B" stroke-width="2" stroke-dasharray="8 8"/>
+  <rect x="1208" y="928" width="272" height="80" rx="18" fill="#FFFFFF" stroke="#9FBFE0" stroke-width="2"/>
+
+  <text x="142" y="968" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="16" font-weight="700">Research Foundry</text>
+  <text x="142" y="992" fill="#476684" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Current carrier: Med Auto Science</text>
+
+  <text x="414" y="968" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="16" font-weight="700">Grant Foundry</text>
+  <text x="414" y="992" fill="#476684" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Public scaffold: Med Auto Grant</text>
+
+  <text x="686" y="968" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="16" font-weight="700">Future Thesis Gateway</text>
+  <text x="686" y="992" fill="#476684" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Planned domain-owned carrier</text>
+
+  <text x="958" y="968" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="16" font-weight="700">Future Review Gateway</text>
+  <text x="958" y="992" fill="#476684" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Planned domain-owned carrier</text>
+
+  <text x="1230" y="968" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="16" font-weight="700">RedCube AI</text>
+  <text x="1230" y="992" fill="#476684" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Emerging carrier via the ppt_deck lane</text>
+
+  <rect x="106" y="1028" width="1388" height="32" rx="16" fill="#EAF2FB" stroke="#C6D8EA"/>
+  <text x="130" y="1049" fill="#375B79" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">
+    Blueprint rule: the diagram shows design structure and planned federation intent; carrier maturity differs by lane and does not transfer runtime ownership into OPL.
+  </text>
+</svg>

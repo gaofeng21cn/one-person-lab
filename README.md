@@ -32,6 +32,10 @@
   <strong>OPL Structure</strong>
 </p>
 
+<p align="center">
+  <img src="assets/branding/opl-architecture-blueprint.svg" alt="OPL architecture blueprint" width="100%" />
+</p>
+
 <table>
   <tr>
     <td colspan="5" align="center" valign="top">
