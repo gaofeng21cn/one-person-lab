@@ -194,6 +194,25 @@ test('top-level positioning docs freeze the g2 release-closeout and substrate bo
   assert.match(roadmapZh, /共享代码框架/);
 });
 
+test('post-g2 public docs move the baton to g3 thin handoff planning freeze hardening', () => {
+  const readme = read('README.md');
+  const readmeZh = read('README.zh-CN.md');
+  const roadmap = read('docs/roadmap.md');
+  const roadmapZh = read('docs/roadmap.zh-CN.md');
+  const gatewayContracts = read('contracts/opl-gateway/README.md');
+  const gatewayContractsZh = read('contracts/opl-gateway/README.zh-CN.md');
+  const rollout = read('docs/references/opl-gateway-rollout.md');
+  const rolloutZh = read('docs/references/opl-gateway-rollout.zh-CN.md');
+
+  for (const doc of [readme, roadmap, gatewayContracts, rollout]) {
+    assert.match(doc, /Phase 1 \/ G3 thin handoff planning freeze hardening/i);
+  }
+
+  for (const doc of [readmeZh, roadmapZh, gatewayContractsZh, rolloutZh]) {
+    assert.match(doc, /Phase 1 \/ G3 thin handoff planning freeze hardening/);
+  }
+});
+
 test('repo-tracked thin handoff planning brief freezes route_request without activating a routed-action runtime', () => {
   const brief = read('docs/plans/2026-04-07-g3-thin-handoff-planning-brief.md');
 
@@ -213,6 +232,42 @@ test('repo-tracked g2 release closeout note freezes the public baseline without 
   assert.match(closeout, /不实现真正的 `?G3 mutation\/routed-action runtime`?/);
   assert.match(closeout, /Unified Harness Engineering Substrate/);
   assert.match(closeout, /不是共享代码框架/);
+});
+
+test('g3 planning docs keep handoff planning-only and forbid launcher semantics', () => {
+  const acceptance = read('docs/references/opl-gateway-acceptance-test-spec.md');
+  const acceptanceZh = read('docs/references/opl-gateway-acceptance-test-spec.zh-CN.md');
+  const routedAction = read('docs/opl-routed-action-gateway.md');
+  const routedActionZh = read('docs/opl-routed-action-gateway.zh-CN.md');
+  const gatewayContracts = read('contracts/opl-gateway/README.md');
+  const gatewayContractsZh = read('contracts/opl-gateway/README.zh-CN.md');
+
+  for (const doc of [acceptance, routedAction, gatewayContracts]) {
+    assert.match(doc, /planning gate|planning-level contract|planning dependency/i);
+    assert.match(doc, /domain_gateway/);
+    assert.match(doc, /launcher/i);
+    assert.match(doc, /no-bypass|bypass/i);
+  }
+
+  for (const doc of [acceptanceZh, routedActionZh, gatewayContractsZh]) {
+    assert.match(doc, /planning gate|planning-level contract|planning dependency|规划 gate|planning-level/);
+    assert.match(doc, /domain_gateway/);
+    assert.match(doc, /launcher/);
+    assert.match(doc, /不得绕过 domain gateway|绕过 domain gateway/);
+  }
+});
+
+test('repo-tracked g3 planning closeout note hardens the planning-only boundary', () => {
+  const closeout = read('docs/plans/2026-04-07-g3-thin-handoff-planning-closeout-note.md');
+
+  assert.match(closeout, /Phase 1 \/ G3 thin handoff planning freeze hardening/);
+  assert.match(closeout, /route_request/);
+  assert.match(closeout, /build_handoff_payload/);
+  assert.match(closeout, /audit_routing_decision/);
+  assert.match(closeout, /domain_gateway/);
+  assert.match(closeout, /不得绕过 domain gateway/);
+  assert.match(closeout, /不新增 mutation entry/);
+  assert.match(closeout, /不把 routed-actions schema 写成 launcher/);
 });
 
 test('reference-grade sync docs stay below the public mainline truth surface', () => {

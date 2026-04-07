@@ -128,7 +128,7 @@
 
 `G3` 只有在下面全部成立时才算通过：
 
-当前 `Phase 1` 里，这一 gate 只冻结 contract / planning 边界，不证明 routed-action runtime 已落地。
+当前 `Phase 1` 里，这里是 planning gate，不是 runtime gate。当前 `G3` surface 仍只是 planning-level contract，`routed-actions.schema.json` 仍只是 planning dependency，而不是 launcher。
 
 1. routed action contract 定义了：
    - `route_request`
@@ -148,6 +148,7 @@
 
 - 解析 `contracts/opl-gateway/routed-actions.schema.json`。
 - 检查 `docs/opl-routed-action-gateway.md` 与 `.zh-CN.md` 中的全部必需操作和失败状态。
+- 用 `rg` 检查 planning gate / planning-level contract / planning dependency wording，并确认 routed-action prose 仍不是 launcher。
 - 用 `rg` 检查 no-bypass wording，并确认它被写成硬规则，而不是偏好建议。
 
 ## D. Domain Onboarding Gate
@@ -1239,11 +1240,12 @@ rg -n "roadmap-only|future-only|reference-only|non-admitting|public-entry|discov
 
 - A-R 十八部分全部通过
 - 关联的机器可读合同存在且有效
+- C 节继续保持 planning-gate green，而不是 runtime-green
 - discovery 与 routing 文档仍然禁止 direct harness bypass
 - governance / audit 仍然保持 index-only
 - publish / promotion 仍然保持 index-only，且只在 post-publish 阶段生效
-- example corpus 仍然保持 illustrative 且 schema-aligned
-- routed-safety corpus 仍然保持 illustrative，且在应当 unresolved 的地方显式 unresolved
+- example corpus 仍然保持 illustrative、planning-level 且 schema-aligned
+- routed-safety corpus 仍然保持 illustrative、planning-level，且在应当 unresolved 的地方显式 unresolved
 - operating example corpus 仍然保持 illustrative，且直接通过 schema 校验
 - operating-record catalog 仍然保持 reference-only，且全部 schema/example ref 都能解析
 - surface lifecycle map 仍然保持 derived、reference-only、non-executing

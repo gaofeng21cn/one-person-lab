@@ -19,6 +19,7 @@
 - 替代底层正式 contract
 
 这些 example 只是 illustrative 的 contract composition。
+在当前 `Phase 1 / G3 thin handoff planning freeze hardening` 中，这里出现的 routed-action 片段都只停留在 planning-level contract 层，不表示已激活 launcher 或 runtime。
 
 ## 当前 Example Set
 

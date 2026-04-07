@@ -6,8 +6,9 @@
 
 这份文档冻结 `OPL Gateway` 的 `G3` 合同。
 
-`G3` 是 `OPL` 第一次可以接收顶层 action request，并把它路由到正确 domain gateway 的阶段。
-在当前 `Phase 1`，这份文档只作为 `G3 thin handoff planning / pre-freeze` 的合同参考；它不表示当前仓库已经进入 routed-action implementation。
+`G3` 是 `OPL` 后续第一次可以接收顶层 action request，并把它路由到正确 domain gateway 的阶段。
+在当前 `Phase 1`，这份文档只作为 `G3 thin handoff planning / pre-freeze` 的合同参考，并承担 `Phase 1 / G3 thin handoff planning freeze hardening` 的 planning-level contract；它不表示当前仓库已经进入 routed-action implementation。
+当前这是 planning gate，不是 runtime gate。本轮不新增 mutation entry、run launch 或 workspace write。
 
 目标不是做成单体 runtime。
 目标是把顶层路由做成显式、可审计、可安全执行的合同。
@@ -24,11 +25,11 @@
 
 ## 核心承诺
 
-在 `G3`，Agent 应该可以：
+在 planning-level 的 `G3` 合同里，Agent 后续应当能够：
 
 - 向 `OPL` 提交顶层 action request
 - 拿到显式 routing decision
-- 为目标 domain gateway 构建稳定 handoff payload
+- 为目标 `domain_gateway` 构建稳定 handoff payload
 - 在请求进入 domain gateway 之前写下可审计的 routing trace
 
 但它仍然**不能**：
@@ -37,9 +38,11 @@
 - 直达 domain harness
 - 把 canonical truth ownership 上收给 `OPL`
 
+唯一允许的成功 handoff 目标只能是 `domain_gateway`。这条 no-bypass 规则是硬边界，不是偏好建议。
+
 ## 必需操作
 
-最小 routed-action gateway 必须暴露这些操作：
+最小 routed-action planning-level contract 必须暴露这些操作：
 
 - `route_request`
 - `build_handoff_payload`
@@ -113,6 +116,7 @@
 
 - 只有在 `route_request` 返回 `status = routed` 后，这个操作才允许执行
 - 输出必须符合 [`../contracts/opl-gateway/handoff.schema.json`](../contracts/opl-gateway/handoff.schema.json)
+- 唯一允许的成功目标只能是 `domain_gateway`；这个操作当前只处于 planning 层，不得启动 domain runtime
 
 建议响应：
 
@@ -307,20 +311,24 @@ OPL Gateway -> Domain Harness OS
 
 - [`../contracts/opl-gateway/routed-actions.schema.json`](../contracts/opl-gateway/routed-actions.schema.json)
 
+在当前基线上，这份 schema 仍只是 planning dependency，不是 launcher。
+
 显式非成功路由状态的 canonical routed-safety examples 位于：
 
 - [OPL Routed-Safety Example Corpus](./references/opl-routed-safety-example-corpus.zh-CN.md)
 
-## 完成定义
+## Planning Freeze 完成定义
 
-只有满足下面条件，`G3` 才算完成：
+只有满足下面条件，当前 `Phase 1 / G3 thin handoff planning freeze hardening` 才算完成：
 
-- `route_request`、`build_handoff_payload`、`audit_routing_decision` 被冻结成稳定操作
+- `route_request`、`build_handoff_payload`、`audit_routing_decision` 被冻结成稳定的 planning-level 操作
 - refusal / unknown-domain / ambiguous-task handling 被显式写清
 - routed output 不再依赖 prose-only interpretation
-- 这份合同仍然禁止绕过 domain gateway
+- 唯一允许的成功 handoff 目标仍只能是 `domain_gateway`
+- 这份 no-bypass 合同仍然禁止绕过 domain gateway
+- schema 仍只是 planning dependency，而不是 launcher
 
-下面这些情况说明 `G3` 还没完成：
+下面这些情况说明当前 planning freeze 还没完成：
 
 - 路由仍然只靠自由 prose 解释
 - 顶层 gateway 在未注册 ownership 的情况下自行发明 owner

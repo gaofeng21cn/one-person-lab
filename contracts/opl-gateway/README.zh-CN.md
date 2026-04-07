@@ -18,8 +18,10 @@
 当前 `opl-mainline` 的公开主线仍是 `Phase 1`。
 截至 `2026-04-07`，当前 repo 已有一条可运行的本地 `TypeScript CLI`-first、read-only gateway baseline；它只读取这个目录中已经冻结的 contract 工件。
 这条 transport 建立在当前 `Codex-default host-agent runtime` 之上；在开发控制面上，`Codex Host` 负责规划冻结与真相裁决，`OMX` 负责在已冻结边界内做长时执行。
-当前工作是 `Phase 1 / G2 release-closeout`：把 `G2 stable public baseline` 收口成稳定、单一、repo-tracked 的公开基线，同时仅对 `G3 thin handoff planning` 做预冻结。
-这个交付目标**不会**把当前目录提升成 runtime、routed-action control plane 或 canonical truth store；它只是把已有的顶层 contract language 通过本地 CLI surface 变成可执行入口。
+已完成的 `Phase 1 / G2 release-closeout` 已把 `G2 stable public baseline` 收口成稳定、单一、repo-tracked 的公开基线。
+作为历史 closeout 锚点，当前工作是 `Phase 1 / G2 release-closeout`：把 `G2 stable public baseline` 收口成稳定、单一、repo-tracked 的公开基线。
+当前这一棒是 `Phase 1 / G3 thin handoff planning freeze hardening`：当前目录只收紧围绕 `route_request`、`build_handoff_payload`、`audit_routing_decision` 的 planning gate / planning-level contract。唯一允许的成功 handoff 目标仍只能是 `domain_gateway`；no-bypass 规则继续禁止直达 domain harness；`routed-actions.schema.json` 仍只是 planning dependency，不是 launcher。
+这个交付目标**不会**把当前目录提升成 runtime、routed-action control plane 或 canonical truth store；它只是把已有的顶层 contract language 继续维持为本地 CLI surface 可读取的合同入口。
 
 ## 当前四仓统一对齐配套文档
 
@@ -87,7 +89,7 @@
 - [`domains.json`](./domains.json) — machine-readable domain registry
 - [`routing-vocabulary.json`](./routing-vocabulary.json) — 共享 routing vocabulary 与已冻结的 routing rules
 - [`handoff.schema.json`](./handoff.schema.json) — 已冻结的 G1 handoff payload JSON Schema
-- [`routed-actions.schema.json`](./routed-actions.schema.json) — `G3 thin handoff planning` 预冻结所依赖的 contract schema；不表示当前主线已进入 routed-action runtime
+- [`routed-actions.schema.json`](./routed-actions.schema.json) — `Phase 1 / G3 thin handoff planning freeze hardening` 所依赖的 planning dependency；它是 planning-level contract 工件，不是 launcher，也不表示当前主线已进入 routed-action runtime
 - [`domain-onboarding-readiness.schema.json`](./domain-onboarding-readiness.schema.json) — machine-readable domain onboarding readiness gate 的 JSON Schema
 - [`governance-audit.schema.json`](./governance-audit.schema.json) — 已冻结的 P5.M1 governance / audit operating contract JSON Schema
 - [`publish-promotion.schema.json`](./publish-promotion.schema.json) — 已冻结的 P5.M2 publish / promotion operating contract JSON Schema

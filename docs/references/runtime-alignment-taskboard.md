@@ -25,7 +25,7 @@
 ## 一、当前统一结论
 
 当前最重要的不是继续发明新的上层名词，而是把已经冻结的统一合同真正压到各仓的 repo-durable truth 与 runtime contract 上。
-对 `one-person-lab` 而言，当前 baton 是 `G2 stable public baseline` 收口与 `G3 thin handoff planning` 预冻结，而不是 runtime 扩面。
+对 `one-person-lab` 而言，当前 baton 是守住已完成的 `G2 stable public baseline`，并推进 `Phase 1 / G3 thin handoff planning freeze hardening`，而不是 runtime 扩面。
 
 当前执行顺序已经明确为：
 
@@ -84,8 +84,9 @@
 
 - 继续把四仓共同检查项收进 `OPL` 的 onboarding / gateway 说明面
 - 形成稳定的“四仓状态更新节奏”，避免各仓单独漂移
-- `G3` 当前仅做 `thin handoff planning` 预冻结
+- `G3` 当前仅做 `thin handoff planning freeze hardening`
 - repo-tracked planning brief：`docs/plans/2026-04-07-g3-thin-handoff-planning-brief.md`
+- repo-tracked planning closeout note：`docs/plans/2026-04-07-g3-thin-handoff-planning-closeout-note.md`
 - repo-tracked release-closeout note：`docs/plans/2026-04-07-g2-release-closeout-note.md`
 - 当前不推进统一 runtime owner，也不抽共享执行内核
 
@@ -197,7 +198,7 @@
 
 ### 并行推荐
 
-1. `OPL` 先回写四仓最新状态到顶层参考同步面，完成 `G2` 收口并预冻结 `G3 thin handoff planning`
+1. `OPL` 先回写四仓最新状态到顶层参考同步面，守住已完成的 `G2 stable public baseline`，并推进 `G3 thin handoff planning freeze hardening`
 2. `Med Auto Science` 处理 `P0`
 3. `RedCube AI` 处理 `P0`
 4. `Med Auto Grant` 处理 `P0`，并并行准备 `P1` 的 formal entry freeze

@@ -18,6 +18,7 @@
 - 把 canonical truth 上收给 `OPL`
 
 这些 example 只是 illustrative 的 safety composition。
+在当前 `Phase 1 / G3 thin handoff planning freeze hardening` 中，它们仍只是 planning-level contract 示例，而不是 runtime 行为。
 
 ## 当前 Example Set
 

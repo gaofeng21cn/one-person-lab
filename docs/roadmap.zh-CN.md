@@ -34,14 +34,16 @@
 
 下一阶段应优先做这些事：
 
-- 完成当前 `Phase 1 / G2 release-closeout`：把 `G2 stable public baseline` 收口成稳定、单一、repo-tracked 的公开基线，并仅对 `G3 thin handoff planning` 做预冻结
+- 推进当前 `Phase 1 / G3 thin handoff planning freeze hardening`：把已完成的 `Phase 1 / G2 release-closeout` 固定为 `G2 stable public baseline`，同时把 `G3` 严格维持在 planning gate
 - 冻结 `OPL Gateway -> domain gateway -> domain harness` 这条控制语言
+- 只把 `route_request`、`build_handoff_payload`、`audit_routing_decision` 冻结为 planning-level contract 操作
+- 把唯一允许的成功 handoff 目标固定为 `domain_gateway`，并把禁止直达 domain harness 的 no-bypass 规则写成硬边界
 - 在当前 domain 仓库之上冻结 `Unified Harness Engineering Substrate` 这套共享语言，但不提前把它写成已经独立成型的公共代码框架
 - 保持 `MedAutoScience` 明确为 `Research Ops` 的 domain surface
 - 保持 `RedCube AI` 明确为视觉交付的 domain surface
 - 把 `Agent-first` 加双模执行这套原则带入后续候选 domain 的定义，而不是逐步漂移成 fixed-code-first 的产品线
 - 用清楚的任务边界与交付对象定义下一个候选 domain，并优先沿用当前 `task-topology + candidate-domain-backlog + domain-onboarding` 这条路径，而不是发明一层冗余中间控制面
-- 逐步把 `OPL Gateway` 从文档优先表面推进成真实入口
+- 逐步把 `OPL Gateway` 从文档优先表面推进成真实入口，但当前仍不激活 routed-action runtime
 
 在仍处于定义阶段的几个工作流里，更自然的优先顺序通常是：
 

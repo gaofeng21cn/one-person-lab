@@ -19,6 +19,7 @@ This corpus does not:
 - replace the underlying contracts
 
 The examples are illustrative contract compositions only.
+For the current `Phase 1 / G3 thin handoff planning freeze hardening`, any routed-action fragments here stay at the planning-level contract layer and do not imply an activated launcher or runtime.
 
 ## Current Example Set
 

@@ -34,14 +34,16 @@ What this phase does not do:
 
 The next phase should prioritize:
 
-- completing the current `Phase 1 / G2 release-closeout` by closing the `G2 stable public baseline` into one stable repo-tracked public entry while pre-freezing `G3 thin handoff planning`
+- hardening the current `Phase 1 / G3 thin handoff planning freeze hardening`: keep the completed `Phase 1 / G2 release-closeout` frozen as the `G2 stable public baseline`, and keep `G3` at a planning gate only
 - freezing the `OPL Gateway -> domain gateway -> domain harness` control language
+- freezing `route_request`, `build_handoff_payload`, and `audit_routing_decision` as planning-level contract operations only
+- keeping the only allowed successful handoff target at `domain_gateway`, with a hard no-bypass rule against direct domain-harness targeting
 - freezing the `Unified Harness Engineering Substrate` language above the current domain repositories without pretending that a shared public code framework already exists
 - keeping `MedAutoScience` explicit as the `Research Ops` domain surface
 - keeping `RedCube AI` explicit as the visual-deliverable domain surface
 - carrying the `Agent-first` plus dual-mode doctrine into future candidate-domain definitions instead of drifting toward fixed-code-first product lines
 - defining the next candidate domains through clear task boundaries and delivery objects, using the current `task-topology + candidate-domain-backlog + domain-onboarding` path rather than inventing a redundant intermediate control surface
-- progressively turning the `OPL Gateway` from a documentation-first surface into a real entry surface
+- progressively turning the `OPL Gateway` from a documentation-first surface into a real entry surface without activating a routed-action runtime yet
 
 Among the still-undefined workstreams, the more natural priority order is usually:
 

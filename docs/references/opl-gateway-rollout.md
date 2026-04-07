@@ -90,7 +90,8 @@ Goal:
 Current frozen state:
 
 - under the `Phase 1` public mainline, the CLI-first / read-only gateway baseline is already runnable
-- the current `Phase 1 / G2 release-closeout` is to close that baseline into one stable repo-tracked `G2 stable public baseline`
+- the completed `Phase 1 / G2 release-closeout` has already closed that baseline into one stable repo-tracked `G2 stable public baseline`
+- the current baton is the `Phase 1 / G3 thin handoff planning freeze hardening`
 
 Should support:
 
@@ -117,7 +118,10 @@ Goal:
 
 Current phase constraint:
 
-- the repository is only entering the `thin handoff planning` pre-freeze and is not entering routed-action implementation
+- the repository is only entering the `Phase 1 / G3 thin handoff planning freeze hardening`, i.e. the repo-tracked hardening pass on top of the earlier `thin handoff planning` pre-freeze, and is not entering routed-action implementation
+- this is a planning gate, not a runtime gate; `route_request`, `build_handoff_payload`, and `audit_routing_decision` are frozen as planning-level contract operations only
+- the only allowed successful handoff target remains `domain_gateway`, and the no-bypass rule forbids direct domain-harness targeting
+- `routed-actions.schema.json` remains a planning dependency, not a launcher
 - that means no mutation entry is added here, and `OPL` does not become a runtime owner
 - in other words, `G3` remains inactive beyond the planning freeze
 

@@ -18,6 +18,7 @@ This corpus does not:
 - move canonical truth into `OPL`
 
 The examples are illustrative safety compositions only.
+For the current `Phase 1 / G3 thin handoff planning freeze hardening`, they remain planning-level contract examples rather than runtime behavior.
 
 ## Current Example Set
 

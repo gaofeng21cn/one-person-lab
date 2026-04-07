@@ -90,7 +90,8 @@ Human / Agent
 当前冻结状态：
 
 - `Phase 1` 公开主线下，CLI-first / read-only gateway baseline 已可运行
-- 当前这一轮 `Phase 1 / G2 release-closeout` 的任务，是把它收口成稳定、单一、repo-tracked 的 `G2 stable public baseline`
+- 已完成的 `Phase 1 / G2 release-closeout` 已把它收口成稳定、单一、repo-tracked 的 `G2 stable public baseline`
+- 当前这一棒是 `Phase 1 / G3 thin handoff planning freeze hardening`
 
 应支持：
 
@@ -117,7 +118,10 @@ Human / Agent
 
 当前阶段限定：
 
-- 当前仅进入 `thin handoff planning` 预冻结，不进入 routed action implementation
+- 当前只进入 `Phase 1 / G3 thin handoff planning freeze hardening`，也就是在更早的 `thin handoff planning` 预冻结之上继续做 repo-tracked hardening，而不进入 routed action implementation
+- 当前这是 planning gate，不是 runtime gate；`route_request`、`build_handoff_payload`、`audit_routing_decision` 只冻结为 planning-level contract 操作
+- 唯一允许的成功 handoff 目标仍只能是 `domain_gateway`，并且 no-bypass 规则禁止直达 domain harness
+- `routed-actions.schema.json` 仍只是 planning dependency，不是 launcher
 - 这意味着当前不会新增 mutation entry，也不会把 `OPL` 升格成 runtime owner
 - 换句话说，`G3` 在 planning freeze 之外仍未激活
 

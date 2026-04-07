@@ -18,8 +18,10 @@ For the broader ownership split, see [Shared Foundation](../../docs/shared-found
 The public `opl-mainline` mainline remains `Phase 1`.
 As of `2026-04-07`, the repository already has a runnable local `TypeScript CLI`-first, read-only gateway baseline that reads the frozen contract artifacts in this directory.
 That transport sits on top of the current `Codex-default host-agent runtime`, while `Codex Host` freezes planning/truth and `OMX` handles long-running execution inside those frozen boundaries.
-The current work is the `Phase 1 / G2 release-closeout`: close the `G2 stable public baseline` into one stable repo-tracked public entry while pre-freezing `G3 thin handoff planning` only.
-That delivery target does **not** promote this directory into a runtime, routed-action control plane, or canonical truth store; it only makes the existing top-level contract language executable through a local CLI surface.
+The completed `Phase 1 / G2 release-closeout` has already closed the `G2 stable public baseline` into one stable repo-tracked public entry.
+For the historical closeout wording, the current work is the `Phase 1 / G2 release-closeout`: close the `G2 stable public baseline` into one stable repo-tracked public entry.
+The current baton is the `Phase 1 / G3 thin handoff planning freeze hardening`: this directory only hardens a planning gate / planning-level contract around `route_request`, `build_handoff_payload`, and `audit_routing_decision`. The only allowed successful handoff target remains `domain_gateway`, the no-bypass rule still forbids direct domain-harness targeting, and `routed-actions.schema.json` remains a planning dependency rather than a launcher.
+That delivery target does **not** promote this directory into a runtime, routed-action control plane, or canonical truth store; it only keeps the existing top-level contract language executable through a local CLI surface.
 
 ## Current four-repo alignment companions
 
@@ -89,7 +91,7 @@ These backlog and mapping surfaces are reference-only. They do not become a work
 - [`domains.json`](./domains.json) — machine-readable domain registry
 - [`routing-vocabulary.json`](./routing-vocabulary.json) — shared routing vocabulary groups plus frozen routing rules
 - [`handoff.schema.json`](./handoff.schema.json) — JSON Schema for the frozen G1 handoff payload
-- [`routed-actions.schema.json`](./routed-actions.schema.json) — schema dependency for the `G3 thin handoff planning` pre-freeze; it does not mean the current mainline has entered a routed-action runtime
+- [`routed-actions.schema.json`](./routed-actions.schema.json) — planning dependency for the `Phase 1 / G3 thin handoff planning freeze hardening`; it is a planning-level contract artifact, not a launcher, and does not mean the current mainline has entered a routed-action runtime
 - [`domain-onboarding-readiness.schema.json`](./domain-onboarding-readiness.schema.json) — JSON Schema for the machine-readable domain onboarding readiness gate
 - [`governance-audit.schema.json`](./governance-audit.schema.json) — JSON Schema for the frozen P5.M1 governance / audit operating contract
 - [`publish-promotion.schema.json`](./publish-promotion.schema.json) — JSON Schema for the frozen P5.M2 publish / promotion operating contract

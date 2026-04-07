@@ -6,8 +6,9 @@
 
 This document freezes the `G3` contract for the `OPL Gateway`.
 
-`G3` is the first phase where `OPL` may accept a top-level action request and route it into the correct domain gateway.
-In the current `Phase 1`, this document is only a `G3 thin handoff planning / pre-freeze` contract reference; it does not mean that the repository has already entered routed-action implementation.
+`G3` is the first phase where `OPL` may eventually accept a top-level action request and route it into the correct domain gateway.
+In the current `Phase 1`, this document is only a `G3 thin handoff planning / pre-freeze` contract reference and now serves as the planning-level contract for the `Phase 1 / G3 thin handoff planning freeze hardening`; it does not mean that the repository has already entered routed-action implementation.
+This is a planning gate, not a runtime gate. No mutation entry, run launch, or workspace write is added at this step.
 
 The goal is not to create a monolithic runtime.
 The goal is to make top-level routing explicit, auditable, and safe.
@@ -24,11 +25,11 @@ If `G1` is not frozen, or if `G2` discovery semantics are still ambiguous, `G3` 
 
 ## Core Promise
 
-At `G3`, an agent should be able to:
+At the planning-level `G3` contract, an agent should eventually be able to:
 
 - submit a top-level request to `OPL`
 - receive an explicit routing decision
-- build a stable handoff payload for the target domain gateway
+- build a stable handoff payload for the target `domain_gateway`
 - record an auditable routing trace
 
 It must still **not**:
@@ -37,9 +38,11 @@ It must still **not**:
 - target a domain harness directly
 - move canonical truth ownership into `OPL`
 
+The only allowed successful handoff target is `domain_gateway`. This no-bypass rule is hard, not advisory.
+
 ## Required Operations
 
-The minimum routed-action gateway must expose these operations:
+The minimum routed-action planning-level contract must expose these operations:
 
 - `route_request`
 - `build_handoff_payload`
@@ -113,6 +116,7 @@ Required rule:
 
 - this operation may run only after `route_request` returns `status = routed`
 - the output must conform to [`../contracts/opl-gateway/handoff.schema.json`](../contracts/opl-gateway/handoff.schema.json)
+- the only allowed successful target is `domain_gateway`; this operation is planning-only and may not launch a domain runtime
 
 Suggested response:
 
@@ -307,20 +311,24 @@ The machine-readable schema for this layer lives at:
 
 - [`../contracts/opl-gateway/routed-actions.schema.json`](../contracts/opl-gateway/routed-actions.schema.json)
 
+At the current baseline, that schema is a planning dependency, not a launcher.
+
 Canonical routed-safety examples for the non-success states live at:
 
 - [OPL Routed-Safety Example Corpus](./references/opl-routed-safety-example-corpus.md)
 
-## Completion Definition
+## Planning Freeze Completion Definition
 
-`G3` is complete when:
+The current `Phase 1 / G3 thin handoff planning freeze hardening` is complete when:
 
-- `route_request`, `build_handoff_payload`, and `audit_routing_decision` are frozen as stable operations
+- `route_request`, `build_handoff_payload`, and `audit_routing_decision` are frozen as stable planning-level operations
 - refusal, unknown-domain, and ambiguous-task handling are explicit
 - routed outputs can be expressed without prose-only interpretation
-- the contract still forbids bypassing domain gateways
+- the only allowed successful handoff target remains `domain_gateway`
+- the no-bypass rule still forbids bypassing domain gateways
+- the schema remains a planning dependency rather than a launcher
 
-`G3` is not complete when:
+The current planning freeze is not complete when:
 
 - routing still depends on free-form prose alone
 - the top-level gateway invents ownership where none is registered

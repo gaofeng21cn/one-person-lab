@@ -128,7 +128,7 @@ These companion surfaces are illustrative or reference-only. The gateway corpus 
 
 `G3` passes only when all of the following are true:
 
-In the current `Phase 1`, this gate freezes contract / planning boundaries only; it does not prove that a routed-action runtime has already been implemented.
+In the current `Phase 1`, this is a planning gate, not a runtime gate. The current `G3` surface remains a planning-level contract, and `routed-actions.schema.json` remains a planning dependency rather than a launcher.
 
 1. The routed action contract defines:
    - `route_request`
@@ -148,6 +148,7 @@ In the current `Phase 1`, this gate freezes contract / planning boundaries only;
 
 - Parse `contracts/opl-gateway/routed-actions.schema.json`.
 - Check `docs/opl-routed-action-gateway.md` and `.zh-CN.md` for all required operations and failure states.
+- Grep for planning-gate / planning-level-contract / planning-dependency wording and confirm that routed-action prose is still non-launcher.
 - Grep for no-bypass wording and confirm it is framed as a hard rule, not a preference.
 
 ## D. Domain Onboarding Gate
@@ -1233,11 +1234,12 @@ The current OPL gateway documentation-and-contract stack is acceptance-green onl
 
 - all sections A-R pass
 - the linked machine-readable contracts are present and valid
+- section C stays planning-gate green rather than runtime-green
 - discovery and routing docs still forbid direct harness bypass
 - governance / audit remains index-only
 - publish / promotion remains index-only and post-publish only
-- the example corpus remains illustrative and schema-aligned
-- the routed-safety corpus remains illustrative and explicitly unresolved where required
+- the example corpus remains illustrative, planning-level, and schema-aligned
+- the routed-safety corpus remains illustrative, planning-level, and explicitly unresolved where required
 - the operating example corpus remains illustrative and directly schema-validated
 - the operating-record catalog remains reference-only and resolves all schema/example refs
 - the surface lifecycle map remains derived, reference-only, and non-executing
