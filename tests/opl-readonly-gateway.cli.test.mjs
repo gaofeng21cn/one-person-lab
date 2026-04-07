@@ -54,6 +54,12 @@ function parseJsonOutput(result) {
   return JSON.parse(text);
 }
 
+function assertNoContractsProvenance(payload) {
+  assert.equal(payload.contracts_context, undefined);
+  assert.equal(payload.error?.details?.contracts_dir, undefined);
+  assert.equal(payload.error?.details?.contracts_root_source, undefined);
+}
+
 function createContractsFixtureRoot(mutator) {
   const fixtureRoot = mkdtempSync(path.join(os.tmpdir(), 'opl-contract-fixture-'));
   const fixtureContractsRoot = path.join(fixtureRoot, 'contracts', 'opl-gateway');
@@ -242,6 +248,8 @@ test('validate-contracts surfaces missing files with a stable machine-readable e
     assert.equal(payload.version, 'g2');
     assert.equal(payload.error.code, 'contract_file_missing');
     assert.match(payload.error.message, /task-topology\.json/i);
+    assert.equal(payload.error.details.contracts_dir, fixtureContractsRoot);
+    assert.equal(payload.error.details.contracts_root_source, 'env');
   } finally {
     rmSync(fixtureRoot, { recursive: true, force: true });
   }
@@ -259,6 +267,8 @@ test('validate-contracts surfaces invalid JSON from the contract set rooted at c
     const payload = parseJsonOutput(result);
     assert.equal(payload.error.code, 'contract_json_invalid');
     assert.match(payload.error.message, /domains\.json|invalid json/i);
+    assert.equal(payload.error.details.contracts_dir, fixtureContractsRoot);
+    assert.equal(payload.error.details.contracts_root_source, 'env');
   } finally {
     rmSync(fixtureRoot, { recursive: true, force: true });
   }
@@ -279,6 +289,8 @@ test('validate-contracts surfaces shape-invalid contracts with a stable error en
     const payload = parseJsonOutput(result);
     assert.equal(payload.error.code, 'contract_shape_invalid');
     assert.match(payload.error.message, /label/i);
+    assert.equal(payload.error.details.contracts_dir, fixtureContractsRoot);
+    assert.equal(payload.error.details.contracts_root_source, 'env');
   } finally {
     rmSync(fixtureRoot, { recursive: true, force: true });
   }
@@ -289,6 +301,7 @@ test('unknown command remains machine-readable and discoverable', () => {
   assert.notEqual(result.status, 0, 'Expected a non-zero exit when the command is unknown.');
 
   const payload = parseJsonOutput(result);
+  assertNoContractsProvenance(payload);
   assert.equal(payload.version, 'g2');
   assert.equal(payload.error.code, 'unknown_command');
   assert.ok(payload.error.details.commands.includes('validate-contracts'));
@@ -301,6 +314,7 @@ test('help stays machine-readable and discoverable for built CLI entrypoints', (
   assert.equal(result.status, 0, formatFailure(result));
 
   const payload = parseJsonOutput(result);
+  assertNoContractsProvenance(payload);
   assert.equal(payload.version, 'g2');
   assert.equal(payload.help.command, null);
   assert.equal(payload.help.usage, 'opl <command> [args]');
@@ -320,6 +334,7 @@ test('command --help stays machine-readable for built CLI entrypoints', () => {
   assert.equal(result.status, 0, formatFailure(result));
 
   const payload = parseJsonOutput(result);
+  assertNoContractsProvenance(payload);
   assert.equal(payload.version, 'g2');
   assert.equal(payload.help.command, 'get-domain');
   assert.equal(payload.help.usage, 'opl get-domain <domain_id>');
@@ -331,6 +346,7 @@ test('command help literal uses the dedicated usage exit code for built CLI entr
   assert.equal(result.status, 2, formatFailure(result));
 
   const payload = parseJsonOutput(result);
+  assertNoContractsProvenance(payload);
   assert.equal(payload.error.code, 'cli_usage_error');
   assert.equal(payload.error.exit_code, 2);
   assert.equal(payload.error.details.help_usage, 'opl get-domain --help');

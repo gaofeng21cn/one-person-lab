@@ -42,6 +42,12 @@ type ResolvedContractsLocation = {
   source: ContractsRootSource;
 };
 
+const CONTRACT_LOAD_ERROR_CODES = new Set<ErrorCode>([
+  'contract_file_missing',
+  'contract_json_invalid',
+  'contract_shape_invalid',
+]);
+
 function defaultExitCode(code: ErrorCode): number {
   switch (code) {
     case 'cli_usage_error':
@@ -643,7 +649,7 @@ function resolveExplicitContractsDir(
         {
           contracts_dir: resolvedDir,
           file: filePath,
-          source,
+          contracts_root_source: source,
         },
       );
     }
@@ -724,6 +730,38 @@ function resolveContractsLocation(
   };
 }
 
+function enrichContractLoadError(
+  error: GatewayContractError,
+  location: ResolvedContractsLocation,
+): GatewayContractError {
+  const rawDetails = error.details ?? {};
+  const {
+    source: legacySource,
+    contracts_root_source: existingContractsRootSource,
+    contracts_dir: existingContractsDir,
+    ...details
+  } = rawDetails;
+
+  return new GatewayContractError(
+    error.code,
+    error.message,
+    {
+      ...details,
+      contracts_dir:
+        typeof existingContractsDir === 'string'
+          ? existingContractsDir
+          : location.contractsDir,
+      contracts_root_source:
+        typeof existingContractsRootSource === 'string'
+          ? existingContractsRootSource
+          : typeof legacySource === 'string'
+            ? legacySource
+            : location.source,
+    },
+    error.exitCode,
+  );
+}
+
 const REQUIRED_CONTRACT_FILES = [
   {
     contract_id: 'workstreams',
@@ -773,32 +811,44 @@ export function validateGatewayContracts(
 export function loadGatewayContracts(
   input?: string | GatewayContractsLoadOptions,
 ): GatewayContracts {
-  const { contractsDir, source } = resolveContractsLocation(input);
+  const location = resolveContractsLocation(input);
+  const { contractsDir, source } = location;
 
-  return {
-    contractsDir,
-    contractsRootSource: source,
-    workstreams: validateWorkstreamsRegistry(
-      path.join(contractsDir, 'workstreams.json'),
-      parseJsonFile(path.join(contractsDir, 'workstreams.json')),
-    ),
-    domains: validateDomainsRegistry(
-      path.join(contractsDir, 'domains.json'),
-      parseJsonFile(path.join(contractsDir, 'domains.json')),
-    ),
-    routingVocabulary: validateRoutingVocabulary(
-      path.join(contractsDir, 'routing-vocabulary.json'),
-      parseJsonFile(path.join(contractsDir, 'routing-vocabulary.json')),
-    ),
-    taskTopology: validateTaskTopology(
-      path.join(contractsDir, 'task-topology.json'),
-      parseJsonFile(path.join(contractsDir, 'task-topology.json')),
-    ),
-    publicSurfaceIndex: validatePublicSurfaceIndex(
-      path.join(contractsDir, 'public-surface-index.json'),
-      parseJsonFile(path.join(contractsDir, 'public-surface-index.json')),
-    ),
-  };
+  try {
+    return {
+      contractsDir,
+      contractsRootSource: source,
+      workstreams: validateWorkstreamsRegistry(
+        path.join(contractsDir, 'workstreams.json'),
+        parseJsonFile(path.join(contractsDir, 'workstreams.json')),
+      ),
+      domains: validateDomainsRegistry(
+        path.join(contractsDir, 'domains.json'),
+        parseJsonFile(path.join(contractsDir, 'domains.json')),
+      ),
+      routingVocabulary: validateRoutingVocabulary(
+        path.join(contractsDir, 'routing-vocabulary.json'),
+        parseJsonFile(path.join(contractsDir, 'routing-vocabulary.json')),
+      ),
+      taskTopology: validateTaskTopology(
+        path.join(contractsDir, 'task-topology.json'),
+        parseJsonFile(path.join(contractsDir, 'task-topology.json')),
+      ),
+      publicSurfaceIndex: validatePublicSurfaceIndex(
+        path.join(contractsDir, 'public-surface-index.json'),
+        parseJsonFile(path.join(contractsDir, 'public-surface-index.json')),
+      ),
+    };
+  } catch (error) {
+    if (
+      error instanceof GatewayContractError
+      && CONTRACT_LOAD_ERROR_CODES.has(error.code)
+    ) {
+      throw enrichContractLoadError(error, location);
+    }
+
+    throw error;
+  }
 }
 
 export function findWorkstreamOrThrow(

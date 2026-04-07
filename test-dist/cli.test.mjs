@@ -43,6 +43,12 @@ function runBuiltCliFailure(args, envOverrides = {}) {
   };
 }
 
+function assertNoContractsProvenance(payload) {
+  assert.equal(payload.contracts_context, undefined);
+  assert.equal(payload.error?.details?.contracts_dir, undefined);
+  assert.equal(payload.error?.details?.contracts_root_source, undefined);
+}
+
 test('built cli lists admitted workstreams', () => {
   const output = runBuiltCli(['list-workstreams']);
 
@@ -119,6 +125,7 @@ test('built cli validate-contracts exposes cli-flag contract-root provenance', (
 test('built cli exposes machine-readable help', () => {
   const output = runBuiltCli(['help']);
 
+  assertNoContractsProvenance(output);
   assert.equal(output.version, 'g2');
   assert.equal(output.help.command, null);
   assert.equal(output.help.usage, 'opl <command> [args]');
@@ -188,11 +195,14 @@ test('built cli treats OPL_CONTRACTS_DIR as an explicit contract root override',
   assert.equal(payload.error.code, 'contract_file_missing');
   assert.equal(payload.error.exit_code, 3);
   assert.equal(status, 3);
+  assert.equal(payload.error.details.contracts_dir, repoRoot);
+  assert.equal(payload.error.details.contracts_root_source, 'env');
 });
 
 test('built cli root --help stays in parity with help output', () => {
   const output = runBuiltCli(['--help']);
 
+  assertNoContractsProvenance(output);
   assert.equal(output.version, 'g2');
   assert.equal(output.help.command, null);
   assert.equal(output.help.usage, 'opl <command> [args]');
@@ -203,6 +213,7 @@ test('built cli root --help stays in parity with help output', () => {
 test('built cli treats command help literal as a usage error', () => {
   const { status, payload } = runBuiltCliFailure(['get-domain', 'help']);
 
+  assertNoContractsProvenance(payload);
   assert.equal(payload.version, 'g2');
   assert.equal(payload.error.code, 'cli_usage_error');
   assert.equal(payload.error.exit_code, 2);
@@ -230,6 +241,8 @@ test('built cli validate-contracts surfaces invalid JSON with a stable error env
     assert.equal(payload.error.exit_code, 3);
     assert.equal(status, 3);
     assert.match(payload.error.message, /public-surface-index\.json/i);
+    assert.equal(payload.error.details.contracts_dir, tempContracts);
+    assert.equal(payload.error.details.contracts_root_source, 'env');
   } finally {
     fs.rmSync(tempContracts, { recursive: true, force: true });
   }
@@ -238,6 +251,7 @@ test('built cli validate-contracts surfaces invalid JSON with a stable error env
 test('built cli unknown-command discovery includes validate-contracts', () => {
   const { status, payload } = runBuiltCliFailure(['unknown-command']);
 
+  assertNoContractsProvenance(payload);
   assert.equal(payload.version, 'g2');
   assert.equal(payload.error.code, 'unknown_command');
   assert.equal(payload.error.exit_code, 2);
@@ -248,6 +262,7 @@ test('built cli unknown-command discovery includes validate-contracts', () => {
 test('built cli usage errors expose machine-readable guidance', () => {
   const { status, payload } = runBuiltCliFailure(['get-domain']);
 
+  assertNoContractsProvenance(payload);
   assert.equal(payload.version, 'g2');
   assert.equal(payload.error.code, 'cli_usage_error');
   assert.equal(payload.error.exit_code, 2);
@@ -280,6 +295,8 @@ test('built cli contract validation failures use the contract-error exit code', 
     const output = JSON.parse(result.stderr);
     assert.equal(output.error.code, 'contract_file_missing');
     assert.equal(output.error.exit_code, 3);
+    assert.equal(output.error.details.contracts_dir, tempContracts);
+    assert.equal(output.error.details.contracts_root_source, 'cli_flag');
   } finally {
     fs.rmSync(tempContracts, { recursive: true, force: true });
   }

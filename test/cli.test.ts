@@ -41,11 +41,19 @@ function runCli(args: string[], envOverrides: Record<string, string> = {}) {
 }
 
 function runCliFailure(args: string[], envOverrides: Record<string, string> = {}) {
+  return runCliFailureInCwd(args, repoRoot, envOverrides);
+}
+
+function runCliFailureInCwd(
+  args: string[],
+  cwd: string,
+  envOverrides: Record<string, string> = {},
+) {
   const result = spawnSync(
     process.execPath,
     ['--experimental-strip-types', cliPath, ...args],
     {
-      cwd: repoRoot,
+      cwd,
       encoding: 'utf8',
       env: {
         ...process.env,
@@ -84,6 +92,16 @@ function assertContractsContext(
   });
 }
 
+function assertNoContractsProvenance(payload: {
+  help?: unknown;
+  error?: { details?: Record<string, unknown> };
+  contracts_context?: unknown;
+}) {
+  assert.equal(payload.contracts_context, undefined);
+  assert.equal(payload.error?.details?.contracts_dir, undefined);
+  assert.equal(payload.error?.details?.contracts_root_source, undefined);
+}
+
 test('loadGatewayContracts returns the frozen gateway registries', () => {
   const contracts = loadGatewayContracts(repoRoot);
 
@@ -100,13 +118,18 @@ test('loadGatewayContracts returns the frozen gateway registries', () => {
 
 test('loadGatewayContracts rejects missing files with a stable error', async (t) => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-gateway-missing-'));
+  const expectedContractsDir = path.join(tempRoot, 'contracts', 'opl-gateway');
 
   await t.test('missing contracts directory', () => {
     assert.throws(
       () => loadGatewayContracts(tempRoot),
-      (error: unknown) =>
-        error instanceof GatewayContractError
-        && error.code === 'contract_file_missing',
+      (error: unknown) => {
+        assert.ok(error instanceof GatewayContractError);
+        assert.equal(error.code, 'contract_file_missing');
+        assert.equal(error.details?.contracts_dir, expectedContractsDir);
+        assert.equal(error.details?.contracts_root_source, 'api');
+        return true;
+      },
     );
   });
 });
@@ -302,21 +325,21 @@ test('validate-contracts exposes cli-flag contract-root provenance', () => {
   }
 });
 
-test('validate-contracts surfaces stable missing-file errors', () => {
+test('validate-contracts surfaces stable missing-file errors with cwd provenance', () => {
   const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((contractsRoot) => {
     fs.rmSync(path.join(contractsRoot, 'task-topology.json'));
   });
 
   try {
-    const { status, payload } = runCliFailure(['validate-contracts'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    });
+    const { status, payload } = runCliFailureInCwd(['validate-contracts'], fixtureRoot);
 
     assert.equal(payload.version, 'g2');
     assert.equal(payload.error.code, 'contract_file_missing');
     assert.equal(payload.error.exit_code, 3);
     assert.equal(status, 3);
     assert.match(payload.error.message, /task-topology\.json/i);
+    assert.equal(payload.error.details.contracts_dir, fs.realpathSync.native(fixtureContractsRoot));
+    assert.equal(payload.error.details.contracts_root_source, 'cwd');
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
@@ -337,12 +360,14 @@ test('validate-contracts surfaces stable invalid-json errors', () => {
     assert.equal(payload.error.exit_code, 3);
     assert.equal(status, 3);
     assert.match(payload.error.message, /domains\.json/i);
+    assert.equal(payload.error.details.contracts_dir, fixtureContractsRoot);
+    assert.equal(payload.error.details.contracts_root_source, 'env');
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
 
-test('validate-contracts surfaces stable shape-invalid errors', () => {
+test('validate-contracts surfaces stable shape-invalid errors with cli-flag provenance', () => {
   const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((contractsRoot) => {
     const workstreamsPath = path.join(contractsRoot, 'workstreams.json');
     const workstreams = JSON.parse(fs.readFileSync(workstreamsPath, 'utf8'));
@@ -351,15 +376,19 @@ test('validate-contracts surfaces stable shape-invalid errors', () => {
   });
 
   try {
-    const { status, payload } = runCliFailure(['validate-contracts'], {
-      OPL_CONTRACTS_DIR: fixtureContractsRoot,
-    });
+    const { status, payload } = runCliFailure([
+      '--contracts-dir',
+      fixtureContractsRoot,
+      'validate-contracts',
+    ]);
 
     assert.equal(payload.version, 'g2');
     assert.equal(payload.error.code, 'contract_shape_invalid');
     assert.equal(payload.error.exit_code, 3);
     assert.equal(status, 3);
     assert.match(payload.error.message, /label/i);
+    assert.equal(payload.error.details.contracts_dir, fixtureContractsRoot);
+    assert.equal(payload.error.details.contracts_root_source, 'cli_flag');
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
@@ -671,6 +700,7 @@ test('explain-domain-boundary explains under-definition requests', () => {
 test('help returns command discovery and runnable examples', () => {
   const output = runCli(['help']);
 
+  assertNoContractsProvenance(output);
   assert.equal(output.version, 'g2');
   assert.equal(output.help.command, null);
   assert.equal(output.help.usage, 'opl <command> [args]');
@@ -689,6 +719,7 @@ test('help returns command discovery and runnable examples', () => {
 test('root --help returns the same machine-readable help payload', () => {
   const output = runCli(['--help']);
 
+  assertNoContractsProvenance(output);
   assert.equal(output.version, 'g2');
   assert.equal(output.help.command, null);
   assert.equal(output.help.usage, 'opl <command> [args]');
@@ -700,6 +731,7 @@ test('root --help returns the same machine-readable help payload', () => {
 test('command --help returns command-scoped usage and examples', () => {
   const output = runCli(['get-domain', '--help']);
 
+  assertNoContractsProvenance(output);
   assert.equal(output.version, 'g2');
   assert.equal(output.help.command, 'get-domain');
   assert.equal(output.help.usage, 'opl get-domain <domain_id>');
@@ -719,6 +751,7 @@ test('command help literal returns a usage error instead of command-scoped help'
 test('CLI usage errors expose machine-readable usage guidance', () => {
   const { status, payload } = runCliFailure(['get-domain']);
 
+  assertNoContractsProvenance(payload);
   assert.equal(payload.version, 'g2');
   assert.equal(payload.error.code, 'cli_usage_error');
   assert.equal(payload.error.exit_code, 2);
@@ -750,6 +783,7 @@ test('CLI returns stable JSON errors for unknown surface ids', () => {
 test('CLI returns machine-readable JSON errors for unknown commands with available command discovery', () => {
   const { status, payload } = runCliFailure(['unknown-command']);
 
+  assertNoContractsProvenance(payload);
   assert.equal(payload.version, 'g2');
   assert.equal(payload.error.code, 'unknown_command');
   assert.equal(payload.error.exit_code, 2);
