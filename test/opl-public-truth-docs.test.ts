@@ -115,6 +115,7 @@ test('grant candidate path keeps med auto grant at signal-only evidence instead 
     assert.match(doc, /not an admitted domain gateway|do not satisfy admission|not indexed here as an admitted domain/i);
     assert.match(doc, /not (?:count as|make).*G2 discovery readiness|not (?:count as|make).*G2 discovery target|G2 discovery-ready|does \*\*not\*\* satisfy.*discovery readiness|do not satisfy.*discovery readiness/i);
     assert.match(doc, /not (?:count as|make).*G3 routed-action readiness|not (?:count as|make).*G3 routed-action target|G3 routed-action-ready|does \*\*not\*\* satisfy.*routing readiness|do not satisfy.*routing readiness/i);
+    assert.match(doc, /handoff-ready|handoff readiness/i);
   }
 
   for (const doc of [roadmapZh, taskMapZh, backlogZh, onboardingZh, publicSurfaceIndexZh, gatewayContractsZh, acceptanceZh]) {
@@ -124,6 +125,7 @@ test('grant candidate path keeps med auto grant at signal-only evidence instead 
     assert.match(doc, /不等于已正式收录的 domain gateway|不等于已经 admitted 的 domain gateway|不会被写成已收录 domain gateway|不能满足 admission/);
     assert.match(doc, /不等于 `?G2`? discovery readiness|不等于 `?G2`? discovery target|`?G2`? discovery-ready|不能满足.*discovery readiness/);
     assert.match(doc, /不等于 `?G3`? routed-action readiness|不等于 `?G3`? routed-action target|`?G3`? routed-action-ready|`?G3`? routed-action readiness|不能满足.*routing readiness/);
+    assert.match(doc, /handoff-ready|handoff readiness/);
   }
 });
 

@@ -106,6 +106,7 @@
 - 当前 `Grant Foundry -> Med Auto Grant` 公开 scaffold 只提供 top-level signal / domain-direction evidence；它不等于已正式收录的 domain gateway，也不等于 `G2` discovery readiness，也不等于 `G3` routed-action readiness，更不等于 handoff-ready surface
 - formal 收录前的 blocker 已在 [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.zh-CN.md) 中跟踪
 - `Grant Foundry -> Med Auto Grant` 当前只提供公开 scaffold / top-level signal / domain-direction evidence；它还不构成 registry material、discovery readiness、routing readiness 或 domain handoff 资格
+- 任何未来的 successful handoff 也只能 targeting `domain_gateway`；direct harness bypass 仍然被禁止
 - 但如果顶层语义已经足够清楚，在真实 domain owner 被收录前，最多只能显式返回 `unknown_domain`，且不会构建 handoff payload
 
 ## Thesis Ops

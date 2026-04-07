@@ -203,7 +203,7 @@ Onboarding package 必须说明：
 
 - 哪些 OPL public surface 承载这组 linked role wording
 - 哪些 domain public surface 承载匹配的 wording
-- 哪句边界声明用来防止 signal-only scaffold 被误读成 admission
+- 哪句边界声明用来防止 signal-only scaffold 被误读成 admission、discovery readiness、routing readiness 或 handoff readiness
 
 如果这组 wording 不能被显式审查，这个 domain 就仍然位于 formal inclusion 之下。
 

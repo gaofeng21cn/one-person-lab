@@ -55,6 +55,7 @@
 
 这个优先顺序只表示边界定义的先后。当前 `Grant Ops` 确实是候选 domain path 收紧的第一优先项，但 `Grant Foundry -> Med Auto Grant` 目前仍只提供公开 scaffold / top-level signal / domain-direction evidence。
 这还不等于 registry material、discovery readiness 或 routing readiness，也不代表 `Grant Ops` 已经变成已正式收录的 domain gateway、`G2` discovery target、`G3` routed-action target 或 handoff-ready surface；在对应 domain-onboarding evidence 出现前，它仍然不是这些状态。
+任何未来的 successful handoff 也仍然只能 targeting `domain_gateway`，并继续受不得直达 harness 的 no-bypass 规则约束。
 
 ## 更后续阶段
 

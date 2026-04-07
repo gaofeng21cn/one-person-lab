@@ -56,6 +56,7 @@ Among the still-undefined workstreams, the more natural priority order is usuall
 This priority ordering is only a boundary-definition sequence.
 `Grant Ops` is the current candidate-domain hardening focus, but `Grant Foundry -> Med Auto Grant` still contributes only public scaffold / top-level signal / domain-direction evidence.
 That does **not** satisfy registry material, discovery readiness, or routing readiness, and it does **not** make `Grant Ops` an admitted domain gateway, a `G2` discovery target, a `G3` routed-action target, or a handoff-ready surface before its domain-onboarding evidence exists.
+Any future successful handoff remains `domain_gateway`-only and subject to the no-bypass rule against direct harness targeting.
 
 ## Later Phase
 

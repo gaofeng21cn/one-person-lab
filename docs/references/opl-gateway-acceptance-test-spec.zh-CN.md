@@ -178,7 +178,7 @@ onboarding gate 只有在下面全部成立时才算通过：
 11. onboarding contract 保持 non-executing、不会自动收录 domain，也不会替代 prose review gate。
 12. onboarding contract 显式禁止“先挂名，后补边界”。
 13. onboarding contract 显式禁止把未来 domain 写成 `OPL` 内部模块。
-14. 像 `Grant Foundry -> Med Auto Grant` 这样的 signal-only scaffold，本身不能满足 admission、discovery readiness 或 routing readiness。
+14. 像 `Grant Foundry -> Med Auto Grant` 这样的 signal-only scaffold，本身不能满足 admission、discovery readiness、routing readiness 或 handoff readiness。
 
 ### 验证方式
 

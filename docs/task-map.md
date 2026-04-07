@@ -107,6 +107,7 @@ Current boundary status:
 - the current `Grant Foundry -> Med Auto Grant` public scaffold provides top-level signal / domain-direction evidence only; it is not an admitted domain gateway and does not count as G2 discovery readiness, G3 routed-action readiness, or a handoff-ready surface
 - admission blockers are tracked in [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.md)
 - `Grant Foundry -> Med Auto Grant` currently contributes public scaffold / top-level signal / domain-direction evidence only; it does not yet satisfy registry material, discovery readiness, routing readiness, or domain handoff eligibility
+- any future successful handoff may target only `domain_gateway`; direct harness bypass remains forbidden
 - clear top-level requests may surface only as `unknown_domain`, without building a handoff payload, until a real domain owner is admitted
 
 ## Thesis Ops

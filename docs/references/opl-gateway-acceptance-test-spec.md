@@ -178,7 +178,7 @@ The onboarding gate passes only when all of the following are true:
 11. The onboarding contract remains non-executing, does not auto-admit domains, and does not replace the prose review gate.
 12. The onboarding contract explicitly forbids “placeholder first, boundary later”.
 13. The onboarding contract explicitly forbids treating future domains as internal `OPL` modules.
-14. Signal-only scaffolds such as `Grant Foundry -> Med Auto Grant` do not satisfy admission, discovery readiness, or routing readiness by themselves.
+14. Signal-only scaffolds such as `Grant Foundry -> Med Auto Grant` do not satisfy admission, discovery readiness, routing readiness, or handoff readiness by themselves.
 
 ### Verification
 

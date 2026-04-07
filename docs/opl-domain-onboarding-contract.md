@@ -203,7 +203,7 @@ The onboarding package must identify:
 
 - which OPL public surfaces carry the linked role wording
 - which domain public surfaces carry the matching wording
-- which boundary statement keeps any signal-only scaffold from being misread as admission
+- which boundary statement keeps any signal-only scaffold from being misread as admission, discovery readiness, routing readiness, or handoff readiness
 
 If this wording cannot be reviewed explicitly, the domain remains below formal inclusion.
 

@@ -102,7 +102,7 @@ Important boundary:
 - `ppt_deck` directly maps to `presentation_ops`
 - `xiaohongshu` may still route to `redcube`, but does not automatically equal `presentation_ops`
 - `Grant Ops`, `Review Ops`, and `Thesis Ops` may appear in the task map as under-definition workstreams, but that does not make them admitted domains or routed targets
-- the current `Grant Foundry -> Med Auto Grant` public scaffold is top-level signal / domain-direction evidence only; it is not indexed here as an admitted domain public-entry surface, is not an admitted domain gateway, and does not count as G2 discovery readiness or G3 routed-action readiness
+- the current `Grant Foundry -> Med Auto Grant` public scaffold is top-level signal / domain-direction evidence only; it is not indexed here as an admitted domain public-entry surface, is not an admitted domain gateway, does not count as G2 discovery readiness or G3 routed-action readiness, and is not a handoff-ready surface
 - the current admission blockers for those under-definition workstreams live in the candidate-domain backlog and remain below the onboarding gate
 
 ## Reading Rule
@@ -114,7 +114,8 @@ Canonical runtime truth, review truth, release truth, and submission truth remai
 If a surface is `opl_operating_model`, `opl_shared_foundation`, or `opl_shared_foundation_ownership`, it remains a shared-foundation boundary/reference surface only and does not transfer canonical truth, mutation, review truth, or publication truth into `OPL`.
 If a surface is `opl_task_map`, under-definition workstreams remain top-level semantic candidates only until the onboarding and registry gates are satisfied.
 If a surface is `opl_candidate_domain_backlog`, it remains an admission-blocker reference only and does not count as onboarding readiness, discovery readiness, or routed-action readiness.
-If a public scaffold such as `Grant Foundry -> Med Auto Grant` is mentioned, it still counts only as top-level signal / domain-direction evidence for a future candidate direction and not as an admitted domain gateway or routing target.
+If a public scaffold such as `Grant Foundry -> Med Auto Grant` is mentioned, it still counts only as top-level signal / domain-direction evidence for a future candidate direction and not as an admitted domain gateway, routing target, or handoff-ready surface.
+Any future follow-on route remains `domain_gateway`-only and subject to the no-bypass rule against direct harness targeting.
 If a surface is `opl_gateway_rollout`, it remains a top-level public-entry map and does not become a runtime authority engine or launcher.
 If a surface is the routed-action prose or schema layer, it remains a planning-level contract / planning dependency only and does not become a launcher or live runtime control plane after the completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening`.
 If a surface is the acceptance, matrix, or example layer, it remains a discoverability/review companion only; it does not automatically promote every listed artifact into a gate.
