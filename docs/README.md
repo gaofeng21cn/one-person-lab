@@ -49,6 +49,7 @@ All Layer 3 docs now live under `docs/references/` so the docs root stays readab
 - `references/host-agent-runtime-contract.md` (Chinese-only internal reference)
 - `references/development-operating-model.md` (Chinese-only internal reference)
 - `references/omx-stage-gated-longrun-guide.md` (Chinese-only internal reference)
+- `references/omx-longrun-prompt-playbook.md` (Chinese-only internal reference)
 - `references/runtime-alignment-taskboard.md` (Chinese-only internal reference)
 - `references/opl-surface-lifecycle-map*`
 - `references/opl-surface-authority-matrix*`
@@ -68,6 +69,7 @@ They explain why a freeze happened, but they are not the living truth surface fo
 
 - Layers 1 and 2 are public surfaces, so every document there must have synchronized English `.md` and Chinese `.zh-CN.md` mirrors.
 - Layer 3 may remain public or repo-tracked, but it is always reference-grade and must not crowd the default reading path in the root README.
+- Long-run prompt templates for `OMX` also belong to Layer 3; they support execution handoff and do not become repository truth owners.
 - Layer 4 is internal working history and should default to Chinese-only unless there is an explicit reason to publish a bilingual mirror.
 - Avoid unnecessary mixed-language prose: keep narrative in one language, and reserve English for fixed terms, file paths, command names, schemas, and code identifiers.
 

@@ -49,6 +49,7 @@
 - `references/host-agent-runtime-contract.md`
 - `references/development-operating-model.md`
 - `references/omx-stage-gated-longrun-guide.md`
+- `references/omx-longrun-prompt-playbook.md`
 - `references/runtime-alignment-taskboard.md`
 - `references/opl-surface-lifecycle-map*`
 - `references/opl-surface-authority-matrix*`
@@ -68,6 +69,7 @@
 
 - 第一层和第二层属于公开文档，因此必须同时提供英文 `.md` 与中文 `.zh-CN.md` 镜像，并保持同步更新。
 - 第三层允许继续公开或仓库跟踪，但始终属于参考级文档，不应继续挤占根 README 的默认阅读路径。
+- 面向 `OMX` 的长线提示词模板，也属于第三层参考文档；它们服务执行接力，不构成仓库当前真相 owner。
 - 第四层属于内部工作历史，默认只保留中文；除非有明确理由，不再额外扩成双语公开面。
 - 避免无意义的中英混写：叙述尽量保持单一语言，英文只保留给固定术语、文件路径、命令名、schema 与代码标识符。
 
