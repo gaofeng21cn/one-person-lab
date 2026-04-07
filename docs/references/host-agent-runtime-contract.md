@@ -1,4 +1,4 @@
-# Codex-default Host-Agent Runtime 合同（内部草案）
+# Codex-default Host-Agent Runtime 合同
 
 ## 文档目的
 
