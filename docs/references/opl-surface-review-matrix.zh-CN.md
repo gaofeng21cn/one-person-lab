@@ -79,6 +79,8 @@
 - `opl_read_only_discovery_gateway`
 - `opl_routed_action_gateway`
 - `opl_domain_onboarding_contract`
+- `opl_phase_1_exit_activation_package`
+- `opl_minimal_admitted_domain_federation_activation_package`
 - `opl_governance_audit_operating_surface`
 - `opl_publish_promotion_operating_surface`
 
@@ -109,6 +111,7 @@
 `required_companion_surfaces` 只指向已经被索引的 supporting 或 governing surface。
 `publishability_stage` 只说明：一个 surface 在被当成当前 public material 之前，需要先满足哪一类 gateway-surface alignment。
 如果被覆盖的 surface 是 `opl_operating_model`、`opl_shared_foundation` 或 `opl_shared_foundation_ownership`，那么这些 review coverage 也仍然只是 reference-only，不会把它们升级成 approval layer、publish controller，或 domain-truth owner。
+如果被覆盖的 surface 是 [OPL Phase 1 Exit Activation Package](./opl-phase-1-exit-activation-package.zh-CN.md) 或 [OPL Minimal admitted-domain federation activation package](./opl-minimal-admitted-domain-federation-activation-package.zh-CN.md)，那么这些 review coverage 也仍然只是 reference-only；它们不会创造 runtime authority、candidate admission，或把 `OPL` 提升成 runtime owner。
 如果被覆盖的 surface 是 `opl_task_map`，那么其中仍在定义中的 workstream 也只保持语义候选身份，不会因为被纳入 review coverage 就自动变成正式收录 domain 或 routed target。
 如果被覆盖的 surface 是 `opl_candidate_domain_backlog`，那么它也只是一张位于 onboarding gate 之下的 blocker index，不会把 candidate workstream 升格成 domain，也不会批准 onboarding 或创造 routed readiness。
 这些字段都不会把 domain review 或 publication authority 上收给 `OPL`。

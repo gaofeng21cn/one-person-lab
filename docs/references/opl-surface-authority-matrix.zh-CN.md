@@ -58,6 +58,8 @@
 - `opl_read_only_discovery_gateway`
 - `opl_routed_action_gateway`
 - `opl_domain_onboarding_contract`
+- `opl_phase_1_exit_activation_package`
+- `opl_minimal_admitted_domain_federation_activation_package`
 - `opl_candidate_domain_backlog`
 - `opl_governance_audit_operating_surface`
 - `opl_publish_promotion_operating_surface`
@@ -80,6 +82,7 @@
 
 当 `owner_scope = opl` 时，这张 matrix 可以暴露 routing、indexing、discoverability 或 acceptance 责任，但 execution authority 与 domain truth/review/publication authority 仍留在 `OPL` 之外。
 如果某个 surface 是 `opl_operating_model`、`opl_shared_foundation` 或 `opl_shared_foundation_ownership`，那么其中全部 authority 字段也都只能表达 boundary 约束，而不会把 canonical truth、mutation、review truth 或 publication truth 上收到 `OPL`。
+如果某个 surface 是 [OPL Phase 1 Exit Activation Package](./opl-phase-1-exit-activation-package.zh-CN.md) 或 [OPL Minimal admitted-domain federation activation package](./opl-minimal-admitted-domain-federation-activation-package.zh-CN.md)，那么其中全部 authority 字段也同样只能保持 `none`；这些 package 不会 admission candidate domain、不会授权 handoff bypass，也不会把 `OPL` 提升成 runtime owner。
 当 `owner_scope = domain` 时，对应 entry 只是在标记：domain-local routing 与 harness execution 从哪里开始，且它们都位于 domain gateway 边界之后。
 如果存在 follow-on surface，允许值也仍然只有 `domain_gateway`。
 如果某个 surface 是 `opl_candidate_domain_backlog`，那么所有 authority 字段都仍然只能是 `none`；这份 backlog 不会给未来 domain 预分配 authority。

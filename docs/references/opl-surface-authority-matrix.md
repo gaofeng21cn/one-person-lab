@@ -58,6 +58,8 @@ Each entry stays derived/reference-only and carries only:
 - `opl_read_only_discovery_gateway`
 - `opl_routed_action_gateway`
 - `opl_domain_onboarding_contract`
+- `opl_phase_1_exit_activation_package`
+- `opl_minimal_admitted_domain_federation_activation_package`
 - `opl_candidate_domain_backlog`
 - `opl_governance_audit_operating_surface`
 - `opl_publish_promotion_operating_surface`
@@ -80,6 +82,7 @@ Read this matrix as a **derived authority split**, not as an execution or author
 
 When `owner_scope = opl`, the matrix may still expose routing, indexing, discoverability, or acceptance responsibility, but execution authority and domain truth/review/publication authority stay outside `OPL`.
 If the surface is `opl_operating_model`, `opl_shared_foundation`, or `opl_shared_foundation_ownership`, every authority field remains boundary-only and does not shift canonical truth, mutation, review truth, or publication truth into `OPL`.
+If the surface is the [OPL Phase 1 Exit Activation Package](./opl-phase-1-exit-activation-package.md) or the [OPL Minimal admitted-domain federation activation package](./opl-minimal-admitted-domain-federation-activation-package.md), every authority field also remains `none`; these packages do not admit candidate domains, do not authorize handoff bypass, and do not promote `OPL` into a runtime owner.
 When `owner_scope = domain`, the entry marks where domain-local routing and harness execution begin behind the domain gateway boundary.
 If a follow-on surface exists, the only allowed value remains `domain_gateway`.
 If the surface is `opl_candidate_domain_backlog`, every authority field remains `none`; the backlog does not grant pre-admission authority over a future domain.

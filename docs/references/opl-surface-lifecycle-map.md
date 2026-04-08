@@ -57,6 +57,11 @@ Each entry stays derived/reference-only and carries only:
 - `opl_routed_action_gateway`
 - `opl_domain_onboarding_contract`
 
+### Activation-package supporting surfaces
+
+- `opl_phase_1_exit_activation_package`
+- `opl_minimal_admitted_domain_federation_activation_package`
+
 ### Operating surfaces
 
 - `opl_governance_audit_operating_surface`
@@ -84,6 +89,7 @@ Read this lifecycle map as a **derived reference graph**, not as an execution co
 `requires_surfaces` and `enables_surfaces` expose frozen dependency and discoverability relationships only.
 They do not authorize automatic transitions, and they do not replace prose review.
 If the surface is `opl_operating_model`, `opl_shared_foundation`, or `opl_shared_foundation_ownership`, it remains a shared-foundation boundary document only and does not grant mutation, transition, review, or publication authority.
+If the surface is the [OPL Phase 1 Exit Activation Package](./opl-phase-1-exit-activation-package.md) or the [OPL Minimal admitted-domain federation activation package](./opl-minimal-admitted-domain-federation-activation-package.md), it remains a reference-grade activation freeze only and does not authorize runtime execution, candidate admission, or runtime-owner promotion.
 When an entry keeps a follow-on route boundary, the only allowed value is `domain_gateway`.
 If no follow-on action belongs to the surface, the map uses `null`.
 If the surface is `opl_candidate_domain_backlog`, the dependency chain remains blocker-oriented only; it does not authorize automatic promotion into onboarding, discovery, or routing.

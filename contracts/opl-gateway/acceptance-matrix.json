@@ -1,5 +1,5 @@
 {
-  "version": "p23.m5",
+  "version": "p23.m6",
   "gates": [
     {
       "gate_id": "g1_registry_completeness",
@@ -300,7 +300,13 @@
         "docs/shared-foundation.md",
         "docs/shared-foundation.zh-CN.md",
         "docs/shared-foundation-ownership.md",
-        "docs/shared-foundation-ownership.zh-CN.md"
+        "docs/shared-foundation-ownership.zh-CN.md",
+        "contracts/opl-gateway/phase-1-exit-activation-package.json",
+        "docs/references/opl-phase-1-exit-activation-package.md",
+        "docs/references/opl-phase-1-exit-activation-package.zh-CN.md",
+        "contracts/opl-gateway/minimal-admitted-domain-federation-activation-package.json",
+        "docs/references/opl-minimal-admitted-domain-federation-activation-package.md",
+        "docs/references/opl-minimal-admitted-domain-federation-activation-package.zh-CN.md"
       ],
       "contract_assertions": [
         "surface lifecycle map covers the frozen gateway, operating, and supporting surfaces needed for current top-level traversal",
@@ -309,7 +315,8 @@
         "follow_on_route_surface is null or domain_gateway only",
         "contract hub, public-surface index, operating-record catalog, and acceptance surfaces expose the lifecycle map as a supporting/reference surface",
         "surface lifecycle map covers the candidate-domain backlog as a supporting/reference surface without introducing execution semantics",
-        "surface lifecycle map covers opl_operating_model, opl_shared_foundation, and opl_shared_foundation_ownership as derived/reference shared-foundation boundary surfaces only"
+        "surface lifecycle map covers opl_operating_model, opl_shared_foundation, and opl_shared_foundation_ownership as derived/reference shared-foundation boundary surfaces only",
+        "surface lifecycle map covers opl_phase_1_exit_activation_package and opl_minimal_admitted_domain_federation_activation_package as derived/reference-only activation-freeze surfaces"
       ],
       "forbidden_regressions": [
         "surface lifecycle map becomes a workflow engine",
@@ -344,7 +351,13 @@
         "docs/shared-foundation.md",
         "docs/shared-foundation.zh-CN.md",
         "docs/shared-foundation-ownership.md",
-        "docs/shared-foundation-ownership.zh-CN.md"
+        "docs/shared-foundation-ownership.zh-CN.md",
+        "contracts/opl-gateway/phase-1-exit-activation-package.json",
+        "docs/references/opl-phase-1-exit-activation-package.md",
+        "docs/references/opl-phase-1-exit-activation-package.zh-CN.md",
+        "contracts/opl-gateway/minimal-admitted-domain-federation-activation-package.json",
+        "docs/references/opl-minimal-admitted-domain-federation-activation-package.md",
+        "docs/references/opl-minimal-admitted-domain-federation-activation-package.zh-CN.md"
       ],
       "contract_assertions": [
         "authority matrix covers the frozen OPL surfaces plus linked domain public-entry surfaces needed for current authority review",
@@ -353,7 +366,8 @@
         "linked domain public-entry surfaces remain domain-owned and mark where domain-local routing/execution begin",
         "lifecycle map, public-surface index, contract hub, and acceptance surfaces expose the authority matrix as a supporting/reference surface",
         "authority matrix covers the candidate-domain backlog while keeping every authority field inside OPL at none",
-        "authority matrix covers opl_operating_model, opl_shared_foundation, and opl_shared_foundation_ownership while keeping execution/truth/review/publication authority at none for those OPL-owned boundary docs"
+        "authority matrix covers opl_operating_model, opl_shared_foundation, and opl_shared_foundation_ownership while keeping execution/truth/review/publication authority at none for those OPL-owned boundary docs",
+        "authority matrix covers opl_phase_1_exit_activation_package and opl_minimal_admitted_domain_federation_activation_package while keeping every authority field at none"
       ],
       "forbidden_regressions": [
         "authority matrix becomes an authorization engine",
@@ -388,7 +402,13 @@
         "docs/shared-foundation.md",
         "docs/shared-foundation.zh-CN.md",
         "docs/shared-foundation-ownership.md",
-        "docs/shared-foundation-ownership.zh-CN.md"
+        "docs/shared-foundation-ownership.zh-CN.md",
+        "contracts/opl-gateway/phase-1-exit-activation-package.json",
+        "docs/references/opl-phase-1-exit-activation-package.md",
+        "docs/references/opl-phase-1-exit-activation-package.zh-CN.md",
+        "contracts/opl-gateway/minimal-admitted-domain-federation-activation-package.json",
+        "docs/references/opl-minimal-admitted-domain-federation-activation-package.md",
+        "docs/references/opl-minimal-admitted-domain-federation-activation-package.zh-CN.md"
       ],
       "contract_assertions": [
         "surface review matrix covers the frozen OPL public, contract, and supporting surfaces needed for current human-review and publishability inspection",
@@ -397,7 +417,8 @@
         "human_review_required and publishability_stage expose review obligations only and do not create an approval engine or publish controller",
         "contract hub, public-surface index, lifecycle map, authority matrix, and acceptance surfaces expose the review matrix as a supporting/reference surface",
         "surface review matrix covers the candidate-domain backlog as a supporting review surface without turning it into an onboarding engine or approval surface",
-        "surface review matrix covers opl_operating_model, opl_shared_foundation, and opl_shared_foundation_ownership as human-review/reference surfaces only"
+        "surface review matrix covers opl_operating_model, opl_shared_foundation, and opl_shared_foundation_ownership as human-review/reference surfaces only",
+        "surface review matrix covers opl_phase_1_exit_activation_package and opl_minimal_admitted_domain_federation_activation_package as human-review/reference activation-freeze surfaces only"
       ],
       "forbidden_regressions": [
         "surface review matrix becomes an approval engine",
@@ -571,7 +592,11 @@
         "docs/shared-foundation.md",
         "docs/shared-foundation.zh-CN.md",
         "docs/shared-foundation-ownership.md",
-        "docs/shared-foundation-ownership.zh-CN.md"
+        "docs/shared-foundation-ownership.zh-CN.md",
+        "docs/references/opl-phase-1-exit-activation-package.md",
+        "docs/references/opl-phase-1-exit-activation-package.zh-CN.md",
+        "docs/references/opl-minimal-admitted-domain-federation-activation-package.md",
+        "docs/references/opl-minimal-admitted-domain-federation-activation-package.zh-CN.md"
       ],
       "contract_assertions": [
         "OPL remains the top-level gateway/federation surface",
@@ -587,7 +612,8 @@
         "candidate backlog keeps Grant/Review/Thesis Ops blocked below the onboarding gate",
         "operating-model, shared-foundation, and shared-foundation-ownership docs keep OPL at the top-level semantic/index/reuse layer while domains keep canonical truth, mutation, runtime writeback, review truth, and delivery/publication truth",
         "shared asset index, shared memory index, shared domain registry, and shared publication/delivery catalog stay roadmap-only/future-only/reference-only/non-admitting candidates until a later explicit readiness contract and acceptance alignment freeze them",
-        "no G4 candidate index is described as a current public-entry/discovery-ready/routed-action-ready/execution/truth-owner/approval/publish-control/release-control surface"
+        "no G4 candidate index is described as a current public-entry/discovery-ready/routed-action-ready/execution/truth-owner/approval/publish-control/release-control surface",
+        "activation-package docs keep the absorbed predecessor freeze and the current admitted-domain-only activation explicit without promoting OPL into a runtime owner"
       ],
       "forbidden_regressions": [
         "OPL described as monolithic runtime",

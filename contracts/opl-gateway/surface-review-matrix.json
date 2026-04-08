@@ -1,5 +1,5 @@
 {
-  "version": "p18.m1",
+  "version": "p18.m2",
   "scope": "opl_surface_review_matrix",
   "description": "Machine-readable derived review matrix for the frozen OPL public, contract, and supporting surfaces. It records human-review obligations, acceptance coverage, companion review surfaces, wording-check mode, and publishability stage without becoming an approval engine, publish controller, or second source of truth.",
   "non_goals": [
@@ -29,6 +29,8 @@
     "opl_read_only_discovery_gateway",
     "opl_routed_action_gateway",
     "opl_domain_onboarding_contract",
+    "opl_phase_1_exit_activation_package",
+    "opl_minimal_admitted_domain_federation_activation_package",
     "opl_governance_audit_operating_surface",
     "opl_publish_promotion_operating_surface",
     "opl_candidate_domain_backlog",
@@ -360,6 +362,30 @@
       ]
     },
     {
+      "surface_id": "opl_phase_1_exit_activation_package",
+      "owner_scope": "opl",
+      "surface_role": "phase_exit_activation_freeze",
+      "human_review_required": true,
+      "required_acceptance_gates": [
+        "p8_public_surface_index_integrity",
+        "cross_domain_wording_consistency"
+      ],
+      "required_companion_surfaces": [
+        "opl_gateway_contract_hub",
+        "opl_candidate_domain_backlog",
+        "opl_domain_onboarding_contract",
+        "opl_public_surface_index_doc",
+        "opl_minimal_admitted_domain_federation_activation_package"
+      ],
+      "cross_domain_wording_check": "shared_gate_required",
+      "publishability_stage": "supporting_reference_aligned",
+      "governing_refs": [
+        "docs/references/opl-phase-1-exit-activation-package.md",
+        "docs/references/opl-phase-1-exit-activation-package.zh-CN.md",
+        "contracts/opl-gateway/phase-1-exit-activation-package.json"
+      ]
+    },
+    {
       "surface_id": "opl_governance_audit_operating_surface",
       "owner_scope": "opl",
       "surface_role": "governance_audit_index_signal",
@@ -379,6 +405,29 @@
         "docs/references/opl-governance-audit-operating-surface.md",
         "docs/references/opl-governance-audit-operating-surface.zh-CN.md",
         "contracts/opl-gateway/governance-audit.schema.json"
+      ]
+    },
+    {
+      "surface_id": "opl_minimal_admitted_domain_federation_activation_package",
+      "owner_scope": "opl",
+      "surface_role": "admitted_domain_federation_activation_freeze",
+      "human_review_required": true,
+      "required_acceptance_gates": [
+        "p8_public_surface_index_integrity",
+        "cross_domain_wording_consistency"
+      ],
+      "required_companion_surfaces": [
+        "opl_phase_1_exit_activation_package",
+        "opl_gateway_contract_hub",
+        "opl_gateway_acceptance_spec",
+        "opl_public_surface_index_doc"
+      ],
+      "cross_domain_wording_check": "shared_gate_required",
+      "publishability_stage": "supporting_reference_aligned",
+      "governing_refs": [
+        "docs/references/opl-minimal-admitted-domain-federation-activation-package.md",
+        "docs/references/opl-minimal-admitted-domain-federation-activation-package.zh-CN.md",
+        "contracts/opl-gateway/minimal-admitted-domain-federation-activation-package.json"
       ]
     },
     {

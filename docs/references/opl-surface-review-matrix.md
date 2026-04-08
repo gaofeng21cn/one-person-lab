@@ -79,6 +79,8 @@ These values describe documentation-readiness stage only. They are not workflow 
 - `opl_read_only_discovery_gateway`
 - `opl_routed_action_gateway`
 - `opl_domain_onboarding_contract`
+- `opl_phase_1_exit_activation_package`
+- `opl_minimal_admitted_domain_federation_activation_package`
 - `opl_governance_audit_operating_surface`
 - `opl_publish_promotion_operating_surface`
 
@@ -109,6 +111,7 @@ Read this matrix as a **derived review-boundary index**, not as an approval or p
 `required_companion_surfaces` only points to already indexed supporting or governing surfaces.
 `publishability_stage` tells you which kind of gateway-surface alignment must already exist before the surface is publishable as current public material.
 If the covered surface is `opl_operating_model`, `opl_shared_foundation`, or `opl_shared_foundation_ownership`, review coverage stays reference-only and does not turn those surfaces into an approval layer, publish controller, or domain-truth owner.
+If the covered surface is the [OPL Phase 1 Exit Activation Package](./opl-phase-1-exit-activation-package.md) or the [OPL Minimal admitted-domain federation activation package](./opl-minimal-admitted-domain-federation-activation-package.md), review coverage still remains reference-only; it does not create runtime authority, candidate admission, or runtime-owner promotion.
 If the covered surface is `opl_task_map`, under-definition workstreams remain semantic candidates only; they do not become admitted domains or routed targets through review coverage alone.
 If the covered surface is `opl_candidate_domain_backlog`, the surface remains a blocker index below the onboarding gate; it does not promote a candidate workstream into a domain, approve onboarding, or create routed readiness.
 None of these fields transfer domain review or publication authority into `OPL`.

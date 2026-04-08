@@ -426,6 +426,8 @@ wording-consistency gate 只有在下面全部成立时才算通过：
    - `opl_read_only_discovery_gateway`
    - `opl_routed_action_gateway`
    - `opl_domain_onboarding_contract`
+   - `opl_phase_1_exit_activation_package`
+   - `opl_minimal_admitted_domain_federation_activation_package`
    - `opl_candidate_domain_backlog`
    - `opl_governance_audit_operating_surface`
    - `opl_publish_promotion_operating_surface`
@@ -467,6 +469,8 @@ wording-consistency gate 只有在下面全部成立时才算通过：
    - `opl_read_only_discovery_gateway`
    - `opl_routed_action_gateway`
    - `opl_domain_onboarding_contract`
+   - `opl_phase_1_exit_activation_package`
+   - `opl_minimal_admitted_domain_federation_activation_package`
    - `opl_candidate_domain_backlog`
    - `opl_governance_audit_operating_surface`
    - `opl_publish_promotion_operating_surface`
@@ -517,6 +521,8 @@ wording-consistency gate 只有在下面全部成立时才算通过：
    - `opl_read_only_discovery_gateway`
    - `opl_routed_action_gateway`
    - `opl_domain_onboarding_contract`
+   - `opl_phase_1_exit_activation_package`
+   - `opl_minimal_admitted_domain_federation_activation_package`
    - `opl_governance_audit_operating_surface`
    - `opl_publish_promotion_operating_surface`
    - `opl_gateway_example_corpus`

@@ -57,6 +57,11 @@
 - `opl_routed_action_gateway`
 - `opl_domain_onboarding_contract`
 
+### Activation-package supporting surfaces
+
+- `opl_phase_1_exit_activation_package`
+- `opl_minimal_admitted_domain_federation_activation_package`
+
 ### Operating surfaces
 
 - `opl_governance_audit_operating_surface`
@@ -84,6 +89,7 @@
 `requires_surfaces` 与 `enables_surfaces` 只暴露已经冻结的依赖与 discoverability 关系。
 它们不会授权自动 transition，也不会替代 prose review。
 如果某个 surface 是 `opl_operating_model`、`opl_shared_foundation` 或 `opl_shared_foundation_ownership`，它也仍然只是 shared-foundation boundary 文档，不会因此获得 mutation、transition、review 或 publication authority。
+如果某个 surface 是 [OPL Phase 1 Exit Activation Package](./opl-phase-1-exit-activation-package.zh-CN.md) 或 [OPL Minimal admitted-domain federation activation package](./opl-minimal-admitted-domain-federation-activation-package.zh-CN.md)，它也仍然只是 reference-grade activation freeze，不会因此授权 runtime execution、candidate admission，或把 `OPL` 提升成 runtime owner。
 如果某个 entry 仍保留 follow-on route boundary，唯一允许值仍然是 `domain_gateway`。
 如果某个 surface 没有后续动作边界，map 就使用 `null`。
 如果某个 surface 是 `opl_candidate_domain_backlog`，这里暴露的依赖链也仍然只是 blocker-oriented 参考关系；它不会授权自动晋升到 onboarding、discovery 或 routing。
