@@ -103,24 +103,27 @@
 
 ### 3. RedCube AI
 
-这条主线当前可以继续在同一 mainline 上做 hardening，而不是重新退回“等待显式下一棒”。
+这条主线当前已经 absorb 到 `Phase 2 / direct-delivery operator handoff hardening`。
 
 具体继续项：
 
-- 继续同一主线上的 `review / export / gate / audit` hardening
-- 把 `auditDeliverable / runtimeWatch / getReviewState / getPublicationProjection` 压成同一 deliverable/topic 边界上的 canonical behavior
+- 当前 latest absorbed tranche 已把 `operator_handoff` 收进 `ppt_deck` / guarded `poster_onepager` 的 canonical governance path
+- `auditDeliverable / runtimeWatch / getReviewState / getPublicationProjection` 已围绕同一 canonical deliverable/topic path 输出 handoff summary
+- 当前没有已冻结的下一候选 tranche；若继续，必须先形成新的 same-mainline truthful freeze
 - 持续保持 `CLI / MCP / controller` 三字段语义与实现状态一致
 - 围绕 `ppt_deck`、`xiaohongshu` 等稳定 family 做手工测试
 - 仍不提前扩成更大的统一 runtime 或 OPL runtime owner
 
 ### 4. Med Auto Grant
 
-这条主线当前仍不是“产品效果打磨优先”，而是继续 author-side mainline hardening。
+这条主线当前已经 absorb 到 `P4.A / Verification Gate Surface`。
 
 具体继续项：
 
-- 继续把 `grant_run_id`、durability、checkpoint、verification surface 收紧
-- 把 `stage-route-report` 压成当前 canonical verification / checkpoint 聚合面
+- `P4.A` 已把五个 CLI surface 收口为当前 canonical verification gate surface
+- `stage-route-report` 当前已稳定承载 `verification_checkpoint / checkpoint_status`
+- gate-open `freeze_ready` 与真正 `submission_frozen` 已 machine-readable 分开
+- 当前不得直接实现 `P4.B`；若继续，唯一 truthful 下一步是先冻结 `P4.B / Verification OS And Checkpoint Surface` activation package
 - 保持 formal-entry matrix 的诚实表达：
   - `CLI` 是当前正式入口
   - `MCP` 仍是 future protocol layer
@@ -133,8 +136,8 @@
 当前最合理的统一推进顺序如下：
 
 1. 由 `one-person-lab` 持有 `Phase C` 的中央执行板、状态矩阵与任务板
-2. 让 `redcube-ai` 先把 canonical audit / watch / review / projection surface 压成同轴行为验证
-3. 让 `med-autogrant` 继续 author-side baseline hardening，并把 verification / checkpoint surface 压成同轴行为验证
+2. 先把 `redcube-ai` 已 absorb 的 `Phase 2 / direct-delivery operator handoff hardening` 同步进中央参考面，并等待新的 same-mainline truthful freeze
+3. 把 `med-autogrant` 已 absorb 的 `P4.A / Verification Gate Surface` 同步进中央参考面，并要求下一棒先 freeze `P4.B` activation package
 4. 让 `med-autoscience` 以手工测试驱动稳定化，不重开新的架构 tranche
 5. 在至少两个业务仓的对象面、报告面和 gate 行为验证真正稳定后，再进入下一阶段
 

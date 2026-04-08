@@ -175,16 +175,23 @@ test('contract convergence execution board freezes the current unified program a
   assert.match(executionBoard, /shared public code framework|共享公共代码框架/);
   assert.match(executionBoard, /monorepo \/ runtime core ingest \/ controlled cutover/);
   assert.match(executionBoard, /不属于当前四仓 `?Phase C`? 的直接交付/);
+  assert.match(executionBoard, /Phase 2 \/ direct-delivery operator handoff hardening/);
+  assert.match(executionBoard, /P4\.A \/ Verification Gate Surface/);
+  assert.match(executionBoard, /P4\.B \/ Verification OS And Checkpoint Surface/);
 
   assert.match(statusMatrix, /Contract Convergence v1/);
   assert.match(statusMatrix, /Phase C \/ Object And Report Behavior Convergence/);
   assert.match(statusMatrix, /monorepo \/ runtime core ingest \/ controlled cutover/);
   assert.match(statusMatrix, /不是当前四仓统一 `?Phase C`? 的 blocker|不是当前统一 program 的直接交付项/);
+  assert.match(statusMatrix, /当前没有已冻结的下一候选 tranche/);
+  assert.match(statusMatrix, /下一 truthful step 不是直接实现 `?P4\.B`?/);
   assert.match(taskboard, /Contract Convergence v1/);
   assert.match(taskboard, /Phase C \/ Object And Report Behavior Convergence/);
   assert.match(taskboard, /verification checkpoint|行为验证/);
   assert.match(taskboard, /monorepo \/ runtime core ingest \/ controlled cutover/);
   assert.match(taskboard, /后置 domain-internal 轨道|不在当前 taskboard 的活跃实现范围/);
+  assert.match(taskboard, /same-mainline truthful freeze/);
+  assert.match(taskboard, /P4\.B \/ Verification OS And Checkpoint Surface/);
 });
 
 test('phase-1 public gateway docs distinguish CLI transport from the host-agent and control-plane defaults', () => {
