@@ -38,9 +38,9 @@
 当前四仓不再按四套散任务理解，而是共同处在：
 
 - `Contract Convergence v1`
-- `Phase B / Handle And Surface Convergence`
+- `Phase C / Object And Report Behavior Convergence`
 
-也就是说，当前已经不再讨论“统一构架是否成立”，而是在统一构架已经成立的前提下，继续把 execution handle、durable surface、audit trail 与边界语义压成同一层级的 repo-tracked 合同。
+也就是说，当前已经不再讨论“统一构架是否成立”，而是在统一构架已经成立、`Phase B` 已完成的前提下，继续把对象层、报告层、gate semantics 与 audit-watch 行为面压成同一层级的 repo-verified behavior。
 
 ## 一、统一框架当前落地层级
 
@@ -51,8 +51,9 @@
 
 - `L1 / 命名-边界-分层合同`
 - `L2 / formal-entry 与 handle-surface 合同`
+- `L3 / object-report-gate behavior convergence（推进中）`
 
-它仍然没有进入 `L3 / 共享执行内核`。
+它仍然没有进入 `L4 / 共享执行内核`。
 
 ### 已经落地的部分
 
@@ -72,6 +73,10 @@
   - 每个业务仓都必须显式冻结 execution handle contract
   - 每个业务仓都必须显式冻结 durable surface contract
   - `OPL` 必须持有中央执行板、状态总表与任务板
+- `Phase C` 的中央完成标准已经启动：
+  - `redcube-ai` 要把 canonical audit / watch / review / projection surface 压成同轴行为验证
+  - `med-autogrant` 要把 verification / checkpoint surface 压成同轴行为验证
+  - `med-autoscience` 主线进入手工测试驱动稳定化，不重开新架构 tranche
 - 当前默认本地执行形态口径已统一：
   - 当前默认本地形态是 `Codex-default host-agent runtime`
   - 未来都应兼容同一 substrate 上的 managed web runtime
@@ -85,7 +90,7 @@
 
 - 还没有独立的共享公共代码框架仓库
 - 还没有抽成一套共享执行内核
-- `Auto-only` 主线已经统一，但行为层仍未全部达到同等成熟度
+- `Auto-only` 主线已经统一，但行为层仍在集中收口
 - future `Human-in-the-loop` 产品还没有开始单独实现
 - managed web runtime 仍是后续目标，不是当前现实
 
@@ -96,7 +101,8 @@
 | 统一术语与架构层 | 高 |
 | formal-entry / layering 合同层 | 高 |
 | 顶层 gateway 合同与只读入口 | 中 |
-| 跨仓 durable surface 对齐 | 中 |
+| 跨仓 durable surface 对齐 | 中高 |
+| repo-verified behavior convergence | 中 |
 | 共享代码框架 / 共享执行内核 | 低 |
 | 统一平台 runtime / managed web runtime | 低 |
 
@@ -127,10 +133,10 @@
 
 | 仓库 | 当前角色 | 当前阶段 | 当前已经成立的真相 | 下一步重点 |
 | --- | --- | --- | --- | --- |
-| `one-person-lab` | 顶层 `Gateway / Federation` | `Minimal admitted-domain federation activation package` | 顶层 formal entry、candidate-domain blocked truth、`Unified Harness Engineering Substrate`、四仓统一文档治理都已冻结；本轮又把 `Contract Convergence v1` 正式吸收到 current/public truth | 继续把 admitted-domain federation wording、中央参考同步面与顶层 docs/contracts/tests 收紧；不越界成 runtime owner |
+| `one-person-lab` | 顶层 `Gateway / Federation` | `Contract Convergence v1 / Phase C` program owner | 顶层 formal entry、candidate-domain blocked truth、`Unified Harness Engineering Substrate`、四仓统一文档治理都已冻结；当前开始统一持有 `Phase C` 的行为收口定义 | 继续把 admitted-domain federation wording、中央参考同步面与顶层 docs/contracts/tests 收紧；不越界成 runtime owner |
 | `med-autoscience` | 医学 `Research Ops` `Domain Harness OS` | runtime mainline 已吸收，repo-side 停在 external runtime gate 前 | 主线 runtime contract 已吸收到 `main`，本轮 formal-entry / Auto-only / future HITL layering 口径也已收口；display 资产化线不在这条主线范围内 | 围绕已稳定能力做手工测试与问题修正；在 external runtime gate 清除前，不重开新的架构 tranche |
-| `redcube-ai` | 视觉交付 `Domain Harness OS` | `redcube-runtime-program` 持续 hardening | `CLI / MCP / controller` 语义已收口，`Auto-only` 主线与 future layering 口径已统一，review/export/source-readiness 治理链已经进入当前主线 | 继续同一主线上的 review / export / gate / audit hardening，并围绕稳定 family 做手工测试 |
-| `med-autogrant` | 医学 `Grant Ops` `Domain Harness OS` 方向 | `baseline freeze / runtime hardening` | author-side mainline、formal-entry、durability 与 `Auto-only` 主线语义已进入 current truth；`MCP` 仍诚实停留在 future layer | 继续 author-side mainline hardening，往 verification surface / checkpoint surface 推进；不提前误写成成熟 submission-grade runtime |
+| `redcube-ai` | 视觉交付 `Domain Harness OS` | `Phase C` 行为收口进行中 | `CLI / MCP / controller` 语义已收口，`Auto-only` 主线与 future layering 口径已统一，review/export/source-readiness 治理链已经进入当前主线 | 把 `auditDeliverable / runtimeWatch / getReviewState / getPublicationProjection` 继续压成同轴行为验证，并围绕稳定 family 做手工测试 |
+| `med-autogrant` | 医学 `Grant Ops` `Domain Harness OS` 方向 | `Phase C` verification/checkpoint 收口进行中 | author-side mainline、formal-entry、durability 与 `Auto-only` 主线语义已进入 current truth；`MCP` 仍诚实停留在 future layer | 继续 author-side mainline hardening，把 verification surface / checkpoint surface 压成一致的 machine-readable behavior；不提前误写成成熟 submission-grade runtime |
 
 对 `one-person-lab` 而言，当前 active baton 不是重新发明 `Phase 1`，而是：
 
@@ -144,7 +150,7 @@
 
 ### 结论
 
-`Phase B` 的合同层已经拉平，行为层还没有拉平。
+`Phase B` 的合同层已经拉平，行为层已进入集中收口。
 
 ### 已经拉平的部分
 
@@ -155,6 +161,7 @@
 - durable surface contract 的表达框架
 - `Codex-default host-agent runtime` 作为当前默认本地形态
 - 对外双语 / 对内中文的文档治理规则
+- `Phase C` 由 `OPL` 集中持有，不再按四仓散管理
 
 ### 还没有拉平的部分
 
@@ -170,16 +177,16 @@
 ### 统一判断
 
 现在不再需要继续讨论“统一构架是否成立”。
-当前真正需要做的是：先完成 `Phase B / Handle And Surface Convergence`，再进入对象面、报告面与行为验证面的更深收敛。
+当前真正需要做的是：沿 `Phase C / Object And Report Behavior Convergence` 继续推进，把对象面、报告面、gate surface 与 audit-watch 收口成 repo-verified behavior。
 
 ### 各仓下一步
 
 1. `one-person-lab`
-   继续维护中央同步面与 admitted-domain federation wording，把顶层当前真相持续压稳。
+   继续维护中央同步面与 admitted-domain federation wording，把顶层当前真相持续压稳，并持有 `Phase C` 的统一离场条件。
 2. `med-autoscience`
    以手工测试稳定化为主；display 资产化独立线不计入这条主线。
 3. `redcube-ai`
-   在当前主线上继续 hardening，再围绕已稳定 family 做手工测试。
+   在当前主线上把 canonical audit / watch / review / projection surface 压成同轴行为，再围绕已稳定 family 做手工测试。
 4. `med-autogrant`
    继续 author-side baseline hardening，向 verification surface 与更强 checkpoint surface 推进。
 

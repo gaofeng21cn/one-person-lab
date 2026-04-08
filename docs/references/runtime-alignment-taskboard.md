@@ -18,8 +18,8 @@
 ## 零、当前统一阶段
 
 - 当前 program：`Contract Convergence v1`
-- 当前阶段：`Phase B / Handle And Surface Convergence`
-- 当前阶段目标：把 formal-entry 之后的 execution handle、durable surface、audit trail 与 control-plane boundary 继续压平到三个业务仓的 repo-tracked 合同面
+- 当前阶段：`Phase C / Object And Report Behavior Convergence`
+- 当前阶段目标：把 formal-entry 之后已经冻结的 execution handle、durable surface、audit trail 与 control-plane boundary，继续压成三个业务仓的 repo-verified behavior 面
 - 当前阶段不做：共享执行内核抽取、统一平台 runtime、托管式 Web runtime、同仓双模
 
 ## 使用规则
@@ -68,17 +68,19 @@
 | execution handle contract | 已完成（合同层） | 后续继续让对象层与行为验证层保持同一边界，避免重新混写 `program_id`、聚合根身份与单次执行句柄 |
 | durable report / audit trail | 已完成（合同层基线） | 继续让 artifact、gate、report、export 闭环更完整 |
 | control-plane 与 product runtime 的边界 | 合同层已完成 | 文档、测试、help、实现状态必须继续一致，不得再漂移 |
-| gate semantics repo verification | 部分完成 | 继续把 fail-closed gate、watch、decision-loop 从合同层压到行为验证层 |
+| gate semantics repo verification | 进行中 | 继续把 fail-closed gate、watch、decision-loop 从合同层压到行为验证层 |
+| verification / checkpoint aggregation | 进行中 | 继续把 route aggregation、rollback gate、frozen gate 与 verification summary 压成一致的 machine-readable behavior |
 
 ## 三、逐仓当前下一棒
 
 ### 1. one-person-lab
 
-当前下一棒不是发明更大的平台叙事，而是继续把 admitted-domain federation 的顶层真相压稳。
+当前下一棒不是发明更大的平台叙事，而是继续把 admitted-domain federation 的顶层真相压稳，并持有 `Phase C` 的统一离场条件。
 
 具体继续项：
 
 - 维护 `OPL` 顶层 current truth / public docs / central references 的一致性
+- 持续同步 `Phase C` 的行为收口定义到中央 references 与顶层测试
 - 继续同步四仓当前状态到中央参考面
 - 继续守住：
   - `TypeScript CLI + read-only gateway baseline`
@@ -104,6 +106,7 @@
 具体继续项：
 
 - 继续同一主线上的 `review / export / gate / audit` hardening
+- 把 `auditDeliverable / runtimeWatch / getReviewState / getPublicationProjection` 压成同一 deliverable/topic 边界上的 canonical behavior
 - 持续保持 `CLI / MCP / controller` 三字段语义与实现状态一致
 - 围绕 `ppt_deck`、`xiaohongshu` 等稳定 family 做手工测试
 - 仍不提前扩成更大的统一 runtime 或 OPL runtime owner
@@ -115,6 +118,7 @@
 具体继续项：
 
 - 继续把 `grant_run_id`、durability、checkpoint、verification surface 收紧
+- 把 `stage-route-report` 压成当前 canonical verification / checkpoint 聚合面
 - 保持 formal-entry matrix 的诚实表达：
   - `CLI` 是当前正式入口
   - `MCP` 仍是 future protocol layer
@@ -126,10 +130,11 @@
 
 当前最合理的统一推进顺序如下：
 
-1. 先完成 `Phase B / Handle And Surface Convergence` 的合同层收口与冻结测试
-2. 然后让 `med-autoscience`、`redcube-ai` 转入稳定能力的手工测试与问题回流
-3. 让 `med-autogrant` 继续 author-side baseline hardening 与 verification surface 收紧
-4. 在至少两个业务仓的对象面、报告面和 gate 行为验证真正稳定后，再进入下一阶段
+1. 由 `one-person-lab` 持有 `Phase C` 的中央执行板、状态矩阵与任务板
+2. 让 `redcube-ai` 先把 canonical audit / watch / review / projection surface 压成同轴行为验证
+3. 让 `med-autogrant` 继续 author-side baseline hardening，并把 verification / checkpoint surface 压成同轴行为验证
+4. 让 `med-autoscience` 以手工测试驱动稳定化，不重开新的架构 tranche
+5. 在至少两个业务仓的对象面、报告面和 gate 行为验证真正稳定后，再进入下一阶段
 
 ## 五、继续后置的事项
 

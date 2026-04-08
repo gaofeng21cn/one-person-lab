@@ -10,10 +10,10 @@
 ## 当前统一 program
 
 - 统一 program：`Contract Convergence v1`
-- 当前阶段：`Phase B / Handle And Surface Convergence`
-- 长线目标：先把三个业务仓在共享 `Unified Harness Engineering Substrate` 上的行为合同层拉平，再进入更深的对象面、报告面、验证面与未来 substrate core 抽取
+- 当前阶段：`Phase C / Object And Report Behavior Convergence`
+- 长线目标：先把三个业务仓在共享 `Unified Harness Engineering Substrate` 上的对象层、报告层、gate semantics 与 audit-watch 行为面压成 repo-verified behavior surface，再进入更深的验证面与未来 substrate core 抽取
 
-这意味着当前并不是继续发明新的顶层叙事，也不是提前抽共享执行内核，而是把已经冻结的统一架构真正落实到各仓可验证的 handle、durable surface、audit trail 与边界语义上。
+这意味着当前并不是继续发明新的顶层叙事，也不是提前抽共享执行内核，而是在 `Phase B` 已完成的前提下，把已经冻结的统一架构继续落实到各仓可验证的对象行为、报告行为、gate semantics 与 audit trail 上。
 
 ## 四项统一完成标准
 
@@ -50,9 +50,9 @@
 
 ### `Phase B / Handle And Surface Convergence`
 
-当前阶段，要求四仓把统一架构继续压到 repo-tracked handle / surface 合同层。
+已完成并冻结。
 
-本阶段完成后，应达到：
+本阶段完成后，已经达到：
 
 - `redcube-ai`、`med-autogrant`、`med-autoscience` 都已写清楚各自的 execution handle contract
 - 三个业务仓都已写清楚当前 canonical durable report / audit / watch surface
@@ -60,11 +60,22 @@
 
 ### `Phase C / Object And Report Behavior Convergence`
 
-后续阶段，不在本轮直接落地：
+当前阶段，要求四仓把统一架构继续压到 repo-verified behavior 面：
 
-- 进一步压平对象层、报告层、gate surface 与 audit-watch 行为面
-- 把当前统一合同继续变成 repo-verified 行为验证面
-- 让三个业务仓在行为层达到更接近的完成标准，而不是只停留在文档层
+- `OPL`
+  - 持续维护中央执行板、状态总表、任务板与顶层 reference docs/tests 的同相同步
+  - 明确 `Phase C` 的统一离场条件，不让四仓重新散管
+- `redcube-ai`
+  - 把 `auditDeliverable / runtimeWatch / getReviewState / getPublicationProjection` 压到同一 deliverable/topic 边界上的 repo-verified behavior
+  - 继续锁定 `run_id` 只是 per-run handle，不污染 `topic_id / deliverable_id`
+- `med-autogrant`
+  - 把 `validate-workspace / summarize-workspace / critique-summary / stage-route-report` 继续压成一致的 verification / checkpoint 行为面
+  - 继续锁定 `forced_rollback_stage / forced_rollback_reason / presubmission_frozen` 的 machine-readable checkpoint 语义
+- `med-autoscience`
+  - 主线不重开新的架构 tranche
+  - 以手工测试驱动稳定化，并保持 external runtime gate 的 truth 不漂移
+
+本阶段的重点不是再补一轮命名，而是把统一合同继续变成 repo-verified behavior。
 
 ### `Phase D / Substrate Core Extraction`
 
@@ -81,19 +92,19 @@
 
 | 仓库 | 本轮在 `Contract Convergence v1` 下的交付项 | 当前判断 |
 | --- | --- | --- |
-| `one-person-lab` | 持有中央执行板、状态总表、任务板与顶层 references；冻结统一阶段与完成标准 | 当前负责 program owner 与 reference-sync |
-| `redcube-ai` | 明确 `program_id / topic_id / deliverable_id / run_id` 与 `auditDeliverable / runtimeWatch` 等 canonical surface | 已进入 Phase B 合同层完成态 |
-| `med-autogrant` | 明确 `grant_run_id / workspace_id / draft_id / program_id` 与 `summarize-workspace / critique-summary / stage-route-report` | 已进入 Phase B 合同层完成态 |
-| `med-autoscience` | 明确 `program_id / study_id / quest_id / active_run_id` 及 `study_runtime_status / runtime_watch / publication_eval / runtime_escalation / controller_decisions` | 本轮补齐到与另外两仓同层级的表达面 |
+| `one-person-lab` | 持有中央执行板、状态总表、任务板与顶层 references；冻结统一阶段与完成标准 | 当前负责 `Phase C` program owner 与 reference-sync |
+| `redcube-ai` | 把 `auditDeliverable / runtimeWatch / getReviewState / getPublicationProjection` 收口为同一 deliverable/topic 边界上的 canonical behavior | 当前进入 `Phase C` 行为冻结面 |
+| `med-autogrant` | 把 `stage-route-report` 收口为 verification / checkpoint canonical behavior，并锁定 rollback / frozen gate 语义 | 当前进入 `Phase C` 行为冻结面 |
+| `med-autoscience` | 保持 `program_id / study_id / quest_id / active_run_id` 与 current durable surface truth，不重开新 tranche | 当前转入手工测试稳定化面 |
 
 ## 当前阶段的离场条件
 
-只有同时满足以下条件，`Phase B` 才算完成：
+只有同时满足以下条件，`Phase C` 才算完成：
 
-- 三个业务仓都已经把 execution handle contract 写进 repo-tracked truth/docs
-- 三个业务仓都已经把 current durable surface contract 写进 repo-tracked truth/docs
-- `OPL` 的中央执行板、状态总表、任务板和 gateway contract references 使用同一阶段口径
-- 测试已冻结这些表述，避免后续文档漂移
+- `redcube-ai` 已把四个 canonical surface 的同轴行为冻结进 repo-verified 测试
+- `med-autogrant` 已把 verification / checkpoint surface 的聚合语义冻结进 repo-verified 测试
+- `med-autoscience` 主线的手工测试稳定化边界与 external runtime gate truth 继续保持一致
+- `OPL` 的中央执行板、状态总表、任务板和顶层 tests 使用同一 `Phase C` 口径
 
 ## 本轮明确不做的事
 

@@ -152,7 +152,7 @@ test('gateway and onboarding docs cross-reference the current four-repo alignmen
   }
 });
 
-test('contract convergence execution board freezes the current unified program and phase-b exit criteria', () => {
+test('contract convergence execution board freezes the current unified program and phase-c behavior convergence plan', () => {
   const docsIndex = read('docs/README.md');
   const docsIndexZh = read('docs/README.zh-CN.md');
   const executionBoard = read('docs/references/contract-convergence-v1-execution-board.md');
@@ -163,20 +163,22 @@ test('contract convergence execution board freezes the current unified program a
   assert.match(docsIndexZh, /references\/contract-convergence-v1-execution-board\.md/);
 
   assert.match(executionBoard, /Contract Convergence v1/);
-  assert.match(executionBoard, /Phase B \/ Handle And Surface Convergence/);
+  assert.match(executionBoard, /Phase C \/ Object And Report Behavior Convergence/);
   assert.match(executionBoard, /default_formal_entry = CLI/);
   assert.match(executionBoard, /supported_protocol_layer = MCP/);
   assert.match(executionBoard, /internal_controller_surface = controller/);
   assert.match(executionBoard, /execution handle contract/);
   assert.match(executionBoard, /durable surface contract/);
+  assert.match(executionBoard, /repo-verified behavior/);
   assert.match(executionBoard, /control-plane/);
   assert.match(executionBoard, /product runtime/);
   assert.match(executionBoard, /shared public code framework|共享公共代码框架/);
 
   assert.match(statusMatrix, /Contract Convergence v1/);
-  assert.match(statusMatrix, /Phase B \/ Handle And Surface Convergence/);
+  assert.match(statusMatrix, /Phase C \/ Object And Report Behavior Convergence/);
   assert.match(taskboard, /Contract Convergence v1/);
-  assert.match(taskboard, /Phase B \/ Handle And Surface Convergence/);
+  assert.match(taskboard, /Phase C \/ Object And Report Behavior Convergence/);
+  assert.match(taskboard, /verification checkpoint|行为验证/);
 });
 
 test('phase-1 public gateway docs distinguish CLI transport from the host-agent and control-plane defaults', () => {
