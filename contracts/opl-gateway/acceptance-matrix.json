@@ -1,5 +1,5 @@
 {
-  "version": "p23.m4",
+  "version": "p23.m5",
   "gates": [
     {
       "gate_id": "g1_registry_completeness",
@@ -160,7 +160,13 @@
         "docs/shared-foundation.md",
         "docs/shared-foundation.zh-CN.md",
         "docs/shared-foundation-ownership.md",
-        "docs/shared-foundation-ownership.zh-CN.md"
+        "docs/shared-foundation-ownership.zh-CN.md",
+        "contracts/opl-gateway/phase-1-exit-activation-package.json",
+        "docs/references/opl-phase-1-exit-activation-package.md",
+        "docs/references/opl-phase-1-exit-activation-package.zh-CN.md",
+        "contracts/opl-gateway/minimal-admitted-domain-federation-activation-package.json",
+        "docs/references/opl-minimal-admitted-domain-federation-activation-package.md",
+        "docs/references/opl-minimal-admitted-domain-federation-activation-package.zh-CN.md"
       ],
       "contract_assertions": [
         "public-surface index remains machine-readable and non-executing",
@@ -170,7 +176,8 @@
         "public-surface index exposes opl_candidate_domain_backlog as a supporting/reference surface for under-definition workstreams without admitting domains early",
         "public-surface index exposes opl_operating_model, opl_shared_foundation, and opl_shared_foundation_ownership as OPL-owned discoverability/reference surfaces without transferring canonical truth, mutation, review truth, or publication truth into OPL",
         "public-surface index keeps shared asset index, shared memory index, shared domain registry, and shared publication/delivery catalog out of the current public surface until a later explicit readiness contract freezes them",
-        "no G4 candidate index is described as a current public-entry/discovery-ready/routed-action-ready/execution/truth-owner/approval/publish-control/release-control surface"
+        "no G4 candidate index is described as a current public-entry/discovery-ready/routed-action-ready/execution/truth-owner/approval/publish-control/release-control surface",
+        "public-surface index exposes opl_phase_1_exit_activation_package as the absorbed predecessor freeze and opl_minimal_admitted_domain_federation_activation_package as the current admitted-domain-only activation surface without promoting OPL into a runtime owner"
       ],
       "forbidden_regressions": [
         "public-surface index becomes a launcher or runtime registry",
@@ -179,7 +186,8 @@
         "candidate-domain backlog is indexed as an admitted domain or execution surface",
         "shared-foundation docs are indexed as execution surfaces, shared truth stores, or domain-truth takeover points",
         "a G4 candidate index appears as a current public surface before explicit readiness alignment",
-        "a G4 candidate index is described as a public-entry/discovery-ready/routed-action-ready/execution/truth-owner/approval/publish-control/release-control surface before a later explicit contract"
+        "a G4 candidate index is described as a public-entry/discovery-ready/routed-action-ready/execution/truth-owner/approval/publish-control/release-control surface before a later explicit contract",
+        "activation-package surfaces are indexed as runtime-owning, domain-admitting, or candidate-bypass execution surfaces"
       ]
     },
     {

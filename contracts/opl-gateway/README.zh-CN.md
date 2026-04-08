@@ -13,23 +13,22 @@
 围绕这一层命名的 `Unified Harness Engineering Substrate` 仍然只是共享架构基座，不是共享代码框架。
 更完整的 ownership split 可参考[共享基础结构](../../docs/shared-foundation.zh-CN.md)与[共享基础结构归属](../../docs/shared-foundation-ownership.zh-CN.md)。
 
-## 当前 Phase 1 对齐
+## 当前基线与已激活 follow-on 对齐
 
-当前 `opl-mainline` 的公开主线仍是 `Phase 1`。
-截至 `2026-04-07`，当前 repo 已有一条可运行的本地 `TypeScript CLI`-first、read-only gateway baseline；它只读取这个目录中已经冻结的 contract 工件。
+截至 `2026-04-08`，当前 `opl-mainline` 的公开主线已经进入 `Phase 2 / Minimal admitted-domain federation activation package`，但 repo-tracked 的 formal entry 仍然是 `Phase 1` 那条本地 `TypeScript CLI`-first、read-only gateway baseline；它只读取这个目录中已经冻结的 contract 工件。
 这条 transport 建立在当前 `Codex-default host-agent runtime` 之上；在开发控制面上，`Codex Host` 负责规划冻结与真相裁决，`OMX` 负责在已冻结边界内做长时执行。
 已完成的 `Phase 1 / G2 release-closeout` 已把 `G2 stable public baseline` 收口成稳定、单一、repo-tracked 的公开基线。
-这条 repo-tracked 基线也仍然是 `OPL` 在 `Phase 1` 的 formal entry contract 与 public system surface。
+因此，即便公开主线已经激活了最小 admitted-domain federation follow-on，这条 repo-tracked 基线也仍然是当前 `OPL` 的 formal entry contract 与 public system surface。
 已完成的 repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` 继续停留在 planning-contract closeout 层：当前目录只冻结围绕 `route_request`、`build_handoff_payload`、`audit_routing_decision` 的 planning gate / planning-level contract。唯一允许的成功 handoff 目标仍只能是 `domain_gateway`；no-bypass 规则继续禁止直达 domain harness；`routed-actions.schema.json` 仍只是 planning dependency，不是 launcher。
 repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review Ops` 然后 `Thesis Ops`：这两条 candidate path 都继续停留在 domain admission、`G2` discovery readiness、`G3` routed-action readiness 与 handoff readiness 之下。
-当前 follow-on 是 `Phase 1 exit + next-stage activation package freeze`：它只冻结最小的更强 federation follow-on，而不会激活 runtime ownership。
+当前已 absorb 的前序 follow-on 是 `Phase 1 exit + next-stage activation package freeze`；当前 active follow-on 已切到 `Minimal admitted-domain federation activation package`：它只对已经 admitted 的 `MedAutoScience` 与 `RedCube AI` domain surface 生效，且仍然**不会**激活 runtime ownership。
 因此，当前 OPL 层的 repo-tracked formal entry 也仍然只是这条本地 `TypeScript CLI`-first / read-only gateway surface，而不是 launcher、mutation entry 或 runtime-owner surface。
 这个交付目标**不会**把当前目录提升成 runtime、routed-action control plane 或 canonical truth store；它只是把已有的顶层 contract language 继续维持为本地 CLI surface 可读取的合同入口。
 
 ## 当前四仓统一对齐配套文档
 
 下面这些 reference-grade 配套文档用于冻结当前四仓的状态、runtime 口径与开发控制面分工；它们不会把当前目录升级成 runtime owner，也不会形成第二真相源。
-下面这组文档以 `2026-04-07` 为日期锚点，并承担把四仓最新状态回写到 `OPL` 顶层参考同步面的责任；这些参考面不会反向抬升为公开主线真相。
+下面这组文档以 `2026-04-08` 为日期锚点，并承担把四仓最新状态回写到 `OPL` 顶层参考同步面的责任；这些参考面不会反向抬升为公开主线真相。
 
 - [生态四仓统一状态总表](../../docs/references/ecosystem-status-matrix.md) — 当前四仓阶段/状态总览（中文内部参考）
 - [Codex-default Host-Agent Runtime 合同](../../docs/references/host-agent-runtime-contract.md) — 当前本地默认 runtime 口径（中文内部参考）
@@ -81,6 +80,7 @@ repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review 
 
 - [OPL Candidate Domain Backlog](../../docs/references/opl-candidate-domain-backlog.zh-CN.md) — 当前 under-definition workstream 的 reference-only machine-readable admission-blocker backlog
 - [OPL Phase 1 Exit Activation Package](../../docs/references/opl-phase-1-exit-activation-package.zh-CN.md) — 当前 `Phase 1` 离场门槛、deferred surface 与最小下一阶段判断的 reference-grade freeze
+- [OPL Minimal admitted-domain federation activation package](../../docs/references/opl-minimal-admitted-domain-federation-activation-package.zh-CN.md) — 仅面向已 admitted domain 的最小 stronger federation wording 的 reference-grade activation freeze
 - [OPL Surface Lifecycle Map](../../docs/references/opl-surface-lifecycle-map.zh-CN.md) — 对当前已冻结 gateway / operating / supporting surfaces 的 derived machine-readable lifecycle 视图
 - [OPL Surface Authority Matrix](../../docs/references/opl-surface-authority-matrix.zh-CN.md) — 对当前已冻结 OPL surfaces 与 linked domain public-entry surfaces 的 derived machine-readable authority split
 - [OPL Surface Review Matrix](../../docs/references/opl-surface-review-matrix.zh-CN.md) — 对当前已冻结 OPL public / contract / supporting surfaces 的 derived machine-readable review obligation
@@ -102,6 +102,7 @@ repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review 
 - [`task-topology.json`](./task-topology.json) — 覆盖已收录与仍在定义中的 OPL workstream 的 machine-readable 顶层任务版图
 - [`candidate-domain-backlog.json`](./candidate-domain-backlog.json) — 当前 under-definition workstream 的 machine-readable admission-blocker backlog
 - [`phase-1-exit-activation-package.json`](./phase-1-exit-activation-package.json) — 当前 `Phase 1` 离场门槛、deferred surface 与最小下一阶段判断的 machine-readable freeze
+- [`minimal-admitted-domain-federation-activation-package.json`](./minimal-admitted-domain-federation-activation-package.json) — 仅面向已 admitted domain 的最小 stronger federation wording 的 machine-readable activation freeze
 - [`operating-record-catalog.json`](./operating-record-catalog.json) — 已冻结 P5.M1 / P5.M2 operating record kind 的 machine-readable reference catalog
 - [`surface-lifecycle-map.json`](./surface-lifecycle-map.json) — 当前已冻结 gateway / operating / supporting surfaces 的 machine-readable derived lifecycle map
 - [`surface-authority-matrix.json`](./surface-authority-matrix.json) — 当前已冻结 OPL surfaces 与 linked domain public-entry surfaces 的 machine-readable derived authority matrix

@@ -215,7 +215,7 @@ test('validate-contracts returns a stable machine-readable success summary', () 
       { contract_id: 'domains', file: 'domains.json', schema_version: 'g1', status: 'valid' },
       { contract_id: 'routing_vocabulary', file: 'routing-vocabulary.json', schema_version: 'g1', status: 'valid' },
       { contract_id: 'task_topology', file: 'task-topology.json', schema_version: 'p17.m1', status: 'valid' },
-      { contract_id: 'public_surface_index', file: 'public-surface-index.json', schema_version: 'p18.m1', status: 'valid' },
+      { contract_id: 'public_surface_index', file: 'public-surface-index.json', schema_version: 'p18.m2', status: 'valid' },
     ],
   );
 });

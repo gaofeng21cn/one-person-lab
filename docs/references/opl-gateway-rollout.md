@@ -5,7 +5,7 @@
 ## Purpose
 
 This document describes how the `OPL Gateway` should move from a documentation-first public surface into a real entry surface without collapsing domain boundaries.
-Snapshot anchor: `2026-04-07`.
+Snapshot anchor: `2026-04-08`.
 
 The target is not a monolithic runtime.
 The target is a real top-level gateway that can route work into independent domain systems.
@@ -93,7 +93,8 @@ Current frozen state:
 - the completed `Phase 1 / G2 release-closeout` has already closed that baseline into one stable repo-tracked `G2 stable public baseline`
 - the completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` remains closed at the planning-contract boundary
 - the repo-tracked `Phase 1` candidate-domain closeout order is frozen as `Review Ops` then `Thesis Ops`
-- the current follow-on is `Phase 1 exit + next-stage activation package freeze`
+- the absorbed predecessor follow-on is `Phase 1 exit + next-stage activation package freeze`
+- the current active follow-on is `Minimal admitted-domain federation activation package`, which now applies to the admitted `MedAutoScience` + `RedCube AI` federation surface only
 
 Should support:
 
@@ -122,7 +123,8 @@ Current phase constraint:
 
 - the completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` remains the closeout boundary for routed-action planning, and the repository is not entering routed-action implementation
 - the repo-tracked `Review Ops -> Thesis Ops` candidate-domain closeout keeps those candidate paths below admission / discovery / routing readiness while G3 stays inactive beyond planning freeze
-- the current follow-on is `Phase 1 exit + next-stage activation package freeze`, which records the minimal stronger-federation follow-on without activating runtime ownership
+- the absorbed predecessor follow-on is `Phase 1 exit + next-stage activation package freeze`, which recorded the minimal stronger-federation follow-on before the threshold was met
+- the current active follow-on is `Minimal admitted-domain federation activation package`, which strengthens federation wording for the already admitted domains only without activating runtime ownership
 - this is a planning gate, not a runtime gate; `route_request`, `build_handoff_payload`, and `audit_routing_decision` are frozen as planning-level contract operations only
 - the only allowed successful handoff target remains `domain_gateway`, and the no-bypass rule forbids direct domain-harness targeting
 - `routed-actions.schema.json` remains a planning dependency, not a launcher

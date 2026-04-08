@@ -9,11 +9,11 @@ This document indexes the current authoritative public surfaces for the `OPL Gat
 Its job is to make the top-level gateway easier to discover across README, roadmap, rollout, contracts, acceptance, examples, and linked domain gateway entries.
 
 It is not a runtime registry.
-It should be read as a CLI-first, read-only discoverability aid for the current Phase 1 gateway baseline.
+It should be read as a CLI-first, read-only discoverability aid built on the frozen Phase 1 gateway baseline and reused by the current `Minimal admitted-domain federation activation package`.
 The completed `G2` closeout keeps the single repo-tracked top-level `G2` CLI-first / read-only baseline stable.
 That baseline remains the current `OPL` `Phase 1` formal entry contract and public system surface.
 The completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` remains closed at the planning-contract layer, and `G3` remains planning-only rather than an activated routed-action runtime.
-The repo-tracked `Phase 1` candidate-domain closeout order is frozen as `Review Ops` then `Thesis Ops`, and the current follow-on is `Phase 1 exit + next-stage activation package freeze`.
+The repo-tracked `Phase 1` candidate-domain closeout order is frozen as `Review Ops` then `Thesis Ops`, the absorbed predecessor follow-on remains `Phase 1 exit + next-stage activation package freeze`, and the current active follow-on is `Minimal admitted-domain federation activation package`.
 The current top-level formal entry therefore remains the CLI-first / read-only gateway surface indexed here rather than a launcher or runtime-authority surface.
 Use the [Ecosystem Status Matrix](./references/ecosystem-status-matrix.md) as the internal reference-sync anchor for the current four-repo stage and maturity snapshot.
 
@@ -68,7 +68,7 @@ These surfaces freeze the gateway and federation boundary:
 - [Shared Foundation](./shared-foundation.md)
 - [Shared Foundation Ownership](./shared-foundation-ownership.md)
 - [OPL Read-Only Discovery Gateway](./opl-read-only-discovery-gateway.md)
-- [OPL Routed Action Gateway](./opl-routed-action-gateway.md) (planning-level contract only; repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` is already closed, the `Review Ops -> Thesis Ops` candidate-domain closeout remains below admission / discovery / routing readiness, and the current follow-on is `Phase 1 exit + next-stage activation package freeze`)
+- [OPL Routed Action Gateway](./opl-routed-action-gateway.md) (planning-level contract only; repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` is already closed, the `Review Ops -> Thesis Ops` candidate-domain closeout remains below admission / discovery / routing readiness, the absorbed predecessor follow-on is `Phase 1 exit + next-stage activation package freeze`, and the current active follow-on is `Minimal admitted-domain federation activation package`)
 - [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.md) + `domain-onboarding-readiness.schema.json`
 - [OPL Governance / Audit Operating Surface](./references/opl-governance-audit-operating-surface.md)
 - [OPL Publish / Promotion Operating Surface](./references/opl-publish-promotion-operating-surface.md)
@@ -80,6 +80,7 @@ These surfaces improve review and discoverability without becoming execution lay
 - [OPL Gateway Acceptance Test Spec](./references/opl-gateway-acceptance-test-spec.md)
 - [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.md)
 - [OPL Phase 1 Exit Activation Package](./references/opl-phase-1-exit-activation-package.md)
+- [OPL Minimal Admitted-Domain Federation Activation Package](./references/opl-minimal-admitted-domain-federation-activation-package.md)
 - [OPL Gateway Example Corpus](./references/opl-gateway-example-corpus.md)
 - [OPL Routed-Safety Example Corpus](./references/opl-routed-safety-example-corpus.md)
 - [OPL Operating Example Corpus](./references/opl-operating-example-corpus.md)
@@ -104,6 +105,7 @@ Important boundary:
 
 - `ppt_deck` directly maps to `presentation_ops`
 - `xiaohongshu` may still route to `redcube`, but does not automatically equal `presentation_ops`
+- the current `Minimal admitted-domain federation activation package` applies to the already admitted domain surfaces only, namely `MedAutoScience` and `RedCube AI`
 - `Grant Ops`, `Review Ops`, and `Thesis Ops` may appear in the task map as under-definition workstreams, but that does not make them admitted domains or routed targets
 - the current `Grant Foundry -> Med Auto Grant` public scaffold is top-level signal / domain-direction evidence only; it is not indexed here as an admitted domain public-entry surface, is not an admitted domain gateway, does not count as G2 discovery readiness or G3 routed-action readiness, and is not a handoff-ready surface
 - the current admission blockers for those under-definition workstreams live in the candidate-domain backlog and remain below the onboarding gate
@@ -132,7 +134,7 @@ If a surface is the acceptance, matrix, or example layer, it remains a discovera
 - [Shared Foundation Ownership](./shared-foundation-ownership.md)
 - [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
 - [OPL Read-Only Discovery Gateway](./opl-read-only-discovery-gateway.md)
-- [OPL Routed Action Gateway](./opl-routed-action-gateway.md) (planning-level contract only; repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` is already closed, the `Review Ops -> Thesis Ops` candidate-domain closeout remains below admission / discovery / routing readiness, and the current follow-on is `Phase 1 exit + next-stage activation package freeze`)
+- [OPL Routed Action Gateway](./opl-routed-action-gateway.md) (planning-level contract only; repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` is already closed, the `Review Ops -> Thesis Ops` candidate-domain closeout remains below admission / discovery / routing readiness, the absorbed predecessor follow-on is `Phase 1 exit + next-stage activation package freeze`, and the current active follow-on is `Minimal admitted-domain federation activation package`)
 - [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.md)
 - [OPL Governance / Audit Operating Surface](./references/opl-governance-audit-operating-surface.md)
 - [OPL Publish / Promotion Operating Surface](./references/opl-publish-promotion-operating-surface.md)

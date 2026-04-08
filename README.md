@@ -313,6 +313,21 @@ Its correct boundary is:
 - the harness surface that most directly carries `Presentation Ops` through `ppt_deck`
 - a runtime family surface that can also host families not identical to `Presentation Ops`
 
+
+## Current Federation Activation State
+
+As of `2026-04-08`, the predecessor `Phase 1 exit + next-stage activation package freeze` remains absorbed as the gate that enabled the current `Minimal admitted-domain federation activation package`.
+
+That activation is justified by two admitted domain surfaces that are now repo-tracked as stable enough for stronger top-level federation wording:
+
+- `MedAutoScience` for `research_ops`
+- `RedCube AI` for `presentation_ops`
+
+This activation still applies to already admitted domains only.
+`Grant Foundry -> Med Auto Grant` remains signal-only / domain-direction evidence only, while `Review Ops` and `Thesis Ops` remain under-definition bundles below onboarding.
+The top-level formal entry still remains the local `TypeScript CLI`-first / read-only gateway surface, and `OPL` still does not become a runtime owner.
+
+
 ## Scope Boundary
 
 This repository should not be described as:
@@ -330,19 +345,19 @@ It should be described as:
 
 ## Roadmap
 
-The current phase has four priorities, led by a Phase 1 local `TypeScript CLI` + read-only gateway baseline:
+The current public mainline is `Phase 2 / Minimal admitted-domain federation activation package`, built on top of the frozen `Phase 1` local `TypeScript CLI` + read-only gateway baseline:
 
 - turn the frozen OPL gateway contracts into a CLI-first, read-only discovery surface for humans and agents
 - keep `Research Foundry -> Med Auto Science` explicit as the current `Research Ops` line
 - keep `RedCube AI` explicit as the visual-deliverable domain gateway and harness
 - keep `Grant Ops`, `Review Ops`, and `Thesis Ops` below the admitted gateway surface until their domain boundaries are explicitly frozen
 
-As of `2026-04-07`, the repository already has a runnable local `TypeScript CLI`-first / read-only gateway baseline.
+As of `2026-04-08`, the repository still has a runnable local `TypeScript CLI`-first / read-only gateway baseline.
 The completed `Phase 1 / G2 release-closeout` has already closed the `G2 stable public baseline` into the single stable repo-tracked public entry.
 That baseline therefore remains the current `OPL` `Phase 1` formal entry contract and public system surface.
 The repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` has already frozen `G3` at a planning-only gate, so it still does not open a mutation entry, turn `OPL` into a unified runtime owner, or pull a shared execution core forward.
 The repo-tracked `Phase 1` candidate-domain closeout order is frozen as `Review Ops` then `Thesis Ops`: both candidate paths remain below admission / discovery / routing / handoff readiness, while `Grant Foundry -> Med Auto Grant` stays signal-only.
-The current follow-on is `Phase 1 exit + next-stage activation package freeze`, which records the minimum stronger-federation follow-on without activating routed action or turning `OPL` into a runtime owner.
+The absorbed predecessor follow-on is `Phase 1 exit + next-stage activation package freeze`, and the current active follow-on is `Minimal admitted-domain federation activation package`, which strengthens federation wording for `MedAutoScience` + `RedCube AI` only without activating routed action, admitting `Grant Ops` / `Review Ops` / `Thesis Ops`, or turning `OPL` into a runtime owner.
 
 The current delivery target uses a local `TypeScript CLI` as the Phase 1 entry transport on top of the current `Codex-default host-agent runtime`.
 At the development-control layer, `Codex Host` freezes planning and truth while `OMX` handles long-running execution inside those frozen boundaries.

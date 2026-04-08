@@ -27,7 +27,7 @@
 ## 一、当前统一结论
 
 当前最重要的不是继续发明新的上层名词，而是守住已经吸收到各仓 current truth 的统一口径。
-对 `one-person-lab` 而言，当前 baton 已停在 `EXTERNAL_READINESS_BLOCKED_AFTER_ABSORB`；对 `med-autoscience` 而言，当前 repo-side 已停在 `EXTERNAL_RUNTIME_DEPENDENCY_BLOCKED_AFTER_ABSORB`；`redcube-ai` 与 `med-autogrant` 则都已经把本轮主线收口吸收到 `main`。
+对 `one-person-lab` 而言，当前 baton 已从 `EXTERNAL_READINESS_BLOCKED_AFTER_ABSORB` 前推到 `Minimal admitted-domain federation activation package`；对 `med-autoscience` 而言，当前 repo-side 已停在 `EXTERNAL_RUNTIME_DEPENDENCY_BLOCKED_AFTER_ABSORB`；`redcube-ai` 与 `med-autogrant` 则都已经把本轮主线收口吸收到 `main`。
 
 当前执行顺序已经明确为：
 
@@ -89,7 +89,7 @@
   - `docs/opl-domain-onboarding-contract.zh-CN.md`
   - `docs/references/opl-gateway-acceptance-test-spec.zh-CN.md`
 - 明确 `Grant Foundry -> Med Auto Grant` 只算 top-level signal / domain-direction evidence，不等于 domain admission、`G2` discovery readiness、`G3` routed-action readiness 或 handoff-ready surface；同时把 `Review Ops` 与 `Thesis Ops` 都保持为 under-definition semantic bundle / workstream，显式 blocked 于 `execution_model`、`discovery_readiness`、`routing_readiness` 与 `cross_domain_wording` 四类 package；任何 future follow-on route 仍只能走 `domain_gateway` 且继续遵守 no-bypass
-- 冻结 `Phase 1 exit + next-stage activation package`，并把“至少两个 admitted domain surface 稳定到足以支撑更强 federation 表达”写成显式外部门槛
+- 已 absorb `Phase 1 exit + next-stage activation package freeze`，并在当前 repo-tracked 四仓 current truth 下把 `Minimal admitted-domain federation activation package` 激活为 docs/contracts/tests first 的最小下一阶段
 - 保持 `OPL` 不越界为 domain runtime owner
 
 #### P1
@@ -101,7 +101,7 @@
 - repo-tracked planning brief：`docs/plans/2026-04-07-g3-thin-handoff-planning-brief.md`
 - repo-tracked planning closeout note：`docs/plans/2026-04-07-g3-thin-handoff-planning-closeout-note.md`
 - repo-tracked release-closeout note：`docs/plans/2026-04-07-g2-release-closeout-note.md`
-- 当前同一 phase 的 follow-on：`Phase 1 exit + next-stage activation package freeze`
+- 当前 active follow-on：`Minimal admitted-domain federation activation package`
 - 当前不推进统一 runtime owner，也不抽共享执行内核
 
 #### P2
@@ -213,7 +213,7 @@
 
 ### 并行推荐
 
-1. `OPL` 先回写四仓最新状态到顶层参考同步面，守住已完成的 `G2 stable public baseline` 与已收口的 `G3 thin handoff planning freeze`，冻结 `Review Ops -> Thesis Ops` candidate-domain closeout truth 与 `Phase 1 exit + next-stage activation package`
+1. `OPL` 先把 `Minimal admitted-domain federation activation package` 冻结并 absorb 到顶层参考同步面，同时继续守住已完成的 `G2 stable public baseline`、已收口的 `G3 thin handoff planning freeze`，以及 `Review Ops -> Thesis Ops` candidate-domain closeout truth
 2. `Med Auto Science` 处理 `P0`
 3. `RedCube AI` 处理 `P0`
 4. `Med Auto Grant` 处理 `P0`，并并行准备 `P1` 的 formal entry freeze

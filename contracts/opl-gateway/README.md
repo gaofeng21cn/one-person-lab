@@ -13,23 +13,22 @@ This directory therefore materializes gateway surfaces for discoverability / rev
 The `Unified Harness Engineering Substrate` named around this layer remains a shared architectural substrate, not a shared public code framework.
 For the broader ownership split, see [Shared Foundation](../../docs/shared-foundation.md) and [Shared Foundation Ownership](../../docs/shared-foundation-ownership.md).
 
-## Current Phase 1 alignment
+## Current baseline and activated follow-on alignment
 
-The public `opl-mainline` mainline remains `Phase 1`.
-As of `2026-04-07`, the repository already has a runnable local `TypeScript CLI`-first, read-only gateway baseline that reads the frozen contract artifacts in this directory.
+As of `2026-04-08`, the public `opl-mainline` mainline has entered `Phase 2 / Minimal admitted-domain federation activation package`, while the repo-tracked formal entry still remains the `Phase 1` local `TypeScript CLI`-first, read-only gateway baseline that reads the frozen contract artifacts in this directory.
 That transport sits on top of the current `Codex-default host-agent runtime`, while `Codex Host` freezes planning/truth and `OMX` handles long-running execution inside those frozen boundaries.
 The completed `Phase 1 / G2 release-closeout` has already closed the `G2 stable public baseline` into one stable repo-tracked public entry.
-That repo-tracked baseline remains the current `OPL` `Phase 1` formal entry contract and public system surface.
+That repo-tracked baseline therefore remains the current `OPL` formal entry contract and public system surface even though the public mainline has already activated a minimal admitted-domain federation follow-on.
 The completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` remains closed at the planning-contract layer: this directory only freezes the planning gate / planning-level contract around `route_request`, `build_handoff_payload`, and `audit_routing_decision`. The only allowed successful handoff target remains `domain_gateway`, the no-bypass rule still forbids direct domain-harness targeting, and `routed-actions.schema.json` remains a planning dependency rather than a launcher.
 The repo-tracked `Phase 1` candidate-domain closeout order is frozen as `Review Ops` then `Thesis Ops`: both candidate paths remain below domain admission, `G2` discovery readiness, `G3` routed-action readiness, and handoff readiness.
-The current follow-on is `Phase 1 exit + next-stage activation package freeze`, which records the minimum stronger-federation follow-on without activating runtime ownership.
+The absorbed predecessor follow-on is `Phase 1 exit + next-stage activation package freeze`, and the current active follow-on is `Minimal admitted-domain federation activation package`, which applies only to the already admitted `MedAutoScience` and `RedCube AI` domain surfaces and still does **not** activate runtime ownership.
 The current repo-tracked formal entry at the OPL layer therefore remains the local `TypeScript CLI`-first / read-only gateway surface rather than a launcher, mutation entry, or runtime-owner surface.
 That delivery target still does **not** promote this directory into a runtime, routed-action control plane, or canonical truth store; it only keeps the existing top-level contract language executable through a local CLI surface.
 
 ## Current four-repo alignment companions
 
 These reference-grade companions freeze the current four-repo status, runtime wording, and development-control split without turning this directory into a runtime owner or second source of truth.
-This companion set is anchored to `2026-04-07` and carries the responsibility of writing the latest four-repo status back into the top-level OPL reference-sync companions without promoting those reference surfaces into public-mainline truth.
+This companion set is anchored to `2026-04-08` and carries the responsibility of writing the latest four-repo status back into the top-level OPL reference-sync companions without promoting those reference surfaces into public-mainline truth.
 
 - [Ecosystem Status Matrix](../../docs/references/ecosystem-status-matrix.md) — Chinese-only internal reference for the current four-repo stage/status picture
 - [Codex-default Host-Agent Runtime Contract](../../docs/references/host-agent-runtime-contract.md) — Chinese-only internal reference for the current local default runtime wording
@@ -83,6 +82,7 @@ These corpora are companion references only. They do not replace the governing c
 
 - [OPL Candidate Domain Backlog](../../docs/references/opl-candidate-domain-backlog.md) — reference-only machine-readable admission-blocker backlog for the current under-definition workstreams
 - [OPL Phase 1 Exit Activation Package](../../docs/references/opl-phase-1-exit-activation-package.md) — reference-grade freeze for the current `Phase 1` exit thresholds, deferred surface, and minimal next-stage decision
+- [OPL Minimal admitted-domain federation activation package](../../docs/references/opl-minimal-admitted-domain-federation-activation-package.md) — reference-grade activation freeze for the minimum stronger federation wording across already admitted domains only
 - [OPL Surface Lifecycle Map](../../docs/references/opl-surface-lifecycle-map.md) — derived machine-readable lifecycle view across the frozen gateway / operating / supporting surfaces
 - [OPL Surface Authority Matrix](../../docs/references/opl-surface-authority-matrix.md) — derived machine-readable authority split across the frozen OPL surfaces and linked domain public-entry surfaces
 - [OPL Surface Review Matrix](../../docs/references/opl-surface-review-matrix.md) — derived machine-readable review obligations across the frozen OPL public, contract, and supporting surfaces
@@ -104,6 +104,7 @@ These backlog and mapping surfaces are reference-only. They do not become a work
 - [`task-topology.json`](./task-topology.json) — machine-readable top-level task topology across admitted and under-definition OPL workstreams
 - [`candidate-domain-backlog.json`](./candidate-domain-backlog.json) — machine-readable admission-blocker backlog for the current under-definition workstreams
 - [`phase-1-exit-activation-package.json`](./phase-1-exit-activation-package.json) — machine-readable freeze for the current `Phase 1` exit thresholds, deferred surface, and minimal next-stage activation decision
+- [`minimal-admitted-domain-federation-activation-package.json`](./minimal-admitted-domain-federation-activation-package.json) — machine-readable activation freeze for the minimum stronger federation wording across already admitted domains only
 - [`operating-record-catalog.json`](./operating-record-catalog.json) — machine-readable reference catalog for the frozen P5.M1 / P5.M2 operating record kinds
 - [`surface-lifecycle-map.json`](./surface-lifecycle-map.json) — machine-readable derived lifecycle map for the frozen gateway / operating / supporting surfaces
 - [`surface-authority-matrix.json`](./surface-authority-matrix.json) — machine-readable derived authority matrix for the frozen OPL surfaces and linked domain public-entry surfaces

@@ -7,7 +7,7 @@
 The priority of the current phase is not to launch every workstream at once.
 It is to freeze the `OPL Gateway` language and stabilize the domain federation around the workstreams that are already real.
 
-As of `2026-04-07`, the public `OPL` mainline remains `Phase 1`.
+As of `2026-04-08`, the public `OPL` mainline has entered `Phase 2 / Minimal admitted-domain federation activation package`.
 
 What is already clear today:
 
@@ -23,6 +23,8 @@ What is already clear today:
 - the current repository already has a runnable local `TypeScript CLI`-first / read-only gateway baseline
 - that repo-tracked CLI-first / read-only baseline remains the current `OPL` `Phase 1` formal entry contract and public system surface
 - the current top-level formal entry at the OPL layer remains that local `TypeScript CLI`-first / read-only gateway surface rather than a launcher or runtime-owner entry
+- the absorbed `Phase 1 exit + next-stage activation package freeze` now acts as the predecessor gate for the current `Minimal admitted-domain federation activation package`
+- `MedAutoScience` and `RedCube AI` now provide the two admitted domain surfaces that are stable enough for this minimum stronger federation activation, while the activation still applies to already admitted domains only
 
 What this phase does not do:
 
@@ -45,7 +47,7 @@ The next phase should prioritize:
 - keeping `MedAutoScience` explicit as the `Research Ops` domain surface
 - keeping `RedCube AI` explicit as the visual-deliverable domain surface
 - carrying the `Agent-first` plus dual-mode doctrine into future candidate-domain definitions instead of drifting toward fixed-code-first product lines
-- freezing the `Phase 1 exit + next-stage activation package` after the repo-tracked `Review Ops -> Thesis Ops` candidate-domain closeout, while keeping every candidate path below admission, discovery readiness, routing readiness, and handoff readiness
+- keeping the absorbed `Phase 1 exit + next-stage activation package freeze` explicit as the predecessor gate for the current `Minimal admitted-domain federation activation package`, while keeping every candidate path below admission, discovery readiness, routing readiness, and handoff readiness
 - defining the next candidate domains through clear task boundaries and delivery objects, using the current `task-topology + candidate-domain-backlog + domain-onboarding` path rather than inventing a redundant intermediate control surface
 - progressively turning the `OPL Gateway` from a documentation-first surface into a real entry surface without activating a routed-action runtime yet
 
@@ -59,8 +61,12 @@ This ordering is a boundary-definition sequence that has now been frozen into th
 That does **not** satisfy registry material, discovery readiness, or routing readiness, and it does **not** make `Grant Ops` an admitted domain gateway, a `G2` discovery target, a `G3` routed-action target, or a handoff-ready surface before its domain-onboarding evidence exists.
 `Review Ops` remains an under-definition semantic bundle only, keeps review truth outside `OPL`, and remains blocked on explicit `execution_model`, `discovery_readiness`, `routing_readiness`, and `cross_domain_wording` packages.
 `Thesis Ops` also remains blocked on explicit `execution_model`, `discovery_readiness`, `routing_readiness`, and `cross_domain_wording` packages, while staying distinct from `Research Ops` manuscript/submission flow and from `Presentation Ops` / `RedCube AI` deck production.
-The current follow-on is `Phase 1 exit + next-stage activation package freeze`; the minimal stronger-federation follow-on stays frozen but cannot activate until at least two admitted domain surfaces are truly stable enough to support it.
+The absorbed predecessor follow-on is `Phase 1 exit + next-stage activation package freeze`; that predecessor gate is what allowed the current `Minimal admitted-domain federation activation package` to activate once the two-admitted-domain threshold turned green.
 Any future successful handoff remains `domain_gateway`-only and subject to the no-bypass rule against direct harness targeting.
+
+At the current `2026-04-08` reassessment, that predecessor freeze has already done its job.
+The current active follow-on is now the `Minimal admitted-domain federation activation package`.
+It strengthens top-level federation wording for `MedAutoScience` + `RedCube AI` only, keeps the formal entry at the same local `TypeScript CLI`-first / read-only gateway surface, and still does **not** admit `Grant Ops`, `Review Ops`, or `Thesis Ops`.
 
 ## Later Phase
 

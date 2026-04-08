@@ -1,0 +1,98 @@
+{
+  "version": "2026-04-08.phase2-fed-activation.v1",
+  "package_id": "opl_minimal_admitted_domain_federation_activation_package",
+  "phase": "phase_2_minimal_admitted_domain_federation_activation",
+  "package_status": "activated",
+  "formal_entry": {
+    "entry_surface": "TypeScript CLI-first / read-only gateway surface",
+    "runtime_owner": false,
+    "mutation_entry": false,
+    "run_launch": false,
+    "workspace_write": false,
+    "shared_execution_core": false,
+    "managed_web_runtime": false
+  },
+  "activation_basis": {
+    "evaluated_at": "2026-04-08",
+    "previous_phase_exit": {
+      "package_id": "opl_phase_1_exit_activation_package",
+      "package_status_at_freeze": "external_readiness_blocked",
+      "superseded_by_current_reassessment": true
+    },
+    "threshold_reassessment": {
+      "two_admitted_domain_surfaces_stable_enough_for_stronger_federation": {
+        "status": "met",
+        "repo_evidence": [
+          "docs/references/ecosystem-status-matrix.md",
+          "docs/references/runtime-alignment-taskboard.md",
+          "docs/roadmap.md",
+          "contracts/opl-gateway/README.md"
+        ],
+        "basis_summary": [
+          "MedAutoScience remains the admitted Research Ops domain gateway and has absorbed its integration harness activation baseline on main.",
+          "RedCube AI remains the admitted Presentation Ops domain gateway family entry and has absorbed its source-intake plus shared-source-truth baseline on main.",
+          "Grant Foundry -> Med Auto Grant remains signal-only / domain-direction evidence only and does not count toward admitted-domain activation readiness."
+        ]
+      }
+    }
+  },
+  "activated_domain_surfaces": [
+    {
+      "workstream_id": "research_ops",
+      "domain_id": "medautoscience",
+      "activation_role": "admitted_stable_domain_surface",
+      "stability_basis": "repo-side activation baseline absorbed; remaining blockers sit outside OPL truth ownership",
+      "repo_evidence": [
+        "docs/references/ecosystem-status-matrix.md",
+        "docs/references/runtime-alignment-taskboard.md"
+      ]
+    },
+    {
+      "workstream_id": "presentation_ops",
+      "domain_id": "redcube",
+      "activation_role": "admitted_stable_domain_surface",
+      "stability_basis": "repo-side source-intake plus shared-source-truth baseline absorbed; formal entry stays stable at MCP/CLI",
+      "repo_evidence": [
+        "docs/references/ecosystem-status-matrix.md",
+        "docs/references/runtime-alignment-taskboard.md"
+      ]
+    }
+  ],
+  "scope": [
+    "strengthen top-level gateway/federation wording for already admitted domains only",
+    "freeze docs+contracts+tests first for the minimal admitted-domain federation activation package",
+    "keep the formal entry at the TypeScript CLI-first / read-only gateway surface while making admitted-domain federation status explicit"
+  ],
+  "explicit_non_qualifiers": [
+    "Grant Ops remains signal-only / domain-direction evidence only",
+    "Review Ops remains under-definition and blocked below onboarding",
+    "Thesis Ops remains under-definition and blocked below onboarding",
+    "Med Auto Grant does not become an admitted domain gateway through this activation package"
+  ],
+  "non_goals": [
+    "no routed-action runtime",
+    "no mutation entry, run launch, or workspace write",
+    "no Grant/Review/Thesis admission",
+    "no Grant/Review/Thesis G2 or G3 readiness",
+    "no shared execution core",
+    "no managed web runtime",
+    "no runtime-owner promotion for OPL"
+  ],
+  "verification_requirements": [
+    "git diff --check",
+    "npm run lint",
+    "npm run typecheck",
+    "npm run build",
+    "npm test",
+    "NODE_NO_WARNINGS=1 node --test tests/opl-readonly-gateway.cli.test.mjs",
+    "focused rg audit for admitted-domain federation wording, candidate-domain wording, and runtime-owner wording"
+  ],
+  "hard_boundaries": [
+    "OPL remains the top-level gateway/federation surface rather than a runtime owner",
+    "the formal entry remains the local TypeScript CLI-first / read-only gateway surface",
+    "candidate domains remain blocked below onboarding and do not become admitted through this package",
+    "no mutation entry, run launch, or workspace write",
+    "no G3 mutation or routed-action runtime",
+    "no shared execution core or managed web runtime"
+  ]
+}

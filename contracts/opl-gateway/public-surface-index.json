@@ -1,5 +1,5 @@
 {
-  "version": "p18.m1",
+  "version": "p18.m2",
   "scope": "opl_public_gateway_surface_index",
   "description": "Machine-readable index of the current authoritative OPL gateway public surfaces and linked domain gateway public entries. This index is contract-first and does not implement a runtime.",
   "non_goals": [
@@ -514,6 +514,14 @@
         {
           "ref_kind": "repo_path",
           "ref": "contracts/opl-gateway/candidate-domain-backlog.json"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "contracts/opl-gateway/phase-1-exit-activation-package.json"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "contracts/opl-gateway/minimal-admitted-domain-federation-activation-package.json"
         }
       ],
       "routes_to": [
@@ -527,6 +535,8 @@
         "opl_gateway_acceptance_spec",
         "opl_candidate_domain_backlog",
         "opl_gateway_example_corpus",
+        "opl_phase_1_exit_activation_package",
+        "opl_minimal_admitted_domain_federation_activation_package",
         "opl_surface_lifecycle_map",
         "opl_surface_authority_matrix",
         "opl_surface_review_matrix",
@@ -693,6 +703,94 @@
       ]
     },
     {
+      "surface_id": "opl_phase_1_exit_activation_package",
+      "category_id": "opl_supporting_surface",
+      "surface_kind": "activation_package",
+      "boundary_role": "phase_exit_freeze",
+      "owner_scope": "opl",
+      "truth_mode": "none",
+      "workstream_ids": [
+        "research_ops",
+        "presentation_ops",
+        "grant_ops",
+        "thesis_ops",
+        "review_ops"
+      ],
+      "domain_ids": [
+        "medautoscience",
+        "redcube"
+      ],
+      "refs": [
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/references/opl-phase-1-exit-activation-package.md",
+          "language": "en"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/references/opl-phase-1-exit-activation-package.zh-CN.md",
+          "language": "zh-CN"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "contracts/opl-gateway/phase-1-exit-activation-package.json"
+        }
+      ],
+      "routes_to": [
+        "opl_gateway_contract_hub",
+        "opl_candidate_domain_backlog",
+        "opl_domain_onboarding_contract",
+        "opl_minimal_admitted_domain_federation_activation_package",
+        "opl_public_surface_index_doc"
+      ],
+      "notes": [
+        "Reference-grade freeze for the absorbed Phase 1 exit thresholds, deferred work, and next-stage activation decision.",
+        "Keeps candidate domains blocked below onboarding and does not activate runtime ownership."
+      ]
+    },
+    {
+      "surface_id": "opl_minimal_admitted_domain_federation_activation_package",
+      "category_id": "opl_supporting_surface",
+      "surface_kind": "activation_package",
+      "boundary_role": "admitted_domain_federation_activation",
+      "owner_scope": "opl",
+      "truth_mode": "none",
+      "workstream_ids": [
+        "research_ops",
+        "presentation_ops"
+      ],
+      "domain_ids": [
+        "medautoscience",
+        "redcube"
+      ],
+      "refs": [
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/references/opl-minimal-admitted-domain-federation-activation-package.md",
+          "language": "en"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "docs/references/opl-minimal-admitted-domain-federation-activation-package.zh-CN.md",
+          "language": "zh-CN"
+        },
+        {
+          "ref_kind": "repo_path",
+          "ref": "contracts/opl-gateway/minimal-admitted-domain-federation-activation-package.json"
+        }
+      ],
+      "routes_to": [
+        "opl_gateway_contract_hub",
+        "opl_phase_1_exit_activation_package",
+        "opl_gateway_acceptance_spec",
+        "opl_public_surface_index_doc"
+      ],
+      "notes": [
+        "Reference-grade activation freeze for the minimum stronger federation wording across already admitted domains only.",
+        "Does not admit Grant/Review/Thesis and does not turn OPL into a runtime owner."
+      ]
+    },
+    {
       "surface_id": "opl_governance_audit_operating_surface",
       "category_id": "opl_contract_surface",
       "surface_kind": "contract_doc",
@@ -795,6 +893,8 @@
       ],
       "routes_to": [
         "opl_gateway_contract_hub",
+        "opl_minimal_admitted_domain_federation_activation_package",
+        "opl_phase_1_exit_activation_package",
         "opl_candidate_domain_backlog",
         "opl_gateway_example_corpus",
         "opl_operating_example_corpus",
@@ -1171,6 +1271,8 @@
         }
       ],
       "routes_to": [
+        "opl_minimal_admitted_domain_federation_activation_package",
+        "opl_phase_1_exit_activation_package",
         "opl_public_readme",
         "opl_roadmap",
         "opl_gateway_rollout",

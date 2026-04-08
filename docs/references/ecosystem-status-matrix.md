@@ -74,7 +74,7 @@
 
 | 仓库 | 角色 | 当前阶段 | 当前成熟度判断 | 当前重点 |
 | --- | --- | --- | --- | --- |
-| `one-person-lab` | 顶层 `Gateway / Federation` | `Phase 1 exit + next-stage activation package freeze` | 顶层合同稳定，`G2 stable public baseline` 已完成，`G3 thin handoff planning freeze hardening` 已收口为 planning freeze；`Grant/Review/Thesis` candidate path 已在当前定义层完成收口，但最小更强 federation follow-on 仍 blocked on external domain readiness，因此主线仍停留在只读 / planning / contract 层 | 维持 `G2 stable public baseline`、保持 `G3` 停在 planning freeze、守住 candidate-domain closeout 的 blocked 边界、冻结 activation package，并把外部 readiness blocker 回写到 OPL 顶层参考同步面 |
+| `one-person-lab` | 顶层 `Gateway / Federation` | `Phase 2 / Minimal admitted-domain federation activation package` | 顶层合同稳定，`G2 stable public baseline` 已完成，`G3 thin handoff planning freeze hardening` 已收口为 planning freeze；`Grant/Review/Thesis` candidate path 继续停留在当前定义层的 blocked truth，而 `MedAutoScience` + `RedCube AI` 两条 admitted domain surface 已稳定到足以支撑最小更强 federation wording，因此主线进入 docs/contracts/tests first 的最小 admitted-domain federation activation | 守住 `G2 stable public baseline`、保持 `G3` 停在 planning freeze、守住 candidate-domain closeout 的 blocked 边界、激活最小 admitted-domain federation package，同时继续不把 `OPL` 写成 runtime owner |
 | `med-autoscience` | 医学 `Research Ops` `Domain Harness OS` | `research-foundry-medical-mainline / integration harness activation baseline absorbed` | 业务最成熟；repo-side 已把 `authority -> runtime -> eval -> delivery` 最小 activation baseline absorb 到 `main`，当前正式停车终态是 `EXTERNAL_RUNTIME_DEPENDENCY_BLOCKED_AFTER_ABSORB` | 守住已吸收的 `Phase 6` baseline、不要回退重做 repo-side tranche、把后续推进诚实停在 external runtime / cutover readiness gate 前 |
 | `redcube-ai` | 视觉交付 `Domain Harness OS` | `redcube-runtime-program / source intake + shared source truth baseline absorbed` | `ppt_deck` / `xiaohongshu` 主线稳定可用；`CLI / MCP` formal entry 已收紧，`source intake + shared source truth` 已进入当前主线能力面 | 守住当前 formal entry 真相、把 `review / export / gate / audit hardening` 视为同一主线的持续增强，而不是重新退回“等待下一棒显式晋升” |
 | `med-autogrant` | 医学 `Grant Ops` `Domain Harness OS` | `med-autogrant-mainline / P3.A mentor verdict contract freeze absorbed` | 已有最小 runtime baseline，且 authoring mainline、formal-entry、durability、`P2.B/P2.C/P3.A` canonical boundary 已进入 current truth；仍处于 `baseline freeze / runtime hardening`，不是 submission-grade runtime | 守住当前 `P3.A` canonical truth，把上游 scaffold / P1 brief 降级为历史 provenance，并继续按 author-side `Grant Ops` 长线主线推进 |
@@ -92,10 +92,10 @@
 
 #### 当前阶段
 
-- `Phase 1`：当前公开主线已完成 `G2` closeout；repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` 也已 closeout，并继续停留在 planning freeze；repo-tracked 的 `Review Ops -> Thesis Ops` candidate-domain closeout 也已在当前定义层收口，当前 follow-on 是 `Phase 1 exit + next-stage activation package freeze`
+- 当前公开主线：`Phase 2 / Minimal admitted-domain federation activation package`；repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` 已 closeout 并继续停留在 planning freeze；repo-tracked 的 `Review Ops -> Thesis Ops` candidate-domain closeout 也已在当前定义层收口，而 `Phase 1` 冻结下来的 `TypeScript CLI + read-only gateway baseline` 仍然是当前 formal entry contract / public system surface
 - 当前 repo 已有可运行的本地 `TypeScript CLI + read-only gateway baseline`
 - 当前 top-level formal entry 仍然就是这条本地 `TypeScript CLI + read-only gateway baseline`，而不是 launcher 或 runtime-owner 入口
-- 当前 baton：已完成 `G2 stable public baseline` 收口 + 已把 `G3` 关在 thin-handoff planning freeze closeout 边界 + 已把 `Review Ops -> Thesis Ops` candidate-domain closeout 收口成 blocked / under-definition truth + 守住 `Grant Foundry -> Med Auto Grant` 的 signal-only 边界 + 冻结 `Phase 1 exit + next-stage activation package` 并显式记录 external readiness blocker + 当前停车终态为 `EXTERNAL_READINESS_BLOCKED_AFTER_ABSORB` + 四仓状态回写到顶层参考同步面
+- 当前 baton：已完成 `G2 stable public baseline` 收口 + 已把 `G3` 关在 thin-handoff planning freeze closeout 边界 + 已把 `Review Ops -> Thesis Ops` candidate-domain closeout 收口成 blocked / under-definition truth + 守住 `Grant Foundry -> Med Auto Grant` 的 signal-only 边界 + 已把 `Phase 1 exit + next-stage activation package freeze` absorb 为前序门槛 + 依据四仓 current truth 激活 `Minimal admitted-domain federation activation package` + 四仓状态回写到顶层参考同步面
 - 对应 planning brief：`docs/plans/2026-04-07-g3-thin-handoff-planning-brief.md`
 - 对应 planning closeout note：`docs/plans/2026-04-07-g3-thin-handoff-planning-closeout-note.md`
 - 对应 release-closeout note：`docs/plans/2026-04-07-g2-release-closeout-note.md`
@@ -258,7 +258,7 @@
 
 #### 对 `OPL`
 
-继续维持为顶层控制语言、合同与只读入口；守住已完成的 `G2 stable public baseline` 与已收口的 `G3 thin handoff planning freeze`，推进 Grant Ops candidate-domain blocker/onboarding package hardening 与四仓状态回写，不扩成 runtime owner。
+继续维持为顶层控制语言、合同与只读入口；守住已完成的 `G2 stable public baseline` 与已收口的 `G3 thin handoff planning freeze`，把 `Minimal admitted-domain federation activation package` 与四仓状态回写同步冻结到顶层参考同步面，同时继续守住 `Grant/Review/Thesis` candidate-domain 的 blocked truth，不扩成 runtime owner。
 
 ## 五、进入第 3 步前的建议门槛
 
@@ -273,7 +273,7 @@
 
 ## 六、当前建议的实际顺序
 
-1. `OPL` 先守住已完成的 `G2 stable public baseline` 与已收口的 `G3 thin handoff planning freeze`，把 `Review Ops -> Thesis Ops` candidate-domain closeout 维持为 blocked / under-definition truth，并冻结 `Phase 1 exit + next-stage activation package` 与 external readiness blocker，再把四仓最新状态回写到顶层参考同步面
+1. `OPL` 先把 `Minimal admitted-domain federation activation package` 冻结并 absorb 到顶层参考同步面，同时继续守住已完成的 `G2 stable public baseline`、已收口的 `G3 thin handoff planning freeze`，以及 `Review Ops -> Thesis Ops` candidate-domain closeout 的 blocked / under-definition truth
 2. 三个业务仓先完成本轮最小统一对齐，优先处理 formal entry、显式执行句柄、durable truth 与 handoff surface 的缺口
 3. `Med Auto Science` 与 `RedCube AI` 在 `P0` 对齐完成后进入“手工测试驱动的稳定化收口”
 4. `Med Auto Grant` 继续守住 `P1.B / runtime baseline hardening`

@@ -309,6 +309,21 @@ Human / Agent
 - 通过 `ppt_deck` 最直接承接 `Presentation Ops` 的 harness surface
 - 同时可以承载不与 `Presentation Ops` 完全等同的其他视觉 family
 
+
+## 当前 Federation Activation State
+
+截至 `2026-04-08`，前序的 `Phase 1 exit + next-stage activation package freeze` 已作为门槛 absorbed，并进一步使当前 `Minimal admitted-domain federation activation package` 得以激活。
+
+这次 activation 的依据是：至少两条 admitted domain surface 现在已经被 repo-tracked truth 证明稳定到足以支撑更强的顶层 federation wording：
+
+- `MedAutoScience` 对应 `research_ops`
+- `RedCube AI` 对应 `presentation_ops`
+
+这次 activation 仍然只面向已 admitted domain。
+`Grant Foundry -> Med Auto Grant` 继续只是 signal-only / domain-direction evidence；`Review Ops` 与 `Thesis Ops` 继续保持为位于 onboarding 之下的 under-definition bundle。
+顶层 formal entry 仍然是本地 `TypeScript CLI`-first / read-only gateway surface，`OPL` 也仍然不是 runtime owner。
+
+
 ## 当前边界
 
 这个仓库不应被写成：
@@ -326,19 +341,19 @@ Human / Agent
 
 ## 路线图
 
-当前阶段有四个重点，当前主线是 `Phase 1` 的本地 `TypeScript CLI` + 只读 gateway 基线：
+当前公开主线已经进入 `Phase 2 / Minimal admitted-domain federation activation package`，但它仍然建立在已冻结的 `Phase 1` 本地 `TypeScript CLI` + 只读 gateway 基线之上：
 
 - 把已经冻结的 `OPL Gateway` contracts 落成面向人类与 Agent 的 CLI-first、read-only discovery surface
 - 继续把 `Research Foundry -> Med Auto Science` 明确为当前 `Research Ops` 主线
 - 继续把 `RedCube AI` 明确为视觉交付的 domain gateway 与 harness
 - 在对应 domain 边界被显式冻结之前，继续让 `Grant Ops`、`Review Ops`、`Thesis Ops` 停留在 admitted gateway surface 之外
 
-截至 `2026-04-07`，当前 repo 已有可运行的本地 `TypeScript CLI`-first / read-only gateway baseline。
+截至 `2026-04-08`，当前 repo 仍保有可运行的本地 `TypeScript CLI`-first / read-only gateway baseline。
 已完成的 `Phase 1 / G2 release-closeout` 已把 `G2 stable public baseline` 收口成单一、稳定、repo-tracked 的公开基线。
 这条基线也因此继续构成 `OPL` 在 `Phase 1` 的 formal entry contract 与 public system surface。
 repo-tracked 的 `Phase 1 / G3 thin handoff planning freeze hardening` 已把 `G3` 冻结在 planning-only gate，因此当前仍不进入 mutation entry，不把 `OPL` 提升成统一 runtime owner，也不提前抽共享执行内核。
 repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review Ops` 然后 `Thesis Ops`：这两条 candidate path 都继续停留在 admission / discovery / routing / handoff readiness 之下，而 `Grant Foundry -> Med Auto Grant` 仍保持 signal-only 状态。
-当前 follow-on 是 `Phase 1 exit + next-stage activation package freeze`：它只冻结最小的更强 federation follow-on，而不会激活 routed action，也不会把 `OPL` 提升成 runtime owner。
+当前已 absorb 的前序 follow-on 是 `Phase 1 exit + next-stage activation package freeze`；当前 active follow-on 已切到 `Minimal admitted-domain federation activation package`：它只针对 `MedAutoScience` + `RedCube AI` 收紧 federation wording，不会激活 routed action，不会 admission `Grant Ops` / `Review Ops` / `Thesis Ops`，也不会把 `OPL` 提升成 runtime owner。
 
 当前交付目标是：在当前 `Codex-default host-agent runtime` 之上，用本地 `TypeScript CLI` 作为 `Phase 1` 的入口 transport。
 在开发控制面上，`Codex Host` 负责规划冻结与真相裁决，`OMX` 负责在这些已冻结边界内做长时执行。

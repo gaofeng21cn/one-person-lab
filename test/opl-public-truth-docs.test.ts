@@ -211,7 +211,7 @@ test('public surface index and routed-action docs stay aligned with the frozen g
   }
 });
 
-test('phase-1 gateway docs freeze the runnable G2 baseline while keeping G3 planning-only below runtime', () => {
+test('current gateway docs keep the phase-1 formal-entry baseline while the public mainline activates the minimal admitted-domain federation package', () => {
   const roadmap = read('docs/roadmap.md');
   const roadmapZh = read('docs/roadmap.zh-CN.md');
   const discovery = read('docs/opl-read-only-discovery-gateway.md');
@@ -223,20 +223,30 @@ test('phase-1 gateway docs freeze the runnable G2 baseline while keeping G3 plan
   const gatewayContracts = read('contracts/opl-gateway/README.md');
   const gatewayContractsZh = read('contracts/opl-gateway/README.zh-CN.md');
 
-  assert.match(roadmap, /2026-04-07[\s\S]{0,40}public `OPL` mainline remains `Phase 1`/i);
-  assert.match(roadmapZh, /截至 `?2026-04-07`?，`?OPL`? 公开主线仍是 `?Phase 1`?/);
+  assert.match(roadmap, /2026-04-08[\s\S]{0,80}Phase 2 \/ Minimal admitted-domain federation activation package/i);
+  assert.match(roadmapZh, /截至 `?2026-04-08`?，`?OPL`? 公开主线已经进入 `?Phase 2 \/ Minimal admitted-domain federation activation package`?/);
   assert.match(discovery, /already has a runnable local `TypeScript CLI`-first \/ read-only gateway baseline/i);
   assert.match(discoveryZh, /已具备可运行的本地 `?TypeScript CLI`?-first \/ read-only gateway baseline/);
+  assert.match(roadmap, /Phase 1[\s\S]{0,40}formal entry contract and public system surface/i);
+  assert.match(roadmapZh, /`Phase 1` 的 formal entry contract 与 public system surface/);
   assert.match(publicSurfaceIndex, /`?G3`?.*thin handoff planning.*planning-contract closeout|planning-level contract/i);
   assert.match(publicSurfaceIndexZh, /`?G3`?.*planning-contract closeout|planning-level contract|planning-only/);
+  assert.match(publicSurfaceIndex, /Minimal admitted-domain federation activation package/i);
+  assert.match(publicSurfaceIndexZh, /Minimal admitted-domain federation activation package/);
   assert.doesNotMatch(publicSurfaceIndex, /pre-freeze/i);
   assert.doesNotMatch(publicSurfaceIndexZh, /预冻结/);
   assert.match(rollout, /G3 thin handoff planning freeze hardening.*planning-contract boundary|`?G3`? remains inactive beyond the planning freeze/i);
   assert.match(rolloutZh, /G3 thin handoff planning freeze hardening.*planning-contract closeout 边界|`?G3`? 在 planning freeze 之外仍未激活/);
   assert.match(gatewayContracts, /G2 stable public baseline/i);
   assert.match(gatewayContracts, /Phase 1 \/ G3 thin handoff planning freeze hardening/i);
+  assert.match(gatewayContracts, /Phase 2 \/ Minimal admitted-domain federation activation package/i);
+  assert.match(gatewayContracts, /MedAutoScience/i);
+  assert.match(gatewayContracts, /RedCube AI/i);
   assert.match(gatewayContractsZh, /G2 stable public baseline/);
   assert.match(gatewayContractsZh, /Phase 1 \/ G3 thin handoff planning freeze hardening/);
+  assert.match(gatewayContractsZh, /Phase 2 \/ Minimal admitted-domain federation activation package/);
+  assert.match(gatewayContractsZh, /MedAutoScience/);
+  assert.match(gatewayContractsZh, /RedCube AI/);
 });
 
 test('top-level positioning docs freeze the g2 release-closeout and substrate boundary wording', () => {
@@ -256,7 +266,7 @@ test('top-level positioning docs freeze the g2 release-closeout and substrate bo
   assert.match(roadmapZh, /共享代码框架/);
 });
 
-test('phase-1 public docs move from candidate-domain closeout to activation-package freeze', () => {
+test('public docs keep the absorbed phase-1 exit freeze while activating the minimal admitted-domain federation package', () => {
   const roadmap = read('docs/roadmap.md');
   const roadmapZh = read('docs/roadmap.zh-CN.md');
   const publicSurfaceIndex = read('docs/opl-public-surface-index.md');
@@ -268,12 +278,14 @@ test('phase-1 public docs move from candidate-domain closeout to activation-pack
 
   for (const doc of [roadmap, publicSurfaceIndex, gatewayContracts, rollout]) {
     assert.match(doc, /Phase 1 exit \+ next-stage activation package freeze/i);
+    assert.match(doc, /Minimal admitted-domain federation activation package/i);
     assert.match(doc, /Review Ops/i);
     assert.match(doc, /Thesis Ops/i);
   }
 
   for (const doc of [roadmapZh, publicSurfaceIndexZh, gatewayContractsZh, rolloutZh]) {
     assert.match(doc, /Phase 1 exit \+ next-stage activation package freeze/);
+    assert.match(doc, /Minimal admitted-domain federation activation package/);
     assert.match(doc, /Review Ops/);
     assert.match(doc, /Thesis Ops/);
   }
@@ -446,14 +458,54 @@ test('internal reference truth docs carry the 2026-04-08 snapshot and current OP
   assert.match(matrix, /G2 stable public baseline/);
   assert.match(matrix, /G3 thin handoff planning/);
   assert.match(matrix, /Phase 1 exit \+ next-stage activation package freeze/);
+  assert.match(matrix, /Minimal admitted-domain federation activation package/);
   assert.match(matrix, /Review Ops -> Thesis Ops/);
   assert.match(matrix, /formal entry.*TypeScript CLI \+ read-only gateway baseline/);
   assert.match(taskboard, /状态锚点：`?2026-04-08`?/);
   assert.match(taskboard, /G2 stable public baseline/);
   assert.match(taskboard, /G3 thin handoff planning/);
-  assert.match(taskboard, /Phase 1 exit \+ next-stage activation package freeze/);
+  assert.match(taskboard, /Minimal admitted-domain federation activation package/);
   assert.match(taskboard, /Review Ops -> Thesis Ops/);
   assert.match(taskboard, /formal entry contract.*TypeScript CLI.*read-only gateway surface/);
+});
+
+
+test('public docs activate the minimal admitted-domain federation package without promoting OPL into a runtime owner', () => {
+  const readme = read('README.md');
+  const readmeZh = read('README.zh-CN.md');
+  const roadmap = read('docs/roadmap.md');
+  const roadmapZh = read('docs/roadmap.zh-CN.md');
+  const publicSurfaceIndex = read('docs/opl-public-surface-index.md');
+  const publicSurfaceIndexZh = read('docs/opl-public-surface-index.zh-CN.md');
+  const gatewayContracts = read('contracts/opl-gateway/README.md');
+  const gatewayContractsZh = read('contracts/opl-gateway/README.zh-CN.md');
+  const rollout = read('docs/references/opl-gateway-rollout.md');
+  const rolloutZh = read('docs/references/opl-gateway-rollout.zh-CN.md');
+
+  for (const doc of [readme, roadmap, publicSurfaceIndex, gatewayContracts, rollout]) {
+    assert.match(doc, /Minimal admitted-domain federation activation package/i);
+    assert.match(doc, /MedAutoScience/i);
+    assert.match(doc, /RedCube AI/i);
+    assert.match(doc, /already admitted domains only|admitted domain surfaces/i);
+    assert.match(doc, /TypeScript CLI.*read-only gateway surface|CLI-first \/ read-only gateway surface|CLI-first \/ read-only gateway baseline/i);
+    assert.match(doc, /runtime owner/i);
+  }
+
+  for (const doc of [readmeZh, roadmapZh, publicSurfaceIndexZh, gatewayContractsZh, rolloutZh]) {
+    assert.match(doc, /Minimal admitted-domain federation activation package/);
+    assert.match(doc, /MedAutoScience/);
+    assert.match(doc, /RedCube AI/);
+    assert.match(doc, /仅面向已 admitted domain|只面向已 admitted domain|至少两个 admitted domain surface|两条 admitted domain surface|已 admitted domain surface/);
+    assert.match(doc, /TypeScript CLI.*read-only gateway surface|CLI-first \/ read-only gateway surface|CLI-first \/ read-only gateway baseline/);
+    assert.match(doc, /runtime owner/);
+  }
+
+  assert.match(readme, /Grant Foundry -> Med Auto Grant/);
+  assert.match(readmeZh, /Grant Foundry -> Med Auto Grant/);
+  assert.match(roadmap, /Review Ops/i);
+  assert.match(roadmapZh, /Review Ops/);
+  assert.match(roadmap, /Thesis Ops/i);
+  assert.match(roadmapZh, /Thesis Ops/);
 });
 
 test('english readme exposes the opl architecture blueprint svg', () => {

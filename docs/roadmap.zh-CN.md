@@ -7,7 +7,7 @@
 当前阶段的重点，不是同时启动所有工作流。
 而是先冻结 `OPL Gateway` 语言，并把已经真实存在的 domain federation 站稳。
 
-截至 `2026-04-07`，`OPL` 公开主线仍是 `Phase 1`。
+截至 `2026-04-08`，`OPL` 公开主线已经进入 `Phase 2 / Minimal admitted-domain federation activation package`。
 
 当前已明确的状态：
 
@@ -23,6 +23,8 @@
 - 当前 repo 已有可运行的本地 `TypeScript CLI`-first / read-only gateway baseline
 - 这条 repo-tracked 的 CLI-first / read-only baseline 也仍然是 `OPL` 在 `Phase 1` 的 formal entry contract 与 public system surface
 - 当前 OPL 层的 top-level formal entry 仍然就是这条本地 `TypeScript CLI`-first / read-only gateway surface，而不是 launcher 或 runtime-owner 入口
+- 已吸收的 `Phase 1 exit + next-stage activation package freeze` 现在已经转化成当前 `Minimal admitted-domain federation activation package` 的前序门槛
+- `MedAutoScience` 与 `RedCube AI` 现在已经构成支撑这次最小 stronger federation activation 的两条 admitted domain surface；但这次 activation 仍然只作用于已 admitted domain
 
 当前阶段不做的事：
 
@@ -45,7 +47,7 @@
 - 保持 `MedAutoScience` 明确为 `Research Ops` 的 domain surface
 - 保持 `RedCube AI` 明确为视觉交付的 domain surface
 - 把 `Agent-first` 加双模执行这套原则带入后续候选 domain 的定义，而不是逐步漂移成 fixed-code-first 的产品线
-- 在 repo-tracked 的 `Review Ops -> Thesis Ops` candidate-domain closeout 之后，冻结 `Phase 1 exit + next-stage activation package`，同时继续让所有 candidate path 停留在 admission、discovery readiness、routing readiness 与 handoff readiness 之下
+- 把已 absorb 的 `Phase 1 exit + next-stage activation package freeze` 继续显式保留为当前 `Minimal admitted-domain federation activation package` 的前序门槛，同时继续让所有 candidate path 停留在 admission、discovery readiness、routing readiness 与 handoff readiness 之下
 - 用清楚的任务边界与交付对象定义下一个候选 domain，并优先沿用当前 `task-topology + candidate-domain-backlog + domain-onboarding` 这条路径，而不是发明一层冗余中间控制面
 - 逐步把 `OPL Gateway` 从文档优先表面推进成真实入口，但当前仍不激活 routed-action runtime
 
@@ -58,8 +60,12 @@
 这还不等于 registry material、discovery readiness 或 routing readiness，也不代表 `Grant Ops` 已经变成已正式收录的 domain gateway、`G2` discovery target、`G3` routed-action target 或 handoff-ready surface；在对应 domain-onboarding evidence 出现前，它仍然不是这些状态。
 `Review Ops` 仍然只是 under-definition semantic bundle，review truth 不会上收到 `OPL`，并继续显式 blocked 于 `execution_model`、`discovery_readiness`、`routing_readiness` 与 `cross_domain_wording` 四类 package。
 `Thesis Ops` 也继续显式 blocked 于 `execution_model`、`discovery_readiness`、`routing_readiness` 与 `cross_domain_wording` 四类 package，同时保持与 `Research Ops` 的 manuscript/submission flow、以及 `Presentation Ops` / `RedCube AI` 的 deck production 的边界区分。
-当前 follow-on 已切到 `Phase 1 exit + next-stage activation package freeze`；最小的更强 federation follow-on 已被冻结，但在至少两个 admitted domain surface 真正稳定前不会被激活。
+当前已 absorb 的前序 follow-on 是 `Phase 1 exit + next-stage activation package freeze`；也正是这个前序门槛在“两条 admitted domain surface 已稳定”之后允许当前 `Minimal admitted-domain federation activation package` 被激活。
 任何未来的 successful handoff 也仍然只能 targeting `domain_gateway`，并继续受不得直达 harness 的 no-bypass 规则约束。
+
+在当前 `2026-04-08` 的重评估下，这个前序 freeze 已经完成它的使命。
+当前 active follow-on 已切换为 `Minimal admitted-domain federation activation package`。
+它只针对 `MedAutoScience` + `RedCube AI` 这两条 admitted domain surface 收紧顶层 federation wording，同时继续保持 formal entry 不变，仍然是本地 `TypeScript CLI`-first / read-only gateway surface，也仍然**不会** admission `Grant Ops`、`Review Ops` 或 `Thesis Ops`。
 
 ## 更后续阶段
 
