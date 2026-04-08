@@ -57,7 +57,7 @@ Candidate-domain backlog 则是位于它上游的 blocker surface，用来记录
 - 它的 truth ownership 是显式的
 - 它的 public gateway / harness boundary 是显式的
 - 它的 review surface 是显式的
-- 它的 execution model 与 `OPL` 的 `Agent-first + 双模共基座` 方向是显式对齐的
+- 它的 execution model 与 `OPL` 的 `Agent-first + 共享基座分层` 方向是显式对齐的
 - 顶层 discovery 与 routing 可以不靠 prose 猜测就指向它
 
 `OPL` 不接受“先挂名，后补边界”的 onboarding。
@@ -164,7 +164,8 @@ Onboarding package 必须说明：
 Onboarding package 必须说明：
 
 - 默认执行者是否是 `Agent-first`，以及它依赖的 stable agent runtime surface 是什么
-- `Auto` 与 `Human-in-the-loop` 是否共享同一基座；如果今天成熟度不同，也必须写清未来的收敛路径，而不是默认两套割裂系统
+- 当前仓库主线是否是 `Auto-only`；如果是，未来 `Human-in-the-loop` 产品会如何作为兼容 sibling 或 upper-layer product 复用同一 substrate，而不是把当前仓强行改成同仓双模
+- formal-entry matrix 如何通过 `default_formal_entry`、`supported_protocol_layer` 与 `internal_controller_surface` 表达
 - 代码承担哪些 stable object / controller / tool / gate / review 责任
 - 哪些部分绝不能被描述成 `fixed-code-first` 主流程，只让 Agent 做少量 prompt 补位
 
@@ -234,7 +235,7 @@ Onboarding package 必须说明：
    这个 domain 暴露了显式 review semantics，而不只是执行入口。
 
 7. **Execution model aligned**
-   这个 domain 明确保持 `Agent-first`，并提供共享同一基座的 `Auto` / `Human-in-the-loop` 执行路径，而不是把主流程定义成 `fixed-code-first` 或长期单模。
+   这个 domain 明确保持 `Agent-first`，诚实描述当前 `Auto-only` 主线，并给出未来 `Human-in-the-loop` 产品如何以 substrate-compatible 的 sibling 或 upper-layer 形式复用同一基座，而不是把当前仓强行做成同仓双模或漂移成 `fixed-code-first` 主流程。
 
 8. **Cross-domain wording aligned**
    `OPL`、该 domain README 以及相关公开表面，在顶层角色语言上保持一致。
@@ -250,7 +251,7 @@ Onboarding package 必须说明：
 - 把现有 domain harness 误当成自动定义了一个新 domain gateway
 - 把 family 或 profile 名误当成已经自动定义了顶层 workstream
 - 在 discovery 与 routing surface 还没更新时，就宣称 domain 已正式 onboard
-- 允许一个 domain 在 admission 时回避 `Agent-first` / `Auto` / `Human-in-the-loop` 共基座问题，或把主流程写成 `fixed-code-first`
+- 允许一个 domain 在 admission 时回避 `Agent-first` / 当前 `Auto-only` / 未来 `Human-in-the-loop` 分层问题，或把主流程写成 `fixed-code-first`
 
 ## 最小 Onboarding 审查问题
 
@@ -263,7 +264,7 @@ Onboarding package 必须说明：
 - 哪些 family 位于这个 domain 内，但不自动等于某个 OPL workstream？
 - `OPL` 如何 discover 并 route 到它？
 - 它依赖什么 stable agent runtime surface？
-- `Auto` 与 `Human-in-the-loop` 如何共享同一基座，而不是变成两套系统？
+- 当前 `Auto-only` 仓如何与未来 `Human-in-the-loop` sibling 或 upper-layer product 保持兼容，而不是变成两套互不相干的系统？
 - 为什么这应被视作一个新 domain，而不是现有 domain 里的一个 family？
 
 如果这些问题答不清，这个 onboarding 就还没准备好。

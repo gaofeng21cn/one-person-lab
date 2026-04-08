@@ -72,17 +72,31 @@
 
 ## 五、用户交互层的统一合同
 
-当前三个业务仓的正式入口统一优先为：
+当前三个业务仓统一的，不再是“把 `MCP / CLI / controller` 并列列成一张没有层级的入口表”，而是统一同一套 formal-entry matrix 语义：
 
-1. `MCP`
-2. `CLI`
-3. `controller`
+- `default_formal_entry`
+- `supported_protocol_layer`
+- `internal_controller_surface`
+
+当前冻结的统一理解如下：
+
+- `default_formal_entry`
+  - 当前统一值写作 `CLI`
+  - 叙述层可进一步说明为 `CLI-first`
+- `supported_protocol_layer`
+  - 当前统一值写作 `MCP`
+  - 叙述层可进一步说明为 `MCP-capable`
+  - 这里统一的是协议层语义，不等于三个仓今天已经把 `MCP` 做到同等成熟度
+- `internal_controller_surface`
+  - 统一固定为 `controller`
+  - 它属于内部控制面，不再与 `CLI`、`MCP` 并列写成同等级对外 formal entry
 
 统一要求：
 
 - 不把临时脚本、一次性 prompt、手工拼 payload 作为正式入口
 - 不把 hidden adapter 或未文档化 helper 作为主入口
 - formal entry 必须能表达结构化输入，而不只是一段 prompt 文本
+- 如果某个仓当前还没有把 `MCP` 做成 repo-verified 能力，就必须诚实写成“协议层保留 / future support”，而不是把 `controller` 冒充成对外 formal entry
 
 ### 对 `OPL` 的要求
 
@@ -251,7 +265,7 @@
 只有当下面这些条件成立时，才可说“当前本地默认 runtime 已基本统一”：
 
 - 三个业务仓都统一使用 `Codex-default host-agent runtime` 作为正式默认表述
-- 三个业务仓都能明确给出 `MCP / CLI / controller` 的正式入口边界
+- 三个业务仓都能明确给出 `default_formal_entry / supported_protocol_layer / internal_controller_surface` 的边界
 - 三个业务仓都能给出显式执行句柄与 durable truth surface
 - `Med Auto Science` 的 `MedDeepScientist` 受控 surface 已被明确纳入统一合同，而不是游离在合同之外
 - “统一 runtime 合同”与“共享 runtime 内核”在文档上被明确区分

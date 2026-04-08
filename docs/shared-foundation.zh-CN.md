@@ -8,12 +8,18 @@
 它的含义是：不同 domain gateway 必须使用兼容的资产、记忆、治理、交付与执行语言。
 这种兼容性并不让 `OPL` 自动变成所有共享对象的 canonical truth store；canonical truth 仍然留在 domain-owned surface，或留在尚未进入 formal domain admission 的 human/private 材料里。
 
-## 双模共基座
+## 当前 Auto 主线与未来 HITL 分层
 
-`OPL` 顶层默认把 `Auto` 与 `Human-in-the-loop` 视为共享同一基座的两种执行模式，而不是两套互不相干的系统。
+`OPL` 顶层现在冻结的是一条更窄、更可执行的规则：
 
-- `Auto`：全自动主线，用于端到端闭环、基座测试、评估与优化
-- `Human-in-the-loop`：共享同一套基础层，但把高判断密度 gate 交给人，Agent 负责重复性与可编排劳动
+- 当前各个 domain 仓都先按 `Auto-only` 主线理解
+- 未来如果要做 `Human-in-the-loop` 产品，应在同一 substrate 之上另建兼容的 sibling 或 upper-layer product
+
+这意味着，`OPL` 现在并不要求每个当前仓同时承载两套顶层判断逻辑。
+它要求的是：在下面这些方面继续共享同一套可复用基础层：
+
+- 当前全自动执行
+- 未来高判断密度的人机回环返回点
 
 因此，真正需要跨 workstream 复用的，不只是数据、文献和模板，也包括：
 
@@ -21,7 +27,7 @@
 - continue / stop / reframe gate
 - review surface
 - 审计回写语言
-- Agent runtime 所依赖的稳定 route / controller / tool surface
+- Agent runtime 所依赖的显式 formal-entry matrix：默认正式入口 `CLI`、支持协议层 `MCP`、`controller` 仅作为 internal control surface
 
 ## 资产层
 

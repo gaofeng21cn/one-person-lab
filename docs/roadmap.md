@@ -18,7 +18,7 @@ What is already clear today:
 - `ppt_deck` is the family that currently maps most directly to `Presentation Ops`
 - `Grant Ops`, `Thesis Ops`, and `Review Ops` remain under definition
 - `Grant Foundry -> Med Auto Grant` currently provides top-level signal / domain-direction evidence for a future medical `Grant Ops` domain only; it is not an admitted domain gateway and does not count as G2 discovery readiness or G3 routed-action readiness
-- the shared target operating pattern is `Agent-first`, with `Auto` and `Human-in-the-loop` running on one common base; this is an architectural rule, not a claim that every domain surface already has both modes fully implemented
+- the shared target operating pattern is `Agent-first`: current domain repositories stay `Auto-only`, while any future `Human-in-the-loop` product should reuse the same substrate as a compatible sibling or upper-layer product rather than forcing same-repo dual-mode logic
 - the current local default deployment shape is a `Codex`-default host-agent runtime, but the same substrate should remain compatible with future managed web runtimes
 - the current repository already has a runnable local `TypeScript CLI`-first / read-only gateway baseline
 - that repo-tracked CLI-first / read-only baseline remains the current `OPL` `Phase 1` formal entry contract and public system surface
@@ -46,7 +46,7 @@ The next phase should prioritize:
 - freezing the `Unified Harness Engineering Substrate` language above the current domain repositories without pretending that a shared public code framework already exists
 - keeping `MedAutoScience` explicit as the `Research Ops` domain surface
 - keeping `RedCube AI` explicit as the visual-deliverable domain surface
-- carrying the `Agent-first` plus dual-mode doctrine into future candidate-domain definitions instead of drifting toward fixed-code-first product lines
+- carrying the `Agent-first` plus `Auto-only current repo + future HITL layering` doctrine into future candidate-domain definitions instead of drifting toward fixed-code-first product lines
 - keeping the absorbed `Phase 1 exit + next-stage activation package freeze` explicit as the predecessor gate for the current `Minimal admitted-domain federation activation package`, while keeping every candidate path below admission, discovery readiness, routing readiness, and handoff readiness
 - defining the next candidate domains through clear task boundaries and delivery objects, using the current `task-topology + candidate-domain-backlog + domain-onboarding` path rather than inventing a redundant intermediate control surface
 - progressively turning the `OPL Gateway` from a documentation-first surface into a real entry surface without activating a routed-action runtime yet

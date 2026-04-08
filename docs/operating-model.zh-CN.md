@@ -85,15 +85,18 @@ Agent 主要负责：
 
 `OPL` 应避免把 domain workstream 重新压回“固定代码流水线 + 少量 prompt 占位”的形态，否则共享 foundation 仍会存在，但各个 `Ops` 会逐步失去可编排性与可迁移性。
 
-## 双模执行
+## 当前 Auto 主线与未来 HITL 分层
 
-`OPL` 里的 workstream，原则上应共享同一套基座，同时支持两种执行模式：
+在 `OPL` 层，当前冻结下来的规则已经不再是“同一个仓里同时暴露两套顶层模式”。
+现在统一后的规则是：
 
-- `Auto`：全自动主线，用于端到端闭环、基座测试、评估与优化
-- `Human-in-the-loop`：共享同一基座，但把高判断密度 gate 交给人，Agent 负责重复性与可编排劳动
+- 已收录的 domain 仓按 `Auto-only` 主线理解
+- 未来如果要做 `Human-in-the-loop` 产品，应作为 sibling 或 upper-layer product 复用同一套 substrate-compatible contract 与执行模块
+- 真正共享的是 substrate contract，而不是同仓模式切换开关
 
-这两种模式的区别，不是两套割裂系统，而是谁来通过高判断密度 gate、谁来签署关键结论与正式交付。
-不同 domain surface 今天可以处在不同成熟度；`OPL` 只冻结统一执行方向，不把所有 planned workstream 写成已经完成双模落地。
+因此，区别不再是“一个仓里做双模”。
+区别在于：未来是否会出现一个更高判断密度的上层产品，建立在当前 `Auto-only` 主线之上，并复用同一套稳定 contract、对象语义、审计面与执行模块。
+`OPL` 现在冻结的是这种分层规则，而不是宣称未来的 `Human-in-the-loop` 产品已经实现。
 
 ## 运行原则
 

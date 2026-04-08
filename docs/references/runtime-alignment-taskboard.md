@@ -4,238 +4,128 @@
 
 ## 文档目的
 
-这份文档把当前已经冻结的统一构架，压缩成一份可执行的对齐任务板。
+这份文档把已经吸收到四仓 current truth 的统一构架，压缩成一份仍然可执行的检查表。
 
 它主要回答四个问题：
 
-1. 四仓当前共同需要对齐什么
-2. 每个仓当前最优先要补什么
-3. `Med Auto Science` 与 `RedCube AI` 何时适合进入手工测试
-4. 现阶段哪些事情应继续后置，不要抢跑
+1. 四仓当前共同已经对齐了什么
+2. 还剩哪些真正活跃的行为面对齐项
+3. 每个仓当前的“下一棒”应该是什么
+4. 哪些事项仍应继续后置，不要抢跑
 
 ## 使用规则
 
 - 这是 `OPL docs` 下的内部参考文档，默认中文维护。
 - 它不替代各仓自己的 `README`、`contracts/project-truth/AGENTS.md`、`CURRENT_PROGRAM.md` 或 domain 内主线文档。
 - 它只作为内部参考同步面，不反向抬升为 `OPL` 公开主线真相。
-- 这里的任务优先级只用于“统一对齐”阶段；进入手工测试后，应再按真实暴露的问题调整。
-- 若需要把任务交给 `OMX` 长线执行，执行方式以 `omx-stage-gated-longrun-guide.md` 为准。
-- 当任一仓的 `P0` 或 `P1` 明显完成后，应同步更新本表。
-- 本表中的 `P0 / P1 / P2` 只是阶段任务，不等于长线目标；当用户明确要求“长线目标 / 全自动驾驶 / 一口气做完”时，应按 `autonomous longrun program mode` 理解，而不是停留在当前 taskboard tranche。
-- 截至 `2026-04-08`，这份任务板更适合作为“历史统一对齐参考”，而不是四仓当前唯一 active backlog；若与各仓 current truth 冲突，以各仓 current truth 为准。
+- 截至 `2026-04-08`，其中大部分合同层对齐项已经完成；下面保留的主要是“下一步仍要继续压实的行为面”。
+- 若与各仓 current truth 冲突，以各仓 current truth 为准。
 
 ## 一、当前统一结论
 
-当前最重要的不是继续发明新的上层名词，而是守住已经吸收到各仓 current truth 的统一口径。
-对 `one-person-lab` 而言，当前 baton 已从 `EXTERNAL_READINESS_BLOCKED_AFTER_ABSORB` 前推到 `Minimal admitted-domain federation activation package`；对 `med-autoscience` 而言，当前 repo-side 已停在 `EXTERNAL_RUNTIME_DEPENDENCY_BLOCKED_AFTER_ABSORB`；`redcube-ai` 与 `med-autogrant` 则都已经把本轮主线收口吸收到 `main`。
+当前最重要的已经不是继续发明新名词，而是守住已经吸收到各仓 current truth 的统一口径，并把剩余工作明确归到行为面。
 
-当前执行顺序已经明确为：
+截至当前，四仓共同完成了这些统一：
 
-1. 先守住 repo-local current truth 与中央同步面的口径一致
-2. 再让 `Med Auto Science` 与 `RedCube AI` 进入手工测试或下一轮同主线 hardening
-3. 用测试和真实 blocker 推动下一轮 current truth 更新
-4. `Med Auto Grant` 继续以 author-side `Grant Ops` mainline hardening 为主
+- 开发控制面统一采用 `Codex Host / OMX` 分工
+- 产品 runtime 与开发控制面分离，不再混写成熟度
+- 三个业务仓统一按 `Auto-only` 主线理解
+- 未来 `Human-in-the-loop` 统一理解为 sibling 或 upper-layer product，而不是同仓双模
+- formal-entry matrix 统一采用：
+  - `default_formal_entry`
+  - `supported_protocol_layer`
+  - `internal_controller_surface`
+- 当前默认本地形态统一写作 `Codex-default host-agent runtime`
 
-这意味着：
+因此，这份 taskboard 不再是“从零开始的统一清单”，而是“合同层已完成后，行为层还剩什么”。
 
-- 这份 taskboard 里很多 `P0 / P1` 项已经完成或被各仓吸收入 current truth
-- 当前更重要的是不要让历史对齐任务重新覆盖各仓最新状态
-- 共享代码框架、统一平台 runtime、统一 Web 前端仍继续后置
+对 `OPL` 顶层当前 baton 的最小锚点，仍应同时保留：
 
-## 二、四仓共同对齐检查表
+- `G2 stable public baseline`
+- `G3 thin handoff planning freeze`
+- `Phase 1 exit + next-stage activation package freeze`
+- 当前 active follow-on 是 `Minimal admitted-domain federation activation package`
+- 当前 top-level formal entry contract 仍是 `TypeScript CLI + read-only gateway surface`
+- `Review Ops -> Thesis Ops` 是已冻结的 candidate-domain closeout 顺序
 
-| 对齐项 | 统一要求 | 当前判断 | 当前动作 |
-| --- | --- | --- | --- |
-| 开发控制面角色 | 四仓统一采用 `Codex Host` 负责规划冻结，`OMX` 负责长时执行 | 顶层口径已统一 | 继续把口径压到各仓 repo-durable 文档与回归 |
-| 产品 runtime 与开发控制面分离 | 不能把开发控制面成熟度写成产品 runtime 成熟度 | 顶层口径已统一 | 各仓继续清理超前表述 |
-| formal entry 矩阵 | 三个业务仓都要明确 `MCP / CLI / controller` 的正式入口边界 | 仅部分清楚 | 各仓补“已实现”和“未来目标”的明确分界 |
-| 显式执行句柄 | 每个业务仓都要有稳定的 per-run handle | `redcube-ai` 已较完整，其他两仓仍需收紧 | 各仓补 `quest_id / run_id / grant_run_id` 一类正式句柄 |
-| durable truth surface | 运行真相必须落到仓内或受控 surface | 三仓都有基础，但完整度不一 | 各仓补 artifact、gate、report、export 的闭环 |
-| 控制动作语义 | `watch / status / resume / rerun / pause / stop` 要么正式支持，要么明确不支持 | 三仓均未完全收束 | 各仓做显式结论，不保留模糊状态 |
-| repo-durable handoff surface | 关键 handoff 不能只停留在本地 `.omx/.codex` 隐式状态 | 三仓均有缺口 | 把最小必要真相提升到 repo-tracked surface 或严格 installer 链 |
-| truth / gate 一致性 | 文档、reports、help、测试 gate、实现状态必须一致 | `redcube-ai` 缺口最大 | 先收敛 truth surface，再谈扩面 |
+## 二、跨仓统一检查表
 
-## 三、逐仓任务板
+| 对齐项 | 当前状态 | 仍需继续的部分 |
+| --- | --- | --- |
+| 开发控制面分工 | 已完成 | 各仓后续新增文档、report、回归不得再把 `Codex Host / OMX` 分工写乱 |
+| 产品 runtime 与开发控制面分离 | 已完成 | 不得把 control-plane 可用性误写成产品 runtime 已成熟 |
+| `Auto-only` 与 future `HITL` layering | 已完成 | 后续不允许再出现“同仓双模”叙述或实现漂移 |
+| formal-entry matrix 三字段 | 已完成 | 各仓继续诚实维护“字段语义统一、实现成熟度不同”的状态 |
+| per-run handle | 部分完成 | `redcube-ai`、`med-autoscience`、`med-autogrant` 继续把各自 handle、report、resume surface 收紧 |
+| durable report / audit trail | 基线已建立 | 继续让 artifact、gate、report、export 闭环更完整 |
+| control-plane 与 product runtime 的边界 | 合同层已完成 | 文档、测试、help、实现状态必须继续一致，不得再漂移 |
+
+## 三、逐仓当前下一棒
 
 ### 1. one-person-lab
 
-#### 当前角色
+当前下一棒不是发明更大的平台叙事，而是继续把 admitted-domain federation 的顶层真相压稳。
 
-- 顶层 `Gateway / Federation`
-- 当前 repo-tracked 的 `TypeScript CLI + read-only gateway baseline` 仍是 `OPL` 在 `Phase 1` 的 formal entry contract 与 public system surface
-- 四仓统一语义、统一合同、统一文档治理的真相冻结面
+具体继续项：
 
-#### P0
-
-- 继续把四仓统一合同维持在 `OPL` 层：
-  - `Unified Harness Engineering Substrate`
-  - `Codex-default host-agent runtime`
-  - `Codex Host / OMX` 开发控制面
-- 守住当前 repo-tracked `TypeScript CLI + read-only gateway baseline` 作为 `OPL` 在 `Phase 1` 的 formal entry contract 与 public system surface
-- 维持并更新四份内部参考同步面：
-  - `ecosystem-status-matrix.md`
-  - `host-agent-runtime-contract.md`
-  - `development-operating-model.md`
-  - `runtime-alignment-taskboard.md`
-- 同步回写 `OPL` 顶层参考同步面：
-  - `docs/roadmap.zh-CN.md`
-  - `docs/opl-public-surface-index.zh-CN.md`
-  - `contracts/opl-gateway/README.zh-CN.md`
-  - `docs/references/opl-gateway-rollout.zh-CN.md`
-- 守住 OPL 当前 formal entry contract：本地 `TypeScript CLI`-first / read-only gateway surface 仍是唯一 top-level formal entry，不扩成 launcher 或 runtime-owner 入口
-- 冻结同一 phase 退出前的 candidate-domain closeout truth：
-  - `docs/task-map.zh-CN.md`
-  - `docs/references/opl-candidate-domain-backlog.zh-CN.md`
-  - `docs/opl-domain-onboarding-contract.zh-CN.md`
-  - `docs/references/opl-gateway-acceptance-test-spec.zh-CN.md`
-- 明确 `Grant Foundry -> Med Auto Grant` 只算 top-level signal / domain-direction evidence，不等于 domain admission、`G2` discovery readiness、`G3` routed-action readiness 或 handoff-ready surface；同时把 `Review Ops` 与 `Thesis Ops` 都保持为 under-definition semantic bundle / workstream，显式 blocked 于 `execution_model`、`discovery_readiness`、`routing_readiness` 与 `cross_domain_wording` 四类 package；任何 future follow-on route 仍只能走 `domain_gateway` 且继续遵守 no-bypass
-- 已 absorb `Phase 1 exit + next-stage activation package freeze`，并在当前 repo-tracked 四仓 current truth 下把 `Minimal admitted-domain federation activation package` 激活为 docs/contracts/tests first 的最小下一阶段
-- 保持 `OPL` 不越界为 domain runtime owner
-
-#### P1
-
-- 继续把四仓共同检查项收进 `OPL` 的 onboarding / gateway 说明面
-- 形成稳定的“四仓状态更新节奏”，避免各仓单独漂移
-- `G3` 当前仅做已收口的 `thin handoff planning freeze`
-- 当前 candidate-domain closeout 已冻结为 `Review Ops -> Thesis Ops`
-- repo-tracked planning brief：`docs/plans/2026-04-07-g3-thin-handoff-planning-brief.md`
-- repo-tracked planning closeout note：`docs/plans/2026-04-07-g3-thin-handoff-planning-closeout-note.md`
-- repo-tracked release-closeout note：`docs/plans/2026-04-07-g2-release-closeout-note.md`
-- 当前 active follow-on：`Minimal admitted-domain federation activation package`
-- 当前不推进统一 runtime owner，也不抽共享执行内核
-
-#### P2
-
-- 只有在至少两个业务仓长期稳定后，再讨论共享代码框架与统一平台 runtime 的抽取规范
+- 维护 `OPL` 顶层 current truth / public docs / central references 的一致性
+- 继续同步四仓当前状态到中央参考面
+- 继续守住：
+  - `TypeScript CLI + read-only gateway baseline`
+  - candidate-domain blocked truth
+  - `Grant Foundry -> Med Auto Grant` 的 signal-only 边界
+- 不把 `OPL` 扩写成 runtime owner
 
 ### 2. Med Auto Science
 
-#### 当前判断
+这条主线的合同层收口已经够了，当前下一棒应转为手工测试驱动的稳定化。
 
-- formal entry、结构化 hydration、`quest_id`、watch/status/review/gate 与 `MedDeepScientist` 受控 execution surface 已基本对齐
-- 当前核心问题不在入口层，而在 `delivery plane contract map`、outer-loop 决策闭环、legacy transport 单一路径化、以及 repo-durable handoff surface
+具体继续项：
 
-#### P0
-
-- 完成 `study_outer_loop_tick(...)` 与 `study_decision_record`，把 study-level durable decision loop 真正闭环
-- 收紧 `MedDeepScientist` transport，为 runtime 不可达场景建立 fail-closed 合同
-- 退役或显式禁止本地文件写旁路，避免 daemon 不可达时走第二写路径
-
-#### P1
-
-- 补齐 formal study-runtime control surface 的 `stop` 语义
-- 明确 `rerun` 是正式支持还是当前明确不支持
-- 补齐 `.omx/plans/spec-program-operating-model.md` 或同等级 canonical spec
-- 为 repo-tracked `docs/specs/**` 或 `docs/plans/**` 建稳定桥接入口
-
-#### P2
-
-- 把 `Codex Host / OMX` 分工提升为 repo-tracked 内部操作文档
-- 给 `runtime_escalation_record`、`publication_eval`、`launch_report`、`runtime_watch`、`publishability_gate` 建统一 artifact map
-
-#### 进入手工测试前的门槛
-
-- 上述 `P0` 完成
-- 至少有一条从 runtime escalation 到 study decision 再到 next action 的闭环 smoke path 可跑通
-- transport 不再通过本地旁路掩盖真实失败
+- 围绕已稳定能力做正式手工测试
+- 把测试中暴露的问题回流成 contract / audit / delivery / gate 修正
+- 在 external runtime gate 清除前，不重开新的大架构 tranche
+- display 资产化独立线不计入这条主线
 
 ### 3. RedCube AI
 
-#### 当前判断
+这条主线当前可以继续在同一 mainline 上做 hardening，而不是重新退回“等待显式下一棒”。
 
-- 结构化 hydration、显式 `run_id`、durable artifact/review/gate surface 已较完整
-- 当前 formal entry 真相应固定为 `MCP / CLI`
-- 当前 active mainline 是 `redcube-runtime-program / P0 credible green baseline repair`；`Phase 2 / source intake + shared source truth` 尚未重新开工
-- 当前最大问题不是执行内核，而是 authoritative truth surface、formal entry 口径与 green baseline 已出现明显漂移
+具体继续项：
 
-#### P0
-
-- 收敛 `CURRENT_PROGRAM`、`LATEST_STATUS`、`OPEN_ISSUES`、测试 gate 与实际实现状态的主线口径
-- 重新建立可信的 green baseline，让 `npm test` 或正式测试 gate 再次可用
-- 冻结 formal entry 真相为当前已验证的 `MCP / CLI`
-- 在 `truth drift` 收敛前，不重开 `Phase 2 / source intake + shared source truth`
-
-#### P1
-
-- 修正 runtime 文档与 family contract 漂移
-- 写清 `shared source truth` 是“代码能力已具备但 current mainline 未激活”，还是“已进入当前主线”
-- 处理 `.codex/AGENTS.md` 中的 dangling references
-- 补 repo-tracked program operating model，明确 `.omx/plans/**` 与仓库版本化 truth 的关系
-
-#### P2
-
-- 对 `resume / pause / stop` 做显式结论：
-  - 正式实现
-  - 或明确当前不支持
-- 在 truth drift 收敛前，不继续扩 controller、新入口或更大的 OPL 联动面
-
-#### 进入手工测试前的门槛
-
-- 上述 `P0` 完成
-- formal entry 真相与对外文档一致
-- 当前 green baseline 能被真实测试重新验证
+- 继续同一主线上的 `review / export / gate / audit` hardening
+- 持续保持 `CLI / MCP / controller` 三字段语义与实现状态一致
+- 围绕 `ppt_deck`、`xiaohongshu` 等稳定 family 做手工测试
+- 仍不提前扩成更大的统一 runtime 或 OPL runtime owner
 
 ### 4. Med Auto Grant
 
-#### 当前判断
+这条主线当前仍不是“产品效果打磨优先”，而是继续 author-side mainline hardening。
 
-- 当前最像“四仓开发控制面参考实现”的本地形态
-- 但按统一 runtime 合同严格看，仍只达到“最小 baseline 基本成立”，还未进入成熟长跑 runtime 阶段
-- 当前 `grant_run_id` 已进入正式执行句柄合同；下一步重点是 formal-entry / durability current truth 收口
-- 在 `OPL` 顶层当前只允许把 `med-autogrant` 写成 Grant Ops 候选方向上的 signal / evidence，不得误写成已 admitted domain gateway
+具体继续项：
 
-#### P0
+- 继续把 `grant_run_id`、durability、checkpoint、verification surface 收紧
+- 保持 formal-entry matrix 的诚实表达：
+  - `CLI` 是当前正式入口
+  - `MCP` 仍是 future protocol layer
+  - `controller` 仍是内部控制面
+- 继续 author-side `Grant Ops` baseline hardening
+- 不提前误写成成熟 submission-grade runtime
 
-- 守住 `grant_run_id` 作为当前正式执行句柄
-- 明确它与 `workspace_id`、`draft_id`、`program_id` 的边界
-- 让 CLI 输出、runtime reports 与未来恢复入口统一携带同一 handle
-- 把 formal entry matrix 与 durability current truth 收口到 repo-tracked surfaces
+## 四、统一推进顺序
 
-#### P1
+当前最合理的统一推进顺序如下：
 
-- 冻结 formal entry 矩阵：
-  - 若当前只正式支持 `CLI`，就明确写成当前真相
-  - 否则补受控 `MCP` 或 `controller` 入口
-- 解决 `.omx/.codex` 的 durability 模型冲突
-- 让文档、测试与 installer / bootstrap 依赖同一条真相链
+1. `one-person-lab` 继续维护中央真相与 admitted-domain federation wording
+2. `med-autoscience` 进入手工测试驱动的稳定化
+3. `redcube-ai` 在同一主线上继续 hardening，并并行做稳定功能测试
+4. `med-autogrant` 继续 baseline hardening，暂不抢跑到产品效果打磨
 
-#### P2
+## 五、继续后置的事项
 
-- 补 runtime write / export surface 与 `HITL gate` skeleton
-- 把 CLI 命令数、blocker / risk 口径、future tranche 叙述继续编码进 regression
+以下事项仍然继续后置，不属于当前 taskboard 的活跃范围：
 
-#### 当前阶段说明
-
-- 当前不进入“功能效果手工测试优先”序列
-- 先把 baseline hardening 做扎实，再谈产品级稳定化
-
-## 四、推荐推进顺序
-
-### 并行推荐
-
-1. `OPL` 先把 `Minimal admitted-domain federation activation package` 冻结并 absorb 到顶层参考同步面，同时继续守住已完成的 `G2 stable public baseline`、已收口的 `G3 thin handoff planning freeze`，以及 `Review Ops -> Thesis Ops` candidate-domain closeout truth
-2. `Med Auto Science` 处理 `P0`
-3. `RedCube AI` 处理 `P0`
-4. `Med Auto Grant` 处理 `P0`，并并行准备 `P1` 的 formal entry freeze
-
-### 若开发资源不足
-
-建议顺序如下：
-
-1. `RedCube AI P0`
-2. `Med Auto Science P0`
-3. `Med Auto Grant P0`
-4. `OPL` 回写顶层参考同步面并持续同步口径
-
-原因不是 `redcube-ai` 最重要，而是它当前 truth drift 最大；如果不先收敛，后续测试与口径都会继续失真。
-
-## 五、测试启动结论
-
-当前结论应统一理解为：
-
-- `Med Auto Science`：先完成本轮 `P0`，再开始手工测试
-- `RedCube AI`：先完成本轮 `P0`，再开始手工测试
-- `Med Auto Grant`：当前不以手工测试为主，继续 baseline hardening
-- `OPL`：不进入产品手工测试序列，继续维护顶层合同与状态总表
-
-也就是说，现阶段不是“直接开始测试”，而是“先完成最小统一对齐，再让测试成为下一轮主方法”。
+- 共享代码框架抽取
+- 统一平台 runtime
+- 统一 Web 前端
+- future `Human-in-the-loop` sibling / upper-layer product 的单独实现

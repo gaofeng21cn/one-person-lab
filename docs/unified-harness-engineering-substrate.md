@@ -59,8 +59,9 @@ The layers mean different things:
 The substrate freezes these shared expectations:
 
 - `Agent-first` is the default execution posture
-- `Auto` and `Human-in-the-loop` should converge on one shared base
-- formal entry should stay explicit through surfaces such as `MCP`, `CLI`, and domain controllers
+- current domain repositories are `Auto-only` mainlines on one shared substrate
+- future `Human-in-the-loop` products should reuse the same substrate as compatible sibling or upper-layer products rather than forcing same-repo dual-mode logic
+- formal entry should stay explicit through one matrix: default formal entry `CLI`, supported protocol layer `MCP`, and `controller` as an internal control surface
 - state transitions, review surfaces, and delivery boundaries should remain auditable
 - deployment shape may change without redefining the domain contract
 

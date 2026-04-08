@@ -8,12 +8,18 @@ The shared foundation does not imply one monolithic runtime.
 It means different domain gateways must speak compatible asset, memory, governance, delivery, and execution language.
 That compatibility does not make `OPL` the canonical truth store for every shared object; canonical truth still stays with domain-owned surfaces or with human/private materials that remain below domain admission.
 
-## One Base, Two Modes
+## Current Auto Mainlines And Future HITL Layers
 
-At the top level, `OPL` treats `Auto` and `Human-in-the-loop` as two execution modes on top of the same shared base rather than as two unrelated systems.
+At the top level, `OPL` now freezes a narrower rule:
 
-- `Auto`: the autonomous primary lane for end-to-end loops, base testing, evaluation, and optimization
-- `Human-in-the-loop`: the same foundational layers with high-judgment gates returned to humans while Agents handle repetitive and composable work
+- the current domain repositories are `Auto-only` mainlines
+- any future `Human-in-the-loop` product should be built as a compatible sibling or upper-layer product on top of the same shared substrate
+
+That means `OPL` is not asking every current repository to carry two top-level judgment models at once.
+It is asking the ecosystem to keep one reusable foundation across:
+
+- current autonomous execution
+- future higher-judgment human-return gates
 
 That means what must be reusable across workstreams is not limited to data, references, and templates. It also includes:
 
@@ -21,7 +27,7 @@ That means what must be reusable across workstreams is not limited to data, refe
 - continue/stop/reframe gates
 - review surfaces
 - audit writeback language
-- the stable route/controller/tool surface that Agent runtimes depend on
+- the explicit formal-entry matrix that Agent runtimes depend on: default formal entry `CLI`, supported protocol layer `MCP`, and `controller` as internal control surface
 
 ## Asset Layer
 

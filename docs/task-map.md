@@ -18,7 +18,8 @@ At runtime, those semantics should route through the `OPL Gateway` into independ
 At the operating level, these workstreams also share one target doctrine:
 
 - use `Agent-first` domain systems rather than fixed-code workflow engines
-- support both `Auto` and `Human-in-the-loop` modes on the same shared foundation
+- keep the current admitted domain repositories `Auto-only`
+- let any future `Human-in-the-loop` product reuse the same substrate as a sibling or upper-layer product rather than forcing same-repository dual-mode control logic
 
 The task map freezes workstream boundaries and delivery objects.
 It does not require one UI, one model provider, or one fixed-code orchestration stack.

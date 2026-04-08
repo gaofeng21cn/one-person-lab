@@ -57,7 +57,7 @@ A new domain may be officially included in `OPL` only when:
 - its truth ownership is explicit
 - its public gateway / harness boundary is explicit
 - its review surfaces are explicit
-- its execution model is explicitly aligned with `OPL`'s `Agent-first + one-base/two-modes` direction
+- its execution model is explicitly aligned with `OPL`'s `Agent-first + shared-base substrate layering` direction
 - top-level discovery and routing can point to it without prose-only guesswork
 
 `OPL` must not accept “placeholder first, boundary later” onboarding.
@@ -164,7 +164,8 @@ A new domain must explicitly declare how its execution model aligns with `OPL`, 
 The onboarding package must identify:
 
 - whether the default executor is `Agent-first` and what stable agent runtime surface it depends on
-- whether `Auto` and `Human-in-the-loop` share one base; if maturity differs today, the package must still describe the convergence path instead of implying two unrelated systems
+- whether the current repository mainline is `Auto-only`, and if so how any future `Human-in-the-loop` product would reuse the same substrate as a compatible sibling or upper-layer product rather than as same-repo dual-mode logic
+- how its formal-entry matrix is expressed through `default_formal_entry`, `supported_protocol_layer`, and `internal_controller_surface`
 - which stable object / controller / tool / gate / review responsibilities stay in code
 - which parts must not be described as a `fixed-code-first` mainline with the Agent reduced to prompt fill-ins
 
@@ -234,7 +235,7 @@ A domain is formally includable in `OPL` only when all of the following are true
    The domain exposes explicit review semantics and not just an execution path.
 
 7. **Execution model aligned**
-   The domain explicitly stays `Agent-first` and provides a shared-base `Auto` / `Human-in-the-loop` path rather than defining the mainline as `fixed-code-first` or permanently single-mode.
+   The domain explicitly stays `Agent-first`, describes its current `Auto-only` mainline honestly, and gives a credible substrate-compatible layering path for any future `Human-in-the-loop` product instead of forcing same-repo dual-mode logic or drifting into a `fixed-code-first` mainline.
 
 8. **Cross-domain wording aligned**
    `OPL`, the domain README, and any linked public surfaces use the same top-level role language.
@@ -250,7 +251,7 @@ The following are not allowed:
 - treating an existing domain harness as if it automatically defines a new domain gateway
 - treating a family or profile name as if it automatically defines a top-level workstream
 - describing a domain as officially onboarded before discovery and routing surfaces are updated
-- allowing a domain to dodge the `Agent-first` / shared-base `Auto`-and-`Human-in-the-loop` question or to present a `fixed-code-first` mainline at admission time
+- allowing a domain to dodge the `Agent-first` / current-`Auto-only` / future-`Human-in-the-loop` layering question or to present a `fixed-code-first` mainline at admission time
 
 ## Minimal Onboarding Review Questions
 
@@ -263,7 +264,7 @@ Before official inclusion, the top-level review should be able to answer:
 - What families are inside the domain but not automatically equal to an OPL workstream?
 - How does `OPL` discover and route into it?
 - What stable agent runtime surface does it depend on?
-- How do `Auto` and `Human-in-the-loop` share one base instead of becoming two separate systems?
+- How does the current `Auto-only` repository stay compatible with any future `Human-in-the-loop` sibling or upper-layer product?
 - Why is this a new domain rather than just a family inside an existing domain?
 
 If these questions cannot be answered clearly, the onboarding is not ready.

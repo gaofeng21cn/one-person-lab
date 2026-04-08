@@ -86,15 +86,18 @@ In that model, code mainly exists to provide:
 
 `OPL` should avoid collapsing domain workstreams back into “rigid code pipelines with prompt slots,” because that keeps a shared foundation in name while weakening composability and portability across `Ops`.
 
-## Dual Execution Modes
+## Auto Mainlines And Future HITL Layering
 
-Workstreams in `OPL` should in principle share one base while supporting two execution modes:
+At the `OPL` layer, the frozen rule is no longer “one repository should expose two top-level modes.”
+The current aligned rule is:
 
-- `Auto`: the autonomous primary lane for end-to-end loops, base testing, evaluation, and optimization
-- `Human-in-the-loop`: the same base with high-judgment gates returned to humans while Agents handle repetitive and composable work
+- admitted domain repositories should be treated as `Auto-only` mainlines
+- any future `Human-in-the-loop` product should reuse the same substrate-compatible contracts and execution modules as a sibling or upper-layer product
+- the shared base is the substrate contract, not a same-repository mode toggle
 
-The difference between these modes is not two separate systems. It is who clears high-judgment gates and who signs off on key conclusions and formal deliveries.
-Different domain surfaces may sit at different maturity levels today; `OPL` only freezes the shared execution direction and does not claim that every planned workstream already has both modes fully realized.
+So the difference is not “two modes inside one repository.”
+It is whether a future higher-judgment product sits above the current `Auto-only` mainline while reusing the same stable contracts, objects, audit surfaces, and execution modules.
+`OPL` freezes that layering rule now, without claiming that any future `Human-in-the-loop` product has already been built.
 
 ## Operating Principles
 

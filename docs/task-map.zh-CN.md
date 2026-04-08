@@ -18,7 +18,8 @@
 在执行层面，这些 workstream 也共享同一条目标原则：
 
 - 采用 `Agent-first` 的 domain system，而不是 fixed-code-first 的工作流引擎
-- 在同一套共享基础结构上支持 `Auto` 与 `Human-in-the-loop` 两种执行模式
+- 当前已收录的 domain 仓统一按 `Auto-only` 主线理解
+- 未来 `Human-in-the-loop` 产品应作为 sibling 或 upper-layer product 复用同一 substrate，而不是把当前仓强行改成同仓双模控制逻辑
 
 任务版图冻结的是工作流边界与交付对象，不要求它们共享同一个界面、同一个模型提供方，或同一套固定代码编排栈。
 

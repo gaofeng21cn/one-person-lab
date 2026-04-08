@@ -189,8 +189,9 @@
 它冻结的是更窄、但更长期稳定的一组共享规则：
 
 - 默认采用 `Agent-first` 执行姿态
-- `Auto` 与 `Human-in-the-loop` 运行在同一套基座上
-- `MCP`、`CLI`、domain controller 等正式入口保持稳定
+- 当前各个 domain 仓首先都是共享同一 substrate 的 `Auto-only` 主线
+- 未来 `Human-in-the-loop` 产品应作为 sibling 或 upper-layer product 复用同一套 substrate-compatible contract 与稳定模块，而不是把当前仓强行做成同仓双模
+- domain formal-entry matrix 保持显式：默认正式入口 `CLI`、支持协议层 `MCP`、`controller` 仅作为 internal control surface
 - 状态迁移、审阅面与交付边界保持可审计
 - 允许从当前本地 host-agent 形态平滑走向未来托管式 Web runtime，而不改写 domain contract
 
@@ -220,12 +221,12 @@
 在当前四仓统一的开发控制面上，`Codex Host` 负责规划冻结与真相裁决，`OMX` 负责在这些已冻结边界内做长时执行。
 但“当前宿主形态”并不等于“体系本体”；后续即使走向托管式 Web runtime，也应复用同一套 substrate 与 domain contract。
 
-在这个前提下，每个 workstream 原则上应支持两种共享同一基座的执行模式：
+在这个前提下，当前 domain 仓统一按 `Auto-only` 产品主线理解。
+也就是说，仓库主线优先服务全自动闭环、评估、硬化和审计，而不是在同一个仓里同时维护两套顶层判断逻辑。
 
-- `Auto`：全自动主线，用于端到端闭环、基座测试、评估与优化
-- `Human-in-the-loop`：与 `Auto` 共享同一基座，但把高判断密度 gate 交给人，Agent 负责重复性与可编排劳动
+如果未来要做高判断密度的 `Human-in-the-loop` 产品，更合理的形态是建立在这些 `Auto-only` 仓之上的 sibling 或 upper-layer product，去复用稳定的 substrate contract、对象语义、审计面和执行模块，而不是把当前仓改造成同仓双模系统。
 
-这是一种 `OPL` 级别的统一目标执行范式，不代表所有 domain surface 今天都已经以同样成熟度落地了这两种模式。
+这就是当前 `OPL` 层已经冻结的统一执行范式。
 
 ## 为什么是 Gateway Federation
 

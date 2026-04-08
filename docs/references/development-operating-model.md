@@ -88,6 +88,16 @@
 
 统一的是开发合同，不是阶段整齐划一。
 
+### 3.1 当前业务仓先按 `Auto-only` 主线理解
+
+当前三个业务仓统一按下面方式理解：
+
+- 当前 repo 主线是 `Auto-only`
+- 当前主线优先服务全自动闭环、验证、硬化与审计
+- 未来若要做高判断密度 `Human-in-the-loop` 产品，应作为兼容 sibling 或 upper-layer product 复用同一 substrate contract 与稳定模块
+
+这条规则统一的是产品分层语义，不等于今天就要在同一个仓里同时维护两套顶层判断逻辑。
+
 ### 4. 允许 legacy controlled surface 继续存在
 
 不要求一开始就完全重构旧执行面。

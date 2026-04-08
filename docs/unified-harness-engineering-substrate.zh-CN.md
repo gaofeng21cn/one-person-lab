@@ -59,8 +59,9 @@ Human / Agent
 这个 substrate 当前冻结的共享约束包括：
 
 - 默认采用 `Agent-first` 执行姿态
-- `Auto` 与 `Human-in-the-loop` 应共用同一套基座
-- 正式入口保持显式化，例如 `MCP`、`CLI` 与 domain controller
+- 当前各个 domain 仓首先都是共享同一 substrate 的 `Auto-only` 主线
+- 未来 `Human-in-the-loop` 产品应作为兼容 sibling 或 upper-layer product 复用同一 substrate，而不是把当前仓强行改成同仓双模
+- formal entry 采用同一套显式矩阵：默认正式入口 `CLI`、支持协议层 `MCP`、`controller` 仅作为 internal control surface
 - 状态迁移、审阅面与交付边界保持可审计
 - 部署形态可以变化，但不应因此改写 domain contract
 

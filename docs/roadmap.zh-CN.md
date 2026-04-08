@@ -18,7 +18,7 @@
 - `ppt_deck` 是当前最直接映射到 `Presentation Ops` 的 family
 - `Grant Ops`、`Thesis Ops`、`Review Ops` 仍处于定义阶段
 - `Grant Foundry -> Med Auto Grant` 当前只提供未来医学 `Grant Ops` 的 top-level signal / domain-direction evidence；它不等于已正式收录的 domain gateway，也不等于 `G2` discovery readiness，更不等于 `G3` routed-action readiness
-- `OPL` 顶层的统一目标执行范式是 `Agent-first`，并让 `Auto` 与 `Human-in-the-loop` 运行在同一套基座上；这是一条架构原则，不代表所有 domain surface 已经完成双模式落地
+- `OPL` 顶层的统一目标执行范式是 `Agent-first`：当前 domain 仓统一按 `Auto-only` 主线理解，而未来 `Human-in-the-loop` 产品应作为兼容 sibling 或 upper-layer product 复用同一 substrate，而不是把当前仓强行改成同仓双模
 - 当前本地默认部署形态是 `Codex-default host-agent runtime`，但同一套 substrate 也应兼容未来托管式 Web runtime
 - 当前 repo 已有可运行的本地 `TypeScript CLI`-first / read-only gateway baseline
 - 这条 repo-tracked 的 CLI-first / read-only baseline 也仍然是 `OPL` 在 `Phase 1` 的 formal entry contract 与 public system surface
@@ -46,7 +46,7 @@
 - 在当前 domain 仓库之上冻结 `Unified Harness Engineering Substrate` 这套共享语言，但不提前把它写成已经独立成型的公共代码框架
 - 保持 `MedAutoScience` 明确为 `Research Ops` 的 domain surface
 - 保持 `RedCube AI` 明确为视觉交付的 domain surface
-- 把 `Agent-first` 加双模执行这套原则带入后续候选 domain 的定义，而不是逐步漂移成 fixed-code-first 的产品线
+- 把 `Agent-first` 加“当前 `Auto-only` 主线 + 未来 `HITL` 分层”这套原则带入后续候选 domain 的定义，而不是逐步漂移成 fixed-code-first 的产品线
 - 把已 absorb 的 `Phase 1 exit + next-stage activation package freeze` 继续显式保留为当前 `Minimal admitted-domain federation activation package` 的前序门槛，同时继续让所有 candidate path 停留在 admission、discovery readiness、routing readiness 与 handoff readiness 之下
 - 用清楚的任务边界与交付对象定义下一个候选 domain，并优先沿用当前 `task-topology + candidate-domain-backlog + domain-onboarding` 这条路径，而不是发明一层冗余中间控制面
 - 逐步把 `OPL Gateway` 从文档优先表面推进成真实入口，但当前仍不激活 routed-action runtime

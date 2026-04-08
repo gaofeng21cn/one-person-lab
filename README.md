@@ -193,8 +193,9 @@ The substrate does **not** claim that every domain already shares one code repos
 It freezes a narrower and more durable set of shared rules:
 
 - `Agent-first` execution as the default product posture
-- one shared base that supports both `Auto` and `Human-in-the-loop`
-- stable formal entry surfaces such as `MCP`, `CLI`, and domain controllers
+- current domain repositories are `Auto-only` mainlines on one shared substrate
+- future `Human-in-the-loop` products should reuse the same substrate-compatible contracts and stable modules as sibling or upper-layer products rather than forcing same-repo dual-mode logic
+- the domain formal-entry matrix stays explicit: default formal entry `CLI`, supported protocol layer `MCP`, and `controller` as an internal control surface
 - auditable state transitions, review surfaces, and delivery boundaries
 - deployment portability from the current local host-agent shape to future managed web runtimes
 
@@ -224,12 +225,12 @@ The current local default deployment shape for this substrate is a `Codex`-defau
 At the current four-repo development-control layer, `Codex Host` freezes planning and truth while `OMX` handles long-running execution inside those frozen boundaries.
 That deployment choice is not the same thing as the architecture itself: the same substrate can later support a managed web runtime without changing the top-level domain contract.
 
-Under that model, each workstream should in principle support two execution modes on top of the same shared base:
+Today, the current domain repositories should be understood as `Auto-only` product mainlines.
+That means the repository itself optimizes for autonomous end-to-end execution, evaluation, hardening, and auditability.
 
-- `Auto`: the autonomous primary lane for end-to-end loops, base evaluation, testing, and optimization
-- `Human-in-the-loop`: the same shared base with high-judgment gates returned to humans while Agents handle repetitive and composable work
+If a higher-judgment `Human-in-the-loop` product is built later, it should sit above or beside those repositories as a compatible sibling or upper-layer product that reuses stable substrate contracts, object semantics, audit surfaces, and execution modules rather than splitting the current repositories into two top-level judgment models.
 
-This is a shared `OPL` target operating pattern. It does not imply that every domain surface already exposes both modes at the same maturity today.
+This is the shared `OPL` target operating pattern now frozen at the architecture layer.
 
 ## Why A Gateway Federation
 
