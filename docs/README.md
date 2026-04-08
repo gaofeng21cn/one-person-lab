@@ -46,6 +46,7 @@ All Layer 3 docs now live under `docs/references/` so the docs root stays readab
 - `references/opl-operating-example-corpus*`
 - `references/opl-operating-record-catalog*`
 - `references/ecosystem-status-matrix.md` (Chinese-only internal reference)
+- `references/contract-convergence-v1-execution-board.md` (Chinese-only internal reference)
 - `references/host-agent-runtime-contract.md` (Chinese-only internal reference)
 - `references/development-operating-model.md` (Chinese-only internal reference)
 - `references/contract-convergence-v1-decision-note.md` (Chinese-only internal reference)

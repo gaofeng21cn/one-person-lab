@@ -31,9 +31,10 @@ repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review 
 下面这组文档以 `2026-04-08` 为日期锚点，并承担把四仓最新状态回写到 `OPL` 顶层参考同步面的责任；这些参考面不会反向抬升为公开主线真相。
 
 - [生态四仓统一状态总表](../../docs/references/ecosystem-status-matrix.md) — 当前四仓阶段/状态总览（中文内部参考）
+- [Contract Convergence v1 执行板](../../docs/references/contract-convergence-v1-execution-board.md) — 当前统一 program、active phase 与离场条件（中文内部参考）
 - [Codex-default Host-Agent Runtime 合同](../../docs/references/host-agent-runtime-contract.md) — 当前本地默认 runtime 口径（中文内部参考）
 - [四仓统一开发运行合同](../../docs/references/development-operating-model.md) — `Codex Host` / `OMX` 规划冻结与长时执行分工（中文内部参考）
-- [四仓统一对齐检查表与任务板](../../docs/references/runtime-alignment-taskboard.md) — 当前 P0 / P1 对齐检查项（中文内部参考）
+- [四仓统一对齐检查表与任务板](../../docs/references/runtime-alignment-taskboard.md) — 当前 `Phase B / Handle And Surface Convergence` 活跃任务面（中文内部参考）
 - [OMX 长线执行门控指引](../../docs/references/omx-stage-gated-longrun-guide.md) — 阶段门控长跑规则（中文内部参考）
 
 ## 上位文档

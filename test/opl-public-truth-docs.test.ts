@@ -143,12 +143,40 @@ test('gateway and onboarding docs cross-reference the current four-repo alignmen
   }
 
   for (const doc of [gatewayContracts, gatewayContractsZh]) {
+    assert.match(doc, /docs\/references\/contract-convergence-v1-execution-board\.md/);
     assert.match(doc, /docs\/references\/ecosystem-status-matrix\.md/);
     assert.match(doc, /docs\/references\/host-agent-runtime-contract\.md/);
     assert.match(doc, /docs\/references\/development-operating-model\.md/);
     assert.match(doc, /docs\/references\/runtime-alignment-taskboard\.md/);
     assert.match(doc, /docs\/references\/omx-stage-gated-longrun-guide\.md/);
   }
+});
+
+test('contract convergence execution board freezes the current unified program and phase-b exit criteria', () => {
+  const docsIndex = read('docs/README.md');
+  const docsIndexZh = read('docs/README.zh-CN.md');
+  const executionBoard = read('docs/references/contract-convergence-v1-execution-board.md');
+  const statusMatrix = read('docs/references/ecosystem-status-matrix.md');
+  const taskboard = read('docs/references/runtime-alignment-taskboard.md');
+
+  assert.match(docsIndex, /references\/contract-convergence-v1-execution-board\.md/);
+  assert.match(docsIndexZh, /references\/contract-convergence-v1-execution-board\.md/);
+
+  assert.match(executionBoard, /Contract Convergence v1/);
+  assert.match(executionBoard, /Phase B \/ Handle And Surface Convergence/);
+  assert.match(executionBoard, /default_formal_entry = CLI/);
+  assert.match(executionBoard, /supported_protocol_layer = MCP/);
+  assert.match(executionBoard, /internal_controller_surface = controller/);
+  assert.match(executionBoard, /execution handle contract/);
+  assert.match(executionBoard, /durable surface contract/);
+  assert.match(executionBoard, /control-plane/);
+  assert.match(executionBoard, /product runtime/);
+  assert.match(executionBoard, /shared public code framework|共享公共代码框架/);
+
+  assert.match(statusMatrix, /Contract Convergence v1/);
+  assert.match(statusMatrix, /Phase B \/ Handle And Surface Convergence/);
+  assert.match(taskboard, /Contract Convergence v1/);
+  assert.match(taskboard, /Phase B \/ Handle And Surface Convergence/);
 });
 
 test('phase-1 public gateway docs distinguish CLI transport from the host-agent and control-plane defaults', () => {

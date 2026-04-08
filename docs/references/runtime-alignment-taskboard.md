@@ -13,6 +13,15 @@
 3. 每个仓当前的“下一棒”应该是什么
 4. 哪些事项仍应继续后置，不要抢跑
 
+当前统一 program、阶段名与离场条件，以 [`contract-convergence-v1-execution-board.md`](./contract-convergence-v1-execution-board.md) 为准；本任务板只保留当前活跃的收敛项。
+
+## 零、当前统一阶段
+
+- 当前 program：`Contract Convergence v1`
+- 当前阶段：`Phase B / Handle And Surface Convergence`
+- 当前阶段目标：把 formal-entry 之后的 execution handle、durable surface、audit trail 与 control-plane boundary 继续压平到三个业务仓的 repo-tracked 合同面
+- 当前阶段不做：共享执行内核抽取、统一平台 runtime、托管式 Web runtime、同仓双模
+
 ## 使用规则
 
 - 这是 `OPL docs` 下的内部参考文档，默认中文维护。
@@ -56,9 +65,10 @@
 | 产品 runtime 与开发控制面分离 | 已完成 | 不得把 control-plane 可用性误写成产品 runtime 已成熟 |
 | `Auto-only` 与 future `HITL` layering | 已完成 | 后续不允许再出现“同仓双模”叙述或实现漂移 |
 | formal-entry matrix 三字段 | 已完成 | 各仓继续诚实维护“字段语义统一、实现成熟度不同”的状态 |
-| per-run handle | 部分完成 | `redcube-ai`、`med-autoscience`、`med-autogrant` 继续把各自 handle、report、resume surface 收紧 |
-| durable report / audit trail | 基线已建立 | 继续让 artifact、gate、report、export 闭环更完整 |
+| execution handle contract | 已完成（合同层） | 后续继续让对象层与行为验证层保持同一边界，避免重新混写 `program_id`、聚合根身份与单次执行句柄 |
+| durable report / audit trail | 已完成（合同层基线） | 继续让 artifact、gate、report、export 闭环更完整 |
 | control-plane 与 product runtime 的边界 | 合同层已完成 | 文档、测试、help、实现状态必须继续一致，不得再漂移 |
+| gate semantics repo verification | 部分完成 | 继续把 fail-closed gate、watch、decision-loop 从合同层压到行为验证层 |
 
 ## 三、逐仓当前下一棒
 
@@ -78,7 +88,7 @@
 
 ### 2. Med Auto Science
 
-这条主线的合同层收口已经够了，当前下一棒应转为手工测试驱动的稳定化。
+这条主线在本轮补齐 handle / durable surface 合同后，下一棒应转为手工测试驱动的稳定化。
 
 具体继续项：
 
@@ -116,10 +126,10 @@
 
 当前最合理的统一推进顺序如下：
 
-1. `one-person-lab` 继续维护中央真相与 admitted-domain federation wording
-2. `med-autoscience` 进入手工测试驱动的稳定化
-3. `redcube-ai` 在同一主线上继续 hardening，并并行做稳定功能测试
-4. `med-autogrant` 继续 baseline hardening，暂不抢跑到产品效果打磨
+1. 先完成 `Phase B / Handle And Surface Convergence` 的合同层收口与冻结测试
+2. 然后让 `med-autoscience`、`redcube-ai` 转入稳定能力的手工测试与问题回流
+3. 让 `med-autogrant` 继续 author-side baseline hardening 与 verification surface 收紧
+4. 在至少两个业务仓的对象面、报告面和 gate 行为验证真正稳定后，再进入下一阶段
 
 ## 五、继续后置的事项
 

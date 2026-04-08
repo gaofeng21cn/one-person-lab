@@ -46,6 +46,7 @@
 - `references/opl-operating-example-corpus*`
 - `references/opl-operating-record-catalog*`
 - `references/ecosystem-status-matrix.md`
+- `references/contract-convergence-v1-execution-board.md`
 - `references/host-agent-runtime-contract.md`
 - `references/development-operating-model.md`
 - `references/contract-convergence-v1-decision-note.md`

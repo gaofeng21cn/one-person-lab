@@ -12,6 +12,8 @@
 3. 四仓是否已经拉平到同一起跑线
 4. 现阶段各仓下一步到底应该继续什么
 
+当前中央 program 与阶段定义，以 [`contract-convergence-v1-execution-board.md`](./contract-convergence-v1-execution-board.md) 为准；本表负责给出四仓状态快照与成熟度判断。
+
 ## 使用规则
 
 - 这是一份仓库跟踪的内部参考文档，默认中文维护。
@@ -24,16 +26,33 @@
 ## 快照依据
 
 - `one-person-lab`：`README*`、`contracts/project-truth/AGENTS.md`、`docs/roadmap*`
+- `one-person-lab`：`docs/references/contract-convergence-v1-execution-board.md`
 - `med-autoscience`：`README*`、`contracts/project-truth/AGENTS.md`、`docs/agent_runtime_interface.md`
 - `redcube-ai`：`README*`、`contracts/project-truth/AGENTS.md`、`contracts/runtime-program/current-program.json`
 - `med-autogrant`：`README*`、`contracts/project-truth/AGENTS.md`、`docs/specs/2026-04-07-formal-entry-matrix-current-truth.md`
+
+## 零、当前统一 program 锚点
+
+### 结论
+
+当前四仓不再按四套散任务理解，而是共同处在：
+
+- `Contract Convergence v1`
+- `Phase B / Handle And Surface Convergence`
+
+也就是说，当前已经不再讨论“统一构架是否成立”，而是在统一构架已经成立的前提下，继续把 execution handle、durable surface、audit trail 与边界语义压成同一层级的 repo-tracked 合同。
 
 ## 一、统一框架当前落地层级
 
 ### 结论
 
 截至 `2026-04-08`，`Contract Convergence v1` 已经从参考级判断吸收到四仓的 current truth / public docs。
-统一框架当前稳定落在 `L1 / 命名-边界-合同层`，并开始进入 `L2 / formal-entry 与 durable surface 对齐层`，但还没有进入 `L3 / 共享执行内核`。
+统一框架当前稳定落在：
+
+- `L1 / 命名-边界-分层合同`
+- `L2 / formal-entry 与 handle-surface 合同`
+
+它仍然没有进入 `L3 / 共享执行内核`。
 
 ### 已经落地的部分
 
@@ -49,6 +68,10 @@
   - `default_formal_entry`
   - `supported_protocol_layer`
   - `internal_controller_surface`
+- `Phase B` 的中央完成标准已统一：
+  - 每个业务仓都必须显式冻结 execution handle contract
+  - 每个业务仓都必须显式冻结 durable surface contract
+  - `OPL` 必须持有中央执行板、状态总表与任务板
 - 当前默认本地执行形态口径已统一：
   - 当前默认本地形态是 `Codex-default host-agent runtime`
   - 未来都应兼容同一 substrate 上的 managed web runtime
@@ -94,7 +117,7 @@
 
 | 仓库 | `default_formal_entry` | `supported_protocol_layer` | `internal_controller_surface` | 当前实现判断 |
 | --- | --- | --- | --- | --- |
-| `med-autoscience` | `CLI` | `MCP` | `controller` | 合同层已收口；主线仍是 `Auto-only` 的医学 `Research Ops` runtime |
+| `med-autoscience` | `CLI` | `MCP` | `controller` | formal-entry 已统一；本轮补齐 `program_id / study_id / quest_id / active_run_id` 与 current durable surface 合同 |
 | `redcube-ai` | `CLI` | `MCP` | `controller` | `CLI` 与 `MCP` 已是 repo-verified public entry；`controller` 仍只属于内部控制面 |
 | `med-autogrant` | `CLI` | `MCP` | `controller` | `CLI` 是当前正式入口；`MCP` 仍是保留的 future protocol layer，尚未 repo-verified |
 
@@ -121,13 +144,15 @@
 
 ### 结论
 
-合同层已经基本拉平，行为层还没有拉平。
+`Phase B` 的合同层已经拉平，行为层还没有拉平。
 
 ### 已经拉平的部分
 
 - `OPL`、`Unified Harness Engineering Substrate`、`Domain Harness OS` 的分层命名
 - 当前 `Auto-only` 主线与未来 `Human-in-the-loop` sibling / upper-layer layering 语义
 - formal-entry matrix 的三字段表达
+- execution handle contract 的表达框架
+- durable surface contract 的表达框架
 - `Codex-default host-agent runtime` 作为当前默认本地形态
 - 对外双语 / 对内中文的文档治理规则
 
@@ -135,7 +160,7 @@
 
 - 三个业务仓的行为面成熟度不同
 - `MCP` 的真实实现状态并不相同
-- per-run handle、durable report、audit trail、gate surface 还需要继续按各仓节奏收紧
+- audit trail、gate surface 与对象层行为验证仍需继续按各仓节奏收紧
 - 手工测试推进顺序也不完全相同：
   - `med-autoscience` 与 `redcube-ai` 可以优先围绕稳定功能测试
   - `med-autogrant` 仍应先继续 baseline hardening
@@ -145,7 +170,7 @@
 ### 统一判断
 
 现在不再需要继续讨论“统一构架是否成立”。
-当前真正需要做的是：在已经统一的合同层之上，把三个业务仓各自推进到更扎实的行为面。
+当前真正需要做的是：先完成 `Phase B / Handle And Surface Convergence`，再进入对象面、报告面与行为验证面的更深收敛。
 
 ### 各仓下一步
 
