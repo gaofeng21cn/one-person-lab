@@ -21,6 +21,7 @@
 - 当前阶段：`Phase C / Object And Report Behavior Convergence`
 - 当前阶段目标：把 formal-entry 之后已经冻结的 execution handle、durable surface、audit trail 与 control-plane boundary，继续压成三个业务仓的 repo-verified behavior 面
 - 当前阶段不做：共享执行内核抽取、统一平台 runtime、托管式 Web runtime、同仓双模
+- `MedAutoScience` 的 `monorepo / runtime core ingest / controlled cutover` 仍是明确长线，但属于后置 domain-internal 轨道，不在当前 taskboard 的活跃实现范围
 
 ## 使用规则
 
@@ -97,6 +98,7 @@
 - 围绕已稳定能力做正式手工测试
 - 把测试中暴露的问题回流成 contract / audit / delivery / gate 修正
 - 在 external runtime gate 清除前，不重开新的大架构 tranche
+- `monorepo / runtime core ingest / controlled cutover` 长线保留，但在 external runtime gate 清除前，不提前进入 physical migration、cross-repo refactor 或 scaffold cutover
 - display 资产化独立线不计入这条主线
 
 ### 3. RedCube AI
@@ -144,3 +146,4 @@
 - 统一平台 runtime
 - 统一 Web 前端
 - future `Human-in-the-loop` sibling / upper-layer product 的单独实现
+- `MedAutoScience` 的 `monorepo / runtime core ingest / controlled cutover`

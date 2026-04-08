@@ -15,6 +15,8 @@
 
 这意味着当前并不是继续发明新的顶层叙事，也不是提前抽共享执行内核，而是在 `Phase B` 已完成的前提下，把已经冻结的统一架构继续落实到各仓可验证的对象行为、报告行为、gate semantics 与 audit trail 上。
 
+这里还要额外钉死一件事：`MedAutoScience` 的 `monorepo / runtime core ingest / controlled cutover` 长线没有取消，但它属于 domain-internal 后置轨，不属于当前四仓 `Phase C` 的直接交付。当前先做 `Phase C`，正是为了把那条长线未来需要依赖的对象边界、报告边界、gate semantics 与 audit 行为面先冻结干净。
+
 ## 四项统一完成标准
 
 `Contract Convergence v1` 当前要求四仓共同满足以下四项：
@@ -74,6 +76,7 @@
 - `med-autoscience`
   - 主线不重开新的架构 tranche
   - 以手工测试驱动稳定化，并保持 external runtime gate 的 truth 不漂移
+  - `monorepo / runtime core ingest / controlled cutover` 仍是明确长线，但在 external runtime gate 清除前，不提前进入 physical migration、cross-repo refactor 或 scaffold cutover
 
 本阶段的重点不是再补一轮命名，而是把统一合同继续变成 repo-verified behavior。
 
@@ -85,6 +88,7 @@
 - 统一平台 runtime
 - 托管式 Web runtime
 - 真正可复用的新 `Harness OS` scaffold
+- `MedAutoScience` 的 `monorepo / runtime core ingest / controlled cutover` domain-internal 长线
 
 只有当至少两个以上 domain 在对象边界、artifact schema、gate surface 与行为验证层都稳定后，才进入这一阶段。
 
@@ -95,7 +99,7 @@
 | `one-person-lab` | 持有中央执行板、状态总表、任务板与顶层 references；冻结统一阶段与完成标准 | 当前负责 `Phase C` program owner 与 reference-sync |
 | `redcube-ai` | 把 `auditDeliverable / runtimeWatch / getReviewState / getPublicationProjection` 收口为同一 deliverable/topic 边界上的 canonical behavior | 当前进入 `Phase C` 行为冻结面 |
 | `med-autogrant` | 把 `stage-route-report` 收口为 verification / checkpoint canonical behavior，并锁定 rollback / frozen gate 语义 | 当前进入 `Phase C` 行为冻结面 |
-| `med-autoscience` | 保持 `program_id / study_id / quest_id / active_run_id` 与 current durable surface truth，不重开新 tranche | 当前转入手工测试稳定化面 |
+| `med-autoscience` | 保持 `program_id / study_id / quest_id / active_run_id` 与 current durable surface truth，不重开新 tranche | 当前转入手工测试稳定化面；`monorepo / runtime core ingest / controlled cutover` 明确保留为后置长线 |
 
 ## 当前阶段的离场条件
 
@@ -113,3 +117,4 @@
 - 不把 `OPL` 扩写成 runtime owner
 - 不在 `Med Auto Science` 主线里碰论文配图资产化独立支线
 - 不把 future `Human-in-the-loop` sibling / upper-layer product 拉回同仓双模
+- 不把 `MedAutoScience` 的 `monorepo / runtime core ingest / controlled cutover` 提前拉进当前四仓 `Phase C`

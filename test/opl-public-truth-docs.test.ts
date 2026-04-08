@@ -173,12 +173,18 @@ test('contract convergence execution board freezes the current unified program a
   assert.match(executionBoard, /control-plane/);
   assert.match(executionBoard, /product runtime/);
   assert.match(executionBoard, /shared public code framework|共享公共代码框架/);
+  assert.match(executionBoard, /monorepo \/ runtime core ingest \/ controlled cutover/);
+  assert.match(executionBoard, /不属于当前四仓 `?Phase C`? 的直接交付/);
 
   assert.match(statusMatrix, /Contract Convergence v1/);
   assert.match(statusMatrix, /Phase C \/ Object And Report Behavior Convergence/);
+  assert.match(statusMatrix, /monorepo \/ runtime core ingest \/ controlled cutover/);
+  assert.match(statusMatrix, /不是当前四仓统一 `?Phase C`? 的 blocker|不是当前统一 program 的直接交付项/);
   assert.match(taskboard, /Contract Convergence v1/);
   assert.match(taskboard, /Phase C \/ Object And Report Behavior Convergence/);
   assert.match(taskboard, /verification checkpoint|行为验证/);
+  assert.match(taskboard, /monorepo \/ runtime core ingest \/ controlled cutover/);
+  assert.match(taskboard, /后置 domain-internal 轨道|不在当前 taskboard 的活跃实现范围/);
 });
 
 test('phase-1 public gateway docs distinguish CLI transport from the host-agent and control-plane defaults', () => {

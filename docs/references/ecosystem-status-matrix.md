@@ -42,6 +42,8 @@
 
 也就是说，当前已经不再讨论“统一构架是否成立”，而是在统一构架已经成立、`Phase B` 已完成的前提下，继续把对象层、报告层、gate semantics 与 audit-watch 行为面压成同一层级的 repo-verified behavior。
 
+同样需要明确：`MedAutoScience` 的 `monorepo / runtime core ingest / controlled cutover` 仍然存在，但它是 `MedAutoScience` 域内长线，不是当前四仓统一 `Phase C` 的 blocker，也不是当前统一 program 的直接交付项。
+
 ## 一、统一框架当前落地层级
 
 ### 结论
@@ -93,6 +95,7 @@
 - `Auto-only` 主线已经统一，但行为层仍在集中收口
 - future `Human-in-the-loop` 产品还没有开始单独实现
 - managed web runtime 仍是后续目标，不是当前现实
+- `MedAutoScience` 的 `monorepo / runtime core ingest / controlled cutover` 仍未进入实施阶段；当前被明确后置在更高 gate 之后
 
 ### 当前成熟度判断
 
@@ -134,7 +137,7 @@
 | 仓库 | 当前角色 | 当前阶段 | 当前已经成立的真相 | 下一步重点 |
 | --- | --- | --- | --- | --- |
 | `one-person-lab` | 顶层 `Gateway / Federation` | `Contract Convergence v1 / Phase C` program owner | 顶层 formal entry、candidate-domain blocked truth、`Unified Harness Engineering Substrate`、四仓统一文档治理都已冻结；当前开始统一持有 `Phase C` 的行为收口定义 | 继续把 admitted-domain federation wording、中央参考同步面与顶层 docs/contracts/tests 收紧；不越界成 runtime owner |
-| `med-autoscience` | 医学 `Research Ops` `Domain Harness OS` | runtime mainline 已吸收，repo-side 停在 external runtime gate 前 | 主线 runtime contract 已吸收到 `main`，本轮 formal-entry / Auto-only / future HITL layering 口径也已收口；display 资产化线不在这条主线范围内 | 围绕已稳定能力做手工测试与问题修正；在 external runtime gate 清除前，不重开新的架构 tranche |
+| `med-autoscience` | 医学 `Research Ops` `Domain Harness OS` | runtime mainline 已吸收，repo-side 停在 external runtime gate 前 | 主线 runtime contract 已吸收到 `main`，本轮 formal-entry / Auto-only / future HITL layering 口径也已收口；display 资产化线不在这条主线范围内；`monorepo / runtime core ingest / controlled cutover` 仍保留为后置长线 | 围绕已稳定能力做手工测试与问题修正；在 external runtime gate 清除前，不重开新的架构 tranche，也不提前进入 physical migration |
 | `redcube-ai` | 视觉交付 `Domain Harness OS` | `Phase C` 行为收口进行中 | `CLI / MCP / controller` 语义已收口，`Auto-only` 主线与 future layering 口径已统一，review/export/source-readiness 治理链已经进入当前主线 | 把 `auditDeliverable / runtimeWatch / getReviewState / getPublicationProjection` 继续压成同轴行为验证，并围绕稳定 family 做手工测试 |
 | `med-autogrant` | 医学 `Grant Ops` `Domain Harness OS` 方向 | `Phase C` verification/checkpoint 收口进行中 | author-side mainline、formal-entry、durability 与 `Auto-only` 主线语义已进入 current truth；`MCP` 仍诚实停留在 future layer | 继续 author-side mainline hardening，把 verification surface / checkpoint surface 压成一致的 machine-readable behavior；不提前误写成成熟 submission-grade runtime |
 
@@ -171,6 +174,7 @@
 - 手工测试推进顺序也不完全相同：
   - `med-autoscience` 与 `redcube-ai` 可以优先围绕稳定功能测试
   - `med-autogrant` 仍应先继续 baseline hardening
+- `MedAutoScience` 还挂着一条 domain-internal 的 `monorepo / runtime core ingest / controlled cutover` 长线；它和四仓统一 `Phase C` 是同一北极星上的前后阶段，不是同层并行交付
 
 ## 五、当前统一推进顺序
 
@@ -184,7 +188,7 @@
 1. `one-person-lab`
    继续维护中央同步面与 admitted-domain federation wording，把顶层当前真相持续压稳，并持有 `Phase C` 的统一离场条件。
 2. `med-autoscience`
-   以手工测试稳定化为主；display 资产化独立线不计入这条主线。
+   以手工测试稳定化为主；display 资产化独立线不计入这条主线。`monorepo / runtime core ingest / controlled cutover` 仍是后置长线，但要等 external runtime gate、对象边界和报告边界继续稳定后再开。
 3. `redcube-ai`
    在当前主线上把 canonical audit / watch / review / projection surface 压成同轴行为，再围绕已稳定 family 做手工测试。
 4. `med-autogrant`
@@ -198,3 +202,4 @@
 - 统一平台 runtime
 - 统一 Web 前端
 - future `Human-in-the-loop` sibling / upper-layer product 的单独实现
+- `MedAutoScience` 的 `monorepo / runtime core ingest / controlled cutover` 物理整合长线
