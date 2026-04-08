@@ -1,6 +1,6 @@
 # OPL 生态四仓统一状态总表
 
-状态锚点：`2026-04-07`
+状态锚点：`2026-04-08`
 
 ## 文档目的
 
@@ -75,9 +75,9 @@
 | 仓库 | 角色 | 当前阶段 | 当前成熟度判断 | 当前重点 |
 | --- | --- | --- | --- | --- |
 | `one-person-lab` | 顶层 `Gateway / Federation` | `Phase 1 exit + next-stage activation package freeze` | 顶层合同稳定，`G2 stable public baseline` 已完成，`G3 thin handoff planning freeze hardening` 已收口为 planning freeze；`Grant/Review/Thesis` candidate path 已在当前定义层完成收口，但最小更强 federation follow-on 仍 blocked on external domain readiness，因此主线仍停留在只读 / planning / contract 层 | 维持 `G2 stable public baseline`、保持 `G3` 停在 planning freeze、守住 candidate-domain closeout 的 blocked 边界、冻结 activation package，并把外部 readiness blocker 回写到 OPL 顶层参考同步面 |
-| `med-autoscience` | 医学 `Research Ops` `Domain Harness OS` | `research-foundry-medical-mainline / harness authority convergence` | 业务最成熟，当前从 `charter-parameterized input contract` 收口转入 `delivery plane contract map` | 继续收紧 `MedAutoScience -> MedDeepScientist` runtime protocol、delivery plane contract 与 outer-loop durable decision loop |
-| `redcube-ai` | 视觉交付 `Domain Harness OS` | `redcube-runtime-program / P0 credible green baseline repair` | `ppt_deck` / `xiaohongshu` 主线可用，但 active mainline truth 与 formal entry 仍在收口 | 固定 `MCP / CLI` formal entry 真相、修复 green baseline、暂不重开 `Phase 2 / source intake + shared source truth` |
-| `med-autogrant` | 医学 `Grant Ops` `Domain Harness OS` 方向 | `med-autogrant-mainline / P1.B runtime baseline hardening` | 已有最小 runtime baseline，但仍是 baseline freeze / runtime hardening | 守住 `grant_run_id` / formal-entry / durability current truth，不抢前两仓的产品打磨优先级 |
+| `med-autoscience` | 医学 `Research Ops` `Domain Harness OS` | `research-foundry-medical-mainline / integration harness activation baseline absorbed` | 业务最成熟；repo-side 已把 `authority -> runtime -> eval -> delivery` 最小 activation baseline absorb 到 `main`，当前正式停车终态是 `EXTERNAL_RUNTIME_DEPENDENCY_BLOCKED_AFTER_ABSORB` | 守住已吸收的 `Phase 6` baseline、不要回退重做 repo-side tranche、把后续推进诚实停在 external runtime / cutover readiness gate 前 |
+| `redcube-ai` | 视觉交付 `Domain Harness OS` | `redcube-runtime-program / source intake + shared source truth baseline absorbed` | `ppt_deck` / `xiaohongshu` 主线稳定可用；`CLI / MCP` formal entry 已收紧，`source intake + shared source truth` 已进入当前主线能力面 | 守住当前 formal entry 真相、把 `review / export / gate / audit hardening` 视为同一主线的持续增强，而不是重新退回“等待下一棒显式晋升” |
+| `med-autogrant` | 医学 `Grant Ops` `Domain Harness OS` | `med-autogrant-mainline / P3.A mentor verdict contract freeze absorbed` | 已有最小 runtime baseline，且 authoring mainline、formal-entry、durability、`P2.B/P2.C/P3.A` canonical boundary 已进入 current truth；仍处于 `baseline freeze / runtime hardening`，不是 submission-grade runtime | 守住当前 `P3.A` canonical truth，把上游 scaffold / P1 brief 降级为历史 provenance，并继续按 author-side `Grant Ops` 长线主线推进 |
 
 ## 三、各仓库的统一判断
 
@@ -95,7 +95,7 @@
 - `Phase 1`：当前公开主线已完成 `G2` closeout；repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` 也已 closeout，并继续停留在 planning freeze；repo-tracked 的 `Review Ops -> Thesis Ops` candidate-domain closeout 也已在当前定义层收口，当前 follow-on 是 `Phase 1 exit + next-stage activation package freeze`
 - 当前 repo 已有可运行的本地 `TypeScript CLI + read-only gateway baseline`
 - 当前 top-level formal entry 仍然就是这条本地 `TypeScript CLI + read-only gateway baseline`，而不是 launcher 或 runtime-owner 入口
-- 当前 baton：已完成 `G2 stable public baseline` 收口 + 已把 `G3` 关在 thin-handoff planning freeze closeout 边界 + 已把 `Review Ops -> Thesis Ops` candidate-domain closeout 收口成 blocked / under-definition truth + 守住 `Grant Foundry -> Med Auto Grant` 的 signal-only 边界 + 冻结 `Phase 1 exit + next-stage activation package` 并显式记录 external readiness blocker + 四仓状态回写到顶层参考同步面
+- 当前 baton：已完成 `G2 stable public baseline` 收口 + 已把 `G3` 关在 thin-handoff planning freeze closeout 边界 + 已把 `Review Ops -> Thesis Ops` candidate-domain closeout 收口成 blocked / under-definition truth + 守住 `Grant Foundry -> Med Auto Grant` 的 signal-only 边界 + 冻结 `Phase 1 exit + next-stage activation package` 并显式记录 external readiness blocker + 当前停车终态为 `EXTERNAL_READINESS_BLOCKED_AFTER_ABSORB` + 四仓状态回写到顶层参考同步面
 - 对应 planning brief：`docs/plans/2026-04-07-g3-thin-handoff-planning-brief.md`
 - 对应 planning closeout note：`docs/plans/2026-04-07-g3-thin-handoff-planning-closeout-note.md`
 - 对应 release-closeout note：`docs/plans/2026-04-07-g2-release-closeout-note.md`
@@ -124,9 +124,14 @@
 #### 当前阶段
 
 - 主线：`research-foundry-medical-mainline`
-- 当前 phase：`harness authority convergence`
-- 已完成收口：`charter-parameterized input contract`
-- 当前切换重点：`delivery plane contract map`
+- repo-side 已完成：
+  - `authority / outer-loop / delivery plane convergence`
+  - `real-study relaunch and verify`
+  - `Phase 6 / integration harness activation baseline`
+- 当前正式停车终态：`EXTERNAL_RUNTIME_DEPENDENCY_BLOCKED_AFTER_ABSORB`
+- 当前 repo 内不应重开：
+  - `real-study relaunch`
+  - 新的 same-repo cutover tranche
 
 #### 冻结状态
 
@@ -136,9 +141,9 @@
 
 #### 当前最自然的后续顺序
 
-1. 收紧 `delivery plane contract map`
-2. 收紧 `outer-loop wakeup and decision loop`
-3. 再做 `real-study relaunch`
+1. 先清理 external runtime / cutover readiness blocker
+2. 再回到 repo-side 继续更大的 `end-to-end harness / cutover readiness`
+3. 在外部 gate 未放行前，不伪造新的 repo-side tranche
 
 #### 当前最适合做的产品动作
 
@@ -158,8 +163,12 @@
 - `P19 / 创作主导权修复`：已完成
 - `P20 / 第三类交付物接入证明`：已完成
 - `P21 / 运行评估与运营面`：已有 closeout artifact，可视为已完成范围，但不是当前 active mainline
-- 当前 active mainline：`redcube-runtime-program / P0 credible green baseline repair`
-- `Phase 2 / source intake + shared source truth`：尚未重新开工
+- 当前 active mainline：`redcube-runtime-program`
+- 当前 repo-side 已 absorbed：
+  - `P0 review-closeout`
+  - `stable deliverable manual-test-driven hardening`
+  - `Phase 2 activation package freeze`
+  - `source intake + shared source truth baseline`
 
 #### 当前稳定能力
 
@@ -169,9 +178,10 @@
 
 #### 当前最适合做的产品动作
 
-- 先收敛 formal entry 真相为 `MCP / CLI`
-- 先重新建立可信 green baseline
-- 在上述两项通过后，再安排 `ppt_deck` 与 `xiaohongshu` 的正式手工测试
+- 守住 `MCP / CLI` formal entry 真相
+- 把 `source intake + shared source truth` 视为已进入当前主线能力面
+- 继续推进 `review / export / gate / audit hardening`
+- 不把已 absorbed 的 baseline 误写成“下一步必须人工显式晋升”的停车闸门
 
 ### 4. Med Auto Grant
 
@@ -182,8 +192,12 @@
 
 #### 当前阶段
 
-- `P1 / Reality Convergence And NSFC Baseline Freeze`
-- 当前唯一活跃子线：`P1.B / runtime baseline hardening`
+- 当前唯一 active program：`med-autogrant-mainline`
+- 当前 current-truth mainline：`P3.A / Mentor Verdict Contract Freeze`
+- 已吸收到 `main` 的上游 canonical boundary：
+  - `P2.B / Argument-Fit-Outline Mainline`
+  - `P2.C / Draft-Critique-Revision Skeleton`
+  - `P3.A / Mentor Verdict Contract Freeze`
 
 #### 当前已有能力
 
@@ -191,12 +205,13 @@
 - summarize / next-step / critique-summary / stage-route-report
 - 基本 route / gate 一致性检查
 - `grant_run_id` 已进入 CLI/runtime formal execution handle 合同
+- formal-entry / durability / authoring mainline current truth 已 repo-tracked
 
 #### 当前不应误判的点
 
 - 控制面已经可用，不等于产品 runtime 已成熟
 - 当前不应进入“效果打磨优先”的产品阶段
-- 当前重点仍是 baseline hardening 与 formal-entry / durability current truth 收口
+- 当前重点仍是 baseline hardening 与 author-side `Grant Ops` mainline 收口
 - 在 `OPL` 顶层当前也只能把它写成 Grant Ops 候选方向上的 signal / evidence，而不是已 admitted 的 domain gateway
 
 ## 四、对“先继续收紧，还是先开始测试”的统一解释

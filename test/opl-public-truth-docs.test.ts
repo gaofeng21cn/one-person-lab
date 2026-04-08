@@ -438,17 +438,17 @@ test('reference-grade sync docs stay below the public mainline truth surface', (
   assert.match(taskboard, /不反向抬升为 `?OPL`? 公开主线真相/);
 });
 
-test('internal reference truth docs carry the 2026-04-07 snapshot and current OPL baton', () => {
+test('internal reference truth docs carry the 2026-04-08 snapshot and current OPL baton', () => {
   const matrix = read('docs/references/ecosystem-status-matrix.md');
   const taskboard = read('docs/references/runtime-alignment-taskboard.md');
 
-  assert.match(matrix, /状态锚点：`?2026-04-07`?/);
+  assert.match(matrix, /状态锚点：`?2026-04-08`?/);
   assert.match(matrix, /G2 stable public baseline/);
   assert.match(matrix, /G3 thin handoff planning/);
   assert.match(matrix, /Phase 1 exit \+ next-stage activation package freeze/);
   assert.match(matrix, /Review Ops -> Thesis Ops/);
   assert.match(matrix, /formal entry.*TypeScript CLI \+ read-only gateway baseline/);
-  assert.match(taskboard, /状态锚点：`?2026-04-07`?/);
+  assert.match(taskboard, /状态锚点：`?2026-04-08`?/);
   assert.match(taskboard, /G2 stable public baseline/);
   assert.match(taskboard, /G3 thin handoff planning/);
   assert.match(taskboard, /Phase 1 exit \+ next-stage activation package freeze/);

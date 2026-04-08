@@ -1,6 +1,6 @@
 # 四仓统一对齐检查表与任务板
 
-状态锚点：`2026-04-07`
+状态锚点：`2026-04-08`
 
 ## 文档目的
 
@@ -22,23 +22,24 @@
 - 若需要把任务交给 `OMX` 长线执行，执行方式以 `omx-stage-gated-longrun-guide.md` 为准。
 - 当任一仓的 `P0` 或 `P1` 明显完成后，应同步更新本表。
 - 本表中的 `P0 / P1 / P2` 只是阶段任务，不等于长线目标；当用户明确要求“长线目标 / 全自动驾驶 / 一口气做完”时，应按 `autonomous longrun program mode` 理解，而不是停留在当前 taskboard tranche。
+- 截至 `2026-04-08`，这份任务板更适合作为“历史统一对齐参考”，而不是四仓当前唯一 active backlog；若与各仓 current truth 冲突，以各仓 current truth 为准。
 
 ## 一、当前统一结论
 
-当前最重要的不是继续发明新的上层名词，而是把已经冻结的统一合同真正压到各仓的 repo-durable truth 与 runtime contract 上。
-对 `one-person-lab` 而言，当前 baton 是守住已完成的 `G2 stable public baseline`、把已收口的 `G3` 保持在 thin-handoff planning freeze、把 `Review Ops -> Thesis Ops` candidate-domain closeout 固定为 blocked / under-definition truth，并冻结 `Phase 1 exit + next-stage activation package` 与 external readiness blocker，而不是 runtime 扩面。
+当前最重要的不是继续发明新的上层名词，而是守住已经吸收到各仓 current truth 的统一口径。
+对 `one-person-lab` 而言，当前 baton 已停在 `EXTERNAL_READINESS_BLOCKED_AFTER_ABSORB`；对 `med-autoscience` 而言，当前 repo-side 已停在 `EXTERNAL_RUNTIME_DEPENDENCY_BLOCKED_AFTER_ABSORB`；`redcube-ai` 与 `med-autogrant` 则都已经把本轮主线收口吸收到 `main`。
 
 当前执行顺序已经明确为：
 
-1. 先完成本轮 `P0` 对齐开发
-2. 再让 `Med Auto Science` 与 `RedCube AI` 进入正式手工测试
-3. 用测试暴露的问题继续推进各仓 `P1 / P2`
-4. `Med Auto Grant` 继续以 `baseline hardening` 为主
+1. 先守住 repo-local current truth 与中央同步面的口径一致
+2. 再让 `Med Auto Science` 与 `RedCube AI` 进入手工测试或下一轮同主线 hardening
+3. 用测试和真实 blocker 推动下一轮 current truth 更新
+4. `Med Auto Grant` 继续以 author-side `Grant Ops` mainline hardening 为主
 
 这意味着：
 
-- “继续收紧合同”和“开始测试”不是对立关系
-- 但在当前时间点，测试应建立在本轮 `P0` 已完成的前提上
+- 这份 taskboard 里很多 `P0 / P1` 项已经完成或被各仓吸收入 current truth
+- 当前更重要的是不要让历史对齐任务重新覆盖各仓最新状态
 - 共享代码框架、统一平台 runtime、统一 Web 前端仍继续后置
 
 ## 二、四仓共同对齐检查表
