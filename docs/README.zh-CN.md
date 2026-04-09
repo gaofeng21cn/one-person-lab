@@ -50,6 +50,7 @@
 - `references/host-agent-runtime-contract.md`
 - `references/development-operating-model.md`
 - `references/contract-convergence-v1-decision-note.md`
+- `references/omx-worktree-operating-handbook.md`
 - `references/omx-stage-gated-longrun-guide.md`
 - `references/omx-longrun-prompt-playbook.md`
 - `references/runtime-alignment-taskboard.md`

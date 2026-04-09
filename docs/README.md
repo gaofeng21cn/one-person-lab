@@ -50,6 +50,7 @@ All Layer 3 docs now live under `docs/references/` so the docs root stays readab
 - `references/host-agent-runtime-contract.md` (Chinese-only internal reference)
 - `references/development-operating-model.md` (Chinese-only internal reference)
 - `references/contract-convergence-v1-decision-note.md` (Chinese-only internal reference)
+- `references/omx-worktree-operating-handbook.md` (Chinese-only internal reference)
 - `references/omx-stage-gated-longrun-guide.md` (Chinese-only internal reference)
 - `references/omx-longrun-prompt-playbook.md` (Chinese-only internal reference)
 - `references/runtime-alignment-taskboard.md` (Chinese-only internal reference)

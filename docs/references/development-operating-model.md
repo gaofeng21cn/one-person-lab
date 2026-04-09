@@ -75,6 +75,30 @@
 - promotion gate
 - final acceptance 标准
 
+### 2.1 owner worktree isolation 是统一硬规则
+
+从当前四仓实践看，`OMX` 的动态污染源不是单一 session，而是：
+
+- 工作目录级 hook 注入
+- 仓级 `.codex/AGENTS.md`
+- `.omx/state/`、tmux、team mailbox 等持久残留
+
+因此，四仓现在统一采用下面这条工程纪律：
+
+- 所有重型 `OMX` 任务必须在独立 owner `worktree` 中执行
+- 根工作树默认停在 `main`，只承担轻读、规划冻结、review、吸收进 `main`、push 与清理
+- 同一个 `worktree` 只允许一条 active heavy `OMX` mainline
+- 阶段停车后必须走 `验证 -> absorb or abandon -> 清理 worktree / branch / tmux / session state`
+
+这里说的重型 `OMX` 任务，至少包括：
+
+- `ralph`
+- `team`
+- `autopilot`
+- 其他会长期占用 tmux pane、持续写回 `.omx/state/**` 或反复触发 hook 的长跑子线
+
+不要把“换一个对话”当成隔离手段；对当前上游实现来说，真正可靠的隔离手段仍然是物理 `worktree`。
+
 ### 3. 同一合同，不同成熟度
 
 四仓共享同一开发模式，但不要求成熟度相同。
@@ -249,15 +273,24 @@
 当前建议按下面顺序推进四仓共同开发模式：
 
 1. 先冻结 `Codex Host / OMX` 的角色边界
-2. 先统一最小 durable handoff surfaces
-3. 对进入长跑的仓逐步补齐增强型 handoff surfaces
-4. 让 `OMX` 只在已冻结边界内长跑
-5. 让 `Codex Host` 保持 promotion / integration / final verification 裁决权
+2. 先统一 owner `worktree` 隔离纪律与收尾纪律
+3. 先统一最小 durable handoff surfaces
+4. 对进入长跑的仓逐步补齐增强型 handoff surfaces
+5. 让 `OMX` 只在已冻结边界内长跑
+6. 让 `Codex Host` 保持 promotion / integration / final verification 裁决权
 
 ## 九、当前不应该做的事
 
 - 不把 `OMX` 当成可以脱离真相文档独立重建上下文的万能执行器
 - 不把 `Codex Host` 与 `OMX` 的职责重新混回同一个模糊对话
+- 不把“同一工作目录里多开几个对话”当成足够的防污染措施
+- 不让已经停车的 owner `worktree`、tmux session 与 `.omx/state/sessions/*` 长期滞留
+
+## 十、统一操作手册
+
+四仓共用的具体启动与收尾步骤，见：
+
+- [OMX Worktree 使用规程](./omx-worktree-operating-handbook.md)
 - 不为了追求统一，要求四仓一上来都补齐同等级 `.omx` 结构
 - 不把开发控制面成熟度误写成产品 runtime 成熟度
 - 不因为 legacy surface 仍存在，就否定统一开发模式已经可以先落地

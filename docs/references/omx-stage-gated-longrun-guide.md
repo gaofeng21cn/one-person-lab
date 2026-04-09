@@ -7,6 +7,7 @@
 与这份规则配套的可复制提示词模板，见：
 
 - [OMX 长线提示词模板库](./omx-longrun-prompt-playbook.md)
+- [OMX Worktree 使用规程](./omx-worktree-operating-handbook.md)
 
 它回答三个问题：
 
@@ -25,6 +26,16 @@
 - 每完成一个阶段，必须先验收当前阶段
 - 只有当前阶段已经收敛，才允许进入下一阶段
 - 一旦出现跨仓冲突、合同改写、边界摇摆或测试基线失真，必须停下回报
+
+### 1.1 长跑之前先满足 owner worktree 隔离
+
+任何重型 `OMX` 长跑，在阶段门控之外还必须先满足：
+
+- 本轮执行发生在独立 owner `worktree`
+- 根工作树不承担这轮长跑 owner 角色
+- 当前 owner `worktree` 没有旧 `.omx/state/sessions/*`、旧 tmux 会话、旧 `skill-active` 残留
+
+如果这些前提不满足，就还没有进入合法的长跑起点。
 
 ### 2. `Codex Host` 仍保留阶段裁决权
 
@@ -58,8 +69,10 @@
 
 1. 读取仓内 `AGENTS.md`、`project-truth`、当前主线文档与 OPL 顶层合同
 2. 确认当前唯一 active mainline
-3. 确认本轮允许推进的最高阶段
-4. 确认当前验证命令、报告路径、回写路径
+3. 确认当前 owner `worktree` 是否独立、clean、fresh
+4. 确认根工作树只承担 integration / cleanup，不承担这轮长跑 owner 角色
+5. 确认本轮允许推进的最高阶段
+6. 确认当前验证命令、报告路径、回写路径
 
 若预检阶段发现：
 
@@ -67,6 +80,8 @@
 - formal entry 说明互相冲突
 - 测试 gate 与状态文档明显不一致
 - 任务本身需要跨仓裁决
+- 当前没有独立 owner `worktree`
+- owner `worktree` 带着旧 session / tmux / state 残留
 
 则不得直接开做，应先回报。
 
@@ -184,6 +199,7 @@
 3. 当前验证命令与结果
 4. 当前剩余 blocker / risk
 5. 是否达到下一阶段门槛
+6. 当前 owner `worktree` 是否仍是唯一合法执行面
 
 优先回写到：
 
@@ -193,6 +209,13 @@
 - 必要的实现 / 测试 / 文档真相面
 
 若仓内没有完整 `.omx` durable surface，则至少在会话输出中给出同等结构化结论，并停止继续扩阶段。
+
+当某条线达到 `absorbed to main`、`ready to close`、`abandoned` 或同等级收口结论时，还必须继续完成：
+
+- 清理对应 tmux session
+- 清理对应 `.omx/state/sessions/*` 与相关 team/state 残留
+- 删除已关闭的 owner `worktree` / branch
+- 让根工作树回到 clean、可启动下一条线的状态
 
 ## 五、统一停止条件
 
