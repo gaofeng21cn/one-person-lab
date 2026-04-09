@@ -53,6 +53,7 @@
 - `references/omx-worktree-operating-handbook.md`
 - `references/omx-stage-gated-longrun-guide.md`
 - `references/omx-longrun-prompt-playbook.md`
+- `references/opl-phase2-ecosystem-sync-owner-line.md`
 - `references/runtime-alignment-taskboard.md`
 - `references/opl-surface-lifecycle-map*`
 - `references/opl-surface-authority-matrix*`

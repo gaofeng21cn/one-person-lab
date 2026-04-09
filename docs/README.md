@@ -53,6 +53,7 @@ All Layer 3 docs now live under `docs/references/` so the docs root stays readab
 - `references/omx-worktree-operating-handbook.md` (Chinese-only internal reference)
 - `references/omx-stage-gated-longrun-guide.md` (Chinese-only internal reference)
 - `references/omx-longrun-prompt-playbook.md` (Chinese-only internal reference)
+- `references/opl-phase2-ecosystem-sync-owner-line.md` (Chinese-only internal reference)
 - `references/runtime-alignment-taskboard.md` (Chinese-only internal reference)
 - `references/opl-surface-lifecycle-map*`
 - `references/opl-surface-authority-matrix*`

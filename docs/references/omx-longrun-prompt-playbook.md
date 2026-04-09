@@ -1,6 +1,6 @@
 # OMX 长线提示词模板库
 
-状态锚点：`2026-04-07`
+状态锚点：`2026-04-09`
 
 ## 文档目的
 
@@ -70,7 +70,7 @@
 
 当前推荐用途：
 
-- `G2 release-closeout` 已提交后，继续打开 `G3 thin handoff planning freeze hardening`
+- 当 admitted-domain 业务仓有新的 absorbed repo-tracked truth 后，作为中央 sync owner 继续收紧 `Phase 2` 顶层 federation wording 与四仓中央参考面
 
 ```text
 你现在在 one-person-lab 仓库，按“同一棒内自动收口”执行。
@@ -78,109 +78,68 @@
 先读：
 - AGENTS.md
 - contracts/project-truth/AGENTS.md
+- .omx/context/CURRENT_PROGRAM.md
 - docs/roadmap.zh-CN.md
-- docs/plans/2026-04-07-g3-thin-handoff-planning-brief.md
+- docs/references/opl-phase2-ecosystem-sync-owner-line.md
+- docs/references/ecosystem-status-matrix.md
+- docs/references/contract-convergence-v1-execution-board.md
+- docs/references/runtime-alignment-taskboard.md
+- docs/references/omx-longrun-prompt-playbook.md
 - docs/references/opl-gateway-rollout.zh-CN.md
 - docs/references/opl-gateway-acceptance-test-spec.zh-CN.md
+- contracts/opl-gateway/minimal-admitted-domain-federation-activation-package.json
 - contracts/opl-gateway/README.zh-CN.md
-- docs/opl-routed-action-gateway.zh-CN.md
-- docs/opl-public-surface-index.zh-CN.md
+- README.zh-CN.md
 
 任务目标：
-在 G2 stable public baseline 已收口的前提下，把 OPL 继续推进到 G3 thin handoff planning freeze hardening，但不进入 routed-action runtime implementation。
+作为 admitted-domain federation 的中央 sync owner，在当前 evidence boundary 内继续同步顶层 federation wording、四仓状态总表、执行板、任务板与提示词模板，但不把 OPL 写成 runtime owner。
 
 必须完成：
-1. 统一 route_request、build_handoff_payload、audit_routing_decision 的最小边界。
-2. 把 no-bypass 规则写成硬边界，并确保 handoff 目标只能是 domain gateway。
-3. 清理任何会把 OPL 误写成 runtime owner、mutation gateway、shared truth store 的表述。
-4. 让 acceptance / rollout / public-surface / contracts README 的 G3 口径保持一致。
-5. 若本轮 hardening 完成且验证全绿，就直接 commit-closeout。
+1. 先判断 admitted-domain 是否已经出现新的 repo-tracked absorbed delta，或 OPL 中央参考面是否发生真实漂移。
+2. 如果没有新增 delta，也没有中央漂移，就诚实停车，不编造新 tranche。
+3. 如果存在真实 delta，只同步中央 reference surfaces 与最小必要的 docs/contracts/tests。
+4. 保持 `CLI-first / read-only` formal entry、no-bypass、candidate-domain blocked truth、signal-only `Grant Ops` wording 一致。
+5. 若本轮 sync 收口且验证全绿，就直接 commit-closeout -> absorb to main。
 
 硬边界：
-- 不新增 mutation entry
-- 不新增 run launch
-- 不新增 workspace write
-- 不把 routed-actions schema 变成 launcher
-- 不实现真正的 G3 routed-action runtime
+- 不 admission 新 domain
+- 不新增 G2 / G3 readiness
+- 不实现 routed-action runtime
+- 不把 OPL 写成 runtime owner / mutation gateway / shared execution core
+- 不把 `Grant Foundry -> Med Auto Grant` 从 signal-only 擅自提升成 admitted domain
 - 不把 Unified Harness Engineering Substrate 写成共享代码框架
 
 验证要求：
+- npm run lint
+- npm run typecheck
+- npm run build
 - npm test
 - git diff --check
-- 用 rg 复核 runtime owner / no-bypass / mutation entry / domain gateway 等关键口径没有漂移
+- 用 rg 复核 runtime owner / no-bypass / signal-only / candidate-domain / G2 / G3 / handoff-ready 等关键口径没有漂移
 
 结束状态：
-- 优先自动收口到 ready to commit / commit closeout
-- 本轮结束后仍停留在 Phase 1；不升格为 runtime owner
+- 有真实 delta 时：优先自动收口到 ready to commit / commit closeout / absorbed to main
+- 无真实 delta 时：停在 honest stop，不升格为 runtime owner
 ```
 
 ### 2. med-autoscience
 
 当前推荐用途：
 
-- `P1` 已完成后，自动执行 manual-test closeout，并在通过后吸收到 `main`
+- 当前不推荐新开“runtime 架构继续推进”型 owner line；主线保持 external gate truth，由人工真实项目测试驱动。若要开新线，只建议：
+  1. `medical display` rolling hardening / visual audit；
+  2. 已通过人工测试打出的具体 repo-side bugfix worktree。
 
 ```text
-你现在在 med-autoscience 仓库，按“同一棒内自动收口”执行。
-
-先读：
-- AGENTS.md
-- contracts/project-truth/AGENTS.md
-- .omx/context/CURRENT_PROGRAM.md
-- .omx/reports/research-foundry-medical-mainline/MANUAL_TEST_PACKAGE.md
-- .omx/reports/research-foundry-medical-mainline/LATEST_STATUS.md
-- .omx/reports/research-foundry-medical-mainline/OPEN_ISSUES.md
-- .omx/reports/research-foundry-medical-mainline/ITERATION_LOG.md
-- docs/study_runtime_control_surface.md
-
-当前起点默认按：
-- P1 已完成
-- closeout slice 已存在
-- ready for manual test = yes
-- ready to commit = yes
-- P2 未开启
-
-执行顺序：
-1. 先在当前 P1 closeout slice 上执行正式 manual-test closeout。
-2. 同步复跑 targeted regression 与 broader regression。
-3. 若 hard gates 通过，就自动完成本轮 remaining closeout work。
-4. 然后把当前 P1 closeout slice 吸收到 main。
-5. 吸收后在 main 上做一轮 fresh verification，并同步 CURRENT_PROGRAM 与 reports。
-6. 最终停在：
-   - P1 fully closed on main
-   - P2 not started / not activated
-
-冻结语义不得漂移：
-- pause_runtime = recoverable
-- stop_runtime = terminal stop
-- stop_after_current_step = unsupported / fail-closed
-- rerun = unsupported executable control action
-- requires_human_confirmation = dispatch gate
-
-硬边界：
-- 不自动进入 P2
-- 不做 real-study relaunch
-- 不做 end-to-end study harness
-- 不做 MedDeepScientist 写入
-- 不做 cross-repo write
-
-验证要求：
-- 执行 MANUAL_TEST_PACKAGE
-- 复跑 targeted regression
-- 复跑 broader regression
-- git diff --check
-- 吸收到 main 后再做一轮 fresh verification
-
-停车规则：
-- 只要当前 P1 hard gates 通过，就自动完成 manual test -> commit closeout -> absorb to main
-- 本轮结束时不得自动开启 P2
+med-autoscience 当前主线不适合继续自动打开新的 runtime architecture tranche。
+如果任务不是 display-only hardening 或人工测试已明确定位的 repo-side bugfix，请不要在本仓开启新的 heavy OMX mainline。
 ```
 
 ### 3. redcube-ai
 
 当前推荐用途：
 
-- `P0 durable closeout` 已完成后，执行 `stable deliverable manual-test-driven hardening`
+- 在 `Phase 2 / source-readiness deep research trigger + gate convergence` 已吸收后，打开同一主线上的 `workspace / operator quickstart convergence`
 
 ```text
 你现在在 redcube-ai 仓库，按“同一棒内自动收口”执行。
@@ -189,52 +148,49 @@
 - AGENTS.md
 - contracts/project-truth/AGENTS.md
 - .omx/context/CURRENT_PROGRAM.md
-- contracts/runtime-program/current-program.json
-- contracts/runtime-program/stable-deliverable-manual-test-driven-hardening.json
-- contracts/runtime-program/stable-deliverable-hardening-backlog.json
-- docs/stable_deliverable_manual_test_brief.md
-- README.zh-CN.md
-- docs/runtime_architecture.md
 - .omx/reports/redcube-runtime-program/LATEST_STATUS.md
 - .omx/reports/redcube-runtime-program/OPEN_ISSUES.md
+- .omx/reports/redcube-runtime-program/ITERATION_LOG.md
+- contracts/runtime-program/current-program.json
+- docs/policies/runtime_operating_model.md
+- docs/human_quickstart.md
+- docs/source_readiness_deep_research_longrun_target_state.md
+- docs/direct_delivery_longrun_target_state.md
+- docs/phase_2_workspace_operator_quickstart_convergence.md
 
 任务目标：
-围绕当前已稳定能力做正式手工测试，并把 findings 收敛成 hardening backlog，不重开 P1，不打开 Phase 2。
-
-当前 scope 只包含：
-- ppt_deck
-- xiaohongshu
+在同一个 `redcube-runtime-program` 主线内，把 `workspace doctor -> source intake / source research -> deliverable create -> audit -> run` 这条 operator quickstart 路径收成更强的 repo-verified behavior surface。
 
 必须完成：
-1. 依据手工测试包执行 stable deliverable manual tests。
-2. 把真实 findings 回写到 stable-deliverable hardening backlog。
-3. 保持 current formal entry 真相为 MCP / CLI。
-4. 保持 tracked-only / clean-clone 口径下的 green baseline 可信。
-5. 若本轮 manual-test hardening 收口且验证全绿，就直接完成 commit-closeout。
+1. 先根据 `docs/phase_2_workspace_operator_quickstart_convergence.md` 判断这条 next line 是否能在当前 hard boundary 内被诚实冻结。
+2. 若可以，就先把这条线写进 active CURRENT_PROGRAM / reports，再进入 freeze -> implement -> verify -> review-closeout -> commit-closeout -> absorb。
+3. 收紧 brand-new / thin workspace 的 canonical bootstrap、quickstart docs 与 runtime behavior 一致性。
+4. 保持 `planning_ready` gate、`auditDeliverable / runtimeWatch / getReviewState / getPublicationProjection` 的同轴语义，以及 `xiaohongshu` human publication 边界。
+5. 若无法在当前 hard boundary 内诚实冻结，就停车，不编造 future scope。
 
 硬边界：
 - 不把 controller 写成正式入口
-- 不重开 P1
-- 不打开 Phase 2 / source intake + shared source truth
-- 不新增 family
-- 不扩大 OPL 联动面
+- 不推进 paper poster / conference poster academic contract
+- 不新增 family / overlay
+- 不把 xiaohongshu 改写成 direct-delivery
+- 不扩大 OPL federation / managed web runtime / controller expansion
 
 验证要求：
-- npm test
-- npm run typecheck
 - git diff --check
-- tracked-only targeted truth-freeze tests 可复现
+- npm run typecheck
+- node --test tests/phase-2-source-readiness-deep-research-trigger-gate-convergence.test.js tests/source-readiness-deep-research-gate.test.js tests/source-intake.test.js tests/source-research.test.js tests/deliverable-review-loop.test.js tests/direct-delivery-operator-handoff.test.js tests/direct-delivery-lifecycle-stage-summary.test.js tests/phase-2-behavior-convergence.test.js
+- npm test
 
 结束状态：
-- 停在 stable deliverable manual-test-driven hardening closeout
-- 不自动进入 Phase 2
+- 若形成 honest quickstart tranche，则自动收口到 ready to commit / commit closeout / absorbed to main
+- 若当前无 honest delta，则停在 honest stop，不自动编造 P1、family parity 或 full autopilot
 ```
 
 ### 4. med-autogrant
 
 当前推荐用途：
 
-- `P2.A / Intake-Direction-Question Mainline` 已激活后，继续做 tranche closeout，但不自动进入 `P2.B`
+- 在本地 `R1 -> R5` runtime ladder 已吸收到 `R5.A` 后，打开 `post-R5A local runtime hardening`
 
 ```text
 你现在在 med-autogrant 仓库，按“同一棒内自动收口”执行。
@@ -248,38 +204,53 @@
 - .omx/plans/prd-med-autogrant-mainline.md
 - .omx/plans/test-spec-med-autogrant-mainline.md
 - .omx/plans/implementation-med-autogrant-mainline.md
+- README.zh-CN.md
+- docs/specs/2026-04-08-runtime-first-productization-program.md
+- docs/specs/2026-04-08-runtime-first-r1-to-r5-boundary-map.md
 - docs/specs/2026-04-07-formal-entry-matrix-current-truth.md
 - docs/specs/2026-04-07-durability-model-clarification.md
-- docs/specs/2026-04-07-p2a-intake-direction-question-mainline-current-truth.md
+- docs/specs/2026-04-09-r3a-machine-applicable-revision-mutation-contract.md
+- docs/specs/2026-04-09-r4a-final-freeze-and-export-package-activation-package.md
+- docs/specs/2026-04-09-r5a-hosted-friendly-session-boundary-activation-package.md
+- docs/specs/2026-04-09-post-r5a-local-runtime-hardening-brief.md
 - .omx/reports/med-autogrant-mainline/LATEST_STATUS.md
 - .omx/reports/med-autogrant-mainline/OPEN_ISSUES.md
 - .omx/reports/med-autogrant-mainline/ITERATION_LOG.md
 
 任务目标：
-在不破坏 P1 baseline 与当前 formal entry / durability / grant_run_id 合同的前提下，把 P2.A 收口成稳定 tranche，但不自动进入 P2.B。
+在 `R3.A / R4.A / R5.A` 已 landed 的前提下，继续把本地 `CLI-first + host-agent` runtime 收紧成更诚实、更可操作的 local product baseline，但不进入 actual hosted runtime 或 `P5`。
 
 必须完成：
-1. 守住 input_intake -> direction_screening -> question_refinement 的当前 canonical route。
-2. 守住 current_selection 对 direction / question 的显式绑定。
-3. 让 CLI、runtime、tests、examples、docs、reports 对当前 P2.A 真相保持一致。
-4. 若本轮 P2.A hard gates 通过，就自动完成当前 tranche closeout。
-5. 结束时保持 same-phase hold，不自动进入 P2.B。
+1. 先按 `docs/specs/2026-04-09-post-r5a-local-runtime-hardening-brief.md` 判断当前 post-R5A delta 是否具体、可验证、仍在本地 runtime hardening 边界内。
+2. 若可以，就优先收紧 revised-workspace validator / checkpoint truth 与 landed local runtime outputs 的一致性。
+3. 同步 README / docs / command matrix / operator walkthrough 到已 landed 的本地命令面：`run-local`、`resume-local`、`build-artifact-bundle`、`execute-revision-pass`、`build-final-package`、`build-hosted-contract-bundle`。
+4. 保持 `grant_run_id / workspace_id / draft_id / program_id`、checkpoint 语义、formal entry matrix 与 hostedization boundary 不漂移。
+5. 若 hard gates 通过，就自动完成 freeze -> implement -> verify -> review-closeout -> commit-closeout -> absorb to main。
+6. 若当前没有新的 honest post-R5A delta，就停车，而不是偷跑 actual hosted runtime、`P5`、same-repo HITL 或新 formal entry。
 
 硬边界：
 - grant_run_id 继续是当前正式 execution handle
 - formal durable entry 仍是 CLI + OMX control surfaces
-- 不扩成 MCP / controller formal entry
-- 不自动进入 P2.B / P2.C / P3
-- 不提前扩 write/export/HITL skeleton
+- 不扩成 MCP / controller public formal entry
+- 不进入 actual hosted runtime / remote execution / Web UI / multi-tenant
+- 不进入 P5.A / P5.B / second-family / federation
+- 不进入 same-repo HITL
 
 验证要求：
-- 运行 active test-spec 定义的 repo-native commands
+- python3 -m unittest discover -s tests -p 'test_program_control_surfaces.py'
+- python3 -m unittest discover -s tests -p 'test_local_runtime.py'
+- python3 -m unittest discover -s tests -p 'test_artifact_bundle.py'
+- python3 -m unittest discover -s tests -p 'test_revision_executor.py'
+- python3 -m unittest discover -s tests -p 'test_final_package.py'
+- python3 -m unittest discover -s tests -p 'test_hosted_contract_bundle.py'
+- python3 -m unittest discover -s tests -p 'test_*.py'
+- current canonical CLI examples
 - git diff --check
-- 确认 CLI / reports / docs / tests 对 grant_run_id 的合同仍一致
+- 确认 CLI / reports / docs / tests 对 grant_run_id 与 post-R5A local runtime truth 仍一致
 
 结束状态：
-- 停在 P2.A closeout / ready for review / ready to commit
-- 不自动进入 P2.B
+- 若存在 honest delta，则自动收口到 ready to commit / commit closeout / absorbed to main
+- 若不存在 honest delta，则停在 `NO_NEW_POST_R5A_LOCAL_RUNTIME_DELTA_HONEST_STOP`
 ```
 
 ## 维护规则
