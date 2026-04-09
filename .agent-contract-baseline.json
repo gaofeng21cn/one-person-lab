@@ -1,18 +1,17 @@
 {
   "baseline_name": "omx-project-installer",
-  "baseline_version": "0.2.0",
+  "baseline_version": "0.5.2",
   "contract_layout": "single-project-truth",
   "scope": "project",
   "display_name": "One Person Lab",
   "project_truth_path": "contracts/project-truth/AGENTS.md",
   "managed_files": [
     "AGENTS.md",
-    "README.md",
     ".gitignore",
     "contracts/project-truth/AGENTS.md",
     ".codex/AGENTS.md"
   ],
-  "updated_at": "2026-04-05T04:37:18.297204+00:00",
+  "updated_at": "2026-04-09T01:26:08.294316+00:00",
   "preserved_existing_root": {
     "backed_up": false,
     "backup_path": "",
@@ -26,21 +25,27 @@
   "legacy_cleanup": {
     "removed": []
   },
-  "gitignore_updated": false,
-  "readme_updated": true,
+  "gitignore_updated": true,
+  "update_policies": {
+    "root_agents": "auto",
+    "project_config": "auto"
+  },
+  "root_agents_state": {
+    "policy": "auto",
+    "source": "pre-setup-snapshot",
+    "sha256": "f0cafe119597f7b522187927246d99c30447f2dc01628eb5933096ec4979a638"
+  },
   "config_reconcile": {
-    "applied": true,
+    "applied": false,
     "user_config_present": true,
     "project_config_present": true,
-    "keys_synced": [
-      "model_provider",
-      "model_reasoning_effort",
-      "model_context_window:removed",
-      "model_auto_compact_token_limit:removed"
-    ],
-    "tables_synced": [
-      "model_providers"
-    ]
+    "keys_synced": [],
+    "tables_synced": [],
+    "managed_keys_synced": [],
+    "managed_tables_synced": [],
+    "restore_applied": true,
+    "restore_source": "pre-setup-snapshot",
+    "policy": "auto"
   },
   "legacy_alias_repair": {
     "repaired": [
@@ -52,5 +57,20 @@
       "swarm"
     ],
     "skipped": []
+  },
+  "continuous_program_scaffold": {
+    "enabled_by_default": true,
+    "program_id": "one-person-lab-mainline",
+    "report_dir": ".omx/reports/one-person-lab-mainline",
+    "created": [],
+    "preserved": [
+      "existing-custom-scaffold"
+    ]
+  },
+  "program_pack": {
+    "id": "",
+    "description": "",
+    "created": [],
+    "preserved": []
   }
 }
