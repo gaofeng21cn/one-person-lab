@@ -25,6 +25,7 @@
 - [OPL 联邦合同](./opl-federation-contract.zh-CN.md)
 - [共享基础结构](./shared-foundation.zh-CN.md)
 - [共享基础结构归属](./shared-foundation-ownership.zh-CN.md)
+- [OPL Runtime 命名与边界合同](./opl-runtime-naming-and-boundary-contract.zh-CN.md)
 - [OPL 只读 Discovery Gateway](./opl-read-only-discovery-gateway.zh-CN.md)
 - [OPL Routed Action Gateway](./opl-routed-action-gateway.zh-CN.md)
 - [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.zh-CN.md)
@@ -48,6 +49,7 @@
 - `references/ecosystem-status-matrix.md`
 - `references/contract-convergence-v1-execution-board.md`
 - `references/host-agent-runtime-contract.md`
+- `references/managed-runtime-migration-readiness-checklist.md`
 - `references/development-operating-model.md`
 - `references/contract-convergence-v1-decision-note.md`
 - `references/omx-worktree-operating-handbook.md`
