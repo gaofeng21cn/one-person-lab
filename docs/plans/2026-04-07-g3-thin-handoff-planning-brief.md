@@ -4,6 +4,8 @@
 
 日期锚点：`2026-04-07`
 
+> Historical / completed planning brief：该 brief 对应的 `G3 thin handoff planning freeze` 已完成并被后续 `Phase 1 exit + next-stage activation package freeze` 与 `Phase 2 / Minimal admitted-domain federation activation package` 作为前序门槛吸收；它不再代表当前 active follow-on。
+
 ## 目的
 
 这份 brief 只服务当前 `Phase 1` 的下一棒：
@@ -14,13 +16,13 @@
 
 它的职责，是把 `route_request`、`build_handoff_payload`、`audit_routing_decision` 三个动作的最小语义、输入输出边界与 `no-bypass` 规则写清楚，供后续实现或验收时复用。
 
-## 当前阶段硬边界
+## freeze closeout 当时的阶段硬边界
 
-- 当前仓库仍停留在 `CLI-first / read-only gateway baseline + planning freeze`。
-- 当前不实现真正的 `G3 mutation/routed-action runtime`。
-- 当前不把 `OPL` 升格为统一 runtime owner。
-- 当前不抽共享执行内核。
-- 当前所有 routed-action 相关 schema / prose / examples，都只能被解释为 **planning dependency / contract pre-freeze**，不能被解释为当前可执行入口。
+- 当时仓库仍停留在 `CLI-first / read-only gateway baseline + planning freeze`。
+- 当时不实现真正的 `G3 mutation/routed-action runtime`。
+- 当时不把 `OPL` 升格为统一 runtime owner。
+- 当时不抽共享执行内核。
+- 当时所有 routed-action 相关 schema / prose / examples，都只能被解释为 **planning dependency / contract pre-freeze**，不能被解释为当前可执行入口。
 
 ## thin handoff 的最小定义
 
@@ -114,7 +116,7 @@ OPL Gateway -> Domain Harness OS
 - `docs/references/opl-gateway-acceptance-test-spec*.md`：当前只应把 `G3` 写成 contract / planning gate，不应写成已落地 runtime。
 - `docs/references/opl-gateway-rollout*.md`：需要显式写明当前只到 `thin handoff planning` 预冻结。
 
-## 最小验收口径（planning-only）
+## 历史最小验收口径（planning-only）
 
 只有当下面这些条件都成立时，才算完成本轮 `planning freeze`：
 
