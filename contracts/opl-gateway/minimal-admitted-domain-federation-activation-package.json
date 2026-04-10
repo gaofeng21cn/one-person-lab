@@ -84,7 +84,7 @@
     "npm run typecheck",
     "npm run build",
     "npm test",
-    "NODE_NO_WARNINGS=1 node --test tests/opl-readonly-gateway.cli.test.mjs",
+    "NODE_NO_WARNINGS=1 node --test tests/built/cli.test.mjs",
     "focused rg audit for admitted-domain federation wording, candidate-domain wording, and runtime-owner wording"
   ],
   "hard_boundaries": [

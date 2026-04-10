@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 type Json = Record<string, any>;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.resolve(__dirname, '..');
+const repoRoot = path.resolve(__dirname, '..', '..');
 
 function read(relativePath: string) {
   return fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
@@ -68,7 +68,7 @@ test('phase-1 exit activation package freezes completed tranches, deferred items
   assert.ok(pkg.minimal_next_stage_tranche.non_goals.some((item: string) => /no routed-action runtime/i.test(item)));
   assert.ok(pkg.minimal_next_stage_tranche.non_goals.some((item: string) => /no Grant\/Review\/Thesis admission/i.test(item)));
   assert.ok(pkg.minimal_next_stage_tranche.verification_requirements.includes('npm test'));
-  assert.ok(pkg.minimal_next_stage_tranche.verification_requirements.includes('NODE_NO_WARNINGS=1 node --test tests/opl-readonly-gateway.cli.test.mjs'));
+  assert.ok(pkg.minimal_next_stage_tranche.verification_requirements.includes('NODE_NO_WARNINGS=1 node --test tests/built/cli.test.mjs'));
 
   for (const text of [doc, docZh]) {
     assert.match(text, /Phase 1 \/ Review Ops candidate-domain backlog and onboarding-package hardening/);

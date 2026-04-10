@@ -10,14 +10,14 @@ import {
   GatewayContractError,
   loadGatewayContracts,
   validateGatewayContracts,
-} from '../src/contracts.ts';
+} from '../../src/contracts.ts';
 import {
   explainDomainBoundary,
   resolveRequestSurface,
-} from '../src/resolver.ts';
+} from '../../src/resolver.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.resolve(__dirname, '..');
+const repoRoot = path.resolve(__dirname, '..', '..');
 const cliPath = path.join(repoRoot, 'src', 'cli.ts');
 const contractsDir = path.join(repoRoot, 'contracts', 'opl-gateway');
 

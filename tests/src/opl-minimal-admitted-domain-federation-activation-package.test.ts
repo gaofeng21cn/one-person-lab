@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 type Json = Record<string, any>;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.resolve(__dirname, '..');
+const repoRoot = path.resolve(__dirname, '..', '..');
 
 function read(relativePath: string) {
   return fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
@@ -55,7 +55,7 @@ test('minimal admitted-domain federation activation package is frozen as an acti
   assert.ok(pkg.non_goals.some((item: string) => /no Grant\/Review\/Thesis admission/i.test(item)));
   assert.ok(pkg.non_goals.some((item: string) => /no runtime-owner promotion/i.test(item)));
   assert.ok(pkg.verification_requirements.includes('npm test'));
-  assert.ok(pkg.verification_requirements.includes('NODE_NO_WARNINGS=1 node --test tests/opl-readonly-gateway.cli.test.mjs'));
+  assert.ok(pkg.verification_requirements.includes('NODE_NO_WARNINGS=1 node --test tests/built/cli.test.mjs'));
 
   for (const text of [doc, docZh]) {
     assert.match(text, /Minimal admitted-domain federation activation package/);

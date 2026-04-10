@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const roots = ['src', 'test', 'scripts'];
+const roots = ['src', 'tests', 'scripts'];
 const filePaths = roots.flatMap((root) => collectFiles(root));
 const failures = [];
 

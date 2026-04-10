@@ -10,8 +10,8 @@
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "lint": "node ./scripts/lint.mjs",
-    "test:src": "NODE_NO_WARNINGS=1 node --experimental-strip-types --test test/**/*.test.ts",
-    "test:dist": "NODE_NO_WARNINGS=1 node --test test-dist/**/*.test.mjs",
+    "test:src": "NODE_NO_WARNINGS=1 node --experimental-strip-types --test tests/src/**/*.test.ts",
+    "test:dist": "NODE_NO_WARNINGS=1 node --test tests/built/**/*.test.mjs",
     "test": "npm run test:src && npm run build && npm run test:dist"
   },
   "devDependencies": {

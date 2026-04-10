@@ -60,7 +60,7 @@
         "README.md",
         "docs/roadmap.md",
         "contracts/opl-gateway/README.md",
-        "test/opl-public-truth-docs.test.ts"
+        "tests/src/opl-public-truth-docs.test.ts"
       ]
     },
     {
@@ -135,7 +135,7 @@
       "npm run typecheck",
       "npm run build",
       "npm test",
-      "NODE_NO_WARNINGS=1 node --test tests/opl-readonly-gateway.cli.test.mjs",
+      "NODE_NO_WARNINGS=1 node --test tests/built/cli.test.mjs",
       "focused rg audit for runtime-owner, candidate-domain, and federation wording"
     ]
   },
