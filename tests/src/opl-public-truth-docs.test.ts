@@ -175,23 +175,25 @@ test('contract convergence execution board freezes the current unified program a
   assert.match(executionBoard, /shared public code framework|共享公共代码框架/);
   assert.match(executionBoard, /monorepo \/ runtime core ingest \/ controlled cutover/);
   assert.match(executionBoard, /不属于当前四仓 `?Phase C`? 的直接交付/);
-  assert.match(executionBoard, /Phase 2 \/ direct-delivery operator handoff hardening/);
-  assert.match(executionBoard, /P4\.A \/ Verification Gate Surface/);
-  assert.match(executionBoard, /P4\.B \/ Verification OS And Checkpoint Surface/);
+  assert.match(executionBoard, /Phase 2 \/ source-readiness deep research trigger \+ gate convergence/);
+  assert.match(executionBoard, /R5\.A \/ Hosted-Friendly Session Boundary/);
+  assert.match(executionBoard, /post-R5A local runtime hardening/);
 
   assert.match(statusMatrix, /Contract Convergence v1/);
   assert.match(statusMatrix, /Phase C \/ Object And Report Behavior Convergence/);
   assert.match(statusMatrix, /monorepo \/ runtime core ingest \/ controlled cutover/);
   assert.match(statusMatrix, /不是当前四仓统一 `?Phase C`? 的 blocker|不是当前统一 program 的直接交付项/);
-  assert.match(statusMatrix, /当前没有已冻结的下一候选 tranche/);
-  assert.match(statusMatrix, /下一 truthful step 不是直接实现 `?P4\.B`?/);
+  assert.match(statusMatrix, /CURRENT_MAXIMUM_REACHED_AND_ABSORBED_TO_MAIN|honest stop/i);
+  assert.match(statusMatrix, /workspace \/ operator quickstart convergence/);
+  assert.match(statusMatrix, /post-R5A local runtime hardening/);
   assert.match(taskboard, /Contract Convergence v1/);
   assert.match(taskboard, /Phase C \/ Object And Report Behavior Convergence/);
   assert.match(taskboard, /verification checkpoint|行为验证/);
   assert.match(taskboard, /monorepo \/ runtime core ingest \/ controlled cutover/);
   assert.match(taskboard, /后置 domain-internal 轨道|不在当前 taskboard 的活跃实现范围/);
   assert.match(taskboard, /same-mainline truthful freeze/);
-  assert.match(taskboard, /P4\.B \/ Verification OS And Checkpoint Surface/);
+  assert.match(taskboard, /workspace \/ operator quickstart convergence/);
+  assert.match(taskboard, /post-R5A local runtime hardening/);
 });
 
 test('phase-1 public gateway docs distinguish CLI transport from the host-agent and control-plane defaults', () => {
@@ -266,8 +268,8 @@ test('current gateway docs keep the phase-1 formal-entry baseline while the publ
   const gatewayContracts = read('contracts/opl-gateway/README.md');
   const gatewayContractsZh = read('contracts/opl-gateway/README.zh-CN.md');
 
-  assert.match(roadmap, /2026-04-08[\s\S]{0,80}Phase 2 \/ Minimal admitted-domain federation activation package/i);
-  assert.match(roadmapZh, /截至 `?2026-04-08`?，`?OPL`? 公开主线已经进入 `?Phase 2 \/ Minimal admitted-domain federation activation package`?/);
+  assert.match(roadmap, /2026-04-10[\s\S]{0,120}Phase 2 \/ Minimal admitted-domain federation activation package/i);
+  assert.match(roadmapZh, /截至 `?2026-04-10`?，`?OPL`? 公开主线仍停留在已 absorbed 的 `?Phase 2 \/ Minimal admitted-domain federation activation package`?/);
   assert.match(discovery, /already has a runnable local `TypeScript CLI`-first \/ read-only gateway baseline/i);
   assert.match(discoveryZh, /已具备可运行的本地 `?TypeScript CLI`?-first \/ read-only gateway baseline/);
   assert.match(roadmap, /Phase 1[\s\S]{0,40}formal entry contract and public system surface/i);
@@ -276,6 +278,8 @@ test('current gateway docs keep the phase-1 formal-entry baseline while the publ
   assert.match(publicSurfaceIndexZh, /`?G3`?.*planning-contract closeout|planning-level contract|planning-only/);
   assert.match(publicSurfaceIndex, /Minimal admitted-domain federation activation package/i);
   assert.match(publicSurfaceIndexZh, /Minimal admitted-domain federation activation package/);
+  assert.match(publicSurfaceIndex, /No new active follow-on tranche is open|central sync/i);
+  assert.match(publicSurfaceIndexZh, /当前没有新的 active follow-on tranche|central sync/i);
   assert.doesNotMatch(publicSurfaceIndex, /pre-freeze/i);
   assert.doesNotMatch(publicSurfaceIndexZh, /预冻结/);
   assert.match(rollout, /G3 thin handoff planning freeze hardening.*planning-contract boundary|`?G3`? remains inactive beyond the planning freeze/i);
@@ -285,11 +289,13 @@ test('current gateway docs keep the phase-1 formal-entry baseline while the publ
   assert.match(gatewayContracts, /Phase 2 \/ Minimal admitted-domain federation activation package/i);
   assert.match(gatewayContracts, /MedAutoScience/i);
   assert.match(gatewayContracts, /RedCube AI/i);
+  assert.match(gatewayContracts, /No new active follow-on tranche is currently open|central sync/i);
   assert.match(gatewayContractsZh, /G2 stable public baseline/);
   assert.match(gatewayContractsZh, /Phase 1 \/ G3 thin handoff planning freeze hardening/);
   assert.match(gatewayContractsZh, /Phase 2 \/ Minimal admitted-domain federation activation package/);
   assert.match(gatewayContractsZh, /MedAutoScience/);
   assert.match(gatewayContractsZh, /RedCube AI/);
+  assert.match(gatewayContractsZh, /当前没有新的 active follow-on tranche|central sync/i);
 });
 
 test('top-level positioning docs freeze the g2 release-closeout and substrate boundary wording', () => {
@@ -493,18 +499,18 @@ test('reference-grade sync docs stay below the public mainline truth surface', (
   assert.match(taskboard, /不反向抬升为 `?OPL`? 公开主线真相/);
 });
 
-test('internal reference truth docs carry the 2026-04-08 snapshot and current OPL baton', () => {
+test('internal reference truth docs carry the 2026-04-10 snapshot and current OPL baton', () => {
   const matrix = read('docs/references/ecosystem-status-matrix.md');
   const taskboard = read('docs/references/runtime-alignment-taskboard.md');
 
-  assert.match(matrix, /状态锚点：`?2026-04-08`?/);
+  assert.match(matrix, /状态锚点：`?2026-04-10`?/);
   assert.match(matrix, /G2 stable public baseline/);
   assert.match(matrix, /G3 thin handoff planning/);
   assert.match(matrix, /Phase 1 exit \+ next-stage activation package freeze/);
   assert.match(matrix, /Minimal admitted-domain federation activation package/);
   assert.match(matrix, /Review Ops -> Thesis Ops/);
   assert.match(matrix, /formal entry.*TypeScript CLI \+ read-only gateway baseline/);
-  assert.match(taskboard, /状态锚点：`?2026-04-08`?/);
+  assert.match(taskboard, /状态锚点：`?2026-04-10`?/);
   assert.match(taskboard, /G2 stable public baseline/);
   assert.match(taskboard, /G3 thin handoff planning/);
   assert.match(taskboard, /Minimal admitted-domain federation activation package/);

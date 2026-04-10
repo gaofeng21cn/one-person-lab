@@ -7,14 +7,14 @@
 The priority of the current phase is not to launch every workstream at once.
 It is to freeze the `OPL Gateway` language and stabilize the domain federation around the workstreams that are already real.
 
-As of `2026-04-08`, the public `OPL` mainline has entered `Phase 2 / Minimal admitted-domain federation activation package`.
+As of `2026-04-10`, the public `OPL` mainline remains at the absorbed `Phase 2 / Minimal admitted-domain federation activation package`.
 
 What is already clear today:
 
 - `OPL` is the top-level gateway and federation model for a one-person research lab
 - the shared Harness Engineering base under `OPL` is now described as the `Unified Harness Engineering Substrate`, which remains a shared architectural substrate rather than a shared public code framework
 - [`MedAutoScience`](https://github.com/gaofeng21cn/med-autoscience) is the active `Research Ops` domain gateway and harness
-- [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) is the emerging visual-deliverable domain gateway and harness
+- [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) is the currently admitted visual-deliverable domain gateway and harness
 - `ppt_deck` is the family that currently maps most directly to `Presentation Ops`
 - `Grant Ops`, `Thesis Ops`, and `Review Ops` remain under definition
 - `Grant Foundry -> Med Auto Grant` currently provides top-level signal / domain-direction evidence for a future medical `Grant Ops` domain only; it is not an admitted domain gateway and does not count as G2 discovery readiness or G3 routed-action readiness
@@ -64,9 +64,9 @@ That does **not** satisfy registry material, discovery readiness, or routing rea
 The absorbed predecessor follow-on is `Phase 1 exit + next-stage activation package freeze`; that predecessor gate is what allowed the current `Minimal admitted-domain federation activation package` to activate once the two-admitted-domain threshold turned green.
 Any future successful handoff remains `domain_gateway`-only and subject to the no-bypass rule against direct harness targeting.
 
-At the current `2026-04-08` reassessment, that predecessor freeze has already done its job.
-The current active follow-on is now the `Minimal admitted-domain federation activation package`.
-It strengthens top-level federation wording for `MedAutoScience` + `RedCube AI` only, keeps the formal entry at the same local `TypeScript CLI`-first / read-only gateway surface, and still does **not** admit `Grant Ops`, `Review Ops`, or `Thesis Ops`.
+At the current `2026-04-10` reassessment, that predecessor freeze has already done its job, and the `Minimal admitted-domain federation activation package` is already absorbed into the current top-level truth.
+The honest current top-level state is a central-sync stop: unless an admitted-domain repository lands a new absorbed delta or the central reference surfaces drift, no new active follow-on tranche is open.
+That absorbed federation package still strengthens top-level federation wording for `MedAutoScience` + `RedCube AI` only, keeps the formal entry at the same local `TypeScript CLI`-first / read-only gateway surface, and still does **not** admit `Grant Ops`, `Review Ops`, or `Thesis Ops`.
 
 ## Later Phase
 

@@ -1,6 +1,6 @@
 # Managed Runtime 迁移准备清单
 
-状态锚点：`2026-04-09`
+状态锚点：`2026-04-10`
 
 ## 文档目的
 
@@ -169,9 +169,9 @@
 
 当前判断：
 
-- `R1-R4` 已稳定
 - runtime ontology 与 host-agent 口径已很清楚
-- 但 `R5 / hosted-friendly contract extraction` 仍缺一份明确 activation package
+- 当前 repo-tracked absorbed tranche 已推进到 `Phase 2 / source-readiness deep research trigger + gate convergence`
+- 但 `R5 / hosted-friendly contract extraction` 仍缺一份明确的 hostedization-prep contract slice
 
 当前已经具备：
 
@@ -184,6 +184,7 @@
 
 - 尚未看到与 `med-autogrant R5.A` 对等的 hostedization-prep package
 - 尚未把 current topic / deliverable / run / audit surfaces 抽成一个 future host 必须兼容的 contract bundle
+- `workspace / operator quickstart convergence` 仍未被冻结进当前 repo truth，说明 operator bootstrap 面仍在同一主线 hardening 中
 - 尚未看到 platform-owned session lifecycle 的 repo-tracked design slice
 
 对 future `managed runtime` 的含义：
@@ -194,14 +195,16 @@
 当前下一步：
 
 1. 继续在 current mainline 上保持 audit / watch / review / projection 收口。
-2. 条件成熟后，冻结首个 hostedization-prep activation package。
-3. 先抽 contract compatibility，不直接跳 hosted runtime。
+2. 先冻结 `workspace / operator quickstart convergence`，把 workspace bootstrap 与 operator path 收紧成更完整的 repo-verified behavior。
+3. 只有在 current mainline 的 operator/bootstrap 面更稳定后，才冻结首个 hostedization-prep activation package。
+4. 先抽 contract compatibility，不直接跳 hosted runtime。
 
 ### 4. med-autogrant
 
 当前判断：
 
 - 四仓里在 `R5 / hosted-friendly contract extraction` 上走得最远
+- `R5.A / Hosted-Friendly Session Boundary` 已经实现并 absorbed
 - 但它仍然明确停在 hostedization prep，而不是 actual hosted runtime
 
 当前已经具备：
@@ -213,8 +216,8 @@
 
 当前 blocker：
 
-- `R5.A` 当前仍是 `pre-frozen / not activated`
 - 文档明确禁止把 hosted-friendly contract prep 写成 actual hosted runtime
+- `R5.A` 之后的 truthful continuation 仍只允许停留在 `post-R5A local runtime hardening`
 - 仍无 remote execution、Web UI、multi-tenant、platform-owned session lifecycle
 
 对 future `managed runtime` 的含义：
@@ -225,7 +228,7 @@
 当前下一步：
 
 1. 继续把 local runtime baseline 收紧成 honest local product baseline。
-2. 条件满足后，再进入 `R5.A` implementation。
+2. 围绕 `post-R5A local runtime hardening` 继续收紧 validator / checkpoint truth、operator walkthrough 与 docs/runtime 对齐。
 3. 继续明确把 hostedization prep 与 actual hosted runtime 分开。
 
 ## 五、当前统一迁移顺序
@@ -235,11 +238,11 @@
 1. `one-person-lab`
    继续持有中央命名、边界与 readiness 清单，不越界为 runtime owner。
 2. `med-autogrant`
-   作为 hosted-friendly contract extraction 的先行参考实现，继续把 `R5.A` 条件收紧。
+   作为 hosted-friendly contract extraction 的先行参考实现，继续把 post-`R5.A` 本地 runtime hardening 收紧。
 3. `med-autoscience`
    继续清 external runtime gate；在 gate 放行前，不提前进入 physical cutover 或 hostedization。
 4. `redcube-ai`
-   在 current mainline truth 稳定后，补首个 hostedization-prep contract slice。
+   先把 current mainline 的 workspace/operator bootstrap 行为面收紧，再补首个 hostedization-prep contract slice。
 
 ## 六、当前不应做的事
 

@@ -1,6 +1,6 @@
 # Contract Convergence v1 执行板
 
-状态锚点：`2026-04-08`
+状态锚点：`2026-04-10`
 
 ## 文档目的
 
@@ -70,11 +70,11 @@
 - `redcube-ai`
   - 把 `auditDeliverable / runtimeWatch / getReviewState / getPublicationProjection` 压到同一 deliverable/topic 边界上的 repo-verified behavior
   - 继续锁定 `run_id` 只是 per-run handle，不污染 `topic_id / deliverable_id`
-  - 当前 latest absorbed tranche 已推进到 `Phase 2 / direct-delivery operator handoff hardening`；若继续，需要新的 same-mainline truthful freeze，而不是直接扩写 future scope
+  - 当前 latest absorbed tranche 已推进到 `Phase 2 / source-readiness deep research trigger + gate convergence`；若继续，需要先冻结 `workspace / operator quickstart convergence` 这条 same-mainline truthful brief，而不是直接扩写 future scope
 - `med-autogrant`
   - 把 `validate-workspace / summarize-workspace / critique-summary / stage-route-report` 继续压成一致的 verification / checkpoint 行为面
   - 继续锁定 `forced_rollback_stage / forced_rollback_reason / presubmission_frozen` 的 machine-readable checkpoint 语义
-  - 当前 latest absorbed checkpoint 已推进到 `P4.A / Verification Gate Surface`；下一 truthful step 不是直接实现 `P4.B`，而是先冻结 `P4.B / Verification OS And Checkpoint Surface` activation package
+  - 当前 runtime-first ladder 已推进到 `R5.A / Hosted-Friendly Session Boundary` 并 absorbed；下一 truthful step 不是回到旧 `P4.B`，而是围绕 `post-R5A local runtime hardening` 继续收紧 validator / checkpoint / docs alignment
 - `med-autoscience`
   - 主线不重开新的架构 tranche
   - 以手工测试驱动稳定化，并保持 external runtime gate 的 truth 不漂移
@@ -99,8 +99,8 @@
 | 仓库 | 本轮在 `Contract Convergence v1` 下的交付项 | 当前判断 |
 | --- | --- | --- |
 | `one-person-lab` | 持有中央执行板、状态总表、任务板与顶层 references；冻结统一阶段与完成标准 | 当前负责 `Phase C` program owner 与 reference-sync |
-| `redcube-ai` | 把 `auditDeliverable / runtimeWatch / getReviewState / getPublicationProjection` 收口为同一 deliverable/topic 边界上的 canonical behavior | 已 absorb 到 `Phase 2 / direct-delivery operator handoff hardening`；当前没有已冻结的下一候选 tranche |
-| `med-autogrant` | 把 `stage-route-report` 收口为 verification / checkpoint canonical behavior，并锁定 rollback / frozen gate 语义 | 已 absorb 到 `P4.A / Verification Gate Surface`；下一 truthful step 仅是先冻结 `P4.B` activation package |
+| `redcube-ai` | 把 `auditDeliverable / runtimeWatch / getReviewState / getPublicationProjection` 收口为同一 deliverable/topic 边界上的 canonical behavior | 已 absorb 到 `Phase 2 / source-readiness deep research trigger + gate convergence`；当前没有已冻结的下一候选 tranche |
+| `med-autogrant` | 把 `stage-route-report` 收口为 verification / checkpoint canonical behavior，并把本地 runtime ladder 与 docs/runtime 对齐 | 已 absorb through `R5.A / Hosted-Friendly Session Boundary`；下一 truthful step 是 `post-R5A local runtime hardening` |
 | `med-autoscience` | 保持 `program_id / study_id / quest_id / active_run_id` 与 current durable surface truth，不重开新 tranche | 当前转入手工测试稳定化面；`monorepo / runtime core ingest / controlled cutover` 明确保留为后置长线 |
 
 ## 当前阶段的离场条件

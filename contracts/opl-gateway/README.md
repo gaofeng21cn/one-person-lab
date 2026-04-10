@@ -15,26 +15,26 @@ For the broader ownership split, see [Shared Foundation](../../docs/shared-found
 
 ## Current baseline and activated follow-on alignment
 
-As of `2026-04-08`, the public `opl-mainline` mainline has entered `Phase 2 / Minimal admitted-domain federation activation package`, while the repo-tracked formal entry still remains the `Phase 1` local `TypeScript CLI`-first, read-only gateway baseline that reads the frozen contract artifacts in this directory.
+As of `2026-04-10`, the public `opl-mainline` mainline remains at the absorbed `Phase 2 / Minimal admitted-domain federation activation package`, while the repo-tracked formal entry still remains the `Phase 1` local `TypeScript CLI`-first, read-only gateway baseline that reads the frozen contract artifacts in this directory.
 That transport sits on top of the current `Codex-default host-agent runtime`, while `Codex Host` freezes planning/truth and `OMX` handles long-running execution inside those frozen boundaries.
 The completed `Phase 1 / G2 release-closeout` has already closed the `G2 stable public baseline` into one stable repo-tracked public entry.
-That repo-tracked baseline therefore remains the current `OPL` formal entry contract and public system surface even though the public mainline has already activated a minimal admitted-domain federation follow-on.
+That repo-tracked baseline therefore remains the current `OPL` formal entry contract and public system surface even though the public mainline has already absorbed the minimal admitted-domain federation package.
 The completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` remains closed at the planning-contract layer: this directory only freezes the planning gate / planning-level contract around `route_request`, `build_handoff_payload`, and `audit_routing_decision`. The only allowed successful handoff target remains `domain_gateway`, the no-bypass rule still forbids direct domain-harness targeting, and `routed-actions.schema.json` remains a planning dependency rather than a launcher.
 The repo-tracked `Phase 1` candidate-domain closeout order is frozen as `Review Ops` then `Thesis Ops`: both candidate paths remain below domain admission, `G2` discovery readiness, `G3` routed-action readiness, and handoff readiness.
-The absorbed predecessor follow-on is `Phase 1 exit + next-stage activation package freeze`, and the current active follow-on is `Minimal admitted-domain federation activation package`, which applies only to the already admitted `MedAutoScience` and `RedCube AI` domain surfaces and still does **not** activate runtime ownership.
+The absorbed predecessor gate is `Phase 1 exit + next-stage activation package freeze`, and the current `Minimal admitted-domain federation activation package` is already absorbed into repo-tracked top-level truth for the already admitted `MedAutoScience` and `RedCube AI` domain surfaces. No new active follow-on tranche is currently open; another central sync only becomes truthful when an admitted-domain repository lands a new absorbed delta or the central reference surfaces drift. Runtime ownership still does **not** activate.
 The current repo-tracked formal entry at the OPL layer therefore remains the local `TypeScript CLI`-first / read-only gateway surface rather than a launcher, mutation entry, or runtime-owner surface.
 That delivery target still does **not** promote this directory into a runtime, routed-action control plane, or canonical truth store; it only keeps the existing top-level contract language executable through a local CLI surface.
 
 ## Current four-repo alignment companions
 
 These reference-grade companions freeze the current four-repo status, runtime wording, and development-control split without turning this directory into a runtime owner or second source of truth.
-This companion set is anchored to `2026-04-08` and carries the responsibility of writing the latest four-repo status back into the top-level OPL reference-sync companions without promoting those reference surfaces into public-mainline truth.
+This companion set is anchored to `2026-04-10` and carries the responsibility of writing the latest four-repo status back into the top-level OPL reference-sync companions without promoting those reference surfaces into public-mainline truth.
 
 - [Ecosystem Status Matrix](../../docs/references/ecosystem-status-matrix.md) — Chinese-only internal reference for the current four-repo stage/status picture
 - [Contract Convergence v1 Execution Board](../../docs/references/contract-convergence-v1-execution-board.md) — Chinese-only internal reference for the current unified program, active phase, and exit criteria
 - [Codex-default Host-Agent Runtime Contract](../../docs/references/host-agent-runtime-contract.md) — Chinese-only internal reference for the current local default runtime wording
 - [Development Operating Model](../../docs/references/development-operating-model.md) — Chinese-only internal reference for the `Codex Host` / `OMX` planning-vs-longrun split
-- [Runtime Alignment Taskboard](../../docs/references/runtime-alignment-taskboard.md) — Chinese-only internal reference for the active `Phase B / Handle And Surface Convergence` task slices
+- [Runtime Alignment Taskboard](../../docs/references/runtime-alignment-taskboard.md) — Chinese-only internal reference for the active `Phase C / Object And Report Behavior Convergence` task slices
 - [OMX Stage-Gated Longrun Guide](../../docs/references/omx-stage-gated-longrun-guide.md) — Chinese-only internal reference for stage-gated long-running execution rules
 
 ## Governing documents

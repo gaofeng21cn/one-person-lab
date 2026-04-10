@@ -1,6 +1,6 @@
 # OMX 长线提示词模板库
 
-状态锚点：`2026-04-09`
+状态锚点：`2026-04-10`
 
 ## 文档目的
 
@@ -33,6 +33,11 @@
 3. 确认当前工作区状态、验证命令与 reports 路径
 4. 若仓内当前真相与本模板冲突，以仓内当前真相为准，并在本仓后续同步更新本模板库
 
+另外必须固定两条运行纪律：
+
+1. 重型 `OMX` 长线一律在独立 `git worktree` 中运行；根工作区只负责规划、吸收、推送、清理与文档同步，不承载并行重型执行。
+2. 如果本地 `.omx/context/CURRENT_PROGRAM.md` 落后于 repo-tracked truth，先同步本地控制面到当前 repo-tracked 真相，再继续实现与 closeout。
+
 ## 统一通用前缀
 
 下面这段是四仓都可复用的默认前缀。
@@ -48,11 +53,13 @@
 - 开发控制面 = Codex Host / Codex App 负责规划冻结，OMX 负责长时执行
 
 执行规则：
+0. 必须在独立 worktree 中执行；root checkout 只负责 absorb / push / cleanup / central sync，不直接承载重型长线实现。
 1. 先读取仓内 AGENTS.md、contracts/project-truth/AGENTS.md、CURRENT_PROGRAM.md、LATEST_STATUS.md、OPEN_ISSUES.md、ITERATION_LOG.md 与当前 tranche 对应 specs / plans / docs。
 2. 在当前 tranche / same-phase 内，只要 hard gates 通过，就自动继续完成 review -> manual test -> commit -> absorb。
 3. 每完成一个阶段动作，都要同步 CURRENT_PROGRAM、LATEST_STATUS、OPEN_ISSUES 与必要的 repo-tracked truth surface。
 4. 不得把开发控制面成熟度误写成产品 runtime 成熟度。
 5. 不得越过当前 frozen phase / tranche 边界偷跑下一阶段。
+6. 如果发现本地 `.omx/**` 控制面落后于 repo-tracked truth，先修正本地控制面，再继续 write-set。
 
 只有以下情况才允许停车询问：
 1. 需要破坏性 git 操作

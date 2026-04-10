@@ -94,7 +94,8 @@ Human / Agent
 - 已完成的 repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` 继续停留在 planning-contract closeout 边界
 - repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review Ops` 然后 `Thesis Ops`
 - 已 absorb 的前序 follow-on 是 `Phase 1 exit + next-stage activation package freeze`
-- 当前 active follow-on 已切到 `Minimal admitted-domain federation activation package`，但它也只面向已 admitted domain surface，也就是 `MedAutoScience` + `RedCube AI` 这两条 federation surface
+- 当前这份 `Minimal admitted-domain federation activation package` 已经被吸收到 repo-tracked 顶层真相中，但它也仍然只面向已 admitted domain surface，也就是 `MedAutoScience` + `RedCube AI` 这两条 federation surface
+- 当前没有新的 active follow-on tranche 超出这份已 absorbed package；只有 admitted-domain absorbed delta 再次出现，或中央 reference surfaces 发生真实漂移时，下一次 central sync 才是诚实的
 
 应支持：
 
@@ -124,7 +125,8 @@ Human / Agent
 - 已完成的 repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` 继续作为 routed-action planning 的 closeout 边界，当前不会进入 routed action implementation
 - repo-tracked 的 `Review Ops -> Thesis Ops` candidate-domain closeout 会继续把这些 candidate path 保持在 admission / discovery / routing readiness 之下，`G3` 也仍然停在 planning freeze 之外未激活
 - 已 absorb 的前序 follow-on 是 `Phase 1 exit + next-stage activation package freeze`：它在门槛满足前冻结了最小的更强 federation follow-on
-- 当前 active follow-on 已切到 `Minimal admitted-domain federation activation package`：它只对已 admitted domain 收紧 federation wording，并不会激活 runtime ownership
+- 当前这份 `Minimal admitted-domain federation activation package` 已经被吸收到 repo-tracked 顶层真相中：它只对已 admitted domain 收紧 federation wording，并不会激活 runtime ownership
+- 当前没有新的 active follow-on tranche 超出这份已 absorbed package；只有 admitted-domain absorbed delta 再次出现，或中央 reference surfaces 发生真实漂移时，下一次 central sync 才是诚实的
 - 当前这是 planning gate，不是 runtime gate；`route_request`、`build_handoff_payload`、`audit_routing_decision` 只冻结为 planning-level contract 操作
 - 唯一允许的成功 handoff 目标仍只能是 `domain_gateway`，并且 no-bypass 规则禁止直达 domain harness
 - `routed-actions.schema.json` 仍只是 planning dependency，不是 launcher

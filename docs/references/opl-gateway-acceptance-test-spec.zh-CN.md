@@ -1183,7 +1183,7 @@ checks = {
     ],
     Path('../gaofeng21cn/../README.md'): [
         'is the top-level gateway for how a one-person research lab routes work into independent domain systems and framework lines.',
-        'is the emerging visual-deliverable gateway under the same umbrella.',
+        'is the admitted visual-deliverable gateway under the same umbrella.',
     ],
 }
 

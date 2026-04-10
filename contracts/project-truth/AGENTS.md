@@ -68,7 +68,7 @@ Apply this contract to the repository as a whole unless a deeper `AGENTS.md` exp
 ## Domain-Specific Direction
 
 - `MedAutoScience` is the active `Research Ops` domain gateway and harness.
-- `RedCube AI` is the emerging visual-deliverable domain gateway and harness.
+- `RedCube AI` is the currently admitted visual-deliverable domain gateway and harness.
 - `Med Auto Grant` is the current future medical `Grant Ops` domain harness direction, but it is not yet an admitted domain gateway and harness.
 - `ppt_deck` maps directly to `Presentation Ops`; `xiaohongshu` shares the same RedCube harness but is not automatically equivalent to `Presentation Ops`.
 - Future workstreams should be added as explicit domain surfaces rather than as scattered features inside existing domains.

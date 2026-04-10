@@ -7,14 +7,14 @@
 当前阶段的重点，不是同时启动所有工作流。
 而是先冻结 `OPL Gateway` 语言，并把已经真实存在的 domain federation 站稳。
 
-截至 `2026-04-08`，`OPL` 公开主线已经进入 `Phase 2 / Minimal admitted-domain federation activation package`。
+截至 `2026-04-10`，`OPL` 公开主线仍停留在已 absorbed 的 `Phase 2 / Minimal admitted-domain federation activation package`。
 
 当前已明确的状态：
 
 - `OPL` 是一人课题组的顶层 Gateway 与 federation model
 - `OPL` 之下共享的 Harness Engineering 基座，当前统一命名为 `Unified Harness Engineering Substrate`，它仍然只是共享架构基座，不是共享代码框架
 - [`MedAutoScience`](https://github.com/gaofeng21cn/med-autoscience) 是当前 active 的 `Research Ops` domain gateway 与 harness
-- [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) 是当前 emerging 的视觉交付 domain gateway 与 harness
+- [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) 是当前已 admitted 的视觉交付 domain gateway 与 harness
 - `ppt_deck` 是当前最直接映射到 `Presentation Ops` 的 family
 - `Grant Ops`、`Thesis Ops`、`Review Ops` 仍处于定义阶段
 - `Grant Foundry -> Med Auto Grant` 当前只提供未来医学 `Grant Ops` 的 top-level signal / domain-direction evidence；它不等于已正式收录的 domain gateway，也不等于 `G2` discovery readiness，更不等于 `G3` routed-action readiness
@@ -63,9 +63,9 @@
 当前已 absorb 的前序 follow-on 是 `Phase 1 exit + next-stage activation package freeze`；也正是这个前序门槛在“两条 admitted domain surface 已稳定”之后允许当前 `Minimal admitted-domain federation activation package` 被激活。
 任何未来的 successful handoff 也仍然只能 targeting `domain_gateway`，并继续受不得直达 harness 的 no-bypass 规则约束。
 
-在当前 `2026-04-08` 的重评估下，这个前序 freeze 已经完成它的使命。
-当前 active follow-on 已切换为 `Minimal admitted-domain federation activation package`。
-它只针对 `MedAutoScience` + `RedCube AI` 这两条 admitted domain surface 收紧顶层 federation wording，同时继续保持 formal entry 不变，仍然是本地 `TypeScript CLI`-first / read-only gateway surface，也仍然**不会** admission `Grant Ops`、`Review Ops` 或 `Thesis Ops`。
+在当前 `2026-04-10` 的重评估下，这个前序 freeze 已经完成它的使命，而 `Minimal admitted-domain federation activation package` 也已经被吸收到当前顶层真相里。
+当前最诚实的顶层状态是中央同步停车：除非 admitted-domain 仓再次落下新的 absorbed delta，或中央 reference surfaces 被证实发生真实漂移，否则当前没有新的 active follow-on tranche 打开。
+这份已 absorbed 的 federation package 仍只针对 `MedAutoScience` + `RedCube AI` 这两条 admitted domain surface 收紧顶层 federation wording，同时继续保持 formal entry 不变，仍然是本地 `TypeScript CLI`-first / read-only gateway surface，也仍然**不会** admission `Grant Ops`、`Review Ops` 或 `Thesis Ops`。
 
 ## 更后续阶段
 

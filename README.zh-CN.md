@@ -23,7 +23,7 @@
     </td>
     <td width="33%" valign="top">
       <strong>联邦状态</strong><br/>
-      <code>Research Foundry -> Med Auto Science</code> 是当前 Active 的 Research Ops 主线；<code>Grant Foundry -> Med Auto Grant</code> 已作为未来医学 Grant Ops surface 的 top-level signal / domain-direction evidence 公开 scaffold 开出；<code>RedCube AI</code> 是当前 Emerging 的视觉交付 surface
+      <code>Research Foundry -> Med Auto Science</code> 是当前 Active 的 Research Ops 主线；<code>Grant Foundry -> Med Auto Grant</code> 仍作为未来医学 Grant Ops surface 的 top-level signal / domain-direction evidence 保持公开 scaffold；<code>RedCube AI</code> 已是当前 admitted 的视觉交付 surface
     </td>
   </tr>
 </table>
@@ -125,8 +125,8 @@
     </td>
     <td width="20%" valign="top">
       <strong>Presentation Ops</strong><br/>
-      <code>Emerging</code><br/>
-      由 <code>RedCube AI</code> 和其 <code>ppt_deck</code> family 先行承接
+      <code>Active</code><br/>
+      由 <code>RedCube AI</code> 和其 <code>ppt_deck</code> family 正式承接
     </td>
   </tr>
   <tr>
@@ -290,19 +290,19 @@ Human / Agent
 
 ### Med Auto Grant
 
-[`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) 是 `OPL` 体系下新开的文档先行 scaffold，用于承接未来医学场景下的 `Grant Ops` surface。
+[`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) 是 `OPL` 体系下当前未来医学 `Grant Ops` 的 domain harness 方向；它在自己的仓内已经形成了本地 runtime baseline，但在 `OPL` 顶层联邦层仍只保持 signal-only / domain-direction evidence。
 
 它当前承担的是：
 
 - `Grant Foundry` 在医学场景下的公开实现 scaffold 与 top-level signal
 - 未来作者侧、proposal-facing 的 `Grant Ops` 医学 surface 的 domain-direction evidence
-- 第一版医学 `NSFC` 通用申请 MVP 的冻结入口
+- 第一版医学 `NSFC` 通用申请 mainline 与本地 runtime baseline 的冻结入口
 - 但它还不是已经 admitted 的 `OPL` domain gateway 与 harness
 - 也还不是 `G2` discovery target 或 `G3` routed-action target
 
 ### RedCube AI
 
-[`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) 是 `OPL` 体系下当前 Emerging 的视觉交付 domain gateway。
+[`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) 是 `OPL` 体系下当前已 admitted 的视觉交付 domain gateway。
 
 它的正确边界是：
 
@@ -313,16 +313,17 @@ Human / Agent
 
 ## 当前 Federation Activation State
 
-截至 `2026-04-08`，前序的 `Phase 1 exit + next-stage activation package freeze` 已作为门槛 absorbed，并进一步使当前 `Minimal admitted-domain federation activation package` 得以激活。
+截至 `2026-04-10`，`Phase 1 exit + next-stage activation package freeze` 仍是已经 absorbed 的前序门槛，而 `Phase 2 / Minimal admitted-domain federation activation package` 也已经被吸收到当前顶层 federation 真相中。
 
 这次 activation 的依据是：至少两条 admitted domain surface 现在已经被 repo-tracked truth 证明稳定到足以支撑更强的顶层 federation wording：
 
 - `MedAutoScience` 对应 `research_ops`
 - `RedCube AI` 对应 `presentation_ops`
 
-这次 activation 仍然只面向已 admitted domain。
+这份已 absorbed 的 federation package 仍然只面向已 admitted domain。
 `Grant Foundry -> Med Auto Grant` 继续只是 signal-only / domain-direction evidence；`Review Ops` 与 `Thesis Ops` 继续保持为位于 onboarding 之下的 under-definition bundle。
 顶层 formal entry 仍然是本地 `TypeScript CLI`-first / read-only gateway surface，`OPL` 也仍然不是 runtime owner。
+当前没有新的 active follow-on tranche 打开；顶层最诚实的状态是中央同步停车，只有 admitted-domain 仓出现新的 absorbed delta，或中央 reference surfaces 发生真实漂移时，才重开下一棒。
 
 
 ## 当前边界
@@ -342,19 +343,20 @@ Human / Agent
 
 ## 路线图
 
-当前公开主线已经进入 `Phase 2 / Minimal admitted-domain federation activation package`，但它仍然建立在已冻结的 `Phase 1` 本地 `TypeScript CLI` + 只读 gateway 基线之上：
+当前公开主线仍然是已 absorbed 的 `Phase 2 / Minimal admitted-domain federation activation package`，但它仍然建立在已冻结的 `Phase 1` 本地 `TypeScript CLI` + 只读 gateway 基线之上：
 
 - 把已经冻结的 `OPL Gateway` contracts 落成面向人类与 Agent 的 CLI-first、read-only discovery surface
 - 继续把 `Research Foundry -> Med Auto Science` 明确为当前 `Research Ops` 主线
 - 继续把 `RedCube AI` 明确为视觉交付的 domain gateway 与 harness
 - 在对应 domain 边界被显式冻结之前，继续让 `Grant Ops`、`Review Ops`、`Thesis Ops` 停留在 admitted gateway surface 之外
 
-截至 `2026-04-08`，当前 repo 仍保有可运行的本地 `TypeScript CLI`-first / read-only gateway baseline。
+截至 `2026-04-10`，当前 repo 仍保有可运行的本地 `TypeScript CLI`-first / read-only gateway baseline。
 已完成的 `Phase 1 / G2 release-closeout` 已把 `G2 stable public baseline` 收口成单一、稳定、repo-tracked 的公开基线。
 这条基线也因此继续构成 `OPL` 在 `Phase 1` 的 formal entry contract 与 public system surface。
 repo-tracked 的 `Phase 1 / G3 thin handoff planning freeze hardening` 已把 `G3` 冻结在 planning-only gate，因此当前仍不进入 mutation entry，不把 `OPL` 提升成统一 runtime owner，也不提前抽共享执行内核。
 repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review Ops` 然后 `Thesis Ops`：这两条 candidate path 都继续停留在 admission / discovery / routing / handoff readiness 之下，而 `Grant Foundry -> Med Auto Grant` 仍保持 signal-only 状态。
-当前已 absorb 的前序 follow-on 是 `Phase 1 exit + next-stage activation package freeze`；当前 active follow-on 已切到 `Minimal admitted-domain federation activation package`：它只针对 `MedAutoScience` + `RedCube AI` 收紧 federation wording，不会激活 routed action，不会 admission `Grant Ops` / `Review Ops` / `Thesis Ops`，也不会把 `OPL` 提升成 runtime owner。
+当前已 absorb 的前序门槛是 `Phase 1 exit + next-stage activation package freeze`；当前已 absorb 的 federation package 是 `Minimal admitted-domain federation activation package`：它只针对 `MedAutoScience` + `RedCube AI` 收紧 federation wording，不会激活 routed action，不会 admission `Grant Ops` / `Review Ops` / `Thesis Ops`，也不会把 `OPL` 提升成 runtime owner。
+因此，当前 repo-tracked truth 是一个诚实的中央同步停车点，而不是继续沿同一 package 无限滚动的活动 tranche。
 
 当前交付目标是：在当前 `Codex-default host-agent runtime` 之上，用本地 `TypeScript CLI` 作为 `Phase 1` 的入口 transport。
 在开发控制面上，`Codex Host` 负责规划冻结与真相裁决，`OMX` 负责在这些已冻结边界内做长时执行。

@@ -94,7 +94,8 @@ Current frozen state:
 - the completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` remains closed at the planning-contract boundary
 - the repo-tracked `Phase 1` candidate-domain closeout order is frozen as `Review Ops` then `Thesis Ops`
 - the absorbed predecessor follow-on is `Phase 1 exit + next-stage activation package freeze`
-- the current active follow-on is `Minimal admitted-domain federation activation package`, which now applies to the admitted `MedAutoScience` + `RedCube AI` federation surface only
+- the current `Minimal admitted-domain federation activation package` is already absorbed into repo-tracked top-level truth and still applies only to the admitted `MedAutoScience` + `RedCube AI` federation surface
+- no new active follow-on tranche is currently open beyond that absorbed package; another central sync only becomes truthful when an admitted-domain absorbed delta lands or the central reference surfaces drift
 
 Should support:
 
@@ -124,7 +125,8 @@ Current phase constraint:
 - the completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` remains the closeout boundary for routed-action planning, and the repository is not entering routed-action implementation
 - the repo-tracked `Review Ops -> Thesis Ops` candidate-domain closeout keeps those candidate paths below admission / discovery / routing readiness while G3 stays inactive beyond planning freeze
 - the absorbed predecessor follow-on is `Phase 1 exit + next-stage activation package freeze`, which recorded the minimal stronger-federation follow-on before the threshold was met
-- the current active follow-on is `Minimal admitted-domain federation activation package`, which strengthens federation wording for the already admitted domains only without activating runtime ownership
+- the current `Minimal admitted-domain federation activation package` is already absorbed into repo-tracked top-level truth, strengthens federation wording for the already admitted domains only, and still does not activate runtime ownership
+- no new active follow-on tranche is currently open beyond that absorbed package; another central sync only becomes truthful when an admitted-domain absorbed delta lands or the central reference surfaces drift
 - this is a planning gate, not a runtime gate; `route_request`, `build_handoff_payload`, and `audit_routing_decision` are frozen as planning-level contract operations only
 - the only allowed successful handoff target remains `domain_gateway`, and the no-bypass rule forbids direct domain-harness targeting
 - `routed-actions.schema.json` remains a planning dependency, not a launcher

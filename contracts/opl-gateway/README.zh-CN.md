@@ -15,26 +15,26 @@
 
 ## 当前基线与已激活 follow-on 对齐
 
-截至 `2026-04-08`，当前 `opl-mainline` 的公开主线已经进入 `Phase 2 / Minimal admitted-domain federation activation package`，但 repo-tracked 的 formal entry 仍然是 `Phase 1` 那条本地 `TypeScript CLI`-first、read-only gateway baseline；它只读取这个目录中已经冻结的 contract 工件。
+截至 `2026-04-10`，当前 `opl-mainline` 的公开主线仍停留在已 absorbed 的 `Phase 2 / Minimal admitted-domain federation activation package`，但 repo-tracked 的 formal entry 仍然是 `Phase 1` 那条本地 `TypeScript CLI`-first、read-only gateway baseline；它只读取这个目录中已经冻结的 contract 工件。
 这条 transport 建立在当前 `Codex-default host-agent runtime` 之上；在开发控制面上，`Codex Host` 负责规划冻结与真相裁决，`OMX` 负责在已冻结边界内做长时执行。
 已完成的 `Phase 1 / G2 release-closeout` 已把 `G2 stable public baseline` 收口成稳定、单一、repo-tracked 的公开基线。
-因此，即便公开主线已经激活了最小 admitted-domain federation follow-on，这条 repo-tracked 基线也仍然是当前 `OPL` 的 formal entry contract 与 public system surface。
+因此，即便公开主线已经吸收了这份最小 admitted-domain federation package，这条 repo-tracked 基线也仍然是当前 `OPL` 的 formal entry contract 与 public system surface。
 已完成的 repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` 继续停留在 planning-contract closeout 层：当前目录只冻结围绕 `route_request`、`build_handoff_payload`、`audit_routing_decision` 的 planning gate / planning-level contract。唯一允许的成功 handoff 目标仍只能是 `domain_gateway`；no-bypass 规则继续禁止直达 domain harness；`routed-actions.schema.json` 仍只是 planning dependency，不是 launcher。
 repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review Ops` 然后 `Thesis Ops`：这两条 candidate path 都继续停留在 domain admission、`G2` discovery readiness、`G3` routed-action readiness 与 handoff readiness 之下。
-当前已 absorb 的前序 follow-on 是 `Phase 1 exit + next-stage activation package freeze`；当前 active follow-on 已切到 `Minimal admitted-domain federation activation package`：它只对已经 admitted 的 `MedAutoScience` 与 `RedCube AI` domain surface 生效，且仍然**不会**激活 runtime ownership。
+当前已 absorb 的前序门槛是 `Phase 1 exit + next-stage activation package freeze`；当前这份 `Minimal admitted-domain federation activation package` 也已经被吸收到 repo-tracked 顶层真相中，只对已经 admitted 的 `MedAutoScience` 与 `RedCube AI` domain surface 生效。当前没有新的 active follow-on tranche 打开；只有 admitted-domain 仓再落下新的 absorbed delta，或中央 reference surfaces 发生真实漂移时，下一次 central sync 才是诚实的。runtime ownership 仍然**不会**被激活。
 因此，当前 OPL 层的 repo-tracked formal entry 也仍然只是这条本地 `TypeScript CLI`-first / read-only gateway surface，而不是 launcher、mutation entry 或 runtime-owner surface。
 这个交付目标**不会**把当前目录提升成 runtime、routed-action control plane 或 canonical truth store；它只是把已有的顶层 contract language 继续维持为本地 CLI surface 可读取的合同入口。
 
 ## 当前四仓统一对齐配套文档
 
 下面这些 reference-grade 配套文档用于冻结当前四仓的状态、runtime 口径与开发控制面分工；它们不会把当前目录升级成 runtime owner，也不会形成第二真相源。
-下面这组文档以 `2026-04-08` 为日期锚点，并承担把四仓最新状态回写到 `OPL` 顶层参考同步面的责任；这些参考面不会反向抬升为公开主线真相。
+下面这组文档以 `2026-04-10` 为日期锚点，并承担把四仓最新状态回写到 `OPL` 顶层参考同步面的责任；这些参考面不会反向抬升为公开主线真相。
 
 - [生态四仓统一状态总表](../../docs/references/ecosystem-status-matrix.md) — 当前四仓阶段/状态总览（中文内部参考）
 - [Contract Convergence v1 执行板](../../docs/references/contract-convergence-v1-execution-board.md) — 当前统一 program、active phase 与离场条件（中文内部参考）
 - [Codex-default Host-Agent Runtime 合同](../../docs/references/host-agent-runtime-contract.md) — 当前本地默认 runtime 口径（中文内部参考）
 - [四仓统一开发运行合同](../../docs/references/development-operating-model.md) — `Codex Host` / `OMX` 规划冻结与长时执行分工（中文内部参考）
-- [四仓统一对齐检查表与任务板](../../docs/references/runtime-alignment-taskboard.md) — 当前 `Phase B / Handle And Surface Convergence` 活跃任务面（中文内部参考）
+- [四仓统一对齐检查表与任务板](../../docs/references/runtime-alignment-taskboard.md) — 当前 `Phase C / Object And Report Behavior Convergence` 活跃任务面（中文内部参考）
 - [OMX 长线执行门控指引](../../docs/references/omx-stage-gated-longrun-guide.md) — 阶段门控长跑规则（中文内部参考）
 
 ## 上位文档

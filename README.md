@@ -23,7 +23,7 @@
     </td>
     <td width="33%" valign="top">
       <strong>Federation State</strong><br/>
-      <code>Research Foundry -> Med Auto Science</code> is the active Research Ops line; <code>Grant Foundry -> Med Auto Grant</code> is now publicly scaffolded as top-level signal / domain-direction evidence for a future medical Grant Ops surface; <code>RedCube AI</code> is the emerging visual-deliverable surface
+      <code>Research Foundry -> Med Auto Science</code> is the active Research Ops line; <code>Grant Foundry -> Med Auto Grant</code> remains a public top-level signal / domain-direction scaffold for a future medical Grant Ops surface; <code>RedCube AI</code> is now the admitted visual-deliverable surface
     </td>
   </tr>
 </table>
@@ -129,7 +129,7 @@
     </td>
     <td width="20%" valign="top">
       <strong>Presentation Ops</strong><br/>
-      <code>Emerging</code><br/>
+      <code>Active</code><br/>
       via <code>RedCube AI</code> and its <code>ppt_deck</code> family
     </td>
   </tr>
@@ -294,19 +294,19 @@ Its current role is:
 
 ### Med Auto Grant
 
-[`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) is the newly opened document-first scaffold for the future medical `Grant Ops` surface under the `OPL` umbrella.
+[`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) is the current future medical `Grant Ops` domain harness direction under the `OPL` umbrella; inside its own repository it already has a local runtime baseline, but at the `OPL` federation layer it still remains signal-only / domain-direction evidence.
 
 Its current role is:
 
 - the public scaffold and top-level signal for the medical implementation of `Grant Foundry`
 - domain-direction evidence for the future author-side, proposal-facing `Grant Ops` medical surface
-- the place where the first medical `NSFC` generic application MVP is being frozen
+- the place where the first medical `NSFC` generic application mainline and local runtime baseline are being frozen
 - not yet an admitted `OPL` domain gateway and harness
 - not yet a `G2` discovery target or a `G3` routed-action target
 
 ### RedCube AI
 
-[`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) is the emerging visual-deliverable domain gateway under the `OPL` umbrella.
+[`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) is the currently admitted visual-deliverable domain gateway under the `OPL` umbrella.
 
 Its correct boundary is:
 
@@ -317,16 +317,17 @@ Its correct boundary is:
 
 ## Current Federation Activation State
 
-As of `2026-04-08`, the predecessor `Phase 1 exit + next-stage activation package freeze` remains absorbed as the gate that enabled the current `Minimal admitted-domain federation activation package`.
+As of `2026-04-10`, `Phase 1 exit + next-stage activation package freeze` remains the absorbed predecessor gate, and `Phase 2 / Minimal admitted-domain federation activation package` is already absorbed into the current top-level federation truth.
 
 That activation is justified by two admitted domain surfaces that are now repo-tracked as stable enough for stronger top-level federation wording:
 
 - `MedAutoScience` for `research_ops`
 - `RedCube AI` for `presentation_ops`
 
-This activation still applies to already admitted domains only.
+That absorbed federation package still applies to already admitted domains only.
 `Grant Foundry -> Med Auto Grant` remains signal-only / domain-direction evidence only, while `Review Ops` and `Thesis Ops` remain under-definition bundles below onboarding.
 The top-level formal entry still remains the local `TypeScript CLI`-first / read-only gateway surface, and `OPL` still does not become a runtime owner.
+No new active follow-on tranche is currently open: the honest top-level state is a central-sync stop until an admitted-domain repository lands a new absorbed delta or the central reference surfaces drift.
 
 
 ## Scope Boundary
@@ -346,19 +347,20 @@ It should be described as:
 
 ## Roadmap
 
-The current public mainline is `Phase 2 / Minimal admitted-domain federation activation package`, built on top of the frozen `Phase 1` local `TypeScript CLI` + read-only gateway baseline:
+The current public mainline remains the absorbed `Phase 2 / Minimal admitted-domain federation activation package`, built on top of the frozen `Phase 1` local `TypeScript CLI` + read-only gateway baseline:
 
 - turn the frozen OPL gateway contracts into a CLI-first, read-only discovery surface for humans and agents
 - keep `Research Foundry -> Med Auto Science` explicit as the current `Research Ops` line
 - keep `RedCube AI` explicit as the visual-deliverable domain gateway and harness
 - keep `Grant Ops`, `Review Ops`, and `Thesis Ops` below the admitted gateway surface until their domain boundaries are explicitly frozen
 
-As of `2026-04-08`, the repository still has a runnable local `TypeScript CLI`-first / read-only gateway baseline.
+As of `2026-04-10`, the repository still has a runnable local `TypeScript CLI`-first / read-only gateway baseline.
 The completed `Phase 1 / G2 release-closeout` has already closed the `G2 stable public baseline` into the single stable repo-tracked public entry.
 That baseline therefore remains the current `OPL` `Phase 1` formal entry contract and public system surface.
 The repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` has already frozen `G3` at a planning-only gate, so it still does not open a mutation entry, turn `OPL` into a unified runtime owner, or pull a shared execution core forward.
 The repo-tracked `Phase 1` candidate-domain closeout order is frozen as `Review Ops` then `Thesis Ops`: both candidate paths remain below admission / discovery / routing / handoff readiness, while `Grant Foundry -> Med Auto Grant` stays signal-only.
-The absorbed predecessor follow-on is `Phase 1 exit + next-stage activation package freeze`, and the current active follow-on is `Minimal admitted-domain federation activation package`, which strengthens federation wording for `MedAutoScience` + `RedCube AI` only without activating routed action, admitting `Grant Ops` / `Review Ops` / `Thesis Ops`, or turning `OPL` into a runtime owner.
+The absorbed predecessor gate is `Phase 1 exit + next-stage activation package freeze`, and the absorbed current federation package is `Minimal admitted-domain federation activation package`, which strengthens federation wording for `MedAutoScience` + `RedCube AI` only without activating routed action, admitting `Grant Ops` / `Review Ops` / `Thesis Ops`, or turning `OPL` into a runtime owner.
+The current repo-tracked truth is therefore an honest central-sync stop rather than an open-ended same-package continuation line.
 
 The current delivery target uses a local `TypeScript CLI` as the Phase 1 entry transport on top of the current `Codex-default host-agent runtime`.
 At the development-control layer, `Codex Host` freezes planning and truth while `OMX` handles long-running execution inside those frozen boundaries.

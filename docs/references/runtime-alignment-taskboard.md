@@ -1,6 +1,6 @@
 # 四仓统一对齐检查表与任务板
 
-状态锚点：`2026-04-08`
+状态锚点：`2026-04-10`
 
 ## 文档目的
 
@@ -28,7 +28,7 @@
 - 这是 `OPL docs` 下的内部参考文档，默认中文维护。
 - 它不替代各仓自己的 `README`、`contracts/project-truth/AGENTS.md`、`CURRENT_PROGRAM.md` 或 domain 内主线文档。
 - 它只作为内部参考同步面，不反向抬升为 `OPL` 公开主线真相。
-- 截至 `2026-04-08`，其中大部分合同层对齐项已经完成；下面保留的主要是“下一步仍要继续压实的行为面”。
+- 截至 `2026-04-10`，其中大部分合同层对齐项已经完成；下面保留的主要是“下一步仍要继续压实的行为面”。
 - 若与各仓 current truth 冲突，以各仓 current truth 为准。
 
 ## 一、当前统一结论
@@ -54,9 +54,10 @@
 - `G2 stable public baseline`
 - `G3 thin handoff planning freeze`
 - `Phase 1 exit + next-stage activation package freeze`
-- 当前 active follow-on 是 `Minimal admitted-domain federation activation package`
+- 当前已 absorbed 的 federation package 是 `Minimal admitted-domain federation activation package`
 - 当前 top-level formal entry contract 仍是 `TypeScript CLI + read-only gateway surface`
 - `Review Ops -> Thesis Ops` 是已冻结的 candidate-domain closeout 顺序
+- 当前没有新的 active follow-on tranche；只有 admitted-domain 新增 absorbed delta 或中央 reference surfaces 发生真实漂移时，才重开中央同步线
 
 ## 二、跨仓统一检查表
 
@@ -76,7 +77,7 @@
 
 ### 1. one-person-lab
 
-当前下一棒不是发明更大的平台叙事，而是继续把 admitted-domain federation 的顶层真相压稳，并持有 `Phase C` 的统一离场条件。
+当前下一棒不是发明更大的平台叙事，而是在 admitted-domain 新增 absorbed delta 或中央 reference surfaces 真实漂移时，作为中央同步持有人继续把顶层真相压稳。
 
 具体继续项：
 
@@ -88,6 +89,7 @@
   - candidate-domain blocked truth
   - `Grant Foundry -> Med Auto Grant` 的 signal-only 边界
 - 不把 `OPL` 扩写成 runtime owner
+- 如果 admitted-domain 没有新增 repo-tracked absorbed delta，或中央 reference surfaces 没有真实漂移，就应 honest stop
 
 ### 2. Med Auto Science
 
@@ -103,41 +105,40 @@
 
 ### 3. RedCube AI
 
-这条主线当前已经 absorb 到 `Phase 2 / direct-delivery operator handoff hardening`。
+这条主线当前已经 absorb 到 `Phase 2 / source-readiness deep research trigger + gate convergence`。
 
 具体继续项：
 
-- 当前 latest absorbed tranche 已把 `operator_handoff` 收进 `ppt_deck` / guarded `poster_onepager` 的 canonical governance path
-- `auditDeliverable / runtimeWatch / getReviewState / getPublicationProjection` 已围绕同一 canonical deliverable/topic path 输出 handoff summary
-- 当前没有已冻结的下一候选 tranche；若继续，必须先形成新的 same-mainline truthful freeze
+- 当前 latest absorbed tranche 已把 `Deep Research` 冻结为 shared `Source Readiness` augmentation，并把 `planning_ready` 压到 `auditDeliverable / runtimeWatch / getReviewState / getPublicationProjection` 的同一 deliverable/topic path
+- `direct-delivery operator_handoff` 与 `lifecycle_stage_summary` 已作为 absorbed provenance 留在主线，不再是当前最新 tranche 本体
+- 当前没有已冻结的下一候选 tranche；若继续，必须先形成 `workspace / operator quickstart convergence` 的 same-mainline truthful freeze
 - 持续保持 `CLI / MCP / controller` 三字段语义与实现状态一致
 - 围绕 `ppt_deck`、`xiaohongshu` 等稳定 family 做手工测试
 - 仍不提前扩成更大的统一 runtime 或 OPL runtime owner
 
 ### 4. Med Auto Grant
 
-这条主线当前已经 absorb 到 `P4.A / Verification Gate Surface`。
+这条主线当前已经 absorb 到 `R5.A / Hosted-Friendly Session Boundary`。
 
 具体继续项：
 
-- `P4.A` 已把五个 CLI surface 收口为当前 canonical verification gate surface
-- `stage-route-report` 当前已稳定承载 `verification_checkpoint / checkpoint_status`
-- gate-open `freeze_ready` 与真正 `submission_frozen` 已 machine-readable 分开
-- 当前不得直接实现 `P4.B`；若继续，唯一 truthful 下一步是先冻结 `P4.B / Verification OS And Checkpoint Surface` activation package
+- 当前五个 canonical CLI surface 仍是 formal entry / verifier baseline，但本地 runtime ladder 已继续吸收到 `run-local / resume-local / build-artifact-bundle / execute-revision-pass / build-final-package / build-hosted-contract-bundle`
+- `stage-route-report` 继续承载 `verification_checkpoint / checkpoint_status`，且当前 truthful 后续重点是收紧 revised workspace validator truth 与 landed local runtime outputs 的一致性
+- 当前不得回退成旧 `P4.B` 审计线；若继续，唯一 truthful 下一步是 `post-R5A local runtime hardening`
 - 保持 formal-entry matrix 的诚实表达：
   - `CLI` 是当前正式入口
   - `MCP` 仍是 future protocol layer
   - `controller` 仍是内部控制面
 - 继续 author-side `Grant Ops` baseline hardening
-- 不提前误写成成熟 submission-grade runtime
+- 不提前误写成 actual hosted runtime、`P5` federation 或成熟 submission-grade runtime
 
 ## 四、统一推进顺序
 
 当前最合理的统一推进顺序如下：
 
 1. 由 `one-person-lab` 持有 `Phase C` 的中央执行板、状态矩阵与任务板
-2. 先把 `redcube-ai` 已 absorb 的 `Phase 2 / direct-delivery operator handoff hardening` 同步进中央参考面，并等待新的 same-mainline truthful freeze
-3. 把 `med-autogrant` 已 absorb 的 `P4.A / Verification Gate Surface` 同步进中央参考面，并要求下一棒先 freeze `P4.B` activation package
+2. 先把 `redcube-ai` 已 absorb 的 `Phase 2 / source-readiness deep research trigger + gate convergence` 同步进中央参考面，并等待 `workspace / operator quickstart convergence` 的 truthful freeze
+3. 把 `med-autogrant` 已 absorb 的 `R5.A / Hosted-Friendly Session Boundary` 与 `post-R5A local runtime hardening` brief 同步进中央参考面
 4. 让 `med-autoscience` 以手工测试驱动稳定化，不重开新的架构 tranche
 5. 在至少两个业务仓的对象面、报告面和 gate 行为验证真正稳定后，再进入下一阶段
 
