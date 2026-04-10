@@ -1,0 +1,54 @@
+{
+  "package_id": "opl_phase_2_admitted_domain_delta_intake_refresh",
+  "date_anchor": "2026-04-11",
+  "status": "truth_frozen_pending_implementation",
+  "parent_board_id": "opl_phase_2_central_reference_sync_board",
+  "parent_package_id": "opl_minimal_admitted_domain_federation_activation_package",
+  "goal": "freeze the first follow-on central-sync slice so OPL can ingest the latest absorbed admitted-domain deltas into central references without widening top-level authority",
+  "current_known_delta_families": [
+    {
+      "domain_id": "redcube",
+      "latest_absorbed_commit": "9cfe58b",
+      "delta_label": "runtime watch locator integrity hardening",
+      "required_central_effect": "central references must stop describing quickstart/operator consistency as the latest absorbed RedCube delta and instead record runtime-watch locator integrity as the current absorbed tranche"
+    },
+    {
+      "domain_id": "medautoscience",
+      "latest_absorbed_commit": "5366d18",
+      "delta_label": "publication-gate routing and managed supervisor watch hardening",
+      "required_central_effect": "central references must stop describing the repo-side hardening edge at 7444000 and instead carry the latest absorbed publication-gate / supervisor-watch follow-on truth while preserving the external-runtime blocker"
+    }
+  ],
+  "in_scope": [
+    "docs/references/contract-convergence-v1-execution-board.md",
+    "docs/references/ecosystem-status-matrix.md",
+    "docs/references/runtime-alignment-taskboard.md",
+    "docs/references/omx-longrun-prompt-playbook.md",
+    "docs/references/opl-phase2-ecosystem-sync-owner-line.md"
+  ],
+  "out_of_scope": [
+    "public OPL runtime-owner promotion",
+    "new admitted-domain activation beyond MedAutoScience and RedCube AI",
+    "Grant Ops admission",
+    "routed-action runtime implementation",
+    "shared execution core extraction",
+    "managed web runtime claims"
+  ],
+  "verification_requirements": [
+    "git diff --check",
+    "npm run lint",
+    "npm run typecheck",
+    "npm run build",
+    "npm test",
+    "NODE_NO_WARNINGS=1 node --experimental-strip-types --test tests/src/opl-phase-2-central-reference-sync-board.test.ts tests/src/opl-public-truth-docs.test.ts"
+  ],
+  "closeout": {
+    "success_state": "CENTRAL_REFERENCE_CONVERGENCE_CLOSED_AND_ABSORBED",
+    "next_tranche_candidate": "phase_2_gateway_surface_wording_sync",
+    "stop_if": [
+      "the absorbed admitted-domain deltas are already fully reflected in the central reference surfaces",
+      "the next write would widen OPL authority rather than sync references",
+      "the next step needs new external domain evidence instead of central sync"
+    ]
+  }
+}

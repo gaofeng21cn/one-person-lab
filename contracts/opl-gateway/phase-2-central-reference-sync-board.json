@@ -1,0 +1,61 @@
+{
+  "board_id": "opl_phase_2_central_reference_sync_board",
+  "date_anchor": "2026-04-11",
+  "status": "prefrozen_follow_on_board",
+  "parent_package_id": "opl_minimal_admitted_domain_federation_activation_package",
+  "board_goal": "freeze a multi-slice central reference-sync owner line so OMX can keep OPL aligned with already absorbed domain truth without promoting OPL into a runtime owner",
+  "entry_conditions": [
+    "an admitted-domain repository lands a new absorbed repo-tracked delta",
+    "central OPL reference surfaces drift from already absorbed admitted-domain truth",
+    "top-level gateway wording, acceptance surfaces, or OMX prompt templates drift from the current admitted-domain evidence boundary"
+  ],
+  "ordered_tranches": [
+    {
+      "tranche_id": "phase_2_admitted_domain_delta_intake_refresh",
+      "kind": "activation_package",
+      "goal": "refresh the central execution board, status matrix, taskboard, and prompt library against the latest absorbed admitted-domain deltas before wider wording sync",
+      "current_known_delta_families": [
+        "RedCube AI latest absorbed same-mainline delta: runtime watch locator integrity hardening (`9cfe58b`)",
+        "MedAutoScience latest absorbed repo-side hardening delta: publication-gate routing and managed supervisor watch (`5366d18`)"
+      ]
+    },
+    {
+      "tranche_id": "phase_2_gateway_surface_wording_sync",
+      "kind": "same_mainline_hardening",
+      "goal": "sync the minimum necessary OPL gateway wording, contract hub wording, and acceptance references to the refreshed admitted-domain truth without widening authority"
+    },
+    {
+      "tranche_id": "phase_2_omx_prompt_and_worktree_handbook_sync",
+      "kind": "same_mainline_hardening",
+      "goal": "keep OMX templates, worktree rules, and longrun-operating references aligned with the same central-sync truth so follow-on runs do not stop on stale execution guidance"
+    },
+    {
+      "tranche_id": "phase_2_reference_regression_refresh",
+      "kind": "same_mainline_hardening",
+      "goal": "refresh the minimum top-level reference regressions so central sync remains machine-verified rather than narrative-only"
+    }
+  ],
+  "hard_boundaries": [
+    "do not promote OPL into a runtime owner",
+    "do not promote OPL into a mutation gateway",
+    "do not admit Grant Ops, Review Ops, or Thesis Ops",
+    "do not create new G2 or G3 readiness claims",
+    "do not activate routed-action runtime",
+    "do not rewrite Grant Foundry -> Med Auto Grant as an admitted domain",
+    "do not write Unified Harness Engineering Substrate as an extracted shared code framework"
+  ],
+  "required_verification": [
+    "git diff --check",
+    "npm run lint",
+    "npm run typecheck",
+    "npm run build",
+    "npm test",
+    "NODE_NO_WARNINGS=1 node --test tests/built/cli.test.mjs",
+    "NODE_NO_WARNINGS=1 node --experimental-strip-types --test tests/src/opl-activation-package-derived-surface-sync.test.ts tests/src/opl-minimal-admitted-domain-federation-activation-package.test.ts tests/src/opl-phase-2-central-reference-sync-board.test.ts tests/src/opl-public-truth-docs.test.ts",
+    "focused rg audit for runtime owner / no-bypass / signal-only / candidate-domain / G2 / G3 / handoff-ready wording"
+  ],
+  "terminal_states": [
+    "CENTRAL_REFERENCE_CONVERGENCE_CLOSED_AND_ABSORBED",
+    "NO_NEW_ADMITTED_DOMAIN_DELTA_HONEST_STOP"
+  ]
+}

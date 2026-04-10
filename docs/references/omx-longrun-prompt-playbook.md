@@ -78,6 +78,9 @@
 当前推荐用途：
 
 - 当 admitted-domain 业务仓有新的 absorbed repo-tracked truth 后，作为中央 sync owner 继续收紧 `Phase 2` 顶层 federation wording 与四仓中央参考面
+- 当前 board 已预冻结的 admitted-domain absorbed delta 锚点：
+  - `RedCube AI` = `9cfe58b` / `runtime watch locator integrity hardening`
+  - `MedAutoScience` = `5366d18` / `publication-gate routing and managed supervisor watch hardening`
 
 ```text
 你现在在 one-person-lab 仓库，按“同一棒内自动收口”执行。
@@ -88,6 +91,8 @@
 - .omx/context/CURRENT_PROGRAM.md
 - docs/roadmap.zh-CN.md
 - docs/references/opl-phase2-ecosystem-sync-owner-line.md
+- docs/references/opl-phase-2-central-reference-sync-board.md
+- docs/references/opl-phase-2-admitted-domain-delta-intake-refresh.md
 - docs/references/ecosystem-status-matrix.md
 - docs/references/contract-convergence-v1-execution-board.md
 - docs/references/runtime-alignment-taskboard.md
@@ -95,6 +100,8 @@
 - docs/references/opl-gateway-rollout.zh-CN.md
 - docs/references/opl-gateway-acceptance-test-spec.zh-CN.md
 - contracts/opl-gateway/minimal-admitted-domain-federation-activation-package.json
+- contracts/opl-gateway/phase-2-central-reference-sync-board.json
+- contracts/opl-gateway/phase-2-admitted-domain-delta-intake-refresh.json
 - contracts/opl-gateway/README.zh-CN.md
 - README.zh-CN.md
 
@@ -102,12 +109,13 @@
 作为 admitted-domain federation 的中央 sync owner，在当前 evidence boundary 内继续同步顶层 federation wording、四仓状态总表、执行板、任务板与提示词模板，但不把 OPL 写成 runtime owner。
 
 必须完成：
-1. 先判断 admitted-domain 是否已经出现新的 repo-tracked absorbed delta，或 OPL 中央参考面是否发生真实漂移。
-2. 如果没有新增 delta，也没有中央漂移，就诚实停车，不编造新 tranche。
-3. 如果存在真实 delta，只同步中央 reference surfaces 与最小必要的 docs/contracts/tests。
-4. 每个 same-mainline slice 都先更新 machine-readable / repo-tracked truth，再更新 README / docs / tests。
-5. 保持 `CLI-first / read-only` formal entry、no-bypass、candidate-domain blocked truth、signal-only `Grant Ops` wording 一致。
-6. 若本轮 sync 收口且验证全绿，就直接 commit-closeout -> absorb to main。
+1. 先读取 `phase-2-central-reference-sync-board` 与 `phase-2-admitted-domain-delta-intake-refresh`，按 board 中已预冻结的 tranche 顺序执行，而不是每完成一个 slice 就回到“没有下一棒”。
+2. 先判断 admitted-domain 是否已经出现新的 repo-tracked absorbed delta，或 OPL 中央参考面是否发生真实漂移。
+3. 如果没有新增 delta，也没有中央漂移，就诚实停车，不编造新 tranche。
+4. 如果存在真实 delta，先完成 `phase_2_admitted_domain_delta_intake_refresh`，再按 board 判断是否继续 `phase_2_gateway_surface_wording_sync`、`phase_2_omx_prompt_and_worktree_handbook_sync`、`phase_2_reference_regression_refresh`。
+5. 每个 same-mainline slice 都先更新 machine-readable / repo-tracked truth，再更新 README / docs / tests。
+6. 保持 `CLI-first / read-only` formal entry、no-bypass、candidate-domain blocked truth、signal-only `Grant Ops` wording 一致。
+7. 若本轮 sync 收口且验证全绿，就直接 commit-closeout -> absorb to main。
 
 硬边界：
 - 不 admission 新 domain

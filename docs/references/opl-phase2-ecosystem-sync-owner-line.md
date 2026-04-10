@@ -18,6 +18,13 @@
 - 新的 runtime activation package；
 - 把 `OPL` 升格成 runtime owner 的授权。
 
+当前配套的 repo-tracked follow-on truth 固定为：
+
+- `contracts/opl-gateway/phase-2-central-reference-sync-board.json`
+- `contracts/opl-gateway/phase-2-admitted-domain-delta-intake-refresh.json`
+- `docs/references/opl-phase-2-central-reference-sync-board.md`
+- `docs/references/opl-phase-2-admitted-domain-delta-intake-refresh.md`
+
 ## 当前结论
 
 `OPL` 当前最适合由 `OMX` 承接的新线，不是继续虚构更大的平台故事，而是：
@@ -29,13 +36,20 @@
 
 当前这条线要同步的 admitted-domain delta，已经包括：
 
-- `RedCube AI` quickstart wording 中 `workspace doctor` diagnostic-only、`source intake / source research` 作为 bootstrap writer 的 current truth；
-- `Med Auto Grant` 在 post-R5A local runtime hardening 中新增的 walkthrough / output consistency、validator alignment closeout 与 root `CURRENT_PROGRAM.program_id` fail-closed guard；
-- `MedAutoScience` 的 manual stabilization checklist、runtime_watch auto-recovery、publication-gate closeout / completion fail-closed repo-side hardening。
+- `RedCube AI` 当前 latest absorbed delta 已推进到 `9cfe58b` 的 `runtime watch locator integrity hardening`，不能再只停留在 quickstart/operator-surface wording；
+- `RedCube AI` 之前已吸收的 operator route truth 仍必须保留：`workspace doctor` 继续只做诊断，而 bootstrap writer 仍是 `source intake / source research`；
+- `MedAutoScience` 当前 latest absorbed repo-side hardening 已推进到 `5366d18`，不能再只停留在 `7444000`；
+- `MedAutoScience` 已冻结的 `manual stabilization checklist` 仍属于中央 sync 时必须保留的 repo-side truth；
+- `Med Auto Grant` 仍允许作为中央状态矩阵里的 signal-only / non-admitted status reference，但不参与 admitted-domain activation；若中央说明引用其本地 runtime baseline，也必须保留 `CURRENT_PROGRAM.program_id` 这类已冻结 fail-closed guard 只是 signal-only direction evidence，而不是 admission 事实。
 
 换句话说，`OPL` 现在适合开的不是“更大平台实现线”，而是：
 
 - `Phase 2 ecosystem reference-sync and admitted-domain federation upkeep`
+- 而且这条 owner line 不再只是一句 owner note，而是有一块已预冻结的 tranche board：
+  1. `phase_2_admitted_domain_delta_intake_refresh`
+  2. `phase_2_gateway_surface_wording_sync`
+  3. `phase_2_omx_prompt_and_worktree_handbook_sync`
+  4. `phase_2_reference_regression_refresh`
 
 ## 什么时候值得开这条线
 
@@ -66,12 +80,20 @@
    - no-bypass
    - candidate domains 继续 blocked below onboarding / non-admitted / non-G2 / non-G3 / non-handoff-ready
 
+当前第一条 activation package 只允许先做：
+
+- `phase_2_admitted_domain_delta_intake_refresh`
+
+也就是先把 latest absorbed admitted-domain delta 收进中央执行板、状态矩阵、任务板与 OMX 提示词模板，再决定是否继续下一条 wording / handbook / regression sync tranche。
+
 ## In Scope
 
 - `docs/references/ecosystem-status-matrix.md`
 - `docs/references/contract-convergence-v1-execution-board.md`
 - `docs/references/runtime-alignment-taskboard.md`
 - `docs/references/omx-longrun-prompt-playbook.md`
+- `docs/references/opl-phase-2-central-reference-sync-board.md`
+- `docs/references/opl-phase-2-admitted-domain-delta-intake-refresh.md`
 - admitted-domain 最新真相落地后，必要的：
   - `README*`
   - `docs/roadmap*`

@@ -56,6 +56,8 @@
 - `references/omx-stage-gated-longrun-guide.md`
 - `references/omx-longrun-prompt-playbook.md`
 - `references/opl-phase2-ecosystem-sync-owner-line.md`
+- `references/opl-phase-2-central-reference-sync-board.md`
+- `references/opl-phase-2-admitted-domain-delta-intake-refresh.md`
 - `references/runtime-alignment-taskboard.md`
 - `references/opl-surface-lifecycle-map*`
 - `references/opl-surface-authority-matrix*`

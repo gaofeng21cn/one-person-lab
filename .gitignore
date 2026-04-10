@@ -1,6 +1,7 @@
 .DS_Store
 .omx/
 dist/
+node_modules/
 *.tsbuildinfo
 .codex/*
 !.codex/agents/
