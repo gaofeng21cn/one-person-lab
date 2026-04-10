@@ -180,9 +180,20 @@ test('contract convergence execution board freezes the current unified program a
   assert.match(executionBoard, /Phase 2 \/ source-readiness deep research trigger \+ gate convergence/);
   assert.match(executionBoard, /Phase 2 \/ workspace (?:\/ )?operator quickstart convergence/);
   assert.match(executionBoard, /fd01266/);
+  assert.match(executionBoard, /workspace doctor.*只做诊断/);
+  assert.match(executionBoard, /bootstrap writer.*source intake \/ source research|source intake \/ source research.*bootstrap writer/);
+  assert.match(executionBoard, /619415f/);
   assert.match(executionBoard, /R5\.A \/ Hosted-Friendly Session Boundary/);
   assert.match(executionBoard, /6277163/);
+  assert.match(executionBoard, /e8f9582/);
+  assert.match(executionBoard, /2c434b1/);
+  assert.match(executionBoard, /c3ba2a7/);
   assert.match(executionBoard, /post-R5A local runtime hardening/);
+  assert.match(executionBoard, /dd865e0/);
+  assert.match(executionBoard, /40e343c/);
+  assert.match(executionBoard, /d17959e/);
+  assert.match(executionBoard, /ee1c0b2/);
+  assert.match(executionBoard, /7444000/);
 
   assert.match(statusMatrix, /Contract Convergence v1/);
   assert.match(statusMatrix, /Phase C \/ Object And Report Behavior Convergence/);
@@ -191,9 +202,19 @@ test('contract convergence execution board freezes the current unified program a
   assert.match(statusMatrix, /CURRENT_MAXIMUM_REACHED_AND_ABSORBED_TO_MAIN|honest stop/i);
   assert.match(statusMatrix, /workspace (?:\/ )?operator quickstart convergence/);
   assert.match(statusMatrix, /fd01266/);
-  assert.match(statusMatrix, /root-checkout truth path anchoring|root checkout/);
+  assert.match(statusMatrix, /workspace doctor.*只做诊断/);
+  assert.match(statusMatrix, /source intake \/ source research/);
+  assert.match(statusMatrix, /619415f/);
+  assert.match(statusMatrix, /post-R5A local runtime hardening current truth|root-checkout truth path anchoring|root checkout/);
   assert.match(statusMatrix, /6277163/);
+  assert.match(statusMatrix, /e8f9582/);
+  assert.match(statusMatrix, /2c434b1/);
+  assert.match(statusMatrix, /c3ba2a7/);
+  assert.match(statusMatrix, /CURRENT_PROGRAM\.program_id/);
   assert.match(statusMatrix, /post-R5A local runtime hardening/);
+  assert.match(statusMatrix, /manual stabilization checklist/);
+  assert.match(statusMatrix, /runtime_watch.*auto-recovery|heartbeat \/ auto-recovery/);
+  assert.match(statusMatrix, /premature completion/);
   assert.match(taskboard, /Contract Convergence v1/);
   assert.match(taskboard, /Phase C \/ Object And Report Behavior Convergence/);
   assert.match(taskboard, /verification checkpoint|行为验证/);
@@ -202,10 +223,26 @@ test('contract convergence execution board freezes the current unified program a
   assert.match(taskboard, /same-mainline concrete delta/);
   assert.match(taskboard, /workspace (?:\/ )?operator quickstart convergence/);
   assert.match(taskboard, /fd01266/);
+  assert.match(taskboard, /workspace doctor.*只做诊断/);
+  assert.match(taskboard, /workspace-init surface/);
+  assert.match(taskboard, /619415f/);
   assert.match(taskboard, /root-checkout truth path anchoring|root checkout/);
   assert.match(taskboard, /6277163/);
+  assert.match(taskboard, /e8f9582/);
+  assert.match(taskboard, /2c434b1/);
+  assert.match(taskboard, /c3ba2a7/);
+  assert.match(taskboard, /CURRENT_PROGRAM\.program_id/);
   assert.match(taskboard, /honest stop/i);
   assert.match(taskboard, /post-R5A local runtime hardening/);
+  assert.match(taskboard, /manual_runtime_stabilization_checklist\.md/);
+  assert.match(taskboard, /premature completion/);
+  assert.match(longrunPlaybook, /machine-readable \/ repo-tracked truth/);
+  assert.match(longrunPlaybook, /workspace doctor.*bootstrap writer.*source intake \/ source research|source intake \/ source research.*bootstrap writer/);
+  assert.match(longrunPlaybook, /619415f/);
+  assert.match(longrunPlaybook, /CURRENT_PROGRAM\.program_id/);
+  assert.match(longrunPlaybook, /manual stabilization checklist/);
+  assert.match(longrunPlaybook, /premature completion/);
+  assert.doesNotMatch(longrunPlaybook, /若可以，就优先收紧 revised-workspace validator/);
 
   for (const doc of [executionBoard, statusMatrix, taskboard, managedRuntimeReadiness, longrunPlaybook]) {
     assert.doesNotMatch(doc, /workspace \/ operator quickstart convergence` 仍未被冻结/);
@@ -538,6 +575,18 @@ test('internal reference truth docs carry the 2026-04-10 snapshot and current OP
   assert.match(taskboard, /Review Ops -> Thesis Ops/);
   assert.match(taskboard, /formal entry contract.*TypeScript CLI.*read-only gateway surface/);
   assert.match(taskboard, /honest stop/i);
+});
+
+test('owner-line brief freezes the current central reference convergence lane', () => {
+  const ownerLine = read('docs/references/opl-phase2-ecosystem-sync-owner-line.md');
+
+  assert.match(ownerLine, /状态锚点：`?2026-04-10`?/);
+  assert.match(ownerLine, /machine-readable \/ repo-tracked truth/);
+  assert.match(ownerLine, /workspace doctor.*bootstrap writer.*source intake \/ source research|source intake \/ source research.*bootstrap writer/);
+  assert.match(ownerLine, /CURRENT_PROGRAM\.program_id/);
+  assert.match(ownerLine, /manual stabilization checklist/);
+  assert.match(ownerLine, /CENTRAL_REFERENCE_CONVERGENCE_CLOSED_AND_ABSORBED/);
+  assert.match(ownerLine, /NO_NEW_ADMITTED_DOMAIN_DELTA_HONEST_STOP/);
 });
 
 

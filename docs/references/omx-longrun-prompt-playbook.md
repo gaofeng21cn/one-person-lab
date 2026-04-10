@@ -105,8 +105,9 @@
 1. 先判断 admitted-domain 是否已经出现新的 repo-tracked absorbed delta，或 OPL 中央参考面是否发生真实漂移。
 2. 如果没有新增 delta，也没有中央漂移，就诚实停车，不编造新 tranche。
 3. 如果存在真实 delta，只同步中央 reference surfaces 与最小必要的 docs/contracts/tests。
-4. 保持 `CLI-first / read-only` formal entry、no-bypass、candidate-domain blocked truth、signal-only `Grant Ops` wording 一致。
-5. 若本轮 sync 收口且验证全绿，就直接 commit-closeout -> absorb to main。
+4. 每个 same-mainline slice 都先更新 machine-readable / repo-tracked truth，再更新 README / docs / tests。
+5. 保持 `CLI-first / read-only` formal entry、no-bypass、candidate-domain blocked truth、signal-only `Grant Ops` wording 一致。
+6. 若本轮 sync 收口且验证全绿，就直接 commit-closeout -> absorb to main。
 
 硬边界：
 - 不 admission 新 domain
@@ -135,11 +136,12 @@
 
 - 当前不推荐新开“runtime 架构继续推进”型 owner line；主线保持 external gate truth，由人工真实项目测试驱动。若要开新线，只建议：
   1. `medical display` rolling hardening / visual audit；
-  2. 已通过人工测试打出的具体 repo-side bugfix worktree。
+  2. 已通过人工测试打出的具体 repo-side bugfix worktree，并先对齐 `docs/manual_runtime_stabilization_checklist.md`、`docs/external_runtime_dependency_gate.md` 与 `docs/agent_runtime_interface.md`。
 
 ```text
 med-autoscience 当前主线不适合继续自动打开新的 runtime architecture tranche。
 如果任务不是 display-only hardening 或人工测试已明确定位的 repo-side bugfix，请不要在本仓开启新的 heavy OMX mainline。
+若确有 repo-side bugfix，先对齐当前已 absorbed truth：manual stabilization checklist 已冻结；runtime_watch heartbeat / auto-recovery、closure handoff-ready bundle 识别、以及 publication gate 未 clear 时拒绝 premature completion 都已经进入 repo-side hardening 基线。不要把这些已 landed truth 重新写成新的 architecture tranche。
 ```
 
 ### 3. redcube-ai
@@ -170,10 +172,11 @@ med-autoscience 当前主线不适合继续自动打开新的 runtime architectu
 
 必须完成：
 1. 先确认 `contracts/runtime-program/current-program.json`、README/docs 与 reports 都把 quickstart 写成当前 absorbed tranche，而不是 future brief。
-2. 保持 `workspace doctor -> source intake / source research -> deliverable create -> deliverable audit -> deliverable run` 的 repo-verified quickstart route 与 `planning_ready` gate 对齐。
+2. 保持 `workspace doctor -> source intake / source research -> deliverable create -> deliverable audit -> deliverable run` 的 repo-verified quickstart route 与 `planning_ready` gate 对齐；其中 `workspace doctor` 只做诊断，brand-new workspace 的 bootstrap writer 仍是 `source intake / source research`（`run_source_intake` / `source research`），不是独立 workspace-init surface。
 3. 保持 `auditDeliverable / runtimeWatch / getReviewState / getPublicationProjection` 的同轴语义，以及 `xiaohongshu` human publication 边界。
-4. 若发现新的 concrete hostedization-prep / contract-export delta，必须先 freeze 到 active truth，再进入 implement -> verify -> review-closeout -> commit-closeout -> absorb。
-5. 若没有新的 honest delta，就停车在 honest stop；不得把 quickstart 重新写成未冻结 blocker。
+4. `619415f` 的 `phase_2_operator_surface_consistency_hardening` 仍未 absorbed；在 verification 过关并 absorbed to main 之前，不得把它写成 current truth。
+5. 若发现新的 concrete hostedization-prep / contract-export delta，必须先 freeze 到 active truth，再进入 implement -> verify -> review-closeout -> commit-closeout -> absorb。
+6. 若没有新的 honest delta，就停车在 honest stop；不得把 quickstart 重新写成未冻结 blocker。
 
 硬边界：
 - 不把 controller 写成正式入口
@@ -226,12 +229,12 @@ med-autoscience 当前主线不适合继续自动打开新的 runtime architectu
 - .omx/reports/med-autogrant-mainline/ITERATION_LOG.md
 
 任务目标：
-在 `R3.A / R4.A / R5.A` 已 landed 的前提下，继续把本地 `CLI-first + host-agent` runtime 收紧成更诚实、更可操作的 local product baseline，但不进入 actual hosted runtime 或 `P5`。
+在 `R3.A / R4.A / R5.A` 已 landed 的前提下，继续把本地 `CLI-first + host-agent` runtime 收紧成更诚实、更可操作的 local product baseline，但不进入 actual hosted runtime 或 `P5`。已 absorbed 的 canonical walkthrough / output consistency、revised-workspace validator / operator alignment、以及 root `CURRENT_PROGRAM.program_id` fail-closed guard 都视为前置 current truth，不再重开为 open delta。
 
 必须完成：
 1. 先按 `docs/specs/2026-04-09-post-r5a-local-runtime-hardening-brief.md` 判断当前 post-R5A delta 是否具体、可验证、仍在本地 runtime hardening 边界内。
-2. 若可以，就优先收紧 revised-workspace validator / checkpoint truth 与 landed local runtime outputs 的一致性。
-3. 同步 README / docs / command matrix / operator walkthrough 到已 landed 的本地命令面：`run-local`、`resume-local`、`build-artifact-bundle`、`execute-revision-pass`、`build-final-package`、`build-hosted-contract-bundle`。
+2. 先确认当前 delta 没有回退已 absorbed 的 canonical walkthrough / output consistency、revised-workspace validator / operator alignment，以及 `build-hosted-contract-bundle` 对 root `CURRENT_PROGRAM.program_id` 的 fail-closed 校验。
+3. 若存在新的 honest delta，再同步 README / docs / command matrix / operator walkthrough 到已 landed 的本地命令面：`run-local`、`resume-local`、`build-artifact-bundle`、`execute-revision-pass`、`build-final-package`、`build-hosted-contract-bundle`。
 4. 保持 `grant_run_id / workspace_id / draft_id / program_id`、checkpoint 语义、formal entry matrix 与 hostedization boundary 不漂移。
 5. 若 hard gates 通过，就自动完成 freeze -> implement -> verify -> review-closeout -> commit-closeout -> absorb to main。
 6. 若当前没有新的 honest post-R5A delta，就停车，而不是偷跑 actual hosted runtime、`P5`、same-repo HITL 或新 formal entry。

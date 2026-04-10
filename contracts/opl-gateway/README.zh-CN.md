@@ -29,6 +29,7 @@ repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review 
 
 下面这些 reference-grade 配套文档用于冻结当前四仓的状态、runtime 口径与开发控制面分工；它们不会把当前目录升级成 runtime owner，也不会形成第二真相源。
 下面这组文档以 `2026-04-10` 为日期锚点，并承担把四仓最新状态回写到 `OPL` 顶层参考同步面的责任；这些参考面不会反向抬升为公开主线真相。
+在当前这一轮 sync 中，需要继续显式守住三组 admitted-domain delta：`RedCube AI` 的 quickstart wording 里 `workspace doctor` 继续只做诊断、`source intake / source research` 才是 bootstrap writer；`Med Auto Grant` 的 post-R5A walkthrough / output consistency 与 root-`CURRENT_PROGRAM.program_id` hardening；以及 `MedAutoScience` 的 manual stabilization / runtime watch / publication gate repo-side hardening。
 
 - [生态四仓统一状态总表](../../docs/references/ecosystem-status-matrix.md) — 当前四仓阶段/状态总览（中文内部参考）
 - [Contract Convergence v1 执行板](../../docs/references/contract-convergence-v1-execution-board.md) — 当前统一 program、active phase 与离场条件（中文内部参考）

@@ -1,6 +1,6 @@
 # OPL Phase 2 生态同步 Owner Line Brief
 
-状态锚点：`2026-04-09`
+状态锚点：`2026-04-10`
 
 ## 文档目的
 
@@ -26,6 +26,12 @@
 - 在已有 admitted-domain 证据边界内，
 - 持续吸收 `MedAutoScience` 与 `RedCube AI` 等 admitted domain 新落地的 repo-tracked truth，
 - 并把顶层 federation wording、中央状态表、执行板、任务板、提示词模板与 acceptance/reference surfaces 同步到最新一致状态。
+
+当前这条线要同步的 admitted-domain delta，已经包括：
+
+- `RedCube AI` quickstart wording 中 `workspace doctor` diagnostic-only、`source intake / source research` 作为 bootstrap writer 的 current truth；
+- `Med Auto Grant` 在 post-R5A local runtime hardening 中新增的 walkthrough / output consistency、validator alignment closeout 与 root `CURRENT_PROGRAM.program_id` fail-closed guard；
+- `MedAutoScience` 的 manual stabilization checklist、runtime_watch auto-recovery、publication-gate closeout / completion fail-closed repo-side hardening。
 
 换句话说，`OPL` 现在适合开的不是“更大平台实现线”，而是：
 
@@ -53,7 +59,8 @@
 1. 保持 `OPL` 作为顶层 `Gateway / Federation / control language / public system surface` 的诚实表述；
 2. 把 admitted-domain 最新已吸收证据同步回中央参考面；
 3. 把四仓统一 program 的阶段、完成标准、下一棒与 OMX 提示词模板保持最新；
-4. 继续守住：
+4. 每个 same-mainline slice 先更新 machine-readable / repo-tracked truth，再更新 README / docs / tests；
+5. 继续守住：
    - `CLI-first / read-only` formal entry
    - `domain_gateway` 才是唯一允许的 successful handoff target
    - no-bypass
@@ -119,9 +126,9 @@
 
 这条线的理想停车结论不是“永远不停”，而是：
 
-- `ADMITTED_DOMAIN_SYNC_CLOSED_AND_ABSORBED`
+- `CENTRAL_REFERENCE_CONVERGENCE_CLOSED_AND_ABSORBED`
   或
 - `NO_NEW_ADMITTED_DOMAIN_DELTA_HONEST_STOP`
 
-前者表示本轮中央 sync 已完成并吸收；
+前者表示本轮中央 reference convergence sync 已完成并吸收；
 后者表示当前没有新的 admitted-domain truth 可以诚实同步。

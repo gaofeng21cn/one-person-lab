@@ -71,13 +71,16 @@
   - 把 `auditDeliverable / runtimeWatch / getReviewState / getPublicationProjection` 压到同一 deliverable/topic 边界上的 repo-verified behavior
   - 继续锁定 `run_id` 只是 per-run handle，不污染 `topic_id / deliverable_id`
   - 当前 latest absorbed tranche 已推进到 `Phase 2 / workspace operator quickstart convergence`；`Phase 2 / source-readiness deep research trigger + gate convergence` 继续作为 absorbed provenance 保留，且 `fd01266` 已把 quickstart 测试与 source-intake bootstrap flow 对齐；当前必须把 RedCube 写成 quickstart 已吸收
+  - `workspace doctor` 继续只做诊断；brand-new workspace 的 canonical bootstrap writer 是 `source intake / source research`（`run_source_intake` / `source research`），而不是独立的 workspace-init surface
+  - `619415f` 的 `phase_2_operator_surface_consistency_hardening` 仍处于 `truth_frozen / pending_verification`，当前不得误写成已 absorbed current truth
 - `med-autogrant`
   - 把 `validate-workspace / summarize-workspace / critique-summary / stage-route-report` 继续压成一致的 verification / checkpoint 行为面
   - 继续锁定 `forced_rollback_stage / forced_rollback_reason / presubmission_frozen` 的 machine-readable checkpoint 语义
-  - 当前 runtime-first ladder 已推进到 `R5.A / Hosted-Friendly Session Boundary` 并 absorbed；post-R5A local runtime hardening 已继续把 canonical runtime truth path 锚回 root checkout（`6277163`），且不得回退成旧 `P4.B` 或误写成 actual hosted runtime
+  - 当前 runtime-first ladder 已推进到 `R5.A / Hosted-Friendly Session Boundary` 并 absorbed；post-R5A local runtime hardening 已继续把 canonical runtime truth path 锚回 root checkout（`6277163`），随后又冻结了 canonical local walkthrough / output consistency（`e8f9582`）、revised-workspace validator / operator alignment closeout（`2c434b1`），以及 `build-hosted-contract-bundle` 覆盖既有 output 时对 root `CURRENT_PROGRAM.program_id` 的 fail-closed 校验（`c3ba2a7`）；不得回退成旧 `P4.B` 或误写成 actual hosted runtime
 - `med-autoscience`
   - 主线不重开新的架构 tranche
   - 以手工测试驱动稳定化，并保持 external runtime gate 的 truth 不漂移
+  - manual stabilization checklist 已冻结成 repo-tracked reference（`dd865e0`）；`runtime_watch` heartbeat / auto-recovery（`40e343c`、`d17959e`）、closure handoff-ready bundle 识别（`ee1c0b2`）与 publication gate 未 clear 时的 premature completion fail-closed（`7444000`）都已 absorbed 到当前 repo-side behavior hardening
   - `monorepo / runtime core ingest / controlled cutover` 仍是明确长线，但在 external runtime gate 清除前，不提前进入 physical migration、cross-repo refactor 或 scaffold cutover
 
 本阶段的重点不是再补一轮命名，而是把统一合同继续变成 repo-verified behavior。
@@ -99,9 +102,9 @@
 | 仓库 | 本轮在 `Contract Convergence v1` 下的交付项 | 当前判断 |
 | --- | --- | --- |
 | `one-person-lab` | 持有中央执行板、状态总表、任务板与顶层 references；冻结统一阶段与完成标准 | 当前负责 `Phase C` program owner 与 reference-sync |
-| `redcube-ai` | 把 `auditDeliverable / runtimeWatch / getReviewState / getPublicationProjection` 与 workspace/operator quickstart route 继续收口为同一 deliverable/topic 边界上的 canonical behavior | 已 absorb 到 `Phase 2 / workspace operator quickstart convergence`，并包含 `fd01266` quickstart test alignment；当前没有已冻结的下一候选 tranche |
-| `med-autogrant` | 把 `stage-route-report` 收口为 verification / checkpoint canonical behavior，并把本地 runtime ladder 与 docs/runtime 对齐 | 已 absorb through `R5.A / Hosted-Friendly Session Boundary`，并在 `6277163` 把 post-R5A runtime truth paths 锚回 root checkout；不得回退旧 `P4.B` |
-| `med-autoscience` | 保持 `program_id / study_id / quest_id / active_run_id` 与 current durable surface truth，不重开新 tranche | 当前转入手工测试稳定化面；`monorepo / runtime core ingest / controlled cutover` 明确保留为后置长线 |
+| `redcube-ai` | 把 `auditDeliverable / runtimeWatch / getReviewState / getPublicationProjection` 与 workspace/operator quickstart route 继续收口为同一 deliverable/topic 边界上的 canonical behavior | 已 absorb 到 `Phase 2 / workspace operator quickstart convergence`，并包含 `fd01266` quickstart test alignment；`workspace doctor` 继续只做诊断、`source intake / source research` 才是 bootstrap writer，而 `619415f` 仍未 absorbed；当前没有已冻结的下一候选 tranche |
+| `med-autogrant` | 把 `stage-route-report` 收口为 verification / checkpoint canonical behavior，并把本地 runtime ladder 与 docs/runtime 对齐 | 已 absorb through `R5.A / Hosted-Friendly Session Boundary`，并在 `6277163` / `e8f9582` / `2c434b1` / `c3ba2a7` 继续收紧 post-R5A runtime truth；不得回退旧 `P4.B` |
+| `med-autoscience` | 保持 `program_id / study_id / quest_id / active_run_id` 与 current durable surface truth，不重开新 tranche | 当前转入手工测试稳定化面；manual stabilization checklist、runtime_watch auto-recovery 与 publication-gate fail-closed hardening 已 absorbed，`monorepo / runtime core ingest / controlled cutover` 明确保留为后置长线 |
 
 ## 当前阶段的离场条件
 

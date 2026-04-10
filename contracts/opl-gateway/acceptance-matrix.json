@@ -577,6 +577,10 @@
         "docs/references/opl-operating-example-corpus.zh-CN.md",
         "docs/references/opl-operating-record-catalog.md",
         "docs/references/opl-operating-record-catalog.zh-CN.md",
+        "docs/references/ecosystem-status-matrix.md",
+        "docs/references/contract-convergence-v1-execution-board.md",
+        "docs/references/runtime-alignment-taskboard.md",
+        "docs/references/omx-longrun-prompt-playbook.md",
         "docs/references/opl-surface-lifecycle-map.md",
         "docs/references/opl-surface-lifecycle-map.zh-CN.md",
         "docs/references/opl-surface-authority-matrix.md",
@@ -612,6 +616,7 @@
         "candidate backlog keeps Grant/Review/Thesis Ops blocked below the onboarding gate",
         "operating-model, shared-foundation, and shared-foundation-ownership docs keep OPL at the top-level semantic/index/reuse layer while domains keep canonical truth, mutation, runtime writeback, review truth, and delivery/publication truth",
         "shared asset index, shared memory index, shared domain registry, and shared publication/delivery catalog stay roadmap-only/future-only/reference-only/non-admitting candidates until a later explicit readiness contract and acceptance alignment freeze them",
+        "central reference-sync companions keep the current admitted-domain absorbed deltas explicit, including RedCube quickstart bootstrap-writer wording, Med Auto Grant post-R5A walkthrough/output-consistency plus root-program-identity hardening, and MedAutoScience manual-stabilization/publication-gate repo-side hardening, without reopening unabsorbed tranches",
         "no G4 candidate index is described as a current public-entry/discovery-ready/routed-action-ready/execution/truth-owner/approval/publish-control/release-control surface",
         "activation-package docs keep the absorbed predecessor freeze and the current admitted-domain-only activation explicit without promoting OPL into a runtime owner"
       ],

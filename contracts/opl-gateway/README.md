@@ -29,6 +29,7 @@ That delivery target still does **not** promote this directory into a runtime, r
 
 These reference-grade companions freeze the current four-repo status, runtime wording, and development-control split without turning this directory into a runtime owner or second source of truth.
 This companion set is anchored to `2026-04-10` and carries the responsibility of writing the latest four-repo status back into the top-level OPL reference-sync companions without promoting those reference surfaces into public-mainline truth.
+In the current sync window, that includes keeping three admitted-domain delta families explicit: RedCube quickstart wording where `workspace doctor` stays diagnostic-only and `source intake / source research` remain the bootstrap writer, Med Auto Grant post-R5A walkthrough/output-consistency plus root-`CURRENT_PROGRAM.program_id` hardening, and MedAutoScience manual-stabilization/runtime-watch/publication-gate repo-side hardening.
 
 - [Ecosystem Status Matrix](../../docs/references/ecosystem-status-matrix.md) — Chinese-only internal reference for the current four-repo stage/status picture
 - [Contract Convergence v1 Execution Board](../../docs/references/contract-convergence-v1-execution-board.md) — Chinese-only internal reference for the current unified program, active phase, and exit criteria

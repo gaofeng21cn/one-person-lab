@@ -99,6 +99,17 @@ test('derived supporting-surface matrices and acceptance docs cover both activat
       'docs/references/opl-minimal-admitted-domain-federation-activation-package.md',
     ),
   );
+  assert.ok(crossDomain.required_files.includes('docs/references/ecosystem-status-matrix.md'));
+  assert.ok(crossDomain.required_files.includes('docs/references/contract-convergence-v1-execution-board.md'));
+  assert.ok(crossDomain.required_files.includes('docs/references/runtime-alignment-taskboard.md'));
+  assert.ok(crossDomain.required_files.includes('docs/references/omx-longrun-prompt-playbook.md'));
+  assert.ok(
+    crossDomain.contract_assertions.some((entry: string) =>
+      /central reference-sync companions keep the current admitted-domain absorbed deltas explicit/i.test(
+        entry,
+      ),
+    ),
+  );
 
   for (const doc of [lifecycleDoc, lifecycleDocZh, authorityDoc, authorityDocZh, reviewDoc, reviewDocZh]) {
     assert.match(doc, /Phase 1 Exit Activation Package|Phase 1 exit activation package|Phase 1 Exit Activation/);

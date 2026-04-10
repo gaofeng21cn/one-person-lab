@@ -137,9 +137,9 @@
 | 仓库 | 当前角色 | 当前阶段 | 当前已经成立的真相 | 下一步重点 |
 | --- | --- | --- | --- | --- |
 | `one-person-lab` | 顶层 `Gateway / Federation` | `Phase 2` admitted-domain federation truth 已吸收，当前停在中央同步持有人语境下的 honest stop | 顶层 formal entry、candidate-domain blocked truth、`Unified Harness Engineering Substrate`、四仓统一文档治理都已冻结；当前 repo-tracked truth 已到 `CURRENT_MAXIMUM_REACHED_AND_ABSORBED_TO_MAIN` | 只在 admitted-domain 业务仓出现新的 absorbed delta，或中央 reference surfaces 发生真实漂移时，重开中央同步线；不越界成 runtime owner |
-| `med-autoscience` | 医学 `Research Ops` `Domain Harness OS` | runtime mainline 已吸收，repo-side 停在 `EXTERNAL_RUNTIME_DEPENDENCY_BLOCKED_AFTER_ABSORB` | 主线 runtime contract 已吸收到 `main`，formal-entry / Auto-only / future HITL layering 口径已收口；runtime 主线与 display 独立 owner line 已明确分离；`monorepo / runtime core ingest / controlled cutover` 仍保留为后置长线 | 围绕已稳定能力做手工测试与问题修正；在 external runtime gate 清除前，不重开新的架构 tranche，也不提前进入 physical migration |
-| `redcube-ai` | 视觉交付 `Domain Harness OS` | 当前 repo-tracked absorbed tranche 已推进到 `Phase 2 / workspace operator quickstart convergence` | `CLI / MCP / controller` 语义已收口，`Auto-only` 主线与 future layering 口径已统一；`planning_ready` 仍通过 `auditDeliverable / runtimeWatch / getReviewState / getPublicationProjection` 的同一 deliverable/topic 治理路径收口；quickstart route 已把 `workspace doctor -> source intake / source research -> deliverable create -> deliverable audit -> deliverable run` 压成 repo-verified operator path，且包含 `fd01266` 测试对齐；`poster_onepager` 仍只代表 knowledge poster | `current-program.json` 仍诚实保持 `next_tranche_candidate = null`；若继续，应先冻结新的 same-mainline concrete delta，而不是把 quickstart 写回 next-line blocker |
-| `med-autogrant` | 医学 `Grant Ops` `Domain Harness OS` 方向 | runtime-first ladder 已吸收到 post-R5A root-checkout truth path anchoring（`6277163`） | author-side mainline、formal-entry、durability 与 `Auto-only` 主线语义已进入 current truth；`run-local / resume-local / build-artifact-bundle / execute-revision-pass / build-final-package / build-hosted-contract-bundle` 已形成当前本地 runtime ladder；canonical post-R5A walkthrough / current-truth 路径已锚回 root checkout；`MCP` 仍诚实停留在 future layer | 当前 truthful continuation 不是回到旧 `P4.B`，也不是进入 actual hosted runtime，而是只在出现新的 concrete post-R5A local runtime hardening delta 后再继续收紧；不提前误写成 `P5` |
+| `med-autoscience` | 医学 `Research Ops` `Domain Harness OS` | runtime mainline 已吸收，repo-side 停在 `EXTERNAL_RUNTIME_DEPENDENCY_BLOCKED_AFTER_ABSORB` | 主线 runtime contract 已吸收到 `main`，formal-entry / Auto-only / future HITL layering 口径已收口；runtime 主线与 display 独立 owner line 已明确分离；manual stabilization checklist 已冻结成 repo-tracked current truth，`runtime_watch` heartbeat / auto-recovery、closure handoff-ready bundle 识别与 publication gate 未 clear 时的 premature completion fail-closed 都已 absorbed 到 repo-side behavior hardening；`monorepo / runtime core ingest / controlled cutover` 仍保留为后置长线 | 围绕 manual stabilization checklist 做手工测试与问题修正；在 external runtime gate 清除前，不重开新的架构 tranche，也不提前进入 physical migration |
+| `redcube-ai` | 视觉交付 `Domain Harness OS` | 当前 repo-tracked absorbed tranche 已推进到 `Phase 2 / workspace operator quickstart convergence` | `CLI / MCP / controller` 语义已收口，`Auto-only` 主线与 future layering 口径已统一；`planning_ready` 仍通过 `auditDeliverable / runtimeWatch / getReviewState / getPublicationProjection` 的同一 deliverable/topic 治理路径收口；quickstart route 已把 `workspace doctor -> source intake / source research -> deliverable create -> deliverable audit -> deliverable run` 压成 repo-verified operator path，且包含 `fd01266` 测试对齐；其中 `workspace doctor` 继续只做诊断，brand-new workspace 的 canonical bootstrap writer 是 `source intake / source research`，不是独立 workspace-init surface；`poster_onepager` 仍只代表 knowledge poster | `current-program.json` 仍诚实保持 `next_tranche_candidate = null`；`619415f` 的 operator-surface consistency hardening 尚未 absorbed；若继续，应先冻结新的 same-mainline concrete delta，而不是把 quickstart 写回 next-line blocker |
+| `med-autogrant` | 医学 `Grant Ops` `Domain Harness OS` 方向 | runtime-first ladder 已吸收到 post-R5A local runtime hardening current truth（`6277163` / `e8f9582` / `2c434b1` / `c3ba2a7`） | author-side mainline、formal-entry、durability 与 `Auto-only` 主线语义已进入 current truth；`run-local / resume-local / build-artifact-bundle / execute-revision-pass / build-final-package / build-hosted-contract-bundle` 已形成当前本地 runtime ladder；canonical post-R5A walkthrough / output consistency 已冻结成 current truth，revised-workspace validator / operator alignment 已 absorbed closeout，且 `build-hosted-contract-bundle` 覆盖既有 output 时必须对 root-checkout `CURRENT_PROGRAM.program_id` 做 fail-closed 校验；`MCP` 仍诚实停留在 future layer | 当前 truthful continuation 不是回到旧 `P4.B`，也不是进入 actual hosted runtime，而是只在出现新的 concrete post-R5A local runtime hardening delta 后再继续收紧；不提前误写成 `P5` |
 
 对 `one-person-lab` 而言，当前 repo-tracked truth 不是重新发明 `Phase 1`，而是：
 
@@ -173,11 +173,11 @@
 - `MCP` 的真实实现状态并不相同
 - audit trail、gate surface 与对象层行为验证仍需继续按各仓节奏收紧
 - 手工测试与 hardening 推进顺序也不完全相同：
-  - `med-autoscience` 当前以 runtime 主线的手工测试和问题修正为主，display 继续独立滚动
-  - `redcube-ai` 当前 quickstart 已吸收，后续更适合围绕稳定功能测试与新的 same-mainline concrete delta 做诚实冻结
-  - `med-autogrant` 已推进到 post-R5A root-checkout truth path anchoring（`6277163`），下一步不是旧 `P4.B`，也不是 actual hosted runtime
+  - `med-autoscience` 当前以 manual stabilization checklist 驱动的手工测试和问题修正为主；runtime_watch auto-recovery、closure handoff-ready bundle 识别与 publication-gate premature-completion fail-closed 已 absorbed，display 继续独立滚动
+  - `redcube-ai` 当前 quickstart 已吸收，且 bootstrap writer 已明确收紧到 `source intake / source research`；后续更适合围绕稳定功能测试与新的 same-mainline concrete delta 做诚实冻结，不把 `619415f` 提前写成 current truth
+  - `med-autogrant` 已推进到 post-R5A local runtime hardening current truth（`6277163` / `e8f9582` / `2c434b1` / `c3ba2a7`），下一步不是旧 `P4.B`，也不是 actual hosted runtime
 - `MedAutoScience` 还挂着一条 domain-internal 的 `monorepo / runtime core ingest / controlled cutover` 长线；它和四仓统一 `Phase C` 是同一北极星上的前后阶段，不是同层并行交付
-- `redcube-ai` 当前没有已冻结的下一候选 tranche，但 quickstart 已不再是未冻结 blocker；`med-autogrant` 已比另外两个业务仓更靠前地推进到 post-R5A root-checkout truth path anchoring，因此四仓已在同一平台，但还不在同一精确 baton 位置
+- `redcube-ai` 当前没有已冻结的下一候选 tranche，但 quickstart 已不再是未冻结 blocker；`med-autogrant` 已比另外两个业务仓更靠前地推进到 post-R5A local runtime hardening current truth，因此四仓已在同一平台，但还不在同一精确 baton 位置
 
 ## 五、当前统一推进顺序
 
@@ -191,11 +191,11 @@
 1. `one-person-lab`
    继续维护中央同步面与 admitted-domain federation wording，但只在 admitted-domain 新增 absorbed delta 或中央 reference surfaces 出现真实漂移时重开 sync owner line。
 2. `med-autoscience`
-   以手工测试稳定化为主；display 资产化独立线不计入这条主线。`monorepo / runtime core ingest / controlled cutover` 仍是后置长线，但要等 external runtime gate、对象边界和报告边界继续稳定后再开。
+   以 manual stabilization checklist 驱动的手工测试稳定化为主；`runtime_watch` heartbeat / auto-recovery、closure handoff-ready bundle 识别与 publication gate 未 clear 时拒绝 premature completion 都已进入当前 repo-side hardening 基线。display 资产化独立线不计入这条主线；`monorepo / runtime core ingest / controlled cutover` 仍是后置长线，但要等 external runtime gate、对象边界和报告边界继续稳定后再开。
 3. `redcube-ai`
-   当前 latest absorbed tranche 已到 `Phase 2 / workspace operator quickstart convergence`，并包含 `fd01266` quickstart test alignment；若继续，需要先形成新的 same-mainline truthful freeze，而不是重开 quickstart。
+   当前 latest absorbed tranche 已到 `Phase 2 / workspace operator quickstart convergence`，并包含 `fd01266` quickstart test alignment；其中 `workspace doctor` 继续只做诊断，brand-new workspace 的 bootstrap writer 是 `source intake / source research`，不是独立 workspace-init surface。若继续，需要先形成新的 same-mainline truthful freeze，而不是重开 quickstart，也不得把 `619415f` 提前写成已 absorbed current truth。
 4. `med-autogrant`
-   当前 runtime-first ladder 已 absorbed through post-R5A root-checkout truth path anchoring（`6277163`）；若继续，必须先确认存在新的 concrete post-R5A local runtime hardening delta，而不是回退旧 `P4.B` 或打开 actual hosted runtime。
+   当前 runtime-first ladder 已 absorbed through post-R5A local runtime hardening current truth（`6277163` / `e8f9582` / `2c434b1` / `c3ba2a7`）；若继续，必须先确认存在新的 concrete post-R5A local runtime hardening delta，而不是回退旧 `P4.B`、重开已 closeout 的 walkthrough / validator drift，或打开 actual hosted runtime。
 
 ## 六、后置事项
 
