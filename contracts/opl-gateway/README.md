@@ -13,7 +13,7 @@ This directory therefore materializes gateway surfaces for discoverability / rev
 The `Unified Harness Engineering Substrate` named around this layer remains a shared architectural substrate, not a shared public code framework.
 For the broader ownership split, see [Shared Foundation](../../docs/shared-foundation.md) and [Shared Foundation Ownership](../../docs/shared-foundation-ownership.md).
 
-## Current baseline and activated follow-on alignment
+## Current baseline and absorbed follow-on alignment
 
 As of `2026-04-10`, the public `opl-mainline` mainline remains at the absorbed `Phase 2 / Minimal admitted-domain federation activation package`, while the repo-tracked formal entry still remains the `Phase 1` local `TypeScript CLI`-first, read-only gateway baseline that reads the frozen contract artifacts in this directory.
 That transport sits on top of the current `Codex-default host-agent runtime`, while `Codex Host` freezes planning/truth and `OMX` handles long-running execution inside those frozen boundaries.
@@ -35,6 +35,7 @@ This companion set is anchored to `2026-04-10` and carries the responsibility of
 - [Codex-default Host-Agent Runtime Contract](../../docs/references/host-agent-runtime-contract.md) — Chinese-only internal reference for the current local default runtime wording
 - [Development Operating Model](../../docs/references/development-operating-model.md) — Chinese-only internal reference for the `Codex Host` / `OMX` planning-vs-longrun split
 - [Runtime Alignment Taskboard](../../docs/references/runtime-alignment-taskboard.md) — Chinese-only internal reference for the active `Phase C / Object And Report Behavior Convergence` task slices
+- [Runtime Alignment Taskboard](../../docs/references/runtime-alignment-taskboard.md) — Chinese-only internal reference for the current `Phase C / Object And Report Behavior Convergence` task slices
 - [OMX Stage-Gated Longrun Guide](../../docs/references/omx-stage-gated-longrun-guide.md) — Chinese-only internal reference for stage-gated long-running execution rules
 
 ## Governing documents

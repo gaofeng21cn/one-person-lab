@@ -193,6 +193,7 @@ test('contract convergence execution board freezes the current unified program a
   assert.match(taskboard, /后置 domain-internal 轨道|不在当前 taskboard 的活跃实现范围/);
   assert.match(taskboard, /same-mainline truthful freeze/);
   assert.match(taskboard, /workspace \/ operator quickstart convergence/);
+  assert.match(taskboard, /honest stop/i);
   assert.match(taskboard, /post-R5A local runtime hardening/);
 });
 
@@ -270,6 +271,8 @@ test('current gateway docs keep the phase-1 formal-entry baseline while the publ
 
   assert.match(roadmap, /2026-04-10[\s\S]{0,120}Phase 2 \/ Minimal admitted-domain federation activation package/i);
   assert.match(roadmapZh, /截至 `?2026-04-10`?，`?OPL`? 公开主线仍停留在已 absorbed 的 `?Phase 2 \/ Minimal admitted-domain federation activation package`?/);
+  assert.match(roadmap, /No new active follow-on tranche is currently open|central-sync stop/i);
+  assert.match(roadmapZh, /没有新的 active follow-on tranche 打开|中央同步停车/);
   assert.match(discovery, /already has a runnable local `TypeScript CLI`-first \/ read-only gateway baseline/i);
   assert.match(discoveryZh, /已具备可运行的本地 `?TypeScript CLI`?-first \/ read-only gateway baseline/);
   assert.match(roadmap, /Phase 1[\s\S]{0,40}formal entry contract and public system surface/i);
@@ -499,7 +502,7 @@ test('reference-grade sync docs stay below the public mainline truth surface', (
   assert.match(taskboard, /不反向抬升为 `?OPL`? 公开主线真相/);
 });
 
-test('internal reference truth docs carry the 2026-04-10 snapshot and current OPL baton', () => {
+test('internal reference truth docs carry the 2026-04-10 snapshot and current OPL stop state', () => {
   const matrix = read('docs/references/ecosystem-status-matrix.md');
   const taskboard = read('docs/references/runtime-alignment-taskboard.md');
 
@@ -510,12 +513,14 @@ test('internal reference truth docs carry the 2026-04-10 snapshot and current OP
   assert.match(matrix, /Minimal admitted-domain federation activation package/);
   assert.match(matrix, /Review Ops -> Thesis Ops/);
   assert.match(matrix, /formal entry.*TypeScript CLI \+ read-only gateway baseline/);
+  assert.match(matrix, /CURRENT_MAXIMUM_REACHED_AND_ABSORBED_TO_MAIN|honest stop/i);
   assert.match(taskboard, /状态锚点：`?2026-04-10`?/);
   assert.match(taskboard, /G2 stable public baseline/);
   assert.match(taskboard, /G3 thin handoff planning/);
   assert.match(taskboard, /Minimal admitted-domain federation activation package/);
   assert.match(taskboard, /Review Ops -> Thesis Ops/);
   assert.match(taskboard, /formal entry contract.*TypeScript CLI.*read-only gateway surface/);
+  assert.match(taskboard, /honest stop/i);
 });
 
 
