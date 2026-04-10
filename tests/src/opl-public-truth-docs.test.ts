@@ -158,6 +158,8 @@ test('contract convergence execution board freezes the current unified program a
   const executionBoard = read('docs/references/contract-convergence-v1-execution-board.md');
   const statusMatrix = read('docs/references/ecosystem-status-matrix.md');
   const taskboard = read('docs/references/runtime-alignment-taskboard.md');
+  const managedRuntimeReadiness = read('docs/references/managed-runtime-migration-readiness-checklist.md');
+  const longrunPlaybook = read('docs/references/omx-longrun-prompt-playbook.md');
 
   assert.match(docsIndex, /references\/contract-convergence-v1-execution-board\.md/);
   assert.match(docsIndexZh, /references\/contract-convergence-v1-execution-board\.md/);
@@ -176,7 +178,10 @@ test('contract convergence execution board freezes the current unified program a
   assert.match(executionBoard, /monorepo \/ runtime core ingest \/ controlled cutover/);
   assert.match(executionBoard, /不属于当前四仓 `?Phase C`? 的直接交付/);
   assert.match(executionBoard, /Phase 2 \/ source-readiness deep research trigger \+ gate convergence/);
+  assert.match(executionBoard, /Phase 2 \/ workspace (?:\/ )?operator quickstart convergence/);
+  assert.match(executionBoard, /fd01266/);
   assert.match(executionBoard, /R5\.A \/ Hosted-Friendly Session Boundary/);
+  assert.match(executionBoard, /6277163/);
   assert.match(executionBoard, /post-R5A local runtime hardening/);
 
   assert.match(statusMatrix, /Contract Convergence v1/);
@@ -184,17 +189,29 @@ test('contract convergence execution board freezes the current unified program a
   assert.match(statusMatrix, /monorepo \/ runtime core ingest \/ controlled cutover/);
   assert.match(statusMatrix, /不是当前四仓统一 `?Phase C`? 的 blocker|不是当前统一 program 的直接交付项/);
   assert.match(statusMatrix, /CURRENT_MAXIMUM_REACHED_AND_ABSORBED_TO_MAIN|honest stop/i);
-  assert.match(statusMatrix, /workspace \/ operator quickstart convergence/);
+  assert.match(statusMatrix, /workspace (?:\/ )?operator quickstart convergence/);
+  assert.match(statusMatrix, /fd01266/);
+  assert.match(statusMatrix, /root-checkout truth path anchoring|root checkout/);
+  assert.match(statusMatrix, /6277163/);
   assert.match(statusMatrix, /post-R5A local runtime hardening/);
   assert.match(taskboard, /Contract Convergence v1/);
   assert.match(taskboard, /Phase C \/ Object And Report Behavior Convergence/);
   assert.match(taskboard, /verification checkpoint|行为验证/);
   assert.match(taskboard, /monorepo \/ runtime core ingest \/ controlled cutover/);
   assert.match(taskboard, /后置 domain-internal 轨道|不在当前 taskboard 的活跃实现范围/);
-  assert.match(taskboard, /same-mainline truthful freeze/);
-  assert.match(taskboard, /workspace \/ operator quickstart convergence/);
+  assert.match(taskboard, /same-mainline concrete delta/);
+  assert.match(taskboard, /workspace (?:\/ )?operator quickstart convergence/);
+  assert.match(taskboard, /fd01266/);
+  assert.match(taskboard, /root-checkout truth path anchoring|root checkout/);
+  assert.match(taskboard, /6277163/);
   assert.match(taskboard, /honest stop/i);
   assert.match(taskboard, /post-R5A local runtime hardening/);
+
+  for (const doc of [executionBoard, statusMatrix, taskboard, managedRuntimeReadiness, longrunPlaybook]) {
+    assert.doesNotMatch(doc, /workspace \/ operator quickstart convergence` 仍未被冻结/);
+    assert.doesNotMatch(doc, /等待 `workspace \/ operator quickstart convergence`/);
+    assert.doesNotMatch(doc, /判断这条 next line 是否能在当前 hard boundary 内被诚实冻结/);
+  }
 });
 
 test('phase-1 public gateway docs distinguish CLI transport from the host-agent and control-plane defaults', () => {

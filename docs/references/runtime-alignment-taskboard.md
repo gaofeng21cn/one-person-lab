@@ -105,26 +105,26 @@
 
 ### 3. RedCube AI
 
-这条主线当前已经 absorb 到 `Phase 2 / source-readiness deep research trigger + gate convergence`。
+这条主线当前已经 absorb 到 `Phase 2 / workspace operator quickstart convergence`。
 
 具体继续项：
 
-- 当前 latest absorbed tranche 已把 `Deep Research` 冻结为 shared `Source Readiness` augmentation，并把 `planning_ready` 压到 `auditDeliverable / runtimeWatch / getReviewState / getPublicationProjection` 的同一 deliverable/topic path
-- `direct-delivery operator_handoff` 与 `lifecycle_stage_summary` 已作为 absorbed provenance 留在主线，不再是当前最新 tranche 本体
-- 当前没有已冻结的下一候选 tranche；若继续，必须先形成 `workspace / operator quickstart convergence` 的 same-mainline truthful freeze
+- 当前 latest absorbed tranche 已把 `workspace doctor -> source intake / source research -> deliverable create -> deliverable audit -> deliverable run` 冻结成同一条 repo-verified operator quickstart route
+- `Phase 2 / source-readiness deep research trigger + gate convergence` 继续作为 absorbed provenance 保留；`fd01266` 已把 quickstart 测试与 source-intake bootstrap flow 对齐
+- 当前没有已冻结的下一候选 tranche；若继续，必须先识别新的 same-mainline concrete delta，而不是把 quickstart 再写成等待 freeze 的 blocker
 - 持续保持 `CLI / MCP / controller` 三字段语义与实现状态一致
 - 围绕 `ppt_deck`、`xiaohongshu` 等稳定 family 做手工测试
 - 仍不提前扩成更大的统一 runtime 或 OPL runtime owner
 
 ### 4. Med Auto Grant
 
-这条主线当前已经 absorb 到 `R5.A / Hosted-Friendly Session Boundary`。
+这条主线当前已经 absorb 到 post-R5A runtime truth path anchored to root checkout（`6277163`）。
 
 具体继续项：
 
 - 当前五个 canonical CLI surface 仍是 formal entry / verifier baseline，但本地 runtime ladder 已继续吸收到 `run-local / resume-local / build-artifact-bundle / execute-revision-pass / build-final-package / build-hosted-contract-bundle`
-- `stage-route-report` 继续承载 `verification_checkpoint / checkpoint_status`，且当前 truthful 后续重点是收紧 revised workspace validator truth 与 landed local runtime outputs 的一致性
-- 当前不得回退成旧 `P4.B` 审计线；若继续，唯一 truthful 下一步是 `post-R5A local runtime hardening`
+- `stage-route-report` 继续承载 `verification_checkpoint / checkpoint_status`；post-R5A hardening 已把 canonical current-truth / walkthrough 路径锚回 root checkout，避免继续指向临时 worktree
+- 当前不得回退成旧 `P4.B` 审计线；若继续，必须先有新的 concrete post-R5A local runtime hardening delta
 - 保持 formal-entry matrix 的诚实表达：
   - `CLI` 是当前正式入口
   - `MCP` 仍是 future protocol layer
@@ -137,9 +137,9 @@
 当前最合理的统一推进顺序如下：
 
 1. 由 `one-person-lab` 持有 `Phase C` 的中央执行板、状态矩阵与任务板
-2. 先把 `redcube-ai` 已 absorb 的 `Phase 2 / source-readiness deep research trigger + gate convergence` 同步进中央参考面，并等待 `workspace / operator quickstart convergence` 的 truthful freeze
-3. 把 `med-autogrant` 已 absorb 的 `R5.A / Hosted-Friendly Session Boundary` 与 `post-R5A local runtime hardening` brief 同步进中央参考面
-4. 让 `med-autoscience` 以手工测试驱动稳定化，不重开新的架构 tranche
+2. 把 `redcube-ai` 已 absorb 的 `Phase 2 / workspace operator quickstart convergence` 与 `fd01266` quickstart test alignment 同步进中央参考面，quickstart 已进入 current truth
+3. 把 `med-autogrant` 已 absorb 的 post-R5A root-checkout truth path anchoring（`6277163`）同步进中央参考面，不回退旧 `P4.B`
+4. 让 `med-autoscience` 以手工测试驱动稳定化，不重开新的架构 tranche；display 资产线继续独立于 runtime 主线
 5. 在至少两个业务仓的对象面、报告面和 gate 行为验证真正稳定后，再进入下一阶段
 
 ## 五、继续后置的事项

@@ -146,7 +146,7 @@ med-autoscience 当前主线不适合继续自动打开新的 runtime architectu
 
 当前推荐用途：
 
-- 在 `Phase 2 / source-readiness deep research trigger + gate convergence` 已吸收后，打开同一主线上的 `workspace / operator quickstart convergence`
+- `Phase 2 / workspace operator quickstart convergence` 已吸收后，只在出现新的 same-mainline concrete delta 时继续；不得再把 quickstart 当作等待 freeze 的下一棒
 
 ```text
 你现在在 redcube-ai 仓库，按“同一棒内自动收口”执行。
@@ -159,21 +159,21 @@ med-autoscience 当前主线不适合继续自动打开新的 runtime architectu
 - .omx/reports/redcube-runtime-program/OPEN_ISSUES.md
 - .omx/reports/redcube-runtime-program/ITERATION_LOG.md
 - contracts/runtime-program/current-program.json
+- docs/README.md
 - docs/policies/runtime_operating_model.md
 - docs/human_quickstart.md
-- docs/source_readiness_deep_research_longrun_target_state.md
-- docs/direct_delivery_longrun_target_state.md
+- docs/phase_2_source_readiness_deep_research_trigger_gate_convergence.md
 - docs/phase_2_workspace_operator_quickstart_convergence.md
 
 任务目标：
-在同一个 `redcube-runtime-program` 主线内，把 `workspace doctor -> source intake / source research -> deliverable create -> audit -> run` 这条 operator quickstart 路径收成更强的 repo-verified behavior surface。
+在同一个 `redcube-runtime-program` 主线内，先确认当前 main 已吸收到 `Phase 2 / workspace operator quickstart convergence`，并包含 `fd01266` quickstart test alignment；随后只在存在新的、已可诚实冻结的 same-mainline concrete delta 时继续推进。
 
 必须完成：
-1. 先根据 `docs/phase_2_workspace_operator_quickstart_convergence.md` 判断这条 next line 是否能在当前 hard boundary 内被诚实冻结。
-2. 若可以，就先把这条线写进 active CURRENT_PROGRAM / reports，再进入 freeze -> implement -> verify -> review-closeout -> commit-closeout -> absorb。
-3. 收紧 brand-new / thin workspace 的 canonical bootstrap、quickstart docs 与 runtime behavior 一致性。
-4. 保持 `planning_ready` gate、`auditDeliverable / runtimeWatch / getReviewState / getPublicationProjection` 的同轴语义，以及 `xiaohongshu` human publication 边界。
-5. 若无法在当前 hard boundary 内诚实冻结，就停车，不编造 future scope。
+1. 先确认 `contracts/runtime-program/current-program.json`、README/docs 与 reports 都把 quickstart 写成当前 absorbed tranche，而不是 future brief。
+2. 保持 `workspace doctor -> source intake / source research -> deliverable create -> deliverable audit -> deliverable run` 的 repo-verified quickstart route 与 `planning_ready` gate 对齐。
+3. 保持 `auditDeliverable / runtimeWatch / getReviewState / getPublicationProjection` 的同轴语义，以及 `xiaohongshu` human publication 边界。
+4. 若发现新的 concrete hostedization-prep / contract-export delta，必须先 freeze 到 active truth，再进入 implement -> verify -> review-closeout -> commit-closeout -> absorb。
+5. 若没有新的 honest delta，就停车在 honest stop；不得把 quickstart 重新写成未冻结 blocker。
 
 硬边界：
 - 不把 controller 写成正式入口
@@ -181,16 +181,17 @@ med-autoscience 当前主线不适合继续自动打开新的 runtime architectu
 - 不新增 family / overlay
 - 不把 xiaohongshu 改写成 direct-delivery
 - 不扩大 OPL federation / managed web runtime / controller expansion
+- 不抽统一执行内核
 
 验证要求：
 - git diff --check
 - npm run typecheck
-- node --test tests/phase-2-source-readiness-deep-research-trigger-gate-convergence.test.js tests/source-readiness-deep-research-gate.test.js tests/source-intake.test.js tests/source-research.test.js tests/deliverable-review-loop.test.js tests/direct-delivery-operator-handoff.test.js tests/direct-delivery-lifecycle-stage-summary.test.js tests/phase-2-behavior-convergence.test.js
+- node --test tests/workspace-operator-quickstart.test.js tests/source-intake.test.js tests/source-research.test.js tests/deliverable-review-loop.test.js tests/phase-2-source-readiness-deep-research-trigger-gate-convergence.test.js tests/source-readiness-deep-research-gate.test.js tests/phase-2-behavior-convergence.test.js
 - npm test
 
 结束状态：
-- 若形成 honest quickstart tranche，则自动收口到 ready to commit / commit closeout / absorbed to main
-- 若当前无 honest delta，则停在 honest stop，不自动编造 P1、family parity 或 full autopilot
+- 若形成新的 honest delta，则自动收口到 ready to commit / commit closeout / absorbed to main
+- 若当前无 honest delta，则停在 `NO_NEW_REDCUBE_QUICKSTART_DELTA_HONEST_STOP`，不自动编造 hosted runtime、family parity 或 full autopilot
 ```
 
 ### 4. med-autogrant
