@@ -222,7 +222,7 @@ At the top level, `OPL` defaults to an `Agent-first` design direction rather tha
 That does not mean every domain must bind itself to one direct LLM API; it means the Agent should act as the default executor that reads state, calls stable gateways, composes steps, organizes intermediate artifacts, and writes key traces back to auditable surfaces, while code mainly provides stable objects, controllers, tool wrappers, gate rules, and delivery surfaces.
 
 The current local default deployment shape for this substrate is a `Codex`-default host-agent runtime.
-At the current four-repo development-control layer, `Codex Host` freezes planning and truth while `OMX` handles long-running execution inside those frozen boundaries.
+The active execution path is Codex-only: planning, implementation, verification, and review are all handled through standard Codex sessions.
 That deployment choice is not the same thing as the architecture itself: the same substrate can later support a managed web runtime without changing the top-level domain contract.
 
 Today, the current domain repositories should be understood as `Auto-only` product mainlines.
@@ -363,7 +363,7 @@ The absorbed predecessor gate is `Phase 1 exit + next-stage activation package f
 The current repo-tracked truth is therefore an honest central-sync stop rather than an open-ended same-package continuation line.
 
 The current delivery target uses a local `TypeScript CLI` as the Phase 1 entry transport on top of the current `Codex-default host-agent runtime`.
-At the development-control layer, `Codex Host` freezes planning and truth while `OMX` handles long-running execution inside those frozen boundaries.
+The active development-control path is Codex-only and does not require a separate `Codex Host / OMX` split.
 That baseline reads frozen contracts, lists workstreams/domains, and explains routing boundaries without claiming web/server runtime behavior or mutating domain state.
 
 For the public phase view and the full document layering:

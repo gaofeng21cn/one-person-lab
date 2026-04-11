@@ -52,9 +52,6 @@
 - `references/managed-runtime-migration-readiness-checklist.md`
 - `references/development-operating-model.md`
 - `references/contract-convergence-v1-decision-note.md`
-- `references/omx-worktree-operating-handbook.md`
-- `references/omx-stage-gated-longrun-guide.md`
-- `references/omx-longrun-prompt-playbook.md`
 - `references/opl-phase2-ecosystem-sync-owner-line.md`
 - `references/opl-phase-2-central-reference-sync-board.md`
 - `references/opl-phase-2-admitted-domain-delta-intake-refresh.md`
@@ -64,6 +61,12 @@
 - `references/opl-surface-review-matrix*`
 - `references/opl-governance-audit-operating-surface*`
 - `references/opl-publish-promotion-operating-surface*`
+
+### OMX 历史迁移参考（非活跃入口）
+
+- `references/omx-worktree-operating-handbook.md`（中文历史参考）
+- `references/omx-stage-gated-longrun-guide.md`（中文历史参考）
+- `references/omx-longrun-prompt-playbook.md`（中文历史参考）
 
 ## 第四层：历史规格与计划
 
@@ -77,7 +80,7 @@
 
 - 第一层和第二层属于公开文档，因此必须同时提供英文 `.md` 与中文 `.zh-CN.md` 镜像，并保持同步更新。
 - 第三层允许继续公开或仓库跟踪，但始终属于参考级文档，不应继续挤占根 README 的默认阅读路径。
-- 面向 `OMX` 的长线提示词模板，也属于第三层参考文档；它们服务执行接力，不构成仓库当前真相 owner。
+- `OMX` 前缀文档保留为历史迁移参考，不属于当前活跃执行入口文档。
 - 第四层属于内部工作历史，默认只保留中文；除非有明确理由，不再额外扩成双语公开面。
 - 避免无意义的中英混写：叙述尽量保持单一语言，英文只保留给固定术语、文件路径、命令名、schema 与代码标识符。
 

@@ -1,5 +1,7 @@
 # OPL 生态四仓统一状态总表
 
+> 历史说明（2026-04-11 OMX offboarding）：本文件保留为历史/迁移参考，不再代表当前活跃执行口径。当前活跃入口以 Codex-only 文档为准（`README*`、`docs/README*`、`contracts/opl-gateway/README*`）。
+
 状态锚点：`2026-04-10`
 
 ## 文档目的

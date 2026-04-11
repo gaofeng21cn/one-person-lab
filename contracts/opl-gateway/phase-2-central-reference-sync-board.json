@@ -3,11 +3,11 @@
   "date_anchor": "2026-04-11",
   "status": "prefrozen_follow_on_board",
   "parent_package_id": "opl_minimal_admitted_domain_federation_activation_package",
-  "board_goal": "freeze a multi-slice central reference-sync owner line so OMX can keep OPL aligned with already absorbed domain truth without promoting OPL into a runtime owner",
+  "board_goal": "freeze a multi-slice central reference-sync owner line so Codex can keep OPL aligned with already absorbed domain truth without promoting OPL into a runtime owner",
   "entry_conditions": [
     "an admitted-domain repository lands a new absorbed repo-tracked delta",
     "central OPL reference surfaces drift from already absorbed admitted-domain truth",
-    "top-level gateway wording, acceptance surfaces, or OMX prompt templates drift from the current admitted-domain evidence boundary"
+    "top-level gateway wording, acceptance surfaces, or legacy OMX prompt templates drift from the current admitted-domain evidence boundary"
   ],
   "ordered_tranches": [
     {
@@ -27,7 +27,7 @@
     {
       "tranche_id": "phase_2_omx_prompt_and_worktree_handbook_sync",
       "kind": "same_mainline_hardening",
-      "goal": "keep OMX templates, worktree rules, and longrun-operating references aligned with the same central-sync truth so follow-on runs do not stop on stale execution guidance"
+      "goal": "keep legacy OMX templates, worktree rules, and longrun-operating references aligned with the same central-sync truth as historical migration context"
     },
     {
       "tranche_id": "phase_2_reference_regression_refresh",

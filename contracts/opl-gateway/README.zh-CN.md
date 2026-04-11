@@ -16,7 +16,7 @@
 ## 当前基线与已吸收 follow-on 对齐
 
 截至 `2026-04-10`，当前 `opl-mainline` 的公开主线仍停留在已 absorbed 的 `Phase 2 / Minimal admitted-domain federation activation package`，但 repo-tracked 的 formal entry 仍然是 `Phase 1` 那条本地 `TypeScript CLI`-first、read-only gateway baseline；它只读取这个目录中已经冻结的 contract 工件。
-这条 transport 建立在当前 `Codex-default host-agent runtime` 之上；在开发控制面上，`Codex Host` 负责规划冻结与真相裁决，`OMX` 负责在已冻结边界内做长时执行。
+这条 transport 建立在当前 `Codex-default host-agent runtime` 之上；当前活跃执行口径为 Codex-only，由标准 Codex 会话完成规划、实现与验证。
 已完成的 `Phase 1 / G2 release-closeout` 已把 `G2 stable public baseline` 收口成稳定、单一、repo-tracked 的公开基线。
 因此，即便公开主线已经吸收了这份最小 admitted-domain federation package，这条 repo-tracked 基线也仍然是当前 `OPL` 的 formal entry contract 与 public system surface。
 已完成的 repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` 继续停留在 planning-contract closeout 层：当前目录只冻结围绕 `route_request`、`build_handoff_payload`、`audit_routing_decision` 的 planning gate / planning-level contract。唯一允许的成功 handoff 目标仍只能是 `domain_gateway`；no-bypass 规则继续禁止直达 domain harness；`routed-actions.schema.json` 仍只是 planning dependency，不是 launcher。
@@ -27,16 +27,23 @@ repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review 
 
 ## 当前四仓统一对齐配套文档
 
-下面这些 reference-grade 配套文档用于冻结当前四仓的状态、runtime 口径与开发控制面分工；它们不会把当前目录升级成 runtime owner，也不会形成第二真相源。
+下面这些 reference-grade 配套文档用于冻结当前四仓的状态与 runtime 口径；它们不会把当前目录升级成 runtime owner，也不会形成第二真相源。
 下面这组文档以 `2026-04-10` 为日期锚点，并承担把四仓最新状态回写到 `OPL` 顶层参考同步面的责任；这些参考面不会反向抬升为公开主线真相。
 在当前这一轮 sync 中，需要继续显式守住三组 admitted-domain delta：`RedCube AI` 的 quickstart wording 里 `workspace doctor` 继续只做诊断、`source intake / source research` 才是 bootstrap writer；`Med Auto Grant` 的 post-R5A walkthrough / output consistency 与 root-`CURRENT_PROGRAM.program_id` hardening；以及 `MedAutoScience` 的 manual stabilization / runtime watch / publication gate repo-side hardening。
 
 - [生态四仓统一状态总表](../../docs/references/ecosystem-status-matrix.md) — 当前四仓阶段/状态总览（中文内部参考）
 - [Contract Convergence v1 执行板](../../docs/references/contract-convergence-v1-execution-board.md) — 当前统一 program、active phase 与离场条件（中文内部参考）
 - [Codex-default Host-Agent Runtime 合同](../../docs/references/host-agent-runtime-contract.md) — 当前本地默认 runtime 口径（中文内部参考）
-- [四仓统一开发运行合同](../../docs/references/development-operating-model.md) — `Codex Host` / `OMX` 规划冻结与长时执行分工（中文内部参考）
 - [四仓统一对齐检查表与任务板](../../docs/references/runtime-alignment-taskboard.md) — 当前 `Phase C / Object And Report Behavior Convergence` 活跃任务面（中文内部参考）
-- [OMX 长线执行门控指引](../../docs/references/omx-stage-gated-longrun-guide.md) — 阶段门控长跑规则（中文内部参考）
+- [四仓统一开发运行合同](../../docs/references/development-operating-model.md) — 当前 Codex-default 开发运行口径（中文内部参考）
+
+## OMX 历史迁移参考
+
+这组文档仅保留为历史迁移上下文，不再作为活跃执行入口文档。
+
+- [OMX 长线执行门控指引](../../docs/references/omx-stage-gated-longrun-guide.md) — 中文历史参考
+- [OMX Worktree 使用规程](../../docs/references/omx-worktree-operating-handbook.md) — 中文历史参考
+- [OMX 长线提示词模板库](../../docs/references/omx-longrun-prompt-playbook.md) — 中文历史参考
 
 ## 上位文档
 

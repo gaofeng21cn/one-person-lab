@@ -18,7 +18,7 @@ Apply this contract to the repository as a whole unless a deeper `AGENTS.md` exp
 - Every `OPL` workstream must converge toward one shared substrate that current `Auto-only` domain repositories and future `Human-in-the-loop` sibling or upper-layer products can reuse.
 - That shared base is now named the `Unified Harness Engineering Substrate`.
 - The default executor is a `Codex`-class agent runtime; code exists to provide stable gateways, controllers, tools, gates, and auditable surfaces rather than to replace Agents as the primary driver.
-- The current local default deployment shape is a `Codex`-default host-agent runtime, but future managed web runtimes may still sit on the same substrate.
+- The current local default deployment shape is a `Codex`-default host-agent runtime with a Codex-only active execution path; legacy `Codex Host / OMX` split wording is historical reference only.
 - The current domain repositories are `Auto-only` product mainlines; future `Human-in-the-loop` products should reuse compatible substrate contracts above or beside them rather than forcing same-repo dual-mode control logic.
 - Domain systems such as `MedAutoScience` and `RedCube AI` remain independent domain gateways and `Domain Harness OS` implementations under the `OPL` umbrella.
 
@@ -49,6 +49,7 @@ Apply this contract to the repository as a whole unless a deeper `AGENTS.md` exp
 - `docs/README.md` and `docs/README.zh-CN.md` define the docs gateway and the four-layer document taxonomy for this repository.
 - Layer 1 and Layer 2 public docs must stay bilingual.
 - Layer 3 reference-grade docs may remain repo-tracked, but they must not crowd the default reading path in the root README or be described as runtime-owning truth.
+- `docs/references/omx-*` docs are legacy migration/history references and must stay outside the default public entry path.
 - `docs/specs/**` and `docs/plans/**` are historical design/planning records rather than living truth surfaces.
 - Internal technical/planning docs default to Chinese unless there is an explicit reason to publish synchronized bilingual mirrors.
 - Avoid unnecessary mixed-language prose; keep English for fixed terms, paths, commands, schemas, and code identifiers.

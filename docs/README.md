@@ -52,9 +52,6 @@ All Layer 3 docs now live under `docs/references/` so the docs root stays readab
 - `references/managed-runtime-migration-readiness-checklist.md` (Chinese-only internal reference)
 - `references/development-operating-model.md` (Chinese-only internal reference)
 - `references/contract-convergence-v1-decision-note.md` (Chinese-only internal reference)
-- `references/omx-worktree-operating-handbook.md` (Chinese-only internal reference)
-- `references/omx-stage-gated-longrun-guide.md` (Chinese-only internal reference)
-- `references/omx-longrun-prompt-playbook.md` (Chinese-only internal reference)
 - `references/opl-phase2-ecosystem-sync-owner-line.md` (Chinese-only internal reference)
 - `references/opl-phase-2-central-reference-sync-board.md` (Chinese-only internal reference)
 - `references/opl-phase-2-admitted-domain-delta-intake-refresh.md` (Chinese-only internal reference)
@@ -64,6 +61,12 @@ All Layer 3 docs now live under `docs/references/` so the docs root stays readab
 - `references/opl-surface-review-matrix*`
 - `references/opl-governance-audit-operating-surface*`
 - `references/opl-publish-promotion-operating-surface*`
+
+### Legacy OMX migration references (historical only)
+
+- `references/omx-worktree-operating-handbook.md` (Chinese-only historical reference)
+- `references/omx-stage-gated-longrun-guide.md` (Chinese-only historical reference)
+- `references/omx-longrun-prompt-playbook.md` (Chinese-only historical reference)
 
 ## Layer 4. Historical Specs And Plans
 
@@ -77,7 +80,7 @@ They explain why a freeze happened, but they are not the living truth surface fo
 
 - Layers 1 and 2 are public surfaces, so every document there must have synchronized English `.md` and Chinese `.zh-CN.md` mirrors.
 - Layer 3 may remain public or repo-tracked, but it is always reference-grade and must not crowd the default reading path in the root README.
-- Long-run prompt templates for `OMX` also belong to Layer 3; they support execution handoff and do not become repository truth owners.
+- OMX-prefixed reference docs are retained as historical migration artifacts; they are not active execution entry docs.
 - Layer 4 is internal working history and should default to Chinese-only unless there is an explicit reason to publish a bilingual mirror.
 - Avoid unnecessary mixed-language prose: keep narrative in one language, and reserve English for fixed terms, file paths, command names, schemas, and code identifiers.
 

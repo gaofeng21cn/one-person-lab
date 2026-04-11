@@ -218,7 +218,7 @@
 这并不等于必须直接绑定某一种 LLM API；它的含义是：Agent 应作为默认执行者，负责读状态、调用稳定 gateway、编排步骤、组织中间产物，并把关键执行痕迹写回可审计表面，而代码主要负责提供稳定对象、控制器、工具封装、门控规则与交付表面。
 
 这套 substrate 当前在本地的默认部署形态，是 `Codex-default host-agent runtime`。
-在当前四仓统一的开发控制面上，`Codex Host` 负责规划冻结与真相裁决，`OMX` 负责在这些已冻结边界内做长时执行。
+当前活跃执行口径是 Codex-only：规划、实现、验证与评审都通过标准 Codex 会话完成。
 但“当前宿主形态”并不等于“体系本体”；后续即使走向托管式 Web runtime，也应复用同一套 substrate 与 domain contract。
 
 在这个前提下，当前 domain 仓统一按 `Auto-only` 产品主线理解。
@@ -359,7 +359,7 @@ repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review 
 因此，当前 repo-tracked truth 是一个诚实的中央同步停车点，而不是继续沿同一 package 无限滚动的活动 tranche。
 
 当前交付目标是：在当前 `Codex-default host-agent runtime` 之上，用本地 `TypeScript CLI` 作为 `Phase 1` 的入口 transport。
-在开发控制面上，`Codex Host` 负责规划冻结与真相裁决，`OMX` 负责在这些已冻结边界内做长时执行。
+当前开发控制面使用 Codex-only 口径，不再把 `Codex Host / OMX` 作为活跃双层执行分工。
 这条基线读取已冻结 contracts、列出 workstream/domain、解释路由边界，但不声称 web/server runtime 行为，也不 mutation domain state。
 
 公开阶段说明与完整文档分层见：

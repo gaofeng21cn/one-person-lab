@@ -3,8 +3,7 @@
 This root `AGENTS.md` is the project entry contract for direct sessions that enter from the project root, including Codex App and plain Codex sessions.
 
 It defines the default execution and collaboration rules at the repository root. It is the entry surface for this project, not the full project-truth contract by itself.
-
-If the repository is launched through OMX project-scope installation, OMX-specific orchestration lives in `.codex/AGENTS.md` and augments this file without replacing it.
+This repository now follows standard Codex execution as the only active path. Legacy OMX planning and long-run references are kept only as historical documents.
 
 ## Scope
 
@@ -24,17 +23,14 @@ Read that file first whenever repository-specific goals, architecture priorities
 - Run the relevant tests, type checks, and validation commands before claiming completion.
 - Final reports should include what changed and any remaining risks or known gaps.
 
-## OMX Worktree Discipline
+## Execution Model
 
-- Heavy OMX work must run in an isolated worktree created from current `main`.
-- Heavy OMX work includes `ralph`, `team`, `autopilot`, other long-running tmux-backed OMX sessions, and any lane expected to leave durable runtime state under `.omx/state/`.
-- Keep the shared root checkout on `main` for light reads, planning, review, absorb-to-`main`, push, and cleanup; do not let it become the long-running owner checkout.
-- Allow at most one active heavy OMX mainline per worktree. If multiple long-running lanes are needed, create multiple worktrees.
-- Before starting a new heavy OMX lane, ensure the owner worktree is clean and free of stale `.omx/state/sessions/*`, lingering tmux sessions, and stale `skill-active` state.
-- After the lane stops, either absorb the verified commits back to `main` or explicitly abandon the lane, then remove its worktree/branch and clear related tmux/session state.
-- Do not rely on session-only isolation to prevent hook interference; use physical worktree isolation.
+- Use Codex as the only active executor for planning, implementation, verification, and review.
+- Keep diffs scoped to the task and avoid introducing side-channel control surfaces outside repo-tracked contracts and docs.
+- Use isolated worktrees when parallel change lanes are required, but do not require OMX-specific lane ownership semantics.
+- Treat any `docs/references/omx-*` content as historical migration guidance, not active operating policy.
 
 ## Local State
 
 - `.omx/` and `.codex/` are local tooling state and must remain untracked.
-- `.omx/local/AGENTS.local.md` is reserved for machine-specific private overlays.
+- `.omx/` is retained only for historical local residue and should not be used as an active control-plane dependency.

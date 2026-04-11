@@ -16,7 +16,7 @@ For the broader ownership split, see [Shared Foundation](../../docs/shared-found
 ## Current baseline and absorbed follow-on alignment
 
 As of `2026-04-10`, the public `opl-mainline` mainline remains at the absorbed `Phase 2 / Minimal admitted-domain federation activation package`, while the repo-tracked formal entry still remains the `Phase 1` local `TypeScript CLI`-first, read-only gateway baseline that reads the frozen contract artifacts in this directory.
-That transport sits on top of the current `Codex-default host-agent runtime`, while `Codex Host` freezes planning/truth and `OMX` handles long-running execution inside those frozen boundaries.
+That transport sits on top of the current `Codex-default host-agent runtime`, with Codex-only active execution for planning, implementation, and verification.
 The completed `Phase 1 / G2 release-closeout` has already closed the `G2 stable public baseline` into one stable repo-tracked public entry.
 That repo-tracked baseline therefore remains the current `OPL` formal entry contract and public system surface even though the public mainline has already absorbed the minimal admitted-domain federation package.
 The completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` remains closed at the planning-contract layer: this directory only freezes the planning gate / planning-level contract around `route_request`, `build_handoff_payload`, and `audit_routing_decision`. The only allowed successful handoff target remains `domain_gateway`, the no-bypass rule still forbids direct domain-harness targeting, and `routed-actions.schema.json` remains a planning dependency rather than a launcher.
@@ -27,17 +27,23 @@ That delivery target still does **not** promote this directory into a runtime, r
 
 ## Current four-repo alignment companions
 
-These reference-grade companions freeze the current four-repo status, runtime wording, and development-control split without turning this directory into a runtime owner or second source of truth.
+These reference-grade companions freeze the current four-repo status and runtime wording without turning this directory into a runtime owner or second source of truth.
 This companion set is anchored to `2026-04-10` and carries the responsibility of writing the latest four-repo status back into the top-level OPL reference-sync companions without promoting those reference surfaces into public-mainline truth.
 In the current sync window, that includes keeping three admitted-domain delta families explicit: RedCube quickstart wording where `workspace doctor` stays diagnostic-only and `source intake / source research` remain the bootstrap writer, Med Auto Grant post-R5A walkthrough/output-consistency plus root-`CURRENT_PROGRAM.program_id` hardening, and MedAutoScience manual-stabilization/runtime-watch/publication-gate repo-side hardening.
 
 - [Ecosystem Status Matrix](../../docs/references/ecosystem-status-matrix.md) — Chinese-only internal reference for the current four-repo stage/status picture
 - [Contract Convergence v1 Execution Board](../../docs/references/contract-convergence-v1-execution-board.md) — Chinese-only internal reference for the current unified program, active phase, and exit criteria
 - [Codex-default Host-Agent Runtime Contract](../../docs/references/host-agent-runtime-contract.md) — Chinese-only internal reference for the current local default runtime wording
-- [Development Operating Model](../../docs/references/development-operating-model.md) — Chinese-only internal reference for the `Codex Host` / `OMX` planning-vs-longrun split
-- [Runtime Alignment Taskboard](../../docs/references/runtime-alignment-taskboard.md) — Chinese-only internal reference for the active `Phase C / Object And Report Behavior Convergence` task slices
 - [Runtime Alignment Taskboard](../../docs/references/runtime-alignment-taskboard.md) — Chinese-only internal reference for the current `Phase C / Object And Report Behavior Convergence` task slices
-- [OMX Stage-Gated Longrun Guide](../../docs/references/omx-stage-gated-longrun-guide.md) — Chinese-only internal reference for stage-gated long-running execution rules
+- [Development Operating Model](../../docs/references/development-operating-model.md) — Chinese-only internal reference for the current Codex-default development operating wording
+
+## Legacy OMX migration references
+
+These references are kept for historical migration context only and are not active execution entry docs.
+
+- [OMX Stage-Gated Longrun Guide](../../docs/references/omx-stage-gated-longrun-guide.md) — Chinese-only historical reference
+- [OMX Worktree Operating Handbook](../../docs/references/omx-worktree-operating-handbook.md) — Chinese-only historical reference
+- [OMX Longrun Prompt Playbook](../../docs/references/omx-longrun-prompt-playbook.md) — Chinese-only historical reference
 
 ## Governing documents
 
