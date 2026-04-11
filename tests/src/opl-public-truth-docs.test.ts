@@ -148,7 +148,7 @@ test('gateway and onboarding docs cross-reference the current four-repo alignmen
     assert.match(doc, /docs\/references\/host-agent-runtime-contract\.md/);
     assert.match(doc, /docs\/references\/development-operating-model\.md/);
     assert.match(doc, /docs\/references\/runtime-alignment-taskboard\.md/);
-    assert.match(doc, /docs\/references\/omx-stage-gated-longrun-guide\.md/);
+    assert.match(doc, /docs\/history\/omx\/README/);
   }
 });
 

@@ -17,7 +17,7 @@
 
 - 这份文档是“可复制的提示词模板库”
 - [`omx-stage-gated-longrun-guide.md`](./omx-stage-gated-longrun-guide.md) 是“统一门控规则”
-- 各仓 `AGENTS.md`、`contracts/project-truth/AGENTS.md`、`CURRENT_PROGRAM.md`、active reports 始终高于本模板库
+- 各仓 `AGENTS.md`、`AGENTS.md`、`CURRENT_PROGRAM.md`、active reports 始终高于本模板库
 
 换句话说：
 
@@ -56,7 +56,7 @@
 
 执行规则：
 0. 必须在独立 worktree 中执行；root checkout 只负责 absorb / push / cleanup / central sync，不直接承载重型长线实现。
-1. 先读取仓内 AGENTS.md、contracts/project-truth/AGENTS.md、CURRENT_PROGRAM.md、LATEST_STATUS.md、OPEN_ISSUES.md、ITERATION_LOG.md 与当前 tranche 对应 specs / plans / docs。
+1. 先读取仓内 AGENTS.md、AGENTS.md、CURRENT_PROGRAM.md、LATEST_STATUS.md、OPEN_ISSUES.md、ITERATION_LOG.md 与当前 tranche 对应 specs / plans / docs。
 2. 在当前 tranche / same-phase 内，只要 hard gates 通过，就自动继续完成 review -> manual test -> commit -> absorb。
 3. 每完成一个阶段动作，都要同步 CURRENT_PROGRAM、LATEST_STATUS、OPEN_ISSUES 与必要的 repo-tracked truth surface。
 4. 不得把开发控制面成熟度误写成产品 runtime 成熟度。
@@ -89,7 +89,7 @@
 
 先读：
 - AGENTS.md
-- contracts/project-truth/AGENTS.md
+- AGENTS.md
 - .omx/context/CURRENT_PROGRAM.md
 - docs/roadmap.zh-CN.md
 - docs/references/opl-phase2-ecosystem-sync-owner-line.md
@@ -164,7 +164,7 @@ med-autoscience 当前主线不适合继续自动打开新的 runtime architectu
 
 先读：
 - AGENTS.md
-- contracts/project-truth/AGENTS.md
+- AGENTS.md
 - .omx/context/CURRENT_PROGRAM.md
 - .omx/reports/redcube-runtime-program/LATEST_STATUS.md
 - .omx/reports/redcube-runtime-program/OPEN_ISSUES.md
@@ -219,7 +219,7 @@ med-autoscience 当前主线不适合继续自动打开新的 runtime architectu
 
 先读：
 - AGENTS.md
-- contracts/project-truth/AGENTS.md
+- AGENTS.md
 - .omx/context/CURRENT_PROGRAM.md
 - .omx/context/PROGRAM_ROUTING.md
 - .omx/plans/spec-program-operating-model.md

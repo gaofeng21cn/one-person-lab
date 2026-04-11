@@ -41,9 +41,7 @@ In the current sync window, that includes keeping two admitted-domain delta pack
 
 These references are kept for historical migration context only and are not active execution entry docs.
 
-- [OMX Stage-Gated Longrun Guide](../../docs/references/omx-stage-gated-longrun-guide.md) — Chinese-only historical reference
-- [OMX Worktree Operating Handbook](../../docs/references/omx-worktree-operating-handbook.md) — Chinese-only historical reference
-- [OMX Longrun Prompt Playbook](../../docs/references/omx-longrun-prompt-playbook.md) — Chinese-only historical reference
+- [OMX historical archive](../../docs/history/omx/README.md) — Chinese-only historical archive entry
 
 ## Governing documents
 

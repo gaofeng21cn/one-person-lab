@@ -5,7 +5,7 @@
 ## 文档目的
 
 这份文档是四仓统一推进时的中央执行板。
-它不替代各仓自己的 `README`、`contracts/project-truth/AGENTS.md`、`CURRENT_PROGRAM` 或主线测试，只负责把当前统一 program、阶段定义、完成标准和四仓交付项压到同一个参考面。
+它不替代各仓自己的 `README`、`AGENTS.md`、`CURRENT_PROGRAM` 或主线测试，只负责把当前统一 program、阶段定义、完成标准和四仓交付项压到同一个参考面。
 
 ## 当前统一 program
 

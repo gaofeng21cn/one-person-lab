@@ -26,7 +26,7 @@
 ## 使用规则
 
 - 这是 `OPL docs` 下的内部参考文档，默认中文维护。
-- 它不替代各仓自己的 `README`、`contracts/project-truth/AGENTS.md`、`CURRENT_PROGRAM.md` 或 domain 内主线文档。
+- 它不替代各仓自己的 `README`、`AGENTS.md`、`CURRENT_PROGRAM.md` 或 domain 内主线文档。
 - 它只作为内部参考同步面，不反向抬升为 `OPL` 公开主线真相。
 - 截至 `2026-04-11`，其中大部分合同层对齐项已经完成；下面保留的主要是“下一步仍要继续压实的行为面”。
 - 若与各仓 current truth 冲突，以各仓 current truth 为准。

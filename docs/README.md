@@ -62,11 +62,9 @@ All Layer 3 docs now live under `docs/references/` so the docs root stays readab
 - `references/opl-governance-audit-operating-surface*`
 - `references/opl-publish-promotion-operating-surface*`
 
-### Legacy OMX migration references (historical only)
+### Historical OMX archive
 
-- `references/omx-worktree-operating-handbook.md` (Chinese-only historical reference)
-- `references/omx-stage-gated-longrun-guide.md` (Chinese-only historical reference)
-- `references/omx-longrun-prompt-playbook.md` (Chinese-only historical reference)
+- [OMX historical archive](history/omx/README.md) (historical reference only)
 
 ## Layer 4. Historical Specs And Plans
 

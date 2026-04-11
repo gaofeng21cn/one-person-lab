@@ -41,9 +41,7 @@ repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review 
 
 这组文档仅保留为历史迁移上下文，不再作为活跃执行入口文档。
 
-- [OMX 长线执行门控指引](../../docs/references/omx-stage-gated-longrun-guide.md) — 中文历史参考
-- [OMX Worktree 使用规程](../../docs/references/omx-worktree-operating-handbook.md) — 中文历史参考
-- [OMX 长线提示词模板库](../../docs/references/omx-longrun-prompt-playbook.md) — 中文历史参考
+- [OMX 历史资料索引](../../docs/history/omx/README.zh-CN.md) — 中文历史资料入口
 
 ## 上位文档
 

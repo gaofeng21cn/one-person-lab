@@ -190,7 +190,7 @@
 四仓共同最少应具备下面这些 durable handoff surfaces：
 
 1. `AGENTS.md`
-2. `contracts/project-truth/AGENTS.md`
+2. `AGENTS.md`
 3. `docs/documentation-governance.md`
 4. 当前有效的 `README*` 与 `docs/README*`
 5. 当前有效的 `docs/specs/**` 与 `docs/plans/**`

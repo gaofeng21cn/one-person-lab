@@ -54,7 +54,7 @@
 这里的真相面至少包括：
 
 - `README*`
-- `contracts/project-truth/AGENTS.md`
+- `AGENTS.md`
 - `CURRENT_PROGRAM.md`
 - `LATEST_STATUS.md`
 - `OPEN_ISSUES.md`

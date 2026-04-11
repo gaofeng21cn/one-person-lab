@@ -19,7 +19,7 @@
 - Modify: `README.zh-CN.md`
 - Modify: `docs/roadmap.md`
 - Modify: `docs/roadmap.zh-CN.md`
-- Modify: `contracts/project-truth/AGENTS.md`
+- Modify: `AGENTS.md`
 
 - [ ] 把 `Unified Harness Engineering Substrate` 作为共享总名写入 OPL 公共面
 - [ ] 明确 `OPL` 不是第四个 `Domain Harness OS`
@@ -33,7 +33,7 @@
 - Modify: `/Users/gaofeng/workspace/med-autoscience/README.zh-CN.md`
 - Modify: `/Users/gaofeng/workspace/med-autoscience/docs/README.md`
 - Modify: `/Users/gaofeng/workspace/med-autoscience/docs/README.zh-CN.md`
-- Modify: `/Users/gaofeng/workspace/med-autoscience/contracts/project-truth/AGENTS.md`
+- Modify: `/Users/gaofeng/workspace/med-autoscience/AGENTS.md`
 - Create: `/Users/gaofeng/workspace/med-autoscience/docs/domain-harness-os-positioning.md`
 
 - [ ] 把项目写成共享 substrate 上的医学 `Research Ops` `Domain Harness OS`
@@ -47,7 +47,7 @@
 - Modify: `/Users/gaofeng/workspace/redcube-ai/README.zh-CN.md`
 - Modify: `/Users/gaofeng/workspace/redcube-ai/docs/README.md`
 - Modify: `/Users/gaofeng/workspace/redcube-ai/docs/README.zh-CN.md`
-- Modify: `/Users/gaofeng/workspace/redcube-ai/contracts/project-truth/AGENTS.md`
+- Modify: `/Users/gaofeng/workspace/redcube-ai/AGENTS.md`
 - Modify: `/Users/gaofeng/workspace/redcube-ai/docs/runtime_architecture.md`
 - Modify: `/Users/gaofeng/workspace/redcube-ai/docs/policies/runtime_operating_model.md`
 - Create: `/Users/gaofeng/workspace/redcube-ai/docs/domain-harness-os-positioning.md`
@@ -63,7 +63,7 @@
 - Modify: `/Users/gaofeng/workspace/med-autogrant/README.zh-CN.md`
 - Modify: `/Users/gaofeng/workspace/med-autogrant/docs/README.md`
 - Modify: `/Users/gaofeng/workspace/med-autogrant/docs/README.zh-CN.md`
-- Modify: `/Users/gaofeng/workspace/med-autogrant/contracts/project-truth/AGENTS.md`
+- Modify: `/Users/gaofeng/workspace/med-autogrant/AGENTS.md`
 - Create: `/Users/gaofeng/workspace/med-autogrant/docs/domain-harness-os-positioning.md`
 
 - [ ] 把项目写成共享 substrate 上的医学 `Grant Ops` `Domain Harness OS` 方向

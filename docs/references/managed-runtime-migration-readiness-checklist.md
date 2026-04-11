@@ -17,7 +17,7 @@
 它不反向抬升为 `OPL` 公开主线 truth owner；统一命名与边界定义仍以：
 
 - `docs/opl-runtime-naming-and-boundary-contract.zh-CN.md`
-- `contracts/project-truth/AGENTS.md`
+- `AGENTS.md`
 
 为准。
 

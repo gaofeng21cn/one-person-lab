@@ -62,11 +62,9 @@
 - `references/opl-governance-audit-operating-surface*`
 - `references/opl-publish-promotion-operating-surface*`
 
-### OMX 历史迁移参考（非活跃入口）
+### OMX 历史资料（非活跃入口）
 
-- `references/omx-worktree-operating-handbook.md`（中文历史参考）
-- `references/omx-stage-gated-longrun-guide.md`（中文历史参考）
-- `references/omx-longrun-prompt-playbook.md`（中文历史参考）
+- [OMX 历史资料索引](history/omx/README.zh-CN.md)（仅历史参考）
 
 ## 第四层：历史规格与计划
 

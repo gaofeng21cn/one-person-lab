@@ -27,11 +27,11 @@
 
 ## 快照依据
 
-- `one-person-lab`：`README*`、`contracts/project-truth/AGENTS.md`、`docs/roadmap*`
+- `one-person-lab`：`README*`、`AGENTS.md`、`docs/roadmap*`
 - `one-person-lab`：`docs/references/contract-convergence-v1-execution-board.md`
-- `med-autoscience`：`README*`、`contracts/project-truth/AGENTS.md`、`docs/agent_runtime_interface.md`
-- `redcube-ai`：`README*`、`contracts/project-truth/AGENTS.md`、`contracts/runtime-program/current-program.json`
-- `med-autogrant`：`README*`、`contracts/project-truth/AGENTS.md`、`docs/specs/2026-04-07-formal-entry-matrix-current-truth.md`
+- `med-autoscience`：`README*`、`AGENTS.md`、`docs/agent_runtime_interface.md`
+- `redcube-ai`：`README*`、`AGENTS.md`、`contracts/runtime-program/current-program.json`
+- `med-autogrant`：`README*`、`AGENTS.md`、`docs/specs/2026-04-07-formal-entry-matrix-current-truth.md`
 
 ## 零、当前统一 program 锚点
 

@@ -4,11 +4,10 @@
   "contract_layout": "single-project-truth",
   "scope": "project",
   "display_name": "One Person Lab",
-  "project_truth_path": "contracts/project-truth/AGENTS.md",
+  "project_truth_path": "AGENTS.md",
   "managed_files": [
     "AGENTS.md",
     ".gitignore",
-    "contracts/project-truth/AGENTS.md",
     ".codex/AGENTS.md"
   ],
   "updated_at": "2026-04-11T02:00:00.000000+00:00",
@@ -18,9 +17,9 @@
     "adopted_to_contract": false
   },
   "project_truth_migration": {
-    "migrated": false,
-    "source_path": "",
-    "removed_legacy_source": false
+    "migrated": true,
+    "source_path": "contracts/project-truth/AGENTS.md",
+    "removed_legacy_source": true
   },
   "legacy_cleanup": {
     "removed": []

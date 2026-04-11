@@ -99,7 +99,7 @@
       "status": "met",
       "depends_on_external_domain_readiness": false,
       "repo_evidence": [
-        "contracts/project-truth/AGENTS.md",
+        "AGENTS.md",
         "README.md",
         "contracts/opl-gateway/README.md",
         "docs/references/opl-phase-1-exit-activation-package.md"
