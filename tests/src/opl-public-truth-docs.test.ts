@@ -277,13 +277,22 @@ test('phase-1 public gateway docs distinguish CLI transport from the host-agent 
   const readmeZh = read('README.zh-CN.md');
   const discoveryGateway = read('docs/opl-read-only-discovery-gateway.md');
   const discoveryGatewayZh = read('docs/opl-read-only-discovery-gateway.zh-CN.md');
+  const onboarding = read('docs/opl-domain-onboarding-contract.md');
+  const onboardingZh = read('docs/opl-domain-onboarding-contract.zh-CN.md');
 
   for (const doc of [readme, readmeZh, discoveryGateway, discoveryGatewayZh]) {
     assert.match(doc, /Codex-default host-agent runtime/);
-    assert.match(doc, /Codex Host/i);
-    assert.match(doc, /OMX/);
+    assert.match(doc, /Codex-only/i);
   }
 
+  assert.match(discoveryGateway, /legacy `Codex Host` \/ `OMX` split/i);
+  assert.match(discoveryGatewayZh, /历史上的 `Codex Host` \/ `OMX` 分工/);
+  assert.doesNotMatch(discoveryGateway, /At the development-control layer, `Codex Host` freezes planning and truth while `OMX` handles long-running execution/i);
+  assert.doesNotMatch(discoveryGatewayZh, /在开发控制面上，`Codex Host` 负责规划冻结与真相裁决，`OMX` 负责在这些已冻结边界内做长时执行/);
+  assert.match(onboarding, /active execution path remains Codex-only/i);
+  assert.match(onboardingZh, /当前活跃执行入口仍是 Codex-only/);
+  assert.match(onboarding, /historical `Codex Host` \/ `OMX` migration discipline/i);
+  assert.match(onboardingZh, /历史 `Codex Host` \/ `OMX` 迁移纪律/);
   assert.match(discoveryGateway, /does not grant route authority/i);
   assert.match(discoveryGatewayZh, /不授予 route authority/);
 });

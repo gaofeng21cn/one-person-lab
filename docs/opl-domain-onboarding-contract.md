@@ -42,11 +42,11 @@ They do not substitute for the onboarding package, are not an admitted domain ga
 When a reviewer checks whether an onboarding package really aligns with the current `OPL` execution direction, the current Phase 1 companion references are:
 
 - [Codex-default Host-Agent Runtime Contract](./references/host-agent-runtime-contract.md) — Chinese-only internal reference for the current local default runtime wording
-- [Development Operating Model](./references/development-operating-model.md) — Chinese-only internal reference for the current `Codex Host` / `OMX` planning-vs-longrun split
+- [Development Operating Model](./references/development-operating-model.md) — Chinese-only internal reference for historical `Codex Host` / `OMX` migration discipline and compatible longrun worktree rules
 - [Runtime Alignment Taskboard](./references/runtime-alignment-taskboard.md) — Chinese-only internal reference for the current P0/P1 gap checklist
-- [OMX Stage-Gated Longrun Guide](./references/omx-stage-gated-longrun-guide.md) — Chinese-only internal reference for stage-gated long-running execution rules
+- [OMX Stage-Gated Longrun Guide](./references/omx-stage-gated-longrun-guide.md) — Chinese-only historical reference for compatible stage-gated long-running execution rules
 
-These companions help reviewers evaluate execution-model wording during onboarding.
+The active execution path remains Codex-only; these companions help reviewers evaluate current execution-model wording plus the retained historical migration boundaries during onboarding.
 They do **not** turn `OPL` into the runtime owner of a candidate domain.
 
 ## Core Promise
