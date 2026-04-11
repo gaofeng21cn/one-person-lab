@@ -67,7 +67,7 @@
 
 进入长线前，`OMX` 必须先完成：
 
-1. 读取仓内 `AGENTS.md`、`project-truth`、当前主线文档与 OPL 顶层合同
+1. 读取仓内 `AGENTS.md`、docs 核心工作集、当前主线文档与 OPL 顶层合同
 2. 确认当前唯一 active mainline
 3. 确认当前 owner `worktree` 是否独立、clean、fresh
 4. 确认根工作树只承担 integration / cleanup，不承担这轮长跑 owner 角色

@@ -100,4 +100,4 @@ They explain why a freeze happened, but they are not the living truth surface fo
 
 ## Governance
 
-- [Documentation Governance](./documentation-governance.md) (Chinese only)
+- Documentation governance lives in [AGENTS.md](../AGENTS.md) and the core maintainer working set.

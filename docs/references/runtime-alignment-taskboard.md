@@ -97,7 +97,7 @@
 
 具体继续项：
 
-- 围绕 `docs/manual_runtime_stabilization_checklist.md` 这条 canonical checklist 做正式手工测试
+- 围绕 `docs/program/manual_runtime_stabilization_checklist.md` 这条 canonical checklist 做正式手工测试
 - `runtime_watch` heartbeat / auto-recovery、closure handoff-ready bundle 识别、以及 publication gate 未 clear 时拒绝 premature completion 都已 absorbed 到 repo-side behavior hardening；后续只在真实 bugfix delta 出现时继续收紧
 - 把测试中暴露的问题回流成 contract / audit / delivery / gate 修正
 - 在 external runtime gate 清除前，不重开新的大架构 tranche

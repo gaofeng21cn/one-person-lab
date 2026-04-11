@@ -7,7 +7,7 @@
 ## 文档目的
 
 这份文档用于给后续开发提供一个统一、可复查的当前状态视图。
-它不替代各仓库自己的 `README`、`project-truth`、`CURRENT_PROGRAM` 或主线文档，只负责回答四个问题：
+它不替代各仓库自己的 `README`、根 `AGENTS.md`、docs 核心工作集、`CURRENT_PROGRAM` 或主线文档，只负责回答四个问题：
 
 1. 四个仓库现在分别处在什么位置
 2. `Unified Harness Engineering Substrate` 当前到底落到了哪一层
@@ -29,7 +29,7 @@
 
 - `one-person-lab`：`README*`、`AGENTS.md`、`docs/roadmap*`
 - `one-person-lab`：`docs/references/contract-convergence-v1-execution-board.md`
-- `med-autoscience`：`README*`、`AGENTS.md`、`docs/agent_runtime_interface.md`
+- `med-autoscience`：`README*`、`AGENTS.md`、`docs/runtime/agent_runtime_interface.md`
 - `redcube-ai`：`README*`、`AGENTS.md`、`contracts/runtime-program/current-program.json`
 - `med-autogrant`：`README*`、`AGENTS.md`、`docs/specs/2026-04-07-formal-entry-matrix-current-truth.md`
 
@@ -88,7 +88,7 @@
   - 对外双语
   - 内部技术/规划/备忘默认中文
   - `docs/README*` 为 docs 入口
-  - `documentation-governance` 负责治理边界
+  - 根 `AGENTS.md` 与 docs 核心工作集共同负责治理边界
 
 ### 尚未落地的部分
 

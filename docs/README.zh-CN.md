@@ -100,4 +100,4 @@
 
 ## 治理说明
 
-- [文档治理规则](./documentation-governance.md)
+- 文档治理规则统一收口在 [AGENTS.md](../AGENTS.md) 与 docs 核心工作集。

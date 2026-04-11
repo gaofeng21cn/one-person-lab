@@ -30,7 +30,7 @@
 
 每次复制模板前，先做四件事：
 
-1. 读取目标仓的 `AGENTS.md`、`project-truth`、`CURRENT_PROGRAM.md`
+1. 读取目标仓的 `AGENTS.md`、docs 核心工作集、`CURRENT_PROGRAM.md`
 2. 确认当前唯一 active mainline 与当前 tranche
 3. 确认当前工作区状态、验证命令与 reports 路径
 4. 若仓内当前真相与本模板冲突，以仓内当前真相为准，并在本仓后续同步更新本模板库
@@ -145,7 +145,7 @@
 
 - 当前不推荐新开“runtime 架构继续推进”型 owner line；主线保持 external gate truth，由人工真实项目测试驱动。若要开新线，只建议：
   1. `medical display` rolling hardening / visual audit；
-  2. 已通过人工测试打出的具体 repo-side bugfix worktree，并先对齐 `docs/manual_runtime_stabilization_checklist.md`、`docs/external_runtime_dependency_gate.md` 与 `docs/agent_runtime_interface.md`。
+  2. 已通过人工测试打出的具体 repo-side bugfix worktree，并先对齐 `docs/program/manual_runtime_stabilization_checklist.md`、`docs/program/external_runtime_dependency_gate.md` 与 `docs/runtime/agent_runtime_interface.md`。
 
 ```text
 med-autoscience 当前主线不适合继续自动打开新的 runtime architecture tranche。

@@ -190,11 +190,10 @@
 四仓共同最少应具备下面这些 durable handoff surfaces：
 
 1. `AGENTS.md`
-2. `AGENTS.md`
-3. `docs/documentation-governance.md`
-4. 当前有效的 `README*` 与 `docs/README*`
-5. 当前有效的 `docs/specs/**` 与 `docs/plans/**`
-6. 对应的测试/验证表面
+2. docs 核心工作集：`docs/project.md`、`docs/status.md`、`docs/architecture.md`、`docs/invariants.md`、`docs/decisions.md`
+3. 当前有效的 `README*` 与 `docs/README*`
+4. 当前有效的 `docs/specs/**` 与 `docs/plans/**`
+5. 对应的测试/验证表面
 
 这套最小表面负责保证：
 
