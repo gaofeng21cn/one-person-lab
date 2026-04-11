@@ -2,290 +2,231 @@
 
 # OPL Runtime 命名与边界合同
 
-## 目的
+## 文档目的
 
-这份文档用于冻结 `OPL` 体系下与 runtime 相关的核心命名，避免把下面几层继续混写成一团：
+这份文档冻结当前 `OPL` 体系里的 runtime 相关命名，避免下面这些层继续被混写：
 
 - 顶层 `Gateway / Federation`
-- `Unified Harness Engineering Substrate`
-- `domain gateway`
+- shared runtime substrate
+- `Domain Gateway`
 - `Domain Harness OS`
-- `execution plane`
-- `deployment shape`
+- `Execution Plane`
+- `Deployment Shape`
 
-它同时回答三个问题：
+它回答四个问题：
 
-1. 四仓当前各自到底处在哪一层。
-2. `Codex-default host-agent runtime` 与未来 `managed runtime` 的关系是什么。
-3. `MedAutoScience` 与 `MedDeepScientist` 这类 “domain harness + 受控执行引擎” 组合，边界应如何稳定表达。
+1. 当前各个仓库分别属于哪一层。
+2. `Codex-default host-agent runtime` 与 future managed runtime 是什么关系。
+3. `S1` 到底冻结哪些 shared runtime substrate 对象。
+4. 哪些 truth 必须继续留在 domain 内，而不能上收到 `OPL` 顶层。
 
 ## 适用范围
 
-这份合同适用于当前 `OPL` 体系下的统一公开命名与边界表达，覆盖：
+这份合同治理当前 `OPL` 体系公开使用的统一命名与边界语言，覆盖：
 
 - `one-person-lab`
 - `med-autoscience`
 - `redcube-ai`
 - `med-autogrant`
 
-它也约束 `OPL` 对 `MedDeepScientist` 这类 domain 下层执行引擎的描述方式。
+它冻结的是命名与边界。
+它**不**宣称整个体系已经拥有：
 
-这份文档冻结的是命名与边界，不宣称当前已经实现：
+- 一套共享 execution core
+- 一套平台托管的共享 execution layer
+- 一个统一的 hosted product entry
 
-- 统一共享执行内核
-- 平台侧统一托管执行面
-- future `Human-in-the-loop` 产品
+## 规范控制链
 
-## 固定控制链
-
-当前推荐长期保持下面这条链：
+控制链继续保持：
 
 ```text
 Human / Agent
   -> OPL Gateway / Federation
-      -> Unified Harness Engineering Substrate
-          -> Domain Gateway
-              -> Domain Harness OS
-                  -> Execution Plane
-                      -> Deployment Shape
+      -> Domain Gateway
+          -> Domain Harness OS
 ```
 
-每一层回答不同问题：
+这条控制链下面仍然有真实层级，但它们不是额外的 routed hop：
 
-- `OPL Gateway / Federation`
-  - 顶层任务语义、跨域路由、admission 语言与边界合同
-- `Unified Harness Engineering Substrate`
-  - 跨域共享的不变量、formal-entry 语义、审计与分层规则
-- `Domain Gateway`
-  - 某个 domain 的正式入口、contract hydration、独立可消费界面
-- `Domain Harness OS`
-  - 某个 domain 的编排、治理、审阅、交付系统本体
+- `shared runtime substrate`
+  - 约束 runtime 命名、迁移兼容性与共享不变量的 cross-domain contract layer
 - `Execution Plane`
-  - 真正执行 session、quest、run、worktree、watch、resume 的运行层
+  - 真正负责 session、run、watch、stop、resume 的 runtime 执行层
 - `Deployment Shape`
-  - execution plane 运行在哪里、由谁托管、生命周期由谁负责
+  - execution plane 运行在哪里，以及其生命周期由谁持有
 
-## 固定术语
+因此，substrate 是共享 contract layer，不是夹在 `OPL Gateway` 与 `Domain Gateway` 之间的新路由层。
 
-| 术语 | 固定定义 | 当前或未来例子 | 明确不是什么 |
+## 规范术语
+
+| 术语 | 冻结含义 | 当前或未来例子 | 明确不等于 |
 | --- | --- | --- | --- |
-| `OPL Gateway / Federation` | 顶层任务语义、跨域路由、边界冻结与 admission 语言 | `one-person-lab` | domain-local runtime owner |
-| `Unified Harness Engineering Substrate` | 多个 domain 共享的 Harness Engineering 约束与合同层 | `Agent-first`、formal-entry matrix、auditability | 共享执行内核 |
-| `Domain Gateway` | 某个 domain 的稳定正式入口与公开 contract surface | `MedAutoScience`、`RedCube AI` | execution engine |
-| `Domain Harness OS` | 某个 domain 的执行编排、治理、审计、交付系统本体 | `MedAutoScience`、`RedCube AI` | 顶层 federation |
-| `Execution Plane` | 实际驱动 quest、run、session、worktree、watch、resume 的运行层 | `MedDeepScientist` 当前对 `MedAutoScience` 承担的运行层 | 顶层公开产品面 |
-| `Host-Agent Runtime` | execution plane 的本地宿主部署形态，由本机 host agent 驱动 | 当前 `Codex-default host-agent runtime` | 托管 runtime |
-| `Managed Runtime` | execution plane 的平台托管部署形态，生命周期、调度、隔离和恢复由平台负责 | future `managed web runtime` | domain gateway |
-| `Managed Execution Plane` | 对内架构词，指平台统一托管的 execution plane 本身 | future shared managed execution layer | 当前已经实现的公开主线 |
+| `OPL Gateway / Federation` | 顶层任务语义、跨域路由语言、admission 语言与边界冻结 | `one-person-lab` | domain-local runtime owner |
+| `shared runtime substrate` | 多个 domain 可复用的跨域 runtime contract layer | `runtime profile`、`session substrate`、`gateway runtime status` | 今天已经实现完成的共享执行内核 |
+| `Domain Gateway` | 某个 domain 的稳定 formal entry 与公开合同面 | `MedAutoScience`、`RedCube AI` | execution engine |
+| `Domain Harness OS` | 某个 domain 的执行、治理、审计与交付系统 | `MedAutoScience`、`RedCube AI` | 顶层 federation |
+| `Execution Plane` | 真正驱动 session、run、stop、resume、watch、recovery 的 runtime 层 | 各 domain 当前受控 runtime | 对外产品身份 |
+| `Host-Agent Runtime` | 由用户可控机器上的 host agent 驱动 execution plane 的本地部署形态 | 当前 `Codex-default host-agent runtime` | managed runtime |
+| `Managed Runtime` | execution plane 由平台托管，生命周期、调度、隔离与恢复都由平台持有的部署形态 | future managed `Web / API` runtime | 当前公开主线 |
 
-## 当前四仓定位
+## 当前仓库角色
 
-| 仓库 | 当前固定定位 | 与 runtime 的关系 |
+| 仓库 | 当前冻结角色 | runtime 关系 |
 | --- | --- | --- |
-| `one-person-lab` | `OPL Gateway / Federation` 的公开说明面与 contract-first surface | 负责定义语言与边界，不是 runtime owner |
-| `med-autoscience` | 医学 `Research Ops` 的 `Domain Gateway + Domain Harness OS` | 拥有医学领域 contract、governance、delivery 与外部 formal entry |
-| `redcube-ai` | 视觉交付 domain 的 `Domain Gateway + Domain Harness OS` | 拥有视觉交付领域 contract、governance、delivery 与外部 formal entry |
-| `med-autogrant` | future `Grant Ops` 的 `Domain Gateway + Domain Harness OS` 方向 | 当前仍停留在 future domain direction / signal-only 语义，不是 admitted runtime owner |
+| `one-person-lab` | `OPL Gateway / Federation` 的公开说明面与 contract-first surface | 负责定义语言与边界，不持有 runtime ownership |
+| `med-autoscience` | 医学 `Research Ops` 的 `Domain Gateway + Domain Harness OS` | 持有医学 domain contract、治理、交付与后续 pilot 吸收 |
+| `redcube-ai` | 视觉交付的 `Domain Gateway + Domain Harness OS` | 持有视觉交付 contract、治理、交付与后续吸收 |
+| `med-autogrant` | future `Grant Ops` 的 `Domain Gateway + Domain Harness OS` 方向 | 当前仍低于 admitted-domain runtime ownership |
 
-`MedDeepScientist` 不属于 `OPL` 顶层四仓中的一个平级 `domain repo`。
-当前更准确的表达是：
+## Shared Runtime Substrate v1
 
-- 它是 `MedAutoScience` 之下的 `controlled quest runtime`
-- 它承担 `MedAutoScience` 当前 execution plane 的主要实现
-- 它不是 `OPL` 顶层的第五个 `Domain Harness OS`
-- 它也不是 `MedAutoScience` 的系统本体或公开入口
+在 `S1`，`OPL` 顶层冻结 6 组共享对象。
+当前冻结的是定义与 ownership boundary，不是共享实现。
 
-## `Codex-default host-agent runtime` 与 `managed runtime`
+### 1. `runtime profile`
 
-### 当前到底是什么
+- 顶层统一定义：
+  - 跨本地与 future managed deployment shape 的稳定隔离单元
+- 不属于 `OPL` 顶层的部分：
+  - domain-local canonical truth
+  - domain 凭据
+  - domain-specific workflow object
+- 必须继续留在 domain 内的 truth：
+  - 一个 profile 在 domain 内如何映射到 study、proposal、deck family、artifact root 或 policy
+- 为什么现在只冻结语言：
+  - 当前各个 domain 的本地布局与 runtime 内部实现仍不同
 
-当前 `OPL` 体系下，公开真相是：
+### 2. `session substrate`
 
-- 当前默认本地部署形态是 `Codex-default host-agent runtime`
-- 这是一种真实的 runtime
-- 但它不是当前意义上的 `managed runtime`
+- 顶层统一定义：
+  - 用于 search、resume、audit 与 cross-session linkage 的 durable continuity contract
+- 不属于 `OPL` 顶层的部分：
+  - domain-specific mutation rule
+  - domain review truth
+  - domain-specific conversation semantics
+- 必须继续留在 domain 内的 truth：
+  - 一个 session 在该 domain workflow 里究竟代表什么，以及允许推进哪些 handle
+- 为什么现在只冻结语言：
+  - 目前还没有被证明可跨域复用的单一 session 实现
 
-其准确含义是：
+### 3. `gateway runtime status`
 
-- `Codex` 类 agent 作为默认 host 执行者
-- execution plane 主要运行在用户机器或受用户控制的本地环境里
-- 本地文件系统、工作树、工具、二进制与环境约束仍然是实际运行的一部分
-- 长时任务虽然可以被编排、恢复、审计，但生命周期与运维责任还没有被平台完整托管
+- 顶层统一定义：
+  - 描述 runtime context 是否 active、interrupted、resumable 或 exiting 的最小可观测状态面
+- 不属于 `OPL` 顶层的部分：
+  - domain 业务指标
+  - domain gate outcome
+  - publication truth
+- 必须继续留在 domain 内的 truth：
+  - 特定 domain workflow 如何定义 healthy / promotable runtime state
+- 为什么现在只冻结语言：
+  - 当前 status surface 仍带有明显的 domain runtime 差异
 
-### 为什么它不等于 `managed runtime`
+### 4. `memory provider hook`
 
-如果一个 `Codex` 会话在本机上被封装得更稳定、能跑得更久，它仍然首先是 `host-agent runtime`。
+- 顶层统一定义：
+  - 围绕 prefetch、turn sync、delegation sync 与 session-end sync 的共享 hook 面
+- 不属于 `OPL` 顶层的部分：
+  - 全局 user-memory 产品
+  - 单一 canonical memory store
+  - domain evidence truth
+- 必须继续留在 domain 内的 truth：
+  - object memory、evidence memory、decision memory、gate memory 及其检索策略
+- 为什么现在只冻结语言：
+  - 正确的 memory 形态应该是 domain-centric，而不是一个全局实现
 
-要进入这里定义的 `managed runtime`，关键变化不是“模型更强”或“跑得更久”，而是：
+### 5. `delivery / cron substrate`
 
-- execution plane 由平台统一托管，而不是主要依附用户机器
-- session / quest / run 的生命周期由平台负责维持与恢复
-- sandbox、工具连接、状态观测、调度与恢复成为正式托管能力
-- 用户与 operator 不再需要自己长期照料底层进程、tmux、daemon、机器路径与恢复细节
+- 顶层统一定义：
+  - 用于 scheduled continuation、scheduled reporting 与 durable delivery targeting 的共享合同
+- 不属于 `OPL` 顶层的部分：
+  - domain-specific delivery object
+  - approval threshold
+  - external publication semantics
+- 必须继续留在 domain 内的 truth：
+  - 什么算 reportable output、deliverable completion 或 scheduled promotion
+- 为什么现在只冻结语言：
+  - 当前还没有被证明可独立于 domain 复用的 delivery engine
 
-因此，可以把 `managed runtime` 粗略理解为：
+### 6. `approval / interrupt / resume`
 
-> “平台托管的、可长时间工作的 agent runtime”
+- 顶层统一定义：
+  - 围绕 stop、pause、approval、interrupt 与 resume 的长跑控制合同
+- 不属于 `OPL` 顶层的部分：
+  - 全局 approval policy
+  - 全局 dangerous-tool policy
+  - 全局 tool catalog
+- 必须继续留在 domain 内的 truth：
+  - tool registry 内容、approval scope、dangerous-action gate、output budget 与 escalation rule
+- 为什么现在只冻结语言：
+  - tool surface 与 approval semantics 仍高度依赖 domain workflow 现实
 
-但不能把它简化成：
+tool registry 归在这一组对象里：
+可以冻结 registry 语义，但实际工具仍保持 domain-scoped。
 
-> “只是一个更能长跑的 Codex”
+## `Codex-default host-agent runtime` 与 future managed runtime
 
-在概念上，真正被托管的是 execution plane，不是某个模型名字。
+### 当前真实状态是什么
 
-### 两者的关系
+当前整个体系公开可说的真相是：
 
-`Host-Agent Runtime` 与 `Managed Runtime` 是同一 execution plane 的两种 deployment shape：
+- 默认本地 deployment shape 是 `Codex-default host-agent runtime`
+- 当前活跃执行口径仍是 Codex-only
+- 这已经是一个真实 runtime，但还不是本合同意义上的 managed runtime
 
-- 当前 shape：`host-agent runtime`
-- future shape：`managed runtime`
+更准确地说：
 
-它们共享的应是同一套：
+- 默认 host executor 是 `Codex`-class agent
+- execution plane 仍主要运行在用户机器或用户可控本地环境里
+- 本地文件系统、worktree、tool、binary 与机器约束仍属于 runtime 现实的一部分
+- 长跑任务已经可以被编排、恢复与审计，但 lifecycle 与 operations 还不是平台托管能力
+
+### 为什么它不等于 managed runtime
+
+变成 managed runtime，关键变化不是“模型更强”或“Codex session 更能长跑”。
+关键变化是：
+
+- execution plane 从“主要由机器持有”变成“主要由平台持有”
+- session、run 与 recovery 的 lifecycle 变成平台维护
+- sandboxing、tool connectivity、observability、scheduling 与 recovery 变成正式托管能力
+
+### 它们之间的关系
+
+`Host-Agent Runtime` 与 `Managed Runtime` 是 execution plane 的两种 deployment shape：
+
+- 当前形态：`host-agent runtime`
+- 未来形态：`managed runtime`
+
+两种形态之间应继续共享的是：
 
 - domain contract
 - formal-entry matrix
-- execution handle 语义
-- audit / review / delivery contract
-
-变化的只是 execution plane 运行与托管的方式。
-
-## 从当前迁到 future `managed runtime`，到底是从什么迁到什么
-
-当前迁移语义不应理解成“从一个 domain 换到另一个 domain”，也不应理解成“从 Codex 换成别的模型”。
-
-更准确的理解是：
-
-- 从：主要由用户机器承载、由本地 host agent 驱动的 execution plane
-- 迁到：主要由平台承载、由平台统一托管生命周期的 execution plane
-
-### 保持不变的部分
-
-迁移到 future `managed runtime` 时，下面这些东西不应被改写：
-
-- `OPL` 顶层 federation 语义
-- `Unified Harness Engineering Substrate` 的共享不变量
-- `domain gateway` / `Domain Harness OS` 的边界
-- `CLI / MCP / controller` 这类 formal-entry matrix 语义
-- `program_id / study_id / quest_id / active_run_id` 这类 execution handle 的语义边界
-- domain-owned audit、review、delivery 与 canonical truth 的归属
-
-### 允许变化的部分
-
-真正允许变化的是 execution plane 与 deployment shape：
-
-- 长时进程跑在本机还是平台
-- session / quest / run 生命周期由谁负责
-- sandbox、工具连接与凭证注入由谁管理
-- watch / status / resume / replay 是否成为平台统一能力
-- operator 是否还需要盯住本地 daemon、机器路径和手工恢复
-
-### 迁移后的主要收益
-
-若 future `managed runtime` 成立，收益应主要来自：
-
-- 更低的本机环境耦合
-- 更清晰的长时任务生命周期托管
-- 更稳定的 status / watch / resume / replay 能力
-- 更低的 operator 运维负担
-- 更容易承接 future `Human-in-the-loop` sibling 或 upper-layer product
-
-### 迁移不是为了做什么
-
-这类迁移不应被写成：
-
-- 取消 domain gateway
-- 把 `OPL` 提升成 runtime owner
-- 把多个 domain 压成同一个单体 runtime
-- 把当前公开真相误写成“已经有统一平台 runtime”
-
-## `MedAutoScience` 与 `MedDeepScientist` 的固定边界
-
-当前更准确的结构应写成：
-
-```text
-Human / Agent
-  -> MedAutoScience
-      -> runtime protocol / runtime transport
-          -> MedDeepScientist
-              -> quest runtime / daemon / worktrees
-```
-
-其中：
-
-- `MedAutoScience`
-  - 是医学 `Research Ops` 的 `Domain Gateway + Domain Harness OS`
-  - 是对外正式入口、领域合同 owner、governance owner、delivery owner
-- `MedDeepScientist`
-  - 是 `MedAutoScience` 当前 execution plane 的主要实现
-  - 是 `controlled quest runtime`
-  - 不是 `MedAutoScience` 的系统本体
-  - 不是 `OPL` 顶层平级 domain
-  - 不是未来 public product naming 的 owner
-
-### 五个共享平面的当前分工
-
-| 平面 | `MedAutoScience` 固定职责 | `MedDeepScientist` 固定职责 |
-| --- | --- | --- |
-| `资产平面` | 医学 study / workspace / artifact 的领域 contract 与 canonical asset truth | 运行期工作副本、导入物、quest-local runtime 文件 |
-| `记忆平面` | 可复用医学研究记忆、controller summary、decision history | quest continuation 所需的运行时记忆与局部状态 |
-| `治理平面` | continue / stop / reframe、publication_eval、controller_decisions、fail-closed gate | quest / session / run 的运行时守卫与状态机 |
-| `交付平面` | manuscript、submission、formal report 与 delivery contract | runtime summary、handoff、escalation 与 completion hook |
-| `执行平面` | 对外 formal entry、runtime protocol adapter、handle mapping、controller orchestration | daemon、quest、run、worktree、watch、resume、runtime audit 的实际实现 |
-
-因此，不应把 `MedDeepScientist` 误写成五个平面的顶层 owner。
-更准确的理解是：
-
-- `MedAutoScience` 拥有五个平面的医学领域语义与外部合同
-- `MedDeepScientist` 主要承担其中 execution plane 的实际运行实现
-
-## `MedDeepScientist` 吸收到 `MedAutoScience` monorepo 时的固定规则
-
-未来如果进入 `monorepo / runtime core ingest / controlled cutover`，应遵守下面这些固定规则：
-
-1. 吸收的是 execution engine，不是把 `MedAutoScience` 降格成 runtime repo。
-2. 被吸收进去的 `MedDeepScientist` 应作为 `MedAutoScience` 内部 `runtime` 主模块的一部分存在，而不是重新抢占 public entrypoint 身份。
-3. cutover 前后应保持 `MedAutoScience -> MedDeepScientist` 当前稳定 runtime protocol 语义等价，而不是边迁边改写对外 contract。
-4. 先稳定 handle、durable surface、gate semantics 与 compatibility regression，再做 physical migration。
-5. 只有在 domain contract 已经稳定后，才允许把外部受控 runtime repo 逐步内收成 monorepo 内部模块。
-
-这意味着未来理想结构更接近：
-
-```text
-MedAutoScience
-  -> controller_charter
-  -> runtime
-       -> ingested execution engine
-  -> eval_hygiene
-```
-
-而不是：
-
-```text
-MedAutoScience == MedDeepScientist
-```
+- execution-handle semantics
+- audit、review 与 delivery contract
+- `S1` 冻结下来的 shared runtime substrate object language
 
 ## 边界规则
 
 不要把系统写成：
 
 - `OPL` 是 runtime owner
-- `Managed Runtime` 只是“更会长跑的 Codex”
-- `MedDeepScientist` 是 `MedAutoScience` 的系统本体
-- monorepo ingest 等于 domain gateway 与 execution engine 边界消失
-- future `managed runtime` 已经是当前 repo-tracked reality
+- `shared runtime substrate v1` 已经是共享实现
+- `Managed Runtime` 只是“更会长跑的 Codex session”
+- future managed runtime 会消灭 domain gateway
+- `contracts/opl-gateway/*.json` 已经物化了整套 substrate
 
 应该把系统写成：
 
-- `OPL` 负责 federation 语言
-- domain repo 负责 `domain gateway + Domain Harness OS`
-- execution engine 负责 execution plane
+- `OPL` 负责 federation 语言与顶层 boundary freeze
+- domain repo 负责 `Domain Gateway + Domain Harness OS`
+- execution plane 负责 runtime execution
 - `host-agent runtime` 与 `managed runtime` 是 execution plane 的两种 deployment shape
-- future migration 只改 execution plane 的托管方式，不改写 domain contract
+- `S1` 先冻结语言，为后续 domain pilot 证明哪些实现真可复用创造条件
 
 ## 延伸阅读
 
 - [OPL 运行模型](./operating-model.zh-CN.md)
 - [Unified Harness Engineering Substrate](./unified-harness-engineering-substrate.zh-CN.md)
-- [共享基础结构](./shared-foundation.zh-CN.md)
-- [Codex-default Host-Agent Runtime 合同](./references/host-agent-runtime-contract.md)
-- [生态四仓统一状态总表](./references/ecosystem-status-matrix.md)
+- [OPL 路线图](./roadmap.zh-CN.md)
+- [Hermes Agent Runtime Substrate 对标与吸收清单](./references/hermes-agent-runtime-substrate-benchmark.md)

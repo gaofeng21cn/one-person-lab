@@ -94,6 +94,6 @@ test('activation package is exposed as a reference-grade supporting surface rath
   assert.match(publicIndexZh, /OPL Phase 1 Exit Activation Package/);
   assert.match(contractReadme, /phase-1-exit-activation-package\.json/);
   assert.match(contractReadmeZh, /phase-1-exit-activation-package\.json/);
-  assert.match(contractReadme, /reference-grade freeze/i);
-  assert.match(contractReadmeZh, /reference-grade freeze/);
+  assert.match(contractReadme, /historical freeze|machine-readable historical freeze/i);
+  assert.match(contractReadmeZh, /历史冻结面|machine-readable 历史冻结面/);
 });

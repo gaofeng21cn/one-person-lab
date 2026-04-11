@@ -19,6 +19,13 @@ These are the first files an AI or maintainer should read before touching the re
 - [Decisions](./decisions.md)
 - [Contracts overview](../contracts/README.md)
 
+Current `S1 / shared runtime substrate v1` working companions:
+
+- [Operating Model](./operating-model.md)
+- [Unified Harness Engineering Substrate](./unified-harness-engineering-substrate.md)
+- [OPL Runtime Naming And Boundary Contract](./opl-runtime-naming-and-boundary-contract.md)
+- [Roadmap](./roadmap.md)
+
 ## Layer 1. Default Public Mainline
 
 These are the first documents a human expert should read to understand what `OPL` is today.
@@ -74,8 +81,9 @@ All Layer 3 docs now live under `docs/references/` so the docs root stays readab
 - `references/opl-operating-example-corpus*`
 - `references/opl-operating-record-catalog*`
 - `references/managed-runtime-migration-readiness-checklist.md` (Chinese-only internal reference)
-- `references/hermes-agent-runtime-substrate-benchmark.md` (Chinese-only internal reference)
-- `references/opl-vertical-online-agent-platform-roadmap.md` (Chinese-only internal reference)
+- `references/hermes-agent-runtime-substrate-benchmark.md` (Chinese-only internal reference; Hermes absorption board for `S1`)
+- `references/opl-vertical-online-agent-platform-roadmap.md` (Chinese-only internal reference; `S1` adoption board and activation package)
+- `references/development-operating-model.md` (Chinese-only internal reference)
 - `references/contract-convergence-v1-decision-note.md` (Chinese-only internal reference)
 - `references/opl-phase2-ecosystem-sync-owner-line.md` (Chinese-only internal reference)
 - `references/opl-phase-2-central-reference-sync-board.md` (Chinese-only internal reference)
@@ -83,9 +91,8 @@ All Layer 3 docs now live under `docs/references/` so the docs root stays readab
 
 ### Historical migration archives
 
-- `references/development-operating-model.md` (Chinese-only historical migration reference)
 - `references/runtime-alignment-taskboard.md` (Chinese-only historical migration reference)
-- [OMX historical archive](history/omx/README.md) (historical reference only)
+- [OMX historical archive](history/omx/README.md) (historical reference only; not a default reading path)
 
 ## Layer 4. Historical Specs And Plans
 

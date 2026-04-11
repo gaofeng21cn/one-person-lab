@@ -2,125 +2,163 @@
 
 # Unified Harness Engineering Substrate
 
-## 目的
+## 文档目的
 
-这份文档用于定义当前 `OPL` 体系下共享的 Harness Engineering 语言。
-它的作用，是让 `OPL` 能以一套清楚的一致性架构对外呈现，而不是把几个 domain project 继续写成松散相关的零散仓库；同时，它也不声称所有 domain 已经被压进一个单体 runtime 或一个公共代码仓。
+这份文档定义当前 `OPL` 体系复用的共享 Harness Engineering 语言。
+它的任务，是让整个系统家族在同一套边界下推进，而不是假装所有 domain 已经收敛成一个单体 runtime 或一套共享公开代码框架。
 
 ## 它是什么
 
-`Unified Harness Engineering Substrate` 是 `OPL` 之下共享的架构基座。
-它定义的是多个 domain system 共同继承的一组稳定约束，而不是取代它们各自的 domain contract、domain gateway 与 `Domain Harness OS`。
+`Unified Harness Engineering Substrate` 是 `OPL` 之下的跨域共享 contract layer。
+它冻结多个 domain system 应继承的复用规则，同时保留各自的 domain contract、domain gateway 与 `Domain Harness OS` 实现。
 
-在当前体系里，这个 substrate 作用于：
+它不是新的 routed hop。
+它是横跨下面这些层的共享 contract layer：
 
-- `Med Auto Science`
-- `RedCube AI`
-- `Med Auto Grant`
+- `OPL Gateway / Federation`
+- `Domain Gateway`
+- `Domain Harness OS`
+- future `Execution Plane / Deployment Shape` 的迁移边界
 
 ## 它不是什么
 
-这个 substrate 不是：
+这套 substrate 不是：
 
-- “所有 domain 已经共享完全一致对象模型”的声明
-- “所有 domain 已经落在同一个公共代码仓”的声明
-- 任何一个 domain gateway 的替代品
-- 任何一个 `Domain Harness OS` 的替代品
-- `OPL` 可以绕过 domain gateway、直接触碰 domain-local harness 执行面的许可
+- “所有 domain 已经使用同一个对象模型”的声明
+- “所有 domain 已经运行在同一个共享代码仓”的声明
+- 任何 domain gateway 的替代品
+- 任何 `Domain Harness OS` 的替代品
+- 允许 `OPL` 绕过 domain gateway 直接接管 domain-local execution 的理由
+- `OPL` 已经成为 runtime owner 的证明
 
-## 分层关系
+## 它在架构中的位置
 
-推荐长期分层保持为：
+控制链继续保持：
 
 ```text
 Human / Agent
   -> OPL Gateway / Federation
-      -> Unified Harness Engineering Substrate
-          -> Domain Gateway
-              -> Domain Harness OS
-                  -> Deployment Shape
+      -> Domain Gateway
+          -> Domain Harness OS
+              -> Review / Audit / Delivery Surfaces
 ```
 
-每一层负责不同的事情：
-
-- `OPL Gateway / Federation`
-  - 负责顶层任务语义、路由语言与跨域边界合同
-- `Unified Harness Engineering Substrate`
-  - 负责多个 domain 共享的 Harness Engineering 原则
-- `Domain Gateway`
-  - 负责 domain-local 的任务入口、路由与合同 hydration
-- `Domain Harness OS`
-  - 负责 domain-local 的执行逻辑、审计面与交付语义
-- `Deployment Shape`
-  - 负责 harness 具体部署在哪里、以什么形态运行，但不重写 domain contract
+substrate 横跨这条链路。
+它约束共享语言与迁移兼容面，但不替代 routing，也不替代 domain 归属。
 
 ## 共享不变量
 
-这个 substrate 当前冻结的共享约束包括：
+这套 substrate 冻结这些共享判断：
 
-- 默认采用 `Agent-first` 执行姿态
-- 当前各个 domain 仓首先都是共享同一 substrate 的 `Auto-only` 主线
-- 未来 `Human-in-the-loop` 产品应作为兼容 sibling 或 upper-layer product 复用同一 substrate，而不是把当前仓强行改成同仓双模
-- formal entry 采用同一套显式矩阵：默认正式入口 `CLI`、支持协议层 `MCP`、`controller` 仅作为 internal control surface
-- 状态迁移、审阅面与交付边界保持可审计
-- 部署形态可以变化，但不应因此改写 domain contract
+- `Agent-first` 是默认执行姿态
+- 当前 domain 仓统一按 `Auto-only` 主线理解
+- 未来如果要出现 `Human-in-the-loop` 产品，应作为 sibling 或 upper-layer product 复用同一套 substrate-compatible contract，而不是把同仓主线改成双模系统
+- formal-entry matrix 继续保持显式：默认 formal entry 是 `CLI`，supported protocol layer 是 `MCP`，`controller` 只保留 internal control surface 语义
+- 状态迁移、review surface 与 delivery boundary 必须可审计
+- deployment shape 可以变化，但不应改写 domain contract
 
-## 部署形态
+## Shared Runtime Substrate v1
 
-当前默认的本地部署形态是：
+在 `S1`，顶层先冻结 6 组共享对象。
+当前冻结的是语言与 ownership boundary，不是共享实现。
+
+### 1. `runtime profile`
+
+- 顶层统一定义：跨本地 host-agent 与 future managed deployment shape 的稳定隔离单元
+- 不属于 `OPL` 顶层的部分：domain-local canonical truth、domain 凭据、domain-specific workflow object
+- 必须继续留在 domain 内的 truth：profile 在一个 domain 里如何映射到 study、proposal、deck、artifact、policy 等对象
+
+### 2. `session substrate`
+
+- 顶层统一定义：用于 search、resume、audit 与 cross-session linkage 的 durable session / run continuity contract
+- 不属于 `OPL` 顶层的部分：domain-specific conversation semantics、domain object mutation rule、domain review truth
+- 必须继续留在 domain 内的 truth：一个 session 在特定 domain workflow 里究竟代表什么，以及它允许推进哪些 handle
+
+### 3. `gateway runtime status`
+
+- 顶层统一定义：描述一个 runtime context 是否健康、活跃、已中断、可恢复或正在退出的最小可观测状态面
+- 不属于 `OPL` 顶层的部分：domain-specific 业务指标、domain gate 结果、publication truth
+- 必须继续留在 domain 内的 truth：特定 domain workflow 如何定义 healthy / promotable run
+
+### 4. `memory provider hook`
+
+- 顶层统一定义：围绕 prefetch、turn sync、delegation sync 与 session-end sync 的共享 hook 面
+- 不属于 `OPL` 顶层的部分：全局 user-memory 产品、单一 canonical memory store、domain evidence truth
+- 必须继续留在 domain 内的 truth：object memory、evidence memory、decision memory、gate memory 的具体语义
+
+### 5. `delivery / cron substrate`
+
+- 顶层统一定义：用于 scheduled continuation、scheduled reporting 与 durable delivery targeting 的共享合同
+- 不属于 `OPL` 顶层的部分：domain-specific delivery object、approval threshold、external publication semantics
+- 必须继续留在 domain 内的 truth：什么算 reportable output、deliverable completion、scheduled promotion
+
+### 6. `approval / interrupt / resume`
+
+- 顶层统一定义：围绕 stop、pause、approval、interrupt 与 resume 的长跑控制合同
+- 不属于 `OPL` 顶层的部分：全局 tool catalog、全局 approval policy
+- 必须继续留在 domain 内的 truth：tool registry 内容、dangerous-action policy、budget limit 与 escalation rule
+
+## 为什么 `S1` 先冻结语言，而不宣称实现
+
+`S1` 只停在顶层 contract freeze，原因是：
+
+- 当前各个 domain 仍保有不同的 runtime 内部结构与产品节奏
+- 这 6 组对象还没有被证明已经形成 gateway-owned machine-readable surface
+- 在 domain pilot 证明哪些实现真正可复用之前，`OPL` 不应宣称已经拥有共享 execution kernel
+
+因此，`S1` 先落在公开文档与 reference-grade 文档层，而不是直接写进 `contracts/opl-gateway/*.json`。
+
+## Deployment Shape
+
+当前默认的本地 deployment shape 是：
 
 - `Codex-default host-agent runtime`
 
-这只是当前部署方式，不是 substrate 的本体定义。
-在后续阶段，同一套 substrate 也应兼容：
+这只是当前宿主选择，不是 substrate 的身份。
+同一套 substrate 还应兼容：
 
-- 托管式 Web runtime
-- 平台侧统一托管的执行面
+- future managed `Web / API` runtime
+- future platform-hosted execution surface
 
-也就是说，未来如果从“装在用户电脑上”迁移到“运行在平台上”，不应因此重写 substrate，也不应因此压平 domain 边界。
+宿主位置变化，不应要求重写 substrate，也不应要求打碎 domain 边界。
 
-## 从共享 substrate 到垂类在线 Agent 平台族
+## 从共享 substrate 到垂类在线 agent 产品族
 
-这套 substrate 的长期产品意义，不是把 `OPL` 改写成通用长期在线 agent 平台，而是让 `OPL` 逐步具备演进成“垂类在线 agent 平台族”的能力。
+这套 substrate 的长期产品含义，不是把 `OPL` 改写成通用长期在线 agent 平台。
+它真正服务的是：让 `OPL` 体系逐步演进成一组垂类在线 agent 产品。
 
-在这个理想结构里：
+在这个结构里：
 
 - `OPL`
-  - 继续负责顶层 `Gateway / Federation`
+  - 继续是顶层 `Gateway / Federation`
 - shared runtime substrate
-  - 逐步承接 `runtime profile`、`session substrate`、`gateway runtime status`、`memory hook`、`delivery / cron`、`approval / interrupt` 这类共享运行合同
-- 各 `Domain Harness OS`
-  - 继续持有自己的 formal entry、domain object、gate、audit、delivery 与 canonical truth
+  - 逐步承接长期在线运行所需的跨域共享 runtime contract
+- 各个 `Domain Harness OS`
+  - 继续持有自己的产品入口、domain object、gate、audit surface、delivery semantics 与 canonical truth
 
-因此，后续更合理的方向不是“直接把三个业务仓改造成同一种执行内核”，而是：
+更诚实的推进顺序是：
 
-- 先冻结共享 runtime substrate 语言
-- 再在合适的 domain 中做成熟的本地产品 runtime pilot
-- 再从 pilot 回抽可复用的 substrate 实现
+1. 先冻结 shared runtime substrate 语言
+2. 在合适的 domain 里证明成熟的本地产品 runtime pilot
+3. 再把真正可复用的实现从 pilot 回抽出来
 
-这条演进线当前仍属于未来方向。
-它不等于当前已经存在统一平台 runtime，也不等于 `OPL` 已经成为 runtime owner。
+## 当前 domain 映射
 
-## 当前 Domain Mapping
-
-当前 `OPL` 体系可以理解成：
+当前 `OPL` 家族可理解为：
 
 - `Med Auto Science`
   - 医学 `Research Ops` 的 `Domain Harness OS`
 - `RedCube AI`
   - 视觉交付的 `Domain Harness OS`
 - `Med Auto Grant`
-  - 未来医学 `Grant Ops` 的 `Domain Harness OS` 方向
+  - future 医学 `Grant Ops` 的 `Domain Harness OS` 方向
 
-`OPL` 本身不是再额外多出来的一个 `Domain Harness OS`。
-它仍然是位于这些 domain system 之上的顶层 gateway 与 federation layer。
+`OPL` 自己不是第四个 `Domain Harness OS`。
+它继续是这些 domain system 之上的顶层 gateway 与 federation 层。
 
-## 现实意义
+## 延伸阅读
 
-这个共享 substrate 的意义，在于后续新 domain 可以沿着同一套思路快速展开：
-
-- 共享执行哲学与边界语言
-- domain-specific contract 继续留在各自 domain
-- `OPL` 负责解释整个体系如何拼起来，而不是吞掉 domain-local runtime owner 权限
-
-这样，后续新增 Harness OS 时，就能更像是在同一套框架思想上演化，而不是重复发明几套彼此不兼容的系统。
+- [OPL 运行模型](./operating-model.zh-CN.md)
+- [OPL Runtime 命名与边界合同](./opl-runtime-naming-and-boundary-contract.zh-CN.md)
+- [OPL 路线图](./roadmap.zh-CN.md)
+- [Hermes Agent Runtime Substrate 对标与吸收清单](./references/hermes-agent-runtime-substrate-benchmark.md)

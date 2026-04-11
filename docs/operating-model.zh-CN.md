@@ -103,6 +103,10 @@ Agent 主要负责：
 当前 repo-tracked 的 formal entry，仍然是本地 `TypeScript CLI`-first / read-only gateway baseline。
 这是真实的当前入口，但它不应被理解成未来产品永远只能通过 `Codex` 接入。
 
+当前 repo-tracked follow-on 是 `S1 / shared runtime substrate v1 contract freeze`。
+这一步只冻结 `runtime profile`、`session substrate`、`gateway runtime status`、`memory provider hook`、`delivery / cron substrate`、`approval / interrupt / resume` 这些共享语言。
+它**不**等于已经拥有共享执行实现、托管式 `Web / API` runtime，或由 `OPL` 持有的 runtime plane。
+
 更合理的长期方向是：
 
 - 当前继续以本地 `CLI-first` 作为 formal entry

@@ -323,19 +323,36 @@ Its correct boundary is:
 - a runtime family surface that can also host families not identical to `Presentation Ops`
 
 
-## Current Federation Activation State
+## Current Public Mainline And Repo-Tracked Follow-On
 
-As of `2026-04-10`, `Phase 1 exit + next-stage activation package freeze` remains the absorbed predecessor gate, and `Phase 2 / Minimal admitted-domain federation activation package` is already absorbed into the current top-level federation truth.
+As of `2026-04-11`, the public `OPL` mainline remains the admitted-domain federation surface plus the local `TypeScript CLI`-first / read-only gateway baseline that already exists in this repository.
 
-That activation is justified by two admitted domain surfaces that are now repo-tracked as stable enough for stronger top-level federation wording:
+That means:
 
-- `MedAutoScience` for `research_ops`
-- `RedCube AI` for `presentation_ops`
+- `MedAutoScience` remains the active `research_ops` domain surface
+- `RedCube AI` remains the admitted `presentation_ops` / visual-deliverable domain surface
+- `Grant Foundry -> Med Auto Grant` remains signal-only / future-direction evidence rather than an admitted domain gateway
+- the formal entry at the `OPL` layer remains `CLI-first`, `MCP` remains the supported protocol layer, and `controller` remains an internal control surface only
+- the current deployment shape remains the `Codex`-default host-agent runtime
 
-That absorbed federation package still applies to already admitted domains only.
-`Grant Foundry -> Med Auto Grant` remains signal-only / domain-direction evidence only, while `Review Ops` and `Thesis Ops` remain under-definition bundles below onboarding.
-The top-level formal entry still remains the local `TypeScript CLI`-first / read-only gateway surface, and `OPL` still does not become a runtime owner.
-No new active follow-on tranche is currently open: the honest top-level state is a central-sync stop until an admitted-domain repository lands a new absorbed delta or the central reference surfaces drift.
+The current repo-tracked follow-on is `S1 / shared runtime substrate v1 contract freeze`.
+It freezes six shared object groups at the top layer:
+
+- `runtime profile`
+- `session substrate`
+- `gateway runtime status`
+- `memory provider hook`
+- `delivery / cron substrate`
+- `approval / interrupt / resume`
+
+`S1` does **not** claim:
+
+- a unified platform runtime
+- a hosted `Web / API` runtime
+- `OPL` as the current runtime owner
+- one shared execution kernel across all domains
+
+Earlier phase and activation-package freezes remain useful historical anchors in `docs/references/`, but they are no longer the right label for the active repo-tracked follow-on.
 
 
 ## Scope Boundary
@@ -355,24 +372,25 @@ It should be described as:
 
 ## Roadmap
 
-The current public mainline remains the absorbed `Phase 2 / Minimal admitted-domain federation activation package`, built on top of the frozen `Phase 1` local `TypeScript CLI` + read-only gateway baseline:
+The immediate repo-tracked roadmap is to complete `S1 / shared runtime substrate v1 contract freeze` without changing the product identity of `OPL`.
 
-- turn the frozen OPL gateway contracts into a CLI-first, read-only discovery surface for humans and agents
-- keep `Research Foundry -> Med Auto Science` explicit as the current `Research Ops` line
-- keep `RedCube AI` explicit as the visual-deliverable domain gateway and harness
-- keep `Grant Ops`, `Review Ops`, and `Thesis Ops` below the admitted gateway surface until their domain boundaries are explicitly frozen
+This means:
 
-As of `2026-04-10`, the repository still has a runnable local `TypeScript CLI`-first / read-only gateway baseline.
-The completed `Phase 1 / G2 release-closeout` has already closed the `G2 stable public baseline` into the single stable repo-tracked public entry.
-That baseline therefore remains the current `OPL` `Phase 1` formal entry contract and public system surface.
-The repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` has already frozen `G3` at a planning-only gate, so it still does not open a mutation entry, turn `OPL` into a unified runtime owner, or pull a shared execution core forward.
-The repo-tracked `Phase 1` candidate-domain closeout order is frozen as `Review Ops` then `Thesis Ops`: both candidate paths remain below admission / discovery / routing / handoff readiness, while `Grant Foundry -> Med Auto Grant` stays signal-only.
-The absorbed predecessor gate is `Phase 1 exit + next-stage activation package freeze`, and the absorbed current federation package is `Minimal admitted-domain federation activation package`, which strengthens federation wording for `MedAutoScience` + `RedCube AI` only without activating routed action, admitting `Grant Ops` / `Review Ops` / `Thesis Ops`, or turning `OPL` into a runtime owner.
-The current repo-tracked truth is therefore an honest central-sync stop rather than an open-ended same-package continuation line.
+- keep the local `TypeScript CLI`-first / read-only gateway baseline as the current formal entry
+- keep `MCP` as the supported protocol layer and keep `controller` internal-only
+- freeze the six shared runtime object groups in public docs and reference-grade docs
+- keep `MedAutoScience` as the first truthful adoption lane, `Med Auto Grant` as the second, and `RedCube AI` as the later lane once `source-readiness / research-mainline` is more stable
 
-The current delivery target uses a local `TypeScript CLI` as the Phase 1 entry transport on top of the current `Codex-default host-agent runtime`.
-The active development-control path is Codex-only and does not require a separate `Codex Host / OMX` split.
-That baseline reads frozen contracts, lists workstreams/domains, and explains routing boundaries without claiming web/server runtime behavior or mutating domain state.
+This roadmap does **not** mean:
+
+- a unified platform runtime is being implemented in `OPL`
+- a hosted runtime already exists
+- the three domain repositories will be forced into one execution kernel
+- `OPL` becomes the runtime owner
+
+The current delivery target inside this repository remains the same local `TypeScript CLI` entry transport on top of the `Codex`-default host-agent runtime.
+The active development-control path remains Codex-only and does not require a separate `Codex Host / OMX` split.
+`S1` changes language, contract alignment, and adoption guidance; it does not pretend that the baseline has already become a hosted product runtime.
 
 For the public phase view and the full document layering:
 

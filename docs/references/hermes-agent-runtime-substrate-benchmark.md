@@ -4,462 +4,213 @@
 
 ## 文档目的
 
-这份文档把 `Hermes Agent` 作为一个外部工程参照物，专门研究它在长期在线 agent runtime、gateway、session、memory、cron、approval 与 profile isolation 上已经做成熟的 substrate 设计。
+这份文档把 `Hermes Agent` 作为一个外部工程参照物，只用于帮助 `OPL` 冻结 `S1 / shared runtime substrate v1` 的吸收判断。
 
-这份文档的目标，不是把 `OPL` 改写成另一个 `Hermes Agent`，也不是把 `OPL` 重新定位成“通用长期在线 agent 平台”。
+它不做三件事：
 
-它只回答三个问题：
+- 不把 `OPL` 改写成通用长期在线 agent 平台
+- 不把 `OPL` 提升成当前 runtime owner
+- 不把 future managed runtime 写成 current truth
 
-1. `Hermes Agent` 哪些 runtime substrate 设计已经足够成熟，值得 `OPL` 吸收。
-2. 哪些设计要经过 domain-oriented 改写后才能吸收。
-3. 哪些设计即使成熟，也不应该进入 `OPL` 的长期主线。
+它只回答一个问题：
 
-这份文档属于 `docs/references/` 下的内部参考级文档。
-它不反向抬升为 `OPL` 的公开产品定位真相，也不替代：
+> Hermes 哪些 runtime substrate 设计值得被 `OPL` 直接吸收、改写后吸收、暂缓吸收或明确拒绝？
 
-- `docs/operating-model.zh-CN.md`
-- `docs/shared-foundation.zh-CN.md`
-- `docs/unified-harness-engineering-substrate.zh-CN.md`
-- `AGENTS.md`
-- `contracts/README.md`
-- `contracts/opl-gateway/README.zh-CN.md`
-
-当前围绕“如何把这些 substrate 判断继续推成 `OPL` 的垂类在线 agent 平台演进路线”的阶段化落地蓝图，见：
-
-- `docs/references/opl-vertical-online-agent-platform-roadmap.md`
-
-## 对标范围
-
-本次对标基于本地克隆仓：
+## 对标快照
 
 - 本地路径：`/Users/gaofeng/workspace/_external/hermes-agent`
 - 快照提交：`96051955`
 - 快照日期：`2026-04-10`
 
-本次重点阅读的实现文件包括：
+本轮重点参照的能力面包括：
+
+- runtime profile / profile isolation
+- session store / session search / resume
+- gateway runtime status / owner-process discipline
+- memory provider contract
+- cron / delivery substrate
+- approval / tool registry / interrupt / resume
+
+## 吸收总原则
+
+`OPL` 对 Hermes 的吸收只围绕 shared runtime substrate v1 进行。
+判断标准是：
+
+- 是否能稳定 `OPL` 顶层对长期在线 runtime 的语言判断
+- 是否不会把 domain truth 不当上收
+- 是否不会把 `OPL` 错写成已经实现的统一平台 runtime
+
+## Adopted
+
+下面这些对象直接进入 `S1` 顶层冻结。
+这里的 “adopted” 指概念与边界直接被吸收，不等于实现已经共享。
+
+### 1. `runtime profile`
+
+- 原因：
+  - Hermes 已经把 profile 证明成长期在线 runtime 的一等隔离单元
+- 边界：
+  - `OPL` 只吸收 profile 的顶层命名、隔离语义与迁移兼容面
+  - domain-local canonical truth、credential、artifact mapping 继续留在 domain 内
+- 对 `OPL` 的实际影响：
+  - `S1` 把 `runtime profile` 固定成跨本地 host-agent 与 future managed runtime 的统一对象
+
+### 2. `session substrate`
+
+- 原因：
+  - Hermes 证明了 session store 不是附属日志，而是 search、resume、audit 的 substrate
+- 边界：
+  - `OPL` 只冻结 session continuity contract，不持有 domain conversation truth
+  - session 对 domain object 的语义解释仍留在 domain 内
+- 对 `OPL` 的实际影响：
+  - `S1` 固定 `session substrate` 为共享对象，而不是各仓各写一套 continuation 叙事
+
+### 3. `gateway runtime status`
+
+- 原因：
+  - Hermes 把 runtime status 做成了正式可观测表面，而不是临时日志
+- 边界：
+  - `OPL` 只吸收最小 runtime-health 语义
+  - 业务指标、gate outcome 与 promotion truth 继续由 domain 持有
+- 对 `OPL` 的实际影响：
+  - `S1` 可以稳定解释什么叫 active / interrupted / resumable / exiting runtime context
+
+### 4. `delivery / cron substrate`
+
+- 原因：
+  - Hermes 证明定时继续、定时交付与静默投递应该属于 runtime substrate，而不是附属脚本
+- 边界：
+  - `OPL` 只冻结 scheduled continuation 与 durable delivery targeting 的共享合同
+  - 真正的 deliverable object、approval threshold 与 publication semantics 继续留在 domain 内
+- 对 `OPL` 的实际影响：
+  - `S1` 可以统一解释 cron / delivery 为什么必须是 substrate，而不是各仓私有补丁
+
+### 5. `approval / interrupt / resume`
+
+- 原因：
+  - Hermes 把 approval、interrupt、resume 做成了 runtime 的中心控制合同
+- 边界：
+  - `OPL` 只吸收 stop / pause / approval / interrupt / resume 的共享合同
+  - 危险动作、预算、具体审批规则仍留在 domain 内
+- 对 `OPL` 的实际影响：
+  - `S1` 对长期在线但仍可控的运行形态有了稳定统一语言
+
+## Adapted
+
+下面这些设计有明显价值，但不能原样搬进 `OPL`。
+它们必须经过 domain-oriented 改写后才能吸收。
+
+### 1. `memory provider hook`
+
+- 原因：
+  - Hermes 的 hook lifecycle 很干净，适合直接成为 substrate contract
+- 边界：
+  - `OPL` 不吸收 user-centric memory 主线
+  - `OPL` 只吸收 `prefetch / sync_turn / on_session_end / on_delegation` 这类 hook 语义
+- 对 `OPL` 的实际影响：
+  - `S1` 把 memory provider hook 冻结成 shared object，但要求 memory 继续是 domain-centric
+
+### 2. `tool registry contract`
+
+- 原因：
+  - Hermes 证明 tool registry 应该是正式 runtime surface，而不是散落在 prompt 或 CLI 回调里
+- 边界：
+  - `OPL` 不建立全局 tool universe
+  - `OPL` 只冻结 registry 的共享语义，具体 tool surface 继续保持 domain-scoped
+- 对 `OPL` 的实际影响：
+  - tool registry 被纳入 `approval / interrupt / resume` 对象组的共享边界，但不抽成顶层工具平台
+
+### 3. `report / audit linkage`
+
+- 原因：
+  - Hermes 的 runtime status、delivery 与 session 之间具备天然联动
+- 边界：
+  - `OPL` 只吸收 linkage 语义
+  - report schema、review truth 与 publish truth 继续留在 domain 内
+- 对 `OPL` 的实际影响：
+  - `S1` 的 adoption board 可以要求各 domain 明确 runtime status 如何进入 audit / delivery surface
 
-- `hermes_state.py`
-- `gateway/run.py`
-- `gateway/session.py`
-- `gateway/status.py`
-- `cron/scheduler.py`
-- `agent/memory_provider.py`
-- `agent/memory_manager.py`
-- `tools/memory_tool.py`
-- `tools/session_search_tool.py`
-- `tools/registry.py`
-- `tools/approval.py`
-- `hermes_cli/profiles.py`
+## Deferred
 
-## 一、当前最值得学习的部分
+下面这些方向在 `S1` 只保留为后续可能推进的对象，不进入当前冻结的已吸收主线。
 
-### 1. runtime profile 是一等隔离单元
+### 1. `gateway owner process` 的统一实现
 
-`Hermes Agent` 不是只做一个默认 `~/.hermes` 目录，然后把所有状态都塞进去。
+- 原因：
+  - Hermes 已经证明长期在线 owner process 很重要
+- 边界：
+  - `OPL` 当前只能冻结 owner-process 语义，不诚实地宣称统一实现已经存在
+- 对 `OPL` 的实际影响：
+  - adoption board 可以把它列为 `med-autoscience` pilot 的后续目标，但不能写成 `OPL` 顶层已落地能力
 
-它已经把下面这些能力统一挂到 `profile` 概念下：
+### 2. 平台托管的 managed runtime
 
-- `HERMES_HOME` 根目录隔离
-- profile 级 gateway pid / runtime status
-- profile 级 session store
-- profile 级 memory / skills / config
-- profile 级 subprocess `HOME`
+- 原因：
+  - Hermes 的 owner-process 与 status 设计对 future managed runtime 很有启发
+- 边界：
+  - `S1` 只冻结 host-agent 与 managed runtime 的命名关系
+  - 当前不实现平台托管 execution plane
+- 对 `OPL` 的实际影响：
+  - `OPL` 对 future migration 有了稳定语言，但仍停留在 host-agent reality
 
-这件事对 `OPL` 很重要，因为你现在真正要解决的，不只是“一个 agent 能不能跑起来”，而是：
+### 3. 多渠道 delivery / messaging 矩阵
 
-- 不同 repo / 不同 domain / 不同 deployment shape 的 runtime 状态能不能隔离
-- 长时间在线时，不同 owner line 能不能不互相污染
-- 未来从本地 host-agent runtime 迁到平台托管 runtime 时，身份与状态能不能稳定迁移
+- 原因：
+  - Hermes 的 delivery surface 很适合更大产品
+- 边界：
+  - `OPL` 当前不应该把 omnichannel matrix 提升成主线
+- 对 `OPL` 的实际影响：
+  - `S1` 只冻结 delivery substrate，不扩张产品渠道矩阵
 
-### 2. session store 是 substrate，不是附属日志
+## Rejected
 
-`Hermes Agent` 用 `SQLite + WAL + FTS5` 做 session store，并显式存：
+下面这些判断不应进入 `OPL` 当前主线。
 
-- session metadata
-- full message history
-- parent_session_id 链
-- source tagging
-- token / cost / title / model config
+### 1. 把 `OPL` 改写成通用长期在线 agent 平台
 
-这比“把对话散落在临时文件里”成熟很多。
+- 原因：
+  - 这会直接改写产品定位
+- 边界：
+  - `OPL` 继续是顶层 `Gateway / Federation`
+- 对 `OPL` 的实际影响：
+  - 所有吸收都必须服从垂类家族定位，而不是通用平台叙事
 
-对 `OPL` 来说，可直接学习的不是“保存聊天记录”本身，而是这条工程判断：
+### 2. 把 user-centric memory 做成核心卖点
 
-- `session / run / execution history` 应该有 repo-independent 的 substrate owner
-- 这个 substrate 要支持 search、resume、audit 与 cross-session recall
-- 但它不能替代 domain-owned canonical truth
+- 原因：
+  - `OPL` 更关心对象、证据、决策、gate 与交付记忆
+- 边界：
+  - user preference 不应成为顶层主线
+- 对 `OPL` 的实际影响：
+  - memory provider hook 必须坚持 domain-centric memory
 
-### 3. gateway 是长期在线 owner process
+### 3. 单体 runtime / 一个共享 execution kernel
 
-`Hermes Agent` 的 gateway 不是一个薄 webhook 入口，而是一个真正长期在线的 owner process。
+- 原因：
+  - 这会抹掉 domain gateway 与 `Domain Harness OS` 边界
+- 边界：
+  - `OPL` 必须继续保留 gateway、domain gateway、domain harness 的三层结构
+- 对 `OPL` 的实际影响：
+  - `S1` 只能冻结 contract，不能强推统一实现
 
-它持有：
+### 4. 自动 skill growth 直接改写 repo-tracked mainline
 
-- 平台接入
-- session routing
-- runtime status
-- delivery
-- cron tick
-- approval 回调
-- interrupt / redirect
+- 原因：
+  - 这会破坏 truth freeze 与 contract stability
+- 边界：
+  - 自动沉淀可以存在，但进入 repo-tracked mainline 前必须经过验证与裁决
+- 对 `OPL` 的实际影响：
+  - runtime substrate 不能反向变成“自动改写真相”的机制
 
-并且用 pid file、runtime status file、scope lock 来维持可观测与可恢复性。
+## 当前 `S1` 吸收结论
 
-这一点和 `OPL` 的未来方向高度一致。
-未来 `OPL` 的稳定性，不会只来自单次 CLI 调用，而会来自：
+这轮对标的直接结论是：
 
-- 长期在线 runtime owner
-- 可观测 gateway
-- 明确 session / delivery / audit linkage
+- `OPL` 应直接 adopted：`runtime profile`、`session substrate`、`gateway runtime status`、`delivery / cron substrate`、`approval / interrupt / resume`
+- `OPL` 应 adapted 后吸收：`memory provider hook`、`tool registry contract`、`report / audit linkage`
+- `OPL` 应 deferred：统一 owner-process 实现、managed runtime、omnichannel delivery matrix
+- `OPL` 应 rejected：通用 agent 平台定位、user-centric memory、单体 runtime、自动 skill growth 改写主线
 
-### 4. memory provider 抽象很干净
+具体推广顺序与 activation package，见：
 
-`Hermes Agent` 把 memory 分成两层：
-
-- 永远存在的 built-in memory
-- 最多一个 external memory provider
-
-同时把 provider 生命周期冻结成统一 contract：
-
-- `initialize`
-- `system_prompt_block`
-- `prefetch`
-- `queue_prefetch`
-- `sync_turn`
-- `on_session_end`
-- `on_pre_compress`
-- `on_delegation`
-
-这比把“记忆”写死在某个工具或某个 prompt 里稳得多。
-
-对 `OPL` 来说，值得吸收的是：
-
-- memory provider 作为 substrate contract
-- prefetch / sync / session-end / delegation 作为正式 hook 面
-- memory context 要和主 prompt 明确隔离
-
-### 5. cron / delivery 是正式 runtime 能力
-
-`Hermes Agent` 把 cron 当成 runtime 的一等公民，而不是脚本外挂。
-
-它有：
-
-- job store
-- due-job resolver
-- delivery target resolver
-- silent marker
-- cron session persistence
-- timeout / inactivity interruption
-
-这对 `OPL` 很有价值，因为未来很多长跑任务都需要：
-
-- 定时继续
-- 定时审计
-- 定时汇报
-- 定时检查 gate
-
-如果这些能力不进入 substrate，后面每个 `Domain Harness OS` 都会自己再造一遍。
-
-### 6. approval / tool registry / interrupt 都是中心能力
-
-`Hermes Agent` 把 tool registry、dangerous approval、session-scoped approval state、interrupt 都放在正式 runtime 面，而不是散在 CLI 回调里。
-
-这个判断是成熟的。
-
-对 `OPL` 来说，未来真正稳定的 substrate 也必须把下面这些冻结下来：
-
-- tool registry contract
-- approval contract
-- interrupt / stop / resume contract
-- result budget / output surface contract
-
-## 二、可以直接吸收的设计
-
-下面这些内容，`OPL` 不需要先重写产品定位，就可以直接吸收为统一 substrate 方向：
-
-### 1. Runtime Profile Contract
-
-建议 `OPL` 冻结统一的 `runtime profile` 语义，至少包括：
-
-- `profile_id`
-- `runtime_home`
-- `session_store`
-- `gateway_pid`
-- `runtime_status`
-- `memory_root`
-- `subprocess_home`
-
-这会直接提升四仓在本地长跑、worktree 隔离、未来托管迁移时的可控性。
-
-### 2. Session Substrate Contract
-
-建议统一冻结：
-
-- `session_id`
-- `parent_session_id`
-- `source`
-- `started_at / ended_at`
-- `session_state`
-- `interrupt_reason`
-- `resume_pointer`
-- `searchable transcript / summary`
-
-这里的重点不是聊天 UI，而是让长期在线 runtime 拥有一个稳定的 execution memory substrate。
-
-### 3. Gateway Runtime Status Contract
-
-建议统一冻结：
-
-- `gateway_state`
-- `active_runs`
-- `platforms`
-- `restart_requested`
-- `last_heartbeat`
-- `exit_reason`
-
-这样未来不管是本地 host-agent runtime 还是平台托管 runtime，外部都能看到可审计的 runtime 健康面。
-
-### 4. Delivery / Cron Contract
-
-建议统一冻结：
-
-- `job_id`
-- `origin`
-- `delivery_target`
-- `next_run_at`
-- `last_run_at`
-- `timeout`
-- `output_record`
-- `silent_delivery`
-
-这样 `cron` 才会是 substrate，不会退回各仓私有脚本。
-
-### 5. Approval / Interrupt Contract
-
-建议统一冻结：
-
-- `approval_request_id`
-- `approval_scope`
-- `session_key`
-- `approval_decision`
-- `interrupt_reason`
-- `resume_allowed`
-
-这部分对“长期在线但仍可控”非常关键。
-
-## 三、需要改写后再吸收的设计
-
-下面这些思路不能原样搬进 `OPL`，但它们背后的 substrate 价值很高。
-
-### 1. user-centric memory 要改成 domain-centric memory
-
-`Hermes Agent` 很强调：
-
-- 对用户的跨 session 认识
-- user profile
-- preference modeling
-
-这不适合成为 `OPL` 的核心。
-
-`OPL` 更需要的是：
-
-- object memory
-- evidence memory
-- decision memory
-- gate memory
-- delivery memory
-
-也就是：记住“任务与对象怎么演化”，而不是把重点放在“用户画像越来越深”。
-
-### 2. self-improving skill loop 需要受控
-
-`Hermes Agent` 的一个亮点是：
-
-- 自动从经验生成 skill
-- skill 使用中继续自我改写
-
-这对通用 agent 平台很有吸引力，但对 `OPL` 来说不能直接放开。
-
-`OPL` 如果吸收，必须改成：
-
-- 经验沉淀可以自动收集
-- skill 候选可以自动提出
-- 但进入 repo-tracked mainline 前必须经过 truth freeze、测试和人工裁决
-
-否则会直接破坏 domain contract 的稳定性。
-
-### 3. omnichannel messaging 不能先行膨胀
-
-`Hermes Agent` 一次接很多消息平台，这对通用产品合理。
-
-`OPL` 不应在当前阶段把这件事当主线。
-值得吸收的是 gateway contract，而不是立刻扩平台矩阵。
-
-当前更合理的顺序是：
-
-1. 先冻结 gateway owner process、session substrate、delivery contract
-2. 再按实际产品入口选择少数渠道水化
-
-### 4. generic tool explosion 要改成 domain-scoped tool surfaces
-
-`Hermes Agent` 的 tools 很多，而且面向通用代理。
-
-`OPL` 不该照搬“一个大而全的工具箱”。
-更合理的是：
-
-- substrate 持有统一 tool registry contract
-- domain 仓各自持有 domain-scoped tool surface
-- formal entry 继续由 `CLI-first + MCP supported + controller internal` 统一表达
-
-## 四、明确不吸收的部分
-
-下面这些内容不应进入 `OPL` 的主线判断。
-
-### 1. 不把 OPL 改写成通用长期在线 agent 平台
-
-`OPL` 的目标不是做另一个“什么都能聊、什么都能接”的通用 agent 产品。
-
-`OPL` 的目标仍然是：
-
-- 顶层 `Gateway / Federation`
-- 多个 `Domain Harness OS`
-- 共享 `Unified Harness Engineering Substrate`
-
-### 2. 不把用户画像深化作为核心产品卖点
-
-`OPL` 卖的是：
-
-- runtime / harness 带来的任务完成能力
-- domain truth、audit、delivery、gate semantics
-
-不是“越来越懂你”的通用陪伴式 agent。
-
-### 3. 不允许自动 skill growth 改写主线真相
-
-任何自动生成的：
-
-- skill
-- runtime rule
-- gate
-- object schema
-- approval policy
-
-都不能直接改写 repo-tracked mainline。
-
-### 4. 不把 domain gateway 吞回一个总 runtime
-
-`Hermes Agent` 的单体感很强。
-
-而 `OPL` 必须继续保留：
-
-- `OPL Gateway`
-- `Domain Gateway`
-- `Domain Harness OS`
-
-三层结构。
-
-吸收 substrate，不等于取消 domain 边界。
-
-## 五、对 OPL 的直接启发
-
-如果把这次对标压成一句话，那么最值得吸收的是：
-
-> 让 `OPL` 拥有一个稳定、可隔离、可审计、可恢复、可托管的 runtime substrate，而不是继续把长期在线执行逻辑分散在各仓自己的临时控制面里。
-
-据此，`OPL` 下一版 substrate contract 最值得优先冻结七个方面：
-
-1. `runtime profile`
-2. `session substrate`
-3. `gateway owner process`
-4. `memory tier contract`
-5. `delivery / cron substrate`
-6. `approval / interrupt / resume`
-7. `report / audit linkage`
-
-这七项一旦冻结，后面无论是本地 host-agent runtime，还是 future managed runtime，都有一条稳定的迁移骨架。
-
-## 六、四仓落地优先级
-
-### 1. one-person-lab
-
-优先级最高的任务不是写更多故事，而是把上面七项 substrate contract 作为顶层参考级合同冻结出来。
-
-当前最适合承接的事情是：
-
-- 写清 `Runtime Substrate Contract v1`
-- 写清 `profile / session / gateway / memory / cron / approval` 的顶层统一语言
-- 不越界成 runtime owner
-
-### 2. redcube-ai
-
-最适合先吸收。
-
-原因是：
-
-- 它已经有相对清楚的 product runtime surface
-- 当前主线不受 external runtime gate 阻塞
-- family / deliverable / audit / watch surface 已经比较清楚
-
-最适合先落地的是：
-
-- repo-tracked runtime state owner
-- session / run substrate
-- audit-watch linkage
-- hosted-friendly gateway state
-
-### 3. med-autogrant
-
-第二优先。
-
-原因是：
-
-- 它已经把 local runtime ladder 和 hosted-friendly contract prep 压得比较清楚
-- 适合进一步吸收 `session substrate / approval / resume / bundle lifecycle`
-
-但仍然不该直接跳成 actual hosted runtime。
-
-### 4. med-autoscience
-
-后置吸收。
-
-原因不是它不重要，而是：
-
-- 当前仍有 external runtime dependency gate
-- 主线已明确转入 manual stabilization
-- display 资产线独立存在
-
-它更适合在 external gate 清除后，再把 substrate contract 吸收进去，而不是现在重构主线。
-
-## 七、当前最合理的执行顺序
-
-### Step 1
-
-先在 `one-person-lab` 冻结 `Runtime Substrate Contract v1` 的参考级合同文档。
-
-### Step 2
-
-优先在 `redcube-ai` 和 `med-autogrant` 各落一轮 repo-side hydration：
-
-- runtime profile
-- session substrate
-- gateway status
-- approval / interrupt / resume
-- report / audit linkage
-
-### Step 3
-
-等 `med-autoscience` 的 external runtime gate 清掉后，再判断如何把同一 substrate contract 吸收进它的 runtime 主线。
-
-## 最终结论
-
-`Hermes Agent` 最值得 `OPL` 学习的，不是“通用长期在线 agent 平台”这层产品形态，而是它背后已经相对成熟的 runtime substrate：
-
-- profile isolation
-- session store
-- gateway owner process
-- pluggable memory
-- cron / delivery
-- approval / interrupt
-
-`OPL` 应该吸收这些 substrate 设计，来增强自己的稳定性、可观测性和未来托管迁移能力；
-但同时必须继续保留自己的 domain-oriented 边界，不让 `OPL` 退化成一个通用 agent 壳。
+- `docs/references/opl-vertical-online-agent-platform-roadmap.md`
