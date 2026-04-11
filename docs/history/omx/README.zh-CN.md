@@ -15,3 +15,5 @@
 - [OMX Worktree 使用规程](../../references/omx-worktree-operating-handbook.md)
 - [OMX 长线执行门控指引](../../references/omx-stage-gated-longrun-guide.md)
 - [OMX 长线提示词模板库](../../references/omx-longrun-prompt-playbook.md)
+
+这些文档仍保留在 `docs/references/` 下以兼容旧链接，但它们现在只通过本历史索引进入，不再作为当前参考级默认入口。

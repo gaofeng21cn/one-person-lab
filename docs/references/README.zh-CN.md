@@ -68,11 +68,10 @@
 
 - `development-operating-model.md`
 - `runtime-alignment-taskboard.md`
-- `omx-longrun-prompt-playbook.md`
-- `omx-stage-gated-longrun-guide.md`
-- `omx-worktree-operating-handbook.md`
+- [OMX 历史资料索引](../history/omx/README.zh-CN.md)
 
 ## 使用规则
 
 - 这些文档可以解释“为什么会这样冻结”，但不能反过来改写 `README*`、`docs/README*` 与核心五件套。
 - 新参考文档优先按上面的五类归档；如果只是历史 closeout 或迁移痕迹，也应继续留在第三层，不要回灌到公开主线。
+- 退役执行面的 runbook、长线提示词模板和 worktree 规程，不再作为 `docs/references/` 的默认阅读入口；统一从 `docs/history/omx/` 进入。

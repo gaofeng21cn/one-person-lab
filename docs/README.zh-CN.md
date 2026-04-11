@@ -22,6 +22,13 @@
 - [关键决策](./decisions.md)
 - [合同目录说明](../contracts/README.md)
 
+## 当前基线与任务层级
+
+- 当前基线：`OPL` 是顶层 gateway / federation / shared substrate contract surface，不是独占 runtime owner。
+- 当前重点：central sync、surface authority convergence、admitted-domain state alignment。
+- 长线目标：随着三个 domain 仓逐步转向 `Hermes-backed runtime substrate`，`OPL` 继续承担顶层协调、发现、合同与边界治理。
+- 历史执行面：OMX 已退场；相关材料只作迁移/审计参考，不再进入默认阅读面。
+
 ## 第一层：默认公开主线
 
 这一层是人类专家第一次理解 `OPL` 时应优先阅读的内容。
@@ -88,9 +95,9 @@
 
 ### 历史迁移归档
 
+- [OMX 历史资料索引](history/omx/README.zh-CN.md)（仅历史参考）
 - `references/development-operating-model.md`
 - `references/runtime-alignment-taskboard.md`
-- [OMX 历史资料索引](history/omx/README.zh-CN.md)（仅历史参考）
 
 ## 第四层：历史规格与计划
 
@@ -106,6 +113,7 @@
 - 第一层和第二层属于公开文档，因此必须同时提供英文 `.md` 与中文 `.zh-CN.md` 镜像，并保持同步更新。
 - 第三层允许继续公开或仓库跟踪，但始终属于参考级文档，不应继续挤占根 README 或 `docs/README*` 的默认阅读路径。
 - 历史迁移参考可以保留，但不得再被写成当前默认 workflow。
+- 与退役执行面相关的历史 runbook、提示词模板和 worktree 规程，只能从 `docs/history/omx/` 进入，不再作为第三层默认入口。
 - 第四层属于内部工作历史，默认只保留中文；除非有明确理由，不再额外扩成双语公开面。
 - 避免无意义的中英混写：叙述尽量保持单一语言，英文只保留给固定术语、文件路径、命令名、schema 与代码标识符。
 

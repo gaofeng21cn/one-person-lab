@@ -22,6 +22,13 @@ These are the first files an AI or maintainer should read before touching the re
 - [Decisions](./decisions.md)
 - [Contracts overview](../contracts/README.md)
 
+## Current Baseline And Task Ladder
+
+- Current baseline: `OPL` is the top-level gateway / federation / shared substrate contract surface, not a domain runtime owner.
+- Current focus: central sync, surface-authority convergence, and admitted-domain state alignment.
+- Long-line target: as the domain repos move toward `Hermes-backed runtime substrate`, `OPL` remains the top-level coordination, discovery, and contract layer.
+- Historical execution surface: OMX is retired and survives only as migration / audit reference material.
+
 ## Layer 1. Default Public Mainline
 
 These are the first documents a human expert should read to understand what `OPL` is today.
@@ -88,9 +95,9 @@ All Layer 3 docs now live under `docs/references/`, with a dedicated index so th
 
 ### Historical migration archives
 
+- [OMX historical archive](history/omx/README.md) (historical reference only)
 - `references/development-operating-model.md` (Chinese-only historical migration reference)
 - `references/runtime-alignment-taskboard.md` (Chinese-only historical migration reference)
-- [OMX historical archive](history/omx/README.md) (historical reference only)
 
 ## Layer 4. Historical Specs And Plans
 
@@ -106,6 +113,7 @@ They explain why a freeze happened, but they are not the living truth surface fo
 - Layers 1 and 2 are public surfaces, so every document there must have synchronized English `.md` and Chinese `.zh-CN.md` mirrors.
 - Layer 3 may remain public or repo-tracked, but it is always reference-grade and must not crowd the default reading path in the root README or `docs/README*`.
 - Historical migration references stay readable, but they must never be presented as the default current workflow.
+- Historical runbooks, prompt templates, and worktree discipline for the retired execution surface must now be entered only through `docs/history/omx/`.
 - Layer 4 is internal working history and should default to Chinese-only unless there is an explicit reason to publish a bilingual mirror.
 - Avoid unnecessary mixed-language prose: keep narrative in one language, and reserve English for fixed terms, file paths, command names, schemas, and code identifiers.
 

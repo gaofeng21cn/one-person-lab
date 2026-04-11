@@ -15,6 +15,7 @@
 - 第一优先级：保持 `Human / Agent -> OPL Gateway -> Domain Gateway -> Domain Harness OS` 这条分层链路。
 - 第二优先级：把 `Unified Harness Engineering Substrate` 的共享边界放在所有单仓之上。
 - 第三优先级：保证 public docs、gateway contracts、reference docs 与 admitted domain 状态同步，不制造第二真相源。
+- 一旦 target topology 已明确，新增投入默认服务目标形态；旧路线只允许作为迁移桥、兼容层或回归对照存在，不继续深磨。
 - 不做降级处理、兜底补丁、启发式修补或“先糊住再说”式实现。
 
 ## 文档体系
@@ -58,4 +59,5 @@
 
 ## 本地状态
 
-- `.codex/` 是本地工具状态，必须保持未跟踪。
+- 项目级 `.codex/` 与 `.omx/` 已退役，不再作为仓库本地状态入口。
+- 如需保留历史 session、prompt、log 或 hook 状态，应迁入用户级 `~/.codex/` 归档，而不是继续留在仓库根目录。

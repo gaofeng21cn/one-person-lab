@@ -68,11 +68,10 @@ If you need to understand what `OPL` is today, go back to:
 
 - `development-operating-model.md`
 - `runtime-alignment-taskboard.md`
-- `omx-longrun-prompt-playbook.md`
-- `omx-stage-gated-longrun-guide.md`
-- `omx-worktree-operating-handbook.md`
+- [OMX historical archive](../history/omx/README.md)
 
 ## Usage Rules
 
 - These files may explain why a freeze happened, but they must not override `README*`, `docs/README*`, or the core maintainer working set.
 - New reference docs should be filed into the five buckets above. Historical closeout or migration traces should stay Layer 3 rather than leaking back into the default public mainline.
+- Runbooks, longrun prompt templates, and worktree discipline for the retired execution surface should no longer be entered from `docs/references/`; use `docs/history/omx/` instead.
