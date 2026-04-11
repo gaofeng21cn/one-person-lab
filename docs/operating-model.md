@@ -104,10 +104,6 @@ It is whether a future higher-judgment product sits above the current `Auto-only
 The current repo-tracked formal entry still remains the local `TypeScript CLI`-first / read-only gateway baseline.
 That is the real entry today, but it should not be read as “the product will always depend on `Codex` as its only entry.”
 
-The current repo-tracked follow-on is `S1 / shared runtime substrate v1 contract freeze`.
-That follow-on only freezes shared language around `runtime profile`, `session substrate`, `gateway runtime status`, `memory provider hook`, `delivery / cron substrate`, and `approval / interrupt / resume`.
-It does **not** claim that a shared execution implementation, a hosted `Web / API` runtime, or an `OPL`-owned runtime plane already exists.
-
 The more durable direction is:
 
 - keep local `CLI-first` as the current formal entry
@@ -117,11 +113,15 @@ The more durable direction is:
 On that path:
 
 - top-level `OPL` continues to define the system family and federation language
-- the shared runtime substrate gradually owns the shared contracts required for long-running online execution
+- `UHS` remains the shared Harness Engineering umbrella language
+- the `Shared Runtime Contract` gradually owns the shared contracts required for long-running online execution
+- the `Shared Domain Contract` gradually owns the cross-domain contracts for formal entry, run identity, report surfaces, audit surfaces, and gate semantics
 - each domain repository continues to own its product entry, domain workflow, and delivery truth
 
 That is how the ecosystem can grow into multiple vertical online agent products on one substrate rather than one giant runtime that swallows every domain.
 The full direction is not implemented yet, but it is the right structure to keep tightening toward.
+
+If the ecosystem later adopts a `Hermes`-backed runtime substrate, that choice belongs more accurately to the implementation layer of the `Shared Runtime Contract`, not as a synonym for `UHS`, `OPL`, or domain truth.
 
 ## Operating Principles
 

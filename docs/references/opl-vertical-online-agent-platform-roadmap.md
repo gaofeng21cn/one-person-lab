@@ -4,225 +4,365 @@
 
 ## 文档目的
 
-这份文档把 `S1 / shared runtime substrate v1 contract freeze` 冻结成一套可执行的 adoption board 与 activation package。
+这份文档用于把 `OPL` 从当前“文档优先 + contract-first 的顶层 gateway 体系”继续推进到“垂类在线 agent 平台族”时，最关键的边界、阶段和落地顺序冻结下来。
 
-它服务于三个后续业务仓：
+它属于 `docs/references/` 下的中文参考级文档。
+它服务于后续四仓统一推进，但不反向替代：
 
-- `med-autoscience`
-- `med-autogrant`
-- `redcube-ai`
+- `README.md` / `README.zh-CN.md`
+- `docs/operating-model.md` / `docs/operating-model.zh-CN.md`
+- `docs/unified-harness-engineering-substrate.md` / `docs/unified-harness-engineering-substrate.zh-CN.md`
+- `docs/roadmap.md` / `docs/roadmap.zh-CN.md`
+- `contracts/README.md`
+- `contracts/opl-gateway/README.md`
 
-但它不反向替代当前公开主线。
-公开主线仍以：
+## 一句话结论
 
-- `README*`
-- `docs/README*`
-- `docs/roadmap*`
-- `docs/operating-model*`
-- `docs/unified-harness-engineering-substrate*`
-- `docs/opl-runtime-naming-and-boundary-contract*`
+`OPL` 不应变成像 `Hermes Agent` 那样的通用长期在线 agent 平台，但应逐步演进为一套面向研究、基金、视觉交付等垂类场景的在线 agent 平台族。
 
-为准。
+更准确地说：
 
-## 当前 north star
+- `OPL` 继续是顶层 `Gateway / Federation`
+- `Unified Harness Engineering Substrate` 继续作为共享上位语言
+- `Shared Runtime Contract` 逐步承接共享 runtime substrate
+- `Shared Domain Contract` 逐步承接跨 domain 正式行为合同
+- 各个业务仓继续作为面向不同场景的 `Domain Harness OS` 与产品入口
 
-`OPL` 的当前 north star 不是更大的平台叙事，也不是提前实现统一平台 runtime。
+## 为什么现在要冻结这条线
 
-当前 north star 是：
+当前四仓已经完成了大量 domain 语义、artifact、gate、audit、delivery 的收紧工作。
+但它们距离“真正可被用户直接使用的在线 agent 产品”之间，还缺一层统一、稳定、可托管的 runtime substrate。
 
-> 先把 `OPL` 顶层对 shared runtime substrate v1 的统一语言、边界、推广顺序和 activation package 冻结下来，让后续 domain 仓在同一个上位目标下推进各自的本地产品 runtime。
+当前最主要的缺口不是：
 
-## Why Now
+- 顶层叙事不够大
+- 再发明一套新的抽象名词
+- 提前把所有 domain 压成一个共享代码仓
 
-现在做 `S1`，原因很直接：
+而是：
 
-- 顶层 gateway / federation 语言已经比 runtime substrate 语言更稳定
-- 三个业务仓已经各自接近需要 runtime substrate 的阶段，再不冻结上位语言就会各写各的
-- Hermes benchmark 已经给了足够强的外部工程参照，足以冻结语言与边界，但还不足以诚实宣称统一实现已经存在
+- 产品入口还主要依附 `Codex`
+- 长期在线 owner process 还没有统一下来
+- `profile / session / gateway status / delivery / approval / interrupt` 还没有形成跨域共享 substrate
+- 从“开发时可运行”到“产品上可使用”之间，还缺清楚的过渡层
 
-## What Counts As Done For `S1`
+`Hermes Agent` 当前最值得吸收的，也正是这一层。
 
-对 `OPL` 顶层来说，`S1` 算完成，至少需要满足：
+## 固定边界
 
-1. 公开主线、合同说明与 reference-grade 文档对 runtime substrate 的边界判断一致。
-2. `runtime profile`、`session substrate`、`gateway runtime status`、`memory provider hook`、`delivery / cron substrate`、`approval / interrupt / resume` 六组对象被统一定义。
-3. Hermes 吸收结论已经冻结为 `adopted / adapted / deferred / rejected`。
-4. 三个业务仓的 adoption order、verification、excluded scope、promotion invariants 与 blocker 已经 repo-tracked。
-5. 没有把 `OPL` 写成 runtime owner、通用 agent 平台或已经存在的 hosted platform。
+### 1. `OPL` 仍不是通用 agent 平台
 
-## What Must Not Be Done In `S1`
+这条演进线的目标不是：
 
-`S1` 明确不能做：
+- 支持任意任务、任意团队、任意平台的通用 agent 平台
+- 一上来就覆盖 `Telegram`、`Discord`、`Slack`、`WhatsApp`、`Signal` 全平台矩阵
+- 把 `OPL` 改写成消息网关产品
 
-- 不做统一平台 runtime 实现
-- 不做托管式 `Web / API` runtime 实现
-- 不把 `OPL` 提升成当前 runtime owner
-- 不把三个业务仓强行改成同一套执行内核
-- 不把 future product entry 写成 current truth
-- 不把尚未证明属于 gateway-owned 的 substrate 语言写进 `contracts/opl-gateway/*.json`
+### 2. `OPL` 仍不是当前 runtime owner
 
-## `S1` Adoption Board
+顶层 `OPL` 仓继续承担：
+
+- 顶层任务语义
+- federation 语言
+- shared-foundation 解释
+- contract 与公开边界
+
+它不直接承接：
+
+- domain-local canonical truth
+- domain-local mutation
+- domain-local delivery truth
+- 当前代际的 runtime owner 身份
+
+### 3. 不把三个业务仓立即压成同一种执行内核实现
+
+统一的是 runtime substrate contract，不是今天就把三个业务仓重构成一个单体 runtime。
+
+当前更合理的结构仍然是：
+
+- `MedAutoScience`
+  - 更接近成熟的自动研究 runtime
+- `RedCube AI`
+  - 更接近视觉交付与 source-readiness runtime
+- `Med Auto Grant`
+  - 更接近基金申请与 revision / final / export runtime
+
+### 4. 不把“未来平台形态”误写成“当前公开真相”
+
+当前真实状态仍然是：
+
+- formal entry 以 `CLI-first` 为主
+- `MCP` 是 supported protocol layer
+- `controller` 只保留 internal control surface 语义
+- 当前活跃开发控制面仍是 `Codex-only`
+- 当前公开主线仍未拥有统一平台 runtime 或托管式 Web runtime
+
+## 目标结构
+
+长期理想结构应收敛为：
+
+```text
+User / Operator / Agent
+  -> Product Entry Surface
+      -> Domain Gateway
+          -> Shared Runtime Substrate
+              -> Domain Harness OS
+                  -> Review / Audit / Delivery Surfaces
+```
+
+其中：
+
+- `OPL`
+  - 负责顶层 `Gateway / Federation`
+- `Product Entry Surface`
+  - 负责用户真正接触到的产品入口
+- `Shared Runtime Contract`
+  - 负责长期在线运行所必需的共享运行合同
+- `Shared Domain Contract`
+  - 负责 formal entry、运行身份、报告面、审计面与 gate 语义的跨域统一合同
+- `Domain Harness OS`
+  - 负责 domain-local 的对象、流程、治理、审计与交付
+
+## Shared Runtime Contract v1 应冻结什么
+
+这一层是后续最先要落下来的统一对象。
+它至少应冻结下面这些合同：
+
+1. `runtime profile`
+   - `profile_id`
+   - `runtime_home`
+   - `subprocess_home`
+   - `runtime_status_root`
+
+2. `session substrate`
+   - `session_id`
+   - `parent_session_id`
+   - `session_state`
+   - `resume_pointer`
+   - `interrupt_reason`
+
+3. `gateway runtime status`
+   - `gateway_state`
+   - `active_runs`
+   - `last_heartbeat`
+   - `restart_requested`
+   - `exit_reason`
+
+4. `memory provider hook`
+   - `prefetch`
+   - `sync_turn`
+   - `on_session_end`
+   - `on_delegation`
+
+5. `delivery / cron substrate`
+   - `job_id`
+   - `delivery_target`
+   - `next_run_at`
+   - `output_record`
+   - `silent_delivery`
+
+6. `approval / interrupt / resume`
+   - `approval_request_id`
+   - `approval_scope`
+   - `approval_decision`
+   - `interrupt_reason`
+   - `resume_allowed`
+
+## Hermes Agent 可以吸收什么
+
+可直接吸收的重点，不是它的通用产品形态，而是它的 runtime substrate 成熟度：
+
+- `profile` 作为一等隔离单元
+- `session store` 作为 substrate，而不是附属日志
+- `gateway owner process` 作为长期在线 owner
+- `memory provider` 作为正式 hook 合同
+- `cron / delivery` 作为正式 runtime 能力
+- `approval / interrupt / resume` 作为中心控制面
+
+不应直接照搬的部分包括：
+
+- 通用消息平台矩阵
+- user-centric memory
+- 面向任意任务的大而全 tool universe
+- 把整个系统做成单体 runtime
+
+## 阶段梯度
+
+### S0：当前状态
+
+当前已经成立的部分：
+
+- `OPL` 顶层 `Gateway / Federation` 语言已经收紧
+- `Unified Harness Engineering Substrate` 已形成共享架构语言
+- `MedAutoScience`、`RedCube AI`、`Med Auto Grant` 都已经具备更清楚的 domain runtime 方向
+- 当前 formal entry 仍是 `CLI-first`
+- 当前活跃开发口径仍是 `Codex-only`
+
+当前还没有成立的部分：
+
+- `Shared Runtime Contract` v1 的统一实现
+- `Shared Domain Contract` v1 的统一实现
+- 统一 owner process
+- 统一 session substrate
+- 统一在线产品入口
+- 托管式 runtime
+
+### S1：冻结 substrate v1 合同
+
+这一步先做“统一语言”，不先做“大重构”。
+
+要求：
+
+- 在 `OPL` 顶层把 `Shared Runtime Contract` v1 的对象、边界与推广顺序写清
+- 在 `OPL` 顶层把 `Shared Domain Contract` v1 的对象、边界与推广顺序写清
+- 明确哪些合同是跨域共享的
+- 明确哪些 truth 继续留在 domain 内部
+
+退出条件：
+
+- 顶层文档与 reference-grade 文档不再对 runtime substrate 方向互相打架
+- 三个业务仓都能对照同一套 substrate 语言解释自己的下一步
+
+### S2：做第一个成熟的本地产品 runtime pilot
+
+这一步优先解决“真的能运行起来”，而不是先做平台托管。
+
+建议顺序：
+
+1. `MedAutoScience`
+   - 自动长跑能力最成熟
+   - 适合先把长期在线 owner runtime 收紧出来
+2. `Med Auto Grant`
+   - 结构清楚，适合快速验证本地产品 runtime 的 revision / final / export 路径
+3. `RedCube AI`
+   - 适合在 research / source-readiness 主线进一步稳定后再吸收更强的共享 substrate
+
+退出条件：
+
+- 至少一个 domain 拥有清楚的本地产品 runtime owner
+- 不再完全依赖 `Codex` 才能作为“使用入口”
+
+### S3：从 pilot 回抽 shared runtime substrate
+
+这一步不是把三个仓硬拼在一起，而是从成功 pilot 中回抽真正跨域共享的运行合同与实现。
+
+重点：
+
+- 回抽 `profile / session / gateway status / delivery / approval`
+- 保持 domain-local 对象、gate、artifact、delivery truth 不上收
+- 把共享实现收敛为 substrate，而不是新顶层 monolith
+
+退出条件：
+
+- 至少两个 domain 能复用同一部分 runtime substrate，而不需要各自重造
+
+### S4：补齐在线产品入口
+
+当本地产品 runtime 已经成熟后，再做在线入口才是稳的。
+
+这一步的目标是让产品不再只能通过开发宿主接入，而是具备：
+
+- 本地 `CLI` 入口
+- 可扩展的 `MCP` protocol layer
+- future `Web / API / gateway` 入口
+
+这里仍应保持：
+
+- `CLI-first`
+- `MCP-supported`
+- 不把 `controller` 升格成公开 formal entry
+
+### S5：形成垂类在线 agent 平台族
+
+到这个阶段时，`OPL` 体系才更适合被描述成“垂类在线 agent 平台族”。
+
+它的含义是：
+
+- 顶层有统一的 `Gateway / Federation`
+- 中层有共享的 runtime substrate
+- 下层有多个垂类 domain 产品
+- 入口不再只依赖开发宿主
+- 托管式 runtime 可以逐步成立
+
+这仍然不等于：
+
+- 通用 agent 平台
+- 单体 runtime
+- domain truth 全部上收到 `OPL`
+
+## 当前最推荐的推进顺序
+
+按现在的仓库成熟度，最合理的顺序是：
+
+1. 先把 `OPL` 顶层文档与 reference-grade 蓝图对齐
+2. 冻结 `Shared Runtime Contract` / `Shared Domain Contract` v1 的统一语言
+3. 优先推进一个“成熟的本地产品 runtime” pilot
+4. 再从 pilot 回抽可复用 substrate
+5. 再做在线入口与托管化
+
+不要倒过来做成：
+
+1. 先写一个更大的平台故事
+2. 先做统一平台 runtime
+3. 再回头看 domain 是否真的能接住
+
+## 当前四仓的对应关系
+
+### `one-person-lab`
+
+负责：
+
+- 顶层 `Gateway / Federation`
+- `Shared Runtime Contract` / `Shared Domain Contract` v1 的统一语言
+- 对外公开边界与体系说明
+
+不负责：
+
+- 直接成为当前 runtime owner
 
 ### `med-autoscience`
 
-- current position：
-  - 当前最接近“成熟本地产品 runtime pilot”的 domain
-  - 已具备最强的长跑与研究主线现实约束
-- next truthful tranche：
-  - 先吸收 `runtime profile`
-  - 先吸收 `session substrate`
-  - 先吸收 `gateway runtime status`
-  - 再把 `delivery / cron substrate` 与 `approval / interrupt / resume` 对齐到本地产品 runtime 语义
-- required verification：
-  - 明确 profile isolation 与 runtime-home 边界
-  - 明确 session / run continuity 如何进入 audit surface
-  - 明确 runtime status 如何进入 watch / report / recovery surface
-  - 证明不依赖顶层 `OPL` 才能运行
-- excluded scope：
-  - 不做 hosted runtime
-  - 不把 domain truth 上收回 `OPL`
-  - 不要求与 `redcube-ai` 共用实现
-- promotion invariants：
-  - formal entry 仍可保持 domain-owned
-  - `OPL` 不成为 runtime owner
-  - domain-local study / evidence / delivery truth 不上收
-- real blockers：
-  - 仍需把现有 runtime reality 整理成稳定的本地产品 runtime 口径
-  - 仍需明确哪些 runtime status / session surface 真的值得冻结成长期 contract
+最适合承担：
 
-### `med-autogrant`
+- 第一个成熟本地产品 runtime pilot
+- 长期在线 owner runtime 的 first proof
 
-- current position：
-  - 已经更接近对象清楚、输出闭环清楚的本地产品 runtime 路径
-  - revision / final / export 方向更容易做 runtime substrate 映射
-- next truthful tranche：
-  - 先吸收 `session substrate`
-  - 先吸收 `approval / interrupt / resume`
-  - 对齐 `delivery / cron substrate`
-  - 在对象更稳定后吸收 `runtime profile` 与 `gateway runtime status`
-- required verification：
-  - 明确 revision / final / export 生命周期如何绑定 session continuity
-  - 明确 approval scope 与 output budget 边界
-  - 明确 delivery target 与 final deliverable 的对应关系
-- excluded scope：
-  - 不提前 admission 成 `OPL` 已 admitted runtime owner
-  - 不宣称 hosted runtime
-  - 不抽象成通用基金平台
-- promotion invariants：
-  - 继续保持 domain-specific 对象与 proposal truth
-  - `MCP` 仍只是 supported layer，不强推成正式产品入口
-  - 不改写 `OPL` 顶层定位
-- real blockers：
-  - 当前仍停留在 future-facing domain direction，不是 `OPL` admitted domain gateway
-  - 需要更多 domain-internal 证据证明其本地产品 runtime 主线已经稳定
+但要注意：
+
+- display / 论文配图资产线应继续与主 runtime 线分开推进
 
 ### `redcube-ai`
 
-- current position：
-  - 当前更需要先稳住 `source-readiness / research-mainline`
-  - 仍处在更适合后置吸收 substrate 的阶段
-- next truthful tranche：
-  - 暂不优先吸收整套 `S1`
-  - 先只保留对 `gateway runtime status`、`delivery / cron substrate`、`approval / interrupt / resume` 的后续兼容目标
-- required verification：
-  - 先证明 research-mainline 与 source-readiness 足够稳定
-  - 先证明 family / deliverable runtime 的当前主线不会被 substrate 话术反向扰动
-- excluded scope：
-  - 不在当前轮次强推 shared runtime substrate 全量落地
-  - 不把 visual delivery runtime 误写成 `OPL` 的统一产品 runtime
-- promotion invariants：
-  - `ppt_deck` 仍只是一条 domain family 入口，不等于整个 `OPL` runtime
-  - domain-local deliverable truth、review truth 与 operator semantics 继续留在仓内
-- real blockers：
-  - `source-readiness / research-mainline` 还不够稳定
-  - 现在强推 substrate 吸收会让 runtime 叙事先于主线成熟度
+当前最适合继续做：
 
-## 哪些内容已经可以压到 domain
+- source-readiness / research-mainline 稳定化
+- one-shot workspace / operator quickstart
+- family parity / full autopilot
 
-下面这些内容已经可以开始压到 domain 仓：
+后续再承接更强的 shared substrate 吸收。
 
-- `med-autoscience`
-  - `runtime profile`
-  - `session substrate`
-  - `gateway runtime status`
-  - `delivery / cron substrate`
-  - `approval / interrupt / resume`
-- `med-autogrant`
-  - `session substrate`
-  - `approval / interrupt / resume`
-  - `delivery / cron substrate`
-  - 受控吸收的 `runtime profile`
-- `redcube-ai`
-  - 当前只建议压入“兼容目标”和 `gateway runtime status / delivery / approval` 的最小边界语言，不建议全量推进
+### `med-autogrant`
 
-## 哪些内容仍只能停留在 `OPL` 顶层
+当前最适合继续做：
 
-在当前阶段，下面这些内容仍只能停留在 `OPL` 顶层 reference / contract 层：
+- 本地产品 runtime 的 revision / final / export 路线
+- 用较清楚的对象和输出闭环证明“可用的本地产品 runtime”该是什么样子
 
-- shared runtime substrate v1 的统一命名与边界
-- host-agent runtime 与 future managed runtime 的关系定义
-- adoption order 与 promotion invariants
-- Hermes 吸收结论
-- “什么属于 gateway-owned machine-readable surface，什么不属于”的顶层判断
+## 当前不应做的事
 
-## `S1` Activation Package
+- 直接宣布 `OPL` 已经是垂类在线 agent 平台
+- 直接宣布 `Shared Runtime Contract` 已经实现完成
+- 直接宣布统一托管 runtime 已经存在
+- 一上来把三个业务仓压成一个共享代码仓
+- 把还没吸收的 Hermes 设计写成当前已落地能力
 
-### current north star
+## 参考关系
 
-- 让三个业务仓共享同一个上位 runtime substrate 目标
-- 但不让 `OPL` 越界成 runtime owner
-
-### why now
-
-- 顶层语言已经足够稳定，可以冻结
-- 共享实现还不够稳定，现在冻结语言比提前写实现更诚实
-
-### what counts as done
-
-- `OPL` 顶层文档与 reference-grade 文档不再打架
-- 六组对象有统一定义与边界
-- adoption board 与下一棒顺序已经冻结
-
-### what must not be done
-
-- 不写统一平台 runtime 实现
-- 不写 hosted runtime 已落地
-- 不把 future product entry 写成 current truth
-- 不把 domain-local truth 上收到 `OPL`
-
-### immediate follow-on after `S1`
-
-1. 在 `med-autoscience` 证明第一条成熟本地产品 runtime pilot。
-2. 在 `med-autogrant` 把同一套语言压进 revision / final / export runtime 路径。
-3. 在 `redcube-ai` 等主线稳定后，只吸收真正可复用的那部分 substrate。
-
-### honest continuation conditions
-
-只有在下面条件成立时，才允许从 `S1` 往后推进：
-
-- 至少一个 domain 证明了成熟本地产品 runtime pilot
-- 至少一个 shared object group 被证明已经形成可复用实现
-- 仍不需要把 `OPL` 错写成 runtime owner 或 hosted platform
-
-## 当前 tranche 记录
-
-- 当前所处阶段：
-  - `S1` 在 `OPL` 顶层已经完成 truth sync、substrate freeze、adoption board freeze 与 activation package freeze
-- 已完成什么：
-  - 阶段 A：truth sync
-  - 阶段 B：shared runtime substrate v1 语言冻结
-  - 阶段 C：adoption board 冻结
-  - 阶段 D：activation package 冻结
-- 剩余待办：
-  - 在 domain 仓做真实 adoption tranche
-  - 验证哪些对象可以升级成 machine-readable gateway surface
-- 为什么现在继续会产生 truth drift：
-  - 再往前就会被迫发明 runtime owner 语义、托管能力或共享执行实现
-- 下一棒必须先满足什么条件：
-  - 至少一个 domain 拿出成熟本地产品 runtime 的实证
-  - 证明某些 shared object 已经具备稳定复用实现
-
-## 结论
-
-这轮 `S1` 的价值不在于把 `OPL` 讲成更大的平台故事。
-它的价值在于：让三个业务仓第一次拥有同一个上位 runtime substrate 目标，同时继续保持 `OPL` 的真实产品边界。
+- `Hermes Agent` 的 substrate 对标，见：
+  - `docs/references/hermes-agent-runtime-substrate-benchmark.md`
+- runtime 命名与 managed runtime 边界，见：
+  - `docs/opl-runtime-naming-and-boundary-contract.zh-CN.md`
+- 当前共享 substrate 公开定义，见：
+  - `docs/unified-harness-engineering-substrate.zh-CN.md`
+- 当前顶层路线图，见：
+  - `docs/roadmap.zh-CN.md`

@@ -19,7 +19,7 @@
     </td>
     <td width="33%" valign="top">
       <strong>产品角色</strong><br/>
-      定义 OPL Gateway、Unified Harness Engineering Substrate，以及跨 domain 共享基础结构
+      定义 OPL Gateway、Unified Harness Engineering Substrate，以及其中的 Shared Runtime Contract / Shared Domain Contract
     </td>
     <td width="33%" valign="top">
       <strong>联邦状态</strong><br/>
@@ -42,7 +42,7 @@
   <tr>
     <td colspan="5" align="center" valign="top">
       <strong>Unified Harness Engineering Substrate</strong><br/>
-      由多个 Domain Harness OS 复用的共享 Harness Engineering 基座
+      共享 Harness Engineering 上位语言；其运行部分正收敛为 <code>Shared Runtime Contract</code>，其产品行为部分正收敛为 <code>Shared Domain Contract</code>
     </td>
   </tr>
   <tr>
@@ -181,27 +181,41 @@
 
 ## Unified Harness Engineering Substrate
 
-在 `OPL` 体系下，当前共享的架构底座统一命名为 `Unified Harness Engineering Substrate`。
-它指的是一套可复用的 Harness Engineering 语言与稳定约束，而不是把所有 domain system 压成一个单体 runtime。
-它仍然只是共享架构基座，不是已经独立抽出的共享代码框架。
+在 `OPL` 体系下，当前共享的上位架构语言统一命名为 `Unified Harness Engineering Substrate`，简称 `UHS`。
+它不是把所有 domain system 压成一个单体 runtime，也不是某个现成 runtime 项目的简单套壳。
+它也不等于当前已经存在一套共享代码框架。
+更准确地说，`UHS` 是 `OPL` 之下的共享 Harness Engineering 总名词，而其中最重要的共享部分正在收敛为两类合同：
 
-这个 substrate **不**声称所有 domain 今天已经共享同一个代码仓、同一种对象模型，或完全一致的执行图。
-它冻结的是更窄、但更长期稳定的一组共享规则：
+- [Shared Runtime Contract](docs/shared-runtime-contract.zh-CN.md)
+- [Shared Domain Contract](docs/shared-domain-contract.zh-CN.md)
 
-- 默认采用 `Agent-first` 执行姿态
-- 当前各个 domain 仓首先都是共享同一 substrate 的 `Auto-only` 主线
-- 未来 `Human-in-the-loop` 产品应作为 sibling 或 upper-layer product 复用同一套 substrate-compatible contract 与稳定模块，而不是把当前仓强行做成同仓双模
-- domain formal-entry matrix 保持显式：默认正式入口 `CLI`、支持协议层 `MCP`、`controller` 仅作为 internal control surface
-- 状态迁移、审阅面与交付边界保持可审计
-- 允许从当前本地 host-agent 形态平滑走向未来托管式 Web runtime，而不改写 domain contract
+其中：
 
-从长期产品形态看，这套 substrate 也构成了 `OPL` 演进成一组垂类在线 agent 产品的路径：
+- `Shared Runtime Contract`
+  - 冻结长期在线 runtime 至少应具备的共享运行对象，例如 `runtime profile`、`session substrate`、`gateway runtime status`、`memory provider hook`、`delivery / cron`、`approval / interrupt / resume`
+- `Shared Domain Contract`
+  - 冻结多个 `Domain Harness OS` 应保持一致的上层行为语义，例如 formal-entry matrix、`per-run handle`、durable report、audit trail、gate semantics 与 no-bypass 规则
 
-- `OPL` 继续负责顶层 `Gateway / Federation`
-- shared runtime substrate 逐步承接共享运行合同
-- 各个 domain 仓继续承接自己的产品入口、workflow 与交付真相
+这意味着：
 
-这里说的是演进方向，不等于当前已经存在统一平台 runtime 或统一托管入口
+- `UHS` 不是 `Hermes` 套壳
+- 但 `Hermes-backed runtime substrate` 是 `Shared Runtime Contract` 的优选未来实现方向
+- `Hermes` 不会替代 `OPL Gateway`、`Domain Gateway` 或 `Domain Harness OS`
+
+从长期产品形态看，更合理的结构是：
+
+- `OPL`
+  - 继续负责顶层 `Gateway / Federation`
+- `UHS`
+  - 继续作为共享 Harness Engineering 上位语言
+- `Shared Runtime Contract`
+  - 逐步承接长期在线运行所需的共享运行合同
+- `Shared Domain Contract`
+  - 逐步承接跨 domain 统一的正式行为合同
+- 各个 domain 仓
+  - 继续承接自己的产品入口、domain workflow 与交付真相
+
+这里说的是演进方向，不等于当前已经存在统一平台 runtime、统一托管入口，或 `Hermes` 已经成为当前公开主线的一部分。
 
 在这套 substrate 之上，当前几个项目应被理解成不同场景下的 `Domain Harness OS`，而不是彼此无关的独立小项目：
 
@@ -319,39 +333,19 @@ Human / Agent
 - 同时可以承载不与 `Presentation Ops` 完全等同的其他视觉 family
 
 
-## 当前公开主线与 repo-tracked follow-on
+## 当前 Federation Activation State
 
-截至 `2026-04-11`，`OPL` 的当前公开主线仍然是两部分的组合：
+截至 `2026-04-10`，`Phase 1 exit + next-stage activation package freeze` 仍是已经 absorbed 的前序门槛，而 `Phase 2 / Minimal admitted-domain federation activation package` 也已经被吸收到当前顶层 federation 真相中。
 
-- 已 admitted domain federation 的公开边界
-- 本仓已经存在的本地 `TypeScript CLI`-first / read-only gateway baseline
+这次 activation 的依据是：至少两条 admitted domain surface 现在已经被 repo-tracked truth 证明稳定到足以支撑更强的顶层 federation wording：
 
-这意味着：
+- `MedAutoScience` 对应 `research_ops`
+- `RedCube AI` 对应 `presentation_ops`
 
-- `MedAutoScience` 继续是活跃的 `research_ops` domain surface
-- `RedCube AI` 继续是已 admitted 的 `presentation_ops` / visual-deliverable domain surface
-- `Grant Foundry -> Med Auto Grant` 继续只是 signal-only / future-direction evidence，而不是已 admitted 的 domain gateway
-- `OPL` 层的 formal entry 继续是 `CLI-first`，`MCP` 继续是 supported protocol layer，`controller` 继续只保留 internal control surface 语义
-- 当前 deployment shape 继续是 `Codex-default host-agent runtime`
-
-当前 repo-tracked follow-on 是 `S1 / shared runtime substrate v1 contract freeze`。
-它在顶层先冻结 6 组共享对象：
-
-- `runtime profile`
-- `session substrate`
-- `gateway runtime status`
-- `memory provider hook`
-- `delivery / cron substrate`
-- `approval / interrupt / resume`
-
-`S1` 明确**不**等于：
-
-- 统一平台 runtime 已经实现
-- 托管式 `Web / API` runtime 已经存在
-- `OPL` 已经变成当前 runtime owner
-- 所有 domain 已经共享同一个执行内核
-
-更早的 phase / activation-package 冻结仍然保留在 `docs/references/` 里作为历史锚点，但不再是当前 repo-tracked follow-on 的正确标签。
+这份已 absorbed 的 federation package 仍然只面向已 admitted domain。
+`Grant Foundry -> Med Auto Grant` 继续只是 signal-only / domain-direction evidence；`Review Ops` 与 `Thesis Ops` 继续保持为位于 onboarding 之下的 under-definition bundle。
+顶层 formal entry 仍然是本地 `TypeScript CLI`-first / read-only gateway surface，`OPL` 也仍然不是 runtime owner。
+当前没有新的 active follow-on tranche 打开；顶层最诚实的状态是中央同步停车，只有 admitted-domain 仓出现新的 absorbed delta，或中央 reference surfaces 发生真实漂移时，才重开下一棒。
 
 
 ## 当前边界
@@ -371,25 +365,24 @@ Human / Agent
 
 ## 路线图
 
-当前 repo-tracked 路线图，是在不改变 `OPL` 产品定位的前提下完成 `S1 / shared runtime substrate v1 contract freeze`。
+当前公开主线仍然是已 absorbed 的 `Phase 2 / Minimal admitted-domain federation activation package`，但它仍然建立在已冻结的 `Phase 1` 本地 `TypeScript CLI` + 只读 gateway 基线之上：
 
-这意味着：
+- 把已经冻结的 `OPL Gateway` contracts 落成面向人类与 Agent 的 CLI-first、read-only discovery surface
+- 继续把 `Research Foundry -> Med Auto Science` 明确为当前 `Research Ops` 主线
+- 继续把 `RedCube AI` 明确为视觉交付的 domain gateway 与 harness
+- 在对应 domain 边界被显式冻结之前，继续让 `Grant Ops`、`Review Ops`、`Thesis Ops` 停留在 admitted gateway surface 之外
 
-- 继续把本地 `TypeScript CLI`-first / read-only gateway baseline 保持为当前 formal entry
-- 继续把 `MCP` 保持为 supported protocol layer，并让 `controller` 继续只保留 internal surface 语义
-- 把 6 组 shared runtime object 冻结到公开文档与 reference-grade 文档层
-- 让 `MedAutoScience` 成为第一条 truthful adoption lane，`Med Auto Grant` 成为第二条，`RedCube AI` 在 `source-readiness / research-mainline` 更稳定后再进入
+截至 `2026-04-10`，当前 repo 仍保有可运行的本地 `TypeScript CLI`-first / read-only gateway baseline。
+已完成的 `Phase 1 / G2 release-closeout` 已把 `G2 stable public baseline` 收口成单一、稳定、repo-tracked 的公开基线。
+这条基线也因此继续构成 `OPL` 在 `Phase 1` 的 formal entry contract 与 public system surface。
+repo-tracked 的 `Phase 1 / G3 thin handoff planning freeze hardening` 已把 `G3` 冻结在 planning-only gate，因此当前仍不进入 mutation entry，不把 `OPL` 提升成统一 runtime owner，也不提前抽共享执行内核。
+repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review Ops` 然后 `Thesis Ops`：这两条 candidate path 都继续停留在 admission / discovery / routing / handoff readiness 之下，而 `Grant Foundry -> Med Auto Grant` 仍保持 signal-only 状态。
+当前已 absorb 的前序门槛是 `Phase 1 exit + next-stage activation package freeze`；当前已 absorb 的 federation package 是 `Minimal admitted-domain federation activation package`：它只针对 `MedAutoScience` + `RedCube AI` 收紧 federation wording，不会激活 routed action，不会 admission `Grant Ops` / `Review Ops` / `Thesis Ops`，也不会把 `OPL` 提升成 runtime owner。
+因此，当前 repo-tracked truth 是一个诚实的中央同步停车点，而不是继续沿同一 package 无限滚动的活动 tranche。
 
-这条路线图**不**意味着：
-
-- `OPL` 正在实现统一平台 runtime
-- 托管式 runtime 已经存在
-- 三个 domain 仓会被强行压成同一个 execution kernel
-- `OPL` 会被提升成 runtime owner
-
-当前这个仓里的交付目标，仍然是建立在 `Codex-default host-agent runtime` 之上的本地 `TypeScript CLI` 入口 transport。
-当前开发控制面仍然是 Codex-only，也不再需要把 `Codex Host / OMX` 作为活跃双控制面来理解。
-`S1` 改的是语言、合同对齐与 adoption guidance，不是把当前基线直接写成 hosted product runtime。
+当前交付目标是：在当前 `Codex-default host-agent runtime` 之上，用本地 `TypeScript CLI` 作为 `Phase 1` 的入口 transport。
+当前开发控制面使用 Codex-only 口径，不再把 `Codex Host / OMX` 作为活跃双层执行分工。
+这条基线读取已冻结 contracts、列出 workstream/domain、解释路由边界，但不声称 web/server runtime 行为，也不 mutation domain state。
 
 公开阶段说明与完整文档分层见：
 
@@ -402,6 +395,8 @@ Human / Agent
 - [Gateway 联邦](docs/gateway-federation.zh-CN.md)
 - [OPL 联邦合同](docs/opl-federation-contract.zh-CN.md)
 - [Unified Harness Engineering Substrate](docs/unified-harness-engineering-substrate.zh-CN.md)
+- [Shared Runtime Contract](docs/shared-runtime-contract.zh-CN.md)
+- [Shared Domain Contract](docs/shared-domain-contract.zh-CN.md)
 - [OPL 运行模型](docs/operating-model.zh-CN.md)
 - [OPL 任务版图](docs/task-map.zh-CN.md)
 - [OPL 路线图](docs/roadmap.zh-CN.md)

@@ -4,230 +4,307 @@
 
 ## Purpose
 
-This document freezes the runtime-related naming used across the current `OPL` ecosystem so the following layers stop being blurred together:
+This document freezes the core runtime-related naming in the `OPL` ecosystem so the following layers stop being blurred together:
 
 - top-level `Gateway / Federation`
-- shared runtime substrate
-- `Domain Gateway`
+- `Unified Harness Engineering Substrate`
+- `Shared Runtime Contract`
+- `Shared Domain Contract`
+- `domain gateway`
 - `Domain Harness OS`
-- `Execution Plane`
-- `Deployment Shape`
+- `execution plane`
+- `deployment shape`
 
-It answers four questions:
+It answers three questions:
 
 1. Which layer each current repository actually belongs to.
-2. How `Codex`-default host-agent runtime relates to a future managed runtime.
-3. Which shared runtime-substrate objects are frozen at `S1`.
-4. Which truths must stay inside domains rather than moving up into `OPL`.
+2. How `Codex-default host-agent runtime` relates to a future `managed runtime`.
+3. How a `domain harness + controlled execution engine` pair such as `MedAutoScience` and `MedDeepScientist` should be described without collapsing their boundary.
 
 ## Scope
 
-This contract governs unified public naming and boundary wording for the current `OPL` ecosystem, covering:
+This contract governs the unified public naming and boundary wording for the current `OPL` ecosystem, covering:
 
 - `one-person-lab`
 - `med-autoscience`
 - `redcube-ai`
 - `med-autogrant`
 
-It freezes naming and boundaries only.
-It does **not** claim that the ecosystem already has:
+It also governs how `OPL` describes lower-layer execution engines such as `MedDeepScientist`.
+
+This document freezes naming and boundaries. It does not claim that the ecosystem already has:
 
 - one shared execution core
-- one platform-managed shared execution layer
-- one shared hosted product entry
+- a platform-managed shared execution layer
+- a future `Human-in-the-loop` product
 
 ## Canonical Control Chain
 
-The control chain stays:
+The recommended long-term chain is:
 
 ```text
 Human / Agent
   -> OPL Gateway / Federation
-      -> Domain Gateway
-          -> Domain Harness OS
+      -> Unified Harness Engineering Substrate
+          -> Shared Runtime Contract
+          -> Shared Domain Contract
+              -> Domain Gateway
+                  -> Domain Harness OS
+                      -> Execution Plane
+                          -> Deployment Shape
 ```
 
-The layers below that chain are still real, but they are not extra routed hops:
+Each layer answers a different question:
 
-- `shared runtime substrate`
-  - the cross-domain contract layer that constrains runtime naming, migration compatibility, and shared invariants
+- `OPL Gateway / Federation`
+  - top-level task semantics, cross-domain routing, admission language, and boundary contracts
+- `Unified Harness Engineering Substrate`
+  - the shared top-level Harness Engineering umbrella language across domains
+- `Shared Runtime Contract`
+  - the shared cross-domain contract for long-running runtime behavior
+- `Shared Domain Contract`
+  - the shared cross-domain contract for formal product behavior
+- `Domain Gateway`
+  - the stable formal entry and public contract surface for one domain
+- `Domain Harness OS`
+  - the orchestration, governance, review, and delivery system for one domain
 - `Execution Plane`
-  - the layer that actually runs sessions, runs, watch, stop, and resume for one domain runtime
+  - the layer that actually runs sessions, quests, runs, worktrees, watch, and resume
 - `Deployment Shape`
-  - where that execution plane runs and who owns its lifecycle
-
-So the substrate is a shared contract layer, not a separate routing layer between `OPL Gateway` and `Domain Gateway`.
+  - where the execution plane runs and who owns its lifecycle
 
 ## Canonical Terms
 
 | Term | Frozen meaning | Current or future example | Explicitly not |
 | --- | --- | --- | --- |
-| `OPL Gateway / Federation` | top-level task semantics, cross-domain routing language, admission language, and boundary freeze | `one-person-lab` | domain-local runtime owner |
-| `shared runtime substrate` | the cross-domain runtime contract layer that multiple domains can reuse | `runtime profile`, `session substrate`, `gateway runtime status` | shared execution kernel already implemented today |
-| `Domain Gateway` | the stable formal entry and public contract surface for one domain | `MedAutoScience`, `RedCube AI` | execution engine |
-| `Domain Harness OS` | the execution, governance, audit, and delivery system for one domain | `MedAutoScience`, `RedCube AI` | top-level federation |
-| `Execution Plane` | the runtime layer that drives sessions, runs, stop, resume, watch, and recovery | current controlled runtimes inside domains | public product identity |
-| `Host-Agent Runtime` | a local deployment shape for the execution plane driven by a host agent on the user-controlled machine | current `Codex`-default host-agent runtime | managed runtime |
-| `Managed Runtime` | a platform-managed deployment shape for the execution plane where lifecycle, scheduling, isolation, and recovery are platform-owned | future managed `Web / API` runtime | current public mainline |
+| `OPL Gateway / Federation` | top-level task semantics, cross-domain routing, boundary freeze, and admission language | `one-person-lab` | domain-local runtime owner |
+| `Unified Harness Engineering Substrate` | shared top-level Harness Engineering umbrella language across domains | layering rules, shared principles, contract family name | shared execution core |
+| `Shared Runtime Contract` | shared cross-domain contract for long-running runtime behavior | `runtime profile`, `session substrate`, `gateway runtime status` | domain truth |
+| `Shared Domain Contract` | shared cross-domain contract for formal product behavior | formal-entry matrix, the `per-run handle`, durable report, gate semantics | domain object model |
+| `Domain Gateway` | stable formal entry and public contract surface for one domain | `MedAutoScience`, `RedCube AI` | execution engine |
+| `Domain Harness OS` | execution, governance, audit, and delivery system for one domain | `MedAutoScience`, `RedCube AI` | top-level federation |
+| `Execution Plane` | the runtime layer that drives quests, runs, sessions, worktrees, watch, and resume | the layer currently carried by `MedDeepScientist` for `MedAutoScience` | top-level public product surface |
+| `Host-Agent Runtime` | a local deployment shape for the execution plane driven by a host agent on the user's machine | current `Codex-default host-agent runtime` | managed runtime |
+| `Managed Runtime` | a platform-managed deployment shape for the execution plane where lifecycle, scheduling, isolation, and recovery are platform-owned | future `managed web runtime` | domain gateway |
+| `Managed Execution Plane` | an internal architecture term for the platform-managed execution plane itself | a future shared managed execution layer | the already-implemented public mainline |
 
 ## Current Repository Roles
 
 | Repository | Frozen current role | Runtime relationship |
 | --- | --- | --- |
 | `one-person-lab` | public explanation and contract-first surface for `OPL Gateway / Federation` | defines language and boundaries, not runtime ownership |
-| `med-autoscience` | `Domain Gateway + Domain Harness OS` for medical `Research Ops` | owns medical domain contracts, governance, delivery, and future pilot absorption |
-| `redcube-ai` | `Domain Gateway + Domain Harness OS` for visual delivery | owns visual-delivery contracts, governance, delivery, and later substrate absorption |
+| `med-autoscience` | `Domain Gateway + Domain Harness OS` for medical `Research Ops` | owns medical domain contracts, governance, delivery, and external formal entry |
+| `redcube-ai` | `Domain Gateway + Domain Harness OS` for visual delivery | owns visual-delivery contracts, governance, delivery, and external formal entry |
 | `med-autogrant` | future `Domain Gateway + Domain Harness OS` direction for `Grant Ops` | currently still below admitted-domain runtime ownership |
 
-## Shared Runtime Substrate v1
+`MedDeepScientist` is not one more top-level peer `domain repo` inside `OPL`.
+The more accurate wording today is:
 
-At `S1`, `OPL` freezes six shared object groups.
-For each object, the top layer freezes definition and ownership boundary only.
-It does not claim shared implementation.
+- it is a `controlled quest runtime` under `MedAutoScience`
+- it carries the main implementation of the current `Execution Plane` for `MedAutoScience`
+- it is not a fifth top-level `Domain Harness OS`
+- it is not the system identity or public entrypoint of `MedAutoScience`
 
-### 1. `runtime profile`
-
-- top-level unified definition:
-  - the stable isolation envelope for one runtime context across local and future managed deployment shapes
-- not part of `OPL` top-layer ownership:
-  - domain-local canonical truth
-  - domain-local credentials
-  - domain-specific workflow objects
-- truth that must stay inside domains:
-  - how one profile maps to studies, proposals, deck families, artifact roots, or domain policy
-- why only language is frozen now:
-  - each domain still uses different local layouts and runtime internals
-
-### 2. `session substrate`
-
-- top-level unified definition:
-  - the durable continuity contract for search, resume, audit, and cross-session linkage
-- not part of `OPL` top-layer ownership:
-  - domain-specific mutation rules
-  - domain review truth
-  - domain-specific conversation semantics
-- truth that must stay inside domains:
-  - what a session means for one workflow and which domain handles it may advance
-- why only language is frozen now:
-  - there is not yet one proven cross-domain session implementation
-
-### 3. `gateway runtime status`
-
-- top-level unified definition:
-  - the minimal observable runtime-health surface for active, interrupted, resumable, or exiting runtime contexts
-- not part of `OPL` top-layer ownership:
-  - domain business metrics
-  - domain gate outcomes
-  - publication truth
-- truth that must stay inside domains:
-  - what counts as healthy or promotable runtime state for one domain workflow
-- why only language is frozen now:
-  - current status surfaces still differ by domain runtime
-
-### 4. `memory provider hook`
-
-- top-level unified definition:
-  - the shared hook surface for prefetch, turn sync, delegation sync, and session-end sync
-- not part of `OPL` top-layer ownership:
-  - one global user-memory product
-  - one canonical memory store
-  - domain evidence truth
-- truth that must stay inside domains:
-  - object memory, evidence memory, decision memory, gate memory, and their retrieval policy
-- why only language is frozen now:
-  - the right memory shape is domain-centric rather than one global implementation
-
-### 5. `delivery / cron substrate`
-
-- top-level unified definition:
-  - the shared contract for scheduled continuation, scheduled reporting, and durable delivery targeting
-- not part of `OPL` top-layer ownership:
-  - domain-specific delivery objects
-  - approval thresholds
-  - external publication semantics
-- truth that must stay inside domains:
-  - what counts as reportable output, deliverable completion, or scheduled promotion
-- why only language is frozen now:
-  - no domain-independent delivery engine has been proven yet
-
-### 6. `approval / interrupt / resume`
-
-- top-level unified definition:
-  - the shared control contract for stop, pause, approval, interrupt, and resume across long-running execution
-- not part of `OPL` top-layer ownership:
-  - one global approval policy
-  - one global dangerous-tool policy
-  - one global tool catalog
-- truth that must stay inside domains:
-  - tool registry contents, approval scope, dangerous-action gates, output budgets, and escalation rules
-- why only language is frozen now:
-  - tool surfaces and approval semantics still depend on domain workflow reality
-
-The tool registry sits inside this sixth object group:
-the shared contract may freeze registry semantics, but actual tools remain domain-scoped.
-
-## `Codex`-Default Host-Agent Runtime And Future Managed Runtime
+## `Codex-default host-agent runtime` And `managed runtime`
 
 ### What the current reality is
 
 The current public truth across the ecosystem is:
 
-- the default local deployment shape is the `Codex`-default host-agent runtime
-- active execution is currently Codex-only
-- this is a real runtime, but it is not yet a managed runtime
+- the default local deployment shape is `Codex-default host-agent runtime`
+- this is a real runtime
+- it is not yet a `managed runtime` in the sense frozen by this contract
 
 Its exact meaning is:
 
 - a `Codex`-class agent acts as the default host executor
 - the execution plane still runs primarily on the user's machine or in a user-controlled local environment
-- local filesystem, worktrees, tools, binaries, and machine constraints remain part of the runtime reality
-- long-running work can be orchestrated, resumed, and audited, but lifecycle and operations are not yet platform-owned
+- the local filesystem, worktrees, tools, binaries, and machine constraints are still part of the runtime reality
+- long-running work can be orchestrated, resumed, and audited, but lifecycle and operations have not yet been fully absorbed by a platform-owned runtime layer
 
-### Why it is not the same as a managed runtime
+### Why it is not the same as `managed runtime`
 
-To become a managed runtime in the sense used here, the key change is not “a stronger model” or “a longer-running Codex session.”
+If a local `Codex` session is packaged better and can run longer, it is still first a `host-agent runtime`.
+
+To become a `managed runtime` in the sense used here, the key change is not “a stronger model” or “a longer-running Codex session.”
 The key change is:
 
-- the execution plane becomes platform-owned instead of primarily machine-owned
-- lifecycle of sessions, runs, and recovery becomes platform-maintained
-- sandboxing, tool connectivity, observability, scheduling, and recovery become formal managed capabilities
+- the execution plane is platform-owned instead of primarily machine-owned
+- the lifecycle of sessions, quests, and runs is maintained and restored by the platform
+- sandboxing, tool connection, observability, scheduling, and recovery become formal managed capabilities
+- users and operators no longer need to personally babysit low-level process, tmux, daemon, path, or recovery details
+
+So `managed runtime` can be understood loosely as:
+
+> a platform-managed long-running agent runtime
+
+But it should not be reduced to:
+
+> just a more persistent Codex session
+
+What is managed is the execution plane, not the model brand.
 
 ### Their relationship
 
-`Host-Agent Runtime` and `Managed Runtime` are two deployment shapes of the execution plane:
+`Host-Agent Runtime` and `Managed Runtime` are two deployment shapes for the same execution plane:
 
 - current shape: `host-agent runtime`
 - future shape: `managed runtime`
 
-What should remain shared across both shapes is:
+What should stay shared across both shapes is:
 
 - domain contracts
 - the formal-entry matrix
 - execution-handle semantics
 - audit, review, and delivery contracts
-- the shared runtime-substrate object language frozen at `S1`
+
+Only the way the execution plane is run and owned should change.
+
+## What migration to a future `managed runtime` actually means
+
+This migration should not be understood as “switching domains” or “replacing Codex with some other model.”
+
+The more precise meaning is:
+
+- from: an execution plane primarily carried by the user's machine and driven by a local host agent
+- to: an execution plane primarily carried by a platform and managed through a platform-owned lifecycle
+
+### What should stay unchanged
+
+When the ecosystem later moves to a future `managed runtime`, the following should not be rewritten:
+
+- top-level `OPL` federation semantics
+- the shared invariants in `Unified Harness Engineering Substrate`
+- the shared runtime objects in the `Shared Runtime Contract`
+- the shared formal behavior objects in the `Shared Domain Contract`
+- the boundary between `domain gateway` and `Domain Harness OS`
+- the formal-entry matrix semantics such as `CLI / MCP / controller`
+- the semantic boundary of execution handles such as `program_id / study_id / quest_id / active_run_id`
+- ownership of domain-owned audit, review, delivery, and canonical truth
+
+### What may change
+
+What may actually change is the execution plane and deployment shape:
+
+- whether long-running processes sit on a local machine or on a platform
+- who owns session, quest, and run lifecycle
+- who manages sandboxing, tool connectivity, and credential injection
+- whether watch, status, resume, and replay become platform-level capabilities
+- whether operators still need to care about local daemons, machine paths, and manual recovery
+
+If the ecosystem later adopts a `Hermes`-backed runtime substrate, the accurate description should still be:
+
+- it is an implementation direction for the `Shared Runtime Contract`
+- it is not the whole `UHS`
+- it does not replace the `OPL Gateway`, any `Domain Gateway`, or any `Domain Harness OS`
+
+### Main benefits of the migration
+
+If a future `managed runtime` becomes real, the main benefits should come from:
+
+- lower dependence on local machine state
+- cleaner lifecycle management for long-running work
+- more stable watch, status, resume, and replay semantics
+- lower operator burden
+- easier support for future `Human-in-the-loop` sibling or upper-layer products
+
+### What the migration is not for
+
+This migration should not be described as:
+
+- removing domain gateways
+- turning `OPL` into the runtime owner
+- collapsing multiple domains into one monolithic runtime
+- claiming that the current public truth already includes a unified platform runtime
+
+## Frozen Boundary Between `MedAutoScience` And `MedDeepScientist`
+
+The more accurate current structure is:
+
+```text
+Human / Agent
+  -> MedAutoScience
+      -> runtime protocol / runtime transport
+          -> MedDeepScientist
+              -> quest runtime / daemon / worktrees
+```
+
+Within that structure:
+
+- `MedAutoScience`
+  - is the `Domain Gateway + Domain Harness OS` for medical `Research Ops`
+  - is the formal public entry, domain-contract owner, governance owner, and delivery owner
+- `MedDeepScientist`
+  - is the main current implementation of the `Execution Plane` under `MedAutoScience`
+  - is a `controlled quest runtime`
+  - is not the system identity of `MedAutoScience`
+  - is not a top-level peer domain under `OPL`
+  - is not the owner of future public product naming
+
+### Current five-plane split
+
+| Plane | Frozen responsibility of `MedAutoScience` | Frozen responsibility of `MedDeepScientist` |
+| --- | --- | --- |
+| `Asset Layer` | medical study, workspace, artifact contracts, and canonical asset truth | runtime working copies, imported runtime materials, quest-local files |
+| `Memory Layer` | reusable medical research memory, controller summaries, decision history | runtime memory and local quest continuation state |
+| `Governance Layer` | continue, stop, reframe, `publication_eval`, `controller_decisions`, fail-closed gates | quest, session, and run operational guards and state machines |
+| `Delivery Layer` | manuscript, submission, formal reports, and delivery contracts | runtime summaries, handoffs, escalation, and completion hooks |
+| `Execution Layer` | external formal entry, runtime-protocol adapter, handle mapping, and controller orchestration | the actual implementation of daemon, quest, run, worktree, watch, resume, and runtime audit |
+
+So `MedDeepScientist` should not be described as the top-level owner of all five planes.
+The more accurate reading is:
+
+- `MedAutoScience` owns the medical domain semantics and external contracts across the five planes
+- `MedDeepScientist` mainly carries the concrete implementation of the execution plane
+
+## Frozen Rules For Ingesting `MedDeepScientist` Into A `MedAutoScience` Monorepo
+
+If the system later enters `monorepo / runtime core ingest / controlled cutover`, the following rules should stay fixed:
+
+1. What gets absorbed is the execution engine, not the public identity of `MedAutoScience`.
+2. The ingested `MedDeepScientist` should live as part of an internal `runtime` module inside `MedAutoScience`, rather than reclaiming the public entrypoint role.
+3. The stable `MedAutoScience -> MedDeepScientist` runtime protocol should remain semantically equivalent across the cutover instead of being rewritten mid-migration.
+4. Handle semantics, durable surfaces, gate semantics, and compatibility regression should be stabilized before physical migration.
+5. Only after domain contracts are stable should the external controlled runtime repository be ingested as an internal runtime module.
+
+That means the long-term shape is closer to:
+
+```text
+MedAutoScience
+  -> controller_charter
+  -> runtime
+       -> ingested execution engine
+  -> eval_hygiene
+```
+
+Not:
+
+```text
+MedAutoScience == MedDeepScientist
+```
 
 ## Boundary Rules
 
 Do not describe the system as if:
 
 - `OPL` is the runtime owner
-- `shared runtime substrate v1` is already a shared implementation
-- `Managed Runtime` only means “a longer-running Codex session”
-- moving to a managed runtime removes domain gateways
-- `contracts/opl-gateway/*.json` already materialize the whole substrate
+- `Managed Runtime` only means “a longer-running Codex”
+- `MedDeepScientist` is the system identity of `MedAutoScience`
+- monorepo ingest means the boundary between domain gateway and execution engine disappears
+- a future `managed runtime` is already part of current repo-tracked reality
 
 Describe it as:
 
-- `OPL` owns federation language and top-level boundary freeze
-- each domain repository owns `Domain Gateway + Domain Harness OS`
-- execution planes own runtime execution
+- `OPL` owns federation language
+- each domain repository owns `domain gateway + Domain Harness OS`
+- execution engines own the execution plane
 - `host-agent runtime` and `managed runtime` are two deployment shapes of the execution plane
-- `S1` freezes language first so later domain pilots can prove what belongs in shared implementation
+- a future migration changes how the execution plane is hosted, not the domain contract
 
 ## Further Reading
 
 - [OPL Operating Model](./operating-model.md)
 - [Unified Harness Engineering Substrate](./unified-harness-engineering-substrate.md)
-- [OPL Roadmap](./roadmap.md)
-- [Hermes Agent Runtime Substrate Benchmark](./references/hermes-agent-runtime-substrate-benchmark.md)
+- [Shared Foundation](./shared-foundation.md)
+- [Codex-default Host-Agent Runtime Contract](./references/host-agent-runtime-contract.md)
+- [Ecosystem Status Matrix](./references/ecosystem-status-matrix.md)

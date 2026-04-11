@@ -103,10 +103,6 @@ Agent 主要负责：
 当前 repo-tracked 的 formal entry，仍然是本地 `TypeScript CLI`-first / read-only gateway baseline。
 这是真实的当前入口，但它不应被理解成未来产品永远只能通过 `Codex` 接入。
 
-当前 repo-tracked follow-on 是 `S1 / shared runtime substrate v1 contract freeze`。
-这一步只冻结 `runtime profile`、`session substrate`、`gateway runtime status`、`memory provider hook`、`delivery / cron substrate`、`approval / interrupt / resume` 这些共享语言。
-它**不**等于已经拥有共享执行实现、托管式 `Web / API` runtime，或由 `OPL` 持有的 runtime plane。
-
 更合理的长期方向是：
 
 - 当前继续以本地 `CLI-first` 作为 formal entry
@@ -116,11 +112,15 @@ Agent 主要负责：
 在这条演进线上：
 
 - 顶层 `OPL` 继续定义产品体系与 federation 语言
-- shared runtime substrate 逐步承接长期在线运行所需的共享合同
+- `UHS` 继续作为共享 Harness Engineering 上位语言
+- `Shared Runtime Contract` 逐步承接长期在线运行所需的共享合同
+- `Shared Domain Contract` 逐步承接 formal entry、运行身份、报告面、审计面与 gate 语义这类跨 domain 正式行为合同
 - 各个 domain 仓继续承接自己的产品入口、domain workflow 与交付真相
 
 因此，未来更像是“多个垂类在线 agent 产品复用同一 substrate”，而不是“一个顶层巨型 runtime 吞掉所有 domain”。
 这条方向当前还没有全部实现，但现在应该按这个结构推进。
+
+如果未来采用 `Hermes-backed runtime substrate`，它也更准确地属于 `Shared Runtime Contract` 的实现层，而不是 `UHS`、`OPL` 或 domain truth 的同义词。
 
 ## 运行原则
 

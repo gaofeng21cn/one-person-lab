@@ -19,13 +19,6 @@
 - [关键决策](./decisions.md)
 - [合同目录说明](../contracts/README.md)
 
-当前 `S1 / shared runtime substrate v1` 的直接配套工作面：
-
-- [运行模型](./operating-model.zh-CN.md)
-- [Unified Harness Engineering Substrate](./unified-harness-engineering-substrate.zh-CN.md)
-- [OPL Runtime 命名与边界合同](./opl-runtime-naming-and-boundary-contract.zh-CN.md)
-- [路线图](./roadmap.zh-CN.md)
-
 ## 第一层：默认公开主线
 
 这一层是人类专家第一次理解 `OPL` 时应优先阅读的内容。
@@ -46,6 +39,8 @@
 - [OPL 联邦合同](./opl-federation-contract.zh-CN.md)
 - [共享基础结构](./shared-foundation.zh-CN.md)
 - [共享基础结构归属](./shared-foundation-ownership.zh-CN.md)
+- [Shared Runtime Contract](./shared-runtime-contract.zh-CN.md)
+- [Shared Domain Contract](./shared-domain-contract.zh-CN.md)
 - [OPL Runtime 命名与边界合同](./opl-runtime-naming-and-boundary-contract.zh-CN.md)
 - [OPL 只读 Discovery Gateway](./opl-read-only-discovery-gateway.zh-CN.md)
 - [OPL Routed Action Gateway](./opl-routed-action-gateway.zh-CN.md)
@@ -81,9 +76,8 @@
 - `references/opl-operating-example-corpus*`
 - `references/opl-operating-record-catalog*`
 - `references/managed-runtime-migration-readiness-checklist.md`
-- `references/hermes-agent-runtime-substrate-benchmark.md`（Hermes 对 `S1` 的 absorption board）
-- `references/opl-vertical-online-agent-platform-roadmap.md`（`S1` adoption board 与 activation package）
-- `references/development-operating-model.md`
+- `references/hermes-agent-runtime-substrate-benchmark.md`
+- `references/opl-vertical-online-agent-platform-roadmap.md`
 - `references/contract-convergence-v1-decision-note.md`
 - `references/opl-phase2-ecosystem-sync-owner-line.md`
 - `references/opl-phase-2-central-reference-sync-board.md`
@@ -91,8 +85,9 @@
 
 ### 历史迁移归档
 
+- `references/development-operating-model.md`
 - `references/runtime-alignment-taskboard.md`
-- [OMX 历史资料索引](history/omx/README.zh-CN.md)（仅历史参考，不是默认阅读路径）
+- [OMX 历史资料索引](history/omx/README.zh-CN.md)（仅历史参考）
 
 ## 第四层：历史规格与计划
 

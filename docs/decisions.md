@@ -23,15 +23,3 @@
 ### 决策：OMX 只保留历史入口
 
 原因：OMX 已退场，后续若仍需要追溯，只能从 `docs/history/omx/` 进入。
-
-### 决策：当前 repo-tracked follow-on 固定为 `S1 / shared runtime substrate v1 contract freeze`
-
-原因：当前最需要冻结的不是新的 phase / sync 叙事，而是 shared runtime substrate v1 的统一对象语言、推广顺序与 activation package。
-
-### 决策：`S1` 先冻结在公开文档与 reference-grade 文档层
-
-原因：shared runtime substrate v1 目前还没有被严格证明为 gateway-owned machine-readable surface，直接写进 `contracts/opl-gateway/*.json` 会制造 truth drift。
-
-### 决策：shared runtime substrate 是 cross-domain contract layer，不是 routed hop
-
-原因：`OPL` 的主控制链必须继续保持 `Gateway -> Domain Gateway -> Domain Harness OS`，substrate 负责约束共享 contract，不负责替代域间路由。

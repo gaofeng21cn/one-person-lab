@@ -9,11 +9,13 @@ This document indexes the current authoritative public surfaces for the `OPL Gat
 Its job is to make the top-level gateway easier to discover across README, roadmap, rollout, contracts, acceptance, examples, and linked domain gateway entries.
 
 It is not a runtime registry.
-It should be read as a CLI-first, read-only discoverability aid built on the current local gateway baseline.
-That baseline remains the current `OPL` formal entry contract and public system surface.
-The current repo-tracked follow-on is `S1 / shared runtime substrate v1 contract freeze`, which aligns the public surfaces around shared runtime-substrate language without turning this index into a runtime registry, launcher, or runtime-authority surface.
-Earlier phase and activation-package freezes remain useful reference-grade anchors, but they no longer define the active follow-on.
-Use the [Ecosystem Status Matrix](./references/ecosystem-status-matrix.md) as the internal reference anchor for current repository maturity and cross-repo status.
+It should be read as a CLI-first, read-only discoverability aid built on the frozen Phase 1 gateway baseline and reused by the absorbed `Minimal admitted-domain federation activation package`.
+The completed `G2` closeout keeps the single repo-tracked top-level `G2` CLI-first / read-only baseline stable.
+That baseline remains the current `OPL` `Phase 1` formal entry contract and public system surface.
+The completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` remains closed at the planning-contract layer, and `G3` remains planning-only rather than an activated routed-action runtime.
+The repo-tracked `Phase 1` candidate-domain closeout order is frozen as `Review Ops` then `Thesis Ops`, the absorbed predecessor gate remains `Phase 1 exit + next-stage activation package freeze`, and the `Minimal admitted-domain federation activation package` is already absorbed into repo-tracked top-level truth. No new active follow-on tranche is open until an admitted-domain absorbed delta or central reference drift justifies another central sync.
+The current top-level formal entry therefore remains the CLI-first / read-only gateway surface indexed here rather than a launcher or runtime-authority surface.
+Use the [Ecosystem Status Matrix](./references/ecosystem-status-matrix.md) as the internal reference-sync anchor for the current four-repo stage and maturity snapshot.
 
 For repository-wide document layering and reference-grade handling, see [Docs Index](./README.md).
 
@@ -65,8 +67,10 @@ These surfaces freeze the gateway and federation boundary:
 - [OPL Operating Model](./operating-model.md)
 - [Shared Foundation](./shared-foundation.md)
 - [Shared Foundation Ownership](./shared-foundation-ownership.md)
+- [Shared Runtime Contract](./shared-runtime-contract.md)
+- [Shared Domain Contract](./shared-domain-contract.md)
 - [OPL Read-Only Discovery Gateway](./opl-read-only-discovery-gateway.md)
-- [OPL Routed Action Gateway](./opl-routed-action-gateway.md) (planning-level contract only; `G3` remains planning-only, and the current repo-tracked follow-on is `S1 / shared runtime substrate v1 contract freeze` rather than routed-action activation)
+- [OPL Routed Action Gateway](./opl-routed-action-gateway.md) (planning-level contract only; repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` is already closed, the `Review Ops -> Thesis Ops` candidate-domain closeout remains below admission / discovery / routing readiness, the absorbed predecessor gate is `Phase 1 exit + next-stage activation package freeze`, and the current `Minimal admitted-domain federation activation package` is already absorbed into repo-tracked top-level truth)
 - [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.md) + `domain-onboarding-readiness.schema.json`
 - [OPL Governance / Audit Operating Surface](./references/opl-governance-audit-operating-surface.md)
 - [OPL Publish / Promotion Operating Surface](./references/opl-publish-promotion-operating-surface.md)
@@ -90,7 +94,9 @@ These surfaces improve review and discoverability without becoming execution lay
 
 Related positioning companion:
 
-- [Unified Harness Engineering Substrate](./unified-harness-engineering-substrate.md) — a top-level shared-architectural-substrate explanation, not a shared public code framework, and it remains outside the current machine-readable indexed surface set
+- [Unified Harness Engineering Substrate](./unified-harness-engineering-substrate.md) — a top-level shared umbrella-language explanation, not a shared public code framework, and it remains outside the current machine-readable indexed surface set
+- [Shared Runtime Contract](./shared-runtime-contract.md) — the cross-domain runtime contract surface
+- [Shared Domain Contract](./shared-domain-contract.md) — the cross-domain formal product-behavior contract surface
 
 ### 4. Linked domain public-entry surfaces
 
@@ -130,9 +136,11 @@ If a surface is the acceptance, matrix, or example layer, it remains a discovera
 - [OPL Operating Model](./operating-model.md)
 - [Shared Foundation](./shared-foundation.md)
 - [Shared Foundation Ownership](./shared-foundation-ownership.md)
+- [Shared Runtime Contract](./shared-runtime-contract.md)
+- [Shared Domain Contract](./shared-domain-contract.md)
 - [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
 - [OPL Read-Only Discovery Gateway](./opl-read-only-discovery-gateway.md)
-- [OPL Routed Action Gateway](./opl-routed-action-gateway.md) (planning-level contract only; `G3` remains planning-only, and the current repo-tracked follow-on is `S1 / shared runtime substrate v1 contract freeze` rather than routed-action activation)
+- [OPL Routed Action Gateway](./opl-routed-action-gateway.md) (planning-level contract only; repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` is already closed, the `Review Ops -> Thesis Ops` candidate-domain closeout remains below admission / discovery / routing readiness, the absorbed predecessor gate is `Phase 1 exit + next-stage activation package freeze`, and the current `Minimal admitted-domain federation activation package` is already absorbed into repo-tracked top-level truth)
 - [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.md)
 - [OPL Governance / Audit Operating Surface](./references/opl-governance-audit-operating-surface.md)
 - [OPL Publish / Promotion Operating Surface](./references/opl-publish-promotion-operating-surface.md)
