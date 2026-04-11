@@ -96,6 +96,24 @@ test('public bilingual truth surfaces freeze Codex-default host-agent runtime wo
   }
 });
 
+test('core maintainer docs exist and are linked from docs index', () => {
+  const docsIndex = read('docs/README.md');
+  const docsIndexZh = read('docs/README.zh-CN.md');
+  const coreDocs = [
+    'docs/project.md',
+    'docs/status.md',
+    'docs/architecture.md',
+    'docs/invariants.md',
+    'docs/decisions.md',
+  ];
+
+  for (const relativePath of coreDocs) {
+    assert.ok(fs.existsSync(path.join(repoRoot, relativePath)), `${relativePath} should exist`);
+    assert.match(docsIndex, new RegExp(relativePath.split('/').pop()!.replace('.', '\\.')));
+    assert.match(docsIndexZh, new RegExp(relativePath.split('/').pop()!.replace('.', '\\.')));
+  }
+});
+
 test('repo-tracked README/docs/contracts markdown links resolve locally', () => {
   const files = [
     ...collectMarkdownFiles('README.md'),

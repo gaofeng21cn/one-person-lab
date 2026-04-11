@@ -51,7 +51,18 @@ test('repo-tracked verification command surfaces reference valid npm scripts and
 test('root AGENTS freezes the canonical fast and full verification entrypoints', () => {
   const agents = read('AGENTS.md');
 
-  assert.match(agents, /npm test` and `npm run test:fast` are the default developer smoke slice/);
-  assert.match(agents, /`npm run test:full` is the clean-clone verification entrypoint/);
-  assert.match(agents, /keep those command surfaces aligned with `package\.json` and the checked-in tests/);
+  assert.match(agents, /默认最小验证入口是 `scripts\/verify\.sh`/);
+  assert.match(agents, /默认 smoke 是 `npm test` \/ `npm run test:fast`/);
+  assert.match(agents, /`npm run test:meta` 与 `npm run test:artifact` 是显式 lane/);
+  assert.match(agents, /`npm run test:full` 是 clean-clone 基线/);
+  assert.match(agents, /必须与 `package\.json` 和已跟踪测试保持一致/);
+});
+
+test('scripts/verify.sh provides the canonical verification wrapper', () => {
+  const verifyScript = read('scripts/verify.sh');
+
+  assert.match(verifyScript, /npm test/);
+  assert.match(verifyScript, /npm run test:meta/);
+  assert.match(verifyScript, /npm run test:artifact/);
+  assert.match(verifyScript, /npm run test:full/);
 });

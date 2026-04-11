@@ -3,7 +3,21 @@
 # OPL Docs Index
 
 This directory carries the public and repo-tracked documents for `One Person Lab`.
-To keep the public surface stable and stop reference material from crowding the main narrative, `OPL` uses one fixed four-layer document system.
+To keep the public surface stable while still giving AI and maintainers a compact working set, `OPL` now uses two simultaneous views:
+
+1. a fixed AI / maintainer core working set
+2. the public four-layer documentation system
+
+## AI / Maintainer Core Working Set
+
+These are the first files an AI or maintainer should read before touching the repository state:
+
+- [Project](./project.md)
+- [Status](./status.md)
+- [Architecture](./architecture.md)
+- [Invariants](./invariants.md)
+- [Decisions](./decisions.md)
+- [Contracts overview](../contracts/README.md)
 
 ## Layer 1. Default Public Mainline
 
@@ -77,6 +91,7 @@ They explain why a freeze happened, but they are not the living truth surface fo
 
 ## Documentation Rules
 
+- The AI / maintainer core working set exists to answer project goal, current state, boundaries, and key decisions quickly without forcing readers through the entire public surface.
 - Layers 1 and 2 are public surfaces, so every document there must have synchronized English `.md` and Chinese `.zh-CN.md` mirrors.
 - Layer 3 may remain public or repo-tracked, but it is always reference-grade and must not crowd the default reading path in the root README.
 - OMX-prefixed reference docs are retained as historical migration artifacts; they are not active execution entry docs.
