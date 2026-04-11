@@ -25,22 +25,21 @@ The absorbed predecessor gate is `Phase 1 exit + next-stage activation package f
 The current repo-tracked formal entry at the OPL layer therefore remains the local `TypeScript CLI`-first / read-only gateway surface rather than a launcher, mutation entry, or runtime-owner surface.
 That delivery target still does **not** promote this directory into a runtime, routed-action control plane, or canonical truth store; it only keeps the existing top-level contract language executable through a local CLI surface.
 
-## Current four-repo alignment companions
+## Current reference-sync companions
 
-These reference-grade companions freeze the current four-repo status and runtime wording without turning this directory into a runtime owner or second source of truth.
-This companion set is anchored to `2026-04-11` and carries the responsibility of writing the latest four-repo status back into the top-level OPL reference-sync companions without promoting those reference surfaces into public-mainline truth.
-In the current sync window, that includes keeping two admitted-domain delta packs plus one signal-only reference pack explicit: RedCube runtime-watch closeout plus layered verification and repo-tracked runtime-program state, MedAutoScience manual-stabilization/runtime-watch/repair-priority repo-side hardening plus repo entry migration off OMX, and Med Auto Grant post-R5A walkthrough/output-consistency plus root-`CURRENT_PROGRAM.program_id` hardening and control-plane state migration off OMX.
+These reference-grade companions freeze the current cross-repo status picture and Codex-only runtime wording without turning this directory into a runtime owner or second source of truth.
+This active companion set is anchored to `2026-04-11` and carries the responsibility of keeping the latest admitted-domain absorbed deltas visible in top-level OPL reference-sync surfaces without promoting those references into public-mainline truth.
 
 - [Ecosystem Status Matrix](../../docs/references/ecosystem-status-matrix.md) — Chinese-only internal reference for the current four-repo stage/status picture
 - [Contract Convergence v1 Execution Board](../../docs/references/contract-convergence-v1-execution-board.md) — Chinese-only internal reference for the current unified program, active phase, and exit criteria
 - [Codex-default Host-Agent Runtime Contract](../../docs/references/host-agent-runtime-contract.md) — Chinese-only internal reference for the current local default runtime wording
-- [Runtime Alignment Taskboard](../../docs/references/runtime-alignment-taskboard.md) — Chinese-only internal reference for the current `Phase C / Object And Report Behavior Convergence` task slices
-- [Development Operating Model](../../docs/references/development-operating-model.md) — Chinese-only internal reference for the current Codex-default development operating wording
 
-## Legacy OMX migration references
+## Historical migration references
 
-These references are kept for historical migration context only and are not active execution entry docs.
+These references are kept for historical migration and offboarding context only. They are not active execution entry docs and must not redefine the current Codex-only mainline.
 
+- [Development Operating Model](../../docs/references/development-operating-model.md) — Chinese-only historical migration reference for `Codex Host` / `OMX` operating discipline
+- [Runtime Alignment Taskboard](../../docs/references/runtime-alignment-taskboard.md) — Chinese-only historical reference for the retired four-repo convergence checklist
 - [OMX historical archive](../../docs/history/omx/README.md) — Chinese-only historical archive entry
 
 ## Governing documents

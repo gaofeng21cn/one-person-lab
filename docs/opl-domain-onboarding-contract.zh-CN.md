@@ -37,16 +37,19 @@ Candidate-domain backlog 则是位于它上游的 blocker surface，用来记录
 公开 scaffold 或 domain-direction hint —— 例如当前 `Grant Ops` 方向上的 `Grant Foundry -> Med Auto Grant` —— 可以帮助说明 candidate path，但它们仍然只算 top-level signal / domain-direction evidence。
 它们不能替代 onboarding package，不等于已正式收录的 domain gateway，也不等于 `G2` discovery readiness，更不等于 `G3` routed-action readiness。
 
-## 当前四仓执行对齐配套文档
+## 执行模型审查配套文档
 
-当审查者判断一个 onboarding package 是否真的与当前 `OPL` 的执行方向对齐时，当前 `Phase 1` 应结合下面这些配套参考：
+当审查者判断一个 onboarding package 是否真的与当前 `OPL` 的执行方向对齐时，应先看当前 Codex-only 执行口径：
 
 - [Codex-default Host-Agent Runtime 合同](./references/host-agent-runtime-contract.md) — 当前本地默认 runtime 口径（中文内部参考）
+
+如果审查时仍需要追溯历史迁移上下文，再单独参考下面这些历史材料：
+
 - [四仓统一开发运行合同](./references/development-operating-model.md) — 历史 `Codex Host` / `OMX` 迁移纪律与兼容长跑 `worktree` 规则（中文内部参考）
-- [四仓统一对齐检查表与任务板](./references/runtime-alignment-taskboard.md) — 当前 P0 / P1 缺口检查表（中文内部参考）
+- [四仓统一对齐检查表与任务板](./references/runtime-alignment-taskboard.md) — 已退役四仓收口清单的历史参考
 - [OMX 历史资料索引](./history/omx/README.zh-CN.md) — 兼容性长跑规则与迁移资料入口（中文历史参考）
 
-当前活跃执行入口仍是 Codex-only；这些配套文档只用于帮助审查当前 execution-model wording，以及保留下来的历史迁移边界。
+当前活跃执行入口仍是 Codex-only；这些配套文档只用于帮助审查当前 execution-model wording，并把它与保留下来的历史迁移边界分开。
 它们**不会**把 `OPL` 变成候选 domain 的 runtime owner。
 
 ## 核心承诺

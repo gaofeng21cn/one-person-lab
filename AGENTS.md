@@ -29,7 +29,7 @@
 - `contracts/` 只保留 machine-readable contract surface；不再承载 narrative 规则。
 - `docs/references/`：参考级配套文档。
 - `docs/specs/` 与 `docs/plans/`：历史设计与计划记录。
-- `docs/history/omx/`：OMX 历史资料入口，不再承担活跃 workflow。
+- `docs/history/`：历史归档入口，不再承担活跃 workflow。
 
 ## 文档规则
 
@@ -54,8 +54,8 @@
 - 大改动、长链路工作、并行多 AI 开发，默认先从最新 `main` 开独立 worktree，再在 worktree 内实现和验证。
 - 共享根 checkout 只用于轻量阅读、评审、吸收验证后提交、push 和清理，不应长期承担重型实现。
 - 需要多条 lane 时创建多个 worktree，不要把多条长线塞进同一工作目录。
+- worktree 内实现和验证完成后，应尽快吸收回 `main`，并清理对应 worktree、分支与临时状态。
 
 ## 本地状态
 
-- `.codex/` 与 `.omx/` 都是本地工具状态，必须保持未跟踪。
-- `.omx/` 仅允许作为历史残留存在，不得再作为当前 workflow 入口。
+- `.codex/` 是本地工具状态，必须保持未跟踪。

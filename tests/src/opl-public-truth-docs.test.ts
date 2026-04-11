@@ -129,7 +129,7 @@ test('grant candidate path keeps med auto grant at signal-only evidence instead 
   }
 });
 
-test('gateway and onboarding docs cross-reference the current four-repo alignment companions', () => {
+test('gateway and onboarding docs separate current execution references from historical migration references', () => {
   const onboardingContract = read('docs/opl-domain-onboarding-contract.md');
   const onboardingContractZh = read('docs/opl-domain-onboarding-contract.zh-CN.md');
   const gatewayContracts = read('contracts/opl-gateway/README.md');
@@ -138,8 +138,9 @@ test('gateway and onboarding docs cross-reference the current four-repo alignmen
   for (const doc of [onboardingContract, onboardingContractZh]) {
     assert.match(doc, /references\/host-agent-runtime-contract\.md/);
     assert.match(doc, /references\/development-operating-model\.md/);
-    assert.match(doc, /Codex Host/i);
-    assert.match(doc, /OMX/);
+    assert.match(doc, /history\/omx\/README/);
+    assert.match(doc, /Codex-only/i);
+    assert.match(doc, /historical migration|历史迁移/);
   }
 
   for (const doc of [gatewayContracts, gatewayContractsZh]) {
@@ -149,6 +150,7 @@ test('gateway and onboarding docs cross-reference the current four-repo alignmen
     assert.match(doc, /docs\/references\/development-operating-model\.md/);
     assert.match(doc, /docs\/references\/runtime-alignment-taskboard\.md/);
     assert.match(doc, /docs\/history\/omx\/README/);
+    assert.match(doc, /historical migration|历史迁移/);
   }
 });
 

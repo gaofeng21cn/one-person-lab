@@ -52,34 +52,39 @@ These documents stay repo-tracked, but they are not the default public reading p
 They support review, acceptance, indexing, examples, or boundary inspection and must not be allowed to redefine the main storyline.
 All Layer 3 docs now live under `docs/references/` so the docs root stays readable.
 
+### Active reference surfaces
+
+- `references/ecosystem-status-matrix.md` (Chinese-only internal reference)
+- `references/contract-convergence-v1-execution-board.md` (Chinese-only internal reference)
+- `references/host-agent-runtime-contract.md` (Chinese-only internal reference)
 - `references/opl-gateway-rollout*`
 - `references/opl-gateway-acceptance-test-spec*`
 - `references/opl-candidate-domain-backlog*`
 - `references/opl-candidate-workstream-tranche-closeout*`
-- `references/opl-gateway-example-corpus*`
-- `references/opl-routed-safety-example-corpus*`
-- `references/opl-operating-example-corpus*`
-- `references/opl-operating-record-catalog*`
-- `references/ecosystem-status-matrix.md` (Chinese-only internal reference)
-- `references/contract-convergence-v1-execution-board.md` (Chinese-only internal reference)
-- `references/host-agent-runtime-contract.md` (Chinese-only internal reference)
-- `references/managed-runtime-migration-readiness-checklist.md` (Chinese-only internal reference)
-- `references/hermes-agent-runtime-substrate-benchmark.md` (Chinese-only internal reference)
-- `references/opl-vertical-online-agent-platform-roadmap.md` (Chinese-only internal reference)
-- `references/development-operating-model.md` (Chinese-only internal reference)
-- `references/contract-convergence-v1-decision-note.md` (Chinese-only internal reference)
-- `references/opl-phase2-ecosystem-sync-owner-line.md` (Chinese-only internal reference)
-- `references/opl-phase-2-central-reference-sync-board.md` (Chinese-only internal reference)
-- `references/opl-phase-2-admitted-domain-delta-intake-refresh.md` (Chinese-only internal reference)
-- `references/runtime-alignment-taskboard.md` (Chinese-only internal reference)
 - `references/opl-surface-lifecycle-map*`
 - `references/opl-surface-authority-matrix*`
 - `references/opl-surface-review-matrix*`
 - `references/opl-governance-audit-operating-surface*`
 - `references/opl-publish-promotion-operating-surface*`
 
-### Historical OMX archive
+### Background, intake, and audit references
 
+- `references/opl-gateway-example-corpus*`
+- `references/opl-routed-safety-example-corpus*`
+- `references/opl-operating-example-corpus*`
+- `references/opl-operating-record-catalog*`
+- `references/managed-runtime-migration-readiness-checklist.md` (Chinese-only internal reference)
+- `references/hermes-agent-runtime-substrate-benchmark.md` (Chinese-only internal reference)
+- `references/opl-vertical-online-agent-platform-roadmap.md` (Chinese-only internal reference)
+- `references/contract-convergence-v1-decision-note.md` (Chinese-only internal reference)
+- `references/opl-phase2-ecosystem-sync-owner-line.md` (Chinese-only internal reference)
+- `references/opl-phase-2-central-reference-sync-board.md` (Chinese-only internal reference)
+- `references/opl-phase-2-admitted-domain-delta-intake-refresh.md` (Chinese-only internal reference)
+
+### Historical migration archives
+
+- `references/development-operating-model.md` (Chinese-only historical migration reference)
+- `references/runtime-alignment-taskboard.md` (Chinese-only historical migration reference)
 - [OMX historical archive](history/omx/README.md) (historical reference only)
 
 ## Layer 4. Historical Specs And Plans
@@ -95,7 +100,7 @@ They explain why a freeze happened, but they are not the living truth surface fo
 - The AI / maintainer core working set exists to answer project goal, current state, boundaries, and key decisions quickly without forcing readers through the entire public surface.
 - Layers 1 and 2 are public surfaces, so every document there must have synchronized English `.md` and Chinese `.zh-CN.md` mirrors.
 - Layer 3 may remain public or repo-tracked, but it is always reference-grade and must not crowd the default reading path in the root README.
-- OMX-prefixed reference docs are retained as historical migration artifacts; they are not active execution entry docs.
+- Historical migration references stay readable, but they must never be presented as the default current workflow.
 - Layer 4 is internal working history and should default to Chinese-only unless there is an explicit reason to publish a bilingual mirror.
 - Avoid unnecessary mixed-language prose: keep narrative in one language, and reserve English for fixed terms, file paths, command names, schemas, and code identifiers.
 

@@ -37,16 +37,19 @@ The candidate-domain backlog is the upstream blocker surface for under-definitio
 Public scaffolds or domain-direction hints — for example `Grant Foundry -> Med Auto Grant` for the current Grant Ops direction — may clarify the candidate path, but they still count only as top-level signal / domain-direction evidence.
 They do not substitute for the onboarding package, are not an admitted domain gateway, and do not count as G2 discovery readiness or G3 routed-action readiness.
 
-## Current Four-Repo Execution Alignment Companions
+## Execution-Model Review Companions
 
-When a reviewer checks whether an onboarding package really aligns with the current `OPL` execution direction, the current Phase 1 companion references are:
+When a reviewer checks whether an onboarding package really aligns with the current `OPL` execution direction, start with the current Codex-only execution wording:
 
 - [Codex-default Host-Agent Runtime Contract](./references/host-agent-runtime-contract.md) — Chinese-only internal reference for the current local default runtime wording
+
+If historical migration context is still needed during review, use these historical references separately:
+
 - [Development Operating Model](./references/development-operating-model.md) — Chinese-only internal reference for historical `Codex Host` / `OMX` migration discipline and compatible longrun worktree rules
-- [Runtime Alignment Taskboard](./references/runtime-alignment-taskboard.md) — Chinese-only internal reference for the current P0/P1 gap checklist
+- [Runtime Alignment Taskboard](./references/runtime-alignment-taskboard.md) — Chinese-only historical reference for the retired four-repo convergence checklist
 - [OMX historical archive](./history/omx/README.md) — Chinese-only historical archive entry for compatible long-running execution references
 
-The active execution path remains Codex-only; these companions help reviewers evaluate current execution-model wording plus the retained historical migration boundaries during onboarding.
+The active execution path remains Codex-only; these companions help reviewers keep current execution-model wording separate from retained historical migration boundaries during onboarding.
 They do **not** turn `OPL` into the runtime owner of a candidate domain.
 
 ## Core Promise

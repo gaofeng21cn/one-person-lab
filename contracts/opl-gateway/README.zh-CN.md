@@ -25,22 +25,21 @@ repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review 
 因此，当前 OPL 层的 repo-tracked formal entry 也仍然只是这条本地 `TypeScript CLI`-first / read-only gateway surface，而不是 launcher、mutation entry 或 runtime-owner surface。
 这个交付目标**不会**把当前目录提升成 runtime、routed-action control plane 或 canonical truth store；它只是把已有的顶层 contract language 继续维持为本地 CLI surface 可读取的合同入口。
 
-## 当前四仓统一对齐配套文档
+## 当前参考同步配套文档
 
-下面这些 reference-grade 配套文档用于冻结当前四仓的状态与 runtime 口径；它们不会把当前目录升级成 runtime owner，也不会形成第二真相源。
-下面这组文档以 `2026-04-11` 为日期锚点，并承担把四仓最新状态回写到 `OPL` 顶层参考同步面的责任；这些参考面不会反向抬升为公开主线真相。
-在当前这一轮 sync 中，需要继续显式守住“两组 admitted-domain delta pack + 一组 signal-only 参考包”：`RedCube AI` 的 runtime-watch closeout、verification surface 分层与 repo-tracked runtime-program state；`MedAutoScience` 的 manual stabilization / runtime watch / repair-priority repo-side hardening与 repo entry off OMX；以及 `Med Auto Grant` 的 post-R5A walkthrough / output consistency、root-`CURRENT_PROGRAM.program_id` hardening 与 control-plane state off OMX。
+下面这些 reference-grade 配套文档用于冻结当前跨仓状态图与 Codex-only runtime 口径；它们不会把当前目录升级成 runtime owner，也不会形成第二真相源。
+下面这组活跃参考以 `2026-04-11` 为日期锚点，并承担把 admitted-domain 最新 absorbed delta 持续回写到 `OPL` 顶层参考同步面的责任；这些参考面不会反向抬升为公开主线真相。
 
 - [生态四仓统一状态总表](../../docs/references/ecosystem-status-matrix.md) — 当前四仓阶段/状态总览（中文内部参考）
 - [Contract Convergence v1 执行板](../../docs/references/contract-convergence-v1-execution-board.md) — 当前统一 program、active phase 与离场条件（中文内部参考）
 - [Codex-default Host-Agent Runtime 合同](../../docs/references/host-agent-runtime-contract.md) — 当前本地默认 runtime 口径（中文内部参考）
-- [四仓统一对齐检查表与任务板](../../docs/references/runtime-alignment-taskboard.md) — 当前 `Phase C / Object And Report Behavior Convergence` 活跃任务面（中文内部参考）
-- [四仓统一开发运行合同](../../docs/references/development-operating-model.md) — 当前 Codex-default 开发运行口径（中文内部参考）
 
-## OMX 历史迁移参考
+## 历史迁移参考
 
-这组文档仅保留为历史迁移上下文，不再作为活跃执行入口文档。
+这组文档仅保留为历史迁移与 offboarding 上下文，不再作为活跃执行入口文档，也不应反过来改写当前 Codex-only 主线。
 
+- [四仓统一开发运行合同](../../docs/references/development-operating-model.md) — `Codex Host` / `OMX` 运行纪律的历史迁移参考
+- [四仓统一对齐检查表与任务板](../../docs/references/runtime-alignment-taskboard.md) — 已退役四仓收口清单的历史参考
 - [OMX 历史资料索引](../../docs/history/omx/README.zh-CN.md) — 中文历史资料入口
 
 ## 上位文档
