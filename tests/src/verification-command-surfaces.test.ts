@@ -16,6 +16,7 @@ function read(relativePath: string) {
 
 test('repo-tracked verification command surfaces reference valid npm scripts and local test files', () => {
   const files = [
+    'AGENTS.md',
     'contracts/opl-gateway/phase-1-exit-activation-package.json',
     'contracts/opl-gateway/minimal-admitted-domain-federation-activation-package.json',
     'contracts/opl-gateway/phase-2-central-reference-sync-board.json',
@@ -45,4 +46,12 @@ test('repo-tracked verification command surfaces reference valid npm scripts and
       );
     }
   }
+});
+
+test('root AGENTS freezes the canonical fast and full verification entrypoints', () => {
+  const agents = read('AGENTS.md');
+
+  assert.match(agents, /npm test` and `npm run test:fast` are the default developer smoke slice/);
+  assert.match(agents, /`npm run test:full` is the clean-clone verification entrypoint/);
+  assert.match(agents, /keep those command surfaces aligned with `package\.json` and the checked-in tests/);
 });

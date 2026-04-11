@@ -30,6 +30,13 @@ Read that file first whenever repository-specific goals, architecture priorities
 - Use isolated worktrees when parallel change lanes are required, but do not require OMX-specific lane ownership semantics.
 - Treat any `docs/references/omx-*` content as historical migration guidance, not active operating policy.
 
+## Test Surface Governance
+
+- `npm test` and `npm run test:fast` are the default developer smoke slice; do not silently widen them into the full tracked baseline.
+- `npm run test:full` is the clean-clone verification entrypoint; repo-tracked contracts, docs, and operator instructions must reference this command when they mean the full baseline.
+- If a repo-tracked file documents verification commands, keep those command surfaces aligned with `package.json` and the checked-in tests.
+- Prefer tightening or deleting stale verification references instead of adding parallel test entrypoints that drift out of sync.
+
 ## Local State
 
 - `.omx/` and `.codex/` are local tooling state and must remain untracked.

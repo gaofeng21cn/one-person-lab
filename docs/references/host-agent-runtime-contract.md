@@ -1,5 +1,7 @@
 # Codex-default Host-Agent Runtime 合同
 
+> 历史说明（2026-04-11 OMX offboarding）：本文件保留为历史/迁移参考；当前活跃执行口径以 Codex-only 文档为准。
+
 ## 文档目的
 
 这份文档用于统一 `OPL` 体系下当前本地默认运行形态的合同语义。

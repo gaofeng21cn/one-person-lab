@@ -1,5 +1,7 @@
 # OPL Phase 2 Admitted-Domain Delta Intake Refresh
 
+> 历史说明（2026-04-11 OMX offboarding）：本文件保留为历史/迁移参考，不作为当前活跃执行入口。
+
 状态锚点：`2026-04-11`
 
 ## 这是什么
