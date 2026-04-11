@@ -159,10 +159,13 @@ test('contract convergence execution board freezes the current unified program a
   const statusMatrix = read('docs/references/ecosystem-status-matrix.md');
   const taskboard = read('docs/references/runtime-alignment-taskboard.md');
   const managedRuntimeReadiness = read('docs/references/managed-runtime-migration-readiness-checklist.md');
+  const hermesBenchmark = read('docs/references/hermes-agent-runtime-substrate-benchmark.md');
   const longrunPlaybook = read('docs/references/omx-longrun-prompt-playbook.md');
 
   assert.match(docsIndex, /references\/contract-convergence-v1-execution-board\.md/);
   assert.match(docsIndexZh, /references\/contract-convergence-v1-execution-board\.md/);
+  assert.match(docsIndex, /references\/hermes-agent-runtime-substrate-benchmark\.md/);
+  assert.match(docsIndexZh, /references\/hermes-agent-runtime-substrate-benchmark\.md/);
 
   assert.match(executionBoard, /Contract Convergence v1/);
   assert.match(executionBoard, /Phase C \/ Object And Report Behavior Convergence/);
@@ -264,8 +267,19 @@ test('contract convergence execution board freezes the current unified program a
   assert.match(longrunPlaybook, /manual stabilization checklist/);
   assert.match(longrunPlaybook, /premature completion/);
   assert.doesNotMatch(longrunPlaybook, /若可以，就优先收紧 revised-workspace validator/);
+  assert.match(hermesBenchmark, /Hermes Agent Runtime Substrate 对标与吸收清单/);
+  assert.match(hermesBenchmark, /不是把 `OPL` 改写成另一个 `Hermes Agent`|不把 `OPL` 改写成另一个 `Hermes Agent`/);
+  assert.match(hermesBenchmark, /也不是把 `OPL` 重新定位成“通用长期在线 agent 平台”|不改写成“通用长期在线 agent 平台”/);
+  assert.match(hermesBenchmark, /runtime profile/);
+  assert.match(hermesBenchmark, /session substrate/);
+  assert.match(hermesBenchmark, /gateway owner process/);
+  assert.match(hermesBenchmark, /memory tier contract/);
+  assert.match(hermesBenchmark, /approval \/ interrupt \/ resume/);
+  assert.match(hermesBenchmark, /redcube-ai/);
+  assert.match(hermesBenchmark, /med-autogrant/);
+  assert.match(hermesBenchmark, /med-autoscience/);
 
-  for (const doc of [executionBoard, statusMatrix, taskboard, managedRuntimeReadiness, longrunPlaybook]) {
+  for (const doc of [executionBoard, statusMatrix, taskboard, managedRuntimeReadiness, hermesBenchmark, longrunPlaybook]) {
     assert.doesNotMatch(doc, /workspace \/ operator quickstart convergence` 仍未被冻结/);
     assert.doesNotMatch(doc, /等待 `workspace \/ operator quickstart convergence`/);
     assert.doesNotMatch(doc, /判断这条 next line 是否能在当前 hard boundary 内被诚实冻结/);
