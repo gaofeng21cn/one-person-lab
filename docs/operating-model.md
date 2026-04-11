@@ -7,7 +7,7 @@
 The core judgment of `OPL` is not “how to make one Agent finish one task once.”
 It is “how to let a research-oriented individual or a very small team continuously carry formal lab work through stable surfaces.”
 
-That is why `OPL` should be understood as a top-level gateway and federation model rather than as a static blueprint and not as a monolithic runtime.
+That is why `OPL` should be understood as the top-level gateway and federation model for continuous lab work.
 
 ## Top-Level Chain
 
@@ -72,8 +72,8 @@ For example:
 
 ## Agent-First Execution
 
-`OPL` defaults to `Agent-first` execution rather than `fixed-code-first`.
-That does not require every domain to bind itself to one direct LLM API; it requires the primary workstream driver to be an Agent runtime that reads state, calls tools and gateways, organizes intermediate artifacts, advances gates, and writes key traces back to auditable surfaces.
+`OPL` defaults to `Agent-first` execution.
+Domains can choose their model interfaces, but the primary workstream driver is an Agent runtime that reads state, calls tools and gateways, organizes intermediate artifacts, advances gates, and writes key traces back to auditable surfaces.
 
 In that model, code mainly exists to provide:
 
@@ -95,9 +95,8 @@ The current aligned rule is:
 - any future `Human-in-the-loop` product should reuse the same substrate-compatible contracts and execution modules as a sibling or upper-layer product
 - the shared base is the substrate contract, not a same-repository mode toggle
 
-So the difference is not “two modes inside one repository.”
-It is whether a future higher-judgment product sits above the current `Auto-only` mainline while reusing the same stable contracts, objects, audit surfaces, and execution modules.
-`OPL` freezes that layering rule now, without claiming that any future `Human-in-the-loop` product has already been built.
+The key distinction is the layering rule: a future higher-judgment product sits above the current `Auto-only` mainline while reusing the same stable contracts, objects, audit surfaces, and execution modules.
+`OPL` freezes that layering rule now and keeps the current mainline definition clean.
 
 ## Product Entry And Online Runtime
 
@@ -121,7 +120,8 @@ On that path:
 That is how the ecosystem can grow into multiple vertical online agent products on one substrate rather than one giant runtime that swallows every domain.
 The full direction is not implemented yet, but it is the right structure to keep tightening toward.
 
-If the ecosystem later adopts a `Hermes`-backed runtime substrate, that choice belongs more accurately to the implementation layer of the `Shared Runtime Contract`, not as a synonym for `UHS`, `OPL`, or domain truth.
+If the ecosystem later adopts the upstream `Hermes-Agent` as a runtime substrate, that choice belongs more accurately to the implementation layer of the `Shared Runtime Contract`, not as a synonym for `UHS`, `OPL`, or domain truth.
+As of today, none of the domain repositories has landed that integration yet.
 
 ## Operating Principles
 
@@ -136,18 +136,12 @@ At the top level, `OPL` follows these principles:
 
 ## Boundary Rules
 
-`OPL` is not:
-
-- a general-purpose assistant
-- a synonym for any single domain project
-- a claim that all runtime code already lives in one repository
-- a reason to remove domain gateways
-
-`OPL` is:
+Use the following scope for `OPL`:
 
 - the top-level product and control language for the lab
 - the place where cross-domain semantics are frozen first
 - the federation layer above independent domain gateways and harnesses
+- the gateway surface that links domain-owned runtimes without absorbing their identities
 
 ## Why Domain Gateways Must Stay
 
@@ -163,10 +157,6 @@ That means the right direction is:
 - `OPL Gateway` above domains
 - thinner but explicit domain gateways
 - explicit domain harnesses underneath
-
-Not:
-
-- one giant runtime that swallows all workstreams
 
 ## Further Reading
 

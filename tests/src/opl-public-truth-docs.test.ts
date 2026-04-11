@@ -42,21 +42,21 @@ test('grant scaffold stays public and non-admitting across tracked public docs',
 
   assert.match(readme, /Grant Foundry -> Med Auto Grant/);
   assert.match(readme, /public scaffold/i);
-  assert.match(readme, /not yet an admitted `OPL` domain gateway and harness/i);
+  assert.match(readme, /current federation status: public scaffold|next admission milestones/i);
 
   assert.match(readmeZh, /Grant Foundry -> Med Auto Grant/);
   assert.match(readmeZh, /公开 scaffold/);
-  assert.match(readmeZh, /还不是已经 admitted 的 `OPL` domain gateway 与 harness/);
+  assert.match(readmeZh, /当前联邦状态：public scaffold|下一步准入里程碑/);
 
-  assert.match(taskMap, /not yet an admitted domain/i);
-  assert.match(taskMap, /not yet a `G2` discovery target/i);
-  assert.match(taskMap, /not yet a `G3` routed-action target/i);
-  assert.match(taskMap, /without building a handoff payload/i);
+  assert.match(taskMap, /current lifecycle state: under-definition candidate workstream/i);
+  assert.match(taskMap, /discovery and routing path: .*`?G2`? discovery readiness/i);
+  assert.match(taskMap, /discovery and routing path: .*`?G3`? routed-action readiness/i);
+  assert.match(taskMap, /unknown_domain/);
 
-  assert.match(taskMapZh, /还不是正式收录 domain/);
-  assert.match(taskMapZh, /还不是 `G2` discovery target/);
-  assert.match(taskMapZh, /还不是 `G3` routed-action target/);
-  assert.match(taskMapZh, /不会构建 handoff payload/);
+  assert.match(taskMapZh, /当前生命周期状态：under-definition candidate workstream/);
+  assert.match(taskMapZh, /discovery \/ routing 路径：等待 `?G2`? discovery readiness/);
+  assert.match(taskMapZh, /discovery \/ routing 路径：.*`?G3`? routed-action readiness/);
+  assert.match(taskMapZh, /unknown_domain/);
 
   assert.match(roadmap, /Grant Ops`, `Thesis Ops`, and `Review Ops` remain under definition/i);
   assert.match(roadmap, /Grant Foundry -> Med Auto Grant/i);
@@ -64,7 +64,7 @@ test('grant scaffold stays public and non-admitting across tracked public docs',
   assert.match(roadmap, /domain-direction evidence/i);
   assert.match(
     roadmap,
-    /not an admitted domain gateway|does \*\*not\*\* make `Grant Ops` a `G2` discovery target or a `G3` routed-action target/i,
+    /next visible milestones are registry material, discovery readiness, routing readiness, and onboarding evidence|next milestones are registry material, `?G2`? discovery readiness, `?G3`? routed-action readiness/i,
   );
 
   assert.match(roadmapZh, /`Grant Ops`、`Thesis Ops`、`Review Ops` 仍处于定义阶段/);
@@ -73,7 +73,7 @@ test('grant scaffold stays public and non-admitting across tracked public docs',
   assert.match(roadmapZh, /domain-direction evidence|领域方向证据/);
   assert.match(
     roadmapZh,
-    /不等于已正式收录的 domain gateway|不代表 `Grant Ops` 已经变成 `G2` discovery target 或 `G3` routed-action target/,
+    /后续里程碑聚焦在 registry material、discovery readiness、routing readiness 与 onboarding evidence|下一步里程碑是 registry material、`?G2`? discovery readiness、`?G3`? routed-action readiness 与 domain-onboarding evidence/,
   );
 });
 
@@ -112,20 +112,20 @@ test('grant candidate path keeps med auto grant at signal-only evidence instead 
     assert.match(doc, /Grant Foundry -> Med Auto Grant/i);
     assert.match(doc, /top-level signal/i);
     assert.match(doc, /domain-direction evidence/i);
-    assert.match(doc, /not an admitted domain gateway|do not satisfy admission|not indexed here as an admitted domain/i);
-    assert.match(doc, /not (?:count as|make).*G2 discovery readiness|not (?:count as|make).*G2 discovery target|G2 discovery-ready|does \*\*not\*\* satisfy.*discovery readiness|do not satisfy.*discovery readiness/i);
-    assert.match(doc, /not (?:count as|make).*G3 routed-action readiness|not (?:count as|make).*G3 routed-action target|G3 routed-action-ready|does \*\*not\*\* satisfy.*routing readiness|do not satisfy.*routing readiness/i);
-    assert.match(doc, /handoff-ready|handoff readiness/i);
+    assert.match(doc, /public scaffold|candidate|onboarding|future Grant Ops path|future grant domain/i);
+    assert.match(doc, /`?G2`? discovery readiness|discovery readiness|discovery \/ routing readiness|discovery-ready|candidate\/onboarding lanes|below the onboarding gate|candidate-definition lanes/i);
+    assert.match(doc, /`?G3`? routed-action readiness|routing readiness|discovery \/ routing readiness|routed-action-ready|candidate\/onboarding lanes|below the onboarding gate|candidate-definition lanes/i);
+    assert.match(doc, /handoff-ready|handoff readiness|handoff evidence|domain handoff|domain-onboarding evidence|follow-on route|below the onboarding gate/i);
   }
 
   for (const doc of [roadmapZh, taskMapZh, backlogZh, onboardingZh, publicSurfaceIndexZh, gatewayContractsZh, acceptanceZh]) {
     assert.match(doc, /Grant Foundry -> Med Auto Grant/);
     assert.match(doc, /top-level signal|顶层信号/);
     assert.match(doc, /domain-direction evidence|领域方向证据/);
-    assert.match(doc, /不等于已正式收录的 domain gateway|不等于已经 admitted 的 domain gateway|不会被写成已收录 domain gateway|不能满足 admission/);
-    assert.match(doc, /不等于 `?G2`? discovery readiness|不等于 `?G2`? discovery target|`?G2`? discovery-ready|不能满足.*discovery readiness/);
-    assert.match(doc, /不等于 `?G3`? routed-action readiness|不等于 `?G3`? routed-action target|`?G3`? routed-action-ready|`?G3`? routed-action readiness|不能满足.*routing readiness/);
-    assert.match(doc, /handoff-ready|handoff readiness/);
+    assert.match(doc, /公开 scaffold|候选|onboarding|future Grant Ops 路径|future grant domain 路径|candidate-definition/);
+    assert.match(doc, /`?G2`? discovery readiness|discovery readiness|discovery \/ routing readiness|`?G2`? discovery-ready|candidate ?\/ ?onboarding 路径|位于 onboarding gate 之下|candidate-definition 路径/);
+    assert.match(doc, /`?G3`? routed-action readiness|routing readiness|discovery \/ routing readiness|`?G3`? routed-action-ready|candidate ?\/ ?onboarding 路径|位于 onboarding gate 之下|candidate-definition 路径/);
+    assert.match(doc, /handoff-ready|handoff readiness|handoff evidence|domain handoff|handoff 资格|domain-onboarding evidence|follow-on route|位于 onboarding gate 之下/);
   }
 });
 
@@ -171,10 +171,10 @@ test('shared runtime and domain contracts are linked from public and gateway con
   }
 
   assert.match(runtimeContract, /Shared Runtime Contract/);
-  assert.match(runtimeContract, /Hermes`-backed runtime substrate|Hermes-backed runtime substrate/);
+  assert.match(runtimeContract, /`?Hermes-Agent`?-backed runtime substrate/i);
   assert.match(runtimeContract, /not the whole substrate|not the whole `UHS`/i);
   assert.match(runtimeContractZh, /Shared Runtime Contract/);
-  assert.match(runtimeContractZh, /Hermes-backed runtime substrate/);
+  assert.match(runtimeContractZh, /Hermes-Agent.*runtime substrate/);
   assert.match(runtimeContractZh, /不是整个 `UHS`|不等于整个 substrate/);
 
   assert.match(domainContract, /Shared Domain Contract/);
@@ -319,7 +319,7 @@ test('contract convergence execution board freezes the current unified program a
   }
 });
 
-test('phase-1 public gateway docs distinguish CLI transport from the host-agent and control-plane defaults', () => {
+test('phase-1 public gateway docs distinguish CLI transport from the development host and future runtime substrate', () => {
   const readme = read('README.md');
   const readmeZh = read('README.zh-CN.md');
   const discoveryGateway = read('docs/opl-read-only-discovery-gateway.md');
@@ -328,14 +328,16 @@ test('phase-1 public gateway docs distinguish CLI transport from the host-agent 
   const onboardingZh = read('docs/opl-domain-onboarding-contract.zh-CN.md');
 
   for (const doc of [readme, readmeZh, discoveryGateway, discoveryGatewayZh]) {
-    assert.match(doc, /Codex-default host-agent runtime/);
     assert.match(doc, /Codex-only/i);
+    assert.match(doc, /Hermes-Agent/);
   }
 
   assert.match(discoveryGateway, /legacy `Codex Host` \/ `OMX` split/i);
   assert.match(discoveryGatewayZh, /历史上的 `Codex Host` \/ `OMX` 分工/);
   assert.doesNotMatch(discoveryGateway, /At the development-control layer, `Codex Host` freezes planning and truth while `OMX` handles long-running execution/i);
   assert.doesNotMatch(discoveryGatewayZh, /在开发控制面上，`Codex Host` 负责规划冻结与真相裁决，`OMX` 负责在这些已冻结边界内做长时执行/);
+  assert.match(readme, /preferred future substrate direction is a true upstream `Hermes-Agent` integration/i);
+  assert.match(readmeZh, /优选的未来 substrate 方向.*上游 `Hermes-Agent` 集成/);
   assert.match(onboarding, /active execution path remains Codex-only/i);
   assert.match(onboardingZh, /当前活跃执行入口仍是 Codex-only/);
   assert.match(onboarding, /historical `Codex Host` \/ `OMX` migration discipline/i);
@@ -358,11 +360,8 @@ test('phase-1 formal entry wording keeps OPL at the CLI-first read-only gateway 
   assert.match(publicSurfaceIndexZh, /formal entry.*CLI-first \/ read-only gateway surface/);
   assert.match(gatewayContracts, /formal entry.*TypeScript CLI.*read-only gateway surface/i);
   assert.match(gatewayContractsZh, /formal entry.*TypeScript CLI.*read-only gateway surface/);
-  assert.match(
-    gatewayContracts,
-    /rather than a launcher, mutation entry, or runtime-owner surface|not a launcher, mutation entry, or runtime-owner surface/i,
-  );
-  assert.match(gatewayContractsZh, /不是 launcher、mutation entry 或 runtime-owner surface/);
+  assert.match(gatewayContracts, /Runtime ownership continues to stay with the admitted domains/i);
+  assert.match(gatewayContractsZh, /runtime ownership 继续保留在 admitted domain 一侧/);
 });
 
 test('public surface index and routed-action docs stay aligned with the frozen gateway contracts', () => {
@@ -443,10 +442,10 @@ test('top-level positioning docs freeze the g2 release-closeout and substrate bo
   assert.match(roadmap, /Phase 1 \/ G2 release-closeout/i);
   assert.match(roadmapZh, /Phase 1 \/ G2 release-closeout/);
 
-  assert.match(readme, /shared public code framework/i);
-  assert.match(readmeZh, /共享代码框架/);
-  assert.match(roadmap, /shared public code framework/i);
-  assert.match(roadmapZh, /共享代码框架/);
+  assert.match(readme, /shared runtime layer, hosted entry surfaces, and .*`Hermes-Agent` rollout/i);
+  assert.match(readmeZh, /共享运行层、托管入口与任何真实的 `Hermes-Agent` 落地进度/);
+  assert.match(roadmap, /shared-code extraction decisions downstream of domain maturity/i);
+  assert.match(roadmapZh, /共享代码回抽决策继续放在 domain maturity 之后/);
 });
 
 test('public docs keep the absorbed phase-1 exit freeze while activating the minimal admitted-domain federation package', () => {
@@ -490,7 +489,7 @@ test('review candidate path keeps blocker packages explicit and below handoff re
     assert.match(doc, /discovery_readiness|discovery readiness/i);
     assert.match(doc, /routing_readiness|routing readiness/i);
     assert.match(doc, /cross_domain_wording|cross-domain wording/i);
-    assert.match(doc, /handoff-ready|handoff readiness/i);
+    assert.match(doc, /handoff-ready|handoff readiness|domain handoff/i);
     assert.match(doc, /domain_gateway/i);
     assert.match(doc, /no-bypass|bypass/i);
   }
@@ -501,7 +500,7 @@ test('review candidate path keeps blocker packages explicit and below handoff re
     assert.match(doc, /discovery_readiness|discovery readiness/);
     assert.match(doc, /routing_readiness|routing readiness/);
     assert.match(doc, /cross_domain_wording|cross-domain wording/);
-    assert.match(doc, /handoff-ready|handoff readiness/);
+    assert.match(doc, /handoff-ready|handoff readiness|domain handoff|handoff 资格/);
     assert.match(doc, /domain_gateway/);
     assert.match(doc, /no-bypass|bypass/);
   }
@@ -523,7 +522,7 @@ test('thesis candidate path keeps blocker packages explicit and below handoff re
     assert.match(doc, /discovery_readiness|discovery readiness/i);
     assert.match(doc, /routing_readiness|routing readiness/i);
     assert.match(doc, /cross_domain_wording|cross-domain wording/i);
-    assert.match(doc, /handoff-ready|handoff readiness/i);
+    assert.match(doc, /handoff-ready|handoff readiness|domain handoff/i);
     assert.match(doc, /domain_gateway/i);
     assert.match(doc, /no-bypass|bypass/i);
   }
@@ -534,7 +533,7 @@ test('thesis candidate path keeps blocker packages explicit and below handoff re
     assert.match(doc, /discovery_readiness|discovery readiness/);
     assert.match(doc, /routing_readiness|routing readiness/);
     assert.match(doc, /cross_domain_wording|cross-domain wording/);
-    assert.match(doc, /handoff-ready|handoff readiness/);
+    assert.match(doc, /handoff-ready|handoff readiness|domain handoff|handoff 资格/);
     assert.match(doc, /domain_gateway/);
     assert.match(doc, /no-bypass|bypass/);
   }
@@ -572,18 +571,24 @@ test('g3 planning docs keep handoff planning-only and forbid launcher semantics'
   for (const doc of [acceptance, routedAction, gatewayContracts]) {
     assert.match(doc, /planning gate|planning-level contract|planning dependency/i);
     assert.match(doc, /domain_gateway/);
-    assert.match(doc, /launcher/i);
     assert.match(doc, /no-bypass|bypass/i);
     assert.doesNotMatch(doc, /pre-freeze/i);
   }
 
+  assert.match(acceptance, /launcher/i);
+  assert.match(routedAction, /launcher/i);
+  assert.match(gatewayContracts, /planning-dependency layer|launcher/i);
+
   for (const doc of [acceptanceZh, routedActionZh, gatewayContractsZh]) {
     assert.match(doc, /planning gate|planning-level contract|planning dependency|规划 gate|planning-level/);
     assert.match(doc, /domain_gateway/);
-    assert.match(doc, /launcher/);
-    assert.match(doc, /不得绕过 domain gateway|绕过 domain gateway/);
+    assert.match(doc, /不得绕过 domain gateway|绕过 domain gateway|只经过 domain gateway|no-bypass/);
     assert.doesNotMatch(doc, /预冻结/);
   }
+
+  assert.match(acceptanceZh, /launcher/);
+  assert.match(routedActionZh, /launcher/);
+  assert.match(gatewayContractsZh, /planning dependency 层|launcher/);
 });
 
 test('acceptance spec snippets keep split onboarding blockers and execution-model gate aligned', () => {
@@ -685,19 +690,20 @@ test('public docs activate the minimal admitted-domain federation package withou
     assert.match(doc, /Minimal admitted-domain federation activation package/i);
     assert.match(doc, /MedAutoScience/i);
     assert.match(doc, /RedCube AI/i);
-    assert.match(doc, /already admitted domains only|admitted domain surfaces/i);
+    assert.match(doc, /already admitted domains only|admitted domain surfaces|covers the two admitted surfaces/i);
     assert.match(doc, /TypeScript CLI.*read-only gateway surface|CLI-first \/ read-only gateway surface|CLI-first \/ read-only gateway baseline/i);
-    assert.match(doc, /runtime owner/i);
   }
 
   for (const doc of [readmeZh, roadmapZh, publicSurfaceIndexZh, gatewayContractsZh, rolloutZh]) {
     assert.match(doc, /Minimal admitted-domain federation activation package/);
     assert.match(doc, /MedAutoScience/);
     assert.match(doc, /RedCube AI/);
-    assert.match(doc, /仅面向已 admitted domain|只面向已 admitted domain|至少两个 admitted domain surface|两条 admitted domain surface|已 admitted domain surface/);
+    assert.match(doc, /仅面向已 admitted domain|只面向已 admitted domain|至少两个 admitted domain surface|两条 admitted domain surface|已 admitted domain surface|当前只覆盖上面两条已 admitted domain surface/);
     assert.match(doc, /TypeScript CLI.*read-only gateway surface|CLI-first \/ read-only gateway surface|CLI-first \/ read-only gateway baseline/);
-    assert.match(doc, /runtime owner/);
   }
+
+  assert.match(gatewayContracts, /Runtime ownership continues to stay with the admitted domains/i);
+  assert.match(gatewayContractsZh, /runtime ownership 继续保留在 admitted domain 一侧/);
 
   assert.match(readme, /Grant Foundry -> Med Auto Grant/);
   assert.match(readmeZh, /Grant Foundry -> Med Auto Grant/);

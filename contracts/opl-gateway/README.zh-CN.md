@@ -2,33 +2,32 @@
 
 这个目录是 `One Person Lab` 在当前仓库中的 `G1` federation contract materialization。
 
-它**不是** runtime 实现。
 它冻结的是后续 discovery 层与 routed-action 层可消费的 machine-readable gateway surface。
 
 ## Shared-foundation ownership boundary
 
 这些 contract 与 reference 工件只位于 shared-foundation 的 materialization 层。
 `OPL` 在这里拥有的是顶层 contract 语言、索引方式与跨域复用规则；一旦 routed request 跨过 gateway 边界，runtime execution、canonical truth、review truth 与 publication truth 仍然由各 domain gateway / harness 持有。
-因此，这个目录只是在做 discoverability / reviewability / acceptance alignment 所需的 gateway surface materialization，而不会变成新的 control plane 或共享 truth store。
-围绕这一层命名的 `Unified Harness Engineering Substrate` 仍然只是共享架构上位语言，不是共享代码框架。
-当前在这套上位语言之下，长期在线运行部分正收敛为 `Shared Runtime Contract`，跨 domain 正式行为部分正收敛为 `Shared Domain Contract`；这两层都不会把当前目录改写成 runtime owner。
+因此，这个目录承担的是 discoverability / reviewability / acceptance alignment 所需的 gateway surface materialization。
+围绕这一层命名的 `Unified Harness Engineering Substrate` 继续充当整个体系的共享架构上位语言。
+当前在这套上位语言之下，长期在线运行部分正收敛为 `Shared Runtime Contract`，跨 domain 正式行为部分正收敛为 `Shared Domain Contract`。
 更完整的 ownership split 可参考[共享基础结构](../../docs/shared-foundation.zh-CN.md)与[共享基础结构归属](../../docs/shared-foundation-ownership.zh-CN.md)。
 
 ## 当前基线与已吸收 follow-on 对齐
 
 截至 `2026-04-11`，当前 `opl-mainline` 的公开主线仍停留在已 absorbed 的 `Phase 2 / Minimal admitted-domain federation activation package`，但 repo-tracked 的 formal entry 仍然是 `Phase 1` 那条本地 `TypeScript CLI`-first、read-only gateway baseline；它只读取这个目录中已经冻结的 contract 工件。
-这条 transport 建立在当前 `Codex-default host-agent runtime` 之上；当前活跃执行口径为 Codex-only，由标准 Codex 会话完成规划、实现与验证。
+这条 transport 当前通过 Codex-only 本地会话完成规划、实现与验证，但这个目录并不会把 Codex 声明成产品 runtime substrate owner。
 已完成的 `Phase 1 / G2 release-closeout` 已把 `G2 stable public baseline` 收口成稳定、单一、repo-tracked 的公开基线。
 因此，即便公开主线已经吸收了这份最小 admitted-domain federation package，这条 repo-tracked 基线也仍然是当前 `OPL` 的 formal entry contract 与 public system surface。
-已完成的 repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` 继续停留在 planning-contract closeout 层：当前目录只冻结围绕 `route_request`、`build_handoff_payload`、`audit_routing_decision` 的 planning gate / planning-level contract。唯一允许的成功 handoff 目标仍只能是 `domain_gateway`；no-bypass 规则继续禁止直达 domain harness；`routed-actions.schema.json` 仍只是 planning dependency，不是 launcher。
+已完成的 repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` 继续停留在 planning-contract closeout 层：当前目录冻结围绕 `route_request`、`build_handoff_payload`、`audit_routing_decision` 的 planning gate / planning-level contract。唯一允许的成功 handoff 目标仍只能是 `domain_gateway`；no-bypass 规则继续禁止直达 domain harness；`routed-actions.schema.json` 继续停留在 planning dependency 层。
 repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review Ops` 然后 `Thesis Ops`：这两条 candidate path 都继续停留在 domain admission、`G2` discovery readiness、`G3` routed-action readiness 与 handoff readiness 之下。
-当前已 absorb 的前序门槛是 `Phase 1 exit + next-stage activation package freeze`；当前这份 `Minimal admitted-domain federation activation package` 也已经被吸收到 repo-tracked 顶层真相中，只对已经 admitted 的 `MedAutoScience` 与 `RedCube AI` domain surface 生效。当前没有新的 active follow-on tranche 打开；只有 admitted-domain 仓再落下新的 absorbed delta，或中央 reference surfaces 发生真实漂移时，下一次 central sync 才是诚实的。runtime ownership 仍然**不会**被激活。
-因此，当前 OPL 层的 repo-tracked formal entry 也仍然只是这条本地 `TypeScript CLI`-first / read-only gateway surface，而不是 launcher、mutation entry 或 runtime-owner surface。
-这个交付目标**不会**把当前目录提升成 runtime、routed-action control plane 或 canonical truth store；它只是把已有的顶层 contract language 继续维持为本地 CLI surface 可读取的合同入口。
+当前已 absorb 的前序门槛是 `Phase 1 exit + next-stage activation package freeze`；当前这份 `Minimal admitted-domain federation activation package` 也已经被吸收到 repo-tracked 顶层真相中，只对已经 admitted 的 `MedAutoScience` 与 `RedCube AI` domain surface 生效。当前没有新的 active follow-on tranche 打开；只有 admitted-domain 仓再落下新的 absorbed delta，或中央 reference surfaces 发生真实漂移时，下一次 central sync 才是诚实的。runtime ownership 继续保留在 admitted domain 一侧。
+因此，当前 OPL 层的 repo-tracked formal entry 也仍然是这条本地 `TypeScript CLI`-first / read-only gateway surface。
+这个交付目标把已有的顶层 contract language 继续维持为本地 CLI surface 可读取的合同入口；任何诚实的上游 `Hermes-Agent` rollout，仍然属于 domain 侧迁移目标，而不是当前 OPL 层既成事实。
 
 ## 当前参考同步配套文档
 
-下面这些 reference-grade 配套文档用于冻结当前跨仓状态图与 Codex-only runtime 口径；它们不会把当前目录升级成 runtime owner，也不会形成第二真相源。
+下面这些 reference-grade 配套文档用于冻结当前跨仓状态图与 Codex-only runtime 口径，并让当前目录与权威公开表面保持同步。
 下面这组活跃参考以 `2026-04-11` 为日期锚点，并承担把 admitted-domain 最新 absorbed delta 持续回写到 `OPL` 顶层参考同步面的责任；这些参考面不会反向抬升为公开主线真相。
 
 - [生态四仓统一状态总表](../../docs/references/ecosystem-status-matrix.md) — 当前四仓阶段/状态总览（中文内部参考）
@@ -37,7 +36,7 @@ repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review 
 
 ## 历史迁移参考
 
-这组文档仅保留为历史迁移与 offboarding 上下文，不再作为活跃执行入口文档，也不应反过来改写当前 Codex-only 主线。
+这组文档仅保留为历史迁移与 offboarding 上下文。当前活跃执行主线继续通过 Codex-only 的公开表面来表达。
 
 - [四仓统一开发运行合同](../../docs/references/development-operating-model.md) — `Codex Host` / `OMX` 运行纪律的历史迁移参考
 - [四仓统一对齐检查表与任务板](../../docs/references/runtime-alignment-taskboard.md) — 已退役四仓收口清单的历史参考
@@ -96,7 +95,7 @@ repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review 
 - [OPL Surface Authority Matrix](../../docs/references/opl-surface-authority-matrix.zh-CN.md) — 对当前已冻结 OPL surfaces 与 linked domain public-entry surfaces 的 derived machine-readable authority split
 - [OPL Surface Review Matrix](../../docs/references/opl-surface-review-matrix.zh-CN.md) — 对当前已冻结 OPL public / contract / supporting surfaces 的 derived machine-readable review obligation
 
-这些 backlog 与 mapping surfaces 都只是 reference-only surface。它们不会变成 workflow engine、transition authority、authorization engine、approval engine、publish controller，也不替代本目录中的 governing contracts。
+这些 backlog 与 mapping surfaces 都是 reference-only surface，继续作为本目录 governing contracts 的配套参考。
 
 ## 文件
 
@@ -131,8 +130,8 @@ repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review 
 - `OPL` 仍是顶层 gateway 与 federation surface。
 - 路由发生后，domain gateway 仍保持独立可用。
 - domain harness 始终位于 domain gateway 之下。
-- 这个目录不会把 canonical truth ownership 上收给 `OPL`。
-- 这个目录不授权绕过 domain gateway 直达 harness。
+- canonical truth ownership 继续留在各自拥有它的 domain。
+- successful routing 继续只经过 domain gateway。
 
 ## 当前范围
 
@@ -143,8 +142,8 @@ repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review 
 - derived / reference-only 的 candidate-domain backlog 工件；它们只记录 admission boundary 还缺什么，不会虚构 placeholder domain 或 routed target
 - 在先证明存在真实缺失边界之前，不额外新增独立的 candidate-domain-definition contract surface；当前 `task-topology + candidate-domain-backlog + domain-onboarding` 的组合就是现行定义路径
 
-`Grant Ops`、`Review Ops`、`Thesis Ops` 等 planned workstream，在对应 domain 边界明确冻结之前，不进入正式收录的 registry / discovery / routing surface。
-如果当前公开文档里提到 `Grant Foundry -> Med Auto Grant`，那也仍然只算 future Grant Ops 路径上的 top-level signal / domain-direction evidence；它不等于已正式收录的 domain gateway，也不等于 `G2` discovery readiness，也不等于 `G3` routed-action readiness，更不等于 handoff-ready surface。
+`Grant Ops`、`Review Ops`、`Thesis Ops` 等 planned workstream，在对应 domain 边界明确冻结之前，继续停留在 candidate-definition 路径上。
+如果当前公开文档里提到 `Grant Foundry -> Med Auto Grant`，那也继续表示 future Grant Ops 路径上的 top-level signal / domain-direction evidence。
 
 ## Materialization 说明
 

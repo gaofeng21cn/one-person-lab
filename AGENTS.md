@@ -15,6 +15,7 @@
 - 第一优先级：保持 `Human / Agent -> OPL Gateway -> Domain Gateway -> Domain Harness OS` 这条分层链路。
 - 第二优先级：把 `Unified Harness Engineering Substrate` 的共享边界放在所有单仓之上。
 - 第三优先级：保证 public docs、gateway contracts、reference docs 与 admitted domain 状态同步，不制造第二真相源。
+- 若文档提到 `Hermes-Agent`，必须明确它指的是上游外部 runtime 项目 / 服务；仓内自写的 shim、pilot、helper 或过渡 scaffold，不得写成“已接入 Hermes-Agent”。
 - 一旦 target topology 已明确，新增投入默认服务目标形态；旧路线只允许作为迁移桥、兼容层或回归对照存在，不继续深磨。
 - 不做降级处理、兜底补丁、启发式修补或“先糊住再说”式实现。
 

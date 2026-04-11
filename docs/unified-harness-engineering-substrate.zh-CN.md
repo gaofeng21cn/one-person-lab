@@ -100,17 +100,18 @@ Human / Agent
 
 ## 部署形态
 
-当前默认的本地部署形态是：
+在当前阶段：
 
-- `Codex-default host-agent runtime`
+- 活跃开发宿主是 Codex-only 本地会话
+- 公开的 OPL formal entry 仍是本地 `TypeScript CLI`-first / read-only gateway surface
 
-这只是当前部署方式，不是 substrate 的本体定义。
+这个区分很重要：Codex 说的是今天的开发宿主，不是 substrate 的本体定义。
 在后续阶段，同一套 substrate 也应兼容：
 
 - 托管式 Web runtime
 - 平台侧统一托管的执行面
 
-如果未来采用 `Hermes-backed runtime substrate`，它更准确的归属应是：
+如果未来先在某个 domain 仓里证明了真实的上游 `Hermes-Agent` 集成，它更准确的归属应是：
 
 - `Shared Runtime Contract` 的实现方向
 

@@ -164,11 +164,12 @@
   </tr>
 </table>
 
-> `OPL` 是实验室顶层的公开 Gateway 语言。它联邦化地组织 `Research Foundry -> Med Auto Science`、`RedCube AI` 这类 domain framework / system，而不是取代它们。
+> `OPL` 是实验室顶层的公开 Gateway 语言。它通过共享任务语义、合同与边界规则，把 `Research Foundry -> Med Auto Science`、`RedCube AI` 这类 domain framework / system 组织成同一个 federation。
 
 ## 仓库定位
 
-`One Person Lab`，简称 `OPL`，面向的不是某一个任务或某一个 domain runtime，而是“一人课题组”这个工作对象的顶层组织面。
+`One Person Lab`，简称 `OPL`，是一人课题组的顶层工作组织面。
+它定义正式工作流如何映射到各个 domain gateway，以及共享 substrate 语言如何在 federation 中流动。
 
 在架构层面，`OPL` 负责四件事：
 
@@ -177,14 +178,14 @@
 - 定义把任务路由到正确 domain surface 的 gateway 语义
 - 定义当前由哪些 domain gateway 正式承接各工作流
 
-因此，这个仓库承担的是 `OPL Gateway` 的文档优先、契约优先的公开说明面，而不是声称所有运行时能力已经都落在这里。
+因此，这个仓库承担的是 `OPL Gateway` 的文档优先、契约优先的公开说明面。
+具体 domain runtime、交付真相与执行表面继续由各自 domain 仓维护。
 
 ## Unified Harness Engineering Substrate
 
 在 `OPL` 体系下，当前共享的上位架构语言统一命名为 `Unified Harness Engineering Substrate`，简称 `UHS`。
-它不是把所有 domain system 压成一个单体 runtime，也不是某个现成 runtime 项目的简单套壳。
-它也不等于当前已经存在一套共享代码框架。
-更准确地说，`UHS` 是 `OPL` 之下的共享 Harness Engineering 总名词，而其中最重要的共享部分正在收敛为两类合同：
+`UHS` 是 `OPL` 之下用于描述运行结构、产品行为与跨域复用的共享 Harness Engineering 语言。
+其中最重要的共享部分正在收敛为两类合同：
 
 - [Shared Runtime Contract](docs/shared-runtime-contract.zh-CN.md)
 - [Shared Domain Contract](docs/shared-domain-contract.zh-CN.md)
@@ -196,11 +197,15 @@
 - `Shared Domain Contract`
   - 冻结多个 `Domain Harness OS` 应保持一致的上层行为语义，例如 formal-entry matrix、`per-run handle`、durable report、audit trail、gate semantics 与 no-bypass 规则
 
-这意味着：
+在当前口径下：
 
-- `UHS` 不是 `Hermes` 套壳
-- 但 `Hermes-backed runtime substrate` 是 `Shared Runtime Contract` 的优选未来实现方向
-- `Hermes` 不会替代 `OPL Gateway`、`Domain Gateway` 或 `Domain Harness OS`
+- 共享运行层的优选长线实现方向是上游 `Hermes-Agent`，当前仓内带 `Hermes` 命名的 package 主要承担迁移 scaffold 与 pilot 角色
+- 截至 `2026-04-11`，四个仓都还没有真正完成上游 `Hermes-Agent` 集成
+- 当前各仓仍处在过渡态：
+  - `Med Auto Science` 目前是 repo-side seam + 受控 `MedDeepScientist` backend
+  - `RedCube AI` 目前是 repo-local managed runtime pilot
+  - `Med Auto Grant` 目前是本地 `CLI` runtime baseline + repo-local migration scaffold
+- 将来如果真正接入上游 `Hermes-Agent`，它也应位于 runtime substrate 这一层，而 `OPL Gateway`、各 `Domain Gateway` 与各 `Domain Harness OS` 继续保留自己的职责边界
 
 从长期产品形态看，更合理的结构是：
 
@@ -215,16 +220,18 @@
 - 各个 domain 仓
   - 继续承接自己的产品入口、domain workflow 与交付真相
 
-这里说的是演进方向，不等于当前已经存在统一平台 runtime、统一托管入口，或 `Hermes` 已经成为当前公开主线的一部分。
+这里描述的是当前正在收敛的目标结构。
+共享运行层、托管入口与任何真实的 `Hermes-Agent` 落地进度，仍分别在对应仓库与合同面中推进。
 
-在这套 substrate 之上，当前几个项目应被理解成不同场景下的 `Domain Harness OS`，而不是彼此无关的独立小项目：
+如果要看这轮真相重置、真实接入标准，以及理想形态相对当前状态的优缺点，见 [Hermes-Agent 真相重置与目标形态说明](docs/references/hermes-agent-truth-reset-and-target-state.md)。
+
+在这套 substrate 之上，当前几个项目应被理解成职责清楚、产品范围独立的 `Domain Harness OS`：
 
 - `Med Auto Science`：医学 `Research Ops`
 - `RedCube AI`：视觉交付，以及当前最直接映射到 `Presentation Ops` 的 family 入口
 - `Med Auto Grant`：未来医学 `Grant Ops` 的 Domain Harness OS 方向
 
-因此，`OPL` 本身**不是**第四个 `Domain Harness OS`。
-它仍然是位于 domain gateway 与 `Domain Harness OS` 之上的顶层 gateway 与 federation surface。
+`OPL` 本身继续停留在 domain gateway 与 `Domain Harness OS` 之上的顶层 gateway 与 federation surface。
 
 ## 对外一句话理解
 
@@ -236,17 +243,17 @@
 
 ## 统一执行范式
 
-`OPL` 顶层默认采用 `Agent-first` 的设计方向，而不是把各个 `Ops` 收缩成固定代码分支驱动的僵硬流水线。
-这并不等于必须直接绑定某一种 LLM API；它的含义是：Agent 应作为默认执行者，负责读状态、调用稳定 gateway、编排步骤、组织中间产物，并把关键执行痕迹写回可审计表面，而代码主要负责提供稳定对象、控制器、工具封装、门控规则与交付表面。
+`OPL` 顶层默认采用 `Agent-first` 的执行范式。
+Agent 是默认执行者：它负责读状态、调用稳定 gateway、编排步骤、组织中间产物，并把关键执行痕迹写回可审计表面；代码则负责提供稳定对象、控制器、工具封装、门控规则与交付表面。
 
-这套 substrate 当前在本地的默认部署形态，是 `Codex-default host-agent runtime`。
-当前活跃执行口径是 Codex-only：规划、实现、验证与评审都通过标准 Codex 会话完成。
-但“当前宿主形态”并不等于“体系本体”；后续即使走向托管式 Web runtime，也应复用同一套 substrate 与 domain contract。
+当前活跃的开发宿主是 Codex-only 本地会话：规划、实现、验证与评审都继续通过标准 Codex 会话完成。
+但这不等于 `OPL` 的产品 runtime 真相就是 Codex。
+在产品/runtime 这一层，优选的未来 substrate 方向，仍然是先在某个 domain 仓里诚实证明真实的上游 `Hermes-Agent` 集成；`OPL` 自身继续只停留在顶层 gateway 与 federation 层。
 
 在这个前提下，当前 domain 仓统一按 `Auto-only` 产品主线理解。
-也就是说，仓库主线优先服务全自动闭环、评估、硬化和审计，而不是在同一个仓里同时维护两套顶层判断逻辑。
+仓库主线优先服务全自动闭环、评估、硬化和审计。
 
-如果未来要做高判断密度的 `Human-in-the-loop` 产品，更合理的形态是建立在这些 `Auto-only` 仓之上的 sibling 或 upper-layer product，去复用稳定的 substrate contract、对象语义、审计面和执行模块，而不是把当前仓改造成同仓双模系统。
+如果未来要做高判断密度的 `Human-in-the-loop` 产品，更合理的形态是建立在这些 `Auto-only` 仓之上的 sibling 或 upper-layer product，去复用同一套稳定 substrate contract、对象语义、审计面和执行模块。
 
 这就是当前 `OPL` 层已经冻结的统一执行范式。
 
@@ -260,9 +267,7 @@
 - 审稿、回复和修回
 - 讲课、汇报和答辩材料
 
-如果把这些任务拆成彼此孤立的产品，就会重复维护上下文，难以沉淀共享记忆、治理与审核面。
-
-如果又把它们强行压成一个单体 runtime，domain 边界会变糊，后续维护也会变差。
+`OPL` 选择 gateway federation，是为了让这些任务共享同一套上下文、记忆、治理与审核面，同时继续保持清楚的 domain 边界与维护责任。
 
 所以更合理的理解是：
 
@@ -287,15 +292,15 @@ Human / Agent
 - `Research Ops` -> `Research Foundry` -> `Med Auto Science`
 - `Presentation Ops` -> `RedCube AI` 里的 `ppt_deck`
 
-当前已公开、但尚未 admitted 的 scaffold：
+当前已公开的候选 scaffold：
 
 - `Grant Ops` -> `Grant Foundry` -> `Med Auto Grant`，作为未来医学 surface 的公开 scaffold / top-level signal / domain-direction evidence
 
 关键边界：
 
-- `RedCube AI` 不是整个 `Presentation Ops`
-- `xiaohongshu` 与 `ppt_deck` 共享同一 harness，但在 OPL 顶层不应直接等同于 `Presentation Ops`
-- 未来 `Grant Ops`、`Review Ops`、`Thesis Ops` 也应保留独立 domain 边界，而不是被压进一个单体系统
+- `RedCube AI` 是当前 `Presentation Ops` 的已收录视觉交付 domain surface，`ppt_deck` 是它最直接的 family 映射
+- `xiaohongshu` 与 `ppt_deck` 共享同一 harness，同时在 OPL 顶层保留独立的视觉 family 语义
+- 未来 `Grant Ops`、`Review Ops`、`Thesis Ops` 都按独立 domain boundary 继续定义
 
 ## 当前 Domain Surface
 
@@ -312,15 +317,16 @@ Human / Agent
 
 ### Med Auto Grant
 
-[`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) 是 `OPL` 体系下当前未来医学 `Grant Ops` 的 domain harness 方向；它在自己的仓内已经形成了本地 runtime baseline，但在 `OPL` 顶层联邦层仍只保持 signal-only / domain-direction evidence。
+[`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) 是 `OPL` 体系下当前未来医学 `Grant Ops` 的 domain harness 方向。
+它在自己的仓内已经形成了本地 runtime baseline，而在 `OPL` 顶层联邦层当前记录为 public scaffold / top-level signal / domain-direction evidence。
 
 它当前承担的是：
 
 - `Grant Foundry` 在医学场景下的公开实现 scaffold 与 top-level signal
 - 未来作者侧、proposal-facing 的 `Grant Ops` 医学 surface 的 domain-direction evidence
 - 第一版医学 `NSFC` 通用申请 mainline 与本地 runtime baseline 的冻结入口
-- 但它还不是已经 admitted 的 `OPL` domain gateway 与 harness
-- 也还不是 `G2` discovery target 或 `G3` routed-action target
+- 当前联邦状态：public scaffold / top-level signal / domain-direction evidence
+- 下一步准入里程碑：registry material、`G2` discovery readiness、`G3` routed-action readiness 与 domain-onboarding evidence
 
 ### RedCube AI
 
@@ -342,26 +348,20 @@ Human / Agent
 - `MedAutoScience` 对应 `research_ops`
 - `RedCube AI` 对应 `presentation_ops`
 
-这份已 absorbed 的 federation package 仍然只面向已 admitted domain。
-`Grant Foundry -> Med Auto Grant` 继续只是 signal-only / domain-direction evidence；`Review Ops` 与 `Thesis Ops` 继续保持为位于 onboarding 之下的 under-definition bundle。
-顶层 formal entry 仍然是本地 `TypeScript CLI`-first / read-only gateway surface，`OPL` 也仍然不是 runtime owner。
-当前没有新的 active follow-on tranche 打开；顶层最诚实的状态是中央同步停车，只有 admitted-domain 仓出现新的 absorbed delta，或中央 reference surfaces 发生真实漂移时，才重开下一棒。
+这份已 absorbed 的 federation package 当前只覆盖上面两条已 admitted domain surface。
+`Grant Foundry -> Med Auto Grant` 继续作为未来 grant domain 的公开 scaffold 被跟踪，`Review Ops` 与 `Thesis Ops` 则继续停留在 under-definition 的 onboarding 路径中。
+顶层 formal entry 仍然是本地 `TypeScript CLI`-first / read-only gateway surface。
+当前没有新的 active follow-on tranche 打开；顶层最诚实的状态仍然是中央同步停车，只有 admitted-domain 仓出现新的 absorbed delta，或中央 reference surfaces 发生真实漂移时，才重开下一棒。
 
 
 ## 当前边界
 
-这个仓库不应被写成：
-
-- 所有 runtime 行为都已经落在这里
-- `Med Auto Science` 或 `RedCube AI` 的替代品
-- 所有 domain workstream 的同义词
-- 所有 planned workstream 已经完成的证明
-
-它应被写成：
+这个仓库应被写成：
 
 - `OPL Gateway` 的权威公开说明面
 - 跨 domain 边界先冻结的地方
-- 外部读者理解 federation 如何拼起来的入口
+- 连接独立 domain system 的 federation 入口
+- 外部读者理解整个体系如何拼起来的入口
 
 ## 路线图
 
@@ -374,15 +374,15 @@ Human / Agent
 
 截至 `2026-04-10`，当前 repo 仍保有可运行的本地 `TypeScript CLI`-first / read-only gateway baseline。
 已完成的 `Phase 1 / G2 release-closeout` 已把 `G2 stable public baseline` 收口成单一、稳定、repo-tracked 的公开基线。
-这条基线也因此继续构成 `OPL` 在 `Phase 1` 的 formal entry contract 与 public system surface。
-repo-tracked 的 `Phase 1 / G3 thin handoff planning freeze hardening` 已把 `G3` 冻结在 planning-only gate，因此当前仍不进入 mutation entry，不把 `OPL` 提升成统一 runtime owner，也不提前抽共享执行内核。
-repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review Ops` 然后 `Thesis Ops`：这两条 candidate path 都继续停留在 admission / discovery / routing / handoff readiness 之下，而 `Grant Foundry -> Med Auto Grant` 仍保持 signal-only 状态。
-当前已 absorb 的前序门槛是 `Phase 1 exit + next-stage activation package freeze`；当前已 absorb 的 federation package 是 `Minimal admitted-domain federation activation package`：它只针对 `MedAutoScience` + `RedCube AI` 收紧 federation wording，不会激活 routed action，不会 admission `Grant Ops` / `Review Ops` / `Thesis Ops`，也不会把 `OPL` 提升成 runtime owner。
-因此，当前 repo-tracked truth 是一个诚实的中央同步停车点，而不是继续沿同一 package 无限滚动的活动 tranche。
+这条基线继续构成 `OPL` 在 `Phase 1` 的 formal entry contract 与 public system surface。
+repo-tracked 的 `Phase 1 / G3 thin handoff planning freeze hardening` 让 `G3` 保持在 planning-only gate，当前工作重点因此集中在 contract wording、handoff 形状与边界校验。
+repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review Ops` 然后 `Thesis Ops`：这两条 candidate path 继续停留在 admission / discovery / routing / handoff readiness 之下，而 `Grant Foundry -> Med Auto Grant` 继续走 signal-and-scaffold 这条路径。
+当前已 absorb 的前序门槛是 `Phase 1 exit + next-stage activation package freeze`；当前已 absorb 的 federation package 是 `Minimal admitted-domain federation activation package`，它把 federation wording 收紧到 `MedAutoScience` + `RedCube AI` 这两条 admitted surface。
+因此，当前 repo-tracked truth 是一个诚实的中央同步停车点。
 
-当前交付目标是：在当前 `Codex-default host-agent runtime` 之上，用本地 `TypeScript CLI` 作为 `Phase 1` 的入口 transport。
-当前开发控制面使用 Codex-only 口径，不再把 `Codex Host / OMX` 作为活跃双层执行分工。
-这条基线读取已冻结 contracts、列出 workstream/domain、解释路由边界，但不声称 web/server runtime 行为，也不 mutation domain state。
+当前交付目标是：继续用本地 `TypeScript CLI` 作为 `Phase 1` 的只读 gateway 入口 transport。
+当前开发控制面仍使用 Codex-only 口径，不再把 `Codex Host / OMX` 作为活跃双层执行分工，但这不应被误解成 `OPL` 已经拥有自己的产品 runtime。
+在这一层，`OPL` 只暴露 gateway surface 与共享合同；任何诚实的 `Hermes-Agent` runtime rollout，仍必须先在某个 domain 仓里落地，再决定是否提升为顶层真相。
 
 公开阶段说明与完整文档分层见：
 

@@ -24,9 +24,10 @@
 
 ## 当前基线与任务层级
 
-- 当前基线：`OPL` 是顶层 gateway / federation / shared substrate contract surface，不是独占 runtime owner。
-- 当前重点：central sync、surface authority convergence、admitted-domain state alignment。
-- 长线目标：随着三个 domain 仓逐步转向 `Hermes-backed runtime substrate`，`OPL` 继续承担顶层协调、发现、合同与边界治理。
+- 当前基线：`OPL` 是顶层 gateway / federation / shared substrate contract surface，而 domain runtime ownership 继续留在已 admitted 的 domain 仓。
+- 当前重点：真相重置、central sync、surface authority convergence、admitted-domain state alignment。
+- 当前真相：四个仓都还没有真正落地上游 `Hermes-Agent` 集成，当前运行形态仍然各自处于过渡态。
+- 长线目标：让共享运行层逐步转向上游 `Hermes-Agent`（或经过明确批准的等价 substrate），同时保持 `OPL` 继续承担顶层协调、发现、合同与边界治理。
 - 历史执行面：OMX 已退场；相关材料只作迁移/审计参考，不再进入默认阅读面。
 
 ## 第一层：默认公开主线
@@ -60,8 +61,8 @@
 
 ## 第三层：参考级配套文档
 
-这一层继续保留在仓库中，但只承担审核、验收、示例、索引或边界检查作用。
-它们不能反过来改写 `OPL` 的默认公开主线。
+这一层继续保留在仓库中，承担审核、验收、示例、索引或边界检查作用。
+`OPL` 的默认公开主线继续收口在核心工作集、第一层与第二层。
 为了让 `docs/` 根目录保持可读，这一层的文档统一收拢到 `docs/references/`，并由单独索引入口管理。
 
 ### 默认入口
@@ -70,6 +71,7 @@
 - `references/contract-convergence-v1-execution-board.md`
 - `references/ecosystem-status-matrix.md`
 - `references/hermes-agent-runtime-substrate-benchmark.md`
+- `references/hermes-agent-truth-reset-and-target-state.md`
 - `references/opl-phase-2-central-reference-sync-board.md`
 - `references/opl-phase-2-admitted-domain-delta-intake-refresh.md`
 

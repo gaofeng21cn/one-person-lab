@@ -8,13 +8,12 @@ This document indexes the current authoritative public surfaces for the `OPL Gat
 
 Its job is to make the top-level gateway easier to discover across README, roadmap, rollout, contracts, acceptance, examples, and linked domain gateway entries.
 
-It is not a runtime registry.
-It should be read as a CLI-first, read-only discoverability aid built on the frozen Phase 1 gateway baseline and reused by the absorbed `Minimal admitted-domain federation activation package`.
+Read it as the CLI-first / read-only surface map built on the frozen Phase 1 gateway baseline and reused by the absorbed `Minimal admitted-domain federation activation package`.
 The completed `G2` closeout keeps the single repo-tracked top-level `G2` CLI-first / read-only baseline stable.
 That baseline remains the current `OPL` `Phase 1` formal entry contract and public system surface.
 The completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` remains closed at the planning-contract layer, and `G3` remains planning-only rather than an activated routed-action runtime.
 The repo-tracked `Phase 1` candidate-domain closeout order is frozen as `Review Ops` then `Thesis Ops`, the absorbed predecessor gate remains `Phase 1 exit + next-stage activation package freeze`, and the `Minimal admitted-domain federation activation package` is already absorbed into repo-tracked top-level truth. No new active follow-on tranche is open until an admitted-domain absorbed delta or central reference drift justifies another central sync.
-The current top-level formal entry therefore remains the CLI-first / read-only gateway surface indexed here rather than a launcher or runtime-authority surface.
+The current top-level formal entry therefore remains the CLI-first / read-only gateway surface indexed here.
 Use the [Ecosystem Status Matrix](./references/ecosystem-status-matrix.md) as the internal reference-sync anchor for the current four-repo stage and maturity snapshot.
 
 For repository-wide document layering and reference-grade handling, see [Docs Index](./README.md).
@@ -28,22 +27,20 @@ The current CLI-first read-only baseline can expose this same artifact through:
 - `list-surfaces`
 - `get-surface`
 
-## Non-Goals
+## Coverage
 
-This index does not:
+This index focuses on:
 
-- launch execution
-- register harness internals
-- move canonical truth into `OPL`
-- turn domain systems into internal modules
-- make `OPL` a unified runtime owner
-- abstract into a shared execution core
+- public-entry surfaces for the top-level gateway
+- contract surfaces that freeze federation boundaries
+- supporting reference surfaces used for review and discoverability
+- linked domain public-entry surfaces that remain domain-owned
 
 ## Shared-Foundation Ownership Boundary
 
 This index sits in the shared-foundation discoverability layer only.
 `OPL` owns the top-level surface language, indexing, and cross-domain navigation hints collected here, but domain gateways still own runtime execution, canonical truth, review truth, and publication truth once work crosses the domain boundary.
-That makes this index a reference surface for discoverability and acceptance alignment, not a control plane, execution registry, or shared truth store.
+That makes this index a reference surface for discoverability and acceptance alignment.
 For the broader ownership split, see [Shared Foundation Ownership](./shared-foundation-ownership.md).
 
 ## Indexed Surface Categories
@@ -108,26 +105,24 @@ These are indexed from `OPL`, but remain domain-owned:
 Important boundary:
 
 - `ppt_deck` directly maps to `presentation_ops`
-- `xiaohongshu` may still route to `redcube`, but does not automatically equal `presentation_ops`
+- `xiaohongshu` may still route to `redcube` and stays a separate visual family at the OPL layer
 - the current `Minimal admitted-domain federation activation package` applies to the already admitted domain surfaces only, namely `MedAutoScience` and `RedCube AI`
-- `Grant Ops`, `Review Ops`, and `Thesis Ops` may appear in the task map as under-definition workstreams, but that does not make them admitted domains or routed targets
-- the current `Grant Foundry -> Med Auto Grant` public scaffold is top-level signal / domain-direction evidence only; it is not indexed here as an admitted domain public-entry surface, is not an admitted domain gateway, does not count as G2 discovery readiness or G3 routed-action readiness, and is not a handoff-ready surface
+- `Grant Ops`, `Review Ops`, and `Thesis Ops` currently appear here as under-definition workstreams on candidate/onboarding lanes
+- `Grant Foundry -> Med Auto Grant` currently stays on the public scaffold / top-level signal / domain-direction evidence lane for a future grant domain
 - the current admission blockers for those under-definition workstreams live in the candidate-domain backlog and remain below the onboarding gate
 
 ## Reading Rule
 
-Read this index as a **surface map**, not as an execution registry.
+Read this index as a **surface map**.
 
-If a surface is domain-owned, `OPL` only indexes its public entry role.
-Canonical runtime truth, review truth, release truth, and submission truth remain inside the owning domain system.
-If a surface is `opl_operating_model`, `opl_shared_foundation`, or `opl_shared_foundation_ownership`, it remains a shared-foundation boundary/reference surface only and does not transfer canonical truth, mutation, review truth, or publication truth into `OPL`.
-If a surface is `opl_task_map`, under-definition workstreams remain top-level semantic candidates only until the onboarding and registry gates are satisfied.
-If a surface is `opl_candidate_domain_backlog`, it remains an admission-blocker reference only and does not count as onboarding readiness, discovery readiness, or routed-action readiness.
-If a public scaffold such as `Grant Foundry -> Med Auto Grant` is mentioned, it still counts only as top-level signal / domain-direction evidence for a future candidate direction and not as an admitted domain gateway, routing target, or handoff-ready surface.
-Any future follow-on route remains `domain_gateway`-only and subject to the no-bypass rule against direct harness targeting.
-If a surface is `opl_gateway_rollout`, it remains a top-level public-entry map and does not become a runtime authority engine or launcher.
-If a surface is the routed-action prose or schema layer, it remains a planning-level contract / planning dependency only and does not become a launcher or live runtime control plane after the completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening`.
-If a surface is the acceptance, matrix, or example layer, it remains a discoverability/review companion only; it does not automatically promote every listed artifact into a gate.
+If a surface is domain-owned, `OPL` indexes its public entry role while runtime, review, release, and submission truth stay in the owning domain.
+If a surface is `opl_operating_model`, `opl_shared_foundation`, or `opl_shared_foundation_ownership`, it serves the shared-foundation boundary/reference layer.
+If a surface is `opl_task_map`, under-definition workstreams stay on candidate/onboarding lanes until their registry and onboarding evidence land.
+If a surface is `opl_candidate_domain_backlog`, it serves as the admission-blocker reference for those lanes.
+If a public scaffold such as `Grant Foundry -> Med Auto Grant` is mentioned, it stays on the top-level signal / domain-direction evidence lane for a future candidate direction.
+Any future follow-on route remains `domain_gateway`-only and follows the no-bypass rule against direct harness targeting.
+If a surface is the routed-action prose or schema layer, it stays at the planning-contract / planning-dependency layer after the completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening`.
+If a surface is the acceptance, matrix, or example layer, it stays in the discoverability/review companion layer.
 
 ## Governing Gateway Documents
 
@@ -174,5 +169,4 @@ The public surface index is acceptable only when:
 - it exposes the candidate-domain backlog as a supporting/reference surface below the onboarding gate
 - it exposes `opl_operating_model`, `opl_shared_foundation`, and `opl_shared_foundation_ownership` as OPL-owned contract/reference surfaces only
 - it exposes the task-map / task-topology surface without turning under-definition workstreams into admitted domains
-- it does not imply a launcher, runtime, or harness bypass
-- it does not move canonical truth into `OPL`
+- it keeps launcher/runtime authority and domain truth ownership scoped to the correct owning surfaces

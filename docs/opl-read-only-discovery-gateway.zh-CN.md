@@ -310,8 +310,9 @@
 
 ## Surface 形态
 
-当前 `Phase 1` 的交付目标，是在 `Codex-default host-agent runtime` 之上，用本地 `TypeScript CLI` 作为当前 discovery transport。
+当前 `Phase 1` 的交付目标，是继续用本地 `TypeScript CLI` 作为当前只读 gateway surface 的 discovery transport。
 在开发控制面上，当前活跃路径已经收口为 Codex-only：标准 Codex 会话直接承担规划、实现、验证与评审，并对冻结的 gateway contracts 负责。
+但这个开发宿主选择并不意味着 Codex 就是 `OPL` 的产品 runtime substrate owner；任何诚实的上游 `Hermes-Agent` rollout，仍必须先在某个 domain 仓里落地。
 历史上的 `Codex Host` / `OMX` 分工现在只保留在第三层历史迁移参考文档中，不再定义这份公开 gateway 文档的当前语义。
 在这条基线里，discovery contract 通过下面这些命令暴露：
 

@@ -77,15 +77,15 @@ The first object set to keep explicit is:
    - `interrupt_reason`
    - `resume_allowed`
 
-## Relationship To Hermes
+## Relationship To Hermes-Agent
 
-What `Hermes` contributes most convincingly today is a mature runtime substrate implementation.
+What the upstream `Hermes-Agent` contributes most convincingly today is a mature runtime substrate implementation.
 
 The more accurate statement is therefore:
 
-- a `Hermes`-backed runtime substrate is a preferred future implementation direction for the `Shared Runtime Contract`
-- `Hermes` is not the whole `UHS`
-- `Hermes` does not replace the `OPL Gateway`, any `Domain Gateway`, or any `Domain Harness OS`
+- an upstream `Hermes-Agent`-backed runtime substrate is a preferred future implementation direction for the `Shared Runtime Contract`
+- `Hermes-Agent` is not the whole `UHS`
+- `Hermes-Agent` does not replace the `OPL Gateway`, any `Domain Gateway`, or any `Domain Harness OS`
 
 In short, `Hermes` is better suited to own “how the system keeps running” than “what counts as a gate, an audit trail, or domain truth.”
 
@@ -95,16 +95,18 @@ As of the current public mainline, the true state remains:
 
 - top-level formal entry is still `CLI-first`
 - `MCP` remains the supported protocol layer
-- the default local deployment shape is still a `Codex`-default host-agent runtime
+- the current active development host is still Codex-only local sessions
+- the current public OPL entry remains the local `TypeScript CLI`-first / read-only gateway surface
 - the `Shared Runtime Contract` is still being frozen and progressively landed
-- a `Hermes`-backed runtime substrate remains an explicit implementation direction, not a landed public fact
+- none of the four repositories has landed a true upstream `Hermes-Agent` integration yet
+- an upstream `Hermes-Agent` runtime substrate remains the preferred future implementation direction for this contract, not a landed public fact
 
 ## Implementation Boundary
 
 As long as the upper-layer contracts stay intact, the `Shared Runtime Contract` can later be implemented through different deployment shapes:
 
 - the current local `host-agent runtime`
-- a future `Hermes`-backed managed runtime
+- a future upstream `Hermes-Agent`-backed managed runtime
 - a future platform-hosted execution plane
 
 What may change is the runtime substrate implementation, not:

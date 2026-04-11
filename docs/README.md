@@ -24,9 +24,10 @@ These are the first files an AI or maintainer should read before touching the re
 
 ## Current Baseline And Task Ladder
 
-- Current baseline: `OPL` is the top-level gateway / federation / shared substrate contract surface, not a domain runtime owner.
-- Current focus: central sync, surface-authority convergence, and admitted-domain state alignment.
-- Long-line target: as the domain repos move toward `Hermes-backed runtime substrate`, `OPL` remains the top-level coordination, discovery, and contract layer.
+- Current baseline: `OPL` is the top-level gateway / federation / shared substrate contract surface, while domain runtime ownership stays with the admitted domain repositories.
+- Current focus: truth reset, central sync, surface-authority convergence, and admitted-domain state alignment.
+- Current truth: none of the four repositories has landed a true upstream `Hermes-Agent` integration yet; current runtime shapes remain transitional and domain-specific.
+- Long-line target: move the shared runtime layer toward upstream `Hermes-Agent` (or an explicitly approved equivalent substrate) while keeping `OPL` as the top-level coordination, discovery, and contract layer.
 - Historical execution surface: OMX is retired and survives only as migration / audit reference material.
 
 ## Layer 1. Default Public Mainline
@@ -60,8 +61,8 @@ They define gateway semantics, shared-foundation boundaries, and formal contract
 
 ## Layer 3. Reference-Grade Supporting Docs
 
-These documents stay repo-tracked, but they are not the default public reading path.
-They support review, acceptance, indexing, examples, or boundary inspection and must not be allowed to redefine the main storyline.
+These documents stay repo-tracked and serve review, acceptance, indexing, examples, or boundary inspection.
+The main storyline continues to live in the core working set plus Layers 1 and 2.
 All Layer 3 docs now live under `docs/references/`, with a dedicated index so the docs root stays readable.
 
 ### Default entry
@@ -70,6 +71,7 @@ All Layer 3 docs now live under `docs/references/`, with a dedicated index so th
 - `references/contract-convergence-v1-execution-board.md` (Chinese-only internal reference)
 - `references/ecosystem-status-matrix.md` (Chinese-only internal reference)
 - `references/hermes-agent-runtime-substrate-benchmark.md` (Chinese-only internal reference)
+- `references/hermes-agent-truth-reset-and-target-state.md` (Chinese-only internal reference)
 - `references/opl-phase-2-central-reference-sync-board.md` (Chinese-only internal reference)
 - `references/opl-phase-2-admitted-domain-delta-intake-refresh.md` (Chinese-only internal reference)
 

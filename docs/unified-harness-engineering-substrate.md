@@ -100,17 +100,18 @@ The two contract families that now need the clearest alignment are:
 
 ## Deployment Shapes
 
-The current default local deployment shape is:
+At the current stage:
 
-- `Codex`-default host-agent runtime
+- the active development host is Codex-only local sessions
+- the public OPL formal entry remains the local `TypeScript CLI`-first / read-only gateway surface
 
-That is a deployment choice, not the identity of the substrate.
+That split matters: Codex names today's development host, not the identity of the substrate.
 The same substrate should remain compatible with:
 
 - future managed web runtimes
 - future platform-hosted execution surfaces
 
-If the ecosystem later adopts a `Hermes`-backed runtime substrate, the accurate place for that choice is:
+If the ecosystem later proves a true upstream `Hermes-Agent` integration inside a domain repository, the accurate place for that choice is:
 
 - an implementation mode for the `Shared Runtime Contract`
 

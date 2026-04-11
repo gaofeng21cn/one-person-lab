@@ -4,9 +4,8 @@
 
 `OPL` groups multiple workstreams into one system not simply because they all involve Agents, but because they reuse the same foundational layers through a federation model.
 
-The shared foundation does not imply one monolithic runtime.
-It means different domain gateways must speak compatible asset, memory, governance, delivery, and execution language.
-That compatibility does not make `OPL` the canonical truth store for every shared object; canonical truth still stays with domain-owned surfaces or with human/private materials that remain below domain admission.
+The shared foundation means different domain gateways speak compatible asset, memory, governance, delivery, and execution language.
+`OPL` owns the shared language and indexing layer, while canonical truth for concrete objects stays with domain-owned surfaces or with human/private materials that remain below domain admission.
 
 ## Current Auto Mainlines And Future HITL Layers
 
@@ -15,8 +14,7 @@ At the top level, `OPL` now freezes a narrower rule:
 - the current domain repositories are `Auto-only` mainlines
 - any future `Human-in-the-loop` product should be built as a compatible sibling or upper-layer product on top of the same shared substrate
 
-That means `OPL` is not asking every current repository to carry two top-level judgment models at once.
-It is asking the ecosystem to keep one reusable foundation across:
+The current rule is to keep one reusable foundation across:
 
 - current autonomous execution
 - future higher-judgment human-return gates
@@ -80,7 +78,7 @@ Each workstream may use a different delivery protocol, but the need for a delive
 
 ## Agent Execution Layer
 
-The `Agent Execution Layer` makes Agent work controllable rather than free-floating.
+The `Agent Execution Layer` makes Agent work controllable and reviewable.
 
 It focuses on:
 
@@ -89,8 +87,8 @@ It focuses on:
 - execution visibility
 - audit writeback
 
-This layer is not about removing humans. It is about letting humans review key outputs instead of babysitting low-level execution.
-It also means `OPL` defaults to an `Agent-first` execution model rather than designing the main workstream as a rigid code pipeline with the Agent left to fill a few prompt slots.
+This layer lets humans review key outputs instead of babysitting low-level execution.
+It also means `OPL` defaults to an `Agent-first` execution model and keeps code focused on stable structure, tools, and gates.
 
 ## Federation Consumption Model
 

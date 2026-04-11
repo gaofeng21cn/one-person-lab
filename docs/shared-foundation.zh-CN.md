@@ -4,9 +4,8 @@
 
 `OPL` 之所以能把多个工作流纳入同一体系，不只是因为它们都能让 Agent 参与，而是因为它们通过 federation model 复用同一套基础层。
 
-共享基础结构不等于单体 runtime。
-它的含义是：不同 domain gateway 必须使用兼容的资产、记忆、治理、交付与执行语言。
-这种兼容性并不让 `OPL` 自动变成所有共享对象的 canonical truth store；canonical truth 仍然留在 domain-owned surface，或留在尚未进入 formal domain admission 的 human/private 材料里。
+共享基础结构的含义是：不同 domain gateway 使用兼容的资产、记忆、治理、交付与执行语言。
+`OPL` 负责共享语言与索引层，而具体对象的 canonical truth 继续留在 domain-owned surface，或留在尚未进入 formal domain admission 的 human/private 材料里。
 
 ## 当前 Auto 主线与未来 HITL 分层
 
@@ -15,8 +14,7 @@
 - 当前各个 domain 仓都先按 `Auto-only` 主线理解
 - 未来如果要做 `Human-in-the-loop` 产品，应在同一 substrate 之上另建兼容的 sibling 或 upper-layer product
 
-这意味着，`OPL` 现在并不要求每个当前仓同时承载两套顶层判断逻辑。
-它要求的是：在下面这些方面继续共享同一套可复用基础层：
+当前规则要求在下面这些方面继续共享同一套可复用基础层：
 
 - 当前全自动执行
 - 未来高判断密度的人机回环返回点
@@ -80,7 +78,7 @@
 
 ## 智能体执行层
 
-`智能体执行层` 让 Agent 成为可控执行者，而不是自由漂移的聊天接口。
+`智能体执行层` 让 Agent 成为可控、可审阅的执行者。
 
 它关注：
 
@@ -89,8 +87,8 @@
 - 执行可见性
 - 审计回写
 
-这一层不是为了拿掉人类，而是为了让人类只看关键输出，不必盯住底层执行细节。
-它也意味着 `OPL` 默认采用 `Agent-first`，而不是把主流程设计成固定代码流水线，只让 Agent 做少量文本补丁。
+这一层让人类只看关键输出，不必盯住底层执行细节。
+它也意味着 `OPL` 默认采用 `Agent-first`，并把代码的职责收口到稳定结构、工具与 gate 上。
 
 ## 联邦消费方式
 

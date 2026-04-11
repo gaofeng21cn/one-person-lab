@@ -2,7 +2,7 @@
 
 ## 顶层分层
 
-`OPL` 的主链路不是具体执行 runtime，而是顶层 federation：
+`OPL` 的主链路是顶层 federation：
 
 `Human / Agent -> OPL Gateway -> Domain Gateway -> Domain Harness OS -> Domain Repository`
 
@@ -28,7 +28,7 @@
 - `docs/gateway-federation*`
 - `docs/operating-model*`
 
-这层负责对外讲清 `OPL` 是什么、当前承载什么、不承载什么。
+这层负责对外讲清 `OPL` 的角色、当前承载范围与 domain 边界。
 
 ### 4. Reference / history docs
 

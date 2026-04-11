@@ -2,6 +2,18 @@
 
 ## 2026-04-11
 
+### 决策：`Hermes-Agent` 只指上游外部 runtime substrate
+
+原因：之前已经出现把“参考 Hermes-Agent”误写成“仓内已经接入 Hermes-Agent”的漂移。后续凡是使用 `Hermes-Agent` 这个名字，都必须指向上游外部项目 / 服务本体，而不是仓内自写 shim、pilot、helper 或 scaffold。
+
+### 决策：四仓当前都未落地真实的上游 Hermes-Agent 集成
+
+原因：截至当前时点，四个仓都还没有把 session、run、event、memory、scheduler、gateway 等 runtime substrate 能力真正交给上游 `Hermes-Agent` 持有。继续沿用“已接入 Hermes-Agent”的说法，只会误导下一轮实现。
+
+### 决策：先做真实上游集成，再做共享 runtime 回抽
+
+原因：之前“先在仓内做出一层 Hermes，再往 shared substrate 回抽”的路线已经证明容易偏离目标。后续应先在合适 domain 仓里完成至少一个真实的上游 `Hermes-Agent` pilot，再决定哪些实现值得回抽到共享层。
+
 ### 决策：固定 AI / 维护者核心五件套
 
 - `docs/project.md`

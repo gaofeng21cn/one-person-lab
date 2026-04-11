@@ -79,7 +79,7 @@ function findBrokenLocalMarkdownLinks(relativePath: string) {
   return brokenLinks;
 }
 
-test('public bilingual truth surfaces freeze Codex-default host-agent runtime wording', () => {
+test('public bilingual truth surfaces distinguish Codex development host from Hermes target substrate', () => {
   const publicDocs = [
     'README.md',
     'README.zh-CN.md',
@@ -91,7 +91,9 @@ test('public bilingual truth surfaces freeze Codex-default host-agent runtime wo
 
   for (const relativePath of publicDocs) {
     const content = read(relativePath);
-    assert.match(content, /`?Codex`?-default host-agent runtime/);
+    assert.match(content, /Codex-only|Codex/);
+    assert.match(content, /Hermes-Agent/);
+    assert.match(content, /development host|开发宿主|future.*substrate|未来产品 runtime substrate 方向/);
     assert.doesNotMatch(content, /Codex.?优先的 host-agent runtime/);
   }
 });

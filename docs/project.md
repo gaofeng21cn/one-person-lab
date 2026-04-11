@@ -11,11 +11,15 @@
 - 作为 federation 入口，明确每个 domain 仓在整体体系中的位置与边界。
 - 作为公开 contract surface，确保文档、gateway contracts 和 admitted domain 状态一致。
 
-## 非目标
+当前关于“真实接入上游 `Hermes-Agent` 的标准是什么、理想形态相对当前状态的优缺点是什么”，统一以参考说明
+`docs/references/hermes-agent-truth-reset-and-target-state.md`
+为准；核心五件套只负责把当前真相、边界和下一步写清，不再在不同文件里各讲一套版本。
 
-- 不把 `OPL` 写成某个 domain runtime 的同义词。
-- 不把 `OPL` 误写成一个独占执行 runtime。
-- 不把历史 `Codex Host / OMX` 分工重新抬升为当前主线。
+## 作用边界
+
+- `OPL` 负责顶层 gateway / federation 语言，而各 domain 仓继续负责自己的 runtime。
+- `OPL` 维护共享边界、任务语义与公开 contract surface。
+- 历史 `Codex Host / OMX` 分工保留在历史材料里，不再承担当前主线角色。
 
 ## 默认入口
 

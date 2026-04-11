@@ -77,15 +77,15 @@
    - `interrupt_reason`
    - `resume_allowed`
 
-## 与 Hermes 的关系
+## 与 Hermes-Agent 的关系
 
-`Hermes` 当前最值得吸收的，是它在 runtime substrate 上已经比较成熟的工程实现。
+上游 `Hermes-Agent` 当前最值得吸收的，是它在 runtime substrate 上已经比较成熟的工程实现。
 
 因此，更准确的表达是：
 
-- `Hermes-backed runtime substrate` 是 `Shared Runtime Contract` 的优选未来实现方向
-- `Hermes` 不是整个 `UHS`
-- `Hermes` 也不会替代 `OPL Gateway`、`Domain Gateway` 或 `Domain Harness OS`
+- 上游 `Hermes-Agent` 支撑的 runtime substrate，是 `Shared Runtime Contract` 的优选未来实现方向
+- `Hermes-Agent` 不是整个 `UHS`
+- `Hermes-Agent` 也不会替代 `OPL Gateway`、`Domain Gateway` 或 `Domain Harness OS`
 
 也就是说，`Hermes` 更适合承接“怎么稳定地跑”，而不是“什么才算过 gate、交付、审计、domain truth”。
 
@@ -95,16 +95,18 @@
 
 - 顶层 formal entry 仍是 `CLI-first`
 - `MCP` 仍是 supported protocol layer
-- 当前默认本地部署形态仍是 `Codex-default host-agent runtime`
+- 当前活跃开发宿主仍是 Codex-only 本地会话
+- 当前公开的 OPL 入口仍是本地 `TypeScript CLI`-first / read-only gateway surface
 - `Shared Runtime Contract` 还处于冻结与逐步落地阶段
-- `Hermes-backed runtime substrate` 仍属于明确的实现方向，不是已经落地的公开事实
+- 四个仓都还没有真正完成上游 `Hermes-Agent` 集成
+- 上游 `Hermes-Agent` 运行底座仍是这份合同优选的未来实现方向，而不是已经落地的公开事实
 
 ## 实现边界
 
 只要不改写上层合同，`Shared Runtime Contract` 后续可以由不同 deployment shape 实现：
 
 - 当前本地 `host-agent runtime`
-- future `Hermes-backed managed runtime`
+- future 上游 `Hermes-Agent`-backed managed runtime
 - future platform-hosted execution plane
 
 变化的应只是 runtime substrate 的承载方式，而不是：

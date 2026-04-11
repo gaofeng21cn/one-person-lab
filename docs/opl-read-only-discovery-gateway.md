@@ -310,8 +310,9 @@ It may not mutate domain truth.
 
 ## Surface Shapes
 
-The current `Phase 1` delivery target uses a local `TypeScript CLI` as the current discovery transport on top of the `Codex-default host-agent runtime`.
+The current `Phase 1` delivery target uses a local `TypeScript CLI` as the current discovery transport for the read-only gateway surface.
 At the development-control layer, the active path is Codex-only: standard Codex sessions handle planning, implementation, verification, and review against the frozen gateway contracts.
+That development host choice does not make Codex the product runtime substrate owner of `OPL`; any honest upstream `Hermes-Agent` rollout still has to land inside a domain repository first.
 The legacy `Codex Host` / `OMX` split now survives only in Layer 3 historical migration references and does not redefine this public gateway surface.
 In that baseline, the discovery contract is exposed through commands such as:
 

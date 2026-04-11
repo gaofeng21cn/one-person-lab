@@ -13,16 +13,16 @@
 - `Presentation Ops`
 
 This split defines top-level task semantics.
-At runtime, those semantics should route through the `OPL Gateway` into independent domain gateways rather than being collapsed into one runtime.
+At runtime, those semantics route through the `OPL Gateway` into independent domain gateways with explicit ownership and handoff boundaries.
 
 At the operating level, these workstreams also share one target doctrine:
 
-- use `Agent-first` domain systems rather than fixed-code workflow engines
+- use `Agent-first` domain systems with explicit gateway/harness layering
 - keep the current admitted domain repositories `Auto-only`
-- let any future `Human-in-the-loop` product reuse the same substrate as a sibling or upper-layer product rather than forcing same-repository dual-mode control logic
+- let any future `Human-in-the-loop` product reuse the same substrate as a sibling or upper-layer product
 
 The task map freezes workstream boundaries and delivery objects.
-It does not require one UI, one model provider, or one fixed-code orchestration stack.
+It preserves shared semantics while allowing different interfaces, model providers, and orchestration stacks across domains.
 
 ## Machine-Readable Companions
 
@@ -34,7 +34,8 @@ These companions materialize:
 - the top-level task topology as a machine-readable semantic surface
 - the missing admission-boundary materials for the current under-definition workstreams
 
-They may describe under-definition workstreams such as `Grant Ops`, `Thesis Ops`, and `Review Ops`, but they do **not** admit new domains, create `G2` discovery readiness, or create `G3` routed-action readiness for them.
+They may describe under-definition workstreams such as `Grant Ops`, `Thesis Ops`, and `Review Ops`, while keeping them on an explicit candidate/onboarding path.
+Formal admission, `G2` discovery readiness, and `G3` routed-action readiness still come from dedicated onboarding evidence.
 
 At the current baseline, `candidate-domain definition` is the composition of:
 
@@ -42,7 +43,7 @@ At the current baseline, `candidate-domain definition` is the composition of:
 - missing boundary packages in the candidate-domain backlog
 - formal admission rules in the domain-onboarding contract
 
-`OPL` does **not** currently add a separate intermediate candidate-domain-definition surface above those layers, because doing so would risk duplicating semantic, blocker, or admission truth.
+The current definition path is therefore the three-layer composition above.
 
 For the human-readable companion to that backlog, see [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.md).
 
@@ -99,17 +100,13 @@ Typical delivery objects include:
 
 Current boundary status:
 
-- still under definition
-- not yet an admitted domain
-- not yet a registered `G1` workstream/domain mapping
-- not yet a `G2` discovery target
-- not yet a `G3` routed-action target
-- not eligible for domain handoff
-- the current `Grant Foundry -> Med Auto Grant` public scaffold provides top-level signal / domain-direction evidence only; it is not an admitted domain gateway and does not count as G2 discovery readiness, G3 routed-action readiness, or a handoff-ready surface
-- admission blockers are tracked in [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.md)
-- `Grant Foundry -> Med Auto Grant` currently contributes public scaffold / top-level signal / domain-direction evidence only; it does not yet satisfy registry material, discovery readiness, routing readiness, or domain handoff eligibility
-- any future successful handoff may target only `domain_gateway`; direct harness bypass remains forbidden
-- clear top-level requests may surface only as `unknown_domain`, without building a handoff payload, until a real domain owner is admitted
+- current lifecycle state: under-definition candidate workstream
+- admission path: waiting for formal domain admission and registered `G1` workstream/domain mapping
+- discovery and routing path: waiting for `G2` discovery readiness, `G3` routed-action readiness, and domain handoff eligibility
+- public surface: `Grant Foundry -> Med Auto Grant` currently contributes public scaffold / top-level signal / domain-direction evidence for the future medical `Grant Ops` domain
+- tracked next steps: registry material, discovery evidence, routing evidence, and handoff evidence are tracked in [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.md)
+- routing rule: any future successful handoff may target only `domain_gateway`, with no direct harness bypass
+- current top-level handling: clear requests surface as `unknown_domain` with no handoff payload until a real domain owner is admitted
 
 ## Thesis Ops
 
@@ -123,9 +120,8 @@ Typical tasks include:
 - organization of abstract, introduction, and discussion layers
 - defense preparation
 
-It remains closely coupled with `Research Ops`, but it should still retain its own task boundary.
-The current negative boundary is that dissertation assembly and defense-preparation coordination are not the same as `Research Ops` manuscript/submission delivery, and they are not reducible to `Presentation Ops` / `RedCube AI` deck production either.
-Those admitted surfaces may supply reusable evidence or downstream derivatives, but they do not yet own a Thesis Ops domain boundary.
+It remains closely coupled with `Research Ops`, while focusing on dissertation assembly and defense preparation as its own workstream.
+Existing admitted surfaces can contribute reusable evidence and downstream derivatives, and thesis-specific domain ownership will be frozen through a dedicated onboarding path.
 
 Typical delivery objects include:
 
@@ -136,25 +132,20 @@ Typical delivery objects include:
 
 Current boundary status:
 
-- still under definition
-- not yet an admitted domain
-- not yet a registered `G1` workstream/domain mapping
-- not yet a `G2` discovery target
-- not yet a `G3` routed-action target
-- not eligible for domain handoff
-- admission blockers are tracked in [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.md)
-- explicit blocker packages remain `execution_model`, `discovery_readiness`, `routing_readiness`, and `cross_domain_wording`
-- thesis-specific canonical truth remains outside `OPL` and outside the currently admitted domains until a real Thesis Ops domain boundary is frozen
-- no handoff-ready surface exists yet for this workstream
-- any future successful handoff may target only `domain_gateway`; direct harness bypass remains forbidden
-- explicit discovery, routing, and cross-domain wording declarations must exist before Thesis Ops can move above the onboarding gate or become handoff-ready
-- clear top-level requests may surface only as `unknown_domain`, without building a handoff payload, until a real domain owner is admitted
+- current lifecycle state: under-definition candidate workstream
+- admission path: waiting for formal domain admission and registered `G1` workstream/domain mapping
+- discovery and routing path: waiting for `G2` discovery readiness, `G3` routed-action readiness, and domain handoff eligibility
+- tracked blocker packages: `execution_model`, `discovery_readiness`, `routing_readiness`, and `cross_domain_wording`
+- truth boundary: thesis-specific canonical truth will be frozen with the future Thesis Ops domain boundary
+- routing rule: any future successful handoff may target only `domain_gateway`, with no direct harness bypass
+- current top-level handling: clear requests surface as `unknown_domain` with no handoff payload until a real domain owner is admitted
 
 ## Review Ops
 
 `Review Ops` covers both “standing in the reviewer role” and “responding to reviewers.”
 
-This combined label remains a top-level semantic bundle only; it does not by itself admit a distinct review domain or make OPL the canonical truth owner of review artifacts.
+This combined label currently stays at the top-level semantic-bundle stage.
+Review artifacts keep their domain-owned truth until a dedicated review domain boundary is frozen.
 
 Typical tasks include:
 
@@ -174,19 +165,13 @@ Typical delivery objects include:
 
 Current boundary status:
 
-- still under definition
-- not yet an admitted domain
-- not yet a registered `G1` workstream/domain mapping
-- not yet a `G2` discovery target
-- not yet a `G3` routed-action target
-- not eligible for domain handoff
-- admission blockers are tracked in [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.md)
-- explicit blocker packages remain `execution_model`, `discovery_readiness`, `routing_readiness`, and `cross_domain_wording`
-- review truth remains outside `OPL`; this semantic bundle does not make `OPL` the canonical truth owner of review artifacts
-- no handoff-ready surface exists yet for this bundle
-- any future successful handoff may target only `domain_gateway`; direct harness bypass remains forbidden
-- clear top-level requests may surface only as `unknown_domain`, without building a handoff payload, until a real domain owner is admitted
-- explicit discovery, routing, and cross-domain wording declarations must exist before Review Ops can move above the onboarding gate or become handoff-ready
+- current lifecycle state: under-definition candidate workstream
+- admission path: waiting for formal domain admission and registered `G1` workstream/domain mapping
+- discovery and routing path: waiting for `G2` discovery readiness, `G3` routed-action readiness, and domain handoff eligibility
+- tracked blocker packages: `execution_model`, `discovery_readiness`, `routing_readiness`, and `cross_domain_wording`
+- truth boundary: review truth will remain domain-owned when a dedicated Review Ops boundary is frozen
+- routing rule: any future successful handoff may target only `domain_gateway`, with no direct harness bypass
+- current top-level handling: clear requests surface as `unknown_domain` with no handoff payload until a real domain owner is admitted
 
 ## Presentation Ops
 
@@ -214,7 +199,7 @@ Within that surface:
 
 - `ppt_deck` is the family that most directly maps to `Presentation Ops`
 - distinctions such as `lecture_student`, `lecture_peer`, `executive_briefing`, and `defense_deck` should be controlled through `profile pack`
-- `xiaohongshu` shares the same RedCube harness but should not be treated as identical to `Presentation Ops` at the OPL level
+- `xiaohongshu` shares the same RedCube harness and stays a separate visual family at the OPL layer
 
 ## How These Workstreams Reuse One Another
 

@@ -2,33 +2,32 @@
 
 This directory is the repository-local materialization of the `G1` federation contract for `One Person Lab`.
 
-It does **not** implement a runtime.
-It freezes machine-readable gateway surfaces that later discovery and routed-action layers can consume.
+It freezes the machine-readable gateway surfaces that later discovery and routed-action layers consume.
 
 ## Shared-foundation ownership boundary
 
 These contract and reference artifacts live in the shared-foundation materialization layer only.
 `OPL` owns the top-level contract language, indexing, and cross-domain reuse rules frozen here, but domain gateways and domain harnesses still own runtime execution, canonical truth, review truth, and publication truth once a routed request crosses the gateway boundary.
-This directory therefore materializes gateway surfaces for discoverability / reviewability / acceptance alignment without becoming a new control plane or shared truth store.
-The `Unified Harness Engineering Substrate` named around this layer remains a shared architectural umbrella language, not a shared public code framework.
-Within that umbrella, the long-running runtime portion is now converging into the `Shared Runtime Contract`, while the cross-domain formal behavior portion is converging into the `Shared Domain Contract`; neither shift turns this directory into a runtime owner.
+This directory therefore materializes gateway surfaces for discoverability / reviewability / acceptance alignment.
+The `Unified Harness Engineering Substrate` named around this layer remains the shared architectural umbrella language for the ecosystem.
+Within that umbrella, the long-running runtime portion is now converging into the `Shared Runtime Contract`, while the cross-domain formal behavior portion is converging into the `Shared Domain Contract`.
 For the broader ownership split, see [Shared Foundation](../../docs/shared-foundation.md) and [Shared Foundation Ownership](../../docs/shared-foundation-ownership.md).
 
 ## Current baseline and absorbed follow-on alignment
 
 As of `2026-04-11`, the public `opl-mainline` mainline remains at the absorbed `Phase 2 / Minimal admitted-domain federation activation package`, while the repo-tracked formal entry still remains the `Phase 1` local `TypeScript CLI`-first, read-only gateway baseline that reads the frozen contract artifacts in this directory.
-That transport sits on top of the current `Codex-default host-agent runtime`, with Codex-only active execution for planning, implementation, and verification.
+That transport is currently exercised through Codex-only local sessions for planning, implementation, and verification, but this directory does not declare Codex as the product runtime substrate owner.
 The completed `Phase 1 / G2 release-closeout` has already closed the `G2 stable public baseline` into one stable repo-tracked public entry.
 That repo-tracked baseline therefore remains the current `OPL` formal entry contract and public system surface even though the public mainline has already absorbed the minimal admitted-domain federation package.
-The completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` remains closed at the planning-contract layer: this directory only freezes the planning gate / planning-level contract around `route_request`, `build_handoff_payload`, and `audit_routing_decision`. The only allowed successful handoff target remains `domain_gateway`, the no-bypass rule still forbids direct domain-harness targeting, and `routed-actions.schema.json` remains a planning dependency rather than a launcher.
+The completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` remains closed at the planning-contract layer: this directory freezes the planning gate / planning-level contract around `route_request`, `build_handoff_payload`, and `audit_routing_decision`. The only allowed successful handoff target remains `domain_gateway`, the no-bypass rule still forbids direct domain-harness targeting, and `routed-actions.schema.json` stays in the planning-dependency layer.
 The repo-tracked `Phase 1` candidate-domain closeout order is frozen as `Review Ops` then `Thesis Ops`: both candidate paths remain below domain admission, `G2` discovery readiness, `G3` routed-action readiness, and handoff readiness.
-The absorbed predecessor gate is `Phase 1 exit + next-stage activation package freeze`, and the current `Minimal admitted-domain federation activation package` is already absorbed into repo-tracked top-level truth for the already admitted `MedAutoScience` and `RedCube AI` domain surfaces. No new active follow-on tranche is currently open; another central sync only becomes truthful when an admitted-domain repository lands a new absorbed delta or the central reference surfaces drift. Runtime ownership still does **not** activate.
-The current repo-tracked formal entry at the OPL layer therefore remains the local `TypeScript CLI`-first / read-only gateway surface rather than a launcher, mutation entry, or runtime-owner surface.
-That delivery target still does **not** promote this directory into a runtime, routed-action control plane, or canonical truth store; it only keeps the existing top-level contract language executable through a local CLI surface.
+The absorbed predecessor gate is `Phase 1 exit + next-stage activation package freeze`, and the current `Minimal admitted-domain federation activation package` is already absorbed into repo-tracked top-level truth for the already admitted `MedAutoScience` and `RedCube AI` domain surfaces. No new active follow-on tranche is currently open; another central sync only becomes truthful when an admitted-domain repository lands a new absorbed delta or the central reference surfaces drift. Runtime ownership continues to stay with the admitted domains.
+The current repo-tracked formal entry at the OPL layer therefore remains the local `TypeScript CLI`-first / read-only gateway surface.
+That delivery target keeps the existing top-level contract language executable through a local CLI surface, while any honest upstream `Hermes-Agent` rollout remains a domain-side migration target rather than a current OPL-layer fact.
 
 ## Current reference-sync companions
 
-These reference-grade companions freeze the current cross-repo status picture and Codex-only runtime wording without turning this directory into a runtime owner or second source of truth.
+These reference-grade companions freeze the current cross-repo status picture and Codex-only runtime wording while keeping this directory aligned with the authoritative public surfaces.
 This active companion set is anchored to `2026-04-11` and carries the responsibility of keeping the latest admitted-domain absorbed deltas visible in top-level OPL reference-sync surfaces without promoting those references into public-mainline truth.
 
 - [Ecosystem Status Matrix](../../docs/references/ecosystem-status-matrix.md) — Chinese-only internal reference for the current four-repo stage/status picture
@@ -37,7 +36,7 @@ This active companion set is anchored to `2026-04-11` and carries the responsibi
 
 ## Historical migration references
 
-These references are kept for historical migration and offboarding context only. They are not active execution entry docs and must not redefine the current Codex-only mainline.
+These references are kept for historical migration and offboarding context only. The active execution mainline continues to be documented through the current Codex-only public surfaces.
 
 - [Development Operating Model](../../docs/references/development-operating-model.md) — Chinese-only historical migration reference for `Codex Host` / `OMX` operating discipline
 - [Runtime Alignment Taskboard](../../docs/references/runtime-alignment-taskboard.md) — Chinese-only historical reference for the retired four-repo convergence checklist
@@ -98,7 +97,7 @@ These corpora are companion references only. They do not replace the governing c
 - [OPL Surface Authority Matrix](../../docs/references/opl-surface-authority-matrix.md) — derived machine-readable authority split across the frozen OPL surfaces and linked domain public-entry surfaces
 - [OPL Surface Review Matrix](../../docs/references/opl-surface-review-matrix.md) — derived machine-readable review obligations across the frozen OPL public, contract, and supporting surfaces
 
-These backlog and mapping surfaces are reference-only. They do not become a workflow engine, transition authority, authorization engine, approval engine, publish controller, or replacement for the governing contracts in this directory.
+These backlog and mapping surfaces stay reference-only companions to the governing contracts in this directory.
 
 ## Files
 
@@ -133,8 +132,8 @@ These backlog and mapping surfaces are reference-only. They do not become a work
 - `OPL` remains the top-level gateway and federation surface.
 - Domain gateways remain independently usable after routing.
 - Domain harnesses stay below domain gateways.
-- This directory does not create canonical truth ownership above domains.
-- This directory does not authorize bypassing a domain gateway to reach a harness.
+- Canonical truth ownership stays with the domains that own it.
+- Successful routing continues to flow through domain gateways only.
 
 ## Current scope
 
@@ -145,8 +144,8 @@ This directory includes:
 - derived / reference-only candidate-domain backlog material that records missing admission boundaries without inventing placeholder domains or routed targets
 - no separate candidate-domain-definition contract surface beyond the current `task-topology + candidate-domain-backlog + domain-onboarding` composition unless a real missing boundary is first proven
 
-Planned workstreams such as `Grant Ops`, `Review Ops`, and `Thesis Ops` remain outside the admitted registry / discovery / routing surfaces until their domain boundaries are explicitly frozen.
-If the current public docs mention `Grant Foundry -> Med Auto Grant`, that mention still counts only as top-level signal / domain-direction evidence for a future Grant Ops path; it is not an admitted domain gateway and does not count as G2 discovery readiness, G3 routed-action readiness, or a handoff-ready surface.
+Planned workstreams such as `Grant Ops`, `Review Ops`, and `Thesis Ops` remain on candidate-definition paths until their domain boundaries are explicitly frozen.
+If the current public docs mention `Grant Foundry -> Med Auto Grant`, that mention stays on the top-level signal / domain-direction evidence lane for a future Grant Ops path.
 
 ## Materialization note
 
