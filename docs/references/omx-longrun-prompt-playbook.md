@@ -2,7 +2,7 @@
 
 > 历史说明（2026-04-11 OMX offboarding）：本文件仅保留为迁移/审计参考，不再作为当前活跃执行入口。
 
-状态锚点：`2026-04-10`
+状态锚点：`2026-04-11`
 
 ## 文档目的
 
@@ -81,8 +81,8 @@
 
 - 当 admitted-domain 业务仓有新的 absorbed repo-tracked truth 后，作为中央 sync owner 继续收紧 `Phase 2` 顶层 federation wording 与四仓中央参考面
 - 当前 board 已预冻结的 admitted-domain absorbed delta 锚点：
-  - `RedCube AI` = `9cfe58b` / `runtime watch locator integrity hardening`
-  - `MedAutoScience` = `5366d18` / `publication-gate routing and managed supervisor watch hardening`
+  - `RedCube AI` = `762ea4c` / `runtime program state off omx`（并保留 `phase_2_family_parity_autopilot_continuation_board`）
+  - `MedAutoScience` = `6c64264` / `retire omx workflow entry`（并保留 `9b5cea8` verification surface split 与 `7ee19a8` repair-priority docs）
 
 ```text
 你现在在 one-person-lab 仓库，按“同一棒内自动收口”执行。
@@ -157,7 +157,7 @@ med-autoscience 当前主线不适合继续自动打开新的 runtime architectu
 
 当前推荐用途：
 
-- `Phase 2 / workspace operator quickstart convergence` 已吸收后，只在出现新的 same-mainline concrete delta 时继续；不得再把 quickstart 当作等待 freeze 的下一棒
+- `Phase 2 / runtime watch locator integrity hardening`、`e8146a1` verification surface split、`762ea4c` runtime-program state off OMX 已吸收后，只在 `phase_2_family_parity_autopilot_continuation_board` 这块 prefrozen same-mainline board 内继续；不得再把 quickstart 当作等待 freeze 的下一棒
 
 ```text
 你现在在 redcube-ai 仓库，按“同一棒内自动收口”执行。
@@ -177,15 +177,15 @@ med-autoscience 当前主线不适合继续自动打开新的 runtime architectu
 - docs/phase_2_workspace_operator_quickstart_convergence.md
 
 任务目标：
-在同一个 `redcube-runtime-program` 主线内，先确认当前 main 已吸收到 `Phase 2 / workspace operator quickstart convergence`，并包含 `fd01266` quickstart test alignment；随后只在存在新的、已可诚实冻结的 same-mainline concrete delta 时继续推进。
+在同一个 `redcube-runtime-program` 主线内，先确认当前 main 已吸收到 `Phase 2 / runtime watch locator integrity hardening`，并且额外收口到 `e8146a1` verification surfaces by test layer 与 `762ea4c` runtime-program state off OMX；随后只在存在新的、已可诚实冻结的 same-mainline concrete delta 时继续推进。
 
 必须完成：
-1. 先确认 `contracts/runtime-program/current-program.json`、README/docs 与 reports 都把 quickstart 写成当前 absorbed tranche，而不是 future brief。
+1. 先确认 `contracts/runtime-program/current-program.json`、README/docs 与 reports 都把 `runtime watch locator integrity hardening` 写成已 absorbed tranche，并把 `phase_2_family_parity_autopilot_continuation_board -> phase_2_family_parity_governance_surface_convergence` 写成当前 prefrozen follow-on。
 2. 保持 `workspace doctor -> source intake / source research -> deliverable create -> deliverable audit -> deliverable run` 的 repo-verified quickstart route 与 `planning_ready` gate 对齐；其中 `workspace doctor` 只做诊断，brand-new workspace 的 bootstrap writer 仍是 `source intake / source research`（`run_source_intake` / `source research`），不是独立 workspace-init surface。
 3. 保持 `auditDeliverable / runtimeWatch / getReviewState / getPublicationProjection` 的同轴语义，以及 `xiaohongshu` human publication 边界。
-4. `619415f` 的 `phase_2_operator_surface_consistency_hardening` 仍未 absorbed；在 verification 过关并 absorbed to main 之前，不得把它写成 current truth。
-5. 若发现新的 concrete hostedization-prep / contract-export delta，必须先 freeze 到 active truth，再进入 implement -> verify -> review-closeout -> commit-closeout -> absorb。
-6. 若没有新的 honest delta，就停车在 honest stop；不得把 quickstart 重新写成未冻结 blocker。
+4. 保持 `e8146a1` 的 layered verification 与 `762ea4c` 的 repo-tracked control-plane state 口径一致，不得把 `.omx/**` 再写回仓内活真相。
+5. 若继续推进，必须先在 `phase_2_family_parity_autopilot_continuation_board` 的边界内冻结 active truth，再进入 implement -> verify -> review-closeout -> commit-closeout -> absorb。
+6. 若没有新的 honest delta，就停车在 honest stop；不得把 quickstart 或 OMX state 重新写成未冻结 blocker。
 
 硬边界：
 - 不把 controller 写成正式入口
@@ -205,7 +205,7 @@ med-autoscience 当前主线不适合继续自动打开新的 runtime architectu
 
 结束状态：
 - 若形成新的 honest delta，则自动收口到 ready to commit / commit closeout / absorbed to main
-- 若当前无 honest delta，则停在 `NO_NEW_REDCUBE_QUICKSTART_DELTA_HONEST_STOP`，不自动编造 hosted runtime、family parity 或 full autopilot
+- 若当前无 honest delta，则停在 `NO_NEW_REDCUBE_SAME_MAINLINE_DELTA_HONEST_STOP`，不自动编造 hosted runtime、family parity 或 full autopilot
 ```
 
 ### 4. med-autogrant

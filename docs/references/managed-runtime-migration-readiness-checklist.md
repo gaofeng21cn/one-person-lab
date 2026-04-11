@@ -1,6 +1,6 @@
 # Managed Runtime 迁移准备清单
 
-状态锚点：`2026-04-10`
+状态锚点：`2026-04-11`
 
 ## 文档目的
 
@@ -170,7 +170,7 @@
 当前判断：
 
 - runtime ontology 与 host-agent 口径已很清楚
-- 当前 repo-tracked absorbed tranche 已推进到 `Phase 2 / workspace operator quickstart convergence`，且包含 `fd01266` quickstart test alignment
+- 当前 repo-tracked absorbed tranche 已推进到 `Phase 2 / runtime watch locator integrity hardening`，并额外吸收了 `e8146a1` verification surface 分层与 `762ea4c` repo-local control-plane migration off OMX
 - 但 `R5 / hosted-friendly contract extraction` 仍缺一份明确的 hostedization-prep contract slice
 
 当前已经具备：
@@ -185,6 +185,7 @@
 - 尚未看到与 `med-autogrant R5.A` 对等的 hostedization-prep package
 - 尚未把 current topic / deliverable / run / audit surfaces 抽成一个 future host 必须兼容的 contract bundle
 - `workspace / operator quickstart convergence` 已被冻结进当前 repo truth，operator bootstrap 面不再是当前未冻结 blocker
+- 虽然 `phase_2_family_parity_autopilot_continuation_board` 已预冻结，但还没有把 family parity / autopilot continuity 真正推进到 hosted-friendly contract extraction
 - 尚未看到 platform-owned session lifecycle 的 repo-tracked design slice
 
 对 future `managed runtime` 的含义：
@@ -205,6 +206,7 @@
 
 - 四仓里在 `R5 / hosted-friendly contract extraction` 上走得最远
 - `R5.A / Hosted-Friendly Session Boundary` 已经实现并 absorbed
+- `98df81f` 已进一步把 control-plane state 迁回 repo-tracked truth
 - 但它仍然明确停在 hostedization prep，而不是 actual hosted runtime
 
 当前已经具备：

@@ -33,13 +33,13 @@
 1. `phase_2_admitted_domain_delta_intake_refresh`
    - 先把最新 absorbed admitted-domain delta 收进中央执行板、状态矩阵、任务板与提示词模板
    - 当前已知 delta：
-     - `RedCube AI`：`9cfe58b` `runtime watch locator integrity hardening`
-     - `MedAutoScience`：`5366d18` `publication-gate routing and managed supervisor watch hardening`
+     - `RedCube AI`：`e8146a1` `verification surfaces by test layer`，以及 `762ea4c` `runtime program state off omx`
+     - `MedAutoScience`：`9b5cea8` `verification surfaces by test layer`、`7ee19a8` `runtime and workspace repair priorities`，以及 `6c64264` `retire omx workflow entry`
 2. `phase_2_gateway_surface_wording_sync`
    - 只同步最小必要的 gateway wording / contract hub wording / acceptance wording
    - 不扩 OPL authority
 3. `phase_2_omx_prompt_and_worktree_handbook_sync`
-   - 把 OMX 长跑提示词、worktree 纪律、closeout 规则与最新中央 truth 收口
+   - 把 OMX 长跑提示词、worktree 纪律、closeout 规则与最新中央 truth 收口，并明确这些文档只保留为历史迁移/兼容性参考
 4. `phase_2_reference_regression_refresh`
    - 把当前 tranche 的中央 sync 改动压回 tests，维持 machine-verified closeout
 

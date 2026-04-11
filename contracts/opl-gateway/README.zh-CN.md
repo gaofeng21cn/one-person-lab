@@ -15,7 +15,7 @@
 
 ## 当前基线与已吸收 follow-on 对齐
 
-截至 `2026-04-10`，当前 `opl-mainline` 的公开主线仍停留在已 absorbed 的 `Phase 2 / Minimal admitted-domain federation activation package`，但 repo-tracked 的 formal entry 仍然是 `Phase 1` 那条本地 `TypeScript CLI`-first、read-only gateway baseline；它只读取这个目录中已经冻结的 contract 工件。
+截至 `2026-04-11`，当前 `opl-mainline` 的公开主线仍停留在已 absorbed 的 `Phase 2 / Minimal admitted-domain federation activation package`，但 repo-tracked 的 formal entry 仍然是 `Phase 1` 那条本地 `TypeScript CLI`-first、read-only gateway baseline；它只读取这个目录中已经冻结的 contract 工件。
 这条 transport 建立在当前 `Codex-default host-agent runtime` 之上；当前活跃执行口径为 Codex-only，由标准 Codex 会话完成规划、实现与验证。
 已完成的 `Phase 1 / G2 release-closeout` 已把 `G2 stable public baseline` 收口成稳定、单一、repo-tracked 的公开基线。
 因此，即便公开主线已经吸收了这份最小 admitted-domain federation package，这条 repo-tracked 基线也仍然是当前 `OPL` 的 formal entry contract 与 public system surface。
@@ -28,8 +28,8 @@ repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review 
 ## 当前四仓统一对齐配套文档
 
 下面这些 reference-grade 配套文档用于冻结当前四仓的状态与 runtime 口径；它们不会把当前目录升级成 runtime owner，也不会形成第二真相源。
-下面这组文档以 `2026-04-10` 为日期锚点，并承担把四仓最新状态回写到 `OPL` 顶层参考同步面的责任；这些参考面不会反向抬升为公开主线真相。
-在当前这一轮 sync 中，需要继续显式守住三组 admitted-domain delta：`RedCube AI` 的 quickstart wording 里 `workspace doctor` 继续只做诊断、`source intake / source research` 才是 bootstrap writer；`Med Auto Grant` 的 post-R5A walkthrough / output consistency 与 root-`CURRENT_PROGRAM.program_id` hardening；以及 `MedAutoScience` 的 manual stabilization / runtime watch / publication gate repo-side hardening。
+下面这组文档以 `2026-04-11` 为日期锚点，并承担把四仓最新状态回写到 `OPL` 顶层参考同步面的责任；这些参考面不会反向抬升为公开主线真相。
+在当前这一轮 sync 中，需要继续显式守住“两组 admitted-domain delta pack + 一组 signal-only 参考包”：`RedCube AI` 的 runtime-watch closeout、verification surface 分层与 repo-tracked runtime-program state；`MedAutoScience` 的 manual stabilization / runtime watch / repair-priority repo-side hardening与 repo entry off OMX；以及 `Med Auto Grant` 的 post-R5A walkthrough / output consistency、root-`CURRENT_PROGRAM.program_id` hardening 与 control-plane state off OMX。
 
 - [生态四仓统一状态总表](../../docs/references/ecosystem-status-matrix.md) — 当前四仓阶段/状态总览（中文内部参考）
 - [Contract Convergence v1 执行板](../../docs/references/contract-convergence-v1-execution-board.md) — 当前统一 program、active phase 与离场条件（中文内部参考）

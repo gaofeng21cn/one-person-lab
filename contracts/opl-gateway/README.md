@@ -15,7 +15,7 @@ For the broader ownership split, see [Shared Foundation](../../docs/shared-found
 
 ## Current baseline and absorbed follow-on alignment
 
-As of `2026-04-10`, the public `opl-mainline` mainline remains at the absorbed `Phase 2 / Minimal admitted-domain federation activation package`, while the repo-tracked formal entry still remains the `Phase 1` local `TypeScript CLI`-first, read-only gateway baseline that reads the frozen contract artifacts in this directory.
+As of `2026-04-11`, the public `opl-mainline` mainline remains at the absorbed `Phase 2 / Minimal admitted-domain federation activation package`, while the repo-tracked formal entry still remains the `Phase 1` local `TypeScript CLI`-first, read-only gateway baseline that reads the frozen contract artifacts in this directory.
 That transport sits on top of the current `Codex-default host-agent runtime`, with Codex-only active execution for planning, implementation, and verification.
 The completed `Phase 1 / G2 release-closeout` has already closed the `G2 stable public baseline` into one stable repo-tracked public entry.
 That repo-tracked baseline therefore remains the current `OPL` formal entry contract and public system surface even though the public mainline has already absorbed the minimal admitted-domain federation package.
@@ -28,8 +28,8 @@ That delivery target still does **not** promote this directory into a runtime, r
 ## Current four-repo alignment companions
 
 These reference-grade companions freeze the current four-repo status and runtime wording without turning this directory into a runtime owner or second source of truth.
-This companion set is anchored to `2026-04-10` and carries the responsibility of writing the latest four-repo status back into the top-level OPL reference-sync companions without promoting those reference surfaces into public-mainline truth.
-In the current sync window, that includes keeping three admitted-domain delta families explicit: RedCube quickstart wording where `workspace doctor` stays diagnostic-only and `source intake / source research` remain the bootstrap writer, Med Auto Grant post-R5A walkthrough/output-consistency plus root-`CURRENT_PROGRAM.program_id` hardening, and MedAutoScience manual-stabilization/runtime-watch/publication-gate repo-side hardening.
+This companion set is anchored to `2026-04-11` and carries the responsibility of writing the latest four-repo status back into the top-level OPL reference-sync companions without promoting those reference surfaces into public-mainline truth.
+In the current sync window, that includes keeping two admitted-domain delta packs plus one signal-only reference pack explicit: RedCube runtime-watch closeout plus layered verification and repo-tracked runtime-program state, MedAutoScience manual-stabilization/runtime-watch/repair-priority repo-side hardening plus repo entry migration off OMX, and Med Auto Grant post-R5A walkthrough/output-consistency plus root-`CURRENT_PROGRAM.program_id` hardening and control-plane state migration off OMX.
 
 - [Ecosystem Status Matrix](../../docs/references/ecosystem-status-matrix.md) — Chinese-only internal reference for the current four-repo stage/status picture
 - [Contract Convergence v1 Execution Board](../../docs/references/contract-convergence-v1-execution-board.md) — Chinese-only internal reference for the current unified program, active phase, and exit criteria

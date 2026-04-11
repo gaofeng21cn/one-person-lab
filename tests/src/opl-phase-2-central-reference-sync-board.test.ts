@@ -45,14 +45,14 @@ test('phase-2 central reference sync board freezes a multi-slice OPL follow-on o
   assert.equal(intake.package_id, 'opl_phase_2_admitted_domain_delta_intake_refresh');
   assert.equal(intake.parent_board_id, board.board_id);
   assert.equal(intake.status, 'truth_frozen_pending_implementation');
-  assert.equal(intake.current_known_delta_families[0].latest_absorbed_commit, '9cfe58b');
-  assert.equal(intake.current_known_delta_families[1].latest_absorbed_commit, '5366d18');
+  assert.equal(intake.current_known_delta_families[0].latest_absorbed_commit, '762ea4c');
+  assert.equal(intake.current_known_delta_families[1].latest_absorbed_commit, '6c64264');
   assert.equal(intake.closeout.next_tranche_candidate, 'phase_2_gateway_surface_wording_sync');
 
   for (const doc of [boardDoc, intakeDoc, ownerLine, playbook]) {
     assert.match(doc, /phase_2_admitted_domain_delta_intake_refresh/);
-    assert.match(doc, /9cfe58b/);
-    assert.match(doc, /5366d18/);
+    assert.match(doc, /762ea4c/);
+    assert.match(doc, /6c64264/);
   }
 
   assert.match(playbook, /phase-2-central-reference-sync-board\.json/);

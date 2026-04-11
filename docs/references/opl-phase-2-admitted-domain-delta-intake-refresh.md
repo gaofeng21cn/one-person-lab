@@ -18,19 +18,19 @@
 
 ### 1. `RedCube AI`
 
-- latest absorbed commit：`9cfe58b`
-- 当前 absorbed tranche：`Phase 2 / runtime watch locator integrity hardening`
+- latest absorbed commit：`762ea4c`
+- 当前 absorbed 主线锚点：`Phase 2 / runtime watch locator integrity hardening` 已 closeout，且同一 mainline 的 `phase_2_family_parity_autopilot_continuation_board` 已预冻结
 - 中央 sync 最小要求：
-  - 不再把 `workspace / operator quickstart convergence` 写成最新 absorbed tranche
-  - 要把 `runtimeWatch` quartet locator fail-closed 与 `topic_id / deliverable_id` durable identity 作为最新 absorbed delta 写回中央参考面
+  - 不再把 `workspace / operator quickstart convergence` 或 `9cfe58b` 单独写成最新 absorbed edge
+  - 要把 `e8146a1` 的 verification surface 分层、`762ea4c` 的 repo-local control-plane state off OMX，以及 `phase_2_family_parity_autopilot_continuation_board -> phase_2_family_parity_governance_surface_convergence` 作为当前 same-mainline follow-on truth 写回中央参考面
 
 ### 2. `MedAutoScience`
 
-- latest absorbed commit：`5366d18`
+- latest absorbed commit：`6c64264`
 - 当前 repo-side 仍停在 `EXTERNAL_RUNTIME_DEPENDENCY_BLOCKED_AFTER_ABSORB`
 - 中央 sync 最小要求：
-  - 不再把 `7444000` 写成 repo-side hardening 的最新 absorbed edge
-  - 要把 publication-gate routing / premature completion / managed supervisor watch 的 follow-on truth 写回中央参考面
+  - 不再把 `5366d18` 单独写成 repo-side hardening 的最新 absorbed edge
+  - 要把 `9b5cea8` 的 verification surface 分层、`7ee19a8` 的 runtime/workspace repair priorities，以及 `6c64264` 的 repo entry off OMX 迁移，一并写回中央参考面
   - 同时继续保持 external runtime / workspace gate 未清除的停车结论
 
 ## 当前只允许修改的中央文件

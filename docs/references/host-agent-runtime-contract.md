@@ -1,6 +1,7 @@
 # Codex-default Host-Agent Runtime 合同
 
 > 历史说明（2026-04-11 OMX offboarding）：本文件保留为历史/迁移参考；当前活跃执行口径以 Codex-only 文档为准。
+> 当前已同步的现实状态是：三个业务仓都已把 repo-local control-plane state 迁回各自的 repo-tracked truth；若继续复用 OMX，只能作为兼容性的历史长跑 lane，并继续遵守独立 worktree 纪律。
 
 ## 文档目的
 

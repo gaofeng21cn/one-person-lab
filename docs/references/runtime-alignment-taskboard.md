@@ -1,6 +1,6 @@
 # 四仓统一对齐检查表与任务板
 
-状态锚点：`2026-04-10`
+状态锚点：`2026-04-11`
 
 ## 文档目的
 
@@ -28,7 +28,7 @@
 - 这是 `OPL docs` 下的内部参考文档，默认中文维护。
 - 它不替代各仓自己的 `README`、`contracts/project-truth/AGENTS.md`、`CURRENT_PROGRAM.md` 或 domain 内主线文档。
 - 它只作为内部参考同步面，不反向抬升为 `OPL` 公开主线真相。
-- 截至 `2026-04-10`，其中大部分合同层对齐项已经完成；下面保留的主要是“下一步仍要继续压实的行为面”。
+- 截至 `2026-04-11`，其中大部分合同层对齐项已经完成；下面保留的主要是“下一步仍要继续压实的行为面”。
 - 若与各仓 current truth 冲突，以各仓 current truth 为准。
 
 ## 一、当前统一结论
@@ -106,22 +106,22 @@
 
 ### 3. RedCube AI
 
-这条主线当前已经 absorb 到 `Phase 2 / workspace operator quickstart convergence`。
+这条主线当前已经 absorb 到 `Phase 2 / runtime watch locator integrity hardening`，并把后续 same-mainline continuation board 预冻结完成。
 
 具体继续项：
 
-- 当前 latest absorbed tranche 已把 `workspace doctor -> source intake / source research -> deliverable create -> deliverable audit -> deliverable run` 冻结成同一条 repo-verified operator quickstart route
+- 当前 absorbed provenance 已把 `workspace doctor -> source intake / source research -> deliverable create -> deliverable audit -> deliverable run` 冻结成同一条 repo-verified operator quickstart route
 - `workspace doctor` 继续只做诊断；brand-new workspace 的 canonical bootstrap writer 是 `source intake / source research`（`run_source_intake` / `source research`），不是独立 workspace-init surface
 - `Phase 2 / source-readiness deep research trigger + gate convergence` 继续作为 absorbed provenance 保留；`fd01266` 已把 quickstart 测试与 source-intake bootstrap flow 对齐
-- `619415f` 的 `phase_2_operator_surface_consistency_hardening` 仍未 absorbed；当前不得把它误写成 current truth
-- 当前没有已冻结的下一候选 tranche；若继续，必须先识别新的 same-mainline concrete delta，而不是把 quickstart 再写成等待 freeze 的 blocker
+- `e8146a1` 已把 verification surfaces 分层，`762ea4c` 已把 runtime-program state 迁回 repo-tracked truth
+- 当前已冻结 `phase_2_family_parity_autopilot_continuation_board`；若继续，应从 `phase_2_family_parity_governance_surface_convergence` 开始推进，而不是把 quickstart 再写成等待 freeze 的 blocker
 - 持续保持 `CLI / MCP / controller` 三字段语义与实现状态一致
 - 围绕 `ppt_deck`、`xiaohongshu` 等稳定 family 做手工测试
 - 仍不提前扩成更大的统一 runtime 或 OPL runtime owner
 
 ### 4. Med Auto Grant
 
-这条主线当前已经 absorb 到 post-R5A local runtime hardening current truth（`6277163` / `e8f9582` / `2c434b1` / `c3ba2a7`）。
+这条主线当前已经 absorb 到 post-R5A local runtime hardening current truth（`6277163` / `e8f9582` / `2c434b1` / `c3ba2a7` / `98df81f`）。
 
 具体继续项：
 
@@ -129,6 +129,7 @@
 - `stage-route-report` 继续承载 `verification_checkpoint / checkpoint_status`；post-R5A hardening 已把 canonical current-truth / walkthrough 路径锚回 root checkout，避免继续指向临时 worktree
 - canonical local walkthrough / output consistency current truth 已冻结（`e8f9582`），revised-workspace validator / operator alignment drift 已 closeout（`2c434b1`）
 - `build-hosted-contract-bundle` 覆盖既有 output 时，除 `grant_run_id / workspace_id / draft_id` 外，还必须校验 `execution_identity.program_id` 与 root-checkout `CURRENT_PROGRAM.program_id` 一致（`c3ba2a7`）
+- `98df81f` 已把 control-plane state 迁回 repo-tracked truth；当前不得再把 `.omx/**` 当成仓内活真相 owner
 - 当前不得回退成旧 `P4.B` 审计线；若继续，必须先有新的 concrete post-R5A local runtime hardening delta
 - 保持 formal-entry matrix 的诚实表达：
   - `CLI` 是当前正式入口
@@ -142,8 +143,8 @@
 当前最合理的统一推进顺序如下：
 
 1. 由 `one-person-lab` 持有 `Phase C` 的中央执行板、状态矩阵与任务板
-2. 把 `redcube-ai` 已 absorb 的 `Phase 2 / workspace operator quickstart convergence`、`fd01266` quickstart test alignment，以及 `workspace doctor` diagnostic-only + `source intake / source research` bootstrap-writer wording 同步进中央参考面；不把 `619415f` 写成已 absorbed current truth
-3. 把 `med-autogrant` 已 absorb 的 post-R5A root-checkout truth path anchoring（`6277163`）、canonical walkthrough / output consistency（`e8f9582`）、validator / operator alignment closeout（`2c434b1`）与 root `CURRENT_PROGRAM.program_id` fail-closed guard（`c3ba2a7`）同步进中央参考面，不回退旧 `P4.B`
+2. 把 `redcube-ai` 已 absorb 的 `Phase 2 / runtime watch locator integrity hardening`、`e8146a1` verification-surface split、`762ea4c` runtime-program state off OMX，以及 `phase_2_family_parity_autopilot_continuation_board` 同步进中央参考面
+3. 把 `med-autogrant` 已 absorb 的 post-R5A root-checkout truth path anchoring（`6277163`）、canonical walkthrough / output consistency（`e8f9582`）、validator / operator alignment closeout（`2c434b1`）、root `CURRENT_PROGRAM.program_id` fail-closed guard（`c3ba2a7`）与 `98df81f` control-plane state off OMX 同步进中央参考面，不回退旧 `P4.B`
 4. 让 `med-autoscience` 围绕 manual stabilization checklist、runtime_watch auto-recovery、publication gate closeout semantics 做 repo-side 稳定化，不重开新的架构 tranche；display 资产线继续独立于 runtime 主线
 5. 在至少两个业务仓的对象面、报告面和 gate 行为验证真正稳定后，再进入下一阶段
 

@@ -8,15 +8,15 @@
   "current_known_delta_families": [
     {
       "domain_id": "redcube",
-      "latest_absorbed_commit": "9cfe58b",
-      "delta_label": "runtime watch locator integrity hardening",
-      "required_central_effect": "central references must stop describing quickstart/operator consistency as the latest absorbed RedCube delta and instead record runtime-watch locator integrity as the current absorbed tranche"
+      "latest_absorbed_commit": "762ea4c",
+      "delta_label": "verification-surface split plus runtime-program state off omx with family-parity continuation board prefrozen",
+      "required_central_effect": "central references must stop describing quickstart or 9cfe58b alone as the latest absorbed RedCube edge, and instead reflect the runtime-watch closeout, layered verification surfaces, repo-local control-plane migration off OMX, and the prefrozen family-parity continuation board"
     },
     {
       "domain_id": "medautoscience",
-      "latest_absorbed_commit": "5366d18",
-      "delta_label": "publication-gate routing and managed supervisor watch hardening",
-      "required_central_effect": "central references must stop describing the repo-side hardening edge at 7444000 and instead carry the latest absorbed publication-gate / supervisor-watch follow-on truth while preserving the external-runtime blocker"
+      "latest_absorbed_commit": "6c64264",
+      "delta_label": "verification-surface split plus runtime/workspace repair priorities and workflow-entry retirement off omx",
+      "required_central_effect": "central references must stop describing 5366d18 alone as the latest MedAutoScience hardening edge, and instead carry the 9b5cea8 / 7ee19a8 / 6c64264 repo-side evidence pack while preserving the external-runtime blocker"
     }
   ],
   "in_scope": [

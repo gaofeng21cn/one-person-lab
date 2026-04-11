@@ -1,6 +1,6 @@
 # OPL Phase 2 生态同步 Owner Line Brief
 
-状态锚点：`2026-04-10`
+状态锚点：`2026-04-11`
 
 ## 文档目的
 
@@ -36,11 +36,11 @@
 
 当前这条线要同步的 admitted-domain delta，已经包括：
 
-- `RedCube AI` 当前 latest absorbed delta 已推进到 `9cfe58b` 的 `runtime watch locator integrity hardening`，不能再只停留在 quickstart/operator-surface wording；
-- `RedCube AI` 之前已吸收的 operator route truth 仍必须保留：`workspace doctor` 继续只做诊断，而 bootstrap writer 仍是 `source intake / source research`；
-- `MedAutoScience` 当前 latest absorbed repo-side hardening 已推进到 `5366d18`，不能再只停留在 `7444000`；
-- `MedAutoScience` 已冻结的 `manual stabilization checklist` 仍属于中央 sync 时必须保留的 repo-side truth；
-- `Med Auto Grant` 仍允许作为中央状态矩阵里的 signal-only / non-admitted status reference，但不参与 admitted-domain activation；若中央说明引用其本地 runtime baseline，也必须保留 `CURRENT_PROGRAM.program_id` 这类已冻结 fail-closed guard 只是 signal-only direction evidence，而不是 admission 事实。
+- `RedCube AI` 当前 latest absorbed same-mainline delta pack 已推进到 `e8146a1` 的 verification surface 分层与 `762ea4c` 的 repo-local runtime-program state off OMX；中央 sync 不得再只停留在 quickstart/operator-surface wording；
+- `RedCube AI` 当前已预冻结 `phase_2_family_parity_autopilot_continuation_board`，其第一条 tranche 是 `phase_2_family_parity_governance_surface_convergence`；中央 sync 需要把“已有 next tranche”写回顶层参考面，而不是继续写成 `next_tranche_candidate = null`；
+- `MedAutoScience` 当前 latest absorbed repo-side delta pack 已推进到 `9b5cea8`、`7ee19a8` 与 `6c64264`，不能再只停留在 `5366d18`；
+- `MedAutoScience` 已冻结的 `manual stabilization checklist`、verification-surface layering 与 runtime/workspace repair priorities 仍属于中央 sync 时必须保留的 repo-side truth；
+- `Med Auto Grant` 仍允许作为中央状态矩阵里的 signal-only / non-admitted status reference，但不参与 admitted-domain activation；若中央说明引用其本地 runtime baseline，应同步到 post-`R5.A` local runtime hardening 与 `98df81f` 的 control-plane state off OMX，而不是 admission 事实。
 
 换句话说，`OPL` 现在适合开的不是“更大平台实现线”，而是：
 

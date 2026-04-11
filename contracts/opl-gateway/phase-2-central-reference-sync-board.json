@@ -15,8 +15,8 @@
       "kind": "activation_package",
       "goal": "refresh the central execution board, status matrix, taskboard, and prompt library against the latest absorbed admitted-domain deltas before wider wording sync",
       "current_known_delta_families": [
-        "RedCube AI latest absorbed same-mainline delta: runtime watch locator integrity hardening (`9cfe58b`)",
-        "MedAutoScience latest absorbed repo-side hardening delta: publication-gate routing and managed supervisor watch (`5366d18`)"
+        "RedCube AI latest absorbed same-mainline delta pack: verification surfaces by test layer (`e8146a1`) plus runtime-program state off OMX (`762ea4c`), with `phase_2_family_parity_autopilot_continuation_board` now prefrozen",
+        "MedAutoScience latest absorbed repo-side hardening delta pack: verification surfaces by test layer (`9b5cea8`), runtime/workspace repair priorities (`7ee19a8`), and workflow-entry retirement off OMX (`6c64264`)"
       ]
     },
     {
