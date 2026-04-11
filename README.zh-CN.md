@@ -195,6 +195,14 @@
 - 状态迁移、审阅面与交付边界保持可审计
 - 允许从当前本地 host-agent 形态平滑走向未来托管式 Web runtime，而不改写 domain contract
 
+从长期产品形态看，这套 substrate 也构成了 `OPL` 演进成一组垂类在线 agent 产品的路径：
+
+- `OPL` 继续负责顶层 `Gateway / Federation`
+- shared runtime substrate 逐步承接共享运行合同
+- 各个 domain 仓继续承接自己的产品入口、workflow 与交付真相
+
+这里说的是演进方向，不等于当前已经存在统一平台 runtime 或统一托管入口
+
 在这套 substrate 之上，当前几个项目应被理解成不同场景下的 `Domain Harness OS`，而不是彼此无关的独立小项目：
 
 - `Med Auto Science`：医学 `Research Ops`

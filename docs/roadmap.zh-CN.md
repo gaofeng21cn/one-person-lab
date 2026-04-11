@@ -45,8 +45,10 @@
 - 只把 `route_request`、`build_handoff_payload`、`audit_routing_decision` 冻结为 planning-level contract 操作
 - 把唯一允许的成功 handoff 目标固定为 `domain_gateway`，并把禁止直达 domain harness 的 no-bypass 规则写成硬边界
 - 在当前 domain 仓库之上冻结 `Unified Harness Engineering Substrate` 这套共享语言，但不提前把它写成已经独立成型的公共代码框架
+- 把 shared runtime substrate v1 需要统一的对象先冻结清楚，至少包括 `runtime profile`、`session substrate`、`gateway runtime status`、`memory hook`、`delivery / cron`、`approval / interrupt`
 - 保持 `MedAutoScience` 明确为 `Research Ops` 的 domain surface
 - 保持 `RedCube AI` 明确为视觉交付的 domain surface
+- 先做“成熟的本地产品 runtime” pilot，再决定哪些实现值得回抽成共享 substrate，而不是先做统一平台 runtime
 - 把 `Agent-first` 加“当前 `Auto-only` 主线 + 未来 `HITL` 分层”这套原则带入后续候选 domain 的定义，而不是逐步漂移成 fixed-code-first 的产品线
 - 把已 absorb 的 `Phase 1 exit + next-stage activation package freeze` 继续显式保留为当前 `Minimal admitted-domain federation activation package` 的前序门槛，同时继续让所有 candidate path 停留在 admission、discovery readiness、routing readiness 与 handoff readiness 之下
 - 用清楚的任务边界与交付对象定义下一个候选 domain，并优先沿用当前 `task-topology + candidate-domain-backlog + domain-onboarding` 这条路径，而不是发明一层冗余中间控制面
@@ -70,11 +72,13 @@
 
 ## 更后续阶段
 
-只有当至少两个 domain surface 真正稳定后，`OPL` 才适合进入更完整的生态表达阶段，例如：
+只有当至少两个 domain surface 真正稳定，并且至少一个 domain 已经证明“成熟的本地产品 runtime”成立后，`OPL` 才适合进入更完整的生态表达阶段，例如：
 
 - 更正式的跨 domain 状态维护
 - 更强的顶层 gateway 公共入口
 - 更清楚的跨 domain 共享协议
+- 共享 runtime substrate 的回抽
+- 面向垂类场景的在线产品入口
 
 进入这一阶段的前提不是“想法很多”，而是“多个 domain surface 边界已经独立清楚”。
 
@@ -91,6 +95,7 @@
 - [OPL Governance / Audit Operating Surface](./references/opl-governance-audit-operating-surface.zh-CN.md)
 - [OPL Publish / Promotion Operating Surface](./references/opl-publish-promotion-operating-surface.zh-CN.md)
 - [生态四仓统一状态总表](./references/ecosystem-status-matrix.md)
+- [OPL 垂类在线 Agent 平台演进蓝图](./references/opl-vertical-online-agent-platform-roadmap.md)
 
 如果要查看这些已冻结 layers 如何以 contract-level composition 的方式拼起来，可参考 [OPL Gateway Example Corpus](./references/opl-gateway-example-corpus.zh-CN.md)。
 

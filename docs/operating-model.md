@@ -99,6 +99,26 @@ So the difference is not “two modes inside one repository.”
 It is whether a future higher-judgment product sits above the current `Auto-only` mainline while reusing the same stable contracts, objects, audit surfaces, and execution modules.
 `OPL` freezes that layering rule now, without claiming that any future `Human-in-the-loop` product has already been built.
 
+## Product Entry And Online Runtime
+
+The current repo-tracked formal entry still remains the local `TypeScript CLI`-first / read-only gateway baseline.
+That is the real entry today, but it should not be read as “the product will always depend on `Codex` as its only entry.”
+
+The more durable direction is:
+
+- keep local `CLI-first` as the current formal entry
+- keep `MCP` as the supported protocol layer
+- progressively add domain-owned product entry surfaces such as local product CLIs and future `Web / API / gateway` surfaces
+
+On that path:
+
+- top-level `OPL` continues to define the system family and federation language
+- the shared runtime substrate gradually owns the shared contracts required for long-running online execution
+- each domain repository continues to own its product entry, domain workflow, and delivery truth
+
+That is how the ecosystem can grow into multiple vertical online agent products on one substrate rather than one giant runtime that swallows every domain.
+The full direction is not implemented yet, but it is the right structure to keep tightening toward.
+
 ## Operating Principles
 
 At the top level, `OPL` follows these principles:

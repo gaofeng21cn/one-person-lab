@@ -98,6 +98,26 @@ Agent 主要负责：
 区别在于：未来是否会出现一个更高判断密度的上层产品，建立在当前 `Auto-only` 主线之上，并复用同一套稳定 contract、对象语义、审计面与执行模块。
 `OPL` 现在冻结的是这种分层规则，而不是宣称未来的 `Human-in-the-loop` 产品已经实现。
 
+## 产品入口与在线运行层
+
+当前 repo-tracked 的 formal entry，仍然是本地 `TypeScript CLI`-first / read-only gateway baseline。
+这是真实的当前入口，但它不应被理解成未来产品永远只能通过 `Codex` 接入。
+
+更合理的长期方向是：
+
+- 当前继续以本地 `CLI-first` 作为 formal entry
+- `MCP` 继续作为 supported protocol layer
+- 后续逐步补齐 domain 自己的产品入口，例如本地产品 CLI、future `Web / API / gateway` 入口
+
+在这条演进线上：
+
+- 顶层 `OPL` 继续定义产品体系与 federation 语言
+- shared runtime substrate 逐步承接长期在线运行所需的共享合同
+- 各个 domain 仓继续承接自己的产品入口、domain workflow 与交付真相
+
+因此，未来更像是“多个垂类在线 agent 产品复用同一 substrate”，而不是“一个顶层巨型 runtime 吞掉所有 domain”。
+这条方向当前还没有全部实现，但现在应该按这个结构推进。
+
 ## 运行原则
 
 `OPL` 顶层遵循这些原则：

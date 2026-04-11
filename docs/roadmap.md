@@ -45,8 +45,10 @@ The next phase should prioritize:
 - freezing `route_request`, `build_handoff_payload`, and `audit_routing_decision` as planning-level contract operations only
 - keeping the only allowed successful handoff target at `domain_gateway`, with a hard no-bypass rule against direct domain-harness targeting
 - freezing the `Unified Harness Engineering Substrate` language above the current domain repositories without pretending that a shared public code framework already exists
+- freezing the shared runtime substrate v1 object set clearly, at least around `runtime profile`, `session substrate`, `gateway runtime status`, `memory hook`, `delivery / cron`, and `approval / interrupt`
 - keeping `MedAutoScience` explicit as the `Research Ops` domain surface
 - keeping `RedCube AI` explicit as the visual-deliverable domain surface
+- proving a “mature local product runtime” pilot before deciding which implementation should be pulled back into a shared substrate, rather than jumping directly to a unified platform runtime
 - carrying the `Agent-first` plus `Auto-only current repo + future HITL layering` doctrine into future candidate-domain definitions instead of drifting toward fixed-code-first product lines
 - keeping the absorbed `Phase 1 exit + next-stage activation package freeze` explicit as the predecessor gate for the current `Minimal admitted-domain federation activation package`, while keeping every candidate path below admission, discovery readiness, routing readiness, and handoff readiness
 - defining the next candidate domains through clear task boundaries and delivery objects, using the current `task-topology + candidate-domain-backlog + domain-onboarding` path rather than inventing a redundant intermediate control surface
@@ -71,11 +73,13 @@ That absorbed federation package still strengthens top-level federation wording 
 
 ## Later Phase
 
-Only after at least two domain surfaces are truly stable should `OPL` move toward a fuller ecosystem expression, such as:
+Only after at least two domain surfaces are truly stable, and at least one domain has proven a “mature local product runtime,” should `OPL` move toward a fuller ecosystem expression, such as:
 
 - more formal cross-domain status maintenance
 - a stronger public entry surface for the top-level gateway
 - clearer shared protocols across domains
+- pulling back a shared runtime substrate
+- online product entry surfaces for vertical scenarios
 
 The condition for this phase is not “many ideas.”
 It is “multiple domain surfaces with clear independent boundaries.”
@@ -93,6 +97,7 @@ For the detailed gateway rollout path, see:
 - [OPL Governance / Audit Operating Surface](./references/opl-governance-audit-operating-surface.md)
 - [OPL Publish / Promotion Operating Surface](./references/opl-publish-promotion-operating-surface.md)
 - [Ecosystem Status Matrix](./references/ecosystem-status-matrix.md)
+- [OPL Vertical Online Agent Platform Roadmap](./references/opl-vertical-online-agent-platform-roadmap.md)
 
 For canonical contract-level compositions across these frozen layers, see [OPL Gateway Example Corpus](./references/opl-gateway-example-corpus.md).
 

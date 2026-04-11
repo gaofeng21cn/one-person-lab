@@ -65,6 +65,7 @@
 - `references/host-agent-runtime-contract.md`
 - `references/managed-runtime-migration-readiness-checklist.md`
 - `references/hermes-agent-runtime-substrate-benchmark.md`
+- `references/opl-vertical-online-agent-platform-roadmap.md`
 - `references/development-operating-model.md`
 - `references/contract-convergence-v1-decision-note.md`
 - `references/opl-phase2-ecosystem-sync-owner-line.md`

@@ -199,6 +199,14 @@ It freezes a narrower and more durable set of shared rules:
 - auditable state transitions, review surfaces, and delivery boundaries
 - deployment portability from the current local host-agent shape to future managed web runtimes
 
+In long-term product terms, this substrate is also the path for `OPL` to evolve into a family of vertical online agent products:
+
+- `OPL` continues to own the top-level `Gateway / Federation`
+- the shared runtime substrate gradually owns the shared runtime contracts
+- each domain repository continues to own its own product entry, workflow, and delivery truth
+
+That is an evolution direction, not a claim that a unified platform runtime or hosted entry surface already exists today.
+
 Under that substrate, the current domain systems should be understood as separate `Domain Harness OS` implementations rather than as unrelated projects:
 
 - `Med Auto Science` for medical `Research Ops`

@@ -20,7 +20,13 @@
 - `docs/operating-model.zh-CN.md`
 - `docs/shared-foundation.zh-CN.md`
 - `docs/unified-harness-engineering-substrate.zh-CN.md`
-- `contracts/project-truth/AGENTS.md`
+- `AGENTS.md`
+- `contracts/README.md`
+- `contracts/opl-gateway/README.zh-CN.md`
+
+当前围绕“如何把这些 substrate 判断继续推成 `OPL` 的垂类在线 agent 平台演进路线”的阶段化落地蓝图，见：
+
+- `docs/references/opl-vertical-online-agent-platform-roadmap.md`
 
 ## 对标范围
 

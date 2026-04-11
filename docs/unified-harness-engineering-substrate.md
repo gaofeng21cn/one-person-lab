@@ -79,6 +79,30 @@ The same substrate should remain compatible with:
 
 Changing the hosting location should not require rewriting the substrate or collapsing domain boundaries.
 
+## From Shared Substrate To A Vertical Online Agent Platform Family
+
+The long-term product meaning of this substrate is not to rewrite `OPL` into a general long-running agent platform.
+It is to let the `OPL` ecosystem evolve toward a family of vertical online agent products.
+
+In that structure:
+
+- `OPL`
+  - remains the top-level `Gateway / Federation`
+- the shared runtime substrate
+  - gradually owns shared runtime contracts such as `runtime profile`, `session substrate`, `gateway runtime status`, `memory hook`, `delivery / cron`, and `approval / interrupt`
+- each `Domain Harness OS`
+  - keeps its own formal entry, domain objects, gates, audit surfaces, delivery semantics, and canonical truth
+
+That means the more honest direction is not “force all three domain repositories into one execution kernel now.”
+It is:
+
+- freeze the shared runtime substrate language first
+- build a mature local product-runtime pilot in the right domain
+- then pull reusable substrate implementation back out of the pilot
+
+This remains a future direction.
+It does not mean a unified platform runtime already exists today, and it does not make `OPL` the current runtime owner.
+
 ## Current Domain Mapping
 
 The current `OPL` family can be read as:

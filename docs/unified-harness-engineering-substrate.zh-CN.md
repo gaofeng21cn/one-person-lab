@@ -79,6 +79,28 @@ Human / Agent
 
 也就是说，未来如果从“装在用户电脑上”迁移到“运行在平台上”，不应因此重写 substrate，也不应因此压平 domain 边界。
 
+## 从共享 substrate 到垂类在线 Agent 平台族
+
+这套 substrate 的长期产品意义，不是把 `OPL` 改写成通用长期在线 agent 平台，而是让 `OPL` 逐步具备演进成“垂类在线 agent 平台族”的能力。
+
+在这个理想结构里：
+
+- `OPL`
+  - 继续负责顶层 `Gateway / Federation`
+- shared runtime substrate
+  - 逐步承接 `runtime profile`、`session substrate`、`gateway runtime status`、`memory hook`、`delivery / cron`、`approval / interrupt` 这类共享运行合同
+- 各 `Domain Harness OS`
+  - 继续持有自己的 formal entry、domain object、gate、audit、delivery 与 canonical truth
+
+因此，后续更合理的方向不是“直接把三个业务仓改造成同一种执行内核”，而是：
+
+- 先冻结共享 runtime substrate 语言
+- 再在合适的 domain 中做成熟的本地产品 runtime pilot
+- 再从 pilot 回抽可复用的 substrate 实现
+
+这条演进线当前仍属于未来方向。
+它不等于当前已经存在统一平台 runtime，也不等于 `OPL` 已经成为 runtime owner。
+
 ## 当前 Domain Mapping
 
 当前 `OPL` 体系可以理解成：
