@@ -128,8 +128,7 @@
 验证要求：
 - npm run lint
 - npm run typecheck
-- npm run build
-- npm test
+- npm run test:full
 - git diff --check
 - 用 rg 复核 runtime owner / no-bypass / signal-only / candidate-domain / G2 / G3 / handoff-ready 等关键口径没有漂移
 
@@ -197,8 +196,10 @@ med-autoscience 当前主线不适合继续自动打开新的 runtime architectu
 验证要求：
 - git diff --check
 - npm run typecheck
-- node --test tests/workspace-operator-quickstart.test.js tests/source-intake.test.js tests/source-research.test.js tests/deliverable-review-loop.test.js tests/phase-2-source-readiness-deep-research-trigger-gate-convergence.test.js tests/source-readiness-deep-research-gate.test.js tests/phase-2-behavior-convergence.test.js
-- npm test
+- npm run test:fast
+- npm run test:integration
+- npm run test:e2e
+- npm run test:meta
 
 结束状态：
 - 若形成新的 honest delta，则自动收口到 ready to commit / commit closeout / absorbed to main
@@ -256,13 +257,9 @@ med-autoscience 当前主线不适合继续自动打开新的 runtime architectu
 - 不进入 same-repo HITL
 
 验证要求：
-- python3 -m unittest discover -s tests -p 'test_program_control_surfaces.py'
-- python3 -m unittest discover -s tests -p 'test_local_runtime.py'
-- python3 -m unittest discover -s tests -p 'test_artifact_bundle.py'
-- python3 -m unittest discover -s tests -p 'test_revision_executor.py'
-- python3 -m unittest discover -s tests -p 'test_final_package.py'
-- python3 -m unittest discover -s tests -p 'test_hosted_contract_bundle.py'
-- python3 -m unittest discover -s tests -p 'test_*.py'
+- make test-meta
+- make test-cli-smoke
+- make test-full
 - current canonical CLI examples
 - git diff --check
 - 确认 CLI / reports / docs / tests 对 grant_run_id 与 post-R5A local runtime truth 仍一致

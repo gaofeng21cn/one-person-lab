@@ -10,9 +10,11 @@
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "lint": "node ./scripts/lint.mjs",
-    "test:src": "NODE_NO_WARNINGS=1 node --experimental-strip-types --test tests/src/**/*.test.ts",
-    "test:dist": "NODE_NO_WARNINGS=1 node --test tests/built/**/*.test.mjs",
-    "test": "npm run test:src && npm run build && npm run test:dist"
+    "test:fast": "NODE_NO_WARNINGS=1 node --experimental-strip-types --test tests/src/cli.test.ts",
+    "test:meta": "NODE_NO_WARNINGS=1 node --experimental-strip-types --test tests/src/opl-activation-package-derived-surface-sync.test.ts tests/src/opl-candidate-domain-backlog-execution-model-sync.test.ts tests/src/opl-doc-surface-alignment.test.ts tests/src/opl-domain-onboarding-execution-model-alignment.test.ts tests/src/opl-minimal-admitted-domain-federation-activation-package.test.ts tests/src/opl-phase-1-exit-activation-package.test.ts tests/src/opl-phase-2-central-reference-sync-board.test.ts tests/src/opl-public-truth-docs.test.ts tests/src/verification-command-surfaces.test.ts",
+    "test:artifact": "npm run build && NODE_NO_WARNINGS=1 node --test tests/built/**/*.test.mjs",
+    "test:full": "npm run test:fast && npm run test:meta && npm run test:artifact",
+    "test": "npm run test:fast"
   },
   "devDependencies": {
     "@types/node": "^24.5.2",

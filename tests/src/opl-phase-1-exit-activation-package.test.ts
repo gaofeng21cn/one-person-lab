@@ -67,8 +67,7 @@ test('phase-1 exit activation package freezes completed tranches, deferred items
   assert.ok(pkg.minimal_next_stage_tranche.scope.some((item: string) => /already admitted domains/i.test(item)));
   assert.ok(pkg.minimal_next_stage_tranche.non_goals.some((item: string) => /no routed-action runtime/i.test(item)));
   assert.ok(pkg.minimal_next_stage_tranche.non_goals.some((item: string) => /no Grant\/Review\/Thesis admission/i.test(item)));
-  assert.ok(pkg.minimal_next_stage_tranche.verification_requirements.includes('npm test'));
-  assert.ok(pkg.minimal_next_stage_tranche.verification_requirements.includes('NODE_NO_WARNINGS=1 node --test tests/built/cli.test.mjs'));
+  assert.ok(pkg.minimal_next_stage_tranche.verification_requirements.includes('npm run test:full'));
 
   for (const text of [doc, docZh]) {
     assert.match(text, /Phase 1 \/ Review Ops candidate-domain backlog and onboarding-package hardening/);

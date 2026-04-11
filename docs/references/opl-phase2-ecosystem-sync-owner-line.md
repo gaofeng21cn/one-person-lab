@@ -122,10 +122,8 @@
 - `git diff --check`
 - `npm run lint`
 - `npm run typecheck`
-- `npm run build`
-- `npm test`
-- `NODE_NO_WARNINGS=1 node --test tests/built/cli.test.mjs`
-- `NODE_NO_WARNINGS=1 node --experimental-strip-types --test tests/src/opl-activation-package-derived-surface-sync.test.ts tests/src/opl-minimal-admitted-domain-federation-activation-package.test.ts tests/src/opl-public-truth-docs.test.ts`
+- `npm run test:meta`
+- `npm run test:artifact`
 - focused `rg` audit：
   - `runtime owner`
   - `no-bypass`

@@ -54,8 +54,7 @@ test('minimal admitted-domain federation activation package is frozen as an acti
   assert.ok(pkg.non_goals.some((item: string) => /no routed-action runtime/i.test(item)));
   assert.ok(pkg.non_goals.some((item: string) => /no Grant\/Review\/Thesis admission/i.test(item)));
   assert.ok(pkg.non_goals.some((item: string) => /no runtime-owner promotion/i.test(item)));
-  assert.ok(pkg.verification_requirements.includes('npm test'));
-  assert.ok(pkg.verification_requirements.includes('NODE_NO_WARNINGS=1 node --test tests/built/cli.test.mjs'));
+  assert.ok(pkg.verification_requirements.includes('npm run test:full'));
 
   for (const text of [doc, docZh]) {
     assert.match(text, /Minimal admitted-domain federation activation package/);
