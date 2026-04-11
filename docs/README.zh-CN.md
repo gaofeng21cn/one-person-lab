@@ -8,6 +8,9 @@
 1. AI / 维护者核心工作集
 2. 四层公开文档体系
 
+如果你只是想把握当前公开真相与活跃主线，默认停在“核心工作集 + 第一层 + 第二层”即可。
+第三层统一通过 [参考级索引](./references/README.zh-CN.md) 进入，不再把参考文档平铺成默认阅读面。
+
 ## AI / 维护者核心工作集
 
 在开始改仓库前，AI 和维护者应优先读取这些文件：
@@ -52,13 +55,19 @@
 
 这一层继续保留在仓库中，但只承担审核、验收、示例、索引或边界检查作用。
 它们不能反过来改写 `OPL` 的默认公开主线。
-为了让 `docs/` 根目录保持可读，这一层的文档现统一收拢到 `docs/references/`。
+为了让 `docs/` 根目录保持可读，这一层的文档统一收拢到 `docs/references/`，并由单独索引入口管理。
 
-### 当前参考面
+### 默认入口
 
-- `references/ecosystem-status-matrix.md`
+- [参考级索引](./references/README.zh-CN.md)
 - `references/contract-convergence-v1-execution-board.md`
-- `references/host-agent-runtime-contract.md`
+- `references/ecosystem-status-matrix.md`
+- `references/hermes-agent-runtime-substrate-benchmark.md`
+- `references/opl-phase-2-central-reference-sync-board.md`
+- `references/opl-phase-2-admitted-domain-delta-intake-refresh.md`
+
+### 常用参考束
+
 - `references/opl-gateway-rollout*`
 - `references/opl-gateway-acceptance-test-spec*`
 - `references/opl-candidate-domain-backlog*`
@@ -68,20 +77,14 @@
 - `references/opl-surface-review-matrix*`
 - `references/opl-governance-audit-operating-surface*`
 - `references/opl-publish-promotion-operating-surface*`
-
-### 背景、intake 与审计参考
-
 - `references/opl-gateway-example-corpus*`
 - `references/opl-routed-safety-example-corpus*`
 - `references/opl-operating-example-corpus*`
 - `references/opl-operating-record-catalog*`
 - `references/managed-runtime-migration-readiness-checklist.md`
-- `references/hermes-agent-runtime-substrate-benchmark.md`
-- `references/opl-vertical-online-agent-platform-roadmap.md`
 - `references/contract-convergence-v1-decision-note.md`
 - `references/opl-phase2-ecosystem-sync-owner-line.md`
-- `references/opl-phase-2-central-reference-sync-board.md`
-- `references/opl-phase-2-admitted-domain-delta-intake-refresh.md`
+- `references/opl-vertical-online-agent-platform-roadmap.md`
 
 ### 历史迁移归档
 
@@ -101,7 +104,7 @@
 
 - AI / 维护者核心工作集用于快速回答项目目标、当前状态、边界与关键决策，避免每次都从整套公开面重新爬梳。
 - 第一层和第二层属于公开文档，因此必须同时提供英文 `.md` 与中文 `.zh-CN.md` 镜像，并保持同步更新。
-- 第三层允许继续公开或仓库跟踪，但始终属于参考级文档，不应继续挤占根 README 的默认阅读路径。
+- 第三层允许继续公开或仓库跟踪，但始终属于参考级文档，不应继续挤占根 README 或 `docs/README*` 的默认阅读路径。
 - 历史迁移参考可以保留，但不得再被写成当前默认 workflow。
 - 第四层属于内部工作历史，默认只保留中文；除非有明确理由，不再额外扩成双语公开面。
 - 避免无意义的中英混写：叙述尽量保持单一语言，英文只保留给固定术语、文件路径、命令名、schema 与代码标识符。

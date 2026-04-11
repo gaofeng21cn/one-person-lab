@@ -23,7 +23,7 @@
     </td>
     <td width="33%" valign="top">
       <strong>联邦状态</strong><br/>
-      <code>Research Foundry -> Med Auto Science</code> 是当前 Active 的 Research Ops 主线；<code>Grant Foundry -> Med Auto Grant</code> 仍作为未来医学 Grant Ops surface 的 top-level signal / domain-direction evidence 保持公开 scaffold；<code>RedCube AI</code> 已是当前 admitted 的视觉交付 surface
+      <code>Research Foundry -> Med Auto Science</code> 是当前 Active 的 Research Ops 主线；<code>Grant Foundry -> Med Auto Grant</code> 在 OPL 顶层仍是 non-admitted 的公开 scaffold / domain-direction evidence，但其仓内已经形成本地运行基线；<code>RedCube AI</code> 已是当前 admitted 的视觉交付 surface
     </td>
   </tr>
 </table>
@@ -112,8 +112,8 @@
     </td>
     <td width="20%" valign="top">
       <strong>Grant Ops</strong><br/>
-      <code>Planned</code><br/>
-      通过 <code>Grant Foundry -> Med Auto Grant</code> 提供公开 scaffold / top-level signal
+      <code>公开信号 + 本地运行基线</code><br/>
+      通过 <code>Grant Foundry -> Med Auto Grant</code> 提供公开 scaffold / top-level signal；其仓内已形成本地运行基线
     </td>
     <td width="20%" valign="top">
       <strong>Thesis Ops</strong><br/>

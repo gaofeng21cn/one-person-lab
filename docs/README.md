@@ -8,6 +8,9 @@ To keep the public surface stable while still giving AI and maintainers a compac
 1. a fixed AI / maintainer core working set
 2. the public four-layer documentation system
 
+If you only need the current public truth and active mainline, stop at the core working set plus Layers 1 and 2.
+Layer 3 should now be entered through the dedicated [reference index](./references/README.md) instead of being treated as a flat default reading path.
+
 ## AI / Maintainer Core Working Set
 
 These are the first files an AI or maintainer should read before touching the repository state:
@@ -52,13 +55,19 @@ They define gateway semantics, shared-foundation boundaries, and formal contract
 
 These documents stay repo-tracked, but they are not the default public reading path.
 They support review, acceptance, indexing, examples, or boundary inspection and must not be allowed to redefine the main storyline.
-All Layer 3 docs now live under `docs/references/` so the docs root stays readable.
+All Layer 3 docs now live under `docs/references/`, with a dedicated index so the docs root stays readable.
 
-### Active reference surfaces
+### Default entry
 
-- `references/ecosystem-status-matrix.md` (Chinese-only internal reference)
+- [Reference index](./references/README.md)
 - `references/contract-convergence-v1-execution-board.md` (Chinese-only internal reference)
-- `references/host-agent-runtime-contract.md` (Chinese-only internal reference)
+- `references/ecosystem-status-matrix.md` (Chinese-only internal reference)
+- `references/hermes-agent-runtime-substrate-benchmark.md` (Chinese-only internal reference)
+- `references/opl-phase-2-central-reference-sync-board.md` (Chinese-only internal reference)
+- `references/opl-phase-2-admitted-domain-delta-intake-refresh.md` (Chinese-only internal reference)
+
+### Common reference bundles
+
 - `references/opl-gateway-rollout*`
 - `references/opl-gateway-acceptance-test-spec*`
 - `references/opl-candidate-domain-backlog*`
@@ -68,20 +77,14 @@ All Layer 3 docs now live under `docs/references/` so the docs root stays readab
 - `references/opl-surface-review-matrix*`
 - `references/opl-governance-audit-operating-surface*`
 - `references/opl-publish-promotion-operating-surface*`
-
-### Background, intake, and audit references
-
 - `references/opl-gateway-example-corpus*`
 - `references/opl-routed-safety-example-corpus*`
 - `references/opl-operating-example-corpus*`
 - `references/opl-operating-record-catalog*`
 - `references/managed-runtime-migration-readiness-checklist.md` (Chinese-only internal reference)
-- `references/hermes-agent-runtime-substrate-benchmark.md` (Chinese-only internal reference)
-- `references/opl-vertical-online-agent-platform-roadmap.md` (Chinese-only internal reference)
 - `references/contract-convergence-v1-decision-note.md` (Chinese-only internal reference)
 - `references/opl-phase2-ecosystem-sync-owner-line.md` (Chinese-only internal reference)
-- `references/opl-phase-2-central-reference-sync-board.md` (Chinese-only internal reference)
-- `references/opl-phase-2-admitted-domain-delta-intake-refresh.md` (Chinese-only internal reference)
+- `references/opl-vertical-online-agent-platform-roadmap.md` (Chinese-only internal reference)
 
 ### Historical migration archives
 
@@ -101,7 +104,7 @@ They explain why a freeze happened, but they are not the living truth surface fo
 
 - The AI / maintainer core working set exists to answer project goal, current state, boundaries, and key decisions quickly without forcing readers through the entire public surface.
 - Layers 1 and 2 are public surfaces, so every document there must have synchronized English `.md` and Chinese `.zh-CN.md` mirrors.
-- Layer 3 may remain public or repo-tracked, but it is always reference-grade and must not crowd the default reading path in the root README.
+- Layer 3 may remain public or repo-tracked, but it is always reference-grade and must not crowd the default reading path in the root README or `docs/README*`.
 - Historical migration references stay readable, but they must never be presented as the default current workflow.
 - Layer 4 is internal working history and should default to Chinese-only unless there is an explicit reason to publish a bilingual mirror.
 - Avoid unnecessary mixed-language prose: keep narrative in one language, and reserve English for fixed terms, file paths, command names, schemas, and code identifiers.

@@ -23,7 +23,7 @@
     </td>
     <td width="33%" valign="top">
       <strong>Federation State</strong><br/>
-      <code>Research Foundry -> Med Auto Science</code> is the active Research Ops line; <code>Grant Foundry -> Med Auto Grant</code> remains a public top-level signal / domain-direction scaffold for a future medical Grant Ops surface; <code>RedCube AI</code> is now the admitted visual-deliverable surface
+      <code>Research Foundry -> Med Auto Science</code> is the active Research Ops line; <code>Grant Foundry -> Med Auto Grant</code> remains a non-admitted public scaffold / domain-direction evidence surface at the OPL layer, while its own repository now already carries a local runtime baseline; <code>RedCube AI</code> is now the admitted visual-deliverable surface
     </td>
   </tr>
 </table>
@@ -116,8 +116,8 @@
     </td>
     <td width="20%" valign="top">
       <strong>Grant Ops</strong><br/>
-      <code>Planned</code><br/>
-      public scaffold / top-level signal via <code>Grant Foundry -> Med Auto Grant</code>
+      <code>Signal + Local Runtime</code><br/>
+      public scaffold / top-level signal via <code>Grant Foundry -> Med Auto Grant</code>, with a repo-local runtime baseline already formed in its own repository
     </td>
     <td width="20%" valign="top">
       <strong>Thesis Ops</strong><br/>
