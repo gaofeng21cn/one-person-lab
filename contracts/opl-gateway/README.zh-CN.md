@@ -143,7 +143,7 @@ repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review 
 - 在先证明存在真实缺失边界之前，不额外新增独立的 candidate-domain-definition contract surface；当前 `task-topology + candidate-domain-backlog + domain-onboarding` 的组合就是现行定义路径
 
 `Grant Ops`、`Review Ops`、`Thesis Ops` 等 planned workstream，在对应 domain 边界明确冻结之前，继续停留在 candidate-definition 路径上。
-如果当前公开文档里提到 `Grant Foundry -> Med Auto Grant`，那也继续表示 future Grant Ops 路径上的 top-level signal / domain-direction evidence。
+如果当前公开文档里提到 `Grant Foundry -> Med Auto Grant`，应把它表达成活跃的 grant-domain 业务仓路径，同时明确它在顶层 federation admission / handoff wording 上仍单独门控；它不会自动等于 admitted、discovery-ready、routed-action-ready 或 handoff-ready surface。
 
 ## Materialization 说明
 

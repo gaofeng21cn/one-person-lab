@@ -7,15 +7,16 @@
 - 当前产品入口真相：用户仍主要通过 `Codex` + 本地 `CLI / MCP` 间接触达 `OPL`；`OPL` 还不是 direct product entry。三个业务仓有的已具备本地 `CLI` / runtime baseline，但整体仍更接近 `operator entry` / `agent entry`，而不是成熟 `product entry`
 - 当前家族级入口真相：四仓都还没有成熟的 `product entry`；当前真正存在的是不同程度的 `operator entry` 与 `agent entry`
 - 当前产品边界：`OPL` 负责顶层 gateway / federation / shared substrate contract，三个 domain 仓继续各自维护自己的产品 runtime
-- 当前 runtime 真相：四个仓都还没有真正完成上游 `Hermes-Agent` 集成；任何 repo-local shim / pilot / scaffold 都不能被写成“已接入 Hermes-Agent”
+- 当前统一协作语义：`Hermes` 负责产品级长期在线 runtime substrate / orchestration；`OPL` 与 domain 仓继续持有 gateway、authority、对象合同与审计真相；具体单步执行保持 executor-adapter 可插拔，不要求三个 domain 仓共享同一种执行脑
+- 当前 runtime 真相：四个仓并不处在同一集成深度。`Med Auto Grant` 已切到真实上游 `Hermes-Agent` runtime substrate；`Med Auto Science` 已完成 external runtime bring-up，当前开发宿主上的 honest next step 是 real adapter cutover；`RedCube AI` 仍处于 upstream pilot prep；`OPL` 自己继续只持有 gateway / federation / handoff contract，而不持有 domain runtime owner 身份。任何 repo-local shim / pilot / scaffold 都不能被写成“已完成真实集成”
 - 当前已冻结的 integration choice：`Hermes Kernel Integration` 采用 `external kernel, managed by OPL product packaging`；不选 fork / vendor，也不把手工安装 Hermes 变成用户前置要求
 - 历史执行面：OMX 已退场，仅保留历史入口
 
-## 当前 admitted domains
+## 当前家族仓与联邦地位
 
 - `Research Foundry -> Med Auto Science`：活跃 `Research Ops`
 - `RedCube AI`：活跃 visual-deliverable / `Presentation Ops`
-- `Grant Foundry -> Med Auto Grant`：future-facing public signal
+- `Grant Foundry -> Med Auto Grant`：活跃 author-side / proposal-facing `Grant Ops` 业务仓；但当前 OPL 顶层 public federation wording 仍需与其 admission / handoff state 分开维护
 
 ## 当前基线（repo-tracked）
 
@@ -40,8 +41,9 @@
 2. 统一四仓对“上游 `Hermes-Agent` / repo-local shim / pilot / scaffold”的命名边界，不再允许假集成叙事。
 3. 先在更轻的业务仓冻结真实的上游 `Hermes-Agent` pilot 条件，同时补齐 `OPL bootstrap / launcher` 所需的 product-entry contract。
 4. 让三个业务仓同步定义自己的 lightweight direct entry，不再长期停留在“只有 CLI / MCP 可被 agent 调用”的状态。
-5. 在上游 pilot 成立前，不把 `OPL` 写成已拥有独立托管 runtime；在 pilot 成立后，再推进 direct product entry。
-6. 避免 reference-grade 与历史迁移文档继续挤占公开主线。
+5. 推动各 domain 仓把 `runtime substrate / gateway authority / executor adapter` 三层边界写成同一套 family 语义，不再有人把“接入 Hermes”误解成“强制替换全部执行器”。
+6. 在上游 pilot 成立前，不把 `OPL` 写成已拥有独立托管 runtime；在 pilot 成立后，再推进 direct product entry。
+7. 避免 reference-grade 与历史迁移文档继续挤占公开主线。
 
 ## 长线目标（规划层）
 

@@ -16,7 +16,7 @@
 
 目标产品链路应是：
 
-`User -> OPL Product Entry -> OPL Gateway -> Hermes Kernel -> Domain Adapter -> Domain Gateway -> Domain Harness OS -> Domain Repository`
+`User -> OPL Product Entry -> OPL Gateway -> Hermes Kernel -> Domain Adapter -> Domain Gateway -> Domain Harness OS -> Executor Adapter -> Concrete Executor`
 
 其中：
 
@@ -26,6 +26,10 @@
   - 负责长期在线 runtime substrate，例如 session、memory、scheduler、interrupt / resume、delivery / cron
 - `Domain Adapter`
   - 负责把通用 runtime substrate 接入具体 domain contract，而不是重写 domain truth
+- `Executor Adapter`
+  - 负责把 domain 内部动作路由到具体执行器，例如受控 backend、Hermes-native agent、Codex、Claude Code、Python/CLI toolchain
+- `Concrete Executor`
+  - 负责完成单个步骤或局部工作，不自动上升为顶层 runtime substrate owner
 
 同样的缺口也存在于三个业务仓：
 
@@ -55,6 +59,35 @@
   - family-level 总入口
 - `Domain Product Entry`
   - domain-scoped 轻量入口
+
+## Hermes Kernel 与具体执行器的协作边界
+
+`Hermes Kernel` 在家族级架构里负责的是：
+
+- 长期在线 session / run substrate
+- gateway / messaging / cron / interrupt / resume
+- memory、scheduler、delivery 这类通用 runtime 能力
+
+它不自动等于“唯一执行脑”。
+
+`OPL` 与各 domain 仓继续负责：
+
+- gateway / handoff / authority 边界
+- object model 与 domain durable surface
+- stage / gate / audit / publication 等业务判断
+- executor routing contract
+
+因此全家族统一的不是“每一步都必须由 Hermes 自己执行”，而是：
+
+- 由 `Hermes` 统一 runtime substrate / orchestration
+- 由 domain 程序统一 authority / contract / audit truth
+- 由 `Executor Adapter` 在每个 domain 内按 route 选择具体执行器
+
+这允许系列项目在不改写顶层 runtime 语义的前提下，保留不同 domain 的最优执行方式。例如：
+
+- 医学研究线可继续通过受控 research backend 承载高复杂度 inner-loop execution
+- visual / grant 线可逐步把 repo-local helper、CLI pipeline 或 host-agent route 收敛到同一 substrate 下
+- 未来若某一类任务已经证明 `Hermes-native executor` 不降级，也可以单独迁过去，而不是一次性替换全仓执行器
 
 二者之间的最小 handoff envelope 应保持一致，至少包括：
 
@@ -120,11 +153,11 @@
 
 这层保留审计、验收、示例、计划与历史材料，但不反向改写当前主线。
 
-## 当前 admitted domains
+## 当前家族仓与联邦地位
 
 - `Research Foundry -> Med Auto Science`：活跃 `Research Ops` 线
 - `RedCube AI`：活跃 visual-deliverable / `Presentation Ops` 入口
-- `Grant Foundry -> Med Auto Grant`：public signal / future direction
+- `Grant Foundry -> Med Auto Grant`：活跃 author-side / proposal-facing `Grant Ops` 业务仓；但顶层 public federation contract 仍需与它的 admission / handoff state 分开表述
 
 ## 文档组织原则
 

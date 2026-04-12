@@ -18,7 +18,7 @@
 - [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) 是当前已 admitted 的视觉交付 domain gateway 与 harness
 - `ppt_deck` 是当前最直接映射到 `Presentation Ops` 的 family
 - `Grant Ops`、`Thesis Ops`、`Review Ops` 仍处于定义阶段
-- `Grant Foundry -> Med Auto Grant` 当前提供的是 future medical `Grant Ops` 的 public scaffold / top-level signal / domain-direction evidence；下一步里程碑是 registry material、`G2` discovery readiness、`G3` routed-action readiness 与 domain-onboarding evidence
+- `Grant Foundry -> Med Auto Grant` 已是当前活跃的医学 `Grant Ops` 业务仓路径；在 OPL 顶层，它的 federation admission / handoff wording 仍单独门控，而可见里程碑继续是 registry material、`G2` discovery readiness、`G3` routed-action readiness 与 domain-onboarding evidence
 - `OPL` 顶层的统一目标执行范式是 `Agent-first`：当前 domain 仓统一按 `Auto-only` 主线理解，而未来 `Human-in-the-loop` 产品应作为兼容 sibling 或 upper-layer product 复用同一 substrate，而不是把当前仓强行改成同仓双模
 - 当前活跃开发宿主是 Codex-only 本地会话，而优选的未来产品 runtime substrate 方向，仍然是先在某个 domain 仓里诚实证明真实的上游 `Hermes-Agent` 集成
 - `OPL` 当前还不是 direct product entry；用户仍主要通过 Codex + 本地 `CLI / MCP` 间接触达它
@@ -63,7 +63,7 @@
 - `Review Ops`
 - `Thesis Ops`
 
-这个顺序本来就只表示边界定义的先后，现在已经被吸收到当前 `Phase 1 exit + next-stage activation package freeze` 中。`Grant Ops` 已经拥有通过 `Grant Foundry -> Med Auto Grant` 表达的 signal-and-scaffold 路径，后续里程碑聚焦在 registry material、discovery readiness、routing readiness 与 onboarding evidence。
+这个顺序本来就只表示边界定义的先后，现在已经被吸收到当前 `Phase 1 exit + next-stage activation package freeze` 中。`Grant Ops` 已经拥有通过 `Grant Foundry -> Med Auto Grant` 表达的活跃业务仓路径，但其顶层 federation admission / handoff wording 仍单独门控；后续里程碑聚焦在 registry material、discovery readiness、routing readiness 与 onboarding evidence。
 `Review Ops` 继续作为 under-definition semantic bundle 推进，review truth 保持 domain-owned，并沿 `execution_model`、`discovery_readiness`、`routing_readiness` 与 `cross_domain_wording` 四类 package 收口。
 `Thesis Ops` 也沿同一组 package 推进，同时保持自身的 dissertation / defense 角色，与 `Research Ops` 的 manuscript flow 以及 `Presentation Ops` / `RedCube AI` 的 deck production 清楚分层。
 当前已 absorb 的前序 follow-on 是 `Phase 1 exit + next-stage activation package freeze`；也正是这个前序门槛在“两条 admitted domain surface 已稳定”之后允许当前 `Minimal admitted-domain federation activation package` 被激活。

@@ -102,7 +102,7 @@ formal 收录、`G2` discovery readiness 与 `G3` routed-action readiness 仍然
 - 当前生命周期状态：under-definition candidate workstream
 - formal 收录路径：等待正式 domain admission 与注册后的 `G1` workstream/domain mapping
 - discovery / routing 路径：等待 `G2` discovery readiness、`G3` routed-action readiness 与 domain handoff 资格
-- 当前公开界面：`Grant Foundry -> Med Auto Grant` 继续提供 future medical `Grant Ops` 的 public scaffold / top-level signal / domain-direction evidence
+- 当前公开界面：`Grant Foundry -> Med Auto Grant` 当前指向活跃的医学 `Grant Ops` 业务仓路径，但它在顶层 federation admission / handoff 上仍单独门控
 - 已跟踪的下一步：registry material、discovery evidence、routing evidence 与 handoff evidence 继续在 [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.zh-CN.md) 中收口
 - 路由规则：任何未来的 successful handoff 仍然只能 targeting `domain_gateway`，并继续禁止 direct harness bypass
 - 当前顶层处理方式：在真实 domain owner 被收录前，清楚的请求会显式返回 `unknown_domain`，且不会构建 handoff payload

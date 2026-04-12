@@ -18,12 +18,12 @@ What is already clear today:
 - [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) is the currently admitted visual-deliverable domain gateway and harness
 - `ppt_deck` is the family that currently maps most directly to `Presentation Ops`
 - `Grant Ops`, `Thesis Ops`, and `Review Ops` remain under definition
-- `Grant Foundry -> Med Auto Grant` currently provides the public scaffold / top-level signal / domain-direction evidence for a future medical `Grant Ops` domain; its next milestones are registry material, `G2` discovery readiness, `G3` routed-action readiness, and domain-onboarding evidence
+- `Grant Foundry -> Med Auto Grant` is the active medical `Grant Ops` repository line; at the OPL layer, its top-level federation admission / handoff wording is still separately gated, and its visible milestones remain registry material, `G2` discovery readiness, `G3` routed-action readiness, and domain-onboarding evidence
 - the shared target operating pattern is `Agent-first`: current domain repositories stay `Auto-only`, while any future `Human-in-the-loop` product should reuse the same substrate as a compatible sibling or upper-layer product rather than forcing same-repo dual-mode logic
 - the current active development host is Codex-only local sessions, while the preferred future product-runtime substrate direction remains a true upstream `Hermes-Agent` integration proved inside a domain repository first
 - `OPL` is not yet a direct product entry surface; users still mainly reach it through Codex plus the local `CLI / MCP` surfaces
 - the frozen top-level integration choice is `external kernel, managed by OPL product packaging`: do not fork `Hermes-Agent`, and do not make user-managed Hermes installation the product prerequisite
-- no domain repository has landed a true upstream `Hermes-Agent` integration yet; the ecosystem is still in a truth-reset and migration-design phase rather than a landed shared-runtime phase
+- the ecosystem is no longer at one uniform `Hermes-Agent` stage: `Med Auto Grant` has landed a true upstream substrate, `Med Auto Science` has completed external runtime bring-up and is moving toward real adapter cutover, `RedCube AI` remains in pilot prep, and `OPL` itself still stays above domain runtime ownership
 - the current repository already has a runnable local `TypeScript CLI`-first / read-only gateway baseline
 - that repo-tracked CLI-first / read-only baseline remains the current `OPL` `Phase 1` formal entry contract and public system surface
 - the current top-level formal entry at the OPL layer remains that local `TypeScript CLI`-first / read-only gateway surface rather than a launcher or runtime-owner entry
@@ -64,7 +64,7 @@ The `Phase 1` candidate-domain closeout order is frozen as:
 - `Thesis Ops`
 
 This ordering is a boundary-definition sequence that has now been frozen into the current `Phase 1 exit + next-stage activation package freeze`.
-`Grant Ops` already has a frozen signal-and-scaffold lane through `Grant Foundry -> Med Auto Grant`, and its next visible milestones are registry material, discovery readiness, routing readiness, and onboarding evidence.
+`Grant Ops` already has an active repository line through `Grant Foundry -> Med Auto Grant`; its top-level federation admission / handoff wording remains separately gated, and its next visible milestones are registry material, discovery readiness, routing readiness, and onboarding evidence.
 `Review Ops` remains an under-definition semantic bundle, keeps review truth domain-owned, and continues through the explicit `execution_model`, `discovery_readiness`, `routing_readiness`, and `cross_domain_wording` packages.
 `Thesis Ops` follows the same package set while keeping its dissertation / defense role distinct from `Research Ops` manuscript flow and from `Presentation Ops` / `RedCube AI` deck production.
 The absorbed predecessor follow-on is `Phase 1 exit + next-stage activation package freeze`; that predecessor gate is what allowed the current `Minimal admitted-domain federation activation package` to activate once the two-admitted-domain threshold turned green.

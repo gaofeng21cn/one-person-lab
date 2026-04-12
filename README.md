@@ -23,7 +23,7 @@
     </td>
     <td width="33%" valign="top">
       <strong>Federation State</strong><br/>
-      <code>Research Foundry -> Med Auto Science</code> is the active Research Ops line; <code>Grant Foundry -> Med Auto Grant</code> remains a non-admitted public scaffold / domain-direction evidence surface at the OPL layer, while its own repository now already carries a local runtime baseline; <code>RedCube AI</code> is now the admitted visual-deliverable surface
+      <code>Research Foundry -> Med Auto Science</code> is the active Research Ops line; <code>Grant Foundry -> Med Auto Grant</code> is the active medical Grant Ops repository line, while its top-level federation admission / handoff wording remains separately gated at the OPL layer; <code>RedCube AI</code> is now the admitted visual-deliverable surface
     </td>
   </tr>
 </table>
@@ -117,7 +117,7 @@
     <td width="20%" valign="top">
       <strong>Grant Ops</strong><br/>
       <code>Signal + Local Runtime</code><br/>
-      public scaffold / top-level signal via <code>Grant Foundry -> Med Auto Grant</code>, with a repo-local runtime baseline already formed in its own repository
+      an active grant-domain repository line via <code>Grant Foundry -> Med Auto Grant</code>, with top-level federation admission / handoff wording still separately gated
     </td>
     <td width="20%" valign="top">
       <strong>Thesis Ops</strong><br/>
@@ -204,7 +204,7 @@ Those two contracts split the shared layer more clearly:
 In practice:
 
 - the preferred long-line implementation direction for the shared runtime layer is the upstream `Hermes-Agent`, with repo-local "Hermes"-named packages serving as transition scaffolds and pilots today
-- as of `2026-04-11`, none of the four repositories has landed a true upstream `Hermes-Agent` integration yet
+- the four repositories are no longer at the same integration depth: `Med Auto Grant` has landed a real upstream `Hermes-Agent` runtime substrate, `Med Auto Science` has completed external runtime bring-up and is moving toward real adapter cutover, `RedCube AI` remains in upstream pilot prep, and `OPL` itself stays above domain runtime ownership
 - the current repo states are still transitional:
   - `Med Auto Science` uses a repo-side seam while real long-running execution still stays in the controlled `MedDeepScientist` backend
   - `RedCube AI` currently carries a repo-local managed-runtime pilot
@@ -233,7 +233,7 @@ Under that substrate, the current domain systems should be understood as separat
 
 - `Med Auto Science` for medical `Research Ops`
 - `RedCube AI` for visual deliverables and the current `Presentation Ops` family entry
-- `Med Auto Grant` as the future medical `Grant Ops` domain harness direction
+- `Med Auto Grant` as the active medical `Grant Ops` repository line, with top-level federation admission and handoff wording still tracked separately
 
 `OPL` itself stays at the top-level gateway and federation layer above those domain gateways and `Domain Harness OS` implementations.
 
@@ -252,11 +252,11 @@ The current truth is still transitional:
 - `OPL` is not yet a direct product entry surface
 - users still mainly reach `OPL` through `Codex` plus the local `CLI / MCP` surfaces
 - the same product-entry gap also exists in the domain repositories: some already have usable local `CLI` or runtime baselines, but they still read more like operator / agent entry surfaces than finished user-facing product entries
-- none of the four repositories has landed a true upstream `Hermes-Agent` integration yet
+- the four repositories are no longer at the same integration depth: `Med Auto Grant` has landed a real upstream `Hermes-Agent` runtime substrate, `Med Auto Science` has completed external runtime bring-up and is moving toward real adapter cutover, `RedCube AI` remains in upstream pilot prep, and `OPL` itself stays above domain runtime ownership
 
 The target product chain is:
 
-`User -> OPL Product Entry -> OPL Gateway -> Hermes Kernel -> Domain Adapter -> Domain Gateway -> Domain Harness OS`
+`User -> OPL Product Entry -> OPL Gateway -> Hermes Kernel -> Domain Adapter -> Domain Gateway -> Domain Harness OS -> Executor Adapter -> Concrete Executor`
 
 That top-level chain is only half of the real target.
 The domain repositories should not remain internal-only runtime surfaces forever.
@@ -339,7 +339,7 @@ Current mapped surfaces:
 
 Current public candidate scaffold:
 
-- `Grant Ops` -> `Grant Foundry` -> `Med Auto Grant` as a future medical surface, currently only as public scaffold / top-level signal / domain-direction evidence
+- `Grant Ops` -> `Grant Foundry` -> `Med Auto Grant` as the active medical grant-domain repository line, with top-level federation admission / handoff wording still separately gated
 
 Important boundary:
 
@@ -362,16 +362,15 @@ Its current role is:
 
 ### Med Auto Grant
 
-[`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) is the current future medical `Grant Ops` domain harness direction under the `OPL` umbrella.
-Its own repository already carries a local runtime baseline, while the `OPL` federation layer currently tracks it as public scaffold / top-level signal / domain-direction evidence.
+[`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) is the active medical `Grant Ops` repository line under the `OPL` umbrella.
+Its own repository has already landed a real upstream `Hermes-Agent` runtime substrate and a lightweight product-entry shell, while the `OPL` federation layer still keeps its top-level admission / handoff wording separately gated.
 
 Its current role is:
 
-- the public scaffold and top-level signal for the medical implementation of `Grant Foundry`
-- domain-direction evidence for the future author-side, proposal-facing `Grant Ops` medical surface
-- the place where the first medical `NSFC` generic application mainline and local runtime baseline are being frozen
-- current federation status: public scaffold / top-level signal / domain-direction evidence
-- next admission milestones: registry material, `G2` discovery readiness, `G3` routed-action readiness, and domain-onboarding evidence
+- the active author-side, proposal-facing medical `Grant Ops` repository line
+- the place where the medical `NSFC` generic application mainline, real upstream substrate, and lightweight product-entry shell are currently being frozen
+- the domain surface whose top-level federation admission / handoff wording still remains separately gated at the `OPL` layer
+- the current bridge between repo-real grant runtime progress and future family-level federation wording
 
 ### RedCube AI
 
@@ -394,7 +393,7 @@ That activation is justified by two admitted domain surfaces that are now repo-t
 - `RedCube AI` for `presentation_ops`
 
 That absorbed federation package currently covers the two admitted surfaces above.
-`Grant Foundry -> Med Auto Grant` stays tracked as the public scaffold for a future grant domain, while `Review Ops` and `Thesis Ops` stay in under-definition onboarding lanes.
+`Grant Foundry -> Med Auto Grant` stays tracked as an active grant-domain repository line whose top-level federation admission / handoff wording remains separately gated, while `Review Ops` and `Thesis Ops` stay in under-definition onboarding lanes.
 The top-level formal entry remains the local `TypeScript CLI`-first / read-only gateway surface.
 No new active follow-on tranche is currently open: the honest top-level state is a central-sync stop until an admitted-domain repository lands a new absorbed delta or the central reference surfaces drift.
 
@@ -421,7 +420,7 @@ As of `2026-04-10`, the repository still has a runnable local `TypeScript CLI`-f
 The completed `Phase 1 / G2 release-closeout` has already closed the `G2 stable public baseline` into the single stable repo-tracked public entry.
 That baseline remains the current `OPL` `Phase 1` formal entry contract and public system surface.
 The repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` keeps `G3` at a planning-only gate focused on contract wording, handoff shape, and boundary validation.
-The repo-tracked `Phase 1` candidate-domain closeout order is frozen as `Review Ops` then `Thesis Ops`: both candidate paths stay below admission / discovery / routing / handoff readiness, while `Grant Foundry -> Med Auto Grant` stays on the signal-and-scaffold lane.
+The repo-tracked `Phase 1` candidate-domain closeout order is frozen as `Review Ops` then `Thesis Ops`: both candidate paths stay below admission / discovery / routing / handoff readiness, while `Grant Foundry -> Med Auto Grant` remains an active grant-domain repository line whose top-level federation admission / handoff wording is still separately gated.
 The absorbed predecessor gate is `Phase 1 exit + next-stage activation package freeze`, and the absorbed current federation package is `Minimal admitted-domain federation activation package`, which strengthens federation wording for `MedAutoScience` + `RedCube AI`.
 The current repo-tracked truth is an honest central-sync stop.
 

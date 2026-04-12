@@ -103,7 +103,7 @@ Current boundary status:
 - current lifecycle state: under-definition candidate workstream
 - admission path: waiting for formal domain admission and registered `G1` workstream/domain mapping
 - discovery and routing path: waiting for `G2` discovery readiness, `G3` routed-action readiness, and domain handoff eligibility
-- public surface: `Grant Foundry -> Med Auto Grant` currently contributes public scaffold / top-level signal / domain-direction evidence for the future medical `Grant Ops` domain
+- public surface: `Grant Foundry -> Med Auto Grant` currently points to the active medical `Grant Ops` repository line, while its top-level federation admission / handoff wording remains separately gated
 - tracked next steps: registry material, discovery evidence, routing evidence, and handoff evidence are tracked in [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.md)
 - routing rule: any future successful handoff may target only `domain_gateway`, with no direct harness bypass
 - current top-level handling: clear requests surface as `unknown_domain` with no handoff payload until a real domain owner is admitted

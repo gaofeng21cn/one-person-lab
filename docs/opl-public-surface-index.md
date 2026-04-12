@@ -108,7 +108,7 @@ Important boundary:
 - `xiaohongshu` may still route to `redcube` and stays a separate visual family at the OPL layer
 - the current `Minimal admitted-domain federation activation package` applies to the already admitted domain surfaces only, namely `MedAutoScience` and `RedCube AI`
 - `Grant Ops`, `Review Ops`, and `Thesis Ops` currently appear here as under-definition workstreams on candidate/onboarding lanes
-- `Grant Foundry -> Med Auto Grant` currently stays on the public scaffold / top-level signal / domain-direction evidence lane for a future grant domain
+- `Grant Foundry -> Med Auto Grant` currently points to an active grant-domain repository line, while its top-level federation admission / handoff wording remains separately gated
 - the current admission blockers for those under-definition workstreams live in the candidate-domain backlog and remain below the onboarding gate
 
 ## Reading Rule
@@ -119,7 +119,7 @@ If a surface is domain-owned, `OPL` indexes its public entry role while runtime,
 If a surface is `opl_operating_model`, `opl_shared_foundation`, or `opl_shared_foundation_ownership`, it serves the shared-foundation boundary/reference layer.
 If a surface is `opl_task_map`, under-definition workstreams stay on candidate/onboarding lanes until their registry and onboarding evidence land.
 If a surface is `opl_candidate_domain_backlog`, it serves as the admission-blocker reference for those lanes.
-If a public scaffold such as `Grant Foundry -> Med Auto Grant` is mentioned, it stays on the top-level signal / domain-direction evidence lane for a future candidate direction.
+If `Grant Foundry -> Med Auto Grant` is mentioned in public wording, it should be framed as an active grant-domain repository line whose top-level federation admission / handoff wording is still separately gated.
 Any future follow-on route remains `domain_gateway`-only and follows the no-bypass rule against direct harness targeting.
 If a surface is the routed-action prose or schema layer, it stays at the planning-contract / planning-dependency layer after the completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening`.
 If a surface is the acceptance, matrix, or example layer, it stays in the discoverability/review companion layer.

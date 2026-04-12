@@ -32,7 +32,7 @@ test('public truth docs use execution visibility wording instead of runtime moni
   assert.doesNotMatch(sharedFoundationZh, /运行监控/);
 });
 
-test('grant scaffold stays public and non-admitting across tracked public docs', () => {
+test('grant public docs describe an active repository line with separately gated federation wording', () => {
   const readme = read('README.md');
   const readmeZh = read('README.zh-CN.md');
   const taskMap = read('docs/task-map.md');
@@ -41,27 +41,29 @@ test('grant scaffold stays public and non-admitting across tracked public docs',
   const roadmapZh = read('docs/roadmap.zh-CN.md');
 
   assert.match(readme, /Grant Foundry -> Med Auto Grant/);
-  assert.match(readme, /public scaffold/i);
-  assert.match(readme, /current federation status: public scaffold|next admission milestones/i);
+  assert.match(readme, /active medical Grant Ops repository line|active grant-domain repository line/i);
+  assert.match(readme, /separately gated/i);
 
   assert.match(readmeZh, /Grant Foundry -> Med Auto Grant/);
-  assert.match(readmeZh, /公开 scaffold/);
-  assert.match(readmeZh, /当前联邦状态：public scaffold|下一步准入里程碑/);
+  assert.match(readmeZh, /活跃的医学 `Grant Ops` 业务仓|活跃的 grant-domain 业务仓路径/);
+  assert.match(readmeZh, /单独门控/);
 
   assert.match(taskMap, /current lifecycle state: under-definition candidate workstream/i);
   assert.match(taskMap, /discovery and routing path: .*`?G2`? discovery readiness/i);
   assert.match(taskMap, /discovery and routing path: .*`?G3`? routed-action readiness/i);
   assert.match(taskMap, /unknown_domain/);
+  assert.match(taskMap, /active medical `Grant Ops` repository line|top-level federation admission \/ handoff wording remains separately gated/i);
 
   assert.match(taskMapZh, /当前生命周期状态：under-definition candidate workstream/);
   assert.match(taskMapZh, /discovery \/ routing 路径：等待 `?G2`? discovery readiness/);
   assert.match(taskMapZh, /discovery \/ routing 路径：.*`?G3`? routed-action readiness/);
   assert.match(taskMapZh, /unknown_domain/);
+  assert.match(taskMapZh, /活跃的医学 `Grant Ops` 业务仓路径|顶层 federation admission \/ handoff 上仍单独门控/);
 
   assert.match(roadmap, /Grant Ops`, `Thesis Ops`, and `Review Ops` remain under definition/i);
   assert.match(roadmap, /Grant Foundry -> Med Auto Grant/i);
-  assert.match(roadmap, /top-level signal/i);
-  assert.match(roadmap, /domain-direction evidence/i);
+  assert.match(roadmap, /active medical `Grant Ops` repository line|active repository line/i);
+  assert.match(roadmap, /separately gated/i);
   assert.match(
     roadmap,
     /next visible milestones are registry material, discovery readiness, routing readiness, and onboarding evidence|next milestones are registry material, `?G2`? discovery readiness, `?G3`? routed-action readiness/i,
@@ -69,8 +71,8 @@ test('grant scaffold stays public and non-admitting across tracked public docs',
 
   assert.match(roadmapZh, /`Grant Ops`、`Thesis Ops`、`Review Ops` 仍处于定义阶段/);
   assert.match(roadmapZh, /Grant Foundry -> Med Auto Grant/);
-  assert.match(roadmapZh, /top-level signal|顶层信号/);
-  assert.match(roadmapZh, /domain-direction evidence|领域方向证据/);
+  assert.match(roadmapZh, /活跃的医学 `Grant Ops` 业务仓路径|活跃业务仓路径/);
+  assert.match(roadmapZh, /单独门控/);
   assert.match(
     roadmapZh,
     /后续里程碑聚焦在 registry material、discovery readiness、routing readiness 与 onboarding evidence|下一步里程碑是 registry material、`?G2`? discovery readiness、`?G3`? routed-action readiness 与 domain-onboarding evidence/,
@@ -92,7 +94,7 @@ test('tracked admission guards still require explicit execution-model evidence',
   assert.match(candidateBacklogJson, /promote_to_g3_without_explicit_route_evidence/i);
 });
 
-test('grant candidate path keeps med auto grant at signal-only evidence instead of admission or readiness', () => {
+test('grant candidate path keeps federation admission and handoff separately gated even when the repo line is active', () => {
   const roadmap = read('docs/roadmap.md');
   const roadmapZh = read('docs/roadmap.zh-CN.md');
   const taskMap = read('docs/task-map.md');
@@ -110,22 +112,22 @@ test('grant candidate path keeps med auto grant at signal-only evidence instead 
 
   for (const doc of [roadmap, taskMap, backlog, onboarding, publicSurfaceIndex, gatewayContracts, acceptance]) {
     assert.match(doc, /Grant Foundry -> Med Auto Grant/i);
-    assert.match(doc, /top-level signal/i);
-    assert.match(doc, /domain-direction evidence/i);
-    assert.match(doc, /public scaffold|candidate|onboarding|future Grant Ops path|future grant domain/i);
+    assert.match(doc, /top-level signal|active .*repository line|separately gated/i);
+    assert.match(doc, /domain-direction evidence|federation admission \/ handoff wording/i);
+    assert.match(doc, /public scaffold|candidate|onboarding|future Grant Ops path|future grant domain|active .*repository line/i);
     assert.match(doc, /`?G2`? discovery readiness|discovery readiness|discovery \/ routing readiness|discovery-ready|candidate\/onboarding lanes|below the onboarding gate|candidate-definition lanes/i);
     assert.match(doc, /`?G3`? routed-action readiness|routing readiness|discovery \/ routing readiness|routed-action-ready|candidate\/onboarding lanes|below the onboarding gate|candidate-definition lanes/i);
-    assert.match(doc, /handoff-ready|handoff readiness|handoff evidence|domain handoff|domain-onboarding evidence|follow-on route|below the onboarding gate/i);
+    assert.match(doc, /handoff-ready|handoff readiness|handoff evidence|domain handoff|domain-onboarding evidence|follow-on route|below the onboarding gate|separately gated/i);
   }
 
   for (const doc of [roadmapZh, taskMapZh, backlogZh, onboardingZh, publicSurfaceIndexZh, gatewayContractsZh, acceptanceZh]) {
     assert.match(doc, /Grant Foundry -> Med Auto Grant/);
-    assert.match(doc, /top-level signal|顶层信号/);
-    assert.match(doc, /domain-direction evidence|领域方向证据/);
-    assert.match(doc, /公开 scaffold|候选|onboarding|future Grant Ops 路径|future grant domain 路径|candidate-definition/);
+    assert.match(doc, /top-level signal|顶层信号|活跃.*业务仓路径|单独门控/);
+    assert.match(doc, /domain-direction evidence|领域方向证据|admission \/ handoff wording|顶层 federation admission \/ handoff 上仍单独门控/);
+    assert.match(doc, /公开 scaffold|候选|onboarding|future Grant Ops 路径|future grant domain 路径|candidate-definition|活跃.*业务仓路径/);
     assert.match(doc, /`?G2`? discovery readiness|discovery readiness|discovery \/ routing readiness|`?G2`? discovery-ready|candidate ?\/ ?onboarding 路径|位于 onboarding gate 之下|candidate-definition 路径/);
     assert.match(doc, /`?G3`? routed-action readiness|routing readiness|discovery \/ routing readiness|`?G3`? routed-action-ready|candidate ?\/ ?onboarding 路径|位于 onboarding gate 之下|candidate-definition 路径/);
-    assert.match(doc, /handoff-ready|handoff readiness|handoff evidence|domain handoff|handoff 资格|domain-onboarding evidence|follow-on route|位于 onboarding gate 之下/);
+    assert.match(doc, /handoff-ready|handoff readiness|handoff evidence|domain handoff|handoff 资格|domain-onboarding evidence|follow-on route|位于 onboarding gate 之下|单独门控/);
   }
 });
 

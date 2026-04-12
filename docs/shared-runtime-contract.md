@@ -99,7 +99,7 @@ As of the current public mainline, the true state remains:
 - the current active development host is still Codex-only local sessions
 - the current public OPL entry remains the local `TypeScript CLI`-first / read-only gateway surface
 - the `Shared Runtime Contract` is still being frozen and progressively landed
-- none of the four repositories has landed a true upstream `Hermes-Agent` integration yet
+- the four repositories are no longer at the same integration depth: `Med Auto Grant` has landed a real upstream `Hermes-Agent` runtime substrate, `Med Auto Science` has completed external runtime bring-up and is entering real adapter cutover, `RedCube AI` remains in upstream pilot prep, and `OPL` itself stays at the top-level gateway / federation layer
 - an upstream `Hermes-Agent` runtime substrate remains the preferred future implementation direction for this contract, not a landed public fact
 
 ## Implementation Boundary

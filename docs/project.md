@@ -19,6 +19,7 @@
 
 - `OPL` 负责顶层 gateway / federation 语言，而各 domain 仓继续负责自己的 runtime。
 - `OPL` 维护共享边界、任务语义与公开 contract surface。
+- `OPL` 统一的是 runtime substrate、gateway/handoff envelope 与 authority 边界，不强制三个 domain 仓共享同一种具体执行器。
 - 历史 `Codex Host / OMX` 分工保留在历史材料里，不再承担当前主线角色。
 
 ## 默认入口

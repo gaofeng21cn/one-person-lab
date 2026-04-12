@@ -99,7 +99,7 @@
 - 当前活跃开发宿主仍是 Codex-only 本地会话
 - 当前公开的 OPL 入口仍是本地 `TypeScript CLI`-first / read-only gateway surface
 - `Shared Runtime Contract` 还处于冻结与逐步落地阶段
-- 四个仓都还没有真正完成上游 `Hermes-Agent` 集成
+- 四个仓已经不处在同一集成深度：`Med Auto Grant` 已落地真实上游 `Hermes-Agent` runtime substrate，`Med Auto Science` 已完成 external runtime bring-up 并进入 real adapter cutover 前态，`RedCube AI` 仍在 upstream pilot prep，而 `OPL` 自身继续停留在顶层 gateway / federation 层
 - 上游 `Hermes-Agent` 运行底座仍是这份合同优选的未来实现方向，而不是已经落地的公开事实
 
 ## 实现边界

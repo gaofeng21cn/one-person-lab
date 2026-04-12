@@ -145,7 +145,7 @@ This directory includes:
 - no separate candidate-domain-definition contract surface beyond the current `task-topology + candidate-domain-backlog + domain-onboarding` composition unless a real missing boundary is first proven
 
 Planned workstreams such as `Grant Ops`, `Review Ops`, and `Thesis Ops` remain on candidate-definition paths until their domain boundaries are explicitly frozen.
-If the current public docs mention `Grant Foundry -> Med Auto Grant`, that mention stays on the top-level signal / domain-direction evidence lane for a future Grant Ops path.
+If the current public docs mention `Grant Foundry -> Med Auto Grant`, that mention should be framed as an active grant-domain repository line whose top-level federation admission / handoff wording is still separately gated; it does not automatically count as an admitted, discovery-ready, routed-action-ready, or handoff-ready surface.
 
 ## Materialization note
 
