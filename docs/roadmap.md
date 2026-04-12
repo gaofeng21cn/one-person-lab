@@ -22,6 +22,7 @@ What is already clear today:
 - the shared target operating pattern is `Agent-first`: current domain repositories stay `Auto-only`, while any future `Human-in-the-loop` product should reuse the same substrate as a compatible sibling or upper-layer product rather than forcing same-repo dual-mode logic
 - the current active development host is Codex-only local sessions, while the preferred future product-runtime substrate direction remains a true upstream `Hermes-Agent` integration proved inside a domain repository first
 - `OPL` now has a local direct product-entry shell whose default front door is `opl`; `opl <request...>` acts as quick ask, and `opl doctor / ask / chat / resume / sessions / logs / repair-hermes-gateway` remain the explicit CLI surface; hosted / web entry is still future work
+- the hosted / web front-desk benchmark is now frozen: `LibreChat-first` is the shortest pilot path, while the long-line target remains an `OPL`-owned web front desk
 - the frozen top-level integration choice is `external kernel, managed by OPL product packaging`: do not fork `Hermes-Agent`, and do not make user-managed Hermes installation the product prerequisite
 - the ecosystem is no longer at one uniform `Hermes-Agent` stage: `Med Auto Grant` has landed a true upstream substrate, `Med Auto Science` has completed external runtime bring-up and is moving toward real adapter cutover, `RedCube AI` remains in pilot prep, and `OPL` itself still stays above domain runtime ownership
 - the current repository already has a runnable local `TypeScript CLI`-first / read-only gateway baseline
@@ -58,6 +59,7 @@ The next phase should prioritize:
 - defining the next candidate domains through clear task boundaries and delivery objects, using the current `task-topology + candidate-domain-backlog + domain-onboarding` path
 - hardening the landed local product-entry shell so it stays service-safe, Hermes-backed, and clearly separated from the read-only gateway contract surface
 - extending that landed local shell toward stronger `OPL bootstrap / launcher` responsibility so the future entry remains `OPL`-owned even when the runtime kernel stays external
+- carrying the hosted / web front-desk route as `LibreChat-first pilot -> OPL-owned web front desk` instead of treating a generic chat shell as the final product identity
 
 The `Phase 1` candidate-domain closeout order is frozen as:
 
@@ -86,6 +88,7 @@ Only after at least two domain surfaces are truly stable, and at least one domai
 - pulling back shared cross-domain formal behavior contracts
 - online product entry surfaces for vertical scenarios
 - a direct `OPL` product entry backed by an external kernel managed through `OPL` product packaging
+- a hosted / web `OPL` front desk that starts from the frozen pilot route but converges back to an `OPL`-owned branded entry
 
 The entrance condition for this phase is multiple domain surfaces with clear independent boundaries.
 

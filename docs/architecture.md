@@ -23,6 +23,7 @@
   - 提供 landed local shell 的会话与 runtime 运维界面
 
 但它还不是 hosted / web 形态的完整产品前台。
+当前这层 hosted / web 缺口也已经冻结了优先路线：短期先走 `LibreChat-first` 的 pilot 壳，长期仍回到 `OPL` 自有 web front desk。
 同时，`Phase 1` 的 read-only gateway commands 仍然是顶层联邦真相面的稳定 formal contract surface。
 
 目标产品链路应是：
@@ -130,6 +131,8 @@
 
 - `docs/references/opl-product-entry-and-hermes-kernel-integration.md`
 - `docs/references/family-product-entry-and-domain-handoff-architecture.md`
+- `docs/references/opl-hosted-web-frontdesk-benchmark.md`
+- `docs/references/family-lightweight-direct-entry-rollout-board.md`
 
 ## 结构角色
 

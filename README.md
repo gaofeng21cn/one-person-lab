@@ -255,6 +255,7 @@ The current truth is still transitional, but it has moved forward:
 - `opl doctor`, `opl ask`, `opl chat`, `opl resume`, `opl sessions`, `opl logs`, and `opl repair-hermes-gateway` remain the explicit product-entry and runtime-ops command surface
 - users no longer need to start from `Codex` just to reach the top-level `OPL` surface locally
 - this landed product entry is still local CLI-first only; the hosted / web front door is still future work
+- the hosted / web benchmark is now frozen: the shortest-path pilot is `LibreChat-first`, while the long-line target remains an `OPL`-owned web front desk; `Chatbot UI` is too thin to act as the main hosted base
 - the same maturity gap still exists in the domain repositories: some already have usable local `CLI` or runtime baselines, but they still read more like operator / agent entry surfaces than finished user-facing product entries
 - the four repositories are no longer at the same integration depth: `Med Auto Grant` has landed a real upstream `Hermes-Agent` runtime substrate, `Med Auto Science` has completed external runtime bring-up and is moving toward real adapter cutover, `RedCube AI` remains in upstream pilot prep, and `OPL` itself stays above domain runtime ownership while now owning the local family-level entry shell
 
@@ -309,6 +310,8 @@ The same logic should later apply to the admitted domain repositories as lightwe
 
 For the detailed comparison between fork / user-managed install / managed external-kernel integration, see [OPL Product Entry And Hermes Kernel Integration](docs/references/opl-product-entry-and-hermes-kernel-integration.md).
 For the family-level entry stack and the `OPL -> domain` handoff architecture, see [Family Product Entry And Domain Handoff Architecture](docs/references/family-product-entry-and-domain-handoff-architecture.md).
+For the current hosted / web front-desk benchmark and why `LibreChat-first` beats `Chatbot UI` for the first pilot, see [OPL Hosted / Web Front Desk Benchmark](docs/references/opl-hosted-web-frontdesk-benchmark.md).
+For the family-level rollout order of `OPL` plus the three domain direct-entry surfaces, see [Family Lightweight Direct Entry Rollout Board](docs/references/family-lightweight-direct-entry-rollout-board.md).
 
 ## Shared Operating Pattern
 

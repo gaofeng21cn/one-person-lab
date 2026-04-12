@@ -55,3 +55,33 @@
 ### 决策：目标形态优先于历史路线
 
 原因：历史规划、过渡方案和旧执行口径可以保留为背景材料，但不能继续主导当前投入方向。对 `OPL` 系列来说，一旦新的 target topology 已经明确，新增工作就应默认服务目标形态，把旧路线降级为迁移桥、兼容层或回归对照。
+
+### 决策：hosted / web 前台短期走 `LibreChat-first`
+
+原因：`OPL` 现在缺的是“最快做出第一版可用 hosted / web 前台”，而不是再从零发明一个聊天前端。对 `OPL` 当前需要的 `front desk + session + handoff + runtime ops` 组合来说，`Chatbot UI` 太薄，`Open WebUI` 和 `LobeChat` 的产品形态都更重。`LibreChat` 最适合作为短期 pilot 壳。
+
+影响：
+
+- `Chatbot UI` 不作为 `OPL` hosted 主前台基座
+- hosted / web pilot 优先采用 `LibreChat-first`
+- 这个选择只代表“最快起步路线”，不代表长期产品身份
+
+### 决策：第三方 web 壳只作为 pilot，不替代 `OPL` 自有前台
+
+原因：`OPL` 的真正产品价值在顶层 front desk、domain handoff、gateway federation 与 audit truth，不在于“找一个现成聊天 UI 永久套着”。第三方 web 壳可以帮助快速起步，但不能反客为主。
+
+影响：
+
+- 长期仍以 `OPL` 自有 web front desk 为目标
+- 第三方前台只承担 pilot、迁移桥或局部复用角色
+- 后续所有文档都不能把“套壳成功”误写成“`OPL` 已拥有最终 hosted 产品前台”
+
+### 决策：family direct entry 按“顶层先站稳，再单仓分别长出入口”推进
+
+原因：如果只做 `OPL` 顶层入口，业务仓会长期像内部能力层；如果只让业务仓自己长入口，又会重新长出四套彼此漂移的入口语义。更合理的节奏是顶层和单仓同时推进，但由 `OPL` 先冻结 family-level 语言与 hosted / web 路线。
+
+影响：
+
+- `OPL` 先站稳 family-level front desk 与 hosted / web 入口策略
+- `RedCube AI`、`Med Auto Grant`、`Med Auto Science` 再分别落各自 lightweight direct entry
+- `Med Auto Science` 的 research 主线继续与 display / 配图资产支线分开

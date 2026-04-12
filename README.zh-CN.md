@@ -251,6 +251,7 @@
 - `opl doctor`、`opl ask`、`opl chat`、`opl resume`、`opl sessions`、`opl logs`、`opl repair-hermes-gateway` 继续构成显式的产品入口与 runtime 运维命令面
 - 用户在本机上不再必须先进入 `Codex`，才能触达顶层 `OPL` surface
 - 这次落地的 product entry 仍然只是本地 CLI-first 入口壳；hosted / web 前台仍是后续工作
+- hosted / web 这一层的选型现在也已经冻结：短期最快可用路线是 `LibreChat-first`，长期目标仍是 `OPL` 自有 web front desk；`Chatbot UI` 太薄，不适合作为主 hosted 基座
 - 这个成熟度缺口在三个业务仓里也仍然存在：有些仓已经有可用的本地 `CLI` 或 runtime baseline，但整体更像 operator / agent entry，而不是打磨完成的用户产品入口
 - 四个仓已经不再处于同一条 `Hermes-Agent` 集成阶段线上：`Med Auto Grant` 已切到真实 runtime substrate，`Med Auto Science` 已打通 external runtime bring-up，`RedCube AI` 仍在 pilot prep，而 `OPL` 继续只持有顶层 gateway / federation 语言，同时开始持有 family-level 的本地入口壳
 
@@ -305,6 +306,8 @@
 
 如果要看 fork / 用户自管安装 / 托管式外部 kernel 集成三种方案的完整对比，见 [OPL 产品入口与 Hermes Kernel Integration 决策](docs/references/opl-product-entry-and-hermes-kernel-integration.md)。
 如果要看四仓家族层面的入口栈与 `OPL -> domain` handoff 架构，见 [OPL 家族产品入口与 Domain Handoff 架构](docs/references/family-product-entry-and-domain-handoff-architecture.md)。
+如果要看 hosted / web 前台为什么优先选 `LibreChat-first` 而不是 `Chatbot UI`，见 [OPL Hosted / Web Front Desk 选型基准](docs/references/opl-hosted-web-frontdesk-benchmark.md)。
+如果要看 `OPL` 与三个业务仓的 lightweight direct entry 后续该按什么顺序推进，见 [Family Lightweight Direct Entry 推进板](docs/references/family-lightweight-direct-entry-rollout-board.md)。
 
 ## 统一执行范式
 

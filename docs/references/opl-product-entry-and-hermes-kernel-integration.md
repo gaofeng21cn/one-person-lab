@@ -232,6 +232,16 @@
 - 平台内部托管 Hermes kernel；
 - `OPL` 作为产品入口、会话层与 domain federation 层对外暴露。
 
+这一步的 hosted / web 前台并不是“随便找一个聊天壳就算完成”。
+当前已经冻结的前台选型是：
+
+- 短期：`LibreChat-first`
+- 长期：`OPL` 自有 web front desk
+
+对应的选型说明见：
+
+- `docs/references/opl-hosted-web-frontdesk-benchmark.md`
+
 ## 9. 一句话结论
 
 `Hermes Kernel Integration` 的正确方向不是抄代码自己养，也不是把安装和理解 Hermes 的负担甩给用户，而是：

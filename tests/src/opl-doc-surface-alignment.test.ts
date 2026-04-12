@@ -142,6 +142,40 @@ test('core maintainer docs exist and are linked from docs index', () => {
   }
 });
 
+test('hosted web front-desk decision stays aligned across public and reference docs', () => {
+  const readme = read('README.md');
+  const readmeZh = read('README.zh-CN.md');
+  const status = read('docs/status.md');
+  const roadmap = read('docs/roadmap.md');
+  const roadmapZh = read('docs/roadmap.zh-CN.md');
+  const architecture = read('docs/architecture.md');
+  const docsIndex = read('docs/README.md');
+  const docsIndexZh = read('docs/README.zh-CN.md');
+  const refsIndex = read('docs/references/README.md');
+  const refsIndexZh = read('docs/references/README.zh-CN.md');
+  const benchmark = read('docs/references/opl-hosted-web-frontdesk-benchmark.md');
+
+  for (const doc of [readme, readmeZh, status, roadmap, roadmapZh, architecture]) {
+    assert.match(doc, /LibreChat/i);
+    assert.match(doc, /web front desk|web 前台/);
+  }
+
+  assert.match(readme, /Chatbot UI/i);
+  assert.match(readmeZh, /Chatbot UI/i);
+  assert.match(status, /Chatbot UI/i);
+
+  assert.match(benchmark, /Chatbot UI/);
+  assert.match(benchmark, /LibreChat/);
+  assert.match(benchmark, /Open WebUI/);
+  assert.match(benchmark, /LobeChat/);
+  assert.match(benchmark, /短期：`LibreChat-first`/);
+  assert.match(benchmark, /长期：`OPL` 自有 web front desk/);
+
+  for (const doc of [docsIndex, docsIndexZh, refsIndex, refsIndexZh]) {
+    assert.match(doc, /opl-hosted-web-frontdesk-benchmark\.md/);
+  }
+});
+
 test('repo-tracked README/docs/contracts markdown links resolve locally', () => {
   const files = [
     ...collectMarkdownFiles('README.md'),

@@ -22,6 +22,7 @@
 - `OPL` 顶层的统一目标执行范式是 `Agent-first`：当前 domain 仓统一按 `Auto-only` 主线理解，而未来 `Human-in-the-loop` 产品应作为兼容 sibling 或 upper-layer product 复用同一 substrate，而不是把当前仓强行改成同仓双模
 - 当前活跃开发宿主是 Codex-only 本地会话，而优选的未来产品 runtime substrate 方向，仍然是先在某个 domain 仓里诚实证明真实的上游 `Hermes-Agent` 集成
 - `OPL` 现在已经有了以 `opl` 为默认前台的本地 direct product-entry shell；`opl <request...>` 可直接作为 quick ask，而 `opl doctor / ask / chat / resume / sessions / logs / repair-hermes-gateway` 继续作为显式 CLI 界面；hosted / web 入口仍是后续工作
+- hosted / web 前台的选型现已冻结：短期最快路线是 `LibreChat-first` pilot，长期仍回到 `OPL` 自有 web front desk
 - 当前已经冻结的顶层 integration choice 是 `external kernel, managed by OPL product packaging`：不 fork `Hermes-Agent`，也不把用户自管 Hermes 安装变成产品前置条件
 - 生态当前已经不再是一刀切阶段：`Med Auto Grant` 已有真实上游 substrate，`Med Auto Science` 已进入 real adapter cutover 前态，`RedCube AI` 仍在 pilot prep，而 `OPL` 现在已经拥有本地 product-entry shell
 - 当前 repo 已有可运行的本地 `TypeScript CLI`-first / read-only gateway baseline
@@ -58,6 +59,7 @@
 - 用清楚的任务边界与交付对象定义下一个候选 domain，并优先沿用当前 `task-topology + candidate-domain-backlog + domain-onboarding` 这条路径
 - 把已落地的本地 product-entry shell 继续做成 service-safe、Hermes-backed、且不与 read-only gateway contract 混淆的真实入口层
 - 继续冻结 `OPL bootstrap / launcher` 的职责边界，确保未来即使 kernel 继续外置，产品入口仍由 `OPL` 自己持有
+- 把 hosted / web 前台路线固定为 `LibreChat-first pilot -> OPL 自有 web front desk`，不把任何通用聊天壳误写成最终产品身份
 
 `Phase 1` candidate-domain closeout 的顺序已冻结为：
 
@@ -85,6 +87,7 @@
 - 跨 domain 正式行为合同的回抽
 - 面向垂类场景的在线产品入口
 - 由 `OPL` 直接暴露、并通过 `OPL` 产品层托管 external kernel 的产品入口
+- 由 `OPL` 自己持有品牌与交互语义的 hosted / web front desk
 
 进入这一阶段的前提，是多个 domain surface 已经拥有清楚且独立的边界。
 

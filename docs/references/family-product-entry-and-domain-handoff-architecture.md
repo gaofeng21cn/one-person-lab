@@ -165,6 +165,15 @@
 
 - 顶层与 domain 入口都沿同一 substrate 迁移到 hosted shape。
 
+当前这一步的顶层 hosted / web 入口已冻结为：
+
+- 先走 `LibreChat-first` pilot
+- 再回收到 `OPL` 自有 web front desk
+
+而家族级 direct entry 的四仓推进节奏，统一参考：
+
+- `docs/references/family-lightweight-direct-entry-rollout-board.md`
+
 ## 9. MAS 顶层切换板
 
 `Med Auto Science` 当前不是普通的 lightweight domain entry 问题。

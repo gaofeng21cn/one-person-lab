@@ -187,6 +187,30 @@ test('shared runtime and domain contracts are linked from public and gateway con
   assert.match(domainContractZh, /per-run handle/);
 });
 
+test('family direct-entry rollout references stay visible from status and docs indexes', () => {
+  const status = read('docs/status.md');
+  const docsIndex = read('docs/README.md');
+  const docsIndexZh = read('docs/README.zh-CN.md');
+  const refsIndex = read('docs/references/README.md');
+  const refsIndexZh = read('docs/references/README.zh-CN.md');
+  const familyArchitecture = read('docs/references/family-product-entry-and-domain-handoff-architecture.md');
+  const rolloutBoard = read('docs/references/family-lightweight-direct-entry-rollout-board.md');
+
+  for (const doc of [status, docsIndex, docsIndexZh, refsIndex, refsIndexZh]) {
+    assert.match(doc, /family-lightweight-direct-entry-rollout-board\.md/);
+  }
+
+  assert.match(rolloutBoard, /OPL/);
+  assert.match(rolloutBoard, /Med Auto Science/);
+  assert.match(rolloutBoard, /RedCube AI/);
+  assert.match(rolloutBoard, /Med Auto Grant/);
+  assert.match(rolloutBoard, /论文配图以外的 research runtime 主线/);
+  assert.match(rolloutBoard, /lightweight direct entry/);
+  assert.match(familyArchitecture, /operator entry/);
+  assert.match(familyArchitecture, /agent entry/);
+  assert.match(familyArchitecture, /product entry/);
+});
+
 test('contract convergence execution board freezes the current unified program and phase-c behavior convergence plan', () => {
   const docsIndex = read('docs/README.md');
   const docsIndexZh = read('docs/README.zh-CN.md');

@@ -28,6 +28,7 @@ These are the first files an AI or maintainer should read before touching the re
 - Current focus: truth reset, central sync, surface-authority convergence, and admitted-domain state alignment.
 - Current truth: the family is no longer at one uniform integration depth. `Med Auto Grant` has landed a real upstream `Hermes-Agent` substrate, `Med Auto Science` has completed external runtime bring-up and is entering real adapter cutover, `RedCube AI` remains in upstream pilot prep, and `OPL` now owns a local direct product-entry shell above the top-level gateway.
 - Current product-entry truth: `OPL` now exposes a local direct product-entry shell whose default front door is `opl`; `opl <request...>` acts as quick ask, while `opl doctor / ask / chat / resume / sessions / logs / repair-hermes-gateway` remain the explicit command surface above the external Hermes kernel. Hosted / web entry is still not landed.
+- Current hosted / web truth: the family now freezes a `LibreChat-first` hosted pilot as the shortest path to a usable web front door, while the long-line target remains an `OPL`-owned web front desk rather than a permanent third-party shell.
 - Family product-entry truth: product-entry maturity is still uneven across the four repositories. `OPL` now has a family-level local shell, while the domain repositories still mostly expose operator / agent entry surfaces and need further lightweight direct-entry hardening.
 - Frozen integration choice: `Hermes Kernel Integration` follows `external kernel, managed by OPL product packaging` rather than a long-term fork or a user-managed Hermes prerequisite.
 - Long-line target: move the shared runtime layer toward upstream `Hermes-Agent` (or an explicitly approved equivalent substrate) while keeping `OPL` as the top-level coordination, discovery, and contract layer.
@@ -76,7 +77,9 @@ All Layer 3 docs now live under `docs/references/`, with a dedicated index so th
 - `references/hermes-agent-runtime-substrate-benchmark.md` (Chinese-only internal reference)
 - `references/hermes-agent-truth-reset-and-target-state.md` (Chinese-only internal reference)
 - `references/family-product-entry-and-domain-handoff-architecture.md` (Chinese-only internal reference)
+- `references/family-lightweight-direct-entry-rollout-board.md` (Chinese-only internal reference)
 - `references/mas-top-level-cutover-board.md` (Chinese-only internal reference)
+- `references/opl-hosted-web-frontdesk-benchmark.md` (Chinese-only internal reference)
 - `references/opl-product-entry-and-hermes-kernel-integration.md` (Chinese-only internal reference)
 - `references/opl-phase-2-central-reference-sync-board.md` (Chinese-only internal reference)
 - `references/opl-phase-2-admitted-domain-delta-intake-refresh.md` (Chinese-only internal reference)
