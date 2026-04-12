@@ -21,6 +21,8 @@
 - `Grant Foundry -> Med Auto Grant` 当前提供的是 future medical `Grant Ops` 的 public scaffold / top-level signal / domain-direction evidence；下一步里程碑是 registry material、`G2` discovery readiness、`G3` routed-action readiness 与 domain-onboarding evidence
 - `OPL` 顶层的统一目标执行范式是 `Agent-first`：当前 domain 仓统一按 `Auto-only` 主线理解，而未来 `Human-in-the-loop` 产品应作为兼容 sibling 或 upper-layer product 复用同一 substrate，而不是把当前仓强行改成同仓双模
 - 当前活跃开发宿主是 Codex-only 本地会话，而优选的未来产品 runtime substrate 方向，仍然是先在某个 domain 仓里诚实证明真实的上游 `Hermes-Agent` 集成
+- `OPL` 当前还不是 direct product entry；用户仍主要通过 Codex + 本地 `CLI / MCP` 间接触达它
+- 当前已经冻结的顶层 integration choice 是 `external kernel, managed by OPL product packaging`：不 fork `Hermes-Agent`，也不把用户自管 Hermes 安装变成产品前置条件
 - 当前还没有任何一个 domain 仓真正完成上游 `Hermes-Agent` 集成；整个生态仍处在真相重置与迁移设计阶段，而不是已落地的共享 runtime 阶段
 - 当前 repo 已有可运行的本地 `TypeScript CLI`-first / read-only gateway baseline
 - 这条 repo-tracked 的 CLI-first / read-only baseline 也仍然是 `OPL` 在 `Phase 1` 的 formal entry contract 与 public system surface
@@ -54,6 +56,7 @@
 - 把已 absorb 的 `Phase 1 exit + next-stage activation package freeze` 继续显式保留为当前 `Minimal admitted-domain federation activation package` 的前序门槛，并让所有 candidate path 持续处在 admission、discovery、routing 与 handoff 的显式审查轨道中
 - 用清楚的任务边界与交付对象定义下一个候选 domain，并优先沿用当前 `task-topology + candidate-domain-backlog + domain-onboarding` 这条路径
 - 逐步把 `OPL Gateway` 从文档优先表面推进成真实入口，同时把 routed action 继续保留在 planning-contract 层
+- 冻结 direct product entry 的形状，以及 `OPL bootstrap / launcher` 的职责边界，确保未来即使 kernel 继续外置，产品入口仍由 `OPL` 自己持有
 
 `Phase 1` candidate-domain closeout 的顺序已冻结为：
 
@@ -80,6 +83,7 @@
 - 共享 runtime substrate 的回抽
 - 跨 domain 正式行为合同的回抽
 - 面向垂类场景的在线产品入口
+- 由 `OPL` 直接暴露、并通过 `OPL` 产品层托管 external kernel 的产品入口
 
 进入这一阶段的前提，是多个 domain surface 已经拥有清楚且独立的边界。
 

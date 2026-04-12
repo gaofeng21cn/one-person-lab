@@ -27,6 +27,8 @@
 - 当前基线：`OPL` 是顶层 gateway / federation / shared substrate contract surface，而 domain runtime ownership 继续留在已 admitted 的 domain 仓。
 - 当前重点：真相重置、central sync、surface authority convergence、admitted-domain state alignment。
 - 当前真相：四个仓都还没有真正落地上游 `Hermes-Agent` 集成，当前运行形态仍然各自处于过渡态。
+- 当前产品入口真相：用户仍主要通过 Codex 中转调用 `CLI / MCP` 触达 `OPL`；`OPL` 还不是 direct product entry。
+- 当前已冻结的 integration choice：`Hermes Kernel Integration` 采用 `external kernel, managed by OPL product packaging`，而不是长期 fork，也不是把 Hermes 手工安装交给用户自己处理。
 - 长线目标：让共享运行层逐步转向上游 `Hermes-Agent`（或经过明确批准的等价 substrate），同时保持 `OPL` 继续承担顶层协调、发现、合同与边界治理。
 - 历史执行面：OMX 已退场；相关材料只作迁移/审计参考，不再进入默认阅读面。
 
@@ -72,6 +74,7 @@
 - `references/ecosystem-status-matrix.md`
 - `references/hermes-agent-runtime-substrate-benchmark.md`
 - `references/hermes-agent-truth-reset-and-target-state.md`
+- `references/opl-product-entry-and-hermes-kernel-integration.md`
 - `references/opl-phase-2-central-reference-sync-board.md`
 - `references/opl-phase-2-admitted-domain-delta-intake-refresh.md`
 

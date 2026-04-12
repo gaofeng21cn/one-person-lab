@@ -245,6 +245,36 @@ For an external reader, the simplest way to understand `OPL` is:
 - it defines how workstreams map to domain systems
 - it keeps cross-domain semantics stable while letting each domain stay independently usable
 
+## Product Entry And Hermes Kernel Integration
+
+The current truth is still transitional:
+
+- `OPL` is not yet a direct product entry surface
+- users still mainly reach `OPL` through `Codex` plus the local `CLI / MCP` surfaces
+- the same product-entry gap also exists in the domain repositories: some already have usable local `CLI` or runtime baselines, but they still read more like operator / agent entry surfaces than finished user-facing product entries
+- none of the four repositories has landed a true upstream `Hermes-Agent` integration yet
+
+The target product chain is:
+
+`User -> OPL Product Entry -> OPL Gateway -> Hermes Kernel -> Domain Adapter -> Domain Gateway -> Domain Harness OS`
+
+The integration choice is now frozen as:
+
+- not forking or vendoring `Hermes-Agent` kernel code into `OPL`
+- not requiring users to manually install and understand `Hermes-Agent` before they can use `OPL`
+- using `Hermes-Agent` as an external kernel while letting `OPL` own the product-facing bootstrap, launcher, version pinning, runtime wiring, and user entry
+
+The short name for that choice is:
+
+- `external kernel, managed by OPL product packaging`
+
+For the open-source local shape, that means `OPL` should provision and manage a supported `Hermes` runtime for the user instead of pushing runtime assembly work onto them.
+For the future hosted shape, that means the platform can run the `Hermes` kernel internally while users interact only with the `OPL` entry surface.
+`Codex` therefore remains a development host and local operator brain, not the future product prerequisite.
+The same logic should later apply to the admitted domain repositories as lightweight direct-entry products at their own domain scope.
+
+For the detailed comparison between fork / user-managed install / managed external-kernel integration, see [OPL Product Entry And Hermes Kernel Integration](docs/references/opl-product-entry-and-hermes-kernel-integration.md).
+
 ## Shared Operating Pattern
 
 At the top level, `OPL` adopts `Agent-first` as its default operating pattern.
@@ -253,6 +283,7 @@ The Agent serves as the default executor: it reads state, calls stable gateways,
 The current active development host is Codex-only local sessions: planning, implementation, verification, and review are all still handled through standard Codex sessions.
 That host choice is not the product-runtime truth of `OPL`.
 At the product/runtime layer, the preferred future substrate direction is a true upstream `Hermes-Agent` integration proved inside a domain repository first, while `OPL` itself remains the top-level gateway and federation layer.
+When that direction is realized, the preferred integration mode is still `external kernel, managed by OPL product packaging` rather than a long-term fork or a user-managed prerequisite install.
 
 Today, the current domain repositories should be understood as `Auto-only` product mainlines.
 They optimize for autonomous end-to-end execution, evaluation, hardening, and auditability.
@@ -386,7 +417,7 @@ The current repo-tracked truth is an honest central-sync stop.
 
 The current delivery target keeps a local `TypeScript CLI` as the Phase 1 entry transport for the read-only gateway baseline.
 The active development-control path remains a single Codex-only flow across planning, implementation, verification, and review, but that should not be confused with product runtime ownership.
-At this layer, `OPL` only exposes the gateway surface and shared contracts; any honest `Hermes-Agent` runtime rollout still has to happen in a domain repository before it can be promoted into top-level truth.
+At this layer, `OPL` only exposes the gateway surface and shared contracts; any honest `Hermes-Agent` runtime rollout still has to happen in a domain repository before it can be promoted into top-level truth, and the intended product-facing shape remains a direct `OPL` entry backed by an external kernel managed through `OPL` product packaging.
 
 For the public phase view and the full document layering:
 

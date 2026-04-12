@@ -86,6 +86,7 @@ The more accurate statement is therefore:
 - an upstream `Hermes-Agent`-backed runtime substrate is a preferred future implementation direction for the `Shared Runtime Contract`
 - `Hermes-Agent` is not the whole `UHS`
 - `Hermes-Agent` does not replace the `OPL Gateway`, any `Domain Gateway`, or any `Domain Harness OS`
+- the preferred integration mode is `external kernel, managed by OPL product packaging` rather than a long-term fork or a user-managed prerequisite install
 
 In short, `Hermes` is better suited to own “how the system keeps running” than “what counts as a gate, an audit trail, or domain truth.”
 
@@ -108,6 +109,11 @@ As long as the upper-layer contracts stay intact, the `Shared Runtime Contract` 
 - the current local `host-agent runtime`
 - a future upstream `Hermes-Agent`-backed managed runtime
 - a future platform-hosted execution plane
+
+In product terms, that preferred future shape means:
+
+- a local open-source `OPL` entry can bootstrap and manage a supported external `Hermes` runtime for the user
+- a future hosted `OPL` product can run the external `Hermes` kernel inside the platform
 
 What may change is the runtime substrate implementation, not:
 

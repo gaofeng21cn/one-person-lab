@@ -346,6 +346,43 @@ test('phase-1 public gateway docs distinguish CLI transport from the development
   assert.match(discoveryGatewayZh, /不授予 route authority/);
 });
 
+test('product-entry docs freeze the managed external-kernel choice instead of fork or user-managed install', () => {
+  const readme = read('README.md');
+  const readmeZh = read('README.zh-CN.md');
+  const status = read('docs/status.md');
+  const architecture = read('docs/architecture.md');
+  const docsIndex = read('docs/README.md');
+  const docsIndexZh = read('docs/README.zh-CN.md');
+  const refsIndex = read('docs/references/README.md');
+  const refsIndexZh = read('docs/references/README.zh-CN.md');
+  const runtimeContract = read('docs/shared-runtime-contract.md');
+  const runtimeContractZh = read('docs/shared-runtime-contract.zh-CN.md');
+  const decisionNote = read('docs/references/opl-product-entry-and-hermes-kernel-integration.md');
+
+  assert.match(readme, /not yet a direct product entry surface/i);
+  assert.match(readme, /external kernel, managed by OPL product packaging/i);
+  assert.match(readme, /not requiring users to manually install and understand `Hermes-Agent`/i);
+  assert.match(readmeZh, /还不是 direct product entry/);
+  assert.match(readmeZh, /external kernel, managed by OPL product packaging/);
+  assert.match(readmeZh, /不要求用户先手工安装并理解 `Hermes-Agent`/);
+
+  assert.match(status, /当前产品入口真相：用户仍主要通过 `Codex` \+ 本地 `CLI \/ MCP` 间接触达 `OPL`/);
+  assert.match(status, /Hermes Kernel Integration.*external kernel, managed by OPL product packaging/);
+  assert.match(architecture, /User -> OPL Product Entry -> OPL Gateway -> Hermes Kernel -> Domain Adapter/);
+
+  assert.match(docsIndex, /opl-product-entry-and-hermes-kernel-integration\.md/);
+  assert.match(docsIndexZh, /opl-product-entry-and-hermes-kernel-integration\.md/);
+  assert.match(refsIndex, /opl-product-entry-and-hermes-kernel-integration\.md/);
+  assert.match(refsIndexZh, /opl-product-entry-and-hermes-kernel-integration\.md/);
+
+  assert.match(runtimeContract, /external kernel, managed by OPL product packaging/i);
+  assert.match(runtimeContractZh, /external kernel, managed by OPL product packaging/);
+
+  assert.match(decisionNote, /不 fork \/ vendor 上游 `Hermes-Agent` kernel 代码/);
+  assert.match(decisionNote, /用户不需要手工维护一套“先会 Hermes 才能会 OPL”的流程/);
+  assert.match(decisionNote, /平台内部运行 `Hermes` kernel/);
+});
+
 test('phase-1 formal entry wording keeps OPL at the CLI-first read-only gateway surface', () => {
   const roadmap = read('docs/roadmap.md');
   const roadmapZh = read('docs/roadmap.zh-CN.md');

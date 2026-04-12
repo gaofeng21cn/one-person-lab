@@ -21,6 +21,8 @@ What is already clear today:
 - `Grant Foundry -> Med Auto Grant` currently provides the public scaffold / top-level signal / domain-direction evidence for a future medical `Grant Ops` domain; its next milestones are registry material, `G2` discovery readiness, `G3` routed-action readiness, and domain-onboarding evidence
 - the shared target operating pattern is `Agent-first`: current domain repositories stay `Auto-only`, while any future `Human-in-the-loop` product should reuse the same substrate as a compatible sibling or upper-layer product rather than forcing same-repo dual-mode logic
 - the current active development host is Codex-only local sessions, while the preferred future product-runtime substrate direction remains a true upstream `Hermes-Agent` integration proved inside a domain repository first
+- `OPL` is not yet a direct product entry surface; users still mainly reach it through Codex plus the local `CLI / MCP` surfaces
+- the frozen top-level integration choice is `external kernel, managed by OPL product packaging`: do not fork `Hermes-Agent`, and do not make user-managed Hermes installation the product prerequisite
 - no domain repository has landed a true upstream `Hermes-Agent` integration yet; the ecosystem is still in a truth-reset and migration-design phase rather than a landed shared-runtime phase
 - the current repository already has a runnable local `TypeScript CLI`-first / read-only gateway baseline
 - that repo-tracked CLI-first / read-only baseline remains the current `OPL` `Phase 1` formal entry contract and public system surface
@@ -54,6 +56,7 @@ The next phase should prioritize:
 - keeping the absorbed `Phase 1 exit + next-stage activation package freeze` explicit as the predecessor gate for the current `Minimal admitted-domain federation activation package`, with every candidate path staying in explicit admission, discovery, routing, and handoff review lanes
 - defining the next candidate domains through clear task boundaries and delivery objects, using the current `task-topology + candidate-domain-backlog + domain-onboarding` path
 - progressively turning the `OPL Gateway` from a documentation-first surface into a real entry surface while keeping routed action at the planning-contract layer
+- freezing the direct-product-entry shape and `OPL bootstrap / launcher` responsibility so the future entry is `OPL`-owned even when the runtime kernel stays external
 
 The `Phase 1` candidate-domain closeout order is frozen as:
 
@@ -81,6 +84,7 @@ Only after at least two domain surfaces are truly stable, and at least one domai
 - pulling back a shared runtime substrate
 - pulling back shared cross-domain formal behavior contracts
 - online product entry surfaces for vertical scenarios
+- a direct `OPL` product entry backed by an external kernel managed through `OPL` product packaging
 
 The entrance condition for this phase is multiple domain surfaces with clear independent boundaries.
 

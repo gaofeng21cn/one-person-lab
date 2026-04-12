@@ -6,6 +6,54 @@
 
 `Human / Agent -> OPL Gateway -> Domain Gateway -> Domain Harness OS -> Domain Repository`
 
+## 当前使用链路与目标产品链路
+
+当前真实使用链路仍然是过渡态：
+
+`User -> Codex -> OPL CLI / MCP surface -> OPL Gateway -> Domain Gateway -> Domain Harness OS -> Domain Repository`
+
+这说明当前 `OPL` 还不是独立产品入口；它仍主要作为被开发宿主间接调用的 gateway surface 存在。
+
+目标产品链路应是：
+
+`User -> OPL Product Entry -> OPL Gateway -> Hermes Kernel -> Domain Adapter -> Domain Gateway -> Domain Harness OS -> Domain Repository`
+
+其中：
+
+- `OPL Product Entry`
+  - 面向用户直接暴露入口，例如本地 launcher / CLI shell、未来 web/chat entry
+- `Hermes Kernel`
+  - 负责长期在线 runtime substrate，例如 session、memory、scheduler、interrupt / resume、delivery / cron
+- `Domain Adapter`
+  - 负责把通用 runtime substrate 接入具体 domain contract，而不是重写 domain truth
+
+同样的缺口也存在于三个业务仓：
+
+- 它们今天很多已经具备 `operator entry` 或 `agent entry`
+- 但还没有全面长成“用户可直接进入”的轻量 `product entry`
+- 因此后续不仅要把 `OPL` 做成 direct entry，也要让各业务仓在各自 scope 内拥有 direct entry
+
+## Hermes Kernel Integration 选型
+
+当前顶层已经冻结的选择不是：
+
+- fork / vendor `Hermes-Agent` 代码进 `OPL` 自己长期维护
+- 要求用户自己手工安装并理解 `Hermes-Agent` 后再使用 `OPL`
+
+当前冻结的选择是：
+
+- `external kernel, managed by OPL product packaging`
+
+也就是：
+
+- 代码层把 `Hermes-Agent` 视为外部 kernel；
+- 产品层由 `OPL` 自己负责 bootstrap、launcher、version pinning、runtime wiring 与受支持版本管理；
+- 对用户来说，接触的是 `OPL` 产品入口，而不是一个需要先会 `Hermes` 的拼装流程。
+
+详细对比与运维取舍见：
+
+- `docs/references/opl-product-entry-and-hermes-kernel-integration.md`
+
 ## 结构角色
 
 ### 1. OPL 顶层 gateway

@@ -241,6 +241,36 @@
 - 它定义工作流如何映射到具体 domain system
 - 它冻结跨 domain 语义，同时保留每个 domain 独立可用
 
+## 产品入口与 Hermes Kernel Integration
+
+当前真实状态仍是过渡态：
+
+- `OPL` 还不是 direct product entry
+- 用户当前仍主要通过 `Codex` + 本地 `CLI / MCP` 间接触达 `OPL`
+- 这个 product-entry 缺口在三个业务仓里也同样存在：有些仓已经有可用的本地 `CLI` 或 runtime baseline，但整体更像 operator / agent entry，而不是打磨完成的用户产品入口
+- 四个仓都还没有真正落地上游 `Hermes-Agent` integration
+
+目标产品链路应是：
+
+`User -> OPL Product Entry -> OPL Gateway -> Hermes Kernel -> Domain Adapter -> Domain Gateway -> Domain Harness OS`
+
+这次已经冻结的集成选择是：
+
+- 不把 `Hermes-Agent` kernel 代码 fork / vendor 进 `OPL` 自己长期维护
+- 不要求用户先手工安装并理解 `Hermes-Agent`，再来使用 `OPL`
+- 让 `Hermes-Agent` 继续作为 external kernel，而 `OPL` 负责面向产品的 bootstrap、launcher、version pinning、runtime wiring 与用户入口
+
+这条路线的固定简称是：
+
+- `external kernel, managed by OPL product packaging`
+
+对本地开源版来说，这意味着应由 `OPL` 为用户 provision 并管理一个受支持的 `Hermes` runtime，而不是把 runtime 拼装工作甩给用户。
+对未来托管版来说，这意味着平台内部运行 `Hermes` kernel，而用户只直接面对 `OPL` 的入口。
+因此，`Codex` 继续只是开发宿主和本地 operator brain，而不是未来产品的前置条件。
+同样的逻辑，后续也应在各个 admitted domain 仓里落成各自轻量的 direct entry，而不是长期停留在“只能被 `Codex` 调用”的状态。
+
+如果要看 fork / 用户自管安装 / 托管式外部 kernel 集成三种方案的完整对比，见 [OPL 产品入口与 Hermes Kernel Integration 决策](docs/references/opl-product-entry-and-hermes-kernel-integration.md)。
+
 ## 统一执行范式
 
 `OPL` 顶层默认采用 `Agent-first` 的执行范式。
@@ -249,6 +279,7 @@ Agent 是默认执行者：它负责读状态、调用稳定 gateway、编排步
 当前活跃的开发宿主是 Codex-only 本地会话：规划、实现、验证与评审都继续通过标准 Codex 会话完成。
 但这不等于 `OPL` 的产品 runtime 真相就是 Codex。
 在产品/runtime 这一层，优选的未来 substrate 方向，仍然是先在某个 domain 仓里诚实证明真实的上游 `Hermes-Agent` 集成；`OPL` 自身继续只停留在顶层 gateway 与 federation 层。
+当这条方向真正落地时，优选的集成方式仍然是 `external kernel, managed by OPL product packaging`，而不是长期 fork，也不是把安装负担留给用户。
 
 在这个前提下，当前 domain 仓统一按 `Auto-only` 产品主线理解。
 仓库主线优先服务全自动闭环、评估、硬化和审计。
@@ -382,7 +413,7 @@ repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review 
 
 当前交付目标是：继续用本地 `TypeScript CLI` 作为 `Phase 1` 的只读 gateway 入口 transport。
 当前开发控制面仍使用 Codex-only 口径，不再把 `Codex Host / OMX` 作为活跃双层执行分工，但这不应被误解成 `OPL` 已经拥有自己的产品 runtime。
-在这一层，`OPL` 只暴露 gateway surface 与共享合同；任何诚实的 `Hermes-Agent` runtime rollout，仍必须先在某个 domain 仓里落地，再决定是否提升为顶层真相。
+在这一层，`OPL` 只暴露 gateway surface 与共享合同；任何诚实的 `Hermes-Agent` runtime rollout，仍必须先在某个 domain 仓里落地，再决定是否提升为顶层真相，而未来面向用户的产品形态应是由 `OPL` 直接出入口、由 `OPL` 产品层托管集成 external kernel。
 
 公开阶段说明与完整文档分层见：
 

@@ -86,6 +86,7 @@
 - 上游 `Hermes-Agent` 支撑的 runtime substrate，是 `Shared Runtime Contract` 的优选未来实现方向
 - `Hermes-Agent` 不是整个 `UHS`
 - `Hermes-Agent` 也不会替代 `OPL Gateway`、`Domain Gateway` 或 `Domain Harness OS`
+- 优选的集成方式是 `external kernel, managed by OPL product packaging`，而不是长期 fork，也不是把手工安装前置给用户
 
 也就是说，`Hermes` 更适合承接“怎么稳定地跑”，而不是“什么才算过 gate、交付、审计、domain truth”。
 
@@ -108,6 +109,11 @@
 - 当前本地 `host-agent runtime`
 - future 上游 `Hermes-Agent`-backed managed runtime
 - future platform-hosted execution plane
+
+从产品形态看，优选未来落地应是：
+
+- 本地开源版由 `OPL` 入口为用户 bootstrap 并管理受支持的外部 `Hermes` runtime
+- 未来托管版由平台内部运行外部 `Hermes` kernel，而 `OPL` 继续对外暴露产品入口
 
 变化的应只是 runtime substrate 的承载方式，而不是：
 

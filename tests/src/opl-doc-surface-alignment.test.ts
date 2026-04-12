@@ -98,6 +98,25 @@ test('public bilingual truth surfaces distinguish Codex development host from He
   }
 });
 
+test('core and reference docs freeze the external-kernel managed-integration model', () => {
+  const readme = read('README.md');
+  const readmeZh = read('README.zh-CN.md');
+  const status = read('docs/status.md');
+  const architecture = read('docs/architecture.md');
+  const referenceDoc = read('docs/references/opl-product-entry-and-hermes-kernel-integration.md');
+
+  assert.match(readme, /external kernel, managed by OPL product packaging/i);
+  assert.match(readmeZh, /external kernel, managed by OPL product packaging/);
+  assert.match(status, /direct product entry|external kernel, managed by OPL product packaging/);
+  assert.match(architecture, /OPL Product Entry -> OPL Gateway -> Hermes Kernel/);
+  assert.match(referenceDoc, /方案 A/);
+  assert.match(referenceDoc, /方案 B/);
+  assert.match(referenceDoc, /方案 C/);
+  assert.match(referenceDoc, /结论：[\s\S]{0,80}- 不选。/);
+  assert.match(referenceDoc, /结论：[\s\S]{0,80}- 选择方案 C。/);
+  assert.match(referenceDoc, /代码层外部依赖，产品层托管集成/);
+});
+
 test('core maintainer docs exist and are linked from docs index', () => {
   const docsIndex = read('docs/README.md');
   const docsIndexZh = read('docs/README.zh-CN.md');
