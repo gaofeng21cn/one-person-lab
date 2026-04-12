@@ -245,7 +245,10 @@
 
 当前真实状态仍是过渡态，但已经往前走了一步：
 
-- `OPL` 现在已经通过 `opl doctor`、`opl ask`、`opl chat` 提供了本地 direct product-entry shell
+- `OPL` 现在已经有了以 `opl` 为默认入口的本地 direct product-entry shell
+- `opl` 会直接进入 `OPL Front Desk`，在外部 Hermes kernel 之上种入或恢复会话
+- `opl "<request...>"` 现在已经成为自然语言 quick ask 的快捷路径
+- `opl doctor`、`opl ask`、`opl chat`、`opl resume`、`opl sessions`、`opl logs`、`opl repair-hermes-gateway` 继续构成显式的产品入口与 runtime 运维命令面
 - 用户在本机上不再必须先进入 `Codex`，才能触达顶层 `OPL` surface
 - 这次落地的 product entry 仍然只是本地 CLI-first 入口壳；hosted / web 前台仍是后续工作
 - 这个成熟度缺口在三个业务仓里也仍然存在：有些仓已经有可用的本地 `CLI` 或 runtime baseline，但整体更像 operator / agent entry，而不是打磨完成的用户产品入口
@@ -266,12 +269,20 @@
 
 这次在本仓实际落下的是这个目标的第一版本地入口壳：
 
+- `opl`
+  - 直接进入 `OPL Front Desk`；在交互环境下会种入并恢复 Hermes 会话
+- `opl "<request...>"`
+  - 把自然语言请求直接作为 routed quick ask 处理，不必显式写 `ask`
 - `opl doctor`
   - 检查本地 product-entry shell、Hermes kernel 可见性与 gateway service 就绪度
 - `opl ask "<request...>"`
   - 先经 `OPL` 做顶层路由，生成 handoff prompt，再执行一次 Hermes 单轮查询
 - `opl chat "<request...>"`
   - 先由 `OPL` 预热并种入一条 Hermes 会话，再切进交互式会话继续工作
+- `opl resume <session_id>`
+  - 恢复一个已存在的 Hermes-backed OPL 会话
+- `opl sessions`、`opl logs`、`opl repair-hermes-gateway`
+  - 暴露这层本地 shell 的 machine-readable 会话与 runtime 运维界面
 
 这层新入口壳并不会抹掉现有的 `Phase 1` gateway contract。
 只读 gateway 命令仍然是联邦真相面的稳定 formal surface。

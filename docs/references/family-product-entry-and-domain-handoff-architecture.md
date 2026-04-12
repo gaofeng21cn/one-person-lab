@@ -36,7 +36,8 @@
 当前四仓共同的真相是：
 
 - 前两层已经不同程度存在；
-- 第三层现在已经在 `OPL` 顶层先落下一版本地入口壳，但全家族都还没有真正成熟。
+- 第三层现在已经在 `OPL` 顶层先落下一版本地入口壳：`opl` 作为默认 front desk、`opl <request...>` 作为 quick ask、`opl doctor / ask / chat / resume / sessions / logs / repair-hermes-gateway` 作为显式入口与运维命令面；
+- 但全家族都还没有真正成熟。
 
 ## 3. 家族级目标结构
 
@@ -164,7 +165,21 @@
 
 - 顶层与 domain 入口都沿同一 substrate 迁移到 hosted shape。
 
-## 9. 一句话结论
+## 9. MAS 顶层切换板
+
+`Med Auto Science` 当前不是普通的 lightweight domain entry 问题。
+它还带着更重的 research runtime 与 `MedDeepScientist` backend 事实，因此顶层还需要一份单独的切换板来约束：
+
+- `OPL` 只冻结 family-level front desk、handoff envelope 与 top-level truth；
+- `MAS` 主线只推进论文配图以外的 research runtime / adapter cutover；
+- display / 配图资产化支线不混入这条主线；
+- 任何把 repo-side seam 误写成“已经完全脱离 `MedDeepScientist`”的叙述都视为 truth drift。
+
+对应板面见：
+
+- `mas-top-level-cutover-board.md`
+
+## 10. 一句话结论
 
 四仓后续不应再按“只有顶层像产品，业务仓只是内部能力”来演进。
 正确方向是：

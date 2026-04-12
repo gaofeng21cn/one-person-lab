@@ -361,21 +361,27 @@ test('product-entry docs freeze the managed external-kernel choice instead of fo
   const runtimeContractZh = read('docs/shared-runtime-contract.zh-CN.md');
   const decisionNote = read('docs/references/opl-product-entry-and-hermes-kernel-integration.md');
   const familyEntryDoc = read('docs/references/family-product-entry-and-domain-handoff-architecture.md');
+  const masCutoverBoard = read('docs/references/mas-top-level-cutover-board.md');
 
   assert.match(readme, /now ships a local direct product-entry shell/i);
   assert.match(readme, /external kernel, managed by OPL product packaging/i);
   assert.match(readme, /not requiring users to manually install and understand `Hermes-Agent`/i);
-  assert.match(readme, /opl doctor.*opl ask.*opl chat/i);
+  assert.match(readme, /default front door is `opl`|`opl` now ships/i);
+  assert.match(readme, /opl doctor.*opl ask.*opl chat.*opl resume.*opl sessions.*opl logs.*opl repair-hermes-gateway/i);
+  assert.match(readme, /opl "<request\.\.\.>"|opl <request/i);
   assert.match(readme, /Domain Handoff -> Domain Product Entry \/ Domain Gateway/i);
   assert.match(readmeZh, /本地 direct product-entry shell/);
   assert.match(readmeZh, /external kernel, managed by OPL product packaging/);
   assert.match(readmeZh, /不要求用户先手工安装并理解 `Hermes-Agent`/);
-  assert.match(readmeZh, /opl doctor.*opl ask.*opl chat/);
+  assert.match(readmeZh, /默认入口的本地 direct product-entry shell|以 `opl` 为默认入口/);
+  assert.match(readmeZh, /opl doctor.*opl ask.*opl chat.*opl resume.*opl sessions.*opl logs.*opl repair-hermes-gateway/);
+  assert.match(readmeZh, /opl "<request\.\.\.>"|opl <request/i);
   assert.match(readmeZh, /Domain Handoff -> Domain Product Entry \/ Domain Gateway/);
 
   assert.match(status, /当前产品入口真相：`OPL` 已经落下本地 direct product-entry shell/);
   assert.match(status, /Hermes Kernel Integration.*external kernel, managed by OPL product packaging/);
   assert.match(status, /家族级入口真相|operator entry.*agent entry.*product entry/);
+  assert.match(architecture, /opl front desk \/ quick ask \/ ops shell/i);
   assert.match(architecture, /User -> OPL Product Entry -> OPL Gateway -> Hermes Kernel -> Domain Adapter/);
   assert.match(architecture, /target_domain_id/);
   assert.match(architecture, /return_surface_contract/);
@@ -384,10 +390,14 @@ test('product-entry docs freeze the managed external-kernel choice instead of fo
   assert.match(docsIndexZh, /opl-product-entry-and-hermes-kernel-integration\.md/);
   assert.match(docsIndex, /family-product-entry-and-domain-handoff-architecture\.md/);
   assert.match(docsIndexZh, /family-product-entry-and-domain-handoff-architecture\.md/);
+  assert.match(docsIndex, /mas-top-level-cutover-board\.md/);
+  assert.match(docsIndexZh, /mas-top-level-cutover-board\.md/);
   assert.match(refsIndex, /opl-product-entry-and-hermes-kernel-integration\.md/);
   assert.match(refsIndexZh, /opl-product-entry-and-hermes-kernel-integration\.md/);
   assert.match(refsIndex, /family-product-entry-and-domain-handoff-architecture\.md/);
   assert.match(refsIndexZh, /family-product-entry-and-domain-handoff-architecture\.md/);
+  assert.match(refsIndex, /mas-top-level-cutover-board\.md/);
+  assert.match(refsIndexZh, /mas-top-level-cutover-board\.md/);
 
   assert.match(runtimeContract, /external kernel, managed by OPL product packaging/i);
   assert.match(runtimeContractZh, /external kernel, managed by OPL product packaging/);
@@ -397,6 +407,9 @@ test('product-entry docs freeze the managed external-kernel choice instead of fo
   assert.match(decisionNote, /平台内部运行 `Hermes` kernel/);
   assert.match(familyEntryDoc, /OPL Product Entry -> OPL Gateway -> Hermes Kernel -> Domain Handoff/);
   assert.match(familyEntryDoc, /User -> Domain Product Entry -> Domain Gateway -> Hermes Kernel -> Domain Harness OS/);
+  assert.match(familyEntryDoc, /mas-top-level-cutover-board\.md/);
+  assert.match(masCutoverBoard, /display .*支线不混入这条主线|display 资产化单独开线/);
+  assert.match(masCutoverBoard, /OPL -> Med Auto Science/);
 });
 
 test('phase-1 formal entry wording keeps OPL at the CLI-first read-only gateway surface', () => {

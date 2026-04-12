@@ -31,7 +31,7 @@
     OPL Architecture Blueprint
   </text>
   <text x="800" y="148" text-anchor="middle" fill="#42627F" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="18">
-    Design-first overview of the local product entry, shared base, and current federation maturity
+    Design-first overview of the OPL front desk, shared base, and current federation maturity
   </text>
 
   <g filter="url(#soft-shadow)">
@@ -40,7 +40,7 @@
       One Person Lab (OPL)
     </text>
     <text x="800" y="248" text-anchor="middle" fill="#D9EAFB" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="18">
-      Local product entry, top-level gateway, and federation surface for one-person lab work
+      Local front desk, top-level gateway, and federation surface for one-person lab work
     </text>
 
     <rect x="230" y="318" width="1140" height="92" rx="22" fill="url(#opl-substrate)"/>
@@ -82,7 +82,7 @@
   <text x="952" y="604" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Review surfaces and final outputs</text>
 
   <text x="1212" y="582" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">Product Entry</text>
-  <text x="1212" y="604" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Direct shell, launch, and handoff context</text>
+  <text x="1212" y="604" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Front desk, quick ask, resume, logs</text>
 
   <path d="M 800 642 L 800 680" stroke="#3B6EA5" stroke-width="4" marker-end="url(#arrow-head)"/>
 
@@ -168,6 +168,6 @@
 
   <rect x="128" y="1018" width="1344" height="30" rx="15" fill="#EAF2FB" stroke="#C6D8EA"/>
   <text x="152" y="1038" fill="#375B79" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13">
-    Blueprint rule: OPL now owns a local product-entry shell, but domain runtime ownership and top-level admission/handoff gates still stay below OPL.
+    Blueprint rule: OPL now owns the opl front desk and local ops shell, but domain runtime ownership and top-level admission/handoff gates still stay below OPL.
   </text>
 </svg>

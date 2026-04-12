@@ -249,7 +249,10 @@ For an external reader, the simplest way to understand `OPL` is:
 
 The current truth is still transitional, but it has moved forward:
 
-- `OPL` now ships a local direct product-entry shell through `opl doctor`, `opl ask`, and `opl chat`
+- `OPL` now ships a local direct product-entry shell whose default front door is `opl`
+- `opl` seeds or resumes an `OPL Front Desk` session on top of the external Hermes kernel
+- `opl "<request...>"` now acts as the fast natural-language path for a one-shot routed ask
+- `opl doctor`, `opl ask`, `opl chat`, `opl resume`, `opl sessions`, `opl logs`, and `opl repair-hermes-gateway` remain the explicit product-entry and runtime-ops command surface
 - users no longer need to start from `Codex` just to reach the top-level `OPL` surface locally
 - this landed product entry is still local CLI-first only; the hosted / web front door is still future work
 - the same maturity gap still exists in the domain repositories: some already have usable local `CLI` or runtime baselines, but they still read more like operator / agent entry surfaces than finished user-facing product entries
@@ -270,12 +273,20 @@ So `OPL` becomes the family-level direct entry, while each domain repository als
 
 What landed in this repository is the first local shell of that idea:
 
+- `opl`
+  - enters the `OPL Front Desk`, seeds a Hermes session, and resumes it directly when running interactively
+- `opl "<request...>"`
+  - treats a plain-language request as a routed quick ask without requiring the explicit `ask` verb
 - `opl doctor`
   - checks the local product-entry shell, Hermes kernel visibility, and gateway-service readiness
 - `opl ask "<request...>"`
   - routes a plain-language request through `OPL`, builds a handoff prompt, and runs a one-shot Hermes query
 - `opl chat "<request...>"`
   - seeds a routed Hermes session through `OPL`, then resumes it interactively
+- `opl resume <session_id>`
+  - resumes a known Hermes-backed OPL session
+- `opl sessions`, `opl logs`, `opl repair-hermes-gateway`
+  - expose machine-readable session and runtime-ops surfaces for the landed local shell
 
 This new shell does not erase the existing `Phase 1` gateway contract.
 The read-only gateway commands remain the stable top-level contract surface for federation truth.

@@ -10,9 +10,18 @@
 
 当前 repo-tracked 的本地使用链路已经变成：
 
-`User -> OPL local product-entry shell -> OPL Gateway -> Hermes Kernel -> Domain Handoff -> Domain Gateway / Domain Product Entry -> Domain Harness OS -> Domain Repository`
+`User -> opl front desk / quick ask / ops shell -> OPL Gateway -> Hermes Kernel -> Domain Handoff -> Domain Gateway / Domain Product Entry -> Domain Harness OS -> Domain Repository`
 
 这说明当前 `OPL` 已经拥有本地 direct product entry 的第一版入口壳；
+它不再只是 `opl doctor / ask / chat` 三条显式命令，而是已经具备：
+
+- `opl`
+  - 默认进入 family-level front desk
+- `opl <request...>`
+  - 默认走 quick ask
+- `opl resume / sessions / logs / repair-hermes-gateway`
+  - 提供 landed local shell 的会话与 runtime 运维界面
+
 但它还不是 hosted / web 形态的完整产品前台。
 同时，`Phase 1` 的 read-only gateway commands 仍然是顶层联邦真相面的稳定 formal contract surface。
 

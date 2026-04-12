@@ -4,7 +4,7 @@
 
 - 仓库角色：顶层 gateway 与 federation surface，domain runtime ownership 留在各自的 admitted domain 仓
 - 当前开发宿主：`Codex` 长线自治会话
-- 当前产品入口真相：`OPL` 已经落下本地 direct product-entry shell，当前入口命令是 `opl doctor`、`opl ask`、`opl chat`；用户在本机上不再必须先通过 `Codex` 才能触达顶层 `OPL`。但这仍只是 local CLI-first 入口壳，不是 hosted / web 前台
+- 当前产品入口真相：`OPL` 已经落下本地 direct product-entry shell，默认前台命令就是 `opl`；`opl <request...>` 可直接作为 quick ask，而 `opl doctor / ask / chat / resume / sessions / logs / repair-hermes-gateway` 构成显式入口与 runtime 运维命令面。用户在本机上不再必须先通过 `Codex` 才能触达顶层 `OPL`。但这仍只是 local CLI-first 入口壳，不是 hosted / web 前台
 - 当前家族级入口真相：四仓的 `product entry` 成熟度仍不一致。`OPL` 已有 family-level 本地入口壳；三个业务仓仍主要停留在不同程度的 `operator entry` / `agent entry`，各自 lightweight direct entry 还要继续补强
 - 当前产品边界：`OPL` 负责顶层 gateway / federation / shared substrate contract，三个 domain 仓继续各自维护自己的产品 runtime
 - 当前统一协作语义：`Hermes` 负责产品级长期在线 runtime substrate / orchestration；`OPL` 与 domain 仓继续持有 gateway、authority、对象合同与审计真相；具体单步执行保持 executor-adapter 可插拔，不要求三个 domain 仓共享同一种执行脑
@@ -34,6 +34,7 @@
 - 理想形态与当前差距、以及为什么不能把 repo-local shim / pilot 写成真实集成，统一收口到 `docs/references/hermes-agent-truth-reset-and-target-state.md`
 - 产品入口形态与 `Hermes Kernel Integration` 的正式选择，统一收口到 `docs/references/opl-product-entry-and-hermes-kernel-integration.md`
 - 家族级入口栈与 `OPL -> domain` handoff 架构，统一收口到 `docs/references/family-product-entry-and-domain-handoff-architecture.md`
+- `Med Auto Science` 的顶层切换边界与 `OPL -> MAS` 切换板，统一收口到 `docs/references/mas-top-level-cutover-board.md`
 
 ## 下一阶段
 

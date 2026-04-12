@@ -325,6 +325,73 @@ exit 1
   }
 });
 
+test('bare opl command seeds a front-desk session through the built CLI entrypoint', () => {
+  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "chat" ]; then
+  cat <<'EOF'
+╭─ ⚕ Hermes ───────────────────────────────────────────────────────────────────╮
+OPL FRONT DESK READY
+
+session_id: opl-frontdesk-session
+EOF
+  exit 0
+fi
+if [ "$1" = "--resume" ] && [ "$2" = "opl-frontdesk-session" ]; then
+  cat <<'EOF'
+OPL FRONT DESK RESUMED
+EOF
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+
+  try {
+    const result = runCli([], {
+      env: { OPL_HERMES_BIN: hermesPath },
+    });
+    assert.equal(result.status, 0, formatFailure(result));
+
+    const payload = parseJsonOutput(result);
+    assert.equal(payload.product_entry.mode, 'frontdesk');
+    assert.equal(payload.product_entry.interactive, false);
+    assert.equal(payload.product_entry.seed.session_id, 'opl-frontdesk-session');
+    assert.equal(payload.product_entry.resume.output, 'OPL FRONT DESK RESUMED');
+  } finally {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('natural-language fallback stays machine-readable through the built CLI entrypoint', () => {
+  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "chat" ]; then
+  cat <<'EOF'
+╭─ ⚕ Hermes ───────────────────────────────────────────────────────────────────╮
+AUTO ASK READY
+
+session_id: opl-quick-ask-session
+EOF
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+
+  try {
+    const result = runCli(['Plan', 'a', 'medical', 'grant', 'proposal', 'revision', 'loop.'], {
+      env: { OPL_HERMES_BIN: hermesPath },
+    });
+    assert.equal(result.status, 0, formatFailure(result));
+
+    const payload = parseJsonOutput(result);
+    assert.equal(payload.product_entry.mode, 'ask');
+    assert.equal(payload.product_entry.input.goal, 'Plan a medical grant proposal revision loop.');
+    assert.equal(payload.product_entry.hermes.session_id, 'opl-quick-ask-session');
+  } finally {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('ask --dry-run stays machine-readable through the built CLI entrypoint', () => {
   const result = runCli([
     'ask',
@@ -341,6 +408,72 @@ test('ask --dry-run stays machine-readable through the built CLI entrypoint', ()
   assert.equal(payload.product_entry.routing.domain_id, 'redcube');
   assert.equal(payload.product_entry.routing.workstream_id, 'presentation_ops');
   assert.ok(payload.product_entry.hermes.command_preview.includes('--query'));
+});
+
+test('sessions stays machine-readable through the built CLI entrypoint', () => {
+  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "sessions" ] && [ "$2" = "list" ]; then
+  cat <<'EOF'
+Preview                                            Last Active   Src    ID
+───────────────────────────────────────────────────────────────────────────────────────────────
+Execute the following RedCube service entry enve   10m ago       api_server run_7e2a41
+Medical grant revision session                     2m ago        cli    sess_abcd
+EOF
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+
+  try {
+    const result = runCli(['sessions', '--limit', '2'], {
+      env: { OPL_HERMES_BIN: hermesPath },
+    });
+    assert.equal(result.status, 0, formatFailure(result));
+
+    const payload = parseJsonOutput(result);
+    assert.equal(payload.product_entry.mode, 'sessions');
+    assert.equal(payload.product_entry.sessions.length, 2);
+    assert.equal(payload.product_entry.sessions[0].session_id, 'run_7e2a41');
+  } finally {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('repair-hermes-gateway stays machine-readable through the built CLI entrypoint', () => {
+  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "gateway" ] && [ "$2" = "install" ]; then
+  cat <<'EOF'
+↻ Updated gateway launchd service definition to match the current Hermes install
+✓ Service definition updated
+EOF
+  exit 0
+fi
+if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
+  cat <<'EOF'
+Launchd plist: /tmp/ai.hermes.gateway.plist
+✓ Service definition matches the current Hermes install
+✓ Gateway service is loaded
+EOF
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+
+  try {
+    const result = runCli(['repair-hermes-gateway'], {
+      env: { OPL_HERMES_BIN: hermesPath },
+    });
+    assert.equal(result.status, 0, formatFailure(result));
+
+    const payload = parseJsonOutput(result);
+    assert.equal(payload.product_entry.mode, 'repair_hermes_gateway');
+    assert.equal(payload.product_entry.gateway_service.loaded, true);
+    assert.match(payload.product_entry.install_output, /Service definition updated/);
+  } finally {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  }
 });
 
 test('validate-contracts surfaces shape-invalid contracts with a stable error envelope', () => {
@@ -386,7 +519,7 @@ test('help stays machine-readable and discoverable for built CLI entrypoints', (
   assertNoContractsProvenance(payload);
   assert.equal(payload.version, 'g2');
   assert.equal(payload.help.command, null);
-  assert.equal(payload.help.usage, 'opl <command> [args]');
+  assert.equal(payload.help.usage, 'opl [command|request...] [args]');
   assert.ok(
     payload.help.commands.some((entry) => entry.command === 'validate-contracts'),
   );

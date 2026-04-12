@@ -348,6 +348,78 @@ exit 1
   }
 });
 
+test('bare opl command seeds a front-desk session when not attached to a tty', () => {
+  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "chat" ]; then
+  cat <<'EOF'
+╭─ ⚕ Hermes ───────────────────────────────────────────────────────────────────╮
+OPL FRONT DESK READY
+
+session_id: opl-frontdesk-session
+EOF
+  exit 0
+fi
+if [ "$1" = "--resume" ] && [ "$2" = "opl-frontdesk-session" ]; then
+  cat <<'EOF'
+OPL FRONT DESK RESUMED
+EOF
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+
+  try {
+    const output = runCli([], {
+      OPL_HERMES_BIN: hermesPath,
+    });
+
+    assert.equal(output.version, 'g2');
+    assert.equal(output.product_entry.mode, 'frontdesk');
+    assert.equal(output.product_entry.interactive, false);
+    assert.equal(output.product_entry.seed.session_id, 'opl-frontdesk-session');
+    assert.equal(output.product_entry.seed.response, 'OPL FRONT DESK READY');
+    assert.equal(output.product_entry.resume.session_id, 'opl-frontdesk-session');
+    assert.equal(output.product_entry.resume.output, 'OPL FRONT DESK RESUMED');
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('natural-language fallback routes multi-token input through quick ask', () => {
+  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "chat" ]; then
+  cat <<'EOF'
+╭─ ⚕ Hermes ───────────────────────────────────────────────────────────────────╮
+AUTO ASK READY
+
+session_id: opl-quick-ask-session
+EOF
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+
+  try {
+    const output = runCli(
+      ['Plan', 'a', 'medical', 'grant', 'proposal', 'revision', 'loop.'],
+      {
+        OPL_HERMES_BIN: hermesPath,
+      },
+    );
+
+    assert.equal(output.product_entry.mode, 'ask');
+    assert.equal(output.product_entry.input.goal, 'Plan a medical grant proposal revision loop.');
+    assert.equal(output.product_entry.routing.status, 'unknown_domain');
+    assert.equal(output.product_entry.routing.candidate_workstream_id, 'grant_ops');
+    assert.equal(output.product_entry.hermes.session_id, 'opl-quick-ask-session');
+    assert.equal(output.product_entry.hermes.response, 'AUTO ASK READY');
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('ask --dry-run produces a routed Hermes handoff preview from a plain-language request', () => {
   const output = runCli([
     'ask',
@@ -420,6 +492,125 @@ exit 1
     assert.equal(output.product_entry.hermes.session_id, 'opl-test-session');
     assert.equal(output.product_entry.hermes.response, 'READY FROM OPL');
     assert.equal(output.product_entry.hermes.exit_code, 0);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('resume returns captured session output in non-interactive mode', () => {
+  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "--resume" ] && [ "$2" = "opl-test-session" ]; then
+  cat <<'EOF'
+RESUMED SESSION BODY
+EOF
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+
+  try {
+    const output = runCli(['resume', 'opl-test-session'], {
+      OPL_HERMES_BIN: hermesPath,
+    });
+
+    assert.equal(output.product_entry.mode, 'resume');
+    assert.equal(output.product_entry.interactive, false);
+    assert.equal(output.product_entry.resume.session_id, 'opl-test-session');
+    assert.equal(output.product_entry.resume.output, 'RESUMED SESSION BODY');
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('sessions parses the Hermes recent-session table into a product-entry surface', () => {
+  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "sessions" ] && [ "$2" = "list" ]; then
+  cat <<'EOF'
+Preview                                            Last Active   Src    ID
+───────────────────────────────────────────────────────────────────────────────────────────────
+Execute the following RedCube service entry enve   10m ago       api_server run_7e2a41
+Medical grant revision session                     2m ago        cli    sess_abcd
+EOF
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+
+  try {
+    const output = runCli(['sessions', '--limit', '2'], {
+      OPL_HERMES_BIN: hermesPath,
+    });
+
+    assert.equal(output.product_entry.mode, 'sessions');
+    assert.equal(output.product_entry.sessions.length, 2);
+    assert.equal(output.product_entry.sessions[0].session_id, 'run_7e2a41');
+    assert.equal(output.product_entry.sessions[0].source, 'api_server');
+    assert.equal(output.product_entry.sessions[1].session_id, 'sess_abcd');
+    assert.equal(output.product_entry.sessions[1].preview, 'Medical grant revision session');
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('logs returns a structured wrapper over Hermes log output', () => {
+  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "logs" ] && [ "$2" = "gateway" ]; then
+  cat <<'EOF'
+[INFO] gateway boot
+[INFO] domain handoff ready
+EOF
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+
+  try {
+    const output = runCli(['logs', 'gateway', '--lines', '20'], {
+      OPL_HERMES_BIN: hermesPath,
+    });
+
+    assert.equal(output.product_entry.mode, 'logs');
+    assert.equal(output.product_entry.log_name, 'gateway');
+    assert.equal(output.product_entry.lines, 20);
+    assert.match(output.product_entry.raw_output, /gateway boot/);
+    assert.ok(output.product_entry.command_preview.includes('gateway'));
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('repair-hermes-gateway reinstalls and rechecks the gateway service', () => {
+  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "gateway" ] && [ "$2" = "install" ]; then
+  cat <<'EOF'
+↻ Updated gateway launchd service definition to match the current Hermes install
+✓ Service definition updated
+EOF
+  exit 0
+fi
+if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
+  cat <<'EOF'
+Launchd plist: /tmp/ai.hermes.gateway.plist
+✓ Service definition matches the current Hermes install
+✓ Gateway service is loaded
+EOF
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+
+  try {
+    const output = runCli(['repair-hermes-gateway'], {
+      OPL_HERMES_BIN: hermesPath,
+    });
+
+    assert.equal(output.product_entry.mode, 'repair_hermes_gateway');
+    assert.match(output.product_entry.install_output, /Service definition updated/);
+    assert.equal(output.product_entry.gateway_service.loaded, true);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
@@ -861,7 +1052,7 @@ test('help returns command discovery and runnable examples', () => {
   assertNoContractsProvenance(output);
   assert.equal(output.version, 'g2');
   assert.equal(output.help.command, null);
-  assert.equal(output.help.usage, 'opl <command> [args]');
+  assert.equal(output.help.usage, 'opl [command|request...] [args]');
   assert.ok(
     ['list-workstreams', 'get-workstream', 'list-domains', 'get-domain', 'list-surfaces', 'get-surface', 'resolve-request-surface', 'explain-domain-boundary'].every((command) =>
       output.help.commands.some((entry: { command: string }) => entry.command === command),
@@ -891,7 +1082,7 @@ test('root --help returns the same machine-readable help payload', () => {
   assertNoContractsProvenance(output);
   assert.equal(output.version, 'g2');
   assert.equal(output.help.command, null);
-  assert.equal(output.help.usage, 'opl <command> [args]');
+  assert.equal(output.help.usage, 'opl [command|request...] [args]');
   assert.ok(
     output.help.commands.some((entry: { command: string }) => entry.command === 'get-domain'),
   );

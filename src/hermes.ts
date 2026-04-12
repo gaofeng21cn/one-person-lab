@@ -35,6 +35,27 @@ export interface HermesCommandResult {
   stderr: string;
 }
 
+export interface HermesSessionsListOptions {
+  limit?: number;
+  source?: string;
+}
+
+export interface HermesSessionSummary {
+  preview: string;
+  last_active: string;
+  source: string;
+  session_id: string;
+}
+
+export interface HermesLogsOptions {
+  logName?: string;
+  lines?: number;
+  since?: string;
+  level?: string;
+  component?: string;
+  sessionId?: string;
+}
+
 function isExecutableCandidate(filePath: string) {
   return fs.existsSync(filePath) && fs.statSync(filePath).isFile();
 }
@@ -167,6 +188,10 @@ export function buildHermesCliPreview(args: string[]) {
   return ['hermes', ...args];
 }
 
+export function isInteractiveShell() {
+  return Boolean(process.stdin.isTTY && process.stdout.isTTY);
+}
+
 export function runHermesCommand(
   args: string[],
   options: HermesCommandOptions = {},
@@ -184,6 +209,136 @@ export function runHermesCommand(
   }
 
   return runBinary(hermesBinary, args, options);
+}
+
+export function runHermesResume(
+  sessionId: string,
+  options: HermesCommandOptions = {},
+) {
+  return runHermesCommand(['--resume', sessionId], options);
+}
+
+export function buildHermesSessionsListArgs(
+  options: HermesSessionsListOptions = {},
+) {
+  const args = ['sessions', 'list'];
+
+  if (typeof options.limit === 'number') {
+    args.push('--limit', String(options.limit));
+  }
+
+  if (options.source) {
+    args.push('--source', options.source);
+  }
+
+  return args;
+}
+
+export function runHermesSessionsList(
+  options: HermesSessionsListOptions = {},
+  commandOptions: HermesCommandOptions = {},
+) {
+  return runHermesCommand(buildHermesSessionsListArgs(options), commandOptions);
+}
+
+export function parseHermesSessionsTable(output: string): HermesSessionSummary[] {
+  return output
+    .split(/\r?\n/)
+    .map((line) => line.trimEnd())
+    .filter((line) => line.trim().length > 0)
+    .filter((line) => !/^Preview\s+Last Active\s+Src\s+ID$/i.test(line))
+    .filter((line) => !/^[\u2500\u2014-]{3,}$/.test(line.trim()))
+    .map((line) => line.split(/\s{2,}/).map((segment) => segment.trim()).filter(Boolean))
+    .map((segments) => {
+      if (segments.length >= 4) {
+        return segments;
+      }
+
+      if (segments.length === 3) {
+        const lastSegment = segments[2];
+        const lastWhitespace = lastSegment.lastIndexOf(' ');
+
+        if (lastWhitespace > 0) {
+          return [
+            segments[0],
+            segments[1],
+            lastSegment.slice(0, lastWhitespace).trim(),
+            lastSegment.slice(lastWhitespace + 1).trim(),
+          ];
+        }
+      }
+
+      return segments;
+    })
+    .filter((segments) => segments.length >= 4)
+    .map((segments) => {
+      const [preview, lastActive, source, ...sessionIdSegments] = segments;
+      return {
+        preview,
+        last_active: lastActive,
+        source,
+        session_id: sessionIdSegments.join(' '),
+      };
+    });
+}
+
+export function runHermesLogs(
+  options: HermesLogsOptions = {},
+  commandOptions: HermesCommandOptions = {},
+) {
+  return runHermesCommand(buildHermesLogsArgs(options), commandOptions);
+}
+
+export function buildHermesLogsArgs(
+  options: HermesLogsOptions = {},
+) {
+  const args = ['logs'];
+
+  if (options.logName) {
+    args.push(options.logName);
+  }
+
+  if (typeof options.lines === 'number') {
+    args.push('--lines', String(options.lines));
+  }
+
+  if (options.since) {
+    args.push('--since', options.since);
+  }
+
+  if (options.level) {
+    args.push('--level', options.level);
+  }
+
+  if (options.component) {
+    args.push('--component', options.component);
+  }
+
+  if (options.sessionId) {
+    args.push('--session', options.sessionId);
+  }
+
+  return args;
+}
+
+export function repairHermesGateway(commandOptions: HermesCommandOptions = {}) {
+  const installResult = runHermesCommand(['gateway', 'install'], commandOptions);
+  const statusResult = runHermesCommand(['gateway', 'status'], commandOptions);
+  const gatewayRawOutput = [statusResult.stdout, statusResult.stderr]
+    .filter((chunk) => chunk.trim().length > 0)
+    .join('\n')
+    .trim();
+
+  return {
+    installResult,
+    gatewayService: {
+      loaded:
+        statusResult.exitCode === 0
+        && /Gateway service is loaded/i.test(gatewayRawOutput),
+      raw_output: gatewayRawOutput,
+    },
+    statusResult,
+  };
 }
 
 export function parseHermesQuietChatOutput(output: string) {

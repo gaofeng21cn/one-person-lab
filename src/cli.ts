@@ -13,6 +13,11 @@ import {
   type ProductEntryCliInput,
   runProductEntryAsk,
   runProductEntryChat,
+  runProductEntryFrontDesk,
+  runProductEntryLogs,
+  runProductEntryRepairHermesGateway,
+  runProductEntryResume,
+  runProductEntrySessions,
 } from './product-entry.ts';
 import { explainDomainBoundary, resolveRequestSurface } from './resolver.ts';
 import type {
@@ -35,6 +40,20 @@ type ParsedCliInput = {
   command: string | null;
   args: string[];
   loadOptions?: GatewayContractsLoadOptions;
+};
+
+type SessionsCliInput = {
+  limit?: number;
+  source?: string;
+};
+
+type LogsCliInput = {
+  logName?: string;
+  lines?: number;
+  since?: string;
+  level?: string;
+  component?: string;
+  sessionId?: string;
 };
 
 function printJson(payload: unknown, stream: NodeJS.WriteStream = process.stdout) {
@@ -197,12 +216,162 @@ function parseProductEntryArgs(
   };
 }
 
+function parsePositiveInteger(
+  token: string,
+  value: string,
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+) {
+  const parsed = Number.parseInt(value, 10);
+
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw buildUsageError(`Option ${token} requires a positive integer.`, spec, {
+      option: token,
+      value,
+    });
+  }
+
+  return parsed;
+}
+
+function parseResumeArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+) {
+  const [sessionId, ...extraArgs] = args;
+
+  if (!sessionId) {
+    throw buildUsageError('resume requires a session id.', spec, {
+      required: ['session_id'],
+    });
+  }
+
+  if (extraArgs.length > 0) {
+    throw buildUsageError(`Unexpected positional argument: ${extraArgs[0]}.`, spec, {
+      token: extraArgs[0],
+    });
+  }
+
+  return sessionId;
+}
+
+function parseSessionsArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): SessionsCliInput {
+  const parsed: SessionsCliInput = {};
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (!token.startsWith('--')) {
+      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
+        token,
+      });
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
+        option: token,
+      });
+    }
+
+    switch (token) {
+      case '--limit':
+        parsed.limit = parsePositiveInteger(token, value, spec);
+        break;
+      case '--source':
+        parsed.source = value;
+        break;
+      default:
+        throw buildUsageError(`Unknown option for sessions: ${token}.`, spec, {
+          option: token,
+        });
+    }
+
+    index += 1;
+  }
+
+  return parsed;
+}
+
+function parseLogsArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): LogsCliInput {
+  const parsed: LogsCliInput = {};
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (!token.startsWith('--')) {
+      if (parsed.logName) {
+        throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
+          token,
+        });
+      }
+
+      parsed.logName = token;
+      continue;
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
+        option: token,
+      });
+    }
+
+    switch (token) {
+      case '--lines':
+        parsed.lines = parsePositiveInteger(token, value, spec);
+        break;
+      case '--since':
+        parsed.since = value;
+        break;
+      case '--level':
+        parsed.level = value;
+        break;
+      case '--component':
+        parsed.component = value;
+        break;
+      case '--session':
+        parsed.sessionId = value;
+        break;
+      default:
+        throw buildUsageError(`Unknown option for logs: ${token}.`, spec, {
+          option: token,
+        });
+    }
+
+    index += 1;
+  }
+
+  return parsed;
+}
+
+function looksLikeNaturalLanguage(command: string, args: string[]) {
+  if (args.length > 0) {
+    return true;
+  }
+
+  if (/\s/.test(command)) {
+    return true;
+  }
+
+  if (/[\u3400-\u9fff]/u.test(command)) {
+    return true;
+  }
+
+  return /[.,!?;:()[\]{}'"“”‘’]/.test(command);
+}
+
 function buildRootHelp(commands: Record<string, CommandSpec>) {
   return {
     version: 'g2',
     help: {
       command: null,
-      usage: 'opl <command> [args]',
+      usage: 'opl [command|request...] [args]',
       global_options: [
         {
           option: '--contracts-dir <path>',
@@ -218,7 +387,9 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
       })),
       examples: [
         'opl help',
+        'opl',
         'opl doctor',
+        'opl "Plan a medical grant proposal revision loop."',
         'opl ask "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck',
         'opl chat "Plan a medical grant proposal revision loop."',
         'opl validate-contracts',
@@ -496,6 +667,30 @@ function main() {
       ],
       handler: (args) => runProductEntryChat(parseProductEntryArgs(args, commandSpecs.chat), getContracts()),
     },
+    resume: {
+      usage: 'opl resume <session_id>',
+      summary: 'Resume a Hermes-backed OPL session directly from the local product-entry shell.',
+      examples: ['opl resume run_7e2a41a19175465f809c0a7f151278ee'],
+      handler: (args) => runProductEntryResume(parseResumeArgs(args, commandSpecs.resume)),
+    },
+    sessions: {
+      usage: 'opl sessions [--limit <n>] [--source <source>]',
+      summary: 'List recent Hermes sessions through a machine-readable OPL product-entry surface.',
+      examples: ['opl sessions', 'opl sessions --limit 10', 'opl sessions --limit 10 --source api_server'],
+      handler: (args) => runProductEntrySessions(parseSessionsArgs(args, commandSpecs.sessions)),
+    },
+    logs: {
+      usage: 'opl logs [log_name] [--lines <n>] [--since <cursor>] [--level <level>] [--component <name>] [--session <id>]',
+      summary: 'Wrap Hermes log access in an OPL product-entry envelope for debugging and operations.',
+      examples: ['opl logs gateway', 'opl logs gateway --lines 50', 'opl logs worker --level info --component runtime'],
+      handler: (args) => runProductEntryLogs(parseLogsArgs(args, commandSpecs.logs)),
+    },
+    'repair-hermes-gateway': {
+      usage: 'opl repair-hermes-gateway',
+      summary: 'Reinstall and recheck the Hermes gateway service used by the OPL product shell.',
+      examples: ['opl repair-hermes-gateway'],
+      handler: () => runProductEntryRepairHermesGateway(),
+    },
     'resolve-request-surface': {
       usage: 'opl resolve-request-surface --intent <intent> --target <target> --goal <goal> [--preferred-family <family>] [--request-kind <kind>]',
       summary: 'Resolve a top-level request to an admitted workstream, domain boundary, or ambiguity envelope.',
@@ -539,20 +734,26 @@ function main() {
       return;
     }
 
-    throw buildUsageError('A command is required.', {
-      usage: 'opl [--contracts-dir <path>] <command> [args]',
-      examples: [
-        'opl help',
-        'opl validate-contracts',
-        'opl --contracts-dir /path/to/contracts/opl-gateway validate-contracts',
-      ],
-    }, {
-      commands: Object.keys(commandSpecs),
-    });
+    const result = runProductEntryFrontDesk(getContracts());
+    if (typeof result === 'object' && result !== null && '__handled' in result) {
+      return;
+    }
+
+    printJson(result);
+    return;
   }
 
   const spec = commandSpecs[command];
   if (!spec) {
+    if (!helpRequested && looksLikeNaturalLanguage(command, args)) {
+      const result = runProductEntryAsk(
+        parseProductEntryArgs([command, ...args], commandSpecs.ask),
+        getContracts(),
+      );
+      printJson(result);
+      return;
+    }
+
     throw new GatewayContractError('unknown_command', `Unknown command: ${command}.`, {
       command,
       commands: Object.keys(commandSpecs),
