@@ -857,6 +857,10 @@ test('workspace registry and handoff surfaces stay machine-readable through the 
     const catalogPayload = parseJsonOutput(catalogResult);
     assert.equal(catalogPayload.workspace_catalog.projects.length, 3);
     assert.equal(catalogPayload.workspace_catalog.projects[2].active_binding.workspace_path, repoRoot);
+    assert.equal(catalogPayload.workspace_catalog.projects[2].bindings_count.total, 1);
+    assert.equal(catalogPayload.workspace_catalog.projects[2].bindings_count.direct_entry_ready, 1);
+    assert.equal(catalogPayload.workspace_catalog.summary.active_projects_count, 1);
+    assert.equal(catalogPayload.workspace_catalog.summary.direct_entry_ready_projects_count, 1);
 
     const handoffResult = runCli([
       'handoff-envelope',
@@ -987,6 +991,9 @@ exit 1
     assert.equal(ledgerPayload.session_ledger.summary.entry_count, 1);
     assert.equal(ledgerPayload.session_ledger.entries[0].session_id, 'built_sess_ledger');
     assert.equal(ledgerPayload.session_ledger.entries[0].resource_sample.process_count, 2);
+    assert.equal(ledgerPayload.session_ledger.summary.session_aggregate_count, 1);
+    assert.equal(ledgerPayload.session_ledger.sessions[0].session_id, 'built_sess_ledger');
+    assert.equal(ledgerPayload.session_ledger.sessions[0].resource_totals.latest_process_count, 2);
   } finally {
     rmSync(fixtureRoot, { recursive: true, force: true });
     rmSync(psFixture.fixtureRoot, { recursive: true, force: true });

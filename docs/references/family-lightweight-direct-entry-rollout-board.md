@@ -63,11 +63,13 @@
 - 这条板只覆盖论文配图以外的 research runtime 主线；
 - display / 配图资产化是独立支线，不混入这里；
 - 当前最诚实的下一棒不是重做 display，而是沿 real adapter cutover 推进研究主线。
+- repo-tracked research-only lightweight direct-entry shell 已经落地：`workspace-cockpit`、`submit-study-task`、`launch-study`、`build-product-entry` 现在共同承担启动、下任务、看进度与 shared handoff envelope 输出。
 
 下一棒：
 
 - external `Hermes-Agent` kernel 与主线 research runtime 的真实 adapter cutover；
-- 保持 `MedDeepScientist` backend 的受控边界，直到替换条件真正成熟。
+- 保持 `MedDeepScientist` backend 的受控边界，直到替换条件真正成熟；
+- 在 external gate 仍存在的前提下，把已 landed shell 继续收成更诚实的 direct-entry 回路，而不是把它误写成成熟前台。
 
 ### `RedCube AI`
 
@@ -75,18 +77,20 @@
 
 - 它是最适合尽快长出 lightweight direct entry 的业务仓之一；
 - 重点仍是 visual deliverable / source-readiness / family handoff 收口。
+- repo-tracked lightweight direct-entry shell 已经落地：`redcube product-entry` 现在可以输出 direct / `OPL` handoff 共用的 shared envelope。
 
 下一棒：
 
 - 真实上游 `Hermes-Agent` pilot；
-- visual-only lightweight direct entry；
-- 与 `OPL` 顶层 handoff 对齐。
+- 把 visual-only lightweight direct entry 从“可输出 envelope 的 contract shell”继续收成更完整的 direct-entry 面；
+- 与 `OPL` 顶层 handoff、workspace locator 与 domain locator 配置继续对齐。
 
 ### `Med Auto Grant`
 
 当前已知边界：
 
 - 它已经比多数仓更接近真实的 runtime substrate 集成；
+- `build-product-entry`、`grant-progress`、`grant-cockpit` 已经让 grant-only lightweight direct entry 走在三仓最前；
 - 下一步不再只是补文档，而是把 grant-only direct entry、local runtime、hosted-friendly 边界继续压实。
 
 下一棒：
@@ -110,9 +114,9 @@
 
 由各业务仓继续落实：
 
-- `RedCube AI`：visual-only lightweight direct entry
-- `Med Auto Grant`：grant-only lightweight direct entry
-- `Med Auto Science`：research-only lightweight direct entry（不含 display 支线）
+- `RedCube AI`：从已 landed 的 `product-entry` contract shell 继续压实 visual-only lightweight direct entry
+- `Med Auto Grant`：在已 landed 的 structured shell 与 read-only projection 上继续压实 grant-only lightweight direct entry
+- `Med Auto Science`：在已 landed 的 research-only shell 与 `build-product-entry` 上继续压实 lightweight direct entry（不含 display 支线）
 
 ### D3. 接入真实 Hermes-backed runtime
 

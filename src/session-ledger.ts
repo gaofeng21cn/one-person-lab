@@ -56,6 +56,27 @@ type RecordSessionLedgerInput = {
   } | null;
 };
 
+type SessionAggregate = {
+  session_id: string;
+  domain_id: string | null;
+  workstream_id: string | null;
+  event_count: number;
+  first_recorded_at: string;
+  last_recorded_at: string;
+  latest_goal_preview: string | null;
+  modes: string[];
+  source_surfaces: string[];
+  workspace_locator: SessionLedgerEntry['workspace_locator'];
+  resource_totals: {
+    samples_captured: number;
+    samples_unavailable: number;
+    latest_process_count: number | null;
+    peak_process_count: number | null;
+    peak_total_rss_kb: number | null;
+    peak_total_cpu_percent: number | null;
+  };
+};
+
 function readSessionLedgerFile(): SessionLedgerFile {
   const paths = resolveFrontDeskStatePaths();
   if (!fs.existsSync(paths.session_ledger_file)) {
@@ -137,9 +158,84 @@ export function recordSessionLedgerEntry(input: RecordSessionLedgerInput) {
   return entry;
 }
 
+function pushUnique(values: string[], value: string | null) {
+  if (!value || values.includes(value)) {
+    return;
+  }
+
+  values.push(value);
+}
+
+function buildSessionAggregates(entries: SessionLedgerEntry[], limit: number) {
+  const aggregates = new Map<string, SessionAggregate>();
+
+  for (const entry of entries) {
+    const existing = aggregates.get(entry.session_id);
+    if (!existing) {
+      aggregates.set(entry.session_id, {
+        session_id: entry.session_id,
+        domain_id: entry.domain_id,
+        workstream_id: entry.workstream_id,
+        event_count: 1,
+        first_recorded_at: entry.recorded_at,
+        last_recorded_at: entry.recorded_at,
+        latest_goal_preview: entry.goal_preview,
+        modes: [entry.mode],
+        source_surfaces: [entry.source_surface],
+        workspace_locator: entry.workspace_locator,
+        resource_totals: {
+          samples_captured: entry.resource_sample.status === 'captured' ? 1 : 0,
+          samples_unavailable: entry.resource_sample.status === 'unavailable' ? 1 : 0,
+          latest_process_count: entry.resource_sample.status === 'captured' ? entry.resource_sample.process_count : null,
+          peak_process_count: entry.resource_sample.status === 'captured' ? entry.resource_sample.process_count : null,
+          peak_total_rss_kb: entry.resource_sample.status === 'captured' ? entry.resource_sample.total_rss_kb : null,
+          peak_total_cpu_percent: entry.resource_sample.status === 'captured' ? entry.resource_sample.total_cpu_percent : null,
+        },
+      });
+      continue;
+    }
+
+    existing.event_count += 1;
+    existing.first_recorded_at = entry.recorded_at < existing.first_recorded_at
+      ? entry.recorded_at
+      : existing.first_recorded_at;
+    existing.last_recorded_at = entry.recorded_at > existing.last_recorded_at
+      ? entry.recorded_at
+      : existing.last_recorded_at;
+    existing.domain_id = existing.domain_id ?? entry.domain_id;
+    existing.workstream_id = existing.workstream_id ?? entry.workstream_id;
+    existing.latest_goal_preview = existing.latest_goal_preview ?? entry.goal_preview;
+    existing.workspace_locator = existing.workspace_locator ?? entry.workspace_locator;
+    pushUnique(existing.modes, entry.mode);
+    pushUnique(existing.source_surfaces, entry.source_surface);
+
+    if (entry.resource_sample.status === 'captured') {
+      existing.resource_totals.samples_captured += 1;
+      existing.resource_totals.latest_process_count = entry.resource_sample.process_count;
+      existing.resource_totals.peak_process_count = Math.max(
+        existing.resource_totals.peak_process_count ?? entry.resource_sample.process_count,
+        entry.resource_sample.process_count,
+      );
+      existing.resource_totals.peak_total_rss_kb = Math.max(
+        existing.resource_totals.peak_total_rss_kb ?? entry.resource_sample.total_rss_kb,
+        entry.resource_sample.total_rss_kb,
+      );
+      existing.resource_totals.peak_total_cpu_percent = Math.max(
+        existing.resource_totals.peak_total_cpu_percent ?? entry.resource_sample.total_cpu_percent,
+        entry.resource_sample.total_cpu_percent,
+      );
+    } else {
+      existing.resource_totals.samples_unavailable += 1;
+    }
+  }
+
+  return Array.from(aggregates.values()).slice(0, limit);
+}
+
 export function buildSessionLedger(limit = 20) {
   const ledger = readSessionLedgerFile();
   const entries = ledger.entries.slice(0, limit);
+  const sessions = buildSessionAggregates(ledger.entries, limit);
 
   return {
     version: 'g2',
@@ -149,12 +245,15 @@ export function buildSessionLedger(limit = 20) {
       summary: {
         entry_count: ledger.entries.length,
         distinct_session_count: new Set(ledger.entries.map((entry) => entry.session_id)).size,
+        session_aggregate_count: sessions.length,
         last_recorded_at: ledger.entries[0]?.recorded_at ?? null,
       },
       entries,
+      sessions,
       notes: [
         'This ledger tracks only OPL-managed product-entry session events.',
         'Resource samples are captured at event time and do not claim kernel-global exact per-session billing.',
+        'Session aggregates are derived from the event ledger and remain OPL-managed attribution rather than kernel-global billing truth.',
       ],
     },
   };

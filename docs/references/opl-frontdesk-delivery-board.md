@@ -58,8 +58,9 @@
 
 - 已经有了第一版多项目 / 工作区 / 会话 / runtime 观测与可写管理面；
 - `runtime-status` 已能看到 Hermes runtime 健康、最近会话以及 runtime-level 进程资源占用；
-- `session-ledger` 已能提供 OPL-managed 的会话事件与诚实资源样本；
+- `session-ledger` 已能提供 OPL-managed 的会话事件、诚实资源样本，以及按 session 聚合后的归因视图；
 - `workspace-bind|activate|archive` 已能把 workspace registry 与 direct-entry locator 作为顶层可写状态管理起来；
+- `workspace-catalog` 现在还会输出 project-level binding summary、最近更新时间与可写 action 提示；
 - `handoff-envelope` 已能把顶层 front desk 到 domain direct entry / domain gateway 的最小交接面冻结出来；
 - `dashboard` 已能把 front desk、projects、workspace、workspace registry、session ledger 与 runtime 汇总到一个管理面里。
 
@@ -160,8 +161,9 @@
 未完成：
 
 - `OPL` 顶层现在已经有 front desk、workspace registry 与 family handoff bundle；
-- 但三个业务仓各自的 lightweight direct entry 还没全部长出来；
-- 当前只能通过 workspace registry 中显式配置的 direct-entry locator 把已知 domain 前台接进来，不能假装全家都已经齐了。
+- 三个业务仓现在都已经长出了 repo-tracked lightweight direct-entry shell，但 maturity、locator 配置与真正可直接进入的产品面仍不一致；
+- 当前仍只能通过 workspace registry 中显式配置的 direct-entry locator 把已知 domain 前台接进来，不能假装全家都已经齐了；
+- 顶层还需要把 domain shell metadata、locator wiring 与 family handoff proof 继续压实。
 
 ## 当前进行中
 
@@ -191,7 +193,7 @@
 最合理的下一棒顺序：
 
 1. 继续把已落地的 `LibreChat-first` hosted shell pilot 往 managed hosted runtime / hosted hardening 推进
-2. 让 `RedCube AI` 先长出真实 lightweight direct entry
+2. 让 `RedCube AI`、`Med Auto Grant`、`Med Auto Science` 的已 landed shell 与顶层 locator / handoff 继续对齐
 3. 让 `Med Auto Grant` 继续把 grant-only entry / runtime / export 压实
 4. 让 `Med Auto Science` 继续走非 display 主线的 real adapter cutover
 

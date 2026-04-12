@@ -1201,6 +1201,13 @@ test('workspace registry commands bind activate and archive project workspaces w
     assert.equal(catalogOutput.workspace_catalog.projects.length, 3);
     assert.equal(catalogOutput.workspace_catalog.projects[2].project_id, 'redcube');
     assert.equal(catalogOutput.workspace_catalog.projects[2].active_binding.workspace_path, repoRoot);
+    assert.equal(catalogOutput.workspace_catalog.projects[2].bindings_count.total, 1);
+    assert.equal(catalogOutput.workspace_catalog.projects[2].bindings_count.direct_entry_ready, 1);
+    assert.equal(catalogOutput.workspace_catalog.projects[2].last_updated_at, bindOutput.workspace_catalog.binding.updated_at);
+    assert.deepEqual(catalogOutput.workspace_catalog.projects[2].available_actions, ['bind', 'activate', 'archive']);
+    assert.equal(catalogOutput.workspace_catalog.summary.active_projects_count, 1);
+    assert.equal(catalogOutput.workspace_catalog.summary.direct_entry_ready_projects_count, 1);
+    assert.equal(catalogOutput.workspace_catalog.summary.last_binding_change_at, bindOutput.workspace_catalog.binding.updated_at);
 
     const archiveOutput = runCli([
       'workspace-archive',
@@ -1349,6 +1356,14 @@ exit 1
     assert.equal(ledgerOutput.session_ledger.entries[0].session_id, 'sess_ledger');
     assert.equal(ledgerOutput.session_ledger.entries[0].domain_id, 'redcube');
     assert.equal(ledgerOutput.session_ledger.entries[0].resource_sample.process_count, 2);
+    assert.equal(ledgerOutput.session_ledger.sessions.length, 1);
+    assert.equal(ledgerOutput.session_ledger.sessions[0].session_id, 'sess_ledger');
+    assert.equal(ledgerOutput.session_ledger.sessions[0].event_count, 1);
+    assert.equal(ledgerOutput.session_ledger.sessions[0].domain_id, 'redcube');
+    assert.deepEqual(ledgerOutput.session_ledger.sessions[0].modes, ['ask']);
+    assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.samples_captured, 1);
+    assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.latest_process_count, 2);
+    assert.equal(ledgerOutput.session_ledger.summary.session_aggregate_count, 1);
 
     const runtimeOutput = runCli(['runtime-status', '--limit', '2'], {
       OPL_HERMES_BIN: hermesPath,
@@ -1356,6 +1371,8 @@ exit 1
       PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
     });
     assert.equal(runtimeOutput.runtime_status.managed_session_ledger.summary.entry_count, 1);
+    assert.equal(runtimeOutput.runtime_status.managed_session_ledger.summary.session_aggregate_count, 1);
+    assert.equal(runtimeOutput.runtime_status.managed_session_ledger.sessions[0].session_id, 'sess_ledger');
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(psFixture.fixtureRoot, { recursive: true, force: true });

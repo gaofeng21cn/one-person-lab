@@ -163,6 +163,10 @@ function setProjectActiveBinding(
   }
 }
 
+function hasDirectEntry(binding: WorkspaceBinding) {
+  return Boolean(binding.direct_entry.command || binding.direct_entry.url);
+}
+
 function buildProjectCatalogEntry(
   projectId: string,
   projectName: string,
@@ -172,6 +176,11 @@ function buildProjectCatalogEntry(
   const activeBinding = projectBindings.find((binding) => binding.status === 'active') ?? null;
   const archivedCount = projectBindings.filter((binding) => binding.status === 'archived').length;
   const inactiveCount = projectBindings.filter((binding) => binding.status === 'inactive').length;
+  const directEntryReadyCount = projectBindings.filter((binding) => binding.status !== 'archived' && hasDirectEntry(binding)).length;
+  const lastUpdatedAt = projectBindings
+    .map((binding) => binding.updated_at)
+    .sort()
+    .at(-1) ?? null;
 
   return {
     project_id: projectId,
@@ -179,6 +188,27 @@ function buildProjectCatalogEntry(
     active_binding: activeBinding,
     inactive_bindings_count: inactiveCount,
     archived_bindings_count: archivedCount,
+    bindings_count: {
+      total: projectBindings.length,
+      active: activeBinding ? 1 : 0,
+      inactive: inactiveCount,
+      archived: archivedCount,
+      direct_entry_ready: directEntryReadyCount,
+    },
+    last_updated_at: lastUpdatedAt,
+    available_actions: ['bind', 'activate', 'archive'],
+  };
+}
+
+function buildWorkspaceCatalogSummary(projects: ReturnType<typeof buildProjectCatalogEntry>[], bindings: WorkspaceBinding[]) {
+  return {
+    total_projects_count: projects.length,
+    active_projects_count: projects.filter((project) => project.active_binding !== null).length,
+    direct_entry_ready_projects_count: projects.filter((project) => project.bindings_count.direct_entry_ready > 0).length,
+    total_bindings_count: bindings.length,
+    active_bindings_count: bindings.filter((binding) => binding.status === 'active').length,
+    archived_bindings_count: bindings.filter((binding) => binding.status === 'archived').length,
+    last_binding_change_at: bindings.map((binding) => binding.updated_at).sort().at(-1) ?? null,
   };
 }
 
@@ -189,6 +219,9 @@ function buildWorkspaceCatalogPayload(
   binding: WorkspaceBinding | null,
 ) {
   const paths = resolveFrontDeskStatePaths();
+  const projects = allowedProjects(contracts).map((project) =>
+    buildProjectCatalogEntry(project.project_id, project.project, registry.bindings),
+  );
   return {
     version: 'g2',
     contracts_context: {
@@ -199,9 +232,8 @@ function buildWorkspaceCatalogPayload(
       action,
       state_dir: paths.state_dir,
       binding,
-      projects: allowedProjects(contracts).map((project) =>
-        buildProjectCatalogEntry(project.project_id, project.project, registry.bindings),
-      ),
+      summary: buildWorkspaceCatalogSummary(projects, registry.bindings),
+      projects,
       bindings: registry.bindings,
       notes: [
         'Workspace bindings are product-entry level state for OPL and admitted domain project surfaces.',

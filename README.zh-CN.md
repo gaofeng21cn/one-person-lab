@@ -256,7 +256,7 @@
 - 用户在本机上不再必须先进入 `Codex`，才能触达顶层 `OPL` surface
 - 这次落地的 product entry 已经同时包含本地 CLI-first 入口壳与本地 web front desk pilot；同时也已经落下可自托管的 hosted pilot package，以及真实的 LibreChat-first hosted shell pilot package，但 actual managed hosted runtime 仍未落地
 - hosted / web 这一层的选型现在也已经冻结：短期最快可用路线是 `LibreChat-first`，长期目标仍是 `OPL` 自有 web front desk；`Chatbot UI` 太薄，不适合作为主 hosted 基座
-- 这个成熟度缺口在三个业务仓里也仍然存在：有些仓已经有可用的本地 `CLI` 或 runtime baseline，但整体更像 operator / agent entry，而不是打磨完成的用户产品入口
+- 三个业务仓的成熟度缺口现在已经缩小，但仍然真实存在：`Med Auto Grant` 已经有 grant-facing 的结构化 shell 和只读 direct-product projection，`Med Auto Science` 已经补上 research-only shell 与共享 envelope 的 `build-product-entry`，`RedCube AI` 也已经有 repo-tracked 的 `redcube product-entry` shell；但三者都还不应被夸大成成熟的 hosted 或最终用户前台
 - 四个仓已经不再处于同一条 `Hermes-Agent` 集成阶段线上：`Med Auto Grant` 已切到真实 runtime substrate，`Med Auto Science` 已打通 external runtime bring-up，`RedCube AI` 仍在 pilot prep，而 `OPL` 继续只持有顶层 gateway / federation 语言，同时开始持有 family-level 的本地入口壳
 
 目标产品链路应是：

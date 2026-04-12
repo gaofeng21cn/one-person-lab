@@ -260,7 +260,7 @@ The current truth is still transitional, but it has moved forward:
 - users no longer need to start from `Codex` just to reach the top-level `OPL` surface locally
 - this landed product entry now includes both the local CLI-first shell and a local web front desk pilot; a self-hostable hosted pilot package and a real LibreChat-first hosted shell pilot package are both landed, but the actual managed hosted runtime is still not landed
 - the hosted / web benchmark is now frozen: the shortest-path pilot is `LibreChat-first`, while the long-line target remains an `OPL`-owned web front desk; `Chatbot UI` is too thin to act as the main hosted base
-- the same maturity gap still exists in the domain repositories: some already have usable local `CLI` or runtime baselines, but they still read more like operator / agent entry surfaces than finished user-facing product entries
+- the domain maturity gap is now narrower but still real: `Med Auto Grant` already has a grant-facing structured shell plus read-only direct-product projections, `Med Auto Science` now has a research-only shell plus shared-envelope `build-product-entry`, and `RedCube AI` now has a repo-tracked `redcube product-entry` shell; none of the three should yet be overstated as a mature hosted or end-user front desk
 - the four repositories are no longer at the same integration depth: `Med Auto Grant` has landed a real upstream `Hermes-Agent` runtime substrate, `Med Auto Science` has completed external runtime bring-up and is moving toward real adapter cutover, `RedCube AI` remains in upstream pilot prep, and `OPL` itself stays above domain runtime ownership while now owning the local family-level entry shell
 
 The target product chain is:

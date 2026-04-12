@@ -28,9 +28,9 @@
 - 当前重点：真相重置、central sync、surface authority convergence、admitted-domain state alignment。
 - 当前真相：四仓已经不在同一集成深度上。`Med Auto Grant` 已落下真实上游 `Hermes-Agent` substrate，`Med Auto Science` 已完成 external runtime bring-up 并进入 real adapter cutover 前态，`RedCube AI` 仍在 upstream pilot prep，而 `OPL` 现在已经在顶层 gateway 之上持有本地 direct product-entry shell。
 - 当前产品入口真相：`OPL` 现在已经有了以 `opl` 为默认前台的本地 direct product-entry shell；`opl <request...>` 可直接作为 quick ask，而 `opl doctor / ask / chat / resume / sessions / logs / repair-hermes-gateway / frontdesk-manifest / frontdesk-hosted-bundle / frontdesk-hosted-package / frontdesk-librechat-package / session-ledger / handoff-envelope / frontdesk-service-*` 继续构成显式命令面，并统一运行在外部 Hermes kernel 之上；`opl web` 现在也已经把本地 web front desk pilot 落下来了。
-- 当前管理面真相：`opl projects / workspace-status / workspace-catalog / workspace-bind|activate|archive / runtime-status / session-ledger / dashboard` 已经补上当前顶层管理面，用来观察项目、工作区、会话、handoff 与 runtime；`opl web` 则把这层管理面直接带进浏览器入口，同时也暴露了 hosted-friendly 的 `health / manifest / hosted-bundle / hosted-package / librechat-package / sessions / resume / logs / handoff-envelope` 表面。
+- 当前管理面真相：`opl projects / workspace-status / workspace-catalog / workspace-bind|activate|archive / runtime-status / session-ledger / dashboard` 已经补上当前顶层管理面，用来观察项目、工作区、会话、handoff 与 runtime；其中 `workspace-catalog` 现在会带 project-level binding summary 与可写 action 提示，`session-ledger` 现在除了原始事件外也会输出按 session 聚合后的归因视图；`opl web` 则把这层管理面直接带进浏览器入口，同时也暴露了 hosted-friendly 的 `health / manifest / hosted-bundle / hosted-package / librechat-package / sessions / resume / logs / handoff-envelope` 表面。
 - 当前 hosted / web 真相：这一层已经有了真实可部署的 `LibreChat-first` hosted shell pilot package，作为最快做出可用 web 前台的路线；长期仍以 `OPL` 自有 web front desk 为准，而不是永久依赖第三方聊天壳；managed hosted runtime 仍未落地。
-- 当前家族级产品入口真相：四仓的 product-entry 成熟度仍然不一致。`OPL` 已有 family-level 本地入口壳，而三个业务仓仍主要暴露 operator / agent entry，后续还要继续补齐 lightweight direct entry。
+- 当前家族级产品入口真相：四仓的 product-entry 成熟度仍然不一致。`OPL` 已有 family-level 本地入口壳；三个业务仓现在也都已经有 repo-tracked 的 lightweight direct-entry shell，但成熟度仍不同，而且都还不能被误写成成熟的 hosted 或最终用户前台。
 - 当前已冻结的 integration choice：`Hermes Kernel Integration` 采用 `external kernel, managed by OPL product packaging`，而不是长期 fork，也不是把 Hermes 手工安装交给用户自己处理。
 - 长线目标：让共享运行层逐步转向上游 `Hermes-Agent`（或经过明确批准的等价 substrate），同时保持 `OPL` 继续承担顶层协调、发现、合同与边界治理。
 - 历史执行面：OMX 已退场；相关材料只作迁移/审计参考，不再进入默认阅读面。
