@@ -3,6 +3,7 @@ export type FrontDeskEndpoints = {
   manifest: string;
   hosted_bundle: string;
   hosted_package: string;
+  librechat_package: string;
   projects: string;
   workspace_status: string;
   workspace_catalog: string;
@@ -39,6 +40,7 @@ export function buildFrontDeskEndpoints(basePath = ''): FrontDeskEndpoints {
     manifest: `${apiBase}/frontdesk-manifest`,
     hosted_bundle: `${apiBase}/hosted-bundle`,
     hosted_package: `${apiBase}/hosted-package`,
+    librechat_package: `${apiBase}/librechat-package`,
     projects: `${apiBase}/projects`,
     workspace_status: `${apiBase}/workspace-status`,
     workspace_catalog: `${apiBase}/workspace-catalog`,

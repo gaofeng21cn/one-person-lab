@@ -572,7 +572,8 @@ exit 1
     const dashboardPayload = parseJsonOutput(dashboardResult);
     assert.equal(dashboardPayload.dashboard.projects.length, 3);
     assert.equal(dashboardPayload.dashboard.front_desk.local_web_frontdesk_status, 'pilot_landed');
-    assert.equal(dashboardPayload.dashboard.front_desk.hosted_web_status, 'librechat_pilot_frozen_not_landed');
+    assert.equal(dashboardPayload.dashboard.front_desk.hosted_web_status, 'librechat_pilot_landed');
+    assert.equal(dashboardPayload.dashboard.front_desk.librechat_pilot_package_status, 'landed');
     assert.equal(dashboardPayload.dashboard.runtime_status.recent_sessions.sessions.length, 1);
   } finally {
     rmSync(fixtureRoot, { recursive: true, force: true });
@@ -589,6 +590,7 @@ test('help exposes the local web front-desk pilot command through the built CLI 
   assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-manifest'));
   assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-hosted-bundle'));
   assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-hosted-package'));
+  assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-librechat-package'));
   assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-service-install'));
   assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-service-status'));
   assert.ok(payload.help.commands.some((entry) => entry.command === 'workspace-bind'));
@@ -777,6 +779,44 @@ test('frontdesk-hosted-package stays machine-readable through the built CLI entr
       existsSync(path.join(payload.hosted_pilot_package.assets.app_contracts, 'opl-gateway', 'workstreams.json')),
       true,
     );
+  } finally {
+    rmSync(outputDir, { recursive: true, force: true });
+  }
+});
+
+test('frontdesk-librechat-package stays machine-readable through the built CLI entrypoint', () => {
+  const outputDir = mkdtempSync(path.join(os.tmpdir(), 'opl-built-librechat-package-'));
+
+  try {
+    const result = runCli([
+      'frontdesk-librechat-package',
+      '--output',
+      outputDir,
+      '--public-origin',
+      'https://opl.example.com',
+      '--host',
+      '0.0.0.0',
+      '--port',
+      '8787',
+      '--base-path',
+      '/pilot/opl',
+      '--sessions-limit',
+      '9',
+    ]);
+    assert.equal(result.status, 0, formatFailure(result));
+
+    const payload = parseJsonOutput(result);
+    assert.equal(payload.librechat_pilot_package.surface_id, 'opl_librechat_hosted_shell_pilot_package');
+    assert.equal(payload.librechat_pilot_package.shell_integration_target, 'librechat_first');
+    assert.equal(payload.librechat_pilot_package.package_status, 'landed');
+    assert.equal(payload.librechat_pilot_package.hosted_shell_status, 'landed');
+    assert.equal(payload.librechat_pilot_package.actual_managed_runtime_status, 'not_landed');
+    assert.equal(payload.librechat_pilot_package.frontdesk_entry_url, 'https://opl.example.com/pilot/opl/');
+    assert.equal(existsSync(payload.librechat_pilot_package.assets.readme), true);
+    assert.equal(existsSync(payload.librechat_pilot_package.assets.stack_env_example), true);
+    assert.equal(existsSync(payload.librechat_pilot_package.assets.compose_file), true);
+    assert.equal(existsSync(payload.librechat_pilot_package.assets.caddyfile), true);
+    assert.equal(existsSync(payload.librechat_pilot_package.assets.frontdesk_bundle_json), true);
   } finally {
     rmSync(outputDir, { recursive: true, force: true });
   }
@@ -1033,6 +1073,8 @@ exit 1
 
     assert.equal(startup.payload.version, 'g2');
     assert.equal(startup.payload.web_frontdesk.entry_surface, 'opl_local_web_frontdesk_pilot');
+    assert.equal(startup.payload.web_frontdesk.hosted_status, 'librechat_pilot_landed');
+    assert.equal(startup.payload.web_frontdesk.api.librechat_package, '/api/librechat-package');
 
     const baseUrl = String(startup.payload.web_frontdesk.listening.base_url);
     const manifestResponse = await fetch(`${baseUrl}/api/frontdesk-manifest`);
@@ -1068,6 +1110,30 @@ exit 1
       assert.equal(existsSync(hostedPackagePayload.hosted_pilot_package.assets.run_script), true);
     } finally {
       rmSync(hostedPackageOutput, { recursive: true, force: true });
+    }
+
+    const librechatPackageOutput = mkdtempSync(path.join(os.tmpdir(), 'opl-built-web-librechat-package-'));
+    try {
+      const librechatPackageResponse = await fetch(`${baseUrl}/api/librechat-package`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          output_dir: librechatPackageOutput,
+          public_origin: 'https://opl.example.com',
+        }),
+      });
+      const librechatPackagePayload = await librechatPackageResponse.json();
+      assert.equal(
+        librechatPackagePayload.librechat_pilot_package.surface_id,
+        'opl_librechat_hosted_shell_pilot_package',
+      );
+      assert.equal(librechatPackagePayload.librechat_pilot_package.hosted_shell_status, 'landed');
+      assert.equal(existsSync(librechatPackagePayload.librechat_pilot_package.assets.compose_file), true);
+      assert.equal(existsSync(librechatPackagePayload.librechat_pilot_package.assets.caddyfile), true);
+    } finally {
+      rmSync(librechatPackageOutput, { recursive: true, force: true });
     }
 
     const resumeResponse = await fetch(`${baseUrl}/api/resume`, {

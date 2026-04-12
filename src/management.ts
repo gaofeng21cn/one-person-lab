@@ -249,8 +249,8 @@ export function buildFrontDeskManifest(contracts: GatewayContracts, options: { b
       entry_surface: 'opl_local_web_frontdesk_pilot',
       runtime_substrate: 'external_hermes_kernel',
       shell_integration_target: 'librechat_first',
-      readiness: 'hosted_friendly_local_only',
-      hosted_packaging_status: 'not_landed',
+      readiness: 'hosted_friendly_shell_pilot_landed',
+      hosted_packaging_status: 'librechat_pilot_landed',
       pilot_bundle_status: 'landed',
       base_path: normalizeBasePath(options.basePath),
       handoff_envelope_fields: [
@@ -263,8 +263,8 @@ export function buildFrontDeskManifest(contracts: GatewayContracts, options: { b
       ],
       endpoints,
       notes: [
-        'This manifest freezes the local hosted-friendly shell contract that future web shells can consume.',
-        'It does not claim that hosted packaging, hosted runtime ownership, or LibreChat-first rollout are already landed.',
+        'This manifest freezes the local hosted-friendly shell contract now consumed by the landed LibreChat-first pilot package.',
+        'It still does not claim managed hosted runtime ownership or multi-tenant platform readiness.',
       ],
     },
   };
@@ -304,7 +304,7 @@ export function buildHostedPilotBundle(
       },
       notes: [
         'This bundle makes the current front desk hosted-pilot-ready through base-path-aware shell packaging.',
-        'It is still not an actual hosted runtime or multi-tenant platform deployment.',
+        'It now feeds the landed LibreChat-first hosted shell pilot package, but it is still not a managed hosted runtime or multi-tenant platform deployment.',
       ],
     },
   };
@@ -390,7 +390,7 @@ export function buildFrontDeskHealth(contracts: GatewayContracts, options: { bas
       runtime_substrate: 'external_hermes_kernel',
       base_path: normalizeBasePath(options.basePath),
       status,
-      hosted_packaging_status: 'not_landed',
+      hosted_packaging_status: 'librechat_pilot_landed',
       pilot_bundle_status: 'landed',
       checks: {
         hermes_binary: {
@@ -406,7 +406,7 @@ export function buildFrontDeskHealth(contracts: GatewayContracts, options: { bas
       },
       notes: [
         'Health here means the current front-desk shell can truthfully expose the Hermes-backed runtime status.',
-        'Hosted pilot bundle support is landed, but actual hosted runtime ownership is still not landed.',
+        'LibreChat-first hosted shell export is landed, but actual hosted runtime ownership is still not landed.',
       ],
     },
   };
@@ -439,11 +439,12 @@ export function buildFrontDeskDashboard(
         local_web_frontdesk_status: 'pilot_landed',
         hosted_friendly_surface_status: 'landed',
         hosted_pilot_bundle_status: 'landed',
-        hosted_web_status: 'librechat_pilot_frozen_not_landed',
+        hosted_web_status: 'librechat_pilot_landed',
+        librechat_pilot_package_status: 'landed',
         workspace_registry_status: 'landed',
         session_ledger_status: 'landed',
         handoff_bundle_status: 'landed',
-        next_major_target: 'opl_hosted_web_frontdesk_deployment',
+        next_major_target: 'opl_hosted_runtime_hardening',
         hosted_friendly_endpoints: endpoints,
         rollout_board_refs: [
           'docs/references/opl-frontdesk-delivery-board.md',
@@ -454,7 +455,7 @@ export function buildFrontDeskDashboard(
         notes: [
           'OPL now exposes a base-path-aware hosted pilot bundle in addition to the local web front-desk pilot.',
           'Workspace registry, managed session ledger, and handoff bundle surfaces are now part of the top-level control room.',
-          'Actual hosted packaging still remains a separate follow-up track; this repo does not yet claim hosted runtime readiness.',
+          'The LibreChat-first hosted shell pilot is now landed through the export package, while managed hosted runtime readiness remains a separate follow-up track.',
         ],
       },
       projects,

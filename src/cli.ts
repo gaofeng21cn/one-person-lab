@@ -37,6 +37,7 @@ import {
   buildWorkspaceStatus,
 } from './management.ts';
 import { buildHostedPilotPackage } from './hosted-pilot-package.ts';
+import { buildLibreChatPilotPackage } from './librechat-pilot-package.ts';
 import { buildSessionLedger } from './session-ledger.ts';
 import { explainDomainBoundary, resolveRequestSurface } from './resolver.ts';
 import {
@@ -736,7 +737,7 @@ function parseHostedPilotPackageArgs(
         parsed.sessionsLimit = parsePositiveInteger(token, value, spec);
         break;
       default:
-        throw buildUsageError(`Unknown option for frontdesk-hosted-package: ${token}.`, spec, {
+        throw buildUsageError(`Unknown option for hosted package export: ${token}.`, spec, {
           option: token,
         });
     }
@@ -746,7 +747,7 @@ function parseHostedPilotPackageArgs(
 
   if (!outputDir) {
     throw buildUsageError(
-      'frontdesk-hosted-package requires --output.',
+      'This hosted package export requires --output.',
       spec,
       { required: ['--output'] },
     );
@@ -814,6 +815,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl frontdesk-manifest',
         'opl frontdesk-hosted-bundle --base-path /pilot/opl',
         'opl frontdesk-hosted-package --output /tmp/opl-hosted-package --public-origin https://opl.example.com --base-path /pilot/opl',
+        'opl frontdesk-librechat-package --output /tmp/opl-librechat-pilot --public-origin https://opl.example.com --base-path /pilot/opl',
         'opl frontdesk-service-install --port 8787',
         'opl workspace-bind --project redcube --path /Users/gaofeng/workspace/redcube-ai --entry-command "redcube-ai frontdesk"',
         'opl handoff-envelope "Prepare a defense-ready slide deck." --preferred-family ppt_deck',
@@ -1146,6 +1148,22 @@ async function main() {
         buildHostedPilotPackage(
           getContracts(),
           parseHostedPilotPackageArgs(args, commandSpecs['frontdesk-hosted-package']),
+        ),
+    },
+    'frontdesk-librechat-package': {
+      usage:
+        'opl frontdesk-librechat-package --output <dir> [--public-origin <origin>] [--host <host>] [--port <port>] [--sessions-limit <n>] [--base-path <base_path>]',
+      summary:
+        'Export a real LibreChat-first hosted shell pilot that combines the OPL front-desk package with same-origin LibreChat deployment assets.',
+      examples: [
+        'opl frontdesk-librechat-package --output /tmp/opl-librechat-pilot --public-origin https://opl.example.com',
+        'opl frontdesk-librechat-package --output /tmp/opl-librechat-pilot --public-origin http://127.0.0.1:8080 --base-path /pilot/opl',
+        'opl frontdesk-librechat-package --output /tmp/opl-librechat-pilot --host 0.0.0.0 --port 8787 --sessions-limit 9',
+      ],
+      handler: (args) =>
+        buildLibreChatPilotPackage(
+          getContracts(),
+          parseHostedPilotPackageArgs(args, commandSpecs['frontdesk-librechat-package']),
         ),
     },
     'frontdesk-service-install': {
