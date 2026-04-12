@@ -21,6 +21,19 @@ export interface RuntimeStatusOptions {
 
 export interface DashboardOptions extends WorkspaceStatusOptions, RuntimeStatusOptions {}
 
+const frontDeskEndpoints = {
+  health: '/api/health',
+  manifest: '/api/frontdesk-manifest',
+  projects: '/api/projects',
+  workspace_status: '/api/workspace-status',
+  runtime_status: '/api/runtime-status',
+  dashboard: '/api/dashboard',
+  ask: '/api/ask',
+  sessions: '/api/sessions',
+  resume: '/api/resume',
+  logs: '/api/logs',
+} as const;
+
 type CommandResult = {
   exitCode: number;
   stdout: string;
@@ -328,6 +341,37 @@ export function buildProjectsOverview(contracts: GatewayContracts) {
   };
 }
 
+export function buildFrontDeskManifest(contracts: GatewayContracts) {
+  return {
+    version: 'g2',
+    contracts_context: {
+      contracts_dir: contracts.contractsDir,
+      contracts_root_source: contracts.contractsRootSource,
+    },
+    frontdesk_manifest: {
+      surface_id: 'opl_hosted_friendly_frontdesk_manifest',
+      entry_surface: 'opl_local_web_frontdesk_pilot',
+      runtime_substrate: 'external_hermes_kernel',
+      shell_integration_target: 'librechat_first',
+      readiness: 'hosted_friendly_local_only',
+      hosted_packaging_status: 'not_landed',
+      handoff_envelope_fields: [
+        'target_domain_id',
+        'task_intent',
+        'entry_mode',
+        'workspace_locator',
+        'runtime_session_contract',
+        'return_surface_contract',
+      ],
+      endpoints: frontDeskEndpoints,
+      notes: [
+        'This manifest freezes the local hosted-friendly shell contract that future web shells can consume.',
+        'It does not claim that hosted packaging, hosted runtime ownership, or LibreChat-first rollout are already landed.',
+      ],
+    },
+  };
+}
+
 export function buildWorkspaceStatus(options: WorkspaceStatusOptions = {}) {
   const absolutePath = normalizeWorkspacePath(options.workspacePath);
   const stats = fs.statSync(absolutePath);
@@ -385,6 +429,46 @@ export function buildRuntimeStatus(options: RuntimeStatusOptions = {}) {
   };
 }
 
+export function buildFrontDeskHealth(contracts: GatewayContracts) {
+  const hermes = inspectHermesRuntime();
+  const status = !hermes.binary
+    ? 'blocked'
+    : hermes.gateway_service.loaded
+      ? 'ok'
+      : 'degraded';
+
+  return {
+    version: 'g2',
+    contracts_context: {
+      contracts_dir: contracts.contractsDir,
+      contracts_root_source: contracts.contractsRootSource,
+    },
+    health: {
+      surface_id: 'opl_frontdesk_health_surface',
+      entry_surface: 'opl_local_web_frontdesk_pilot',
+      runtime_substrate: 'external_hermes_kernel',
+      status,
+      hosted_packaging_status: 'not_landed',
+      checks: {
+        hermes_binary: {
+          found: Boolean(hermes.binary),
+          path: hermes.binary?.path ?? null,
+          source: hermes.binary?.source ?? null,
+        },
+        gateway_service: {
+          loaded: hermes.gateway_service.loaded,
+          raw_output: hermes.gateway_service.raw_output,
+        },
+        issues: hermes.issues,
+      },
+      notes: [
+        'Health here means the local front-desk shell can truthfully expose the current Hermes-backed runtime status.',
+        'Hosted packaging and hosted rollout remain separate work even when this local health surface is green.',
+      ],
+    },
+  };
+}
+
 export function buildFrontDeskDashboard(
   contracts: GatewayContracts,
   options: DashboardOptions = {},
@@ -405,8 +489,10 @@ export function buildFrontDeskDashboard(
         local_shell_status: 'landed',
         local_web_frontdesk_command: 'opl web',
         local_web_frontdesk_status: 'pilot_landed',
+        hosted_friendly_surface_status: 'landed',
         hosted_web_status: 'librechat_pilot_frozen_not_landed',
         next_major_target: 'opl_hosted_web_frontdesk_packaging',
+        hosted_friendly_endpoints: frontDeskEndpoints,
         rollout_board_refs: [
           'docs/references/opl-frontdesk-delivery-board.md',
           'docs/references/opl-hosted-web-frontdesk-benchmark.md',
@@ -415,6 +501,7 @@ export function buildFrontDeskDashboard(
         ],
         notes: [
           'OPL now exposes a local web front-desk pilot through `opl web`.',
+          'The hosted-friendly shell contract now has dedicated manifest/health/session/resume/log surfaces for future hosted shells.',
           'Hosted packaging still remains a separate follow-up track; this repo does not yet claim hosted readiness.',
         ],
       },

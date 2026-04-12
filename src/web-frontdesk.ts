@@ -3,11 +3,19 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { GatewayContractError } from './contracts.ts';
 import {
   buildFrontDeskDashboard,
+  buildFrontDeskHealth,
+  buildFrontDeskManifest,
   buildProjectsOverview,
   buildRuntimeStatus,
   buildWorkspaceStatus,
 } from './management.ts';
-import { runProductEntryAsk, type ProductEntryCliInput } from './product-entry.ts';
+import {
+  runProductEntryAsk,
+  runProductEntryLogs,
+  runProductEntryResume,
+  runProductEntrySessions,
+  type ProductEntryCliInput,
+} from './product-entry.ts';
 import type { GatewayContracts } from './types.ts';
 
 export interface WebFrontDeskOptions {
@@ -32,6 +40,11 @@ type AskRequestBody = Partial<{
   skills: string[] | string;
 }>;
 
+type ResumeRequestBody = Partial<{
+  sessionId: string;
+  session_id: string;
+}>;
+
 type WebFrontDeskStartupPayload = {
   version: 'g2';
   contracts_context: {
@@ -51,11 +64,16 @@ type WebFrontDeskStartupPayload = {
       base_url: string;
     };
     api: {
+      health: string;
+      frontdesk_manifest: string;
       dashboard: string;
       projects: string;
       workspace_status: string;
       runtime_status: string;
       ask: string;
+      sessions: string;
+      resume: string;
+      logs: string;
     };
     defaults: {
       workspace_path: string;
@@ -208,6 +226,29 @@ function normalizeAskInput(body: AskRequestBody): ProductEntryCliInput {
   };
 }
 
+function normalizeResumeSessionId(body: ResumeRequestBody) {
+  const sessionId = normalizeOptionalString(body.sessionId) ?? normalizeOptionalString(body.session_id);
+  if (!sessionId) {
+    throw new GatewayContractError(
+      'cli_usage_error',
+      'Web front-desk resume requests require a non-empty session_id.',
+      {
+        required: ['session_id'],
+      },
+    );
+  }
+
+  return sessionId;
+}
+
+function parsePositiveIntegerOptional(value: string | null) {
+  if (!value) {
+    return undefined;
+  }
+
+  return parsePositiveIntegerOrDefault(value, 1);
+}
+
 function normalizeBaseUrlHost(host: string) {
   if (host === '0.0.0.0') {
     return '127.0.0.1';
@@ -221,6 +262,8 @@ function normalizeBaseUrlHost(host: string) {
 }
 
 function buildStartupPayload(context: WebFrontDeskContext): WebFrontDeskStartupPayload {
+  const manifest = buildFrontDeskManifest(context.contracts);
+
   return {
     version: 'g2',
     contracts_context: {
@@ -240,11 +283,16 @@ function buildStartupPayload(context: WebFrontDeskContext): WebFrontDeskStartupP
         base_url: context.baseUrl,
       },
       api: {
+        health: manifest.frontdesk_manifest.endpoints.health,
+        frontdesk_manifest: manifest.frontdesk_manifest.endpoints.manifest,
         dashboard: '/api/dashboard',
         projects: '/api/projects',
         workspace_status: '/api/workspace-status',
         runtime_status: '/api/runtime-status',
         ask: '/api/ask',
+        sessions: manifest.frontdesk_manifest.endpoints.sessions,
+        resume: manifest.frontdesk_manifest.endpoints.resume,
+        logs: manifest.frontdesk_manifest.endpoints.logs,
       },
       defaults: {
         workspace_path: context.workspacePath,
@@ -767,6 +815,64 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
 
           <section class="panel">
             <div class="panel-header">
+              <h2 class="panel-title">Hosted-Friendly Surface</h2>
+            </div>
+            <p class="panel-copy">
+              These surfaces freeze the local shell contract that a future hosted shell can consume. They improve product-entry interoperability without pretending hosted packaging is already done.
+            </p>
+            <div class="panel-body">
+              <div class="split-grid">
+                <div class="card">
+                  <h3>Health</h3>
+                  <div id="health-summary">Loading health...</div>
+                </div>
+                <div class="card">
+                  <h3>Manifest</h3>
+                  <div id="manifest-summary">Loading manifest...</div>
+                </div>
+              </div>
+              <div style="height: 12px"></div>
+              <div class="split-grid">
+                <div class="card">
+                  <h3>Resume Session</h3>
+                  <form id="resume-form">
+                    <label>
+                      Session ID
+                      <input id="resume-session-id" name="resume-session-id" placeholder="sess_..." />
+                    </label>
+                    <div class="button-row">
+                      <button class="secondary" type="submit">Resume</button>
+                    </div>
+                  </form>
+                  <div class="status-line" id="resume-status" aria-live="polite"></div>
+                  <pre class="json-view" id="resume-output">No resumed session yet.</pre>
+                </div>
+                <div class="card">
+                  <h3>Gateway Logs</h3>
+                  <form id="logs-form">
+                    <div class="field-grid">
+                      <label>
+                        Log Name
+                        <input id="log-name" name="log-name" value="gateway" />
+                      </label>
+                      <label>
+                        Lines
+                        <input id="log-lines" name="log-lines" value="20" />
+                      </label>
+                    </div>
+                    <div class="button-row">
+                      <button class="ghost" type="submit">Load Logs</button>
+                    </div>
+                  </form>
+                  <div class="status-line" id="logs-status" aria-live="polite"></div>
+                  <pre class="json-view" id="logs-output">Loading logs...</pre>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-header">
               <h2 class="panel-title">Workspace</h2>
             </div>
             <p class="panel-copy">
@@ -822,6 +928,15 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       const metricSessions = document.getElementById('metric-sessions');
       const metricProcesses = document.getElementById('metric-processes');
       const runtimeNote = document.getElementById('runtime-note');
+      const healthSummary = document.getElementById('health-summary');
+      const manifestSummary = document.getElementById('manifest-summary');
+      const resumeSessionInput = document.getElementById('resume-session-id');
+      const resumeStatus = document.getElementById('resume-status');
+      const resumeOutput = document.getElementById('resume-output');
+      const logsStatus = document.getElementById('logs-status');
+      const logsOutput = document.getElementById('logs-output');
+      const logNameInput = document.getElementById('log-name');
+      const logLinesInput = document.getElementById('log-lines');
       const workspacePathInput = document.getElementById('workspace-path');
       const previewButton = document.getElementById('preview-button');
       const askButton = document.getElementById('ask-button');
@@ -894,8 +1009,33 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
           + '<p><strong>Last Active:</strong> ' + session.last_active + '</p>'
           + '<p><strong>Source:</strong> ' + session.source + '</p>'
           + '<p><strong>Session ID:</strong> ' + session.session_id + '</p>'
+          + '<div class="button-row"><button class="ghost" type="button" data-session-id="' + session.session_id + '">Load Into Resume</button></div>'
           + '</div>'
         )));
+      }
+
+      function renderHealth(payload) {
+        const health = payload.health;
+        const issues = (health.checks.issues || []).map((issue) => '<li>' + issue + '</li>').join('');
+        healthSummary.innerHTML = [
+          '<p><strong>Status:</strong> ' + health.status + '</p>',
+          '<p><strong>Entry Surface:</strong> ' + health.entry_surface + '</p>',
+          '<p><strong>Gateway Service Loaded:</strong> ' + String(health.checks.gateway_service.loaded) + '</p>',
+          issues ? '<ul>' + issues + '</ul>' : '<p>No runtime issues reported.</p>',
+        ].join('');
+      }
+
+      function renderManifest(payload) {
+        const manifest = payload.frontdesk_manifest;
+        const endpointList = Object.entries(manifest.endpoints)
+          .map(([key, value]) => '<li><strong>' + key + ':</strong> ' + value + '</li>')
+          .join('');
+        manifestSummary.innerHTML = [
+          '<p><strong>Readiness:</strong> ' + manifest.readiness + '</p>',
+          '<p><strong>Shell Target:</strong> ' + manifest.shell_integration_target + '</p>',
+          '<p><strong>Hosted Packaging:</strong> ' + manifest.hosted_packaging_status + '</p>',
+          '<ul>' + endpointList + '</ul>',
+        ].join('');
       }
 
       function renderDashboard(payload) {
@@ -906,7 +1046,6 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         runtimeNote.textContent = dashboard.runtime_status.notes.join(' ');
         renderProjects(dashboard.projects);
         renderWorkspace(dashboard.workspace);
-        renderSessions(dashboard.runtime_status.recent_sessions.sessions);
       }
 
       function renderAskPayload(payload) {
@@ -947,6 +1086,113 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         renderDashboard(payload);
       }
 
+      async function fetchSessions() {
+        const params = new URLSearchParams({
+          limit: String(state.sessionsLimit),
+        });
+        const response = await fetch(bootstrap.web_frontdesk.api.sessions + '?' + params.toString());
+        if (!response.ok) {
+          throw new Error('Sessions request failed with status ' + response.status);
+        }
+
+        const payload = await response.json();
+        renderSessions(payload.product_entry.sessions || []);
+      }
+
+      async function fetchHostedFriendlySurface() {
+        const [healthResponse, manifestResponse] = await Promise.all([
+          fetch(bootstrap.web_frontdesk.api.health),
+          fetch(bootstrap.web_frontdesk.api.frontdesk_manifest),
+        ]);
+
+        if (!healthResponse.ok) {
+          throw new Error('Health request failed with status ' + healthResponse.status);
+        }
+        if (!manifestResponse.ok) {
+          throw new Error('Manifest request failed with status ' + manifestResponse.status);
+        }
+
+        renderHealth(await healthResponse.json());
+        renderManifest(await manifestResponse.json());
+      }
+
+      function setResumeStatus(message, tone = 'muted') {
+        resumeStatus.textContent = message;
+        resumeStatus.dataset.tone = tone;
+      }
+
+      function setLogsStatus(message, tone = 'muted') {
+        logsStatus.textContent = message;
+        logsStatus.dataset.tone = tone;
+      }
+
+      async function submitResume() {
+        const sessionId = resumeSessionInput.value.trim();
+        if (!sessionId) {
+          setResumeStatus('Resume requires a session id.', 'warn');
+          return;
+        }
+
+        setResumeStatus('Resuming Hermes session...', 'muted');
+        try {
+          const response = await fetch(bootstrap.web_frontdesk.api.resume, {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+            },
+            body: JSON.stringify({
+              session_id: sessionId,
+            }),
+          });
+          const payload = await response.json();
+
+          if (!response.ok) {
+            throw new Error(payload.error?.message || 'Resume request failed.');
+          }
+
+          resumeOutput.textContent = JSON.stringify(payload, null, 2);
+          setResumeStatus('Session resumed.', 'ok');
+        } catch (error) {
+          setResumeStatus(error instanceof Error ? error.message : 'Resume failed.', 'warn');
+        }
+      }
+
+      async function loadLogs() {
+        const params = new URLSearchParams();
+        const logName = logNameInput.value.trim();
+        const lines = logLinesInput.value.trim();
+
+        if (logName) {
+          params.set('log_name', logName);
+        }
+        if (lines) {
+          params.set('lines', lines);
+        }
+
+        setLogsStatus('Loading logs...', 'muted');
+        try {
+          const response = await fetch(bootstrap.web_frontdesk.api.logs + '?' + params.toString());
+          const payload = await response.json();
+
+          if (!response.ok) {
+            throw new Error(payload.error?.message || 'Logs request failed.');
+          }
+
+          logsOutput.textContent = JSON.stringify(payload, null, 2);
+          setLogsStatus('Logs updated.', 'ok');
+        } catch (error) {
+          setLogsStatus(error instanceof Error ? error.message : 'Logs failed.', 'warn');
+        }
+      }
+
+      async function refreshAll() {
+        await Promise.all([
+          fetchDashboard(),
+          fetchSessions(),
+          fetchHostedFriendlySurface(),
+        ]);
+      }
+
       async function submitAsk(dryRun) {
         setButtonBusy(true);
         setAskStatus(dryRun ? 'Previewing handoff...' : 'Calling Hermes through OPL ask...', 'muted');
@@ -985,10 +1231,35 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         event.preventDefault();
         state.workspacePath = workspacePathInput.value.trim() || bootstrap.web_frontdesk.defaults.workspace_path;
         try {
-          await fetchDashboard();
+          await refreshAll();
         } catch (error) {
           runtimeNote.textContent = error instanceof Error ? error.message : 'Workspace refresh failed.';
         }
+      });
+
+      document.getElementById('resume-form').addEventListener('submit', (event) => {
+        event.preventDefault();
+        void submitResume();
+      });
+
+      document.getElementById('logs-form').addEventListener('submit', (event) => {
+        event.preventDefault();
+        void loadLogs();
+      });
+
+      sessionsList.addEventListener('click', (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) {
+          return;
+        }
+
+        const button = target.closest('button[data-session-id]');
+        if (!(button instanceof HTMLButtonElement)) {
+          return;
+        }
+
+        resumeSessionInput.value = button.dataset.sessionId || '';
+        setResumeStatus('Session id loaded from recent sessions.', 'ok');
       });
 
       previewButton.addEventListener('click', () => {
@@ -998,16 +1269,16 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         void submitAsk(false);
       });
       refreshButton.addEventListener('click', () => {
-        void fetchDashboard().catch((error) => {
+        void refreshAll().catch((error) => {
           runtimeNote.textContent = error instanceof Error ? error.message : 'Refresh failed.';
         });
       });
 
-      void fetchDashboard().catch((error) => {
+      void Promise.all([refreshAll(), loadLogs()]).catch((error) => {
         runtimeNote.textContent = error instanceof Error ? error.message : 'Dashboard load failed.';
       });
       window.setInterval(() => {
-        void fetchDashboard().catch(() => {
+        void refreshAll().catch(() => {
           // Keep the current UI state if background refresh fails.
         });
       }, 30000);
@@ -1040,6 +1311,16 @@ async function handleRequest(
   try {
     if (method === 'GET' && url.pathname === '/') {
       writeHtml(response, buildWebFrontDeskHtml(context));
+      return;
+    }
+
+    if (method === 'GET' && url.pathname === '/api/health') {
+      writeJson(response, 200, buildFrontDeskHealth(context.contracts));
+      return;
+    }
+
+    if (method === 'GET' && url.pathname === '/api/frontdesk-manifest') {
+      writeJson(response, 200, buildFrontDeskManifest(context.contracts));
       return;
     }
 
@@ -1088,6 +1369,42 @@ async function handleRequest(
     if (method === 'POST' && url.pathname === '/api/ask') {
       const body = (await readJsonBody(request)) as AskRequestBody;
       writeJson(response, 200, runProductEntryAsk(normalizeAskInput(body), context.contracts));
+      return;
+    }
+
+    if (method === 'GET' && url.pathname === '/api/sessions') {
+      writeJson(
+        response,
+        200,
+        runProductEntrySessions({
+          limit: parsePositiveIntegerOptional(url.searchParams.get('limit')) ?? context.sessionsLimit,
+          source: normalizeOptionalString(url.searchParams.get('source')),
+        }),
+      );
+      return;
+    }
+
+    if (method === 'POST' && url.pathname === '/api/resume') {
+      const body = (await readJsonBody(request)) as ResumeRequestBody;
+      writeJson(response, 200, runProductEntryResume(normalizeResumeSessionId(body)));
+      return;
+    }
+
+    if (method === 'GET' && url.pathname === '/api/logs') {
+      writeJson(
+        response,
+        200,
+        runProductEntryLogs({
+          logName: normalizeOptionalString(url.searchParams.get('log_name')),
+          lines: parsePositiveIntegerOptional(url.searchParams.get('lines')),
+          since: normalizeOptionalString(url.searchParams.get('since')),
+          level: normalizeOptionalString(url.searchParams.get('level')),
+          component: normalizeOptionalString(url.searchParams.get('component')),
+          sessionId:
+            normalizeOptionalString(url.searchParams.get('session_id'))
+            ?? normalizeOptionalString(url.searchParams.get('session')),
+        }),
+      );
       return;
     }
 

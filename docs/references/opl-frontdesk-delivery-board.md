@@ -64,12 +64,30 @@
 - `/api/runtime-status`
 - `/api/dashboard`
 - `/api/ask`
+- `/api/health`
+- `/api/frontdesk-manifest`
+- `/api/sessions`
+- `/api/resume`
+- `/api/logs`
 
 当前含义：
 
 - `OPL` 已经不只有 CLI 入口，而是已经有了可直接打开的本地浏览器前台；
 - 用户可以直接在浏览器里做 quick ask、查看项目、检查 workspace、观察 runtime；
 - 这仍是 local pilot，不等于 hosted 包装完成。
+
+### F2.B. hosted-friendly shell contract
+
+已完成：
+
+- `opl frontdesk-manifest`
+- 本地 web 前台已开始直接消费 `health / manifest / sessions / resume / logs` surfaces
+
+当前含义：
+
+- `OPL` 现在不只是“有一个本地浏览器 pilot”，而是已经冻结出一层 future hosted shell 可消费的 front-desk contract；
+- 这层 contract 可以服务后续 `LibreChat-first` 或自有 web front desk 的接壳工作；
+- 但它仍然只是 hosted-friendly local surface，不等于 hosted packaging / hosted runtime 已完成。
 
 ### F3. hosted / web 路线冻结
 
@@ -90,6 +108,7 @@
 未完成：
 
 - 虽然已经有本地可打开的 web front desk pilot；
+- 虽然也已经有 hosted-friendly manifest / health / session / logs contract surface；
 - 但还没有 service-safe 的 hosted packaging；
 - 也还没有把 `LibreChat-first` 这条 hosted pilot 路线正式接起来。
 
@@ -142,11 +161,12 @@
 最合理的下一棒顺序：
 
 1. 做 `OPL` hosted / web front desk pilot
-2. 让 `RedCube AI` 先长出真实 lightweight direct entry
-3. 让 `Med Auto Grant` 继续把 grant-only entry / runtime / export 压实
-4. 让 `Med Auto Science` 继续走非 display 主线的 real adapter cutover
+2. 把 `LibreChat-first` 或等价 hosted shell 接到已冻结的 hosted-friendly shell contract 上
+3. 让 `RedCube AI` 先长出真实 lightweight direct entry
+4. 让 `Med Auto Grant` 继续把 grant-only entry / runtime / export 压实
+5. 让 `Med Auto Science` 继续走非 display 主线的 real adapter cutover
 
 ## 一句话结论
 
-`OPL Front Desk` 这条线现在已经从“只有 CLI 说明面”走到了“有本地 CLI 入口 + 有管理面 + 有本地 web pilot + 有明确 hosted 路线”的状态。
-下一步不该再回头争论方向，而是把 hosted packaging 和后续家族级 direct entry 继续压实。
+`OPL Front Desk` 这条线现在已经从“只有 CLI 说明面”走到了“有本地 CLI 入口 + 有管理面 + 有本地 web pilot + 有 hosted-friendly shell contract + 有明确 hosted 路线”的状态。
+下一步不该再回头争论方向，而是把 hosted shell 接壳、hosted packaging 和后续家族级 direct entry 继续压实。

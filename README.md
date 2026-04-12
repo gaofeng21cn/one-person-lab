@@ -253,8 +253,9 @@ The current truth is still transitional, but it has moved forward:
 - `opl` seeds or resumes an `OPL Front Desk` session on top of the external Hermes kernel
 - `opl "<request...>"` now acts as the fast natural-language path for a one-shot routed ask
 - `opl doctor`, `opl ask`, `opl chat`, `opl resume`, `opl sessions`, `opl logs`, and `opl repair-hermes-gateway` remain the explicit product-entry and runtime-ops command surface
+- `opl frontdesk-manifest` now freezes the hosted-friendly shell contract that future web shells can consume without overstating hosted readiness
 - `opl projects`, `opl workspace-status`, `opl runtime-status`, and `opl dashboard` now add the first top-level management surface for project, workspace, session, and runtime visibility
-- `opl web` now lands a local web front desk pilot for browser-based direct entry, quick ask, workspace inspection, and runtime visibility
+- `opl web` now lands a local web front desk pilot for browser-based direct entry, quick ask, workspace inspection, runtime visibility, and hosted-friendly `health / manifest / sessions / resume / logs` surfaces
 - users no longer need to start from `Codex` just to reach the top-level `OPL` surface locally
 - this landed product entry now includes both the local CLI-first shell and a local web front desk pilot; the hosted front door is still not landed and hosted packaging remains future work
 - the hosted / web benchmark is now frozen: the shortest-path pilot is `LibreChat-first`, while the long-line target remains an `OPL`-owned web front desk; `Chatbot UI` is too thin to act as the main hosted base
@@ -290,6 +291,8 @@ What landed in this repository is the first local shell of that idea:
   - resumes a known Hermes-backed OPL session
 - `opl sessions`, `opl logs`, `opl repair-hermes-gateway`
   - expose machine-readable session and runtime-ops surfaces for the landed local shell
+- `opl frontdesk-manifest`
+  - exposes the hosted-friendly front-desk contract for future web shells while keeping hosted packaging status honest
 - `opl projects`
   - lists the current family-level project surfaces exposed through OPL
 - `opl workspace-status`
@@ -299,7 +302,7 @@ What landed in this repository is the first local shell of that idea:
 - `opl dashboard`
   - aggregates the current front-desk management view across projects, workspace, and runtime
 - `opl web`
-  - starts the local web front desk pilot so users can open OPL in a browser, run quick ask, and inspect project / workspace / runtime surfaces without going through Codex
+  - starts the local web front desk pilot so users can open OPL in a browser, run quick ask, inspect project / workspace / runtime surfaces, and consume hosted-friendly `health / manifest / sessions / resume / logs` APIs without going through Codex
 
 This new shell does not erase the existing `Phase 1` gateway contract.
 The read-only gateway commands remain the stable top-level contract surface for federation truth.

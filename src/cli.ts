@@ -21,6 +21,7 @@ import {
 } from './product-entry.ts';
 import {
   buildFrontDeskDashboard,
+  buildFrontDeskManifest,
   buildProjectsOverview,
   buildRuntimeStatus,
   buildWorkspaceStatus,
@@ -598,6 +599,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl',
         'opl doctor',
         'opl projects',
+        'opl frontdesk-manifest',
         'opl workspace-status --path /Users/gaofeng/workspace/redcube-ai',
         'opl runtime-status --limit 10',
         'opl dashboard --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
@@ -892,6 +894,13 @@ async function main() {
         'opl dashboard --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
       ],
       handler: (args) => buildFrontDeskDashboard(getContracts(), parseDashboardArgs(args, commandSpecs.dashboard)),
+    },
+    'frontdesk-manifest': {
+      usage: 'opl frontdesk-manifest',
+      summary:
+        'Expose the hosted-friendly OPL front-desk shell contract without claiming hosted packaging is already landed.',
+      examples: ['opl frontdesk-manifest'],
+      handler: () => buildFrontDeskManifest(getContracts()),
     },
     web: {
       usage: 'opl web [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>]',

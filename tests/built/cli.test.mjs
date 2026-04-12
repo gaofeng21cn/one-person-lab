@@ -512,12 +512,24 @@ test('help exposes the local web front-desk pilot command through the built CLI 
 
   const payload = parseJsonOutput(result);
   assert.ok(payload.help.commands.some((entry) => entry.command === 'web'));
+  assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-manifest'));
 
   const scoped = runCli(['web', '--help']);
   assert.equal(scoped.status, 0, formatFailure(scoped));
   const scopedPayload = parseJsonOutput(scoped);
   assert.equal(scopedPayload.help.command, 'web');
   assert.match(scopedPayload.help.usage, /opl web/);
+});
+
+test('frontdesk-manifest stays machine-readable through the built CLI entrypoint', () => {
+  const result = runCli(['frontdesk-manifest']);
+  assert.equal(result.status, 0, formatFailure(result));
+
+  const payload = parseJsonOutput(result);
+  assert.equal(payload.frontdesk_manifest.surface_id, 'opl_hosted_friendly_frontdesk_manifest');
+  assert.equal(payload.frontdesk_manifest.shell_integration_target, 'librechat_first');
+  assert.equal(payload.frontdesk_manifest.endpoints.health, '/api/health');
+  assert.equal(payload.frontdesk_manifest.endpoints.resume, '/api/resume');
 });
 
 test('web starts a local front-desk pilot through the built CLI entrypoint', async () => {
@@ -556,6 +568,19 @@ Built web pilot session                            1m ago        cli    sess_bui
 EOF
   exit 0
 fi
+if [ "$1" = "--resume" ] && [ "$2" = "sess_built_web" ]; then
+  cat <<'EOF'
+BUILT WEB PILOT RESUME OUTPUT
+EOF
+  exit 0
+fi
+if [ "$1" = "logs" ] && [ "$2" = "gateway" ]; then
+  cat <<'EOF'
+[INFO] built gateway boot
+[INFO] built hosted-friendly front desk ready
+EOF
+  exit 0
+fi
 if [ "$1" = "chat" ]; then
   cat <<'EOF'
 ╭─ ⚕ Hermes ───────────────────────────────────────────────────────────────────╮
@@ -588,10 +613,34 @@ exit 1
     assert.equal(startup.payload.web_frontdesk.entry_surface, 'opl_local_web_frontdesk_pilot');
 
     const baseUrl = String(startup.payload.web_frontdesk.listening.base_url);
+    const manifestResponse = await fetch(`${baseUrl}/api/frontdesk-manifest`);
+    const manifestPayload = await manifestResponse.json();
+    assert.equal(manifestPayload.frontdesk_manifest.endpoints.logs, '/api/logs');
+
+    const healthResponse = await fetch(`${baseUrl}/api/health`);
+    const healthPayload = await healthResponse.json();
+    assert.equal(healthPayload.health.status, 'ok');
+
     const dashboardResponse = await fetch(`${baseUrl}/api/dashboard`);
     const dashboardPayload = await dashboardResponse.json();
     assert.equal(dashboardPayload.dashboard.projects.length, 3);
     assert.equal(dashboardPayload.dashboard.runtime_status.recent_sessions.sessions.length, 1);
+
+    const resumeResponse = await fetch(`${baseUrl}/api/resume`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        session_id: 'sess_built_web',
+      }),
+    });
+    const resumePayload = await resumeResponse.json();
+    assert.match(resumePayload.product_entry.resume.output, /BUILT WEB PILOT RESUME OUTPUT/);
+
+    const logsResponse = await fetch(`${baseUrl}/api/logs?log_name=gateway&lines=20`);
+    const logsPayload = await logsResponse.json();
+    assert.match(logsPayload.product_entry.raw_output, /built hosted-friendly front desk ready/);
 
     const askResponse = await fetch(`${baseUrl}/api/ask`, {
       method: 'POST',

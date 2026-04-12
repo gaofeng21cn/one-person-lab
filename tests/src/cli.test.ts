@@ -826,10 +826,36 @@ test('help advertises the local web front-desk pilot command surface', () => {
   assert.ok(
     output.help.commands.some((entry: { command: string }) => entry.command === 'web'),
   );
+  assert.ok(
+    output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk-manifest'),
+  );
 
   const scoped = runCli(['web', '--help']);
   assert.equal(scoped.help.command, 'web');
   assert.match(scoped.help.usage, /opl web/);
+});
+
+test('frontdesk-manifest exposes the hosted-friendly OPL shell contract without claiming hosted readiness', () => {
+  const output = runCli(['frontdesk-manifest']);
+
+  assert.equal(output.version, 'g2');
+  assert.equal(output.frontdesk_manifest.surface_id, 'opl_hosted_friendly_frontdesk_manifest');
+  assert.equal(output.frontdesk_manifest.entry_surface, 'opl_local_web_frontdesk_pilot');
+  assert.equal(output.frontdesk_manifest.shell_integration_target, 'librechat_first');
+  assert.equal(output.frontdesk_manifest.readiness, 'hosted_friendly_local_only');
+  assert.equal(output.frontdesk_manifest.hosted_packaging_status, 'not_landed');
+  assert.deepEqual(output.frontdesk_manifest.handoff_envelope_fields, [
+    'target_domain_id',
+    'task_intent',
+    'entry_mode',
+    'workspace_locator',
+    'runtime_session_contract',
+    'return_surface_contract',
+  ]);
+  assert.equal(output.frontdesk_manifest.endpoints.manifest, '/api/frontdesk-manifest');
+  assert.equal(output.frontdesk_manifest.endpoints.health, '/api/health');
+  assert.equal(output.frontdesk_manifest.endpoints.resume, '/api/resume');
+  assert.equal(output.frontdesk_manifest.endpoints.logs, '/api/logs');
 });
 
 test('web starts a local front-desk pilot and serves dashboard plus ask surfaces', async () => {
@@ -865,6 +891,19 @@ if [ "$1" = "sessions" ] && [ "$2" = "list" ]; then
 Preview                                            Last Active   Src    ID
 ───────────────────────────────────────────────────────────────────────────────────────────────
 Web pilot session                                  1m ago        cli    sess_web
+EOF
+  exit 0
+fi
+if [ "$1" = "--resume" ] && [ "$2" = "sess_web" ]; then
+  cat <<'EOF'
+WEB PILOT RESUME OUTPUT
+EOF
+  exit 0
+fi
+if [ "$1" = "logs" ] && [ "$2" = "gateway" ]; then
+  cat <<'EOF'
+[INFO] gateway boot
+[INFO] hosted-friendly front desk ready
 EOF
   exit 0
 fi
@@ -912,11 +951,48 @@ exit 1
     const pageHtml = await page.text();
     assert.match(pageHtml, /OPL Front Desk/);
     assert.match(pageHtml, /Control Room/);
+    assert.match(pageHtml, /Hosted-Friendly Surface/);
 
     const dashboardResponse = await fetch(`${baseUrl}/api/dashboard`);
     const dashboardPayload = await dashboardResponse.json();
     assert.equal(dashboardPayload.dashboard.front_desk.local_web_frontdesk_status, 'pilot_landed');
     assert.equal(dashboardPayload.dashboard.projects.length, 3);
+
+    const healthResponse = await fetch(`${baseUrl}/api/health`);
+    const healthPayload = await healthResponse.json();
+    assert.equal(healthPayload.health.entry_surface, 'opl_local_web_frontdesk_pilot');
+    assert.equal(healthPayload.health.status, 'ok');
+    assert.equal(healthPayload.health.checks.gateway_service.loaded, true);
+
+    const manifestResponse = await fetch(`${baseUrl}/api/frontdesk-manifest`);
+    const manifestPayload = await manifestResponse.json();
+    assert.equal(manifestPayload.frontdesk_manifest.shell_integration_target, 'librechat_first');
+    assert.equal(manifestPayload.frontdesk_manifest.endpoints.sessions, '/api/sessions');
+
+    const sessionsResponse = await fetch(`${baseUrl}/api/sessions?limit=1`);
+    const sessionsPayload = await sessionsResponse.json();
+    assert.equal(sessionsPayload.product_entry.mode, 'sessions');
+    assert.equal(sessionsPayload.product_entry.sessions.length, 1);
+    assert.equal(sessionsPayload.product_entry.sessions[0].session_id, 'sess_web');
+
+    const resumeResponse = await fetch(`${baseUrl}/api/resume`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        session_id: 'sess_web',
+      }),
+    });
+    const resumePayload = await resumeResponse.json();
+    assert.equal(resumePayload.product_entry.mode, 'resume');
+    assert.match(resumePayload.product_entry.resume.output, /WEB PILOT RESUME OUTPUT/);
+
+    const logsResponse = await fetch(`${baseUrl}/api/logs?log_name=gateway&lines=20`);
+    const logsPayload = await logsResponse.json();
+    assert.equal(logsPayload.product_entry.mode, 'logs');
+    assert.equal(logsPayload.product_entry.log_name, 'gateway');
+    assert.match(logsPayload.product_entry.raw_output, /hosted-friendly front desk ready/);
 
     const previewResponse = await fetch(`${baseUrl}/api/ask`, {
       method: 'POST',
