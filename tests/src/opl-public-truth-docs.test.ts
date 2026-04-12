@@ -362,16 +362,18 @@ test('product-entry docs freeze the managed external-kernel choice instead of fo
   const decisionNote = read('docs/references/opl-product-entry-and-hermes-kernel-integration.md');
   const familyEntryDoc = read('docs/references/family-product-entry-and-domain-handoff-architecture.md');
 
-  assert.match(readme, /not yet a direct product entry surface/i);
+  assert.match(readme, /now ships a local direct product-entry shell/i);
   assert.match(readme, /external kernel, managed by OPL product packaging/i);
   assert.match(readme, /not requiring users to manually install and understand `Hermes-Agent`/i);
+  assert.match(readme, /opl doctor.*opl ask.*opl chat/i);
   assert.match(readme, /Domain Handoff -> Domain Product Entry \/ Domain Gateway/i);
-  assert.match(readmeZh, /还不是 direct product entry/);
+  assert.match(readmeZh, /本地 direct product-entry shell/);
   assert.match(readmeZh, /external kernel, managed by OPL product packaging/);
   assert.match(readmeZh, /不要求用户先手工安装并理解 `Hermes-Agent`/);
+  assert.match(readmeZh, /opl doctor.*opl ask.*opl chat/);
   assert.match(readmeZh, /Domain Handoff -> Domain Product Entry \/ Domain Gateway/);
 
-  assert.match(status, /当前产品入口真相：用户仍主要通过 `Codex` \+ 本地 `CLI \/ MCP` 间接触达 `OPL`/);
+  assert.match(status, /当前产品入口真相：`OPL` 已经落下本地 direct product-entry shell/);
   assert.match(status, /Hermes Kernel Integration.*external kernel, managed by OPL product packaging/);
   assert.match(status, /家族级入口真相|operator entry.*agent entry.*product entry/);
   assert.match(architecture, /User -> OPL Product Entry -> OPL Gateway -> Hermes Kernel -> Domain Adapter/);

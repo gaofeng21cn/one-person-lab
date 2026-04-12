@@ -82,6 +82,23 @@ function createContractsFixtureRoot(mutator) {
   return { fixtureRoot, fixtureContractsRoot };
 }
 
+function createFakeHermesFixture(handlerBody) {
+  const fixtureRoot = mkdtempSync(path.join(os.tmpdir(), 'opl-hermes-fixture-'));
+  const hermesPath = path.join(fixtureRoot, 'fake-hermes');
+  writeFileSync(
+    hermesPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+${handlerBody}
+`,
+    { mode: 0o755 },
+  );
+  return {
+    fixtureRoot,
+    hermesPath,
+  };
+}
+
 test('list-workstreams returns the admitted workstream summaries', () => {
   assert.ok(existsSync(cliEntrypoint), `Expected CLI entrypoint at ${cliEntrypoint}.`);
 
@@ -272,6 +289,58 @@ test('validate-contracts surfaces invalid JSON from the contract set rooted at c
   } finally {
     rmSync(fixtureRoot, { recursive: true, force: true });
   }
+});
+
+test('doctor reports the local OPL product-entry shell readiness through the built CLI', () => {
+  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "version" ]; then
+  echo "Hermes Agent v9.9.9-test"
+  exit 0
+fi
+if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
+  cat <<'EOF'
+Launchd plist: /tmp/ai.hermes.gateway.plist
+✓ Service definition matches the current Hermes install
+✓ Gateway service is loaded
+EOF
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+
+  try {
+    const result = runCli(['doctor'], {
+      env: { OPL_HERMES_BIN: hermesPath },
+    });
+    assert.equal(result.status, 0, formatFailure(result));
+
+    const payload = parseJsonOutput(result);
+    assert.equal(payload.product_entry.entry_surface, 'opl_local_product_entry_shell');
+    assert.equal(payload.product_entry.ready, true);
+    assert.equal(payload.product_entry.hermes.binary.path, hermesPath);
+    assert.equal(payload.product_entry.hermes.gateway_service.loaded, true);
+  } finally {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('ask --dry-run stays machine-readable through the built CLI entrypoint', () => {
+  const result = runCli([
+    'ask',
+    'Prepare a defense-ready slide deck for a thesis committee.',
+    '--preferred-family',
+    'ppt_deck',
+    '--dry-run',
+  ]);
+  assert.equal(result.status, 0, formatFailure(result));
+
+  const payload = parseJsonOutput(result);
+  assert.equal(payload.product_entry.mode, 'ask');
+  assert.equal(payload.product_entry.dry_run, true);
+  assert.equal(payload.product_entry.routing.domain_id, 'redcube');
+  assert.equal(payload.product_entry.routing.workstream_id, 'presentation_ops');
+  assert.ok(payload.product_entry.hermes.command_preview.includes('--query'));
 });
 
 test('validate-contracts surfaces shape-invalid contracts with a stable error envelope', () => {

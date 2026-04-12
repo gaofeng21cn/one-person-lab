@@ -81,6 +81,23 @@ function createContractsFixtureRoot(mutator?: (contractsRoot: string) => void) {
   return { fixtureRoot, fixtureContractsRoot };
 }
 
+function createFakeHermesFixture(handlerBody: string) {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-hermes-fixture-'));
+  const hermesPath = path.join(fixtureRoot, 'fake-hermes');
+  fs.writeFileSync(
+    hermesPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+${handlerBody}
+`,
+    { mode: 0o755 },
+  );
+  return {
+    fixtureRoot,
+    hermesPath,
+  };
+}
+
 function assertContractsContext(
   output: { contracts_context?: { contracts_dir: string; contracts_root_source: string } },
   contractsRootSource: string,
@@ -291,6 +308,142 @@ test('validate-contracts returns a stable machine-readable contract summary', ()
       ],
     },
   });
+});
+
+test('doctor reports a ready local product-entry shell when Hermes is available', () => {
+  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "version" ]; then
+  echo "Hermes Agent v9.9.9-test"
+  exit 0
+fi
+if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
+  cat <<'EOF'
+Launchd plist: /tmp/ai.hermes.gateway.plist
+✓ Service definition matches the current Hermes install
+✓ Gateway service is loaded
+EOF
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+
+  try {
+    const output = runCli(['doctor'], {
+      OPL_HERMES_BIN: hermesPath,
+    });
+
+    assert.equal(output.version, 'g2');
+    assert.equal(output.product_entry.entry_surface, 'opl_local_product_entry_shell');
+    assert.equal(output.product_entry.ready, true);
+    assert.equal(output.product_entry.local_entry_ready, true);
+    assert.equal(output.product_entry.messaging_gateway_ready, true);
+    assert.equal(output.product_entry.hermes.binary.path, hermesPath);
+    assert.equal(output.product_entry.hermes.version, 'Hermes Agent v9.9.9-test');
+    assert.equal(output.product_entry.hermes.gateway_service.loaded, true);
+    assert.deepEqual(output.product_entry.issues, []);
+    assert.equal(output.validation.status, 'valid');
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('ask --dry-run produces a routed Hermes handoff preview from a plain-language request', () => {
+  const output = runCli([
+    'ask',
+    'Prepare a defense-ready slide deck for a thesis committee.',
+    '--preferred-family',
+    'ppt_deck',
+    '--dry-run',
+  ]);
+
+  assert.equal(output.version, 'g2');
+  assert.equal(output.product_entry.mode, 'ask');
+  assert.equal(output.product_entry.dry_run, true);
+  assert.equal(output.product_entry.input.goal, 'Prepare a defense-ready slide deck for a thesis committee.');
+  assert.equal(output.product_entry.input.intent, 'create');
+  assert.equal(output.product_entry.input.target, 'deliverable');
+  assert.equal(output.product_entry.routing.status, 'routed');
+  assert.equal(output.product_entry.routing.domain_id, 'redcube');
+  assert.equal(output.product_entry.routing.workstream_id, 'presentation_ops');
+  assert.match(output.product_entry.handoff_prompt_preview, /One Person Lab \(OPL\) Product Entry/);
+  assert.match(output.product_entry.handoff_prompt_preview, /presentation_ops/);
+  assert.equal(output.product_entry.hermes.command_preview[0], 'hermes');
+  assert.ok(output.product_entry.hermes.command_preview.includes('--query'));
+});
+
+test('ask runs Hermes through the resolved product-entry handoff and returns the captured response', () => {
+  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "version" ]; then
+  echo "Hermes Agent v9.9.9-test"
+  exit 0
+fi
+if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
+  cat <<'EOF'
+Launchd plist: /tmp/ai.hermes.gateway.plist
+✓ Service definition matches the current Hermes install
+✓ Gateway service is loaded
+EOF
+  exit 0
+fi
+if [ "$1" = "chat" ]; then
+  cat <<'EOF'
+╭─ ⚕ Hermes ───────────────────────────────────────────────────────────────────╮
+READY FROM OPL
+
+session_id: opl-test-session
+EOF
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+
+  try {
+    const output = runCli(
+      [
+        'ask',
+        'Create a xiaohongshu campaign pack for a lab update.',
+        '--preferred-family',
+        'xiaohongshu',
+      ],
+      {
+        OPL_HERMES_BIN: hermesPath,
+      },
+    );
+
+    assert.equal(output.version, 'g2');
+    assert.equal(output.product_entry.mode, 'ask');
+    assert.equal(output.product_entry.dry_run, false);
+    assert.equal(output.product_entry.routing.status, 'domain_boundary');
+    assert.equal(output.product_entry.routing.domain_id, 'redcube');
+    assert.equal(output.product_entry.hermes.session_id, 'opl-test-session');
+    assert.equal(output.product_entry.hermes.response, 'READY FROM OPL');
+    assert.equal(output.product_entry.hermes.exit_code, 0);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('chat --dry-run prepares a seeding query and a resume command for Hermes', () => {
+  const output = runCli([
+    'chat',
+    'Plan a medical grant proposal revision loop.',
+    '--dry-run',
+  ]);
+
+  assert.equal(output.version, 'g2');
+  assert.equal(output.product_entry.mode, 'chat');
+  assert.equal(output.product_entry.dry_run, true);
+  assert.equal(output.product_entry.routing.status, 'unknown_domain');
+  assert.equal(output.product_entry.routing.candidate_workstream_id, 'grant_ops');
+  assert.equal(output.product_entry.hermes.seed_command_preview[0], 'hermes');
+  assert.ok(output.product_entry.hermes.seed_command_preview.includes('--query'));
+  assert.deepEqual(output.product_entry.hermes.resume_command_preview, [
+    'hermes',
+    '--resume',
+    '<session_id>',
+  ]);
 });
 
 test('validate-contracts exposes env contract-root provenance', () => {

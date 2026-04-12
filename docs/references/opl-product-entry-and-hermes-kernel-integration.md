@@ -16,17 +16,18 @@
 截至当前主线，真实情况是：
 
 - `OPL` 仍是顶层 gateway / federation / shared-contract layer；
-- `OPL` 还不是 direct product entry；
+- `OPL` 已经落下本地 direct product-entry shell，但还不是 hosted / web 形态的完整产品前台；
 - 三个业务仓也大多仍是 “可被 operator / host-agent 调用的 runtime surface”，而不是面向普通用户的独立产品入口；
-- 四个仓都还没有真正落地上游 `Hermes-Agent` integration；
+- 四个仓已经不在同一集成深度上，至少 `Med Auto Grant` 已经落下真实上游 `Hermes-Agent` substrate；
 - `Codex` 仍是当前活跃的开发宿主，而不是未来产品 runtime 的真相；
 - 三个业务仓当前仍各自处于过渡态 runtime 形状。
 
-所以，当前最诚实的用户使用链路仍然是：
+所以，当前最诚实的用户使用链路应分两层看：
 
-`User -> Codex -> OPL CLI / MCP surface -> OPL Gateway -> Domain Gateway -> Domain Harness OS`
+- 当前已落地的本地入口：`User -> OPL local product-entry shell -> OPL Gateway -> Hermes Kernel -> Domain Handoff -> Domain Gateway / Domain Product Entry`
+- 当前仍未落地的形态：hosted / web 级产品前台
 
-这条链路对开发有效，但它还不是理想的产品入口。
+开发上，`Codex` 仍然是高质量开发宿主；但它不再是本机直达 `OPL` 的唯一前台。
 
 这里要明确区分三层：
 
@@ -37,7 +38,7 @@
 - `product entry`
   - 普通用户可直接进入、无需先学会底层 runtime 拼装方式的正式产品入口。
 
-当前四个仓里，很多已经有前两层的一部分，但四个仓都还没有把第三层真正做成熟。
+当前四个仓里，很多已经有前两层的一部分；而第三层现在已经在 `OPL` 顶层先落下一版本地入口壳，但全家族都还没有把这层做成熟。
 
 ## 3. 理想目标形态
 
@@ -217,6 +218,14 @@
 - 引入 `OPL bootstrap / launcher`；
 - 让本地用户通过 `OPL` 入口直接启动受支持的 runtime；
 - 把 Hermes 的版本、profile、wiring、diagnostics 纳入 `OPL` 产品层管理。
+
+这一步现在已经先落下了第一版本地 shell：
+
+- `opl doctor`
+- `opl ask`
+- `opl chat`
+
+后续剩余工作是把这层入口继续做成更稳定的 service-safe packaging，并向 hosted / web 入口推进。
 
 ### S4. 进入 hosted / web 化
 

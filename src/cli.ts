@@ -8,6 +8,12 @@ import {
   loadGatewayContracts,
   validateGatewayContracts,
 } from './contracts.ts';
+import {
+  buildProductEntryDoctor,
+  type ProductEntryCliInput,
+  runProductEntryAsk,
+  runProductEntryChat,
+} from './product-entry.ts';
 import { explainDomainBoundary, resolveRequestSurface } from './resolver.ts';
 import type {
   GatewayContracts,
@@ -90,6 +96,107 @@ function parseKeyValueArgs(
   };
 }
 
+function parseProductEntryArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): ProductEntryCliInput {
+  let dryRun = false;
+  let explicitGoal: string | undefined;
+  const positionalGoalParts: string[] = [];
+  const parsed: Omit<ProductEntryCliInput, 'goal' | 'dryRun'> = {
+    intent: 'create',
+    target: 'deliverable',
+    skills: [],
+  };
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (token === '--dry-run') {
+      dryRun = true;
+      continue;
+    }
+
+    if (!token.startsWith('--')) {
+      positionalGoalParts.push(token);
+      continue;
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
+        option: token,
+      });
+    }
+
+    switch (token) {
+      case '--goal':
+        explicitGoal = value;
+        break;
+      case '--intent':
+        parsed.intent = value;
+        break;
+      case '--target':
+        parsed.target = value;
+        break;
+      case '--preferred-family':
+        parsed.preferredFamily = value;
+        break;
+      case '--request-kind':
+        parsed.requestKind = value;
+        break;
+      case '--model':
+        parsed.model = value;
+        break;
+      case '--provider':
+        parsed.provider = value;
+        break;
+      case '--skills':
+        parsed.skills.push(
+          ...value
+            .split(',')
+            .map((entry) => entry.trim())
+            .filter(Boolean),
+        );
+        break;
+      default:
+        throw buildUsageError(`Unknown option for product entry: ${token}.`, spec, {
+          option: token,
+        });
+    }
+
+    index += 1;
+  }
+
+  if (explicitGoal && positionalGoalParts.length > 0) {
+    throw buildUsageError(
+      'Use either a positional request or --goal for the product-entry request, not both.',
+      spec,
+      {
+        positional_request: positionalGoalParts.join(' '),
+      },
+    );
+  }
+
+  const goal = (explicitGoal ?? positionalGoalParts.join(' ')).trim();
+
+  if (!goal) {
+    throw buildUsageError(
+      'ask and chat require a plain-language request, either as positional text or via --goal.',
+      spec,
+      {
+        required: ['<request...> or --goal <text>'],
+      },
+    );
+  }
+
+  return {
+    ...parsed,
+    goal,
+    dryRun,
+  };
+}
+
 function buildRootHelp(commands: Record<string, CommandSpec>) {
   return {
     version: 'g2',
@@ -111,6 +218,9 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
       })),
       examples: [
         'opl help',
+        'opl doctor',
+        'opl ask "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck',
+        'opl chat "Plan a medical grant proposal revision loop."',
         'opl validate-contracts',
         'opl list-workstreams',
         'opl get-workstream presentation_ops',
@@ -356,6 +466,36 @@ function main() {
         validation: validateGatewayContracts(parsedInput.loadOptions),
       }),
     },
+    doctor: {
+      usage: 'opl doctor',
+      summary:
+        'Check whether the local OPL product-entry shell and Hermes kernel are ready for direct use.',
+      examples: ['opl doctor', 'OPL_HERMES_BIN=/path/to/hermes opl doctor'],
+      handler: () => {
+        const validation = validateGatewayContracts(parsedInput.loadOptions);
+        return buildProductEntryDoctor(validation);
+      },
+    },
+    ask: {
+      usage: 'opl ask <request...> [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--model <model>] [--provider <provider>] [--skills <skills>] [--dry-run]',
+      summary:
+        'Run a one-shot OPL product-entry request by routing through OPL and then querying Hermes.',
+      examples: [
+        'opl ask "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck',
+        'opl ask --goal "Create a xiaohongshu campaign pack for a lab update." --preferred-family xiaohongshu --dry-run',
+      ],
+      handler: (args) => runProductEntryAsk(parseProductEntryArgs(args, commandSpecs.ask), getContracts()),
+    },
+    chat: {
+      usage: 'opl chat <request...> [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--model <model>] [--provider <provider>] [--skills <skills>] [--dry-run]',
+      summary:
+        'Seed a Hermes session from the OPL product entry and continue interactively inside the routed boundary.',
+      examples: [
+        'opl chat "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck',
+        'opl chat "Plan a medical grant proposal revision loop." --dry-run',
+      ],
+      handler: (args) => runProductEntryChat(parseProductEntryArgs(args, commandSpecs.chat), getContracts()),
+    },
     'resolve-request-surface': {
       usage: 'opl resolve-request-surface --intent <intent> --target <target> --goal <goal> [--preferred-family <family>] [--request-kind <kind>]',
       summary: 'Resolve a top-level request to an admitted workstream, domain boundary, or ambiguity envelope.',
@@ -441,7 +581,12 @@ function main() {
     return;
   }
 
-  printJson(spec.handler(args));
+  const result = spec.handler(args);
+  if (typeof result === 'object' && result !== null && '__handled' in result) {
+    return;
+  }
+
+  printJson(result);
 }
 
 try {

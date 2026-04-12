@@ -21,7 +21,7 @@ What is already clear today:
 - `Grant Foundry -> Med Auto Grant` is the active medical `Grant Ops` repository line; at the OPL layer, its top-level federation admission / handoff wording is still separately gated, and its visible milestones remain registry material, `G2` discovery readiness, `G3` routed-action readiness, and domain-onboarding evidence
 - the shared target operating pattern is `Agent-first`: current domain repositories stay `Auto-only`, while any future `Human-in-the-loop` product should reuse the same substrate as a compatible sibling or upper-layer product rather than forcing same-repo dual-mode logic
 - the current active development host is Codex-only local sessions, while the preferred future product-runtime substrate direction remains a true upstream `Hermes-Agent` integration proved inside a domain repository first
-- `OPL` is not yet a direct product entry surface; users still mainly reach it through Codex plus the local `CLI / MCP` surfaces
+- `OPL` now has a local direct product-entry shell through `opl doctor`, `opl ask`, and `opl chat`; hosted / web entry is still future work
 - the frozen top-level integration choice is `external kernel, managed by OPL product packaging`: do not fork `Hermes-Agent`, and do not make user-managed Hermes installation the product prerequisite
 - the ecosystem is no longer at one uniform `Hermes-Agent` stage: `Med Auto Grant` has landed a true upstream substrate, `Med Auto Science` has completed external runtime bring-up and is moving toward real adapter cutover, `RedCube AI` remains in pilot prep, and `OPL` itself still stays above domain runtime ownership
 - the current repository already has a runnable local `TypeScript CLI`-first / read-only gateway baseline
@@ -29,7 +29,8 @@ What is already clear today:
 - the current top-level formal entry at the OPL layer remains that local `TypeScript CLI`-first / read-only gateway surface rather than a launcher or runtime-owner entry
 - the absorbed `Phase 1 exit + next-stage activation package freeze` now acts as the predecessor gate for the current `Minimal admitted-domain federation activation package`
 - `MedAutoScience` and `RedCube AI` now provide the two admitted domain surfaces that are stable enough for this minimum stronger federation activation, while the activation still applies to already admitted domains only
-- no new active follow-on tranche is currently open: the honest top-level state is a central-sync stop until an admitted-domain repository lands a new absorbed delta or the central reference surfaces drift
+- the current repository now carries two top-level layers in parallel: the stable `Phase 1` read-only gateway contract surface, and a local direct product-entry shell above it
+- no new active follow-on tranche is currently open at the gateway-contract layer: the honest top-level state is a central-sync stop until an admitted-domain repository lands a new absorbed delta or the central reference surfaces drift
 
 Current phase boundaries:
 
@@ -55,8 +56,8 @@ The next phase should prioritize:
 - carrying the `Agent-first` plus `Auto-only current repo + future HITL layering` doctrine into future candidate-domain definitions
 - keeping the absorbed `Phase 1 exit + next-stage activation package freeze` explicit as the predecessor gate for the current `Minimal admitted-domain federation activation package`, with every candidate path staying in explicit admission, discovery, routing, and handoff review lanes
 - defining the next candidate domains through clear task boundaries and delivery objects, using the current `task-topology + candidate-domain-backlog + domain-onboarding` path
-- progressively turning the `OPL Gateway` from a documentation-first surface into a real entry surface while keeping routed action at the planning-contract layer
-- freezing the direct-product-entry shape and `OPL bootstrap / launcher` responsibility so the future entry is `OPL`-owned even when the runtime kernel stays external
+- hardening the landed local product-entry shell so it stays service-safe, Hermes-backed, and clearly separated from the read-only gateway contract surface
+- extending that landed local shell toward stronger `OPL bootstrap / launcher` responsibility so the future entry remains `OPL`-owned even when the runtime kernel stays external
 
 The `Phase 1` candidate-domain closeout order is frozen as:
 

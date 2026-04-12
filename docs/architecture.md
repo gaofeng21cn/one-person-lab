@@ -8,11 +8,13 @@
 
 ## 当前使用链路与目标产品链路
 
-当前真实使用链路仍然是过渡态：
+当前 repo-tracked 的本地使用链路已经变成：
 
-`User -> Codex -> OPL CLI / MCP surface -> OPL Gateway -> Domain Gateway -> Domain Harness OS -> Domain Repository`
+`User -> OPL local product-entry shell -> OPL Gateway -> Hermes Kernel -> Domain Handoff -> Domain Gateway / Domain Product Entry -> Domain Harness OS -> Domain Repository`
 
-这说明当前 `OPL` 还不是独立产品入口；它仍主要作为被开发宿主间接调用的 gateway surface 存在。
+这说明当前 `OPL` 已经拥有本地 direct product entry 的第一版入口壳；
+但它还不是 hosted / web 形态的完整产品前台。
+同时，`Phase 1` 的 read-only gateway commands 仍然是顶层联邦真相面的稳定 formal contract surface。
 
 目标产品链路应是：
 

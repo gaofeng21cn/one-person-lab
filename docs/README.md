@@ -26,9 +26,9 @@ These are the first files an AI or maintainer should read before touching the re
 
 - Current baseline: `OPL` is the top-level gateway / federation / shared substrate contract surface, while domain runtime ownership stays with the admitted domain repositories.
 - Current focus: truth reset, central sync, surface-authority convergence, and admitted-domain state alignment.
-- Current truth: none of the four repositories has landed a true upstream `Hermes-Agent` integration yet; current runtime shapes remain transitional and domain-specific.
-- Current product-entry truth: users still mainly reach `OPL` through Codex-mediated `CLI / MCP` usage; `OPL` is not yet a direct product entry surface.
-- Family product-entry truth: the same gap also exists in the domain repositories; many already have operator / agent entry surfaces, but none of the four repositories has a mature user-facing product entry yet.
+- Current truth: the family is no longer at one uniform integration depth. `Med Auto Grant` has landed a real upstream `Hermes-Agent` substrate, `Med Auto Science` has completed external runtime bring-up and is entering real adapter cutover, `RedCube AI` remains in upstream pilot prep, and `OPL` now owns a local direct product-entry shell above the top-level gateway.
+- Current product-entry truth: `OPL` now exposes a local direct product-entry shell through `opl doctor`, `opl ask`, and `opl chat`, backed by an external Hermes kernel. Hosted / web entry is still not landed.
+- Family product-entry truth: product-entry maturity is still uneven across the four repositories. `OPL` now has a family-level local shell, while the domain repositories still mostly expose operator / agent entry surfaces and need further lightweight direct-entry hardening.
 - Frozen integration choice: `Hermes Kernel Integration` follows `external kernel, managed by OPL product packaging` rather than a long-term fork or a user-managed Hermes prerequisite.
 - Long-line target: move the shared runtime layer toward upstream `Hermes-Agent` (or an explicitly approved equivalent substrate) while keeping `OPL` as the top-level coordination, discovery, and contract layer.
 - Historical execution surface: OMX is retired and survives only as migration / audit reference material.

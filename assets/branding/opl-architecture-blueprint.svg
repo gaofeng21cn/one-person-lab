@@ -31,7 +31,7 @@
     OPL Architecture Blueprint
   </text>
   <text x="800" y="148" text-anchor="middle" fill="#42627F" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="18">
-    Design-first overview of the top-level gateway, shared base, and current federation maturity
+    Design-first overview of the local product entry, shared base, and current federation maturity
   </text>
 
   <g filter="url(#soft-shadow)">
@@ -40,7 +40,7 @@
       One Person Lab (OPL)
     </text>
     <text x="800" y="248" text-anchor="middle" fill="#D9EAFB" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="18">
-      Top-level gateway and federation surface for one-person lab work
+      Local product entry, top-level gateway, and federation surface for one-person lab work
     </text>
 
     <rect x="230" y="318" width="1140" height="92" rx="22" fill="url(#opl-substrate)"/>
@@ -48,7 +48,7 @@
       Unified Harness Engineering Substrate
     </text>
     <text x="800" y="383" text-anchor="middle" fill="#DCEEFF" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="17">
-      One shared base for Agent-first execution, stable entry and runtime contracts, and domain-specific harness evolution
+      One shared base for direct product entry, stable gateway/runtime contracts, and domain-specific harness evolution
     </text>
   </g>
 
@@ -81,8 +81,8 @@
   <text x="952" y="582" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">Delivery</text>
   <text x="952" y="604" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Review surfaces and final outputs</text>
 
-  <text x="1212" y="582" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">Agent Execution</text>
-  <text x="1212" y="604" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Stable entry surfaces and audit traces</text>
+  <text x="1212" y="582" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">Product Entry</text>
+  <text x="1212" y="604" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Direct shell, launch, and handoff context</text>
 
   <path d="M 800 642 L 800 680" stroke="#3B6EA5" stroke-width="4" marker-end="url(#arrow-head)"/>
 
@@ -104,10 +104,10 @@
 
   <g>
     <rect x="392" y="778" width="256" height="86" rx="20" fill="#FFF8ED" stroke="#D7C6A4"/>
-    <rect x="408" y="792" width="110" height="22" rx="11" fill="#FFF0D1"/>
-    <text x="463" y="807" text-anchor="middle" fill="#8A6415" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="700">SIGNAL+LOCAL</text>
+    <rect x="408" y="792" width="120" height="22" rx="11" fill="#FFF0D1"/>
+    <text x="468" y="807" text-anchor="middle" fill="#8A6415" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="700">ACTIVE+GATED</text>
     <text x="408" y="836" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">Grant Ops</text>
-    <text x="408" y="852" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Proposal writing and review support</text>
+    <text x="408" y="852" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Active repo, top-level handoff still gated</text>
   </g>
 
   <g>
@@ -155,7 +155,7 @@
   <text x="142" y="986" fill="#476684" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Current carrier: Med Auto Science</text>
 
   <text x="414" y="962" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="16" font-weight="700">Grant Foundry</text>
-  <text x="414" y="986" fill="#476684" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13">Public scaffold + local runtime: Med Auto Grant</text>
+  <text x="414" y="986" fill="#476684" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13">Active carrier: Med Auto Grant (federation gate)</text>
 
   <text x="686" y="962" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="16" font-weight="700">Future Thesis Gateway</text>
   <text x="686" y="986" fill="#476684" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Planned domain-owned carrier</text>
@@ -168,6 +168,6 @@
 
   <rect x="128" y="1018" width="1344" height="30" rx="15" fill="#EAF2FB" stroke="#C6D8EA"/>
   <text x="152" y="1038" fill="#375B79" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13">
-    Blueprint rule: lane maturity differs across the federation; public scaffolds or local runtime baselines still do not transfer runtime ownership into OPL.
+    Blueprint rule: OPL now owns a local product-entry shell, but domain runtime ownership and top-level admission/handoff gates still stay below OPL.
   </text>
 </svg>

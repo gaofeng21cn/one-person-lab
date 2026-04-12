@@ -26,9 +26,9 @@
 
 - 当前基线：`OPL` 是顶层 gateway / federation / shared substrate contract surface，而 domain runtime ownership 继续留在已 admitted 的 domain 仓。
 - 当前重点：真相重置、central sync、surface authority convergence、admitted-domain state alignment。
-- 当前真相：四个仓都还没有真正落地上游 `Hermes-Agent` 集成，当前运行形态仍然各自处于过渡态。
-- 当前产品入口真相：用户仍主要通过 Codex 中转调用 `CLI / MCP` 触达 `OPL`；`OPL` 还不是 direct product entry。
-- 当前家族级产品入口真相：同样的缺口也存在于三个业务仓；它们很多已经有 operator / agent entry，但四个仓都还没有真正成熟的用户产品入口。
+- 当前真相：四仓已经不在同一集成深度上。`Med Auto Grant` 已落下真实上游 `Hermes-Agent` substrate，`Med Auto Science` 已完成 external runtime bring-up 并进入 real adapter cutover 前态，`RedCube AI` 仍在 upstream pilot prep，而 `OPL` 现在已经在顶层 gateway 之上持有本地 direct product-entry shell。
+- 当前产品入口真相：`OPL` 现在已经通过 `opl doctor`、`opl ask`、`opl chat` 暴露本地 direct product-entry shell，并以外部 Hermes kernel 为底层 runtime substrate；hosted / web 入口仍未落地。
+- 当前家族级产品入口真相：四仓的 product-entry 成熟度仍然不一致。`OPL` 已有 family-level 本地入口壳，而三个业务仓仍主要暴露 operator / agent entry，后续还要继续补齐 lightweight direct entry。
 - 当前已冻结的 integration choice：`Hermes Kernel Integration` 采用 `external kernel, managed by OPL product packaging`，而不是长期 fork，也不是把 Hermes 手工安装交给用户自己处理。
 - 长线目标：让共享运行层逐步转向上游 `Hermes-Agent`（或经过明确批准的等价 substrate），同时保持 `OPL` 继续承担顶层协调、发现、合同与边界治理。
 - 历史执行面：OMX 已退场；相关材料只作迁移/审计参考，不再进入默认阅读面。

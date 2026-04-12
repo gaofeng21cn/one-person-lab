@@ -4,8 +4,8 @@
 
 - 仓库角色：顶层 gateway 与 federation surface，domain runtime ownership 留在各自的 admitted domain 仓
 - 当前开发宿主：`Codex` 长线自治会话
-- 当前产品入口真相：用户仍主要通过 `Codex` + 本地 `CLI / MCP` 间接触达 `OPL`；`OPL` 还不是 direct product entry。三个业务仓有的已具备本地 `CLI` / runtime baseline，但整体仍更接近 `operator entry` / `agent entry`，而不是成熟 `product entry`
-- 当前家族级入口真相：四仓都还没有成熟的 `product entry`；当前真正存在的是不同程度的 `operator entry` 与 `agent entry`
+- 当前产品入口真相：`OPL` 已经落下本地 direct product-entry shell，当前入口命令是 `opl doctor`、`opl ask`、`opl chat`；用户在本机上不再必须先通过 `Codex` 才能触达顶层 `OPL`。但这仍只是 local CLI-first 入口壳，不是 hosted / web 前台
+- 当前家族级入口真相：四仓的 `product entry` 成熟度仍不一致。`OPL` 已有 family-level 本地入口壳；三个业务仓仍主要停留在不同程度的 `operator entry` / `agent entry`，各自 lightweight direct entry 还要继续补强
 - 当前产品边界：`OPL` 负责顶层 gateway / federation / shared substrate contract，三个 domain 仓继续各自维护自己的产品 runtime
 - 当前统一协作语义：`Hermes` 负责产品级长期在线 runtime substrate / orchestration；`OPL` 与 domain 仓继续持有 gateway、authority、对象合同与审计真相；具体单步执行保持 executor-adapter 可插拔，不要求三个 domain 仓共享同一种执行脑
 - 当前 runtime 真相：四个仓并不处在同一集成深度。`Med Auto Grant` 已切到真实上游 `Hermes-Agent` runtime substrate；`Med Auto Science` 已完成 external runtime bring-up，当前开发宿主上的 honest next step 是 real adapter cutover；`RedCube AI` 仍处于 upstream pilot prep；`OPL` 自己继续只持有 gateway / federation / handoff contract，而不持有 domain runtime owner 身份。任何 repo-local shim / pilot / scaffold 都不能被写成“已完成真实集成”
@@ -29,7 +29,7 @@
 
 - 当前顶层主线：truth reset、central sync、surface authority convergence、admitted-domain state alignment
 - 当前重点：先把“上游 `Hermes-Agent` 才算真实接入”与“OPL 采用外部 kernel、产品层托管集成”这两条标准冻结下来，再把三个 domain 仓已经 absorbed 的 delta 收进顶层参考面与公开边界
-- 当前重点：同时冻结 `OPL direct entry + domain lightweight direct entry + unified handoff envelope` 这条家族级入口架构
+- 当前重点：在已经落地的 `OPL` 本地 direct-entry shell 基础上，继续冻结 `domain lightweight direct entry + unified handoff envelope` 这条家族级入口架构
 - 当前约束：runtime ownership 继续留在 domain 一侧，开发宿主、历史执行面与仓内自写 substrate 都只能描述执行条件与迁移背景，不能被抬升成产品 runtime 真相
 - 理想形态与当前差距、以及为什么不能把 repo-local shim / pilot 写成真实集成，统一收口到 `docs/references/hermes-agent-truth-reset-and-target-state.md`
 - 产品入口形态与 `Hermes Kernel Integration` 的正式选择，统一收口到 `docs/references/opl-product-entry-and-hermes-kernel-integration.md`
@@ -42,7 +42,7 @@
 3. 先在更轻的业务仓冻结真实的上游 `Hermes-Agent` pilot 条件，同时补齐 `OPL bootstrap / launcher` 所需的 product-entry contract。
 4. 让三个业务仓同步定义自己的 lightweight direct entry，不再长期停留在“只有 CLI / MCP 可被 agent 调用”的状态。
 5. 推动各 domain 仓把 `runtime substrate / gateway authority / executor adapter` 三层边界写成同一套 family 语义，不再有人把“接入 Hermes”误解成“强制替换全部执行器”。
-6. 在上游 pilot 成立前，不把 `OPL` 写成已拥有独立托管 runtime；在 pilot 成立后，再推进 direct product entry。
+6. 当前已经落地的是本地 direct product-entry shell，不把它误写成 hosted / web runtime；在上游 pilot 继续成立后，再推进 service-safe packaging 与更完整的 direct product entry。
 7. 避免 reference-grade 与历史迁移文档继续挤占公开主线。
 
 ## 长线目标（规划层）

@@ -6,7 +6,7 @@
 
 当前更准确的真相是：
 
-- `OPL` 还没有真正的用户产品前台；
+- `OPL` 已经有了本地 direct product-entry shell，但还没有 hosted / web 级别的完整用户前台；
 - 三个业务仓虽然有的已经有 `CLI` / runtime baseline，但大多仍停留在 `operator entry` 或 `agent entry`；
 - 如果只把 `OPL` 做成入口，而不同时冻结每个 domain 仓自己的 lightweight direct entry 与 handoff 关系，后续仍会出现顶层一套入口、业务仓三套入口语义各自漂移的情况。
 
@@ -36,13 +36,13 @@
 当前四仓共同的真相是：
 
 - 前两层已经不同程度存在；
-- 第三层还都没有真正成熟。
+- 第三层现在已经在 `OPL` 顶层先落下一版本地入口壳，但全家族都还没有真正成熟。
 
 ## 3. 家族级目标结构
 
 ### 顶层入口
 
-`OPL` 未来应成为整个 family 的 direct product entry：
+`OPL` 已经开始成为整个 family 的 direct product entry：
 
 `User -> OPL Product Entry -> OPL Gateway -> Hermes Kernel -> Domain Handoff -> Domain Product Entry / Domain Gateway`
 

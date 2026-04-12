@@ -243,12 +243,13 @@
 
 ## 产品入口与 Hermes Kernel Integration
 
-当前真实状态仍是过渡态：
+当前真实状态仍是过渡态，但已经往前走了一步：
 
-- `OPL` 还不是 direct product entry
-- 用户当前仍主要通过 `Codex` + 本地 `CLI / MCP` 间接触达 `OPL`
-- 这个 product-entry 缺口在三个业务仓里也同样存在：有些仓已经有可用的本地 `CLI` 或 runtime baseline，但整体更像 operator / agent entry，而不是打磨完成的用户产品入口
-- 四个仓已经不再处于同一条 `Hermes-Agent` 集成阶段线上：`Med Auto Grant` 已切到真实 runtime substrate，`Med Auto Science` 已打通 external runtime bring-up，`RedCube AI` 仍在 pilot prep，而 `OPL` 继续只持有顶层 gateway / federation 语言
+- `OPL` 现在已经通过 `opl doctor`、`opl ask`、`opl chat` 提供了本地 direct product-entry shell
+- 用户在本机上不再必须先进入 `Codex`，才能触达顶层 `OPL` surface
+- 这次落地的 product entry 仍然只是本地 CLI-first 入口壳；hosted / web 前台仍是后续工作
+- 这个成熟度缺口在三个业务仓里也仍然存在：有些仓已经有可用的本地 `CLI` 或 runtime baseline，但整体更像 operator / agent entry，而不是打磨完成的用户产品入口
+- 四个仓已经不再处于同一条 `Hermes-Agent` 集成阶段线上：`Med Auto Grant` 已切到真实 runtime substrate，`Med Auto Science` 已打通 external runtime bring-up，`RedCube AI` 仍在 pilot prep，而 `OPL` 继续只持有顶层 gateway / federation 语言，同时开始持有 family-level 的本地入口壳
 
 目标产品链路应是：
 
@@ -262,6 +263,19 @@
 - 单仓：`User -> Domain Product Entry -> Domain Gateway -> Hermes Kernel -> Domain Harness OS`
 
 也就是说，`OPL` 要成为 family-level 的 direct entry，而每个业务仓也都要拥有自己的 lightweight direct entry，服务那些已经明确知道自己要做研究、基金申请或视觉交付的用户。
+
+这次在本仓实际落下的是这个目标的第一版本地入口壳：
+
+- `opl doctor`
+  - 检查本地 product-entry shell、Hermes kernel 可见性与 gateway service 就绪度
+- `opl ask "<request...>"`
+  - 先经 `OPL` 做顶层路由，生成 handoff prompt，再执行一次 Hermes 单轮查询
+- `opl chat "<request...>"`
+  - 先由 `OPL` 预热并种入一条 Hermes 会话，再切进交互式会话继续工作
+
+这层新入口壳并不会抹掉现有的 `Phase 1` gateway contract。
+只读 gateway 命令仍然是联邦真相面的稳定 formal surface。
+新的 product-entry shell 是叠在这层 formal gateway contract 之上的第一层用户入口。
 
 这次已经冻结的集成选择是：
 

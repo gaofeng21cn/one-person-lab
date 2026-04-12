@@ -247,12 +247,13 @@ For an external reader, the simplest way to understand `OPL` is:
 
 ## Product Entry And Hermes Kernel Integration
 
-The current truth is still transitional:
+The current truth is still transitional, but it has moved forward:
 
-- `OPL` is not yet a direct product entry surface
-- users still mainly reach `OPL` through `Codex` plus the local `CLI / MCP` surfaces
-- the same product-entry gap also exists in the domain repositories: some already have usable local `CLI` or runtime baselines, but they still read more like operator / agent entry surfaces than finished user-facing product entries
-- the four repositories are no longer at the same integration depth: `Med Auto Grant` has landed a real upstream `Hermes-Agent` runtime substrate, `Med Auto Science` has completed external runtime bring-up and is moving toward real adapter cutover, `RedCube AI` remains in upstream pilot prep, and `OPL` itself stays above domain runtime ownership
+- `OPL` now ships a local direct product-entry shell through `opl doctor`, `opl ask`, and `opl chat`
+- users no longer need to start from `Codex` just to reach the top-level `OPL` surface locally
+- this landed product entry is still local CLI-first only; the hosted / web front door is still future work
+- the same maturity gap still exists in the domain repositories: some already have usable local `CLI` or runtime baselines, but they still read more like operator / agent entry surfaces than finished user-facing product entries
+- the four repositories are no longer at the same integration depth: `Med Auto Grant` has landed a real upstream `Hermes-Agent` runtime substrate, `Med Auto Science` has completed external runtime bring-up and is moving toward real adapter cutover, `RedCube AI` remains in upstream pilot prep, and `OPL` itself stays above domain runtime ownership while now owning the local family-level entry shell
 
 The target product chain is:
 
@@ -266,6 +267,19 @@ The intended family structure is:
 - per domain: `User -> Domain Product Entry -> Domain Gateway -> Hermes Kernel -> Domain Harness OS`
 
 So `OPL` becomes the family-level direct entry, while each domain repository also grows a lightweight direct entry for users who already know they want a research, grant, or visual-deliverable workflow.
+
+What landed in this repository is the first local shell of that idea:
+
+- `opl doctor`
+  - checks the local product-entry shell, Hermes kernel visibility, and gateway-service readiness
+- `opl ask "<request...>"`
+  - routes a plain-language request through `OPL`, builds a handoff prompt, and runs a one-shot Hermes query
+- `opl chat "<request...>"`
+  - seeds a routed Hermes session through `OPL`, then resumes it interactively
+
+This new shell does not erase the existing `Phase 1` gateway contract.
+The read-only gateway commands remain the stable top-level contract surface for federation truth.
+The product-entry shell is the first user-facing launcher layer above that contract surface.
 
 The integration choice is now frozen as:
 
