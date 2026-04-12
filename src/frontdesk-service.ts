@@ -1,9 +1,10 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 
 import { GatewayContractError } from './contracts.ts';
+import { buildFrontDeskEntryUrl, buildFrontDeskEndpoints, normalizeBasePath } from './frontdesk-paths.ts';
+import { resolveFrontDeskStatePaths } from './frontdesk-state.ts';
 import type { GatewayContracts } from './types.ts';
 
 export interface FrontDeskServiceOptions {
@@ -11,6 +12,7 @@ export interface FrontDeskServiceOptions {
   port?: number;
   workspacePath?: string;
   sessionsLimit?: number;
+  basePath?: string;
 }
 
 type FrontDeskServiceConfig = {
@@ -18,7 +20,9 @@ type FrontDeskServiceConfig = {
   port: number;
   workspace_path: string;
   sessions_limit: number;
+  base_path: string;
   base_url: string;
+  entry_url: string;
 };
 
 type ServicePaths = {
@@ -95,17 +99,17 @@ function normalizeBaseUrl(host: string, port: number) {
 }
 
 function resolveServicePaths() {
-  const homeDir = process.env.HOME?.trim() || os.homedir();
+  const statePaths = resolveFrontDeskStatePaths();
 
   return {
-    home_dir: homeDir,
-    launch_agents_dir: path.join(homeDir, 'Library', 'LaunchAgents'),
-    application_support_dir: path.join(homeDir, 'Library', 'Application Support', 'OPL', 'frontdesk'),
-    logs_dir: path.join(homeDir, 'Library', 'Logs', 'OPL'),
-    launch_agent_plist: path.join(homeDir, 'Library', 'LaunchAgents', `${FRONTDESK_SERVICE_LABEL}.plist`),
-    config_file: path.join(homeDir, 'Library', 'Application Support', 'OPL', 'frontdesk', 'service-config.json'),
-    stdout_log: path.join(homeDir, 'Library', 'Logs', 'OPL', 'frontdesk.stdout.log'),
-    stderr_log: path.join(homeDir, 'Library', 'Logs', 'OPL', 'frontdesk.stderr.log'),
+    home_dir: statePaths.home_dir,
+    launch_agents_dir: path.join(statePaths.home_dir, 'Library', 'LaunchAgents'),
+    application_support_dir: statePaths.state_dir,
+    logs_dir: path.join(statePaths.home_dir, 'Library', 'Logs', 'OPL'),
+    launch_agent_plist: path.join(statePaths.home_dir, 'Library', 'LaunchAgents', `${FRONTDESK_SERVICE_LABEL}.plist`),
+    config_file: statePaths.service_config_file,
+    stdout_log: path.join(statePaths.home_dir, 'Library', 'Logs', 'OPL', 'frontdesk.stdout.log'),
+    stderr_log: path.join(statePaths.home_dir, 'Library', 'Logs', 'OPL', 'frontdesk.stderr.log'),
   } satisfies ServicePaths;
 }
 
@@ -133,6 +137,7 @@ function normalizeWorkspacePath(workspacePath?: string) {
 function buildServiceConfig(options: FrontDeskServiceOptions = {}): FrontDeskServiceConfig {
   const host = options.host ?? DEFAULT_HOST;
   const port = options.port ?? DEFAULT_PORT;
+  const basePath = normalizeBasePath(options.basePath);
 
   if (port <= 0) {
     throw new GatewayContractError(
@@ -149,7 +154,9 @@ function buildServiceConfig(options: FrontDeskServiceOptions = {}): FrontDeskSer
     port,
     workspace_path: normalizeWorkspacePath(options.workspacePath),
     sessions_limit: options.sessionsLimit ?? DEFAULT_SESSIONS_LIMIT,
+    base_path: basePath,
     base_url: normalizeBaseUrl(host, port),
+    entry_url: buildFrontDeskEntryUrl(normalizeBaseUrl(host, port), basePath),
   };
 }
 
@@ -165,7 +172,9 @@ function loadServiceConfig(paths: ServicePaths): FrontDeskServiceConfig | null {
       || typeof parsed.port !== 'number'
       || typeof parsed.workspace_path !== 'string'
       || typeof parsed.sessions_limit !== 'number'
+      || typeof parsed.base_path !== 'string'
       || typeof parsed.base_url !== 'string'
+      || typeof parsed.entry_url !== 'string'
     ) {
       throw new Error('Invalid frontdesk service config shape.');
     }
@@ -175,7 +184,9 @@ function loadServiceConfig(paths: ServicePaths): FrontDeskServiceConfig | null {
       port: parsed.port,
       workspace_path: parsed.workspace_path,
       sessions_limit: parsed.sessions_limit,
+      base_path: parsed.base_path,
       base_url: parsed.base_url,
+      entry_url: parsed.entry_url,
     };
   } catch (error) {
     throw new GatewayContractError(
@@ -198,7 +209,7 @@ function buildWebProgramArguments(config: FrontDeskServiceConfig) {
     );
   }
 
-  return [
+  const args = [
     ...process.execArgv,
     cliEntry,
     'web',
@@ -211,6 +222,12 @@ function buildWebProgramArguments(config: FrontDeskServiceConfig) {
     '--sessions-limit',
     String(config.sessions_limit),
   ];
+
+  if (config.base_path) {
+    args.push('--base-path', config.base_path);
+  }
+
+  return args;
 }
 
 function writeServiceConfig(paths: ServicePaths, config: FrontDeskServiceConfig) {
@@ -310,34 +327,37 @@ function buildServiceCommandPreview(paths: ServicePaths, config: FrontDeskServic
     launchctl_bootout: [getLaunchctlBinary(), 'bootout', getServiceDomain(), paths.launch_agent_plist],
     launchctl_print: [getLaunchctlBinary(), 'print', `${getServiceDomain()}/${FRONTDESK_SERVICE_LABEL}`],
     launchctl_kickstart: [getLaunchctlBinary(), 'kickstart', '-k', `${getServiceDomain()}/${FRONTDESK_SERVICE_LABEL}`],
-    open: [getOpenBinary(), config.base_url],
+    open: [getOpenBinary(), config.entry_url],
     web_entrypoint: [process.execPath, ...buildWebProgramArguments(config)],
   };
 }
 
-async function probeHealth(baseUrl: string) {
+async function probeHealth(baseUrl: string, basePath: string) {
+  const endpoints = buildFrontDeskEndpoints(basePath);
+  const healthUrl = new URL(endpoints.health, baseUrl).toString();
+
   try {
-    const response = await fetch(new URL('/api/health', baseUrl), {
+    const response = await fetch(healthUrl, {
       signal: AbortSignal.timeout(1_200),
     });
 
     if (!response.ok) {
       return {
         status: 'unreachable',
-        url: `${baseUrl}/api/health`,
+        url: healthUrl,
         reason: `health endpoint responded with status ${response.status}`,
       };
     }
 
     return {
       status: 'ok',
-      url: `${baseUrl}/api/health`,
+      url: healthUrl,
       payload: await response.json(),
     };
   } catch (error) {
     return {
       status: 'unreachable',
-      url: `${baseUrl}/api/health`,
+      url: healthUrl,
       reason: error instanceof Error ? error.message : 'Unknown health probe failure.',
     };
   }
@@ -363,9 +383,9 @@ async function buildServiceStatusPayload(
       : !loaded
         ? {
             status: 'not_running',
-            url: `${config.base_url}/api/health`,
+            url: new URL(buildFrontDeskEndpoints(config.base_path).health, config.base_url).toString(),
           }
-        : await probeHealth(config.base_url);
+        : await probeHealth(config.base_url, config.base_path);
 
   return {
     version: 'g2',
@@ -378,6 +398,8 @@ async function buildServiceStatusPayload(
       installed,
       loaded,
       base_url: config?.base_url ?? null,
+      base_path: config?.base_path ?? null,
+      entry_url: config?.entry_url ?? null,
       host: config?.host ?? null,
       port: config?.port ?? null,
       workspace_path: config?.workspace_path ?? null,
@@ -461,14 +483,14 @@ export async function openFrontDeskService(contracts: GatewayContracts) {
     );
   }
 
-  const result = runCommand(getOpenBinary(), [config.base_url]);
+  const result = runCommand(getOpenBinary(), [config.entry_url]);
   if (result.exitCode !== 0) {
     throw new GatewayContractError(
       'hermes_command_failed',
-      `Failed to open the local OPL front desk at ${config.base_url}.`,
+      `Failed to open the local OPL front desk at ${config.entry_url}.`,
       {
         command: getOpenBinary(),
-        args: [config.base_url],
+        args: [config.entry_url],
         stdout: result.stdout,
         stderr: result.stderr,
       },

@@ -17,6 +17,7 @@ import {
   uninstallFrontDeskService,
 } from './frontdesk-service.ts';
 import {
+  buildProductEntryHandoffEnvelope,
   buildProductEntryDoctor,
   type ProductEntryCliInput,
   runProductEntryAsk,
@@ -29,12 +30,20 @@ import {
 } from './product-entry.ts';
 import {
   buildFrontDeskDashboard,
+  buildHostedPilotBundle,
   buildFrontDeskManifest,
   buildProjectsOverview,
   buildRuntimeStatus,
   buildWorkspaceStatus,
 } from './management.ts';
+import { buildSessionLedger } from './session-ledger.ts';
 import { explainDomainBoundary, resolveRequestSurface } from './resolver.ts';
+import {
+  activateWorkspaceBinding,
+  archiveWorkspaceBinding,
+  bindWorkspace,
+  buildWorkspaceCatalog,
+} from './workspace-registry.ts';
 import { attachWebFrontDeskShutdown, startWebFrontDeskServer } from './web-frontdesk.ts';
 import type {
   GatewayContracts,
@@ -80,9 +89,21 @@ type RuntimeStatusCliInput = {
   limit?: number;
 };
 
+type SessionLedgerCliInput = {
+  limit?: number;
+};
+
 type DashboardCliInput = {
   workspacePath?: string;
   sessionsLimit?: number;
+};
+
+type WorkspaceRegistryCliInput = {
+  projectId?: string;
+  workspacePath?: string;
+  label?: string;
+  entryCommand?: string;
+  entryUrl?: string;
 };
 
 type WebCliInput = {
@@ -90,6 +111,7 @@ type WebCliInput = {
   port?: number;
   workspacePath?: string;
   sessionsLimit?: number;
+  basePath?: string;
 };
 
 function printJson(payload: unknown, stream: NodeJS.WriteStream = process.stdout) {
@@ -205,6 +227,9 @@ function parseProductEntryArgs(
         break;
       case '--provider':
         parsed.provider = value;
+        break;
+      case '--workspace-path':
+        parsed.workspacePath = value;
         break;
       case '--skills':
         parsed.skills.push(
@@ -479,6 +504,44 @@ function parseRuntimeStatusArgs(
   return parsed;
 }
 
+function parseSessionLedgerArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): SessionLedgerCliInput {
+  const parsed: SessionLedgerCliInput = {};
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (!token.startsWith('--')) {
+      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
+        token,
+      });
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
+        option: token,
+      });
+    }
+
+    switch (token) {
+      case '--limit':
+        parsed.limit = parsePositiveInteger(token, value, spec);
+        break;
+      default:
+        throw buildUsageError(`Unknown option for session-ledger: ${token}.`, spec, {
+          option: token,
+        });
+    }
+
+    index += 1;
+  }
+
+  return parsed;
+}
+
 function parseDashboardArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
@@ -510,6 +573,56 @@ function parseDashboardArgs(
         break;
       default:
         throw buildUsageError(`Unknown option for dashboard: ${token}.`, spec, {
+          option: token,
+        });
+    }
+
+    index += 1;
+  }
+
+  return parsed;
+}
+
+function parseWorkspaceRegistryArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): WorkspaceRegistryCliInput {
+  const parsed: WorkspaceRegistryCliInput = {};
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (!token.startsWith('--')) {
+      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
+        token,
+      });
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
+        option: token,
+      });
+    }
+
+    switch (token) {
+      case '--project':
+        parsed.projectId = value;
+        break;
+      case '--path':
+        parsed.workspacePath = value;
+        break;
+      case '--label':
+        parsed.label = value;
+        break;
+      case '--entry-command':
+        parsed.entryCommand = value;
+        break;
+      case '--entry-url':
+        parsed.entryUrl = value;
+        break;
+      default:
+        throw buildUsageError(`Unknown option for workspace registry command: ${token}.`, spec, {
           option: token,
         });
     }
@@ -554,6 +667,9 @@ function parseWebArgs(
         break;
       case '--sessions-limit':
         parsed.sessionsLimit = parsePositiveInteger(token, value, spec);
+        break;
+      case '--base-path':
+        parsed.basePath = value;
         break;
       default:
         throw buildUsageError(`Unknown option for web: ${token}.`, spec, {
@@ -621,14 +737,17 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl doctor',
         'opl projects',
         'opl frontdesk-manifest',
+        'opl frontdesk-hosted-bundle --base-path /pilot/opl',
         'opl frontdesk-service-install --port 8787',
+        'opl workspace-bind --project redcube --path /Users/gaofeng/workspace/redcube-ai --entry-command "redcube-ai frontdesk"',
+        'opl handoff-envelope "Prepare a defense-ready slide deck." --preferred-family ppt_deck',
         'opl workspace-status --path /Users/gaofeng/workspace/redcube-ai',
         'opl runtime-status --limit 10',
         'opl dashboard --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
-        'opl web --host 127.0.0.1 --port 8787 --path /Users/gaofeng/workspace/one-person-lab',
+        'opl web --host 127.0.0.1 --port 8787 --base-path /pilot/opl --path /Users/gaofeng/workspace/one-person-lab',
         'opl "Plan a medical grant proposal revision loop."',
-        'opl ask "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck',
-        'opl chat "Plan a medical grant proposal revision loop."',
+        'opl ask "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck --workspace-path /Users/gaofeng/workspace/redcube-ai',
+        'opl chat "Plan a medical grant proposal revision loop." --workspace-path /Users/gaofeng/workspace/med-autogrant',
         'opl validate-contracts',
         'opl list-workstreams',
         'opl get-workstream presentation_ops',
@@ -924,14 +1043,28 @@ async function main() {
       examples: ['opl frontdesk-manifest'],
       handler: () => buildFrontDeskManifest(getContracts()),
     },
+    'frontdesk-hosted-bundle': {
+      usage:
+        'opl frontdesk-hosted-bundle [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>]',
+      summary:
+        'Emit the hosted-pilot-ready front-desk bundle with base-path-aware entry and API endpoints.',
+      examples: [
+        'opl frontdesk-hosted-bundle',
+        'opl frontdesk-hosted-bundle --host 0.0.0.0 --port 8787 --base-path /pilot/opl',
+        'opl frontdesk-hosted-bundle --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 9',
+      ],
+      handler: (args) =>
+        buildHostedPilotBundle(getContracts(), parseWebArgs(args, commandSpecs['frontdesk-hosted-bundle'])),
+    },
     'frontdesk-service-install': {
-      usage: 'opl frontdesk-service-install [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>]',
+      usage:
+        'opl frontdesk-service-install [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>]',
       summary:
         'Install and bootstrap a local launchd-managed OPL web front-desk service for long-running direct entry.',
       examples: [
         'opl frontdesk-service-install',
         'opl frontdesk-service-install --port 8787',
-        'opl frontdesk-service-install --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 10',
+        'opl frontdesk-service-install --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 10 --base-path /pilot/opl',
       ],
       handler: (args) => installFrontDeskService(getContracts(), parseWebArgs(args, commandSpecs['frontdesk-service-install'])),
     },
@@ -982,12 +1115,14 @@ async function main() {
       },
     },
     web: {
-      usage: 'opl web [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>]',
+      usage:
+        'opl web [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>]',
       summary: 'Start the local OPL web front-desk pilot for direct browser-based entry and management.',
       examples: [
         'opl web',
         'opl web --host 127.0.0.1 --port 8787',
         'opl web --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 10',
+        'opl web --host 127.0.0.1 --port 8787 --base-path /pilot/opl',
       ],
       handler: async (args) => {
         const { server, startupPayload } = await startWebFrontDeskServer(
@@ -1004,22 +1139,25 @@ async function main() {
       },
     },
     ask: {
-      usage: 'opl ask <request...> [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--model <model>] [--provider <provider>] [--skills <skills>] [--dry-run]',
+      usage:
+        'opl ask <request...> [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--model <model>] [--provider <provider>] [--workspace-path <path>] [--skills <skills>] [--dry-run]',
       summary:
         'Run a one-shot OPL product-entry request by routing through OPL and then querying Hermes.',
       examples: [
         'opl ask "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck',
         'opl ask --goal "Create a xiaohongshu campaign pack for a lab update." --preferred-family xiaohongshu --dry-run',
+        'opl ask "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck --workspace-path /Users/gaofeng/workspace/redcube-ai',
       ],
       handler: (args) => runProductEntryAsk(parseProductEntryArgs(args, commandSpecs.ask), getContracts()),
     },
     chat: {
-      usage: 'opl chat <request...> [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--model <model>] [--provider <provider>] [--skills <skills>] [--dry-run]',
+      usage:
+        'opl chat <request...> [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--model <model>] [--provider <provider>] [--workspace-path <path>] [--skills <skills>] [--dry-run]',
       summary:
         'Seed a Hermes session from the OPL product entry and continue interactively inside the routed boundary.',
       examples: [
         'opl chat "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck',
-        'opl chat "Plan a medical grant proposal revision loop." --dry-run',
+        'opl chat "Plan a medical grant proposal revision loop." --workspace-path /Users/gaofeng/workspace/med-autogrant --dry-run',
       ],
       handler: (args) => runProductEntryChat(parseProductEntryArgs(args, commandSpecs.chat), getContracts()),
     },
@@ -1040,6 +1178,92 @@ async function main() {
       summary: 'Wrap Hermes log access in an OPL product-entry envelope for debugging and operations.',
       examples: ['opl logs gateway', 'opl logs gateway --lines 50', 'opl logs worker --level info --component runtime'],
       handler: (args) => runProductEntryLogs(parseLogsArgs(args, commandSpecs.logs)),
+    },
+    'workspace-catalog': {
+      usage: 'opl workspace-catalog',
+      summary: 'Show the file-backed workspace registry for OPL and admitted domain project surfaces.',
+      examples: ['opl workspace-catalog'],
+      handler: (args) => {
+        assertNoArgs(args, commandSpecs['workspace-catalog']);
+        return buildWorkspaceCatalog(getContracts());
+      },
+    },
+    'workspace-bind': {
+      usage:
+        'opl workspace-bind --project <project_id> --path <workspace_path> [--label <label>] [--entry-command <command>] [--entry-url <url>]',
+      summary:
+        'Bind and activate one workspace for an admitted project, optionally freezing its direct-entry locator.',
+      examples: [
+        'opl workspace-bind --project redcube --path /Users/gaofeng/workspace/redcube-ai',
+        'opl workspace-bind --project redcube --path /Users/gaofeng/workspace/redcube-ai --entry-command "redcube-ai frontdesk" --entry-url http://127.0.0.1:3310/redcube',
+      ],
+      handler: (args) => {
+        const parsed = parseWorkspaceRegistryArgs(args, commandSpecs['workspace-bind']);
+        if (!parsed.projectId || !parsed.workspacePath) {
+          throw buildUsageError(
+            'workspace-bind requires both --project and --path.',
+            commandSpecs['workspace-bind'],
+            { required: ['--project', '--path'] },
+          );
+        }
+
+        return bindWorkspace(getContracts(), {
+          projectId: parsed.projectId,
+          workspacePath: parsed.workspacePath,
+          label: parsed.label,
+          entryCommand: parsed.entryCommand,
+          entryUrl: parsed.entryUrl,
+        });
+      },
+    },
+    'workspace-activate': {
+      usage: 'opl workspace-activate --project <project_id> --path <workspace_path>',
+      summary: 'Switch the active workspace binding for an admitted project.',
+      examples: ['opl workspace-activate --project redcube --path /Users/gaofeng/workspace/redcube-ai'],
+      handler: (args) => {
+        const parsed = parseWorkspaceRegistryArgs(args, commandSpecs['workspace-activate']);
+        if (!parsed.projectId || !parsed.workspacePath) {
+          throw buildUsageError(
+            'workspace-activate requires both --project and --path.',
+            commandSpecs['workspace-activate'],
+            { required: ['--project', '--path'] },
+          );
+        }
+
+        return activateWorkspaceBinding(getContracts(), {
+          projectId: parsed.projectId,
+          workspacePath: parsed.workspacePath,
+        });
+      },
+    },
+    'workspace-archive': {
+      usage: 'opl workspace-archive --project <project_id> --path <workspace_path>',
+      summary: 'Archive one workspace binding so OPL no longer treats it as active or reusable.',
+      examples: ['opl workspace-archive --project redcube --path /Users/gaofeng/workspace/redcube-ai'],
+      handler: (args) => {
+        const parsed = parseWorkspaceRegistryArgs(args, commandSpecs['workspace-archive']);
+        if (!parsed.projectId || !parsed.workspacePath) {
+          throw buildUsageError(
+            'workspace-archive requires both --project and --path.',
+            commandSpecs['workspace-archive'],
+            { required: ['--project', '--path'] },
+          );
+        }
+
+        return archiveWorkspaceBinding(getContracts(), {
+          projectId: parsed.projectId,
+          workspacePath: parsed.workspacePath,
+        });
+      },
+    },
+    'session-ledger': {
+      usage: 'opl session-ledger [--limit <n>]',
+      summary: 'Show OPL-managed session events with honest resource samples captured at event time.',
+      examples: ['opl session-ledger', 'opl session-ledger --limit 5'],
+      handler: (args) => {
+        const parsed = parseSessionLedgerArgs(args, commandSpecs['session-ledger']);
+        return buildSessionLedger(parsed.limit);
+      },
     },
     'repair-hermes-gateway': {
       usage: 'opl repair-hermes-gateway',
@@ -1079,6 +1303,21 @@ async function main() {
           ),
         });
       },
+    },
+    'handoff-envelope': {
+      usage:
+        'opl handoff-envelope <request...> [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--workspace-path <path>]',
+      summary:
+        'Build a machine-readable OPL family handoff bundle for the current request and active workspace bindings.',
+      examples: [
+        'opl handoff-envelope "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck',
+        'opl handoff-envelope "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck --workspace-path /Users/gaofeng/workspace/redcube-ai',
+      ],
+      handler: (args) =>
+        buildProductEntryHandoffEnvelope(
+          parseProductEntryArgs(args, commandSpecs['handoff-envelope']),
+          getContracts(),
+        ),
     },
   };
 

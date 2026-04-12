@@ -21,6 +21,12 @@
   - 默认走 quick ask
 - `opl resume / sessions / logs / repair-hermes-gateway`
   - 提供 landed local shell 的会话与 runtime 运维界面
+- `opl frontdesk-hosted-bundle / session-ledger / handoff-envelope`
+  - 提供 hosted-pilot-ready shell bundle、OPL-managed session attribution 与 family handoff contract
+- `opl workspace-catalog / workspace-bind|activate|archive`
+  - 提供 file-backed workspace registry 与顶层到 domain 之间的 direct-entry locator 管理
+- `opl web`
+  - 提供 browser-based front desk，并把 workspace registry、managed session ledger 与 handoff-aware control room 一并带到前台
 
 但它还不是 hosted / web 形态的完整产品前台。
 当前这层 hosted / web 缺口也已经冻结了优先路线：短期先走 `LibreChat-first` 的 pilot 壳，长期仍回到 `OPL` 自有 web front desk。
@@ -109,6 +115,8 @@
 - `workspace_locator`
 - `runtime_session_contract`
 - `return_surface_contract`
+
+当前 `OPL` 已经把这层 envelope 做成 repo-tracked surface，并且通过 workspace registry 中显式配置的 direct-entry locator，把顶层 front desk 与 domain direct entry / domain gateway 连接起来；没有 locator 的 domain 不会被伪造成“已接好前台”。
 
 ## Hermes Kernel Integration 选型
 

@@ -45,14 +45,23 @@
 
 - `opl projects`
 - `opl workspace-status`
+- `opl workspace-catalog`
+- `opl workspace-bind`
+- `opl workspace-activate`
+- `opl workspace-archive`
 - `opl runtime-status`
+- `opl session-ledger`
 - `opl dashboard`
+- `opl handoff-envelope`
 
 当前含义：
 
-- 已经有了第一版多项目 / 工作区 / 会话 / runtime 观测面；
+- 已经有了第一版多项目 / 工作区 / 会话 / runtime 观测与可写管理面；
 - `runtime-status` 已能看到 Hermes runtime 健康、最近会话以及 runtime-level 进程资源占用；
-- `dashboard` 已能把 front desk、projects、workspace、runtime 汇总到一个管理面里。
+- `session-ledger` 已能提供 OPL-managed 的会话事件与诚实资源样本；
+- `workspace-bind|activate|archive` 已能把 workspace registry 与 direct-entry locator 作为顶层可写状态管理起来；
+- `handoff-envelope` 已能把顶层 front desk 到 domain direct entry / domain gateway 的最小交接面冻结出来；
+- `dashboard` 已能把 front desk、projects、workspace、workspace registry、session ledger 与 runtime 汇总到一个管理面里。
 
 ### F2. 本地 web front desk pilot
 
@@ -61,11 +70,18 @@
 - `opl web`
 - `/api/projects`
 - `/api/workspace-status`
+- `/api/workspace-catalog`
+- `/api/workspace-bind`
+- `/api/workspace-activate`
+- `/api/workspace-archive`
 - `/api/runtime-status`
+- `/api/session-ledger`
 - `/api/dashboard`
 - `/api/ask`
 - `/api/health`
 - `/api/frontdesk-manifest`
+- `/api/hosted-bundle`
+- `/api/handoff-envelope`
 - `/api/sessions`
 - `/api/resume`
 - `/api/logs`
@@ -73,7 +89,7 @@
 当前含义：
 
 - `OPL` 已经不只有 CLI 入口，而是已经有了可直接打开的本地浏览器前台；
-- 用户可以直接在浏览器里做 quick ask、查看项目、检查 workspace、观察 runtime；
+- 用户可以直接在浏览器里做 quick ask、查看项目、检查与绑定 workspace、查看 managed session ledger、观察 runtime；
 - 这仍是 local pilot，不等于 hosted 包装完成。
 
 ### F2.B. hosted-friendly shell contract
@@ -81,11 +97,13 @@
 已完成：
 
 - `opl frontdesk-manifest`
-- 本地 web 前台已开始直接消费 `health / manifest / sessions / resume / logs` surfaces
+- `opl frontdesk-hosted-bundle`
+- 本地 web 前台已开始直接消费 `health / manifest / hosted-bundle / sessions / resume / logs / handoff-envelope` surfaces
 
 当前含义：
 
 - `OPL` 现在不只是“有一个本地浏览器 pilot”，而是已经冻结出一层 future hosted shell 可消费的 front-desk contract；
+- hosted-pilot-ready shell bundle 已经把 base-path-aware 的 entry / API endpoint 一并冻结下来；
 - 这层 contract 可以服务后续 `LibreChat-first` 或自有 web front desk 的接壳工作；
 - 但它仍然只是 hosted-friendly local surface，不等于 hosted packaging / hosted runtime 已完成。
 
@@ -130,26 +148,13 @@
 - 但还没有 service-safe 的 hosted packaging；
 - 也还没有把 `LibreChat-first` 这条 hosted pilot 路线正式接起来。
 
-### W2. project / workspace 的可写管理能力
+### W2. 顶层与业务仓的前台联动
 
 未完成：
 
-- 当前只有 workspace / git / runtime 的观察面；
-- 还没有正式的创建项目、切换项目、绑定 workspace、归档 workspace 的产品级可写管理流。
-
-### W3. session 级细粒度资源归因
-
-未完成：
-
-- 当前资源可见性是 runtime-level / process-level；
-- 还不是严格的 per-session 资源账本。
-
-### W4. 顶层与业务仓的前台联动
-
-未完成：
-
-- `OPL` 顶层有 front desk 了；
-- 三个业务仓各自的 lightweight direct entry 还没全部长出来。
+- `OPL` 顶层现在已经有 front desk、workspace registry 与 family handoff bundle；
+- 但三个业务仓各自的 lightweight direct entry 还没全部长出来；
+- 当前只能通过 workspace registry 中显式配置的 direct-entry locator 把已知 domain 前台接进来，不能假装全家都已经齐了。
 
 ## 当前进行中
 
@@ -178,13 +183,12 @@
 
 最合理的下一棒顺序：
 
-1. 做 `OPL` hosted / web front desk pilot
-2. 把 `LibreChat-first` 或等价 hosted shell 接到已冻结的 hosted-friendly shell contract 上
-3. 让 `RedCube AI` 先长出真实 lightweight direct entry
-4. 让 `Med Auto Grant` 继续把 grant-only entry / runtime / export 压实
-5. 让 `Med Auto Science` 继续走非 display 主线的 real adapter cutover
+1. 把 `LibreChat-first` 或等价 hosted shell 接到已冻结的 hosted-friendly shell contract 与 hosted pilot bundle 上
+2. 让 `RedCube AI` 先长出真实 lightweight direct entry
+3. 让 `Med Auto Grant` 继续把 grant-only entry / runtime / export 压实
+4. 让 `Med Auto Science` 继续走非 display 主线的 real adapter cutover
 
 ## 一句话结论
 
-`OPL Front Desk` 这条线现在已经从“只有 CLI 说明面”走到了“有本地 CLI 入口 + 有管理面 + 有本地 web pilot + 有 hosted-friendly shell contract + 有 service-safe 本地包装层 + 有明确 hosted 路线”的状态。
+`OPL Front Desk` 这条线现在已经从“只有 CLI 说明面”走到了“有本地 CLI 入口 + 有可写管理面 + 有 managed session ledger + 有 family handoff bundle + 有本地 web pilot + 有 hosted-friendly shell contract / hosted pilot bundle + 有 service-safe 本地包装层 + 有明确 hosted 路线”的状态。
 下一步不该再回头争论方向，而是把 hosted shell 接壳、hosted packaging 和后续家族级 direct entry 继续压实。

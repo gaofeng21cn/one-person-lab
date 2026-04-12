@@ -572,6 +572,7 @@ exit 1
     const dashboardPayload = parseJsonOutput(dashboardResult);
     assert.equal(dashboardPayload.dashboard.projects.length, 3);
     assert.equal(dashboardPayload.dashboard.front_desk.local_web_frontdesk_status, 'pilot_landed');
+    assert.equal(dashboardPayload.dashboard.front_desk.hosted_web_status, 'librechat_pilot_frozen_not_landed');
     assert.equal(dashboardPayload.dashboard.runtime_status.recent_sessions.sessions.length, 1);
   } finally {
     rmSync(fixtureRoot, { recursive: true, force: true });
@@ -586,8 +587,12 @@ test('help exposes the local web front-desk pilot command through the built CLI 
   const payload = parseJsonOutput(result);
   assert.ok(payload.help.commands.some((entry) => entry.command === 'web'));
   assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-manifest'));
+  assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-hosted-bundle'));
   assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-service-install'));
   assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-service-status'));
+  assert.ok(payload.help.commands.some((entry) => entry.command === 'workspace-bind'));
+  assert.ok(payload.help.commands.some((entry) => entry.command === 'session-ledger'));
+  assert.ok(payload.help.commands.some((entry) => entry.command === 'handoff-envelope'));
 
   const scoped = runCli(['web', '--help']);
   assert.equal(scoped.status, 0, formatFailure(scoped));
@@ -702,6 +707,204 @@ test('frontdesk-service lifecycle stays machine-readable through the built CLI e
     rmSync(homeRoot, { recursive: true, force: true });
     rmSync(launchctlFixture.fixtureRoot, { recursive: true, force: true });
     rmSync(openFixture.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('frontdesk-hosted-bundle stays machine-readable through the built CLI entrypoint', () => {
+  const result = runCli([
+    'frontdesk-hosted-bundle',
+    '--host',
+    '0.0.0.0',
+    '--port',
+    '8787',
+    '--base-path',
+    '/pilot/opl',
+    '--path',
+    repoRoot,
+    '--sessions-limit',
+    '9',
+  ]);
+  assert.equal(result.status, 0, formatFailure(result));
+
+  const payload = parseJsonOutput(result);
+  assert.equal(payload.hosted_pilot_bundle.surface_id, 'opl_hosted_frontdesk_pilot_bundle');
+  assert.equal(payload.hosted_pilot_bundle.base_path, '/pilot/opl');
+  assert.equal(payload.hosted_pilot_bundle.entry_url, 'http://127.0.0.1:8787/pilot/opl/');
+  assert.equal(payload.hosted_pilot_bundle.api_base_url, 'http://127.0.0.1:8787/pilot/opl/api');
+  assert.equal(payload.hosted_pilot_bundle.endpoints.dashboard, '/pilot/opl/api/dashboard');
+  assert.equal(payload.hosted_pilot_bundle.defaults.workspace_path, repoRoot);
+  assert.equal(payload.hosted_pilot_bundle.defaults.sessions_limit, 9);
+});
+
+test('workspace registry and handoff surfaces stay machine-readable through the built CLI entrypoint', () => {
+  const stateRoot = mkdtempSync(path.join(os.tmpdir(), 'opl-built-state-fixture-'));
+
+  try {
+    const bindResult = runCli([
+      'workspace-bind',
+      '--project',
+      'redcube',
+      '--path',
+      repoRoot,
+      '--label',
+      'RedCube Main Workspace',
+      '--entry-command',
+      'redcube-ai frontdesk',
+      '--entry-url',
+      'http://127.0.0.1:3310/redcube',
+    ], {
+      env: {
+        OPL_FRONTDESK_STATE_DIR: stateRoot,
+      },
+    });
+    assert.equal(bindResult.status, 0, formatFailure(bindResult));
+    const bindPayload = parseJsonOutput(bindResult);
+    assert.equal(bindPayload.workspace_catalog.action, 'bind');
+    assert.equal(bindPayload.workspace_catalog.binding.direct_entry.command, 'redcube-ai frontdesk');
+
+    const catalogResult = runCli(['workspace-catalog'], {
+      env: {
+        OPL_FRONTDESK_STATE_DIR: stateRoot,
+      },
+    });
+    assert.equal(catalogResult.status, 0, formatFailure(catalogResult));
+    const catalogPayload = parseJsonOutput(catalogResult);
+    assert.equal(catalogPayload.workspace_catalog.projects.length, 3);
+    assert.equal(catalogPayload.workspace_catalog.projects[2].active_binding.workspace_path, repoRoot);
+
+    const handoffResult = runCli([
+      'handoff-envelope',
+      'Prepare',
+      'a',
+      'defense-ready',
+      'slide',
+      'deck',
+      'for',
+      'a',
+      'thesis',
+      'committee.',
+      '--preferred-family',
+      'ppt_deck',
+      '--workspace-path',
+      repoRoot,
+    ], {
+      env: {
+        OPL_FRONTDESK_STATE_DIR: stateRoot,
+      },
+    });
+    assert.equal(handoffResult.status, 0, formatFailure(handoffResult));
+    const handoffPayload = parseJsonOutput(handoffResult);
+    assert.equal(handoffPayload.handoff_bundle.target_domain_id, 'redcube');
+    assert.equal(handoffPayload.handoff_bundle.domain_direct_entry.command, 'redcube-ai frontdesk');
+
+    const archiveResult = runCli([
+      'workspace-archive',
+      '--project',
+      'redcube',
+      '--path',
+      repoRoot,
+    ], {
+      env: {
+        OPL_FRONTDESK_STATE_DIR: stateRoot,
+      },
+    });
+    assert.equal(archiveResult.status, 0, formatFailure(archiveResult));
+    const archivePayload = parseJsonOutput(archiveResult);
+    assert.equal(archivePayload.workspace_catalog.binding.status, 'archived');
+  } finally {
+    rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('session-ledger stays machine-readable through the built CLI entrypoint', () => {
+  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "chat" ]; then
+  cat <<'EOF'
+╭─ ⚕ Hermes ───────────────────────────────────────────────────────────────────╮
+BUILT SESSION LEDGER RESPONSE
+
+session_id: built_sess_ledger
+EOF
+  exit 0
+fi
+if [ "$1" = "sessions" ] && [ "$2" = "list" ]; then
+  cat <<'EOF'
+Preview                                            Last Active   Src    ID
+───────────────────────────────────────────────────────────────────────────────────────────────
+Built ledger session                               1m ago        cli    built_sess_ledger
+EOF
+  exit 0
+fi
+if [ "$1" = "version" ]; then
+  echo "Hermes Agent v9.9.9-test"
+  exit 0
+fi
+if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
+  cat <<'EOF'
+Launchd plist: /tmp/ai.hermes.gateway.plist
+✓ Service definition matches the current Hermes install
+✓ Gateway service is loaded
+EOF
+  exit 0
+fi
+if [ "$1" = "status" ]; then
+  cat <<'EOF'
+◆ Environment
+  Project:      /tmp/hermes-agent
+◆ Gateway Service
+  Status:       ✓ loaded
+  Manager:      launchd
+◆ Scheduled Jobs
+  Jobs:         1
+◆ Sessions
+  Active:       1
+EOF
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+  const psFixture = createFakePsFixture(`27025 1 0.2 0.4 49616 00:46 /Users/test/.hermes/venv/bin/python -m hermes_cli.main gateway run --replace
+27026 27025 4.2 1.1 125000 00:31 /Users/test/.hermes/venv/bin/python -m hermes_cli.main chat --resume built_sess_ledger`);
+  const stateRoot = mkdtempSync(path.join(os.tmpdir(), 'opl-built-ledger-state-'));
+
+  try {
+    const askResult = runCli([
+      'ask',
+      'Prepare',
+      'a',
+      'defense-ready',
+      'slide',
+      'deck.',
+      '--preferred-family',
+      'ppt_deck',
+      '--workspace-path',
+      repoRoot,
+    ], {
+      env: {
+        OPL_HERMES_BIN: hermesPath,
+        OPL_FRONTDESK_STATE_DIR: stateRoot,
+        PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
+      },
+    });
+    assert.equal(askResult.status, 0, formatFailure(askResult));
+
+    const ledgerResult = runCli(['session-ledger', '--limit', '5'], {
+      env: {
+        OPL_HERMES_BIN: hermesPath,
+        OPL_FRONTDESK_STATE_DIR: stateRoot,
+        PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
+      },
+    });
+    assert.equal(ledgerResult.status, 0, formatFailure(ledgerResult));
+    const ledgerPayload = parseJsonOutput(ledgerResult);
+    assert.equal(ledgerPayload.session_ledger.summary.entry_count, 1);
+    assert.equal(ledgerPayload.session_ledger.entries[0].session_id, 'built_sess_ledger');
+    assert.equal(ledgerPayload.session_ledger.entries[0].resource_sample.process_count, 2);
+  } finally {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+    rmSync(psFixture.fixtureRoot, { recursive: true, force: true });
+    rmSync(stateRoot, { recursive: true, force: true });
   }
 });
 

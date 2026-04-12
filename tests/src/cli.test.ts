@@ -1008,6 +1008,227 @@ test('frontdesk-service commands manage the local launchd wrapper for the web pi
   }
 });
 
+test('frontdesk-hosted-bundle exposes a hosted-pilot-ready bundle with base-path aware endpoints', () => {
+  const output = runCli([
+    'frontdesk-hosted-bundle',
+    '--host',
+    '0.0.0.0',
+    '--port',
+    '8787',
+    '--base-path',
+    '/pilot/opl',
+    '--path',
+    repoRoot,
+    '--sessions-limit',
+    '9',
+  ]);
+
+  assert.equal(output.version, 'g2');
+  assert.equal(output.hosted_pilot_bundle.surface_id, 'opl_hosted_frontdesk_pilot_bundle');
+  assert.equal(output.hosted_pilot_bundle.shell_integration_target, 'librechat_first');
+  assert.equal(output.hosted_pilot_bundle.pilot_bundle_status, 'landed');
+  assert.equal(output.hosted_pilot_bundle.actual_hosted_runtime_status, 'not_landed');
+  assert.equal(output.hosted_pilot_bundle.base_path, '/pilot/opl');
+  assert.equal(output.hosted_pilot_bundle.entry_url, 'http://127.0.0.1:8787/pilot/opl/');
+  assert.equal(output.hosted_pilot_bundle.api_base_url, 'http://127.0.0.1:8787/pilot/opl/api');
+  assert.equal(output.hosted_pilot_bundle.endpoints.dashboard, '/pilot/opl/api/dashboard');
+  assert.equal(output.hosted_pilot_bundle.defaults.workspace_path, repoRoot);
+  assert.equal(output.hosted_pilot_bundle.defaults.sessions_limit, 9);
+});
+
+test('workspace registry commands bind activate and archive project workspaces with direct-entry locators', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-state-fixture-'));
+
+  try {
+    const bindOutput = runCli([
+      'workspace-bind',
+      '--project',
+      'redcube',
+      '--path',
+      repoRoot,
+      '--label',
+      'RedCube Main Workspace',
+      '--entry-command',
+      'redcube-ai frontdesk',
+      '--entry-url',
+      'http://127.0.0.1:3310/redcube',
+    ], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+    });
+
+    assert.equal(bindOutput.workspace_catalog.action, 'bind');
+    assert.equal(bindOutput.workspace_catalog.binding.project_id, 'redcube');
+    assert.equal(bindOutput.workspace_catalog.binding.direct_entry.command, 'redcube-ai frontdesk');
+    assert.equal(bindOutput.workspace_catalog.binding.direct_entry.url, 'http://127.0.0.1:3310/redcube');
+
+    const catalogOutput = runCli(['workspace-catalog'], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+    });
+    assert.equal(catalogOutput.workspace_catalog.projects.length, 3);
+    assert.equal(catalogOutput.workspace_catalog.projects[2].project_id, 'redcube');
+    assert.equal(catalogOutput.workspace_catalog.projects[2].active_binding.workspace_path, repoRoot);
+
+    const archiveOutput = runCli([
+      'workspace-archive',
+      '--project',
+      'redcube',
+      '--path',
+      repoRoot,
+    ], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+    });
+    assert.equal(archiveOutput.workspace_catalog.action, 'archive');
+    assert.equal(archiveOutput.workspace_catalog.binding.status, 'archived');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('handoff-envelope returns a machine-readable family handoff bundle aligned with the active workspace binding', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-handoff-state-'));
+
+  try {
+    runCli([
+      'workspace-bind',
+      '--project',
+      'redcube',
+      '--path',
+      repoRoot,
+      '--entry-command',
+      'redcube-ai frontdesk',
+      '--entry-url',
+      'http://127.0.0.1:3310/redcube',
+    ], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+    });
+
+    const output = runCli([
+      'handoff-envelope',
+      'Prepare',
+      'a',
+      'defense-ready',
+      'slide',
+      'deck',
+      'for',
+      'a',
+      'thesis',
+      'committee.',
+      '--preferred-family',
+      'ppt_deck',
+      '--workspace-path',
+      repoRoot,
+    ], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+    });
+
+    assert.equal(output.handoff_bundle.target_domain_id, 'redcube');
+    assert.equal(output.handoff_bundle.task_intent, 'create');
+    assert.equal(output.handoff_bundle.entry_mode, 'product_entry_handoff');
+    assert.equal(output.handoff_bundle.workspace_locator.absolute_path, repoRoot);
+    assert.equal(output.handoff_bundle.runtime_session_contract.runtime_substrate, 'external_hermes_kernel');
+    assert.equal(output.handoff_bundle.return_surface_contract.opl.resume_command, 'opl resume <session_id>');
+    assert.equal(output.handoff_bundle.domain_direct_entry.command, 'redcube-ai frontdesk');
+    assert.equal(output.handoff_bundle.domain_direct_entry.url, 'http://127.0.0.1:3310/redcube');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('session-ledger captures OPL-managed session events with honest resource samples', () => {
+  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "chat" ]; then
+  cat <<'EOF'
+╭─ ⚕ Hermes ───────────────────────────────────────────────────────────────────╮
+SESSION LEDGER ASK RESPONSE
+
+session_id: sess_ledger
+EOF
+  exit 0
+fi
+if [ "$1" = "sessions" ] && [ "$2" = "list" ]; then
+  cat <<'EOF'
+Preview                                            Last Active   Src    ID
+───────────────────────────────────────────────────────────────────────────────────────────────
+Ledger session                                     1m ago        cli    sess_ledger
+EOF
+  exit 0
+fi
+if [ "$1" = "version" ]; then
+  echo "Hermes Agent v9.9.9-test"
+  exit 0
+fi
+if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
+  cat <<'EOF'
+Launchd plist: /tmp/ai.hermes.gateway.plist
+✓ Service definition matches the current Hermes install
+✓ Gateway service is loaded
+EOF
+  exit 0
+fi
+if [ "$1" = "status" ]; then
+  cat <<'EOF'
+◆ Environment
+  Project:      /tmp/hermes-agent
+◆ Gateway Service
+  Status:       ✓ loaded
+  Manager:      launchd
+◆ Scheduled Jobs
+  Jobs:         1
+◆ Sessions
+  Active:       1
+EOF
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+  const psFixture = createFakePsFixture(`27025 1 0.2 0.4 49616 00:46 /Users/test/.hermes/venv/bin/python -m hermes_cli.main gateway run --replace
+27026 27025 4.2 1.1 125000 00:31 /Users/test/.hermes/venv/bin/python -m hermes_cli.main chat --resume sess_ledger`);
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-ledger-state-'));
+
+  try {
+    const askOutput = runCli([
+      'ask',
+      'Prepare',
+      'a',
+      'defense-ready',
+      'slide',
+      'deck.',
+      '--preferred-family',
+      'ppt_deck',
+      '--workspace-path',
+      repoRoot,
+    ], {
+      OPL_HERMES_BIN: hermesPath,
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
+    });
+    assert.equal(askOutput.product_entry.hermes.session_id, 'sess_ledger');
+
+    const ledgerOutput = runCli(['session-ledger', '--limit', '5'], {
+      OPL_HERMES_BIN: hermesPath,
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
+    });
+
+    assert.equal(ledgerOutput.session_ledger.summary.entry_count, 1);
+    assert.equal(ledgerOutput.session_ledger.entries[0].session_id, 'sess_ledger');
+    assert.equal(ledgerOutput.session_ledger.entries[0].domain_id, 'redcube');
+    assert.equal(ledgerOutput.session_ledger.entries[0].resource_sample.process_count, 2);
+
+    const runtimeOutput = runCli(['runtime-status', '--limit', '2'], {
+      OPL_HERMES_BIN: hermesPath,
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
+    });
+    assert.equal(runtimeOutput.runtime_status.managed_session_ledger.summary.entry_count, 1);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(psFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('web starts a local front-desk pilot and serves dashboard plus ask surfaces', async () => {
   const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
 if [ "$1" = "version" ]; then

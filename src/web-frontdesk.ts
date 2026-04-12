@@ -2,20 +2,34 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 
 import { GatewayContractError } from './contracts.ts';
 import {
+  buildFrontDeskEndpoints,
+  buildFrontDeskEntryUrl,
+  stripFrontDeskBasePath,
+} from './frontdesk-paths.ts';
+import {
   buildFrontDeskDashboard,
   buildFrontDeskHealth,
   buildFrontDeskManifest,
+  buildHostedPilotBundle,
   buildProjectsOverview,
   buildRuntimeStatus,
   buildWorkspaceStatus,
 } from './management.ts';
 import {
+  buildProductEntryHandoffEnvelope,
   runProductEntryAsk,
   runProductEntryLogs,
   runProductEntryResume,
   runProductEntrySessions,
   type ProductEntryCliInput,
 } from './product-entry.ts';
+import { buildSessionLedger } from './session-ledger.ts';
+import {
+  activateWorkspaceBinding,
+  archiveWorkspaceBinding,
+  bindWorkspace,
+  buildWorkspaceCatalog,
+} from './workspace-registry.ts';
 import type { GatewayContracts } from './types.ts';
 
 export interface WebFrontDeskOptions {
@@ -23,6 +37,7 @@ export interface WebFrontDeskOptions {
   port?: number;
   workspacePath?: string;
   sessionsLimit?: number;
+  basePath?: string;
 }
 
 type AskRequestBody = Partial<{
@@ -37,12 +52,26 @@ type AskRequestBody = Partial<{
   request_kind: string;
   model: string;
   provider: string;
+  workspacePath: string;
+  workspace_path: string;
   skills: string[] | string;
 }>;
 
 type ResumeRequestBody = Partial<{
   sessionId: string;
   session_id: string;
+}>;
+
+type WorkspaceRegistryBody = Partial<{
+  projectId: string;
+  project_id: string;
+  workspacePath: string;
+  workspace_path: string;
+  label: string;
+  entryCommand: string;
+  entry_command: string;
+  entryUrl: string;
+  entry_url: string;
 }>;
 
 type WebFrontDeskStartupPayload = {
@@ -58,19 +87,29 @@ type WebFrontDeskStartupPayload = {
     local_shell_command: 'opl web';
     local_only: true;
     hosted_status: 'not_landed';
+    pilot_bundle_status: 'landed';
     listening: {
       host: string;
       port: number;
       base_url: string;
+      entry_url: string;
+      base_path: string;
     };
     api: {
       health: string;
       frontdesk_manifest: string;
+      hosted_bundle: string;
       dashboard: string;
       projects: string;
       workspace_status: string;
+      workspace_catalog: string;
+      workspace_bind: string;
+      workspace_activate: string;
+      workspace_archive: string;
       runtime_status: string;
+      session_ledger: string;
       ask: string;
+      handoff_envelope: string;
       sessions: string;
       resume: string;
       logs: string;
@@ -88,6 +127,8 @@ type WebFrontDeskContext = {
   host: string;
   port: number;
   baseUrl: string;
+  entryUrl: string;
+  basePath: string;
   workspacePath: string;
   sessionsLimit: number;
 };
@@ -222,6 +263,8 @@ function normalizeAskInput(body: AskRequestBody): ProductEntryCliInput {
       normalizeOptionalString(body.requestKind) ?? normalizeOptionalString(body.request_kind),
     model: normalizeOptionalString(body.model),
     provider: normalizeOptionalString(body.provider),
+    workspacePath:
+      normalizeOptionalString(body.workspacePath) ?? normalizeOptionalString(body.workspace_path),
     skills: normalizeSkills(body.skills),
   };
 }
@@ -239,6 +282,31 @@ function normalizeResumeSessionId(body: ResumeRequestBody) {
   }
 
   return sessionId;
+}
+
+function normalizeWorkspaceRegistryInput(body: WorkspaceRegistryBody) {
+  const projectId = normalizeOptionalString(body.projectId) ?? normalizeOptionalString(body.project_id);
+  const workspacePath =
+    normalizeOptionalString(body.workspacePath) ?? normalizeOptionalString(body.workspace_path);
+
+  if (!projectId || !workspacePath) {
+    throw new GatewayContractError(
+      'cli_usage_error',
+      'Workspace registry requests require non-empty project_id and workspace_path.',
+      {
+        required: ['project_id', 'workspace_path'],
+      },
+    );
+  }
+
+  return {
+    projectId,
+    workspacePath,
+    label: normalizeOptionalString(body.label),
+    entryCommand:
+      normalizeOptionalString(body.entryCommand) ?? normalizeOptionalString(body.entry_command),
+    entryUrl: normalizeOptionalString(body.entryUrl) ?? normalizeOptionalString(body.entry_url),
+  };
 }
 
 function parsePositiveIntegerOptional(value: string | null) {
@@ -262,7 +330,8 @@ function normalizeBaseUrlHost(host: string) {
 }
 
 function buildStartupPayload(context: WebFrontDeskContext): WebFrontDeskStartupPayload {
-  const manifest = buildFrontDeskManifest(context.contracts);
+  const manifest = buildFrontDeskManifest(context.contracts, { basePath: context.basePath });
+  const endpoints = buildFrontDeskEndpoints(context.basePath);
 
   return {
     version: 'g2',
@@ -277,22 +346,32 @@ function buildStartupPayload(context: WebFrontDeskContext): WebFrontDeskStartupP
       local_shell_command: 'opl web',
       local_only: true,
       hosted_status: 'not_landed',
+      pilot_bundle_status: 'landed',
       listening: {
         host: context.host,
         port: context.port,
         base_url: context.baseUrl,
+        entry_url: context.entryUrl,
+        base_path: context.basePath,
       },
       api: {
-        health: manifest.frontdesk_manifest.endpoints.health,
+        health: endpoints.health,
         frontdesk_manifest: manifest.frontdesk_manifest.endpoints.manifest,
-        dashboard: '/api/dashboard',
-        projects: '/api/projects',
-        workspace_status: '/api/workspace-status',
-        runtime_status: '/api/runtime-status',
-        ask: '/api/ask',
-        sessions: manifest.frontdesk_manifest.endpoints.sessions,
-        resume: manifest.frontdesk_manifest.endpoints.resume,
-        logs: manifest.frontdesk_manifest.endpoints.logs,
+        hosted_bundle: endpoints.hosted_bundle,
+        dashboard: endpoints.dashboard,
+        projects: endpoints.projects,
+        workspace_status: endpoints.workspace_status,
+        workspace_catalog: endpoints.workspace_catalog,
+        workspace_bind: endpoints.workspace_bind,
+        workspace_activate: endpoints.workspace_activate,
+        workspace_archive: endpoints.workspace_archive,
+        runtime_status: endpoints.runtime_status,
+        session_ledger: endpoints.session_ledger,
+        ask: endpoints.ask,
+        handoff_envelope: endpoints.handoff_envelope,
+        sessions: endpoints.sessions,
+        resume: endpoints.resume,
+        logs: endpoints.logs,
       },
       defaults: {
         workspace_path: context.workspacePath,
@@ -300,7 +379,7 @@ function buildStartupPayload(context: WebFrontDeskContext): WebFrontDeskStartupP
       },
       notes: [
         'This is a local web front-desk pilot layered above the existing OPL CLI-first entry shell.',
-        'Hosted packaging and LibreChat-first rollout remain separate future work; this pilot does not claim hosted readiness.',
+        'Hosted pilot bundle is landed, but actual hosted packaging and LibreChat-first rollout remain separate future work.',
       ],
     },
   };
@@ -832,6 +911,13 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
                 </div>
               </div>
               <div style="height: 12px"></div>
+              <div class="card">
+                <h3>Hosted Pilot Bundle</h3>
+                <div id="hosted-bundle-summary">Loading hosted pilot bundle...</div>
+                <div style="height: 12px"></div>
+                <pre class="json-view" id="hosted-bundle-json">{}</pre>
+              </div>
+              <div style="height: 12px"></div>
               <div class="split-grid">
                 <div class="card">
                   <h3>Resume Session</h3>
@@ -876,19 +962,47 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
               <h2 class="panel-title">Workspace</h2>
             </div>
             <p class="panel-copy">
-              Inspect a workspace path without leaving the front desk. This is observation-only for now; binding and archive flows are still future work.
+              Bind, activate, archive, and inspect project workspaces without leaving the front desk. Optional direct-entry locators let OPL hand off into a domain front desk honestly.
             </p>
             <div class="panel-body">
               <form id="workspace-form">
-                <label>
-                  Workspace Path
-                  <input id="workspace-path" name="workspace-path" />
-                </label>
+                <div class="field-grid">
+                  <label>
+                    Project ID
+                    <input id="workspace-project" name="workspace-project" value="redcube" />
+                  </label>
+                  <label>
+                    Workspace Path
+                    <input id="workspace-path" name="workspace-path" />
+                  </label>
+                  <label>
+                    Label
+                    <input id="workspace-label" name="workspace-label" placeholder="Optional label" />
+                  </label>
+                  <label>
+                    Direct Entry Command
+                    <input id="workspace-entry-command" name="workspace-entry-command" placeholder="Optional command" />
+                  </label>
+                  <label style="grid-column: 1 / -1;">
+                    Direct Entry URL
+                    <input id="workspace-entry-url" name="workspace-entry-url" placeholder="Optional URL" />
+                  </label>
+                </div>
                 <div class="button-row">
-                  <button class="secondary" type="submit">Inspect Workspace</button>
+                  <button class="secondary" type="submit" id="workspace-inspect-button">Inspect Workspace</button>
+                  <button class="primary" type="button" id="workspace-bind-button">Bind / Upsert</button>
+                  <button class="ghost" type="button" id="workspace-activate-button">Activate</button>
+                  <button class="ghost" type="button" id="workspace-archive-button">Archive</button>
                 </div>
               </form>
+              <div class="status-line" id="workspace-status-line" aria-live="polite"></div>
+              <div style="height: 12px"></div>
               <div class="card-list" id="workspace-card-list"></div>
+              <div style="height: 12px"></div>
+              <div class="card">
+                <h3>Workspace Catalog</h3>
+                <pre class="json-view" id="workspace-catalog-json">{}</pre>
+              </div>
             </div>
           </section>
 
@@ -899,9 +1013,15 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
             <div class="panel-body">
               <div class="card-list" id="projects-list"></div>
               <div style="height: 12px"></div>
-              <div class="card">
-                <h3>Recent Sessions</h3>
-                <div id="sessions-list">Loading recent sessions...</div>
+              <div class="split-grid">
+                <div class="card">
+                  <h3>Recent Sessions</h3>
+                  <div id="sessions-list">Loading recent sessions...</div>
+                </div>
+                <div class="card">
+                  <h3>Managed Session Ledger</h3>
+                  <pre class="json-view" id="session-ledger-json">{}</pre>
+                </div>
               </div>
             </div>
           </section>
@@ -930,6 +1050,8 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       const runtimeNote = document.getElementById('runtime-note');
       const healthSummary = document.getElementById('health-summary');
       const manifestSummary = document.getElementById('manifest-summary');
+      const hostedBundleSummary = document.getElementById('hosted-bundle-summary');
+      const hostedBundleJson = document.getElementById('hosted-bundle-json');
       const resumeSessionInput = document.getElementById('resume-session-id');
       const resumeStatus = document.getElementById('resume-status');
       const resumeOutput = document.getElementById('resume-output');
@@ -937,10 +1059,20 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       const logsOutput = document.getElementById('logs-output');
       const logNameInput = document.getElementById('log-name');
       const logLinesInput = document.getElementById('log-lines');
+      const workspaceProjectInput = document.getElementById('workspace-project');
       const workspacePathInput = document.getElementById('workspace-path');
+      const workspaceLabelInput = document.getElementById('workspace-label');
+      const workspaceEntryCommandInput = document.getElementById('workspace-entry-command');
+      const workspaceEntryUrlInput = document.getElementById('workspace-entry-url');
+      const workspaceStatusLine = document.getElementById('workspace-status-line');
+      const workspaceCatalogJson = document.getElementById('workspace-catalog-json');
+      const sessionLedgerJson = document.getElementById('session-ledger-json');
       const previewButton = document.getElementById('preview-button');
       const askButton = document.getElementById('ask-button');
       const refreshButton = document.getElementById('refresh-button');
+      const workspaceBindButton = document.getElementById('workspace-bind-button');
+      const workspaceActivateButton = document.getElementById('workspace-activate-button');
+      const workspaceArchiveButton = document.getElementById('workspace-archive-button');
 
       workspacePathInput.value = state.workspacePath;
 
@@ -969,11 +1101,25 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
             project.scope,
             project.gateway_surface || project.direct_entry_surface,
           ].filter(Boolean).map((entry) => '<span class="badge">' + entry + '</span>').join('');
+          const activeBinding = project.active_binding;
+          const bindingBlock = activeBinding
+            ? [
+                '<p><strong>Active Workspace:</strong> ' + activeBinding.workspace_path + '</p>',
+                activeBinding.label ? '<p><strong>Binding Label:</strong> ' + activeBinding.label + '</p>' : '',
+                activeBinding.direct_entry?.command
+                  ? '<p><strong>Direct Entry Command:</strong> ' + activeBinding.direct_entry.command + '</p>'
+                  : '',
+                activeBinding.direct_entry?.url
+                  ? '<p><strong>Direct Entry URL:</strong> ' + activeBinding.direct_entry.url + '</p>'
+                  : '',
+              ].filter(Boolean).join('')
+            : '<p><strong>Active Workspace:</strong> none</p>';
 
           return '<div class="card">'
             + '<h3>' + project.project + '</h3>'
             + '<p><strong>Project ID:</strong> ' + project.project_id + '</p>'
             + '<p><strong>Owned Workstreams:</strong> ' + (project.owned_workstreams || []).join(', ') + '</p>'
+            + bindingBlock
             + '<div class="badge-row">' + badges + '</div>'
             + '</div>';
         }));
@@ -1025,6 +1171,17 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         ].join('');
       }
 
+      function renderHostedBundle(payload) {
+        const bundle = payload.hosted_pilot_bundle;
+        hostedBundleSummary.innerHTML = [
+          '<p><strong>Pilot Bundle:</strong> ' + bundle.pilot_bundle_status + '</p>',
+          '<p><strong>Actual Hosted Runtime:</strong> ' + bundle.actual_hosted_runtime_status + '</p>',
+          '<p><strong>Entry URL:</strong> ' + bundle.entry_url + '</p>',
+          '<p><strong>API Base:</strong> ' + bundle.api_base_url + '</p>',
+        ].join('');
+        hostedBundleJson.textContent = JSON.stringify(payload, null, 2);
+      }
+
       function renderManifest(payload) {
         const manifest = payload.frontdesk_manifest;
         const endpointList = Object.entries(manifest.endpoints)
@@ -1046,6 +1203,8 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         runtimeNote.textContent = dashboard.runtime_status.notes.join(' ');
         renderProjects(dashboard.projects);
         renderWorkspace(dashboard.workspace);
+        renderWorkspaceCatalog({ workspace_catalog: dashboard.workspace_catalog });
+        renderSessionLedger({ session_ledger: dashboard.runtime_status.managed_session_ledger });
       }
 
       function renderAskPayload(payload) {
@@ -1070,6 +1229,19 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
           '<p><strong>Boundary Reason:</strong> ' + entry.boundary.reason + '</p>',
         ].join('');
         askJson.textContent = JSON.stringify(payload, null, 2);
+      }
+
+      function renderWorkspaceCatalog(payload) {
+        workspaceCatalogJson.textContent = JSON.stringify(payload, null, 2);
+      }
+
+      function renderSessionLedger(payload) {
+        sessionLedgerJson.textContent = JSON.stringify(payload, null, 2);
+      }
+
+      function setWorkspaceStatus(message, tone = 'muted') {
+        workspaceStatusLine.textContent = message;
+        workspaceStatusLine.dataset.tone = tone;
       }
 
       async function fetchDashboard() {
@@ -1100,9 +1272,10 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       }
 
       async function fetchHostedFriendlySurface() {
-        const [healthResponse, manifestResponse] = await Promise.all([
+        const [healthResponse, manifestResponse, hostedBundleResponse] = await Promise.all([
           fetch(bootstrap.web_frontdesk.api.health),
           fetch(bootstrap.web_frontdesk.api.frontdesk_manifest),
+          fetch(bootstrap.web_frontdesk.api.hosted_bundle),
         ]);
 
         if (!healthResponse.ok) {
@@ -1111,9 +1284,33 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         if (!manifestResponse.ok) {
           throw new Error('Manifest request failed with status ' + manifestResponse.status);
         }
+        if (!hostedBundleResponse.ok) {
+          throw new Error('Hosted bundle request failed with status ' + hostedBundleResponse.status);
+        }
 
         renderHealth(await healthResponse.json());
         renderManifest(await manifestResponse.json());
+        renderHostedBundle(await hostedBundleResponse.json());
+      }
+
+      async function fetchWorkspaceCatalog() {
+        const response = await fetch(bootstrap.web_frontdesk.api.workspace_catalog);
+        if (!response.ok) {
+          throw new Error('Workspace catalog request failed with status ' + response.status);
+        }
+
+        renderWorkspaceCatalog(await response.json());
+      }
+
+      async function fetchSessionLedger() {
+        const response = await fetch(
+          bootstrap.web_frontdesk.api.session_ledger + '?limit=' + encodeURIComponent(String(state.sessionsLimit)),
+        );
+        if (!response.ok) {
+          throw new Error('Session ledger request failed with status ' + response.status);
+        }
+
+        renderSessionLedger(await response.json());
       }
 
       function setResumeStatus(message, tone = 'muted') {
@@ -1190,7 +1387,79 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
           fetchDashboard(),
           fetchSessions(),
           fetchHostedFriendlySurface(),
+          fetchWorkspaceCatalog(),
+          fetchSessionLedger(),
         ]);
+      }
+
+      async function submitWorkspaceAction(action) {
+        const projectId = workspaceProjectInput.value.trim();
+        const workspacePath = workspacePathInput.value.trim() || bootstrap.web_frontdesk.defaults.workspace_path;
+
+        state.workspacePath = workspacePath;
+
+        if (action === 'inspect') {
+          setWorkspaceStatus('Inspecting workspace...', 'muted');
+          try {
+            await refreshAll();
+            setWorkspaceStatus('Workspace inspection updated.', 'ok');
+          } catch (error) {
+            setWorkspaceStatus(error instanceof Error ? error.message : 'Workspace inspection failed.', 'warn');
+          }
+          return;
+        }
+
+        const endpoint = action === 'bind'
+          ? bootstrap.web_frontdesk.api.workspace_bind
+          : action === 'activate'
+            ? bootstrap.web_frontdesk.api.workspace_activate
+            : bootstrap.web_frontdesk.api.workspace_archive;
+
+        setWorkspaceStatus(
+          action === 'bind'
+            ? 'Writing workspace binding...'
+            : action === 'activate'
+              ? 'Activating workspace binding...'
+              : 'Archiving workspace binding...',
+          'muted',
+        );
+
+        try {
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+            },
+            body: JSON.stringify({
+              project_id: projectId,
+              workspace_path: workspacePath,
+              label: workspaceLabelInput.value,
+              entry_command: workspaceEntryCommandInput.value,
+              entry_url: workspaceEntryUrlInput.value,
+            }),
+          });
+          const payload = await response.json();
+
+          if (!response.ok) {
+            throw new Error(payload.error?.message || 'Workspace registry request failed.');
+          }
+
+          renderWorkspaceCatalog(payload);
+          await refreshAll();
+          setWorkspaceStatus(
+            action === 'bind'
+              ? 'Workspace binding saved.'
+              : action === 'activate'
+                ? 'Workspace binding activated.'
+                : 'Workspace binding archived.',
+            'ok',
+          );
+        } catch (error) {
+          setWorkspaceStatus(
+            error instanceof Error ? error.message : 'Workspace registry request failed.',
+            'warn',
+          );
+        }
       }
 
       async function submitAsk(dryRun) {
@@ -1210,6 +1479,7 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
               target: document.getElementById('target').value,
               preferred_family: document.getElementById('preferred-family').value,
               request_kind: document.getElementById('request-kind').value,
+              workspace_path: workspacePathInput.value.trim() || state.workspacePath,
             }),
           });
           const payload = await response.json();
@@ -1229,12 +1499,7 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
 
       document.getElementById('workspace-form').addEventListener('submit', async (event) => {
         event.preventDefault();
-        state.workspacePath = workspacePathInput.value.trim() || bootstrap.web_frontdesk.defaults.workspace_path;
-        try {
-          await refreshAll();
-        } catch (error) {
-          runtimeNote.textContent = error instanceof Error ? error.message : 'Workspace refresh failed.';
-        }
+        await submitWorkspaceAction('inspect');
       });
 
       document.getElementById('resume-form').addEventListener('submit', (event) => {
@@ -1273,6 +1538,15 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
           runtimeNote.textContent = error instanceof Error ? error.message : 'Refresh failed.';
         });
       });
+      workspaceBindButton.addEventListener('click', () => {
+        void submitWorkspaceAction('bind');
+      });
+      workspaceActivateButton.addEventListener('click', () => {
+        void submitWorkspaceAction('activate');
+      });
+      workspaceArchiveButton.addEventListener('click', () => {
+        void submitWorkspaceAction('archive');
+      });
 
       void Promise.all([refreshAll(), loadLogs()]).catch((error) => {
         runtimeNote.textContent = error instanceof Error ? error.message : 'Dashboard load failed.';
@@ -1307,29 +1581,57 @@ async function handleRequest(
 ) {
   const method = request.method ?? 'GET';
   const url = new URL(request.url ?? '/', context.baseUrl);
+  const routedPath = stripFrontDeskBasePath(url.pathname, context.basePath);
 
   try {
-    if (method === 'GET' && url.pathname === '/') {
+    if (routedPath === null) {
+      writeJson(response, 404, {
+        version: 'g2',
+        error: {
+          code: 'unknown_command',
+          message: `Unknown web front-desk route: ${method} ${url.pathname}`,
+          exit_code: 2,
+        },
+      });
+      return;
+    }
+
+    if (method === 'GET' && routedPath === '/') {
       writeHtml(response, buildWebFrontDeskHtml(context));
       return;
     }
 
-    if (method === 'GET' && url.pathname === '/api/health') {
-      writeJson(response, 200, buildFrontDeskHealth(context.contracts));
+    if (method === 'GET' && routedPath === '/api/health') {
+      writeJson(response, 200, buildFrontDeskHealth(context.contracts, { basePath: context.basePath }));
       return;
     }
 
-    if (method === 'GET' && url.pathname === '/api/frontdesk-manifest') {
-      writeJson(response, 200, buildFrontDeskManifest(context.contracts));
+    if (method === 'GET' && routedPath === '/api/frontdesk-manifest') {
+      writeJson(response, 200, buildFrontDeskManifest(context.contracts, { basePath: context.basePath }));
       return;
     }
 
-    if (method === 'GET' && url.pathname === '/api/projects') {
+    if (method === 'GET' && routedPath === '/api/hosted-bundle') {
+      writeJson(
+        response,
+        200,
+        buildHostedPilotBundle(context.contracts, {
+          host: context.host,
+          port: context.port,
+          workspacePath: context.workspacePath,
+          sessionsLimit: context.sessionsLimit,
+          basePath: context.basePath,
+        }),
+      );
+      return;
+    }
+
+    if (method === 'GET' && routedPath === '/api/projects') {
       writeJson(response, 200, buildProjectsOverview(context.contracts));
       return;
     }
 
-    if (method === 'GET' && url.pathname === '/api/workspace-status') {
+    if (method === 'GET' && routedPath === '/api/workspace-status') {
       writeJson(
         response,
         200,
@@ -1340,7 +1642,35 @@ async function handleRequest(
       return;
     }
 
-    if (method === 'GET' && url.pathname === '/api/runtime-status') {
+    if (method === 'GET' && routedPath === '/api/workspace-catalog') {
+      writeJson(response, 200, buildWorkspaceCatalog(context.contracts));
+      return;
+    }
+
+    if (method === 'POST' && routedPath === '/api/workspace-bind') {
+      writeJson(response, 200, bindWorkspace(context.contracts, normalizeWorkspaceRegistryInput(await readJsonBody(request))));
+      return;
+    }
+
+    if (method === 'POST' && routedPath === '/api/workspace-activate') {
+      writeJson(
+        response,
+        200,
+        activateWorkspaceBinding(context.contracts, normalizeWorkspaceRegistryInput(await readJsonBody(request))),
+      );
+      return;
+    }
+
+    if (method === 'POST' && routedPath === '/api/workspace-archive') {
+      writeJson(
+        response,
+        200,
+        archiveWorkspaceBinding(context.contracts, normalizeWorkspaceRegistryInput(await readJsonBody(request))),
+      );
+      return;
+    }
+
+    if (method === 'GET' && routedPath === '/api/runtime-status') {
       writeJson(
         response,
         200,
@@ -1351,7 +1681,16 @@ async function handleRequest(
       return;
     }
 
-    if (method === 'GET' && url.pathname === '/api/dashboard') {
+    if (method === 'GET' && routedPath === '/api/session-ledger') {
+      writeJson(
+        response,
+        200,
+        buildSessionLedger(parsePositiveIntegerOptional(url.searchParams.get('limit')) ?? context.sessionsLimit),
+      );
+      return;
+    }
+
+    if (method === 'GET' && routedPath === '/api/dashboard') {
       writeJson(
         response,
         200,
@@ -1361,18 +1700,25 @@ async function handleRequest(
             url.searchParams.get('sessions-limit'),
             context.sessionsLimit,
           ),
+          basePath: context.basePath,
         }),
       );
       return;
     }
 
-    if (method === 'POST' && url.pathname === '/api/ask') {
+    if (method === 'POST' && routedPath === '/api/ask') {
       const body = (await readJsonBody(request)) as AskRequestBody;
       writeJson(response, 200, runProductEntryAsk(normalizeAskInput(body), context.contracts));
       return;
     }
 
-    if (method === 'GET' && url.pathname === '/api/sessions') {
+    if (method === 'POST' && routedPath === '/api/handoff-envelope') {
+      const body = (await readJsonBody(request)) as AskRequestBody;
+      writeJson(response, 200, buildProductEntryHandoffEnvelope(normalizeAskInput(body), context.contracts));
+      return;
+    }
+
+    if (method === 'GET' && routedPath === '/api/sessions') {
       writeJson(
         response,
         200,
@@ -1384,13 +1730,13 @@ async function handleRequest(
       return;
     }
 
-    if (method === 'POST' && url.pathname === '/api/resume') {
+    if (method === 'POST' && routedPath === '/api/resume') {
       const body = (await readJsonBody(request)) as ResumeRequestBody;
       writeJson(response, 200, runProductEntryResume(normalizeResumeSessionId(body)));
       return;
     }
 
-    if (method === 'GET' && url.pathname === '/api/logs') {
+    if (method === 'GET' && routedPath === '/api/logs') {
       writeJson(
         response,
         200,
@@ -1429,6 +1775,7 @@ export async function startWebFrontDeskServer(
   const requestedPort = options.port ?? 8787;
   const workspacePath = options.workspacePath ?? process.cwd();
   const sessionsLimit = options.sessionsLimit ?? 5;
+  const basePath = options.basePath ?? '';
   let actualPort = requestedPort;
 
   const listening = await new Promise<{ server: Server; port: number }>((resolve, reject) => {
@@ -1439,6 +1786,8 @@ export async function startWebFrontDeskServer(
         host: requestedHost,
         port: actualPort,
         baseUrl,
+        entryUrl: buildFrontDeskEntryUrl(baseUrl, basePath),
+        basePath,
         workspacePath,
         sessionsLimit,
       };
@@ -1475,6 +1824,8 @@ export async function startWebFrontDeskServer(
     host: requestedHost,
     port: resolvedPort,
     baseUrl,
+    entryUrl: buildFrontDeskEntryUrl(baseUrl, basePath),
+    basePath,
     workspacePath,
     sessionsLimit,
   };

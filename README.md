@@ -252,10 +252,10 @@ The current truth is still transitional, but it has moved forward:
 - `OPL` now ships a local direct product-entry shell whose default front door is `opl`
 - `opl` seeds or resumes an `OPL Front Desk` session on top of the external Hermes kernel
 - `opl "<request...>"` now acts as the fast natural-language path for a one-shot routed ask
-- `opl doctor`, `opl ask`, `opl chat`, `opl resume`, `opl sessions`, `opl logs`, `opl repair-hermes-gateway`, and the `frontdesk-service-*` commands remain the explicit product-entry and runtime-ops command surface
-- `opl frontdesk-manifest` now freezes the hosted-friendly shell contract that future web shells can consume without overstating hosted readiness
-- `opl projects`, `opl workspace-status`, `opl runtime-status`, and `opl dashboard` now add the first top-level management surface for project, workspace, session, and runtime visibility
-- `opl web` now lands a local web front desk pilot for browser-based direct entry, quick ask, workspace inspection, runtime visibility, and hosted-friendly `health / manifest / sessions / resume / logs` surfaces
+- `opl doctor`, `opl ask`, `opl chat`, `opl resume`, `opl sessions`, `opl logs`, `opl repair-hermes-gateway`, `opl frontdesk-manifest`, `opl frontdesk-hosted-bundle`, `opl session-ledger`, `opl handoff-envelope`, and the `frontdesk-service-*` commands now form the explicit product-entry and runtime-ops command surface
+- `opl frontdesk-manifest` plus `opl frontdesk-hosted-bundle` now freeze the hosted-friendly shell contract that future web shells can consume without overstating hosted readiness
+- `opl projects`, `opl workspace-status`, `opl workspace-catalog`, `opl workspace-bind|activate|archive`, `opl runtime-status`, `opl session-ledger`, and `opl dashboard` now add a writable top-level management surface for project, workspace, session, runtime, and handoff visibility
+- `opl web` now lands a local web front desk pilot for browser-based direct entry, quick ask, workspace inspection, workspace binding, runtime visibility, managed session-ledger review, and hosted-friendly `health / manifest / hosted-bundle / sessions / resume / logs / handoff-envelope` surfaces
 - `opl frontdesk-service-install|status|start|stop|open|uninstall` now add a service-safe local packaging layer for the OPL web front desk on top of launchd
 - users no longer need to start from `Codex` just to reach the top-level `OPL` surface locally
 - this landed product entry now includes both the local CLI-first shell and a local web front desk pilot; the hosted front door is still not landed and hosted packaging remains future work
@@ -292,20 +292,30 @@ What landed in this repository is the first local shell of that idea:
   - resumes a known Hermes-backed OPL session
 - `opl sessions`, `opl logs`, `opl repair-hermes-gateway`
   - expose machine-readable session and runtime-ops surfaces for the landed local shell
+- `opl session-ledger`
+  - shows OPL-managed session events together with honest runtime resource samples captured at event time
+- `opl handoff-envelope`
+  - builds the machine-readable family handoff bundle that connects the OPL front desk to a domain direct entry or domain gateway
 - `opl frontdesk-service-install|status|start|stop|open|uninstall`
   - install and manage a launchd-backed local OPL web front desk so the browser entry can stay long-running without manual terminal babysitting
 - `opl frontdesk-manifest`
   - exposes the hosted-friendly front-desk contract for future web shells while keeping hosted packaging status honest
+- `opl frontdesk-hosted-bundle`
+  - freezes the hosted-pilot-ready shell bundle, including base-path-aware entry and API endpoints, without claiming an actual hosted runtime
 - `opl projects`
   - lists the current family-level project surfaces exposed through OPL
 - `opl workspace-status`
   - inspects one workspace path for git/worktree state and file-surface visibility
+- `opl workspace-catalog`
+  - shows the file-backed workspace registry for OPL and admitted domain project surfaces
+- `opl workspace-bind|activate|archive`
+  - manage project workspace bindings and optional direct-entry locators so top-level handoff can stay machine-readable and honest
 - `opl runtime-status`
   - reports Hermes runtime health, recent sessions, and runtime-level process resource usage
 - `opl dashboard`
-  - aggregates the current front-desk management view across projects, workspace, and runtime
+  - aggregates the current front-desk management view across projects, workspace, workspace catalog, session ledger, and runtime
 - `opl web`
-  - starts the local web front desk pilot so users can open OPL in a browser, run quick ask, inspect project / workspace / runtime surfaces, and consume hosted-friendly `health / manifest / sessions / resume / logs` APIs without going through Codex
+  - starts the local web front desk pilot so users can open OPL in a browser, run quick ask, inspect and bind workspaces, review managed session ledger state, and consume hosted-friendly `health / manifest / hosted-bundle / sessions / resume / logs / handoff-envelope` APIs without going through Codex
 
 This new shell does not erase the existing `Phase 1` gateway contract.
 The read-only gateway commands remain the stable top-level contract surface for federation truth.

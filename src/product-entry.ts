@@ -1,4 +1,5 @@
 import { findDomainOrThrow, GatewayContractError } from './contracts.ts';
+import { buildHandoffBundle } from './handoff-bundle.ts';
 import {
   buildHermesCliPreview,
   buildHermesLogsArgs,
@@ -16,6 +17,7 @@ import {
   runHermesSessionsList,
 } from './hermes.ts';
 import { explainDomainBoundary, resolveRequestSurface } from './resolver.ts';
+import { recordSessionLedgerEntry } from './session-ledger.ts';
 import type {
   BoundaryExplanation,
   ContractValidationSummary,
@@ -42,6 +44,7 @@ export type ProductEntryCliInput = {
   requestKind?: string;
   model?: string;
   provider?: string;
+  workspacePath?: string;
   skills: string[];
 };
 
@@ -130,6 +133,7 @@ function buildPromptHeader(
     `- request_kind: ${input.requestKind ?? 'product_entry'}`,
     `- routing_status: ${resolution.status}`,
     `- boundary_status: ${boundary.boundary_status}`,
+    `- workspace_locator: ${input.workspacePath ?? 'not_provided'}`,
   ];
 
   if ('workstream_id' in resolution && resolution.workstream_id) {
@@ -242,6 +246,14 @@ function buildPreviewPayload(
   const routing = resolveRequestSurface(resolveInput, contracts);
   const boundary = explainDomainBoundary(resolveInput, contracts);
   const handoffPrompt = buildPromptHeader(mode, input, routing, boundary, contracts);
+  const handoffBundle = buildHandoffBundle(contracts, {
+    mode,
+    goal: input.goal,
+    intent: input.intent,
+    workspacePath: input.workspacePath,
+    routing,
+    boundary,
+  });
 
   if (mode === 'ask') {
     return {
@@ -254,6 +266,7 @@ function buildPreviewPayload(
         input: resolveInput,
         routing,
         boundary,
+        ...handoffBundle,
         handoff_prompt_preview: handoffPrompt,
         hermes: {
           command_preview: buildHermesCliPreview(buildAskArgs(input, handoffPrompt)),
@@ -272,6 +285,7 @@ function buildPreviewPayload(
       input: resolveInput,
       routing,
       boundary,
+      ...handoffBundle,
       handoff_prompt_preview: handoffPrompt,
       hermes: {
         seed_command_preview: buildHermesCliPreview(buildChatSeedArgs(input, handoffPrompt)),
@@ -331,6 +345,24 @@ export function runProductEntryAsk(
   );
 
   const parsed = parseHermesQuietChatOutput(hermesResult.stdout);
+  const handoffBundle = buildHandoffBundle(contracts, {
+    mode: 'ask',
+    goal: input.goal,
+    intent: input.intent,
+    workspacePath: input.workspacePath,
+    routing,
+    boundary,
+    sessionId: parsed.sessionId,
+  });
+  recordSessionLedgerEntry({
+    sessionId: parsed.sessionId,
+    mode: 'ask',
+    sourceSurface: 'opl_local_product_entry_shell',
+    domainId: 'domain_id' in routing ? routing.domain_id : null,
+    workstreamId: 'workstream_id' in routing ? routing.workstream_id : null,
+    goalPreview: input.goal,
+    workspaceLocator: handoffBundle.handoff_bundle.workspace_locator,
+  });
 
   return {
     version: 'g2',
@@ -342,6 +374,7 @@ export function runProductEntryAsk(
       input: resolveInput,
       routing,
       boundary,
+      ...handoffBundle,
       handoff_prompt_preview: handoffPrompt,
       hermes: {
         command_preview: buildHermesCliPreview(args),
@@ -371,6 +404,12 @@ export function runProductEntryFrontDesk(
   );
 
   const parsed = parseHermesQuietChatOutput(seedResult.stdout);
+  recordSessionLedgerEntry({
+    sessionId: parsed.sessionId,
+    mode: 'frontdesk',
+    sourceSurface: 'opl_local_product_entry_shell',
+    goalPreview: 'OPL Front Desk seed',
+  });
 
   if (isInteractiveShell()) {
     process.stdout.write(
@@ -463,6 +502,24 @@ export function runProductEntryChat(
   );
 
   const parsed = parseHermesQuietChatOutput(seedResult.stdout);
+  const handoffBundle = buildHandoffBundle(contracts, {
+    mode: 'chat',
+    goal: input.goal,
+    intent: input.intent,
+    workspacePath: input.workspacePath,
+    routing,
+    boundary,
+    sessionId: parsed.sessionId,
+  });
+  recordSessionLedgerEntry({
+    sessionId: parsed.sessionId,
+    mode: 'chat',
+    sourceSurface: 'opl_local_product_entry_shell',
+    domainId: 'domain_id' in routing ? routing.domain_id : null,
+    workstreamId: 'workstream_id' in routing ? routing.workstream_id : null,
+    goalPreview: input.goal,
+    workspaceLocator: handoffBundle.handoff_bundle.workspace_locator,
+  });
 
   if (isInteractiveShell()) {
     process.stdout.write(
@@ -517,6 +574,7 @@ export function runProductEntryChat(
       input: resolveInput,
       routing,
       boundary,
+      ...handoffBundle,
       handoff_prompt_preview: handoffPrompt,
       seed: {
         command_preview: buildHermesCliPreview(seedArgs),
@@ -564,6 +622,11 @@ export function runProductEntryResume(sessionId: string) {
       stderr: resumeResult.stderr,
     },
   );
+  recordSessionLedgerEntry({
+    sessionId,
+    mode: 'resume',
+    sourceSurface: 'opl_local_product_entry_shell',
+  });
 
   return {
     version: 'g2',
@@ -676,5 +739,27 @@ export function runProductEntryRepairHermesGateway() {
       ),
       gateway_service: repaired.gatewayService,
     },
+  };
+}
+
+export function buildProductEntryHandoffEnvelope(
+  input: ProductEntryCliInput,
+  contracts: GatewayContracts,
+) {
+  const resolveInput = buildResolveRequestInput(input);
+  const routing = resolveRequestSurface(resolveInput, contracts);
+  const boundary = explainDomainBoundary(resolveInput, contracts);
+
+  return {
+    version: 'g2',
+    contracts_context: buildContractsContext(contracts),
+    ...buildHandoffBundle(contracts, {
+      mode: 'ask',
+      goal: input.goal,
+      intent: input.intent,
+      workspacePath: input.workspacePath,
+      routing,
+      boundary,
+    }),
   };
 }

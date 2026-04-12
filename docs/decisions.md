@@ -76,6 +76,16 @@
 - 第三方前台只承担 pilot、迁移桥或局部复用角色
 - 后续所有文档都不能把“套壳成功”误写成“`OPL` 已拥有最终 hosted 产品前台”
 
+### 决策：workspace registry / managed session ledger / hosted pilot bundle 只能按本地产品层真相表述
+
+原因：这一轮 `OPL` 已经落下了 file-backed workspace registry、OPL-managed session ledger、hosted pilot bundle 与 family handoff bundle。如果不把它们的口径冻结清楚，很容易再次被误写成“完整 hosted runtime 已完成”或者“已经拿到了 kernel-global per-session 账本”。
+
+影响：
+
+- `workspace registry` 只描述 `OPL` 顶层持有的 project/workspace 绑定与 direct-entry locator，不伪造 domain runtime truth
+- `managed session ledger` 只描述 `OPL` 自己记录到的事件与诚实资源样本，不伪造 kernel-global exact billing
+- `hosted pilot bundle` 只描述 hosted-pilot-ready shell contract，不伪造 actual hosted runtime
+
 ### 决策：family direct entry 按“顶层先站稳，再单仓分别长出入口”推进
 
 原因：如果只做 `OPL` 顶层入口，业务仓会长期像内部能力层；如果只让业务仓自己长入口，又会重新长出四套彼此漂移的入口语义。更合理的节奏是顶层和单仓同时推进，但由 `OPL` 先冻结 family-level 语言与 hosted / web 路线。

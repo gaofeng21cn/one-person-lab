@@ -219,14 +219,22 @@
 - 让本地用户通过 `OPL` 入口直接启动受支持的 runtime；
 - 把 Hermes 的版本、profile、wiring、diagnostics 纳入 `OPL` 产品层管理。
 
-这一步现在已经先落下了第一版本地 shell：
+这一步现在已经先落下了第一版本地 shell 与第一版 family control room：
 
 - `opl doctor`
 - `opl ask`
 - `opl chat`
+- `opl frontdesk-manifest`
+- `opl frontdesk-hosted-bundle`
+- `opl workspace-catalog`
+- `opl workspace-bind|activate|archive`
+- `opl session-ledger`
+- `opl handoff-envelope`
+- `opl dashboard`
+- `opl web`
 
 这一步现在已经继续往前落下了一层 service-safe 的本地 front desk packaging；
-后续剩余工作则变成把这层本地 packaging 继续往真正的 hosted shell 接壳与 hosted / web 入口推进。
+后续剩余工作则变成把这层本地 packaging、hosted pilot bundle、workspace registry、managed session ledger 与 family handoff surface 继续往真正的 hosted shell 接壳与 hosted / web 入口推进。
 
 ### S4. 进入 hosted / web 化
 
