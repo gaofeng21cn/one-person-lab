@@ -358,22 +358,32 @@ test('product-entry docs freeze the managed external-kernel choice instead of fo
   const runtimeContract = read('docs/shared-runtime-contract.md');
   const runtimeContractZh = read('docs/shared-runtime-contract.zh-CN.md');
   const decisionNote = read('docs/references/opl-product-entry-and-hermes-kernel-integration.md');
+  const familyEntryDoc = read('docs/references/family-product-entry-and-domain-handoff-architecture.md');
 
   assert.match(readme, /not yet a direct product entry surface/i);
   assert.match(readme, /external kernel, managed by OPL product packaging/i);
   assert.match(readme, /not requiring users to manually install and understand `Hermes-Agent`/i);
+  assert.match(readme, /Domain Handoff -> Domain Product Entry \/ Domain Gateway/i);
   assert.match(readmeZh, /还不是 direct product entry/);
   assert.match(readmeZh, /external kernel, managed by OPL product packaging/);
   assert.match(readmeZh, /不要求用户先手工安装并理解 `Hermes-Agent`/);
+  assert.match(readmeZh, /Domain Handoff -> Domain Product Entry \/ Domain Gateway/);
 
   assert.match(status, /当前产品入口真相：用户仍主要通过 `Codex` \+ 本地 `CLI \/ MCP` 间接触达 `OPL`/);
   assert.match(status, /Hermes Kernel Integration.*external kernel, managed by OPL product packaging/);
+  assert.match(status, /家族级入口真相|operator entry.*agent entry.*product entry/);
   assert.match(architecture, /User -> OPL Product Entry -> OPL Gateway -> Hermes Kernel -> Domain Adapter/);
+  assert.match(architecture, /target_domain_id/);
+  assert.match(architecture, /return_surface_contract/);
 
   assert.match(docsIndex, /opl-product-entry-and-hermes-kernel-integration\.md/);
   assert.match(docsIndexZh, /opl-product-entry-and-hermes-kernel-integration\.md/);
+  assert.match(docsIndex, /family-product-entry-and-domain-handoff-architecture\.md/);
+  assert.match(docsIndexZh, /family-product-entry-and-domain-handoff-architecture\.md/);
   assert.match(refsIndex, /opl-product-entry-and-hermes-kernel-integration\.md/);
   assert.match(refsIndexZh, /opl-product-entry-and-hermes-kernel-integration\.md/);
+  assert.match(refsIndex, /family-product-entry-and-domain-handoff-architecture\.md/);
+  assert.match(refsIndexZh, /family-product-entry-and-domain-handoff-architecture\.md/);
 
   assert.match(runtimeContract, /external kernel, managed by OPL product packaging/i);
   assert.match(runtimeContractZh, /external kernel, managed by OPL product packaging/);
@@ -381,6 +391,8 @@ test('product-entry docs freeze the managed external-kernel choice instead of fo
   assert.match(decisionNote, /不 fork \/ vendor 上游 `Hermes-Agent` kernel 代码/);
   assert.match(decisionNote, /用户不需要手工维护一套“先会 Hermes 才能会 OPL”的流程/);
   assert.match(decisionNote, /平台内部运行 `Hermes` kernel/);
+  assert.match(familyEntryDoc, /OPL Product Entry -> OPL Gateway -> Hermes Kernel -> Domain Handoff/);
+  assert.match(familyEntryDoc, /User -> Domain Product Entry -> Domain Gateway -> Hermes Kernel -> Domain Harness OS/);
 });
 
 test('phase-1 formal entry wording keeps OPL at the CLI-first read-only gateway surface', () => {

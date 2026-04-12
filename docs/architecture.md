@@ -33,6 +33,38 @@
 - 但还没有全面长成“用户可直接进入”的轻量 `product entry`
 - 因此后续不仅要把 `OPL` 做成 direct entry，也要让各业务仓在各自 scope 内拥有 direct entry
 
+## 统一入口 taxonomy 与 handoff 关系
+
+四仓后续统一使用下面三层入口语义：
+
+- `operator entry`
+  - 面向工程操作者的命令、脚本、调试入口
+- `agent entry`
+  - 面向 `Codex` / Claude Code / OpenClaw 这类 host-agent 的调用入口
+- `product entry`
+  - 面向最终用户的正式产品入口
+
+`OPL` 的 direct entry 不会替代 domain 仓的 direct entry。
+更准确的 family-level 结构应是：
+
+`User -> OPL Product Entry -> OPL Gateway -> Hermes Kernel -> Domain Handoff -> Domain Product Entry / Domain Gateway`
+
+这意味着顶层和单仓都要成长出产品入口，只是作用域不同：
+
+- `OPL Product Entry`
+  - family-level 总入口
+- `Domain Product Entry`
+  - domain-scoped 轻量入口
+
+二者之间的最小 handoff envelope 应保持一致，至少包括：
+
+- `target_domain_id`
+- `task_intent`
+- `entry_mode`
+- `workspace_locator`
+- `runtime_session_contract`
+- `return_surface_contract`
+
 ## Hermes Kernel Integration 选型
 
 当前顶层已经冻结的选择不是：
@@ -53,6 +85,7 @@
 详细对比与运维取舍见：
 
 - `docs/references/opl-product-entry-and-hermes-kernel-integration.md`
+- `docs/references/family-product-entry-and-domain-handoff-architecture.md`
 
 ## 结构角色
 

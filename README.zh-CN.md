@@ -254,6 +254,15 @@
 
 `User -> OPL Product Entry -> OPL Gateway -> Hermes Kernel -> Domain Adapter -> Domain Gateway -> Domain Harness OS`
 
+但这条顶层链路只解决了一半问题。
+业务仓不能长期只是“内部 runtime surface”。
+更完整的家族级目标结构应是：
+
+- 顶层：`User -> OPL Product Entry -> OPL Gateway -> Hermes Kernel -> Domain Handoff -> Domain Product Entry / Domain Gateway`
+- 单仓：`User -> Domain Product Entry -> Domain Gateway -> Hermes Kernel -> Domain Harness OS`
+
+也就是说，`OPL` 要成为 family-level 的 direct entry，而每个业务仓也都要拥有自己的 lightweight direct entry，服务那些已经明确知道自己要做研究、基金申请或视觉交付的用户。
+
 这次已经冻结的集成选择是：
 
 - 不把 `Hermes-Agent` kernel 代码 fork / vendor 进 `OPL` 自己长期维护
@@ -270,6 +279,7 @@
 同样的逻辑，后续也应在各个 admitted domain 仓里落成各自轻量的 direct entry，而不是长期停留在“只能被 `Codex` 调用”的状态。
 
 如果要看 fork / 用户自管安装 / 托管式外部 kernel 集成三种方案的完整对比，见 [OPL 产品入口与 Hermes Kernel Integration 决策](docs/references/opl-product-entry-and-hermes-kernel-integration.md)。
+如果要看四仓家族层面的入口栈与 `OPL -> domain` handoff 架构，见 [OPL 家族产品入口与 Domain Handoff 架构](docs/references/family-product-entry-and-domain-handoff-architecture.md)。
 
 ## 统一执行范式
 

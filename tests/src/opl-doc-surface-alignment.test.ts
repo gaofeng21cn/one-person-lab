@@ -104,6 +104,7 @@ test('core and reference docs freeze the external-kernel managed-integration mod
   const status = read('docs/status.md');
   const architecture = read('docs/architecture.md');
   const referenceDoc = read('docs/references/opl-product-entry-and-hermes-kernel-integration.md');
+  const familyEntryDoc = read('docs/references/family-product-entry-and-domain-handoff-architecture.md');
 
   assert.match(readme, /external kernel, managed by OPL product packaging/i);
   assert.match(readmeZh, /external kernel, managed by OPL product packaging/);
@@ -115,6 +116,12 @@ test('core and reference docs freeze the external-kernel managed-integration mod
   assert.match(referenceDoc, /结论：[\s\S]{0,80}- 不选。/);
   assert.match(referenceDoc, /结论：[\s\S]{0,80}- 选择方案 C。/);
   assert.match(referenceDoc, /代码层外部依赖，产品层托管集成/);
+  assert.match(familyEntryDoc, /operator entry/);
+  assert.match(familyEntryDoc, /agent entry/);
+  assert.match(familyEntryDoc, /product entry/);
+  assert.match(familyEntryDoc, /target_domain_id/);
+  assert.match(familyEntryDoc, /runtime_session_contract/);
+  assert.match(familyEntryDoc, /return_surface_contract/);
 });
 
 test('core maintainer docs exist and are linked from docs index', () => {

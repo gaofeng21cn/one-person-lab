@@ -28,6 +28,7 @@ These are the first files an AI or maintainer should read before touching the re
 - Current focus: truth reset, central sync, surface-authority convergence, and admitted-domain state alignment.
 - Current truth: none of the four repositories has landed a true upstream `Hermes-Agent` integration yet; current runtime shapes remain transitional and domain-specific.
 - Current product-entry truth: users still mainly reach `OPL` through Codex-mediated `CLI / MCP` usage; `OPL` is not yet a direct product entry surface.
+- Family product-entry truth: the same gap also exists in the domain repositories; many already have operator / agent entry surfaces, but none of the four repositories has a mature user-facing product entry yet.
 - Frozen integration choice: `Hermes Kernel Integration` follows `external kernel, managed by OPL product packaging` rather than a long-term fork or a user-managed Hermes prerequisite.
 - Long-line target: move the shared runtime layer toward upstream `Hermes-Agent` (or an explicitly approved equivalent substrate) while keeping `OPL` as the top-level coordination, discovery, and contract layer.
 - Historical execution surface: OMX is retired and survives only as migration / audit reference material.
@@ -74,6 +75,7 @@ All Layer 3 docs now live under `docs/references/`, with a dedicated index so th
 - `references/ecosystem-status-matrix.md` (Chinese-only internal reference)
 - `references/hermes-agent-runtime-substrate-benchmark.md` (Chinese-only internal reference)
 - `references/hermes-agent-truth-reset-and-target-state.md` (Chinese-only internal reference)
+- `references/family-product-entry-and-domain-handoff-architecture.md` (Chinese-only internal reference)
 - `references/opl-product-entry-and-hermes-kernel-integration.md` (Chinese-only internal reference)
 - `references/opl-phase-2-central-reference-sync-board.md` (Chinese-only internal reference)
 - `references/opl-phase-2-admitted-domain-delta-intake-refresh.md` (Chinese-only internal reference)

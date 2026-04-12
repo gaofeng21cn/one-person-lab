@@ -258,6 +258,15 @@ The target product chain is:
 
 `User -> OPL Product Entry -> OPL Gateway -> Hermes Kernel -> Domain Adapter -> Domain Gateway -> Domain Harness OS`
 
+That top-level chain is only half of the real target.
+The domain repositories should not remain internal-only runtime surfaces forever.
+The intended family structure is:
+
+- top level: `User -> OPL Product Entry -> OPL Gateway -> Hermes Kernel -> Domain Handoff -> Domain Product Entry / Domain Gateway`
+- per domain: `User -> Domain Product Entry -> Domain Gateway -> Hermes Kernel -> Domain Harness OS`
+
+So `OPL` becomes the family-level direct entry, while each domain repository also grows a lightweight direct entry for users who already know they want a research, grant, or visual-deliverable workflow.
+
 The integration choice is now frozen as:
 
 - not forking or vendoring `Hermes-Agent` kernel code into `OPL`
@@ -274,6 +283,7 @@ For the future hosted shape, that means the platform can run the `Hermes` kernel
 The same logic should later apply to the admitted domain repositories as lightweight direct-entry products at their own domain scope.
 
 For the detailed comparison between fork / user-managed install / managed external-kernel integration, see [OPL Product Entry And Hermes Kernel Integration](docs/references/opl-product-entry-and-hermes-kernel-integration.md).
+For the family-level entry stack and the `OPL -> domain` handoff architecture, see [Family Product Entry And Domain Handoff Architecture](docs/references/family-product-entry-and-domain-handoff-architecture.md).
 
 ## Shared Operating Pattern
 
