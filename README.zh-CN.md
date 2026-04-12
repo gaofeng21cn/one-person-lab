@@ -248,13 +248,13 @@
 - `OPL` 现在已经有了以 `opl` 为默认入口的本地 direct product-entry shell
 - `opl` 会直接进入 `OPL Front Desk`，在外部 Hermes kernel 之上种入或恢复会话
 - `opl "<request...>"` 现在已经成为自然语言 quick ask 的快捷路径
-- `opl doctor`、`opl ask`、`opl chat`、`opl resume`、`opl sessions`、`opl logs`、`opl repair-hermes-gateway`、`opl frontdesk-manifest`、`opl frontdesk-hosted-bundle`、`opl session-ledger`、`opl handoff-envelope` 以及 `frontdesk-service-*` 现在共同构成显式的产品入口与 runtime 运维命令面
-- `opl frontdesk-manifest` 加上 `opl frontdesk-hosted-bundle`，现在把 hosted-friendly shell contract 与 hosted-pilot-ready shell bundle 一并冻结下来，方便未来 web 壳接入，同时不夸大 hosted readiness
+- `opl doctor`、`opl ask`、`opl chat`、`opl resume`、`opl sessions`、`opl logs`、`opl repair-hermes-gateway`、`opl frontdesk-manifest`、`opl frontdesk-hosted-bundle`、`opl frontdesk-hosted-package`、`opl session-ledger`、`opl handoff-envelope` 以及 `frontdesk-service-*` 现在共同构成显式的产品入口与 runtime 运维命令面
+- `opl frontdesk-manifest`、`opl frontdesk-hosted-bundle` 与 `opl frontdesk-hosted-package`，现在把 hosted-friendly shell contract、hosted-ready bundle surface 与可自托管的 pilot package 一并冻结下来，方便未来 web 壳接入，同时不夸大 hosted readiness
 - `opl projects`、`opl workspace-status`、`opl workspace-catalog`、`opl workspace-bind|activate|archive`、`opl runtime-status`、`opl session-ledger`、`opl dashboard` 现在补上了可写的顶层管理面，用来观察并管理项目、工作区、会话、handoff 与 runtime
-- `opl web` 现在补上了本地 web front desk pilot，可以直接从浏览器进入 OPL、做 quick ask、绑定 workspace、查看 managed session ledger，并消费 hosted-friendly `health / manifest / hosted-bundle / sessions / resume / logs / handoff-envelope` 界面
+- `opl web` 现在补上了本地 web front desk pilot，可以直接从浏览器进入 OPL、做 quick ask、绑定 workspace、查看 managed session ledger、导出可自托管的 hosted pilot package，并消费 hosted-friendly `health / manifest / hosted-bundle / hosted-package / sessions / resume / logs / handoff-envelope` 界面
 - `opl frontdesk-service-install|status|start|stop|open|uninstall` 现在又补上了基于 launchd 的 service-safe 本地包装层，让 OPL 的浏览器入口不再只能靠手动挂着终端
 - 用户在本机上不再必须先进入 `Codex`，才能触达顶层 `OPL` surface
-- 这次落地的 product entry 已经同时包含本地 CLI-first 入口壳与本地 web front desk pilot；但 hosted 前台仍未落地，hosted 包装仍是后续工作
+- 这次落地的 product entry 已经同时包含本地 CLI-first 入口壳与本地 web front desk pilot；同时也已经落下可自托管的 hosted pilot package，但 actual hosted 前台与 actual hosted runtime 仍未落地
 - hosted / web 这一层的选型现在也已经冻结：短期最快可用路线是 `LibreChat-first`，长期目标仍是 `OPL` 自有 web front desk；`Chatbot UI` 太薄，不适合作为主 hosted 基座
 - 这个成熟度缺口在三个业务仓里也仍然存在：有些仓已经有可用的本地 `CLI` 或 runtime baseline，但整体更像 operator / agent entry，而不是打磨完成的用户产品入口
 - 四个仓已经不再处于同一条 `Hermes-Agent` 集成阶段线上：`Med Auto Grant` 已切到真实 runtime substrate，`Med Auto Science` 已打通 external runtime bring-up，`RedCube AI` 仍在 pilot prep，而 `OPL` 继续只持有顶层 gateway / federation 语言，同时开始持有 family-level 的本地入口壳
@@ -298,6 +298,8 @@
   - 暴露 hosted-friendly front desk contract，给后续 web 壳接入使用，同时保持 hosted 包装状态描述诚实
 - `opl frontdesk-hosted-bundle`
   - 冻结 hosted-pilot-ready shell bundle，包括 base-path-aware 的入口与 API 端点，但不把它写成实际 hosted runtime
+- `opl frontdesk-hosted-package`
+  - 导出可自托管的 hosted pilot package，包含 app snapshot、启动脚本、env 模板、`systemd` unit 与反向代理资产，但不把它写成 actual hosted runtime
 - `opl projects`
   - 列出当前经由 `OPL` 暴露的 family-level 项目面
 - `opl workspace-status`
@@ -311,7 +313,7 @@
 - `opl dashboard`
   - 把 front desk、projects、workspace、workspace catalog、session ledger 与 runtime 汇总成当前顶层管理视图
 - `opl web`
-  - 启动本地 web front desk pilot，让用户直接在浏览器里进入 OPL、发起 quick ask、绑定 workspace、查看 managed session ledger，并消费 hosted-friendly `health / manifest / hosted-bundle / sessions / resume / logs / handoff-envelope` API
+  - 启动本地 web front desk pilot，让用户直接在浏览器里进入 OPL、发起 quick ask、绑定 workspace、查看 managed session ledger、导出可自托管的 hosted pilot package，并消费 hosted-friendly `health / manifest / hosted-bundle / hosted-package / sessions / resume / logs / handoff-envelope` API
 
 这层新入口壳并不会抹掉现有的 `Phase 1` gateway contract。
 只读 gateway 命令仍然是联邦真相面的稳定 formal surface。

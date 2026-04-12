@@ -81,6 +81,7 @@
 - `/api/health`
 - `/api/frontdesk-manifest`
 - `/api/hosted-bundle`
+- `/api/hosted-package`
 - `/api/handoff-envelope`
 - `/api/sessions`
 - `/api/resume`
@@ -92,20 +93,22 @@
 - 用户可以直接在浏览器里做 quick ask、查看项目、检查与绑定 workspace、查看 managed session ledger、观察 runtime；
 - 这仍是 local pilot，不等于 hosted 包装完成。
 
-### F2.B. hosted-friendly shell contract
+### F2.B. hosted-friendly shell contract 与 pilot package
 
 已完成：
 
 - `opl frontdesk-manifest`
 - `opl frontdesk-hosted-bundle`
-- 本地 web 前台已开始直接消费 `health / manifest / hosted-bundle / sessions / resume / logs / handoff-envelope` surfaces
+- `opl frontdesk-hosted-package`
+- 本地 web 前台已开始直接消费 `health / manifest / hosted-bundle / hosted-package / sessions / resume / logs / handoff-envelope` surfaces
 
 当前含义：
 
 - `OPL` 现在不只是“有一个本地浏览器 pilot”，而是已经冻结出一层 future hosted shell 可消费的 front-desk contract；
 - hosted-pilot-ready shell bundle 已经把 base-path-aware 的 entry / API endpoint 一并冻结下来；
+- self-hostable hosted pilot package 已经把 app snapshot、run script、env 模板、`systemd` unit 与反向代理资产一并导出来；
 - 这层 contract 可以服务后续 `LibreChat-first` 或自有 web front desk 的接壳工作；
-- 但它仍然只是 hosted-friendly local surface，不等于 hosted packaging / hosted runtime 已完成。
+- 但它仍然只是 hosted-friendly local surface 加 self-hostable pilot packaging，不等于 actual hosted runtime 已完成。
 
 ### F2.C. service-safe 本地包装层
 
@@ -138,15 +141,16 @@
 
 ## 当前还没有完成
 
-### W1. 真正的 hosted packaging / web 前台
+### W1. 真正的 hosted runtime / web 前台
 
 未完成：
 
 - 虽然已经有本地可打开的 web front desk pilot；
 - 虽然也已经有 hosted-friendly manifest / health / session / logs contract surface；
 - 虽然现在也已经有了 service-safe 的本地 packaging；
-- 但还没有 service-safe 的 hosted packaging；
-- 也还没有把 `LibreChat-first` 这条 hosted pilot 路线正式接起来。
+- 虽然也已经有了 self-hostable hosted pilot package；
+- 但还没有 actual hosted runtime；
+- 也还没有把 `LibreChat-first` 这条 hosted pilot 路线正式接成真正可用的 hosted 前台。
 
 ### W2. 顶层与业务仓的前台联动
 
@@ -162,7 +166,7 @@
 
 方向：
 
-- 在已落地的本地 web pilot、hosted-friendly shell contract 与本地 service packaging 之上继续做 hosted packaging；
+- 在已落地的本地 web pilot、hosted-friendly shell contract、self-hostable hosted pilot package 与本地 service packaging 之上继续做 hosted follow-up；
 - 把 service、session、handoff、runtime ops 与后续 hosted 壳接起来。
 
 ### I2. family handoff 与 domain lightweight direct entry 对齐
@@ -183,12 +187,12 @@
 
 最合理的下一棒顺序：
 
-1. 把 `LibreChat-first` 或等价 hosted shell 接到已冻结的 hosted-friendly shell contract 与 hosted pilot bundle 上
+1. 把 `LibreChat-first` 或等价 hosted shell 接到已冻结的 hosted-friendly shell contract、hosted pilot bundle 与 self-hostable pilot package 上
 2. 让 `RedCube AI` 先长出真实 lightweight direct entry
 3. 让 `Med Auto Grant` 继续把 grant-only entry / runtime / export 压实
 4. 让 `Med Auto Science` 继续走非 display 主线的 real adapter cutover
 
 ## 一句话结论
 
-`OPL Front Desk` 这条线现在已经从“只有 CLI 说明面”走到了“有本地 CLI 入口 + 有可写管理面 + 有 managed session ledger + 有 family handoff bundle + 有本地 web pilot + 有 hosted-friendly shell contract / hosted pilot bundle + 有 service-safe 本地包装层 + 有明确 hosted 路线”的状态。
-下一步不该再回头争论方向，而是把 hosted shell 接壳、hosted packaging 和后续家族级 direct entry 继续压实。
+`OPL Front Desk` 这条线现在已经从“只有 CLI 说明面”走到了“有本地 CLI 入口 + 有可写管理面 + 有 managed session ledger + 有 family handoff bundle + 有本地 web pilot + 有 hosted-friendly shell contract / hosted pilot bundle / self-hostable pilot package + 有 service-safe 本地包装层 + 有明确 hosted 路线”的状态。
+下一步不该再回头争论方向，而是把 hosted shell 接壳、actual hosted runtime 和后续家族级 direct entry 继续压实。

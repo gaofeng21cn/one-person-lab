@@ -588,6 +588,7 @@ test('help exposes the local web front-desk pilot command through the built CLI 
   assert.ok(payload.help.commands.some((entry) => entry.command === 'web'));
   assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-manifest'));
   assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-hosted-bundle'));
+  assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-hosted-package'));
   assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-service-install'));
   assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-service-status'));
   assert.ok(payload.help.commands.some((entry) => entry.command === 'workspace-bind'));
@@ -734,6 +735,51 @@ test('frontdesk-hosted-bundle stays machine-readable through the built CLI entry
   assert.equal(payload.hosted_pilot_bundle.endpoints.dashboard, '/pilot/opl/api/dashboard');
   assert.equal(payload.hosted_pilot_bundle.defaults.workspace_path, repoRoot);
   assert.equal(payload.hosted_pilot_bundle.defaults.sessions_limit, 9);
+});
+
+test('frontdesk-hosted-package stays machine-readable through the built CLI entrypoint', () => {
+  const outputDir = mkdtempSync(path.join(os.tmpdir(), 'opl-built-hosted-package-'));
+
+  try {
+    const result = runCli([
+      'frontdesk-hosted-package',
+      '--output',
+      outputDir,
+      '--public-origin',
+      'https://opl.example.com',
+      '--host',
+      '0.0.0.0',
+      '--port',
+      '8787',
+      '--base-path',
+      '/pilot/opl',
+      '--sessions-limit',
+      '9',
+    ]);
+    assert.equal(result.status, 0, formatFailure(result));
+
+    const payload = parseJsonOutput(result);
+    assert.equal(payload.hosted_pilot_package.surface_id, 'opl_hosted_frontdesk_pilot_package');
+    assert.equal(payload.hosted_pilot_package.shell_integration_target, 'librechat_first');
+    assert.equal(payload.hosted_pilot_package.package_status, 'landed');
+    assert.equal(payload.hosted_pilot_package.actual_hosted_runtime_status, 'not_landed');
+    assert.equal(payload.hosted_pilot_package.public_origin, 'https://opl.example.com');
+    assert.equal(payload.hosted_pilot_package.entry_url, 'https://opl.example.com/pilot/opl/');
+    assert.equal(payload.hosted_pilot_package.api_base_url, 'https://opl.example.com/pilot/opl/api');
+    assert.equal(existsSync(payload.hosted_pilot_package.assets.bundle_json), true);
+    assert.equal(existsSync(payload.hosted_pilot_package.assets.readme), true);
+    assert.equal(existsSync(payload.hosted_pilot_package.assets.run_script), true);
+    assert.equal(existsSync(payload.hosted_pilot_package.assets.systemd_service), true);
+    assert.equal(existsSync(payload.hosted_pilot_package.assets.caddyfile), true);
+    assert.equal(existsSync(payload.hosted_pilot_package.assets.env_example), true);
+    assert.equal(existsSync(path.join(payload.hosted_pilot_package.assets.app_dist, 'cli.js')), true);
+    assert.equal(
+      existsSync(path.join(payload.hosted_pilot_package.assets.app_contracts, 'opl-gateway', 'workstreams.json')),
+      true,
+    );
+  } finally {
+    rmSync(outputDir, { recursive: true, force: true });
+  }
 });
 
 test('workspace registry and handoff surfaces stay machine-readable through the built CLI entrypoint', () => {
@@ -1001,6 +1047,28 @@ exit 1
     const dashboardPayload = await dashboardResponse.json();
     assert.equal(dashboardPayload.dashboard.projects.length, 3);
     assert.equal(dashboardPayload.dashboard.runtime_status.recent_sessions.sessions.length, 1);
+
+    const hostedPackageOutput = mkdtempSync(path.join(os.tmpdir(), 'opl-built-web-hosted-package-'));
+    try {
+      const hostedPackageResponse = await fetch(`${baseUrl}/api/hosted-package`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          output_dir: hostedPackageOutput,
+          public_origin: 'https://opl.example.com',
+        }),
+      });
+      const hostedPackagePayload = await hostedPackageResponse.json();
+      assert.equal(hostedPackagePayload.hosted_pilot_package.surface_id, 'opl_hosted_frontdesk_pilot_package');
+      assert.equal(hostedPackagePayload.hosted_pilot_package.public_origin, 'https://opl.example.com');
+      assert.equal(hostedPackagePayload.hosted_pilot_package.entry_url, 'https://opl.example.com/pilot/opl/');
+      assert.equal(existsSync(hostedPackagePayload.hosted_pilot_package.assets.bundle_json), true);
+      assert.equal(existsSync(hostedPackagePayload.hosted_pilot_package.assets.run_script), true);
+    } finally {
+      rmSync(hostedPackageOutput, { recursive: true, force: true });
+    }
 
     const resumeResponse = await fetch(`${baseUrl}/api/resume`, {
       method: 'POST',

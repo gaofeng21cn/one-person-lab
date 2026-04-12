@@ -21,8 +21,8 @@
   - 默认走 quick ask
 - `opl resume / sessions / logs / repair-hermes-gateway`
   - 提供 landed local shell 的会话与 runtime 运维界面
-- `opl frontdesk-hosted-bundle / session-ledger / handoff-envelope`
-  - 提供 hosted-pilot-ready shell bundle、OPL-managed session attribution 与 family handoff contract
+- `opl frontdesk-hosted-bundle / frontdesk-hosted-package / session-ledger / handoff-envelope`
+  - 提供 hosted-pilot-ready shell bundle、self-hostable hosted pilot package、OPL-managed session attribution 与 family handoff contract
 - `opl workspace-catalog / workspace-bind|activate|archive`
   - 提供 file-backed workspace registry 与顶层到 domain 之间的 direct-entry locator 管理
 - `opl web`

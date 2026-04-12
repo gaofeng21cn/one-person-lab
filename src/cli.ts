@@ -36,6 +36,7 @@ import {
   buildRuntimeStatus,
   buildWorkspaceStatus,
 } from './management.ts';
+import { buildHostedPilotPackage } from './hosted-pilot-package.ts';
 import { buildSessionLedger } from './session-ledger.ts';
 import { explainDomainBoundary, resolveRequestSurface } from './resolver.ts';
 import {
@@ -112,6 +113,15 @@ type WebCliInput = {
   workspacePath?: string;
   sessionsLimit?: number;
   basePath?: string;
+};
+
+type HostedPilotPackageCliInput = {
+  outputDir: string;
+  publicOrigin?: string;
+  host?: string;
+  port?: number;
+  basePath?: string;
+  sessionsLimit?: number;
 };
 
 function printJson(payload: unknown, stream: NodeJS.WriteStream = process.stdout) {
@@ -683,6 +693,71 @@ function parseWebArgs(
   return parsed;
 }
 
+function parseHostedPilotPackageArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): HostedPilotPackageCliInput {
+  let outputDir: string | undefined;
+  const parsed: Omit<HostedPilotPackageCliInput, 'outputDir'> = {};
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (!token.startsWith('--')) {
+      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
+        token,
+      });
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
+        option: token,
+      });
+    }
+
+    switch (token) {
+      case '--output':
+        outputDir = value;
+        break;
+      case '--public-origin':
+        parsed.publicOrigin = value;
+        break;
+      case '--host':
+        parsed.host = value;
+        break;
+      case '--port':
+        parsed.port = parsePort(token, value, spec);
+        break;
+      case '--base-path':
+        parsed.basePath = value;
+        break;
+      case '--sessions-limit':
+        parsed.sessionsLimit = parsePositiveInteger(token, value, spec);
+        break;
+      default:
+        throw buildUsageError(`Unknown option for frontdesk-hosted-package: ${token}.`, spec, {
+          option: token,
+        });
+    }
+
+    index += 1;
+  }
+
+  if (!outputDir) {
+    throw buildUsageError(
+      'frontdesk-hosted-package requires --output.',
+      spec,
+      { required: ['--output'] },
+    );
+  }
+
+  return {
+    outputDir,
+    ...parsed,
+  };
+}
+
 function assertNoArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
@@ -738,6 +813,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl projects',
         'opl frontdesk-manifest',
         'opl frontdesk-hosted-bundle --base-path /pilot/opl',
+        'opl frontdesk-hosted-package --output /tmp/opl-hosted-package --public-origin https://opl.example.com --base-path /pilot/opl',
         'opl frontdesk-service-install --port 8787',
         'opl workspace-bind --project redcube --path /Users/gaofeng/workspace/redcube-ai --entry-command "redcube-ai frontdesk"',
         'opl handoff-envelope "Prepare a defense-ready slide deck." --preferred-family ppt_deck',
@@ -1055,6 +1131,22 @@ async function main() {
       ],
       handler: (args) =>
         buildHostedPilotBundle(getContracts(), parseWebArgs(args, commandSpecs['frontdesk-hosted-bundle'])),
+    },
+    'frontdesk-hosted-package': {
+      usage:
+        'opl frontdesk-hosted-package --output <dir> [--public-origin <origin>] [--host <host>] [--port <port>] [--sessions-limit <n>] [--base-path <base_path>]',
+      summary:
+        'Export a self-hostable hosted pilot package with app snapshot, run script, service unit, and reverse-proxy assets.',
+      examples: [
+        'opl frontdesk-hosted-package --output /tmp/opl-frontdesk-package',
+        'opl frontdesk-hosted-package --output /tmp/opl-frontdesk-package --public-origin https://opl.example.com --base-path /pilot/opl',
+        'opl frontdesk-hosted-package --output /tmp/opl-frontdesk-package --host 0.0.0.0 --port 8787 --sessions-limit 9',
+      ],
+      handler: (args) =>
+        buildHostedPilotPackage(
+          getContracts(),
+          parseHostedPilotPackageArgs(args, commandSpecs['frontdesk-hosted-package']),
+        ),
     },
     'frontdesk-service-install': {
       usage:

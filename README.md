@@ -252,13 +252,13 @@ The current truth is still transitional, but it has moved forward:
 - `OPL` now ships a local direct product-entry shell whose default front door is `opl`
 - `opl` seeds or resumes an `OPL Front Desk` session on top of the external Hermes kernel
 - `opl "<request...>"` now acts as the fast natural-language path for a one-shot routed ask
-- `opl doctor`, `opl ask`, `opl chat`, `opl resume`, `opl sessions`, `opl logs`, `opl repair-hermes-gateway`, `opl frontdesk-manifest`, `opl frontdesk-hosted-bundle`, `opl session-ledger`, `opl handoff-envelope`, and the `frontdesk-service-*` commands now form the explicit product-entry and runtime-ops command surface
-- `opl frontdesk-manifest` plus `opl frontdesk-hosted-bundle` now freeze the hosted-friendly shell contract that future web shells can consume without overstating hosted readiness
+- `opl doctor`, `opl ask`, `opl chat`, `opl resume`, `opl sessions`, `opl logs`, `opl repair-hermes-gateway`, `opl frontdesk-manifest`, `opl frontdesk-hosted-bundle`, `opl frontdesk-hosted-package`, `opl session-ledger`, `opl handoff-envelope`, and the `frontdesk-service-*` commands now form the explicit product-entry and runtime-ops command surface
+- `opl frontdesk-manifest`, `opl frontdesk-hosted-bundle`, and `opl frontdesk-hosted-package` now freeze the hosted-friendly shell contract, the hosted-ready bundle surface, and a self-hostable pilot package without overstating hosted readiness
 - `opl projects`, `opl workspace-status`, `opl workspace-catalog`, `opl workspace-bind|activate|archive`, `opl runtime-status`, `opl session-ledger`, and `opl dashboard` now add a writable top-level management surface for project, workspace, session, runtime, and handoff visibility
-- `opl web` now lands a local web front desk pilot for browser-based direct entry, quick ask, workspace inspection, workspace binding, runtime visibility, managed session-ledger review, and hosted-friendly `health / manifest / hosted-bundle / sessions / resume / logs / handoff-envelope` surfaces
+- `opl web` now lands a local web front desk pilot for browser-based direct entry, quick ask, workspace inspection, workspace binding, runtime visibility, managed session-ledger review, and hosted-friendly `health / manifest / hosted-bundle / hosted-package / sessions / resume / logs / handoff-envelope` surfaces
 - `opl frontdesk-service-install|status|start|stop|open|uninstall` now add a service-safe local packaging layer for the OPL web front desk on top of launchd
 - users no longer need to start from `Codex` just to reach the top-level `OPL` surface locally
-- this landed product entry now includes both the local CLI-first shell and a local web front desk pilot; the hosted front door is still not landed and hosted packaging remains future work
+- this landed product entry now includes both the local CLI-first shell and a local web front desk pilot; a self-hostable hosted pilot package is also landed, but the actual hosted front door and actual hosted runtime are still not landed
 - the hosted / web benchmark is now frozen: the shortest-path pilot is `LibreChat-first`, while the long-line target remains an `OPL`-owned web front desk; `Chatbot UI` is too thin to act as the main hosted base
 - the same maturity gap still exists in the domain repositories: some already have usable local `CLI` or runtime baselines, but they still read more like operator / agent entry surfaces than finished user-facing product entries
 - the four repositories are no longer at the same integration depth: `Med Auto Grant` has landed a real upstream `Hermes-Agent` runtime substrate, `Med Auto Science` has completed external runtime bring-up and is moving toward real adapter cutover, `RedCube AI` remains in upstream pilot prep, and `OPL` itself stays above domain runtime ownership while now owning the local family-level entry shell
@@ -302,6 +302,8 @@ What landed in this repository is the first local shell of that idea:
   - exposes the hosted-friendly front-desk contract for future web shells while keeping hosted packaging status honest
 - `opl frontdesk-hosted-bundle`
   - freezes the hosted-pilot-ready shell bundle, including base-path-aware entry and API endpoints, without claiming an actual hosted runtime
+- `opl frontdesk-hosted-package`
+  - exports a self-hostable hosted pilot package with app snapshot, run script, env template, `systemd` unit, and reverse-proxy assets, without claiming an actual hosted runtime
 - `opl projects`
   - lists the current family-level project surfaces exposed through OPL
 - `opl workspace-status`
@@ -315,7 +317,7 @@ What landed in this repository is the first local shell of that idea:
 - `opl dashboard`
   - aggregates the current front-desk management view across projects, workspace, workspace catalog, session ledger, and runtime
 - `opl web`
-  - starts the local web front desk pilot so users can open OPL in a browser, run quick ask, inspect and bind workspaces, review managed session ledger state, and consume hosted-friendly `health / manifest / hosted-bundle / sessions / resume / logs / handoff-envelope` APIs without going through Codex
+  - starts the local web front desk pilot so users can open OPL in a browser, run quick ask, inspect and bind workspaces, review managed session ledger state, export a self-hostable hosted pilot package, and consume hosted-friendly `health / manifest / hosted-bundle / hosted-package / sessions / resume / logs / handoff-envelope` APIs without going through Codex
 
 This new shell does not erase the existing `Phase 1` gateway contract.
 The read-only gateway commands remain the stable top-level contract surface for federation truth.

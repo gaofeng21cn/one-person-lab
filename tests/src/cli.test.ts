@@ -1036,6 +1036,77 @@ test('frontdesk-hosted-bundle exposes a hosted-pilot-ready bundle with base-path
   assert.equal(output.hosted_pilot_bundle.defaults.sessions_limit, 9);
 });
 
+test('frontdesk-hosted-package exports a self-hostable hosted pilot package with runtime and proxy assets', () => {
+  const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-hosted-package-'));
+
+  try {
+    const output = runCli([
+      'frontdesk-hosted-package',
+      '--output',
+      outputDir,
+      '--public-origin',
+      'https://opl.example.com',
+      '--base-path',
+      '/pilot/opl',
+      '--host',
+      '0.0.0.0',
+      '--port',
+      '8787',
+      '--sessions-limit',
+      '9',
+    ]);
+
+    assert.equal(output.version, 'g2');
+    assert.equal(output.hosted_pilot_package.surface_id, 'opl_hosted_frontdesk_pilot_package');
+    assert.equal(output.hosted_pilot_package.shell_integration_target, 'librechat_first');
+    assert.equal(output.hosted_pilot_package.package_status, 'landed');
+    assert.equal(output.hosted_pilot_package.actual_hosted_runtime_status, 'not_landed');
+    assert.equal(output.hosted_pilot_package.public_origin, 'https://opl.example.com');
+    assert.equal(output.hosted_pilot_package.entry_url, 'https://opl.example.com/pilot/opl/');
+    assert.equal(output.hosted_pilot_package.api_base_url, 'https://opl.example.com/pilot/opl/api');
+
+    const assets = output.hosted_pilot_package.assets;
+    assert.equal(fs.existsSync(assets.bundle_json), true);
+    assert.equal(fs.existsSync(assets.readme), true);
+    assert.equal(fs.existsSync(assets.run_script), true);
+    assert.equal(fs.existsSync(assets.systemd_service), true);
+    assert.equal(fs.existsSync(assets.caddyfile), true);
+    assert.equal(fs.existsSync(assets.env_example), true);
+    assert.equal(fs.existsSync(assets.app_dist), true);
+    assert.equal(fs.existsSync(path.join(assets.app_dist, 'cli.js')), true);
+    assert.equal(fs.existsSync(path.join(assets.app_contracts, 'opl-gateway', 'workstreams.json')), true);
+
+    const readme = fs.readFileSync(assets.readme, 'utf8');
+    assert.match(readme, /LibreChat-first/i);
+    assert.match(readme, /OPL_HERMES_BIN/);
+    assert.match(readme, /actual hosted runtime is still not landed/i);
+
+    const service = fs.readFileSync(assets.systemd_service, 'utf8');
+    assert.match(service, /EnvironmentFile=/);
+    assert.match(service, /run-frontdesk\.sh/);
+
+    const runScript = fs.readFileSync(assets.run_script, 'utf8');
+    assert.match(runScript, /--base-path/);
+    assert.match(runScript, /\/pilot\/opl/);
+    assert.match(runScript, /OPL_FRONTDESK_WORKSPACE/);
+
+    const caddyfile = fs.readFileSync(assets.caddyfile, 'utf8');
+    assert.match(caddyfile, /opl\.example\.com/);
+    assert.match(caddyfile, /handle_path \/pilot\/opl\/\*/);
+    assert.match(caddyfile, /reverse_proxy 127\.0\.0\.1:8787/);
+
+    const envExample = fs.readFileSync(assets.env_example, 'utf8');
+    assert.match(envExample, /OPL_HERMES_BIN=/);
+    assert.match(envExample, /OPL_FRONTDESK_WORKSPACE=/);
+
+    const bundleJson = JSON.parse(fs.readFileSync(assets.bundle_json, 'utf8'));
+    assert.equal(bundleJson.hosted_pilot_package.entry_url, 'https://opl.example.com/pilot/opl/');
+    assert.equal(bundleJson.hosted_pilot_package.base_path, '/pilot/opl');
+  } finally {
+    fs.rmSync(outputDir, { recursive: true, force: true });
+  }
+});
+
 test('workspace registry commands bind activate and archive project workspaces with direct-entry locators', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-state-fixture-'));
 
@@ -1339,6 +1410,28 @@ exit 1
     const manifestPayload = await manifestResponse.json();
     assert.equal(manifestPayload.frontdesk_manifest.shell_integration_target, 'librechat_first');
     assert.equal(manifestPayload.frontdesk_manifest.endpoints.sessions, '/api/sessions');
+
+    const hostedPackageOutput = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-web-hosted-package-'));
+    try {
+      const hostedPackageResponse = await fetch(`${baseUrl}/api/hosted-package`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          output_dir: hostedPackageOutput,
+          public_origin: 'https://opl.example.com',
+        }),
+      });
+      const hostedPackagePayload = await hostedPackageResponse.json();
+      assert.equal(hostedPackagePayload.hosted_pilot_package.surface_id, 'opl_hosted_frontdesk_pilot_package');
+      assert.equal(hostedPackagePayload.hosted_pilot_package.public_origin, 'https://opl.example.com');
+      assert.equal(hostedPackagePayload.hosted_pilot_package.entry_url, 'https://opl.example.com/pilot/opl/');
+      assert.equal(fs.existsSync(hostedPackagePayload.hosted_pilot_package.assets.bundle_json), true);
+      assert.equal(fs.existsSync(hostedPackagePayload.hosted_pilot_package.assets.run_script), true);
+    } finally {
+      fs.rmSync(hostedPackageOutput, { recursive: true, force: true });
+    }
 
     const sessionsResponse = await fetch(`${baseUrl}/api/sessions?limit=1`);
     const sessionsPayload = await sessionsResponse.json();
@@ -1914,6 +2007,9 @@ test('help returns command discovery and runnable examples', () => {
     ['frontdesk-service-install', 'frontdesk-service-status', 'frontdesk-service-open'].every((command) =>
       output.help.commands.some((entry: { command: string }) => entry.command === command),
     ),
+  );
+  assert.ok(
+    output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk-hosted-package'),
   );
   assert.ok(
     output.help.commands.some(

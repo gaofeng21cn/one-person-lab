@@ -46,13 +46,13 @@
 
 - 本地 direct product-entry shell 已成立；
 - `opl` / `opl <request...>` / `opl doctor|ask|chat|resume|sessions|logs|repair-hermes-gateway` 已成为顶层本地入口面；
-- `opl frontdesk-manifest|frontdesk-hosted-bundle` 已把 hosted-friendly shell contract 与 hosted pilot bundle 冻结下来；
+- `opl frontdesk-manifest|frontdesk-hosted-bundle|frontdesk-hosted-package` 已把 hosted-friendly shell contract、hosted pilot bundle 与 self-hostable hosted pilot package 冻结下来；
 - `opl workspace-catalog|workspace-bind|activate|archive` 已把 workspace registry 与 direct-entry locator 管理做成顶层控制面；
 - `opl session-ledger|handoff-envelope|dashboard|web` 已把 managed session attribution、family handoff 和 browser front desk 一并落地。
 
 下一棒：
 
-- 把 `LibreChat-first` 或等价 hosted shell 接到已冻结的 hosted-friendly shell contract / hosted pilot bundle 上；
+- 把 `LibreChat-first` 或等价 hosted shell 接到已冻结的 hosted-friendly shell contract / hosted pilot bundle / self-hostable hosted pilot package 上；
 - `OPL bootstrap / launcher / product packaging` 继续收紧；
 - family-level session / handoff / runtime ops 继续稳定，并保持顶层与 domain direct-entry locator 对齐。
 

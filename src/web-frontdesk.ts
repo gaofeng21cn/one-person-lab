@@ -15,6 +15,7 @@ import {
   buildRuntimeStatus,
   buildWorkspaceStatus,
 } from './management.ts';
+import { buildHostedPilotPackage } from './hosted-pilot-package.ts';
 import {
   buildProductEntryHandoffEnvelope,
   runProductEntryAsk,
@@ -74,6 +75,19 @@ type WorkspaceRegistryBody = Partial<{
   entry_url: string;
 }>;
 
+type HostedPackageRequestBody = Partial<{
+  outputDir: string;
+  output_dir: string;
+  publicOrigin: string;
+  public_origin: string;
+  host: string;
+  port: number | string;
+  basePath: string;
+  base_path: string;
+  sessionsLimit: number | string;
+  sessions_limit: number | string;
+}>;
+
 type WebFrontDeskStartupPayload = {
   version: 'g2';
   contracts_context: {
@@ -99,6 +113,7 @@ type WebFrontDeskStartupPayload = {
       health: string;
       frontdesk_manifest: string;
       hosted_bundle: string;
+      hosted_package: string;
       dashboard: string;
       projects: string;
       workspace_status: string;
@@ -309,6 +324,69 @@ function normalizeWorkspaceRegistryInput(body: WorkspaceRegistryBody) {
   };
 }
 
+function normalizeHostedPackageInput(body: HostedPackageRequestBody) {
+  const outputDir = normalizeOptionalString(body.outputDir) ?? normalizeOptionalString(body.output_dir);
+
+  if (!outputDir) {
+    throw new GatewayContractError(
+      'cli_usage_error',
+      'Hosted package export requires a non-empty output_dir.',
+      {
+        required: ['output_dir'],
+      },
+    );
+  }
+
+  const portValue = body.port;
+  let port: number | undefined;
+  if (typeof portValue === 'number' && Number.isInteger(portValue) && portValue >= 0 && portValue <= 65535) {
+    port = portValue;
+  } else if (typeof portValue === 'string' && portValue.trim().length > 0) {
+    const parsed = Number.parseInt(portValue, 10);
+    if (!Number.isInteger(parsed) || parsed < 0 || parsed > 65535) {
+      throw new GatewayContractError(
+        'cli_usage_error',
+        'Hosted package export requires port to be an integer between 0 and 65535.',
+        {
+          port: portValue,
+        },
+      );
+    }
+    port = parsed;
+  }
+
+  const sessionsLimitValue = body.sessionsLimit ?? body.sessions_limit;
+  let sessionsLimit: number | undefined;
+  if (
+    typeof sessionsLimitValue === 'number'
+    && Number.isInteger(sessionsLimitValue)
+    && sessionsLimitValue > 0
+  ) {
+    sessionsLimit = sessionsLimitValue;
+  } else if (typeof sessionsLimitValue === 'string' && sessionsLimitValue.trim().length > 0) {
+    const parsed = Number.parseInt(sessionsLimitValue, 10);
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+      throw new GatewayContractError(
+        'cli_usage_error',
+        'Hosted package export requires sessions_limit to be a positive integer.',
+        {
+          sessions_limit: sessionsLimitValue,
+        },
+      );
+    }
+    sessionsLimit = parsed;
+  }
+
+  return {
+    outputDir,
+    publicOrigin: normalizeOptionalString(body.publicOrigin) ?? normalizeOptionalString(body.public_origin),
+    host: normalizeOptionalString(body.host),
+    port,
+    basePath: normalizeOptionalString(body.basePath) ?? normalizeOptionalString(body.base_path),
+    sessionsLimit,
+  };
+}
+
 function parsePositiveIntegerOptional(value: string | null) {
   if (!value) {
     return undefined;
@@ -358,6 +436,7 @@ function buildStartupPayload(context: WebFrontDeskContext): WebFrontDeskStartupP
         health: endpoints.health,
         frontdesk_manifest: manifest.frontdesk_manifest.endpoints.manifest,
         hosted_bundle: endpoints.hosted_bundle,
+        hosted_package: endpoints.hosted_package,
         dashboard: endpoints.dashboard,
         projects: endpoints.projects,
         workspace_status: endpoints.workspace_status,
@@ -918,6 +997,31 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
                 <pre class="json-view" id="hosted-bundle-json">{}</pre>
               </div>
               <div style="height: 12px"></div>
+              <div class="card">
+                <h3>Hosted Pilot Package Export</h3>
+                <p class="panel-copy">
+                  Export a self-hostable pilot package with runnable app snapshot, env template, service unit, and reverse-proxy files. This is packaging prep, not a claim that the actual hosted runtime is already landed.
+                </p>
+                <form id="hosted-package-form">
+                  <div class="field-grid">
+                    <label>
+                      Output Directory
+                      <input id="hosted-package-output" name="hosted-package-output" placeholder="/tmp/opl-frontdesk-package" />
+                    </label>
+                    <label>
+                      Public Origin
+                      <input id="hosted-package-public-origin" name="hosted-package-public-origin" placeholder="https://opl.example.com" />
+                    </label>
+                  </div>
+                  <div class="button-row">
+                    <button class="secondary" type="submit">Export Package</button>
+                  </div>
+                </form>
+                <div class="status-line" id="hosted-package-status" aria-live="polite"></div>
+                <div style="height: 12px"></div>
+                <pre class="json-view" id="hosted-package-json">No hosted package export yet.</pre>
+              </div>
+              <div style="height: 12px"></div>
               <div class="split-grid">
                 <div class="card">
                   <h3>Resume Session</h3>
@@ -1052,6 +1156,10 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       const manifestSummary = document.getElementById('manifest-summary');
       const hostedBundleSummary = document.getElementById('hosted-bundle-summary');
       const hostedBundleJson = document.getElementById('hosted-bundle-json');
+      const hostedPackageOutputInput = document.getElementById('hosted-package-output');
+      const hostedPackagePublicOriginInput = document.getElementById('hosted-package-public-origin');
+      const hostedPackageStatus = document.getElementById('hosted-package-status');
+      const hostedPackageJson = document.getElementById('hosted-package-json');
       const resumeSessionInput = document.getElementById('resume-session-id');
       const resumeStatus = document.getElementById('resume-status');
       const resumeOutput = document.getElementById('resume-output');
@@ -1182,6 +1290,11 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         hostedBundleJson.textContent = JSON.stringify(payload, null, 2);
       }
 
+      function setHostedPackageStatus(message, tone = 'muted') {
+        hostedPackageStatus.textContent = message;
+        hostedPackageStatus.dataset.tone = tone;
+      }
+
       function renderManifest(payload) {
         const manifest = payload.frontdesk_manifest;
         const endpointList = Object.entries(manifest.endpoints)
@@ -1291,6 +1404,42 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         renderHealth(await healthResponse.json());
         renderManifest(await manifestResponse.json());
         renderHostedBundle(await hostedBundleResponse.json());
+      }
+
+      async function exportHostedPackage() {
+        const outputDir = hostedPackageOutputInput.value.trim();
+        if (!outputDir) {
+          setHostedPackageStatus('Hosted package export requires an output directory.', 'warn');
+          return;
+        }
+
+        setHostedPackageStatus('Exporting hosted pilot package...', 'muted');
+
+        try {
+          const response = await fetch(bootstrap.web_frontdesk.api.hosted_package, {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+            },
+            body: JSON.stringify({
+              output_dir: outputDir,
+              public_origin: hostedPackagePublicOriginInput.value.trim(),
+            }),
+          });
+          const payload = await response.json();
+
+          if (!response.ok) {
+            throw new Error(payload.error?.message || 'Hosted package export failed.');
+          }
+
+          hostedPackageJson.textContent = JSON.stringify(payload, null, 2);
+          setHostedPackageStatus('Hosted pilot package exported.', 'ok');
+        } catch (error) {
+          setHostedPackageStatus(
+            error instanceof Error ? error.message : 'Hosted package export failed.',
+            'warn',
+          );
+        }
       }
 
       async function fetchWorkspaceCatalog() {
@@ -1512,6 +1661,11 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         void loadLogs();
       });
 
+      document.getElementById('hosted-package-form').addEventListener('submit', (event) => {
+        event.preventDefault();
+        void exportHostedPackage();
+      });
+
       sessionsList.addEventListener('click', (event) => {
         const target = event.target;
         if (!(target instanceof HTMLElement)) {
@@ -1621,6 +1775,21 @@ async function handleRequest(
           workspacePath: context.workspacePath,
           sessionsLimit: context.sessionsLimit,
           basePath: context.basePath,
+        }),
+      );
+      return;
+    }
+
+    if (method === 'POST' && routedPath === '/api/hosted-package') {
+      writeJson(
+        response,
+        200,
+        buildHostedPilotPackage(context.contracts, {
+          ...normalizeHostedPackageInput((await readJsonBody(request)) as HostedPackageRequestBody),
+          host: context.host,
+          port: context.port,
+          basePath: context.basePath,
+          sessionsLimit: context.sessionsLimit,
         }),
       );
       return;

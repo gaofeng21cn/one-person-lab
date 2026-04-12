@@ -226,6 +226,7 @@
 - `opl chat`
 - `opl frontdesk-manifest`
 - `opl frontdesk-hosted-bundle`
+- `opl frontdesk-hosted-package`
 - `opl workspace-catalog`
 - `opl workspace-bind|activate|archive`
 - `opl session-ledger`
@@ -234,7 +235,7 @@
 - `opl web`
 
 这一步现在已经继续往前落下了一层 service-safe 的本地 front desk packaging；
-后续剩余工作则变成把这层本地 packaging、hosted pilot bundle、workspace registry、managed session ledger 与 family handoff surface 继续往真正的 hosted shell 接壳与 hosted / web 入口推进。
+后续剩余工作则变成把这层本地 packaging、hosted pilot bundle、self-hostable hosted pilot package、workspace registry、managed session ledger 与 family handoff surface 继续往真正的 hosted shell 接壳与 hosted / web 入口推进。
 
 ### S4. 进入 hosted / web 化
 
