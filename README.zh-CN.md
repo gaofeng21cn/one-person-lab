@@ -249,6 +249,7 @@
 - `opl` 会直接进入 `OPL Front Desk`，在外部 Hermes kernel 之上种入或恢复会话
 - `opl "<request...>"` 现在已经成为自然语言 quick ask 的快捷路径
 - `opl doctor`、`opl ask`、`opl chat`、`opl resume`、`opl sessions`、`opl logs`、`opl repair-hermes-gateway` 继续构成显式的产品入口与 runtime 运维命令面
+- `opl projects`、`opl workspace-status`、`opl runtime-status`、`opl dashboard` 现在补上了第一版顶层管理面，用来观察项目、工作区、会话与 runtime
 - 用户在本机上不再必须先进入 `Codex`，才能触达顶层 `OPL` surface
 - 这次落地的 product entry 仍然只是本地 CLI-first 入口壳；hosted / web 前台仍是后续工作
 - hosted / web 这一层的选型现在也已经冻结：短期最快可用路线是 `LibreChat-first`，长期目标仍是 `OPL` 自有 web front desk；`Chatbot UI` 太薄，不适合作为主 hosted 基座
@@ -284,6 +285,14 @@
   - 恢复一个已存在的 Hermes-backed OPL 会话
 - `opl sessions`、`opl logs`、`opl repair-hermes-gateway`
   - 暴露这层本地 shell 的 machine-readable 会话与 runtime 运维界面
+- `opl projects`
+  - 列出当前经由 `OPL` 暴露的 family-level 项目面
+- `opl workspace-status`
+  - 检查某个 workspace 路径的 git / worktree / 文件可见性状态
+- `opl runtime-status`
+  - 输出 Hermes runtime 健康、最近会话与 runtime-level 进程资源占用
+- `opl dashboard`
+  - 把 front desk、projects、workspace 与 runtime 汇总成当前顶层管理视图
 
 这层新入口壳并不会抹掉现有的 `Phase 1` gateway contract。
 只读 gateway 命令仍然是联邦真相面的稳定 formal surface。
@@ -308,6 +317,7 @@
 如果要看四仓家族层面的入口栈与 `OPL -> domain` handoff 架构，见 [OPL 家族产品入口与 Domain Handoff 架构](docs/references/family-product-entry-and-domain-handoff-architecture.md)。
 如果要看 hosted / web 前台为什么优先选 `LibreChat-first` 而不是 `Chatbot UI`，见 [OPL Hosted / Web Front Desk 选型基准](docs/references/opl-hosted-web-frontdesk-benchmark.md)。
 如果要看 `OPL` 与三个业务仓的 lightweight direct entry 后续该按什么顺序推进，见 [Family Lightweight Direct Entry 推进板](docs/references/family-lightweight-direct-entry-rollout-board.md)。
+如果要看 front desk 这条线当前已经落了什么、还缺什么，见 [OPL Front Desk 落地推进板](docs/references/opl-frontdesk-delivery-board.md)。
 
 ## 统一执行范式
 

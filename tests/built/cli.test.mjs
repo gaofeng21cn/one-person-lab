@@ -99,6 +99,25 @@ ${handlerBody}
   };
 }
 
+function createFakePsFixture(output) {
+  const fixtureRoot = mkdtempSync(path.join(os.tmpdir(), 'opl-ps-fixture-'));
+  const psPath = path.join(fixtureRoot, 'ps');
+  writeFileSync(
+    psPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+cat <<'EOF'
+${output}
+EOF
+`,
+    { mode: 0o755 },
+  );
+  return {
+    fixtureRoot,
+    psPath,
+  };
+}
+
 test('list-workstreams returns the admitted workstream summaries', () => {
   assert.ok(existsSync(cliEntrypoint), `Expected CLI entrypoint at ${cliEntrypoint}.`);
 
@@ -322,6 +341,96 @@ exit 1
     assert.equal(payload.product_entry.hermes.gateway_service.loaded, true);
   } finally {
     rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('projects stays machine-readable through the built CLI entrypoint', () => {
+  const result = runCli(['projects']);
+  assert.equal(result.status, 0, formatFailure(result));
+
+  const payload = parseJsonOutput(result);
+  assert.equal(payload.projects.length, 3);
+  assert.equal(payload.projects[0].project_id, 'opl');
+  assert.equal(payload.projects[1].project_id, 'medautoscience');
+  assert.equal(payload.projects[2].project_id, 'redcube');
+});
+
+test('workspace-status stays machine-readable through the built CLI entrypoint', () => {
+  const result = runCli(['workspace-status', '--path', repoRoot]);
+  assert.equal(result.status, 0, formatFailure(result));
+
+  const payload = parseJsonOutput(result);
+  assert.equal(payload.workspace.absolute_path, repoRoot);
+  assert.equal(payload.workspace.git.inside_work_tree, true);
+  assert.equal(typeof payload.workspace.git.linked_worktree, 'boolean');
+});
+
+test('runtime-status and dashboard stay machine-readable through the built CLI entrypoint', () => {
+  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "version" ]; then
+  echo "Hermes Agent v9.9.9-test"
+  exit 0
+fi
+if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
+  cat <<'EOF'
+Launchd plist: /tmp/ai.hermes.gateway.plist
+✓ Service definition matches the current Hermes install
+✓ Gateway service is loaded
+EOF
+  exit 0
+fi
+if [ "$1" = "status" ]; then
+  cat <<'EOF'
+◆ Environment
+  Project:      /tmp/hermes-agent
+◆ Gateway Service
+  Status:       ✓ loaded
+  Manager:      launchd
+◆ Scheduled Jobs
+  Jobs:         1
+◆ Sessions
+  Active:       2
+EOF
+  exit 0
+fi
+if [ "$1" = "sessions" ] && [ "$2" = "list" ]; then
+  cat <<'EOF'
+Preview                                            Last Active   Src    ID
+───────────────────────────────────────────────────────────────────────────────────────────────
+Built CLI dashboard session                        1m ago        cli    sess_built
+EOF
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+  const psFixture = createFakePsFixture(`27025 1 0.1 0.2 49616 22:46 /Users/test/.hermes/venv/bin/python -m hermes_cli.main gateway run --replace`);
+
+  try {
+    const runtimeResult = runCli(['runtime-status', '--limit', '1'], {
+      env: {
+        OPL_HERMES_BIN: hermesPath,
+        PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
+      },
+    });
+    assert.equal(runtimeResult.status, 0, formatFailure(runtimeResult));
+    const runtimePayload = parseJsonOutput(runtimeResult);
+    assert.equal(runtimePayload.runtime_status.status_report.parsed.summary.active_sessions, 2);
+    assert.equal(runtimePayload.runtime_status.process_usage.summary.process_count, 1);
+
+    const dashboardResult = runCli(['dashboard', '--path', repoRoot, '--sessions-limit', '1'], {
+      env: {
+        OPL_HERMES_BIN: hermesPath,
+        PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
+      },
+    });
+    assert.equal(dashboardResult.status, 0, formatFailure(dashboardResult));
+    const dashboardPayload = parseJsonOutput(dashboardResult);
+    assert.equal(dashboardPayload.dashboard.projects.length, 3);
+    assert.equal(dashboardPayload.dashboard.runtime_status.recent_sessions.sessions.length, 1);
+  } finally {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+    rmSync(psFixture.fixtureRoot, { recursive: true, force: true });
   }
 });
 

@@ -28,6 +28,7 @@
 - 当前重点：真相重置、central sync、surface authority convergence、admitted-domain state alignment。
 - 当前真相：四仓已经不在同一集成深度上。`Med Auto Grant` 已落下真实上游 `Hermes-Agent` substrate，`Med Auto Science` 已完成 external runtime bring-up 并进入 real adapter cutover 前态，`RedCube AI` 仍在 upstream pilot prep，而 `OPL` 现在已经在顶层 gateway 之上持有本地 direct product-entry shell。
 - 当前产品入口真相：`OPL` 现在已经有了以 `opl` 为默认前台的本地 direct product-entry shell；`opl <request...>` 可直接作为 quick ask，而 `opl doctor / ask / chat / resume / sessions / logs / repair-hermes-gateway` 继续构成显式命令面，并统一运行在外部 Hermes kernel 之上；hosted / web 入口仍未落地。
+- 当前管理面真相：`opl projects / workspace-status / runtime-status / dashboard` 已经补上第一版顶层管理面，用来观察项目、工作区、会话与 runtime。
 - 当前 hosted / web 真相：这一层的入口选型现已冻结为短期 `LibreChat-first` pilot，目标是最快做出可用 web 前台；长期仍以 `OPL` 自有 web front desk 为准，而不是永久依赖第三方聊天壳。
 - 当前家族级产品入口真相：四仓的 product-entry 成熟度仍然不一致。`OPL` 已有 family-level 本地入口壳，而三个业务仓仍主要暴露 operator / agent entry，后续还要继续补齐 lightweight direct entry。
 - 当前已冻结的 integration choice：`Hermes Kernel Integration` 采用 `external kernel, managed by OPL product packaging`，而不是长期 fork，也不是把 Hermes 手工安装交给用户自己处理。
@@ -79,6 +80,7 @@
 - `references/family-product-entry-and-domain-handoff-architecture.md`
 - `references/family-lightweight-direct-entry-rollout-board.md`
 - `references/mas-top-level-cutover-board.md`
+- `references/opl-frontdesk-delivery-board.md`
 - `references/opl-hosted-web-frontdesk-benchmark.md`
 - `references/opl-product-entry-and-hermes-kernel-integration.md`
 - `references/opl-phase-2-central-reference-sync-board.md`

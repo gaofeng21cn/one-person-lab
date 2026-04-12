@@ -253,6 +253,7 @@ The current truth is still transitional, but it has moved forward:
 - `opl` seeds or resumes an `OPL Front Desk` session on top of the external Hermes kernel
 - `opl "<request...>"` now acts as the fast natural-language path for a one-shot routed ask
 - `opl doctor`, `opl ask`, `opl chat`, `opl resume`, `opl sessions`, `opl logs`, and `opl repair-hermes-gateway` remain the explicit product-entry and runtime-ops command surface
+- `opl projects`, `opl workspace-status`, `opl runtime-status`, and `opl dashboard` now add the first top-level management surface for project, workspace, session, and runtime visibility
 - users no longer need to start from `Codex` just to reach the top-level `OPL` surface locally
 - this landed product entry is still local CLI-first only; the hosted / web front door is still future work
 - the hosted / web benchmark is now frozen: the shortest-path pilot is `LibreChat-first`, while the long-line target remains an `OPL`-owned web front desk; `Chatbot UI` is too thin to act as the main hosted base
@@ -288,6 +289,14 @@ What landed in this repository is the first local shell of that idea:
   - resumes a known Hermes-backed OPL session
 - `opl sessions`, `opl logs`, `opl repair-hermes-gateway`
   - expose machine-readable session and runtime-ops surfaces for the landed local shell
+- `opl projects`
+  - lists the current family-level project surfaces exposed through OPL
+- `opl workspace-status`
+  - inspects one workspace path for git/worktree state and file-surface visibility
+- `opl runtime-status`
+  - reports Hermes runtime health, recent sessions, and runtime-level process resource usage
+- `opl dashboard`
+  - aggregates the current front-desk management view across projects, workspace, and runtime
 
 This new shell does not erase the existing `Phase 1` gateway contract.
 The read-only gateway commands remain the stable top-level contract surface for federation truth.
@@ -312,6 +321,7 @@ For the detailed comparison between fork / user-managed install / managed extern
 For the family-level entry stack and the `OPL -> domain` handoff architecture, see [Family Product Entry And Domain Handoff Architecture](docs/references/family-product-entry-and-domain-handoff-architecture.md).
 For the current hosted / web front-desk benchmark and why `LibreChat-first` beats `Chatbot UI` for the first pilot, see [OPL Hosted / Web Front Desk Benchmark](docs/references/opl-hosted-web-frontdesk-benchmark.md).
 For the family-level rollout order of `OPL` plus the three domain direct-entry surfaces, see [Family Lightweight Direct Entry Rollout Board](docs/references/family-lightweight-direct-entry-rollout-board.md).
+For the current front-desk implementation progress, see [OPL Front Desk Delivery Board](docs/references/opl-frontdesk-delivery-board.md).
 
 ## Shared Operating Pattern
 

@@ -30,6 +30,7 @@ If you need to understand what `OPL` is today, go back to:
 - `family-product-entry-and-domain-handoff-architecture.md`
 - `family-lightweight-direct-entry-rollout-board.md`
 - `mas-top-level-cutover-board.md`
+- `opl-frontdesk-delivery-board.md`
 - `opl-hosted-web-frontdesk-benchmark.md`
 - `opl-product-entry-and-hermes-kernel-integration.md`
 - `opl-vertical-online-agent-platform-roadmap.md`

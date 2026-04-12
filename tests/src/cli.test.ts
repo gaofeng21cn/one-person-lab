@@ -98,6 +98,25 @@ ${handlerBody}
   };
 }
 
+function createFakePsFixture(output: string) {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-ps-fixture-'));
+  const psPath = path.join(fixtureRoot, 'ps');
+  fs.writeFileSync(
+    psPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+cat <<'EOF'
+${output}
+EOF
+`,
+    { mode: 0o755 },
+  );
+  return {
+    fixtureRoot,
+    psPath,
+  };
+}
+
 function assertContractsContext(
   output: { contracts_context?: { contracts_dir: string; contracts_root_source: string } },
   contractsRootSource: string,
@@ -348,6 +367,31 @@ exit 1
   }
 });
 
+test('projects returns the current OPL family project surfaces', () => {
+  const output = runCli(['projects']);
+
+  assert.equal(output.version, 'g2');
+  assert.equal(output.projects.length, 3);
+  assert.equal(output.projects[0].project_id, 'opl');
+  assert.equal(output.projects[0].scope, 'family_gateway');
+  assert.equal(output.projects[0].direct_entry_surface, 'opl');
+  assert.equal(output.projects[1].project_id, 'medautoscience');
+  assert.equal(output.projects[2].project_id, 'redcube');
+});
+
+test('workspace-status reports git and worktree visibility for one workspace path', () => {
+  const output = runCli(['workspace-status', '--path', repoRoot]);
+
+  assert.equal(output.version, 'g2');
+  assert.equal(output.workspace.absolute_path, repoRoot);
+  assert.equal(output.workspace.kind, 'directory');
+  assert.equal(output.workspace.entries.total > 0, true);
+  assert.equal(output.workspace.git.inside_work_tree, true);
+  assert.equal(output.workspace.git.root, repoRoot);
+  assert.equal(typeof output.workspace.git.linked_worktree, 'boolean');
+  assert.equal(typeof output.workspace.git.is_clean, 'boolean');
+});
+
 test('bare opl command seeds a front-desk session when not attached to a tty', () => {
   const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
 if [ "$1" = "chat" ]; then
@@ -551,6 +595,140 @@ exit 1
     assert.equal(output.product_entry.sessions[1].preview, 'Medical grant revision session');
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime-status reports Hermes runtime health, sessions, and process usage', () => {
+  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "version" ]; then
+  echo "Hermes Agent v9.9.9-test"
+  exit 0
+fi
+if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
+  cat <<'EOF'
+Launchd plist: /tmp/ai.hermes.gateway.plist
+✓ Service definition matches the current Hermes install
+✓ Gateway service is loaded
+EOF
+  exit 0
+fi
+if [ "$1" = "status" ]; then
+  cat <<'EOF'
+◆ Environment
+  Project:      /tmp/hermes-agent
+  Model:        gpt-5.4
+◆ Terminal Backend
+  Backend:      local
+◆ Messaging Platforms
+  Telegram      ✓ configured
+  Slack         ✗ not configured
+◆ Gateway Service
+  Status:       ✓ loaded
+  Manager:      launchd
+◆ Scheduled Jobs
+  Jobs:         2
+◆ Sessions
+  Active:       3
+EOF
+  exit 0
+fi
+if [ "$1" = "sessions" ] && [ "$2" = "list" ]; then
+  cat <<'EOF'
+Preview                                            Last Active   Src    ID
+───────────────────────────────────────────────────────────────────────────────────────────────
+OPL dashboard session                              1m ago        cli    sess_dash
+RedCube active session                             2m ago        api_server sess_redcube
+EOF
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+  const psFixture = createFakePsFixture(`27025 1 0.1 0.2 49616 22:46 /Users/test/.hermes/venv/bin/python -m hermes_cli.main gateway run --replace
+27026 27025 5.2 1.1 125000 00:31 /Users/test/.hermes/venv/bin/python -m hermes_cli.main chat --resume sess_dash`);
+
+  try {
+    const output = runCli(['runtime-status', '--limit', '2'], {
+      OPL_HERMES_BIN: hermesPath,
+      PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
+    });
+
+    assert.equal(output.version, 'g2');
+    assert.equal(output.runtime_status.runtime_substrate, 'external_hermes_kernel');
+    assert.equal(output.runtime_status.hermes.binary.path, hermesPath);
+    assert.equal(output.runtime_status.status_report.parsed.summary.active_sessions, 3);
+    assert.equal(output.runtime_status.status_report.parsed.summary.scheduled_jobs, 2);
+    assert.deepEqual(output.runtime_status.status_report.parsed.summary.configured_messaging_platforms, ['Telegram']);
+    assert.equal(output.runtime_status.recent_sessions.sessions.length, 2);
+    assert.equal(output.runtime_status.process_usage.summary.process_count, 2);
+    assert.equal(output.runtime_status.process_usage.processes[0].role, 'gateway');
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(psFixture.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('dashboard aggregates front-desk management surfaces into one view', () => {
+  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "version" ]; then
+  echo "Hermes Agent v9.9.9-test"
+  exit 0
+fi
+if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
+  cat <<'EOF'
+Launchd plist: /tmp/ai.hermes.gateway.plist
+✓ Service definition matches the current Hermes install
+✓ Gateway service is loaded
+EOF
+  exit 0
+fi
+if [ "$1" = "status" ]; then
+  cat <<'EOF'
+◆ Environment
+  Project:      /tmp/hermes-agent
+◆ Gateway Service
+  Status:       ✓ loaded
+  Manager:      launchd
+◆ Scheduled Jobs
+  Jobs:         0
+◆ Sessions
+  Active:       1
+EOF
+  exit 0
+fi
+if [ "$1" = "sessions" ] && [ "$2" = "list" ]; then
+  cat <<'EOF'
+Preview                                            Last Active   Src    ID
+───────────────────────────────────────────────────────────────────────────────────────────────
+OPL dashboard session                              1m ago        cli    sess_dash
+EOF
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+  const psFixture = createFakePsFixture(`27025 1 0.1 0.2 49616 22:46 /Users/test/.hermes/venv/bin/python -m hermes_cli.main gateway run --replace`);
+
+  try {
+    const output = runCli(['dashboard', '--path', repoRoot, '--sessions-limit', '1'], {
+      OPL_HERMES_BIN: hermesPath,
+      PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
+    });
+
+    assert.equal(output.version, 'g2');
+    assert.equal(output.dashboard.front_desk.direct_entry_command, 'opl');
+    assert.equal(output.dashboard.front_desk.hosted_web_status, 'pilot_frozen_not_landed');
+    assert.equal(output.dashboard.projects.length, 3);
+    assert.equal(output.dashboard.workspace.absolute_path, repoRoot);
+    assert.equal(output.dashboard.runtime_status.recent_sessions.sessions.length, 1);
+    assert.deepEqual(output.dashboard.front_desk.rollout_board_refs, [
+      'docs/references/opl-hosted-web-frontdesk-benchmark.md',
+      'docs/references/family-lightweight-direct-entry-rollout-board.md',
+      'docs/references/mas-top-level-cutover-board.md',
+    ]);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(psFixture.fixtureRoot, { recursive: true, force: true });
   }
 });
 

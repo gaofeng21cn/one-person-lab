@@ -4,7 +4,7 @@
 
 - 仓库角色：顶层 gateway 与 federation surface，domain runtime ownership 留在各自的 admitted domain 仓
 - 当前开发宿主：`Codex` 长线自治会话
-- 当前产品入口真相：`OPL` 已经落下本地 direct product-entry shell，默认前台命令就是 `opl`；`opl <request...>` 可直接作为 quick ask，而 `opl doctor / ask / chat / resume / sessions / logs / repair-hermes-gateway` 构成显式入口与 runtime 运维命令面。用户在本机上不再必须先通过 `Codex` 才能触达顶层 `OPL`。但这仍只是 local CLI-first 入口壳，不是 hosted / web 前台
+- 当前产品入口真相：`OPL` 已经落下本地 direct product-entry shell，默认前台命令就是 `opl`；`opl <request...>` 可直接作为 quick ask，而 `opl doctor / ask / chat / resume / sessions / logs / repair-hermes-gateway` 构成显式入口与 runtime 运维命令面。`opl projects / workspace-status / runtime-status / dashboard` 则补上了第一版顶层管理面。用户在本机上不再必须先通过 `Codex` 才能触达顶层 `OPL`。但这仍只是 local CLI-first 入口壳，不是 hosted / web 前台
 - 当前 hosted / web 前台真相：这轮已经冻结 `OPL` 的 hosted / web 入口选型。短期 pilot 采用 `LibreChat-first`，用于最快做出可用前台；长期仍回到 `OPL` 自有 web front desk。`Chatbot UI` 不作为主 hosted 基座
 - 当前家族级入口真相：四仓的 `product entry` 成熟度仍不一致。`OPL` 已有 family-level 本地入口壳；三个业务仓仍主要停留在不同程度的 `operator entry` / `agent entry`，各自 lightweight direct entry 还要继续补强
 - 当前产品边界：`OPL` 负责顶层 gateway / federation / shared substrate contract，三个 domain 仓继续各自维护自己的产品 runtime
@@ -38,6 +38,7 @@
 - 家族级入口栈与 `OPL -> domain` handoff 架构，统一收口到 `docs/references/family-product-entry-and-domain-handoff-architecture.md`
 - hosted / web 前台选型与 pilot 优先级，统一收口到 `docs/references/opl-hosted-web-frontdesk-benchmark.md`
 - 家族级 lightweight direct entry 推进节奏，统一收口到 `docs/references/family-lightweight-direct-entry-rollout-board.md`
+- `OPL Front Desk` 当前已完成/未完成事项，统一收口到 `docs/references/opl-frontdesk-delivery-board.md`
 - `Med Auto Science` 的顶层切换边界与 `OPL -> MAS` 切换板，统一收口到 `docs/references/mas-top-level-cutover-board.md`
 
 ## 下一阶段

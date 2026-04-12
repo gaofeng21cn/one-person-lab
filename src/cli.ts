@@ -19,6 +19,12 @@ import {
   runProductEntryResume,
   runProductEntrySessions,
 } from './product-entry.ts';
+import {
+  buildFrontDeskDashboard,
+  buildProjectsOverview,
+  buildRuntimeStatus,
+  buildWorkspaceStatus,
+} from './management.ts';
 import { explainDomainBoundary, resolveRequestSurface } from './resolver.ts';
 import type {
   GatewayContracts,
@@ -54,6 +60,19 @@ type LogsCliInput = {
   level?: string;
   component?: string;
   sessionId?: string;
+};
+
+type WorkspaceStatusCliInput = {
+  workspacePath?: string;
+};
+
+type RuntimeStatusCliInput = {
+  limit?: number;
+};
+
+type DashboardCliInput = {
+  workspacePath?: string;
+  sessionsLimit?: number;
 };
 
 function printJson(payload: unknown, stream: NodeJS.WriteStream = process.stdout) {
@@ -350,6 +369,123 @@ function parseLogsArgs(
   return parsed;
 }
 
+function parseWorkspaceStatusArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): WorkspaceStatusCliInput {
+  const parsed: WorkspaceStatusCliInput = {};
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (!token.startsWith('--')) {
+      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
+        token,
+      });
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
+        option: token,
+      });
+    }
+
+    switch (token) {
+      case '--path':
+        parsed.workspacePath = value;
+        break;
+      default:
+        throw buildUsageError(`Unknown option for workspace-status: ${token}.`, spec, {
+          option: token,
+        });
+    }
+
+    index += 1;
+  }
+
+  return parsed;
+}
+
+function parseRuntimeStatusArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): RuntimeStatusCliInput {
+  const parsed: RuntimeStatusCliInput = {};
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (!token.startsWith('--')) {
+      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
+        token,
+      });
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
+        option: token,
+      });
+    }
+
+    switch (token) {
+      case '--limit':
+        parsed.limit = parsePositiveInteger(token, value, spec);
+        break;
+      default:
+        throw buildUsageError(`Unknown option for runtime-status: ${token}.`, spec, {
+          option: token,
+        });
+    }
+
+    index += 1;
+  }
+
+  return parsed;
+}
+
+function parseDashboardArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): DashboardCliInput {
+  const parsed: DashboardCliInput = {};
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (!token.startsWith('--')) {
+      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
+        token,
+      });
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
+        option: token,
+      });
+    }
+
+    switch (token) {
+      case '--path':
+        parsed.workspacePath = value;
+        break;
+      case '--sessions-limit':
+        parsed.sessionsLimit = parsePositiveInteger(token, value, spec);
+        break;
+      default:
+        throw buildUsageError(`Unknown option for dashboard: ${token}.`, spec, {
+          option: token,
+        });
+    }
+
+    index += 1;
+  }
+
+  return parsed;
+}
+
 function looksLikeNaturalLanguage(command: string, args: string[]) {
   if (args.length > 0) {
     return true;
@@ -389,6 +525,10 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl help',
         'opl',
         'opl doctor',
+        'opl projects',
+        'opl workspace-status --path /Users/gaofeng/workspace/redcube-ai',
+        'opl runtime-status --limit 10',
+        'opl dashboard --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
         'opl "Plan a medical grant proposal revision loop."',
         'opl ask "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck',
         'opl chat "Plan a medical grant proposal revision loop."',
@@ -646,6 +786,39 @@ function main() {
         const validation = validateGatewayContracts(parsedInput.loadOptions);
         return buildProductEntryDoctor(validation);
       },
+    },
+    projects: {
+      usage: 'opl projects',
+      summary: 'List the current OPL family project surfaces and their admitted workstreams.',
+      examples: ['opl projects'],
+      handler: () => buildProjectsOverview(getContracts()),
+    },
+    'workspace-status': {
+      usage: 'opl workspace-status [--path <workspace_path>]',
+      summary: 'Inspect one workspace path for git/worktree state and file-surface visibility.',
+      examples: [
+        'opl workspace-status',
+        'opl workspace-status --path /Users/gaofeng/workspace/redcube-ai',
+      ],
+      handler: (args) => buildWorkspaceStatus(parseWorkspaceStatusArgs(args, commandSpecs['workspace-status'])),
+    },
+    'runtime-status': {
+      usage: 'opl runtime-status [--limit <n>]',
+      summary: 'Show Hermes runtime health, recent sessions, and runtime-level process resource usage.',
+      examples: ['opl runtime-status', 'opl runtime-status --limit 10'],
+      handler: (args) => {
+        const parsed = parseRuntimeStatusArgs(args, commandSpecs['runtime-status']);
+        return buildRuntimeStatus({ sessionsLimit: parsed.limit });
+      },
+    },
+    dashboard: {
+      usage: 'opl dashboard [--path <workspace_path>] [--sessions-limit <n>]',
+      summary: 'Aggregate the current OPL front-desk management view across projects, workspace, and runtime.',
+      examples: [
+        'opl dashboard',
+        'opl dashboard --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
+      ],
+      handler: (args) => buildFrontDeskDashboard(getContracts(), parseDashboardArgs(args, commandSpecs.dashboard)),
     },
     ask: {
       usage: 'opl ask <request...> [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--model <model>] [--provider <provider>] [--skills <skills>] [--dry-run]',
