@@ -118,6 +118,79 @@ EOF
   };
 }
 
+function createFakeLaunchctlFixture() {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-launchctl-fixture-'));
+  const stateDir = path.join(fixtureRoot, 'state');
+  fs.mkdirSync(stateDir, { recursive: true });
+  const launchctlPath = path.join(fixtureRoot, 'launchctl');
+  fs.writeFileSync(
+    launchctlPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+STATE_DIR="${stateDir}"
+CALLS="$STATE_DIR/calls.log"
+mkdir -p "$STATE_DIR"
+printf '%s\\n' "$*" >> "$CALLS"
+
+case "$1" in
+  bootstrap)
+    touch "$STATE_DIR/loaded"
+    exit 0
+    ;;
+  bootout)
+    rm -f "$STATE_DIR/loaded"
+    exit 0
+    ;;
+  kickstart)
+    touch "$STATE_DIR/loaded"
+    exit 0
+    ;;
+  print)
+    if [ -f "$STATE_DIR/loaded" ]; then
+      cat <<'EOF'
+service = ai.opl.frontdesk
+state = running
+EOF
+      exit 0
+    fi
+    echo "service not loaded" >&2
+    exit 113
+    ;;
+esac
+
+echo "unexpected launchctl args: $*" >&2
+exit 1
+`,
+    { mode: 0o755 },
+  );
+
+  return {
+    fixtureRoot,
+    launchctlPath,
+    callsPath: path.join(stateDir, 'calls.log'),
+  };
+}
+
+function createFakeOpenFixture() {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-open-fixture-'));
+  const capturePath = path.join(fixtureRoot, 'open.log');
+  const openPath = path.join(fixtureRoot, 'open');
+  fs.writeFileSync(
+    openPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\\n' "$*" > "${capturePath}"
+`,
+    { mode: 0o755 },
+  );
+
+  return {
+    fixtureRoot,
+    openPath,
+    capturePath,
+  };
+}
+
 async function startCliServer(
   args: string[],
   envOverrides: Record<string, string> = {},
@@ -858,6 +931,83 @@ test('frontdesk-manifest exposes the hosted-friendly OPL shell contract without 
   assert.equal(output.frontdesk_manifest.endpoints.logs, '/api/logs');
 });
 
+test('frontdesk-service commands manage the local launchd wrapper for the web pilot', async () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-frontdesk-home-'));
+  const launchctlFixture = createFakeLaunchctlFixture();
+  const openFixture = createFakeOpenFixture();
+  const serviceEnv = {
+    HOME: homeRoot,
+    OPL_LAUNCHCTL_BIN: launchctlFixture.launchctlPath,
+    OPL_OPEN_BIN: openFixture.openPath,
+  };
+  const configuredPort = 8911;
+
+  try {
+    const install = runCli([
+      'frontdesk-service-install',
+      '--host',
+      '127.0.0.1',
+      '--port',
+      String(configuredPort),
+      '--path',
+      repoRoot,
+      '--sessions-limit',
+      '7',
+    ], serviceEnv);
+
+    assert.equal(install.frontdesk_service.action, 'install');
+    assert.equal(install.frontdesk_service.installed, true);
+    assert.equal(install.frontdesk_service.loaded, true);
+    assert.equal(install.frontdesk_service.base_url, `http://127.0.0.1:${configuredPort}`);
+    assert.equal(install.frontdesk_service.paths.launch_agent_plist.endsWith('.plist'), true);
+    assert.equal(fs.existsSync(install.frontdesk_service.paths.launch_agent_plist), true);
+    assert.equal(fs.existsSync(install.frontdesk_service.paths.config_file), true);
+
+    const plistText = fs.readFileSync(install.frontdesk_service.paths.launch_agent_plist, 'utf8');
+    assert.match(plistText, /<string>web<\/string>/);
+    assert.match(plistText, new RegExp(String(configuredPort)));
+
+    const statusWithoutHealth = runCli(['frontdesk-service-status'], serviceEnv);
+    assert.equal(statusWithoutHealth.frontdesk_service.action, 'status');
+    assert.equal(statusWithoutHealth.frontdesk_service.installed, true);
+    assert.equal(statusWithoutHealth.frontdesk_service.loaded, true);
+    assert.equal(statusWithoutHealth.frontdesk_service.health.status, 'unreachable');
+
+    const statusWithHealth = runCli(['frontdesk-service-status'], serviceEnv);
+    assert.equal(statusWithHealth.frontdesk_service.loaded, true);
+    assert.equal(statusWithHealth.frontdesk_service.health.status, 'unreachable');
+    assert.equal(
+      statusWithHealth.frontdesk_service.health.url,
+      `http://127.0.0.1:${configuredPort}/api/health`,
+    );
+
+    const openOutput = runCli(['frontdesk-service-open'], serviceEnv);
+    assert.equal(openOutput.frontdesk_service.action, 'open');
+    assert.match(fs.readFileSync(openFixture.capturePath, 'utf8'), new RegExp(String(configuredPort)));
+
+    const stopOutput = runCli(['frontdesk-service-stop'], serviceEnv);
+    assert.equal(stopOutput.frontdesk_service.action, 'stop');
+    assert.equal(stopOutput.frontdesk_service.loaded, false);
+
+    const stoppedStatus = runCli(['frontdesk-service-status'], serviceEnv);
+    assert.equal(stoppedStatus.frontdesk_service.loaded, false);
+    assert.equal(stoppedStatus.frontdesk_service.health.status, 'not_running');
+
+    const startOutput = runCli(['frontdesk-service-start'], serviceEnv);
+    assert.equal(startOutput.frontdesk_service.action, 'start');
+    assert.equal(startOutput.frontdesk_service.loaded, true);
+
+    const uninstallOutput = runCli(['frontdesk-service-uninstall'], serviceEnv);
+    assert.equal(uninstallOutput.frontdesk_service.action, 'uninstall');
+    assert.equal(uninstallOutput.frontdesk_service.installed, false);
+    assert.equal(fs.existsSync(install.frontdesk_service.paths.launch_agent_plist), false);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(launchctlFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(openFixture.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('web starts a local front-desk pilot and serves dashboard plus ask surfaces', async () => {
   const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
 if [ "$1" = "version" ]; then
@@ -1540,6 +1690,11 @@ test('help returns command discovery and runnable examples', () => {
     output.help.commands.some((entry: { command: string }) => entry.command === 'validate-contracts'),
   );
   assert.ok(
+    ['frontdesk-service-install', 'frontdesk-service-status', 'frontdesk-service-open'].every((command) =>
+      output.help.commands.some((entry: { command: string }) => entry.command === command),
+    ),
+  );
+  assert.ok(
     output.help.commands.some(
       (entry: { command: string; examples: string[] }) =>
         entry.command === 'validate-contracts'
@@ -1574,6 +1729,16 @@ test('command --help returns command-scoped usage and examples', () => {
   assert.equal(output.help.command, 'get-domain');
   assert.equal(output.help.usage, 'opl get-domain <domain_id>');
   assert.ok(output.help.examples.includes('opl get-domain redcube'));
+});
+
+test('frontdesk-service-install --help returns command-scoped usage and examples', () => {
+  const output = runCli(['frontdesk-service-install', '--help']);
+
+  assertNoContractsProvenance(output);
+  assert.equal(output.version, 'g2');
+  assert.equal(output.help.command, 'frontdesk-service-install');
+  assert.match(output.help.usage, /opl frontdesk-service-install/);
+  assert.ok(output.help.examples.includes('opl frontdesk-service-install --port 8787'));
 });
 
 test('help <command> returns the same payload as command --help', () => {

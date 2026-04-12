@@ -9,6 +9,14 @@ import {
   validateGatewayContracts,
 } from './contracts.ts';
 import {
+  getFrontDeskServiceStatus,
+  installFrontDeskService,
+  openFrontDeskService,
+  startFrontDeskService,
+  stopFrontDeskService,
+  uninstallFrontDeskService,
+} from './frontdesk-service.ts';
+import {
   buildProductEntryDoctor,
   type ProductEntryCliInput,
   runProductEntryAsk,
@@ -559,6 +567,19 @@ function parseWebArgs(
   return parsed;
 }
 
+function assertNoArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+) {
+  if (args.length === 0) {
+    return;
+  }
+
+  throw buildUsageError(`Unexpected positional argument: ${args[0]}.`, spec, {
+    token: args[0],
+  });
+}
+
 function looksLikeNaturalLanguage(command: string, args: string[]) {
   if (args.length > 0) {
     return true;
@@ -600,6 +621,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl doctor',
         'opl projects',
         'opl frontdesk-manifest',
+        'opl frontdesk-service-install --port 8787',
         'opl workspace-status --path /Users/gaofeng/workspace/redcube-ai',
         'opl runtime-status --limit 10',
         'opl dashboard --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
@@ -901,6 +923,63 @@ async function main() {
         'Expose the hosted-friendly OPL front-desk shell contract without claiming hosted packaging is already landed.',
       examples: ['opl frontdesk-manifest'],
       handler: () => buildFrontDeskManifest(getContracts()),
+    },
+    'frontdesk-service-install': {
+      usage: 'opl frontdesk-service-install [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>]',
+      summary:
+        'Install and bootstrap a local launchd-managed OPL web front-desk service for long-running direct entry.',
+      examples: [
+        'opl frontdesk-service-install',
+        'opl frontdesk-service-install --port 8787',
+        'opl frontdesk-service-install --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 10',
+      ],
+      handler: (args) => installFrontDeskService(getContracts(), parseWebArgs(args, commandSpecs['frontdesk-service-install'])),
+    },
+    'frontdesk-service-status': {
+      usage: 'opl frontdesk-service-status',
+      summary:
+        'Inspect whether the local launchd-managed OPL web front desk is installed, loaded, and reachable.',
+      examples: ['opl frontdesk-service-status'],
+      handler: (args) => {
+        assertNoArgs(args, commandSpecs['frontdesk-service-status']);
+        return getFrontDeskServiceStatus(getContracts());
+      },
+    },
+    'frontdesk-service-start': {
+      usage: 'opl frontdesk-service-start',
+      summary: 'Bootstrap and kickstart the installed local OPL web front-desk service.',
+      examples: ['opl frontdesk-service-start'],
+      handler: (args) => {
+        assertNoArgs(args, commandSpecs['frontdesk-service-start']);
+        return startFrontDeskService(getContracts());
+      },
+    },
+    'frontdesk-service-stop': {
+      usage: 'opl frontdesk-service-stop',
+      summary: 'Stop the installed local OPL web front-desk service without removing its packaging files.',
+      examples: ['opl frontdesk-service-stop'],
+      handler: (args) => {
+        assertNoArgs(args, commandSpecs['frontdesk-service-stop']);
+        return stopFrontDeskService(getContracts());
+      },
+    },
+    'frontdesk-service-open': {
+      usage: 'opl frontdesk-service-open',
+      summary: 'Open the configured local OPL web front-desk URL in the default browser.',
+      examples: ['opl frontdesk-service-open'],
+      handler: (args) => {
+        assertNoArgs(args, commandSpecs['frontdesk-service-open']);
+        return openFrontDeskService(getContracts());
+      },
+    },
+    'frontdesk-service-uninstall': {
+      usage: 'opl frontdesk-service-uninstall',
+      summary: 'Remove the local launchd-managed OPL web front-desk service packaging.',
+      examples: ['opl frontdesk-service-uninstall'],
+      handler: (args) => {
+        assertNoArgs(args, commandSpecs['frontdesk-service-uninstall']);
+        return uninstallFrontDeskService(getContracts());
+      },
     },
     web: {
       usage: 'opl web [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>]',

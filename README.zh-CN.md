@@ -248,10 +248,11 @@
 - `OPL` 现在已经有了以 `opl` 为默认入口的本地 direct product-entry shell
 - `opl` 会直接进入 `OPL Front Desk`，在外部 Hermes kernel 之上种入或恢复会话
 - `opl "<request...>"` 现在已经成为自然语言 quick ask 的快捷路径
-- `opl doctor`、`opl ask`、`opl chat`、`opl resume`、`opl sessions`、`opl logs`、`opl repair-hermes-gateway` 继续构成显式的产品入口与 runtime 运维命令面
+- `opl doctor`、`opl ask`、`opl chat`、`opl resume`、`opl sessions`、`opl logs`、`opl repair-hermes-gateway` 以及 `frontdesk-service-*` 继续构成显式的产品入口与 runtime 运维命令面
 - `opl frontdesk-manifest` 现在补上了 hosted-friendly shell contract，方便未来 web 壳接入，同时不夸大 hosted readiness
 - `opl projects`、`opl workspace-status`、`opl runtime-status`、`opl dashboard` 现在补上了第一版顶层管理面，用来观察项目、工作区、会话与 runtime
 - `opl web` 现在补上了本地 web front desk pilot，可以直接从浏览器进入 OPL、做 quick ask，并观察 workspace、runtime，以及 hosted-friendly 的 `health / manifest / sessions / resume / logs` 界面
+- `opl frontdesk-service-install|status|start|stop|open|uninstall` 现在又补上了基于 launchd 的 service-safe 本地包装层，让 OPL 的浏览器入口不再只能靠手动挂着终端
 - 用户在本机上不再必须先进入 `Codex`，才能触达顶层 `OPL` surface
 - 这次落地的 product entry 已经同时包含本地 CLI-first 入口壳与本地 web front desk pilot；但 hosted 前台仍未落地，hosted 包装仍是后续工作
 - hosted / web 这一层的选型现在也已经冻结：短期最快可用路线是 `LibreChat-first`，长期目标仍是 `OPL` 自有 web front desk；`Chatbot UI` 太薄，不适合作为主 hosted 基座
@@ -287,6 +288,8 @@
   - 恢复一个已存在的 Hermes-backed OPL 会话
 - `opl sessions`、`opl logs`、`opl repair-hermes-gateway`
   - 暴露这层本地 shell 的 machine-readable 会话与 runtime 运维界面
+- `opl frontdesk-service-install|status|start|stop|open|uninstall`
+  - 安装并管理 launchd 驱动的本地 OPL web front desk，让浏览器入口可以长期运行，而不需要人工盯着终端
 - `opl frontdesk-manifest`
   - 暴露 hosted-friendly front desk contract，给后续 web 壳接入使用，同时保持 hosted 包装状态描述诚实
 - `opl projects`

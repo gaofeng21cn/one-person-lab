@@ -225,7 +225,8 @@
 - `opl ask`
 - `opl chat`
 
-后续剩余工作是把这层入口继续做成更稳定的 service-safe packaging，并向 hosted / web 入口推进。
+这一步现在已经继续往前落下了一层 service-safe 的本地 front desk packaging；
+后续剩余工作则变成把这层本地 packaging 继续往真正的 hosted shell 接壳与 hosted / web 入口推进。
 
 ### S4. 进入 hosted / web 化
 

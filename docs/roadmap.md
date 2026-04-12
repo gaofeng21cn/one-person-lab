@@ -57,7 +57,7 @@ The next phase should prioritize:
 - carrying the `Agent-first` plus `Auto-only current repo + future HITL layering` doctrine into future candidate-domain definitions
 - keeping the absorbed `Phase 1 exit + next-stage activation package freeze` explicit as the predecessor gate for the current `Minimal admitted-domain federation activation package`, with every candidate path staying in explicit admission, discovery, routing, and handoff review lanes
 - defining the next candidate domains through clear task boundaries and delivery objects, using the current `task-topology + candidate-domain-backlog + domain-onboarding` path
-- hardening the landed local product-entry shell so it stays service-safe, Hermes-backed, and clearly separated from the read-only gateway contract surface
+- landing and then hardening a service-safe local product-entry shell so it stays Hermes-backed and clearly separated from the read-only gateway contract surface
 - extending that landed local shell toward stronger `OPL bootstrap / launcher` responsibility so the future entry remains `OPL`-owned even when the runtime kernel stays external
 - carrying the hosted / web front-desk route as `LibreChat-first pilot -> OPL-owned web front desk` instead of treating a generic chat shell as the final product identity
 

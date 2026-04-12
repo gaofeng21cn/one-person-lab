@@ -252,10 +252,11 @@ The current truth is still transitional, but it has moved forward:
 - `OPL` now ships a local direct product-entry shell whose default front door is `opl`
 - `opl` seeds or resumes an `OPL Front Desk` session on top of the external Hermes kernel
 - `opl "<request...>"` now acts as the fast natural-language path for a one-shot routed ask
-- `opl doctor`, `opl ask`, `opl chat`, `opl resume`, `opl sessions`, `opl logs`, and `opl repair-hermes-gateway` remain the explicit product-entry and runtime-ops command surface
+- `opl doctor`, `opl ask`, `opl chat`, `opl resume`, `opl sessions`, `opl logs`, `opl repair-hermes-gateway`, and the `frontdesk-service-*` commands remain the explicit product-entry and runtime-ops command surface
 - `opl frontdesk-manifest` now freezes the hosted-friendly shell contract that future web shells can consume without overstating hosted readiness
 - `opl projects`, `opl workspace-status`, `opl runtime-status`, and `opl dashboard` now add the first top-level management surface for project, workspace, session, and runtime visibility
 - `opl web` now lands a local web front desk pilot for browser-based direct entry, quick ask, workspace inspection, runtime visibility, and hosted-friendly `health / manifest / sessions / resume / logs` surfaces
+- `opl frontdesk-service-install|status|start|stop|open|uninstall` now add a service-safe local packaging layer for the OPL web front desk on top of launchd
 - users no longer need to start from `Codex` just to reach the top-level `OPL` surface locally
 - this landed product entry now includes both the local CLI-first shell and a local web front desk pilot; the hosted front door is still not landed and hosted packaging remains future work
 - the hosted / web benchmark is now frozen: the shortest-path pilot is `LibreChat-first`, while the long-line target remains an `OPL`-owned web front desk; `Chatbot UI` is too thin to act as the main hosted base
@@ -291,6 +292,8 @@ What landed in this repository is the first local shell of that idea:
   - resumes a known Hermes-backed OPL session
 - `opl sessions`, `opl logs`, `opl repair-hermes-gateway`
   - expose machine-readable session and runtime-ops surfaces for the landed local shell
+- `opl frontdesk-service-install|status|start|stop|open|uninstall`
+  - install and manage a launchd-backed local OPL web front desk so the browser entry can stay long-running without manual terminal babysitting
 - `opl frontdesk-manifest`
   - exposes the hosted-friendly front-desk contract for future web shells while keeping hosted packaging status honest
 - `opl projects`

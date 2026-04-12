@@ -89,6 +89,23 @@
 - 这层 contract 可以服务后续 `LibreChat-first` 或自有 web front desk 的接壳工作；
 - 但它仍然只是 hosted-friendly local surface，不等于 hosted packaging / hosted runtime 已完成。
 
+### F2.C. service-safe 本地包装层
+
+已完成：
+
+- `opl frontdesk-service-install`
+- `opl frontdesk-service-status`
+- `opl frontdesk-service-start`
+- `opl frontdesk-service-stop`
+- `opl frontdesk-service-open`
+- `opl frontdesk-service-uninstall`
+
+当前含义：
+
+- `OPL` 的本地浏览器前台已经不再只能依赖“手动开一个终端跑 `opl web`”；
+- 当前已经有了 launchd 驱动的 service-safe 本地包装层，可以把本地 front desk 作为长期运行的入口服务管理；
+- 但这仍然只是 local product packaging，不等于 hosted packaging，更不等于 `LibreChat-first` 已接上。
+
 ### F3. hosted / web 路线冻结
 
 已完成：
@@ -109,6 +126,7 @@
 
 - 虽然已经有本地可打开的 web front desk pilot；
 - 虽然也已经有 hosted-friendly manifest / health / session / logs contract surface；
+- 虽然现在也已经有了 service-safe 的本地 packaging；
 - 但还没有 service-safe 的 hosted packaging；
 - 也还没有把 `LibreChat-first` 这条 hosted pilot 路线正式接起来。
 
@@ -139,7 +157,7 @@
 
 方向：
 
-- 在已落地的本地 web pilot 之上继续做 hosted packaging；
+- 在已落地的本地 web pilot、hosted-friendly shell contract 与本地 service packaging 之上继续做 hosted packaging；
 - 把 service、session、handoff、runtime ops 与后续 hosted 壳接起来。
 
 ### I2. family handoff 与 domain lightweight direct entry 对齐
@@ -168,5 +186,5 @@
 
 ## 一句话结论
 
-`OPL Front Desk` 这条线现在已经从“只有 CLI 说明面”走到了“有本地 CLI 入口 + 有管理面 + 有本地 web pilot + 有 hosted-friendly shell contract + 有明确 hosted 路线”的状态。
+`OPL Front Desk` 这条线现在已经从“只有 CLI 说明面”走到了“有本地 CLI 入口 + 有管理面 + 有本地 web pilot + 有 hosted-friendly shell contract + 有 service-safe 本地包装层 + 有明确 hosted 路线”的状态。
 下一步不该再回头争论方向，而是把 hosted shell 接壳、hosted packaging 和后续家族级 direct entry 继续压实。

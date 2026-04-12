@@ -57,7 +57,7 @@
 - 把 `Agent-first` 加“当前 `Auto-only` 主线 + 未来 `HITL` 分层”这套原则带入后续候选 domain 的定义
 - 把已 absorb 的 `Phase 1 exit + next-stage activation package freeze` 继续显式保留为当前 `Minimal admitted-domain federation activation package` 的前序门槛，并让所有 candidate path 持续处在 admission、discovery、routing 与 handoff 的显式审查轨道中
 - 用清楚的任务边界与交付对象定义下一个候选 domain，并优先沿用当前 `task-topology + candidate-domain-backlog + domain-onboarding` 这条路径
-- 把已落地的本地 product-entry shell 继续做成 service-safe、Hermes-backed、且不与 read-only gateway contract 混淆的真实入口层
+- 把本地 product-entry shell 进一步落成并继续硬化为 service-safe、Hermes-backed、且不与 read-only gateway contract 混淆的真实入口层
 - 继续冻结 `OPL bootstrap / launcher` 的职责边界，确保未来即使 kernel 继续外置，产品入口仍由 `OPL` 自己持有
 - 把 hosted / web 前台路线固定为 `LibreChat-first pilot -> OPL 自有 web front desk`，不把任何通用聊天壳误写成最终产品身份
 
