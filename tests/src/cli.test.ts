@@ -1,9 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync, type ChildProcessByStdio } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import type { Readable } from 'node:stream';
 import { fileURLToPath } from 'node:url';
 
 import {
@@ -115,6 +116,91 @@ EOF
     fixtureRoot,
     psPath,
   };
+}
+
+async function startCliServer(
+  args: string[],
+  envOverrides: Record<string, string> = {},
+  timeoutMs = 10_000,
+): Promise<{
+  child: ChildProcessByStdio<null, Readable, Readable>;
+  payload: Record<string, unknown>;
+  stdout: string;
+  stderr: string;
+}> {
+  return await new Promise((resolve, reject) => {
+    const child = spawn(
+      process.execPath,
+      ['--experimental-strip-types', cliPath, ...args],
+      {
+        cwd: repoRoot,
+        env: {
+          ...process.env,
+          NODE_NO_WARNINGS: '1',
+          ...envOverrides,
+        },
+        stdio: ['ignore', 'pipe', 'pipe'],
+      },
+    );
+    let stdout = '';
+    let stderr = '';
+
+    const finishReject = (message: string) => {
+      clearTimeout(timeout);
+      child.kill('SIGTERM');
+      reject(new Error(`${message}\nstdout=${stdout}\nstderr=${stderr}`));
+    };
+
+    const onExit = (code: number | null, signal: NodeJS.Signals | null) => {
+      finishReject(`CLI server exited before startup payload was ready (code=${code}, signal=${signal}).`);
+    };
+
+    const timeout = setTimeout(() => {
+      finishReject('Timed out while waiting for CLI server startup payload.');
+    }, timeoutMs);
+
+    child.once('exit', onExit);
+    child.stderr.on('data', (chunk: Buffer | string) => {
+      stderr += chunk.toString();
+    });
+    child.stdout.on('data', (chunk: Buffer | string) => {
+      stdout += chunk.toString();
+
+      try {
+        const payload = JSON.parse(stdout.trim()) as Record<string, unknown>;
+        clearTimeout(timeout);
+        child.off('exit', onExit);
+        resolve({
+          child,
+          payload,
+          stdout,
+          stderr,
+        });
+      } catch {
+        // Wait until the full startup payload is written.
+      }
+    });
+  });
+}
+
+async function stopCliServer(child: ChildProcessByStdio<null, Readable, Readable>) {
+  if (child.exitCode !== null || child.signalCode !== null) {
+    return;
+  }
+
+  await new Promise<void>((resolve) => {
+    const forceKill = setTimeout(() => {
+      if (child.exitCode === null && child.signalCode === null) {
+        child.kill('SIGKILL');
+      }
+    }, 2_000);
+
+    child.once('exit', () => {
+      clearTimeout(forceKill);
+      resolve();
+    });
+    child.kill('SIGTERM');
+  });
 }
 
 function assertContractsContext(
@@ -717,16 +803,154 @@ exit 1
 
     assert.equal(output.version, 'g2');
     assert.equal(output.dashboard.front_desk.direct_entry_command, 'opl');
-    assert.equal(output.dashboard.front_desk.hosted_web_status, 'pilot_frozen_not_landed');
+    assert.equal(output.dashboard.front_desk.local_web_frontdesk_status, 'pilot_landed');
+    assert.equal(output.dashboard.front_desk.hosted_web_status, 'librechat_pilot_frozen_not_landed');
     assert.equal(output.dashboard.projects.length, 3);
     assert.equal(output.dashboard.workspace.absolute_path, repoRoot);
     assert.equal(output.dashboard.runtime_status.recent_sessions.sessions.length, 1);
     assert.deepEqual(output.dashboard.front_desk.rollout_board_refs, [
+      'docs/references/opl-frontdesk-delivery-board.md',
       'docs/references/opl-hosted-web-frontdesk-benchmark.md',
       'docs/references/family-lightweight-direct-entry-rollout-board.md',
       'docs/references/mas-top-level-cutover-board.md',
     ]);
   } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(psFixture.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('help advertises the local web front-desk pilot command surface', () => {
+  const output = runCli(['help']);
+
+  assert.ok(
+    output.help.commands.some((entry: { command: string }) => entry.command === 'web'),
+  );
+
+  const scoped = runCli(['web', '--help']);
+  assert.equal(scoped.help.command, 'web');
+  assert.match(scoped.help.usage, /opl web/);
+});
+
+test('web starts a local front-desk pilot and serves dashboard plus ask surfaces', async () => {
+  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "version" ]; then
+  echo "Hermes Agent v9.9.9-test"
+  exit 0
+fi
+if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
+  cat <<'EOF'
+Launchd plist: /tmp/ai.hermes.gateway.plist
+✓ Service definition matches the current Hermes install
+✓ Gateway service is loaded
+EOF
+  exit 0
+fi
+if [ "$1" = "status" ]; then
+  cat <<'EOF'
+◆ Environment
+  Project:      /tmp/hermes-agent
+◆ Gateway Service
+  Status:       ✓ loaded
+  Manager:      launchd
+◆ Scheduled Jobs
+  Jobs:         1
+◆ Sessions
+  Active:       2
+EOF
+  exit 0
+fi
+if [ "$1" = "sessions" ] && [ "$2" = "list" ]; then
+  cat <<'EOF'
+Preview                                            Last Active   Src    ID
+───────────────────────────────────────────────────────────────────────────────────────────────
+Web pilot session                                  1m ago        cli    sess_web
+EOF
+  exit 0
+fi
+if [ "$1" = "chat" ]; then
+  cat <<'EOF'
+╭─ ⚕ Hermes ───────────────────────────────────────────────────────────────────╮
+WEB PILOT ASK RESPONSE
+
+session_id: web-ask-session
+EOF
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+  const psFixture = createFakePsFixture(`27025 1 0.1 0.2 49616 22:46 /Users/test/.hermes/venv/bin/python -m hermes_cli.main gateway run --replace`);
+
+  let child: ChildProcessByStdio<null, Readable, Readable> | null = null;
+
+  try {
+    const startup = await startCliServer(
+      ['web', '--host', '127.0.0.1', '--port', '0', '--path', repoRoot, '--sessions-limit', '1'],
+      {
+        OPL_HERMES_BIN: hermesPath,
+        PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
+      },
+    );
+    child = startup.child;
+
+    const webFrontdesk = startup.payload.web_frontdesk as {
+      entry_surface: string;
+      hosted_status: string;
+      listening: {
+        base_url: string;
+      };
+    };
+
+    assert.equal(startup.payload.version, 'g2');
+    assert.equal(webFrontdesk.entry_surface, 'opl_local_web_frontdesk_pilot');
+    assert.equal(webFrontdesk.hosted_status, 'not_landed');
+
+    const baseUrl = String(webFrontdesk.listening.base_url);
+    const page = await fetch(baseUrl);
+    assert.equal(page.status, 200);
+    const pageHtml = await page.text();
+    assert.match(pageHtml, /OPL Front Desk/);
+    assert.match(pageHtml, /Control Room/);
+
+    const dashboardResponse = await fetch(`${baseUrl}/api/dashboard`);
+    const dashboardPayload = await dashboardResponse.json();
+    assert.equal(dashboardPayload.dashboard.front_desk.local_web_frontdesk_status, 'pilot_landed');
+    assert.equal(dashboardPayload.dashboard.projects.length, 3);
+
+    const previewResponse = await fetch(`${baseUrl}/api/ask`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        goal: 'Prepare a defense-ready slide deck for a thesis committee.',
+        preferred_family: 'ppt_deck',
+        dry_run: true,
+      }),
+    });
+    const previewPayload = await previewResponse.json();
+    assert.equal(previewPayload.product_entry.dry_run, true);
+    assert.equal(previewPayload.product_entry.routing.domain_id, 'redcube');
+
+    const askResponse = await fetch(`${baseUrl}/api/ask`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        goal: 'Prepare a defense-ready slide deck for a thesis committee.',
+        preferred_family: 'ppt_deck',
+      }),
+    });
+    const askPayload = await askResponse.json();
+    assert.equal(askPayload.product_entry.dry_run, false);
+    assert.equal(askPayload.product_entry.hermes.session_id, 'web-ask-session');
+    assert.match(askPayload.product_entry.hermes.response, /WEB PILOT ASK RESPONSE/);
+  } finally {
+    if (child) {
+      await stopCliServer(child);
+    }
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(psFixture.fixtureRoot, { recursive: true, force: true });
   }

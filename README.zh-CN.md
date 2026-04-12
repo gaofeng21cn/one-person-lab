@@ -250,8 +250,9 @@
 - `opl "<request...>"` 现在已经成为自然语言 quick ask 的快捷路径
 - `opl doctor`、`opl ask`、`opl chat`、`opl resume`、`opl sessions`、`opl logs`、`opl repair-hermes-gateway` 继续构成显式的产品入口与 runtime 运维命令面
 - `opl projects`、`opl workspace-status`、`opl runtime-status`、`opl dashboard` 现在补上了第一版顶层管理面，用来观察项目、工作区、会话与 runtime
+- `opl web` 现在补上了本地 web front desk pilot，可以直接从浏览器进入 OPL、做 quick ask，并观察 workspace 与 runtime 状态
 - 用户在本机上不再必须先进入 `Codex`，才能触达顶层 `OPL` surface
-- 这次落地的 product entry 仍然只是本地 CLI-first 入口壳；hosted / web 前台仍是后续工作
+- 这次落地的 product entry 已经同时包含本地 CLI-first 入口壳与本地 web front desk pilot；但 hosted 前台仍未落地，hosted 包装仍是后续工作
 - hosted / web 这一层的选型现在也已经冻结：短期最快可用路线是 `LibreChat-first`，长期目标仍是 `OPL` 自有 web front desk；`Chatbot UI` 太薄，不适合作为主 hosted 基座
 - 这个成熟度缺口在三个业务仓里也仍然存在：有些仓已经有可用的本地 `CLI` 或 runtime baseline，但整体更像 operator / agent entry，而不是打磨完成的用户产品入口
 - 四个仓已经不再处于同一条 `Hermes-Agent` 集成阶段线上：`Med Auto Grant` 已切到真实 runtime substrate，`Med Auto Science` 已打通 external runtime bring-up，`RedCube AI` 仍在 pilot prep，而 `OPL` 继续只持有顶层 gateway / federation 语言，同时开始持有 family-level 的本地入口壳
@@ -293,6 +294,8 @@
   - 输出 Hermes runtime 健康、最近会话与 runtime-level 进程资源占用
 - `opl dashboard`
   - 把 front desk、projects、workspace 与 runtime 汇总成当前顶层管理视图
+- `opl web`
+  - 启动本地 web front desk pilot，让用户直接在浏览器里进入 OPL、发起 quick ask，并查看 project / workspace / runtime 状态
 
 这层新入口壳并不会抹掉现有的 `Phase 1` gateway contract。
 只读 gateway 命令仍然是联邦真相面的稳定 formal surface。

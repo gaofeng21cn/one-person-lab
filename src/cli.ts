@@ -26,13 +26,14 @@ import {
   buildWorkspaceStatus,
 } from './management.ts';
 import { explainDomainBoundary, resolveRequestSurface } from './resolver.ts';
+import { attachWebFrontDeskShutdown, startWebFrontDeskServer } from './web-frontdesk.ts';
 import type {
   GatewayContracts,
   GatewayContractsLoadOptions,
   ResolveRequestInput,
 } from './types.ts';
 
-type CommandHandler = (args: string[]) => unknown;
+type CommandHandler = (args: string[]) => unknown | Promise<unknown>;
 
 type CommandSpec = {
   usage: string;
@@ -71,6 +72,13 @@ type RuntimeStatusCliInput = {
 };
 
 type DashboardCliInput = {
+  workspacePath?: string;
+  sessionsLimit?: number;
+};
+
+type WebCliInput = {
+  host?: string;
+  port?: number;
   workspacePath?: string;
   sessionsLimit?: number;
 };
@@ -244,6 +252,23 @@ function parsePositiveInteger(
 
   if (!Number.isInteger(parsed) || parsed <= 0) {
     throw buildUsageError(`Option ${token} requires a positive integer.`, spec, {
+      option: token,
+      value,
+    });
+  }
+
+  return parsed;
+}
+
+function parsePort(
+  token: string,
+  value: string,
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+) {
+  const parsed = Number.parseInt(value, 10);
+
+  if (!Number.isInteger(parsed) || parsed < 0 || parsed > 65535) {
+    throw buildUsageError(`Option ${token} requires an integer port between 0 and 65535.`, spec, {
       option: token,
       value,
     });
@@ -486,6 +511,53 @@ function parseDashboardArgs(
   return parsed;
 }
 
+function parseWebArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): WebCliInput {
+  const parsed: WebCliInput = {};
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (!token.startsWith('--')) {
+      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
+        token,
+      });
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
+        option: token,
+      });
+    }
+
+    switch (token) {
+      case '--host':
+        parsed.host = value;
+        break;
+      case '--port':
+        parsed.port = parsePort(token, value, spec);
+        break;
+      case '--path':
+        parsed.workspacePath = value;
+        break;
+      case '--sessions-limit':
+        parsed.sessionsLimit = parsePositiveInteger(token, value, spec);
+        break;
+      default:
+        throw buildUsageError(`Unknown option for web: ${token}.`, spec, {
+          option: token,
+        });
+    }
+
+    index += 1;
+  }
+
+  return parsed;
+}
+
 function looksLikeNaturalLanguage(command: string, args: string[]) {
   if (args.length > 0) {
     return true;
@@ -529,6 +601,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl workspace-status --path /Users/gaofeng/workspace/redcube-ai',
         'opl runtime-status --limit 10',
         'opl dashboard --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
+        'opl web --host 127.0.0.1 --port 8787 --path /Users/gaofeng/workspace/one-person-lab',
         'opl "Plan a medical grant proposal revision loop."',
         'opl ask "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck',
         'opl chat "Plan a medical grant proposal revision loop."',
@@ -628,7 +701,7 @@ function parseCliInput(argv: string[]): ParsedCliInput {
   };
 }
 
-function main() {
+async function main() {
   const parsedInput = parseCliInput(process.argv.slice(2));
   let cachedContracts: GatewayContracts | null = null;
   const getContracts = () => {
@@ -820,6 +893,28 @@ function main() {
       ],
       handler: (args) => buildFrontDeskDashboard(getContracts(), parseDashboardArgs(args, commandSpecs.dashboard)),
     },
+    web: {
+      usage: 'opl web [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>]',
+      summary: 'Start the local OPL web front-desk pilot for direct browser-based entry and management.',
+      examples: [
+        'opl web',
+        'opl web --host 127.0.0.1 --port 8787',
+        'opl web --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 10',
+      ],
+      handler: async (args) => {
+        const { server, startupPayload } = await startWebFrontDeskServer(
+          getContracts(),
+          parseWebArgs(args, commandSpecs.web),
+        );
+
+        attachWebFrontDeskShutdown(server);
+        printJson(startupPayload);
+
+        return {
+          __handled: true as const,
+        };
+      },
+    },
     ask: {
       usage: 'opl ask <request...> [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--model <model>] [--provider <provider>] [--skills <skills>] [--dry-run]',
       summary:
@@ -907,7 +1002,7 @@ function main() {
       return;
     }
 
-    const result = runProductEntryFrontDesk(getContracts());
+    const result = await runProductEntryFrontDesk(getContracts());
     if (typeof result === 'object' && result !== null && '__handled' in result) {
       return;
     }
@@ -919,7 +1014,7 @@ function main() {
   const spec = commandSpecs[command];
   if (!spec) {
     if (!helpRequested && looksLikeNaturalLanguage(command, args)) {
-      const result = runProductEntryAsk(
+      const result = await runProductEntryAsk(
         parseProductEntryArgs([command, ...args], commandSpecs.ask),
         getContracts(),
       );
@@ -947,7 +1042,7 @@ function main() {
 
   if (helpRequested || (args.length === 1 && args[0] === '--help')) {
     if (command === 'help') {
-      printJson(spec.handler(args));
+      printJson(await spec.handler(args));
       return;
     }
 
@@ -955,7 +1050,7 @@ function main() {
     return;
   }
 
-  const result = spec.handler(args);
+  const result = await spec.handler(args);
   if (typeof result === 'object' && result !== null && '__handled' in result) {
     return;
   }
@@ -963,28 +1058,27 @@ function main() {
   printJson(result);
 }
 
-try {
-  main();
-} catch (error) {
+void main().catch((error) => {
   if (error instanceof GatewayContractError) {
     printJson(error.toJSON(), process.stderr);
     process.exitCode = error.exitCode;
-  } else {
-    const unexpected =
-      error instanceof Error
-        ? error.message
-        : 'Unexpected non-error failure while running the OPL gateway CLI.';
-    printJson(
-      {
-        version: 'g2',
-        error: {
-          code: 'unexpected_error',
-          message: unexpected,
-          exit_code: 1,
-        },
-      },
-      process.stderr,
-    );
-    process.exitCode = 1;
+    return;
   }
-}
+
+  const unexpected =
+    error instanceof Error
+      ? error.message
+      : 'Unexpected non-error failure while running the OPL gateway CLI.';
+  printJson(
+    {
+      version: 'g2',
+      error: {
+        code: 'unexpected_error',
+        message: unexpected,
+        exit_code: 1,
+      },
+    },
+    process.stderr,
+  );
+  process.exitCode = 1;
+});

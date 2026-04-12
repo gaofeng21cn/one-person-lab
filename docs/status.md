@@ -4,8 +4,8 @@
 
 - 仓库角色：顶层 gateway 与 federation surface，domain runtime ownership 留在各自的 admitted domain 仓
 - 当前开发宿主：`Codex` 长线自治会话
-- 当前产品入口真相：`OPL` 已经落下本地 direct product-entry shell，默认前台命令就是 `opl`；`opl <request...>` 可直接作为 quick ask，而 `opl doctor / ask / chat / resume / sessions / logs / repair-hermes-gateway` 构成显式入口与 runtime 运维命令面。`opl projects / workspace-status / runtime-status / dashboard` 则补上了第一版顶层管理面。用户在本机上不再必须先通过 `Codex` 才能触达顶层 `OPL`。但这仍只是 local CLI-first 入口壳，不是 hosted / web 前台
-- 当前 hosted / web 前台真相：这轮已经冻结 `OPL` 的 hosted / web 入口选型。短期 pilot 采用 `LibreChat-first`，用于最快做出可用前台；长期仍回到 `OPL` 自有 web front desk。`Chatbot UI` 不作为主 hosted 基座
+- 当前产品入口真相：`OPL` 已经落下本地 direct product-entry shell，默认前台命令就是 `opl`；`opl <request...>` 可直接作为 quick ask，而 `opl doctor / ask / chat / resume / sessions / logs / repair-hermes-gateway` 构成显式入口与 runtime 运维命令面。`opl projects / workspace-status / runtime-status / dashboard` 补上了第一版顶层管理面，而 `opl web` 则把本地 web front desk pilot 也一并落地。用户在本机上不再必须先通过 `Codex` 才能触达顶层 `OPL`
+- 当前 hosted / web 前台真相：这轮已经有了可直接打开的本地 web front desk pilot，但 hosted 前台本身仍未落地、也仍未完成 hosted 包装。真正的 hosted / web 入口选型继续冻结为短期 `LibreChat-first`、长期 `OPL` 自有 web front desk。`Chatbot UI` 不作为主 hosted 基座
 - 当前家族级入口真相：四仓的 `product entry` 成熟度仍不一致。`OPL` 已有 family-level 本地入口壳；三个业务仓仍主要停留在不同程度的 `operator entry` / `agent entry`，各自 lightweight direct entry 还要继续补强
 - 当前产品边界：`OPL` 负责顶层 gateway / federation / shared substrate contract，三个 domain 仓继续各自维护自己的产品 runtime
 - 当前统一协作语义：`Hermes` 负责产品级长期在线 runtime substrate / orchestration；`OPL` 与 domain 仓继续持有 gateway、authority、对象合同与审计真相；具体单步执行保持 executor-adapter 可插拔，不要求三个 domain 仓共享同一种执行脑
@@ -48,7 +48,7 @@
 3. 先让 `OPL` 站稳 family-level hosted / web front desk 方案，再让三个业务仓按统一板面继续落自己的 lightweight direct entry。
 4. 统一四仓对“上游 `Hermes-Agent` / repo-local shim / pilot / scaffold”的命名边界，不再允许假集成叙事。
 5. 推动各 domain 仓把 `runtime substrate / gateway authority / executor adapter` 三层边界写成同一套 family 语义，不再有人把“接入 Hermes”误解成“强制替换全部执行器”。
-6. 当前已经落地的是本地 direct product-entry shell，不把它误写成 hosted / web runtime；在上游 pilot 继续成立后，再推进 service-safe packaging 与更完整的 direct product entry。
+6. 当前已经落地的是本地 direct product-entry shell 加本地 web pilot，不把它误写成 hosted / web runtime；在上游 pilot 继续成立后，再推进 service-safe packaging 与更完整的 direct product entry。
 7. 避免 reference-grade 与历史迁移文档继续挤占公开主线。
 
 ## 长线目标（规划层）

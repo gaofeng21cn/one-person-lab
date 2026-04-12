@@ -403,12 +403,19 @@ export function buildFrontDeskDashboard(
       front_desk: {
         direct_entry_command: 'opl',
         local_shell_status: 'landed',
-        hosted_web_status: 'pilot_frozen_not_landed',
-        next_major_target: 'opl_hosted_web_frontdesk_pilot',
+        local_web_frontdesk_command: 'opl web',
+        local_web_frontdesk_status: 'pilot_landed',
+        hosted_web_status: 'librechat_pilot_frozen_not_landed',
+        next_major_target: 'opl_hosted_web_frontdesk_packaging',
         rollout_board_refs: [
+          'docs/references/opl-frontdesk-delivery-board.md',
           'docs/references/opl-hosted-web-frontdesk-benchmark.md',
           'docs/references/family-lightweight-direct-entry-rollout-board.md',
           'docs/references/mas-top-level-cutover-board.md',
+        ],
+        notes: [
+          'OPL now exposes a local web front-desk pilot through `opl web`.',
+          'Hosted packaging still remains a separate follow-up track; this repo does not yet claim hosted readiness.',
         ],
       },
       projects,

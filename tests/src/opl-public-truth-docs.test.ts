@@ -391,18 +391,24 @@ test('product-entry docs freeze the managed external-kernel choice instead of fo
   assert.match(readme, /external kernel, managed by OPL product packaging/i);
   assert.match(readme, /not requiring users to manually install and understand `Hermes-Agent`/i);
   assert.match(readme, /default front door is `opl`|`opl` now ships/i);
-  assert.match(readme, /opl doctor.*opl ask.*opl chat.*opl resume.*opl sessions.*opl logs.*opl repair-hermes-gateway/i);
+  assert.match(readme, /opl doctor[\s\S]*opl ask[\s\S]*opl chat[\s\S]*opl resume[\s\S]*opl sessions[\s\S]*opl logs[\s\S]*opl repair-hermes-gateway[\s\S]*opl web/i);
   assert.match(readme, /opl "<request\.\.\.>"|opl <request/i);
   assert.match(readme, /Domain Handoff -> Domain Product Entry \/ Domain Gateway/i);
+  assert.match(readme, /local web front desk pilot|local web pilot/i);
+  assert.match(readme, /hosted.*still not landed|hosted.*not ready/i);
   assert.match(readmeZh, /本地 direct product-entry shell/);
   assert.match(readmeZh, /external kernel, managed by OPL product packaging/);
   assert.match(readmeZh, /不要求用户先手工安装并理解 `Hermes-Agent`/);
   assert.match(readmeZh, /默认入口的本地 direct product-entry shell|以 `opl` 为默认入口/);
-  assert.match(readmeZh, /opl doctor.*opl ask.*opl chat.*opl resume.*opl sessions.*opl logs.*opl repair-hermes-gateway/);
+  assert.match(readmeZh, /opl doctor[\s\S]*opl ask[\s\S]*opl chat[\s\S]*opl resume[\s\S]*opl sessions[\s\S]*opl logs[\s\S]*opl repair-hermes-gateway[\s\S]*opl web/);
   assert.match(readmeZh, /opl "<request\.\.\.>"|opl <request/i);
   assert.match(readmeZh, /Domain Handoff -> Domain Product Entry \/ Domain Gateway/);
+  assert.match(readmeZh, /本地 web front desk pilot|本地 web pilot/);
+  assert.match(readmeZh, /hosted.*仍未落地|hosted.*未完成/);
 
   assert.match(status, /当前产品入口真相：`OPL` 已经落下本地 direct product-entry shell/);
+  assert.match(status, /本地 web front desk pilot|本地 web pilot/);
+  assert.match(status, /hosted \/ web 前台真相：.*仍未落地|hosted.*仍未完成/);
   assert.match(status, /Hermes Kernel Integration.*external kernel, managed by OPL product packaging/);
   assert.match(status, /家族级入口真相|operator entry.*agent entry.*product entry/);
   assert.match(architecture, /opl front desk \/ quick ask \/ ops shell/i);

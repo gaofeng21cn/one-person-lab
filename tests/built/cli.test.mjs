@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import {
   existsSync,
   mkdirSync,
@@ -116,6 +116,77 @@ EOF
     fixtureRoot,
     psPath,
   };
+}
+
+async function startCliServer(args, options = {}, timeoutMs = 10000) {
+  return await new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [cliEntrypoint, ...args], {
+      cwd: options.cwd ?? repoRoot,
+      env: {
+        ...process.env,
+        ...options.env,
+      },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    let stdout = '';
+    let stderr = '';
+
+    const finishReject = (message) => {
+      clearTimeout(timeout);
+      child.kill('SIGTERM');
+      reject(new Error(`${message}\nstdout=${stdout}\nstderr=${stderr}`));
+    };
+
+    const onExit = (code, signal) => {
+      finishReject(`CLI server exited before startup payload was ready (code=${code}, signal=${signal}).`);
+    };
+
+    const timeout = setTimeout(() => {
+      finishReject('Timed out while waiting for CLI server startup payload.');
+    }, timeoutMs);
+
+    child.once('exit', onExit);
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+    });
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+
+      try {
+        const payload = JSON.parse(stdout.trim());
+        clearTimeout(timeout);
+        child.off('exit', onExit);
+        resolve({
+          child,
+          payload,
+          stdout,
+          stderr,
+        });
+      } catch {
+        // Wait for the full JSON startup payload.
+      }
+    });
+  });
+}
+
+async function stopCliServer(child) {
+  if (child.exitCode !== null || child.signalCode !== null) {
+    return;
+  }
+
+  await new Promise((resolve) => {
+    const forceKill = setTimeout(() => {
+      if (child.exitCode === null && child.signalCode === null) {
+        child.kill('SIGKILL');
+      }
+    }, 2000);
+
+    child.once('exit', () => {
+      clearTimeout(forceKill);
+      resolve();
+    });
+    child.kill('SIGTERM');
+  });
 }
 
 test('list-workstreams returns the admitted workstream summaries', () => {
@@ -427,8 +498,118 @@ exit 1
     assert.equal(dashboardResult.status, 0, formatFailure(dashboardResult));
     const dashboardPayload = parseJsonOutput(dashboardResult);
     assert.equal(dashboardPayload.dashboard.projects.length, 3);
+    assert.equal(dashboardPayload.dashboard.front_desk.local_web_frontdesk_status, 'pilot_landed');
     assert.equal(dashboardPayload.dashboard.runtime_status.recent_sessions.sessions.length, 1);
   } finally {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+    rmSync(psFixture.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('help exposes the local web front-desk pilot command through the built CLI entrypoint', () => {
+  const result = runCli(['help']);
+  assert.equal(result.status, 0, formatFailure(result));
+
+  const payload = parseJsonOutput(result);
+  assert.ok(payload.help.commands.some((entry) => entry.command === 'web'));
+
+  const scoped = runCli(['web', '--help']);
+  assert.equal(scoped.status, 0, formatFailure(scoped));
+  const scopedPayload = parseJsonOutput(scoped);
+  assert.equal(scopedPayload.help.command, 'web');
+  assert.match(scopedPayload.help.usage, /opl web/);
+});
+
+test('web starts a local front-desk pilot through the built CLI entrypoint', async () => {
+  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "version" ]; then
+  echo "Hermes Agent v9.9.9-test"
+  exit 0
+fi
+if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
+  cat <<'EOF'
+Launchd plist: /tmp/ai.hermes.gateway.plist
+✓ Service definition matches the current Hermes install
+✓ Gateway service is loaded
+EOF
+  exit 0
+fi
+if [ "$1" = "status" ]; then
+  cat <<'EOF'
+◆ Environment
+  Project:      /tmp/hermes-agent
+◆ Gateway Service
+  Status:       ✓ loaded
+  Manager:      launchd
+◆ Scheduled Jobs
+  Jobs:         1
+◆ Sessions
+  Active:       2
+EOF
+  exit 0
+fi
+if [ "$1" = "sessions" ] && [ "$2" = "list" ]; then
+  cat <<'EOF'
+Preview                                            Last Active   Src    ID
+───────────────────────────────────────────────────────────────────────────────────────────────
+Built web pilot session                            1m ago        cli    sess_built_web
+EOF
+  exit 0
+fi
+if [ "$1" = "chat" ]; then
+  cat <<'EOF'
+╭─ ⚕ Hermes ───────────────────────────────────────────────────────────────────╮
+BUILT WEB PILOT ASK RESPONSE
+
+session_id: built-web-ask-session
+EOF
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+  const psFixture = createFakePsFixture(`27025 1 0.1 0.2 49616 22:46 /Users/test/.hermes/venv/bin/python -m hermes_cli.main gateway run --replace`);
+
+  let child = null;
+
+  try {
+    const startup = await startCliServer(
+      ['web', '--host', '127.0.0.1', '--port', '0', '--path', repoRoot, '--sessions-limit', '1'],
+      {
+        env: {
+          OPL_HERMES_BIN: hermesPath,
+          PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
+        },
+      },
+    );
+    child = startup.child;
+
+    assert.equal(startup.payload.version, 'g2');
+    assert.equal(startup.payload.web_frontdesk.entry_surface, 'opl_local_web_frontdesk_pilot');
+
+    const baseUrl = String(startup.payload.web_frontdesk.listening.base_url);
+    const dashboardResponse = await fetch(`${baseUrl}/api/dashboard`);
+    const dashboardPayload = await dashboardResponse.json();
+    assert.equal(dashboardPayload.dashboard.projects.length, 3);
+    assert.equal(dashboardPayload.dashboard.runtime_status.recent_sessions.sessions.length, 1);
+
+    const askResponse = await fetch(`${baseUrl}/api/ask`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        goal: 'Prepare a defense-ready slide deck for a thesis committee.',
+        preferred_family: 'ppt_deck',
+      }),
+    });
+    const askPayload = await askResponse.json();
+    assert.equal(askPayload.product_entry.hermes.session_id, 'built-web-ask-session');
+    assert.match(askPayload.product_entry.hermes.response, /BUILT WEB PILOT ASK RESPONSE/);
+  } finally {
+    if (child) {
+      await stopCliServer(child);
+    }
     rmSync(fixtureRoot, { recursive: true, force: true });
     rmSync(psFixture.fixtureRoot, { recursive: true, force: true });
   }

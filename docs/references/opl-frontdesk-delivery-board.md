@@ -54,7 +54,24 @@
 - `runtime-status` 已能看到 Hermes runtime 健康、最近会话以及 runtime-level 进程资源占用；
 - `dashboard` 已能把 front desk、projects、workspace、runtime 汇总到一个管理面里。
 
-### F2. hosted / web 路线冻结
+### F2. 本地 web front desk pilot
+
+已完成：
+
+- `opl web`
+- `/api/projects`
+- `/api/workspace-status`
+- `/api/runtime-status`
+- `/api/dashboard`
+- `/api/ask`
+
+当前含义：
+
+- `OPL` 已经不只有 CLI 入口，而是已经有了可直接打开的本地浏览器前台；
+- 用户可以直接在浏览器里做 quick ask、查看项目、检查 workspace、观察 runtime；
+- 这仍是 local pilot，不等于 hosted 包装完成。
+
+### F3. hosted / web 路线冻结
 
 已完成：
 
@@ -68,12 +85,13 @@
 
 ## 当前还没有完成
 
-### W1. 真正的 hosted / web 前台
+### W1. 真正的 hosted packaging / web 前台
 
 未完成：
 
-- 还没有可直接打开的 web front desk；
-- 当前仍是本地 `CLI-first` 产品入口。
+- 虽然已经有本地可打开的 web front desk pilot；
+- 但还没有 service-safe 的 hosted packaging；
+- 也还没有把 `LibreChat-first` 这条 hosted pilot 路线正式接起来。
 
 ### W2. project / workspace 的可写管理能力
 
@@ -98,12 +116,12 @@
 
 ## 当前进行中
 
-### I1. `OPL` hosted / web front desk pilot
+### I1. `OPL` hosted packaging / web front desk follow-up
 
 方向：
 
-- 先把顶层前台做成真正可直接使用的产品入口；
-- 支持多项目、多对话、工作区入口、session 恢复、运行时观测。
+- 在已落地的本地 web pilot 之上继续做 hosted packaging；
+- 把 service、session、handoff、runtime ops 与后续 hosted 壳接起来。
 
 ### I2. family handoff 与 domain lightweight direct entry 对齐
 
@@ -130,5 +148,5 @@
 
 ## 一句话结论
 
-`OPL Front Desk` 这条线现在已经从“只有 CLI 说明面”走到了“有本地入口 + 有管理面 + 有明确 hosted 路线”的状态。
-下一步不该再回头争论方向，而是直接把 hosted / web pilot 做出来。
+`OPL Front Desk` 这条线现在已经从“只有 CLI 说明面”走到了“有本地 CLI 入口 + 有管理面 + 有本地 web pilot + 有明确 hosted 路线”的状态。
+下一步不该再回头争论方向，而是把 hosted packaging 和后续家族级 direct entry 继续压实。
