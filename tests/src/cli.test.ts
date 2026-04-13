@@ -887,6 +887,8 @@ exit 1
     assert.equal(output.dashboard.front_desk.local_web_frontdesk_status, 'pilot_landed');
     assert.equal(output.dashboard.front_desk.hosted_web_status, 'librechat_pilot_landed');
     assert.equal(output.dashboard.front_desk.librechat_pilot_package_status, 'landed');
+    assert.equal(output.dashboard.front_desk.recommended_entry_surfaces_count, 0);
+    assert.deepEqual(output.dashboard.front_desk.recommended_entry_surfaces, []);
     assert.equal(output.dashboard.projects.length, 3);
     assert.equal(output.dashboard.domain_manifests.summary.total_projects_count, 2);
     assert.equal(output.dashboard.domain_manifests.summary.resolved_count, 0);
@@ -1260,6 +1262,7 @@ test('domain-manifests resolves active domain-owned manifest commands while work
       workspace_root: repoRoot,
     },
     recommended_shell: 'direct',
+    recommended_command: 'redcube product invoke',
     runtime: {
       runtime_owner: 'upstream_hermes_agent',
     },
@@ -1331,6 +1334,38 @@ test('domain-manifests resolves active domain-owned manifest commands while work
 
 test('handoff-envelope returns a machine-readable family handoff bundle aligned with the active workspace binding', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-handoff-state-'));
+  const resolvedManifest = {
+    surface_kind: 'product_entry_manifest',
+    manifest_version: 1,
+    manifest_kind: 'redcube_product_entry_manifest',
+    target_domain_id: 'redcube_ai',
+    formal_entry: {
+      default: 'CLI',
+      supported_protocols: ['MCP'],
+      internal_surface: 'gateway',
+    },
+    workspace_locator: {
+      workspace_root: repoRoot,
+    },
+    recommended_shell: 'direct',
+    recommended_command: 'redcube product invoke',
+    runtime: {
+      runtime_owner: 'upstream_hermes_agent',
+    },
+    product_entry_shell: {
+      direct: {
+        command: 'redcube product invoke',
+        surface_kind: 'product_entry',
+      },
+    },
+    shared_handoff: {
+      opl_return_surface: {
+        surface_kind: 'product_entry',
+        target_domain_id: 'redcube_ai',
+      },
+    },
+    notes: [],
+  };
 
   try {
     runCli([
@@ -1342,7 +1377,7 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
       '--entry-command',
       'redcube-ai frontdesk',
       '--manifest-command',
-      'redcube product manifest --workspace-root /Users/gaofeng/workspace/redcube-ai',
+      buildManifestCommand(resolvedManifest),
       '--entry-url',
       'http://127.0.0.1:3310/redcube',
     ], {
@@ -1377,9 +1412,13 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     assert.equal(output.handoff_bundle.domain_direct_entry.command, 'redcube-ai frontdesk');
     assert.equal(
       output.handoff_bundle.domain_direct_entry.manifest_command,
-      'redcube product manifest --workspace-root /Users/gaofeng/workspace/redcube-ai',
+      buildManifestCommand(resolvedManifest),
     );
     assert.equal(output.handoff_bundle.domain_direct_entry.url, 'http://127.0.0.1:3310/redcube');
+    assert.equal(output.handoff_bundle.domain_manifest_recommendation.status, 'resolved');
+    assert.equal(output.handoff_bundle.domain_manifest_recommendation.recommended_shell, 'direct');
+    assert.equal(output.handoff_bundle.domain_manifest_recommendation.recommended_command, 'redcube product invoke');
+    assert.equal(output.handoff_bundle.domain_manifest_recommendation.manifest_target_domain_id, 'redcube_ai');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

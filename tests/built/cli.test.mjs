@@ -574,6 +574,7 @@ exit 1
     assert.equal(dashboardPayload.dashboard.front_desk.local_web_frontdesk_status, 'pilot_landed');
     assert.equal(dashboardPayload.dashboard.front_desk.hosted_web_status, 'librechat_pilot_landed');
     assert.equal(dashboardPayload.dashboard.front_desk.librechat_pilot_package_status, 'landed');
+    assert.equal(dashboardPayload.dashboard.front_desk.recommended_entry_surfaces_count, 0);
     assert.equal(dashboardPayload.dashboard.runtime_status.recent_sessions.sessions.length, 1);
   } finally {
     rmSync(fixtureRoot, { recursive: true, force: true });
@@ -887,6 +888,8 @@ test('workspace registry and handoff surfaces stay machine-readable through the 
     const handoffPayload = parseJsonOutput(handoffResult);
     assert.equal(handoffPayload.handoff_bundle.target_domain_id, 'redcube');
     assert.equal(handoffPayload.handoff_bundle.domain_direct_entry.command, 'redcube-ai frontdesk');
+    assert.equal(handoffPayload.handoff_bundle.domain_manifest_recommendation.status, 'manifest_not_configured');
+    assert.equal(handoffPayload.handoff_bundle.domain_manifest_recommendation.recommended_command, null);
 
     const archiveResult = runCli([
       'workspace-archive',

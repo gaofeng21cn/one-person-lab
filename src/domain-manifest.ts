@@ -112,9 +112,21 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
   const productEntryShell = normalizeRecordMap(manifest.product_entry_shell, 'product_entry_shell');
   const sharedHandoff = normalizeRecordMap(manifest.shared_handoff, 'shared_handoff');
   const recommendedShell = optionalString(manifest.recommended_shell);
+  const explicitRecommendedCommand = optionalString(manifest.recommended_command);
+  const derivedRecommendedCommand = recommendedShell
+    ? optionalString(productEntryShell[recommendedShell]?.command)
+    : null;
 
   if (recommendedShell && !productEntryShell[recommendedShell]) {
     throw new Error(`recommended_shell points at unknown shell key: ${recommendedShell}`);
+  }
+  if (
+    recommendedShell
+    && explicitRecommendedCommand
+    && derivedRecommendedCommand
+    && explicitRecommendedCommand !== derivedRecommendedCommand
+  ) {
+    throw new Error('recommended_command must match the command declared by recommended_shell.');
   }
 
   return {
@@ -136,10 +148,7 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
     runtime: isRecord(manifest.runtime) ? manifest.runtime : null,
     repo_mainline: isRecord(manifest.repo_mainline) ? manifest.repo_mainline : null,
     recommended_shell: recommendedShell,
-    recommended_command:
-      recommendedShell && optionalString(productEntryShell[recommendedShell]?.command)
-        ? optionalString(productEntryShell[recommendedShell]?.command)
-        : null,
+    recommended_command: explicitRecommendedCommand ?? derivedRecommendedCommand,
     product_entry_shell: productEntryShell,
     shared_handoff: sharedHandoff,
     remaining_gaps: readStringList(manifest.remaining_gaps),

@@ -1,4 +1,5 @@
 import { findDomainOrThrow } from './contracts.ts';
+import { buildDomainManifestCatalog } from './domain-manifest.ts';
 import { resolveWorkspaceLocator } from './workspace-registry.ts';
 import { buildFrontDeskEndpoints } from './frontdesk-paths.ts';
 import type { BoundaryExplanation, GatewayContracts, ResolutionResult } from './types.ts';
@@ -37,6 +38,11 @@ export function buildHandoffBundle(
         source: options.workspacePath ? 'explicit_path' : 'none',
         binding: null,
       };
+  const domainManifestEntry = targetDomainId
+    ? buildDomainManifestCatalog(contracts).domain_manifests.projects.find(
+        (entry) => entry.project_id === targetDomainId,
+      ) ?? null
+    : null;
   const endpoints = buildFrontDeskEndpoints(options.basePath);
 
   return {
@@ -80,6 +86,22 @@ export function buildHandoffBundle(
             workspace_path: workspaceLocator.binding.workspace_path,
           }
         : null,
+      domain_manifest_recommendation: domainManifestEntry
+        ? {
+            status: domainManifestEntry.status,
+            manifest_command: domainManifestEntry.manifest_command,
+            binding_id: domainManifestEntry.binding_id,
+            workspace_path: domainManifestEntry.workspace_path,
+            manifest_target_domain_id: domainManifestEntry.manifest?.target_domain_id ?? null,
+            recommended_shell: domainManifestEntry.manifest?.recommended_shell ?? null,
+            recommended_command: domainManifestEntry.manifest?.recommended_command ?? null,
+            formal_entry: domainManifestEntry.manifest?.formal_entry ?? null,
+            runtime: domainManifestEntry.manifest?.runtime ?? null,
+            repo_mainline: domainManifestEntry.manifest?.repo_mainline ?? null,
+            shared_handoff: domainManifestEntry.manifest?.shared_handoff ?? null,
+            error: domainManifestEntry.error,
+          }
+        : null,
       domain_context: domain
         ? {
             project: domain.project,
@@ -90,6 +112,7 @@ export function buildHandoffBundle(
       notes: [
         'This handoff bundle freezes the family-level transfer from OPL product entry into a domain direct entry or domain gateway.',
         'A domain direct-entry locator is only included when the workspace registry has one configured for the routed project.',
+        'When a routed domain publishes a machine-readable manifest, the same bundle also carries the routed recommended shell and command so callers do not have to guess the next step.',
       ],
     },
   };

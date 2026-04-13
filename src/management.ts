@@ -426,6 +426,18 @@ export function buildFrontDeskDashboard(
   }).runtime_status;
   const workspaceCatalog = buildWorkspaceCatalog(contracts).workspace_catalog;
   const domainManifests = buildDomainManifestCatalog(contracts).domain_manifests;
+  const recommendedEntrySurfaces = domainManifests.projects
+    .filter((entry) => entry.status === 'resolved' && entry.manifest?.recommended_command)
+    .map((entry) => ({
+      project_id: entry.project_id,
+      project: entry.project,
+      binding_id: entry.binding_id,
+      manifest_target_domain_id: entry.manifest?.target_domain_id ?? null,
+      recommended_shell: entry.manifest?.recommended_shell ?? null,
+      recommended_command: entry.manifest?.recommended_command ?? null,
+      manifest_command: entry.manifest_command,
+      workspace_path: entry.workspace_path,
+    }));
 
   return {
     version: 'g2',
@@ -446,6 +458,8 @@ export function buildFrontDeskDashboard(
         workspace_registry_status: 'landed',
         session_ledger_status: 'landed',
         handoff_bundle_status: 'landed',
+        recommended_entry_surfaces_count: recommendedEntrySurfaces.length,
+        recommended_entry_surfaces: recommendedEntrySurfaces,
         next_major_target: 'opl_hosted_runtime_hardening',
         hosted_friendly_endpoints: endpoints,
         rollout_board_refs: [
@@ -458,6 +472,7 @@ export function buildFrontDeskDashboard(
         'OPL now exposes a base-path-aware hosted pilot bundle in addition to the local web front-desk pilot.',
         'Workspace registry, managed session ledger, and handoff bundle surfaces are now part of the top-level control room.',
         'workspace-catalog keeps manifest_command as non-executing registry state, while domain-manifests resolves the active bound machine-readable product-entry manifests.',
+        'Resolved domain manifests now also feed recommended shell and command hints back into dashboard and handoff surfaces.',
         'The LibreChat-first hosted shell pilot is now landed through the export package, while managed hosted runtime readiness remains a separate follow-up track.',
       ],
     },
