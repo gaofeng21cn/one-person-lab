@@ -474,6 +474,7 @@ export function buildFrontDeskDashboard(
       product_entry_shell: entry.manifest?.product_entry_shell ?? {},
       shared_handoff: entry.manifest?.shared_handoff ?? {},
       family_orchestration: entry.manifest?.family_orchestration ?? null,
+      product_entry_readiness: entry.manifest?.product_entry_readiness ?? null,
       manifest_command: entry.manifest_command,
       workspace_path: entry.workspace_path,
       mainline_phase_id: pickManifestPhaseId(entry.manifest?.repo_mainline ?? null),
@@ -490,6 +491,19 @@ export function buildFrontDeskDashboard(
       product_entry_overview_resume_command:
         entry.manifest?.product_entry_overview?.resume_surface?.command ?? null,
       product_entry_overview_human_gate_ids: entry.manifest?.product_entry_overview?.human_gate_ids ?? [],
+      product_entry_readiness_verdict: entry.manifest?.product_entry_readiness?.verdict ?? null,
+      product_entry_readiness_summary: entry.manifest?.product_entry_readiness?.summary ?? null,
+      product_entry_readiness_usable_now: entry.manifest?.product_entry_readiness?.usable_now ?? null,
+      product_entry_readiness_good_to_use_now:
+        entry.manifest?.product_entry_readiness?.good_to_use_now ?? null,
+      product_entry_readiness_fully_automatic:
+        entry.manifest?.product_entry_readiness?.fully_automatic ?? null,
+      product_entry_readiness_start_command:
+        entry.manifest?.product_entry_readiness?.recommended_start_command ?? null,
+      product_entry_readiness_loop_command:
+        entry.manifest?.product_entry_readiness?.recommended_loop_command ?? null,
+      product_entry_readiness_blocking_gaps:
+        entry.manifest?.product_entry_readiness?.blocking_gaps ?? [],
       family_human_gate_count: entry.manifest?.family_orchestration?.human_gates.length ?? 0,
       family_human_gate_ids:
         entry.manifest?.family_orchestration?.human_gates.map((gate) => String(gate.gate_id)) ?? [],

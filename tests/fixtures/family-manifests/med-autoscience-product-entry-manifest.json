@@ -128,6 +128,22 @@
       "publication_release_gate"
     ]
   },
+  "product_entry_readiness": {
+    "surface_kind": "product_entry_readiness",
+    "verdict": "runtime_ready_not_standalone_product",
+    "usable_now": true,
+    "good_to_use_now": false,
+    "fully_automatic": false,
+    "summary": "当前可以作为 research frontdesk / CLI 主线使用，并通过稳定的 runtime 回路持续推进研究；但还不是成熟的独立医学产品前台。",
+    "recommended_start_surface": "product_frontdesk",
+    "recommended_start_command": "uv run python -m med_autoscience.cli product-frontdesk --profile /fixtures/med-autoscience/profile.local.toml",
+    "recommended_loop_surface": "workspace_cockpit",
+    "recommended_loop_command": "uv run python -m med_autoscience.cli workspace-cockpit --profile /fixtures/med-autoscience/profile.local.toml",
+    "blocking_gaps": [
+      "独立医学前台 / hosted product entry 仍未 landed。",
+      "更多 workspace / host 的真实 clearance 与 study-local blocker 收口仍在继续。"
+    ]
+  },
   "product_entry_shell": {
     "product_frontdesk": {
       "command": "uv run python -m med_autoscience.cli product-frontdesk --profile /fixtures/med-autoscience/profile.local.toml",

@@ -1557,6 +1557,44 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
                   manifestEntry.manifest?.product_entry_status?.summary
                     ? '<p><strong>Entry Status:</strong> ' + manifestEntry.manifest.product_entry_status.summary + '</p>'
                     : '',
+                  manifestEntry.manifest?.product_entry_readiness?.summary
+                    ? '<p><strong>Entry Readiness:</strong> '
+                      + manifestEntry.manifest.product_entry_readiness.summary
+                      + '</p>'
+                    : '',
+                  manifestEntry.manifest?.product_entry_readiness?.verdict
+                    ? '<p><strong>Readiness Verdict:</strong> '
+                      + manifestEntry.manifest.product_entry_readiness.verdict
+                      + '</p>'
+                    : '',
+                  typeof manifestEntry.manifest?.product_entry_readiness?.usable_now === 'boolean'
+                    ? '<p><strong>Usable Now:</strong> '
+                      + String(manifestEntry.manifest.product_entry_readiness.usable_now)
+                      + '</p>'
+                    : '',
+                  typeof manifestEntry.manifest?.product_entry_readiness?.good_to_use_now === 'boolean'
+                    ? '<p><strong>Good To Use Now:</strong> '
+                      + String(manifestEntry.manifest.product_entry_readiness.good_to_use_now)
+                      + '</p>'
+                    : '',
+                  manifestEntry.manifest?.product_entry_readiness?.recommended_start_command
+                    ? '<p><strong>Readiness Start Command:</strong> <code>'
+                      + manifestEntry.manifest.product_entry_readiness.recommended_start_command
+                      + '</code></p>'
+                    : '',
+                  manifestEntry.manifest?.product_entry_readiness?.recommended_loop_command
+                    ? '<p><strong>Readiness Loop Command:</strong> <code>'
+                      + manifestEntry.manifest.product_entry_readiness.recommended_loop_command
+                      + '</code></p>'
+                    : '',
+                  Array.isArray(manifestEntry.manifest?.product_entry_readiness?.blocking_gaps)
+                    && manifestEntry.manifest.product_entry_readiness.blocking_gaps.length > 0
+                    ? '<div><strong>Readiness Blocking Gaps:</strong><ul>'
+                      + manifestEntry.manifest.product_entry_readiness.blocking_gaps
+                        .map((gap) => '<li>' + String(gap) + '</li>')
+                        .join('')
+                      + '</ul></div>'
+                    : '',
                   typeof manifestEntry.manifest?.product_entry_status?.remaining_gaps_count === 'number'
                     ? '<p><strong>Remaining Gaps:</strong> '
                       + String(manifestEntry.manifest.product_entry_status.remaining_gaps_count)

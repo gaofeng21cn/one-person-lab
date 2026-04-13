@@ -44,6 +44,7 @@
   - `opl web` 的 front desk project cards
 - 三个业务仓的 manifest 现在还会统一带出 `product_entry_quickstart` companion，给出用户第一组可执行步骤、resume 合同与 human gate id；`OPL` 顶层 discovery / dashboard / handoff / web 同步消费这层用户面。
 - 三个业务仓的 manifest 现在也会统一带出 `product_entry_overview` companion，把当前入口摘要、progress / resume 句柄、remaining gaps 与 human gate id 收成同型前台看板，避免用户还要手工从 status/loop/quickstart 几层自己拼。
+- 三个业务仓的 manifest 现在还会统一带出轻量 `product_entry_readiness` companion，直接回答“现在能不能用、是否已经好用、是不是全自动、建议从哪进、目前还差什么”；`OPL` 顶层 discovery / dashboard / handoff / web 也同步消费这层成熟度摘要。
 
 ## 四仓当前落点
 
@@ -63,7 +64,7 @@
 
 ## 接下来的推进顺序
 
-1. 先维持这轮统一真相：所有 domain manifest 都必须继续带 `frontdesk_surface + operator_loop_surface + operator_loop_actions + product_entry_quickstart + product_entry_overview`，`OPL` 顶层所有 discovery / dashboard / handoff surface 都继续消费它。
+1. 先维持这轮统一真相：所有 domain manifest 都必须继续带 `frontdesk_surface + operator_loop_surface + operator_loop_actions + product_entry_quickstart + product_entry_overview + product_entry_readiness`，`OPL` 顶层所有 discovery / dashboard / handoff surface 都继续消费它。
 2. 再把 `OPL` 继续往 `S5` 推：重点是 hosted runtime hardening 与 family front desk 的 domain wiring。
 3. 同时让 `MedAutoGrant` 与 `RedCube AI` 往 `S4` 推：把现有 shell 收成更像产品前台的 direct loop，而不是继续堆 controller 命令。
 4. `MedAutoScience` 先以真实研究回路稳定性为先：主线不是继续发明新前台，而是把已有 loop 在真实 study 上压稳，再决定前台壳的提升顺序。

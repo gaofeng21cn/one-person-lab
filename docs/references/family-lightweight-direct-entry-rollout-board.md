@@ -54,6 +54,7 @@
 - 三个业务仓当前又统一补上了 `product_entry_quickstart` companion，用 step list / resume contract / human gate id 把“先从哪进、接着怎么续跑、看哪条进度面”冻结成同型 discovery surface。
 - 三个业务仓当前也都已经把 `family_orchestration.action_graph` 实体带进 manifest；`OPL` 顶层不再只能看到 graph ref，而是能统一消费 node / edge / gate 摘要。
 - 三个业务仓当前还统一补上了 `product_entry_overview` companion，把入口摘要、progress / resume 句柄、remaining gaps 与 human gate id 收成同型看板，方便顶层和单仓前台直接显示“现在处在什么状态”。
+- 三个业务仓当前又统一补上了轻量 `product_entry_readiness` companion，把“现在能不能直接用、是否已经好用、是不是全自动、建议从哪进以及还差什么”冻结成同型成熟度摘要，方便顶层和单仓前台少翻一层文档。
 
 下一棒：
 

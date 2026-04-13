@@ -74,6 +74,19 @@ export interface NormalizedDomainManifest {
     remaining_gaps_count: number | null;
     human_gate_ids: string[];
   } | null;
+  product_entry_readiness: {
+    surface_kind: string;
+    verdict: string | null;
+    usable_now: boolean | null;
+    good_to_use_now: boolean | null;
+    fully_automatic: boolean | null;
+    summary: string | null;
+    recommended_start_surface: string | null;
+    recommended_start_command: string | null;
+    recommended_loop_surface: string | null;
+    recommended_loop_command: string | null;
+    blocking_gaps: string[];
+  } | null;
   product_entry_quickstart: {
     surface_kind: string;
     summary: string | null;
@@ -287,6 +300,26 @@ function normalizeProductEntryOverview(value: unknown) {
   };
 }
 
+function normalizeProductEntryReadiness(value: unknown) {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  return {
+    surface_kind: optionalString(value.surface_kind) ?? 'product_entry_readiness',
+    verdict: optionalString(value.verdict),
+    usable_now: typeof value.usable_now === 'boolean' ? value.usable_now : null,
+    good_to_use_now: typeof value.good_to_use_now === 'boolean' ? value.good_to_use_now : null,
+    fully_automatic: typeof value.fully_automatic === 'boolean' ? value.fully_automatic : null,
+    summary: optionalString(value.summary),
+    recommended_start_surface: optionalString(value.recommended_start_surface),
+    recommended_start_command: optionalString(value.recommended_start_command),
+    recommended_loop_surface: optionalString(value.recommended_loop_surface),
+    recommended_loop_command: optionalString(value.recommended_loop_command),
+    blocking_gaps: readStringList(value.blocking_gaps),
+  };
+}
+
 function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
   const manifest = unwrapManifestPayload(payload);
   const formalEntry = requireRecord(manifest.formal_entry, 'formal_entry');
@@ -309,6 +342,7 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
     ? normalizeRecordMap(manifest.operator_loop_actions, 'operator_loop_actions')
     : {};
   const productEntryOverview = normalizeProductEntryOverview(manifest.product_entry_overview);
+  const productEntryReadiness = normalizeProductEntryReadiness(manifest.product_entry_readiness);
   const productEntryQuickstart = normalizeProductEntryQuickstart(manifest.product_entry_quickstart);
   const rawFamilyOrchestration = isRecord(manifest.family_orchestration)
     ? manifest.family_orchestration
@@ -364,6 +398,7 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
     product_entry_shell: productEntryShell,
     shared_handoff: sharedHandoff,
     product_entry_overview: productEntryOverview,
+    product_entry_readiness: productEntryReadiness,
     product_entry_quickstart: productEntryQuickstart,
     family_orchestration: rawFamilyOrchestration
       ? {
