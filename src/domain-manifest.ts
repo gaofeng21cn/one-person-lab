@@ -39,6 +39,7 @@ export interface NormalizedDomainManifest {
     continuation_shell_key: string | null;
     continuation_command: string | null;
   } | null;
+  operator_loop_actions: Record<string, JsonRecord>;
   recommended_shell: string | null;
   recommended_command: string | null;
   product_entry_shell: Record<string, JsonRecord>;
@@ -132,6 +133,9 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
   const rawOperatorLoopSurface = isRecord(manifest.operator_loop_surface)
     ? manifest.operator_loop_surface
     : null;
+  const operatorLoopActions = isRecord(manifest.operator_loop_actions)
+    ? normalizeRecordMap(manifest.operator_loop_actions, 'operator_loop_actions')
+    : {};
   const operatorLoopShellKey = rawOperatorLoopSurface
     ? requireString(rawOperatorLoopSurface.shell_key, 'operator_loop_surface.shell_key')
     : null;
@@ -207,6 +211,7 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
           continuation_command: optionalString(rawOperatorLoopSurface.continuation_command),
         }
       : null,
+    operator_loop_actions: operatorLoopActions,
     recommended_shell: recommendedShell,
     recommended_command: explicitRecommendedCommand ?? derivedRecommendedCommand,
     product_entry_shell: productEntryShell,

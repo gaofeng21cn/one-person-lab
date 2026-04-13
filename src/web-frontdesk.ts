@@ -1330,6 +1330,26 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
                       + manifestEntry.manifest.operator_loop_surface.continuation_command
                       + '</p>'
                     : '',
+                  Object.entries(manifestEntry.manifest?.operator_loop_actions || {}).length > 0
+                    ? '<div><strong>Operator Loop Actions:</strong><ul>'
+                      + Object.entries(manifestEntry.manifest?.operator_loop_actions || {})
+                        .map(([actionKey, actionValue]) => {
+                          if (!actionValue || typeof actionValue !== 'object') {
+                            return '';
+                          }
+                          const action = actionValue as {
+                            command?: string;
+                            summary?: string;
+                          };
+                          return '<li><code>' + actionKey + '</code>: '
+                            + String(action.command || '')
+                            + (action.summary ? ' - ' + action.summary : '')
+                            + '</li>';
+                        })
+                        .filter(Boolean)
+                        .join('')
+                      + '</ul></div>'
+                    : '',
                   manifestEntry.manifest?.product_entry_status?.summary
                     ? '<p><strong>Entry Status:</strong> ' + manifestEntry.manifest.product_entry_status.summary + '</p>'
                     : '',

@@ -94,6 +94,7 @@ export function buildHandoffBundle(
             workspace_path: domainManifestEntry.workspace_path,
             manifest_target_domain_id: domainManifestEntry.manifest?.target_domain_id ?? null,
             operator_loop_surface: domainManifestEntry.manifest?.operator_loop_surface ?? null,
+            operator_loop_actions: domainManifestEntry.manifest?.operator_loop_actions ?? {},
             recommended_shell: domainManifestEntry.manifest?.recommended_shell ?? null,
             recommended_command: domainManifestEntry.manifest?.recommended_command ?? null,
             formal_entry: domainManifestEntry.manifest?.formal_entry ?? null,

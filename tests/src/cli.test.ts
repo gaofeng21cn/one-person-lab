@@ -1271,6 +1271,20 @@ test('domain-manifests resolves active domain-owned manifest commands while work
       continuation_shell_key: 'session',
       continuation_command: 'redcube product session',
     },
+    operator_loop_actions: {
+      start_deliverable: {
+        command: 'redcube product invoke',
+        surface_kind: 'product_entry',
+        summary: '直接进入当前 deliverable 的 primary operator loop。',
+        requires: ['entry_session_id', 'overlay', 'topic_id', 'deliverable_id'],
+      },
+      continue_session: {
+        command: 'redcube product session',
+        surface_kind: 'product_entry_session',
+        summary: '在已有 entry_session_id 下继续同一交付。',
+        requires: ['entry_session_id'],
+      },
+    },
     repo_mainline: {
       program_id: 'redcube-runtime-program',
       phase_id: 'repo_verified_product_entry_and_opl_federation',
@@ -1349,6 +1363,8 @@ test('domain-manifests resolves active domain-owned manifest commands while work
     assert.equal(redcube.manifest.recommended_command, 'redcube product invoke');
     assert.equal(redcube.manifest.operator_loop_surface.shell_key, 'direct');
     assert.equal(redcube.manifest.operator_loop_surface.continuation_command, 'redcube product session');
+    assert.equal(redcube.manifest.operator_loop_actions.start_deliverable.command, 'redcube product invoke');
+    assert.equal(redcube.manifest.operator_loop_actions.continue_session.surface_kind, 'product_entry_session');
     assert.equal(redcube.manifest.repo_mainline.phase_id, 'repo_verified_product_entry_and_opl_federation');
     assert.equal(redcube.manifest.product_entry_status.remaining_gaps_count, 2);
     assert.equal(medautoscience.status, 'invalid_json');
@@ -1365,6 +1381,7 @@ test('domain-manifests resolves active domain-owned manifest commands while work
     assert.equal(recommendedEntry.mainline_phase_id, 'repo_verified_product_entry_and_opl_federation');
     assert.equal(recommendedEntry.operator_loop_shell_key, 'direct');
     assert.equal(recommendedEntry.operator_loop_command, 'redcube product invoke');
+    assert.equal(recommendedEntry.operator_loop_actions.start_deliverable.command, 'redcube product invoke');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
@@ -1394,6 +1411,20 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
       summary: '当前 operator loop 仍 anchored on direct product entry；拿到 entry_session_id 后继续通过 session surface 追踪同一交付。',
       continuation_shell_key: 'session',
       continuation_command: 'redcube product session',
+    },
+    operator_loop_actions: {
+      start_deliverable: {
+        command: 'redcube product invoke',
+        surface_kind: 'product_entry',
+        summary: '直接进入当前 deliverable 的 primary operator loop。',
+        requires: ['entry_session_id', 'overlay', 'topic_id', 'deliverable_id'],
+      },
+      continue_session: {
+        command: 'redcube product session',
+        surface_kind: 'product_entry_session',
+        summary: '在已有 entry_session_id 下继续同一交付。',
+        requires: ['entry_session_id'],
+      },
     },
     repo_mainline: {
       program_id: 'redcube-runtime-program',
@@ -1482,6 +1513,10 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.operator_loop_surface.continuation_command,
       'redcube product session',
+    );
+    assert.equal(
+      output.handoff_bundle.domain_manifest_recommendation.operator_loop_actions.start_deliverable.command,
+      'redcube product invoke',
     );
     assert.equal(output.handoff_bundle.domain_manifest_recommendation.manifest_target_domain_id, 'redcube_ai');
     assert.equal(

@@ -4,7 +4,7 @@
 
 - 仓库角色：顶层 gateway 与 federation surface，domain runtime ownership 留在各自的 admitted domain 仓
 - 当前开发宿主：`Codex` 长线自治会话
-- 当前产品入口真相：`OPL` 已经落下本地 direct product-entry shell，默认前台命令就是 `opl`；`opl <request...>` 可直接作为 quick ask，而 `opl doctor / ask / chat / resume / sessions / logs / repair-hermes-gateway / frontdesk-manifest / frontdesk-hosted-bundle / frontdesk-hosted-package / frontdesk-librechat-package / session-ledger / handoff-envelope / domain-manifests / frontdesk-service-*` 构成显式入口与 runtime 运维命令面。`opl projects / workspace-status / workspace-catalog / workspace-bind|activate|archive / domain-manifests / runtime-status / session-ledger / dashboard` 已把顶层管理面补成“可观察 + 可写 workspace 管理 + 会话归因”的第一版；其中 `workspace-catalog` 继续只是 registry，会输出 project-level binding summary、可写 action 提示，以及可选的 domain-owned `manifest_command`；`domain-manifests` 则会实际解析这些 active binding 上的 `manifest_command`，把 family wiring 指向 routed domain 的 machine-readable product-entry discovery surface，并把 routed domain 的 `operator_loop_surface`、recommended shell / command、repo mainline 摘要与 `product_entry_status` 状态摘要一起回灌到 `dashboard` 与 `handoff-envelope`；`session-ledger` 现在会输出 session aggregate 级别的归因视图。`opl web` 则把本地 web front desk pilot 与 hosted-friendly 的 `health / manifest / domain-manifests / hosted-bundle / hosted-package / librechat-package / sessions / resume / logs / handoff-envelope` 表面也一并落地；现在又进一步补上了基于 launchd 的 service-safe 本地包装层。用户在本机上不再必须先通过 `Codex` 才能触达顶层 `OPL`
+- 当前产品入口真相：`OPL` 已经落下本地 direct product-entry shell，默认前台命令就是 `opl`；`opl <request...>` 可直接作为 quick ask，而 `opl doctor / ask / chat / resume / sessions / logs / repair-hermes-gateway / frontdesk-manifest / frontdesk-hosted-bundle / frontdesk-hosted-package / frontdesk-librechat-package / session-ledger / handoff-envelope / domain-manifests / frontdesk-service-*` 构成显式入口与 runtime 运维命令面。`opl projects / workspace-status / workspace-catalog / workspace-bind|activate|archive / domain-manifests / runtime-status / session-ledger / dashboard` 已把顶层管理面补成“可观察 + 可写 workspace 管理 + 会话归因”的第一版；其中 `workspace-catalog` 继续只是 registry，会输出 project-level binding summary、可写 action 提示，以及可选的 domain-owned `manifest_command`；`domain-manifests` 则会实际解析这些 active binding 上的 `manifest_command`，把 family wiring 指向 routed domain 的 machine-readable product-entry discovery surface，并把 routed domain 的 `operator_loop_surface`、`operator_loop_actions`、recommended shell / command、repo mainline 摘要与 `product_entry_status` 状态摘要一起回灌到 `dashboard` 与 `handoff-envelope`；`session-ledger` 现在会输出 session aggregate 级别的归因视图。`opl web` 则把本地 web front desk pilot 与 hosted-friendly 的 `health / manifest / domain-manifests / hosted-bundle / hosted-package / librechat-package / sessions / resume / logs / handoff-envelope` 表面也一并落地；现在又进一步补上了基于 launchd 的 service-safe 本地包装层。用户在本机上不再必须先通过 `Codex` 才能触达顶层 `OPL`
 - 当前 hosted / web 前台真相：这轮已经有了可直接打开的本地 web front desk pilot，也已经把 future hosted shell 可消费的 hosted-friendly contract surface 冻结出来，并导出了 self-hostable hosted pilot package，以及真实可部署的 `LibreChat-first` hosted shell pilot package；但 actual managed hosted runtime 仍未落地。真正的 hosted / web 入口选型继续冻结为短期 `LibreChat-first`、长期 `OPL` 自有 web front desk。`Chatbot UI` 不作为主 hosted 基座
 - 当前家族级入口真相：四仓的 `product entry` 成熟度仍不一致。`OPL` 已有 family-level 本地入口壳；三个业务仓现在也都已有 repo-tracked 的 lightweight direct-entry shell，但成熟度和可直接使用性仍不同，且都还不能被误写成成熟的 hosted 或最终用户前台
 - 当前产品边界：`OPL` 负责顶层 gateway / federation / shared substrate contract，三个 domain 仓继续各自维护自己的产品 runtime
@@ -34,6 +34,7 @@
 - 当前顶层主线：truth reset、central sync、surface authority convergence、admitted-domain state alignment
 - 当前重点：先把“上游 `Hermes-Agent` 才算真实接入”与“OPL 采用外部 kernel、产品层托管集成”这两条标准冻结下来，再把三个 domain 仓已经 absorbed 的 delta 收进顶层参考面与公开边界
 - 当前重点：在已经落地的 `OPL` 本地 direct-entry shell 基础上，继续冻结 `domain lightweight direct entry + unified handoff envelope` 这条家族级入口架构
+- 当前重点：把三个业务仓新增的 `operator_loop_actions` 收口为同一套家族级用户面 contract，并让 `domain-manifests / dashboard / handoff-envelope / opl web` 一起消费，不再只告诉用户“当前 loop 是什么”，而是直接告诉用户“下一步能做哪几件事”
 - 当前重点：把 hosted / web 前台的真实选型、hosted-friendly shell contract 与 family-level direct entry 推进板一起冻结，避免下一轮又回到“随便套一个 chat UI 就算产品入口”的漂移
 - 当前约束：runtime ownership 继续留在 domain 一侧，开发宿主、历史执行面与仓内自写 substrate 都只能描述执行条件与迁移背景，不能被抬升成产品 runtime 真相
 - 理想形态与当前差距、以及为什么不能把 repo-local shim / pilot 写成真实集成，统一收口到 `docs/references/hermes-agent-truth-reset-and-target-state.md`
@@ -41,6 +42,7 @@
 - 家族级入口栈与 `OPL -> domain` handoff 架构，统一收口到 `docs/references/family-product-entry-and-domain-handoff-architecture.md`
 - hosted / web 前台选型与 pilot 优先级，统一收口到 `docs/references/opl-hosted-web-frontdesk-benchmark.md`
 - 家族级 lightweight direct entry 推进节奏，统一收口到 `docs/references/family-lightweight-direct-entry-rollout-board.md`
+- 家族用户面成熟度梯子与四仓当前落点，统一收口到 `docs/references/family-user-facing-maturity-roadmap.md`
 - 家族统一 `executor-adapter` 默认口径，统一收口到 `docs/references/family-executor-adapter-defaults.md`
 - `OPL Front Desk` 当前已完成/未完成事项，统一收口到 `docs/references/opl-frontdesk-delivery-board.md`
 - `Med Auto Science` 的顶层切换边界与 `OPL -> MAS` 切换板，统一收口到 `docs/references/mas-top-level-cutover-board.md`
@@ -49,7 +51,7 @@
 
 1. 保持公开 docs、gateway contracts 与 admitted domain 状态一致。
 2. 在已落地的 hosted-pilot-ready shell bundle、self-hostable hosted pilot package、真实的 `LibreChat-first` hosted shell pilot package、workspace registry、managed session ledger 与 handoff bundle 之上，继续做 hosted runtime hardening，同时明确长期仍是 `OPL` 自有 web front desk。
-3. 先让 `OPL` 站稳 family-level hosted / web front desk 方案，再让三个业务仓把已经 landed 的 lightweight direct-entry shell 继续压实成更稳定的 direct-entry 面。
+3. 先让 `OPL` 站稳 family-level hosted / web front desk 方案，再让三个业务仓沿已经 landed 的 `operator_loop_actions` 把 lightweight direct-entry shell 继续压实成更稳定的 direct-entry 面。
 4. 统一四仓对“上游 `Hermes-Agent` / repo-local shim / pilot / scaffold”的命名边界，不再允许假集成叙事。
 5. 推动三个 domain 仓先共用“`Codex CLI autonomous` + 继承本机 `Codex` 默认配置”这条默认执行器主线，再在不降级的前提下测试真正的 `Hermes-native` 完整 `Hermes AIAgent` agent loop。
 6. 推动各 domain 仓把 `runtime substrate / gateway authority / executor adapter` 三层边界写成同一套 family 语义，不再有人把“接入 Hermes”误解成“强制替换全部执行器”或“当前 chat relay 已经等于 Hermes-native”。
