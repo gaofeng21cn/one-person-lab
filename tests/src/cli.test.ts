@@ -1750,6 +1750,12 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(medautogrant.manifest.product_entry_readiness.verdict, 'agent_assisted_ready_not_product_grade');
     assert.equal(medautogrant.manifest.product_entry_readiness.usable_now, true);
     assert.equal(medautogrant.manifest.product_entry_readiness.recommended_loop_command, 'uv run python -m med_autogrant grant-user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json');
+    assert.equal(medautogrant.manifest.product_entry_preflight.surface_kind, 'product_entry_preflight');
+    assert.equal(medautogrant.manifest.product_entry_preflight.ready_to_try_now, true);
+    assert.equal(
+      medautogrant.manifest.product_entry_preflight.recommended_check_command,
+      'uv run python -m med_autogrant validate-workspace --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json',
+    );
 
     assert.equal(medautoscience.status, 'resolved');
     assert.equal(medautoscience.manifest.recommended_shell, 'workspace_cockpit');
@@ -1772,6 +1778,12 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(medautoscience.manifest.product_entry_readiness.verdict, 'runtime_ready_not_standalone_product');
     assert.equal(medautoscience.manifest.product_entry_readiness.good_to_use_now, false);
     assert.equal(medautoscience.manifest.product_entry_readiness.recommended_start_surface, 'product_frontdesk');
+    assert.equal(medautoscience.manifest.product_entry_preflight.surface_kind, 'product_entry_preflight');
+    assert.equal(medautoscience.manifest.product_entry_preflight.ready_to_try_now, true);
+    assert.equal(
+      medautoscience.manifest.product_entry_preflight.recommended_check_command,
+      'uv run python -m med_autoscience.cli doctor --profile /fixtures/med-autoscience/profile.local.toml',
+    );
 
     assert.equal(redcube.status, 'resolved');
     assert.equal(redcube.manifest.recommended_shell, 'direct');
@@ -1801,6 +1813,12 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(redcube.manifest.product_entry_readiness.verdict, 'service_surface_ready_not_managed_product');
     assert.equal(redcube.manifest.product_entry_readiness.usable_now, true);
     assert.equal(redcube.manifest.product_entry_readiness.recommended_start_command, 'redcube product frontdesk');
+    assert.equal(redcube.manifest.product_entry_preflight.surface_kind, 'product_entry_preflight');
+    assert.equal(redcube.manifest.product_entry_preflight.ready_to_try_now, true);
+    assert.equal(
+      redcube.manifest.product_entry_preflight.recommended_check_command,
+      'redcube workspace doctor --workspace-root /fixtures/redcube/workspace',
+    );
 
     const dashboardOutput = runCli(['dashboard', '--path', repoRoot, '--sessions-limit', '1'], env);
     assert.equal(dashboardOutput.dashboard.front_desk.recommended_entry_surfaces_count, 3);
@@ -1821,6 +1839,13 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(grantEntry.product_entry_readiness_verdict, 'agent_assisted_ready_not_product_grade');
     assert.equal(grantEntry.product_entry_readiness_usable_now, true);
     assert.equal(grantEntry.product_entry_readiness_start_command, 'uv run python -m med_autogrant product-frontdesk --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json');
+    assert.equal(grantEntry.product_entry_preflight.ready_to_try_now, true);
+    assert.equal(
+      grantEntry.product_entry_preflight.recommended_check_command,
+      'uv run python -m med_autogrant validate-workspace --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json',
+    );
+    assert.deepEqual(grantEntry.product_entry_preflight_blocking_check_ids, []);
+    assert.equal(grantEntry.product_entry_preflight_checks_count, 4);
     assert.equal(grantEntry.product_entry_overview.summary, grantEntry.product_entry_status_summary);
     assert.equal(grantEntry.product_entry_overview.progress_surface.surface_kind, 'grant_progress');
     assert.equal(grantEntry.product_entry_overview.resume_surface.surface_kind, 'grant_user_loop');
@@ -1832,6 +1857,13 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(scienceEntry.product_entry_readiness_verdict, 'runtime_ready_not_standalone_product');
     assert.equal(scienceEntry.product_entry_readiness_good_to_use_now, false);
     assert.equal(scienceEntry.product_entry_readiness_loop_command, 'uv run python -m med_autoscience.cli workspace-cockpit --profile /fixtures/med-autoscience/profile.local.toml');
+    assert.equal(scienceEntry.product_entry_preflight.ready_to_try_now, true);
+    assert.equal(
+      scienceEntry.product_entry_preflight.recommended_check_command,
+      'uv run python -m med_autoscience.cli doctor --profile /fixtures/med-autoscience/profile.local.toml',
+    );
+    assert.deepEqual(scienceEntry.product_entry_preflight_blocking_check_ids, []);
+    assert.equal(scienceEntry.product_entry_preflight_checks_count, 7);
     assert.equal(scienceEntry.family_action_graph_ref, '/family_orchestration/action_graph');
     assert.equal(scienceEntry.family_action_graph_node_count, 4);
     assert.equal(scienceEntry.family_action_graph_edge_count, 5);
@@ -1853,6 +1885,13 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(recommendedEntry.product_entry_readiness_summary, '当前可以作为 RedCube 的 direct frontdesk / CLI product-entry 主线使用，但还不是成熟的最终用户前台或托管 Web 产品。');
     assert.equal(recommendedEntry.product_entry_readiness_start_command, 'redcube product frontdesk');
     assert.equal(recommendedEntry.product_entry_readiness_loop_command, 'redcube product invoke');
+    assert.equal(recommendedEntry.product_entry_preflight.ready_to_try_now, true);
+    assert.equal(
+      recommendedEntry.product_entry_preflight.recommended_check_command,
+      'redcube workspace doctor --workspace-root /fixtures/redcube/workspace',
+    );
+    assert.deepEqual(recommendedEntry.product_entry_preflight_blocking_check_ids, []);
+    assert.equal(recommendedEntry.product_entry_preflight_checks_count, 4);
     assert.equal(recommendedEntry.operator_loop_actions.start_deliverable.command, 'redcube product invoke');
     assert.equal(recommendedEntry.product_entry_overview.summary, recommendedEntry.product_entry_status_summary);
     assert.equal(recommendedEntry.product_entry_overview.progress_surface.surface_kind, 'product_entry_session');
@@ -1995,6 +2034,18 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.product_entry_readiness.recommended_start_command,
       'redcube product frontdesk',
+    );
+    assert.equal(
+      output.handoff_bundle.domain_manifest_recommendation.product_entry_preflight.surface_kind,
+      'product_entry_preflight',
+    );
+    assert.equal(
+      output.handoff_bundle.domain_manifest_recommendation.product_entry_preflight.recommended_check_command,
+      'redcube workspace doctor --workspace-root /fixtures/redcube/workspace',
+    );
+    assert.equal(
+      output.handoff_bundle.domain_manifest_recommendation.product_entry_preflight.ready_to_try_now,
+      true,
     );
     assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.product_entry_overview.progress_surface.command,

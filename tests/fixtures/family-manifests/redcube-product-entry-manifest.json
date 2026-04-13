@@ -139,6 +139,48 @@
       "redcube_operator_review_gate"
     ]
   },
+  "product_entry_preflight": {
+    "surface_kind": "product_entry_preflight",
+    "summary": "Current product-entry preflight passed; inspect the workspace doctor output and then open the RedCube frontdesk.",
+    "ready_to_try_now": true,
+    "recommended_check_command": "redcube workspace doctor --workspace-root /fixtures/redcube/workspace",
+    "recommended_start_command": "redcube product frontdesk --workspace-root /fixtures/redcube/workspace",
+    "blocking_check_ids": [],
+    "checks": [
+      {
+        "check_id": "workspace_root_resolved",
+        "title": "Workspace Root Resolved",
+        "status": "pass",
+        "blocking": true,
+        "summary": "workspace root 已解析且目录存在。",
+        "command": "redcube workspace doctor --workspace-root /fixtures/redcube/workspace"
+      },
+      {
+        "check_id": "workspace_contract_present",
+        "title": "Workspace Contract Present",
+        "status": "pass",
+        "blocking": true,
+        "summary": "workspace contract 已就位。",
+        "command": "redcube workspace doctor --workspace-root /fixtures/redcube/workspace"
+      },
+      {
+        "check_id": "runtime_state_root_ready",
+        "title": "Runtime State Root Ready",
+        "status": "pass",
+        "blocking": true,
+        "summary": "runtime state root 已就位。",
+        "command": "redcube workspace doctor --workspace-root /fixtures/redcube/workspace"
+      },
+      {
+        "check_id": "frontdoor_contract_landed",
+        "title": "Frontdoor Contract Landed",
+        "status": "pass",
+        "blocking": true,
+        "summary": "direct RedCube frontdoor contract 已 landed，可由 frontdesk / manifest 直接消费。",
+        "command": "redcube product frontdesk --workspace-root /fixtures/redcube/workspace"
+      }
+    ]
+  },
   "product_entry_readiness": {
     "surface_kind": "product_entry_readiness",
     "verdict": "service_surface_ready_not_managed_product",
