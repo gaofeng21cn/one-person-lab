@@ -78,11 +78,19 @@ test('domain-onboarding readiness schema requires execution-model alignment befo
   assert.deepEqual(schema.$defs.formalInclusionGate.required, expectedFormalGateRequired);
 
   const executionModel = schema.$defs.executionModelDeclaration;
-  assert.equal(executionModel.properties.default_executor.const, 'agent_first');
+  assert.equal(executionModel.properties.default_executor.const, 'codex_cli_autonomous');
+  assert.equal(executionModel.properties.default_model.const, 'inherit_local_codex_default');
+  assert.equal(executionModel.properties.default_reasoning_effort.const, 'inherit_local_codex_default');
   assert.equal(executionModel.properties.auto_human_share_one_base.const, true);
+  assert.equal(executionModel.properties.chat_completion_only_executor_forbidden.const, true);
+  assert.equal(executionModel.properties.hermes_native_requires_full_agent_loop.const, true);
   assert.equal(executionModel.properties.fixed_code_first_mainline_forbidden.const, true);
   assert.equal(executionModel.properties.single_mode_steady_state_forbidden.const, true);
+  assert.ok(executionModel.required.includes('default_model'));
+  assert.ok(executionModel.required.includes('default_reasoning_effort'));
   assert.ok(executionModel.required.includes('stable_agent_runtime_surface_refs'));
+  assert.ok(executionModel.required.includes('chat_completion_only_executor_forbidden'));
+  assert.ok(executionModel.required.includes('hermes_native_requires_full_agent_loop'));
   assert.ok(executionModel.required.includes('convergence_surface_refs'));
   assert.ok(executionModel.required.includes('code_responsibility_surface_refs'));
 
@@ -112,14 +120,18 @@ test('domain-onboarding readiness schema requires execution-model alignment befo
   );
 });
 
-test('example onboarding record declares the agent-first execution model and aligned gate', () => {
+test('example onboarding record declares the codex-cli-autonomous execution model and aligned gate', () => {
   const schema = readJson('contracts/opl-gateway/domain-onboarding-readiness.schema.json');
   const example = readJson('examples/opl-gateway/domain-onboarding-readiness.json');
   const embeddedExample = schema.examples[0];
 
   for (const record of [embeddedExample, example]) {
-    assert.equal(record.execution_model.default_executor, 'agent_first');
+    assert.equal(record.execution_model.default_executor, 'codex_cli_autonomous');
+    assert.equal(record.execution_model.default_model, 'inherit_local_codex_default');
+    assert.equal(record.execution_model.default_reasoning_effort, 'inherit_local_codex_default');
     assert.equal(record.execution_model.auto_human_share_one_base, true);
+    assert.equal(record.execution_model.chat_completion_only_executor_forbidden, true);
+    assert.equal(record.execution_model.hermes_native_requires_full_agent_loop, true);
     assert.equal(record.execution_model.fixed_code_first_mainline_forbidden, true);
     assert.equal(record.execution_model.single_mode_steady_state_forbidden, true);
     assert.ok(record.execution_model.stable_agent_runtime_surface_refs.length > 0);
@@ -149,7 +161,7 @@ test('example onboarding record declares the agent-first execution model and ali
     assert.equal(record.formal_inclusion_gate.cross_domain_wording_aligned.status, 'ready');
     assert.match(
       record.formal_inclusion_gate.execution_model_aligned.evidence_refs.join(' '),
-      /stable_agent_runtime_surface|shared_base_auto_hitl|default_executor=agent_first/i,
+      /stable_agent_runtime_surface|shared_base_auto_hitl|default_executor=codex_cli_autonomous|default_model=inherit_local_codex_default|default_reasoning_effort=inherit_local_codex_default/i,
     );
   }
 });

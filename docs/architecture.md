@@ -46,6 +46,7 @@
   - 负责把通用 runtime substrate 接入具体 domain contract，而不是重写 domain truth
 - `Executor Adapter`
   - 负责把 domain 内部动作路由到具体执行器，例如受控 backend、Hermes-native agent、Codex、Claude Code、Python/CLI toolchain
+  - 当前家族默认执行器固定为 `Codex CLI autonomous`；默认模型与默认 reasoning effort 统一继承本机 `Codex` 默认配置，不在 family contract 里固定 pin
 - `Concrete Executor`
   - 负责完成单个步骤或局部工作，不自动上升为顶层 runtime substrate owner
 
@@ -101,6 +102,20 @@
 - 由 domain 程序统一 authority / contract / audit truth
 - 由 `Executor Adapter` 在每个 domain 内按 route 选择具体执行器
 
+当前冻结的 family-level 默认 route 是：
+
+其中，`Hermes-native` 当前只作为实验路线；只有完整的 Hermes AIAgent agent loop 才算成立，而一步一步 chat、单次 chat completion 或 chat relay 都不算目标主线。
+
+- `Codex CLI autonomous`
+  - 当前正式默认执行器
+  - 默认模型：继承本机 `Codex` 默认配置
+  - 默认 reasoning effort：继承本机 `Codex` 默认配置
+  - 语义要求：必须是能自主拆解与执行的 agent loop，而不是一步一步 chat、单次 chat completion，或 chat relay
+- `Hermes-native`
+  - 当前只作为实验路线
+  - 只有完整的 Hermes AIAgent agent loop 才算 `Hermes-native`
+  - 任何把 `Hermes` 降格成一步一步 chat、单次 chat completion，或 chat relay 的实现，都只能算迁移桥 / 对照面，不算目标主线
+
 这允许系列项目在不改写顶层 runtime 语义的前提下，保留不同 domain 的最优执行方式。例如：
 
 - 医学研究线可继续通过受控 research backend 承载高复杂度 inner-loop execution
@@ -138,6 +153,7 @@
 详细对比与运维取舍见：
 
 - `docs/references/opl-product-entry-and-hermes-kernel-integration.md`
+- `docs/references/family-executor-adapter-defaults.md`
 - `docs/references/family-product-entry-and-domain-handoff-architecture.md`
 - `docs/references/opl-hosted-web-frontdesk-benchmark.md`
 - `docs/references/family-lightweight-direct-entry-rollout-board.md`

@@ -31,6 +31,7 @@ These are the first files an AI or maintainer should read before touching the re
 - Current management-surface truth: `opl projects / workspace-status / workspace-catalog / workspace-bind|activate|archive / runtime-status / session-ledger / dashboard` provide the current top-level management layer for project, workspace, session, handoff, and runtime visibility. `workspace-catalog` now carries project-level binding summaries, writable available-action hints, and an optional domain-owned `manifest_command`; `session-ledger` now carries per-session aggregate attribution in addition to raw event entries, and `opl web` gives that management surface a directly usable browser front door while also exposing hosted-friendly `health / manifest / hosted-bundle / hosted-package / librechat-package / sessions / resume / logs / handoff-envelope` surfaces.
 - Current hosted / web truth: the family now has a real `LibreChat-first` hosted shell pilot package as the shortest path to a usable web front door, while the long-line target remains an `OPL`-owned web front desk rather than a permanent third-party shell; managed hosted runtime is still not landed.
 - Family product-entry truth: product-entry maturity is still uneven across the four repositories. `OPL` now has a family-level local shell; all three domain repositories now also have repo-tracked lightweight direct-entry shells, but their maturity still differs and none should yet be overstated as a mature hosted or end-user front desk.
+- Current family executor default: `Codex CLI autonomous` is now the frozen default executor route; the family default model and reasoning effort inherit the local `Codex` default configuration rather than pinning a repo-local model version, while `Hermes-native` remains experimental and only counts when a full `Hermes AIAgent` loop is proved.
 - Frozen integration choice: `Hermes Kernel Integration` follows `external kernel, managed by OPL product packaging` rather than a long-term fork or a user-managed Hermes prerequisite.
 - Long-line target: move the shared runtime layer toward upstream `Hermes-Agent` (or an explicitly approved equivalent substrate) while keeping `OPL` as the top-level coordination, discovery, and contract layer.
 - Historical execution surface: OMX is retired and survives only as migration / audit reference material.
@@ -77,6 +78,7 @@ All Layer 3 docs now live under `docs/references/`, with a dedicated index so th
 - `references/ecosystem-status-matrix.md` (Chinese-only internal reference)
 - `references/hermes-agent-runtime-substrate-benchmark.md` (Chinese-only internal reference)
 - `references/hermes-agent-truth-reset-and-target-state.md` (Chinese-only internal reference)
+- `references/family-executor-adapter-defaults.md` (Chinese-only internal reference)
 - `references/family-product-entry-and-domain-handoff-architecture.md` (Chinese-only internal reference)
 - `references/family-lightweight-direct-entry-rollout-board.md` (Chinese-only internal reference)
 - `references/mas-top-level-cutover-board.md` (Chinese-only internal reference)

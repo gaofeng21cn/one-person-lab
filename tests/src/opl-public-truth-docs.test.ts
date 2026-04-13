@@ -376,6 +376,7 @@ test('product-entry docs freeze the managed external-kernel choice instead of fo
   const readme = read('README.md');
   const readmeZh = read('README.zh-CN.md');
   const status = read('docs/status.md');
+  const decisions = read('docs/decisions.md');
   const architecture = read('docs/architecture.md');
   const docsIndex = read('docs/README.md');
   const docsIndexZh = read('docs/README.zh-CN.md');
@@ -384,6 +385,7 @@ test('product-entry docs freeze the managed external-kernel choice instead of fo
   const runtimeContract = read('docs/shared-runtime-contract.md');
   const runtimeContractZh = read('docs/shared-runtime-contract.zh-CN.md');
   const decisionNote = read('docs/references/opl-product-entry-and-hermes-kernel-integration.md');
+  const executorDefaults = read('docs/references/family-executor-adapter-defaults.md');
   const familyEntryDoc = read('docs/references/family-product-entry-and-domain-handoff-architecture.md');
   const masCutoverBoard = read('docs/references/mas-top-level-cutover-board.md');
 
@@ -411,21 +413,36 @@ test('product-entry docs freeze the managed external-kernel choice instead of fo
   assert.match(status, /hosted \/ web 前台真相：.*仍未落地|hosted.*仍未完成/);
   assert.match(status, /Hermes Kernel Integration.*external kernel, managed by OPL product packaging/);
   assert.match(status, /家族级入口真相|operator entry.*agent entry.*product entry/);
+  assert.match(status, /家族默认执行器.*Codex CLI autonomous.*Codex.*默认配置/);
+  assert.match(status, /Hermes-native.*实验路线/);
+  assert.match(status, /Hermes AIAgent.*完整.*agent loop|完整的 Hermes AIAgent/);
+  assert.match(status, /不是.*chat relay|不是一步一步 chat/);
   assert.match(architecture, /opl front desk \/ quick ask \/ ops shell/i);
   assert.match(architecture, /User -> OPL Product Entry -> OPL Gateway -> Hermes Kernel -> Domain Adapter/);
   assert.match(architecture, /target_domain_id/);
   assert.match(architecture, /return_surface_contract/);
+  assert.match(architecture, /Codex CLI autonomous.*Codex.*默认配置/);
+  assert.match(architecture, /Hermes-native.*实验/);
+  assert.match(architecture, /Hermes AIAgent.*agent loop|完整的 agent loop/);
+  assert.match(architecture, /chat relay|一步一步 chat/);
+  assert.match(decisions, /Codex CLI autonomous/);
+  assert.match(decisions, /inherit_local_codex_default/);
+  assert.match(decisions, /Hermes-native.*完整.*AIAgent.*agent loop|完整的 Hermes AIAgent/);
 
   assert.match(docsIndex, /opl-product-entry-and-hermes-kernel-integration\.md/);
   assert.match(docsIndexZh, /opl-product-entry-and-hermes-kernel-integration\.md/);
   assert.match(docsIndex, /family-product-entry-and-domain-handoff-architecture\.md/);
   assert.match(docsIndexZh, /family-product-entry-and-domain-handoff-architecture\.md/);
+  assert.match(docsIndex, /family-executor-adapter-defaults\.md/);
+  assert.match(docsIndexZh, /family-executor-adapter-defaults\.md/);
   assert.match(docsIndex, /mas-top-level-cutover-board\.md/);
   assert.match(docsIndexZh, /mas-top-level-cutover-board\.md/);
   assert.match(refsIndex, /opl-product-entry-and-hermes-kernel-integration\.md/);
   assert.match(refsIndexZh, /opl-product-entry-and-hermes-kernel-integration\.md/);
   assert.match(refsIndex, /family-product-entry-and-domain-handoff-architecture\.md/);
   assert.match(refsIndexZh, /family-product-entry-and-domain-handoff-architecture\.md/);
+  assert.match(refsIndex, /family-executor-adapter-defaults\.md/);
+  assert.match(refsIndexZh, /family-executor-adapter-defaults\.md/);
   assert.match(refsIndex, /mas-top-level-cutover-board\.md/);
   assert.match(refsIndexZh, /mas-top-level-cutover-board\.md/);
 
@@ -435,6 +452,10 @@ test('product-entry docs freeze the managed external-kernel choice instead of fo
   assert.match(decisionNote, /不 fork \/ vendor 上游 `Hermes-Agent` kernel 代码/);
   assert.match(decisionNote, /用户不需要手工维护一套“先会 Hermes 才能会 OPL”的流程/);
   assert.match(decisionNote, /平台内部运行 `Hermes` kernel/);
+  assert.match(executorDefaults, /Codex CLI autonomous/);
+  assert.match(executorDefaults, /inherit_local_codex_default/);
+  assert.match(executorDefaults, /Hermes AIAgent/);
+  assert.match(executorDefaults, /chat relay|一步一步 chat/);
   assert.match(familyEntryDoc, /OPL Product Entry -> OPL Gateway -> Hermes Kernel -> Domain Handoff/);
   assert.match(familyEntryDoc, /User -> Domain Product Entry -> Domain Gateway -> Hermes Kernel -> Domain Harness OS/);
   assert.match(familyEntryDoc, /mas-top-level-cutover-board\.md/);
