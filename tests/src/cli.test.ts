@@ -1250,7 +1250,7 @@ test('domain-manifests resolves active domain-owned manifest commands while work
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-manifest-state-'));
   const resolvedManifest = {
     surface_kind: 'product_entry_manifest',
-    manifest_version: 1,
+    manifest_version: 2,
     manifest_kind: 'redcube_product_entry_manifest',
     target_domain_id: 'redcube_ai',
     formal_entry: {
@@ -1322,6 +1322,35 @@ test('domain-manifests resolves active domain-owned manifest commands while work
       opl_return_surface: {
         surface_kind: 'product_entry',
         target_domain_id: 'redcube_ai',
+      },
+    },
+    family_orchestration: {
+      action_graph_ref: {
+        ref_kind: 'repo_path',
+        ref: 'contracts/runtime-program/action-graph.json',
+        label: 'redcube operator graph',
+      },
+      human_gates: [
+        {
+          gate_id: 'deliverable_publish_gate',
+          title: 'Deliverable publish gate',
+          status: 'requested',
+        },
+      ],
+      resume_contract: {
+        surface_kind: 'product_entry_session',
+        session_locator_field: 'entry_session_id',
+        checkpoint_locator_field: 'checkpoint_lineage_id',
+      },
+      event_envelope_surface: {
+        ref_kind: 'repo_path',
+        ref: 'runtime_watch/latest.json',
+        label: 'runtime event surface',
+      },
+      checkpoint_lineage_surface: {
+        ref_kind: 'repo_path',
+        ref: 'runtime_watch/checkpoints/latest.json',
+        label: 'checkpoint lineage surface',
       },
     },
     notes: [],
@@ -1378,6 +1407,9 @@ test('domain-manifests resolves active domain-owned manifest commands while work
     assert.equal(redcube.manifest.operator_loop_actions.continue_session.surface_kind, 'product_entry_session');
     assert.equal(redcube.manifest.repo_mainline.phase_id, 'repo_verified_product_entry_and_opl_federation');
     assert.equal(redcube.manifest.product_entry_status.remaining_gaps_count, 2);
+    assert.equal(redcube.manifest.family_orchestration.action_graph_ref.ref, 'contracts/runtime-program/action-graph.json');
+    assert.equal(redcube.manifest.family_orchestration.human_gates[0].gate_id, 'deliverable_publish_gate');
+    assert.equal(redcube.manifest.family_orchestration.resume_contract.session_locator_field, 'entry_session_id');
     assert.equal(medautoscience.status, 'invalid_json');
     assert.equal(medautoscience.error.code, 'invalid_json');
 
@@ -1403,7 +1435,7 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-handoff-state-'));
   const resolvedManifest = {
     surface_kind: 'product_entry_manifest',
-    manifest_version: 1,
+    manifest_version: 2,
     manifest_kind: 'redcube_product_entry_manifest',
     target_domain_id: 'redcube_ai',
     formal_entry: {
@@ -1475,6 +1507,35 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
       opl_return_surface: {
         surface_kind: 'product_entry',
         target_domain_id: 'redcube_ai',
+      },
+    },
+    family_orchestration: {
+      action_graph_ref: {
+        ref_kind: 'repo_path',
+        ref: 'contracts/runtime-program/action-graph.json',
+        label: 'redcube operator graph',
+      },
+      human_gates: [
+        {
+          gate_id: 'deliverable_publish_gate',
+          title: 'Deliverable publish gate',
+          status: 'requested',
+        },
+      ],
+      resume_contract: {
+        surface_kind: 'product_entry_session',
+        session_locator_field: 'entry_session_id',
+        checkpoint_locator_field: 'checkpoint_lineage_id',
+      },
+      event_envelope_surface: {
+        ref_kind: 'repo_path',
+        ref: 'runtime_watch/latest.json',
+        label: 'runtime event surface',
+      },
+      checkpoint_lineage_surface: {
+        ref_kind: 'repo_path',
+        ref: 'runtime_watch/checkpoints/latest.json',
+        label: 'checkpoint lineage surface',
       },
     },
     notes: [],
@@ -1549,6 +1610,10 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.repo_mainline.phase_id,
       'repo_verified_product_entry_and_opl_federation',
+    );
+    assert.equal(
+      output.handoff_bundle.domain_manifest_recommendation.family_orchestration.resume_contract.checkpoint_locator_field,
+      'checkpoint_lineage_id',
     );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });

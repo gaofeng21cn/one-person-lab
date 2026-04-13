@@ -19,6 +19,8 @@ The `Shared Runtime Contract` owns the shared runtime objects and behavior surfa
 - `memory provider hook`
 - `delivery / cron`
 - `approval / interrupt / resume`
+- `family event envelope`
+- `family checkpoint lineage`
 
 These are cross-domain runtime requirements.
 They define what the runtime layer must expose structurally, not what any one domain decides about artifacts, review, or delivery truth.
@@ -77,6 +79,28 @@ The first object set to keep explicit is:
    - `interrupt_reason`
    - `resume_allowed`
 
+## Family Orchestration Companion Schemas
+
+To avoid coupling the family runtime layer to one orchestration framework, the machine-readable companion schemas now frozen under this contract are:
+
+1. `family event envelope`
+   - shared event correlation, producer, session, and audit-reference envelope
+2. `family checkpoint lineage`
+   - shared checkpoint ancestry, resume, and state-reference envelope
+
+These schemas live in `contracts/family-orchestration/`.
+They freeze interoperability surfaces that multiple domain runtimes can adopt while still keeping runtime ownership and durable truth local to each domain repository.
+
+## Relationship To CrewAI
+
+`CrewAI` is being used here as a source of orchestration ideas, not as a required family runtime layer.
+
+The current split is:
+
+- absorb event correlation, checkpoint lineage, flow introspection, and human-gate pause / resume semantics at the contract layer
+- do not standardize on `CrewAI` as the default `LLM`, `Agent`, `Crew`, or memory owner
+- do not let `CrewAI` replace `Hermes-Agent`, `Codex CLI`, the `OPL Gateway`, or any `Domain Gateway`
+
 ## Relationship To Hermes-Agent
 
 What the upstream `Hermes-Agent` contributes most convincingly today is a mature runtime substrate implementation.
@@ -99,6 +123,7 @@ As of the current public mainline, the true state remains:
 - the current active development host is still Codex-only local sessions
 - the current public OPL entry remains the local `TypeScript CLI`-first / read-only gateway surface
 - the `Shared Runtime Contract` is still being frozen and progressively landed
+- the runtime-oriented family orchestration companion schemas now live in `contracts/family-orchestration/` and freeze the shared `event envelope + checkpoint lineage` semantics without turning them into one runtime owner
 - the four repositories are no longer at the same integration depth: `Med Auto Grant` has landed a real upstream `Hermes-Agent` runtime substrate, `Med Auto Science` has completed external runtime bring-up and is entering real adapter cutover, `RedCube AI` remains in upstream pilot prep, and `OPL` itself stays at the top-level gateway / federation layer
 - an upstream `Hermes-Agent` runtime substrate remains the preferred future implementation direction for this contract, not a landed public fact
 

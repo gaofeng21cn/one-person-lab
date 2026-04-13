@@ -19,6 +19,9 @@ The `Shared Domain Contract` owns the shared upper-layer behavior semantics acro
 - the audit trail surface
 - gate semantics
 - the relationship between the current `Auto-only` mainline and any future `HITL` sibling / upper-layer product
+- `family action graph`
+- `family human gate`
+- `family product-entry manifest v2`
 
 These concerns define how the product is entered, observed, reviewed, and promoted in a stable way.
 They do not define how runtime processes are hosted.
@@ -56,6 +59,32 @@ The first objects and rules to keep aligned are:
    - current admitted mainlines remain `Auto-only`
    - any future `Human-in-the-loop` product should reuse stable modules as a sibling or upper-layer product rather than forcing same-repository dual-mode logic
 
+## Family Orchestration Companion Schemas
+
+The machine-readable companion schemas now frozen under this contract are:
+
+1. `family action graph`
+   - shared graph topology, node, edge, checkpoint-policy, and gate-binding surface
+2. `family human gate`
+   - shared request / evidence / decision / resume surface for human review
+3. `family product-entry manifest v2`
+   - shared product-entry discovery surface that can point at graphs, gates, resume contracts, and runtime companions
+
+These schemas live in `contracts/family-orchestration/`.
+They keep the upper-layer behavior semantics aligned without forcing all domains into one identical internal object model.
+
+## Relationship To CrewAI
+
+`CrewAI` is relevant here only as a source of orchestration ideas worth absorbing into contracts.
+
+The family is not standardizing on:
+
+- `CrewAI` as the default `Agent` / `Crew` runtime
+- `CrewAI` as the `LLM` wrapper or memory owner
+- `CrewAI` as the domain-truth owner
+
+The family is standardizing only on the reusable formal behavior surfaces: graph, gate, checkpoint, and discovery semantics.
+
 ## What It Does Not Own
 
 This contract does not:
@@ -85,6 +114,7 @@ As of the current public mainline, this contract is already partially visible in
 - `controller internal only`
 - `Auto-only` mainline
 - no-bypass to `Domain Gateway`
+- the domain-oriented family orchestration companion schemas are now frozen as `family action graph + family human gate + family product-entry manifest v2`
 
 But the `per-run handle`, durable report, audit trail, and gate semantics are still being tightened into repo-verified behavior surfaces and should not be overstated as already fully unified across every repository.
 

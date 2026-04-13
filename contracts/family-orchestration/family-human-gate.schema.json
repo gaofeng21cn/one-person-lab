@@ -1,0 +1,208 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opl.onepersonlab/contracts/family-orchestration/family-human-gate.schema.json",
+  "title": "OPL Family Human Gate",
+  "description": "Shared human-review gate contract for request, evidence, decision, and resume semantics across the OPL family.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "gate_id",
+    "target_domain_id",
+    "gate_kind",
+    "requested_at",
+    "status",
+    "request_surface",
+    "evidence_refs",
+    "decision_options"
+  ],
+  "properties": {
+    "version": {
+      "const": "family-human-gate.v1"
+    },
+    "gate_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target_domain_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "gate_kind": {
+      "type": "string",
+      "minLength": 1
+    },
+    "requested_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "requested",
+        "approved",
+        "rejected",
+        "changes_requested",
+        "skipped",
+        "expired"
+      ]
+    },
+    "request_surface": {
+      "$ref": "#/$defs/surfaceRef"
+    },
+    "evidence_refs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/referenceRef"
+      }
+    },
+    "decision_options": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decision",
+        "decided_at"
+      ],
+      "properties": {
+        "decision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "decided_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "decided_by": {
+          "type": "string",
+          "minLength": 1
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "resume_contract": {
+          "$ref": "#/$defs/resumeContract"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "surfaceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface_kind",
+        "surface_id"
+      ],
+      "properties": {
+        "surface_kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "surface_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "command": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "referenceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ref_kind",
+        "ref"
+      ],
+      "properties": {
+        "ref_kind": {
+          "type": "string",
+          "enum": [
+            "repo_path",
+            "json_pointer",
+            "workspace_locator",
+            "external_url"
+          ]
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "resumeContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "resume_mode"
+      ],
+      "properties": {
+        "resume_mode": {
+          "type": "string",
+          "enum": [
+            "resume_action_graph",
+            "resume_checkpoint",
+            "return_to_frontdesk"
+          ]
+        },
+        "target_action_graph_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "target_node_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "checkpoint_lineage_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "return_surface": {
+          "$ref": "#/$defs/surfaceRef"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "version": "family-human-gate.v1",
+      "gate_id": "rca_operator_review_gate",
+      "target_domain_id": "redcube",
+      "gate_kind": "operator_review",
+      "requested_at": "2026-04-13T08:40:00Z",
+      "status": "requested",
+      "request_surface": {
+        "surface_kind": "operator_loop_surface",
+        "surface_id": "redcube_product_session",
+        "command": "redcube product session"
+      },
+      "evidence_refs": [
+        {
+          "ref_kind": "repo_path",
+          "ref": "audit/latest.json",
+          "label": "deliverable audit"
+        }
+      ],
+      "decision_options": [
+        "approve",
+        "request_changes",
+        "reject"
+      ]
+    }
+  ]
+}

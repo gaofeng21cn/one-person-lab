@@ -1,0 +1,370 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opl.onepersonlab/contracts/family-orchestration/family-product-entry-manifest-v2.schema.json",
+  "title": "OPL Family Product Entry Manifest v2",
+  "description": "Shared family-level product-entry discovery manifest for direct-entry, operator-loop, gate, and orchestration discovery across domain repositories.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "surface_kind",
+    "manifest_version",
+    "manifest_kind",
+    "target_domain_id",
+    "formal_entry",
+    "workspace_locator",
+    "product_entry_shell",
+    "shared_handoff",
+    "family_orchestration"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "product_entry_manifest"
+    },
+    "manifest_version": {
+      "const": 2
+    },
+    "manifest_kind": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target_domain_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "formal_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "default",
+        "supported_protocols"
+      ],
+      "properties": {
+        "default": {
+          "type": "string",
+          "minLength": 1
+        },
+        "supported_protocols": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "internal_surface": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "workspace_locator": {
+      "type": "object"
+    },
+    "runtime": {
+      "type": "object"
+    },
+    "repo_mainline": {
+      "type": "object"
+    },
+    "product_entry_status": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "next_focus": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "remaining_gaps_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "frontdesk_surface": {
+      "$ref": "#/$defs/shellSurface"
+    },
+    "operator_loop_surface": {
+      "$ref": "#/$defs/shellSurface"
+    },
+    "operator_loop_actions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "recommended_shell": {
+      "type": "string",
+      "minLength": 1
+    },
+    "recommended_command": {
+      "type": "string",
+      "minLength": 1
+    },
+    "product_entry_shell": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "$ref": "#/$defs/shellCommand"
+      }
+    },
+    "shared_handoff": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "family_orchestration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "human_gates"
+      ],
+      "properties": {
+        "action_graph_ref": {
+          "$ref": "#/$defs/referenceRef"
+        },
+        "human_gates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/gatePreview"
+          }
+        },
+        "resume_contract": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "surface_kind",
+            "session_locator_field"
+          ],
+          "properties": {
+            "surface_kind": {
+              "type": "string",
+              "minLength": 1
+            },
+            "session_locator_field": {
+              "type": "string",
+              "minLength": 1
+            },
+            "checkpoint_locator_field": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "event_envelope_surface": {
+          "$ref": "#/$defs/referenceRef"
+        },
+        "checkpoint_lineage_surface": {
+          "$ref": "#/$defs/referenceRef"
+        }
+      }
+    },
+    "remaining_gaps": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {
+    "shellCommand": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "command"
+      ],
+      "properties": {
+        "command": {
+          "type": "string",
+          "minLength": 1
+        },
+        "surface_kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "shellSurface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "shell_key"
+      ],
+      "properties": {
+        "shell_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "command": {
+          "type": "string",
+          "minLength": 1
+        },
+        "surface_kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "continuation_shell_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "continuation_command": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "referenceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ref_kind",
+        "ref"
+      ],
+      "properties": {
+        "ref_kind": {
+          "type": "string",
+          "enum": [
+            "repo_path",
+            "json_pointer",
+            "workspace_locator",
+            "external_url"
+          ]
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "gatePreview": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gate_id"
+      ],
+      "properties": {
+        "gate_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "requested",
+            "approved",
+            "rejected",
+            "changes_requested"
+          ]
+        },
+        "review_surface": {
+          "$ref": "#/$defs/referenceRef"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "surface_kind": "product_entry_manifest",
+      "manifest_version": 2,
+      "manifest_kind": "redcube_product_entry_manifest",
+      "target_domain_id": "redcube",
+      "formal_entry": {
+        "default": "CLI",
+        "supported_protocols": [
+          "MCP"
+        ],
+        "internal_surface": "controller"
+      },
+      "workspace_locator": {
+        "workspace_root": "/workspace/redcube-ai"
+      },
+      "frontdesk_surface": {
+        "shell_key": "frontdesk",
+        "command": "redcube product frontdesk",
+        "surface_kind": "product_frontdesk"
+      },
+      "operator_loop_surface": {
+        "shell_key": "direct",
+        "command": "redcube product invoke",
+        "surface_kind": "product_entry",
+        "continuation_shell_key": "session",
+        "continuation_command": "redcube product session"
+      },
+      "recommended_shell": "direct",
+      "recommended_command": "redcube product invoke",
+      "product_entry_shell": {
+        "frontdesk": {
+          "command": "redcube product frontdesk",
+          "surface_kind": "product_frontdesk"
+        },
+        "direct": {
+          "command": "redcube product invoke",
+          "surface_kind": "product_entry"
+        }
+      },
+      "shared_handoff": {
+        "opl_return_surface": {
+          "surface_kind": "product_entry",
+          "target_domain_id": "redcube"
+        }
+      },
+      "family_orchestration": {
+        "action_graph_ref": {
+          "ref_kind": "repo_path",
+          "ref": "contracts/runtime-program/action-graph.json",
+          "label": "operator loop graph"
+        },
+        "human_gates": [
+          {
+            "gate_id": "deliverable_publish_gate",
+            "title": "Deliverable publish gate",
+            "status": "requested"
+          }
+        ],
+        "resume_contract": {
+          "surface_kind": "product_entry_session",
+          "session_locator_field": "entry_session_id",
+          "checkpoint_locator_field": "checkpoint_lineage_id"
+        },
+        "event_envelope_surface": {
+          "ref_kind": "repo_path",
+          "ref": "runtime_watch/latest.json",
+          "label": "runtime event companion"
+        },
+        "checkpoint_lineage_surface": {
+          "ref_kind": "repo_path",
+          "ref": "runtime_watch/checkpoints/latest.json",
+          "label": "checkpoint lineage companion"
+        }
+      }
+    }
+  ]
+}
