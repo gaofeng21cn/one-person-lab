@@ -33,7 +33,8 @@
 
 ## 当前阶段
 
-- 当前顶层主线：truth reset、central sync、surface authority convergence、admitted-domain state alignment
+- 当前顶层主线：family-level front desk / hosted runtime hardening / domain lightweight direct-entry alignment；`central sync` 只作为 admitted-domain 新 absorbed delta 或 central reference surfaces drift 出现时才重开的条件性 follow-on
+- 当前顶层执行面收口：`docs/status.md` 继续给出顶层当前真相；`docs/references/opl-frontdesk-delivery-board.md` 负责当前活跃执行主线、主要 gap 与建议下一条执行 issue；`contracts/opl-gateway/README.md` 继续冻结 machine-readable contract boundary 与“`OPL` 不升格成 runtime owner”的约束；`docs/references/opl-phase-2-central-reference-sync-board.md` 只保留 admitted-domain delta / gateway wording drift 场景下的中央同步 follow-on
 - 当前重点：先把“上游 `Hermes-Agent` 才算真实接入”与“OPL 采用外部 kernel、产品层托管集成”这两条标准冻结下来，再把三个 domain 仓已经 absorbed 的 delta 收进顶层参考面与公开边界
 - 当前重点：在已经落地的 `OPL` 本地 direct-entry shell 基础上，继续冻结 `domain lightweight direct entry + unified handoff envelope` 这条家族级入口架构
 - 当前重点：把三个业务仓新增的 `frontdesk_surface + operator_loop_actions + product_entry_shell + shared_handoff` 收口为同一套家族级用户面 contract，并让 `domain-manifests / dashboard / handoff-envelope / opl web` 一起消费，不再只告诉用户“当前 loop 是什么”，而是直接告诉用户“该从哪个 direct frontdesk 进入、下一步能做哪几件事、有哪些 builder / federated handoff 可以直接接”

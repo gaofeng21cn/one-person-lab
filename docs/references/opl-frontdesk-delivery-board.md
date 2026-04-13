@@ -188,6 +188,30 @@
 - 继续走 research runtime 主线；
 - 不把 display / 配图资产支线混进来。
 
+## 与顶层 docs / contracts / central sync 的关系
+
+- `docs/status.md` 负责给出当前顶层真相与活跃阶段口径；这条板只负责把当前 front desk 交付线收成一条可继续执行的 owner line。
+- `contracts/opl-gateway/README.md` 继续冻结 machine-readable contract boundary、read-only gateway / control-plane bridge 的 owner split，以及 “`OPL` 不升格成 runtime owner” 的硬边界；这条 front desk 主线只能在这个边界内继续压实。
+- `docs/references/opl-phase-2-central-reference-sync-board.md` 仍然保留，但它现在只应该在 admitted-domain 新 absorbed delta 到来、或 central reference surfaces drift 需要补同步时才重开；它不是当前默认活跃的 top-level execution mainline。
+
+## 当前最大执行缺口
+
+当前最大的缺口不是再写一轮更大的平台叙事，而是把已经 landed 的 top-level front desk 压成更稳的 family-level execution surface。
+
+最需要继续收口的是：
+
+- `managed hosted runtime hardening` 仍未完成，当前仍只是本地 web pilot、hosted-friendly shell contract、self-hostable pilot package 与 `LibreChat-first` hosted shell pilot 的组合，还不能误写成 actual hosted runtime。
+- 顶层 `workspace registry / domain-manifests / dashboard / handoff-envelope / opl web` 已经能消费 domain discovery surface，但 domain locator wiring、`shared_handoff` 一致性与 direct-entry parity 还没有完全压稳。
+
+## 推荐下一条执行 issue
+
+建议下一条执行 issue：
+
+- 标题：`压实 OPL Front Desk hosted hardening 与 locator/handoff parity`
+- 目标：沿现有 `opl front desk -> domain-manifests / dashboard / handoff-envelope / opl web` 主线，继续把 hosted runtime hardening、domain locator wiring、`shared_handoff` 一致性与 direct-entry parity 压成更稳定的 family-level execution surface。
+- 边界：不新增 admitted domain、不重开 domain repo 内部实现、不把 `OPL` 写成 runtime owner；若没有新的 admitted-domain delta 或 central reference surfaces drift，也不重开 `docs/references/opl-phase-2-central-reference-sync-board.md` 那条中央同步线。
+- 完成信号：`docs/status.md`、`contracts/opl-gateway/README.md`、front desk 相关 reference docs 与验证口径都能一致表达“当前活跃主线是 frontdesk hardening + locator/handoff parity，而 central sync 只是条件性 follow-on”。
+
 ## 下一棒
 
 最合理的下一棒顺序：

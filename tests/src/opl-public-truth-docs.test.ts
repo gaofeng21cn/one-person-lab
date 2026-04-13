@@ -222,6 +222,24 @@ test('family orchestration absorb note stays visible from docs and reference ind
   assert.match(absorbNote, /family product-entry manifest v2/);
 });
 
+test('top-level execution mainline is framed as frontdesk hardening plus conditional central sync follow-on', () => {
+  const status = read('docs/status.md');
+  const board = read('docs/references/opl-frontdesk-delivery-board.md');
+
+  assert.match(status, /opl-frontdesk-delivery-board\.md/);
+  assert.match(status, /opl-phase-2-central-reference-sync-board\.md/);
+  assert.match(status, /front desk|frontdesk|hosted runtime hardening/i);
+  assert.match(status, /central sync|中央同步/);
+
+  assert.match(board, /docs\/status\.md/);
+  assert.match(board, /contracts\/opl-gateway\/README\.md/);
+  assert.match(board, /opl-phase-2-central-reference-sync-board\.md/);
+  assert.match(board, /admitted-domain.*delta|central reference surfaces drift|中央 reference surface/);
+  assert.match(board, /hosted runtime hardening|hosted hardening/i);
+  assert.match(board, /locator|shared_handoff|domain-manifests/);
+  assert.match(board, /下一条执行 issue|推荐下一条 issue/);
+});
+
 test('family direct-entry rollout references stay visible from status and docs indexes', () => {
   const status = read('docs/status.md');
   const docsIndex = read('docs/README.md');
