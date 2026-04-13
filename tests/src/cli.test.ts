@@ -1432,6 +1432,11 @@ test('domain-manifests resolves active domain-owned manifest commands while work
       recommendedEntry.family_orchestration.resume_contract.session_locator_field,
       'entry_session_id',
     );
+    assert.equal(recommendedEntry.manifest_version, 2);
+    assert.equal(recommendedEntry.family_human_gate_count, 1);
+    assert.deepEqual(recommendedEntry.family_human_gate_ids, ['deliverable_publish_gate']);
+    assert.equal(recommendedEntry.family_resume_surface_kind, 'product_entry_session');
+    assert.equal(recommendedEntry.family_checkpoint_lineage_ref, 'runtime_watch/checkpoints/latest.json');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

@@ -464,6 +464,7 @@ export function buildFrontDeskDashboard(
       operator_loop_summary: entry.manifest?.operator_loop_surface?.summary ?? null,
       operator_loop_continuation_command: entry.manifest?.operator_loop_surface?.continuation_command ?? null,
       operator_loop_actions: entry.manifest?.operator_loop_actions ?? {},
+      manifest_version: entry.manifest?.manifest_version ?? null,
       recommended_shell: entry.manifest?.recommended_shell ?? null,
       recommended_command: entry.manifest?.recommended_command ?? null,
       family_orchestration: entry.manifest?.family_orchestration ?? null,
@@ -477,6 +478,13 @@ export function buildFrontDeskDashboard(
         entry.manifest?.product_entry_status?.remaining_gaps_count
         ?? entry.manifest?.remaining_gaps.length
         ?? null,
+      family_human_gate_count: entry.manifest?.family_orchestration?.human_gates.length ?? 0,
+      family_human_gate_ids:
+        entry.manifest?.family_orchestration?.human_gates.map((gate) => String(gate.gate_id)) ?? [],
+      family_resume_surface_kind: entry.manifest?.family_orchestration?.resume_contract?.surface_kind ?? null,
+      family_event_envelope_ref: entry.manifest?.family_orchestration?.event_envelope_surface?.ref ?? null,
+      family_checkpoint_lineage_ref:
+        entry.manifest?.family_orchestration?.checkpoint_lineage_surface?.ref ?? null,
     }));
 
   return {
@@ -513,6 +521,7 @@ export function buildFrontDeskDashboard(
         'Workspace registry, managed session ledger, and handoff bundle surfaces are now part of the top-level control room.',
         'workspace-catalog keeps manifest_command as non-executing registry state, while domain-manifests resolves the active bound machine-readable product-entry manifests.',
         'Resolved domain manifests now also feed frontdesk surface plus operator-loop actions and recommended shell/command hints back into dashboard and handoff surfaces.',
+        'Resolved domain manifests now also surface family-orchestration companion previews so the top-level front desk can show human-gate and resume semantics instead of hiding them in domain docs.',
         'The LibreChat-first hosted shell pilot is now landed through the export package, while managed hosted runtime readiness remains a separate follow-up track.',
       ],
     },

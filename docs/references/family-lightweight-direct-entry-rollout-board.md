@@ -81,6 +81,7 @@
 - 它是最适合尽快长出 lightweight direct entry 的业务仓之一；
 - 重点仍是 visual deliverable / source-readiness / family handoff 收口。
 - repo-tracked lightweight direct-entry shell 已经落地：`redcube product frontdesk` 现在作为 direct frontdesk，`redcube product manifest` 会显式导出 `frontdesk_surface`，而 `redcube product invoke|federate|session` 继续承担 direct / `OPL` handoff 共用的 shared envelope 与续跑面。
+- 三个业务仓的 repo-tracked manifest 现在开始补上 `family_orchestration` companion preview，顶层 `OPL` 的 `domain-manifests / dashboard / opl web` 也会回显 human gate / resume / checkpoint lineage 摘要。
 - 它当前也是家族里最接近“frontdesk contract 已清晰、operator loop contract 也清晰”的参考形态。
 
 下一棒：
