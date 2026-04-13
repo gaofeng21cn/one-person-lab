@@ -1551,6 +1551,12 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(redcube.manifest.product_entry_status.remaining_gaps_count, 2);
     assert.equal(redcube.manifest.product_entry_shell.session.surface_kind, 'product_entry_session');
     assert.equal(redcube.manifest.shared_handoff.opl_return_surface.surface_kind, 'product_entry');
+    assert.equal(redcube.manifest.product_entry_overview.summary, redcube.manifest.product_entry_status.summary);
+    assert.equal(redcube.manifest.product_entry_overview.progress_surface.command, 'redcube product session --entry-session-id <entry-session-id>');
+    assert.equal(
+      redcube.manifest.product_entry_overview.resume_surface.checkpoint_locator_field,
+      'continuation_snapshot.latest_managed_run_id',
+    );
     assert.equal(redcube.manifest.family_orchestration.action_graph_ref.ref, 'contracts/runtime-program/redcube-product-entry-mvp.json');
     assert.equal(redcube.manifest.family_orchestration.human_gates[0].gate_id, 'redcube_operator_review_gate');
     assert.equal(
@@ -1574,8 +1580,14 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(grantEntry.family_action_graph_ref, '/family_orchestration/action_graph');
     assert.equal(grantEntry.family_action_graph_node_count, 2);
     assert.equal(grantEntry.family_action_graph_edge_count, 1);
+    assert.equal(grantEntry.product_entry_overview.summary, grantEntry.product_entry_status_summary);
+    assert.equal(grantEntry.product_entry_overview.progress_surface.surface_kind, 'grant_progress');
+    assert.equal(grantEntry.product_entry_overview.resume_surface.surface_kind, 'grant_user_loop');
     assert.equal(scienceEntry.product_entry_shell.workspace_cockpit.purpose.includes('workspace'), true);
     assert.equal(scienceEntry.shared_handoff.opl_handoff_builder.entry_mode, 'opl-handoff');
+    assert.equal(scienceEntry.product_entry_overview.summary, scienceEntry.product_entry_status_summary);
+    assert.equal(scienceEntry.product_entry_overview.progress_surface.surface_kind, 'study_progress');
+    assert.equal(scienceEntry.product_entry_overview.resume_surface.surface_kind, 'launch_study');
     assert.equal(scienceEntry.family_resume_surface_kind, 'launch_study');
     assert.equal(
       scienceEntry.family_event_envelope_ref,
@@ -1591,6 +1603,12 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(recommendedEntry.operator_loop_shell_key, 'direct');
     assert.equal(recommendedEntry.operator_loop_command, 'redcube product invoke');
     assert.equal(recommendedEntry.operator_loop_actions.start_deliverable.command, 'redcube product invoke');
+    assert.equal(recommendedEntry.product_entry_overview.summary, recommendedEntry.product_entry_status_summary);
+    assert.equal(recommendedEntry.product_entry_overview.progress_surface.surface_kind, 'product_entry_session');
+    assert.equal(
+      recommendedEntry.product_entry_overview.resume_surface.checkpoint_locator_field,
+      'continuation_snapshot.latest_managed_run_id',
+    );
     assert.equal(recommendedEntry.product_entry_shell.federated.surface_kind, 'federated_product_entry');
     assert.equal(recommendedEntry.shared_handoff.opl_return_surface.target_domain_id, 'redcube_ai');
     assert.equal(recommendedEntry.family_orchestration.action_graph_ref.ref, 'contracts/runtime-program/redcube-product-entry-mvp.json');
@@ -1715,6 +1733,14 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.product_entry_status.summary,
       'Repo-verified product-entry service surface 已 landed，但成熟终端用户前台壳与 managed web productization 仍未 landed。',
+    );
+    assert.equal(
+      output.handoff_bundle.domain_manifest_recommendation.product_entry_overview.progress_surface.command,
+      'redcube product session --entry-session-id <entry-session-id>',
+    );
+    assert.equal(
+      output.handoff_bundle.domain_manifest_recommendation.product_entry_overview.resume_surface.checkpoint_locator_field,
+      'continuation_snapshot.latest_managed_run_id',
     );
     assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.repo_mainline.phase_id,

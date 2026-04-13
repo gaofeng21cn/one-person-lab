@@ -52,6 +52,28 @@ export interface NormalizedDomainManifest {
   recommended_command: string | null;
   product_entry_shell: Record<string, JsonRecord>;
   shared_handoff: Record<string, JsonRecord>;
+  product_entry_overview: {
+    surface_kind: string;
+    summary: string | null;
+    frontdesk_command: string | null;
+    recommended_command: string | null;
+    operator_loop_command: string | null;
+    progress_surface: {
+      surface_kind: string | null;
+      command: string | null;
+      step_id: string | null;
+    } | null;
+    resume_surface: {
+      surface_kind: string | null;
+      command: string | null;
+      session_locator_field: string | null;
+      checkpoint_locator_field: string | null;
+    } | null;
+    recommended_step_id: string | null;
+    next_focus: string[];
+    remaining_gaps_count: number | null;
+    human_gate_ids: string[];
+  } | null;
   product_entry_quickstart: {
     surface_kind: string;
     summary: string | null;
@@ -229,6 +251,42 @@ function normalizeProductEntryQuickstart(value: unknown) {
   };
 }
 
+function normalizeProductEntryOverview(value: unknown) {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const progressSurface = isRecord(value.progress_surface)
+    ? {
+        surface_kind: optionalString(value.progress_surface.surface_kind),
+        command: optionalString(value.progress_surface.command),
+        step_id: optionalString(value.progress_surface.step_id),
+      }
+    : null;
+  const resumeSurface = isRecord(value.resume_surface)
+    ? {
+        surface_kind: optionalString(value.resume_surface.surface_kind),
+        command: optionalString(value.resume_surface.command),
+        session_locator_field: optionalString(value.resume_surface.session_locator_field),
+        checkpoint_locator_field: optionalString(value.resume_surface.checkpoint_locator_field),
+      }
+    : null;
+
+  return {
+    surface_kind: optionalString(value.surface_kind) ?? 'product_entry_overview',
+    summary: optionalString(value.summary),
+    frontdesk_command: optionalString(value.frontdesk_command),
+    recommended_command: optionalString(value.recommended_command),
+    operator_loop_command: optionalString(value.operator_loop_command),
+    progress_surface: progressSurface,
+    resume_surface: resumeSurface,
+    recommended_step_id: optionalString(value.recommended_step_id),
+    next_focus: readStringList(value.next_focus),
+    remaining_gaps_count: typeof value.remaining_gaps_count === 'number' ? value.remaining_gaps_count : null,
+    human_gate_ids: readStringList(value.human_gate_ids),
+  };
+}
+
 function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
   const manifest = unwrapManifestPayload(payload);
   const formalEntry = requireRecord(manifest.formal_entry, 'formal_entry');
@@ -250,6 +308,7 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
   const operatorLoopActions = isRecord(manifest.operator_loop_actions)
     ? normalizeRecordMap(manifest.operator_loop_actions, 'operator_loop_actions')
     : {};
+  const productEntryOverview = normalizeProductEntryOverview(manifest.product_entry_overview);
   const productEntryQuickstart = normalizeProductEntryQuickstart(manifest.product_entry_quickstart);
   const rawFamilyOrchestration = isRecord(manifest.family_orchestration)
     ? manifest.family_orchestration
@@ -304,6 +363,7 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
     recommended_command: explicitRecommendedCommand ?? derivedRecommendedCommand,
     product_entry_shell: productEntryShell,
     shared_handoff: sharedHandoff,
+    product_entry_overview: productEntryOverview,
     product_entry_quickstart: productEntryQuickstart,
     family_orchestration: rawFamilyOrchestration
       ? {

@@ -114,6 +114,33 @@
         "entry_mode": "opl-handoff"
       }
     },
+    "product_entry_overview": {
+      "surface_kind": "product_entry_overview",
+      "summary": "把 direct grant product 面逐步收成当前用户 inbox shell，而不越界写成 mature Web UI 或 hosted runtime。",
+      "frontdesk_command": "uv run python -m med_autogrant product-frontdesk --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+      "recommended_command": "uv run python -m med_autogrant grant-user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
+      "operator_loop_command": "uv run python -m med_autogrant grant-user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
+      "progress_surface": {
+        "surface_kind": "grant_progress",
+        "command": "uv run python -m med_autogrant grant-progress --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+        "step_id": "inspect_progress"
+      },
+      "resume_surface": {
+        "surface_kind": "grant_user_loop",
+        "command": "uv run python -m med_autogrant grant-user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
+        "session_locator_field": "grant_run_id",
+        "checkpoint_locator_field": "lifecycle_stage"
+      },
+      "recommended_step_id": "open_frontdesk",
+      "next_focus": [
+        "继续把 `grant-user-loop` 当作当前 direct grant user inbox shell，并保持主线 snapshot / route action / product entry truth 对齐。",
+        "继续用 fresh proof 验证 critique / revision / final package / hosted contract bundle 在 Hermes substrate 上不漂移。"
+      ],
+      "remaining_gaps_count": 2,
+      "human_gate_ids": [
+        "mag_route_gate_revision"
+      ]
+    },
     "family_orchestration": {
       "action_graph_ref": {
         "ref_kind": "json_pointer",

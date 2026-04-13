@@ -466,6 +466,7 @@ export function buildFrontDeskDashboard(
       operator_loop_summary: entry.manifest?.operator_loop_surface?.summary ?? null,
       operator_loop_continuation_command: entry.manifest?.operator_loop_surface?.continuation_command ?? null,
       operator_loop_actions: entry.manifest?.operator_loop_actions ?? {},
+      product_entry_overview: entry.manifest?.product_entry_overview ?? null,
       product_entry_quickstart: entry.manifest?.product_entry_quickstart ?? null,
       manifest_version: entry.manifest?.manifest_version ?? null,
       recommended_shell: entry.manifest?.recommended_shell ?? null,
@@ -483,6 +484,12 @@ export function buildFrontDeskDashboard(
         entry.manifest?.product_entry_status?.remaining_gaps_count
         ?? entry.manifest?.remaining_gaps.length
         ?? null,
+      product_entry_overview_summary: entry.manifest?.product_entry_overview?.summary ?? null,
+      product_entry_overview_progress_command:
+        entry.manifest?.product_entry_overview?.progress_surface?.command ?? null,
+      product_entry_overview_resume_command:
+        entry.manifest?.product_entry_overview?.resume_surface?.command ?? null,
+      product_entry_overview_human_gate_ids: entry.manifest?.product_entry_overview?.human_gate_ids ?? [],
       family_human_gate_count: entry.manifest?.family_orchestration?.human_gates.length ?? 0,
       family_human_gate_ids:
         entry.manifest?.family_orchestration?.human_gates.map((gate) => String(gate.gate_id)) ?? [],

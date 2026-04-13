@@ -1373,6 +1373,29 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
                         .join('')
                       + '</ul></div>'
                     : '',
+                  manifestEntry.manifest?.product_entry_overview?.summary
+                    ? '<p><strong>Overview Summary:</strong> '
+                      + manifestEntry.manifest.product_entry_overview.summary
+                      + '</p>'
+                    : '',
+                  manifestEntry.manifest?.product_entry_overview?.progress_surface?.command
+                    ? '<p><strong>Overview Progress Command:</strong> <code>'
+                      + manifestEntry.manifest.product_entry_overview.progress_surface.command
+                      + '</code></p>'
+                    : '',
+                  manifestEntry.manifest?.product_entry_overview?.resume_surface?.command
+                    ? '<p><strong>Overview Resume Command:</strong> <code>'
+                      + manifestEntry.manifest.product_entry_overview.resume_surface.command
+                      + '</code></p>'
+                    : '',
+                  Array.isArray(manifestEntry.manifest?.product_entry_overview?.human_gate_ids)
+                    && manifestEntry.manifest.product_entry_overview.human_gate_ids.length > 0
+                    ? '<p><strong>Overview Human Gates:</strong> '
+                      + manifestEntry.manifest.product_entry_overview.human_gate_ids
+                        .map((gateId) => '<code>' + String(gateId) + '</code>')
+                        .join(', ')
+                      + '</p>'
+                    : '',
                   manifestEntry.manifest?.product_entry_quickstart?.summary
                     ? '<p><strong>Quickstart Summary:</strong> '
                       + manifestEntry.manifest.product_entry_quickstart.summary

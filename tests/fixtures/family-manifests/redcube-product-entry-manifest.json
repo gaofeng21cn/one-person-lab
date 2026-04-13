@@ -112,6 +112,33 @@
       "target_domain_id": "redcube_ai"
     }
   },
+  "product_entry_overview": {
+    "surface_kind": "product_entry_overview",
+    "summary": "Repo-verified product-entry service surface 已 landed，但成熟终端用户前台壳与 managed web productization 仍未 landed。",
+    "frontdesk_command": "redcube product frontdesk",
+    "recommended_command": "redcube product invoke",
+    "operator_loop_command": "redcube product invoke",
+    "progress_surface": {
+      "surface_kind": "product_entry_session",
+      "command": "redcube product session --entry-session-id <entry-session-id>",
+      "step_id": "inspect_current_progress"
+    },
+    "resume_surface": {
+      "surface_kind": "product_entry_session",
+      "command": "redcube product session --entry-session-id <entry-session-id>",
+      "session_locator_field": "entry_session_contract.entry_session_id",
+      "checkpoint_locator_field": "continuation_snapshot.latest_managed_run_id"
+    },
+    "recommended_step_id": "open_frontdesk",
+    "next_focus": [
+      "继续把 mature end-user shell 建在已 landed 的 RedCube product-entry service surface 之上。",
+      "继续把 OPL federated handoff 与同一 downstream product-entry contract 对齐。"
+    ],
+    "remaining_gaps_count": 2,
+    "human_gate_ids": [
+      "redcube_operator_review_gate"
+    ]
+  },
   "family_orchestration": {
     "action_graph_ref": {
       "ref_kind": "repo_path",

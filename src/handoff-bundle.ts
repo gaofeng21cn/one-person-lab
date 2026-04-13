@@ -104,6 +104,7 @@ export function buildHandoffBundle(
             product_entry_status: domainManifestEntry.manifest?.product_entry_status ?? null,
             product_entry_shell: domainManifestEntry.manifest?.product_entry_shell ?? {},
             shared_handoff: domainManifestEntry.manifest?.shared_handoff ?? null,
+            product_entry_overview: domainManifestEntry.manifest?.product_entry_overview ?? null,
             product_entry_quickstart: domainManifestEntry.manifest?.product_entry_quickstart ?? null,
             family_orchestration: domainManifestEntry.manifest?.family_orchestration ?? null,
             error: domainManifestEntry.error,
