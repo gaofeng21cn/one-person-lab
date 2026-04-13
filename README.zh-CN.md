@@ -300,7 +300,7 @@
 - `opl frontdesk-hosted-bundle`
   - 冻结 hosted-pilot-ready shell bundle，包括 base-path-aware 的入口与 API 端点，但不把它写成实际 hosted runtime
 - `opl frontdesk-hosted-package`
-  - 导出可自托管的 hosted pilot package，包含 app snapshot、启动脚本、env 模板、`systemd` unit 与反向代理资产，但不把它写成 actual hosted runtime
+  - 导出可自托管的 hosted pilot package，包含 app snapshot、启动脚本、env 模板、`systemd` unit、service-install / healthcheck helper 与反向代理资产，但不把它写成 actual hosted runtime
 - `opl frontdesk-librechat-package`
   - 导出真实的 LibreChat-first hosted shell pilot package，把 OPL front-desk package、同源反向代理资产与 LibreChat 部署文件打包到一起，同时保持 managed hosted runtime 的表述诚实
 - `opl projects`

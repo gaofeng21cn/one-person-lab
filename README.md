@@ -304,7 +304,7 @@ What landed in this repository is the first local shell of that idea:
 - `opl frontdesk-hosted-bundle`
   - freezes the hosted-pilot-ready shell bundle, including base-path-aware entry and API endpoints, without claiming an actual hosted runtime
 - `opl frontdesk-hosted-package`
-  - exports a self-hostable hosted pilot package with app snapshot, run script, env template, `systemd` unit, and reverse-proxy assets, without claiming an actual hosted runtime
+  - exports a self-hostable hosted pilot package with app snapshot, run script, env template, `systemd` unit, service-install / healthcheck helpers, and reverse-proxy assets, without claiming an actual hosted runtime
 - `opl frontdesk-librechat-package`
   - exports the real LibreChat-first hosted shell pilot package, combining the OPL front-desk package, same-origin reverse-proxy assets, and LibreChat deployment files while keeping managed hosted runtime claims honest
 - `opl projects`

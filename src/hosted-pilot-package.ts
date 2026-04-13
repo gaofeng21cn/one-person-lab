@@ -27,6 +27,8 @@ type HostedPilotPackageAssets = {
   env_example: string;
   run_script: string;
   systemd_service: string;
+  install_service_script: string;
+  healthcheck_script: string;
   caddyfile: string;
   app_root: string;
   app_dist: string;
@@ -133,6 +135,7 @@ function writeExecutableFile(targetPath: string, contents: string) {
 function buildReadme(options: {
   publicOrigin: string;
   basePath: string;
+  publicHealthUrl: string;
   port: number;
   sessionsLimit: number;
 }) {
@@ -144,7 +147,8 @@ What it lands:
 
 - a runnable snapshot of the current OPL front-desk app
 - a host-side run script
-- a \`systemd\` unit template
+- a rendered \`systemd\` unit plus an install helper
+- a host-side healthcheck helper
 - a \`Caddy\` reverse-proxy template
 - a machine-readable hosted pilot bundle
 
@@ -174,7 +178,9 @@ What it does **not** claim:
 - \`app/\`: exported OPL app snapshot
 - \`config/opl-frontdesk.env.example\`: host environment template
 - \`scripts/run-frontdesk.sh\`: host launch script
-- \`systemd/opl-frontdesk.service\`: service unit template
+- \`scripts/install-systemd-service.sh\`: install/render the packaged \`systemd\` unit on the target host
+- \`scripts/check-frontdesk-health.sh\`: verify the packaged front desk exposes \`/api/health\`
+- \`systemd/opl-frontdesk.service\`: rendered \`systemd\` unit preview
 - \`caddy/Caddyfile\`: reverse-proxy template
 - \`pilot-bundle.json\`: machine-readable deployment bundle
 
@@ -184,8 +190,8 @@ What it does **not** claim:
 2. Duplicate \`config/opl-frontdesk.env.example\` to \`config/opl-frontdesk.env\` and fill in:
    - \`OPL_HERMES_BIN\`
    - \`OPL_FRONTDESK_WORKSPACE\`
-3. Adjust \`systemd/opl-frontdesk.service\` so \`WorkingDirectory\` points at the deployed package directory.
-4. Install the service unit and start it.
+3. Run \`sudo scripts/install-systemd-service.sh --enable-now\` to install and start the packaged service, or use \`scripts/run-frontdesk.sh\` for a foreground bring-up.
+4. Run \`scripts/check-frontdesk-health.sh\` and confirm the local front desk is healthy before wiring the public reverse-proxy endpoint at \`${options.publicHealthUrl}\`.
 5. Load \`caddy/Caddyfile\` (or adapt it to your reverse proxy) so ${options.publicOrigin}${options.basePath || '/'} points at the local OPL front desk.
 
 ## Notes
@@ -250,7 +256,7 @@ exec node "$APP_ROOT/dist/cli.js" web \\
 `;
 }
 
-function buildSystemdService() {
+function buildRenderedSystemdService(packageRoot: string) {
   return `[Unit]
 Description=OPL Front Desk Hosted Pilot
 After=network-online.target
@@ -258,14 +264,106 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-WorkingDirectory=/opt/opl-frontdesk
-EnvironmentFile=/opt/opl-frontdesk/config/opl-frontdesk.env
-ExecStart=/usr/bin/env bash /opt/opl-frontdesk/scripts/run-frontdesk.sh
+WorkingDirectory="${packageRoot}"
+EnvironmentFile="${packageRoot}/config/opl-frontdesk.env"
+ExecStart=/usr/bin/env bash "${packageRoot}/scripts/run-frontdesk.sh"
 Restart=always
 RestartSec=3
 
 [Install]
 WantedBy=multi-user.target
+`;
+}
+
+function buildInstallServiceScript() {
+  return `#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
+PACKAGE_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+UNIT_DIR="\${OPL_FRONTDESK_SYSTEMD_UNIT_DIR:-/etc/systemd/system}"
+UNIT_NAME="opl-frontdesk.service"
+SYSTEMCTL_BIN="\${OPL_FRONTDESK_SYSTEMCTL_BIN:-systemctl}"
+ENABLE_NOW=0
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --unit-dir)
+      UNIT_DIR="$2"
+      shift 2
+      ;;
+    --enable-now)
+      ENABLE_NOW=1
+      shift
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      exit 1
+      ;;
+  esac
+done
+
+mkdir -p "$UNIT_DIR"
+TARGET="$UNIT_DIR/$UNIT_NAME"
+
+cat >"$TARGET" <<EOF
+[Unit]
+Description=OPL Front Desk Hosted Pilot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory="$PACKAGE_ROOT"
+EnvironmentFile="$PACKAGE_ROOT/config/opl-frontdesk.env"
+ExecStart=/usr/bin/env bash "$PACKAGE_ROOT/scripts/run-frontdesk.sh"
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+"$SYSTEMCTL_BIN" daemon-reload
+
+if [[ "$ENABLE_NOW" -eq 1 ]]; then
+  "$SYSTEMCTL_BIN" enable --now "$UNIT_NAME"
+else
+  echo "Installed $TARGET"
+  echo "Run: sudo $SYSTEMCTL_BIN enable --now $UNIT_NAME"
+fi
+`;
+}
+
+function buildHealthcheckScript(options: { host: string; port: number; basePath: string }) {
+  const defaultHost = options.host === '0.0.0.0' || options.host === '::'
+    ? '127.0.0.1'
+    : options.host;
+
+  return `#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
+PACKAGE_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+ENV_FILE="\${OPL_FRONTDESK_ENV_FILE:-$PACKAGE_ROOT/config/opl-frontdesk.env}"
+
+if [[ -f "$ENV_FILE" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  . "$ENV_FILE"
+  set +a
+fi
+
+HOST="\${OPL_FRONTDESK_HEALTH_HOST:-\${OPL_FRONTDESK_HOST:-${defaultHost}}}"
+if [[ "$HOST" == "0.0.0.0" || "$HOST" == "::" ]]; then
+  HOST="127.0.0.1"
+fi
+
+PORT="\${OPL_FRONTDESK_PORT:-${options.port}}"
+BASE_PATH="\${OPL_FRONTDESK_BASE_PATH:-${options.basePath}}"
+URL="http://$HOST:$PORT$BASE_PATH/api/health"
+
+node -e "const url = process.argv[1]; fetch(url).then(async (response) => { const text = (await response.text()).trim(); if (!response.ok) { console.error(text || ('Healthcheck failed: ' + response.status)); process.exit(1); } console.log(text || 'ok'); }).catch((error) => { console.error(error instanceof Error ? error.message : String(error)); process.exit(1); });" "$URL"
 `;
 }
 
@@ -309,6 +407,8 @@ export function buildHostedPilotPackage(
   const readmePath = path.join(outputDir, 'README.md');
   const envExamplePath = path.join(configDir, 'opl-frontdesk.env.example');
   const runScriptPath = path.join(scriptsDir, 'run-frontdesk.sh');
+  const installServiceScriptPath = path.join(scriptsDir, 'install-systemd-service.sh');
+  const healthcheckScriptPath = path.join(scriptsDir, 'check-frontdesk-health.sh');
   const systemdPath = path.join(systemdDir, 'opl-frontdesk.service');
   const caddyfilePath = path.join(caddyDir, 'Caddyfile');
   const packageJsonPath = path.join(appRoot, 'package.json');
@@ -329,6 +429,7 @@ export function buildHostedPilotPackage(
     buildReadme({
       publicOrigin,
       basePath,
+      publicHealthUrl: `${publicOrigin}${endpoints.health}`,
       port,
       sessionsLimit,
     }),
@@ -343,8 +444,21 @@ export function buildHostedPilotPackage(
     }),
   );
   writeExecutableFile(runScriptPath, buildRunScript());
-  fs.writeFileSync(systemdPath, buildSystemdService());
+  writeExecutableFile(installServiceScriptPath, buildInstallServiceScript());
+  writeExecutableFile(
+    healthcheckScriptPath,
+    buildHealthcheckScript({
+      host,
+      port,
+      basePath,
+    }),
+  );
+  fs.writeFileSync(systemdPath, buildRenderedSystemdService(outputDir));
   fs.writeFileSync(caddyfilePath, buildCaddyfile({ publicOrigin, basePath, port }));
+
+  const localHealthHost = host === '0.0.0.0' || host === '::' ? '127.0.0.1' : host;
+  const localHealthUrl = `http://${localHealthHost}:${port}${endpoints.health}`;
+  const publicHealthUrl = `${publicOrigin}${endpoints.health}`;
 
   const payload = {
     version: 'g2',
@@ -370,12 +484,28 @@ export function buildHostedPilotPackage(
         runtime_workspace_env: 'OPL_FRONTDESK_WORKSPACE',
         hermes_binary_env: 'OPL_HERMES_BIN',
       },
+      operations: {
+        systemd: {
+          unit_name: 'opl-frontdesk.service',
+          rendered_unit_path: systemdPath,
+          install_script: installServiceScriptPath,
+          install_command: `sudo bash ${installServiceScriptPath} --enable-now`,
+        },
+        healthcheck: {
+          script: healthcheckScriptPath,
+          local_url: localHealthUrl,
+          public_url: publicHealthUrl,
+          command: `bash ${healthcheckScriptPath}`,
+        },
+      },
       assets: {
         bundle_json: bundleJsonPath,
         readme: readmePath,
         env_example: envExamplePath,
         run_script: runScriptPath,
         systemd_service: systemdPath,
+        install_service_script: installServiceScriptPath,
+        healthcheck_script: healthcheckScriptPath,
         caddyfile: caddyfilePath,
         app_root: appRoot,
         app_dist: appDist,
@@ -385,6 +515,7 @@ export function buildHostedPilotPackage(
       notes: [
         'This package is a self-hostable hosted pilot package for the OPL front desk.',
         'It still requires an external Hermes binary on the host and does not claim that the actual hosted runtime is landed.',
+        'The package now carries service-install and healthcheck helpers so host-side bring-up does not depend on hand-edited service paths.',
         'The immediate shell target is LibreChat-first, but the long-line product identity remains an OPL-owned web front desk.',
       ],
     },

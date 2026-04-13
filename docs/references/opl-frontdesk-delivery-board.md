@@ -108,7 +108,7 @@
 
 - `OPL` 现在不只是“有一个本地浏览器 pilot”，而是已经冻结出一层 future hosted shell 可消费的 front-desk contract；
 - hosted-pilot-ready shell bundle 已经把 base-path-aware 的 entry / API endpoint 一并冻结下来；
-- self-hostable hosted pilot package 已经把 app snapshot、run script、env 模板、`systemd` unit 与反向代理资产一并导出来；
+- self-hostable hosted pilot package 已经把 app snapshot、run script、env 模板、`systemd` unit、service-install / healthcheck helper 与反向代理资产一并导出来；
 - `frontdesk-librechat-package` 已经把 `LibreChat` 外层壳、同源反向代理与 `OPL Front Desk` 的真实 pilot 组合导出来；
 - 这层 contract 现在不再只是“等未来接壳”的 prep，而是已经支撑一条真实的 `LibreChat-first` hosted shell pilot；
 - 但它仍然不等于 managed hosted runtime 已完成。
@@ -151,7 +151,7 @@
 - 虽然已经有本地可打开的 web front desk pilot；
 - 虽然也已经有 hosted-friendly manifest / health / session / logs contract surface；
 - 虽然现在也已经有了 service-safe 的本地 packaging；
-- 虽然也已经有了 self-hostable hosted pilot package；
+- 虽然也已经有了带 service-install / healthcheck helper 的 self-hostable hosted pilot package；
 - 虽然现在也已经有了真实的 `LibreChat-first` hosted shell pilot package；
 - 但还没有 managed hosted runtime；
 - 也还没有把 pilot 收紧到更低运维摩擦的正式 hosted 运行面。
