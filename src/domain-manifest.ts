@@ -52,6 +52,13 @@ export interface NormalizedDomainManifest {
   recommended_command: string | null;
   product_entry_shell: Record<string, JsonRecord>;
   shared_handoff: Record<string, JsonRecord>;
+  family_orchestration: {
+    action_graph_ref: JsonRecord | null;
+    human_gates: JsonRecord[];
+    resume_contract: JsonRecord | null;
+    event_envelope_surface: JsonRecord | null;
+    checkpoint_lineage_surface: JsonRecord | null;
+  } | null;
   remaining_gaps: string[];
   notes: string[];
 }
@@ -121,6 +128,19 @@ function normalizeRecordMap(value: unknown, field: string) {
   return normalized;
 }
 
+function normalizeRecordList(value: unknown, field: string) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.map((entry, index) => {
+    if (!isRecord(entry)) {
+      throw new Error(`Field ${field}[${index}] must be an object.`);
+    }
+    return entry;
+  });
+}
+
 function unwrapManifestPayload(payload: JsonRecord) {
   if (isRecord(payload.product_entry_manifest)) {
     return payload.product_entry_manifest;
@@ -185,6 +205,9 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
   const operatorLoopActions = isRecord(manifest.operator_loop_actions)
     ? normalizeRecordMap(manifest.operator_loop_actions, 'operator_loop_actions')
     : {};
+  const rawFamilyOrchestration = isRecord(manifest.family_orchestration)
+    ? manifest.family_orchestration
+    : null;
 
   if (recommendedShell && !productEntryShell[recommendedShell]) {
     throw new Error(`recommended_shell points at unknown shell key: ${recommendedShell}`);
@@ -235,6 +258,23 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
     recommended_command: explicitRecommendedCommand ?? derivedRecommendedCommand,
     product_entry_shell: productEntryShell,
     shared_handoff: sharedHandoff,
+    family_orchestration: rawFamilyOrchestration
+      ? {
+          action_graph_ref: isRecord(rawFamilyOrchestration.action_graph_ref)
+            ? rawFamilyOrchestration.action_graph_ref
+            : null,
+          human_gates: normalizeRecordList(rawFamilyOrchestration.human_gates, 'family_orchestration.human_gates'),
+          resume_contract: isRecord(rawFamilyOrchestration.resume_contract)
+            ? rawFamilyOrchestration.resume_contract
+            : null,
+          event_envelope_surface: isRecord(rawFamilyOrchestration.event_envelope_surface)
+            ? rawFamilyOrchestration.event_envelope_surface
+            : null,
+          checkpoint_lineage_surface: isRecord(rawFamilyOrchestration.checkpoint_lineage_surface)
+            ? rawFamilyOrchestration.checkpoint_lineage_surface
+            : null,
+        }
+      : null,
     remaining_gaps: remainingGaps,
     notes: readStringList(manifest.notes),
   };

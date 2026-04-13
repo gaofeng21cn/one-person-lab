@@ -10,6 +10,7 @@
 - 当前产品边界：`OPL` 负责顶层 gateway / federation / shared substrate contract，三个 domain 仓继续各自维护自己的产品 runtime
 - 当前统一协作语义：`Hermes` 负责产品级长期在线 runtime substrate / orchestration；`OPL` 与 domain 仓继续持有 gateway、authority、对象合同与审计真相；具体单步执行保持 executor-adapter 可插拔，不要求三个 domain 仓共享同一种执行脑
 - 当前家族默认执行器：`Codex CLI autonomous`；默认模型与默认 reasoning effort / thinking 统一继承本机 `Codex` 默认配置，不在 family contract 里固定 pin 具体型号
+- 当前 family orchestration contract 真相：这轮吸收的是 `CrewAI` 一类框架里最值得保留的 orchestration 语义，而不是把 `CrewAI` 直接拉进来做 family dependency；当前顶层冻结的 5 类 companion surface 是 `family event envelope`、`family checkpoint lineage`、`family action graph`、`family human gate`、`family product-entry manifest v2`
 - 当前 `Hermes-native` 口径：只作为实验路线；只有完整的 Hermes AIAgent agent loop 才算 `Hermes-native`，不是一步一步 chat，也不是 chat relay
 - 当前执行器落差：`Med Auto Science / MedDeepScientist` 已拥有 `Codex CLI autonomous` 参考实现；`RedCube AI` 的 `Codex CLI autonomous` 默认执行器实现已在待吸收提交中完成，但主 checkout `main` 仍未安全并回，因此主线公开 truth 还没全部跟上；`Med Auto Grant` 的 critique 路线已经 landed `Codex CLI autonomous`，但 docs / contract 仍停在旧的 `pending / handoff-required` 口径
 - 当前 runtime 真相：四个仓并不处在同一集成深度。`Med Auto Grant` 已切到真实上游 `Hermes-Agent` runtime substrate；`Med Auto Science` 已完成 external runtime bring-up，当前开发宿主上的 honest next step 是 real adapter cutover；`RedCube AI` 仍处于 upstream pilot prep；`OPL` 自己继续只持有 gateway / federation / handoff contract，而不持有 domain runtime owner 身份。任何 repo-local shim / pilot / scaffold 都不能被写成“已完成真实集成”
@@ -36,6 +37,7 @@
 - 当前重点：在已经落地的 `OPL` 本地 direct-entry shell 基础上，继续冻结 `domain lightweight direct entry + unified handoff envelope` 这条家族级入口架构
 - 当前重点：把三个业务仓新增的 `frontdesk_surface + operator_loop_actions` 收口为同一套家族级用户面 contract，并让 `domain-manifests / dashboard / handoff-envelope / opl web` 一起消费，不再只告诉用户“当前 loop 是什么”，而是直接告诉用户“该从哪个 direct frontdesk 进入、下一步能做哪几件事”
 - 当前重点：把 hosted / web 前台的真实选型、hosted-friendly shell contract 与 family-level direct entry 推进板一起冻结，避免下一轮又回到“随便套一个 chat UI 就算产品入口”的漂移
+- 当前重点：以 contract-first 的方式吸收 `CrewAI` 的 orchestration 优点，把 `family event envelope / checkpoint lineage / action graph / human gate / product-entry manifest v2` 冻结为 shared runtime/shared domain 的 machine-readable companion surface，而不是新增 family runtime dependency
 - 当前约束：runtime ownership 继续留在 domain 一侧，开发宿主、历史执行面与仓内自写 substrate 都只能描述执行条件与迁移背景，不能被抬升成产品 runtime 真相
 - 理想形态与当前差距、以及为什么不能把 repo-local shim / pilot 写成真实集成，统一收口到 `docs/references/hermes-agent-truth-reset-and-target-state.md`
 - 产品入口形态与 `Hermes Kernel Integration` 的正式选择，统一收口到 `docs/references/opl-product-entry-and-hermes-kernel-integration.md`
@@ -45,6 +47,7 @@
 - 家族用户面成熟度梯子与四仓当前落点，统一收口到 `docs/references/family-user-facing-maturity-roadmap.md`
 - 家族统一 `executor-adapter` 默认口径，统一收口到 `docs/references/family-executor-adapter-defaults.md`
 - 四仓剩余执行器任务、文档同步清单与 `Hermes-Agent` 备选执行器评估，统一收口到 `docs/references/four-repo-executor-follow-up-and-hermes-evaluation.md`
+- 家族统一 orchestration contract 收编说明，统一收口到 `docs/references/family-orchestration-contract-absorb-crewai.md`
 - `OPL Front Desk` 当前已完成/未完成事项，统一收口到 `docs/references/opl-frontdesk-delivery-board.md`
 - `Med Auto Science` 的顶层切换边界与 `OPL -> MAS` 切换板，统一收口到 `docs/references/mas-top-level-cutover-board.md`
 
@@ -56,8 +59,9 @@
 4. 统一四仓对“上游 `Hermes-Agent` / repo-local shim / pilot / scaffold”的命名边界，不再允许假集成叙事。
 5. 推动三个 domain 仓先共用“`Codex CLI autonomous` + 继承本机 `Codex` 默认配置”这条默认执行器主线，再在不降级的前提下测试真正的 `Hermes-native` 完整 `Hermes AIAgent` agent loop。
 6. 推动各 domain 仓把 `runtime substrate / gateway authority / executor adapter` 三层边界写成同一套 family 语义，不再有人把“接入 Hermes”误解成“强制替换全部执行器”或“当前 chat relay 已经等于 Hermes-native”。
-7. 当前已经落地的是本地 direct product-entry shell、本地 web pilot、hosted-friendly shell contract、hosted pilot bundle、self-hostable hosted pilot package、真实的 `LibreChat-first` hosted shell pilot package、workspace registry、managed session ledger、family handoff bundle，以及 service-safe 的本地 front desk packaging；不把它们误写成 managed hosted runtime；下一步继续推进 hosted runtime hardening 与更完整的 direct product entry。
-8. 避免 reference-grade 与历史迁移文档继续挤占公开主线。
+7. 推动 `Med Auto Grant`、`Med Auto Science`、`RedCube AI` 依次把各自的 `operator loop / runtime watch / grant-progress / direct-entry manifest` 等 surface 对齐到 family orchestration companion contracts，避免每仓各自再发明一套 graph / gate / resume / discovery 语义。
+8. 当前已经落地的是本地 direct product-entry shell、本地 web pilot、hosted-friendly shell contract、hosted pilot bundle、self-hostable hosted pilot package、真实的 `LibreChat-first` hosted shell pilot package、workspace registry、managed session ledger、family handoff bundle，以及 service-safe 的本地 front desk packaging；不把它们误写成 managed hosted runtime；下一步继续推进 hosted runtime hardening 与更完整的 direct product entry。
+9. 避免 reference-grade 与历史迁移文档继续挤占公开主线。
 
 ## 长线目标（规划层）
 

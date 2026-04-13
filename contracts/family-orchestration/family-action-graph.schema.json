@@ -1,0 +1,256 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opl.onepersonlab/contracts/family-orchestration/family-action-graph.schema.json",
+  "title": "OPL Family Action Graph",
+  "description": "Shared domain-oriented action-graph topology contract across the OPL family. This schema freezes graph semantics without requiring one orchestration framework implementation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "graph_id",
+    "target_domain_id",
+    "graph_kind",
+    "nodes",
+    "edges",
+    "entry_nodes"
+  ],
+  "properties": {
+    "version": {
+      "const": "family-action-graph.v1"
+    },
+    "graph_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target_domain_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "graph_kind": {
+      "type": "string",
+      "minLength": 1
+    },
+    "graph_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/node"
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/edge"
+      }
+    },
+    "entry_nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "exit_nodes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "human_gates": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/humanGateBinding"
+      }
+    },
+    "checkpoint_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "none",
+            "node_boundary",
+            "explicit_nodes"
+          ]
+        },
+        "checkpoint_nodes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "node_id",
+        "node_kind",
+        "title"
+      ],
+      "properties": {
+        "node_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "node_kind": {
+          "type": "string",
+          "enum": [
+            "intake",
+            "research",
+            "authoring",
+            "audit",
+            "review",
+            "publish",
+            "operator_step",
+            "controller",
+            "tool_call"
+          ]
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "executor_hint": {
+          "type": "string",
+          "minLength": 1
+        },
+        "produces_checkpoint": {
+          "type": "boolean"
+        }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "from",
+        "to"
+      ],
+      "properties": {
+        "from": {
+          "type": "string",
+          "minLength": 1
+        },
+        "to": {
+          "type": "string",
+          "minLength": 1
+        },
+        "on": {
+          "type": "string",
+          "enum": [
+            "success",
+            "failure",
+            "decision",
+            "manual_resume"
+          ]
+        },
+        "condition": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "humanGateBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gate_id",
+        "trigger_nodes"
+      ],
+      "properties": {
+        "gate_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "trigger_nodes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "blocking": {
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "version": "family-action-graph.v1",
+      "graph_id": "mag_grant_direct_entry_graph",
+      "target_domain_id": "medautogrant",
+      "graph_kind": "grant_direct_entry",
+      "graph_version": "2026-04-13",
+      "nodes": [
+        {
+          "node_id": "grant_progress_intake",
+          "node_kind": "intake",
+          "title": "Grant progress intake",
+          "executor_hint": "codex_cli_autonomous",
+          "produces_checkpoint": true
+        },
+        {
+          "node_id": "grant_authoring_loop",
+          "node_kind": "authoring",
+          "title": "Grant authoring loop"
+        },
+        {
+          "node_id": "grant_publish_gate",
+          "node_kind": "review",
+          "title": "Grant publish gate"
+        }
+      ],
+      "edges": [
+        {
+          "from": "grant_progress_intake",
+          "to": "grant_authoring_loop",
+          "on": "success"
+        },
+        {
+          "from": "grant_authoring_loop",
+          "to": "grant_publish_gate",
+          "on": "decision"
+        }
+      ],
+      "entry_nodes": [
+        "grant_progress_intake"
+      ],
+      "human_gates": [
+        {
+          "gate_id": "grant_publish_gate",
+          "trigger_nodes": [
+            "grant_authoring_loop"
+          ],
+          "blocking": true
+        }
+      ],
+      "checkpoint_policy": {
+        "mode": "node_boundary",
+        "checkpoint_nodes": [
+          "grant_progress_intake",
+          "grant_authoring_loop"
+        ]
+      }
+    }
+  ]
+}

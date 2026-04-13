@@ -1,5 +1,24 @@
 # OPL 关键决策
 
+## 2026-04-13
+
+### 决策：以 contract-first 方式吸收 CrewAI 的 orchestration 优点，而不是引入 CrewAI 作为 family runtime dependency
+
+原因：当前四仓已经把 owner split 基本钉住了：`Hermes-Agent` 更适合承担长期在线 runtime substrate，`Codex CLI autonomous` 已经是更成熟的默认执行器，而 `OPL` 与各 domain 仓继续持有 gateway、authority、对象合同、审计与 durable truth。如果这时再把 `CrewAI` 直接塞进 family 主链，只会把 runtime substrate、executor、agent wrapper、memory owner 与 domain truth 再次搅成一层。
+
+影响：
+
+- `OPL` 顶层冻结 5 类 family orchestration companion contract：
+  - `family event envelope`
+  - `family checkpoint lineage`
+  - `family action graph`
+  - `family human gate`
+  - `family product-entry manifest v2`
+- runtime-oriented 的一半归入 `Shared Runtime Contract`
+- domain-oriented 的一半归入 `Shared Domain Contract`
+- 只吸收 graph / event / checkpoint / human gate / discovery 这些编排语义，不吸收 `CrewAI` 的 `Crew` / `Agent` / `Memory` / `LLM wrapper` 作为统一 owner 层
+- 不把 `CrewAI` 写成 `Hermes-Agent`、`Codex CLI`、`OPL Gateway` 或任何 `Domain Gateway` 的替代者
+
 ## 2026-04-11
 
 ### 决策：`Hermes-Agent` 只指上游外部 runtime substrate

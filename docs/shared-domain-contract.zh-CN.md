@@ -19,6 +19,9 @@
 - audit trail
 - gate semantics
 - `Auto-only` 主线与 future `HITL` sibling / upper-layer 关系
+- `family action graph`
+- `family human gate`
+- `family product-entry manifest v2`
 
 这些内容决定的是产品如何被稳定地接入、观察、审核和推进，而不是 runtime 进程如何托管。
 
@@ -55,6 +58,32 @@
    - 当前 admitted mainline 统一按 `Auto-only` 理解
    - future `Human-in-the-loop` 产品应作为 sibling 或 upper-layer product 复用稳定模块，而不是把当前仓改成同仓双模
 
+## Family Orchestration Companion Schemas
+
+当前与这份合同并列冻结的 machine-readable companion schemas 包括：
+
+1. `family action graph`
+   - 统一 graph topology、node、edge、checkpoint policy 与 gate binding surface
+2. `family human gate`
+   - 统一 human review 的 request / evidence / decision / resume surface
+3. `family product-entry manifest v2`
+   - 统一可指向 graph、gate、resume contract 与 runtime companion 的 product-entry discovery surface
+
+这些 schema 位于 `contracts/family-orchestration/`。
+它们的作用是让上层行为语义保持一致，而不是强制所有 domain 共享一模一样的内部对象模型。
+
+## 与 CrewAI 的关系
+
+`CrewAI` 在这里的意义，只是提供值得吸收的 orchestration 思想来源。
+
+家族当前并不统一：
+
+- `CrewAI` 作为默认 `Agent` / `Crew` runtime
+- `CrewAI` 作为 `LLM` wrapper 或 memory owner
+- `CrewAI` 作为 domain truth owner
+
+家族当前真正统一的是可复用的正式行为面：graph、gate、checkpoint 与 discovery 语义。
+
 ## 它不负责什么
 
 这份合同不负责：
@@ -84,6 +113,7 @@
 - `controller internal only`
 - `Auto-only` mainline
 - no-bypass to `domain_gateway`
+- domain-oriented 的 family orchestration companion schemas 已冻结为 `family action graph + family human gate + family product-entry manifest v2`
 
 但 `per-run handle`、durable report、audit trail、gate semantics 仍在持续往 repo-verified 行为面压实，不应被夸写成“已经在所有仓完全统一实现”。
 

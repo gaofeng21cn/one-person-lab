@@ -172,19 +172,54 @@ test('shared runtime and domain contracts are linked from public and gateway con
     assert.match(doc, /shared-domain-contract/i);
   }
 
+  assert.match(contractsIndex, /family-orchestration/i);
+
   assert.match(runtimeContract, /Shared Runtime Contract/);
   assert.match(runtimeContract, /`?Hermes-Agent`?-backed runtime substrate/i);
   assert.match(runtimeContract, /not the whole substrate|not the whole `UHS`/i);
+  assert.match(runtimeContract, /family event envelope/i);
+  assert.match(runtimeContract, /family checkpoint lineage/i);
   assert.match(runtimeContractZh, /Shared Runtime Contract/);
   assert.match(runtimeContractZh, /Hermes-Agent.*runtime substrate/);
   assert.match(runtimeContractZh, /不是整个 `UHS`|不等于整个 substrate/);
+  assert.match(runtimeContractZh, /family event envelope/i);
+  assert.match(runtimeContractZh, /family checkpoint lineage/i);
 
   assert.match(domainContract, /Shared Domain Contract/);
   assert.match(domainContract, /formal-entry matrix/i);
   assert.match(domainContract, /per-run handle/i);
+  assert.match(domainContract, /family action graph/i);
+  assert.match(domainContract, /family human gate/i);
+  assert.match(domainContract, /family product-entry manifest v2/i);
   assert.match(domainContractZh, /Shared Domain Contract/);
   assert.match(domainContractZh, /formal-entry matrix/);
   assert.match(domainContractZh, /per-run handle/);
+  assert.match(domainContractZh, /family action graph/i);
+  assert.match(domainContractZh, /family human gate/i);
+  assert.match(domainContractZh, /family product-entry manifest v2/i);
+});
+
+test('family orchestration absorb note stays visible from docs and reference indexes', () => {
+  const docsIndex = read('docs/README.md');
+  const docsIndexZh = read('docs/README.zh-CN.md');
+  const refsIndex = read('docs/references/README.md');
+  const refsIndexZh = read('docs/references/README.zh-CN.md');
+  const status = read('docs/status.md');
+  const decisions = read('docs/decisions.md');
+  const absorbNote = read('docs/references/family-orchestration-contract-absorb-crewai.md');
+
+  for (const doc of [docsIndex, docsIndexZh, refsIndex, refsIndexZh, status]) {
+    assert.match(doc, /family-orchestration-contract-absorb-crewai\.md/);
+  }
+
+  assert.match(decisions, /contract-first/);
+  assert.match(decisions, /CrewAI/);
+  assert.match(absorbNote, /不把 `CrewAI` 引入为 `OPL` family runtime dependency/);
+  assert.match(absorbNote, /family event envelope/);
+  assert.match(absorbNote, /family checkpoint lineage/);
+  assert.match(absorbNote, /family action graph/);
+  assert.match(absorbNote, /family human gate/);
+  assert.match(absorbNote, /family product-entry manifest v2/);
 });
 
 test('family direct-entry rollout references stay visible from status and docs indexes', () => {

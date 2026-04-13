@@ -19,6 +19,8 @@
 - `memory provider hook`
 - `delivery / cron`
 - `approval / interrupt / resume`
+- `family event envelope`
+- `family checkpoint lineage`
 
 这些对象是跨 domain 共享的运行底座要求。
 它们描述的是 runtime 应具备怎样的结构化能力，而不是某个 domain 自己的对象、评审标准或交付真相。
@@ -77,6 +79,28 @@
    - `interrupt_reason`
    - `resume_allowed`
 
+## Family Orchestration Companion Schemas
+
+为了避免把 family runtime 层绑死在某一个 orchestration framework 上，这份合同之下现在同步冻结两类 machine-readable companion schema：
+
+1. `family event envelope`
+   - 统一 event correlation、producer、session、audit reference 的 envelope
+2. `family checkpoint lineage`
+   - 统一 checkpoint ancestry、resume、state reference 的 envelope
+
+这些 schema 位于 `contracts/family-orchestration/`。
+它们冻结的是多个 domain runtime 都能吸收的互操作语义，同时继续把 runtime ownership 与 durable truth 留在各自 domain 仓。
+
+## 与 CrewAI 的关系
+
+这里对 `CrewAI` 的吸收方式是“借鉴 orchestration 思想”，不是“把它变成家族强制 runtime 层”。
+
+当前明确的切分是：
+
+- 在 contract 层吸收 event correlation、checkpoint lineage、flow introspection 与 human-gate pause / resume 语义
+- 不把 `CrewAI` 统一成默认 `LLM`、`Agent`、`Crew` 或 memory owner
+- 不让 `CrewAI` 替代 `Hermes-Agent`、`Codex CLI`、`OPL Gateway` 或任何 `Domain Gateway`
+
 ## 与 Hermes-Agent 的关系
 
 上游 `Hermes-Agent` 当前最值得吸收的，是它在 runtime substrate 上已经比较成熟的工程实现。
@@ -99,6 +123,7 @@
 - 当前活跃开发宿主仍是 Codex-only 本地会话
 - 当前公开的 OPL 入口仍是本地 `TypeScript CLI`-first / read-only gateway surface
 - `Shared Runtime Contract` 还处于冻结与逐步落地阶段
+- runtime-oriented 的 family orchestration companion schemas 已经落在 `contracts/family-orchestration/`，先冻结共享 `event envelope + checkpoint lineage` 语义，而不是把它们误写成某个统一 runtime owner
 - 四个仓已经不处在同一集成深度：`Med Auto Grant` 已落地真实上游 `Hermes-Agent` runtime substrate，`Med Auto Science` 已完成 external runtime bring-up 并进入 real adapter cutover 前态，`RedCube AI` 仍在 upstream pilot prep，而 `OPL` 自身继续停留在顶层 gateway / federation 层
 - 上游 `Hermes-Agent` 运行底座仍是这份合同优选的未来实现方向，而不是已经落地的公开事实
 
