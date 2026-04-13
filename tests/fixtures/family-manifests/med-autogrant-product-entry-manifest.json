@@ -141,6 +141,23 @@
         "mag_route_gate_revision"
       ]
     },
+    "product_entry_readiness": {
+      "surface_kind": "product_entry_readiness",
+      "verdict": "agent_assisted_ready_not_product_grade",
+      "usable_now": true,
+      "good_to_use_now": false,
+      "fully_automatic": false,
+      "summary": "当前可以作为 Agent 协同的 CLI/controller 标书写作主线使用，但还不是无需人工材料、无需判断、可直接交付的全自动国自然标书产品。",
+      "recommended_start_surface": "product_frontdesk",
+      "recommended_start_command": "uv run python -m med_autogrant product-frontdesk --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+      "recommended_loop_surface": "grant_user_loop",
+      "recommended_loop_command": "uv run python -m med_autogrant grant-user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
+      "blocking_gaps": [
+        "还不是 mature direct grant Web UI / hosted runtime。",
+        "还不能在缺少用户真实材料、前期结果和图片素材时全自动生成可信标书。",
+        "文献热点检索、引用证据绑定、图件生产和最终国自然格式化交付仍未完整产品化。"
+      ]
+    },
     "family_orchestration": {
       "action_graph_ref": {
         "ref_kind": "json_pointer",
