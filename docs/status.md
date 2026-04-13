@@ -36,6 +36,7 @@
 - 当前重点：先把“上游 `Hermes-Agent` 才算真实接入”与“OPL 采用外部 kernel、产品层托管集成”这两条标准冻结下来，再把三个 domain 仓已经 absorbed 的 delta 收进顶层参考面与公开边界
 - 当前重点：在已经落地的 `OPL` 本地 direct-entry shell 基础上，继续冻结 `domain lightweight direct entry + unified handoff envelope` 这条家族级入口架构
 - 当前重点：把三个业务仓新增的 `frontdesk_surface + operator_loop_actions` 收口为同一套家族级用户面 contract，并让 `domain-manifests / dashboard / handoff-envelope / opl web` 一起消费，不再只告诉用户“当前 loop 是什么”，而是直接告诉用户“该从哪个 direct frontdesk 进入、下一步能做哪几件事”
+- 当前重点：把三个业务仓继续压到“显式 `product frontdesk` + 诚实 `operator loop`”这一层；也就是 `frontdesk_surface` 不再只是某个 loop 的别名，而是 controller-owned 的 direct frontdoor contract，底下仍明确保留各自的 loop / action / handoff 真相
 - 当前重点：把 hosted / web 前台的真实选型、hosted-friendly shell contract 与 family-level direct entry 推进板一起冻结，避免下一轮又回到“随便套一个 chat UI 就算产品入口”的漂移
 - 当前重点：以 contract-first 的方式吸收 `CrewAI` 的 orchestration 优点，把 `family event envelope / checkpoint lineage / action graph / human gate / product-entry manifest v2` 冻结为 shared runtime/shared domain 的 machine-readable companion surface，而不是新增 family runtime dependency
 - 当前约束：runtime ownership 继续留在 domain 一侧，开发宿主、历史执行面与仓内自写 substrate 都只能描述执行条件与迁移背景，不能被抬升成产品 runtime 真相
@@ -56,7 +57,7 @@
 
 1. 保持公开 docs、gateway contracts 与 admitted domain 状态一致。
 2. 在已落地的 hosted-pilot-ready shell bundle、self-hostable hosted pilot package、真实的 `LibreChat-first` hosted shell pilot package、workspace registry、managed session ledger 与 handoff bundle 之上，继续做 hosted runtime hardening，同时明确长期仍是 `OPL` 自有 web front desk。
-3. 先让 `OPL` 站稳 family-level hosted / web front desk 方案，再让三个业务仓沿已经 landed 的 `operator_loop_actions` 把 lightweight direct-entry shell 继续压实成更稳定的 direct-entry 面。
+3. 先让 `OPL` 站稳 family-level hosted / web front desk 方案，再让三个业务仓沿已经 landed 的 `product frontdesk + operator_loop_actions` 把 lightweight direct-entry shell 继续压实成更稳定的 direct-entry 面。
 4. 统一四仓对“上游 `Hermes-Agent` / repo-local shim / pilot / scaffold”的命名边界，不再允许假集成叙事。
 5. 先保持“`Codex CLI autonomous` + 继承本机 `Codex` 默认配置”这条默认执行器主线不漂移，优先完成 `RedCube AI` 的安全吸收与中央 reference sync，再在不降级的前提下测试真正的 `Hermes-native` 完整 `Hermes AIAgent` agent loop。
 6. 推动各 domain 仓沿同一份 family contract 表达 `runtime substrate / gateway authority / executor adapter` 三层边界，不再有人把“接入 Hermes”误解成“强制替换全部执行器”或“当前 chat relay 已经等于 Hermes-native”。
