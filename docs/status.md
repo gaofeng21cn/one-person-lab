@@ -11,7 +11,7 @@
 - 当前统一协作语义：`Hermes` 负责产品级长期在线 runtime substrate / orchestration；`OPL` 与 domain 仓继续持有 gateway、authority、对象合同与审计真相；具体单步执行保持 executor-adapter 可插拔，不要求三个 domain 仓共享同一种执行脑
 - 当前家族默认执行器：`Codex CLI autonomous`；默认模型与默认 reasoning effort / thinking 统一继承本机 `Codex` 默认配置，不在 family contract 里固定 pin 具体型号
 - 当前 `Hermes-native` 口径：只作为实验路线；只有完整的 Hermes AIAgent agent loop 才算 `Hermes-native`，不是一步一步 chat，也不是 chat relay
-- 当前执行器落差：`Med Auto Science / MedDeepScientist` 已拥有 `Codex CLI autonomous` 参考实现；`RedCube AI` 现有的 Hermes `/v1/runs` relay 仍只是迁移桥，不算默认主线；`Med Auto Grant` 虽然已经能跑真实上游 `Hermes-Agent` substrate，但在补上 `Codex CLI autonomous` 的 critique / authoring 主线之前，仍不能视为家族默认 authoring 主线已落地
+- 当前执行器落差：`Med Auto Science / MedDeepScientist` 已拥有 `Codex CLI autonomous` 参考实现；`RedCube AI` 的 `Codex CLI autonomous` 默认执行器实现已在待吸收提交中完成，但主 checkout `main` 仍未安全并回，因此主线公开 truth 还没全部跟上；`Med Auto Grant` 的 critique 路线已经 landed `Codex CLI autonomous`，但 docs / contract 仍停在旧的 `pending / handoff-required` 口径
 - 当前 runtime 真相：四个仓并不处在同一集成深度。`Med Auto Grant` 已切到真实上游 `Hermes-Agent` runtime substrate；`Med Auto Science` 已完成 external runtime bring-up，当前开发宿主上的 honest next step 是 real adapter cutover；`RedCube AI` 仍处于 upstream pilot prep；`OPL` 自己继续只持有 gateway / federation / handoff contract，而不持有 domain runtime owner 身份。任何 repo-local shim / pilot / scaffold 都不能被写成“已完成真实集成”
 - 当前已冻结的 integration choice：`Hermes Kernel Integration` 采用 `external kernel, managed by OPL product packaging`；不选 fork / vendor，也不把手工安装 Hermes 变成用户前置要求
 - 历史执行面：OMX 已退场，仅保留历史入口
@@ -42,6 +42,7 @@
 - hosted / web 前台选型与 pilot 优先级，统一收口到 `docs/references/opl-hosted-web-frontdesk-benchmark.md`
 - 家族级 lightweight direct entry 推进节奏，统一收口到 `docs/references/family-lightweight-direct-entry-rollout-board.md`
 - 家族统一 `executor-adapter` 默认口径，统一收口到 `docs/references/family-executor-adapter-defaults.md`
+- 四仓剩余执行器任务、文档同步清单与 `Hermes-Agent` 备选执行器评估，统一收口到 `docs/references/four-repo-executor-follow-up-and-hermes-evaluation.md`
 - `OPL Front Desk` 当前已完成/未完成事项，统一收口到 `docs/references/opl-frontdesk-delivery-board.md`
 - `Med Auto Science` 的顶层切换边界与 `OPL -> MAS` 切换板，统一收口到 `docs/references/mas-top-level-cutover-board.md`
 

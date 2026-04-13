@@ -4,9 +4,18 @@
 
 状态锚点：`2026-04-11`
 
+## 当前默认口径跳转（2026-04-13）
+
+- 本文件是 `2026-04-11 snapshot`，属于历史参考；不再作为四仓当前执行器与推进顺序的默认口径。
+- 当前 follow-up 与执行器统一口径请改读 [`four-repo-executor-follow-up-and-hermes-evaluation.md`](./four-repo-executor-follow-up-and-hermes-evaluation.md) 与 `docs/status.md`。
+- `OPL` 对 `MAS / MAG / MDS` 的当前家族默认执行器口径是 `Codex CLI autonomous`，默认模型与默认 reasoning effort 都继承本机 `Codex` 默认配置（`inherit_local_codex_default`）。
+- `Hermes-native` 当前仍是后续评估路线；只有完整 `Hermes AIAgent` agent loop 才算 `Hermes-native`，chat relay / 单次 chat completion 不算。
+- `RedCube` 的 `Codex CLI autonomous` 默认执行器实现已在待吸收提交中完成（见 follow-up 文档），但本线程不修改 `redcube-ai` 主仓。
+- 本文中出现的 `Codex-default host-agent runtime` 为当时历史措辞；如与当前口径冲突，以 follow-up 文档和 `docs/status.md` 为准。
+
 ## 文档目的
 
-这份文档用于给后续开发提供一个统一、可复查的当前状态视图。
+这份文档用于保留 `2026-04-11` 时点的统一状态快照，供后续审计与迁移追踪。
 它不替代各仓库自己的 `README`、根 `AGENTS.md`、docs 核心工作集、`CURRENT_PROGRAM` 或主线文档，只负责回答四个问题：
 
 1. 四个仓库现在分别处在什么位置
@@ -14,7 +23,7 @@
 3. 四仓是否已经拉平到同一起跑线
 4. 现阶段各仓下一步到底应该继续什么
 
-当前中央 program 与阶段定义，以 [`contract-convergence-v1-execution-board.md`](./contract-convergence-v1-execution-board.md) 为准；本表负责给出四仓状态快照与成熟度判断。
+`2026-04-11` 快照对应的中央 program 与阶段定义，以 [`contract-convergence-v1-execution-board.md`](./contract-convergence-v1-execution-board.md) 为准；当前默认口径请回到 [`four-repo-executor-follow-up-and-hermes-evaluation.md`](./four-repo-executor-follow-up-and-hermes-evaluation.md) 与 `docs/status.md`。
 
 ## 使用规则
 
@@ -23,7 +32,7 @@
 - 它只作为内部参考同步面，不反向抬升为 `OPL` 公开主线真相。
 - 这里的判断必须尽量引用四仓已冻结的真相文档，而不是基于印象口述。
 - 本文中的“长线总目标”默认指理想形态 / `north star`；“当前阶段”只回答当前做到哪里，不等于长期目标已经缩小成这一阶段。
-- 当四仓阶段发生明显变化时，应同步更新本表。
+- 当四仓阶段发生明显变化时，应优先更新当前 follow-up 文档；本表只在需要补充历史快照说明时再更新。
 
 ## 快照依据
 
@@ -33,7 +42,7 @@
 - `redcube-ai`：`README*`、`AGENTS.md`、`contracts/runtime-program/current-program.json`
 - `med-autogrant`：`README*`、`AGENTS.md`、`docs/specs/2026-04-07-formal-entry-matrix-current-truth.md`
 
-## 零、当前统一 program 锚点
+## 零、`2026-04-11` 统一 program 锚点（历史）
 
 ### 结论
 
