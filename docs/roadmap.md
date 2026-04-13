@@ -25,7 +25,7 @@ What is already clear today:
 - `OPL` also now has a landed local web front desk pilot, plus a writable workspace-registry surface, a managed session ledger, and a machine-readable family handoff bundle
 - the hosted / web front-desk benchmark is now frozen: `LibreChat-first` is the shortest pilot path, and the real hosted shell pilot package is now landed, while the long-line target remains an `OPL`-owned web front desk
 - the frozen top-level integration choice is `external kernel, managed by OPL product packaging`: do not fork `Hermes-Agent`, and do not make user-managed Hermes installation the product prerequisite
-- the ecosystem is no longer at one uniform `Hermes-Agent` stage: `Med Auto Grant` has landed a true upstream substrate, `Med Auto Science` has completed external runtime bring-up and is moving toward real adapter cutover, `RedCube AI` remains in pilot prep, and `OPL` itself still stays above domain runtime ownership
+- the ecosystem is no longer at one uniform `Hermes-Agent` stage: `Med Auto Grant` has landed a true upstream substrate, `Med Auto Science` has completed external runtime bring-up and is moving toward real adapter cutover, `RedCube AI` has already landed upstream runtime-owner cutover plus repo-verified product-entry federation, and `OPL` itself still stays above domain runtime ownership
 - the current repository already has a runnable local `TypeScript CLI`-first / read-only gateway baseline
 - that repo-tracked CLI-first / read-only baseline remains the current `OPL` `Phase 1` formal entry contract and public system surface
 - the current top-level formal entry at the OPL layer remains that local `TypeScript CLI`-first / read-only gateway surface rather than a launcher or runtime-owner entry
@@ -54,7 +54,7 @@ The next phase should prioritize:
 - freezing the `Shared Domain Contract` v1 object set clearly, at least around the formal-entry matrix, the `per-run handle`, the durable report surface, the audit trail, gate semantics, and the no-bypass rule
 - keeping `MedAutoScience` explicit as the `Research Ops` domain surface
 - keeping `RedCube AI` explicit as the visual-deliverable domain surface
-- proving at least one honest upstream `Hermes-Agent` pilot inside a domain repository before promoting any shared-runtime claim
+- keeping the `Hermes-native` backup-executor route on an explicit full-agent-loop proof lane instead of loosening it into generic `chat_completions`, single-step relay, or repo-local chat wrappers
 - carrying the `Agent-first` plus `Auto-only current repo + future HITL layering` doctrine into future candidate-domain definitions
 - keeping the absorbed `Phase 1 exit + next-stage activation package freeze` explicit as the predecessor gate for the current `Minimal admitted-domain federation activation package`, with every candidate path staying in explicit admission, discovery, routing, and handoff review lanes
 - defining the next candidate domains through clear task boundaries and delivery objects, using the current `task-topology + candidate-domain-backlog + domain-onboarding` path

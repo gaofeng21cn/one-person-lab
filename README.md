@@ -207,10 +207,10 @@ Those two contracts split the shared layer more clearly:
 In practice:
 
 - the preferred long-line implementation direction for the shared runtime layer is the upstream `Hermes-Agent`, with repo-local "Hermes"-named packages serving as transition scaffolds and pilots today
-- the four repositories are no longer at the same integration depth: `Med Auto Grant` has landed a real upstream `Hermes-Agent` runtime substrate, `Med Auto Science` has completed external runtime bring-up and is moving toward real adapter cutover, `RedCube AI` remains in upstream pilot prep, and `OPL` itself stays above domain runtime ownership
+- the four repositories are no longer at the same integration depth: `Med Auto Grant` has landed a real upstream `Hermes-Agent` runtime substrate, `Med Auto Science` has completed external runtime bring-up and is moving toward real adapter cutover, `RedCube AI` has already landed upstream runtime-owner cutover plus repo-verified `product frontdesk / federated product entry / session continuity / family-orchestration companion` surfaces, and `OPL` itself stays above domain runtime ownership
 - the current repo states are still transitional:
   - `Med Auto Science` uses a repo-side seam while real long-running execution still stays in the controlled `MedDeepScientist` backend
-  - `RedCube AI` currently carries a repo-local managed-runtime pilot
+  - `RedCube AI` now runs through the upstream `Hermes-Agent` API server with a service-safe domain-entry adapter and repo-verified `product frontdesk / manifest / federated entry` surfaces
   - `Med Auto Grant` currently carries a local CLI runtime baseline plus a repo-local migration scaffold
 - when the ecosystem later adopts upstream `Hermes-Agent`, it should sit in the runtime-substrate layer while the `OPL Gateway`, each `Domain Gateway`, and each `Domain Harness OS` keep their own responsibilities
 
@@ -263,8 +263,8 @@ The current truth is still transitional, but it has moved forward:
 - users no longer need to start from `Codex` just to reach the top-level `OPL` surface locally
 - this landed product entry now includes both the local CLI-first shell and a local web front desk pilot; a self-hostable hosted pilot package and a real LibreChat-first hosted shell pilot package are both landed, but the actual managed hosted runtime is still not landed
 - the hosted / web benchmark is now frozen: the shortest-path pilot is `LibreChat-first`, while the long-line target remains an `OPL`-owned web front desk; `Chatbot UI` is too thin to act as the main hosted base
-- the domain maturity gap is now narrower but still real: `Med Auto Grant` already has a grant-facing structured shell plus read-only direct-product projections, `Med Auto Science` now has a research-only shell plus shared-envelope `build-product-entry`, and `RedCube AI` now has a repo-tracked `redcube product-entry` shell; none of the three should yet be overstated as a mature hosted or end-user front desk
-- the four repositories are no longer at the same integration depth: `Med Auto Grant` has landed a real upstream `Hermes-Agent` runtime substrate, `Med Auto Science` has completed external runtime bring-up and is moving toward real adapter cutover, `RedCube AI` remains in upstream pilot prep, and `OPL` itself stays above domain runtime ownership while now owning the local family-level entry shell
+- the domain maturity gap is now narrower but still real: `Med Auto Grant` already has a grant-facing structured shell plus read-only direct-product projections, `Med Auto Science` now has a research-only shell plus shared-envelope `build-product-entry`, and `RedCube AI` now has a repo-verified `redcube product frontdesk` with direct / federated / session entry surfaces plus family-orchestration companions; none of the three should yet be overstated as a mature hosted or end-user front desk
+- the four repositories are no longer at the same integration depth: `Med Auto Grant` has landed a real upstream `Hermes-Agent` runtime substrate, `Med Auto Science` has completed external runtime bring-up and is moving toward real adapter cutover, `RedCube AI` has already landed upstream runtime-owner cutover plus repo-verified product-entry federation, and `OPL` itself stays above domain runtime ownership while now owning the local family-level entry shell
 
 The target product chain is:
 

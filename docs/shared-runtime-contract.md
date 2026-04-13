@@ -124,7 +124,7 @@ As of the current public mainline, the true state remains:
 - the current public OPL entry remains the local `TypeScript CLI`-first / read-only gateway surface
 - the `Shared Runtime Contract` is still being frozen and progressively landed
 - the runtime-oriented family orchestration companion schemas now live in `contracts/family-orchestration/` and freeze the shared `event envelope + checkpoint lineage` semantics without turning them into one runtime owner
-- the four repositories are no longer at the same integration depth: `Med Auto Grant` has landed a real upstream `Hermes-Agent` runtime substrate, `Med Auto Science` has completed external runtime bring-up and is entering real adapter cutover, `RedCube AI` remains in upstream pilot prep, and `OPL` itself stays at the top-level gateway / federation layer
+- the four repositories are no longer at the same integration depth: `Med Auto Grant` has landed a real upstream `Hermes-Agent` runtime substrate, `Med Auto Science` has completed external runtime bring-up and is entering real adapter cutover, `RedCube AI` has already landed upstream runtime-owner cutover plus repo-verified product-entry federation, and `OPL` itself stays at the top-level gateway / federation layer
 - an upstream `Hermes-Agent` runtime substrate remains the preferred future implementation direction for this contract, not a landed public fact
 
 ## Implementation Boundary

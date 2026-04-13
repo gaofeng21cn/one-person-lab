@@ -13,8 +13,8 @@
 - 当前家族默认执行器：`Codex CLI autonomous`；默认模型与默认 reasoning effort / thinking 统一继承本机 `Codex` 默认配置，不在 family contract 里固定 pin 具体型号
 - 当前 family orchestration contract 真相：这轮吸收的是 `CrewAI` 一类框架里最值得保留的 orchestration 语义，而不是把 `CrewAI` 直接拉进来做 family dependency；当前顶层冻结的 5 类 companion surface 是 `family event envelope`、`family checkpoint lineage`、`family action graph`、`family human gate`、`family product-entry manifest v2`
 - 当前 `Hermes-native` 口径：只作为实验路线；只有完整的 Hermes AIAgent agent loop 才算 `Hermes-native`，不是一步一步 chat，也不是 chat relay
-- 当前执行器收口状态：family 默认 executor-adapter truth 现在同时冻结在参考文档 `docs/references/family-executor-adapter-defaults.md` 与 machine-readable contract `contracts/opl-gateway/family-executor-adapter-defaults.json`；`Med Auto Science / MedDeepScientist` 继续是当前 reference implementation，`Med Auto Grant` 的 critique route 与 docs / contract 已经对齐到 `Codex CLI autonomous`，而 `RedCube AI` 的同类实现仍卡在主 checkout `main` 的安全吸收
-- 当前 runtime 真相：四个仓并不处在同一集成深度。`Med Auto Grant` 已切到真实上游 `Hermes-Agent` runtime substrate；`Med Auto Science` 已完成 external runtime bring-up，当前开发宿主上的 honest next step 是 real adapter cutover；`RedCube AI` 仍处于 upstream pilot prep；`OPL` 自己继续只持有 gateway / federation / handoff contract，而不持有 domain runtime owner 身份。任何 repo-local shim / pilot / scaffold 都不能被写成“已完成真实集成”
+- 当前执行器收口状态：family 默认 executor-adapter truth 现在同时冻结在参考文档 `docs/references/family-executor-adapter-defaults.md` 与 machine-readable contract `contracts/opl-gateway/family-executor-adapter-defaults.json`；`Med Auto Science / MedDeepScientist` 继续是当前 reference implementation，`Med Auto Grant` 的 critique route 与 `RedCube AI` 的默认 autonomous route 也都已经对齐到 `Codex CLI autonomous`
+- 当前 runtime 真相：四个仓并不处在同一集成深度。`Med Auto Grant` 已切到真实上游 `Hermes-Agent` runtime substrate；`Med Auto Science` 已完成 external runtime bring-up，当前开发宿主上的 honest next step 是 real adapter cutover；`RedCube AI` 也已经落下 upstream runtime-owner cutover、repo-verified `product frontdesk / federated product entry / session continuity / family-orchestration companion` 表面；`OPL` 自己继续只持有 gateway / federation / handoff contract，而不持有 domain runtime owner 身份。任何 repo-local shim / pilot / scaffold 都不能被写成“已完成真实集成”
 - 当前已冻结的 integration choice：`Hermes Kernel Integration` 采用 `external kernel, managed by OPL product packaging`；不选 fork / vendor，也不把手工安装 Hermes 变成用户前置要求
 - 历史执行面：OMX 已退场，仅保留历史入口
 
@@ -51,6 +51,7 @@
 - 家族级 lightweight direct entry 推进节奏，统一收口到 `docs/references/family-lightweight-direct-entry-rollout-board.md`
 - 家族用户面成熟度梯子与四仓当前落点，统一收口到 `docs/references/family-user-facing-maturity-roadmap.md`
 - 家族统一 `executor-adapter` 默认口径，统一收口到 `docs/references/family-executor-adapter-defaults.md` 与 `contracts/opl-gateway/family-executor-adapter-defaults.json`
+- `Hermes-native` 备选执行器的准入标准与验证维度，统一收口到 `docs/references/hermes-native-executor-proof-lane.md`
 - 四仓剩余执行器任务、文档同步清单与 `Hermes-Agent` 备选执行器评估，统一收口到 `docs/references/four-repo-executor-follow-up-and-hermes-evaluation.md`
 - 家族统一 orchestration contract 收编说明，统一收口到 `docs/references/family-orchestration-contract-absorb-crewai.md`
 - `OPL Front Desk` 当前已完成/未完成事项，统一收口到 `docs/references/opl-frontdesk-delivery-board.md`
@@ -63,7 +64,7 @@
 2. 在已落地的 hosted-pilot-ready shell bundle、self-hostable hosted pilot package、真实的 `LibreChat-first` hosted shell pilot package、workspace registry、managed session ledger 与 handoff bundle 之上，继续做 hosted runtime hardening，同时明确长期仍是 `OPL` 自有 web front desk。
 3. 先让 `OPL` 站稳 family-level hosted / web front desk 方案，再让三个业务仓沿已经 landed 的 `product frontdesk + operator_loop_actions` 把 lightweight direct-entry shell 继续压实成更稳定的 direct-entry 面。
 4. 统一四仓对“上游 `Hermes-Agent` / repo-local shim / pilot / scaffold”的命名边界，不再允许假集成叙事。
-5. 先保持“`Codex CLI autonomous` + 继承本机 `Codex` 默认配置”这条默认执行器主线不漂移，优先完成 `RedCube AI` 的安全吸收与中央 reference sync，再在不降级的前提下测试真正的 `Hermes-native` 完整 `Hermes AIAgent` agent loop。
+5. 先保持“`Codex CLI autonomous` + 继承本机 `Codex` 默认配置”这条默认执行器主线不漂移；`RedCube AI` 的已 absorbed truth 继续保持在中央 reference surfaces 上同步，并只通过 `docs/references/hermes-native-executor-proof-lane.md` 定义的 full-agent-loop proof lane 测试真正的 `Hermes-native`。
 6. 推动各 domain 仓沿同一份 family contract 表达 `runtime substrate / gateway authority / executor adapter` 三层边界，不再有人把“接入 Hermes”误解成“强制替换全部执行器”或“当前 chat relay 已经等于 Hermes-native”。
 7. 在已经 landed 的 `family_orchestration` companion preview 基础上，继续推动 `Med Auto Grant`、`Med Auto Science`、`RedCube AI` 把各自的 `operator loop / runtime watch / grant-progress / direct-entry manifest` 往更完整的 graph / gate / resume / discovery 语义压实，避免每仓各自再发明一套。
 8. 继续把 `product_entry_quickstart`、`product_entry_overview` 与 `product_entry_readiness` companion 保持成三仓同型 discovery surface，并让 `dashboard / handoff-envelope / opl web` 统一消费，保证 family-level 入口能直接回答“现在怎么进、怎么续跑、看哪、能不能直接用，以及当前缺口和人审门在哪”。
