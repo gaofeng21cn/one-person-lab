@@ -166,6 +166,48 @@ test('example onboarding record declares the codex-cli-autonomous execution mode
   }
 });
 
+test('family executor defaults contract mirrors onboarding execution-model constants', () => {
+  const schema = readJson('contracts/opl-gateway/domain-onboarding-readiness.schema.json');
+  const defaults = readJson('contracts/opl-gateway/family-executor-adapter-defaults.json');
+  const publicSurfaceIndex = readJson('contracts/opl-gateway/public-surface-index.json');
+  const contractHub = publicSurfaceIndex.surfaces.find(
+    (entry: Json) => entry.surface_id === 'opl_gateway_contract_hub',
+  );
+
+  assert.equal(
+    defaults.defaults.default_executor,
+    schema.$defs.executionModelDeclaration.properties.default_executor.const,
+  );
+  assert.equal(
+    defaults.defaults.default_model,
+    schema.$defs.executionModelDeclaration.properties.default_model.const,
+  );
+  assert.equal(
+    defaults.defaults.default_reasoning_effort,
+    schema.$defs.executionModelDeclaration.properties.default_reasoning_effort.const,
+  );
+  assert.equal(defaults.defaults.default_semantics, 'full_agent_loop_autonomous_execution');
+  assert.equal(defaults.guardrails.chat_completion_only_executor_forbidden, true);
+  assert.equal(defaults.guardrails.hermes_native_requires_full_agent_loop, true);
+  assert.equal(defaults.guardrails.migration_bridge_label_required_for_non_default_routes, true);
+  assert.equal(defaults.guardrails.experimental_label_required_for_non_default_routes, true);
+  assert.equal(defaults.guardrails.regression_oracle_label_required_for_non_default_routes, true);
+  assert.equal(defaults.guardrails.domain_runtime_authority_stays_domain_owned, true);
+  assert.deepEqual(defaults.allowed_non_default_route_labels, [
+    'migration_bridge',
+    'experimental',
+    'regression_oracle',
+  ]);
+
+  assert.ok(contractHub, 'Expected opl_gateway_contract_hub surface in public-surface-index.json.');
+  assert.ok(
+    contractHub.refs.some(
+      (entry: Json) => entry.ref === 'contracts/opl-gateway/family-executor-adapter-defaults.json',
+    ),
+    'Expected public-surface-index contract hub to expose family-executor-adapter-defaults.json.',
+  );
+});
+
 test('task topology keeps under-definition workstreams blocked without stable runtime and shared-base convergence', () => {
   const topology = readJson('contracts/opl-gateway/task-topology.json');
 

@@ -33,6 +33,8 @@ This active companion set is anchored to `2026-04-11` and carries the responsibi
 - [Ecosystem Status Matrix](../../docs/references/ecosystem-status-matrix.md) — Chinese-only internal reference for the current four-repo stage/status picture
 - [Contract Convergence v1 Execution Board](../../docs/references/contract-convergence-v1-execution-board.md) — Chinese-only internal reference for the current unified program, active phase, and exit criteria
 - [Codex-default Host-Agent Runtime Contract](../../docs/references/host-agent-runtime-contract.md) — Chinese-only internal reference for the current local default runtime wording
+- [Family Executor Adapter Defaults](../../docs/references/family-executor-adapter-defaults.md) — Chinese-only internal reference for the current family default executor route and Hermes-native guardrails
+- [Four-Repo Executor Follow-up And Hermes Evaluation](../../docs/references/four-repo-executor-follow-up-and-hermes-evaluation.md) — Chinese-only internal reference for the remaining executor-unification work and Hermes-agent evaluation
 
 ## Historical migration references
 
@@ -107,6 +109,7 @@ These backlog and mapping surfaces stay reference-only companions to the governi
 - [`handoff.schema.json`](./handoff.schema.json) — JSON Schema for the frozen G1 handoff payload
 - [`routed-actions.schema.json`](./routed-actions.schema.json) — planning dependency kept at the closeout boundary of `Phase 1 / G3 thin handoff planning freeze hardening`; it is a planning-level contract artifact, not a launcher, and does not mean the current mainline has entered a routed-action runtime
 - [`domain-onboarding-readiness.schema.json`](./domain-onboarding-readiness.schema.json) — JSON Schema for the machine-readable domain onboarding readiness gate
+- [`family-executor-adapter-defaults.json`](./family-executor-adapter-defaults.json) — machine-readable freeze for the current family default executor-adapter route and its hard guardrails
 - [`governance-audit.schema.json`](./governance-audit.schema.json) — JSON Schema for the frozen P5.M1 governance / audit operating contract
 - [`publish-promotion.schema.json`](./publish-promotion.schema.json) — JSON Schema for the frozen P5.M2 publish / promotion operating contract
 - [`acceptance-matrix.json`](./acceptance-matrix.json) — declarative acceptance matrix for the frozen gateway and operating surfaces

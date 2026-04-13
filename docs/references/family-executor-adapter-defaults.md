@@ -24,6 +24,15 @@
 这里说的 `Codex CLI autonomous`，不是一次性的 chat completion，也不是把大任务先拆成手写的固定小步骤再让模型逐步补空。
 它要求 `Executor Adapter` 把任务交给一个可以自主决策推进的 Codex agent route。
 
+## Machine-Readable Mirror
+
+这组默认值现在不再只停留在参考文档中，也已经同步冻结到：
+
+- `contracts/opl-gateway/family-executor-adapter-defaults.json`
+- `contracts/opl-gateway/domain-onboarding-readiness.schema.json` 的 `executionModelDeclaration`
+
+这意味着家族默认执行器不再只是“叙述口径”，而是已经有 repo-tracked 的 machine-readable 锚点。
+
 ## 与 Hermes 的边界
 
 `Hermes` 在家族里继续承担的是 runtime substrate / orchestration：
@@ -52,15 +61,15 @@
   - 当前最成熟的参考实现
   - 已经以 `Codex CLI autonomous` 作为真实可证实的底层执行器
 - `RedCube AI`
-  - 现有 Hermes `/v1/runs` relay 仍是迁移桥
-  - 不应继续被记作默认执行器主线
-  - 默认路线应切到 `Codex CLI autonomous`
+  - `Codex CLI autonomous` 默认路线的实现已经完成
+  - 当前剩余问题是主 checkout `main` 仍未安全吸收，不是默认语义还没定
+  - 现有 Hermes `/v1/runs` relay 继续只算迁移桥
 - `Med Auto Grant`
   - 真实上游 `Hermes-Agent` runtime substrate 已可运行
-  - 但 authoring 主线还没有因为 substrate 落地就自动完成
-  - 在 `critique` 等 authoring route 切到 `Codex CLI autonomous` 之前，还不能把默认 authoring 主线写成已完成
+  - `critique` route 已 landed 到 `Codex CLI autonomous`
+  - docs / contract 已与默认模型策略一起收口
 
-## 统一 contract 期待
+## 统一 Contract 要求
 
 三个 domain 仓后续都应在各自的 `executor_routing_contract` 或等价 surface 中，显式表达同一组 family 默认字段：
 

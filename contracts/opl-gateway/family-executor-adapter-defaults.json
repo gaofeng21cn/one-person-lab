@@ -1,0 +1,42 @@
+{
+  "version": "2026-04-13",
+  "contract_id": "opl_family_executor_adapter_defaults",
+  "scope": "family_executor_adapter_default_route",
+  "description": "Machine-readable freeze for the OPL family default executor-adapter route and its non-negotiable guardrails. This contract does not select a runtime substrate owner and does not collapse domain authority into OPL.",
+  "non_goals": [
+    "runtime_substrate_replacement",
+    "domain_object_model_unification",
+    "chat_completion_relay_as_default_executor",
+    "repo_local_model_pin_as_family_default"
+  ],
+  "defaults": {
+    "default_executor": "codex_cli_autonomous",
+    "default_model": "inherit_local_codex_default",
+    "default_reasoning_effort": "inherit_local_codex_default",
+    "default_semantics": "full_agent_loop_autonomous_execution"
+  },
+  "guardrails": {
+    "chat_completion_only_executor_forbidden": true,
+    "hermes_native_requires_full_agent_loop": true,
+    "migration_bridge_label_required_for_non_default_routes": true,
+    "experimental_label_required_for_non_default_routes": true,
+    "regression_oracle_label_required_for_non_default_routes": true,
+    "domain_runtime_authority_stays_domain_owned": true
+  },
+  "topology_split": {
+    "opl_role": "top_level_gateway_and_federation_contract",
+    "runtime_substrate_role": "session_memory_scheduler_orchestration",
+    "executor_adapter_role": "domain_local_route_selection",
+    "concrete_executor_role": "task_local_autonomous_execution"
+  },
+  "allowed_non_default_route_labels": [
+    "migration_bridge",
+    "experimental",
+    "regression_oracle"
+  ],
+  "verification_refs": [
+    "contracts/opl-gateway/domain-onboarding-readiness.schema.json",
+    "docs/references/family-executor-adapter-defaults.md",
+    "docs/references/four-repo-executor-follow-up-and-hermes-evaluation.md"
+  ]
+}

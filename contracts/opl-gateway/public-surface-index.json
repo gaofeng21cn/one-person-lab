@@ -477,6 +477,10 @@
         },
         {
           "ref_kind": "repo_path",
+          "ref": "contracts/opl-gateway/family-executor-adapter-defaults.json"
+        },
+        {
+          "ref_kind": "repo_path",
           "ref": "contracts/opl-gateway/governance-audit.schema.json"
         },
         {
