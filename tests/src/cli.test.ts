@@ -1340,6 +1340,27 @@ test('frontdesk-manifest exposes the hosted-friendly OPL shell contract without 
   assert.equal(output.frontdesk_manifest.endpoints.health, '/api/health');
   assert.equal(output.frontdesk_manifest.endpoints.resume, '/api/resume');
   assert.equal(output.frontdesk_manifest.endpoints.logs, '/api/logs');
+  assert.equal(
+    output.frontdesk_manifest.hosted_runtime_readiness.surface_kind,
+    'opl_hosted_runtime_readiness',
+  );
+  assert.equal(output.frontdesk_manifest.hosted_runtime_readiness.status, 'pilot_ready_not_managed');
+  assert.equal(
+    output.frontdesk_manifest.hosted_runtime_readiness.shell_integration_target,
+    'librechat_first',
+  );
+  assert.equal(
+    output.frontdesk_manifest.hosted_runtime_readiness.managed_hosted_runtime_landed,
+    false,
+  );
+  assert.equal(
+    output.frontdesk_manifest.hosted_runtime_readiness.hosted_pilot_bundle_landed,
+    true,
+  );
+  assert.equal(
+    output.frontdesk_manifest.hosted_runtime_readiness.librechat_pilot_package_landed,
+    true,
+  );
 });
 
 test('frontdesk-service commands manage the local launchd wrapper for the web pilot', async () => {
@@ -1445,6 +1466,19 @@ test('frontdesk-hosted-bundle exposes a hosted-pilot-ready bundle with base-path
   assert.equal(output.hosted_pilot_bundle.endpoints.dashboard, '/pilot/opl/api/dashboard');
   assert.equal(output.hosted_pilot_bundle.defaults.workspace_path, repoRoot);
   assert.equal(output.hosted_pilot_bundle.defaults.sessions_limit, 9);
+  assert.equal(
+    output.hosted_pilot_bundle.hosted_runtime_readiness.surface_kind,
+    'opl_hosted_runtime_readiness',
+  );
+  assert.equal(output.hosted_pilot_bundle.hosted_runtime_readiness.status, 'pilot_ready_not_managed');
+  assert.equal(
+    output.hosted_pilot_bundle.hosted_runtime_readiness.hosted_pilot_bundle_landed,
+    true,
+  );
+  assert.equal(
+    output.hosted_pilot_bundle.hosted_runtime_readiness.self_hostable_pilot_package_landed,
+    true,
+  );
 });
 
 test('frontdesk-hosted-package exports a self-hostable hosted pilot package with runtime and proxy assets', () => {
@@ -1475,6 +1509,22 @@ test('frontdesk-hosted-package exports a self-hostable hosted pilot package with
     assert.equal(output.hosted_pilot_package.public_origin, 'https://opl.example.com');
     assert.equal(output.hosted_pilot_package.entry_url, 'https://opl.example.com/pilot/opl/');
     assert.equal(output.hosted_pilot_package.api_base_url, 'https://opl.example.com/pilot/opl/api');
+    assert.equal(
+      output.hosted_pilot_package.hosted_runtime_readiness.surface_kind,
+      'opl_hosted_runtime_readiness',
+    );
+    assert.equal(
+      output.hosted_pilot_package.hosted_runtime_readiness.status,
+      'pilot_ready_not_managed',
+    );
+    assert.equal(
+      output.hosted_pilot_package.hosted_runtime_readiness.self_hostable_pilot_package_landed,
+      true,
+    );
+    assert.equal(
+      output.hosted_pilot_package.hosted_runtime_readiness.service_safe_local_packaging_landed,
+      true,
+    );
 
     const assets = output.hosted_pilot_package.assets;
     assert.equal(fs.existsSync(assets.bundle_json), true);
@@ -1581,6 +1631,22 @@ test('frontdesk-librechat-package exports a same-origin LibreChat-first hosted s
     assert.equal(output.librechat_pilot_package.hosted_shell_entry_url, 'https://opl.example.com/');
     assert.equal(output.librechat_pilot_package.frontdesk_entry_url, 'https://opl.example.com/pilot/opl/');
     assert.equal(output.librechat_pilot_package.frontdesk_runtime_upstream, 'host.docker.internal:8787');
+    assert.equal(
+      output.librechat_pilot_package.hosted_runtime_readiness.surface_kind,
+      'opl_hosted_runtime_readiness',
+    );
+    assert.equal(
+      output.librechat_pilot_package.hosted_runtime_readiness.status,
+      'pilot_ready_not_managed',
+    );
+    assert.equal(
+      output.librechat_pilot_package.hosted_runtime_readiness.librechat_pilot_package_landed,
+      true,
+    );
+    assert.equal(
+      output.librechat_pilot_package.hosted_runtime_readiness.managed_hosted_runtime_landed,
+      false,
+    );
 
     const assets = output.librechat_pilot_package.assets;
     assert.equal(fs.existsSync(assets.readme), true);
@@ -1833,6 +1899,71 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
 
     const dashboardOutput = runCli(['dashboard', '--path', repoRoot, '--sessions-limit', '1'], env);
     assert.equal(dashboardOutput.dashboard.front_desk.recommended_entry_surfaces_count, 3);
+    assert.equal(
+      dashboardOutput.dashboard.front_desk.hosted_runtime_readiness.surface_kind,
+      'opl_hosted_runtime_readiness',
+    );
+    assert.equal(
+      dashboardOutput.dashboard.front_desk.hosted_runtime_readiness.status,
+      'pilot_ready_not_managed',
+    );
+    assert.equal(
+      dashboardOutput.dashboard.front_desk.domain_entry_parity.summary.total_projects_count,
+      3,
+    );
+    assert.equal(
+      dashboardOutput.dashboard.front_desk.domain_entry_parity.summary.aligned_projects_count,
+      1,
+    );
+    assert.equal(
+      dashboardOutput.dashboard.front_desk.domain_entry_parity.summary.partial_projects_count,
+      2,
+    );
+    assert.equal(
+      dashboardOutput.dashboard.front_desk.domain_entry_parity.summary.blocked_projects_count,
+      0,
+    );
+    assert.equal(
+      dashboardOutput.dashboard.front_desk.domain_entry_parity.summary.direct_entry_locator_ready_projects_count,
+      1,
+    );
+    assert.equal(
+      dashboardOutput.dashboard.front_desk.domain_entry_parity.summary.ready_for_opl_start_count,
+      3,
+    );
+    assert.equal(
+      dashboardOutput.dashboard.front_desk.domain_entry_parity.summary.ready_for_domain_handoff_count,
+      3,
+    );
+    const grantParity = dashboardOutput.dashboard.front_desk.domain_entry_parity.projects.find(
+      (entry: { project_id: string }) => entry.project_id === 'medautogrant',
+    );
+    const scienceParity = dashboardOutput.dashboard.front_desk.domain_entry_parity.projects.find(
+      (entry: { project_id: string }) => entry.project_id === 'medautoscience',
+    );
+    const redcubeParity = dashboardOutput.dashboard.front_desk.domain_entry_parity.projects.find(
+      (entry: { project_id: string }) => entry.project_id === 'redcube',
+    );
+    assert.equal(grantParity.entry_parity_status, 'partial');
+    assert.equal(grantParity.direct_entry_locator_status, 'missing');
+    assert.equal(grantParity.ready_for_opl_start, true);
+    assert.equal(grantParity.ready_for_domain_handoff, true);
+    assert.equal(grantParity.product_entry_readiness_verdict, 'agent_assisted_ready_not_product_grade');
+    assert.equal(scienceParity.entry_parity_status, 'partial');
+    assert.equal(scienceParity.direct_entry_locator_status, 'missing');
+    assert.equal(scienceParity.ready_for_opl_start, true);
+    assert.equal(scienceParity.ready_for_domain_handoff, true);
+    assert.equal(scienceParity.product_entry_readiness_verdict, 'runtime_ready_not_standalone_product');
+    assert.equal(redcubeParity.entry_parity_status, 'aligned');
+    assert.equal(redcubeParity.direct_entry_locator_status, 'ready');
+    assert.equal(redcubeParity.ready_for_opl_start, true);
+    assert.equal(redcubeParity.ready_for_domain_handoff, true);
+    assert.equal(redcubeParity.product_entry_readiness_verdict, 'service_surface_ready_not_managed_product');
+    assert.equal(redcubeParity.recommended_start_command, 'redcube product frontdesk');
+    assert.equal(
+      redcubeParity.recommended_check_command,
+      'redcube workspace doctor --workspace-root /fixtures/redcube/workspace',
+    );
     const grantEntry = dashboardOutput.dashboard.front_desk.recommended_entry_surfaces.find(
       (entry: { project_id: string }) => entry.project_id === 'medautogrant',
     );
@@ -2139,6 +2270,19 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
       output.handoff_bundle.domain_manifest_recommendation.family_orchestration.action_graph_ref.ref,
       '/family_orchestration/action_graph',
     );
+    assert.equal(output.handoff_bundle.domain_entry_parity.summary.total_projects_count, 2);
+    assert.equal(output.handoff_bundle.domain_entry_parity.summary.aligned_projects_count, 1);
+    assert.equal(
+      output.handoff_bundle.domain_entry_parity.summary.direct_entry_locator_ready_projects_count,
+      1,
+    );
+    const routedParity = output.handoff_bundle.domain_entry_parity.projects.find(
+      (entry: { project_id: string }) => entry.project_id === 'redcube',
+    );
+    assert.equal(routedParity.entry_parity_status, 'aligned');
+    assert.equal(routedParity.direct_entry_locator_status, 'ready');
+    assert.equal(routedParity.ready_for_opl_start, true);
+    assert.equal(routedParity.ready_for_domain_handoff, true);
     assertRedcubeActionGraph(
       output.handoff_bundle.domain_manifest_recommendation.family_orchestration.action_graph,
     );
@@ -2354,12 +2498,22 @@ exit 1
     assert.match(pageHtml, /OPL Front Desk/);
     assert.match(pageHtml, /Control Room/);
     assert.match(pageHtml, /Hosted-Friendly Surface/);
+    assert.match(pageHtml, /Hosted Runtime Readiness/);
+    assert.match(pageHtml, /Domain Entry Parity/);
 
     const dashboardResponse = await fetch(`${baseUrl}/api/dashboard`);
     const dashboardPayload = await dashboardResponse.json();
     assert.equal(dashboardPayload.dashboard.front_desk.local_web_frontdesk_status, 'pilot_landed');
     assert.equal(dashboardPayload.dashboard.projects.length, 3);
     assert.equal(dashboardPayload.dashboard.domain_manifests.summary.total_projects_count, 2);
+    assert.equal(
+      dashboardPayload.dashboard.front_desk.hosted_runtime_readiness.status,
+      'pilot_ready_not_managed',
+    );
+    assert.equal(
+      dashboardPayload.dashboard.front_desk.domain_entry_parity.summary.total_projects_count,
+      2,
+    );
 
     const healthResponse = await fetch(`${baseUrl}/api/health`);
     const healthPayload = await healthResponse.json();

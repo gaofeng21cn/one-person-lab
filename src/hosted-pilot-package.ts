@@ -10,6 +10,7 @@ import {
   buildFrontDeskEntryUrl,
   normalizeBasePath,
 } from './frontdesk-paths.ts';
+import { buildHostedRuntimeReadiness } from './management.ts';
 import type { GatewayContracts } from './types.ts';
 
 export type HostedPilotPackageOptions = {
@@ -459,6 +460,7 @@ export function buildHostedPilotPackage(
   const localHealthHost = host === '0.0.0.0' || host === '::' ? '127.0.0.1' : host;
   const localHealthUrl = `http://${localHealthHost}:${port}${endpoints.health}`;
   const publicHealthUrl = `${publicOrigin}${endpoints.health}`;
+  const hostedRuntimeReadiness = buildHostedRuntimeReadiness();
 
   const payload = {
     version: 'g2',
@@ -472,6 +474,7 @@ export function buildHostedPilotPackage(
       package_status: 'landed',
       actual_hosted_runtime_status: 'not_landed',
       runtime_substrate: 'external_hermes_kernel',
+      hosted_runtime_readiness: hostedRuntimeReadiness,
       public_origin: publicOrigin,
       host,
       port,

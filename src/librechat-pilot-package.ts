@@ -7,6 +7,7 @@ import {
   buildHostedPilotPackage,
   type HostedPilotPackageOptions,
 } from './hosted-pilot-package.ts';
+import { buildHostedRuntimeReadiness } from './management.ts';
 import type { GatewayContracts } from './types.ts';
 
 export type LibreChatPilotPackageOptions = HostedPilotPackageOptions;
@@ -391,6 +392,7 @@ export function buildLibreChatPilotPackage(
     basePath,
     sessionsLimit,
   });
+  const hostedRuntimeReadiness = buildHostedRuntimeReadiness();
 
   fs.writeFileSync(
     readmePath,
@@ -439,6 +441,7 @@ export function buildLibreChatPilotPackage(
       hosted_shell_status: 'landed',
       actual_managed_runtime_status: 'not_landed',
       runtime_substrate: 'external_hermes_kernel',
+      hosted_runtime_readiness: hostedRuntimeReadiness,
       public_origin: publicOrigin,
       hosted_shell_entry_url: `${publicOrigin}/`,
       frontdesk_entry_url: frontdeskEntryUrl,
