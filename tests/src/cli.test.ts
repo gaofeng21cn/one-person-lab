@@ -1567,7 +1567,10 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
       redcube.manifest.product_entry_overview.resume_surface.checkpoint_locator_field,
       'continuation_snapshot.latest_managed_run_id',
     );
-    assert.equal(redcube.manifest.family_orchestration.action_graph_ref.ref, 'contracts/runtime-program/redcube-product-entry-mvp.json');
+    assert.equal(redcube.manifest.family_orchestration.action_graph_ref.ref, '/family_orchestration/action_graph');
+    assert.equal(redcube.manifest.family_orchestration.action_graph.graph_id, 'redcube_frontdoor_product_entry_graph');
+    assert.equal(redcube.manifest.family_orchestration.action_graph.nodes.length, 4);
+    assert.equal(redcube.manifest.family_orchestration.action_graph.edges.length, 4);
     assert.equal(redcube.manifest.family_orchestration.human_gates[0].gate_id, 'redcube_operator_review_gate');
     assert.equal(
       redcube.manifest.family_orchestration.resume_contract.session_locator_field,
@@ -1624,7 +1627,10 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     );
     assert.equal(recommendedEntry.product_entry_shell.federated.surface_kind, 'federated_product_entry');
     assert.equal(recommendedEntry.shared_handoff.opl_return_surface.target_domain_id, 'redcube_ai');
-    assert.equal(recommendedEntry.family_orchestration.action_graph_ref.ref, 'contracts/runtime-program/redcube-product-entry-mvp.json');
+    assert.equal(recommendedEntry.family_orchestration.action_graph_ref.ref, '/family_orchestration/action_graph');
+    assert.equal(recommendedEntry.family_action_graph_ref, '/family_orchestration/action_graph');
+    assert.equal(recommendedEntry.family_action_graph_node_count, 4);
+    assert.equal(recommendedEntry.family_action_graph_edge_count, 4);
     assert.equal(recommendedEntry.family_orchestration.human_gates[0].gate_id, 'redcube_operator_review_gate');
     assert.equal(
       recommendedEntry.family_orchestration.resume_contract.session_locator_field,
@@ -1761,7 +1767,11 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     );
     assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.family_orchestration.action_graph_ref.ref,
-      'contracts/runtime-program/redcube-product-entry-mvp.json',
+      '/family_orchestration/action_graph',
+    );
+    assert.equal(
+      output.handoff_bundle.domain_manifest_recommendation.family_orchestration.action_graph.graph_id,
+      'redcube_frontdoor_product_entry_graph',
     );
     assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.family_orchestration.resume_contract.checkpoint_locator_field,

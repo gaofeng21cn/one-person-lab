@@ -52,6 +52,7 @@
 - `domain-manifests / dashboard / handoff-envelope / opl web` 现在会统一消费 domain manifest 里的 `frontdesk_surface`，不再只知道每个业务仓“当前 operator loop 是什么”。
 - 三个业务仓当前也都已经开始把 `frontdesk_surface` 与 `operator_loop_surface` 明确分开；`OPL` 顶层现在消费的已不再只是“哪个 loop 可跑”，而是“当前 frontdoor 是什么、底下真实 loop 是什么”。
 - 三个业务仓当前又统一补上了 `product_entry_quickstart` companion，用 step list / resume contract / human gate id 把“先从哪进、接着怎么续跑、看哪条进度面”冻结成同型 discovery surface。
+- 三个业务仓当前也都已经把 `family_orchestration.action_graph` 实体带进 manifest；`OPL` 顶层不再只能看到 graph ref，而是能统一消费 node / edge / gate 摘要。
 - 三个业务仓当前还统一补上了 `product_entry_overview` companion，把入口摘要、progress / resume 句柄、remaining gaps 与 human gate id 收成同型看板，方便顶层和单仓前台直接显示“现在处在什么状态”。
 
 下一棒：

@@ -39,7 +39,7 @@
 - 当前重点：在已经落地的 `OPL` 本地 direct-entry shell 基础上，继续冻结 `domain lightweight direct entry + unified handoff envelope` 这条家族级入口架构
 - 当前重点：把三个业务仓新增的 `frontdesk_surface + operator_loop_actions + product_entry_shell + shared_handoff` 收口为同一套家族级用户面 contract，并让 `domain-manifests / dashboard / handoff-envelope / opl web` 一起消费，不再只告诉用户“当前 loop 是什么”，而是直接告诉用户“该从哪个 direct frontdesk 进入、下一步能做哪几件事、有哪些 builder / federated handoff 可以直接接”
 - 当前重点：把三个业务仓继续压到“显式 `product frontdesk` + 诚实 `operator loop`”这一层；也就是 `frontdesk_surface` 不再只是某个 loop 的别名，而是 controller-owned 的 direct frontdoor contract，底下仍明确保留各自的 loop / action / handoff 真相
-- 当前重点：三个业务仓的 repo-tracked `product-entry manifest` 已开始显式带出 `family_orchestration` companion preview；`OPL` 顶层现在会把 human gate、resume surface、checkpoint lineage，以及可选的 `action_graph` 摘要回灌进 `dashboard / domain-manifests / handoff-envelope / opl web`
+- 当前重点：三个业务仓的 repo-tracked `product-entry manifest` 现在都已显式带出 `family_orchestration` companion preview；`OPL` 顶层现在会把 human gate、resume surface、checkpoint lineage，以及 repo-tracked `action_graph` 实体摘要一起回灌进 `dashboard / domain-manifests / handoff-envelope / opl web`
 - 当前重点：业务仓若继续发布 `product_entry_quickstart` 与 `product_entry_overview` companion，`OPL` 顶层也要一并消费；这样 top-level front desk 就不再只知道 manifest 和 loop，而是还能直接展示“先从哪进、接着怎么续跑、看哪条进度面，以及当前入口摘要 / progress / resume 句柄”
 - 当前重点：把 hosted / web 前台的真实选型、hosted-friendly shell contract 与 family-level direct entry 推进板一起冻结，避免下一轮又回到“随便套一个 chat UI 就算产品入口”的漂移
 - 当前重点：以 contract-first 的方式吸收 `CrewAI` 的 orchestration 优点，把 `family event envelope / checkpoint lineage / action graph / human gate / product-entry manifest v2` 冻结为 shared runtime/shared domain 的 machine-readable companion surface，而不是新增 family runtime dependency
