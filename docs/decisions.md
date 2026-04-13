@@ -24,6 +24,28 @@
 - `OPL` 与各 domain 仓继续负责 gateway、authority、object contract、audit truth
 - 具体任务执行继续通过 domain 内部的 `Executor Adapter` 路由，可按 tranche 逐步替换，不要求一次性单脑化
 
+### 决策：家族默认执行器立即冻结为 `Codex CLI autonomous`
+
+原因：当前三个 domain 仓在 runtime substrate、入口形态与业务目标上可以不同，但默认执行器如果继续分裂，就会把“同一个 executor-adapter contract”重新打散成三套实现语义。现阶段最成熟、质量最可控、并且已经在医学研究线证明可行的默认路线，是 `Codex CLI autonomous`，而不是 repo-local helper、一步一步 chat，或把 `Hermes` 降格成 relay。
+
+影响：
+
+- 家族默认执行器统一写作 `Codex CLI autonomous`
+- 默认模型与默认 reasoning effort / thinking 统一写作 `inherit_local_codex_default`
+- family contract 不固定 pin 具体模型版本，而是继承本机 `Codex` 默认配置
+- `Med Auto Science / MedDeepScientist` 作为当前 reference implementation
+- `RedCube AI` 与 `Med Auto Grant` 后续新增投入默认先收敛到这条主线
+
+### 决策：`Hermes-native` 只指完整的 Hermes AIAgent agent loop
+
+原因：如果不把 `Hermes-native` 的语义钉死，任何一步一步 chat、单次 chat completion、或 chat relay 都会被误报成“已经有 Hermes agent 能力”，从而掩盖真实能力差距。
+
+影响：
+
+- 只有完整的 Hermes AIAgent agent loop 才允许写成 `Hermes-native`
+- 当前 `custom + chat_completions`、单次 `/v1/runs` relay、repo-local chat 包装层，都不能写成 `Hermes-native`
+- 在真实 `Hermes-native` 路线被验证前，它只能作为实验路线、迁移桥或回归对照存在
+
 ### 决策：固定 AI / 维护者核心五件套
 
 - `docs/project.md`

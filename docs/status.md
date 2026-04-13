@@ -9,6 +9,9 @@
 - 当前家族级入口真相：四仓的 `product entry` 成熟度仍不一致。`OPL` 已有 family-level 本地入口壳；三个业务仓现在也都已有 repo-tracked 的 lightweight direct-entry shell，但成熟度和可直接使用性仍不同，且都还不能被误写成成熟的 hosted 或最终用户前台
 - 当前产品边界：`OPL` 负责顶层 gateway / federation / shared substrate contract，三个 domain 仓继续各自维护自己的产品 runtime
 - 当前统一协作语义：`Hermes` 负责产品级长期在线 runtime substrate / orchestration；`OPL` 与 domain 仓继续持有 gateway、authority、对象合同与审计真相；具体单步执行保持 executor-adapter 可插拔，不要求三个 domain 仓共享同一种执行脑
+- 当前家族默认执行器：`Codex CLI autonomous`；默认模型与默认 reasoning effort / thinking 统一继承本机 `Codex` 默认配置，不在 family contract 里固定 pin 具体型号
+- 当前 `Hermes-native` 口径：只作为实验路线；只有完整的 Hermes AIAgent agent loop 才算 `Hermes-native`，不是一步一步 chat，也不是 chat relay
+- 当前执行器落差：`Med Auto Science / MedDeepScientist` 已拥有 `Codex CLI autonomous` 参考实现；`RedCube AI` 现有的 Hermes `/v1/runs` relay 仍只是迁移桥，不算默认主线；`Med Auto Grant` 虽然已经能跑真实上游 `Hermes-Agent` substrate，但在补上 `Codex CLI autonomous` 的 critique / authoring 主线之前，仍不能视为家族默认 authoring 主线已落地
 - 当前 runtime 真相：四个仓并不处在同一集成深度。`Med Auto Grant` 已切到真实上游 `Hermes-Agent` runtime substrate；`Med Auto Science` 已完成 external runtime bring-up，当前开发宿主上的 honest next step 是 real adapter cutover；`RedCube AI` 仍处于 upstream pilot prep；`OPL` 自己继续只持有 gateway / federation / handoff contract，而不持有 domain runtime owner 身份。任何 repo-local shim / pilot / scaffold 都不能被写成“已完成真实集成”
 - 当前已冻结的 integration choice：`Hermes Kernel Integration` 采用 `external kernel, managed by OPL product packaging`；不选 fork / vendor，也不把手工安装 Hermes 变成用户前置要求
 - 历史执行面：OMX 已退场，仅保留历史入口
@@ -38,6 +41,7 @@
 - 家族级入口栈与 `OPL -> domain` handoff 架构，统一收口到 `docs/references/family-product-entry-and-domain-handoff-architecture.md`
 - hosted / web 前台选型与 pilot 优先级，统一收口到 `docs/references/opl-hosted-web-frontdesk-benchmark.md`
 - 家族级 lightweight direct entry 推进节奏，统一收口到 `docs/references/family-lightweight-direct-entry-rollout-board.md`
+- 家族统一 `executor-adapter` 默认口径，统一收口到 `docs/references/family-executor-adapter-defaults.md`
 - `OPL Front Desk` 当前已完成/未完成事项，统一收口到 `docs/references/opl-frontdesk-delivery-board.md`
 - `Med Auto Science` 的顶层切换边界与 `OPL -> MAS` 切换板，统一收口到 `docs/references/mas-top-level-cutover-board.md`
 
@@ -47,9 +51,10 @@
 2. 在已落地的 hosted-pilot-ready shell bundle、self-hostable hosted pilot package、真实的 `LibreChat-first` hosted shell pilot package、workspace registry、managed session ledger 与 handoff bundle 之上，继续做 hosted runtime hardening，同时明确长期仍是 `OPL` 自有 web front desk。
 3. 先让 `OPL` 站稳 family-level hosted / web front desk 方案，再让三个业务仓把已经 landed 的 lightweight direct-entry shell 继续压实成更稳定的 direct-entry 面。
 4. 统一四仓对“上游 `Hermes-Agent` / repo-local shim / pilot / scaffold”的命名边界，不再允许假集成叙事。
-5. 推动各 domain 仓把 `runtime substrate / gateway authority / executor adapter` 三层边界写成同一套 family 语义，不再有人把“接入 Hermes”误解成“强制替换全部执行器”。
-6. 当前已经落地的是本地 direct product-entry shell、本地 web pilot、hosted-friendly shell contract、hosted pilot bundle、self-hostable hosted pilot package、真实的 `LibreChat-first` hosted shell pilot package、workspace registry、managed session ledger、family handoff bundle，以及 service-safe 的本地 front desk packaging；不把它们误写成 managed hosted runtime；下一步继续推进 hosted runtime hardening 与更完整的 direct product entry。
-7. 避免 reference-grade 与历史迁移文档继续挤占公开主线。
+5. 推动三个 domain 仓先共用“`Codex CLI autonomous` + 继承本机 `Codex` 默认配置”这条默认执行器主线，再在不降级的前提下测试真正的 `Hermes-native` 完整 `Hermes AIAgent` agent loop。
+6. 推动各 domain 仓把 `runtime substrate / gateway authority / executor adapter` 三层边界写成同一套 family 语义，不再有人把“接入 Hermes”误解成“强制替换全部执行器”或“当前 chat relay 已经等于 Hermes-native”。
+7. 当前已经落地的是本地 direct product-entry shell、本地 web pilot、hosted-friendly shell contract、hosted pilot bundle、self-hostable hosted pilot package、真实的 `LibreChat-first` hosted shell pilot package、workspace registry、managed session ledger、family handoff bundle，以及 service-safe 的本地 front desk packaging；不把它们误写成 managed hosted runtime；下一步继续推进 hosted runtime hardening 与更完整的 direct product entry。
+8. 避免 reference-grade 与历史迁移文档继续挤占公开主线。
 
 ## 长线目标（规划层）
 

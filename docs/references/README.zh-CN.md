@@ -27,6 +27,7 @@
 - `host-agent-runtime-contract.md`
 - `managed-runtime-migration-readiness-checklist.md`
 - `hermes-agent-runtime-substrate-benchmark.md`
+- `family-executor-adapter-defaults.md`
 - `family-product-entry-and-domain-handoff-architecture.md`
 - `family-lightweight-direct-entry-rollout-board.md`
 - `mas-top-level-cutover-board.md`

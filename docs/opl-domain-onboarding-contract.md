@@ -42,6 +42,7 @@ They do not substitute for the onboarding package, are not an admitted domain ga
 When a reviewer checks whether an onboarding package really aligns with the current `OPL` execution direction, start with the current Codex-only execution wording:
 
 - [Codex-default Host-Agent Runtime Contract](./references/host-agent-runtime-contract.md) — Chinese-only internal reference for the current local default runtime wording
+- [Family Executor Adapter Defaults](./references/family-executor-adapter-defaults.md) — Chinese-only internal reference for the current family default executor, default model, and Hermes-native experimental boundary
 
 If historical migration context is still needed during review, use these historical references separately:
 
@@ -60,7 +61,7 @@ A new domain may be officially included in `OPL` only when:
 - its truth ownership is explicit
 - its public gateway / harness boundary is explicit
 - its review surfaces are explicit
-- its execution model is explicitly aligned with `OPL`'s `Agent-first + shared-base substrate layering` direction
+- its execution model is explicitly aligned with `OPL`'s `Codex CLI autonomous + shared-base substrate layering` direction
 - top-level discovery and routing can point to it without prose-only guesswork
 
 `OPL` must not accept “placeholder first, boundary later” onboarding.
@@ -166,9 +167,10 @@ A new domain must explicitly declare how its execution model aligns with `OPL`, 
 
 The onboarding package must identify:
 
-- whether the default executor is `Agent-first` and what stable agent runtime surface it depends on
+- whether the default executor is `Codex CLI autonomous`, whether the default model / reasoning inherit the local `Codex` default configuration, and what stable agent runtime surface it depends on
 - whether the current repository mainline is `Auto-only`, and if so how any future `Human-in-the-loop` product would reuse the same substrate as a compatible sibling or upper-layer product rather than as same-repo dual-mode logic
 - how its formal-entry matrix is expressed through `default_formal_entry`, `supported_protocol_layer`, and `internal_controller_surface`
+- whether any route described as `Hermes-native` is a full `Hermes AIAgent` loop rather than a single-step chat or chat relay
 - which stable object / controller / tool / gate / review responsibilities stay in code
 - which parts must not be described as a `fixed-code-first` mainline with the Agent reduced to prompt fill-ins
 

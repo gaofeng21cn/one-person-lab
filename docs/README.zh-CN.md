@@ -31,6 +31,7 @@
 - 当前管理面真相：`opl projects / workspace-status / workspace-catalog / workspace-bind|activate|archive / domain-manifests / runtime-status / session-ledger / dashboard` 已经补上当前顶层管理面，用来观察项目、工作区、会话、handoff 与 runtime；其中 `workspace-catalog` 继续只是 non-executing registry，会带 project-level binding summary、可写 action 提示，以及可选的 domain-owned `manifest_command`；`domain-manifests` 则是并列的执行型发现面，会把当前 active binding 上的 `manifest_command` 解析成 machine-readable 的 product-entry discovery object；`session-ledger` 现在除了原始事件外也会输出按 session 聚合后的归因视图；`opl web` 则把这层管理面直接带进浏览器入口，同时也暴露了 hosted-friendly 的 `health / manifest / domain-manifests / hosted-bundle / hosted-package / librechat-package / sessions / resume / logs / handoff-envelope` 表面。
 - 当前 hosted / web 真相：这一层已经有了真实可部署的 `LibreChat-first` hosted shell pilot package，作为最快做出可用 web 前台的路线；长期仍以 `OPL` 自有 web front desk 为准，而不是永久依赖第三方聊天壳；managed hosted runtime 仍未落地。
 - 当前家族级产品入口真相：四仓的 product-entry 成熟度仍然不一致。`OPL` 已有 family-level 本地入口壳；三个业务仓现在也都已经有 repo-tracked 的 lightweight direct-entry shell，但成熟度仍不同，而且都还不能被误写成成熟的 hosted 或最终用户前台。
+- 当前家族默认执行器：`Codex CLI autonomous` 已冻结为默认执行器 route；家族默认模型与默认 reasoning effort / thinking 统一继承本机 `Codex` 默认配置，而不是在 repo 里固定 pin 某个具体型号；`Hermes-native` 仍只算实验路线，且只有完整的 `Hermes AIAgent` loop 才算成立。
 - 当前已冻结的 integration choice：`Hermes Kernel Integration` 采用 `external kernel, managed by OPL product packaging`，而不是长期 fork，也不是把 Hermes 手工安装交给用户自己处理。
 - 长线目标：让共享运行层逐步转向上游 `Hermes-Agent`（或经过明确批准的等价 substrate），同时保持 `OPL` 继续承担顶层协调、发现、合同与边界治理。
 - 历史执行面：OMX 已退场；相关材料只作迁移/审计参考，不再进入默认阅读面。
@@ -77,6 +78,7 @@
 - `references/ecosystem-status-matrix.md`
 - `references/hermes-agent-runtime-substrate-benchmark.md`
 - `references/hermes-agent-truth-reset-and-target-state.md`
+- `references/family-executor-adapter-defaults.md`
 - `references/family-product-entry-and-domain-handoff-architecture.md`
 - `references/family-lightweight-direct-entry-rollout-board.md`
 - `references/mas-top-level-cutover-board.md`

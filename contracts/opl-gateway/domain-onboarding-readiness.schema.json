@@ -482,8 +482,12 @@
       "additionalProperties": false,
       "required": [
         "default_executor",
+        "default_model",
+        "default_reasoning_effort",
         "stable_agent_runtime_surface_refs",
         "auto_human_share_one_base",
+        "chat_completion_only_executor_forbidden",
+        "hermes_native_requires_full_agent_loop",
         "convergence_surface_refs",
         "code_responsibility_surface_refs",
         "fixed_code_first_mainline_forbidden",
@@ -491,7 +495,13 @@
       ],
       "properties": {
         "default_executor": {
-          "const": "agent_first"
+          "const": "codex_cli_autonomous"
+        },
+        "default_model": {
+          "const": "inherit_local_codex_default"
+        },
+        "default_reasoning_effort": {
+          "const": "inherit_local_codex_default"
         },
         "stable_agent_runtime_surface_refs": {
           "type": "array",
@@ -501,6 +511,12 @@
           }
         },
         "auto_human_share_one_base": {
+          "const": true
+        },
+        "chat_completion_only_executor_forbidden": {
+          "const": true
+        },
+        "hermes_native_requires_full_agent_loop": {
           "const": true
         },
         "convergence_surface_refs": {
@@ -895,7 +911,9 @@
         "opl_review_linkage_explicit": true
       },
       "execution_model": {
-        "default_executor": "agent_first",
+        "default_executor": "codex_cli_autonomous",
+        "default_model": "inherit_local_codex_default",
+        "default_reasoning_effort": "inherit_local_codex_default",
         "stable_agent_runtime_surface_refs": [
           {
             "ref_kind": "external_url",
@@ -904,6 +922,8 @@
           }
         ],
         "auto_human_share_one_base": true,
+        "chat_completion_only_executor_forbidden": true,
+        "hermes_native_requires_full_agent_loop": true,
         "convergence_surface_refs": [
           {
             "ref_kind": "external_url",
@@ -962,7 +982,9 @@
         "execution_model_aligned": {
           "status": "ready",
           "evidence_refs": [
-            "default_executor=agent_first",
+            "default_executor=codex_cli_autonomous",
+            "default_model=inherit_local_codex_default",
+            "default_reasoning_effort=inherit_local_codex_default",
             "stable_agent_runtime_surface=declared",
             "shared_base_auto_hitl=declared"
           ]
