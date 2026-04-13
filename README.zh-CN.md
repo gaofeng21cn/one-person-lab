@@ -23,7 +23,7 @@
     </td>
     <td width="33%" valign="top">
       <strong>联邦状态</strong><br/>
-      <code>Research Foundry -> Med Auto Science</code> 是当前 Active 的 Research Ops 主线；<code>Grant Foundry -> Med Auto Grant</code> 是当前活跃的医学 Grant Ops 业务仓，而它在 OPL 顶层的 federation admission / handoff wording 仍单独门控；<code>RedCube AI</code> 已是当前 admitted 的视觉交付 surface
+      <code>Research Foundry -> Med Auto Science</code> 是当前 Active 的 Research Ops 主线；<code>Grant Foundry -> Med Auto Grant</code> 是当前活跃的医学 Grant Ops 业务仓，并且仓内已经落下真实上游 <code>Hermes-Agent</code> substrate，而它在 OPL 顶层的 federation admission / handoff wording 仍单独门控；<code>RedCube AI</code> 是当前 admitted 的视觉交付 surface，并在本地 <code>Codex CLI</code> host-agent runtime 上运行当前交付主线
     </td>
   </tr>
 </table>
@@ -112,8 +112,8 @@
     </td>
     <td width="20%" valign="top">
       <strong>Grant Ops</strong><br/>
-      <code>公开信号 + 本地运行基线</code><br/>
-      通过 <code>Grant Foundry -> Med Auto Grant</code> 提供活跃的 grant-domain 业务仓入口，而顶层 federation admission / handoff wording 继续单独门控
+      <code>活跃业务仓主线</code><br/>
+      通过 <code>Grant Foundry -> Med Auto Grant</code> 承接；仓内 runtime substrate 已落地，而顶层 federation admission / handoff wording 继续单独门控
     </td>
     <td width="20%" valign="top">
       <strong>Thesis Ops</strong><br/>
@@ -147,24 +147,24 @@
       `Research Foundry` 的医学实现，以及当前 `Research Ops` 主线的 domain gateway 与 harness
     </td>
     <td width="20%" valign="top">
-      <strong>FengGaoLab</strong><br/>
-      <a href="https://fenggaolab.org"><code>网站</code></a><br/>
-      公开学术主页
-    </td>
-    <td width="20%" valign="top">
-      <strong>GitHub 主页</strong><br/>
-      <a href="https://github.com/gaofeng21cn"><code>GitHub</code></a><br/>
-      公开项目入口
+      <strong>Med Auto Grant</strong><br/>
+      <a href="https://github.com/gaofeng21cn/med-autogrant"><code>仓库</code></a><br/>
+      跑在真实上游 `Hermes-Agent` substrate 上的医学 grant-authoring 业务仓，但顶层 admission / handoff wording 仍在 `OPL` 单独门控
     </td>
     <td width="20%" valign="top">
       <strong>RedCube AI</strong><br/>
       <a href="https://github.com/gaofeng21cn/redcube-ai"><code>仓库</code></a><br/>
-      视觉交付 domain gateway 与 harness
+      运行在当前本地 `Codex CLI` host-agent runtime 主线上的视觉交付 domain gateway 与 harness
+    </td>
+    <td width="20%" valign="top">
+      <strong>FengGaoLab</strong><br/>
+      <a href="https://fenggaolab.org"><code>网站</code></a><br/>
+      公开学术主页
     </td>
   </tr>
 </table>
 
-> `OPL` 是实验室顶层的公开 Gateway 语言。它通过共享任务语义、合同与边界规则，把 `Research Foundry -> Med Auto Science`、`RedCube AI` 这类 domain framework / system 组织成同一个 federation。
+> `OPL` 是实验室顶层的公开 Gateway 语言。它通过共享任务语义、合同与边界规则，把 `Research Foundry -> Med Auto Science`、`Grant Foundry -> Med Auto Grant` 以及 `RedCube AI` 这类 domain framework / system 组织成同一个 federation。
 
 ## 仓库定位
 
@@ -203,11 +203,11 @@
 在当前口径下：
 
 - 共享运行层的优选长线实现方向是上游 `Hermes-Agent`，当前仓内带 `Hermes` 命名的 package 主要承担迁移 scaffold 与 pilot 角色
-- 当前四个仓已不处在同一集成深度：`Med Auto Grant` 已落地真实上游 `Hermes-Agent` runtime substrate，`Med Auto Science` 已完成 external runtime bring-up 并转入 real adapter cutover 前态，`RedCube AI` 也已经落下 upstream runtime-owner cutover，以及 repo-verified 的 `product frontdesk / federated product entry / session continuity / family-orchestration companion` 表面，而 `OPL` 自身继续不持有 domain runtime owner 身份
+- 当前四个仓已不处在同一集成深度：`Med Auto Grant` 已落地真实上游 `Hermes-Agent` runtime substrate，`Med Auto Science` 已完成 external runtime bring-up 并转入 real adapter cutover 前态，`RedCube AI` 已把 route / managed execution 收口到本地 `Codex CLI` host-agent runtime，同时落下 repo-verified 的 `product frontdesk / federated product entry / session continuity / family-orchestration companion` 表面，而 `OPL` 自身继续不持有 domain runtime owner 身份
 - 当前各仓仍处在过渡态：
   - `Med Auto Science` 目前是 repo-side seam + 受控 `MedDeepScientist` backend
-  - `RedCube AI` 现在通过上游 `Hermes-Agent` API server 运行，并已经有 service-safe domain-entry adapter 与 repo-verified 的 `product frontdesk / manifest / federated entry` 表面
-  - `Med Auto Grant` 目前是本地 `CLI` runtime baseline + repo-local migration scaffold
+  - `RedCube AI` 当前以本地 `Codex CLI` host-agent runtime 作为交付 run surface，同时继续通过 service-safe domain-entry adapter 与 repo-verified 的 `product frontdesk / manifest / federated entry / session continuity` 表面维持家族合同
+  - `Med Auto Grant` 当前已经跑在真实上游 `Hermes-Agent` runtime substrate 上，而 repo-side domain / entry adapter 继续保留 author-side grant truth、route 语义与 lightweight product-entry shell
 - 将来如果真正接入上游 `Hermes-Agent`，它也应位于 runtime substrate 这一层，而 `OPL Gateway`、各 `Domain Gateway` 与各 `Domain Harness OS` 继续保留自己的职责边界
 
 从长期产品形态看，更合理的结构是：
@@ -231,8 +231,8 @@
 在这套 substrate 之上，当前几个项目应被理解成职责清楚、产品范围独立的 `Domain Harness OS`：
 
 - `Med Auto Science`：医学 `Research Ops`
-- `RedCube AI`：视觉交付，以及当前最直接映射到 `Presentation Ops` 的 family 入口
 - `Med Auto Grant`：活跃的医学 `Grant Ops` 业务仓与 Domain Harness OS 方向；但在 `OPL` 顶层 public federation wording 上仍需与 admission / handoff state 分开表述
+- `RedCube AI`：视觉交付，以及当前最直接映射到 `Presentation Ops` 的 family 入口
 
 `OPL` 本身继续停留在 domain gateway 与 `Domain Harness OS` 之上的顶层 gateway 与 federation surface。
 
@@ -261,7 +261,7 @@
 - 这次落地的 product entry 已经同时包含本地 CLI-first 入口壳与本地 web front desk pilot；同时也已经落下可自托管的 hosted pilot package，以及真实的 LibreChat-first hosted shell pilot package，但 actual managed hosted runtime 仍未落地
 - hosted / web 这一层的选型现在也已经冻结：短期最快可用路线是 `LibreChat-first`，长期目标仍是 `OPL` 自有 web front desk；`Chatbot UI` 太薄，不适合作为主 hosted 基座
 - 三个业务仓的成熟度缺口现在已经缩小，但仍然真实存在：`Med Auto Grant` 已经有 grant-facing 的结构化 shell 和只读 direct-product projection，`Med Auto Science` 已经补上 research-only shell 与共享 envelope 的 `build-product-entry`，`RedCube AI` 也已经有 repo-verified 的 `redcube product frontdesk`、direct / federated / session entry surfaces，以及 family-orchestration companions；但三者都还不应被夸大成成熟的 hosted 或最终用户前台
-- 四个仓已经不再处于同一条 `Hermes-Agent` 集成阶段线上：`Med Auto Grant` 已切到真实 runtime substrate，`Med Auto Science` 已打通 external runtime bring-up，`RedCube AI` 也已经落下 upstream runtime-owner cutover 与 repo-verified product-entry federation，而 `OPL` 继续只持有顶层 gateway / federation 语言，同时开始持有 family-level 的本地入口壳
+- 四个仓已经不再处于同一条 `Hermes-Agent` 集成阶段线上：`Med Auto Grant` 已切到真实 runtime substrate，`Med Auto Science` 已打通 external runtime bring-up，`RedCube AI` 已把 route / managed execution 收口到本地 `Codex CLI` host-agent runtime，同时落下 repo-verified product-entry federation，而 `OPL` 继续只持有顶层 gateway / federation 语言，同时开始持有 family-level 的本地入口壳
 
 目标产品链路应是：
 
@@ -447,22 +447,23 @@ Human / Agent
 
 - 视觉交付物的 domain gateway
 - 通过 `ppt_deck` 最直接承接 `Presentation Ops` 的 harness surface
+- 已经 repo-verified 的 lightweight direct-entry surface，而其当前 route / managed execution 运行在本地 `Codex CLI` host-agent runtime 上
 - 同时可以承载不与 `Presentation Ops` 完全等同的其他视觉 family
 
 
 ## 当前 Federation Activation State
 
-截至 `2026-04-10`，`Phase 1 exit + next-stage activation package freeze` 仍是已经 absorbed 的前序门槛，而 `Phase 2 / Minimal admitted-domain federation activation package` 也已经被吸收到当前顶层 federation 真相中。
-
-这次 activation 的依据是：至少两条 admitted domain surface 现在已经被 repo-tracked truth 证明稳定到足以支撑更强的顶层 federation wording：
+截至 `2026-04-13`，顶层已 admitted 的 domain surface 仍然是：
 
 - `MedAutoScience` 对应 `research_ops`
 - `RedCube AI` 对应 `presentation_ops`
 
-这份已 absorbed 的 federation package 当前只覆盖上面两条已 admitted domain surface。
 `Grant Foundry -> Med Auto Grant` 继续作为活跃的 grant-domain 业务仓路径被跟踪，但其顶层 federation admission / handoff wording 仍单独门控；`Review Ops` 与 `Thesis Ops` 则继续停留在 under-definition 的 onboarding 路径中。
-顶层 formal entry 仍然是本地 `TypeScript CLI`-first / read-only gateway surface。
-当前没有新的 active follow-on tranche 打开；顶层最诚实的状态仍然是中央同步停车，只有 admitted-domain 仓出现新的 absorbed delta，或中央 reference surfaces 发生真实漂移时，才重开下一棒。
+顶层 formal entry 已不再只是历史上的只读 gateway baseline；当前真正的前台是本地 `opl` CLI shell、`opl web` pilot，以及围绕它们的 machine-readable discovery / handoff surface。
+当前顶层 active mainline 是 `family-level front desk / hosted runtime hardening / domain lightweight direct-entry alignment`。
+`central sync` 不再是默认活跃 tranche；只有 admitted-domain 仓吸收了新的 delta，或中央 reference surface 发生真实漂移时，才会条件性重开。
+同时，已完成的 `Phase 1 / G2 release-closeout` 仍冻结着 `G2 stable public baseline`，而已吸收的 `Minimal admitted-domain federation activation package` 继续构成最近一次只面向 `MedAutoScience` 与 `RedCube AI` 两条已 admitted domain surface 的顶层 activation package。
+在当前 front desk 之下，machine-readable 的 formal-entry contract 仍是本地 `TypeScript CLI`-first / read-only gateway surface；接下来真正承载增量真相的工作，位于共享运行层、托管入口与任何真实的 `Hermes-Agent` 落地进度之中。
 
 
 ## 当前边界
@@ -476,22 +477,16 @@ Human / Agent
 
 ## 路线图
 
-当前公开主线仍然是已 absorbed 的 `Phase 2 / Minimal admitted-domain federation activation package`，但它仍然建立在已冻结的 `Phase 1` 本地 `TypeScript CLI` + 只读 gateway 基线之上：
+当前公开主线已经转向 family-level front desk 与 direct-entry 对齐，这条主线建立在已落地的本地 `opl` shell 与 `opl web` pilot 之上：
 
-- 把已经冻结的 `OPL Gateway` contracts 落成面向人类与 Agent 的 CLI-first、read-only discovery surface
-- 继续把 `Research Foundry -> Med Auto Science` 明确为当前 `Research Ops` 主线
-- 继续把 `RedCube AI` 明确为视觉交付的 domain gateway 与 harness
-- 在对应 domain 边界被显式冻结之前，继续让 `Grant Ops`、`Review Ops`、`Thesis Ops` 停留在 admitted gateway surface 之外
+- 保持公开 docs、gateway contracts 与 admitted-domain wording 跟 repo-tracked truth 同步
+- 继续硬化 family-level front desk、hosted/web shell contract，以及 managed session / handoff surface
+- 继续推动 `Research Foundry -> Med Auto Science`、`Grant Foundry -> Med Auto Grant` 与 `RedCube AI` 沿 `product frontdesk + operator loop + shared handoff envelope` 收口成同一套家族级用户面合同
+- 在对应 domain boundary 与 onboarding evidence 明确冻结之前，继续让 `Review Ops` 与 `Thesis Ops` 停留在 admitted surface 之外
+- 只有 admitted-domain 新吸收了 delta，或中央 reference surface 真实漂移时，才条件性重开 `central sync`
 
-截至 `2026-04-10`，当前 repo 仍保有可运行的本地 `TypeScript CLI`-first / read-only gateway baseline。
-已完成的 `Phase 1 / G2 release-closeout` 已把 `G2 stable public baseline` 收口成单一、稳定、repo-tracked 的公开基线。
-这条基线继续构成 `OPL` 在 `Phase 1` 的 formal entry contract 与 public system surface。
-repo-tracked 的 `Phase 1 / G3 thin handoff planning freeze hardening` 让 `G3` 保持在 planning-only gate，当前工作重点因此集中在 contract wording、handoff 形状与边界校验。
-repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review Ops` 然后 `Thesis Ops`：这两条 candidate path 继续停留在 admission / discovery / routing / handoff readiness 之下，而 `Grant Foundry -> Med Auto Grant` 作为活跃业务仓路径，其顶层 federation admission / handoff wording 仍单独门控。
-当前已 absorb 的前序门槛是 `Phase 1 exit + next-stage activation package freeze`；当前已 absorb 的 federation package 是 `Minimal admitted-domain federation activation package`，它把 federation wording 收紧到 `MedAutoScience` + `RedCube AI` 这两条 admitted surface。
-因此，当前 repo-tracked truth 是一个诚实的中央同步停车点。
-
-当前交付目标是：继续用本地 `TypeScript CLI` 作为 `Phase 1` 的只读 gateway 入口 transport。
+当前交付目标已不再只是 `Phase 1` 的本地 `TypeScript CLI` 只读 gateway transport。
+现在面向用户的顶层收口，已经是本地 `opl` shell、本地 `opl web` pilot、hosted-friendly bundle surface，以及建立在 external kernel managed by `OPL` product packaging 之上的 domain-manifest discovery。
 当前开发控制面仍使用 Codex-only 口径，不再把 `Codex Host / OMX` 作为活跃双层执行分工，但这不应被误解成 `OPL` 已经拥有自己的产品 runtime。
 在这一层，`OPL` 只暴露 gateway surface 与共享合同；任何诚实的 `Hermes-Agent` runtime rollout，仍必须先在某个 domain 仓里落地，再决定是否提升为顶层真相，而未来面向用户的产品形态应是由 `OPL` 直接出入口、由 `OPL` 产品层托管集成 external kernel。
 

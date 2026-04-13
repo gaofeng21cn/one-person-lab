@@ -23,7 +23,7 @@
     </td>
     <td width="33%" valign="top">
       <strong>Federation State</strong><br/>
-      <code>Research Foundry -> Med Auto Science</code> is the active Research Ops line; <code>Grant Foundry -> Med Auto Grant</code> is the active medical Grant Ops repository line, while its top-level federation admission / handoff wording remains separately gated at the OPL layer; <code>RedCube AI</code> is now the admitted visual-deliverable surface
+      <code>Research Foundry -> Med Auto Science</code> is the active Research Ops line; <code>Grant Foundry -> Med Auto Grant</code> is the active medical Grant Ops repository line and already runs on a real upstream <code>Hermes-Agent</code> substrate, while its top-level federation admission / handoff wording remains separately gated at the OPL layer; <code>RedCube AI</code> is the admitted visual-deliverable surface and currently runs its delivery mainline on local <code>Codex CLI</code> host-agent runtime
     </td>
   </tr>
 </table>
@@ -116,8 +116,8 @@
     </td>
     <td width="20%" valign="top">
       <strong>Grant Ops</strong><br/>
-      <code>Signal + Local Runtime</code><br/>
-      an active grant-domain repository line via <code>Grant Foundry -> Med Auto Grant</code>, with top-level federation admission / handoff wording still separately gated
+      <code>Active Repo Line</code><br/>
+      via <code>Grant Foundry -> Med Auto Grant</code>; its in-repo runtime substrate is landed, while top-level federation admission / handoff wording remains separately gated
     </td>
     <td width="20%" valign="top">
       <strong>Thesis Ops</strong><br/>
@@ -151,24 +151,24 @@
       Medical implementation of `Research Foundry`, and the current domain gateway and harness for the active Research Ops line
     </td>
     <td width="20%" valign="top">
-      <strong>FengGaoLab</strong><br/>
-      <a href="https://fenggaolab.org"><code>Website</code></a><br/>
-      Public academic website
-    </td>
-    <td width="20%" valign="top">
-      <strong>Profile</strong><br/>
-      <a href="https://github.com/gaofeng21cn"><code>GitHub</code></a><br/>
-      Public project entry
+      <strong>Med Auto Grant</strong><br/>
+      <a href="https://github.com/gaofeng21cn/med-autogrant"><code>Repository</code></a><br/>
+      Medical grant-authoring domain line on real upstream `Hermes-Agent` substrate, with top-level admission / handoff wording still separately gated at `OPL`
     </td>
     <td width="20%" valign="top">
       <strong>RedCube AI</strong><br/>
       <a href="https://github.com/gaofeng21cn/redcube-ai"><code>Repository</code></a><br/>
-      Visual-deliverable domain gateway and harness
+      Visual-deliverable domain gateway and harness on the current local `Codex CLI` host-agent runtime mainline
+    </td>
+    <td width="20%" valign="top">
+      <strong>FengGaoLab</strong><br/>
+      <a href="https://fenggaolab.org"><code>Website</code></a><br/>
+      Public academic website
     </td>
   </tr>
 </table>
 
-> `OPL` is the public top-level gateway language for the lab. It federates `Research Foundry -> Med Auto Science` and sibling domain systems such as `RedCube AI` through shared task semantics, contracts, and boundary rules.
+> `OPL` is the public top-level gateway language for the lab. It federates `Research Foundry -> Med Auto Science`, `Grant Foundry -> Med Auto Grant`, and sibling domain systems such as `RedCube AI` through shared task semantics, contracts, and boundary rules.
 
 ## Repository Position
 
@@ -207,11 +207,11 @@ Those two contracts split the shared layer more clearly:
 In practice:
 
 - the preferred long-line implementation direction for the shared runtime layer is the upstream `Hermes-Agent`, with repo-local "Hermes"-named packages serving as transition scaffolds and pilots today
-- the four repositories are no longer at the same integration depth: `Med Auto Grant` has landed a real upstream `Hermes-Agent` runtime substrate, `Med Auto Science` has completed external runtime bring-up and is moving toward real adapter cutover, `RedCube AI` has already landed upstream runtime-owner cutover plus repo-verified `product frontdesk / federated product entry / session continuity / family-orchestration companion` surfaces, and `OPL` itself stays above domain runtime ownership
+- the four repositories are no longer at the same integration depth: `Med Auto Grant` has landed a real upstream `Hermes-Agent` runtime substrate, `Med Auto Science` has completed external runtime bring-up and is moving toward real adapter cutover, `RedCube AI` has converged route / managed execution onto local `Codex CLI` host-agent runtime while landing repo-verified `product frontdesk / federated product entry / session continuity / family-orchestration companion` surfaces, and `OPL` itself stays above domain runtime ownership
 - the current repo states are still transitional:
   - `Med Auto Science` uses a repo-side seam while real long-running execution still stays in the controlled `MedDeepScientist` backend
-  - `RedCube AI` now runs through the upstream `Hermes-Agent` API server with a service-safe domain-entry adapter and repo-verified `product frontdesk / manifest / federated entry` surfaces
-  - `Med Auto Grant` currently carries a local CLI runtime baseline plus a repo-local migration scaffold
+  - `RedCube AI` now uses local `Codex CLI` host-agent runtime as its current delivery run surface, while a service-safe domain-entry adapter plus repo-verified `product frontdesk / manifest / federated entry / session continuity` surfaces keep the family contract honest
+  - `Med Auto Grant` now runs on a real upstream `Hermes-Agent` runtime substrate while repo-side domain / entry adapters preserve author-side grant truth, route semantics, and its lightweight product-entry shell
 - when the ecosystem later adopts upstream `Hermes-Agent`, it should sit in the runtime-substrate layer while the `OPL Gateway`, each `Domain Gateway`, and each `Domain Harness OS` keep their own responsibilities
 
 In long-term product terms, the more accurate structure is:
@@ -235,8 +235,8 @@ For the current truth reset, the true-integration criteria, and the target-state
 Under that substrate, the current domain systems should be understood as separate `Domain Harness OS` implementations with distinct product scopes:
 
 - `Med Auto Science` for medical `Research Ops`
+- `Med Auto Grant` for the active medical `Grant Ops` repository line, with top-level federation admission and handoff wording still tracked separately
 - `RedCube AI` for visual deliverables and the current `Presentation Ops` family entry
-- `Med Auto Grant` as the active medical `Grant Ops` repository line, with top-level federation admission and handoff wording still tracked separately
 
 `OPL` itself stays at the top-level gateway and federation layer above those domain gateways and `Domain Harness OS` implementations.
 
@@ -265,7 +265,7 @@ The current truth is still transitional, but it has moved forward:
 - this landed product entry now includes both the local CLI-first shell and a local web front desk pilot; a self-hostable hosted pilot package and a real LibreChat-first hosted shell pilot package are both landed, but the actual managed hosted runtime is still not landed
 - the hosted / web benchmark is now frozen: the shortest-path pilot is `LibreChat-first`, while the long-line target remains an `OPL`-owned web front desk; `Chatbot UI` is too thin to act as the main hosted base
 - the domain maturity gap is now narrower but still real: `Med Auto Grant` already has a grant-facing structured shell plus read-only direct-product projections, `Med Auto Science` now has a research-only shell plus shared-envelope `build-product-entry`, and `RedCube AI` now has a repo-verified `redcube product frontdesk` with direct / federated / session entry surfaces plus family-orchestration companions; none of the three should yet be overstated as a mature hosted or end-user front desk
-- the four repositories are no longer at the same integration depth: `Med Auto Grant` has landed a real upstream `Hermes-Agent` runtime substrate, `Med Auto Science` has completed external runtime bring-up and is moving toward real adapter cutover, `RedCube AI` has already landed upstream runtime-owner cutover plus repo-verified product-entry federation, and `OPL` itself stays above domain runtime ownership while now owning the local family-level entry shell
+- the four repositories are no longer at the same integration depth: `Med Auto Grant` has landed a real upstream `Hermes-Agent` runtime substrate, `Med Auto Science` has completed external runtime bring-up and is moving toward real adapter cutover, `RedCube AI` has converged route / managed execution onto local `Codex CLI` host-agent runtime while landing repo-verified product-entry federation, and `OPL` itself stays above domain runtime ownership while now owning the local family-level entry shell
 
 The target product chain is:
 
@@ -331,7 +331,7 @@ What landed in this repository is the first local shell of that idea:
   - starts the local web front desk pilot so users can open OPL in a browser, resolve one routed domain `product_entry_start`, run quick ask, inspect and bind workspaces, review managed session ledger state, inspect resolved domain manifests, export both the self-hostable front-desk package and the LibreChat-first hosted shell pilot package, and consume hosted-friendly `health / manifest / domain-manifests / hosted-bundle / hosted-package / librechat-package / start / sessions / resume / logs / handoff-envelope` APIs without going through Codex
 
 This new shell does not erase the existing `Phase 1` gateway contract.
-The read-only gateway commands remain the stable top-level contract surface for federation truth.
+The machine-readable gateway contracts remain the stable top-level contract surface for federation truth.
 The product-entry shell is the first user-facing launcher layer above that contract surface.
 
 The integration choice is now frozen as:
@@ -450,22 +450,23 @@ Its correct boundary is:
 
 - the domain gateway for visual deliverables
 - the harness surface that most directly carries `Presentation Ops` through `ppt_deck`
+- the repo-verified direct-entry surface whose current route / managed execution runs on local `Codex CLI` host-agent runtime
 - a runtime family surface that can also host families not identical to `Presentation Ops`
 
 
 ## Current Federation Activation State
 
-As of `2026-04-10`, `Phase 1 exit + next-stage activation package freeze` remains the absorbed predecessor gate, and `Phase 2 / Minimal admitted-domain federation activation package` is already absorbed into the current top-level federation truth.
-
-That activation is justified by two admitted domain surfaces that are now repo-tracked as stable enough for stronger top-level federation wording:
+As of `2026-04-13`, the admitted domain surfaces at the top layer still remain:
 
 - `MedAutoScience` for `research_ops`
 - `RedCube AI` for `presentation_ops`
 
-That absorbed federation package currently covers the two admitted surfaces above.
-`Grant Foundry -> Med Auto Grant` stays tracked as an active grant-domain repository line whose top-level federation admission / handoff wording remains separately gated, while `Review Ops` and `Thesis Ops` stay in under-definition onboarding lanes.
-The top-level formal entry remains the local `TypeScript CLI`-first / read-only gateway surface.
-No new active follow-on tranche is currently open: the honest top-level state is a central-sync stop until an admitted-domain repository lands a new absorbed delta or the central reference surfaces drift.
+`Grant Foundry -> Med Auto Grant` remains tracked as an active grant-domain repository line whose top-level federation admission / handoff wording is still separately gated, while `Review Ops` and `Thesis Ops` stay in under-definition onboarding lanes.
+The top-level formal entry is no longer only the historical read-only gateway baseline: the current front door is the local `opl` CLI shell plus the `opl web` pilot and their machine-readable discovery / handoff surfaces.
+The active top-level mainline is now `family-level front desk / hosted runtime hardening / domain lightweight direct-entry alignment`.
+`central sync` is no longer the default active tranche; it only reopens when an admitted-domain repository lands a new absorbed delta or the central reference surfaces drift.
+At the same time, the completed `Phase 1 / G2 release-closeout` still freezes the `G2 stable public baseline`, and the absorbed `Minimal admitted-domain federation activation package` remains the latest top-level activation package for the already admitted `MedAutoScience` and `RedCube AI` surfaces only.
+Beneath the current front desk, the machine-readable formal-entry contract still remains the local `TypeScript CLI`-first / read-only gateway surface; the next truth-bearing work now sits in the shared runtime layer, hosted entry surfaces, and any real `Hermes-Agent` rollout that domain repositories can honestly absorb.
 
 
 ## Scope Boundary
@@ -479,22 +480,16 @@ Describe this repository as:
 
 ## Roadmap
 
-The current public mainline remains the absorbed `Phase 2 / Minimal admitted-domain federation activation package`, built on top of the frozen `Phase 1` local `TypeScript CLI` + read-only gateway baseline:
+The current public mainline is now the family-level front desk and direct-entry alignment work that sits on top of the already landed local `opl` shell and `opl web` pilot:
 
-- turn the frozen OPL gateway contracts into a CLI-first, read-only discovery surface for humans and agents
-- keep `Research Foundry -> Med Auto Science` explicit as the current `Research Ops` line
-- keep `RedCube AI` explicit as the visual-deliverable domain gateway and harness
-- keep `Grant Ops`, `Review Ops`, and `Thesis Ops` below the admitted gateway surface until their domain boundaries are explicitly frozen
+- keep public docs, gateway contracts, and admitted-domain wording aligned with the current repo-tracked truth
+- continue hardening the family-level front desk, hosted/web shell contract, and managed session / handoff surfaces
+- keep `Research Foundry -> Med Auto Science`, `Grant Foundry -> Med Auto Grant`, and `RedCube AI` aligned around `product frontdesk + operator loop + shared handoff envelope`
+- keep `Review Ops` and `Thesis Ops` below admitted-domain status until their domain boundaries and onboarding evidence are explicitly frozen
+- reopen `central sync` only when an admitted-domain repository lands new absorbed delta or when the central reference surfaces drift
 
-As of `2026-04-10`, the repository still has a runnable local `TypeScript CLI`-first / read-only gateway baseline.
-The completed `Phase 1 / G2 release-closeout` has already closed the `G2 stable public baseline` into the single stable repo-tracked public entry.
-That baseline remains the current `OPL` `Phase 1` formal entry contract and public system surface.
-The repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` keeps `G3` at a planning-only gate focused on contract wording, handoff shape, and boundary validation.
-The repo-tracked `Phase 1` candidate-domain closeout order is frozen as `Review Ops` then `Thesis Ops`: both candidate paths stay below admission / discovery / routing / handoff readiness, while `Grant Foundry -> Med Auto Grant` remains an active grant-domain repository line whose top-level federation admission / handoff wording is still separately gated.
-The absorbed predecessor gate is `Phase 1 exit + next-stage activation package freeze`, and the absorbed current federation package is `Minimal admitted-domain federation activation package`, which strengthens federation wording for `MedAutoScience` + `RedCube AI`.
-The current repo-tracked truth is an honest central-sync stop.
-
-The current delivery target keeps a local `TypeScript CLI` as the Phase 1 entry transport for the read-only gateway baseline.
+The current delivery target is no longer a read-only `TypeScript CLI` gateway alone.
+It is a family-level direct entry made of the local `opl` shell, the `opl web` pilot, hosted-friendly bundle surfaces, and domain-manifest discovery above the external kernel managed by `OPL` product packaging.
 The active development-control path remains a single Codex-only flow across planning, implementation, verification, and review, but that should not be confused with product runtime ownership.
 At this layer, `OPL` only exposes the gateway surface and shared contracts; any honest `Hermes-Agent` runtime rollout still has to happen in a domain repository before it can be promoted into top-level truth, and the intended product-facing shape remains a direct `OPL` entry backed by an external kernel managed through `OPL` product packaging.
 
