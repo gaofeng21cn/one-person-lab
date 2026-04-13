@@ -1290,16 +1290,39 @@ test('frontdesk-hosted-package exports a self-hostable hosted pilot package with
     assert.equal(fs.existsSync(assets.readme), true);
     assert.equal(fs.existsSync(assets.run_script), true);
     assert.equal(fs.existsSync(assets.systemd_service), true);
+    assert.equal(fs.existsSync(assets.install_service_script), true);
+    assert.equal(fs.existsSync(assets.healthcheck_script), true);
     assert.equal(fs.existsSync(assets.caddyfile), true);
     assert.equal(fs.existsSync(assets.env_example), true);
     assert.equal(fs.existsSync(assets.app_dist), true);
     assert.equal(fs.existsSync(path.join(assets.app_dist, 'cli.js')), true);
     assert.equal(fs.existsSync(path.join(assets.app_contracts, 'opl-gateway', 'workstreams.json')), true);
 
+    assert.equal(output.hosted_pilot_package.operations.systemd.unit_name, 'opl-frontdesk.service');
+    assert.equal(
+      output.hosted_pilot_package.operations.systemd.install_script,
+      assets.install_service_script,
+    );
+    assert.equal(
+      output.hosted_pilot_package.operations.healthcheck.script,
+      assets.healthcheck_script,
+    );
+    assert.equal(
+      output.hosted_pilot_package.operations.healthcheck.local_url,
+      'http://127.0.0.1:8787/pilot/opl/api/health',
+    );
+    assert.equal(
+      output.hosted_pilot_package.operations.healthcheck.public_url,
+      'https://opl.example.com/pilot/opl/api/health',
+    );
+
     const readme = fs.readFileSync(assets.readme, 'utf8');
     assert.match(readme, /LibreChat-first/i);
     assert.match(readme, /OPL_HERMES_BIN/);
     assert.match(readme, /actual hosted runtime is still not landed/i);
+    assert.match(readme, /install-systemd-service\.sh/);
+    assert.match(readme, /check-frontdesk-health\.sh/);
+    assert.match(readme, /https:\/\/opl\.example\.com\/pilot\/opl\/api\/health/);
 
     const service = fs.readFileSync(assets.systemd_service, 'utf8');
     assert.match(service, /EnvironmentFile=/);
@@ -1319,9 +1342,20 @@ test('frontdesk-hosted-package exports a self-hostable hosted pilot package with
     assert.match(envExample, /OPL_HERMES_BIN=/);
     assert.match(envExample, /OPL_FRONTDESK_WORKSPACE=/);
 
+    const installScript = fs.readFileSync(assets.install_service_script, 'utf8');
+    assert.match(installScript, /SYSTEMCTL_BIN/);
+    assert.match(installScript, /daemon-reload/);
+    assert.match(installScript, /opl-frontdesk\.service/);
+    assert.match(installScript, /run-frontdesk\.sh/);
+
+    const healthcheckScript = fs.readFileSync(assets.healthcheck_script, 'utf8');
+    assert.match(healthcheckScript, /api\/health/);
+    assert.match(healthcheckScript, /node -e/);
+
     const bundleJson = JSON.parse(fs.readFileSync(assets.bundle_json, 'utf8'));
     assert.equal(bundleJson.hosted_pilot_package.entry_url, 'https://opl.example.com/pilot/opl/');
     assert.equal(bundleJson.hosted_pilot_package.base_path, '/pilot/opl');
+    assert.equal(bundleJson.hosted_pilot_package.operations.systemd.unit_name, 'opl-frontdesk.service');
   } finally {
     fs.rmSync(outputDir, { recursive: true, force: true });
   }

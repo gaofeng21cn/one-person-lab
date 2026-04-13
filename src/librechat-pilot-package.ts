@@ -120,11 +120,12 @@ What it does **not** claim:
    - \`OPL_HERMES_BIN\`
    - \`OPL_FRONTDESK_WORKSPACE\`
 3. Start the OPL front desk on the host:
-   - via \`systemd/opl-frontdesk.service\`, or
+   - via \`sudo scripts/install-systemd-service.sh --enable-now\`, or
    - via \`scripts/run-frontdesk.sh\`
-4. Enter \`librechat-stack/\`, copy \`.env.example\` to \`.env\`, and fill provider keys plus any host-specific values.
-5. Run \`scripts/run-librechat-pilot.sh\`.
-6. Open ${options.publicOrigin}/ for the outer shell and ${options.frontdeskEntryUrl} for the OPL front desk.
+4. Run \`scripts/check-frontdesk-health.sh\` from \`opl-frontdesk/\` before wiring the public shell.
+5. Enter \`librechat-stack/\`, copy \`.env.example\` to \`.env\`, and fill provider keys plus any host-specific values.
+6. Run \`scripts/run-librechat-pilot.sh\`.
+7. Open ${options.publicOrigin}/ for the outer shell and ${options.frontdeskEntryUrl} for the OPL front desk.
 
 ## Honest runtime boundary
 
