@@ -92,6 +92,30 @@ function parseStatusLine(statusLine: string) {
   };
 }
 
+function pickManifestPhaseId(repoMainline: Record<string, unknown> | null) {
+  if (!repoMainline) {
+    return null;
+  }
+
+  return [
+    repoMainline.phase_id,
+    repoMainline.current_program_phase_id,
+    repoMainline.active_phase,
+  ].find((value) => typeof value === 'string' && value.trim()) ?? null;
+}
+
+function pickManifestTrancheId(repoMainline: Record<string, unknown> | null) {
+  if (!repoMainline) {
+    return null;
+  }
+
+  return [
+    repoMainline.tranche_id,
+    repoMainline.current_stage_id,
+    repoMainline.active_tranche,
+  ].find((value) => typeof value === 'string' && value.trim()) ?? null;
+}
+
 function buildWorkspaceEntriesSummary(absolutePath: string) {
   const entries = fs.readdirSync(absolutePath, { withFileTypes: true });
   const directories = entries.filter((entry) => entry.isDirectory()).length;
@@ -437,6 +461,14 @@ export function buildFrontDeskDashboard(
       recommended_command: entry.manifest?.recommended_command ?? null,
       manifest_command: entry.manifest_command,
       workspace_path: entry.workspace_path,
+      mainline_phase_id: pickManifestPhaseId(entry.manifest?.repo_mainline ?? null),
+      mainline_tranche_id: pickManifestTrancheId(entry.manifest?.repo_mainline ?? null),
+      product_entry_status_summary: entry.manifest?.product_entry_status?.summary ?? null,
+      product_entry_next_focus: entry.manifest?.product_entry_status?.next_focus ?? [],
+      product_entry_remaining_gaps_count:
+        entry.manifest?.product_entry_status?.remaining_gaps_count
+        ?? entry.manifest?.remaining_gaps.length
+        ?? null,
     }));
 
   return {

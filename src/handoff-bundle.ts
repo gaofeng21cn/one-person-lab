@@ -98,6 +98,7 @@ export function buildHandoffBundle(
             formal_entry: domainManifestEntry.manifest?.formal_entry ?? null,
             runtime: domainManifestEntry.manifest?.runtime ?? null,
             repo_mainline: domainManifestEntry.manifest?.repo_mainline ?? null,
+            product_entry_status: domainManifestEntry.manifest?.product_entry_status ?? null,
             shared_handoff: domainManifestEntry.manifest?.shared_handoff ?? null,
             error: domainManifestEntry.error,
           }

@@ -1263,6 +1263,20 @@ test('domain-manifests resolves active domain-owned manifest commands while work
     },
     recommended_shell: 'direct',
     recommended_command: 'redcube product invoke',
+    repo_mainline: {
+      program_id: 'redcube-runtime-program',
+      phase_id: 'repo_verified_product_entry_and_opl_federation',
+      phase_label: 'Repo-Verified Product Entry And OPL Federation',
+      active_baton_id: 'managed_product_entry_hardening',
+      active_baton_status: 'closeout_completed',
+    },
+    product_entry_status: {
+      summary: 'Repo-verified product-entry service surface 已 landed，但成熟终端用户前台壳与 managed web productization 仍未 landed。',
+      next_focus: [
+        '继续把 mature end-user shell 建在已 landed 的 RedCube product-entry service surface 之上。',
+      ],
+      remaining_gaps_count: 2,
+    },
     runtime: {
       runtime_owner: 'upstream_hermes_agent',
     },
@@ -1325,8 +1339,20 @@ test('domain-manifests resolves active domain-owned manifest commands while work
     assert.equal(redcube.status, 'resolved');
     assert.equal(redcube.manifest.recommended_shell, 'direct');
     assert.equal(redcube.manifest.recommended_command, 'redcube product invoke');
+    assert.equal(redcube.manifest.repo_mainline.phase_id, 'repo_verified_product_entry_and_opl_federation');
+    assert.equal(redcube.manifest.product_entry_status.remaining_gaps_count, 2);
     assert.equal(medautoscience.status, 'invalid_json');
     assert.equal(medautoscience.error.code, 'invalid_json');
+
+    const dashboardOutput = runCli(['dashboard', '--path', repoRoot, '--sessions-limit', '1'], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+    });
+    const recommendedEntry = dashboardOutput.dashboard.front_desk.recommended_entry_surfaces.find(
+      (entry: { project_id: string }) => entry.project_id === 'redcube',
+    );
+    assert.equal(recommendedEntry.product_entry_status_summary, resolvedManifest.product_entry_status.summary);
+    assert.equal(recommendedEntry.product_entry_remaining_gaps_count, 2);
+    assert.equal(recommendedEntry.mainline_phase_id, 'repo_verified_product_entry_and_opl_federation');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
@@ -1349,6 +1375,20 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     },
     recommended_shell: 'direct',
     recommended_command: 'redcube product invoke',
+    repo_mainline: {
+      program_id: 'redcube-runtime-program',
+      phase_id: 'repo_verified_product_entry_and_opl_federation',
+      phase_label: 'Repo-Verified Product Entry And OPL Federation',
+      active_baton_id: 'managed_product_entry_hardening',
+      active_baton_status: 'closeout_completed',
+    },
+    product_entry_status: {
+      summary: 'Repo-verified product-entry service surface 已 landed，但成熟终端用户前台壳与 managed web productization 仍未 landed。',
+      next_focus: [
+        '继续把 mature end-user shell 建在已 landed 的 RedCube product-entry service surface 之上。',
+      ],
+      remaining_gaps_count: 2,
+    },
     runtime: {
       runtime_owner: 'upstream_hermes_agent',
     },
@@ -1419,6 +1459,14 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     assert.equal(output.handoff_bundle.domain_manifest_recommendation.recommended_shell, 'direct');
     assert.equal(output.handoff_bundle.domain_manifest_recommendation.recommended_command, 'redcube product invoke');
     assert.equal(output.handoff_bundle.domain_manifest_recommendation.manifest_target_domain_id, 'redcube_ai');
+    assert.equal(
+      output.handoff_bundle.domain_manifest_recommendation.product_entry_status.summary,
+      resolvedManifest.product_entry_status.summary,
+    );
+    assert.equal(
+      output.handoff_bundle.domain_manifest_recommendation.repo_mainline.phase_id,
+      'repo_verified_product_entry_and_opl_federation',
+    );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }

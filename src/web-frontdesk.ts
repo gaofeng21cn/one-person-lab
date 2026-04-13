@@ -1284,11 +1284,39 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
             : manifestEntry.status === 'resolved'
               ? [
                   '<p><strong>Manifest Status:</strong> resolved</p>',
+                  manifestEntry.manifest?.repo_mainline
+                    ? '<p><strong>Mainline Phase:</strong> '
+                      + (
+                        manifestEntry.manifest.repo_mainline.phase_id
+                        || manifestEntry.manifest.repo_mainline.current_program_phase_id
+                        || manifestEntry.manifest.repo_mainline.active_phase
+                        || 'unknown'
+                      )
+                      + '</p>'
+                    : '',
+                  manifestEntry.manifest?.repo_mainline
+                    ? '<p><strong>Mainline Tranche:</strong> '
+                      + (
+                        manifestEntry.manifest.repo_mainline.tranche_id
+                        || manifestEntry.manifest.repo_mainline.current_stage_id
+                        || manifestEntry.manifest.repo_mainline.active_tranche
+                        || 'unknown'
+                      )
+                      + '</p>'
+                    : '',
                   manifestEntry.manifest?.recommended_shell
                     ? '<p><strong>Recommended Shell:</strong> ' + manifestEntry.manifest.recommended_shell + '</p>'
                     : '',
                   manifestEntry.manifest?.recommended_command
                     ? '<p><strong>Recommended Command:</strong> ' + manifestEntry.manifest.recommended_command + '</p>'
+                    : '',
+                  manifestEntry.manifest?.product_entry_status?.summary
+                    ? '<p><strong>Entry Status:</strong> ' + manifestEntry.manifest.product_entry_status.summary + '</p>'
+                    : '',
+                  typeof manifestEntry.manifest?.product_entry_status?.remaining_gaps_count === 'number'
+                    ? '<p><strong>Remaining Gaps:</strong> '
+                      + String(manifestEntry.manifest.product_entry_status.remaining_gaps_count)
+                      + '</p>'
                     : '',
                 ].filter(Boolean).join('')
               : '<p><strong>Manifest Status:</strong> ' + manifestEntry.status + '</p>';

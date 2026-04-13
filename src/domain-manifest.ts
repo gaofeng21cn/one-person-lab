@@ -26,6 +26,11 @@ export interface NormalizedDomainManifest {
   workspace_locator: JsonRecord;
   runtime: JsonRecord | null;
   repo_mainline: JsonRecord | null;
+  product_entry_status: {
+    summary: string | null;
+    next_focus: string[];
+    remaining_gaps_count: number | null;
+  } | null;
   recommended_shell: string | null;
   recommended_command: string | null;
   product_entry_shell: Record<string, JsonRecord>;
@@ -128,6 +133,8 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
   ) {
     throw new Error('recommended_command must match the command declared by recommended_shell.');
   }
+  const remainingGaps = readStringList(manifest.remaining_gaps);
+  const rawProductEntryStatus = isRecord(manifest.product_entry_status) ? manifest.product_entry_status : null;
 
   return {
     surface_kind: optionalString(manifest.surface_kind) ?? 'product_entry_manifest',
@@ -147,11 +154,21 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
     workspace_locator: requireRecord(manifest.workspace_locator, 'workspace_locator'),
     runtime: isRecord(manifest.runtime) ? manifest.runtime : null,
     repo_mainline: isRecord(manifest.repo_mainline) ? manifest.repo_mainline : null,
+    product_entry_status: rawProductEntryStatus
+      ? {
+          summary: optionalString(rawProductEntryStatus.summary),
+          next_focus: readStringList(rawProductEntryStatus.next_focus),
+          remaining_gaps_count:
+            typeof rawProductEntryStatus.remaining_gaps_count === 'number'
+              ? rawProductEntryStatus.remaining_gaps_count
+              : remainingGaps.length,
+        }
+      : null,
     recommended_shell: recommendedShell,
     recommended_command: explicitRecommendedCommand ?? derivedRecommendedCommand,
     product_entry_shell: productEntryShell,
     shared_handoff: sharedHandoff,
-    remaining_gaps: readStringList(manifest.remaining_gaps),
+    remaining_gaps: remainingGaps,
     notes: readStringList(manifest.notes),
   };
 }
