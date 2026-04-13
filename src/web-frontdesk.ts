@@ -18,6 +18,7 @@ import {
   buildWorkspaceStatus,
 } from './management.ts';
 import { buildDomainManifestCatalog } from './domain-manifest.ts';
+import { launchDomainEntry, type DomainLaunchStrategy } from './domain-launch.ts';
 import { buildHostedPilotPackage } from './hosted-pilot-package.ts';
 import { buildLibreChatPilotPackage } from './librechat-pilot-package.ts';
 import { buildPaperclipBootstrap, syncPaperclipProjections } from './paperclip-control-plane.ts';
@@ -66,6 +67,16 @@ type AskRequestBody = Partial<{
 type ResumeRequestBody = Partial<{
   sessionId: string;
   session_id: string;
+}>;
+
+type LaunchDomainRequestBody = Partial<{
+  projectId: string;
+  project_id: string;
+  workspacePath: string;
+  workspace_path: string;
+  strategy: DomainLaunchStrategy;
+  dryRun: boolean;
+  dry_run: boolean;
 }>;
 
 type WorkspaceRegistryBody = Partial<{
@@ -150,6 +161,7 @@ type WebFrontDeskStartupPayload = {
       session_ledger: string;
       ask: string;
       start: string;
+      launch_domain: string;
       handoff_envelope: string;
       sessions: string;
       resume: string;
@@ -323,6 +335,38 @@ function normalizeResumeSessionId(body: ResumeRequestBody) {
   }
 
   return sessionId;
+}
+
+function normalizeLaunchDomainInput(body: LaunchDomainRequestBody) {
+  const projectId = normalizeOptionalString(body.projectId) ?? normalizeOptionalString(body.project_id);
+  if (!projectId) {
+    throw new GatewayContractError(
+      'cli_usage_error',
+      'Web front-desk launch-domain requests require a non-empty project_id.',
+      {
+        required: ['project_id'],
+      },
+    );
+  }
+
+  const strategy = normalizeOptionalString(body.strategy);
+  if (strategy && !['auto', 'open_url', 'spawn_command'].includes(strategy)) {
+    throw new GatewayContractError(
+      'cli_usage_error',
+      'Web front-desk launch-domain requests require strategy to be auto, open_url, or spawn_command.',
+      {
+        strategy,
+      },
+    );
+  }
+
+  return {
+    projectId,
+    workspacePath:
+      normalizeOptionalString(body.workspacePath) ?? normalizeOptionalString(body.workspace_path),
+    strategy: strategy as DomainLaunchStrategy | undefined,
+    dryRun: Boolean(body.dryRun ?? body.dry_run),
+  };
 }
 
 function normalizePaperclipSyncInput(body: PaperclipSyncRequestBody) {
@@ -509,6 +553,7 @@ function buildStartupPayload(context: WebFrontDeskContext): WebFrontDeskStartupP
         session_ledger: endpoints.session_ledger,
         ask: endpoints.ask,
         start: endpoints.start,
+        launch_domain: endpoints.launch_domain,
         handoff_envelope: endpoints.handoff_envelope,
         sessions: endpoints.sessions,
         resume: endpoints.resume,
@@ -982,6 +1027,47 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
 
           <section class="panel">
             <div class="panel-header">
+              <h2 class="panel-title">Launch Bound Domain Entry</h2>
+            </div>
+            <p class="panel-copy">
+              Consume one already-bound direct-entry locator and launch it honestly. This stays at locator level and does not claim OPL owns the domain runtime.
+            </p>
+            <div class="panel-body">
+              <form id="launch-form">
+                <div class="field-grid">
+                  <label>
+                    Project ID
+                    <input id="launch-project" name="launch-project" placeholder="redcube" />
+                  </label>
+                  <label>
+                    Strategy
+                    <input id="launch-strategy" name="launch-strategy" placeholder="auto | open_url | spawn_command" value="auto" />
+                  </label>
+                </div>
+                <div class="button-row">
+                  <button class="secondary" type="button" id="launch-preview-button">Preview Launch</button>
+                  <button class="primary" type="submit" id="launch-button">Launch Domain</button>
+                </div>
+              </form>
+              <div class="status-line" id="launch-status" aria-live="polite"></div>
+              <div style="height: 12px"></div>
+              <div class="split-grid">
+                <div class="card">
+                  <h3>Launch Summary</h3>
+                  <div id="launch-summary">No bound domain locator launched yet.</div>
+                </div>
+                <div class="card">
+                  <h3>Launch Action</h3>
+                  <div id="launch-action">Preview or launch a bound domain entry to inspect the selected action.</div>
+                </div>
+              </div>
+              <div style="height: 12px"></div>
+              <pre class="json-view" id="launch-json">{}</pre>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-header">
               <h2 class="panel-title">Quick Ask</h2>
             </div>
             <p class="panel-copy">
@@ -1298,6 +1384,12 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       const startSummary = document.getElementById('start-summary');
       const startCommand = document.getElementById('start-command');
       const startJson = document.getElementById('start-json');
+      const launchProjectInput = document.getElementById('launch-project');
+      const launchStrategyInput = document.getElementById('launch-strategy');
+      const launchStatus = document.getElementById('launch-status');
+      const launchSummary = document.getElementById('launch-summary');
+      const launchAction = document.getElementById('launch-action');
+      const launchJson = document.getElementById('launch-json');
       const projectsList = document.getElementById('projects-list');
       const workspaceCardList = document.getElementById('workspace-card-list');
       const sessionsList = document.getElementById('sessions-list');
@@ -1339,6 +1431,8 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       const previewButton = document.getElementById('preview-button');
       const askButton = document.getElementById('ask-button');
       const startButton = document.getElementById('start-button');
+      const launchPreviewButton = document.getElementById('launch-preview-button');
+      const launchButton = document.getElementById('launch-button');
       const refreshButton = document.getElementById('refresh-button');
       const workspaceBindButton = document.getElementById('workspace-bind-button');
       const workspaceActivateButton = document.getElementById('workspace-activate-button');
@@ -1356,10 +1450,17 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         startStatus.dataset.tone = tone;
       }
 
+      function setLaunchStatus(message, tone = 'muted') {
+        launchStatus.textContent = message;
+        launchStatus.dataset.tone = tone;
+      }
+
       function setButtonBusy(isBusy) {
         previewButton.disabled = isBusy;
         askButton.disabled = isBusy;
         startButton.disabled = isBusy;
+        launchPreviewButton.disabled = isBusy;
+        launchButton.disabled = isBusy;
         refreshButton.disabled = isBusy;
       }
 
@@ -1918,6 +2019,9 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
           if (!startProjectInput.value.trim()) {
             startProjectInput.value = String(recommendedStart.project_id || '');
           }
+          if (!launchProjectInput.value.trim()) {
+            launchProjectInput.value = String(recommendedStart.project_id || '');
+          }
           if (!startModeInput.value.trim() && recommendedStart.product_entry_start?.recommended_mode_id) {
             startModeInput.value = String(recommendedStart.product_entry_start.recommended_mode_id);
           }
@@ -2006,6 +2110,32 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
             : '',
         ].filter(Boolean).join('');
         startJson.textContent = JSON.stringify(payload, null, 2);
+      }
+
+      function renderLaunchPayload(payload) {
+        const launch = payload.domain_entry_launch;
+        launchSummary.innerHTML = [
+          '<p><strong>Project:</strong> ' + launch.project + '</p>',
+          '<p><strong>Target Domain:</strong> ' + launch.target_domain_id + '</p>',
+          '<p><strong>Launch Status:</strong> ' + launch.launch_status + '</p>',
+          '<p><strong>Selected Strategy:</strong> <code>' + launch.selected_strategy + '</code></p>',
+          launch.workspace_locator?.absolute_path
+            ? '<p><strong>Workspace:</strong> ' + launch.workspace_locator.absolute_path + '</p>'
+            : '',
+        ].filter(Boolean).join('');
+        launchAction.innerHTML = [
+          launch.action?.kind ? '<p><strong>Action Kind:</strong> <code>' + launch.action.kind + '</code></p>' : '',
+          Array.isArray(launch.action?.command_preview)
+            ? '<p><strong>Command Preview:</strong> <code>' + launch.action.command_preview.join(' ') + '</code></p>'
+            : '',
+          launch.direct_entry_locator?.url
+            ? '<p><strong>Direct Entry URL:</strong> ' + launch.direct_entry_locator.url + '</p>'
+            : '',
+          launch.direct_entry_locator?.command
+            ? '<p><strong>Direct Entry Command:</strong> <code>' + launch.direct_entry_locator.command + '</code></p>'
+            : '',
+        ].filter(Boolean).join('');
+        launchJson.textContent = JSON.stringify(payload, null, 2);
       }
 
       function renderWorkspaceCatalog(payload) {
@@ -2104,6 +2234,43 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
           setStartStatus('Start surface resolved.', 'ok');
         } catch (error) {
           setStartStatus(error instanceof Error ? error.message : 'Start surface request failed.', 'warn');
+        }
+      }
+
+      async function submitDomainLaunch(dryRun) {
+        const projectId = launchProjectInput.value.trim() || startProjectInput.value.trim();
+        const strategy = launchStrategyInput.value.trim();
+
+        if (!projectId) {
+          setLaunchStatus('Launch requires a project id.', 'warn');
+          return;
+        }
+
+        setLaunchStatus(dryRun ? 'Previewing domain launch...' : 'Launching bound domain entry...', 'muted');
+
+        try {
+          const response = await fetch(bootstrap.web_frontdesk.api.launch_domain, {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+            },
+            body: JSON.stringify({
+              project_id: projectId,
+              workspace_path: workspacePathInput.value.trim() || state.workspacePath,
+              strategy,
+              dry_run: dryRun,
+            }),
+          });
+          const payload = await response.json();
+
+          if (!response.ok) {
+            throw new Error(payload.error?.message || 'Launch request failed.');
+          }
+
+          renderLaunchPayload(payload);
+          setLaunchStatus(dryRun ? 'Launch preview updated.' : 'Bound domain entry launched.', 'ok');
+        } catch (error) {
+          setLaunchStatus(error instanceof Error ? error.message : 'Launch request failed.', 'warn');
         }
       }
 
@@ -2399,6 +2566,11 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         void resolveStartSurface();
       });
 
+      document.getElementById('launch-form').addEventListener('submit', (event) => {
+        event.preventDefault();
+        void submitDomainLaunch(false);
+      });
+
       document.getElementById('resume-form').addEventListener('submit', (event) => {
         event.preventDefault();
         void submitResume();
@@ -2439,6 +2611,9 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       });
       askButton.addEventListener('click', () => {
         void submitAsk(false);
+      });
+      launchPreviewButton.addEventListener('click', () => {
+        void submitDomainLaunch(true);
       });
       refreshButton.addEventListener('click', () => {
         void refreshAll().catch((error) => {
@@ -2715,6 +2890,18 @@ async function handleRequest(
           projectId: normalizeOptionalString(url.searchParams.get('project')) ?? '',
           modeId: normalizeOptionalString(url.searchParams.get('mode')),
         }),
+      );
+      return;
+    }
+
+    if (method === 'POST' && routedPath === '/api/launch-domain') {
+      writeJson(
+        response,
+        200,
+        await launchDomainEntry(
+          context.contracts,
+          normalizeLaunchDomainInput((await readJsonBody(request)) as LaunchDomainRequestBody),
+        ),
       );
       return;
     }

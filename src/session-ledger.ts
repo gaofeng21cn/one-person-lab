@@ -77,6 +77,8 @@ type SessionAggregate = {
   };
 };
 
+type LedgerCountMap = Record<string, number>;
+
 function readSessionLedgerFile(): SessionLedgerFile {
   const paths = resolveFrontDeskStatePaths();
   if (!fs.existsSync(paths.session_ledger_file)) {
@@ -131,16 +133,21 @@ function buildResourceSample() {
   }
 }
 
+function findLatestEntryForSession(entries: SessionLedgerEntry[], sessionId: string) {
+  return entries.find((entry) => entry.session_id === sessionId) ?? null;
+}
+
 export function recordSessionLedgerEntry(input: RecordSessionLedgerInput) {
   const ledger = readSessionLedgerFile();
+  const previousEntry = findLatestEntryForSession(ledger.entries, input.sessionId);
   const entry: SessionLedgerEntry = {
     ledger_id: randomUUID(),
     recorded_at: new Date().toISOString(),
     session_id: input.sessionId,
     mode: input.mode,
     source_surface: input.sourceSurface,
-    domain_id: input.domainId ?? null,
-    workstream_id: input.workstreamId ?? null,
+    domain_id: input.domainId ?? previousEntry?.domain_id ?? null,
+    workstream_id: input.workstreamId ?? previousEntry?.workstream_id ?? null,
     goal_preview: input.goalPreview ?? null,
     workspace_locator: input.workspaceLocator
       ? {
@@ -149,7 +156,7 @@ export function recordSessionLedgerEntry(input: RecordSessionLedgerInput) {
           source: input.workspaceLocator.source ?? 'none',
           binding_id: input.workspaceLocator.binding?.binding_id ?? null,
         }
-      : null,
+      : previousEntry?.workspace_locator ?? null,
     resource_sample: buildResourceSample(),
   };
 
@@ -232,6 +239,56 @@ function buildSessionAggregates(entries: SessionLedgerEntry[], limit: number) {
   return Array.from(aggregates.values()).slice(0, limit);
 }
 
+function incrementCount(map: LedgerCountMap, key: string | null) {
+  const normalizedKey = key && key.trim().length > 0 ? key : 'unassigned';
+  map[normalizedKey] = (map[normalizedKey] ?? 0) + 1;
+}
+
+function buildLedgerSummary(entries: SessionLedgerEntry[], sessions: SessionAggregate[]) {
+  const modeCounts: LedgerCountMap = {};
+  const domainCounts: LedgerCountMap = {};
+  const sourceSurfaceCounts: LedgerCountMap = {};
+  const workspaceLocators = new Set<string>();
+  let peakTotalRssKb: number | null = null;
+  let peakTotalCpuPercent: number | null = null;
+
+  for (const entry of entries) {
+    incrementCount(modeCounts, entry.mode);
+    incrementCount(domainCounts, entry.domain_id);
+    incrementCount(sourceSurfaceCounts, entry.source_surface);
+    if (entry.workspace_locator) {
+      const locatorKey =
+        entry.workspace_locator.binding_id
+        ?? [
+          entry.workspace_locator.project_id ?? 'unknown_project',
+          entry.workspace_locator.absolute_path ?? 'unknown_path',
+          entry.workspace_locator.source,
+        ].join('::');
+      workspaceLocators.add(locatorKey);
+    }
+    if (entry.resource_sample.status === 'captured') {
+      peakTotalRssKb = Math.max(peakTotalRssKb ?? entry.resource_sample.total_rss_kb, entry.resource_sample.total_rss_kb);
+      peakTotalCpuPercent = Math.max(
+        peakTotalCpuPercent ?? entry.resource_sample.total_cpu_percent,
+        entry.resource_sample.total_cpu_percent,
+      );
+    }
+  }
+
+  return {
+    entry_count: entries.length,
+    distinct_session_count: new Set(entries.map((entry) => entry.session_id)).size,
+    session_aggregate_count: sessions.length,
+    last_recorded_at: entries[0]?.recorded_at ?? null,
+    mode_counts: modeCounts,
+    domain_counts: domainCounts,
+    source_surface_counts: sourceSurfaceCounts,
+    workspace_binding_count: workspaceLocators.size,
+    peak_total_rss_kb: peakTotalRssKb,
+    peak_total_cpu_percent: peakTotalCpuPercent,
+  };
+}
+
 export function buildSessionLedger(limit = 20) {
   const ledger = readSessionLedgerFile();
   const entries = ledger.entries.slice(0, limit);
@@ -242,12 +299,7 @@ export function buildSessionLedger(limit = 20) {
     session_ledger: {
       surface_id: 'opl_managed_session_ledger',
       ledger_scope: 'opl_product_entry_managed_sessions',
-      summary: {
-        entry_count: ledger.entries.length,
-        distinct_session_count: new Set(ledger.entries.map((entry) => entry.session_id)).size,
-        session_aggregate_count: sessions.length,
-        last_recorded_at: ledger.entries[0]?.recorded_at ?? null,
-      },
+      summary: buildLedgerSummary(ledger.entries, sessions),
       entries,
       sessions,
       notes: [
