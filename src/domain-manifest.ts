@@ -31,6 +31,14 @@ export interface NormalizedDomainManifest {
     next_focus: string[];
     remaining_gaps_count: number | null;
   } | null;
+  frontdesk_surface: {
+    shell_key: string;
+    command: string | null;
+    surface_kind: string | null;
+    summary: string | null;
+    continuation_shell_key: string | null;
+    continuation_command: string | null;
+  } | null;
   operator_loop_surface: {
     shell_key: string;
     command: string | null;
@@ -120,6 +128,42 @@ function unwrapManifestPayload(payload: JsonRecord) {
   return payload;
 }
 
+function normalizeShellSurface(
+  value: unknown,
+  options: {
+    field: string;
+    productEntryShell: Record<string, JsonRecord>;
+  },
+) {
+  const { field, productEntryShell } = options;
+
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const shellKey = requireString(value.shell_key, `${field}.shell_key`);
+  if (!productEntryShell[shellKey]) {
+    throw new Error(`${field}.shell_key points at unknown shell key: ${shellKey}`);
+  }
+
+  const explicitCommand = optionalString(value.command);
+  const derivedCommand = optionalString(productEntryShell[shellKey]?.command);
+  if (explicitCommand && derivedCommand && explicitCommand !== derivedCommand) {
+    throw new Error(`${field}.command must match the command declared by ${field}.shell_key.`);
+  }
+
+  return {
+    shell_key: shellKey,
+    command: explicitCommand ?? derivedCommand,
+    surface_kind:
+      optionalString(value.surface_kind)
+      ?? optionalString(productEntryShell[shellKey]?.surface_kind),
+    summary: optionalString(value.summary),
+    continuation_shell_key: optionalString(value.continuation_shell_key),
+    continuation_command: optionalString(value.continuation_command),
+  };
+}
+
 function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
   const manifest = unwrapManifestPayload(payload);
   const formalEntry = requireRecord(manifest.formal_entry, 'formal_entry');
@@ -130,21 +174,17 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
   const derivedRecommendedCommand = recommendedShell
     ? optionalString(productEntryShell[recommendedShell]?.command)
     : null;
-  const rawOperatorLoopSurface = isRecord(manifest.operator_loop_surface)
-    ? manifest.operator_loop_surface
-    : null;
+  const frontdeskSurface = normalizeShellSurface(manifest.frontdesk_surface, {
+    field: 'frontdesk_surface',
+    productEntryShell,
+  });
+  const operatorLoopSurface = normalizeShellSurface(manifest.operator_loop_surface, {
+    field: 'operator_loop_surface',
+    productEntryShell,
+  });
   const operatorLoopActions = isRecord(manifest.operator_loop_actions)
     ? normalizeRecordMap(manifest.operator_loop_actions, 'operator_loop_actions')
     : {};
-  const operatorLoopShellKey = rawOperatorLoopSurface
-    ? requireString(rawOperatorLoopSurface.shell_key, 'operator_loop_surface.shell_key')
-    : null;
-  const explicitOperatorLoopCommand = rawOperatorLoopSurface
-    ? optionalString(rawOperatorLoopSurface.command)
-    : null;
-  const derivedOperatorLoopCommand = operatorLoopShellKey
-    ? optionalString(productEntryShell[operatorLoopShellKey]?.command)
-    : null;
 
   if (recommendedShell && !productEntryShell[recommendedShell]) {
     throw new Error(`recommended_shell points at unknown shell key: ${recommendedShell}`);
@@ -156,17 +196,6 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
     && explicitRecommendedCommand !== derivedRecommendedCommand
   ) {
     throw new Error('recommended_command must match the command declared by recommended_shell.');
-  }
-  if (operatorLoopShellKey && !productEntryShell[operatorLoopShellKey]) {
-    throw new Error(`operator_loop_surface.shell_key points at unknown shell key: ${operatorLoopShellKey}`);
-  }
-  if (
-    operatorLoopShellKey
-    && explicitOperatorLoopCommand
-    && derivedOperatorLoopCommand
-    && explicitOperatorLoopCommand !== derivedOperatorLoopCommand
-  ) {
-    throw new Error('operator_loop_surface.command must match the command declared by operator_loop_surface.shell_key.');
   }
   const remainingGaps = readStringList(manifest.remaining_gaps);
   const rawProductEntryStatus = isRecord(manifest.product_entry_status) ? manifest.product_entry_status : null;
@@ -199,18 +228,8 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
               : remainingGaps.length,
         }
       : null,
-    operator_loop_surface: rawOperatorLoopSurface && operatorLoopShellKey
-      ? {
-          shell_key: operatorLoopShellKey,
-          command: explicitOperatorLoopCommand ?? derivedOperatorLoopCommand,
-          surface_kind:
-            optionalString(rawOperatorLoopSurface.surface_kind)
-            ?? optionalString(productEntryShell[operatorLoopShellKey]?.surface_kind),
-          summary: optionalString(rawOperatorLoopSurface.summary),
-          continuation_shell_key: optionalString(rawOperatorLoopSurface.continuation_shell_key),
-          continuation_command: optionalString(rawOperatorLoopSurface.continuation_command),
-        }
-      : null,
+    frontdesk_surface: frontdeskSurface,
+    operator_loop_surface: operatorLoopSurface,
     operator_loop_actions: operatorLoopActions,
     recommended_shell: recommendedShell,
     recommended_command: explicitRecommendedCommand ?? derivedRecommendedCommand,

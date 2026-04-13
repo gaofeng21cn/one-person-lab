@@ -1310,6 +1310,21 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
                   manifestEntry.manifest?.recommended_command
                     ? '<p><strong>Recommended Command:</strong> ' + manifestEntry.manifest.recommended_command + '</p>'
                     : '',
+                  manifestEntry.manifest?.frontdesk_surface?.shell_key
+                    ? '<p><strong>Frontdesk Shell:</strong> '
+                      + manifestEntry.manifest.frontdesk_surface.shell_key
+                      + '</p>'
+                    : '',
+                  manifestEntry.manifest?.frontdesk_surface?.command
+                    ? '<p><strong>Frontdesk Command:</strong> '
+                      + manifestEntry.manifest.frontdesk_surface.command
+                      + '</p>'
+                    : '',
+                  manifestEntry.manifest?.frontdesk_surface?.summary
+                    ? '<p><strong>Frontdesk Summary:</strong> '
+                      + manifestEntry.manifest.frontdesk_surface.summary
+                      + '</p>'
+                    : '',
                   manifestEntry.manifest?.operator_loop_surface?.shell_key
                     ? '<p><strong>Current Operator Loop:</strong> '
                       + manifestEntry.manifest.operator_loop_surface.shell_key

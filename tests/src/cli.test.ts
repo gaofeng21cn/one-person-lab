@@ -1263,6 +1263,12 @@ test('domain-manifests resolves active domain-owned manifest commands while work
     },
     recommended_shell: 'direct',
     recommended_command: 'redcube product invoke',
+    frontdesk_surface: {
+      shell_key: 'frontdesk',
+      command: 'redcube product frontdesk',
+      surface_kind: 'product_frontdesk',
+      summary: '面向终端用户的 RedCube frontdesk，先给出 direct / federated / session 三类入口。',
+    },
     operator_loop_surface: {
       shell_key: 'direct',
       command: 'redcube product invoke',
@@ -1303,6 +1309,10 @@ test('domain-manifests resolves active domain-owned manifest commands while work
       runtime_owner: 'upstream_hermes_agent',
     },
     product_entry_shell: {
+      frontdesk: {
+        command: 'redcube product frontdesk',
+        surface_kind: 'product_frontdesk',
+      },
       direct: {
         command: 'redcube product invoke',
         surface_kind: 'product_entry',
@@ -1361,6 +1371,7 @@ test('domain-manifests resolves active domain-owned manifest commands while work
     assert.equal(redcube.status, 'resolved');
     assert.equal(redcube.manifest.recommended_shell, 'direct');
     assert.equal(redcube.manifest.recommended_command, 'redcube product invoke');
+    assert.equal(redcube.manifest.frontdesk_surface.command, 'redcube product frontdesk');
     assert.equal(redcube.manifest.operator_loop_surface.shell_key, 'direct');
     assert.equal(redcube.manifest.operator_loop_surface.continuation_command, 'redcube product session');
     assert.equal(redcube.manifest.operator_loop_actions.start_deliverable.command, 'redcube product invoke');
@@ -1379,6 +1390,7 @@ test('domain-manifests resolves active domain-owned manifest commands while work
     assert.equal(recommendedEntry.product_entry_status_summary, resolvedManifest.product_entry_status.summary);
     assert.equal(recommendedEntry.product_entry_remaining_gaps_count, 2);
     assert.equal(recommendedEntry.mainline_phase_id, 'repo_verified_product_entry_and_opl_federation');
+    assert.equal(recommendedEntry.frontdesk_surface.command, 'redcube product frontdesk');
     assert.equal(recommendedEntry.operator_loop_shell_key, 'direct');
     assert.equal(recommendedEntry.operator_loop_command, 'redcube product invoke');
     assert.equal(recommendedEntry.operator_loop_actions.start_deliverable.command, 'redcube product invoke');
@@ -1404,6 +1416,12 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     },
     recommended_shell: 'direct',
     recommended_command: 'redcube product invoke',
+    frontdesk_surface: {
+      shell_key: 'frontdesk',
+      command: 'redcube product frontdesk',
+      surface_kind: 'product_frontdesk',
+      summary: '面向终端用户的 RedCube frontdesk，先给出 direct / federated / session 三类入口。',
+    },
     operator_loop_surface: {
       shell_key: 'direct',
       command: 'redcube product invoke',
@@ -1444,6 +1462,10 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
       runtime_owner: 'upstream_hermes_agent',
     },
     product_entry_shell: {
+      frontdesk: {
+        command: 'redcube product frontdesk',
+        surface_kind: 'product_frontdesk',
+      },
       direct: {
         command: 'redcube product invoke',
         surface_kind: 'product_entry',
@@ -1509,6 +1531,7 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     assert.equal(output.handoff_bundle.domain_manifest_recommendation.status, 'resolved');
     assert.equal(output.handoff_bundle.domain_manifest_recommendation.recommended_shell, 'direct');
     assert.equal(output.handoff_bundle.domain_manifest_recommendation.recommended_command, 'redcube product invoke');
+    assert.equal(output.handoff_bundle.domain_manifest_recommendation.frontdesk_surface.command, 'redcube product frontdesk');
     assert.equal(output.handoff_bundle.domain_manifest_recommendation.operator_loop_surface.shell_key, 'direct');
     assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.operator_loop_surface.continuation_command,

@@ -48,7 +48,8 @@
 - `opl` / `opl <request...>` / `opl doctor|ask|chat|resume|sessions|logs|repair-hermes-gateway` 已成为顶层本地入口面；
 - `opl frontdesk-manifest|frontdesk-hosted-bundle|frontdesk-hosted-package` 已把 hosted-friendly shell contract、hosted pilot bundle 与 self-hostable hosted pilot package 冻结下来；
 - `opl workspace-catalog|workspace-bind|activate|archive` 已把 workspace registry 与 direct-entry locator 管理做成顶层控制面；当前 binding 还可额外冻结 domain-owned `manifest_command`，让 family wiring 指向诚实的 product-entry manifest；
-- `opl session-ledger|handoff-envelope|dashboard|web` 已把 managed session attribution、family handoff 和 browser front desk 一并落地。
+- `opl session-ledger|handoff-envelope|dashboard|web` 已把 managed session attribution、family handoff 和 browser front desk 一并落地；
+- `domain-manifests / dashboard / handoff-envelope / opl web` 现在会统一消费 domain manifest 里的 `frontdesk_surface`，不再只知道每个业务仓“当前 operator loop 是什么”。
 
 下一棒：
 
@@ -77,7 +78,7 @@
 
 - 它是最适合尽快长出 lightweight direct entry 的业务仓之一；
 - 重点仍是 visual deliverable / source-readiness / family handoff 收口。
-- repo-tracked lightweight direct-entry shell 已经落地：`redcube product-entry` 现在可以输出 direct / `OPL` handoff 共用的 shared envelope。
+- repo-tracked lightweight direct-entry shell 已经落地：`redcube product frontdesk` 现在作为 direct frontdesk，`redcube product manifest` 会显式导出 `frontdesk_surface`，而 `redcube product invoke|federate|session` 继续承担 direct / `OPL` handoff 共用的 shared envelope 与续跑面。
 
 下一棒：
 
