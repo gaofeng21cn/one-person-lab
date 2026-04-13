@@ -188,6 +188,95 @@ function loadFamilyManifestFixtures() {
   };
 }
 
+function assertMagActionGraph(actionGraph: Record<string, unknown>) {
+  assert.equal(actionGraph.graph_id, 'mag_critique_to_revision_graph');
+  assert.equal(actionGraph.target_domain_id, 'med-autogrant');
+  assert.deepEqual(
+    (actionGraph.nodes as Array<{ node_id: string }>).map((node) => node.node_id),
+    ['route:critique', 'route:revision'],
+  );
+  assert.deepEqual(actionGraph.entry_nodes, ['route:critique']);
+  assert.deepEqual(actionGraph.exit_nodes, ['route:revision']);
+  assert.deepEqual(actionGraph.human_gates, [
+    {
+      gate_id: 'mag_route_gate_revision',
+      trigger_nodes: ['route:revision'],
+      blocking: true,
+    },
+  ]);
+  assert.deepEqual(actionGraph.checkpoint_policy, {
+    mode: 'explicit_nodes',
+    checkpoint_nodes: ['route:critique', 'route:revision'],
+  });
+}
+
+function assertMasActionGraph(actionGraph: Record<string, unknown>) {
+  assert.equal(actionGraph.graph_id, 'mas_workspace_frontdoor_study_runtime_graph');
+  assert.equal(actionGraph.target_domain_id, 'med-autoscience');
+  assert.deepEqual(
+    (actionGraph.nodes as Array<{ node_id: string }>).map((node) => node.node_id),
+    [
+      'frontdoor:open_workspace',
+      'study:submit_task',
+      'study:launch_or_resume',
+      'study:inspect_progress',
+    ],
+  );
+  assert.deepEqual(actionGraph.entry_nodes, ['frontdoor:open_workspace']);
+  assert.deepEqual(actionGraph.exit_nodes, ['study:inspect_progress']);
+  assert.deepEqual(actionGraph.human_gates, [
+    {
+      gate_id: 'study_physician_decision_gate',
+      trigger_nodes: ['study:inspect_progress'],
+      blocking: true,
+    },
+    {
+      gate_id: 'publication_release_gate',
+      trigger_nodes: ['study:inspect_progress'],
+      blocking: true,
+    },
+  ]);
+  assert.deepEqual(actionGraph.checkpoint_policy, {
+    mode: 'explicit_nodes',
+    checkpoint_nodes: [
+      'study:submit_task',
+      'study:launch_or_resume',
+      'study:inspect_progress',
+    ],
+  });
+}
+
+function assertRedcubeActionGraph(actionGraph: Record<string, unknown>) {
+  assert.equal(actionGraph.graph_id, 'redcube_frontdoor_product_entry_graph');
+  assert.equal(actionGraph.target_domain_id, 'redcube_ai');
+  assert.deepEqual(
+    (actionGraph.nodes as Array<{ node_id: string }>).map((node) => node.node_id),
+    [
+      'step:open_frontdesk',
+      'step:continue_current_loop',
+      'step:federated_handoff',
+      'step:inspect_current_progress',
+    ],
+  );
+  assert.deepEqual(actionGraph.entry_nodes, ['step:open_frontdesk']);
+  assert.deepEqual(actionGraph.exit_nodes, ['step:inspect_current_progress']);
+  assert.deepEqual(actionGraph.human_gates, [
+    {
+      gate_id: 'redcube_operator_review_gate',
+      trigger_nodes: ['step:inspect_current_progress'],
+      blocking: true,
+    },
+  ]);
+  assert.deepEqual(actionGraph.checkpoint_policy, {
+    mode: 'explicit_nodes',
+    checkpoint_nodes: [
+      'step:continue_current_loop',
+      'step:federated_handoff',
+      'step:inspect_current_progress',
+    ],
+  });
+}
+
 function createFamilyContractsFixtureRoot() {
   return createContractsFixtureRoot((fixtureContractsRoot) => {
     const domainsPath = path.join(fixtureContractsRoot, 'domains.json');
@@ -1566,8 +1655,7 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(medautogrant.manifest.product_entry_shell.grant_cockpit.surface_kind, 'grant_cockpit');
     assert.equal(medautogrant.manifest.shared_handoff.opl_handoff_builder.entry_mode, 'opl-handoff');
     assert.equal(medautogrant.manifest.family_orchestration.action_graph_ref.ref, '/family_orchestration/action_graph');
-    assert.equal(medautogrant.manifest.family_orchestration.action_graph.graph_id, 'mag_critique_to_revision_graph');
-    assert.equal(medautogrant.manifest.family_orchestration.action_graph.nodes.length, 2);
+    assertMagActionGraph(medautogrant.manifest.family_orchestration.action_graph);
     assert.equal(medautogrant.manifest.family_orchestration.human_gates[0].gate_id, 'mag_route_gate_revision');
     assert.equal(medautogrant.manifest.family_orchestration.resume_contract.surface_kind, 'grant_user_loop');
     assert.equal(medautogrant.manifest.family_orchestration.event_envelope_surface.ref, '/product_entry_manifest/recommended_command');
@@ -1582,12 +1670,7 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
       medautoscience.manifest.family_orchestration.action_graph_ref.ref,
       '/family_orchestration/action_graph',
     );
-    assert.equal(
-      medautoscience.manifest.family_orchestration.action_graph.graph_id,
-      'mas_workspace_frontdoor_study_runtime_graph',
-    );
-    assert.equal(medautoscience.manifest.family_orchestration.action_graph.nodes.length, 4);
-    assert.equal(medautoscience.manifest.family_orchestration.action_graph.edges.length, 5);
+    assertMasActionGraph(medautoscience.manifest.family_orchestration.action_graph);
     assert.equal(medautoscience.manifest.family_orchestration.human_gates[0].gate_id, 'study_physician_decision_gate');
     assert.equal(medautoscience.manifest.family_orchestration.human_gates[1].gate_id, 'publication_release_gate');
     assert.equal(medautoscience.manifest.family_orchestration.resume_contract.surface_kind, 'launch_study');
@@ -1615,9 +1698,7 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
       'continuation_snapshot.latest_managed_run_id',
     );
     assert.equal(redcube.manifest.family_orchestration.action_graph_ref.ref, '/family_orchestration/action_graph');
-    assert.equal(redcube.manifest.family_orchestration.action_graph.graph_id, 'redcube_frontdoor_product_entry_graph');
-    assert.equal(redcube.manifest.family_orchestration.action_graph.nodes.length, 4);
-    assert.equal(redcube.manifest.family_orchestration.action_graph.edges.length, 4);
+    assertRedcubeActionGraph(redcube.manifest.family_orchestration.action_graph);
     assert.equal(redcube.manifest.family_orchestration.human_gates[0].gate_id, 'redcube_operator_review_gate');
     assert.equal(
       redcube.manifest.family_orchestration.resume_contract.session_locator_field,
@@ -1816,9 +1897,8 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
       output.handoff_bundle.domain_manifest_recommendation.family_orchestration.action_graph_ref.ref,
       '/family_orchestration/action_graph',
     );
-    assert.equal(
-      output.handoff_bundle.domain_manifest_recommendation.family_orchestration.action_graph.graph_id,
-      'redcube_frontdoor_product_entry_graph',
+    assertRedcubeActionGraph(
+      output.handoff_bundle.domain_manifest_recommendation.family_orchestration.action_graph,
     );
     assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.family_orchestration.resume_contract.checkpoint_locator_field,
