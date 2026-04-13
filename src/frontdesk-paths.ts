@@ -1,6 +1,7 @@
 export type FrontDeskEndpoints = {
   health: string;
   manifest: string;
+  domain_manifests: string;
   hosted_bundle: string;
   hosted_package: string;
   librechat_package: string;
@@ -38,6 +39,7 @@ export function buildFrontDeskEndpoints(basePath = ''): FrontDeskEndpoints {
   return {
     health: `${apiBase}/health`,
     manifest: `${apiBase}/frontdesk-manifest`,
+    domain_manifests: `${apiBase}/domain-manifests`,
     hosted_bundle: `${apiBase}/hosted-bundle`,
     hosted_package: `${apiBase}/hosted-package`,
     librechat_package: `${apiBase}/librechat-package`,

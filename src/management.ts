@@ -9,6 +9,7 @@ import {
   buildFrontDeskEntryUrl,
   normalizeBasePath,
 } from './frontdesk-paths.ts';
+import { buildDomainManifestCatalog } from './domain-manifest.ts';
 import {
   buildHermesSessionsListArgs,
   inspectHermesRuntime,
@@ -424,6 +425,7 @@ export function buildFrontDeskDashboard(
     ledgerLimit: options.sessionsLimit,
   }).runtime_status;
   const workspaceCatalog = buildWorkspaceCatalog(contracts).workspace_catalog;
+  const domainManifests = buildDomainManifestCatalog(contracts).domain_manifests;
 
   return {
     version: 'g2',
@@ -455,13 +457,14 @@ export function buildFrontDeskDashboard(
       notes: [
         'OPL now exposes a base-path-aware hosted pilot bundle in addition to the local web front-desk pilot.',
         'Workspace registry, managed session ledger, and handoff bundle surfaces are now part of the top-level control room.',
-        'Active workspace bindings may now also freeze a domain-owned manifest_command so family wiring can point at the honest product-entry manifest instead of guessing domain shell capability.',
+        'workspace-catalog keeps manifest_command as non-executing registry state, while domain-manifests resolves the active bound machine-readable product-entry manifests.',
         'The LibreChat-first hosted shell pilot is now landed through the export package, while managed hosted runtime readiness remains a separate follow-up track.',
       ],
     },
       projects,
       workspace,
       workspace_catalog: workspaceCatalog,
+      domain_manifests: domainManifests,
       runtime_status: runtimeStatus,
     },
   };

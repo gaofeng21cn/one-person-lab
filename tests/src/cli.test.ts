@@ -118,6 +118,14 @@ EOF
   };
 }
 
+function shellSingleQuote(value: string) {
+  return `'${value.replace(/'/g, `'\\''`)}'`;
+}
+
+function buildManifestCommand(payload: Record<string, unknown>) {
+  return `${process.execPath} -e "process.stdout.write(process.argv[1])" ${shellSingleQuote(JSON.stringify(payload))}`;
+}
+
 function createFakeLaunchctlFixture() {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-launchctl-fixture-'));
   const stateDir = path.join(fixtureRoot, 'state');
@@ -880,6 +888,8 @@ exit 1
     assert.equal(output.dashboard.front_desk.hosted_web_status, 'librechat_pilot_landed');
     assert.equal(output.dashboard.front_desk.librechat_pilot_package_status, 'landed');
     assert.equal(output.dashboard.projects.length, 3);
+    assert.equal(output.dashboard.domain_manifests.summary.total_projects_count, 2);
+    assert.equal(output.dashboard.domain_manifests.summary.resolved_count, 0);
     assert.equal(output.dashboard.workspace.absolute_path, repoRoot);
     assert.equal(output.dashboard.runtime_status.recent_sessions.sessions.length, 1);
     assert.deepEqual(output.dashboard.front_desk.rollout_board_refs, [
@@ -927,6 +937,7 @@ test('frontdesk-manifest exposes the hosted-friendly OPL shell contract without 
     'return_surface_contract',
   ]);
   assert.equal(output.frontdesk_manifest.endpoints.manifest, '/api/frontdesk-manifest');
+  assert.equal(output.frontdesk_manifest.endpoints.domain_manifests, '/api/domain-manifests');
   assert.equal(output.frontdesk_manifest.endpoints.health, '/api/health');
   assert.equal(output.frontdesk_manifest.endpoints.resume, '/api/resume');
   assert.equal(output.frontdesk_manifest.endpoints.logs, '/api/logs');
@@ -1233,6 +1244,91 @@ test('workspace registry commands bind activate and archive project workspaces w
   }
 });
 
+test('domain-manifests resolves active domain-owned manifest commands while workspace-catalog stays registry-only', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-manifest-state-'));
+  const resolvedManifest = {
+    surface_kind: 'product_entry_manifest',
+    manifest_version: 1,
+    manifest_kind: 'redcube_product_entry_manifest',
+    target_domain_id: 'redcube_ai',
+    formal_entry: {
+      default: 'CLI',
+      supported_protocols: ['MCP'],
+      internal_surface: 'gateway',
+    },
+    workspace_locator: {
+      workspace_root: repoRoot,
+    },
+    recommended_shell: 'direct',
+    runtime: {
+      runtime_owner: 'upstream_hermes_agent',
+    },
+    product_entry_shell: {
+      direct: {
+        command: 'redcube product invoke',
+        surface_kind: 'product_entry',
+      },
+    },
+    shared_handoff: {
+      opl_return_surface: {
+        surface_kind: 'product_entry',
+        target_domain_id: 'redcube_ai',
+      },
+    },
+    notes: [],
+  };
+
+  try {
+    runCli([
+      'workspace-bind',
+      '--project',
+      'redcube',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildManifestCommand(resolvedManifest),
+    ], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+    });
+    runCli([
+      'workspace-bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      "printf 'not-json'",
+    ], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+    });
+
+    const catalogOutput = runCli(['workspace-catalog'], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+    });
+    const redcubeCatalog = catalogOutput.workspace_catalog.projects.find((entry: { project_id: string }) => entry.project_id === 'redcube');
+    assert.equal(redcubeCatalog?.active_binding?.direct_entry?.manifest_command, buildManifestCommand(resolvedManifest));
+
+    const manifestOutput = runCli(['domain-manifests'], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+    });
+    assert.equal(manifestOutput.domain_manifests.summary.total_projects_count, 2);
+    assert.equal(manifestOutput.domain_manifests.summary.manifest_configured_count, 2);
+    assert.equal(manifestOutput.domain_manifests.summary.resolved_count, 1);
+    assert.equal(manifestOutput.domain_manifests.summary.failed_count, 1);
+
+    const redcube = manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) => entry.project_id === 'redcube');
+    const medautoscience = manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) => entry.project_id === 'medautoscience');
+
+    assert.equal(redcube.status, 'resolved');
+    assert.equal(redcube.manifest.recommended_shell, 'direct');
+    assert.equal(redcube.manifest.recommended_command, 'redcube product invoke');
+    assert.equal(medautoscience.status, 'invalid_json');
+    assert.equal(medautoscience.error.code, 'invalid_json');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('handoff-envelope returns a machine-readable family handoff bundle aligned with the active workspace binding', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-handoff-state-'));
 
@@ -1497,6 +1593,7 @@ exit 1
     const dashboardPayload = await dashboardResponse.json();
     assert.equal(dashboardPayload.dashboard.front_desk.local_web_frontdesk_status, 'pilot_landed');
     assert.equal(dashboardPayload.dashboard.projects.length, 3);
+    assert.equal(dashboardPayload.dashboard.domain_manifests.summary.total_projects_count, 2);
 
     const healthResponse = await fetch(`${baseUrl}/api/health`);
     const healthPayload = await healthResponse.json();
@@ -1508,6 +1605,10 @@ exit 1
     const manifestPayload = await manifestResponse.json();
     assert.equal(manifestPayload.frontdesk_manifest.shell_integration_target, 'librechat_first');
     assert.equal(manifestPayload.frontdesk_manifest.endpoints.sessions, '/api/sessions');
+
+    const domainManifestResponse = await fetch(`${baseUrl}/api/domain-manifests`);
+    const domainManifestPayload = await domainManifestResponse.json();
+    assert.equal(domainManifestPayload.domain_manifests.summary.total_projects_count, 2);
 
     const hostedPackageOutput = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-web-hosted-package-'));
     try {

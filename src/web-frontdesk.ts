@@ -15,6 +15,7 @@ import {
   buildRuntimeStatus,
   buildWorkspaceStatus,
 } from './management.ts';
+import { buildDomainManifestCatalog } from './domain-manifest.ts';
 import { buildHostedPilotPackage } from './hosted-pilot-package.ts';
 import { buildLibreChatPilotPackage } from './librechat-pilot-package.ts';
 import {
@@ -116,6 +117,7 @@ type WebFrontDeskStartupPayload = {
     api: {
       health: string;
       frontdesk_manifest: string;
+      domain_manifests: string;
       hosted_bundle: string;
       hosted_package: string;
       librechat_package: string;
@@ -443,6 +445,7 @@ function buildStartupPayload(context: WebFrontDeskContext): WebFrontDeskStartupP
       api: {
         health: endpoints.health,
         frontdesk_manifest: manifest.frontdesk_manifest.endpoints.manifest,
+        domain_manifests: endpoints.domain_manifests,
         hosted_bundle: endpoints.hosted_bundle,
         hosted_package: endpoints.hosted_package,
         librechat_package: endpoints.librechat_package,
@@ -1165,6 +1168,10 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
                   <h3>Managed Session Ledger</h3>
                   <pre class="json-view" id="session-ledger-json">{}</pre>
                 </div>
+                <div class="card">
+                  <h3>Domain Manifests</h3>
+                  <pre class="json-view" id="domain-manifest-json">{}</pre>
+                </div>
               </div>
             </div>
           </section>
@@ -1219,6 +1226,7 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       const workspaceStatusLine = document.getElementById('workspace-status-line');
       const workspaceCatalogJson = document.getElementById('workspace-catalog-json');
       const sessionLedgerJson = document.getElementById('session-ledger-json');
+      const domainManifestJson = document.getElementById('domain-manifest-json');
       const previewButton = document.getElementById('preview-button');
       const askButton = document.getElementById('ask-button');
       const refreshButton = document.getElementById('refresh-button');
@@ -1247,7 +1255,8 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         return '<div class="card-list">' + items.join('') + '</div>';
       }
 
-      function renderProjects(projects) {
+      function renderProjects(projects, domainManifestProjects = []) {
+        const manifestLookup = new Map(domainManifestProjects.map((entry) => [entry.project_id, entry]));
         projectsList.innerHTML = formatList(projects.map((project) => {
           const badges = [
             project.scope,
@@ -1269,12 +1278,27 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
                   : '',
               ].filter(Boolean).join('')
             : '<p><strong>Active Workspace:</strong> none</p>';
+          const manifestEntry = manifestLookup.get(project.project_id);
+          const manifestBlock = !manifestEntry
+            ? ''
+            : manifestEntry.status === 'resolved'
+              ? [
+                  '<p><strong>Manifest Status:</strong> resolved</p>',
+                  manifestEntry.manifest?.recommended_shell
+                    ? '<p><strong>Recommended Shell:</strong> ' + manifestEntry.manifest.recommended_shell + '</p>'
+                    : '',
+                  manifestEntry.manifest?.recommended_command
+                    ? '<p><strong>Recommended Command:</strong> ' + manifestEntry.manifest.recommended_command + '</p>'
+                    : '',
+                ].filter(Boolean).join('')
+              : '<p><strong>Manifest Status:</strong> ' + manifestEntry.status + '</p>';
 
           return '<div class="card">'
             + '<h3>' + project.project + '</h3>'
             + '<p><strong>Project ID:</strong> ' + project.project_id + '</p>'
             + '<p><strong>Owned Workstreams:</strong> ' + (project.owned_workstreams || []).join(', ') + '</p>'
             + bindingBlock
+            + manifestBlock
             + '<div class="badge-row">' + badges + '</div>'
             + '</div>';
         }));
@@ -1361,10 +1385,11 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         metricSessions.textContent = String(dashboard.runtime_status.recent_sessions.sessions.length);
         metricProcesses.textContent = String(dashboard.runtime_status.process_usage.summary.process_count);
         runtimeNote.textContent = dashboard.runtime_status.notes.join(' ');
-        renderProjects(dashboard.projects);
+        renderProjects(dashboard.projects, dashboard.domain_manifests.projects);
         renderWorkspace(dashboard.workspace);
         renderWorkspaceCatalog({ workspace_catalog: dashboard.workspace_catalog });
         renderSessionLedger({ session_ledger: dashboard.runtime_status.managed_session_ledger });
+        renderDomainManifests({ domain_manifests: dashboard.domain_manifests });
       }
 
       function renderAskPayload(payload) {
@@ -1397,6 +1422,10 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
 
       function renderSessionLedger(payload) {
         sessionLedgerJson.textContent = JSON.stringify(payload, null, 2);
+      }
+
+      function renderDomainManifests(payload) {
+        domainManifestJson.textContent = JSON.stringify(payload, null, 2);
       }
 
       function setWorkspaceStatus(message, tone = 'muted') {
@@ -1922,6 +1951,11 @@ async function handleRequest(
 
     if (method === 'GET' && routedPath === '/api/workspace-catalog') {
       writeJson(response, 200, buildWorkspaceCatalog(context.contracts));
+      return;
+    }
+
+    if (method === 'GET' && routedPath === '/api/domain-manifests') {
+      writeJson(response, 200, buildDomainManifestCatalog(context.contracts));
       return;
     }
 

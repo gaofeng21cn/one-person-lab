@@ -611,6 +611,7 @@ test('frontdesk-manifest stays machine-readable through the built CLI entrypoint
   const payload = parseJsonOutput(result);
   assert.equal(payload.frontdesk_manifest.surface_id, 'opl_hosted_friendly_frontdesk_manifest');
   assert.equal(payload.frontdesk_manifest.shell_integration_target, 'librechat_first');
+  assert.equal(payload.frontdesk_manifest.endpoints.domain_manifests, '/api/domain-manifests');
   assert.equal(payload.frontdesk_manifest.endpoints.health, '/api/health');
   assert.equal(payload.frontdesk_manifest.endpoints.resume, '/api/resume');
 });

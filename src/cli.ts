@@ -29,6 +29,9 @@ import {
   runProductEntrySessions,
 } from './product-entry.ts';
 import {
+  buildDomainManifestCatalog,
+} from './domain-manifest.ts';
+import {
   buildFrontDeskDashboard,
   buildHostedPilotBundle,
   buildFrontDeskManifest,
@@ -1117,6 +1120,16 @@ async function main() {
         'opl dashboard --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
       ],
       handler: (args) => buildFrontDeskDashboard(getContracts(), parseDashboardArgs(args, commandSpecs.dashboard)),
+    },
+    'domain-manifests': {
+      usage: 'opl domain-manifests',
+      summary:
+        'Resolve the active admitted-domain manifest_command bindings into machine-readable product-entry discovery surfaces.',
+      examples: ['opl domain-manifests'],
+      handler: (args) => {
+        assertNoArgs(args, commandSpecs['domain-manifests']);
+        return buildDomainManifestCatalog(getContracts());
+      },
     },
     'frontdesk-manifest': {
       usage: 'opl frontdesk-manifest',
