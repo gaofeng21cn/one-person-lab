@@ -31,6 +31,14 @@ export interface NormalizedDomainManifest {
     next_focus: string[];
     remaining_gaps_count: number | null;
   } | null;
+  operator_loop_surface: {
+    shell_key: string;
+    command: string | null;
+    surface_kind: string | null;
+    summary: string | null;
+    continuation_shell_key: string | null;
+    continuation_command: string | null;
+  } | null;
   recommended_shell: string | null;
   recommended_command: string | null;
   product_entry_shell: Record<string, JsonRecord>;
@@ -121,6 +129,18 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
   const derivedRecommendedCommand = recommendedShell
     ? optionalString(productEntryShell[recommendedShell]?.command)
     : null;
+  const rawOperatorLoopSurface = isRecord(manifest.operator_loop_surface)
+    ? manifest.operator_loop_surface
+    : null;
+  const operatorLoopShellKey = rawOperatorLoopSurface
+    ? requireString(rawOperatorLoopSurface.shell_key, 'operator_loop_surface.shell_key')
+    : null;
+  const explicitOperatorLoopCommand = rawOperatorLoopSurface
+    ? optionalString(rawOperatorLoopSurface.command)
+    : null;
+  const derivedOperatorLoopCommand = operatorLoopShellKey
+    ? optionalString(productEntryShell[operatorLoopShellKey]?.command)
+    : null;
 
   if (recommendedShell && !productEntryShell[recommendedShell]) {
     throw new Error(`recommended_shell points at unknown shell key: ${recommendedShell}`);
@@ -132,6 +152,17 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
     && explicitRecommendedCommand !== derivedRecommendedCommand
   ) {
     throw new Error('recommended_command must match the command declared by recommended_shell.');
+  }
+  if (operatorLoopShellKey && !productEntryShell[operatorLoopShellKey]) {
+    throw new Error(`operator_loop_surface.shell_key points at unknown shell key: ${operatorLoopShellKey}`);
+  }
+  if (
+    operatorLoopShellKey
+    && explicitOperatorLoopCommand
+    && derivedOperatorLoopCommand
+    && explicitOperatorLoopCommand !== derivedOperatorLoopCommand
+  ) {
+    throw new Error('operator_loop_surface.command must match the command declared by operator_loop_surface.shell_key.');
   }
   const remainingGaps = readStringList(manifest.remaining_gaps);
   const rawProductEntryStatus = isRecord(manifest.product_entry_status) ? manifest.product_entry_status : null;
@@ -162,6 +193,18 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
             typeof rawProductEntryStatus.remaining_gaps_count === 'number'
               ? rawProductEntryStatus.remaining_gaps_count
               : remainingGaps.length,
+        }
+      : null,
+    operator_loop_surface: rawOperatorLoopSurface && operatorLoopShellKey
+      ? {
+          shell_key: operatorLoopShellKey,
+          command: explicitOperatorLoopCommand ?? derivedOperatorLoopCommand,
+          surface_kind:
+            optionalString(rawOperatorLoopSurface.surface_kind)
+            ?? optionalString(productEntryShell[operatorLoopShellKey]?.surface_kind),
+          summary: optionalString(rawOperatorLoopSurface.summary),
+          continuation_shell_key: optionalString(rawOperatorLoopSurface.continuation_shell_key),
+          continuation_command: optionalString(rawOperatorLoopSurface.continuation_command),
         }
       : null,
     recommended_shell: recommendedShell,

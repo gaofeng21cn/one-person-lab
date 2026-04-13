@@ -1310,6 +1310,26 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
                   manifestEntry.manifest?.recommended_command
                     ? '<p><strong>Recommended Command:</strong> ' + manifestEntry.manifest.recommended_command + '</p>'
                     : '',
+                  manifestEntry.manifest?.operator_loop_surface?.shell_key
+                    ? '<p><strong>Current Operator Loop:</strong> '
+                      + manifestEntry.manifest.operator_loop_surface.shell_key
+                      + '</p>'
+                    : '',
+                  manifestEntry.manifest?.operator_loop_surface?.command
+                    ? '<p><strong>Operator Loop Command:</strong> '
+                      + manifestEntry.manifest.operator_loop_surface.command
+                      + '</p>'
+                    : '',
+                  manifestEntry.manifest?.operator_loop_surface?.summary
+                    ? '<p><strong>Operator Loop Summary:</strong> '
+                      + manifestEntry.manifest.operator_loop_surface.summary
+                      + '</p>'
+                    : '',
+                  manifestEntry.manifest?.operator_loop_surface?.continuation_command
+                    ? '<p><strong>Operator Loop Continue:</strong> '
+                      + manifestEntry.manifest.operator_loop_surface.continuation_command
+                      + '</p>'
+                    : '',
                   manifestEntry.manifest?.product_entry_status?.summary
                     ? '<p><strong>Entry Status:</strong> ' + manifestEntry.manifest.product_entry_status.summary + '</p>'
                     : '',
