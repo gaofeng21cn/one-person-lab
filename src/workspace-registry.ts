@@ -8,6 +8,7 @@ import type { GatewayContracts } from './types.ts';
 
 type DirectEntryLocator = {
   command: string | null;
+  manifest_command: string | null;
   url: string | null;
 };
 
@@ -40,6 +41,7 @@ type WorkspaceRegistryOptions = {
   workspacePath: string;
   label?: string;
   entryCommand?: string;
+  manifestCommand?: string;
   entryUrl?: string;
 };
 
@@ -81,6 +83,7 @@ function readWorkspaceRegistryFile(): WorkspaceRegistryFile {
             : 'inactive',
         direct_entry: {
           command: normalizeOptionalString(binding.direct_entry?.command),
+          manifest_command: normalizeOptionalString(binding.direct_entry?.manifest_command),
           url: normalizeOptionalString(binding.direct_entry?.url),
         },
         created_at: String(binding.created_at),
@@ -167,6 +170,10 @@ function hasDirectEntry(binding: WorkspaceBinding) {
   return Boolean(binding.direct_entry.command || binding.direct_entry.url);
 }
 
+function hasManifest(binding: WorkspaceBinding) {
+  return Boolean(binding.direct_entry.manifest_command);
+}
+
 function buildProjectCatalogEntry(
   projectId: string,
   projectName: string,
@@ -177,6 +184,7 @@ function buildProjectCatalogEntry(
   const archivedCount = projectBindings.filter((binding) => binding.status === 'archived').length;
   const inactiveCount = projectBindings.filter((binding) => binding.status === 'inactive').length;
   const directEntryReadyCount = projectBindings.filter((binding) => binding.status !== 'archived' && hasDirectEntry(binding)).length;
+  const manifestReadyCount = projectBindings.filter((binding) => binding.status !== 'archived' && hasManifest(binding)).length;
   const lastUpdatedAt = projectBindings
     .map((binding) => binding.updated_at)
     .sort()
@@ -194,6 +202,7 @@ function buildProjectCatalogEntry(
       inactive: inactiveCount,
       archived: archivedCount,
       direct_entry_ready: directEntryReadyCount,
+      manifest_ready: manifestReadyCount,
     },
     last_updated_at: lastUpdatedAt,
     available_actions: ['bind', 'activate', 'archive'],
@@ -205,6 +214,7 @@ function buildWorkspaceCatalogSummary(projects: ReturnType<typeof buildProjectCa
     total_projects_count: projects.length,
     active_projects_count: projects.filter((project) => project.active_binding !== null).length,
     direct_entry_ready_projects_count: projects.filter((project) => project.bindings_count.direct_entry_ready > 0).length,
+    manifest_ready_projects_count: projects.filter((project) => project.bindings_count.manifest_ready > 0).length,
     total_bindings_count: bindings.length,
     active_bindings_count: bindings.filter((binding) => binding.status === 'active').length,
     archived_bindings_count: bindings.filter((binding) => binding.status === 'archived').length,
@@ -238,6 +248,7 @@ function buildWorkspaceCatalogPayload(
       notes: [
         'Workspace bindings are product-entry level state for OPL and admitted domain project surfaces.',
         'A binding may carry direct-entry locators so OPL can hand off into a domain front desk without inventing one.',
+        'When available, manifest_command points at the domain-owned machine-readable product-entry manifest for that bound workspace.',
       ],
     },
   };
@@ -290,6 +301,7 @@ export function bindWorkspace(
     status: 'inactive' as const,
     direct_entry: {
       command: null,
+      manifest_command: null,
       url: null,
     },
     created_at: timestamp,
@@ -302,6 +314,7 @@ export function bindWorkspace(
   binding.status = 'active';
   binding.direct_entry = {
     command: normalizeOptionalString(options.entryCommand),
+    manifest_command: normalizeOptionalString(options.manifestCommand),
     url: normalizeOptionalString(options.entryUrl),
   };
   binding.updated_at = timestamp;

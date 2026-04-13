@@ -105,6 +105,7 @@ type WorkspaceRegistryCliInput = {
   workspacePath?: string;
   label?: string;
   entryCommand?: string;
+  manifestCommand?: string;
   entryUrl?: string;
 };
 
@@ -629,6 +630,9 @@ function parseWorkspaceRegistryArgs(
       case '--entry-command':
         parsed.entryCommand = value;
         break;
+      case '--manifest-command':
+        parsed.manifestCommand = value;
+        break;
       case '--entry-url':
         parsed.entryUrl = value;
         break;
@@ -817,7 +821,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl frontdesk-hosted-package --output /tmp/opl-hosted-package --public-origin https://opl.example.com --base-path /pilot/opl',
         'opl frontdesk-librechat-package --output /tmp/opl-librechat-pilot --public-origin https://opl.example.com --base-path /pilot/opl',
         'opl frontdesk-service-install --port 8787',
-        'opl workspace-bind --project redcube --path /Users/gaofeng/workspace/redcube-ai --entry-command "redcube-ai frontdesk"',
+        'opl workspace-bind --project redcube --path /Users/gaofeng/workspace/redcube-ai --entry-command "redcube-ai frontdesk" --manifest-command "redcube product manifest --workspace-root /Users/gaofeng/workspace/redcube-ai"',
         'opl handoff-envelope "Prepare a defense-ready slide deck." --preferred-family ppt_deck',
         'opl workspace-status --path /Users/gaofeng/workspace/redcube-ai',
         'opl runtime-status --limit 10',
@@ -1300,12 +1304,12 @@ async function main() {
     },
     'workspace-bind': {
       usage:
-        'opl workspace-bind --project <project_id> --path <workspace_path> [--label <label>] [--entry-command <command>] [--entry-url <url>]',
+        'opl workspace-bind --project <project_id> --path <workspace_path> [--label <label>] [--entry-command <command>] [--manifest-command <command>] [--entry-url <url>]',
       summary:
         'Bind and activate one workspace for an admitted project, optionally freezing its direct-entry locator.',
       examples: [
         'opl workspace-bind --project redcube --path /Users/gaofeng/workspace/redcube-ai',
-        'opl workspace-bind --project redcube --path /Users/gaofeng/workspace/redcube-ai --entry-command "redcube-ai frontdesk" --entry-url http://127.0.0.1:3310/redcube',
+        'opl workspace-bind --project redcube --path /Users/gaofeng/workspace/redcube-ai --entry-command "redcube-ai frontdesk" --manifest-command "redcube product manifest --workspace-root /Users/gaofeng/workspace/redcube-ai" --entry-url http://127.0.0.1:3310/redcube',
       ],
       handler: (args) => {
         const parsed = parseWorkspaceRegistryArgs(args, commandSpecs['workspace-bind']);
@@ -1322,6 +1326,7 @@ async function main() {
           workspacePath: parsed.workspacePath,
           label: parsed.label,
           entryCommand: parsed.entryCommand,
+          manifestCommand: parsed.manifestCommand,
           entryUrl: parsed.entryUrl,
         });
       },

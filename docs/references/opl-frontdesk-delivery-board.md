@@ -59,7 +59,7 @@
 - 已经有了第一版多项目 / 工作区 / 会话 / runtime 观测与可写管理面；
 - `runtime-status` 已能看到 Hermes runtime 健康、最近会话以及 runtime-level 进程资源占用；
 - `session-ledger` 已能提供 OPL-managed 的会话事件、诚实资源样本，以及按 session 聚合后的归因视图；
-- `workspace-bind|activate|archive` 已能把 workspace registry 与 direct-entry locator 作为顶层可写状态管理起来；
+- `workspace-bind|activate|archive` 已能把 workspace registry、direct-entry locator 与可选的 domain-owned `manifest_command` 作为顶层可写状态管理起来；
 - `workspace-catalog` 现在还会输出 project-level binding summary、最近更新时间与可写 action 提示；
 - `handoff-envelope` 已能把顶层 front desk 到 domain direct entry / domain gateway 的最小交接面冻结出来；
 - `dashboard` 已能把 front desk、projects、workspace、workspace registry、session ledger 与 runtime 汇总到一个管理面里。

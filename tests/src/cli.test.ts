@@ -1184,6 +1184,8 @@ test('workspace registry commands bind activate and archive project workspaces w
       'RedCube Main Workspace',
       '--entry-command',
       'redcube-ai frontdesk',
+      '--manifest-command',
+      'redcube product manifest --workspace-root /Users/gaofeng/workspace/redcube-ai',
       '--entry-url',
       'http://127.0.0.1:3310/redcube',
     ], {
@@ -1193,6 +1195,10 @@ test('workspace registry commands bind activate and archive project workspaces w
     assert.equal(bindOutput.workspace_catalog.action, 'bind');
     assert.equal(bindOutput.workspace_catalog.binding.project_id, 'redcube');
     assert.equal(bindOutput.workspace_catalog.binding.direct_entry.command, 'redcube-ai frontdesk');
+    assert.equal(
+      bindOutput.workspace_catalog.binding.direct_entry.manifest_command,
+      'redcube product manifest --workspace-root /Users/gaofeng/workspace/redcube-ai',
+    );
     assert.equal(bindOutput.workspace_catalog.binding.direct_entry.url, 'http://127.0.0.1:3310/redcube');
 
     const catalogOutput = runCli(['workspace-catalog'], {
@@ -1203,10 +1209,12 @@ test('workspace registry commands bind activate and archive project workspaces w
     assert.equal(catalogOutput.workspace_catalog.projects[2].active_binding.workspace_path, repoRoot);
     assert.equal(catalogOutput.workspace_catalog.projects[2].bindings_count.total, 1);
     assert.equal(catalogOutput.workspace_catalog.projects[2].bindings_count.direct_entry_ready, 1);
+    assert.equal(catalogOutput.workspace_catalog.projects[2].bindings_count.manifest_ready, 1);
     assert.equal(catalogOutput.workspace_catalog.projects[2].last_updated_at, bindOutput.workspace_catalog.binding.updated_at);
     assert.deepEqual(catalogOutput.workspace_catalog.projects[2].available_actions, ['bind', 'activate', 'archive']);
     assert.equal(catalogOutput.workspace_catalog.summary.active_projects_count, 1);
     assert.equal(catalogOutput.workspace_catalog.summary.direct_entry_ready_projects_count, 1);
+    assert.equal(catalogOutput.workspace_catalog.summary.manifest_ready_projects_count, 1);
     assert.equal(catalogOutput.workspace_catalog.summary.last_binding_change_at, bindOutput.workspace_catalog.binding.updated_at);
 
     const archiveOutput = runCli([
@@ -1237,6 +1245,8 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
       repoRoot,
       '--entry-command',
       'redcube-ai frontdesk',
+      '--manifest-command',
+      'redcube product manifest --workspace-root /Users/gaofeng/workspace/redcube-ai',
       '--entry-url',
       'http://127.0.0.1:3310/redcube',
     ], {
@@ -1269,6 +1279,10 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     assert.equal(output.handoff_bundle.runtime_session_contract.runtime_substrate, 'external_hermes_kernel');
     assert.equal(output.handoff_bundle.return_surface_contract.opl.resume_command, 'opl resume <session_id>');
     assert.equal(output.handoff_bundle.domain_direct_entry.command, 'redcube-ai frontdesk');
+    assert.equal(
+      output.handoff_bundle.domain_direct_entry.manifest_command,
+      'redcube product manifest --workspace-root /Users/gaofeng/workspace/redcube-ai',
+    );
     assert.equal(output.handoff_bundle.domain_direct_entry.url, 'http://127.0.0.1:3310/redcube');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });

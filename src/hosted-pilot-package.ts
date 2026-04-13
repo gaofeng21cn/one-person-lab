@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -86,6 +87,43 @@ function copyTrackedTree(source: string, destination: string) {
   }
 
   fs.cpSync(source, destination, { recursive: true });
+}
+
+function buildAppSnapshot(projectRoot: string, destination: string) {
+  const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+  const result = spawnSync(
+    npmCommand,
+    ['run', 'build', '--', '--outDir', destination],
+    {
+      cwd: projectRoot,
+      encoding: 'utf8',
+      env: process.env,
+    },
+  );
+
+  if ((result.status ?? 1) !== 0) {
+    throw new GatewayContractError(
+      'build_command_failed',
+      'Failed to build a runnable OPL app snapshot while exporting the hosted pilot package.',
+      {
+        command: [npmCommand, 'run', 'build', '--', '--outDir', destination],
+        cwd: projectRoot,
+        stdout: result.stdout ?? '',
+        stderr: result.stderr ?? '',
+      },
+    );
+  }
+
+  const cliEntrypoint = path.join(destination, 'cli.js');
+  if (!fs.existsSync(cliEntrypoint)) {
+    throw new GatewayContractError(
+      'contract_file_missing',
+      'Hosted pilot package build completed without emitting dist/cli.js.',
+      {
+        source: cliEntrypoint,
+      },
+    );
+  }
 }
 
 function writeExecutableFile(targetPath: string, contents: string) {
@@ -282,7 +320,7 @@ export function buildHostedPilotPackage(
   ensureDirectory(caddyDir);
 
   const projectRoot = resolveProjectRoot();
-  copyTrackedTree(path.join(projectRoot, 'dist'), appDist);
+  buildAppSnapshot(projectRoot, appDist);
   copyTrackedTree(path.join(projectRoot, 'contracts'), appContracts);
   fs.copyFileSync(path.join(projectRoot, 'package.json'), packageJsonPath);
 

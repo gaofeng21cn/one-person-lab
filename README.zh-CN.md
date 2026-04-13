@@ -250,7 +250,7 @@
 - `opl "<request...>"` 现在已经成为自然语言 quick ask 的快捷路径
 - `opl doctor`、`opl ask`、`opl chat`、`opl resume`、`opl sessions`、`opl logs`、`opl repair-hermes-gateway`、`opl frontdesk-manifest`、`opl frontdesk-hosted-bundle`、`opl frontdesk-hosted-package`、`opl frontdesk-librechat-package`、`opl session-ledger`、`opl handoff-envelope` 以及 `frontdesk-service-*` 现在共同构成显式的产品入口与 runtime 运维命令面
 - `opl frontdesk-manifest`、`opl frontdesk-hosted-bundle`、`opl frontdesk-hosted-package` 与 `opl frontdesk-librechat-package`，现在把 hosted-friendly shell contract、hosted-ready bundle surface、可自托管的 frontdesk package，以及真实的 LibreChat-first hosted shell pilot package 一并冻结下来，同时不夸大 managed hosted runtime readiness
-- `opl projects`、`opl workspace-status`、`opl workspace-catalog`、`opl workspace-bind|activate|archive`、`opl runtime-status`、`opl session-ledger`、`opl dashboard` 现在补上了可写的顶层管理面，用来观察并管理项目、工作区、会话、handoff 与 runtime
+- `opl projects`、`opl workspace-status`、`opl workspace-catalog`、`opl workspace-bind|activate|archive`、`opl runtime-status`、`opl session-ledger`、`opl dashboard` 现在补上了可写的顶层管理面，用来观察并管理项目、工作区、会话、handoff 与 runtime；workspace binding 现在还可以冻结 domain-owned 的 `manifest_command`，让 family wiring 指向诚实的产品入口 manifest，而不是猜测 domain shell 能力
 - `opl web` 现在补上了本地 web front desk pilot，可以直接从浏览器进入 OPL、做 quick ask、绑定 workspace、查看 managed session ledger、导出可自托管的 hosted pilot package，并消费 hosted-friendly `health / manifest / hosted-bundle / hosted-package / librechat-package / sessions / resume / logs / handoff-envelope` 界面
 - `opl frontdesk-service-install|status|start|stop|open|uninstall` 现在又补上了基于 launchd 的 service-safe 本地包装层，让 OPL 的浏览器入口不再只能靠手动挂着终端
 - 用户在本机上不再必须先进入 `Codex`，才能触达顶层 `OPL` surface
@@ -309,6 +309,7 @@
 - `opl workspace-catalog`
   - 查看 `OPL` 与 admitted domain 项目面的 file-backed workspace registry
 - `opl workspace-bind|activate|archive`
+  - binding 现在还可携带 routed domain workspace 对应的 `manifest_command`
   - 管理项目 workspace 绑定与可选 direct-entry locator，让顶层 handoff 保持机器可读且不编故事
 - `opl runtime-status`
   - 输出 Hermes runtime 健康、最近会话与 runtime-level 进程资源占用

@@ -72,6 +72,8 @@ type WorkspaceRegistryBody = Partial<{
   label: string;
   entryCommand: string;
   entry_command: string;
+  manifestCommand: string;
+  manifest_command: string;
   entryUrl: string;
   entry_url: string;
 }>;
@@ -323,6 +325,8 @@ function normalizeWorkspaceRegistryInput(body: WorkspaceRegistryBody) {
     label: normalizeOptionalString(body.label),
     entryCommand:
       normalizeOptionalString(body.entryCommand) ?? normalizeOptionalString(body.entry_command),
+    manifestCommand:
+      normalizeOptionalString(body.manifestCommand) ?? normalizeOptionalString(body.manifest_command),
     entryUrl: normalizeOptionalString(body.entryUrl) ?? normalizeOptionalString(body.entry_url),
   };
 }
@@ -1119,6 +1123,10 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
                     <input id="workspace-entry-command" name="workspace-entry-command" placeholder="Optional command" />
                   </label>
                   <label style="grid-column: 1 / -1;">
+                    Manifest Command
+                    <input id="workspace-manifest-command" name="workspace-manifest-command" placeholder="Optional product-entry manifest command" />
+                  </label>
+                  <label style="grid-column: 1 / -1;">
                     Direct Entry URL
                     <input id="workspace-entry-url" name="workspace-entry-url" placeholder="Optional URL" />
                   </label>
@@ -1206,6 +1214,7 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       const workspacePathInput = document.getElementById('workspace-path');
       const workspaceLabelInput = document.getElementById('workspace-label');
       const workspaceEntryCommandInput = document.getElementById('workspace-entry-command');
+      const workspaceManifestCommandInput = document.getElementById('workspace-manifest-command');
       const workspaceEntryUrlInput = document.getElementById('workspace-entry-url');
       const workspaceStatusLine = document.getElementById('workspace-status-line');
       const workspaceCatalogJson = document.getElementById('workspace-catalog-json');
@@ -1251,6 +1260,9 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
                 activeBinding.label ? '<p><strong>Binding Label:</strong> ' + activeBinding.label + '</p>' : '',
                 activeBinding.direct_entry?.command
                   ? '<p><strong>Direct Entry Command:</strong> ' + activeBinding.direct_entry.command + '</p>'
+                  : '',
+                activeBinding.direct_entry?.manifest_command
+                  ? '<p><strong>Manifest Command:</strong> ' + activeBinding.direct_entry.manifest_command + '</p>'
                   : '',
                 activeBinding.direct_entry?.url
                   ? '<p><strong>Direct Entry URL:</strong> ' + activeBinding.direct_entry.url + '</p>'
@@ -1660,6 +1672,7 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
               workspace_path: workspacePath,
               label: workspaceLabelInput.value,
               entry_command: workspaceEntryCommandInput.value,
+              manifest_command: workspaceManifestCommandInput.value,
               entry_url: workspaceEntryUrlInput.value,
             }),
           });

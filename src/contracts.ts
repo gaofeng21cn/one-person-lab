@@ -17,6 +17,7 @@ type ErrorCode =
   | 'contract_file_missing'
   | 'contract_json_invalid'
   | 'contract_shape_invalid'
+  | 'build_command_failed'
   | 'workstream_not_found'
   | 'domain_not_found'
   | 'surface_not_found'
@@ -59,6 +60,7 @@ function defaultExitCode(code: ErrorCode): number {
     case 'contract_file_missing':
     case 'contract_json_invalid':
     case 'contract_shape_invalid':
+    case 'build_command_failed':
       return 3;
     case 'workstream_not_found':
     case 'domain_not_found':
