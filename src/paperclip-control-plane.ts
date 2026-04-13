@@ -1,11 +1,14 @@
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
 import { GatewayContractError } from './contracts.ts';
+import { buildDomainManifestCatalog } from './domain-manifest.ts';
 import { ensureFrontDeskStateDir, resolveFrontDeskStatePaths } from './frontdesk-state.ts';
 import { buildFrontDeskEndpoints } from './frontdesk-paths.ts';
 import { buildProductEntryHandoffEnvelope, type ProductEntryCliInput } from './product-entry.ts';
+import { buildSessionLedger } from './session-ledger.ts';
 import type { GatewayContracts } from './types.ts';
 
 const PAPERCLIP_EXECUTION_WORKSPACE_PREFERENCES = [
@@ -58,14 +61,56 @@ export type PaperclipControlPlaneSummary = {
   readiness: 'not_configured' | 'partial' | 'configured';
   state_dir: string;
   config_file: string;
+  projection_registry_file: string;
   connection: PaperclipConnectionSummary;
   summary: {
     available_projects: string[];
     project_bindings_count: number;
     bound_projects: string[];
+    tracked_projections_count: number;
+    tracked_task_projections_count: number;
+    tracked_gate_projections_count: number;
+    last_projection_at: string | null;
+    last_sync_at: string | null;
   };
   project_bindings: PaperclipProjectBinding[];
+  tracked_projections: Array<{
+    projection_id: string;
+    projection_kind: 'task' | 'gate';
+    target_project_id: string;
+    company_id: string;
+    issue_id: string;
+    approval_id: string | null;
+    workspace_path: string | null;
+    created_at: string;
+    last_sync_at: string | null;
+    sync_count: number;
+  }>;
   notes: string[];
+};
+
+export type PaperclipTrackedProjection = {
+  projection_id: string;
+  projection_kind: 'task' | 'gate';
+  target_project_id: string;
+  company_id: string;
+  issue_id: string;
+  approval_id: string | null;
+  goal: string;
+  preferred_family: string | null;
+  workspace_path: string | null;
+  handoff_bundle: Record<string, unknown>;
+  family_human_gate: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+  last_sync_at: string | null;
+  last_sync_fingerprint: string | null;
+  sync_count: number;
+};
+
+type PaperclipProjectionRegistryFile = {
+  version: 'g2';
+  projections: PaperclipTrackedProjection[];
 };
 
 export type PaperclipConfigOptions = {
@@ -92,6 +137,18 @@ export type PaperclipGateOptions = {
   title?: string;
   gateKind?: string;
   decisionOptions?: string[];
+};
+
+export type PaperclipBootstrapOptions = {
+  basePath?: string;
+};
+
+export type PaperclipSyncOptions = {
+  issueId?: string;
+  projectId?: string;
+  workspacePath?: string;
+  sessionsLimit?: number;
+  force?: boolean;
 };
 
 type PaperclipRequestConfig = {
@@ -231,6 +288,141 @@ function writePaperclipControlPlaneFile(payload: PaperclipControlPlaneFile) {
   fs.writeFileSync(paths.paperclip_control_plane_file, `${JSON.stringify(payload, null, 2)}\n`);
 }
 
+function requireProjectionString(value: unknown, field: string) {
+  const text = typeof value === 'string' ? normalizeOptionalString(value) : null;
+  if (!text) {
+    throw new Error(`Invalid Paperclip projection registry entry: missing ${field}.`);
+  }
+  return text;
+}
+
+function requireProjectionRecord(value: unknown, field: string) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error(`Invalid Paperclip projection registry entry: ${field} must be an object.`);
+  }
+  return value as Record<string, unknown>;
+}
+
+function readPaperclipProjectionRegistryFile(): PaperclipProjectionRegistryFile {
+  const paths = resolveFrontDeskStatePaths();
+  if (!fs.existsSync(paths.paperclip_projection_registry_file)) {
+    return {
+      version: 'g2',
+      projections: [],
+    };
+  }
+
+  try {
+    const parsed = JSON.parse(
+      fs.readFileSync(paths.paperclip_projection_registry_file, 'utf8'),
+    ) as Partial<PaperclipProjectionRegistryFile>;
+
+    if (parsed.version !== 'g2' || !Array.isArray(parsed.projections)) {
+      throw new Error('Invalid Paperclip projection registry shape.');
+    }
+
+    return {
+      version: 'g2',
+      projections: parsed.projections.map((projection) => {
+        if (projection.projection_kind !== 'task' && projection.projection_kind !== 'gate') {
+          throw new Error('Invalid Paperclip projection registry entry: unsupported projection_kind.');
+        }
+        if (
+          typeof projection.sync_count !== 'number'
+          || !Number.isInteger(projection.sync_count)
+          || projection.sync_count < 0
+        ) {
+          throw new Error('Invalid Paperclip projection registry entry: sync_count must be a non-negative integer.');
+        }
+
+        return {
+          projection_id: requireProjectionString(projection.projection_id, 'projection_id'),
+          projection_kind: projection.projection_kind,
+          target_project_id: requireProjectionString(projection.target_project_id, 'target_project_id'),
+          company_id: requireProjectionString(projection.company_id, 'company_id'),
+          issue_id: requireProjectionString(projection.issue_id, 'issue_id'),
+          approval_id: normalizeOptionalString(projection.approval_id),
+          goal: requireProjectionString(projection.goal, 'goal'),
+          preferred_family: normalizeOptionalString(projection.preferred_family),
+          workspace_path: normalizeOptionalString(projection.workspace_path),
+          handoff_bundle: requireProjectionRecord(projection.handoff_bundle, 'handoff_bundle'),
+          family_human_gate:
+            projection.family_human_gate === null || projection.family_human_gate === undefined
+              ? null
+              : requireProjectionRecord(projection.family_human_gate, 'family_human_gate'),
+          created_at: requireProjectionString(projection.created_at, 'created_at'),
+          updated_at: requireProjectionString(projection.updated_at, 'updated_at'),
+          last_sync_at: normalizeOptionalString(projection.last_sync_at),
+          last_sync_fingerprint: normalizeOptionalString(projection.last_sync_fingerprint),
+          sync_count: projection.sync_count,
+        };
+      }),
+    };
+  } catch (error) {
+    throw new GatewayContractError(
+      'contract_shape_invalid',
+      'Existing Paperclip projection registry is invalid JSON or has an invalid shape.',
+      {
+        file: paths.paperclip_projection_registry_file,
+        cause:
+          error instanceof Error ? error.message : 'Unknown Paperclip projection registry parse failure.',
+      },
+    );
+  }
+}
+
+function writePaperclipProjectionRegistryFile(payload: PaperclipProjectionRegistryFile) {
+  const paths = ensureFrontDeskStateDir();
+  fs.writeFileSync(paths.paperclip_projection_registry_file, `${JSON.stringify(payload, null, 2)}\n`);
+}
+
+function recordTrackedProjection(
+  input: Omit<
+    PaperclipTrackedProjection,
+    'projection_id' | 'created_at' | 'updated_at' | 'last_sync_at' | 'last_sync_fingerprint' | 'sync_count'
+  >,
+) {
+  const registry = readPaperclipProjectionRegistryFile();
+  const timestamp = nowIso();
+  const projection: PaperclipTrackedProjection = {
+    projection_id: `paperclip_projection_${randomUUID()}`,
+    projection_kind: input.projection_kind,
+    target_project_id: input.target_project_id,
+    company_id: input.company_id,
+    issue_id: input.issue_id,
+    approval_id: input.approval_id,
+    goal: input.goal,
+    preferred_family: input.preferred_family,
+    workspace_path: input.workspace_path,
+    handoff_bundle: input.handoff_bundle,
+    family_human_gate: input.family_human_gate,
+    created_at: timestamp,
+    updated_at: timestamp,
+    last_sync_at: null,
+    last_sync_fingerprint: null,
+    sync_count: 0,
+  };
+
+  registry.projections.unshift(projection);
+  writePaperclipProjectionRegistryFile(registry);
+  return projection;
+}
+
+function buildTrackedProjectionSurface(projection: PaperclipTrackedProjection) {
+  return {
+    projection_id: projection.projection_id,
+    projection_kind: projection.projection_kind,
+    target_project_id: projection.target_project_id,
+    company_id: projection.company_id,
+    issue_id: projection.issue_id,
+    approval_id: projection.approval_id,
+    workspace_path: projection.workspace_path,
+    created_at: projection.created_at,
+    last_sync_at: projection.last_sync_at,
+    sync_count: projection.sync_count,
+  };
+}
+
 function buildConnectionSummary(file: PaperclipControlPlaneFile): PaperclipConnectionSummary {
   const headerEnv = file.config.auth_header_env;
   const cookieEnv = file.config.cookie_env;
@@ -266,6 +458,7 @@ export function buildPaperclipControlPlaneSummary(
   contracts: GatewayContracts,
 ): PaperclipControlPlaneSummary {
   const file = readPaperclipControlPlaneFile();
+  const projectionRegistry = readPaperclipProjectionRegistryFile();
   const paths = resolveFrontDeskStatePaths();
   const connection = buildConnectionSummary(file);
 
@@ -274,17 +467,28 @@ export function buildPaperclipControlPlaneSummary(
     readiness: computeReadiness(connection),
     state_dir: paths.state_dir,
     config_file: paths.paperclip_control_plane_file,
+    projection_registry_file: paths.paperclip_projection_registry_file,
     connection,
     summary: {
       available_projects: allowedProjects(contracts).map((project) => project.project_id),
       project_bindings_count: file.project_bindings.length,
       bound_projects: file.project_bindings.map((binding) => binding.project_id),
+      tracked_projections_count: projectionRegistry.projections.length,
+      tracked_task_projections_count: projectionRegistry.projections.filter((entry) => entry.projection_kind === 'task').length,
+      tracked_gate_projections_count: projectionRegistry.projections.filter((entry) => entry.projection_kind === 'gate').length,
+      last_projection_at: projectionRegistry.projections[0]?.created_at ?? null,
+      last_sync_at:
+        projectionRegistry.projections
+          .map((entry) => entry.last_sync_at)
+          .find((entry): entry is string => Boolean(entry)) ?? null,
     },
     project_bindings: file.project_bindings,
+    tracked_projections: projectionRegistry.projections.map(buildTrackedProjectionSurface),
     notes: [
       'Paperclip remains a downstream external control plane; OPL keeps routing truth, handoff truth, and top-level gateway ownership.',
       'Project bindings map admitted OPL project surfaces onto existing Paperclip companies/projects/workspaces so OPL can open tasks without inventing another control plane.',
       'Human gates are projected through the family-human-gate contract and request_board_approval approvals instead of bypassing domain runtime truth.',
+      'Tracked Paperclip projections stay in a repo-local OPL registry so sync automation can update audit comments without moving runtime ownership out of OPL and the domains.',
     ],
   };
 }
@@ -494,6 +698,247 @@ function truncateTitle(value: string, prefix = '') {
   return normalized.length > 120 ? `${normalized.slice(0, 117)}...` : normalized;
 }
 
+function buildWorkspaceSnapshot(workspacePath?: string | null) {
+  const normalizedPath = normalizeOptionalString(workspacePath);
+  if (!normalizedPath) {
+    return {
+      status: 'not_provided' as const,
+      workspace_path: null,
+      git: null,
+    };
+  }
+
+  const absolutePath = path.resolve(normalizedPath);
+  if (!fs.existsSync(absolutePath)) {
+    return {
+      status: 'missing' as const,
+      workspace_path: absolutePath,
+      git: null,
+    };
+  }
+
+  const statusResult = spawnSync('git', ['-C', absolutePath, 'status', '--short', '--branch'], {
+    encoding: 'utf8',
+    env: process.env,
+  });
+  const lines = statusResult.status === 0
+    ? (statusResult.stdout ?? '').split(/\r?\n/).map((line) => line.trimEnd()).filter(Boolean)
+    : [];
+  const statusLine = lines[0] ?? null;
+  const changedLines = statusLine ? lines.slice(1) : lines;
+  const branchMatch = statusLine?.match(/^##\s+([^\s.]+)(?:\.\.\.([^\s]+))?(?:\s+\[(.+)\])?$/);
+
+  return {
+    status: 'ready' as const,
+    workspace_path: absolutePath,
+    git: {
+      inside_work_tree: statusResult.status === 0,
+      branch: branchMatch?.[1] ?? null,
+      upstream: branchMatch?.[2] ?? null,
+      upstream_state: branchMatch?.[3] ?? null,
+      is_clean: changedLines.length === 0,
+      changed_count: changedLines.length,
+    },
+  };
+}
+
+function buildDomainManifestSnapshot(contracts: GatewayContracts, targetProjectId: string) {
+  const manifestCatalog = buildDomainManifestCatalog(contracts);
+  const project = manifestCatalog.domain_manifests.projects.find((entry) => entry.project_id === targetProjectId);
+  if (!project) {
+    return {
+      domain_manifest_status: 'not_bound',
+      domain_manifest: null,
+    };
+  }
+
+  return {
+    domain_manifest_status: project.status,
+    domain_manifest: {
+      project_id: project.project_id,
+      status: project.status,
+      workspace_path: project.workspace_path,
+      recommended_command: project.manifest?.recommended_command ?? null,
+      frontdesk_surface: project.manifest?.frontdesk_surface ?? null,
+      operator_loop_surface: project.manifest?.operator_loop_surface ?? null,
+      product_entry_quickstart: project.manifest?.product_entry_quickstart ?? null,
+    },
+  };
+}
+
+function buildRelatedSessionSnapshot(
+  targetProjectId: string,
+  workspacePath: string | null,
+  limit = 5,
+) {
+  const sessionLedger = buildSessionLedger(limit);
+  const normalizedWorkspacePath = workspacePath ? path.resolve(workspacePath) : null;
+  const relatedSessions = sessionLedger.session_ledger.sessions.filter((session) => {
+    const domainMatches = session.domain_id === targetProjectId;
+    if (!domainMatches) {
+      return false;
+    }
+
+    if (!normalizedWorkspacePath) {
+      return true;
+    }
+
+    return session.workspace_locator?.absolute_path === normalizedWorkspacePath;
+  });
+
+  return {
+    related_session_aggregate_count: relatedSessions.length,
+    related_sessions: relatedSessions,
+  };
+}
+
+function buildProjectionSyncSnapshot(
+  contracts: GatewayContracts,
+  projection: PaperclipTrackedProjection,
+  options: PaperclipSyncOptions = {},
+) {
+  const workspaceStatus = buildWorkspaceSnapshot(projection.workspace_path ?? options.workspacePath ?? null);
+  const manifestSnapshot = buildDomainManifestSnapshot(contracts, projection.target_project_id);
+  const relatedSessionSnapshot = buildRelatedSessionSnapshot(
+    projection.target_project_id,
+    workspaceStatus.workspace_path,
+    options.sessionsLimit ?? 5,
+  );
+
+  return {
+    synced_at: nowIso(),
+    projection: {
+      projection_id: projection.projection_id,
+      projection_kind: projection.projection_kind,
+      target_project_id: projection.target_project_id,
+      company_id: projection.company_id,
+      issue_id: projection.issue_id,
+      approval_id: projection.approval_id,
+      goal: projection.goal,
+      preferred_family: projection.preferred_family,
+    },
+    workspace_path: workspaceStatus.workspace_path,
+    workspace_status: workspaceStatus,
+    ...manifestSnapshot,
+    ...relatedSessionSnapshot,
+    handoff_bundle: projection.handoff_bundle,
+    family_human_gate: projection.family_human_gate,
+  };
+}
+
+function buildSyncFingerprint(snapshot: Record<string, unknown>) {
+  const { synced_at: _syncedAt, ...stableSnapshot } = snapshot;
+  return createHash('sha256').update(JSON.stringify(stableSnapshot)).digest('hex');
+}
+
+function buildSyncCommentBody(snapshot: ReturnType<typeof buildProjectionSyncSnapshot>) {
+  return [
+    '# OPL Sync Update',
+    '',
+    `- projection_kind: ${snapshot.projection.projection_kind}`,
+    `- target_project_id: ${snapshot.projection.target_project_id}`,
+    `- issue_id: ${snapshot.projection.issue_id}`,
+    `- synced_at: ${snapshot.synced_at}`,
+    '',
+    snapshot.projection.goal,
+    '',
+    '## Snapshot',
+    '```json',
+    JSON.stringify(snapshot, null, 2),
+    '```',
+  ].join('\n');
+}
+
+function buildBootstrapPlaybooks() {
+  return [
+    {
+      playbook_id: 'task_execution_loop',
+      title: 'Open task, execute in the routed domain, then sync audit state back into Paperclip.',
+      steps: [
+        {
+          step_id: 'open_task',
+          command: 'opl paperclip-open-task "<request...>" --workspace-path <path>',
+          summary: 'Freeze the OPL handoff bundle and open the routed Paperclip task in the mapped project company.',
+        },
+        {
+          step_id: 'execute_domain_work',
+          command: null,
+          summary: 'Continue the work inside the routed domain surface while OPL keeps the handoff and session ledger truth.',
+        },
+        {
+          step_id: 'sync_state',
+          command: 'opl paperclip-sync --all',
+          summary: 'Write the latest OPL workspace, manifest, and session state back into Paperclip comments.',
+        },
+      ],
+    },
+    {
+      playbook_id: 'human_gate_loop',
+      title: 'Open a Paperclip approval gate and keep the downstream audit thread current.',
+      steps: [
+        {
+          step_id: 'open_gate',
+          command: 'opl paperclip-open-gate "<request...>" --workspace-path <path>',
+          summary: 'Project the family-human-gate contract into the Paperclip control company.',
+        },
+        {
+          step_id: 'sync_state',
+          command: 'opl paperclip-sync --all',
+          summary: 'Refresh the downstream issue thread with current OPL handoff, manifest, and related session state.',
+        },
+        {
+          step_id: 'approve_or_request_changes',
+          command: null,
+          summary: 'Let humans decide in Paperclip while OPL and the domains keep runtime and object truth ownership.',
+        },
+      ],
+    },
+  ];
+}
+
+export function buildPaperclipBootstrap(
+  contracts: GatewayContracts,
+  options: PaperclipBootstrapOptions = {},
+) {
+  const summary = buildPaperclipControlPlaneSummary(contracts);
+  const endpoints = buildFrontDeskEndpoints(options.basePath);
+
+  return {
+    controlPlane: summary,
+    bootstrap: {
+      surface_id: 'opl_paperclip_operator_bootstrap',
+      readiness: summary.readiness,
+      preflight: {
+        base_url_configured: Boolean(summary.connection.base_url),
+        control_company_configured: Boolean(summary.connection.control_company_id),
+        auth_declared: Boolean(summary.connection.auth.header_env || summary.connection.auth.cookie_env),
+        auth_available: summary.connection.auth.header_present || summary.connection.auth.cookie_present,
+        bound_projects_count: summary.summary.project_bindings_count,
+        ready_for_task_projection:
+          summary.readiness === 'configured' && summary.summary.project_bindings_count > 0,
+        ready_for_gate_projection:
+          summary.readiness === 'configured' && Boolean(summary.connection.control_company_id),
+      },
+      bound_projects: summary.project_bindings,
+      operator_playbooks: buildBootstrapPlaybooks(),
+      automation_surfaces: {
+        status_command: 'opl paperclip-status',
+        sync_command: 'opl paperclip-sync --all',
+        web: {
+          status: endpoints.paperclip_control_plane,
+          bootstrap: endpoints.paperclip_bootstrap,
+          sync: endpoints.paperclip_sync,
+        },
+      },
+      docs_ref: 'docs/references/paperclip-control-plane-operator-guide.md',
+      notes: [
+        'Use this bootstrap surface to set up the existing downstream Paperclip workspace instead of building another control plane.',
+        'The operating loops keep OPL as the gateway and audit truth while Paperclip remains the downstream issue / approval UI.',
+      ],
+    },
+  };
+}
+
 export async function openPaperclipTask(
   input: ProductEntryCliInput,
   contracts: GatewayContracts,
@@ -534,13 +979,38 @@ export async function openPaperclipTask(
       projectWorkspaceId: binding.project_workspace_id,
       executionWorkspacePreference: binding.execution_workspace_preference,
     },
-  );
+  ) as Record<string, unknown>;
+
+  const issueId = typeof issue.id === 'string' ? issue.id : null;
+  if (!issueId) {
+    throw new GatewayContractError(
+      'paperclip_request_failed',
+      'Paperclip issue creation did not return a stable issue id.',
+      {
+        response: issue,
+      },
+    );
+  }
+
+  const trackedProjection = recordTrackedProjection({
+    projection_kind: 'task',
+    target_project_id: targetProjectId,
+    company_id: binding.company_id,
+    issue_id: issueId,
+    approval_id: null,
+    goal: input.goal,
+    preferred_family: input.preferredFamily ?? null,
+    workspace_path: normalizeOptionalString(input.workspacePath),
+    handoff_bundle: handoffBundle,
+    family_human_gate: null,
+  });
 
   return {
-    controlPlane: summary,
+    controlPlane: buildPaperclipControlPlaneSummary(contracts),
     projectBinding: binding,
     handoffBundle,
     issue,
+    trackedProjection,
   };
 }
 
@@ -643,13 +1113,119 @@ export async function openPaperclipGate(
       },
       issueIds: [issueId],
     },
-  );
+  ) as Record<string, unknown>;
+
+  const trackedProjection = recordTrackedProjection({
+    projection_kind: 'gate',
+    target_project_id: targetProjectId,
+    company_id: summary.connection.control_company_id,
+    issue_id: issueId,
+    approval_id: typeof approval.id === 'string' ? approval.id : null,
+    goal: input.goal,
+    preferred_family: input.preferredFamily ?? null,
+    workspace_path: normalizeOptionalString(input.workspacePath),
+    handoff_bundle: handoffBundle,
+    family_human_gate: familyHumanGate,
+  });
 
   return {
-    controlPlane: summary,
+    controlPlane: buildPaperclipControlPlaneSummary(contracts),
     handoffBundle,
     familyHumanGate,
     issue,
     approval,
+    trackedProjection,
+  };
+}
+
+export async function syncPaperclipProjections(
+  contracts: GatewayContracts,
+  options: PaperclipSyncOptions = {},
+) {
+  const initialSummary = buildPaperclipControlPlaneSummary(contracts);
+  const requestConfig = requirePaperclipRequestConfig(initialSummary);
+  const registry = readPaperclipProjectionRegistryFile();
+  const matchedProjections = registry.projections.filter((projection) => {
+    if (options.issueId && projection.issue_id !== options.issueId) {
+      return false;
+    }
+    if (options.projectId && projection.target_project_id !== options.projectId) {
+      return false;
+    }
+    return true;
+  });
+
+  const projectionResults: Array<{
+    projection_id: string;
+    issue_id: string;
+    projection_kind: 'task' | 'gate';
+    sync_status: 'synced' | 'skipped_no_change';
+    snapshot: ReturnType<typeof buildProjectionSyncSnapshot>;
+    comment: Record<string, unknown> | null;
+  }> = [];
+
+  for (const projection of matchedProjections) {
+    const snapshot = buildProjectionSyncSnapshot(contracts, projection, options);
+    const fingerprint = buildSyncFingerprint(snapshot);
+
+    if (!options.force && projection.last_sync_fingerprint === fingerprint) {
+      projectionResults.push({
+        projection_id: projection.projection_id,
+        issue_id: projection.issue_id,
+        projection_kind: projection.projection_kind,
+        sync_status: 'skipped_no_change',
+        snapshot,
+        comment: null,
+      });
+      continue;
+    }
+
+    const comment = await paperclipRequest(
+      requestConfig,
+      `/api/companies/${projection.company_id}/issues/${projection.issue_id}/comments`,
+      {
+        body: buildSyncCommentBody(snapshot),
+      },
+    ) as Record<string, unknown>;
+
+    projection.last_sync_at = snapshot.synced_at;
+    projection.last_sync_fingerprint = fingerprint;
+    projection.sync_count += 1;
+    projection.updated_at = snapshot.synced_at;
+
+    projectionResults.push({
+      projection_id: projection.projection_id,
+      issue_id: projection.issue_id,
+      projection_kind: projection.projection_kind,
+      sync_status: 'synced',
+      snapshot,
+      comment,
+    });
+  }
+
+  writePaperclipProjectionRegistryFile(registry);
+  const finalSummary = buildPaperclipControlPlaneSummary(contracts);
+
+  return {
+    controlPlane: finalSummary,
+    sync: {
+      surface_id: 'opl_paperclip_projection_sync',
+      selector: {
+        issue_id: normalizeOptionalString(options.issueId),
+        project_id: normalizeOptionalString(options.projectId),
+        workspace_path: normalizeOptionalString(options.workspacePath),
+        force: Boolean(options.force),
+      },
+      summary: {
+        matched_projection_count: matchedProjections.length,
+        synced_count: projectionResults.filter((entry) => entry.sync_status === 'synced').length,
+        skipped_count: projectionResults.filter((entry) => entry.sync_status === 'skipped_no_change').length,
+      },
+      projections: projectionResults,
+      notes: [
+        'Sync writes OPL-managed audit snapshots back into downstream Paperclip issue comments.',
+        'Skipped projections mean the derived OPL snapshot fingerprint did not change since the last sync.',
+      ],
+    },
   };
 }

@@ -583,6 +583,8 @@ export function buildPaperclipControlPlaneStatus(
           surface_id: 'opl_paperclip_control_plane_bridge_surface',
           endpoints: {
             control_plane: endpoints.paperclip_control_plane,
+            bootstrap: endpoints.paperclip_bootstrap,
+            sync: endpoints.paperclip_sync,
             dashboard: endpoints.dashboard,
             domain_manifests: endpoints.domain_manifests,
             handoff_envelope: endpoints.handoff_envelope,

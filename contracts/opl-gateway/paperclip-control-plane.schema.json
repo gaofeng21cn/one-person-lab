@@ -49,8 +49,10 @@
             "config",
             "bind",
             "status",
+            "bootstrap",
             "open_task",
-            "open_gate"
+            "open_gate",
+            "sync"
           ]
         },
         "surface_id": {
@@ -123,7 +125,8 @@
           "required": [
             "available_projects",
             "project_bindings_count",
-            "bound_projects"
+            "bound_projects",
+            "tracked_projections_count"
           ],
           "properties": {
             "available_projects": {
@@ -143,6 +146,30 @@
                 "type": "string",
                 "minLength": 1
               }
+            },
+            "tracked_projections_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "tracked_task_projections_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "tracked_gate_projections_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "last_projection_at": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "last_sync_at": {
+              "type": [
+                "string",
+                "null"
+              ]
             }
           }
         }
@@ -179,7 +206,12 @@
           "project_bindings_count": 1,
           "bound_projects": [
             "redcube"
-          ]
+          ],
+          "tracked_projections_count": 1,
+          "tracked_task_projections_count": 1,
+          "tracked_gate_projections_count": 0,
+          "last_projection_at": "2026-04-13T09:00:00.000Z",
+          "last_sync_at": null
         }
       }
     }

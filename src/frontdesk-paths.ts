@@ -15,6 +15,8 @@ export type FrontDeskEndpoints = {
   session_ledger: string;
   dashboard: string;
   paperclip_control_plane: string;
+  paperclip_bootstrap: string;
+  paperclip_sync: string;
   ask: string;
   handoff_envelope: string;
   sessions: string;
@@ -54,6 +56,8 @@ export function buildFrontDeskEndpoints(basePath = ''): FrontDeskEndpoints {
     session_ledger: `${apiBase}/session-ledger`,
     dashboard: `${apiBase}/dashboard`,
     paperclip_control_plane: `${apiBase}/paperclip/control-plane`,
+    paperclip_bootstrap: `${apiBase}/paperclip/control-plane/bootstrap`,
+    paperclip_sync: `${apiBase}/paperclip/control-plane/sync`,
     ask: `${apiBase}/ask`,
     handoff_envelope: `${apiBase}/handoff-envelope`,
     sessions: `${apiBase}/sessions`,
