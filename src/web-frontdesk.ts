@@ -10,6 +10,7 @@ import {
   buildFrontDeskDashboard,
   buildFrontDeskHealth,
   buildFrontDeskManifest,
+  buildFrontDeskStart,
   buildHostedPilotBundle,
   buildPaperclipControlPlaneStatus,
   buildProjectsOverview,
@@ -148,6 +149,7 @@ type WebFrontDeskStartupPayload = {
       runtime_status: string;
       session_ledger: string;
       ask: string;
+      start: string;
       handoff_envelope: string;
       sessions: string;
       resume: string;
@@ -506,6 +508,7 @@ function buildStartupPayload(context: WebFrontDeskContext): WebFrontDeskStartupP
         runtime_status: endpoints.runtime_status,
         session_ledger: endpoints.session_ledger,
         ask: endpoints.ask,
+        start: endpoints.start,
         handoff_envelope: endpoints.handoff_envelope,
         sessions: endpoints.sessions,
         resume: endpoints.resume,
@@ -939,6 +942,46 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         <div class="stack">
           <section class="panel">
             <div class="panel-header">
+              <h2 class="panel-title">Start A Domain Project</h2>
+            </div>
+            <p class="panel-copy">
+              Resolve the exact recommended direct entry mode OPL should open for one admitted domain project, instead of making the caller inspect raw manifests by hand.
+            </p>
+            <div class="panel-body">
+              <form id="start-form">
+                <div class="field-grid">
+                  <label>
+                    Project ID
+                    <input id="start-project" name="start-project" placeholder="redcube" />
+                  </label>
+                  <label>
+                    Mode ID
+                    <input id="start-mode" name="start-mode" placeholder="Optional: open_frontdesk" />
+                  </label>
+                </div>
+                <div class="button-row">
+                  <button class="primary" type="submit" id="start-button">Resolve Start</button>
+                </div>
+              </form>
+              <div class="status-line" id="start-status" aria-live="polite"></div>
+              <div style="height: 12px"></div>
+              <div class="split-grid">
+                <div class="card">
+                  <h3>Start Summary</h3>
+                  <div id="start-summary">No routed start surface selected yet.</div>
+                </div>
+                <div class="card">
+                  <h3>Selected Command</h3>
+                  <div id="start-command">Choose a project and resolve its current start surface.</div>
+                </div>
+              </div>
+              <div style="height: 12px"></div>
+              <pre class="json-view" id="start-json">{}</pre>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-header">
               <h2 class="panel-title">Quick Ask</h2>
             </div>
             <p class="panel-copy">
@@ -1238,6 +1281,12 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       const askSummary = document.getElementById('ask-summary');
       const askBoundary = document.getElementById('ask-boundary');
       const askJson = document.getElementById('ask-json');
+      const startProjectInput = document.getElementById('start-project');
+      const startModeInput = document.getElementById('start-mode');
+      const startStatus = document.getElementById('start-status');
+      const startSummary = document.getElementById('start-summary');
+      const startCommand = document.getElementById('start-command');
+      const startJson = document.getElementById('start-json');
       const projectsList = document.getElementById('projects-list');
       const workspaceCardList = document.getElementById('workspace-card-list');
       const sessionsList = document.getElementById('sessions-list');
@@ -1276,6 +1325,7 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       const domainManifestJson = document.getElementById('domain-manifest-json');
       const previewButton = document.getElementById('preview-button');
       const askButton = document.getElementById('ask-button');
+      const startButton = document.getElementById('start-button');
       const refreshButton = document.getElementById('refresh-button');
       const workspaceBindButton = document.getElementById('workspace-bind-button');
       const workspaceActivateButton = document.getElementById('workspace-activate-button');
@@ -1288,9 +1338,15 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         askStatus.dataset.tone = tone;
       }
 
+      function setStartStatus(message, tone = 'muted') {
+        startStatus.textContent = message;
+        startStatus.dataset.tone = tone;
+      }
+
       function setButtonBusy(isBusy) {
         previewButton.disabled = isBusy;
         askButton.disabled = isBusy;
+        startButton.disabled = isBusy;
         refreshButton.disabled = isBusy;
       }
 
@@ -1451,6 +1507,42 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
                     ? '<p><strong>Preflight Start Command:</strong> <code>'
                       + manifestEntry.manifest.product_entry_preflight.recommended_start_command
                       + '</code></p>'
+                    : '',
+                  manifestEntry.manifest?.product_entry_start?.summary
+                    ? '<p><strong>Start Summary:</strong> '
+                      + manifestEntry.manifest.product_entry_start.summary
+                      + '</p>'
+                    : '',
+                  manifestEntry.manifest?.product_entry_start?.recommended_mode_id
+                    ? '<p><strong>Start Recommended Mode:</strong> <code>'
+                      + manifestEntry.manifest.product_entry_start.recommended_mode_id
+                      + '</code></p>'
+                    : '',
+                  manifestEntry.manifest?.product_entry_start?.resume_surface?.command
+                    ? '<p><strong>Start Resume Command:</strong> <code>'
+                      + manifestEntry.manifest.product_entry_start.resume_surface.command
+                      + '</code></p>'
+                    : '',
+                  Array.isArray(manifestEntry.manifest?.product_entry_start?.human_gate_ids)
+                    && manifestEntry.manifest.product_entry_start.human_gate_ids.length > 0
+                    ? '<p><strong>Start Human Gates:</strong> '
+                      + manifestEntry.manifest.product_entry_start.human_gate_ids
+                        .map((gateId) => '<code>' + String(gateId) + '</code>')
+                        .join(', ')
+                      + '</p>'
+                    : '',
+                  Array.isArray(manifestEntry.manifest?.product_entry_start?.modes)
+                    && manifestEntry.manifest.product_entry_start.modes.length > 0
+                    ? '<div><strong>Start Modes:</strong><ul>'
+                      + manifestEntry.manifest.product_entry_start.modes
+                        .map((mode) => '<li><code>'
+                          + String(mode.mode_id)
+                          + '</code>: '
+                          + String(mode.command || mode.surface_kind || '')
+                          + (mode.summary ? ' - ' + String(mode.summary) : '')
+                          + '</li>')
+                        .join('')
+                      + '</ul></div>'
                     : '',
                   Array.isArray(manifestEntry.manifest?.product_entry_preflight?.blocking_check_ids)
                     && manifestEntry.manifest.product_entry_preflight.blocking_check_ids.length > 0
@@ -1759,6 +1851,35 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         metricSessions.textContent = String(dashboard.runtime_status.recent_sessions.sessions.length);
         metricProcesses.textContent = String(dashboard.runtime_status.process_usage.summary.process_count);
         runtimeNote.textContent = dashboard.runtime_status.notes.join(' ');
+        const recommendedStart = Array.isArray(dashboard.front_desk.recommended_entry_surfaces)
+          ? dashboard.front_desk.recommended_entry_surfaces[0] || null
+          : null;
+        if (recommendedStart) {
+          if (!startProjectInput.value.trim()) {
+            startProjectInput.value = String(recommendedStart.project_id || '');
+          }
+          if (!startModeInput.value.trim() && recommendedStart.product_entry_start?.recommended_mode_id) {
+            startModeInput.value = String(recommendedStart.product_entry_start.recommended_mode_id);
+          }
+          if (startJson.textContent === '{}' || startJson.textContent === '') {
+            startSummary.innerHTML = [
+              '<p><strong>Recommended Project:</strong> ' + String(recommendedStart.project || recommendedStart.project_id) + '</p>',
+              recommendedStart.product_entry_start?.summary
+                ? '<p><strong>Summary:</strong> ' + String(recommendedStart.product_entry_start.summary) + '</p>'
+                : '',
+              recommendedStart.product_entry_start?.recommended_mode_id
+                ? '<p><strong>Recommended Mode:</strong> <code>'
+                  + String(recommendedStart.product_entry_start.recommended_mode_id)
+                  + '</code></p>'
+                : '',
+            ].filter(Boolean).join('');
+            startCommand.innerHTML = recommendedStart.product_entry_start?.modes?.length
+              ? '<p><strong>Available Modes:</strong> '
+                + recommendedStart.product_entry_start.modes.map((mode) => '<code>' + String(mode.mode_id) + '</code>').join(', ')
+                + '</p>'
+              : 'Choose a project and resolve its current start surface.';
+          }
+        }
         renderProjects(dashboard.projects, dashboard.domain_manifests.projects);
         renderWorkspace(dashboard.workspace);
         renderWorkspaceCatalog({ workspace_catalog: dashboard.workspace_catalog });
@@ -1788,6 +1909,41 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
           '<p><strong>Boundary Reason:</strong> ' + entry.boundary.reason + '</p>',
         ].join('');
         askJson.textContent = JSON.stringify(payload, null, 2);
+      }
+
+      function renderStartPayload(payload) {
+        const start = payload.product_entry_start;
+        startSummary.innerHTML = [
+          '<p><strong>Project:</strong> ' + start.project + '</p>',
+          '<p><strong>Target Domain:</strong> ' + start.target_domain_id + '</p>',
+          start.summary ? '<p><strong>Summary:</strong> ' + start.summary + '</p>' : '',
+          start.recommended_mode_id ? '<p><strong>Recommended Mode:</strong> <code>' + start.recommended_mode_id + '</code></p>' : '',
+          Array.isArray(start.human_gate_ids) && start.human_gate_ids.length > 0
+            ? '<p><strong>Human Gates:</strong> ' + start.human_gate_ids.map((gateId) => '<code>' + gateId + '</code>').join(', ') + '</p>'
+            : '',
+        ].filter(Boolean).join('');
+        startCommand.innerHTML = [
+          '<p><strong>Selected Mode:</strong> <code>' + start.selected_mode_id + '</code></p>',
+          start.selected_mode?.command
+            ? '<p><strong>Command:</strong> <code>' + start.selected_mode.command + '</code></p>'
+            : '',
+          start.resume_surface?.command
+            ? '<p><strong>Resume Command:</strong> <code>' + start.resume_surface.command + '</code></p>'
+            : '',
+          Array.isArray(start.available_modes) && start.available_modes.length > 0
+            ? '<div><strong>Available Modes:</strong><ul>'
+              + start.available_modes
+                .map((mode) => '<li><code>'
+                  + String(mode.mode_id)
+                  + '</code>: '
+                  + String(mode.command || mode.surface_kind || '')
+                  + (mode.summary ? ' - ' + String(mode.summary) : '')
+                  + '</li>')
+                .join('')
+              + '</ul></div>'
+            : '',
+        ].filter(Boolean).join('');
+        startJson.textContent = JSON.stringify(payload, null, 2);
       }
 
       function renderWorkspaceCatalog(payload) {
@@ -1854,6 +2010,39 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         renderHealth(await healthResponse.json());
         renderManifest(await manifestResponse.json());
         renderHostedBundle(await hostedBundleResponse.json());
+      }
+
+      async function resolveStartSurface() {
+        const projectId = startProjectInput.value.trim();
+        const modeId = startModeInput.value.trim();
+
+        if (!projectId) {
+          setStartStatus('Start surface requires a project id.', 'warn');
+          return;
+        }
+
+        const params = new URLSearchParams({
+          project: projectId,
+        });
+        if (modeId) {
+          params.set('mode', modeId);
+        }
+
+        setStartStatus('Resolving routed start surface...', 'muted');
+
+        try {
+          const response = await fetch(bootstrap.web_frontdesk.api.start + '?' + params.toString());
+          const payload = await response.json();
+
+          if (!response.ok) {
+            throw new Error(payload.error?.message || 'Start surface request failed.');
+          }
+
+          renderStartPayload(payload);
+          setStartStatus('Start surface resolved.', 'ok');
+        } catch (error) {
+          setStartStatus(error instanceof Error ? error.message : 'Start surface request failed.', 'warn');
+        }
       }
 
       async function exportHostedPackage() {
@@ -2141,6 +2330,11 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       document.getElementById('workspace-form').addEventListener('submit', async (event) => {
         event.preventDefault();
         await submitWorkspaceAction('inspect');
+      });
+
+      document.getElementById('start-form').addEventListener('submit', (event) => {
+        event.preventDefault();
+        void resolveStartSurface();
       });
 
       document.getElementById('resume-form').addEventListener('submit', (event) => {
@@ -2448,6 +2642,18 @@ async function handleRequest(
     if (method === 'POST' && routedPath === '/api/ask') {
       const body = (await readJsonBody(request)) as AskRequestBody;
       writeJson(response, 200, runProductEntryAsk(normalizeAskInput(body), context.contracts));
+      return;
+    }
+
+    if (method === 'GET' && routedPath === '/api/start') {
+      writeJson(
+        response,
+        200,
+        buildFrontDeskStart(context.contracts, {
+          projectId: normalizeOptionalString(url.searchParams.get('project')) ?? '',
+          modeId: normalizeOptionalString(url.searchParams.get('mode')),
+        }),
+      );
       return;
     }
 
