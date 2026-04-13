@@ -23,6 +23,7 @@ import {
   parseHermesStatusOutput,
 } from './runtime-observer.ts';
 import { buildWorkspaceCatalog, getActiveWorkspaceBinding } from './workspace-registry.ts';
+import { buildPaperclipControlPlaneSummary } from './paperclip-control-plane.ts';
 import type { GatewayContracts } from './types.ts';
 
 export interface WorkspaceStatusOptions {
@@ -442,6 +443,7 @@ export function buildFrontDeskDashboard(
   options: DashboardOptions = {},
 ) {
   const endpoints = buildFrontDeskEndpoints(options.basePath);
+  const paperclipControlPlane = buildPaperclipControlPlaneSummary(contracts);
   const projects = buildProjectsOverview(contracts).projects;
   const workspace = buildWorkspaceStatus({ workspacePath: options.workspacePath }).workspace;
   const runtimeStatus = buildRuntimeStatus({
@@ -506,6 +508,10 @@ export function buildFrontDeskDashboard(
         workspace_registry_status: 'landed',
         session_ledger_status: 'landed',
         handoff_bundle_status: 'landed',
+        paperclip_control_plane_status: paperclipControlPlane.readiness,
+        paperclip_control_plane_endpoint: endpoints.paperclip_control_plane,
+        paperclip_bound_projects_count: paperclipControlPlane.summary.project_bindings_count,
+        paperclip_control_company_id: paperclipControlPlane.connection.control_company_id,
         recommended_entry_surfaces_count: recommendedEntrySurfaces.length,
         recommended_entry_surfaces: recommendedEntrySurfaces,
         next_major_target: 'opl_hosted_runtime_hardening',
@@ -519,6 +525,7 @@ export function buildFrontDeskDashboard(
       notes: [
         'OPL now exposes a base-path-aware hosted pilot bundle in addition to the local web front-desk pilot.',
         'Workspace registry, managed session ledger, and handoff bundle surfaces are now part of the top-level control room.',
+        'Paperclip can now sit downstream as an external control plane through a file-backed OPL bridge instead of becoming a replacement runtime.',
         'workspace-catalog keeps manifest_command as non-executing registry state, while domain-manifests resolves the active bound machine-readable product-entry manifests.',
         'Resolved domain manifests now also feed frontdesk surface plus operator-loop actions and recommended shell/command hints back into dashboard and handoff surfaces.',
         'Resolved domain manifests now also surface family-orchestration companion previews so the top-level front desk can show human-gate and resume semantics instead of hiding them in domain docs.',
@@ -530,6 +537,43 @@ export function buildFrontDeskDashboard(
       workspace_catalog: workspaceCatalog,
       domain_manifests: domainManifests,
       runtime_status: runtimeStatus,
+    },
+  };
+}
+
+export function buildPaperclipControlPlaneStatus(
+  contracts: GatewayContracts,
+  options: DashboardOptions = {},
+) {
+  const endpoints = buildFrontDeskEndpoints(options.basePath);
+  const paperclipControlPlane = buildPaperclipControlPlaneSummary(contracts);
+
+  return {
+    version: 'g2',
+    contracts_context: {
+      contracts_dir: contracts.contractsDir,
+      contracts_root_source: contracts.contractsRootSource,
+    },
+    paperclip_control_plane: {
+      action: 'status',
+      ...paperclipControlPlane,
+      gateway: {
+        surface: {
+          surface_id: 'opl_paperclip_control_plane_bridge_surface',
+          endpoints: {
+            control_plane: endpoints.paperclip_control_plane,
+            dashboard: endpoints.dashboard,
+            domain_manifests: endpoints.domain_manifests,
+            handoff_envelope: endpoints.handoff_envelope,
+          },
+          contract_refs: {
+            handoff: 'contracts/opl-gateway/handoff.schema.json',
+            family_human_gate: 'contracts/family-orchestration/family-human-gate.schema.json',
+            governance_audit: 'contracts/opl-gateway/governance-audit.schema.json',
+          },
+        },
+        dashboard: buildFrontDeskDashboard(contracts, options).dashboard,
+      },
     },
   };
 }

@@ -14,6 +14,7 @@ export type FrontDeskEndpoints = {
   runtime_status: string;
   session_ledger: string;
   dashboard: string;
+  paperclip_control_plane: string;
   ask: string;
   handoff_envelope: string;
   sessions: string;
@@ -52,6 +53,7 @@ export function buildFrontDeskEndpoints(basePath = ''): FrontDeskEndpoints {
     runtime_status: `${apiBase}/runtime-status`,
     session_ledger: `${apiBase}/session-ledger`,
     dashboard: `${apiBase}/dashboard`,
+    paperclip_control_plane: `${apiBase}/paperclip/control-plane`,
     ask: `${apiBase}/ask`,
     handoff_envelope: `${apiBase}/handoff-envelope`,
     sessions: `${apiBase}/sessions`,

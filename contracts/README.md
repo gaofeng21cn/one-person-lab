@@ -9,6 +9,7 @@
 当前保留的 repo-tracked machine-readable truth：
 
 - `contracts/opl-gateway/*.json`：冻结的 gateway、admission、acceptance 与 supporting-surface contract
+- `contracts/opl-gateway/paperclip-control-plane.schema.json`：`OPL -> Paperclip` 下游 control-plane bridge 的 machine-readable schema
 - `contracts/opl-gateway/README.md`：这些 JSON contract 的人类可读说明
 - `contracts/family-orchestration/*.schema.json`：跨四仓统一的 family orchestration companion schemas
 - `contracts/family-orchestration/README*.md`：这些 family orchestration schema 的人类可读说明

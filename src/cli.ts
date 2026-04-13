@@ -35,6 +35,7 @@ import {
   buildFrontDeskDashboard,
   buildHostedPilotBundle,
   buildFrontDeskManifest,
+  buildPaperclipControlPlaneStatus,
   buildProjectsOverview,
   buildRuntimeStatus,
   buildWorkspaceStatus,
@@ -49,6 +50,12 @@ import {
   bindWorkspace,
   buildWorkspaceCatalog,
 } from './workspace-registry.ts';
+import {
+  bindPaperclipProject,
+  configurePaperclipControlPlane,
+  openPaperclipGate,
+  openPaperclipTask,
+} from './paperclip-control-plane.ts';
 import { attachWebFrontDeskShutdown, startWebFrontDeskServer } from './web-frontdesk.ts';
 import type {
   GatewayContracts,
@@ -127,6 +134,32 @@ type HostedPilotPackageCliInput = {
   port?: number;
   basePath?: string;
   sessionsLimit?: number;
+};
+
+type PaperclipConfigCliInput = {
+  baseUrl?: string;
+  authHeaderEnv?: string;
+  cookieEnv?: string;
+  controlCompanyId?: string;
+};
+
+type PaperclipBindCliInput = {
+  projectId?: string;
+  companyId?: string;
+  paperclipProjectId?: string;
+  projectWorkspaceId?: string;
+  executionWorkspacePreference?: string;
+};
+
+type PaperclipTaskCliInput = ProductEntryCliInput & {
+  title?: string;
+  priority?: 'critical' | 'high' | 'medium' | 'low';
+};
+
+type PaperclipGateCliInput = ProductEntryCliInput & {
+  title?: string;
+  gateKind?: string;
+  decisionOptions?: string[];
 };
 
 function printJson(payload: unknown, stream: NodeJS.WriteStream = process.stdout) {
@@ -766,6 +799,334 @@ function parseHostedPilotPackageArgs(
   };
 }
 
+function parsePaperclipConfigArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): PaperclipConfigCliInput {
+  const parsed: PaperclipConfigCliInput = {};
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (!token.startsWith('--')) {
+      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
+        token,
+      });
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
+        option: token,
+      });
+    }
+
+    switch (token) {
+      case '--base-url':
+        parsed.baseUrl = value;
+        break;
+      case '--auth-header-env':
+        parsed.authHeaderEnv = value;
+        break;
+      case '--cookie-env':
+        parsed.cookieEnv = value;
+        break;
+      case '--control-company-id':
+        parsed.controlCompanyId = value;
+        break;
+      default:
+        throw buildUsageError(`Unknown option for Paperclip config: ${token}.`, spec, {
+          option: token,
+        });
+    }
+
+    index += 1;
+  }
+
+  return parsed;
+}
+
+function parsePaperclipBindArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): PaperclipBindCliInput {
+  const parsed: PaperclipBindCliInput = {};
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (!token.startsWith('--')) {
+      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
+        token,
+      });
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
+        option: token,
+      });
+    }
+
+    switch (token) {
+      case '--project':
+        parsed.projectId = value;
+        break;
+      case '--company-id':
+        parsed.companyId = value;
+        break;
+      case '--paperclip-project-id':
+        parsed.paperclipProjectId = value;
+        break;
+      case '--project-workspace-id':
+        parsed.projectWorkspaceId = value;
+        break;
+      case '--execution-workspace':
+        parsed.executionWorkspacePreference = value;
+        break;
+      default:
+        throw buildUsageError(`Unknown option for Paperclip bind: ${token}.`, spec, {
+          option: token,
+        });
+    }
+
+    index += 1;
+  }
+
+  return parsed;
+}
+
+function parsePaperclipTaskArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): PaperclipTaskCliInput {
+  let dryRun = false;
+  let explicitGoal: string | undefined;
+  const positionalGoalParts: string[] = [];
+  const parsed: Omit<PaperclipTaskCliInput, 'goal' | 'dryRun'> = {
+    intent: 'create',
+    target: 'deliverable',
+    skills: [],
+  };
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (token === '--dry-run') {
+      dryRun = true;
+      continue;
+    }
+
+    if (!token.startsWith('--')) {
+      positionalGoalParts.push(token);
+      continue;
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
+        option: token,
+      });
+    }
+
+    switch (token) {
+      case '--goal':
+        explicitGoal = value;
+        break;
+      case '--intent':
+        parsed.intent = value;
+        break;
+      case '--target':
+        parsed.target = value;
+        break;
+      case '--preferred-family':
+        parsed.preferredFamily = value;
+        break;
+      case '--request-kind':
+        parsed.requestKind = value;
+        break;
+      case '--model':
+        parsed.model = value;
+        break;
+      case '--provider':
+        parsed.provider = value;
+        break;
+      case '--workspace-path':
+        parsed.workspacePath = value;
+        break;
+      case '--skills':
+        parsed.skills.push(
+          ...value
+            .split(',')
+            .map((entry) => entry.trim())
+            .filter(Boolean),
+        );
+        break;
+      case '--title':
+        parsed.title = value;
+        break;
+      case '--priority':
+        if (!['critical', 'high', 'medium', 'low'].includes(value)) {
+          throw buildUsageError('Unsupported Paperclip task priority.', spec, {
+            option: token,
+            priority: value,
+            allowed_values: ['critical', 'high', 'medium', 'low'],
+          });
+        }
+        parsed.priority = value as PaperclipTaskCliInput['priority'];
+        break;
+      default:
+        throw buildUsageError(`Unknown option for Paperclip task: ${token}.`, spec, {
+          option: token,
+        });
+    }
+
+    index += 1;
+  }
+
+  if (explicitGoal && positionalGoalParts.length > 0) {
+    throw buildUsageError(
+      'Use either a positional request or --goal for the Paperclip task, not both.',
+      spec,
+      {
+        positional_request: positionalGoalParts.join(' '),
+      },
+    );
+  }
+
+  const goal = (explicitGoal ?? positionalGoalParts.join(' ')).trim();
+  if (!goal) {
+    throw buildUsageError(
+      'paperclip-open-task requires a plain-language request, either as positional text or via --goal.',
+      spec,
+      {
+        required: ['<request...> or --goal <text>'],
+      },
+    );
+  }
+
+  return {
+    ...parsed,
+    goal,
+    dryRun,
+  };
+}
+
+function parsePaperclipGateArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): PaperclipGateCliInput {
+  let dryRun = false;
+  let explicitGoal: string | undefined;
+  const positionalGoalParts: string[] = [];
+  const parsed: Omit<PaperclipGateCliInput, 'goal' | 'dryRun'> = {
+    intent: 'create',
+    target: 'deliverable',
+    skills: [],
+  };
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (token === '--dry-run') {
+      dryRun = true;
+      continue;
+    }
+
+    if (!token.startsWith('--')) {
+      positionalGoalParts.push(token);
+      continue;
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
+        option: token,
+      });
+    }
+
+    switch (token) {
+      case '--goal':
+        explicitGoal = value;
+        break;
+      case '--intent':
+        parsed.intent = value;
+        break;
+      case '--target':
+        parsed.target = value;
+        break;
+      case '--preferred-family':
+        parsed.preferredFamily = value;
+        break;
+      case '--request-kind':
+        parsed.requestKind = value;
+        break;
+      case '--model':
+        parsed.model = value;
+        break;
+      case '--provider':
+        parsed.provider = value;
+        break;
+      case '--workspace-path':
+        parsed.workspacePath = value;
+        break;
+      case '--skills':
+        parsed.skills.push(
+          ...value
+            .split(',')
+            .map((entry) => entry.trim())
+            .filter(Boolean),
+        );
+        break;
+      case '--title':
+        parsed.title = value;
+        break;
+      case '--gate-kind':
+        parsed.gateKind = value;
+        break;
+      case '--decision-options':
+        parsed.decisionOptions = value
+          .split(',')
+          .map((entry) => entry.trim())
+          .filter(Boolean);
+        break;
+      default:
+        throw buildUsageError(`Unknown option for Paperclip gate: ${token}.`, spec, {
+          option: token,
+        });
+    }
+
+    index += 1;
+  }
+
+  if (explicitGoal && positionalGoalParts.length > 0) {
+    throw buildUsageError(
+      'Use either a positional request or --goal for the Paperclip gate, not both.',
+      spec,
+      {
+        positional_request: positionalGoalParts.join(' '),
+      },
+    );
+  }
+
+  const goal = (explicitGoal ?? positionalGoalParts.join(' ')).trim();
+  if (!goal) {
+    throw buildUsageError(
+      'paperclip-open-gate requires a plain-language request, either as positional text or via --goal.',
+      spec,
+      {
+        required: ['<request...> or --goal <text>'],
+      },
+    );
+  }
+
+  return {
+    ...parsed,
+    goal,
+    dryRun,
+  };
+}
+
 function assertNoArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
@@ -825,6 +1186,9 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl frontdesk-librechat-package --output /tmp/opl-librechat-pilot --public-origin https://opl.example.com --base-path /pilot/opl',
         'opl frontdesk-service-install --port 8787',
         'opl workspace-bind --project redcube --path /Users/gaofeng/workspace/redcube-ai --entry-command "redcube-ai frontdesk" --manifest-command "redcube product manifest --workspace-root /Users/gaofeng/workspace/redcube-ai"',
+        'opl paperclip-config --base-url https://paperclip.example.com --auth-header-env OPL_PAPERCLIP_AUTH_HEADER --control-company-id company-opl-control',
+        'opl paperclip-bind --project redcube --company-id company-redcube --paperclip-project-id project-redcube --project-workspace-id workspace-redcube --execution-workspace shared_workspace',
+        'opl paperclip-open-task "Prepare a defense-ready slide deck." --preferred-family ppt_deck --workspace-path /Users/gaofeng/workspace/redcube-ai --priority high',
         'opl handoff-envelope "Prepare a defense-ready slide deck." --preferred-family ppt_deck',
         'opl workspace-status --path /Users/gaofeng/workspace/redcube-ai',
         'opl runtime-status --limit 10',
@@ -1120,6 +1484,122 @@ async function main() {
         'opl dashboard --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
       ],
       handler: (args) => buildFrontDeskDashboard(getContracts(), parseDashboardArgs(args, commandSpecs.dashboard)),
+    },
+    'paperclip-config': {
+      usage:
+        'opl paperclip-config [--base-url <url>] [--auth-header-env <env>] [--cookie-env <env>] [--control-company-id <company_id>]',
+      summary: 'Configure the downstream Paperclip control-plane connection OPL will use for tasks and gates.',
+      examples: [
+        'opl paperclip-config --base-url https://paperclip.example.com --auth-header-env OPL_PAPERCLIP_AUTH_HEADER --control-company-id company-opl-control',
+      ],
+      handler: (args) => {
+        const contracts = getContracts();
+        return withContractsContext(contracts, {
+          paperclip_control_plane: {
+            action: 'config',
+            ...configurePaperclipControlPlane(contracts, parsePaperclipConfigArgs(args, commandSpecs['paperclip-config'])),
+          },
+        });
+      },
+    },
+    'paperclip-bind': {
+      usage:
+        'opl paperclip-bind --project <project_id> --company-id <company_id> [--paperclip-project-id <project_id>] [--project-workspace-id <workspace_id>] [--execution-workspace <mode>]',
+      summary: 'Bind one admitted OPL project surface to its downstream Paperclip company/project/workspace mapping.',
+      examples: [
+        'opl paperclip-bind --project redcube --company-id company-redcube --paperclip-project-id project-redcube --project-workspace-id workspace-redcube --execution-workspace shared_workspace',
+      ],
+      handler: (args) => {
+        const parsed = parsePaperclipBindArgs(args, commandSpecs['paperclip-bind']);
+        if (!parsed.projectId || !parsed.companyId) {
+          throw buildUsageError(
+            'paperclip-bind requires both --project and --company-id.',
+            commandSpecs['paperclip-bind'],
+            { required: ['--project', '--company-id'] },
+          );
+        }
+
+        const contracts = getContracts();
+        return withContractsContext(contracts, {
+          paperclip_control_plane: {
+            action: 'bind',
+            ...bindPaperclipProject(contracts, {
+              projectId: parsed.projectId,
+              companyId: parsed.companyId,
+              paperclipProjectId: parsed.paperclipProjectId,
+              projectWorkspaceId: parsed.projectWorkspaceId,
+              executionWorkspacePreference: parsed.executionWorkspacePreference,
+            }),
+          },
+        });
+      },
+    },
+    'paperclip-status': {
+      usage: 'opl paperclip-status [--path <workspace_path>] [--sessions-limit <n>]',
+      summary: 'Aggregate the current OPL -> Paperclip bridge status together with the family dashboard it exposes.',
+      examples: [
+        'opl paperclip-status',
+        'opl paperclip-status --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
+      ],
+      handler: (args) => buildPaperclipControlPlaneStatus(getContracts(), parseDashboardArgs(args, commandSpecs['paperclip-status'])),
+    },
+    'paperclip-open-task': {
+      usage:
+        'opl paperclip-open-task <request...> [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--workspace-path <path>] [--title <title>] [--priority <priority>]',
+      summary: 'Route an OPL request, freeze its handoff bundle, and create the corresponding Paperclip issue in the mapped project company.',
+      examples: [
+        'opl paperclip-open-task "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck --workspace-path /Users/gaofeng/workspace/redcube-ai --priority high',
+      ],
+      handler: async (args) => {
+        const contracts = getContracts();
+        const parsed = parsePaperclipTaskArgs(args, commandSpecs['paperclip-open-task']);
+        const result = await openPaperclipTask(parsed, contracts, {
+          title: parsed.title,
+          priority: parsed.priority,
+        });
+
+        return withContractsContext(contracts, {
+          paperclip_control_plane: {
+            action: 'open_task',
+            ...result.controlPlane,
+          },
+          paperclip_task: {
+            project_binding: result.projectBinding,
+            handoff_bundle: result.handoffBundle,
+            issue: result.issue,
+          },
+        });
+      },
+    },
+    'paperclip-open-gate': {
+      usage:
+        'opl paperclip-open-gate <request...> [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--workspace-path <path>] [--title <title>] [--gate-kind <kind>] [--decision-options <csv>]',
+      summary: 'Route an OPL request and open a downstream Paperclip board-approval gate using the family-human-gate contract.',
+      examples: [
+        'opl paperclip-open-gate "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck --gate-kind publish_readiness',
+      ],
+      handler: async (args) => {
+        const contracts = getContracts();
+        const parsed = parsePaperclipGateArgs(args, commandSpecs['paperclip-open-gate']);
+        const result = await openPaperclipGate(parsed, contracts, {
+          title: parsed.title,
+          gateKind: parsed.gateKind,
+          decisionOptions: parsed.decisionOptions,
+        });
+
+        return withContractsContext(contracts, {
+          paperclip_control_plane: {
+            action: 'open_gate',
+            ...result.controlPlane,
+          },
+          paperclip_gate: {
+            handoff_bundle: result.handoffBundle,
+            family_human_gate: result.familyHumanGate,
+            issue: result.issue,
+            approval: result.approval,
+          },
+        });
+      },
     },
     'domain-manifests': {
       usage: 'opl domain-manifests',

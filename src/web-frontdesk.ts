@@ -11,6 +11,7 @@ import {
   buildFrontDeskHealth,
   buildFrontDeskManifest,
   buildHostedPilotBundle,
+  buildPaperclipControlPlaneStatus,
   buildProjectsOverview,
   buildRuntimeStatus,
   buildWorkspaceStatus,
@@ -122,6 +123,7 @@ type WebFrontDeskStartupPayload = {
       hosted_package: string;
       librechat_package: string;
       dashboard: string;
+      paperclip_control_plane: string;
       projects: string;
       workspace_status: string;
       workspace_catalog: string;
@@ -450,6 +452,7 @@ function buildStartupPayload(context: WebFrontDeskContext): WebFrontDeskStartupP
         hosted_package: endpoints.hosted_package,
         librechat_package: endpoints.librechat_package,
         dashboard: endpoints.dashboard,
+        paperclip_control_plane: endpoints.paperclip_control_plane,
         projects: endpoints.projects,
         workspace_status: endpoints.workspace_status,
         workspace_catalog: endpoints.workspace_catalog,
@@ -2162,6 +2165,22 @@ async function handleRequest(
         response,
         200,
         buildFrontDeskDashboard(context.contracts, {
+          workspacePath: url.searchParams.get('path') ?? context.workspacePath,
+          sessionsLimit: parsePositiveIntegerOrDefault(
+            url.searchParams.get('sessions-limit'),
+            context.sessionsLimit,
+          ),
+          basePath: context.basePath,
+        }),
+      );
+      return;
+    }
+
+    if (method === 'GET' && routedPath === '/api/paperclip/control-plane') {
+      writeJson(
+        response,
+        200,
+        buildPaperclipControlPlaneStatus(context.contracts, {
           workspacePath: url.searchParams.get('path') ?? context.workspacePath,
           sessionsLimit: parsePositiveIntegerOrDefault(
             url.searchParams.get('sessions-limit'),

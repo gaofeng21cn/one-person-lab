@@ -184,6 +184,7 @@ At the architecture level, `OPL` is responsible for four things:
 
 This repository therefore acts as a documentation-first and contract-first public surface for the `OPL` gateway.
 Domain runtimes, delivery truth, and execution surfaces continue to live in their respective domain repositories.
+The current `OPL` front desk can also bridge to an existing downstream `Paperclip` control plane for issue / approval UI and audit trails, without turning `Paperclip` into the runtime owner.
 
 ## Unified Harness Engineering Substrate
 

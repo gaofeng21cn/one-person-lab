@@ -180,6 +180,7 @@
 
 因此，这个仓库承担的是 `OPL Gateway` 的文档优先、契约优先的公开说明面。
 具体 domain runtime、交付真相与执行表面继续由各自 domain 仓维护。
+当前 `OPL` front desk 也已经可以桥接到现成的下游 `Paperclip` control plane，用它承接 issue / approval UI 与审计轨迹；但这不会把 `Paperclip` 抬升成 runtime owner。
 
 ## Unified Harness Engineering Substrate
 

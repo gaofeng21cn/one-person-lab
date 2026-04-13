@@ -110,6 +110,7 @@ These backlog and mapping surfaces stay reference-only companions to the governi
 - [`routed-actions.schema.json`](./routed-actions.schema.json) — planning dependency kept at the closeout boundary of `Phase 1 / G3 thin handoff planning freeze hardening`; it is a planning-level contract artifact, not a launcher, and does not mean the current mainline has entered a routed-action runtime
 - [`domain-onboarding-readiness.schema.json`](./domain-onboarding-readiness.schema.json) — JSON Schema for the machine-readable domain onboarding readiness gate
 - [`family-executor-adapter-defaults.json`](./family-executor-adapter-defaults.json) — machine-readable freeze for the current family default executor-adapter route and its hard guardrails
+- [`paperclip-control-plane.schema.json`](./paperclip-control-plane.schema.json) — JSON Schema for the downstream `OPL -> Paperclip` control-plane bridge surface, including config/binding/status/task/gate payloads
 - [`governance-audit.schema.json`](./governance-audit.schema.json) — JSON Schema for the frozen P5.M1 governance / audit operating contract
 - [`publish-promotion.schema.json`](./publish-promotion.schema.json) — JSON Schema for the frozen P5.M2 publish / promotion operating contract
 - [`acceptance-matrix.json`](./acceptance-matrix.json) — declarative acceptance matrix for the frozen gateway and operating surfaces

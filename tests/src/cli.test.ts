@@ -2,6 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn, spawnSync, type ChildProcessByStdio } from 'node:child_process';
 import fs from 'node:fs';
+import {
+  createServer,
+  type IncomingHttpHeaders,
+  type IncomingMessage,
+  type Server,
+  type ServerResponse,
+} from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import type { Readable } from 'node:stream';
@@ -69,6 +76,46 @@ function runCliFailureInCwd(
     status: result.status ?? 1,
     payload: JSON.parse(result.stderr),
   };
+}
+
+async function runCliAsync(args: string[], envOverrides: Record<string, string> = {}) {
+  return await new Promise<Record<string, unknown>>((resolve, reject) => {
+    const child = spawn(
+      process.execPath,
+      ['--experimental-strip-types', cliPath, ...args],
+      {
+        cwd: repoRoot,
+        env: {
+          ...process.env,
+          NODE_NO_WARNINGS: '1',
+          ...envOverrides,
+        },
+        stdio: ['ignore', 'pipe', 'pipe'],
+      },
+    );
+
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (chunk: Buffer | string) => {
+      stdout += chunk.toString();
+    });
+    child.stderr.on('data', (chunk: Buffer | string) => {
+      stderr += chunk.toString();
+    });
+    child.once('error', reject);
+    child.once('exit', (code) => {
+      if (code !== 0) {
+        reject(new Error(`CLI exited with code ${code}\nstdout=${stdout}\nstderr=${stderr}`));
+        return;
+      }
+
+      try {
+        resolve(JSON.parse(stdout));
+      } catch (error) {
+        reject(error);
+      }
+    });
+  });
 }
 
 function createContractsFixtureRoot(mutator?: (contractsRoot: string) => void) {
@@ -197,6 +244,121 @@ printf '%s\\n' "$*" > "${capturePath}"
     openPath,
     capturePath,
   };
+}
+
+type FakePaperclipRequest = {
+  method: string;
+  path: string;
+  headers: IncomingHttpHeaders;
+  body: Record<string, unknown> | null;
+};
+
+async function readServerJsonBody(request: IncomingMessage) {
+  return await new Promise<Record<string, unknown> | null>((resolve, reject) => {
+    let body = '';
+    request.setEncoding('utf8');
+    request.on('data', (chunk) => {
+      body += chunk;
+    });
+    request.on('end', () => {
+      if (!body.trim()) {
+        resolve(null);
+        return;
+      }
+
+      try {
+        resolve(JSON.parse(body) as Record<string, unknown>);
+      } catch (error) {
+        reject(error);
+      }
+    });
+    request.on('error', reject);
+  });
+}
+
+async function startFakePaperclipServer() {
+  const requests: FakePaperclipRequest[] = [];
+  const server = createServer(async (request: IncomingMessage, response: ServerResponse<IncomingMessage>) => {
+    const url = new URL(request.url ?? '/', 'http://127.0.0.1');
+    const body = await readServerJsonBody(request);
+    requests.push({
+      method: request.method ?? 'GET',
+      path: url.pathname,
+      headers: request.headers,
+      body,
+    });
+
+    response.setHeader('content-type', 'application/json; charset=utf-8');
+    response.setHeader('connection', 'close');
+
+    if (request.method === 'POST' && /^\/api\/companies\/[^/]+\/issues$/.test(url.pathname)) {
+      const companyId = url.pathname.split('/')[3] ?? 'unknown-company';
+      response.statusCode = 201;
+      response.end(JSON.stringify({
+        id: `issue-${requests.filter((entry) => entry.path.endsWith('/issues')).length}`,
+        companyId,
+        title: String(body?.title ?? 'Untitled issue'),
+        status: String(body?.status ?? 'backlog'),
+        priority: String(body?.priority ?? 'medium'),
+        projectId: body?.projectId ?? null,
+        projectWorkspaceId: body?.projectWorkspaceId ?? null,
+        executionWorkspacePreference: body?.executionWorkspacePreference ?? null,
+      }));
+      return;
+    }
+
+    if (request.method === 'POST' && /^\/api\/companies\/[^/]+\/approvals$/.test(url.pathname)) {
+      const companyId = url.pathname.split('/')[3] ?? 'unknown-company';
+      response.statusCode = 201;
+      response.end(JSON.stringify({
+        id: `approval-${requests.filter((entry) => entry.path.endsWith('/approvals')).length}`,
+        companyId,
+        type: body?.type ?? null,
+        status: 'pending',
+        payload: body?.payload ?? {},
+        issueIds: Array.isArray(body?.issueIds) ? body?.issueIds : [],
+      }));
+      return;
+    }
+
+    response.statusCode = 404;
+    response.end(JSON.stringify({
+      error: 'not_found',
+      path: url.pathname,
+    }));
+  });
+
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      resolve();
+    });
+  });
+
+  const address = server.address();
+  if (!address || typeof address === 'string') {
+    server.close();
+    throw new Error('Failed to bind fake Paperclip server.');
+  }
+
+  return {
+    server,
+    requests,
+    baseUrl: `http://127.0.0.1:${address.port}`,
+  };
+}
+
+async function stopHttpServer(server: Server) {
+  await new Promise<void>((resolve, reject) => {
+    server.closeAllConnections?.();
+    server.close((error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve();
+    });
+  });
 }
 
 async function startCliServer(
@@ -1966,6 +2128,322 @@ exit 1
     }
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(psFixture.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('paperclip config and bindings persist into a control-plane status surface', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paperclip-state-'));
+
+  try {
+    const configured = runCli([
+      'paperclip-config',
+      '--base-url',
+      'http://127.0.0.1:4321',
+      '--auth-header-env',
+      'OPL_PAPERCLIP_AUTH_HEADER',
+      '--control-company-id',
+      'company-opl-control',
+    ], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer demo-token',
+    });
+
+    assert.equal(configured.paperclip_control_plane.action, 'config');
+    assert.equal(configured.paperclip_control_plane.connection.base_url, 'http://127.0.0.1:4321');
+    assert.equal(configured.paperclip_control_plane.connection.auth.header_env, 'OPL_PAPERCLIP_AUTH_HEADER');
+    assert.equal(configured.paperclip_control_plane.connection.auth.header_present, true);
+    assert.equal(configured.paperclip_control_plane.connection.control_company_id, 'company-opl-control');
+
+    const bound = runCli([
+      'paperclip-bind',
+      '--project',
+      'redcube',
+      '--company-id',
+      'company-redcube',
+      '--paperclip-project-id',
+      'project-redcube',
+      '--project-workspace-id',
+      'workspace-redcube',
+      '--execution-workspace',
+      'shared_workspace',
+    ], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer demo-token',
+    });
+
+    assert.equal(bound.paperclip_control_plane.action, 'bind');
+    assert.equal(bound.paperclip_control_plane.project_bindings.length, 1);
+    assert.equal(bound.paperclip_control_plane.project_bindings[0].project_id, 'redcube');
+    assert.equal(bound.paperclip_control_plane.project_bindings[0].company_id, 'company-redcube');
+
+    const status = runCli(['paperclip-status', '--path', repoRoot, '--sessions-limit', '1'], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer demo-token',
+    });
+
+    assert.equal(status.paperclip_control_plane.action, 'status');
+    assert.equal(status.paperclip_control_plane.readiness, 'configured');
+    assert.equal(status.paperclip_control_plane.connection.base_url, 'http://127.0.0.1:4321');
+    assert.equal(status.paperclip_control_plane.summary.project_bindings_count, 1);
+    assert.equal(status.paperclip_control_plane.summary.bound_projects[0], 'redcube');
+    assert.equal(status.paperclip_control_plane.gateway.dashboard.front_desk.paperclip_control_plane_status, 'configured');
+    assert.equal(status.paperclip_control_plane.gateway.surface.endpoints.control_plane, '/api/paperclip/control-plane');
+    assert.equal(
+      status.paperclip_control_plane.gateway.surface.contract_refs.family_human_gate,
+      'contracts/family-orchestration/family-human-gate.schema.json',
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('paperclip-open-task creates a routed Paperclip issue using the bound domain mapping', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paperclip-open-task-'));
+  const fakePaperclip = await startFakePaperclipServer();
+
+  try {
+    runCli([
+      'paperclip-config',
+      '--base-url',
+      fakePaperclip.baseUrl,
+      '--auth-header-env',
+      'OPL_PAPERCLIP_AUTH_HEADER',
+      '--control-company-id',
+      'company-opl-control',
+    ], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer integration-token',
+    });
+    runCli([
+      'paperclip-bind',
+      '--project',
+      'redcube',
+      '--company-id',
+      'company-redcube',
+      '--paperclip-project-id',
+      'project-redcube',
+      '--project-workspace-id',
+      'workspace-redcube',
+      '--execution-workspace',
+      'shared_workspace',
+    ], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer integration-token',
+    });
+
+    const output = await runCliAsync([
+      'paperclip-open-task',
+      'Prepare a defense-ready slide deck for a thesis committee.',
+      '--preferred-family',
+      'ppt_deck',
+      '--workspace-path',
+      repoRoot,
+      '--priority',
+      'high',
+    ], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer integration-token',
+    }) as {
+      paperclip_control_plane: {
+        action: string;
+      };
+      paperclip_task: {
+        issue: {
+          companyId: string;
+          priority: string;
+        };
+        handoff_bundle: {
+          target_domain_id: string;
+        };
+        project_binding: {
+          project_id: string;
+        };
+      };
+    };
+
+    assert.equal(output.paperclip_control_plane.action, 'open_task');
+    assert.equal(output.paperclip_task.issue.companyId, 'company-redcube');
+    assert.equal(output.paperclip_task.issue.priority, 'high');
+    assert.equal(output.paperclip_task.handoff_bundle.target_domain_id, 'redcube');
+    assert.equal(output.paperclip_task.project_binding.project_id, 'redcube');
+
+    assert.equal(fakePaperclip.requests.length, 1);
+    const issueRequest = fakePaperclip.requests[0];
+    assert.equal(issueRequest.method, 'POST');
+    assert.equal(issueRequest.path, '/api/companies/company-redcube/issues');
+    assert.equal(issueRequest.headers.authorization, 'Bearer integration-token');
+    assert.equal(issueRequest.body?.projectId, 'project-redcube');
+    assert.equal(issueRequest.body?.projectWorkspaceId, 'workspace-redcube');
+    assert.equal(issueRequest.body?.executionWorkspacePreference, 'shared_workspace');
+    assert.equal(issueRequest.body?.priority, 'high');
+    assert.equal(issueRequest.body?.title, 'Prepare a defense-ready slide deck for a thesis committee.');
+    assert.match(String(issueRequest.body?.description ?? ''), /opl_family_handoff_bundle/);
+    assert.match(String(issueRequest.body?.description ?? ''), /redcube/);
+  } finally {
+    await stopHttpServer(fakePaperclip.server);
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('paperclip-open-gate creates a control-company issue and linked board approval payload', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paperclip-open-gate-'));
+  const fakePaperclip = await startFakePaperclipServer();
+
+  try {
+    runCli([
+      'paperclip-config',
+      '--base-url',
+      fakePaperclip.baseUrl,
+      '--auth-header-env',
+      'OPL_PAPERCLIP_AUTH_HEADER',
+      '--control-company-id',
+      'company-opl-control',
+    ], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer integration-token',
+    });
+
+    const output = await runCliAsync([
+      'paperclip-open-gate',
+      'Prepare a defense-ready slide deck for a thesis committee.',
+      '--preferred-family',
+      'ppt_deck',
+      '--workspace-path',
+      repoRoot,
+      '--gate-kind',
+      'publish_readiness',
+    ], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer integration-token',
+    }) as {
+      paperclip_control_plane: {
+        action: string;
+      };
+      paperclip_gate: {
+        issue: {
+          companyId: string;
+        };
+        approval: {
+          companyId: string;
+          type: string;
+        };
+        family_human_gate: {
+          target_domain_id: string;
+          gate_kind: string;
+          decision_options: string[];
+        };
+      };
+    };
+
+    assert.equal(output.paperclip_control_plane.action, 'open_gate');
+    assert.equal(output.paperclip_gate.issue.companyId, 'company-opl-control');
+    assert.equal(output.paperclip_gate.approval.companyId, 'company-opl-control');
+    assert.equal(output.paperclip_gate.approval.type, 'request_board_approval');
+    assert.equal(output.paperclip_gate.family_human_gate.target_domain_id, 'redcube');
+    assert.equal(output.paperclip_gate.family_human_gate.gate_kind, 'publish_readiness');
+    assert.deepEqual(output.paperclip_gate.family_human_gate.decision_options, [
+      'approve',
+      'request_changes',
+      'reject',
+    ]);
+
+    assert.equal(fakePaperclip.requests.length, 2);
+    const issueRequest = fakePaperclip.requests[0];
+    const approvalRequest = fakePaperclip.requests[1];
+    assert.equal(issueRequest.path, '/api/companies/company-opl-control/issues');
+    assert.equal(approvalRequest.path, '/api/companies/company-opl-control/approvals');
+    assert.equal(issueRequest.headers.authorization, 'Bearer integration-token');
+    assert.equal(approvalRequest.headers.authorization, 'Bearer integration-token');
+    assert.equal(approvalRequest.body?.type, 'request_board_approval');
+    assert.deepEqual(approvalRequest.body?.issueIds, ['issue-1']);
+
+    const approvalPayload = approvalRequest.body?.payload as Record<string, unknown>;
+    const familyHumanGate = approvalPayload.family_human_gate as Record<string, unknown>;
+    assert.equal(familyHumanGate.version, 'family-human-gate.v1');
+    assert.equal(familyHumanGate.target_domain_id, 'redcube');
+    assert.equal(familyHumanGate.gate_kind, 'publish_readiness');
+    assert.deepEqual(familyHumanGate.decision_options, ['approve', 'request_changes', 'reject']);
+    assert.deepEqual(familyHumanGate.evidence_refs, [
+      {
+        ref_kind: 'json_pointer',
+        ref: '/handoff_bundle',
+        label: 'opl family handoff bundle',
+      },
+    ]);
+  } finally {
+    await stopHttpServer(fakePaperclip.server);
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('web front-desk exposes the Paperclip control-plane aggregate surface', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paperclip-web-state-'));
+  let child: ChildProcessByStdio<null, Readable, Readable> | null = null;
+
+  try {
+    runCli([
+      'paperclip-config',
+      '--base-url',
+      'http://127.0.0.1:4321',
+      '--auth-header-env',
+      'OPL_PAPERCLIP_AUTH_HEADER',
+      '--control-company-id',
+      'company-opl-control',
+    ], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer web-token',
+    });
+    runCli([
+      'paperclip-bind',
+      '--project',
+      'redcube',
+      '--company-id',
+      'company-redcube',
+    ], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer web-token',
+    });
+
+    const startup = await startCliServer(
+      ['web', '--host', '127.0.0.1', '--port', '0', '--path', repoRoot, '--sessions-limit', '1'],
+      {
+        OPL_FRONTDESK_STATE_DIR: stateRoot,
+        OPL_PAPERCLIP_AUTH_HEADER: 'Bearer web-token',
+      },
+    );
+    child = startup.child;
+
+    const webFrontdesk = startup.payload.web_frontdesk as {
+      api: {
+        paperclip_control_plane: string;
+      };
+      listening: {
+        base_url: string;
+      };
+    };
+
+    assert.equal(webFrontdesk.api.paperclip_control_plane, '/api/paperclip/control-plane');
+
+    const response = await fetch(`${webFrontdesk.listening.base_url}/api/paperclip/control-plane`);
+    const payload = await response.json() as {
+      paperclip_control_plane: {
+        readiness: string;
+        connection: {
+          base_url: string;
+        };
+        summary: {
+          project_bindings_count: number;
+        };
+      };
+    };
+    assert.equal(payload.paperclip_control_plane.readiness, 'configured');
+    assert.equal(payload.paperclip_control_plane.connection.base_url, 'http://127.0.0.1:4321');
+    assert.equal(payload.paperclip_control_plane.summary.project_bindings_count, 1);
+  } finally {
+    if (child) {
+      await stopCliServer(child);
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
 
