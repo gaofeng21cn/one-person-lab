@@ -132,6 +132,7 @@ type PaperclipProjectionRegistryFile = {
 type PaperclipOperatorLoopFile = {
   version: 'g2';
   state: 'idle' | 'running';
+  owner_pid: number | null;
   last_started_at: string | null;
   last_completed_at: string | null;
   last_error: string | null;
@@ -434,6 +435,7 @@ function readPaperclipOperatorLoopFile(): PaperclipOperatorLoopFile {
     return {
       version: 'g2',
       state: 'idle',
+      owner_pid: null,
       last_started_at: null,
       last_completed_at: null,
       last_error: null,
@@ -456,6 +458,14 @@ function readPaperclipOperatorLoopFile(): PaperclipOperatorLoopFile {
     return {
       version: 'g2',
       state: parsed.state,
+      owner_pid:
+        parsed.owner_pid === null || parsed.owner_pid === undefined
+          ? null
+          : Number.isInteger(parsed.owner_pid) && parsed.owner_pid > 0
+            ? parsed.owner_pid
+            : (() => {
+                throw new Error('Invalid Paperclip operator loop state shape.');
+              })(),
       last_started_at: normalizeOptionalString(parsed.last_started_at),
       last_completed_at: normalizeOptionalString(parsed.last_completed_at),
       last_error: normalizeOptionalString(parsed.last_error),
@@ -472,7 +482,7 @@ function readPaperclipOperatorLoopFile(): PaperclipOperatorLoopFile {
               resolved_gate_count: Number(parsed.last_run_summary.resolved_gate_count ?? 0),
             }
           : null,
-    };
+    } satisfies PaperclipOperatorLoopFile;
   } catch (error) {
     throw new GatewayContractError(
       'contract_shape_invalid',
@@ -484,6 +494,49 @@ function readPaperclipOperatorLoopFile(): PaperclipOperatorLoopFile {
       },
     );
   }
+}
+
+function isProcessAlive(pid: number) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    if (
+      error
+      && typeof error === 'object'
+      && 'code' in error
+      && (error.code === 'ESRCH')
+    ) {
+      return false;
+    }
+    if (
+      error
+      && typeof error === 'object'
+      && 'code' in error
+      && (error.code === 'EPERM')
+    ) {
+      return true;
+    }
+    throw error;
+  }
+}
+
+function recoverStalePaperclipOperatorLoopFile(
+  payload: PaperclipOperatorLoopFile,
+): PaperclipOperatorLoopFile {
+  if (payload.state !== 'running' || !payload.owner_pid || isProcessAlive(payload.owner_pid)) {
+    return payload;
+  }
+
+  const recovered = {
+    ...payload,
+    state: 'idle',
+    owner_pid: null,
+    last_completed_at: nowIso(),
+    last_error: `Recovered stale Paperclip operator loop state from terminated pid ${payload.owner_pid}.`,
+  } satisfies PaperclipOperatorLoopFile;
+  writePaperclipOperatorLoopFile(recovered);
+  return recovered;
 }
 
 function writePaperclipOperatorLoopFile(payload: PaperclipOperatorLoopFile) {
@@ -562,7 +615,7 @@ function buildTrackedProjectionSurface(projection: PaperclipTrackedProjection) {
 
 function buildOperatorLoopSurface() {
   const paths = resolveFrontDeskStatePaths();
-  const loop = readPaperclipOperatorLoopFile();
+  const loop = recoverStalePaperclipOperatorLoopFile(readPaperclipOperatorLoopFile());
   return {
     state_file: paths.paperclip_operator_loop_file,
     state: loop.state,
@@ -1556,11 +1609,12 @@ export async function runPaperclipOperatorLoop(
 ) {
   const intervalMs = options.intervalMs ?? 30_000;
   const cyclesRequested = options.cycles ?? 0;
-  const loopState = readPaperclipOperatorLoopFile();
+  const loopState = recoverStalePaperclipOperatorLoopFile(readPaperclipOperatorLoopFile());
   const startedAt = nowIso();
   writePaperclipOperatorLoopFile({
     ...loopState,
     state: 'running',
+    owner_pid: process.pid,
     last_started_at: startedAt,
     last_error: null,
   });
@@ -1594,6 +1648,7 @@ export async function runPaperclipOperatorLoop(
     writePaperclipOperatorLoopFile({
       version: 'g2',
       state: 'idle',
+      owner_pid: null,
       last_started_at: startedAt,
       last_completed_at: nowIso(),
       last_error: error instanceof Error ? error.message : String(error),
@@ -1621,6 +1676,7 @@ export async function runPaperclipOperatorLoop(
   writePaperclipOperatorLoopFile({
     version: 'g2',
     state: 'idle',
+    owner_pid: null,
     last_started_at: startedAt,
     last_completed_at: completedAt,
     last_error: null,
