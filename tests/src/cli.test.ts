@@ -3090,6 +3090,74 @@ test('paperclip-operator-loop runs repeated reconcile cycles and persists loop s
   }
 });
 
+test('paperclip-status recovers stale paperclip operator loop state when the recorded owner pid is gone', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paperclip-operator-stale-'));
+  const operatorLoopFile = path.join(stateRoot, 'paperclip-operator-loop.json');
+
+  try {
+    fs.writeFileSync(
+      operatorLoopFile,
+      `${JSON.stringify({
+        version: 'g2',
+        state: 'running',
+        owner_pid: 999999,
+        last_started_at: '2026-04-13T10:00:00.000Z',
+        last_completed_at: null,
+        last_error: null,
+        last_run_summary: {
+          cycles_completed: 1,
+          matched_projection_count: 1,
+          synced_count: 1,
+          skipped_count: 0,
+          approval_updates_count: 0,
+          resolved_gate_count: 0,
+        },
+      }, null, 2)}\n`,
+      'utf8',
+    );
+
+    const status = runCli(['paperclip-status'], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+    }) as {
+      paperclip_control_plane: {
+        operator_loop: {
+          state: string;
+          last_started_at: string | null;
+          last_completed_at: string | null;
+          last_error: string | null;
+        };
+      };
+    };
+
+    assert.equal(status.paperclip_control_plane.operator_loop.state, 'idle');
+    assert.equal(status.paperclip_control_plane.operator_loop.last_started_at, '2026-04-13T10:00:00.000Z');
+    assert.match(
+      String(status.paperclip_control_plane.operator_loop.last_completed_at),
+      /^2026-/,
+    );
+    assert.match(
+      String(status.paperclip_control_plane.operator_loop.last_error),
+      /Recovered stale Paperclip operator loop state from terminated pid 999999\./,
+    );
+
+    const persisted = JSON.parse(fs.readFileSync(operatorLoopFile, 'utf8')) as {
+      state: string;
+      owner_pid?: number | null;
+      last_completed_at: string | null;
+      last_error: string | null;
+    };
+    assert.equal(persisted.state, 'idle');
+    assert.equal(persisted.owner_pid ?? null, null);
+    assert.match(String(persisted.last_completed_at), /^2026-/);
+    assert.match(
+      String(persisted.last_error),
+      /Recovered stale Paperclip operator loop state from terminated pid 999999\./,
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('web front-desk exposes the Paperclip control-plane aggregate surface', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paperclip-web-state-'));
   const fakePaperclip = await startFakePaperclipServer();
