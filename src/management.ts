@@ -466,6 +466,7 @@ export function buildFrontDeskDashboard(
       operator_loop_actions: entry.manifest?.operator_loop_actions ?? {},
       recommended_shell: entry.manifest?.recommended_shell ?? null,
       recommended_command: entry.manifest?.recommended_command ?? null,
+      family_orchestration: entry.manifest?.family_orchestration ?? null,
       manifest_command: entry.manifest_command,
       workspace_path: entry.workspace_path,
       mainline_phase_id: pickManifestPhaseId(entry.manifest?.repo_mainline ?? null),

@@ -1365,6 +1365,37 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
                         .join('')
                       + '</ul></div>'
                     : '',
+                  manifestEntry.manifest?.family_orchestration?.action_graph_ref?.ref
+                    ? '<p><strong>Action Graph:</strong> '
+                      + manifestEntry.manifest.family_orchestration.action_graph_ref.ref
+                      + '</p>'
+                    : '',
+                  Array.isArray(manifestEntry.manifest?.family_orchestration?.human_gates)
+                    && manifestEntry.manifest.family_orchestration.human_gates.length > 0
+                    ? '<div><strong>Human Gates:</strong><ul>'
+                      + manifestEntry.manifest.family_orchestration.human_gates
+                        .map((gate) => {
+                          if (!gate || typeof gate !== 'object') {
+                            return '';
+                          }
+                          const gateId = gate.gate_id ? String(gate.gate_id) : 'unknown_gate';
+                          const title = gate.title ? ' - ' + String(gate.title) : '';
+                          const status = gate.status ? ' (' + String(gate.status) + ')' : '';
+                          return '<li><code>' + gateId + '</code>' + title + status + '</li>';
+                        })
+                        .filter(Boolean)
+                        .join('')
+                      + '</ul></div>'
+                    : '',
+                  manifestEntry.manifest?.family_orchestration?.resume_contract?.surface_kind
+                    ? '<p><strong>Resume Contract:</strong> '
+                      + manifestEntry.manifest.family_orchestration.resume_contract.surface_kind
+                      + ' via '
+                      + String(
+                        manifestEntry.manifest.family_orchestration.resume_contract.session_locator_field || 'unknown',
+                      )
+                      + '</p>'
+                    : '',
                   manifestEntry.manifest?.product_entry_status?.summary
                     ? '<p><strong>Entry Status:</strong> ' + manifestEntry.manifest.product_entry_status.summary + '</p>'
                     : '',
