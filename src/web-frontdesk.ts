@@ -1071,6 +1071,17 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
               <div class="footer-note" id="runtime-note">
                 Loading dashboard...
               </div>
+              <div style="height: 12px"></div>
+              <div class="split-grid">
+                <div class="card">
+                  <h3>Hosted Runtime Readiness</h3>
+                  <div id="hosted-runtime-readiness-summary">Loading hosted runtime readiness...</div>
+                </div>
+                <div class="card">
+                  <h3>Domain Entry Parity</h3>
+                  <div id="domain-entry-parity-summary">Loading domain entry parity...</div>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -1294,6 +1305,8 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       const metricSessions = document.getElementById('metric-sessions');
       const metricProcesses = document.getElementById('metric-processes');
       const runtimeNote = document.getElementById('runtime-note');
+      const hostedRuntimeReadinessSummary = document.getElementById('hosted-runtime-readiness-summary');
+      const domainEntryParitySummary = document.getElementById('domain-entry-parity-summary');
       const healthSummary = document.getElementById('health-summary');
       const manifestSummary = document.getElementById('manifest-summary');
       const hostedBundleSummary = document.getElementById('hosted-bundle-summary');
@@ -1827,6 +1840,53 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         hostedBundleJson.textContent = JSON.stringify(payload, null, 2);
       }
 
+      function renderHostedRuntimeReadiness(readiness) {
+        if (!readiness) {
+          hostedRuntimeReadinessSummary.innerHTML = '<p>No hosted runtime readiness surface yet.</p>';
+          return;
+        }
+
+        const gaps = Array.isArray(readiness.blocking_gaps)
+          ? readiness.blocking_gaps.map((gap) => '<li>' + String(gap) + '</li>').join('')
+          : '';
+        hostedRuntimeReadinessSummary.innerHTML = [
+          '<p><strong>Status:</strong> ' + String(readiness.status || 'unknown') + '</p>',
+          '<p><strong>Shell Target:</strong> ' + String(readiness.shell_integration_target || 'unknown') + '</p>',
+          '<p><strong>Managed Hosted Runtime Landed:</strong> '
+            + String(readiness.managed_hosted_runtime_landed)
+            + '</p>',
+          '<p><strong>LibreChat Pilot Package Landed:</strong> '
+            + String(readiness.librechat_pilot_package_landed)
+            + '</p>',
+          gaps ? '<ul>' + gaps + '</ul>' : '<p>No blocking gaps reported.</p>',
+        ].join('');
+      }
+
+      function renderDomainEntryParity(parity) {
+        if (!parity) {
+          domainEntryParitySummary.innerHTML = '<p>No domain entry parity surface yet.</p>';
+          return;
+        }
+
+        const projects = Array.isArray(parity.projects)
+          ? parity.projects.map((project) => (
+            '<li><strong>' + String(project.project || project.project_id) + ':</strong> '
+            + String(project.entry_parity_status || 'unknown')
+            + ' / locator '
+            + String(project.direct_entry_locator_status || 'unknown')
+            + '</li>'
+          )).join('')
+          : '';
+
+        domainEntryParitySummary.innerHTML = [
+          '<p><strong>Total Projects:</strong> ' + String(parity.summary?.total_projects_count ?? 0) + '</p>',
+          '<p><strong>Aligned:</strong> ' + String(parity.summary?.aligned_projects_count ?? 0) + '</p>',
+          '<p><strong>Partial:</strong> ' + String(parity.summary?.partial_projects_count ?? 0) + '</p>',
+          '<p><strong>Ready For OPL Start:</strong> ' + String(parity.summary?.ready_for_opl_start_count ?? 0) + '</p>',
+          projects ? '<ul>' + projects + '</ul>' : '<p>No domain parity entries reported.</p>',
+        ].join('');
+      }
+
       function setHostedPackageStatus(message, tone = 'muted') {
         hostedPackageStatus.textContent = message;
         hostedPackageStatus.dataset.tone = tone;
@@ -1880,6 +1940,8 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
               : 'Choose a project and resolve its current start surface.';
           }
         }
+        renderHostedRuntimeReadiness(dashboard.front_desk.hosted_runtime_readiness);
+        renderDomainEntryParity(dashboard.front_desk.domain_entry_parity);
         renderProjects(dashboard.projects, dashboard.domain_manifests.projects);
         renderWorkspace(dashboard.workspace);
         renderWorkspaceCatalog({ workspace_catalog: dashboard.workspace_catalog });

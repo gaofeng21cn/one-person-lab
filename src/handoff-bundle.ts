@@ -1,5 +1,6 @@
 import { findDomainOrThrow } from './contracts.ts';
 import { buildDomainManifestCatalog } from './domain-manifest.ts';
+import { buildDomainEntryParity } from './management.ts';
 import { resolveWorkspaceLocator } from './workspace-registry.ts';
 import { buildFrontDeskEndpoints } from './frontdesk-paths.ts';
 import type { BoundaryExplanation, GatewayContracts, ResolutionResult } from './types.ts';
@@ -38,11 +39,13 @@ export function buildHandoffBundle(
         source: options.workspacePath ? 'explicit_path' : 'none',
         binding: null,
       };
+  const domainManifestCatalog = buildDomainManifestCatalog(contracts).domain_manifests;
   const domainManifestEntry = targetDomainId
-    ? buildDomainManifestCatalog(contracts).domain_manifests.projects.find(
+    ? domainManifestCatalog.projects.find(
         (entry) => entry.project_id === targetDomainId,
       ) ?? null
     : null;
+  const domainEntryParity = buildDomainEntryParity(domainManifestCatalog.projects);
   const endpoints = buildFrontDeskEndpoints(options.basePath);
 
   return {
@@ -113,6 +116,7 @@ export function buildHandoffBundle(
             error: domainManifestEntry.error,
           }
         : null,
+      domain_entry_parity: domainEntryParity,
       domain_context: domain
         ? {
             project: domain.project,

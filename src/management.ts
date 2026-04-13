@@ -9,7 +9,7 @@ import {
   buildFrontDeskEntryUrl,
   normalizeBasePath,
 } from './frontdesk-paths.ts';
-import { buildDomainManifestCatalog } from './domain-manifest.ts';
+import { buildDomainManifestCatalog, type DomainManifestCatalogEntry } from './domain-manifest.ts';
 import {
   buildHermesSessionsListArgs,
   inspectHermesRuntime,
@@ -215,6 +215,145 @@ function normalizeBaseUrlHost(host: string) {
   return host.includes(':') && !host.startsWith('[') ? `[${host}]` : host;
 }
 
+export function buildHostedRuntimeReadiness() {
+  return {
+    surface_kind: 'opl_hosted_runtime_readiness',
+    status: 'pilot_ready_not_managed',
+    shell_integration_target: 'librechat_first',
+    managed_hosted_runtime_landed: false,
+    local_web_frontdesk_landed: true,
+    hosted_friendly_contract_landed: true,
+    hosted_pilot_bundle_landed: true,
+    self_hostable_pilot_package_landed: true,
+    librechat_pilot_package_landed: true,
+    service_safe_local_packaging_landed: true,
+    blocking_gaps: [
+      'managed hosted runtime ownership 仍未 landed。',
+      'multi-tenant hosted platform orchestration 仍未 landed。',
+      'frontdesk 与 hosted shell 的深层 tool wiring 仍未 landed。',
+    ],
+    recommended_next_actions: [
+      '继续把 hosted shell 入口收紧到同一份 frontdesk contract 上。',
+      '把 managed hosted runtime 的 service orchestration、tenant boundary 与 policy surface 单独冻结。',
+      '保持 Hermes 作为外部 runtime substrate，不在 OPL 仓内虚构托管完成度。',
+    ],
+  };
+}
+
+function hasResolvedCommand(value: unknown) {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+export function buildDomainEntryParity(projects: DomainManifestCatalogEntry[]) {
+  const normalizedProjects = projects.map((entry) => {
+    const manifest = entry.manifest;
+    const binding = getActiveWorkspaceBinding(entry.project_id);
+    const manifestResolved = entry.status === 'resolved' && manifest !== null;
+    const directEntryLocatorReady = Boolean(binding?.direct_entry.command || binding?.direct_entry.url);
+    const frontdeskSurfaceReady = Boolean(
+      manifest?.frontdesk_surface?.surface_kind
+      && hasResolvedCommand(manifest?.frontdesk_surface?.command),
+    );
+    const startSurfaceReady = Boolean(
+      manifest?.product_entry_start?.surface_kind
+      && Array.isArray(manifest?.product_entry_start?.modes)
+      && manifest.product_entry_start.modes.length > 0,
+    );
+    const sharedHandoffReady = Boolean(
+      manifest?.shared_handoff && Object.keys(manifest.shared_handoff).length > 0,
+    );
+    const readyForOplStart = Boolean(manifestResolved && startSurfaceReady);
+    const readyForDomainHandoff = Boolean(manifestResolved && sharedHandoffReady);
+
+    const gaps: string[] = [];
+    if (!manifestResolved) {
+      gaps.push('当前 active binding 尚未暴露 resolved product-entry manifest。');
+    }
+    if (manifestResolved && !directEntryLocatorReady) {
+      gaps.push('当前 active binding 缺少 direct-entry locator（entry command 或 entry URL）。');
+    }
+    if (manifestResolved && !frontdeskSurfaceReady) {
+      gaps.push('manifest 尚未暴露可直接消费的 frontdesk surface。');
+    }
+    if (manifestResolved && !startSurfaceReady) {
+      gaps.push('manifest 尚未暴露可直接消费的 start surface。');
+    }
+    if (manifestResolved && !sharedHandoffReady) {
+      gaps.push('manifest 尚未暴露 shared handoff surface。');
+    }
+
+    let entryParityStatus: 'aligned' | 'partial' | 'blocked' = 'blocked';
+    if (manifestResolved && frontdeskSurfaceReady && startSurfaceReady && sharedHandoffReady) {
+      entryParityStatus = directEntryLocatorReady ? 'aligned' : 'partial';
+    } else if (manifestResolved) {
+      entryParityStatus = 'partial';
+    }
+
+    const recommendedNextActions: string[] = [];
+    if (!manifestResolved) {
+      recommendedNextActions.push('先冻结并绑定 repo-tracked product-entry manifest。');
+    }
+    if (manifestResolved && !directEntryLocatorReady) {
+      recommendedNextActions.push('给 active binding 补 entry_command 或 entry_url，让 OPL 可直接定位 domain frontdesk。');
+    }
+    if (manifestResolved && !frontdeskSurfaceReady) {
+      recommendedNextActions.push('补齐 manifest.frontdesk_surface.command，让 frontdesk locator 与 manifest 一致。');
+    }
+    if (manifestResolved && !startSurfaceReady) {
+      recommendedNextActions.push('补齐 product_entry_start surface，保持 OPL start 与 domain start 同口径。');
+    }
+    if (manifestResolved && !sharedHandoffReady) {
+      recommendedNextActions.push('补齐 shared_handoff surface，让 OPL handoff 不再靠隐式约定。');
+    }
+
+    return {
+      project_id: entry.project_id,
+      project: entry.project,
+      binding_id: binding?.binding_id ?? entry.binding_id,
+      workspace_path: binding?.workspace_path ?? entry.workspace_path,
+      entry_parity_status: entryParityStatus,
+      manifest_status: entry.status,
+      direct_entry_locator_status: directEntryLocatorReady ? 'ready' : 'missing',
+      frontdesk_surface_status: frontdeskSurfaceReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
+      start_surface_status: startSurfaceReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
+      shared_handoff_status: sharedHandoffReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
+      ready_for_opl_start: readyForOplStart,
+      ready_for_domain_handoff: readyForDomainHandoff,
+      product_entry_readiness_verdict: manifest?.product_entry_readiness?.verdict ?? null,
+      recommended_start_command:
+        manifest?.frontdesk_surface?.command
+        ?? manifest?.recommended_command
+        ?? manifest?.product_entry_preflight?.recommended_start_command
+        ?? null,
+      recommended_check_command: manifest?.product_entry_preflight?.recommended_check_command ?? null,
+      gaps,
+      recommended_next_actions: recommendedNextActions,
+    };
+  });
+
+  return {
+    surface_kind: 'opl_domain_entry_parity',
+    summary: {
+      total_projects_count: normalizedProjects.length,
+      aligned_projects_count: normalizedProjects.filter((entry) => entry.entry_parity_status === 'aligned').length,
+      partial_projects_count: normalizedProjects.filter((entry) => entry.entry_parity_status === 'partial').length,
+      blocked_projects_count: normalizedProjects.filter((entry) => entry.entry_parity_status === 'blocked').length,
+      direct_entry_locator_ready_projects_count:
+        normalizedProjects.filter((entry) => entry.direct_entry_locator_status === 'ready').length,
+      ready_for_opl_start_count:
+        normalizedProjects.filter((entry) => entry.ready_for_opl_start).length,
+      ready_for_domain_handoff_count:
+        normalizedProjects.filter((entry) => entry.ready_for_domain_handoff).length,
+    },
+    projects: normalizedProjects,
+    notes: [
+      'Domain entry parity is a family-level derived surface, not a second manifest system.',
+      'A project can be start-ready and handoff-ready before it has a direct-entry locator bound into the active workspace.',
+      'aligned means frontdesk/start/shared-handoff are resolved and the active binding already carries a direct-entry locator.',
+    ],
+  };
+}
+
 function buildRecentSessions(limit = 5) {
   const result = runHermesCommand(buildHermesSessionsListArgs({ limit }));
 
@@ -268,6 +407,7 @@ export function buildProjectsOverview(contracts: GatewayContracts) {
 
 export function buildFrontDeskManifest(contracts: GatewayContracts, options: { basePath?: string } = {}) {
   const endpoints = buildFrontDeskEndpoints(options.basePath);
+  const hostedRuntimeReadiness = buildHostedRuntimeReadiness();
 
   return {
     version: 'g2',
@@ -284,6 +424,7 @@ export function buildFrontDeskManifest(contracts: GatewayContracts, options: { b
       hosted_packaging_status: 'librechat_pilot_landed',
       pilot_bundle_status: 'landed',
       base_path: normalizeBasePath(options.basePath),
+      hosted_runtime_readiness: hostedRuntimeReadiness,
       handoff_envelope_fields: [
         'target_domain_id',
         'task_intent',
@@ -312,6 +453,7 @@ export function buildHostedPilotBundle(
   const normalizedBasePath = normalizeBasePath(options.basePath);
   const baseUrl = `http://${normalizeBaseUrlHost(host)}:${port}`;
   const endpoints = buildFrontDeskEndpoints(normalizedBasePath);
+  const hostedRuntimeReadiness = buildHostedRuntimeReadiness();
 
   return {
     version: 'g2',
@@ -326,6 +468,7 @@ export function buildHostedPilotBundle(
       pilot_bundle_status: 'landed',
       actual_hosted_runtime_status: 'not_landed',
       base_path: normalizedBasePath,
+      hosted_runtime_readiness: hostedRuntimeReadiness,
       entry_url: buildFrontDeskEntryUrl(baseUrl, normalizedBasePath),
       api_base_url: buildFrontDeskApiBaseUrl(baseUrl, normalizedBasePath),
       endpoints,
@@ -539,6 +682,8 @@ export function buildFrontDeskDashboard(
   }).runtime_status;
   const workspaceCatalog = buildWorkspaceCatalog(contracts).workspace_catalog;
   const domainManifests = buildDomainManifestCatalog(contracts).domain_manifests;
+  const hostedRuntimeReadiness = buildHostedRuntimeReadiness();
+  const domainEntryParity = buildDomainEntryParity(domainManifests.projects);
   const recommendedEntrySurfaces = domainManifests.projects
     .filter((entry) => entry.status === 'resolved' && entry.manifest?.recommended_command)
     .map((entry) => ({
@@ -644,9 +789,11 @@ export function buildFrontDeskDashboard(
         hosted_pilot_bundle_status: 'landed',
         hosted_web_status: 'librechat_pilot_landed',
         librechat_pilot_package_status: 'landed',
+        hosted_runtime_readiness: hostedRuntimeReadiness,
         workspace_registry_status: 'landed',
         session_ledger_status: 'landed',
         handoff_bundle_status: 'landed',
+        domain_entry_parity: domainEntryParity,
         paperclip_control_plane_status: paperclipControlPlane.readiness,
         paperclip_control_plane_endpoint: endpoints.paperclip_control_plane,
         paperclip_bound_projects_count: paperclipControlPlane.summary.project_bindings_count,
