@@ -1531,6 +1531,16 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(medautoscience.manifest.operator_loop_actions.submit_task.requires[0], 'study_id');
     assert.match(medautoscience.manifest.product_entry_shell.launch_study.command, /launch-study/);
     assert.equal(medautoscience.manifest.shared_handoff.direct_entry_builder.entry_mode, 'direct');
+    assert.equal(
+      medautoscience.manifest.family_orchestration.action_graph_ref.ref,
+      '/family_orchestration/action_graph',
+    );
+    assert.equal(
+      medautoscience.manifest.family_orchestration.action_graph.graph_id,
+      'mas_workspace_frontdoor_study_runtime_graph',
+    );
+    assert.equal(medautoscience.manifest.family_orchestration.action_graph.nodes.length, 4);
+    assert.equal(medautoscience.manifest.family_orchestration.action_graph.edges.length, 5);
     assert.equal(medautoscience.manifest.family_orchestration.human_gates[0].gate_id, 'study_physician_decision_gate');
     assert.equal(medautoscience.manifest.family_orchestration.human_gates[1].gate_id, 'publication_release_gate');
     assert.equal(medautoscience.manifest.family_orchestration.resume_contract.surface_kind, 'launch_study');
@@ -1588,6 +1598,9 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(scienceEntry.product_entry_overview.summary, scienceEntry.product_entry_status_summary);
     assert.equal(scienceEntry.product_entry_overview.progress_surface.surface_kind, 'study_progress');
     assert.equal(scienceEntry.product_entry_overview.resume_surface.surface_kind, 'launch_study');
+    assert.equal(scienceEntry.family_action_graph_ref, '/family_orchestration/action_graph');
+    assert.equal(scienceEntry.family_action_graph_node_count, 4);
+    assert.equal(scienceEntry.family_action_graph_edge_count, 5);
     assert.equal(scienceEntry.family_resume_surface_kind, 'launch_study');
     assert.equal(
       scienceEntry.family_event_envelope_ref,
