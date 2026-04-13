@@ -1,6 +1,6 @@
 {
   "board_id": "opl_phase_2_central_reference_sync_board",
-  "date_anchor": "2026-04-11",
+  "date_anchor": "2026-04-13",
   "status": "prefrozen_follow_on_board",
   "parent_package_id": "opl_minimal_admitted_domain_federation_activation_package",
   "board_goal": "freeze a multi-slice central reference-sync owner line so Codex can keep OPL aligned with already absorbed domain truth without promoting OPL into a runtime owner",
@@ -15,7 +15,7 @@
       "kind": "activation_package",
       "goal": "refresh the central execution board, status matrix, taskboard, and prompt library against the latest absorbed admitted-domain deltas before wider wording sync",
       "current_known_delta_families": [
-        "RedCube AI latest absorbed same-mainline delta pack: verification surfaces by test layer (`e8146a1`) plus runtime-program state off OMX (`762ea4c`), with `phase_2_family_parity_autopilot_continuation_board` now prefrozen",
+        "RedCube AI latest absorbed delta pack: upstream runtime-owner cutover plus repo-verified `product frontdesk / federated product entry / session continuity / family-orchestration companion / product-entry readiness`, anchored at `c124c5d`",
         "MedAutoScience latest absorbed repo-side hardening delta pack: verification surfaces by test layer (`9b5cea8`), runtime/workspace repair priorities (`7ee19a8`), and workflow-entry retirement off OMX (`6c64264`)"
       ]
     },

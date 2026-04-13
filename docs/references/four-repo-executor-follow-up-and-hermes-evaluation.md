@@ -83,36 +83,36 @@
 
 ### `RedCube AI`
 
-`RedCube AI` 的 `Codex CLI autonomous` 默认执行器实现已经在待吸收提交中完成，执行形态同样是把完整 service entry envelope 直接交给 `codex exec` 的 agent loop，而不是 repo-local 小步 chat。
+`RedCube AI` 的 `Codex CLI autonomous` 默认执行器实现已经吸收回 `main`。
+当前 repo-tracked truth 已经同时包含：
 
-当前唯一 honest blocker 是：
+- upstream `Hermes-Agent` runtime-owner cutover
+- repo-verified `redcube product frontdesk`
+- direct / federated / session product-entry surfaces
+- `family_orchestration` companion preview 与 `product_entry_quickstart / overview / readiness`
+- 默认 autonomous route 把完整 service-entry envelope 直接交给 `codex exec` agent loop，而不是 repo-local 小步 chat
 
-- 主 checkout `main` 上仍有重叠本地改动
-- 因此这条已完成实现还不能安全直接吸收到主线公开 truth
+也就是说，`RedCube AI` 当前已经不再是“待吸收默认执行器”的状态；当前 honest next step 变成：
+
+- 把这条已 absorbed truth 持续同步进 `OPL` 顶层 central reference surfaces
+- 然后只把 `Hermes-native` 作为独立 backup-executor proof lane 去验证
 
 ## 当前仍待完成的主线
 
-### 一、把 `RedCube AI` 的待吸收 Codex 默认执行器改动安全并回 `main`
-
-这条已经不是设计或实现问题，而是安全吸收问题。
-
-必须做的是：
-
-- 先消掉主 checkout 上与待吸收提交重叠的本地状态
-- 再吸收已经完成的 `Codex CLI autonomous` 默认执行器提交
-- 同步 `README*`、`docs/status.md`、`docs/architecture.md` 与 `contracts/runtime-program/current-program.json`
-
-### 二、在 `RedCube` 吸收后刷新中央 reference sync 面
+### 一、刷新 `OPL` 顶层 central reference sync 面
 
 `OPL` 顶层当前最容易继续漂移的不是 core truth，而是 central reference sync 面。
 
-下一次 honest 刷新时，应重点处理：
+当前这一棒必须重点处理：
 
 - `docs/references/ecosystem-status-matrix.md`
-- 仍引用旧 snapshot 的顶层参考入口
+- `docs/status.md`
+- `docs/README*`
+- `docs/roadmap*`
+- 仍引用旧 snapshot 的顶层参考入口与 reference index
 - 与 `RedCube` 主线吸收状态直接相关的 central reference companion
 
-### 三、继续要求三个 domain 仓沿同一组 machine-readable family defaults 收口
+### 二、继续要求三个 domain 仓沿同一组 machine-readable family defaults 收口
 
 这一步现在已经从“只有参考文档”变成“有 contract-first 锚点”。
 后续真正要守住的是：
@@ -121,7 +121,7 @@
 - 不允许把 chat relay / 单次 chat completion 写成默认执行器
 - 不允许把 `Hermes-native` 的语义放松成非 full-agent-loop
 
-### 四、最后才开启 `Hermes-native` proof lane
+### 三、只在独立 proof lane 中验证 `Hermes-native`
 
 这条线现在仍只算实验路线。
 后续如果要做，必须满足：
@@ -129,6 +129,7 @@
 - 入口不是一步一步 chat
 - 也不是把 `/v1/chat/completions` 当一次性模型代理
 - 而是直接调用 `Hermes AIAgent` full agent loop，或明确等价于该 loop 的 `/v1/runs` run surface
+- 验证口径统一收口到 `docs/references/hermes-native-executor-proof-lane.md`
 
 ## 文档同步清单
 
@@ -136,7 +137,10 @@
 
 - `OPL`
   - `docs/status.md`
+  - `docs/README*`
+  - `docs/roadmap*`
   - `docs/references/family-executor-adapter-defaults.md`
+  - `docs/references/hermes-native-executor-proof-lane.md`
   - `docs/references/four-repo-executor-follow-up-and-hermes-evaluation.md`
   - `contracts/opl-gateway/family-executor-adapter-defaults.json`
   - `contracts/opl-gateway/README*.md`
@@ -147,20 +151,19 @@
   - root `status / architecture` 本轮同步到“inherit local Codex default + CodexRunner -> codex exec”真相
 - `Med Auto Grant`
   - 根级 `status / architecture / decisions / runtime-program current truth` 已对齐 critique `Codex CLI autonomous`
-
-### 仍待同步
-
 - `RedCube AI`
-  - 主 checkout `main`
   - `README*`
   - `docs/status.md`
   - `docs/architecture.md`
   - `contracts/runtime-program/current-program.json`
+  - 默认执行器 truth 已对齐 `Codex CLI autonomous`
 
-原因很简单：
+### 仍待同步
 
-- 实现已经完成
-- 但主 checkout 还没安全吸收，所以 repo-tracked public truth 不能提前写成已 landed
+- `OPL`
+  - 后续若再出现 admitted-domain 新 absorbed delta，仍要继续重开 central sync，而不是回退成旧 snapshot
+- `Hermes-native`
+  - 还没有任何一仓被 repo-verified 成“已经能平替 `Codex CLI autonomous` 的 family default concrete executor”
 
 ## Hermes-Agent 作为备选执行器：已经具备什么
 
@@ -253,10 +256,10 @@
 
 ## 建议开工顺序
 
-1. 当前批次先落地 OPL family executor contract、更新中央文档，并同步 `MedDeepScientist` 根级 truth。
-2. 随后处理 `RedCube AI` 主 checkout 的安全吸收条件，把已完成的 `Codex CLI autonomous` 默认执行器并回 `main`。
-3. 在 `RedCube` 吸收完成后，再刷新 `OPL` 顶层 central reference sync 面。
-4. 最后才开启 `Hermes-native` proof lane，而且只允许基于真实 `AIAgent` / `/v1/runs` full-agent-loop 路线。
+1. 当前批次先把 `RedCube AI` 已 absorbed truth 写回 `OPL` 顶层 central reference sync 面。
+2. 继续守住 `Codex CLI autonomous + inherit local Codex default` 这条 family 默认执行器主线。
+3. 只在独立 proof lane 中测试真正的 `Hermes-native`，而且只允许基于真实 `AIAgent` / `/v1/runs` full-agent-loop 路线。
+4. 如果后续四仓再出现新的 admitted-domain absorbed delta，再重开下一轮 central sync。
 
 ## 一句话结论
 
@@ -265,4 +268,4 @@
 - 家族默认 concrete executor 仍应坚持 `Codex CLI autonomous`
 - `Hermes-Agent` 已经具备真实 agent loop、工具自治、skills、browser、subagent 与多 provider 兼容能力，因此非常有资格成为后续备选执行器
 - 但在这几个仓里，它还没有被 repo-verified 成“当前就能平替 Codex CLI 的默认 concrete executor”
-- 因此下一步正确动作不是重新争论方向，而是先把 `RedCube` 吸收、中央 reference sync 与 `Hermes-native` proof lane 分 tranche 做完
+- 因此下一步正确动作不是重新争论方向，而是先把中央 reference sync 与 `Hermes-native` proof lane 分 tranche 做完，并继续把默认主线守在 `Codex CLI autonomous`

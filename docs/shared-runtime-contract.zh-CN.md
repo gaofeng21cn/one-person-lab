@@ -124,7 +124,7 @@
 - 当前公开的 OPL 入口仍是本地 `TypeScript CLI`-first / read-only gateway surface
 - `Shared Runtime Contract` 还处于冻结与逐步落地阶段
 - runtime-oriented 的 family orchestration companion schemas 已经落在 `contracts/family-orchestration/`，先冻结共享 `event envelope + checkpoint lineage` 语义，而不是把它们误写成某个统一 runtime owner
-- 四个仓已经不处在同一集成深度：`Med Auto Grant` 已落地真实上游 `Hermes-Agent` runtime substrate，`Med Auto Science` 已完成 external runtime bring-up 并进入 real adapter cutover 前态，`RedCube AI` 仍在 upstream pilot prep，而 `OPL` 自身继续停留在顶层 gateway / federation 层
+- 四个仓已经不处在同一集成深度：`Med Auto Grant` 已落地真实上游 `Hermes-Agent` runtime substrate，`Med Auto Science` 已完成 external runtime bring-up 并进入 real adapter cutover 前态，`RedCube AI` 也已经落下 upstream runtime-owner cutover 与 repo-verified product-entry federation，而 `OPL` 自身继续停留在顶层 gateway / federation 层
 - 上游 `Hermes-Agent` 运行底座仍是这份合同优选的未来实现方向，而不是已经落地的公开事实
 
 ## 实现边界

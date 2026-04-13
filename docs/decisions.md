@@ -19,6 +19,17 @@
 - 只吸收 graph / event / checkpoint / human gate / discovery 这些编排语义，不吸收 `CrewAI` 的 `Crew` / `Agent` / `Memory` / `LLM wrapper` 作为统一 owner 层
 - 不把 `CrewAI` 写成 `Hermes-Agent`、`Codex CLI`、`OPL Gateway` 或任何 `Domain Gateway` 的替代者
 
+### 决策：`Hermes-native` 备选执行器只通过独立 proof lane 验证
+
+原因：`Med Auto Grant` 与 `RedCube AI` 已经证明“runtime substrate 已接上游 `Hermes-Agent`”不等于“默认 concrete executor 已经能平替 `Codex CLI autonomous`”。如果不把 proof lane 单独冻结，`custom + chat_completions`、单步 relay、repo-local chat wrapper，都会被误报成“已经完成 Hermes-native 备选执行器验证”。
+
+影响：
+
+- 家族默认 concrete executor 继续保持 `Codex CLI autonomous`
+- `Hermes-native` 备选执行器只允许在 `docs/references/hermes-native-executor-proof-lane.md` 这条独立 proof lane 内验证
+- proof 只接受完整 `Hermes AIAgent` loop，或经证实等价、能产生真实 terminal event stream 的 `/v1/runs`
+- proof 必须同时检查 reasoning 语义是否真实生效、tools / skills / browser / delegate / memory / session 能力是否成立，以及 event / error / interrupt 是否 fail-closed
+
 ## 2026-04-11
 
 ### 决策：`Hermes-Agent` 只指上游外部 runtime substrate
@@ -27,7 +38,7 @@
 
 ### 决策：四仓必须分别诚实描述自己的 Hermes 集成深度
 
-原因：不同仓当前所处阶段已经不一样。`Med Auto Grant` 已把 runtime substrate 切到真实上游 `Hermes-Agent`，`Med Auto Science` 已完成 external runtime bring-up 并转入 real adapter cutover 前态，`RedCube AI` 仍在 pilot prep，而 `OPL` 自己不持有 domain runtime owner 身份。继续用“一刀切”的集成描述，只会误导下一轮实现。
+原因：不同仓当前所处阶段已经不一样。`Med Auto Grant` 已把 runtime substrate 切到真实上游 `Hermes-Agent`，`Med Auto Science` 已完成 external runtime bring-up 并转入 real adapter cutover 前态，`RedCube AI` 已落下 upstream runtime-owner cutover 与 repo-verified product-entry federation，而 `OPL` 自己不持有 domain runtime owner 身份。继续用“一刀切”的集成描述，只会误导下一轮实现。
 
 ### 决策：先做真实上游集成，再做共享 runtime 回抽
 

@@ -25,7 +25,7 @@
 - `OPL` 现在也已经落下本地 web front desk pilot，以及可写 workspace registry、managed session ledger 和 machine-readable family handoff bundle
 - hosted / web 前台的选型现已冻结：短期最快路线是 `LibreChat-first` pilot，而且真实的 hosted shell pilot package 已落地；长期仍回到 `OPL` 自有 web front desk
 - 当前已经冻结的顶层 integration choice 是 `external kernel, managed by OPL product packaging`：不 fork `Hermes-Agent`，也不把用户自管 Hermes 安装变成产品前置条件
-- 生态当前已经不再是一刀切阶段：`Med Auto Grant` 已有真实上游 substrate，`Med Auto Science` 已进入 real adapter cutover 前态，`RedCube AI` 仍在 pilot prep，而 `OPL` 现在已经拥有本地 product-entry shell
+- 生态当前已经不再是一刀切阶段：`Med Auto Grant` 已有真实上游 substrate，`Med Auto Science` 已进入 real adapter cutover 前态，`RedCube AI` 也已经落下 upstream runtime-owner cutover 与 repo-verified product-entry federation，而 `OPL` 现在已经拥有本地 product-entry shell
 - 当前 repo 已有可运行的本地 `TypeScript CLI`-first / read-only gateway baseline
 - 这条 repo-tracked 的 CLI-first / read-only baseline 也仍然是 `OPL` 在 `Phase 1` 的 formal entry contract 与 public system surface
 - 当前 OPL 层的 top-level formal entry 仍然就是这条本地 `TypeScript CLI`-first / read-only gateway surface，而不是 launcher 或 runtime-owner 入口
@@ -54,7 +54,7 @@
 - 把 `Shared Domain Contract` v1 需要统一的对象先冻结清楚，至少包括 formal-entry matrix、`per-run handle`、durable report、audit trail、gate semantics 与 no-bypass 规则
 - 保持 `MedAutoScience` 明确为 `Research Ops` 的 domain surface
 - 保持 `RedCube AI` 明确为视觉交付的 domain surface
-- 先在某个合适的 domain 仓里做出一个诚实的上游 `Hermes-Agent` pilot，再决定哪些实现值得回抽成共享 substrate
+- 把 `Hermes-native` 备选执行器继续锁在显式的 full-agent-loop proof lane 里，不把 generic `chat_completions`、单步 relay 或 repo-local chat 包装层误写成真实等价路线
 - 把 `Agent-first` 加“当前 `Auto-only` 主线 + 未来 `HITL` 分层”这套原则带入后续候选 domain 的定义
 - 把已 absorb 的 `Phase 1 exit + next-stage activation package freeze` 继续显式保留为当前 `Minimal admitted-domain federation activation package` 的前序门槛，并让所有 candidate path 持续处在 admission、discovery、routing 与 handoff 的显式审查轨道中
 - 用清楚的任务边界与交付对象定义下一个候选 domain，并优先沿用当前 `task-topology + candidate-domain-backlog + domain-onboarding` 这条路径

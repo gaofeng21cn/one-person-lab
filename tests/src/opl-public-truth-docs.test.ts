@@ -439,6 +439,7 @@ test('product-entry docs freeze the managed external-kernel choice instead of fo
   const runtimeContractZh = read('docs/shared-runtime-contract.zh-CN.md');
   const decisionNote = read('docs/references/opl-product-entry-and-hermes-kernel-integration.md');
   const executorDefaults = read('docs/references/family-executor-adapter-defaults.md');
+  const hermesProofLane = read('docs/references/hermes-native-executor-proof-lane.md');
   const familyEntryDoc = read('docs/references/family-product-entry-and-domain-handoff-architecture.md');
   const masCutoverBoard = read('docs/references/mas-top-level-cutover-board.md');
 
@@ -488,6 +489,8 @@ test('product-entry docs freeze the managed external-kernel choice instead of fo
   assert.match(docsIndexZh, /family-product-entry-and-domain-handoff-architecture\.md/);
   assert.match(docsIndex, /family-executor-adapter-defaults\.md/);
   assert.match(docsIndexZh, /family-executor-adapter-defaults\.md/);
+  assert.match(docsIndex, /hermes-native-executor-proof-lane\.md/);
+  assert.match(docsIndexZh, /hermes-native-executor-proof-lane\.md/);
   assert.match(docsIndex, /mas-top-level-cutover-board\.md/);
   assert.match(docsIndexZh, /mas-top-level-cutover-board\.md/);
   assert.match(refsIndex, /opl-product-entry-and-hermes-kernel-integration\.md/);
@@ -496,6 +499,8 @@ test('product-entry docs freeze the managed external-kernel choice instead of fo
   assert.match(refsIndexZh, /family-product-entry-and-domain-handoff-architecture\.md/);
   assert.match(refsIndex, /family-executor-adapter-defaults\.md/);
   assert.match(refsIndexZh, /family-executor-adapter-defaults\.md/);
+  assert.match(refsIndex, /hermes-native-executor-proof-lane\.md/);
+  assert.match(refsIndexZh, /hermes-native-executor-proof-lane\.md/);
   assert.match(refsIndex, /mas-top-level-cutover-board\.md/);
   assert.match(refsIndexZh, /mas-top-level-cutover-board\.md/);
 
@@ -509,6 +514,11 @@ test('product-entry docs freeze the managed external-kernel choice instead of fo
   assert.match(executorDefaults, /inherit_local_codex_default/);
   assert.match(executorDefaults, /Hermes AIAgent/);
   assert.match(executorDefaults, /chat relay|一步一步 chat/);
+  assert.match(hermesProofLane, /Codex CLI autonomous/);
+  assert.match(hermesProofLane, /AIAgent/);
+  assert.match(hermesProofLane, /\/v1\/runs/);
+  assert.match(hermesProofLane, /chat relay|单次 `chat completion`/);
+  assert.match(hermesProofLane, /skills|browser|delegate|memory|session/);
   assert.match(familyEntryDoc, /OPL Product Entry -> OPL Gateway -> Hermes Kernel -> Domain Handoff/);
   assert.match(familyEntryDoc, /User -> Domain Product Entry -> Domain Gateway -> Hermes Kernel -> Domain Harness OS/);
   assert.match(familyEntryDoc, /mas-top-level-cutover-board\.md/);
@@ -832,11 +842,12 @@ test('internal reference truth docs carry the 2026-04-11 snapshot and current OP
 test('owner-line brief freezes the current central reference convergence lane', () => {
   const ownerLine = read('docs/references/opl-phase2-ecosystem-sync-owner-line.md');
 
-  assert.match(ownerLine, /状态锚点：`?2026-04-11`?/);
+  assert.match(ownerLine, /状态锚点：`?2026-04-13`?/);
   assert.match(ownerLine, /machine-readable \/ repo-tracked truth/);
-  assert.match(ownerLine, /e8146a1/);
-  assert.match(ownerLine, /762ea4c/);
-  assert.match(ownerLine, /phase_2_family_parity_autopilot_continuation_board/);
+  assert.match(ownerLine, /c124c5d/);
+  assert.match(ownerLine, /product frontdesk/);
+  assert.match(ownerLine, /federated product entry/);
+  assert.match(ownerLine, /待吸收默认执行器|pilot prep/);
   assert.match(ownerLine, /98df81f/);
   assert.match(ownerLine, /manual stabilization checklist/);
   assert.match(ownerLine, /CENTRAL_REFERENCE_CONVERGENCE_CLOSED_AND_ABSORBED/);

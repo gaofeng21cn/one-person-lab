@@ -1,8 +1,8 @@
 # OPL Phase 2 Admitted-Domain Delta Intake Refresh
 
-> 历史说明（2026-04-11 OMX offboarding）：本文件保留为历史/迁移参考，不作为当前活跃执行入口。
+> 历史说明（2026-04-11 OMX offboarding）：本文件保留为参考级 tranche 记录；当前这轮同步已更新到 `2026-04-13` 的 admitted-domain truth。
 
-状态锚点：`2026-04-11`
+状态锚点：`2026-04-13`
 
 ## 这是什么
 
@@ -18,11 +18,11 @@
 
 ### 1. `RedCube AI`
 
-- latest absorbed commit：`762ea4c`
-- 当前 absorbed 主线锚点：`Phase 2 / runtime watch locator integrity hardening` 已 closeout，且同一 mainline 的 `phase_2_family_parity_autopilot_continuation_board` 已预冻结
+- latest absorbed commit：`c124c5d`
+- 当前 absorbed 主线锚点：已经不再只是 `Phase 2 / runtime watch locator integrity hardening`；当前 repo-tracked truth 已推进到 upstream runtime-owner cutover 与 `Repo-Verified Product Entry And OPL Federation`
 - 中央 sync 最小要求：
-  - 不再把 `workspace / operator quickstart convergence` 或 `9cfe58b` 单独写成最新 absorbed edge
-  - 要把 `e8146a1` 的 verification surface 分层、`762ea4c` 的 repo-local control-plane state off OMX，以及 `phase_2_family_parity_autopilot_continuation_board -> phase_2_family_parity_governance_surface_convergence` 作为当前 same-mainline follow-on truth 写回中央参考面
+  - 不再把 `RedCube AI` 写成 upstream pilot prep、待吸收默认执行器，或只停留在 quickstart provenance
+  - 要把 upstream runtime-owner cutover、`redcube product frontdesk`、federated product entry、session continuity、family manifest companion，以及 latest `product_entry_readiness` companion 一并写回中央参考面
 
 ### 2. `MedAutoScience`
 

@@ -203,10 +203,10 @@
 在当前口径下：
 
 - 共享运行层的优选长线实现方向是上游 `Hermes-Agent`，当前仓内带 `Hermes` 命名的 package 主要承担迁移 scaffold 与 pilot 角色
-- 当前四个仓已不处在同一集成深度：`Med Auto Grant` 已落地真实上游 `Hermes-Agent` runtime substrate，`Med Auto Science` 已完成 external runtime bring-up 并转入 real adapter cutover 前态，`RedCube AI` 仍在 upstream pilot prep，而 `OPL` 自身继续不持有 domain runtime owner 身份
+- 当前四个仓已不处在同一集成深度：`Med Auto Grant` 已落地真实上游 `Hermes-Agent` runtime substrate，`Med Auto Science` 已完成 external runtime bring-up 并转入 real adapter cutover 前态，`RedCube AI` 也已经落下 upstream runtime-owner cutover，以及 repo-verified 的 `product frontdesk / federated product entry / session continuity / family-orchestration companion` 表面，而 `OPL` 自身继续不持有 domain runtime owner 身份
 - 当前各仓仍处在过渡态：
   - `Med Auto Science` 目前是 repo-side seam + 受控 `MedDeepScientist` backend
-  - `RedCube AI` 目前是 repo-local managed runtime pilot
+  - `RedCube AI` 现在通过上游 `Hermes-Agent` API server 运行，并已经有 service-safe domain-entry adapter 与 repo-verified 的 `product frontdesk / manifest / federated entry` 表面
   - `Med Auto Grant` 目前是本地 `CLI` runtime baseline + repo-local migration scaffold
 - 将来如果真正接入上游 `Hermes-Agent`，它也应位于 runtime substrate 这一层，而 `OPL Gateway`、各 `Domain Gateway` 与各 `Domain Harness OS` 继续保留自己的职责边界
 
@@ -259,8 +259,8 @@
 - 用户在本机上不再必须先进入 `Codex`，才能触达顶层 `OPL` surface
 - 这次落地的 product entry 已经同时包含本地 CLI-first 入口壳与本地 web front desk pilot；同时也已经落下可自托管的 hosted pilot package，以及真实的 LibreChat-first hosted shell pilot package，但 actual managed hosted runtime 仍未落地
 - hosted / web 这一层的选型现在也已经冻结：短期最快可用路线是 `LibreChat-first`，长期目标仍是 `OPL` 自有 web front desk；`Chatbot UI` 太薄，不适合作为主 hosted 基座
-- 三个业务仓的成熟度缺口现在已经缩小，但仍然真实存在：`Med Auto Grant` 已经有 grant-facing 的结构化 shell 和只读 direct-product projection，`Med Auto Science` 已经补上 research-only shell 与共享 envelope 的 `build-product-entry`，`RedCube AI` 也已经有 repo-tracked 的 `redcube product-entry` shell；但三者都还不应被夸大成成熟的 hosted 或最终用户前台
-- 四个仓已经不再处于同一条 `Hermes-Agent` 集成阶段线上：`Med Auto Grant` 已切到真实 runtime substrate，`Med Auto Science` 已打通 external runtime bring-up，`RedCube AI` 仍在 pilot prep，而 `OPL` 继续只持有顶层 gateway / federation 语言，同时开始持有 family-level 的本地入口壳
+- 三个业务仓的成熟度缺口现在已经缩小，但仍然真实存在：`Med Auto Grant` 已经有 grant-facing 的结构化 shell 和只读 direct-product projection，`Med Auto Science` 已经补上 research-only shell 与共享 envelope 的 `build-product-entry`，`RedCube AI` 也已经有 repo-verified 的 `redcube product frontdesk`、direct / federated / session entry surfaces，以及 family-orchestration companions；但三者都还不应被夸大成成熟的 hosted 或最终用户前台
+- 四个仓已经不再处于同一条 `Hermes-Agent` 集成阶段线上：`Med Auto Grant` 已切到真实 runtime substrate，`Med Auto Science` 已打通 external runtime bring-up，`RedCube AI` 也已经落下 upstream runtime-owner cutover 与 repo-verified product-entry federation，而 `OPL` 继续只持有顶层 gateway / federation 语言，同时开始持有 family-level 的本地入口壳
 
 目标产品链路应是：
 

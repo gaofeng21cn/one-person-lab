@@ -1,6 +1,6 @@
 # OPL Phase 2 中央 Reference Sync Tranche Board
 
-状态锚点：`2026-04-11`
+状态锚点：`2026-04-13`
 
 ## 文档目的
 
@@ -33,7 +33,7 @@
 1. `phase_2_admitted_domain_delta_intake_refresh`
    - 先把最新 absorbed admitted-domain delta 收进中央执行板、状态矩阵、任务板与提示词模板
    - 当前已知 delta：
-     - `RedCube AI`：`e8146a1` `verification surfaces by test layer`，以及 `762ea4c` `runtime program state off omx`
+     - `RedCube AI`：当前 latest absorbed delta 已推进到 upstream runtime-owner cutover 与 repo-verified `product frontdesk / federated product entry / session continuity / family-orchestration companion / product-entry readiness`，当前锚点为 `c124c5d`
      - `MedAutoScience`：`9b5cea8` `verification surfaces by test layer`、`7ee19a8` `runtime and workspace repair priorities`，以及 `6c64264` `retire omx workflow entry`
 2. `phase_2_gateway_surface_wording_sync`
    - 只同步最小必要的 gateway wording / contract hub wording / acceptance wording

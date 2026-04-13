@@ -61,8 +61,8 @@
   - 当前最成熟的参考实现
   - 已经以 `Codex CLI autonomous` 作为真实可证实的底层执行器
 - `RedCube AI`
-  - `Codex CLI autonomous` 默认路线的实现已经完成
-  - 当前剩余问题是主 checkout `main` 仍未安全吸收，不是默认语义还没定
+  - `Codex CLI autonomous` 默认路线已经吸收回 `main`
+  - 当前 repo-tracked truth 已同时包含 upstream runtime-owner cutover 与 repo-verified `product frontdesk / federated product entry / session continuity`
   - 现有 Hermes `/v1/runs` relay 继续只算迁移桥
 - `Med Auto Grant`
   - 真实上游 `Hermes-Agent` runtime substrate 已可运行

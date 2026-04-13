@@ -1,6 +1,6 @@
 {
   "package_id": "opl_phase_2_admitted_domain_delta_intake_refresh",
-  "date_anchor": "2026-04-11",
+  "date_anchor": "2026-04-13",
   "status": "truth_frozen_pending_implementation",
   "parent_board_id": "opl_phase_2_central_reference_sync_board",
   "parent_package_id": "opl_minimal_admitted_domain_federation_activation_package",
@@ -8,9 +8,9 @@
   "current_known_delta_families": [
     {
       "domain_id": "redcube",
-      "latest_absorbed_commit": "762ea4c",
-      "delta_label": "verification-surface split plus runtime-program state off omx with family-parity continuation board prefrozen",
-      "required_central_effect": "central references must stop describing quickstart or 9cfe58b alone as the latest absorbed RedCube edge, and instead reflect the runtime-watch closeout, layered verification surfaces, repo-local control-plane migration off OMX, and the prefrozen family-parity continuation board"
+      "latest_absorbed_commit": "c124c5d",
+      "delta_label": "upstream runtime-owner cutover plus repo-verified product frontdesk, federation, session continuity, family-orchestration companions, and product-entry readiness",
+      "required_central_effect": "central references must stop describing RedCube as pilot prep, pending Codex absorb, or quickstart-only provenance, and instead reflect upstream runtime-owner cutover, `redcube product frontdesk`, federated product entry, session continuity, family manifest companions, and the latest readiness companion surface"
     },
     {
       "domain_id": "medautoscience",
