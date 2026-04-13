@@ -1432,6 +1432,34 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
                       + manifestEntry.manifest.product_entry_overview.resume_surface.command
                       + '</code></p>'
                     : '',
+                  manifestEntry.manifest?.product_entry_preflight?.summary
+                    ? '<p><strong>Preflight Summary:</strong> '
+                      + manifestEntry.manifest.product_entry_preflight.summary
+                      + '</p>'
+                    : '',
+                  typeof manifestEntry.manifest?.product_entry_preflight?.ready_to_try_now === 'boolean'
+                    ? '<p><strong>Ready To Try Now:</strong> '
+                      + String(manifestEntry.manifest.product_entry_preflight.ready_to_try_now)
+                      + '</p>'
+                    : '',
+                  manifestEntry.manifest?.product_entry_preflight?.recommended_check_command
+                    ? '<p><strong>Preflight Check Command:</strong> <code>'
+                      + manifestEntry.manifest.product_entry_preflight.recommended_check_command
+                      + '</code></p>'
+                    : '',
+                  manifestEntry.manifest?.product_entry_preflight?.recommended_start_command
+                    ? '<p><strong>Preflight Start Command:</strong> <code>'
+                      + manifestEntry.manifest.product_entry_preflight.recommended_start_command
+                      + '</code></p>'
+                    : '',
+                  Array.isArray(manifestEntry.manifest?.product_entry_preflight?.blocking_check_ids)
+                    && manifestEntry.manifest.product_entry_preflight.blocking_check_ids.length > 0
+                    ? '<p><strong>Blocking Preflight Checks:</strong> '
+                      + manifestEntry.manifest.product_entry_preflight.blocking_check_ids
+                        .map((checkId) => '<code>' + String(checkId) + '</code>')
+                        .join(', ')
+                      + '</p>'
+                    : '',
                   Array.isArray(manifestEntry.manifest?.product_entry_overview?.human_gate_ids)
                     && manifestEntry.manifest.product_entry_overview.human_gate_ids.length > 0
                     ? '<p><strong>Overview Human Gates:</strong> '

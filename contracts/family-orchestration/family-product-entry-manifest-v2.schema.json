@@ -105,6 +105,9 @@
       "type": "string",
       "minLength": 1
     },
+    "product_entry_preflight": {
+      "$ref": "#/$defs/productEntryPreflight"
+    },
     "product_entry_shell": {
       "type": "object",
       "minProperties": 1,
@@ -288,6 +291,81 @@
           "$ref": "#/$defs/referenceRef"
         }
       }
+    },
+    "productEntryPreflightCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "check_id"
+      ],
+      "properties": {
+        "check_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "blocking": {
+          "type": "boolean"
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "command": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "productEntryPreflight": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface_kind",
+        "ready_to_try_now",
+        "blocking_check_ids",
+        "checks"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "product_entry_preflight"
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ready_to_try_now": {
+          "type": "boolean"
+        },
+        "recommended_check_command": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recommended_start_command": {
+          "type": "string",
+          "minLength": 1
+        },
+        "blocking_check_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/productEntryPreflightCheck"
+          }
+        }
+      }
     }
   },
   "examples": [
@@ -320,6 +398,16 @@
       },
       "recommended_shell": "direct",
       "recommended_command": "redcube product invoke",
+      "product_entry_preflight": {
+        "surface_kind": "product_entry_preflight",
+        "ready_to_try_now": true,
+        "blocking_check_ids": [],
+        "checks": [
+          {
+            "check_id": "workspace_contract_present"
+          }
+        ]
+      },
       "product_entry_shell": {
         "frontdesk": {
           "command": "redcube product frontdesk",

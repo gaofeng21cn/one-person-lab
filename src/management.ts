@@ -467,6 +467,7 @@ export function buildFrontDeskDashboard(
       operator_loop_continuation_command: entry.manifest?.operator_loop_surface?.continuation_command ?? null,
       operator_loop_actions: entry.manifest?.operator_loop_actions ?? {},
       product_entry_overview: entry.manifest?.product_entry_overview ?? null,
+      product_entry_preflight: entry.manifest?.product_entry_preflight ?? null,
       product_entry_quickstart: entry.manifest?.product_entry_quickstart ?? null,
       manifest_version: entry.manifest?.manifest_version ?? null,
       recommended_shell: entry.manifest?.recommended_shell ?? null,
@@ -491,6 +492,17 @@ export function buildFrontDeskDashboard(
       product_entry_overview_resume_command:
         entry.manifest?.product_entry_overview?.resume_surface?.command ?? null,
       product_entry_overview_human_gate_ids: entry.manifest?.product_entry_overview?.human_gate_ids ?? [],
+      product_entry_preflight_summary: entry.manifest?.product_entry_preflight?.summary ?? null,
+      product_entry_preflight_ready_to_try_now:
+        entry.manifest?.product_entry_preflight?.ready_to_try_now ?? null,
+      product_entry_preflight_recommended_check_command:
+        entry.manifest?.product_entry_preflight?.recommended_check_command ?? null,
+      product_entry_preflight_recommended_start_command:
+        entry.manifest?.product_entry_preflight?.recommended_start_command ?? null,
+      product_entry_preflight_blocking_check_ids:
+        entry.manifest?.product_entry_preflight?.blocking_check_ids ?? [],
+      product_entry_preflight_checks_count:
+        entry.manifest?.product_entry_preflight?.checks.length ?? 0,
       product_entry_readiness_verdict: entry.manifest?.product_entry_readiness?.verdict ?? null,
       product_entry_readiness_summary: entry.manifest?.product_entry_readiness?.summary ?? null,
       product_entry_readiness_usable_now: entry.manifest?.product_entry_readiness?.usable_now ?? null,

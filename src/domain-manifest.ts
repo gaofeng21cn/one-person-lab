@@ -74,6 +74,22 @@ export interface NormalizedDomainManifest {
     remaining_gaps_count: number | null;
     human_gate_ids: string[];
   } | null;
+  product_entry_preflight: {
+    surface_kind: string;
+    summary: string | null;
+    ready_to_try_now: boolean | null;
+    recommended_check_command: string | null;
+    recommended_start_command: string | null;
+    blocking_check_ids: string[];
+    checks: Array<{
+      check_id: string;
+      title: string | null;
+      status: string | null;
+      blocking: boolean | null;
+      summary: string | null;
+      command: string | null;
+    }>;
+  } | null;
   product_entry_readiness: {
     surface_kind: string;
     verdict: string | null;
@@ -300,6 +316,31 @@ function normalizeProductEntryOverview(value: unknown) {
   };
 }
 
+function normalizeProductEntryPreflight(value: unknown) {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const checks = normalizeRecordList(value.checks, 'product_entry_preflight.checks').map((check, index) => ({
+    check_id: requireString(check.check_id, `product_entry_preflight.checks[${index}].check_id`),
+    title: optionalString(check.title),
+    status: optionalString(check.status),
+    blocking: typeof check.blocking === 'boolean' ? check.blocking : null,
+    summary: optionalString(check.summary),
+    command: optionalString(check.command),
+  }));
+
+  return {
+    surface_kind: optionalString(value.surface_kind) ?? 'product_entry_preflight',
+    summary: optionalString(value.summary),
+    ready_to_try_now: typeof value.ready_to_try_now === 'boolean' ? value.ready_to_try_now : null,
+    recommended_check_command: optionalString(value.recommended_check_command),
+    recommended_start_command: optionalString(value.recommended_start_command),
+    blocking_check_ids: readStringList(value.blocking_check_ids),
+    checks,
+  };
+}
+
 function normalizeProductEntryReadiness(value: unknown) {
   if (!isRecord(value)) {
     return null;
@@ -342,6 +383,7 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
     ? normalizeRecordMap(manifest.operator_loop_actions, 'operator_loop_actions')
     : {};
   const productEntryOverview = normalizeProductEntryOverview(manifest.product_entry_overview);
+  const productEntryPreflight = normalizeProductEntryPreflight(manifest.product_entry_preflight);
   const productEntryReadiness = normalizeProductEntryReadiness(manifest.product_entry_readiness);
   const productEntryQuickstart = normalizeProductEntryQuickstart(manifest.product_entry_quickstart);
   const rawFamilyOrchestration = isRecord(manifest.family_orchestration)
@@ -398,6 +440,7 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
     product_entry_shell: productEntryShell,
     shared_handoff: sharedHandoff,
     product_entry_overview: productEntryOverview,
+    product_entry_preflight: productEntryPreflight,
     product_entry_readiness: productEntryReadiness,
     product_entry_quickstart: productEntryQuickstart,
     family_orchestration: rawFamilyOrchestration

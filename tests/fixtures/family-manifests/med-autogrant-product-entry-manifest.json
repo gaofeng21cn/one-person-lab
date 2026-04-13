@@ -141,6 +141,48 @@
         "mag_route_gate_revision"
       ]
     },
+    "product_entry_preflight": {
+      "surface_kind": "product_entry_preflight",
+      "summary": "当前 direct grant frontdoor 的前置检查已通过，可以先复核 workspace 与主线，再进入 product frontdesk。",
+      "ready_to_try_now": true,
+      "recommended_check_command": "uv run python -m med_autogrant validate-workspace --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+      "recommended_start_command": "uv run python -m med_autogrant product-frontdesk --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+      "blocking_check_ids": [],
+      "checks": [
+        {
+          "check_id": "workspace_document_valid",
+          "title": "Workspace Document Valid",
+          "status": "pass",
+          "blocking": true,
+          "summary": "workspace document schema 与 runtime constraints 均通过。",
+          "command": "uv run python -m med_autogrant validate-workspace --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json"
+        },
+        {
+          "check_id": "upstream_hermes_owner_line",
+          "title": "Upstream Hermes Owner Line",
+          "status": "pass",
+          "blocking": true,
+          "summary": "当前 runtime owner line 已对齐 upstream Hermes substrate。",
+          "command": "uv run python -m med_autogrant mainline-status --format json"
+        },
+        {
+          "check_id": "direct_frontdoor_contract_landed",
+          "title": "Direct Frontdoor Contract Landed",
+          "status": "pass",
+          "blocking": true,
+          "summary": "direct frontdoor contract 已 landed，可由 product-frontdesk / manifest 直接消费。",
+          "command": "uv run python -m med_autogrant product-frontdesk --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json"
+        },
+        {
+          "check_id": "submission_ready_export_gate",
+          "title": "Submission Ready Export Gate",
+          "status": "warn",
+          "blocking": false,
+          "summary": "当前 stage 还未到 submission-ready export gate；这不阻止进入 frontdoor，但后续仍需继续主线推进。",
+          "command": "uv run python -m med_autogrant build-submission-ready-package --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --output-dir <output-dir> --format json"
+        }
+      ]
+    },
     "product_entry_readiness": {
       "surface_kind": "product_entry_readiness",
       "verdict": "agent_assisted_ready_not_product_grade",
