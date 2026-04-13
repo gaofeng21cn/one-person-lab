@@ -386,6 +386,28 @@ type FakePaperclipRequest = {
   body: Record<string, unknown> | null;
 };
 
+type FakePaperclipIssue = {
+  id: string;
+  companyId: string;
+  title: string;
+  status: string;
+  priority: string;
+  projectId: unknown;
+  projectWorkspaceId: unknown;
+  executionWorkspacePreference: unknown;
+};
+
+type FakePaperclipApproval = {
+  id: string;
+  companyId: string;
+  type: unknown;
+  status: string;
+  decision: string | null;
+  decidedAt: string | null;
+  payload: Record<string, unknown>;
+  issueIds: string[];
+};
+
 async function readServerJsonBody(request: IncomingMessage) {
   return await new Promise<Record<string, unknown> | null>((resolve, reject) => {
     let body = '';
@@ -411,6 +433,8 @@ async function readServerJsonBody(request: IncomingMessage) {
 
 async function startFakePaperclipServer() {
   const requests: FakePaperclipRequest[] = [];
+  const issues = new Map<string, FakePaperclipIssue>();
+  const approvals = new Map<string, FakePaperclipApproval>();
   const server = createServer(async (request: IncomingMessage, response: ServerResponse<IncomingMessage>) => {
     const url = new URL(request.url ?? '/', 'http://127.0.0.1');
     const body = await readServerJsonBody(request);
@@ -426,8 +450,7 @@ async function startFakePaperclipServer() {
 
     if (request.method === 'POST' && /^\/api\/companies\/[^/]+\/issues$/.test(url.pathname)) {
       const companyId = url.pathname.split('/')[3] ?? 'unknown-company';
-      response.statusCode = 201;
-      response.end(JSON.stringify({
+      const issue: FakePaperclipIssue = {
         id: `issue-${requests.filter((entry) => entry.path.endsWith('/issues')).length}`,
         companyId,
         title: String(body?.title ?? 'Untitled issue'),
@@ -436,21 +459,67 @@ async function startFakePaperclipServer() {
         projectId: body?.projectId ?? null,
         projectWorkspaceId: body?.projectWorkspaceId ?? null,
         executionWorkspacePreference: body?.executionWorkspacePreference ?? null,
-      }));
+      };
+      issues.set(issue.id, issue);
+      response.statusCode = 201;
+      response.end(JSON.stringify(issue));
+      return;
+    }
+
+    if (request.method === 'GET' && /^\/api\/companies\/[^/]+\/issues\/[^/]+$/.test(url.pathname)) {
+      const issueId = url.pathname.split('/')[5] ?? 'unknown-issue';
+      const issue = issues.get(issueId);
+      if (!issue) {
+        response.statusCode = 404;
+        response.end(JSON.stringify({
+          error: 'not_found',
+          path: url.pathname,
+          issueId,
+        }));
+        return;
+      }
+
+      response.statusCode = 200;
+      response.end(JSON.stringify(issue));
       return;
     }
 
     if (request.method === 'POST' && /^\/api\/companies\/[^/]+\/approvals$/.test(url.pathname)) {
       const companyId = url.pathname.split('/')[3] ?? 'unknown-company';
-      response.statusCode = 201;
-      response.end(JSON.stringify({
+      const approval: FakePaperclipApproval = {
         id: `approval-${requests.filter((entry) => entry.path.endsWith('/approvals')).length}`,
         companyId,
         type: body?.type ?? null,
         status: 'pending',
-        payload: body?.payload ?? {},
-        issueIds: Array.isArray(body?.issueIds) ? body?.issueIds : [],
-      }));
+        decision: null,
+        decidedAt: null,
+        payload:
+          body?.payload && typeof body.payload === 'object' && !Array.isArray(body.payload)
+            ? body.payload as Record<string, unknown>
+            : {},
+        issueIds: Array.isArray(body?.issueIds) ? body.issueIds.map((value) => String(value)) : [],
+      };
+      approvals.set(approval.id, approval);
+      response.statusCode = 201;
+      response.end(JSON.stringify(approval));
+      return;
+    }
+
+    if (request.method === 'GET' && /^\/api\/companies\/[^/]+\/approvals\/[^/]+$/.test(url.pathname)) {
+      const approvalId = url.pathname.split('/')[5] ?? 'unknown-approval';
+      const approval = approvals.get(approvalId);
+      if (!approval) {
+        response.statusCode = 404;
+        response.end(JSON.stringify({
+          error: 'not_found',
+          path: url.pathname,
+          approvalId,
+        }));
+        return;
+      }
+
+      response.statusCode = 200;
+      response.end(JSON.stringify(approval));
       return;
     }
 
@@ -490,7 +559,26 @@ async function startFakePaperclipServer() {
   return {
     server,
     requests,
+    issues,
+    approvals,
     baseUrl: `http://127.0.0.1:${address.port}`,
+    setIssueStatus(issueId: string, status: string) {
+      const issue = issues.get(issueId);
+      assert.ok(issue);
+      issue.status = status;
+    },
+    setApprovalDecision(
+      approvalId: string,
+      status: string,
+      decision: string,
+      decidedAt = '2026-04-13T12:00:00.000Z',
+    ) {
+      const approval = approvals.get(approvalId);
+      assert.ok(approval);
+      approval.status = status;
+      approval.decision = decision;
+      approval.decidedAt = decidedAt;
+    },
   };
 }
 
@@ -2387,6 +2475,7 @@ test('paperclip-bootstrap exposes operator preflight plus the task and gate oper
           ready_for_gate_projection: boolean;
         };
         automation_surfaces: {
+          operator_loop_command: string;
           sync_command: string;
           web: {
             bootstrap: string;
@@ -2408,6 +2497,10 @@ test('paperclip-bootstrap exposes operator preflight plus the task and gate oper
     assert.equal(output.paperclip_bootstrap.readiness, 'configured');
     assert.equal(output.paperclip_bootstrap.preflight.ready_for_task_projection, true);
     assert.equal(output.paperclip_bootstrap.preflight.ready_for_gate_projection, true);
+    assert.equal(
+      output.paperclip_bootstrap.automation_surfaces.operator_loop_command,
+      'opl paperclip-operator-loop --all --interval-ms 30000',
+    );
     assert.equal(output.paperclip_bootstrap.automation_surfaces.sync_command, 'opl paperclip-sync --all');
     assert.equal(output.paperclip_bootstrap.automation_surfaces.web.bootstrap, '/api/paperclip/control-plane/bootstrap');
     assert.equal(output.paperclip_bootstrap.automation_surfaces.web.sync, '/api/paperclip/control-plane/sync');
@@ -2592,10 +2685,16 @@ test('paperclip-sync writes a deduplicated OPL state comment back to a tracked P
           matched_projection_count: number;
           synced_count: number;
           skipped_count: number;
+          approval_updates_count: number;
+          resolved_gate_count: number;
         };
         projections: Array<{
           issue_id: string;
           sync_status: string;
+          remote_issue_status: string | null;
+          remote_approval_status: string | null;
+          gate_status: string | null;
+          gate_decision: string | null;
           snapshot: {
             workspace_path: string;
             related_session_aggregate_count: number;
@@ -2612,15 +2711,24 @@ test('paperclip-sync writes a deduplicated OPL state comment back to a tracked P
     assert.equal(synced.paperclip_sync.summary.matched_projection_count, 1);
     assert.equal(synced.paperclip_sync.summary.synced_count, 1);
     assert.equal(synced.paperclip_sync.summary.skipped_count, 0);
+    assert.equal(synced.paperclip_sync.summary.approval_updates_count, 0);
+    assert.equal(synced.paperclip_sync.summary.resolved_gate_count, 0);
     assert.equal(synced.paperclip_sync.projections[0].issue_id, 'issue-1');
     assert.equal(synced.paperclip_sync.projections[0].sync_status, 'synced');
+    assert.equal(synced.paperclip_sync.projections[0].remote_issue_status, 'backlog');
+    assert.equal(synced.paperclip_sync.projections[0].remote_approval_status, null);
+    assert.equal(synced.paperclip_sync.projections[0].gate_status, null);
+    assert.equal(synced.paperclip_sync.projections[0].gate_decision, null);
     assert.equal(synced.paperclip_sync.projections[0].snapshot.workspace_path, repoRoot);
     assert.equal(synced.paperclip_sync.projections[0].snapshot.related_session_aggregate_count, 0);
     assert.equal(synced.paperclip_sync.projections[0].snapshot.domain_manifest_status, 'not_bound');
     assert.equal(synced.paperclip_sync.projections[0].comment?.id, 'comment-1');
 
-    assert.equal(fakePaperclip.requests.length, 2);
-    const commentRequest = fakePaperclip.requests[1];
+    assert.equal(fakePaperclip.requests.length, 3);
+    const issueStatusRequest = fakePaperclip.requests[1];
+    const commentRequest = fakePaperclip.requests[2];
+    assert.equal(issueStatusRequest.method, 'GET');
+    assert.equal(issueStatusRequest.path, '/api/companies/company-redcube/issues/issue-1');
     assert.equal(commentRequest.path, '/api/companies/company-redcube/issues/issue-1/comments');
     assert.equal(commentRequest.headers.authorization, 'Bearer sync-token');
     assert.match(String(commentRequest.body?.body ?? ''), /# OPL Sync Update/);
@@ -2644,9 +2752,12 @@ test('paperclip-sync writes a deduplicated OPL state comment back to a tracked P
           matched_projection_count: number;
           synced_count: number;
           skipped_count: number;
+          approval_updates_count: number;
+          resolved_gate_count: number;
         };
         projections: Array<{
           sync_status: string;
+          remote_issue_status: string | null;
           comment: {
             id: string;
           } | null;
@@ -2657,9 +2768,12 @@ test('paperclip-sync writes a deduplicated OPL state comment back to a tracked P
     assert.equal(skipped.paperclip_sync.summary.matched_projection_count, 1);
     assert.equal(skipped.paperclip_sync.summary.synced_count, 0);
     assert.equal(skipped.paperclip_sync.summary.skipped_count, 1);
+    assert.equal(skipped.paperclip_sync.summary.approval_updates_count, 0);
+    assert.equal(skipped.paperclip_sync.summary.resolved_gate_count, 0);
     assert.equal(skipped.paperclip_sync.projections[0].sync_status, 'skipped_no_change');
+    assert.equal(skipped.paperclip_sync.projections[0].remote_issue_status, 'backlog');
     assert.equal(skipped.paperclip_sync.projections[0].comment, null);
-    assert.equal(fakePaperclip.requests.length, 2);
+    assert.equal(fakePaperclip.requests.length, 4);
   } finally {
     await stopHttpServer(fakePaperclip.server);
     fs.rmSync(stateRoot, { recursive: true, force: true });
@@ -2751,6 +2865,225 @@ test('paperclip-open-gate creates a control-company issue and linked board appro
         label: 'opl family handoff bundle',
       },
     ]);
+  } finally {
+    await stopHttpServer(fakePaperclip.server);
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('paperclip-sync pulls approval decisions back into tracked gate state before writing audit comments', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paperclip-gate-sync-'));
+  const fakePaperclip = await startFakePaperclipServer();
+
+  try {
+    runCli([
+      'paperclip-config',
+      '--base-url',
+      fakePaperclip.baseUrl,
+      '--auth-header-env',
+      'OPL_PAPERCLIP_AUTH_HEADER',
+      '--control-company-id',
+      'company-opl-control',
+    ], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer gate-sync-token',
+    });
+
+    await runCliAsync([
+      'paperclip-open-gate',
+      'Review publish readiness for the defense deck.',
+      '--preferred-family',
+      'ppt_deck',
+      '--workspace-path',
+      repoRoot,
+      '--gate-kind',
+      'publish_readiness',
+    ], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer gate-sync-token',
+    });
+
+    fakePaperclip.setIssueStatus('issue-1', 'in_review');
+    fakePaperclip.setApprovalDecision('approval-1', 'approved', 'approve');
+
+    const synced = await runCliAsync([
+      'paperclip-sync',
+      '--issue-id',
+      'issue-1',
+      '--path',
+      repoRoot,
+      '--sessions-limit',
+      '1',
+    ], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer gate-sync-token',
+    }) as {
+      paperclip_sync: {
+        summary: {
+          matched_projection_count: number;
+          synced_count: number;
+          approval_updates_count: number;
+          resolved_gate_count: number;
+        };
+        projections: Array<{
+          projection_kind: string;
+          remote_issue_status: string | null;
+          remote_approval_status: string | null;
+          gate_status: string | null;
+          gate_decision: string | null;
+          comment: {
+            id: string;
+          } | null;
+        }>;
+      };
+    };
+
+    assert.equal(synced.paperclip_sync.summary.matched_projection_count, 1);
+    assert.equal(synced.paperclip_sync.summary.synced_count, 1);
+    assert.equal(synced.paperclip_sync.summary.approval_updates_count, 1);
+    assert.equal(synced.paperclip_sync.summary.resolved_gate_count, 1);
+    assert.equal(synced.paperclip_sync.projections[0].projection_kind, 'gate');
+    assert.equal(synced.paperclip_sync.projections[0].remote_issue_status, 'in_review');
+    assert.equal(synced.paperclip_sync.projections[0].remote_approval_status, 'approved');
+    assert.equal(synced.paperclip_sync.projections[0].gate_status, 'approved');
+    assert.equal(synced.paperclip_sync.projections[0].gate_decision, 'approve');
+    assert.equal(synced.paperclip_sync.projections[0].comment?.id, 'comment-1');
+
+    const status = runCli(['paperclip-status', '--path', repoRoot, '--sessions-limit', '1'], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer gate-sync-token',
+    }) as {
+      paperclip_control_plane: {
+        summary: {
+          tracked_resolved_gate_count: number;
+          tracked_pending_gate_count: number;
+        };
+        tracked_projections: Array<{
+          issue_id: string;
+          approval_status: string | null;
+          gate_status: string | null;
+          gate_decision: string | null;
+          remote_issue_status: string | null;
+          last_polled_at: string | null;
+        }>;
+      };
+    };
+
+    assert.equal(status.paperclip_control_plane.summary.tracked_resolved_gate_count, 1);
+    assert.equal(status.paperclip_control_plane.summary.tracked_pending_gate_count, 0);
+    assert.equal(status.paperclip_control_plane.tracked_projections[0].issue_id, 'issue-1');
+    assert.equal(status.paperclip_control_plane.tracked_projections[0].approval_status, 'approved');
+    assert.equal(status.paperclip_control_plane.tracked_projections[0].gate_status, 'approved');
+    assert.equal(status.paperclip_control_plane.tracked_projections[0].gate_decision, 'approve');
+    assert.equal(status.paperclip_control_plane.tracked_projections[0].remote_issue_status, 'in_review');
+    assert.match(String(status.paperclip_control_plane.tracked_projections[0].last_polled_at), /^2026-/);
+  } finally {
+    await stopHttpServer(fakePaperclip.server);
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('paperclip-operator-loop runs repeated reconcile cycles and persists loop state for status surfaces', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paperclip-operator-loop-'));
+  const fakePaperclip = await startFakePaperclipServer();
+
+  try {
+    runCli([
+      'paperclip-config',
+      '--base-url',
+      fakePaperclip.baseUrl,
+      '--auth-header-env',
+      'OPL_PAPERCLIP_AUTH_HEADER',
+      '--control-company-id',
+      'company-opl-control',
+    ], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer loop-token',
+    });
+    runCli([
+      'paperclip-bind',
+      '--project',
+      'redcube',
+      '--company-id',
+      'company-redcube',
+      '--paperclip-project-id',
+      'project-redcube',
+    ], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer loop-token',
+    });
+
+    await runCliAsync([
+      'paperclip-open-task',
+      'Prepare a defense-ready slide deck for a thesis committee.',
+      '--preferred-family',
+      'ppt_deck',
+      '--workspace-path',
+      repoRoot,
+    ], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer loop-token',
+    });
+
+    const loop = await runCliAsync([
+      'paperclip-operator-loop',
+      '--project',
+      'redcube',
+      '--path',
+      repoRoot,
+      '--sessions-limit',
+      '1',
+      '--interval-ms',
+      '1',
+      '--cycles',
+      '2',
+    ], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer loop-token',
+    }) as {
+      paperclip_control_plane: {
+        action: string;
+      };
+      paperclip_operator_loop: {
+        state: string;
+        interval_ms: number;
+        cycles_completed: number;
+        summary: {
+          synced_count: number;
+          skipped_count: number;
+        };
+      };
+    };
+
+    assert.equal(loop.paperclip_control_plane.action, 'operator_loop');
+    assert.equal(loop.paperclip_operator_loop.state, 'completed');
+    assert.equal(loop.paperclip_operator_loop.interval_ms, 1);
+    assert.equal(loop.paperclip_operator_loop.cycles_completed, 2);
+    assert.equal(loop.paperclip_operator_loop.summary.synced_count, 1);
+    assert.equal(loop.paperclip_operator_loop.summary.skipped_count, 1);
+
+    const status = runCli(['paperclip-status', '--path', repoRoot, '--sessions-limit', '1'], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer loop-token',
+    }) as {
+      paperclip_control_plane: {
+        operator_loop: {
+          state: string;
+          last_completed_at: string | null;
+          last_run_summary: {
+            cycles_completed: number;
+            synced_count: number;
+            skipped_count: number;
+          } | null;
+        };
+      };
+    };
+
+    assert.equal(status.paperclip_control_plane.operator_loop.state, 'idle');
+    assert.match(String(status.paperclip_control_plane.operator_loop.last_completed_at), /^2026-/);
+    assert.equal(status.paperclip_control_plane.operator_loop.last_run_summary?.cycles_completed, 2);
+    assert.equal(status.paperclip_control_plane.operator_loop.last_run_summary?.synced_count, 1);
+    assert.equal(status.paperclip_control_plane.operator_loop.last_run_summary?.skipped_count, 1);
   } finally {
     await stopHttpServer(fakePaperclip.server);
     fs.rmSync(stateRoot, { recursive: true, force: true });

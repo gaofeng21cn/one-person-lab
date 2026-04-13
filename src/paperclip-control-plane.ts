@@ -62,6 +62,7 @@ export type PaperclipControlPlaneSummary = {
   state_dir: string;
   config_file: string;
   projection_registry_file: string;
+  operator_loop_state_file: string;
   connection: PaperclipConnectionSummary;
   summary: {
     available_projects: string[];
@@ -70,7 +71,10 @@ export type PaperclipControlPlaneSummary = {
     tracked_projections_count: number;
     tracked_task_projections_count: number;
     tracked_gate_projections_count: number;
+    tracked_pending_gate_count: number;
+    tracked_resolved_gate_count: number;
     last_projection_at: string | null;
+    last_polled_at: string | null;
     last_sync_at: string | null;
   };
   project_bindings: PaperclipProjectBinding[];
@@ -82,10 +86,16 @@ export type PaperclipControlPlaneSummary = {
     issue_id: string;
     approval_id: string | null;
     workspace_path: string | null;
+    remote_issue_status: string | null;
+    approval_status: string | null;
+    gate_status: string | null;
+    gate_decision: string | null;
     created_at: string;
+    last_polled_at: string | null;
     last_sync_at: string | null;
     sync_count: number;
   }>;
+  operator_loop: PaperclipOperatorLoopSurface;
   notes: string[];
 };
 
@@ -103,6 +113,12 @@ export type PaperclipTrackedProjection = {
   family_human_gate: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
+  last_polled_at: string | null;
+  remote_issue_status: string | null;
+  approval_status: string | null;
+  gate_status: string | null;
+  gate_decision: string | null;
+  gate_decided_at: string | null;
   last_sync_at: string | null;
   last_sync_fingerprint: string | null;
   sync_count: number;
@@ -111,6 +127,31 @@ export type PaperclipTrackedProjection = {
 type PaperclipProjectionRegistryFile = {
   version: 'g2';
   projections: PaperclipTrackedProjection[];
+};
+
+type PaperclipOperatorLoopFile = {
+  version: 'g2';
+  state: 'idle' | 'running';
+  last_started_at: string | null;
+  last_completed_at: string | null;
+  last_error: string | null;
+  last_run_summary: {
+    cycles_completed: number;
+    matched_projection_count: number;
+    synced_count: number;
+    skipped_count: number;
+    approval_updates_count: number;
+    resolved_gate_count: number;
+  } | null;
+};
+
+type PaperclipOperatorLoopSurface = {
+  state_file: string;
+  state: 'idle' | 'running';
+  last_started_at: string | null;
+  last_completed_at: string | null;
+  last_error: string | null;
+  last_run_summary: PaperclipOperatorLoopFile['last_run_summary'];
 };
 
 export type PaperclipConfigOptions = {
@@ -149,6 +190,11 @@ export type PaperclipSyncOptions = {
   workspacePath?: string;
   sessionsLimit?: number;
   force?: boolean;
+};
+
+export type PaperclipOperatorLoopOptions = PaperclipSyncOptions & {
+  intervalMs?: number;
+  cycles?: number;
 };
 
 type PaperclipRequestConfig = {
@@ -352,6 +398,12 @@ function readPaperclipProjectionRegistryFile(): PaperclipProjectionRegistryFile 
               : requireProjectionRecord(projection.family_human_gate, 'family_human_gate'),
           created_at: requireProjectionString(projection.created_at, 'created_at'),
           updated_at: requireProjectionString(projection.updated_at, 'updated_at'),
+          last_polled_at: normalizeOptionalString(projection.last_polled_at),
+          remote_issue_status: normalizeOptionalString(projection.remote_issue_status),
+          approval_status: normalizeOptionalString(projection.approval_status),
+          gate_status: normalizeOptionalString(projection.gate_status),
+          gate_decision: normalizeOptionalString(projection.gate_decision),
+          gate_decided_at: normalizeOptionalString(projection.gate_decided_at),
           last_sync_at: normalizeOptionalString(projection.last_sync_at),
           last_sync_fingerprint: normalizeOptionalString(projection.last_sync_fingerprint),
           sync_count: projection.sync_count,
@@ -376,10 +428,84 @@ function writePaperclipProjectionRegistryFile(payload: PaperclipProjectionRegist
   fs.writeFileSync(paths.paperclip_projection_registry_file, `${JSON.stringify(payload, null, 2)}\n`);
 }
 
+function readPaperclipOperatorLoopFile(): PaperclipOperatorLoopFile {
+  const paths = resolveFrontDeskStatePaths();
+  if (!fs.existsSync(paths.paperclip_operator_loop_file)) {
+    return {
+      version: 'g2',
+      state: 'idle',
+      last_started_at: null,
+      last_completed_at: null,
+      last_error: null,
+      last_run_summary: null,
+    };
+  }
+
+  try {
+    const parsed = JSON.parse(
+      fs.readFileSync(paths.paperclip_operator_loop_file, 'utf8'),
+    ) as Partial<PaperclipOperatorLoopFile>;
+
+    if (
+      parsed.version !== 'g2'
+      || (parsed.state !== 'idle' && parsed.state !== 'running')
+    ) {
+      throw new Error('Invalid Paperclip operator loop state shape.');
+    }
+
+    return {
+      version: 'g2',
+      state: parsed.state,
+      last_started_at: normalizeOptionalString(parsed.last_started_at),
+      last_completed_at: normalizeOptionalString(parsed.last_completed_at),
+      last_error: normalizeOptionalString(parsed.last_error),
+      last_run_summary:
+        parsed.last_run_summary
+        && typeof parsed.last_run_summary === 'object'
+        && !Array.isArray(parsed.last_run_summary)
+          ? {
+              cycles_completed: Number(parsed.last_run_summary.cycles_completed ?? 0),
+              matched_projection_count: Number(parsed.last_run_summary.matched_projection_count ?? 0),
+              synced_count: Number(parsed.last_run_summary.synced_count ?? 0),
+              skipped_count: Number(parsed.last_run_summary.skipped_count ?? 0),
+              approval_updates_count: Number(parsed.last_run_summary.approval_updates_count ?? 0),
+              resolved_gate_count: Number(parsed.last_run_summary.resolved_gate_count ?? 0),
+            }
+          : null,
+    };
+  } catch (error) {
+    throw new GatewayContractError(
+      'contract_shape_invalid',
+      'Existing Paperclip operator loop state is invalid JSON or has an invalid shape.',
+      {
+        file: paths.paperclip_operator_loop_file,
+        cause:
+          error instanceof Error ? error.message : 'Unknown Paperclip operator loop parse failure.',
+      },
+    );
+  }
+}
+
+function writePaperclipOperatorLoopFile(payload: PaperclipOperatorLoopFile) {
+  const paths = ensureFrontDeskStateDir();
+  fs.writeFileSync(paths.paperclip_operator_loop_file, `${JSON.stringify(payload, null, 2)}\n`);
+}
+
 function recordTrackedProjection(
   input: Omit<
     PaperclipTrackedProjection,
-    'projection_id' | 'created_at' | 'updated_at' | 'last_sync_at' | 'last_sync_fingerprint' | 'sync_count'
+    | 'projection_id'
+    | 'created_at'
+    | 'updated_at'
+    | 'last_polled_at'
+    | 'remote_issue_status'
+    | 'approval_status'
+    | 'gate_status'
+    | 'gate_decision'
+    | 'gate_decided_at'
+    | 'last_sync_at'
+    | 'last_sync_fingerprint'
+    | 'sync_count'
   >,
 ) {
   const registry = readPaperclipProjectionRegistryFile();
@@ -398,6 +524,12 @@ function recordTrackedProjection(
     family_human_gate: input.family_human_gate,
     created_at: timestamp,
     updated_at: timestamp,
+    last_polled_at: null,
+    remote_issue_status: null,
+    approval_status: null,
+    gate_status: null,
+    gate_decision: null,
+    gate_decided_at: null,
     last_sync_at: null,
     last_sync_fingerprint: null,
     sync_count: 0,
@@ -417,10 +549,28 @@ function buildTrackedProjectionSurface(projection: PaperclipTrackedProjection) {
     issue_id: projection.issue_id,
     approval_id: projection.approval_id,
     workspace_path: projection.workspace_path,
+    remote_issue_status: projection.remote_issue_status,
+    approval_status: projection.approval_status,
+    gate_status: projection.gate_status,
+    gate_decision: projection.gate_decision,
     created_at: projection.created_at,
+    last_polled_at: projection.last_polled_at,
     last_sync_at: projection.last_sync_at,
     sync_count: projection.sync_count,
   };
+}
+
+function buildOperatorLoopSurface() {
+  const paths = resolveFrontDeskStatePaths();
+  const loop = readPaperclipOperatorLoopFile();
+  return {
+    state_file: paths.paperclip_operator_loop_file,
+    state: loop.state,
+    last_started_at: loop.last_started_at,
+    last_completed_at: loop.last_completed_at,
+    last_error: loop.last_error,
+    last_run_summary: loop.last_run_summary,
+  } satisfies PaperclipOperatorLoopSurface;
 }
 
 function buildConnectionSummary(file: PaperclipControlPlaneFile): PaperclipConnectionSummary {
@@ -461,6 +611,18 @@ export function buildPaperclipControlPlaneSummary(
   const projectionRegistry = readPaperclipProjectionRegistryFile();
   const paths = resolveFrontDeskStatePaths();
   const connection = buildConnectionSummary(file);
+  const operatorLoop = buildOperatorLoopSurface();
+  const resolvedGateCount = projectionRegistry.projections.filter((entry) => {
+    if (entry.projection_kind !== 'gate') {
+      return false;
+    }
+
+    return Boolean(
+      entry.gate_status
+      && entry.gate_status !== 'pending'
+      && entry.gate_status !== 'requested',
+    );
+  }).length;
 
   return {
     surface_id: 'opl_paperclip_control_plane_bridge',
@@ -468,6 +630,7 @@ export function buildPaperclipControlPlaneSummary(
     state_dir: paths.state_dir,
     config_file: paths.paperclip_control_plane_file,
     projection_registry_file: paths.paperclip_projection_registry_file,
+    operator_loop_state_file: paths.paperclip_operator_loop_file,
     connection,
     summary: {
       available_projects: allowedProjects(contracts).map((project) => project.project_id),
@@ -476,7 +639,15 @@ export function buildPaperclipControlPlaneSummary(
       tracked_projections_count: projectionRegistry.projections.length,
       tracked_task_projections_count: projectionRegistry.projections.filter((entry) => entry.projection_kind === 'task').length,
       tracked_gate_projections_count: projectionRegistry.projections.filter((entry) => entry.projection_kind === 'gate').length,
+      tracked_pending_gate_count:
+        projectionRegistry.projections.filter((entry) => entry.projection_kind === 'gate').length
+        - resolvedGateCount,
+      tracked_resolved_gate_count: resolvedGateCount,
       last_projection_at: projectionRegistry.projections[0]?.created_at ?? null,
+      last_polled_at:
+        projectionRegistry.projections
+          .map((entry) => entry.last_polled_at)
+          .find((entry): entry is string => Boolean(entry)) ?? null,
       last_sync_at:
         projectionRegistry.projections
           .map((entry) => entry.last_sync_at)
@@ -484,6 +655,7 @@ export function buildPaperclipControlPlaneSummary(
     },
     project_bindings: file.project_bindings,
     tracked_projections: projectionRegistry.projections.map(buildTrackedProjectionSurface),
+    operator_loop: operatorLoop,
     notes: [
       'Paperclip remains a downstream external control plane; OPL keeps routing truth, handoff truth, and top-level gateway ownership.',
       'Project bindings map admitted OPL project surfaces onto existing Paperclip companies/projects/workspaces so OPL can open tasks without inventing another control plane.',
@@ -596,14 +768,15 @@ function requirePaperclipRequestConfig(summary: PaperclipControlPlaneSummary): P
 
 async function paperclipRequest(
   config: PaperclipRequestConfig,
+  method: 'GET' | 'POST',
   pathName: string,
-  body: Record<string, unknown>,
+  body?: Record<string, unknown>,
 ) {
   const url = `${config.baseUrl}${pathName}`;
   const response = await fetch(url, {
-    method: 'POST',
+    method,
     headers: config.headers,
-    body: JSON.stringify(body),
+    body: body ? JSON.stringify(body) : undefined,
   });
 
   const rawText = await response.text();
@@ -629,6 +802,118 @@ async function paperclipRequest(
   }
 
   return payload;
+}
+
+function normalizeRemoteProjectionStatus(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function mapApprovalStatusToGateStatus(status: string | null) {
+  if (!status) {
+    return null;
+  }
+
+  if (status === 'pending') {
+    return 'pending';
+  }
+
+  return status;
+}
+
+function updateFamilyHumanGateRecord(
+  familyHumanGate: Record<string, unknown> | null,
+  update: {
+    approvalId: string | null;
+    issueId: string;
+    approvalStatus: string | null;
+    gateDecision: string | null;
+    gateDecidedAt: string | null;
+  },
+) {
+  if (!familyHumanGate) {
+    return familyHumanGate;
+  }
+
+  return {
+    ...familyHumanGate,
+    approval_id: update.approvalId,
+    issue_id: update.issueId,
+    status: update.approvalStatus ?? familyHumanGate.status ?? 'pending',
+    decision: update.gateDecision,
+    decided_at: update.gateDecidedAt,
+  };
+}
+
+async function fetchPaperclipProjectionRemoteState(
+  config: PaperclipRequestConfig,
+  projection: PaperclipTrackedProjection,
+) {
+  const issue = await paperclipRequest(
+    config,
+    'GET',
+    `/api/companies/${projection.company_id}/issues/${projection.issue_id}`,
+  ) as Record<string, unknown>;
+  const approval = projection.approval_id
+    ? await paperclipRequest(
+        config,
+        'GET',
+        `/api/companies/${projection.company_id}/approvals/${projection.approval_id}`,
+      ) as Record<string, unknown>
+    : null;
+
+  return {
+    issue,
+    approval,
+  };
+}
+
+function reconcileTrackedProjectionRemoteState(
+  projection: PaperclipTrackedProjection,
+  remote: Awaited<ReturnType<typeof fetchPaperclipProjectionRemoteState>>,
+) {
+  const polledAt = nowIso();
+  const remoteIssueStatus = normalizeRemoteProjectionStatus(remote.issue.status);
+  const approvalStatus = normalizeRemoteProjectionStatus(remote.approval?.status);
+  const gateDecision = normalizeRemoteProjectionStatus(remote.approval?.decision);
+  const gateDecidedAt = normalizeRemoteProjectionStatus(remote.approval?.decidedAt);
+  const gateStatus = mapApprovalStatusToGateStatus(approvalStatus);
+  const previousApprovalStatus = projection.approval_status;
+  const previousGateStatus = projection.gate_status;
+
+  projection.last_polled_at = polledAt;
+  projection.remote_issue_status = remoteIssueStatus;
+  projection.updated_at = polledAt;
+
+  if (projection.projection_kind === 'gate') {
+    projection.approval_status = approvalStatus;
+    projection.gate_status = gateStatus;
+    projection.gate_decision = gateDecision;
+    projection.gate_decided_at = gateDecidedAt;
+    projection.family_human_gate = updateFamilyHumanGateRecord(projection.family_human_gate, {
+      approvalId: projection.approval_id,
+      issueId: projection.issue_id,
+      approvalStatus,
+      gateDecision,
+      gateDecidedAt,
+    });
+  }
+
+  return {
+    polledAt,
+    remoteIssueStatus,
+    approvalStatus,
+    gateStatus,
+    gateDecision,
+    approvalUpdated: previousApprovalStatus !== projection.approval_status,
+    gateResolved:
+      projection.projection_kind === 'gate'
+      && Boolean(
+        previousGateStatus !== projection.gate_status
+        && projection.gate_status
+        && projection.gate_status !== 'pending'
+        && projection.gate_status !== 'requested',
+      ),
+  };
 }
 
 function extractHandoffBundle(payload: Record<string, unknown>) {
@@ -817,6 +1102,11 @@ function buildProjectionSyncSnapshot(
       goal: projection.goal,
       preferred_family: projection.preferred_family,
     },
+    remote_issue_status: projection.remote_issue_status,
+    remote_approval_status: projection.approval_status,
+    gate_status: projection.gate_status,
+    gate_decision: projection.gate_decision,
+    gate_decided_at: projection.gate_decided_at,
     workspace_path: workspaceStatus.workspace_path,
     workspace_status: workspaceStatus,
     ...manifestSnapshot,
@@ -924,6 +1214,7 @@ export function buildPaperclipBootstrap(
       automation_surfaces: {
         status_command: 'opl paperclip-status',
         sync_command: 'opl paperclip-sync --all',
+        operator_loop_command: 'opl paperclip-operator-loop --all --interval-ms 30000',
         web: {
           status: endpoints.paperclip_control_plane,
           bootstrap: endpoints.paperclip_bootstrap,
@@ -962,6 +1253,7 @@ export async function openPaperclipTask(
   const requestConfig = requirePaperclipRequestConfig(summary);
   const issue = await paperclipRequest(
     requestConfig,
+    'POST',
     `/api/companies/${binding.company_id}/issues`,
     {
       title: truncateTitle(options.title ?? input.goal),
@@ -1071,6 +1363,7 @@ export async function openPaperclipGate(
 
   const issue = await paperclipRequest(
     requestConfig,
+    'POST',
     `/api/companies/${summary.connection.control_company_id}/issues`,
     {
       title: truncateTitle(options.title ?? input.goal, '[Gate] '),
@@ -1100,6 +1393,7 @@ export async function openPaperclipGate(
 
   const approval = await paperclipRequest(
     requestConfig,
+    'POST',
     `/api/companies/${summary.connection.control_company_id}/approvals`,
     {
       type: 'request_board_approval',
@@ -1160,13 +1454,28 @@ export async function syncPaperclipProjections(
     issue_id: string;
     projection_kind: 'task' | 'gate';
     sync_status: 'synced' | 'skipped_no_change';
+    remote_issue_status: string | null;
+    remote_approval_status: string | null;
+    gate_status: string | null;
+    gate_decision: string | null;
     snapshot: ReturnType<typeof buildProjectionSyncSnapshot>;
     comment: Record<string, unknown> | null;
   }> = [];
+  let approvalUpdatesCount = 0;
+  let resolvedGateCount = 0;
 
   for (const projection of matchedProjections) {
+    const remote = await fetchPaperclipProjectionRemoteState(requestConfig, projection);
+    const reconcile = reconcileTrackedProjectionRemoteState(projection, remote);
     const snapshot = buildProjectionSyncSnapshot(contracts, projection, options);
     const fingerprint = buildSyncFingerprint(snapshot);
+
+    if (reconcile.approvalUpdated) {
+      approvalUpdatesCount += 1;
+    }
+    if (reconcile.gateResolved) {
+      resolvedGateCount += 1;
+    }
 
     if (!options.force && projection.last_sync_fingerprint === fingerprint) {
       projectionResults.push({
@@ -1174,6 +1483,10 @@ export async function syncPaperclipProjections(
         issue_id: projection.issue_id,
         projection_kind: projection.projection_kind,
         sync_status: 'skipped_no_change',
+        remote_issue_status: projection.remote_issue_status,
+        remote_approval_status: projection.approval_status,
+        gate_status: projection.gate_status,
+        gate_decision: projection.gate_decision,
         snapshot,
         comment: null,
       });
@@ -1182,6 +1495,7 @@ export async function syncPaperclipProjections(
 
     const comment = await paperclipRequest(
       requestConfig,
+      'POST',
       `/api/companies/${projection.company_id}/issues/${projection.issue_id}/comments`,
       {
         body: buildSyncCommentBody(snapshot),
@@ -1198,6 +1512,10 @@ export async function syncPaperclipProjections(
       issue_id: projection.issue_id,
       projection_kind: projection.projection_kind,
       sync_status: 'synced',
+      remote_issue_status: projection.remote_issue_status,
+      remote_approval_status: projection.approval_status,
+      gate_status: projection.gate_status,
+      gate_decision: projection.gate_decision,
       snapshot,
       comment,
     });
@@ -1220,12 +1538,106 @@ export async function syncPaperclipProjections(
         matched_projection_count: matchedProjections.length,
         synced_count: projectionResults.filter((entry) => entry.sync_status === 'synced').length,
         skipped_count: projectionResults.filter((entry) => entry.sync_status === 'skipped_no_change').length,
+        approval_updates_count: approvalUpdatesCount,
+        resolved_gate_count: resolvedGateCount,
       },
       projections: projectionResults,
       notes: [
-        'Sync writes OPL-managed audit snapshots back into downstream Paperclip issue comments.',
+        'Sync first pulls remote Paperclip issue / approval state back into the tracked OPL projection, then writes the current audit snapshot into downstream comments.',
         'Skipped projections mean the derived OPL snapshot fingerprint did not change since the last sync.',
       ],
+    },
+  };
+}
+
+export async function runPaperclipOperatorLoop(
+  contracts: GatewayContracts,
+  options: PaperclipOperatorLoopOptions = {},
+) {
+  const intervalMs = options.intervalMs ?? 30_000;
+  const cyclesRequested = options.cycles ?? 0;
+  const loopState = readPaperclipOperatorLoopFile();
+  const startedAt = nowIso();
+  writePaperclipOperatorLoopFile({
+    ...loopState,
+    state: 'running',
+    last_started_at: startedAt,
+    last_error: null,
+  });
+
+  let cyclesCompleted = 0;
+  let matchedProjectionCount = 0;
+  let syncedCount = 0;
+  let skippedCount = 0;
+  let approvalUpdatesCount = 0;
+  let resolvedGateCount = 0;
+
+  try {
+    for (;;) {
+      const result = await syncPaperclipProjections(contracts, options);
+      cyclesCompleted += 1;
+      matchedProjectionCount += result.sync.summary.matched_projection_count;
+      syncedCount += result.sync.summary.synced_count;
+      skippedCount += result.sync.summary.skipped_count;
+      approvalUpdatesCount += result.sync.summary.approval_updates_count;
+      resolvedGateCount += result.sync.summary.resolved_gate_count;
+
+      if (cyclesRequested > 0 && cyclesCompleted >= cyclesRequested) {
+        break;
+      }
+
+      await new Promise((resolve) => {
+        setTimeout(resolve, intervalMs);
+      });
+    }
+  } catch (error) {
+    writePaperclipOperatorLoopFile({
+      version: 'g2',
+      state: 'idle',
+      last_started_at: startedAt,
+      last_completed_at: nowIso(),
+      last_error: error instanceof Error ? error.message : String(error),
+      last_run_summary: {
+        cycles_completed: cyclesCompleted,
+        matched_projection_count: matchedProjectionCount,
+        synced_count: syncedCount,
+        skipped_count: skippedCount,
+        approval_updates_count: approvalUpdatesCount,
+        resolved_gate_count: resolvedGateCount,
+      },
+    });
+    throw error;
+  }
+
+  const completedAt = nowIso();
+  const lastRunSummary = {
+    cycles_completed: cyclesCompleted,
+    matched_projection_count: matchedProjectionCount,
+    synced_count: syncedCount,
+    skipped_count: skippedCount,
+    approval_updates_count: approvalUpdatesCount,
+    resolved_gate_count: resolvedGateCount,
+  };
+  writePaperclipOperatorLoopFile({
+    version: 'g2',
+    state: 'idle',
+    last_started_at: startedAt,
+    last_completed_at: completedAt,
+    last_error: null,
+    last_run_summary: lastRunSummary,
+  });
+
+  return {
+    controlPlane: buildPaperclipControlPlaneSummary(contracts),
+    operatorLoop: {
+      surface_id: 'opl_paperclip_operator_loop',
+      state: 'completed',
+      interval_ms: intervalMs,
+      cycles_requested: cyclesRequested,
+      cycles_completed: cyclesCompleted,
+      started_at: startedAt,
+      completed_at: completedAt,
+      summary: lastRunSummary,
     },
   };
 }

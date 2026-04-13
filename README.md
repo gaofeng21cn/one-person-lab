@@ -185,7 +185,7 @@ At the architecture level, `OPL` is responsible for four things:
 This repository therefore acts as a documentation-first and contract-first public surface for the `OPL` gateway.
 Domain runtimes, delivery truth, and execution surfaces continue to live in their respective domain repositories.
 The current `OPL` front desk can also bridge to an existing downstream `Paperclip` control plane for issue / approval UI and audit trails, without turning `Paperclip` into the runtime owner.
-`Paperclip` is optional: without it, `OPL` still runs through its own natural-language front desk, dashboard, session ledger, and handoff surfaces; with it configured, `paperclip-bootstrap / paperclip-open-task / paperclip-open-gate / paperclip-sync` add an external issue / approval / audit UI.
+`Paperclip` is optional: without it, `OPL` still runs through its own natural-language front desk, dashboard, session ledger, and handoff surfaces; with it configured, `paperclip-bootstrap / paperclip-open-task / paperclip-open-gate / paperclip-sync / paperclip-operator-loop` add an external issue / approval / audit UI, pull approval decisions back into OPL-tracked gate state, and keep audit snapshots synced automatically.
 For the operator loop, see [Paperclip Control Plane Operator Guide](docs/references/paperclip-control-plane-operator-guide.md).
 
 ## Unified Harness Engineering Substrate

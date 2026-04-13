@@ -52,7 +52,8 @@
             "bootstrap",
             "open_task",
             "open_gate",
-            "sync"
+            "sync",
+            "operator_loop"
           ]
         },
         "surface_id": {
@@ -126,7 +127,14 @@
             "available_projects",
             "project_bindings_count",
             "bound_projects",
-            "tracked_projections_count"
+            "tracked_projections_count",
+            "tracked_task_projections_count",
+            "tracked_gate_projections_count",
+            "tracked_pending_gate_count",
+            "tracked_resolved_gate_count",
+            "last_projection_at",
+            "last_polled_at",
+            "last_sync_at"
           ],
           "properties": {
             "available_projects": {
@@ -159,7 +167,21 @@
               "type": "integer",
               "minimum": 0
             },
+            "tracked_pending_gate_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "tracked_resolved_gate_count": {
+              "type": "integer",
+              "minimum": 0
+            },
             "last_projection_at": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "last_polled_at": {
               "type": [
                 "string",
                 "null"
@@ -170,6 +192,252 @@
                 "string",
                 "null"
               ]
+            }
+          }
+        },
+        "project_bindings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "project_id",
+              "project",
+              "company_id",
+              "paperclip_project_id",
+              "project_workspace_id",
+              "execution_workspace_preference",
+              "created_at",
+              "updated_at"
+            ],
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "project": {
+                "type": "string",
+                "minLength": 1
+              },
+              "company_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "paperclip_project_id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "project_workspace_id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "execution_workspace_preference": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "created_at": {
+                "type": "string",
+                "minLength": 1
+              },
+              "updated_at": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "tracked_projections": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "projection_id",
+              "projection_kind",
+              "target_project_id",
+              "company_id",
+              "issue_id",
+              "approval_id",
+              "workspace_path",
+              "remote_issue_status",
+              "approval_status",
+              "gate_status",
+              "gate_decision",
+              "created_at",
+              "last_polled_at",
+              "last_sync_at",
+              "sync_count"
+            ],
+            "properties": {
+              "projection_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "projection_kind": {
+                "type": "string",
+                "enum": [
+                  "task",
+                  "gate"
+                ]
+              },
+              "target_project_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "company_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "issue_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "approval_id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "workspace_path": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "remote_issue_status": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "approval_status": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "gate_status": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "gate_decision": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "created_at": {
+                "type": "string",
+                "minLength": 1
+              },
+              "last_polled_at": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "last_sync_at": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "sync_count": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        },
+        "operator_loop": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state_file",
+            "state",
+            "last_started_at",
+            "last_completed_at",
+            "last_error",
+            "last_run_summary"
+          ],
+          "properties": {
+            "state_file": {
+              "type": "string",
+              "minLength": 1
+            },
+            "state": {
+              "type": "string",
+              "enum": [
+                "idle",
+                "running"
+              ]
+            },
+            "last_started_at": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "last_completed_at": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "last_error": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "last_run_summary": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "required": [
+                "cycles_completed",
+                "matched_projection_count",
+                "synced_count",
+                "skipped_count",
+                "approval_updates_count",
+                "resolved_gate_count"
+              ],
+              "properties": {
+                "cycles_completed": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "matched_projection_count": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "synced_count": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "skipped_count": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "approval_updates_count": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "resolved_gate_count": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
             }
           }
         }
@@ -210,8 +478,57 @@
           "tracked_projections_count": 1,
           "tracked_task_projections_count": 1,
           "tracked_gate_projections_count": 0,
+          "tracked_pending_gate_count": 0,
+          "tracked_resolved_gate_count": 0,
           "last_projection_at": "2026-04-13T09:00:00.000Z",
+          "last_polled_at": "2026-04-13T09:05:00.000Z",
           "last_sync_at": null
+        },
+        "project_bindings": [
+          {
+            "project_id": "redcube",
+            "project": "redcube-ai",
+            "company_id": "company-redcube",
+            "paperclip_project_id": "project-redcube",
+            "project_workspace_id": "workspace-redcube",
+            "execution_workspace_preference": "shared_workspace",
+            "created_at": "2026-04-13T08:59:00.000Z",
+            "updated_at": "2026-04-13T08:59:00.000Z"
+          }
+        ],
+        "tracked_projections": [
+          {
+            "projection_id": "paperclip_projection_123",
+            "projection_kind": "task",
+            "target_project_id": "redcube",
+            "company_id": "company-redcube",
+            "issue_id": "issue-1",
+            "approval_id": null,
+            "workspace_path": "/Users/gaofeng/workspace/redcube-ai",
+            "remote_issue_status": "in_progress",
+            "approval_status": null,
+            "gate_status": null,
+            "gate_decision": null,
+            "created_at": "2026-04-13T09:00:00.000Z",
+            "last_polled_at": "2026-04-13T09:05:00.000Z",
+            "last_sync_at": null,
+            "sync_count": 0
+          }
+        ],
+        "operator_loop": {
+          "state_file": "/Users/gaofeng/.opl/frontdesk-state/paperclip-operator-loop.json",
+          "state": "idle",
+          "last_started_at": "2026-04-13T09:10:00.000Z",
+          "last_completed_at": "2026-04-13T09:10:03.000Z",
+          "last_error": null,
+          "last_run_summary": {
+            "cycles_completed": 2,
+            "matched_projection_count": 2,
+            "synced_count": 1,
+            "skipped_count": 1,
+            "approval_updates_count": 0,
+            "resolved_gate_count": 0
+          }
         }
       }
     }
