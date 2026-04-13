@@ -181,7 +181,7 @@
 因此，这个仓库承担的是 `OPL Gateway` 的文档优先、契约优先的公开说明面。
 具体 domain runtime、交付真相与执行表面继续由各自 domain 仓维护。
 当前 `OPL` front desk 也已经可以桥接到现成的下游 `Paperclip` control plane，用它承接 issue / approval UI 与审计轨迹；但这不会把 `Paperclip` 抬升成 runtime owner。
-`Paperclip` 是可选增强项：没有安装或配置时，`OPL` 仍然通过自己的自然语言 front desk、dashboard、session ledger 与 handoff surface 正常运行；配置好之后，`paperclip-bootstrap / paperclip-open-task / paperclip-open-gate / paperclip-sync` 才会额外接上外部 issue / approval / audit UI。
+`Paperclip` 是可选增强项：没有安装或配置时，`OPL` 仍然通过自己的自然语言 front desk、dashboard、session ledger 与 handoff surface 正常运行；配置好之后，`paperclip-bootstrap / paperclip-open-task / paperclip-open-gate / paperclip-sync / paperclip-operator-loop` 才会额外接上外部 issue / approval / audit UI，把审批决议回流到 OPL 跟踪的 gate 状态里，并持续自动同步审计快照。
 具体使用闭环见 [Paperclip Control Plane Operator Guide](docs/references/paperclip-control-plane-operator-guide.md)。
 
 ## Unified Harness Engineering Substrate

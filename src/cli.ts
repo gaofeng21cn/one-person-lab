@@ -56,6 +56,7 @@ import {
   configurePaperclipControlPlane,
   openPaperclipGate,
   openPaperclipTask,
+  runPaperclipOperatorLoop,
   syncPaperclipProjections,
 } from './paperclip-control-plane.ts';
 import { attachWebFrontDeskShutdown, startWebFrontDeskServer } from './web-frontdesk.ts';
@@ -171,6 +172,11 @@ type PaperclipSyncCliInput = {
   sessionsLimit?: number;
   all: boolean;
   force: boolean;
+};
+
+type PaperclipOperatorLoopCliInput = PaperclipSyncCliInput & {
+  intervalMs?: number;
+  cycles?: number;
 };
 
 function printJson(payload: unknown, stream: NodeJS.WriteStream = process.stdout) {
@@ -1206,6 +1212,96 @@ function parsePaperclipSyncArgs(
   return parsed;
 }
 
+function parsePaperclipOperatorLoopArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): PaperclipOperatorLoopCliInput {
+  const parsed: PaperclipOperatorLoopCliInput = {
+    all: false,
+    force: false,
+  };
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (token === '--force') {
+      parsed.force = true;
+      continue;
+    }
+
+    if (token === '--all') {
+      parsed.all = true;
+      continue;
+    }
+
+    if (!token.startsWith('--')) {
+      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
+        token,
+      });
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
+        option: token,
+      });
+    }
+
+    switch (token) {
+      case '--issue-id':
+        parsed.issueId = value;
+        break;
+      case '--project':
+        parsed.projectId = value;
+        break;
+      case '--path':
+        parsed.workspacePath = value;
+        break;
+      case '--sessions-limit': {
+        const parsedLimit = Number.parseInt(value, 10);
+        if (!Number.isInteger(parsedLimit) || parsedLimit <= 0) {
+          throw buildUsageError('Paperclip operator loop expects a positive integer --sessions-limit.', spec, {
+            option: token,
+            value,
+          });
+        }
+        parsed.sessionsLimit = parsedLimit;
+        break;
+      }
+      case '--interval-ms': {
+        const parsedInterval = Number.parseInt(value, 10);
+        if (!Number.isInteger(parsedInterval) || parsedInterval <= 0) {
+          throw buildUsageError('Paperclip operator loop expects a positive integer --interval-ms.', spec, {
+            option: token,
+            value,
+          });
+        }
+        parsed.intervalMs = parsedInterval;
+        break;
+      }
+      case '--cycles': {
+        const parsedCycles = Number.parseInt(value, 10);
+        if (!Number.isInteger(parsedCycles) || parsedCycles < 0) {
+          throw buildUsageError('Paperclip operator loop expects a non-negative integer --cycles.', spec, {
+            option: token,
+            value,
+          });
+        }
+        parsed.cycles = parsedCycles;
+        break;
+      }
+      default:
+        throw buildUsageError(`Unknown option for Paperclip operator loop: ${token}.`, spec, {
+          option: token,
+        });
+    }
+
+    index += 1;
+  }
+
+  return parsed;
+}
+
 function assertNoArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
@@ -1702,7 +1798,7 @@ async function main() {
     'paperclip-sync': {
       usage:
         'opl paperclip-sync [--issue-id <issue_id>] [--project <project_id>] [--path <workspace_path>] [--sessions-limit <n>] [--force]',
-      summary: 'Write the latest OPL audit snapshot back into tracked downstream Paperclip issue comments.',
+      summary: 'Pull remote Paperclip issue / approval state back into OPL tracked projections, then write the latest OPL audit snapshot into downstream issue comments.',
       examples: [
         'opl paperclip-sync --all',
         'opl paperclip-sync --issue-id issue-1 --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
@@ -1724,6 +1820,36 @@ async function main() {
             ...result.controlPlane,
           },
           paperclip_sync: result.sync,
+        });
+      },
+    },
+    'paperclip-operator-loop': {
+      usage:
+        'opl paperclip-operator-loop [--issue-id <issue_id>] [--project <project_id>] [--path <workspace_path>] [--sessions-limit <n>] [--interval-ms <n>] [--cycles <n>] [--force]',
+      summary: 'Run the local file-backed Paperclip operator loop that repeatedly reconciles remote approval state and audit syncs.',
+      examples: [
+        'opl paperclip-operator-loop --project redcube --path /Users/gaofeng/workspace/redcube-ai --interval-ms 30000',
+        'opl paperclip-operator-loop --issue-id issue-1 --path /Users/gaofeng/workspace/one-person-lab --interval-ms 1000 --cycles 2',
+      ],
+      handler: async (args) => {
+        const contracts = getContracts();
+        const parsed = parsePaperclipOperatorLoopArgs(args, commandSpecs['paperclip-operator-loop']);
+        const result = await runPaperclipOperatorLoop(contracts, {
+          issueId: parsed.issueId,
+          projectId: parsed.projectId,
+          workspacePath: parsed.workspacePath,
+          sessionsLimit: parsed.sessionsLimit,
+          intervalMs: parsed.intervalMs,
+          cycles: parsed.cycles,
+          force: parsed.force,
+        });
+
+        return withContractsContext(contracts, {
+          paperclip_control_plane: {
+            action: 'operator_loop',
+            ...result.controlPlane,
+          },
+          paperclip_operator_loop: result.operatorLoop,
         });
       },
     },

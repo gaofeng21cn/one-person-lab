@@ -18,7 +18,7 @@
 - `opl web`
 
 这些主入口继续承担自然语言交互、进度可见性、handoff 与审计上下文。
-只有 `paperclip-open-task`、`paperclip-open-gate`、`paperclip-sync` 这类下游 bridge 动作需要 `Paperclip` 配置。
+只有 `paperclip-open-task`、`paperclip-open-gate`、`paperclip-sync`、`paperclip-operator-loop` 这类下游 bridge 动作需要 `Paperclip` 配置。
 
 ## Bootstrap
 
@@ -72,6 +72,9 @@ opl paperclip-open-task "Prepare a defense-ready slide deck." \
 opl paperclip-sync --all
 ```
 
+`paperclip-sync` 会先拉取远端 Paperclip issue / approval 当前状态。
+如果 projection 对应的是 human gate，它会先把 approval decision、decision time 与 gate status 回流到本地 tracked projection 和 `family-human-gate` 记录里，然后再决定是否回写新的审计 comment。
+
 如果只同步某个 issue：
 
 ```bash
@@ -86,6 +89,23 @@ opl paperclip-sync --issue-id issue-1 --path /Users/gaofeng/workspace/redcube-ai
 opl paperclip-sync --issue-id issue-1 --force
 ```
 
+## Automatic Sync Loop
+
+如果希望把“审批回流 + 审计 comment sync”持续跑起来，可以直接开本地 operator loop：
+
+```bash
+opl paperclip-operator-loop --all --interval-ms 30000
+```
+
+调试或 CI 中也可以限制轮数：
+
+```bash
+opl paperclip-operator-loop --issue-id issue-1 --interval-ms 1000 --cycles 2
+```
+
+这个 loop 不要求你独立运维 Paperclip。
+它只是 OPL 本地的轮询 reconcile 进程，会把最近一次运行摘要写进 `paperclip-status.operator_loop`，供 CLI 和 web status surface 观察。
+
 ## Human Gate Loop
 
 用于需要人工审批、审核或发布判断的节点：
@@ -98,7 +118,8 @@ opl paperclip-open-gate "Review publish readiness for the defense deck." \
 ```
 
 这会把 `family-human-gate` 语义投射到 Paperclip control company 的 issue / approval。
-后续仍用 `opl paperclip-sync` 把 OPL 的 handoff bundle、workspace 状态、domain manifest 摘要与相关 session aggregate 回写到 issue comment。
+后续仍用 `opl paperclip-sync` 或 `opl paperclip-operator-loop` 把 OPL 的 handoff bundle、workspace 状态、domain manifest 摘要与相关 session aggregate 回写到 issue comment。
+一旦审批在 Paperclip 里被 approve / request_changes / reject，对应 decision 也会先回流到 OPL 侧 tracked gate state，再进入新的审计快照。
 
 ## Web Surface
 
@@ -109,6 +130,7 @@ opl paperclip-open-gate "Review publish readiness for the defense deck." \
 - `POST /api/paperclip/control-plane/sync`
 
 这些 endpoint 只是本地 front desk 的 downstream bridge surface。
+其中 `GET /api/paperclip/control-plane` 返回的 status payload 会带上 tracked projection 的远端 issue / approval 状态，以及最近一次 operator loop 运行摘要。
 它们不改变 `OPL`、`Hermes-Agent` 或各 domain 仓的 runtime ownership。
 
 ## 不做的事
