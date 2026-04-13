@@ -27,6 +27,7 @@
 | --- | --- | --- | --- |
 | `S1` | 可发现入口 | 知道正式入口是什么，不再靠口头约定 | `formal_entry`、`recommended_command`、最小 manifest |
 | `S2` | 可执行当前回路 | 知道当前主循环是什么、下一步能做什么 | `operator_loop_surface`、`operator_loop_actions` |
+| `S2.5` | 可解释回路边界 | 知道哪里会卡在人审、怎么续跑、checkpoint 从哪里看 | `family_orchestration.human_gates`、`resume_contract`、`checkpoint_lineage_surface` |
 | `S3` | 可持续续跑 | 同一任务可以恢复、看进度、看 handoff，不会每次重新猜状态 | durable session/progress surface、resume/handoff contract |
 | `S4` | 直接产品前台 | 用户可以直接进入本仓产品壳，尽量不碰底层 controller 命令 | local front desk / mature direct shell / cockpit |
 | `S5` | 托管运营态 | 有 hosted/web 前台、会话与工作区管理、可观测与运维面 | hosted runtime、managed session/workspace governance |
@@ -48,8 +49,8 @@
 | --- | --- | --- | --- | --- |
 | `OPL` | `S4` 前段 | `opl`、`opl web`、workspace/session/handoff 管理面都已存在，用户已经可以不经 `Codex` 直接进入顶层壳 | managed hosted runtime 还没落地，family frontdesk-domain wiring 还未完全压实 | 继续做 hosted runtime hardening、family frontdesk 到 domain direct entry 的稳定联动 |
 | `MedAutoScience` | `S3` | 用户现在已有显式 `product-frontdesk` 合同，可先从 frontdoor 进入，再转到 `workspace-cockpit` / `submit-study-task` / `launch-study` / `study-progress` | 独立医学产品前台还没落地；真实执行仍经受控 `MedDeepScientist` backend | 先继续把真实研究回路在手工测试中压稳，再决定如何把 front desk 从 shell 推到更完整入口 |
-| `MedAutoGrant` | `S3 -> S4` | 用户现在已有显式 `product-frontdesk` 合同，可从 frontdoor 进入 `grant-user-loop`、`grant-progress`、`grant-cockpit` 与 direct / `OPL` handoff builder | 成熟 grant-facing front desk 还没落地；authoring 执行器的产品态 UX 还不够顺手 | 用同一套 `product frontdesk + operator_loop_actions` 继续把 direct grant 前台收口，不新造第二套 executor 协议 |
-| `RedCube AI` | `S3 -> S4` | 用户已经有显式 `redcube product frontdesk`，也能 `invoke`、`session`、`federate`，同一交付的会话连续性已落地 | 成熟 end-user shell 与 managed web productization 还没落地 | 在现有 frontdesk / manifest / session continuity 之上继续补成熟 product shell 与更直接的前台壳 |
+| `MedAutoGrant` | `S3 -> S4` | 用户现在已有显式 `product-frontdesk` 合同，可从 frontdoor 进入 `grant-user-loop`、`grant-progress`、`grant-cockpit` 与 direct / `OPL` handoff builder；当前 manifest 也开始带出 family human gate / resume companion | 成熟 grant-facing front desk 还没落地；authoring 执行器的产品态 UX 还不够顺手 | 用同一套 `product frontdesk + operator_loop_actions + family_orchestration preview` 继续把 direct grant 前台收口，不新造第二套 executor 协议 |
+| `RedCube AI` | `S3 -> S4` | 用户已经有显式 `redcube product frontdesk`，也能 `invoke`、`session`、`federate`，同一交付的会话连续性已落地；当前 manifest 已开始带出 family human gate / resume companion | 成熟 end-user shell 与 managed web productization 还没落地 | 在现有 frontdesk / manifest / session continuity 之上继续补成熟 product shell 与更直接的前台壳 |
 
 ## 当前统一短板
 

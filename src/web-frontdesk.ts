@@ -1307,6 +1307,11 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
                   manifestEntry.manifest?.recommended_shell
                     ? '<p><strong>Recommended Shell:</strong> ' + manifestEntry.manifest.recommended_shell + '</p>'
                     : '',
+                  manifestEntry.manifest?.manifest_version
+                    ? '<p><strong>Manifest Version:</strong> '
+                      + String(manifestEntry.manifest.manifest_version)
+                      + '</p>'
+                    : '',
                   manifestEntry.manifest?.recommended_command
                     ? '<p><strong>Recommended Command:</strong> ' + manifestEntry.manifest.recommended_command + '</p>'
                     : '',
@@ -1372,6 +1377,42 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
                     ? '<p><strong>Remaining Gaps:</strong> '
                       + String(manifestEntry.manifest.product_entry_status.remaining_gaps_count)
                       + '</p>'
+                    : '',
+                  manifestEntry.manifest?.family_orchestration?.resume_contract?.surface_kind
+                    ? '<p><strong>Family Resume Surface:</strong> '
+                      + manifestEntry.manifest.family_orchestration.resume_contract.surface_kind
+                      + '</p>'
+                    : '',
+                  manifestEntry.manifest?.family_orchestration?.checkpoint_lineage_surface?.ref
+                    ? '<p><strong>Family Checkpoint Lineage:</strong> '
+                      + manifestEntry.manifest.family_orchestration.checkpoint_lineage_surface.ref
+                      + '</p>'
+                    : '',
+                  manifestEntry.manifest?.family_orchestration?.event_envelope_surface?.ref
+                    ? '<p><strong>Family Event Envelope:</strong> '
+                      + manifestEntry.manifest.family_orchestration.event_envelope_surface.ref
+                      + '</p>'
+                    : '',
+                  Object.entries(manifestEntry.manifest?.family_orchestration?.human_gates || {}).length > 0
+                    ? '<div><strong>Family Human Gates:</strong><ul>'
+                      + Object.values(manifestEntry.manifest?.family_orchestration?.human_gates || {})
+                        .map((gateValue) => {
+                          if (!gateValue || typeof gateValue !== 'object') {
+                            return '';
+                          }
+                          const gate = gateValue as {
+                            gate_id?: string;
+                            title?: string;
+                            status?: string;
+                          };
+                          return '<li><code>' + String(gate.gate_id || 'unknown_gate') + '</code>'
+                            + (gate.title ? ': ' + gate.title : '')
+                            + (gate.status ? ' - ' + gate.status : '')
+                            + '</li>';
+                        })
+                        .filter(Boolean)
+                        .join('')
+                      + '</ul></div>'
                     : '',
                 ].filter(Boolean).join('')
               : '<p><strong>Manifest Status:</strong> ' + manifestEntry.status + '</p>';

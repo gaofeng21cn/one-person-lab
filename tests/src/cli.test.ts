@@ -1426,6 +1426,11 @@ test('domain-manifests resolves active domain-owned manifest commands while work
     assert.equal(recommendedEntry.operator_loop_shell_key, 'direct');
     assert.equal(recommendedEntry.operator_loop_command, 'redcube product invoke');
     assert.equal(recommendedEntry.operator_loop_actions.start_deliverable.command, 'redcube product invoke');
+    assert.equal(recommendedEntry.manifest_version, 2);
+    assert.equal(recommendedEntry.family_human_gate_count, 1);
+    assert.deepEqual(recommendedEntry.family_human_gate_ids, ['deliverable_publish_gate']);
+    assert.equal(recommendedEntry.family_resume_surface_kind, 'product_entry_session');
+    assert.equal(recommendedEntry.family_checkpoint_lineage_ref, 'runtime_watch/checkpoints/latest.json');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
