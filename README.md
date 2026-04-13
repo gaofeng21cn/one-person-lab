@@ -255,9 +255,10 @@ The current truth is still transitional, but it has moved forward:
 - `OPL` now ships a local direct product-entry shell whose default front door is `opl`
 - `opl` seeds or resumes an `OPL Front Desk` session on top of the external Hermes kernel
 - `opl "<request...>"` now acts as the fast natural-language path for a one-shot routed ask
+- `opl start --project <project_id> [--mode <mode_id>]` now resolves one admitted domain's `product_entry_start` surface into the exact next entry mode `OPL` recommends
 - `opl doctor`, `opl ask`, `opl chat`, `opl resume`, `opl sessions`, `opl logs`, `opl repair-hermes-gateway`, `opl frontdesk-manifest`, `opl frontdesk-hosted-bundle`, `opl frontdesk-hosted-package`, `opl frontdesk-librechat-package`, `opl session-ledger`, `opl handoff-envelope`, `opl domain-manifests`, `paperclip-*`, and the `frontdesk-service-*` commands now form the explicit product-entry and runtime-ops command surface; the `paperclip-*` family remains optional and only activates the downstream external control-plane bridge when configured
 - `opl frontdesk-manifest`, `opl frontdesk-hosted-bundle`, `opl frontdesk-hosted-package`, and `opl frontdesk-librechat-package` now freeze the hosted-friendly shell contract, the hosted-ready bundle surface, the self-hostable front-desk package, and the actual LibreChat-first hosted shell pilot package without overstating managed hosted-runtime readiness
-- `opl projects`, `opl workspace-status`, `opl workspace-catalog`, `opl workspace-bind|activate|archive`, `opl domain-manifests`, `opl runtime-status`, `opl session-ledger`, and `opl dashboard` now add a writable top-level management surface for project, workspace, session, runtime, and handoff visibility; `workspace-catalog` stays registry-only, while `domain-manifests` actually resolves the active bound domain-owned `manifest_command` into a machine-readable discovery surface so family wiring can consume the honest product-entry manifest without inventing domain shell capability; the same surface now also preserves each domain's `product_entry_shell`, `shared_handoff`, and optional `family_orchestration.action_graph` companion instead of flattening everything back into guesswork
+- `opl projects`, `opl workspace-status`, `opl workspace-catalog`, `opl workspace-bind|activate|archive`, `opl domain-manifests`, `opl runtime-status`, `opl session-ledger`, and `opl dashboard` now add a writable top-level management surface for project, workspace, session, runtime, and handoff visibility; `workspace-catalog` stays registry-only, while `domain-manifests` actually resolves the active bound domain-owned `manifest_command` into a machine-readable discovery surface so family wiring can consume the honest product-entry manifest without inventing domain shell capability; the same surface now also preserves each domain's `product_entry_start`, `product_entry_shell`, `shared_handoff`, and optional `family_orchestration.action_graph` companion instead of flattening everything back into guesswork
 - `opl web` now lands a local web front desk pilot for browser-based direct entry, quick ask, workspace inspection, workspace binding, runtime visibility, managed session-ledger review, and hosted-friendly `health / manifest / hosted-bundle / hosted-package / librechat-package / sessions / resume / logs / handoff-envelope` surfaces
 - `opl frontdesk-service-install|status|start|stop|open|uninstall` now add a service-safe local packaging layer for the OPL web front desk on top of launchd
 - users no longer need to start from `Codex` just to reach the top-level `OPL` surface locally
@@ -285,6 +286,8 @@ What landed in this repository is the first local shell of that idea:
   - enters the `OPL Front Desk`, seeds a Hermes session, and resumes it directly when running interactively
 - `opl "<request...>"`
   - treats a plain-language request as a routed quick ask without requiring the explicit `ask` verb
+- `opl start --project <project_id> [--mode <mode_id>]`
+  - resolves one admitted domain's `product_entry_start` surface and emits the exact recommended mode, available modes, resume surface, and human-gate summary before handoff
 - `opl doctor`
   - checks the local product-entry shell, Hermes kernel visibility, and gateway-service readiness
 - `opl ask "<request...>"`
@@ -316,7 +319,7 @@ What landed in this repository is the first local shell of that idea:
 - `opl workspace-catalog`
   - shows the file-backed workspace registry for OPL and admitted domain project surfaces
 - `opl domain-manifests`
-  - resolves the current active admitted-domain `manifest_command` bindings into machine-readable product-entry discovery surfaces
+  - resolves the current active admitted-domain `manifest_command` bindings into machine-readable product-entry discovery surfaces, including `product_entry_start`
 - `opl workspace-bind|activate|archive`
   - bindings can now also carry a `manifest_command` for the routed domain workspace
   - manage project workspace bindings and optional direct-entry locators so top-level handoff can stay machine-readable and honest

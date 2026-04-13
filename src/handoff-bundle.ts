@@ -102,6 +102,7 @@ export function buildHandoffBundle(
             runtime: domainManifestEntry.manifest?.runtime ?? null,
             repo_mainline: domainManifestEntry.manifest?.repo_mainline ?? null,
             product_entry_status: domainManifestEntry.manifest?.product_entry_status ?? null,
+            product_entry_start: domainManifestEntry.manifest?.product_entry_start ?? null,
             product_entry_preflight: domainManifestEntry.manifest?.product_entry_preflight ?? null,
             product_entry_readiness: domainManifestEntry.manifest?.product_entry_readiness ?? null,
             product_entry_shell: domainManifestEntry.manifest?.product_entry_shell ?? {},

@@ -1756,6 +1756,9 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
       medautogrant.manifest.product_entry_preflight.recommended_check_command,
       'uv run python -m med_autogrant validate-workspace --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json',
     );
+    assert.equal(medautogrant.manifest.product_entry_start.surface_kind, 'product_entry_start');
+    assert.equal(medautogrant.manifest.product_entry_start.recommended_mode_id, 'open_frontdesk');
+    assert.equal(medautogrant.manifest.product_entry_start.modes[1].mode_id, 'continue_grant_loop');
 
     assert.equal(medautoscience.status, 'resolved');
     assert.equal(medautoscience.manifest.recommended_shell, 'workspace_cockpit');
@@ -1784,6 +1787,9 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
       medautoscience.manifest.product_entry_preflight.recommended_check_command,
       'uv run python -m med_autoscience.cli doctor --profile /fixtures/med-autoscience/profile.local.toml',
     );
+    assert.equal(medautoscience.manifest.product_entry_start.surface_kind, 'product_entry_start');
+    assert.equal(medautoscience.manifest.product_entry_start.recommended_mode_id, 'open_frontdesk');
+    assert.equal(medautoscience.manifest.product_entry_start.modes[2].mode_id, 'continue_study');
 
     assert.equal(redcube.status, 'resolved');
     assert.equal(redcube.manifest.recommended_shell, 'direct');
@@ -1819,6 +1825,10 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
       redcube.manifest.product_entry_preflight.recommended_check_command,
       'redcube workspace doctor --workspace-root /fixtures/redcube/workspace',
     );
+    assert.equal(redcube.manifest.product_entry_start.surface_kind, 'product_entry_start');
+    assert.equal(redcube.manifest.product_entry_start.recommended_mode_id, 'open_frontdesk');
+    assert.equal(redcube.manifest.product_entry_start.modes[2].mode_id, 'federated_handoff');
+    assert.equal(redcube.manifest.product_entry_start.modes[3].mode_id, 'resume_session');
 
     const dashboardOutput = runCli(['dashboard', '--path', repoRoot, '--sessions-limit', '1'], env);
     assert.equal(dashboardOutput.dashboard.front_desk.recommended_entry_surfaces_count, 3);
@@ -1840,6 +1850,10 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(grantEntry.product_entry_readiness_usable_now, true);
     assert.equal(grantEntry.product_entry_readiness_start_command, 'uv run python -m med_autogrant product-frontdesk --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json');
     assert.equal(grantEntry.product_entry_preflight.ready_to_try_now, true);
+    assert.equal(grantEntry.product_entry_start.surface_kind, 'product_entry_start');
+    assert.equal(grantEntry.product_entry_start.recommended_mode_id, 'open_frontdesk');
+    assert.equal(grantEntry.product_entry_start_resume_surface_kind, 'grant_user_loop');
+    assert.equal(grantEntry.product_entry_start_mode_ids[2], 'build_direct_entry');
     assert.equal(
       grantEntry.product_entry_preflight.recommended_check_command,
       'uv run python -m med_autogrant validate-workspace --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json',
@@ -1858,6 +1872,10 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(scienceEntry.product_entry_readiness_good_to_use_now, false);
     assert.equal(scienceEntry.product_entry_readiness_loop_command, 'uv run python -m med_autoscience.cli workspace-cockpit --profile /fixtures/med-autoscience/profile.local.toml');
     assert.equal(scienceEntry.product_entry_preflight.ready_to_try_now, true);
+    assert.equal(scienceEntry.product_entry_start.surface_kind, 'product_entry_start');
+    assert.equal(scienceEntry.product_entry_start.recommended_mode_id, 'open_frontdesk');
+    assert.equal(scienceEntry.product_entry_start_resume_surface_kind, 'launch_study');
+    assert.equal(scienceEntry.product_entry_start_mode_ids[1], 'submit_task');
     assert.equal(
       scienceEntry.product_entry_preflight.recommended_check_command,
       'uv run python -m med_autoscience.cli doctor --profile /fixtures/med-autoscience/profile.local.toml',
@@ -1886,6 +1904,10 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(recommendedEntry.product_entry_readiness_start_command, 'redcube product frontdesk');
     assert.equal(recommendedEntry.product_entry_readiness_loop_command, 'redcube product invoke');
     assert.equal(recommendedEntry.product_entry_preflight.ready_to_try_now, true);
+    assert.equal(recommendedEntry.product_entry_start.surface_kind, 'product_entry_start');
+    assert.equal(recommendedEntry.product_entry_start.recommended_mode_id, 'open_frontdesk');
+    assert.equal(recommendedEntry.product_entry_start_resume_surface_kind, 'product_entry_session');
+    assert.equal(recommendedEntry.product_entry_start_mode_ids[2], 'federated_handoff');
     assert.equal(
       recommendedEntry.product_entry_preflight.recommended_check_command,
       'redcube workspace doctor --workspace-root /fixtures/redcube/workspace',
@@ -1915,6 +1937,47 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.deepEqual(recommendedEntry.family_human_gate_ids, ['redcube_operator_review_gate']);
     assert.equal(recommendedEntry.family_resume_surface_kind, 'product_entry_session');
     assert.equal(recommendedEntry.family_checkpoint_lineage_ref, 'runtime_watch/checkpoints/latest.json');
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('start returns the routed family start surface for a bound project', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-start-state-'));
+  const fixtures = loadFamilyManifestFixtures();
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const env = {
+    OPL_FRONTDESK_STATE_DIR: stateRoot,
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+  };
+
+  try {
+    runCli([
+      'workspace-bind',
+      '--project',
+      'redcube',
+      '--path',
+      repoRoot,
+      '--entry-command',
+      'redcube-ai frontdesk',
+      '--manifest-command',
+      buildManifestCommand(fixtures.redcube),
+      '--entry-url',
+      'http://127.0.0.1:3310/redcube',
+    ], env);
+
+    const output = runCli(['start', '--project', 'redcube'], env);
+    assert.equal(output.product_entry_start.surface_kind, 'opl_product_entry_start');
+    assert.equal(output.product_entry_start.project_id, 'redcube');
+    assert.equal(output.product_entry_start.target_domain_id, 'redcube_ai');
+    assert.equal(output.product_entry_start.recommended_mode_id, 'open_frontdesk');
+    assert.equal(output.product_entry_start.selected_mode_id, 'open_frontdesk');
+    assert.equal(output.product_entry_start.selected_mode.mode_id, 'open_frontdesk');
+    assert.equal(output.product_entry_start.selected_mode.command, 'redcube product frontdesk');
+    assert.equal(output.product_entry_start.available_modes[2].mode_id, 'federated_handoff');
+    assert.equal(output.product_entry_start.resume_surface.surface_kind, 'product_entry_session');
+    assert.deepEqual(output.product_entry_start.human_gate_ids, ['redcube_operator_review_gate']);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(stateRoot, { recursive: true, force: true });
@@ -2046,6 +2109,18 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.product_entry_preflight.ready_to_try_now,
       true,
+    );
+    assert.equal(
+      output.handoff_bundle.domain_manifest_recommendation.product_entry_start.surface_kind,
+      'product_entry_start',
+    );
+    assert.equal(
+      output.handoff_bundle.domain_manifest_recommendation.product_entry_start.recommended_mode_id,
+      'open_frontdesk',
+    );
+    assert.equal(
+      output.handoff_bundle.domain_manifest_recommendation.product_entry_start.modes[2].mode_id,
+      'federated_handoff',
     );
     assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.product_entry_overview.progress_surface.command,

@@ -113,6 +113,11 @@ type DashboardCliInput = {
   sessionsLimit?: number;
 };
 
+type StartCliInput = {
+  projectId?: string;
+  modeId?: string;
+};
+
 type WorkspaceRegistryCliInput = {
   projectId?: string;
   workspacePath?: string;
@@ -638,6 +643,47 @@ function parseDashboardArgs(
         break;
       default:
         throw buildUsageError(`Unknown option for dashboard: ${token}.`, spec, {
+          option: token,
+        });
+    }
+
+    index += 1;
+  }
+
+  return parsed;
+}
+
+function parseStartArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): StartCliInput {
+  const parsed: StartCliInput = {};
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (!token.startsWith('--')) {
+      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
+        token,
+      });
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
+        option: token,
+      });
+    }
+
+    switch (token) {
+      case '--project':
+        parsed.projectId = value;
+        break;
+      case '--mode':
+        parsed.modeId = value;
+        break;
+      default:
+        throw buildUsageError(`Unknown option for start: ${token}.`, spec, {
           option: token,
         });
     }
@@ -1659,6 +1705,82 @@ async function main() {
         'opl dashboard --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
       ],
       handler: (args) => buildFrontDeskDashboard(getContracts(), parseDashboardArgs(args, commandSpecs.dashboard)),
+    },
+    start: {
+      usage: 'opl start --project <project_id> [--mode <mode_id>]',
+      summary: 'Select one resolved domain start surface and emit the exact next entry mode OPL recommends.',
+      examples: [
+        'opl start --project redcube',
+        'opl start --project med-autogrant --mode build_direct_entry',
+      ],
+      handler: (args) => {
+        const parsed = parseStartArgs(args, commandSpecs.start);
+        if (!parsed.projectId) {
+          throw buildUsageError(
+            'start requires --project.',
+            commandSpecs.start,
+            { required: ['--project'] },
+          );
+        }
+
+        const contracts = getContracts();
+        findDomainOrThrow(contracts, parsed.projectId);
+        const domainManifests = buildDomainManifestCatalog(contracts).domain_manifests;
+        const entry = domainManifests.projects.find((candidate) => candidate.project_id === parsed.projectId);
+
+        if (!entry) {
+          throw new GatewayContractError('domain_not_found', 'Requested project is not part of the admitted domain set.', {
+            project_id: parsed.projectId,
+          });
+        }
+        if (entry.status !== 'resolved' || !entry.manifest?.product_entry_start) {
+          throw new GatewayContractError(
+            'cli_usage_error',
+            'The requested project does not currently expose a resolved product_entry_start surface.',
+            {
+              project_id: parsed.projectId,
+              status: entry.status,
+              manifest_command: entry.manifest_command,
+              workspace_path: entry.workspace_path,
+            },
+          );
+        }
+
+        const startSurface = entry.manifest.product_entry_start;
+        const selectedModeId = parsed.modeId ?? startSurface.recommended_mode_id;
+        const selectedMode = startSurface.modes.find((mode) => mode.mode_id === selectedModeId) ?? null;
+
+        if (!selectedModeId || !selectedMode) {
+          throw new GatewayContractError(
+            'cli_usage_error',
+            'The requested start mode is not available on the resolved product_entry_start surface.',
+            {
+              project_id: parsed.projectId,
+              mode_id: parsed.modeId ?? null,
+              available_modes: startSurface.modes.map((mode) => mode.mode_id),
+            },
+          );
+        }
+
+        return withContractsContext(contracts, {
+          product_entry_start: {
+            surface_kind: 'opl_product_entry_start',
+            project_id: entry.project_id,
+            project: entry.project,
+            binding_id: entry.binding_id,
+            workspace_path: entry.workspace_path,
+            manifest_command: entry.manifest_command,
+            target_domain_id: entry.manifest.target_domain_id,
+            summary: startSurface.summary,
+            recommended_mode_id: startSurface.recommended_mode_id,
+            selected_mode_id: selectedModeId,
+            selected_mode: selectedMode,
+            available_modes: startSurface.modes,
+            resume_surface: startSurface.resume_surface,
+            human_gate_ids: startSurface.human_gate_ids,
+          },
+        });
+      },
     },
     'paperclip-config': {
       usage:
