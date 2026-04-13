@@ -380,6 +380,26 @@ printf '%s\\n' "$*" > "${capturePath}"
   };
 }
 
+function createFakeShellCommandFixture() {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-shell-command-fixture-'));
+  const capturePath = path.join(fixtureRoot, 'shell-command.log');
+  const commandPath = path.join(fixtureRoot, 'fake-domain-entry');
+  fs.writeFileSync(
+    commandPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\\n' "$*" >> "${capturePath}"
+`,
+    { mode: 0o755 },
+  );
+
+  return {
+    fixtureRoot,
+    commandPath,
+    capturePath,
+  };
+}
+
 type FakePaperclipRequest = {
   method: string;
   path: string;
@@ -1312,6 +1332,9 @@ test('help advertises the local web front-desk pilot command surface', () => {
   assert.ok(
     output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk-manifest'),
   );
+  assert.ok(
+    output.help.commands.some((entry: { command: string }) => entry.command === 'launch-domain'),
+  );
 
   const scoped = runCli(['web', '--help']);
   assert.equal(scoped.help.command, 'web');
@@ -1721,7 +1744,7 @@ test('workspace registry commands bind activate and archive project workspaces w
     assert.equal(catalogOutput.workspace_catalog.projects[2].bindings_count.direct_entry_ready, 1);
     assert.equal(catalogOutput.workspace_catalog.projects[2].bindings_count.manifest_ready, 1);
     assert.equal(catalogOutput.workspace_catalog.projects[2].last_updated_at, bindOutput.workspace_catalog.binding.updated_at);
-    assert.deepEqual(catalogOutput.workspace_catalog.projects[2].available_actions, ['bind', 'activate', 'archive']);
+    assert.deepEqual(catalogOutput.workspace_catalog.projects[2].available_actions, ['bind', 'activate', 'archive', 'launch']);
     assert.equal(catalogOutput.workspace_catalog.summary.active_projects_count, 1);
     assert.equal(catalogOutput.workspace_catalog.summary.direct_entry_ready_projects_count, 1);
     assert.equal(catalogOutput.workspace_catalog.summary.manifest_ready_projects_count, 1);
@@ -2295,12 +2318,109 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
   }
 });
 
+test('launch-domain resolves a bound direct-entry locator into an honest launcher surface', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-launch-domain-state-'));
+  const openFixture = createFakeOpenFixture();
+  const shellFixture = createFakeShellCommandFixture();
+
+  try {
+    runCli([
+      'workspace-bind',
+      '--project',
+      'redcube',
+      '--path',
+      repoRoot,
+      '--entry-command',
+      `${shellFixture.commandPath} --workspace ${repoRoot}`,
+      '--entry-url',
+      'http://127.0.0.1:3310/redcube',
+    ], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+    });
+
+    const preview = runCli([
+      'launch-domain',
+      '--project',
+      'redcube',
+      '--dry-run',
+    ], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_OPEN_BIN: openFixture.openPath,
+    });
+
+    assert.equal(preview.domain_entry_launch.surface_id, 'opl_domain_direct_entry_launch');
+    assert.equal(preview.domain_entry_launch.project_id, 'redcube');
+    assert.equal(preview.domain_entry_launch.dry_run, true);
+    assert.equal(preview.domain_entry_launch.selected_strategy, 'open_url');
+    assert.equal(preview.domain_entry_launch.launch_status, 'preview_only');
+    assert.equal(preview.domain_entry_launch.workspace_locator.absolute_path, repoRoot);
+    assert.equal(preview.domain_entry_launch.available_strategies[0], 'open_url');
+    assert.equal(preview.domain_entry_launch.available_strategies[1], 'spawn_command');
+    assert.equal(preview.domain_entry_launch.direct_entry_locator.url, 'http://127.0.0.1:3310/redcube');
+    assert.equal(preview.domain_entry_launch.direct_entry_locator.command.includes(shellFixture.commandPath), true);
+    assert.equal(preview.domain_entry_launch.action.command_preview[0], openFixture.openPath);
+
+    const openResult = runCli([
+      'launch-domain',
+      '--project',
+      'redcube',
+    ], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_OPEN_BIN: openFixture.openPath,
+    });
+
+    assert.equal(openResult.domain_entry_launch.selected_strategy, 'open_url');
+    assert.equal(openResult.domain_entry_launch.launch_status, 'launched');
+    assert.equal(openResult.domain_entry_launch.action.kind, 'open_url');
+    assert.equal(fs.readFileSync(openFixture.capturePath, 'utf8').trim(), 'http://127.0.0.1:3310/redcube');
+
+    const spawnResult = runCli([
+      'launch-domain',
+      '--project',
+      'redcube',
+      '--strategy',
+      'spawn_command',
+    ], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_OPEN_BIN: openFixture.openPath,
+    });
+
+    assert.equal(spawnResult.domain_entry_launch.selected_strategy, 'spawn_command');
+    assert.equal(spawnResult.domain_entry_launch.launch_status, 'launched');
+    assert.equal(spawnResult.domain_entry_launch.action.kind, 'spawn_command');
+    assert.equal(typeof spawnResult.domain_entry_launch.action.pid, 'number');
+
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      if (fs.existsSync(shellFixture.capturePath)) {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+
+    assert.equal(fs.existsSync(shellFixture.capturePath), true);
+    assert.match(fs.readFileSync(shellFixture.capturePath, 'utf8'), new RegExp(repoRoot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(openFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(shellFixture.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('session-ledger captures OPL-managed session events with honest resource samples', () => {
   const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
 if [ "$1" = "chat" ]; then
   cat <<'EOF'
 ╭─ ⚕ Hermes ───────────────────────────────────────────────────────────────────╮
 SESSION LEDGER ASK RESPONSE
+
+session_id: sess_ledger
+EOF
+  exit 0
+fi
+if [ "$1" = "--resume" ] && [ "$2" = "sess_ledger" ]; then
+  cat <<'EOF'
+╭─ ⚕ Hermes ───────────────────────────────────────────────────────────────────╮
+SESSION LEDGER RESUME RESPONSE
 
 session_id: sess_ledger
 EOF
@@ -2366,23 +2486,37 @@ exit 1
     });
     assert.equal(askOutput.product_entry.hermes.session_id, 'sess_ledger');
 
+    const resumeOutput = runCli(['resume', 'sess_ledger'], {
+      OPL_HERMES_BIN: hermesPath,
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
+    });
+    assert.equal(resumeOutput.product_entry.mode, 'resume');
+
     const ledgerOutput = runCli(['session-ledger', '--limit', '5'], {
       OPL_HERMES_BIN: hermesPath,
       OPL_FRONTDESK_STATE_DIR: stateRoot,
       PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
     });
 
-    assert.equal(ledgerOutput.session_ledger.summary.entry_count, 1);
+    assert.equal(ledgerOutput.session_ledger.summary.entry_count, 2);
+    assert.equal(ledgerOutput.session_ledger.summary.mode_counts.ask, 1);
+    assert.equal(ledgerOutput.session_ledger.summary.mode_counts.resume, 1);
+    assert.equal(ledgerOutput.session_ledger.summary.domain_counts.redcube, 2);
+    assert.equal(ledgerOutput.session_ledger.summary.workspace_binding_count, 1);
     assert.equal(ledgerOutput.session_ledger.entries[0].session_id, 'sess_ledger');
+    assert.equal(ledgerOutput.session_ledger.entries[0].mode, 'resume');
     assert.equal(ledgerOutput.session_ledger.entries[0].domain_id, 'redcube');
-    assert.equal(ledgerOutput.session_ledger.entries[0].resource_sample.process_count, 2);
+    assert.equal(ledgerOutput.session_ledger.entries[0].workspace_locator.absolute_path, repoRoot);
+    assert.equal(ledgerOutput.session_ledger.entries[1].mode, 'ask');
     assert.equal(ledgerOutput.session_ledger.sessions.length, 1);
     assert.equal(ledgerOutput.session_ledger.sessions[0].session_id, 'sess_ledger');
-    assert.equal(ledgerOutput.session_ledger.sessions[0].event_count, 1);
+    assert.equal(ledgerOutput.session_ledger.sessions[0].event_count, 2);
     assert.equal(ledgerOutput.session_ledger.sessions[0].domain_id, 'redcube');
-    assert.deepEqual(ledgerOutput.session_ledger.sessions[0].modes, ['ask']);
-    assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.samples_captured, 1);
+    assert.deepEqual(ledgerOutput.session_ledger.sessions[0].modes, ['resume', 'ask']);
+    assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.samples_captured, 2);
     assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.latest_process_count, 2);
+    assert.equal(ledgerOutput.session_ledger.sessions[0].workspace_locator.absolute_path, repoRoot);
     assert.equal(ledgerOutput.session_ledger.summary.session_aggregate_count, 1);
 
     const runtimeOutput = runCli(['runtime-status', '--limit', '2'], {
@@ -2390,8 +2524,9 @@ exit 1
       OPL_FRONTDESK_STATE_DIR: stateRoot,
       PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
     });
-    assert.equal(runtimeOutput.runtime_status.managed_session_ledger.summary.entry_count, 1);
+    assert.equal(runtimeOutput.runtime_status.managed_session_ledger.summary.entry_count, 2);
     assert.equal(runtimeOutput.runtime_status.managed_session_ledger.summary.session_aggregate_count, 1);
+    assert.equal(runtimeOutput.runtime_status.managed_session_ledger.summary.domain_counts.redcube, 2);
     assert.equal(runtimeOutput.runtime_status.managed_session_ledger.sessions[0].session_id, 'sess_ledger');
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
@@ -2724,6 +2859,7 @@ exit 1
     const pageHtml = await page.text();
     assert.match(pageHtml, /Start A Domain Project/);
     assert.match(pageHtml, /Resolve the exact recommended direct entry mode/);
+    assert.match(pageHtml, /Launch Bound Domain Entry/);
 
     const startResponse = await fetch(`${baseUrl}/api/start?project=redcube`);
     assert.equal(startResponse.status, 200);
@@ -2740,6 +2876,23 @@ exit 1
     const modePayload = await modeResponse.json();
     assert.equal(modePayload.product_entry_start.selected_mode_id, 'federated_handoff');
     assert.equal(modePayload.product_entry_start.selected_mode.command, 'redcube product federate');
+
+    const launchResponse = await fetch(`${baseUrl}/api/launch-domain`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        project_id: 'redcube',
+        dry_run: true,
+      }),
+    });
+    assert.equal(launchResponse.status, 200);
+    const launchPayload = await launchResponse.json();
+    assert.equal(launchPayload.domain_entry_launch.project_id, 'redcube');
+    assert.equal(launchPayload.domain_entry_launch.selected_strategy, 'open_url');
+    assert.equal(launchPayload.domain_entry_launch.launch_status, 'preview_only');
+    assert.equal(launchPayload.domain_entry_launch.direct_entry_locator.url, 'http://127.0.0.1:3310/redcube');
   } finally {
     if (child) {
       child.kill('SIGTERM');

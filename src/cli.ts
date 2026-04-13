@@ -28,6 +28,7 @@ import {
   runProductEntryResume,
   runProductEntrySessions,
 } from './product-entry.ts';
+import { launchDomainEntry, type DomainLaunchStrategy } from './domain-launch.ts';
 import {
   buildDomainManifestCatalog,
 } from './domain-manifest.ts';
@@ -86,6 +87,13 @@ type ParsedCliInput = {
 type SessionsCliInput = {
   limit?: number;
   source?: string;
+};
+
+type LaunchDomainCliInput = {
+  projectId?: string;
+  workspacePath?: string;
+  strategy?: DomainLaunchStrategy;
+  dryRun?: boolean;
 };
 
 type LogsCliInput = {
@@ -685,6 +693,61 @@ function parseStartArgs(
         break;
       default:
         throw buildUsageError(`Unknown option for start: ${token}.`, spec, {
+          option: token,
+        });
+    }
+
+    index += 1;
+  }
+
+  return parsed;
+}
+
+function parseLaunchDomainArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): LaunchDomainCliInput {
+  const parsed: LaunchDomainCliInput = {};
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (token === '--dry-run') {
+      parsed.dryRun = true;
+      continue;
+    }
+
+    if (!token.startsWith('--')) {
+      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
+        token,
+      });
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
+        option: token,
+      });
+    }
+
+    switch (token) {
+      case '--project':
+        parsed.projectId = value;
+        break;
+      case '--path':
+        parsed.workspacePath = value;
+        break;
+      case '--strategy':
+        if (!['auto', 'open_url', 'spawn_command'].includes(value)) {
+          throw buildUsageError(`Option ${token} must be one of auto, open_url, or spawn_command.`, spec, {
+            option: token,
+            value,
+          });
+        }
+        parsed.strategy = value as DomainLaunchStrategy;
+        break;
+      default:
+        throw buildUsageError(`Unknown option for launch-domain: ${token}.`, spec, {
           option: token,
         });
     }
@@ -1408,6 +1471,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl frontdesk-librechat-package --output /tmp/opl-librechat-pilot --public-origin https://opl.example.com --base-path /pilot/opl',
         'opl frontdesk-service-install --port 8787',
         'opl workspace-bind --project redcube --path /Users/gaofeng/workspace/redcube-ai --entry-command "redcube-ai frontdesk" --manifest-command "redcube product manifest --workspace-root /Users/gaofeng/workspace/redcube-ai"',
+        'opl launch-domain --project redcube --dry-run',
         'opl paperclip-config --base-url https://paperclip.example.com --auth-header-env OPL_PAPERCLIP_AUTH_HEADER --control-company-id company-opl-control',
         'opl paperclip-bind --project redcube --company-id company-redcube --paperclip-project-id project-redcube --project-workspace-id workspace-redcube --execution-workspace shared_workspace',
         'opl paperclip-open-task "Prepare a defense-ready slide deck." --preferred-family ppt_deck --workspace-path /Users/gaofeng/workspace/redcube-ai --priority high',
@@ -1727,6 +1791,34 @@ async function main() {
         return buildFrontDeskStart(getContracts(), {
           projectId: parsed.projectId,
           modeId: parsed.modeId,
+        });
+      },
+    },
+    'launch-domain': {
+      usage:
+        'opl launch-domain --project <project_id> [--path <workspace_path>] [--strategy <auto|open_url|spawn_command>] [--dry-run]',
+      summary:
+        'Invoke one already-bound domain direct-entry locator without upgrading OPL into runtime ownership.',
+      examples: [
+        'opl launch-domain --project redcube --dry-run',
+        'opl launch-domain --project redcube --strategy open_url',
+        'opl launch-domain --project med-autogrant --path /Users/gaofeng/workspace/med-autogrant --strategy spawn_command',
+      ],
+      handler: (args) => {
+        const parsed = parseLaunchDomainArgs(args, commandSpecs['launch-domain']);
+        if (!parsed.projectId) {
+          throw buildUsageError(
+            'launch-domain requires --project.',
+            commandSpecs['launch-domain'],
+            { required: ['--project'] },
+          );
+        }
+
+        return launchDomainEntry(getContracts(), {
+          projectId: parsed.projectId,
+          workspacePath: parsed.workspacePath,
+          strategy: parsed.strategy,
+          dryRun: parsed.dryRun,
         });
       },
     },

@@ -191,6 +191,26 @@ printf '%s\\n' "$*" > "${capturePath}"
   };
 }
 
+function createFakeShellCommandFixture() {
+  const fixtureRoot = mkdtempSync(path.join(os.tmpdir(), 'opl-shell-command-fixture-'));
+  const capturePath = path.join(fixtureRoot, 'shell-command.log');
+  const commandPath = path.join(fixtureRoot, 'fake-domain-entry');
+  writeFileSync(
+    commandPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\\n' "$*" >> "${capturePath}"
+`,
+    { mode: 0o755 },
+  );
+
+  return {
+    fixtureRoot,
+    commandPath,
+    capturePath,
+  };
+}
+
 async function startCliServer(args, options = {}, timeoutMs = 10000) {
   return await new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [cliEntrypoint, ...args], {
@@ -595,6 +615,7 @@ test('help exposes the local web front-desk pilot command through the built CLI 
   assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-service-install'));
   assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-service-status'));
   assert.ok(payload.help.commands.some((entry) => entry.command === 'workspace-bind'));
+  assert.ok(payload.help.commands.some((entry) => entry.command === 'launch-domain'));
   assert.ok(payload.help.commands.some((entry) => entry.command === 'session-ledger'));
   assert.ok(payload.help.commands.some((entry) => entry.command === 'handoff-envelope'));
 
@@ -838,6 +859,8 @@ test('workspace registry and handoff surfaces stay machine-readable through the 
       'RedCube Main Workspace',
       '--entry-command',
       'redcube-ai frontdesk',
+      '--manifest-command',
+      'redcube product manifest --workspace-root /Users/gaofeng/workspace/redcube-ai',
       '--entry-url',
       'http://127.0.0.1:3310/redcube',
     ], {
@@ -861,8 +884,11 @@ test('workspace registry and handoff surfaces stay machine-readable through the 
     assert.equal(catalogPayload.workspace_catalog.projects[2].active_binding.workspace_path, repoRoot);
     assert.equal(catalogPayload.workspace_catalog.projects[2].bindings_count.total, 1);
     assert.equal(catalogPayload.workspace_catalog.projects[2].bindings_count.direct_entry_ready, 1);
+    assert.equal(catalogPayload.workspace_catalog.projects[2].bindings_count.manifest_ready, 1);
+    assert.deepEqual(catalogPayload.workspace_catalog.projects[2].available_actions, ['bind', 'activate', 'archive', 'launch']);
     assert.equal(catalogPayload.workspace_catalog.summary.active_projects_count, 1);
     assert.equal(catalogPayload.workspace_catalog.summary.direct_entry_ready_projects_count, 1);
+    assert.equal(catalogPayload.workspace_catalog.summary.manifest_ready_projects_count, 1);
 
     const handoffResult = runCli([
       'handoff-envelope',
@@ -888,7 +914,7 @@ test('workspace registry and handoff surfaces stay machine-readable through the 
     const handoffPayload = parseJsonOutput(handoffResult);
     assert.equal(handoffPayload.handoff_bundle.target_domain_id, 'redcube');
     assert.equal(handoffPayload.handoff_bundle.domain_direct_entry.command, 'redcube-ai frontdesk');
-    assert.equal(handoffPayload.handoff_bundle.domain_manifest_recommendation.status, 'manifest_not_configured');
+    assert.equal(handoffPayload.handoff_bundle.domain_manifest_recommendation.status, 'command_failed');
     assert.equal(handoffPayload.handoff_bundle.domain_manifest_recommendation.recommended_command, null);
 
     const archiveResult = runCli([
@@ -910,6 +936,92 @@ test('workspace registry and handoff surfaces stay machine-readable through the 
   }
 });
 
+test('launch-domain stays machine-readable through the built CLI entrypoint', async () => {
+  const stateRoot = mkdtempSync(path.join(os.tmpdir(), 'opl-built-launch-domain-state-'));
+  const openFixture = createFakeOpenFixture();
+  const shellFixture = createFakeShellCommandFixture();
+
+  try {
+    const bindResult = runCli([
+      'workspace-bind',
+      '--project',
+      'redcube',
+      '--path',
+      repoRoot,
+      '--entry-command',
+      `${shellFixture.commandPath} --workspace ${repoRoot}`,
+      '--entry-url',
+      'http://127.0.0.1:3310/redcube',
+    ], {
+      env: {
+        OPL_FRONTDESK_STATE_DIR: stateRoot,
+      },
+    });
+    assert.equal(bindResult.status, 0, formatFailure(bindResult));
+
+    const previewResult = runCli([
+      'launch-domain',
+      '--project',
+      'redcube',
+      '--dry-run',
+    ], {
+      env: {
+        OPL_FRONTDESK_STATE_DIR: stateRoot,
+        OPL_OPEN_BIN: openFixture.openPath,
+      },
+    });
+    assert.equal(previewResult.status, 0, formatFailure(previewResult));
+    const previewPayload = parseJsonOutput(previewResult);
+    assert.equal(previewPayload.domain_entry_launch.surface_id, 'opl_domain_direct_entry_launch');
+    assert.equal(previewPayload.domain_entry_launch.selected_strategy, 'open_url');
+    assert.equal(previewPayload.domain_entry_launch.launch_status, 'preview_only');
+
+    const openResult = runCli([
+      'launch-domain',
+      '--project',
+      'redcube',
+    ], {
+      env: {
+        OPL_FRONTDESK_STATE_DIR: stateRoot,
+        OPL_OPEN_BIN: openFixture.openPath,
+      },
+    });
+    assert.equal(openResult.status, 0, formatFailure(openResult));
+    assert.equal(readFileSync(openFixture.capturePath, 'utf8').trim(), 'http://127.0.0.1:3310/redcube');
+
+    const spawnResult = runCli([
+      'launch-domain',
+      '--project',
+      'redcube',
+      '--strategy',
+      'spawn_command',
+    ], {
+      env: {
+        OPL_FRONTDESK_STATE_DIR: stateRoot,
+        OPL_OPEN_BIN: openFixture.openPath,
+      },
+    });
+    assert.equal(spawnResult.status, 0, formatFailure(spawnResult));
+    const spawnPayload = parseJsonOutput(spawnResult);
+    assert.equal(spawnPayload.domain_entry_launch.selected_strategy, 'spawn_command');
+    assert.equal(spawnPayload.domain_entry_launch.launch_status, 'launched');
+
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      if (existsSync(shellFixture.capturePath)) {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+
+    assert.equal(existsSync(shellFixture.capturePath), true);
+    assert.match(readFileSync(shellFixture.capturePath, 'utf8'), new RegExp(repoRoot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  } finally {
+    rmSync(stateRoot, { recursive: true, force: true });
+    rmSync(openFixture.fixtureRoot, { recursive: true, force: true });
+    rmSync(shellFixture.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('session-ledger stays machine-readable through the built CLI entrypoint', () => {
   const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
 if [ "$1" = "chat" ]; then
@@ -918,6 +1030,12 @@ if [ "$1" = "chat" ]; then
 BUILT SESSION LEDGER RESPONSE
 
 session_id: built_sess_ledger
+EOF
+  exit 0
+fi
+if [ "$1" = "--resume" ] && [ "$2" = "built_sess_ledger" ]; then
+  cat <<'EOF'
+BUILT SESSION LEDGER RESUME RESPONSE
 EOF
   exit 0
 fi
@@ -983,6 +1101,15 @@ exit 1
     });
     assert.equal(askResult.status, 0, formatFailure(askResult));
 
+    const resumeResult = runCli(['resume', 'built_sess_ledger'], {
+      env: {
+        OPL_HERMES_BIN: hermesPath,
+        OPL_FRONTDESK_STATE_DIR: stateRoot,
+        PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
+      },
+    });
+    assert.equal(resumeResult.status, 0, formatFailure(resumeResult));
+
     const ledgerResult = runCli(['session-ledger', '--limit', '5'], {
       env: {
         OPL_HERMES_BIN: hermesPath,
@@ -992,12 +1119,22 @@ exit 1
     });
     assert.equal(ledgerResult.status, 0, formatFailure(ledgerResult));
     const ledgerPayload = parseJsonOutput(ledgerResult);
-    assert.equal(ledgerPayload.session_ledger.summary.entry_count, 1);
+    assert.equal(ledgerPayload.session_ledger.summary.entry_count, 2);
+    assert.equal(ledgerPayload.session_ledger.summary.mode_counts.ask, 1);
+    assert.equal(ledgerPayload.session_ledger.summary.mode_counts.resume, 1);
+    assert.equal(ledgerPayload.session_ledger.summary.domain_counts.redcube, 2);
+    assert.equal(ledgerPayload.session_ledger.summary.workspace_binding_count, 1);
     assert.equal(ledgerPayload.session_ledger.entries[0].session_id, 'built_sess_ledger');
+    assert.equal(ledgerPayload.session_ledger.entries[0].mode, 'resume');
+    assert.equal(ledgerPayload.session_ledger.entries[0].domain_id, 'redcube');
+    assert.equal(ledgerPayload.session_ledger.entries[0].workspace_locator.absolute_path, repoRoot);
     assert.equal(ledgerPayload.session_ledger.entries[0].resource_sample.process_count, 2);
+    assert.equal(ledgerPayload.session_ledger.entries[1].mode, 'ask');
     assert.equal(ledgerPayload.session_ledger.summary.session_aggregate_count, 1);
     assert.equal(ledgerPayload.session_ledger.sessions[0].session_id, 'built_sess_ledger');
+    assert.equal(ledgerPayload.session_ledger.sessions[0].event_count, 2);
     assert.equal(ledgerPayload.session_ledger.sessions[0].resource_totals.latest_process_count, 2);
+    assert.deepEqual(ledgerPayload.session_ledger.sessions[0].modes, ['resume', 'ask']);
   } finally {
     rmSync(fixtureRoot, { recursive: true, force: true });
     rmSync(psFixture.fixtureRoot, { recursive: true, force: true });
@@ -1067,15 +1204,32 @@ echo "unexpected fake-hermes args: $*" >&2
 exit 1
 `);
   const psFixture = createFakePsFixture(`27025 1 0.1 0.2 49616 22:46 /Users/test/.hermes/venv/bin/python -m hermes_cli.main gateway run --replace`);
+  const stateRoot = mkdtempSync(path.join(os.tmpdir(), 'opl-built-web-state-'));
 
   let child = null;
 
   try {
+    const bindResult = runCli([
+      'workspace-bind',
+      '--project',
+      'redcube',
+      '--path',
+      repoRoot,
+      '--entry-url',
+      'http://127.0.0.1:3310/redcube',
+    ], {
+      env: {
+        OPL_FRONTDESK_STATE_DIR: stateRoot,
+      },
+    });
+    assert.equal(bindResult.status, 0, formatFailure(bindResult));
+
     const startup = await startCliServer(
       ['web', '--host', '127.0.0.1', '--port', '0', '--path', repoRoot, '--sessions-limit', '1'],
       {
         env: {
           OPL_HERMES_BIN: hermesPath,
+          OPL_FRONTDESK_STATE_DIR: stateRoot,
           PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
         },
       },
@@ -1086,8 +1240,13 @@ exit 1
     assert.equal(startup.payload.web_frontdesk.entry_surface, 'opl_local_web_frontdesk_pilot');
     assert.equal(startup.payload.web_frontdesk.hosted_status, 'librechat_pilot_landed');
     assert.equal(startup.payload.web_frontdesk.api.librechat_package, '/api/librechat-package');
+    assert.equal(startup.payload.web_frontdesk.api.launch_domain, '/api/launch-domain');
 
     const baseUrl = String(startup.payload.web_frontdesk.listening.base_url);
+    const pageResponse = await fetch(baseUrl);
+    const pageHtml = await pageResponse.text();
+    assert.match(pageHtml, /Launch Bound Domain Entry/);
+
     const manifestResponse = await fetch(`${baseUrl}/api/frontdesk-manifest`);
     const manifestPayload = await manifestResponse.json();
     assert.equal(manifestPayload.frontdesk_manifest.endpoints.logs, '/api/logs');
@@ -1100,6 +1259,22 @@ exit 1
     const dashboardPayload = await dashboardResponse.json();
     assert.equal(dashboardPayload.dashboard.projects.length, 3);
     assert.equal(dashboardPayload.dashboard.runtime_status.recent_sessions.sessions.length, 1);
+
+    const launchResponse = await fetch(`${baseUrl}/api/launch-domain`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        project_id: 'redcube',
+        dry_run: true,
+      }),
+    });
+    assert.equal(launchResponse.status, 200);
+    const launchPayload = await launchResponse.json();
+    assert.equal(launchPayload.domain_entry_launch.project_id, 'redcube');
+    assert.equal(launchPayload.domain_entry_launch.selected_strategy, 'open_url');
+    assert.equal(launchPayload.domain_entry_launch.launch_status, 'preview_only');
 
     const hostedPackageOutput = mkdtempSync(path.join(os.tmpdir(), 'opl-built-web-hosted-package-'));
     try {
@@ -1182,6 +1357,7 @@ exit 1
     }
     rmSync(fixtureRoot, { recursive: true, force: true });
     rmSync(psFixture.fixtureRoot, { recursive: true, force: true });
+    rmSync(stateRoot, { recursive: true, force: true });
   }
 });
 

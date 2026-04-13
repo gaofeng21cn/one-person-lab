@@ -34,7 +34,8 @@ export type WorkspaceCatalogAction =
   | 'catalog'
   | 'bind'
   | 'activate'
-  | 'archive';
+  | 'archive'
+  | 'launch';
 
 type WorkspaceRegistryOptions = {
   projectId: string;
@@ -205,7 +206,12 @@ function buildProjectCatalogEntry(
       manifest_ready: manifestReadyCount,
     },
     last_updated_at: lastUpdatedAt,
-    available_actions: ['bind', 'activate', 'archive'],
+    available_actions: [
+      'bind',
+      'activate',
+      'archive',
+      ...(activeBinding && hasDirectEntry(activeBinding) ? ['launch'] : []),
+    ],
   };
 }
 
@@ -275,6 +281,16 @@ function findBindingOrThrow(
   }
 
   return binding;
+}
+
+function findBinding(
+  registry: WorkspaceRegistryFile,
+  projectId: string,
+  absolutePath: string,
+) {
+  return registry.bindings.find((entry) =>
+    entry.project_id === projectId && entry.workspace_path === absolutePath,
+  ) ?? null;
 }
 
 export function buildWorkspaceCatalog(contracts: GatewayContracts) {
@@ -377,15 +393,27 @@ export function getActiveWorkspaceBinding(projectId: string) {
   ) ?? null;
 }
 
+export function resolveWorkspaceBinding(projectId: string, explicitWorkspacePath?: string) {
+  const registry = readWorkspaceRegistryFile();
+
+  if (explicitWorkspacePath) {
+    return findBinding(registry, projectId, normalizeWorkspacePath(explicitWorkspacePath));
+  }
+
+  return registry.bindings.find((binding) =>
+    binding.project_id === projectId && binding.status === 'active',
+  ) ?? null;
+}
+
 export function resolveWorkspaceLocator(projectId: string, explicitWorkspacePath?: string) {
-  const activeBinding = getActiveWorkspaceBinding(projectId);
-  const absolutePath = explicitWorkspacePath ? normalizeWorkspacePath(explicitWorkspacePath) : activeBinding?.workspace_path ?? null;
+  const binding = resolveWorkspaceBinding(projectId, explicitWorkspacePath);
+  const absolutePath = explicitWorkspacePath ? normalizeWorkspacePath(explicitWorkspacePath) : binding?.workspace_path ?? null;
 
   return {
     project_id: projectId,
     requested_path: explicitWorkspacePath ?? null,
     absolute_path: absolutePath,
-    source: explicitWorkspacePath ? 'explicit_path' : activeBinding ? 'workspace_registry' : 'none',
-    binding: activeBinding,
+    source: explicitWorkspacePath ? 'explicit_path' : binding ? 'workspace_registry' : 'none',
+    binding,
   };
 }
