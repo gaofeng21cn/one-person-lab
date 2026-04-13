@@ -19,6 +19,7 @@ import {
 import { buildDomainManifestCatalog } from './domain-manifest.ts';
 import { buildHostedPilotPackage } from './hosted-pilot-package.ts';
 import { buildLibreChatPilotPackage } from './librechat-pilot-package.ts';
+import { buildPaperclipBootstrap, syncPaperclipProjections } from './paperclip-control-plane.ts';
 import {
   buildProductEntryHandoffEnvelope,
   runProductEntryAsk,
@@ -93,6 +94,18 @@ type HostedPackageRequestBody = Partial<{
   sessions_limit: number | string;
 }>;
 
+type PaperclipSyncRequestBody = Partial<{
+  issueId: string;
+  issue_id: string;
+  projectId: string;
+  project_id: string;
+  workspacePath: string;
+  workspace_path: string;
+  sessionsLimit: number | string;
+  sessions_limit: number | string;
+  force: boolean;
+}>;
+
 type WebFrontDeskStartupPayload = {
   version: 'g2';
   contracts_context: {
@@ -124,6 +137,8 @@ type WebFrontDeskStartupPayload = {
       librechat_package: string;
       dashboard: string;
       paperclip_control_plane: string;
+      paperclip_bootstrap: string;
+      paperclip_sync: string;
       projects: string;
       workspace_status: string;
       workspace_catalog: string;
@@ -308,6 +323,33 @@ function normalizeResumeSessionId(body: ResumeRequestBody) {
   return sessionId;
 }
 
+function normalizePaperclipSyncInput(body: PaperclipSyncRequestBody) {
+  const sessionsLimitValue = body.sessionsLimit ?? body.sessions_limit;
+  let sessionsLimit: number | undefined;
+  if (sessionsLimitValue !== undefined) {
+    const parsed = Number.parseInt(String(sessionsLimitValue), 10);
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+      throw new GatewayContractError(
+        'cli_usage_error',
+        'Web Paperclip sync requests require sessions_limit to be a positive integer when provided.',
+        {
+          value: sessionsLimitValue,
+        },
+      );
+    }
+    sessionsLimit = parsed;
+  }
+
+  return {
+    issueId: normalizeOptionalString(body.issueId) ?? normalizeOptionalString(body.issue_id),
+    projectId: normalizeOptionalString(body.projectId) ?? normalizeOptionalString(body.project_id),
+    workspacePath:
+      normalizeOptionalString(body.workspacePath) ?? normalizeOptionalString(body.workspace_path),
+    sessionsLimit,
+    force: Boolean(body.force),
+  };
+}
+
 function normalizeWorkspaceRegistryInput(body: WorkspaceRegistryBody) {
   const projectId = normalizeOptionalString(body.projectId) ?? normalizeOptionalString(body.project_id);
   const workspacePath =
@@ -453,6 +495,8 @@ function buildStartupPayload(context: WebFrontDeskContext): WebFrontDeskStartupP
         librechat_package: endpoints.librechat_package,
         dashboard: endpoints.dashboard,
         paperclip_control_plane: endpoints.paperclip_control_plane,
+        paperclip_bootstrap: endpoints.paperclip_bootstrap,
+        paperclip_sync: endpoints.paperclip_sync,
         projects: endpoints.projects,
         workspace_status: endpoints.workspace_status,
         workspace_catalog: endpoints.workspace_catalog,
@@ -2295,6 +2339,43 @@ async function handleRequest(
           basePath: context.basePath,
         }),
       );
+      return;
+    }
+
+    if (method === 'GET' && routedPath === '/api/paperclip/control-plane/bootstrap') {
+      const result = buildPaperclipBootstrap(context.contracts, {
+        basePath: context.basePath,
+      });
+      writeJson(response, 200, {
+        version: 'g2',
+        contracts_context: {
+          contracts_dir: context.contracts.contractsDir,
+          contracts_root_source: context.contracts.contractsRootSource,
+        },
+        paperclip_control_plane: {
+          action: 'bootstrap',
+          ...result.controlPlane,
+        },
+        paperclip_bootstrap: result.bootstrap,
+      });
+      return;
+    }
+
+    if (method === 'POST' && routedPath === '/api/paperclip/control-plane/sync') {
+      const body = (await readJsonBody(request)) as PaperclipSyncRequestBody;
+      const result = await syncPaperclipProjections(context.contracts, normalizePaperclipSyncInput(body));
+      writeJson(response, 200, {
+        version: 'g2',
+        contracts_context: {
+          contracts_dir: context.contracts.contractsDir,
+          contracts_root_source: context.contracts.contractsRootSource,
+        },
+        paperclip_control_plane: {
+          action: 'sync',
+          ...result.controlPlane,
+        },
+        paperclip_sync: result.sync,
+      });
       return;
     }
 

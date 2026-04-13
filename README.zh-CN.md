@@ -181,6 +181,8 @@
 因此，这个仓库承担的是 `OPL Gateway` 的文档优先、契约优先的公开说明面。
 具体 domain runtime、交付真相与执行表面继续由各自 domain 仓维护。
 当前 `OPL` front desk 也已经可以桥接到现成的下游 `Paperclip` control plane，用它承接 issue / approval UI 与审计轨迹；但这不会把 `Paperclip` 抬升成 runtime owner。
+`Paperclip` 是可选增强项：没有安装或配置时，`OPL` 仍然通过自己的自然语言 front desk、dashboard、session ledger 与 handoff surface 正常运行；配置好之后，`paperclip-bootstrap / paperclip-open-task / paperclip-open-gate / paperclip-sync` 才会额外接上外部 issue / approval / audit UI。
+具体使用闭环见 [Paperclip Control Plane Operator Guide](docs/references/paperclip-control-plane-operator-guide.md)。
 
 ## Unified Harness Engineering Substrate
 
@@ -249,7 +251,7 @@
 - `OPL` 现在已经有了以 `opl` 为默认入口的本地 direct product-entry shell
 - `opl` 会直接进入 `OPL Front Desk`，在外部 Hermes kernel 之上种入或恢复会话
 - `opl "<request...>"` 现在已经成为自然语言 quick ask 的快捷路径
-- `opl doctor`、`opl ask`、`opl chat`、`opl resume`、`opl sessions`、`opl logs`、`opl repair-hermes-gateway`、`opl frontdesk-manifest`、`opl frontdesk-hosted-bundle`、`opl frontdesk-hosted-package`、`opl frontdesk-librechat-package`、`opl session-ledger`、`opl handoff-envelope`、`opl domain-manifests` 以及 `frontdesk-service-*` 现在共同构成显式的产品入口与 runtime 运维命令面
+- `opl doctor`、`opl ask`、`opl chat`、`opl resume`、`opl sessions`、`opl logs`、`opl repair-hermes-gateway`、`opl frontdesk-manifest`、`opl frontdesk-hosted-bundle`、`opl frontdesk-hosted-package`、`opl frontdesk-librechat-package`、`opl session-ledger`、`opl handoff-envelope`、`opl domain-manifests`、`paperclip-*` 以及 `frontdesk-service-*` 现在共同构成显式的产品入口与 runtime 运维命令面；其中 `paperclip-*` 仍是可选下游 bridge，只在已配置外部 control plane 时启用
 - `opl frontdesk-manifest`、`opl frontdesk-hosted-bundle`、`opl frontdesk-hosted-package` 与 `opl frontdesk-librechat-package`，现在把 hosted-friendly shell contract、hosted-ready bundle surface、可自托管的 frontdesk package，以及真实的 LibreChat-first hosted shell pilot package 一并冻结下来，同时不夸大 managed hosted runtime readiness
 - `opl projects`、`opl workspace-status`、`opl workspace-catalog`、`opl workspace-bind|activate|archive`、`opl domain-manifests`、`opl runtime-status`、`opl session-ledger`、`opl dashboard` 现在补上了可写的顶层管理面，用来观察并管理项目、工作区、会话、handoff 与 runtime；`workspace-catalog` 继续只做 registry，而 `domain-manifests` 会实际解析当前 active binding 上的 `manifest_command`，把 domain-owned 的产品入口 manifest 变成可消费的 machine-readable discovery surface，避免 family wiring 自己猜 domain shell 能力；这层发现面现在也会原样保留各 domain 的 `product_entry_shell`、`shared_handoff` 与可选的 `family_orchestration.action_graph` companion，而不是再把 richer shell 语义压扁掉
 - `opl web` 现在补上了本地 web front desk pilot，可以直接从浏览器进入 OPL、做 quick ask、绑定 workspace、查看 managed session ledger、导出可自托管的 hosted pilot package，并消费 hosted-friendly `health / manifest / hosted-bundle / hosted-package / librechat-package / sessions / resume / logs / handoff-envelope` 界面

@@ -96,6 +96,7 @@ repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review 
 - [OPL Surface Lifecycle Map](../../docs/references/opl-surface-lifecycle-map.zh-CN.md) — 对当前已冻结 gateway / operating / supporting surfaces 的 derived machine-readable lifecycle 视图
 - [OPL Surface Authority Matrix](../../docs/references/opl-surface-authority-matrix.zh-CN.md) — 对当前已冻结 OPL surfaces 与 linked domain public-entry surfaces 的 derived machine-readable authority split
 - [OPL Surface Review Matrix](../../docs/references/opl-surface-review-matrix.zh-CN.md) — 对当前已冻结 OPL public / contract / supporting surfaces 的 derived machine-readable review obligation
+- [Paperclip Control Plane Operator Guide](../../docs/references/paperclip-control-plane-operator-guide.md) — 可选下游 Paperclip bridge 的 operator loop、bootstrap 与 sync 使用说明
 
 这些 backlog 与 mapping surfaces 都是 reference-only surface，继续作为本目录 governing contracts 的配套参考。
 
@@ -108,6 +109,7 @@ repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review 
 - [`routed-actions.schema.json`](./routed-actions.schema.json) — 停留在 `Phase 1 / G3 thin handoff planning freeze hardening` closeout 边界上的 planning dependency；它是 planning-level contract 工件，不是 launcher，也不表示当前主线已进入 routed-action runtime
 - [`domain-onboarding-readiness.schema.json`](./domain-onboarding-readiness.schema.json) — machine-readable domain onboarding readiness gate 的 JSON Schema
 - [`family-executor-adapter-defaults.json`](./family-executor-adapter-defaults.json) — 当前家族默认 executor-adapter route 与硬 guardrail 的 machine-readable freeze
+- [`paperclip-control-plane.schema.json`](./paperclip-control-plane.schema.json) — 可选 `OPL -> Paperclip` 下游 control-plane bridge surface 的 JSON Schema，覆盖 config / binding / status / bootstrap / task / gate / sync payload；未配置 `Paperclip` 时不影响 `OPL` 主入口运行
 - [`governance-audit.schema.json`](./governance-audit.schema.json) — 已冻结的 P5.M1 governance / audit operating contract JSON Schema
 - [`publish-promotion.schema.json`](./publish-promotion.schema.json) — 已冻结的 P5.M2 publish / promotion operating contract JSON Schema
 - [`acceptance-matrix.json`](./acceptance-matrix.json) — 已冻结 gateway 与 operating surface 的 declarative acceptance matrix

@@ -9,6 +9,7 @@ export type FrontDeskStatePaths = {
   session_ledger_file: string;
   service_config_file: string;
   paperclip_control_plane_file: string;
+  paperclip_projection_registry_file: string;
 };
 
 export function resolveFrontDeskStatePaths(): FrontDeskStatePaths {
@@ -23,6 +24,7 @@ export function resolveFrontDeskStatePaths(): FrontDeskStatePaths {
     session_ledger_file: path.join(stateDir, 'session-ledger.json'),
     service_config_file: path.join(stateDir, 'service-config.json'),
     paperclip_control_plane_file: path.join(stateDir, 'paperclip-control-plane.json'),
+    paperclip_projection_registry_file: path.join(stateDir, 'paperclip-projection-registry.json'),
   };
 }
 

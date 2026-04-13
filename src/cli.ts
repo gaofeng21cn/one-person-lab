@@ -51,10 +51,12 @@ import {
   buildWorkspaceCatalog,
 } from './workspace-registry.ts';
 import {
+  buildPaperclipBootstrap,
   bindPaperclipProject,
   configurePaperclipControlPlane,
   openPaperclipGate,
   openPaperclipTask,
+  syncPaperclipProjections,
 } from './paperclip-control-plane.ts';
 import { attachWebFrontDeskShutdown, startWebFrontDeskServer } from './web-frontdesk.ts';
 import type {
@@ -160,6 +162,15 @@ type PaperclipGateCliInput = ProductEntryCliInput & {
   title?: string;
   gateKind?: string;
   decisionOptions?: string[];
+};
+
+type PaperclipSyncCliInput = {
+  issueId?: string;
+  projectId?: string;
+  workspacePath?: string;
+  sessionsLimit?: number;
+  all: boolean;
+  force: boolean;
 };
 
 function printJson(payload: unknown, stream: NodeJS.WriteStream = process.stdout) {
@@ -1127,6 +1138,74 @@ function parsePaperclipGateArgs(
   };
 }
 
+function parsePaperclipSyncArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): PaperclipSyncCliInput {
+  const parsed: PaperclipSyncCliInput = {
+    all: false,
+    force: false,
+  };
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (token === '--force') {
+      parsed.force = true;
+      continue;
+    }
+
+    if (token === '--all') {
+      parsed.all = true;
+      continue;
+    }
+
+    if (!token.startsWith('--')) {
+      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
+        token,
+      });
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
+        option: token,
+      });
+    }
+
+    switch (token) {
+      case '--issue-id':
+        parsed.issueId = value;
+        break;
+      case '--project':
+        parsed.projectId = value;
+        break;
+      case '--path':
+        parsed.workspacePath = value;
+        break;
+      case '--sessions-limit': {
+        const parsedLimit = Number.parseInt(value, 10);
+        if (!Number.isInteger(parsedLimit) || parsedLimit <= 0) {
+          throw buildUsageError('Paperclip sync expects a positive integer --sessions-limit.', spec, {
+            option: token,
+            value,
+          });
+        }
+        parsed.sessionsLimit = parsedLimit;
+        break;
+      }
+      default:
+        throw buildUsageError(`Unknown option for Paperclip sync: ${token}.`, spec, {
+          option: token,
+        });
+    }
+
+    index += 1;
+  }
+
+  return parsed;
+}
+
 function assertNoArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
@@ -1543,6 +1622,23 @@ async function main() {
       ],
       handler: (args) => buildPaperclipControlPlaneStatus(getContracts(), parseDashboardArgs(args, commandSpecs['paperclip-status'])),
     },
+    'paperclip-bootstrap': {
+      usage: 'opl paperclip-bootstrap',
+      summary: 'Show the operator bootstrap surface for Paperclip preflight, SOP loops, and sync endpoints.',
+      examples: ['opl paperclip-bootstrap'],
+      handler: (args) => {
+        assertNoArgs(args, commandSpecs['paperclip-bootstrap']);
+        const contracts = getContracts();
+        const result = buildPaperclipBootstrap(contracts);
+        return withContractsContext(contracts, {
+          paperclip_control_plane: {
+            action: 'bootstrap',
+            ...result.controlPlane,
+          },
+          paperclip_bootstrap: result.bootstrap,
+        });
+      },
+    },
     'paperclip-open-task': {
       usage:
         'opl paperclip-open-task <request...> [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--workspace-path <path>] [--title <title>] [--priority <priority>]',
@@ -1567,6 +1663,7 @@ async function main() {
             project_binding: result.projectBinding,
             handoff_bundle: result.handoffBundle,
             issue: result.issue,
+            tracked_projection: result.trackedProjection,
           },
         });
       },
@@ -1597,7 +1694,36 @@ async function main() {
             family_human_gate: result.familyHumanGate,
             issue: result.issue,
             approval: result.approval,
+            tracked_projection: result.trackedProjection,
           },
+        });
+      },
+    },
+    'paperclip-sync': {
+      usage:
+        'opl paperclip-sync [--issue-id <issue_id>] [--project <project_id>] [--path <workspace_path>] [--sessions-limit <n>] [--force]',
+      summary: 'Write the latest OPL audit snapshot back into tracked downstream Paperclip issue comments.',
+      examples: [
+        'opl paperclip-sync --all',
+        'opl paperclip-sync --issue-id issue-1 --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
+      ],
+      handler: async (args) => {
+        const contracts = getContracts();
+        const parsed = parsePaperclipSyncArgs(args, commandSpecs['paperclip-sync']);
+        const result = await syncPaperclipProjections(contracts, {
+          issueId: parsed.issueId,
+          projectId: parsed.projectId,
+          workspacePath: parsed.workspacePath,
+          sessionsLimit: parsed.sessionsLimit,
+          force: parsed.force,
+        });
+
+        return withContractsContext(contracts, {
+          paperclip_control_plane: {
+            action: 'sync',
+            ...result.controlPlane,
+          },
+          paperclip_sync: result.sync,
         });
       },
     },
