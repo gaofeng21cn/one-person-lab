@@ -466,6 +466,7 @@ export function buildFrontDeskDashboard(
       operator_loop_summary: entry.manifest?.operator_loop_surface?.summary ?? null,
       operator_loop_continuation_command: entry.manifest?.operator_loop_surface?.continuation_command ?? null,
       operator_loop_actions: entry.manifest?.operator_loop_actions ?? {},
+      product_entry_quickstart: entry.manifest?.product_entry_quickstart ?? null,
       manifest_version: entry.manifest?.manifest_version ?? null,
       recommended_shell: entry.manifest?.recommended_shell ?? null,
       recommended_command: entry.manifest?.recommended_command ?? null,
@@ -487,6 +488,8 @@ export function buildFrontDeskDashboard(
       family_event_envelope_ref: entry.manifest?.family_orchestration?.event_envelope_surface?.ref ?? null,
       family_checkpoint_lineage_ref:
         entry.manifest?.family_orchestration?.checkpoint_lineage_surface?.ref ?? null,
+      quickstart_step_count: entry.manifest?.product_entry_quickstart?.steps.length ?? 0,
+      quickstart_step_ids: entry.manifest?.product_entry_quickstart?.steps.map((step) => step.step_id) ?? [],
     }));
 
   return {

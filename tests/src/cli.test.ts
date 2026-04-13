@@ -1486,6 +1486,43 @@ test('domain-manifests resolves active domain-owned manifest commands while work
         target_domain_id: 'redcube_ai',
       },
     },
+    product_entry_quickstart: {
+      surface_kind: 'product_entry_quickstart',
+      recommended_step_id: 'open_frontdesk',
+      summary: 'Open the RedCube frontdesk first, then continue the same deliverable or inspect its current session state.',
+      steps: [
+        {
+          step_id: 'open_frontdesk',
+          title: 'Open RedCube frontdesk',
+          command: 'redcube product frontdesk --workspace-root /tmp/redcube-workspace',
+          surface_kind: 'product_frontdesk',
+          summary: 'Open the direct RedCube frontdesk for the current workspace.',
+          requires: [],
+        },
+        {
+          step_id: 'continue_current_loop',
+          title: 'Continue current deliverable loop',
+          command: 'redcube product invoke --workspace-root /tmp/redcube-workspace --entry-session-id <entry-session-id> --overlay <overlay-id> --topic-id <topic-id> --deliverable-id <deliverable-id>',
+          surface_kind: 'product_entry',
+          summary: 'Continue the current deliverable loop once identifiers are known.',
+          requires: ['entry_session_id', 'overlay', 'topic_id', 'deliverable_id'],
+        },
+        {
+          step_id: 'inspect_current_progress',
+          title: 'Inspect session progress',
+          command: 'redcube product session --entry-session-id <entry-session-id>',
+          surface_kind: 'product_entry_session',
+          summary: 'Inspect the current session progress for the same deliverable.',
+          requires: ['entry_session_id'],
+        },
+      ],
+      resume_contract: {
+        surface_kind: 'product_entry_session',
+        session_locator_field: 'entry_session_id',
+        checkpoint_locator_field: 'checkpoint_lineage_id',
+      },
+      human_gate_ids: ['deliverable_publish_gate'],
+    },
     family_orchestration: {
       action_graph_ref: {
         ref_kind: 'repo_path',
@@ -1569,6 +1606,9 @@ test('domain-manifests resolves active domain-owned manifest commands while work
     assert.equal(redcube.manifest.operator_loop_actions.continue_session.surface_kind, 'product_entry_session');
     assert.equal(redcube.manifest.repo_mainline.phase_id, 'repo_verified_product_entry_and_opl_federation');
     assert.equal(redcube.manifest.product_entry_status.remaining_gaps_count, 2);
+    assert.equal(redcube.manifest.product_entry_quickstart.recommended_step_id, 'open_frontdesk');
+    assert.equal(redcube.manifest.product_entry_quickstart.steps[1].step_id, 'continue_current_loop');
+    assert.equal(redcube.manifest.product_entry_quickstart.steps[2].surface_kind, 'product_entry_session');
     assert.equal(redcube.manifest.family_orchestration.action_graph_ref.ref, 'contracts/runtime-program/action-graph.json');
     assert.equal(redcube.manifest.family_orchestration.human_gates[0].gate_id, 'deliverable_publish_gate');
     assert.equal(redcube.manifest.family_orchestration.resume_contract.session_locator_field, 'entry_session_id');
@@ -1588,6 +1628,9 @@ test('domain-manifests resolves active domain-owned manifest commands while work
     assert.equal(recommendedEntry.operator_loop_shell_key, 'direct');
     assert.equal(recommendedEntry.operator_loop_command, 'redcube product invoke');
     assert.equal(recommendedEntry.operator_loop_actions.start_deliverable.command, 'redcube product invoke');
+    assert.equal(recommendedEntry.product_entry_quickstart.recommended_step_id, 'open_frontdesk');
+    assert.equal(recommendedEntry.product_entry_quickstart.steps[0].command, 'redcube product frontdesk --workspace-root /tmp/redcube-workspace');
+    assert.deepEqual(recommendedEntry.product_entry_quickstart.human_gate_ids, ['deliverable_publish_gate']);
     assert.equal(recommendedEntry.family_orchestration.action_graph_ref.ref, 'contracts/runtime-program/action-graph.json');
     assert.equal(recommendedEntry.family_orchestration.human_gates[0].gate_id, 'deliverable_publish_gate');
     assert.equal(
@@ -1681,6 +1724,43 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
         surface_kind: 'product_entry',
         target_domain_id: 'redcube_ai',
       },
+    },
+    product_entry_quickstart: {
+      surface_kind: 'product_entry_quickstart',
+      recommended_step_id: 'open_frontdesk',
+      summary: 'Open the RedCube frontdesk first, then continue the same deliverable or inspect its current session state.',
+      steps: [
+        {
+          step_id: 'open_frontdesk',
+          title: 'Open RedCube frontdesk',
+          command: 'redcube product frontdesk --workspace-root /tmp/redcube-workspace',
+          surface_kind: 'product_frontdesk',
+          summary: 'Open the direct RedCube frontdesk for the current workspace.',
+          requires: [],
+        },
+        {
+          step_id: 'continue_current_loop',
+          title: 'Continue current deliverable loop',
+          command: 'redcube product invoke --workspace-root /tmp/redcube-workspace --entry-session-id <entry-session-id> --overlay <overlay-id> --topic-id <topic-id> --deliverable-id <deliverable-id>',
+          surface_kind: 'product_entry',
+          summary: 'Continue the current deliverable loop once identifiers are known.',
+          requires: ['entry_session_id', 'overlay', 'topic_id', 'deliverable_id'],
+        },
+        {
+          step_id: 'inspect_current_progress',
+          title: 'Inspect session progress',
+          command: 'redcube product session --entry-session-id <entry-session-id>',
+          surface_kind: 'product_entry_session',
+          summary: 'Inspect the current session progress for the same deliverable.',
+          requires: ['entry_session_id'],
+        },
+      ],
+      resume_contract: {
+        surface_kind: 'product_entry_session',
+        session_locator_field: 'entry_session_id',
+        checkpoint_locator_field: 'checkpoint_lineage_id',
+      },
+      human_gate_ids: ['deliverable_publish_gate'],
     },
     family_orchestration: {
       action_graph_ref: {
@@ -1779,6 +1859,14 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.product_entry_status.summary,
       resolvedManifest.product_entry_status.summary,
+    );
+    assert.equal(
+      output.handoff_bundle.domain_manifest_recommendation.product_entry_quickstart.recommended_step_id,
+      'open_frontdesk',
+    );
+    assert.equal(
+      output.handoff_bundle.domain_manifest_recommendation.product_entry_quickstart.steps[2].command,
+      'redcube product session --entry-session-id <entry-session-id>',
     );
     assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.repo_mainline.phase_id,

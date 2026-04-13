@@ -52,6 +52,21 @@ export interface NormalizedDomainManifest {
   recommended_command: string | null;
   product_entry_shell: Record<string, JsonRecord>;
   shared_handoff: Record<string, JsonRecord>;
+  product_entry_quickstart: {
+    surface_kind: string;
+    summary: string | null;
+    recommended_step_id: string | null;
+    steps: Array<{
+      step_id: string;
+      title: string | null;
+      command: string | null;
+      surface_kind: string | null;
+      summary: string | null;
+      requires: string[];
+    }>;
+    resume_contract: JsonRecord | null;
+    human_gate_ids: string[];
+  } | null;
   family_orchestration: {
     action_graph_ref: JsonRecord | null;
     human_gates: JsonRecord[];
@@ -184,6 +199,35 @@ function normalizeShellSurface(
   };
 }
 
+function normalizeProductEntryQuickstart(value: unknown) {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const steps = normalizeRecordList(value.steps, 'product_entry_quickstart.steps').map((step, index) => ({
+    step_id: requireString(step.step_id, `product_entry_quickstart.steps[${index}].step_id`),
+    title: optionalString(step.title),
+    command: optionalString(step.command),
+    surface_kind: optionalString(step.surface_kind),
+    summary: optionalString(step.summary),
+    requires: readStringList(step.requires),
+  }));
+  const recommendedStepId = optionalString(value.recommended_step_id);
+
+  if (recommendedStepId && !steps.some((step) => step.step_id === recommendedStepId)) {
+    throw new Error('product_entry_quickstart.recommended_step_id must reference an existing step_id.');
+  }
+
+  return {
+    surface_kind: optionalString(value.surface_kind) ?? 'product_entry_quickstart',
+    summary: optionalString(value.summary),
+    recommended_step_id: recommendedStepId,
+    steps,
+    resume_contract: isRecord(value.resume_contract) ? value.resume_contract : null,
+    human_gate_ids: readStringList(value.human_gate_ids),
+  };
+}
+
 function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
   const manifest = unwrapManifestPayload(payload);
   const formalEntry = requireRecord(manifest.formal_entry, 'formal_entry');
@@ -205,6 +249,7 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
   const operatorLoopActions = isRecord(manifest.operator_loop_actions)
     ? normalizeRecordMap(manifest.operator_loop_actions, 'operator_loop_actions')
     : {};
+  const productEntryQuickstart = normalizeProductEntryQuickstart(manifest.product_entry_quickstart);
   const rawFamilyOrchestration = isRecord(manifest.family_orchestration)
     ? manifest.family_orchestration
     : null;
@@ -258,6 +303,7 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
     recommended_command: explicitRecommendedCommand ?? derivedRecommendedCommand,
     product_entry_shell: productEntryShell,
     shared_handoff: sharedHandoff,
+    product_entry_quickstart: productEntryQuickstart,
     family_orchestration: rawFamilyOrchestration
       ? {
           action_graph_ref: isRecord(rawFamilyOrchestration.action_graph_ref)

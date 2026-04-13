@@ -1373,6 +1373,34 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
                         .join('')
                       + '</ul></div>'
                     : '',
+                  manifestEntry.manifest?.product_entry_quickstart?.summary
+                    ? '<p><strong>Quickstart Summary:</strong> '
+                      + manifestEntry.manifest.product_entry_quickstart.summary
+                      + '</p>'
+                    : '',
+                  Array.isArray(manifestEntry.manifest?.product_entry_quickstart?.steps)
+                    && manifestEntry.manifest.product_entry_quickstart.steps.length > 0
+                    ? '<div><strong>Quickstart Steps:</strong><ol>'
+                      + manifestEntry.manifest.product_entry_quickstart.steps
+                        .map((step) => {
+                          if (!step || typeof step !== 'object') {
+                            return '';
+                          }
+                          const stepId = step.step_id ? String(step.step_id) : 'unknown_step';
+                          const title = step.title ? ' - ' + String(step.title) : '';
+                          const command = step.command ? '<br /><code>' + String(step.command) + '</code>' : '';
+                          const summary = step.summary ? '<br />' + String(step.summary) : '';
+                          return '<li><code>' + stepId + '</code>' + title + command + summary + '</li>';
+                        })
+                        .filter(Boolean)
+                        .join('')
+                      + '</ol></div>'
+                    : '',
+                  manifestEntry.manifest?.product_entry_quickstart?.resume_contract?.surface_kind
+                    ? '<p><strong>Quickstart Resume Surface:</strong> '
+                      + manifestEntry.manifest.product_entry_quickstart.resume_contract.surface_kind
+                      + '</p>'
+                    : '',
                   manifestEntry.manifest?.family_orchestration?.action_graph_ref?.ref
                     ? '<p><strong>Action Graph:</strong> '
                       + manifestEntry.manifest.family_orchestration.action_graph_ref.ref

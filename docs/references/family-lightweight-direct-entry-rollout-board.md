@@ -51,6 +51,7 @@
 - `opl session-ledger|handoff-envelope|dashboard|web` 已把 managed session attribution、family handoff 和 browser front desk 一并落地；
 - `domain-manifests / dashboard / handoff-envelope / opl web` 现在会统一消费 domain manifest 里的 `frontdesk_surface`，不再只知道每个业务仓“当前 operator loop 是什么”。
 - 三个业务仓当前也都已经开始把 `frontdesk_surface` 与 `operator_loop_surface` 明确分开；`OPL` 顶层现在消费的已不再只是“哪个 loop 可跑”，而是“当前 frontdoor 是什么、底下真实 loop 是什么”。
+- 三个业务仓当前又统一补上了 `product_entry_quickstart` companion，用 step list / resume contract / human gate id 把“先从哪进、接着怎么续跑、看哪条进度面”冻结成同型 discovery surface。
 
 下一棒：
 
