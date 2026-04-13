@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn, spawnSync, type ChildProcessByStdio } from 'node:child_process';
+import { once } from 'node:events';
 import fs from 'node:fs';
 import {
   createServer,
@@ -2485,6 +2486,115 @@ exit 1
     }
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(psFixture.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('web front-desk exposes start api and renders a direct start panel for resolved domain manifests', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-web-start-state-'));
+  const fixtures = loadFamilyManifestFixtures();
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const { fixtureRoot: hermesFixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "version" ]; then
+  echo "Hermes Agent v9.9.9-test"
+  exit 0
+fi
+if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
+  cat <<'EOF'
+Launchd plist: /tmp/ai.hermes.gateway.plist
+✓ Service definition matches the current Hermes install
+✓ Gateway service is loaded
+EOF
+  exit 0
+fi
+if [ "$1" = "status" ]; then
+  cat <<'EOF'
+◆ Environment
+  Project:      /tmp/hermes-agent
+◆ Gateway Service
+  Status:       ✓ loaded
+  Manager:      launchd
+◆ Scheduled Jobs
+  Jobs:         1
+◆ Sessions
+  Active:       1
+EOF
+  exit 0
+fi
+if [ "$1" = "sessions" ] && [ "$2" = "list" ]; then
+  cat <<'EOF'
+Preview                                            Last Active   Src    ID
+───────────────────────────────────────────────────────────────────────────────────────────────
+Resolved start session                             1m ago        cli    sess_start
+EOF
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+  const psFixture = createFakePsFixture(`27025 1 0.1 0.2 49616 22:46 /Users/test/.hermes/venv/bin/python -m hermes_cli.main gateway run --replace`);
+
+  let child: ChildProcessByStdio<null, Readable, Readable> | null = null;
+
+  try {
+    runCli([
+      'workspace-bind',
+      '--project',
+      'redcube',
+      '--path',
+      repoRoot,
+      '--entry-command',
+      'redcube-ai frontdesk',
+      '--manifest-command',
+      buildManifestCommand(fixtures.redcube),
+      '--entry-url',
+      'http://127.0.0.1:3310/redcube',
+    ], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+
+    const startup = await startCliServer(
+      ['web', '--host', '127.0.0.1', '--port', '0', '--path', repoRoot, '--sessions-limit', '1'],
+      {
+        OPL_CONTRACTS_DIR: fixtureContractsRoot,
+        OPL_FRONTDESK_STATE_DIR: stateRoot,
+        OPL_HERMES_BIN: hermesPath,
+        PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
+      },
+    );
+    child = startup.child;
+
+    const baseUrl = String((startup.payload.web_frontdesk as { listening: { base_url: string } }).listening.base_url);
+    const page = await fetch(baseUrl);
+    assert.equal(page.status, 200);
+    const pageHtml = await page.text();
+    assert.match(pageHtml, /Start A Domain Project/);
+    assert.match(pageHtml, /Resolve the exact recommended direct entry mode/);
+
+    const startResponse = await fetch(`${baseUrl}/api/start?project=redcube`);
+    assert.equal(startResponse.status, 200);
+    const startPayload = await startResponse.json();
+    assert.equal(startPayload.product_entry_start.surface_kind, 'opl_product_entry_start');
+    assert.equal(startPayload.product_entry_start.project_id, 'redcube');
+    assert.equal(startPayload.product_entry_start.recommended_mode_id, 'open_frontdesk');
+    assert.equal(startPayload.product_entry_start.selected_mode_id, 'open_frontdesk');
+    assert.equal(startPayload.product_entry_start.selected_mode.command, 'redcube product frontdesk');
+    assert.deepEqual(startPayload.product_entry_start.human_gate_ids, ['redcube_operator_review_gate']);
+
+    const modeResponse = await fetch(`${baseUrl}/api/start?project=redcube&mode=federated_handoff`);
+    assert.equal(modeResponse.status, 200);
+    const modePayload = await modeResponse.json();
+    assert.equal(modePayload.product_entry_start.selected_mode_id, 'federated_handoff');
+    assert.equal(modePayload.product_entry_start.selected_mode.command, 'redcube product federate');
+  } finally {
+    if (child) {
+      child.kill('SIGTERM');
+      await once(child, 'exit');
+    }
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(hermesFixtureRoot, { recursive: true, force: true });
+    fs.rmSync(psFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
 

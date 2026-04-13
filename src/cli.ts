@@ -38,6 +38,7 @@ import {
   buildPaperclipControlPlaneStatus,
   buildProjectsOverview,
   buildRuntimeStatus,
+  buildFrontDeskStart,
   buildWorkspaceStatus,
 } from './management.ts';
 import { buildHostedPilotPackage } from './hosted-pilot-package.ts';
@@ -1723,62 +1724,9 @@ async function main() {
           );
         }
 
-        const contracts = getContracts();
-        findDomainOrThrow(contracts, parsed.projectId);
-        const domainManifests = buildDomainManifestCatalog(contracts).domain_manifests;
-        const entry = domainManifests.projects.find((candidate) => candidate.project_id === parsed.projectId);
-
-        if (!entry) {
-          throw new GatewayContractError('domain_not_found', 'Requested project is not part of the admitted domain set.', {
-            project_id: parsed.projectId,
-          });
-        }
-        if (entry.status !== 'resolved' || !entry.manifest?.product_entry_start) {
-          throw new GatewayContractError(
-            'cli_usage_error',
-            'The requested project does not currently expose a resolved product_entry_start surface.',
-            {
-              project_id: parsed.projectId,
-              status: entry.status,
-              manifest_command: entry.manifest_command,
-              workspace_path: entry.workspace_path,
-            },
-          );
-        }
-
-        const startSurface = entry.manifest.product_entry_start;
-        const selectedModeId = parsed.modeId ?? startSurface.recommended_mode_id;
-        const selectedMode = startSurface.modes.find((mode) => mode.mode_id === selectedModeId) ?? null;
-
-        if (!selectedModeId || !selectedMode) {
-          throw new GatewayContractError(
-            'cli_usage_error',
-            'The requested start mode is not available on the resolved product_entry_start surface.',
-            {
-              project_id: parsed.projectId,
-              mode_id: parsed.modeId ?? null,
-              available_modes: startSurface.modes.map((mode) => mode.mode_id),
-            },
-          );
-        }
-
-        return withContractsContext(contracts, {
-          product_entry_start: {
-            surface_kind: 'opl_product_entry_start',
-            project_id: entry.project_id,
-            project: entry.project,
-            binding_id: entry.binding_id,
-            workspace_path: entry.workspace_path,
-            manifest_command: entry.manifest_command,
-            target_domain_id: entry.manifest.target_domain_id,
-            summary: startSurface.summary,
-            recommended_mode_id: startSurface.recommended_mode_id,
-            selected_mode_id: selectedModeId,
-            selected_mode: selectedMode,
-            available_modes: startSurface.modes,
-            resume_surface: startSurface.resume_surface,
-            human_gate_ids: startSurface.human_gate_ids,
-          },
+        return buildFrontDeskStart(getContracts(), {
+          projectId: parsed.projectId,
+          modeId: parsed.modeId,
         });
       },
     },

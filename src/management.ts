@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { GatewayContractError } from './contracts.ts';
+import { findDomainOrThrow, GatewayContractError } from './contracts.ts';
 import {
   buildFrontDeskApiBaseUrl,
   buildFrontDeskEndpoints,
@@ -37,6 +37,11 @@ export interface RuntimeStatusOptions {
 
 export interface DashboardOptions extends WorkspaceStatusOptions, RuntimeStatusOptions {
   basePath?: string;
+}
+
+export interface StartSurfaceOptions {
+  projectId: string;
+  modeId?: string;
 }
 
 export interface HostedPilotBundleOptions {
@@ -434,6 +439,88 @@ export function buildFrontDeskHealth(contracts: GatewayContracts, options: { bas
         'Health here means the current front-desk shell can truthfully expose the Hermes-backed runtime status.',
         'LibreChat-first hosted shell export is landed, but actual hosted runtime ownership is still not landed.',
       ],
+    },
+  };
+}
+
+export function buildFrontDeskStart(
+  contracts: GatewayContracts,
+  options: StartSurfaceOptions,
+) {
+  if (!options.projectId) {
+    throw new GatewayContractError(
+      'cli_usage_error',
+      'start requires a non-empty project_id.',
+      {
+        required: ['project_id'],
+      },
+    );
+  }
+
+  findDomainOrThrow(contracts, options.projectId);
+  const domainManifests = buildDomainManifestCatalog(contracts).domain_manifests;
+  const entry = domainManifests.projects.find((candidate) => candidate.project_id === options.projectId);
+
+  if (!entry) {
+    throw new GatewayContractError(
+      'domain_not_found',
+      'Requested project is not part of the admitted domain set.',
+      {
+        project_id: options.projectId,
+      },
+    );
+  }
+
+  if (entry.status !== 'resolved' || !entry.manifest?.product_entry_start) {
+    throw new GatewayContractError(
+      'cli_usage_error',
+      'The requested project does not currently expose a resolved product_entry_start surface.',
+      {
+        project_id: options.projectId,
+        status: entry.status,
+        manifest_command: entry.manifest_command,
+        workspace_path: entry.workspace_path,
+      },
+    );
+  }
+
+  const startSurface = entry.manifest.product_entry_start;
+  const selectedModeId = options.modeId ?? startSurface.recommended_mode_id;
+  const selectedMode = startSurface.modes.find((mode) => mode.mode_id === selectedModeId) ?? null;
+
+  if (!selectedModeId || !selectedMode) {
+    throw new GatewayContractError(
+      'cli_usage_error',
+      'The requested start mode is not available on the resolved product_entry_start surface.',
+      {
+        project_id: options.projectId,
+        mode_id: options.modeId ?? null,
+        available_modes: startSurface.modes.map((mode) => mode.mode_id),
+      },
+    );
+  }
+
+  return {
+    version: 'g2',
+    contracts_context: {
+      contracts_dir: contracts.contractsDir,
+      contracts_root_source: contracts.contractsRootSource,
+    },
+    product_entry_start: {
+      surface_kind: 'opl_product_entry_start',
+      project_id: entry.project_id,
+      project: entry.project,
+      binding_id: entry.binding_id,
+      workspace_path: entry.workspace_path,
+      manifest_command: entry.manifest_command,
+      target_domain_id: entry.manifest.target_domain_id,
+      summary: startSurface.summary,
+      recommended_mode_id: startSurface.recommended_mode_id,
+      selected_mode_id: selectedModeId,
+      selected_mode: selectedMode,
+      available_modes: startSurface.modes,
+      resume_surface: startSurface.resume_surface,
+      human_gate_ids: startSurface.human_gate_ids,
     },
   };
 }

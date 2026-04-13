@@ -18,6 +18,7 @@ export type FrontDeskEndpoints = {
   paperclip_bootstrap: string;
   paperclip_sync: string;
   ask: string;
+  start: string;
   handoff_envelope: string;
   sessions: string;
   resume: string;
@@ -59,6 +60,7 @@ export function buildFrontDeskEndpoints(basePath = ''): FrontDeskEndpoints {
     paperclip_bootstrap: `${apiBase}/paperclip/control-plane/bootstrap`,
     paperclip_sync: `${apiBase}/paperclip/control-plane/sync`,
     ask: `${apiBase}/ask`,
+    start: `${apiBase}/start`,
     handoff_envelope: `${apiBase}/handoff-envelope`,
     sessions: `${apiBase}/sessions`,
     resume: `${apiBase}/resume`,
