@@ -28,6 +28,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 const cliPath = path.join(repoRoot, 'src', 'cli.ts');
 const contractsDir = path.join(repoRoot, 'contracts', 'opl-gateway');
+const familyManifestFixtureDir = path.join(repoRoot, 'tests', 'fixtures', 'family-manifests');
 
 function runCli(args: string[], envOverrides: Record<string, string> = {}) {
   const result = spawnSync(
@@ -171,6 +172,49 @@ function shellSingleQuote(value: string) {
 
 function buildManifestCommand(payload: Record<string, unknown>) {
   return `${process.execPath} -e "process.stdout.write(process.argv[1])" ${shellSingleQuote(JSON.stringify(payload))}`;
+}
+
+function readJsonFixture<T>(name: string) {
+  return JSON.parse(
+    fs.readFileSync(path.join(familyManifestFixtureDir, name), 'utf8'),
+  ) as T;
+}
+
+function loadFamilyManifestFixtures() {
+  return {
+    medautogrant: readJsonFixture<Record<string, unknown>>('med-autogrant-product-entry-manifest.json'),
+    medautoscience: readJsonFixture<Record<string, unknown>>('med-autoscience-product-entry-manifest.json'),
+    redcube: readJsonFixture<Record<string, unknown>>('redcube-product-entry-manifest.json'),
+  };
+}
+
+function createFamilyContractsFixtureRoot() {
+  return createContractsFixtureRoot((fixtureContractsRoot) => {
+    const domainsPath = path.join(fixtureContractsRoot, 'domains.json');
+    const payload = JSON.parse(fs.readFileSync(domainsPath, 'utf8')) as {
+      version: string;
+      domains: Array<Record<string, unknown>>;
+    };
+
+    payload.domains.push({
+      domain_id: 'medautogrant',
+      label: 'MedAutoGrant',
+      project: 'med-autogrant',
+      role: 'grant_ops_gateway',
+      gateway_surface: 'Grant Ops Gateway',
+      harness_surface: 'Grant Writing Domain Harness OS',
+      standalone_allowed: true,
+      owned_workstreams: ['grant_ops'],
+      non_opl_families: [],
+      canonical_truth_owner: [
+        'grant_runs',
+        'workspace_state',
+        'submission_artifacts',
+      ],
+    });
+
+    fs.writeFileSync(domainsPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+  });
 }
 
 function createFakeLaunchctlFixture() {
@@ -1408,165 +1452,168 @@ test('workspace registry commands bind activate and archive project workspaces w
   }
 });
 
-test('domain-manifests resolves active domain-owned manifest commands while workspace-catalog stays registry-only', () => {
+test('domain-manifests resolves real family manifest fixtures while workspace-catalog stays registry-only', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-manifest-state-'));
-  const resolvedManifest = {
-    surface_kind: 'product_entry_manifest',
-    manifest_version: 2,
-    manifest_kind: 'redcube_product_entry_manifest',
-    target_domain_id: 'redcube_ai',
-    formal_entry: {
-      default: 'CLI',
-      supported_protocols: ['MCP'],
-      internal_surface: 'gateway',
-    },
-    workspace_locator: {
-      workspace_root: repoRoot,
-    },
-    recommended_shell: 'direct',
-    recommended_command: 'redcube product invoke',
-    frontdesk_surface: {
-      shell_key: 'frontdesk',
-      command: 'redcube product frontdesk',
-      surface_kind: 'product_frontdesk',
-      summary: '面向终端用户的 RedCube frontdesk，先给出 direct / federated / session 三类入口。',
-    },
-    operator_loop_surface: {
-      shell_key: 'direct',
-      command: 'redcube product invoke',
-      surface_kind: 'product_entry',
-      summary: '当前 operator loop 仍 anchored on direct product entry；拿到 entry_session_id 后继续通过 session surface 追踪同一交付。',
-      continuation_shell_key: 'session',
-      continuation_command: 'redcube product session',
-    },
-    operator_loop_actions: {
-      start_deliverable: {
-        command: 'redcube product invoke',
-        surface_kind: 'product_entry',
-        summary: '直接进入当前 deliverable 的 primary operator loop。',
-        requires: ['entry_session_id', 'overlay', 'topic_id', 'deliverable_id'],
-      },
-      continue_session: {
-        command: 'redcube product session',
-        surface_kind: 'product_entry_session',
-        summary: '在已有 entry_session_id 下继续同一交付。',
-        requires: ['entry_session_id'],
-      },
-    },
-    repo_mainline: {
-      program_id: 'redcube-runtime-program',
-      phase_id: 'repo_verified_product_entry_and_opl_federation',
-      phase_label: 'Repo-Verified Product Entry And OPL Federation',
-      active_baton_id: 'managed_product_entry_hardening',
-      active_baton_status: 'closeout_completed',
-    },
-    product_entry_status: {
-      summary: 'Repo-verified product-entry service surface 已 landed，但成熟终端用户前台壳与 managed web productization 仍未 landed。',
-      next_focus: [
-        '继续把 mature end-user shell 建在已 landed 的 RedCube product-entry service surface 之上。',
-      ],
-      remaining_gaps_count: 2,
-    },
-    runtime: {
-      runtime_owner: 'upstream_hermes_agent',
-    },
-    product_entry_shell: {
-      frontdesk: {
-        command: 'redcube product frontdesk',
-        surface_kind: 'product_frontdesk',
-      },
-      direct: {
-        command: 'redcube product invoke',
-        surface_kind: 'product_entry',
-      },
-    },
-    shared_handoff: {
-      opl_return_surface: {
-        surface_kind: 'product_entry',
-        target_domain_id: 'redcube_ai',
-      },
-    },
-    product_entry_quickstart: {
-      surface_kind: 'product_entry_quickstart',
-      recommended_step_id: 'open_frontdesk',
-      summary: 'Open the RedCube frontdesk first, then continue the same deliverable or inspect its current session state.',
-      steps: [
-        {
-          step_id: 'open_frontdesk',
-          title: 'Open RedCube frontdesk',
-          command: 'redcube product frontdesk --workspace-root /tmp/redcube-workspace',
-          surface_kind: 'product_frontdesk',
-          summary: 'Open the direct RedCube frontdesk for the current workspace.',
-          requires: [],
-        },
-        {
-          step_id: 'continue_current_loop',
-          title: 'Continue current deliverable loop',
-          command: 'redcube product invoke --workspace-root /tmp/redcube-workspace --entry-session-id <entry-session-id> --overlay <overlay-id> --topic-id <topic-id> --deliverable-id <deliverable-id>',
-          surface_kind: 'product_entry',
-          summary: 'Continue the current deliverable loop once identifiers are known.',
-          requires: ['entry_session_id', 'overlay', 'topic_id', 'deliverable_id'],
-        },
-        {
-          step_id: 'inspect_current_progress',
-          title: 'Inspect session progress',
-          command: 'redcube product session --entry-session-id <entry-session-id>',
-          surface_kind: 'product_entry_session',
-          summary: 'Inspect the current session progress for the same deliverable.',
-          requires: ['entry_session_id'],
-        },
-      ],
-      resume_contract: {
-        surface_kind: 'product_entry_session',
-        session_locator_field: 'entry_session_id',
-        checkpoint_locator_field: 'checkpoint_lineage_id',
-      },
-      human_gate_ids: ['deliverable_publish_gate'],
-    },
-    family_orchestration: {
-      action_graph_ref: {
-        ref_kind: 'repo_path',
-        ref: 'contracts/runtime-program/action-graph.json',
-        label: 'redcube operator graph',
-      },
-      human_gates: [
-        {
-          gate_id: 'deliverable_publish_gate',
-          title: 'Deliverable publish gate',
-          status: 'requested',
-        },
-      ],
-      resume_contract: {
-        surface_kind: 'product_entry_session',
-        session_locator_field: 'entry_session_id',
-        checkpoint_locator_field: 'checkpoint_lineage_id',
-      },
-      event_envelope_surface: {
-        ref_kind: 'repo_path',
-        ref: 'runtime_watch/latest.json',
-        label: 'runtime event surface',
-      },
-      checkpoint_lineage_surface: {
-        ref_kind: 'repo_path',
-        ref: 'runtime_watch/checkpoints/latest.json',
-        label: 'checkpoint lineage surface',
-      },
-    },
-    notes: [],
+  const fixtures = loadFamilyManifestFixtures();
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const env = {
+    OPL_FRONTDESK_STATE_DIR: stateRoot,
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
   };
 
   try {
     runCli([
       'workspace-bind',
       '--project',
-      'redcube',
+      'medautogrant',
       '--path',
       repoRoot,
       '--manifest-command',
-      buildManifestCommand(resolvedManifest),
-    ], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
-    });
+      buildManifestCommand(fixtures.medautogrant),
+    ], env);
+    runCli([
+      'workspace-bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildManifestCommand(fixtures.medautoscience),
+    ], env);
+    runCli([
+      'workspace-bind',
+      '--project',
+      'redcube',
+      '--path',
+      repoRoot,
+      '--entry-command',
+      'redcube-ai frontdesk',
+      '--manifest-command',
+      buildManifestCommand(fixtures.redcube),
+      '--entry-url',
+      'http://127.0.0.1:3310/redcube',
+    ], env);
+
+    const catalogOutput = runCli(['workspace-catalog'], env);
+    const magCatalog = catalogOutput.workspace_catalog.projects.find((entry: { project_id: string }) => entry.project_id === 'medautogrant');
+    const masCatalog = catalogOutput.workspace_catalog.projects.find((entry: { project_id: string }) => entry.project_id === 'medautoscience');
+    const redcubeCatalog = catalogOutput.workspace_catalog.projects.find((entry: { project_id: string }) => entry.project_id === 'redcube');
+    assert.equal(magCatalog?.active_binding?.direct_entry?.manifest_command, buildManifestCommand(fixtures.medautogrant));
+    assert.equal(masCatalog?.active_binding?.direct_entry?.manifest_command, buildManifestCommand(fixtures.medautoscience));
+    assert.equal(redcubeCatalog?.active_binding?.direct_entry?.manifest_command, buildManifestCommand(fixtures.redcube));
+
+    const manifestOutput = runCli(['domain-manifests'], env);
+    assert.equal(manifestOutput.domain_manifests.summary.total_projects_count, 3);
+    assert.equal(manifestOutput.domain_manifests.summary.manifest_configured_count, 3);
+    assert.equal(manifestOutput.domain_manifests.summary.resolved_count, 3);
+    assert.equal(manifestOutput.domain_manifests.summary.failed_count, 0);
+
+    const medautogrant = manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) => entry.project_id === 'medautogrant');
+    const redcube = manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) => entry.project_id === 'redcube');
+    const medautoscience = manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) => entry.project_id === 'medautoscience');
+
+    assert.equal(medautogrant.status, 'resolved');
+    assert.equal(medautogrant.manifest.recommended_shell, 'grant_user_loop');
+    assert.equal(medautogrant.manifest.frontdesk_surface.shell_key, 'product_frontdesk');
+    assert.equal(medautogrant.manifest.operator_loop_surface.shell_key, 'grant_user_loop');
+    assert.equal(medautogrant.manifest.product_entry_shell.grant_cockpit.surface_kind, 'grant_cockpit');
+    assert.equal(medautogrant.manifest.shared_handoff.opl_handoff_builder.entry_mode, 'opl-handoff');
+    assert.equal(medautogrant.manifest.family_orchestration.action_graph_ref.ref, '/family_orchestration/action_graph');
+    assert.equal(medautogrant.manifest.family_orchestration.action_graph.graph_id, 'mag_critique_to_revision_graph');
+    assert.equal(medautogrant.manifest.family_orchestration.action_graph.nodes.length, 2);
+    assert.equal(medautogrant.manifest.family_orchestration.human_gates[0].gate_id, 'mag_route_gate_revision');
+    assert.equal(medautogrant.manifest.family_orchestration.resume_contract.surface_kind, 'grant_user_loop');
+    assert.equal(medautogrant.manifest.family_orchestration.event_envelope_surface.ref, '/product_entry_manifest/recommended_command');
+
+    assert.equal(medautoscience.status, 'resolved');
+    assert.equal(medautoscience.manifest.recommended_shell, 'workspace_cockpit');
+    assert.equal(medautoscience.manifest.frontdesk_surface.shell_key, 'product_frontdesk');
+    assert.equal(medautoscience.manifest.operator_loop_actions.submit_task.requires[0], 'study_id');
+    assert.match(medautoscience.manifest.product_entry_shell.launch_study.command, /launch-study/);
+    assert.equal(medautoscience.manifest.shared_handoff.direct_entry_builder.entry_mode, 'direct');
+    assert.equal(medautoscience.manifest.family_orchestration.human_gates[0].gate_id, 'study_physician_decision_gate');
+    assert.equal(medautoscience.manifest.family_orchestration.human_gates[1].gate_id, 'publication_release_gate');
+    assert.equal(medautoscience.manifest.family_orchestration.resume_contract.surface_kind, 'launch_study');
+    assert.equal(
+      medautoscience.manifest.family_orchestration.event_envelope_surface.ref,
+      'studies/<study_id>/artifacts/runtime_watch/latest.json',
+    );
+
+    assert.equal(redcube.status, 'resolved');
+    assert.equal(redcube.manifest.recommended_shell, 'direct');
+    assert.equal(redcube.manifest.recommended_command, 'redcube product invoke');
+    assert.equal(redcube.manifest.frontdesk_surface.command, 'redcube product frontdesk');
+    assert.equal(redcube.manifest.operator_loop_surface.shell_key, 'direct');
+    assert.equal(redcube.manifest.operator_loop_surface.continuation_command, 'redcube product session');
+    assert.equal(redcube.manifest.operator_loop_actions.start_deliverable.command, 'redcube product invoke');
+    assert.equal(redcube.manifest.operator_loop_actions.continue_session.surface_kind, 'product_entry_session');
+    assert.equal(redcube.manifest.repo_mainline.phase_id, 'repo_verified_product_entry_and_opl_federation');
+    assert.equal(redcube.manifest.product_entry_status.remaining_gaps_count, 2);
+    assert.equal(redcube.manifest.product_entry_shell.session.surface_kind, 'product_entry_session');
+    assert.equal(redcube.manifest.shared_handoff.opl_return_surface.surface_kind, 'product_entry');
+    assert.equal(redcube.manifest.family_orchestration.action_graph_ref.ref, 'contracts/runtime-program/redcube-product-entry-mvp.json');
+    assert.equal(redcube.manifest.family_orchestration.human_gates[0].gate_id, 'redcube_operator_review_gate');
+    assert.equal(
+      redcube.manifest.family_orchestration.resume_contract.session_locator_field,
+      'entry_session_contract.entry_session_id',
+    );
+
+    const dashboardOutput = runCli(['dashboard', '--path', repoRoot, '--sessions-limit', '1'], env);
+    assert.equal(dashboardOutput.dashboard.front_desk.recommended_entry_surfaces_count, 3);
+    const grantEntry = dashboardOutput.dashboard.front_desk.recommended_entry_surfaces.find(
+      (entry: { project_id: string }) => entry.project_id === 'medautogrant',
+    );
+    const scienceEntry = dashboardOutput.dashboard.front_desk.recommended_entry_surfaces.find(
+      (entry: { project_id: string }) => entry.project_id === 'medautoscience',
+    );
+    const recommendedEntry = dashboardOutput.dashboard.front_desk.recommended_entry_surfaces.find(
+      (entry: { project_id: string }) => entry.project_id === 'redcube',
+    );
+    assert.equal(grantEntry.product_entry_shell.grant_user_loop.surface_kind, 'grant_user_loop');
+    assert.equal(grantEntry.shared_handoff.direct_entry_builder.entry_mode, 'direct');
+    assert.equal(grantEntry.family_action_graph_ref, '/family_orchestration/action_graph');
+    assert.equal(grantEntry.family_action_graph_node_count, 2);
+    assert.equal(grantEntry.family_action_graph_edge_count, 1);
+    assert.equal(scienceEntry.product_entry_shell.workspace_cockpit.purpose.includes('workspace'), true);
+    assert.equal(scienceEntry.shared_handoff.opl_handoff_builder.entry_mode, 'opl-handoff');
+    assert.equal(scienceEntry.family_resume_surface_kind, 'launch_study');
+    assert.equal(
+      scienceEntry.family_event_envelope_ref,
+      'studies/<study_id>/artifacts/runtime_watch/latest.json',
+    );
+    assert.equal(
+      recommendedEntry.product_entry_status_summary,
+      'Repo-verified product-entry service surface 已 landed，但成熟终端用户前台壳与 managed web productization 仍未 landed。',
+    );
+    assert.equal(recommendedEntry.product_entry_remaining_gaps_count, 2);
+    assert.equal(recommendedEntry.mainline_phase_id, 'repo_verified_product_entry_and_opl_federation');
+    assert.equal(recommendedEntry.frontdesk_surface.command, 'redcube product frontdesk');
+    assert.equal(recommendedEntry.operator_loop_shell_key, 'direct');
+    assert.equal(recommendedEntry.operator_loop_command, 'redcube product invoke');
+    assert.equal(recommendedEntry.operator_loop_actions.start_deliverable.command, 'redcube product invoke');
+    assert.equal(recommendedEntry.product_entry_shell.federated.surface_kind, 'federated_product_entry');
+    assert.equal(recommendedEntry.shared_handoff.opl_return_surface.target_domain_id, 'redcube_ai');
+    assert.equal(recommendedEntry.family_orchestration.action_graph_ref.ref, 'contracts/runtime-program/redcube-product-entry-mvp.json');
+    assert.equal(recommendedEntry.family_orchestration.human_gates[0].gate_id, 'redcube_operator_review_gate');
+    assert.equal(
+      recommendedEntry.family_orchestration.resume_contract.session_locator_field,
+      'entry_session_contract.entry_session_id',
+    );
+    assert.equal(recommendedEntry.manifest_version, 2);
+    assert.equal(recommendedEntry.family_human_gate_count, 1);
+    assert.deepEqual(recommendedEntry.family_human_gate_ids, ['redcube_operator_review_gate']);
+    assert.equal(recommendedEntry.family_resume_surface_kind, 'product_entry_session');
+    assert.equal(recommendedEntry.family_checkpoint_lineage_ref, 'runtime_watch/checkpoints/latest.json');
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('domain-manifests reports invalid json when a bound manifest command is malformed', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-manifest-invalid-json-state-'));
+
+  try {
     runCli([
       'workspace-bind',
       '--project',
@@ -1579,69 +1626,13 @@ test('domain-manifests resolves active domain-owned manifest commands while work
       OPL_FRONTDESK_STATE_DIR: stateRoot,
     });
 
-    const catalogOutput = runCli(['workspace-catalog'], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
-    });
-    const redcubeCatalog = catalogOutput.workspace_catalog.projects.find((entry: { project_id: string }) => entry.project_id === 'redcube');
-    assert.equal(redcubeCatalog?.active_binding?.direct_entry?.manifest_command, buildManifestCommand(resolvedManifest));
-
     const manifestOutput = runCli(['domain-manifests'], {
       OPL_FRONTDESK_STATE_DIR: stateRoot,
     });
-    assert.equal(manifestOutput.domain_manifests.summary.total_projects_count, 2);
-    assert.equal(manifestOutput.domain_manifests.summary.manifest_configured_count, 2);
-    assert.equal(manifestOutput.domain_manifests.summary.resolved_count, 1);
-    assert.equal(manifestOutput.domain_manifests.summary.failed_count, 1);
-
-    const redcube = manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) => entry.project_id === 'redcube');
     const medautoscience = manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) => entry.project_id === 'medautoscience');
 
-    assert.equal(redcube.status, 'resolved');
-    assert.equal(redcube.manifest.recommended_shell, 'direct');
-    assert.equal(redcube.manifest.recommended_command, 'redcube product invoke');
-    assert.equal(redcube.manifest.frontdesk_surface.command, 'redcube product frontdesk');
-    assert.equal(redcube.manifest.operator_loop_surface.shell_key, 'direct');
-    assert.equal(redcube.manifest.operator_loop_surface.continuation_command, 'redcube product session');
-    assert.equal(redcube.manifest.operator_loop_actions.start_deliverable.command, 'redcube product invoke');
-    assert.equal(redcube.manifest.operator_loop_actions.continue_session.surface_kind, 'product_entry_session');
-    assert.equal(redcube.manifest.repo_mainline.phase_id, 'repo_verified_product_entry_and_opl_federation');
-    assert.equal(redcube.manifest.product_entry_status.remaining_gaps_count, 2);
-    assert.equal(redcube.manifest.product_entry_quickstart.recommended_step_id, 'open_frontdesk');
-    assert.equal(redcube.manifest.product_entry_quickstart.steps[1].step_id, 'continue_current_loop');
-    assert.equal(redcube.manifest.product_entry_quickstart.steps[2].surface_kind, 'product_entry_session');
-    assert.equal(redcube.manifest.family_orchestration.action_graph_ref.ref, 'contracts/runtime-program/action-graph.json');
-    assert.equal(redcube.manifest.family_orchestration.human_gates[0].gate_id, 'deliverable_publish_gate');
-    assert.equal(redcube.manifest.family_orchestration.resume_contract.session_locator_field, 'entry_session_id');
     assert.equal(medautoscience.status, 'invalid_json');
     assert.equal(medautoscience.error.code, 'invalid_json');
-
-    const dashboardOutput = runCli(['dashboard', '--path', repoRoot, '--sessions-limit', '1'], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
-    });
-    const recommendedEntry = dashboardOutput.dashboard.front_desk.recommended_entry_surfaces.find(
-      (entry: { project_id: string }) => entry.project_id === 'redcube',
-    );
-    assert.equal(recommendedEntry.product_entry_status_summary, resolvedManifest.product_entry_status.summary);
-    assert.equal(recommendedEntry.product_entry_remaining_gaps_count, 2);
-    assert.equal(recommendedEntry.mainline_phase_id, 'repo_verified_product_entry_and_opl_federation');
-    assert.equal(recommendedEntry.frontdesk_surface.command, 'redcube product frontdesk');
-    assert.equal(recommendedEntry.operator_loop_shell_key, 'direct');
-    assert.equal(recommendedEntry.operator_loop_command, 'redcube product invoke');
-    assert.equal(recommendedEntry.operator_loop_actions.start_deliverable.command, 'redcube product invoke');
-    assert.equal(recommendedEntry.product_entry_quickstart.recommended_step_id, 'open_frontdesk');
-    assert.equal(recommendedEntry.product_entry_quickstart.steps[0].command, 'redcube product frontdesk --workspace-root /tmp/redcube-workspace');
-    assert.deepEqual(recommendedEntry.product_entry_quickstart.human_gate_ids, ['deliverable_publish_gate']);
-    assert.equal(recommendedEntry.family_orchestration.action_graph_ref.ref, 'contracts/runtime-program/action-graph.json');
-    assert.equal(recommendedEntry.family_orchestration.human_gates[0].gate_id, 'deliverable_publish_gate');
-    assert.equal(
-      recommendedEntry.family_orchestration.resume_contract.session_locator_field,
-      'entry_session_id',
-    );
-    assert.equal(recommendedEntry.manifest_version, 2);
-    assert.equal(recommendedEntry.family_human_gate_count, 1);
-    assert.deepEqual(recommendedEntry.family_human_gate_ids, ['deliverable_publish_gate']);
-    assert.equal(recommendedEntry.family_resume_surface_kind, 'product_entry_session');
-    assert.equal(recommendedEntry.family_checkpoint_lineage_ref, 'runtime_watch/checkpoints/latest.json');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
@@ -1649,150 +1640,7 @@ test('domain-manifests resolves active domain-owned manifest commands while work
 
 test('handoff-envelope returns a machine-readable family handoff bundle aligned with the active workspace binding', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-handoff-state-'));
-  const resolvedManifest = {
-    surface_kind: 'product_entry_manifest',
-    manifest_version: 2,
-    manifest_kind: 'redcube_product_entry_manifest',
-    target_domain_id: 'redcube_ai',
-    formal_entry: {
-      default: 'CLI',
-      supported_protocols: ['MCP'],
-      internal_surface: 'gateway',
-    },
-    workspace_locator: {
-      workspace_root: repoRoot,
-    },
-    recommended_shell: 'direct',
-    recommended_command: 'redcube product invoke',
-    frontdesk_surface: {
-      shell_key: 'frontdesk',
-      command: 'redcube product frontdesk',
-      surface_kind: 'product_frontdesk',
-      summary: '面向终端用户的 RedCube frontdesk，先给出 direct / federated / session 三类入口。',
-    },
-    operator_loop_surface: {
-      shell_key: 'direct',
-      command: 'redcube product invoke',
-      surface_kind: 'product_entry',
-      summary: '当前 operator loop 仍 anchored on direct product entry；拿到 entry_session_id 后继续通过 session surface 追踪同一交付。',
-      continuation_shell_key: 'session',
-      continuation_command: 'redcube product session',
-    },
-    operator_loop_actions: {
-      start_deliverable: {
-        command: 'redcube product invoke',
-        surface_kind: 'product_entry',
-        summary: '直接进入当前 deliverable 的 primary operator loop。',
-        requires: ['entry_session_id', 'overlay', 'topic_id', 'deliverable_id'],
-      },
-      continue_session: {
-        command: 'redcube product session',
-        surface_kind: 'product_entry_session',
-        summary: '在已有 entry_session_id 下继续同一交付。',
-        requires: ['entry_session_id'],
-      },
-    },
-    repo_mainline: {
-      program_id: 'redcube-runtime-program',
-      phase_id: 'repo_verified_product_entry_and_opl_federation',
-      phase_label: 'Repo-Verified Product Entry And OPL Federation',
-      active_baton_id: 'managed_product_entry_hardening',
-      active_baton_status: 'closeout_completed',
-    },
-    product_entry_status: {
-      summary: 'Repo-verified product-entry service surface 已 landed，但成熟终端用户前台壳与 managed web productization 仍未 landed。',
-      next_focus: [
-        '继续把 mature end-user shell 建在已 landed 的 RedCube product-entry service surface 之上。',
-      ],
-      remaining_gaps_count: 2,
-    },
-    runtime: {
-      runtime_owner: 'upstream_hermes_agent',
-    },
-    product_entry_shell: {
-      frontdesk: {
-        command: 'redcube product frontdesk',
-        surface_kind: 'product_frontdesk',
-      },
-      direct: {
-        command: 'redcube product invoke',
-        surface_kind: 'product_entry',
-      },
-    },
-    shared_handoff: {
-      opl_return_surface: {
-        surface_kind: 'product_entry',
-        target_domain_id: 'redcube_ai',
-      },
-    },
-    product_entry_quickstart: {
-      surface_kind: 'product_entry_quickstart',
-      recommended_step_id: 'open_frontdesk',
-      summary: 'Open the RedCube frontdesk first, then continue the same deliverable or inspect its current session state.',
-      steps: [
-        {
-          step_id: 'open_frontdesk',
-          title: 'Open RedCube frontdesk',
-          command: 'redcube product frontdesk --workspace-root /tmp/redcube-workspace',
-          surface_kind: 'product_frontdesk',
-          summary: 'Open the direct RedCube frontdesk for the current workspace.',
-          requires: [],
-        },
-        {
-          step_id: 'continue_current_loop',
-          title: 'Continue current deliverable loop',
-          command: 'redcube product invoke --workspace-root /tmp/redcube-workspace --entry-session-id <entry-session-id> --overlay <overlay-id> --topic-id <topic-id> --deliverable-id <deliverable-id>',
-          surface_kind: 'product_entry',
-          summary: 'Continue the current deliverable loop once identifiers are known.',
-          requires: ['entry_session_id', 'overlay', 'topic_id', 'deliverable_id'],
-        },
-        {
-          step_id: 'inspect_current_progress',
-          title: 'Inspect session progress',
-          command: 'redcube product session --entry-session-id <entry-session-id>',
-          surface_kind: 'product_entry_session',
-          summary: 'Inspect the current session progress for the same deliverable.',
-          requires: ['entry_session_id'],
-        },
-      ],
-      resume_contract: {
-        surface_kind: 'product_entry_session',
-        session_locator_field: 'entry_session_id',
-        checkpoint_locator_field: 'checkpoint_lineage_id',
-      },
-      human_gate_ids: ['deliverable_publish_gate'],
-    },
-    family_orchestration: {
-      action_graph_ref: {
-        ref_kind: 'repo_path',
-        ref: 'contracts/runtime-program/action-graph.json',
-        label: 'redcube operator graph',
-      },
-      human_gates: [
-        {
-          gate_id: 'deliverable_publish_gate',
-          title: 'Deliverable publish gate',
-          status: 'requested',
-        },
-      ],
-      resume_contract: {
-        surface_kind: 'product_entry_session',
-        session_locator_field: 'entry_session_id',
-        checkpoint_locator_field: 'checkpoint_lineage_id',
-      },
-      event_envelope_surface: {
-        ref_kind: 'repo_path',
-        ref: 'runtime_watch/latest.json',
-        label: 'runtime event surface',
-      },
-      checkpoint_lineage_surface: {
-        ref_kind: 'repo_path',
-        ref: 'runtime_watch/checkpoints/latest.json',
-        label: 'checkpoint lineage surface',
-      },
-    },
-    notes: [],
-  };
+  const resolvedManifest = loadFamilyManifestFixtures().redcube;
 
   try {
     runCli([
@@ -1857,24 +1705,28 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     );
     assert.equal(output.handoff_bundle.domain_manifest_recommendation.manifest_target_domain_id, 'redcube_ai');
     assert.equal(
+      output.handoff_bundle.domain_manifest_recommendation.product_entry_shell.federated.surface_kind,
+      'federated_product_entry',
+    );
+    assert.equal(
+      output.handoff_bundle.domain_manifest_recommendation.shared_handoff.opl_return_surface.target_domain_id,
+      'redcube_ai',
+    );
+    assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.product_entry_status.summary,
-      resolvedManifest.product_entry_status.summary,
-    );
-    assert.equal(
-      output.handoff_bundle.domain_manifest_recommendation.product_entry_quickstart.recommended_step_id,
-      'open_frontdesk',
-    );
-    assert.equal(
-      output.handoff_bundle.domain_manifest_recommendation.product_entry_quickstart.steps[2].command,
-      'redcube product session --entry-session-id <entry-session-id>',
+      'Repo-verified product-entry service surface 已 landed，但成熟终端用户前台壳与 managed web productization 仍未 landed。',
     );
     assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.repo_mainline.phase_id,
       'repo_verified_product_entry_and_opl_federation',
     );
     assert.equal(
+      output.handoff_bundle.domain_manifest_recommendation.family_orchestration.action_graph_ref.ref,
+      'contracts/runtime-program/redcube-product-entry-mvp.json',
+    );
+    assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.family_orchestration.resume_contract.checkpoint_locator_field,
-      'checkpoint_lineage_id',
+      'continuation_snapshot.latest_managed_run_id',
     );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });

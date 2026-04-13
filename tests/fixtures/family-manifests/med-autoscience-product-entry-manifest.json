@@ -1,0 +1,179 @@
+{
+  "schema_version": 1,
+  "manifest_version": 2,
+  "surface_kind": "product_entry_manifest",
+  "manifest_kind": "med_autoscience_product_entry_manifest",
+  "target_domain_id": "med-autoscience",
+  "formal_entry": {
+    "default": "CLI",
+    "supported_protocols": [
+      "MCP"
+    ],
+    "internal_surface": "controller"
+  },
+  "runtime": {
+    "runtime_owner": "med_autoscience_gateway",
+    "runtime_substrate": "external_hermes_agent_target",
+    "managed_runtime_backend_id": "med-deepscientist",
+    "runtime_root": "/fixtures/med-autoscience/runtime",
+    "hermes_home_root": "/fixtures/med-autoscience/hermes-home"
+  },
+  "executor_defaults": {
+    "default_executor": "codex_cli_autonomous",
+    "default_model": "inherit_local_codex_default",
+    "default_reasoning_effort": "inherit_local_codex_default",
+    "chat_completion_only_executor_forbidden": true,
+    "hermes_native_requires_full_agent_loop": true,
+    "current_backend_chain": [
+      "med_autoscience.runtime_transport.hermes -> med_autoscience.runtime_transport.med_deepscientist",
+      "med_deepscientist CodexRunner -> codex exec autonomous agent loop"
+    ]
+  },
+  "workspace_locator": {
+    "workspace_surface_kind": "med_autoscience_workspace_profile",
+    "profile_name": "fixture-med-autoscience",
+    "workspace_root": "/fixtures/med-autoscience/workspace",
+    "profile_ref": "/fixtures/med-autoscience/profile.local.toml"
+  },
+  "recommended_shell": "workspace_cockpit",
+  "recommended_command": "uv run python -m med_autoscience.cli workspace-cockpit --profile /fixtures/med-autoscience/profile.local.toml",
+  "frontdesk_surface": {
+    "shell_key": "product_frontdesk",
+    "command": "uv run python -m med_autoscience.cli product-frontdesk --profile /fixtures/med-autoscience/profile.local.toml",
+    "surface_kind": "product_frontdesk",
+    "summary": "当前 research product frontdesk，先暴露当前 frontdoor、workspace inbox 与 shared handoff 入口。"
+  },
+  "operator_loop_surface": {
+    "shell_key": "workspace_cockpit",
+    "command": "uv run python -m med_autoscience.cli workspace-cockpit --profile /fixtures/med-autoscience/profile.local.toml",
+    "surface_kind": "workspace_cockpit",
+    "summary": "当前 workspace 级用户 inbox，聚合 attention queue、监督在线态与研究入口回路。"
+  },
+  "operator_loop_actions": {
+    "open_loop": {
+      "command": "uv run python -m med_autoscience.cli workspace-cockpit --profile /fixtures/med-autoscience/profile.local.toml",
+      "surface_kind": "workspace_cockpit",
+      "summary": "先进入当前 workspace 级用户 inbox。",
+      "requires": []
+    },
+    "submit_task": {
+      "command": "uv run python -m med_autoscience.cli submit-study-task --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id> --task-intent '<task_intent>'",
+      "surface_kind": "study_task_intake",
+      "summary": "先把新的研究任务写成 durable study task intake。",
+      "requires": [
+        "study_id",
+        "task_intent"
+      ]
+    },
+    "continue_study": {
+      "command": "uv run python -m med_autoscience.cli launch-study --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>",
+      "surface_kind": "launch_study",
+      "summary": "创建或恢复某个 study runtime，并回到当前研究主线。",
+      "requires": [
+        "study_id"
+      ]
+    },
+    "inspect_progress": {
+      "command": "uv run python -m med_autoscience.cli study-progress --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>",
+      "surface_kind": "study_progress",
+      "summary": "读取某个 study 的当前阶段、阻塞和监督 freshness。",
+      "requires": [
+        "study_id"
+      ]
+    }
+  },
+  "repo_mainline": {
+    "program_id": "research-foundry-medical-mainline",
+    "current_stage_id": "f4_blocker_closeout",
+    "current_stage_status": "in_progress",
+    "current_stage_summary": "继续收口 blocker 并把用户入口壳压实。",
+    "current_program_phase_id": "phase_2_user_product_loop",
+    "current_program_phase_status": "in_progress",
+    "current_program_phase_summary": "把用户 inbox 与持续进度回路收成稳定壳。",
+    "next_focus": [
+      "继续把 workspace inbox、study progress 与恢复建议收成统一产品壳。"
+    ]
+  },
+  "product_entry_status": {
+    "summary": "继续收口 blocker 并把用户入口壳压实。",
+    "next_focus": [
+      "继续把 workspace inbox、study progress 与恢复建议收成统一产品壳。"
+    ],
+    "remaining_gaps_count": 1
+  },
+  "product_entry_shell": {
+    "product_frontdesk": {
+      "command": "uv run python -m med_autoscience.cli product-frontdesk --profile /fixtures/med-autoscience/profile.local.toml",
+      "purpose": "当前 research product frontdesk，先暴露当前 frontdoor、workspace inbox 与 shared handoff 入口。"
+    },
+    "workspace_cockpit": {
+      "command": "uv run python -m med_autoscience.cli workspace-cockpit --profile /fixtures/med-autoscience/profile.local.toml",
+      "purpose": "当前 workspace 级用户 inbox，聚合 attention queue、监督在线态与研究入口回路。"
+    },
+    "submit_study_task": {
+      "command": "uv run python -m med_autoscience.cli submit-study-task --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id> --task-intent '<task_intent>'",
+      "purpose": "先把用户任务写成 durable study task intake，再启动研究执行。"
+    },
+    "launch_study": {
+      "command": "uv run python -m med_autoscience.cli launch-study --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>",
+      "purpose": "创建或恢复 study runtime，并进入当前研究主线。"
+    },
+    "study_progress": {
+      "command": "uv run python -m med_autoscience.cli study-progress --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>",
+      "purpose": "持续读取当前 study 的阶段摘要、阻塞、监督 freshness 与下一步。"
+    },
+    "mainline_status": {
+      "command": "uv run python -m med_autoscience.cli mainline-status",
+      "purpose": "查看 repo 理想形态、当前阶段、剩余缺口与下一步焦点。"
+    },
+    "mainline_phase": {
+      "command": "uv run python -m med_autoscience.cli mainline-phase --phase <current|next|phase_id>",
+      "purpose": "查看某一阶段当前可用入口、退出条件与关键文档。"
+    }
+  },
+  "shared_handoff": {
+    "direct_entry_builder": {
+      "command": "uv run python -m med_autoscience.cli build-product-entry --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id> --entry-mode direct",
+      "entry_mode": "direct"
+    },
+    "opl_handoff_builder": {
+      "command": "uv run python -m med_autoscience.cli build-product-entry --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id> --entry-mode opl-handoff",
+      "entry_mode": "opl-handoff"
+    }
+  },
+  "family_orchestration": {
+    "human_gates": [
+      {
+        "gate_id": "study_physician_decision_gate",
+        "title": "Study physician decision gate"
+      },
+      {
+        "gate_id": "publication_release_gate",
+        "title": "Publication release gate"
+      }
+    ],
+    "resume_contract": {
+      "surface_kind": "launch_study",
+      "session_locator_field": "study_id",
+      "checkpoint_locator_field": "controller_decision_path"
+    },
+    "event_envelope_surface": {
+      "ref_kind": "workspace_locator",
+      "ref": "studies/<study_id>/artifacts/runtime_watch/latest.json",
+      "label": "runtime watch event companion"
+    },
+    "checkpoint_lineage_surface": {
+      "ref_kind": "workspace_locator",
+      "ref": "studies/<study_id>/artifacts/controller_decisions/latest.json",
+      "label": "controller checkpoint lineage companion"
+    }
+  },
+  "remaining_gaps": [
+    "mature standalone medical product entry is still not landed"
+  ],
+  "notes": [
+    "This manifest freezes the current MAS repo-tracked research product-entry shell only.",
+    "It does not include the display / paper-figure asset line.",
+    "It does not claim that a mature standalone medical frontend is already landed."
+  ]
+}

@@ -1401,9 +1401,64 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
                       + manifestEntry.manifest.product_entry_quickstart.resume_contract.surface_kind
                       + '</p>'
                     : '',
+                  Object.entries(manifestEntry.manifest?.product_entry_shell || {}).length > 0
+                    ? '<div><strong>Product Entry Shells:</strong><ul>'
+                      + Object.entries(manifestEntry.manifest?.product_entry_shell || {})
+                        .map(([shellKey, shellValue]) => {
+                          if (!shellValue || typeof shellValue !== 'object') {
+                            return '';
+                          }
+                          const shell = shellValue as {
+                            command?: string;
+                            surface_kind?: string;
+                            purpose?: string;
+                          };
+                          return '<li><code>' + shellKey + '</code>: '
+                            + String(shell.command || '')
+                            + (shell.surface_kind ? ' [' + shell.surface_kind + ']' : '')
+                            + (shell.purpose ? ' - ' + shell.purpose : '')
+                            + '</li>';
+                        })
+                        .filter(Boolean)
+                        .join('')
+                      + '</ul></div>'
+                    : '',
+                  Object.entries(manifestEntry.manifest?.shared_handoff || {}).length > 0
+                    ? '<div><strong>Shared Handoff:</strong><ul>'
+                      + Object.entries(manifestEntry.manifest?.shared_handoff || {})
+                        .map(([handoffKey, handoffValue]) => {
+                          if (!handoffValue || typeof handoffValue !== 'object') {
+                            return '';
+                          }
+                          const handoff = handoffValue as {
+                            command?: string;
+                            entry_mode?: string;
+                            surface_kind?: string;
+                            target_domain_id?: string;
+                          };
+                          return '<li><code>' + handoffKey + '</code>: '
+                            + String(handoff.command || handoff.surface_kind || '')
+                            + (handoff.entry_mode ? ' (' + handoff.entry_mode + ')' : '')
+                            + (handoff.target_domain_id ? ' -> ' + handoff.target_domain_id : '')
+                            + '</li>';
+                        })
+                        .filter(Boolean)
+                        .join('')
+                      + '</ul></div>'
+                    : '',
                   manifestEntry.manifest?.family_orchestration?.action_graph_ref?.ref
                     ? '<p><strong>Action Graph:</strong> '
                       + manifestEntry.manifest.family_orchestration.action_graph_ref.ref
+                      + '</p>'
+                    : '',
+                  Array.isArray(manifestEntry.manifest?.family_orchestration?.action_graph?.nodes)
+                    ? '<p><strong>Action Graph Nodes:</strong> '
+                      + String(manifestEntry.manifest.family_orchestration.action_graph.nodes.length)
+                      + '</p>'
+                    : '',
+                  Array.isArray(manifestEntry.manifest?.family_orchestration?.action_graph?.edges)
+                    ? '<p><strong>Action Graph Edges:</strong> '
+                      + String(manifestEntry.manifest.family_orchestration.action_graph.edges.length)
                       + '</p>'
                     : '',
                   Array.isArray(manifestEntry.manifest?.family_orchestration?.human_gates)

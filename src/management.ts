@@ -470,6 +470,8 @@ export function buildFrontDeskDashboard(
       manifest_version: entry.manifest?.manifest_version ?? null,
       recommended_shell: entry.manifest?.recommended_shell ?? null,
       recommended_command: entry.manifest?.recommended_command ?? null,
+      product_entry_shell: entry.manifest?.product_entry_shell ?? {},
+      shared_handoff: entry.manifest?.shared_handoff ?? {},
       family_orchestration: entry.manifest?.family_orchestration ?? null,
       manifest_command: entry.manifest_command,
       workspace_path: entry.workspace_path,
@@ -485,6 +487,15 @@ export function buildFrontDeskDashboard(
       family_human_gate_ids:
         entry.manifest?.family_orchestration?.human_gates.map((gate) => String(gate.gate_id)) ?? [],
       family_resume_surface_kind: entry.manifest?.family_orchestration?.resume_contract?.surface_kind ?? null,
+      family_action_graph_ref: entry.manifest?.family_orchestration?.action_graph_ref?.ref ?? null,
+      family_action_graph_node_count:
+        Array.isArray(entry.manifest?.family_orchestration?.action_graph?.nodes)
+          ? entry.manifest.family_orchestration.action_graph.nodes.length
+          : 0,
+      family_action_graph_edge_count:
+        Array.isArray(entry.manifest?.family_orchestration?.action_graph?.edges)
+          ? entry.manifest.family_orchestration.action_graph.edges.length
+          : 0,
       family_event_envelope_ref: entry.manifest?.family_orchestration?.event_envelope_surface?.ref ?? null,
       family_checkpoint_lineage_ref:
         entry.manifest?.family_orchestration?.checkpoint_lineage_surface?.ref ?? null,

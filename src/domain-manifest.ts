@@ -69,6 +69,7 @@ export interface NormalizedDomainManifest {
   } | null;
   family_orchestration: {
     action_graph_ref: JsonRecord | null;
+    action_graph: JsonRecord | null;
     human_gates: JsonRecord[];
     resume_contract: JsonRecord | null;
     event_envelope_surface: JsonRecord | null;
@@ -308,6 +309,9 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
       ? {
           action_graph_ref: isRecord(rawFamilyOrchestration.action_graph_ref)
             ? rawFamilyOrchestration.action_graph_ref
+            : null,
+          action_graph: isRecord(rawFamilyOrchestration.action_graph)
+            ? rawFamilyOrchestration.action_graph
             : null,
           human_gates: normalizeRecordList(rawFamilyOrchestration.human_gates, 'family_orchestration.human_gates'),
           resume_contract: isRecord(rawFamilyOrchestration.resume_contract)
