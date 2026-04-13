@@ -14,6 +14,7 @@
     "workspace_locator",
     "product_entry_shell",
     "shared_handoff",
+    "product_entry_start",
     "family_orchestration"
   ],
   "properties": {
@@ -104,6 +105,9 @@
     "recommended_command": {
       "type": "string",
       "minLength": 1
+    },
+    "product_entry_start": {
+      "$ref": "#/$defs/productEntryStart"
     },
     "product_entry_preflight": {
       "$ref": "#/$defs/productEntryPreflight"
@@ -233,6 +237,81 @@
         "continuation_command": {
           "type": "string",
           "minLength": 1
+        }
+      }
+    },
+    "productEntryStartMode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode_id"
+      ],
+      "properties": {
+        "mode_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "command": {
+          "type": "string",
+          "minLength": 1
+        },
+        "surface_kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "requires": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "productEntryStart": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface_kind",
+        "recommended_mode_id",
+        "modes",
+        "human_gate_ids"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "product_entry_start"
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recommended_mode_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "modes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/productEntryStartMode"
+          }
+        },
+        "resume_surface": {
+          "type": "object"
+        },
+        "human_gate_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     },

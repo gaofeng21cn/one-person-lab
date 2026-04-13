@@ -103,6 +103,26 @@ export interface NormalizedDomainManifest {
     recommended_loop_command: string | null;
     blocking_gaps: string[];
   } | null;
+  product_entry_start: {
+    surface_kind: string;
+    summary: string | null;
+    recommended_mode_id: string | null;
+    modes: Array<{
+      mode_id: string;
+      title: string | null;
+      command: string | null;
+      surface_kind: string | null;
+      summary: string | null;
+      requires: string[];
+    }>;
+    resume_surface: {
+      surface_kind: string | null;
+      command: string | null;
+      session_locator_field: string | null;
+      checkpoint_locator_field: string | null;
+    } | null;
+    human_gate_ids: string[];
+  } | null;
   product_entry_quickstart: {
     surface_kind: string;
     summary: string | null;
@@ -361,6 +381,44 @@ function normalizeProductEntryReadiness(value: unknown) {
   };
 }
 
+function normalizeProductEntryStart(value: unknown) {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const modes = normalizeRecordList(value.modes, 'product_entry_start.modes').map((mode, index) => ({
+    mode_id: requireString(mode.mode_id, `product_entry_start.modes[${index}].mode_id`),
+    title: optionalString(mode.title),
+    command: optionalString(mode.command),
+    surface_kind: optionalString(mode.surface_kind),
+    summary: optionalString(mode.summary),
+    requires: readStringList(mode.requires),
+  }));
+  const recommendedModeId = optionalString(value.recommended_mode_id);
+
+  if (recommendedModeId && !modes.some((mode) => mode.mode_id === recommendedModeId)) {
+    throw new Error('product_entry_start.recommended_mode_id must reference an existing mode_id.');
+  }
+
+  const resumeSurface = isRecord(value.resume_surface)
+    ? {
+        surface_kind: optionalString(value.resume_surface.surface_kind),
+        command: optionalString(value.resume_surface.command),
+        session_locator_field: optionalString(value.resume_surface.session_locator_field),
+        checkpoint_locator_field: optionalString(value.resume_surface.checkpoint_locator_field),
+      }
+    : null;
+
+  return {
+    surface_kind: optionalString(value.surface_kind) ?? 'product_entry_start',
+    summary: optionalString(value.summary),
+    recommended_mode_id: recommendedModeId,
+    modes,
+    resume_surface: resumeSurface,
+    human_gate_ids: readStringList(value.human_gate_ids),
+  };
+}
+
 function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
   const manifest = unwrapManifestPayload(payload);
   const formalEntry = requireRecord(manifest.formal_entry, 'formal_entry');
@@ -385,6 +443,7 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
   const productEntryOverview = normalizeProductEntryOverview(manifest.product_entry_overview);
   const productEntryPreflight = normalizeProductEntryPreflight(manifest.product_entry_preflight);
   const productEntryReadiness = normalizeProductEntryReadiness(manifest.product_entry_readiness);
+  const productEntryStart = normalizeProductEntryStart(manifest.product_entry_start);
   const productEntryQuickstart = normalizeProductEntryQuickstart(manifest.product_entry_quickstart);
   const rawFamilyOrchestration = isRecord(manifest.family_orchestration)
     ? manifest.family_orchestration
@@ -442,6 +501,7 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
     product_entry_overview: productEntryOverview,
     product_entry_preflight: productEntryPreflight,
     product_entry_readiness: productEntryReadiness,
+    product_entry_start: productEntryStart,
     product_entry_quickstart: productEntryQuickstart,
     family_orchestration: rawFamilyOrchestration
       ? {

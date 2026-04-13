@@ -114,6 +114,49 @@
         "entry_mode": "opl-handoff"
       }
     },
+    "product_entry_start": {
+      "surface_kind": "product_entry_start",
+      "summary": "先进入 direct grant frontdesk；需要继续当前写作主线时恢复 grant user loop，需要把用户意图显式装配成入口合同时再构建 direct entry。",
+      "recommended_mode_id": "open_frontdesk",
+      "modes": [
+        {
+          "mode_id": "open_frontdesk",
+          "title": "Open grant frontdesk",
+          "command": "uv run python -m med_autogrant product-frontdesk --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+          "surface_kind": "product_frontdesk",
+          "summary": "打开当前 direct grant frontdoor。",
+          "requires": []
+        },
+        {
+          "mode_id": "continue_grant_loop",
+          "title": "Continue current grant loop",
+          "command": "uv run python -m med_autogrant grant-user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
+          "surface_kind": "grant_user_loop",
+          "summary": "进入当前 direct grant user inbox shell。",
+          "requires": [
+            "task_intent"
+          ]
+        },
+        {
+          "mode_id": "build_direct_entry",
+          "title": "Build direct entry",
+          "command": "uv run python -m med_autogrant grant-direct-entry --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
+          "surface_kind": "grant_direct_entry",
+          "summary": "把用户意图组合成当前 grant direct-entry contract。",
+          "requires": [
+            "task_intent"
+          ]
+        }
+      ],
+      "resume_surface": {
+        "surface_kind": "grant_user_loop",
+        "session_locator_field": "grant_run_id",
+        "checkpoint_locator_field": "lifecycle_stage"
+      },
+      "human_gate_ids": [
+        "mag_route_gate_revision"
+      ]
+    },
     "product_entry_overview": {
       "surface_kind": "product_entry_overview",
       "summary": "把 direct grant product 面逐步收成当前用户 inbox shell，而不越界写成 mature Web UI 或 hosted runtime。",

@@ -466,6 +466,11 @@ export function buildFrontDeskDashboard(
       operator_loop_summary: entry.manifest?.operator_loop_surface?.summary ?? null,
       operator_loop_continuation_command: entry.manifest?.operator_loop_surface?.continuation_command ?? null,
       operator_loop_actions: entry.manifest?.operator_loop_actions ?? {},
+      product_entry_start: entry.manifest?.product_entry_start ?? null,
+      product_entry_start_resume_surface_kind:
+        entry.manifest?.product_entry_start?.resume_surface?.surface_kind ?? null,
+      product_entry_start_mode_ids:
+        entry.manifest?.product_entry_start?.modes.map((mode) => mode.mode_id) ?? [],
       product_entry_overview: entry.manifest?.product_entry_overview ?? null,
       product_entry_preflight: entry.manifest?.product_entry_preflight ?? null,
       product_entry_quickstart: entry.manifest?.product_entry_quickstart ?? null,
