@@ -610,6 +610,7 @@ test('help exposes the local web front-desk pilot command through the built CLI 
   assert.ok(payload.help.commands.some((entry) => entry.command === 'web'));
   assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-manifest'));
   assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-domain-wiring'));
+  assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-readiness'));
   assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-hosted-bundle'));
   assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-hosted-package'));
   assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-librechat-package'));
@@ -641,6 +642,8 @@ test('frontdesk-manifest stays machine-readable through the built CLI entrypoint
   assert.equal(payload.frontdesk_manifest.domain_wiring_surface.endpoint, '/api/frontdesk-domain-wiring');
   assert.equal(payload.frontdesk_manifest.domain_wiring_surface.summary.total_projects_count, 2);
   assert.equal(payload.frontdesk_manifest.domain_wiring_surface.summary.recommended_entry_surfaces_count, 0);
+  assert.equal(payload.frontdesk_manifest.frontdesk_readiness_surface.surface_id, 'opl_frontdesk_readiness');
+  assert.equal(payload.frontdesk_manifest.frontdesk_readiness_surface.endpoint, '/api/frontdesk-readiness');
 });
 
 test('frontdesk-domain-wiring stays machine-readable through the built CLI entrypoint', () => {
@@ -660,6 +663,71 @@ test('frontdesk-domain-wiring stays machine-readable through the built CLI entry
   assert.equal(payload.frontdesk_domain_wiring.endpoints.workspace_bind, '/api/workspace-bind');
   assert.equal(payload.frontdesk_domain_wiring.summary.recommended_entry_surfaces_count, 0);
   assert.deepEqual(payload.frontdesk_domain_wiring.recommended_entry_surfaces, []);
+});
+
+test('frontdesk-readiness stays machine-readable through the built CLI entrypoint', () => {
+  const homeRoot = mkdtempSync(path.join(os.tmpdir(), 'opl-frontdesk-readiness-home-'));
+  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "version" ]; then
+  echo "Hermes Agent v9.9.9-test"
+  exit 0
+fi
+if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
+  cat <<'EOF'
+Launchd plist: /tmp/ai.hermes.gateway.plist
+✓ Service definition matches the current Hermes install
+✓ Gateway service is loaded
+EOF
+  exit 0
+fi
+if [ "$1" = "status" ]; then
+  cat <<'EOF'
+◆ Environment
+  Project:      /tmp/hermes-agent
+◆ Gateway Service
+  Status:       ✓ loaded
+  Manager:      launchd
+◆ Scheduled Jobs
+  Jobs:         0
+◆ Sessions
+  Active:       1
+EOF
+  exit 0
+fi
+if [ "$1" = "sessions" ] && [ "$2" = "list" ]; then
+  cat <<'EOF'
+Preview                                            Last Active   Src    ID
+───────────────────────────────────────────────────────────────────────────────────────────────
+Built CLI readiness session                        1m ago        cli    sess_ready_built
+EOF
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+  const psFixture = createFakePsFixture(`27025 1 0.1 0.2 49616 22:46 /Users/test/.hermes/venv/bin/python -m hermes_cli.main gateway run --replace`);
+
+  try {
+    const result = runCli(['frontdesk-readiness', '--path', repoRoot, '--sessions-limit', '1'], {
+      env: {
+        HOME: homeRoot,
+        OPL_HERMES_BIN: hermesPath,
+        PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
+      },
+    });
+    assert.equal(result.status, 0, formatFailure(result));
+
+    const payload = parseJsonOutput(result);
+    assert.equal(payload.frontdesk_readiness.surface_id, 'opl_frontdesk_readiness');
+    assert.equal(payload.frontdesk_readiness.local_service.health.status, 'not_installed');
+    assert.equal(payload.frontdesk_readiness.summary.total_projects_count, 2);
+    assert.equal(payload.frontdesk_readiness.summary.usable_now_projects_count, 0);
+    assert.equal(payload.frontdesk_readiness.endpoints.frontdesk_readiness, '/api/frontdesk-readiness');
+  } finally {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+    rmSync(psFixture.fixtureRoot, { recursive: true, force: true });
+    rmSync(homeRoot, { recursive: true, force: true });
+  }
 });
 
 test('frontdesk-service-install --help stays machine-readable through the built CLI entrypoint', () => {
@@ -1267,6 +1335,7 @@ exit 1
     assert.equal(startup.payload.version, 'g2');
     assert.equal(startup.payload.web_frontdesk.entry_surface, 'opl_local_web_frontdesk_pilot');
     assert.equal(startup.payload.web_frontdesk.hosted_status, 'librechat_pilot_landed');
+    assert.equal(startup.payload.web_frontdesk.api.frontdesk_readiness, '/api/frontdesk-readiness');
     assert.equal(startup.payload.web_frontdesk.api.frontdesk_domain_wiring, '/api/frontdesk-domain-wiring');
     assert.equal(startup.payload.web_frontdesk.api.librechat_package, '/api/librechat-package');
     assert.equal(startup.payload.web_frontdesk.api.launch_domain, '/api/launch-domain');
@@ -1276,6 +1345,7 @@ exit 1
     const pageHtml = await pageResponse.text();
     assert.match(pageHtml, /Launch Bound Domain Entry/);
     assert.match(pageHtml, /Domain Wiring/);
+    assert.match(pageHtml, /Frontdesk Readiness/);
 
     const manifestResponse = await fetch(`${baseUrl}/api/frontdesk-manifest`);
     const manifestPayload = await manifestResponse.json();
@@ -1290,6 +1360,13 @@ exit 1
     assert.equal(wiringPayload.frontdesk_domain_wiring.domain_binding_parity.summary.direct_entry_ready_projects_count, 1);
     assert.equal(wiringPayload.frontdesk_domain_wiring.domain_binding_parity.summary.manifest_ready_projects_count, 0);
     assert.equal(wiringPayload.frontdesk_domain_wiring.summary.recommended_entry_surfaces_count, 0);
+
+    const readinessResponse = await fetch(`${baseUrl}/api/frontdesk-readiness`);
+    const readinessPayload = await readinessResponse.json();
+    assert.equal(readinessPayload.frontdesk_readiness.surface_id, 'opl_frontdesk_readiness');
+    assert.equal(readinessPayload.frontdesk_readiness.summary.total_projects_count, 2);
+    assert.equal(readinessPayload.frontdesk_readiness.summary.usable_now_projects_count, 0);
+    assert.equal(readinessPayload.frontdesk_readiness.local_service.health.status, 'not_installed');
 
     const healthResponse = await fetch(`${baseUrl}/api/health`);
     const healthPayload = await healthResponse.json();

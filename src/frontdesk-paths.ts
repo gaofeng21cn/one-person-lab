@@ -1,6 +1,7 @@
 export type FrontDeskEndpoints = {
   health: string;
   manifest: string;
+  frontdesk_readiness: string;
   domain_manifests: string;
   hosted_bundle: string;
   hosted_package: string;
@@ -45,6 +46,7 @@ export function buildFrontDeskEndpoints(basePath = ''): FrontDeskEndpoints {
   return {
     health: `${apiBase}/health`,
     manifest: `${apiBase}/frontdesk-manifest`,
+    frontdesk_readiness: `${apiBase}/frontdesk-readiness`,
     domain_manifests: `${apiBase}/domain-manifests`,
     hosted_bundle: `${apiBase}/hosted-bundle`,
     hosted_package: `${apiBase}/hosted-package`,
