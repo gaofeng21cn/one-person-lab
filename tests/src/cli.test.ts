@@ -1402,9 +1402,17 @@ test('frontdesk-domain-wiring exposes a dedicated hosted-friendly family wiring 
   assert.equal(output.frontdesk_domain_wiring.runtime_substrate, 'external_hermes_kernel');
   assert.equal(output.frontdesk_domain_wiring.hosted_runtime_readiness.surface_kind, 'opl_hosted_runtime_readiness');
   assert.equal(output.frontdesk_domain_wiring.domain_entry_parity.surface_kind, 'opl_domain_entry_parity');
+  assert.equal(output.frontdesk_domain_wiring.domain_binding_parity.surface_kind, 'opl_domain_binding_parity');
   assert.equal(output.frontdesk_domain_wiring.summary.total_projects_count, 2);
   assert.equal(output.frontdesk_domain_wiring.domain_entry_parity.summary.blocked_projects_count, 2);
+  assert.equal(output.frontdesk_domain_wiring.domain_binding_parity.summary.total_projects_count, 2);
+  assert.equal(output.frontdesk_domain_wiring.domain_binding_parity.summary.active_projects_count, 0);
+  assert.equal(output.frontdesk_domain_wiring.domain_binding_parity.summary.manifest_ready_projects_count, 0);
   assert.equal(output.frontdesk_domain_wiring.summary.recommended_entry_surfaces_count, 0);
+  assert.equal(output.frontdesk_domain_wiring.endpoints.workspace_catalog, '/api/workspace-catalog');
+  assert.equal(output.frontdesk_domain_wiring.endpoints.workspace_bind, '/api/workspace-bind');
+  assert.equal(output.frontdesk_domain_wiring.endpoints.workspace_activate, '/api/workspace-activate');
+  assert.equal(output.frontdesk_domain_wiring.endpoints.workspace_archive, '/api/workspace-archive');
   assert.deepEqual(output.frontdesk_domain_wiring.recommended_entry_surfaces, []);
 });
 
@@ -2118,6 +2126,33 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.deepEqual(recommendedEntry.family_human_gate_ids, ['redcube_operator_review_gate']);
     assert.equal(recommendedEntry.family_resume_surface_kind, 'product_entry_session');
     assert.equal(recommendedEntry.family_checkpoint_lineage_ref, 'runtime_watch/checkpoints/latest.json');
+
+    const wiringOutput = runCli(['frontdesk-domain-wiring'], env);
+    assert.equal(wiringOutput.frontdesk_domain_wiring.domain_binding_parity.surface_kind, 'opl_domain_binding_parity');
+    assert.equal(wiringOutput.frontdesk_domain_wiring.domain_binding_parity.summary.total_projects_count, 3);
+    assert.equal(wiringOutput.frontdesk_domain_wiring.domain_binding_parity.summary.active_projects_count, 3);
+    assert.equal(wiringOutput.frontdesk_domain_wiring.domain_binding_parity.summary.direct_entry_ready_projects_count, 1);
+    assert.equal(wiringOutput.frontdesk_domain_wiring.domain_binding_parity.summary.manifest_ready_projects_count, 3);
+    assert.equal(wiringOutput.frontdesk_domain_wiring.domain_binding_parity.summary.launch_ready_projects_count, 1);
+    const grantBindingParity = wiringOutput.frontdesk_domain_wiring.domain_binding_parity.projects.find(
+      (entry: { project_id: string }) => entry.project_id === 'medautogrant',
+    );
+    const scienceBindingParity = wiringOutput.frontdesk_domain_wiring.domain_binding_parity.projects.find(
+      (entry: { project_id: string }) => entry.project_id === 'medautoscience',
+    );
+    const redcubeBindingParity = wiringOutput.frontdesk_domain_wiring.domain_binding_parity.projects.find(
+      (entry: { project_id: string }) => entry.project_id === 'redcube',
+    );
+    assert.equal(grantBindingParity.direct_entry_ready, false);
+    assert.equal(grantBindingParity.manifest_ready, true);
+    assert.deepEqual(grantBindingParity.available_actions, ['bind', 'activate', 'archive']);
+    assert.equal(scienceBindingParity.direct_entry_ready, false);
+    assert.equal(scienceBindingParity.manifest_ready, true);
+    assert.deepEqual(scienceBindingParity.available_actions, ['bind', 'activate', 'archive']);
+    assert.equal(redcubeBindingParity.direct_entry_ready, true);
+    assert.equal(redcubeBindingParity.manifest_ready, true);
+    assert.equal(redcubeBindingParity.active_binding.direct_entry.url, 'http://127.0.0.1:3310/redcube');
+    assert.deepEqual(redcubeBindingParity.available_actions, ['bind', 'activate', 'archive', 'launch']);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(stateRoot, { recursive: true, force: true });
@@ -2661,6 +2696,7 @@ exit 1
     assert.match(pageHtml, /OPL Front Desk/);
     assert.match(pageHtml, /Control Room/);
     assert.match(pageHtml, /Hosted-Friendly Surface/);
+    assert.match(pageHtml, /Domain Wiring/);
     assert.match(pageHtml, /Hosted Runtime Readiness/);
     assert.match(pageHtml, /Domain Entry Parity/);
 
@@ -2693,6 +2729,8 @@ exit 1
     const wiringPayload = await wiringResponse.json();
     assert.equal(wiringPayload.frontdesk_domain_wiring.surface_id, 'opl_frontdesk_domain_wiring');
     assert.equal(wiringPayload.frontdesk_domain_wiring.summary.total_projects_count, 2);
+    assert.equal(wiringPayload.frontdesk_domain_wiring.domain_binding_parity.summary.total_projects_count, 2);
+    assert.equal(wiringPayload.frontdesk_domain_wiring.domain_binding_parity.summary.active_projects_count, 0);
     assert.equal(wiringPayload.frontdesk_domain_wiring.summary.recommended_entry_surfaces_count, 0);
 
     const domainManifestResponse = await fetch(`${baseUrl}/api/domain-manifests`);

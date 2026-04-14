@@ -445,6 +445,51 @@ function buildRecommendedEntrySurfaces(projects: DomainManifestCatalogEntry[]) {
     }));
 }
 
+function buildDomainBindingParity(
+  contracts: GatewayContracts,
+  options: { basePath?: string } = {},
+) {
+  const endpoints = buildFrontDeskEndpoints(options.basePath);
+  const workspaceCatalog = buildWorkspaceCatalog(contracts).workspace_catalog;
+  const domainProjects = workspaceCatalog.projects.filter((entry) => entry.project_id !== 'opl');
+  const projects = domainProjects.map((entry) => ({
+    project_id: entry.project_id,
+    project: entry.project,
+    active_binding: entry.active_binding,
+    bindings_count: entry.bindings_count,
+    last_updated_at: entry.last_updated_at,
+    available_actions: entry.available_actions,
+    direct_entry_ready: entry.bindings_count.direct_entry_ready > 0,
+    manifest_ready: entry.bindings_count.manifest_ready > 0,
+    launch_ready: entry.available_actions.includes('launch'),
+  }));
+
+  return {
+    surface_kind: 'opl_domain_binding_parity',
+    summary: {
+      total_projects_count: projects.length,
+      active_projects_count: projects.filter((entry) => entry.active_binding !== null).length,
+      direct_entry_ready_projects_count: projects.filter((entry) => entry.direct_entry_ready).length,
+      manifest_ready_projects_count: projects.filter((entry) => entry.manifest_ready).length,
+      launch_ready_projects_count: projects.filter((entry) => entry.launch_ready).length,
+      last_binding_change_at: workspaceCatalog.summary.last_binding_change_at,
+    },
+    projects,
+    endpoints: {
+      workspace_catalog: endpoints.workspace_catalog,
+      workspace_bind: endpoints.workspace_bind,
+      workspace_activate: endpoints.workspace_activate,
+      workspace_archive: endpoints.workspace_archive,
+      launch_domain: endpoints.launch_domain,
+    },
+    notes: [
+      'This surface mirrors the domain-scoped binding state from workspace-catalog so hosted shells do not need to reconstruct it from dashboard.',
+      'It stays derived from the writable workspace registry rather than inventing a second binding store.',
+      'direct_entry_ready means the current project already has a bound command or URL; manifest_ready means the active binding already carries a manifest_command.',
+    ],
+  };
+}
+
 function buildFrontDeskDomainWiringSurfaceRef(
   contracts: GatewayContracts,
   options: { basePath?: string } = {},
@@ -466,6 +511,7 @@ export function buildFrontDeskDomainWiring(
   const domainManifests = buildDomainManifestCatalog(contracts).domain_manifests;
   const hostedRuntimeReadiness = buildHostedRuntimeReadiness();
   const domainEntryParity = buildDomainEntryParity(domainManifests.projects);
+  const domainBindingParity = buildDomainBindingParity(contracts, options);
   const recommendedEntrySurfaces = buildRecommendedEntrySurfaces(domainManifests.projects);
 
   return {
@@ -482,18 +528,26 @@ export function buildFrontDeskDomainWiring(
       base_path: normalizeBasePath(options.basePath),
       hosted_runtime_readiness: hostedRuntimeReadiness,
       domain_entry_parity: domainEntryParity,
+      domain_binding_parity: domainBindingParity,
       recommended_entry_surfaces: recommendedEntrySurfaces,
       summary: {
         total_projects_count: domainEntryParity.summary.total_projects_count,
         aligned_projects_count: domainEntryParity.summary.aligned_projects_count,
         ready_for_opl_start_count: domainEntryParity.summary.ready_for_opl_start_count,
         ready_for_domain_handoff_count: domainEntryParity.summary.ready_for_domain_handoff_count,
+        active_binding_projects_count: domainBindingParity.summary.active_projects_count,
+        manifest_ready_projects_count: domainBindingParity.summary.manifest_ready_projects_count,
+        launch_ready_projects_count: domainBindingParity.summary.launch_ready_projects_count,
         recommended_entry_surfaces_count: recommendedEntrySurfaces.length,
       },
       endpoints: {
         frontdesk_domain_wiring: endpoints.frontdesk_domain_wiring,
         domain_manifests: endpoints.domain_manifests,
         dashboard: endpoints.dashboard,
+        workspace_catalog: endpoints.workspace_catalog,
+        workspace_bind: endpoints.workspace_bind,
+        workspace_activate: endpoints.workspace_activate,
+        workspace_archive: endpoints.workspace_archive,
         start: endpoints.start,
         launch_domain: endpoints.launch_domain,
         handoff_envelope: endpoints.handoff_envelope,

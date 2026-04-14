@@ -110,6 +110,7 @@
 
 - `OPL` 现在不只是“有一个本地浏览器 pilot”，而是已经冻结出一层 future hosted shell 可消费的 front-desk contract；
 - `frontdesk-domain-wiring` 又把 `hosted_runtime_readiness / domain_entry_parity / recommended_entry_surfaces` 收成 hosted shell 与本地 front desk 都能直接消费的 family wiring truth；
+- `frontdesk-domain-wiring` 现在还额外承载 `domain_binding_parity` 与 `workspace_catalog / workspace_bind / workspace_activate / workspace_archive` 这些修复 locator parity 所需的 endpoint 引导，不再要求 hosted shell 自己去拼大而杂的 dashboard；
 - hosted-pilot-ready shell bundle 已经把 base-path-aware 的 entry / API endpoint 一并冻结下来；
 - self-hostable hosted pilot package 已经把 app snapshot、run script、env 模板、`systemd` unit、service-install / healthcheck helper 与反向代理资产一并导出来；
 - `frontdesk-librechat-package` 已经把 `LibreChat` 外层壳、同源反向代理与 `OPL Front Desk` 的真实 pilot 组合导出来；

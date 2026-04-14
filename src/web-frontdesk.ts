@@ -1194,6 +1194,11 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
               </div>
               <div style="height: 12px"></div>
               <div class="card">
+                <h3>Domain Wiring</h3>
+                <div id="domain-wiring-summary">Loading domain wiring...</div>
+              </div>
+              <div style="height: 12px"></div>
+              <div class="card">
                 <h3>Hosted Pilot Bundle</h3>
                 <div id="hosted-bundle-summary">Loading hosted pilot bundle...</div>
                 <div style="height: 12px"></div>
@@ -1404,6 +1409,7 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       const domainEntryParitySummary = document.getElementById('domain-entry-parity-summary');
       const healthSummary = document.getElementById('health-summary');
       const manifestSummary = document.getElementById('manifest-summary');
+      const domainWiringSummary = document.getElementById('domain-wiring-summary');
       const hostedBundleSummary = document.getElementById('hosted-bundle-summary');
       const hostedBundleJson = document.getElementById('hosted-bundle-json');
       const hostedPackageOutputInput = document.getElementById('hosted-package-output');
@@ -2009,6 +2015,31 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         ].join('');
       }
 
+      function renderDomainWiring(payload) {
+        const wiring = payload.frontdesk_domain_wiring;
+        const bindingParity = wiring.domain_binding_parity;
+        const projects = Array.isArray(bindingParity?.projects)
+          ? bindingParity.projects.map((project) => (
+            '<li><strong>' + String(project.project || project.project_id) + ':</strong> '
+            + 'active=' + String(project.active_binding ? 'yes' : 'no')
+            + ' / manifest=' + String(project.manifest_ready)
+            + ' / launch=' + String(project.launch_ready)
+            + (Array.isArray(project.available_actions) && project.available_actions.length > 0
+              ? ' / actions ' + project.available_actions.map((action) => '<code>' + String(action) + '</code>').join(', ')
+              : '')
+            + '</li>'
+          )).join('')
+          : '';
+
+        domainWiringSummary.innerHTML = [
+          '<p><strong>Total Projects:</strong> ' + String(wiring.summary?.total_projects_count ?? 0) + '</p>',
+          '<p><strong>Active Bindings:</strong> ' + String(bindingParity?.summary?.active_projects_count ?? 0) + '</p>',
+          '<p><strong>Manifest Ready:</strong> ' + String(bindingParity?.summary?.manifest_ready_projects_count ?? 0) + '</p>',
+          '<p><strong>Launch Ready:</strong> ' + String(bindingParity?.summary?.launch_ready_projects_count ?? 0) + '</p>',
+          projects ? '<ul>' + projects + '</ul>' : '<p>No domain wiring entries reported.</p>',
+        ].join('');
+      }
+
       function renderDashboard(payload) {
         const dashboard = payload.dashboard;
         metricProjects.textContent = String(dashboard.projects.length);
@@ -2186,9 +2217,10 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       }
 
       async function fetchHostedFriendlySurface() {
-        const [healthResponse, manifestResponse, hostedBundleResponse] = await Promise.all([
+        const [healthResponse, manifestResponse, wiringResponse, hostedBundleResponse] = await Promise.all([
           fetch(bootstrap.web_frontdesk.api.health),
           fetch(bootstrap.web_frontdesk.api.frontdesk_manifest),
+          fetch(bootstrap.web_frontdesk.api.frontdesk_domain_wiring),
           fetch(bootstrap.web_frontdesk.api.hosted_bundle),
         ]);
 
@@ -2198,12 +2230,16 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         if (!manifestResponse.ok) {
           throw new Error('Manifest request failed with status ' + manifestResponse.status);
         }
+        if (!wiringResponse.ok) {
+          throw new Error('Domain wiring request failed with status ' + wiringResponse.status);
+        }
         if (!hostedBundleResponse.ok) {
           throw new Error('Hosted bundle request failed with status ' + hostedBundleResponse.status);
         }
 
         renderHealth(await healthResponse.json());
         renderManifest(await manifestResponse.json());
+        renderDomainWiring(await wiringResponse.json());
         renderHostedBundle(await hostedBundleResponse.json());
       }
 

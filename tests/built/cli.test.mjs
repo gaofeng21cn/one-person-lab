@@ -653,6 +653,11 @@ test('frontdesk-domain-wiring stays machine-readable through the built CLI entry
   assert.equal(payload.frontdesk_domain_wiring.runtime_substrate, 'external_hermes_kernel');
   assert.equal(payload.frontdesk_domain_wiring.summary.total_projects_count, 2);
   assert.equal(payload.frontdesk_domain_wiring.domain_entry_parity.summary.blocked_projects_count, 2);
+  assert.equal(payload.frontdesk_domain_wiring.domain_binding_parity.surface_kind, 'opl_domain_binding_parity');
+  assert.equal(payload.frontdesk_domain_wiring.domain_binding_parity.summary.total_projects_count, 2);
+  assert.equal(payload.frontdesk_domain_wiring.domain_binding_parity.summary.active_projects_count, 0);
+  assert.equal(payload.frontdesk_domain_wiring.endpoints.workspace_catalog, '/api/workspace-catalog');
+  assert.equal(payload.frontdesk_domain_wiring.endpoints.workspace_bind, '/api/workspace-bind');
   assert.equal(payload.frontdesk_domain_wiring.summary.recommended_entry_surfaces_count, 0);
   assert.deepEqual(payload.frontdesk_domain_wiring.recommended_entry_surfaces, []);
 });
@@ -1270,6 +1275,7 @@ exit 1
     const pageResponse = await fetch(baseUrl);
     const pageHtml = await pageResponse.text();
     assert.match(pageHtml, /Launch Bound Domain Entry/);
+    assert.match(pageHtml, /Domain Wiring/);
 
     const manifestResponse = await fetch(`${baseUrl}/api/frontdesk-manifest`);
     const manifestPayload = await manifestResponse.json();
@@ -1279,6 +1285,10 @@ exit 1
     const wiringPayload = await wiringResponse.json();
     assert.equal(wiringPayload.frontdesk_domain_wiring.surface_id, 'opl_frontdesk_domain_wiring');
     assert.equal(wiringPayload.frontdesk_domain_wiring.summary.total_projects_count, 2);
+    assert.equal(wiringPayload.frontdesk_domain_wiring.domain_binding_parity.summary.total_projects_count, 2);
+    assert.equal(wiringPayload.frontdesk_domain_wiring.domain_binding_parity.summary.active_projects_count, 1);
+    assert.equal(wiringPayload.frontdesk_domain_wiring.domain_binding_parity.summary.direct_entry_ready_projects_count, 1);
+    assert.equal(wiringPayload.frontdesk_domain_wiring.domain_binding_parity.summary.manifest_ready_projects_count, 0);
     assert.equal(wiringPayload.frontdesk_domain_wiring.summary.recommended_entry_surfaces_count, 0);
 
     const healthResponse = await fetch(`${baseUrl}/api/health`);
