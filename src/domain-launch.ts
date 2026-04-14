@@ -148,6 +148,7 @@ export async function launchDomainEntry(
     command: binding.direct_entry.command,
     manifest_command: binding.direct_entry.manifest_command,
     url: binding.direct_entry.url,
+    workspace_locator: binding.direct_entry.workspace_locator,
   };
   const requestedStrategy = options.strategy ?? 'auto';
   const selectedStrategy = selectStrategy(locator, requestedStrategy);

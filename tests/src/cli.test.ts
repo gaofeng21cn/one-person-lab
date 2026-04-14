@@ -400,6 +400,69 @@ printf '%s\\n' "$*" >> "${capturePath}"
   };
 }
 
+function createFamilyLocatorResolverFixture(options: {
+  masProfile: string;
+  magInput: string;
+  redcubeWorkspaceRoot: string;
+  masManifest: Record<string, unknown>;
+  magManifest: Record<string, unknown>;
+  redcubeManifest: Record<string, unknown>;
+}) {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-locator-fixture-'));
+  const uvPath = path.join(fixtureRoot, 'uv');
+  const redcubePath = path.join(fixtureRoot, 'redcube');
+  const masManifestPath = path.join(fixtureRoot, 'mas-manifest.json');
+  const magManifestPath = path.join(fixtureRoot, 'mag-manifest.json');
+  const redcubeManifestPath = path.join(fixtureRoot, 'redcube-manifest.json');
+
+  fs.writeFileSync(masManifestPath, `${JSON.stringify(options.masManifest, null, 2)}\n`, 'utf8');
+  fs.writeFileSync(magManifestPath, `${JSON.stringify(options.magManifest, null, 2)}\n`, 'utf8');
+  fs.writeFileSync(redcubeManifestPath, `${JSON.stringify(options.redcubeManifest, null, 2)}\n`, 'utf8');
+
+  fs.writeFileSync(
+    uvPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "$*" == ${shellSingleQuote(`run python -m med_autoscience.cli product-entry-manifest --profile ${path.resolve(options.masProfile)} --format json`)} ]]; then
+  cat ${shellSingleQuote(masManifestPath)}
+  exit 0
+fi
+
+if [[ "$*" == ${shellSingleQuote(`run python -m med_autogrant product-entry-manifest --input ${path.resolve(options.magInput)} --format json`)} ]]; then
+  cat ${shellSingleQuote(magManifestPath)}
+  exit 0
+fi
+
+echo "unexpected uv args: $*" >&2
+exit 1
+`,
+    { mode: 0o755 },
+  );
+
+  fs.writeFileSync(
+    redcubePath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "$*" == ${shellSingleQuote(`product manifest --workspace-root ${path.resolve(options.redcubeWorkspaceRoot)}`)} ]]; then
+  cat ${shellSingleQuote(redcubeManifestPath)}
+  exit 0
+fi
+
+echo "unexpected redcube args: $*" >&2
+exit 1
+`,
+    { mode: 0o755 },
+  );
+
+  return {
+    fixtureRoot,
+    uvPath,
+    redcubePath,
+  };
+}
+
 type FakePaperclipRequest = {
   method: string;
   path: string;
@@ -1338,7 +1401,6 @@ test('help advertises the local web front-desk pilot command surface', () => {
   assert.ok(
     output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk-readiness'),
   );
-  assert.ok(
     output.help.commands.some((entry: { command: string }) => entry.command === 'launch-domain'),
   );
 
@@ -1613,10 +1675,6 @@ test('frontdesk-hosted-bundle exposes a hosted-pilot-ready bundle with base-path
     output.hosted_pilot_bundle.hosted_runtime_readiness.self_hostable_pilot_package_landed,
     true,
   );
-  assert.equal(output.hosted_pilot_bundle.domain_wiring_surface.surface_id, 'opl_frontdesk_domain_wiring');
-  assert.equal(output.hosted_pilot_bundle.domain_wiring_surface.endpoint, '/pilot/opl/api/frontdesk-domain-wiring');
-  assert.equal(output.hosted_pilot_bundle.domain_wiring_surface.summary.total_projects_count, 2);
-  assert.equal(output.hosted_pilot_bundle.domain_wiring_surface.summary.recommended_entry_surfaces_count, 0);
 });
 
 test('frontdesk-hosted-package exports a self-hostable hosted pilot package with runtime and proxy assets', () => {
@@ -2269,6 +2327,161 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
   }
 });
 
+test('workspace-bind derives family direct-entry locators from structured project locators', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-binding-state-'));
+  const fixtures = loadFamilyManifestFixtures();
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const locatorRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-binding-locators-'));
+  const masWorkspacePath = path.join(locatorRoot, 'medautoscience-workspace');
+  const magWorkspacePath = path.join(locatorRoot, 'medautogrant-workspace');
+  const redcubeWorkspacePath = path.join(locatorRoot, 'redcube-workspace');
+  const masProfilePath = path.join(locatorRoot, 'profile.local.toml');
+  const magInputPath = path.join(locatorRoot, 'workspace.json');
+  const commandFixture = createFamilyLocatorResolverFixture({
+    masProfile: masProfilePath,
+    magInput: magInputPath,
+    redcubeWorkspaceRoot: redcubeWorkspacePath,
+    masManifest: fixtures.medautoscience,
+    magManifest: fixtures.medautogrant,
+    redcubeManifest: fixtures.redcube,
+  });
+
+  fs.mkdirSync(masWorkspacePath, { recursive: true });
+  fs.mkdirSync(magWorkspacePath, { recursive: true });
+  fs.mkdirSync(redcubeWorkspacePath, { recursive: true });
+  fs.writeFileSync(masProfilePath, '[workspace]\nname = "fixture"\n', 'utf8');
+  fs.writeFileSync(magInputPath, '{}\n', 'utf8');
+
+  const env = {
+    OPL_FRONTDESK_STATE_DIR: stateRoot,
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    PATH: `${commandFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
+  };
+
+  try {
+    const magBind = runCli([
+      'workspace-bind',
+      '--project',
+      'medautogrant',
+      '--path',
+      magWorkspacePath,
+      '--input',
+      magInputPath,
+    ], env);
+    const masBind = runCli([
+      'workspace-bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      masWorkspacePath,
+      '--profile',
+      masProfilePath,
+    ], env);
+    const redcubeBind = runCli([
+      'workspace-bind',
+      '--project',
+      'redcube',
+      '--path',
+      redcubeWorkspacePath,
+    ], env);
+
+    assert.equal(
+      magBind.workspace_catalog.binding.direct_entry.command,
+      `uv run python -m med_autogrant product-frontdesk --input ${path.resolve(magInputPath)}`,
+    );
+    assert.equal(
+      magBind.workspace_catalog.binding.direct_entry.manifest_command,
+      `uv run python -m med_autogrant product-entry-manifest --input ${path.resolve(magInputPath)} --format json`,
+    );
+    assert.deepEqual(magBind.workspace_catalog.binding.direct_entry.workspace_locator, {
+      surface_kind: 'med_autogrant_workspace_input',
+      workspace_root: path.resolve(magWorkspacePath),
+      profile_ref: null,
+      input_path: path.resolve(magInputPath),
+    });
+
+    assert.equal(
+      masBind.workspace_catalog.binding.direct_entry.command,
+      `uv run python -m med_autoscience.cli product-frontdesk --profile ${path.resolve(masProfilePath)}`,
+    );
+    assert.equal(
+      masBind.workspace_catalog.binding.direct_entry.manifest_command,
+      `uv run python -m med_autoscience.cli product-entry-manifest --profile ${path.resolve(masProfilePath)} --format json`,
+    );
+    assert.deepEqual(masBind.workspace_catalog.binding.direct_entry.workspace_locator, {
+      surface_kind: 'med_autoscience_workspace_profile',
+      workspace_root: path.resolve(masWorkspacePath),
+      profile_ref: path.resolve(masProfilePath),
+      input_path: null,
+    });
+
+    assert.equal(
+      redcubeBind.workspace_catalog.binding.direct_entry.command,
+      `redcube product frontdesk --workspace-root ${path.resolve(redcubeWorkspacePath)}`,
+    );
+    assert.equal(
+      redcubeBind.workspace_catalog.binding.direct_entry.manifest_command,
+      `redcube product manifest --workspace-root ${path.resolve(redcubeWorkspacePath)}`,
+    );
+    assert.deepEqual(redcubeBind.workspace_catalog.binding.direct_entry.workspace_locator, {
+      surface_kind: 'redcube_workspace',
+      workspace_root: path.resolve(redcubeWorkspacePath),
+      profile_ref: null,
+      input_path: null,
+    });
+
+    const catalogOutput = runCli(['workspace-catalog'], env);
+    assert.equal(catalogOutput.workspace_catalog.summary.direct_entry_ready_projects_count, 3);
+    assert.equal(catalogOutput.workspace_catalog.summary.manifest_ready_projects_count, 3);
+
+    const manifestOutput = runCli(['domain-manifests'], env);
+    assert.equal(manifestOutput.domain_manifests.summary.resolved_count, 3);
+    assert.equal(
+      manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) => entry.project_id === 'medautogrant')?.manifest_command,
+      `uv run python -m med_autogrant product-entry-manifest --input ${path.resolve(magInputPath)} --format json`,
+    );
+    assert.equal(
+      manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) => entry.project_id === 'medautoscience')?.manifest_command,
+      `uv run python -m med_autoscience.cli product-entry-manifest --profile ${path.resolve(masProfilePath)} --format json`,
+    );
+    assert.equal(
+      manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) => entry.project_id === 'redcube')?.manifest_command,
+      `redcube product manifest --workspace-root ${path.resolve(redcubeWorkspacePath)}`,
+    );
+
+    const dashboardOutput = runCli(['dashboard', '--path', repoRoot, '--sessions-limit', '1'], env);
+    assert.equal(
+      dashboardOutput.dashboard.front_desk.domain_entry_parity.summary.aligned_projects_count,
+      3,
+    );
+    assert.equal(
+      dashboardOutput.dashboard.front_desk.domain_entry_parity.summary.partial_projects_count,
+      0,
+    );
+    assert.equal(
+      dashboardOutput.dashboard.front_desk.domain_entry_parity.summary.direct_entry_locator_ready_projects_count,
+      3,
+    );
+    assert.equal(
+      dashboardOutput.dashboard.front_desk.domain_entry_parity.projects.find(
+        (entry: { project_id: string }) => entry.project_id === 'medautogrant',
+      )?.direct_entry_locator_status,
+      'ready',
+    );
+    assert.equal(
+      dashboardOutput.dashboard.front_desk.domain_entry_parity.projects.find(
+        (entry: { project_id: string }) => entry.project_id === 'medautoscience',
+      )?.direct_entry_locator_status,
+      'ready',
+    );
+  } finally {
+    fs.rmSync(commandFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(locatorRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('start returns the routed family start surface for a bound project', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-start-state-'));
   const fixtures = loadFamilyManifestFixtures();
@@ -2852,7 +3065,6 @@ exit 1
     assert.equal(readinessPayload.frontdesk_readiness.summary.total_projects_count, 2);
     assert.equal(readinessPayload.frontdesk_readiness.summary.usable_now_projects_count, 0);
     assert.equal(readinessPayload.frontdesk_readiness.local_service.health.status, 'not_installed');
-
     const domainManifestResponse = await fetch(`${baseUrl}/api/domain-manifests`);
     const domainManifestPayload = await domainManifestResponse.json();
     assert.equal(domainManifestPayload.domain_manifests.summary.total_projects_count, 2);

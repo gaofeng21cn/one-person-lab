@@ -86,6 +86,7 @@ export function buildHandoffBundle(
             command: workspaceLocator.binding.direct_entry.command,
             manifest_command: workspaceLocator.binding.direct_entry.manifest_command,
             url: workspaceLocator.binding.direct_entry.url,
+            workspace_locator: workspaceLocator.binding.direct_entry.workspace_locator,
             workspace_path: workspaceLocator.binding.workspace_path,
           }
         : null,

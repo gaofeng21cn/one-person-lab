@@ -6,10 +6,18 @@ import { GatewayContractError } from './contracts.ts';
 import { ensureFrontDeskStateDir, resolveFrontDeskStatePaths } from './frontdesk-state.ts';
 import type { GatewayContracts } from './types.ts';
 
+type BoundWorkspaceLocator = {
+  surface_kind: string;
+  workspace_root: string | null;
+  profile_ref: string | null;
+  input_path: string | null;
+};
+
 type DirectEntryLocator = {
   command: string | null;
   manifest_command: string | null;
   url: string | null;
+  workspace_locator: BoundWorkspaceLocator | null;
 };
 
 export type WorkspaceBinding = {
@@ -44,15 +52,48 @@ type WorkspaceRegistryOptions = {
   entryCommand?: string;
   manifestCommand?: string;
   entryUrl?: string;
+  workspaceRoot?: string;
+  profileRef?: string;
+  inputPath?: string;
 };
 
 function nowIso() {
   return new Date().toISOString();
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 function normalizeOptionalString(value?: string | null) {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
+}
+
+function normalizeWorkspaceLocator(value: unknown): BoundWorkspaceLocator | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const surfaceKind = normalizeOptionalString(
+    typeof value.surface_kind === 'string' ? value.surface_kind : null,
+  );
+  if (!surfaceKind) {
+    return null;
+  }
+
+  return {
+    surface_kind: surfaceKind,
+    workspace_root: normalizeOptionalString(
+      typeof value.workspace_root === 'string' ? value.workspace_root : null,
+    ),
+    profile_ref: normalizeOptionalString(
+      typeof value.profile_ref === 'string' ? value.profile_ref : null,
+    ),
+    input_path: normalizeOptionalString(
+      typeof value.input_path === 'string' ? value.input_path : null,
+    ),
+  };
 }
 
 function readWorkspaceRegistryFile(): WorkspaceRegistryFile {
@@ -86,6 +127,7 @@ function readWorkspaceRegistryFile(): WorkspaceRegistryFile {
           command: normalizeOptionalString(binding.direct_entry?.command),
           manifest_command: normalizeOptionalString(binding.direct_entry?.manifest_command),
           url: normalizeOptionalString(binding.direct_entry?.url),
+          workspace_locator: normalizeWorkspaceLocator(binding.direct_entry?.workspace_locator),
         },
         created_at: String(binding.created_at),
         updated_at: String(binding.updated_at),
@@ -151,6 +193,178 @@ function normalizeWorkspacePath(workspacePath: string) {
   }
 
   return absolutePath;
+}
+
+function normalizeExistingFilePath(filePath: string | undefined, field: string) {
+  const normalized = normalizeOptionalString(filePath);
+  if (!normalized) {
+    return null;
+  }
+
+  const absolutePath = path.resolve(normalized);
+  if (!fs.existsSync(absolutePath) || !fs.statSync(absolutePath).isFile()) {
+    throw new GatewayContractError(
+      'cli_usage_error',
+      `Workspace registry locator field ${field} requires an existing file path.`,
+      {
+        field,
+        value: absolutePath,
+      },
+    );
+  }
+
+  return absolutePath;
+}
+
+function normalizeExistingDirectoryPath(directoryPath: string | undefined, field: string) {
+  const normalized = normalizeOptionalString(directoryPath);
+  if (!normalized) {
+    return null;
+  }
+
+  const absolutePath = path.resolve(normalized);
+  if (!fs.existsSync(absolutePath) || !fs.statSync(absolutePath).isDirectory()) {
+    throw new GatewayContractError(
+      'cli_usage_error',
+      `Workspace registry locator field ${field} requires an existing directory.`,
+      {
+        field,
+        value: absolutePath,
+      },
+    );
+  }
+
+  return absolutePath;
+}
+
+function validateProjectLocatorOptions(
+  projectId: string,
+  locatorOptions: {
+    workspaceRoot?: string;
+    profileRef?: string;
+    inputPath?: string;
+  },
+) {
+  const provided = {
+    workspace_root: Boolean(normalizeOptionalString(locatorOptions.workspaceRoot)),
+    profile: Boolean(normalizeOptionalString(locatorOptions.profileRef)),
+    input: Boolean(normalizeOptionalString(locatorOptions.inputPath)),
+  };
+
+  const unsupportedLocatorFields = Object.entries(provided)
+    .filter(([, enabled]) => enabled)
+    .map(([key]) => key)
+    .filter((key) => {
+      if (projectId === 'medautoscience') {
+        return key !== 'profile';
+      }
+      if (projectId === 'medautogrant') {
+        return key !== 'input';
+      }
+      if (projectId === 'redcube') {
+        return key !== 'workspace_root';
+      }
+      return true;
+    });
+
+  if (unsupportedLocatorFields.length > 0) {
+    throw new GatewayContractError(
+      'cli_usage_error',
+      'The requested workspace locator fields are not supported for this project surface.',
+      {
+        project_id: projectId,
+        unsupported_locator_fields: unsupportedLocatorFields,
+      },
+    );
+  }
+}
+
+function buildWorkspaceLocator(
+  projectId: string,
+  workspacePath: string,
+  options: {
+    workspaceRoot?: string;
+    profileRef?: string;
+    inputPath?: string;
+  },
+): BoundWorkspaceLocator | null {
+  validateProjectLocatorOptions(projectId, options);
+
+  if (projectId === 'medautoscience') {
+    const profileRef = normalizeExistingFilePath(options.profileRef, 'profile');
+    if (!profileRef) {
+      return null;
+    }
+
+    return {
+      surface_kind: 'med_autoscience_workspace_profile',
+      workspace_root: workspacePath,
+      profile_ref: profileRef,
+      input_path: null,
+    };
+  }
+
+  if (projectId === 'medautogrant') {
+    const inputPath = normalizeExistingFilePath(options.inputPath, 'input');
+    if (!inputPath) {
+      return null;
+    }
+
+    return {
+      surface_kind: 'med_autogrant_workspace_input',
+      workspace_root: workspacePath,
+      profile_ref: null,
+      input_path: inputPath,
+    };
+  }
+
+  if (projectId === 'redcube') {
+    return {
+      surface_kind: 'redcube_workspace',
+      workspace_root: normalizeExistingDirectoryPath(options.workspaceRoot, 'workspace_root') ?? workspacePath,
+      profile_ref: null,
+      input_path: null,
+    };
+  }
+
+  return null;
+}
+
+function buildDerivedDirectEntryLocator(workspaceLocator: BoundWorkspaceLocator | null) {
+  if (!workspaceLocator) {
+    return {
+      command: null,
+      manifest_command: null,
+    };
+  }
+
+  if (workspaceLocator.surface_kind === 'med_autoscience_workspace_profile' && workspaceLocator.profile_ref) {
+    return {
+      command: `uv run python -m med_autoscience.cli product-frontdesk --profile ${workspaceLocator.profile_ref}`,
+      manifest_command:
+        `uv run python -m med_autoscience.cli product-entry-manifest --profile ${workspaceLocator.profile_ref} --format json`,
+    };
+  }
+
+  if (workspaceLocator.surface_kind === 'med_autogrant_workspace_input' && workspaceLocator.input_path) {
+    return {
+      command: `uv run python -m med_autogrant product-frontdesk --input ${workspaceLocator.input_path}`,
+      manifest_command:
+        `uv run python -m med_autogrant product-entry-manifest --input ${workspaceLocator.input_path} --format json`,
+    };
+  }
+
+  if (workspaceLocator.surface_kind === 'redcube_workspace' && workspaceLocator.workspace_root) {
+    return {
+      command: `redcube product frontdesk --workspace-root ${workspaceLocator.workspace_root}`,
+      manifest_command: `redcube product manifest --workspace-root ${workspaceLocator.workspace_root}`,
+    };
+  }
+
+  return {
+    command: null,
+    manifest_command: null,
+  };
 }
 
 function setProjectActiveBinding(
@@ -254,6 +468,7 @@ function buildWorkspaceCatalogPayload(
       notes: [
         'Workspace bindings are product-entry level state for OPL and admitted domain project surfaces.',
         'A binding may carry direct-entry locators so OPL can hand off into a domain front desk without inventing one.',
+        'Structured workspace locators let OPL derive project-specific direct-entry and manifest commands without promoting OPL into a domain runtime owner.',
         'When available, manifest_command points at the domain-owned machine-readable product-entry manifest for that bound workspace.',
       ],
     },
@@ -319,19 +534,28 @@ export function bindWorkspace(
       command: null,
       manifest_command: null,
       url: null,
+      workspace_locator: null,
     },
     created_at: timestamp,
     updated_at: timestamp,
     archived_at: null,
   };
 
+  const workspaceLocator = buildWorkspaceLocator(project.project_id, absolutePath, {
+    workspaceRoot: options.workspaceRoot,
+    profileRef: options.profileRef,
+    inputPath: options.inputPath,
+  });
+  const derivedDirectEntry = buildDerivedDirectEntryLocator(workspaceLocator);
+
   binding.project = project.project;
   binding.label = normalizeOptionalString(options.label);
   binding.status = 'active';
   binding.direct_entry = {
-    command: normalizeOptionalString(options.entryCommand),
-    manifest_command: normalizeOptionalString(options.manifestCommand),
+    command: normalizeOptionalString(options.entryCommand) ?? derivedDirectEntry.command,
+    manifest_command: normalizeOptionalString(options.manifestCommand) ?? derivedDirectEntry.manifest_command,
     url: normalizeOptionalString(options.entryUrl),
+    workspace_locator: workspaceLocator,
   };
   binding.updated_at = timestamp;
   binding.archived_at = null;

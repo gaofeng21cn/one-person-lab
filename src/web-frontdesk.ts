@@ -93,6 +93,12 @@ type WorkspaceRegistryBody = Partial<{
   manifest_command: string;
   entryUrl: string;
   entry_url: string;
+  workspaceRoot: string;
+  workspace_root: string;
+  profileRef: string;
+  profile_ref: string;
+  inputPath: string;
+  input_path: string;
 }>;
 
 type HostedPackageRequestBody = Partial<{
@@ -424,6 +430,12 @@ function normalizeWorkspaceRegistryInput(body: WorkspaceRegistryBody) {
     manifestCommand:
       normalizeOptionalString(body.manifestCommand) ?? normalizeOptionalString(body.manifest_command),
     entryUrl: normalizeOptionalString(body.entryUrl) ?? normalizeOptionalString(body.entry_url),
+    workspaceRoot:
+      normalizeOptionalString(body.workspaceRoot) ?? normalizeOptionalString(body.workspace_root),
+    profileRef:
+      normalizeOptionalString(body.profileRef) ?? normalizeOptionalString(body.profile_ref),
+    inputPath:
+      normalizeOptionalString(body.inputPath) ?? normalizeOptionalString(body.input_path),
   };
 }
 
@@ -1336,6 +1348,18 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
                     Direct Entry URL
                     <input id="workspace-entry-url" name="workspace-entry-url" placeholder="Optional URL" />
                   </label>
+                  <label>
+                    Workspace Root
+                    <input id="workspace-workspace-root" name="workspace-workspace-root" placeholder="Optional redcube workspace root" />
+                  </label>
+                  <label>
+                    Profile
+                    <input id="workspace-profile" name="workspace-profile" placeholder="Optional medautoscience profile path" />
+                  </label>
+                  <label>
+                    Input
+                    <input id="workspace-input" name="workspace-input" placeholder="Optional medautogrant workspace input" />
+                  </label>
                 </div>
                 <div class="button-row">
                   <button class="secondary" type="submit" id="workspace-inspect-button">Inspect Workspace</button>
@@ -1442,6 +1466,9 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       const workspaceEntryCommandInput = document.getElementById('workspace-entry-command');
       const workspaceManifestCommandInput = document.getElementById('workspace-manifest-command');
       const workspaceEntryUrlInput = document.getElementById('workspace-entry-url');
+      const workspaceRootLocatorInput = document.getElementById('workspace-workspace-root');
+      const workspaceProfileInput = document.getElementById('workspace-profile');
+      const workspaceInputPathInput = document.getElementById('workspace-input');
       const workspaceStatusLine = document.getElementById('workspace-status-line');
       const workspaceCatalogJson = document.getElementById('workspace-catalog-json');
       const sessionLedgerJson = document.getElementById('session-ledger-json');
@@ -1513,6 +1540,22 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
                   : '',
               ].filter(Boolean).join('')
             : '<p><strong>Active Workspace:</strong> none</p>';
+          const locatorBlock = activeBinding?.direct_entry?.workspace_locator
+            ? [
+                activeBinding.direct_entry.workspace_locator.surface_kind
+                  ? '<p><strong>Workspace Locator:</strong> ' + activeBinding.direct_entry.workspace_locator.surface_kind + '</p>'
+                  : '',
+                activeBinding.direct_entry.workspace_locator.workspace_root
+                  ? '<p><strong>Locator Workspace Root:</strong> ' + activeBinding.direct_entry.workspace_locator.workspace_root + '</p>'
+                  : '',
+                activeBinding.direct_entry.workspace_locator.profile_ref
+                  ? '<p><strong>Locator Profile:</strong> ' + activeBinding.direct_entry.workspace_locator.profile_ref + '</p>'
+                  : '',
+                activeBinding.direct_entry.workspace_locator.input_path
+                  ? '<p><strong>Locator Input:</strong> ' + activeBinding.direct_entry.workspace_locator.input_path + '</p>'
+                  : '',
+              ].filter(Boolean).join('')
+            : '';
           const manifestEntry = manifestLookup.get(project.project_id);
           const manifestBlock = !manifestEntry
             ? ''
@@ -1896,6 +1939,7 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
             + '<p><strong>Project ID:</strong> ' + project.project_id + '</p>'
             + '<p><strong>Owned Workstreams:</strong> ' + (project.owned_workstreams || []).join(', ') + '</p>'
             + bindingBlock
+            + locatorBlock
             + manifestBlock
             + '<div class="badge-row">' + badges + '</div>'
             + '</div>';
@@ -2201,6 +2245,9 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
             : '',
           launch.direct_entry_locator?.command
             ? '<p><strong>Direct Entry Command:</strong> <code>' + launch.direct_entry_locator.command + '</code></p>'
+            : '',
+          launch.direct_entry_locator?.workspace_locator?.surface_kind
+            ? '<p><strong>Workspace Locator:</strong> ' + launch.direct_entry_locator.workspace_locator.surface_kind + '</p>'
             : '',
         ].filter(Boolean).join('');
         launchJson.textContent = JSON.stringify(payload, null, 2);
@@ -2573,6 +2620,9 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
               entry_command: workspaceEntryCommandInput.value,
               manifest_command: workspaceManifestCommandInput.value,
               entry_url: workspaceEntryUrlInput.value,
+              workspace_root: workspaceRootLocatorInput.value,
+              profile_ref: workspaceProfileInput.value,
+              input_path: workspaceInputPathInput.value,
             }),
           });
           const payload = await response.json();
@@ -2791,7 +2841,6 @@ async function handleRequest(
       writeJson(response, 200, buildFrontDeskDomainWiring(context.contracts, { basePath: context.basePath }));
       return;
     }
-
     if (method === 'GET' && routedPath === '/api/hosted-bundle') {
       writeJson(
         response,
