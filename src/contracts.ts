@@ -616,6 +616,8 @@ function describeContractsRootSource(source: ContractsRootSource): string {
       return 'API contractsDir option';
     case 'cwd':
       return 'current working directory search root';
+    case 'cli_entry':
+      return 'active OPL CLI entrypoint';
   }
 }
 
@@ -646,6 +648,17 @@ function resolveContractsDirFromSearchRoot(rootPath: string): string {
   }
 
   return path.join(searchRoot, 'contracts', 'opl-gateway');
+}
+
+function resolveContractsDirFromCliEntrypoint(): string | null {
+  const cliEntry = process.argv[1];
+  if (!cliEntry) {
+    return null;
+  }
+
+  const projectRoot = path.resolve(path.dirname(cliEntry), '..');
+  const contractsRoot = path.join(projectRoot, 'contracts', 'opl-gateway');
+  return hasRequiredContractFiles(contractsRoot) ? contractsRoot : null;
 }
 
 function resolveExplicitContractsDir(
@@ -736,6 +749,25 @@ function resolveContractsLocation(
       'Contract root resolution requires either an explicit contracts directory or a search root.',
       { source: options.source },
     );
+  }
+
+  if (options.source === 'cwd') {
+    const cwdSearchRoot = path.resolve(options.searchFrom);
+    const cwdContractsDir = resolveContractsDirFromSearchRoot(cwdSearchRoot);
+    if (hasRequiredContractFiles(cwdSearchRoot) || fs.existsSync(cwdContractsDir)) {
+      return {
+        contractsDir: cwdContractsDir,
+        source: options.source,
+      };
+    }
+
+    const cliEntrypointContractsDir = resolveContractsDirFromCliEntrypoint();
+    if (cliEntrypointContractsDir) {
+      return {
+        contractsDir: cliEntrypointContractsDir,
+        source: 'cli_entry',
+      };
+    }
   }
 
   return {
