@@ -28,6 +28,10 @@
   </tr>
 </table>
 
+<p align="center">
+  <img src="assets/branding/opl-architecture-blueprint.svg" alt="OPL architecture blueprint" width="100%" />
+</p>
+
 > `OPL` is the public top-level gateway for a one-person lab. It helps a human expert or agent find the right domain system, preserve handoff boundaries, and keep work understandable across the lab.
 
 ## What People Use OPL For
@@ -42,7 +46,7 @@
 | Need | Current path | Status | Notes |
 | --- | --- | --- | --- |
 | Medical research | [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience) | Active | Current `Research Ops` carrier |
-| Grant writing | [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) | Active repository line | Top-level federation admission and handoff wording are still separately gated at `OPL` |
+| Grant writing | [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) | Active medical Grant Ops repository line | Top-level federation admission and handoff wording are still separately gated at `OPL` |
 | Presentations and visual deliverables | [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) | Active | Current `Presentation Ops` carrier; `ppt_deck` is the most direct family mapping |
 | Thesis preparation | Planned | Not yet admitted | Still being defined as its own domain boundary |
 | Review and rebuttal work | Planned | Not yet admitted | Still being defined as its own domain boundary |
@@ -81,12 +85,28 @@ In plain language:
   <summary><strong>Technical Notes And Current Implementation Truth</strong></summary>
 
 `OPL` keeps the top-level `Gateway / Federation` role, while admitted domain repositories keep domain runtime ownership.
+The active execution path remains Codex-only as the development host, while the preferred future substrate direction is a true upstream `Hermes-Agent` integration.
+This top-level surface keeps execution visibility, audit, and delivery semantics aligned without turning `OPL` into the runtime owner.
 
 The shared architectural language under `OPL` is the `Unified Harness Engineering Substrate`, with its most important shared pieces converging into the [Shared Runtime Contract](./docs/shared-runtime-contract.md) and the [Shared Domain Contract](./docs/shared-domain-contract.md).
+The shared runtime layer, hosted entry surfaces, and any real `Hermes-Agent` rollout still progress inside their respective repositories and contracts.
 
-Current top-level entry surfaces already include a local `opl` shell and a local web front desk pilot.
+The current public mainline still carries the absorbed `Phase 1 / G2 release-closeout` wording, while the repo-tracked formal entry remains the `TypeScript CLI`-first / read-only gateway surface.
+The current `Phase 2 / Minimal admitted-domain federation activation package` covers the two already admitted domain surfaces only: `MedAutoScience` and `RedCube AI`.
+`Grant Foundry -> Med Auto Grant` stays the active medical Grant Ops repository line, while top-level federation admission and handoff wording remain separately gated at `OPL`.
+
+`OPL` now ships a local direct product-entry shell whose default front door is `opl`, plus a local web front desk pilot.
+It follows `external kernel, managed by OPL product packaging`, not requiring users to manually install and understand `Hermes-Agent`.
+`opl "<request...>"` acts as the fast natural-language path, and the current product-entry surface includes `opl doctor`, `opl ask`, `opl chat`, `opl resume`, `opl sessions`, `opl logs`, `opl repair-hermes-gateway`, and `opl web`.
+Hosted shell pilots are real, but managed hosted runtime is still not landed.
+
+Current top-level entry surfaces therefore already include a local `opl` shell and a local web front desk pilot.
 Current family management surfaces include `workspace-catalog`, `workspace-bind|activate|archive`, `domain-manifests`, `session-ledger`, and `dashboard`.
 `workspace-bind` can now derive family `entry_command` plus `manifest_command` from structured workspace locators such as `--profile`, `--input`, and `--workspace-root`, instead of forcing every project onto handwritten raw commands.
+
+The intended family chain is:
+
+`User -> OPL Product Entry -> OPL Gateway -> Hermes Kernel -> Domain Handoff -> Domain Product Entry / Domain Gateway`
 
 Current family state is intentionally uneven and should be described honestly:
 

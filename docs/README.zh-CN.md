@@ -11,7 +11,7 @@
 | 读者 | 建议起点 | 目的 |
 | --- | --- | --- |
 | 潜在用户、人类专家、非技术读者 | [仓库首页](../README.zh-CN.md)、[路线图](./roadmap.zh-CN.md)、[任务版图](./task-map.zh-CN.md)、[Gateway 联邦](./gateway-federation.zh-CN.md) | 先理解 `OPL` 是干什么的，再决定是否进入技术细节 |
-| 技术规划者、架构读者、方向同步读者 | [项目概览](./project.md)、[当前状态](./status.md)、[架构](./architecture.md)、[硬约束](./invariants.md)、[关键决策](./decisions.md)、[合同目录说明](../contracts/README.zh-CN.md) | 快速把握当前真相、边界和技术主线 |
+| 技术规划者、架构读者、方向同步读者 | [项目概览](./project.md)、[当前状态](./status.md)、[架构](./architecture.md)、[硬约束](./invariants.md)、[关键决策](./decisions.md)、[合同目录说明](../contracts/README.md) | 快速把握当前真相、边界和技术主线 |
 | 开发者与维护者 | [参考级索引](./references/README.zh-CN.md)、`docs/specs/`、`docs/plans/`、`docs/history/omx/` | 查看实现配套材料、历史记录和跟踪中的工作笔记 |
 
 ## 当前基线
@@ -30,7 +30,7 @@
 - [架构](./architecture.md)
 - [硬约束](./invariants.md)
 - [关键决策](./decisions.md)
-- [合同目录说明](../contracts/README.zh-CN.md)
+- [合同目录说明](../contracts/README.md)
 
 ## 现有四层文档体系如何使用
 
@@ -76,6 +76,18 @@
 它们继续被仓库跟踪，但不应再挤占公开首页的默认阅读路径。
 
 - [参考级索引](./references/README.zh-CN.md)
+- `docs/references/contract-convergence-v1-execution-board.md`
+- `docs/references/hermes-agent-runtime-substrate-benchmark.md`
+- `docs/references/family-orchestration-contract-absorb-crewai.md`
+- `docs/references/family-lightweight-direct-entry-rollout-board.md`
+- `docs/references/opl-hosted-web-frontdesk-benchmark.md`
+- `docs/references/opl-product-entry-and-hermes-kernel-integration.md`
+- `docs/references/family-product-entry-and-domain-handoff-architecture.md`
+- `docs/references/family-executor-adapter-defaults.md`
+- `docs/references/hermes-native-executor-proof-lane.md`
+- `docs/references/mas-top-level-cutover-board.md`
+- `docs/references/opl-phase-2-central-reference-sync-board.md`
+- `docs/references/opl-phase-2-admitted-domain-delta-intake-refresh.md`
 - `docs/references/opl-gateway-rollout*`
 - `docs/references/opl-gateway-acceptance-test-spec*`
 - `docs/references/opl-candidate-domain-backlog*`

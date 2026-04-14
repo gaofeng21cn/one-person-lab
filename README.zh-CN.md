@@ -28,6 +28,10 @@
   </tr>
 </table>
 
+<p align="center">
+  <img src="assets/branding/opl-architecture-blueprint.svg" alt="OPL architecture blueprint" width="100%" />
+</p>
+
 > `OPL` 是一人课题组的公开顶层 Gateway。它帮助人类专家或 Agent 找到合适的 domain system，保持 handoff 边界清楚，并让整条实验室工作线保持可理解、可追踪。
 
 ## OPL 主要用来做什么
@@ -42,7 +46,7 @@
 | 需求 | 当前路径 | 状态 | 说明 |
 | --- | --- | --- | --- |
 | 医学科研 | [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience) | Active | 当前 `Research Ops` 主承接面 |
-| 基金写作 | [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) | 活跃业务仓路径 | 顶层 federation admission / handoff wording 仍在 `OPL` 单独门控 |
+| 基金写作 | [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) | 活跃的医学 `Grant Ops` 业务仓路径 | 顶层 federation admission / handoff wording 仍在 `OPL` 单独门控 |
 | 汇报与视觉交付 | [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) | Active | 当前 `Presentation Ops` 主承接面，`ppt_deck` 是最直接 family 映射 |
 | 学位论文准备 | Planned | 尚未正式收录 | 仍在定义为独立 domain boundary |
 | 审稿与回复评审 | Planned | 尚未正式收录 | 仍在定义为独立 domain boundary |
@@ -51,7 +55,7 @@
 
 1. 潜在用户、人类专家和非技术读者，先读当前首页，再继续看 [路线图](./docs/roadmap.zh-CN.md)、[任务版图](./docs/task-map.zh-CN.md)、[Gateway 联邦](./docs/gateway-federation.zh-CN.md)。
 2. 技术规划、架构判断和方向同步，继续读 [文档索引](./docs/README.zh-CN.md)，再读 [项目概览](./docs/project.md)、[当前状态](./docs/status.md)、[架构](./docs/architecture.md)、[硬约束](./docs/invariants.md)、[关键决策](./docs/decisions.md)。
-3. 开发者和维护者，继续读 [合同目录说明](./contracts/README.zh-CN.md)、[参考级索引](./docs/references/README.zh-CN.md)，以及 `docs/specs/`、`docs/plans/`、`docs/history/omx/` 下的跟踪材料。
+3. 开发者和维护者，继续读 [合同目录说明](./contracts/README.md)、[参考级索引](./docs/references/README.zh-CN.md)，以及 `docs/specs/`、`docs/plans/`、`docs/history/omx/` 下的跟踪材料。
 
 ## 用人话解释 OPL 的位置
 
@@ -81,12 +85,28 @@ Human / Agent
   <summary><strong>面向技术读者的折叠说明</strong></summary>
 
 `OPL` 继续只持有顶层 `Gateway / Federation` 角色，admitted domain 仓继续持有各自的 domain runtime ownership。
+当前活跃执行入口仍是 Codex-only 开发宿主，而优选的未来 substrate 方向仍是上游 `Hermes-Agent` 集成。
+这个顶层表面继续把执行可见性、审计与交付语义保持对齐，而不是把 `OPL` 抬升成 runtime owner。
 
 `OPL` 之下共享的上位架构语言是 `Unified Harness Engineering Substrate`。其中当前最重要的共享部分，正在收敛为 [Shared Runtime Contract](./docs/shared-runtime-contract.zh-CN.md) 和 [Shared Domain Contract](./docs/shared-domain-contract.zh-CN.md)。
+共享运行层、托管入口与任何真实的 `Hermes-Agent` 落地进度，仍在各自仓与合同中推进。
 
-当前顶层已落地的入口表面包括本地 `opl` shell 和本地 web front desk pilot。
+当前公开主线继续保留已 absorbed 的 `Phase 1 / G2 release-closeout` 口径，而 repo-tracked formal entry 仍是 `TypeScript CLI`-first / read-only gateway surface。
+当前 `Phase 2 / Minimal admitted-domain federation activation package` 只覆盖两个已 admitted domain surface：`MedAutoScience` 与 `RedCube AI`。
+`Grant Foundry -> Med Auto Grant` 仍是活跃的医学 `Grant Ops` 业务仓路径，但顶层 federation admission / handoff wording 继续在 `OPL` 单独门控。
+
+`OPL` 现在已经有了本地 direct product-entry shell，默认入口是 `opl`，同时也有本地 web front desk pilot。
+它采用 `external kernel, managed by OPL product packaging`，不要求用户先手工安装并理解 `Hermes-Agent`。
+`opl "<request...>"` 是快速自然语言入口，当前产品入口表面包括 `opl doctor`、`opl ask`、`opl chat`、`opl resume`、`opl sessions`、`opl logs`、`opl repair-hermes-gateway` 与 `opl web`。
+hosted pilot 已经存在，但 managed hosted runtime 仍未落地。
+
+当前顶层已落地的入口表面因此包括本地 `opl` shell 和本地 web front desk pilot。
 当前家族级管理面包括 `workspace-catalog`、`workspace-bind|activate|archive`、`domain-manifests`、`session-ledger` 与 `dashboard`。
 `workspace-bind` 现在也支持从结构化 workspace locator 自动推出 family `entry_command` 与 `manifest_command`，例如 `--profile`、`--input` 与 `--workspace-root`，不再要求所有项目都手写原始命令串。
+
+当前目标家族链路是：
+
+`User -> OPL Product Entry -> OPL Gateway -> Hermes Kernel -> Domain Handoff -> Domain Product Entry / Domain Gateway`
 
 当前家族状态必须继续诚实描述：
 
@@ -107,4 +127,4 @@ Human / Agent
 - [文档索引](./docs/README.zh-CN.md)
 - [项目概览](./docs/project.md)
 - [当前状态](./docs/status.md)
-- [合同目录说明](./contracts/README.zh-CN.md)
+- [合同目录说明](./contracts/README.md)

@@ -455,7 +455,7 @@ test('product-entry docs freeze the managed external-kernel choice instead of fo
   assert.match(readmeZh, /本地 direct product-entry shell/);
   assert.match(readmeZh, /external kernel, managed by OPL product packaging/);
   assert.match(readmeZh, /不要求用户先手工安装并理解 `Hermes-Agent`/);
-  assert.match(readmeZh, /默认入口的本地 direct product-entry shell|以 `opl` 为默认入口/);
+  assert.match(readmeZh, /默认入口的本地 direct product-entry shell|以 `opl` 为默认入口|默认入口是 `opl`|默认前台命令就是 `opl`/);
   assert.match(readmeZh, /opl doctor[\s\S]*opl ask[\s\S]*opl chat[\s\S]*opl resume[\s\S]*opl sessions[\s\S]*opl logs[\s\S]*opl repair-hermes-gateway[\s\S]*opl web/);
   assert.match(readmeZh, /opl "<request\.\.\.>"|opl <request/i);
   assert.match(readmeZh, /Domain Handoff -> Domain Product Entry \/ Domain Gateway/);
