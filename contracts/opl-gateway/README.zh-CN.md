@@ -15,14 +15,15 @@
 
 ## 当前基线与已吸收 follow-on 对齐
 
-截至 `2026-04-11`，当前 `opl-mainline` 的公开主线仍停留在已 absorbed 的 `Phase 2 / Minimal admitted-domain federation activation package`，但 repo-tracked 的 formal entry 仍然是 `Phase 1` 那条本地 `TypeScript CLI`-first、read-only gateway baseline；它只读取这个目录中已经冻结的 contract 工件。
+截至 `2026-04-11`，当前 `opl-mainline` 的活跃公开主线已经进入围绕本地 `opl` shell 与 `opl web` 的 family-level front desk / hosted-entry hardening，而 repo-tracked 的 formal entry 仍然是 `Phase 1` 那条本地 `TypeScript CLI`-first、read-only gateway baseline；它只读取这个目录中已经冻结的 contract 工件。
 这条 transport 当前通过 Codex-only 本地会话完成规划、实现与验证，但这个目录并不会把 Codex 声明成产品 runtime substrate owner。
 已完成的 `Phase 1 / G2 release-closeout` 已把 `G2 stable public baseline` 收口成稳定、单一、repo-tracked 的公开基线。
-因此，即便公开主线已经吸收了这份最小 admitted-domain federation package，这条 repo-tracked 基线也仍然是当前 `OPL` 的 formal entry contract 与 public system surface。
+因此，即便公开主线已经吸收了这份最小 admitted-domain federation package，并继续上移到 front-desk 层，这条 repo-tracked 基线也仍然是当前 `OPL` 的 formal entry contract 与 public system surface。
 已完成的 repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` 继续停留在 planning-contract closeout 层：当前目录冻结围绕 `route_request`、`build_handoff_payload`、`audit_routing_decision` 的 planning gate / planning-level contract。唯一允许的成功 handoff 目标仍只能是 `domain_gateway`；no-bypass 规则继续禁止直达 domain harness；`routed-actions.schema.json` 继续停留在 planning dependency 层。
 repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review Ops` 然后 `Thesis Ops`：这两条 candidate path 都继续停留在 domain admission、`G2` discovery readiness、`G3` routed-action readiness 与 handoff readiness 之下。
-当前已 absorb 的前序门槛是 `Phase 1 exit + next-stage activation package freeze`；当前这份 `Minimal admitted-domain federation activation package` 也已经被吸收到 repo-tracked 顶层真相中，只对已经 admitted 的 `MedAutoScience` 与 `RedCube AI` domain surface 生效。当前没有新的 active follow-on tranche 打开；只有 admitted-domain 仓再落下新的 absorbed delta，或中央 reference surfaces 发生真实漂移时，下一次 central sync 才是诚实的。runtime ownership 继续保留在 admitted domain 一侧。
+当前已 absorb 的前序门槛是 `Phase 1 exit + next-stage activation package freeze`；当前这份 `Phase 2 / Minimal admitted-domain federation activation package` 也已经被吸收到 repo-tracked 顶层真相中，只对已经 admitted 的 `MedAutoScience` 与 `RedCube AI` domain surface 生效。当前没有新的 active follow-on tranche 打开；只有 admitted-domain 仓再落下新的 absorbed delta，或中央 reference surfaces 发生真实漂移时，下一次 central sync 才是诚实的。runtime ownership 继续保留在 admitted domain 一侧。
 因此，当前 OPL 层的 repo-tracked formal entry 也仍然是这条本地 `TypeScript CLI`-first / read-only gateway surface。
+而位于这层合同之上的当前用户前台，已经是本地 `opl` shell、`opl web` pilot，以及围绕它们的 machine-readable discovery / handoff surface。
 这个交付目标把已有的顶层 contract language 继续维持为本地 CLI surface 可读取的合同入口；任何诚实的上游 `Hermes-Agent` rollout，仍然属于 domain 侧迁移目标，而不是当前 OPL 层既成事实。
 
 ## 当前参考同步配套文档

@@ -8,12 +8,12 @@ This document indexes the current authoritative public surfaces for the `OPL Gat
 
 Its job is to make the top-level gateway easier to discover across README, roadmap, rollout, contracts, acceptance, examples, and linked domain gateway entries.
 
-Read it as the CLI-first / read-only surface map built on the frozen Phase 1 gateway baseline and reused by the absorbed `Minimal admitted-domain federation activation package`.
+Read it as the current public surface map for a two-layer OPL entry: the active user-facing front door is the local `opl` shell plus the `opl web` pilot, while the underlying formal entry still remains the CLI-first / read-only surface map built on the frozen Phase 1 gateway baseline and reused by the absorbed `Minimal admitted-domain federation activation package`.
 The completed `G2` closeout keeps the single repo-tracked top-level `G2` CLI-first / read-only baseline stable.
 That baseline remains the current `OPL` `Phase 1` formal entry contract and public system surface.
 The completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` remains closed at the planning-contract layer, and `G3` remains planning-only rather than an activated routed-action runtime.
 The repo-tracked `Phase 1` candidate-domain closeout order is frozen as `Review Ops` then `Thesis Ops`, the absorbed predecessor gate remains `Phase 1 exit + next-stage activation package freeze`, and the `Minimal admitted-domain federation activation package` is already absorbed into repo-tracked top-level truth. No new active follow-on tranche is open until an admitted-domain absorbed delta or central reference drift justifies another central sync.
-The current top-level formal entry therefore remains the CLI-first / read-only gateway surface indexed here.
+The current top-level formal entry therefore remains the CLI-first / read-only gateway surface indexed here, even though the active public mainline above it is now the family-level front desk and hosted-entry hardening line.
 Use the [Ecosystem Status Matrix](./references/ecosystem-status-matrix.md) as the internal reference-sync anchor for the current four-repo stage and maturity snapshot.
 
 For repository-wide document layering and reference-grade handling, see [Docs Index](./README.md).
@@ -32,6 +32,7 @@ The current CLI-first read-only baseline can expose this same artifact through:
 This index focuses on:
 
 - public-entry surfaces for the top-level gateway
+- the user-facing front door layered above the formal gateway contract
 - contract surfaces that freeze federation boundaries
 - supporting reference surfaces used for review and discoverability
 - linked domain public-entry surfaces that remain domain-owned
@@ -53,6 +54,8 @@ These surfaces position and navigate the top-level gateway:
 - [Roadmap](./roadmap.md)
 - [OPL Task Map](./task-map.md)
 - [Gateway Rollout](./references/opl-gateway-rollout.md)
+
+At the current public layer, those surfaces should be read together with the landed local `opl` shell and `opl web` pilot: they provide the active front door above the unchanged formal-entry contract.
 
 ### 2. OPL contract surfaces
 

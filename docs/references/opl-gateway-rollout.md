@@ -91,6 +91,7 @@ Current frozen state:
 
 - under the `Phase 1` public mainline, the CLI-first / read-only gateway baseline is already runnable
 - the completed `Phase 1 / G2 release-closeout` has already closed that baseline into one stable repo-tracked `G2 stable public baseline`
+- above that unchanged formal-entry baseline, the active public front door is now the landed local `opl` shell plus the `opl web` pilot and their machine-readable discovery / handoff surfaces
 - the completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` remains closed at the planning-contract boundary
 - the repo-tracked `Phase 1` candidate-domain closeout order is frozen as `Review Ops` then `Thesis Ops`
 - the absorbed predecessor follow-on is `Phase 1 exit + next-stage activation package freeze`
@@ -214,6 +215,7 @@ Rule:
 
 - the first real gateway surface should still be thin
 - top-level orchestration should route, not swallow domain logic
+- the currently landed local front desk remains that thin first surface; later productization should harden it rather than replace it with a generic chat shell identity
 
 Completion signal:
 

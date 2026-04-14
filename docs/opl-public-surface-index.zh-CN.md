@@ -8,12 +8,12 @@
 
 它的作用是：让顶层 gateway 在 README、roadmap、rollout、contracts、acceptance、examples，以及链接出去的 domain gateway 公开入口之间更容易被发现。
 
-它应被理解为建立在已冻结 `Phase 1` gateway 基线之上、并继续服务当前这份已 absorbed `Minimal admitted-domain federation activation package` 的 CLI-first / read-only surface map。
+它应被理解成一套双层 OPL 入口的当前公开界面地图：面向用户的活跃前台已经是本地 `opl` shell 与 `opl web` pilot，而下层 formal entry 仍然是建立在已冻结 `Phase 1` gateway 基线之上、并继续服务当前这份已 absorbed `Minimal admitted-domain federation activation package` 的 CLI-first / read-only surface map。
 已完成的 `G2` closeout 已把单一、repo-tracked 的顶层 `G2` CLI-first / read-only baseline 固定下来。
 这条基线也仍然是 `OPL` 在 `Phase 1` 的 formal entry contract 与 public system surface。
 已完成的 repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` 继续停留在 planning-contract closeout 层，`G3` 也仍然只保持 planning-only 状态，而不是已激活的 routed-action runtime。
 repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review Ops` 然后 `Thesis Ops`，已吸收的前序门槛仍是 `Phase 1 exit + next-stage activation package freeze`，而 `Minimal admitted-domain federation activation package` 也已经被吸收到 repo-tracked 顶层真相中。除非 admitted-domain absorbed delta 或中央 reference 漂移再次出现，否则当前没有新的 active follow-on tranche 打开。
-因此，当前 top-level formal entry 也仍然是这里索引到的 CLI-first / read-only gateway surface。
+因此，当前 top-level formal entry 也仍然是这里索引到的 CLI-first / read-only gateway surface，只是其上方活跃的公开主线已经转为 family-level front desk 与 hosted-entry hardening。
 四仓当前阶段与成熟度判断，以 [生态四仓统一状态总表](./references/ecosystem-status-matrix.md) 作为内部参考同步锚点。
 
 如果要看仓库级文档分层与参考级处理规则，请继续看 [文档索引](./README.zh-CN.md)。
@@ -32,6 +32,7 @@ repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review 
 这个 index 聚焦于：
 
 - 顶层 gateway 的 public-entry surface
+- formal gateway contract 之上的用户前台层
 - 冻结 federation boundary 的 contract surface
 - 用于 review 与 discoverability 的 supporting/reference surface
 - 仍由各 domain 自己持有 ownership 的 linked domain public-entry surface
@@ -53,6 +54,8 @@ repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review 
 - [路线图](./roadmap.zh-CN.md)
 - [OPL 任务版图](./task-map.zh-CN.md)
 - [Gateway 落地路线](./references/opl-gateway-rollout.zh-CN.md)
+
+在当前公开层，这组界面应和已落地的本地 `opl` shell 与 `opl web` pilot 一起理解：它们共同构成 formal-entry contract 之上的活跃前台。
 
 ### 2. OPL 合同界面
 

@@ -7,7 +7,8 @@
 The priority of the current phase is not to launch every workstream at once.
 It is to freeze the `OPL Gateway` language and stabilize the domain federation around the workstreams that are already real.
 
-As of `2026-04-10`, the public `OPL` mainline remains at the absorbed `Phase 2 / Minimal admitted-domain federation activation package`.
+As of `2026-04-10`, the absorbed `Phase 2 / Minimal admitted-domain federation activation package` remains the latest completed top-level activation package beneath `OPL`.
+Above it, the public `OPL` mainline has already moved into `family-level front desk / hosted runtime hardening / domain lightweight direct-entry alignment`.
 
 What is already clear today:
 
@@ -25,10 +26,11 @@ What is already clear today:
 - `OPL` also now has a landed local web front desk pilot, plus a writable workspace-registry surface, a managed session ledger, and a machine-readable family handoff bundle
 - the hosted / web front-desk benchmark is now frozen: `LibreChat-first` is the shortest pilot path, and the real hosted shell pilot package is now landed, while the long-line target remains an `OPL`-owned web front desk
 - the frozen top-level integration choice is `external kernel, managed by OPL product packaging`: do not fork `Hermes-Agent`, and do not make user-managed Hermes installation the product prerequisite
-- the ecosystem is no longer at one uniform `Hermes-Agent` stage: `Med Auto Grant` has landed a true upstream substrate, `Med Auto Science` has completed external runtime bring-up and is moving toward real adapter cutover, `RedCube AI` has already landed upstream runtime-owner cutover plus repo-verified product-entry federation, and `OPL` itself still stays above domain runtime ownership
+- the ecosystem is no longer at one uniform `Hermes-Agent` stage: `Med Auto Grant` has landed a true upstream substrate, `Med Auto Science` has completed external runtime bring-up and is moving toward real adapter cutover, `RedCube AI` has converged route / managed execution onto local `Codex CLI` host-agent runtime while keeping repo-verified product-entry federation, and `OPL` itself still stays above domain runtime ownership
 - the current repository already has a runnable local `TypeScript CLI`-first / read-only gateway baseline
 - that repo-tracked CLI-first / read-only baseline remains the current `OPL` `Phase 1` formal entry contract and public system surface
 - the current top-level formal entry at the OPL layer remains that local `TypeScript CLI`-first / read-only gateway surface rather than a launcher or runtime-owner entry
+- the current user-facing front door above that formal entry is now the local `opl` shell plus the `opl web` pilot and their machine-readable discovery / handoff surfaces
 - the absorbed `Phase 1 exit + next-stage activation package freeze` now acts as the predecessor gate for the current `Minimal admitted-domain federation activation package`
 - `MedAutoScience` and `RedCube AI` now provide the two admitted domain surfaces that are stable enough for this minimum stronger federation activation, while the activation still applies to already admitted domains only
 - the current repository now carries two top-level layers in parallel: the stable `Phase 1` read-only gateway contract surface, and a local direct product-entry shell above it
@@ -58,7 +60,7 @@ The next phase should prioritize:
 - carrying the `Agent-first` plus `Auto-only current repo + future HITL layering` doctrine into future candidate-domain definitions
 - keeping the absorbed `Phase 1 exit + next-stage activation package freeze` explicit as the predecessor gate for the current `Minimal admitted-domain federation activation package`, with every candidate path staying in explicit admission, discovery, routing, and handoff review lanes
 - defining the next candidate domains through clear task boundaries and delivery objects, using the current `task-topology + candidate-domain-backlog + domain-onboarding` path
-- landing and then hardening a service-safe local product-entry shell so it stays Hermes-backed and clearly separated from the read-only gateway contract surface
+- continuing to harden the already landed local product-entry shell so it stays service-safe, clearly separated from the read-only gateway contract surface, and honest about external-kernel ownership
 - extending that landed local shell toward stronger `OPL bootstrap / launcher` responsibility so the future entry remains `OPL`-owned even when the runtime kernel stays external
 - carrying the hosted / web front-desk route as `LibreChat-first pilot -> OPL-owned web front desk` instead of treating a generic chat shell as the final product identity
 
@@ -77,6 +79,7 @@ Any future successful handoff remains `domain_gateway`-only and subject to the n
 At the current `2026-04-10` reassessment, that predecessor freeze has already done its job, and the `Minimal admitted-domain federation activation package` is already absorbed into the current top-level truth.
 The honest current top-level state is a central-sync stop: unless an admitted-domain repository lands a new absorbed delta or the central reference surfaces drift, no new active follow-on tranche is open.
 That absorbed federation package still strengthens top-level federation wording for `MedAutoScience` + `RedCube AI`, keeps the formal entry at the same local `TypeScript CLI`-first / read-only gateway surface, and keeps `Grant Ops`, `Review Ops`, and `Thesis Ops` on their candidate-definition lanes.
+Above that absorbed package, the active public mainline is now the family-level front desk and hosted-entry hardening work around the local `opl` shell, `opl web`, and their machine-readable handoff surfaces.
 
 ## Later Phase
 

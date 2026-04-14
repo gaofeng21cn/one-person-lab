@@ -91,6 +91,7 @@ Human / Agent
 
 - `Phase 1` 公开主线下，CLI-first / read-only gateway baseline 已可运行
 - 已完成的 `Phase 1 / G2 release-closeout` 已把它收口成稳定、单一、repo-tracked 的 `G2 stable public baseline`
+- 在这条未变化的 formal-entry baseline 之上，当前活跃的公开前台已经是已落地的本地 `opl` shell、`opl web` pilot，以及围绕它们的 machine-readable discovery / handoff surface
 - 已完成的 repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` 继续停留在 planning-contract closeout 边界
 - repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review Ops` 然后 `Thesis Ops`
 - 已 absorb 的前序 follow-on 是 `Phase 1 exit + next-stage activation package freeze`
@@ -214,6 +215,7 @@ Human / Agent
 
 - 第一版真实 gateway 仍应保持薄
 - 顶层职责是 route，不是吞掉 domain logic
+- 当前已经落地的本地 front desk 就是这层“薄入口”的第一版；后续产品化应继续硬化它，而不是改写成某个通用聊天壳的产品身份
 
 完成信号：
 
