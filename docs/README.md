@@ -140,3 +140,4 @@ They explain why a freeze happened, but they are not the living truth surface fo
 
 - Documentation governance now freezes in [series-doc-governance-checklist.md](./references/series-doc-governance-checklist.md), the core maintainer working set, and the repo-tracked contract/doc surfaces rather than in `AGENTS.md` alone.
 - The current four-repo alignment snapshot is tracked in [four-repo-doc-series-sync-summary-2026-04-14.md](./references/four-repo-doc-series-sync-summary-2026-04-14.md).
+- The reusable intake starting point now lives in [four-repo-doc-intake-template.md](./references/four-repo-doc-intake-template.md), and the default central drift audit command is `npm run audit:doc-series`.

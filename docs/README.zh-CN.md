@@ -140,3 +140,4 @@
 
 - 文档治理规则现在统一冻结在 [series-doc-governance-checklist.md](./references/series-doc-governance-checklist.md)、docs 核心工作集，以及仓库跟踪的 contract/doc surface 中，而不再只写在 `AGENTS.md`。
 - 当前四仓文档对齐快照统一收口在 [four-repo-doc-series-sync-summary-2026-04-14.md](./references/four-repo-doc-series-sync-summary-2026-04-14.md)。
+- 可复用的 intake 起手模板现在收口在 [four-repo-doc-intake-template.md](./references/four-repo-doc-intake-template.md)，默认中央漂移审计命令是 `npm run audit:doc-series`。
