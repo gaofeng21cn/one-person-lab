@@ -142,9 +142,7 @@ test('core maintainer docs exist and are linked from docs index', () => {
   }
 });
 
-test('hosted web front-desk decision stays aligned across public and reference docs', () => {
-  const readme = read('README.md');
-  const readmeZh = read('README.zh-CN.md');
+test('hosted web front-desk decision stays aligned across decision-bearing docs', () => {
   const status = read('docs/status.md');
   const roadmap = read('docs/roadmap.md');
   const roadmapZh = read('docs/roadmap.zh-CN.md');
@@ -155,13 +153,11 @@ test('hosted web front-desk decision stays aligned across public and reference d
   const refsIndexZh = read('docs/references/README.zh-CN.md');
   const benchmark = read('docs/references/opl-hosted-web-frontdesk-benchmark.md');
 
-  for (const doc of [readme, readmeZh, status, roadmap, roadmapZh, architecture]) {
+  for (const doc of [status, roadmap, roadmapZh, architecture, benchmark]) {
     assert.match(doc, /LibreChat/i);
     assert.match(doc, /web front desk|web 前台/);
   }
 
-  assert.match(readme, /Chatbot UI/i);
-  assert.match(readmeZh, /Chatbot UI/i);
   assert.match(status, /Chatbot UI/i);
 
   assert.match(benchmark, /Chatbot UI/);

@@ -1401,6 +1401,7 @@ test('help advertises the local web front-desk pilot command surface', () => {
   assert.ok(
     output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk-readiness'),
   );
+  assert.ok(
     output.help.commands.some((entry: { command: string }) => entry.command === 'launch-domain'),
   );
 

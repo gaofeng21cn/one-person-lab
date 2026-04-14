@@ -76,6 +76,18 @@ Layer 3 holds review, audit, rollout, benchmark, and supporting reference materi
 It is repo-tracked, but it should not crowd the public front page.
 
 - [Reference Index](./references/README.md)
+- `docs/references/contract-convergence-v1-execution-board.md`
+- `docs/references/hermes-agent-runtime-substrate-benchmark.md`
+- `docs/references/family-orchestration-contract-absorb-crewai.md`
+- `docs/references/family-lightweight-direct-entry-rollout-board.md`
+- `docs/references/opl-hosted-web-frontdesk-benchmark.md`
+- `docs/references/opl-product-entry-and-hermes-kernel-integration.md`
+- `docs/references/family-product-entry-and-domain-handoff-architecture.md`
+- `docs/references/family-executor-adapter-defaults.md`
+- `docs/references/hermes-native-executor-proof-lane.md`
+- `docs/references/mas-top-level-cutover-board.md`
+- `docs/references/opl-phase-2-central-reference-sync-board.md`
+- `docs/references/opl-phase-2-admitted-domain-delta-intake-refresh.md`
 - `docs/references/opl-gateway-rollout*`
 - `docs/references/opl-gateway-acceptance-test-spec*`
 - `docs/references/opl-candidate-domain-backlog*`
