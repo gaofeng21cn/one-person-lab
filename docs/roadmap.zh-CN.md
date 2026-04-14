@@ -8,6 +8,9 @@
 而是先冻结 `OPL Gateway` 语言，并把已经真实存在的 domain federation 站稳。
 
 截至 `2026-04-10`，`OPL` 公开主线仍停留在已 absorbed 的 `Phase 2 / Minimal admitted-domain federation activation package`。
+这条表述保留的是 formal-entry / activation-package 层最近一次完成的顶层 freeze。
+截至 `2026-04-10`，已 absorbed 的 `Phase 2 / Minimal admitted-domain federation activation package` 继续作为 `OPL` 下方最近一次完成的顶层 activation package 保留。
+在这层之上，`OPL` 公开主线已经进入 `family-level front desk / hosted runtime hardening / domain lightweight direct-entry alignment`。
 
 当前已明确的状态：
 
@@ -25,10 +28,11 @@
 - `OPL` 现在也已经落下本地 web front desk pilot，以及可写 workspace registry、managed session ledger 和 machine-readable family handoff bundle
 - hosted / web 前台的选型现已冻结：短期最快路线是 `LibreChat-first` pilot，而且真实的 hosted shell pilot package 已落地；长期仍回到 `OPL` 自有 web front desk
 - 当前已经冻结的顶层 integration choice 是 `external kernel, managed by OPL product packaging`：不 fork `Hermes-Agent`，也不把用户自管 Hermes 安装变成产品前置条件
-- 生态当前已经不再是一刀切阶段：`Med Auto Grant` 已有真实上游 substrate，`Med Auto Science` 已进入 real adapter cutover 前态，`RedCube AI` 也已经落下 upstream runtime-owner cutover 与 repo-verified product-entry federation，而 `OPL` 现在已经拥有本地 product-entry shell
+- 生态当前已经不再是一刀切阶段：`Med Auto Grant` 已有真实上游 substrate，`Med Auto Science` 已进入 real adapter cutover 前态，`RedCube AI` 已把 route / managed execution 收口到本地 `Codex CLI` host-agent runtime，同时保留 repo-verified product-entry federation，而 `OPL` 现在已经拥有本地 product-entry shell
 - 当前 repo 已有可运行的本地 `TypeScript CLI`-first / read-only gateway baseline
 - 这条 repo-tracked 的 CLI-first / read-only baseline 也仍然是 `OPL` 在 `Phase 1` 的 formal entry contract 与 public system surface
 - 当前 OPL 层的 top-level formal entry 仍然就是这条本地 `TypeScript CLI`-first / read-only gateway surface，而不是 launcher 或 runtime-owner 入口
+- 这条 formal entry 之上的当前用户前台，已经是本地 `opl` shell、`opl web` pilot 以及围绕它们的 machine-readable discovery / handoff surface
 - 已吸收的 `Phase 1 exit + next-stage activation package freeze` 现在已经转化成当前 `Minimal admitted-domain federation activation package` 的前序门槛
 - `MedAutoScience` 与 `RedCube AI` 现在已经构成支撑这次最小 stronger federation activation 的两条 admitted domain surface；但这次 activation 仍然只作用于已 admitted domain
 - 当前 repo 在顶层并行持有两层：稳定的 `Phase 1` read-only gateway contract surface，以及其上的本地 direct product-entry shell
@@ -58,7 +62,7 @@
 - 把 `Agent-first` 加“当前 `Auto-only` 主线 + 未来 `HITL` 分层”这套原则带入后续候选 domain 的定义
 - 把已 absorb 的 `Phase 1 exit + next-stage activation package freeze` 继续显式保留为当前 `Minimal admitted-domain federation activation package` 的前序门槛，并让所有 candidate path 持续处在 admission、discovery、routing 与 handoff 的显式审查轨道中
 - 用清楚的任务边界与交付对象定义下一个候选 domain，并优先沿用当前 `task-topology + candidate-domain-backlog + domain-onboarding` 这条路径
-- 把本地 product-entry shell 进一步落成并继续硬化为 service-safe、Hermes-backed、且不与 read-only gateway contract 混淆的真实入口层
+- 继续把已经落地的本地 product-entry shell 硬化为 service-safe、并与 read-only gateway contract 清楚分层、同时对 external-kernel ownership 保持诚实的真实入口层
 - 继续冻结 `OPL bootstrap / launcher` 的职责边界，确保未来即使 kernel 继续外置，产品入口仍由 `OPL` 自己持有
 - 把 hosted / web 前台路线固定为 `LibreChat-first pilot -> OPL 自有 web front desk`，不把任何通用聊天壳误写成最终产品身份
 
@@ -76,6 +80,7 @@
 在当前 `2026-04-10` 的重评估下，这个前序 freeze 已经完成它的使命，而 `Minimal admitted-domain federation activation package` 也已经被吸收到当前顶层真相里。
 当前最诚实的顶层状态是中央同步停车：除非 admitted-domain 仓再次落下新的 absorbed delta，或中央 reference surfaces 被证实发生真实漂移，否则当前没有新的 active follow-on tranche 打开。
 这份已 absorbed 的 federation package 继续针对 `MedAutoScience` + `RedCube AI` 这两条 admitted domain surface 收紧顶层 federation wording，同时保持 formal entry 不变，仍然是本地 `TypeScript CLI`-first / read-only gateway surface；`Grant Ops`、`Review Ops` 与 `Thesis Ops` 继续沿各自的 candidate-definition 路径推进。
+而在这份已 absorbed package 之上，当前真正活跃的公开主线已经转到围绕本地 `opl` shell、`opl web` 与 machine-readable handoff surface 的 family-level front desk / hosted-entry hardening 工作。
 
 ## 更后续阶段
 
