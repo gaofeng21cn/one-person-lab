@@ -1333,6 +1333,9 @@ test('help advertises the local web front-desk pilot command surface', () => {
     output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk-manifest'),
   );
   assert.ok(
+    output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk-domain-wiring'),
+  );
+  assert.ok(
     output.help.commands.some((entry: { command: string }) => entry.command === 'launch-domain'),
   );
 
@@ -1384,6 +1387,25 @@ test('frontdesk-manifest exposes the hosted-friendly OPL shell contract without 
     output.frontdesk_manifest.hosted_runtime_readiness.librechat_pilot_package_landed,
     true,
   );
+  assert.equal(output.frontdesk_manifest.domain_wiring_surface.surface_id, 'opl_frontdesk_domain_wiring');
+  assert.equal(output.frontdesk_manifest.domain_wiring_surface.endpoint, '/api/frontdesk-domain-wiring');
+  assert.equal(output.frontdesk_manifest.domain_wiring_surface.summary.total_projects_count, 2);
+  assert.equal(output.frontdesk_manifest.domain_wiring_surface.summary.recommended_entry_surfaces_count, 0);
+});
+
+test('frontdesk-domain-wiring exposes a dedicated hosted-friendly family wiring surface', () => {
+  const output = runCli(['frontdesk-domain-wiring']);
+
+  assert.equal(output.version, 'g2');
+  assert.equal(output.frontdesk_domain_wiring.surface_id, 'opl_frontdesk_domain_wiring');
+  assert.equal(output.frontdesk_domain_wiring.entry_surface, 'opl_local_web_frontdesk_pilot');
+  assert.equal(output.frontdesk_domain_wiring.runtime_substrate, 'external_hermes_kernel');
+  assert.equal(output.frontdesk_domain_wiring.hosted_runtime_readiness.surface_kind, 'opl_hosted_runtime_readiness');
+  assert.equal(output.frontdesk_domain_wiring.domain_entry_parity.surface_kind, 'opl_domain_entry_parity');
+  assert.equal(output.frontdesk_domain_wiring.summary.total_projects_count, 2);
+  assert.equal(output.frontdesk_domain_wiring.domain_entry_parity.summary.blocked_projects_count, 2);
+  assert.equal(output.frontdesk_domain_wiring.summary.recommended_entry_surfaces_count, 0);
+  assert.deepEqual(output.frontdesk_domain_wiring.recommended_entry_surfaces, []);
 });
 
 test('frontdesk-service commands manage the local launchd wrapper for the web pilot', async () => {
@@ -1502,6 +1524,10 @@ test('frontdesk-hosted-bundle exposes a hosted-pilot-ready bundle with base-path
     output.hosted_pilot_bundle.hosted_runtime_readiness.self_hostable_pilot_package_landed,
     true,
   );
+  assert.equal(output.hosted_pilot_bundle.domain_wiring_surface.surface_id, 'opl_frontdesk_domain_wiring');
+  assert.equal(output.hosted_pilot_bundle.domain_wiring_surface.endpoint, '/pilot/opl/api/frontdesk-domain-wiring');
+  assert.equal(output.hosted_pilot_bundle.domain_wiring_surface.summary.total_projects_count, 2);
+  assert.equal(output.hosted_pilot_bundle.domain_wiring_surface.summary.recommended_entry_surfaces_count, 0);
 });
 
 test('frontdesk-hosted-package exports a self-hostable hosted pilot package with runtime and proxy assets', () => {
@@ -2614,6 +2640,7 @@ exit 1
       entry_surface: string;
       hosted_status: string;
       api: {
+        frontdesk_domain_wiring: string;
         librechat_package: string;
       };
       listening: {
@@ -2624,6 +2651,7 @@ exit 1
     assert.equal(startup.payload.version, 'g2');
     assert.equal(webFrontdesk.entry_surface, 'opl_local_web_frontdesk_pilot');
     assert.equal(webFrontdesk.hosted_status, 'librechat_pilot_landed');
+    assert.equal(webFrontdesk.api.frontdesk_domain_wiring, '/api/frontdesk-domain-wiring');
     assert.equal(webFrontdesk.api.librechat_package, '/api/librechat-package');
 
     const baseUrl = String(webFrontdesk.listening.base_url);
@@ -2660,6 +2688,12 @@ exit 1
     const manifestPayload = await manifestResponse.json();
     assert.equal(manifestPayload.frontdesk_manifest.shell_integration_target, 'librechat_first');
     assert.equal(manifestPayload.frontdesk_manifest.endpoints.sessions, '/api/sessions');
+
+    const wiringResponse = await fetch(`${baseUrl}/api/frontdesk-domain-wiring`);
+    const wiringPayload = await wiringResponse.json();
+    assert.equal(wiringPayload.frontdesk_domain_wiring.surface_id, 'opl_frontdesk_domain_wiring');
+    assert.equal(wiringPayload.frontdesk_domain_wiring.summary.total_projects_count, 2);
+    assert.equal(wiringPayload.frontdesk_domain_wiring.summary.recommended_entry_surfaces_count, 0);
 
     const domainManifestResponse = await fetch(`${baseUrl}/api/domain-manifests`);
     const domainManifestPayload = await domainManifestResponse.json();

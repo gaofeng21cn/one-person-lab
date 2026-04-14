@@ -23,7 +23,7 @@ The completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening`
 The repo-tracked `Phase 1` candidate-domain closeout order is frozen as `Review Ops` then `Thesis Ops`: both candidate paths remain below domain admission, `G2` discovery readiness, `G3` routed-action readiness, and handoff readiness.
 The absorbed predecessor gate is `Phase 1 exit + next-stage activation package freeze`, and the current `Phase 2 / Minimal admitted-domain federation activation package` is already absorbed into repo-tracked top-level truth for the already admitted `MedAutoScience` and `RedCube AI` domain surfaces. No new active follow-on tranche is currently open; another central sync only becomes truthful when an admitted-domain repository lands a new absorbed delta or the central reference surfaces drift. Runtime ownership continues to stay with the admitted domains.
 The current repo-tracked formal entry at the OPL layer therefore remains the local `TypeScript CLI`-first / read-only gateway surface.
-The current user-facing front door above that contract is now the local `opl` shell plus the `opl web` pilot and their machine-readable discovery / handoff surfaces.
+The current user-facing front door above that contract is now the local `opl` shell plus the `opl web` pilot and their machine-readable discovery / handoff surfaces, including the hosted-friendly `frontdesk-manifest`, `frontdesk-domain-wiring`, `hosted-bundle`, and related handoff surfaces.
 That delivery target keeps the existing top-level contract language executable through a local CLI surface, while any honest upstream `Hermes-Agent` rollout remains a domain-side migration target rather than a current OPL-layer fact.
 
 ## Current reference-sync companions

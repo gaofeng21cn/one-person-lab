@@ -81,6 +81,7 @@
 - `/api/ask`
 - `/api/health`
 - `/api/frontdesk-manifest`
+- `/api/frontdesk-domain-wiring`
 - `/api/hosted-bundle`
 - `/api/hosted-package`
 - `/api/handoff-envelope`
@@ -99,6 +100,7 @@
 已完成：
 
 - `opl frontdesk-manifest`
+- `opl frontdesk-domain-wiring`
 - `opl frontdesk-hosted-bundle`
 - `opl frontdesk-hosted-package`
 - `opl frontdesk-librechat-package`
@@ -107,6 +109,7 @@
 当前含义：
 
 - `OPL` 现在不只是“有一个本地浏览器 pilot”，而是已经冻结出一层 future hosted shell 可消费的 front-desk contract；
+- `frontdesk-domain-wiring` 又把 `hosted_runtime_readiness / domain_entry_parity / recommended_entry_surfaces` 收成 hosted shell 与本地 front desk 都能直接消费的 family wiring truth；
 - hosted-pilot-ready shell bundle 已经把 base-path-aware 的 entry / API endpoint 一并冻结下来；
 - self-hostable hosted pilot package 已经把 app snapshot、run script、env 模板、`systemd` unit、service-install / healthcheck helper 与反向代理资产一并导出来；
 - `frontdesk-librechat-package` 已经把 `LibreChat` 外层壳、同源反向代理与 `OPL Front Desk` 的真实 pilot 组合导出来；
@@ -202,6 +205,7 @@
 
 - `managed hosted runtime hardening` 仍未完成，当前仍只是本地 web pilot、hosted-friendly shell contract、self-hostable pilot package 与 `LibreChat-first` hosted shell pilot 的组合，还不能误写成 actual hosted runtime。
 - 顶层 `workspace registry / domain-manifests / dashboard / handoff-envelope / opl web` 已经能消费 domain discovery surface，但 domain locator wiring、`shared_handoff` 一致性与 direct-entry parity 还没有完全压稳。
+- 顶层 `frontdesk-domain-wiring` 已把这件事收成单独 surface，但仍需要随着 domain active binding 和 manifest 成熟度继续推进，而不是把当前 blocked parity 误写成已完成。
 
 ## 推荐下一条执行 issue
 

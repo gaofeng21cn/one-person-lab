@@ -24,7 +24,7 @@
 - `Grant Foundry -> Med Auto Grant` 已是当前活跃的医学 `Grant Ops` 业务仓路径；在 OPL 顶层，它的 federation admission / handoff wording 仍单独门控，而可见里程碑继续是 registry material、`G2` discovery readiness、`G3` routed-action readiness 与 domain-onboarding evidence
 - `OPL` 顶层的统一目标执行范式是 `Agent-first`：当前 domain 仓统一按 `Auto-only` 主线理解，而未来 `Human-in-the-loop` 产品应作为兼容 sibling 或 upper-layer product 复用同一 substrate，而不是把当前仓强行改成同仓双模
 - 当前活跃开发宿主是 Codex-only 本地会话，而优选的未来产品 runtime substrate 方向，仍然是先在某个 domain 仓里诚实证明真实的上游 `Hermes-Agent` 集成
-- `OPL` 现在已经有了以 `opl` 为默认前台的本地 direct product-entry shell；`opl <request...>` 可直接作为 quick ask，而 `opl doctor / ask / chat / resume / sessions / logs / repair-hermes-gateway / frontdesk-manifest / frontdesk-hosted-bundle / frontdesk-hosted-package / frontdesk-librechat-package / session-ledger / handoff-envelope / frontdesk-service-*` 继续作为显式 CLI 界面
+- `OPL` 现在已经有了以 `opl` 为默认前台的本地 direct product-entry shell；`opl <request...>` 可直接作为 quick ask，而 `opl doctor / ask / chat / resume / sessions / logs / repair-hermes-gateway / frontdesk-manifest / frontdesk-domain-wiring / frontdesk-hosted-bundle / frontdesk-hosted-package / frontdesk-librechat-package / session-ledger / handoff-envelope / frontdesk-service-*` 继续作为显式 CLI 界面
 - `OPL` 现在也已经落下本地 web front desk pilot，以及可写 workspace registry、managed session ledger 和 machine-readable family handoff bundle
 - hosted / web 前台的选型现已冻结：短期最快路线是 `LibreChat-first` pilot，而且真实的 hosted shell pilot package 已落地；长期仍回到 `OPL` 自有 web front desk
 - 当前已经冻结的顶层 integration choice 是 `external kernel, managed by OPL product packaging`：不 fork `Hermes-Agent`，也不把用户自管 Hermes 安装变成产品前置条件

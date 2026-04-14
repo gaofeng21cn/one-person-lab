@@ -1,6 +1,39 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+/**
+ * @typedef {object} RepoSpec
+ * @property {string} slug
+ * @property {string} displayName
+ * @property {string} directoryName
+ * @property {string[]=} requiredChecklistPhrases
+ * @property {string[]=} requiredDocsIndexSnippets
+ * @property {string[]=} requiredReferenceIndexSnippets
+ * @property {string[]=} extraRequiredFiles
+ */
+
+/**
+ * @typedef {object} AuditIssue
+ * @property {string} code
+ * @property {string} message
+ */
+
+/**
+ * @typedef {object} RepoAuditResult
+ * @property {string} slug
+ * @property {string} displayName
+ * @property {string | null | undefined} repoPath
+ * @property {AuditIssue[]} issues
+ */
+
+/**
+ * @typedef {object} DocSeriesAudit
+ * @property {boolean} ok
+ * @property {number} repoCount
+ * @property {number} issueCount
+ * @property {RepoAuditResult[]} results
+ */
+
 export const CORE_DOCS = [
   'docs/project.md',
   'docs/status.md',
@@ -51,6 +84,7 @@ const DISALLOWED_DOCS_INDEX_PATTERNS = [
   },
 ];
 
+/** @type {RepoSpec[]} */
 export const DEFAULT_REPO_SPECS = [
   {
     slug: 'opl',
@@ -253,6 +287,10 @@ function auditReferenceIndexes(spec, repoPath, issues) {
   }
 }
 
+/**
+ * @param {{ spec: RepoSpec; repoPath?: string | null }} input
+ * @returns {RepoAuditResult}
+ */
 export function auditRepoSeriesSurface({ spec, repoPath }) {
   const issues = [];
 
@@ -284,6 +322,10 @@ export function auditRepoSeriesSurface({ spec, repoPath }) {
   };
 }
 
+/**
+ * @param {{ repoPathsBySlug?: Record<string, string>; repoSpecs?: RepoSpec[] }=} input
+ * @returns {DocSeriesAudit}
+ */
 export function auditDocSeries({
   repoPathsBySlug,
   repoSpecs = DEFAULT_REPO_SPECS,
@@ -304,6 +346,10 @@ export function auditDocSeries({
   };
 }
 
+/**
+ * @param {DocSeriesAudit} audit
+ * @returns {string}
+ */
 export function formatAuditReport(audit) {
   const lines = [];
 
