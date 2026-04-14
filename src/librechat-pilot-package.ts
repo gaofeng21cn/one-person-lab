@@ -93,13 +93,14 @@ What this package lands:
 - a complete LibreChat-first pilot stack for the hosted shell layer
 - a bundled OPL front-desk package under \`opl-frontdesk/\`
 - a same-origin reverse-proxy template that routes \`/\` to LibreChat and \`${options.basePath}/\` to OPL Front Desk
+- a shipped MCP stdio bridge that lets LibreChat call the OPL front desk over its existing HTTP API
 - a host bring-up guide that keeps Hermes honest as an external kernel dependency
 
 What it does **not** claim:
 
 - managed hosted runtime is still not landed
 - multi-tenant platform hosting is still not landed
-- deep in-chat OPL tool wiring inside LibreChat is still not landed
+- full platform-grade product frontdoor hardening is still not landed
 
 ## Package layout
 
@@ -146,6 +147,7 @@ What it does **not** claim:
 function buildStackEnvExample(options: {
   publicOrigin: string;
   frontdeskPort: number;
+  basePath: string;
 }) {
   const parsed = new URL(options.publicOrigin);
   const publicHttpPort =
@@ -162,6 +164,11 @@ DOMAIN_CLIENT=${options.publicOrigin}
 DOMAIN_SERVER=${options.publicOrigin}
 TRUST_PROXY=1
 NO_INDEX=true
+ALLOW_REGISTRATION=true
+CREDS_KEY=replace_with_32_characters_minimum
+CREDS_IV=replace_with_16_characters
+JWT_SECRET=replace_with_long_random_secret
+JWT_REFRESH_SECRET=replace_with_long_random_refresh_secret
 
 # Runtime dependencies
 MONGO_URI=mongodb://mongodb:27017/LibreChat
@@ -170,6 +177,7 @@ RAG_PORT=8000
 
 # Choose and fill the providers you actually want LibreChat to expose
 OPENAI_API_KEY=user_provided
+OPENAI_BASE_URL=user_provided
 ANTHROPIC_API_KEY=user_provided
 GOOGLE_KEY=user_provided
 
@@ -180,6 +188,7 @@ GID=1000
 # Same-origin routing to the host-side OPL front desk
 PUBLIC_HTTP_PORT=${publicHttpPort}
 OPL_FRONTDESK_UPSTREAM=host.docker.internal:${options.frontdeskPort}
+OPL_FRONTDESK_API_BASE_URL=http://host.docker.internal:${options.frontdeskPort}${options.basePath}/api
 `;
 }
 
@@ -218,10 +227,23 @@ interface:
 
 registration:
   socialLogins: ['github']
+
+mcpServers:
+  opl_frontdesk:
+    type: stdio
+    command: node
+    args:
+      - /app/opl-frontdesk/dist/cli.js
+      - mcp-stdio
+      - --api-base-url
+      - \${OPL_FRONTDESK_API_BASE_URL}
 `;
 }
 
-function buildComposeFile() {
+function buildComposeFile(options: {
+  frontdeskPort: number;
+  basePath: string;
+}) {
   return `services:
   librechat:
     image: registry.librechat.ai/danny-avila/librechat-dev:latest
@@ -237,6 +259,7 @@ function buildComposeFile() {
       RAG_PORT: \${RAG_PORT:-8000}
       RAG_API_URL: http://rag_api:\${RAG_PORT:-8000}
       CONFIG_PATH: /app/librechat.yaml
+      OPL_FRONTDESK_API_BASE_URL: http://host.docker.internal:${options.frontdeskPort}${options.basePath}/api
     volumes:
       - type: bind
         source: ./librechat.yaml
@@ -244,6 +267,7 @@ function buildComposeFile() {
       - ./images:/app/client/public/images
       - ./uploads:/app/uploads
       - ./logs:/app/logs
+      - ../opl-frontdesk/app:/app/opl-frontdesk:ro
     depends_on:
       - mongodb
       - rag_api
@@ -295,7 +319,7 @@ function buildComposeFile() {
     environment:
       OPL_FRONTDESK_UPSTREAM: \${OPL_FRONTDESK_UPSTREAM}
     ports:
-      - "\${PUBLIC_HTTP_PORT:-8080}:80"
+      - "\${PUBLIC_HTTP_PORT:-8080}:\${PUBLIC_HTTP_PORT:-8080}"
     volumes:
       - type: bind
         source: ./Caddyfile
@@ -409,6 +433,7 @@ export function buildLibreChatPilotPackage(
     buildStackEnvExample({
       publicOrigin,
       frontdeskPort: port,
+      basePath,
     }),
   );
   fs.writeFileSync(
@@ -418,7 +443,13 @@ export function buildLibreChatPilotPackage(
       frontdeskEntryUrl,
     }),
   );
-  fs.writeFileSync(composeFilePath, buildComposeFile());
+  fs.writeFileSync(
+    composeFilePath,
+    buildComposeFile({
+      frontdeskPort: port,
+      basePath,
+    }),
+  );
   fs.writeFileSync(
     caddyfilePath,
     buildCaddyfile({

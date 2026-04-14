@@ -41,6 +41,7 @@ type PaperclipControlPlaneFile = {
     auth_header_env: string | null;
     cookie_env: string | null;
     control_company_id: string | null;
+    local_trusted_no_auth: boolean;
   };
   project_bindings: PaperclipProjectBinding[];
 };
@@ -52,6 +53,7 @@ type PaperclipConnectionSummary = {
     cookie_env: string | null;
     header_present: boolean;
     cookie_present: boolean;
+    local_trusted_no_auth: boolean;
   };
   control_company_id: string | null;
 };
@@ -160,6 +162,7 @@ export type PaperclipConfigOptions = {
   authHeaderEnv?: string;
   cookieEnv?: string;
   controlCompanyId?: string;
+  localTrustedNoAuth?: boolean;
 };
 
 export type PaperclipBindOptions = {
@@ -207,8 +210,12 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-function normalizeOptionalString(value?: string | null) {
-  const trimmed = value?.trim();
+function normalizeOptionalString(value?: unknown) {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
   return trimmed ? trimmed : null;
 }
 
@@ -282,6 +289,7 @@ function readPaperclipControlPlaneFile(): PaperclipControlPlaneFile {
         auth_header_env: null,
         cookie_env: null,
         control_company_id: null,
+        local_trusted_no_auth: false,
       },
       project_bindings: [],
     };
@@ -303,6 +311,7 @@ function readPaperclipControlPlaneFile(): PaperclipControlPlaneFile {
         auth_header_env: normalizeOptionalString(parsed.config.auth_header_env),
         cookie_env: normalizeOptionalString(parsed.config.cookie_env),
         control_company_id: normalizeOptionalString(parsed.config.control_company_id),
+        local_trusted_no_auth: Boolean(parsed.config.local_trusted_no_auth),
       },
       project_bindings: parsed.project_bindings.map((binding) => ({
         project_id: String(binding.project_id),
@@ -637,6 +646,7 @@ function buildConnectionSummary(file: PaperclipControlPlaneFile): PaperclipConne
       cookie_env: cookieEnv,
       header_present: Boolean(headerEnv && normalizeOptionalString(process.env[headerEnv])),
       cookie_present: Boolean(cookieEnv && normalizeOptionalString(process.env[cookieEnv])),
+      local_trusted_no_auth: file.config.local_trusted_no_auth,
     },
     control_company_id: file.config.control_company_id,
   };
@@ -647,11 +657,12 @@ function computeReadiness(summary: PaperclipControlPlaneSummary['connection']) {
   const hasControlCompany = Boolean(summary.control_company_id);
   const hasAuth = summary.auth.header_present || summary.auth.cookie_present;
   const declaredAuth = Boolean(summary.auth.header_env || summary.auth.cookie_env);
+  const localTrustedNoAuth = summary.auth.local_trusted_no_auth;
 
-  if (hasBaseUrl && hasControlCompany && declaredAuth && hasAuth) {
+  if (hasBaseUrl && hasControlCompany && ((declaredAuth && hasAuth) || localTrustedNoAuth)) {
     return 'configured' as const;
   }
-  if (hasBaseUrl || hasControlCompany || declaredAuth) {
+  if (hasBaseUrl || hasControlCompany || declaredAuth || localTrustedNoAuth) {
     return 'partial' as const;
   }
   return 'not_configured' as const;
@@ -737,6 +748,10 @@ export function configurePaperclipControlPlane(
       options.controlCompanyId !== undefined
         ? normalizeOptionalString(options.controlCompanyId)
         : file.config.control_company_id,
+    local_trusted_no_auth:
+      options.localTrustedNoAuth !== undefined
+        ? options.localTrustedNoAuth
+        : file.config.local_trusted_no_auth,
   };
 
   writePaperclipControlPlaneFile(file);
@@ -802,7 +817,7 @@ function requirePaperclipRequestConfig(summary: PaperclipControlPlaneSummary): P
     headers.cookie = cookieValue;
   }
 
-  if (!headers.authorization && !headers.cookie) {
+  if (!headers.authorization && !headers.cookie && !summary.connection.auth.local_trusted_no_auth) {
     throw new GatewayContractError(
       'paperclip_not_configured',
       'Paperclip auth env is declared but no auth value is currently available in the environment.',
@@ -819,6 +834,139 @@ function requirePaperclipRequestConfig(summary: PaperclipControlPlaneSummary): P
   };
 }
 
+function isLoopbackBaseUrl(baseUrl: string) {
+  const parsed = new URL(baseUrl);
+  return ['127.0.0.1', 'localhost', '::1', '[::1]'].includes(parsed.hostname);
+}
+
+async function fetchPaperclipJson(baseUrl: string, pathName: string) {
+  const response = await fetch(`${normalizeBaseUrl(baseUrl)}${pathName}`, {
+    headers: {
+      connection: 'close',
+    },
+  });
+  const raw = await response.text();
+  const payload = raw.trim().length > 0 ? JSON.parse(raw) as unknown : null;
+
+  if (!response.ok) {
+    throw new GatewayContractError(
+      'paperclip_request_failed',
+      'Paperclip request failed while probing the local trusted control plane.',
+      {
+        url: `${normalizeBaseUrl(baseUrl)}${pathName}`,
+        status: response.status,
+        response: payload,
+      },
+    );
+  }
+
+  return payload;
+}
+
+type PaperclipBootstrapLocalOptions = {
+  workspacePath: string;
+  projectId: string;
+  explicitBaseUrl?: string;
+};
+
+type PaperclipCompanySummary = {
+  id: string;
+  name?: string;
+};
+
+type PaperclipProjectSummary = {
+  id: string;
+  name?: string;
+};
+
+type PaperclipWorkspaceSummary = {
+  id: string;
+  cwd?: string;
+};
+
+export async function bootstrapLocalPaperclipControlPlane(
+  contracts: GatewayContracts,
+  options: PaperclipBootstrapLocalOptions,
+) {
+  const existing = readPaperclipControlPlaneFile();
+  const normalizedWorkspacePath = path.resolve(options.workspacePath);
+  const candidates = [
+    options.explicitBaseUrl,
+    existing.config.base_url,
+    'http://127.0.0.1:3100',
+    'http://127.0.0.1:4321',
+  ]
+    .map((value) => normalizeOptionalString(value))
+    .filter((value, index, values): value is string => Boolean(value) && values.indexOf(value) === index);
+
+  for (const candidate of candidates) {
+    if (!isLoopbackBaseUrl(candidate)) {
+      continue;
+    }
+
+    try {
+      const health = await fetchPaperclipJson(candidate, '/api/health') as Record<string, unknown>;
+      const deploymentMode = normalizeOptionalString(health.deploymentMode);
+      const deploymentExposure = normalizeOptionalString(health.deploymentExposure);
+      if (deploymentMode !== 'local_trusted' || deploymentExposure !== 'private') {
+        continue;
+      }
+
+      const companies = await fetchPaperclipJson(candidate, '/api/companies') as PaperclipCompanySummary[];
+      const company = companies.find((entry) => typeof entry.id === 'string') ?? null;
+      if (!company) {
+        continue;
+      }
+
+      configurePaperclipControlPlane(contracts, {
+        baseUrl: candidate,
+        authHeaderEnv: '',
+        cookieEnv: '',
+        controlCompanyId: company.id,
+        localTrustedNoAuth: true,
+      });
+
+      const projects = await fetchPaperclipJson(
+        candidate,
+        `/api/companies/${company.id}/projects`,
+      ) as PaperclipProjectSummary[];
+
+      for (const project of projects) {
+        if (!project?.id) {
+          continue;
+        }
+
+        const workspaces = await fetchPaperclipJson(
+          candidate,
+          `/api/projects/${project.id}/workspaces`,
+        ) as PaperclipWorkspaceSummary[];
+        const matchingWorkspace = workspaces.find((workspace) =>
+          normalizeOptionalString(workspace.cwd) === normalizedWorkspacePath
+        );
+
+        if (!matchingWorkspace) {
+          continue;
+        }
+
+        bindPaperclipProject(contracts, {
+          projectId: options.projectId,
+          companyId: company.id,
+          paperclipProjectId: project.id,
+          projectWorkspaceId: matchingWorkspace.id,
+          executionWorkspacePreference: 'reuse_existing',
+        });
+        break;
+      }
+
+      return buildPaperclipControlPlaneSummary(contracts);
+    } catch {
+      // Try the next candidate base URL.
+    }
+  }
+
+  return buildPaperclipControlPlaneSummary(contracts);
+}
+
 async function paperclipRequest(
   config: PaperclipRequestConfig,
   method: 'GET' | 'POST',
@@ -828,7 +976,10 @@ async function paperclipRequest(
   const url = `${config.baseUrl}${pathName}`;
   const response = await fetch(url, {
     method,
-    headers: config.headers,
+    headers: {
+      ...config.headers,
+      connection: 'close',
+    },
     body: body ? JSON.stringify(body) : undefined,
   });
 
