@@ -16,6 +16,8 @@
 
 ## 一、统一收敛与状态对齐
 
+- `series-doc-governance-checklist.md`
+- `four-repo-doc-series-sync-summary-2026-04-14.md`
 - `contract-convergence-v1-execution-board.md`
 - `ecosystem-status-matrix.md`
 - `family-user-facing-maturity-roadmap.md`
@@ -84,5 +86,6 @@
 ## 使用规则
 
 - 这些文档可以解释“为什么会这样冻结”，但不能反过来改写 `README*`、`docs/README*` 与核心五件套。
+- `series-doc-governance-checklist.md` 是当前仓与四仓系列项目保持一致时使用的 repo-scope 审计清单；带日期的 sync summary 负责记录某一次具体跨仓 intake / 对齐结果。
 - 新参考文档优先按上面的五类归档；如果只是历史 closeout 或迁移痕迹，也应继续留在第三层，不要回灌到公开主线。
 - 退役执行面的 runbook、长线提示词模板和 worktree 规程，不再作为 `docs/references/` 的默认阅读入口；统一从 `docs/history/omx/` 进入。

@@ -176,6 +176,38 @@ test('hosted web front-desk decision stays aligned across public and reference d
   }
 });
 
+test('docs governance checklist and four-repo sync summary keep the series audit surface explicit', () => {
+  const docsIndex = read('docs/README.md');
+  const docsIndexZh = read('docs/README.zh-CN.md');
+  const refsIndex = read('docs/references/README.md');
+  const refsIndexZh = read('docs/references/README.zh-CN.md');
+  const checklist = read('docs/references/series-doc-governance-checklist.md');
+  const summary = read('docs/references/four-repo-doc-series-sync-summary-2026-04-14.md');
+
+  for (const doc of [docsIndex, docsIndexZh, refsIndex, refsIndexZh]) {
+    assert.match(doc, /series-doc-governance-checklist\.md/);
+  }
+
+  assert.match(docsIndex, /four-repo-doc-series-sync-summary-2026-04-14\.md/);
+  assert.match(docsIndexZh, /four-repo-doc-series-sync-summary-2026-04-14\.md/);
+  assert.doesNotMatch(docsIndex, /Documentation governance lives in \[AGENTS\.md]/);
+  assert.doesNotMatch(docsIndexZh, /文档治理规则统一收口在 \[AGENTS\.md]/);
+
+  for (const label of ['One Person Lab', 'Med Auto Science', 'Med Auto Grant', 'RedCube AI']) {
+    assert.match(checklist, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    assert.match(summary, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  }
+
+  assert.match(checklist, /docs\/project\.md/);
+  assert.match(checklist, /docs\/status\.md/);
+  assert.match(checklist, /docs\/architecture\.md/);
+  assert.match(checklist, /docs\/invariants\.md/);
+  assert.match(checklist, /docs\/decisions\.md/);
+  assert.match(checklist, /scripts\/verify\.sh meta/);
+  assert.match(summary, /docs\/references\/series-doc-governance-checklist\.md/);
+  assert.match(summary, /scripts\/verify\.sh meta/);
+});
+
 test('repo-tracked README/docs/contracts markdown links resolve locally', () => {
   const files = [
     ...collectMarkdownFiles('README.md'),
