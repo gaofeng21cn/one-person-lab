@@ -183,6 +183,7 @@ test('docs governance checklist and four-repo sync summary keep the series audit
   const refsIndexZh = read('docs/references/README.zh-CN.md');
   const checklist = read('docs/references/series-doc-governance-checklist.md');
   const summary = read('docs/references/four-repo-doc-series-sync-summary-2026-04-14.md');
+  const intakeTemplate = read('docs/references/four-repo-doc-intake-template.md');
 
   for (const doc of [docsIndex, docsIndexZh, refsIndex, refsIndexZh]) {
     assert.match(doc, /series-doc-governance-checklist\.md/);
@@ -190,6 +191,10 @@ test('docs governance checklist and four-repo sync summary keep the series audit
 
   assert.match(docsIndex, /four-repo-doc-series-sync-summary-2026-04-14\.md/);
   assert.match(docsIndexZh, /four-repo-doc-series-sync-summary-2026-04-14\.md/);
+  assert.match(docsIndex, /four-repo-doc-intake-template\.md/);
+  assert.match(docsIndexZh, /four-repo-doc-intake-template\.md/);
+  assert.match(refsIndex, /four-repo-doc-intake-template\.md/);
+  assert.match(refsIndexZh, /four-repo-doc-intake-template\.md/);
   assert.doesNotMatch(docsIndex, /Documentation governance lives in \[AGENTS\.md]/);
   assert.doesNotMatch(docsIndexZh, /文档治理规则统一收口在 \[AGENTS\.md]/);
 
@@ -198,6 +203,7 @@ test('docs governance checklist and four-repo sync summary keep the series audit
     assert.match(summary, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
 
+  assert.match(checklist, /第二真相源/);
   assert.match(checklist, /docs\/project\.md/);
   assert.match(checklist, /docs\/status\.md/);
   assert.match(checklist, /docs\/architecture\.md/);
@@ -206,6 +212,11 @@ test('docs governance checklist and four-repo sync summary keep the series audit
   assert.match(checklist, /scripts\/verify\.sh meta/);
   assert.match(summary, /docs\/references\/series-doc-governance-checklist\.md/);
   assert.match(summary, /scripts\/verify\.sh meta/);
+  assert.match(intakeTemplate, /npm run audit:doc-series/);
+  assert.match(intakeTemplate, /是否触及 formal entry wording/);
+  assert.match(intakeTemplate, /是否触及 runtime owner wording/);
+  assert.match(intakeTemplate, /是否触及 product-entry truth/);
+  assert.match(intakeTemplate, /是否已吸收到各自 `main`/);
 });
 
 test('repo-tracked README/docs/contracts markdown links resolve locally', () => {
