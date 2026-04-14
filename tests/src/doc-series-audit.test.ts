@@ -12,6 +12,28 @@ import {
   formatAuditReport,
 } from '../../scripts/doc-series-audit-lib.mjs';
 
+type RepoSpec = {
+  slug: string;
+  displayName: string;
+  directoryName: string;
+  requiredChecklistPhrases?: string[];
+  requiredDocsIndexSnippets?: string[];
+  requiredReferenceIndexSnippets?: string[];
+  extraRequiredFiles?: string[];
+};
+
+type AuditIssue = {
+  code: string;
+  message: string;
+};
+
+type RepoAuditResult = {
+  slug: string;
+  displayName: string;
+  repoPath?: string | null;
+  issues: AuditIssue[];
+};
+
 function writeFile(baseDir: string, relativePath: string, content: string) {
   const absolutePath = path.join(baseDir, relativePath);
   fs.mkdirSync(path.dirname(absolutePath), { recursive: true });
@@ -29,7 +51,7 @@ function createRepoFixture(baseDir: string, spec: (typeof DEFAULT_REPO_SPECS)[nu
   writeFile(baseDir, 'README.zh-CN.md', '# README\n');
 
   const docsIndexSnippets = [
-    ...CORE_DOCS.map((relativePath) => path.basename(relativePath)),
+    ...CORE_DOCS.map((relativePath: string) => path.basename(relativePath)),
     ...(spec.requiredDocsIndexSnippets ?? []),
   ].join('\n');
 
@@ -109,12 +131,14 @@ test('auditDocSeries reports docs indexes that still position AGENTS.md as the o
     );
 
     const audit = auditDocSeries({ repoPathsBySlug });
-    const medAutoScience = audit.results.find((result) => result.slug === 'med-autoscience');
+    const medAutoScience = audit.results.find(
+      (result: RepoAuditResult) => result.slug === 'med-autoscience',
+    );
 
     assert.equal(audit.ok, false);
     assert.ok(medAutoScience);
     assert.ok(
-      medAutoScience!.issues.some((issue) => issue.code === 'docs-index-governance-source'),
+      medAutoScience!.issues.some((issue: AuditIssue) => issue.code === 'docs-index-governance-source'),
     );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });

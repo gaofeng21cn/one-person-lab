@@ -9,6 +9,7 @@ import {
 import {
   buildFrontDeskDashboard,
   buildFrontDeskHealth,
+  buildFrontDeskDomainWiring,
   buildFrontDeskManifest,
   buildFrontDeskStart,
   buildHostedPilotBundle,
@@ -143,6 +144,7 @@ type WebFrontDeskStartupPayload = {
     api: {
       health: string;
       frontdesk_manifest: string;
+      frontdesk_domain_wiring: string;
       domain_manifests: string;
       hosted_bundle: string;
       hosted_package: string;
@@ -535,6 +537,7 @@ function buildStartupPayload(context: WebFrontDeskContext): WebFrontDeskStartupP
       api: {
         health: endpoints.health,
         frontdesk_manifest: manifest.frontdesk_manifest.endpoints.manifest,
+        frontdesk_domain_wiring: endpoints.frontdesk_domain_wiring,
         domain_manifests: endpoints.domain_manifests,
         hosted_bundle: endpoints.hosted_bundle,
         hosted_package: endpoints.hosted_package,
@@ -2690,6 +2693,11 @@ async function handleRequest(
 
     if (method === 'GET' && routedPath === '/api/frontdesk-manifest') {
       writeJson(response, 200, buildFrontDeskManifest(context.contracts, { basePath: context.basePath }));
+      return;
+    }
+
+    if (method === 'GET' && routedPath === '/api/frontdesk-domain-wiring') {
+      writeJson(response, 200, buildFrontDeskDomainWiring(context.contracts, { basePath: context.basePath }));
       return;
     }
 

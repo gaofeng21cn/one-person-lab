@@ -23,7 +23,7 @@
 repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review Ops` 然后 `Thesis Ops`：这两条 candidate path 都继续停留在 domain admission、`G2` discovery readiness、`G3` routed-action readiness 与 handoff readiness 之下。
 当前已 absorb 的前序门槛是 `Phase 1 exit + next-stage activation package freeze`；当前这份 `Phase 2 / Minimal admitted-domain federation activation package` 也已经被吸收到 repo-tracked 顶层真相中，只对已经 admitted 的 `MedAutoScience` 与 `RedCube AI` domain surface 生效。当前没有新的 active follow-on tranche 打开；只有 admitted-domain 仓再落下新的 absorbed delta，或中央 reference surfaces 发生真实漂移时，下一次 central sync 才是诚实的。runtime ownership 继续保留在 admitted domain 一侧。
 因此，当前 OPL 层的 repo-tracked formal entry 也仍然是这条本地 `TypeScript CLI`-first / read-only gateway surface。
-而位于这层合同之上的当前用户前台，已经是本地 `opl` shell、`opl web` pilot，以及围绕它们的 machine-readable discovery / handoff surface。
+而位于这层合同之上的当前用户前台，已经是本地 `opl` shell、`opl web` pilot，以及围绕它们的 machine-readable discovery / handoff surface；其中 hosted-friendly 的 `frontdesk-manifest`、`frontdesk-domain-wiring`、`hosted-bundle` 等 surface 已作为当前前台 contract 的一部分落地。
 这个交付目标把已有的顶层 contract language 继续维持为本地 CLI surface 可读取的合同入口；任何诚实的上游 `Hermes-Agent` rollout，仍然属于 domain 侧迁移目标，而不是当前 OPL 层既成事实。
 
 ## 当前参考同步配套文档

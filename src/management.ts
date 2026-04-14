@@ -354,6 +354,158 @@ export function buildDomainEntryParity(projects: DomainManifestCatalogEntry[]) {
   };
 }
 
+function buildRecommendedEntrySurfaces(projects: DomainManifestCatalogEntry[]) {
+  return projects
+    .filter((entry) => entry.status === 'resolved' && entry.manifest?.recommended_command)
+    .map((entry) => ({
+      project_id: entry.project_id,
+      project: entry.project,
+      binding_id: entry.binding_id,
+      manifest_target_domain_id: entry.manifest?.target_domain_id ?? null,
+      frontdesk_surface: entry.manifest?.frontdesk_surface ?? null,
+      operator_loop_shell_key: entry.manifest?.operator_loop_surface?.shell_key ?? null,
+      operator_loop_command: entry.manifest?.operator_loop_surface?.command ?? null,
+      operator_loop_surface_kind: entry.manifest?.operator_loop_surface?.surface_kind ?? null,
+      operator_loop_summary: entry.manifest?.operator_loop_surface?.summary ?? null,
+      operator_loop_continuation_command: entry.manifest?.operator_loop_surface?.continuation_command ?? null,
+      operator_loop_actions: entry.manifest?.operator_loop_actions ?? {},
+      product_entry_start: entry.manifest?.product_entry_start ?? null,
+      product_entry_start_resume_surface_kind:
+        entry.manifest?.product_entry_start?.resume_surface?.surface_kind ?? null,
+      product_entry_start_mode_ids:
+        entry.manifest?.product_entry_start?.modes.map((mode) => mode.mode_id) ?? [],
+      product_entry_overview: entry.manifest?.product_entry_overview ?? null,
+      product_entry_preflight: entry.manifest?.product_entry_preflight ?? null,
+      product_entry_quickstart: entry.manifest?.product_entry_quickstart ?? null,
+      manifest_version: entry.manifest?.manifest_version ?? null,
+      recommended_shell: entry.manifest?.recommended_shell ?? null,
+      recommended_command: entry.manifest?.recommended_command ?? null,
+      product_entry_shell: entry.manifest?.product_entry_shell ?? {},
+      shared_handoff: entry.manifest?.shared_handoff ?? {},
+      family_orchestration: entry.manifest?.family_orchestration ?? null,
+      product_entry_readiness: entry.manifest?.product_entry_readiness ?? null,
+      manifest_command: entry.manifest_command,
+      workspace_path: entry.workspace_path,
+      mainline_phase_id: pickManifestPhaseId(entry.manifest?.repo_mainline ?? null),
+      mainline_tranche_id: pickManifestTrancheId(entry.manifest?.repo_mainline ?? null),
+      product_entry_status_summary: entry.manifest?.product_entry_status?.summary ?? null,
+      product_entry_next_focus: entry.manifest?.product_entry_status?.next_focus ?? [],
+      product_entry_remaining_gaps_count:
+        entry.manifest?.product_entry_status?.remaining_gaps_count
+        ?? entry.manifest?.remaining_gaps.length
+        ?? null,
+      product_entry_overview_summary: entry.manifest?.product_entry_overview?.summary ?? null,
+      product_entry_overview_progress_command:
+        entry.manifest?.product_entry_overview?.progress_surface?.command ?? null,
+      product_entry_overview_resume_command:
+        entry.manifest?.product_entry_overview?.resume_surface?.command ?? null,
+      product_entry_overview_human_gate_ids: entry.manifest?.product_entry_overview?.human_gate_ids ?? [],
+      product_entry_preflight_summary: entry.manifest?.product_entry_preflight?.summary ?? null,
+      product_entry_preflight_ready_to_try_now:
+        entry.manifest?.product_entry_preflight?.ready_to_try_now ?? null,
+      product_entry_preflight_recommended_check_command:
+        entry.manifest?.product_entry_preflight?.recommended_check_command ?? null,
+      product_entry_preflight_recommended_start_command:
+        entry.manifest?.product_entry_preflight?.recommended_start_command ?? null,
+      product_entry_preflight_blocking_check_ids:
+        entry.manifest?.product_entry_preflight?.blocking_check_ids ?? [],
+      product_entry_preflight_checks_count:
+        entry.manifest?.product_entry_preflight?.checks.length ?? 0,
+      product_entry_readiness_verdict: entry.manifest?.product_entry_readiness?.verdict ?? null,
+      product_entry_readiness_summary: entry.manifest?.product_entry_readiness?.summary ?? null,
+      product_entry_readiness_usable_now: entry.manifest?.product_entry_readiness?.usable_now ?? null,
+      product_entry_readiness_good_to_use_now:
+        entry.manifest?.product_entry_readiness?.good_to_use_now ?? null,
+      product_entry_readiness_fully_automatic:
+        entry.manifest?.product_entry_readiness?.fully_automatic ?? null,
+      product_entry_readiness_start_command:
+        entry.manifest?.product_entry_readiness?.recommended_start_command ?? null,
+      product_entry_readiness_loop_command:
+        entry.manifest?.product_entry_readiness?.recommended_loop_command ?? null,
+      product_entry_readiness_blocking_gaps:
+        entry.manifest?.product_entry_readiness?.blocking_gaps ?? [],
+      family_human_gate_count: entry.manifest?.family_orchestration?.human_gates.length ?? 0,
+      family_human_gate_ids:
+        entry.manifest?.family_orchestration?.human_gates.map((gate) => String(gate.gate_id)) ?? [],
+      family_resume_surface_kind: entry.manifest?.family_orchestration?.resume_contract?.surface_kind ?? null,
+      family_action_graph_ref: entry.manifest?.family_orchestration?.action_graph_ref?.ref ?? null,
+      family_action_graph_node_count:
+        Array.isArray(entry.manifest?.family_orchestration?.action_graph?.nodes)
+          ? entry.manifest.family_orchestration.action_graph.nodes.length
+          : 0,
+      family_action_graph_edge_count:
+        Array.isArray(entry.manifest?.family_orchestration?.action_graph?.edges)
+          ? entry.manifest.family_orchestration.action_graph.edges.length
+          : 0,
+      family_event_envelope_ref: entry.manifest?.family_orchestration?.event_envelope_surface?.ref ?? null,
+      family_checkpoint_lineage_ref:
+        entry.manifest?.family_orchestration?.checkpoint_lineage_surface?.ref ?? null,
+      quickstart_step_count: entry.manifest?.product_entry_quickstart?.steps.length ?? 0,
+      quickstart_step_ids: entry.manifest?.product_entry_quickstart?.steps.map((step) => step.step_id) ?? [],
+    }));
+}
+
+function buildFrontDeskDomainWiringSurfaceRef(
+  contracts: GatewayContracts,
+  options: { basePath?: string } = {},
+) {
+  const wiring = buildFrontDeskDomainWiring(contracts, options).frontdesk_domain_wiring;
+
+  return {
+    surface_id: wiring.surface_id,
+    endpoint: wiring.endpoints.frontdesk_domain_wiring,
+    summary: wiring.summary,
+  };
+}
+
+export function buildFrontDeskDomainWiring(
+  contracts: GatewayContracts,
+  options: { basePath?: string } = {},
+) {
+  const endpoints = buildFrontDeskEndpoints(options.basePath);
+  const domainManifests = buildDomainManifestCatalog(contracts).domain_manifests;
+  const hostedRuntimeReadiness = buildHostedRuntimeReadiness();
+  const domainEntryParity = buildDomainEntryParity(domainManifests.projects);
+  const recommendedEntrySurfaces = buildRecommendedEntrySurfaces(domainManifests.projects);
+
+  return {
+    version: 'g2',
+    contracts_context: {
+      contracts_dir: contracts.contractsDir,
+      contracts_root_source: contracts.contractsRootSource,
+    },
+    frontdesk_domain_wiring: {
+      surface_id: 'opl_frontdesk_domain_wiring',
+      entry_surface: 'opl_local_web_frontdesk_pilot',
+      runtime_substrate: 'external_hermes_kernel',
+      shell_integration_target: 'librechat_first',
+      base_path: normalizeBasePath(options.basePath),
+      hosted_runtime_readiness: hostedRuntimeReadiness,
+      domain_entry_parity: domainEntryParity,
+      recommended_entry_surfaces: recommendedEntrySurfaces,
+      summary: {
+        total_projects_count: domainEntryParity.summary.total_projects_count,
+        aligned_projects_count: domainEntryParity.summary.aligned_projects_count,
+        ready_for_opl_start_count: domainEntryParity.summary.ready_for_opl_start_count,
+        ready_for_domain_handoff_count: domainEntryParity.summary.ready_for_domain_handoff_count,
+        recommended_entry_surfaces_count: recommendedEntrySurfaces.length,
+      },
+      endpoints: {
+        frontdesk_domain_wiring: endpoints.frontdesk_domain_wiring,
+        domain_manifests: endpoints.domain_manifests,
+        dashboard: endpoints.dashboard,
+        start: endpoints.start,
+        launch_domain: endpoints.launch_domain,
+        handoff_envelope: endpoints.handoff_envelope,
+      },
+      notes: [
+        'This surface hardens the family-level domain wiring truth for hosted shells and local front-desk consumers.',
+        'It stays derived from active domain manifests and workspace bindings; it does not create a second truth source.',
+      ],
+    },
+  };
+}
+
 function buildRecentSessions(limit = 5) {
   const result = runHermesCommand(buildHermesSessionsListArgs({ limit }));
 
@@ -408,6 +560,7 @@ export function buildProjectsOverview(contracts: GatewayContracts) {
 export function buildFrontDeskManifest(contracts: GatewayContracts, options: { basePath?: string } = {}) {
   const endpoints = buildFrontDeskEndpoints(options.basePath);
   const hostedRuntimeReadiness = buildHostedRuntimeReadiness();
+  const domainWiringSurface = buildFrontDeskDomainWiringSurfaceRef(contracts, options);
 
   return {
     version: 'g2',
@@ -425,6 +578,7 @@ export function buildFrontDeskManifest(contracts: GatewayContracts, options: { b
       pilot_bundle_status: 'landed',
       base_path: normalizeBasePath(options.basePath),
       hosted_runtime_readiness: hostedRuntimeReadiness,
+      domain_wiring_surface: domainWiringSurface,
       handoff_envelope_fields: [
         'target_domain_id',
         'task_intent',
@@ -454,6 +608,9 @@ export function buildHostedPilotBundle(
   const baseUrl = `http://${normalizeBaseUrlHost(host)}:${port}`;
   const endpoints = buildFrontDeskEndpoints(normalizedBasePath);
   const hostedRuntimeReadiness = buildHostedRuntimeReadiness();
+  const domainWiringSurface = buildFrontDeskDomainWiringSurfaceRef(contracts, {
+    basePath: normalizedBasePath,
+  });
 
   return {
     version: 'g2',
@@ -469,6 +626,7 @@ export function buildHostedPilotBundle(
       actual_hosted_runtime_status: 'not_landed',
       base_path: normalizedBasePath,
       hosted_runtime_readiness: hostedRuntimeReadiness,
+      domain_wiring_surface: domainWiringSurface,
       entry_url: buildFrontDeskEntryUrl(baseUrl, normalizedBasePath),
       api_base_url: buildFrontDeskApiBaseUrl(baseUrl, normalizedBasePath),
       endpoints,
@@ -684,94 +842,7 @@ export function buildFrontDeskDashboard(
   const domainManifests = buildDomainManifestCatalog(contracts).domain_manifests;
   const hostedRuntimeReadiness = buildHostedRuntimeReadiness();
   const domainEntryParity = buildDomainEntryParity(domainManifests.projects);
-  const recommendedEntrySurfaces = domainManifests.projects
-    .filter((entry) => entry.status === 'resolved' && entry.manifest?.recommended_command)
-    .map((entry) => ({
-      project_id: entry.project_id,
-      project: entry.project,
-      binding_id: entry.binding_id,
-      manifest_target_domain_id: entry.manifest?.target_domain_id ?? null,
-      frontdesk_surface: entry.manifest?.frontdesk_surface ?? null,
-      operator_loop_shell_key: entry.manifest?.operator_loop_surface?.shell_key ?? null,
-      operator_loop_command: entry.manifest?.operator_loop_surface?.command ?? null,
-      operator_loop_surface_kind: entry.manifest?.operator_loop_surface?.surface_kind ?? null,
-      operator_loop_summary: entry.manifest?.operator_loop_surface?.summary ?? null,
-      operator_loop_continuation_command: entry.manifest?.operator_loop_surface?.continuation_command ?? null,
-      operator_loop_actions: entry.manifest?.operator_loop_actions ?? {},
-      product_entry_start: entry.manifest?.product_entry_start ?? null,
-      product_entry_start_resume_surface_kind:
-        entry.manifest?.product_entry_start?.resume_surface?.surface_kind ?? null,
-      product_entry_start_mode_ids:
-        entry.manifest?.product_entry_start?.modes.map((mode) => mode.mode_id) ?? [],
-      product_entry_overview: entry.manifest?.product_entry_overview ?? null,
-      product_entry_preflight: entry.manifest?.product_entry_preflight ?? null,
-      product_entry_quickstart: entry.manifest?.product_entry_quickstart ?? null,
-      manifest_version: entry.manifest?.manifest_version ?? null,
-      recommended_shell: entry.manifest?.recommended_shell ?? null,
-      recommended_command: entry.manifest?.recommended_command ?? null,
-      product_entry_shell: entry.manifest?.product_entry_shell ?? {},
-      shared_handoff: entry.manifest?.shared_handoff ?? {},
-      family_orchestration: entry.manifest?.family_orchestration ?? null,
-      product_entry_readiness: entry.manifest?.product_entry_readiness ?? null,
-      manifest_command: entry.manifest_command,
-      workspace_path: entry.workspace_path,
-      mainline_phase_id: pickManifestPhaseId(entry.manifest?.repo_mainline ?? null),
-      mainline_tranche_id: pickManifestTrancheId(entry.manifest?.repo_mainline ?? null),
-      product_entry_status_summary: entry.manifest?.product_entry_status?.summary ?? null,
-      product_entry_next_focus: entry.manifest?.product_entry_status?.next_focus ?? [],
-      product_entry_remaining_gaps_count:
-        entry.manifest?.product_entry_status?.remaining_gaps_count
-        ?? entry.manifest?.remaining_gaps.length
-        ?? null,
-      product_entry_overview_summary: entry.manifest?.product_entry_overview?.summary ?? null,
-      product_entry_overview_progress_command:
-        entry.manifest?.product_entry_overview?.progress_surface?.command ?? null,
-      product_entry_overview_resume_command:
-        entry.manifest?.product_entry_overview?.resume_surface?.command ?? null,
-      product_entry_overview_human_gate_ids: entry.manifest?.product_entry_overview?.human_gate_ids ?? [],
-      product_entry_preflight_summary: entry.manifest?.product_entry_preflight?.summary ?? null,
-      product_entry_preflight_ready_to_try_now:
-        entry.manifest?.product_entry_preflight?.ready_to_try_now ?? null,
-      product_entry_preflight_recommended_check_command:
-        entry.manifest?.product_entry_preflight?.recommended_check_command ?? null,
-      product_entry_preflight_recommended_start_command:
-        entry.manifest?.product_entry_preflight?.recommended_start_command ?? null,
-      product_entry_preflight_blocking_check_ids:
-        entry.manifest?.product_entry_preflight?.blocking_check_ids ?? [],
-      product_entry_preflight_checks_count:
-        entry.manifest?.product_entry_preflight?.checks.length ?? 0,
-      product_entry_readiness_verdict: entry.manifest?.product_entry_readiness?.verdict ?? null,
-      product_entry_readiness_summary: entry.manifest?.product_entry_readiness?.summary ?? null,
-      product_entry_readiness_usable_now: entry.manifest?.product_entry_readiness?.usable_now ?? null,
-      product_entry_readiness_good_to_use_now:
-        entry.manifest?.product_entry_readiness?.good_to_use_now ?? null,
-      product_entry_readiness_fully_automatic:
-        entry.manifest?.product_entry_readiness?.fully_automatic ?? null,
-      product_entry_readiness_start_command:
-        entry.manifest?.product_entry_readiness?.recommended_start_command ?? null,
-      product_entry_readiness_loop_command:
-        entry.manifest?.product_entry_readiness?.recommended_loop_command ?? null,
-      product_entry_readiness_blocking_gaps:
-        entry.manifest?.product_entry_readiness?.blocking_gaps ?? [],
-      family_human_gate_count: entry.manifest?.family_orchestration?.human_gates.length ?? 0,
-      family_human_gate_ids:
-        entry.manifest?.family_orchestration?.human_gates.map((gate) => String(gate.gate_id)) ?? [],
-      family_resume_surface_kind: entry.manifest?.family_orchestration?.resume_contract?.surface_kind ?? null,
-      family_action_graph_ref: entry.manifest?.family_orchestration?.action_graph_ref?.ref ?? null,
-      family_action_graph_node_count:
-        Array.isArray(entry.manifest?.family_orchestration?.action_graph?.nodes)
-          ? entry.manifest.family_orchestration.action_graph.nodes.length
-          : 0,
-      family_action_graph_edge_count:
-        Array.isArray(entry.manifest?.family_orchestration?.action_graph?.edges)
-          ? entry.manifest.family_orchestration.action_graph.edges.length
-          : 0,
-      family_event_envelope_ref: entry.manifest?.family_orchestration?.event_envelope_surface?.ref ?? null,
-      family_checkpoint_lineage_ref:
-        entry.manifest?.family_orchestration?.checkpoint_lineage_surface?.ref ?? null,
-      quickstart_step_count: entry.manifest?.product_entry_quickstart?.steps.length ?? 0,
-      quickstart_step_ids: entry.manifest?.product_entry_quickstart?.steps.map((step) => step.step_id) ?? [],
-    }));
+  const recommendedEntrySurfaces = buildRecommendedEntrySurfaces(domainManifests.projects);
 
   return {
     version: 'g2',

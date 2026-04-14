@@ -34,6 +34,7 @@ import {
 } from './domain-manifest.ts';
 import {
   buildFrontDeskDashboard,
+  buildFrontDeskDomainWiring,
   buildHostedPilotBundle,
   buildFrontDeskManifest,
   buildPaperclipControlPlaneStatus,
@@ -1466,6 +1467,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl doctor',
         'opl projects',
         'opl frontdesk-manifest',
+        'opl frontdesk-domain-wiring',
         'opl frontdesk-hosted-bundle --base-path /pilot/opl',
         'opl frontdesk-hosted-package --output /tmp/opl-hosted-package --public-origin https://opl.example.com --base-path /pilot/opl',
         'opl frontdesk-librechat-package --output /tmp/opl-librechat-pilot --public-origin https://opl.example.com --base-path /pilot/opl',
@@ -2030,7 +2032,20 @@ async function main() {
       summary:
         'Expose the hosted-friendly OPL front-desk shell contract without claiming hosted packaging is already landed.',
       examples: ['opl frontdesk-manifest'],
-      handler: () => buildFrontDeskManifest(getContracts()),
+      handler: (args) => {
+        assertNoArgs(args, commandSpecs['frontdesk-manifest']);
+        return buildFrontDeskManifest(getContracts());
+      },
+    },
+    'frontdesk-domain-wiring': {
+      usage: 'opl frontdesk-domain-wiring',
+      summary:
+        'Expose the hosted-friendly family wiring surface that freezes runtime readiness, domain entry parity, and recommended entry surfaces.',
+      examples: ['opl frontdesk-domain-wiring'],
+      handler: (args) => {
+        assertNoArgs(args, commandSpecs['frontdesk-domain-wiring']);
+        return buildFrontDeskDomainWiring(getContracts());
+      },
     },
     'frontdesk-hosted-bundle': {
       usage:

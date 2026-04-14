@@ -225,6 +225,7 @@
 - `opl ask`
 - `opl chat`
 - `opl frontdesk-manifest`
+- `opl frontdesk-domain-wiring`
 - `opl frontdesk-hosted-bundle`
 - `opl frontdesk-hosted-package`
 - `opl workspace-catalog`
