@@ -9,6 +9,7 @@ import {
   buildFrontDeskEntryUrl,
   normalizeBasePath,
 } from './frontdesk-paths.ts';
+import { getFrontDeskServiceStatus } from './frontdesk-service.ts';
 import { buildDomainManifestCatalog, type DomainManifestCatalogEntry } from './domain-manifest.ts';
 import {
   buildHermesSessionsListArgs,
@@ -503,6 +504,15 @@ function buildFrontDeskDomainWiringSurfaceRef(
   };
 }
 
+function buildFrontDeskReadinessSurfaceRef(options: { basePath?: string } = {}) {
+  const endpoints = buildFrontDeskEndpoints(options.basePath);
+
+  return {
+    surface_id: 'opl_frontdesk_readiness',
+    endpoint: endpoints.frontdesk_readiness,
+  };
+}
+
 export function buildFrontDeskDomainWiring(
   contracts: GatewayContracts,
   options: { basePath?: string } = {},
@@ -555,6 +565,178 @@ export function buildFrontDeskDomainWiring(
       notes: [
         'This surface hardens the family-level domain wiring truth for hosted shells and local front-desk consumers.',
         'It stays derived from active domain manifests and workspace bindings; it does not create a second truth source.',
+      ],
+    },
+  };
+}
+
+function buildFrontDeskReadinessProjects(
+  projects: DomainManifestCatalogEntry[],
+  domainEntryParity: ReturnType<typeof buildDomainEntryParity>,
+  domainBindingParity: ReturnType<typeof buildDomainBindingParity>,
+) {
+  const entryParityByProject = new Map(
+    domainEntryParity.projects.map((entry) => [entry.project_id, entry]),
+  );
+  const bindingParityByProject = new Map(
+    domainBindingParity.projects.map((entry) => [entry.project_id, entry]),
+  );
+
+  return projects.map((entry) => {
+    const manifest = entry.manifest;
+    const entryParity = entryParityByProject.get(entry.project_id);
+    const bindingParity = bindingParityByProject.get(entry.project_id);
+    const readiness = manifest?.product_entry_readiness;
+    const preflight = manifest?.product_entry_preflight;
+    const overview = manifest?.product_entry_overview;
+    const quickstart = manifest?.product_entry_quickstart;
+
+    return {
+      project_id: entry.project_id,
+      project: entry.project,
+      manifest_status: entry.status,
+      entry_parity_status: entryParity?.entry_parity_status ?? 'blocked',
+      binding_active: bindingParity?.active_binding !== null,
+      binding_direct_entry_ready: bindingParity?.direct_entry_ready ?? false,
+      binding_manifest_ready: bindingParity?.manifest_ready ?? false,
+      binding_launch_ready: bindingParity?.launch_ready ?? false,
+      usable_now: readiness?.usable_now === true,
+      good_to_use_now: readiness?.good_to_use_now === true,
+      fully_automatic: readiness?.fully_automatic === true,
+      ready_to_try_now: preflight?.ready_to_try_now === true,
+      ready_for_opl_start: entryParity?.ready_for_opl_start ?? false,
+      ready_for_domain_handoff: entryParity?.ready_for_domain_handoff ?? false,
+      verdict: readiness?.verdict ?? null,
+      summary: readiness?.summary ?? manifest?.product_entry_status?.summary ?? null,
+      frontdesk_command:
+        manifest?.frontdesk_surface?.command
+        ?? manifest?.recommended_command
+        ?? null,
+      recommended_start_command:
+        readiness?.recommended_start_command
+        ?? entryParity?.recommended_start_command
+        ?? preflight?.recommended_start_command
+        ?? null,
+      recommended_loop_command: readiness?.recommended_loop_command ?? null,
+      recommended_check_command:
+        preflight?.recommended_check_command
+        ?? entryParity?.recommended_check_command
+        ?? null,
+      blocking_gaps_count: readiness?.blocking_gaps.length ?? 0,
+      blocking_gaps: readiness?.blocking_gaps ?? [],
+      blocking_check_ids: preflight?.blocking_check_ids ?? [],
+      preflight_checks_count: preflight?.checks.length ?? 0,
+      quickstart_steps_count: quickstart?.steps.length ?? 0,
+      overview_progress_command: overview?.progress_surface?.command ?? null,
+      overview_resume_command: overview?.resume_surface?.command ?? null,
+      recommended_next_actions: entryParity?.recommended_next_actions ?? [],
+    };
+  });
+}
+
+export async function buildFrontDeskReadiness(
+  contracts: GatewayContracts,
+  options: DashboardOptions = {},
+) {
+  const endpoints = buildFrontDeskEndpoints(options.basePath);
+  const hostedRuntimeReadiness = buildHostedRuntimeReadiness();
+  const domainManifests = buildDomainManifestCatalog(contracts).domain_manifests;
+  const domainEntryParity = buildDomainEntryParity(domainManifests.projects);
+  const domainBindingParity = buildDomainBindingParity(contracts, options);
+  const recommendedEntrySurfaces = buildRecommendedEntrySurfaces(domainManifests.projects);
+  const localService = (await getFrontDeskServiceStatus(contracts)).frontdesk_service;
+  const projects = buildFrontDeskReadinessProjects(
+    domainManifests.projects,
+    domainEntryParity,
+    domainBindingParity,
+  );
+
+  const summary = {
+    total_projects_count: projects.length,
+    resolved_manifests_count: domainManifests.summary.resolved_count,
+    blocked_projects_count: domainEntryParity.summary.blocked_projects_count,
+    usable_now_projects_count: projects.filter((entry) => entry.usable_now).length,
+    good_to_use_now_projects_count: projects.filter((entry) => entry.good_to_use_now).length,
+    fully_automatic_projects_count: projects.filter((entry) => entry.fully_automatic).length,
+    ready_to_try_now_projects_count: projects.filter((entry) => entry.ready_to_try_now).length,
+    direct_entry_ready_projects_count: domainBindingParity.summary.direct_entry_ready_projects_count,
+    manifest_ready_projects_count: domainBindingParity.summary.manifest_ready_projects_count,
+    launch_ready_projects_count: domainBindingParity.summary.launch_ready_projects_count,
+    ready_for_opl_start_count: domainEntryParity.summary.ready_for_opl_start_count,
+    ready_for_domain_handoff_count: domainEntryParity.summary.ready_for_domain_handoff_count,
+    recommended_entry_projects_count: recommendedEntrySurfaces.length,
+  };
+
+  const recommendedNextActions: string[] = [];
+  if (!localService.installed) {
+    recommendedNextActions.push('如需长期本地产品入口，先执行 `opl frontdesk-service-install`。');
+  } else if (!localService.loaded) {
+    recommendedNextActions.push('frontdesk service 已安装但未加载，执行 `opl frontdesk-service-start`。');
+  } else if (localService.health.status === 'unreachable') {
+    recommendedNextActions.push('frontdesk service 已加载但健康检查失败，先执行 `opl frontdesk-service-status` 与 `opl logs`。');
+  }
+  if (summary.manifest_ready_projects_count < summary.total_projects_count) {
+    recommendedNextActions.push('给仍缺 manifest 的 active binding 补 `manifest_command`。');
+  }
+  if (summary.direct_entry_ready_projects_count < summary.total_projects_count) {
+    recommendedNextActions.push('给仍缺 direct-entry locator 的项目补 `entry_command` 或 `entry_url`。');
+  }
+  if (summary.ready_for_domain_handoff_count < summary.total_projects_count) {
+    recommendedNextActions.push('继续补齐 `product_entry_start` 与 `shared_handoff`，让 OPL start/handoff 口径完全对齐。');
+  }
+
+  return {
+    version: 'g2',
+    contracts_context: {
+      contracts_dir: contracts.contractsDir,
+      contracts_root_source: contracts.contractsRootSource,
+    },
+    frontdesk_readiness: {
+      surface_id: 'opl_frontdesk_readiness',
+      entry_surface: 'opl_local_web_frontdesk_pilot',
+      runtime_substrate: 'external_hermes_kernel',
+      shell_integration_target: 'librechat_first',
+      base_path: normalizeBasePath(options.basePath),
+      overall_status:
+        summary.usable_now_projects_count > 0
+          ? localService.health.status === 'ok'
+            ? 'usable_with_known_gaps'
+            : 'domain_ready_local_service_optional'
+          : 'setup_incomplete',
+      local_shell: {
+        direct_entry_command: 'opl',
+        quick_ask_command: 'opl <request...>',
+        web_command: 'opl web',
+      },
+      local_service: localService,
+      hosted_runtime_readiness: hostedRuntimeReadiness,
+      domain_entry_parity: domainEntryParity,
+      domain_binding_parity: domainBindingParity,
+      summary,
+      projects,
+      recommended_entry_surfaces: recommendedEntrySurfaces,
+      recommended_next_actions: recommendedNextActions,
+      endpoints: {
+        frontdesk_readiness: endpoints.frontdesk_readiness,
+        frontdesk_manifest: endpoints.manifest,
+        frontdesk_domain_wiring: endpoints.frontdesk_domain_wiring,
+        domain_manifests: endpoints.domain_manifests,
+        dashboard: endpoints.dashboard,
+        workspace_catalog: endpoints.workspace_catalog,
+        workspace_bind: endpoints.workspace_bind,
+        workspace_activate: endpoints.workspace_activate,
+        workspace_archive: endpoints.workspace_archive,
+        runtime_status: endpoints.runtime_status,
+        session_ledger: endpoints.session_ledger,
+        start: endpoints.start,
+        launch_domain: endpoints.launch_domain,
+        handoff_envelope: endpoints.handoff_envelope,
+        health: endpoints.health,
+      },
+      notes: [
+        'This surface is an operator-facing derived board: it reuses service status, hosted readiness, manifest truth, and workspace bindings without creating a second source of truth.',
+        'usable_now / good_to_use_now / fully_automatic come from the domain-owned product_entry_readiness companion, not from OPL invention.',
+        'Local service readiness remains optional for direct CLI use, but it is the shortest path to a persistent local front desk.',
       ],
     },
   };
@@ -615,6 +797,7 @@ export function buildFrontDeskManifest(contracts: GatewayContracts, options: { b
   const endpoints = buildFrontDeskEndpoints(options.basePath);
   const hostedRuntimeReadiness = buildHostedRuntimeReadiness();
   const domainWiringSurface = buildFrontDeskDomainWiringSurfaceRef(contracts, options);
+  const frontdeskReadinessSurface = buildFrontDeskReadinessSurfaceRef(options);
 
   return {
     version: 'g2',
@@ -632,6 +815,7 @@ export function buildFrontDeskManifest(contracts: GatewayContracts, options: { b
       pilot_bundle_status: 'landed',
       base_path: normalizeBasePath(options.basePath),
       hosted_runtime_readiness: hostedRuntimeReadiness,
+      frontdesk_readiness_surface: frontdeskReadinessSurface,
       domain_wiring_surface: domainWiringSurface,
       handoff_envelope_fields: [
         'target_domain_id',
@@ -662,6 +846,9 @@ export function buildHostedPilotBundle(
   const baseUrl = `http://${normalizeBaseUrlHost(host)}:${port}`;
   const endpoints = buildFrontDeskEndpoints(normalizedBasePath);
   const hostedRuntimeReadiness = buildHostedRuntimeReadiness();
+  const frontdeskReadinessSurface = buildFrontDeskReadinessSurfaceRef({
+    basePath: normalizedBasePath,
+  });
   const domainWiringSurface = buildFrontDeskDomainWiringSurfaceRef(contracts, {
     basePath: normalizedBasePath,
   });
@@ -680,6 +867,7 @@ export function buildHostedPilotBundle(
       actual_hosted_runtime_status: 'not_landed',
       base_path: normalizedBasePath,
       hosted_runtime_readiness: hostedRuntimeReadiness,
+      frontdesk_readiness_surface: frontdeskReadinessSurface,
       domain_wiring_surface: domainWiringSurface,
       entry_url: buildFrontDeskEntryUrl(baseUrl, normalizedBasePath),
       api_base_url: buildFrontDeskApiBaseUrl(baseUrl, normalizedBasePath),
@@ -897,6 +1085,7 @@ export function buildFrontDeskDashboard(
   const hostedRuntimeReadiness = buildHostedRuntimeReadiness();
   const domainEntryParity = buildDomainEntryParity(domainManifests.projects);
   const recommendedEntrySurfaces = buildRecommendedEntrySurfaces(domainManifests.projects);
+  const frontdeskReadinessSurface = buildFrontDeskReadinessSurfaceRef(options);
 
   return {
     version: 'g2',
@@ -915,6 +1104,7 @@ export function buildFrontDeskDashboard(
         hosted_web_status: 'librechat_pilot_landed',
         librechat_pilot_package_status: 'landed',
         hosted_runtime_readiness: hostedRuntimeReadiness,
+        frontdesk_readiness_surface: frontdeskReadinessSurface,
         workspace_registry_status: 'landed',
         session_ledger_status: 'landed',
         handoff_bundle_status: 'landed',

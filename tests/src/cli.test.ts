@@ -1336,6 +1336,9 @@ test('help advertises the local web front-desk pilot command surface', () => {
     output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk-domain-wiring'),
   );
   assert.ok(
+    output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk-readiness'),
+  );
+  assert.ok(
     output.help.commands.some((entry: { command: string }) => entry.command === 'launch-domain'),
   );
 
@@ -1391,6 +1394,8 @@ test('frontdesk-manifest exposes the hosted-friendly OPL shell contract without 
   assert.equal(output.frontdesk_manifest.domain_wiring_surface.endpoint, '/api/frontdesk-domain-wiring');
   assert.equal(output.frontdesk_manifest.domain_wiring_surface.summary.total_projects_count, 2);
   assert.equal(output.frontdesk_manifest.domain_wiring_surface.summary.recommended_entry_surfaces_count, 0);
+  assert.equal(output.frontdesk_manifest.frontdesk_readiness_surface.surface_id, 'opl_frontdesk_readiness');
+  assert.equal(output.frontdesk_manifest.frontdesk_readiness_surface.endpoint, '/api/frontdesk-readiness');
 });
 
 test('frontdesk-domain-wiring exposes a dedicated hosted-friendly family wiring surface', () => {
@@ -1414,6 +1419,82 @@ test('frontdesk-domain-wiring exposes a dedicated hosted-friendly family wiring 
   assert.equal(output.frontdesk_domain_wiring.endpoints.workspace_activate, '/api/workspace-activate');
   assert.equal(output.frontdesk_domain_wiring.endpoints.workspace_archive, '/api/workspace-archive');
   assert.deepEqual(output.frontdesk_domain_wiring.recommended_entry_surfaces, []);
+});
+
+test('frontdesk-readiness exposes one operator-facing readiness surface for local service and domain entry state', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-frontdesk-readiness-home-'));
+  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "version" ]; then
+  echo "Hermes Agent v9.9.9-test"
+  exit 0
+fi
+if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
+  cat <<'EOF'
+Launchd plist: /tmp/ai.hermes.gateway.plist
+✓ Service definition matches the current Hermes install
+✓ Gateway service is loaded
+EOF
+  exit 0
+fi
+if [ "$1" = "status" ]; then
+  cat <<'EOF'
+◆ Environment
+  Project:      /tmp/hermes-agent
+◆ Gateway Service
+  Status:       ✓ loaded
+  Manager:      launchd
+◆ Scheduled Jobs
+  Jobs:         0
+◆ Sessions
+  Active:       1
+EOF
+  exit 0
+fi
+if [ "$1" = "sessions" ] && [ "$2" = "list" ]; then
+  cat <<'EOF'
+Preview                                            Last Active   Src    ID
+───────────────────────────────────────────────────────────────────────────────────────────────
+OPL readiness session                              1m ago        cli    sess_ready
+EOF
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+  const psFixture = createFakePsFixture(`27025 1 0.1 0.2 49616 22:46 /Users/test/.hermes/venv/bin/python -m hermes_cli.main gateway run --replace`);
+
+  try {
+    const output = runCli(['frontdesk-readiness', '--path', repoRoot, '--sessions-limit', '1'], {
+      HOME: homeRoot,
+      OPL_HERMES_BIN: hermesPath,
+      PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
+    });
+
+    assert.equal(output.version, 'g2');
+    assert.equal(output.frontdesk_readiness.surface_id, 'opl_frontdesk_readiness');
+    assert.equal(output.frontdesk_readiness.runtime_substrate, 'external_hermes_kernel');
+    assert.equal(output.frontdesk_readiness.local_service.installed, false);
+    assert.equal(output.frontdesk_readiness.local_service.loaded, false);
+    assert.equal(output.frontdesk_readiness.local_service.health.status, 'not_installed');
+    assert.equal(output.frontdesk_readiness.hosted_runtime_readiness.status, 'pilot_ready_not_managed');
+    assert.equal(output.frontdesk_readiness.summary.total_projects_count, 2);
+    assert.equal(output.frontdesk_readiness.summary.usable_now_projects_count, 0);
+    assert.equal(output.frontdesk_readiness.summary.good_to_use_now_projects_count, 0);
+    assert.equal(output.frontdesk_readiness.summary.fully_automatic_projects_count, 0);
+    assert.equal(output.frontdesk_readiness.summary.ready_to_try_now_projects_count, 0);
+    assert.equal(output.frontdesk_readiness.summary.ready_for_opl_start_count, 0);
+    assert.equal(output.frontdesk_readiness.summary.ready_for_domain_handoff_count, 0);
+    assert.equal(output.frontdesk_readiness.endpoints.frontdesk_readiness, '/api/frontdesk-readiness');
+    assert.equal(output.frontdesk_readiness.endpoints.frontdesk_domain_wiring, '/api/frontdesk-domain-wiring');
+    assert.equal(output.frontdesk_readiness.projects[0].manifest_status, 'not_bound');
+    assert.equal(output.frontdesk_readiness.projects[0].entry_parity_status, 'blocked');
+    assert.equal(output.frontdesk_readiness.projects[0].usable_now, false);
+    assert.equal(output.frontdesk_readiness.projects[0].recommended_start_command, null);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(psFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
 });
 
 test('frontdesk-service commands manage the local launchd wrapper for the web pilot', async () => {
@@ -2153,6 +2234,35 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(redcubeBindingParity.manifest_ready, true);
     assert.equal(redcubeBindingParity.active_binding.direct_entry.url, 'http://127.0.0.1:3310/redcube');
     assert.deepEqual(redcubeBindingParity.available_actions, ['bind', 'activate', 'archive', 'launch']);
+
+    const readinessOutput = runCli(['frontdesk-readiness', '--path', repoRoot, '--sessions-limit', '1'], env);
+    assert.equal(readinessOutput.frontdesk_readiness.summary.total_projects_count, 3);
+    assert.equal(readinessOutput.frontdesk_readiness.summary.usable_now_projects_count, 3);
+    assert.equal(readinessOutput.frontdesk_readiness.summary.good_to_use_now_projects_count, 0);
+    assert.equal(readinessOutput.frontdesk_readiness.summary.fully_automatic_projects_count, 0);
+    assert.equal(readinessOutput.frontdesk_readiness.summary.ready_to_try_now_projects_count, 3);
+    assert.equal(readinessOutput.frontdesk_readiness.summary.ready_for_opl_start_count, 3);
+    assert.equal(readinessOutput.frontdesk_readiness.summary.ready_for_domain_handoff_count, 3);
+    assert.equal(readinessOutput.frontdesk_readiness.summary.direct_entry_ready_projects_count, 1);
+    const grantReadiness = readinessOutput.frontdesk_readiness.projects.find(
+      (entry: { project_id: string }) => entry.project_id === 'medautogrant',
+    );
+    const scienceReadiness = readinessOutput.frontdesk_readiness.projects.find(
+      (entry: { project_id: string }) => entry.project_id === 'medautoscience',
+    );
+    const redcubeReadiness = readinessOutput.frontdesk_readiness.projects.find(
+      (entry: { project_id: string }) => entry.project_id === 'redcube',
+    );
+    assert.equal(grantReadiness.usable_now, true);
+    assert.equal(grantReadiness.good_to_use_now, false);
+    assert.equal(grantReadiness.fully_automatic, false);
+    assert.equal(grantReadiness.ready_to_try_now, true);
+    assert.equal(grantReadiness.blocking_gaps_count, 3);
+    assert.equal(scienceReadiness.usable_now, true);
+    assert.equal(scienceReadiness.preflight_checks_count, 7);
+    assert.equal(redcubeReadiness.usable_now, true);
+    assert.equal(redcubeReadiness.binding_launch_ready, true);
+    assert.equal(redcubeReadiness.recommended_start_command, 'redcube product frontdesk');
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(stateRoot, { recursive: true, force: true });
@@ -2675,6 +2785,7 @@ exit 1
       entry_surface: string;
       hosted_status: string;
       api: {
+        frontdesk_readiness: string;
         frontdesk_domain_wiring: string;
         librechat_package: string;
       };
@@ -2686,6 +2797,7 @@ exit 1
     assert.equal(startup.payload.version, 'g2');
     assert.equal(webFrontdesk.entry_surface, 'opl_local_web_frontdesk_pilot');
     assert.equal(webFrontdesk.hosted_status, 'librechat_pilot_landed');
+    assert.equal(webFrontdesk.api.frontdesk_readiness, '/api/frontdesk-readiness');
     assert.equal(webFrontdesk.api.frontdesk_domain_wiring, '/api/frontdesk-domain-wiring');
     assert.equal(webFrontdesk.api.librechat_package, '/api/librechat-package');
 
@@ -2697,6 +2809,7 @@ exit 1
     assert.match(pageHtml, /Control Room/);
     assert.match(pageHtml, /Hosted-Friendly Surface/);
     assert.match(pageHtml, /Domain Wiring/);
+    assert.match(pageHtml, /Frontdesk Readiness/);
     assert.match(pageHtml, /Hosted Runtime Readiness/);
     assert.match(pageHtml, /Domain Entry Parity/);
 
@@ -2732,6 +2845,13 @@ exit 1
     assert.equal(wiringPayload.frontdesk_domain_wiring.domain_binding_parity.summary.total_projects_count, 2);
     assert.equal(wiringPayload.frontdesk_domain_wiring.domain_binding_parity.summary.active_projects_count, 0);
     assert.equal(wiringPayload.frontdesk_domain_wiring.summary.recommended_entry_surfaces_count, 0);
+
+    const readinessResponse = await fetch(`${baseUrl}/api/frontdesk-readiness`);
+    const readinessPayload = await readinessResponse.json();
+    assert.equal(readinessPayload.frontdesk_readiness.surface_id, 'opl_frontdesk_readiness');
+    assert.equal(readinessPayload.frontdesk_readiness.summary.total_projects_count, 2);
+    assert.equal(readinessPayload.frontdesk_readiness.summary.usable_now_projects_count, 0);
+    assert.equal(readinessPayload.frontdesk_readiness.local_service.health.status, 'not_installed');
 
     const domainManifestResponse = await fetch(`${baseUrl}/api/domain-manifests`);
     const domainManifestPayload = await domainManifestResponse.json();

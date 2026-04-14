@@ -34,6 +34,7 @@ import {
 } from './domain-manifest.ts';
 import {
   buildFrontDeskDashboard,
+  buildFrontDeskReadiness,
   buildFrontDeskDomainWiring,
   buildHostedPilotBundle,
   buildFrontDeskManifest,
@@ -1467,6 +1468,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl doctor',
         'opl projects',
         'opl frontdesk-manifest',
+        'opl frontdesk-readiness --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
         'opl frontdesk-domain-wiring',
         'opl frontdesk-hosted-bundle --base-path /pilot/opl',
         'opl frontdesk-hosted-package --output /tmp/opl-hosted-package --public-origin https://opl.example.com --base-path /pilot/opl',
@@ -2036,6 +2038,17 @@ async function main() {
         assertNoArgs(args, commandSpecs['frontdesk-manifest']);
         return buildFrontDeskManifest(getContracts());
       },
+    },
+    'frontdesk-readiness': {
+      usage: 'opl frontdesk-readiness [--path <workspace_path>] [--sessions-limit <n>]',
+      summary:
+        'Expose one operator-facing readiness surface for local shell, hosted pilot, and domain direct-entry parity.',
+      examples: [
+        'opl frontdesk-readiness',
+        'opl frontdesk-readiness --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
+      ],
+      handler: (args) =>
+        buildFrontDeskReadiness(getContracts(), parseDashboardArgs(args, commandSpecs['frontdesk-readiness'])),
     },
     'frontdesk-domain-wiring': {
       usage: 'opl frontdesk-domain-wiring',

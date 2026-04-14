@@ -1,6 +1,6 @@
 # OPL Front Desk 落地推进板
 
-状态锚点：`2026-04-12`
+状态锚点：`2026-04-14`
 
 ## 文档目的
 
@@ -50,6 +50,7 @@
 - `opl workspace-activate`
 - `opl workspace-archive`
 - `opl runtime-status`
+- `opl frontdesk-readiness`
 - `opl session-ledger`
 - `opl dashboard`
 - `opl handoff-envelope`
@@ -59,6 +60,7 @@
 - 已经有了第一版多项目 / 工作区 / 会话 / runtime 观测与可写管理面；
 - `runtime-status` 已能看到 Hermes runtime 健康、最近会话以及 runtime-level 进程资源占用；
 - `session-ledger` 已能提供 OPL-managed 的会话事件、诚实资源样本，以及按 session 聚合后的归因视图；
+- `frontdesk-readiness` 已能把本地 service 状态、hosted pilot readiness、domain `product_entry_readiness / preflight` 与修复建议收成单一 operator-facing board；
 - `workspace-bind|activate|archive` 已能把 workspace registry、direct-entry locator 与可选的 domain-owned `manifest_command` 作为顶层可写状态管理起来；
 - `workspace-catalog` 现在还会输出 project-level binding summary、最近更新时间与可写 action 提示；
 - `handoff-envelope` 已能把顶层 front desk 到 domain direct entry / domain gateway 的最小交接面冻结出来；
@@ -81,6 +83,7 @@
 - `/api/ask`
 - `/api/health`
 - `/api/frontdesk-manifest`
+- `/api/frontdesk-readiness`
 - `/api/frontdesk-domain-wiring`
 - `/api/hosted-bundle`
 - `/api/hosted-package`
@@ -92,7 +95,7 @@
 当前含义：
 
 - `OPL` 已经不只有 CLI 入口，而是已经有了可直接打开的本地浏览器前台；
-- 用户可以直接在浏览器里做 quick ask、查看项目、检查与绑定 workspace、查看 managed session ledger、观察 runtime；
+- 用户可以直接在浏览器里做 quick ask、查看项目、检查与绑定 workspace、查看 managed session ledger、观察 runtime，并在浏览器里直接看到 `Frontdesk Readiness` 的 operator triage 结果；
 - 这仍是 local pilot，不等于 hosted 包装完成。
 
 ### F2.B. hosted-friendly shell contract 与 pilot package
@@ -100,15 +103,17 @@
 已完成：
 
 - `opl frontdesk-manifest`
+- `opl frontdesk-readiness`
 - `opl frontdesk-domain-wiring`
 - `opl frontdesk-hosted-bundle`
 - `opl frontdesk-hosted-package`
 - `opl frontdesk-librechat-package`
-- 本地 web 前台已开始直接消费 `health / manifest / hosted-bundle / hosted-package / librechat-package / sessions / resume / logs / handoff-envelope` surfaces
+- 本地 web 前台已开始直接消费 `health / manifest / frontdesk-readiness / hosted-bundle / hosted-package / librechat-package / sessions / resume / logs / handoff-envelope` surfaces
 
 当前含义：
 
 - `OPL` 现在不只是“有一个本地浏览器 pilot”，而是已经冻结出一层 future hosted shell 可消费的 front-desk contract；
+- `frontdesk-readiness` 把本地 service 状态、hosted pilot readiness、domain readiness / preflight 与下一步修复建议收成单一 operator-facing board，但它继续只复用已有 truth，不构成第二真相源；
 - `frontdesk-domain-wiring` 又把 `hosted_runtime_readiness / domain_entry_parity / recommended_entry_surfaces` 收成 hosted shell 与本地 front desk 都能直接消费的 family wiring truth；
 - `frontdesk-domain-wiring` 现在还额外承载 `domain_binding_parity` 与 `workspace_catalog / workspace_bind / workspace_activate / workspace_archive` 这些修复 locator parity 所需的 endpoint 引导，不再要求 hosted shell 自己去拼大而杂的 dashboard；
 - hosted-pilot-ready shell bundle 已经把 base-path-aware 的 entry / API endpoint 一并冻结下来；

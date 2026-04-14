@@ -8,6 +8,7 @@ import {
 } from './frontdesk-paths.ts';
 import {
   buildFrontDeskDashboard,
+  buildFrontDeskReadiness,
   buildFrontDeskHealth,
   buildFrontDeskDomainWiring,
   buildFrontDeskManifest,
@@ -144,6 +145,7 @@ type WebFrontDeskStartupPayload = {
     api: {
       health: string;
       frontdesk_manifest: string;
+      frontdesk_readiness: string;
       frontdesk_domain_wiring: string;
       domain_manifests: string;
       hosted_bundle: string;
@@ -537,6 +539,7 @@ function buildStartupPayload(context: WebFrontDeskContext): WebFrontDeskStartupP
       api: {
         health: endpoints.health,
         frontdesk_manifest: manifest.frontdesk_manifest.endpoints.manifest,
+        frontdesk_readiness: endpoints.frontdesk_readiness,
         frontdesk_domain_wiring: endpoints.frontdesk_domain_wiring,
         domain_manifests: endpoints.domain_manifests,
         hosted_bundle: endpoints.hosted_bundle,
@@ -1194,6 +1197,11 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
               </div>
               <div style="height: 12px"></div>
               <div class="card">
+                <h3>Frontdesk Readiness</h3>
+                <div id="frontdesk-readiness-summary">Loading frontdesk readiness...</div>
+              </div>
+              <div style="height: 12px"></div>
+              <div class="card">
                 <h3>Domain Wiring</h3>
                 <div id="domain-wiring-summary">Loading domain wiring...</div>
               </div>
@@ -1409,6 +1417,7 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       const domainEntryParitySummary = document.getElementById('domain-entry-parity-summary');
       const healthSummary = document.getElementById('health-summary');
       const manifestSummary = document.getElementById('manifest-summary');
+      const frontdeskReadinessSummary = document.getElementById('frontdesk-readiness-summary');
       const domainWiringSummary = document.getElementById('domain-wiring-summary');
       const hostedBundleSummary = document.getElementById('hosted-bundle-summary');
       const hostedBundleJson = document.getElementById('hosted-bundle-json');
@@ -2015,6 +2024,31 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         ].join('');
       }
 
+      function renderFrontdeskReadiness(payload) {
+        const readiness = payload.frontdesk_readiness;
+        const projects = Array.isArray(readiness?.projects)
+          ? readiness.projects.map((project) => (
+            '<li><strong>' + String(project.project || project.project_id) + ':</strong> '
+            + String(project.verdict || project.entry_parity_status || 'unknown')
+            + ' / usable=' + String(project.usable_now)
+            + ' / start=' + String(project.ready_for_opl_start)
+            + ' / handoff=' + String(project.ready_for_domain_handoff)
+            + (project.recommended_start_command
+              ? ' / <code>' + String(project.recommended_start_command) + '</code>'
+              : '')
+            + '</li>'
+          )).join('')
+          : '';
+
+        frontdeskReadinessSummary.innerHTML = [
+          '<p><strong>Overall:</strong> ' + String(readiness.overall_status || 'unknown') + '</p>',
+          '<p><strong>Service Health:</strong> ' + String(readiness.local_service?.health?.status || 'unknown') + '</p>',
+          '<p><strong>Usable Now:</strong> ' + String(readiness.summary?.usable_now_projects_count ?? 0) + '</p>',
+          '<p><strong>Ready To Try Now:</strong> ' + String(readiness.summary?.ready_to_try_now_projects_count ?? 0) + '</p>',
+          projects ? '<ul>' + projects + '</ul>' : '<p>No readiness entries reported.</p>',
+        ].join('');
+      }
+
       function renderDomainWiring(payload) {
         const wiring = payload.frontdesk_domain_wiring;
         const bindingParity = wiring.domain_binding_parity;
@@ -2217,9 +2251,10 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       }
 
       async function fetchHostedFriendlySurface() {
-        const [healthResponse, manifestResponse, wiringResponse, hostedBundleResponse] = await Promise.all([
+        const [healthResponse, manifestResponse, readinessResponse, wiringResponse, hostedBundleResponse] = await Promise.all([
           fetch(bootstrap.web_frontdesk.api.health),
           fetch(bootstrap.web_frontdesk.api.frontdesk_manifest),
+          fetch(bootstrap.web_frontdesk.api.frontdesk_readiness),
           fetch(bootstrap.web_frontdesk.api.frontdesk_domain_wiring),
           fetch(bootstrap.web_frontdesk.api.hosted_bundle),
         ]);
@@ -2230,6 +2265,9 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         if (!manifestResponse.ok) {
           throw new Error('Manifest request failed with status ' + manifestResponse.status);
         }
+        if (!readinessResponse.ok) {
+          throw new Error('Frontdesk readiness request failed with status ' + readinessResponse.status);
+        }
         if (!wiringResponse.ok) {
           throw new Error('Domain wiring request failed with status ' + wiringResponse.status);
         }
@@ -2239,6 +2277,7 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
 
         renderHealth(await healthResponse.json());
         renderManifest(await manifestResponse.json());
+        renderFrontdeskReadiness(await readinessResponse.json());
         renderDomainWiring(await wiringResponse.json());
         renderHostedBundle(await hostedBundleResponse.json());
       }
@@ -2729,6 +2768,22 @@ async function handleRequest(
 
     if (method === 'GET' && routedPath === '/api/frontdesk-manifest') {
       writeJson(response, 200, buildFrontDeskManifest(context.contracts, { basePath: context.basePath }));
+      return;
+    }
+
+    if (method === 'GET' && routedPath === '/api/frontdesk-readiness') {
+      writeJson(
+        response,
+        200,
+        await buildFrontDeskReadiness(context.contracts, {
+          workspacePath: url.searchParams.get('path') ?? context.workspacePath,
+          sessionsLimit: parsePositiveIntegerOrDefault(
+            url.searchParams.get('sessions-limit'),
+            context.sessionsLimit,
+          ),
+          basePath: context.basePath,
+        }),
+      );
       return;
     }
 
