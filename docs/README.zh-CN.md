@@ -138,4 +138,5 @@
 
 ## 治理说明
 
-- 文档治理规则统一收口在 [AGENTS.md](../AGENTS.md) 与 docs 核心工作集。
+- 文档治理规则现在统一冻结在 [series-doc-governance-checklist.md](./references/series-doc-governance-checklist.md)、docs 核心工作集，以及仓库跟踪的 contract/doc surface 中，而不再只写在 `AGENTS.md`。
+- 当前四仓文档对齐快照统一收口在 [four-repo-doc-series-sync-summary-2026-04-14.md](./references/four-repo-doc-series-sync-summary-2026-04-14.md)。

@@ -16,6 +16,8 @@ If you need to understand what `OPL` is today, go back to:
 
 ## 1. Convergence And Status Alignment
 
+- `series-doc-governance-checklist.md`
+- `four-repo-doc-series-sync-summary-2026-04-14.md`
 - `contract-convergence-v1-execution-board.md`
 - `ecosystem-status-matrix.md`
 - `family-user-facing-maturity-roadmap.md`
@@ -84,5 +86,6 @@ If you need to understand what `OPL` is today, go back to:
 ## Usage Rules
 
 - These files may explain why a freeze happened, but they must not override `README*`, `docs/README*`, or the core maintainer working set.
+- `series-doc-governance-checklist.md` is the repo-scoped audit checklist for keeping this repository aligned with the four-repo series; the dated sync summary records one concrete cross-repo intake round.
 - New reference docs should be filed into the five buckets above. Historical closeout or migration traces should stay Layer 3 rather than leaking back into the default public mainline.
 - Runbooks, longrun prompt templates, and worktree discipline for the retired execution surface should no longer be entered from `docs/references/`; use `docs/history/omx/` instead.
