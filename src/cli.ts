@@ -136,6 +136,9 @@ type WorkspaceRegistryCliInput = {
   entryCommand?: string;
   manifestCommand?: string;
   entryUrl?: string;
+  workspaceRoot?: string;
+  profileRef?: string;
+  inputPath?: string;
 };
 
 type WebCliInput = {
@@ -800,6 +803,15 @@ function parseWorkspaceRegistryArgs(
         break;
       case '--entry-url':
         parsed.entryUrl = value;
+        break;
+      case '--workspace-root':
+        parsed.workspaceRoot = value;
+        break;
+      case '--profile':
+        parsed.profileRef = value;
+        break;
+      case '--input':
+        parsed.inputPath = value;
         break;
       default:
         throw buildUsageError(`Unknown option for workspace registry command: ${token}.`, spec, {
@@ -2239,12 +2251,14 @@ async function main() {
     },
     'workspace-bind': {
       usage:
-        'opl workspace-bind --project <project_id> --path <workspace_path> [--label <label>] [--entry-command <command>] [--manifest-command <command>] [--entry-url <url>]',
+        'opl workspace-bind --project <project_id> --path <workspace_path> [--label <label>] [--entry-command <command>] [--manifest-command <command>] [--entry-url <url>] [--workspace-root <dir>] [--profile <file>] [--input <file>]',
       summary:
-        'Bind and activate one workspace for an admitted project, optionally freezing its direct-entry locator.',
+        'Bind and activate one workspace for an admitted project, optionally freezing or deriving its direct-entry locator.',
       examples: [
         'opl workspace-bind --project redcube --path /Users/gaofeng/workspace/redcube-ai',
         'opl workspace-bind --project redcube --path /Users/gaofeng/workspace/redcube-ai --entry-command "redcube-ai frontdesk" --manifest-command "redcube product manifest --workspace-root /Users/gaofeng/workspace/redcube-ai" --entry-url http://127.0.0.1:3310/redcube',
+        'opl workspace-bind --project medautoscience --path /Users/gaofeng/workspace/med-autoscience --profile /Users/gaofeng/workspace/med-autoscience/profiles/local.toml',
+        'opl workspace-bind --project medautogrant --path /Users/gaofeng/workspace/med-autogrant --input /Users/gaofeng/workspace/med-autogrant/examples/nsfc_workspace_p2c_critique.json',
       ],
       handler: (args) => {
         const parsed = parseWorkspaceRegistryArgs(args, commandSpecs['workspace-bind']);
@@ -2263,6 +2277,9 @@ async function main() {
           entryCommand: parsed.entryCommand,
           manifestCommand: parsed.manifestCommand,
           entryUrl: parsed.entryUrl,
+          workspaceRoot: parsed.workspaceRoot,
+          profileRef: parsed.profileRef,
+          inputPath: parsed.inputPath,
         });
       },
     },
