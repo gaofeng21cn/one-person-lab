@@ -910,6 +910,87 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
       .map((entry) => escapeHtml(entry))
     : [];
+  const bindingGuideSummary = escapeHtml(
+    [
+      `当前 registry 里有 ${frontdeskDashboard.workspace_catalog.summary.total_projects_count} 个 project surface`,
+      `${frontdeskDashboard.workspace_catalog.summary.active_projects_count} 个已激活 workspace binding`,
+      `${frontdeskDashboard.workspace_catalog.summary.direct_entry_ready_projects_count} 个已具备 direct entry`,
+      `${frontdeskDashboard.workspace_catalog.summary.manifest_ready_projects_count} 个已具备 manifest command`,
+    ].join('；'),
+  );
+  const bindingGuideCards = frontdeskDashboard.workspace_catalog.projects
+    .filter((project) => project.project_id !== 'opl')
+    .map((project) => {
+      const contract = project.binding_contract;
+      const requiredFields = contract.required_locator_fields.length > 0
+        ? contract.required_locator_fields.map((field) => `<code>${escapeHtml(field)}</code>`).join(', ')
+        : 'none';
+      const optionalFields = contract.optional_locator_fields.length > 0
+        ? contract.optional_locator_fields.map((field) => `<code>${escapeHtml(field)}</code>`).join(', ')
+        : 'none';
+      const activeBindingSummary = project.active_binding
+        ? `<div>${escapeHtml(project.active_binding.workspace_path)}</div>`
+        : '<div>当前还没有 active binding。</div>';
+
+      return `
+          <div class="meta-card">
+            <span class="meta-label">${escapeHtml(project.project)}</span>
+            <div><strong>Locator kind:</strong> ${escapeHtml(contract.workspace_locator_surface_kind ?? 'none')}</div>
+            <div><strong>Required:</strong> ${requiredFields}</div>
+            <div><strong>Optional:</strong> ${optionalFields}</div>
+            ${contract.derived_frontdesk_command_template
+              ? `<div><strong>Frontdesk:</strong> <code>${escapeHtml(contract.derived_frontdesk_command_template)}</code></div>`
+              : ''}
+            ${contract.derived_manifest_command_template
+              ? `<div><strong>Manifest:</strong> <code>${escapeHtml(contract.derived_manifest_command_template)}</code></div>`
+              : ''}
+            <div><strong>Quick bind:</strong> ${escapeHtml(contract.quick_bind_hint)}</div>
+            <div><strong>Current active binding:</strong></div>
+            ${activeBindingSummary}
+          </div>`;
+    })
+    .join('');
+  const latestLedgerSession = frontdeskDashboard.runtime_status.managed_session_ledger.sessions[0] ?? null;
+  const latestLedgerResourceTotals = latestLedgerSession?.resource_totals ?? null;
+  const sessionResourceSummary = escapeHtml(
+    [
+      `${frontdeskDashboard.runtime_status.managed_session_ledger.summary.entry_count} 条 ledger event`,
+      `${frontdeskDashboard.runtime_status.managed_session_ledger.summary.session_aggregate_count} 个 session aggregate`,
+      latestLedgerResourceTotals
+        ? `latest sample ${latestLedgerResourceTotals.latest_sample_status}`
+        : '当前还没有 session resource sample',
+      frontdeskDashboard.runtime_status.managed_session_ledger.summary.peak_total_rss_kb !== null
+        ? `peak RSS ${frontdeskDashboard.runtime_status.managed_session_ledger.summary.peak_total_rss_kb} KB`
+        : 'peak RSS n/a',
+      frontdeskDashboard.runtime_status.managed_session_ledger.summary.peak_total_cpu_percent !== null
+        ? `peak CPU ${frontdeskDashboard.runtime_status.managed_session_ledger.summary.peak_total_cpu_percent}%`
+        : 'peak CPU n/a',
+    ].join('；'),
+  );
+  const latestLedgerSessionId = escapeHtml(latestLedgerSession?.session_id ?? 'n/a');
+  const latestLedgerDomain = escapeHtml(latestLedgerSession?.domain_id ?? 'unassigned');
+  const latestLedgerWorkspace = escapeHtml(latestLedgerSession?.workspace_locator?.absolute_path ?? 'n/a');
+  const latestLedgerSampleStatus = escapeHtml(latestLedgerResourceTotals?.latest_sample_status ?? 'n/a');
+  const latestLedgerLatestRss = escapeHtml(
+    typeof latestLedgerResourceTotals?.latest_total_rss_kb === 'number'
+      ? `${latestLedgerResourceTotals.latest_total_rss_kb} KB`
+      : 'n/a',
+  );
+  const latestLedgerLatestCpu = escapeHtml(
+    typeof latestLedgerResourceTotals?.latest_total_cpu_percent === 'number'
+      ? `${latestLedgerResourceTotals.latest_total_cpu_percent}%`
+      : 'n/a',
+  );
+  const latestLedgerPeakRss = escapeHtml(
+    typeof latestLedgerResourceTotals?.peak_total_rss_kb === 'number'
+      ? `${latestLedgerResourceTotals.peak_total_rss_kb} KB`
+      : 'n/a',
+  );
+  const latestLedgerPeakCpu = escapeHtml(
+    typeof latestLedgerResourceTotals?.peak_total_cpu_percent === 'number'
+      ? `${latestLedgerResourceTotals.peak_total_cpu_percent}%`
+      : 'n/a',
+  );
 
   return `<!doctype html>
 <html lang="en">
@@ -1179,6 +1260,41 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
           <div class="meta-card">
             <span class="meta-label">Hosted shell origin</span>
             <div>${hostedShellOrigin}</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Binding Guide</h2>
+        <p class="status-copy">${bindingGuideSummary}</p>
+        <p class="muted" style="margin-top: 12px;">
+          这里冻结的是 OPL 如何从 workspace registry 诚实派生各业务仓 direct entry / manifest locator；不是把 OPL 写成 domain runtime owner。
+        </p>
+        <div class="detail-grid" style="margin-top: 16px;">
+          ${bindingGuideCards}
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Session Resource Attribution</h2>
+        <p class="status-copy">${sessionResourceSummary}</p>
+        <p class="muted" style="margin-top: 12px;">
+          这里只显示 OPL 管理 session 的事件时采样，用来做可读归因；不声称是 Hermes kernel 的全局计费真相。
+        </p>
+        <div class="detail-grid" style="margin-top: 16px;">
+          <div class="meta-card">
+            <span class="meta-label">Latest session aggregate</span>
+            <div><strong>Session ID:</strong> ${latestLedgerSessionId}</div>
+            <div><strong>Domain:</strong> ${latestLedgerDomain}</div>
+            <div><strong>Workspace:</strong> ${latestLedgerWorkspace}</div>
+            <div><strong>Latest sample:</strong> ${latestLedgerSampleStatus}</div>
+          </div>
+          <div class="meta-card">
+            <span class="meta-label">Latest resource sample</span>
+            <div><strong>Latest RSS:</strong> ${latestLedgerLatestRss}</div>
+            <div><strong>Latest CPU:</strong> ${latestLedgerLatestCpu}</div>
+            <div><strong>Peak RSS:</strong> ${latestLedgerPeakRss}</div>
+            <div><strong>Peak CPU:</strong> ${latestLedgerPeakCpu}</div>
           </div>
         </div>
       </section>

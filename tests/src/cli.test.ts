@@ -2995,6 +2995,26 @@ test('workspace registry commands bind activate and archive project workspaces w
     assert.equal(catalogOutput.workspace_catalog.projects[2].bindings_count.manifest_ready, 1);
     assert.equal(catalogOutput.workspace_catalog.projects[2].last_updated_at, bindOutput.workspace_catalog.binding.updated_at);
     assert.deepEqual(catalogOutput.workspace_catalog.projects[2].available_actions, ['bind', 'activate', 'archive', 'launch']);
+    assert.equal(
+      catalogOutput.workspace_catalog.projects[2].binding_contract.surface_id,
+      'opl_project_workspace_binding_contract',
+    );
+    assert.deepEqual(
+      catalogOutput.workspace_catalog.projects[2].binding_contract.required_locator_fields,
+      [],
+    );
+    assert.deepEqual(
+      catalogOutput.workspace_catalog.projects[2].binding_contract.optional_locator_fields,
+      ['workspace_root'],
+    );
+    assert.equal(
+      catalogOutput.workspace_catalog.projects[2].binding_contract.derived_frontdesk_command_template,
+      'redcube product frontdesk --workspace-root <workspace_root>',
+    );
+    assert.equal(
+      catalogOutput.workspace_catalog.projects[2].binding_contract.derived_manifest_command_template,
+      'redcube product manifest --workspace-root <workspace_root>',
+    );
     assert.equal(catalogOutput.workspace_catalog.summary.active_projects_count, 1);
     assert.equal(catalogOutput.workspace_catalog.summary.direct_entry_ready_projects_count, 1);
     assert.equal(catalogOutput.workspace_catalog.summary.manifest_ready_projects_count, 1);
@@ -3732,6 +3752,10 @@ test('project-progress promotes current MAS study into a paper-facing summary in
     assert.ok(currentStudy);
     const storySummary = currentStudy.story_summary;
     assert.ok(storySummary);
+    const paperSnapshot = currentStudy.paper_snapshot;
+    assert.ok(paperSnapshot);
+    const currentEffectSummary = paperSnapshot.current_effect_summary;
+    assert.ok(currentEffectSummary);
 
     assert.equal(currentStudy.study_id, studyId);
     assert.equal(
@@ -3741,14 +3765,14 @@ test('project-progress promotes current MAS study into a paper-facing summary in
     assert.match(storySummary, /侵袭负担.*Knosp.*公开 MRI \/ omics/);
     assert.equal(currentStudy.current_stage, 'publication_supervision');
     assert.equal(currentStudy.monitoring.health_status, 'live');
-    assert.equal(currentStudy.paper_snapshot.main_figure_count, 3);
-    assert.equal(currentStudy.paper_snapshot.supplementary_figure_count, 1);
-    assert.equal(currentStudy.paper_snapshot.main_table_count, 2);
-    assert.equal(currentStudy.paper_snapshot.supplementary_table_count, 1);
-    assert.equal(currentStudy.paper_snapshot.reference_count, 32);
-    assert.equal(currentStudy.paper_snapshot.page_count, 12);
-    assert.ok(currentStudy.paper_snapshot.current_effect_summary.includes('AUROC 0.7999'));
-    assert.match(currentStudy.paper_snapshot.current_effect_summary, /negative/i);
+    assert.equal(paperSnapshot.main_figure_count, 3);
+    assert.equal(paperSnapshot.supplementary_figure_count, 1);
+    assert.equal(paperSnapshot.main_table_count, 2);
+    assert.equal(paperSnapshot.supplementary_table_count, 1);
+    assert.equal(paperSnapshot.reference_count, 32);
+    assert.equal(paperSnapshot.page_count, 12);
+    assert.ok(currentEffectSummary.includes('AUROC 0.7999'));
+    assert.match(currentEffectSummary, /negative/i);
     assert.match(payload.project_progress.progress_summary, /004-invasive-architecture/);
     assert.match(payload.project_progress.progress_summary, /3 张主图/);
     assert.match(payload.project_progress.progress_summary, /32 篇参考文献/);
@@ -3866,6 +3890,38 @@ test('workspace-bind derives family direct-entry locators from structured projec
     const catalogOutput = runCli(['workspace-catalog'], env);
     assert.equal(catalogOutput.workspace_catalog.summary.direct_entry_ready_projects_count, 3);
     assert.equal(catalogOutput.workspace_catalog.summary.manifest_ready_projects_count, 3);
+    const magProject = catalogOutput.workspace_catalog.projects.find(
+      (entry: { project_id: string }) => entry.project_id === 'medautogrant',
+    );
+    const masProject = catalogOutput.workspace_catalog.projects.find(
+      (entry: { project_id: string }) => entry.project_id === 'medautoscience',
+    );
+    const redcubeProject = catalogOutput.workspace_catalog.projects.find(
+      (entry: { project_id: string }) => entry.project_id === 'redcube',
+    );
+    assert.deepEqual(magProject.binding_contract.required_locator_fields, ['input_path']);
+    assert.equal(
+      magProject.binding_contract.workspace_locator_surface_kind,
+      'med_autogrant_workspace_input',
+    );
+    assert.equal(
+      magProject.binding_contract.derived_frontdesk_command_template,
+      'uv run python -m med_autogrant product-frontdesk --input <input_path>',
+    );
+    assert.deepEqual(masProject.binding_contract.required_locator_fields, ['profile_ref']);
+    assert.equal(
+      masProject.binding_contract.workspace_locator_surface_kind,
+      'med_autoscience_workspace_profile',
+    );
+    assert.equal(
+      masProject.binding_contract.derived_manifest_command_template,
+      'uv run python -m med_autoscience.cli product-entry-manifest --profile <profile_ref> --format json',
+    );
+    assert.deepEqual(redcubeProject.binding_contract.optional_locator_fields, ['workspace_root']);
+    assert.equal(
+      redcubeProject.binding_contract.quick_bind_hint,
+      '可只给 workspace_path；若额外提供 workspace_root，则 redcube direct entry 会优先指向它。',
+    );
 
     const manifestOutput = runCli(['domain-manifests'], env);
     assert.equal(manifestOutput.domain_manifests.summary.resolved_count, 3);
@@ -4410,7 +4466,10 @@ exit 1
     assert.equal(ledgerOutput.session_ledger.sessions[0].domain_id, 'redcube');
     assert.deepEqual(ledgerOutput.session_ledger.sessions[0].modes, ['resume', 'ask']);
     assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.samples_captured, 2);
+    assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.latest_sample_status, 'captured');
     assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.latest_process_count, 2);
+    assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.latest_total_rss_kb, 174616);
+    assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.latest_total_cpu_percent, 4.4);
     assert.equal(ledgerOutput.session_ledger.sessions[0].workspace_locator.absolute_path, repoRoot);
     assert.equal(ledgerOutput.session_ledger.summary.session_aggregate_count, 1);
 
@@ -4838,6 +4897,8 @@ exit 1
     assert.match(pageHtml, /Bound direct entry/);
     assert.match(pageHtml, /Open redcube direct entry/);
     assert.match(pageHtml, /http:\/\/127\.0\.0\.1:3310\/redcube/);
+    assert.match(pageHtml, /Binding Guide/);
+    assert.match(pageHtml, /Session Resource Attribution/);
     assert.match(pageHtml, /Project snapshot/);
     assert.match(pageHtml, /\/api\/frontdesk-entry-guide/);
     assert.doesNotMatch(pageHtml, /Start A Domain Project/);

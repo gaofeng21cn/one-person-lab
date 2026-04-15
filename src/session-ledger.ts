@@ -70,7 +70,10 @@ type SessionAggregate = {
   resource_totals: {
     samples_captured: number;
     samples_unavailable: number;
+    latest_sample_status: 'captured' | 'unavailable';
     latest_process_count: number | null;
+    latest_total_rss_kb: number | null;
+    latest_total_cpu_percent: number | null;
     peak_process_count: number | null;
     peak_total_rss_kb: number | null;
     peak_total_cpu_percent: number | null;
@@ -193,7 +196,11 @@ function buildSessionAggregates(entries: SessionLedgerEntry[], limit: number) {
         resource_totals: {
           samples_captured: entry.resource_sample.status === 'captured' ? 1 : 0,
           samples_unavailable: entry.resource_sample.status === 'unavailable' ? 1 : 0,
+          latest_sample_status: entry.resource_sample.status,
           latest_process_count: entry.resource_sample.status === 'captured' ? entry.resource_sample.process_count : null,
+          latest_total_rss_kb: entry.resource_sample.status === 'captured' ? entry.resource_sample.total_rss_kb : null,
+          latest_total_cpu_percent:
+            entry.resource_sample.status === 'captured' ? entry.resource_sample.total_cpu_percent : null,
           peak_process_count: entry.resource_sample.status === 'captured' ? entry.resource_sample.process_count : null,
           peak_total_rss_kb: entry.resource_sample.status === 'captured' ? entry.resource_sample.total_rss_kb : null,
           peak_total_cpu_percent: entry.resource_sample.status === 'captured' ? entry.resource_sample.total_cpu_percent : null,

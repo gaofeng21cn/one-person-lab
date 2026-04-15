@@ -33,6 +33,18 @@ export type WorkspaceBinding = {
   archived_at: string | null;
 };
 
+type ProjectWorkspaceBindingContract = {
+  surface_id: 'opl_project_workspace_binding_contract';
+  project_id: string;
+  project: string;
+  workspace_locator_surface_kind: string | null;
+  required_locator_fields: string[];
+  optional_locator_fields: string[];
+  derived_frontdesk_command_template: string | null;
+  derived_manifest_command_template: string | null;
+  quick_bind_hint: string;
+};
+
 type WorkspaceRegistryFile = {
   version: 'g2';
   bindings: WorkspaceBinding[];
@@ -389,6 +401,69 @@ function hasManifest(binding: WorkspaceBinding) {
   return Boolean(binding.direct_entry.manifest_command);
 }
 
+function buildProjectBindingContract(
+  projectId: string,
+  projectName: string,
+): ProjectWorkspaceBindingContract {
+  if (projectId === 'medautoscience') {
+    return {
+      surface_id: 'opl_project_workspace_binding_contract',
+      project_id: projectId,
+      project: projectName,
+      workspace_locator_surface_kind: 'med_autoscience_workspace_profile',
+      required_locator_fields: ['profile_ref'],
+      optional_locator_fields: [],
+      derived_frontdesk_command_template:
+        'uv run python -m med_autoscience.cli product-frontdesk --profile <profile_ref>',
+      derived_manifest_command_template:
+        'uv run python -m med_autoscience.cli product-entry-manifest --profile <profile_ref> --format json',
+      quick_bind_hint: '绑定现有 MAS workspace_path 后，再给 profile_ref，OPL 就能稳定派生 direct entry 与 manifest surface。',
+    };
+  }
+
+  if (projectId === 'medautogrant') {
+    return {
+      surface_id: 'opl_project_workspace_binding_contract',
+      project_id: projectId,
+      project: projectName,
+      workspace_locator_surface_kind: 'med_autogrant_workspace_input',
+      required_locator_fields: ['input_path'],
+      optional_locator_fields: [],
+      derived_frontdesk_command_template:
+        'uv run python -m med_autogrant product-frontdesk --input <input_path>',
+      derived_manifest_command_template:
+        'uv run python -m med_autogrant product-entry-manifest --input <input_path> --format json',
+      quick_bind_hint: '绑定现有 MAG workspace_path 后，再给 input_path，OPL 就能诚实派生 grant direct entry 与 manifest command。',
+    };
+  }
+
+  if (projectId === 'redcube') {
+    return {
+      surface_id: 'opl_project_workspace_binding_contract',
+      project_id: projectId,
+      project: projectName,
+      workspace_locator_surface_kind: 'redcube_workspace',
+      required_locator_fields: [],
+      optional_locator_fields: ['workspace_root'],
+      derived_frontdesk_command_template: 'redcube product frontdesk --workspace-root <workspace_root>',
+      derived_manifest_command_template: 'redcube product manifest --workspace-root <workspace_root>',
+      quick_bind_hint: '可只给 workspace_path；若额外提供 workspace_root，则 redcube direct entry 会优先指向它。',
+    };
+  }
+
+  return {
+    surface_id: 'opl_project_workspace_binding_contract',
+    project_id: projectId,
+    project: projectName,
+    workspace_locator_surface_kind: null,
+    required_locator_fields: [],
+    optional_locator_fields: [],
+    derived_frontdesk_command_template: null,
+    derived_manifest_command_template: null,
+    quick_bind_hint: 'OPL 顶层 workspace binding 只用于 family-level 状态与路由，不直接派生 domain product entry。',
+  };
+}
+
 function buildProjectCatalogEntry(
   projectId: string,
   projectName: string,
@@ -419,6 +494,7 @@ function buildProjectCatalogEntry(
       direct_entry_ready: directEntryReadyCount,
       manifest_ready: manifestReadyCount,
     },
+    binding_contract: buildProjectBindingContract(projectId, projectName),
     last_updated_at: lastUpdatedAt,
     available_actions: [
       'bind',
