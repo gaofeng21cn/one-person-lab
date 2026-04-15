@@ -619,6 +619,35 @@ function buildFrontDeskReadinessSurfaceRef(options: { basePath?: string } = {}) 
   };
 }
 
+function buildFrontDeskDashboardSurfaceRef(options: { basePath?: string } = {}) {
+  const endpoints = buildFrontDeskEndpoints(options.basePath);
+
+  return {
+    surface_id: 'opl_frontdesk_dashboard',
+    endpoint: endpoints.dashboard,
+  };
+}
+
+function buildFrontDeskShellBootstrap(
+  contracts: GatewayContracts,
+  options: { basePath?: string } = {},
+) {
+  const frontdeskEntryGuideSurface = buildFrontDeskEntryGuideSurfaceRef(contracts, options);
+  const frontdeskReadinessSurface = buildFrontDeskReadinessSurfaceRef(options);
+  const domainWiringSurface = buildFrontDeskDomainWiringSurfaceRef(contracts, options);
+  const dashboardSurface = buildFrontDeskDashboardSurfaceRef(options);
+
+  return {
+    primary_surface: frontdeskEntryGuideSurface,
+    follow_on_surfaces: [
+      frontdeskReadinessSurface,
+      domainWiringSurface,
+      dashboardSurface,
+    ],
+    operator_debug_surface: dashboardSurface,
+  };
+}
+
 type DomainWorkspaceGuide = {
   domain_workspace_kind: string;
   domain_workspace_label: string;
@@ -1115,6 +1144,7 @@ export function buildFrontDeskManifest(contracts: GatewayContracts, options: { b
   const frontdeskEntryGuideSurface = buildFrontDeskEntryGuideSurfaceRef(contracts, options);
   const domainWiringSurface = buildFrontDeskDomainWiringSurfaceRef(contracts, options);
   const frontdeskReadinessSurface = buildFrontDeskReadinessSurfaceRef(options);
+  const shellBootstrap = buildFrontDeskShellBootstrap(contracts, options);
 
   return {
     version: 'g2',
@@ -1135,6 +1165,7 @@ export function buildFrontDeskManifest(contracts: GatewayContracts, options: { b
       frontdesk_entry_guide_surface: frontdeskEntryGuideSurface,
       frontdesk_readiness_surface: frontdeskReadinessSurface,
       domain_wiring_surface: domainWiringSurface,
+      shell_bootstrap: shellBootstrap,
       handoff_envelope_fields: [
         'target_domain_id',
         'task_intent',

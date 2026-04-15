@@ -102,6 +102,7 @@ Hosted shell pilots are real, but managed hosted runtime is still not landed.
 
 Current top-level entry surfaces therefore already include a local `opl` shell and a local web front desk pilot.
 Current family management surfaces include `workspace-catalog`, `workspace-bind|activate|archive`, `domain-manifests`, `session-ledger`, and `dashboard`.
+For AI / GUI shells, the new default bootstrap order is now explicit: start with `frontdesk-entry-guide`, then consult `frontdesk-readiness` and `frontdesk-domain-wiring`, and only use `dashboard` as the operator/debug aggregate surface.
 `workspace-bind` can now derive family `entry_command` plus `manifest_command` from structured workspace locators such as `--profile`, `--input`, and `--workspace-root`, instead of forcing every project onto handwritten raw commands.
 
 The intended family chain is:

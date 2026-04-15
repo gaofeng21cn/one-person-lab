@@ -26,6 +26,7 @@ repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review 
 而位于这层合同之上的当前用户前台，已经是本地 `opl` shell、`opl web` pilot，以及围绕它们的 machine-readable discovery / handoff surface；其中 hosted-friendly 的 `frontdesk-manifest`、`frontdesk-entry-guide`、`frontdesk-readiness`、`frontdesk-domain-wiring`、`hosted-bundle` 等 surface 已作为当前前台 contract 的一部分落地。
 其中 `frontdesk-readiness` 是面向 operator 的派生看板：它只收口本地 service 状态、hosted pilot readiness，以及 domain 自己持有的 `product_entry_readiness / preflight` 真相；它继续从既有 manifest / binding / runtime surface 派生，不得变成第二真相源。
 其中 `frontdesk-entry-guide` 是面向 AI / GUI 壳的 family-level machine-readable entry layer：它冻结 workspace taxonomy、domain workspace mapping 与每个 domain 的 start guidance，但不替代 domain 自己持有的 manifest truth。
+`frontdesk-manifest` 与 `opl web` startup payload 现在也把 shell bootstrap 顺序显式冻结下来：`frontdesk-entry-guide` 是 primary discovery surface，`frontdesk-readiness` 与 `frontdesk-domain-wiring` 是 follow-on alignment surface，而 `dashboard` 明确退回 operator debug / aggregate surface，不再充当壳层默认入口来源。
 如果未来把更高层的用户前台命名为 `OPL Cortex`，那也只应被视为产品壳名字；repo 内部的 `frontdesk_*` contract id 继续保持不变，除非单独冻结新的 rename tranche。
 这个交付目标把已有的顶层 contract language 继续维持为本地 CLI surface 可读取的合同入口；任何诚实的上游 `Hermes-Agent` rollout，仍然属于 domain 侧迁移目标，而不是当前 OPL 层既成事实。
 

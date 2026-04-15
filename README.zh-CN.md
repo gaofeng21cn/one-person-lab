@@ -105,6 +105,7 @@
 - `opl doctor`、`opl ask`、`opl chat`、`opl resume`、`opl sessions`、`opl logs`、`opl repair-hermes-gateway`、`opl frontdesk-manifest`、`opl frontdesk-hosted-bundle`、`opl frontdesk-hosted-package`、`opl frontdesk-librechat-package`、`opl session-ledger`、`opl handoff-envelope`、`opl domain-manifests`、`paperclip-*` 以及 `frontdesk-service-*` 现在共同构成显式的产品入口与 runtime 运维命令面；其中 `paperclip-*` 仍是可选下游 bridge，只在已配置外部 control plane 时启用
 - `opl frontdesk-bootstrap --path <workspace>` 是本机 GUI 前台的主入口；它会一次性落下 `OPL Atlas` 前台壳，把 `OPL Agent` 对齐到当前本机 Codex 默认模型与 thinking，并默认挂上 `OPL Cortex` 这条 MCP bridge，同时把当前 workspace 接入顶层 registry
 - `opl frontdesk-manifest`、`opl frontdesk-hosted-bundle`、`opl frontdesk-hosted-package` 与 `opl frontdesk-librechat-package`，现在把 hosted-friendly shell contract、hosted-ready bundle surface、可自托管的 frontdesk package，以及真实的 LibreChat-first hosted shell pilot package 一并冻结下来，同时不夸大 managed hosted runtime readiness
+- 对 AI / GUI 壳来说，当前默认 bootstrap 顺序也已经明确冻结：先读 `frontdesk-entry-guide`，再看 `frontdesk-readiness` 与 `frontdesk-domain-wiring`，`dashboard` 明确只保留给 operator/debug 聚合视图
 - `opl projects`、`opl workspace-status`、`opl workspace-catalog`、`opl workspace-bind|activate|archive`、`opl domain-manifests`、`opl runtime-status`、`opl session-ledger`、`opl dashboard` 现在补上了可写的顶层管理面，用来观察并管理项目、工作区、会话、handoff 与 runtime；`workspace-catalog` 继续只做 registry，而 `domain-manifests` 会实际解析当前 active binding 上的 `manifest_command`，把 domain-owned 的产品入口 manifest 变成可消费的 machine-readable discovery surface，避免 family wiring 自己猜 domain shell 能力；这层发现面现在也会原样保留各 domain 的 `product_entry_start`、`product_entry_shell`、`shared_handoff` 与可选的 `family_orchestration.action_graph` companion，而不是再把 richer shell 语义压扁掉
 - `opl web` 现在补上了本地 web front desk pilot，可以直接从浏览器进入 OPL、解析 routed start surface、做 quick ask、绑定 workspace、查看 managed session ledger、导出可自托管的 hosted pilot package，并消费 hosted-friendly `health / manifest / domain-manifests / hosted-bundle / hosted-package / librechat-package / start / sessions / resume / logs / handoff-envelope` 界面
 - `opl frontdesk-service-install|status|start|stop|open|uninstall` 现在又补上了基于 launchd 的 service-safe 本地包装层，让 OPL 的浏览器入口不再只能靠手动挂着终端
@@ -174,6 +175,7 @@
   - 输出 Hermes runtime 健康、最近会话与 runtime-level 进程资源占用
 - `opl dashboard`
   - 把 front desk、projects、workspace、workspace catalog、resolved domain manifests、session ledger 与 runtime 汇总成当前顶层管理视图
+  - 这是 operator/debug aggregate surface，不再作为 GUI / shell 默认 discovery 起点
 - `opl web`
   - 启动本地 web front desk pilot，让用户直接在浏览器里进入 OPL、解析某个 routed domain 的 `product_entry_start`、发起 quick ask、绑定 workspace、查看 managed session ledger、检查 resolved domain manifests、导出可自托管的 frontdesk package 与 LibreChat-first hosted shell pilot package，并消费 hosted-friendly `health / manifest / domain-manifests / hosted-bundle / hosted-package / librechat-package / start / sessions / resume / logs / handoff-envelope` API
 

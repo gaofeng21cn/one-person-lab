@@ -181,6 +181,22 @@ type WebFrontDeskStartupPayload = {
       resume: string;
       logs: string;
     };
+    shell_bootstrap: {
+      primary_surface: {
+        surface_id: string;
+        endpoint: string;
+        summary?: unknown;
+      };
+      follow_on_surfaces: Array<{
+        surface_id: string;
+        endpoint: string;
+        summary?: unknown;
+      }>;
+      operator_debug_surface: {
+        surface_id: string;
+        endpoint: string;
+      };
+    };
     defaults: {
       workspace_path: string;
       sessions_limit: number;
@@ -583,6 +599,7 @@ function buildStartupPayload(context: WebFrontDeskContext): WebFrontDeskStartupP
         resume: endpoints.resume,
         logs: endpoints.logs,
       },
+      shell_bootstrap: manifest.frontdesk_manifest.shell_bootstrap,
       defaults: {
         workspace_path: context.workspacePath,
         sessions_limit: context.sessionsLimit,

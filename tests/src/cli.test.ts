@@ -1002,6 +1002,22 @@ async function startFakeFrontDeskApiServer() {
       return;
     }
 
+    if (request.method === 'GET' && url.pathname === '/api/frontdesk-entry-guide') {
+      response.statusCode = 200;
+      response.end(JSON.stringify({
+        frontdesk_entry_guide: {
+          surface_id: 'opl_frontdesk_entry_guide',
+          workspace_taxonomy: {
+            family_workspace_kind: 'opl_family_workspace',
+          },
+          summary: {
+            total_projects_count: 1,
+          },
+        },
+      }));
+      return;
+    }
+
     if (request.method === 'GET' && url.pathname === '/api/project-progress') {
       response.statusCode = 200;
       response.end(JSON.stringify({
@@ -1979,6 +1995,14 @@ test('frontdesk-manifest exposes the hosted-friendly OPL shell contract without 
     assert.equal(output.frontdesk_manifest.frontdesk_entry_guide_surface.endpoint, '/api/frontdesk-entry-guide');
     assert.equal(output.frontdesk_manifest.frontdesk_readiness_surface.surface_id, 'opl_frontdesk_readiness');
     assert.equal(output.frontdesk_manifest.frontdesk_readiness_surface.endpoint, '/api/frontdesk-readiness');
+    assert.equal(output.frontdesk_manifest.shell_bootstrap.primary_surface.surface_id, 'opl_frontdesk_entry_guide');
+    assert.equal(output.frontdesk_manifest.shell_bootstrap.primary_surface.endpoint, '/api/frontdesk-entry-guide');
+    assert.deepEqual(
+      output.frontdesk_manifest.shell_bootstrap.follow_on_surfaces.map((entry: { surface_id: string }) => entry.surface_id),
+      ['opl_frontdesk_readiness', 'opl_frontdesk_domain_wiring', 'opl_frontdesk_dashboard'],
+    );
+    assert.equal(output.frontdesk_manifest.shell_bootstrap.operator_debug_surface.surface_id, 'opl_frontdesk_dashboard');
+    assert.equal(output.frontdesk_manifest.shell_bootstrap.operator_debug_surface.endpoint, '/api/dashboard');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
@@ -2511,6 +2535,7 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
         tools: Array<{ name: string }>;
       }).tools;
       assert.equal(tools.some((tool) => tool.name === 'opl_project_progress'), true);
+      assert.equal(tools.some((tool) => tool.name === 'opl_frontdesk_entry_guide'), true);
       assert.equal(tools.some((tool) => tool.name === 'opl_dashboard'), true);
       assert.equal(tools.some((tool) => tool.name === 'opl_runtime_status'), true);
       assert.equal(tools.some((tool) => tool.name === 'opl_workspace_catalog'), true);
@@ -2560,6 +2585,22 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
         id: 5,
         method: 'tools/call',
         params: {
+          name: 'opl_frontdesk_entry_guide',
+          arguments: {},
+        },
+      });
+      const entryGuideCall = await readJsonLine(child.stdout);
+      const entryGuideContent = (entryGuideCall.result as {
+        content: Array<{ type: string; text: string }>;
+      }).content;
+      assert.equal(entryGuideContent[0].type, 'text');
+      assert.match(entryGuideContent[0].text, /"surface_id": "opl_frontdesk_entry_guide"/);
+
+      writeJsonLine(child.stdin, {
+        jsonrpc: '2.0',
+        id: 6,
+        method: 'tools/call',
+        params: {
           name: 'opl_dashboard',
           arguments: {},
         },
@@ -2580,6 +2621,7 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
         && request.query.path === activatedWorkspacePath
         && request.query.sessions_limit === '7'
       ), true);
+      assert.equal(fakeApi.requests.some((request) => request.path === '/api/frontdesk-entry-guide'), true);
     } finally {
       child.kill('SIGTERM');
       await once(child, 'exit');
@@ -4066,6 +4108,20 @@ exit 1
     const webFrontdesk = startup.payload.web_frontdesk as {
       entry_surface: string;
       hosted_status: string;
+      shell_bootstrap: {
+        primary_surface: {
+          surface_id: string;
+          endpoint: string;
+        };
+        follow_on_surfaces: Array<{
+          surface_id: string;
+          endpoint: string;
+        }>;
+        operator_debug_surface: {
+          surface_id: string;
+          endpoint: string;
+        };
+      };
       api: {
         frontdesk_entry_guide: string;
         frontdesk_readiness: string;
@@ -4086,6 +4142,13 @@ exit 1
     assert.equal(webFrontdesk.api.project_progress, '/api/project-progress');
     assert.equal(webFrontdesk.api.frontdesk_domain_wiring, '/api/frontdesk-domain-wiring');
     assert.equal(webFrontdesk.api.librechat_package, '/api/librechat-package');
+    assert.equal(webFrontdesk.shell_bootstrap.primary_surface.surface_id, 'opl_frontdesk_entry_guide');
+    assert.equal(webFrontdesk.shell_bootstrap.primary_surface.endpoint, '/api/frontdesk-entry-guide');
+    assert.deepEqual(
+      webFrontdesk.shell_bootstrap.follow_on_surfaces.map((entry: { surface_id: string }) => entry.surface_id),
+      ['opl_frontdesk_readiness', 'opl_frontdesk_domain_wiring', 'opl_frontdesk_dashboard'],
+    );
+    assert.equal(webFrontdesk.shell_bootstrap.operator_debug_surface.endpoint, '/api/dashboard');
 
     const baseUrl = String(webFrontdesk.listening.base_url);
     const page = await fetch(baseUrl);
@@ -4127,6 +4190,8 @@ exit 1
     assert.equal(manifestPayload.frontdesk_manifest.shell_integration_target, 'librechat_first');
     assert.equal(manifestPayload.frontdesk_manifest.endpoints.sessions, '/api/sessions');
     assert.equal(manifestPayload.frontdesk_manifest.frontdesk_entry_guide_surface.surface_id, 'opl_frontdesk_entry_guide');
+    assert.equal(manifestPayload.frontdesk_manifest.shell_bootstrap.primary_surface.surface_id, 'opl_frontdesk_entry_guide');
+    assert.equal(manifestPayload.frontdesk_manifest.shell_bootstrap.operator_debug_surface.endpoint, '/api/dashboard');
 
     const entryGuideResponse = await fetch(`${baseUrl}/api/frontdesk-entry-guide`);
     const entryGuidePayload = await entryGuideResponse.json();

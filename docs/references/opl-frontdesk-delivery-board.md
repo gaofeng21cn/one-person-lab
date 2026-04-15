@@ -115,6 +115,7 @@
 
 - `OPL` 现在不只是“有一个本地浏览器 pilot”，而是已经冻结出一层 future hosted shell 可消费的 front-desk contract；
 - `frontdesk-entry-guide` 现在补上了 family workspace taxonomy、domain workspace mapping，以及每个 admitted domain 的 start / preflight / readiness 推荐，方便 AI / GUI 壳直接消费；
+- `frontdesk-manifest`、`opl web` startup payload 与 `mcp-stdio` 现在也都已经显式声明 `frontdesk-entry-guide` 是 shell bootstrap 的第一消费面，`dashboard` 退回 operator debug / aggregate 视图；
 - `frontdesk-readiness` 把本地 service 状态、hosted pilot readiness、domain readiness / preflight 与下一步修复建议收成单一 operator-facing board，但它继续只复用已有 truth，不构成第二真相源；
 - `frontdesk-domain-wiring` 又把 `hosted_runtime_readiness / domain_entry_parity / recommended_entry_surfaces` 收成 hosted shell 与本地 front desk 都能直接消费的 family wiring truth；
 - `frontdesk-domain-wiring` 现在还额外承载 `domain_binding_parity` 与 `workspace_catalog / workspace_bind / workspace_activate / workspace_archive` 这些修复 locator parity 所需的 endpoint 引导，不再要求 hosted shell 自己去拼大而杂的 dashboard；
