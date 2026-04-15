@@ -202,7 +202,7 @@ RAG_PORT=8000
 
 # OPL Agent inherits the current Codex operator profile
 OPENAI_API_KEY=user_provided
-OPENAI_BASE_URL=${options.codexDefaults.provider_base_url ?? 'user_provided'}
+OPENAI_REVERSE_PROXY=${options.codexDefaults.provider_base_url ?? 'user_provided'}
 OPENAI_MODELS=${options.codexDefaults.model}
 ANTHROPIC_API_KEY=user_provided
 GOOGLE_KEY=user_provided
