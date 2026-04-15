@@ -751,17 +751,21 @@ function buildStudyProgressSurface(options: {
   }
 
   const studyCommands = isRecord(currentStudySummary.commands) ? currentStudySummary.commands : null;
+  const studyId = optionalString(currentStudySummary.study_id);
+  const machineProgressCommand =
+    optionalString(options.overview?.progress_surface?.command)?.replace(/<study_id>/g, studyId ?? '')
+    ?? optionalString((options.manifest?.product_entry_shell.study_progress as Record<string, unknown> | undefined)?.command)?.replace(/<study_id>/g, studyId ?? '')
+    ?? null;
   const progressCommand =
     optionalString(studyCommands?.progress)
-    ?? optionalString(options.overview?.progress_surface?.command)?.replace(/<study_id>/g, optionalString(currentStudySummary.study_id) ?? '')
-    ?? null;
+    ?? machineProgressCommand;
   const resumeCommand =
     optionalString(studyCommands?.launch)
-    ?? optionalString(options.overview?.resume_surface?.command)?.replace(/<study_id>/g, optionalString(currentStudySummary.study_id) ?? '')
+    ?? optionalString(options.overview?.resume_surface?.command)?.replace(/<study_id>/g, studyId ?? '')
     ?? null;
-  const progressPayloadResult = runJsonShellCommand(progressCommand, options.workspacePath);
+  const progressPayloadResult = runJsonShellCommand(machineProgressCommand, options.workspacePath);
 
-  if (progressPayloadResult.error) {
+  if (machineProgressCommand && progressPayloadResult.error) {
     attentionItems.push(`当前论文已定位，但详细 study 进度面暂时不可读：${progressPayloadResult.error}`);
   }
 
@@ -818,8 +822,8 @@ function buildStudyProgressSurface(options: {
     ?? studyCharter?.paper_framing_summary
     ?? optionalString(currentStudySummary.current_stage_summary);
   const progressSummary = normalizeInlineText([
-    optionalString(currentStudySummary.study_id)
-      ? `${optionalString(currentStudySummary.study_id)} 当前阶段：${currentStageSummary ?? '待确认'}`
+    studyId
+      ? `${studyId} 当前阶段：${currentStageSummary ?? '待确认'}`
       : currentStageSummary,
     paperSnapshot?.human_summary ?? null,
   ].filter(Boolean).join(' '));
@@ -896,8 +900,8 @@ function buildStudyProgressSurface(options: {
     attentionItems: blockers,
     inspectPaths,
     recentActivity,
-    recommendedCommands: {
-      progress: progressCommand,
+        recommendedCommands: {
+          progress: progressCommand,
       resume: resumeCommand,
     },
     userOptions: buildCurrentStudyUserOptions(true, Boolean(paperSnapshot)),

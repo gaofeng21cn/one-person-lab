@@ -2470,6 +2470,8 @@ test('frontdesk-librechat-package exports a same-origin LibreChat-first hosted s
     assert.match(librechatConfig, /modelDisplayLabel: OPL Agent/);
     assert.match(librechatConfig, /model: gpt-5\.4-operator/);
     assert.match(librechatConfig, /reasoning_effort: xhigh/);
+    assert.match(librechatConfig, /If a study identifier such as 004-invasive-architecture appears, start with it\./);
+    assert.match(librechatConfig, /Prefer titles like 004 invasive architecture over generic summaries\./);
     assert.match(librechatConfig, /mcpServers:/);
     assert.match(librechatConfig, /opl_cortex:/);
     assert.match(librechatConfig, /type: stdio/);
@@ -3540,40 +3542,15 @@ test('project-progress promotes current MAS study into a paper-facing summary in
           latest_progress_summary: '投稿打包阶段已被全局门控放行，可以进入关键路径。',
         },
         commands: {
-          progress: buildManifestCommand({
-            study_id: studyId,
-            study_root: studyRoot,
-            quest_id: '004-invasive-architecture-managed-20260408',
-            quest_root: questRoot,
-            current_stage: 'publication_supervision',
-            current_stage_summary: '投稿打包阶段已被全局门控放行，可以进入关键路径。',
-            paper_stage: 'bundle_stage_ready',
-            paper_stage_summary: '论文当前建议推进到投稿打包阶段。',
-            current_blockers: [
-              '当前论文交付目录与注册/合同约定不一致，需要先修正交付面。',
-            ],
-            next_system_action: 'continue bundle stage',
-            progress_freshness: {
-              latest_progress_time_label: '2026-04-15 11:24 UTC',
-              latest_progress_summary: '投稿打包阶段已被全局门控放行，可以进入关键路径。',
-              latest_progress_source: 'publication_eval',
-            },
-            supervision: {
-              browser_url: 'http://127.0.0.1:21001',
-              active_run_id: 'run-884e2a72',
-              health_status: 'live',
-            },
-            latest_events: [
-              {
-                time_label: '2026-04-15 11:24 UTC',
-                title: '发表可行性评估更新',
-                summary: '投稿打包阶段已被全局门控放行，可以进入关键路径。',
-              },
-            ],
-            refs: {
-              publication_eval_path: path.join(studyRoot, 'artifacts', 'publication_eval', 'latest.json'),
-            },
-          }),
+          progress: `${process.execPath} -e "process.stdout.write(process.argv[1])" ${shellSingleQuote(
+            [
+              '# 研究进度',
+              '',
+              `- study_id: \`${studyId}\``,
+              '- 当前阶段: 论文可发表性监管',
+              '- 阶段摘要: 投稿打包阶段已被全局门控放行，可以进入关键路径。',
+            ].join('\n'),
+          )}`,
         },
       },
       {
@@ -3622,7 +3599,38 @@ test('project-progress promotes current MAS study into a paper-facing summary in
   manifest.product_entry_overview.recommended_command = buildManifestCommand(workspaceCockpitPayload);
   manifest.product_entry_overview.operator_loop_command = buildManifestCommand(workspaceCockpitPayload);
   manifest.product_entry_overview.progress_surface.command = buildManifestCommand({
-    study_id: '<study_id>',
+    study_id: studyId,
+    study_root: studyRoot,
+    quest_id: '004-invasive-architecture-managed-20260408',
+    quest_root: questRoot,
+    current_stage: 'publication_supervision',
+    current_stage_summary: '投稿打包阶段已被全局门控放行，可以进入关键路径。',
+    paper_stage: 'bundle_stage_ready',
+    paper_stage_summary: '论文当前建议推进到投稿打包阶段。',
+    current_blockers: [
+      '当前论文交付目录与注册/合同约定不一致，需要先修正交付面。',
+    ],
+    next_system_action: 'continue bundle stage',
+    progress_freshness: {
+      latest_progress_time_label: '2026-04-15 11:24 UTC',
+      latest_progress_summary: '投稿打包阶段已被全局门控放行，可以进入关键路径。',
+      latest_progress_source: 'publication_eval',
+    },
+    supervision: {
+      browser_url: 'http://127.0.0.1:21001',
+      active_run_id: 'run-884e2a72',
+      health_status: 'live',
+    },
+    latest_events: [
+      {
+        time_label: '2026-04-15 11:24 UTC',
+        title: '发表可行性评估更新',
+        summary: '投稿打包阶段已被全局门控放行，可以进入关键路径。',
+      },
+    ],
+    refs: {
+      publication_eval_path: path.join(studyRoot, 'artifacts', 'publication_eval', 'latest.json'),
+    },
   });
   manifest.operator_loop_actions.open_loop.command = buildManifestCommand(workspaceCockpitPayload);
   manifest.operator_loop_actions.inspect_progress.command = buildManifestCommand({
@@ -3696,6 +3704,14 @@ test('project-progress promotes current MAS study into a paper-facing summary in
     assert.match(payload.project_progress.progress_summary, /32 篇参考文献/);
     assert.ok(payload.project_progress.user_options.includes('展开当前论文的详细进度'));
     assert.ok(payload.project_progress.inspect_paths.includes(studyRoot));
+    assert.equal(
+      payload.project_progress.recommended_commands.progress,
+      workspaceCockpitPayload.studies[0].commands.progress,
+    );
+    assert.doesNotMatch(
+      payload.project_progress.recommended_commands.progress,
+      /--format json/,
+    );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(masWorkspace.fixtureRoot, { recursive: true, force: true });
