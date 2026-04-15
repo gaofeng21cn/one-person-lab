@@ -221,6 +221,19 @@ const TOOLS: ToolDefinition[] = [
     },
   },
   {
+    name: 'opl_frontdesk_entry_guide',
+    description:
+      '当 shell / agent 不确定该从哪个项目、哪个 start mode 或哪类 workspace 进入时优先使用。返回 OPL 当前 family-level entry guide 原始面。',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    },
+    call: async (_args, options) => {
+      return await fetchJson(options, '/frontdesk-entry-guide');
+    },
+  },
+  {
     name: 'opl_dashboard',
     description:
       '读取 OPL 顶层 dashboard 原始控制面，适合调试 family wiring、readiness 和 runtime 细节；普通用户进度问答优先用 opl_project_progress。',
