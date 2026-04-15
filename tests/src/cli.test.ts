@@ -1016,6 +1016,15 @@ async function startFakeFrontDeskApiServer() {
             sync_status: 'drift_detected',
             app_title: 'OPL Agent',
           },
+          hosted_shell_mcp_wiring: {
+            surface_kind: 'opl_hosted_shell_mcp_wiring',
+            binding_context: {
+              primary_tool_name: 'opl_workspace_catalog',
+            },
+            session_attribution: {
+              primary_tool_name: 'opl_session_ledger',
+            },
+          },
           notes: [
             'Recorded hosted shell assets drift from the currently expected local stack.',
           ],
@@ -1139,6 +1148,25 @@ async function startFakeFrontDeskApiServer() {
                   manifest_command: null,
                   url: 'http://127.0.0.1:8080',
                 },
+              },
+            },
+          ],
+        },
+      }));
+      return;
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/session-ledger') {
+      response.statusCode = 200;
+      response.end(JSON.stringify({
+        session_ledger: {
+          surface_id: 'opl_managed_session_ledger',
+          limit: Number(url.searchParams.get('limit') ?? '0'),
+          sessions: [
+            {
+              session_id: 'sess-001',
+              resource_totals: {
+                latest_sample_status: 'captured',
               },
             },
           ],
@@ -2457,6 +2485,32 @@ test('frontdesk-librechat-package exports a same-origin LibreChat-first hosted s
       output.librechat_pilot_package.hosted_runtime_readiness.managed_hosted_runtime_landed,
       false,
     );
+    assert.equal(
+      output.librechat_pilot_package.hosted_runtime_readiness.hosted_shell_mcp_wiring_landed,
+      true,
+    );
+    assert.equal(
+      output.librechat_pilot_package.hosted_shell_mcp_wiring.surface_kind,
+      'opl_hosted_shell_mcp_wiring',
+    );
+    assert.equal(
+      output.librechat_pilot_package.hosted_shell_mcp_wiring.binding_context.primary_tool_name,
+      'opl_workspace_catalog',
+    );
+    assert.equal(
+      output.librechat_pilot_package.hosted_shell_mcp_wiring.session_attribution.primary_tool_name,
+      'opl_session_ledger',
+    );
+    assert.deepEqual(
+      output.librechat_pilot_package.hosted_shell_mcp_wiring.discovery_order,
+      [
+        'opl_frontdesk_entry_guide',
+        'opl_frontdesk_readiness',
+        'opl_workspace_catalog',
+        'opl_session_ledger',
+        'opl_project_progress',
+      ],
+    );
 
     const assets = output.librechat_pilot_package.assets;
     assert.equal(fs.existsSync(assets.readme), true);
@@ -2488,6 +2542,8 @@ test('frontdesk-librechat-package exports a same-origin LibreChat-first hosted s
     const librechatConfig = fs.readFileSync(assets.librechat_config, 'utf8');
     assert.match(librechatConfig, /当前工作区：Unbound workspace/);
     assert.match(librechatConfig, /可直接问：论文进度、切换项目、下一步。/);
+    assert.match(librechatConfig, /切换项目或确认 direct entry 时，我会先检查 workspace binding。/);
+    assert.match(librechatConfig, /恢复长跑上下文或解释最近运行时，我会先检查 session attribution。/);
     assert.doesNotMatch(librechatConfig, /Welcome to OPL Atlas/);
     assert.doesNotMatch(librechatConfig, /How to use:/);
     assert.match(librechatConfig, /OPL Agent/);
@@ -2582,6 +2638,7 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
       assert.equal(tools.some((tool) => tool.name === 'opl_dashboard'), true);
       assert.equal(tools.some((tool) => tool.name === 'opl_runtime_status'), true);
       assert.equal(tools.some((tool) => tool.name === 'opl_workspace_catalog'), true);
+      assert.equal(tools.some((tool) => tool.name === 'opl_session_ledger'), true);
       assert.equal(tools.some((tool) => tool.name === 'opl_activate_workspace'), true);
       assert.equal(tools.some((tool) => tool.name === 'opl_frontdesk_librechat_status'), true);
       assert.match(
@@ -2648,6 +2705,8 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
       assert.equal(hostedShellContent[0].type, 'text');
       assert.match(hostedShellContent[0].text, /"surface_id": "opl_frontdesk_librechat_status"/);
       assert.match(hostedShellContent[0].text, /"sync_status": "drift_detected"/);
+      assert.match(hostedShellContent[0].text, /"primary_tool_name": "opl_workspace_catalog"/);
+      assert.match(hostedShellContent[0].text, /"primary_tool_name": "opl_session_ledger"/);
 
       writeJsonLine(child.stdin, {
         jsonrpc: '2.0',
@@ -2670,6 +2729,25 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
         id: 7,
         method: 'tools/call',
         params: {
+          name: 'opl_session_ledger',
+          arguments: {
+            limit: 3,
+          },
+        },
+      });
+      const sessionLedgerCall = await readJsonLine(child.stdout);
+      const sessionLedgerContent = (sessionLedgerCall.result as {
+        content: Array<{ type: string; text: string }>;
+      }).content;
+      assert.equal(sessionLedgerContent[0].type, 'text');
+      assert.match(sessionLedgerContent[0].text, /"surface_id": "opl_managed_session_ledger"/);
+      assert.match(sessionLedgerContent[0].text, /"latest_sample_status": "captured"/);
+
+      writeJsonLine(child.stdin, {
+        jsonrpc: '2.0',
+        id: 8,
+        method: 'tools/call',
+        params: {
           name: 'opl_dashboard',
           arguments: {},
         },
@@ -2689,6 +2767,10 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
         request.path === '/api/dashboard'
         && request.query.path === activatedWorkspacePath
         && request.query.sessions_limit === '7'
+      ), true);
+      assert.equal(fakeApi.requests.some((request) =>
+        request.path === '/api/session-ledger'
+        && request.query.limit === '3'
       ), true);
       assert.equal(fakeApi.requests.some((request) => request.path === '/api/frontdesk-entry-guide'), true);
       assert.equal(fakeApi.requests.some((request) => request.path === '/api/frontdesk-librechat-status'), true);
@@ -2803,6 +2885,14 @@ test('frontdesk bootstrap manages the local LibreChat shell, inherits local Code
         installed: boolean;
         running: boolean;
         public_origin: string;
+        hosted_shell_mcp_wiring: {
+          binding_context: {
+            primary_tool_name: string;
+          };
+          session_attribution: {
+            primary_tool_name: string;
+          };
+        };
         assets: {
           env_file: string;
           librechat_config: string;
@@ -2831,6 +2921,14 @@ test('frontdesk bootstrap manages the local LibreChat shell, inherits local Code
     assert.equal(install.frontdesk_librechat.installed, true);
     assert.equal(install.frontdesk_librechat.running, true);
     assert.equal(install.frontdesk_librechat.public_origin, 'http://127.0.0.1:18080');
+    assert.equal(
+      install.frontdesk_librechat.hosted_shell_mcp_wiring.binding_context.primary_tool_name,
+      'opl_workspace_catalog',
+    );
+    assert.equal(
+      install.frontdesk_librechat.hosted_shell_mcp_wiring.session_attribution.primary_tool_name,
+      'opl_session_ledger',
+    );
     assert.equal(install.frontdesk_service.loaded, true);
     assert.equal(install.paperclip_control_plane.readiness, 'configured');
     assert.equal(install.paperclip_control_plane.connection.base_url, fakePaperclip.baseUrl);
@@ -2849,6 +2947,8 @@ test('frontdesk bootstrap manages the local LibreChat shell, inherits local Code
     assert.match(librechatConfig, /当前工作区：/);
     assert.match(librechatConfig, new RegExp(path.basename(masWorkspaceFixture.fixtureRoot)));
     assert.match(librechatConfig, /可直接问：论文进度、切换项目、下一步。/);
+    assert.match(librechatConfig, /切换项目或确认 direct entry 时，我会先检查 workspace binding。/);
+    assert.match(librechatConfig, /恢复长跑上下文或解释最近运行时，我会先检查 session attribution。/);
     assert.doesNotMatch(librechatConfig, /Welcome to OPL Atlas/);
     assert.doesNotMatch(librechatConfig, /How to use:/);
     assert.doesNotMatch(librechatConfig, /\n\s*-\s*Model:/);
@@ -2876,6 +2976,14 @@ test('frontdesk bootstrap manages the local LibreChat shell, inherits local Code
     assert.equal(status.frontdesk_librechat.identity.model_display_label, 'OPL Agent');
     assert.equal(status.frontdesk_librechat.identity.installed_model, 'gpt-5.4-frontdoor');
     assert.equal(status.frontdesk_librechat.identity.installed_reasoning_effort, 'xhigh');
+    assert.equal(
+      status.frontdesk_librechat.hosted_shell_mcp_wiring.binding_context.primary_tool_name,
+      'opl_workspace_catalog',
+    );
+    assert.equal(
+      status.frontdesk_librechat.hosted_shell_mcp_wiring.session_attribution.primary_tool_name,
+      'opl_session_ledger',
+    );
 
     const openOutput = runCli(['frontdesk-librechat-open'], serviceEnv);
     assert.equal(openOutput.frontdesk_librechat.action, 'open');

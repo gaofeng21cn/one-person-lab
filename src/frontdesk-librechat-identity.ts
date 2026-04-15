@@ -13,6 +13,29 @@ type FrontDeskWelcomeOptions = {
   activeProjectLabel?: string | null;
 };
 
+export function buildFrontDeskHostedShellMcpWiring() {
+  return {
+    surface_kind: 'opl_hosted_shell_mcp_wiring',
+    binding_context: {
+      primary_tool_name: 'opl_workspace_catalog',
+      activate_tool_name: 'opl_activate_workspace',
+      binding_contract_surface_id: 'opl_project_workspace_binding_contract',
+    },
+    session_attribution: {
+      primary_tool_name: 'opl_session_ledger',
+      fallback_tool_name: 'opl_runtime_status',
+      attribution_surface_id: 'opl_managed_session_ledger',
+    },
+    discovery_order: [
+      'opl_frontdesk_entry_guide',
+      'opl_frontdesk_readiness',
+      'opl_workspace_catalog',
+      'opl_session_ledger',
+      'opl_project_progress',
+    ],
+  };
+}
+
 export function inferFrontDeskWorkspaceLabel(options: {
   workspacePath?: string | null;
   fallbackLabel?: string | null;
@@ -36,6 +59,8 @@ export function buildFrontDeskLibreChatWelcome(options: FrontDeskWelcomeOptions)
   const lines = [
     `当前工作区：${workspaceLabel}`,
     '可直接问：论文进度、切换项目、下一步。',
+    '切换项目或确认 direct entry 时，我会先检查 workspace binding。',
+    '恢复长跑上下文或解释最近运行时，我会先检查 session attribution。',
   ];
 
   return lines.join('\n');

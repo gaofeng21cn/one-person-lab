@@ -22,6 +22,7 @@ import {
   parseHermesSessionsTable,
   runHermesCommand,
 } from './hermes.ts';
+import { buildFrontDeskHostedShellMcpWiring } from './frontdesk-librechat-identity.ts';
 import { buildSessionLedger } from './session-ledger.ts';
 import {
   collectHermesProcessUsage,
@@ -921,15 +922,17 @@ export function buildHostedRuntimeReadiness() {
     self_hostable_pilot_package_landed: true,
     librechat_pilot_package_landed: true,
     service_safe_local_packaging_landed: true,
+    hosted_shell_mcp_wiring_landed: true,
+    workspace_binding_tooling_landed: true,
+    session_attribution_tooling_landed: true,
     blocking_gaps: [
       'managed hosted runtime ownership 仍未 landed。',
       'multi-tenant hosted platform orchestration 仍未 landed。',
-      'frontdesk 与 hosted shell 的深层 tool wiring 仍未 landed。',
     ],
     recommended_next_actions: [
-      '继续把 hosted shell 入口收紧到同一份 frontdesk contract 上。',
       '把 managed hosted runtime 的 service orchestration、tenant boundary 与 policy surface 单独冻结。',
       '保持 Hermes 作为外部 runtime substrate，不在 OPL 仓内虚构托管完成度。',
+      '继续把 hosted shell 与 OPL 自有 web front desk 统一压到同一份 family contract / wiring truth 上。',
     ],
   };
 }
@@ -1764,6 +1767,7 @@ export function buildProjectsOverview(contracts: GatewayContracts) {
 export function buildFrontDeskManifest(contracts: GatewayContracts, options: { basePath?: string } = {}) {
   const endpoints = buildFrontDeskEndpoints(options.basePath);
   const hostedRuntimeReadiness = buildHostedRuntimeReadiness();
+  const hostedShellMcpWiring = buildFrontDeskHostedShellMcpWiring();
   const frontdeskEntryGuideSurface = buildFrontDeskEntryGuideSurfaceRef(contracts, options);
   const domainWiringSurface = buildFrontDeskDomainWiringSurfaceRef(contracts, options);
   const frontdeskReadinessSurface = buildFrontDeskReadinessSurfaceRef(options);
@@ -1785,6 +1789,7 @@ export function buildFrontDeskManifest(contracts: GatewayContracts, options: { b
       pilot_bundle_status: 'landed',
       base_path: normalizeBasePath(options.basePath),
       hosted_runtime_readiness: hostedRuntimeReadiness,
+      hosted_shell_mcp_wiring: hostedShellMcpWiring,
       frontdesk_entry_guide_surface: frontdeskEntryGuideSurface,
       frontdesk_readiness_surface: frontdeskReadinessSurface,
       domain_wiring_surface: domainWiringSurface,
@@ -1818,6 +1823,7 @@ export function buildHostedPilotBundle(
   const baseUrl = `http://${normalizeBaseUrlHost(host)}:${port}`;
   const endpoints = buildFrontDeskEndpoints(normalizedBasePath);
   const hostedRuntimeReadiness = buildHostedRuntimeReadiness();
+  const hostedShellMcpWiring = buildFrontDeskHostedShellMcpWiring();
   const frontdeskReadinessSurface = buildFrontDeskReadinessSurfaceRef({
     basePath: normalizedBasePath,
   });
@@ -1839,6 +1845,7 @@ export function buildHostedPilotBundle(
       actual_hosted_runtime_status: 'not_landed',
       base_path: normalizedBasePath,
       hosted_runtime_readiness: hostedRuntimeReadiness,
+      hosted_shell_mcp_wiring: hostedShellMcpWiring,
       frontdesk_readiness_surface: frontdeskReadinessSurface,
       domain_wiring_surface: domainWiringSurface,
       entry_url: buildFrontDeskEntryUrl(baseUrl, normalizedBasePath),

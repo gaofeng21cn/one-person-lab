@@ -12,6 +12,7 @@ import {
 } from './frontdesk-service.ts';
 import { resolveFrontDeskStatePaths, ensureFrontDeskStateDir } from './frontdesk-state.ts';
 import {
+  buildFrontDeskHostedShellMcpWiring,
   OPL_FRONTDOOR_AGENT_LABEL,
   OPL_FRONTDOOR_APP_TITLE,
   OPL_FRONTDOOR_MCP_SERVER_KEY,
@@ -573,6 +574,7 @@ async function buildPayload(
       };
   const dockerStatus = installedStackAssets ? runDockerCompose(config, 'ps') : null;
   const services = dockerStatus ? parseDockerPs(dockerStatus.stdout) : [];
+  const hostedShellMcpWiring = buildFrontDeskHostedShellMcpWiring();
 
   return {
     version: 'g2',
@@ -596,6 +598,7 @@ async function buildPayload(
       sessions_limit: config?.sessions_limit ?? null,
       frontdesk_api_base_url: config?.frontdesk_api_base_url ?? null,
       identity: buildInstalledIdentity(config),
+      hosted_shell_mcp_wiring: hostedShellMcpWiring,
       assets: config
         ? {
             package_root: config.package_root,

@@ -9,6 +9,7 @@ import {
 } from './hosted-pilot-package.ts';
 import { buildHostedRuntimeReadiness } from './management.ts';
 import {
+  buildFrontDeskHostedShellMcpWiring,
   buildFrontDeskLibreChatWelcome,
   buildFrontDeskTitlePrompt,
   OPL_FRONTDOOR_AGENT_LABEL,
@@ -482,6 +483,7 @@ export function buildLibreChatPilotPackage(
     sessionsLimit,
   });
   const hostedRuntimeReadiness = buildHostedRuntimeReadiness();
+  const hostedShellMcpWiring = buildFrontDeskHostedShellMcpWiring();
 
   fs.writeFileSync(
     readmePath,
@@ -542,6 +544,7 @@ export function buildLibreChatPilotPackage(
       actual_managed_runtime_status: 'not_landed',
       runtime_substrate: 'external_hermes_kernel',
       hosted_runtime_readiness: hostedRuntimeReadiness,
+      hosted_shell_mcp_wiring: hostedShellMcpWiring,
       public_origin: publicOrigin,
       hosted_shell_entry_url: `${publicOrigin}/`,
       frontdesk_entry_url: frontdeskEntryUrl,
