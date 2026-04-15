@@ -32,8 +32,8 @@ function inferProjectLabel(options: FrontDeskWelcomeOptions) {
 export function buildFrontDeskLibreChatWelcome(options: FrontDeskWelcomeOptions) {
   const projectLabel = inferProjectLabel(options);
   const lines = [
-    `Current project: ${projectLabel}`,
-    '直接问论文或项目进度；也可以说切换项目、查看任务或下一步。',
+    `当前项目：${projectLabel}`,
+    '可直接问：论文进度、切换项目、下一步。',
   ];
 
   return lines.join('\n');
@@ -43,6 +43,7 @@ export function buildFrontDeskTitlePrompt() {
   return [
     `Create a short conversation title for ${OPL_FRONTDOOR_APP_TITLE}.`,
     'Prefer the concrete workspace, project, study, or paper identifier when one is present.',
+    'Never return New Chat or any other generic placeholder.',
     'Keep the title under 12 Chinese characters or 6 English words.',
     'Do not use punctuation.',
     'Prefer the domain or workspace name over generic phrases.',

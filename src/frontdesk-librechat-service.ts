@@ -315,7 +315,13 @@ function buildRuntimeEnvFile(
     ['MEILI_MASTER_KEY', randomHex(16)],
     ['RAG_PORT', '8000'],
     ['OPENAI_API_KEY', codexDefaults.provider_api_key ?? hermesEnv.OPENAI_API_KEY ?? 'user_provided'],
-    ['OPENAI_BASE_URL', codexDefaults.provider_base_url ?? hermesEnv.OPENAI_BASE_URL ?? 'user_provided'],
+    [
+      'OPENAI_REVERSE_PROXY',
+      codexDefaults.provider_base_url
+      ?? hermesEnv.OPENAI_REVERSE_PROXY
+      ?? hermesEnv.OPENAI_BASE_URL
+      ?? 'user_provided',
+    ],
     ['OPENAI_MODELS', codexDefaults.model],
     ['ANTHROPIC_API_KEY', hermesEnv.ANTHROPIC_API_KEY ?? 'user_provided'],
     ['GOOGLE_KEY', hermesEnv.GOOGLE_KEY ?? 'user_provided'],
