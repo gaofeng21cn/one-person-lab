@@ -2120,6 +2120,10 @@ exit 1
     assert.equal(output.frontdesk_readiness.local_service.installed, false);
     assert.equal(output.frontdesk_readiness.local_service.loaded, false);
     assert.equal(output.frontdesk_readiness.local_service.health.status, 'not_installed');
+    assert.equal(output.frontdesk_readiness.local_hosted_shell.surface_id, 'opl_frontdesk_librechat_status');
+    assert.equal(output.frontdesk_readiness.local_hosted_shell.installed, false);
+    assert.equal(output.frontdesk_readiness.local_hosted_shell.running, false);
+    assert.equal(output.frontdesk_readiness.local_hosted_shell.identity.sync_status, 'not_installed');
     assert.equal(output.frontdesk_readiness.hosted_runtime_readiness.status, 'pilot_ready_not_managed');
     assert.equal(output.frontdesk_readiness.summary.total_projects_count, 2);
     assert.equal(output.frontdesk_readiness.summary.usable_now_projects_count, 0);
@@ -2130,6 +2134,7 @@ exit 1
     assert.equal(output.frontdesk_readiness.summary.ready_for_domain_handoff_count, 0);
     assert.equal(output.frontdesk_readiness.endpoints.frontdesk_readiness, '/api/frontdesk-readiness');
     assert.equal(output.frontdesk_readiness.endpoints.frontdesk_domain_wiring, '/api/frontdesk-domain-wiring');
+    assert.equal(output.frontdesk_readiness.endpoints.frontdesk_librechat_status, '/api/frontdesk-librechat-status');
     assert.equal(output.frontdesk_readiness.projects[0].manifest_status, 'not_bound');
     assert.equal(output.frontdesk_readiness.projects[0].entry_parity_status, 'blocked');
     assert.equal(output.frontdesk_readiness.projects[0].usable_now, false);
@@ -3230,6 +3235,9 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(grantEntry.product_entry_start.recommended_mode_id, 'open_frontdesk');
     assert.equal(grantEntry.product_entry_start_resume_surface_kind, 'grant_user_loop');
     assert.equal(grantEntry.product_entry_start_mode_ids[2], 'build_direct_entry');
+    assert.equal(grantEntry.active_binding_locator_status, 'missing');
+    assert.equal(grantEntry.active_binding_locator.command, null);
+    assert.equal(grantEntry.active_binding_locator.url, null);
     assert.equal(
       grantEntry.product_entry_preflight.recommended_check_command,
       'uv run python -m med_autogrant validate-workspace --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json',
@@ -3247,6 +3255,9 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(scienceEntry.product_entry_readiness_verdict, 'runtime_ready_not_standalone_product');
     assert.equal(scienceEntry.product_entry_readiness_good_to_use_now, false);
     assert.equal(scienceEntry.product_entry_readiness_loop_command, 'uv run python -m med_autoscience.cli workspace-cockpit --profile /fixtures/med-autoscience/profile.local.toml');
+    assert.equal(scienceEntry.active_binding_locator_status, 'missing');
+    assert.equal(scienceEntry.active_binding_locator.command, null);
+    assert.equal(scienceEntry.active_binding_locator.url, null);
     assert.equal(scienceEntry.product_entry_preflight.ready_to_try_now, true);
     assert.equal(scienceEntry.product_entry_start.surface_kind, 'product_entry_start');
     assert.equal(scienceEntry.product_entry_start.recommended_mode_id, 'open_frontdesk');
@@ -3280,6 +3291,13 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(recommendedEntry.product_entry_readiness_start_command, 'redcube product frontdesk');
     assert.equal(recommendedEntry.product_entry_readiness_loop_command, 'redcube product invoke');
     assert.equal(recommendedEntry.product_entry_preflight.ready_to_try_now, true);
+    assert.equal(recommendedEntry.active_binding_locator_status, 'ready');
+    assert.equal(recommendedEntry.active_binding_locator.command, 'redcube-ai frontdesk');
+    assert.equal(recommendedEntry.active_binding_locator.url, 'http://127.0.0.1:3310/redcube');
+    assert.equal(
+      recommendedEntry.active_binding_locator.manifest_command,
+      buildManifestCommand(fixtures.redcube),
+    );
     assert.equal(recommendedEntry.product_entry_start.surface_kind, 'product_entry_start');
     assert.equal(recommendedEntry.product_entry_start.recommended_mode_id, 'open_frontdesk');
     assert.equal(recommendedEntry.product_entry_start_resume_surface_kind, 'product_entry_session');
@@ -4352,6 +4370,7 @@ exit 1
       api: {
         frontdesk_entry_guide: string;
         frontdesk_readiness: string;
+        frontdesk_librechat_status: string;
         project_progress: string;
         frontdesk_domain_wiring: string;
         librechat_package: string;
@@ -4368,6 +4387,7 @@ exit 1
     assert.equal(webFrontdesk.api.frontdesk_readiness, '/api/frontdesk-readiness');
     assert.equal(webFrontdesk.api.project_progress, '/api/project-progress');
     assert.equal(webFrontdesk.api.frontdesk_domain_wiring, '/api/frontdesk-domain-wiring');
+    assert.equal(webFrontdesk.api.frontdesk_librechat_status, '/api/frontdesk-librechat-status');
     assert.equal(webFrontdesk.api.librechat_package, '/api/librechat-package');
     assert.equal(webFrontdesk.shell_bootstrap.primary_surface.surface_id, 'opl_frontdesk_entry_guide');
     assert.equal(webFrontdesk.shell_bootstrap.primary_surface.endpoint, '/api/frontdesk-entry-guide');
@@ -4439,10 +4459,16 @@ exit 1
     assert.equal(readinessPayload.frontdesk_readiness.surface_id, 'opl_frontdesk_readiness');
     assert.equal(readinessPayload.frontdesk_readiness.summary.total_projects_count, 2);
     assert.equal(readinessPayload.frontdesk_readiness.summary.usable_now_projects_count, 0);
+    assert.equal(readinessPayload.frontdesk_readiness.local_hosted_shell.surface_id, 'opl_frontdesk_librechat_status');
     assert.match(
       readinessPayload.frontdesk_readiness.local_service.health.status,
       /^(ok|not_installed|unreachable)$/,
     );
+
+    const librechatStatusResponse = await fetch(`${baseUrl}/api/frontdesk-librechat-status`);
+    const librechatStatusPayload = await librechatStatusResponse.json();
+    assert.equal(librechatStatusPayload.frontdesk_librechat.action, 'status');
+    assert.equal(librechatStatusPayload.frontdesk_librechat.identity.sync_status, 'not_installed');
     const progressResponse = await fetch(`${baseUrl}/api/project-progress`);
     const progressPayload = await progressResponse.json();
     assert.equal(progressPayload.project_progress.surface_id, 'opl_project_progress_brief');
