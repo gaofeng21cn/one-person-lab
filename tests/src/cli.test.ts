@@ -179,6 +179,78 @@ function shellSingleQuote(value: string) {
   return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
+function createCodexConfigFixture(options: {
+  model?: string;
+  reasoningEffort?: string;
+  providerId?: string;
+  providerName?: string;
+  baseUrl?: string;
+  apiKey?: string;
+} = {}) {
+  const codexHome = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-home-'));
+  const configPath = path.join(codexHome, 'config.toml');
+  const model = options.model ?? 'gpt-5.4-lab';
+  const reasoningEffort = options.reasoningEffort ?? 'xhigh';
+  const providerId = options.providerId ?? 'lab';
+  const providerName = options.providerName ?? 'lab';
+  const baseUrl = options.baseUrl ?? 'https://codex-provider.example.test/v1';
+  const apiKey = options.apiKey ?? 'codex-provider-key';
+
+  fs.writeFileSync(
+    configPath,
+    [
+      `model_provider = "${providerId}"`,
+      `model = "${model}"`,
+      `model_reasoning_effort = "${reasoningEffort}"`,
+      '',
+      `[model_providers.${providerId}]`,
+      `name = "${providerName}"`,
+      `base_url = "${baseUrl}"`,
+      `experimental_bearer_token = "${apiKey}"`,
+      '',
+    ].join('\n'),
+    'utf8',
+  );
+
+  return {
+    codexHome,
+    configPath,
+    model,
+    reasoningEffort,
+    providerId,
+    providerName,
+    baseUrl,
+    apiKey,
+  };
+}
+
+function createMasWorkspaceFixture(profileName = 'nfpitnet.workspace.toml') {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-mas-workspace-'));
+  const sharedPath = path.join(fixtureRoot, 'ops', 'medautoscience', 'bin', '_shared.sh');
+  const profilePath = path.join(fixtureRoot, 'ops', 'medautoscience', 'profiles', profileName);
+
+  fs.mkdirSync(path.dirname(sharedPath), { recursive: true });
+  fs.mkdirSync(path.dirname(profilePath), { recursive: true });
+  fs.writeFileSync(sharedPath, '#!/usr/bin/env bash\nset -euo pipefail\n', {
+    mode: 0o755,
+  });
+  fs.writeFileSync(
+    profilePath,
+    [
+      '[workspace]',
+      'workspace_id = "mas-fixture"',
+      '',
+    ].join('\n'),
+    'utf8',
+  );
+
+  return {
+    fixtureRoot,
+    sharedPath,
+    profilePath,
+  };
+}
+
 function buildManifestCommand(payload: Record<string, unknown>) {
   return `${process.execPath} -e "process.stdout.write(process.argv[1])" ${shellSingleQuote(JSON.stringify(payload))}`;
 }
@@ -777,6 +849,7 @@ async function startFakePaperclipPilotServer(options: {
 }
 
 async function startFakeFrontDeskApiServer() {
+  let activeWorkspacePath = repoRoot;
   const requests: Array<{
     method: string;
     path: string;
@@ -868,6 +941,51 @@ async function startFakeFrontDeskApiServer() {
       response.end(JSON.stringify({
         domain_manifests: {
           projects: [],
+        },
+      }));
+      return;
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/workspace-catalog') {
+      response.statusCode = 200;
+      response.end(JSON.stringify({
+        workspace_catalog: {
+          summary: {
+            active_projects_count: 1,
+          },
+          projects: [
+            {
+              project_id: 'medautoscience',
+              project: 'med-autoscience',
+              active_binding: {
+                project_id: 'medautoscience',
+                project: 'med-autoscience',
+                workspace_path: activeWorkspacePath,
+                status: 'active',
+                direct_entry: {
+                  command: null,
+                  manifest_command: null,
+                  url: 'http://127.0.0.1:8080',
+                },
+              },
+            },
+          ],
+        },
+      }));
+      return;
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/workspace-activate') {
+      activeWorkspacePath = String(body?.workspace_path ?? activeWorkspacePath);
+      response.statusCode = 200;
+      response.end(JSON.stringify({
+        workspace_catalog: {
+          action: 'activate',
+          binding: {
+            project_id: String(body?.project_id ?? 'unknown'),
+            workspace_path: activeWorkspacePath,
+            status: 'active',
+          },
         },
       }));
       return;
@@ -1730,26 +1848,34 @@ test('frontdesk-manifest exposes the hosted-friendly OPL shell contract without 
 });
 
 test('frontdesk-domain-wiring exposes a dedicated hosted-friendly family wiring surface', () => {
-  const output = runCli(['frontdesk-domain-wiring']);
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-wiring-state-'));
 
-  assert.equal(output.version, 'g2');
-  assert.equal(output.frontdesk_domain_wiring.surface_id, 'opl_frontdesk_domain_wiring');
-  assert.equal(output.frontdesk_domain_wiring.entry_surface, 'opl_local_web_frontdesk_pilot');
-  assert.equal(output.frontdesk_domain_wiring.runtime_substrate, 'external_hermes_kernel');
-  assert.equal(output.frontdesk_domain_wiring.hosted_runtime_readiness.surface_kind, 'opl_hosted_runtime_readiness');
-  assert.equal(output.frontdesk_domain_wiring.domain_entry_parity.surface_kind, 'opl_domain_entry_parity');
-  assert.equal(output.frontdesk_domain_wiring.domain_binding_parity.surface_kind, 'opl_domain_binding_parity');
-  assert.equal(output.frontdesk_domain_wiring.summary.total_projects_count, 2);
-  assert.equal(output.frontdesk_domain_wiring.domain_entry_parity.summary.blocked_projects_count, 2);
-  assert.equal(output.frontdesk_domain_wiring.domain_binding_parity.summary.total_projects_count, 2);
-  assert.equal(output.frontdesk_domain_wiring.domain_binding_parity.summary.active_projects_count, 0);
-  assert.equal(output.frontdesk_domain_wiring.domain_binding_parity.summary.manifest_ready_projects_count, 0);
-  assert.equal(output.frontdesk_domain_wiring.summary.recommended_entry_surfaces_count, 0);
-  assert.equal(output.frontdesk_domain_wiring.endpoints.workspace_catalog, '/api/workspace-catalog');
-  assert.equal(output.frontdesk_domain_wiring.endpoints.workspace_bind, '/api/workspace-bind');
-  assert.equal(output.frontdesk_domain_wiring.endpoints.workspace_activate, '/api/workspace-activate');
-  assert.equal(output.frontdesk_domain_wiring.endpoints.workspace_archive, '/api/workspace-archive');
-  assert.deepEqual(output.frontdesk_domain_wiring.recommended_entry_surfaces, []);
+  try {
+    const output = runCli(['frontdesk-domain-wiring'], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+    });
+
+    assert.equal(output.version, 'g2');
+    assert.equal(output.frontdesk_domain_wiring.surface_id, 'opl_frontdesk_domain_wiring');
+    assert.equal(output.frontdesk_domain_wiring.entry_surface, 'opl_local_web_frontdesk_pilot');
+    assert.equal(output.frontdesk_domain_wiring.runtime_substrate, 'external_hermes_kernel');
+    assert.equal(output.frontdesk_domain_wiring.hosted_runtime_readiness.surface_kind, 'opl_hosted_runtime_readiness');
+    assert.equal(output.frontdesk_domain_wiring.domain_entry_parity.surface_kind, 'opl_domain_entry_parity');
+    assert.equal(output.frontdesk_domain_wiring.domain_binding_parity.surface_kind, 'opl_domain_binding_parity');
+    assert.equal(output.frontdesk_domain_wiring.summary.total_projects_count, 2);
+    assert.equal(output.frontdesk_domain_wiring.domain_entry_parity.summary.blocked_projects_count, 2);
+    assert.equal(output.frontdesk_domain_wiring.domain_binding_parity.summary.total_projects_count, 2);
+    assert.equal(output.frontdesk_domain_wiring.domain_binding_parity.summary.active_projects_count, 0);
+    assert.equal(output.frontdesk_domain_wiring.domain_binding_parity.summary.manifest_ready_projects_count, 0);
+    assert.equal(output.frontdesk_domain_wiring.summary.recommended_entry_surfaces_count, 0);
+    assert.equal(output.frontdesk_domain_wiring.endpoints.workspace_catalog, '/api/workspace-catalog');
+    assert.equal(output.frontdesk_domain_wiring.endpoints.workspace_bind, '/api/workspace-bind');
+    assert.equal(output.frontdesk_domain_wiring.endpoints.workspace_activate, '/api/workspace-activate');
+    assert.equal(output.frontdesk_domain_wiring.endpoints.workspace_archive, '/api/workspace-archive');
+    assert.deepEqual(output.frontdesk_domain_wiring.recommended_entry_surfaces, []);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
 });
 
 test('frontdesk-readiness exposes one operator-facing readiness surface for local service and domain entry state', () => {
@@ -2072,6 +2198,10 @@ test('frontdesk-hosted-package exports a self-hostable hosted pilot package with
 });
 
 test('frontdesk-librechat-package exports a same-origin LibreChat-first hosted shell pilot', () => {
+  const codexFixture = createCodexConfigFixture({
+    model: 'gpt-5.4-operator',
+    reasoningEffort: 'xhigh',
+  });
   const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-librechat-package-'));
 
   try {
@@ -2089,7 +2219,9 @@ test('frontdesk-librechat-package exports a same-origin LibreChat-first hosted s
       '8787',
       '--sessions-limit',
       '9',
-    ]);
+    ], {
+      CODEX_HOME: codexFixture.codexHome,
+    });
 
     assert.equal(output.version, 'g2');
     assert.equal(output.librechat_pilot_package.surface_id, 'opl_librechat_hosted_shell_pilot_package');
@@ -2145,19 +2277,29 @@ test('frontdesk-librechat-package exports a same-origin LibreChat-first hosted s
     assert.match(caddyfile, /reverse_proxy \{\$OPL_FRONTDESK_UPSTREAM\}/);
 
     const librechatConfig = fs.readFileSync(assets.librechat_config, 'utf8');
-    assert.match(librechatConfig, /Welcome to the OPL hosted pilot/);
+    assert.match(librechatConfig, /Welcome to OPL Atlas/);
+    assert.match(librechatConfig, /OPL Agent/);
+    assert.match(librechatConfig, /modelDisplayLabel: OPL Agent/);
+    assert.match(librechatConfig, /model: gpt-5\.4-operator/);
+    assert.match(librechatConfig, /reasoning_effort: xhigh/);
     assert.match(librechatConfig, /https:\/\/opl\.example\.com\/pilot\/opl\//);
     assert.match(librechatConfig, /mcpServers:/);
-    assert.match(librechatConfig, /opl_frontdesk:/);
+    assert.match(librechatConfig, /opl_cortex:/);
     assert.match(librechatConfig, /type: stdio/);
     assert.match(librechatConfig, /mcp-stdio/);
+
+    const envExample = fs.readFileSync(assets.stack_env_example, 'utf8');
+    assert.match(envExample, /APP_TITLE=OPL Atlas/);
+    assert.match(envExample, /OPENAI_MODELS=gpt-5\.4-operator/);
   } finally {
+    fs.rmSync(codexFixture.codexHome, { recursive: true, force: true });
     fs.rmSync(outputDir, { recursive: true, force: true });
   }
 });
 
 test('mcp-stdio lists OPL tools and proxies dashboard calls through the configured frontdesk API', async () => {
   const fakeApi = await startFakeFrontDeskApiServer();
+  const activatedWorkspacePath = '/tmp/opl-activated-workspace';
 
   try {
     const child = spawn(
@@ -2221,10 +2363,31 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
       }).tools;
       assert.equal(tools.some((tool) => tool.name === 'opl_dashboard'), true);
       assert.equal(tools.some((tool) => tool.name === 'opl_runtime_status'), true);
+      assert.equal(tools.some((tool) => tool.name === 'opl_workspace_catalog'), true);
+      assert.equal(tools.some((tool) => tool.name === 'opl_activate_workspace'), true);
 
       writeJsonLine(child.stdin, {
         jsonrpc: '2.0',
         id: 3,
+        method: 'tools/call',
+        params: {
+          name: 'opl_activate_workspace',
+          arguments: {
+            project_id: 'medautoscience',
+            workspace_path: activatedWorkspacePath,
+          },
+        },
+      });
+      const activateCall = await readJsonLine(child.stdout);
+      const activateContent = (activateCall.result as {
+        content: Array<{ type: string; text: string }>;
+      }).content;
+      assert.equal(activateContent[0].type, 'text');
+      assert.match(activateContent[0].text, /"action": "activate"/);
+
+      writeJsonLine(child.stdin, {
+        jsonrpc: '2.0',
+        id: 4,
         method: 'tools/call',
         params: {
           name: 'opl_dashboard',
@@ -2236,10 +2399,15 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
         content: Array<{ type: string; text: string }>;
       }).content;
       assert.equal(content[0].type, 'text');
-      assert.match(content[0].text, new RegExp(repoRoot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+      assert.match(content[0].text, new RegExp(activatedWorkspacePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+      assert.equal(fakeApi.requests.some((request) =>
+        request.path === '/api/workspace-activate'
+        && request.body?.project_id === 'medautoscience'
+        && request.body?.workspace_path === activatedWorkspacePath
+      ), true);
       assert.equal(fakeApi.requests.some((request) =>
         request.path === '/api/dashboard'
-        && request.query.path === repoRoot
+        && request.query.path === activatedWorkspacePath
         && request.query.sessions_limit === '7'
       ), true);
     } finally {
@@ -2298,27 +2466,35 @@ test('mcp-stdio defaults to a LibreChat-compatible protocol version when the cli
   }
 });
 
-test('frontdesk-librechat commands manage the local LibreChat shell and auto-bootstrap local trusted Paperclip', async () => {
+test('frontdesk bootstrap manages the local LibreChat shell, inherits local Codex defaults, and auto-bootstraps local trusted Paperclip', async () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-librechat-home-'));
+  const codexFixture = createCodexConfigFixture({
+    model: 'gpt-5.4-frontdoor',
+    reasoningEffort: 'xhigh',
+    baseUrl: 'https://codex-frontdoor.example.test/v1',
+    apiKey: 'codex-frontdoor-key',
+  });
+  const masWorkspaceFixture = createMasWorkspaceFixture();
   const launchctlFixture = createFakeLaunchctlFixture();
   const dockerFixture = createFakeDockerFixture();
   const openFixture = createFakeOpenFixture();
   const fakePaperclip = await startFakePaperclipPilotServer({
-    workspacePath: repoRoot,
+    workspacePath: masWorkspaceFixture.fixtureRoot,
   });
   const hermesDir = path.join(homeRoot, '.hermes');
   fs.mkdirSync(hermesDir, { recursive: true });
   fs.writeFileSync(
     path.join(hermesDir, '.env'),
     [
-      'OPENAI_API_KEY=test-openai-key',
-      'OPENAI_BASE_URL=https://api.example.test/v1',
+      'OPENAI_API_KEY=legacy-hermes-key',
+      'OPENAI_BASE_URL=https://legacy-hermes.example.test/v1',
       '',
     ].join('\n'),
     'utf8',
   );
   const serviceEnv = {
     HOME: homeRoot,
+    CODEX_HOME: codexFixture.codexHome,
     OPL_LAUNCHCTL_BIN: launchctlFixture.launchctlPath,
     OPL_DOCKER_BIN: dockerFixture.dockerPath,
     OPL_OPEN_BIN: openFixture.openPath,
@@ -2326,13 +2502,13 @@ test('frontdesk-librechat commands manage the local LibreChat shell and auto-boo
 
   try {
     const install = await runCliAsync([
-      'frontdesk-librechat-install',
+      'frontdesk-bootstrap',
       '--host',
       '127.0.0.1',
       '--port',
       '8911',
       '--path',
-      repoRoot,
+      masWorkspaceFixture.fixtureRoot,
       '--sessions-limit',
       '7',
       '--public-origin',
@@ -2347,6 +2523,7 @@ test('frontdesk-librechat commands manage the local LibreChat shell and auto-boo
         public_origin: string;
         assets: {
           env_file: string;
+          librechat_config: string;
         };
       };
       frontdesk_service: {
@@ -2381,14 +2558,38 @@ test('frontdesk-librechat commands manage the local LibreChat shell and auto-boo
       && binding.paperclip_project_id === fakePaperclip.projectId
       && binding.project_workspace_id === fakePaperclip.workspaceId
     ), true);
-    assert.match(fs.readFileSync(install.frontdesk_librechat.assets.env_file, 'utf8'), /OPENAI_API_KEY=test-openai-key/);
-    assert.match(fs.readFileSync(install.frontdesk_librechat.assets.env_file, 'utf8'), /OPENAI_BASE_URL=https:\/\/api\.example\.test\/v1/);
+    const runtimeEnv = fs.readFileSync(install.frontdesk_librechat.assets.env_file, 'utf8');
+    assert.match(runtimeEnv, /APP_TITLE=OPL Atlas/);
+    assert.match(runtimeEnv, /OPENAI_API_KEY=codex-frontdoor-key/);
+    assert.match(runtimeEnv, /OPENAI_BASE_URL=https:\/\/codex-frontdoor\.example\.test\/v1/);
+    assert.match(runtimeEnv, /OPENAI_MODELS=gpt-5\.4-frontdoor/);
+    const librechatConfig = fs.readFileSync(install.frontdesk_librechat.assets.librechat_config, 'utf8');
+    assert.match(librechatConfig, /Welcome to OPL Atlas/);
+    assert.match(librechatConfig, /Active workspace:/);
+    assert.match(librechatConfig, /Bound project: med-autoscience/);
+    assert.match(librechatConfig, /modelDisplayLabel: OPL Agent/);
+    assert.match(librechatConfig, /model: gpt-5\.4-frontdoor/);
+    assert.match(librechatConfig, /reasoning_effort: xhigh/);
+    assert.match(librechatConfig, /opl_cortex:/);
+    const workspaceRegistryPath = path.join(homeRoot, 'Library', 'Application Support', 'OPL', 'frontdesk', 'workspace-registry.json');
+    const workspaceRegistry = JSON.parse(fs.readFileSync(workspaceRegistryPath, 'utf8')) as {
+      bindings: Array<{ project_id: string; workspace_path: string; status: string }>;
+    };
+    assert.equal(workspaceRegistry.bindings.some((binding) =>
+      binding.project_id === 'medautoscience'
+      && binding.workspace_path === masWorkspaceFixture.fixtureRoot
+      && binding.status === 'active'
+    ), true);
     assert.match(fs.readFileSync(dockerFixture.callsPath, 'utf8'), /up -d/);
 
     const status = runCli(['frontdesk-librechat-status'], serviceEnv);
     assert.equal(status.frontdesk_librechat.action, 'status');
     assert.equal(status.frontdesk_librechat.installed, true);
     assert.equal(status.frontdesk_librechat.running, true);
+    assert.equal(status.frontdesk_librechat.identity.app_title, 'OPL Atlas');
+    assert.equal(status.frontdesk_librechat.identity.model_display_label, 'OPL Agent');
+    assert.equal(status.frontdesk_librechat.identity.installed_model, 'gpt-5.4-frontdoor');
+    assert.equal(status.frontdesk_librechat.identity.installed_reasoning_effort, 'xhigh');
 
     const openOutput = runCli(['frontdesk-librechat-open'], serviceEnv);
     assert.equal(openOutput.frontdesk_librechat.action, 'open');
@@ -2403,6 +2604,8 @@ test('frontdesk-librechat commands manage the local LibreChat shell and auto-boo
     assert.equal(startOutput.frontdesk_librechat.running, true);
   } finally {
     await stopHttpServer(fakePaperclip.server);
+    fs.rmSync(codexFixture.codexHome, { recursive: true, force: true });
+    fs.rmSync(masWorkspaceFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(launchctlFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(dockerFixture.fixtureRoot, { recursive: true, force: true });
@@ -3299,6 +3502,10 @@ exit 1
 });
 
 test('web starts a local front-desk pilot and serves dashboard plus ask surfaces', async () => {
+  const codexFixture = createCodexConfigFixture({
+    model: 'gpt-5.4-web',
+    reasoningEffort: 'xhigh',
+  });
   const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
 if [ "$1" = "version" ]; then
   echo "Hermes Agent v9.9.9-test"
@@ -3369,6 +3576,7 @@ exit 1
       ['web', '--host', '127.0.0.1', '--port', '0', '--path', repoRoot, '--sessions-limit', '1'],
       {
         HOME: homeRoot,
+        CODEX_HOME: codexFixture.codexHome,
         OPL_HERMES_BIN: hermesPath,
         PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
       },
@@ -5179,7 +5387,7 @@ test('help returns command discovery and runnable examples', () => {
     ),
   );
   assert.ok(
-    ['frontdesk-librechat-install', 'frontdesk-librechat-status', 'frontdesk-librechat-start', 'frontdesk-librechat-stop', 'frontdesk-librechat-open'].every((command) =>
+    ['frontdesk-bootstrap', 'frontdesk-librechat-install', 'frontdesk-librechat-status', 'frontdesk-librechat-start', 'frontdesk-librechat-stop', 'frontdesk-librechat-open'].every((command) =>
       output.help.commands.some((entry: { command: string }) => entry.command === command),
     ),
   );

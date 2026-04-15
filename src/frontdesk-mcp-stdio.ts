@@ -94,8 +94,18 @@ async function fetchJson(
   options: FrontDeskMcpBridgeOptions,
   endpoint: string,
   query: Record<string, string | number | undefined> = {},
+  requestInit: {
+    method?: 'GET' | 'POST';
+    body?: Record<string, unknown>;
+  } = {},
 ) {
-  const response = await fetch(buildUrl(options.apiBaseUrl, endpoint, query));
+  const response = await fetch(buildUrl(options.apiBaseUrl, endpoint, query), {
+    method: requestInit.method ?? 'GET',
+    headers: requestInit.body ? {
+      'content-type': 'application/json',
+    } : undefined,
+    body: requestInit.body ? JSON.stringify(requestInit.body) : undefined,
+  });
   const raw = await response.text();
   const payload = raw.trim().length > 0 ? JSON.parse(raw) as unknown : null;
 
@@ -157,6 +167,54 @@ const TOOLS: ToolDefinition[] = [
     },
     call: async (_args, options) => {
       return await fetchJson(options, '/projects');
+    },
+  },
+  {
+    name: 'opl_workspace_catalog',
+    description: '读取 OPL 已绑定的 workspace 目录，适合查看当前有哪些项目/workspace 已接入前台。',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    },
+    call: async (_args, options) => {
+      return await fetchJson(options, '/workspace-catalog');
+    },
+  },
+  {
+    name: 'opl_activate_workspace',
+    description: '激活一个已绑定的 workspace，并把当前聊天默认上下文切换到该 workspace。',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_id: {
+          type: 'string',
+          description: '必填。要切换的项目 ID，例如 medautoscience 或 redcube。',
+        },
+        workspace_path: {
+          type: 'string',
+          description: '必填。要激活的 workspace 绝对路径。',
+        },
+      },
+      required: ['project_id', 'workspace_path'],
+      additionalProperties: false,
+    },
+    call: async (args, options) => {
+      const projectId = normalizeOptionalString(args.project_id);
+      const workspacePath = normalizeOptionalString(args.workspace_path);
+      if (!projectId || !workspacePath) {
+        throw new Error('opl_activate_workspace requires both project_id and workspace_path.');
+      }
+
+      const payload = await fetchJson(options, '/workspace-activate', {}, {
+        method: 'POST',
+        body: {
+          project_id: projectId,
+          workspace_path: workspacePath,
+        },
+      });
+      options.workspacePath = workspacePath;
+      return payload;
     },
   },
   {
