@@ -3558,14 +3558,19 @@ test('project-progress promotes current MAS study into a paper-facing summary in
       }
     }
 
-    assert.equal(payload.project_progress.current_study.study_id, studyId);
+    const currentStudy = payload.project_progress.current_study;
+    assert.ok(currentStudy);
+    const storySummary = currentStudy.story_summary;
+    assert.ok(storySummary);
+
+    assert.equal(currentStudy.study_id, studyId);
     assert.equal(
-      payload.project_progress.current_study.title,
+      currentStudy.title,
       'NF-PitNET invasive phenotype architecture with public-data anatomy and biology anchors',
     );
-    assert.match(payload.project_progress.current_study.story_summary, /侵袭负担.*Knosp.*公开 MRI \/ omics/);
-    assert.equal(payload.project_progress.current_study.current_stage, 'publication_supervision');
-    assert.equal(payload.project_progress.current_study.monitoring.health_status, 'live');
+    assert.match(storySummary, /侵袭负担.*Knosp.*公开 MRI \/ omics/);
+    assert.equal(currentStudy.current_stage, 'publication_supervision');
+    assert.equal(currentStudy.monitoring.health_status, 'live');
     assert.match(payload.project_progress.progress_summary, /004-invasive-architecture/);
     assert.ok(payload.project_progress.user_options.includes('展开当前论文的详细进度'));
     assert.ok(payload.project_progress.inspect_paths.includes(studyRoot));
