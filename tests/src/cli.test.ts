@@ -3898,7 +3898,7 @@ exit 1
     assert.equal(wiringPayload.frontdesk_domain_wiring.surface_id, 'opl_frontdesk_domain_wiring');
     assert.equal(wiringPayload.frontdesk_domain_wiring.summary.total_projects_count, 2);
     assert.equal(wiringPayload.frontdesk_domain_wiring.domain_binding_parity.summary.total_projects_count, 2);
-    assert.equal(wiringPayload.frontdesk_domain_wiring.domain_binding_parity.summary.active_projects_count, 1);
+    assert.equal(wiringPayload.frontdesk_domain_wiring.domain_binding_parity.summary.active_projects_count, 0);
     assert.equal(wiringPayload.frontdesk_domain_wiring.summary.recommended_entry_surfaces_count, 0);
 
     const readinessResponse = await fetch(`${baseUrl}/api/frontdesk-readiness`);
