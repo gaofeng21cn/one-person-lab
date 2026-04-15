@@ -30,16 +30,10 @@ function inferProjectLabel(options: FrontDeskWelcomeOptions) {
 }
 
 export function buildFrontDeskLibreChatWelcome(options: FrontDeskWelcomeOptions) {
+  const projectLabel = inferProjectLabel(options);
   const lines = [
-    `Welcome to ${OPL_FRONTDOOR_APP_TITLE}.`,
-    '',
-    'Current project:',
-    `- ${inferProjectLabel(options)}`,
-    '',
-    'How to use:',
-    '- 直接问当前论文或运行时进度',
-    '- 直接说你想切换到哪个项目或 workspace',
-    '- 直接要求查看当前任务、文件或下一步',
+    `Current project: ${projectLabel}`,
+    '直接问论文或项目进度；也可以说切换项目、查看任务或下一步。',
   ];
 
   return lines.join('\n');

@@ -574,7 +574,7 @@ function resolveBindingManifest(projectId: string, project: string, binding: Wor
     };
   }
 
-  const result = spawnSync('/bin/zsh', ['-lc', manifestCommand], {
+  const result = spawnSync('/bin/bash', ['-lc', manifestCommand], {
     cwd: binding.workspace_path,
     encoding: 'utf8',
     env: process.env,
