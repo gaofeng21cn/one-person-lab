@@ -43,6 +43,8 @@ export function buildFrontDeskTitlePrompt() {
   return [
     `Create a short conversation title for ${OPL_FRONTDOOR_APP_TITLE}.`,
     'Prefer the concrete workspace, project, study, or paper identifier when one is present.',
+    'If a study identifier such as 004-invasive-architecture appears, start with it.',
+    'Prefer titles like 004 invasive architecture over generic summaries.',
     'Never return New Chat or any other generic placeholder.',
     'Keep the title under 12 Chinese characters or 6 English words.',
     'Do not use punctuation.',
