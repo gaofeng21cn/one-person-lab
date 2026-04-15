@@ -656,7 +656,8 @@ function resolveContractsDirFromCliEntrypoint(): string | null {
     return null;
   }
 
-  const projectRoot = path.resolve(path.dirname(cliEntry), '..');
+  const cliEntryRealPath = fs.realpathSync.native(cliEntry);
+  const projectRoot = path.resolve(path.dirname(cliEntryRealPath), '..');
   const contractsRoot = path.join(projectRoot, 'contracts', 'opl-gateway');
   return hasRequiredContractFiles(contractsRoot) ? contractsRoot : null;
 }

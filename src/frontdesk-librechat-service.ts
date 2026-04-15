@@ -544,12 +544,17 @@ function buildInstalledIdentity(config: LibreChatServiceConfigFile | null) {
   };
 }
 
+function hasInstalledStackAssets(config: LibreChatServiceConfigFile | null): config is LibreChatServiceConfigFile {
+  return Boolean(config && fs.existsSync(config.compose_file) && fs.existsSync(config.env_file));
+}
+
 async function buildPayload(
   contracts: GatewayContracts,
   action: 'install' | 'status' | 'start' | 'stop' | 'open',
   config: LibreChatServiceConfigFile | null,
   paperclipSummary?: PaperclipControlPlaneSummary | null,
 ) {
+  const installedStackAssets = hasInstalledStackAssets(config);
   const frontdeskServicePayload = config
     ? await getFrontDeskServiceStatus(contracts)
     : {
@@ -560,7 +565,7 @@ async function buildPayload(
         },
         frontdesk_service: null,
       };
-  const dockerStatus = config ? runDockerCompose(config, 'ps') : null;
+  const dockerStatus = installedStackAssets ? runDockerCompose(config, 'ps') : null;
   const services = dockerStatus ? parseDockerPs(dockerStatus.stdout) : [];
 
   return {
@@ -575,7 +580,7 @@ async function buildPayload(
     ...(paperclipSummary ? { paperclip_control_plane: paperclipSummary } : {}),
     frontdesk_librechat: {
       action,
-      installed: Boolean(config && fs.existsSync(config.compose_file) && fs.existsSync(config.env_file)),
+      installed: installedStackAssets,
       running: services.some((service) => String(service.State ?? '').toLowerCase() === 'running'),
       public_origin: config?.public_origin ?? null,
       host: config?.host ?? null,
@@ -604,6 +609,11 @@ async function buildPayload(
       notes: [
         'This is the local LibreChat-first front door for OPL, not a claim that managed hosted runtime is landed.',
         'The chat shell talks to OPL through the shipped MCP stdio bridge, while the OPL front desk remains the routed gateway.',
+        ...(config && !installedStackAssets
+          ? [
+              'Recorded stack config exists but stack assets are missing. Re-run frontdesk-librechat-start or frontdesk-bootstrap to resync the local front door.',
+            ]
+          : []),
       ],
     },
   };

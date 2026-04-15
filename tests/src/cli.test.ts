@@ -58,6 +58,30 @@ function runCliInCwd(
   return JSON.parse(result.stdout);
 }
 
+function runCliViaEntryPathInCwd(
+  entryPath: string,
+  args: string[],
+  cwd: string,
+  envOverrides: Record<string, string> = {},
+) {
+  const result = spawnSync(
+    process.execPath,
+    ['--experimental-strip-types', entryPath, ...args],
+    {
+      cwd,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: '1',
+        ...envOverrides,
+      },
+    },
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  return JSON.parse(result.stdout);
+}
+
 function runCliFailure(args: string[], envOverrides: Record<string, string> = {}) {
   return runCliFailureInCwd(args, repoRoot, envOverrides);
 }
@@ -2354,11 +2378,14 @@ test('frontdesk-librechat-package exports a same-origin LibreChat-first hosted s
 
     const librechatConfig = fs.readFileSync(assets.librechat_config, 'utf8');
     assert.match(librechatConfig, /Welcome to OPL Atlas/);
+    assert.match(librechatConfig, /Current project:/);
+    assert.match(librechatConfig, /How to use:/);
     assert.match(librechatConfig, /OPL Agent/);
+    assert.doesNotMatch(librechatConfig, /\n\s*-\s*Model:/);
+    assert.doesNotMatch(librechatConfig, /\n\s*-\s*Thinking:/);
     assert.match(librechatConfig, /modelDisplayLabel: OPL Agent/);
     assert.match(librechatConfig, /model: gpt-5\.4-operator/);
     assert.match(librechatConfig, /reasoning_effort: xhigh/);
-    assert.match(librechatConfig, /https:\/\/opl\.example\.com\/pilot\/opl\//);
     assert.match(librechatConfig, /mcpServers:/);
     assert.match(librechatConfig, /opl_cortex:/);
     assert.match(librechatConfig, /type: stdio/);
@@ -2641,8 +2668,12 @@ test('frontdesk bootstrap manages the local LibreChat shell, inherits local Code
     assert.match(runtimeEnv, /OPENAI_MODELS=gpt-5\.4-frontdoor/);
     const librechatConfig = fs.readFileSync(install.frontdesk_librechat.assets.librechat_config, 'utf8');
     assert.match(librechatConfig, /Welcome to OPL Atlas/);
-    assert.match(librechatConfig, /Active workspace:/);
-    assert.match(librechatConfig, /Bound project: med-autoscience/);
+    assert.match(librechatConfig, /Current project:/);
+    assert.match(librechatConfig, /med-autoscience/);
+    assert.match(librechatConfig, /How to use:/);
+    assert.match(librechatConfig, /直接问当前论文或运行时进度/);
+    assert.doesNotMatch(librechatConfig, /\n\s*-\s*Model:/);
+    assert.doesNotMatch(librechatConfig, /\n\s*-\s*Thinking:/);
     assert.match(librechatConfig, /modelDisplayLabel: OPL Agent/);
     assert.match(librechatConfig, /model: gpt-5\.4-frontdoor/);
     assert.match(librechatConfig, /reasoning_effort: xhigh/);
@@ -2686,6 +2717,62 @@ test('frontdesk bootstrap manages the local LibreChat shell, inherits local Code
     fs.rmSync(launchctlFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(dockerFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(openFixture.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('frontdesk-librechat-status reports stack drift instead of crashing when recorded assets are missing', async () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-librechat-drift-home-'));
+  const codexFixture = createCodexConfigFixture({
+    model: 'gpt-5.4-frontdoor',
+    reasoningEffort: 'xhigh',
+    baseUrl: 'https://codex-frontdoor.example.test/v1',
+    apiKey: 'codex-frontdoor-key',
+  });
+  const masWorkspaceFixture = createMasWorkspaceFixture();
+  const launchctlFixture = createFakeLaunchctlFixture();
+  const dockerFixture = createFakeDockerFixture();
+  const serviceEnv = {
+    HOME: homeRoot,
+    CODEX_HOME: codexFixture.codexHome,
+    OPL_LAUNCHCTL_BIN: launchctlFixture.launchctlPath,
+    OPL_DOCKER_BIN: dockerFixture.dockerPath,
+  };
+
+  try {
+    const install = await runCliAsync([
+      'frontdesk-librechat-install',
+      '--host',
+      '127.0.0.1',
+      '--port',
+      '8912',
+      '--path',
+      masWorkspaceFixture.fixtureRoot,
+      '--sessions-limit',
+      '7',
+      '--public-origin',
+      'http://127.0.0.1:18081',
+    ], serviceEnv) as {
+      frontdesk_librechat: {
+        assets: {
+          env_file: string;
+          compose_file: string;
+        };
+      };
+    };
+
+    fs.rmSync(install.frontdesk_librechat.assets.env_file, { force: true });
+    fs.rmSync(install.frontdesk_librechat.assets.compose_file, { force: true });
+
+    const status = runCli(['frontdesk-librechat-status'], serviceEnv);
+    assert.equal(status.frontdesk_librechat.installed, false);
+    assert.equal(status.frontdesk_librechat.running, false);
+    assert.match(status.frontdesk_librechat.notes.join('\n'), /stack assets are missing/i);
+  } finally {
+    fs.rmSync(codexFixture.codexHome, { recursive: true, force: true });
+    fs.rmSync(masWorkspaceFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(launchctlFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(dockerFixture.fixtureRoot, { recursive: true, force: true });
   }
 });
 
@@ -3857,9 +3944,12 @@ exit 1
     const page = await fetch(baseUrl);
     assert.equal(page.status, 200);
     const pageHtml = await page.text();
-    assert.match(pageHtml, /OPL Front Desk/);
+    assert.match(pageHtml, /OPL Machine Surface/);
+    assert.match(pageHtml, /Human chat entry/);
+    assert.match(pageHtml, /href="\/login"/);
     assert.match(pageHtml, /id="opl-bootstrap"/);
     assert.match(pageHtml, /\/api\/frontdesk-entry-guide/);
+    assert.doesNotMatch(pageHtml, /Workspace Hub/);
 
     const dashboardResponse = await fetch(`${baseUrl}/api/dashboard`);
     const dashboardPayload = await dashboardResponse.json();
@@ -4028,7 +4118,7 @@ exit 1
   }
 });
 
-test('web front-desk exposes start api and renders a direct start panel for resolved domain manifests', async () => {
+test('web front-desk keeps a minimal machine surface while start api stays available for resolved domain manifests', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-web-start-state-'));
   const fixtures = loadFamilyManifestFixtures();
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
@@ -4107,9 +4197,11 @@ exit 1
     const page = await fetch(baseUrl);
     assert.equal(page.status, 200);
     const pageHtml = await page.text();
-    assert.match(pageHtml, /Start A Domain Project/);
-    assert.match(pageHtml, /Resolve the exact recommended direct entry mode/);
-    assert.match(pageHtml, /Launch Bound Domain Entry/);
+    assert.match(pageHtml, /OPL Machine Surface/);
+    assert.match(pageHtml, /Human chat entry/);
+    assert.match(pageHtml, /\/api\/frontdesk-entry-guide/);
+    assert.doesNotMatch(pageHtml, /Start A Domain Project/);
+    assert.doesNotMatch(pageHtml, /Workspace Hub/);
 
     const startResponse = await fetch(`${baseUrl}/api/start?project=redcube`);
     assert.equal(startResponse.status, 200);
@@ -5241,6 +5333,23 @@ test('validate-contracts falls back to the active CLI repo contracts when cwd ha
     assert.equal(output.validation.contracts_root_source, 'cli_entry');
   } finally {
     fs.rmSync(unrelatedCwd, { recursive: true, force: true });
+  }
+});
+
+test('validate-contracts resolves repo contracts through a symlinked CLI entry path', () => {
+  const unrelatedCwd = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-cli-entry-link-cwd-'));
+  const linkedCliRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-cli-entry-link-'));
+  const linkedCliPath = path.join(linkedCliRoot, 'opl-linked.ts');
+
+  try {
+    fs.symlinkSync(cliPath, linkedCliPath);
+    const output = runCliViaEntryPathInCwd(linkedCliPath, ['validate-contracts'], unrelatedCwd);
+
+    assert.equal(output.validation.contracts_dir, contractsDir);
+    assert.equal(output.validation.contracts_root_source, 'cli_entry');
+  } finally {
+    fs.rmSync(unrelatedCwd, { recursive: true, force: true });
+    fs.rmSync(linkedCliRoot, { recursive: true, force: true });
   }
 });
 
