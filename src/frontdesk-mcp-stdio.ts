@@ -1,5 +1,7 @@
 import readline from 'node:readline';
 
+import { inferFrontDeskWorkspaceLabel } from './frontdesk-librechat-identity.ts';
+
 type JsonRpcId = string | number | null;
 
 export type FrontDeskMcpBridgeOptions = {
@@ -150,13 +152,17 @@ function renderProjectProgressBrief(payload: unknown) {
     ? brief.user_options.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
     : [];
 
+  const workspacePath = normalizeOptionalString(currentProject.workspace_path);
+  const workspaceLabel = inferFrontDeskWorkspaceLabel({
+    workspacePath,
+    fallbackLabel: normalizeOptionalString(currentProject.label) ?? null,
+  });
   const lines = [
-    `当前项目：${normalizeOptionalString(currentProject.label) ?? '未绑定项目'}`,
+    `当前工作区：${workspaceLabel}`,
   ];
 
-  const workspacePath = normalizeOptionalString(currentProject.workspace_path);
   if (workspacePath) {
-    lines.push(`默认 workspace：${workspacePath}`);
+    lines.push(`工作区路径：${workspacePath}`);
   }
 
   if (currentStudy) {

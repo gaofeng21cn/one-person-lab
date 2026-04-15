@@ -2486,7 +2486,7 @@ test('frontdesk-librechat-package exports a same-origin LibreChat-first hosted s
     assert.match(caddyfile, /reverse_proxy \{\$OPL_FRONTDESK_UPSTREAM\}/);
 
     const librechatConfig = fs.readFileSync(assets.librechat_config, 'utf8');
-    assert.match(librechatConfig, /当前项目：Unbound workspace/);
+    assert.match(librechatConfig, /当前工作区：Unbound workspace/);
     assert.match(librechatConfig, /可直接问：论文进度、切换项目、下一步。/);
     assert.doesNotMatch(librechatConfig, /Welcome to OPL Atlas/);
     assert.doesNotMatch(librechatConfig, /How to use:/);
@@ -2622,7 +2622,7 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
         content: Array<{ type: string; text: string }>;
       }).content;
       assert.equal(progressContent[0].type, 'text');
-      assert.match(progressContent[0].text, /当前项目：med-autoscience/);
+      assert.match(progressContent[0].text, /当前工作区：opl-activated-workspace/);
       assert.match(progressContent[0].text, /当前论文：004-invasive-architecture/);
       assert.match(progressContent[0].text, /论文题目：NF-PitNET invasive phenotype architecture/);
       assert.match(progressContent[0].text, /论文主线：当前主线是首术 NF-PitNET 的侵袭表型 architecture/);
@@ -2846,8 +2846,8 @@ test('frontdesk bootstrap manages the local LibreChat shell, inherits local Code
     assert.match(runtimeEnv, /OPENAI_REVERSE_PROXY=https:\/\/codex-frontdoor\.example\.test\/v1/);
     assert.match(runtimeEnv, /OPENAI_MODELS=gpt-5\.4-frontdoor/);
     const librechatConfig = fs.readFileSync(install.frontdesk_librechat.assets.librechat_config, 'utf8');
-    assert.match(librechatConfig, /当前项目：/);
-    assert.match(librechatConfig, /med-autoscience/);
+    assert.match(librechatConfig, /当前工作区：/);
+    assert.match(librechatConfig, new RegExp(path.basename(masWorkspaceFixture.fixtureRoot)));
     assert.match(librechatConfig, /可直接问：论文进度、切换项目、下一步。/);
     assert.doesNotMatch(librechatConfig, /Welcome to OPL Atlas/);
     assert.doesNotMatch(librechatConfig, /How to use:/);
@@ -4642,7 +4642,9 @@ exit 1
     assert.match(pageHtml, /Open OPL Agent/);
     assert.match(pageHtml, /Project snapshot/);
     assert.match(pageHtml, /Progress summary/);
-    assert.match(pageHtml, /Current project/);
+    assert.match(pageHtml, /Current workspace/);
+    assert.match(pageHtml, /one-person-lab/);
+    assert.doesNotMatch(pageHtml, /Current project/);
     assert.match(pageHtml, /href="\/login"/);
     assert.match(pageHtml, /id="opl-bootstrap"/);
     assert.match(pageHtml, /white-space: pre-wrap/);
@@ -4916,6 +4918,9 @@ exit 1
     assert.match(pageHtml, /Binding Guide/);
     assert.match(pageHtml, /Session Resource Attribution/);
     assert.match(pageHtml, /Project snapshot/);
+    assert.match(pageHtml, /Current workspace/);
+    assert.match(pageHtml, /one-person-lab/);
+    assert.doesNotMatch(pageHtml, /Current project/);
     assert.match(pageHtml, /\/api\/frontdesk-entry-guide/);
     assert.doesNotMatch(pageHtml, /Start A Domain Project/);
     assert.doesNotMatch(pageHtml, /Workspace Hub/);

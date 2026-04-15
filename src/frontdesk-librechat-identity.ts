@@ -13,15 +13,14 @@ type FrontDeskWelcomeOptions = {
   activeProjectLabel?: string | null;
 };
 
-function inferProjectLabel(options: FrontDeskWelcomeOptions) {
-  const projectLabel = options.activeProjectLabel?.trim();
-  if (projectLabel) {
-    return projectLabel;
-  }
-
+export function inferFrontDeskWorkspaceLabel(options: {
+  workspacePath?: string | null;
+  fallbackLabel?: string | null;
+}) {
   const workspacePath = options.workspacePath?.trim();
   if (!workspacePath) {
-    return 'Unbound workspace';
+    const fallbackLabel = options.fallbackLabel?.trim();
+    return fallbackLabel || 'Unbound workspace';
   }
 
   const normalized = workspacePath.replace(/[\\/]+$/, '');
@@ -30,9 +29,12 @@ function inferProjectLabel(options: FrontDeskWelcomeOptions) {
 }
 
 export function buildFrontDeskLibreChatWelcome(options: FrontDeskWelcomeOptions) {
-  const projectLabel = inferProjectLabel(options);
+  const workspaceLabel = inferFrontDeskWorkspaceLabel({
+    workspacePath: options.workspacePath,
+    fallbackLabel: options.activeProjectLabel,
+  });
   const lines = [
-    `当前项目：${projectLabel}`,
+    `当前工作区：${workspaceLabel}`,
     '可直接问：论文进度、切换项目、下一步。',
   ];
 
