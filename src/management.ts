@@ -300,11 +300,220 @@ function runJsonShellCommand(command: string | null, cwd: string) {
   }
 }
 
-function buildCurrentStudyUserOptions(hasCurrentStudy: boolean) {
+function optionalNumber(value: unknown) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function readOptionalText(filePath: string | null) {
+  if (!filePath || !fs.existsSync(filePath)) {
+    return null;
+  }
+
+  try {
+    return fs.readFileSync(filePath, 'utf8');
+  } catch {
+    return null;
+  }
+}
+
+function normalizeInlineText(value: string | null | undefined) {
+  const normalized = value
+    ?.replace(/\r?\n+/g, ' ')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\\$/g, '')
+    .trim();
+
+  return normalized ? normalized : null;
+}
+
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function extractMarkedField(markdown: string | null, label: string) {
+  if (!markdown) {
+    return null;
+  }
+
+  const pattern = new RegExp(
+    `\\*\\*${escapeRegex(label)}:\\*\\*\\s*([\\s\\S]*?)(?:\\\\\\s*$|\\n\\*\\*|\\n##|\\n#|$)`,
+    'im',
+  );
+  const match = markdown.match(pattern);
+  return normalizeInlineText(match?.[1] ?? null);
+}
+
+function extractFrontMatterTitle(markdown: string | null) {
+  if (!markdown) {
+    return null;
+  }
+
+  const match = markdown.match(/^title:\s*"(.+)"$/m);
+  return normalizeInlineText(match?.[1] ?? null);
+}
+
+function summarizeFigureCounts(figureCatalog: Record<string, unknown> | null) {
+  const figures = Array.isArray(figureCatalog?.figures)
+    ? figureCatalog.figures.filter((entry): entry is Record<string, unknown> => isRecord(entry))
+    : [];
+  let main = 0;
+  let supplementary = 0;
+
+  for (const figure of figures) {
+    const figureId = optionalString(figure.figure_id);
+    const paperRole = optionalString(figure.paper_role);
+    const isSupplementary = (figureId && /^S/i.test(figureId)) || paperRole === 'supplementary';
+    if (isSupplementary) {
+      supplementary += 1;
+    } else {
+      main += 1;
+    }
+  }
+
+  return {
+    main: figures.length > 0 ? main : null,
+    supplementary: figures.length > 0 ? supplementary : null,
+  };
+}
+
+function summarizeTableCounts(tableCatalog: Record<string, unknown> | null) {
+  const tables = Array.isArray(tableCatalog?.tables)
+    ? tableCatalog.tables.filter((entry): entry is Record<string, unknown> => isRecord(entry))
+    : [];
+  let main = 0;
+  let supplementary = 0;
+
+  for (const table of tables) {
+    const tableId = optionalString(table.table_id);
+    const paperRole = optionalString(table.paper_role);
+    const isSupplementary = (tableId && /^TA/i.test(tableId)) || paperRole === 'supplementary';
+    if (isSupplementary) {
+      supplementary += 1;
+    } else {
+      main += 1;
+    }
+  }
+
+  return {
+    main: tables.length > 0 ? main : null,
+    supplementary: tables.length > 0 ? supplementary : null,
+  };
+}
+
+function buildPaperFacingSnapshot(options: {
+  studyRoot: string | null;
+  questRoot: string | null;
+  publicationObjective: string | null;
+  paperFramingSummary: string | null;
+}) {
+  const studyMatrixPath = options.studyRoot
+    ? path.join(options.studyRoot, 'paper', 'paper_experiment_matrix.json')
+    : null;
+  const reviewManuscriptPath = options.questRoot
+    ? path.join(options.questRoot, 'paper', 'build', 'review_manuscript.md')
+    : null;
+  const figureCatalogPath = options.questRoot
+    ? path.join(options.questRoot, 'paper', 'figures', 'figure_catalog.json')
+    : null;
+  const tableCatalogPath = options.questRoot
+    ? path.join(options.questRoot, 'paper', 'tables', 'table_catalog.json')
+    : null;
+  const referenceCoveragePath = options.questRoot
+    ? path.join(options.questRoot, 'paper', 'reference_coverage_report.json')
+    : null;
+  const compileReportPath = options.questRoot
+    ? path.join(options.questRoot, 'paper', 'build', 'compile_report.json')
+    : null;
+  const bundleManifestPath = options.questRoot
+    ? path.join(options.questRoot, 'paper', 'paper_bundle_manifest.json')
+    : null;
+
+  const matrix = readOptionalJsonRecord(studyMatrixPath);
+  const reviewManuscript = readOptionalText(reviewManuscriptPath);
+  const figureCatalog = readOptionalJsonRecord(figureCatalogPath);
+  const tableCatalog = readOptionalJsonRecord(tableCatalogPath);
+  const referenceCoverage = readOptionalJsonRecord(referenceCoveragePath);
+  const compileReport = readOptionalJsonRecord(compileReportPath);
+  const bundleManifest = readOptionalJsonRecord(bundleManifestPath);
+
+  const figureCounts = summarizeFigureCounts(figureCatalog);
+  const tableCounts = summarizeTableCounts(tableCatalog);
+  const referenceCount =
+    optionalNumber(referenceCoverage?.record_count)
+    ?? optionalNumber(referenceCoverage?.records_total)
+    ?? null;
+  const pageCount = optionalNumber(compileReport?.page_count);
+  const matrixJudgment = isRecord(matrix?.current_judgment) ? matrix.current_judgment : null;
+  const manuscriptObjective = extractMarkedField(reviewManuscript, 'Objective');
+  const manuscriptResults = extractMarkedField(reviewManuscript, 'Results');
+  const currentEffectSummary =
+    manuscriptResults
+    ?? normalizeInlineText(optionalString(matrixJudgment?.current_judgment))
+    ?? null;
+  const proofingSummary =
+    normalizeInlineText(optionalString(compileReport?.proofing_summary))
+    ?? normalizeInlineText(optionalString(bundleManifest?.summary))
+    ?? null;
+  const clinicalQuestion = manuscriptObjective ?? options.publicationObjective ?? null;
+  const innovationSummary = options.paperFramingSummary ?? null;
+  const materializedBits = [
+    figureCounts.main !== null ? `${figureCounts.main} 张主图` : null,
+    figureCounts.supplementary ? `${figureCounts.supplementary} 张补充图` : null,
+    tableCounts.main !== null ? `${tableCounts.main} 张主表` : null,
+    tableCounts.supplementary ? `${tableCounts.supplementary} 张附表` : null,
+    referenceCount !== null ? `${referenceCount} 篇参考文献` : null,
+    pageCount !== null ? `${pageCount} 页 PDF` : null,
+  ].filter((entry): entry is string => Boolean(entry));
+  const humanSummary = normalizeInlineText([
+    clinicalQuestion ? `临床问题：${clinicalQuestion}` : null,
+    currentEffectSummary ? `当前结果：${currentEffectSummary}` : null,
+    materializedBits.length > 0 ? `稿件已物化 ${materializedBits.join('，')}` : proofingSummary,
+  ].filter(Boolean).join(' '));
+
+  if (
+    !clinicalQuestion
+    && !innovationSummary
+    && !currentEffectSummary
+    && materializedBits.length === 0
+    && !proofingSummary
+    && !bundleManifest
+  ) {
+    return null;
+  }
+
+  return {
+    title:
+      normalizeInlineText(optionalString(bundleManifest?.title))
+      ?? extractFrontMatterTitle(reviewManuscript),
+    clinical_question: clinicalQuestion,
+    innovation_summary: innovationSummary,
+    current_effect_summary: currentEffectSummary,
+    main_figure_count: figureCounts.main,
+    supplementary_figure_count: figureCounts.supplementary,
+    main_table_count: tableCounts.main,
+    supplementary_table_count: tableCounts.supplementary,
+    reference_count: referenceCount,
+    page_count: pageCount,
+    proofing_summary: proofingSummary,
+    bundle_summary: normalizeInlineText(optionalString(bundleManifest?.summary)),
+    human_summary: humanSummary,
+    inspect_paths: uniqueStrings([
+      studyMatrixPath,
+      reviewManuscriptPath,
+      figureCatalogPath,
+      tableCatalogPath,
+      referenceCoveragePath,
+      compileReportPath,
+      bundleManifestPath,
+    ]),
+  };
+}
+
+function buildCurrentStudyUserOptions(hasCurrentStudy: boolean, hasPaperSnapshot = false) {
   if (hasCurrentStudy) {
     return [
       '展开当前论文的详细进度',
-      '列出当前 workspace 的全部论文',
+      ...(hasPaperSnapshot ? ['列出当前稿件的图表与参考文献计数', '打开当前论文的可审阅目录'] : []),
       '切换到另一篇论文继续查看',
     ];
   }
@@ -563,6 +772,7 @@ function buildStudyProgressSurface(options: {
     ?? optionalString(currentStudySummary.study_root)
     ?? null;
   const questId = optionalString(progressPayload?.quest_id);
+  const questRoot = optionalString(progressPayload?.quest_root);
   const currentStage = optionalString(progressPayload?.current_stage) ?? optionalString(currentStudySummary.current_stage);
   const currentStageSummary =
     optionalString(progressPayload?.current_stage_summary)
@@ -587,6 +797,12 @@ function buildStudyProgressSurface(options: {
     : [];
   const latestEvent = latestEvents[0] ?? null;
   const studyCharter = readStudyCharter(studyRoot);
+  const paperSnapshot = buildPaperFacingSnapshot({
+    studyRoot,
+    questRoot,
+    publicationObjective: studyCharter?.publication_objective ?? null,
+    paperFramingSummary: studyCharter?.paper_framing_summary ?? null,
+  });
   const refs = isRecord(progressPayload?.refs) ? progressPayload.refs : null;
   const inspectPaths = uniqueStrings([
     studyRoot,
@@ -596,14 +812,18 @@ function buildStudyProgressSurface(options: {
     studyRoot && fs.existsSync(path.join(studyRoot, 'manuscript', 'current_package'))
       ? path.join(studyRoot, 'manuscript', 'current_package')
       : null,
+    ...(paperSnapshot?.inspect_paths ?? []),
   ]);
   const storySummary =
     studyCharter?.publication_objective
     ?? studyCharter?.paper_framing_summary
     ?? optionalString(currentStudySummary.current_stage_summary);
-  const progressSummary = currentStageSummary
-    ? `${optionalString(currentStudySummary.study_id) ?? '当前论文'} 当前阶段：${currentStageSummary}`
-    : null;
+  const progressSummary = normalizeInlineText([
+    optionalString(currentStudySummary.study_id)
+      ? `${optionalString(currentStudySummary.study_id)} 当前阶段：${currentStageSummary ?? '待确认'}`
+      : currentStageSummary,
+    paperSnapshot?.human_summary ?? null,
+  ].filter(Boolean).join(' '));
   const latestProgressTimeLabel = optionalString(freshness?.latest_progress_time_label);
   const latestProgressSummary = optionalString(freshness?.latest_progress_summary);
   const latestProgressSource = optionalString(freshness?.latest_progress_source);
@@ -620,12 +840,32 @@ function buildStudyProgressSurface(options: {
   return {
     currentStudy: {
       study_id: optionalString(currentStudySummary.study_id),
-      title: studyCharter?.title ?? optionalString(currentStudySummary.study_id),
+      title:
+        studyCharter?.title
+        ?? paperSnapshot?.title
+        ?? optionalString(currentStudySummary.study_id),
       story_summary: storySummary,
       paper_framing_summary: studyCharter?.paper_framing_summary ?? null,
+      clinical_question: paperSnapshot?.clinical_question ?? studyCharter?.publication_objective ?? null,
+      innovation_summary: paperSnapshot?.innovation_summary ?? studyCharter?.paper_framing_summary ?? null,
+      current_effect_summary: paperSnapshot?.current_effect_summary ?? null,
+      paper_snapshot: paperSnapshot
+        ? {
+            main_figure_count: paperSnapshot.main_figure_count,
+            supplementary_figure_count: paperSnapshot.supplementary_figure_count,
+            main_table_count: paperSnapshot.main_table_count,
+            supplementary_table_count: paperSnapshot.supplementary_table_count,
+            reference_count: paperSnapshot.reference_count,
+            page_count: paperSnapshot.page_count,
+            proofing_summary: paperSnapshot.proofing_summary,
+            bundle_summary: paperSnapshot.bundle_summary,
+            human_summary: paperSnapshot.human_summary,
+            current_effect_summary: paperSnapshot.current_effect_summary,
+          }
+        : null,
       study_root: studyRoot,
       quest_id: questId,
-      quest_root: optionalString(progressPayload?.quest_root),
+      quest_root: questRoot,
       current_stage: currentStage,
       current_stage_summary: currentStageSummary,
       paper_stage: paperStage,
@@ -661,7 +901,7 @@ function buildStudyProgressSurface(options: {
       progress: progressCommand,
       resume: resumeCommand,
     },
-    userOptions: buildCurrentStudyUserOptions(true),
+    userOptions: buildCurrentStudyUserOptions(true, Boolean(paperSnapshot)),
   };
 }
 

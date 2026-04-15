@@ -824,17 +824,15 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
       .map((entry) => escapeHtml(entry))
     : [];
-  const recommendedCommands = progress.recommended_commands
-    && typeof progress.recommended_commands === 'object'
-    && !Array.isArray(progress.recommended_commands)
-    ? Object.values(progress.recommended_commands)
-      .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
-      .map((entry) => escapeHtml(entry))
-    : [];
   const currentStudy = progress.current_study
     && typeof progress.current_study === 'object'
     && !Array.isArray(progress.current_study)
     ? progress.current_study as Record<string, unknown>
+    : null;
+  const paperSnapshot = currentStudy?.paper_snapshot
+    && typeof currentStudy.paper_snapshot === 'object'
+    && !Array.isArray(currentStudy.paper_snapshot)
+    ? currentStudy.paper_snapshot as Record<string, unknown>
     : null;
   const currentStudyId = escapeHtml(
     typeof currentStudy?.study_id === 'string'
@@ -850,6 +848,23 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
     typeof currentStudy?.story_summary === 'string'
       ? currentStudy.story_summary
       : '当前还只能确认到项目级，建议让 OPL Agent 先列出全部论文或检查哪篇在 live。',
+  );
+  const currentStudyClinicalQuestion = escapeHtml(
+    typeof currentStudy?.clinical_question === 'string'
+      ? currentStudy.clinical_question
+      : '当前还没有抽出临床问题摘要。',
+  );
+  const currentStudyInnovation = escapeHtml(
+    typeof currentStudy?.innovation_summary === 'string'
+      ? currentStudy.innovation_summary
+      : '当前还没有抽出论文主线/创新边界摘要。',
+  );
+  const currentStudyEffect = escapeHtml(
+    typeof currentStudy?.current_effect_summary === 'string'
+      ? currentStudy.current_effect_summary
+      : typeof paperSnapshot?.current_effect_summary === 'string'
+        ? String(paperSnapshot.current_effect_summary)
+        : '当前还没有抽出可汇报的效果摘要。',
   );
   const currentStudyStage = escapeHtml(
     typeof currentStudy?.current_stage_summary === 'string'
@@ -875,6 +890,20 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         ? `run ${currentStudyMonitoring.active_run_id}`
         : null,
     ].filter(Boolean).join(' · ') || '当前没有读到 live runtime 会话。',
+  );
+  const currentStudyMaterialized = escapeHtml(
+    [
+      typeof paperSnapshot?.main_figure_count === 'number' ? `${paperSnapshot.main_figure_count} 张主图` : null,
+      typeof paperSnapshot?.supplementary_figure_count === 'number' && paperSnapshot.supplementary_figure_count > 0
+        ? `${paperSnapshot.supplementary_figure_count} 张补充图`
+        : null,
+      typeof paperSnapshot?.main_table_count === 'number' ? `${paperSnapshot.main_table_count} 张主表` : null,
+      typeof paperSnapshot?.supplementary_table_count === 'number' && paperSnapshot.supplementary_table_count > 0
+        ? `${paperSnapshot.supplementary_table_count} 张附表`
+        : null,
+      typeof paperSnapshot?.reference_count === 'number' ? `${paperSnapshot.reference_count} 篇参考文献` : null,
+      typeof paperSnapshot?.page_count === 'number' ? `${paperSnapshot.page_count} 页 PDF` : null,
+    ].filter(Boolean).join('，') || '当前还没有抽出图表与参考文献计数。',
   );
   const userOptions = Array.isArray(progress.user_options)
     ? progress.user_options
@@ -1116,8 +1145,7 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         <h2>Machine surface</h2>
         <h1>OPL Machine Surface</h1>
         <p class="lede">
-          This page is the compact operator view for the current OPL workspace. Use chat for natural-language interaction,
-          and use this page to glance at the active project, progress summary, and inspectable paths.
+          这里负责给当前项目做人类可读的进度概览。自然语言交互走聊天界面，这一页负责把论文状态、卡点和可审阅路径讲明白。
         </p>
         <div class="entry-actions">
           <a class="entry-link" href="/login">Open OPL Agent</a>
@@ -1185,8 +1213,15 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
             <span class="meta-label">Runtime</span>
             <div>${currentStudyRuntime}</div>
           </div>
+          <div class="meta-card">
+            <span class="meta-label">Materialized draft</span>
+            <div>${currentStudyMaterialized}</div>
+          </div>
         </div>
-        <p class="status-copy" style="margin-top: 16px;">${currentStudyStory}</p>
+        <p class="status-copy" style="margin-top: 16px;"><strong>论文主线：</strong>${currentStudyStory}</p>
+        <p class="status-copy" style="margin-top: 12px;"><strong>临床问题：</strong>${currentStudyClinicalQuestion}</p>
+        <p class="status-copy" style="margin-top: 12px;"><strong>写作边界：</strong>${currentStudyInnovation}</p>
+        <p class="status-copy" style="margin-top: 12px;"><strong>当前结果：</strong>${currentStudyEffect}</p>
         <p class="muted" style="margin-top: 12px;">下一步建议：${currentStudyNextAction}</p>
         ${attentionItems.length > 0
           ? `<ul class="status-list">${attentionItems.map((item) => `<li>${item}</li>`).join('')}</ul>`
@@ -1196,9 +1231,6 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
           : ''}
         ${inspectPaths.length > 0
           ? `<div style="margin-top: 18px;"><span class="meta-label">Where to inspect</span><ul class="inspect-list">${inspectPaths.map((item) => `<li>${item}</li>`).join('')}</ul></div>`
-          : ''}
-        ${recommendedCommands.length > 0
-          ? `<div style="margin-top: 18px;"><span class="meta-label">Useful commands</span><ul class="inspect-list">${recommendedCommands.map((item) => `<li><code>${item}</code></li>`).join('')}</ul></div>`
           : ''}
       </section>
 

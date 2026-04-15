@@ -138,8 +138,8 @@ function renderProjectProgressBrief(payload: unknown) {
   const brief = payload.project_progress;
   const currentProject = isRecord(brief.current_project) ? brief.current_project : {};
   const currentStudy = isRecord(brief.current_study) ? brief.current_study : null;
+  const paperSnapshot = currentStudy && isRecord(currentStudy.paper_snapshot) ? currentStudy.paper_snapshot : null;
   const recentActivity = isRecord(brief.recent_activity) ? brief.recent_activity : null;
-  const recommendedCommands = isRecord(brief.recommended_commands) ? brief.recommended_commands : {};
   const inspectPaths = Array.isArray(brief.inspect_paths)
     ? brief.inspect_paths.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
     : [];
@@ -163,8 +163,29 @@ function renderProjectProgressBrief(payload: unknown) {
     const studyId = normalizeOptionalString(currentStudy.study_id);
     const title = normalizeOptionalString(currentStudy.title);
     const storySummary = normalizeOptionalString(currentStudy.story_summary);
+    const clinicalQuestion = normalizeOptionalString(currentStudy.clinical_question);
+    const innovationSummary = normalizeOptionalString(currentStudy.innovation_summary);
+    const effectSummary =
+      normalizeOptionalString(currentStudy.current_effect_summary)
+      ?? normalizeOptionalString(paperSnapshot?.current_effect_summary);
     const currentStageSummary = normalizeOptionalString(currentStudy.current_stage_summary);
     const nextSystemAction = normalizeOptionalString(currentStudy.next_system_action);
+    const mainFigureCount = typeof paperSnapshot?.main_figure_count === 'number' ? paperSnapshot.main_figure_count : null;
+    const supplementaryFigureCount =
+      typeof paperSnapshot?.supplementary_figure_count === 'number' ? paperSnapshot.supplementary_figure_count : null;
+    const mainTableCount = typeof paperSnapshot?.main_table_count === 'number' ? paperSnapshot.main_table_count : null;
+    const supplementaryTableCount =
+      typeof paperSnapshot?.supplementary_table_count === 'number' ? paperSnapshot.supplementary_table_count : null;
+    const referenceCount = typeof paperSnapshot?.reference_count === 'number' ? paperSnapshot.reference_count : null;
+    const pageCount = typeof paperSnapshot?.page_count === 'number' ? paperSnapshot.page_count : null;
+    const materializedSummary = [
+      mainFigureCount !== null ? `${mainFigureCount} 张主图` : null,
+      supplementaryFigureCount ? `${supplementaryFigureCount} 张补充图` : null,
+      mainTableCount !== null ? `${mainTableCount} 张主表` : null,
+      supplementaryTableCount ? `${supplementaryTableCount} 张附表` : null,
+      referenceCount !== null ? `${referenceCount} 篇参考文献` : null,
+      pageCount !== null ? `${pageCount} 页 PDF` : null,
+    ].filter(Boolean).join('，');
 
     if (studyId) {
       lines.push(`当前论文：${studyId}`);
@@ -172,8 +193,20 @@ function renderProjectProgressBrief(payload: unknown) {
     if (title) {
       lines.push(`论文题目：${title}`);
     }
+    if (clinicalQuestion) {
+      lines.push(`临床问题：${clinicalQuestion}`);
+    }
     if (storySummary) {
       lines.push(`论文主线：${storySummary}`);
+    }
+    if (innovationSummary && innovationSummary !== storySummary) {
+      lines.push(`写作边界：${innovationSummary}`);
+    }
+    if (effectSummary) {
+      lines.push(`当前结果：${effectSummary}`);
+    }
+    if (materializedSummary) {
+      lines.push(`稿件物化：${materializedSummary}`);
     }
     if (currentStageSummary) {
       lines.push(`当前阶段：${currentStageSummary}`);
@@ -207,14 +240,6 @@ function renderProjectProgressBrief(payload: unknown) {
     lines.push(`查看位置：${inspectPaths.join('；')}`);
   }
 
-  const progressCommand = normalizeOptionalString(recommendedCommands.progress);
-  const resumeCommand = normalizeOptionalString(recommendedCommands.resume);
-  const startCommand = normalizeOptionalString(recommendedCommands.start);
-  const commandHints = [progressCommand, resumeCommand, startCommand].filter(Boolean) as string[];
-  if (commandHints.length > 0) {
-    lines.push(`可继续使用：${commandHints.join('；')}`);
-  }
-
   if (attentionItems.length > 0) {
     lines.push(`当前需关注：${attentionItems.join('；')}`);
   }
@@ -230,7 +255,7 @@ const TOOLS: ToolDefinition[] = [
   {
     name: 'opl_project_progress',
     description:
-      '当用户直接问“当前是哪篇论文、讲什么故事、进度如何、卡在哪里、下一步做什么”时优先使用。返回人类可读摘要，不返回控制面原始字段。',
+      '当用户直接问当前是哪篇论文、讲什么故事、进度如何时优先使用。返回论文题目、临床问题、当前结果、图表与参考文献计数、卡点和下一步；不要回传控制面原始字段。',
     inputSchema: {
       type: 'object',
       properties: {

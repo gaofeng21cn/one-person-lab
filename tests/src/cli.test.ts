@@ -2486,8 +2486,8 @@ test('frontdesk-librechat-package exports a same-origin LibreChat-first hosted s
     assert.match(caddyfile, /reverse_proxy \{\$OPL_FRONTDESK_UPSTREAM\}/);
 
     const librechatConfig = fs.readFileSync(assets.librechat_config, 'utf8');
-    assert.match(librechatConfig, /Current project: Unbound workspace/);
-    assert.match(librechatConfig, /直接问论文或项目进度；也可以说切换项目、查看任务或下一步。/);
+    assert.match(librechatConfig, /当前项目：Unbound workspace/);
+    assert.match(librechatConfig, /可直接问：论文进度、切换项目、下一步。/);
     assert.doesNotMatch(librechatConfig, /Welcome to OPL Atlas/);
     assert.doesNotMatch(librechatConfig, /How to use:/);
     assert.match(librechatConfig, /OPL Agent/);
@@ -2504,6 +2504,7 @@ test('frontdesk-librechat-package exports a same-origin LibreChat-first hosted s
     const envExample = fs.readFileSync(assets.stack_env_example, 'utf8');
     assert.match(envExample, /APP_TITLE=OPL Atlas/);
     assert.match(envExample, /OPENAI_MODELS=gpt-5\.4-operator/);
+    assert.match(envExample, /OPENAI_REVERSE_PROXY=https:\/\/codex-provider\.example\.test\/v1/);
   } finally {
     fs.rmSync(codexFixture.codexHome, { recursive: true, force: true });
     fs.rmSync(outputDir, { recursive: true, force: true });
@@ -2840,12 +2841,12 @@ test('frontdesk bootstrap manages the local LibreChat shell, inherits local Code
     const runtimeEnv = fs.readFileSync(install.frontdesk_librechat.assets.env_file, 'utf8');
     assert.match(runtimeEnv, /APP_TITLE=OPL Atlas/);
     assert.match(runtimeEnv, /OPENAI_API_KEY=codex-frontdoor-key/);
-    assert.match(runtimeEnv, /OPENAI_BASE_URL=https:\/\/codex-frontdoor\.example\.test\/v1/);
+    assert.match(runtimeEnv, /OPENAI_REVERSE_PROXY=https:\/\/codex-frontdoor\.example\.test\/v1/);
     assert.match(runtimeEnv, /OPENAI_MODELS=gpt-5\.4-frontdoor/);
     const librechatConfig = fs.readFileSync(install.frontdesk_librechat.assets.librechat_config, 'utf8');
-    assert.match(librechatConfig, /Current project:/);
+    assert.match(librechatConfig, /当前项目：/);
     assert.match(librechatConfig, /med-autoscience/);
-    assert.match(librechatConfig, /直接问论文或项目进度；也可以说切换项目、查看任务或下一步。/);
+    assert.match(librechatConfig, /可直接问：论文进度、切换项目、下一步。/);
     assert.doesNotMatch(librechatConfig, /Welcome to OPL Atlas/);
     assert.doesNotMatch(librechatConfig, /How to use:/);
     assert.doesNotMatch(librechatConfig, /\n\s*-\s*Model:/);
@@ -3441,8 +3442,25 @@ test('project-progress promotes current MAS study into a paper-facing summary in
   const studyId = '004-invasive-architecture';
   const studyRoot = path.join(masWorkspace.fixtureRoot, 'studies', studyId);
   const controllerDir = path.join(studyRoot, 'artifacts', 'controller');
+  const paperDir = path.join(studyRoot, 'paper');
+  const questRoot = path.join(
+    masWorkspace.fixtureRoot,
+    'ops',
+    'med-deepscientist',
+    'runtime',
+    'quests',
+    '004-invasive-architecture-managed-20260408',
+  );
+  const questPaperDir = path.join(questRoot, 'paper');
+  const questPaperBuildDir = path.join(questPaperDir, 'build');
+  const questPaperFiguresDir = path.join(questPaperDir, 'figures');
+  const questPaperTablesDir = path.join(questPaperDir, 'tables');
 
   fs.mkdirSync(controllerDir, { recursive: true });
+  fs.mkdirSync(paperDir, { recursive: true });
+  fs.mkdirSync(questPaperBuildDir, { recursive: true });
+  fs.mkdirSync(questPaperFiguresDir, { recursive: true });
+  fs.mkdirSync(questPaperTablesDir, { recursive: true });
   fs.writeFileSync(
     path.join(controllerDir, 'study_charter.json'),
     `${JSON.stringify({
@@ -3452,6 +3470,99 @@ test('project-progress promotes current MAS study into a paper-facing summary in
         '在首术 NF-PitNET 中，重构由侵袭负担、Knosp、视觉压迫与切除负担组成的 clinically interpretable invasive phenotype architecture，并把公开 MRI / omics 用作 anatomy / biology anchors。',
       paper_framing_summary:
         'The paper-facing route is a first-surgery NF-PitNET invasive phenotype architecture study rather than a generic workflow summary.',
+    }, null, 2)}\n`,
+    'utf8',
+  );
+  fs.writeFileSync(
+    path.join(paperDir, 'paper_experiment_matrix.json'),
+    `${JSON.stringify({
+      current_judgment: {
+        current_judgment:
+          'EXP-001 confirmed a deterministic Knosp split for invasiveness, EXP-002 stayed negative beyond Knosp, and EXP-003 preserved a bounded secondary non-GTR extension.',
+      },
+      rows: [
+        {
+          exp_id: 'EXP-001',
+          status: 'first_compute_completed',
+          title: 'Local phenotype architecture map',
+        },
+        {
+          exp_id: 'EXP-002',
+          status: 'negative_compute_completed',
+          title: 'Beyond-Knosp invasiveness audit',
+        },
+        {
+          exp_id: 'EXP-003',
+          status: 'first_compute_completed',
+          title: 'Non-GTR bounded extension audit',
+          key_metrics: {
+            auroc: 0.7999,
+            delta_brier_vs_knosp_only: -0.011845,
+          },
+        },
+      ],
+    }, null, 2)}\n`,
+    'utf8',
+  );
+  fs.writeFileSync(
+    path.join(questPaperBuildDir, 'review_manuscript.md'),
+    [
+      '---',
+      'title: "Clinically Interpretable Invasive Phenotype Architecture in First-Surgery NF-PitNET"',
+      'bibliography: ../references.bib',
+      '---',
+      '',
+      '## Abstract',
+      '',
+      '**Objective:** To reconstruct the local invasive phenotype architecture around the prespecified Knosp boundary in first-surgery NF-PitNET.\\',
+      '**Results:** Knosp remained the dominant structural organizer, beyond-Knosp stayed negative, and the bounded non-GTR extension reached AUROC 0.7999 with delta Brier -0.011845.\\',
+    ].join('\n'),
+    'utf8',
+  );
+  fs.writeFileSync(
+    path.join(questPaperDir, 'reference_coverage_report.json'),
+    `${JSON.stringify({
+      record_count: 32,
+    }, null, 2)}\n`,
+    'utf8',
+  );
+  fs.writeFileSync(
+    path.join(questPaperBuildDir, 'compile_report.json'),
+    `${JSON.stringify({
+      page_count: 12,
+      proofing_summary: 'Compiled manuscript refreshed into a 12-page reviewer-facing PDF.',
+    }, null, 2)}\n`,
+    'utf8',
+  );
+  fs.writeFileSync(
+    path.join(questPaperDir, 'paper_bundle_manifest.json'),
+    `${JSON.stringify({
+      title: 'Clinically Interpretable Invasive Phenotype Architecture in First-Surgery NF-PitNET',
+      summary:
+        'The current reviewer bundle keeps main-text figures F1-F3, one supplementary figure S1, main tables T1-T2, and appendix table TA1 in sync.',
+    }, null, 2)}\n`,
+    'utf8',
+  );
+  fs.writeFileSync(
+    path.join(questPaperFiguresDir, 'figure_catalog.json'),
+    `${JSON.stringify({
+      figures: [
+        { figure_id: 'F1', paper_role: 'main_text' },
+        { figure_id: 'F2', paper_role: 'main_text' },
+        { figure_id: 'F3', paper_role: 'main_text' },
+        { figure_id: 'S1', paper_role: 'supplementary' },
+      ],
+    }, null, 2)}\n`,
+    'utf8',
+  );
+  fs.writeFileSync(
+    path.join(questPaperTablesDir, 'table_catalog.json'),
+    `${JSON.stringify({
+      tables: [
+        { table_id: 'T1', paper_role: 'main_text' },
+        { table_id: 'T2', paper_role: 'main_text' },
+        { table_id: 'TA1', paper_role: 'supplementary' },
+      ],
     }, null, 2)}\n`,
     'utf8',
   );
@@ -3491,6 +3602,7 @@ test('project-progress promotes current MAS study into a paper-facing summary in
             study_id: studyId,
             study_root: studyRoot,
             quest_id: '004-invasive-architecture-managed-20260408',
+            quest_root: questRoot,
             current_stage: 'publication_supervision',
             current_stage_summary: '投稿打包阶段已被全局门控放行，可以进入关键路径。',
             paper_stage: 'bundle_stage_ready',
@@ -3629,7 +3741,17 @@ test('project-progress promotes current MAS study into a paper-facing summary in
     assert.match(storySummary, /侵袭负担.*Knosp.*公开 MRI \/ omics/);
     assert.equal(currentStudy.current_stage, 'publication_supervision');
     assert.equal(currentStudy.monitoring.health_status, 'live');
+    assert.equal(currentStudy.paper_snapshot.main_figure_count, 3);
+    assert.equal(currentStudy.paper_snapshot.supplementary_figure_count, 1);
+    assert.equal(currentStudy.paper_snapshot.main_table_count, 2);
+    assert.equal(currentStudy.paper_snapshot.supplementary_table_count, 1);
+    assert.equal(currentStudy.paper_snapshot.reference_count, 32);
+    assert.equal(currentStudy.paper_snapshot.page_count, 12);
+    assert.ok(currentStudy.paper_snapshot.current_effect_summary.includes('AUROC 0.7999'));
+    assert.match(currentStudy.paper_snapshot.current_effect_summary, /negative/i);
     assert.match(payload.project_progress.progress_summary, /004-invasive-architecture/);
+    assert.match(payload.project_progress.progress_summary, /3 张主图/);
+    assert.match(payload.project_progress.progress_summary, /32 篇参考文献/);
     assert.ok(payload.project_progress.user_options.includes('展开当前论文的详细进度'));
     assert.ok(payload.project_progress.inspect_paths.includes(studyRoot));
   } finally {
