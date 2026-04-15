@@ -10,7 +10,11 @@ import {
   normalizeBasePath,
 } from './frontdesk-paths.ts';
 import { getFrontDeskServiceStatus } from './frontdesk-service.ts';
-import { buildDomainManifestCatalog, type DomainManifestCatalogEntry } from './domain-manifest.ts';
+import {
+  buildDomainManifestCatalog,
+  type DomainManifestCatalogEntry,
+  type NormalizedDomainManifest,
+} from './domain-manifest.ts';
 import {
   buildHermesSessionsListArgs,
   inspectHermesRuntime,
@@ -220,6 +224,97 @@ function uniqueStrings(values: Array<string | null | undefined>) {
   return [...new Set(values.map((value) => value?.trim()).filter((value): value is string => Boolean(value)))];
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function optionalString(value: unknown) {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+function optionalStringList(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((entry) => optionalString(entry))
+    .filter((entry): entry is string => Boolean(entry));
+}
+
+function readOptionalJsonRecord(filePath: string | null) {
+  if (!filePath || !fs.existsSync(filePath)) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    return isRecord(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function runJsonShellCommand(command: string | null, cwd: string) {
+  if (!command) {
+    return {
+      payload: null,
+      error: null,
+    };
+  }
+
+  const result = spawnSync('/bin/bash', ['-lc', command], {
+    cwd,
+    encoding: 'utf8',
+    env: process.env,
+    maxBuffer: 10 * 1024 * 1024,
+  });
+
+  if (result.error || (result.status ?? 1) !== 0) {
+    const failure = normalizeCommandOutput(result.stdout ?? '', result.stderr ?? result.error?.message ?? '');
+    return {
+      payload: null,
+      error: failure || 'Command execution failed.',
+    };
+  }
+
+  try {
+    const parsed = JSON.parse(result.stdout ?? '');
+    if (!isRecord(parsed)) {
+      return {
+        payload: null,
+        error: 'Command returned a JSON payload that is not an object.',
+      };
+    }
+
+    return {
+      payload: parsed,
+      error: null,
+    };
+  } catch (error) {
+    return {
+      payload: null,
+      error: error instanceof Error ? error.message : 'Command did not return valid JSON.',
+    };
+  }
+}
+
+function buildCurrentStudyUserOptions(hasCurrentStudy: boolean) {
+  if (hasCurrentStudy) {
+    return [
+      '展开当前论文的详细进度',
+      '列出当前 workspace 的全部论文',
+      '切换到另一篇论文继续查看',
+    ];
+  }
+
+  return [
+    '列出当前 workspace 的全部论文',
+    '检查哪篇论文现在还在 live',
+    '指定一个 study 让我读取详细进度',
+  ];
+}
+
 function inferWorkspaceLabel(workspacePath?: string | null) {
   const normalized = workspacePath?.trim();
   if (!normalized) {
@@ -319,6 +414,253 @@ function pickCurrentProjectEntry(
       activeBindingEntry?.project
       ?? manifestEntry?.project
       ?? inferWorkspaceLabel(workspacePath),
+  };
+}
+
+function parseStudyTimestamp(value: unknown) {
+  const timestamp = optionalString(value);
+  if (!timestamp) {
+    return Number.NEGATIVE_INFINITY;
+  }
+
+  const parsed = Date.parse(timestamp);
+  return Number.isNaN(parsed) ? Number.NEGATIVE_INFINITY : parsed;
+}
+
+function scoreStudyEntry(entry: Record<string, unknown>) {
+  const monitoring = isRecord(entry.monitoring) ? entry.monitoring : null;
+  const freshness = isRecord(entry.progress_freshness) ? entry.progress_freshness : null;
+  const healthStatus = optionalString(monitoring?.health_status);
+  const freshnessStatus = optionalString(freshness?.status);
+  const activeRunId = optionalString(monitoring?.active_run_id);
+  const currentStage = optionalString(entry.current_stage);
+
+  let score = 0;
+  if (healthStatus === 'live') {
+    score += 1000;
+  } else if (healthStatus === 'recovering') {
+    score += 700;
+  }
+
+  if (activeRunId) {
+    score += 250;
+  }
+
+  if (freshnessStatus === 'fresh') {
+    score += 120;
+  } else if (freshnessStatus === 'stale') {
+    score += 40;
+  }
+
+  if (currentStage && currentStage !== 'runtime_blocked') {
+    score += 40;
+  }
+
+  return score + parseStudyTimestamp(freshness?.latest_progress_at) / 1_000_000_000_000;
+}
+
+function pickCurrentStudyEntry(studies: unknown) {
+  if (!Array.isArray(studies)) {
+    return null;
+  }
+
+  const entries = studies.filter((entry): entry is Record<string, unknown> => isRecord(entry));
+  if (entries.length === 0) {
+    return null;
+  }
+
+  return [...entries].sort((left, right) => scoreStudyEntry(right) - scoreStudyEntry(left))[0] ?? null;
+}
+
+function readStudyCharter(studyRoot: string | null) {
+  if (!studyRoot) {
+    return null;
+  }
+
+  const charterPath = path.join(studyRoot, 'artifacts', 'controller', 'study_charter.json');
+  const charter = readOptionalJsonRecord(charterPath);
+  if (!charter) {
+    return null;
+  }
+
+  return {
+    charter_path: charterPath,
+    title: optionalString(charter.title),
+    publication_objective:
+      optionalString(charter.publication_objective)
+      ?? optionalString(charter.primary_question),
+    paper_framing_summary: optionalString(charter.paper_framing_summary),
+  };
+}
+
+function buildStudyProgressSurface(options: {
+  workspacePath: string;
+  overview: NormalizedDomainManifest['product_entry_overview'] | null;
+  manifest: NormalizedDomainManifest | null;
+}) {
+  const operatorLoopCommand =
+    options.overview?.operator_loop_command
+    ?? options.manifest?.operator_loop_surface?.command
+    ?? options.manifest?.recommended_command
+    ?? null;
+  const operatorLoop = runJsonShellCommand(operatorLoopCommand, options.workspacePath);
+  const attentionItems: string[] = [];
+
+  if (operatorLoop.error) {
+    attentionItems.push(`当前只能确认到项目级，因为 study 队列摘要暂时不可读：${operatorLoop.error}`);
+    return {
+      currentStudy: null,
+      progressSummary: null,
+      nextFocus: null,
+      attentionItems,
+      inspectPaths: [],
+      recentActivity: null,
+      recommendedCommands: {
+        progress: options.overview?.progress_surface?.command ?? null,
+        resume: options.overview?.resume_surface?.command ?? null,
+      },
+      userOptions: buildCurrentStudyUserOptions(false),
+    };
+  }
+
+  const operatorLoopPayload = operatorLoop.payload;
+  const currentStudySummary = pickCurrentStudyEntry(operatorLoopPayload?.studies);
+  if (!currentStudySummary) {
+    return {
+      currentStudy: null,
+      progressSummary: null,
+      nextFocus: null,
+      attentionItems,
+      inspectPaths: [],
+      recentActivity: null,
+      recommendedCommands: {
+        progress: options.overview?.progress_surface?.command ?? null,
+        resume: options.overview?.resume_surface?.command ?? null,
+      },
+      userOptions: buildCurrentStudyUserOptions(false),
+    };
+  }
+
+  const studyCommands = isRecord(currentStudySummary.commands) ? currentStudySummary.commands : null;
+  const progressCommand =
+    optionalString(studyCommands?.progress)
+    ?? optionalString(options.overview?.progress_surface?.command)?.replace(/<study_id>/g, optionalString(currentStudySummary.study_id) ?? '')
+    ?? null;
+  const resumeCommand =
+    optionalString(studyCommands?.launch)
+    ?? optionalString(options.overview?.resume_surface?.command)?.replace(/<study_id>/g, optionalString(currentStudySummary.study_id) ?? '')
+    ?? null;
+  const progressPayloadResult = runJsonShellCommand(progressCommand, options.workspacePath);
+
+  if (progressPayloadResult.error) {
+    attentionItems.push(`当前论文已定位，但详细 study 进度面暂时不可读：${progressPayloadResult.error}`);
+  }
+
+  const progressPayload = progressPayloadResult.payload;
+  const studyRoot =
+    optionalString(progressPayload?.study_root)
+    ?? optionalString(currentStudySummary.study_root)
+    ?? null;
+  const questId = optionalString(progressPayload?.quest_id);
+  const currentStage = optionalString(progressPayload?.current_stage) ?? optionalString(currentStudySummary.current_stage);
+  const currentStageSummary =
+    optionalString(progressPayload?.current_stage_summary)
+    ?? optionalString(currentStudySummary.current_stage_summary);
+  const paperStage = optionalString(progressPayload?.paper_stage);
+  const paperStageSummary = optionalString(progressPayload?.paper_stage_summary);
+  const nextSystemAction =
+    optionalString(progressPayload?.next_system_action)
+    ?? optionalString(currentStudySummary.next_system_action);
+  const blockers = uniqueStrings([
+    ...optionalStringList(progressPayload?.current_blockers),
+    ...optionalStringList(currentStudySummary.current_blockers),
+  ]);
+  const supervision =
+    (isRecord(progressPayload?.supervision) ? progressPayload.supervision : null)
+    ?? (isRecord(currentStudySummary.monitoring) ? currentStudySummary.monitoring : null);
+  const freshness =
+    (isRecord(progressPayload?.progress_freshness) ? progressPayload.progress_freshness : null)
+    ?? (isRecord(currentStudySummary.progress_freshness) ? currentStudySummary.progress_freshness : null);
+  const latestEvents = Array.isArray(progressPayload?.latest_events)
+    ? progressPayload.latest_events.filter((entry): entry is Record<string, unknown> => isRecord(entry))
+    : [];
+  const latestEvent = latestEvents[0] ?? null;
+  const studyCharter = readStudyCharter(studyRoot);
+  const refs = isRecord(progressPayload?.refs) ? progressPayload.refs : null;
+  const inspectPaths = uniqueStrings([
+    studyRoot,
+    studyCharter?.charter_path ?? null,
+    optionalString(refs?.publication_eval_path),
+    optionalString(refs?.launch_report_path),
+    studyRoot && fs.existsSync(path.join(studyRoot, 'manuscript', 'current_package'))
+      ? path.join(studyRoot, 'manuscript', 'current_package')
+      : null,
+  ]);
+  const storySummary =
+    studyCharter?.publication_objective
+    ?? studyCharter?.paper_framing_summary
+    ?? optionalString(currentStudySummary.current_stage_summary);
+  const progressSummary = currentStageSummary
+    ? `${optionalString(currentStudySummary.study_id) ?? '当前论文'} 当前阶段：${currentStageSummary}`
+    : null;
+  const latestProgressTimeLabel = optionalString(freshness?.latest_progress_time_label);
+  const latestProgressSummary = optionalString(freshness?.latest_progress_summary);
+  const latestProgressSource = optionalString(freshness?.latest_progress_source);
+  const recentActivity =
+    latestProgressTimeLabel || latestProgressSummary
+      ? {
+          session_id: optionalString(supervision?.active_run_id) ?? optionalString(currentStudySummary.study_id),
+          last_active: latestProgressTimeLabel ?? '未知时间',
+          source: latestProgressSource ?? 'study_progress',
+          preview: latestProgressSummary ?? currentStageSummary,
+        }
+      : null;
+
+  return {
+    currentStudy: {
+      study_id: optionalString(currentStudySummary.study_id),
+      title: studyCharter?.title ?? optionalString(currentStudySummary.study_id),
+      story_summary: storySummary,
+      paper_framing_summary: studyCharter?.paper_framing_summary ?? null,
+      study_root: studyRoot,
+      quest_id: questId,
+      quest_root: optionalString(progressPayload?.quest_root),
+      current_stage: currentStage,
+      current_stage_summary: currentStageSummary,
+      paper_stage: paperStage,
+      paper_stage_summary: paperStageSummary,
+      next_system_action: nextSystemAction,
+      current_blockers: blockers,
+      monitoring: {
+        browser_url: optionalString(supervision?.browser_url),
+        quest_session_api_url: optionalString(supervision?.quest_session_api_url),
+        active_run_id: optionalString(supervision?.active_run_id),
+        health_status: optionalString(supervision?.health_status),
+        supervisor_tick_status: optionalString(supervision?.supervisor_tick_status),
+      },
+      latest_progress: {
+        time_label: latestProgressTimeLabel,
+        summary: latestProgressSummary,
+        source: latestProgressSource,
+      },
+      latest_event: latestEvent
+        ? {
+            time_label: optionalString(latestEvent.time_label),
+            title: optionalString(latestEvent.title),
+            summary: optionalString(latestEvent.summary),
+          }
+        : null,
+    },
+    progressSummary,
+    nextFocus: nextSystemAction,
+    attentionItems: blockers,
+    inspectPaths,
+    recentActivity,
+    recommendedCommands: {
+      progress: progressCommand,
+      resume: resumeCommand,
+    },
+    userOptions: buildCurrentStudyUserOptions(true),
   };
 }
 
@@ -1360,6 +1702,11 @@ export async function buildProjectProgressBrief(
   const overview = manifest?.product_entry_overview ?? null;
   const productStatus = manifest?.product_entry_status ?? null;
   const repoMainline = manifest?.repo_mainline ?? null;
+  const studySurface = buildStudyProgressSurface({
+    workspacePath,
+    overview,
+    manifest,
+  });
   const recentSession = runtimeStatus.recent_sessions.sessions[0] ?? null;
   const projectState =
     manifestEntry === null
@@ -1370,7 +1717,9 @@ export async function buildProjectProgressBrief(
           ? 'attention_needed'
           : 'active';
   const progressSummary =
-    overview?.summary
+    studySurface.progressSummary
+    ?? studySurface.currentStudy?.story_summary
+    ?? overview?.summary
     ?? productStatus?.summary
     ?? readinessEntry?.summary
     ?? (
@@ -1380,6 +1729,7 @@ export async function buildProjectProgressBrief(
     );
   const nextFocus =
     [
+      studySurface.nextFocus,
       ...(overview?.next_focus ?? []),
       ...(productStatus?.next_focus ?? []),
       ...(Array.isArray(repoMainline?.next_focus)
@@ -1388,6 +1738,7 @@ export async function buildProjectProgressBrief(
       ...(readinessEntry?.recommended_next_actions ?? []),
     ][0] ?? null;
   const attentionItems = uniqueStrings([
+    ...studySurface.attentionItems,
     ...(readinessEntry?.usable_now === false ? readinessEntry.blocking_gaps : []),
     explainManifestFailure(manifestEntry?.error ?? null),
   ]);
@@ -1397,6 +1748,7 @@ export async function buildProjectProgressBrief(
     manifestEntry?.workspace_path ?? null,
     typeof manifest?.workspace_locator?.workspace_root === 'string' ? manifest.workspace_locator.workspace_root : null,
     typeof manifest?.workspace_locator?.profile_ref === 'string' ? manifest.workspace_locator.profile_ref : null,
+    ...studySurface.inspectPaths,
   ]);
   const configuredHumanGates = uniqueStrings([
     ...(overview?.human_gate_ids ?? []),
@@ -1419,6 +1771,7 @@ export async function buildProjectProgressBrief(
         active_binding_status: currentProject.activeBindingEntry?.active_binding?.status ?? null,
       },
       progress_summary: progressSummary,
+      current_study: studySurface.currentStudy,
       next_focus: nextFocus,
       recent_activity: recentSession
         ? {
@@ -1427,17 +1780,19 @@ export async function buildProjectProgressBrief(
             source: recentSession.source,
             preview: recentSession.preview,
           }
-        : null,
+        : studySurface.recentActivity,
       inspect_paths: inspectPaths,
       attention_items: attentionItems,
+      user_options: studySurface.userOptions,
       configured_human_gates: configuredHumanGates,
       recommended_commands: {
-        progress: overview?.progress_surface?.command ?? null,
-        resume: overview?.resume_surface?.command ?? null,
+        progress: studySurface.recommendedCommands.progress ?? overview?.progress_surface?.command ?? null,
+        resume: studySurface.recommendedCommands.resume ?? overview?.resume_surface?.command ?? null,
         start: readinessEntry?.recommended_start_command ?? null,
       },
       notes: [
         'This brief is a user-facing summary derived from workspace binding, domain manifest, frontdesk readiness, and runtime visibility.',
+        'When the current domain exposes study-level truth, this brief promotes the most active study into a paper-facing summary instead of stopping at project-level wording.',
         'Configured human gates are capability hints from the domain manifest; they do not by themselves mean the system is currently waiting for user input.',
       ],
     },
