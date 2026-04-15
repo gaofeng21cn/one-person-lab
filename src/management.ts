@@ -216,6 +216,112 @@ function normalizeBaseUrlHost(host: string) {
   return host.includes(':') && !host.startsWith('[') ? `[${host}]` : host;
 }
 
+function uniqueStrings(values: Array<string | null | undefined>) {
+  return [...new Set(values.map((value) => value?.trim()).filter((value): value is string => Boolean(value)))];
+}
+
+function inferWorkspaceLabel(workspacePath?: string | null) {
+  const normalized = workspacePath?.trim();
+  if (!normalized) {
+    return 'Unbound workspace';
+  }
+
+  const cleanPath = normalized.replace(/[\\/]+$/, '');
+  const segments = cleanPath.split(/[\\/]/).filter(Boolean);
+  return segments.at(-1) ?? cleanPath;
+}
+
+type ProjectProgressDecision = {
+  gate_id: string;
+  label: string;
+  reason: string;
+};
+
+function describeHumanGate(gateId: string): ProjectProgressDecision {
+  if (gateId === 'publication_release_gate') {
+    return {
+      gate_id: gateId,
+      label: '确认是否进入收尾/发布',
+      reason: '用于决定当前研究产出是否已经可以作为收尾或发布版本继续推进。',
+    };
+  }
+
+  if (gateId === 'study_physician_decision_gate') {
+    return {
+      gate_id: gateId,
+      label: '确认研究分叉或医学判断',
+      reason: '用于需要医生或研究负责人明确判断时的人工分叉口。',
+    };
+  }
+
+  if (gateId === 'redcube_operator_review_gate') {
+    return {
+      gate_id: gateId,
+      label: '确认是否接受当前产出',
+      reason: '用于决定是否接受当前轮产出并继续下一步执行。',
+    };
+  }
+
+  return {
+    gate_id: gateId,
+    label: '存在一个域侧人工判断口',
+    reason: `当前域定义了人工判断口 ${gateId}，但 OPL 控制面还没有拿到更细的自然语言解释。`,
+  };
+}
+
+function explainManifestFailure(error: DomainManifestCatalogEntry['error']) {
+  if (!error) {
+    return null;
+  }
+
+  const stderrLines = (error.stderr ?? '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const usefulLine =
+    stderrLines.find((line) => !line.includes('parameter not set'))
+    ?? stderrLines[0]
+    ?? error.message;
+
+  if (!usefulLine) {
+    return error.message;
+  }
+
+  if (usefulLine === error.message) {
+    return usefulLine;
+  }
+
+  return `${error.message} ${usefulLine}`;
+}
+
+function pickCurrentProjectEntry(
+  domainManifests: ReturnType<typeof buildDomainManifestCatalog>['domain_manifests'],
+  workspaceCatalog: ReturnType<typeof buildWorkspaceCatalog>['workspace_catalog'],
+  workspacePath: string,
+) {
+  const activeBindingEntry =
+    workspaceCatalog.projects.find((entry) => entry.active_binding?.workspace_path === workspacePath)
+    ?? workspaceCatalog.projects.find((entry) => entry.active_binding?.status === 'active')
+    ?? null;
+
+  const manifestEntry =
+    (activeBindingEntry
+      ? domainManifests.projects.find((entry) => entry.project_id === activeBindingEntry.project_id)
+      : null)
+    ?? domainManifests.projects.find((entry) => entry.workspace_path === workspacePath)
+    ?? null;
+
+  return {
+    activeBindingEntry,
+    manifestEntry,
+    projectId: activeBindingEntry?.project_id ?? manifestEntry?.project_id ?? null,
+    projectLabel:
+      activeBindingEntry?.project
+      ?? manifestEntry?.project
+      ?? inferWorkspaceLabel(workspacePath),
+  };
+}
+
 export function buildHostedRuntimeReadiness() {
   return {
     surface_kind: 'opl_hosted_runtime_readiness',
@@ -1193,6 +1299,115 @@ export function buildFrontDeskHealth(contracts: GatewayContracts, options: { bas
       notes: [
         'Health here means the current front-desk shell can truthfully expose the Hermes-backed runtime status.',
         'LibreChat-first hosted shell export is landed, but actual hosted runtime ownership is still not landed.',
+      ],
+    },
+  };
+}
+
+export async function buildProjectProgressBrief(
+  contracts: GatewayContracts,
+  options: DashboardOptions = {},
+) {
+  const workspacePath = normalizeWorkspacePath(options.workspacePath);
+  const workspaceCatalog = buildWorkspaceCatalog(contracts).workspace_catalog;
+  const domainManifests = buildDomainManifestCatalog(contracts).domain_manifests;
+  const readiness = (await buildFrontDeskReadiness(contracts, {
+    workspacePath,
+    sessionsLimit: options.sessionsLimit,
+    basePath: options.basePath,
+  })).frontdesk_readiness;
+  const runtimeStatus = buildRuntimeStatus({
+    sessionsLimit: options.sessionsLimit,
+    ledgerLimit: options.sessionsLimit,
+  }).runtime_status;
+  const currentProject = pickCurrentProjectEntry(domainManifests, workspaceCatalog, workspacePath);
+  const readinessEntry = currentProject.projectId
+    ? readiness.projects.find((entry) => entry.project_id === currentProject.projectId) ?? null
+    : null;
+  const manifestEntry = currentProject.manifestEntry;
+  const manifest = manifestEntry?.manifest ?? null;
+  const overview = manifest?.product_entry_overview ?? null;
+  const productStatus = manifest?.product_entry_status ?? null;
+  const repoMainline = manifest?.repo_mainline ?? null;
+  const recentSession = runtimeStatus.recent_sessions.sessions[0] ?? null;
+  const projectState =
+    manifestEntry === null
+      ? 'unbound'
+      : manifestEntry.status !== 'resolved'
+        ? 'attention_needed'
+        : readinessEntry?.usable_now === false
+          ? 'attention_needed'
+          : 'active';
+  const progressSummary =
+    overview?.summary
+    ?? productStatus?.summary
+    ?? readinessEntry?.summary
+    ?? (
+      manifestEntry === null
+        ? '当前 workspace 还没有绑定到可直接汇报进度的项目。'
+        : '当前还没有读到结构化的项目进度摘要。'
+    );
+  const nextFocus =
+    [
+      ...(overview?.next_focus ?? []),
+      ...(productStatus?.next_focus ?? []),
+      ...(Array.isArray(repoMainline?.next_focus)
+        ? repoMainline.next_focus.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+        : []),
+      ...(readinessEntry?.recommended_next_actions ?? []),
+    ][0] ?? null;
+  const attentionItems = uniqueStrings([
+    ...(readinessEntry?.usable_now === false ? readinessEntry.blocking_gaps : []),
+    explainManifestFailure(manifestEntry?.error ?? null),
+  ]);
+  const inspectPaths = uniqueStrings([
+    workspacePath,
+    currentProject.activeBindingEntry?.active_binding?.workspace_path ?? null,
+    manifestEntry?.workspace_path ?? null,
+    typeof manifest?.workspace_locator?.workspace_root === 'string' ? manifest.workspace_locator.workspace_root : null,
+    typeof manifest?.workspace_locator?.profile_ref === 'string' ? manifest.workspace_locator.profile_ref : null,
+  ]);
+  const configuredHumanGates = uniqueStrings([
+    ...(overview?.human_gate_ids ?? []),
+    ...(manifest?.product_entry_start?.human_gate_ids ?? []),
+  ]).map((gateId) => describeHumanGate(gateId));
+
+  return {
+    version: 'g2',
+    contracts_context: {
+      contracts_dir: contracts.contractsDir,
+      contracts_root_source: contracts.contractsRootSource,
+    },
+    project_progress: {
+      surface_id: 'opl_project_progress_brief',
+      project_state: projectState,
+      current_project: {
+        project_id: currentProject.projectId,
+        label: currentProject.projectLabel,
+        workspace_path: workspacePath,
+        active_binding_status: currentProject.activeBindingEntry?.active_binding?.status ?? null,
+      },
+      progress_summary: progressSummary,
+      next_focus: nextFocus,
+      recent_activity: recentSession
+        ? {
+            session_id: recentSession.session_id,
+            last_active: recentSession.last_active,
+            source: recentSession.source,
+            preview: recentSession.preview,
+          }
+        : null,
+      inspect_paths: inspectPaths,
+      attention_items: attentionItems,
+      configured_human_gates: configuredHumanGates,
+      recommended_commands: {
+        progress: overview?.progress_surface?.command ?? null,
+        resume: overview?.resume_surface?.command ?? null,
+        start: readinessEntry?.recommended_start_command ?? null,
+      },
+      notes: [
+        'This brief is a user-facing summary derived from workspace binding, domain manifest, frontdesk readiness, and runtime visibility.',
+        'Configured human gates are capability hints from the domain manifest; they do not by themselves mean the system is currently waiting for user input.',
       ],
     },
   };

@@ -13,6 +13,7 @@ import {
   buildFrontDeskHealth,
   buildFrontDeskDomainWiring,
   buildFrontDeskManifest,
+  buildProjectProgressBrief,
   buildFrontDeskStart,
   buildHostedPilotBundle,
   buildPaperclipControlPlaneStatus,
@@ -154,6 +155,7 @@ type WebFrontDeskStartupPayload = {
       frontdesk_manifest: string;
       frontdesk_entry_guide: string;
       frontdesk_readiness: string;
+      project_progress: string;
       frontdesk_domain_wiring: string;
       domain_manifests: string;
       hosted_bundle: string;
@@ -555,6 +557,7 @@ function buildStartupPayload(context: WebFrontDeskContext): WebFrontDeskStartupP
         frontdesk_manifest: manifest.frontdesk_manifest.endpoints.manifest,
         frontdesk_entry_guide: endpoints.frontdesk_entry_guide,
         frontdesk_readiness: endpoints.frontdesk_readiness,
+        project_progress: endpoints.project_progress,
         frontdesk_domain_wiring: endpoints.frontdesk_domain_wiring,
         domain_manifests: endpoints.domain_manifests,
         hosted_bundle: endpoints.hosted_bundle,
@@ -600,9 +603,28 @@ function serializeJsonForHtml(value: unknown) {
     .replace(/&/g, '\\u0026');
 }
 
-function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
   const bootstrap = buildStartupPayload(context);
+  const progressPayload = await buildProjectProgressBrief(context.contracts, {
+    workspacePath: context.workspacePath,
+    sessionsLimit: context.sessionsLimit,
+    basePath: context.basePath,
+  });
+  const progress = progressPayload.project_progress;
   const apiLinks = [
+    {
+      label: 'Project progress',
+      href: bootstrap.web_frontdesk.api.project_progress,
+    },
     {
       label: 'Frontdesk entry guide',
       href: bootstrap.web_frontdesk.api.frontdesk_entry_guide,
@@ -619,6 +641,14 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       label: 'Workspace catalog',
       href: bootstrap.web_frontdesk.api.workspace_catalog,
     },
+    {
+      label: 'Runtime status',
+      href: bootstrap.web_frontdesk.api.runtime_status,
+    },
+    {
+      label: 'Dashboard',
+      href: bootstrap.web_frontdesk.api.dashboard,
+    },
   ]
     .map(
       (link) => `
@@ -629,6 +659,50 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
     )
     .join('');
   const bootstrapJson = serializeJsonForHtml(bootstrap);
+  const currentProjectLabel = escapeHtml(
+    typeof progress.current_project?.label === 'string'
+      ? progress.current_project.label
+      : 'Unbound workspace',
+  );
+  const progressSummary = escapeHtml(
+    typeof progress.progress_summary === 'string'
+      ? progress.progress_summary
+      : 'No structured project summary yet.',
+  );
+  const nextFocus = escapeHtml(
+    typeof progress.next_focus === 'string'
+      ? progress.next_focus
+      : 'Ask OPL Agent for the next study step.',
+  );
+  const recentActivity = progress.recent_activity
+    && typeof progress.recent_activity === 'object'
+    && !Array.isArray(progress.recent_activity)
+    ? progress.recent_activity as Record<string, unknown>
+    : null;
+  const recentActivityText = escapeHtml(recentActivity
+    ? [
+        typeof recentActivity.last_active === 'string' ? recentActivity.last_active : 'unknown time',
+        typeof recentActivity.source === 'string' ? `source ${recentActivity.source}` : null,
+        typeof recentActivity.preview === 'string' ? recentActivity.preview : null,
+      ].filter(Boolean).join(' · ')
+    : 'No recent runtime session has been reported yet.');
+  const attentionItems = Array.isArray(progress.attention_items)
+    ? progress.attention_items
+      .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+      .map((entry) => escapeHtml(entry))
+    : [];
+  const inspectPaths = Array.isArray(progress.inspect_paths)
+    ? progress.inspect_paths
+      .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+      .map((entry) => escapeHtml(entry))
+    : [];
+  const recommendedCommands = progress.recommended_commands
+    && typeof progress.recommended_commands === 'object'
+    && !Array.isArray(progress.recommended_commands)
+    ? Object.values(progress.recommended_commands)
+      .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+      .map((entry) => escapeHtml(entry))
+    : [];
 
   return `<!doctype html>
 <html lang="en">
@@ -733,6 +807,13 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         border: 1px solid rgba(31, 107, 90, 0.08);
       }
 
+      .snapshot-grid,
+      .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
       .meta-label {
         display: block;
         font-size: 0.82rem;
@@ -763,6 +844,54 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         margin-top: 4px;
       }
 
+      .detail-copy,
+      .meta-card div,
+      .lede,
+      .status-copy,
+      .inspect-list li,
+      .api-list li,
+      summary,
+      code {
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+
+      .status-copy,
+      .muted {
+        color: var(--ink-soft);
+        line-height: 1.7;
+      }
+
+      .status-list,
+      .inspect-list {
+        margin: 14px 0 0;
+        padding-left: 18px;
+        display: grid;
+        gap: 10px;
+        color: var(--ink-soft);
+      }
+
+      .machine-detail {
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        padding: 14px 16px;
+        background: rgba(31, 107, 90, 0.03);
+      }
+
+      .machine-detail + .machine-detail {
+        margin-top: 12px;
+      }
+
+      .machine-detail summary {
+        cursor: pointer;
+        font-weight: 600;
+        color: var(--accent-strong);
+      }
+
+      .machine-detail[open] summary {
+        margin-bottom: 12px;
+      }
+
       .json-view {
         margin-top: 12px;
         padding: 16px;
@@ -770,11 +899,14 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         background: #15261f;
         color: #eef4f1;
         overflow: auto;
+        white-space: pre-wrap;
         font: 0.84rem/1.6 var(--font-mono);
       }
 
       @media (max-width: 1040px) {
-        .meta {
+        .meta,
+        .snapshot-grid,
+        .detail-grid {
           grid-template-columns: 1fr;
         }
       }
@@ -793,45 +925,73 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         <h2>Machine surface</h2>
         <h1>OPL Machine Surface</h1>
         <p class="lede">
-          This page is the machine-readable gateway surface for OPL. It is not the main human chat UI.
-          Use LibreChat for natural-language interaction, then let OPL Agent handle workspace and project switching inside chat.
+          This page is the compact operator view for the current OPL workspace. Use chat for natural-language interaction,
+          and use this page to glance at the active project, progress summary, and inspectable paths.
         </p>
-        <a class="entry-link" href="/login">Human chat entry</a>
+        <a class="entry-link" href="/login">Open OPL Agent</a>
       </section>
 
       <section class="panel">
-        <h2>Current wiring</h2>
-        <div class="meta">
+        <h2>Project snapshot</h2>
+        <div class="snapshot-grid">
           <div class="meta-card">
-            <span class="meta-label">Workspace</span>
+            <span class="meta-label">Current project</span>
+            <div>${currentProjectLabel}</div>
+          </div>
+          <div class="meta-card">
+            <span class="meta-label">Default workspace</span>
             <div>${bootstrap.web_frontdesk.defaults.workspace_path}</div>
           </div>
           <div class="meta-card">
-            <span class="meta-label">Entry URL</span>
-            <div>${bootstrap.web_frontdesk.listening.entry_url}</div>
+            <span class="meta-label">Chat entry</span>
+            <div>/login</div>
           </div>
           <div class="meta-card">
-            <span class="meta-label">Sessions limit</span>
-            <div>${bootstrap.web_frontdesk.defaults.sessions_limit}</div>
-          </div>
-          <div class="meta-card">
-            <span class="meta-label">Hosted status</span>
-            <div>${bootstrap.web_frontdesk.hosted_status}</div>
+            <span class="meta-label">Latest runtime activity</span>
+            <div>${recentActivityText}</div>
           </div>
         </div>
       </section>
 
       <section class="panel">
-        <h2>API surfaces</h2>
-        <ul class="api-list">
-${apiLinks}
-        </ul>
+        <h2>Progress summary</h2>
+        <p class="status-copy">${progressSummary}</p>
+        <div class="detail-grid" style="margin-top: 16px;">
+          <div class="meta-card">
+            <span class="meta-label">Next focus</span>
+            <div>${nextFocus}</div>
+          </div>
+          <div class="meta-card">
+            <span class="meta-label">Hosted shell status</span>
+            <div>${bootstrap.web_frontdesk.hosted_status}</div>
+          </div>
+        </div>
+        ${attentionItems.length > 0
+          ? `<ul class="status-list">${attentionItems.map((item) => `<li>${item}</li>`).join('')}</ul>`
+          : '<p class="muted" style="margin-top: 14px;">No immediate blocker is being surfaced on this page right now.</p>'}
+        ${inspectPaths.length > 0
+          ? `<div style="margin-top: 18px;"><span class="meta-label">Where to inspect</span><ul class="inspect-list">${inspectPaths.map((item) => `<li>${item}</li>`).join('')}</ul></div>`
+          : ''}
+        ${recommendedCommands.length > 0
+          ? `<div style="margin-top: 18px;"><span class="meta-label">Useful commands</span><ul class="inspect-list">${recommendedCommands.map((item) => `<li><code>${item}</code></li>`).join('')}</ul></div>`
+          : ''}
       </section>
 
       <section class="panel">
-        <h2>Bootstrap JSON</h2>
-        <script id="opl-bootstrap" type="application/json">${bootstrapJson}</script>
-        <pre class="json-view">${bootstrapJson}</pre>
+        <h2>Operator surfaces</h2>
+        <details class="machine-detail">
+          <summary>API surfaces</summary>
+          <p class="detail-copy muted">These links stay available for operators, automation, and machine consumers.</p>
+          <ul class="api-list">
+${apiLinks}
+          </ul>
+        </details>
+        <details class="machine-detail">
+          <summary>Bootstrap JSON</summary>
+          <p class="detail-copy muted">Kept collapsed by default so the main page stays readable for humans.</p>
+          <script id="opl-bootstrap" type="application/json">${bootstrapJson}</script>
+          <pre class="json-view">${bootstrapJson}</pre>
+        </details>
       </section>
     </main>
   </body>
@@ -3189,7 +3349,7 @@ async function handleRequest(
     }
 
     if (method === 'GET' && routedPath === '/') {
-      writeHtml(response, buildWebFrontDeskHtml(context));
+      writeHtml(response, await buildWebFrontDeskHtml(context));
       return;
     }
 
@@ -3215,7 +3375,23 @@ async function handleRequest(
         await buildFrontDeskReadiness(context.contracts, {
           workspacePath: url.searchParams.get('path') ?? context.workspacePath,
           sessionsLimit: parsePositiveIntegerOrDefault(
-            url.searchParams.get('sessions-limit'),
+            url.searchParams.get('sessions-limit') ?? url.searchParams.get('sessions_limit'),
+            context.sessionsLimit,
+          ),
+          basePath: context.basePath,
+        }),
+      );
+      return;
+    }
+
+    if (method === 'GET' && routedPath === '/api/project-progress') {
+      writeJson(
+        response,
+        200,
+        await buildProjectProgressBrief(context.contracts, {
+          workspacePath: url.searchParams.get('path') ?? context.workspacePath,
+          sessionsLimit: parsePositiveIntegerOrDefault(
+            url.searchParams.get('sessions-limit') ?? url.searchParams.get('sessions_limit'),
             context.sessionsLimit,
           ),
           basePath: context.basePath,
@@ -3349,7 +3525,7 @@ async function handleRequest(
         buildFrontDeskDashboard(context.contracts, {
           workspacePath: url.searchParams.get('path') ?? context.workspacePath,
           sessionsLimit: parsePositiveIntegerOrDefault(
-            url.searchParams.get('sessions-limit'),
+            url.searchParams.get('sessions-limit') ?? url.searchParams.get('sessions_limit'),
             context.sessionsLimit,
           ),
           basePath: context.basePath,
@@ -3365,7 +3541,7 @@ async function handleRequest(
         buildPaperclipControlPlaneStatus(context.contracts, {
           workspacePath: url.searchParams.get('path') ?? context.workspacePath,
           sessionsLimit: parsePositiveIntegerOrDefault(
-            url.searchParams.get('sessions-limit'),
+            url.searchParams.get('sessions-limit') ?? url.searchParams.get('sessions_limit'),
             context.sessionsLimit,
           ),
           basePath: context.basePath,

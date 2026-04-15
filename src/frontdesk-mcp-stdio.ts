@@ -123,18 +123,107 @@ function buildTextToolResult(payload: unknown, isError = false) {
     content: [
       {
         type: 'text',
-        text: JSON.stringify(payload, null, 2),
+        text: typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2),
       },
     ],
     ...(isError ? { isError: true } : {}),
   };
 }
 
+function renderProjectProgressBrief(payload: unknown) {
+  if (!isRecord(payload) || !isRecord(payload.project_progress)) {
+    return '当前没有读到可用的项目进度摘要。';
+  }
+
+  const brief = payload.project_progress;
+  const currentProject = isRecord(brief.current_project) ? brief.current_project : {};
+  const recentActivity = isRecord(brief.recent_activity) ? brief.recent_activity : null;
+  const recommendedCommands = isRecord(brief.recommended_commands) ? brief.recommended_commands : {};
+  const inspectPaths = Array.isArray(brief.inspect_paths)
+    ? brief.inspect_paths.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+    : [];
+  const attentionItems = Array.isArray(brief.attention_items)
+    ? brief.attention_items.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+    : [];
+
+  const lines = [
+    `当前项目：${normalizeOptionalString(currentProject.label) ?? '未绑定项目'}`,
+  ];
+
+  const workspacePath = normalizeOptionalString(currentProject.workspace_path);
+  if (workspacePath) {
+    lines.push(`默认 workspace：${workspacePath}`);
+  }
+
+  lines.push(`当前进度：${normalizeOptionalString(brief.progress_summary) ?? '暂未读到结构化进度摘要。'}`);
+
+  const nextFocus = normalizeOptionalString(brief.next_focus);
+  if (nextFocus) {
+    lines.push(`下一步：${nextFocus}`);
+  }
+
+  if (recentActivity) {
+    const lastActive = normalizeOptionalString(recentActivity.last_active) ?? '未知时间';
+    const source = normalizeOptionalString(recentActivity.source) ?? '未知来源';
+    const preview = normalizeOptionalString(recentActivity.preview);
+    lines.push(
+      `最近活动：${lastActive}，来源 ${source}${preview ? `，摘要 ${preview}` : ''}。`,
+    );
+  } else {
+    lines.push('最近活动：当前没有读到新的 runtime 会话活动。');
+  }
+
+  if (inspectPaths.length > 0) {
+    lines.push(`查看位置：${inspectPaths.join('；')}`);
+  }
+
+  const progressCommand = normalizeOptionalString(recommendedCommands.progress);
+  const resumeCommand = normalizeOptionalString(recommendedCommands.resume);
+  const startCommand = normalizeOptionalString(recommendedCommands.start);
+  const commandHints = [progressCommand, resumeCommand, startCommand].filter(Boolean) as string[];
+  if (commandHints.length > 0) {
+    lines.push(`可继续使用：${commandHints.join('；')}`);
+  }
+
+  if (attentionItems.length > 0) {
+    lines.push(`当前需关注：${attentionItems.join('；')}`);
+  }
+
+  return lines.join('\n');
+}
+
 const TOOLS: ToolDefinition[] = [
+  {
+    name: 'opl_project_progress',
+    description:
+      '当用户直接问“当前论文/项目/研究进度如何、卡在哪里、下一步做什么”时优先使用。返回人类可读摘要，不返回控制面原始字段。',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        workspace_path: {
+          type: 'string',
+          description: '可选。要查看的 workspace 绝对路径；默认使用桥接启动时传入的路径。',
+        },
+        sessions_limit: {
+          type: 'integer',
+          minimum: 1,
+          description: '可选。合并最近多少条 runtime session 来做摘要。',
+        },
+      },
+      additionalProperties: false,
+    },
+    call: async (args, options) => {
+      const payload = await fetchJson(options, '/project-progress', {
+        path: normalizeOptionalString(args.workspace_path) ?? options.workspacePath,
+        sessions_limit: parsePositiveInteger(args.sessions_limit, 'sessions_limit') ?? options.sessionsLimit,
+      });
+      return renderProjectProgressBrief(payload);
+    },
+  },
   {
     name: 'opl_dashboard',
     description:
-      '读取 OPL 顶层 dashboard，适合问当前 workspace 的总体进度、会话概览、frontdesk readiness 和运行状态。',
+      '读取 OPL 顶层 dashboard 原始控制面，适合调试 family wiring、readiness 和 runtime 细节；普通用户进度问答优先用 opl_project_progress。',
     inputSchema: {
       type: 'object',
       properties: {
@@ -239,7 +328,7 @@ const TOOLS: ToolDefinition[] = [
   },
   {
     name: 'opl_frontdesk_readiness',
-    description: '读取 OPL frontdesk readiness，适合看当前入口 readiness、域绑定和下一步建议。',
+    description: '读取 OPL frontdesk readiness 原始面，适合调试入口 readiness、域绑定和下一步建议；普通进度问答优先用 opl_project_progress。',
     inputSchema: {
       type: 'object',
       properties: {
@@ -308,7 +397,7 @@ const TOOLS: ToolDefinition[] = [
   },
   {
     name: 'opl_domain_manifests',
-    description: '读取当前域产品入口 manifest 汇总，适合看 family wiring 和 routed domain 的 product entry surface。',
+    description: '读取当前域产品入口 manifest 汇总原始面，适合调试 family wiring 和 routed domain 的 product entry surface。',
     inputSchema: {
       type: 'object',
       properties: {},

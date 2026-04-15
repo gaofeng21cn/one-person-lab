@@ -1002,6 +1002,40 @@ async function startFakeFrontDeskApiServer() {
       return;
     }
 
+    if (request.method === 'GET' && url.pathname === '/api/project-progress') {
+      response.statusCode = 200;
+      response.end(JSON.stringify({
+        project_progress: {
+          current_project: {
+            project_id: 'medautoscience',
+            label: 'med-autoscience',
+            workspace_path: url.searchParams.get('path'),
+          },
+          progress_summary: '004 论文当前仍在推进证据补强，需要继续补主图和投稿包可审计物。',
+          next_focus: '继续补图表并把 submission package 更新到 studies 目录下可直接审阅的状态。',
+          recent_activity: {
+            session_id: 'sess-progress',
+            last_active: '2m ago',
+            source: 'cli',
+            preview: 'study 004 progress refresh',
+          },
+          inspect_paths: [
+            url.searchParams.get('path'),
+            '/tmp/opl-activated-workspace/studies/004-invasive-architecture',
+          ],
+          attention_items: [
+            'submission package 仍需补更多主图后再建议用户审阅。',
+          ],
+          recommended_commands: {
+            progress: 'medautosci study-progress --study 004',
+            resume: 'medautosci launch-study --study 004',
+            start: null,
+          },
+        },
+      }));
+      return;
+    }
+
     if (request.method === 'GET' && url.pathname === '/api/workspace-status') {
       response.statusCode = 200;
       response.end(JSON.stringify({
@@ -1828,9 +1862,11 @@ echo "unexpected fake-hermes args: $*" >&2
 exit 1
 `);
   const psFixture = createFakePsFixture(`27025 1 0.1 0.2 49616 22:46 /Users/test/.hermes/venv/bin/python -m hermes_cli.main gateway run --replace`);
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-dashboard-state-'));
 
   try {
     const output = runCli(['dashboard', '--path', repoRoot, '--sessions-limit', '1'], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
       OPL_HERMES_BIN: hermesPath,
       PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
     });
@@ -1856,6 +1892,7 @@ exit 1
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(psFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
 
@@ -1887,56 +1924,64 @@ test('help advertises the local web front-desk pilot command surface', () => {
 });
 
 test('frontdesk-manifest exposes the hosted-friendly OPL shell contract without claiming hosted readiness', () => {
-  const output = runCli(['frontdesk-manifest']);
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-frontdesk-manifest-state-'));
 
-  assert.equal(output.version, 'g2');
-  assert.equal(output.frontdesk_manifest.surface_id, 'opl_hosted_friendly_frontdesk_manifest');
-  assert.equal(output.frontdesk_manifest.entry_surface, 'opl_local_web_frontdesk_pilot');
-  assert.equal(output.frontdesk_manifest.shell_integration_target, 'librechat_first');
-  assert.equal(output.frontdesk_manifest.readiness, 'hosted_friendly_shell_pilot_landed');
-  assert.equal(output.frontdesk_manifest.hosted_packaging_status, 'librechat_pilot_landed');
-  assert.deepEqual(output.frontdesk_manifest.handoff_envelope_fields, [
-    'target_domain_id',
-    'task_intent',
-    'entry_mode',
-    'workspace_locator',
-    'runtime_session_contract',
-    'return_surface_contract',
-  ]);
-  assert.equal(output.frontdesk_manifest.endpoints.manifest, '/api/frontdesk-manifest');
-  assert.equal(output.frontdesk_manifest.endpoints.domain_manifests, '/api/domain-manifests');
-  assert.equal(output.frontdesk_manifest.endpoints.health, '/api/health');
-  assert.equal(output.frontdesk_manifest.endpoints.resume, '/api/resume');
-  assert.equal(output.frontdesk_manifest.endpoints.logs, '/api/logs');
-  assert.equal(
-    output.frontdesk_manifest.hosted_runtime_readiness.surface_kind,
-    'opl_hosted_runtime_readiness',
-  );
-  assert.equal(output.frontdesk_manifest.hosted_runtime_readiness.status, 'pilot_ready_not_managed');
-  assert.equal(
-    output.frontdesk_manifest.hosted_runtime_readiness.shell_integration_target,
-    'librechat_first',
-  );
-  assert.equal(
-    output.frontdesk_manifest.hosted_runtime_readiness.managed_hosted_runtime_landed,
-    false,
-  );
-  assert.equal(
-    output.frontdesk_manifest.hosted_runtime_readiness.hosted_pilot_bundle_landed,
-    true,
-  );
-  assert.equal(
-    output.frontdesk_manifest.hosted_runtime_readiness.librechat_pilot_package_landed,
-    true,
-  );
-  assert.equal(output.frontdesk_manifest.domain_wiring_surface.surface_id, 'opl_frontdesk_domain_wiring');
-  assert.equal(output.frontdesk_manifest.domain_wiring_surface.endpoint, '/api/frontdesk-domain-wiring');
-  assert.equal(output.frontdesk_manifest.domain_wiring_surface.summary.total_projects_count, 2);
-  assert.equal(output.frontdesk_manifest.domain_wiring_surface.summary.recommended_entry_surfaces_count, 0);
-  assert.equal(output.frontdesk_manifest.frontdesk_entry_guide_surface.surface_id, 'opl_frontdesk_entry_guide');
-  assert.equal(output.frontdesk_manifest.frontdesk_entry_guide_surface.endpoint, '/api/frontdesk-entry-guide');
-  assert.equal(output.frontdesk_manifest.frontdesk_readiness_surface.surface_id, 'opl_frontdesk_readiness');
-  assert.equal(output.frontdesk_manifest.frontdesk_readiness_surface.endpoint, '/api/frontdesk-readiness');
+  try {
+    const output = runCli(['frontdesk-manifest'], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+    });
+
+    assert.equal(output.version, 'g2');
+    assert.equal(output.frontdesk_manifest.surface_id, 'opl_hosted_friendly_frontdesk_manifest');
+    assert.equal(output.frontdesk_manifest.entry_surface, 'opl_local_web_frontdesk_pilot');
+    assert.equal(output.frontdesk_manifest.shell_integration_target, 'librechat_first');
+    assert.equal(output.frontdesk_manifest.readiness, 'hosted_friendly_shell_pilot_landed');
+    assert.equal(output.frontdesk_manifest.hosted_packaging_status, 'librechat_pilot_landed');
+    assert.deepEqual(output.frontdesk_manifest.handoff_envelope_fields, [
+      'target_domain_id',
+      'task_intent',
+      'entry_mode',
+      'workspace_locator',
+      'runtime_session_contract',
+      'return_surface_contract',
+    ]);
+    assert.equal(output.frontdesk_manifest.endpoints.manifest, '/api/frontdesk-manifest');
+    assert.equal(output.frontdesk_manifest.endpoints.domain_manifests, '/api/domain-manifests');
+    assert.equal(output.frontdesk_manifest.endpoints.health, '/api/health');
+    assert.equal(output.frontdesk_manifest.endpoints.resume, '/api/resume');
+    assert.equal(output.frontdesk_manifest.endpoints.logs, '/api/logs');
+    assert.equal(
+      output.frontdesk_manifest.hosted_runtime_readiness.surface_kind,
+      'opl_hosted_runtime_readiness',
+    );
+    assert.equal(output.frontdesk_manifest.hosted_runtime_readiness.status, 'pilot_ready_not_managed');
+    assert.equal(
+      output.frontdesk_manifest.hosted_runtime_readiness.shell_integration_target,
+      'librechat_first',
+    );
+    assert.equal(
+      output.frontdesk_manifest.hosted_runtime_readiness.managed_hosted_runtime_landed,
+      false,
+    );
+    assert.equal(
+      output.frontdesk_manifest.hosted_runtime_readiness.hosted_pilot_bundle_landed,
+      true,
+    );
+    assert.equal(
+      output.frontdesk_manifest.hosted_runtime_readiness.librechat_pilot_package_landed,
+      true,
+    );
+    assert.equal(output.frontdesk_manifest.domain_wiring_surface.surface_id, 'opl_frontdesk_domain_wiring');
+    assert.equal(output.frontdesk_manifest.domain_wiring_surface.endpoint, '/api/frontdesk-domain-wiring');
+    assert.equal(output.frontdesk_manifest.domain_wiring_surface.summary.total_projects_count, 2);
+    assert.equal(output.frontdesk_manifest.domain_wiring_surface.summary.recommended_entry_surfaces_count, 0);
+    assert.equal(output.frontdesk_manifest.frontdesk_entry_guide_surface.surface_id, 'opl_frontdesk_entry_guide');
+    assert.equal(output.frontdesk_manifest.frontdesk_entry_guide_surface.endpoint, '/api/frontdesk-entry-guide');
+    assert.equal(output.frontdesk_manifest.frontdesk_readiness_surface.surface_id, 'opl_frontdesk_readiness');
+    assert.equal(output.frontdesk_manifest.frontdesk_readiness_surface.endpoint, '/api/frontdesk-readiness');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
 });
 
 test('frontdesk-entry-guide exposes family shell taxonomy and domain workspace mapping', () => {
@@ -2377,9 +2422,10 @@ test('frontdesk-librechat-package exports a same-origin LibreChat-first hosted s
     assert.match(caddyfile, /reverse_proxy \{\$OPL_FRONTDESK_UPSTREAM\}/);
 
     const librechatConfig = fs.readFileSync(assets.librechat_config, 'utf8');
-    assert.match(librechatConfig, /Welcome to OPL Atlas/);
-    assert.match(librechatConfig, /Current project:/);
-    assert.match(librechatConfig, /How to use:/);
+    assert.match(librechatConfig, /Current project: Unbound workspace/);
+    assert.match(librechatConfig, /直接问论文或项目进度；也可以说切换项目、查看任务或下一步。/);
+    assert.doesNotMatch(librechatConfig, /Welcome to OPL Atlas/);
+    assert.doesNotMatch(librechatConfig, /How to use:/);
     assert.match(librechatConfig, /OPL Agent/);
     assert.doesNotMatch(librechatConfig, /\n\s*-\s*Model:/);
     assert.doesNotMatch(librechatConfig, /\n\s*-\s*Thinking:/);
@@ -2464,6 +2510,7 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
       const tools = (toolsList.result as {
         tools: Array<{ name: string }>;
       }).tools;
+      assert.equal(tools.some((tool) => tool.name === 'opl_project_progress'), true);
       assert.equal(tools.some((tool) => tool.name === 'opl_dashboard'), true);
       assert.equal(tools.some((tool) => tool.name === 'opl_runtime_status'), true);
       assert.equal(tools.some((tool) => tool.name === 'opl_workspace_catalog'), true);
@@ -2491,6 +2538,26 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
       writeJsonLine(child.stdin, {
         jsonrpc: '2.0',
         id: 4,
+        method: 'tools/call',
+        params: {
+          name: 'opl_project_progress',
+          arguments: {},
+        },
+      });
+      const progressCall = await readJsonLine(child.stdout);
+      const progressContent = (progressCall.result as {
+        content: Array<{ type: string; text: string }>;
+      }).content;
+      assert.equal(progressContent[0].type, 'text');
+      assert.match(progressContent[0].text, /当前项目：med-autoscience/);
+      assert.match(progressContent[0].text, /当前进度：004 论文当前仍在推进证据补强/);
+      assert.match(progressContent[0].text, /最近活动：2m ago/);
+      assert.match(progressContent[0].text, /查看位置：/);
+      assert.doesNotMatch(progressContent[0].text, /entry_parity_status/);
+
+      writeJsonLine(child.stdin, {
+        jsonrpc: '2.0',
+        id: 5,
         method: 'tools/call',
         params: {
           name: 'opl_dashboard',
@@ -2667,11 +2734,11 @@ test('frontdesk bootstrap manages the local LibreChat shell, inherits local Code
     assert.match(runtimeEnv, /OPENAI_BASE_URL=https:\/\/codex-frontdoor\.example\.test\/v1/);
     assert.match(runtimeEnv, /OPENAI_MODELS=gpt-5\.4-frontdoor/);
     const librechatConfig = fs.readFileSync(install.frontdesk_librechat.assets.librechat_config, 'utf8');
-    assert.match(librechatConfig, /Welcome to OPL Atlas/);
     assert.match(librechatConfig, /Current project:/);
     assert.match(librechatConfig, /med-autoscience/);
-    assert.match(librechatConfig, /How to use:/);
-    assert.match(librechatConfig, /直接问当前论文或运行时进度/);
+    assert.match(librechatConfig, /直接问论文或项目进度；也可以说切换项目、查看任务或下一步。/);
+    assert.doesNotMatch(librechatConfig, /Welcome to OPL Atlas/);
+    assert.doesNotMatch(librechatConfig, /How to use:/);
     assert.doesNotMatch(librechatConfig, /\n\s*-\s*Model:/);
     assert.doesNotMatch(librechatConfig, /\n\s*-\s*Thinking:/);
     assert.match(librechatConfig, /modelDisplayLabel: OPL Agent/);
@@ -3399,6 +3466,84 @@ test('workspace-bind derives family direct-entry locators from structured projec
   }
 });
 
+test('domain-manifests executes manifest_command with a bash-compatible shell', () => {
+  const fixtures = loadFamilyManifestFixtures();
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-manifest-bash-state-'));
+  const workspacePath = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-manifest-bash-workspace-'));
+  const profilePath = path.join(workspacePath, 'ops', 'medautoscience', 'profiles', 'nfpitnet.workspace.toml');
+  const shellGuardPath = path.join(workspacePath, 'manifest-shell-guard.sh');
+  const commandFixture = createFamilyLocatorResolverFixture({
+    masProfile: profilePath,
+    magInput: path.join(workspacePath, 'unused.input.json'),
+    redcubeWorkspaceRoot: path.join(workspacePath, 'unused-redcube'),
+    masManifest: fixtures.medautoscience,
+    magManifest: fixtures.medautogrant,
+    redcubeManifest: fixtures.redcube,
+  });
+  const workspaceRegistryPath = path.join(stateRoot, 'workspace-registry.json');
+  const now = new Date().toISOString();
+
+  fs.mkdirSync(path.dirname(profilePath), { recursive: true });
+  fs.writeFileSync(profilePath, '[workspace]\nname = "fixture"\n', 'utf8');
+  fs.writeFileSync(
+    shellGuardPath,
+    '#!/usr/bin/env bash\nset -euo pipefail\n: "${BASH_SOURCE[0]}"\n',
+    { mode: 0o755 },
+  );
+  fs.writeFileSync(
+    workspaceRegistryPath,
+    `${JSON.stringify({
+      version: 'g2',
+      bindings: [
+        {
+          binding_id: 'mas-binding',
+          project_id: 'medautoscience',
+          project: 'med-autoscience',
+          workspace_path: workspacePath,
+          label: null,
+          status: 'active',
+          direct_entry: {
+            command: null,
+            manifest_command:
+              `source ${shellSingleQuote(shellGuardPath)} && `
+              + `uv run python -m med_autoscience.cli product-entry-manifest --profile ${path.resolve(profilePath)} --format json`,
+            url: null,
+            workspace_locator: {
+              surface_kind: 'med_autoscience_workspace_profile',
+              workspace_root: workspacePath,
+              profile_ref: path.resolve(profilePath),
+              input_path: null,
+            },
+          },
+          created_at: now,
+          updated_at: now,
+          archived_at: null,
+        },
+      ],
+    }, null, 2)}\n`,
+    'utf8',
+  );
+
+  try {
+    const output = runCli(['domain-manifests'], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      PATH: `${commandFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
+    });
+    const medautoscienceEntry = output.domain_manifests.projects.find(
+      (entry: { project_id: string }) => entry.project_id === 'medautoscience',
+    );
+    assert.equal(medautoscienceEntry?.status, 'resolved');
+    assert.equal(medautoscienceEntry?.manifest?.target_domain_id, 'med-autoscience');
+  } finally {
+    fs.rmSync(commandFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspacePath, { recursive: true, force: true });
+  }
+});
+
 test('start returns the routed family start surface for a bound project', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-start-state-'));
   const fixtures = loadFamilyManifestFixtures();
@@ -3924,6 +4069,7 @@ exit 1
       api: {
         frontdesk_entry_guide: string;
         frontdesk_readiness: string;
+        project_progress: string;
         frontdesk_domain_wiring: string;
         librechat_package: string;
       };
@@ -3937,6 +4083,7 @@ exit 1
     assert.equal(webFrontdesk.hosted_status, 'librechat_pilot_landed');
     assert.equal(webFrontdesk.api.frontdesk_entry_guide, '/api/frontdesk-entry-guide');
     assert.equal(webFrontdesk.api.frontdesk_readiness, '/api/frontdesk-readiness');
+    assert.equal(webFrontdesk.api.project_progress, '/api/project-progress');
     assert.equal(webFrontdesk.api.frontdesk_domain_wiring, '/api/frontdesk-domain-wiring');
     assert.equal(webFrontdesk.api.librechat_package, '/api/librechat-package');
 
@@ -3945,9 +4092,13 @@ exit 1
     assert.equal(page.status, 200);
     const pageHtml = await page.text();
     assert.match(pageHtml, /OPL Machine Surface/);
-    assert.match(pageHtml, /Human chat entry/);
+    assert.match(pageHtml, /Open OPL Agent/);
+    assert.match(pageHtml, /Project snapshot/);
+    assert.match(pageHtml, /Progress summary/);
+    assert.match(pageHtml, /Current project/);
     assert.match(pageHtml, /href="\/login"/);
     assert.match(pageHtml, /id="opl-bootstrap"/);
+    assert.match(pageHtml, /white-space: pre-wrap/);
     assert.match(pageHtml, /\/api\/frontdesk-entry-guide/);
     assert.doesNotMatch(pageHtml, /Workspace Hub/);
 
@@ -4000,6 +4151,11 @@ exit 1
       readinessPayload.frontdesk_readiness.local_service.health.status,
       /^(ok|not_installed|unreachable)$/,
     );
+    const progressResponse = await fetch(`${baseUrl}/api/project-progress`);
+    const progressPayload = await progressResponse.json();
+    assert.equal(progressPayload.project_progress.surface_id, 'opl_project_progress_brief');
+    assert.equal(progressPayload.project_progress.current_project.workspace_path, repoRoot);
+    assert.ok(Array.isArray(progressPayload.project_progress.inspect_paths));
     const domainManifestResponse = await fetch(`${baseUrl}/api/domain-manifests`);
     const domainManifestPayload = await domainManifestResponse.json();
     assert.equal(domainManifestPayload.domain_manifests.summary.total_projects_count, 2);
@@ -4198,7 +4354,8 @@ exit 1
     assert.equal(page.status, 200);
     const pageHtml = await page.text();
     assert.match(pageHtml, /OPL Machine Surface/);
-    assert.match(pageHtml, /Human chat entry/);
+    assert.match(pageHtml, /Open OPL Agent/);
+    assert.match(pageHtml, /Project snapshot/);
     assert.match(pageHtml, /\/api\/frontdesk-entry-guide/);
     assert.doesNotMatch(pageHtml, /Start A Domain Project/);
     assert.doesNotMatch(pageHtml, /Workspace Hub/);
