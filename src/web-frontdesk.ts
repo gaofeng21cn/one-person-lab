@@ -218,12 +218,64 @@ type WebFrontDeskContext = {
   sessionsLimit: number;
 };
 
+type RecommendedEntrySurface = Record<string, unknown>;
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function normalizeOptionalString(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+function getRecommendedEntryLocator(entry: RecommendedEntrySurface) {
+  const locator = isRecord(entry.active_binding_locator) ? entry.active_binding_locator : {};
+
+  return {
+    status: normalizeOptionalString(entry.active_binding_locator_status),
+    projectId: normalizeOptionalString(entry.project_id),
+    project: normalizeOptionalString(entry.project),
+    summary: normalizeOptionalString(entry.product_entry_status_summary),
+    recommendedModeId: isRecord(entry.product_entry_start)
+      ? normalizeOptionalString(entry.product_entry_start.recommended_mode_id)
+      : undefined,
+    url: normalizeOptionalString(locator.url),
+    command: normalizeOptionalString(locator.command),
+    manifestCommand: normalizeOptionalString(locator.manifest_command),
+  };
+}
+
+function pickPreferredRecommendedEntry(recommendedEntrySurfaces: unknown) {
+  if (!Array.isArray(recommendedEntrySurfaces)) {
+    return null;
+  }
+
+  const entries = recommendedEntrySurfaces.filter((entry): entry is RecommendedEntrySurface => isRecord(entry));
+
+  return (
+    entries.find((entry) => Boolean(getRecommendedEntryLocator(entry).url))
+    ?? entries.find((entry) => Boolean(getRecommendedEntryLocator(entry).command))
+    ?? entries.find((entry) => getRecommendedEntryLocator(entry).status === 'ready')
+    ?? entries[0]
+    ?? null
+  );
+}
+
+function pickPreferredLaunchStrategy(entry: RecommendedEntrySurface | null): DomainLaunchStrategy | null {
+  if (!entry) {
+    return null;
+  }
+
+  const locator = getRecommendedEntryLocator(entry);
+  if (locator.url) {
+    return 'open_url';
+  }
+
+  if (locator.command) {
+    return 'spawn_command';
+  }
+
+  return null;
 }
 
 function normalizeSkills(value: unknown) {
@@ -635,6 +687,11 @@ function escapeHtml(value: string) {
 async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
   const bootstrap = buildStartupPayload(context);
   const libreChatStatusPayload = (await getFrontDeskLibreChatServiceStatus(context.contracts)).frontdesk_librechat;
+  const frontdeskDashboard = buildFrontDeskDashboard(context.contracts, {
+    workspacePath: context.workspacePath,
+    sessionsLimit: context.sessionsLimit,
+    basePath: context.basePath,
+  }).dashboard;
   const progressPayload = await buildProjectProgressBrief(context.contracts, {
     workspacePath: context.workspacePath,
     sessionsLimit: context.sessionsLimit,
@@ -689,6 +746,40 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       ? progress.current_project.label
       : 'Unbound workspace',
   );
+  const preferredRecommendedEntry = pickPreferredRecommendedEntry(
+    frontdeskDashboard.front_desk.recommended_entry_surfaces,
+  );
+  const preferredRecommendedLocator = preferredRecommendedEntry
+    ? getRecommendedEntryLocator(preferredRecommendedEntry)
+    : null;
+  const preferredEntryProjectLabel = escapeHtml(
+    preferredRecommendedLocator?.projectId
+    ?? preferredRecommendedLocator?.project
+    ?? 'current domain project',
+  );
+  const preferredEntryLaunchStrategy = preferredRecommendedEntry
+    ? pickPreferredLaunchStrategy(preferredRecommendedEntry)
+    : null;
+  const preferredEntryCallout = preferredRecommendedLocator
+    ? `
+        <div class="detail-grid" style="margin-top: 16px;">
+          <div class="meta-card">
+            <span class="meta-label">Bound direct entry</span>
+            <div>${preferredEntryProjectLabel}</div>
+            ${preferredRecommendedLocator.url ? `<div>${escapeHtml(preferredRecommendedLocator.url)}</div>` : ''}
+            ${preferredRecommendedLocator.command ? `<div><code>${escapeHtml(preferredRecommendedLocator.command)}</code></div>` : ''}
+          </div>
+          <div class="meta-card">
+            <span class="meta-label">Preferred launch</span>
+            <div>${preferredEntryLaunchStrategy ? `<code>${preferredEntryLaunchStrategy}</code>` : 'Resolve after binding a launchable locator.'}</div>
+            ${preferredRecommendedLocator.recommendedModeId ? `<div>Start mode: <code>${escapeHtml(preferredRecommendedLocator.recommendedModeId)}</code></div>` : ''}
+            ${preferredRecommendedLocator.summary ? `<div>${escapeHtml(preferredRecommendedLocator.summary)}</div>` : ''}
+          </div>
+        </div>
+        ${preferredRecommendedLocator.url
+          ? `<a class="entry-link secondary-entry-link" href="${escapeHtml(preferredRecommendedLocator.url)}">Open ${preferredEntryProjectLabel} direct entry</a>`
+          : ''}`
+    : '';
   const progressSummary = escapeHtml(
     typeof progress.progress_summary === 'string'
       ? progress.progress_summary
@@ -881,6 +972,19 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         font-weight: 600;
       }
 
+      .entry-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .secondary-entry-link {
+        background: rgba(31, 107, 90, 0.08);
+        color: var(--accent-strong);
+        border: 1px solid rgba(31, 107, 90, 0.22);
+      }
+
       .meta {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1015,7 +1119,10 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
           This page is the compact operator view for the current OPL workspace. Use chat for natural-language interaction,
           and use this page to glance at the active project, progress summary, and inspectable paths.
         </p>
-        <a class="entry-link" href="/login">Open OPL Agent</a>
+        <div class="entry-actions">
+          <a class="entry-link" href="/login">Open OPL Agent</a>
+          ${preferredEntryCallout}
+        </div>
       </section>
 
       <section class="panel">
@@ -2061,6 +2168,30 @@ function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
         return '<div class="card-list">' + items.join('') + '</div>';
       }
 
+      function pickPreferredRecommendedEntry(entries) {
+        if (!Array.isArray(entries) || entries.length === 0) {
+          return null;
+        }
+
+        return entries.find((entry) => entry?.active_binding_locator?.url)
+          || entries.find((entry) => entry?.active_binding_locator?.command)
+          || entries.find((entry) => entry?.active_binding_locator_status === 'ready')
+          || entries[0]
+          || null;
+      }
+
+      function pickRecommendedLaunchStrategy(entry) {
+        if (entry?.active_binding_locator?.url) {
+          return 'open_url';
+        }
+
+        if (entry?.active_binding_locator?.command) {
+          return 'spawn_command';
+        }
+
+        return '';
+      }
+
       function getWorkspaceBindingLabel(binding) {
         const project = binding.project || binding.project_id || 'unknown-project';
         const label = binding.label ? ' · ' + binding.label : '';
@@ -2712,15 +2843,17 @@ function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
         metricSessions.textContent = String(dashboard.runtime_status.recent_sessions.sessions.length);
         metricProcesses.textContent = String(dashboard.runtime_status.process_usage.summary.process_count);
         runtimeNote.textContent = dashboard.runtime_status.notes.join(' ');
-        const recommendedStart = Array.isArray(dashboard.front_desk.recommended_entry_surfaces)
-          ? dashboard.front_desk.recommended_entry_surfaces[0] || null
-          : null;
+        const recommendedStart = pickPreferredRecommendedEntry(dashboard.front_desk.recommended_entry_surfaces);
         if (recommendedStart) {
+          const preferredLaunchStrategy = pickRecommendedLaunchStrategy(recommendedStart);
           if (!startProjectInput.value.trim()) {
             startProjectInput.value = String(recommendedStart.project_id || '');
           }
           if (!launchProjectInput.value.trim()) {
             launchProjectInput.value = String(recommendedStart.project_id || '');
+          }
+          if (!launchStrategyInput.value.trim() || launchStrategyInput.value.trim() === 'auto') {
+            launchStrategyInput.value = preferredLaunchStrategy || 'auto';
           }
           if (!startModeInput.value.trim() && recommendedStart.product_entry_start?.recommended_mode_id) {
             startModeInput.value = String(recommendedStart.product_entry_start.recommended_mode_id);
@@ -2736,12 +2869,41 @@ function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
                   + String(recommendedStart.product_entry_start.recommended_mode_id)
                   + '</code></p>'
                 : '',
+              recommendedStart.active_binding_locator?.url
+                ? '<p><strong>Bound direct entry:</strong> ' + String(recommendedStart.active_binding_locator.url) + '</p>'
+                : '',
+              recommendedStart.active_binding_locator?.command
+                ? '<p><strong>Bound direct command:</strong> <code>'
+                  + String(recommendedStart.active_binding_locator.command)
+                  + '</code></p>'
+                : '',
             ].filter(Boolean).join('');
             startCommand.innerHTML = recommendedStart.product_entry_start?.modes?.length
               ? '<p><strong>Available Modes:</strong> '
                 + recommendedStart.product_entry_start.modes.map((mode) => '<code>' + String(mode.mode_id) + '</code>').join(', ')
                 + '</p>'
               : 'Choose a project and resolve its current start surface.';
+          }
+          if (launchJson.textContent === '{}' || launchJson.textContent === '') {
+            launchSummary.innerHTML = [
+              '<p><strong>Bound direct entry:</strong> ' + String(recommendedStart.project || recommendedStart.project_id) + '</p>',
+              preferredLaunchStrategy
+                ? '<p><strong>Preferred Strategy:</strong> <code>' + preferredLaunchStrategy + '</code></p>'
+                : '',
+              recommendedStart.active_binding_locator?.url
+                ? '<p><strong>Direct Entry URL:</strong> ' + String(recommendedStart.active_binding_locator.url) + '</p>'
+                : '',
+              recommendedStart.active_binding_locator?.command
+                ? '<p><strong>Direct Entry Command:</strong> <code>'
+                  + String(recommendedStart.active_binding_locator.command)
+                  + '</code></p>'
+                : '',
+            ].filter(Boolean).join('');
+            launchAction.innerHTML = recommendedStart.active_binding_locator?.manifest_command
+              ? '<p><strong>Manifest Command:</strong> <code>'
+                + String(recommendedStart.active_binding_locator.manifest_command)
+                + '</code></p>'
+              : 'Preview or launch a bound domain entry to inspect the selected action.';
           }
         }
         renderHostedRuntimeReadiness(dashboard.front_desk.hosted_runtime_readiness);
