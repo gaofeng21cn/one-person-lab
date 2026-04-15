@@ -338,7 +338,7 @@ const TOOLS: ToolDefinition[] = [
   },
   {
     name: 'opl_workspace_catalog',
-    description: '读取 OPL 已绑定的 workspace 目录，适合查看当前有哪些项目/workspace 已接入前台。',
+    description: '读取 OPL 已绑定的 workspace 目录与 binding contract 摘要，适合确认当前有哪些项目/workspace 已接入前台，以及 direct-entry locator 是否已绑定。',
     inputSchema: {
       type: 'object',
       properties: {},
@@ -346,6 +346,27 @@ const TOOLS: ToolDefinition[] = [
     },
     call: async (_args, options) => {
       return await fetchJson(options, '/workspace-catalog');
+    },
+  },
+  {
+    name: 'opl_session_ledger',
+    description:
+      '读取 OPL managed session attribution ledger，适合恢复长跑上下文、查看最近会话归因与资源采样；若只想看原始 live runtime 状态再用 opl_runtime_status。',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        limit: {
+          type: 'integer',
+          minimum: 1,
+          description: '可选。返回最近多少条 session ledger 记录。',
+        },
+      },
+      additionalProperties: false,
+    },
+    call: async (args, options) => {
+      return await fetchJson(options, '/session-ledger', {
+        limit: parsePositiveInteger(args.limit, 'limit'),
+      });
     },
   },
   {

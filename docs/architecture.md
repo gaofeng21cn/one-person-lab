@@ -23,6 +23,7 @@
   - 提供 landed local shell 的会话与 runtime 运维界面
 - `opl frontdesk-manifest / frontdesk-domain-wiring / frontdesk-hosted-bundle / frontdesk-hosted-package / frontdesk-librechat-package / session-ledger / handoff-envelope`
   - 提供 hosted-friendly shell contract、hosted-friendly family wiring truth、hosted-pilot-ready shell bundle、self-hostable hosted pilot package、真实的 LibreChat-first hosted shell pilot package、OPL-managed session attribution 与 family handoff contract
+  - 当前 hosted shell bootstrap discovery 顺序固定为 `opl_frontdesk_entry_guide -> opl_frontdesk_readiness -> opl_workspace_catalog -> opl_session_ledger -> opl_project_progress`
 - `opl workspace-catalog / workspace-bind|activate|archive`
   - 提供 file-backed workspace registry 与顶层到 domain 之间的 direct-entry locator 管理
 - `opl web`
