@@ -399,6 +399,19 @@ const TOOLS: ToolDefinition[] = [
     },
   },
   {
+    name: 'opl_frontdesk_librechat_status',
+    description:
+      '读取 OPL 当前 hosted shell / LibreChat pilot 的安装、运行与 drift 状态，适合 agent 判断本地托管壳是否可直接使用。',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    },
+    call: async (_args, options) => {
+      return await fetchJson(options, '/frontdesk-librechat-status');
+    },
+  },
+  {
     name: 'opl_workspace_status',
     description: '读取某个 workspace 的 git/worktree 状态。',
     inputSchema: {

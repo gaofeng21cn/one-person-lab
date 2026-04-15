@@ -1003,6 +1003,27 @@ async function startFakeFrontDeskApiServer() {
       return;
     }
 
+    if (request.method === 'GET' && url.pathname === '/api/frontdesk-librechat-status') {
+      response.statusCode = 200;
+      response.end(JSON.stringify({
+        frontdesk_librechat: {
+          action: 'status',
+          surface_id: 'opl_frontdesk_librechat_status',
+          installed: true,
+          running: false,
+          public_origin: 'http://127.0.0.1:3010',
+          identity: {
+            sync_status: 'drift_detected',
+            app_title: 'OPL Agent',
+          },
+          notes: [
+            'Recorded hosted shell assets drift from the currently expected local stack.',
+          ],
+        },
+      }));
+      return;
+    }
+
     if (request.method === 'GET' && url.pathname === '/api/frontdesk-entry-guide') {
       response.statusCode = 200;
       response.end(JSON.stringify({
@@ -2559,6 +2580,7 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
       assert.equal(tools.some((tool) => tool.name === 'opl_runtime_status'), true);
       assert.equal(tools.some((tool) => tool.name === 'opl_workspace_catalog'), true);
       assert.equal(tools.some((tool) => tool.name === 'opl_activate_workspace'), true);
+      assert.equal(tools.some((tool) => tool.name === 'opl_frontdesk_librechat_status'), true);
       assert.match(
         tools.find((tool) => tool.name === 'opl_project_progress')?.description ?? '',
         /哪篇论文|讲什么故事/,
@@ -2612,6 +2634,23 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
         id: 5,
         method: 'tools/call',
         params: {
+          name: 'opl_frontdesk_librechat_status',
+          arguments: {},
+        },
+      });
+      const hostedShellCall = await readJsonLine(child.stdout);
+      const hostedShellContent = (hostedShellCall.result as {
+        content: Array<{ type: string; text: string }>;
+      }).content;
+      assert.equal(hostedShellContent[0].type, 'text');
+      assert.match(hostedShellContent[0].text, /"surface_id": "opl_frontdesk_librechat_status"/);
+      assert.match(hostedShellContent[0].text, /"sync_status": "drift_detected"/);
+
+      writeJsonLine(child.stdin, {
+        jsonrpc: '2.0',
+        id: 6,
+        method: 'tools/call',
+        params: {
           name: 'opl_frontdesk_entry_guide',
           arguments: {},
         },
@@ -2625,7 +2664,7 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
 
       writeJsonLine(child.stdin, {
         jsonrpc: '2.0',
-        id: 6,
+        id: 7,
         method: 'tools/call',
         params: {
           name: 'opl_dashboard',
@@ -2649,6 +2688,7 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
         && request.query.sessions_limit === '7'
       ), true);
       assert.equal(fakeApi.requests.some((request) => request.path === '/api/frontdesk-entry-guide'), true);
+      assert.equal(fakeApi.requests.some((request) => request.path === '/api/frontdesk-librechat-status'), true);
     } finally {
       child.kill('SIGTERM');
       await once(child, 'exit');
@@ -4673,6 +4713,9 @@ exit 1
     const pageHtml = await page.text();
     assert.match(pageHtml, /OPL Machine Surface/);
     assert.match(pageHtml, /Open OPL Agent/);
+    assert.match(pageHtml, /Bound direct entry/);
+    assert.match(pageHtml, /Open redcube direct entry/);
+    assert.match(pageHtml, /http:\/\/127\.0\.0\.1:3310\/redcube/);
     assert.match(pageHtml, /Project snapshot/);
     assert.match(pageHtml, /\/api\/frontdesk-entry-guide/);
     assert.doesNotMatch(pageHtml, /Start A Domain Project/);
