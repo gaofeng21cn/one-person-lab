@@ -42,6 +42,7 @@ import {
 } from './domain-manifest.ts';
 import {
   buildFrontDeskDashboard,
+  buildFrontDeskEntryGuide,
   buildFrontDeskReadiness,
   buildFrontDeskDomainWiring,
   buildHostedPilotBundle,
@@ -1604,6 +1605,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl doctor',
         'opl projects',
         'opl frontdesk-manifest',
+        'opl frontdesk-entry-guide',
         'opl frontdesk-readiness --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
         'opl frontdesk-domain-wiring',
         'opl frontdesk-hosted-bundle --base-path /pilot/opl',
@@ -2177,6 +2179,16 @@ async function main() {
       handler: (args) => {
         assertNoArgs(args, commandSpecs['frontdesk-manifest']);
         return buildFrontDeskManifest(getContracts());
+      },
+    },
+    'frontdesk-entry-guide': {
+      usage: 'opl frontdesk-entry-guide',
+      summary:
+        'Expose the machine-readable family entry guide that maps OPL workspace semantics onto domain start and workspace surfaces.',
+      examples: ['opl frontdesk-entry-guide'],
+      handler: (args) => {
+        assertNoArgs(args, commandSpecs['frontdesk-entry-guide']);
+        return buildFrontDeskEntryGuide(getContracts());
       },
     },
     'frontdesk-readiness': {

@@ -18,6 +18,7 @@
 
 - `OPL` 继续是顶层 gateway、federation 与 shared-boundary surface。
 - Domain runtime ownership 继续留在 admitted domain 仓，而不是上收进 `OPL`。
+- `frontdesk-entry-guide` 现在是给 AI / GUI 壳消费的 family-level machine-readable entry layer；如果用户前台产品壳命名为 `OPL Cortex`，那一层名称位于 repo 内部 `frontdesk_*` contract id 之上。
 - 仓库首页应继续保持对非技术专家可读；这份索引可以承担技术说明。
 - 当前公开活跃承接面分别是：`Med Auto Science` 的 `Research Ops`、`RedCube AI` 的 `Presentation Ops`，以及当前活跃的医学 `Grant Ops` 业务仓路径 `Med Auto Grant`，其中后者的顶层 admission / handoff wording 仍在 `OPL` 单独门控。
 

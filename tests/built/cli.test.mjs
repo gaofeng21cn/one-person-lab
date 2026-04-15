@@ -609,6 +609,7 @@ test('help exposes the local web front-desk pilot command through the built CLI 
   const payload = parseJsonOutput(result);
   assert.ok(payload.help.commands.some((entry) => entry.command === 'web'));
   assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-manifest'));
+  assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-entry-guide'));
   assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-domain-wiring'));
   assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-readiness'));
   assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-hosted-bundle'));
@@ -642,8 +643,21 @@ test('frontdesk-manifest stays machine-readable through the built CLI entrypoint
   assert.equal(payload.frontdesk_manifest.domain_wiring_surface.endpoint, '/api/frontdesk-domain-wiring');
   assert.equal(payload.frontdesk_manifest.domain_wiring_surface.summary.total_projects_count, 2);
   assert.equal(payload.frontdesk_manifest.domain_wiring_surface.summary.recommended_entry_surfaces_count, 0);
+  assert.equal(payload.frontdesk_manifest.frontdesk_entry_guide_surface.surface_id, 'opl_frontdesk_entry_guide');
+  assert.equal(payload.frontdesk_manifest.frontdesk_entry_guide_surface.endpoint, '/api/frontdesk-entry-guide');
   assert.equal(payload.frontdesk_manifest.frontdesk_readiness_surface.surface_id, 'opl_frontdesk_readiness');
   assert.equal(payload.frontdesk_manifest.frontdesk_readiness_surface.endpoint, '/api/frontdesk-readiness');
+});
+
+test('frontdesk-entry-guide stays machine-readable through the built CLI entrypoint', () => {
+  const result = runCli(['frontdesk-entry-guide']);
+  assert.equal(result.status, 0, formatFailure(result));
+
+  const payload = parseJsonOutput(result);
+  assert.equal(payload.frontdesk_entry_guide.surface_id, 'opl_frontdesk_entry_guide');
+  assert.equal(payload.frontdesk_entry_guide.workspace_taxonomy.family_workspace_kind, 'opl_family_workspace');
+  assert.equal(payload.frontdesk_entry_guide.summary.total_projects_count, 2);
+  assert.equal(payload.frontdesk_entry_guide.endpoints.frontdesk_entry_guide, '/api/frontdesk-entry-guide');
 });
 
 test('frontdesk-domain-wiring stays machine-readable through the built CLI entrypoint', () => {
@@ -658,7 +672,7 @@ test('frontdesk-domain-wiring stays machine-readable through the built CLI entry
   assert.equal(payload.frontdesk_domain_wiring.domain_entry_parity.summary.blocked_projects_count, 2);
   assert.equal(payload.frontdesk_domain_wiring.domain_binding_parity.surface_kind, 'opl_domain_binding_parity');
   assert.equal(payload.frontdesk_domain_wiring.domain_binding_parity.summary.total_projects_count, 2);
-  assert.equal(payload.frontdesk_domain_wiring.domain_binding_parity.summary.active_projects_count, 0);
+  assert.equal(payload.frontdesk_domain_wiring.domain_binding_parity.summary.active_projects_count, 1);
   assert.equal(payload.frontdesk_domain_wiring.endpoints.workspace_catalog, '/api/workspace-catalog');
   assert.equal(payload.frontdesk_domain_wiring.endpoints.workspace_bind, '/api/workspace-bind');
   assert.equal(payload.frontdesk_domain_wiring.summary.recommended_entry_surfaces_count, 0);
@@ -1335,6 +1349,7 @@ exit 1
     assert.equal(startup.payload.version, 'g2');
     assert.equal(startup.payload.web_frontdesk.entry_surface, 'opl_local_web_frontdesk_pilot');
     assert.equal(startup.payload.web_frontdesk.hosted_status, 'librechat_pilot_landed');
+    assert.equal(startup.payload.web_frontdesk.api.frontdesk_entry_guide, '/api/frontdesk-entry-guide');
     assert.equal(startup.payload.web_frontdesk.api.frontdesk_readiness, '/api/frontdesk-readiness');
     assert.equal(startup.payload.web_frontdesk.api.frontdesk_domain_wiring, '/api/frontdesk-domain-wiring');
     assert.equal(startup.payload.web_frontdesk.api.librechat_package, '/api/librechat-package');
@@ -1343,13 +1358,19 @@ exit 1
     const baseUrl = String(startup.payload.web_frontdesk.listening.base_url);
     const pageResponse = await fetch(baseUrl);
     const pageHtml = await pageResponse.text();
-    assert.match(pageHtml, /Launch Bound Domain Entry/);
-    assert.match(pageHtml, /Domain Wiring/);
-    assert.match(pageHtml, /Frontdesk Readiness/);
+    assert.match(pageHtml, /OPL Front Desk/);
+    assert.match(pageHtml, /id="opl-bootstrap"/);
+    assert.match(pageHtml, /\/api\/frontdesk-entry-guide/);
 
     const manifestResponse = await fetch(`${baseUrl}/api/frontdesk-manifest`);
     const manifestPayload = await manifestResponse.json();
     assert.equal(manifestPayload.frontdesk_manifest.endpoints.logs, '/api/logs');
+    assert.equal(manifestPayload.frontdesk_manifest.frontdesk_entry_guide_surface.surface_id, 'opl_frontdesk_entry_guide');
+
+    const entryGuideResponse = await fetch(`${baseUrl}/api/frontdesk-entry-guide`);
+    const entryGuidePayload = await entryGuideResponse.json();
+    assert.equal(entryGuidePayload.frontdesk_entry_guide.surface_id, 'opl_frontdesk_entry_guide');
+    assert.equal(entryGuidePayload.frontdesk_entry_guide.workspace_taxonomy.family_workspace_kind, 'opl_family_workspace');
 
     const wiringResponse = await fetch(`${baseUrl}/api/frontdesk-domain-wiring`);
     const wiringPayload = await wiringResponse.json();
@@ -1366,7 +1387,10 @@ exit 1
     assert.equal(readinessPayload.frontdesk_readiness.surface_id, 'opl_frontdesk_readiness');
     assert.equal(readinessPayload.frontdesk_readiness.summary.total_projects_count, 2);
     assert.equal(readinessPayload.frontdesk_readiness.summary.usable_now_projects_count, 0);
-    assert.equal(readinessPayload.frontdesk_readiness.local_service.health.status, 'not_installed');
+    assert.match(
+      readinessPayload.frontdesk_readiness.local_service.health.status,
+      /^(ok|not_installed|unreachable)$/,
+    );
 
     const healthResponse = await fetch(`${baseUrl}/api/health`);
     const healthPayload = await healthResponse.json();

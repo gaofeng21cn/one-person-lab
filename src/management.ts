@@ -513,6 +513,216 @@ function buildFrontDeskReadinessSurfaceRef(options: { basePath?: string } = {}) 
   };
 }
 
+type DomainWorkspaceGuide = {
+  domain_workspace_kind: string;
+  domain_workspace_label: string;
+  domain_workspace_role: string;
+  summary: string;
+};
+
+function buildDomainWorkspaceGuide(entry: DomainManifestCatalogEntry): DomainWorkspaceGuide {
+  const surfaceKind = entry.manifest?.operator_loop_surface?.surface_kind;
+
+  if (surfaceKind === 'workspace_cockpit' || entry.project_id === 'medautoscience') {
+    return {
+      domain_workspace_kind: 'research_workspace',
+      domain_workspace_label: 'study queue',
+      domain_workspace_role: 'research_runtime_workspace',
+      summary:
+        'OPL workspace 是 family-level task container；进入 MedAutoScience 后，domain workspace 会收紧为 research workspace / study queue，用来承接具体 study runtime 与研究闭环。',
+    };
+  }
+
+  if (surfaceKind === 'grant_user_loop' || entry.project_id === 'medautogrant') {
+    return {
+      domain_workspace_kind: 'grant_workspace',
+      domain_workspace_label: 'draft lane',
+      domain_workspace_role: 'grant_draft_workspace',
+      summary:
+        'OPL workspace 只负责 family-level 路由；进入 MedAutoGrant 后，domain workspace 会收紧为 grant workspace / draft lane，用来推进 critique、revision 与导出链路。',
+    };
+  }
+
+  if (surfaceKind === 'product_entry' || entry.project_id === 'redcube') {
+    return {
+      domain_workspace_kind: 'deliverable_workspace',
+      domain_workspace_label: 'entry session',
+      domain_workspace_role: 'deliverable_runtime_workspace',
+      summary:
+        'OPL workspace 仍是 family-level task container；进入 RedCube 后，domain workspace 会收紧为 deliverable workspace / entry session，用来持续推进某个交付物的 runtime loop。',
+    };
+  }
+
+  return {
+    domain_workspace_kind: 'domain_workspace',
+    domain_workspace_label: 'domain workspace',
+    domain_workspace_role: 'domain_runtime_workspace',
+    summary:
+      'OPL workspace 负责 family-level task routing；一旦 handoff 到具体 domain，后续执行会落到该 domain 自己定义的 workspace / runtime container。',
+  };
+}
+
+function buildFrontDeskEntryGuideSurfaceRef(
+  contracts: GatewayContracts,
+  options: { basePath?: string } = {},
+) {
+  const guide = buildFrontDeskEntryGuide(contracts, options).frontdesk_entry_guide;
+
+  return {
+    surface_id: guide.surface_id,
+    endpoint: guide.endpoints.frontdesk_entry_guide,
+    summary: guide.summary,
+  };
+}
+
+export function buildFrontDeskEntryGuide(
+  contracts: GatewayContracts,
+  options: { basePath?: string } = {},
+) {
+  const endpoints = buildFrontDeskEndpoints(options.basePath);
+  const domainManifests = buildDomainManifestCatalog(contracts).domain_manifests;
+  const projects = domainManifests.projects.map((entry) => {
+    const workspaceGuide = buildDomainWorkspaceGuide(entry);
+    const manifest = entry.manifest;
+    const startSurface = manifest?.product_entry_start;
+    const preflightSurface = manifest?.product_entry_preflight;
+    const readinessSurface = manifest?.product_entry_readiness;
+    const orchestration = manifest?.family_orchestration;
+
+    return {
+      project_id: entry.project_id,
+      project: entry.project,
+      binding_id: entry.binding_id,
+      workspace_path: entry.workspace_path,
+      manifest_command: entry.manifest_command,
+      manifest_status: entry.status,
+      target_domain_id: manifest?.target_domain_id ?? null,
+      domain_workspace_kind: workspaceGuide.domain_workspace_kind,
+      domain_workspace_label: workspaceGuide.domain_workspace_label,
+      workspace_mapping: {
+        family_workspace_kind: 'opl_family_workspace',
+        family_workspace_role: 'family_task_container',
+        domain_workspace_role: workspaceGuide.domain_workspace_role,
+        summary: workspaceGuide.summary,
+      },
+      frontdesk: manifest?.frontdesk_surface
+        ? {
+            shell_key: manifest.frontdesk_surface.shell_key,
+            command: manifest.frontdesk_surface.command,
+            surface_kind: manifest.frontdesk_surface.surface_kind,
+            summary: manifest.frontdesk_surface.summary,
+          }
+        : null,
+      operator_loop: manifest?.operator_loop_surface
+        ? {
+            shell_key: manifest.operator_loop_surface.shell_key,
+            command: manifest.operator_loop_surface.command,
+            surface_kind: manifest.operator_loop_surface.surface_kind,
+            summary: manifest.operator_loop_surface.summary,
+            continuation_command: manifest.operator_loop_surface.continuation_command,
+          }
+        : null,
+      start: startSurface
+        ? {
+            summary: startSurface.summary,
+            recommended_mode_id: startSurface.recommended_mode_id,
+            mode_count: startSurface.modes.length,
+            mode_ids: startSurface.modes.map((mode) => mode.mode_id),
+            modes: startSurface.modes,
+            resume_surface: startSurface.resume_surface,
+            human_gate_ids: startSurface.human_gate_ids,
+          }
+        : null,
+      preflight: preflightSurface
+        ? {
+            summary: preflightSurface.summary,
+            ready_to_try_now: preflightSurface.ready_to_try_now,
+            recommended_check_command: preflightSurface.recommended_check_command,
+            recommended_start_command: preflightSurface.recommended_start_command,
+            blocking_check_ids: preflightSurface.blocking_check_ids,
+          }
+        : null,
+      readiness: readinessSurface
+        ? {
+            verdict: readinessSurface.verdict,
+            usable_now: readinessSurface.usable_now,
+            good_to_use_now: readinessSurface.good_to_use_now,
+            fully_automatic: readinessSurface.fully_automatic,
+            summary: readinessSurface.summary,
+            recommended_start_command: readinessSurface.recommended_start_command,
+            recommended_loop_command: readinessSurface.recommended_loop_command,
+            blocking_gaps: readinessSurface.blocking_gaps,
+          }
+        : null,
+      orchestration: orchestration
+        ? {
+            action_graph_ref: orchestration.action_graph_ref,
+            human_gate_ids: orchestration.human_gates
+              .map((gate) => gate.gate_id)
+              .filter((gateId): gateId is string => typeof gateId === 'string' && gateId.length > 0),
+            resume_contract: orchestration.resume_contract,
+          }
+        : null,
+      shared_handoff: manifest?.shared_handoff ?? {},
+      recommended_start_command:
+        readinessSurface?.recommended_start_command
+        ?? preflightSurface?.recommended_start_command
+        ?? manifest?.frontdesk_surface?.command
+        ?? null,
+      recommended_check_command: preflightSurface?.recommended_check_command ?? null,
+    };
+  });
+
+  return {
+    version: 'g2',
+    contracts_context: {
+      contracts_dir: contracts.contractsDir,
+      contracts_root_source: contracts.contractsRootSource,
+    },
+    frontdesk_entry_guide: {
+      surface_id: 'opl_frontdesk_entry_guide',
+      entry_surface: 'opl_local_web_frontdesk_pilot',
+      runtime_substrate: 'external_hermes_kernel',
+      shell_integration_target: 'librechat_first',
+      base_path: normalizeBasePath(options.basePath),
+      workspace_taxonomy: {
+        family_workspace_kind: 'opl_family_workspace',
+        family_workspace_role: 'family_task_container',
+        summary:
+          'OPL workspace 是 family-level task container：先承接用户目标，再把任务 handoff 到具体 domain 的 workspace / runtime container。',
+      },
+      starter_prompts: projects.map((entry) => ({
+        prompt_id: `start_${entry.project_id}`,
+        project_id: entry.project_id,
+        title: `Start ${entry.project}`,
+        prompt: `从 ${entry.project} 开始，并告诉我当前推荐的 direct entry / start mode。`,
+      })),
+      summary: {
+        total_projects_count: projects.length,
+        resolved_projects_count: projects.filter((entry) => entry.manifest_status === 'resolved').length,
+        ready_to_try_now_projects_count:
+          projects.filter((entry) => entry.preflight?.ready_to_try_now === true).length,
+        usable_now_projects_count: projects.filter((entry) => entry.readiness?.usable_now === true).length,
+      },
+      projects,
+      endpoints: {
+        frontdesk_entry_guide: endpoints.frontdesk_entry_guide,
+        frontdesk_manifest: endpoints.manifest,
+        frontdesk_readiness: endpoints.frontdesk_readiness,
+        frontdesk_domain_wiring: endpoints.frontdesk_domain_wiring,
+        domain_manifests: endpoints.domain_manifests,
+        start: endpoints.start,
+        launch_domain: endpoints.launch_domain,
+        handoff_envelope: endpoints.handoff_envelope,
+      },
+      notes: [
+        'This surface is machine-readable entry guidance for AI shells and higher-level GUI hosts; it stays derived from admitted domain manifests instead of inventing a second truth source.',
+        'User-facing product naming can move to OPL Cortex at the GUI layer, while repo-internal surface ids remain frontdesk_* until a separate rename tranche is frozen.',
+      ],
+    },
+  };
+}
+
 export function buildFrontDeskDomainWiring(
   contracts: GatewayContracts,
   options: { basePath?: string } = {},
@@ -796,6 +1006,7 @@ export function buildProjectsOverview(contracts: GatewayContracts) {
 export function buildFrontDeskManifest(contracts: GatewayContracts, options: { basePath?: string } = {}) {
   const endpoints = buildFrontDeskEndpoints(options.basePath);
   const hostedRuntimeReadiness = buildHostedRuntimeReadiness();
+  const frontdeskEntryGuideSurface = buildFrontDeskEntryGuideSurfaceRef(contracts, options);
   const domainWiringSurface = buildFrontDeskDomainWiringSurfaceRef(contracts, options);
   const frontdeskReadinessSurface = buildFrontDeskReadinessSurfaceRef(options);
 
@@ -815,6 +1026,7 @@ export function buildFrontDeskManifest(contracts: GatewayContracts, options: { b
       pilot_bundle_status: 'landed',
       base_path: normalizeBasePath(options.basePath),
       hosted_runtime_readiness: hostedRuntimeReadiness,
+      frontdesk_entry_guide_surface: frontdeskEntryGuideSurface,
       frontdesk_readiness_surface: frontdeskReadinessSurface,
       domain_wiring_surface: domainWiringSurface,
       handoff_envelope_fields: [
@@ -1085,6 +1297,7 @@ export function buildFrontDeskDashboard(
   const hostedRuntimeReadiness = buildHostedRuntimeReadiness();
   const domainEntryParity = buildDomainEntryParity(domainManifests.projects);
   const recommendedEntrySurfaces = buildRecommendedEntrySurfaces(domainManifests.projects);
+  const frontdeskEntryGuideSurface = buildFrontDeskEntryGuideSurfaceRef(contracts, options);
   const frontdeskReadinessSurface = buildFrontDeskReadinessSurfaceRef(options);
 
   return {
@@ -1104,6 +1317,7 @@ export function buildFrontDeskDashboard(
         hosted_web_status: 'librechat_pilot_landed',
         librechat_pilot_package_status: 'landed',
         hosted_runtime_readiness: hostedRuntimeReadiness,
+        frontdesk_entry_guide_surface: frontdeskEntryGuideSurface,
         frontdesk_readiness_surface: frontdeskReadinessSurface,
         workspace_registry_status: 'landed',
         session_ledger_status: 'landed',
