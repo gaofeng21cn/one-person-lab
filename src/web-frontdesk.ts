@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 
 import { GatewayContractError } from './contracts.ts';
+import { inferFrontDeskWorkspaceLabel } from './frontdesk-librechat-identity.ts';
 import {
   buildFrontDeskEndpoints,
   buildFrontDeskEntryUrl,
@@ -741,11 +742,11 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
     )
     .join('');
   const bootstrapJson = serializeJsonForHtml(bootstrap);
-  const currentProjectLabel = escapeHtml(
-    typeof progress.current_project?.label === 'string'
-      ? progress.current_project.label
-      : 'Unbound workspace',
-  );
+  const currentProjectWorkspacePath = normalizeOptionalString(progress.current_project?.workspace_path);
+  const currentProjectLabel = escapeHtml(inferFrontDeskWorkspaceLabel({
+    workspacePath: currentProjectWorkspacePath ?? context.workspacePath,
+    fallbackLabel: normalizeOptionalString(progress.current_project?.label) ?? 'Unbound workspace',
+  }));
   const preferredRecommendedEntry = pickPreferredRecommendedEntry(
     frontdeskDashboard.front_desk.recommended_entry_surfaces,
   );
@@ -1226,7 +1227,7 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         <h2>Machine surface</h2>
         <h1>OPL Machine Surface</h1>
         <p class="lede">
-          这里负责给当前项目做人类可读的进度概览。自然语言交互走聊天界面，这一页负责把论文状态、卡点和可审阅路径讲明白。
+          这里负责给当前工作区做人类可读的进度概览。自然语言交互走聊天界面，这一页负责把论文状态、卡点和可审阅路径讲明白。
         </p>
         <div class="entry-actions">
           <a class="entry-link" href="/login">Open OPL Agent</a>
@@ -1238,11 +1239,11 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         <h2>Project snapshot</h2>
         <div class="snapshot-grid">
           <div class="meta-card">
-            <span class="meta-label">Current project</span>
+            <span class="meta-label">Current workspace</span>
             <div>${currentProjectLabel}</div>
           </div>
           <div class="meta-card">
-            <span class="meta-label">Default workspace</span>
+            <span class="meta-label">Workspace path</span>
             <div>${bootstrap.web_frontdesk.defaults.workspace_path}</div>
           </div>
           <div class="meta-card">
