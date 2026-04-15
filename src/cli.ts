@@ -17,6 +17,14 @@ import {
   uninstallFrontDeskService,
 } from './frontdesk-service.ts';
 import {
+  getFrontDeskLibreChatServiceStatus,
+  installFrontDeskLibreChatService,
+  openFrontDeskLibreChatService,
+  startFrontDeskLibreChatService,
+  stopFrontDeskLibreChatService,
+} from './frontdesk-librechat-service.ts';
+import { startFrontDeskMcpBridge } from './frontdesk-mcp-stdio.ts';
+import {
   buildProductEntryHandoffEnvelope,
   buildProductEntryDoctor,
   type ProductEntryCliInput,
@@ -149,6 +157,17 @@ type WebCliInput = {
   basePath?: string;
 };
 
+type FrontDeskLibreChatCliInput = WebCliInput & {
+  publicOrigin?: string;
+  paperclipBaseUrl?: string;
+};
+
+type FrontDeskMcpCliInput = {
+  apiBaseUrl?: string;
+  workspacePath?: string;
+  sessionsLimit?: number;
+};
+
 type HostedPilotPackageCliInput = {
   outputDir: string;
   publicOrigin?: string;
@@ -163,6 +182,7 @@ type PaperclipConfigCliInput = {
   authHeaderEnv?: string;
   cookieEnv?: string;
   controlCompanyId?: string;
+  localTrustedNoAuth?: boolean;
 };
 
 type PaperclipBindCliInput = {
@@ -949,6 +969,11 @@ function parsePaperclipConfigArgs(
   for (let index = 0; index < args.length; index += 1) {
     const token = args[index];
 
+    if (token === '--local-trusted-no-auth') {
+      parsed.localTrustedNoAuth = true;
+      continue;
+    }
+
     if (!token.startsWith('--')) {
       throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
         token,
@@ -977,6 +1002,105 @@ function parsePaperclipConfigArgs(
         break;
       default:
         throw buildUsageError(`Unknown option for Paperclip config: ${token}.`, spec, {
+          option: token,
+        });
+    }
+
+    index += 1;
+  }
+
+  return parsed;
+}
+
+function parseFrontDeskLibreChatArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): FrontDeskLibreChatCliInput {
+  const parsed: FrontDeskLibreChatCliInput = {};
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    if (!token.startsWith('--')) {
+      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
+        token,
+      });
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
+        option: token,
+      });
+    }
+
+    switch (token) {
+      case '--host':
+        parsed.host = value;
+        break;
+      case '--port':
+        parsed.port = parsePort(token, value, spec);
+        break;
+      case '--path':
+        parsed.workspacePath = value;
+        break;
+      case '--sessions-limit':
+        parsed.sessionsLimit = parsePositiveInteger(token, value, spec);
+        break;
+      case '--base-path':
+        parsed.basePath = value;
+        break;
+      case '--public-origin':
+        parsed.publicOrigin = value;
+        break;
+      case '--paperclip-base-url':
+        parsed.paperclipBaseUrl = value;
+        break;
+      default:
+        throw buildUsageError(`Unknown option for frontdesk LibreChat command: ${token}.`, spec, {
+          option: token,
+        });
+    }
+
+    index += 1;
+  }
+
+  return parsed;
+}
+
+function parseFrontDeskMcpArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): FrontDeskMcpCliInput {
+  const parsed: FrontDeskMcpCliInput = {};
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (!token.startsWith('--')) {
+      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
+        token,
+      });
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
+        option: token,
+      });
+    }
+
+    switch (token) {
+      case '--api-base-url':
+        parsed.apiBaseUrl = value;
+        break;
+      case '--workspace-path':
+        parsed.workspacePath = value;
+        break;
+      case '--sessions-limit':
+        parsed.sessionsLimit = parsePositiveInteger(token, value, spec);
+        break;
+      default:
+        throw buildUsageError(`Unknown option for MCP bridge command: ${token}.`, spec, {
           option: token,
         });
     }
@@ -1465,7 +1589,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         {
           option: '--contracts-dir <path>',
           summary:
-            'Use an explicit OPL contract root. When omitted, the CLI resolves from cwd or cwd/contracts/opl-gateway.',
+            'Use an explicit OPL contract root. When omitted, the CLI resolves from cwd, cwd/contracts/opl-gateway, or the active OPL CLI repo contracts root.',
         },
       ],
       commands: Object.entries(commands).map(([command, spec]) => ({
@@ -1485,7 +1609,10 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl frontdesk-hosted-bundle --base-path /pilot/opl',
         'opl frontdesk-hosted-package --output /tmp/opl-hosted-package --public-origin https://opl.example.com --base-path /pilot/opl',
         'opl frontdesk-librechat-package --output /tmp/opl-librechat-pilot --public-origin https://opl.example.com --base-path /pilot/opl',
+        'opl frontdesk-bootstrap --path /Users/gaofeng/workspace/Yang/NF-PitNET --public-origin http://127.0.0.1:8080',
         'opl frontdesk-service-install --port 8787',
+        'opl frontdesk-librechat-install --path /Users/gaofeng/workspace/Yang/NF-PitNET --public-origin http://127.0.0.1:8080',
+        'opl frontdesk-librechat-open',
         'opl workspace-bind --project redcube --path /Users/gaofeng/workspace/redcube-ai --entry-command "redcube-ai frontdesk" --manifest-command "redcube product manifest --workspace-root /Users/gaofeng/workspace/redcube-ai"',
         'opl launch-domain --project redcube --dry-run',
         'opl paperclip-config --base-url https://paperclip.example.com --auth-header-env OPL_PAPERCLIP_AUTH_HEADER --control-company-id company-opl-control',
@@ -1840,10 +1967,11 @@ async function main() {
     },
     'paperclip-config': {
       usage:
-        'opl paperclip-config [--base-url <url>] [--auth-header-env <env>] [--cookie-env <env>] [--control-company-id <company_id>]',
+        'opl paperclip-config [--base-url <url>] [--auth-header-env <env>] [--cookie-env <env>] [--control-company-id <company_id>] [--local-trusted-no-auth]',
       summary: 'Configure the downstream Paperclip control-plane connection OPL will use for tasks and gates.',
       examples: [
         'opl paperclip-config --base-url https://paperclip.example.com --auth-header-env OPL_PAPERCLIP_AUTH_HEADER --control-company-id company-opl-control',
+        'opl paperclip-config --base-url http://127.0.0.1:3100 --control-company-id company-opl-control --local-trusted-no-auth',
       ],
       handler: (args) => {
         const contracts = getContracts();
@@ -2173,6 +2301,102 @@ async function main() {
       handler: (args) => {
         assertNoArgs(args, commandSpecs['frontdesk-service-uninstall']);
         return uninstallFrontDeskService(getContracts());
+      },
+    },
+    'frontdesk-bootstrap': {
+      usage:
+        'opl frontdesk-bootstrap [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>] [--public-origin <origin>] [--paperclip-base-url <url>]',
+      summary:
+        'Bootstrap the family front door in one shot: install the OPL workspace console, install the LibreChat shell, inherit the local Codex defaults, and bind the current workspace.',
+      examples: [
+        'opl frontdesk-bootstrap --path /Users/gaofeng/workspace/Yang/NF-PitNET',
+        'opl frontdesk-bootstrap --path /Users/gaofeng/workspace/Yang/NF-PitNET --public-origin http://127.0.0.1:8080',
+        'opl frontdesk-bootstrap --path /Users/gaofeng/workspace/Yang/NF-PitNET --paperclip-base-url http://127.0.0.1:3100',
+      ],
+      handler: (args) =>
+        installFrontDeskLibreChatService(
+          getContracts(),
+          parseFrontDeskLibreChatArgs(args, commandSpecs['frontdesk-bootstrap']),
+        ),
+    },
+    'frontdesk-librechat-install': {
+      usage:
+        'opl frontdesk-librechat-install [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>] [--public-origin <origin>] [--paperclip-base-url <url>]',
+      summary:
+        'Install and start the local LibreChat-first front door, wire it to the OPL front desk, and auto-bootstrap local trusted Paperclip when available.',
+      examples: [
+        'opl frontdesk-librechat-install --path /Users/gaofeng/workspace/Yang/NF-PitNET',
+        'opl frontdesk-librechat-install --path /Users/gaofeng/workspace/Yang/NF-PitNET --public-origin http://127.0.0.1:8080',
+        'opl frontdesk-librechat-install --path /Users/gaofeng/workspace/Yang/NF-PitNET --paperclip-base-url http://127.0.0.1:3100',
+      ],
+      handler: (args) =>
+        installFrontDeskLibreChatService(
+          getContracts(),
+          parseFrontDeskLibreChatArgs(args, commandSpecs['frontdesk-librechat-install']),
+        ),
+    },
+    'frontdesk-librechat-status': {
+      usage: 'opl frontdesk-librechat-status',
+      summary:
+        'Inspect whether the local LibreChat-first front door is installed, running, and still aligned with the OPL front desk and Paperclip bridge.',
+      examples: ['opl frontdesk-librechat-status'],
+      handler: (args) => {
+        assertNoArgs(args, commandSpecs['frontdesk-librechat-status']);
+        return getFrontDeskLibreChatServiceStatus(getContracts());
+      },
+    },
+    'frontdesk-librechat-start': {
+      usage: 'opl frontdesk-librechat-start',
+      summary: 'Start the installed local LibreChat-first front door and ensure the OPL front desk service is up.',
+      examples: ['opl frontdesk-librechat-start'],
+      handler: (args) => {
+        assertNoArgs(args, commandSpecs['frontdesk-librechat-start']);
+        return startFrontDeskLibreChatService(getContracts());
+      },
+    },
+    'frontdesk-librechat-stop': {
+      usage: 'opl frontdesk-librechat-stop',
+      summary: 'Stop the dockerized local LibreChat-first front door without removing its packaging files.',
+      examples: ['opl frontdesk-librechat-stop'],
+      handler: (args) => {
+        assertNoArgs(args, commandSpecs['frontdesk-librechat-stop']);
+        return stopFrontDeskLibreChatService(getContracts());
+      },
+    },
+    'frontdesk-librechat-open': {
+      usage: 'opl frontdesk-librechat-open',
+      summary: 'Open the local LibreChat-first front door in the default browser.',
+      examples: ['opl frontdesk-librechat-open'],
+      handler: (args) => {
+        assertNoArgs(args, commandSpecs['frontdesk-librechat-open']);
+        return openFrontDeskLibreChatService(getContracts());
+      },
+    },
+    'mcp-stdio': {
+      usage:
+        'opl mcp-stdio --api-base-url <url> [--workspace-path <workspace_path>] [--sessions-limit <n>]',
+      summary: 'Internal command: run the OPL front-desk MCP stdio bridge for chat shells such as LibreChat.',
+      examples: [
+        'opl mcp-stdio --api-base-url http://host.docker.internal:8787/pilot/opl/api',
+      ],
+      handler: async (args) => {
+        const parsed = parseFrontDeskMcpArgs(args, commandSpecs['mcp-stdio']);
+        if (!parsed.apiBaseUrl) {
+          throw buildUsageError(
+            'mcp-stdio requires --api-base-url.',
+            commandSpecs['mcp-stdio'],
+            { required: ['--api-base-url'] },
+          );
+        }
+
+        await startFrontDeskMcpBridge({
+          apiBaseUrl: parsed.apiBaseUrl,
+          workspacePath: parsed.workspacePath,
+          sessionsLimit: parsed.sessionsLimit,
+        });
+        return {
+          __handled: true as const,
+        };
       },
     },
     web: {

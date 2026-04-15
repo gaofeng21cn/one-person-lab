@@ -8,9 +8,24 @@ import {
   type HostedPilotPackageOptions,
 } from './hosted-pilot-package.ts';
 import { buildHostedRuntimeReadiness } from './management.ts';
+import {
+  buildFrontDeskLibreChatWelcome,
+  buildFrontDeskTitlePrompt,
+  OPL_FRONTDOOR_AGENT_LABEL,
+  OPL_FRONTDOOR_APP_TITLE,
+  OPL_FRONTDOOR_MCP_SERVER_KEY,
+} from './frontdesk-librechat-identity.ts';
+import {
+  readLocalCodexDefaults,
+  type LocalCodexDefaults,
+} from './local-codex-defaults.ts';
 import type { GatewayContracts } from './types.ts';
 
-export type LibreChatPilotPackageOptions = HostedPilotPackageOptions;
+export type LibreChatPilotPackageOptions = HostedPilotPackageOptions & {
+  codexDefaults?: LocalCodexDefaults;
+  workspacePath?: string;
+  activeProjectLabel?: string | null;
+};
 
 type LibreChatPilotPackageAssets = {
   readme: string;
@@ -29,6 +44,14 @@ function ensureDirectory(directory: string) {
 
 function writeExecutableFile(targetPath: string, contents: string) {
   fs.writeFileSync(targetPath, contents, { mode: 0o755 });
+}
+
+function indentBlock(contents: string, spaces = 4) {
+  const prefix = ' '.repeat(spaces);
+  return contents
+    .split('\n')
+    .map((line) => `${prefix}${line}`)
+    .join('\n');
 }
 
 function normalizePublicOrigin(origin?: string) {
@@ -93,13 +116,14 @@ What this package lands:
 - a complete LibreChat-first pilot stack for the hosted shell layer
 - a bundled OPL front-desk package under \`opl-frontdesk/\`
 - a same-origin reverse-proxy template that routes \`/\` to LibreChat and \`${options.basePath}/\` to OPL Front Desk
+- a shipped MCP stdio bridge that lets LibreChat call the OPL front desk over its existing HTTP API
 - a host bring-up guide that keeps Hermes honest as an external kernel dependency
 
 What it does **not** claim:
 
 - managed hosted runtime is still not landed
 - multi-tenant platform hosting is still not landed
-- deep in-chat OPL tool wiring inside LibreChat is still not landed
+- full platform-grade product frontdoor hardening is still not landed
 
 ## Package layout
 
@@ -146,6 +170,8 @@ What it does **not** claim:
 function buildStackEnvExample(options: {
   publicOrigin: string;
   frontdeskPort: number;
+  basePath: string;
+  codexDefaults: LocalCodexDefaults;
 }) {
   const parsed = new URL(options.publicOrigin);
   const publicHttpPort =
@@ -162,14 +188,22 @@ DOMAIN_CLIENT=${options.publicOrigin}
 DOMAIN_SERVER=${options.publicOrigin}
 TRUST_PROXY=1
 NO_INDEX=true
+ALLOW_REGISTRATION=true
+APP_TITLE=${OPL_FRONTDOOR_APP_TITLE}
+CREDS_KEY=replace_with_32_characters_minimum
+CREDS_IV=replace_with_16_characters
+JWT_SECRET=replace_with_long_random_secret
+JWT_REFRESH_SECRET=replace_with_long_random_refresh_secret
 
 # Runtime dependencies
 MONGO_URI=mongodb://mongodb:27017/LibreChat
 MEILI_MASTER_KEY=change-me
 RAG_PORT=8000
 
-# Choose and fill the providers you actually want LibreChat to expose
+# OPL Agent inherits the current Codex operator profile
 OPENAI_API_KEY=user_provided
+OPENAI_BASE_URL=${options.codexDefaults.provider_base_url ?? 'user_provided'}
+OPENAI_MODELS=${options.codexDefaults.model}
 ANTHROPIC_API_KEY=user_provided
 GOOGLE_KEY=user_provided
 
@@ -180,29 +214,39 @@ GID=1000
 # Same-origin routing to the host-side OPL front desk
 PUBLIC_HTTP_PORT=${publicHttpPort}
 OPL_FRONTDESK_UPSTREAM=host.docker.internal:${options.frontdeskPort}
+OPL_FRONTDESK_API_BASE_URL=http://host.docker.internal:${options.frontdeskPort}${options.basePath}/api
 `;
 }
 
 function buildLibreChatConfig(options: {
   publicOrigin: string;
   frontdeskEntryUrl: string;
+  codexDefaults: LocalCodexDefaults;
+  workspacePath?: string;
+  activeProjectLabel?: string | null;
 }) {
+  const welcome = buildFrontDeskLibreChatWelcome({
+    publicOrigin: options.publicOrigin,
+    frontdeskEntryUrl: options.frontdeskEntryUrl,
+    codexDefaults: options.codexDefaults,
+    workspacePath: options.workspacePath,
+    activeProjectLabel: options.activeProjectLabel,
+  });
+  const titlePrompt = buildFrontDeskTitlePrompt();
+  const reasoningEffortLine = options.codexDefaults.reasoning_effort
+    ? `\n        reasoning_effort: ${options.codexDefaults.reasoning_effort}`
+    : '';
+
   return `version: 1.3.8
 
 cache: true
 
 interface:
   customWelcome: |
-    Welcome to the OPL hosted pilot.
-
-    LibreChat is the outer hosted shell for general conversation and session handling.
-    The OPL Front Desk remains the routed gateway for workspace-aware entry, handoff, runtime visibility, and family-level control:
-
-    - Public shell: ${options.publicOrigin}/
-    - OPL Front Desk: ${options.frontdeskEntryUrl}
-  modelSelect: true
-  parameters: true
-  presets: true
+${indentBlock(welcome)}
+  modelSelect: false
+  parameters: false
+  presets: false
   bookmarks: true
   multiConvo: true
   prompts:
@@ -215,13 +259,55 @@ interface:
     create: false
     share: false
     public: false
+  mcpServers:
+    use: true
+    create: false
+    share: false
+    public: false
+
+endpoints:
+  openAI:
+    titleConvo: true
+    titleModel: ${options.codexDefaults.model}
+    titleMethod: completion
+    titlePrompt: |
+${indentBlock(titlePrompt, 6)}
+    modelDisplayLabel: ${OPL_FRONTDOOR_AGENT_LABEL}
+
+modelSpecs:
+  enforce: true
+  prioritize: true
+  list:
+    - name: opl_agent
+      label: ${OPL_FRONTDOOR_AGENT_LABEL}
+      default: true
+      description: Unified family front door that inherits the current Codex operator profile.
+      mcpServers:
+        - ${OPL_FRONTDOOR_MCP_SERVER_KEY}
+      preset:
+        endpoint: openAI
+        model: ${options.codexDefaults.model}
+        modelLabel: ${OPL_FRONTDOOR_AGENT_LABEL}${reasoningEffortLine}
 
 registration:
   socialLogins: ['github']
+
+mcpServers:
+  ${OPL_FRONTDOOR_MCP_SERVER_KEY}:
+    type: stdio
+    command: node
+    args:
+      - /app/opl-frontdesk/dist/cli.js
+      - mcp-stdio
+      - --api-base-url
+      - \${OPL_FRONTDESK_API_BASE_URL}
 `;
 }
 
-function buildComposeFile() {
+function buildComposeFile(options: {
+  frontdeskPort: number;
+  basePath: string;
+}) {
   return `services:
   librechat:
     image: registry.librechat.ai/danny-avila/librechat-dev:latest
@@ -237,6 +323,7 @@ function buildComposeFile() {
       RAG_PORT: \${RAG_PORT:-8000}
       RAG_API_URL: http://rag_api:\${RAG_PORT:-8000}
       CONFIG_PATH: /app/librechat.yaml
+      OPL_FRONTDESK_API_BASE_URL: http://host.docker.internal:${options.frontdeskPort}${options.basePath}/api
     volumes:
       - type: bind
         source: ./librechat.yaml
@@ -244,6 +331,7 @@ function buildComposeFile() {
       - ./images:/app/client/public/images
       - ./uploads:/app/uploads
       - ./logs:/app/logs
+      - ../opl-frontdesk/app:/app/opl-frontdesk:ro
     depends_on:
       - mongodb
       - rag_api
@@ -295,7 +383,7 @@ function buildComposeFile() {
     environment:
       OPL_FRONTDESK_UPSTREAM: \${OPL_FRONTDESK_UPSTREAM}
     ports:
-      - "\${PUBLIC_HTTP_PORT:-8080}:80"
+      - "\${PUBLIC_HTTP_PORT:-8080}:\${PUBLIC_HTTP_PORT:-8080}"
     volumes:
       - type: bind
         source: ./Caddyfile
@@ -349,6 +437,7 @@ export function buildLibreChatPilotPackage(
   contracts: GatewayContracts,
   options: LibreChatPilotPackageOptions,
 ) {
+  const codexDefaults = options.codexDefaults ?? readLocalCodexDefaults();
   const outputDir = path.resolve(options.outputDir);
   const basePath = normalizeBasePath(options.basePath || '/pilot/opl');
 
@@ -409,6 +498,8 @@ export function buildLibreChatPilotPackage(
     buildStackEnvExample({
       publicOrigin,
       frontdeskPort: port,
+      basePath,
+      codexDefaults,
     }),
   );
   fs.writeFileSync(
@@ -416,9 +507,18 @@ export function buildLibreChatPilotPackage(
     buildLibreChatConfig({
       publicOrigin,
       frontdeskEntryUrl,
+      codexDefaults,
+      workspacePath: options.workspacePath,
+      activeProjectLabel: options.activeProjectLabel,
     }),
   );
-  fs.writeFileSync(composeFilePath, buildComposeFile());
+  fs.writeFileSync(
+    composeFilePath,
+    buildComposeFile({
+      frontdeskPort: port,
+      basePath,
+    }),
+  );
   fs.writeFileSync(
     caddyfilePath,
     buildCaddyfile({

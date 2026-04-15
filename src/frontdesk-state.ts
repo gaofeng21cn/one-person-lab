@@ -8,6 +8,8 @@ export type FrontDeskStatePaths = {
   workspace_registry_file: string;
   session_ledger_file: string;
   service_config_file: string;
+  librechat_service_file: string;
+  librechat_pilot_root: string;
   paperclip_control_plane_file: string;
   paperclip_projection_registry_file: string;
   paperclip_operator_loop_file: string;
@@ -24,6 +26,8 @@ export function resolveFrontDeskStatePaths(): FrontDeskStatePaths {
     workspace_registry_file: path.join(stateDir, 'workspace-registry.json'),
     session_ledger_file: path.join(stateDir, 'session-ledger.json'),
     service_config_file: path.join(stateDir, 'service-config.json'),
+    librechat_service_file: path.join(stateDir, 'librechat-service.json'),
+    librechat_pilot_root: path.join(stateDir, 'librechat-pilot'),
     paperclip_control_plane_file: path.join(stateDir, 'paperclip-control-plane.json'),
     paperclip_projection_registry_file: path.join(stateDir, 'paperclip-projection-registry.json'),
     paperclip_operator_loop_file: path.join(stateDir, 'paperclip-operator-loop.json'),
