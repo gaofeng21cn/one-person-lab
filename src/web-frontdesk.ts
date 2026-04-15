@@ -23,6 +23,7 @@ import {
 } from './management.ts';
 import { buildDomainManifestCatalog } from './domain-manifest.ts';
 import { launchDomainEntry, type DomainLaunchStrategy } from './domain-launch.ts';
+import { getFrontDeskLibreChatServiceStatus } from './frontdesk-librechat-service.ts';
 import { buildHostedPilotPackage } from './hosted-pilot-package.ts';
 import { buildLibreChatPilotPackage } from './librechat-pilot-package.ts';
 import { buildPaperclipBootstrap, syncPaperclipProjections } from './paperclip-control-plane.ts';
@@ -155,6 +156,7 @@ type WebFrontDeskStartupPayload = {
       frontdesk_manifest: string;
       frontdesk_entry_guide: string;
       frontdesk_readiness: string;
+      frontdesk_librechat_status: string;
       project_progress: string;
       frontdesk_domain_wiring: string;
       domain_manifests: string;
@@ -216,12 +218,64 @@ type WebFrontDeskContext = {
   sessionsLimit: number;
 };
 
+type RecommendedEntrySurface = Record<string, unknown>;
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function normalizeOptionalString(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+function getRecommendedEntryLocator(entry: RecommendedEntrySurface) {
+  const locator = isRecord(entry.active_binding_locator) ? entry.active_binding_locator : {};
+
+  return {
+    status: normalizeOptionalString(entry.active_binding_locator_status),
+    projectId: normalizeOptionalString(entry.project_id),
+    project: normalizeOptionalString(entry.project),
+    summary: normalizeOptionalString(entry.product_entry_status_summary),
+    recommendedModeId: isRecord(entry.product_entry_start)
+      ? normalizeOptionalString(entry.product_entry_start.recommended_mode_id)
+      : undefined,
+    url: normalizeOptionalString(locator.url),
+    command: normalizeOptionalString(locator.command),
+    manifestCommand: normalizeOptionalString(locator.manifest_command),
+  };
+}
+
+function pickPreferredRecommendedEntry(recommendedEntrySurfaces: unknown) {
+  if (!Array.isArray(recommendedEntrySurfaces)) {
+    return null;
+  }
+
+  const entries = recommendedEntrySurfaces.filter((entry): entry is RecommendedEntrySurface => isRecord(entry));
+
+  return (
+    entries.find((entry) => Boolean(getRecommendedEntryLocator(entry).url))
+    ?? entries.find((entry) => Boolean(getRecommendedEntryLocator(entry).command))
+    ?? entries.find((entry) => getRecommendedEntryLocator(entry).status === 'ready')
+    ?? entries[0]
+    ?? null
+  );
+}
+
+function pickPreferredLaunchStrategy(entry: RecommendedEntrySurface | null): DomainLaunchStrategy | null {
+  if (!entry) {
+    return null;
+  }
+
+  const locator = getRecommendedEntryLocator(entry);
+  if (locator.url) {
+    return 'open_url';
+  }
+
+  if (locator.command) {
+    return 'spawn_command';
+  }
+
+  return null;
 }
 
 function normalizeSkills(value: unknown) {
@@ -573,6 +627,7 @@ function buildStartupPayload(context: WebFrontDeskContext): WebFrontDeskStartupP
         frontdesk_manifest: manifest.frontdesk_manifest.endpoints.manifest,
         frontdesk_entry_guide: endpoints.frontdesk_entry_guide,
         frontdesk_readiness: endpoints.frontdesk_readiness,
+        frontdesk_librechat_status: endpoints.frontdesk_librechat_status,
         project_progress: endpoints.project_progress,
         frontdesk_domain_wiring: endpoints.frontdesk_domain_wiring,
         domain_manifests: endpoints.domain_manifests,
@@ -631,6 +686,12 @@ function escapeHtml(value: string) {
 
 async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
   const bootstrap = buildStartupPayload(context);
+  const libreChatStatusPayload = (await getFrontDeskLibreChatServiceStatus(context.contracts)).frontdesk_librechat;
+  const frontdeskDashboard = buildFrontDeskDashboard(context.contracts, {
+    workspacePath: context.workspacePath,
+    sessionsLimit: context.sessionsLimit,
+    basePath: context.basePath,
+  }).dashboard;
   const progressPayload = await buildProjectProgressBrief(context.contracts, {
     workspacePath: context.workspacePath,
     sessionsLimit: context.sessionsLimit,
@@ -649,6 +710,10 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
     {
       label: 'Frontdesk readiness',
       href: bootstrap.web_frontdesk.api.frontdesk_readiness,
+    },
+    {
+      label: 'Hosted shell status',
+      href: bootstrap.web_frontdesk.api.frontdesk_librechat_status,
     },
     {
       label: 'Frontdesk domain wiring',
@@ -681,6 +746,40 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       ? progress.current_project.label
       : 'Unbound workspace',
   );
+  const preferredRecommendedEntry = pickPreferredRecommendedEntry(
+    frontdeskDashboard.front_desk.recommended_entry_surfaces,
+  );
+  const preferredRecommendedLocator = preferredRecommendedEntry
+    ? getRecommendedEntryLocator(preferredRecommendedEntry)
+    : null;
+  const preferredEntryProjectLabel = escapeHtml(
+    preferredRecommendedLocator?.projectId
+    ?? preferredRecommendedLocator?.project
+    ?? 'current domain project',
+  );
+  const preferredEntryLaunchStrategy = preferredRecommendedEntry
+    ? pickPreferredLaunchStrategy(preferredRecommendedEntry)
+    : null;
+  const preferredEntryCallout = preferredRecommendedLocator
+    ? `
+        <div class="detail-grid" style="margin-top: 16px;">
+          <div class="meta-card">
+            <span class="meta-label">Bound direct entry</span>
+            <div>${preferredEntryProjectLabel}</div>
+            ${preferredRecommendedLocator.url ? `<div>${escapeHtml(preferredRecommendedLocator.url)}</div>` : ''}
+            ${preferredRecommendedLocator.command ? `<div><code>${escapeHtml(preferredRecommendedLocator.command)}</code></div>` : ''}
+          </div>
+          <div class="meta-card">
+            <span class="meta-label">Preferred launch</span>
+            <div>${preferredEntryLaunchStrategy ? `<code>${preferredEntryLaunchStrategy}</code>` : 'Resolve after binding a launchable locator.'}</div>
+            ${preferredRecommendedLocator.recommendedModeId ? `<div>Start mode: <code>${escapeHtml(preferredRecommendedLocator.recommendedModeId)}</code></div>` : ''}
+            ${preferredRecommendedLocator.summary ? `<div>${escapeHtml(preferredRecommendedLocator.summary)}</div>` : ''}
+          </div>
+        </div>
+        ${preferredRecommendedLocator.url
+          ? `<a class="entry-link secondary-entry-link" href="${escapeHtml(preferredRecommendedLocator.url)}">Open ${preferredEntryProjectLabel} direct entry</a>`
+          : ''}`
+    : '';
   const progressSummary = escapeHtml(
     typeof progress.progress_summary === 'string'
       ? progress.progress_summary
@@ -690,6 +789,18 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
     typeof progress.next_focus === 'string'
       ? progress.next_focus
       : 'Ask OPL Agent for the next study step.',
+  );
+  const hostedShellSummary = escapeHtml([
+    libreChatStatusPayload.installed ? 'installed' : 'not installed',
+    libreChatStatusPayload.running ? 'running' : 'stopped',
+    typeof libreChatStatusPayload.identity?.sync_status === 'string'
+      ? `identity ${libreChatStatusPayload.identity.sync_status}`
+      : null,
+  ].filter(Boolean).join(' · '));
+  const hostedShellOrigin = escapeHtml(
+    typeof libreChatStatusPayload.public_origin === 'string'
+      ? libreChatStatusPayload.public_origin
+      : '当前还没有记录 hosted shell public origin。',
   );
   const recentActivity = progress.recent_activity
     && typeof progress.recent_activity === 'object'
@@ -799,6 +910,87 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
       .map((entry) => escapeHtml(entry))
     : [];
+  const bindingGuideSummary = escapeHtml(
+    [
+      `当前 registry 里有 ${frontdeskDashboard.workspace_catalog.summary.total_projects_count} 个 project surface`,
+      `${frontdeskDashboard.workspace_catalog.summary.active_projects_count} 个已激活 workspace binding`,
+      `${frontdeskDashboard.workspace_catalog.summary.direct_entry_ready_projects_count} 个已具备 direct entry`,
+      `${frontdeskDashboard.workspace_catalog.summary.manifest_ready_projects_count} 个已具备 manifest command`,
+    ].join('；'),
+  );
+  const bindingGuideCards = frontdeskDashboard.workspace_catalog.projects
+    .filter((project) => project.project_id !== 'opl')
+    .map((project) => {
+      const contract = project.binding_contract;
+      const requiredFields = contract.required_locator_fields.length > 0
+        ? contract.required_locator_fields.map((field) => `<code>${escapeHtml(field)}</code>`).join(', ')
+        : 'none';
+      const optionalFields = contract.optional_locator_fields.length > 0
+        ? contract.optional_locator_fields.map((field) => `<code>${escapeHtml(field)}</code>`).join(', ')
+        : 'none';
+      const activeBindingSummary = project.active_binding
+        ? `<div>${escapeHtml(project.active_binding.workspace_path)}</div>`
+        : '<div>当前还没有 active binding。</div>';
+
+      return `
+          <div class="meta-card">
+            <span class="meta-label">${escapeHtml(project.project)}</span>
+            <div><strong>Locator kind:</strong> ${escapeHtml(contract.workspace_locator_surface_kind ?? 'none')}</div>
+            <div><strong>Required:</strong> ${requiredFields}</div>
+            <div><strong>Optional:</strong> ${optionalFields}</div>
+            ${contract.derived_frontdesk_command_template
+              ? `<div><strong>Frontdesk:</strong> <code>${escapeHtml(contract.derived_frontdesk_command_template)}</code></div>`
+              : ''}
+            ${contract.derived_manifest_command_template
+              ? `<div><strong>Manifest:</strong> <code>${escapeHtml(contract.derived_manifest_command_template)}</code></div>`
+              : ''}
+            <div><strong>Quick bind:</strong> ${escapeHtml(contract.quick_bind_hint)}</div>
+            <div><strong>Current active binding:</strong></div>
+            ${activeBindingSummary}
+          </div>`;
+    })
+    .join('');
+  const latestLedgerSession = frontdeskDashboard.runtime_status.managed_session_ledger.sessions[0] ?? null;
+  const latestLedgerResourceTotals = latestLedgerSession?.resource_totals ?? null;
+  const sessionResourceSummary = escapeHtml(
+    [
+      `${frontdeskDashboard.runtime_status.managed_session_ledger.summary.entry_count} 条 ledger event`,
+      `${frontdeskDashboard.runtime_status.managed_session_ledger.summary.session_aggregate_count} 个 session aggregate`,
+      latestLedgerResourceTotals
+        ? `latest sample ${latestLedgerResourceTotals.latest_sample_status}`
+        : '当前还没有 session resource sample',
+      frontdeskDashboard.runtime_status.managed_session_ledger.summary.peak_total_rss_kb !== null
+        ? `peak RSS ${frontdeskDashboard.runtime_status.managed_session_ledger.summary.peak_total_rss_kb} KB`
+        : 'peak RSS n/a',
+      frontdeskDashboard.runtime_status.managed_session_ledger.summary.peak_total_cpu_percent !== null
+        ? `peak CPU ${frontdeskDashboard.runtime_status.managed_session_ledger.summary.peak_total_cpu_percent}%`
+        : 'peak CPU n/a',
+    ].join('；'),
+  );
+  const latestLedgerSessionId = escapeHtml(latestLedgerSession?.session_id ?? 'n/a');
+  const latestLedgerDomain = escapeHtml(latestLedgerSession?.domain_id ?? 'unassigned');
+  const latestLedgerWorkspace = escapeHtml(latestLedgerSession?.workspace_locator?.absolute_path ?? 'n/a');
+  const latestLedgerSampleStatus = escapeHtml(latestLedgerResourceTotals?.latest_sample_status ?? 'n/a');
+  const latestLedgerLatestRss = escapeHtml(
+    typeof latestLedgerResourceTotals?.latest_total_rss_kb === 'number'
+      ? `${latestLedgerResourceTotals.latest_total_rss_kb} KB`
+      : 'n/a',
+  );
+  const latestLedgerLatestCpu = escapeHtml(
+    typeof latestLedgerResourceTotals?.latest_total_cpu_percent === 'number'
+      ? `${latestLedgerResourceTotals.latest_total_cpu_percent}%`
+      : 'n/a',
+  );
+  const latestLedgerPeakRss = escapeHtml(
+    typeof latestLedgerResourceTotals?.peak_total_rss_kb === 'number'
+      ? `${latestLedgerResourceTotals.peak_total_rss_kb} KB`
+      : 'n/a',
+  );
+  const latestLedgerPeakCpu = escapeHtml(
+    typeof latestLedgerResourceTotals?.peak_total_cpu_percent === 'number'
+      ? `${latestLedgerResourceTotals.peak_total_cpu_percent}%`
+      : 'n/a',
+  );
 
   return `<!doctype html>
 <html lang="en">
@@ -888,6 +1080,19 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         color: #f5f8f7;
         text-decoration: none;
         font-weight: 600;
+      }
+
+      .entry-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .secondary-entry-link {
+        background: rgba(31, 107, 90, 0.08);
+        color: var(--accent-strong);
+        border: 1px solid rgba(31, 107, 90, 0.22);
       }
 
       .meta {
@@ -1023,7 +1228,10 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         <p class="lede">
           这里负责给当前项目做人类可读的进度概览。自然语言交互走聊天界面，这一页负责把论文状态、卡点和可审阅路径讲明白。
         </p>
-        <a class="entry-link" href="/login">Open OPL Agent</a>
+        <div class="entry-actions">
+          <a class="entry-link" href="/login">Open OPL Agent</a>
+          ${preferredEntryCallout}
+        </div>
       </section>
 
       <section class="panel">
@@ -1045,6 +1253,49 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
             <span class="meta-label">Latest runtime activity</span>
             <div>${recentActivityText}</div>
           </div>
+          <div class="meta-card">
+            <span class="meta-label">Hosted shell</span>
+            <div>${hostedShellSummary}</div>
+          </div>
+          <div class="meta-card">
+            <span class="meta-label">Hosted shell origin</span>
+            <div>${hostedShellOrigin}</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Binding Guide</h2>
+        <p class="status-copy">${bindingGuideSummary}</p>
+        <p class="muted" style="margin-top: 12px;">
+          这里冻结的是 OPL 如何从 workspace registry 诚实派生各业务仓 direct entry / manifest locator；不是把 OPL 写成 domain runtime owner。
+        </p>
+        <div class="detail-grid" style="margin-top: 16px;">
+          ${bindingGuideCards}
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Session Resource Attribution</h2>
+        <p class="status-copy">${sessionResourceSummary}</p>
+        <p class="muted" style="margin-top: 12px;">
+          这里只显示 OPL 管理 session 的事件时采样，用来做可读归因；不声称是 Hermes kernel 的全局计费真相。
+        </p>
+        <div class="detail-grid" style="margin-top: 16px;">
+          <div class="meta-card">
+            <span class="meta-label">Latest session aggregate</span>
+            <div><strong>Session ID:</strong> ${latestLedgerSessionId}</div>
+            <div><strong>Domain:</strong> ${latestLedgerDomain}</div>
+            <div><strong>Workspace:</strong> ${latestLedgerWorkspace}</div>
+            <div><strong>Latest sample:</strong> ${latestLedgerSampleStatus}</div>
+          </div>
+          <div class="meta-card">
+            <span class="meta-label">Latest resource sample</span>
+            <div><strong>Latest RSS:</strong> ${latestLedgerLatestRss}</div>
+            <div><strong>Latest CPU:</strong> ${latestLedgerLatestCpu}</div>
+            <div><strong>Peak RSS:</strong> ${latestLedgerPeakRss}</div>
+            <div><strong>Peak CPU:</strong> ${latestLedgerPeakCpu}</div>
+          </div>
         </div>
       </section>
 
@@ -1058,7 +1309,7 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
           </div>
           <div class="meta-card">
             <span class="meta-label">Hosted shell status</span>
-            <div>${bootstrap.web_frontdesk.hosted_status}</div>
+            <div>${hostedShellSummary}</div>
           </div>
         </div>
         <div class="detail-grid" style="margin-top: 16px;">
@@ -2065,6 +2316,30 @@ function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
         return '<div class="card-list">' + items.join('') + '</div>';
       }
 
+      function pickPreferredRecommendedEntry(entries) {
+        if (!Array.isArray(entries) || entries.length === 0) {
+          return null;
+        }
+
+        return entries.find((entry) => entry?.active_binding_locator?.url)
+          || entries.find((entry) => entry?.active_binding_locator?.command)
+          || entries.find((entry) => entry?.active_binding_locator_status === 'ready')
+          || entries[0]
+          || null;
+      }
+
+      function pickRecommendedLaunchStrategy(entry) {
+        if (entry?.active_binding_locator?.url) {
+          return 'open_url';
+        }
+
+        if (entry?.active_binding_locator?.command) {
+          return 'spawn_command';
+        }
+
+        return '';
+      }
+
       function getWorkspaceBindingLabel(binding) {
         const project = binding.project || binding.project_id || 'unknown-project';
         const label = binding.label ? ' · ' + binding.label : '';
@@ -2716,15 +2991,17 @@ function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
         metricSessions.textContent = String(dashboard.runtime_status.recent_sessions.sessions.length);
         metricProcesses.textContent = String(dashboard.runtime_status.process_usage.summary.process_count);
         runtimeNote.textContent = dashboard.runtime_status.notes.join(' ');
-        const recommendedStart = Array.isArray(dashboard.front_desk.recommended_entry_surfaces)
-          ? dashboard.front_desk.recommended_entry_surfaces[0] || null
-          : null;
+        const recommendedStart = pickPreferredRecommendedEntry(dashboard.front_desk.recommended_entry_surfaces);
         if (recommendedStart) {
+          const preferredLaunchStrategy = pickRecommendedLaunchStrategy(recommendedStart);
           if (!startProjectInput.value.trim()) {
             startProjectInput.value = String(recommendedStart.project_id || '');
           }
           if (!launchProjectInput.value.trim()) {
             launchProjectInput.value = String(recommendedStart.project_id || '');
+          }
+          if (!launchStrategyInput.value.trim() || launchStrategyInput.value.trim() === 'auto') {
+            launchStrategyInput.value = preferredLaunchStrategy || 'auto';
           }
           if (!startModeInput.value.trim() && recommendedStart.product_entry_start?.recommended_mode_id) {
             startModeInput.value = String(recommendedStart.product_entry_start.recommended_mode_id);
@@ -2740,12 +3017,41 @@ function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
                   + String(recommendedStart.product_entry_start.recommended_mode_id)
                   + '</code></p>'
                 : '',
+              recommendedStart.active_binding_locator?.url
+                ? '<p><strong>Bound direct entry:</strong> ' + String(recommendedStart.active_binding_locator.url) + '</p>'
+                : '',
+              recommendedStart.active_binding_locator?.command
+                ? '<p><strong>Bound direct command:</strong> <code>'
+                  + String(recommendedStart.active_binding_locator.command)
+                  + '</code></p>'
+                : '',
             ].filter(Boolean).join('');
             startCommand.innerHTML = recommendedStart.product_entry_start?.modes?.length
               ? '<p><strong>Available Modes:</strong> '
                 + recommendedStart.product_entry_start.modes.map((mode) => '<code>' + String(mode.mode_id) + '</code>').join(', ')
                 + '</p>'
               : 'Choose a project and resolve its current start surface.';
+          }
+          if (launchJson.textContent === '{}' || launchJson.textContent === '') {
+            launchSummary.innerHTML = [
+              '<p><strong>Bound direct entry:</strong> ' + String(recommendedStart.project || recommendedStart.project_id) + '</p>',
+              preferredLaunchStrategy
+                ? '<p><strong>Preferred Strategy:</strong> <code>' + preferredLaunchStrategy + '</code></p>'
+                : '',
+              recommendedStart.active_binding_locator?.url
+                ? '<p><strong>Direct Entry URL:</strong> ' + String(recommendedStart.active_binding_locator.url) + '</p>'
+                : '',
+              recommendedStart.active_binding_locator?.command
+                ? '<p><strong>Direct Entry Command:</strong> <code>'
+                  + String(recommendedStart.active_binding_locator.command)
+                  + '</code></p>'
+                : '',
+            ].filter(Boolean).join('');
+            launchAction.innerHTML = recommendedStart.active_binding_locator?.manifest_command
+              ? '<p><strong>Manifest Command:</strong> <code>'
+                + String(recommendedStart.active_binding_locator.manifest_command)
+                + '</code></p>'
+              : 'Preview or launch a bound domain entry to inspect the selected action.';
           }
         }
         renderHostedRuntimeReadiness(dashboard.front_desk.hosted_runtime_readiness);
@@ -3503,6 +3809,11 @@ async function handleRequest(
           basePath: context.basePath,
         }),
       );
+      return;
+    }
+
+    if (method === 'GET' && routedPath === '/api/frontdesk-librechat-status') {
+      writeJson(response, 200, await getFrontDeskLibreChatServiceStatus(context.contracts));
       return;
     }
 

@@ -3,6 +3,7 @@ export type FrontDeskEndpoints = {
   manifest: string;
   frontdesk_entry_guide: string;
   frontdesk_readiness: string;
+  frontdesk_librechat_status: string;
   project_progress: string;
   domain_manifests: string;
   hosted_bundle: string;
@@ -50,6 +51,7 @@ export function buildFrontDeskEndpoints(basePath = ''): FrontDeskEndpoints {
     manifest: `${apiBase}/frontdesk-manifest`,
     frontdesk_entry_guide: `${apiBase}/frontdesk-entry-guide`,
     frontdesk_readiness: `${apiBase}/frontdesk-readiness`,
+    frontdesk_librechat_status: `${apiBase}/frontdesk-librechat-status`,
     project_progress: `${apiBase}/project-progress`,
     domain_manifests: `${apiBase}/domain-manifests`,
     hosted_bundle: `${apiBase}/hosted-bundle`,
