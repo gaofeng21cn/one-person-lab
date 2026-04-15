@@ -11,13 +11,25 @@ import {
   startFrontDeskService,
 } from './frontdesk-service.ts';
 import { resolveFrontDeskStatePaths, ensureFrontDeskStateDir } from './frontdesk-state.ts';
+import {
+  OPL_FRONTDOOR_AGENT_LABEL,
+  OPL_FRONTDOOR_APP_TITLE,
+  OPL_FRONTDOOR_MCP_SERVER_KEY,
+  OPL_FRONTDOOR_MCP_SERVER_LABEL,
+} from './frontdesk-librechat-identity.ts';
 import { buildLibreChatPilotPackage } from './librechat-pilot-package.ts';
+import {
+  readLocalCodexDefaults,
+  readLocalCodexDefaultsIfAvailable,
+  type LocalCodexDefaults,
+} from './local-codex-defaults.ts';
 import type { GatewayContracts } from './types.ts';
 import {
   bootstrapLocalPaperclipControlPlane,
   buildPaperclipControlPlaneSummary,
   type PaperclipControlPlaneSummary,
 } from './paperclip-control-plane.ts';
+import { bindWorkspace } from './workspace-registry.ts';
 
 export type FrontDeskLibreChatServiceOptions = {
   host?: string;
@@ -45,6 +57,15 @@ type LibreChatServiceConfigFile = {
   caddyfile: string;
   run_script: string;
   frontdesk_api_base_url: string;
+  app_title: string;
+  model_display_label: string;
+  mcp_server_key: string;
+  mcp_server_label: string;
+  codex_config_file: string | null;
+  codex_model: string | null;
+  codex_reasoning_effort: string | null;
+  active_project_id: string | null;
+  active_project_label: string | null;
 };
 
 type DockerComposeServiceState = {
@@ -57,6 +78,12 @@ type CommandResult = {
   exitCode: number;
   stdout: string;
   stderr: string;
+};
+
+type ActiveProjectBinding = {
+  project_id: string;
+  project: string;
+  workspace_path: string;
 };
 
 function debugLog(message: string, details: Record<string, unknown> = {}) {
@@ -103,6 +130,10 @@ function getOpenBinary() {
 function normalizeOptionalString(value?: string | null) {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
+}
+
+function shellSingleQuote(value: string) {
+  return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
 function normalizeBasePath(basePath?: string | null) {
@@ -190,7 +221,73 @@ function randomHex(bytes: number) {
   return randomBytes(bytes).toString('hex');
 }
 
-function buildRuntimeEnvFile(config: LibreChatServiceConfigFile) {
+function resolveMasWorkspaceProfile(workspacePath: string) {
+  const sharedPath = path.join(workspacePath, 'ops', 'medautoscience', 'bin', '_shared.sh');
+  const profilesRoot = path.join(workspacePath, 'ops', 'medautoscience', 'profiles');
+
+  if (!fs.existsSync(sharedPath) || !fs.existsSync(profilesRoot) || !fs.statSync(profilesRoot).isDirectory()) {
+    return null;
+  }
+
+  const defaultProfile = path.join(profilesRoot, 'nfpitnet.workspace.toml');
+  if (fs.existsSync(defaultProfile)) {
+    return {
+      sharedPath,
+      profilePath: defaultProfile,
+    };
+  }
+
+  const profilePath = fs.readdirSync(profilesRoot)
+    .filter((entry) => entry.endsWith('.workspace.toml'))
+    .sort()
+    .map((entry) => path.join(profilesRoot, entry))
+    .find((candidate) => fs.statSync(candidate).isFile());
+
+  if (!profilePath) {
+    return null;
+  }
+
+  return {
+    sharedPath,
+    profilePath,
+  };
+}
+
+function syncMasWorkspaceBinding(
+  contracts: GatewayContracts,
+  workspacePath: string,
+  publicOrigin: string,
+) {
+  const profile = resolveMasWorkspaceProfile(workspacePath);
+  if (!profile) {
+    return null;
+  }
+
+  const payload = bindWorkspace(contracts, {
+    projectId: 'medautoscience',
+    workspacePath,
+    entryCommand:
+      `source ${shellSingleQuote(profile.sharedPath)}`
+      + ` && run_medautosci product-frontdesk --profile ${shellSingleQuote(profile.profilePath)}`,
+    manifestCommand:
+      `source ${shellSingleQuote(profile.sharedPath)}`
+      + ` && run_medautosci product-entry-manifest --profile ${shellSingleQuote(profile.profilePath)} --format json`,
+    entryUrl: publicOrigin,
+  });
+
+  return payload.workspace_catalog.binding
+    ? {
+        project_id: payload.workspace_catalog.binding.project_id,
+        project: payload.workspace_catalog.binding.project,
+        workspace_path: payload.workspace_catalog.binding.workspace_path,
+      } satisfies ActiveProjectBinding
+    : null;
+}
+
+function buildRuntimeEnvFile(
+  config: LibreChatServiceConfigFile,
+  codexDefaults: LocalCodexDefaults,
+) {
   const publicOrigin = new URL(config.public_origin);
   const publicHttpPort =
     publicOrigin.port.length > 0
@@ -209,6 +306,7 @@ function buildRuntimeEnvFile(config: LibreChatServiceConfigFile) {
     ['TRUST_PROXY', '1'],
     ['NO_INDEX', 'true'],
     ['ALLOW_REGISTRATION', 'true'],
+    ['APP_TITLE', config.app_title],
     ['CREDS_KEY', randomHex(24)],
     ['CREDS_IV', randomHex(8)],
     ['JWT_SECRET', randomHex(32)],
@@ -216,8 +314,9 @@ function buildRuntimeEnvFile(config: LibreChatServiceConfigFile) {
     ['MONGO_URI', 'mongodb://mongodb:27017/LibreChat'],
     ['MEILI_MASTER_KEY', randomHex(16)],
     ['RAG_PORT', '8000'],
-    ['OPENAI_API_KEY', hermesEnv.OPENAI_API_KEY ?? 'user_provided'],
-    ['OPENAI_BASE_URL', hermesEnv.OPENAI_BASE_URL ?? 'user_provided'],
+    ['OPENAI_API_KEY', codexDefaults.provider_api_key ?? hermesEnv.OPENAI_API_KEY ?? 'user_provided'],
+    ['OPENAI_BASE_URL', codexDefaults.provider_base_url ?? hermesEnv.OPENAI_BASE_URL ?? 'user_provided'],
+    ['OPENAI_MODELS', codexDefaults.model],
     ['ANTHROPIC_API_KEY', hermesEnv.ANTHROPIC_API_KEY ?? 'user_provided'],
     ['GOOGLE_KEY', hermesEnv.GOOGLE_KEY ?? 'user_provided'],
     ['UID', uid],
@@ -274,6 +373,26 @@ function readLibreChatConfigFile(): LibreChatServiceConfigFile | null {
       caddyfile: parsed.caddyfile,
       run_script: parsed.run_script,
       frontdesk_api_base_url: parsed.frontdesk_api_base_url,
+      app_title: typeof parsed.app_title === 'string' ? parsed.app_title : OPL_FRONTDOOR_APP_TITLE,
+      model_display_label:
+        typeof parsed.model_display_label === 'string' ? parsed.model_display_label : OPL_FRONTDOOR_AGENT_LABEL,
+      mcp_server_key:
+        typeof parsed.mcp_server_key === 'string' ? parsed.mcp_server_key : OPL_FRONTDOOR_MCP_SERVER_KEY,
+      mcp_server_label:
+        typeof parsed.mcp_server_label === 'string' ? parsed.mcp_server_label : OPL_FRONTDOOR_MCP_SERVER_LABEL,
+      codex_config_file: normalizeOptionalString(
+        typeof parsed.codex_config_file === 'string' ? parsed.codex_config_file : null,
+      ),
+      codex_model: normalizeOptionalString(typeof parsed.codex_model === 'string' ? parsed.codex_model : null),
+      codex_reasoning_effort: normalizeOptionalString(
+        typeof parsed.codex_reasoning_effort === 'string' ? parsed.codex_reasoning_effort : null,
+      ),
+      active_project_id: normalizeOptionalString(
+        typeof parsed.active_project_id === 'string' ? parsed.active_project_id : null,
+      ),
+      active_project_label: normalizeOptionalString(
+        typeof parsed.active_project_label === 'string' ? parsed.active_project_label : null,
+      ),
     };
   } catch (error) {
     throw new GatewayContractError(
@@ -355,6 +474,76 @@ function runDockerCompose(config: LibreChatServiceConfigFile, command: 'up' | 'd
   return result;
 }
 
+function mergeInstalledFrontDoorConfig(
+  config: LibreChatServiceConfigFile,
+  codexDefaults: LocalCodexDefaults,
+  activeBinding: ActiveProjectBinding | null,
+) {
+  return {
+    ...config,
+    app_title: OPL_FRONTDOOR_APP_TITLE,
+    model_display_label: OPL_FRONTDOOR_AGENT_LABEL,
+    mcp_server_key: OPL_FRONTDOOR_MCP_SERVER_KEY,
+    mcp_server_label: OPL_FRONTDOOR_MCP_SERVER_LABEL,
+    codex_config_file: codexDefaults.config_path,
+    codex_model: codexDefaults.model,
+    codex_reasoning_effort: codexDefaults.reasoning_effort,
+    active_project_id: activeBinding?.project_id ?? null,
+    active_project_label: activeBinding?.project ?? null,
+  } satisfies LibreChatServiceConfigFile;
+}
+
+function syncInstalledFrontDoorAssets(
+  contracts: GatewayContracts,
+  config: LibreChatServiceConfigFile,
+) {
+  const codexDefaults = readLocalCodexDefaults();
+  const activeBinding = syncMasWorkspaceBinding(contracts, config.workspace_path, config.public_origin);
+  const nextConfig = mergeInstalledFrontDoorConfig(config, codexDefaults, activeBinding);
+
+  buildLibreChatPilotPackage(contracts, {
+    outputDir: nextConfig.package_root,
+    publicOrigin: nextConfig.public_origin,
+    host: nextConfig.host,
+    port: nextConfig.port,
+    basePath: nextConfig.base_path,
+    sessionsLimit: nextConfig.sessions_limit,
+    codexDefaults,
+    workspacePath: nextConfig.workspace_path,
+    activeProjectLabel: nextConfig.active_project_label,
+  });
+  fs.writeFileSync(nextConfig.env_file, buildRuntimeEnvFile(nextConfig, codexDefaults), 'utf8');
+  writeLibreChatConfigFile(nextConfig);
+  return nextConfig;
+}
+
+function buildInstalledIdentity(config: LibreChatServiceConfigFile | null) {
+  const currentCodexDefaults = readLocalCodexDefaultsIfAvailable();
+  const syncStatus = !config
+    ? 'not_installed'
+    : !currentCodexDefaults
+      ? 'current_codex_profile_unavailable'
+      : config.codex_model === currentCodexDefaults.model
+        && (config.codex_reasoning_effort ?? null) === (currentCodexDefaults.reasoning_effort ?? null)
+        ? 'in_sync'
+        : 'drifted';
+
+  return {
+    app_title: config?.app_title ?? OPL_FRONTDOOR_APP_TITLE,
+    model_display_label: config?.model_display_label ?? OPL_FRONTDOOR_AGENT_LABEL,
+    mcp_server_key: config?.mcp_server_key ?? OPL_FRONTDOOR_MCP_SERVER_KEY,
+    mcp_server_label: config?.mcp_server_label ?? OPL_FRONTDOOR_MCP_SERVER_LABEL,
+    installed_model: config?.codex_model ?? null,
+    installed_reasoning_effort: config?.codex_reasoning_effort ?? null,
+    current_model: currentCodexDefaults?.model ?? null,
+    current_reasoning_effort: currentCodexDefaults?.reasoning_effort ?? null,
+    codex_config_file: currentCodexDefaults?.config_path ?? config?.codex_config_file ?? null,
+    sync_status: syncStatus,
+    active_project_id: config?.active_project_id ?? null,
+    active_project_label: config?.active_project_label ?? null,
+  };
+}
+
 async function buildPayload(
   contracts: GatewayContracts,
   action: 'install' | 'status' | 'start' | 'stop' | 'open',
@@ -395,6 +584,7 @@ async function buildPayload(
       workspace_path: config?.workspace_path ?? null,
       sessions_limit: config?.sessions_limit ?? null,
       frontdesk_api_base_url: config?.frontdesk_api_base_url ?? null,
+      identity: buildInstalledIdentity(config),
       assets: config
         ? {
             package_root: config.package_root,
@@ -446,6 +636,15 @@ function buildInstallConfig(options: FrontDeskLibreChatServiceOptions): LibreCha
     caddyfile: path.join(stackRoot, 'Caddyfile'),
     run_script: path.join(stackRoot, 'scripts', 'run-librechat-pilot.sh'),
     frontdesk_api_base_url: `http://host.docker.internal:${port}${basePath}/api`,
+    app_title: OPL_FRONTDOOR_APP_TITLE,
+    model_display_label: OPL_FRONTDOOR_AGENT_LABEL,
+    mcp_server_key: OPL_FRONTDOOR_MCP_SERVER_KEY,
+    mcp_server_label: OPL_FRONTDOOR_MCP_SERVER_LABEL,
+    codex_config_file: null,
+    codex_model: null,
+    codex_reasoning_effort: null,
+    active_project_id: null,
+    active_project_label: null,
   };
 }
 
@@ -472,25 +671,17 @@ export async function installFrontDeskLibreChatService(
   });
   debugLog('install.frontdesk_service_install.done');
 
-  debugLog('install.librechat_package.start');
-  buildLibreChatPilotPackage(contracts, {
-    outputDir: config.package_root,
-    publicOrigin: config.public_origin,
-    host: config.host,
-    port: config.port,
-    basePath: config.base_path,
-    sessionsLimit: config.sessions_limit,
-  });
-  debugLog('install.librechat_package.done');
-  fs.writeFileSync(config.env_file, buildRuntimeEnvFile(config), 'utf8');
-  writeLibreChatConfigFile(config);
-  debugLog('install.runtime_env_written', {
-    env_file: config.env_file,
+  debugLog('install.frontdoor_assets_sync.start');
+  const syncedConfig = syncInstalledFrontDoorAssets(contracts, config);
+  debugLog('install.frontdoor_assets_sync.done', {
+    env_file: syncedConfig.env_file,
+    codex_model: syncedConfig.codex_model,
+    codex_reasoning_effort: syncedConfig.codex_reasoning_effort,
   });
 
   debugLog('install.paperclip_bootstrap.start');
   const paperclipSummary = await bootstrapLocalPaperclipControlPlane(contracts, {
-    workspacePath: config.workspace_path,
+    workspacePath: syncedConfig.workspace_path,
     projectId: 'medautoscience',
     explicitBaseUrl: options.paperclipBaseUrl,
   });
@@ -499,11 +690,11 @@ export async function installFrontDeskLibreChatService(
   });
 
   debugLog('install.docker_up.start');
-  runDockerCompose(config, 'up');
+  runDockerCompose(syncedConfig, 'up');
   debugLog('install.docker_up.done');
 
   debugLog('install.payload.start');
-  return await buildPayload(contracts, 'install', config, paperclipSummary);
+  return await buildPayload(contracts, 'install', syncedConfig, paperclipSummary);
 }
 
 export async function getFrontDeskLibreChatServiceStatus(contracts: GatewayContracts) {
@@ -534,9 +725,10 @@ export async function startFrontDeskLibreChatService(contracts: GatewayContracts
     );
   }
 
+  const syncedConfig = syncInstalledFrontDoorAssets(contracts, config);
   await startFrontDeskService(contracts);
-  runDockerCompose(config, 'up');
-  return await buildPayload(contracts, 'start', config, buildPaperclipControlPlaneSummary(contracts));
+  runDockerCompose(syncedConfig, 'up');
+  return await buildPayload(contracts, 'start', syncedConfig, buildPaperclipControlPlaneSummary(contracts));
 }
 
 export async function openFrontDeskLibreChatService(contracts: GatewayContracts) {

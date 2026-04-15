@@ -1310,6 +1310,26 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
               Bind, activate, archive, and inspect project workspaces without leaving the front desk. Optional direct-entry locators let OPL hand off into a domain front desk honestly.
             </p>
             <div class="panel-body">
+              <div class="card">
+                <h3>Workspace Hub</h3>
+                <p class="panel-copy">
+                  Switch the active workspace for this control room, sync the form below, and keep the family front door focused on one bound project/workspace at a time.
+                </p>
+                <div class="field-grid">
+                  <label>
+                    Active Binding
+                    <select id="workspace-binding-select">
+                      <option value="">No bound workspace yet</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="button-row">
+                  <button class="primary" type="button" id="workspace-switch-button">Switch Active Workspace</button>
+                  <button class="ghost" type="button" id="workspace-refresh-button">Reload Workspace Hub</button>
+                </div>
+                <div id="workspace-active-summary">No workspace bindings loaded yet.</div>
+              </div>
+              <div style="height: 12px"></div>
               <form id="workspace-form">
                 <div class="field-grid">
                   <label>
@@ -1388,6 +1408,7 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       const state = {
         workspacePath: bootstrap.web_frontdesk.defaults.workspace_path,
         sessionsLimit: bootstrap.web_frontdesk.defaults.sessions_limit,
+        workspaceBindings: [],
       };
 
       const askStatus = document.getElementById('ask-status');
@@ -1442,6 +1463,8 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       const workspaceEntryCommandInput = document.getElementById('workspace-entry-command');
       const workspaceManifestCommandInput = document.getElementById('workspace-manifest-command');
       const workspaceEntryUrlInput = document.getElementById('workspace-entry-url');
+      const workspaceBindingSelect = document.getElementById('workspace-binding-select');
+      const workspaceActiveSummary = document.getElementById('workspace-active-summary');
       const workspaceStatusLine = document.getElementById('workspace-status-line');
       const workspaceCatalogJson = document.getElementById('workspace-catalog-json');
       const sessionLedgerJson = document.getElementById('session-ledger-json');
@@ -1455,6 +1478,8 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       const workspaceBindButton = document.getElementById('workspace-bind-button');
       const workspaceActivateButton = document.getElementById('workspace-activate-button');
       const workspaceArchiveButton = document.getElementById('workspace-archive-button');
+      const workspaceSwitchButton = document.getElementById('workspace-switch-button');
+      const workspaceRefreshButton = document.getElementById('workspace-refresh-button');
 
       workspacePathInput.value = state.workspacePath;
 
@@ -1488,6 +1513,50 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         }
 
         return '<div class="card-list">' + items.join('') + '</div>';
+      }
+
+      function getWorkspaceBindingLabel(binding) {
+        const project = binding.project || binding.project_id || 'unknown-project';
+        const label = binding.label ? ' · ' + binding.label : '';
+        return project + label + ' · ' + binding.workspace_path;
+      }
+
+      function getSelectedWorkspaceBinding() {
+        const selectedBindingId = workspaceBindingSelect.value;
+        return state.workspaceBindings.find((binding) => binding.binding_id === selectedBindingId) || null;
+      }
+
+      function syncWorkspaceForm(binding) {
+        if (!binding) {
+          return;
+        }
+
+        workspaceProjectInput.value = binding.project_id || '';
+        workspacePathInput.value = binding.workspace_path || '';
+        workspaceLabelInput.value = binding.label || '';
+        workspaceEntryCommandInput.value = binding.direct_entry?.command || '';
+        workspaceManifestCommandInput.value = binding.direct_entry?.manifest_command || '';
+        workspaceEntryUrlInput.value = binding.direct_entry?.url || '';
+      }
+
+      function renderWorkspaceHubSummary(binding, summary) {
+        if (!binding) {
+          workspaceActiveSummary.innerHTML = '<p>No active workspace binding yet. Bind one below to make this control room project-aware.</p>';
+          return;
+        }
+
+        workspaceActiveSummary.innerHTML = [
+          '<p><strong>Project:</strong> ' + String(binding.project || binding.project_id || 'unknown') + '</p>',
+          '<p><strong>Workspace:</strong> ' + String(binding.workspace_path || 'unknown') + '</p>',
+          binding.direct_entry?.url
+            ? '<p><strong>Direct Entry URL:</strong> ' + String(binding.direct_entry.url) + '</p>'
+            : '',
+          binding.direct_entry?.command
+            ? '<p><strong>Direct Entry Command:</strong> <code>' + String(binding.direct_entry.command) + '</code></p>'
+            : '',
+          '<p><strong>Active Projects:</strong> ' + String(summary?.active_projects_count ?? 0) + '</p>',
+          '<p><strong>Total Bindings:</strong> ' + String(summary?.total_bindings_count ?? 0) + '</p>',
+        ].filter(Boolean).join('');
       }
 
       function renderProjects(projects, domainManifestProjects = []) {
@@ -2207,7 +2276,27 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       }
 
       function renderWorkspaceCatalog(payload) {
+        const catalog = payload.workspace_catalog || {};
+        const bindings = Array.isArray(catalog.bindings)
+          ? catalog.bindings.filter((binding) => binding.status !== 'archived')
+          : [];
+        const activeBinding = bindings.find((binding) => binding.status === 'active') || bindings[0] || null;
+
+        state.workspaceBindings = bindings;
         workspaceCatalogJson.textContent = JSON.stringify(payload, null, 2);
+        workspaceBindingSelect.innerHTML = bindings.length > 0
+          ? bindings.map((binding) => (
+            '<option value="' + binding.binding_id + '">' + getWorkspaceBindingLabel(binding) + '</option>'
+          )).join('')
+          : '<option value="">No bound workspace yet</option>';
+
+        if (activeBinding) {
+          workspaceBindingSelect.value = activeBinding.binding_id;
+          state.workspacePath = activeBinding.workspace_path;
+          syncWorkspaceForm(activeBinding);
+        }
+
+        renderWorkspaceHubSummary(activeBinding, catalog.summary);
       }
 
       function renderSessionLedger(payload) {
@@ -2519,13 +2608,49 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       }
 
       async function refreshAll() {
+        await fetchWorkspaceCatalog();
         await Promise.all([
           fetchDashboard(),
           fetchSessions(),
           fetchHostedFriendlySurface(),
-          fetchWorkspaceCatalog(),
           fetchSessionLedger(),
         ]);
+      }
+
+      async function activateSelectedWorkspace() {
+        const binding = getSelectedWorkspaceBinding();
+        if (!binding) {
+          setWorkspaceStatus('Choose a bound workspace first.', 'warn');
+          return;
+        }
+
+        setWorkspaceStatus('Switching active workspace...', 'muted');
+
+        try {
+          const response = await fetch(bootstrap.web_frontdesk.api.workspace_activate, {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+            },
+            body: JSON.stringify({
+              project_id: binding.project_id,
+              workspace_path: binding.workspace_path,
+            }),
+          });
+          const payload = await response.json();
+
+          if (!response.ok) {
+            throw new Error(payload.error?.message || 'Workspace switch failed.');
+          }
+
+          state.workspacePath = binding.workspace_path;
+          syncWorkspaceForm(binding);
+          renderWorkspaceCatalog(payload);
+          await refreshAll();
+          setWorkspaceStatus('Active workspace switched.', 'ok');
+        } catch (error) {
+          setWorkspaceStatus(error instanceof Error ? error.message : 'Workspace switch failed.', 'warn');
+        }
       }
 
       async function submitWorkspaceAction(action) {
@@ -2706,6 +2831,22 @@ function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       });
       workspaceArchiveButton.addEventListener('click', () => {
         void submitWorkspaceAction('archive');
+      });
+      workspaceBindingSelect.addEventListener('change', () => {
+        const binding = getSelectedWorkspaceBinding();
+        syncWorkspaceForm(binding);
+        renderWorkspaceHubSummary(binding, {
+          active_projects_count: state.workspaceBindings.filter((entry) => entry.status === 'active').length,
+          total_bindings_count: state.workspaceBindings.length,
+        });
+      });
+      workspaceSwitchButton.addEventListener('click', () => {
+        void activateSelectedWorkspace();
+      });
+      workspaceRefreshButton.addEventListener('click', () => {
+        void refreshAll().catch((error) => {
+          setWorkspaceStatus(error instanceof Error ? error.message : 'Workspace refresh failed.', 'warn');
+        });
       });
 
       void Promise.all([refreshAll(), loadLogs()]).catch((error) => {

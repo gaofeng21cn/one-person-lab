@@ -1597,6 +1597,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl frontdesk-hosted-bundle --base-path /pilot/opl',
         'opl frontdesk-hosted-package --output /tmp/opl-hosted-package --public-origin https://opl.example.com --base-path /pilot/opl',
         'opl frontdesk-librechat-package --output /tmp/opl-librechat-pilot --public-origin https://opl.example.com --base-path /pilot/opl',
+        'opl frontdesk-bootstrap --path /Users/gaofeng/workspace/Yang/NF-PitNET --public-origin http://127.0.0.1:8080',
         'opl frontdesk-service-install --port 8787',
         'opl frontdesk-librechat-install --path /Users/gaofeng/workspace/Yang/NF-PitNET --public-origin http://127.0.0.1:8080',
         'opl frontdesk-librechat-open',
@@ -2289,6 +2290,22 @@ async function main() {
         assertNoArgs(args, commandSpecs['frontdesk-service-uninstall']);
         return uninstallFrontDeskService(getContracts());
       },
+    },
+    'frontdesk-bootstrap': {
+      usage:
+        'opl frontdesk-bootstrap [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>] [--public-origin <origin>] [--paperclip-base-url <url>]',
+      summary:
+        'Bootstrap the family front door in one shot: install the OPL workspace console, install the LibreChat shell, inherit the local Codex defaults, and bind the current workspace.',
+      examples: [
+        'opl frontdesk-bootstrap --path /Users/gaofeng/workspace/Yang/NF-PitNET',
+        'opl frontdesk-bootstrap --path /Users/gaofeng/workspace/Yang/NF-PitNET --public-origin http://127.0.0.1:8080',
+        'opl frontdesk-bootstrap --path /Users/gaofeng/workspace/Yang/NF-PitNET --paperclip-base-url http://127.0.0.1:3100',
+      ],
+      handler: (args) =>
+        installFrontDeskLibreChatService(
+          getContracts(),
+          parseFrontDeskLibreChatArgs(args, commandSpecs['frontdesk-bootstrap']),
+        ),
     },
     'frontdesk-librechat-install': {
       usage:
