@@ -602,6 +602,244 @@ function serializeJsonForHtml(value: unknown) {
 
 function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
   const bootstrap = buildStartupPayload(context);
+  const apiLinks = [
+    {
+      label: 'Frontdesk entry guide',
+      href: bootstrap.web_frontdesk.api.frontdesk_entry_guide,
+    },
+    {
+      label: 'Frontdesk readiness',
+      href: bootstrap.web_frontdesk.api.frontdesk_readiness,
+    },
+    {
+      label: 'Frontdesk domain wiring',
+      href: bootstrap.web_frontdesk.api.frontdesk_domain_wiring,
+    },
+    {
+      label: 'Workspace catalog',
+      href: bootstrap.web_frontdesk.api.workspace_catalog,
+    },
+  ]
+    .map(
+      (link) => `
+          <li>
+            <a href="${link.href}">${link.href}</a>
+            <span>${link.label}</span>
+          </li>`,
+    )
+    .join('');
+  const bootstrapJson = serializeJsonForHtml(bootstrap);
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OPL Machine Surface</title>
+    <style>
+      :root {
+        --bg: #f6f2ea;
+        --panel: rgba(255, 252, 246, 0.96);
+        --line: rgba(29, 52, 48, 0.12);
+        --ink: #19342d;
+        --ink-soft: #5e736b;
+        --accent: #1f6b5a;
+        --accent-strong: #0f4e41;
+        --shadow: 0 24px 48px rgba(25, 52, 45, 0.1);
+        --radius-xl: 24px;
+        --radius-md: 14px;
+        --font-ui: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+        --font-mono: "SFMono-Regular", "Menlo", "Consolas", monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: var(--font-ui);
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top right, rgba(31, 107, 90, 0.14), transparent 26%),
+          linear-gradient(180deg, #faf6ee 0%, var(--bg) 100%);
+      }
+
+      main {
+        width: min(960px, calc(100vw - 32px));
+        margin: 24px auto 40px;
+        display: grid;
+        gap: 18px;
+      }
+
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: var(--radius-xl);
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        padding: 24px;
+      }
+
+      h1,
+      h2,
+      p,
+      ul {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: clamp(2rem, 4vw, 3rem);
+        line-height: 1.05;
+      }
+
+      h2 {
+        font-size: 1rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--ink-soft);
+        margin-bottom: 12px;
+      }
+
+      .lede {
+        margin-top: 12px;
+        line-height: 1.7;
+        color: var(--ink-soft);
+      }
+
+      .entry-link {
+        display: inline-flex;
+        margin-top: 16px;
+        align-items: center;
+        min-height: 44px;
+        padding: 0 16px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+        color: #f5f8f7;
+        text-decoration: none;
+        font-weight: 600;
+      }
+
+      .meta {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .meta-card {
+        padding: 16px;
+        border-radius: var(--radius-md);
+        background: rgba(31, 107, 90, 0.06);
+        border: 1px solid rgba(31, 107, 90, 0.08);
+      }
+
+      .meta-label {
+        display: block;
+        font-size: 0.82rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--ink-soft);
+        margin-bottom: 8px;
+      }
+
+      .api-list {
+        padding-left: 18px;
+        display: grid;
+        gap: 12px;
+      }
+
+      .api-list li {
+        color: var(--ink-soft);
+      }
+
+      .api-list a {
+        color: var(--accent-strong);
+        text-decoration: none;
+        font-family: var(--font-mono);
+      }
+
+      .api-list span {
+        display: block;
+        margin-top: 4px;
+      }
+
+      .json-view {
+        margin-top: 12px;
+        padding: 16px;
+        border-radius: var(--radius-md);
+        background: #15261f;
+        color: #eef4f1;
+        overflow: auto;
+        font: 0.84rem/1.6 var(--font-mono);
+      }
+
+      @media (max-width: 1040px) {
+        .meta {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 720px) {
+        main {
+          width: min(100vw - 18px, 100%);
+          margin: 12px auto 24px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="panel">
+        <h2>Machine surface</h2>
+        <h1>OPL Machine Surface</h1>
+        <p class="lede">
+          This page is the machine-readable gateway surface for OPL. It is not the main human chat UI.
+          Use LibreChat for natural-language interaction, then let OPL Agent handle workspace and project switching inside chat.
+        </p>
+        <a class="entry-link" href="/login">Human chat entry</a>
+      </section>
+
+      <section class="panel">
+        <h2>Current wiring</h2>
+        <div class="meta">
+          <div class="meta-card">
+            <span class="meta-label">Workspace</span>
+            <div>${bootstrap.web_frontdesk.defaults.workspace_path}</div>
+          </div>
+          <div class="meta-card">
+            <span class="meta-label">Entry URL</span>
+            <div>${bootstrap.web_frontdesk.listening.entry_url}</div>
+          </div>
+          <div class="meta-card">
+            <span class="meta-label">Sessions limit</span>
+            <div>${bootstrap.web_frontdesk.defaults.sessions_limit}</div>
+          </div>
+          <div class="meta-card">
+            <span class="meta-label">Hosted status</span>
+            <div>${bootstrap.web_frontdesk.hosted_status}</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>API surfaces</h2>
+        <ul class="api-list">
+${apiLinks}
+        </ul>
+      </section>
+
+      <section class="panel">
+        <h2>Bootstrap JSON</h2>
+        <script id="opl-bootstrap" type="application/json">${bootstrapJson}</script>
+        <pre class="json-view">${bootstrapJson}</pre>
+      </section>
+    </main>
+  </body>
+</html>`;
+}
+
+function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
+  const bootstrap = buildStartupPayload(context);
 
   return `<!doctype html>
 <html lang="en">

@@ -13,29 +13,34 @@ type FrontDeskWelcomeOptions = {
   activeProjectLabel?: string | null;
 };
 
-function formatOptionalLine(label: string, value?: string | null) {
-  return value ? `- ${label}: ${value}` : null;
+function inferProjectLabel(options: FrontDeskWelcomeOptions) {
+  const projectLabel = options.activeProjectLabel?.trim();
+  if (projectLabel) {
+    return projectLabel;
+  }
+
+  const workspacePath = options.workspacePath?.trim();
+  if (!workspacePath) {
+    return 'Unbound workspace';
+  }
+
+  const normalized = workspacePath.replace(/[\\/]+$/, '');
+  const segments = normalized.split(/[\\/]/).filter(Boolean);
+  return segments.at(-1) ?? normalized;
 }
 
 export function buildFrontDeskLibreChatWelcome(options: FrontDeskWelcomeOptions) {
   const lines = [
     `Welcome to ${OPL_FRONTDOOR_APP_TITLE}.`,
     '',
-    'This shell is the family front door for multi-workspace chat, progress checks, runtime triage, and domain handoff.',
-    `${OPL_FRONTDOOR_AGENT_LABEL} follows the current Codex operator profile:`,
+    'Current project:',
+    `- ${inferProjectLabel(options)}`,
     '',
-    `- Model: ${options.codexDefaults.model}`,
-    `- Thinking: ${options.codexDefaults.reasoning_effort ?? 'default'}`,
-    `- Public shell: ${options.publicOrigin}/`,
-    `- OPL Workspace Console: ${options.frontdeskEntryUrl}`,
-    formatOptionalLine('Active workspace', options.workspacePath ?? null),
-    formatOptionalLine('Bound project', options.activeProjectLabel ?? null),
-    '',
-    'Try asking:',
-    '- 现在激活的是哪个 workspace？',
-    '- 004 论文现在进度如何？',
-    '- 切换到另一个项目或 workspace',
-  ].filter((line): line is string => line !== null);
+    'How to use:',
+    '- 直接问当前论文或运行时进度',
+    '- 直接说你想切换到哪个项目或 workspace',
+    '- 直接要求查看当前任务、文件或下一步',
+  ];
 
   return lines.join('\n');
 }
