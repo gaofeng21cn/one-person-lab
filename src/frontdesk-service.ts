@@ -209,9 +209,24 @@ function buildWebProgramArguments(config: FrontDeskServiceConfig) {
     );
   }
 
+  const projectRoot = path.resolve(path.dirname(cliEntry), '..');
+  const contractsRoot = path.join(projectRoot, 'contracts', 'opl-gateway');
+  if (!fs.existsSync(contractsRoot)) {
+    throw new GatewayContractError(
+      'contract_file_missing',
+      'Unable to resolve the repo-tracked OPL contracts root for frontdesk service packaging.',
+      {
+        cli_entry: cliEntry,
+        contracts_root: contractsRoot,
+      },
+    );
+  }
+
   const args = [
     ...process.execArgv,
     cliEntry,
+    '--contracts-dir',
+    contractsRoot,
     'web',
     '--host',
     config.host,
@@ -339,6 +354,9 @@ async function probeHealth(baseUrl: string, basePath: string) {
   try {
     const response = await fetch(healthUrl, {
       signal: AbortSignal.timeout(1_200),
+      headers: {
+        connection: 'close',
+      },
     });
 
     if (!response.ok) {
