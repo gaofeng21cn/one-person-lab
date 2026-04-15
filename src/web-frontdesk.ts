@@ -23,6 +23,7 @@ import {
 } from './management.ts';
 import { buildDomainManifestCatalog } from './domain-manifest.ts';
 import { launchDomainEntry, type DomainLaunchStrategy } from './domain-launch.ts';
+import { getFrontDeskLibreChatServiceStatus } from './frontdesk-librechat-service.ts';
 import { buildHostedPilotPackage } from './hosted-pilot-package.ts';
 import { buildLibreChatPilotPackage } from './librechat-pilot-package.ts';
 import { buildPaperclipBootstrap, syncPaperclipProjections } from './paperclip-control-plane.ts';
@@ -155,6 +156,7 @@ type WebFrontDeskStartupPayload = {
       frontdesk_manifest: string;
       frontdesk_entry_guide: string;
       frontdesk_readiness: string;
+      frontdesk_librechat_status: string;
       project_progress: string;
       frontdesk_domain_wiring: string;
       domain_manifests: string;
@@ -573,6 +575,7 @@ function buildStartupPayload(context: WebFrontDeskContext): WebFrontDeskStartupP
         frontdesk_manifest: manifest.frontdesk_manifest.endpoints.manifest,
         frontdesk_entry_guide: endpoints.frontdesk_entry_guide,
         frontdesk_readiness: endpoints.frontdesk_readiness,
+        frontdesk_librechat_status: endpoints.frontdesk_librechat_status,
         project_progress: endpoints.project_progress,
         frontdesk_domain_wiring: endpoints.frontdesk_domain_wiring,
         domain_manifests: endpoints.domain_manifests,
@@ -631,6 +634,7 @@ function escapeHtml(value: string) {
 
 async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
   const bootstrap = buildStartupPayload(context);
+  const libreChatStatusPayload = (await getFrontDeskLibreChatServiceStatus(context.contracts)).frontdesk_librechat;
   const progressPayload = await buildProjectProgressBrief(context.contracts, {
     workspacePath: context.workspacePath,
     sessionsLimit: context.sessionsLimit,
@@ -649,6 +653,10 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
     {
       label: 'Frontdesk readiness',
       href: bootstrap.web_frontdesk.api.frontdesk_readiness,
+    },
+    {
+      label: 'Hosted shell status',
+      href: bootstrap.web_frontdesk.api.frontdesk_librechat_status,
     },
     {
       label: 'Frontdesk domain wiring',
@@ -690,6 +698,18 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
     typeof progress.next_focus === 'string'
       ? progress.next_focus
       : 'Ask OPL Agent for the next study step.',
+  );
+  const hostedShellSummary = escapeHtml([
+    libreChatStatusPayload.installed ? 'installed' : 'not installed',
+    libreChatStatusPayload.running ? 'running' : 'stopped',
+    typeof libreChatStatusPayload.identity?.sync_status === 'string'
+      ? `identity ${libreChatStatusPayload.identity.sync_status}`
+      : null,
+  ].filter(Boolean).join(' · '));
+  const hostedShellOrigin = escapeHtml(
+    typeof libreChatStatusPayload.public_origin === 'string'
+      ? libreChatStatusPayload.public_origin
+      : '当前还没有记录 hosted shell public origin。',
   );
   const recentActivity = progress.recent_activity
     && typeof progress.recent_activity === 'object'
@@ -1017,6 +1037,14 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
             <span class="meta-label">Latest runtime activity</span>
             <div>${recentActivityText}</div>
           </div>
+          <div class="meta-card">
+            <span class="meta-label">Hosted shell</span>
+            <div>${hostedShellSummary}</div>
+          </div>
+          <div class="meta-card">
+            <span class="meta-label">Hosted shell origin</span>
+            <div>${hostedShellOrigin}</div>
+          </div>
         </div>
       </section>
 
@@ -1030,7 +1058,7 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
           </div>
           <div class="meta-card">
             <span class="meta-label">Hosted shell status</span>
-            <div>${bootstrap.web_frontdesk.hosted_status}</div>
+            <div>${hostedShellSummary}</div>
           </div>
         </div>
         <div class="detail-grid" style="margin-top: 16px;">
@@ -3471,6 +3499,11 @@ async function handleRequest(
           basePath: context.basePath,
         }),
       );
+      return;
+    }
+
+    if (method === 'GET' && routedPath === '/api/frontdesk-librechat-status') {
+      writeJson(response, 200, await getFrontDeskLibreChatServiceStatus(context.contracts));
       return;
     }
 
