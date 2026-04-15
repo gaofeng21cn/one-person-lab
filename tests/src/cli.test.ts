@@ -20,6 +20,7 @@ import {
   loadGatewayContracts,
   validateGatewayContracts,
 } from '../../src/contracts.ts';
+import { buildProjectProgressBrief } from '../../src/management.ts';
 import {
   explainDomainBoundary,
   resolveRequestSurface,
@@ -1028,6 +1029,14 @@ async function startFakeFrontDeskApiServer() {
             workspace_path: url.searchParams.get('path'),
           },
           progress_summary: '004 论文当前仍在推进证据补强，需要继续补主图和投稿包可审计物。',
+          current_study: {
+            study_id: '004-invasive-architecture',
+            title: 'NF-PitNET invasive phenotype architecture with public-data anatomy and biology anchors',
+            story_summary: '当前主线是首术 NF-PitNET 的侵袭表型 architecture：用本地队列重构侵袭、Knosp、视觉压迫与切除负担，并把公开 MRI / omics 作为 anatomy / biology anchors。',
+            current_stage: 'publication_supervision',
+            current_stage_summary: '投稿打包阶段已被全局门控放行，可以进入关键路径。',
+            next_system_action: 'continue bundle stage',
+          },
           next_focus: '继续补图表并把 submission package 更新到 studies 目录下可直接审阅的状态。',
           recent_activity: {
             session_id: 'sess-progress',
@@ -1041,6 +1050,11 @@ async function startFakeFrontDeskApiServer() {
           ],
           attention_items: [
             'submission package 仍需补更多主图后再建议用户审阅。',
+          ],
+          user_options: [
+            '展开当前论文的详细进度',
+            '列出当前 workspace 的全部论文',
+            '切换到另一篇论文继续查看',
           ],
           recommended_commands: {
             progress: 'medautosci study-progress --study 004',
@@ -2532,7 +2546,7 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
       });
       const toolsList = await readJsonLine(child.stdout);
       const tools = (toolsList.result as {
-        tools: Array<{ name: string }>;
+        tools: Array<{ name: string; description?: string }>;
       }).tools;
       assert.equal(tools.some((tool) => tool.name === 'opl_project_progress'), true);
       assert.equal(tools.some((tool) => tool.name === 'opl_frontdesk_entry_guide'), true);
@@ -2540,6 +2554,10 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
       assert.equal(tools.some((tool) => tool.name === 'opl_runtime_status'), true);
       assert.equal(tools.some((tool) => tool.name === 'opl_workspace_catalog'), true);
       assert.equal(tools.some((tool) => tool.name === 'opl_activate_workspace'), true);
+      assert.match(
+        tools.find((tool) => tool.name === 'opl_project_progress')?.description ?? '',
+        /哪篇论文|讲什么故事/,
+      );
 
       writeJsonLine(child.stdin, {
         jsonrpc: '2.0',
@@ -2575,8 +2593,12 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
       }).content;
       assert.equal(progressContent[0].type, 'text');
       assert.match(progressContent[0].text, /当前项目：med-autoscience/);
+      assert.match(progressContent[0].text, /当前论文：004-invasive-architecture/);
+      assert.match(progressContent[0].text, /论文题目：NF-PitNET invasive phenotype architecture/);
+      assert.match(progressContent[0].text, /论文主线：当前主线是首术 NF-PitNET 的侵袭表型 architecture/);
       assert.match(progressContent[0].text, /当前进度：004 论文当前仍在推进证据补强/);
       assert.match(progressContent[0].text, /最近活动：2m ago/);
+      assert.match(progressContent[0].text, /你可以直接说：展开当前论文的详细进度；列出当前 workspace 的全部论文；切换到另一篇论文继续查看/);
       assert.match(progressContent[0].text, /查看位置：/);
       assert.doesNotMatch(progressContent[0].text, /entry_parity_status/);
 
@@ -3350,6 +3372,206 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('project-progress promotes current MAS study into a paper-facing summary instead of stopping at project-level wording', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-project-progress-state-'));
+  const fixtures = loadFamilyManifestFixtures();
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const masWorkspace = createMasWorkspaceFixture();
+  const studyId = '004-invasive-architecture';
+  const studyRoot = path.join(masWorkspace.fixtureRoot, 'studies', studyId);
+  const controllerDir = path.join(studyRoot, 'artifacts', 'controller');
+
+  fs.mkdirSync(controllerDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(controllerDir, 'study_charter.json'),
+    `${JSON.stringify({
+      study_id: studyId,
+      title: 'NF-PitNET invasive phenotype architecture with public-data anatomy and biology anchors',
+      publication_objective:
+        '在首术 NF-PitNET 中，重构由侵袭负担、Knosp、视觉压迫与切除负担组成的 clinically interpretable invasive phenotype architecture，并把公开 MRI / omics 用作 anatomy / biology anchors。',
+      paper_framing_summary:
+        'The paper-facing route is a first-surgery NF-PitNET invasive phenotype architecture study rather than a generic workflow summary.',
+    }, null, 2)}\n`,
+    'utf8',
+  );
+
+  const workspaceCockpitPayload = {
+    schema_version: 1,
+    workspace_root: masWorkspace.fixtureRoot,
+    studies: [
+      {
+        study_id: studyId,
+        current_stage: 'publication_supervision',
+        current_stage_summary: '投稿打包阶段已被全局门控放行，可以进入关键路径。',
+        current_blockers: [
+          '当前论文交付目录与注册/合同约定不一致，需要先修正交付面。',
+        ],
+        next_system_action: 'continue bundle stage',
+        needs_physician_decision: false,
+        monitoring: {
+          browser_url: 'http://127.0.0.1:21001',
+          quest_session_api_url: 'http://127.0.0.1:21001/api/quests/004/session',
+          active_run_id: 'run-884e2a72',
+          health_status: 'live',
+          supervisor_tick_status: 'fresh',
+        },
+        task_intake: null,
+        progress_freshness: {
+          status: 'fresh',
+          required: true,
+          summary: '最近 12 小时内仍有明确研究推进记录。',
+          latest_progress_at: '2026-04-15T11:24:35+00:00',
+          latest_progress_time_label: '2026-04-15 11:24 UTC',
+          latest_progress_source: 'publication_eval',
+          latest_progress_summary: '投稿打包阶段已被全局门控放行，可以进入关键路径。',
+        },
+        commands: {
+          progress: buildManifestCommand({
+            study_id: studyId,
+            study_root: studyRoot,
+            quest_id: '004-invasive-architecture-managed-20260408',
+            current_stage: 'publication_supervision',
+            current_stage_summary: '投稿打包阶段已被全局门控放行，可以进入关键路径。',
+            paper_stage: 'bundle_stage_ready',
+            paper_stage_summary: '论文当前建议推进到投稿打包阶段。',
+            current_blockers: [
+              '当前论文交付目录与注册/合同约定不一致，需要先修正交付面。',
+            ],
+            next_system_action: 'continue bundle stage',
+            progress_freshness: {
+              latest_progress_time_label: '2026-04-15 11:24 UTC',
+              latest_progress_summary: '投稿打包阶段已被全局门控放行，可以进入关键路径。',
+              latest_progress_source: 'publication_eval',
+            },
+            supervision: {
+              browser_url: 'http://127.0.0.1:21001',
+              active_run_id: 'run-884e2a72',
+              health_status: 'live',
+            },
+            latest_events: [
+              {
+                time_label: '2026-04-15 11:24 UTC',
+                title: '发表可行性评估更新',
+                summary: '投稿打包阶段已被全局门控放行，可以进入关键路径。',
+              },
+            ],
+            refs: {
+              publication_eval_path: path.join(studyRoot, 'artifacts', 'publication_eval', 'latest.json'),
+            },
+          }),
+        },
+      },
+      {
+        study_id: '003-endocrine-burden-followup',
+        current_stage: 'managed_runtime_recovering',
+        current_stage_summary: '系统正在推进托管运行进入可监督的在线状态。',
+        current_blockers: ['仍有主线阻塞。'],
+        next_system_action: '等待下一次巡检确认 worker 已重新上线并恢复 live。',
+        needs_physician_decision: false,
+        monitoring: {
+          browser_url: null,
+          quest_session_api_url: null,
+          active_run_id: null,
+          health_status: 'recovering',
+          supervisor_tick_status: 'fresh',
+        },
+        task_intake: null,
+        progress_freshness: {
+          status: 'fresh',
+          required: true,
+          summary: '最近 12 小时内仍有明确研究推进记录。',
+          latest_progress_at: '2026-04-15T11:20:00+00:00',
+          latest_progress_time_label: '2026-04-15 11:20 UTC',
+          latest_progress_source: 'publication_eval',
+          latest_progress_summary: '论文包雏形已经存在，但当前硬阻塞仍在论文可发表性面。',
+        },
+        commands: {
+          progress: buildManifestCommand({
+            study_id: '003-endocrine-burden-followup',
+          }),
+        },
+      },
+    ],
+    attention_queue: [],
+    workspace_supervision: {
+      summary: '4 个 study；当前监管心跳新鲜。',
+    },
+  };
+
+  const manifest = structuredClone(fixtures.medautoscience) as Record<string, any>;
+  manifest.workspace_locator.workspace_root = masWorkspace.fixtureRoot;
+  manifest.workspace_locator.profile_ref = masWorkspace.profilePath;
+  manifest.recommended_command = buildManifestCommand(workspaceCockpitPayload);
+  manifest.product_entry_shell.workspace_cockpit.command = buildManifestCommand(workspaceCockpitPayload);
+  manifest.operator_loop_surface.command = buildManifestCommand(workspaceCockpitPayload);
+  manifest.product_entry_overview.recommended_command = buildManifestCommand(workspaceCockpitPayload);
+  manifest.product_entry_overview.operator_loop_command = buildManifestCommand(workspaceCockpitPayload);
+  manifest.product_entry_overview.progress_surface.command = buildManifestCommand({
+    study_id: '<study_id>',
+  });
+  manifest.operator_loop_actions.open_loop.command = buildManifestCommand(workspaceCockpitPayload);
+  manifest.operator_loop_actions.inspect_progress.command = buildManifestCommand({
+    study_id: '<study_id>',
+  });
+
+  try {
+    runCli([
+      'workspace-bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      masWorkspace.fixtureRoot,
+      '--manifest-command',
+      buildManifestCommand(manifest),
+    ], {
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+
+    const contracts = loadGatewayContracts({ contractsDir: fixtureContractsRoot });
+    const originalArgv1 = process.argv[1];
+    const originalStateDir = process.env.OPL_FRONTDESK_STATE_DIR;
+    const originalContractsDir = process.env.OPL_CONTRACTS_DIR;
+    let payload: Awaited<ReturnType<typeof buildProjectProgressBrief>>;
+    try {
+      process.argv[1] = cliPath;
+      process.env.OPL_FRONTDESK_STATE_DIR = stateRoot;
+      process.env.OPL_CONTRACTS_DIR = fixtureContractsRoot;
+      payload = await buildProjectProgressBrief(contracts, {
+        workspacePath: masWorkspace.fixtureRoot,
+        sessionsLimit: 1,
+      });
+    } finally {
+      process.argv[1] = originalArgv1;
+      if (originalStateDir === undefined) {
+        delete process.env.OPL_FRONTDESK_STATE_DIR;
+      } else {
+        process.env.OPL_FRONTDESK_STATE_DIR = originalStateDir;
+      }
+      if (originalContractsDir === undefined) {
+        delete process.env.OPL_CONTRACTS_DIR;
+      } else {
+        process.env.OPL_CONTRACTS_DIR = originalContractsDir;
+      }
+    }
+
+    assert.equal(payload.project_progress.current_study.study_id, studyId);
+    assert.equal(
+      payload.project_progress.current_study.title,
+      'NF-PitNET invasive phenotype architecture with public-data anatomy and biology anchors',
+    );
+    assert.match(payload.project_progress.current_study.story_summary, /侵袭负担.*Knosp.*公开 MRI \/ omics/);
+    assert.equal(payload.project_progress.current_study.current_stage, 'publication_supervision');
+    assert.equal(payload.project_progress.current_study.monitoring.health_status, 'live');
+    assert.match(payload.project_progress.progress_summary, /004-invasive-architecture/);
+    assert.ok(payload.project_progress.user_options.includes('展开当前论文的详细进度'));
+    assert.ok(payload.project_progress.inspect_paths.includes(studyRoot));
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(masWorkspace.fixtureRoot, { recursive: true, force: true });
   }
 });
 

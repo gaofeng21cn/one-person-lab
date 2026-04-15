@@ -137,6 +137,7 @@ function renderProjectProgressBrief(payload: unknown) {
 
   const brief = payload.project_progress;
   const currentProject = isRecord(brief.current_project) ? brief.current_project : {};
+  const currentStudy = isRecord(brief.current_study) ? brief.current_study : null;
   const recentActivity = isRecord(brief.recent_activity) ? brief.recent_activity : null;
   const recommendedCommands = isRecord(brief.recommended_commands) ? brief.recommended_commands : {};
   const inspectPaths = Array.isArray(brief.inspect_paths)
@@ -144,6 +145,9 @@ function renderProjectProgressBrief(payload: unknown) {
     : [];
   const attentionItems = Array.isArray(brief.attention_items)
     ? brief.attention_items.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+    : [];
+  const userOptions = Array.isArray(brief.user_options)
+    ? brief.user_options.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
     : [];
 
   const lines = [
@@ -153,6 +157,32 @@ function renderProjectProgressBrief(payload: unknown) {
   const workspacePath = normalizeOptionalString(currentProject.workspace_path);
   if (workspacePath) {
     lines.push(`默认 workspace：${workspacePath}`);
+  }
+
+  if (currentStudy) {
+    const studyId = normalizeOptionalString(currentStudy.study_id);
+    const title = normalizeOptionalString(currentStudy.title);
+    const storySummary = normalizeOptionalString(currentStudy.story_summary);
+    const currentStageSummary = normalizeOptionalString(currentStudy.current_stage_summary);
+    const nextSystemAction = normalizeOptionalString(currentStudy.next_system_action);
+
+    if (studyId) {
+      lines.push(`当前论文：${studyId}`);
+    }
+    if (title) {
+      lines.push(`论文题目：${title}`);
+    }
+    if (storySummary) {
+      lines.push(`论文主线：${storySummary}`);
+    }
+    if (currentStageSummary) {
+      lines.push(`当前阶段：${currentStageSummary}`);
+    }
+    if (nextSystemAction) {
+      lines.push(`系统下一步：${nextSystemAction}`);
+    }
+  } else {
+    lines.push('当前只能确认到项目级，暂时还不能锁定具体论文。');
   }
 
   lines.push(`当前进度：${normalizeOptionalString(brief.progress_summary) ?? '暂未读到结构化进度摘要。'}`);
@@ -189,6 +219,10 @@ function renderProjectProgressBrief(payload: unknown) {
     lines.push(`当前需关注：${attentionItems.join('；')}`);
   }
 
+  if (userOptions.length > 0) {
+    lines.push(`你可以直接说：${userOptions.join('；')}`);
+  }
+
   return lines.join('\n');
 }
 
@@ -196,7 +230,7 @@ const TOOLS: ToolDefinition[] = [
   {
     name: 'opl_project_progress',
     description:
-      '当用户直接问“当前论文/项目/研究进度如何、卡在哪里、下一步做什么”时优先使用。返回人类可读摘要，不返回控制面原始字段。',
+      '当用户直接问“当前是哪篇论文、讲什么故事、进度如何、卡在哪里、下一步做什么”时优先使用。返回人类可读摘要，不返回控制面原始字段。',
     inputSchema: {
       type: 'object',
       properties: {

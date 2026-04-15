@@ -720,6 +720,56 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
       .map((entry) => escapeHtml(entry))
     : [];
+  const currentStudy = progress.current_study
+    && typeof progress.current_study === 'object'
+    && !Array.isArray(progress.current_study)
+    ? progress.current_study as Record<string, unknown>
+    : null;
+  const currentStudyId = escapeHtml(
+    typeof currentStudy?.study_id === 'string'
+      ? currentStudy.study_id
+      : '未锁定具体论文',
+  );
+  const currentStudyTitle = escapeHtml(
+    typeof currentStudy?.title === 'string'
+      ? currentStudy.title
+      : '当前还没有读到论文题目。',
+  );
+  const currentStudyStory = escapeHtml(
+    typeof currentStudy?.story_summary === 'string'
+      ? currentStudy.story_summary
+      : '当前还只能确认到项目级，建议让 OPL Agent 先列出全部论文或检查哪篇在 live。',
+  );
+  const currentStudyStage = escapeHtml(
+    typeof currentStudy?.current_stage_summary === 'string'
+      ? currentStudy.current_stage_summary
+      : '当前阶段待确认。',
+  );
+  const currentStudyNextAction = escapeHtml(
+    typeof currentStudy?.next_system_action === 'string'
+      ? currentStudy.next_system_action
+      : '继续读取当前论文的详细进度。',
+  );
+  const currentStudyMonitoring = currentStudy?.monitoring
+    && typeof currentStudy.monitoring === 'object'
+    && !Array.isArray(currentStudy.monitoring)
+    ? currentStudy.monitoring as Record<string, unknown>
+    : null;
+  const currentStudyRuntime = escapeHtml(
+    [
+      typeof currentStudyMonitoring?.health_status === 'string'
+        ? `runtime ${currentStudyMonitoring.health_status}`
+        : null,
+      typeof currentStudyMonitoring?.active_run_id === 'string'
+        ? `run ${currentStudyMonitoring.active_run_id}`
+        : null,
+    ].filter(Boolean).join(' · ') || '当前没有读到 live runtime 会话。',
+  );
+  const userOptions = Array.isArray(progress.user_options)
+    ? progress.user_options
+      .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+      .map((entry) => escapeHtml(entry))
+    : [];
 
   return `<!doctype html>
 <html lang="en">
@@ -983,9 +1033,32 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
             <div>${bootstrap.web_frontdesk.hosted_status}</div>
           </div>
         </div>
+        <div class="detail-grid" style="margin-top: 16px;">
+          <div class="meta-card">
+            <span class="meta-label">Current study</span>
+            <div>${currentStudyId}</div>
+          </div>
+          <div class="meta-card">
+            <span class="meta-label">Current stage</span>
+            <div>${currentStudyStage}</div>
+          </div>
+          <div class="meta-card">
+            <span class="meta-label">Paper title</span>
+            <div>${currentStudyTitle}</div>
+          </div>
+          <div class="meta-card">
+            <span class="meta-label">Runtime</span>
+            <div>${currentStudyRuntime}</div>
+          </div>
+        </div>
+        <p class="status-copy" style="margin-top: 16px;">${currentStudyStory}</p>
+        <p class="muted" style="margin-top: 12px;">下一步建议：${currentStudyNextAction}</p>
         ${attentionItems.length > 0
           ? `<ul class="status-list">${attentionItems.map((item) => `<li>${item}</li>`).join('')}</ul>`
           : '<p class="muted" style="margin-top: 14px;">No immediate blocker is being surfaced on this page right now.</p>'}
+        ${userOptions.length > 0
+          ? `<div style="margin-top: 18px;"><span class="meta-label">Ask like this</span><ul class="inspect-list">${userOptions.map((item) => `<li>${item}</li>`).join('')}</ul></div>`
+          : ''}
         ${inspectPaths.length > 0
           ? `<div style="margin-top: 18px;"><span class="meta-label">Where to inspect</span><ul class="inspect-list">${inspectPaths.map((item) => `<li>${item}</li>`).join('')}</ul></div>`
           : ''}
