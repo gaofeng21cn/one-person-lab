@@ -103,6 +103,7 @@
 已完成：
 
 - `opl frontdesk-manifest`
+- `opl frontdesk-entry-guide`
 - `opl frontdesk-readiness`
 - `opl frontdesk-domain-wiring`
 - `opl frontdesk-hosted-bundle`
@@ -113,6 +114,7 @@
 当前含义：
 
 - `OPL` 现在不只是“有一个本地浏览器 pilot”，而是已经冻结出一层 future hosted shell 可消费的 front-desk contract；
+- `frontdesk-entry-guide` 现在补上了 family workspace taxonomy、domain workspace mapping，以及每个 admitted domain 的 start / preflight / readiness 推荐，方便 AI / GUI 壳直接消费；
 - `frontdesk-readiness` 把本地 service 状态、hosted pilot readiness、domain readiness / preflight 与下一步修复建议收成单一 operator-facing board，但它继续只复用已有 truth，不构成第二真相源；
 - `frontdesk-domain-wiring` 又把 `hosted_runtime_readiness / domain_entry_parity / recommended_entry_surfaces` 收成 hosted shell 与本地 front desk 都能直接消费的 family wiring truth；
 - `frontdesk-domain-wiring` 现在还额外承载 `domain_binding_parity` 与 `workspace_catalog / workspace_bind / workspace_activate / workspace_archive` 这些修复 locator parity 所需的 endpoint 引导，不再要求 hosted shell 自己去拼大而杂的 dashboard；
@@ -120,6 +122,7 @@
 - self-hostable hosted pilot package 已经把 app snapshot、run script、env 模板、`systemd` unit、service-install / healthcheck helper 与反向代理资产一并导出来；
 - `frontdesk-librechat-package` 已经把 `LibreChat` 外层壳、同源反向代理与 `OPL Front Desk` 的真实 pilot 组合导出来；
 - 这层 contract 现在不再只是“等未来接壳”的 prep，而是已经支撑一条真实的 `LibreChat-first` hosted shell pilot；
+- 如果外层用户前台后续命名为 `OPL Cortex`，当前 tranche 也只把它当作壳层 branding，不会立即改写 repo 内部 `frontdesk_*` surface id；
 - 但它仍然不等于 managed hosted runtime 已完成。
 
 ### F2.C. service-safe 本地包装层

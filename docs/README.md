@@ -18,6 +18,7 @@ This guide is for readers who need the architecture, contracts, planning surface
 
 - `OPL` is the top-level gateway, federation, and shared-boundary surface for the family.
 - Domain runtime ownership stays with admitted domain repositories rather than moving into `OPL`.
+- `frontdesk-entry-guide` is now the family-level machine-readable entry layer for AI / GUI shells; if the user-facing shell is branded as `OPL Cortex`, that naming sits above the repo-internal `frontdesk_*` contract ids.
 - The repository home should stay readable for non-technical human experts; this docs guide may be technical.
 - The active public carriers today are `Med Auto Science` for `Research Ops`, `RedCube AI` for `Presentation Ops`, and the active `Med Auto Grant` repository line for medical `Grant Ops`, with top-level admission and handoff wording still separately gated at `OPL`.
 

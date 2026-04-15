@@ -23,8 +23,10 @@
 repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review Ops` 然后 `Thesis Ops`：这两条 candidate path 都继续停留在 domain admission、`G2` discovery readiness、`G3` routed-action readiness 与 handoff readiness 之下。
 当前已 absorb 的前序门槛是 `Phase 1 exit + next-stage activation package freeze`；当前这份 `Phase 2 / Minimal admitted-domain federation activation package` 也已经被吸收到 repo-tracked 顶层真相中，只对已经 admitted 的 `MedAutoScience` 与 `RedCube AI` domain surface 生效。当前没有新的 active follow-on tranche 打开；只有 admitted-domain 仓再落下新的 absorbed delta，或中央 reference surfaces 发生真实漂移时，下一次 central sync 才是诚实的。runtime ownership 继续保留在 admitted domain 一侧。
 因此，当前 OPL 层的 repo-tracked formal entry 也仍然是这条本地 `TypeScript CLI`-first / read-only gateway surface。
-而位于这层合同之上的当前用户前台，已经是本地 `opl` shell、`opl web` pilot，以及围绕它们的 machine-readable discovery / handoff surface；其中 hosted-friendly 的 `frontdesk-manifest`、`frontdesk-readiness`、`frontdesk-domain-wiring`、`hosted-bundle` 等 surface 已作为当前前台 contract 的一部分落地。
+而位于这层合同之上的当前用户前台，已经是本地 `opl` shell、`opl web` pilot，以及围绕它们的 machine-readable discovery / handoff surface；其中 hosted-friendly 的 `frontdesk-manifest`、`frontdesk-entry-guide`、`frontdesk-readiness`、`frontdesk-domain-wiring`、`hosted-bundle` 等 surface 已作为当前前台 contract 的一部分落地。
 其中 `frontdesk-readiness` 是面向 operator 的派生看板：它只收口本地 service 状态、hosted pilot readiness，以及 domain 自己持有的 `product_entry_readiness / preflight` 真相；它继续从既有 manifest / binding / runtime surface 派生，不得变成第二真相源。
+其中 `frontdesk-entry-guide` 是面向 AI / GUI 壳的 family-level machine-readable entry layer：它冻结 workspace taxonomy、domain workspace mapping 与每个 domain 的 start guidance，但不替代 domain 自己持有的 manifest truth。
+如果未来把更高层的用户前台命名为 `OPL Cortex`，那也只应被视为产品壳名字；repo 内部的 `frontdesk_*` contract id 继续保持不变，除非单独冻结新的 rename tranche。
 这个交付目标把已有的顶层 contract language 继续维持为本地 CLI surface 可读取的合同入口；任何诚实的上游 `Hermes-Agent` rollout，仍然属于 domain 侧迁移目标，而不是当前 OPL 层既成事实。
 
 ## 当前参考同步配套文档
@@ -116,6 +118,7 @@ repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review 
 - [`publish-promotion.schema.json`](./publish-promotion.schema.json) — 已冻结的 P5.M2 publish / promotion operating contract JSON Schema
 - [`acceptance-matrix.json`](./acceptance-matrix.json) — 已冻结 gateway 与 operating surface 的 declarative acceptance matrix
 - [`public-surface-index.json`](./public-surface-index.json) — 当前权威 OPL public surface 与链接 domain public entry 的 machine-readable index
+- runtime 派生的 `frontdesk-*` discovery surface 故意继续在代码中实现，而不是在本目录额外冻结成静态 JSON；它们仍然属于由上层 governing contracts 派生出来的 machine-readable surface
 - [`task-topology.json`](./task-topology.json) — 覆盖已收录与仍在定义中的 OPL workstream 的 machine-readable 顶层任务版图
 - [`candidate-domain-backlog.json`](./candidate-domain-backlog.json) — 当前 under-definition workstream 的 machine-readable admission-blocker backlog
 - [`phase-1-exit-activation-package.json`](./phase-1-exit-activation-package.json) — 当前 `Phase 1` 离场门槛、deferred surface 与最小下一阶段判断的 machine-readable freeze

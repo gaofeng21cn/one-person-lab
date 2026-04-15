@@ -8,6 +8,7 @@ import {
 } from './frontdesk-paths.ts';
 import {
   buildFrontDeskDashboard,
+  buildFrontDeskEntryGuide,
   buildFrontDeskReadiness,
   buildFrontDeskHealth,
   buildFrontDeskDomainWiring,
@@ -151,6 +152,7 @@ type WebFrontDeskStartupPayload = {
     api: {
       health: string;
       frontdesk_manifest: string;
+      frontdesk_entry_guide: string;
       frontdesk_readiness: string;
       frontdesk_domain_wiring: string;
       domain_manifests: string;
@@ -551,6 +553,7 @@ function buildStartupPayload(context: WebFrontDeskContext): WebFrontDeskStartupP
       api: {
         health: endpoints.health,
         frontdesk_manifest: manifest.frontdesk_manifest.endpoints.manifest,
+        frontdesk_entry_guide: endpoints.frontdesk_entry_guide,
         frontdesk_readiness: endpoints.frontdesk_readiness,
         frontdesk_domain_wiring: endpoints.frontdesk_domain_wiring,
         domain_manifests: endpoints.domain_manifests,
@@ -2959,6 +2962,11 @@ async function handleRequest(
 
     if (method === 'GET' && routedPath === '/api/frontdesk-manifest') {
       writeJson(response, 200, buildFrontDeskManifest(context.contracts, { basePath: context.basePath }));
+      return;
+    }
+
+    if (method === 'GET' && routedPath === '/api/frontdesk-entry-guide') {
+      writeJson(response, 200, buildFrontDeskEntryGuide(context.contracts, { basePath: context.basePath }));
       return;
     }
 
