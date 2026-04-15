@@ -1003,6 +1003,27 @@ async function startFakeFrontDeskApiServer() {
       return;
     }
 
+    if (request.method === 'GET' && url.pathname === '/api/frontdesk-librechat-status') {
+      response.statusCode = 200;
+      response.end(JSON.stringify({
+        frontdesk_librechat: {
+          action: 'status',
+          surface_id: 'opl_frontdesk_librechat_status',
+          installed: true,
+          running: false,
+          public_origin: 'http://127.0.0.1:3010',
+          identity: {
+            sync_status: 'drift_detected',
+            app_title: 'OPL Agent',
+          },
+          notes: [
+            'Recorded hosted shell assets drift from the currently expected local stack.',
+          ],
+        },
+      }));
+      return;
+    }
+
     if (request.method === 'GET' && url.pathname === '/api/frontdesk-entry-guide') {
       response.statusCode = 200;
       response.end(JSON.stringify({
@@ -2120,6 +2141,10 @@ exit 1
     assert.equal(output.frontdesk_readiness.local_service.installed, false);
     assert.equal(output.frontdesk_readiness.local_service.loaded, false);
     assert.equal(output.frontdesk_readiness.local_service.health.status, 'not_installed');
+    assert.equal(output.frontdesk_readiness.local_hosted_shell.surface_id, 'opl_frontdesk_librechat_status');
+    assert.equal(output.frontdesk_readiness.local_hosted_shell.installed, false);
+    assert.equal(output.frontdesk_readiness.local_hosted_shell.running, false);
+    assert.equal(output.frontdesk_readiness.local_hosted_shell.identity.sync_status, 'not_installed');
     assert.equal(output.frontdesk_readiness.hosted_runtime_readiness.status, 'pilot_ready_not_managed');
     assert.equal(output.frontdesk_readiness.summary.total_projects_count, 2);
     assert.equal(output.frontdesk_readiness.summary.usable_now_projects_count, 0);
@@ -2130,6 +2155,7 @@ exit 1
     assert.equal(output.frontdesk_readiness.summary.ready_for_domain_handoff_count, 0);
     assert.equal(output.frontdesk_readiness.endpoints.frontdesk_readiness, '/api/frontdesk-readiness');
     assert.equal(output.frontdesk_readiness.endpoints.frontdesk_domain_wiring, '/api/frontdesk-domain-wiring');
+    assert.equal(output.frontdesk_readiness.endpoints.frontdesk_librechat_status, '/api/frontdesk-librechat-status');
     assert.equal(output.frontdesk_readiness.projects[0].manifest_status, 'not_bound');
     assert.equal(output.frontdesk_readiness.projects[0].entry_parity_status, 'blocked');
     assert.equal(output.frontdesk_readiness.projects[0].usable_now, false);
@@ -2557,6 +2583,7 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
       assert.equal(tools.some((tool) => tool.name === 'opl_runtime_status'), true);
       assert.equal(tools.some((tool) => tool.name === 'opl_workspace_catalog'), true);
       assert.equal(tools.some((tool) => tool.name === 'opl_activate_workspace'), true);
+      assert.equal(tools.some((tool) => tool.name === 'opl_frontdesk_librechat_status'), true);
       assert.match(
         tools.find((tool) => tool.name === 'opl_project_progress')?.description ?? '',
         /哪篇论文|讲什么故事/,
@@ -2610,6 +2637,23 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
         id: 5,
         method: 'tools/call',
         params: {
+          name: 'opl_frontdesk_librechat_status',
+          arguments: {},
+        },
+      });
+      const hostedShellCall = await readJsonLine(child.stdout);
+      const hostedShellContent = (hostedShellCall.result as {
+        content: Array<{ type: string; text: string }>;
+      }).content;
+      assert.equal(hostedShellContent[0].type, 'text');
+      assert.match(hostedShellContent[0].text, /"surface_id": "opl_frontdesk_librechat_status"/);
+      assert.match(hostedShellContent[0].text, /"sync_status": "drift_detected"/);
+
+      writeJsonLine(child.stdin, {
+        jsonrpc: '2.0',
+        id: 6,
+        method: 'tools/call',
+        params: {
           name: 'opl_frontdesk_entry_guide',
           arguments: {},
         },
@@ -2623,7 +2667,7 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
 
       writeJsonLine(child.stdin, {
         jsonrpc: '2.0',
-        id: 6,
+        id: 7,
         method: 'tools/call',
         params: {
           name: 'opl_dashboard',
@@ -2647,6 +2691,7 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
         && request.query.sessions_limit === '7'
       ), true);
       assert.equal(fakeApi.requests.some((request) => request.path === '/api/frontdesk-entry-guide'), true);
+      assert.equal(fakeApi.requests.some((request) => request.path === '/api/frontdesk-librechat-status'), true);
     } finally {
       child.kill('SIGTERM');
       await once(child, 'exit');
@@ -2952,6 +2997,26 @@ test('workspace registry commands bind activate and archive project workspaces w
     assert.equal(catalogOutput.workspace_catalog.projects[2].bindings_count.manifest_ready, 1);
     assert.equal(catalogOutput.workspace_catalog.projects[2].last_updated_at, bindOutput.workspace_catalog.binding.updated_at);
     assert.deepEqual(catalogOutput.workspace_catalog.projects[2].available_actions, ['bind', 'activate', 'archive', 'launch']);
+    assert.equal(
+      catalogOutput.workspace_catalog.projects[2].binding_contract.surface_id,
+      'opl_project_workspace_binding_contract',
+    );
+    assert.deepEqual(
+      catalogOutput.workspace_catalog.projects[2].binding_contract.required_locator_fields,
+      [],
+    );
+    assert.deepEqual(
+      catalogOutput.workspace_catalog.projects[2].binding_contract.optional_locator_fields,
+      ['workspace_root'],
+    );
+    assert.equal(
+      catalogOutput.workspace_catalog.projects[2].binding_contract.derived_frontdesk_command_template,
+      'redcube product frontdesk --workspace-root <workspace_root>',
+    );
+    assert.equal(
+      catalogOutput.workspace_catalog.projects[2].binding_contract.derived_manifest_command_template,
+      'redcube product manifest --workspace-root <workspace_root>',
+    );
     assert.equal(catalogOutput.workspace_catalog.summary.active_projects_count, 1);
     assert.equal(catalogOutput.workspace_catalog.summary.direct_entry_ready_projects_count, 1);
     assert.equal(catalogOutput.workspace_catalog.summary.manifest_ready_projects_count, 1);
@@ -3233,6 +3298,9 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(grantEntry.product_entry_start.recommended_mode_id, 'open_frontdesk');
     assert.equal(grantEntry.product_entry_start_resume_surface_kind, 'grant_user_loop');
     assert.equal(grantEntry.product_entry_start_mode_ids[2], 'build_direct_entry');
+    assert.equal(grantEntry.active_binding_locator_status, 'missing');
+    assert.equal(grantEntry.active_binding_locator.command, null);
+    assert.equal(grantEntry.active_binding_locator.url, null);
     assert.equal(
       grantEntry.product_entry_preflight.recommended_check_command,
       'uv run python -m med_autogrant validate-workspace --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json',
@@ -3250,6 +3318,9 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(scienceEntry.product_entry_readiness_verdict, 'runtime_ready_not_standalone_product');
     assert.equal(scienceEntry.product_entry_readiness_good_to_use_now, false);
     assert.equal(scienceEntry.product_entry_readiness_loop_command, 'uv run python -m med_autoscience.cli workspace-cockpit --profile /fixtures/med-autoscience/profile.local.toml');
+    assert.equal(scienceEntry.active_binding_locator_status, 'missing');
+    assert.equal(scienceEntry.active_binding_locator.command, null);
+    assert.equal(scienceEntry.active_binding_locator.url, null);
     assert.equal(scienceEntry.product_entry_preflight.ready_to_try_now, true);
     assert.equal(scienceEntry.product_entry_start.surface_kind, 'product_entry_start');
     assert.equal(scienceEntry.product_entry_start.recommended_mode_id, 'open_frontdesk');
@@ -3283,6 +3354,13 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(recommendedEntry.product_entry_readiness_start_command, 'redcube product frontdesk');
     assert.equal(recommendedEntry.product_entry_readiness_loop_command, 'redcube product invoke');
     assert.equal(recommendedEntry.product_entry_preflight.ready_to_try_now, true);
+    assert.equal(recommendedEntry.active_binding_locator_status, 'ready');
+    assert.equal(recommendedEntry.active_binding_locator.command, 'redcube-ai frontdesk');
+    assert.equal(recommendedEntry.active_binding_locator.url, 'http://127.0.0.1:3310/redcube');
+    assert.equal(
+      recommendedEntry.active_binding_locator.manifest_command,
+      buildManifestCommand(fixtures.redcube),
+    );
     assert.equal(recommendedEntry.product_entry_start.surface_kind, 'product_entry_start');
     assert.equal(recommendedEntry.product_entry_start.recommended_mode_id, 'open_frontdesk');
     assert.equal(recommendedEntry.product_entry_start_resume_surface_kind, 'product_entry_session');
@@ -3682,6 +3760,10 @@ test('project-progress promotes current MAS study into a paper-facing summary in
     assert.ok(currentStudy);
     const storySummary = currentStudy.story_summary;
     assert.ok(storySummary);
+    const paperSnapshot = currentStudy.paper_snapshot;
+    assert.ok(paperSnapshot);
+    const currentEffectSummary = paperSnapshot.current_effect_summary;
+    assert.ok(currentEffectSummary);
 
     assert.equal(currentStudy.study_id, studyId);
     assert.equal(
@@ -3691,14 +3773,14 @@ test('project-progress promotes current MAS study into a paper-facing summary in
     assert.match(storySummary, /侵袭负担.*Knosp.*公开 MRI \/ omics/);
     assert.equal(currentStudy.current_stage, 'publication_supervision');
     assert.equal(currentStudy.monitoring.health_status, 'live');
-    assert.equal(currentStudy.paper_snapshot.main_figure_count, 3);
-    assert.equal(currentStudy.paper_snapshot.supplementary_figure_count, 1);
-    assert.equal(currentStudy.paper_snapshot.main_table_count, 2);
-    assert.equal(currentStudy.paper_snapshot.supplementary_table_count, 1);
-    assert.equal(currentStudy.paper_snapshot.reference_count, 32);
-    assert.equal(currentStudy.paper_snapshot.page_count, 12);
-    assert.ok(currentStudy.paper_snapshot.current_effect_summary.includes('AUROC 0.7999'));
-    assert.match(currentStudy.paper_snapshot.current_effect_summary, /negative/i);
+    assert.equal(paperSnapshot.main_figure_count, 3);
+    assert.equal(paperSnapshot.supplementary_figure_count, 1);
+    assert.equal(paperSnapshot.main_table_count, 2);
+    assert.equal(paperSnapshot.supplementary_table_count, 1);
+    assert.equal(paperSnapshot.reference_count, 32);
+    assert.equal(paperSnapshot.page_count, 12);
+    assert.ok(currentEffectSummary.includes('AUROC 0.7999'));
+    assert.match(currentEffectSummary, /negative/i);
     assert.match(payload.project_progress.progress_summary, /004-invasive-architecture/);
     assert.match(payload.project_progress.progress_summary, /3 张主图/);
     assert.match(payload.project_progress.progress_summary, /32 篇参考文献/);
@@ -3824,6 +3906,38 @@ test('workspace-bind derives family direct-entry locators from structured projec
     const catalogOutput = runCli(['workspace-catalog'], env);
     assert.equal(catalogOutput.workspace_catalog.summary.direct_entry_ready_projects_count, 3);
     assert.equal(catalogOutput.workspace_catalog.summary.manifest_ready_projects_count, 3);
+    const magProject = catalogOutput.workspace_catalog.projects.find(
+      (entry: { project_id: string }) => entry.project_id === 'medautogrant',
+    );
+    const masProject = catalogOutput.workspace_catalog.projects.find(
+      (entry: { project_id: string }) => entry.project_id === 'medautoscience',
+    );
+    const redcubeProject = catalogOutput.workspace_catalog.projects.find(
+      (entry: { project_id: string }) => entry.project_id === 'redcube',
+    );
+    assert.deepEqual(magProject.binding_contract.required_locator_fields, ['input_path']);
+    assert.equal(
+      magProject.binding_contract.workspace_locator_surface_kind,
+      'med_autogrant_workspace_input',
+    );
+    assert.equal(
+      magProject.binding_contract.derived_frontdesk_command_template,
+      'uv run python -m med_autogrant product-frontdesk --input <input_path>',
+    );
+    assert.deepEqual(masProject.binding_contract.required_locator_fields, ['profile_ref']);
+    assert.equal(
+      masProject.binding_contract.workspace_locator_surface_kind,
+      'med_autoscience_workspace_profile',
+    );
+    assert.equal(
+      masProject.binding_contract.derived_manifest_command_template,
+      'uv run python -m med_autoscience.cli product-entry-manifest --profile <profile_ref> --format json',
+    );
+    assert.deepEqual(redcubeProject.binding_contract.optional_locator_fields, ['workspace_root']);
+    assert.equal(
+      redcubeProject.binding_contract.quick_bind_hint,
+      '可只给 workspace_path；若额外提供 workspace_root，则 redcube direct entry 会优先指向它。',
+    );
 
     const manifestOutput = runCli(['domain-manifests'], env);
     assert.equal(manifestOutput.domain_manifests.summary.resolved_count, 3);
@@ -4368,7 +4482,10 @@ exit 1
     assert.equal(ledgerOutput.session_ledger.sessions[0].domain_id, 'redcube');
     assert.deepEqual(ledgerOutput.session_ledger.sessions[0].modes, ['resume', 'ask']);
     assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.samples_captured, 2);
+    assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.latest_sample_status, 'captured');
     assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.latest_process_count, 2);
+    assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.latest_total_rss_kb, 174616);
+    assert.equal(ledgerOutput.session_ledger.sessions[0].resource_totals.latest_total_cpu_percent, 4.4);
     assert.equal(ledgerOutput.session_ledger.sessions[0].workspace_locator.absolute_path, repoRoot);
     assert.equal(ledgerOutput.session_ledger.summary.session_aggregate_count, 1);
 
@@ -4490,6 +4607,7 @@ exit 1
       api: {
         frontdesk_entry_guide: string;
         frontdesk_readiness: string;
+        frontdesk_librechat_status: string;
         project_progress: string;
         frontdesk_domain_wiring: string;
         librechat_package: string;
@@ -4506,6 +4624,7 @@ exit 1
     assert.equal(webFrontdesk.api.frontdesk_readiness, '/api/frontdesk-readiness');
     assert.equal(webFrontdesk.api.project_progress, '/api/project-progress');
     assert.equal(webFrontdesk.api.frontdesk_domain_wiring, '/api/frontdesk-domain-wiring');
+    assert.equal(webFrontdesk.api.frontdesk_librechat_status, '/api/frontdesk-librechat-status');
     assert.equal(webFrontdesk.api.librechat_package, '/api/librechat-package');
     assert.equal(webFrontdesk.shell_bootstrap.primary_surface.surface_id, 'opl_frontdesk_entry_guide');
     assert.equal(webFrontdesk.shell_bootstrap.primary_surface.endpoint, '/api/frontdesk-entry-guide');
@@ -4577,10 +4696,16 @@ exit 1
     assert.equal(readinessPayload.frontdesk_readiness.surface_id, 'opl_frontdesk_readiness');
     assert.equal(readinessPayload.frontdesk_readiness.summary.total_projects_count, 2);
     assert.equal(readinessPayload.frontdesk_readiness.summary.usable_now_projects_count, 0);
+    assert.equal(readinessPayload.frontdesk_readiness.local_hosted_shell.surface_id, 'opl_frontdesk_librechat_status');
     assert.match(
       readinessPayload.frontdesk_readiness.local_service.health.status,
       /^(ok|not_installed|unreachable)$/,
     );
+
+    const librechatStatusResponse = await fetch(`${baseUrl}/api/frontdesk-librechat-status`);
+    const librechatStatusPayload = await librechatStatusResponse.json();
+    assert.equal(librechatStatusPayload.frontdesk_librechat.action, 'status');
+    assert.equal(librechatStatusPayload.frontdesk_librechat.identity.sync_status, 'not_installed');
     const progressResponse = await fetch(`${baseUrl}/api/project-progress`);
     const progressPayload = await progressResponse.json();
     assert.equal(progressPayload.project_progress.surface_id, 'opl_project_progress_brief');
@@ -4785,6 +4910,11 @@ exit 1
     const pageHtml = await page.text();
     assert.match(pageHtml, /OPL Machine Surface/);
     assert.match(pageHtml, /Open OPL Agent/);
+    assert.match(pageHtml, /Bound direct entry/);
+    assert.match(pageHtml, /Open redcube direct entry/);
+    assert.match(pageHtml, /http:\/\/127\.0\.0\.1:3310\/redcube/);
+    assert.match(pageHtml, /Binding Guide/);
+    assert.match(pageHtml, /Session Resource Attribution/);
     assert.match(pageHtml, /Project snapshot/);
     assert.match(pageHtml, /\/api\/frontdesk-entry-guide/);
     assert.doesNotMatch(pageHtml, /Start A Domain Project/);
