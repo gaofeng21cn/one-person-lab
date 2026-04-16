@@ -1,4 +1,6 @@
+import { spawn } from 'node:child_process';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
+import { fileURLToPath } from 'node:url';
 
 import { GatewayContractError } from './contracts.ts';
 import { inferFrontDeskWorkspaceLabel } from './frontdesk-librechat-identity.ts';
@@ -26,7 +28,6 @@ import { buildDomainManifestCatalog } from './domain-manifest.ts';
 import { launchDomainEntry, type DomainLaunchStrategy } from './domain-launch.ts';
 import {
   readFrontDeskLibreChatTitleSyncConfig,
-  syncFrontDeskLibreChatConversationTitles,
 } from './frontdesk-librechat-title-sync.ts';
 import { getFrontDeskLibreChatServiceStatus } from './frontdesk-librechat-service.ts';
 import { buildHostedPilotPackage } from './hosted-pilot-package.ts';
@@ -759,19 +760,56 @@ async function queueFrontDeskLibreChatTitleSync(limit = 3) {
   frontDeskLibreChatTitleSyncState.inFlight = true;
   frontDeskLibreChatTitleSyncState.lastStartedAt = now;
   frontDeskLibreChatTitleSyncState.lastError = null;
+  const currentModulePath = fileURLToPath(import.meta.url);
+  const workerSuffix = currentModulePath.endsWith('.js') ? '.js' : '.ts';
+  const workerPath = fileURLToPath(new URL(`./frontdesk-librechat-title-sync-worker${workerSuffix}`, import.meta.url));
+  const child = spawn(
+    process.execPath,
+    [
+      ...process.execArgv,
+      workerPath,
+      '--limit',
+      String(limit),
+    ],
+    {
+      env: process.env,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    },
+  );
 
-  void syncFrontDeskLibreChatConversationTitles(config, { limit })
-    .then((summary) => {
-      frontDeskLibreChatTitleSyncState.lastResult = summary;
-    })
-    .catch((error) => {
+  let stdout = '';
+  let stderr = '';
+
+  child.stdout?.on('data', (chunk: Buffer | string) => {
+    stdout += chunk.toString();
+  });
+  child.stderr?.on('data', (chunk: Buffer | string) => {
+    stderr += chunk.toString();
+  });
+
+  child.once('error', (error) => {
+    frontDeskLibreChatTitleSyncState.lastError = error.message;
+    frontDeskLibreChatTitleSyncState.inFlight = false;
+    frontDeskLibreChatTitleSyncState.lastCompletedAt = Date.now();
+  });
+
+  child.once('close', (code) => {
+    if (code === 0) {
+      try {
+        frontDeskLibreChatTitleSyncState.lastResult = JSON.parse(stdout.trim()) as Record<string, unknown>;
+        frontDeskLibreChatTitleSyncState.lastError = null;
+      } catch (error) {
+        frontDeskLibreChatTitleSyncState.lastError =
+          error instanceof Error ? error.message : 'Failed to parse title sync worker output.';
+      }
+    } else {
       frontDeskLibreChatTitleSyncState.lastError =
-        error instanceof Error ? error.message : 'Unknown title sync failure.';
-    })
-    .finally(() => {
-      frontDeskLibreChatTitleSyncState.inFlight = false;
-      frontDeskLibreChatTitleSyncState.lastCompletedAt = Date.now();
-    });
+        stderr.trim() || stdout.trim() || `Title sync worker exited with code ${code ?? 1}.`;
+    }
+
+    frontDeskLibreChatTitleSyncState.inFlight = false;
+    frontDeskLibreChatTitleSyncState.lastCompletedAt = Date.now();
+  });
 
   return {
     status: 'started',

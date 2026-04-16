@@ -2991,6 +2991,135 @@ test('frontdesk librechat title sync normalizes placeholders into stable human t
   );
 });
 
+test('frontdesk librechat title sync worker reads recorded config and prints a summary json payload', async () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-frontdesk-title-sync-state-'));
+  const composeFile = path.join(stateRoot, 'docker-compose.yml');
+  const envFile = path.join(stateRoot, '.env');
+  const dockerLog = path.join(stateRoot, 'docker.log');
+  const dockerPath = path.join(stateRoot, 'docker');
+  const workerPath = path.join(repoRoot, 'src', 'frontdesk-librechat-title-sync-worker.ts');
+  const provider = createServer((request, response) => {
+    response.statusCode = 200;
+    response.setHeader('content-type', 'application/json; charset=utf-8');
+    response.end(JSON.stringify({
+      choices: [
+        {
+          message: {
+            content: 'NF-PitNET 论文进度',
+          },
+        },
+      ],
+    }));
+  });
+
+  await new Promise<void>((resolve, reject) => {
+    provider.once('error', reject);
+    provider.listen(0, '127.0.0.1', () => resolve());
+  });
+
+  const address = provider.address();
+  assert.ok(address && typeof address !== 'string');
+
+  fs.writeFileSync(composeFile, 'services: {}\n', 'utf8');
+  fs.writeFileSync(envFile, [
+    `OPENAI_REVERSE_PROXY=http://127.0.0.1:${address.port}`,
+    'OPENAI_API_KEY=test-provider-key',
+  ].join('\n'), 'utf8');
+  fs.writeFileSync(
+    path.join(stateRoot, 'librechat-service.json'),
+    `${JSON.stringify({
+      env_file: envFile,
+      compose_file: composeFile,
+      workspace_path: '/Users/gaofeng/workspace/Yang/NF-PitNET',
+      codex_model: 'gpt-5.4',
+      codex_reasoning_effort: 'xhigh',
+    }, null, 2)}\n`,
+    'utf8',
+  );
+  fs.writeFileSync(
+    dockerPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\\n' "$*" >> ${shellSingleQuote(dockerLog)}
+if [[ "$*" == *"db.conversations.find"* ]]; then
+  cat <<'EOF'
+[{"conversation_id":"conv-001","current_title":"New Chat","first_user_text":"现在论文进度如何？"}]
+EOF
+  exit 0
+fi
+if [[ "$*" == *"db.conversations.updateOne"* ]]; then
+  cat <<'EOF'
+{"matchedCount":1,"modifiedCount":1}
+EOF
+  exit 0
+fi
+echo "unexpected docker args: $*" >&2
+exit 1
+`,
+    { mode: 0o755 },
+  );
+
+  try {
+    const child = spawn(
+      process.execPath,
+      ['--experimental-strip-types', workerPath, '--limit', '2'],
+      {
+        cwd: repoRoot,
+        env: {
+          ...process.env,
+          NODE_NO_WARNINGS: '1',
+          OPL_FRONTDESK_STATE_DIR: stateRoot,
+          OPL_DOCKER_BIN: dockerPath,
+        },
+        stdio: ['ignore', 'pipe', 'pipe'],
+      },
+    );
+
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (chunk: Buffer | string) => {
+      stdout += chunk.toString();
+    });
+    child.stderr.on('data', (chunk: Buffer | string) => {
+      stderr += chunk.toString();
+    });
+
+    const exitCode = await new Promise<number>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        child.kill('SIGKILL');
+        reject(new Error('title sync worker test timed out'));
+      }, 15_000);
+
+      child.once('error', (error) => {
+        clearTimeout(timer);
+        reject(error);
+      });
+      child.once('close', (code) => {
+        clearTimeout(timer);
+        resolve(code ?? 1);
+      });
+    });
+
+    assert.equal(exitCode, 0, stderr);
+    const payload = JSON.parse(stdout) as {
+      scanned_count: number;
+      updated_count: number;
+      failed_count: number;
+      updates: Array<{ conversation_id: string; title: string }>;
+    };
+    assert.equal(payload.scanned_count, 1);
+    assert.equal(payload.updated_count, 1);
+    assert.equal(payload.failed_count, 0);
+    assert.equal(payload.updates[0]?.conversation_id, 'conv-001');
+    assert.equal(payload.updates[0]?.title, 'NF-PitNET 论文进度');
+    assert.match(fs.readFileSync(dockerLog, 'utf8'), /db\.conversations\.find/);
+    assert.match(fs.readFileSync(dockerLog, 'utf8'), /db\.conversations\.updateOne/);
+  } finally {
+    await stopHttpServer(provider);
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('mcp-stdio defaults to a LibreChat-compatible protocol version when the client does not negotiate one', async () => {
   const fakeApi = await startFakeFrontDeskApiServer();
 
