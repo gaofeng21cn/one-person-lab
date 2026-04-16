@@ -86,6 +86,7 @@ type CommandSpec = {
   summary: string;
   examples: string[];
   handler: CommandHandler;
+  group?: string;
 };
 
 type ParsedCliInput = {
@@ -1580,12 +1581,78 @@ function looksLikeNaturalLanguage(command: string, args: string[]) {
   return /[.,!?;:()[\]{}'"“”‘’]/.test(command);
 }
 
+const COMMAND_GROUP_SUMMARIES: Record<string, string> = {
+  top_level: '直接产品入口与前台运行入口。',
+  status: '读取 family、workspace、runtime 和 dashboard 状态。',
+  workspace: '管理项目与 workspace 绑定。',
+  domain: '解析域边界、域入口和域 manifest。',
+  contract: '读取或验证 machine-readable contract / handoff surface。',
+  frontdesk: '安装、打包、启动和检查前台壳。',
+  paperclip: 'Paperclip control-plane 绑定与同步。',
+  session: '查看、恢复和审计会话。',
+  runtime: '修复或检查底层 runtime 相关入口。',
+};
+
+function cloneCommandSpec(
+  base: CommandSpec,
+  overrides: Partial<Omit<CommandSpec, 'handler'>> & { handler?: CommandHandler } = {},
+): CommandSpec {
+  return {
+    ...base,
+    ...overrides,
+    examples: overrides.examples ?? base.examples,
+  };
+}
+
+function resolveCommandSpec(
+  tokens: string[],
+  commands: Record<string, CommandSpec>,
+) {
+  const prefixLimit = Math.max(
+    1,
+    tokens.findIndex((token) => token.startsWith('--')) === -1
+      ? tokens.length
+      : tokens.findIndex((token) => token.startsWith('--')),
+  );
+
+  for (let length = prefixLimit; length >= 1; length -= 1) {
+    const candidate = tokens.slice(0, length).join(' ');
+    const spec = commands[candidate];
+    if (spec) {
+      return {
+        command: candidate,
+        spec,
+        args: tokens.slice(length),
+      };
+    }
+  }
+
+  return null;
+}
+
 function buildRootHelp(commands: Record<string, CommandSpec>) {
+  const grouped = Object.entries(commands).reduce<Record<string, Array<{
+    command: string;
+    usage: string;
+    summary: string;
+    examples: string[];
+  }>>>((acc, [command, spec]) => {
+    const groupId = spec.group ?? 'top_level';
+    acc[groupId] ??= [];
+    acc[groupId].push({
+      command,
+      usage: spec.usage,
+      summary: spec.summary,
+      examples: spec.examples,
+    });
+    return acc;
+  }, {});
+
   return {
     version: 'g2',
     help: {
       command: null,
-      usage: 'opl [command|request...] [args]',
+      usage: 'opl [command ...|request...] [args]',
       global_options: [
         {
           option: '--contracts-dir <path>',
@@ -1593,6 +1660,11 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
             'Use an explicit OPL contract root. When omitted, the CLI resolves from cwd, cwd/contracts/opl-gateway, or the active OPL CLI repo contracts root.',
         },
       ],
+      command_groups: Object.entries(grouped).map(([group_id, entries]) => ({
+        group_id,
+        summary: COMMAND_GROUP_SUMMARIES[group_id] ?? '',
+        commands: entries,
+      })),
       commands: Object.entries(commands).map(([command, spec]) => ({
         command,
         usage: spec.usage,
@@ -1603,37 +1675,33 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl help',
         'opl',
         'opl doctor',
-        'opl projects',
-        'opl frontdesk-manifest',
-        'opl frontdesk-entry-guide',
-        'opl frontdesk-readiness --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
-        'opl frontdesk-domain-wiring',
-        'opl frontdesk-hosted-bundle --base-path /pilot/opl',
-        'opl frontdesk-hosted-package --output /tmp/opl-hosted-package --public-origin https://opl.example.com --base-path /pilot/opl',
-        'opl frontdesk-librechat-package --output /tmp/opl-librechat-pilot --public-origin https://opl.example.com --base-path /pilot/opl',
-        'opl frontdesk-bootstrap --path /Users/gaofeng/workspace/Yang/NF-PitNET --public-origin http://127.0.0.1:8080',
-        'opl frontdesk-service-install --port 8787',
-        'opl frontdesk-librechat-install --path /Users/gaofeng/workspace/Yang/NF-PitNET --public-origin http://127.0.0.1:8080',
-        'opl frontdesk-librechat-open',
-        'opl workspace-bind --project redcube --path /Users/gaofeng/workspace/redcube-ai --entry-command "redcube-ai frontdesk" --manifest-command "redcube product manifest --workspace-root /Users/gaofeng/workspace/redcube-ai"',
-        'opl launch-domain --project redcube --dry-run',
-        'opl paperclip-config --base-url https://paperclip.example.com --auth-header-env OPL_PAPERCLIP_AUTH_HEADER --control-company-id company-opl-control',
-        'opl paperclip-bind --project redcube --company-id company-redcube --paperclip-project-id project-redcube --project-workspace-id workspace-redcube --execution-workspace shared_workspace',
-        'opl paperclip-open-task "Prepare a defense-ready slide deck." --preferred-family ppt_deck --workspace-path /Users/gaofeng/workspace/redcube-ai --priority high',
-        'opl handoff-envelope "Prepare a defense-ready slide deck." --preferred-family ppt_deck',
-        'opl workspace-status --path /Users/gaofeng/workspace/redcube-ai',
-        'opl runtime-status --limit 10',
-        'opl dashboard --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
+        'opl workspace projects',
+        'opl frontdesk manifest',
+        'opl frontdesk readiness --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
+        'opl frontdesk domain-wiring',
+        'opl frontdesk hosted-bundle --base-path /pilot/opl',
+        'opl frontdesk hosted-package --output /tmp/opl-hosted-package --public-origin https://opl.example.com --base-path /pilot/opl',
+        'opl frontdesk librechat-package --output /tmp/opl-librechat-pilot --public-origin https://opl.example.com --base-path /pilot/opl',
+        'opl frontdesk bootstrap --path /Users/gaofeng/workspace/Yang/NF-PitNET --public-origin http://127.0.0.1:8080',
+        'opl frontdesk service install --port 8787',
+        'opl frontdesk librechat install --path /Users/gaofeng/workspace/Yang/NF-PitNET --public-origin http://127.0.0.1:8080',
+        'opl frontdesk librechat open',
+        'opl workspace bind --project redcube --path /Users/gaofeng/workspace/redcube-ai --entry-command "redcube-ai frontdesk" --manifest-command "redcube product manifest --workspace-root /Users/gaofeng/workspace/redcube-ai"',
+        'opl domain launch --project redcube --dry-run',
+        'opl paperclip config --base-url https://paperclip.example.com --auth-header-env OPL_PAPERCLIP_AUTH_HEADER --control-company-id company-opl-control',
+        'opl paperclip bind --project redcube --company-id company-redcube --paperclip-project-id project-redcube --project-workspace-id workspace-redcube --execution-workspace shared_workspace',
+        'opl paperclip open-task "Prepare a defense-ready slide deck." --preferred-family ppt_deck --workspace-path /Users/gaofeng/workspace/redcube-ai --priority high',
+        'opl contract handoff-envelope "Prepare a defense-ready slide deck." --preferred-family ppt_deck',
+        'opl status workspace --path /Users/gaofeng/workspace/redcube-ai',
+        'opl status runtime --limit 10',
+        'opl status dashboard --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
         'opl web --host 127.0.0.1 --port 8787 --base-path /pilot/opl --path /Users/gaofeng/workspace/one-person-lab',
         'opl "Plan a medical grant proposal revision loop."',
         'opl ask "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck --workspace-path /Users/gaofeng/workspace/redcube-ai',
         'opl chat "Plan a medical grant proposal revision loop." --workspace-path /Users/gaofeng/workspace/med-autogrant',
-        'opl validate-contracts',
-        'opl list-workstreams',
-        'opl get-workstream presentation_ops',
-        'opl get-domain redcube',
-        'opl resolve-request-surface --intent presentation_delivery --target deliverable --goal "Prepare a defense-ready slide deck."',
-        'opl explain-domain-boundary --intent create --target deliverable --goal "Prepare a xiaohongshu campaign pack." --preferred-family xiaohongshu',
+        'opl contract validate',
+        'opl domain resolve-request --intent presentation_delivery --target deliverable --goal "Prepare a defense-ready slide deck."',
+        'opl domain explain-boundary --intent create --target deliverable --goal "Prepare a xiaohongshu campaign pack." --preferred-family xiaohongshu',
       ],
     },
   };
@@ -2624,11 +2692,370 @@ async function main() {
     },
   };
 
-  const { command, args, helpRequested } = parsedInput;
+  const publicCommandSpecs: Record<string, CommandSpec> = {
+    help: {
+      usage: 'opl help [command ...]',
+      summary: 'Show the top-level command groups or command-scoped runnable examples.',
+      examples: ['opl help', 'opl help status workspace', 'opl help frontdesk service install'],
+      group: 'top_level',
+      handler: (args) => {
+        if (args.length === 0) {
+          return buildRootHelp(publicCommandSpecs);
+        }
 
-  if (!command) {
-    if (helpRequested) {
-      printJson(buildRootHelp(commandSpecs));
+        const helpTarget = args.join(' ');
+        const helpSpec = publicCommandSpecs[helpTarget];
+        if (!helpSpec) {
+          throw new GatewayContractError('unknown_command', `Unknown command: ${helpTarget}.`, {
+            command: helpTarget,
+            commands: Object.keys(publicCommandSpecs),
+            usage: 'opl help',
+          });
+        }
+
+        return buildCommandHelp(helpTarget, helpSpec);
+      },
+    },
+    doctor: cloneCommandSpec(commandSpecs.doctor, { group: 'top_level' }),
+    start: cloneCommandSpec(commandSpecs.start, { group: 'top_level' }),
+    ask: cloneCommandSpec(commandSpecs.ask, { group: 'top_level' }),
+    chat: cloneCommandSpec(commandSpecs.chat, { group: 'top_level' }),
+    web: cloneCommandSpec(commandSpecs.web, { group: 'top_level' }),
+    'mcp-stdio': cloneCommandSpec(commandSpecs['mcp-stdio'], { group: 'top_level' }),
+    'status workspace': cloneCommandSpec(commandSpecs['workspace-status'], {
+      usage: 'opl status workspace [--path <workspace_path>]',
+      examples: ['opl status workspace', 'opl status workspace --path /Users/gaofeng/workspace/redcube-ai'],
+      group: 'status',
+    }),
+    'status runtime': cloneCommandSpec(commandSpecs['runtime-status'], {
+      usage: 'opl status runtime [--limit <n>]',
+      examples: ['opl status runtime', 'opl status runtime --limit 10'],
+      group: 'status',
+    }),
+    'status dashboard': cloneCommandSpec(commandSpecs.dashboard, {
+      usage: 'opl status dashboard [--path <workspace_path>] [--sessions-limit <n>]',
+      examples: [
+        'opl status dashboard',
+        'opl status dashboard --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
+      ],
+      group: 'status',
+    }),
+    'workspace projects': cloneCommandSpec(commandSpecs.projects, {
+      usage: 'opl workspace projects',
+      examples: ['opl workspace projects'],
+      group: 'workspace',
+    }),
+    'workspace list': cloneCommandSpec(commandSpecs['workspace-catalog'], {
+      usage: 'opl workspace list',
+      examples: ['opl workspace list'],
+      group: 'workspace',
+    }),
+    'workspace bind': cloneCommandSpec(commandSpecs['workspace-bind'], {
+      usage:
+        'opl workspace bind --project <project_id> --path <workspace_path> [--label <label>] [--entry-command <command>] [--manifest-command <command>] [--entry-url <url>] [--workspace-root <dir>] [--profile <file>] [--input <file>]',
+      examples: [
+        'opl workspace bind --project redcube --path /Users/gaofeng/workspace/redcube-ai',
+        'opl workspace bind --project medautoscience --path /Users/gaofeng/workspace/med-autoscience --profile /Users/gaofeng/workspace/med-autoscience/profiles/local.toml',
+      ],
+      group: 'workspace',
+    }),
+    'workspace activate': cloneCommandSpec(commandSpecs['workspace-activate'], {
+      usage: 'opl workspace activate --project <project_id> --path <workspace_path>',
+      examples: ['opl workspace activate --project redcube --path /Users/gaofeng/workspace/redcube-ai'],
+      group: 'workspace',
+    }),
+    'workspace archive': cloneCommandSpec(commandSpecs['workspace-archive'], {
+      usage: 'opl workspace archive --project <project_id> --path <workspace_path>',
+      examples: ['opl workspace archive --project redcube --path /Users/gaofeng/workspace/redcube-ai'],
+      group: 'workspace',
+    }),
+    'domain manifests': cloneCommandSpec(commandSpecs['domain-manifests'], {
+      usage: 'opl domain manifests',
+      examples: ['opl domain manifests'],
+      group: 'domain',
+    }),
+    'domain launch': cloneCommandSpec(commandSpecs['launch-domain'], {
+      usage:
+        'opl domain launch --project <project_id> [--path <workspace_path>] [--strategy <auto|open_url|spawn_command>] [--dry-run]',
+      examples: ['opl domain launch --project redcube --dry-run'],
+      group: 'domain',
+    }),
+    'domain resolve-request': cloneCommandSpec(commandSpecs['resolve-request-surface'], {
+      usage:
+        'opl domain resolve-request --intent <intent> --target <target> --goal <goal> [--preferred-family <family>] [--request-kind <kind>]',
+      examples: [
+        'opl domain resolve-request --intent presentation_delivery --target deliverable --goal "Prepare a defense-ready slide deck."',
+      ],
+      group: 'domain',
+    }),
+    'domain explain-boundary': cloneCommandSpec(commandSpecs['explain-domain-boundary'], {
+      usage:
+        'opl domain explain-boundary --intent <intent> --target <target> --goal <goal> [--preferred-family <family>] [--request-kind <kind>]',
+      examples: [
+        'opl domain explain-boundary --intent create --target deliverable --goal "Prepare a xiaohongshu campaign pack." --preferred-family xiaohongshu',
+      ],
+      group: 'domain',
+    }),
+    'contract validate': cloneCommandSpec(commandSpecs['validate-contracts'], {
+      usage: 'opl contract validate',
+      examples: ['opl contract validate'],
+      group: 'contract',
+    }),
+    'contract workstreams': cloneCommandSpec(commandSpecs['list-workstreams'], {
+      usage: 'opl contract workstreams',
+      examples: ['opl contract workstreams'],
+      group: 'contract',
+    }),
+    'contract workstream': cloneCommandSpec(commandSpecs['get-workstream'], {
+      usage: 'opl contract workstream <workstream_id>',
+      examples: ['opl contract workstream research_ops', 'opl contract workstream presentation_ops'],
+      group: 'contract',
+      handler: (args) => {
+        const [workstreamId] = args;
+        if (!workstreamId) {
+          throw buildUsageError('contract workstream requires a workstream id.', publicCommandSpecs['contract workstream'], {
+            required: ['workstream_id'],
+          });
+        }
+
+        const contracts = getContracts();
+        return withContractsContext(contracts, {
+          workstream: findWorkstreamOrThrow(contracts, workstreamId),
+        });
+      },
+    }),
+    'contract domains': cloneCommandSpec(commandSpecs['list-domains'], {
+      usage: 'opl contract domains',
+      examples: ['opl contract domains'],
+      group: 'contract',
+    }),
+    'contract domain': cloneCommandSpec(commandSpecs['get-domain'], {
+      usage: 'opl contract domain <domain_id>',
+      examples: ['opl contract domain medautoscience', 'opl contract domain redcube'],
+      group: 'contract',
+      handler: (args) => {
+        const [domainId] = args;
+        if (!domainId) {
+          throw buildUsageError('contract domain requires a domain id.', publicCommandSpecs['contract domain'], {
+            required: ['domain_id'],
+          });
+        }
+
+        const contracts = getContracts();
+        return withContractsContext(contracts, {
+          domain: findDomainOrThrow(contracts, domainId),
+        });
+      },
+    }),
+    'contract surfaces': cloneCommandSpec(commandSpecs['list-surfaces'], {
+      usage: 'opl contract surfaces',
+      examples: ['opl contract surfaces'],
+      group: 'contract',
+    }),
+    'contract surface': cloneCommandSpec(commandSpecs['get-surface'], {
+      usage: 'opl contract surface <surface_id>',
+      examples: ['opl contract surface opl_read_only_discovery_gateway'],
+      group: 'contract',
+      handler: (args) => {
+        const [surfaceId] = args;
+        if (!surfaceId) {
+          throw buildUsageError('contract surface requires a surface id.', publicCommandSpecs['contract surface'], {
+            required: ['surface_id'],
+          });
+        }
+
+        const contracts = getContracts();
+        return withContractsContext(contracts, {
+          surface: findSurfaceOrThrow(contracts, surfaceId),
+        });
+      },
+    }),
+    'contract handoff-envelope': cloneCommandSpec(commandSpecs['handoff-envelope'], {
+      usage:
+        'opl contract handoff-envelope <request...> [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--workspace-path <path>]',
+      examples: [
+        'opl contract handoff-envelope "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck',
+      ],
+      group: 'contract',
+    }),
+    'frontdesk manifest': cloneCommandSpec(commandSpecs['frontdesk-manifest'], {
+      usage: 'opl frontdesk manifest',
+      examples: ['opl frontdesk manifest'],
+      group: 'frontdesk',
+    }),
+    'frontdesk entry-guide': cloneCommandSpec(commandSpecs['frontdesk-entry-guide'], {
+      usage: 'opl frontdesk entry-guide',
+      examples: ['opl frontdesk entry-guide'],
+      group: 'frontdesk',
+    }),
+    'frontdesk readiness': cloneCommandSpec(commandSpecs['frontdesk-readiness'], {
+      usage: 'opl frontdesk readiness [--path <workspace_path>] [--sessions-limit <n>]',
+      examples: ['opl frontdesk readiness', 'opl frontdesk readiness --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5'],
+      group: 'frontdesk',
+    }),
+    'frontdesk domain-wiring': cloneCommandSpec(commandSpecs['frontdesk-domain-wiring'], {
+      usage: 'opl frontdesk domain-wiring',
+      examples: ['opl frontdesk domain-wiring'],
+      group: 'frontdesk',
+    }),
+    'frontdesk hosted-bundle': cloneCommandSpec(commandSpecs['frontdesk-hosted-bundle'], {
+      usage:
+        'opl frontdesk hosted-bundle [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>]',
+      examples: ['opl frontdesk hosted-bundle', 'opl frontdesk hosted-bundle --host 0.0.0.0 --port 8787 --base-path /pilot/opl'],
+      group: 'frontdesk',
+    }),
+    'frontdesk hosted-package': cloneCommandSpec(commandSpecs['frontdesk-hosted-package'], {
+      usage:
+        'opl frontdesk hosted-package --output <dir> [--public-origin <origin>] [--host <host>] [--port <port>] [--sessions-limit <n>] [--base-path <base_path>]',
+      examples: ['opl frontdesk hosted-package --output /tmp/opl-frontdesk-package'],
+      group: 'frontdesk',
+    }),
+    'frontdesk librechat-package': cloneCommandSpec(commandSpecs['frontdesk-librechat-package'], {
+      usage:
+        'opl frontdesk librechat-package --output <dir> [--public-origin <origin>] [--host <host>] [--port <port>] [--sessions-limit <n>] [--base-path <base_path>]',
+      examples: ['opl frontdesk librechat-package --output /tmp/opl-librechat-pilot --public-origin http://127.0.0.1:8080'],
+      group: 'frontdesk',
+    }),
+    'frontdesk service install': cloneCommandSpec(commandSpecs['frontdesk-service-install'], {
+      usage:
+        'opl frontdesk service install [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>]',
+      examples: ['opl frontdesk service install', 'opl frontdesk service install --port 8787'],
+      group: 'frontdesk',
+    }),
+    'frontdesk service status': cloneCommandSpec(commandSpecs['frontdesk-service-status'], {
+      usage: 'opl frontdesk service status',
+      examples: ['opl frontdesk service status'],
+      group: 'frontdesk',
+    }),
+    'frontdesk service start': cloneCommandSpec(commandSpecs['frontdesk-service-start'], {
+      usage: 'opl frontdesk service start',
+      examples: ['opl frontdesk service start'],
+      group: 'frontdesk',
+    }),
+    'frontdesk service stop': cloneCommandSpec(commandSpecs['frontdesk-service-stop'], {
+      usage: 'opl frontdesk service stop',
+      examples: ['opl frontdesk service stop'],
+      group: 'frontdesk',
+    }),
+    'frontdesk service open': cloneCommandSpec(commandSpecs['frontdesk-service-open'], {
+      usage: 'opl frontdesk service open',
+      examples: ['opl frontdesk service open'],
+      group: 'frontdesk',
+    }),
+    'frontdesk service uninstall': cloneCommandSpec(commandSpecs['frontdesk-service-uninstall'], {
+      usage: 'opl frontdesk service uninstall',
+      examples: ['opl frontdesk service uninstall'],
+      group: 'frontdesk',
+    }),
+    'frontdesk bootstrap': cloneCommandSpec(commandSpecs['frontdesk-bootstrap'], {
+      usage:
+        'opl frontdesk bootstrap [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>] [--public-origin <origin>] [--paperclip-base-url <url>]',
+      examples: ['opl frontdesk bootstrap --path /Users/gaofeng/workspace/Yang/NF-PitNET --public-origin http://127.0.0.1:8080'],
+      group: 'frontdesk',
+    }),
+    'frontdesk librechat install': cloneCommandSpec(commandSpecs['frontdesk-librechat-install'], {
+      usage:
+        'opl frontdesk librechat install [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>] [--public-origin <origin>] [--paperclip-base-url <url>]',
+      examples: ['opl frontdesk librechat install --path /Users/gaofeng/workspace/Yang/NF-PitNET --public-origin http://127.0.0.1:8080'],
+      group: 'frontdesk',
+    }),
+    'frontdesk librechat status': cloneCommandSpec(commandSpecs['frontdesk-librechat-status'], {
+      usage: 'opl frontdesk librechat status',
+      examples: ['opl frontdesk librechat status'],
+      group: 'frontdesk',
+    }),
+    'frontdesk librechat start': cloneCommandSpec(commandSpecs['frontdesk-librechat-start'], {
+      usage: 'opl frontdesk librechat start',
+      examples: ['opl frontdesk librechat start'],
+      group: 'frontdesk',
+    }),
+    'frontdesk librechat stop': cloneCommandSpec(commandSpecs['frontdesk-librechat-stop'], {
+      usage: 'opl frontdesk librechat stop',
+      examples: ['opl frontdesk librechat stop'],
+      group: 'frontdesk',
+    }),
+    'frontdesk librechat open': cloneCommandSpec(commandSpecs['frontdesk-librechat-open'], {
+      usage: 'opl frontdesk librechat open',
+      examples: ['opl frontdesk librechat open'],
+      group: 'frontdesk',
+    }),
+    'paperclip config': cloneCommandSpec(commandSpecs['paperclip-config'], {
+      usage:
+        'opl paperclip config [--base-url <url>] [--auth-header-env <env>] [--cookie-env <env>] [--control-company-id <company_id>] [--local-trusted-no-auth]',
+      examples: ['opl paperclip config --base-url https://paperclip.example.com --auth-header-env OPL_PAPERCLIP_AUTH_HEADER --control-company-id company-opl-control'],
+      group: 'paperclip',
+    }),
+    'paperclip bind': cloneCommandSpec(commandSpecs['paperclip-bind'], {
+      usage:
+        'opl paperclip bind --project <project_id> --company-id <company_id> [--paperclip-project-id <project_id>] [--project-workspace-id <workspace_id>] [--execution-workspace <mode>]',
+      examples: ['opl paperclip bind --project redcube --company-id company-redcube --paperclip-project-id project-redcube --project-workspace-id workspace-redcube --execution-workspace shared_workspace'],
+      group: 'paperclip',
+    }),
+    'paperclip status': cloneCommandSpec(commandSpecs['paperclip-status'], {
+      usage: 'opl paperclip status [--path <workspace_path>] [--sessions-limit <n>]',
+      examples: ['opl paperclip status'],
+      group: 'paperclip',
+    }),
+    'paperclip bootstrap': cloneCommandSpec(commandSpecs['paperclip-bootstrap'], {
+      usage: 'opl paperclip bootstrap',
+      examples: ['opl paperclip bootstrap'],
+      group: 'paperclip',
+    }),
+    'paperclip open-task': cloneCommandSpec(commandSpecs['paperclip-open-task'], {
+      usage:
+        'opl paperclip open-task <request...> [--title <title>] [--priority <critical|high|medium|low>] [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--workspace-path <path>]',
+      examples: ['opl paperclip open-task "Prepare a defense-ready slide deck." --preferred-family ppt_deck --priority high'],
+      group: 'paperclip',
+    }),
+    'paperclip open-gate': cloneCommandSpec(commandSpecs['paperclip-open-gate'], {
+      usage:
+        'opl paperclip open-gate <request...> [--title <title>] [--gate-kind <kind>] [--decision-options <csv>] [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--workspace-path <path>]',
+      examples: ['opl paperclip open-gate "Approve the next grant revision step." --decision-options approve,revise,stop'],
+      group: 'paperclip',
+    }),
+    'paperclip sync': cloneCommandSpec(commandSpecs['paperclip-sync'], {
+      usage: 'opl paperclip sync [--issue-id <id>] [--project <project_id>] [--path <workspace_path>] [--sessions-limit <n>] [--all] [--force]',
+      examples: ['opl paperclip sync --all'],
+      group: 'paperclip',
+    }),
+    'paperclip operator-loop': cloneCommandSpec(commandSpecs['paperclip-operator-loop'], {
+      usage:
+        'opl paperclip operator-loop [--issue-id <id>] [--project <project_id>] [--path <workspace_path>] [--sessions-limit <n>] [--interval-ms <ms>] [--cycles <n>] [--all] [--force]',
+      examples: ['opl paperclip operator-loop --all --interval-ms 30000'],
+      group: 'paperclip',
+    }),
+    'session list': cloneCommandSpec(commandSpecs.sessions, {
+      usage: 'opl session list [--limit <n>] [--source <source>]',
+      examples: ['opl session list', 'opl session list --limit 10'],
+      group: 'session',
+    }),
+    'session resume': cloneCommandSpec(commandSpecs.resume, {
+      usage: 'opl session resume <session_id>',
+      examples: ['opl session resume run_7e2a41a19175465f809c0a7f151278ee'],
+      group: 'session',
+    }),
+    'session logs': cloneCommandSpec(commandSpecs.logs, {
+      usage: 'opl session logs [log_name] [--lines <n>] [--since <cursor>] [--level <level>] [--component <name>] [--session <id>]',
+      examples: ['opl session logs gateway', 'opl session logs worker --level info --component runtime'],
+      group: 'session',
+    }),
+    'session ledger': cloneCommandSpec(commandSpecs['session-ledger'], {
+      usage: 'opl session ledger [--limit <n>]',
+      examples: ['opl session ledger', 'opl session ledger --limit 5'],
+      group: 'session',
+    }),
+    'runtime repair-gateway': cloneCommandSpec(commandSpecs['repair-hermes-gateway'], {
+      usage: 'opl runtime repair-gateway',
+      examples: ['opl runtime repair-gateway'],
+      group: 'runtime',
+    }),
+  };
+
+  const inputTokens = parsedInput.command ? [parsedInput.command, ...parsedInput.args] : [];
+
+  if (inputTokens.length === 0) {
+    if (parsedInput.helpRequested) {
+      printJson(buildRootHelp(publicCommandSpecs));
       return;
     }
 
@@ -2641,9 +3068,10 @@ async function main() {
     return;
   }
 
-  const spec = commandSpecs[command];
-  if (!spec) {
-    if (!helpRequested && looksLikeNaturalLanguage(command, args)) {
+  const resolved = resolveCommandSpec(inputTokens, publicCommandSpecs);
+  if (!resolved) {
+    const [command, ...args] = inputTokens;
+    if (!parsedInput.helpRequested && command && looksLikeNaturalLanguage(command, args)) {
       const result = await runProductEntryAsk(
         parseProductEntryArgs([command, ...args], commandSpecs.ask),
         getContracts(),
@@ -2654,10 +3082,12 @@ async function main() {
 
     throw new GatewayContractError('unknown_command', `Unknown command: ${command}.`, {
       command,
-      commands: Object.keys(commandSpecs),
+      commands: Object.keys(publicCommandSpecs),
       usage: 'opl help',
     });
   }
+
+  const { command, spec, args } = resolved;
 
   if (command !== 'help' && args.length === 1 && args[0] === 'help') {
     throw buildUsageError(
@@ -2670,9 +3100,9 @@ async function main() {
     );
   }
 
-  if (helpRequested || (args.length === 1 && args[0] === '--help')) {
+  if (parsedInput.helpRequested || (args.length === 1 && args[0] === '--help')) {
     if (command === 'help') {
-      printJson(await spec.handler(args));
+      printJson(await spec.handler(args.filter((arg) => arg !== '--help')));
       return;
     }
 

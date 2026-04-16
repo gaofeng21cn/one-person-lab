@@ -1351,7 +1351,7 @@ function buildBootstrapPlaybooks() {
       steps: [
         {
           step_id: 'open_task',
-          command: 'opl paperclip-open-task "<request...>" --workspace-path <path>',
+          command: 'opl paperclip open-task "<request...>" --workspace-path <path>',
           summary: 'Freeze the OPL handoff bundle and open the routed Paperclip task in the mapped project company.',
         },
         {
@@ -1361,7 +1361,7 @@ function buildBootstrapPlaybooks() {
         },
         {
           step_id: 'sync_state',
-          command: 'opl paperclip-sync --all',
+          command: 'opl paperclip sync --all',
           summary: 'Write the latest OPL workspace, manifest, and session state back into Paperclip comments.',
         },
       ],
@@ -1372,12 +1372,12 @@ function buildBootstrapPlaybooks() {
       steps: [
         {
           step_id: 'open_gate',
-          command: 'opl paperclip-open-gate "<request...>" --workspace-path <path>',
+          command: 'opl paperclip open-gate "<request...>" --workspace-path <path>',
           summary: 'Project the family-human-gate contract into the Paperclip control company.',
         },
         {
           step_id: 'sync_state',
-          command: 'opl paperclip-sync --all',
+          command: 'opl paperclip sync --all',
           summary: 'Refresh the downstream issue thread with current OPL handoff, manifest, and related session state.',
         },
         {
@@ -1417,8 +1417,8 @@ export function buildPaperclipBootstrap(
       operator_playbooks: buildBootstrapPlaybooks(),
       automation_surfaces: {
         status_command: 'opl paperclip-status',
-        sync_command: 'opl paperclip-sync --all',
-        operator_loop_command: 'opl paperclip-operator-loop --all --interval-ms 30000',
+        sync_command: 'opl paperclip sync --all',
+        operator_loop_command: 'opl paperclip operator-loop --all --interval-ms 30000',
         web: {
           status: endpoints.paperclip_control_plane,
           bootstrap: endpoints.paperclip_bootstrap,
