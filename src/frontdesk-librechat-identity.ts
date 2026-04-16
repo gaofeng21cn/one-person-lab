@@ -17,32 +17,29 @@ export function buildFrontDeskHostedShellMcpWiring() {
   return {
     surface_kind: 'opl_hosted_shell_mcp_wiring',
     binding_context: {
-      primary_tool_name: 'opl_projects',
-      activate_tool_name: 'opl_activate_workspace',
+      primary_tool_name: 'opl_workspace',
+      activate_tool_name: 'opl_workspace',
       binding_contract_surface_id: 'opl_project_workspace_binding_contract',
     },
     session_attribution: {
-      primary_tool_name: 'opl_recent_sessions',
-      fallback_tool_name: 'opl_runtime_logs',
+      primary_tool_name: 'opl_session',
+      fallback_tool_name: 'opl_session',
       attribution_surface_id: 'opl_managed_session_ledger',
     },
     execution_context: {
       primary_tool_name: 'opl_execute_request',
       task_status_tool_name: 'opl_task_status',
-      sessions_tool_name: 'opl_recent_sessions',
-      resume_tool_name: 'opl_resume_session',
-      logs_tool_name: 'opl_runtime_logs',
+      sessions_tool_name: 'opl_session',
+      resume_tool_name: 'opl_session',
+      logs_tool_name: 'opl_session',
       auto_title_sync_surface_id: 'opl_frontdesk_librechat_title_sync',
     },
     discovery_order: [
       'opl_project_progress',
       'opl_execute_request',
       'opl_task_status',
-      'opl_recent_sessions',
-      'opl_projects',
-      'opl_activate_workspace',
-      'opl_resume_session',
-      'opl_runtime_logs',
+      'opl_workspace',
+      'opl_session',
     ],
   };
 }

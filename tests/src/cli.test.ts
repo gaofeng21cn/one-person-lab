@@ -1024,10 +1024,10 @@ async function startFakeFrontDeskApiServer() {
           hosted_shell_mcp_wiring: {
             surface_kind: 'opl_hosted_shell_mcp_wiring',
             binding_context: {
-              primary_tool_name: 'opl_projects',
+              primary_tool_name: 'opl_workspace',
             },
             session_attribution: {
-              primary_tool_name: 'opl_recent_sessions',
+              primary_tool_name: 'opl_session',
             },
           },
           notes: [
@@ -1500,7 +1500,7 @@ test('loadGatewayContracts honors OPL_CONTRACTS_DIR when provided', () => {
   workstreams.workstreams[0].label = 'Research Ops Override';
   fs.writeFileSync(workstreamsPath, JSON.stringify(workstreams, null, 2));
 
-  const output = runCli(['get-workstream', 'research_ops'], {
+  const output = runCli(['contract', 'workstream', 'research_ops'], {
     OPL_CONTRACTS_DIR: tempContracts,
   });
 
@@ -1520,7 +1520,8 @@ test('global --contracts-dir override uses the explicit contract root', () => {
     const output = runCli([
       '--contracts-dir',
       fixtureContractsRoot,
-      'get-workstream',
+      'contract',
+      'workstream',
       'research_ops',
     ]);
 
@@ -1547,7 +1548,7 @@ test('global --contracts-dir override takes precedence over OPL_CONTRACTS_DIR', 
 
   try {
     const output = runCli(
-      ['--contracts-dir', flagFixture.fixtureContractsRoot, 'get-workstream', 'research_ops'],
+      ['--contracts-dir', flagFixture.fixtureContractsRoot, 'contract', 'workstream', 'research_ops'],
       { OPL_CONTRACTS_DIR: envFixture.fixtureContractsRoot },
     );
 
@@ -1602,8 +1603,8 @@ test('validateGatewayContracts returns a stable summary for the required contrac
   });
 });
 
-test('validate-contracts returns a stable machine-readable contract summary', () => {
-  const output = runCli(['validate-contracts']);
+test('contract validate returns a stable machine-readable contract summary', () => {
+  const output = runCli(['contract', 'validate']);
   const contracts = loadGatewayContracts(repoRoot);
 
   assert.deepEqual(output, {
@@ -1686,8 +1687,8 @@ exit 1
   }
 });
 
-test('projects returns the current OPL family project surfaces', () => {
-  const output = runCli(['projects']);
+test('workspace projects returns the current OPL family project surfaces', () => {
+  const output = runCli(['workspace', 'projects']);
 
   assert.equal(output.version, 'g2');
   assert.equal(output.projects.length, 3);
@@ -1698,8 +1699,8 @@ test('projects returns the current OPL family project surfaces', () => {
   assert.equal(output.projects[2].project_id, 'redcube');
 });
 
-test('workspace-status reports git and worktree visibility for one workspace path', () => {
-  const output = runCli(['workspace-status', '--path', repoRoot]);
+test('status workspace reports git and worktree visibility for one workspace path', () => {
+  const output = runCli(['status', 'workspace', '--path', repoRoot]);
 
   assert.equal(output.version, 'g2');
   assert.equal(output.workspace.absolute_path, repoRoot);
@@ -1873,7 +1874,7 @@ exit 1
 `);
 
   try {
-    const output = runCli(['resume', 'opl-test-session'], {
+    const output = runCli(['session', 'resume', 'opl-test-session'], {
       OPL_HERMES_BIN: hermesPath,
     });
 
@@ -1902,7 +1903,7 @@ exit 1
 `);
 
   try {
-    const output = runCli(['sessions', '--limit', '2'], {
+    const output = runCli(['session', 'list', '--limit', '2'], {
       OPL_HERMES_BIN: hermesPath,
     });
 
@@ -1917,7 +1918,7 @@ exit 1
   }
 });
 
-test('runtime-status reports Hermes runtime health, sessions, and process usage', () => {
+test('status runtime reports Hermes runtime health, sessions, and process usage', () => {
   const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
 if [ "$1" = "version" ]; then
   echo "Hermes Agent v9.9.9-test"
@@ -1967,7 +1968,7 @@ exit 1
 27026 27025 5.2 1.1 125000 00:31 /Users/test/.hermes/venv/bin/python -m hermes_cli.main chat --resume sess_dash`);
 
   try {
-    const output = runCli(['runtime-status', '--limit', '2'], {
+    const output = runCli(['status', 'runtime', '--limit', '2'], {
       OPL_HERMES_BIN: hermesPath,
       PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
     });
@@ -1987,7 +1988,7 @@ exit 1
   }
 });
 
-test('dashboard aggregates front-desk management surfaces into one view', () => {
+test('status dashboard aggregates front-desk management surfaces into one view', () => {
   const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
 if [ "$1" = "version" ]; then
   echo "Hermes Agent v9.9.9-test"
@@ -2030,7 +2031,7 @@ exit 1
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-dashboard-state-'));
 
   try {
-    const output = runCli(['dashboard', '--path', repoRoot, '--sessions-limit', '1'], {
+    const output = runCli(['status', 'dashboard', '--path', repoRoot, '--sessions-limit', '1'], {
       OPL_FRONTDESK_STATE_DIR: stateRoot,
       OPL_HERMES_BIN: hermesPath,
       PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
@@ -2068,19 +2069,19 @@ test('help advertises the local web front-desk pilot command surface', () => {
     output.help.commands.some((entry: { command: string }) => entry.command === 'web'),
   );
   assert.ok(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk-manifest'),
+    output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk manifest'),
   );
   assert.ok(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk-entry-guide'),
+    output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk entry-guide'),
   );
   assert.ok(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk-domain-wiring'),
+    output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk domain-wiring'),
   );
   assert.ok(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk-readiness'),
+    output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk readiness'),
   );
   assert.ok(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'launch-domain'),
+    output.help.commands.some((entry: { command: string }) => entry.command === 'domain launch'),
   );
 
   const scoped = runCli(['web', '--help']);
@@ -2092,7 +2093,7 @@ test('frontdesk-manifest exposes the hosted-friendly OPL shell contract without 
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-frontdesk-manifest-state-'));
 
   try {
-    const output = runCli(['frontdesk-manifest'], {
+    const output = runCli(['frontdesk', 'manifest'], {
       OPL_FRONTDESK_STATE_DIR: stateRoot,
     });
 
@@ -2158,7 +2159,7 @@ test('frontdesk-manifest exposes the hosted-friendly OPL shell contract without 
 });
 
 test('frontdesk-entry-guide exposes family shell taxonomy and domain workspace mapping', () => {
-  const output = runCli(['frontdesk-entry-guide']);
+  const output = runCli(['frontdesk', 'entry-guide']);
 
   assert.equal(output.version, 'g2');
   assert.equal(output.frontdesk_entry_guide.surface_id, 'opl_frontdesk_entry_guide');
@@ -2173,7 +2174,7 @@ test('frontdesk-domain-wiring exposes a dedicated hosted-friendly family wiring 
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-wiring-state-'));
 
   try {
-    const output = runCli(['frontdesk-domain-wiring'], {
+    const output = runCli(['frontdesk', 'domain-wiring'], {
       OPL_FRONTDESK_STATE_DIR: stateRoot,
     });
 
@@ -2243,7 +2244,7 @@ exit 1
   const psFixture = createFakePsFixture(`27025 1 0.1 0.2 49616 22:46 /Users/test/.hermes/venv/bin/python -m hermes_cli.main gateway run --replace`);
 
   try {
-    const output = runCli(['frontdesk-readiness', '--path', repoRoot, '--sessions-limit', '1'], {
+    const output = runCli(['frontdesk', 'readiness', '--path', repoRoot, '--sessions-limit', '1'], {
       HOME: homeRoot,
       OPL_HERMES_BIN: hermesPath,
       PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
@@ -2294,7 +2295,9 @@ test('frontdesk-service commands manage the local launchd wrapper for the web pi
 
   try {
     const install = runCli([
-      'frontdesk-service-install',
+      'frontdesk',
+      'service',
+      'install',
       '--host',
       '127.0.0.1',
       '--port',
@@ -2317,13 +2320,13 @@ test('frontdesk-service commands manage the local launchd wrapper for the web pi
     assert.match(plistText, /<string>web<\/string>/);
     assert.match(plistText, new RegExp(String(configuredPort)));
 
-    const statusWithoutHealth = runCli(['frontdesk-service-status'], serviceEnv);
+    const statusWithoutHealth = runCli(['frontdesk', 'service', 'status'], serviceEnv);
     assert.equal(statusWithoutHealth.frontdesk_service.action, 'status');
     assert.equal(statusWithoutHealth.frontdesk_service.installed, true);
     assert.equal(statusWithoutHealth.frontdesk_service.loaded, true);
     assert.equal(statusWithoutHealth.frontdesk_service.health.status, 'unreachable');
 
-    const statusWithHealth = runCli(['frontdesk-service-status'], serviceEnv);
+    const statusWithHealth = runCli(['frontdesk', 'service', 'status'], serviceEnv);
     assert.equal(statusWithHealth.frontdesk_service.loaded, true);
     assert.equal(statusWithHealth.frontdesk_service.health.status, 'unreachable');
     assert.equal(
@@ -2331,23 +2334,23 @@ test('frontdesk-service commands manage the local launchd wrapper for the web pi
       `http://127.0.0.1:${configuredPort}/api/health`,
     );
 
-    const openOutput = runCli(['frontdesk-service-open'], serviceEnv);
+    const openOutput = runCli(['frontdesk', 'service', 'open'], serviceEnv);
     assert.equal(openOutput.frontdesk_service.action, 'open');
     assert.match(fs.readFileSync(openFixture.capturePath, 'utf8'), new RegExp(String(configuredPort)));
 
-    const stopOutput = runCli(['frontdesk-service-stop'], serviceEnv);
+    const stopOutput = runCli(['frontdesk', 'service', 'stop'], serviceEnv);
     assert.equal(stopOutput.frontdesk_service.action, 'stop');
     assert.equal(stopOutput.frontdesk_service.loaded, false);
 
-    const stoppedStatus = runCli(['frontdesk-service-status'], serviceEnv);
+    const stoppedStatus = runCli(['frontdesk', 'service', 'status'], serviceEnv);
     assert.equal(stoppedStatus.frontdesk_service.loaded, false);
     assert.equal(stoppedStatus.frontdesk_service.health.status, 'not_running');
 
-    const startOutput = runCli(['frontdesk-service-start'], serviceEnv);
+    const startOutput = runCli(['frontdesk', 'service', 'start'], serviceEnv);
     assert.equal(startOutput.frontdesk_service.action, 'start');
     assert.equal(startOutput.frontdesk_service.loaded, true);
 
-    const uninstallOutput = runCli(['frontdesk-service-uninstall'], serviceEnv);
+    const uninstallOutput = runCli(['frontdesk', 'service', 'uninstall'], serviceEnv);
     assert.equal(uninstallOutput.frontdesk_service.action, 'uninstall');
     assert.equal(uninstallOutput.frontdesk_service.installed, false);
     assert.equal(fs.existsSync(install.frontdesk_service.paths.launch_agent_plist), false);
@@ -2360,7 +2363,8 @@ test('frontdesk-service commands manage the local launchd wrapper for the web pi
 
 test('frontdesk-hosted-bundle exposes a hosted-pilot-ready bundle with base-path aware endpoints', () => {
   const output = runCli([
-    'frontdesk-hosted-bundle',
+    'frontdesk',
+      'hosted-bundle',
     '--host',
     '0.0.0.0',
     '--port',
@@ -2404,7 +2408,8 @@ test('frontdesk-hosted-package exports a self-hostable hosted pilot package with
 
   try {
     const output = runCli([
-      'frontdesk-hosted-package',
+      'frontdesk',
+      'hosted-package',
       '--output',
       outputDir,
       '--public-origin',
@@ -2529,7 +2534,8 @@ test('frontdesk-librechat-package exports a same-origin LibreChat-first hosted s
 
   try {
     const output = runCli([
-      'frontdesk-librechat-package',
+      'frontdesk',
+      'librechat-package',
       '--output',
       outputDir,
       '--public-origin',
@@ -2581,11 +2587,11 @@ test('frontdesk-librechat-package exports a same-origin LibreChat-first hosted s
     );
     assert.equal(
       output.librechat_pilot_package.hosted_shell_mcp_wiring.binding_context.primary_tool_name,
-      'opl_projects',
+      'opl_workspace',
     );
     assert.equal(
       output.librechat_pilot_package.hosted_shell_mcp_wiring.session_attribution.primary_tool_name,
-      'opl_recent_sessions',
+      'opl_session',
     );
     assert.deepEqual(
       output.librechat_pilot_package.hosted_shell_mcp_wiring.discovery_order,
@@ -2593,11 +2599,8 @@ test('frontdesk-librechat-package exports a same-origin LibreChat-first hosted s
         'opl_project_progress',
         'opl_execute_request',
         'opl_task_status',
-        'opl_recent_sessions',
-        'opl_projects',
-        'opl_activate_workspace',
-        'opl_resume_session',
-        'opl_runtime_logs',
+        'opl_workspace',
+        'opl_session',
       ],
     );
 
@@ -2724,14 +2727,11 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
       assert.deepEqual(
         tools.map((tool) => tool.name).sort(),
         [
-          'opl_activate_workspace',
           'opl_execute_request',
           'opl_project_progress',
-          'opl_projects',
-          'opl_recent_sessions',
-          'opl_resume_session',
-          'opl_runtime_logs',
+          'opl_session',
           'opl_task_status',
+          'opl_workspace',
         ],
       );
       assert.match(
@@ -2748,8 +2748,9 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
         id: 3,
         method: 'tools/call',
         params: {
-          name: 'opl_activate_workspace',
+          name: 'opl_workspace',
           arguments: {
+            action: 'activate',
             project_id: 'medautoscience',
             workspace_path: activatedWorkspacePath,
           },
@@ -2760,7 +2761,8 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
         content: Array<{ type: string; text: string }>;
       }).content;
       assert.equal(activateContent[0].type, 'text');
-      assert.match(activateContent[0].text, /"action": "activate"/);
+      assert.match(activateContent[0].text, /已切换工作区/);
+      assert.match(activateContent[0].text, /medautoscience/);
 
       writeJsonLine(child.stdin, {
         jsonrpc: '2.0',
@@ -2794,7 +2796,7 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
         id: 5,
         method: 'tools/call',
         params: {
-          name: 'opl_projects',
+          name: 'opl_workspace',
           arguments: {},
         },
       });
@@ -2803,15 +2805,16 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
         content: Array<{ type: string; text: string }>;
       }).content;
       assert.equal(projectsContent[0].type, 'text');
-      assert.match(projectsContent[0].text, /"project_id": "medautoscience"/);
+      assert.match(projectsContent[0].text, /medautoscience/);
 
       writeJsonLine(child.stdin, {
         jsonrpc: '2.0',
         id: 6,
         method: 'tools/call',
         params: {
-          name: 'opl_recent_sessions',
+          name: 'opl_session',
           arguments: {
+            action: 'list',
             limit: 3,
           },
         },
@@ -2829,8 +2832,9 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
         id: 7,
         method: 'tools/call',
         params: {
-          name: 'opl_runtime_logs',
+          name: 'opl_session',
           arguments: {
+            action: 'logs',
             lines: 10,
           },
         },
@@ -3203,7 +3207,8 @@ test('frontdesk bootstrap manages the local LibreChat shell, inherits local Code
 
   try {
     const install = await runCliAsync([
-      'frontdesk-bootstrap',
+      'frontdesk',
+      'bootstrap',
       '--host',
       '127.0.0.1',
       '--port',
@@ -3260,11 +3265,11 @@ test('frontdesk bootstrap manages the local LibreChat shell, inherits local Code
     assert.equal(install.frontdesk_librechat.public_origin, 'http://127.0.0.1:18080');
     assert.equal(
       install.frontdesk_librechat.hosted_shell_mcp_wiring.binding_context.primary_tool_name,
-      'opl_projects',
+      'opl_workspace',
     );
     assert.equal(
       install.frontdesk_librechat.hosted_shell_mcp_wiring.session_attribution.primary_tool_name,
-      'opl_recent_sessions',
+      'opl_session',
     );
     assert.equal(install.frontdesk_service.loaded, true);
     assert.equal(install.paperclip_control_plane.readiness, 'configured');
@@ -3304,7 +3309,7 @@ test('frontdesk bootstrap manages the local LibreChat shell, inherits local Code
     ), true);
     assert.match(fs.readFileSync(dockerFixture.callsPath, 'utf8'), /up -d/);
 
-    const status = runCli(['frontdesk-librechat-status'], serviceEnv);
+    const status = runCli(['frontdesk', 'librechat', 'status'], serviceEnv);
     assert.equal(status.frontdesk_librechat.action, 'status');
     assert.equal(status.frontdesk_librechat.installed, true);
     assert.equal(status.frontdesk_librechat.running, true);
@@ -3314,22 +3319,22 @@ test('frontdesk bootstrap manages the local LibreChat shell, inherits local Code
     assert.equal(status.frontdesk_librechat.identity.installed_reasoning_effort, 'xhigh');
     assert.equal(
       status.frontdesk_librechat.hosted_shell_mcp_wiring.binding_context.primary_tool_name,
-      'opl_projects',
+      'opl_workspace',
     );
     assert.equal(
       status.frontdesk_librechat.hosted_shell_mcp_wiring.session_attribution.primary_tool_name,
-      'opl_recent_sessions',
+      'opl_session',
     );
 
-    const openOutput = runCli(['frontdesk-librechat-open'], serviceEnv);
+    const openOutput = runCli(['frontdesk', 'librechat', 'open'], serviceEnv);
     assert.equal(openOutput.frontdesk_librechat.action, 'open');
     assert.match(fs.readFileSync(openFixture.capturePath, 'utf8'), /http:\/\/127\.0\.0\.1:18080/);
 
-    const stopOutput = runCli(['frontdesk-librechat-stop'], serviceEnv);
+    const stopOutput = runCli(['frontdesk', 'librechat', 'stop'], serviceEnv);
     assert.equal(stopOutput.frontdesk_librechat.action, 'stop');
     assert.equal(stopOutput.frontdesk_librechat.running, false);
 
-    const startOutput = runCli(['frontdesk-librechat-start'], serviceEnv);
+    const startOutput = runCli(['frontdesk', 'librechat', 'start'], serviceEnv);
     assert.equal(startOutput.frontdesk_librechat.action, 'start');
     assert.equal(startOutput.frontdesk_librechat.running, true);
   } finally {
@@ -3363,7 +3368,9 @@ test('frontdesk-librechat-status reports stack drift instead of crashing when re
 
   try {
     const install = await runCliAsync([
-      'frontdesk-librechat-install',
+      'frontdesk',
+      'librechat',
+      'install',
       '--host',
       '127.0.0.1',
       '--port',
@@ -3386,7 +3393,7 @@ test('frontdesk-librechat-status reports stack drift instead of crashing when re
     fs.rmSync(install.frontdesk_librechat.assets.env_file, { force: true });
     fs.rmSync(install.frontdesk_librechat.assets.compose_file, { force: true });
 
-    const status = runCli(['frontdesk-librechat-status'], serviceEnv);
+    const status = runCli(['frontdesk', 'librechat', 'status'], serviceEnv);
     assert.equal(status.frontdesk_librechat.installed, false);
     assert.equal(status.frontdesk_librechat.running, false);
     assert.match(status.frontdesk_librechat.notes.join('\n'), /stack assets are missing/i);
@@ -3404,7 +3411,8 @@ test('workspace registry commands bind activate and archive project workspaces w
 
   try {
     const bindOutput = runCli([
-      'workspace-bind',
+      'workspace',
+      'bind',
       '--project',
       'redcube',
       '--path',
@@ -3430,7 +3438,7 @@ test('workspace registry commands bind activate and archive project workspaces w
     );
     assert.equal(bindOutput.workspace_catalog.binding.direct_entry.url, 'http://127.0.0.1:3310/redcube');
 
-    const catalogOutput = runCli(['workspace-catalog'], {
+    const catalogOutput = runCli(['workspace', 'list'], {
       OPL_FRONTDESK_STATE_DIR: stateRoot,
     });
     assert.equal(catalogOutput.workspace_catalog.projects.length, 3);
@@ -3467,7 +3475,8 @@ test('workspace registry commands bind activate and archive project workspaces w
     assert.equal(catalogOutput.workspace_catalog.summary.last_binding_change_at, bindOutput.workspace_catalog.binding.updated_at);
 
     const archiveOutput = runCli([
-      'workspace-archive',
+      'workspace',
+      'archive',
       '--project',
       'redcube',
       '--path',
@@ -3493,7 +3502,8 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
 
   try {
     runCli([
-      'workspace-bind',
+      'workspace',
+      'bind',
       '--project',
       'medautogrant',
       '--path',
@@ -3502,7 +3512,8 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
       buildManifestCommand(fixtures.medautogrant),
     ], env);
     runCli([
-      'workspace-bind',
+      'workspace',
+      'bind',
       '--project',
       'medautoscience',
       '--path',
@@ -3511,7 +3522,8 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
       buildManifestCommand(fixtures.medautoscience),
     ], env);
     runCli([
-      'workspace-bind',
+      'workspace',
+      'bind',
       '--project',
       'redcube',
       '--path',
@@ -3524,7 +3536,7 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
       'http://127.0.0.1:3310/redcube',
     ], env);
 
-    const catalogOutput = runCli(['workspace-catalog'], env);
+    const catalogOutput = runCli(['workspace', 'list'], env);
     const magCatalog = catalogOutput.workspace_catalog.projects.find((entry: { project_id: string }) => entry.project_id === 'medautogrant');
     const masCatalog = catalogOutput.workspace_catalog.projects.find((entry: { project_id: string }) => entry.project_id === 'medautoscience');
     const redcubeCatalog = catalogOutput.workspace_catalog.projects.find((entry: { project_id: string }) => entry.project_id === 'redcube');
@@ -3532,7 +3544,7 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(masCatalog?.active_binding?.direct_entry?.manifest_command, buildManifestCommand(fixtures.medautoscience));
     assert.equal(redcubeCatalog?.active_binding?.direct_entry?.manifest_command, buildManifestCommand(fixtures.redcube));
 
-    const manifestOutput = runCli(['domain-manifests'], env);
+    const manifestOutput = runCli(['domain', 'manifests'], env);
     assert.equal(manifestOutput.domain_manifests.summary.total_projects_count, 3);
     assert.equal(manifestOutput.domain_manifests.summary.manifest_configured_count, 3);
     assert.equal(manifestOutput.domain_manifests.summary.resolved_count, 3);
@@ -3636,7 +3648,7 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(redcube.manifest.product_entry_start.modes[2].mode_id, 'federated_handoff');
     assert.equal(redcube.manifest.product_entry_start.modes[3].mode_id, 'resume_session');
 
-    const guideOutput = runCli(['frontdesk-entry-guide'], env);
+    const guideOutput = runCli(['frontdesk', 'entry-guide'], env);
     assert.equal(guideOutput.frontdesk_entry_guide.summary.total_projects_count, 3);
     assert.equal(guideOutput.frontdesk_entry_guide.workspace_taxonomy.family_workspace_kind, 'opl_family_workspace');
     const scienceGuide = guideOutput.frontdesk_entry_guide.projects.find(
@@ -3653,7 +3665,7 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(scienceGuide.preflight.ready_to_try_now, true);
     assert.equal(scienceGuide.readiness.verdict, 'runtime_ready_not_standalone_product');
 
-    const dashboardOutput = runCli(['dashboard', '--path', repoRoot, '--sessions-limit', '1'], env);
+    const dashboardOutput = runCli(['status', 'dashboard', '--path', repoRoot, '--sessions-limit', '1'], env);
     assert.equal(dashboardOutput.dashboard.front_desk.recommended_entry_surfaces_count, 3);
     assert.equal(
       dashboardOutput.dashboard.front_desk.hosted_runtime_readiness.surface_kind,
@@ -3839,7 +3851,7 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(recommendedEntry.family_resume_surface_kind, 'product_entry_session');
     assert.equal(recommendedEntry.family_checkpoint_lineage_ref, 'runtime_watch/checkpoints/latest.json');
 
-    const wiringOutput = runCli(['frontdesk-domain-wiring'], env);
+    const wiringOutput = runCli(['frontdesk', 'domain-wiring'], env);
     assert.equal(wiringOutput.frontdesk_domain_wiring.domain_binding_parity.surface_kind, 'opl_domain_binding_parity');
     assert.equal(wiringOutput.frontdesk_domain_wiring.domain_binding_parity.summary.total_projects_count, 3);
     assert.equal(wiringOutput.frontdesk_domain_wiring.domain_binding_parity.summary.active_projects_count, 3);
@@ -3866,7 +3878,7 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(redcubeBindingParity.active_binding.direct_entry.url, 'http://127.0.0.1:3310/redcube');
     assert.deepEqual(redcubeBindingParity.available_actions, ['bind', 'activate', 'archive', 'launch']);
 
-    const readinessOutput = runCli(['frontdesk-readiness', '--path', repoRoot, '--sessions-limit', '1'], env);
+    const readinessOutput = runCli(['frontdesk', 'readiness', '--path', repoRoot, '--sessions-limit', '1'], env);
     assert.equal(readinessOutput.frontdesk_readiness.summary.total_projects_count, 3);
     assert.equal(readinessOutput.frontdesk_readiness.summary.usable_now_projects_count, 3);
     assert.equal(readinessOutput.frontdesk_readiness.summary.good_to_use_now_projects_count, 0);
@@ -4161,7 +4173,8 @@ test('project-progress promotes current MAS study into a paper-facing summary in
 
   try {
     runCli([
-      'workspace-bind',
+      'workspace',
+      'bind',
       '--project',
       'medautoscience',
       '--path',
@@ -4277,7 +4290,8 @@ test('workspace-bind derives family direct-entry locators from structured projec
 
   try {
     const magBind = runCli([
-      'workspace-bind',
+      'workspace',
+      'bind',
       '--project',
       'medautogrant',
       '--path',
@@ -4286,7 +4300,8 @@ test('workspace-bind derives family direct-entry locators from structured projec
       magInputPath,
     ], env);
     const masBind = runCli([
-      'workspace-bind',
+      'workspace',
+      'bind',
       '--project',
       'medautoscience',
       '--path',
@@ -4295,7 +4310,8 @@ test('workspace-bind derives family direct-entry locators from structured projec
       masProfilePath,
     ], env);
     const redcubeBind = runCli([
-      'workspace-bind',
+      'workspace',
+      'bind',
       '--project',
       'redcube',
       '--path',
@@ -4347,7 +4363,7 @@ test('workspace-bind derives family direct-entry locators from structured projec
       input_path: null,
     });
 
-    const catalogOutput = runCli(['workspace-catalog'], env);
+    const catalogOutput = runCli(['workspace', 'list'], env);
     assert.equal(catalogOutput.workspace_catalog.summary.direct_entry_ready_projects_count, 3);
     assert.equal(catalogOutput.workspace_catalog.summary.manifest_ready_projects_count, 3);
     const magProject = catalogOutput.workspace_catalog.projects.find(
@@ -4383,7 +4399,7 @@ test('workspace-bind derives family direct-entry locators from structured projec
       '可只给 workspace_path；若额外提供 workspace_root，则 redcube direct entry 会优先指向它。',
     );
 
-    const manifestOutput = runCli(['domain-manifests'], env);
+    const manifestOutput = runCli(['domain', 'manifests'], env);
     assert.equal(manifestOutput.domain_manifests.summary.resolved_count, 3);
     assert.equal(
       manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) => entry.project_id === 'medautogrant')?.manifest_command,
@@ -4398,7 +4414,7 @@ test('workspace-bind derives family direct-entry locators from structured projec
       `redcube product manifest --workspace-root ${path.resolve(redcubeWorkspacePath)}`,
     );
 
-    const dashboardOutput = runCli(['dashboard', '--path', repoRoot, '--sessions-limit', '1'], env);
+    const dashboardOutput = runCli(['status', 'dashboard', '--path', repoRoot, '--sessions-limit', '1'], env);
     assert.equal(
       dashboardOutput.dashboard.front_desk.domain_entry_parity.summary.aligned_projects_count,
       3,
@@ -4491,7 +4507,7 @@ test('domain-manifests executes manifest_command with a bash-compatible shell', 
   );
 
   try {
-    const output = runCli(['domain-manifests'], {
+    const output = runCli(['domain', 'manifests'], {
       OPL_FRONTDESK_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
       PATH: `${commandFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
@@ -4520,7 +4536,8 @@ test('start returns the routed family start surface for a bound project', () => 
 
   try {
     runCli([
-      'workspace-bind',
+      'workspace',
+      'bind',
       '--project',
       'redcube',
       '--path',
@@ -4555,7 +4572,8 @@ test('domain-manifests reports invalid json when a bound manifest command is mal
 
   try {
     runCli([
-      'workspace-bind',
+      'workspace',
+      'bind',
       '--project',
       'medautoscience',
       '--path',
@@ -4566,7 +4584,7 @@ test('domain-manifests reports invalid json when a bound manifest command is mal
       OPL_FRONTDESK_STATE_DIR: stateRoot,
     });
 
-    const manifestOutput = runCli(['domain-manifests'], {
+    const manifestOutput = runCli(['domain', 'manifests'], {
       OPL_FRONTDESK_STATE_DIR: stateRoot,
     });
     const medautoscience = manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) => entry.project_id === 'medautoscience');
@@ -4584,7 +4602,8 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
 
   try {
     runCli([
-      'workspace-bind',
+      'workspace',
+      'bind',
       '--project',
       'redcube',
       '--path',
@@ -4600,6 +4619,7 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     });
 
     const output = runCli([
+      'contract',
       'handoff-envelope',
       'Prepare',
       'a',
@@ -4736,7 +4756,8 @@ test('launch-domain resolves a bound direct-entry locator into an honest launche
 
   try {
     runCli([
-      'workspace-bind',
+      'workspace',
+      'bind',
       '--project',
       'redcube',
       '--path',
@@ -4750,7 +4771,8 @@ test('launch-domain resolves a bound direct-entry locator into an honest launche
     });
 
     const preview = runCli([
-      'launch-domain',
+      'domain',
+      'launch',
       '--project',
       'redcube',
       '--dry-run',
@@ -4772,7 +4794,8 @@ test('launch-domain resolves a bound direct-entry locator into an honest launche
     assert.equal(preview.domain_entry_launch.action.command_preview[0], openFixture.openPath);
 
     const openResult = runCli([
-      'launch-domain',
+      'domain',
+      'launch',
       '--project',
       'redcube',
     ], {
@@ -4786,7 +4809,8 @@ test('launch-domain resolves a bound direct-entry locator into an honest launche
     assert.equal(fs.readFileSync(openFixture.capturePath, 'utf8').trim(), 'http://127.0.0.1:3310/redcube');
 
     const spawnResult = runCli([
-      'launch-domain',
+      'domain',
+      'launch',
       '--project',
       'redcube',
       '--strategy',
@@ -4897,14 +4921,14 @@ exit 1
     });
     assert.equal(askOutput.product_entry.hermes.session_id, 'sess_ledger');
 
-    const resumeOutput = runCli(['resume', 'sess_ledger'], {
+    const resumeOutput = runCli(['session', 'resume', 'sess_ledger'], {
       OPL_HERMES_BIN: hermesPath,
       OPL_FRONTDESK_STATE_DIR: stateRoot,
       PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
     });
     assert.equal(resumeOutput.product_entry.mode, 'resume');
 
-    const ledgerOutput = runCli(['session-ledger', '--limit', '5'], {
+    const ledgerOutput = runCli(['session', 'ledger', '--limit', '5'], {
       OPL_HERMES_BIN: hermesPath,
       OPL_FRONTDESK_STATE_DIR: stateRoot,
       PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
@@ -4933,7 +4957,7 @@ exit 1
     assert.equal(ledgerOutput.session_ledger.sessions[0].workspace_locator.absolute_path, repoRoot);
     assert.equal(ledgerOutput.session_ledger.summary.session_aggregate_count, 1);
 
-    const runtimeOutput = runCli(['runtime-status', '--limit', '2'], {
+    const runtimeOutput = runCli(['status', 'runtime', '--limit', '2'], {
       OPL_HERMES_BIN: hermesPath,
       OPL_FRONTDESK_STATE_DIR: stateRoot,
       PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
@@ -5337,7 +5361,8 @@ exit 1
 
   try {
     runCli([
-      'workspace-bind',
+      'workspace',
+      'bind',
       '--project',
       'redcube',
       '--path',
@@ -5432,7 +5457,8 @@ test('paperclip config and bindings persist into a control-plane status surface'
 
   try {
     const configured = runCli([
-      'paperclip-config',
+      'paperclip',
+      'config',
       '--base-url',
       'http://127.0.0.1:4321',
       '--auth-header-env',
@@ -5451,7 +5477,8 @@ test('paperclip config and bindings persist into a control-plane status surface'
     assert.equal(configured.paperclip_control_plane.connection.control_company_id, 'company-opl-control');
 
     const bound = runCli([
-      'paperclip-bind',
+      'paperclip',
+      'bind',
       '--project',
       'redcube',
       '--company-id',
@@ -5472,7 +5499,7 @@ test('paperclip config and bindings persist into a control-plane status surface'
     assert.equal(bound.paperclip_control_plane.project_bindings[0].project_id, 'redcube');
     assert.equal(bound.paperclip_control_plane.project_bindings[0].company_id, 'company-redcube');
 
-    const status = runCli(['paperclip-status', '--path', repoRoot, '--sessions-limit', '1'], {
+    const status = runCli(['paperclip', 'status', '--path', repoRoot, '--sessions-limit', '1'], {
       OPL_FRONTDESK_STATE_DIR: stateRoot,
       OPL_PAPERCLIP_AUTH_HEADER: 'Bearer demo-token',
     });
@@ -5498,7 +5525,8 @@ test('paperclip-bootstrap exposes operator preflight plus the task and gate oper
 
   try {
     runCli([
-      'paperclip-config',
+      'paperclip',
+      'config',
       '--base-url',
       'http://127.0.0.1:4321',
       '--auth-header-env',
@@ -5510,7 +5538,8 @@ test('paperclip-bootstrap exposes operator preflight plus the task and gate oper
       OPL_PAPERCLIP_AUTH_HEADER: 'Bearer bootstrap-token',
     });
     runCli([
-      'paperclip-bind',
+      'paperclip',
+      'bind',
       '--project',
       'redcube',
       '--company-id',
@@ -5526,7 +5555,7 @@ test('paperclip-bootstrap exposes operator preflight plus the task and gate oper
       OPL_PAPERCLIP_AUTH_HEADER: 'Bearer bootstrap-token',
     });
 
-    const output = runCli(['paperclip-bootstrap'], {
+    const output = runCli(['paperclip', 'bootstrap'], {
       OPL_FRONTDESK_STATE_DIR: stateRoot,
       OPL_PAPERCLIP_AUTH_HEADER: 'Bearer bootstrap-token',
     }) as {
@@ -5564,9 +5593,9 @@ test('paperclip-bootstrap exposes operator preflight plus the task and gate oper
     assert.equal(output.paperclip_bootstrap.preflight.ready_for_gate_projection, true);
     assert.equal(
       output.paperclip_bootstrap.automation_surfaces.operator_loop_command,
-      'opl paperclip-operator-loop --all --interval-ms 30000',
+      'opl paperclip operator-loop --all --interval-ms 30000',
     );
-    assert.equal(output.paperclip_bootstrap.automation_surfaces.sync_command, 'opl paperclip-sync --all');
+    assert.equal(output.paperclip_bootstrap.automation_surfaces.sync_command, 'opl paperclip sync --all');
     assert.equal(output.paperclip_bootstrap.automation_surfaces.web.bootstrap, '/api/paperclip/control-plane/bootstrap');
     assert.equal(output.paperclip_bootstrap.automation_surfaces.web.sync, '/api/paperclip/control-plane/sync');
     assert.deepEqual(
@@ -5575,13 +5604,13 @@ test('paperclip-bootstrap exposes operator preflight plus the task and gate oper
     );
     assert.equal(
       output.paperclip_bootstrap.operator_playbooks[0].steps.some((step) =>
-        step.step_id === 'open_task' && step.command === 'opl paperclip-open-task "<request...>" --workspace-path <path>',
+        step.step_id === 'open_task' && step.command === 'opl paperclip open-task "<request...>" --workspace-path <path>',
       ),
       true,
     );
     assert.equal(
       output.paperclip_bootstrap.operator_playbooks[1].steps.some((step) =>
-        step.step_id === 'open_gate' && step.command === 'opl paperclip-open-gate "<request...>" --workspace-path <path>',
+        step.step_id === 'open_gate' && step.command === 'opl paperclip open-gate "<request...>" --workspace-path <path>',
       ),
       true,
     );
@@ -5604,7 +5633,8 @@ test('paperclip-status treats a local trusted Paperclip deployment as configured
 
     try {
       runCli([
-        'paperclip-config',
+        'paperclip',
+      'config',
         '--base-url',
         fakePaperclip.baseUrl,
         '--control-company-id',
@@ -5614,7 +5644,7 @@ test('paperclip-status treats a local trusted Paperclip deployment as configured
         OPL_FRONTDESK_STATE_DIR: stateRoot,
       });
 
-      const status = runCli(['paperclip-status', '--path', repoRoot, '--sessions-limit', '1'], {
+      const status = runCli(['paperclip', 'status', '--path', repoRoot, '--sessions-limit', '1'], {
         OPL_FRONTDESK_STATE_DIR: stateRoot,
       });
 
@@ -5635,7 +5665,8 @@ test('paperclip-open-task creates a routed Paperclip issue using the bound domai
 
   try {
     runCli([
-      'paperclip-config',
+      'paperclip',
+      'config',
       '--base-url',
       fakePaperclip.baseUrl,
       '--auth-header-env',
@@ -5647,7 +5678,8 @@ test('paperclip-open-task creates a routed Paperclip issue using the bound domai
       OPL_PAPERCLIP_AUTH_HEADER: 'Bearer integration-token',
     });
     runCli([
-      'paperclip-bind',
+      'paperclip',
+      'bind',
       '--project',
       'redcube',
       '--company-id',
@@ -5664,7 +5696,8 @@ test('paperclip-open-task creates a routed Paperclip issue using the bound domai
     });
 
     const output = await runCliAsync([
-      'paperclip-open-task',
+      'paperclip',
+      'open-task',
       'Prepare a defense-ready slide deck for a thesis committee.',
       '--preferred-family',
       'ppt_deck',
@@ -5723,7 +5756,8 @@ test('paperclip-sync writes a deduplicated OPL state comment back to a tracked P
 
   try {
     runCli([
-      'paperclip-config',
+      'paperclip',
+      'config',
       '--base-url',
       fakePaperclip.baseUrl,
       '--auth-header-env',
@@ -5735,7 +5769,8 @@ test('paperclip-sync writes a deduplicated OPL state comment back to a tracked P
       OPL_PAPERCLIP_AUTH_HEADER: 'Bearer sync-token',
     });
     runCli([
-      'paperclip-bind',
+      'paperclip',
+      'bind',
       '--project',
       'redcube',
       '--company-id',
@@ -5752,7 +5787,8 @@ test('paperclip-sync writes a deduplicated OPL state comment back to a tracked P
     });
 
     await runCliAsync([
-      'paperclip-open-task',
+      'paperclip',
+      'open-task',
       'Prepare a defense-ready slide deck for a thesis committee.',
       '--preferred-family',
       'ppt_deck',
@@ -5766,7 +5802,8 @@ test('paperclip-sync writes a deduplicated OPL state comment back to a tracked P
     });
 
     const synced = await runCliAsync([
-      'paperclip-sync',
+      'paperclip',
+      'sync',
       '--issue-id',
       'issue-1',
       '--path',
@@ -5836,7 +5873,8 @@ test('paperclip-sync writes a deduplicated OPL state comment back to a tracked P
     assert.match(String(commentRequest.body?.body ?? ''), /workspace_status/);
 
     const skipped = await runCliAsync([
-      'paperclip-sync',
+      'paperclip',
+      'sync',
       '--issue-id',
       'issue-1',
       '--path',
@@ -5886,7 +5924,8 @@ test('paperclip-open-gate creates a control-company issue and linked board appro
 
   try {
     runCli([
-      'paperclip-config',
+      'paperclip',
+      'config',
       '--base-url',
       fakePaperclip.baseUrl,
       '--auth-header-env',
@@ -5899,7 +5938,8 @@ test('paperclip-open-gate creates a control-company issue and linked board appro
     });
 
     const output = await runCliAsync([
-      'paperclip-open-gate',
+      'paperclip',
+      'open-gate',
       'Prepare a defense-ready slide deck for a thesis committee.',
       '--preferred-family',
       'ppt_deck',
@@ -5977,7 +6017,8 @@ test('paperclip-sync pulls approval decisions back into tracked gate state befor
 
   try {
     runCli([
-      'paperclip-config',
+      'paperclip',
+      'config',
       '--base-url',
       fakePaperclip.baseUrl,
       '--auth-header-env',
@@ -5990,7 +6031,8 @@ test('paperclip-sync pulls approval decisions back into tracked gate state befor
     });
 
     await runCliAsync([
-      'paperclip-open-gate',
+      'paperclip',
+      'open-gate',
       'Review publish readiness for the defense deck.',
       '--preferred-family',
       'ppt_deck',
@@ -6007,7 +6049,8 @@ test('paperclip-sync pulls approval decisions back into tracked gate state befor
     fakePaperclip.setApprovalDecision('approval-1', 'approved', 'approve');
 
     const synced = await runCliAsync([
-      'paperclip-sync',
+      'paperclip',
+      'sync',
       '--issue-id',
       'issue-1',
       '--path',
@@ -6049,7 +6092,7 @@ test('paperclip-sync pulls approval decisions back into tracked gate state befor
     assert.equal(synced.paperclip_sync.projections[0].gate_decision, 'approve');
     assert.equal(synced.paperclip_sync.projections[0].comment?.id, 'comment-1');
 
-    const status = runCli(['paperclip-status', '--path', repoRoot, '--sessions-limit', '1'], {
+    const status = runCli(['paperclip', 'status', '--path', repoRoot, '--sessions-limit', '1'], {
       OPL_FRONTDESK_STATE_DIR: stateRoot,
       OPL_PAPERCLIP_AUTH_HEADER: 'Bearer gate-sync-token',
     }) as {
@@ -6089,7 +6132,8 @@ test('paperclip-operator-loop runs repeated reconcile cycles and persists loop s
 
   try {
     runCli([
-      'paperclip-config',
+      'paperclip',
+      'config',
       '--base-url',
       fakePaperclip.baseUrl,
       '--auth-header-env',
@@ -6101,7 +6145,8 @@ test('paperclip-operator-loop runs repeated reconcile cycles and persists loop s
       OPL_PAPERCLIP_AUTH_HEADER: 'Bearer loop-token',
     });
     runCli([
-      'paperclip-bind',
+      'paperclip',
+      'bind',
       '--project',
       'redcube',
       '--company-id',
@@ -6114,7 +6159,8 @@ test('paperclip-operator-loop runs repeated reconcile cycles and persists loop s
     });
 
     await runCliAsync([
-      'paperclip-open-task',
+      'paperclip',
+      'open-task',
       'Prepare a defense-ready slide deck for a thesis committee.',
       '--preferred-family',
       'ppt_deck',
@@ -6126,7 +6172,8 @@ test('paperclip-operator-loop runs repeated reconcile cycles and persists loop s
     });
 
     const loop = await runCliAsync([
-      'paperclip-operator-loop',
+      'paperclip',
+      'operator-loop',
       '--project',
       'redcube',
       '--path',
@@ -6162,7 +6209,7 @@ test('paperclip-operator-loop runs repeated reconcile cycles and persists loop s
     assert.equal(loop.paperclip_operator_loop.summary.synced_count, 1);
     assert.equal(loop.paperclip_operator_loop.summary.skipped_count, 1);
 
-    const status = runCli(['paperclip-status', '--path', repoRoot, '--sessions-limit', '1'], {
+    const status = runCli(['paperclip', 'status', '--path', repoRoot, '--sessions-limit', '1'], {
       OPL_FRONTDESK_STATE_DIR: stateRoot,
       OPL_PAPERCLIP_AUTH_HEADER: 'Bearer loop-token',
     }) as {
@@ -6216,7 +6263,7 @@ test('paperclip-status recovers stale paperclip operator loop state when the rec
       'utf8',
     );
 
-    const status = runCli(['paperclip-status'], {
+    const status = runCli(['paperclip', 'status'], {
       OPL_FRONTDESK_STATE_DIR: stateRoot,
     }) as {
       paperclip_control_plane: {
@@ -6265,7 +6312,8 @@ test('web front-desk exposes the Paperclip control-plane aggregate surface', asy
 
   try {
     runCli([
-      'paperclip-config',
+      'paperclip',
+      'config',
       '--base-url',
       fakePaperclip.baseUrl,
       '--auth-header-env',
@@ -6277,7 +6325,8 @@ test('web front-desk exposes the Paperclip control-plane aggregate surface', asy
       OPL_PAPERCLIP_AUTH_HEADER: 'Bearer web-token',
     });
     runCli([
-      'paperclip-bind',
+      'paperclip',
+      'bind',
       '--project',
       'redcube',
       '--company-id',
@@ -6289,7 +6338,8 @@ test('web front-desk exposes the Paperclip control-plane aggregate surface', asy
       OPL_PAPERCLIP_AUTH_HEADER: 'Bearer web-token',
     });
     await runCliAsync([
-      'paperclip-open-task',
+      'paperclip',
+      'open-task',
       'Prepare a defense-ready slide deck for a thesis committee.',
       '--preferred-family',
       'ppt_deck',
@@ -6402,7 +6452,7 @@ exit 1
 `);
 
   try {
-    const output = runCli(['logs', 'gateway', '--lines', '20'], {
+    const output = runCli(['session', 'logs', 'gateway', '--lines', '20'], {
       OPL_HERMES_BIN: hermesPath,
     });
 
@@ -6438,7 +6488,7 @@ exit 1
 `);
 
   try {
-    const output = runCli(['repair-hermes-gateway'], {
+    const output = runCli(['runtime', 'repair-gateway'], {
       OPL_HERMES_BIN: hermesPath,
     });
 
@@ -6471,11 +6521,11 @@ test('chat --dry-run prepares a seeding query and a resume command for Hermes', 
   ]);
 });
 
-test('validate-contracts exposes env contract-root provenance', () => {
+test('contract validate exposes env contract-root provenance', () => {
   const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot(() => {});
 
   try {
-    const output = runCli(['validate-contracts'], {
+    const output = runCli(['contract', 'validate'], {
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     });
 
@@ -6486,14 +6536,15 @@ test('validate-contracts exposes env contract-root provenance', () => {
   }
 });
 
-test('validate-contracts exposes cli-flag contract-root provenance', () => {
+test('contract validate exposes cli-flag contract-root provenance', () => {
   const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot(() => {});
 
   try {
     const output = runCli([
       '--contracts-dir',
       fixtureContractsRoot,
-      'validate-contracts',
+      'contract',
+      'validate',
     ]);
 
     assert.equal(output.validation.contracts_dir, fixtureContractsRoot);
@@ -6503,11 +6554,11 @@ test('validate-contracts exposes cli-flag contract-root provenance', () => {
   }
 });
 
-test('validate-contracts falls back to the active CLI repo contracts when cwd has no contract root', () => {
+test('contract validate falls back to the active CLI repo contracts when cwd has no contract root', () => {
   const unrelatedCwd = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-cli-entry-cwd-'));
 
   try {
-    const output = runCliInCwd(['validate-contracts'], unrelatedCwd);
+    const output = runCliInCwd(['contract', 'validate'], unrelatedCwd);
 
     assert.equal(output.validation.contracts_dir, contractsDir);
     assert.equal(output.validation.contracts_root_source, 'cli_entry');
@@ -6516,14 +6567,14 @@ test('validate-contracts falls back to the active CLI repo contracts when cwd ha
   }
 });
 
-test('validate-contracts resolves repo contracts through a symlinked CLI entry path', () => {
+test('contract validate resolves repo contracts through a symlinked CLI entry path', () => {
   const unrelatedCwd = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-cli-entry-link-cwd-'));
   const linkedCliRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-cli-entry-link-'));
   const linkedCliPath = path.join(linkedCliRoot, 'opl-linked.ts');
 
   try {
     fs.symlinkSync(cliPath, linkedCliPath);
-    const output = runCliViaEntryPathInCwd(linkedCliPath, ['validate-contracts'], unrelatedCwd);
+    const output = runCliViaEntryPathInCwd(linkedCliPath, ['contract', 'validate'], unrelatedCwd);
 
     assert.equal(output.validation.contracts_dir, contractsDir);
     assert.equal(output.validation.contracts_root_source, 'cli_entry');
@@ -6533,13 +6584,13 @@ test('validate-contracts resolves repo contracts through a symlinked CLI entry p
   }
 });
 
-test('validate-contracts surfaces stable missing-file errors with cwd provenance', () => {
+test('contract validate surfaces stable missing-file errors with cwd provenance', () => {
   const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((contractsRoot) => {
     fs.rmSync(path.join(contractsRoot, 'task-topology.json'));
   });
 
   try {
-    const { status, payload } = runCliFailureInCwd(['validate-contracts'], fixtureRoot);
+    const { status, payload } = runCliFailureInCwd(['contract', 'validate'], fixtureRoot);
 
     assert.equal(payload.version, 'g2');
     assert.equal(payload.error.code, 'contract_file_missing');
@@ -6553,13 +6604,13 @@ test('validate-contracts surfaces stable missing-file errors with cwd provenance
   }
 });
 
-test('validate-contracts surfaces stable invalid-json errors', () => {
+test('contract validate surfaces stable invalid-json errors', () => {
   const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((contractsRoot) => {
     fs.writeFileSync(path.join(contractsRoot, 'domains.json'), '{ invalid json\n');
   });
 
   try {
-    const { status, payload } = runCliFailure(['validate-contracts'], {
+    const { status, payload } = runCliFailure(['contract', 'validate'], {
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     });
 
@@ -6575,7 +6626,7 @@ test('validate-contracts surfaces stable invalid-json errors', () => {
   }
 });
 
-test('validate-contracts surfaces stable shape-invalid errors with cli-flag provenance', () => {
+test('contract validate surfaces stable shape-invalid errors with cli-flag provenance', () => {
   const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((contractsRoot) => {
     const workstreamsPath = path.join(contractsRoot, 'workstreams.json');
     const workstreams = JSON.parse(fs.readFileSync(workstreamsPath, 'utf8'));
@@ -6587,7 +6638,8 @@ test('validate-contracts surfaces stable shape-invalid errors with cli-flag prov
     const { status, payload } = runCliFailure([
       '--contracts-dir',
       fixtureContractsRoot,
-      'validate-contracts',
+      'contract',
+      'validate',
     ]);
 
     assert.equal(payload.version, 'g2');
@@ -6616,7 +6668,8 @@ test('global --contracts-dir expects an exact contract root', () => {
   const { status, payload } = runCliFailure([
     '--contracts-dir',
     repoRoot,
-    'validate-contracts',
+    'contract',
+    'validate',
   ]);
 
   assert.equal(payload.version, 'g2');
@@ -6626,7 +6679,7 @@ test('global --contracts-dir expects an exact contract root', () => {
 });
 
 test('list-workstreams returns admitted workstream summaries', () => {
-  const output = runCli(['list-workstreams']);
+  const output = runCli(['contract', 'workstreams']);
 
   assert.deepEqual(output, {
     version: 'g2',
@@ -6651,8 +6704,8 @@ test('list-workstreams returns admitted workstream summaries', () => {
   });
 });
 
-test('get-workstream returns the full registered workstream meaning', () => {
-  const output = runCli(['get-workstream', 'presentation_ops']);
+test('contract workstream returns the full registered workstream meaning', () => {
+  const output = runCli(['contract', 'workstream', 'presentation_ops']);
 
   assert.equal(output.version, 'g2');
   assertContractsContext(output, 'cwd');
@@ -6661,8 +6714,8 @@ test('get-workstream returns the full registered workstream meaning', () => {
   assert.deepEqual(output.workstream.primary_families, ['ppt_deck']);
 });
 
-test('list-domains returns the registered domain gateway summaries', () => {
-  const output = runCli(['list-domains']);
+test('contract domains returns the registered domain gateway summaries', () => {
+  const output = runCli(['contract', 'domains']);
 
   assert.deepEqual(output, {
     version: 'g2',
@@ -6685,8 +6738,8 @@ test('list-domains returns the registered domain gateway summaries', () => {
   });
 });
 
-test('list-surfaces returns the public gateway surface summaries', () => {
-  const output = runCli(['list-surfaces']);
+test('contract surfaces returns the public gateway surface summaries', () => {
+  const output = runCli(['contract', 'surfaces']);
 
   assert.equal(output.version, 'g2');
   assertContractsContext(output, 'cwd');
@@ -6713,8 +6766,8 @@ test('list-surfaces returns the public gateway surface summaries', () => {
   );
 });
 
-test('get-domain returns the full registered domain meaning', () => {
-  const output = runCli(['get-domain', 'redcube']);
+test('contract domain returns the full registered domain meaning', () => {
+  const output = runCli(['contract', 'domain', 'redcube']);
 
   assert.equal(output.version, 'g2');
   assertContractsContext(output, 'cwd');
@@ -6723,8 +6776,8 @@ test('get-domain returns the full registered domain meaning', () => {
   assert.deepEqual(output.domain.non_opl_families, ['xiaohongshu']);
 });
 
-test('get-surface returns the full registered public surface meaning', () => {
-  const output = runCli(['get-surface', 'opl_read_only_discovery_gateway']);
+test('contract surface returns the full registered public surface meaning', () => {
+  const output = runCli(['contract', 'surface', 'opl_read_only_discovery_gateway']);
 
   assert.equal(output.version, 'g2');
   assertContractsContext(output, 'cwd');
@@ -6771,7 +6824,8 @@ test('resolveRequestSurface routes presentation delivery to redcube', () => {
 
 test('resolveRequestSurface keeps ppt_deck mapped to presentation_ops', () => {
   const output = runCli([
-    'resolve-request-surface',
+    'domain',
+    'resolve-request',
     '--intent',
     'presentation_delivery',
     '--target',
@@ -6791,7 +6845,8 @@ test('resolveRequestSurface keeps ppt_deck mapped to presentation_ops', () => {
 
 test('resolveRequestSurface keeps xiaohongshu at the redcube family boundary', () => {
   const output = runCli([
-    'resolve-request-surface',
+    'domain',
+    'resolve-request',
     '--intent',
     'create',
     '--target',
@@ -6810,7 +6865,8 @@ test('resolveRequestSurface keeps xiaohongshu at the redcube family boundary', (
 
 test('resolveRequestSurface returns unknown_domain for under-definition workstreams', () => {
   const output = runCli([
-    'resolve-request-surface',
+    'domain',
+    'resolve-request',
     '--intent',
     'plan',
     '--target',
@@ -6826,7 +6882,8 @@ test('resolveRequestSurface returns unknown_domain for under-definition workstre
 
 test('resolveRequestSurface returns ambiguous_task with explicit boundary evidence when the primary deliverable is unclear', () => {
   const output = runCli([
-    'resolve-request-surface',
+    'domain',
+    'resolve-request',
     '--intent',
     'create',
     '--target',
@@ -6874,9 +6931,10 @@ test('explainDomainBoundary explains admitted presentation routing', () => {
   assert.match(explanation.reason, /visual deliverable/i);
 });
 
-test('explain-domain-boundary explains xiaohongshu non-equivalence', () => {
+test('domain explain-boundary explains xiaohongshu non-equivalence', () => {
   const output = runCli([
-    'explain-domain-boundary',
+    'domain',
+    'explain-boundary',
     '--intent',
     'create',
     '--target',
@@ -6893,9 +6951,10 @@ test('explain-domain-boundary explains xiaohongshu non-equivalence', () => {
   assert.match(output.boundary_explanation.reason, /not automatically equal presentation ops/i);
 });
 
-test('explain-domain-boundary explains under-definition requests', () => {
+test('domain explain-boundary explains under-definition requests', () => {
   const output = runCli([
-    'explain-domain-boundary',
+    'domain',
+    'explain-boundary',
     '--intent',
     'plan',
     '--target',
@@ -6916,42 +6975,42 @@ test('help returns command discovery and runnable examples', () => {
   assertNoContractsProvenance(output);
   assert.equal(output.version, 'g2');
   assert.equal(output.help.command, null);
-  assert.equal(output.help.usage, 'opl [command|request...] [args]');
+  assert.equal(output.help.usage, 'opl [command ...|request...] [args]');
   assert.ok(
-    ['list-workstreams', 'get-workstream', 'list-domains', 'get-domain', 'list-surfaces', 'get-surface', 'resolve-request-surface', 'explain-domain-boundary'].every((command) =>
+    ['contract workstreams', 'contract workstream', 'contract domains', 'contract domain', 'contract surfaces', 'contract surface', 'domain resolve-request', 'domain explain-boundary'].every((command) =>
       output.help.commands.some((entry: { command: string }) => entry.command === command),
     ),
   );
   assert.ok(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'validate-contracts'),
+    output.help.commands.some((entry: { command: string }) => entry.command === 'contract validate'),
   );
   assert.ok(
-    ['frontdesk-service-install', 'frontdesk-service-status', 'frontdesk-service-open'].every((command) =>
+    ['frontdesk service install', 'frontdesk service status', 'frontdesk service open'].every((command) =>
       output.help.commands.some((entry: { command: string }) => entry.command === command),
     ),
   );
   assert.ok(
-    ['frontdesk-bootstrap', 'frontdesk-librechat-install', 'frontdesk-librechat-status', 'frontdesk-librechat-start', 'frontdesk-librechat-stop', 'frontdesk-librechat-open'].every((command) =>
+    ['frontdesk bootstrap', 'frontdesk librechat install', 'frontdesk librechat status', 'frontdesk librechat start', 'frontdesk librechat stop', 'frontdesk librechat open'].every((command) =>
       output.help.commands.some((entry: { command: string }) => entry.command === command),
     ),
   );
   assert.ok(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk-hosted-package'),
+    output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk hosted-package'),
   );
   assert.ok(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk-librechat-package'),
+    output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk librechat-package'),
   );
   assert.ok(
     output.help.commands.some(
       (entry: { command: string; examples: string[] }) =>
-        entry.command === 'validate-contracts'
-        && entry.examples.includes('opl validate-contracts'),
+        entry.command === 'contract validate'
+        && entry.examples.includes('opl contract validate'),
     ),
   );
-  assert.ok(output.help.examples.includes('opl get-workstream presentation_ops'));
+  assert.ok(output.help.examples.includes('opl contract handoff-envelope "Prepare a defense-ready slide deck." --preferred-family ppt_deck'));
   assert.ok(
     output.help.examples.includes(
-      'opl explain-domain-boundary --intent create --target deliverable --goal "Prepare a xiaohongshu campaign pack." --preferred-family xiaohongshu',
+      'opl domain explain-boundary --intent create --target deliverable --goal "Prepare a xiaohongshu campaign pack." --preferred-family xiaohongshu',
     ),
   );
 });
@@ -6962,77 +7021,77 @@ test('root --help returns the same machine-readable help payload', () => {
   assertNoContractsProvenance(output);
   assert.equal(output.version, 'g2');
   assert.equal(output.help.command, null);
-  assert.equal(output.help.usage, 'opl [command|request...] [args]');
+  assert.equal(output.help.usage, 'opl [command ...|request...] [args]');
   assert.ok(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'get-domain'),
+    output.help.commands.some((entry: { command: string }) => entry.command === 'contract domain'),
   );
 });
 
 test('command --help returns command-scoped usage and examples', () => {
-  const output = runCli(['get-domain', '--help']);
+  const output = runCli(['contract', 'domain', '--help']);
 
   assertNoContractsProvenance(output);
   assert.equal(output.version, 'g2');
-  assert.equal(output.help.command, 'get-domain');
-  assert.equal(output.help.usage, 'opl get-domain <domain_id>');
-  assert.ok(output.help.examples.includes('opl get-domain redcube'));
+  assert.equal(output.help.command, 'contract domain');
+  assert.equal(output.help.usage, 'opl contract domain <domain_id>');
+  assert.ok(output.help.examples.includes('opl contract domain redcube'));
 });
 
-test('frontdesk-service-install --help returns command-scoped usage and examples', () => {
-  const output = runCli(['frontdesk-service-install', '--help']);
+test('frontdesk service install --help returns command-scoped usage and examples', () => {
+  const output = runCli(['frontdesk', 'service', 'install', '--help']);
 
   assertNoContractsProvenance(output);
   assert.equal(output.version, 'g2');
-  assert.equal(output.help.command, 'frontdesk-service-install');
-  assert.match(output.help.usage, /opl frontdesk-service-install/);
-  assert.ok(output.help.examples.includes('opl frontdesk-service-install --port 8787'));
+  assert.equal(output.help.command, 'frontdesk service install');
+  assert.match(output.help.usage, /opl frontdesk service install/);
+  assert.ok(output.help.examples.includes('opl frontdesk service install --port 8787'));
 });
 
 test('help <command> returns the same payload as command --help', () => {
-  const viaHelp = runCli(['help', 'get-domain']);
-  const viaFlag = runCli(['get-domain', '--help']);
+  const viaHelp = runCli(['help', 'contract', 'domain']);
+  const viaFlag = runCli(['contract', 'domain', '--help']);
 
   assert.deepEqual(viaHelp, viaFlag);
 });
 
-test('explain-domain-boundary --help advertises the xiaohongshu family-boundary example', () => {
-  const output = runCli(['explain-domain-boundary', '--help']);
+test('domain explain-boundary --help advertises the xiaohongshu family-boundary example', () => {
+  const output = runCli(['domain', 'explain-boundary', '--help']);
 
   assertNoContractsProvenance(output);
   assert.equal(output.version, 'g2');
-  assert.equal(output.help.command, 'explain-domain-boundary');
+  assert.equal(output.help.command, 'domain explain-boundary');
   assert.ok(
     output.help.examples.includes(
-      'opl explain-domain-boundary --intent create --target deliverable --goal "Prepare a xiaohongshu campaign pack." --preferred-family xiaohongshu',
+      'opl domain explain-boundary --intent create --target deliverable --goal "Prepare a xiaohongshu campaign pack." --preferred-family xiaohongshu',
     ),
   );
 });
 
 test('command help literal returns a usage error instead of command-scoped help', () => {
-  const { status, payload } = runCliFailure(['get-domain', 'help']);
+  const { status, payload } = runCliFailure(['contract', 'domain', 'help']);
 
   assert.equal(payload.version, 'g2');
   assert.equal(payload.error.code, 'cli_usage_error');
   assert.equal(payload.error.exit_code, 2);
   assert.equal(status, 2);
-  assert.equal(payload.error.details.help_usage, 'opl get-domain --help');
+  assert.equal(payload.error.details.help_usage, 'opl contract domain --help');
 });
 
 test('CLI usage errors expose machine-readable usage guidance', () => {
-  const { status, payload } = runCliFailure(['get-domain']);
+  const { status, payload } = runCliFailure(['contract', 'domain']);
 
   assertNoContractsProvenance(payload);
   assert.equal(payload.version, 'g2');
   assert.equal(payload.error.code, 'cli_usage_error');
   assert.equal(payload.error.exit_code, 2);
   assert.equal(status, 2);
-  assert.equal(payload.error.details.usage, 'opl get-domain <domain_id>');
+  assert.equal(payload.error.details.usage, 'opl contract domain <domain_id>');
   assert.ok(Array.isArray(payload.error.details.examples));
-  assert.ok(payload.error.details.examples.includes('opl get-domain redcube'));
+  assert.ok(payload.error.details.examples.includes('opl contract domain redcube'));
 });
 
 test('CLI returns stable JSON errors for unknown ids', () => {
-  const { status, payload } = runCliFailure(['get-domain', 'unknown']);
+  const { status, payload } = runCliFailure(['contract', 'domain', 'unknown']);
 
   assert.equal(payload.version, 'g2');
   assert.equal(payload.error.code, 'domain_not_found');
@@ -7041,7 +7100,7 @@ test('CLI returns stable JSON errors for unknown ids', () => {
 });
 
 test('CLI returns stable JSON errors for unknown surface ids', () => {
-  const { status, payload } = runCliFailure(['get-surface', 'unknown_surface']);
+  const { status, payload } = runCliFailure(['contract', 'surface', 'unknown_surface']);
 
   assert.equal(payload.version, 'g2');
   assert.equal(payload.error.code, 'surface_not_found');
@@ -7059,7 +7118,7 @@ test('CLI returns machine-readable JSON errors for unknown commands with availab
   assert.equal(payload.error.exit_code, 2);
   assert.equal(status, 2);
   assert.ok(Array.isArray(payload.error.details.commands));
-  assert.ok(payload.error.details.commands.includes('validate-contracts'));
+  assert.ok(payload.error.details.commands.includes('contract validate'));
   assert.equal(payload.error.details.command, 'unknown-command');
   assert.equal(payload.error.details.usage, 'opl help');
 });
