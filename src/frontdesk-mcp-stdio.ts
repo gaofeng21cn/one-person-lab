@@ -429,6 +429,45 @@ function renderTaskStatusBrief(payload: unknown) {
   return lines.join('\n');
 }
 
+function renderWorkspaceBrief(payload: unknown, action: 'list' | 'activate') {
+  if (action === 'activate') {
+    const binding = isRecord(payload) && isRecord(payload.workspace_binding)
+      ? payload.workspace_binding
+      : isRecord(payload) && isRecord(payload.workspace_catalog) && isRecord(payload.workspace_catalog.binding)
+        ? payload.workspace_catalog.binding
+        : null;
+    if (!binding) {
+      return `当前没有拿到可用的 workspace 切换结果。${buildJsonAppendix(payload)}`;
+    }
+    const projectId = normalizeOptionalString(binding.project_id);
+    const workspacePath = normalizeOptionalString(binding.workspace_path);
+    const lines = ['已切换工作区。'];
+    if (projectId) {
+      lines.push(`项目：${projectId}`);
+    }
+    if (workspacePath) {
+      lines.push(`路径：${workspacePath}`);
+    }
+    return lines.join('\n');
+  }
+
+  if (!isRecord(payload) || !Array.isArray(payload.projects)) {
+    return `当前没有拿到项目与 workspace 列表。${buildJsonAppendix(payload)}`;
+  }
+
+  const lines = [`当前项目：${payload.projects.length} 个。`];
+  for (const item of payload.projects.slice(0, 8)) {
+    if (!isRecord(item)) {
+      continue;
+    }
+    const projectId = normalizeOptionalString(item.project_id) ?? 'unknown-project';
+    const label = normalizeOptionalString(item.label);
+    const workspacePath = normalizeOptionalString(item.active_workspace_path);
+    lines.push([projectId, label, workspacePath].filter(Boolean).join(' | '));
+  }
+  return lines.join('\n');
+}
+
 const TOOLS: ToolDefinition[] = [
   {
     name: 'opl_project_progress',
@@ -526,152 +565,141 @@ const TOOLS: ToolDefinition[] = [
     },
   },
   {
-    name: 'opl_projects',
-    description: '列出 OPL 当前可见的 family/domain 项目面。',
-    inputSchema: {
-      type: 'object',
-      properties: {},
-      additionalProperties: false,
-    },
-    call: async (_args, options) => {
-      return await fetchJson(options, '/projects');
-    },
-  },
-  {
-    name: 'opl_activate_workspace',
-    description: '激活一个已绑定的 workspace，并把当前聊天默认上下文切换到该 workspace。',
+    name: 'opl_workspace',
+    description:
+      '列出当前可见的项目/workspace，或激活一个新的 workspace。用户说“切到某个项目”“看看我现在有哪些项目”时优先使用。',
     inputSchema: {
       type: 'object',
       properties: {
+        action: {
+          type: 'string',
+          description: '可选。`list` 或 `activate`；默认 `list`。',
+        },
         project_id: {
           type: 'string',
-          description: '必填。要切换的项目 ID，例如 medautoscience 或 redcube。',
+          description: '当 action=activate 时必填。要切换的项目 ID。',
         },
         workspace_path: {
           type: 'string',
-          description: '必填。要激活的 workspace 绝对路径。',
+          description: '当 action=activate 时必填。要切换的 workspace 绝对路径；list 时可省略。',
         },
       },
-      required: ['project_id', 'workspace_path'],
       additionalProperties: false,
     },
     call: async (args, options) => {
-      const projectId = normalizeOptionalString(args.project_id);
-      const workspacePath = normalizeOptionalString(args.workspace_path);
-      if (!projectId || !workspacePath) {
-        throw new Error('opl_activate_workspace requires both project_id and workspace_path.');
+      const action = normalizeOptionalString(args.action) ?? 'list';
+      if (action !== 'list' && action !== 'activate') {
+        throw new Error('opl_workspace action must be list or activate.');
       }
 
-      const payload = await fetchJson(options, '/workspace-activate', {}, {
-        method: 'POST',
-        body: {
-          project_id: projectId,
-          workspace_path: workspacePath,
-        },
-      });
-      options.workspacePath = workspacePath;
-      return payload;
+      if (action === 'activate') {
+        const projectId = normalizeOptionalString(args.project_id);
+        const workspacePath = normalizeOptionalString(args.workspace_path);
+        if (!projectId || !workspacePath) {
+          throw new Error('opl_workspace with action=activate requires project_id and workspace_path.');
+        }
+
+        const payload = await fetchJson(options, '/workspace-activate', {}, {
+          method: 'POST',
+          body: {
+            project_id: projectId,
+            workspace_path: workspacePath,
+          },
+        });
+        options.workspacePath = workspacePath;
+        return renderWorkspaceBrief(payload, 'activate');
+      }
+
+      const payload = await fetchJson(options, '/projects');
+      return renderWorkspaceBrief(payload, 'list');
     },
   },
   {
-    name: 'opl_recent_sessions',
-    description: '列出最近由 OPL 执行入口产生的会话，适合回答“刚才跑到哪了”“最近有哪些 live session”。',
+    name: 'opl_session',
+    description:
+      '列出最近会话、恢复会话，或读取运行日志。用户说“刚才跑到哪了”“继续刚才那个”“看看最后一次报了什么”时优先使用。',
     inputSchema: {
       type: 'object',
       properties: {
+        action: {
+          type: 'string',
+          description: '可选。`list`、`resume` 或 `logs`；默认 `list`。',
+        },
+        session_id: {
+          type: 'string',
+          description: '当 action=resume 或 action=logs 且要过滤会话时使用。',
+        },
         limit: {
           type: 'integer',
           minimum: 1,
-          description: '可选。返回最近多少条会话。',
+          description: 'action=list 时可选。返回最近多少条会话。',
         },
         source: {
           type: 'string',
-          description: '可选。按 source 过滤。',
+          description: 'action=list 时可选。按 source 过滤。',
+        },
+        log_name: {
+          type: 'string',
+          description: 'action=logs 时可选。日志名。',
+        },
+        lines: {
+          type: 'integer',
+          minimum: 1,
+          description: 'action=logs 时可选。读取多少行。',
+        },
+        since: {
+          type: 'string',
+          description: 'action=logs 时可选。只读某个时间点之后的日志。',
+        },
+        level: {
+          type: 'string',
+          description: 'action=logs 时可选。日志级别过滤。',
+        },
+        component: {
+          type: 'string',
+          description: 'action=logs 时可选。组件过滤。',
         },
       },
       additionalProperties: false,
     },
     call: async (args, options) => {
+      const action = normalizeOptionalString(args.action) ?? 'list';
+      if (action !== 'list' && action !== 'resume' && action !== 'logs') {
+        throw new Error('opl_session action must be list, resume, or logs.');
+      }
+
+      if (action === 'resume') {
+        const sessionId = normalizeOptionalString(args.session_id);
+        if (!sessionId) {
+          throw new Error('opl_session with action=resume requires a non-empty session_id.');
+        }
+
+        const payload = await fetchJson(options, '/resume', {}, {
+          method: 'POST',
+          body: {
+            session_id: sessionId,
+          },
+        });
+        return renderResumeSessionBrief(payload);
+      }
+
+      if (action === 'logs') {
+        const payload = await fetchJson(options, '/logs', {
+          log_name: normalizeOptionalString(args.log_name),
+          lines: parsePositiveInteger(args.lines, 'lines'),
+          since: normalizeOptionalString(args.since),
+          level: normalizeOptionalString(args.level),
+          component: normalizeOptionalString(args.component),
+          session_id: normalizeOptionalString(args.session_id),
+        });
+        return renderRuntimeLogsBrief(payload);
+      }
+
       const payload = await fetchJson(options, '/sessions', {
         limit: parsePositiveInteger(args.limit, 'limit'),
         source: normalizeOptionalString(args.source),
       });
       return renderRecentSessionsBrief(payload);
-    },
-  },
-  {
-    name: 'opl_resume_session',
-    description: '恢复一个已存在的 OPL / Hermes 会话。用户明确说“继续刚才那个”“恢复 sess-xxx”时优先使用。',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        session_id: {
-          type: 'string',
-          description: '必填。要恢复的 session id。',
-        },
-      },
-      required: ['session_id'],
-      additionalProperties: false,
-    },
-    call: async (args, options) => {
-      const sessionId = normalizeOptionalString(args.session_id);
-      if (!sessionId) {
-        throw new Error('opl_resume_session requires a non-empty session_id.');
-      }
-
-      const payload = await fetchJson(options, '/resume', {}, {
-        method: 'POST',
-        body: {
-          session_id: sessionId,
-        },
-      });
-      return renderResumeSessionBrief(payload);
-    },
-  },
-  {
-    name: 'opl_runtime_logs',
-    description: '读取某条执行会话或某个组件的运行日志。遇到“为什么停了”“最后一次报了什么”这类问题时优先使用。',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        log_name: {
-          type: 'string',
-          description: '可选。日志名。',
-        },
-        lines: {
-          type: 'integer',
-          minimum: 1,
-          description: '可选。读取多少行。',
-        },
-        since: {
-          type: 'string',
-          description: '可选。只读某个时间点之后的日志。',
-        },
-        level: {
-          type: 'string',
-          description: '可选。日志级别过滤。',
-        },
-        component: {
-          type: 'string',
-          description: '可选。组件过滤。',
-        },
-        session_id: {
-          type: 'string',
-          description: '可选。会话过滤。',
-        },
-      },
-      additionalProperties: false,
-    },
-    call: async (args, options) => {
-      const payload = await fetchJson(options, '/logs', {
-        log_name: normalizeOptionalString(args.log_name),
-        lines: parsePositiveInteger(args.lines, 'lines'),
-        since: normalizeOptionalString(args.since),
-        level: normalizeOptionalString(args.level),
-        component: normalizeOptionalString(args.component),
-        session_id: normalizeOptionalString(args.session_id),
-      });
-      return renderRuntimeLogsBrief(payload);
     },
   },
   {
