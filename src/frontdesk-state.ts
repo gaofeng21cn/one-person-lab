@@ -7,6 +7,7 @@ export type FrontDeskStatePaths = {
   state_dir: string;
   workspace_registry_file: string;
   session_ledger_file: string;
+  task_state_dir: string;
   service_config_file: string;
   librechat_service_file: string;
   librechat_pilot_root: string;
@@ -25,6 +26,7 @@ export function resolveFrontDeskStatePaths(): FrontDeskStatePaths {
     state_dir: stateDir,
     workspace_registry_file: path.join(stateDir, 'workspace-registry.json'),
     session_ledger_file: path.join(stateDir, 'session-ledger.json'),
+    task_state_dir: path.join(stateDir, 'tasks'),
     service_config_file: path.join(stateDir, 'service-config.json'),
     librechat_service_file: path.join(stateDir, 'librechat-service.json'),
     librechat_pilot_root: path.join(stateDir, 'librechat-pilot'),

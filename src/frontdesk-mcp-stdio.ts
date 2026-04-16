@@ -10,6 +10,11 @@ export type FrontDeskMcpBridgeOptions = {
   sessionsLimit?: number;
 };
 
+type FrontDeskMcpBridgeState = {
+  titleSyncInFlight: boolean;
+  lastTitleSyncAt: number;
+};
+
 type JsonRpcRequest = {
   jsonrpc?: string;
   id?: JsonRpcId;
@@ -42,6 +47,7 @@ const SUPPORTED_PROTOCOL_VERSIONS = [
   '2024-11-05',
 ] as const;
 const DEFAULT_PROTOCOL_VERSION = '2025-03-26';
+const TITLE_SYNC_COOLDOWN_MS = 15_000;
 
 function writeJsonLine(payload: JsonRpcResponse) {
   process.stdout.write(`${JSON.stringify(payload)}\n`);
@@ -60,6 +66,48 @@ function normalizeApiBaseUrl(apiBaseUrl: string) {
 
 function normalizeOptionalString(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+function normalizeStringArray(value: unknown, field: string) {
+  if (value === undefined || value === null || value === '') {
+    return [] as string[];
+  }
+
+  const items = Array.isArray(value)
+    ? value
+    : typeof value === 'string'
+      ? value.split(',')
+      : null;
+
+  if (!items) {
+    throw new Error(`${field} must be an array of strings or a comma-separated string.`);
+  }
+
+  return items
+    .map((entry) => normalizeOptionalString(entry))
+    .filter((entry): entry is string => Boolean(entry));
+}
+
+function parseOptionalBoolean(value: unknown, field: string) {
+  if (value === undefined || value === null || value === '') {
+    return undefined;
+  }
+
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'true') {
+      return true;
+    }
+    if (normalized === 'false') {
+      return false;
+    }
+  }
+
+  throw new Error(`${field} must be a boolean.`);
 }
 
 function parsePositiveInteger(value: unknown, field: string) {
@@ -132,6 +180,24 @@ function buildTextToolResult(payload: unknown, isError = false) {
   };
 }
 
+function buildJsonAppendix(payload: unknown) {
+  return `\n\n原始返回：\n${JSON.stringify(payload, null, 2)}`;
+}
+
+function containsInternalPhrase(value: string) {
+  return /(entry_parity_status|continue bundle stage|contract|surface_id|routing_status|boundary_status|current_stage_summary|next_system_action)/i.test(value);
+}
+
+function toHumanLine(label: string, value: string | undefined, lines: string[]) {
+  if (!value) {
+    return;
+  }
+  if (containsInternalPhrase(value)) {
+    return;
+  }
+  lines.push(`${label}：${value}`);
+}
+
 function renderProjectProgressBrief(payload: unknown) {
   if (!isRecord(payload) || !isRecord(payload.project_progress)) {
     return '当前没有读到可用的项目进度摘要。';
@@ -157,9 +223,7 @@ function renderProjectProgressBrief(payload: unknown) {
     workspacePath,
     fallbackLabel: normalizeOptionalString(currentProject.label) ?? null,
   });
-  const lines = [
-    `当前工作区：${workspaceLabel}`,
-  ];
+  const lines = [`当前工作区：${workspaceLabel}`];
 
   if (workspacePath) {
     lines.push(`工作区路径：${workspacePath}`);
@@ -193,65 +257,173 @@ function renderProjectProgressBrief(payload: unknown) {
       pageCount !== null ? `${pageCount} 页 PDF` : null,
     ].filter(Boolean).join('，');
 
-    if (studyId) {
-      lines.push(`当前论文：${studyId}`);
-    }
-    if (title) {
-      lines.push(`论文题目：${title}`);
-    }
-    if (clinicalQuestion) {
-      lines.push(`临床问题：${clinicalQuestion}`);
-    }
-    if (storySummary) {
-      lines.push(`论文主线：${storySummary}`);
-    }
+    toHumanLine('当前论文', studyId, lines);
+    toHumanLine('论文题目', title, lines);
+    toHumanLine('临床问题', clinicalQuestion, lines);
+    toHumanLine('论文主线', storySummary, lines);
     if (innovationSummary && innovationSummary !== storySummary) {
-      lines.push(`写作边界：${innovationSummary}`);
+      toHumanLine('创新点', innovationSummary, lines);
     }
-    if (effectSummary) {
-      lines.push(`当前结果：${effectSummary}`);
-    }
-    if (materializedSummary) {
-      lines.push(`稿件物化：${materializedSummary}`);
-    }
-    if (currentStageSummary) {
-      lines.push(`当前阶段：${currentStageSummary}`);
-    }
-    if (nextSystemAction) {
-      lines.push(`系统下一步：${nextSystemAction}`);
-    }
+    toHumanLine('当前结果', effectSummary, lines);
+    toHumanLine('稿件物化', materializedSummary || undefined, lines);
+    toHumanLine('当前阶段', currentStageSummary, lines);
+    toHumanLine('系统下一步', nextSystemAction, lines);
   } else {
     lines.push('当前只能确认到项目级，暂时还不能锁定具体论文。');
   }
 
-  lines.push(`当前进度：${normalizeOptionalString(brief.progress_summary) ?? '暂未读到结构化进度摘要。'}`);
-
-  const nextFocus = normalizeOptionalString(brief.next_focus);
-  if (nextFocus) {
-    lines.push(`下一步：${nextFocus}`);
-  }
+  toHumanLine('当前进度', normalizeOptionalString(brief.progress_summary), lines);
+  toHumanLine('下一步', normalizeOptionalString(brief.next_focus), lines);
 
   if (recentActivity) {
     const lastActive = normalizeOptionalString(recentActivity.last_active) ?? '未知时间';
-    const source = normalizeOptionalString(recentActivity.source) ?? '未知来源';
     const preview = normalizeOptionalString(recentActivity.preview);
-    lines.push(
-      `最近活动：${lastActive}，来源 ${source}${preview ? `，摘要 ${preview}` : ''}。`,
-    );
+    lines.push(`最近活动：${lastActive}${preview ? `，${preview}` : ''}`);
   } else {
     lines.push('最近活动：当前没有读到新的 runtime 会话活动。');
+  }
+
+  const humanAttentionItems = attentionItems.filter((entry) => !containsInternalPhrase(entry));
+  if (humanAttentionItems.length > 0) {
+    lines.push(`当前卡点：${humanAttentionItems.join('；')}`);
   }
 
   if (inspectPaths.length > 0) {
     lines.push(`查看位置：${inspectPaths.join('；')}`);
   }
 
-  if (attentionItems.length > 0) {
-    lines.push(`当前需关注：${attentionItems.join('；')}`);
-  }
-
   if (userOptions.length > 0) {
     lines.push(`你可以直接说：${userOptions.join('；')}`);
+  }
+
+  return lines.join('\n');
+}
+
+function renderExecuteRequestBrief(payload: unknown) {
+  if (!isRecord(payload) || !isRecord(payload.product_entry)) {
+    return `当前没有拿到可用的执行结果。${buildJsonAppendix(payload)}`;
+  }
+
+  const productEntry = payload.product_entry;
+  const input = isRecord(productEntry.input) ? productEntry.input : null;
+  const task = isRecord(productEntry.task) ? productEntry.task : null;
+  const goal = normalizeOptionalString(input?.goal);
+  const taskId = normalizeOptionalString(task?.task_id);
+  const status = normalizeOptionalString(task?.status);
+  const sessionId = normalizeOptionalString(task?.session_id);
+  const summary = normalizeOptionalString(task?.summary);
+
+  const lines = ['任务已受理。'];
+  if (goal) {
+    lines.push(`目标：${goal}`);
+  }
+  if (taskId) {
+    lines.push(`任务编号：${taskId}`);
+  }
+  if (status) {
+    lines.push(`当前状态：${status}`);
+  }
+  if (summary) {
+    lines.push(`当前说明：${summary}`);
+  }
+  if (sessionId) {
+    lines.push(`Hermes 会话：${sessionId}`);
+  }
+  lines.push('如需继续追踪，直接问“这个任务现在进展如何”，或调用任务状态工具。');
+  return lines.join('\n');
+}
+
+function renderRecentSessionsBrief(payload: unknown) {
+  if (!isRecord(payload) || !isRecord(payload.product_entry)) {
+    return `当前没有拿到最近会话列表。${buildJsonAppendix(payload)}`;
+  }
+
+  const productEntry = payload.product_entry;
+  const sessions = Array.isArray(productEntry.sessions)
+    ? productEntry.sessions.filter((entry): entry is Record<string, unknown> => isRecord(entry))
+    : [];
+  const lines = [`最近会话：${sessions.length} 条。`];
+
+  for (const session of sessions.slice(0, 5)) {
+    const sessionId = normalizeOptionalString(session.session_id) ?? 'unknown-session';
+    const lastActive = normalizeOptionalString(session.last_active) ?? '未知时间';
+    const preview = normalizeOptionalString(session.preview);
+    lines.push(`${sessionId} | ${lastActive}${preview ? ` | ${preview}` : ''}`);
+  }
+
+  return lines.join('\n');
+}
+
+function renderResumeSessionBrief(payload: unknown) {
+  if (!isRecord(payload) || !isRecord(payload.product_entry) || !isRecord(payload.product_entry.resume)) {
+    return `当前没有拿到可用的恢复结果。${buildJsonAppendix(payload)}`;
+  }
+
+  const resume = payload.product_entry.resume;
+  const sessionId = normalizeOptionalString(resume.session_id);
+  const output = normalizeOptionalString(resume.output);
+  const lines = ['已恢复先前会话。'];
+  if (sessionId) {
+    lines.push(`会话：${sessionId}`);
+  }
+  if (output) {
+    lines.push(`最近输出：${output}`);
+  }
+  return lines.join('\n');
+}
+
+function renderRuntimeLogsBrief(payload: unknown) {
+  if (!isRecord(payload) || !isRecord(payload.product_entry)) {
+    return `当前没有拿到日志。${buildJsonAppendix(payload)}`;
+  }
+
+  const productEntry = payload.product_entry;
+  const rawOutput = normalizeOptionalString(productEntry.raw_output);
+  const logName = normalizeOptionalString(productEntry.log_name);
+  const sessionId = normalizeOptionalString(productEntry.session_id);
+  const lines = ['最近日志：'];
+  if (logName) {
+    lines.push(`日志名：${logName}`);
+  }
+  if (sessionId) {
+    lines.push(`会话：${sessionId}`);
+  }
+  if (rawOutput) {
+    lines.push(rawOutput);
+  } else {
+    lines.push('当前没有读到新的日志内容。');
+  }
+  return lines.join('\n');
+}
+
+function renderTaskStatusBrief(payload: unknown) {
+  if (!isRecord(payload) || !isRecord(payload.product_entry) || !isRecord(payload.product_entry.task)) {
+    return `当前没有拿到任务状态。${buildJsonAppendix(payload)}`;
+  }
+
+  const task = payload.product_entry.task;
+  const taskId = normalizeOptionalString(task.task_id) ?? 'unknown-task';
+  const status = normalizeOptionalString(task.status) ?? '未知';
+  const summary = normalizeOptionalString(task.summary);
+  const stage = normalizeOptionalString(task.stage);
+  const sessionId = normalizeOptionalString(task.session_id);
+  const recentOutput = normalizeOptionalString(task.recent_output);
+  const lines = [
+    `任务编号：${taskId}`,
+    `任务状态：${status}`,
+  ];
+
+  if (stage) {
+    lines.push(`当前阶段：${stage}`);
+  }
+  if (summary) {
+    lines.push(`当前说明：${summary}`);
+  }
+  if (sessionId) {
+    lines.push(`Hermes 会话：${sessionId}`);
+  }
+  if (recentOutput) {
+    lines.push(`最近输出：${recentOutput}`);
   }
 
   return lines.join('\n');
@@ -286,42 +458,71 @@ const TOOLS: ToolDefinition[] = [
     },
   },
   {
-    name: 'opl_frontdesk_entry_guide',
+    name: 'opl_execute_request',
     description:
-      '当 shell / agent 不确定该从哪个项目、哪个 start mode 或哪类 workspace 进入时优先使用。返回 OPL 当前 family-level entry guide 原始面。',
-    inputSchema: {
-      type: 'object',
-      properties: {},
-      additionalProperties: false,
-    },
-    call: async (_args, options) => {
-      return await fetchJson(options, '/frontdesk-entry-guide');
-    },
-  },
-  {
-    name: 'opl_dashboard',
-    description:
-      '读取 OPL 顶层 dashboard 原始控制面，适合调试 family wiring、readiness 和 runtime 细节；普通用户进度问答优先用 opl_project_progress。',
+      '当用户要求你继续推进、恢复、重启、整理、打包、检查并处理某件事时优先使用。它会真正提交执行请求，而不是只解释状态。',
     inputSchema: {
       type: 'object',
       properties: {
+        goal: {
+          type: 'string',
+          description: '必填。要执行的自然语言目标。',
+        },
+        intent: {
+          type: 'string',
+          description: '可选。执行意图，默认 create。',
+        },
+        target: {
+          type: 'string',
+          description: '可选。执行目标类型，默认 deliverable。',
+        },
+        preferred_family: {
+          type: 'string',
+          description: '可选。希望优先落到的 family，例如 paper。',
+        },
+        request_kind: {
+          type: 'string',
+          description: '可选。更细的请求分类。',
+        },
         workspace_path: {
           type: 'string',
-          description: '可选。要查看的 workspace 绝对路径；默认使用桥接启动时传入的路径。',
+          description: '可选。显式指定要执行的 workspace 绝对路径。',
         },
-        sessions_limit: {
-          type: 'integer',
-          minimum: 1,
-          description: '可选。返回最近多少条相关 session。',
+        skills: {
+          type: 'array',
+          items: {
+            type: 'string',
+          },
+          description: '可选。希望随 handoff 一起传递的技能名列表。',
+        },
+        dry_run: {
+          type: 'boolean',
+          description: '可选。若为 true，只预演 handoff，不真正执行。',
         },
       },
+      required: ['goal'],
       additionalProperties: false,
     },
     call: async (args, options) => {
-      return await fetchJson(options, '/dashboard', {
-        path: normalizeOptionalString(args.workspace_path) ?? options.workspacePath,
-        sessions_limit: parsePositiveInteger(args.sessions_limit, 'sessions_limit') ?? options.sessionsLimit,
+      const goal = normalizeOptionalString(args.goal);
+      if (!goal) {
+        throw new Error('opl_execute_request requires a non-empty goal.');
+      }
+
+      const payload = await fetchJson(options, '/ask', {}, {
+        method: 'POST',
+        body: {
+          goal,
+          intent: normalizeOptionalString(args.intent),
+          target: normalizeOptionalString(args.target),
+          preferred_family: normalizeOptionalString(args.preferred_family),
+          request_kind: normalizeOptionalString(args.request_kind),
+          workspace_path: normalizeOptionalString(args.workspace_path) ?? options.workspacePath,
+          skills: normalizeStringArray(args.skills, 'skills'),
+          dry_run: parseOptionalBoolean(args.dry_run, 'dry_run') ?? false,
+        },
       });
+      return renderExecuteRequestBrief(payload);
     },
   },
   {
@@ -334,39 +535,6 @@ const TOOLS: ToolDefinition[] = [
     },
     call: async (_args, options) => {
       return await fetchJson(options, '/projects');
-    },
-  },
-  {
-    name: 'opl_workspace_catalog',
-    description: '读取 OPL 已绑定的 workspace 目录与 binding contract 摘要，适合确认当前有哪些项目/workspace 已接入前台，以及 direct-entry locator 是否已绑定。',
-    inputSchema: {
-      type: 'object',
-      properties: {},
-      additionalProperties: false,
-    },
-    call: async (_args, options) => {
-      return await fetchJson(options, '/workspace-catalog');
-    },
-  },
-  {
-    name: 'opl_session_ledger',
-    description:
-      '读取 OPL managed session attribution ledger，适合恢复长跑上下文、查看最近会话归因与资源采样；若只想看原始 live runtime 状态再用 opl_runtime_status。',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        limit: {
-          type: 'integer',
-          minimum: 1,
-          description: '可选。返回最近多少条 session ledger 记录。',
-        },
-      },
-      additionalProperties: false,
-    },
-    call: async (args, options) => {
-      return await fetchJson(options, '/session-ledger', {
-        limit: parsePositiveInteger(args.limit, 'limit'),
-      });
     },
   },
   {
@@ -406,117 +574,135 @@ const TOOLS: ToolDefinition[] = [
     },
   },
   {
-    name: 'opl_runtime_status',
-    description: '读取 OPL runtime status，适合看当前 live session、近期 runs 和运行健康度。',
+    name: 'opl_recent_sessions',
+    description: '列出最近由 OPL 执行入口产生的会话，适合回答“刚才跑到哪了”“最近有哪些 live session”。',
     inputSchema: {
       type: 'object',
       properties: {
         limit: {
           type: 'integer',
           minimum: 1,
-          description: '可选。返回最近多少条 runtime 记录。',
+          description: '可选。返回最近多少条会话。',
+        },
+        source: {
+          type: 'string',
+          description: '可选。按 source 过滤。',
         },
       },
       additionalProperties: false,
     },
     call: async (args, options) => {
-      return await fetchJson(options, '/runtime-status', {
+      const payload = await fetchJson(options, '/sessions', {
         limit: parsePositiveInteger(args.limit, 'limit'),
+        source: normalizeOptionalString(args.source),
       });
+      return renderRecentSessionsBrief(payload);
     },
   },
   {
-    name: 'opl_frontdesk_readiness',
-    description: '读取 OPL frontdesk readiness 原始面，适合调试入口 readiness、域绑定和下一步建议；普通进度问答优先用 opl_project_progress。',
+    name: 'opl_resume_session',
+    description: '恢复一个已存在的 OPL / Hermes 会话。用户明确说“继续刚才那个”“恢复 sess-xxx”时优先使用。',
     inputSchema: {
       type: 'object',
       properties: {
-        workspace_path: {
+        session_id: {
           type: 'string',
-          description: '可选。要查看的 workspace 绝对路径；默认使用桥接启动时传入的路径。',
+          description: '必填。要恢复的 session id。',
         },
-        sessions_limit: {
+      },
+      required: ['session_id'],
+      additionalProperties: false,
+    },
+    call: async (args, options) => {
+      const sessionId = normalizeOptionalString(args.session_id);
+      if (!sessionId) {
+        throw new Error('opl_resume_session requires a non-empty session_id.');
+      }
+
+      const payload = await fetchJson(options, '/resume', {}, {
+        method: 'POST',
+        body: {
+          session_id: sessionId,
+        },
+      });
+      return renderResumeSessionBrief(payload);
+    },
+  },
+  {
+    name: 'opl_runtime_logs',
+    description: '读取某条执行会话或某个组件的运行日志。遇到“为什么停了”“最后一次报了什么”这类问题时优先使用。',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        log_name: {
+          type: 'string',
+          description: '可选。日志名。',
+        },
+        lines: {
           type: 'integer',
           minimum: 1,
-          description: '可选。返回最近多少条相关 session。',
+          description: '可选。读取多少行。',
+        },
+        since: {
+          type: 'string',
+          description: '可选。只读某个时间点之后的日志。',
+        },
+        level: {
+          type: 'string',
+          description: '可选。日志级别过滤。',
+        },
+        component: {
+          type: 'string',
+          description: '可选。组件过滤。',
+        },
+        session_id: {
+          type: 'string',
+          description: '可选。会话过滤。',
         },
       },
       additionalProperties: false,
     },
     call: async (args, options) => {
-      return await fetchJson(options, '/frontdesk-readiness', {
-        path: normalizeOptionalString(args.workspace_path) ?? options.workspacePath,
-        sessions_limit: parsePositiveInteger(args.sessions_limit, 'sessions_limit') ?? options.sessionsLimit,
+      const payload = await fetchJson(options, '/logs', {
+        log_name: normalizeOptionalString(args.log_name),
+        lines: parsePositiveInteger(args.lines, 'lines'),
+        since: normalizeOptionalString(args.since),
+        level: normalizeOptionalString(args.level),
+        component: normalizeOptionalString(args.component),
+        session_id: normalizeOptionalString(args.session_id),
       });
+      return renderRuntimeLogsBrief(payload);
     },
   },
   {
-    name: 'opl_frontdesk_librechat_status',
-    description:
-      '读取 OPL 当前 hosted shell / LibreChat pilot 的安装、运行与 drift 状态，适合 agent 判断本地托管壳是否可直接使用。',
-    inputSchema: {
-      type: 'object',
-      properties: {},
-      additionalProperties: false,
-    },
-    call: async (_args, options) => {
-      return await fetchJson(options, '/frontdesk-librechat-status');
-    },
-  },
-  {
-    name: 'opl_workspace_status',
-    description: '读取某个 workspace 的 git/worktree 状态。',
+    name: 'opl_task_status',
+    description: '读取某个前台执行任务的状态、阶段与最近输出，适合追踪刚提交的长任务进度。',
     inputSchema: {
       type: 'object',
       properties: {
-        workspace_path: {
+        task_id: {
           type: 'string',
-          description: '可选。要查看的 workspace 绝对路径；默认使用桥接启动时传入的路径。',
+          description: '必填。任务 id。',
         },
-      },
-      additionalProperties: false,
-    },
-    call: async (args, options) => {
-      return await fetchJson(options, '/workspace-status', {
-        path: normalizeOptionalString(args.workspace_path) ?? options.workspacePath,
-      });
-    },
-  },
-  {
-    name: 'opl_paperclip_status',
-    description: '读取 OPL 到 Paperclip 的控制面桥接状态，包括映射、投影与 operator loop 状态。',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        workspace_path: {
-          type: 'string',
-          description: '可选。要查看的 workspace 绝对路径；默认使用桥接启动时传入的路径。',
-        },
-        sessions_limit: {
+        lines: {
           type: 'integer',
           minimum: 1,
-          description: '可选。返回最近多少条相关 session。',
+          description: '可选。附带多少行最近输出。',
         },
       },
+      required: ['task_id'],
       additionalProperties: false,
     },
     call: async (args, options) => {
-      return await fetchJson(options, '/paperclip/control-plane', {
-        path: normalizeOptionalString(args.workspace_path) ?? options.workspacePath,
-        sessions_limit: parsePositiveInteger(args.sessions_limit, 'sessions_limit') ?? options.sessionsLimit,
+      const taskId = normalizeOptionalString(args.task_id);
+      if (!taskId) {
+        throw new Error('opl_task_status requires a non-empty task_id.');
+      }
+      const payload = await fetchJson(options, '/task-status', {
+        task_id: taskId,
+        lines: parsePositiveInteger(args.lines, 'lines'),
       });
-    },
-  },
-  {
-    name: 'opl_domain_manifests',
-    description: '读取当前域产品入口 manifest 汇总原始面，适合调试 family wiring 和 routed domain 的 product entry surface。',
-    inputSchema: {
-      type: 'object',
-      properties: {},
-      additionalProperties: false,
-    },
-    call: async (_args, options) => {
-      return await fetchJson(options, '/domain-manifests');
+      return renderTaskStatusBrief(payload);
     },
   },
 ];
@@ -548,6 +734,7 @@ function buildErrorResponse(id: JsonRpcId, code: number, message: string, data?:
 async function handleRequest(
   request: JsonRpcRequest,
   options: FrontDeskMcpBridgeOptions,
+  state: FrontDeskMcpBridgeState,
 ): Promise<JsonRpcResponse | null> {
   if (request.jsonrpc !== '2.0') {
     return buildErrorResponse(request.id ?? null, -32600, 'Invalid JSON-RPC envelope.');
@@ -606,6 +793,23 @@ async function handleRequest(
   }
 
   if (request.method === 'tools/call') {
+    if (!state.titleSyncInFlight && Date.now() - state.lastTitleSyncAt >= TITLE_SYNC_COOLDOWN_MS) {
+      state.titleSyncInFlight = true;
+      state.lastTitleSyncAt = Date.now();
+      try {
+        await fetchJson(options, '/frontdesk-librechat-title-sync', {}, {
+          method: 'POST',
+          body: {
+            limit: 3,
+          },
+        });
+      } catch {
+        // Title sync is opportunistic; it should never block user-facing tool calls.
+      } finally {
+        state.titleSyncInFlight = false;
+      }
+    }
+
     const params = isRecord(request.params) ? request.params : {};
     const name = normalizeOptionalString(params.name);
     if (!name) {
@@ -649,6 +853,10 @@ export async function startFrontDeskMcpBridge(options: FrontDeskMcpBridgeOptions
     ...options,
     apiBaseUrl: normalizeApiBaseUrl(options.apiBaseUrl),
   } satisfies FrontDeskMcpBridgeOptions;
+  const state: FrontDeskMcpBridgeState = {
+    titleSyncInFlight: false,
+    lastTitleSyncAt: 0,
+  };
 
   const rl = readline.createInterface({
     input: process.stdin,
@@ -676,7 +884,7 @@ export async function startFrontDeskMcpBridge(options: FrontDeskMcpBridgeOptions
       continue;
     }
 
-    const response = await handleRequest(request, normalizedOptions);
+    const response = await handleRequest(request, normalizedOptions, state);
     if (response) {
       writeJsonLine(response);
     }

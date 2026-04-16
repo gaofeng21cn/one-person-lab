@@ -48,6 +48,15 @@ export type ProductEntryCliInput = {
   skills: string[];
 };
 
+export type PreparedProductEntryAsk = {
+  resolveInput: ResolveRequestInput;
+  routing: ResolutionResult;
+  boundary: BoundaryExplanation;
+  handoffPrompt: string;
+  args: string[];
+  handoffBundle: ReturnType<typeof buildHandoffBundle>;
+};
+
 function appendHermesOptions(
   args: string[],
   input: Pick<ProductEntryCliInput, 'model' | 'provider' | 'skills'>,
@@ -193,6 +202,34 @@ function buildAskArgs(
   return appendHermesOptions(['chat', '--query', prompt, '--quiet'], input);
 }
 
+export function prepareProductEntryAsk(
+  input: ProductEntryCliInput,
+  contracts: GatewayContracts,
+): PreparedProductEntryAsk {
+  const resolveInput = buildResolveRequestInput(input);
+  const routing = resolveRequestSurface(resolveInput, contracts);
+  const boundary = explainDomainBoundary(resolveInput, contracts);
+  const handoffPrompt = buildPromptHeader('ask', input, routing, boundary, contracts);
+  const args = buildAskArgs(input, handoffPrompt);
+  const handoffBundle = buildHandoffBundle(contracts, {
+    mode: 'ask',
+    goal: input.goal,
+    intent: input.intent,
+    workspacePath: input.workspacePath,
+    routing,
+    boundary,
+  });
+
+  return {
+    resolveInput,
+    routing,
+    boundary,
+    handoffPrompt,
+    args,
+    handoffBundle,
+  };
+}
+
 function buildChatSeedArgs(
   input: ProductEntryCliInput,
   prompt: string,
@@ -327,18 +364,14 @@ export function runProductEntryAsk(
     return buildPreviewPayload('ask', input, contracts);
   }
 
-  const resolveInput = buildResolveRequestInput(input);
-  const routing = resolveRequestSurface(resolveInput, contracts);
-  const boundary = explainDomainBoundary(resolveInput, contracts);
-  const handoffPrompt = buildPromptHeader('ask', input, routing, boundary, contracts);
-  const args = buildAskArgs(input, handoffPrompt);
-  const hermesResult = runHermesCommand(args);
+  const preparedAsk = prepareProductEntryAsk(input, contracts);
+  const hermesResult = runHermesCommand(preparedAsk.args);
 
   assertHermesSuccess(
     hermesResult.exitCode,
     'Hermes ask query failed inside OPL Product Entry.',
     {
-      args: buildHermesCliPreview(args),
+      args: buildHermesCliPreview(preparedAsk.args),
       stdout: hermesResult.stdout,
       stderr: hermesResult.stderr,
     },
@@ -350,16 +383,16 @@ export function runProductEntryAsk(
     goal: input.goal,
     intent: input.intent,
     workspacePath: input.workspacePath,
-    routing,
-    boundary,
+    routing: preparedAsk.routing,
+    boundary: preparedAsk.boundary,
     sessionId: parsed.sessionId,
   });
   recordSessionLedgerEntry({
     sessionId: parsed.sessionId,
     mode: 'ask',
     sourceSurface: 'opl_local_product_entry_shell',
-    domainId: 'domain_id' in routing ? routing.domain_id : null,
-    workstreamId: 'workstream_id' in routing ? routing.workstream_id : null,
+    domainId: 'domain_id' in preparedAsk.routing ? preparedAsk.routing.domain_id : null,
+    workstreamId: 'workstream_id' in preparedAsk.routing ? preparedAsk.routing.workstream_id : null,
     goalPreview: input.goal,
     workspaceLocator: handoffBundle.handoff_bundle.workspace_locator,
   });
@@ -371,13 +404,13 @@ export function runProductEntryAsk(
       entry_surface: 'opl_local_product_entry_shell',
       mode: 'ask',
       dry_run: false,
-      input: resolveInput,
-      routing,
-      boundary,
+      input: preparedAsk.resolveInput,
+      routing: preparedAsk.routing,
+      boundary: preparedAsk.boundary,
       ...handoffBundle,
-      handoff_prompt_preview: handoffPrompt,
+      handoff_prompt_preview: preparedAsk.handoffPrompt,
       hermes: {
-        command_preview: buildHermesCliPreview(args),
+        command_preview: buildHermesCliPreview(preparedAsk.args),
         response: parsed.response,
         session_id: parsed.sessionId,
         exit_code: hermesResult.exitCode,

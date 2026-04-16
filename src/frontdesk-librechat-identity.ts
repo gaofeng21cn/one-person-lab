@@ -17,21 +17,32 @@ export function buildFrontDeskHostedShellMcpWiring() {
   return {
     surface_kind: 'opl_hosted_shell_mcp_wiring',
     binding_context: {
-      primary_tool_name: 'opl_workspace_catalog',
+      primary_tool_name: 'opl_projects',
       activate_tool_name: 'opl_activate_workspace',
       binding_contract_surface_id: 'opl_project_workspace_binding_contract',
     },
     session_attribution: {
-      primary_tool_name: 'opl_session_ledger',
-      fallback_tool_name: 'opl_runtime_status',
+      primary_tool_name: 'opl_recent_sessions',
+      fallback_tool_name: 'opl_runtime_logs',
       attribution_surface_id: 'opl_managed_session_ledger',
     },
+    execution_context: {
+      primary_tool_name: 'opl_execute_request',
+      task_status_tool_name: 'opl_task_status',
+      sessions_tool_name: 'opl_recent_sessions',
+      resume_tool_name: 'opl_resume_session',
+      logs_tool_name: 'opl_runtime_logs',
+      auto_title_sync_surface_id: 'opl_frontdesk_librechat_title_sync',
+    },
     discovery_order: [
-      'opl_frontdesk_entry_guide',
-      'opl_frontdesk_readiness',
-      'opl_workspace_catalog',
-      'opl_session_ledger',
       'opl_project_progress',
+      'opl_execute_request',
+      'opl_task_status',
+      'opl_recent_sessions',
+      'opl_projects',
+      'opl_activate_workspace',
+      'opl_resume_session',
+      'opl_runtime_logs',
     ],
   };
 }
@@ -58,9 +69,8 @@ export function buildFrontDeskLibreChatWelcome(options: FrontDeskWelcomeOptions)
   });
   const lines = [
     `当前工作区：${workspaceLabel}`,
-    '可直接问：论文进度、切换项目、下一步。',
-    '切换项目或确认 direct entry 时，我会先检查 workspace binding。',
-    '恢复长跑上下文或解释最近运行时，我会先检查 session attribution。',
+    '可直接说：论文进度、继续推进、切换项目。',
+    '长任务会先受理，再持续返回任务进展。',
   ];
 
   return lines.join('\n');

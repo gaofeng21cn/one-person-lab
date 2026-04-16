@@ -24,10 +24,15 @@ import {
 } from './management.ts';
 import { buildDomainManifestCatalog } from './domain-manifest.ts';
 import { launchDomainEntry, type DomainLaunchStrategy } from './domain-launch.ts';
+import {
+  readFrontDeskLibreChatTitleSyncConfig,
+  syncFrontDeskLibreChatConversationTitles,
+} from './frontdesk-librechat-title-sync.ts';
 import { getFrontDeskLibreChatServiceStatus } from './frontdesk-librechat-service.ts';
 import { buildHostedPilotPackage } from './hosted-pilot-package.ts';
 import { buildLibreChatPilotPackage } from './librechat-pilot-package.ts';
 import { buildPaperclipBootstrap, syncPaperclipProjections } from './paperclip-control-plane.ts';
+import { readFrontDeskTaskStatus, submitFrontDeskAskTask } from './frontdesk-task-store.ts';
 import {
   buildProductEntryHandoffEnvelope,
   runProductEntryAsk,
@@ -73,6 +78,10 @@ type AskRequestBody = Partial<{
 type ResumeRequestBody = Partial<{
   sessionId: string;
   session_id: string;
+}>;
+
+type TitleSyncRequestBody = Partial<{
+  limit: number | string;
 }>;
 
 type LaunchDomainRequestBody = Partial<{
@@ -158,6 +167,7 @@ type WebFrontDeskStartupPayload = {
       frontdesk_entry_guide: string;
       frontdesk_readiness: string;
       frontdesk_librechat_status: string;
+      frontdesk_librechat_title_sync: string;
       project_progress: string;
       frontdesk_domain_wiring: string;
       domain_manifests: string;
@@ -177,6 +187,7 @@ type WebFrontDeskStartupPayload = {
       runtime_status: string;
       session_ledger: string;
       ask: string;
+      task_status: string;
       start: string;
       launch_domain: string;
       handoff_envelope: string;
@@ -221,12 +232,48 @@ type WebFrontDeskContext = {
 
 type RecommendedEntrySurface = Record<string, unknown>;
 
+const FRONTDESK_LIBRECHAT_TITLE_SYNC_COOLDOWN_MS = 15_000;
+
+const frontDeskLibreChatTitleSyncState: {
+  inFlight: boolean;
+  lastStartedAt: number;
+  lastCompletedAt: number;
+  lastResult: Record<string, unknown> | null;
+  lastError: string | null;
+} = {
+  inFlight: false,
+  lastStartedAt: 0,
+  lastCompletedAt: 0,
+  lastResult: null,
+  lastError: null,
+};
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function normalizeOptionalString(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+function parsePositiveIntegerFromBody(value: unknown, field: string) {
+  if (value === undefined || value === null || value === '') {
+    return undefined;
+  }
+
+  const parsed = Number.parseInt(String(value), 10);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new GatewayContractError(
+      'cli_usage_error',
+      `${field} must be a positive integer.`,
+      {
+        field,
+        value,
+      },
+    );
+  }
+
+  return parsed;
 }
 
 function getRecommendedEntryLocator(entry: RecommendedEntrySurface) {
@@ -629,6 +676,7 @@ function buildStartupPayload(context: WebFrontDeskContext): WebFrontDeskStartupP
         frontdesk_entry_guide: endpoints.frontdesk_entry_guide,
         frontdesk_readiness: endpoints.frontdesk_readiness,
         frontdesk_librechat_status: endpoints.frontdesk_librechat_status,
+        frontdesk_librechat_title_sync: endpoints.frontdesk_librechat_title_sync,
         project_progress: endpoints.project_progress,
         frontdesk_domain_wiring: endpoints.frontdesk_domain_wiring,
         domain_manifests: endpoints.domain_manifests,
@@ -648,6 +696,7 @@ function buildStartupPayload(context: WebFrontDeskContext): WebFrontDeskStartupP
         runtime_status: endpoints.runtime_status,
         session_ledger: endpoints.session_ledger,
         ask: endpoints.ask,
+        task_status: endpoints.task_status,
         start: endpoints.start,
         launch_domain: endpoints.launch_domain,
         handoff_envelope: endpoints.handoff_envelope,
@@ -666,6 +715,70 @@ function buildStartupPayload(context: WebFrontDeskContext): WebFrontDeskStartupP
         'Managed hosted runtime ownership is still not landed.',
       ],
     },
+  };
+}
+
+async function queueFrontDeskLibreChatTitleSync(limit = 3) {
+  const now = Date.now();
+  if (frontDeskLibreChatTitleSyncState.inFlight) {
+    return {
+      status: 'in_progress',
+      limit,
+      last_completed_at: frontDeskLibreChatTitleSyncState.lastCompletedAt || null,
+      last_result: frontDeskLibreChatTitleSyncState.lastResult,
+      last_error: frontDeskLibreChatTitleSyncState.lastError,
+    };
+  }
+
+  if (
+    frontDeskLibreChatTitleSyncState.lastStartedAt > 0
+    && now - frontDeskLibreChatTitleSyncState.lastStartedAt < FRONTDESK_LIBRECHAT_TITLE_SYNC_COOLDOWN_MS
+  ) {
+    return {
+      status: 'cooldown',
+      limit,
+      last_completed_at: frontDeskLibreChatTitleSyncState.lastCompletedAt || null,
+      last_result: frontDeskLibreChatTitleSyncState.lastResult,
+      last_error: frontDeskLibreChatTitleSyncState.lastError,
+    };
+  }
+
+  let config;
+  try {
+    config = readFrontDeskLibreChatTitleSyncConfig();
+  } catch (error) {
+    return {
+      status: 'unavailable',
+      limit,
+      last_completed_at: frontDeskLibreChatTitleSyncState.lastCompletedAt || null,
+      last_result: frontDeskLibreChatTitleSyncState.lastResult,
+      last_error: error instanceof Error ? error.message : 'Unknown title sync availability failure.',
+    };
+  }
+
+  frontDeskLibreChatTitleSyncState.inFlight = true;
+  frontDeskLibreChatTitleSyncState.lastStartedAt = now;
+  frontDeskLibreChatTitleSyncState.lastError = null;
+
+  void syncFrontDeskLibreChatConversationTitles(config, { limit })
+    .then((summary) => {
+      frontDeskLibreChatTitleSyncState.lastResult = summary;
+    })
+    .catch((error) => {
+      frontDeskLibreChatTitleSyncState.lastError =
+        error instanceof Error ? error.message : 'Unknown title sync failure.';
+    })
+    .finally(() => {
+      frontDeskLibreChatTitleSyncState.inFlight = false;
+      frontDeskLibreChatTitleSyncState.lastCompletedAt = Date.now();
+    });
+
+  return {
+    status: 'started',
+    limit,
+    last_completed_at: frontDeskLibreChatTitleSyncState.lastCompletedAt || null,
+    last_result: frontDeskLibreChatTitleSyncState.lastResult,
+    last_error: frontDeskLibreChatTitleSyncState.lastError,
   };
 }
 
@@ -3072,6 +3185,18 @@ function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
           '<p><strong>Routing:</strong> ' + entry.routing.status + '</p>',
         ];
 
+        if (entry.execution_mode) {
+          summaryLines.push('<p><strong>Execution:</strong> ' + entry.execution_mode + '</p>');
+        }
+
+        if (entry.task && entry.task.task_id) {
+          summaryLines.push('<p><strong>Task:</strong> ' + entry.task.task_id + '</p>');
+        }
+
+        if (entry.task && entry.task.status) {
+          summaryLines.push('<p><strong>Task Status:</strong> ' + entry.task.status + '</p>');
+        }
+
         if (entry.hermes && entry.hermes.session_id) {
           summaryLines.push('<p><strong>Session:</strong> ' + entry.hermes.session_id + '</p>');
         }
@@ -3606,7 +3731,7 @@ function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
 
       async function submitAsk(dryRun) {
         setButtonBusy(true);
-        setAskStatus(dryRun ? 'Previewing handoff...' : 'Calling Hermes through OPL ask...', 'muted');
+        setAskStatus(dryRun ? 'Previewing handoff...' : 'Submitting background task through OPL...', 'muted');
 
         try {
           const response = await fetch(bootstrap.web_frontdesk.api.ask, {
@@ -3631,7 +3756,10 @@ function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
           }
 
           renderAskPayload(payload);
-          setAskStatus(dryRun ? 'Preview updated.' : 'Ask completed through Hermes.', 'ok');
+          setAskStatus(
+            dryRun ? 'Preview updated.' : 'Task accepted. Use task status to follow progress.',
+            'ok',
+          );
         } catch (error) {
           setAskStatus(error instanceof Error ? error.message : 'Unknown ask failure.', 'warn');
         } finally {
@@ -3815,6 +3943,16 @@ async function handleRequest(
 
     if (method === 'GET' && routedPath === '/api/frontdesk-librechat-status') {
       writeJson(response, 200, await getFrontDeskLibreChatServiceStatus(context.contracts));
+      return;
+    }
+
+    if (method === 'POST' && routedPath === '/api/frontdesk-librechat-title-sync') {
+      const body = (await readJsonBody(request)) as TitleSyncRequestBody;
+      writeJson(response, 200, {
+        frontdesk_librechat_title_sync: await queueFrontDeskLibreChatTitleSync(
+          parsePositiveIntegerFromBody(body.limit, 'limit') ?? 3,
+        ),
+      });
       return;
     }
 
@@ -4023,7 +4161,34 @@ async function handleRequest(
 
     if (method === 'POST' && routedPath === '/api/ask') {
       const body = (await readJsonBody(request)) as AskRequestBody;
-      writeJson(response, 200, runProductEntryAsk(normalizeAskInput(body), context.contracts));
+      const normalizedInput = normalizeAskInput(body);
+      writeJson(
+        response,
+        200,
+        normalizedInput.dryRun
+          ? runProductEntryAsk(normalizedInput, context.contracts)
+          : submitFrontDeskAskTask(normalizedInput, context.contracts),
+      );
+      return;
+    }
+
+    if (method === 'GET' && routedPath === '/api/task-status') {
+      const taskId = normalizeOptionalString(url.searchParams.get('task_id'));
+      if (!taskId) {
+        throw new GatewayContractError(
+          'cli_usage_error',
+          'task-status requires a non-empty task_id query parameter.',
+          {
+            required: ['task_id'],
+          },
+          2,
+        );
+      }
+      writeJson(
+        response,
+        200,
+        readFrontDeskTaskStatus(taskId, parsePositiveIntegerOrDefault(url.searchParams.get('lines'), 20)),
+      );
       return;
     }
 
