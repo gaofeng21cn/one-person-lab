@@ -3,7 +3,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { GatewayContractError } from './contracts.ts';
-import { buildHermesCliPreview, resolveHermesBinary } from './hermes.ts';
 import { ensureFrontDeskStateDir, resolveFrontDeskStatePaths } from './frontdesk-state.ts';
 import { prepareProductEntryAsk, type ProductEntryCliInput } from './product-entry.ts';
 import type { GatewayContracts } from './types.ts';
@@ -98,11 +97,6 @@ function updateTaskRecord(taskId: string, updater: (current: FrontDeskTaskRecord
   return next;
 }
 
-function extractSessionId(output: string) {
-  const sessionMatch = output.match(/session_id:\s*(\S+)/i);
-  return sessionMatch?.[1] ?? null;
-}
-
 function extractRecentOutput(output: string) {
   return output
     .split(/\r?\n/)
@@ -114,22 +108,109 @@ function extractRecentOutput(output: string) {
     .join('\n');
 }
 
+function resolveOplCliEntry() {
+  const cliEntry = process.argv[1];
+  if (!cliEntry) {
+    throw new GatewayContractError(
+      'cli_usage_error',
+      'Unable to determine the active OPL CLI entrypoint for frontdesk task execution.',
+    );
+  }
+
+  return cliEntry;
+}
+
+function buildOplAskExecution(input: ProductEntryCliInput, contracts: GatewayContracts) {
+  const cliEntry = resolveOplCliEntry();
+  const execArgs = [
+    ...process.execArgv,
+    cliEntry,
+    '--contracts-dir',
+    contracts.contractsDir,
+    'ask',
+    input.goal,
+    '--intent',
+    input.intent,
+    '--target',
+    input.target,
+  ];
+  const preview = [
+    'opl',
+    '--contracts-dir',
+    contracts.contractsDir,
+    'ask',
+    input.goal,
+    '--intent',
+    input.intent,
+    '--target',
+    input.target,
+  ];
+
+  if (input.preferredFamily) {
+    execArgs.push('--preferred-family', input.preferredFamily);
+    preview.push('--preferred-family', input.preferredFamily);
+  }
+
+  if (input.requestKind) {
+    execArgs.push('--request-kind', input.requestKind);
+    preview.push('--request-kind', input.requestKind);
+  }
+
+  if (input.model) {
+    execArgs.push('--model', input.model);
+    preview.push('--model', input.model);
+  }
+
+  if (input.provider) {
+    execArgs.push('--provider', input.provider);
+    preview.push('--provider', input.provider);
+  }
+
+  if (input.workspacePath) {
+    execArgs.push('--workspace-path', input.workspacePath);
+    preview.push('--workspace-path', input.workspacePath);
+  }
+
+  if (input.skills.length > 0) {
+    const joinedSkills = input.skills.join(',');
+    execArgs.push('--skills', joinedSkills);
+    preview.push('--skills', joinedSkills);
+  }
+
+  return {
+    execArgs,
+    preview,
+  };
+}
+
+function extractCliAskPayload(output: string) {
+  try {
+    const parsed = JSON.parse(output) as {
+      product_entry?: {
+        hermes?: {
+          response?: string;
+          session_id?: string | null;
+        };
+      };
+    };
+    return {
+      response: parsed.product_entry?.hermes?.response ?? '',
+      sessionId: parsed.product_entry?.hermes?.session_id ?? null,
+    };
+  } catch {
+    return {
+      response: '',
+      sessionId: null,
+    };
+  }
+}
+
 export function submitFrontDeskAskTask(
   input: ProductEntryCliInput,
   contracts: GatewayContracts,
 ) {
-  const hermesBinary = resolveHermesBinary();
-  if (!hermesBinary) {
-    throw new GatewayContractError(
-      'hermes_binary_not_found',
-      'Hermes binary is required for OPL web ask execution.',
-      {
-        env_var: 'OPL_HERMES_BIN',
-      },
-    );
-  }
-
   const preparedAsk = prepareProductEntryAsk(input, contracts);
+  const cliExecution = buildOplAskExecution(input, contracts);
   const taskId = buildTaskId();
   const now = new Date().toISOString();
   const { logFile } = resolveTaskFiles(taskId);
@@ -149,7 +230,7 @@ export function submitFrontDeskAskTask(
     session_id: null,
     pid: null,
     exit_code: null,
-    command_preview: buildHermesCliPreview(preparedAsk.args),
+    command_preview: cliExecution.preview,
     log_file: logFile,
     recent_output: '',
     routing_status: preparedAsk.routing.status,
@@ -158,7 +239,8 @@ export function submitFrontDeskAskTask(
   };
   writeTaskRecord(initialTask);
 
-  const child = spawn(hermesBinary.path, preparedAsk.args, {
+  const child = spawn(process.execPath, cliExecution.execArgs, {
+    cwd: input.workspacePath ?? process.cwd(),
     env: process.env,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -167,7 +249,7 @@ export function submitFrontDeskAskTask(
     ...current,
     status: 'running',
     stage: 'running',
-    summary: '后台执行已启动。',
+    summary: '后台执行已启动，正在通过 OPL ask 统一入口处理请求。',
     pid: child.pid ?? null,
   }));
 
@@ -176,12 +258,8 @@ export function submitFrontDeskAskTask(
     fs.appendFileSync(logFile, text, 'utf8');
     updateTaskRecord(taskId, (current) => {
       const recentOutput = extractRecentOutput(`${current.recent_output}\n${text}`);
-      const sessionId = current.session_id ?? extractSessionId(text);
       return {
         ...current,
-        stage: sessionId ? 'session_ready' : current.stage,
-        summary: sessionId ? 'Hermes 会话已建立，任务继续运行中。' : current.summary,
-        session_id: sessionId,
         recent_output: recentOutput,
       };
     });
@@ -201,13 +279,21 @@ export function submitFrontDeskAskTask(
   });
 
   child.once('close', (code) => {
+    const rawOutput = fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8') : '';
+    const cliAskPayload = extractCliAskPayload(rawOutput);
     updateTaskRecord(taskId, (current) => ({
       ...current,
       status: code === 0 ? 'succeeded' : 'failed',
       stage: code === 0 ? 'completed' : 'failed',
-      summary: code === 0 ? '后台执行已完成。' : '后台执行失败，请查看最近输出。',
+      summary:
+        code === 0
+          ? cliAskPayload.sessionId
+            ? '后台执行已完成，并已通过 OPL ask 建立会话记录。'
+            : '后台执行已完成。'
+          : '后台执行失败，请查看最近输出。',
+      session_id: cliAskPayload.sessionId ?? current.session_id,
       exit_code: code ?? 1,
-      recent_output: tailLines(logFile, 20),
+      recent_output: cliAskPayload.response || tailLines(logFile, 20),
     }));
   });
 
