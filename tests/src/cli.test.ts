@@ -20,6 +20,11 @@ import {
   loadGatewayContracts,
   validateGatewayContracts,
 } from '../../src/contracts.ts';
+import {
+  normalizeFrontDeskConversationTitleCandidate,
+  syncFrontDeskLibreChatConversationTitles,
+  type FrontDeskLibreChatTitleSyncConfig,
+} from '../../src/frontdesk-librechat-title-sync.ts';
 import { buildProjectProgressBrief } from '../../src/management.ts';
 import {
   explainDomainBoundary,
@@ -1019,10 +1024,10 @@ async function startFakeFrontDeskApiServer() {
           hosted_shell_mcp_wiring: {
             surface_kind: 'opl_hosted_shell_mcp_wiring',
             binding_context: {
-              primary_tool_name: 'opl_workspace_catalog',
+              primary_tool_name: 'opl_projects',
             },
             session_attribution: {
-              primary_tool_name: 'opl_session_ledger',
+              primary_tool_name: 'opl_recent_sessions',
             },
           },
           notes: [
@@ -1044,6 +1049,18 @@ async function startFakeFrontDeskApiServer() {
           summary: {
             total_projects_count: 1,
           },
+        },
+      }));
+      return;
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/frontdesk-librechat-title-sync') {
+      response.statusCode = 200;
+      response.end(JSON.stringify({
+        frontdesk_librechat_title_sync: {
+          scanned_count: Number(body?.limit ?? '0'),
+          updated_count: 1,
+          failed_count: 0,
         },
       }));
       return;
@@ -1090,6 +1107,57 @@ async function startFakeFrontDeskApiServer() {
             progress: 'medautosci study-progress --study 004',
             resume: 'medautosci launch-study --study 004',
             start: null,
+          },
+        },
+      }));
+      return;
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/sessions') {
+      response.statusCode = 200;
+      response.end(JSON.stringify({
+        product_entry: {
+          limit: Number(url.searchParams.get('limit') ?? '0'),
+          source_filter: url.searchParams.get('source'),
+          sessions: [
+            {
+              session_id: 'sess-frontdesk-001',
+              source: 'opl-product-entry',
+              preview: 'Resume 004 paper progression',
+              last_active: '1m ago',
+            },
+          ],
+          raw_output: 'sess-frontdesk-001 opl-product-entry Resume 004 paper progression',
+        },
+      }));
+      return;
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/logs') {
+      response.statusCode = 200;
+      response.end(JSON.stringify({
+        product_entry: {
+          mode: 'logs',
+          log_name: url.searchParams.get('log_name'),
+          lines: Number(url.searchParams.get('lines') ?? '0'),
+          session_id: url.searchParams.get('session_id'),
+          raw_output: 'runtime heartbeat ok\npaper worker still running',
+        },
+      }));
+      return;
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/task-status') {
+      response.statusCode = 200;
+      response.end(JSON.stringify({
+        product_entry: {
+          task: {
+            task_id: url.searchParams.get('task_id'),
+            status: '运行中',
+            stage: 'writing',
+            summary: '正在补图和整理投稿包',
+            recent_output: '主图更新完成，正在刷新审计目录',
+            session_id: 'sess-frontdesk-001',
           },
         },
       }));
@@ -1185,6 +1253,24 @@ async function startFakeFrontDeskApiServer() {
             project_id: String(body?.project_id ?? 'unknown'),
             workspace_path: activeWorkspacePath,
             status: 'active',
+          },
+        },
+      }));
+      return;
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/ask') {
+      response.statusCode = 200;
+      response.end(JSON.stringify({
+        product_entry: {
+          input: {
+            goal: String(body?.goal ?? ''),
+          },
+          task: {
+            task_id: 'task-frontdesk-001',
+            status: '已受理',
+            summary: '请求已提交到后台执行队列',
+            session_id: null,
           },
         },
       }));
@@ -2495,20 +2581,23 @@ test('frontdesk-librechat-package exports a same-origin LibreChat-first hosted s
     );
     assert.equal(
       output.librechat_pilot_package.hosted_shell_mcp_wiring.binding_context.primary_tool_name,
-      'opl_workspace_catalog',
+      'opl_projects',
     );
     assert.equal(
       output.librechat_pilot_package.hosted_shell_mcp_wiring.session_attribution.primary_tool_name,
-      'opl_session_ledger',
+      'opl_recent_sessions',
     );
     assert.deepEqual(
       output.librechat_pilot_package.hosted_shell_mcp_wiring.discovery_order,
       [
-        'opl_frontdesk_entry_guide',
-        'opl_frontdesk_readiness',
-        'opl_workspace_catalog',
-        'opl_session_ledger',
         'opl_project_progress',
+        'opl_execute_request',
+        'opl_task_status',
+        'opl_recent_sessions',
+        'opl_projects',
+        'opl_activate_workspace',
+        'opl_resume_session',
+        'opl_runtime_logs',
       ],
     );
 
@@ -2541,9 +2630,8 @@ test('frontdesk-librechat-package exports a same-origin LibreChat-first hosted s
 
     const librechatConfig = fs.readFileSync(assets.librechat_config, 'utf8');
     assert.match(librechatConfig, /当前工作区：Unbound workspace/);
-    assert.match(librechatConfig, /可直接问：论文进度、切换项目、下一步。/);
-    assert.match(librechatConfig, /切换项目或确认 direct entry 时，我会先检查 workspace binding。/);
-    assert.match(librechatConfig, /恢复长跑上下文或解释最近运行时，我会先检查 session attribution。/);
+    assert.match(librechatConfig, /可直接说：论文进度、继续推进、切换项目。/);
+    assert.match(librechatConfig, /长任务会先受理，再持续返回任务进展。/);
     assert.doesNotMatch(librechatConfig, /Welcome to OPL Atlas/);
     assert.doesNotMatch(librechatConfig, /How to use:/);
     assert.match(librechatConfig, /OPL Agent/);
@@ -2633,17 +2721,26 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
       const tools = (toolsList.result as {
         tools: Array<{ name: string; description?: string }>;
       }).tools;
-      assert.equal(tools.some((tool) => tool.name === 'opl_project_progress'), true);
-      assert.equal(tools.some((tool) => tool.name === 'opl_frontdesk_entry_guide'), true);
-      assert.equal(tools.some((tool) => tool.name === 'opl_dashboard'), true);
-      assert.equal(tools.some((tool) => tool.name === 'opl_runtime_status'), true);
-      assert.equal(tools.some((tool) => tool.name === 'opl_workspace_catalog'), true);
-      assert.equal(tools.some((tool) => tool.name === 'opl_session_ledger'), true);
-      assert.equal(tools.some((tool) => tool.name === 'opl_activate_workspace'), true);
-      assert.equal(tools.some((tool) => tool.name === 'opl_frontdesk_librechat_status'), true);
+      assert.deepEqual(
+        tools.map((tool) => tool.name).sort(),
+        [
+          'opl_activate_workspace',
+          'opl_execute_request',
+          'opl_project_progress',
+          'opl_projects',
+          'opl_recent_sessions',
+          'opl_resume_session',
+          'opl_runtime_logs',
+          'opl_task_status',
+        ],
+      );
       assert.match(
         tools.find((tool) => tool.name === 'opl_project_progress')?.description ?? '',
         /哪篇论文|讲什么故事/,
+      );
+      assert.match(
+        tools.find((tool) => tool.name === 'opl_task_status')?.description ?? '',
+        /任务|进度|阶段/,
       );
 
       writeJsonLine(child.stdin, {
@@ -2685,71 +2782,75 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
       assert.match(progressContent[0].text, /论文主线：当前主线是首术 NF-PitNET 的侵袭表型 architecture/);
       assert.match(progressContent[0].text, /当前进度：004 论文当前仍在推进证据补强/);
       assert.match(progressContent[0].text, /最近活动：2m ago/);
+      assert.match(progressContent[0].text, /当前卡点：submission package 仍需补更多主图后再建议用户审阅/);
       assert.match(progressContent[0].text, /你可以直接说：展开当前论文的详细进度；列出当前 workspace 的全部论文；切换到另一篇论文继续查看/);
       assert.match(progressContent[0].text, /查看位置：/);
       assert.doesNotMatch(progressContent[0].text, /entry_parity_status/);
+      assert.doesNotMatch(progressContent[0].text, /continue bundle stage/i);
+      assert.doesNotMatch(progressContent[0].text, /current_stage_summary|next_system_action|contract/i);
 
       writeJsonLine(child.stdin, {
         jsonrpc: '2.0',
         id: 5,
         method: 'tools/call',
         params: {
-          name: 'opl_frontdesk_librechat_status',
+          name: 'opl_projects',
           arguments: {},
         },
       });
-      const hostedShellCall = await readJsonLine(child.stdout);
-      const hostedShellContent = (hostedShellCall.result as {
+      const projectsCall = await readJsonLine(child.stdout);
+      const projectsContent = (projectsCall.result as {
         content: Array<{ type: string; text: string }>;
       }).content;
-      assert.equal(hostedShellContent[0].type, 'text');
-      assert.match(hostedShellContent[0].text, /"surface_id": "opl_frontdesk_librechat_status"/);
-      assert.match(hostedShellContent[0].text, /"sync_status": "drift_detected"/);
-      assert.match(hostedShellContent[0].text, /"primary_tool_name": "opl_workspace_catalog"/);
-      assert.match(hostedShellContent[0].text, /"primary_tool_name": "opl_session_ledger"/);
+      assert.equal(projectsContent[0].type, 'text');
+      assert.match(projectsContent[0].text, /"project_id": "medautoscience"/);
 
       writeJsonLine(child.stdin, {
         jsonrpc: '2.0',
         id: 6,
         method: 'tools/call',
         params: {
-          name: 'opl_frontdesk_entry_guide',
-          arguments: {},
+          name: 'opl_recent_sessions',
+          arguments: {
+            limit: 3,
+          },
         },
       });
-      const entryGuideCall = await readJsonLine(child.stdout);
-      const entryGuideContent = (entryGuideCall.result as {
+      const sessionsCall = await readJsonLine(child.stdout);
+      const sessionsContent = (sessionsCall.result as {
         content: Array<{ type: string; text: string }>;
       }).content;
-      assert.equal(entryGuideContent[0].type, 'text');
-      assert.match(entryGuideContent[0].text, /"surface_id": "opl_frontdesk_entry_guide"/);
+      assert.equal(sessionsContent[0].type, 'text');
+      assert.match(sessionsContent[0].text, /最近会话：1 条/);
+      assert.match(sessionsContent[0].text, /sess-frontdesk-001/);
 
       writeJsonLine(child.stdin, {
         jsonrpc: '2.0',
         id: 7,
         method: 'tools/call',
         params: {
-          name: 'opl_session_ledger',
+          name: 'opl_runtime_logs',
           arguments: {
-            limit: 3,
+            lines: 10,
           },
         },
       });
-      const sessionLedgerCall = await readJsonLine(child.stdout);
-      const sessionLedgerContent = (sessionLedgerCall.result as {
+      const runtimeLogsCall = await readJsonLine(child.stdout);
+      const runtimeLogsContent = (runtimeLogsCall.result as {
         content: Array<{ type: string; text: string }>;
       }).content;
-      assert.equal(sessionLedgerContent[0].type, 'text');
-      assert.match(sessionLedgerContent[0].text, /"surface_id": "opl_managed_session_ledger"/);
-      assert.match(sessionLedgerContent[0].text, /"latest_sample_status": "captured"/);
+      assert.equal(runtimeLogsContent[0].type, 'text');
+      assert.match(runtimeLogsContent[0].text, /runtime heartbeat ok/);
 
       writeJsonLine(child.stdin, {
         jsonrpc: '2.0',
         id: 8,
         method: 'tools/call',
         params: {
-          name: 'opl_dashboard',
-          arguments: {},
+          name: 'opl_task_status',
+          arguments: {
+            task_id: 'task-frontdesk-001',
+          },
         },
       });
       const toolCall = await readJsonLine(child.stdout);
@@ -2757,23 +2858,28 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
         content: Array<{ type: string; text: string }>;
       }).content;
       assert.equal(content[0].type, 'text');
-      assert.match(content[0].text, new RegExp(activatedWorkspacePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+      assert.match(content[0].text, /任务状态：运行中|任务状态：已受理|任务状态：未知/);
       assert.equal(fakeApi.requests.some((request) =>
         request.path === '/api/workspace-activate'
         && request.body?.project_id === 'medautoscience'
         && request.body?.workspace_path === activatedWorkspacePath
       ), true);
       assert.equal(fakeApi.requests.some((request) =>
-        request.path === '/api/dashboard'
-        && request.query.path === activatedWorkspacePath
-        && request.query.sessions_limit === '7'
+        request.path === '/api/frontdesk-librechat-title-sync'
+        && request.method === 'POST'
       ), true);
       assert.equal(fakeApi.requests.some((request) =>
-        request.path === '/api/session-ledger'
+        request.path === '/api/sessions'
         && request.query.limit === '3'
       ), true);
-      assert.equal(fakeApi.requests.some((request) => request.path === '/api/frontdesk-entry-guide'), true);
-      assert.equal(fakeApi.requests.some((request) => request.path === '/api/frontdesk-librechat-status'), true);
+      assert.equal(fakeApi.requests.some((request) =>
+        request.path === '/api/logs'
+        && request.query.lines === '10'
+      ), true);
+      assert.equal(fakeApi.requests.some((request) =>
+        request.path === '/api/task-status'
+        && request.query.task_id === 'task-frontdesk-001'
+      ), true);
     } finally {
       child.kill('SIGTERM');
       await once(child, 'exit');
@@ -2781,6 +2887,108 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
   } finally {
     await stopHttpServer(fakeApi.server);
   }
+});
+
+test('frontdesk librechat title sync rewrites New Chat conversations through provider and mongo surfaces', async () => {
+  const capturedRequests: Array<{
+    url: string;
+    body: Record<string, unknown>;
+  }> = [];
+  const executedScripts: string[] = [];
+  const config: FrontDeskLibreChatTitleSyncConfig = {
+    composeFile: '/tmp/opl-librechat/docker-compose.yml',
+    envFile: '/tmp/opl-librechat/.env',
+    workspacePath: '/Users/gaofeng/workspace/Yang/NF-PitNET',
+    model: 'gpt-5.4',
+    reasoningEffort: 'xhigh',
+    apiBaseUrl: 'https://provider.example.test/v1',
+    apiKey: 'test-provider-key',
+  };
+
+  const summary = await syncFrontDeskLibreChatConversationTitles(config, {
+    limit: 2,
+    runCommand: (command, args) => {
+      assert.equal(command, 'docker');
+      const evalScript = args.at(-1) ?? '';
+      if (evalScript.includes('db.conversations.find')) {
+        return {
+          exitCode: 0,
+          stdout: JSON.stringify([
+            {
+              conversation_id: 'conv-001',
+              current_title: 'New Chat',
+              first_user_text: '现在论文进度如何？',
+            },
+          ]),
+          stderr: '',
+        };
+      }
+
+      if (evalScript.includes('db.conversations.updateOne')) {
+        executedScripts.push(evalScript);
+        return {
+          exitCode: 0,
+          stdout: JSON.stringify({
+            matchedCount: 1,
+            modifiedCount: 1,
+          }),
+          stderr: '',
+        };
+      }
+
+      throw new Error(`Unexpected docker command: ${args.join(' ')}`);
+    },
+    fetchImpl: async (url, init) => {
+      capturedRequests.push({
+        url: String(url),
+        body: JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown>,
+      });
+
+      return new Response(JSON.stringify({
+        choices: [
+          {
+            message: {
+              content: 'NF-PitNET 论文进度',
+            },
+          },
+        ],
+      }), {
+        status: 200,
+        headers: {
+          'content-type': 'application/json; charset=utf-8',
+        },
+      });
+    },
+  });
+
+  assert.equal(summary.scanned_count, 1);
+  assert.equal(summary.updated_count, 1);
+  assert.equal(summary.failed_count, 0);
+  assert.equal(capturedRequests.length, 1);
+  assert.equal(capturedRequests[0].url, 'https://provider.example.test/v1/chat/completions');
+  assert.equal(capturedRequests[0].body.model, 'gpt-5.4');
+  assert.equal(capturedRequests[0].body.reasoning_effort, 'xhigh');
+  assert.match(JSON.stringify(capturedRequests[0].body.messages), /现在论文进度如何/);
+  assert.equal(executedScripts.length, 1);
+  assert.match(executedScripts[0], /NF-PitNET 论文进度/);
+  assert.match(executedScripts[0], /conv-001/);
+});
+
+test('frontdesk librechat title sync normalizes placeholders into stable human titles', () => {
+  assert.equal(
+    normalizeFrontDeskConversationTitleCandidate('  "New Chat"  ', {
+      workspaceLabel: 'NF-PitNET',
+      firstUserText: '现在论文进度如何？',
+    }),
+    'NF-PitNET 现在论文进度',
+  );
+  assert.equal(
+    normalizeFrontDeskConversationTitleCandidate('**NF-PitNET 论文进度**', {
+      workspaceLabel: 'NF-PitNET',
+      firstUserText: '现在论文进度如何？',
+    }),
+    'NF-PitNET 论文进度',
+  );
 });
 
 test('mcp-stdio defaults to a LibreChat-compatible protocol version when the client does not negotiate one', async () => {
@@ -2923,11 +3131,11 @@ test('frontdesk bootstrap manages the local LibreChat shell, inherits local Code
     assert.equal(install.frontdesk_librechat.public_origin, 'http://127.0.0.1:18080');
     assert.equal(
       install.frontdesk_librechat.hosted_shell_mcp_wiring.binding_context.primary_tool_name,
-      'opl_workspace_catalog',
+      'opl_projects',
     );
     assert.equal(
       install.frontdesk_librechat.hosted_shell_mcp_wiring.session_attribution.primary_tool_name,
-      'opl_session_ledger',
+      'opl_recent_sessions',
     );
     assert.equal(install.frontdesk_service.loaded, true);
     assert.equal(install.paperclip_control_plane.readiness, 'configured');
@@ -2946,9 +3154,8 @@ test('frontdesk bootstrap manages the local LibreChat shell, inherits local Code
     const librechatConfig = fs.readFileSync(install.frontdesk_librechat.assets.librechat_config, 'utf8');
     assert.match(librechatConfig, /当前工作区：/);
     assert.match(librechatConfig, new RegExp(path.basename(masWorkspaceFixture.fixtureRoot)));
-    assert.match(librechatConfig, /可直接问：论文进度、切换项目、下一步。/);
-    assert.match(librechatConfig, /切换项目或确认 direct entry 时，我会先检查 workspace binding。/);
-    assert.match(librechatConfig, /恢复长跑上下文或解释最近运行时，我会先检查 session attribution。/);
+    assert.match(librechatConfig, /可直接说：论文进度、继续推进、切换项目。/);
+    assert.match(librechatConfig, /长任务会先受理，再持续返回任务进展。/);
     assert.doesNotMatch(librechatConfig, /Welcome to OPL Atlas/);
     assert.doesNotMatch(librechatConfig, /How to use:/);
     assert.doesNotMatch(librechatConfig, /\n\s*-\s*Model:/);
@@ -2978,11 +3185,11 @@ test('frontdesk bootstrap manages the local LibreChat shell, inherits local Code
     assert.equal(status.frontdesk_librechat.identity.installed_reasoning_effort, 'xhigh');
     assert.equal(
       status.frontdesk_librechat.hosted_shell_mcp_wiring.binding_context.primary_tool_name,
-      'opl_workspace_catalog',
+      'opl_projects',
     );
     assert.equal(
       status.frontdesk_librechat.hosted_shell_mcp_wiring.session_attribution.primary_tool_name,
-      'opl_session_ledger',
+      'opl_recent_sessions',
     );
 
     const openOutput = runCli(['frontdesk-librechat-open'], serviceEnv);
@@ -4719,6 +4926,7 @@ exit 1
         project_progress: string;
         frontdesk_domain_wiring: string;
         librechat_package: string;
+        task_status: string;
       };
       listening: {
         base_url: string;
@@ -4734,6 +4942,7 @@ exit 1
     assert.equal(webFrontdesk.api.frontdesk_domain_wiring, '/api/frontdesk-domain-wiring');
     assert.equal(webFrontdesk.api.frontdesk_librechat_status, '/api/frontdesk-librechat-status');
     assert.equal(webFrontdesk.api.librechat_package, '/api/librechat-package');
+    assert.equal(webFrontdesk.api.task_status, '/api/task-status');
     assert.equal(webFrontdesk.shell_bootstrap.primary_surface.surface_id, 'opl_frontdesk_entry_guide');
     assert.equal(webFrontdesk.shell_bootstrap.primary_surface.endpoint, '/api/frontdesk-entry-guide');
     assert.deepEqual(
@@ -4926,9 +5135,21 @@ exit 1
       }),
     });
     const askPayload = await askResponse.json();
+    assert.equal(askPayload.product_entry.mode, 'ask');
     assert.equal(askPayload.product_entry.dry_run, false);
-    assert.equal(askPayload.product_entry.hermes.session_id, 'web-ask-session');
-    assert.match(askPayload.product_entry.hermes.response, /WEB PILOT ASK RESPONSE/);
+    assert.equal(askPayload.product_entry.execution_mode, 'async_accept');
+    assert.match(askPayload.product_entry.task.task_id, /^task_/);
+    assert.equal(askPayload.product_entry.task.status, 'accepted');
+    assert.match(askPayload.product_entry.task.summary, /后台|受理|执行/);
+
+    const taskStatusResponse = await fetch(
+      `${baseUrl}/api/task-status?task_id=${encodeURIComponent(String(askPayload.product_entry.task.task_id))}&lines=20`,
+    );
+    const taskStatusPayload = await taskStatusResponse.json();
+    assert.equal(taskStatusPayload.product_entry.mode, 'task_status');
+    assert.equal(taskStatusPayload.product_entry.task.task_id, askPayload.product_entry.task.task_id);
+    assert.match(taskStatusPayload.product_entry.task.status, /accepted|running|succeeded|failed/);
+    assert.equal(typeof taskStatusPayload.product_entry.task.recent_output, 'string');
   } finally {
     if (child) {
       await stopCliServer(child);

@@ -4,6 +4,7 @@ export type FrontDeskEndpoints = {
   frontdesk_entry_guide: string;
   frontdesk_readiness: string;
   frontdesk_librechat_status: string;
+  frontdesk_librechat_title_sync: string;
   project_progress: string;
   domain_manifests: string;
   hosted_bundle: string;
@@ -22,6 +23,7 @@ export type FrontDeskEndpoints = {
   paperclip_bootstrap: string;
   paperclip_sync: string;
   ask: string;
+  task_status: string;
   start: string;
   frontdesk_domain_wiring: string;
   launch_domain: string;
@@ -52,6 +54,7 @@ export function buildFrontDeskEndpoints(basePath = ''): FrontDeskEndpoints {
     frontdesk_entry_guide: `${apiBase}/frontdesk-entry-guide`,
     frontdesk_readiness: `${apiBase}/frontdesk-readiness`,
     frontdesk_librechat_status: `${apiBase}/frontdesk-librechat-status`,
+    frontdesk_librechat_title_sync: `${apiBase}/frontdesk-librechat-title-sync`,
     project_progress: `${apiBase}/project-progress`,
     domain_manifests: `${apiBase}/domain-manifests`,
     hosted_bundle: `${apiBase}/hosted-bundle`,
@@ -70,6 +73,7 @@ export function buildFrontDeskEndpoints(basePath = ''): FrontDeskEndpoints {
     paperclip_bootstrap: `${apiBase}/paperclip/control-plane/bootstrap`,
     paperclip_sync: `${apiBase}/paperclip/control-plane/sync`,
     ask: `${apiBase}/ask`,
+    task_status: `${apiBase}/task-status`,
     start: `${apiBase}/start`,
     frontdesk_domain_wiring: `${apiBase}/frontdesk-domain-wiring`,
     launch_domain: `${apiBase}/launch-domain`,
