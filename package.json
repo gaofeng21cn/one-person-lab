@@ -3,13 +3,21 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "exports": {
+    "./managed-runtime-contract": "./dist/managed-runtime-contract.js"
+  },
   "bin": {
     "opl": "./dist/cli.js"
   },
+  "files": [
+    "dist",
+    "contracts/opl-gateway"
+  ],
   "scripts": {
     "audit:doc-series": "node ./scripts/audit-doc-series.mjs",
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
+    "prepare": "npm run build",
     "lint": "node ./scripts/lint.mjs",
     "test:fast": "NODE_NO_WARNINGS=1 node --experimental-strip-types --test tests/src/cli.test.ts",
     "test:meta": "NODE_NO_WARNINGS=1 node --experimental-strip-types --test tests/src/doc-series-audit.test.ts tests/src/opl-activation-package-derived-surface-sync.test.ts tests/src/opl-candidate-domain-backlog-execution-model-sync.test.ts tests/src/opl-doc-surface-alignment.test.ts tests/src/opl-domain-onboarding-execution-model-alignment.test.ts tests/src/opl-minimal-admitted-domain-federation-activation-package.test.ts tests/src/opl-phase-1-exit-activation-package.test.ts tests/src/opl-phase-2-central-reference-sync-board.test.ts tests/src/opl-public-truth-docs.test.ts tests/src/verification-command-surfaces.test.ts",

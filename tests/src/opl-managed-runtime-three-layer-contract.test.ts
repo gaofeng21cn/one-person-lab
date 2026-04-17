@@ -5,8 +5,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
+  buildManagedRuntimeContract,
   normalizeManagedRuntimeContract,
   readManagedRuntimeThreeLayerContract,
+  readBundledManagedRuntimeThreeLayerContract,
+  validateManagedRuntimeContract,
 } from '../../src/managed-runtime-contract.ts';
 
 type Json = Record<string, unknown>;
@@ -34,6 +37,7 @@ function unwrapManifestFixture(payload: Json): Json {
 
 test('shared managed runtime contract freezes the three-layer owner envelope and fail-closed rules', () => {
   const contract = readManagedRuntimeThreeLayerContract(repoRoot);
+  const bundled = readBundledManagedRuntimeThreeLayerContract();
 
   assert.equal(contract.contract_id, 'opl_managed_runtime_three_layer_contract');
   assert.deepEqual(contract.required_owner_fields, ['runtime_owner', 'domain_owner', 'executor_owner']);
@@ -45,6 +49,7 @@ test('shared managed runtime contract freezes the three-layer owner envelope and
   assert.match(contract.canonical_fail_closed_rules.join('\n'), /domain_supervision_cannot_bypass_runtime/);
   assert.match(contract.canonical_fail_closed_rules.join('\n'), /executor_cannot_declare_global_gate_clear/);
   assert.match(contract.canonical_fail_closed_rules.join('\n'), /runtime_cannot_invent_domain_publishability_truth/);
+  assert.deepEqual(bundled, contract);
 });
 
 test('family manifest fixtures consume the shared managed runtime three-layer contract consistently', () => {
@@ -85,5 +90,40 @@ test('family manifest fixtures consume the shared managed runtime three-layer co
     assert.equal(contract?.attention_queue_surface.surface_kind.length > 0, true);
     assert.equal(contract?.recovery_contract_surface.surface_kind.length > 0, true);
     assert.deepEqual(contract?.fail_closed_rules, sharedContract.canonical_fail_closed_rules);
+    assert.deepEqual(validateManagedRuntimeContract(contract), contract);
   }
+});
+
+test('buildManagedRuntimeContract materializes canonical fail-closed rules and domain-owned surfaces', () => {
+  const contract = buildManagedRuntimeContract({
+    domain_owner: 'redcube_ai',
+    executor_owner: 'codex_cli',
+    supervision_status_surface: 'product_entry_session',
+    attention_queue_surface: 'product_frontdesk',
+    recovery_contract_surface: 'product_entry_session',
+  });
+
+  assert.deepEqual(contract, {
+    shared_contract_ref: 'contracts/opl-gateway/managed-runtime-three-layer-contract.json',
+    runtime_owner: 'upstream_hermes_agent',
+    domain_owner: 'redcube_ai',
+    executor_owner: 'codex_cli',
+    supervision_status_surface: {
+      surface_kind: 'product_entry_session',
+      owner: 'redcube_ai',
+    },
+    attention_queue_surface: {
+      surface_kind: 'product_frontdesk',
+      owner: 'redcube_ai',
+    },
+    recovery_contract_surface: {
+      surface_kind: 'product_entry_session',
+      owner: 'redcube_ai',
+    },
+    fail_closed_rules: [
+      'domain_supervision_cannot_bypass_runtime',
+      'executor_cannot_declare_global_gate_clear',
+      'runtime_cannot_invent_domain_publishability_truth',
+    ],
+  });
 });
