@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./managed-runtime-contract": "./dist/managed-runtime-contract.js"
+    "./managed-runtime-contract": "./dist/managed-runtime-contract.js",
+    "./product-entry-companions": "./dist/product-entry-companions.js"
   },
   "bin": {
     "opl": "./dist/cli.js"
@@ -19,7 +20,7 @@
     "typecheck": "tsc --noEmit",
     "prepare": "npm run build",
     "lint": "node ./scripts/lint.mjs",
-    "test:fast": "NODE_NO_WARNINGS=1 node --experimental-strip-types --test tests/src/cli.test.ts",
+    "test:fast": "NODE_NO_WARNINGS=1 node --experimental-strip-types --test tests/src/cli.test.ts tests/src/product-entry-companions.test.ts",
     "test:meta": "NODE_NO_WARNINGS=1 node --experimental-strip-types --test tests/src/doc-series-audit.test.ts tests/src/opl-activation-package-derived-surface-sync.test.ts tests/src/opl-candidate-domain-backlog-execution-model-sync.test.ts tests/src/opl-doc-surface-alignment.test.ts tests/src/opl-domain-onboarding-execution-model-alignment.test.ts tests/src/opl-minimal-admitted-domain-federation-activation-package.test.ts tests/src/opl-phase-1-exit-activation-package.test.ts tests/src/opl-phase-2-central-reference-sync-board.test.ts tests/src/opl-public-truth-docs.test.ts tests/src/verification-command-surfaces.test.ts",
     "test:artifact": "npm run build && NODE_NO_WARNINGS=1 node --test tests/built/**/*.test.mjs",
     "test:full": "npm run test:fast && npm run test:meta && npm run test:artifact",
