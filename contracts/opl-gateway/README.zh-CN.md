@@ -114,6 +114,7 @@ repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review 
 - [`routed-actions.schema.json`](./routed-actions.schema.json) — 停留在 `Phase 1 / G3 thin handoff planning freeze hardening` closeout 边界上的 planning dependency；它是 planning-level contract 工件，不是 launcher，也不表示当前主线已进入 routed-action runtime
 - [`domain-onboarding-readiness.schema.json`](./domain-onboarding-readiness.schema.json) — machine-readable domain onboarding readiness gate 的 JSON Schema
 - [`family-executor-adapter-defaults.json`](./family-executor-adapter-defaults.json) — 当前家族默认 executor-adapter route 与硬 guardrail 的 machine-readable freeze
+- [`managed-runtime-three-layer-contract.json`](./managed-runtime-three-layer-contract.json) — 共享 `runtime_owner / domain_owner / executor_owner` envelope 与 supervision / recovery surface locator 的 machine-readable freeze
 - [`paperclip-control-plane.schema.json`](./paperclip-control-plane.schema.json) — 可选 `OPL -> Paperclip` 下游 control-plane bridge surface 的 JSON Schema，覆盖 config / binding / status / bootstrap / task / gate / sync payload；未配置 `Paperclip` 时不影响 `OPL` 主入口运行
 - [`governance-audit.schema.json`](./governance-audit.schema.json) — 已冻结的 P5.M1 governance / audit operating contract JSON Schema
 - [`publish-promotion.schema.json`](./publish-promotion.schema.json) — 已冻结的 P5.M2 publish / promotion operating contract JSON Schema
@@ -128,6 +129,10 @@ repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review 
 - [`surface-lifecycle-map.json`](./surface-lifecycle-map.json) — 当前已冻结 gateway / operating / supporting surfaces 的 machine-readable derived lifecycle map
 - [`surface-authority-matrix.json`](./surface-authority-matrix.json) — 当前已冻结 OPL surfaces 与 linked domain public-entry surfaces 的 machine-readable derived authority matrix
 - [`surface-review-matrix.json`](./surface-review-matrix.json) — 当前已冻结 OPL public / contract / supporting surfaces 的 machine-readable derived review matrix
+
+## 共享托管运行时 companion
+
+- [OPL 托管运行时三层合同](../../docs/references/opl-managed-runtime-three-layer-contract.zh-CN.md) — 冻结已准入 domain 的 managed runtime / supervision / executor owner envelope
 
 ## 已冻结的当前映射
 
