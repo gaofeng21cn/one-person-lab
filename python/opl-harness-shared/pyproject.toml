@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "opl-harness-shared"
+version = "0.1.0"
+description = "Family-shared harness substrate helpers owned by one-person-lab."
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [
+  { name = "Gao Feng" }
+]
+
+[tool.setuptools.package-data]
+"opl_harness_shared.contracts" = ["*.json"]
