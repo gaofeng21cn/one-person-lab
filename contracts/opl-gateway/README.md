@@ -116,6 +116,7 @@ These backlog and mapping surfaces stay reference-only companions to the governi
 - [`routed-actions.schema.json`](./routed-actions.schema.json) — planning dependency kept at the closeout boundary of `Phase 1 / G3 thin handoff planning freeze hardening`; it is a planning-level contract artifact, not a launcher, and does not mean the current mainline has entered a routed-action runtime
 - [`domain-onboarding-readiness.schema.json`](./domain-onboarding-readiness.schema.json) — JSON Schema for the machine-readable domain onboarding readiness gate
 - [`family-executor-adapter-defaults.json`](./family-executor-adapter-defaults.json) — machine-readable freeze for the current family default executor-adapter route and its hard guardrails
+- [`managed-runtime-three-layer-contract.json`](./managed-runtime-three-layer-contract.json) — machine-readable freeze for the shared `runtime_owner / domain_owner / executor_owner` envelope plus supervision / recovery surface locators
 - [`paperclip-control-plane.schema.json`](./paperclip-control-plane.schema.json) — JSON Schema for the optional downstream `OPL -> Paperclip` control-plane bridge surface, including config/binding/status/bootstrap/task/gate/sync payloads
 - [`governance-audit.schema.json`](./governance-audit.schema.json) — JSON Schema for the frozen P5.M1 governance / audit operating contract
 - [`publish-promotion.schema.json`](./publish-promotion.schema.json) — JSON Schema for the frozen P5.M2 publish / promotion operating contract
@@ -130,6 +131,10 @@ These backlog and mapping surfaces stay reference-only companions to the governi
 - [`surface-lifecycle-map.json`](./surface-lifecycle-map.json) — machine-readable derived lifecycle map for the frozen gateway / operating / supporting surfaces
 - [`surface-authority-matrix.json`](./surface-authority-matrix.json) — machine-readable derived authority matrix for the frozen OPL surfaces and linked domain public-entry surfaces
 - [`surface-review-matrix.json`](./surface-review-matrix.json) — machine-readable derived review matrix for the frozen OPL public, contract, and supporting surfaces
+
+## Shared managed runtime companion
+
+- [OPL Managed Runtime Three-Layer Contract](../../docs/references/opl-managed-runtime-three-layer-contract.md) — reference-grade owner envelope for admitted-domain managed runtime, supervision, and executor boundaries
 
 ## Frozen current mappings
 

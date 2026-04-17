@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 
 import type { GatewayContracts } from './types.ts';
+import { normalizeManagedRuntimeContract } from './managed-runtime-contract.ts';
 import { getActiveWorkspaceBinding, type WorkspaceBinding } from './workspace-registry.ts';
 
 type JsonRecord = Record<string, unknown>;
@@ -25,6 +26,25 @@ export interface NormalizedDomainManifest {
   };
   workspace_locator: JsonRecord;
   runtime: JsonRecord | null;
+  managed_runtime_contract: {
+    shared_contract_ref: string;
+    runtime_owner: string;
+    domain_owner: string;
+    executor_owner: string;
+    supervision_status_surface: {
+      surface_kind: string;
+      owner: string;
+    };
+    attention_queue_surface: {
+      surface_kind: string;
+      owner: string;
+    };
+    recovery_contract_surface: {
+      surface_kind: string;
+      owner: string;
+    };
+    fail_closed_rules: string[];
+  } | null;
   repo_mainline: JsonRecord | null;
   product_entry_status: {
     summary: string | null;
@@ -480,6 +500,7 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
     },
     workspace_locator: requireRecord(manifest.workspace_locator, 'workspace_locator'),
     runtime: isRecord(manifest.runtime) ? manifest.runtime : null,
+    managed_runtime_contract: normalizeManagedRuntimeContract(manifest.managed_runtime_contract),
     repo_mainline: isRecord(manifest.repo_mainline) ? manifest.repo_mainline : null,
     product_entry_status: rawProductEntryStatus
       ? {

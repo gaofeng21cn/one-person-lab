@@ -84,6 +84,29 @@
     "runtime_state_root": "/fixtures/redcube/runtime-state",
     "session_store_root": "/fixtures/redcube/runtime-state/product-entry-sessions"
   },
+  "managed_runtime_contract": {
+    "shared_contract_ref": "contracts/opl-gateway/managed-runtime-three-layer-contract.json",
+    "runtime_owner": "upstream_hermes_agent",
+    "domain_owner": "redcube_ai",
+    "executor_owner": "codex_cli",
+    "supervision_status_surface": {
+      "surface_kind": "product_entry_session",
+      "owner": "redcube_ai"
+    },
+    "attention_queue_surface": {
+      "surface_kind": "product_frontdesk",
+      "owner": "redcube_ai"
+    },
+    "recovery_contract_surface": {
+      "surface_kind": "product_entry_session",
+      "owner": "redcube_ai"
+    },
+    "fail_closed_rules": [
+      "domain_supervision_cannot_bypass_runtime",
+      "executor_cannot_declare_global_gate_clear",
+      "runtime_cannot_invent_domain_publishability_truth"
+    ]
+  },
   "product_entry_shell": {
     "frontdesk": {
       "command": "redcube product frontdesk",

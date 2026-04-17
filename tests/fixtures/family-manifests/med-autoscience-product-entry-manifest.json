@@ -12,11 +12,34 @@
     "internal_surface": "controller"
   },
   "runtime": {
-    "runtime_owner": "med_autoscience_gateway",
+    "runtime_owner": "upstream_hermes_agent",
     "runtime_substrate": "external_hermes_agent_target",
     "managed_runtime_backend_id": "med-deepscientist",
     "runtime_root": "/fixtures/med-autoscience/runtime",
     "hermes_home_root": "/fixtures/med-autoscience/hermes-home"
+  },
+  "managed_runtime_contract": {
+    "shared_contract_ref": "contracts/opl-gateway/managed-runtime-three-layer-contract.json",
+    "runtime_owner": "upstream_hermes_agent",
+    "domain_owner": "med-autoscience",
+    "executor_owner": "med_deepscientist",
+    "supervision_status_surface": {
+      "surface_kind": "study_progress",
+      "owner": "med-autoscience"
+    },
+    "attention_queue_surface": {
+      "surface_kind": "workspace_cockpit",
+      "owner": "med-autoscience"
+    },
+    "recovery_contract_surface": {
+      "surface_kind": "study_runtime_status",
+      "owner": "med-autoscience"
+    },
+    "fail_closed_rules": [
+      "domain_supervision_cannot_bypass_runtime",
+      "executor_cannot_declare_global_gate_clear",
+      "runtime_cannot_invent_domain_publishability_truth"
+    ]
   },
   "executor_defaults": {
     "default_executor": "codex_cli_autonomous",

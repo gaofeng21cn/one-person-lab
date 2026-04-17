@@ -82,6 +82,29 @@
       "current_owner_line": "external Hermes substrate + MedAutoGrant authority surfaces",
       "runtime_owner": "upstream_hermes_agent"
     },
+    "managed_runtime_contract": {
+      "shared_contract_ref": "contracts/opl-gateway/managed-runtime-three-layer-contract.json",
+      "runtime_owner": "upstream_hermes_agent",
+      "domain_owner": "med-autogrant",
+      "executor_owner": "med-autogrant",
+      "supervision_status_surface": {
+        "surface_kind": "grant_progress",
+        "owner": "med-autogrant"
+      },
+      "attention_queue_surface": {
+        "surface_kind": "grant_user_loop",
+        "owner": "med-autogrant"
+      },
+      "recovery_contract_surface": {
+        "surface_kind": "grant_user_loop",
+        "owner": "med-autogrant"
+      },
+      "fail_closed_rules": [
+        "domain_supervision_cannot_bypass_runtime",
+        "executor_cannot_declare_global_gate_clear",
+        "runtime_cannot_invent_domain_publishability_truth"
+      ]
+    },
     "product_entry_shell": {
       "product_frontdesk": {
         "command": "uv run python -m med_autogrant product-frontdesk --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
