@@ -6,7 +6,7 @@
 
 - 这份文档只从用户视角衡量 `OPL / MedAutoScience / MedAutoGrant / RedCube AI` 的成熟度，不用 runtime 集成深度替代“能不能用、好不好用”。
 - 它回答四个问题：用户从哪里进入、当前能做哪几步、在哪一层会停住、下一棒应该先补什么。
-- 本轮统一基线是：三个业务仓的 machine-readable `product-entry manifest` 不再只暴露 `operator_loop_surface`，而是都要显式区分 `frontdesk_surface`、`operator_loop_surface` 与 `operator_loop_actions`；`OPL` 顶层的 `domain-manifests / dashboard / handoff-envelope / web front desk` 要同步消费这层动作面。
+- 本轮统一基线是：三个业务仓的 machine-readable `product-entry manifest` 不再只暴露 `operator_loop_surface`，而是都要显式区分 `frontdesk_surface`、`operator_loop_surface` 与 `operator_loop_actions`；`OPL` 顶层的 `domain manifests / status dashboard / contract handoff-envelope / web front desk` 要同步消费这层动作面。
 
 ## 家族理想形态
 
@@ -38,9 +38,9 @@
 - `MedAutoGrant` 的 manifest 现在把 `product-frontdesk` 冻结成显式 `frontdesk_surface`，同时继续导出 `open_loop / inspect_progress / inspect_cockpit / build_direct_entry`。
 - `RedCube AI` 的 manifest 继续把 `redcube product frontdesk` 作为显式 `frontdesk_surface`，并导出 `start_deliverable / continue_session / opl_bridge_handoff`。
 - `OPL` 顶层现在会把这些 `operator_loop_actions` 继续透传到：
-  - `domain-manifests`
+  - `domain manifests`
   - `dashboard.front_desk.recommended_entry_surfaces`
-  - `handoff-envelope`
+  - `contract handoff-envelope`
   - `opl web` 的 front desk project cards
 - 三个业务仓的 manifest 现在还会统一带出 `product_entry_quickstart` companion，给出用户第一组可执行步骤、resume 合同与 human gate id；`OPL` 顶层 discovery / dashboard / handoff / web 同步消费这层用户面。
 - 三个业务仓的 manifest 现在也会统一带出 `product_entry_overview` companion，把当前入口摘要、progress / resume 句柄、remaining gaps 与 human gate id 收成同型前台看板，避免用户还要手工从 status/loop/quickstart 几层自己拼。

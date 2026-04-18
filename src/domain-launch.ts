@@ -122,7 +122,7 @@ export async function launchDomainEntry(
   if (!options.projectId.trim()) {
     throw new GatewayContractError(
       'cli_usage_error',
-      'launch-domain requires a non-empty project_id.',
+      'domain launch requires a non-empty project_id.',
       {
         required: ['project_id'],
       },
