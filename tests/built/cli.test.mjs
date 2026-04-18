@@ -605,7 +605,7 @@ exit 1
   }
 });
 
-test('help exposes the local web front-desk pilot command through the built CLI entrypoint', () => {
+test('help exposes the public front-desk entrypoints while hiding librechat compatibility commands through the built CLI entrypoint', () => {
   const result = runCli(['help']);
   assert.equal(result.status, 0, formatFailure(result));
 
@@ -617,7 +617,8 @@ test('help exposes the local web front-desk pilot command through the built CLI 
   assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-readiness'));
   assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-hosted-bundle'));
   assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-hosted-package'));
-  assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-librechat-package'));
+  assert.equal(payload.help.commands.some((entry) => entry.command.startsWith('frontdesk-librechat')), false);
+  assert.equal(payload.help.commands.some((entry) => entry.command === 'frontdesk-librechat-package'), false);
   assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-service-install'));
   assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-service-status'));
   assert.ok(payload.help.commands.some((entry) => entry.command === 'workspace-bind'));

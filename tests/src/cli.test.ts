@@ -3093,22 +3093,17 @@ test('frontdesk bootstrap prepares the local Desktop shell without Paperclip bri
   }
 });
 
-test('help keeps bootstrap as the default GUI/Codex lane and librechat install as the optional compatibility lane', () => {
+test('help keeps bootstrap as the default GUI/Codex lane and hides librechat compatibility commands', () => {
   const output = runCli(['help']);
   const bootstrap = output.help.commands.find((entry: { command: string }) => entry.command === 'frontdesk bootstrap');
-  const librechatInstall = output.help.commands.find((entry: { command: string }) => entry.command === 'frontdesk librechat install');
+  const commands = output.help.commands.map((entry: { command: string }) => entry.command);
 
   assert.ok(bootstrap);
   assert.match(bootstrap.summary, /Desktop shell/i);
   assert.match(bootstrap.summary, /Codex defaults/i);
   assert.ok(bootstrap.examples.includes('opl frontdesk bootstrap --path /Users/gaofeng/workspace/Yang/NF-PitNET'));
-
-  assert.ok(librechatInstall);
-  assert.match(librechatInstall.summary, /optional LibreChat compatibility lane/i);
-  assert.match(librechatInstall.summary, /OPL front desk/i);
-  assert.ok(librechatInstall.examples.includes(
-    'opl frontdesk librechat install --path /Users/gaofeng/workspace/Yang/NF-PitNET --public-origin http://127.0.0.1:8080',
-  ));
+  assert.equal(commands.some((command: string) => command.startsWith('frontdesk librechat')), false);
+  assert.equal(commands.includes('frontdesk librechat-package'), false);
 });
 
 test('help omits retired paperclip public commands from the CLI discovery surface', () => {
@@ -6240,15 +6235,18 @@ test('help returns command discovery and runnable examples', () => {
     ),
   );
   assert.ok(
-    ['frontdesk bootstrap', 'frontdesk librechat install', 'frontdesk librechat status', 'frontdesk librechat start', 'frontdesk librechat stop', 'frontdesk librechat open'].every((command) =>
-      output.help.commands.some((entry: { command: string }) => entry.command === command),
-    ),
+    output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk bootstrap'),
   );
   assert.ok(
     output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk hosted-package'),
   );
-  assert.ok(
+  assert.equal(
+    output.help.commands.some((entry: { command: string }) => entry.command.startsWith('frontdesk librechat')),
+    false,
+  );
+  assert.equal(
     output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk librechat-package'),
+    false,
   );
   assert.ok(
     output.help.commands.some(

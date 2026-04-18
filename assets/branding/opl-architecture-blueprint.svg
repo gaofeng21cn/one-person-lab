@@ -28,10 +28,10 @@
   <rect x="80" y="80" width="1440" height="980" rx="30" stroke="#A9C1DD" stroke-width="2" stroke-dasharray="10 10"/>
 
   <text x="800" y="112" text-anchor="middle" fill="#14314F" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="34" font-weight="700">
-    OPL Architecture Blueprint
+    OPL Product Shell Blueprint
   </text>
   <text x="800" y="148" text-anchor="middle" fill="#42627F" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="18">
-    Design-first overview of the OPL front desk, shared base, and current federation maturity
+    GUI work modes, module management, progress, files, settings, and optional Hermes-Agent online gateway
   </text>
 
   <g filter="url(#soft-shadow)">
@@ -40,15 +40,15 @@
       One Person Lab (OPL)
     </text>
     <text x="800" y="248" text-anchor="middle" fill="#D9EAFB" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="18">
-      Local front desk, top-level gateway, and federation surface for one-person lab work
+      Codex-native product shell and module manager for one-person lab work
     </text>
 
     <rect x="230" y="318" width="1140" height="92" rx="22" fill="url(#opl-substrate)"/>
     <text x="800" y="354" text-anchor="middle" fill="#FFFFFF" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="32" font-weight="700">
-      Unified Harness Engineering Substrate
+      Module Management and Shared Lab Substrate
     </text>
     <text x="800" y="383" text-anchor="middle" fill="#DCEEFF" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="17">
-      One shared base for direct product entry, stable gateway/runtime contracts, and domain-specific harness evolution
+      One shared base for modules, upgrades, readiness, settings, and domain-agent entry
     </text>
   </g>
 
@@ -57,10 +57,10 @@
 
   <rect x="130" y="468" width="1340" height="174" rx="24" fill="#F8FBFF" stroke="#B5CBE2" stroke-width="2"/>
   <text x="800" y="506" text-anchor="middle" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="24" font-weight="700">
-    Shared Foundation
+    Product Shell and Settings
   </text>
   <text x="800" y="532" text-anchor="middle" fill="#597793" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="16">
-    The reusable lab-wide layers that keep assets, memory, decisions, and delivery surfaces coherent across domains
+    User-facing surfaces that keep work modes, modules, progress, files, versions, and gateway config coherent
   </text>
 
   <rect x="150" y="554" width="244" height="66" rx="18" fill="#E8F0FA" stroke="#C7D7E8"/>
@@ -69,69 +69,69 @@
   <rect x="930" y="554" width="244" height="66" rx="18" fill="#E8F0FA" stroke="#C7D7E8"/>
   <rect x="1190" y="554" width="260" height="66" rx="18" fill="#E8F0FA" stroke="#C7D7E8"/>
 
-  <text x="172" y="582" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">Asset</text>
-  <text x="172" y="604" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Data, references, templates</text>
+  <text x="172" y="582" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">Codex Chat</text>
+  <text x="172" y="604" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Ordinary conversation</text>
 
-  <text x="432" y="582" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">Memory</text>
-  <text x="432" y="604" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Topic, venue, and review memory</text>
+  <text x="432" y="582" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">Codex Task</text>
+  <text x="432" y="604" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Files, commands, verify</text>
 
-  <text x="692" y="582" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">Governance</text>
-  <text x="692" y="604" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Go, stop, reframe, gate logic</text>
+  <text x="692" y="582" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">Module Catalog</text>
+  <text x="692" y="604" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Install, upgrade, pin</text>
 
-  <text x="952" y="582" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">Delivery</text>
-  <text x="952" y="604" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Review surfaces and final outputs</text>
+  <text x="952" y="582" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">Progress + Files</text>
+  <text x="952" y="604" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Human updates, deliverables</text>
 
-  <text x="1212" y="582" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">Product Entry</text>
-  <text x="1212" y="604" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Front desk, quick ask, resume, logs</text>
+  <text x="1212" y="582" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">Hermes Gateway</text>
+  <text x="1212" y="604" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Backup online mode</text>
 
   <path d="M 800 642 L 800 680" stroke="#3B6EA5" stroke-width="4" marker-end="url(#arrow-head)"/>
 
   <rect x="100" y="694" width="1400" height="314" rx="24" fill="#F8FBFF" stroke="#B5CBE2" stroke-width="2"/>
   <text x="800" y="732" text-anchor="middle" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="24" font-weight="700">
-    Workstream Federation
+    GUI Work Modes and Domain Modules
   </text>
   <text x="800" y="758" text-anchor="middle" fill="#597793" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="16">
-    All five lanes are part of the design surface; current federation maturity differs by lane, but the architectural pattern stays shared
+    Three peer GUI modes sit beside module management; specialized domain agents are installed modules
   </text>
 
   <g>
     <rect x="120" y="778" width="256" height="86" rx="20" fill="#F2F8FF" stroke="#A9C3DF"/>
     <rect x="136" y="792" width="66" height="22" rx="11" fill="#DDF7E8"/>
     <text x="169" y="807" text-anchor="middle" fill="#22674B" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="700">ACTIVE</text>
-    <text x="136" y="836" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">Research Ops</text>
-    <text x="136" y="852" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Data to paper and evidence delivery</text>
+    <text x="136" y="836" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">Codex Chat</text>
+    <text x="136" y="852" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Discussion, reading, planning</text>
   </g>
 
   <g>
     <rect x="392" y="778" width="256" height="86" rx="20" fill="#FFF8ED" stroke="#D7C6A4"/>
     <rect x="408" y="792" width="120" height="22" rx="11" fill="#FFF0D1"/>
-    <text x="468" y="807" text-anchor="middle" fill="#8A6415" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="700">ACTIVE+GATED</text>
-    <text x="408" y="836" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">Grant Ops</text>
-    <text x="408" y="852" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Active repo, top-level handoff still gated</text>
+    <text x="468" y="807" text-anchor="middle" fill="#8A6415" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="700">ACTIVE</text>
+    <text x="408" y="836" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">Codex Task</text>
+    <text x="408" y="852" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Files, commands, verification</text>
   </g>
 
   <g>
     <rect x="664" y="778" width="256" height="86" rx="20" fill="#FFF8ED" stroke="#D7C6A4"/>
     <rect x="680" y="792" width="76" height="22" rx="11" fill="#FFF0D1"/>
-    <text x="718" y="807" text-anchor="middle" fill="#8A6415" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="700">PLANNED</text>
-    <text x="680" y="836" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">Thesis Ops</text>
-    <text x="680" y="852" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Dissertation and defense delivery</text>
+    <text x="718" y="807" text-anchor="middle" fill="#8A6415" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="700">ACTIVE</text>
+    <text x="680" y="836" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">MAS</text>
+    <text x="680" y="852" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Medical research agent</text>
   </g>
 
   <g>
     <rect x="936" y="778" width="256" height="86" rx="20" fill="#FFF8ED" stroke="#D7C6A4"/>
     <rect x="952" y="792" width="76" height="22" rx="11" fill="#FFF0D1"/>
-    <text x="990" y="807" text-anchor="middle" fill="#8A6415" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="700">PLANNED</text>
-    <text x="952" y="836" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">Review Ops</text>
-    <text x="952" y="852" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Review, rebuttal, and revision flow</text>
+    <text x="990" y="807" text-anchor="middle" fill="#8A6415" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="700">ACTIVE</text>
+    <text x="952" y="836" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">MAG</text>
+    <text x="952" y="852" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Grant and proposal agent</text>
   </g>
 
   <g>
     <rect x="1208" y="778" width="272" height="86" rx="20" fill="#F2F8FF" stroke="#A9C3DF"/>
     <rect x="1224" y="792" width="66" height="22" rx="11" fill="#DDF7E8"/>
     <text x="1257" y="807" text-anchor="middle" fill="#22674B" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="700">ACTIVE</text>
-    <text x="1224" y="836" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">Presentation Ops</text>
-    <text x="1224" y="852" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Lecture, report, and slide delivery</text>
+    <text x="1224" y="836" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">RCA</text>
+    <text x="1224" y="852" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Visual deliverable agent</text>
   </g>
 
   <path d="M 248 864 L 248 924" stroke="#3B6EA5" stroke-width="3" marker-end="url(#arrow-head)"/>
@@ -142,7 +142,7 @@
 
   <rect x="585" y="886" width="430" height="38" rx="19" fill="#F8FBFF"/>
   <text x="800" y="911" text-anchor="middle" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="22" font-weight="700">
-    Domain Carrier Surfaces
+    Installed Module Surfaces
   </text>
 
   <rect x="120" y="924" width="256" height="76" rx="18" fill="#FFFFFF" stroke="#9FBFE0" stroke-width="2"/>
@@ -151,23 +151,23 @@
   <rect x="936" y="924" width="256" height="76" rx="18" fill="#FFFFFF" stroke="#CBB48B" stroke-width="2" stroke-dasharray="8 8"/>
   <rect x="1208" y="924" width="272" height="76" rx="18" fill="#FFFFFF" stroke="#9FBFE0" stroke-width="2"/>
 
-  <text x="142" y="962" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="16" font-weight="700">Research Foundry</text>
-  <text x="142" y="986" fill="#476684" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Current carrier: Med Auto Science</text>
+  <text x="142" y="962" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="16" font-weight="700">Default Conversation</text>
+  <text x="142" y="986" fill="#476684" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Engine: Codex</text>
 
-  <text x="414" y="962" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="16" font-weight="700">Grant Foundry</text>
-  <text x="414" y="986" fill="#476684" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13">Active carrier: Med Auto Grant (federation gate)</text>
+  <text x="414" y="962" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="16" font-weight="700">Default Task Runner</text>
+  <text x="414" y="986" fill="#476684" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13">Engine: Codex task runner</text>
 
-  <text x="686" y="962" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="16" font-weight="700">Future Thesis Gateway</text>
-  <text x="686" y="986" fill="#476684" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Planned domain-owned carrier</text>
+  <text x="686" y="962" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="16" font-weight="700">MAS Module</text>
+  <text x="686" y="986" fill="#476684" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Carrier: Med Auto Science</text>
 
-  <text x="958" y="962" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="16" font-weight="700">Future Review Gateway</text>
-  <text x="958" y="986" fill="#476684" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Planned domain-owned carrier</text>
+  <text x="958" y="962" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="16" font-weight="700">MAG Module</text>
+  <text x="958" y="986" fill="#476684" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Carrier: Med Auto Grant</text>
 
-  <text x="1230" y="962" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="16" font-weight="700">RedCube AI</text>
-  <text x="1230" y="986" fill="#476684" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Admitted carrier via the ppt_deck family</text>
+  <text x="1230" y="962" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="16" font-weight="700">RCA Module</text>
+  <text x="1230" y="986" fill="#476684" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Carrier: RedCube AI</text>
 
   <rect x="128" y="1018" width="1344" height="30" rx="15" fill="#EAF2FB" stroke="#C6D8EA"/>
   <text x="152" y="1038" fill="#375B79" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13">
-    Blueprint rule: OPL now owns the opl front desk and local ops shell, but domain runtime ownership and top-level admission/handoff gates still stay below OPL.
+    Blueprint rule: OPL presents one GUI product shell, shows human-readable progress plus deliverable files, manages modules in settings, and keeps Hermes-Agent as the explicit backup online gateway.
   </text>
 </svg>

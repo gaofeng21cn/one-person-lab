@@ -173,47 +173,6 @@ type HostedPilotPackageCliInput = {
   sessionsLimit?: number;
 };
 
-type PaperclipConfigCliInput = {
-  baseUrl?: string;
-  authHeaderEnv?: string;
-  cookieEnv?: string;
-  controlCompanyId?: string;
-  localTrustedNoAuth?: boolean;
-};
-
-type PaperclipBindCliInput = {
-  projectId?: string;
-  companyId?: string;
-  paperclipProjectId?: string;
-  projectWorkspaceId?: string;
-  executionWorkspacePreference?: string;
-};
-
-type PaperclipTaskCliInput = ProductEntryCliInput & {
-  title?: string;
-  priority?: 'critical' | 'high' | 'medium' | 'low';
-};
-
-type PaperclipGateCliInput = ProductEntryCliInput & {
-  title?: string;
-  gateKind?: string;
-  decisionOptions?: string[];
-};
-
-type PaperclipSyncCliInput = {
-  issueId?: string;
-  projectId?: string;
-  workspacePath?: string;
-  sessionsLimit?: number;
-  all: boolean;
-  force: boolean;
-};
-
-type PaperclipOperatorLoopCliInput = PaperclipSyncCliInput & {
-  intervalMs?: number;
-  cycles?: number;
-};
-
 function printJson(payload: unknown, stream: NodeJS.WriteStream = process.stdout) {
   stream.write(`${JSON.stringify(payload, null, 2)}\n`);
 }
@@ -965,58 +924,6 @@ function parseHostedPilotPackageArgs(
   };
 }
 
-function parsePaperclipConfigArgs(
-  args: string[],
-  spec: Pick<CommandSpec, 'usage' | 'examples'>,
-): PaperclipConfigCliInput {
-  const parsed: PaperclipConfigCliInput = {};
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-
-    if (token === '--local-trusted-no-auth') {
-      parsed.localTrustedNoAuth = true;
-      continue;
-    }
-
-    if (!token.startsWith('--')) {
-      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
-        token,
-      });
-    }
-
-    const value = args[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
-        option: token,
-      });
-    }
-
-    switch (token) {
-      case '--base-url':
-        parsed.baseUrl = value;
-        break;
-      case '--auth-header-env':
-        parsed.authHeaderEnv = value;
-        break;
-      case '--cookie-env':
-        parsed.cookieEnv = value;
-        break;
-      case '--control-company-id':
-        parsed.controlCompanyId = value;
-        break;
-      default:
-        throw buildUsageError(`Unknown option for Paperclip config: ${token}.`, spec, {
-          option: token,
-        });
-    }
-
-    index += 1;
-  }
-
-  return parsed;
-}
-
 function parseFrontDeskLibreChatArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
@@ -1162,445 +1069,6 @@ function parseFrontDeskMcpArgs(
   return parsed;
 }
 
-function parsePaperclipBindArgs(
-  args: string[],
-  spec: Pick<CommandSpec, 'usage' | 'examples'>,
-): PaperclipBindCliInput {
-  const parsed: PaperclipBindCliInput = {};
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-
-    if (!token.startsWith('--')) {
-      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
-        token,
-      });
-    }
-
-    const value = args[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
-        option: token,
-      });
-    }
-
-    switch (token) {
-      case '--project':
-        parsed.projectId = value;
-        break;
-      case '--company-id':
-        parsed.companyId = value;
-        break;
-      case '--paperclip-project-id':
-        parsed.paperclipProjectId = value;
-        break;
-      case '--project-workspace-id':
-        parsed.projectWorkspaceId = value;
-        break;
-      case '--execution-workspace':
-        parsed.executionWorkspacePreference = value;
-        break;
-      default:
-        throw buildUsageError(`Unknown option for Paperclip bind: ${token}.`, spec, {
-          option: token,
-        });
-    }
-
-    index += 1;
-  }
-
-  return parsed;
-}
-
-function parsePaperclipTaskArgs(
-  args: string[],
-  spec: Pick<CommandSpec, 'usage' | 'examples'>,
-): PaperclipTaskCliInput {
-  let dryRun = false;
-  let explicitGoal: string | undefined;
-  const positionalGoalParts: string[] = [];
-  const parsed: Omit<PaperclipTaskCliInput, 'goal' | 'dryRun'> = {
-    intent: 'create',
-    target: 'deliverable',
-    skills: [],
-  };
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-
-    if (token === '--dry-run') {
-      dryRun = true;
-      continue;
-    }
-
-    if (!token.startsWith('--')) {
-      positionalGoalParts.push(token);
-      continue;
-    }
-
-    const value = args[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
-        option: token,
-      });
-    }
-
-    switch (token) {
-      case '--goal':
-        explicitGoal = value;
-        break;
-      case '--intent':
-        parsed.intent = value;
-        break;
-      case '--target':
-        parsed.target = value;
-        break;
-      case '--preferred-family':
-        parsed.preferredFamily = value;
-        break;
-      case '--request-kind':
-        parsed.requestKind = value;
-        break;
-      case '--model':
-        parsed.model = value;
-        break;
-      case '--provider':
-        parsed.provider = value;
-        break;
-      case '--workspace-path':
-        parsed.workspacePath = value;
-        break;
-      case '--skills':
-        parsed.skills.push(
-          ...value
-            .split(',')
-            .map((entry) => entry.trim())
-            .filter(Boolean),
-        );
-        break;
-      case '--title':
-        parsed.title = value;
-        break;
-      case '--priority':
-        if (!['critical', 'high', 'medium', 'low'].includes(value)) {
-          throw buildUsageError('Unsupported Paperclip task priority.', spec, {
-            option: token,
-            priority: value,
-            allowed_values: ['critical', 'high', 'medium', 'low'],
-          });
-        }
-        parsed.priority = value as PaperclipTaskCliInput['priority'];
-        break;
-      default:
-        throw buildUsageError(`Unknown option for Paperclip task: ${token}.`, spec, {
-          option: token,
-        });
-    }
-
-    index += 1;
-  }
-
-  if (explicitGoal && positionalGoalParts.length > 0) {
-    throw buildUsageError(
-      'Use either a positional request or --goal for the Paperclip task, not both.',
-      spec,
-      {
-        positional_request: positionalGoalParts.join(' '),
-      },
-    );
-  }
-
-  const goal = (explicitGoal ?? positionalGoalParts.join(' ')).trim();
-  if (!goal) {
-    throw buildUsageError(
-      'paperclip-open-task requires a plain-language request, either as positional text or via --goal.',
-      spec,
-      {
-        required: ['<request...> or --goal <text>'],
-      },
-    );
-  }
-
-  return {
-    ...parsed,
-    goal,
-    dryRun,
-  };
-}
-
-function parsePaperclipGateArgs(
-  args: string[],
-  spec: Pick<CommandSpec, 'usage' | 'examples'>,
-): PaperclipGateCliInput {
-  let dryRun = false;
-  let explicitGoal: string | undefined;
-  const positionalGoalParts: string[] = [];
-  const parsed: Omit<PaperclipGateCliInput, 'goal' | 'dryRun'> = {
-    intent: 'create',
-    target: 'deliverable',
-    skills: [],
-  };
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-
-    if (token === '--dry-run') {
-      dryRun = true;
-      continue;
-    }
-
-    if (!token.startsWith('--')) {
-      positionalGoalParts.push(token);
-      continue;
-    }
-
-    const value = args[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
-        option: token,
-      });
-    }
-
-    switch (token) {
-      case '--goal':
-        explicitGoal = value;
-        break;
-      case '--intent':
-        parsed.intent = value;
-        break;
-      case '--target':
-        parsed.target = value;
-        break;
-      case '--preferred-family':
-        parsed.preferredFamily = value;
-        break;
-      case '--request-kind':
-        parsed.requestKind = value;
-        break;
-      case '--model':
-        parsed.model = value;
-        break;
-      case '--provider':
-        parsed.provider = value;
-        break;
-      case '--workspace-path':
-        parsed.workspacePath = value;
-        break;
-      case '--skills':
-        parsed.skills.push(
-          ...value
-            .split(',')
-            .map((entry) => entry.trim())
-            .filter(Boolean),
-        );
-        break;
-      case '--title':
-        parsed.title = value;
-        break;
-      case '--gate-kind':
-        parsed.gateKind = value;
-        break;
-      case '--decision-options':
-        parsed.decisionOptions = value
-          .split(',')
-          .map((entry) => entry.trim())
-          .filter(Boolean);
-        break;
-      default:
-        throw buildUsageError(`Unknown option for Paperclip gate: ${token}.`, spec, {
-          option: token,
-        });
-    }
-
-    index += 1;
-  }
-
-  if (explicitGoal && positionalGoalParts.length > 0) {
-    throw buildUsageError(
-      'Use either a positional request or --goal for the Paperclip gate, not both.',
-      spec,
-      {
-        positional_request: positionalGoalParts.join(' '),
-      },
-    );
-  }
-
-  const goal = (explicitGoal ?? positionalGoalParts.join(' ')).trim();
-  if (!goal) {
-    throw buildUsageError(
-      'paperclip-open-gate requires a plain-language request, either as positional text or via --goal.',
-      spec,
-      {
-        required: ['<request...> or --goal <text>'],
-      },
-    );
-  }
-
-  return {
-    ...parsed,
-    goal,
-    dryRun,
-  };
-}
-
-function parsePaperclipSyncArgs(
-  args: string[],
-  spec: Pick<CommandSpec, 'usage' | 'examples'>,
-): PaperclipSyncCliInput {
-  const parsed: PaperclipSyncCliInput = {
-    all: false,
-    force: false,
-  };
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-
-    if (token === '--force') {
-      parsed.force = true;
-      continue;
-    }
-
-    if (token === '--all') {
-      parsed.all = true;
-      continue;
-    }
-
-    if (!token.startsWith('--')) {
-      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
-        token,
-      });
-    }
-
-    const value = args[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
-        option: token,
-      });
-    }
-
-    switch (token) {
-      case '--issue-id':
-        parsed.issueId = value;
-        break;
-      case '--project':
-        parsed.projectId = value;
-        break;
-      case '--path':
-        parsed.workspacePath = value;
-        break;
-      case '--sessions-limit': {
-        const parsedLimit = Number.parseInt(value, 10);
-        if (!Number.isInteger(parsedLimit) || parsedLimit <= 0) {
-          throw buildUsageError('Paperclip sync expects a positive integer --sessions-limit.', spec, {
-            option: token,
-            value,
-          });
-        }
-        parsed.sessionsLimit = parsedLimit;
-        break;
-      }
-      default:
-        throw buildUsageError(`Unknown option for Paperclip sync: ${token}.`, spec, {
-          option: token,
-        });
-    }
-
-    index += 1;
-  }
-
-  return parsed;
-}
-
-function parsePaperclipOperatorLoopArgs(
-  args: string[],
-  spec: Pick<CommandSpec, 'usage' | 'examples'>,
-): PaperclipOperatorLoopCliInput {
-  const parsed: PaperclipOperatorLoopCliInput = {
-    all: false,
-    force: false,
-  };
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-
-    if (token === '--force') {
-      parsed.force = true;
-      continue;
-    }
-
-    if (token === '--all') {
-      parsed.all = true;
-      continue;
-    }
-
-    if (!token.startsWith('--')) {
-      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
-        token,
-      });
-    }
-
-    const value = args[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
-        option: token,
-      });
-    }
-
-    switch (token) {
-      case '--issue-id':
-        parsed.issueId = value;
-        break;
-      case '--project':
-        parsed.projectId = value;
-        break;
-      case '--path':
-        parsed.workspacePath = value;
-        break;
-      case '--sessions-limit': {
-        const parsedLimit = Number.parseInt(value, 10);
-        if (!Number.isInteger(parsedLimit) || parsedLimit <= 0) {
-          throw buildUsageError('Paperclip operator loop expects a positive integer --sessions-limit.', spec, {
-            option: token,
-            value,
-          });
-        }
-        parsed.sessionsLimit = parsedLimit;
-        break;
-      }
-      case '--interval-ms': {
-        const parsedInterval = Number.parseInt(value, 10);
-        if (!Number.isInteger(parsedInterval) || parsedInterval <= 0) {
-          throw buildUsageError('Paperclip operator loop expects a positive integer --interval-ms.', spec, {
-            option: token,
-            value,
-          });
-        }
-        parsed.intervalMs = parsedInterval;
-        break;
-      }
-      case '--cycles': {
-        const parsedCycles = Number.parseInt(value, 10);
-        if (!Number.isInteger(parsedCycles) || parsedCycles < 0) {
-          throw buildUsageError('Paperclip operator loop expects a non-negative integer --cycles.', spec, {
-            option: token,
-            value,
-          });
-        }
-        parsed.cycles = parsedCycles;
-        break;
-      }
-      default:
-        throw buildUsageError(`Unknown option for Paperclip operator loop: ${token}.`, spec, {
-          option: token,
-        });
-    }
-
-    index += 1;
-  }
-
-  return parsed;
-}
-
 function assertNoArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
@@ -1729,11 +1197,8 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl frontdesk domain-wiring',
         'opl frontdesk hosted-bundle --base-path /pilot/opl',
         'opl frontdesk hosted-package --output /tmp/opl-hosted-package --public-origin https://opl.example.com --base-path /pilot/opl',
-        'opl frontdesk librechat-package --output /tmp/opl-librechat-pilot --public-origin https://opl.example.com --base-path /pilot/opl',
         'opl frontdesk bootstrap --path /Users/gaofeng/workspace/Yang/NF-PitNET',
         'opl frontdesk service install --port 8787',
-        'opl frontdesk librechat install --path /Users/gaofeng/workspace/Yang/NF-PitNET --public-origin http://127.0.0.1:8080',
-        'opl frontdesk librechat open',
         'opl workspace bind --project redcube --path /Users/gaofeng/workspace/redcube-ai --entry-command "redcube-ai frontdesk" --manifest-command "redcube product manifest --workspace-root /Users/gaofeng/workspace/redcube-ai"',
         'opl domain launch --project redcube --dry-run',
         'opl contract handoff-envelope "Prepare a defense-ready slide deck." --preferred-family ppt_deck',
@@ -2553,11 +2018,11 @@ async function main() {
         }
 
         const helpTarget = args.join(' ');
-        const helpSpec = publicCommandSpecs[helpTarget];
+        const helpSpec = publicCommandSpecs[helpTarget] ?? compatibilityCommandSpecs[helpTarget];
         if (!helpSpec) {
           throw new GatewayContractError('unknown_command', `Unknown command: ${helpTarget}.`, {
             command: helpTarget,
-            commands: Object.keys(publicCommandSpecs),
+            commands: Object.keys({ ...publicCommandSpecs, ...compatibilityCommandSpecs }),
             usage: 'opl help',
           });
         }
@@ -2759,12 +2224,6 @@ async function main() {
       examples: ['opl frontdesk hosted-package --output /tmp/opl-frontdesk-package'],
       group: 'frontdesk',
     }),
-    'frontdesk librechat-package': cloneCommandSpec(commandSpecs['frontdesk-librechat-package'], {
-      usage:
-        'opl frontdesk librechat-package --output <dir> [--public-origin <origin>] [--host <host>] [--port <port>] [--sessions-limit <n>] [--base-path <base_path>]',
-      examples: ['opl frontdesk librechat-package --output /tmp/opl-librechat-pilot --public-origin http://127.0.0.1:8080'],
-      group: 'frontdesk',
-    }),
     'frontdesk service install': cloneCommandSpec(commandSpecs['frontdesk-service-install'], {
       usage:
         'opl frontdesk service install [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>]',
@@ -2802,32 +2261,6 @@ async function main() {
       examples: ['opl frontdesk bootstrap --path /Users/gaofeng/workspace/Yang/NF-PitNET'],
       group: 'frontdesk',
     }),
-    'frontdesk librechat install': cloneCommandSpec(commandSpecs['frontdesk-librechat-install'], {
-      usage:
-        'opl frontdesk librechat install [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>] [--public-origin <origin>]',
-      examples: ['opl frontdesk librechat install --path /Users/gaofeng/workspace/Yang/NF-PitNET --public-origin http://127.0.0.1:8080'],
-      group: 'frontdesk',
-    }),
-    'frontdesk librechat status': cloneCommandSpec(commandSpecs['frontdesk-librechat-status'], {
-      usage: 'opl frontdesk librechat status',
-      examples: ['opl frontdesk librechat status'],
-      group: 'frontdesk',
-    }),
-    'frontdesk librechat start': cloneCommandSpec(commandSpecs['frontdesk-librechat-start'], {
-      usage: 'opl frontdesk librechat start',
-      examples: ['opl frontdesk librechat start'],
-      group: 'frontdesk',
-    }),
-    'frontdesk librechat stop': cloneCommandSpec(commandSpecs['frontdesk-librechat-stop'], {
-      usage: 'opl frontdesk librechat stop',
-      examples: ['opl frontdesk librechat stop'],
-      group: 'frontdesk',
-    }),
-    'frontdesk librechat open': cloneCommandSpec(commandSpecs['frontdesk-librechat-open'], {
-      usage: 'opl frontdesk librechat open',
-      examples: ['opl frontdesk librechat open'],
-      group: 'frontdesk',
-    }),
     'session list': cloneCommandSpec(commandSpecs.sessions, {
       usage: 'opl session list [--limit <n>] [--source <source>]',
       examples: ['opl session list', 'opl session list --limit 10'],
@@ -2855,6 +2288,45 @@ async function main() {
     }),
   };
 
+  const compatibilityCommandSpecs: Record<string, CommandSpec> = {
+    'frontdesk librechat-package': cloneCommandSpec(commandSpecs['frontdesk-librechat-package'], {
+      usage:
+        'opl frontdesk librechat-package --output <dir> [--public-origin <origin>] [--host <host>] [--port <port>] [--sessions-limit <n>] [--base-path <base_path>]',
+      examples: ['opl frontdesk librechat-package --output /tmp/opl-librechat-pilot --public-origin http://127.0.0.1:8080'],
+      group: 'compatibility',
+    }),
+    'frontdesk librechat install': cloneCommandSpec(commandSpecs['frontdesk-librechat-install'], {
+      usage:
+        'opl frontdesk librechat install [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>] [--public-origin <origin>]',
+      examples: ['opl frontdesk librechat install --path /Users/gaofeng/workspace/Yang/NF-PitNET --public-origin http://127.0.0.1:8080'],
+      group: 'compatibility',
+    }),
+    'frontdesk librechat status': cloneCommandSpec(commandSpecs['frontdesk-librechat-status'], {
+      usage: 'opl frontdesk librechat status',
+      examples: ['opl frontdesk librechat status'],
+      group: 'compatibility',
+    }),
+    'frontdesk librechat start': cloneCommandSpec(commandSpecs['frontdesk-librechat-start'], {
+      usage: 'opl frontdesk librechat start',
+      examples: ['opl frontdesk librechat start'],
+      group: 'compatibility',
+    }),
+    'frontdesk librechat stop': cloneCommandSpec(commandSpecs['frontdesk-librechat-stop'], {
+      usage: 'opl frontdesk librechat stop',
+      examples: ['opl frontdesk librechat stop'],
+      group: 'compatibility',
+    }),
+    'frontdesk librechat open': cloneCommandSpec(commandSpecs['frontdesk-librechat-open'], {
+      usage: 'opl frontdesk librechat open',
+      examples: ['opl frontdesk librechat open'],
+      group: 'compatibility',
+    }),
+  };
+  const dispatchCommandSpecs: Record<string, CommandSpec> = {
+    ...publicCommandSpecs,
+    ...compatibilityCommandSpecs,
+  };
+
   const inputTokens = parsedInput.command ? [parsedInput.command, ...parsedInput.args] : [];
 
   if (inputTokens.length === 0) {
@@ -2872,7 +2344,7 @@ async function main() {
     return;
   }
 
-  const resolved = resolveCommandSpec(inputTokens, publicCommandSpecs);
+  const resolved = resolveCommandSpec(inputTokens, dispatchCommandSpecs);
   if (!resolved) {
     const [command, ...args] = inputTokens;
     if (!parsedInput.helpRequested && command && looksLikeNaturalLanguage(command, args)) {

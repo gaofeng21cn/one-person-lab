@@ -4,23 +4,25 @@
 
 This directory is the technical reading layer for `One Person Lab`.
 The repository home is written first for potential users and human experts.
-This guide is for readers who need the architecture, contracts, planning surfaces, and implementation references behind that public story.
+This guide points readers to the architecture, contracts, planning surfaces, and implementation references behind the current product-shell story.
 
 ## Start Here By Audience
 
 | Audience | Start here | Why |
 | --- | --- | --- |
-| Potential users and human experts | [Repository Home](../README.md), [Roadmap](./roadmap.md), [Task Map](./task-map.md), [Gateway Federation](./gateway-federation.md) | Understand what `OPL` is for before reading technical details |
+| Potential users and human experts | [Repository Home](../README.md), [Roadmap](./roadmap.md), [Task Map](./task-map.md), [Operating Model](./operating-model.md) | Understand the `OPL` product shell before reading technical details |
 | Technical readers and planners | [Project](./project.md), [Status](./status.md), [Architecture](./architecture.md), [Invariants](./invariants.md), [Decisions](./decisions.md), [Contracts Overview](../contracts/README.md) | Understand current truth, boundaries, and the active technical direction |
 | Developers and maintainers | [Reference Index](./references/README.md), `docs/specs/`, `docs/plans/`, `docs/history/omx/` | Inspect implementation support material, historical records, and tracked working notes |
 
 ## Current Baseline
 
-- `OPL` is the top-level gateway, federation, and shared-boundary surface for the family.
-- Domain runtime ownership stays with admitted domain repositories rather than moving into `OPL`.
-- `frontdesk-entry-guide` is now the family-level machine-readable entry layer for AI / GUI shells; if the user-facing shell is branded as `OPL Cortex`, that naming sits above the repo-internal `frontdesk_*` contract ids.
-- The repository home should stay readable for non-technical human experts; this docs guide may be technical.
-- The active public carriers today are `Med Auto Science` for `Research Ops`, `RedCube AI` for `Presentation Ops`, and the active `Med Auto Grant` repository line for medical `Grant Ops`, with top-level admission and handoff wording still separately gated at `OPL`.
+- `OPL` is the Codex-native GUI product shell and module manager for one-person-lab agents.
+- The GUI presents three peer work modes: ordinary Codex conversation, general Codex task, and specialized domain agents.
+- Settings own module management, module upgrades, version pins, module health, default mode, and online gateway configuration.
+- The workspace side rail owns human-readable progress, running-task status, and deliverable files.
+- `MAS`, `MAG`, and `RCA` are the active specialized domain-agent modules.
+- `Hermes-Agent` is the explicit backup mode and online gateway for remote or alternate runtime paths.
+- Domain-agent repositories remain the source of truth for their specialized capabilities and readiness.
 
 ## Technical Working Set
 
@@ -36,17 +38,17 @@ These are the fastest files for understanding the live technical truth before ch
 ## The Existing Four-Layer Docs System
 
 The repository still uses the four-layer `OPL` docs system.
-The important change is both how readers enter it and which technical truth is currently frozen:
+The current entry order is:
 
-- human experts should enter through the repository home and Layer 1
-- technical planners should combine the technical working set with Layer 2
-- developers should treat Layers 3 and 4 as supporting material, not the public front page
-- live front-desk, hosted, and domain-entry truth should still be read from [Status](./status.md)
-- `opl frontdesk-bootstrap --path <workspace>` is now the shortest user-facing bootstrap for the local GUI stack: it prepares the Docker-free `OPL Atlas` Desktop shell, aligns `OPL Agent` with the current local Codex defaults, and keeps the built-in `OPL Cortex` MCP bridge attached to the same frontdesk truth
-- the default `OPL Cortex` bridge is now intentionally small: `project progress`, `execute request`, `task status`, `recent sessions`, `resume session`, `runtime logs`, `projects`, and `activate workspace`
-- front-door execution requests now use async acceptance for real work: the shell returns a `task_id` quickly, then the user-facing shell follows progress through `task status` instead of waiting for a single long blocking tool call
-- `Codex CLI autonomous` remains the frozen family executor default; model and reasoning inherit the local Codex profile rather than a repo-pinned version
-- the default local GUI path is now `OPL Atlas` Desktop, while `LibreChat-first` remains the explicit hosted pilot and optional compatibility lane; the long-line target still remains an `OPL`-owned web front desk and managed hosted runtime is still not landed
+- human experts enter through the repository home and Layer 1
+- technical planners combine the technical working set with Layer 2
+- developers treat Layers 3 and 4 as supporting material
+- live product-shell, module, settings, and online-gateway truth is read from [Status](./status.md)
+- `opl frontdesk bootstrap --path <workspace>` prepares the local `OPL Atlas` Desktop shell and binds the active workspace into the module registry
+- the default `OPL Cortex` bridge stays small: `project progress`, `execute request`, `task status`, `recent sessions`, `resume session`, `runtime logs`, `projects`, and `activate workspace`
+- front-door execution requests use async acceptance for real work: the shell returns a `task_id`, then the user-facing shell follows progress through `task status`
+- Codex remains the default engine for ordinary conversation and general local tasks
+- `Hermes-Agent` remains the explicit backup online gateway
 
 ## Layer 1. Default Public Mainline
 
@@ -56,13 +58,12 @@ They must stay bilingual and easy to read.
 - [Repository Home](../README.md)
 - [Roadmap](./roadmap.md)
 - [Task Map](./task-map.md)
-- [Gateway Federation](./gateway-federation.md)
 - [Operating Model](./operating-model.md)
 - [Unified Harness Engineering Substrate](./unified-harness-engineering-substrate.md)
 
 ## Layer 2. Public Contract And Technical Companion Docs
 
-These documents are still public and bilingual, but they are meant for technical understanding rather than first-read storytelling.
+These documents are still public and bilingual, but they are meant for technical understanding.
 
 - [OPL Federation Contract](./opl-federation-contract.md)
 - [Shared Foundation](./shared-foundation.md)
@@ -79,7 +80,7 @@ These documents are still public and bilingual, but they are meant for technical
 ## Layer 3. Reference-Grade Supporting Docs
 
 Layer 3 holds review, audit, rollout, benchmark, and supporting reference material.
-It is repo-tracked, but it should not crowd the public front page.
+It is repo-tracked supporting material.
 
 - [Reference Index](./references/README.md)
 - `docs/references/contract-convergence-v1-execution-board.md`
@@ -88,7 +89,6 @@ It is repo-tracked, but it should not crowd the public front page.
 - `docs/references/family-lightweight-direct-entry-rollout-board.md`
 - `docs/references/opl-hosted-web-frontdesk-benchmark.md`
 - `docs/references/opl-product-entry-and-hermes-kernel-integration.md`
-- `docs/references/family-product-entry-and-domain-handoff-architecture.md`
 - `docs/references/family-executor-adapter-defaults.md`
 - `docs/references/hermes-native-executor-proof-lane.md`
 - `docs/references/mas-top-level-cutover-board.md`
@@ -110,7 +110,7 @@ It is repo-tracked, but it should not crowd the public front page.
 ## Layer 4. Historical Specs And Plans
 
 Layer 4 is working history.
-It explains how or why a freeze happened, but it is not the living truth surface.
+It explains how or why a freeze happened, while [Status](./status.md) remains the current truth surface.
 
 - `docs/specs/`
 - `docs/plans/`
@@ -120,13 +120,13 @@ It explains how or why a freeze happened, but it is not the living truth surface
 
 - Keep [Repository Home](../README.md) user-facing and readable for potential users, clinicians, and other non-technical experts.
 - Keep Layers 1 and 2 bilingual, because they are part of the public surface.
-- Keep Layer 3 reference-grade; it can be detailed, but it should not replace the public entry path.
-- Keep Layer 4 as tracked working history rather than current truth.
-- When a change affects public wording, gateway contracts, or admitted-domain state, update docs, contracts, and related verification together.
+- Keep Layer 3 reference-grade and detailed.
+- Keep Layer 4 as tracked working history.
+- When a change affects public wording, contracts, or admitted-domain state, update docs, contracts, and related verification together.
 
 ## Governance
 
-- Governance rules now live in [series-doc-governance-checklist.md](./references/series-doc-governance-checklist.md), the technical working set, and the repo-tracked contract/doc surfaces rather than in `AGENTS.md` alone.
+- Governance rules live in [series-doc-governance-checklist.md](./references/series-doc-governance-checklist.md), the technical working set, and the repo-tracked contract/doc surfaces.
 - The current four-repo alignment snapshot lives in [four-repo-doc-series-sync-summary-2026-04-14.md](./references/four-repo-doc-series-sync-summary-2026-04-14.md).
 - The reusable intake starting point lives in [four-repo-doc-intake-template.md](./references/four-repo-doc-intake-template.md).
 - The default central drift audit command is `npm run audit:doc-series`.
