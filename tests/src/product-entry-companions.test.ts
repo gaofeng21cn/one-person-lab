@@ -551,6 +551,7 @@ test('family product frontdesk builder projects manifest core into canonical fro
       session: manifestPayload.product_entry_shell.session,
     },
     notes: ['Thin frontdesk adapter is active.'],
+    schema_ref: 'contracts/schemas/v1/product-frontdesk.schema.json',
     extra_payload: {
       ok: true,
     },
@@ -570,6 +571,7 @@ test('family product frontdesk builder projects manifest core into canonical fro
   assert.equal(manifest.schema_ref, 'contracts/schemas/v1/product-entry-manifest.schema.json');
   assert.equal(manifest.domain_entry_contract?.entry_adapter, 'RedCubeDomainEntry');
   assert.equal(manifest.gateway_interaction_contract?.frontdoor_owner, 'opl_gateway_or_domain_gui');
+  assert.equal(frontdesk.schema_ref, 'contracts/schemas/v1/product-frontdesk.schema.json');
   assert.equal(frontdesk.domain_entry_contract?.entry_adapter, 'RedCubeDomainEntry');
   assert.equal(frontdesk.gateway_interaction_contract?.shared_downstream_entry, 'RedCubeDomainEntry');
 });

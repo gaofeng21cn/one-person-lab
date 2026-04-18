@@ -500,12 +500,14 @@ def test_build_family_product_frontdesk_projects_manifest_core() -> None:
             },
         },
         notes=["Thin frontdesk adapter is active."],
+        schema_ref="contracts/schemas/v1/product-frontdesk.schema.json",
         extra_payload={"ok": True},
     )
 
     assert frontdesk["surface_kind"] == "product_frontdesk"
     assert frontdesk["ok"] is True
     assert frontdesk["target_domain_id"] == "med-autogrant"
+    assert frontdesk["schema_ref"] == "contracts/schemas/v1/product-frontdesk.schema.json"
     assert (
         frontdesk["summary"]["frontdesk_command"]
         == "uv run python -m med_autogrant product-frontdesk --input /tmp/workspace.json --format json"

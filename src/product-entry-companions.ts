@@ -120,6 +120,9 @@ export interface BuildFamilyProductFrontdeskInput {
   product_entry_manifest: JsonRecord;
   entry_surfaces: JsonRecord;
   notes: string[];
+  schema_ref?: string | null;
+  domain_entry_contract?: JsonRecord | null;
+  gateway_interaction_contract?: JsonRecord | null;
   extra_payload?: JsonRecord;
 }
 
@@ -894,11 +897,15 @@ export function buildFamilyProductFrontdesk(input: BuildFamilyProductFrontdeskIn
       ),
     },
     notes: readStringList(input.notes, 'notes'),
-    schema_ref: optionalString(manifest.schema_ref),
-    domain_entry_contract: isRecord(manifest.domain_entry_contract)
+    schema_ref: optionalString(input.schema_ref) ?? optionalString(manifest.schema_ref),
+    domain_entry_contract: isRecord(input.domain_entry_contract)
+      ? input.domain_entry_contract
+      : isRecord(manifest.domain_entry_contract)
       ? manifest.domain_entry_contract
       : null,
-    gateway_interaction_contract: isRecord(manifest.gateway_interaction_contract)
+    gateway_interaction_contract: isRecord(input.gateway_interaction_contract)
+      ? input.gateway_interaction_contract
+      : isRecord(manifest.gateway_interaction_contract)
       ? manifest.gateway_interaction_contract
       : null,
     extra_payload: input.extra_payload,
