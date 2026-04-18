@@ -4336,6 +4336,20 @@ test('project-progress promotes current MAS study into a paper-facing summary in
     assert.match(payload.project_progress.progress_feedback.headline, /投稿打包阶段/);
     assert.match(payload.project_progress.progress_feedback.latest_update, /2026-04-15 11:24 UTC/);
     assert.match(payload.project_progress.progress_feedback.next_step, /continue bundle stage/);
+    assert.equal(payload.project_progress.workspace_inbox.summary.known_task_count, 3);
+    assert.equal(payload.project_progress.workspace_inbox.summary.running_count, 1);
+    assert.equal(payload.project_progress.workspace_inbox.summary.waiting_count, 1);
+    assert.equal(payload.project_progress.workspace_inbox.summary.ready_count, 0);
+    assert.equal(payload.project_progress.workspace_inbox.summary.delivered_count, 1);
+    assert.equal(payload.project_progress.workspace_inbox.summary.active_task_id, studyId);
+    assert.equal(payload.project_progress.workspace_inbox.sections.running[0].task_id, studyId);
+    assert.match(payload.project_progress.workspace_inbox.sections.running[0].summary, /投稿打包阶段/);
+    assert.ok(
+      payload.project_progress.workspace_inbox.sections.waiting.some(
+        (entry: { task_id: string }) => entry.task_id === '003-endocrine-burden-followup',
+      ),
+    );
+    assert.equal(payload.project_progress.workspace_inbox.sections.delivered[0].deliverable_count, 3);
     assert.ok(payload.project_progress.user_options.includes('展开当前论文的详细进度'));
     assert.ok(payload.project_progress.inspect_paths.includes(studyRoot));
     assert.equal(payload.project_progress.workspace_files.deliverable_files.length, 3);
@@ -5260,6 +5274,10 @@ exit 1
     assert.match(pageHtml, /Open OPL Agent/);
     assert.match(pageHtml, /Workspace Home/);
     assert.match(pageHtml, /Current Task/);
+    assert.match(pageHtml, /Workspace Inbox/);
+    assert.match(pageHtml, /Running/);
+    assert.match(pageHtml, /Waiting/);
+    assert.match(pageHtml, /Delivered/);
     assert.match(pageHtml, /Files & Deliverables/);
     assert.match(pageHtml, /Progress Feed/);
     assert.match(pageHtml, /Latest update/);
@@ -5334,6 +5352,10 @@ exit 1
     assert.equal(progressPayload.project_progress.surface_id, 'opl_project_progress_brief');
     assert.equal(progressPayload.project_progress.current_project.workspace_path, repoRoot);
     assert.ok(Array.isArray(progressPayload.project_progress.inspect_paths));
+    assert.equal(typeof progressPayload.project_progress.workspace_inbox.summary.known_task_count, 'number');
+    assert.ok(Array.isArray(progressPayload.project_progress.workspace_inbox.sections.running));
+    assert.ok(Array.isArray(progressPayload.project_progress.workspace_inbox.sections.waiting));
+    assert.ok(Array.isArray(progressPayload.project_progress.workspace_inbox.sections.delivered));
     assert.ok(Array.isArray(progressPayload.project_progress.workspace_files.deliverable_files));
     assert.ok(Array.isArray(progressPayload.project_progress.workspace_files.supporting_files));
     assert.equal(typeof progressPayload.project_progress.progress_feedback.headline, 'string');
@@ -5551,6 +5573,9 @@ exit 1
     assert.match(pageHtml, /Open OPL Agent/);
     assert.match(pageHtml, /Workspace Home/);
     assert.match(pageHtml, /Current Task/);
+    assert.match(pageHtml, /Workspace Inbox/);
+    assert.match(pageHtml, /Running/);
+    assert.match(pageHtml, /Waiting/);
     assert.match(pageHtml, /Progress Feed/);
     assert.match(pageHtml, /Files & Deliverables/);
     assert.match(pageHtml, /Bound direct entry/);

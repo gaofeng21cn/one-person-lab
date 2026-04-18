@@ -1117,6 +1117,82 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       ? `<span class="status-chip">${escapeHtml(humanizeProgressCode(progressFeedback.runtime_status) ?? progressFeedback.runtime_status)}</span>`
       : null,
   ].filter(Boolean).join('');
+  const workspaceInbox = progress.workspace_inbox
+    && typeof progress.workspace_inbox === 'object'
+    && !Array.isArray(progress.workspace_inbox)
+    ? progress.workspace_inbox as Record<string, unknown>
+    : null;
+  const workspaceInboxSummary = workspaceInbox?.summary
+    && typeof workspaceInbox.summary === 'object'
+    && !Array.isArray(workspaceInbox.summary)
+    ? workspaceInbox.summary as Record<string, unknown>
+    : null;
+  const workspaceInboxSections = workspaceInbox?.sections
+    && typeof workspaceInbox.sections === 'object'
+    && !Array.isArray(workspaceInbox.sections)
+    ? workspaceInbox.sections as Record<string, unknown>
+    : null;
+  const getInboxCards = (lane: string) => Array.isArray(workspaceInboxSections?.[lane])
+    ? workspaceInboxSections[lane].filter((entry): entry is Record<string, unknown> => isRecord(entry))
+    : [];
+  const inboxRunningCards = getInboxCards('running');
+  const inboxWaitingCards = getInboxCards('waiting');
+  const inboxReadyCards = getInboxCards('ready');
+  const inboxDeliveredCards = getInboxCards('delivered');
+  const workspaceInboxActiveTask = escapeHtml(
+    typeof workspaceInboxSummary?.active_task_id === 'string'
+      ? workspaceInboxSummary.active_task_id
+      : '当前还没有锁定主任务。',
+  );
+  const workspaceInboxSummaryChips = [
+    typeof workspaceInboxSummary?.known_task_count === 'number'
+      ? `<span class="summary-chip">Known ${workspaceInboxSummary.known_task_count}</span>`
+      : null,
+    typeof workspaceInboxSummary?.running_count === 'number'
+      ? `<span class="summary-chip">Running ${workspaceInboxSummary.running_count}</span>`
+      : null,
+    typeof workspaceInboxSummary?.waiting_count === 'number'
+      ? `<span class="summary-chip">Waiting ${workspaceInboxSummary.waiting_count}</span>`
+      : null,
+    typeof workspaceInboxSummary?.ready_count === 'number'
+      ? `<span class="summary-chip">Ready ${workspaceInboxSummary.ready_count}</span>`
+      : null,
+    typeof workspaceInboxSummary?.delivered_count === 'number'
+      ? `<span class="summary-chip">Delivered ${workspaceInboxSummary.delivered_count}</span>`
+      : null,
+  ].filter(Boolean).join('');
+  const renderInboxLane = (
+    title: string,
+    cards: Record<string, unknown>[],
+    emptyMessage: string,
+  ) => `
+    <div class="inbox-section">
+      <div class="inbox-section-header">
+        <h3>${escapeHtml(title)}</h3>
+        <span class="muted">${cards.length} task${cards.length === 1 ? '' : 's'}</span>
+      </div>
+      ${cards.length > 0
+        ? `<div class="inbox-grid">${cards.map((entry) => {
+          const taskTitle = escapeHtml(typeof entry.title === 'string' ? entry.title : 'Unnamed task');
+          const taskId = escapeHtml(typeof entry.task_id === 'string' ? entry.task_id : 'task');
+          const statusLabel = escapeHtml(typeof entry.status_label === 'string' ? entry.status_label : '状态待确认');
+          const summary = escapeHtml(typeof entry.summary === 'string' ? entry.summary : '');
+          const latestUpdate = escapeHtml(typeof entry.latest_update === 'string' ? entry.latest_update : '当前还没有新的进度更新时间。');
+          const nextStep = escapeHtml(typeof entry.next_step === 'string' ? entry.next_step : '继续查看这个任务的详细进度。');
+          const inspectPath = escapeHtml(typeof entry.inspect_path === 'string' ? entry.inspect_path : '当前还没有 inspect path。');
+          const deliverableCount = typeof entry.deliverable_count === 'number' ? entry.deliverable_count : 0;
+          return `<div class="inbox-card">`
+            + `<div class="inbox-card-title-row"><span class="inbox-card-title">${taskTitle}</span><code>${taskId}</code></div>`
+            + `<div class="muted">${statusLabel}</div>`
+            + (summary ? `<div class="inbox-copy">${summary}</div>` : '')
+            + `<div class="muted"><strong>Latest update:</strong> ${latestUpdate}</div>`
+            + `<div class="muted"><strong>Next step:</strong> ${nextStep}</div>`
+            + (deliverableCount > 0 ? `<div class="muted"><strong>Deliverables:</strong> ${deliverableCount}</div>` : '')
+            + `<div class="file-path">${inspectPath}</div>`
+            + `</div>`;
+        }).join('')}</div>`
+        : `<p class="muted" style="margin-top: 12px;">${escapeHtml(emptyMessage)}</p>`}
+    </div>`;
   const workspaceFiles = progress.workspace_files
     && typeof progress.workspace_files === 'object'
     && !Array.isArray(progress.workspace_files)
@@ -1488,6 +1564,82 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         font-weight: 600;
       }
 
+      .summary-chip {
+        display: inline-flex;
+        align-items: center;
+        min-height: 32px;
+        padding: 0 12px;
+        border-radius: 999px;
+        background: rgba(25, 52, 45, 0.06);
+        border: 1px solid rgba(25, 52, 45, 0.08);
+        color: var(--ink);
+        font-size: 0.9rem;
+        font-weight: 600;
+      }
+
+      .summary-chip-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      .inbox-sections {
+        display: grid;
+        gap: 16px;
+        margin-top: 16px;
+      }
+
+      .inbox-section {
+        padding: 16px;
+        border-radius: var(--radius-md);
+        background: rgba(31, 107, 90, 0.04);
+        border: 1px solid rgba(31, 107, 90, 0.08);
+      }
+
+      .inbox-section-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .inbox-grid {
+        display: grid;
+        gap: 12px;
+        margin-top: 14px;
+      }
+
+      .inbox-card {
+        padding: 14px;
+        border-radius: 12px;
+        border: 1px solid rgba(31, 107, 90, 0.08);
+        background: var(--panel-strong);
+      }
+
+      .inbox-card + .inbox-card {
+        margin-top: 12px;
+      }
+
+      .inbox-card-title-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .inbox-card-title,
+      .inbox-copy {
+        color: var(--ink);
+      }
+
+      .inbox-copy {
+        margin-top: 10px;
+        line-height: 1.7;
+      }
+
       .machine-detail {
         border: 1px solid var(--line);
         border-radius: var(--radius-md);
@@ -1633,6 +1785,19 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
               ${userOptions.length > 0
                 ? `<div style="margin-top: 18px;"><span class="meta-label">Ask like this</span><ul class="inspect-list">${userOptions.map((item) => `<li>${item}</li>`).join('')}</ul></div>`
                 : ''}
+            </div>
+
+            <div>
+              <h2>Workspace Inbox</h2>
+              <p class="muted">把当前 workspace 里能确认到的任务分成运行中、等待中、可继续和已交付四类。</p>
+              ${workspaceInboxSummaryChips ? `<div class="summary-chip-row">${workspaceInboxSummaryChips}</div>` : ''}
+              <p class="muted" style="margin-top: 12px;">当前主任务：${workspaceInboxActiveTask}</p>
+              <div class="inbox-sections">
+                ${renderInboxLane('Running', inboxRunningCards, '当前没有处于运行中的任务。')}
+                ${renderInboxLane('Waiting', inboxWaitingCards, '当前没有等待中的任务。')}
+                ${renderInboxLane('Ready', inboxReadyCards, '当前没有可直接继续的任务。')}
+                ${renderInboxLane('Delivered', inboxDeliveredCards, '当前还没有形成明确交付的任务。')}
+              </div>
             </div>
           </div>
 
