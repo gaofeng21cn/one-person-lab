@@ -3,6 +3,7 @@ from __future__ import annotations
 from opl_harness_shared.family_orchestration import (
     build_family_human_gate,
     build_family_orchestration_companion,
+    build_family_orchestration_template,
     resolve_active_run_id,
     resolve_program_id,
 )
@@ -54,3 +55,44 @@ def test_build_family_orchestration_companion_materializes_event_and_lineage() -
     assert payload["event_envelope"]["payload"]["runtime_decision"] == "continue"
     assert payload["checkpoint_lineage"]["checkpoint_id"].startswith("checkpoint-")
     assert payload["human_gates"][0]["gate_id"] == "gate-1"
+
+
+def test_build_family_orchestration_template_normalizes_shared_preview_surfaces() -> None:
+    payload = build_family_orchestration_template(
+        action_graph={
+            "version": "family-action-graph.v1",
+            "graph_id": "graph-1",
+            "target_domain_id": "med-autoscience",
+            "graph_kind": "study_runtime_orchestration",
+            "graph_version": "2026-04-18",
+            "nodes": [{"node_id": "step:open_frontdesk"}],
+            "edges": [],
+            "entry_nodes": ["step:open_frontdesk"],
+            "exit_nodes": ["step:open_frontdesk"],
+            "human_gates": [{"gate_id": "gate-1", "trigger_nodes": ["step:open_frontdesk"], "blocking": True}],
+            "checkpoint_policy": {"mode": "explicit_nodes", "checkpoint_nodes": ["step:open_frontdesk"]},
+        },
+        human_gates=[{"gate_id": "gate-1", "title": "Gate 1", "status": "requested"}],
+        resume_surface_kind="launch_study",
+        session_locator_field="study_id",
+        checkpoint_locator_field="controller_decision_path",
+        event_envelope_surface={
+            "ref_kind": "workspace_locator",
+            "ref": "studies/<study_id>/runtime_watch/latest.json",
+        },
+        checkpoint_lineage_surface={
+            "ref_kind": "workspace_locator",
+            "ref": "studies/<study_id>/controller_decisions/latest.json",
+        },
+    )
+
+    assert payload["action_graph_ref"]["ref"] == "/family_orchestration/action_graph"
+    assert payload["action_graph"]["graph_id"] == "graph-1"
+    assert "family_human_gates" not in payload
+    assert payload["resume_contract"] == {
+        "surface_kind": "launch_study",
+        "session_locator_field": "study_id",
+        "checkpoint_locator_field": "controller_decision_path",
+    }
+    assert payload["event_envelope_surface"]["ref_kind"] == "workspace_locator"
+    assert payload["checkpoint_lineage_surface"]["ref_kind"] == "workspace_locator"

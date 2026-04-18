@@ -123,6 +123,52 @@ def build_family_human_gate(
     return payload
 
 
+def build_family_orchestration_template(
+    *,
+    action_graph: Mapping[str, Any],
+    human_gates: Sequence[Mapping[str, Any]] | None = None,
+    resume_surface_kind: str,
+    session_locator_field: str,
+    checkpoint_locator_field: str,
+    action_graph_ref: Mapping[str, Any] | None = None,
+    event_envelope_surface: Mapping[str, Any] | None = None,
+    checkpoint_lineage_surface: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    if not isinstance(action_graph, Mapping):
+        raise ValueError("family orchestration 缺少 mapping 字段: action_graph")
+    normalized_human_gates = [dict(gate) for gate in human_gates or () if isinstance(gate, Mapping)]
+    normalized_action_graph_ref = _normalize_ref(action_graph_ref, "action_graph_ref") or {
+        "ref_kind": "json_pointer",
+        "ref": "/family_orchestration/action_graph",
+        "label": "family action graph",
+    }
+    normalized_event_envelope_surface = _normalize_ref(event_envelope_surface, "event_envelope_surface")
+    normalized_checkpoint_lineage_surface = _normalize_ref(
+        checkpoint_lineage_surface,
+        "checkpoint_lineage_surface",
+    )
+    return {
+        "action_graph_ref": normalized_action_graph_ref,
+        "action_graph": dict(action_graph),
+        "human_gates": normalized_human_gates,
+        "resume_contract": {
+            "surface_kind": _require_string(resume_surface_kind, "resume_surface_kind"),
+            "session_locator_field": _require_string(session_locator_field, "session_locator_field"),
+            "checkpoint_locator_field": _require_string(checkpoint_locator_field, "checkpoint_locator_field"),
+        },
+        **(
+            {"event_envelope_surface": normalized_event_envelope_surface}
+            if normalized_event_envelope_surface is not None
+            else {}
+        ),
+        **(
+            {"checkpoint_lineage_surface": normalized_checkpoint_lineage_surface}
+            if normalized_checkpoint_lineage_surface is not None
+            else {}
+        ),
+    }
+
+
 def build_family_orchestration_companion(
     *,
     surface_kind: str,
@@ -313,39 +359,21 @@ def build_family_orchestration_companion(
     if normalized_restoration_refs:
         checkpoint_lineage_payload["restoration_evidence"] = normalized_restoration_refs
 
-    normalized_action_graph_ref = _normalize_ref(action_graph_ref, "action_graph_ref")
-    if normalized_action_graph_ref is None and isinstance(action_graph, Mapping):
-        normalized_action_graph_ref = {
-            "ref_kind": "json_pointer",
-            "ref": "/family_orchestration/action_graph",
-            "label": "family action graph",
-        }
-    normalized_event_envelope_surface = _normalize_ref(event_envelope_surface, "event_envelope_surface")
-    normalized_checkpoint_lineage_surface = _normalize_ref(
-        checkpoint_lineage_surface,
-        "checkpoint_lineage_surface",
+    template = build_family_orchestration_template(
+        action_graph=dict(action_graph or {}),
+        human_gates=normalized_human_gates,
+        resume_surface_kind=_text(resume_surface_kind) or resolved_surface_kind,
+        session_locator_field=_text(session_locator_field) or "event_envelope.session.session_id",
+        checkpoint_locator_field=_text(checkpoint_locator_field) or "checkpoint_lineage.checkpoint_id",
+        action_graph_ref=action_graph_ref,
+        event_envelope_surface=event_envelope_surface,
+        checkpoint_lineage_surface=checkpoint_lineage_surface,
     )
 
     return {
-        **({"action_graph_ref": normalized_action_graph_ref} if normalized_action_graph_ref is not None else {}),
-        **({"action_graph": dict(action_graph)} if isinstance(action_graph, Mapping) else {}),
+        **template,
         "human_gates": normalized_human_gates,
         "family_human_gates": normalized_human_gates,
-        "resume_contract": {
-            "surface_kind": _text(resume_surface_kind) or resolved_surface_kind,
-            "session_locator_field": _text(session_locator_field) or "event_envelope.session.session_id",
-            "checkpoint_locator_field": _text(checkpoint_locator_field) or "checkpoint_lineage.checkpoint_id",
-        },
-        **(
-            {"event_envelope_surface": normalized_event_envelope_surface}
-            if normalized_event_envelope_surface is not None
-            else {}
-        ),
-        **(
-            {"checkpoint_lineage_surface": normalized_checkpoint_lineage_surface}
-            if normalized_checkpoint_lineage_surface is not None
-            else {}
-        ),
         "event_envelope": event_envelope,
         "family_event_envelope": event_envelope,
         "checkpoint_lineage": checkpoint_lineage_payload,

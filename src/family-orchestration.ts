@@ -64,6 +64,17 @@ export interface BuildFamilyOrchestrationCompanionInput {
   checkpoint_lineage_surface?: FamilyReference | null;
 }
 
+export interface BuildFamilyOrchestrationTemplateInput {
+  action_graph: JsonRecord;
+  human_gates?: JsonRecord[] | null;
+  resume_surface_kind: string;
+  session_locator_field: string;
+  checkpoint_locator_field: string;
+  action_graph_ref?: FamilyReference | null;
+  event_envelope_surface?: FamilyReference | null;
+  checkpoint_lineage_surface?: FamilyReference | null;
+}
+
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -160,6 +171,33 @@ export function buildFamilyHumanGate(input: BuildFamilyHumanGateInput) {
     gate.decision = { ...input.decision };
   }
   return gate;
+}
+
+export function buildFamilyOrchestrationTemplate(input: BuildFamilyOrchestrationTemplateInput) {
+  const actionGraph = isRecord(input.action_graph) ? { ...input.action_graph } : null;
+  if (!actionGraph) {
+    throw new Error('family orchestration 缺少 mapping 字段: action_graph');
+  }
+  const humanGates = Array.isArray(input.human_gates)
+    ? input.human_gates.filter((gate): gate is JsonRecord => isRecord(gate)).map((gate) => ({ ...gate }))
+    : [];
+  const actionGraphRef = normalizeRef(input.action_graph_ref, 'action_graph_ref')
+    ?? { ref_kind: 'json_pointer', ref: '/family_orchestration/action_graph', label: 'family action graph' };
+  const eventEnvelopeSurface = normalizeRef(input.event_envelope_surface, 'event_envelope_surface');
+  const checkpointLineageSurface = normalizeRef(input.checkpoint_lineage_surface, 'checkpoint_lineage_surface');
+
+  return {
+    action_graph_ref: actionGraphRef,
+    action_graph: actionGraph,
+    human_gates: humanGates,
+    resume_contract: {
+      surface_kind: requireString(input.resume_surface_kind, 'resume_surface_kind'),
+      session_locator_field: requireString(input.session_locator_field, 'session_locator_field'),
+      checkpoint_locator_field: requireString(input.checkpoint_locator_field, 'checkpoint_locator_field'),
+    },
+    ...(eventEnvelopeSurface ? { event_envelope_surface: eventEnvelopeSurface } : {}),
+    ...(checkpointLineageSurface ? { checkpoint_lineage_surface: checkpointLineageSurface } : {}),
+  };
 }
 
 export function buildFamilyOrchestrationCompanion(input: BuildFamilyOrchestrationCompanionInput) {
@@ -289,24 +327,21 @@ export function buildFamilyOrchestrationCompanion(input: BuildFamilyOrchestratio
     checkpointLineage.restoration_evidence = restorationEvidence;
   }
 
-  const actionGraph = isRecord(input.action_graph) ? { ...input.action_graph } : null;
-  const actionGraphRef = normalizeRef(input.action_graph_ref, 'action_graph_ref')
-    ?? (actionGraph ? { ref_kind: 'json_pointer', ref: '/family_orchestration/action_graph', label: 'family action graph' } : null);
-  const eventEnvelopeSurface = normalizeRef(input.event_envelope_surface, 'event_envelope_surface');
-  const checkpointLineageSurface = normalizeRef(input.checkpoint_lineage_surface, 'checkpoint_lineage_surface');
+  const template = buildFamilyOrchestrationTemplate({
+    action_graph: isRecord(input.action_graph) ? input.action_graph : {},
+    human_gates: humanGates,
+    resume_surface_kind: optionalString(input.resume_surface_kind) ?? surfaceKind,
+    session_locator_field: optionalString(input.session_locator_field) ?? 'event_envelope.session.session_id',
+    checkpoint_locator_field: optionalString(input.checkpoint_locator_field) ?? 'checkpoint_lineage.checkpoint_id',
+    action_graph_ref: input.action_graph_ref ?? null,
+    event_envelope_surface: input.event_envelope_surface ?? null,
+    checkpoint_lineage_surface: input.checkpoint_lineage_surface ?? null,
+  });
 
   return {
-    ...(actionGraphRef ? { action_graph_ref: actionGraphRef } : {}),
-    ...(actionGraph ? { action_graph: actionGraph } : {}),
+    ...template,
     human_gates: humanGates,
     family_human_gates: humanGates,
-    resume_contract: {
-      surface_kind: optionalString(input.resume_surface_kind) ?? surfaceKind,
-      session_locator_field: optionalString(input.session_locator_field) ?? 'event_envelope.session.session_id',
-      checkpoint_locator_field: optionalString(input.checkpoint_locator_field) ?? 'checkpoint_lineage.checkpoint_id',
-    },
-    ...(eventEnvelopeSurface ? { event_envelope_surface: eventEnvelopeSurface } : {}),
-    ...(checkpointLineageSurface ? { checkpoint_lineage_surface: checkpointLineageSurface } : {}),
     event_envelope: eventEnvelope,
     family_event_envelope: eventEnvelope,
     checkpoint_lineage: checkpointLineage,

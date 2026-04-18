@@ -7,6 +7,7 @@ from .automation_companions import (
 from .family_orchestration import (
     build_family_human_gate,
     build_family_orchestration_companion,
+    build_family_orchestration_template,
     resolve_active_run_id,
     resolve_program_id,
 )
@@ -60,6 +61,7 @@ __all__ = [
     "build_checkpoint_summary",
     "build_family_human_gate",
     "build_family_orchestration_companion",
+    "build_family_orchestration_template",
     "build_managed_runtime_contract",
     "build_product_entry_overview",
     "build_product_entry_quickstart",
