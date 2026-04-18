@@ -2,9 +2,27 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import {
+  buildCodexCliPreview,
+  buildCodexExecArgs,
+  extractCodexRecentOutput,
+  parseCodexExecOutput,
+  resolveCodexBinary,
+} from './codex.ts';
 import { GatewayContractError } from './contracts.ts';
+import { readFrontDeskRuntimeModes } from './frontdesk-runtime-modes.ts';
 import { ensureFrontDeskStateDir, resolveFrontDeskStatePaths } from './frontdesk-state.ts';
-import { prepareProductEntryAsk, type ProductEntryCliInput } from './product-entry.ts';
+import {
+  buildHermesCliPreview,
+  parseHermesQuietChatOutput,
+  resolveHermesBinary,
+} from './hermes.ts';
+import {
+  prepareProductEntryAsk,
+  type PreparedProductEntryAsk,
+  type ProductEntryCliInput,
+  type ProductEntryExecutor,
+} from './product-entry.ts';
 import type { GatewayContracts } from './types.ts';
 
 type FrontDeskTaskStatus = 'accepted' | 'running' | 'succeeded' | 'failed';
@@ -13,6 +31,7 @@ type FrontDeskTaskRecord = {
   version: 'g1';
   task_id: string;
   mode: 'ask';
+  executor_backend: ProductEntryExecutor;
   status: FrontDeskTaskStatus;
   stage: string;
   summary: string;
@@ -108,99 +127,109 @@ function extractRecentOutput(output: string) {
     .join('\n');
 }
 
-function resolveOplCliEntry() {
-  const cliEntry = process.argv[1];
-  if (!cliEntry) {
+function resolveFrontDeskAskExecutor(input: ProductEntryCliInput): ProductEntryExecutor {
+  return input.executor ?? readFrontDeskRuntimeModes().interaction_mode;
+}
+
+function buildTaskExecution(
+  input: ProductEntryCliInput,
+  preparedAsk: PreparedProductEntryAsk,
+  executorBackend: ProductEntryExecutor,
+) {
+  if (executorBackend === 'codex') {
+    const codexBinary = resolveCodexBinary();
+    if (!codexBinary) {
+      throw new GatewayContractError(
+        'surface_not_found',
+        'Codex binary is required for Codex-backed frontdesk execution.',
+        {
+          env_var: 'OPL_CODEX_BIN',
+        },
+      );
+    }
+
+    const args = buildCodexExecArgs(preparedAsk.handoffPrompt, {
+      cwd: input.workspacePath,
+      json: true,
+      model: input.model,
+      provider: input.provider,
+    });
+
+    return {
+      command: codexBinary.path,
+      args,
+      preview: buildCodexCliPreview(args),
+    };
+  }
+
+  const hermesBinary = resolveHermesBinary();
+  if (!hermesBinary) {
     throw new GatewayContractError(
-      'cli_usage_error',
-      'Unable to determine the active OPL CLI entrypoint for frontdesk task execution.',
+      'hermes_binary_not_found',
+      'Hermes binary is required for Hermes-backed frontdesk execution.',
+      {
+        env_var: 'OPL_HERMES_BIN',
+      },
     );
   }
 
-  return cliEntry;
-}
-
-function buildOplAskExecution(input: ProductEntryCliInput, contracts: GatewayContracts) {
-  const cliEntry = resolveOplCliEntry();
-  const execArgs = [
-    ...process.execArgv,
-    cliEntry,
-    '--contracts-dir',
-    contracts.contractsDir,
-    'ask',
-    input.goal,
-    '--intent',
-    input.intent,
-    '--target',
-    input.target,
-  ];
-  const preview = [
-    'opl',
-    '--contracts-dir',
-    contracts.contractsDir,
-    'ask',
-    input.goal,
-    '--intent',
-    input.intent,
-    '--target',
-    input.target,
-  ];
-
-  if (input.preferredFamily) {
-    execArgs.push('--preferred-family', input.preferredFamily);
-    preview.push('--preferred-family', input.preferredFamily);
-  }
-
-  if (input.requestKind) {
-    execArgs.push('--request-kind', input.requestKind);
-    preview.push('--request-kind', input.requestKind);
-  }
-
-  if (input.model) {
-    execArgs.push('--model', input.model);
-    preview.push('--model', input.model);
-  }
-
-  if (input.provider) {
-    execArgs.push('--provider', input.provider);
-    preview.push('--provider', input.provider);
-  }
-
-  if (input.workspacePath) {
-    execArgs.push('--workspace-path', input.workspacePath);
-    preview.push('--workspace-path', input.workspacePath);
-  }
-
-  if (input.skills.length > 0) {
-    const joinedSkills = input.skills.join(',');
-    execArgs.push('--skills', joinedSkills);
-    preview.push('--skills', joinedSkills);
-  }
-
   return {
-    execArgs,
-    preview,
+    command: hermesBinary.path,
+    args: preparedAsk.args,
+    preview: buildHermesCliPreview(preparedAsk.args),
   };
 }
 
-function extractCliAskPayload(output: string) {
-  try {
-    const parsed = JSON.parse(output) as {
-      product_entry?: {
-        hermes?: {
-          response?: string;
-          session_id?: string | null;
-        };
-      };
-    };
+function buildTaskRunningSummary(executorBackend: ProductEntryExecutor) {
+  return executorBackend === 'codex'
+    ? '后台执行已启动，Codex 正在接管这个请求。'
+    : '后台执行已启动，Hermes 正在处理这个请求。';
+}
+
+function buildTaskRecentOutput(logFile: string, executorBackend: ProductEntryExecutor, lines = 20) {
+  if (!fs.existsSync(logFile)) {
+    return '';
+  }
+
+  const rawOutput = fs.readFileSync(logFile, 'utf8');
+  const recentOutput = buildTaskHumanOutput(rawOutput, executorBackend);
+  if (!recentOutput) {
+    return tailLines(logFile, lines);
+  }
+
+  return recentOutput
+    .split(/\r?\n/)
+    .slice(-lines)
+    .join('\n');
+}
+
+function buildTaskHumanOutput(output: string, executorBackend: ProductEntryExecutor) {
+  if (executorBackend === 'codex') {
+    return extractCodexRecentOutput(output, 20);
+  }
+
+  return extractRecentOutput(output);
+}
+
+function extractTaskCompletionPayload(output: string, executorBackend: ProductEntryExecutor) {
+  if (executorBackend === 'codex') {
+    const parsed = parseCodexExecOutput(output);
     return {
-      response: parsed.product_entry?.hermes?.response ?? '',
-      sessionId: parsed.product_entry?.hermes?.session_id ?? null,
+      sessionId: parsed.threadId,
+      response: parsed.finalMessage || buildTaskHumanOutput(output, executorBackend),
+    };
+  }
+
+  try {
+    const parsed = parseHermesQuietChatOutput(output);
+    return {
+      sessionId: parsed.sessionId,
+      response: parsed.response || buildTaskHumanOutput(output, executorBackend),
     };
   } catch {
     return {
-      response: '',
       sessionId: null,
+      response: buildTaskHumanOutput(output, executorBackend),
     };
   }
 }
@@ -210,7 +239,8 @@ export function submitFrontDeskAskTask(
   contracts: GatewayContracts,
 ) {
   const preparedAsk = prepareProductEntryAsk(input, contracts);
-  const cliExecution = buildOplAskExecution(input, contracts);
+  const executorBackend = resolveFrontDeskAskExecutor(input);
+  const taskExecution = buildTaskExecution(input, preparedAsk, executorBackend);
   const taskId = buildTaskId();
   const now = new Date().toISOString();
   const { logFile } = resolveTaskFiles(taskId);
@@ -220,9 +250,10 @@ export function submitFrontDeskAskTask(
     version: 'g1',
     task_id: taskId,
     mode: 'ask',
+    executor_backend: executorBackend,
     status: 'accepted',
     stage: 'queued',
-    summary: '请求已受理，正在提交到后台执行。',
+    summary: `请求已受理，准备提交给 ${executorBackend === 'codex' ? 'Codex' : 'Hermes'}。`,
     created_at: now,
     updated_at: now,
     goal: input.goal,
@@ -230,7 +261,7 @@ export function submitFrontDeskAskTask(
     session_id: null,
     pid: null,
     exit_code: null,
-    command_preview: cliExecution.preview,
+    command_preview: taskExecution.preview,
     log_file: logFile,
     recent_output: '',
     routing_status: preparedAsk.routing.status,
@@ -239,7 +270,7 @@ export function submitFrontDeskAskTask(
   };
   writeTaskRecord(initialTask);
 
-  const child = spawn(process.execPath, cliExecution.execArgs, {
+  const child = spawn(taskExecution.command, taskExecution.args, {
     cwd: input.workspacePath ?? process.cwd(),
     env: process.env,
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -249,7 +280,7 @@ export function submitFrontDeskAskTask(
     ...current,
     status: 'running',
     stage: 'running',
-    summary: '后台执行已启动，正在通过 OPL ask 统一入口处理请求。',
+    summary: buildTaskRunningSummary(executorBackend),
     pid: child.pid ?? null,
   }));
 
@@ -257,10 +288,12 @@ export function submitFrontDeskAskTask(
     const text = chunk.toString();
     fs.appendFileSync(logFile, text, 'utf8');
     updateTaskRecord(taskId, (current) => {
-      const recentOutput = extractRecentOutput(`${current.recent_output}\n${text}`);
+      const recentOutput = buildTaskRecentOutput(logFile, executorBackend, 8);
+      const latestLine = recentOutput.split(/\r?\n/).filter(Boolean).at(-1) ?? current.summary;
       return {
         ...current,
         recent_output: recentOutput,
+        summary: latestLine,
       };
     });
   };
@@ -280,20 +313,20 @@ export function submitFrontDeskAskTask(
 
   child.once('close', (code) => {
     const rawOutput = fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8') : '';
-    const cliAskPayload = extractCliAskPayload(rawOutput);
+    const completion = extractTaskCompletionPayload(rawOutput, executorBackend);
     updateTaskRecord(taskId, (current) => ({
       ...current,
       status: code === 0 ? 'succeeded' : 'failed',
       stage: code === 0 ? 'completed' : 'failed',
       summary:
         code === 0
-          ? cliAskPayload.sessionId
-            ? '后台执行已完成，并已通过 OPL ask 建立会话记录。'
-            : '后台执行已完成。'
+          ? completion.sessionId
+            ? `${executorBackend === 'codex' ? 'Codex' : 'Hermes'} 已完成本轮执行，并已记录会话。`
+            : `${executorBackend === 'codex' ? 'Codex' : 'Hermes'} 已完成本轮执行。`
           : '后台执行失败，请查看最近输出。',
-      session_id: cliAskPayload.sessionId ?? current.session_id,
+      session_id: completion.sessionId ?? current.session_id,
       exit_code: code ?? 1,
-      recent_output: cliAskPayload.response || tailLines(logFile, 20),
+      recent_output: completion.response || buildTaskRecentOutput(logFile, executorBackend, 20),
     }));
   });
 
@@ -305,6 +338,7 @@ export function submitFrontDeskAskTask(
       mode: 'ask',
       dry_run: false,
       execution_mode: 'async_accept',
+      executor_backend: executorBackend,
       input: preparedAsk.resolveInput,
       routing: preparedAsk.routing,
       boundary: preparedAsk.boundary,
@@ -314,8 +348,9 @@ export function submitFrontDeskAskTask(
         task_id: taskId,
         status: 'accepted',
         stage: 'queued',
-        summary: '请求已受理，正在提交到后台执行。',
+        summary: initialTask.summary,
         session_id: null,
+        executor_backend: executorBackend,
       },
     },
   };
@@ -343,8 +378,9 @@ export function readFrontDeskTaskStatus(taskId: string, lines = 20) {
         status: task.status,
         stage: task.stage,
         summary: task.summary,
+        executor_backend: task.executor_backend,
         session_id: task.session_id,
-        recent_output: tailLines(task.log_file, lines),
+        recent_output: buildTaskRecentOutput(task.log_file, task.executor_backend, lines),
         exit_code: task.exit_code,
         created_at: task.created_at,
         updated_at: task.updated_at,

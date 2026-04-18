@@ -25,11 +25,6 @@ import {
   type LocalCodexDefaults,
 } from './local-codex-defaults.ts';
 import type { GatewayContracts } from './types.ts';
-import {
-  bootstrapLocalPaperclipControlPlane,
-  buildPaperclipControlPlaneSummary,
-  type PaperclipControlPlaneSummary,
-} from './paperclip-control-plane.ts';
 import { bindWorkspace } from './workspace-registry.ts';
 
 export type FrontDeskLibreChatServiceOptions = {
@@ -39,7 +34,6 @@ export type FrontDeskLibreChatServiceOptions = {
   sessionsLimit?: number;
   basePath?: string;
   publicOrigin?: string;
-  paperclipBaseUrl?: string;
 };
 
 type LibreChatServiceConfigFile = {
@@ -559,7 +553,6 @@ async function buildPayload(
   contracts: GatewayContracts,
   action: 'install' | 'status' | 'start' | 'stop' | 'open',
   config: LibreChatServiceConfigFile | null,
-  paperclipSummary?: PaperclipControlPlaneSummary | null,
 ) {
   const installedStackAssets = hasInstalledStackAssets(config);
   const frontdeskServicePayload = config
@@ -585,7 +578,6 @@ async function buildPayload(
     ...(frontdeskServicePayload.frontdesk_service
       ? { frontdesk_service: frontdeskServicePayload.frontdesk_service }
       : {}),
-    ...(paperclipSummary ? { paperclip_control_plane: paperclipSummary } : {}),
     frontdesk_librechat: {
       action,
       installed: installedStackAssets,
@@ -618,6 +610,7 @@ async function buildPayload(
       notes: [
         'This is the local LibreChat-first front door for OPL, not a claim that managed hosted runtime is landed.',
         'The chat shell talks to OPL through the shipped MCP stdio bridge, while the OPL front desk remains the routed gateway.',
+        'Paperclip is no longer part of the OPL GUI mainline; this fallback shell only keeps the LibreChat lane available.',
         ...(config && !installedStackAssets
           ? [
               'Recorded stack config exists but stack assets are missing. Re-run frontdesk-librechat-start or frontdesk-librechat-install to resync the local front door.',
@@ -698,28 +691,17 @@ export async function installFrontDeskLibreChatService(
     codex_reasoning_effort: syncedConfig.codex_reasoning_effort,
   });
 
-  debugLog('install.paperclip_bootstrap.start');
-  const paperclipSummary = await bootstrapLocalPaperclipControlPlane(contracts, {
-    workspacePath: syncedConfig.workspace_path,
-    projectId: 'medautoscience',
-    explicitBaseUrl: options.paperclipBaseUrl,
-  });
-  debugLog('install.paperclip_bootstrap.done', {
-    readiness: paperclipSummary.readiness,
-  });
-
   debugLog('install.docker_up.start');
   runDockerCompose(syncedConfig, 'up');
   debugLog('install.docker_up.done');
 
   debugLog('install.payload.start');
-  return await buildPayload(contracts, 'install', syncedConfig, paperclipSummary);
+  return await buildPayload(contracts, 'install', syncedConfig);
 }
 
 export async function getFrontDeskLibreChatServiceStatus(contracts: GatewayContracts) {
   const config = readLibreChatConfigFile();
-  const paperclipSummary = config ? buildPaperclipControlPlaneSummary(contracts) : null;
-  return await buildPayload(contracts, 'status', config, paperclipSummary);
+  return await buildPayload(contracts, 'status', config);
 }
 
 export async function stopFrontDeskLibreChatService(contracts: GatewayContracts) {
@@ -732,7 +714,7 @@ export async function stopFrontDeskLibreChatService(contracts: GatewayContracts)
   }
 
   runDockerCompose(config, 'down');
-  return await buildPayload(contracts, 'stop', config, buildPaperclipControlPlaneSummary(contracts));
+  return await buildPayload(contracts, 'stop', config);
 }
 
 export async function startFrontDeskLibreChatService(contracts: GatewayContracts) {
@@ -747,7 +729,7 @@ export async function startFrontDeskLibreChatService(contracts: GatewayContracts
   const syncedConfig = syncInstalledFrontDoorAssets(contracts, config);
   await startFrontDeskService(contracts);
   runDockerCompose(syncedConfig, 'up');
-  return await buildPayload(contracts, 'start', syncedConfig, buildPaperclipControlPlaneSummary(contracts));
+  return await buildPayload(contracts, 'start', syncedConfig);
 }
 
 export async function openFrontDeskLibreChatService(contracts: GatewayContracts) {
@@ -774,5 +756,5 @@ export async function openFrontDeskLibreChatService(contracts: GatewayContracts)
     );
   }
 
-  return await buildPayload(contracts, 'open', config, buildPaperclipControlPlaneSummary(contracts));
+  return await buildPayload(contracts, 'open', config);
 }

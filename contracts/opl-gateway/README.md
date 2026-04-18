@@ -15,24 +15,26 @@ For the broader ownership split, see [Shared Foundation](../../docs/shared-found
 
 ## Current baseline and absorbed follow-on alignment
 
-As of `2026-04-11`, the active public `opl-mainline` has already moved into the family-level front desk / hosted-entry hardening line around the local `opl` shell and `opl web`, while the repo-tracked formal entry still remains the `Phase 1` local `TypeScript CLI`-first, read-only gateway baseline that reads the frozen contract artifacts in this directory.
-That transport is currently exercised through Codex-only local sessions for planning, implementation, and verification, but this directory does not declare Codex as the product runtime substrate owner.
+As of `2026-04-11`, the active public `opl-mainline` has already moved into the family-level front desk / hosted-entry hardening line around the local GUI front desk, the local `opl` shell shortcuts, and `opl web`, while the repo-tracked formal entry still remains the `Phase 1` local `TypeScript CLI`-first, read-only gateway baseline that reads the frozen contract artifacts in this directory.
+The current public default path is `GUI front desk -> Codex -> OPL gateway surfaces`: `opl frontdesk bootstrap --path <workspace>` prepares the local `OPL Atlas` Desktop shell, the local web front desk stays as a companion surface, and this directory freezes the gateway surfaces behind that front door without declaring Codex as the product runtime substrate owner.
 The completed `Phase 1 / G2 release-closeout` has already closed the `G2 stable public baseline` into one stable repo-tracked public entry.
 That repo-tracked baseline therefore remains the current `OPL` formal entry contract and public system surface even though the public mainline has already absorbed the minimal admitted-domain federation package and continued into the front-desk layer above it.
 The completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` remains closed at the planning-contract layer: this directory freezes the planning gate / planning-level contract around `route_request`, `build_handoff_payload`, and `audit_routing_decision`. The only allowed successful handoff target remains `domain_gateway`, the no-bypass rule still forbids direct domain-harness targeting, and `routed-actions.schema.json` stays in the planning-dependency layer.
 The repo-tracked `Phase 1` candidate-domain closeout order is frozen as `Review Ops` then `Thesis Ops`: both candidate paths remain below domain admission, `G2` discovery readiness, `G3` routed-action readiness, and handoff readiness.
 The absorbed predecessor gate is `Phase 1 exit + next-stage activation package freeze`, and the current `Phase 2 / Minimal admitted-domain federation activation package` is already absorbed into repo-tracked top-level truth for the already admitted `MedAutoScience` and `RedCube AI` domain surfaces. No new active follow-on tranche is currently open; another central sync only becomes truthful when an admitted-domain repository lands a new absorbed delta or the central reference surfaces drift. Runtime ownership continues to stay with the admitted domains.
 The current repo-tracked formal entry at the OPL layer therefore remains the local `TypeScript CLI`-first / read-only gateway surface.
-The current user-facing front door above that contract is now the local `opl` shell plus the `opl web` pilot and their machine-readable discovery / handoff surfaces, including the hosted-friendly `frontdesk-manifest`, `frontdesk-entry-guide`, `frontdesk-readiness`, `frontdesk-domain-wiring`, `hosted-bundle`, and related handoff surfaces.
+The current user-facing front door above that contract now centers on the GUI front desk plus its local shell shortcuts and `opl web` companion surface, including the hosted-friendly `frontdesk-manifest`, `frontdesk-entry-guide`, `frontdesk-readiness`, `frontdesk-domain-wiring`, `hosted-bundle`, and related handoff surfaces.
+Within that front door, `interaction_mode=codex` and `execution_mode=codex` are the default public modes, while `Hermes-Agent` stays available only as an explicit alternate mode for interactive continuation and selected executor routing.
 Within that front-desk set, `frontdesk-readiness` is the operator-facing derived board for local service status, hosted pilot readiness, and domain-owned `product_entry_readiness / preflight` truth; it stays downstream of existing manifest / binding / runtime surfaces and must not become a second truth source.
 Within the same set, `frontdesk-entry-guide` is the family-level machine-readable entry layer for AI / GUI shells: it freezes workspace taxonomy, domain workspace mapping, and per-domain start guidance without replacing domain-owned manifests.
 `frontdesk-manifest` and the `opl web` startup payload now freeze the shell bootstrap order explicitly: `frontdesk-entry-guide` is the primary discovery surface, `frontdesk-readiness` plus `frontdesk-domain-wiring` are follow-on alignment surfaces, and `dashboard` is kept as the operator debug / aggregate surface rather than the default shell entry source.
 If a higher-level shell is later branded as `OPL Cortex`, that remains a product-shell name above these repo-internal `frontdesk_*` contract ids unless a separate rename tranche is explicitly frozen.
-That delivery target keeps the existing top-level contract language executable through a local CLI surface, while any honest upstream `Hermes-Agent` rollout remains a domain-side migration target rather than a current OPL-layer fact.
+`Paperclip` remains outside the primary front door as an optional downstream control-plane bridge, and `LibreChat` remains outside the primary front door as an optional compatibility / fallback lane.
+That delivery target keeps the existing top-level contract language executable through local GUI and CLI surfaces, while any honest upstream `Hermes-Agent` rollout remains a domain-side migration target rather than a current OPL-layer fact.
 
 ## Current reference-sync companions
 
-These reference-grade companions freeze the current cross-repo status picture and Codex-only runtime wording while keeping this directory aligned with the authoritative public surfaces.
+These reference-grade companions freeze the current cross-repo status picture and GUI-first / Codex-default runtime wording while keeping this directory aligned with the authoritative public surfaces.
 This active companion set is anchored to `2026-04-11` and carries the responsibility of keeping the latest admitted-domain absorbed deltas visible in top-level OPL reference-sync surfaces without promoting those references into public-mainline truth.
 
 - [Ecosystem Status Matrix](../../docs/references/ecosystem-status-matrix.md) — Chinese-only internal reference for the current four-repo stage/status picture
@@ -43,7 +45,7 @@ This active companion set is anchored to `2026-04-11` and carries the responsibi
 
 ## Historical migration references
 
-These references are kept for historical migration and offboarding context only. The active execution mainline continues to be documented through the current Codex-only public surfaces.
+These references are kept for historical migration and offboarding context only. The active execution mainline continues to be documented through the current GUI-first / Codex-default public surfaces.
 
 - [Development Operating Model](../../docs/references/development-operating-model.md) — Chinese-only historical migration reference for `Codex Host` / `OMX` operating discipline
 - [Runtime Alignment Taskboard](../../docs/references/runtime-alignment-taskboard.md) — Chinese-only historical reference for the retired four-repo convergence checklist

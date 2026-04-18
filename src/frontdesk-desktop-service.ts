@@ -15,20 +15,16 @@ import {
   OPL_FRONTDOOR_AGENT_LABEL,
   OPL_FRONTDOOR_APP_TITLE,
 } from './frontdesk-librechat-identity.ts';
+import { readFrontDeskRuntimeModes } from './frontdesk-runtime-modes.ts';
 import {
   installFrontDeskService,
   type FrontDeskServiceOptions,
 } from './frontdesk-service.ts';
 import { readLocalCodexDefaults } from './local-codex-defaults.ts';
-import {
-  bootstrapLocalPaperclipControlPlane,
-} from './paperclip-control-plane.ts';
 import type { GatewayContracts } from './types.ts';
 import { bindWorkspace } from './workspace-registry.ts';
 
-export type FrontDeskDesktopBootstrapOptions = FrontDeskServiceOptions & {
-  paperclipBaseUrl?: string;
-};
+export type FrontDeskDesktopBootstrapOptions = FrontDeskServiceOptions;
 
 type ActiveProjectBinding = {
   project_id: string;
@@ -147,6 +143,7 @@ export async function bootstrapFrontDeskDesktop(
   });
   const activeBinding = syncMasWorkspaceBinding(contracts, workspacePath, frontdeskUrl);
   const codexDefaults = readLocalCodexDefaults();
+  const runtimeModes = readFrontDeskRuntimeModes();
   const desktopPackage = buildFrontDeskDesktopPackage({
     outputDir: statePaths.desktop_pilot_root,
     configFile: statePaths.desktop_config_file,
@@ -159,15 +156,8 @@ export async function bootstrapFrontDeskDesktop(
     activeProjectId: activeBinding?.project_id ?? null,
     activeProjectLabel: activeBinding?.project ?? null,
     codexDefaults,
+    runtimeModes,
   });
-
-  const paperclipSummary = activeBinding?.project_id
-    ? await bootstrapLocalPaperclipControlPlane(contracts, {
-        workspacePath,
-        projectId: activeBinding.project_id,
-        explicitBaseUrl: options.paperclipBaseUrl,
-      })
-    : null;
 
   return {
     version: 'g2',
@@ -176,7 +166,6 @@ export async function bootstrapFrontDeskDesktop(
       contracts_root_source: contracts.contractsRootSource,
     },
     frontdesk_service: servicePayload.frontdesk_service,
-    ...(paperclipSummary ? { paperclip_control_plane: paperclipSummary } : {}),
     frontdesk_desktop: {
       action: 'bootstrap',
       installed: true,
@@ -193,13 +182,15 @@ export async function bootstrapFrontDeskDesktop(
       codex_config_file: codexDefaults.config_path,
       codex_model: codexDefaults.model,
       codex_reasoning_effort: codexDefaults.reasoning_effort ?? null,
+      interaction_mode: runtimeModes.interaction_mode,
+      execution_mode: runtimeModes.execution_mode,
       librechat_retired_from_default: true,
       launch_command: desktopPackage.launch_command,
       assets: desktopPackage.assets,
       notes: [
         'This is the default local Desktop front door for OPL.',
         'The Desktop shell reuses the existing OPL web front desk as its truth surface.',
-        'LibreChat remains available only as an explicit optional lane through frontdesk librechat install.',
+        'The desktop shell is now the only supported GUI path for OPL.',
       ],
     },
   };

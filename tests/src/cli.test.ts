@@ -5,7 +5,6 @@ import { once } from 'node:events';
 import fs from 'node:fs';
 import {
   createServer,
-  type IncomingHttpHeaders,
   type IncomingMessage,
   type Server,
   type ServerResponse,
@@ -183,6 +182,23 @@ ${handlerBody}
   return {
     fixtureRoot,
     hermesPath,
+  };
+}
+
+function createFakeCodexFixture(handlerBody: string) {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-fixture-'));
+  const codexPath = path.join(fixtureRoot, 'codex');
+  fs.writeFileSync(
+    codexPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+${handlerBody}
+`,
+    { mode: 0o755 },
+  );
+  return {
+    fixtureRoot,
+    codexPath,
   };
 }
 
@@ -626,35 +642,6 @@ exit 1
   };
 }
 
-type FakePaperclipRequest = {
-  method: string;
-  path: string;
-  headers: IncomingHttpHeaders;
-  body: Record<string, unknown> | null;
-};
-
-type FakePaperclipIssue = {
-  id: string;
-  companyId: string;
-  title: string;
-  status: string;
-  priority: string;
-  projectId: unknown;
-  projectWorkspaceId: unknown;
-  executionWorkspacePreference: unknown;
-};
-
-type FakePaperclipApproval = {
-  id: string;
-  companyId: string;
-  type: unknown;
-  status: string;
-  decision: string | null;
-  decidedAt: string | null;
-  payload: Record<string, unknown>;
-  issueIds: string[];
-};
-
 async function readServerJsonBody(request: IncomingMessage) {
   return await new Promise<Record<string, unknown> | null>((resolve, reject) => {
     let body = '';
@@ -676,269 +663,6 @@ async function readServerJsonBody(request: IncomingMessage) {
     });
     request.on('error', reject);
   });
-}
-
-async function startFakePaperclipServer() {
-  const requests: FakePaperclipRequest[] = [];
-  const issues = new Map<string, FakePaperclipIssue>();
-  const approvals = new Map<string, FakePaperclipApproval>();
-  const server = createServer(async (request: IncomingMessage, response: ServerResponse<IncomingMessage>) => {
-    const url = new URL(request.url ?? '/', 'http://127.0.0.1');
-    const body = await readServerJsonBody(request);
-    requests.push({
-      method: request.method ?? 'GET',
-      path: url.pathname,
-      headers: request.headers,
-      body,
-    });
-
-    response.setHeader('content-type', 'application/json; charset=utf-8');
-    response.setHeader('connection', 'close');
-
-    if (request.method === 'POST' && /^\/api\/companies\/[^/]+\/issues$/.test(url.pathname)) {
-      const companyId = url.pathname.split('/')[3] ?? 'unknown-company';
-      const issue: FakePaperclipIssue = {
-        id: `issue-${requests.filter((entry) => entry.path.endsWith('/issues')).length}`,
-        companyId,
-        title: String(body?.title ?? 'Untitled issue'),
-        status: String(body?.status ?? 'backlog'),
-        priority: String(body?.priority ?? 'medium'),
-        projectId: body?.projectId ?? null,
-        projectWorkspaceId: body?.projectWorkspaceId ?? null,
-        executionWorkspacePreference: body?.executionWorkspacePreference ?? null,
-      };
-      issues.set(issue.id, issue);
-      response.statusCode = 201;
-      response.end(JSON.stringify(issue));
-      return;
-    }
-
-    if (request.method === 'GET' && /^\/api\/companies\/[^/]+\/issues\/[^/]+$/.test(url.pathname)) {
-      const issueId = url.pathname.split('/')[5] ?? 'unknown-issue';
-      const issue = issues.get(issueId);
-      if (!issue) {
-        response.statusCode = 404;
-        response.end(JSON.stringify({
-          error: 'not_found',
-          path: url.pathname,
-          issueId,
-        }));
-        return;
-      }
-
-      response.statusCode = 200;
-      response.end(JSON.stringify(issue));
-      return;
-    }
-
-    if (request.method === 'POST' && /^\/api\/companies\/[^/]+\/approvals$/.test(url.pathname)) {
-      const companyId = url.pathname.split('/')[3] ?? 'unknown-company';
-      const approval: FakePaperclipApproval = {
-        id: `approval-${requests.filter((entry) => entry.path.endsWith('/approvals')).length}`,
-        companyId,
-        type: body?.type ?? null,
-        status: 'pending',
-        decision: null,
-        decidedAt: null,
-        payload:
-          body?.payload && typeof body.payload === 'object' && !Array.isArray(body.payload)
-            ? body.payload as Record<string, unknown>
-            : {},
-        issueIds: Array.isArray(body?.issueIds) ? body.issueIds.map((value) => String(value)) : [],
-      };
-      approvals.set(approval.id, approval);
-      response.statusCode = 201;
-      response.end(JSON.stringify(approval));
-      return;
-    }
-
-    if (request.method === 'GET' && /^\/api\/companies\/[^/]+\/approvals\/[^/]+$/.test(url.pathname)) {
-      const approvalId = url.pathname.split('/')[5] ?? 'unknown-approval';
-      const approval = approvals.get(approvalId);
-      if (!approval) {
-        response.statusCode = 404;
-        response.end(JSON.stringify({
-          error: 'not_found',
-          path: url.pathname,
-          approvalId,
-        }));
-        return;
-      }
-
-      response.statusCode = 200;
-      response.end(JSON.stringify(approval));
-      return;
-    }
-
-    if (request.method === 'POST' && /^\/api\/companies\/[^/]+\/issues\/[^/]+\/comments$/.test(url.pathname)) {
-      const companyId = url.pathname.split('/')[3] ?? 'unknown-company';
-      const issueId = url.pathname.split('/')[5] ?? 'unknown-issue';
-      response.statusCode = 201;
-      response.end(JSON.stringify({
-        id: `comment-${requests.filter((entry) => entry.path.endsWith('/comments')).length}`,
-        companyId,
-        issueId,
-        body: body?.body ?? null,
-      }));
-      return;
-    }
-
-    response.statusCode = 404;
-    response.end(JSON.stringify({
-      error: 'not_found',
-      path: url.pathname,
-    }));
-  });
-
-  await new Promise<void>((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(0, '127.0.0.1', () => {
-      resolve();
-    });
-  });
-
-  const address = server.address();
-  if (!address || typeof address === 'string') {
-    server.close();
-    throw new Error('Failed to bind fake Paperclip server.');
-  }
-
-  return {
-    server,
-    requests,
-    issues,
-    approvals,
-    baseUrl: `http://127.0.0.1:${address.port}`,
-    setIssueStatus(issueId: string, status: string) {
-      const issue = issues.get(issueId);
-      assert.ok(issue);
-      issue.status = status;
-    },
-    setApprovalDecision(
-      approvalId: string,
-      status: string,
-      decision: string,
-      decidedAt = '2026-04-13T12:00:00.000Z',
-    ) {
-      const approval = approvals.get(approvalId);
-      assert.ok(approval);
-      approval.status = status;
-      approval.decision = decision;
-      approval.decidedAt = decidedAt;
-    },
-  };
-}
-
-async function startFakePaperclipPilotServer(options: {
-  companyId?: string;
-  companyName?: string;
-  projectId?: string;
-  projectName?: string;
-  workspaceId?: string;
-  workspaceName?: string;
-  workspacePath?: string;
-} = {}) {
-  const requests: FakePaperclipRequest[] = [];
-  const companyId = options.companyId ?? 'company-local-pilot';
-  const projectId = options.projectId ?? 'project-mas';
-  const workspaceId = options.workspaceId ?? 'workspace-pituitary';
-  const workspacePath = options.workspacePath ?? repoRoot;
-  const server = createServer(async (request: IncomingMessage, response: ServerResponse<IncomingMessage>) => {
-    const url = new URL(request.url ?? '/', 'http://127.0.0.1');
-    const body = await readServerJsonBody(request);
-    requests.push({
-      method: request.method ?? 'GET',
-      path: url.pathname,
-      headers: request.headers,
-      body,
-    });
-
-    response.setHeader('content-type', 'application/json; charset=utf-8');
-    response.setHeader('connection', 'close');
-
-    if (request.method === 'GET' && url.pathname === '/api/health') {
-      response.statusCode = 200;
-      response.end(JSON.stringify({
-        status: 'ok',
-        deploymentMode: 'local_trusted',
-        deploymentExposure: 'private',
-        authReady: true,
-      }));
-      return;
-    }
-
-    if (request.method === 'GET' && url.pathname === '/api/companies') {
-      response.statusCode = 200;
-      response.end(JSON.stringify([
-        {
-          id: companyId,
-          name: options.companyName ?? 'FengGao Lab',
-        },
-      ]));
-      return;
-    }
-
-    if (request.method === 'GET' && url.pathname === `/api/companies/${companyId}/projects`) {
-      response.statusCode = 200;
-      response.end(JSON.stringify([
-        {
-          id: projectId,
-          companyId,
-          name: options.projectName ?? 'Med Auto Science Papers',
-          primaryWorkspace: {
-            id: 'workspace-mas-core',
-            cwd: '/Users/gaofeng/workspace/med-autoscience',
-          },
-        },
-      ]));
-      return;
-    }
-
-    if (request.method === 'GET' && url.pathname === `/api/projects/${projectId}/workspaces`) {
-      response.statusCode = 200;
-      response.end(JSON.stringify([
-        {
-          id: 'workspace-mas-core',
-          name: 'Med Auto Science Core',
-          cwd: '/Users/gaofeng/workspace/med-autoscience',
-        },
-        {
-          id: workspaceId,
-          name: options.workspaceName ?? 'Pituitary Workspace',
-          cwd: workspacePath,
-        },
-      ]));
-      return;
-    }
-
-    response.statusCode = 404;
-    response.end(JSON.stringify({
-      error: 'not_found',
-      path: url.pathname,
-    }));
-  });
-
-  await new Promise<void>((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(0, '127.0.0.1', () => {
-      resolve();
-    });
-  });
-
-  const address = server.address();
-  if (!address || typeof address === 'string') {
-    server.close();
-    throw new Error('Failed to bind fake Paperclip pilot server.');
-  }
-
-  return {
-    server,
-    requests,
-    baseUrl: `http://127.0.0.1:${address.port}`,
-    companyId,
-    projectId,
-    workspaceId,
-  };
 }
 
 async function startFakeFrontDeskApiServer() {
@@ -1201,17 +925,6 @@ async function startFakeFrontDeskApiServer() {
       response.end(JSON.stringify({
         workspace_status: {
           workspace_path: url.searchParams.get('path'),
-        },
-      }));
-      return;
-    }
-
-    if (request.method === 'GET' && url.pathname === '/api/paperclip/control-plane') {
-      response.statusCode = 200;
-      response.end(JSON.stringify({
-        paperclip_control_plane: {
-          workspace_path: url.searchParams.get('path'),
-          sessions_limit: Number(url.searchParams.get('sessions_limit') ?? '0'),
         },
       }));
       return;
@@ -1782,18 +1495,17 @@ exit 1
   }
 });
 
-test('natural-language fallback routes multi-token input through quick ask', () => {
-  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
-if [ "$1" = "chat" ]; then
+test('natural-language fallback routes multi-token input through the default Codex quick ask path', () => {
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$1" = "exec" ]; then
   cat <<'EOF'
-╭─ ⚕ Hermes ───────────────────────────────────────────────────────────────────╮
-AUTO ASK READY
-
-session_id: opl-quick-ask-session
+{"type":"thread.started","thread_id":"opl-quick-ask-session"}
+{"type":"turn.started"}
+{"item":{"type":"agent_message","text":"AUTO ASK READY"}}
 EOF
   exit 0
 fi
-echo "unexpected fake-hermes args: $*" >&2
+echo "unexpected fake-codex args: $*" >&2
 exit 1
 `);
 
@@ -1801,7 +1513,7 @@ exit 1
     const output = runCli(
       ['Plan', 'a', 'medical', 'grant', 'proposal', 'revision', 'loop.'],
       {
-        OPL_HERMES_BIN: hermesPath,
+        OPL_CODEX_BIN: codexPath,
       },
     );
 
@@ -1809,14 +1521,15 @@ exit 1
     assert.equal(output.product_entry.input.goal, 'Plan a medical grant proposal revision loop.');
     assert.equal(output.product_entry.routing.status, 'unknown_domain');
     assert.equal(output.product_entry.routing.candidate_workstream_id, 'grant_ops');
-    assert.equal(output.product_entry.hermes.session_id, 'opl-quick-ask-session');
-    assert.equal(output.product_entry.hermes.response, 'AUTO ASK READY');
+    assert.equal(output.product_entry.executor_backend, 'codex');
+    assert.equal(output.product_entry.codex.session_id, 'opl-quick-ask-session');
+    assert.equal(output.product_entry.codex.response, 'AUTO ASK READY');
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
 
-test('ask --dry-run produces a routed Hermes handoff preview from a plain-language request', () => {
+test('ask --dry-run produces a routed Codex handoff preview from a plain-language request', () => {
   const output = runCli([
     'ask',
     'Prepare a defense-ready slide deck for a thesis committee.',
@@ -1834,13 +1547,57 @@ test('ask --dry-run produces a routed Hermes handoff preview from a plain-langua
   assert.equal(output.product_entry.routing.status, 'routed');
   assert.equal(output.product_entry.routing.domain_id, 'redcube');
   assert.equal(output.product_entry.routing.workstream_id, 'presentation_ops');
+  assert.equal(output.product_entry.executor_backend, 'codex');
   assert.match(output.product_entry.handoff_prompt_preview, /One Person Lab \(OPL\) Product Entry/);
   assert.match(output.product_entry.handoff_prompt_preview, /presentation_ops/);
-  assert.equal(output.product_entry.hermes.command_preview[0], 'hermes');
-  assert.ok(output.product_entry.hermes.command_preview.includes('--query'));
+  assert.equal(output.product_entry.codex.command_preview[0], 'codex');
+  assert.ok(output.product_entry.codex.command_preview.includes('--json'));
 });
 
-test('ask runs Hermes through the resolved product-entry handoff and returns the captured response', () => {
+test('ask runs Codex through the resolved product-entry handoff and returns the captured response', () => {
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$1" = "exec" ]; then
+  cat <<'EOF'
+{"type":"thread.started","thread_id":"opl-test-session"}
+{"type":"turn.started"}
+{"item":{"type":"command_execution","command":"npm test","status":"completed","aggregated_output":"2 passed"}}
+{"item":{"type":"agent_message","text":"READY FROM OPL"}}
+{"type":"turn.completed"}
+EOF
+  exit 0
+fi
+echo "unexpected fake-codex args: $*" >&2
+exit 1
+`);
+
+  try {
+    const output = runCli(
+      [
+        'ask',
+        'Create a xiaohongshu campaign pack for a lab update.',
+        '--preferred-family',
+        'xiaohongshu',
+      ],
+      {
+        OPL_CODEX_BIN: codexPath,
+      },
+    );
+
+    assert.equal(output.version, 'g2');
+    assert.equal(output.product_entry.mode, 'ask');
+    assert.equal(output.product_entry.dry_run, false);
+    assert.equal(output.product_entry.executor_backend, 'codex');
+    assert.equal(output.product_entry.routing.status, 'domain_boundary');
+    assert.equal(output.product_entry.routing.domain_id, 'redcube');
+    assert.equal(output.product_entry.codex.session_id, 'opl-test-session');
+    assert.equal(output.product_entry.codex.response, 'READY FROM OPL');
+    assert.equal(output.product_entry.codex.exit_code, 0);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('ask --executor hermes keeps the Hermes fallback lane available', () => {
   const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
 if [ "$1" = "version" ]; then
   echo "Hermes Agent v9.9.9-test"
@@ -1874,6 +1631,8 @@ exit 1
         'Create a xiaohongshu campaign pack for a lab update.',
         '--preferred-family',
         'xiaohongshu',
+        '--executor',
+        'hermes',
       ],
       {
         OPL_HERMES_BIN: hermesPath,
@@ -1883,6 +1642,7 @@ exit 1
     assert.equal(output.version, 'g2');
     assert.equal(output.product_entry.mode, 'ask');
     assert.equal(output.product_entry.dry_run, false);
+    assert.equal(output.product_entry.executor_backend, 'hermes');
     assert.equal(output.product_entry.routing.status, 'domain_boundary');
     assert.equal(output.product_entry.routing.domain_id, 'redcube');
     assert.equal(output.product_entry.hermes.session_id, 'opl-test-session');
@@ -2132,9 +1892,9 @@ test('frontdesk-manifest exposes the hosted-friendly OPL shell contract without 
     assert.equal(output.version, 'g2');
     assert.equal(output.frontdesk_manifest.surface_id, 'opl_hosted_friendly_frontdesk_manifest');
     assert.equal(output.frontdesk_manifest.entry_surface, 'opl_local_web_frontdesk_pilot');
-    assert.equal(output.frontdesk_manifest.shell_integration_target, 'librechat_first');
+    assert.equal(output.frontdesk_manifest.shell_integration_target, 'desktop_first');
     assert.equal(output.frontdesk_manifest.readiness, 'hosted_friendly_shell_pilot_landed');
-    assert.equal(output.frontdesk_manifest.hosted_packaging_status, 'librechat_pilot_landed');
+    assert.equal(output.frontdesk_manifest.hosted_packaging_status, 'frontdesk_package_landed');
     assert.deepEqual(output.frontdesk_manifest.handoff_envelope_fields, [
       'target_domain_id',
       'task_intent',
@@ -2155,7 +1915,7 @@ test('frontdesk-manifest exposes the hosted-friendly OPL shell contract without 
     assert.equal(output.frontdesk_manifest.hosted_runtime_readiness.status, 'pilot_ready_not_managed');
     assert.equal(
       output.frontdesk_manifest.hosted_runtime_readiness.shell_integration_target,
-      'librechat_first',
+      'desktop_first',
     );
     assert.equal(
       output.frontdesk_manifest.hosted_runtime_readiness.managed_hosted_runtime_landed,
@@ -2166,7 +1926,7 @@ test('frontdesk-manifest exposes the hosted-friendly OPL shell contract without 
       true,
     );
     assert.equal(
-      output.frontdesk_manifest.hosted_runtime_readiness.librechat_pilot_package_landed,
+      output.frontdesk_manifest.hosted_runtime_readiness.desktop_shell_landed,
       true,
     );
     assert.equal(output.frontdesk_manifest.domain_wiring_surface.surface_id, 'opl_frontdesk_domain_wiring');
@@ -2288,10 +2048,10 @@ exit 1
     assert.equal(output.frontdesk_readiness.local_service.installed, false);
     assert.equal(output.frontdesk_readiness.local_service.loaded, false);
     assert.equal(output.frontdesk_readiness.local_service.health.status, 'not_installed');
-    assert.equal(output.frontdesk_readiness.local_hosted_shell.surface_id, 'opl_frontdesk_librechat_status');
-    assert.equal(output.frontdesk_readiness.local_hosted_shell.installed, false);
-    assert.equal(output.frontdesk_readiness.local_hosted_shell.running, false);
-    assert.equal(output.frontdesk_readiness.local_hosted_shell.identity.sync_status, 'not_installed');
+    assert.equal(output.frontdesk_readiness.shell_integration_target, 'desktop_first');
+    assert.equal(output.frontdesk_readiness.local_shell.direct_entry_command, 'opl');
+    assert.equal(output.frontdesk_readiness.local_shell.web_command, 'opl web');
+    assert.equal(output.frontdesk_readiness.local_shell.desktop_command, 'opl frontdesk-bootstrap');
     assert.equal(output.frontdesk_readiness.hosted_runtime_readiness.status, 'pilot_ready_not_managed');
     assert.equal(output.frontdesk_readiness.summary.total_projects_count, 2);
     assert.equal(output.frontdesk_readiness.summary.usable_now_projects_count, 0);
@@ -2302,7 +2062,6 @@ exit 1
     assert.equal(output.frontdesk_readiness.summary.ready_for_domain_handoff_count, 0);
     assert.equal(output.frontdesk_readiness.endpoints.frontdesk_readiness, '/api/frontdesk-readiness');
     assert.equal(output.frontdesk_readiness.endpoints.frontdesk_domain_wiring, '/api/frontdesk-domain-wiring');
-    assert.equal(output.frontdesk_readiness.endpoints.frontdesk_librechat_status, '/api/frontdesk-librechat-status');
     assert.equal(output.frontdesk_readiness.projects[0].manifest_status, 'not_bound');
     assert.equal(output.frontdesk_readiness.projects[0].entry_parity_status, 'blocked');
     assert.equal(output.frontdesk_readiness.projects[0].usable_now, false);
@@ -2411,7 +2170,7 @@ test('frontdesk-hosted-bundle exposes a hosted-pilot-ready bundle with base-path
 
   assert.equal(output.version, 'g2');
   assert.equal(output.hosted_pilot_bundle.surface_id, 'opl_hosted_frontdesk_pilot_bundle');
-  assert.equal(output.hosted_pilot_bundle.shell_integration_target, 'librechat_first');
+  assert.equal(output.hosted_pilot_bundle.shell_integration_target, 'desktop_first');
   assert.equal(output.hosted_pilot_bundle.pilot_bundle_status, 'landed');
   assert.equal(output.hosted_pilot_bundle.actual_hosted_runtime_status, 'not_landed');
   assert.equal(output.hosted_pilot_bundle.base_path, '/pilot/opl');
@@ -2600,10 +2359,6 @@ test('frontdesk-librechat-package exports a same-origin LibreChat-first hosted s
     assert.equal(
       output.librechat_pilot_package.hosted_runtime_readiness.status,
       'pilot_ready_not_managed',
-    );
-    assert.equal(
-      output.librechat_pilot_package.hosted_runtime_readiness.librechat_pilot_package_landed,
-      true,
     );
     assert.equal(
       output.librechat_pilot_package.hosted_runtime_readiness.managed_hosted_runtime_landed,
@@ -3205,7 +2960,7 @@ test('mcp-stdio defaults to a LibreChat-compatible protocol version when the cli
   }
 });
 
-test('frontdesk bootstrap prepares the local Desktop shell, inherits local Codex defaults, and auto-bootstraps local trusted Paperclip', async () => {
+test('frontdesk bootstrap prepares the local Desktop shell without Paperclip bridge payloads', async () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-desktop-home-'));
   const codexFixture = createCodexConfigFixture({
     model: 'gpt-5.4-frontdoor',
@@ -3216,9 +2971,6 @@ test('frontdesk bootstrap prepares the local Desktop shell, inherits local Codex
   const masWorkspaceFixture = createMasWorkspaceFixture();
   const launchctlFixture = createFakeLaunchctlFixture();
   const dockerFixture = createFakeDockerFixture();
-  const fakePaperclip = await startFakePaperclipPilotServer({
-    workspacePath: masWorkspaceFixture.fixtureRoot,
-  });
   const hermesDir = path.join(homeRoot, '.hermes');
   fs.mkdirSync(hermesDir, { recursive: true });
   fs.writeFileSync(
@@ -3249,8 +3001,6 @@ test('frontdesk bootstrap prepares the local Desktop shell, inherits local Codex
       masWorkspaceFixture.fixtureRoot,
       '--sessions-limit',
       '7',
-      '--paperclip-base-url',
-      fakePaperclip.baseUrl,
     ], serviceEnv) as {
       frontdesk_desktop: {
         action: string;
@@ -3264,6 +3014,8 @@ test('frontdesk bootstrap prepares the local Desktop shell, inherits local Codex
         workspace_path: string;
         active_project_id: string | null;
         active_project_label: string | null;
+        interaction_mode: string;
+        execution_mode: string;
         librechat_retired_from_default: boolean;
         launch_command: string;
         assets: {
@@ -3279,20 +3031,7 @@ test('frontdesk bootstrap prepares the local Desktop shell, inherits local Codex
       frontdesk_service: {
         loaded: boolean;
       };
-      paperclip_control_plane: {
-        readiness: string;
-        connection: {
-          base_url: string;
-          auth: {
-            header_env: string | null;
-          };
-        };
-        project_bindings: Array<{
-          project_id: string;
-          paperclip_project_id: string | null;
-          project_workspace_id: string | null;
-        }>;
-      };
+      paperclip_control_plane?: unknown;
     };
 
     assert.equal(install.frontdesk_desktop.action, 'bootstrap');
@@ -3306,17 +3045,12 @@ test('frontdesk bootstrap prepares the local Desktop shell, inherits local Codex
     assert.equal(install.frontdesk_desktop.workspace_path, masWorkspaceFixture.fixtureRoot);
     assert.equal(install.frontdesk_desktop.active_project_id, 'medautoscience');
     assert.equal(install.frontdesk_desktop.active_project_label, 'med-autoscience');
+    assert.equal(install.frontdesk_desktop.interaction_mode, 'codex');
+    assert.equal(install.frontdesk_desktop.execution_mode, 'codex');
     assert.equal(install.frontdesk_desktop.librechat_retired_from_default, true);
     assert.match(install.frontdesk_desktop.launch_command, /electron/i);
     assert.equal(install.frontdesk_service.loaded, true);
-    assert.equal(install.paperclip_control_plane.readiness, 'configured');
-    assert.equal(install.paperclip_control_plane.connection.base_url, fakePaperclip.baseUrl);
-    assert.equal(install.paperclip_control_plane.connection.auth.header_env, null);
-    assert.equal(install.paperclip_control_plane.project_bindings.some((binding) =>
-      binding.project_id === 'medautoscience'
-      && binding.paperclip_project_id === fakePaperclip.projectId
-      && binding.project_workspace_id === fakePaperclip.workspaceId
-    ), true);
+    assert.equal('paperclip_control_plane' in install, false);
     assert.equal(fs.existsSync(install.frontdesk_desktop.assets.package_root), true);
     assert.equal(fs.existsSync(install.frontdesk_desktop.assets.package_json), true);
     assert.equal(fs.existsSync(install.frontdesk_desktop.assets.main_script), true);
@@ -3330,9 +3064,13 @@ test('frontdesk bootstrap prepares the local Desktop shell, inherits local Codex
     const desktopReadme = fs.readFileSync(install.frontdesk_desktop.assets.readme, 'utf8');
     assert.match(desktopReadme, /OPL Atlas Desktop/);
     assert.match(desktopReadme, /LibreChat has moved to an optional lane/i);
+    assert.match(desktopReadme, /Interaction mode: codex/i);
+    assert.match(desktopReadme, /Execution mode: codex/i);
     const desktopConfig = fs.readFileSync(install.frontdesk_desktop.assets.config_file, 'utf8');
     assert.match(desktopConfig, /"frontdesk_url": "http:\/\/127\.0\.0\.1:8911\/"/);
     assert.match(desktopConfig, /"workspace_path"/);
+    assert.match(desktopConfig, /"interaction_mode": "codex"/);
+    assert.match(desktopConfig, /"execution_mode": "codex"/);
     const workspaceRegistryPath = path.join(homeRoot, 'Library', 'Application Support', 'OPL', 'frontdesk', 'workspace-registry.json');
     const workspaceRegistry = JSON.parse(fs.readFileSync(workspaceRegistryPath, 'utf8')) as {
       bindings: Array<{ project_id: string; workspace_path: string; status: string }>;
@@ -3344,7 +3082,6 @@ test('frontdesk bootstrap prepares the local Desktop shell, inherits local Codex
     ), true);
     assert.equal(fs.existsSync(dockerFixture.callsPath), false);
   } finally {
-    await stopHttpServer(fakePaperclip.server);
     fs.rmSync(codexFixture.codexHome, { recursive: true, force: true });
     fs.rmSync(masWorkspaceFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
@@ -3353,7 +3090,33 @@ test('frontdesk bootstrap prepares the local Desktop shell, inherits local Codex
   }
 });
 
-test('frontdesk librechat install manages the local LibreChat shell, inherits local Codex defaults, and auto-bootstraps local trusted Paperclip', async () => {
+test('help keeps bootstrap as the default GUI/Codex lane and librechat install as the optional compatibility lane', () => {
+  const output = runCli(['help']);
+  const bootstrap = output.help.commands.find((entry: { command: string }) => entry.command === 'frontdesk bootstrap');
+  const librechatInstall = output.help.commands.find((entry: { command: string }) => entry.command === 'frontdesk librechat install');
+
+  assert.ok(bootstrap);
+  assert.match(bootstrap.summary, /Desktop shell/i);
+  assert.match(bootstrap.summary, /Codex defaults/i);
+  assert.ok(bootstrap.examples.includes('opl frontdesk bootstrap --path /Users/gaofeng/workspace/Yang/NF-PitNET'));
+
+  assert.ok(librechatInstall);
+  assert.match(librechatInstall.summary, /optional LibreChat compatibility lane/i);
+  assert.match(librechatInstall.summary, /OPL front desk/i);
+  assert.ok(librechatInstall.examples.includes(
+    'opl frontdesk librechat install --path /Users/gaofeng/workspace/Yang/NF-PitNET --public-origin http://127.0.0.1:8080',
+  ));
+});
+
+test('help omits retired paperclip public commands from the CLI discovery surface', () => {
+  const output = runCli(['help']);
+  const commands = output.help.commands.map((entry: { command: string }) => entry.command);
+
+  assert.equal(commands.some((command: string) => command.startsWith('paperclip')), false);
+  assert.equal(output.help.examples.some((example: string) => example.includes('paperclip')), false);
+});
+
+test('frontdesk librechat install keeps the optional compatibility shell aligned with the local Codex profile', async () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-librechat-home-'));
   const codexFixture = createCodexConfigFixture({
     model: 'gpt-5.4-frontdoor',
@@ -3365,9 +3128,6 @@ test('frontdesk librechat install manages the local LibreChat shell, inherits lo
   const launchctlFixture = createFakeLaunchctlFixture();
   const dockerFixture = createFakeDockerFixture();
   const openFixture = createFakeOpenFixture();
-  const fakePaperclip = await startFakePaperclipPilotServer({
-    workspacePath: masWorkspaceFixture.fixtureRoot,
-  });
   const hermesDir = path.join(homeRoot, '.hermes');
   fs.mkdirSync(hermesDir, { recursive: true });
   fs.writeFileSync(
@@ -3402,8 +3162,6 @@ test('frontdesk librechat install manages the local LibreChat shell, inherits lo
       '7',
       '--public-origin',
       'http://127.0.0.1:18080',
-      '--paperclip-base-url',
-      fakePaperclip.baseUrl,
     ], serviceEnv) as {
       frontdesk_librechat: {
         action: string;
@@ -3422,24 +3180,12 @@ test('frontdesk librechat install manages the local LibreChat shell, inherits lo
           env_file: string;
           librechat_config: string;
         };
+        notes: string[];
       };
       frontdesk_service: {
         loaded: boolean;
       };
-      paperclip_control_plane: {
-        readiness: string;
-        connection: {
-          base_url: string;
-          auth: {
-            header_env: string | null;
-          };
-        };
-        project_bindings: Array<{
-          project_id: string;
-          paperclip_project_id: string | null;
-          project_workspace_id: string | null;
-        }>;
-      };
+      paperclip_control_plane?: unknown;
     };
 
     assert.equal(install.frontdesk_librechat.action, 'install');
@@ -3455,14 +3201,7 @@ test('frontdesk librechat install manages the local LibreChat shell, inherits lo
       'opl_session',
     );
     assert.equal(install.frontdesk_service.loaded, true);
-    assert.equal(install.paperclip_control_plane.readiness, 'configured');
-    assert.equal(install.paperclip_control_plane.connection.base_url, fakePaperclip.baseUrl);
-    assert.equal(install.paperclip_control_plane.connection.auth.header_env, null);
-    assert.equal(install.paperclip_control_plane.project_bindings.some((binding) =>
-      binding.project_id === 'medautoscience'
-      && binding.paperclip_project_id === fakePaperclip.projectId
-      && binding.project_workspace_id === fakePaperclip.workspaceId
-    ), true);
+    assert.equal('paperclip_control_plane' in install, false);
     const runtimeEnv = fs.readFileSync(install.frontdesk_librechat.assets.env_file, 'utf8');
     assert.match(runtimeEnv, /APP_TITLE=OPL Atlas/);
     assert.match(runtimeEnv, /OPENAI_API_KEY=codex-frontdoor-key/);
@@ -3481,6 +3220,10 @@ test('frontdesk librechat install manages the local LibreChat shell, inherits lo
     assert.match(librechatConfig, /model: gpt-5\.4-frontdoor/);
     assert.match(librechatConfig, /reasoning_effort: xhigh/);
     assert.match(librechatConfig, /opl_cortex:/);
+    assert.equal(
+      install.frontdesk_librechat.notes.some((entry) => /Paperclip is no longer part of the OPL GUI mainline/i.test(entry)),
+      true,
+    );
     const workspaceRegistryPath = path.join(homeRoot, 'Library', 'Application Support', 'OPL', 'frontdesk', 'workspace-registry.json');
     const workspaceRegistry = JSON.parse(fs.readFileSync(workspaceRegistryPath, 'utf8')) as {
       bindings: Array<{ project_id: string; workspace_path: string; status: string }>;
@@ -3521,7 +3264,6 @@ test('frontdesk librechat install manages the local LibreChat shell, inherits lo
     assert.equal(startOutput.frontdesk_librechat.action, 'start');
     assert.equal(startOutput.frontdesk_librechat.running, true);
   } finally {
-    await stopHttpServer(fakePaperclip.server);
     fs.rmSync(codexFixture.codexHome, { recursive: true, force: true });
     fs.rmSync(masWorkspaceFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
@@ -5338,6 +5080,8 @@ exit 1
       'deck.',
       '--preferred-family',
       'ppt_deck',
+      '--executor',
+      'hermes',
       '--workspace-path',
       repoRoot,
     ], {
@@ -5404,6 +5148,20 @@ test('web starts a local front-desk pilot and serves dashboard plus ask surfaces
     model: 'gpt-5.4-web',
     reasoningEffort: 'xhigh',
   });
+  const { fixtureRoot: codexRuntimeFixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$1" = "exec" ]; then
+  cat <<'EOF'
+{"type":"thread.started","thread_id":"web-ask-session"}
+{"type":"turn.started"}
+{"item":{"type":"command_execution","command":"opl handoff","status":"in_progress"}}
+{"item":{"type":"agent_message","text":"WEB PILOT ASK RESPONSE"}}
+{"type":"turn.completed"}
+EOF
+  exit 0
+fi
+echo "unexpected fake-codex args: $*" >&2
+exit 1
+`);
   const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
 if [ "$1" = "version" ]; then
   echo "Hermes Agent v9.9.9-test"
@@ -5475,6 +5233,7 @@ exit 1
       {
         HOME: homeRoot,
         CODEX_HOME: codexFixture.codexHome,
+        OPL_CODEX_BIN: codexPath,
         OPL_HERMES_BIN: hermesPath,
         PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
       },
@@ -5484,6 +5243,10 @@ exit 1
     const webFrontdesk = startup.payload.web_frontdesk as {
       entry_surface: string;
       hosted_status: string;
+      frontdesk_settings: {
+        interaction_mode: string;
+        execution_mode: string;
+      };
       shell_bootstrap: {
         primary_surface: {
           surface_id: string;
@@ -5501,6 +5264,7 @@ exit 1
       api: {
         frontdesk_entry_guide: string;
         frontdesk_readiness: string;
+        frontdesk_settings: string;
         frontdesk_librechat_status: string;
         project_progress: string;
         frontdesk_domain_wiring: string;
@@ -5517,11 +5281,14 @@ exit 1
     assert.equal(webFrontdesk.hosted_status, 'librechat_pilot_landed');
     assert.equal(webFrontdesk.api.frontdesk_entry_guide, '/api/frontdesk-entry-guide');
     assert.equal(webFrontdesk.api.frontdesk_readiness, '/api/frontdesk-readiness');
+    assert.equal(webFrontdesk.api.frontdesk_settings, '/api/frontdesk-settings');
     assert.equal(webFrontdesk.api.project_progress, '/api/project-progress');
     assert.equal(webFrontdesk.api.frontdesk_domain_wiring, '/api/frontdesk-domain-wiring');
     assert.equal(webFrontdesk.api.frontdesk_librechat_status, '/api/frontdesk-librechat-status');
     assert.equal(webFrontdesk.api.librechat_package, '/api/librechat-package');
     assert.equal(webFrontdesk.api.task_status, '/api/task-status');
+    assert.equal(webFrontdesk.frontdesk_settings.interaction_mode, 'codex');
+    assert.equal(webFrontdesk.frontdesk_settings.execution_mode, 'codex');
     assert.equal(webFrontdesk.shell_bootstrap.primary_surface.surface_id, 'opl_frontdesk_entry_guide');
     assert.equal(webFrontdesk.shell_bootstrap.primary_surface.endpoint, '/api/frontdesk-entry-guide');
     assert.deepEqual(
@@ -5575,9 +5342,14 @@ exit 1
     assert.equal(healthPayload.health.status, 'ok');
     assert.equal(healthPayload.health.checks.gateway_service.loaded, true);
 
+    const settingsResponse = await fetch(`${baseUrl}/api/frontdesk-settings`);
+    const settingsPayload = await settingsResponse.json();
+    assert.equal(settingsPayload.frontdesk_settings.interaction_mode, 'codex');
+    assert.equal(settingsPayload.frontdesk_settings.execution_mode, 'codex');
+
     const manifestResponse = await fetch(`${baseUrl}/api/frontdesk-manifest`);
     const manifestPayload = await manifestResponse.json();
-    assert.equal(manifestPayload.frontdesk_manifest.shell_integration_target, 'librechat_first');
+    assert.equal(manifestPayload.frontdesk_manifest.shell_integration_target, 'desktop_first');
     assert.equal(manifestPayload.frontdesk_manifest.endpoints.sessions, '/api/sessions');
     assert.equal(manifestPayload.frontdesk_manifest.frontdesk_entry_guide_surface.surface_id, 'opl_frontdesk_entry_guide');
     assert.equal(manifestPayload.frontdesk_manifest.shell_bootstrap.primary_surface.surface_id, 'opl_frontdesk_entry_guide');
@@ -5602,7 +5374,8 @@ exit 1
     assert.equal(readinessPayload.frontdesk_readiness.surface_id, 'opl_frontdesk_readiness');
     assert.equal(readinessPayload.frontdesk_readiness.summary.total_projects_count, 2);
     assert.equal(readinessPayload.frontdesk_readiness.summary.usable_now_projects_count, 0);
-    assert.equal(readinessPayload.frontdesk_readiness.local_hosted_shell.surface_id, 'opl_frontdesk_librechat_status');
+    assert.equal(readinessPayload.frontdesk_readiness.shell_integration_target, 'desktop_first');
+    assert.equal(readinessPayload.frontdesk_readiness.local_shell.desktop_command, 'opl frontdesk-bootstrap');
     assert.match(
       readinessPayload.frontdesk_readiness.local_service.health.status,
       /^(ok|not_installed|unreachable)$/,
@@ -5703,6 +5476,11 @@ exit 1
     assert.equal(logsPayload.product_entry.log_name, 'gateway');
     assert.match(logsPayload.product_entry.raw_output, /hosted-friendly front desk ready/);
 
+    const retiredPaperclipResponse = await fetch(`${baseUrl}/api/paperclip/control-plane`);
+    const retiredPaperclipPayload = await retiredPaperclipResponse.json();
+    assert.equal(retiredPaperclipResponse.status, 404);
+    assert.equal(retiredPaperclipPayload.error.code, 'unknown_command');
+
     const previewResponse = await fetch(`${baseUrl}/api/ask`, {
       method: 'POST',
       headers: {
@@ -5716,6 +5494,7 @@ exit 1
     });
     const previewPayload = await previewResponse.json();
     assert.equal(previewPayload.product_entry.dry_run, true);
+    assert.equal(previewPayload.product_entry.executor_backend, 'codex');
     assert.equal(previewPayload.product_entry.routing.domain_id, 'redcube');
 
     const askResponse = await fetch(`${baseUrl}/api/ask`, {
@@ -5732,8 +5511,10 @@ exit 1
     assert.equal(askPayload.product_entry.mode, 'ask');
     assert.equal(askPayload.product_entry.dry_run, false);
     assert.equal(askPayload.product_entry.execution_mode, 'async_accept');
+    assert.equal(askPayload.product_entry.executor_backend, 'codex');
     assert.match(askPayload.product_entry.task.task_id, /^task_/);
     assert.equal(askPayload.product_entry.task.status, 'accepted');
+    assert.equal(askPayload.product_entry.task.executor_backend, 'codex');
     assert.match(askPayload.product_entry.task.summary, /后台|受理|执行/);
 
     const taskStatusResponse = await fetch(
@@ -5742,12 +5523,15 @@ exit 1
     const taskStatusPayload = await taskStatusResponse.json();
     assert.equal(taskStatusPayload.product_entry.mode, 'task_status');
     assert.equal(taskStatusPayload.product_entry.task.task_id, askPayload.product_entry.task.task_id);
+    assert.equal(taskStatusPayload.product_entry.task.executor_backend, 'codex');
     assert.match(taskStatusPayload.product_entry.task.status, /accepted|running|succeeded|failed/);
     assert.equal(typeof taskStatusPayload.product_entry.task.recent_output, 'string');
   } finally {
     if (child) {
       await stopCliServer(child);
     }
+    fs.rmSync(codexRuntimeFixtureRoot, { recursive: true, force: true });
+    fs.rmSync(codexFixture.codexHome, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(psFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
@@ -5900,991 +5684,6 @@ exit 1
   }
 });
 
-test('paperclip config and bindings persist into a control-plane status surface', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paperclip-state-'));
-
-  try {
-    const configured = runCli([
-      'paperclip',
-      'config',
-      '--base-url',
-      'http://127.0.0.1:4321',
-      '--auth-header-env',
-      'OPL_PAPERCLIP_AUTH_HEADER',
-      '--control-company-id',
-      'company-opl-control',
-    ], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
-      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer demo-token',
-    });
-
-    assert.equal(configured.paperclip_control_plane.action, 'config');
-    assert.equal(configured.paperclip_control_plane.connection.base_url, 'http://127.0.0.1:4321');
-    assert.equal(configured.paperclip_control_plane.connection.auth.header_env, 'OPL_PAPERCLIP_AUTH_HEADER');
-    assert.equal(configured.paperclip_control_plane.connection.auth.header_present, true);
-    assert.equal(configured.paperclip_control_plane.connection.control_company_id, 'company-opl-control');
-
-    const bound = runCli([
-      'paperclip',
-      'bind',
-      '--project',
-      'redcube',
-      '--company-id',
-      'company-redcube',
-      '--paperclip-project-id',
-      'project-redcube',
-      '--project-workspace-id',
-      'workspace-redcube',
-      '--execution-workspace',
-      'shared_workspace',
-    ], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
-      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer demo-token',
-    });
-
-    assert.equal(bound.paperclip_control_plane.action, 'bind');
-    assert.equal(bound.paperclip_control_plane.project_bindings.length, 1);
-    assert.equal(bound.paperclip_control_plane.project_bindings[0].project_id, 'redcube');
-    assert.equal(bound.paperclip_control_plane.project_bindings[0].company_id, 'company-redcube');
-
-    const status = runCli(['paperclip', 'status', '--path', repoRoot, '--sessions-limit', '1'], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
-      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer demo-token',
-    });
-
-    assert.equal(status.paperclip_control_plane.action, 'status');
-    assert.equal(status.paperclip_control_plane.readiness, 'configured');
-    assert.equal(status.paperclip_control_plane.connection.base_url, 'http://127.0.0.1:4321');
-    assert.equal(status.paperclip_control_plane.summary.project_bindings_count, 1);
-    assert.equal(status.paperclip_control_plane.summary.bound_projects[0], 'redcube');
-    assert.equal(status.paperclip_control_plane.gateway.dashboard.front_desk.paperclip_control_plane_status, 'configured');
-    assert.equal(status.paperclip_control_plane.gateway.surface.endpoints.control_plane, '/api/paperclip/control-plane');
-    assert.equal(
-      status.paperclip_control_plane.gateway.surface.contract_refs.family_human_gate,
-      'contracts/family-orchestration/family-human-gate.schema.json',
-    );
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
-test('paperclip-bootstrap exposes operator preflight plus the task and gate operating loops', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paperclip-bootstrap-'));
-
-  try {
-    runCli([
-      'paperclip',
-      'config',
-      '--base-url',
-      'http://127.0.0.1:4321',
-      '--auth-header-env',
-      'OPL_PAPERCLIP_AUTH_HEADER',
-      '--control-company-id',
-      'company-opl-control',
-    ], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
-      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer bootstrap-token',
-    });
-    runCli([
-      'paperclip',
-      'bind',
-      '--project',
-      'redcube',
-      '--company-id',
-      'company-redcube',
-      '--paperclip-project-id',
-      'project-redcube',
-      '--project-workspace-id',
-      'workspace-redcube',
-      '--execution-workspace',
-      'shared_workspace',
-    ], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
-      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer bootstrap-token',
-    });
-
-    const output = runCli(['paperclip', 'bootstrap'], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
-      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer bootstrap-token',
-    }) as {
-      paperclip_control_plane: {
-        action: string;
-      };
-      paperclip_bootstrap: {
-        readiness: string;
-        preflight: {
-          ready_for_task_projection: boolean;
-          ready_for_gate_projection: boolean;
-        };
-        automation_surfaces: {
-          operator_loop_command: string;
-          sync_command: string;
-          web: {
-            bootstrap: string;
-            sync: string;
-          };
-        };
-        operator_playbooks: Array<{
-          playbook_id: string;
-          steps: Array<{
-            step_id: string;
-            command: string | null;
-          }>;
-        }>;
-        docs_ref: string;
-      };
-    };
-
-    assert.equal(output.paperclip_control_plane.action, 'bootstrap');
-    assert.equal(output.paperclip_bootstrap.readiness, 'configured');
-    assert.equal(output.paperclip_bootstrap.preflight.ready_for_task_projection, true);
-    assert.equal(output.paperclip_bootstrap.preflight.ready_for_gate_projection, true);
-    assert.equal(
-      output.paperclip_bootstrap.automation_surfaces.operator_loop_command,
-      'opl paperclip operator-loop --all --interval-ms 30000',
-    );
-    assert.equal(output.paperclip_bootstrap.automation_surfaces.sync_command, 'opl paperclip sync --all');
-    assert.equal(output.paperclip_bootstrap.automation_surfaces.web.bootstrap, '/api/paperclip/control-plane/bootstrap');
-    assert.equal(output.paperclip_bootstrap.automation_surfaces.web.sync, '/api/paperclip/control-plane/sync');
-    assert.deepEqual(
-      output.paperclip_bootstrap.operator_playbooks.map((entry) => entry.playbook_id),
-      ['task_execution_loop', 'human_gate_loop'],
-    );
-    assert.equal(
-      output.paperclip_bootstrap.operator_playbooks[0].steps.some((step) =>
-        step.step_id === 'open_task' && step.command === 'opl paperclip open-task "<request...>" --workspace-path <path>',
-      ),
-      true,
-    );
-    assert.equal(
-      output.paperclip_bootstrap.operator_playbooks[1].steps.some((step) =>
-        step.step_id === 'open_gate' && step.command === 'opl paperclip open-gate "<request...>" --workspace-path <path>',
-      ),
-      true,
-    );
-    assert.equal(
-      output.paperclip_bootstrap.docs_ref,
-      'docs/references/paperclip-control-plane-operator-guide.md',
-    );
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
-test('paperclip-status treats a local trusted Paperclip deployment as configured even when no auth env is declared', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paperclip-local-trusted-'));
-
-  return (async () => {
-    const fakePaperclip = await startFakePaperclipPilotServer({
-      workspacePath: repoRoot,
-    });
-
-    try {
-      runCli([
-        'paperclip',
-      'config',
-        '--base-url',
-        fakePaperclip.baseUrl,
-        '--control-company-id',
-        fakePaperclip.companyId,
-        '--local-trusted-no-auth',
-      ], {
-        OPL_FRONTDESK_STATE_DIR: stateRoot,
-      });
-
-      const status = runCli(['paperclip', 'status', '--path', repoRoot, '--sessions-limit', '1'], {
-        OPL_FRONTDESK_STATE_DIR: stateRoot,
-      });
-
-      assert.equal(status.paperclip_control_plane.readiness, 'configured');
-      assert.equal(status.paperclip_control_plane.connection.base_url, fakePaperclip.baseUrl);
-      assert.equal(status.paperclip_control_plane.connection.auth.header_env, null);
-      assert.equal(status.paperclip_control_plane.connection.auth.header_present, false);
-    } finally {
-      await stopHttpServer(fakePaperclip.server);
-      fs.rmSync(stateRoot, { recursive: true, force: true });
-    }
-  })();
-});
-
-test('paperclip-open-task creates a routed Paperclip issue using the bound domain mapping', async () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paperclip-open-task-'));
-  const fakePaperclip = await startFakePaperclipServer();
-
-  try {
-    runCli([
-      'paperclip',
-      'config',
-      '--base-url',
-      fakePaperclip.baseUrl,
-      '--auth-header-env',
-      'OPL_PAPERCLIP_AUTH_HEADER',
-      '--control-company-id',
-      'company-opl-control',
-    ], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
-      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer integration-token',
-    });
-    runCli([
-      'paperclip',
-      'bind',
-      '--project',
-      'redcube',
-      '--company-id',
-      'company-redcube',
-      '--paperclip-project-id',
-      'project-redcube',
-      '--project-workspace-id',
-      'workspace-redcube',
-      '--execution-workspace',
-      'shared_workspace',
-    ], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
-      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer integration-token',
-    });
-
-    const output = await runCliAsync([
-      'paperclip',
-      'open-task',
-      'Prepare a defense-ready slide deck for a thesis committee.',
-      '--preferred-family',
-      'ppt_deck',
-      '--workspace-path',
-      repoRoot,
-      '--priority',
-      'high',
-    ], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
-      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer integration-token',
-    }) as {
-      paperclip_control_plane: {
-        action: string;
-      };
-      paperclip_task: {
-        issue: {
-          companyId: string;
-          priority: string;
-        };
-        handoff_bundle: {
-          target_domain_id: string;
-        };
-        project_binding: {
-          project_id: string;
-        };
-      };
-    };
-
-    assert.equal(output.paperclip_control_plane.action, 'open_task');
-    assert.equal(output.paperclip_task.issue.companyId, 'company-redcube');
-    assert.equal(output.paperclip_task.issue.priority, 'high');
-    assert.equal(output.paperclip_task.handoff_bundle.target_domain_id, 'redcube');
-    assert.equal(output.paperclip_task.project_binding.project_id, 'redcube');
-
-    assert.equal(fakePaperclip.requests.length, 1);
-    const issueRequest = fakePaperclip.requests[0];
-    assert.equal(issueRequest.method, 'POST');
-    assert.equal(issueRequest.path, '/api/companies/company-redcube/issues');
-    assert.equal(issueRequest.headers.authorization, 'Bearer integration-token');
-    assert.equal(issueRequest.body?.projectId, 'project-redcube');
-    assert.equal(issueRequest.body?.projectWorkspaceId, 'workspace-redcube');
-    assert.equal(issueRequest.body?.executionWorkspacePreference, 'shared_workspace');
-    assert.equal(issueRequest.body?.priority, 'high');
-    assert.equal(issueRequest.body?.title, 'Prepare a defense-ready slide deck for a thesis committee.');
-    assert.match(String(issueRequest.body?.description ?? ''), /opl_family_handoff_bundle/);
-    assert.match(String(issueRequest.body?.description ?? ''), /redcube/);
-  } finally {
-    await stopHttpServer(fakePaperclip.server);
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
-test('paperclip-sync writes a deduplicated OPL state comment back to a tracked Paperclip issue', async () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paperclip-sync-'));
-  const fakePaperclip = await startFakePaperclipServer();
-
-  try {
-    runCli([
-      'paperclip',
-      'config',
-      '--base-url',
-      fakePaperclip.baseUrl,
-      '--auth-header-env',
-      'OPL_PAPERCLIP_AUTH_HEADER',
-      '--control-company-id',
-      'company-opl-control',
-    ], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
-      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer sync-token',
-    });
-    runCli([
-      'paperclip',
-      'bind',
-      '--project',
-      'redcube',
-      '--company-id',
-      'company-redcube',
-      '--paperclip-project-id',
-      'project-redcube',
-      '--project-workspace-id',
-      'workspace-redcube',
-      '--execution-workspace',
-      'shared_workspace',
-    ], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
-      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer sync-token',
-    });
-
-    await runCliAsync([
-      'paperclip',
-      'open-task',
-      'Prepare a defense-ready slide deck for a thesis committee.',
-      '--preferred-family',
-      'ppt_deck',
-      '--workspace-path',
-      repoRoot,
-      '--priority',
-      'high',
-    ], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
-      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer sync-token',
-    });
-
-    const synced = await runCliAsync([
-      'paperclip',
-      'sync',
-      '--issue-id',
-      'issue-1',
-      '--path',
-      repoRoot,
-      '--sessions-limit',
-      '1',
-    ], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
-      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer sync-token',
-    }) as {
-      paperclip_control_plane: {
-        action: string;
-      };
-      paperclip_sync: {
-        summary: {
-          matched_projection_count: number;
-          synced_count: number;
-          skipped_count: number;
-          approval_updates_count: number;
-          resolved_gate_count: number;
-        };
-        projections: Array<{
-          issue_id: string;
-          sync_status: string;
-          remote_issue_status: string | null;
-          remote_approval_status: string | null;
-          gate_status: string | null;
-          gate_decision: string | null;
-          snapshot: {
-            workspace_path: string;
-            related_session_aggregate_count: number;
-            domain_manifest_status: string;
-          };
-          comment: {
-            id: string;
-          } | null;
-        }>;
-      };
-    };
-
-    assert.equal(synced.paperclip_control_plane.action, 'sync');
-    assert.equal(synced.paperclip_sync.summary.matched_projection_count, 1);
-    assert.equal(synced.paperclip_sync.summary.synced_count, 1);
-    assert.equal(synced.paperclip_sync.summary.skipped_count, 0);
-    assert.equal(synced.paperclip_sync.summary.approval_updates_count, 0);
-    assert.equal(synced.paperclip_sync.summary.resolved_gate_count, 0);
-    assert.equal(synced.paperclip_sync.projections[0].issue_id, 'issue-1');
-    assert.equal(synced.paperclip_sync.projections[0].sync_status, 'synced');
-    assert.equal(synced.paperclip_sync.projections[0].remote_issue_status, 'backlog');
-    assert.equal(synced.paperclip_sync.projections[0].remote_approval_status, null);
-    assert.equal(synced.paperclip_sync.projections[0].gate_status, null);
-    assert.equal(synced.paperclip_sync.projections[0].gate_decision, null);
-    assert.equal(synced.paperclip_sync.projections[0].snapshot.workspace_path, repoRoot);
-    assert.equal(synced.paperclip_sync.projections[0].snapshot.related_session_aggregate_count, 0);
-    assert.equal(synced.paperclip_sync.projections[0].snapshot.domain_manifest_status, 'not_bound');
-    assert.equal(synced.paperclip_sync.projections[0].comment?.id, 'comment-1');
-
-    assert.equal(fakePaperclip.requests.length, 3);
-    const issueStatusRequest = fakePaperclip.requests[1];
-    const commentRequest = fakePaperclip.requests[2];
-    assert.equal(issueStatusRequest.method, 'GET');
-    assert.equal(issueStatusRequest.path, '/api/companies/company-redcube/issues/issue-1');
-    assert.equal(commentRequest.path, '/api/companies/company-redcube/issues/issue-1/comments');
-    assert.equal(commentRequest.headers.authorization, 'Bearer sync-token');
-    assert.match(String(commentRequest.body?.body ?? ''), /# OPL Sync Update/);
-    assert.match(String(commentRequest.body?.body ?? ''), /Prepare a defense-ready slide deck/);
-    assert.match(String(commentRequest.body?.body ?? ''), /workspace_status/);
-
-    const skipped = await runCliAsync([
-      'paperclip',
-      'sync',
-      '--issue-id',
-      'issue-1',
-      '--path',
-      repoRoot,
-      '--sessions-limit',
-      '1',
-    ], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
-      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer sync-token',
-    }) as {
-      paperclip_sync: {
-        summary: {
-          matched_projection_count: number;
-          synced_count: number;
-          skipped_count: number;
-          approval_updates_count: number;
-          resolved_gate_count: number;
-        };
-        projections: Array<{
-          sync_status: string;
-          remote_issue_status: string | null;
-          comment: {
-            id: string;
-          } | null;
-        }>;
-      };
-    };
-
-    assert.equal(skipped.paperclip_sync.summary.matched_projection_count, 1);
-    assert.equal(skipped.paperclip_sync.summary.synced_count, 0);
-    assert.equal(skipped.paperclip_sync.summary.skipped_count, 1);
-    assert.equal(skipped.paperclip_sync.summary.approval_updates_count, 0);
-    assert.equal(skipped.paperclip_sync.summary.resolved_gate_count, 0);
-    assert.equal(skipped.paperclip_sync.projections[0].sync_status, 'skipped_no_change');
-    assert.equal(skipped.paperclip_sync.projections[0].remote_issue_status, 'backlog');
-    assert.equal(skipped.paperclip_sync.projections[0].comment, null);
-    assert.equal(fakePaperclip.requests.length, 4);
-  } finally {
-    await stopHttpServer(fakePaperclip.server);
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
-test('paperclip-open-gate creates a control-company issue and linked board approval payload', async () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paperclip-open-gate-'));
-  const fakePaperclip = await startFakePaperclipServer();
-
-  try {
-    runCli([
-      'paperclip',
-      'config',
-      '--base-url',
-      fakePaperclip.baseUrl,
-      '--auth-header-env',
-      'OPL_PAPERCLIP_AUTH_HEADER',
-      '--control-company-id',
-      'company-opl-control',
-    ], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
-      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer integration-token',
-    });
-
-    const output = await runCliAsync([
-      'paperclip',
-      'open-gate',
-      'Prepare a defense-ready slide deck for a thesis committee.',
-      '--preferred-family',
-      'ppt_deck',
-      '--workspace-path',
-      repoRoot,
-      '--gate-kind',
-      'publish_readiness',
-    ], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
-      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer integration-token',
-    }) as {
-      paperclip_control_plane: {
-        action: string;
-      };
-      paperclip_gate: {
-        issue: {
-          companyId: string;
-        };
-        approval: {
-          companyId: string;
-          type: string;
-        };
-        family_human_gate: {
-          target_domain_id: string;
-          gate_kind: string;
-          decision_options: string[];
-        };
-      };
-    };
-
-    assert.equal(output.paperclip_control_plane.action, 'open_gate');
-    assert.equal(output.paperclip_gate.issue.companyId, 'company-opl-control');
-    assert.equal(output.paperclip_gate.approval.companyId, 'company-opl-control');
-    assert.equal(output.paperclip_gate.approval.type, 'request_board_approval');
-    assert.equal(output.paperclip_gate.family_human_gate.target_domain_id, 'redcube');
-    assert.equal(output.paperclip_gate.family_human_gate.gate_kind, 'publish_readiness');
-    assert.deepEqual(output.paperclip_gate.family_human_gate.decision_options, [
-      'approve',
-      'request_changes',
-      'reject',
-    ]);
-
-    assert.equal(fakePaperclip.requests.length, 2);
-    const issueRequest = fakePaperclip.requests[0];
-    const approvalRequest = fakePaperclip.requests[1];
-    assert.equal(issueRequest.path, '/api/companies/company-opl-control/issues');
-    assert.equal(approvalRequest.path, '/api/companies/company-opl-control/approvals');
-    assert.equal(issueRequest.headers.authorization, 'Bearer integration-token');
-    assert.equal(approvalRequest.headers.authorization, 'Bearer integration-token');
-    assert.equal(approvalRequest.body?.type, 'request_board_approval');
-    assert.deepEqual(approvalRequest.body?.issueIds, ['issue-1']);
-
-    const approvalPayload = approvalRequest.body?.payload as Record<string, unknown>;
-    const familyHumanGate = approvalPayload.family_human_gate as Record<string, unknown>;
-    assert.equal(familyHumanGate.version, 'family-human-gate.v1');
-    assert.equal(familyHumanGate.target_domain_id, 'redcube');
-    assert.equal(familyHumanGate.gate_kind, 'publish_readiness');
-    assert.deepEqual(familyHumanGate.decision_options, ['approve', 'request_changes', 'reject']);
-    assert.deepEqual(familyHumanGate.evidence_refs, [
-      {
-        ref_kind: 'json_pointer',
-        ref: '/handoff_bundle',
-        label: 'opl family handoff bundle',
-      },
-    ]);
-  } finally {
-    await stopHttpServer(fakePaperclip.server);
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
-test('paperclip-sync pulls approval decisions back into tracked gate state before writing audit comments', async () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paperclip-gate-sync-'));
-  const fakePaperclip = await startFakePaperclipServer();
-
-  try {
-    runCli([
-      'paperclip',
-      'config',
-      '--base-url',
-      fakePaperclip.baseUrl,
-      '--auth-header-env',
-      'OPL_PAPERCLIP_AUTH_HEADER',
-      '--control-company-id',
-      'company-opl-control',
-    ], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
-      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer gate-sync-token',
-    });
-
-    await runCliAsync([
-      'paperclip',
-      'open-gate',
-      'Review publish readiness for the defense deck.',
-      '--preferred-family',
-      'ppt_deck',
-      '--workspace-path',
-      repoRoot,
-      '--gate-kind',
-      'publish_readiness',
-    ], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
-      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer gate-sync-token',
-    });
-
-    fakePaperclip.setIssueStatus('issue-1', 'in_review');
-    fakePaperclip.setApprovalDecision('approval-1', 'approved', 'approve');
-
-    const synced = await runCliAsync([
-      'paperclip',
-      'sync',
-      '--issue-id',
-      'issue-1',
-      '--path',
-      repoRoot,
-      '--sessions-limit',
-      '1',
-    ], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
-      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer gate-sync-token',
-    }) as {
-      paperclip_sync: {
-        summary: {
-          matched_projection_count: number;
-          synced_count: number;
-          approval_updates_count: number;
-          resolved_gate_count: number;
-        };
-        projections: Array<{
-          projection_kind: string;
-          remote_issue_status: string | null;
-          remote_approval_status: string | null;
-          gate_status: string | null;
-          gate_decision: string | null;
-          comment: {
-            id: string;
-          } | null;
-        }>;
-      };
-    };
-
-    assert.equal(synced.paperclip_sync.summary.matched_projection_count, 1);
-    assert.equal(synced.paperclip_sync.summary.synced_count, 1);
-    assert.equal(synced.paperclip_sync.summary.approval_updates_count, 1);
-    assert.equal(synced.paperclip_sync.summary.resolved_gate_count, 1);
-    assert.equal(synced.paperclip_sync.projections[0].projection_kind, 'gate');
-    assert.equal(synced.paperclip_sync.projections[0].remote_issue_status, 'in_review');
-    assert.equal(synced.paperclip_sync.projections[0].remote_approval_status, 'approved');
-    assert.equal(synced.paperclip_sync.projections[0].gate_status, 'approved');
-    assert.equal(synced.paperclip_sync.projections[0].gate_decision, 'approve');
-    assert.equal(synced.paperclip_sync.projections[0].comment?.id, 'comment-1');
-
-    const status = runCli(['paperclip', 'status', '--path', repoRoot, '--sessions-limit', '1'], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
-      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer gate-sync-token',
-    }) as {
-      paperclip_control_plane: {
-        summary: {
-          tracked_resolved_gate_count: number;
-          tracked_pending_gate_count: number;
-        };
-        tracked_projections: Array<{
-          issue_id: string;
-          approval_status: string | null;
-          gate_status: string | null;
-          gate_decision: string | null;
-          remote_issue_status: string | null;
-          last_polled_at: string | null;
-        }>;
-      };
-    };
-
-    assert.equal(status.paperclip_control_plane.summary.tracked_resolved_gate_count, 1);
-    assert.equal(status.paperclip_control_plane.summary.tracked_pending_gate_count, 0);
-    assert.equal(status.paperclip_control_plane.tracked_projections[0].issue_id, 'issue-1');
-    assert.equal(status.paperclip_control_plane.tracked_projections[0].approval_status, 'approved');
-    assert.equal(status.paperclip_control_plane.tracked_projections[0].gate_status, 'approved');
-    assert.equal(status.paperclip_control_plane.tracked_projections[0].gate_decision, 'approve');
-    assert.equal(status.paperclip_control_plane.tracked_projections[0].remote_issue_status, 'in_review');
-    assert.match(String(status.paperclip_control_plane.tracked_projections[0].last_polled_at), /^2026-/);
-  } finally {
-    await stopHttpServer(fakePaperclip.server);
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
-test('paperclip-operator-loop runs repeated reconcile cycles and persists loop state for status surfaces', async () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paperclip-operator-loop-'));
-  const fakePaperclip = await startFakePaperclipServer();
-
-  try {
-    runCli([
-      'paperclip',
-      'config',
-      '--base-url',
-      fakePaperclip.baseUrl,
-      '--auth-header-env',
-      'OPL_PAPERCLIP_AUTH_HEADER',
-      '--control-company-id',
-      'company-opl-control',
-    ], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
-      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer loop-token',
-    });
-    runCli([
-      'paperclip',
-      'bind',
-      '--project',
-      'redcube',
-      '--company-id',
-      'company-redcube',
-      '--paperclip-project-id',
-      'project-redcube',
-    ], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
-      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer loop-token',
-    });
-
-    await runCliAsync([
-      'paperclip',
-      'open-task',
-      'Prepare a defense-ready slide deck for a thesis committee.',
-      '--preferred-family',
-      'ppt_deck',
-      '--workspace-path',
-      repoRoot,
-    ], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
-      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer loop-token',
-    });
-
-    const loop = await runCliAsync([
-      'paperclip',
-      'operator-loop',
-      '--project',
-      'redcube',
-      '--path',
-      repoRoot,
-      '--sessions-limit',
-      '1',
-      '--interval-ms',
-      '1',
-      '--cycles',
-      '2',
-    ], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
-      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer loop-token',
-    }) as {
-      paperclip_control_plane: {
-        action: string;
-      };
-      paperclip_operator_loop: {
-        state: string;
-        interval_ms: number;
-        cycles_completed: number;
-        summary: {
-          synced_count: number;
-          skipped_count: number;
-        };
-      };
-    };
-
-    assert.equal(loop.paperclip_control_plane.action, 'operator_loop');
-    assert.equal(loop.paperclip_operator_loop.state, 'completed');
-    assert.equal(loop.paperclip_operator_loop.interval_ms, 1);
-    assert.equal(loop.paperclip_operator_loop.cycles_completed, 2);
-    assert.equal(loop.paperclip_operator_loop.summary.synced_count, 1);
-    assert.equal(loop.paperclip_operator_loop.summary.skipped_count, 1);
-
-    const status = runCli(['paperclip', 'status', '--path', repoRoot, '--sessions-limit', '1'], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
-      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer loop-token',
-    }) as {
-      paperclip_control_plane: {
-        operator_loop: {
-          state: string;
-          last_completed_at: string | null;
-          last_run_summary: {
-            cycles_completed: number;
-            synced_count: number;
-            skipped_count: number;
-          } | null;
-        };
-      };
-    };
-
-    assert.equal(status.paperclip_control_plane.operator_loop.state, 'idle');
-    assert.match(String(status.paperclip_control_plane.operator_loop.last_completed_at), /^2026-/);
-    assert.equal(status.paperclip_control_plane.operator_loop.last_run_summary?.cycles_completed, 2);
-    assert.equal(status.paperclip_control_plane.operator_loop.last_run_summary?.synced_count, 1);
-    assert.equal(status.paperclip_control_plane.operator_loop.last_run_summary?.skipped_count, 1);
-  } finally {
-    await stopHttpServer(fakePaperclip.server);
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
-test('paperclip-status recovers stale paperclip operator loop state when the recorded owner pid is gone', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paperclip-operator-stale-'));
-  const operatorLoopFile = path.join(stateRoot, 'paperclip-operator-loop.json');
-
-  try {
-    fs.writeFileSync(
-      operatorLoopFile,
-      `${JSON.stringify({
-        version: 'g2',
-        state: 'running',
-        owner_pid: 999999,
-        last_started_at: '2026-04-13T10:00:00.000Z',
-        last_completed_at: null,
-        last_error: null,
-        last_run_summary: {
-          cycles_completed: 1,
-          matched_projection_count: 1,
-          synced_count: 1,
-          skipped_count: 0,
-          approval_updates_count: 0,
-          resolved_gate_count: 0,
-        },
-      }, null, 2)}\n`,
-      'utf8',
-    );
-
-    const status = runCli(['paperclip', 'status'], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
-    }) as {
-      paperclip_control_plane: {
-        operator_loop: {
-          state: string;
-          last_started_at: string | null;
-          last_completed_at: string | null;
-          last_error: string | null;
-        };
-      };
-    };
-
-    assert.equal(status.paperclip_control_plane.operator_loop.state, 'idle');
-    assert.equal(status.paperclip_control_plane.operator_loop.last_started_at, '2026-04-13T10:00:00.000Z');
-    assert.match(
-      String(status.paperclip_control_plane.operator_loop.last_completed_at),
-      /^2026-/,
-    );
-    assert.match(
-      String(status.paperclip_control_plane.operator_loop.last_error),
-      /Recovered stale Paperclip operator loop state from terminated pid 999999\./,
-    );
-
-    const persisted = JSON.parse(fs.readFileSync(operatorLoopFile, 'utf8')) as {
-      state: string;
-      owner_pid?: number | null;
-      last_completed_at: string | null;
-      last_error: string | null;
-    };
-    assert.equal(persisted.state, 'idle');
-    assert.equal(persisted.owner_pid ?? null, null);
-    assert.match(String(persisted.last_completed_at), /^2026-/);
-    assert.match(
-      String(persisted.last_error),
-      /Recovered stale Paperclip operator loop state from terminated pid 999999\./,
-    );
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
-test('web front-desk exposes the Paperclip control-plane aggregate surface', async () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-paperclip-web-state-'));
-  const fakePaperclip = await startFakePaperclipServer();
-  let child: ChildProcessByStdio<null, Readable, Readable> | null = null;
-
-  try {
-    runCli([
-      'paperclip',
-      'config',
-      '--base-url',
-      fakePaperclip.baseUrl,
-      '--auth-header-env',
-      'OPL_PAPERCLIP_AUTH_HEADER',
-      '--control-company-id',
-      'company-opl-control',
-    ], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
-      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer web-token',
-    });
-    runCli([
-      'paperclip',
-      'bind',
-      '--project',
-      'redcube',
-      '--company-id',
-      'company-redcube',
-      '--paperclip-project-id',
-      'project-redcube',
-    ], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
-      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer web-token',
-    });
-    await runCliAsync([
-      'paperclip',
-      'open-task',
-      'Prepare a defense-ready slide deck for a thesis committee.',
-      '--preferred-family',
-      'ppt_deck',
-      '--workspace-path',
-      repoRoot,
-    ], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
-      OPL_PAPERCLIP_AUTH_HEADER: 'Bearer web-token',
-    });
-
-    const startup = await startCliServer(
-      ['web', '--host', '127.0.0.1', '--port', '0', '--path', repoRoot, '--sessions-limit', '1'],
-      {
-        OPL_FRONTDESK_STATE_DIR: stateRoot,
-        OPL_PAPERCLIP_AUTH_HEADER: 'Bearer web-token',
-      },
-    );
-    child = startup.child;
-
-    const webFrontdesk = startup.payload.web_frontdesk as {
-      api: {
-        paperclip_control_plane: string;
-        paperclip_bootstrap: string;
-        paperclip_sync: string;
-      };
-      listening: {
-        base_url: string;
-      };
-    };
-
-    assert.equal(webFrontdesk.api.paperclip_control_plane, '/api/paperclip/control-plane');
-    assert.equal(webFrontdesk.api.paperclip_bootstrap, '/api/paperclip/control-plane/bootstrap');
-    assert.equal(webFrontdesk.api.paperclip_sync, '/api/paperclip/control-plane/sync');
-
-    const response = await fetch(`${webFrontdesk.listening.base_url}/api/paperclip/control-plane`);
-    const payload = await response.json() as {
-      paperclip_control_plane: {
-        readiness: string;
-        connection: {
-          base_url: string;
-        };
-        summary: {
-          project_bindings_count: number;
-        };
-      };
-    };
-    assert.equal(payload.paperclip_control_plane.readiness, 'configured');
-    assert.equal(payload.paperclip_control_plane.connection.base_url, fakePaperclip.baseUrl);
-    assert.equal(payload.paperclip_control_plane.summary.project_bindings_count, 1);
-
-    const bootstrapResponse = await fetch(`${webFrontdesk.listening.base_url}/api/paperclip/control-plane/bootstrap`);
-    const bootstrapPayload = await bootstrapResponse.json() as {
-      paperclip_control_plane: {
-        action: string;
-      };
-      paperclip_bootstrap: {
-        automation_surfaces: {
-          web: {
-            sync: string;
-          };
-        };
-      };
-    };
-    assert.equal(bootstrapPayload.paperclip_control_plane.action, 'bootstrap');
-    assert.equal(bootstrapPayload.paperclip_bootstrap.automation_surfaces.web.sync, '/api/paperclip/control-plane/sync');
-
-    const syncResponse = await fetch(`${webFrontdesk.listening.base_url}/api/paperclip/control-plane/sync`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        issue_id: 'issue-1',
-        workspace_path: repoRoot,
-        sessions_limit: 1,
-      }),
-    });
-    const syncPayload = await syncResponse.json() as {
-      paperclip_control_plane: {
-        action: string;
-      };
-      paperclip_sync: {
-        summary: {
-          synced_count: number;
-        };
-      };
-    };
-    assert.equal(syncPayload.paperclip_control_plane.action, 'sync');
-    assert.equal(syncPayload.paperclip_sync.summary.synced_count, 1);
-  } finally {
-    if (child) {
-      await stopCliServer(child);
-    }
-    await stopHttpServer(fakePaperclip.server);
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
 
 test('logs returns a structured wrapper over Hermes log output', () => {
   const { fixtureRoot, hermesPath } = createFakeHermesFixture(`

@@ -207,5 +207,6 @@ test('product entry companion helpers build canonical shared payloads', () => {
   assert.equal(frontdesk.surface_kind, 'product_frontdesk');
   assert.equal(frontdesk.ok, true);
   assert.equal(frontdesk.schema_ref, 'contracts/schemas/v1/product-frontdesk.schema.json');
-  assert.equal(frontdesk.product_entry_start.recommended_mode_id, 'open_frontdesk');
+  const productEntryStart = frontdesk.product_entry_start as { recommended_mode_id: string };
+  assert.equal(productEntryStart.recommended_mode_id, 'open_frontdesk');
 });

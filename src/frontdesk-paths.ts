@@ -3,6 +3,7 @@ export type FrontDeskEndpoints = {
   manifest: string;
   frontdesk_entry_guide: string;
   frontdesk_readiness: string;
+  frontdesk_settings: string;
   frontdesk_librechat_status: string;
   frontdesk_librechat_title_sync: string;
   project_progress: string;
@@ -19,9 +20,6 @@ export type FrontDeskEndpoints = {
   runtime_status: string;
   session_ledger: string;
   dashboard: string;
-  paperclip_control_plane: string;
-  paperclip_bootstrap: string;
-  paperclip_sync: string;
   ask: string;
   task_status: string;
   start: string;
@@ -53,6 +51,7 @@ export function buildFrontDeskEndpoints(basePath = ''): FrontDeskEndpoints {
     manifest: `${apiBase}/frontdesk-manifest`,
     frontdesk_entry_guide: `${apiBase}/frontdesk-entry-guide`,
     frontdesk_readiness: `${apiBase}/frontdesk-readiness`,
+    frontdesk_settings: `${apiBase}/frontdesk-settings`,
     frontdesk_librechat_status: `${apiBase}/frontdesk-librechat-status`,
     frontdesk_librechat_title_sync: `${apiBase}/frontdesk-librechat-title-sync`,
     project_progress: `${apiBase}/project-progress`,
@@ -69,9 +68,6 @@ export function buildFrontDeskEndpoints(basePath = ''): FrontDeskEndpoints {
     runtime_status: `${apiBase}/runtime-status`,
     session_ledger: `${apiBase}/session-ledger`,
     dashboard: `${apiBase}/dashboard`,
-    paperclip_control_plane: `${apiBase}/paperclip/control-plane`,
-    paperclip_bootstrap: `${apiBase}/paperclip/control-plane/bootstrap`,
-    paperclip_sync: `${apiBase}/paperclip/control-plane/sync`,
     ask: `${apiBase}/ask`,
     task_status: `${apiBase}/task-status`,
     start: `${apiBase}/start`,
