@@ -36,7 +36,7 @@
 
 - `MedAutoScience` 的 manifest 现在把 `product-frontdesk` 冻结成显式 `frontdesk_surface`，同时继续导出 `open_loop / submit_task / continue_study / inspect_progress`。
 - `MedAutoGrant` 的 manifest 现在把 `product-frontdesk` 冻结成显式 `frontdesk_surface`，同时继续导出 `open_loop / inspect_progress / inspect_cockpit / build_direct_entry`。
-- `RedCube AI` 的 manifest 继续把 `redcube product frontdesk` 作为显式 `frontdesk_surface`，并导出 `start_deliverable / continue_session / federated_handoff`。
+- `RedCube AI` 的 manifest 继续把 `redcube product frontdesk` 作为显式 `frontdesk_surface`，并导出 `start_deliverable / continue_session / opl_bridge_handoff`。
 - `OPL` 顶层现在会把这些 `operator_loop_actions` 继续透传到：
   - `domain-manifests`
   - `dashboard.front_desk.recommended_entry_surfaces`

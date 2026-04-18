@@ -120,9 +120,20 @@ The local web front desk pilot is landed, while the hosted web front desk is sti
 The public product direction is `GUI -> mode selection -> Codex or domain module`.
 `opl frontdesk bootstrap --path <workspace>` prepares the local `OPL Atlas` Desktop shell.
 `opl web` remains the local browser companion.
-`opl`, `opl "<request...>"`, `opl ask`, and `opl chat` remain shell surfaces around the same product entry.
+`opl`, `opl "<request...>"`, `opl start`, `opl ask`, and `opl chat` remain shell surfaces around the same product entry.
+The grouped CLI matrix now stays aligned with the landed front door:
 
-The explicit CLI surface order stays visible as `opl doctor`, `opl ask`, `opl chat`, `opl resume`, `opl sessions`, `opl logs`, `opl repair-hermes-gateway`, and `opl web`.
+- top-level shell: `opl`, `opl "<request...>"`, `opl start`, `opl doctor`, `opl ask`, `opl chat`, `opl web`
+- contract surfaces: `opl contract validate|workstreams|workstream|domains|domain|surfaces|surface|handoff-envelope`
+- domain surfaces: `opl domain manifests|launch|resolve-request|explain-boundary`
+- status surfaces: `opl status workspace|runtime|dashboard`
+- workspace surfaces: `opl workspace projects|list|bind|activate|archive`
+- frontdesk surfaces: `opl frontdesk manifest|entry-guide|readiness|domain-wiring|hosted-bundle|hosted-package|service *|bootstrap`
+- session surfaces: `opl session list|resume|logs|ledger`
+- runtime ops: `opl runtime repair-gateway`
+
+Representative grouped commands now read as `opl contract validate`, `opl domain manifests`, `opl status runtime`, `opl workspace bind`, `opl frontdesk entry-guide`, `opl session ledger`, and `opl runtime repair-gateway`.
+
 `opl "<request...>"` remains the quick-ask shell path around the same direct product entry.
 
 Codex is the default engine for ordinary conversation and general local tasks.

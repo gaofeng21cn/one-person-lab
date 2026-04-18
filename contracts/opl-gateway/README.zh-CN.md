@@ -23,11 +23,11 @@
 repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review Ops` 然后 `Thesis Ops`：这两条 candidate path 都继续停留在 domain admission、`G2` discovery readiness、`G3` routed-action readiness 与 handoff readiness 之下。
 当前已 absorb 的前序门槛是 `Phase 1 exit + next-stage activation package freeze`；当前这份 `Phase 2 / Minimal admitted-domain federation activation package` 也已经被吸收到 repo-tracked 顶层真相中，只对已经 admitted 的 `MedAutoScience` 与 `RedCube AI` domain surface 生效。当前没有新的 active follow-on tranche 打开；只有 admitted-domain 仓再落下新的 absorbed delta，或中央 reference surfaces 发生真实漂移时，下一次 central sync 才是诚实的。runtime ownership 继续保留在 admitted domain 一侧。
 因此，当前 OPL 层的 repo-tracked formal entry 也仍然是这条本地 `TypeScript CLI`-first / gateway contract surface。
-而位于这层合同之上的当前用户前台，已经以 GUI front desk 为中心，并带着本地 shell shortcut 与 `opl web` companion surface；其中 hosted-friendly 的 `frontdesk-manifest`、`frontdesk-entry-guide`、`frontdesk-readiness`、`frontdesk-domain-wiring`、`hosted-bundle` 等 surface 已作为当前前台 contract 的一部分落地。
+而位于这层合同之上的当前用户前台，已经以 GUI front desk 为中心，并带着本地 shell shortcut 与 `opl web` companion surface；其中 hosted-friendly 的 `opl frontdesk manifest`、`opl frontdesk entry-guide`、`opl frontdesk readiness`、`opl frontdesk domain-wiring`、`opl frontdesk hosted-bundle` 等 surface 已作为当前前台 contract 的一部分落地。
 在这层前台里，`interaction_mode=codex` 与 `execution_mode=codex` 是默认公开模式；`Hermes-Agent` 继续只保留给显式交互续跑与特定 executor routing 的备用模式。
 其中 `frontdesk-readiness` 是面向 operator 的派生看板：它只收口本地 service 状态、hosted pilot readiness，以及 domain 自己持有的 `product_entry_readiness / preflight` 真相；它继续从既有 manifest / binding / runtime surface 派生，不得变成第二真相源。
 其中 `frontdesk-entry-guide` 是面向 AI / GUI 壳的 family-level machine-readable entry layer：它冻结 workspace taxonomy、domain workspace mapping 与每个 domain 的 start guidance，但不替代 domain 自己持有的 manifest truth。
-`frontdesk-manifest` 与 `opl web` startup payload 现在也把 shell bootstrap 顺序显式冻结下来：`frontdesk-entry-guide` 是 primary discovery surface，`frontdesk-readiness` 与 `frontdesk-domain-wiring` 是 follow-on alignment surface，而 `dashboard` 明确退回 operator debug / aggregate surface，不再充当壳层默认入口来源。
+`opl frontdesk manifest` 与 `opl web` startup payload 现在也把 shell bootstrap 顺序显式冻结下来：`opl frontdesk entry-guide` 是 primary discovery surface，`opl frontdesk readiness` 与 `opl frontdesk domain-wiring` 是 follow-on alignment surface，而 `opl status dashboard` 明确退回 operator debug / aggregate surface，不再充当壳层默认入口来源。
 如果未来把更高层的用户前台命名为 `OPL Cortex`，那也只应被视为产品壳名字；repo 内部的 `frontdesk_*` contract id 继续保持不变，除非单独冻结新的 rename tranche。
 `Paperclip` 继续停留在主公开面之外的 optional downstream control-plane bridge，`LibreChat` 继续停留在主公开面之外的 optional compatibility / fallback lane。
 这个交付目标把已有的顶层 contract language 继续维持为本地 GUI 与 CLI surface 可读取的合同入口；任何诚实的上游 `Hermes-Agent` rollout，仍然属于 domain 侧迁移目标，而不是当前 OPL 层既成事实。

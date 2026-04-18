@@ -1707,7 +1707,7 @@ function buildDomainBindingParity(
       launch_domain: endpoints.launch_domain,
     },
     notes: [
-      'This surface mirrors the domain-scoped binding state from workspace-catalog so hosted shells do not need to reconstruct it from dashboard.',
+      'This surface mirrors the domain-scoped binding state from `opl workspace list` so hosted shells do not need to reconstruct it from `opl status dashboard`.',
       'It stays derived from the writable workspace registry rather than inventing a second binding store.',
       'direct_entry_ready means the current project already has a bound command or URL; manifest_ready means the active binding already carries a manifest_command.',
     ],
@@ -2140,13 +2140,13 @@ export async function buildFrontDeskReadiness(
 
   const recommendedNextActions: string[] = [];
   if (!localService.installed) {
-    recommendedNextActions.push('如需长期本地产品入口，先执行 `opl frontdesk-service-install`。');
+    recommendedNextActions.push('如需长期本地产品入口，先执行 `opl frontdesk service install`。');
   } else if (!localService.loaded) {
-    recommendedNextActions.push('frontdesk service 已安装但未加载，执行 `opl frontdesk-service-start`。');
+    recommendedNextActions.push('frontdesk service 已安装但未加载，执行 `opl frontdesk service start`。');
   } else if (localService.health.status === 'unreachable') {
-    recommendedNextActions.push('frontdesk service 已加载但健康检查失败，先执行 `opl frontdesk-service-status` 与 `opl logs`。');
+    recommendedNextActions.push('frontdesk service 已加载但健康检查失败，先执行 `opl frontdesk service status` 与 `opl session logs`。');
   }
-  recommendedNextActions.push('默认 GUI 入口使用 `opl frontdesk-bootstrap` 准备并启动 OPL Atlas Desktop。');
+  recommendedNextActions.push('默认 GUI 入口使用 `opl frontdesk bootstrap` 准备并启动 OPL Atlas Desktop。');
   if (summary.manifest_ready_projects_count < summary.total_projects_count) {
     recommendedNextActions.push('给仍缺 manifest 的 active binding 补 `manifest_command`。');
   }
@@ -2179,7 +2179,7 @@ export async function buildFrontDeskReadiness(
         direct_entry_command: 'opl',
         quick_ask_command: 'opl <request...>',
         web_command: 'opl web',
-        desktop_command: 'opl frontdesk-bootstrap',
+        desktop_command: 'opl frontdesk bootstrap',
       },
       local_service: localService,
       hosted_runtime_readiness: hostedRuntimeReadiness,
@@ -2756,7 +2756,7 @@ export function buildFrontDeskDashboard(
         notes: [
           'OPL now exposes a desktop-first control room together with the local web front-desk pilot and hosted bundle exports.',
           'Workspace registry, managed session ledger, handoff bundle, and current Codex/Hermes mode selection are all visible from the same top-level board.',
-          'workspace-catalog keeps manifest_command as non-executing registry state, while domain-manifests resolves the active bound machine-readable product-entry manifests.',
+          '`opl workspace list` keeps `manifest_command` as non-executing registry state, while `opl domain manifests` resolves the active bound machine-readable product-entry manifests.',
           'Resolved domain manifests now also feed frontdesk surface plus operator-loop actions and recommended shell/command hints back into dashboard and handoff surfaces.',
           'Resolved domain manifests now also surface family-orchestration companion previews so the top-level front desk can show human-gate and resume semantics instead of hiding them in domain docs.',
           'The LibreChat-first hosted shell pilot remains available as a fallback export lane, while managed hosted runtime readiness remains a separate follow-up track.',

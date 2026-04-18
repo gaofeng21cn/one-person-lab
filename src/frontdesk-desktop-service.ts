@@ -47,7 +47,7 @@ function normalizeWorkspacePath(workspacePath?: string) {
   if (!fs.existsSync(resolved) || !fs.statSync(resolved).isDirectory()) {
     throw new GatewayContractError(
       'cli_usage_error',
-      'frontdesk-bootstrap requires an existing workspace directory.',
+      'frontdesk bootstrap requires an existing workspace directory.',
       {
         workspace_path: resolved,
       },

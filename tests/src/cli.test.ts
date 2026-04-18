@@ -381,7 +381,7 @@ function assertRedcubeActionGraph(actionGraph: Record<string, unknown>) {
     [
       'step:open_frontdesk',
       'step:continue_current_loop',
-      'step:federated_handoff',
+      'step:opl_bridge_handoff',
       'step:inspect_current_progress',
     ],
   );
@@ -398,7 +398,7 @@ function assertRedcubeActionGraph(actionGraph: Record<string, unknown>) {
     mode: 'explicit_nodes',
     checkpoint_nodes: [
       'step:continue_current_loop',
-      'step:federated_handoff',
+      'step:opl_bridge_handoff',
       'step:inspect_current_progress',
     ],
   });
@@ -2051,7 +2051,7 @@ exit 1
     assert.equal(output.frontdesk_readiness.shell_integration_target, 'desktop_first');
     assert.equal(output.frontdesk_readiness.local_shell.direct_entry_command, 'opl');
     assert.equal(output.frontdesk_readiness.local_shell.web_command, 'opl web');
-    assert.equal(output.frontdesk_readiness.local_shell.desktop_command, 'opl frontdesk-bootstrap');
+    assert.equal(output.frontdesk_readiness.local_shell.desktop_command, 'opl frontdesk bootstrap');
     assert.equal(output.frontdesk_readiness.hosted_runtime_readiness.status, 'pilot_ready_not_managed');
     assert.equal(output.frontdesk_readiness.summary.total_projects_count, 2);
     assert.equal(output.frontdesk_readiness.summary.usable_now_projects_count, 0);
@@ -2066,6 +2066,11 @@ exit 1
     assert.equal(output.frontdesk_readiness.projects[0].entry_parity_status, 'blocked');
     assert.equal(output.frontdesk_readiness.projects[0].usable_now, false);
     assert.equal(output.frontdesk_readiness.projects[0].recommended_start_command, null);
+    assert.ok(
+      output.frontdesk_readiness.recommended_next_actions.some((entry: string) =>
+        entry.includes('opl frontdesk service install'),
+      ),
+    );
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(psFixture.fixtureRoot, { recursive: true, force: true });
@@ -3467,6 +3472,11 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(manifestOutput.domain_manifests.summary.manifest_configured_count, 3);
     assert.equal(manifestOutput.domain_manifests.summary.resolved_count, 3);
     assert.equal(manifestOutput.domain_manifests.summary.failed_count, 0);
+    assert.ok(
+      manifestOutput.domain_manifests.notes.some((note: string) =>
+        note.includes('opl workspace list') && note.includes('opl domain manifests'),
+      ),
+    );
 
     const medautogrant = manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) => entry.project_id === 'medautogrant');
     const redcube = manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) => entry.project_id === 'redcube');
@@ -3600,7 +3610,7 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     );
     assert.equal(redcube.manifest.product_entry_start.surface_kind, 'product_entry_start');
     assert.equal(redcube.manifest.product_entry_start.recommended_mode_id, 'open_frontdesk');
-    assert.equal(redcube.manifest.product_entry_start.modes[2].mode_id, 'federated_handoff');
+    assert.equal(redcube.manifest.product_entry_start.modes[2].mode_id, 'opl_bridge_handoff');
     assert.equal(redcube.manifest.product_entry_start.modes[3].mode_id, 'resume_session');
 
     const guideOutput = runCli(['frontdesk', 'entry-guide'], env);
@@ -3804,7 +3814,7 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(recommendedEntry.product_entry_start.surface_kind, 'product_entry_start');
     assert.equal(recommendedEntry.product_entry_start.recommended_mode_id, 'open_frontdesk');
     assert.equal(recommendedEntry.product_entry_start_resume_surface_kind, 'product_entry_session');
-    assert.equal(recommendedEntry.product_entry_start_mode_ids[2], 'federated_handoff');
+    assert.equal(recommendedEntry.product_entry_start_mode_ids[2], 'opl_bridge_handoff');
     assert.equal(
       recommendedEntry.product_entry_preflight.recommended_check_command,
       'redcube workspace doctor --workspace-root /fixtures/redcube/workspace',
@@ -3833,7 +3843,7 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
       recommendedEntry.product_entry_overview.resume_surface.checkpoint_locator_field,
       'continuation_snapshot.latest_managed_run_id',
     );
-    assert.equal(recommendedEntry.product_entry_shell.federated.surface_kind, 'federated_product_entry');
+    assert.equal(recommendedEntry.product_entry_shell.opl_bridge.surface_kind, 'federated_product_entry');
     assert.equal(recommendedEntry.shared_handoff.opl_return_surface.target_domain_id, 'redcube_ai');
     assert.equal(recommendedEntry.family_orchestration.action_graph_ref.ref, '/family_orchestration/action_graph');
     assert.equal(recommendedEntry.family_action_graph_ref, '/family_orchestration/action_graph');
@@ -4679,7 +4689,7 @@ test('start returns the routed family start surface for a bound project', () => 
     assert.equal(output.product_entry_start.selected_mode_id, 'open_frontdesk');
     assert.equal(output.product_entry_start.selected_mode.mode_id, 'open_frontdesk');
     assert.equal(output.product_entry_start.selected_mode.command, 'redcube product frontdesk');
-    assert.equal(output.product_entry_start.available_modes[2].mode_id, 'federated_handoff');
+    assert.equal(output.product_entry_start.available_modes[2].mode_id, 'opl_bridge_handoff');
     assert.equal(output.product_entry_start.resume_surface.surface_kind, 'product_entry_session');
     assert.deepEqual(output.product_entry_start.human_gate_ids, ['redcube_operator_review_gate']);
   } finally {
@@ -4764,7 +4774,12 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     assert.equal(output.handoff_bundle.entry_mode, 'product_entry_handoff');
     assert.equal(output.handoff_bundle.workspace_locator.absolute_path, repoRoot);
     assert.equal(output.handoff_bundle.runtime_session_contract.runtime_substrate, 'external_hermes_kernel');
-    assert.equal(output.handoff_bundle.return_surface_contract.opl.resume_command, 'opl resume <session_id>');
+    assert.equal(output.handoff_bundle.return_surface_contract.opl.resume_command, 'opl session resume <session_id>');
+    assert.equal(
+      output.handoff_bundle.return_surface_contract.opl.logs_command,
+      'opl session logs gateway --session <session_id>',
+    );
+    assert.equal(output.handoff_bundle.return_surface_contract.opl.dashboard_command, 'opl status dashboard');
     assert.equal(output.handoff_bundle.domain_direct_entry.command, 'redcube-ai frontdesk');
     assert.equal(
       output.handoff_bundle.domain_direct_entry.manifest_command,
@@ -4786,7 +4801,7 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     );
     assert.equal(output.handoff_bundle.domain_manifest_recommendation.manifest_target_domain_id, 'redcube_ai');
     assert.equal(
-      output.handoff_bundle.domain_manifest_recommendation.product_entry_shell.federated.surface_kind,
+      output.handoff_bundle.domain_manifest_recommendation.product_entry_shell.opl_bridge.surface_kind,
       'federated_product_entry',
     );
     assert.equal(
@@ -4859,7 +4874,7 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     );
     assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.product_entry_start.modes[2].mode_id,
-      'federated_handoff',
+      'opl_bridge_handoff',
     );
     assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.product_entry_overview.progress_surface.command,
@@ -5368,7 +5383,7 @@ exit 1
     assert.equal(readinessPayload.frontdesk_readiness.summary.total_projects_count, 2);
     assert.equal(readinessPayload.frontdesk_readiness.summary.usable_now_projects_count, 0);
     assert.equal(readinessPayload.frontdesk_readiness.shell_integration_target, 'desktop_first');
-    assert.equal(readinessPayload.frontdesk_readiness.local_shell.desktop_command, 'opl frontdesk-bootstrap');
+    assert.equal(readinessPayload.frontdesk_readiness.local_shell.desktop_command, 'opl frontdesk bootstrap');
     assert.match(
       readinessPayload.frontdesk_readiness.local_service.health.status,
       /^(ok|not_installed|unreachable)$/,
@@ -5643,10 +5658,10 @@ exit 1
     assert.equal(startPayload.product_entry_start.selected_mode.command, 'redcube product frontdesk');
     assert.deepEqual(startPayload.product_entry_start.human_gate_ids, ['redcube_operator_review_gate']);
 
-    const modeResponse = await fetch(`${baseUrl}/api/start?project=redcube&mode=federated_handoff`);
+    const modeResponse = await fetch(`${baseUrl}/api/start?project=redcube&mode=opl_bridge_handoff`);
     assert.equal(modeResponse.status, 200);
     const modePayload = await modeResponse.json();
-    assert.equal(modePayload.product_entry_start.selected_mode_id, 'federated_handoff');
+    assert.equal(modePayload.product_entry_start.selected_mode_id, 'opl_bridge_handoff');
     assert.equal(modePayload.product_entry_start.selected_mode.command, 'redcube product federate');
 
     const launchResponse = await fetch(`${baseUrl}/api/launch-domain`, {

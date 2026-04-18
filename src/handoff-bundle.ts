@@ -72,9 +72,9 @@ export function buildHandoffBundle(
       },
       return_surface_contract: {
         opl: {
-          resume_command: 'opl resume <session_id>',
-          logs_command: 'opl logs gateway --session <session_id>',
-          dashboard_command: 'opl dashboard',
+          resume_command: 'opl session resume <session_id>',
+          logs_command: 'opl session logs gateway --session <session_id>',
+          dashboard_command: 'opl status dashboard',
           resume_endpoint: endpoints.resume,
           logs_endpoint: endpoints.logs,
           dashboard_endpoint: endpoints.dashboard,

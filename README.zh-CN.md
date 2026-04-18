@@ -120,9 +120,20 @@ Human
 当前公开前台路径是 `GUI 产品壳 -> 工作模式选择 -> Codex / 专用智能体`。
 `opl frontdesk bootstrap --path <workspace>` 准备本地 `OPL Atlas` Desktop 壳。
 `opl web` 是同一产品壳的本地浏览器 companion surface。
-`opl`、`opl "<request...>"`、`opl ask` 与 `opl chat` 都围绕同一产品入口。
+`opl`、`opl "<request...>"`、`opl start`、`opl ask` 与 `opl chat` 都围绕同一产品入口。
+当前 grouped CLI matrix 已经和落地前门保持一致：
 
-显式 CLI surface 顺序继续保留为 `opl doctor`、`opl ask`、`opl chat`、`opl resume`、`opl sessions`、`opl logs`、`opl repair-hermes-gateway`、`opl web`。
+- 顶层壳面：`opl`、`opl "<request...>"`、`opl start`、`opl doctor`、`opl ask`、`opl chat`、`opl web`
+- contract 面：`opl contract validate|workstreams|workstream|domains|domain|surfaces|surface|handoff-envelope`
+- domain 面：`opl domain manifests|launch|resolve-request|explain-boundary`
+- status 面：`opl status workspace|runtime|dashboard`
+- workspace 面：`opl workspace projects|list|bind|activate|archive`
+- frontdesk 面：`opl frontdesk manifest|entry-guide|readiness|domain-wiring|hosted-bundle|hosted-package|service *|bootstrap`
+- session 面：`opl session list|resume|logs|ledger`
+- runtime 运维面：`opl runtime repair-gateway`
+
+现在的代表性 grouped command 可以直接读成 `opl contract validate`、`opl domain manifests`、`opl status runtime`、`opl workspace bind`、`opl frontdesk entry-guide`、`opl session ledger` 与 `opl runtime repair-gateway`。
+
 `opl "<request...>"` 继续作为同一 direct product entry 之上的 quick ask 路径。
 
 Codex 是普通对话与通用本地任务的默认执行者。

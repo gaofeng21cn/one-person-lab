@@ -1225,7 +1225,7 @@ export function buildDomainManifestCatalog(contracts: GatewayContracts) {
       projects,
       notes: [
         'This surface executes the domain-owned manifest_command for active admitted-domain bindings only.',
-        'workspace-catalog remains the non-executing registry; domain-manifests is the sibling discovery surface that resolves machine-readable product-entry manifests.',
+        '`opl workspace list` remains the non-executing registry; `opl domain manifests` is the sibling discovery surface that resolves machine-readable product-entry manifests.',
       ],
     },
   };
