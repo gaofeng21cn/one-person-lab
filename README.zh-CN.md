@@ -38,7 +38,7 @@
 
 - 从一个统一入口开始，而不是先把每个仓库、每套命令和每个 runtime 都学一遍。
 - 快速知道当前问题属于医学科研、基金写作、评审回复，还是展示/汇报制作。
-- 让实验室里会复用的数据、文献、判断和交付上下文保持连贯，但不把所有工作流混成一个大工具。
+- 让实验室里会复用的数据、文献、判断、执行可见性和交付上下文保持连贯，但不把所有工作流混成一个大工具。
 - 直接看清楚哪些路径今天已经活跃，哪些还处在定义阶段。
 
 ## 当前可走的主路径
@@ -104,10 +104,12 @@
 
 - `opl frontdesk bootstrap --path <workspace>` 是本机 GUI 前台主入口；它会准备 `OPL Atlas` Desktop 壳、把 `OPL Agent` 对齐到当前本机 `Codex` 默认模型与 thinking，并挂上 `OPL Cortex` MCP bridge
 - `opl web` 是同一前台的本地 web companion surface
-- `opl`、`opl "<request...>"`、`opl start --project <project_id> [--mode <mode_id>]` 是进入同一 front door / gateway surface 的 shell shortcut
+- `opl` 是默认前台命令，`opl "<request...>"` 与 `opl start --project <project_id> [--mode <mode_id>]` 是进入同一 front door / gateway surface 的 shell shortcut
+- 当前活跃开发宿主是 Codex-only 本地会话，而优选的未来产品 runtime substrate 方向，仍然是先在某个 domain 仓里诚实证明真实的上游 `Hermes-Agent` 集成
 - `opl ask` 默认执行器是 `Codex`
 - frontdesk runtime modes 当前冻结为 `interaction_mode=codex` 与 `execution_mode=codex`
 - `opl chat`、`opl resume`、`--executor hermes` 与前台显式 mode 切换保留 `Hermes` 备用 lane；这条 lane 用于显式交互续跑与 external kernel 验证
+- 当前 primary entry surfaces 包括 `opl frontdesk bootstrap`、`opl`、`opl "<request...>"`、`opl doctor`、`opl ask`、`opl chat`、`opl resume`、`opl sessions`、`opl logs`、`opl repair-hermes-gateway` 与 `opl web`
 
 围绕这条主路径，当前已经冻结的顶层发现与管理面包括：
 
@@ -124,6 +126,7 @@
 
 `Hermes Kernel Integration` 的正式选择继续是 `external kernel, managed by OPL product packaging`。
 这表示 `Hermes` 保持 external kernel 目标与显式备用模式；`OPL` 继续负责产品层 bootstrap、launcher、version pinning、runtime wiring 与用户入口；domain runtime ownership 继续留在各个 admitted domain 仓。
+hosted 产品化仍未落地。
 
 如果要看 fork / 用户自管安装 / 托管式外部 kernel 集成三种方案的完整对比，见 [OPL 产品入口与 Hermes Kernel Integration 决策](docs/references/opl-product-entry-and-hermes-kernel-integration.md)。
 如果要看四仓家族层面的入口栈与 `OPL -> domain` handoff 架构，见 [OPL 家族产品入口与 Domain Handoff 架构](docs/references/family-product-entry-and-domain-handoff-architecture.md)。
@@ -194,6 +197,7 @@ Human / Agent
 
 `OPL` 继续只持有顶层 `Gateway / Federation` 角色，admitted domain 仓继续持有各自的 domain runtime ownership。
 当前公开前台路径是 `GUI 前台 -> Codex -> OPL gateway surfaces`：`opl frontdesk bootstrap --path <workspace>` 准备本地 `OPL Atlas` Desktop 壳，本地 web front desk 保留 companion surface，交互与执行默认都走 `Codex`。
+当前活跃开发宿主是 Codex-only 本地会话，而优选的未来产品 runtime substrate 方向，仍然是先在某个 domain 仓里诚实证明真实的上游 `Hermes-Agent` 集成。
 `Hermes-Agent` 保留为显式备用模式，用于交互续跑、特定 executor routing 与 external kernel 验证；真实上游 `Hermes-Agent` rollout 仍属于 domain 侧迁移目标。
 
 `OPL` 之下共享的上位架构语言是 `Unified Harness Engineering Substrate`。其中当前最重要的共享部分，正在收敛为 [Shared Runtime Contract](./docs/shared-runtime-contract.zh-CN.md) 和 [Shared Domain Contract](./docs/shared-domain-contract.zh-CN.md)。
@@ -203,10 +207,11 @@ Human / Agent
 当前 `Phase 2 / Minimal admitted-domain federation activation package` 只覆盖两个已 admitted domain surface：`MedAutoScience` 与 `RedCube AI`。
 `Grant Foundry -> Med Auto Grant` 仍是活跃的医学 `Grant Ops` 业务仓路径，但顶层 federation admission / handoff wording 继续在 `OPL` 单独门控。
 
-`OPL` 现在已经有了本地 direct product-entry shell，公开 front door 以 GUI 前台为中心，`opl`、`opl "<request...>"` 与 `opl web` 是围绕同一入口的 shell shortcut 或 companion surface。
+`OPL` 现在已经有了以 `opl` 为默认入口的本地 direct product-entry shell，公开 front door 仍以 GUI 前台为中心，`opl "<request...>"` 与 `opl web` 是围绕同一入口的 shell shortcut 或 companion surface。
 它采用 `external kernel, managed by OPL product packaging`，不要求用户先手工安装并理解 `Hermes-Agent`。
-当前 primary entry surfaces 包括 `opl frontdesk bootstrap`、`opl`、`opl "<request...>"`、`opl ask`、`opl chat`、`opl resume`、`opl sessions`、`opl logs`、`opl repair-hermes-gateway` 与 `opl web`。
+当前 primary entry surfaces 包括 `opl frontdesk bootstrap`、`opl`、`opl "<request...>"`、`opl doctor`、`opl ask`、`opl chat`、`opl resume`、`opl sessions`、`opl logs`、`opl repair-hermes-gateway` 与 `opl web`。
 `Paperclip` 是 optional downstream control-plane bridge，`LibreChat` 是 optional compatibility / fallback lane。
+hosted 产品化仍未落地。
 
 当前顶层已落地的入口表面因此包括本地 `opl` shell 和本地 web front desk pilot。
 当前家族级管理面包括 `workspace-catalog`、`workspace-bind|activate|archive`、`domain-manifests`、`session-ledger` 与 `dashboard`。

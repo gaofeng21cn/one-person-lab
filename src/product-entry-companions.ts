@@ -107,6 +107,37 @@ export interface BuildProductFrontdeskInput {
   extra_payload?: JsonRecord;
 }
 
+export interface BuildFamilyProductEntryManifestInput {
+  manifest_kind: string;
+  target_domain_id: string;
+  formal_entry: JsonRecord;
+  workspace_locator: JsonRecord;
+  product_entry_shell: JsonRecord;
+  shared_handoff: JsonRecord;
+  product_entry_start: JsonRecord;
+  family_orchestration: JsonRecord;
+  runtime?: JsonRecord | null;
+  managed_runtime_contract?: JsonRecord | null;
+  repo_mainline?: JsonRecord | null;
+  product_entry_status?: JsonRecord | null;
+  frontdesk_surface?: JsonRecord | null;
+  operator_loop_surface?: JsonRecord | null;
+  operator_loop_actions?: JsonRecord | null;
+  recommended_shell?: string | null;
+  recommended_command?: string | null;
+  runtime_inventory?: JsonRecord | null;
+  task_lifecycle?: JsonRecord | null;
+  skill_catalog?: JsonRecord | null;
+  automation?: JsonRecord | null;
+  product_entry_overview?: JsonRecord | null;
+  product_entry_preflight?: JsonRecord | null;
+  product_entry_readiness?: JsonRecord | null;
+  product_entry_quickstart?: JsonRecord | null;
+  remaining_gaps?: string[] | null;
+  notes?: string[] | null;
+  extra_payload?: JsonRecord;
+}
+
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -158,6 +189,13 @@ function readStringList(value: unknown, field: string) {
   const normalized = value
     .map((entry, index) => requireString(entry, `${field}[${index}]`));
   return normalized;
+}
+
+function optionalStringList(value: unknown, field: string) {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+  return value.map((entry, index) => requireString(entry, `${field}[${index}]`));
 }
 
 function normalizeResumeContract(value: unknown, field: string): ProductEntryResumeContract {
@@ -243,14 +281,14 @@ function normalizeFrontdeskSummary(value: unknown, field: string) {
   };
 }
 
-function mergeExtraPayload(base: JsonRecord, extraPayload: unknown) {
+function mergeExtraPayload(base: JsonRecord, extraPayload: unknown, surfaceKind: string) {
   if (extraPayload === undefined) {
     return base;
   }
   const normalizedExtraPayload = cloneRecord(extraPayload, 'extra_payload');
   for (const key of Object.keys(normalizedExtraPayload)) {
     if (Object.prototype.hasOwnProperty.call(base, key)) {
-      throw new Error(`product frontdesk extra_payload 不允许覆盖核心字段: ${key}`);
+      throw new Error(`${surfaceKind} extra_payload 不允许覆盖核心字段: ${key}`);
     }
   }
   return {
@@ -365,5 +403,63 @@ export function buildProductFrontdesk(input: BuildProductFrontdeskInput) {
     summary: normalizeFrontdeskSummary(input.summary, 'summary'),
     notes: readStringList(input.notes, 'notes'),
   };
-  return mergeExtraPayload(payload, input.extra_payload);
+  return mergeExtraPayload(payload, input.extra_payload, 'product frontdesk');
+}
+
+export function buildFamilyProductEntryManifest(input: BuildFamilyProductEntryManifestInput) {
+  const payload: JsonRecord = {
+    surface_kind: 'product_entry_manifest',
+    manifest_version: 2,
+    manifest_kind: requireString(input.manifest_kind, 'manifest_kind'),
+    target_domain_id: requireString(input.target_domain_id, 'target_domain_id'),
+    formal_entry: cloneRecord(input.formal_entry, 'formal_entry'),
+    workspace_locator: cloneRecord(input.workspace_locator, 'workspace_locator'),
+    product_entry_shell: cloneRecord(input.product_entry_shell, 'product_entry_shell'),
+    shared_handoff: cloneRecord(input.shared_handoff, 'shared_handoff'),
+    product_entry_start: cloneRecord(input.product_entry_start, 'product_entry_start'),
+    family_orchestration: cloneRecord(input.family_orchestration, 'family_orchestration'),
+  };
+
+  const optionalRecords: Array<[string, unknown]> = [
+    ['runtime', input.runtime],
+    ['managed_runtime_contract', input.managed_runtime_contract],
+    ['repo_mainline', input.repo_mainline],
+    ['product_entry_status', input.product_entry_status],
+    ['frontdesk_surface', input.frontdesk_surface],
+    ['operator_loop_surface', input.operator_loop_surface],
+    ['operator_loop_actions', input.operator_loop_actions],
+    ['runtime_inventory', input.runtime_inventory],
+    ['task_lifecycle', input.task_lifecycle],
+    ['skill_catalog', input.skill_catalog],
+    ['automation', input.automation],
+    ['product_entry_overview', input.product_entry_overview],
+    ['product_entry_preflight', input.product_entry_preflight],
+    ['product_entry_readiness', input.product_entry_readiness],
+    ['product_entry_quickstart', input.product_entry_quickstart],
+  ];
+
+  for (const [key, value] of optionalRecords) {
+    if (value !== undefined && value !== null) {
+      payload[key] = cloneRecord(value, key);
+    }
+  }
+
+  const recommendedShell = optionalString(input.recommended_shell);
+  if (recommendedShell) {
+    payload.recommended_shell = recommendedShell;
+  }
+  const recommendedCommand = optionalString(input.recommended_command);
+  if (recommendedCommand) {
+    payload.recommended_command = recommendedCommand;
+  }
+  const remainingGaps = optionalStringList(input.remaining_gaps, 'remaining_gaps');
+  if (remainingGaps) {
+    payload.remaining_gaps = remainingGaps;
+  }
+  const notes = optionalStringList(input.notes, 'notes');
+  if (notes) {
+    payload.notes = notes;
+  }
+
+  return mergeExtraPayload(payload, input.extra_payload, 'product entry manifest');
 }
