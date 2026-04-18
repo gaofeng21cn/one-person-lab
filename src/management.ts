@@ -800,9 +800,12 @@ function buildStudyQueueCards(studies: unknown, workspacePath: string) {
       const monitoring = isRecord(entry.monitoring) ? entry.monitoring : null;
       const freshness = isRecord(entry.progress_freshness) ? entry.progress_freshness : null;
       const blockers = uniqueStrings(optionalStringList(entry.current_blockers));
+      const narrationContract = readStatusNarrationContract(entry.status_narration_contract);
       const currentStage = optionalString(entry.current_stage);
       const currentStageSummary =
-        optionalString(entry.current_stage_summary)
+        optionalString(narrationContract?.latest_update)
+        ?? optionalString(entry.current_stage_summary)
+        ?? statusNarrationStageSummary(narrationContract)
         ?? humanizeProgressCode(currentStage)
         ?? '当前任务状态待确认。';
       const latestProgressTimeLabel = optionalString(freshness?.latest_progress_time_label);
@@ -814,10 +817,16 @@ function buildStudyQueueCards(studies: unknown, workspacePath: string) {
         ].filter(Boolean).join(' · '))
         ?? '当前还没有新的进度更新时间。';
       const nextStep =
-        normalizeInlineText(optionalString(entry.next_system_action) ?? '继续查看这个研究任务的详细进度。')
+        normalizeInlineText(
+          optionalString(narrationContract?.next_step)
+          ?? optionalString(entry.next_system_action)
+          ?? '继续查看这个研究任务的详细进度。',
+        )
         ?? '继续查看这个研究任务的详细进度。';
+      const summaryFromContract = statusNarrationSummary(narrationContract);
       const summary =
-        normalizeInlineText([
+        summaryFromContract
+        ?? normalizeInlineText([
           currentStageSummary,
           blockers.length > 0 ? `当前卡点：${blockers.join('；')}` : null,
         ].filter(Boolean).join(' '))
@@ -932,6 +941,7 @@ function buildStudyProgressSurface(options: {
   }
 
   const progressPayload = progressPayloadResult.payload;
+  const narrationContract = readStatusNarrationContract(progressPayload?.status_narration_contract);
   const studyRoot =
     optionalString(progressPayload?.study_root)
     ?? optionalString(currentStudySummary.study_root)
@@ -1033,6 +1043,7 @@ function buildStudyProgressSurface(options: {
       quest_root: questRoot,
       current_stage: currentStage,
       current_stage_summary: currentStageSummary,
+      status_narration_contract: narrationContract,
       paper_stage: paperStage,
       paper_stage_summary: paperStageSummary,
       next_system_action: nextSystemAction,
@@ -1091,6 +1102,39 @@ function humanizeProgressCode(code: string | null) {
   return labels[code] ?? code.replace(/_/g, ' ');
 }
 
+function readStatusNarrationContract(value: unknown) {
+  if (!isRecord(value)) {
+    return null;
+  }
+  return value;
+}
+
+function statusNarrationStageSummary(contract: Record<string, unknown> | null) {
+  if (!contract) {
+    return null;
+  }
+  const stage = isRecord(contract.stage) ? contract.stage : null;
+  const currentStage = optionalString(stage?.current_stage);
+  const recommendedNextStage = optionalString(stage?.recommended_next_stage);
+  const currentStageLabel = humanizeProgressCode(currentStage) ?? currentStage;
+  const nextStageLabel = humanizeProgressCode(recommendedNextStage) ?? recommendedNextStage;
+  return normalizeInlineText([
+    currentStageLabel ? `当前状态：${currentStageLabel}` : null,
+    nextStageLabel ? `下一阶段：${nextStageLabel}` : null,
+  ].filter(Boolean).join('；'));
+}
+
+function statusNarrationSummary(contract: Record<string, unknown> | null) {
+  if (!contract) {
+    return null;
+  }
+  const blockers = uniqueStrings(optionalStringList(contract.current_blockers));
+  return normalizeInlineText([
+    statusNarrationStageSummary(contract),
+    blockers.length > 0 ? `当前卡点：${blockers.join('；')}` : null,
+  ].filter(Boolean).join('；'));
+}
+
 function buildProgressFeedback(options: {
   studySurface: ReturnType<typeof buildStudyProgressSurface>;
   progressSummary: string;
@@ -1106,12 +1150,15 @@ function buildProgressFeedback(options: {
   const monitoring = isRecord(currentStudy?.monitoring) ? currentStudy.monitoring : null;
   const latestProgress = isRecord(currentStudy?.latest_progress) ? currentStudy.latest_progress : null;
   const latestEvent = isRecord(currentStudy?.latest_event) ? currentStudy.latest_event : null;
+  const narrationContract = readStatusNarrationContract(currentStudy?.status_narration_contract);
   const recentActivity = options.studySurface.recentActivity;
   const currentStatus = optionalString(currentStudy?.current_stage);
   const runtimeStatus = optionalString(monitoring?.health_status);
   const headline =
     normalizeInlineText(
-      optionalString(currentStudy?.current_stage_summary)
+      optionalString(narrationContract?.latest_update)
+      ?? statusNarrationStageSummary(narrationContract)
+      ?? optionalString(currentStudy?.current_stage_summary)
       ?? optionalString(latestProgress?.summary)
       ?? optionalString(latestEvent?.summary)
       ?? options.progressSummary,
@@ -1124,7 +1171,8 @@ function buildProgressFeedback(options: {
       ?? recentActivity?.last_active
       ?? options.recentSession?.last_active
       ?? null,
-      optionalString(latestProgress?.summary)
+      optionalString(narrationContract?.latest_update)
+      ?? optionalString(latestProgress?.summary)
       ?? optionalString(latestEvent?.summary)
       ?? recentActivity?.preview
       ?? options.recentSession?.preview
@@ -1134,13 +1182,15 @@ function buildProgressFeedback(options: {
     ?? '当前还没有读到新的进度更新时间。';
   const nextStep =
     normalizeInlineText(
-      optionalString(currentStudy?.next_system_action)
+      optionalString(narrationContract?.next_step)
+      ?? optionalString(currentStudy?.next_system_action)
       ?? options.nextFocus
       ?? '继续展开当前任务的详细进度。',
     )
     ?? '继续展开当前任务的详细进度。';
   const statusSummary =
     normalizeInlineText([
+      statusNarrationSummary(narrationContract),
       currentStatus ? `当前状态：${humanizeProgressCode(currentStatus) ?? currentStatus}` : null,
       runtimeStatus ? `运行态：${humanizeProgressCode(runtimeStatus) ?? runtimeStatus}` : null,
     ].filter(Boolean).join('；'))
