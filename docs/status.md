@@ -2,10 +2,12 @@
 
 ## 当前公开角色
 
+- `OPL` 对外公开认知分三层：产品壳、产品家族、当前实现 / 模块。
 - `OPL` 是一人课题组的 Codex-native GUI 产品壳与模块管理器。
 - `Codex` 是默认交互与执行宿主，也是当前开发宿主；当前活跃执行入口仍是 `Codex-only` 本地会话，未来产品 runtime substrate 方向继续指向先在 domain 仓内证明的上游 `Hermes-Agent` 集成。
 - 当前默认入口是 `GUI 产品壳 -> 工作模式选择 -> Codex 对话 / Codex 任务 / 专用 domain agent`。
-- GUI 中并列呈现三类工作模式：普通 Codex 对话、通用 Codex 任务、专用 domain agents。
+- GUI 中并列呈现三类工作模式：普通 Codex 对话、通用 Codex 任务、专用智能体模块。
+- 产品家族定义长期稳定的工作类型，当前公开家族包括 `Research Foundry`、`Grant Foundry`、`Presentation Ops`、`Thesis Ops`、`Review Ops`。
 - 设置面承载模块安装、模块升级、版本 pin、默认模式、模块健康状态、最近验证状态和 online gateway 配置。
 - 右侧 workspace 边栏承载人话进度、任务状态与交付文件视图。
 - `OPL` 持有 family-level GUI、模块目录、shared helper 与 machine-readable contract；domain runtime ownership 继续留在各自仓库。
@@ -39,16 +41,26 @@
 | --- | --- | --- | --- |
 | 普通 Codex 对话 | Codex | 讨论、解释、阅读、计划、轻量分析 | 默认 GUI 模式 |
 | 通用 Codex 任务 | Codex task runner | 本地文件工作、命令执行、验证、多步任务 | 默认执行模式 |
-| 专用 domain agents | `MAS`、`MAG`、`RCA` | 医学科研、基金写作、视觉交付 | 活跃模块家族 |
+| 专用智能体模块 | `MAS`、`MAG`、`RCA` | 医学科研、基金写作、视觉交付 | 活跃模块家族 |
 
 `Hermes-Agent` 通过显式备用入口进入，作为 online gateway 和 alternate runtime lane。
 
-## 当前模块
+## 当前产品家族
+
+| 产品家族 | 当前实现 | 当前覆盖范围 | 公开状态 |
+| --- | --- | --- | --- |
+| `Research Foundry` | `MAS / Med Auto Science` | 医学科研、证据整理、稿件交付 | 活跃 |
+| `Grant Foundry` | `MAG / Med Auto Grant` | 医学基金方向判断、申请书写作、作者侧模拟评审 | 活跃仓线，顶层 admission / handoff wording 单独门控 |
+| `Presentation Ops` | `RCA / RedCube AI` | 汇报、讲课、幻灯片与视觉交付 | 活跃 |
+| `Thesis Ops` | Planned | 学位论文装配与答辩准备 | 定义阶段 |
+| `Review Ops` | Planned | 审稿、回复与修回 | 定义阶段 |
+
+## 当前实现与模块
 
 | 模块 | 仓库 | 用户面职责 | 当前状态 |
 | --- | --- | --- | --- |
 | `MAS` | `Med Auto Science` | 医学科研、证据整理、论文交付 | 活跃 |
-| `MAG` | `Med Auto Grant` | 基金申请、proposal、grant-facing 工作 | 活跃 |
+| `MAG` | `Med Auto Grant` | 基金申请、申请书写作与作者侧基金工作 | 活跃 |
 | `RCA` | `RedCube AI` | 汇报、幻灯片、视觉交付 | 活跃 |
 | thesis module | Planned | 学位论文与答辩准备 | 定义阶段 |
 | review module | Planned | 审稿、回复和修回 | 定义阶段 |
@@ -65,18 +77,19 @@
 
 ## 当前阶段
 
-- 把公开品牌主线稳定为 `产品壳 + 模块管理器`。
-- 把 GUI 三类工作模式固定为普通 Codex 对话、通用 Codex 任务、专用 domain agents。
+- 把公开品牌主线稳定为 `产品壳 + 产品家族 + 当前实现 / 模块`。
+- 把 GUI 三类工作模式固定为普通 Codex 对话、通用 Codex 任务、专用智能体模块。
+- 把 `Research Foundry`、`Grant Foundry`、`Presentation Ops`、`Thesis Ops`、`Review Ops` 固定为用户可理解的产品家族层。
 - 把设置面推进成模块安装、升级、版本 pin、健康状态、默认模式和 online gateway 配置的统一入口。
 - 把右侧边栏推进成人话 progress + files deliverables 的统一入口。
 - 把 `MAS`、`MAG`、`RCA` 的 module readiness、启动入口、最近运行状态和升级状态统一投射到 `OPL`。
 - 把 `Hermes-Agent` 明确放在备用模式与在线网关位置。
-- 保持 domain agents 的专业能力和仓库事实由各自项目维护。
+- 保持各专用智能体的专业能力和仓库事实由各自项目维护。
 - 顶层执行主线继续定位成 front desk / hosted runtime hardening，加上条件触发的 central sync follow-on；当前顶层 honest state 是 central sync stop，直到 admitted-domain 仓再次吸收新 delta 或中央 reference surface 再次漂移。
 
 ## 下一阶段
 
-1. 统一公开首页、docs 索引、状态页与架构图里的产品壳叙事。
+1. 统一公开首页、docs 索引、状态页与架构图里的 `产品壳 -> 产品家族 -> 当前实现` 叙事。
 2. 继续把 settings surface 做成模块管理、升级提示、版本 pin 和运行观察的主入口。
 3. 将 `MAS`、`MAG`、`RCA` 的 readiness 与最近运行入口投射到同一模块目录。
 4. 让 Hermes-Agent online gateway 只通过显式配置和显式模式切换出现。
@@ -92,10 +105,10 @@
 
 ## 长线目标
 
-- 让 `OPL` 成为一人课题组使用 Codex 与多个专用 Agent 的统一 GUI。
+- 让 `OPL` 成为一人课题组使用 Codex 与多个专用智能体的统一 GUI。
 - 让模块安装、模块升级、版本 pin、健康状态、默认模式和 online gateway 配置集中到 settings。
-- 让普通对话、通用任务与专用 domain agents 在同一产品壳里并列可选。
-- 让 domain agents 保持各自专业边界，同时共享 `OPL` 的入口、目录、状态和升级面。
+- 让普通对话、通用任务与专用智能体模块在同一产品壳里并列可选。
+- 让各专用智能体保持各自专业边界，同时共享 `OPL` 的入口、目录、状态和升级面。
 - 让 `Hermes-Agent` 作为在线网关和备用运行路径服务需要远端或替代 runtime 的工作。
 
 ## 默认验证

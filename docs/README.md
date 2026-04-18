@@ -10,17 +10,19 @@ This guide points readers to the architecture, contracts, planning surfaces, and
 
 | Audience | Start here | Why |
 | --- | --- | --- |
-| Potential users and human experts | [Repository Home](../README.md), [Roadmap](./roadmap.md), [Task Map](./task-map.md), [Operating Model](./operating-model.md) | Understand the `OPL` product shell before reading technical details |
+| Potential users and human experts | [Repository Home](../README.md), [Roadmap](./roadmap.md), [Task Map](./task-map.md), [Operating Model](./operating-model.md) | Understand the `OPL` shell, product families, and current implementations before reading technical details |
 | Technical readers and planners | [Project](./project.md), [Status](./status.md), [Architecture](./architecture.md), [Invariants](./invariants.md), [Decisions](./decisions.md), [Contracts Overview](../contracts/README.md) | Understand current truth, boundaries, and the active technical direction |
 | Developers and maintainers | [Reference Index](./references/README.md), `docs/specs/`, `docs/plans/`, `docs/history/omx/` | Inspect implementation support material, historical records, and tracked working notes |
 
 ## Current Baseline
 
 - `OPL` is the Codex-native GUI product shell and module manager for one-person-lab agents.
+- The public reading model uses three layers: product shell -> product families -> current implementations.
 - The GUI presents three peer work modes: ordinary Codex conversation, general Codex task, and specialized domain agents.
+- `Research Foundry`, `Grant Foundry`, and `Presentation Ops` are the current active product families; `Thesis Ops` and `Review Ops` stay in definition.
+- `MAS`, `MAG`, and `RCA` are the current active implementations under those product families.
 - Settings own module management, module upgrades, version pins, module health, default mode, and online gateway configuration.
 - The workspace side rail owns human-readable progress, running-task status, and deliverable files.
-- `MAS`, `MAG`, and `RCA` are the active specialized domain-agent modules.
 - `Hermes-Agent` is the explicit backup mode and online gateway for remote or alternate runtime paths.
 - Domain-agent repositories remain the source of truth for their specialized capabilities and readiness.
 
@@ -43,6 +45,7 @@ The current entry order is:
 - human experts enter through the repository home and Layer 1
 - technical planners combine the technical working set with Layer 2
 - developers treat Layers 3 and 4 as supporting material
+- the public product mental model is `shell -> family -> implementation`
 - live product-shell, module, settings, and online-gateway truth is read from [Status](./status.md)
 - `opl frontdesk bootstrap --path <workspace>` prepares the local `OPL Atlas` Desktop shell and binds the active workspace into the module registry
 - the default `OPL Cortex` bridge stays small: `project progress`, `execute request`, `task status`, `recent sessions`, `resume session`, `runtime logs`, `projects`, and `activate workspace`
