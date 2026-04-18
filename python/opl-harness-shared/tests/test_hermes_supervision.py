@@ -85,6 +85,38 @@ class HermesSupervisionTest(unittest.TestCase):
             jobs_file.write_text("{invalid", encoding="utf-8")
             self.assertEqual(load_jobs(hermes_home_root=hermes_home_root), [])
 
+    def test_load_jobs_accepts_object_payload_with_jobs_array(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            hermes_home_root = Path(tmp_dir)
+            jobs_file = hermes_home_root / "cron" / "jobs.json"
+            jobs_file.parent.mkdir(parents=True, exist_ok=True)
+            jobs_file.write_text(
+                json.dumps(
+                    {
+                        "jobs": [
+                            {
+                                "id": "job-002",
+                                "name": "family-supervision",
+                                "script": "family/watch.py",
+                            }
+                        ],
+                        "updated_at": "2026-04-18T09:11:14.132850+08:00",
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            self.assertEqual(
+                load_jobs(hermes_home_root=hermes_home_root),
+                [
+                    {
+                        "id": "job-002",
+                        "name": "family-supervision",
+                        "script": "family/watch.py",
+                    }
+                ],
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
