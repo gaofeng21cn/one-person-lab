@@ -1,5 +1,15 @@
 """Family-shared harness substrate helpers."""
 
+from .automation_companions import (
+    build_automation_catalog,
+    build_automation_descriptor,
+)
+from .family_orchestration import (
+    build_family_human_gate,
+    build_family_orchestration_companion,
+    resolve_active_run_id,
+    resolve_program_id,
+)
 from .hermes_supervision import (
     HermesSupervisionSpec,
     ensure_script_file,
@@ -30,16 +40,36 @@ from .product_entry_companions import (
     build_product_entry_resume_surface,
     collect_family_human_gate_ids,
 )
+from .runtime_task_companions import (
+    build_checkpoint_summary,
+    build_runtime_inventory,
+    build_task_lifecycle,
+    build_task_surface_descriptor,
+)
+from .skill_catalog import (
+    build_skill_catalog,
+    build_skill_descriptor,
+)
 
 __all__ = [
     "HermesSupervisionSpec",
     "MANAGED_RUNTIME_THREE_LAYER_CONTRACT_REF",
     "ManagedRuntimeThreeLayerContract",
+    "build_automation_catalog",
+    "build_automation_descriptor",
+    "build_checkpoint_summary",
+    "build_family_human_gate",
+    "build_family_orchestration_companion",
     "build_managed_runtime_contract",
     "build_product_entry_overview",
     "build_product_entry_quickstart",
     "build_product_entry_readiness",
     "build_product_entry_resume_surface",
+    "build_runtime_inventory",
+    "build_skill_catalog",
+    "build_skill_descriptor",
+    "build_task_lifecycle",
+    "build_task_surface_descriptor",
     "collect_family_human_gate_ids",
     "ensure_script_file",
     "job_drift",
@@ -50,7 +80,9 @@ __all__ = [
     "read_managed_runtime_three_layer_contract",
     "remove_empty_parent_dirs",
     "render_supervision_script",
+    "resolve_active_run_id",
     "resolve_job_script_path",
+    "resolve_program_id",
     "schedule_matches",
     "script_path",
     "select_primary_job",
