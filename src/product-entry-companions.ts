@@ -107,6 +107,14 @@ export interface BuildProductFrontdeskInput {
   extra_payload?: JsonRecord;
 }
 
+export interface BuildFamilyProductFrontdeskInput {
+  recommended_action: string;
+  product_entry_manifest: JsonRecord;
+  entry_surfaces: JsonRecord;
+  notes: string[];
+  extra_payload?: JsonRecord;
+}
+
 export interface BuildFamilyProductEntryManifestInput {
   manifest_kind: string;
   target_domain_id: string;
@@ -404,6 +412,82 @@ export function buildProductFrontdesk(input: BuildProductFrontdeskInput) {
     notes: readStringList(input.notes, 'notes'),
   };
   return mergeExtraPayload(payload, input.extra_payload, 'product frontdesk');
+}
+
+export function buildFamilyProductFrontdesk(input: BuildFamilyProductFrontdeskInput) {
+  const manifest = cloneRecord(input.product_entry_manifest, 'product_entry_manifest');
+  const frontdeskSurface = cloneRecord(
+    manifest.frontdesk_surface,
+    'product_entry_manifest.frontdesk_surface',
+  );
+  const operatorLoopSurface = cloneRecord(
+    manifest.operator_loop_surface,
+    'product_entry_manifest.operator_loop_surface',
+  );
+  return buildProductFrontdesk({
+    recommended_action: requireString(input.recommended_action, 'recommended_action'),
+    target_domain_id: requireString(
+      manifest.target_domain_id,
+      'product_entry_manifest.target_domain_id',
+    ),
+    workspace_locator: cloneRecord(
+      manifest.workspace_locator,
+      'product_entry_manifest.workspace_locator',
+    ),
+    runtime: cloneRecord(manifest.runtime, 'product_entry_manifest.runtime'),
+    product_entry_status: cloneRecord(
+      manifest.product_entry_status,
+      'product_entry_manifest.product_entry_status',
+    ),
+    frontdesk_surface: frontdeskSurface,
+    operator_loop_surface: operatorLoopSurface,
+    operator_loop_actions: cloneRecord(
+      manifest.operator_loop_actions,
+      'product_entry_manifest.operator_loop_actions',
+    ),
+    product_entry_start: cloneRecord(
+      manifest.product_entry_start,
+      'product_entry_manifest.product_entry_start',
+    ),
+    product_entry_overview: cloneRecord(
+      manifest.product_entry_overview,
+      'product_entry_manifest.product_entry_overview',
+    ),
+    product_entry_preflight: cloneRecord(
+      manifest.product_entry_preflight,
+      'product_entry_manifest.product_entry_preflight',
+    ),
+    product_entry_readiness: cloneRecord(
+      manifest.product_entry_readiness,
+      'product_entry_manifest.product_entry_readiness',
+    ),
+    product_entry_quickstart: cloneRecord(
+      manifest.product_entry_quickstart,
+      'product_entry_manifest.product_entry_quickstart',
+    ),
+    family_orchestration: cloneRecord(
+      manifest.family_orchestration,
+      'product_entry_manifest.family_orchestration',
+    ),
+    product_entry_manifest: manifest,
+    entry_surfaces: cloneRecord(input.entry_surfaces, 'entry_surfaces'),
+    summary: {
+      frontdesk_command: requireString(
+        frontdeskSurface.command,
+        'product_entry_manifest.frontdesk_surface.command',
+      ),
+      recommended_command: requireString(
+        manifest.recommended_command,
+        'product_entry_manifest.recommended_command',
+      ),
+      operator_loop_command: requireString(
+        operatorLoopSurface.command,
+        'product_entry_manifest.operator_loop_surface.command',
+      ),
+    },
+    notes: readStringList(input.notes, 'notes'),
+    extra_payload: input.extra_payload,
+  });
 }
 
 export function buildFamilyProductEntryManifest(input: BuildFamilyProductEntryManifestInput) {
