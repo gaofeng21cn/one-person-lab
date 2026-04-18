@@ -3570,6 +3570,17 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(medautogrant.manifest.product_entry_readiness.recommended_loop_command, 'uv run python -m med_autogrant grant-user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json');
     assert.equal(medautogrant.manifest.product_entry_preflight.surface_kind, 'product_entry_preflight');
     assert.equal(medautogrant.manifest.product_entry_preflight.ready_to_try_now, true);
+    assert.equal(medautogrant.manifest.runtime_inventory.surface_kind, 'runtime_inventory');
+    assert.equal(medautogrant.manifest.runtime_inventory.runtime_owner, 'upstream_hermes_agent');
+    assert.equal(medautogrant.manifest.runtime_inventory.availability, 'ready');
+    assert.equal(medautogrant.manifest.task_lifecycle.surface_kind, 'task_lifecycle');
+    assert.equal(medautogrant.manifest.task_lifecycle.resume_surface.surface_kind, 'grant_user_loop');
+    assert.equal(medautogrant.manifest.task_lifecycle.checkpoint_summary.status, 'critique');
+    assert.equal(medautogrant.manifest.skill_catalog.surface_kind, 'skill_catalog');
+    assert.equal(medautogrant.manifest.skill_catalog.skills.length, 2);
+    assert.equal(medautogrant.manifest.skill_catalog.supported_commands[1], 'grant-user-loop');
+    assert.equal(medautogrant.manifest.automation.surface_kind, 'automation');
+    assert.equal(medautogrant.manifest.automation.automations[0].target_surface_kind, 'grant_user_loop');
     assert.equal(
       medautogrant.manifest.product_entry_preflight.recommended_check_command,
       'uv run python -m med_autogrant validate-workspace --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json',
@@ -3601,6 +3612,16 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(medautoscience.manifest.product_entry_readiness.recommended_start_surface, 'product_frontdesk');
     assert.equal(medautoscience.manifest.product_entry_preflight.surface_kind, 'product_entry_preflight');
     assert.equal(medautoscience.manifest.product_entry_preflight.ready_to_try_now, true);
+    assert.equal(medautoscience.manifest.runtime_inventory.surface_kind, 'runtime_inventory');
+    assert.equal(medautoscience.manifest.runtime_inventory.executor_owner, 'med_deepscientist');
+    assert.equal(medautoscience.manifest.task_lifecycle.surface_kind, 'task_lifecycle');
+    assert.equal(medautoscience.manifest.task_lifecycle.resume_surface.surface_kind, 'launch_study');
+    assert.equal(medautoscience.manifest.task_lifecycle.human_gate_ids.length, 2);
+    assert.equal(medautoscience.manifest.skill_catalog.surface_kind, 'skill_catalog');
+    assert.equal(medautoscience.manifest.skill_catalog.supported_commands[0], 'product-frontdesk');
+    assert.equal(medautoscience.manifest.skill_catalog.skills[1].skill_id, 'medautoscience_workspace_cockpit');
+    assert.equal(medautoscience.manifest.automation.surface_kind, 'automation');
+    assert.equal(medautoscience.manifest.automation.automations[0].readiness_status, 'automation_ready');
     assert.equal(
       medautoscience.manifest.product_entry_preflight.recommended_check_command,
       'uv run python -m med_autoscience.cli doctor --profile /fixtures/med-autoscience/profile.local.toml',
@@ -3634,6 +3655,15 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
       redcube.manifest.family_orchestration.resume_contract.session_locator_field,
       'entry_session_contract.entry_session_id',
     );
+    assert.equal(redcube.manifest.runtime_inventory.surface_kind, 'runtime_inventory');
+    assert.equal(redcube.manifest.runtime_inventory.health_status, 'healthy');
+    assert.equal(redcube.manifest.task_lifecycle.surface_kind, 'task_lifecycle');
+    assert.equal(redcube.manifest.task_lifecycle.resume_surface.surface_kind, 'product_entry_session');
+    assert.equal(redcube.manifest.task_lifecycle.checkpoint_summary.status, 'operator_review_requested');
+    assert.equal(redcube.manifest.skill_catalog.surface_kind, 'skill_catalog');
+    assert.equal(redcube.manifest.skill_catalog.supported_commands[3], 'product-session');
+    assert.equal(redcube.manifest.automation.surface_kind, 'automation');
+    assert.equal(redcube.manifest.automation.automations[0].automation_id, 'redcube_autopilot_continuation');
     assert.equal(redcube.manifest.product_entry_readiness.verdict, 'service_surface_ready_not_managed_product');
     assert.equal(redcube.manifest.product_entry_readiness.usable_now, true);
     assert.equal(redcube.manifest.product_entry_readiness.recommended_start_command, 'redcube product frontdesk');
@@ -3766,11 +3796,40 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(grantEntry.product_entry_overview.summary, grantEntry.product_entry_status_summary);
     assert.equal(grantEntry.product_entry_overview.progress_surface.surface_kind, 'grant_progress');
     assert.equal(grantEntry.product_entry_overview.resume_surface.surface_kind, 'grant_user_loop');
+    assert.equal(grantEntry.runtime_inventory.surface_kind, 'runtime_inventory');
+    assert.equal(grantEntry.runtime_inventory_runtime_owner, 'upstream_hermes_agent');
+    assert.equal(grantEntry.runtime_inventory_availability, 'ready');
+    assert.equal(grantEntry.task_lifecycle.surface_kind, 'task_lifecycle');
+    assert.equal(grantEntry.task_lifecycle_status, 'resumable');
+    assert.equal(grantEntry.task_lifecycle_resume_surface_kind, 'grant_user_loop');
+    assert.deepEqual(grantEntry.task_lifecycle_human_gate_ids, ['mag_route_gate_revision']);
+    assert.equal(grantEntry.skill_catalog.surface_kind, 'skill_catalog');
+    assert.equal(grantEntry.skill_catalog_skill_count, 2);
+    assert.equal(grantEntry.skill_catalog_supported_commands[1], 'grant-user-loop');
+    assert.equal(grantEntry.automation.surface_kind, 'automation');
+    assert.equal(grantEntry.automation_count, 2);
+    assert.equal(
+      grantEntry.automation_readiness_summary,
+      'Revision route follow-up 已 ready，submission-ready export 继续保持 tracked follow-on。',
+    );
     assert.equal(scienceEntry.product_entry_shell.workspace_cockpit.purpose.includes('workspace'), true);
     assert.equal(scienceEntry.shared_handoff.opl_handoff_builder.entry_mode, 'opl-handoff');
     assert.equal(scienceEntry.product_entry_overview.summary, scienceEntry.product_entry_status_summary);
     assert.equal(scienceEntry.product_entry_overview.progress_surface.surface_kind, 'study_progress');
     assert.equal(scienceEntry.product_entry_overview.resume_surface.surface_kind, 'launch_study');
+    assert.equal(scienceEntry.runtime_inventory.surface_kind, 'runtime_inventory');
+    assert.equal(scienceEntry.runtime_inventory_runtime_owner, 'upstream_hermes_agent');
+    assert.equal(scienceEntry.task_lifecycle.surface_kind, 'task_lifecycle');
+    assert.equal(scienceEntry.task_lifecycle_resume_surface_kind, 'launch_study');
+    assert.deepEqual(
+      scienceEntry.task_lifecycle_human_gate_ids,
+      ['study_physician_decision_gate', 'publication_release_gate'],
+    );
+    assert.equal(scienceEntry.skill_catalog.surface_kind, 'skill_catalog');
+    assert.equal(scienceEntry.skill_catalog_skill_count, 2);
+    assert.equal(scienceEntry.skill_catalog_supported_commands[0], 'product-frontdesk');
+    assert.equal(scienceEntry.automation.surface_kind, 'automation');
+    assert.equal(scienceEntry.automation_count, 2);
     assert.equal(scienceEntry.product_entry_readiness_verdict, 'runtime_ready_not_standalone_product');
     assert.equal(scienceEntry.product_entry_readiness_good_to_use_now, false);
     assert.equal(scienceEntry.product_entry_readiness_loop_command, 'uv run python -m med_autoscience.cli workspace-cockpit --profile /fixtures/med-autoscience/profile.local.toml');
@@ -3830,6 +3889,21 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(recommendedEntry.operator_loop_actions.start_deliverable.command, 'redcube product invoke');
     assert.equal(recommendedEntry.product_entry_overview.summary, recommendedEntry.product_entry_status_summary);
     assert.equal(recommendedEntry.product_entry_overview.progress_surface.surface_kind, 'product_entry_session');
+    assert.equal(recommendedEntry.runtime_inventory.surface_kind, 'runtime_inventory');
+    assert.equal(recommendedEntry.runtime_inventory_runtime_owner, 'upstream_hermes_agent');
+    assert.equal(recommendedEntry.runtime_inventory_health_status, 'healthy');
+    assert.equal(recommendedEntry.task_lifecycle.surface_kind, 'task_lifecycle');
+    assert.equal(recommendedEntry.task_lifecycle_resume_surface_kind, 'product_entry_session');
+    assert.deepEqual(recommendedEntry.task_lifecycle_human_gate_ids, ['redcube_operator_review_gate']);
+    assert.equal(recommendedEntry.skill_catalog.surface_kind, 'skill_catalog');
+    assert.equal(recommendedEntry.skill_catalog_skill_count, 2);
+    assert.equal(recommendedEntry.skill_catalog_supported_commands[3], 'product-session');
+    assert.equal(recommendedEntry.automation.surface_kind, 'automation');
+    assert.equal(recommendedEntry.automation_count, 2);
+    assert.equal(
+      recommendedEntry.automation_readiness_summary,
+      'Continuation automation 继续保持 tracked follow-on，review state sync 保持 operator-gated。',
+    );
     assert.equal(
       recommendedEntry.product_entry_overview.resume_surface.checkpoint_locator_field,
       'continuation_snapshot.latest_managed_run_id',
@@ -3858,6 +3932,10 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(wiringOutput.frontdesk_domain_wiring.domain_binding_parity.summary.direct_entry_ready_projects_count, 1);
     assert.equal(wiringOutput.frontdesk_domain_wiring.domain_binding_parity.summary.manifest_ready_projects_count, 3);
     assert.equal(wiringOutput.frontdesk_domain_wiring.domain_binding_parity.summary.launch_ready_projects_count, 1);
+    assert.equal(wiringOutput.frontdesk_domain_wiring.domain_entry_parity.summary.runtime_inventory_ready_count, 3);
+    assert.equal(wiringOutput.frontdesk_domain_wiring.domain_entry_parity.summary.task_lifecycle_ready_count, 3);
+    assert.equal(wiringOutput.frontdesk_domain_wiring.domain_entry_parity.summary.skill_catalog_ready_count, 3);
+    assert.equal(wiringOutput.frontdesk_domain_wiring.domain_entry_parity.summary.automation_ready_count, 3);
     const grantBindingParity = wiringOutput.frontdesk_domain_wiring.domain_binding_parity.projects.find(
       (entry: { project_id: string }) => entry.project_id === 'medautogrant',
     );
@@ -3869,12 +3947,24 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     );
     assert.equal(grantBindingParity.direct_entry_ready, false);
     assert.equal(grantBindingParity.manifest_ready, true);
+    assert.equal(grantParity.runtime_inventory_status, 'ready');
+    assert.equal(grantParity.task_lifecycle_status, 'ready');
+    assert.equal(grantParity.skill_catalog_status, 'ready');
+    assert.equal(grantParity.automation_status, 'ready');
     assert.deepEqual(grantBindingParity.available_actions, ['bind', 'activate', 'archive']);
     assert.equal(scienceBindingParity.direct_entry_ready, false);
     assert.equal(scienceBindingParity.manifest_ready, true);
+    assert.equal(scienceParity.runtime_inventory_status, 'ready');
+    assert.equal(scienceParity.task_lifecycle_status, 'ready');
+    assert.equal(scienceParity.skill_catalog_status, 'ready');
+    assert.equal(scienceParity.automation_status, 'ready');
     assert.deepEqual(scienceBindingParity.available_actions, ['bind', 'activate', 'archive']);
     assert.equal(redcubeBindingParity.direct_entry_ready, true);
     assert.equal(redcubeBindingParity.manifest_ready, true);
+    assert.equal(redcubeParity.runtime_inventory_status, 'ready');
+    assert.equal(redcubeParity.task_lifecycle_status, 'ready');
+    assert.equal(redcubeParity.skill_catalog_status, 'ready');
+    assert.equal(redcubeParity.automation_status, 'ready');
     assert.equal(redcubeBindingParity.active_binding.direct_entry.url, 'http://127.0.0.1:3310/redcube');
     assert.deepEqual(redcubeBindingParity.available_actions, ['bind', 'activate', 'archive', 'launch']);
 
@@ -4677,6 +4767,38 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
       'Repo-verified product-entry service surface 已 landed，但成熟终端用户前台壳与 managed web productization 仍未 landed。',
     );
     assert.equal(
+      output.handoff_bundle.domain_manifest_recommendation.runtime_inventory.surface_kind,
+      'runtime_inventory',
+    );
+    assert.equal(
+      output.handoff_bundle.domain_manifest_recommendation.runtime_inventory.runtime_owner,
+      'upstream_hermes_agent',
+    );
+    assert.equal(
+      output.handoff_bundle.domain_manifest_recommendation.task_lifecycle.surface_kind,
+      'task_lifecycle',
+    );
+    assert.equal(
+      output.handoff_bundle.domain_manifest_recommendation.task_lifecycle.resume_surface.surface_kind,
+      'product_entry_session',
+    );
+    assert.equal(
+      output.handoff_bundle.domain_manifest_recommendation.skill_catalog.surface_kind,
+      'skill_catalog',
+    );
+    assert.equal(
+      output.handoff_bundle.domain_manifest_recommendation.skill_catalog.skills.length,
+      2,
+    );
+    assert.equal(
+      output.handoff_bundle.domain_manifest_recommendation.automation.surface_kind,
+      'automation',
+    );
+    assert.equal(
+      output.handoff_bundle.domain_manifest_recommendation.automation.automations[0].automation_id,
+      'redcube_autopilot_continuation',
+    );
+    assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.product_entry_readiness.verdict,
       'service_surface_ready_not_managed_product',
     );
@@ -4726,6 +4848,10 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     );
     assert.equal(output.handoff_bundle.domain_entry_parity.summary.total_projects_count, 2);
     assert.equal(output.handoff_bundle.domain_entry_parity.summary.aligned_projects_count, 1);
+    assert.equal(output.handoff_bundle.domain_entry_parity.summary.runtime_inventory_ready_count, 1);
+    assert.equal(output.handoff_bundle.domain_entry_parity.summary.task_lifecycle_ready_count, 1);
+    assert.equal(output.handoff_bundle.domain_entry_parity.summary.skill_catalog_ready_count, 1);
+    assert.equal(output.handoff_bundle.domain_entry_parity.summary.automation_ready_count, 1);
     assert.equal(
       output.handoff_bundle.domain_entry_parity.summary.direct_entry_locator_ready_projects_count,
       1,
@@ -4737,6 +4863,10 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     assert.equal(routedParity.direct_entry_locator_status, 'ready');
     assert.equal(routedParity.ready_for_opl_start, true);
     assert.equal(routedParity.ready_for_domain_handoff, true);
+    assert.equal(routedParity.runtime_inventory_status, 'ready');
+    assert.equal(routedParity.task_lifecycle_status, 'ready');
+    assert.equal(routedParity.skill_catalog_status, 'ready');
+    assert.equal(routedParity.automation_status, 'ready');
     assertRedcubeActionGraph(
       output.handoff_bundle.domain_manifest_recommendation.family_orchestration.action_graph,
     );

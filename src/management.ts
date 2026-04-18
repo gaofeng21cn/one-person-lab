@@ -959,6 +959,10 @@ export function buildDomainEntryParity(projects: DomainManifestCatalogEntry[]) {
     const sharedHandoffReady = Boolean(
       manifest?.shared_handoff && Object.keys(manifest.shared_handoff).length > 0,
     );
+    const runtimeInventoryReady = Boolean(manifest?.runtime_inventory?.surface_kind === 'runtime_inventory');
+    const taskLifecycleReady = Boolean(manifest?.task_lifecycle?.surface_kind === 'task_lifecycle');
+    const skillCatalogReady = Boolean(manifest?.skill_catalog?.surface_kind === 'skill_catalog');
+    const automationReady = Boolean(manifest?.automation?.surface_kind === 'automation');
     const readyForOplStart = Boolean(manifestResolved && startSurfaceReady);
     const readyForDomainHandoff = Boolean(manifestResolved && sharedHandoffReady);
 
@@ -977,6 +981,18 @@ export function buildDomainEntryParity(projects: DomainManifestCatalogEntry[]) {
     }
     if (manifestResolved && !sharedHandoffReady) {
       gaps.push('manifest 尚未暴露 shared handoff surface。');
+    }
+    if (manifestResolved && !runtimeInventoryReady) {
+      gaps.push('manifest 尚未暴露 runtime_inventory surface。');
+    }
+    if (manifestResolved && !taskLifecycleReady) {
+      gaps.push('manifest 尚未暴露 task_lifecycle surface。');
+    }
+    if (manifestResolved && !skillCatalogReady) {
+      gaps.push('manifest 尚未暴露 skill_catalog surface。');
+    }
+    if (manifestResolved && !automationReady) {
+      gaps.push('manifest 尚未暴露 automation surface。');
     }
 
     let entryParityStatus: 'aligned' | 'partial' | 'blocked' = 'blocked';
@@ -1002,6 +1018,18 @@ export function buildDomainEntryParity(projects: DomainManifestCatalogEntry[]) {
     if (manifestResolved && !sharedHandoffReady) {
       recommendedNextActions.push('补齐 shared_handoff surface，让 OPL handoff 不再靠隐式约定。');
     }
+    if (manifestResolved && !runtimeInventoryReady) {
+      recommendedNextActions.push('补齐 runtime_inventory surface，让 family runtime owner/availability/health truth 可直接复用。');
+    }
+    if (manifestResolved && !taskLifecycleReady) {
+      recommendedNextActions.push('补齐 task_lifecycle surface，让 continuation 和 checkpoint truth 不再散落在 repo 私有字段里。');
+    }
+    if (manifestResolved && !skillCatalogReady) {
+      recommendedNextActions.push('补齐 skill_catalog surface，让 family command/skill reuse 可以直接消费。');
+    }
+    if (manifestResolved && !automationReady) {
+      recommendedNextActions.push('补齐 automation surface，让 automation/autopilot truth 能沿同一 manifest 暴露。');
+    }
 
     return {
       project_id: entry.project_id,
@@ -1014,6 +1042,10 @@ export function buildDomainEntryParity(projects: DomainManifestCatalogEntry[]) {
       frontdesk_surface_status: frontdeskSurfaceReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
       start_surface_status: startSurfaceReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
       shared_handoff_status: sharedHandoffReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
+      runtime_inventory_status: runtimeInventoryReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
+      task_lifecycle_status: taskLifecycleReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
+      skill_catalog_status: skillCatalogReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
+      automation_status: automationReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
       ready_for_opl_start: readyForOplStart,
       ready_for_domain_handoff: readyForDomainHandoff,
       product_entry_readiness_verdict: manifest?.product_entry_readiness?.verdict ?? null,
@@ -1037,6 +1069,14 @@ export function buildDomainEntryParity(projects: DomainManifestCatalogEntry[]) {
       blocked_projects_count: normalizedProjects.filter((entry) => entry.entry_parity_status === 'blocked').length,
       direct_entry_locator_ready_projects_count:
         normalizedProjects.filter((entry) => entry.direct_entry_locator_status === 'ready').length,
+      runtime_inventory_ready_count:
+        normalizedProjects.filter((entry) => entry.runtime_inventory_status === 'ready').length,
+      task_lifecycle_ready_count:
+        normalizedProjects.filter((entry) => entry.task_lifecycle_status === 'ready').length,
+      skill_catalog_ready_count:
+        normalizedProjects.filter((entry) => entry.skill_catalog_status === 'ready').length,
+      automation_ready_count:
+        normalizedProjects.filter((entry) => entry.automation_status === 'ready').length,
       ready_for_opl_start_count:
         normalizedProjects.filter((entry) => entry.ready_for_opl_start).length,
       ready_for_domain_handoff_count:
@@ -1134,6 +1174,25 @@ function buildRecommendedEntrySurfaces(projects: DomainManifestCatalogEntry[]) {
           entry.manifest?.product_entry_readiness?.recommended_loop_command ?? null,
         product_entry_readiness_blocking_gaps:
           entry.manifest?.product_entry_readiness?.blocking_gaps ?? [],
+        runtime_inventory: entry.manifest?.runtime_inventory ?? null,
+        runtime_inventory_summary: entry.manifest?.runtime_inventory?.summary ?? null,
+        runtime_inventory_runtime_owner: entry.manifest?.runtime_inventory?.runtime_owner ?? null,
+        runtime_inventory_availability: entry.manifest?.runtime_inventory?.availability ?? null,
+        runtime_inventory_health_status: entry.manifest?.runtime_inventory?.health_status ?? null,
+        task_lifecycle: entry.manifest?.task_lifecycle ?? null,
+        task_lifecycle_status: entry.manifest?.task_lifecycle?.status ?? null,
+        task_lifecycle_task_kind: entry.manifest?.task_lifecycle?.task_kind ?? null,
+        task_lifecycle_progress_command:
+          entry.manifest?.task_lifecycle?.progress_surface?.command ?? null,
+        task_lifecycle_resume_surface_kind:
+          entry.manifest?.task_lifecycle?.resume_surface?.surface_kind ?? null,
+        task_lifecycle_human_gate_ids: entry.manifest?.task_lifecycle?.human_gate_ids ?? [],
+        skill_catalog: entry.manifest?.skill_catalog ?? null,
+        skill_catalog_supported_commands: entry.manifest?.skill_catalog?.supported_commands ?? [],
+        skill_catalog_skill_count: entry.manifest?.skill_catalog?.skills.length ?? 0,
+        automation: entry.manifest?.automation ?? null,
+        automation_count: entry.manifest?.automation?.automations.length ?? 0,
+        automation_readiness_summary: entry.manifest?.automation?.readiness_summary ?? null,
         family_human_gate_count: entry.manifest?.family_orchestration?.human_gates.length ?? 0,
         family_human_gate_ids:
           entry.manifest?.family_orchestration?.human_gates.map((gate) => String(gate.gate_id)) ?? [],

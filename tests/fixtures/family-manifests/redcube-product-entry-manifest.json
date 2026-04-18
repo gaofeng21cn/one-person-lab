@@ -79,6 +79,52 @@
     ],
     "remaining_gaps_count": 2
   },
+  "task_lifecycle": {
+    "surface_kind": "task_lifecycle",
+    "task_kind": "visual_deliverable_loop",
+    "task_id": "redcube-entry-session-loop",
+    "status": "resumable",
+    "summary": "当前 deliverable loop 可以继续沿同一 entry session 推进并保留 review state。",
+    "session_id": "<entry-session-id>",
+    "run_id": "<latest-managed-run-id>",
+    "progress_surface": {
+      "surface_kind": "product_entry_session",
+      "summary": "读取当前 entry session 的交付进度。",
+      "command": "redcube product session --entry-session-id <entry-session-id>",
+      "step_id": "inspect_current_progress",
+      "locator_fields": [
+        "entry_session_id"
+      ]
+    },
+    "resume_surface": {
+      "surface_kind": "product_entry_session",
+      "summary": "继续同一 deliverable loop。",
+      "command": "redcube product session --entry-session-id <entry-session-id>",
+      "locator_fields": [
+        "entry_session_id"
+      ]
+    },
+    "checkpoint_summary": {
+      "surface_kind": "checkpoint_summary",
+      "status": "operator_review_requested",
+      "summary": "当前 deliverable loop 已进入需要 operator review 的可恢复状态。",
+      "checkpoint_id": "managed_product_entry_hardening",
+      "lineage_ref": {
+        "ref_kind": "repo_path",
+        "ref": "runtime_watch/checkpoints/latest.json"
+      },
+      "verification_ref": {
+        "ref_kind": "json_pointer",
+        "ref": "/family_orchestration/action_graph"
+      }
+    },
+    "human_gate_ids": [
+      "redcube_operator_review_gate"
+    ],
+    "domain_projection": {
+      "active_baton_id": "managed_product_entry_hardening"
+    }
+  },
   "runtime": {
     "runtime_owner": "upstream_hermes_agent",
     "runtime_state_root": "/fixtures/redcube/runtime-state",
@@ -107,6 +153,37 @@
       "runtime_cannot_invent_domain_publishability_truth"
     ]
   },
+  "runtime_inventory": {
+    "surface_kind": "runtime_inventory",
+    "summary": "RedCube 当前通过 upstream Hermes runtime 与 entry-session store 持续管理 deliverable loop。",
+    "runtime_owner": "upstream_hermes_agent",
+    "domain_owner": "redcube_ai",
+    "executor_owner": "codex_cli",
+    "substrate": "external_hermes_kernel",
+    "availability": "ready",
+    "health_status": "healthy",
+    "status_surface": {
+      "ref_kind": "repo_path",
+      "ref": "runtime_watch/latest.json",
+      "label": "runtime event surface"
+    },
+    "attention_surface": {
+      "ref_kind": "json_pointer",
+      "ref": "/frontdesk_surface",
+      "label": "redcube_frontdesk"
+    },
+    "recovery_surface": {
+      "ref_kind": "json_pointer",
+      "ref": "/product_entry_start/resume_surface",
+      "label": "product_entry_session_resume"
+    },
+    "workspace_binding": {
+      "workspace_root": "/fixtures/redcube/workspace"
+    },
+    "domain_projection": {
+      "active_baton_id": "managed_product_entry_hardening"
+    }
+  },
   "product_entry_shell": {
     "frontdesk": {
       "command": "redcube product frontdesk",
@@ -128,6 +205,71 @@
       "command_template": "redcube product session --entry-session-id <entry-session-id>",
       "surface_kind": "product_entry_session"
     }
+  },
+  "skill_catalog": {
+    "surface_kind": "skill_catalog",
+    "summary": "RedCube 当前通过 repo-tracked product entry shells 暴露 family 可复用技能。",
+    "skills": [
+      {
+        "surface_kind": "skill_descriptor",
+        "skill_id": "redcube_product_frontdesk",
+        "title": "RedCube product frontdesk",
+        "owner": "redcube_ai",
+        "distribution_mode": "repo_tracked",
+        "target_surface_kind": "product_frontdesk",
+        "description": "打开当前 RedCube frontdesk。",
+        "command": "redcube product frontdesk",
+        "readiness": "landed",
+        "tags": [
+          "frontdesk",
+          "deliverable"
+        ]
+      },
+      {
+        "surface_kind": "skill_descriptor",
+        "skill_id": "redcube_product_session",
+        "title": "RedCube product session",
+        "owner": "redcube_ai",
+        "distribution_mode": "repo_tracked",
+        "target_surface_kind": "product_entry_session",
+        "description": "继续当前 entry session 并读取同一交付进度。",
+        "command": "redcube product session --entry-session-id <entry-session-id>",
+        "readiness": "landed",
+        "tags": [
+          "session",
+          "review",
+          "continuation"
+        ]
+      }
+    ],
+    "supported_commands": [
+      "product-frontdesk",
+      "product-invoke",
+      "product-federate",
+      "product-session"
+    ],
+    "command_contracts": [
+      {
+        "command": "product-frontdesk",
+        "owner": "redcube_ai",
+        "surface_kind": "product_frontdesk"
+      },
+      {
+        "command": "product-invoke",
+        "owner": "redcube_ai",
+        "surface_kind": "product_entry"
+      },
+      {
+        "command": "product-federate",
+        "owner": "redcube_ai",
+        "surface_kind": "federated_product_entry"
+      },
+      {
+        "command": "product-session",
+        "owner": "redcube_ai",
+        "surface_kind": "product_entry_session"
+      }
+    ]
   },
   "shared_handoff": {
     "opl_return_surface": {
@@ -394,6 +536,45 @@
       "ref": "runtime_watch/checkpoints/latest.json",
       "label": "checkpoint lineage surface"
     }
+  },
+  "automation": {
+    "surface_kind": "automation",
+    "summary": "RedCube 当前把 deliverable continuation 与 operator review gate 暴露成 family 自动化面。",
+    "automations": [
+      {
+        "surface_kind": "automation_descriptor",
+        "automation_id": "redcube_autopilot_continuation",
+        "title": "RedCube autopilot continuation",
+        "owner": "redcube_ai",
+        "trigger_kind": "continuation_board",
+        "target_surface_kind": "product_entry_session",
+        "summary": "继续当前 entry session 并保留同一 deliverable 的 continuation truth。",
+        "readiness_status": "tracked_follow_on",
+        "gate_policy": "operator_review_gated",
+        "output_expectation": [
+          "continue same entry session",
+          "preserve review state"
+        ],
+        "target_command": "redcube product session --entry-session-id <entry-session-id>"
+      },
+      {
+        "surface_kind": "automation_descriptor",
+        "automation_id": "redcube_review_state_sync",
+        "title": "RedCube review state sync",
+        "owner": "redcube_ai",
+        "trigger_kind": "review_gate",
+        "target_surface_kind": "product_frontdesk",
+        "summary": "在 operator review gate 周围同步当前 deliverable 的审阅状态。",
+        "readiness_status": "operator_review_gated",
+        "gate_policy": "operator_review_gated",
+        "output_expectation": [
+          "preserve operator review truth",
+          "surface latest continuation checkpoint"
+        ],
+        "target_command": "redcube product frontdesk --workspace-root /fixtures/redcube/workspace"
+      }
+    ],
+    "readiness_summary": "Continuation automation 继续保持 tracked follow-on，review state sync 保持 operator-gated。"
   },
   "current_truth": {
     "product_entry_contract": "contracts/runtime-program/redcube-product-entry-mvp.json",
