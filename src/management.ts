@@ -31,6 +31,14 @@ import {
 } from './runtime-observer.ts';
 import { buildWorkspaceCatalog, getActiveWorkspaceBinding } from './workspace-registry.ts';
 import { buildPaperclipControlPlaneSummary } from './paperclip-control-plane.ts';
+import {
+  humanizeProgressCode,
+  readStatusNarrationContract,
+  statusNarrationLatestUpdate,
+  statusNarrationNextStep,
+  statusNarrationStageSummary,
+  statusNarrationSummary,
+} from './status-narration.ts';
 import type { GatewayContracts } from './types.ts';
 
 export interface WorkspaceStatusOptions {
@@ -803,7 +811,7 @@ function buildStudyQueueCards(studies: unknown, workspacePath: string) {
       const narrationContract = readStatusNarrationContract(entry.status_narration_contract);
       const currentStage = optionalString(entry.current_stage);
       const currentStageSummary =
-        optionalString(narrationContract?.latest_update)
+        statusNarrationLatestUpdate(narrationContract)
         ?? optionalString(entry.current_stage_summary)
         ?? statusNarrationStageSummary(narrationContract)
         ?? humanizeProgressCode(currentStage)
@@ -818,7 +826,7 @@ function buildStudyQueueCards(studies: unknown, workspacePath: string) {
         ?? '当前还没有新的进度更新时间。';
       const nextStep =
         normalizeInlineText(
-          optionalString(narrationContract?.next_step)
+          statusNarrationNextStep(narrationContract)
           ?? optionalString(entry.next_system_action)
           ?? '继续查看这个研究任务的详细进度。',
         )
@@ -1083,58 +1091,6 @@ function buildStudyProgressSurface(options: {
   };
 }
 
-function humanizeProgressCode(code: string | null) {
-  if (!code) {
-    return null;
-  }
-
-  const labels: Record<string, string> = {
-    publication_supervision: '论文可发表性监管',
-    bundle_stage_ready: '投稿打包就绪',
-    managed_runtime_recovering: '托管运行恢复中',
-    runtime_blocked: '运行阻塞',
-    live: '在线推进',
-    recovering: '恢复中',
-    stale: '进度陈旧',
-    fresh: '进度新鲜',
-  };
-
-  return labels[code] ?? code.replace(/_/g, ' ');
-}
-
-function readStatusNarrationContract(value: unknown) {
-  if (!isRecord(value)) {
-    return null;
-  }
-  return value;
-}
-
-function statusNarrationStageSummary(contract: Record<string, unknown> | null) {
-  if (!contract) {
-    return null;
-  }
-  const stage = isRecord(contract.stage) ? contract.stage : null;
-  const currentStage = optionalString(stage?.current_stage);
-  const recommendedNextStage = optionalString(stage?.recommended_next_stage);
-  const currentStageLabel = humanizeProgressCode(currentStage) ?? currentStage;
-  const nextStageLabel = humanizeProgressCode(recommendedNextStage) ?? recommendedNextStage;
-  return normalizeInlineText([
-    currentStageLabel ? `当前状态：${currentStageLabel}` : null,
-    nextStageLabel ? `下一阶段：${nextStageLabel}` : null,
-  ].filter(Boolean).join('；'));
-}
-
-function statusNarrationSummary(contract: Record<string, unknown> | null) {
-  if (!contract) {
-    return null;
-  }
-  const blockers = uniqueStrings(optionalStringList(contract.current_blockers));
-  return normalizeInlineText([
-    statusNarrationStageSummary(contract),
-    blockers.length > 0 ? `当前卡点：${blockers.join('；')}` : null,
-  ].filter(Boolean).join('；'));
-}
-
 function buildProgressFeedback(options: {
   studySurface: ReturnType<typeof buildStudyProgressSurface>;
   progressSummary: string;
@@ -1156,7 +1112,7 @@ function buildProgressFeedback(options: {
   const runtimeStatus = optionalString(monitoring?.health_status);
   const headline =
     normalizeInlineText(
-      optionalString(narrationContract?.latest_update)
+      statusNarrationLatestUpdate(narrationContract)
       ?? statusNarrationStageSummary(narrationContract)
       ?? optionalString(currentStudy?.current_stage_summary)
       ?? optionalString(latestProgress?.summary)
@@ -1171,7 +1127,7 @@ function buildProgressFeedback(options: {
       ?? recentActivity?.last_active
       ?? options.recentSession?.last_active
       ?? null,
-      optionalString(narrationContract?.latest_update)
+      statusNarrationLatestUpdate(narrationContract)
       ?? optionalString(latestProgress?.summary)
       ?? optionalString(latestEvent?.summary)
       ?? recentActivity?.preview
@@ -1182,7 +1138,7 @@ function buildProgressFeedback(options: {
     ?? '当前还没有读到新的进度更新时间。';
   const nextStep =
     normalizeInlineText(
-      optionalString(narrationContract?.next_step)
+      statusNarrationNextStep(narrationContract)
       ?? optionalString(currentStudy?.next_system_action)
       ?? options.nextFocus
       ?? '继续展开当前任务的详细进度。',

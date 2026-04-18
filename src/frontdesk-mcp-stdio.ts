@@ -1,6 +1,12 @@
 import readline from 'node:readline';
 
 import { inferFrontDeskWorkspaceLabel } from './frontdesk-librechat-identity.ts';
+import {
+  readStatusNarrationContract,
+  statusNarrationLatestUpdate,
+  statusNarrationNextStep,
+  statusNarrationStageSummary,
+} from './status-narration.ts';
 
 type JsonRpcId = string | number | null;
 
@@ -188,7 +194,7 @@ function containsInternalPhrase(value: string) {
   return /(entry_parity_status|continue bundle stage|contract|surface_id|routing_status|boundary_status|current_stage_summary|next_system_action)/i.test(value);
 }
 
-function toHumanLine(label: string, value: string | undefined, lines: string[]) {
+function toHumanLine(label: string, value: string | null | undefined, lines: string[]) {
   if (!value) {
     return;
   }
@@ -230,6 +236,7 @@ function renderProjectProgressBrief(payload: unknown) {
   }
 
   if (currentStudy) {
+    const narrationContract = readStatusNarrationContract(currentStudy.status_narration_contract);
     const studyId = normalizeOptionalString(currentStudy.study_id);
     const title = normalizeOptionalString(currentStudy.title);
     const storySummary = normalizeOptionalString(currentStudy.story_summary);
@@ -238,8 +245,13 @@ function renderProjectProgressBrief(payload: unknown) {
     const effectSummary =
       normalizeOptionalString(currentStudy.current_effect_summary)
       ?? normalizeOptionalString(paperSnapshot?.current_effect_summary);
-    const currentStageSummary = normalizeOptionalString(currentStudy.current_stage_summary);
-    const nextSystemAction = normalizeOptionalString(currentStudy.next_system_action);
+    const currentStageSummary =
+      statusNarrationLatestUpdate(narrationContract)
+      ?? normalizeOptionalString(currentStudy.current_stage_summary)
+      ?? statusNarrationStageSummary(narrationContract);
+    const nextSystemAction =
+      statusNarrationNextStep(narrationContract)
+      ?? normalizeOptionalString(currentStudy.next_system_action);
     const mainFigureCount = typeof paperSnapshot?.main_figure_count === 'number' ? paperSnapshot.main_figure_count : null;
     const supplementaryFigureCount =
       typeof paperSnapshot?.supplementary_figure_count === 'number' ? paperSnapshot.supplementary_figure_count : null;

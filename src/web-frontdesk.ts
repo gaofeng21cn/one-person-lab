@@ -44,6 +44,14 @@ import {
 } from './product-entry.ts';
 import { buildSessionLedger } from './session-ledger.ts';
 import {
+  humanizeProgressCode,
+  readStatusNarrationContract,
+  statusNarrationLatestUpdate,
+  statusNarrationNextStep,
+  statusNarrationStageSummary,
+  statusNarrationSummary,
+} from './status-narration.ts';
+import {
   activateWorkspaceBinding,
   archiveWorkspaceBinding,
   bindWorkspace,
@@ -986,6 +994,7 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
     && !Array.isArray(currentStudy.paper_snapshot)
     ? currentStudy.paper_snapshot as Record<string, unknown>
     : null;
+  const studyNarrationContract = readStatusNarrationContract(currentStudy?.status_narration_contract);
   const currentStudyId = escapeHtml(
     typeof currentStudy?.study_id === 'string'
       ? currentStudy.study_id
@@ -1019,14 +1028,19 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         : '当前还没有抽出可汇报的效果摘要。',
   );
   const currentStudyStage = escapeHtml(
-    typeof currentStudy?.current_stage_summary === 'string'
-      ? currentStudy.current_stage_summary
-      : '当前阶段待确认。',
+    statusNarrationLatestUpdate(studyNarrationContract)
+      ?? (typeof currentStudy?.current_stage_summary === 'string'
+        ? currentStudy.current_stage_summary
+        : null)
+      ?? statusNarrationStageSummary(studyNarrationContract)
+      ?? '当前阶段待确认。',
   );
   const currentStudyNextAction = escapeHtml(
-    typeof currentStudy?.next_system_action === 'string'
-      ? currentStudy.next_system_action
-      : '继续读取当前论文的详细进度。',
+    statusNarrationNextStep(studyNarrationContract)
+      ?? (typeof currentStudy?.next_system_action === 'string'
+        ? currentStudy.next_system_action
+        : null)
+      ?? '继续读取当前论文的详细进度。',
   );
   const currentStudyMonitoring = currentStudy?.monitoring
     && typeof currentStudy.monitoring === 'object'
@@ -1062,30 +1076,17 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
     && !Array.isArray(progress.progress_feedback)
     ? progress.progress_feedback as Record<string, unknown>
     : null;
-  const humanizeProgressCode = (value: string | null) => {
-    if (!value) {
-      return null;
-    }
-
-    const labels: Record<string, string> = {
-      publication_supervision: '论文可发表性监管',
-      bundle_stage_ready: '投稿打包就绪',
-      managed_runtime_recovering: '托管运行恢复中',
-      runtime_blocked: '运行阻塞',
-      live: '在线推进',
-      recovering: '恢复中',
-      stale: '进度陈旧',
-      fresh: '进度新鲜',
-    };
-
-    return labels[value] ?? value.replace(/_/g, ' ');
-  };
+  const progressFeedbackNarrationContract =
+    readStatusNarrationContract(progressFeedback?.status_narration_contract) ?? studyNarrationContract;
   const progressFeedHeadline = escapeHtml(
     typeof progressFeedback?.headline === 'string'
       ? progressFeedback.headline
-      : typeof currentStudy?.current_stage_summary === 'string'
-        ? currentStudy.current_stage_summary
-        : '当前还没有读到自然语言进度摘要。',
+      : statusNarrationLatestUpdate(progressFeedbackNarrationContract)
+        ?? (typeof currentStudy?.current_stage_summary === 'string'
+          ? currentStudy.current_stage_summary
+          : null)
+        ?? statusNarrationStageSummary(progressFeedbackNarrationContract)
+        ?? '当前还没有读到自然语言进度摘要。',
   );
   const progressFeedLatestUpdate = escapeHtml(
     typeof progressFeedback?.latest_update === 'string'
@@ -1100,14 +1101,17 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
   const progressFeedNextStep = escapeHtml(
     typeof progressFeedback?.next_step === 'string'
       ? progressFeedback.next_step
-      : typeof currentStudy?.next_system_action === 'string'
-        ? currentStudy.next_system_action
-        : '继续读取当前论文的详细进度。',
+      : statusNarrationNextStep(progressFeedbackNarrationContract)
+        ?? (typeof currentStudy?.next_system_action === 'string'
+          ? currentStudy.next_system_action
+          : null)
+        ?? '继续读取当前论文的详细进度。',
   );
   const progressFeedStatusSummary = escapeHtml(
     typeof progressFeedback?.status_summary === 'string'
       ? progressFeedback.status_summary
-      : '当前还没有读到结构化状态。',
+      : statusNarrationSummary(progressFeedbackNarrationContract)
+        ?? '当前还没有读到结构化状态。',
   );
   const progressFeedChips = [
     typeof progressFeedback?.current_status === 'string'
