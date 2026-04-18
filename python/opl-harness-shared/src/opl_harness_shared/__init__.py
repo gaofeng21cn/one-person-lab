@@ -72,6 +72,7 @@ from .status_narration import (
     STATUS_NARRATION_CONTRACT_KIND,
     STATUS_NARRATION_SCHEMA_VERSION,
     build_status_narration_contract,
+    build_status_narration_human_view,
 )
 from .skill_catalog import (
     build_skill_catalog,
@@ -113,6 +114,7 @@ __all__ = [
     "build_skill_catalog",
     "build_skill_descriptor",
     "build_status_narration_contract",
+    "build_status_narration_human_view",
     "build_task_lifecycle",
     "build_task_surface_descriptor",
     "collect_family_human_gate_ids",
