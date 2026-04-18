@@ -4331,8 +4331,26 @@ test('project-progress promotes current MAS study into a paper-facing summary in
     assert.match(payload.project_progress.progress_summary, /004-invasive-architecture/);
     assert.match(payload.project_progress.progress_summary, /3 张主图/);
     assert.match(payload.project_progress.progress_summary, /32 篇参考文献/);
+    assert.equal(payload.project_progress.progress_feedback.current_status, 'publication_supervision');
+    assert.equal(payload.project_progress.progress_feedback.runtime_status, 'live');
+    assert.match(payload.project_progress.progress_feedback.headline, /投稿打包阶段/);
+    assert.match(payload.project_progress.progress_feedback.latest_update, /2026-04-15 11:24 UTC/);
+    assert.match(payload.project_progress.progress_feedback.next_step, /continue bundle stage/);
     assert.ok(payload.project_progress.user_options.includes('展开当前论文的详细进度'));
     assert.ok(payload.project_progress.inspect_paths.includes(studyRoot));
+    assert.equal(payload.project_progress.workspace_files.deliverable_files.length, 3);
+    assert.equal(payload.project_progress.workspace_files.supporting_files.length, 4);
+    assert.equal(payload.project_progress.workspace_files.deliverable_files[0].file_id, 'review_manuscript');
+    assert.equal(payload.project_progress.workspace_files.deliverable_files[0].kind, 'deliverable');
+    assert.match(
+      payload.project_progress.workspace_files.deliverable_files[0].path,
+      /paper\/build\/review_manuscript\.md$/,
+    );
+    assert.ok(
+      payload.project_progress.workspace_files.supporting_files.some(
+        (entry: { file_id: string }) => entry.file_id === 'figure_catalog',
+      ),
+    );
     assert.equal(
       payload.project_progress.recommended_commands.progress,
       workspaceCockpitPayload.studies[0].commands.progress,
@@ -5238,13 +5256,16 @@ exit 1
     const page = await fetch(baseUrl);
     assert.equal(page.status, 200);
     const pageHtml = await page.text();
-    assert.match(pageHtml, /OPL Machine Surface/);
+    assert.match(pageHtml, /OPL Workspace Home/);
     assert.match(pageHtml, /Open OPL Agent/);
-    assert.match(pageHtml, /Project snapshot/);
-    assert.match(pageHtml, /Progress summary/);
-    assert.match(pageHtml, /Current workspace/);
+    assert.match(pageHtml, /Workspace Home/);
+    assert.match(pageHtml, /Current Task/);
+    assert.match(pageHtml, /Files & Deliverables/);
+    assert.match(pageHtml, /Progress Feed/);
+    assert.match(pageHtml, /Latest update/);
     assert.match(pageHtml, /one-person-lab/);
     assert.doesNotMatch(pageHtml, /Current project/);
+    assert.doesNotMatch(pageHtml, /Project snapshot/);
     assert.match(pageHtml, /href="\/login"/);
     assert.match(pageHtml, /id="opl-bootstrap"/);
     assert.match(pageHtml, /white-space: pre-wrap/);
@@ -5313,6 +5334,9 @@ exit 1
     assert.equal(progressPayload.project_progress.surface_id, 'opl_project_progress_brief');
     assert.equal(progressPayload.project_progress.current_project.workspace_path, repoRoot);
     assert.ok(Array.isArray(progressPayload.project_progress.inspect_paths));
+    assert.ok(Array.isArray(progressPayload.project_progress.workspace_files.deliverable_files));
+    assert.ok(Array.isArray(progressPayload.project_progress.workspace_files.supporting_files));
+    assert.equal(typeof progressPayload.project_progress.progress_feedback.headline, 'string');
     const domainManifestResponse = await fetch(`${baseUrl}/api/domain-manifests`);
     const domainManifestPayload = await domainManifestResponse.json();
     assert.equal(domainManifestPayload.domain_manifests.summary.total_projects_count, 2);
@@ -5523,17 +5547,21 @@ exit 1
     const page = await fetch(baseUrl);
     assert.equal(page.status, 200);
     const pageHtml = await page.text();
-    assert.match(pageHtml, /OPL Machine Surface/);
+    assert.match(pageHtml, /OPL Workspace Home/);
     assert.match(pageHtml, /Open OPL Agent/);
+    assert.match(pageHtml, /Workspace Home/);
+    assert.match(pageHtml, /Current Task/);
+    assert.match(pageHtml, /Progress Feed/);
+    assert.match(pageHtml, /Files & Deliverables/);
     assert.match(pageHtml, /Bound direct entry/);
     assert.match(pageHtml, /Open redcube direct entry/);
     assert.match(pageHtml, /http:\/\/127\.0\.0\.1:3310\/redcube/);
-    assert.match(pageHtml, /Binding Guide/);
-    assert.match(pageHtml, /Session Resource Attribution/);
-    assert.match(pageHtml, /Project snapshot/);
+    assert.match(pageHtml, /Workspace binding guide/);
+    assert.match(pageHtml, /Session resource attribution/);
     assert.match(pageHtml, /Current workspace/);
     assert.match(pageHtml, /one-person-lab/);
     assert.doesNotMatch(pageHtml, /Current project/);
+    assert.doesNotMatch(pageHtml, /Project snapshot/);
     assert.match(pageHtml, /\/api\/frontdesk-entry-guide/);
     assert.doesNotMatch(pageHtml, /Start A Domain Project/);
     assert.doesNotMatch(pageHtml, /Workspace Hub/);

@@ -470,6 +470,77 @@ function buildPaperFacingSnapshot(options: {
     currentEffectSummary ? `当前结果：${currentEffectSummary}` : null,
     materializedBits.length > 0 ? `稿件已物化 ${materializedBits.join('，')}` : proofingSummary,
   ].filter(Boolean).join(' '));
+  const keyFiles = [
+    reviewManuscriptPath
+      ? {
+          file_id: 'review_manuscript',
+          label: 'Reviewer manuscript',
+          kind: 'deliverable',
+          path: reviewManuscriptPath,
+          summary: '当前 reviewer-facing 主稿。',
+        }
+      : null,
+    compileReportPath
+      ? {
+          file_id: 'compile_report',
+          label: 'Compile report',
+          kind: 'deliverable',
+          path: compileReportPath,
+          summary: '最近一次编译与 proofing 摘要。',
+        }
+      : null,
+    bundleManifestPath
+      ? {
+          file_id: 'paper_bundle_manifest',
+          label: 'Paper bundle manifest',
+          kind: 'deliverable',
+          path: bundleManifestPath,
+          summary: '当前论文 bundle 的交付清单。',
+        }
+      : null,
+    studyMatrixPath
+      ? {
+          file_id: 'paper_experiment_matrix',
+          label: 'Experiment matrix',
+          kind: 'supporting',
+          path: studyMatrixPath,
+          summary: '当前实验矩阵与 judgment。',
+        }
+      : null,
+    figureCatalogPath
+      ? {
+          file_id: 'figure_catalog',
+          label: 'Figure catalog',
+          kind: 'supporting',
+          path: figureCatalogPath,
+          summary: '图目录与主图/补充图分层。',
+        }
+      : null,
+    tableCatalogPath
+      ? {
+          file_id: 'table_catalog',
+          label: 'Table catalog',
+          kind: 'supporting',
+          path: tableCatalogPath,
+          summary: '表目录与主表/附表分层。',
+        }
+      : null,
+    referenceCoveragePath
+      ? {
+          file_id: 'reference_coverage_report',
+          label: 'Reference coverage report',
+          kind: 'supporting',
+          path: referenceCoveragePath,
+          summary: '当前文献覆盖计数。',
+        }
+      : null,
+  ].filter((entry): entry is {
+    file_id: string;
+    label: string;
+    kind: 'deliverable' | 'supporting';
+    path: string;
+    summary: string;
+  } => Boolean(entry && fs.existsSync(entry.path)));
 
   if (
     !clinicalQuestion
@@ -498,6 +569,7 @@ function buildPaperFacingSnapshot(options: {
     proofing_summary: proofingSummary,
     bundle_summary: normalizeInlineText(optionalString(bundleManifest?.summary)),
     human_summary: humanSummary,
+    key_files: keyFiles,
     inspect_paths: uniqueStrings([
       studyMatrixPath,
       reviewManuscriptPath,
@@ -726,6 +798,7 @@ function buildStudyProgressSurface(options: {
       attentionItems,
       inspectPaths: [],
       recentActivity: null,
+      workspaceFiles: [],
       recommendedCommands: {
         progress: options.overview?.progress_surface?.command ?? null,
         resume: options.overview?.resume_surface?.command ?? null,
@@ -744,6 +817,7 @@ function buildStudyProgressSurface(options: {
       attentionItems,
       inspectPaths: [],
       recentActivity: null,
+      workspaceFiles: [],
       recommendedCommands: {
         progress: options.overview?.progress_surface?.command ?? null,
         resume: options.overview?.resume_surface?.command ?? null,
@@ -902,11 +976,96 @@ function buildStudyProgressSurface(options: {
     attentionItems: blockers,
     inspectPaths,
     recentActivity,
-        recommendedCommands: {
-          progress: progressCommand,
+    workspaceFiles: paperSnapshot?.key_files ?? [],
+    recommendedCommands: {
+      progress: progressCommand,
       resume: resumeCommand,
     },
     userOptions: buildCurrentStudyUserOptions(true, Boolean(paperSnapshot)),
+  };
+}
+
+function humanizeProgressCode(code: string | null) {
+  if (!code) {
+    return null;
+  }
+
+  const labels: Record<string, string> = {
+    publication_supervision: '论文可发表性监管',
+    bundle_stage_ready: '投稿打包就绪',
+    managed_runtime_recovering: '托管运行恢复中',
+    runtime_blocked: '运行阻塞',
+    live: '在线推进',
+    recovering: '恢复中',
+    stale: '进度陈旧',
+    fresh: '进度新鲜',
+  };
+
+  return labels[code] ?? code.replace(/_/g, ' ');
+}
+
+function buildProgressFeedback(options: {
+  studySurface: ReturnType<typeof buildStudyProgressSurface>;
+  progressSummary: string;
+  nextFocus: string | null;
+  recentSession: {
+    session_id: string;
+    last_active: string;
+    source: string;
+    preview: string;
+  } | null;
+}) {
+  const currentStudy = options.studySurface.currentStudy;
+  const monitoring = isRecord(currentStudy?.monitoring) ? currentStudy.monitoring : null;
+  const latestProgress = isRecord(currentStudy?.latest_progress) ? currentStudy.latest_progress : null;
+  const latestEvent = isRecord(currentStudy?.latest_event) ? currentStudy.latest_event : null;
+  const recentActivity = options.studySurface.recentActivity;
+  const currentStatus = optionalString(currentStudy?.current_stage);
+  const runtimeStatus = optionalString(monitoring?.health_status);
+  const headline =
+    normalizeInlineText(
+      optionalString(currentStudy?.current_stage_summary)
+      ?? optionalString(latestProgress?.summary)
+      ?? optionalString(latestEvent?.summary)
+      ?? options.progressSummary,
+    )
+    ?? '当前还没有读到结构化的研究推进摘要。';
+  const latestUpdate =
+    normalizeInlineText([
+      optionalString(latestProgress?.time_label)
+      ?? optionalString(latestEvent?.time_label)
+      ?? recentActivity?.last_active
+      ?? options.recentSession?.last_active
+      ?? null,
+      optionalString(latestProgress?.summary)
+      ?? optionalString(latestEvent?.summary)
+      ?? recentActivity?.preview
+      ?? options.recentSession?.preview
+      ?? optionalString(currentStudy?.current_stage_summary)
+      ?? null,
+    ].filter(Boolean).join(' · '))
+    ?? '当前还没有读到新的进度更新时间。';
+  const nextStep =
+    normalizeInlineText(
+      optionalString(currentStudy?.next_system_action)
+      ?? options.nextFocus
+      ?? '继续展开当前任务的详细进度。',
+    )
+    ?? '继续展开当前任务的详细进度。';
+  const statusSummary =
+    normalizeInlineText([
+      currentStatus ? `当前状态：${humanizeProgressCode(currentStatus) ?? currentStatus}` : null,
+      runtimeStatus ? `运行态：${humanizeProgressCode(runtimeStatus) ?? runtimeStatus}` : null,
+    ].filter(Boolean).join('；'))
+    ?? '当前还没有读到结构化状态。';
+
+  return {
+    headline,
+    current_status: currentStatus,
+    runtime_status: runtimeStatus,
+    latest_update: latestUpdate,
+    next_step: nextStep,
+    status_summary: statusSummary,
   };
 }
 
@@ -2101,6 +2260,15 @@ export async function buildProjectProgressBrief(
     ...(overview?.human_gate_ids ?? []),
     ...(manifest?.product_entry_start?.human_gate_ids ?? []),
   ]).map((gateId) => describeHumanGate(gateId));
+  const workspaceFiles = studySurface.workspaceFiles;
+  const deliverableFiles = workspaceFiles.filter((entry) => entry.kind === 'deliverable');
+  const supportingFiles = workspaceFiles.filter((entry) => entry.kind === 'supporting');
+  const progressFeedback = buildProgressFeedback({
+    studySurface,
+    progressSummary,
+    nextFocus,
+    recentSession,
+  });
 
   return {
     version: 'g2',
@@ -2120,6 +2288,7 @@ export async function buildProjectProgressBrief(
       progress_summary: progressSummary,
       current_study: studySurface.currentStudy,
       next_focus: nextFocus,
+      progress_feedback: progressFeedback,
       recent_activity: recentSession
         ? {
             session_id: recentSession.session_id,
@@ -2128,6 +2297,10 @@ export async function buildProjectProgressBrief(
             preview: recentSession.preview,
           }
         : studySurface.recentActivity,
+      workspace_files: {
+        deliverable_files: deliverableFiles,
+        supporting_files: supportingFiles,
+      },
       inspect_paths: inspectPaths,
       attention_items: attentionItems,
       user_options: studySurface.userOptions,
