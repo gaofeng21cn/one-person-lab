@@ -1,13 +1,13 @@
 [English](./opl-read-only-discovery-gateway.md) | **中文**
 
-# OPL 只读 Discovery Gateway
+# OPL Gateway 契约面
 
 ## 目的
 
 这份文档冻结 `OPL Gateway` 的 `G2` 目标。
 
 `G2` 是 `OPL` 第一次成为真实入口表面，但仅限于只读 discovery。
-截至 `2026-04-07`，`OPL` 公开主线仍是 `Phase 1`，且当前仓库已具备可运行的本地 `TypeScript CLI`-first / read-only gateway baseline；当前重点是把它收口成稳定、单一、repo-tracked 的 `G2 stable public baseline`。
+截至 `2026-04-07`，`OPL` 公开主线仍是 `Phase 1`，且当前仓库已具备可运行的本地 `TypeScript CLI`-first / gateway contract baseline；当前重点是把它收口成稳定、单一、repo-tracked 的 `G2 stable public baseline`。
 
 目标不是 mutation domain state。
 目标是让人类和 Agent 能先问顶层 gateway：我该用哪个系统、这个 workstream 是什么、这个请求应该落到哪个 domain。

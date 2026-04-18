@@ -154,7 +154,7 @@
 
 - 本机默认 GUI 路径已经从 Docker 驱动的 LibreChat 壳切到 `OPL Atlas` Desktop；
 - Desktop 当前先复用现有 `opl web` truth surface，把 Electron 壳与本地 frontdesk service 接起来；
-- `frontdesk librechat install` 继续保留，但角色已经收紧为 optional compatibility lane 与 hosted pilot 参考面。
+- `frontdesk-librechat-install` 继续保留，但角色已经收紧为 optional compatibility lane 与 hosted pilot 参考面。
 
 ### F3. hosted / web 路线冻结
 
@@ -217,7 +217,7 @@
 ## 与顶层 docs / contracts / central sync 的关系
 
 - `docs/status.md` 负责给出当前顶层真相与活跃阶段口径；这条板只负责把当前 front desk 交付线收成一条可继续执行的 owner line。
-- `contracts/opl-gateway/README.md` 继续冻结 machine-readable contract boundary、read-only gateway / control-plane bridge 的 owner split，以及 “`OPL` 不升格成 runtime owner” 的硬边界；这条 front desk 主线只能在这个边界内继续压实。
+- `contracts/opl-gateway/README.md` 继续冻结 machine-readable contract boundary、gateway contract / control-plane bridge 的 owner split，以及 “`OPL` 不升格成 runtime owner” 的硬边界；这条 front desk 主线只能在这个边界内继续压实。
 - `docs/references/opl-phase-2-central-reference-sync-board.md` 仍然保留，但它现在只应该在 admitted-domain 新 absorbed delta 到来、或 central reference surfaces drift 需要补同步时才重开；它不是当前默认活跃的 top-level execution mainline。
 
 ## 当前最大执行缺口

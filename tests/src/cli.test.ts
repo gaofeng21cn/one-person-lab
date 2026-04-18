@@ -2325,8 +2325,7 @@ test('frontdesk-librechat-package exports a same-origin LibreChat-first hosted s
 
   try {
     const output = runCli([
-      'frontdesk',
-      'librechat-package',
+      'frontdesk-librechat-package',
       '--output',
       outputDir,
       '--public-origin',
@@ -3114,7 +3113,7 @@ test('help omits retired paperclip public commands from the CLI discovery surfac
   assert.equal(output.help.examples.some((example: string) => example.includes('paperclip')), false);
 });
 
-test('frontdesk librechat install keeps the optional compatibility shell aligned with the local Codex profile', async () => {
+test('frontdesk-librechat-install keeps the optional compatibility shell aligned with the local Codex profile', async () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-librechat-home-'));
   const codexFixture = createCodexConfigFixture({
     model: 'gpt-5.4-frontdoor',
@@ -3147,9 +3146,7 @@ test('frontdesk librechat install keeps the optional compatibility shell aligned
 
   try {
     const install = await runCliAsync([
-      'frontdesk',
-      'librechat',
-      'install',
+      'frontdesk-librechat-install',
       '--host',
       '127.0.0.1',
       '--port',
@@ -3233,7 +3230,7 @@ test('frontdesk librechat install keeps the optional compatibility shell aligned
     ), true);
     assert.match(fs.readFileSync(dockerFixture.callsPath, 'utf8'), /up -d/);
 
-    const status = runCli(['frontdesk', 'librechat', 'status'], serviceEnv);
+    const status = runCli(['frontdesk-librechat-status'], serviceEnv);
     assert.equal(status.frontdesk_librechat.action, 'status');
     assert.equal(status.frontdesk_librechat.installed, true);
     assert.equal(status.frontdesk_librechat.running, true);
@@ -3250,15 +3247,15 @@ test('frontdesk librechat install keeps the optional compatibility shell aligned
       'opl_session',
     );
 
-    const openOutput = runCli(['frontdesk', 'librechat', 'open'], serviceEnv);
+    const openOutput = runCli(['frontdesk-librechat-open'], serviceEnv);
     assert.equal(openOutput.frontdesk_librechat.action, 'open');
     assert.match(fs.readFileSync(openFixture.capturePath, 'utf8'), /http:\/\/127\.0\.0\.1:18080/);
 
-    const stopOutput = runCli(['frontdesk', 'librechat', 'stop'], serviceEnv);
+    const stopOutput = runCli(['frontdesk-librechat-stop'], serviceEnv);
     assert.equal(stopOutput.frontdesk_librechat.action, 'stop');
     assert.equal(stopOutput.frontdesk_librechat.running, false);
 
-    const startOutput = runCli(['frontdesk', 'librechat', 'start'], serviceEnv);
+    const startOutput = runCli(['frontdesk-librechat-start'], serviceEnv);
     assert.equal(startOutput.frontdesk_librechat.action, 'start');
     assert.equal(startOutput.frontdesk_librechat.running, true);
   } finally {
@@ -3291,9 +3288,7 @@ test('frontdesk-librechat-status reports stack drift instead of crashing when re
 
   try {
     const install = await runCliAsync([
-      'frontdesk',
-      'librechat',
-      'install',
+      'frontdesk-librechat-install',
       '--host',
       '127.0.0.1',
       '--port',
@@ -3316,7 +3311,7 @@ test('frontdesk-librechat-status reports stack drift instead of crashing when re
     fs.rmSync(install.frontdesk_librechat.assets.env_file, { force: true });
     fs.rmSync(install.frontdesk_librechat.assets.compose_file, { force: true });
 
-    const status = runCli(['frontdesk', 'librechat', 'status'], serviceEnv);
+    const status = runCli(['frontdesk-librechat-status'], serviceEnv);
     assert.equal(status.frontdesk_librechat.installed, false);
     assert.equal(status.frontdesk_librechat.running, false);
     assert.match(status.frontdesk_librechat.notes.join('\n'), /stack assets are missing/i);
@@ -6022,16 +6017,13 @@ test('contract domain returns the full registered domain meaning', () => {
 });
 
 test('contract surface returns the full registered public surface meaning', () => {
-  const output = runCli(['contract', 'surface', 'opl_read_only_discovery_gateway']);
+  const output = runCli(['contract', 'surface', 'opl_gateway_contract_hub']);
 
   assert.equal(output.version, 'g2');
   assertContractsContext(output, 'cwd');
-  assert.equal(output.surface.surface_id, 'opl_read_only_discovery_gateway');
+  assert.equal(output.surface.surface_id, 'opl_gateway_contract_hub');
   assert.equal(output.surface.category_id, 'opl_contract_surface');
-  assert.deepEqual(output.surface.routes_to, [
-    'medautoscience_public_gateway',
-    'redcube_public_gateway',
-  ]);
+  assert.match(output.surface.boundary_role, /contract_hub|machine_readable_contract_hub/);
 });
 
 test('resolveRequestSurface routes research delivery to medautoscience', () => {

@@ -99,6 +99,23 @@ ${handlerBody}
   };
 }
 
+function createFakeCodexFixture(handlerBody) {
+  const fixtureRoot = mkdtempSync(path.join(os.tmpdir(), 'opl-codex-fixture-'));
+  const codexPath = path.join(fixtureRoot, 'codex');
+  writeFileSync(
+    codexPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+${handlerBody}
+`,
+    { mode: 0o755 },
+  );
+  return {
+    fixtureRoot,
+    codexPath,
+  };
+}
+
 function createFakePsFixture(output) {
   const fixtureRoot = mkdtempSync(path.join(os.tmpdir(), 'opl-ps-fixture-'));
   const psPath = path.join(fixtureRoot, 'ps');
@@ -282,10 +299,10 @@ async function stopCliServer(child) {
   });
 }
 
-test('list-workstreams returns the admitted workstream summaries', () => {
+test('contract workstreams returns the admitted workstream summaries', () => {
   assert.ok(existsSync(cliEntrypoint), `Expected CLI entrypoint at ${cliEntrypoint}.`);
 
-  const result = runCli(['list-workstreams']);
+  const result = runCli(['contract', 'workstreams']);
   assert.equal(result.status, 0, formatFailure(result));
 
   const payload = parseJsonOutput(result);
@@ -310,8 +327,8 @@ test('list-workstreams returns the admitted workstream summaries', () => {
   ]);
 });
 
-test('get-domain redcube returns gateway and harness truth', () => {
-  const result = runCli(['get-domain', 'redcube']);
+test('contract domain redcube returns gateway and harness truth', () => {
+  const result = runCli(['contract', 'domain', 'redcube']);
   assert.equal(result.status, 0, formatFailure(result));
 
   const payload = parseJsonOutput(result);
@@ -328,9 +345,10 @@ test('get-domain redcube returns gateway and harness truth', () => {
   assert.deepEqual(payload.domain.non_opl_families, ['xiaohongshu']);
 });
 
-test('resolve-request-surface maps a defense-ready slide deck to presentation_ops via redcube', () => {
+test('domain resolve-request maps a defense-ready slide deck to presentation_ops via redcube', () => {
   const result = runCli([
-    'resolve-request-surface',
+    'domain',
+    'resolve-request',
     '--intent', 'presentation_delivery',
     '--target', 'deliverable',
     '--goal', 'Prepare a defense-ready slide deck for a thesis committee.',
@@ -351,9 +369,10 @@ test('resolve-request-surface maps a defense-ready slide deck to presentation_op
   assert.equal(payload.resolution.confidence, 'high');
 });
 
-test('resolve-request-surface keeps xiaohongshu at the redcube family boundary without auto-admitting presentation_ops', () => {
+test('domain resolve-request keeps xiaohongshu at the redcube family boundary without auto-admitting presentation_ops', () => {
   const result = runCli([
-    'resolve-request-surface',
+    'domain',
+    'resolve-request',
     '--intent', 'create',
     '--target', 'deliverable',
     '--goal', 'Create a xiaohongshu campaign pack for a lab update.',
@@ -373,9 +392,10 @@ test('resolve-request-surface keeps xiaohongshu at the redcube family boundary w
   assert.match(payload.resolution.reason, /must not auto-resolve|not automatically equal|family boundary/i);
 });
 
-test('resolve-request-surface emits ambiguous_task with machine-readable clarification evidence', () => {
+test('domain resolve-request emits ambiguous_task with machine-readable clarification evidence', () => {
   const result = runCli([
-    'resolve-request-surface',
+    'domain',
+    'resolve-request',
     '--intent', 'create',
     '--target', 'deliverable',
     '--goal', 'Package the study for submission and also turn it into a defense-ready deck.',
@@ -395,8 +415,8 @@ test('resolve-request-surface emits ambiguous_task with machine-readable clarifi
   ]);
 });
 
-test('validate-contracts returns a stable machine-readable success summary', () => {
-  const result = runCli(['validate-contracts']);
+test('contract validate returns a stable machine-readable success summary', () => {
+  const result = runCli(['contract', 'validate']);
   assert.equal(result.status, 0, formatFailure(result));
 
   const payload = parseJsonOutput(result);
@@ -420,11 +440,11 @@ test('validate-contracts returns a stable machine-readable success summary', () 
   );
 });
 
-test('validate-contracts exposes cli-flag contract-root provenance for built CLI entrypoints', () => {
+test('contract validate exposes cli-flag contract-root provenance for built CLI entrypoints', () => {
   const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot(() => {});
 
   try {
-    const result = runCli(['--contracts-dir', fixtureContractsRoot, 'validate-contracts']);
+    const result = runCli(['--contracts-dir', fixtureContractsRoot, 'contract', 'validate']);
     assert.equal(result.status, 0, formatFailure(result));
 
     const payload = parseJsonOutput(result);
@@ -435,13 +455,13 @@ test('validate-contracts exposes cli-flag contract-root provenance for built CLI
   }
 });
 
-test('validate-contracts surfaces missing files with a stable machine-readable error envelope', () => {
+test('contract validate surfaces missing files with a stable machine-readable error envelope', () => {
   const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((_fixtureRoot, contractsDir) => {
     rmSync(path.join(contractsDir, 'task-topology.json'));
   });
 
   try {
-    const result = runCli(['validate-contracts'], { env: { OPL_CONTRACTS_DIR: fixtureContractsRoot } });
+    const result = runCli(['contract', 'validate'], { env: { OPL_CONTRACTS_DIR: fixtureContractsRoot } });
     assert.notEqual(result.status, 0, 'Expected a non-zero exit when task-topology.json is missing.');
 
     const payload = parseJsonOutput(result);
@@ -455,13 +475,13 @@ test('validate-contracts surfaces missing files with a stable machine-readable e
   }
 });
 
-test('validate-contracts surfaces invalid JSON from the contract set rooted at cwd', () => {
+test('contract validate surfaces invalid JSON from the contract set rooted at cwd', () => {
   const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((_fixtureRoot, contractsDir) => {
     writeFileSync(path.join(contractsDir, 'domains.json'), '{ invalid json\n');
   });
 
   try {
-    const result = runCli(['validate-contracts'], { env: { OPL_CONTRACTS_DIR: fixtureContractsRoot } });
+    const result = runCli(['contract', 'validate'], { env: { OPL_CONTRACTS_DIR: fixtureContractsRoot } });
     assert.notEqual(result.status, 0, 'Expected a non-zero exit when domains.json is invalid.');
 
     const payload = parseJsonOutput(result);
@@ -509,7 +529,7 @@ exit 1
 });
 
 test('projects stays machine-readable through the built CLI entrypoint', () => {
-  const result = runCli(['projects']);
+  const result = runCli(['workspace', 'projects']);
   assert.equal(result.status, 0, formatFailure(result));
 
   const payload = parseJsonOutput(result);
@@ -519,8 +539,8 @@ test('projects stays machine-readable through the built CLI entrypoint', () => {
   assert.equal(payload.projects[2].project_id, 'redcube');
 });
 
-test('workspace-status stays machine-readable through the built CLI entrypoint', () => {
-  const result = runCli(['workspace-status', '--path', repoRoot]);
+test('status workspace stays machine-readable through the built CLI entrypoint', () => {
+  const result = runCli(['status', 'workspace', '--path', repoRoot]);
   assert.equal(result.status, 0, formatFailure(result));
 
   const payload = parseJsonOutput(result);
@@ -529,7 +549,7 @@ test('workspace-status stays machine-readable through the built CLI entrypoint',
   assert.equal(typeof payload.workspace.git.linked_worktree, 'boolean');
 });
 
-test('runtime-status and dashboard stay machine-readable through the built CLI entrypoint', () => {
+test('status runtime and status dashboard stay machine-readable through the built CLI entrypoint', () => {
   const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
 if [ "$1" = "version" ]; then
   echo "Hermes Agent v9.9.9-test"
@@ -572,7 +592,7 @@ exit 1
   const stateRoot = mkdtempSync(path.join(os.tmpdir(), 'opl-built-dashboard-state-'));
 
   try {
-    const runtimeResult = runCli(['runtime-status', '--limit', '1'], {
+    const runtimeResult = runCli(['status', 'runtime', '--limit', '1'], {
       env: {
         OPL_HERMES_BIN: hermesPath,
         PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
@@ -583,7 +603,7 @@ exit 1
     assert.equal(runtimePayload.runtime_status.status_report.parsed.summary.active_sessions, 2);
     assert.equal(runtimePayload.runtime_status.process_usage.summary.process_count, 1);
 
-    const dashboardResult = runCli(['dashboard', '--path', repoRoot, '--sessions-limit', '1'], {
+    const dashboardResult = runCli(['status', 'dashboard', '--path', repoRoot, '--sessions-limit', '1'], {
       env: {
         OPL_FRONTDESK_STATE_DIR: stateRoot,
         OPL_HERMES_BIN: hermesPath,
@@ -611,20 +631,20 @@ test('help exposes the public front-desk entrypoints while hiding librechat comp
 
   const payload = parseJsonOutput(result);
   assert.ok(payload.help.commands.some((entry) => entry.command === 'web'));
-  assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-manifest'));
-  assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-entry-guide'));
-  assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-domain-wiring'));
-  assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-readiness'));
-  assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-hosted-bundle'));
-  assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-hosted-package'));
+  assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk manifest'));
+  assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk entry-guide'));
+  assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk domain-wiring'));
+  assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk readiness'));
+  assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk hosted-bundle'));
+  assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk hosted-package'));
   assert.equal(payload.help.commands.some((entry) => entry.command.startsWith('frontdesk-librechat')), false);
   assert.equal(payload.help.commands.some((entry) => entry.command === 'frontdesk-librechat-package'), false);
-  assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-service-install'));
-  assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk-service-status'));
-  assert.ok(payload.help.commands.some((entry) => entry.command === 'workspace-bind'));
-  assert.ok(payload.help.commands.some((entry) => entry.command === 'launch-domain'));
-  assert.ok(payload.help.commands.some((entry) => entry.command === 'session-ledger'));
-  assert.ok(payload.help.commands.some((entry) => entry.command === 'handoff-envelope'));
+  assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk service install'));
+  assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk service status'));
+  assert.ok(payload.help.commands.some((entry) => entry.command === 'workspace bind'));
+  assert.ok(payload.help.commands.some((entry) => entry.command === 'domain launch'));
+  assert.ok(payload.help.commands.some((entry) => entry.command === 'session ledger'));
+  assert.ok(payload.help.commands.some((entry) => entry.command === 'contract handoff-envelope'));
 
   const scoped = runCli(['web', '--help']);
   assert.equal(scoped.status, 0, formatFailure(scoped));
@@ -633,11 +653,11 @@ test('help exposes the public front-desk entrypoints while hiding librechat comp
   assert.match(scopedPayload.help.usage, /opl web/);
 });
 
-test('frontdesk-manifest stays machine-readable through the built CLI entrypoint', () => {
+test('frontdesk manifest stays machine-readable through the built CLI entrypoint', () => {
   const stateRoot = mkdtempSync(path.join(os.tmpdir(), 'opl-built-frontdesk-manifest-state-'));
 
   try {
-    const result = runCli(['frontdesk-manifest'], {
+    const result = runCli(['frontdesk', 'manifest'], {
       env: {
         OPL_FRONTDESK_STATE_DIR: stateRoot,
       },
@@ -646,7 +666,7 @@ test('frontdesk-manifest stays machine-readable through the built CLI entrypoint
 
     const payload = parseJsonOutput(result);
     assert.equal(payload.frontdesk_manifest.surface_id, 'opl_hosted_friendly_frontdesk_manifest');
-    assert.equal(payload.frontdesk_manifest.shell_integration_target, 'librechat_first');
+    assert.equal(payload.frontdesk_manifest.shell_integration_target, 'desktop_first');
     assert.equal(payload.frontdesk_manifest.endpoints.domain_manifests, '/api/domain-manifests');
     assert.equal(payload.frontdesk_manifest.endpoints.health, '/api/health');
     assert.equal(payload.frontdesk_manifest.endpoints.resume, '/api/resume');
@@ -671,8 +691,8 @@ test('frontdesk-manifest stays machine-readable through the built CLI entrypoint
   }
 });
 
-test('frontdesk-entry-guide stays machine-readable through the built CLI entrypoint', () => {
-  const result = runCli(['frontdesk-entry-guide']);
+test('frontdesk entry-guide stays machine-readable through the built CLI entrypoint', () => {
+  const result = runCli(['frontdesk', 'entry-guide']);
   assert.equal(result.status, 0, formatFailure(result));
 
   const payload = parseJsonOutput(result);
@@ -682,11 +702,11 @@ test('frontdesk-entry-guide stays machine-readable through the built CLI entrypo
   assert.equal(payload.frontdesk_entry_guide.endpoints.frontdesk_entry_guide, '/api/frontdesk-entry-guide');
 });
 
-test('frontdesk-domain-wiring stays machine-readable through the built CLI entrypoint', () => {
+test('frontdesk domain-wiring stays machine-readable through the built CLI entrypoint', () => {
   const stateRoot = mkdtempSync(path.join(os.tmpdir(), 'opl-built-frontdesk-domain-wiring-state-'));
 
   try {
-    const result = runCli(['frontdesk-domain-wiring'], {
+    const result = runCli(['frontdesk', 'domain-wiring'], {
       env: {
         OPL_FRONTDESK_STATE_DIR: stateRoot,
       },
@@ -711,7 +731,7 @@ test('frontdesk-domain-wiring stays machine-readable through the built CLI entry
   }
 });
 
-test('frontdesk-readiness stays machine-readable through the built CLI entrypoint', () => {
+test('frontdesk readiness stays machine-readable through the built CLI entrypoint', () => {
   const homeRoot = mkdtempSync(path.join(os.tmpdir(), 'opl-frontdesk-readiness-home-'));
   const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
 if [ "$1" = "version" ]; then
@@ -754,7 +774,7 @@ exit 1
   const psFixture = createFakePsFixture(`27025 1 0.1 0.2 49616 22:46 /Users/test/.hermes/venv/bin/python -m hermes_cli.main gateway run --replace`);
 
   try {
-    const result = runCli(['frontdesk-readiness', '--path', repoRoot, '--sessions-limit', '1'], {
+    const result = runCli(['frontdesk', 'readiness', '--path', repoRoot, '--sessions-limit', '1'], {
       env: {
         HOME: homeRoot,
         OPL_HERMES_BIN: hermesPath,
@@ -776,14 +796,14 @@ exit 1
   }
 });
 
-test('frontdesk-service-install --help stays machine-readable through the built CLI entrypoint', () => {
-  const result = runCli(['frontdesk-service-install', '--help']);
+test('frontdesk service install --help stays machine-readable through the built CLI entrypoint', () => {
+  const result = runCli(['frontdesk', 'service', 'install', '--help']);
   assert.equal(result.status, 0, formatFailure(result));
 
   const payload = parseJsonOutput(result);
-  assert.equal(payload.help.command, 'frontdesk-service-install');
-  assert.match(payload.help.usage, /opl frontdesk-service-install/);
-  assert.ok(payload.help.examples.includes('opl frontdesk-service-install --port 8787'));
+  assert.equal(payload.help.command, 'frontdesk service install');
+  assert.match(payload.help.usage, /opl frontdesk service install/);
+  assert.ok(payload.help.examples.includes('opl frontdesk service install --port 8787'));
 });
 
 test('frontdesk-service lifecycle stays machine-readable through the built CLI entrypoint', () => {
@@ -799,7 +819,9 @@ test('frontdesk-service lifecycle stays machine-readable through the built CLI e
 
   try {
     const installResult = runCli([
-      'frontdesk-service-install',
+      'frontdesk',
+      'service',
+      'install',
       '--host',
       '127.0.0.1',
       '--port',
@@ -823,7 +845,7 @@ test('frontdesk-service lifecycle stays machine-readable through the built CLI e
     assert.match(plistText, /<string>web<\/string>/);
     assert.match(plistText, new RegExp(String(configuredPort)));
 
-    const statusResult = runCli(['frontdesk-service-status'], {
+    const statusResult = runCli(['frontdesk', 'service', 'status'], {
       env,
     });
     assert.equal(statusResult.status, 0, formatFailure(statusResult));
@@ -835,7 +857,7 @@ test('frontdesk-service lifecycle stays machine-readable through the built CLI e
       `http://127.0.0.1:${configuredPort}/api/health`,
     );
 
-    const openResult = runCli(['frontdesk-service-open'], {
+    const openResult = runCli(['frontdesk', 'service', 'open'], {
       env,
     });
     assert.equal(openResult.status, 0, formatFailure(openResult));
@@ -843,7 +865,7 @@ test('frontdesk-service lifecycle stays machine-readable through the built CLI e
     assert.equal(openPayload.frontdesk_service.action, 'open');
     assert.match(readFileSync(openFixture.capturePath, 'utf8'), new RegExp(String(configuredPort)));
 
-    const stopResult = runCli(['frontdesk-service-stop'], {
+    const stopResult = runCli(['frontdesk', 'service', 'stop'], {
       env,
     });
     assert.equal(stopResult.status, 0, formatFailure(stopResult));
@@ -851,7 +873,7 @@ test('frontdesk-service lifecycle stays machine-readable through the built CLI e
     assert.equal(stopPayload.frontdesk_service.action, 'stop');
     assert.equal(stopPayload.frontdesk_service.loaded, false);
 
-    const startResult = runCli(['frontdesk-service-start'], {
+    const startResult = runCli(['frontdesk', 'service', 'start'], {
       env,
     });
     assert.equal(startResult.status, 0, formatFailure(startResult));
@@ -859,7 +881,7 @@ test('frontdesk-service lifecycle stays machine-readable through the built CLI e
     assert.equal(startPayload.frontdesk_service.action, 'start');
     assert.equal(startPayload.frontdesk_service.loaded, true);
 
-    const uninstallResult = runCli(['frontdesk-service-uninstall'], {
+    const uninstallResult = runCli(['frontdesk', 'service', 'uninstall'], {
       env,
     });
     assert.equal(uninstallResult.status, 0, formatFailure(uninstallResult));
@@ -874,12 +896,13 @@ test('frontdesk-service lifecycle stays machine-readable through the built CLI e
   }
 });
 
-test('frontdesk-hosted-bundle stays machine-readable through the built CLI entrypoint', () => {
+test('frontdesk hosted-bundle stays machine-readable through the built CLI entrypoint', () => {
   const stateRoot = mkdtempSync(path.join(os.tmpdir(), 'opl-built-hosted-bundle-state-'));
 
   try {
     const result = runCli([
-      'frontdesk-hosted-bundle',
+      'frontdesk',
+      'hosted-bundle',
       '--host',
       '0.0.0.0',
       '--port',
@@ -914,12 +937,13 @@ test('frontdesk-hosted-bundle stays machine-readable through the built CLI entry
   }
 });
 
-test('frontdesk-hosted-package stays machine-readable through the built CLI entrypoint', () => {
+test('frontdesk hosted-package stays machine-readable through the built CLI entrypoint', () => {
   const outputDir = mkdtempSync(path.join(os.tmpdir(), 'opl-built-hosted-package-'));
 
   try {
     const result = runCli([
-      'frontdesk-hosted-package',
+      'frontdesk',
+      'hosted-package',
       '--output',
       outputDir,
       '--public-origin',
@@ -997,12 +1021,13 @@ test('frontdesk-librechat-package stays machine-readable through the built CLI e
   }
 });
 
-test('workspace registry and handoff surfaces stay machine-readable through the built CLI entrypoint', () => {
+test('workspace registry and contract handoff surfaces stay machine-readable through the built CLI entrypoint', () => {
   const stateRoot = mkdtempSync(path.join(os.tmpdir(), 'opl-built-state-fixture-'));
 
   try {
     const bindResult = runCli([
-      'workspace-bind',
+      'workspace',
+      'bind',
       '--project',
       'redcube',
       '--path',
@@ -1025,7 +1050,7 @@ test('workspace registry and handoff surfaces stay machine-readable through the 
     assert.equal(bindPayload.workspace_catalog.action, 'bind');
     assert.equal(bindPayload.workspace_catalog.binding.direct_entry.command, 'redcube-ai frontdesk');
 
-    const catalogResult = runCli(['workspace-catalog'], {
+    const catalogResult = runCli(['workspace', 'list'], {
       env: {
         OPL_FRONTDESK_STATE_DIR: stateRoot,
       },
@@ -1043,6 +1068,7 @@ test('workspace registry and handoff surfaces stay machine-readable through the 
     assert.equal(catalogPayload.workspace_catalog.summary.manifest_ready_projects_count, 1);
 
     const handoffResult = runCli([
+      'contract',
       'handoff-envelope',
       'Prepare',
       'a',
@@ -1070,7 +1096,8 @@ test('workspace registry and handoff surfaces stay machine-readable through the 
     assert.equal(handoffPayload.handoff_bundle.domain_manifest_recommendation.recommended_command, null);
 
     const archiveResult = runCli([
-      'workspace-archive',
+      'workspace',
+      'archive',
       '--project',
       'redcube',
       '--path',
@@ -1088,14 +1115,15 @@ test('workspace registry and handoff surfaces stay machine-readable through the 
   }
 });
 
-test('launch-domain stays machine-readable through the built CLI entrypoint', async () => {
+test('domain launch stays machine-readable through the built CLI entrypoint', async () => {
   const stateRoot = mkdtempSync(path.join(os.tmpdir(), 'opl-built-launch-domain-state-'));
   const openFixture = createFakeOpenFixture();
   const shellFixture = createFakeShellCommandFixture();
 
   try {
     const bindResult = runCli([
-      'workspace-bind',
+      'workspace',
+      'bind',
       '--project',
       'redcube',
       '--path',
@@ -1112,7 +1140,8 @@ test('launch-domain stays machine-readable through the built CLI entrypoint', as
     assert.equal(bindResult.status, 0, formatFailure(bindResult));
 
     const previewResult = runCli([
-      'launch-domain',
+      'domain',
+      'launch',
       '--project',
       'redcube',
       '--dry-run',
@@ -1129,7 +1158,8 @@ test('launch-domain stays machine-readable through the built CLI entrypoint', as
     assert.equal(previewPayload.domain_entry_launch.launch_status, 'preview_only');
 
     const openResult = runCli([
-      'launch-domain',
+      'domain',
+      'launch',
       '--project',
       'redcube',
     ], {
@@ -1142,7 +1172,8 @@ test('launch-domain stays machine-readable through the built CLI entrypoint', as
     assert.equal(readFileSync(openFixture.capturePath, 'utf8').trim(), 'http://127.0.0.1:3310/redcube');
 
     const spawnResult = runCli([
-      'launch-domain',
+      'domain',
+      'launch',
       '--project',
       'redcube',
       '--strategy',
@@ -1174,7 +1205,7 @@ test('launch-domain stays machine-readable through the built CLI entrypoint', as
   }
 });
 
-test('session-ledger stays machine-readable through the built CLI entrypoint', () => {
+test('session ledger stays machine-readable through the built CLI entrypoint', () => {
   const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
 if [ "$1" = "chat" ]; then
   cat <<'EOF'
@@ -1242,6 +1273,8 @@ exit 1
       'deck.',
       '--preferred-family',
       'ppt_deck',
+      '--executor',
+      'hermes',
       '--workspace-path',
       repoRoot,
     ], {
@@ -1253,7 +1286,7 @@ exit 1
     });
     assert.equal(askResult.status, 0, formatFailure(askResult));
 
-    const resumeResult = runCli(['resume', 'built_sess_ledger'], {
+    const resumeResult = runCli(['session', 'resume', 'built_sess_ledger'], {
       env: {
         OPL_HERMES_BIN: hermesPath,
         OPL_FRONTDESK_STATE_DIR: stateRoot,
@@ -1262,7 +1295,7 @@ exit 1
     });
     assert.equal(resumeResult.status, 0, formatFailure(resumeResult));
 
-    const ledgerResult = runCli(['session-ledger', '--limit', '5'], {
+    const ledgerResult = runCli(['session', 'ledger', '--limit', '5'], {
       env: {
         OPL_HERMES_BIN: hermesPath,
         OPL_FRONTDESK_STATE_DIR: stateRoot,
@@ -1295,6 +1328,20 @@ exit 1
 });
 
 test('web starts a local front-desk pilot through the built CLI entrypoint', async () => {
+  const { fixtureRoot: codexRuntimeFixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$1" = "exec" ]; then
+  cat <<'EOF'
+{"type":"thread.started","thread_id":"built-web-ask-session"}
+{"type":"turn.started"}
+{"item":{"type":"command_execution","command":"opl handoff","status":"in_progress"}}
+{"item":{"type":"agent_message","text":"BUILT WEB PILOT ASK RESPONSE"}}
+{"type":"turn.completed"}
+EOF
+  exit 0
+fi
+echo "unexpected fake-codex args: $*" >&2
+exit 1
+`);
   const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
 if [ "$1" = "version" ]; then
   echo "Hermes Agent v9.9.9-test"
@@ -1362,7 +1409,8 @@ exit 1
 
   try {
     const bindResult = runCli([
-      'workspace-bind',
+      'workspace',
+      'bind',
       '--project',
       'redcube',
       '--path',
@@ -1380,6 +1428,7 @@ exit 1
       ['web', '--host', '127.0.0.1', '--port', '0', '--path', repoRoot, '--sessions-limit', '1'],
       {
         env: {
+          OPL_CODEX_BIN: codexPath,
           OPL_HERMES_BIN: hermesPath,
           OPL_FRONTDESK_STATE_DIR: stateRoot,
           PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
@@ -1407,7 +1456,16 @@ exit 1
     const baseUrl = String(startup.payload.web_frontdesk.listening.base_url);
     const pageResponse = await fetch(baseUrl);
     const pageHtml = await pageResponse.text();
-    assert.match(pageHtml, /OPL Machine Surface/);
+    assert.match(pageHtml, /OPL Workspace Home/);
+    assert.match(pageHtml, /Open OPL Agent/);
+    assert.match(pageHtml, /Workspace Home/);
+    assert.match(pageHtml, /Current Task/);
+    assert.match(pageHtml, /Workspace Inbox/);
+    assert.match(pageHtml, /Files & Deliverables/);
+    assert.match(pageHtml, /Progress Feed/);
+    assert.match(pageHtml, /one-person-lab/);
+    assert.match(pageHtml, /href="\/login"/);
+    assert.doesNotMatch(pageHtml, /Workspace Hub/);
     assert.match(pageHtml, /id="opl-bootstrap"/);
     assert.match(pageHtml, /\/api\/frontdesk-entry-guide/);
 
@@ -1541,12 +1599,29 @@ exit 1
       }),
     });
     const askPayload = await askResponse.json();
-    assert.equal(askPayload.product_entry.hermes.session_id, 'built-web-ask-session');
-    assert.match(askPayload.product_entry.hermes.response, /BUILT WEB PILOT ASK RESPONSE/);
+    assert.equal(askPayload.product_entry.mode, 'ask');
+    assert.equal(askPayload.product_entry.dry_run, false);
+    assert.equal(askPayload.product_entry.execution_mode, 'async_accept');
+    assert.equal(askPayload.product_entry.executor_backend, 'codex');
+    assert.match(askPayload.product_entry.task.task_id, /^task_/);
+    assert.equal(askPayload.product_entry.task.status, 'accepted');
+    assert.equal(askPayload.product_entry.task.executor_backend, 'codex');
+    assert.match(askPayload.product_entry.task.summary, /Codex|受理|执行/);
+
+    const taskStatusResponse = await fetch(
+      `${baseUrl}/api/task-status?task_id=${encodeURIComponent(String(askPayload.product_entry.task.task_id))}&lines=20`,
+    );
+    const taskStatusPayload = await taskStatusResponse.json();
+    assert.equal(taskStatusPayload.product_entry.mode, 'task_status');
+    assert.equal(taskStatusPayload.product_entry.task.task_id, askPayload.product_entry.task.task_id);
+    assert.equal(taskStatusPayload.product_entry.task.executor_backend, 'codex');
+    assert.match(taskStatusPayload.product_entry.task.status, /accepted|running|succeeded|failed/);
+    assert.equal(typeof taskStatusPayload.product_entry.task.recent_output, 'string');
   } finally {
     if (child) {
       await stopCliServer(child);
     }
+    rmSync(codexRuntimeFixtureRoot, { recursive: true, force: true });
     rmSync(fixtureRoot, { recursive: true, force: true });
     rmSync(psFixture.fixtureRoot, { recursive: true, force: true });
     rmSync(stateRoot, { recursive: true, force: true });
@@ -1591,30 +1666,33 @@ exit 1
 });
 
 test('natural-language fallback stays machine-readable through the built CLI entrypoint', () => {
-  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
-if [ "$1" = "chat" ]; then
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$1" = "exec" ]; then
   cat <<'EOF'
-╭─ ⚕ Hermes ───────────────────────────────────────────────────────────────────╮
-AUTO ASK READY
-
-session_id: opl-quick-ask-session
+{"type":"thread.started","thread_id":"opl-quick-ask-session"}
+{"type":"turn.started"}
+{"item":{"type":"agent_message","text":"AUTO ASK READY"}}
 EOF
   exit 0
 fi
-echo "unexpected fake-hermes args: $*" >&2
+echo "unexpected fake-codex args: $*" >&2
 exit 1
 `);
 
   try {
     const result = runCli(['Plan', 'a', 'medical', 'grant', 'proposal', 'revision', 'loop.'], {
-      env: { OPL_HERMES_BIN: hermesPath },
+      env: { OPL_CODEX_BIN: codexPath },
     });
     assert.equal(result.status, 0, formatFailure(result));
 
     const payload = parseJsonOutput(result);
     assert.equal(payload.product_entry.mode, 'ask');
     assert.equal(payload.product_entry.input.goal, 'Plan a medical grant proposal revision loop.');
-    assert.equal(payload.product_entry.hermes.session_id, 'opl-quick-ask-session');
+    assert.equal(payload.product_entry.routing.status, 'unknown_domain');
+    assert.equal(payload.product_entry.routing.candidate_workstream_id, 'grant_ops');
+    assert.equal(payload.product_entry.executor_backend, 'codex');
+    assert.equal(payload.product_entry.codex.session_id, 'opl-quick-ask-session');
+    assert.equal(payload.product_entry.codex.response, 'AUTO ASK READY');
   } finally {
     rmSync(fixtureRoot, { recursive: true, force: true });
   }
@@ -1633,12 +1711,20 @@ test('ask --dry-run stays machine-readable through the built CLI entrypoint', ()
   const payload = parseJsonOutput(result);
   assert.equal(payload.product_entry.mode, 'ask');
   assert.equal(payload.product_entry.dry_run, true);
+  assert.equal(payload.product_entry.input.goal, 'Prepare a defense-ready slide deck for a thesis committee.');
+  assert.equal(payload.product_entry.input.intent, 'create');
+  assert.equal(payload.product_entry.input.target, 'deliverable');
+  assert.equal(payload.product_entry.routing.status, 'routed');
   assert.equal(payload.product_entry.routing.domain_id, 'redcube');
   assert.equal(payload.product_entry.routing.workstream_id, 'presentation_ops');
-  assert.ok(payload.product_entry.hermes.command_preview.includes('--query'));
+  assert.equal(payload.product_entry.executor_backend, 'codex');
+  assert.match(payload.product_entry.handoff_prompt_preview, /One Person Lab \(OPL\) Product Entry/);
+  assert.match(payload.product_entry.handoff_prompt_preview, /presentation_ops/);
+  assert.equal(payload.product_entry.codex.command_preview[0], 'codex');
+  assert.ok(payload.product_entry.codex.command_preview.includes('--json'));
 });
 
-test('sessions stays machine-readable through the built CLI entrypoint', () => {
+test('session list stays machine-readable through the built CLI entrypoint', () => {
   const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
 if [ "$1" = "sessions" ] && [ "$2" = "list" ]; then
   cat <<'EOF'
@@ -1654,7 +1740,7 @@ exit 1
 `);
 
   try {
-    const result = runCli(['sessions', '--limit', '2'], {
+    const result = runCli(['session', 'list', '--limit', '2'], {
       env: { OPL_HERMES_BIN: hermesPath },
     });
     assert.equal(result.status, 0, formatFailure(result));
@@ -1668,7 +1754,7 @@ exit 1
   }
 });
 
-test('repair-hermes-gateway stays machine-readable through the built CLI entrypoint', () => {
+test('runtime repair-gateway stays machine-readable through the built CLI entrypoint', () => {
   const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
 if [ "$1" = "gateway" ] && [ "$2" = "install" ]; then
   cat <<'EOF'
@@ -1690,7 +1776,7 @@ exit 1
 `);
 
   try {
-    const result = runCli(['repair-hermes-gateway'], {
+    const result = runCli(['runtime', 'repair-gateway'], {
       env: { OPL_HERMES_BIN: hermesPath },
     });
     assert.equal(result.status, 0, formatFailure(result));
@@ -1704,7 +1790,7 @@ exit 1
   }
 });
 
-test('validate-contracts surfaces shape-invalid contracts with a stable error envelope', () => {
+test('contract validate surfaces shape-invalid contracts with a stable error envelope', () => {
   const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((_fixtureRoot, contractsDir) => {
     const workstreamsPath = path.join(contractsDir, 'workstreams.json');
     const workstreams = JSON.parse(readFileSync(workstreamsPath, 'utf8'));
@@ -1713,7 +1799,7 @@ test('validate-contracts surfaces shape-invalid contracts with a stable error en
   });
 
   try {
-    const result = runCli(['validate-contracts'], { env: { OPL_CONTRACTS_DIR: fixtureContractsRoot } });
+    const result = runCli(['contract', 'validate'], { env: { OPL_CONTRACTS_DIR: fixtureContractsRoot } });
     assert.notEqual(result.status, 0, 'Expected a non-zero exit when workstreams.json shape is invalid.');
 
     const payload = parseJsonOutput(result);
@@ -1734,7 +1820,7 @@ test('unknown command remains machine-readable and discoverable', () => {
   assertNoContractsProvenance(payload);
   assert.equal(payload.version, 'g2');
   assert.equal(payload.error.code, 'unknown_command');
-  assert.ok(payload.error.details.commands.includes('validate-contracts'));
+  assert.ok(payload.error.details.commands.includes('contract validate'));
   assert.equal(payload.error.exit_code, result.status);
   assert.equal(result.status, 2);
 });
@@ -1747,39 +1833,39 @@ test('help stays machine-readable and discoverable for built CLI entrypoints', (
   assertNoContractsProvenance(payload);
   assert.equal(payload.version, 'g2');
   assert.equal(payload.help.command, null);
-  assert.equal(payload.help.usage, 'opl [command|request...] [args]');
+  assert.equal(payload.help.usage, 'opl [command ...|request...] [args]');
   assert.ok(
-    payload.help.commands.some((entry) => entry.command === 'validate-contracts'),
+    payload.help.commands.some((entry) => entry.command === 'contract validate'),
   );
   assert.ok(
     payload.help.commands.some(
-      (entry) => entry.command === 'get-domain'
-        && entry.examples.includes('opl get-domain redcube'),
+      (entry) => entry.command === 'contract domain'
+        && entry.examples.includes('opl contract domain redcube'),
     ),
   );
 });
 
 test('command --help stays machine-readable for built CLI entrypoints', () => {
-  const result = runCli(['get-domain', '--help']);
+  const result = runCli(['contract', 'domain', '--help']);
   assert.equal(result.status, 0, formatFailure(result));
 
   const payload = parseJsonOutput(result);
   assertNoContractsProvenance(payload);
   assert.equal(payload.version, 'g2');
-  assert.equal(payload.help.command, 'get-domain');
-  assert.equal(payload.help.usage, 'opl get-domain <domain_id>');
-  assert.ok(payload.help.examples.includes('opl get-domain redcube'));
+  assert.equal(payload.help.command, 'contract domain');
+  assert.equal(payload.help.usage, 'opl contract domain <domain_id>');
+  assert.ok(payload.help.examples.includes('opl contract domain redcube'));
 });
 
 test('command help literal uses the dedicated usage exit code for built CLI entrypoints', () => {
-  const result = runCli(['get-domain', 'help']);
+  const result = runCli(['contract', 'domain', 'help']);
   assert.equal(result.status, 2, formatFailure(result));
 
   const payload = parseJsonOutput(result);
   assertNoContractsProvenance(payload);
   assert.equal(payload.error.code, 'cli_usage_error');
   assert.equal(payload.error.exit_code, 2);
-  assert.equal(payload.error.details.help_usage, 'opl get-domain --help');
+  assert.equal(payload.error.details.help_usage, 'opl contract domain --help');
 });
 
 test('global --contracts-dir override stays explicit and wins over OPL_CONTRACTS_DIR for built CLI entrypoints', () => {
@@ -1798,7 +1884,7 @@ test('global --contracts-dir override stays explicit and wins over OPL_CONTRACTS
 
   try {
     const result = runCli(
-      ['--contracts-dir', flagFixture.fixtureContractsRoot, 'get-workstream', 'research_ops'],
+      ['--contracts-dir', flagFixture.fixtureContractsRoot, 'contract', 'workstream', 'research_ops'],
       {
         env: {
           OPL_CONTRACTS_DIR: envFixture.fixtureContractsRoot,
@@ -1826,7 +1912,7 @@ test('contract validation failures use the dedicated contract exit code for buil
 
   try {
     const result = runCli(
-      ['--contracts-dir', fixtureContractsRoot, 'validate-contracts'],
+      ['--contracts-dir', fixtureContractsRoot, 'contract', 'validate'],
     );
     assert.equal(result.status, 3, formatFailure(result));
 
@@ -1839,7 +1925,7 @@ test('contract validation failures use the dedicated contract exit code for buil
 });
 
 test('usage errors use the dedicated usage exit code for built CLI entrypoints', () => {
-  const result = runCli(['get-domain']);
+  const result = runCli(['contract', 'domain']);
   assert.equal(result.status, 2, formatFailure(result));
 
   const payload = parseJsonOutput(result);

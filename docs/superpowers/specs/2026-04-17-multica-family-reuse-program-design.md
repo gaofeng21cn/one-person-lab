@@ -190,7 +190,7 @@
 
 #### `RCA`
 
-- 先把 `product entry` manifest 里的 shared companion payload 改为直接消费 `opl-readonly-gateway/product-entry-companions`
+- 先把 `product entry` manifest 里的 shared companion payload 改为直接消费 `opl-gateway-shared/product-entry-companions`
 - 再把 `session continuity / rerun linkage / review state / runtime watch` 接入共享 runtime/task/skill/automation companion
 - 保留 deliverable domain truth
 
@@ -231,7 +231,7 @@
 
 ### `RCA`
 
-- `product-entry manifest` 的 `quickstart / overview / readiness` 改为直接复用 `opl-readonly-gateway/product-entry-companions`
+- `product-entry manifest` 的 `quickstart / overview / readiness` 改为直接复用 `opl-gateway-shared/product-entry-companions`
 - conformance tests
 
 ## Validation

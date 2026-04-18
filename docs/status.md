@@ -3,7 +3,7 @@
 ## 当前公开角色
 
 - `OPL` 是一人课题组的 Codex-native GUI 产品壳与模块管理器。
-- `Codex` 是默认交互与执行宿主，也是当前开发宿主。
+- `Codex` 是默认交互与执行宿主，也是当前开发宿主；当前活跃执行入口仍是 `Codex-only` 本地会话，未来产品 runtime substrate 方向继续指向先在 domain 仓内证明的上游 `Hermes-Agent` 集成。
 - 当前默认入口是 `GUI 产品壳 -> 工作模式选择 -> Codex 对话 / Codex 任务 / 专用 domain agent`。
 - GUI 中并列呈现三类工作模式：普通 Codex 对话、通用 Codex 任务、专用 domain agents。
 - 设置面承载模块安装、模块升级、版本 pin、默认模式、模块健康状态、最近验证状态和 online gateway 配置。
@@ -14,15 +14,24 @@
 
 ## 当前产品入口
 
+- 当前产品入口真相：`OPL` 已经落下本地 direct product-entry shell，默认前门是 `opl`。
+- `Hermes Kernel Integration` 的冻结选择是 `external kernel, managed by OPL product packaging`。
+- 这条产品入口路径把用户留在 `OPL` 壳里，不要求用户先手工安装并理解 `Hermes-Agent`。
+- 家族级入口真相继续分成 `operator entry`、`agent entry`、`product entry` 三层。
+- 家族默认执行器继续冻结在 `Codex CLI autonomous`，沿用本地 `Codex` 默认配置。
+- `Hermes-native` 继续只作为实验路线存在，目标是完整的 Hermes AIAgent agent loop，不是一条 chat relay，也不是一步一步 chat。
+
 - `opl frontdesk bootstrap --path <workspace>` 准备本地 `OPL Atlas` Desktop 壳，并把当前 workspace 接入 `OPL` 模块与项目 registry。
 - `opl web` 是同一产品壳的本地浏览器 companion surface。
 - `opl`、`opl "<request...>"`、`opl start --project <project_id> [--mode <mode_id>]`、`opl doctor`、`opl ask`、`opl chat`、`opl resume`、`opl sessions` 与 `opl logs` 都围绕同一产品入口。
-- `opl frontdesk librechat install|status|start|stop|open` 与 `opl frontdesk librechat-package` 保留为 hidden compatibility surface，默认入口保持 GUI 主路径。
+- `opl frontdesk-librechat-install|status|start|stop|open` 与 `opl frontdesk-librechat-package` 保留为 hidden compatibility surface，默认入口保持 GUI 主路径。
 - `opl ask` 默认走 `Codex`；`opl chat`、`opl resume`、显式 executor 配置和 GUI 模式切换可以进入 `Hermes-Agent` 备用在线路径。
 - `workspace-catalog`、`workspace-bind|activate|archive` 与 `domain-manifests` 组成模块发现与绑定面。
 - `runtime-status`、`session-ledger` 与 `dashboard` 组成运行观察面。
 - `frontdesk-entry-guide`、`frontdesk-readiness` 与 `frontdesk-domain-wiring` 组成 GUI 启动与 readiness 面。
 - GUI 的任务边栏应把 progress 状态和 files 交付区投射到当前 workspace。
+- `opl <request...>` 继续作为同一入口之上的 quick ask 路径。
+- 本地 web front desk pilot 已经落地；hosted / web 前台真相：`LibreChat-first` pilot 仍未落地为最终托管前台，比较基线包含 `Chatbot UI`、`LibreChat`、`Open WebUI` 与 `LobeChat`。
 
 ## GUI 工作模式
 
@@ -51,6 +60,8 @@
 - 机器合同：`contracts/` 保留 machine-readable contract surface。
 - 参考级材料：`docs/references/` 承接实现记录、基准、推进板和边界说明。
 - 历史执行与迁移材料：从 `docs/history/omx/` 进入。
+- 公开联邦冻结面继续是 `Minimal admitted-domain federation activation package`，当前只覆盖 `MedAutoScience` 与 `RedCube AI` 两条已 admitted domain surface；formal entry 保持在本地 `TypeScript CLI`-first / gateway contract surface，runtime ownership 继续留在 admitted domain 一侧。
+- `Grant Foundry -> Med Auto Grant` 已经是活跃的医学 `Grant Ops` 业务仓路径；在 `OPL` 顶层，它的 federation admission 与 handoff wording 继续单独门控。
 
 ## 当前阶段
 
@@ -61,6 +72,7 @@
 - 把 `MAS`、`MAG`、`RCA` 的 module readiness、启动入口、最近运行状态和升级状态统一投射到 `OPL`。
 - 把 `Hermes-Agent` 明确放在备用模式与在线网关位置。
 - 保持 domain agents 的专业能力和仓库事实由各自项目维护。
+- 顶层执行主线继续定位成 front desk / hosted runtime hardening，加上条件触发的 central sync follow-on；当前顶层 honest state 是 central sync stop，直到 admitted-domain 仓再次吸收新 delta 或中央 reference surface 再次漂移。
 
 ## 下一阶段
 
@@ -70,6 +82,13 @@
 4. 让 Hermes-Agent online gateway 只通过显式配置和显式模式切换出现。
 5. 维持 `Codex` 作为普通对话与通用任务的默认执行者。
 6. 让参考级与历史迁移文档留在 `docs/references/`、`docs/specs/`、`docs/plans/` 和 `docs/history/`。
+
+## 参考锚点
+
+- `docs/references/family-orchestration-contract-absorb-crewai.md`
+- `docs/references/family-lightweight-direct-entry-rollout-board.md`
+- `docs/references/opl-frontdesk-delivery-board.md`
+- `docs/references/opl-phase-2-central-reference-sync-board.md`
 
 ## 长线目标
 

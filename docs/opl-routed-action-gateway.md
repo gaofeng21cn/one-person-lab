@@ -18,7 +18,7 @@ The goal is to make top-level routing explicit, auditable, and safe.
 `G3` builds on:
 
 - [OPL Federation Contract](./opl-federation-contract.md)
-- [OPL Read-Only Discovery Gateway](./opl-read-only-discovery-gateway.md)
+- [OPL Gateway Contract Surface](./opl-read-only-discovery-gateway.md)
 - [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
 
 If `G1` is not frozen, or if `G2` discovery semantics are still ambiguous, `G3` should not proceed.

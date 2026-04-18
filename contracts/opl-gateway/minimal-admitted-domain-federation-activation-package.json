@@ -4,7 +4,7 @@
   "phase": "phase_2_minimal_admitted_domain_federation_activation",
   "package_status": "activated",
   "formal_entry": {
-    "entry_surface": "TypeScript CLI-first / read-only gateway surface",
+    "entry_surface": "TypeScript CLI-first / gateway contract surface",
     "runtime_owner": false,
     "mutation_entry": false,
     "run_launch": false,
@@ -61,7 +61,7 @@
   "scope": [
     "strengthen top-level gateway/federation wording for already admitted domains only",
     "freeze docs+contracts+tests first for the minimal admitted-domain federation activation package",
-    "keep the formal entry at the TypeScript CLI-first / read-only gateway surface while making admitted-domain federation status explicit"
+    "keep the formal entry at the TypeScript CLI-first / gateway contract surface while making admitted-domain federation status explicit"
   ],
   "explicit_non_qualifiers": [
     "Grant Ops remains signal-only / domain-direction evidence only",
@@ -87,7 +87,7 @@
   ],
   "hard_boundaries": [
     "OPL remains the top-level gateway/federation surface rather than a runtime owner",
-    "the formal entry remains the local TypeScript CLI-first / read-only gateway surface",
+    "the formal entry remains the local TypeScript CLI-first / gateway contract surface",
     "candidate domains remain blocked below onboarding and do not become admitted through this package",
     "no mutation entry, run launch, or workspace write",
     "no G3 mutation or routed-action runtime",

@@ -97,7 +97,7 @@ If the surface is `opl_candidate_domain_backlog`, the dependency chain remains b
 ## Governing Sources
 
 - [OPL Federation Contract](../opl-federation-contract.md)
-- [OPL Read-Only Discovery Gateway](../opl-read-only-discovery-gateway.md)
+- [OPL Gateway Contract Surface](../opl-read-only-discovery-gateway.md)
 - [OPL Routed Action Gateway](../opl-routed-action-gateway.md)
 - [OPL Domain Onboarding Contract](../opl-domain-onboarding-contract.md)
 - [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.md)

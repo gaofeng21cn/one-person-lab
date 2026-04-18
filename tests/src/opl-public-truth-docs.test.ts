@@ -526,7 +526,7 @@ test('product-entry docs freeze the managed external-kernel choice instead of fo
   assert.match(masCutoverBoard, /OPL -> Med Auto Science/);
 });
 
-test('phase-1 formal entry wording keeps OPL at the CLI-first read-only gateway surface', () => {
+test('phase-1 formal entry wording keeps OPL at the CLI-first gateway contract surface', () => {
   const roadmap = read('docs/roadmap.md');
   const roadmapZh = read('docs/roadmap.zh-CN.md');
   const publicSurfaceIndex = read('docs/opl-public-surface-index.md');
@@ -534,12 +534,12 @@ test('phase-1 formal entry wording keeps OPL at the CLI-first read-only gateway 
   const gatewayContracts = read('contracts/opl-gateway/README.md');
   const gatewayContractsZh = read('contracts/opl-gateway/README.zh-CN.md');
 
-  assert.match(roadmap, /formal entry.*TypeScript CLI.*read-only gateway surface/i);
-  assert.match(roadmapZh, /formal entry.*TypeScript CLI.*read-only gateway surface/);
-  assert.match(publicSurfaceIndex, /formal entry.*CLI-first \/ read-only gateway surface/i);
-  assert.match(publicSurfaceIndexZh, /formal entry.*CLI-first \/ read-only gateway surface/);
-  assert.match(gatewayContracts, /formal entry.*TypeScript CLI.*read-only gateway surface/i);
-  assert.match(gatewayContractsZh, /formal entry.*TypeScript CLI.*read-only gateway surface/);
+  assert.match(roadmap, /formal entry.*TypeScript CLI.*gateway contract surface/i);
+  assert.match(roadmapZh, /formal entry.*TypeScript CLI.*gateway contract surface/);
+  assert.match(publicSurfaceIndex, /formal entry.*CLI-first \/ gateway contract surface/i);
+  assert.match(publicSurfaceIndexZh, /formal entry.*CLI-first \/ gateway contract surface/);
+  assert.match(gatewayContracts, /formal entry.*TypeScript CLI.*gateway contract surface/i);
+  assert.match(gatewayContractsZh, /formal entry.*TypeScript CLI.*gateway contract surface/);
   assert.match(gatewayContracts, /Runtime ownership continues to stay with the admitted domains/i);
   assert.match(gatewayContractsZh, /runtime ownership 继续保留在 admitted domain 一侧/);
 });
@@ -583,8 +583,8 @@ test('current gateway docs keep the phase-1 formal-entry baseline while the publ
   assert.match(roadmapZh, /截至 `?2026-04-10`?，`?OPL`? 公开主线仍停留在已 absorbed 的 `?Phase 2 \/ Minimal admitted-domain federation activation package`?/);
   assert.match(roadmap, /No new active follow-on tranche is currently open|central-sync stop/i);
   assert.match(roadmapZh, /没有新的 active follow-on tranche 打开|中央同步停车/);
-  assert.match(discovery, /already has a runnable local `TypeScript CLI`-first \/ read-only gateway baseline/i);
-  assert.match(discoveryZh, /已具备可运行的本地 `?TypeScript CLI`?-first \/ read-only gateway baseline/);
+  assert.match(discovery, /already has a runnable local `TypeScript CLI`-first \/ gateway contract baseline/i);
+  assert.match(discoveryZh, /已具备可运行的本地 `?TypeScript CLI`?-first \/ gateway contract baseline/);
   assert.match(roadmap, /Phase 1[\s\S]{0,40}formal entry contract and public system surface/i);
   assert.match(roadmapZh, /`Phase 1` 的 formal entry contract 与 public system surface/);
   assert.match(publicSurfaceIndex, /`?G3`?.*thin handoff planning.*planning-contract closeout|planning-level contract/i);
@@ -733,7 +733,7 @@ test('repo-tracked g2 release closeout note freezes the public baseline without 
   const closeout = read('docs/plans/2026-04-07-g2-release-closeout-note.md');
 
   assert.match(closeout, /G2 stable public baseline/);
-  assert.match(closeout, /已具备可运行的本地 `?TypeScript CLI`?-first \/ read-only gateway baseline/);
+  assert.match(closeout, /已具备可运行的本地 `?TypeScript CLI`?-first \/ gateway contract baseline/);
   assert.match(closeout, /`?G3`? 仍未激活/);
   assert.match(closeout, /不实现真正的 `?G3 mutation\/routed-action runtime`?/);
   assert.match(closeout, /Unified Harness Engineering Substrate/);
@@ -828,14 +828,14 @@ test('internal reference truth docs carry the 2026-04-11 snapshot and current OP
   assert.match(matrix, /Phase 1 exit \+ next-stage activation package freeze/);
   assert.match(matrix, /Minimal admitted-domain federation activation package/);
   assert.match(matrix, /Review Ops -> Thesis Ops/);
-  assert.match(matrix, /formal entry.*TypeScript CLI \+ read-only gateway baseline/);
+  assert.match(matrix, /formal entry.*TypeScript CLI \+ gateway contract baseline/);
   assert.match(matrix, /CURRENT_MAXIMUM_REACHED_AND_ABSORBED_TO_MAIN|honest stop/i);
   assert.match(taskboard, /状态锚点：`?2026-04-11`?/);
   assert.match(taskboard, /G2 stable public baseline/);
   assert.match(taskboard, /G3 thin handoff planning/);
   assert.match(taskboard, /Minimal admitted-domain federation activation package/);
   assert.match(taskboard, /Review Ops -> Thesis Ops/);
-  assert.match(taskboard, /formal entry contract.*TypeScript CLI.*read-only gateway surface/);
+  assert.match(taskboard, /formal entry contract.*TypeScript CLI.*gateway contract surface/);
   assert.match(taskboard, /honest stop/i);
 });
 
@@ -872,7 +872,7 @@ test('public docs activate the minimal admitted-domain federation package withou
     assert.match(doc, /MedAutoScience/i);
     assert.match(doc, /RedCube AI/i);
     assert.match(doc, /already admitted domains only|admitted domain surfaces|covers the two admitted surfaces/i);
-    assert.match(doc, /TypeScript CLI.*read-only gateway surface|CLI-first \/ read-only gateway surface|CLI-first \/ read-only gateway baseline/i);
+    assert.match(doc, /TypeScript CLI.*gateway contract surface|CLI-first \/ gateway contract surface|CLI-first \/ gateway contract baseline/i);
   }
 
   for (const doc of [readmeZh, roadmapZh, publicSurfaceIndexZh, gatewayContractsZh, rolloutZh]) {
@@ -880,7 +880,7 @@ test('public docs activate the minimal admitted-domain federation package withou
     assert.match(doc, /MedAutoScience/);
     assert.match(doc, /RedCube AI/);
     assert.match(doc, /仅面向已 admitted domain|只面向已 admitted domain|至少两个 admitted domain surface|两条 admitted domain surface|已 admitted domain surface|当前只覆盖上面两条已 admitted domain surface/);
-    assert.match(doc, /TypeScript CLI.*read-only gateway surface|CLI-first \/ read-only gateway surface|CLI-first \/ read-only gateway baseline/);
+    assert.match(doc, /TypeScript CLI.*gateway contract surface|CLI-first \/ gateway contract surface|CLI-first \/ gateway contract baseline/);
   }
 
   assert.match(gatewayContracts, /Runtime ownership continues to stay with the admitted domains/i);

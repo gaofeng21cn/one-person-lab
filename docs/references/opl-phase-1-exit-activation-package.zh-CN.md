@@ -31,7 +31,7 @@
 4. `Phase 1 / Review Ops candidate-domain backlog and onboarding-package hardening`
 5. `Phase 1 / Thesis Ops candidate-domain backlog and onboarding-package hardening`
 
-由此得到的 formal entry 仍然是当前本地 `TypeScript CLI`-first / read-only gateway surface。
+由此得到的 formal entry 仍然是当前本地 `TypeScript CLI`-first / gateway contract surface。
 这也继续意味着：
 
 - 不进入 mutation entry

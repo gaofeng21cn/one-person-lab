@@ -55,7 +55,7 @@
 - `G3 thin handoff planning freeze`
 - `Phase 1 exit + next-stage activation package freeze`
 - 当前已 absorbed 的 federation package 是 `Minimal admitted-domain federation activation package`
-- 当前 top-level formal entry contract 仍是 `TypeScript CLI + read-only gateway surface`
+- 当前 top-level formal entry contract 仍是 `TypeScript CLI + gateway contract surface`
 - `Review Ops -> Thesis Ops` 是已冻结的 candidate-domain closeout 顺序
 - 当前没有新的 active follow-on tranche；只有 admitted-domain 新增 absorbed delta 或中央 reference surfaces 发生真实漂移时，才重开中央同步线
 
@@ -85,7 +85,7 @@
 - 持续同步 `Phase C` 的行为收口定义到中央 references 与顶层测试
 - 继续同步四仓当前状态到中央参考面
 - 继续守住：
-  - `TypeScript CLI + read-only gateway baseline`
+  - `TypeScript CLI + gateway contract baseline`
   - candidate-domain blocked truth
   - `Grant Foundry -> Med Auto Grant` 的 signal-only 边界
 - 不把 `OPL` 扩写成 runtime owner

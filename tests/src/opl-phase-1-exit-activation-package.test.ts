@@ -24,7 +24,7 @@ test('phase-1 exit activation package freezes completed tranches, deferred items
 
   assert.equal(pkg.phase, 'phase_1_exit');
   assert.equal(pkg.package_status, 'external_readiness_blocked');
-  assert.equal(pkg.phase_1_formal_entry.entry_surface, 'TypeScript CLI-first / read-only gateway surface');
+  assert.equal(pkg.phase_1_formal_entry.entry_surface, 'TypeScript CLI-first / gateway contract surface');
   assert.equal(pkg.phase_1_formal_entry.runtime_owner, false);
   assert.equal(pkg.phase_1_formal_entry.mutation_entry, false);
   assert.equal(pkg.phase_1_formal_entry.run_launch, false);

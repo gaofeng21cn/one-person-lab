@@ -8,12 +8,12 @@
 
 它的作用是：让顶层 gateway 在 README、roadmap、rollout、contracts、acceptance、examples，以及链接出去的 domain gateway 公开入口之间更容易被发现。
 
-它应被理解成一套双层 OPL 入口的当前公开界面地图：面向用户的活跃前台已经是本地 `opl` shell 与 `opl web` pilot，而下层 formal entry 仍然是建立在已冻结 `Phase 1` gateway 基线之上、并继续服务当前这份已 absorbed `Minimal admitted-domain federation activation package` 的 CLI-first / read-only surface map。
-已完成的 `G2` closeout 已把单一、repo-tracked 的顶层 `G2` CLI-first / read-only baseline 固定下来。
+它应被理解成一套双层 OPL 入口的当前公开界面地图：面向用户的活跃前台已经是本地 `opl` shell 与 `opl web` pilot，而下层 formal entry 仍然是建立在已冻结 `Phase 1` gateway 基线之上、并继续服务当前这份已 absorbed `Minimal admitted-domain federation activation package` 的 CLI-first / gateway contract surface map。
+已完成的 `G2` closeout 已把单一、repo-tracked 的顶层 `G2` CLI-first / gateway contract baseline 固定下来。
 这条基线也仍然是 `OPL` 在 `Phase 1` 的 formal entry contract 与 public system surface。
 已完成的 repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` 继续停留在 planning-contract closeout 层，`G3` 也仍然只保持 planning-only 状态，而不是已激活的 routed-action runtime。
 repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review Ops` 然后 `Thesis Ops`，已吸收的前序门槛仍是 `Phase 1 exit + next-stage activation package freeze`，而 `Minimal admitted-domain federation activation package` 也已经被吸收到 repo-tracked 顶层真相中。除非 admitted-domain absorbed delta 或中央 reference 漂移再次出现，否则当前没有新的 active follow-on tranche 打开。
-因此，当前 top-level formal entry 也仍然是这里索引到的 CLI-first / read-only gateway surface，只是其上方活跃的公开主线已经转为 family-level front desk 与 hosted-entry hardening。
+因此，当前 top-level formal entry 也仍然是这里索引到的 CLI-first / gateway contract surface，只是其上方活跃的公开主线已经转为 family-level front desk 与 hosted-entry hardening。
 四仓当前阶段与成熟度判断，以 [生态四仓统一状态总表](./references/ecosystem-status-matrix.md) 作为内部参考同步锚点。
 
 如果要看仓库级文档分层与参考级处理规则，请继续看 [文档索引](./README.zh-CN.md)。
@@ -69,7 +69,7 @@ repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review 
 - [共享基础结构归属](./shared-foundation-ownership.zh-CN.md)
 - [Shared Runtime Contract](./shared-runtime-contract.zh-CN.md)
 - [Shared Domain Contract](./shared-domain-contract.zh-CN.md)
-- [OPL 只读 Discovery Gateway](./opl-read-only-discovery-gateway.zh-CN.md)
+- [OPL Gateway 契约面](./opl-read-only-discovery-gateway.zh-CN.md)
 - [OPL Routed Action Gateway](./opl-routed-action-gateway.zh-CN.md)（当前仅作为 planning-level 合同参考；repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` 已完成 closeout，`Review Ops -> Thesis Ops` candidate-domain closeout 继续停留在 admission / discovery / routing readiness 之下，已 absorb 的前序门槛是 `Phase 1 exit + next-stage activation package freeze`，而当前这份 `Minimal admitted-domain federation activation package` 也已经被吸收到 repo-tracked 顶层真相中）
 - [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.zh-CN.md) + `domain-onboarding-readiness.schema.json`
 - [OPL Governance / Audit Operating Surface](./references/opl-governance-audit-operating-surface.zh-CN.md)
@@ -137,7 +137,7 @@ repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review 
 - [Shared Runtime Contract](./shared-runtime-contract.zh-CN.md)
 - [Shared Domain Contract](./shared-domain-contract.zh-CN.md)
 - [OPL Gateway 合同](../contracts/opl-gateway/README.zh-CN.md)
-- [OPL 只读 Discovery Gateway](./opl-read-only-discovery-gateway.zh-CN.md)
+- [OPL Gateway 契约面](./opl-read-only-discovery-gateway.zh-CN.md)
 - [OPL Routed Action Gateway](./opl-routed-action-gateway.zh-CN.md)（当前仅作为 planning-level 合同参考；repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` 已完成 closeout，`Review Ops -> Thesis Ops` candidate-domain closeout 继续停留在 admission / discovery / routing readiness 之下，已 absorb 的前序门槛是 `Phase 1 exit + next-stage activation package freeze`，而当前这份 `Minimal admitted-domain federation activation package` 也已经被吸收到 repo-tracked 顶层真相中）
 - [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.zh-CN.md)
 - [OPL Governance / Audit Operating Surface](./references/opl-governance-audit-operating-surface.zh-CN.md)

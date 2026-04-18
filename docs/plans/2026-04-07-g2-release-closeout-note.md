@@ -14,7 +14,7 @@
 
 ## 当前已完成边界
 
-截至 `2026-04-07`，`one-person-lab` 已具备可运行的本地 `TypeScript CLI`-first / read-only gateway baseline。
+截至 `2026-04-07`，`one-person-lab` 已具备可运行的本地 `TypeScript CLI`-first / gateway contract baseline。
 
 本轮 `G2 stable public baseline` 的完成边界是：
 

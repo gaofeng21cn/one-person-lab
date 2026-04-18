@@ -1427,7 +1427,7 @@ async function main() {
     'get-surface': {
       usage: 'opl get-surface <surface_id>',
       summary: 'Show the full registered meaning for one public surface.',
-      examples: ['opl get-surface opl_read_only_discovery_gateway'],
+      examples: ['opl get-surface opl_gateway_contract_hub'],
       handler: (args) => {
         const [surfaceId] = args;
         if (!surfaceId) {
@@ -2168,7 +2168,7 @@ async function main() {
     }),
     'contract surface': cloneCommandSpec(commandSpecs['get-surface'], {
       usage: 'opl contract surface <surface_id>',
-      examples: ['opl contract surface opl_read_only_discovery_gateway'],
+      examples: ['opl contract surface opl_gateway_contract_hub'],
       group: 'contract',
       handler: (args) => {
         const [surfaceId] = args;
@@ -2289,36 +2289,36 @@ async function main() {
   };
 
   const compatibilityCommandSpecs: Record<string, CommandSpec> = {
-    'frontdesk librechat-package': cloneCommandSpec(commandSpecs['frontdesk-librechat-package'], {
+    'frontdesk-librechat-package': cloneCommandSpec(commandSpecs['frontdesk-librechat-package'], {
       usage:
-        'opl frontdesk librechat-package --output <dir> [--public-origin <origin>] [--host <host>] [--port <port>] [--sessions-limit <n>] [--base-path <base_path>]',
-      examples: ['opl frontdesk librechat-package --output /tmp/opl-librechat-pilot --public-origin http://127.0.0.1:8080'],
+        'opl frontdesk-librechat-package --output <dir> [--public-origin <origin>] [--host <host>] [--port <port>] [--sessions-limit <n>] [--base-path <base_path>]',
+      examples: ['opl frontdesk-librechat-package --output /tmp/opl-librechat-pilot --public-origin http://127.0.0.1:8080'],
       group: 'compatibility',
     }),
-    'frontdesk librechat install': cloneCommandSpec(commandSpecs['frontdesk-librechat-install'], {
+    'frontdesk-librechat-install': cloneCommandSpec(commandSpecs['frontdesk-librechat-install'], {
       usage:
-        'opl frontdesk librechat install [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>] [--public-origin <origin>]',
-      examples: ['opl frontdesk librechat install --path /Users/gaofeng/workspace/Yang/NF-PitNET --public-origin http://127.0.0.1:8080'],
+        'opl frontdesk-librechat-install [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>] [--public-origin <origin>]',
+      examples: ['opl frontdesk-librechat-install --path /Users/gaofeng/workspace/Yang/NF-PitNET --public-origin http://127.0.0.1:8080'],
       group: 'compatibility',
     }),
-    'frontdesk librechat status': cloneCommandSpec(commandSpecs['frontdesk-librechat-status'], {
-      usage: 'opl frontdesk librechat status',
-      examples: ['opl frontdesk librechat status'],
+    'frontdesk-librechat-status': cloneCommandSpec(commandSpecs['frontdesk-librechat-status'], {
+      usage: 'opl frontdesk-librechat-status',
+      examples: ['opl frontdesk-librechat-status'],
       group: 'compatibility',
     }),
-    'frontdesk librechat start': cloneCommandSpec(commandSpecs['frontdesk-librechat-start'], {
-      usage: 'opl frontdesk librechat start',
-      examples: ['opl frontdesk librechat start'],
+    'frontdesk-librechat-start': cloneCommandSpec(commandSpecs['frontdesk-librechat-start'], {
+      usage: 'opl frontdesk-librechat-start',
+      examples: ['opl frontdesk-librechat-start'],
       group: 'compatibility',
     }),
-    'frontdesk librechat stop': cloneCommandSpec(commandSpecs['frontdesk-librechat-stop'], {
-      usage: 'opl frontdesk librechat stop',
-      examples: ['opl frontdesk librechat stop'],
+    'frontdesk-librechat-stop': cloneCommandSpec(commandSpecs['frontdesk-librechat-stop'], {
+      usage: 'opl frontdesk-librechat-stop',
+      examples: ['opl frontdesk-librechat-stop'],
       group: 'compatibility',
     }),
-    'frontdesk librechat open': cloneCommandSpec(commandSpecs['frontdesk-librechat-open'], {
-      usage: 'opl frontdesk librechat open',
-      examples: ['opl frontdesk librechat open'],
+    'frontdesk-librechat-open': cloneCommandSpec(commandSpecs['frontdesk-librechat-open'], {
+      usage: 'opl frontdesk-librechat-open',
+      examples: ['opl frontdesk-librechat-open'],
       group: 'compatibility',
     }),
   };

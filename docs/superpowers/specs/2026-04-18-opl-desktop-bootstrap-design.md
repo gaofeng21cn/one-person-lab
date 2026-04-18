@@ -13,7 +13,7 @@
 1. 把 `opl frontdesk-bootstrap` 从 LibreChat 默认安装入口切到 Desktop 默认入口。
 2. 落下一套 repo-tracked 的 `OPL Atlas` 桌面骨架，作为本地 GUI frontdoor。
 3. 让 Desktop 默认复用现有 `opl web` / frontdesk API truth，而不是再发明第二套状态系统。
-4. 把 LibreChat 降为显式 optional lane，只保留 `frontdesk librechat *` 与 hosted pilot/package 能力。
+4. 把 LibreChat 降为显式 optional lane，只保留 `frontdesk-librechat-*` 与 hosted pilot/package 能力。
 
 ## Non-goals
 

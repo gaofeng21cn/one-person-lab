@@ -103,7 +103,7 @@ The two contract families that now need the clearest alignment are:
 At the current stage:
 
 - the active development host is Codex-only local sessions
-- the public OPL formal entry remains the local `TypeScript CLI`-first / read-only gateway surface
+- the public OPL formal entry remains the local `TypeScript CLI`-first / gateway contract surface
 
 That split matters: Codex names today's development host, not the identity of the substrate.
 The same substrate should remain compatible with:

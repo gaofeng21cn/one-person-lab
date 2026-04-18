@@ -40,7 +40,7 @@ The acceptance checks below are grounded in:
 
 - [README](../../README.md)
 - [OPL Federation Contract](../opl-federation-contract.md)
-- [OPL Read-Only Discovery Gateway](../opl-read-only-discovery-gateway.md)
+- [OPL Gateway Contract Surface](../opl-read-only-discovery-gateway.md)
 - [OPL Routed Action Gateway](../opl-routed-action-gateway.md)
 - [OPL Domain Onboarding Contract](../opl-domain-onboarding-contract.md)
 - [OPL Governance / Audit Operating Surface](./opl-governance-audit-operating-surface.md)

@@ -18,7 +18,7 @@
 `G3` 建立在下面这些东西之上：
 
 - [OPL Federation Contract](./opl-federation-contract.zh-CN.md)
-- [OPL 只读 Discovery Gateway](./opl-read-only-discovery-gateway.zh-CN.md)
+- [OPL Gateway 契约面](./opl-read-only-discovery-gateway.zh-CN.md)
 - [OPL Gateway Contracts](../contracts/opl-gateway/README.zh-CN.md)
 
 如果 `G1` 还没冻结，或者 `G2` discovery 语义仍然模糊，`G3` 不应继续推进。

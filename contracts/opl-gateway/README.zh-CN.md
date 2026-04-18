@@ -15,14 +15,14 @@
 
 ## 当前基线与已吸收 follow-on 对齐
 
-截至 `2026-04-11`，当前 `opl-mainline` 的活跃公开主线已经进入围绕本地 GUI 前台、本地 `opl` shell shortcut 与 `opl web` 的 family-level front desk / hosted-entry hardening，而 repo-tracked 的 formal entry 仍然是 `Phase 1` 那条本地 `TypeScript CLI`-first、read-only gateway baseline；它只读取这个目录中已经冻结的 contract 工件。
+截至 `2026-04-11`，当前 `opl-mainline` 的活跃公开主线已经进入围绕本地 GUI 前台、本地 `opl` shell shortcut 与 `opl web` 的 family-level front desk / hosted-entry hardening，而 repo-tracked 的 formal entry 仍然是 `Phase 1` 那条本地 `TypeScript CLI`-first gateway contract baseline；它只读取这个目录中已经冻结的 contract 工件。
 当前公开默认主路径已经统一为 `GUI 前台 -> Codex -> OPL gateway surfaces`：`opl frontdesk bootstrap --path <workspace>` 会准备本地 `OPL Atlas` Desktop 壳，本地 web front desk 保留 companion surface，而当前目录冻结的是这层前台背后的 gateway surfaces，同时继续保持 Codex 不被写成产品 runtime substrate owner。
 已完成的 `Phase 1 / G2 release-closeout` 已把 `G2 stable public baseline` 收口成稳定、单一、repo-tracked 的公开基线。
 因此，即便公开主线已经吸收了这份最小 admitted-domain federation package，并继续上移到 front-desk 层，这条 repo-tracked 基线也仍然是当前 `OPL` 的 formal entry contract 与 public system surface。
 已完成的 repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` 继续停留在 planning-contract closeout 层：当前目录冻结围绕 `route_request`、`build_handoff_payload`、`audit_routing_decision` 的 planning gate / planning-level contract。唯一允许的成功 handoff 目标仍只能是 `domain_gateway`；no-bypass 规则继续禁止直达 domain harness；`routed-actions.schema.json` 继续停留在 planning dependency 层。
 repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review Ops` 然后 `Thesis Ops`：这两条 candidate path 都继续停留在 domain admission、`G2` discovery readiness、`G3` routed-action readiness 与 handoff readiness 之下。
 当前已 absorb 的前序门槛是 `Phase 1 exit + next-stage activation package freeze`；当前这份 `Phase 2 / Minimal admitted-domain federation activation package` 也已经被吸收到 repo-tracked 顶层真相中，只对已经 admitted 的 `MedAutoScience` 与 `RedCube AI` domain surface 生效。当前没有新的 active follow-on tranche 打开；只有 admitted-domain 仓再落下新的 absorbed delta，或中央 reference surfaces 发生真实漂移时，下一次 central sync 才是诚实的。runtime ownership 继续保留在 admitted domain 一侧。
-因此，当前 OPL 层的 repo-tracked formal entry 也仍然是这条本地 `TypeScript CLI`-first / read-only gateway surface。
+因此，当前 OPL 层的 repo-tracked formal entry 也仍然是这条本地 `TypeScript CLI`-first / gateway contract surface。
 而位于这层合同之上的当前用户前台，已经以 GUI front desk 为中心，并带着本地 shell shortcut 与 `opl web` companion surface；其中 hosted-friendly 的 `frontdesk-manifest`、`frontdesk-entry-guide`、`frontdesk-readiness`、`frontdesk-domain-wiring`、`hosted-bundle` 等 surface 已作为当前前台 contract 的一部分落地。
 在这层前台里，`interaction_mode=codex` 与 `execution_mode=codex` 是默认公开模式；`Hermes-Agent` 继续只保留给显式交互续跑与特定 executor routing 的备用模式。
 其中 `frontdesk-readiness` 是面向 operator 的派生看板：它只收口本地 service 状态、hosted pilot readiness，以及 domain 自己持有的 `product_entry_readiness / preflight` 真相；它继续从既有 manifest / binding / runtime surface 派生，不得变成第二真相源。
@@ -67,8 +67,8 @@ repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review 
 - [Shared Foundation（中文）](../../docs/shared-foundation.zh-CN.md)
 - [Shared Foundation Ownership](../../docs/shared-foundation-ownership.md)
 - [Shared Foundation Ownership（中文）](../../docs/shared-foundation-ownership.zh-CN.md)
-- [OPL Read-Only Discovery Gateway](../../docs/opl-read-only-discovery-gateway.md)
-- [OPL Read-Only Discovery Gateway（中文）](../../docs/opl-read-only-discovery-gateway.zh-CN.md)
+- [OPL Gateway Contract Surface](../../docs/opl-read-only-discovery-gateway.md)
+- [OPL Gateway Contract Surface（中文）](../../docs/opl-read-only-discovery-gateway.zh-CN.md)
 - [OPL Routed Action Gateway](../../docs/opl-routed-action-gateway.md)
 - [OPL Routed Action Gateway（中文）](../../docs/opl-routed-action-gateway.zh-CN.md)
 - [OPL Domain Onboarding Contract](../../docs/opl-domain-onboarding-contract.md)

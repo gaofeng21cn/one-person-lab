@@ -103,7 +103,7 @@ Human / Agent
 在当前阶段：
 
 - 活跃开发宿主是 Codex-only 本地会话
-- 公开的 OPL formal entry 仍是本地 `TypeScript CLI`-first / read-only gateway surface
+- 公开的 OPL formal entry 仍是本地 `TypeScript CLI`-first / gateway contract surface
 
 这个区分很重要：Codex 说的是今天的开发宿主，不是 substrate 的本体定义。
 在后续阶段，同一套 substrate 也应兼容：

@@ -1,13 +1,13 @@
 **English** | [中文](./opl-read-only-discovery-gateway.zh-CN.md)
 
-# OPL Read-Only Discovery Gateway
+# OPL Gateway Contract Surface
 
 ## Purpose
 
 This document freezes the `G2` target for the `OPL Gateway`.
 
 `G2` is the first phase where `OPL` becomes a real entry surface, but only in a read-only discovery sense.
-As of `2026-04-07`, the public `OPL` mainline remains `Phase 1`, and the repository already has a runnable local `TypeScript CLI`-first / read-only gateway baseline; the current job is to close it into one stable repo-tracked `G2 stable public baseline`.
+As of `2026-04-07`, the public `OPL` mainline remains `Phase 1`, and the repository already has a runnable local `TypeScript CLI`-first / gateway contract baseline; the current job is to close it into one stable repo-tracked `G2 stable public baseline`.
 
 The goal is not to mutate domain state.
 The goal is to let humans and agents ask the top-level gateway what system they should use, what a workstream means, and how a request maps into a domain.
@@ -310,7 +310,7 @@ It may not mutate domain truth.
 
 ## Surface Shapes
 
-The current `Phase 1` delivery target uses a local `TypeScript CLI` as the current discovery transport for the read-only gateway surface.
+The current `Phase 1` delivery target uses a local `TypeScript CLI` as the current discovery transport for the gateway contract surface.
 At the development-control layer, the active path is Codex-only: standard Codex sessions handle planning, implementation, verification, and review against the frozen gateway contracts.
 That development host choice does not make Codex the product runtime substrate owner of `OPL`; any honest upstream `Hermes-Agent` rollout still has to land inside a domain repository first.
 The legacy `Codex Host` / `OMX` split now survives only in Layer 3 historical migration references and does not redefine this public gateway surface.
