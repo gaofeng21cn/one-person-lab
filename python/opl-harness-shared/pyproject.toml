@@ -7,7 +7,7 @@ name = "opl-harness-shared"
 version = "0.1.0"
 description = "Family-shared harness substrate helpers owned by one-person-lab."
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 authors = [
   { name = "Gao Feng" }
 ]
