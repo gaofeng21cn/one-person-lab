@@ -1,3 +1,8 @@
+import {
+  validateFamilyDomainEntryContract as validateSharedFamilyDomainEntryContract,
+  validateGatewayInteractionContract as validateSharedGatewayInteractionContract,
+} from './family-entry-contracts.ts';
+
 export type JsonRecord = Record<string, unknown>;
 
 export interface ProductEntryResumeContract {
@@ -470,71 +475,11 @@ function validateOptionalFamilyReferenceRef(value: unknown, field: string) {
 }
 
 function validateDomainEntryContractShape(value: unknown, field: string) {
-  const payload = requireRecord(value, field);
-  const supportedCommands = payload.supported_commands;
-  if (!Array.isArray(supportedCommands) || supportedCommands.length === 0) {
-    throw new Error(`product entry companion 缺少数组字段: ${field}.supported_commands`);
-  }
-  const commandContracts = payload.command_contracts;
-  if (!Array.isArray(commandContracts) || commandContracts.length === 0) {
-    throw new Error(`product entry companion 缺少数组字段: ${field}.command_contracts`);
-  }
-  commandContracts.forEach((contract, index) => {
-    const normalizedContract = requireRecord(contract, `${field}.command_contracts[${index}]`);
-    requireString(normalizedContract.command, `${field}.command_contracts[${index}].command`);
-    readStringList(
-      normalizedContract.required_fields,
-      `${field}.command_contracts[${index}].required_fields`,
-    );
-    readStringList(
-      normalizedContract.optional_fields,
-      `${field}.command_contracts[${index}].optional_fields`,
-    );
-  });
-  return {
-    ...payload,
-    entry_adapter: requireString(payload.entry_adapter, `${field}.entry_adapter`),
-    service_safe_surface_kind: requireString(
-      payload.service_safe_surface_kind,
-      `${field}.service_safe_surface_kind`,
-    ),
-    product_entry_builder_command: requireString(
-      payload.product_entry_builder_command,
-      `${field}.product_entry_builder_command`,
-    ),
-    supported_commands: supportedCommands.map((command, index) =>
-      requireString(command, `${field}.supported_commands[${index}]`)),
-    command_contracts: commandContracts.map((contract) => ({ ...requireRecord(contract, field) })),
-  };
+  return validateSharedFamilyDomainEntryContract(value, field);
 }
 
 function validateGatewayInteractionContractShape(value: unknown, field: string) {
-  const payload = requireRecord(value, field);
-  return {
-    ...payload,
-    surface_kind: requireString(payload.surface_kind, `${field}.surface_kind`),
-    frontdoor_owner: requireString(payload.frontdoor_owner, `${field}.frontdoor_owner`),
-    user_interaction_mode: requireString(
-      payload.user_interaction_mode,
-      `${field}.user_interaction_mode`,
-    ),
-    user_commands_required: requireBoolean(
-      payload.user_commands_required,
-      `${field}.user_commands_required`,
-    ),
-    command_surfaces_for_agent_consumption_only: requireBoolean(
-      payload.command_surfaces_for_agent_consumption_only,
-      `${field}.command_surfaces_for_agent_consumption_only`,
-    ),
-    shared_downstream_entry: requireString(
-      payload.shared_downstream_entry,
-      `${field}.shared_downstream_entry`,
-    ),
-    shared_handoff_envelope: readStringList(
-      payload.shared_handoff_envelope,
-      `${field}.shared_handoff_envelope`,
-    ),
-  };
+  return validateSharedGatewayInteractionContract(value, field);
 }
 
 function validateSurfaceKindRecord(

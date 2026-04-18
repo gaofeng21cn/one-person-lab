@@ -2,6 +2,11 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
+from .family_entry_contracts import (
+    validate_family_domain_entry_contract as _validate_shared_family_domain_entry_contract,
+    validate_gateway_interaction_contract as _validate_shared_gateway_interaction_contract,
+)
+
 
 def _non_empty_text(value: object) -> str | None:
     text = str(value or "").strip()
@@ -176,75 +181,11 @@ def _validate_optional_family_reference_ref(value: object, field: str) -> dict[s
 
 
 def _validate_domain_entry_contract_shape(value: object, field: str) -> dict[str, Any]:
-    payload = _require_mapping(value, field)
-    supported_commands = payload.get("supported_commands")
-    if not isinstance(supported_commands, list) or not supported_commands:
-        raise ValueError(f"product entry companion 缺少数组字段: {field}.supported_commands")
-    command_contracts = payload.get("command_contracts")
-    if not isinstance(command_contracts, list) or not command_contracts:
-        raise ValueError(f"product entry companion 缺少数组字段: {field}.command_contracts")
-    normalized_contracts: list[dict[str, Any]] = []
-    for index, contract in enumerate(command_contracts):
-        normalized_contract = _clone_mapping(contract, f"{field}.command_contracts[{index}]")
-        _require_string(
-            normalized_contract.get("command"),
-            f"{field}.command_contracts[{index}].command",
-        )
-        _require_string_list(
-            normalized_contract.get("required_fields"),
-            f"{field}.command_contracts[{index}].required_fields",
-        )
-        _require_string_list(
-            normalized_contract.get("optional_fields"),
-            f"{field}.command_contracts[{index}].optional_fields",
-        )
-        normalized_contracts.append(normalized_contract)
-    return {
-        **dict(payload),
-        "entry_adapter": _require_string(payload.get("entry_adapter"), f"{field}.entry_adapter"),
-        "service_safe_surface_kind": _require_string(
-            payload.get("service_safe_surface_kind"),
-            f"{field}.service_safe_surface_kind",
-        ),
-        "product_entry_builder_command": _require_string(
-            payload.get("product_entry_builder_command"),
-            f"{field}.product_entry_builder_command",
-        ),
-        "supported_commands": _require_string_list(
-            supported_commands,
-            f"{field}.supported_commands",
-        ),
-        "command_contracts": normalized_contracts,
-    }
+    return _validate_shared_family_domain_entry_contract(value, field)
 
 
 def _validate_gateway_interaction_contract_shape(value: object, field: str) -> dict[str, Any]:
-    payload = _require_mapping(value, field)
-    return {
-        **dict(payload),
-        "surface_kind": _require_string(payload.get("surface_kind"), f"{field}.surface_kind"),
-        "frontdoor_owner": _require_string(payload.get("frontdoor_owner"), f"{field}.frontdoor_owner"),
-        "user_interaction_mode": _require_string(
-            payload.get("user_interaction_mode"),
-            f"{field}.user_interaction_mode",
-        ),
-        "user_commands_required": _require_bool(
-            payload.get("user_commands_required"),
-            f"{field}.user_commands_required",
-        ),
-        "command_surfaces_for_agent_consumption_only": _require_bool(
-            payload.get("command_surfaces_for_agent_consumption_only"),
-            f"{field}.command_surfaces_for_agent_consumption_only",
-        ),
-        "shared_downstream_entry": _require_string(
-            payload.get("shared_downstream_entry"),
-            f"{field}.shared_downstream_entry",
-        ),
-        "shared_handoff_envelope": _require_string_list(
-            payload.get("shared_handoff_envelope"),
-            f"{field}.shared_handoff_envelope",
-        ),
-    }
+    return _validate_shared_gateway_interaction_contract(value, field)
 
 
 def _validate_surface_kind_mapping(value: object, field: str, expected_surface_kind: str) -> dict[str, Any]:
