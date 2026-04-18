@@ -12,5 +12,13 @@ authors = [
   { name = "Gao Feng" }
 ]
 
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["opl_harness_shared", "opl_harness_shared.*"]
+namespaces = false
+
 [tool.setuptools.package-data]
 "opl_harness_shared.contracts" = ["*.json"]
