@@ -2,6 +2,7 @@ import readline from 'node:readline';
 
 import { inferFrontDeskWorkspaceLabel } from './frontdesk-librechat-identity.ts';
 import {
+  humanizeProgressCode,
   readStatusNarrationContract,
   statusNarrationLatestUpdate,
   statusNarrationNextStep,
@@ -321,7 +322,8 @@ function renderExecuteRequestBrief(payload: unknown) {
   const task = isRecord(productEntry.task) ? productEntry.task : null;
   const goal = normalizeOptionalString(input?.goal);
   const taskId = normalizeOptionalString(task?.task_id);
-  const status = normalizeOptionalString(task?.status);
+  const status = humanizeProgressCode(normalizeOptionalString(task?.status) ?? null)
+    ?? normalizeOptionalString(task?.status);
   const sessionId = normalizeOptionalString(task?.session_id);
   const summary = normalizeOptionalString(task?.summary);
 
@@ -415,9 +417,11 @@ function renderTaskStatusBrief(payload: unknown) {
 
   const task = payload.product_entry.task;
   const taskId = normalizeOptionalString(task.task_id) ?? 'unknown-task';
-  const status = normalizeOptionalString(task.status) ?? '未知';
+  const rawStatus = normalizeOptionalString(task.status);
+  const status = humanizeProgressCode(rawStatus ?? null) ?? rawStatus ?? '未知';
   const summary = normalizeOptionalString(task.summary);
-  const stage = normalizeOptionalString(task.stage);
+  const rawStage = normalizeOptionalString(task.stage);
+  const stage = humanizeProgressCode(rawStage ?? null) ?? rawStage;
   const sessionId = normalizeOptionalString(task.session_id);
   const recentOutput = normalizeOptionalString(task.recent_output);
   const lines = [

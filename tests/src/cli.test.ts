@@ -909,7 +909,7 @@ async function startFakeFrontDeskApiServer() {
         product_entry: {
           task: {
             task_id: url.searchParams.get('task_id'),
-            status: '运行中',
+            status: 'running',
             stage: 'writing',
             summary: '正在补图和整理投稿包',
             recent_output: '主图更新完成，正在刷新审计目录',
@@ -1013,7 +1013,7 @@ async function startFakeFrontDeskApiServer() {
           },
           task: {
             task_id: 'task-frontdesk-001',
-            status: '已受理',
+            status: 'accepted',
             summary: '请求已提交到后台执行队列',
             session_id: null,
           },
@@ -2651,7 +2651,10 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
         content: Array<{ type: string; text: string }>;
       }).content;
       assert.equal(content[0].type, 'text');
-      assert.match(content[0].text, /任务状态：运行中|任务状态：已受理|任务状态：未知/);
+      assert.match(content[0].text, /任务状态：运行中/);
+      assert.match(content[0].text, /当前阶段：撰写中/);
+      assert.doesNotMatch(content[0].text, /任务状态：running/);
+      assert.doesNotMatch(content[0].text, /当前阶段：writing/);
       assert.equal(fakeApi.requests.some((request) =>
         request.path === '/api/workspace-activate'
         && request.body?.project_id === 'medautoscience'
