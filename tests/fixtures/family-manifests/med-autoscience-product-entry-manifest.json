@@ -18,6 +18,66 @@
     "runtime_root": "/fixtures/med-autoscience/runtime",
     "hermes_home_root": "/fixtures/med-autoscience/hermes-home"
   },
+  "schema_ref": "contracts/schemas/v1/product-entry-manifest.schema.json",
+  "domain_entry_contract": {
+    "entry_adapter": "MedAutoScienceDomainEntry",
+    "service_safe_surface_kind": "med_autoscience_service_safe_domain_entry",
+    "product_entry_builder_command": "build-product-entry",
+    "supported_entry_modes": [
+      "direct",
+      "opl-handoff"
+    ],
+    "product_entry_kind": "med_autoscience_product_entry",
+    "supported_commands": [
+      "workspace-cockpit",
+      "product-frontdesk",
+      "launch-study"
+    ],
+    "command_contracts": [
+      {
+        "command": "workspace-cockpit",
+        "required_fields": [
+          "profile_ref"
+        ],
+        "optional_fields": []
+      },
+      {
+        "command": "product-frontdesk",
+        "required_fields": [
+          "profile_ref"
+        ],
+        "optional_fields": []
+      },
+      {
+        "command": "launch-study",
+        "required_fields": [
+          "profile_ref",
+          "study_id"
+        ],
+        "optional_fields": [
+          "entry_mode",
+          "allow_stopped_relaunch",
+          "force"
+        ]
+      }
+    ]
+  },
+  "gateway_interaction_contract": {
+    "surface_kind": "gateway_interaction_contract",
+    "frontdoor_owner": "opl_gateway_or_domain_gui",
+    "user_interaction_mode": "natural_language_frontdoor",
+    "user_commands_required": false,
+    "command_surfaces_for_agent_consumption_only": true,
+    "shared_downstream_entry": "MedAutoScienceDomainEntry",
+    "shared_handoff_envelope": [
+      "target_domain_id",
+      "task_intent",
+      "entry_mode",
+      "workspace_locator",
+      "runtime_session_contract",
+      "return_surface_contract"
+    ]
+  },
   "managed_runtime_contract": {
     "shared_contract_ref": "contracts/opl-gateway/managed-runtime-three-layer-contract.json",
     "runtime_owner": "upstream_hermes_agent",

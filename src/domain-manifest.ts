@@ -1,5 +1,13 @@
 import { spawnSync } from 'node:child_process';
 
+import type {
+  FamilyDomainEntryContractSurface,
+  GatewayInteractionContractSurface,
+} from './family-entry-contracts.ts';
+import {
+  validateFamilyDomainEntryContract,
+  validateGatewayInteractionContract,
+} from './family-entry-contracts.ts';
 import type { GatewayContracts } from './types.ts';
 import { normalizeManagedRuntimeContract } from './managed-runtime-contract.ts';
 import { getActiveWorkspaceBinding, type WorkspaceBinding } from './workspace-registry.ts';
@@ -171,6 +179,9 @@ export interface NormalizedDomainManifest {
   operator_loop_actions: Record<string, JsonRecord>;
   recommended_shell: string | null;
   recommended_command: string | null;
+  schema_ref: string | null;
+  domain_entry_contract: FamilyDomainEntryContractSurface | null;
+  gateway_interaction_contract: GatewayInteractionContractSurface | null;
   product_entry_shell: Record<string, JsonRecord>;
   shared_handoff: Record<string, JsonRecord>;
   product_entry_overview: {
@@ -986,6 +997,16 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
   const taskLifecycle = normalizeTaskLifecycle(manifest.task_lifecycle);
   const skillCatalog = normalizeSkillCatalog(manifest.skill_catalog);
   const automation = normalizeAutomationCatalog(manifest.automation);
+  const schemaRef = optionalString(manifest.schema_ref);
+  const domainEntryContract = manifest.domain_entry_contract === undefined
+    ? null
+    : validateFamilyDomainEntryContract(manifest.domain_entry_contract, 'domain_entry_contract');
+  const gatewayInteractionContract = manifest.gateway_interaction_contract === undefined
+    ? null
+    : validateGatewayInteractionContract(
+      manifest.gateway_interaction_contract,
+      'gateway_interaction_contract',
+    );
   const rawFamilyOrchestration = isRecord(manifest.family_orchestration)
     ? manifest.family_orchestration
     : null;
@@ -1038,6 +1059,9 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
     operator_loop_actions: operatorLoopActions,
     recommended_shell: recommendedShell,
     recommended_command: explicitRecommendedCommand ?? derivedRecommendedCommand,
+    schema_ref: schemaRef,
+    domain_entry_contract: domainEntryContract,
+    gateway_interaction_contract: gatewayInteractionContract,
     product_entry_shell: productEntryShell,
     shared_handoff: sharedHandoff,
     product_entry_overview: productEntryOverview,

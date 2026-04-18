@@ -109,6 +109,9 @@ export interface BuildProductFrontdeskInput {
   entry_surfaces: JsonRecord;
   summary: BuildProductFrontdeskSummaryInput;
   notes: string[];
+  schema_ref?: string | null;
+  domain_entry_contract?: JsonRecord | null;
+  gateway_interaction_contract?: JsonRecord | null;
   extra_payload?: JsonRecord;
 }
 
@@ -148,6 +151,9 @@ export interface BuildFamilyProductEntryManifestInput {
   product_entry_quickstart?: JsonRecord | null;
   remaining_gaps?: string[] | null;
   notes?: string[] | null;
+  schema_ref?: string | null;
+  domain_entry_contract?: JsonRecord | null;
+  gateway_interaction_contract?: JsonRecord | null;
   extra_payload?: JsonRecord;
 }
 
@@ -800,6 +806,19 @@ export function buildProductFrontdesk(input: BuildProductFrontdeskInput) {
     summary: normalizeFrontdeskSummary(input.summary, 'summary'),
     notes: readStringList(input.notes, 'notes'),
   };
+  const schemaRef = optionalString(input.schema_ref);
+  if (schemaRef) {
+    payload.schema_ref = schemaRef;
+  }
+  if (input.domain_entry_contract !== undefined && input.domain_entry_contract !== null) {
+    payload.domain_entry_contract = cloneRecord(input.domain_entry_contract, 'domain_entry_contract');
+  }
+  if (input.gateway_interaction_contract !== undefined && input.gateway_interaction_contract !== null) {
+    payload.gateway_interaction_contract = cloneRecord(
+      input.gateway_interaction_contract,
+      'gateway_interaction_contract',
+    );
+  }
   return mergeExtraPayload(payload, input.extra_payload, 'product frontdesk');
 }
 
@@ -875,6 +894,13 @@ export function buildFamilyProductFrontdesk(input: BuildFamilyProductFrontdeskIn
       ),
     },
     notes: readStringList(input.notes, 'notes'),
+    schema_ref: optionalString(manifest.schema_ref),
+    domain_entry_contract: isRecord(manifest.domain_entry_contract)
+      ? manifest.domain_entry_contract
+      : null,
+    gateway_interaction_contract: isRecord(manifest.gateway_interaction_contract)
+      ? manifest.gateway_interaction_contract
+      : null,
     extra_payload: input.extra_payload,
   });
 }
@@ -932,6 +958,19 @@ export function buildFamilyProductEntryManifest(input: BuildFamilyProductEntryMa
   const notes = optionalStringList(input.notes, 'notes');
   if (notes) {
     payload.notes = notes;
+  }
+  const schemaRef = optionalString(input.schema_ref);
+  if (schemaRef) {
+    payload.schema_ref = schemaRef;
+  }
+  if (input.domain_entry_contract !== undefined && input.domain_entry_contract !== null) {
+    payload.domain_entry_contract = cloneRecord(input.domain_entry_contract, 'domain_entry_contract');
+  }
+  if (input.gateway_interaction_contract !== undefined && input.gateway_interaction_contract !== null) {
+    payload.gateway_interaction_contract = cloneRecord(
+      input.gateway_interaction_contract,
+      'gateway_interaction_contract',
+    );
   }
 
   return mergeExtraPayload(payload, input.extra_payload, 'product entry manifest');
