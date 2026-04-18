@@ -121,12 +121,16 @@ def _normalize_workflow_coverage_item(value: object, field: str) -> dict[str, st
 
 def _normalize_sequence_step(value: object, field: str) -> dict[str, str]:
     payload = _require_mapping(value, field)
-    return {
+    normalized = {
         "step_id": _require_string(payload.get("step_id"), f"{field}.step_id"),
         "phase_id": _require_string(payload.get("phase_id"), f"{field}.phase_id"),
         "status": _require_string(payload.get("status"), f"{field}.status"),
         "summary": _require_string(payload.get("summary"), f"{field}.summary"),
     }
+    title = _non_empty_text(payload.get("title"))
+    if title is not None:
+        normalized["title"] = title
+    return normalized
 
 
 def build_program_check(
@@ -440,16 +444,17 @@ def build_program_sequence_step(
     phase_id: str,
     status: str,
     summary: str,
+    title: str | None = None,
 ) -> dict[str, str]:
-    return _normalize_sequence_step(
-        {
-            "step_id": step_id,
-            "phase_id": phase_id,
-            "status": status,
-            "summary": summary,
-        },
-        "program_sequence_step",
-    )
+    payload = {
+        "step_id": step_id,
+        "phase_id": phase_id,
+        "status": status,
+        "summary": summary,
+    }
+    if title is not None:
+        payload["title"] = title
+    return _normalize_sequence_step(payload, "program_sequence_step")
 
 
 def build_platform_target(
@@ -466,6 +471,8 @@ def build_platform_target(
     promotion_gates: list[str],
     recommended_phase_command: str,
     surface_kind: str = "phase5_platform_target",
+    land_now: list[str] | None = None,
+    not_yet: list[str] | None = None,
 ) -> dict[str, Any]:
     normalized_landing_sequence = [
         _normalize_sequence_step(item, f"landing_sequence[{index}]")
@@ -501,4 +508,6 @@ def build_platform_target(
             recommended_phase_command,
             "recommended_phase_command",
         ),
+        **({"land_now": _require_string_list(land_now, "land_now")} if land_now is not None else {}),
+        **({"not_yet": _require_string_list(not_yet, "not_yet")} if not_yet is not None else {}),
     }

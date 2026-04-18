@@ -217,12 +217,117 @@ export interface NormalizedDomainManifest {
     usable_now: boolean | null;
     good_to_use_now: boolean | null;
     fully_automatic: boolean | null;
+    user_experience_level: string | null;
     summary: string | null;
     recommended_start_surface: string | null;
     recommended_start_command: string | null;
     recommended_loop_surface: string | null;
     recommended_loop_command: string | null;
+    workflow_coverage: Array<{
+      step_id: string;
+      manual_flow_label: string | null;
+      coverage_status: string | null;
+      current_surface: string | null;
+      remaining_gap: string | null;
+    }>;
     blocking_gaps: string[];
+  } | null;
+  grant_authoring_readiness: {
+    surface_kind: string;
+    verdict: string | null;
+    usable_now: boolean | null;
+    good_to_use_now: boolean | null;
+    fully_automatic: boolean | null;
+    user_experience_level: string | null;
+    summary: string | null;
+    recommended_start_surface: string | null;
+    recommended_start_command: string | null;
+    recommended_loop_surface: string | null;
+    recommended_loop_command: string | null;
+    workflow_coverage: Array<{
+      step_id: string;
+      manual_flow_label: string | null;
+      coverage_status: string | null;
+      current_surface: string | null;
+      remaining_gap: string | null;
+    }>;
+    blocking_gaps: string[];
+  } | null;
+  product_entry_guardrails: {
+    surface_kind: string;
+    summary: string | null;
+    guardrail_classes: Array<{
+      guardrail_id: string;
+      trigger: string | null;
+      symptom: string | null;
+      recommended_command: string | null;
+    }>;
+    recovery_loop: Array<{
+      step_id: string;
+      title: string | null;
+      command: string | null;
+      surface_kind: string | null;
+    }>;
+  } | null;
+  phase3_clearance_lane: {
+    surface_kind: string;
+    summary: string | null;
+    recommended_step_id: string | null;
+    recommended_command: string | null;
+    clearance_targets: Array<{
+      target_id: string;
+      title: string | null;
+      commands: string[];
+    }>;
+    clearance_loop: Array<{
+      step_id: string;
+      title: string | null;
+      command: string | null;
+      surface_kind: string | null;
+    }>;
+    proof_surfaces: Array<{
+      surface_kind: string | null;
+      command: string | null;
+      ref: string | null;
+    }>;
+    recommended_phase_command: string | null;
+  } | null;
+  phase4_backend_deconstruction: {
+    surface_kind: string;
+    summary: string | null;
+    substrate_targets: Array<{
+      capability_id: string;
+      owner: string | null;
+      summary: string | null;
+    }>;
+    backend_retained_now: string[];
+    current_backend_chain: string[];
+    optional_executor_proofs: JsonRecord[];
+    promotion_rules: string[];
+    deconstruction_map_doc: string | null;
+    recommended_phase_command: string | null;
+  } | null;
+  phase5_platform_target: {
+    surface_kind: string;
+    summary: string | null;
+    sequence_scope: string | null;
+    current_step_id: string | null;
+    current_readiness_summary: string | null;
+    north_star_topology: JsonRecord | null;
+    target_internal_modules: string[];
+    landing_sequence: Array<{
+      step_id: string;
+      title: string | null;
+      phase_id: string | null;
+      status: string | null;
+      summary: string | null;
+    }>;
+    completed_step_ids: string[];
+    remaining_step_ids: string[];
+    promotion_gates: string[];
+    recommended_phase_command: string | null;
+    land_now: string[];
+    not_yet: string[];
   } | null;
   product_entry_start: {
     surface_kind: string;
@@ -664,23 +769,139 @@ function normalizeProductEntryPreflight(value: unknown) {
   };
 }
 
-function normalizeProductEntryReadiness(value: unknown) {
+function normalizeDetailedReadinessSurface(value: unknown, fallbackSurfaceKind: string) {
   if (!isRecord(value)) {
     return null;
   }
 
   return {
-    surface_kind: optionalString(value.surface_kind) ?? 'product_entry_readiness',
+    surface_kind: optionalString(value.surface_kind) ?? fallbackSurfaceKind,
     verdict: optionalString(value.verdict),
     usable_now: typeof value.usable_now === 'boolean' ? value.usable_now : null,
     good_to_use_now: typeof value.good_to_use_now === 'boolean' ? value.good_to_use_now : null,
     fully_automatic: typeof value.fully_automatic === 'boolean' ? value.fully_automatic : null,
+    user_experience_level: optionalString(value.user_experience_level),
     summary: optionalString(value.summary),
     recommended_start_surface: optionalString(value.recommended_start_surface),
     recommended_start_command: optionalString(value.recommended_start_command),
     recommended_loop_surface: optionalString(value.recommended_loop_surface),
     recommended_loop_command: optionalString(value.recommended_loop_command),
+    workflow_coverage: normalizeRecordList(value.workflow_coverage, `${fallbackSurfaceKind}.workflow_coverage`).map((entry, index) => ({
+      step_id: requireString(entry.step_id, `${fallbackSurfaceKind}.workflow_coverage[${index}].step_id`),
+      manual_flow_label: optionalString(entry.manual_flow_label),
+      coverage_status: optionalString(entry.coverage_status),
+      current_surface: optionalString(entry.current_surface),
+      remaining_gap: optionalString(entry.remaining_gap),
+    })),
     blocking_gaps: readStringList(value.blocking_gaps),
+  };
+}
+
+function normalizeProductEntryReadiness(value: unknown) {
+  return normalizeDetailedReadinessSurface(value, 'product_entry_readiness');
+}
+
+function normalizeProductEntryGuardrails(value: unknown) {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  return {
+    surface_kind: optionalString(value.surface_kind) ?? 'product_entry_guardrails',
+    summary: optionalString(value.summary),
+    guardrail_classes: normalizeRecordList(value.guardrail_classes, 'product_entry_guardrails.guardrail_classes').map((entry, index) => ({
+      guardrail_id: requireString(entry.guardrail_id, `product_entry_guardrails.guardrail_classes[${index}].guardrail_id`),
+      trigger: optionalString(entry.trigger),
+      symptom: optionalString(entry.symptom),
+      recommended_command: optionalString(entry.recommended_command),
+    })),
+    recovery_loop: normalizeRecordList(value.recovery_loop, 'product_entry_guardrails.recovery_loop').map((entry, index) => ({
+      step_id: requireString(entry.step_id, `product_entry_guardrails.recovery_loop[${index}].step_id`),
+      title: optionalString(entry.title),
+      command: optionalString(entry.command),
+      surface_kind: optionalString(entry.surface_kind),
+    })),
+  };
+}
+
+function normalizeClearanceLane(value: unknown, fallbackSurfaceKind: string) {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  return {
+    surface_kind: optionalString(value.surface_kind) ?? fallbackSurfaceKind,
+    summary: optionalString(value.summary),
+    recommended_step_id: optionalString(value.recommended_step_id),
+    recommended_command: optionalString(value.recommended_command),
+    clearance_targets: normalizeRecordList(value.clearance_targets, `${fallbackSurfaceKind}.clearance_targets`).map((entry, index) => ({
+      target_id: requireString(entry.target_id, `${fallbackSurfaceKind}.clearance_targets[${index}].target_id`),
+      title: optionalString(entry.title),
+      commands: readStringList(entry.commands),
+    })),
+    clearance_loop: normalizeRecordList(value.clearance_loop, `${fallbackSurfaceKind}.clearance_loop`).map((entry, index) => ({
+      step_id: requireString(entry.step_id, `${fallbackSurfaceKind}.clearance_loop[${index}].step_id`),
+      title: optionalString(entry.title),
+      command: optionalString(entry.command),
+      surface_kind: optionalString(entry.surface_kind),
+    })),
+    proof_surfaces: normalizeRecordList(value.proof_surfaces, `${fallbackSurfaceKind}.proof_surfaces`).map((entry) => ({
+      surface_kind: optionalString(entry.surface_kind),
+      command: optionalString(entry.command),
+      ref: optionalString(entry.ref),
+    })),
+    recommended_phase_command: optionalString(value.recommended_phase_command),
+  };
+}
+
+function normalizeBackendDeconstructionLane(value: unknown) {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  return {
+    surface_kind: optionalString(value.surface_kind) ?? 'phase4_backend_deconstruction_lane',
+    summary: optionalString(value.summary),
+    substrate_targets: normalizeRecordList(value.substrate_targets, 'phase4_backend_deconstruction_lane.substrate_targets').map((entry, index) => ({
+      capability_id: requireString(entry.capability_id, `phase4_backend_deconstruction_lane.substrate_targets[${index}].capability_id`),
+      owner: optionalString(entry.owner),
+      summary: optionalString(entry.summary),
+    })),
+    backend_retained_now: readStringList(value.backend_retained_now),
+    current_backend_chain: readStringList(value.current_backend_chain),
+    optional_executor_proofs: normalizeRecordList(value.optional_executor_proofs, 'phase4_backend_deconstruction_lane.optional_executor_proofs'),
+    promotion_rules: readStringList(value.promotion_rules),
+    deconstruction_map_doc: optionalString(value.deconstruction_map_doc),
+    recommended_phase_command: optionalString(value.recommended_phase_command),
+  };
+}
+
+function normalizePlatformTarget(value: unknown) {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  return {
+    surface_kind: optionalString(value.surface_kind) ?? 'phase5_platform_target',
+    summary: optionalString(value.summary),
+    sequence_scope: optionalString(value.sequence_scope),
+    current_step_id: optionalString(value.current_step_id),
+    current_readiness_summary: optionalString(value.current_readiness_summary),
+    north_star_topology: isRecord(value.north_star_topology) ? value.north_star_topology : null,
+    target_internal_modules: readStringList(value.target_internal_modules),
+    landing_sequence: normalizeRecordList(value.landing_sequence, 'phase5_platform_target.landing_sequence').map((entry, index) => ({
+      step_id: requireString(entry.step_id, `phase5_platform_target.landing_sequence[${index}].step_id`),
+      title: optionalString(entry.title),
+      phase_id: optionalString(entry.phase_id),
+      status: optionalString(entry.status),
+      summary: optionalString(entry.summary),
+    })),
+    completed_step_ids: readStringList(value.completed_step_ids),
+    remaining_step_ids: readStringList(value.remaining_step_ids),
+    promotion_gates: readStringList(value.promotion_gates),
+    recommended_phase_command: optionalString(value.recommended_phase_command),
+    land_now: readStringList(value.land_now),
+    not_yet: readStringList(value.not_yet),
   };
 }
 
@@ -746,6 +967,19 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
   const productEntryOverview = normalizeProductEntryOverview(manifest.product_entry_overview);
   const productEntryPreflight = normalizeProductEntryPreflight(manifest.product_entry_preflight);
   const productEntryReadiness = normalizeProductEntryReadiness(manifest.product_entry_readiness);
+  const grantAuthoringReadiness = normalizeDetailedReadinessSurface(
+    manifest.grant_authoring_readiness,
+    'grant_authoring_readiness',
+  );
+  const productEntryGuardrails = normalizeProductEntryGuardrails(manifest.product_entry_guardrails);
+  const phase3ClearanceLane = normalizeClearanceLane(
+    manifest.phase3_clearance_lane,
+    'phase3_host_clearance_lane',
+  );
+  const phase4BackendDeconstruction = normalizeBackendDeconstructionLane(
+    manifest.phase4_backend_deconstruction,
+  );
+  const phase5PlatformTarget = normalizePlatformTarget(manifest.phase5_platform_target);
   const productEntryStart = normalizeProductEntryStart(manifest.product_entry_start);
   const productEntryQuickstart = normalizeProductEntryQuickstart(manifest.product_entry_quickstart);
   const runtimeInventory = normalizeRuntimeInventory(manifest.runtime_inventory);
@@ -809,6 +1043,11 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
     product_entry_overview: productEntryOverview,
     product_entry_preflight: productEntryPreflight,
     product_entry_readiness: productEntryReadiness,
+    grant_authoring_readiness: grantAuthoringReadiness,
+    product_entry_guardrails: productEntryGuardrails,
+    phase3_clearance_lane: phase3ClearanceLane,
+    phase4_backend_deconstruction: phase4BackendDeconstruction,
+    phase5_platform_target: phase5PlatformTarget,
     product_entry_start: productEntryStart,
     product_entry_quickstart: productEntryQuickstart,
     family_orchestration: rawFamilyOrchestration

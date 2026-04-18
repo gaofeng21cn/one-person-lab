@@ -3751,6 +3751,8 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(medautogrant.manifest.product_entry_readiness.verdict, 'agent_assisted_ready_not_product_grade');
     assert.equal(medautogrant.manifest.product_entry_readiness.usable_now, true);
     assert.equal(medautogrant.manifest.product_entry_readiness.recommended_loop_command, 'uv run python -m med_autogrant grant-user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json');
+    assert.equal(medautogrant.manifest.grant_authoring_readiness.surface_kind, 'grant_authoring_readiness');
+    assert.equal(medautogrant.manifest.grant_authoring_readiness.workflow_coverage[0].step_id, 'accumulation_direction_screening');
     assert.equal(medautogrant.manifest.product_entry_preflight.surface_kind, 'product_entry_preflight');
     assert.equal(medautogrant.manifest.product_entry_preflight.ready_to_try_now, true);
     assert.equal(medautogrant.manifest.runtime_inventory.surface_kind, 'runtime_inventory');
@@ -3793,6 +3795,11 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(medautoscience.manifest.product_entry_readiness.verdict, 'runtime_ready_not_standalone_product');
     assert.equal(medautoscience.manifest.product_entry_readiness.good_to_use_now, false);
     assert.equal(medautoscience.manifest.product_entry_readiness.recommended_start_surface, 'product_frontdesk');
+    assert.equal(medautoscience.manifest.product_entry_guardrails.surface_kind, 'product_entry_guardrails');
+    assert.equal(medautoscience.manifest.product_entry_guardrails.guardrail_classes[0].guardrail_id, 'workspace_supervision_gap');
+    assert.equal(medautoscience.manifest.phase3_clearance_lane.surface_kind, 'phase3_host_clearance_lane');
+    assert.equal(medautoscience.manifest.phase4_backend_deconstruction.surface_kind, 'phase4_backend_deconstruction_lane');
+    assert.equal(medautoscience.manifest.phase5_platform_target.surface_kind, 'phase5_platform_target');
     assert.equal(medautoscience.manifest.product_entry_preflight.surface_kind, 'product_entry_preflight');
     assert.equal(medautoscience.manifest.product_entry_preflight.ready_to_try_now, true);
     assert.equal(medautoscience.manifest.runtime_inventory.surface_kind, 'runtime_inventory');
@@ -4580,6 +4587,7 @@ test('project-progress promotes current MAS study into a paper-facing summary in
     assert.match(payload.project_progress.progress_summary, /004-invasive-architecture/);
     assert.match(payload.project_progress.progress_summary, /3 张主图/);
     assert.match(payload.project_progress.progress_summary, /32 篇参考文献/);
+    assert.ok(currentStudy.status_narration_contract);
     assert.equal(currentStudy.status_narration_contract.latest_update, '论文主体内容已经完成，当前进入投稿打包收口。');
     assert.equal(payload.project_progress.progress_feedback.current_status, 'publication_supervision');
     assert.equal(payload.project_progress.progress_feedback.runtime_status, 'live');

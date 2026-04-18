@@ -27,6 +27,12 @@ def _require_string(value: object, field: str) -> str:
     return text
 
 
+def _require_bool(value: object, field: str) -> bool:
+    if not isinstance(value, bool):
+        raise ValueError(f"family orchestration 缺少布尔字段: {field}")
+    return value
+
+
 def _normalize_ref(value: object, field: str) -> dict[str, str] | None:
     if not isinstance(value, Mapping):
         return None
@@ -56,6 +62,12 @@ def _normalize_refs(values: object, field: str) -> list[dict[str, str]]:
         if payload is not None:
             normalized.append(payload)
     return normalized
+
+
+def _require_string_list(values: object, field: str) -> list[str]:
+    if not isinstance(values, Sequence) or isinstance(values, (str, bytes, bytearray)):
+        raise ValueError(f"family orchestration 缺少数组字段: {field}")
+    return [_require_string(value, f"{field}[{index}]") for index, value in enumerate(values)]
 
 
 def resolve_program_id(execution: Mapping[str, Any] | None = None, fallback: str = "opl_family_program") -> str:
@@ -121,6 +133,121 @@ def build_family_human_gate(
     if decision is not None:
         payload["decision"] = dict(decision)
     return payload
+
+
+def build_family_action_graph_node(
+    *,
+    node_id: str,
+    node_kind: str,
+    title: str,
+    surface_kind: str | None = None,
+    produces_checkpoint: bool | None = None,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "node_id": _require_string(node_id, "node_id"),
+        "node_kind": _require_string(node_kind, "node_kind"),
+        "title": _require_string(title, "title"),
+    }
+    if _text(surface_kind) is not None:
+        payload["surface_kind"] = _require_string(surface_kind, "surface_kind")
+    if produces_checkpoint is not None:
+        payload["produces_checkpoint"] = _require_bool(produces_checkpoint, "produces_checkpoint")
+    return payload
+
+
+def build_family_action_graph_edge(
+    *,
+    from_node: str,
+    to_node: str,
+    on: str,
+) -> dict[str, str]:
+    return {
+        "from": _require_string(from_node, "from"),
+        "to": _require_string(to_node, "to"),
+        "on": _require_string(on, "on"),
+    }
+
+
+def build_family_action_graph_human_gate(
+    *,
+    gate_id: str,
+    trigger_nodes: Sequence[str],
+    blocking: bool,
+) -> dict[str, Any]:
+    return {
+        "gate_id": _require_string(gate_id, "gate_id"),
+        "trigger_nodes": _require_string_list(trigger_nodes, "trigger_nodes"),
+        "blocking": _require_bool(blocking, "blocking"),
+    }
+
+
+def build_explicit_checkpoint_policy(
+    *,
+    checkpoint_nodes: Sequence[str],
+) -> dict[str, Any]:
+    return {
+        "mode": "explicit_nodes",
+        "checkpoint_nodes": _require_string_list(checkpoint_nodes, "checkpoint_nodes"),
+    }
+
+
+def build_family_action_graph(
+    *,
+    graph_id: str,
+    target_domain_id: str,
+    graph_kind: str,
+    graph_version: str,
+    nodes: Sequence[Mapping[str, Any]],
+    edges: Sequence[Mapping[str, Any]],
+    entry_nodes: Sequence[str],
+    exit_nodes: Sequence[str],
+    human_gates: Sequence[Mapping[str, Any]] | None = None,
+    checkpoint_policy: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    normalized_nodes = [dict(node) for node in nodes if isinstance(node, Mapping)]
+    node_ids = {str(node.get("node_id") or "") for node in normalized_nodes}
+    normalized_edges = [dict(edge) for edge in edges if isinstance(edge, Mapping)]
+    normalized_entry_nodes = _require_string_list(entry_nodes, "entry_nodes")
+    normalized_exit_nodes = _require_string_list(exit_nodes, "exit_nodes")
+    normalized_human_gates = [dict(gate) for gate in human_gates or () if isinstance(gate, Mapping)]
+
+    for node_id in (*normalized_entry_nodes, *normalized_exit_nodes):
+        if node_id not in node_ids:
+            raise ValueError(f"family action graph references unknown node_id: {node_id}")
+    for edge in normalized_edges:
+        from_node = _require_string(edge.get("from"), "edge.from")
+        to_node = _require_string(edge.get("to"), "edge.to")
+        if from_node not in node_ids or to_node not in node_ids:
+            raise ValueError(f"family action graph edge references unknown node: {from_node} -> {to_node}")
+    for gate in normalized_human_gates:
+        for node_id in _require_string_list(gate.get("trigger_nodes"), "human_gate.trigger_nodes"):
+            if node_id not in node_ids:
+                raise ValueError(f"family action graph gate references unknown node_id: {node_id}")
+
+    normalized_checkpoint_policy = (
+        dict(checkpoint_policy)
+        if isinstance(checkpoint_policy, Mapping)
+        else build_explicit_checkpoint_policy(
+            checkpoint_nodes=[
+                str(node.get("node_id") or "")
+                for node in normalized_nodes
+                if bool(node.get("produces_checkpoint"))
+            ]
+        )
+    )
+    return {
+        "version": "family-action-graph.v1",
+        "graph_id": _require_string(graph_id, "graph_id"),
+        "target_domain_id": _require_string(target_domain_id, "target_domain_id"),
+        "graph_kind": _require_string(graph_kind, "graph_kind"),
+        "graph_version": _require_string(graph_version, "graph_version"),
+        "nodes": normalized_nodes,
+        "edges": normalized_edges,
+        "entry_nodes": normalized_entry_nodes,
+        "exit_nodes": normalized_exit_nodes,
+        "human_gates": normalized_human_gates,
+        "checkpoint_policy": normalized_checkpoint_policy,
+    }
 
 
 def build_family_orchestration_template(

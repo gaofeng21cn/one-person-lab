@@ -112,6 +112,24 @@
     "product_entry_preflight": {
       "$ref": "#/$defs/productEntryPreflight"
     },
+    "product_entry_readiness": {
+      "$ref": "#/$defs/productEntryReadiness"
+    },
+    "grant_authoring_readiness": {
+      "$ref": "#/$defs/grantAuthoringReadiness"
+    },
+    "product_entry_guardrails": {
+      "$ref": "#/$defs/productEntryGuardrails"
+    },
+    "phase3_clearance_lane": {
+      "$ref": "#/$defs/phase3ClearanceLane"
+    },
+    "phase4_backend_deconstruction": {
+      "$ref": "#/$defs/phase4BackendDeconstructionLane"
+    },
+    "phase5_platform_target": {
+      "$ref": "#/$defs/phase5PlatformTarget"
+    },
     "product_entry_shell": {
       "type": "object",
       "minProperties": 1,
@@ -443,6 +461,552 @@
           "items": {
             "$ref": "#/$defs/productEntryPreflightCheck"
           }
+        }
+      }
+    },
+    "workflowCoverageItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "step_id"
+      ],
+      "properties": {
+        "step_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "manual_flow_label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "coverage_status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "current_surface": {
+          "type": "string",
+          "minLength": 1
+        },
+        "remaining_gap": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "productEntryReadiness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface_kind",
+        "blocking_gaps",
+        "workflow_coverage"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "product_entry_readiness"
+        },
+        "verdict": {
+          "type": "string",
+          "minLength": 1
+        },
+        "usable_now": {
+          "type": "boolean"
+        },
+        "good_to_use_now": {
+          "type": "boolean"
+        },
+        "fully_automatic": {
+          "type": "boolean"
+        },
+        "user_experience_level": {
+          "type": "string",
+          "minLength": 1
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recommended_start_surface": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recommended_start_command": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recommended_loop_surface": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recommended_loop_command": {
+          "type": "string",
+          "minLength": 1
+        },
+        "workflow_coverage": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/workflowCoverageItem"
+          }
+        },
+        "blocking_gaps": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "grantAuthoringReadiness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface_kind",
+        "blocking_gaps",
+        "workflow_coverage"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "grant_authoring_readiness"
+        },
+        "verdict": {
+          "type": "string",
+          "minLength": 1
+        },
+        "usable_now": {
+          "type": "boolean"
+        },
+        "good_to_use_now": {
+          "type": "boolean"
+        },
+        "fully_automatic": {
+          "type": "boolean"
+        },
+        "user_experience_level": {
+          "type": "string",
+          "minLength": 1
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recommended_start_surface": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recommended_start_command": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recommended_loop_surface": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recommended_loop_command": {
+          "type": "string",
+          "minLength": 1
+        },
+        "workflow_coverage": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/workflowCoverageItem"
+          }
+        },
+        "blocking_gaps": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "guardrailClass": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "guardrail_id"
+      ],
+      "properties": {
+        "guardrail_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "trigger": {
+          "type": "string",
+          "minLength": 1
+        },
+        "symptom": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recommended_command": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "programStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "step_id",
+        "command",
+        "surface_kind"
+      ],
+      "properties": {
+        "step_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "command": {
+          "type": "string",
+          "minLength": 1
+        },
+        "surface_kind": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "programSurface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface_kind"
+      ],
+      "properties": {
+        "surface_kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "command": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "command"
+          ]
+        },
+        {
+          "required": [
+            "ref"
+          ]
+        }
+      ]
+    },
+    "productEntryGuardrails": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface_kind",
+        "guardrail_classes",
+        "recovery_loop"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "product_entry_guardrails"
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "guardrail_classes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/guardrailClass"
+          }
+        },
+        "recovery_loop": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/programStep"
+          }
+        }
+      }
+    },
+    "clearanceTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target_id",
+        "commands"
+      ],
+      "properties": {
+        "target_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "commands": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "phase3ClearanceLane": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface_kind",
+        "clearance_targets",
+        "clearance_loop",
+        "proof_surfaces"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "phase3_host_clearance_lane"
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recommended_step_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recommended_command": {
+          "type": "string",
+          "minLength": 1
+        },
+        "clearance_targets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/clearanceTarget"
+          }
+        },
+        "clearance_loop": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/programStep"
+          }
+        },
+        "proof_surfaces": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/programSurface"
+          }
+        },
+        "recommended_phase_command": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "programCapability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capability_id"
+      ],
+      "properties": {
+        "capability_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "phase4BackendDeconstructionLane": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface_kind",
+        "substrate_targets",
+        "backend_retained_now",
+        "current_backend_chain",
+        "optional_executor_proofs",
+        "promotion_rules"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "phase4_backend_deconstruction_lane"
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "substrate_targets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/programCapability"
+          }
+        },
+        "backend_retained_now": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "current_backend_chain": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "optional_executor_proofs": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "promotion_rules": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "deconstruction_map_doc": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recommended_phase_command": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "programSequenceStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "step_id"
+      ],
+      "properties": {
+        "step_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "phase_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "phase5PlatformTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface_kind",
+        "target_internal_modules",
+        "landing_sequence",
+        "completed_step_ids",
+        "remaining_step_ids",
+        "promotion_gates"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "phase5_platform_target"
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sequence_scope": {
+          "type": "string",
+          "minLength": 1
+        },
+        "current_step_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "current_readiness_summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "north_star_topology": {
+          "type": "object"
+        },
+        "target_internal_modules": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "landing_sequence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/programSequenceStep"
+          }
+        },
+        "completed_step_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "remaining_step_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "promotion_gates": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "land_now": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "not_yet": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "recommended_phase_command": {
+          "type": "string",
+          "minLength": 1
         }
       }
     }

@@ -75,6 +75,43 @@ export interface BuildFamilyOrchestrationTemplateInput {
   checkpoint_lineage_surface?: FamilyReference | null;
 }
 
+export interface FamilyActionGraphNodeInput {
+  node_id: string;
+  node_kind: string;
+  title: string;
+  surface_kind?: string;
+  produces_checkpoint?: boolean;
+}
+
+export interface FamilyActionGraphEdgeInput {
+  from: string;
+  to: string;
+  on: string;
+}
+
+export interface FamilyActionGraphHumanGateInput {
+  gate_id: string;
+  trigger_nodes: string[];
+  blocking: boolean;
+}
+
+export interface BuildExplicitCheckpointPolicyInput {
+  checkpoint_nodes: string[];
+}
+
+export interface BuildFamilyActionGraphInput {
+  graph_id: string;
+  target_domain_id: string;
+  graph_kind: string;
+  graph_version: string;
+  nodes: FamilyActionGraphNodeInput[];
+  edges: FamilyActionGraphEdgeInput[];
+  entry_nodes: string[];
+  exit_nodes: string[];
+  human_gates?: FamilyActionGraphHumanGateInput[] | null;
+  checkpoint_policy?: JsonRecord | null;
+}
+
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -115,6 +152,20 @@ function normalizeRefs(values: unknown, field: string) {
   return values
     .map((value, index) => normalizeRef(value, `${field}[${index}]`))
     .filter((value): value is FamilyReference => Boolean(value));
+}
+
+function requireBoolean(value: unknown, field: string) {
+  if (typeof value !== 'boolean') {
+    throw new Error(`family orchestration 缺少布尔字段: ${field}`);
+  }
+  return value;
+}
+
+function readStringList(values: unknown, field: string) {
+  if (!Array.isArray(values)) {
+    throw new Error(`family orchestration 缺少数组字段: ${field}`);
+  }
+  return values.map((value, index) => requireString(value, `${field}[${index}]`));
 }
 
 function stableId(prefix: string, ...parts: unknown[]) {
@@ -171,6 +222,91 @@ export function buildFamilyHumanGate(input: BuildFamilyHumanGateInput) {
     gate.decision = { ...input.decision };
   }
   return gate;
+}
+
+export function buildFamilyActionGraphNode(input: FamilyActionGraphNodeInput) {
+  return {
+    node_id: requireString(input.node_id, 'node_id'),
+    node_kind: requireString(input.node_kind, 'node_kind'),
+    title: requireString(input.title, 'title'),
+    ...(optionalString(input.surface_kind) ? { surface_kind: optionalString(input.surface_kind)! } : {}),
+    ...(typeof input.produces_checkpoint === 'boolean'
+      ? { produces_checkpoint: requireBoolean(input.produces_checkpoint, 'produces_checkpoint') }
+      : {}),
+  };
+}
+
+export function buildFamilyActionGraphEdge(input: FamilyActionGraphEdgeInput) {
+  return {
+    from: requireString(input.from, 'from'),
+    to: requireString(input.to, 'to'),
+    on: requireString(input.on, 'on'),
+  };
+}
+
+export function buildFamilyActionGraphHumanGate(input: FamilyActionGraphHumanGateInput) {
+  return {
+    gate_id: requireString(input.gate_id, 'gate_id'),
+    trigger_nodes: readStringList(input.trigger_nodes, 'trigger_nodes'),
+    blocking: requireBoolean(input.blocking, 'blocking'),
+  };
+}
+
+export function buildExplicitCheckpointPolicy(input: BuildExplicitCheckpointPolicyInput) {
+  return {
+    mode: 'explicit_nodes',
+    checkpoint_nodes: readStringList(input.checkpoint_nodes, 'checkpoint_nodes'),
+  };
+}
+
+export function buildFamilyActionGraph(input: BuildFamilyActionGraphInput) {
+  const nodes = input.nodes.map((node) => buildFamilyActionGraphNode(node));
+  const nodeIds = new Set(nodes.map((node) => node.node_id));
+  const edges = input.edges.map((edge) => buildFamilyActionGraphEdge(edge));
+  const entryNodes = readStringList(input.entry_nodes, 'entry_nodes');
+  const exitNodes = readStringList(input.exit_nodes, 'exit_nodes');
+  const humanGates = Array.isArray(input.human_gates)
+    ? input.human_gates.map((gate) => buildFamilyActionGraphHumanGate(gate))
+    : [];
+  const checkpointPolicy = isRecord(input.checkpoint_policy)
+    ? { ...input.checkpoint_policy }
+    : buildExplicitCheckpointPolicy({
+        checkpoint_nodes: nodes
+          .filter((node) => node.produces_checkpoint)
+          .map((node) => node.node_id),
+      });
+
+  for (const nodeId of [...entryNodes, ...exitNodes]) {
+    if (!nodeIds.has(nodeId)) {
+      throw new Error(`family action graph references unknown node_id: ${nodeId}`);
+    }
+  }
+  for (const edge of edges) {
+    if (!nodeIds.has(edge.from) || !nodeIds.has(edge.to)) {
+      throw new Error(`family action graph edge references unknown node: ${edge.from} -> ${edge.to}`);
+    }
+  }
+  for (const gate of humanGates) {
+    for (const nodeId of gate.trigger_nodes) {
+      if (!nodeIds.has(nodeId)) {
+        throw new Error(`family action graph gate references unknown node_id: ${nodeId}`);
+      }
+    }
+  }
+
+  return {
+    version: 'family-action-graph.v1',
+    graph_id: requireString(input.graph_id, 'graph_id'),
+    target_domain_id: requireString(input.target_domain_id, 'target_domain_id'),
+    graph_kind: requireString(input.graph_kind, 'graph_kind'),
+    graph_version: requireString(input.graph_version, 'graph_version'),
+    nodes,
+    edges,
+    entry_nodes: entryNodes,
+    exit_nodes: exitNodes,
+    human_gates: humanGates,
+    checkpoint_policy: checkpointPolicy,
+  };
 }
 
 export function buildFamilyOrchestrationTemplate(input: BuildFamilyOrchestrationTemplateInput) {

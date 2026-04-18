@@ -298,6 +298,32 @@
         "文献热点检索、引用证据绑定、图件生产和最终国自然格式化交付仍未完整产品化。"
       ]
     },
+    "grant_authoring_readiness": {
+      "surface_kind": "grant_authoring_readiness",
+      "verdict": "agent_assisted_cli_ready_not_full_autopilot",
+      "usable_now": true,
+      "good_to_use_now": false,
+      "fully_automatic": false,
+      "user_experience_level": "usable_for_agent_assisted_cli_authoring_not_yet_polished_product",
+      "summary": "当前可以作为 Agent 协同的 CLI/controller 标书写作主线使用；对材料齐备的 workspace 已能导出本地 submission-ready 交付包。",
+      "recommended_start_surface": "product_frontdesk",
+      "recommended_start_command": "uv run python -m med_autogrant product-frontdesk --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+      "recommended_loop_surface": "grant_user_loop",
+      "recommended_loop_command": "uv run python -m med_autogrant grant-user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
+      "workflow_coverage": [
+        {
+          "step_id": "accumulation_direction_screening",
+          "manual_flow_label": "从已有积累中筛选方向",
+          "coverage_status": "landed_route",
+          "current_surface": "execute-direction-screening-pass",
+          "remaining_gap": "需要用户先提供真实课题、论文、前期结果和在研工作材料。"
+        }
+      ],
+      "blocking_gaps": [
+        "还不是 mature direct grant Web UI / hosted runtime。",
+        "还不能在缺少用户真实材料、前期结果和图片素材时全自动生成可信标书。"
+      ]
+    },
     "family_orchestration": {
       "action_graph_ref": {
         "ref_kind": "json_pointer",
