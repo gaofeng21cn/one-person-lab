@@ -35,10 +35,12 @@ from .managed_runtime import (
     validate_managed_runtime_contract,
 )
 from .product_entry_companions import (
+    build_product_entry_start,
     build_product_entry_overview,
     build_product_entry_quickstart,
     build_product_entry_readiness,
     build_product_entry_resume_surface,
+    build_product_frontdesk,
     collect_family_human_gate_ids,
 )
 from .runtime_task_companions import (
@@ -63,6 +65,8 @@ __all__ = [
     "build_family_orchestration_companion",
     "build_family_orchestration_template",
     "build_managed_runtime_contract",
+    "build_product_entry_start",
+    "build_product_frontdesk",
     "build_product_entry_overview",
     "build_product_entry_quickstart",
     "build_product_entry_readiness",

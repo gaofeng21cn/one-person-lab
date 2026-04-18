@@ -6,6 +6,13 @@ export interface ProductEntryResumeContract {
   checkpoint_locator_field?: string | null;
 }
 
+export interface ProductEntryStartResumeSurface {
+  surface_kind: string;
+  command?: string | null;
+  session_locator_field?: string | null;
+  checkpoint_locator_field?: string | null;
+}
+
 export interface ProductEntryStepInput {
   step_id: string;
   title: string;
@@ -19,6 +26,15 @@ export interface ProductEntryProgressSurfaceInput {
   surface_kind: string;
   command: string;
   step_id?: string | null;
+}
+
+export interface ProductEntryStartModeInput {
+  mode_id: string;
+  title: string;
+  command: string;
+  surface_kind: string;
+  summary: string;
+  requires: string[];
 }
 
 export interface BuildProductEntryQuickstartInput {
@@ -55,6 +71,42 @@ export interface BuildProductEntryReadinessInput {
   blocking_gaps: string[];
 }
 
+export interface BuildProductEntryStartInput {
+  summary: string;
+  recommended_mode_id: string;
+  modes: ProductEntryStartModeInput[];
+  resume_surface: ProductEntryStartResumeSurface;
+  human_gate_ids: string[];
+}
+
+export interface BuildProductFrontdeskSummaryInput {
+  frontdesk_command: string;
+  recommended_command: string;
+  operator_loop_command: string;
+}
+
+export interface BuildProductFrontdeskInput {
+  recommended_action: string;
+  target_domain_id: string;
+  workspace_locator: JsonRecord;
+  runtime: JsonRecord;
+  product_entry_status: JsonRecord;
+  frontdesk_surface: JsonRecord;
+  operator_loop_surface: JsonRecord;
+  operator_loop_actions: JsonRecord;
+  product_entry_start: JsonRecord;
+  product_entry_overview: JsonRecord;
+  product_entry_preflight: JsonRecord;
+  product_entry_readiness: JsonRecord;
+  product_entry_quickstart: JsonRecord;
+  family_orchestration: JsonRecord;
+  product_entry_manifest: JsonRecord;
+  entry_surfaces: JsonRecord;
+  summary: BuildProductFrontdeskSummaryInput;
+  notes: string[];
+  extra_payload?: JsonRecord;
+}
+
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -85,6 +137,20 @@ function requireInteger(value: unknown, field: string) {
   return Number(value);
 }
 
+function requireRecord(value: unknown, field: string): JsonRecord {
+  if (!isRecord(value)) {
+    throw new Error(`product entry companion 缺少对象字段: ${field}`);
+  }
+  return value;
+}
+
+function readOptionalStringProperty(value: JsonRecord, key: string, field: string) {
+  if (!Object.prototype.hasOwnProperty.call(value, key)) {
+    return undefined;
+  }
+  return requireString(value[key], field);
+}
+
 function readStringList(value: unknown, field: string) {
   if (!Array.isArray(value)) {
     throw new Error(`product entry companion 缺少数组字段: ${field}`);
@@ -95,38 +161,101 @@ function readStringList(value: unknown, field: string) {
 }
 
 function normalizeResumeContract(value: unknown, field: string): ProductEntryResumeContract {
-  if (!isRecord(value)) {
-    throw new Error(`product entry companion 缺少对象字段: ${field}`);
-  }
+  const payload = requireRecord(value, field);
   return {
-    surface_kind: requireString(value.surface_kind, `${field}.surface_kind`),
-    session_locator_field: requireString(value.session_locator_field, `${field}.session_locator_field`),
-    checkpoint_locator_field: optionalString(value.checkpoint_locator_field),
+    surface_kind: requireString(payload.surface_kind, `${field}.surface_kind`),
+    session_locator_field: requireString(payload.session_locator_field, `${field}.session_locator_field`),
+    checkpoint_locator_field: optionalString(payload.checkpoint_locator_field),
   };
 }
 
 function normalizeStep(value: unknown, field: string): ProductEntryStepInput {
-  if (!isRecord(value)) {
-    throw new Error(`product entry companion 缺少对象字段: ${field}`);
-  }
+  const payload = requireRecord(value, field);
   return {
-    step_id: requireString(value.step_id, `${field}.step_id`),
-    title: requireString(value.title, `${field}.title`),
-    command: requireString(value.command, `${field}.command`),
-    surface_kind: requireString(value.surface_kind, `${field}.surface_kind`),
-    summary: requireString(value.summary, `${field}.summary`),
-    requires: readStringList(value.requires, `${field}.requires`),
+    step_id: requireString(payload.step_id, `${field}.step_id`),
+    title: requireString(payload.title, `${field}.title`),
+    command: requireString(payload.command, `${field}.command`),
+    surface_kind: requireString(payload.surface_kind, `${field}.surface_kind`),
+    summary: requireString(payload.summary, `${field}.summary`),
+    requires: readStringList(payload.requires, `${field}.requires`),
   };
 }
 
 function normalizeProgressSurface(value: unknown, field: string): ProductEntryProgressSurfaceInput {
-  if (!isRecord(value)) {
-    throw new Error(`product entry companion 缺少对象字段: ${field}`);
+  const payload = requireRecord(value, field);
+  return {
+    surface_kind: requireString(payload.surface_kind, `${field}.surface_kind`),
+    command: requireString(payload.command, `${field}.command`),
+    step_id: optionalString(payload.step_id),
+  };
+}
+
+function normalizeStartMode(value: unknown, field: string): ProductEntryStartModeInput {
+  const payload = requireRecord(value, field);
+  return {
+    mode_id: requireString(payload.mode_id, `${field}.mode_id`),
+    title: requireString(payload.title, `${field}.title`),
+    command: requireString(payload.command, `${field}.command`),
+    surface_kind: requireString(payload.surface_kind, `${field}.surface_kind`),
+    summary: requireString(payload.summary, `${field}.summary`),
+    requires: readStringList(payload.requires, `${field}.requires`),
+  };
+}
+
+function normalizeStartResumeSurface(value: unknown, field: string): ProductEntryStartResumeSurface {
+  const payload = requireRecord(value, field);
+  const normalized: ProductEntryStartResumeSurface = {
+    surface_kind: requireString(payload.surface_kind, `${field}.surface_kind`),
+  };
+  const command = readOptionalStringProperty(payload, 'command', `${field}.command`);
+  if (command !== undefined) {
+    normalized.command = command;
+  }
+  const sessionLocatorField = readOptionalStringProperty(
+    payload,
+    'session_locator_field',
+    `${field}.session_locator_field`,
+  );
+  if (sessionLocatorField !== undefined) {
+    normalized.session_locator_field = sessionLocatorField;
+  }
+  const checkpointLocatorField = readOptionalStringProperty(
+    payload,
+    'checkpoint_locator_field',
+    `${field}.checkpoint_locator_field`,
+  );
+  if (checkpointLocatorField !== undefined) {
+    normalized.checkpoint_locator_field = checkpointLocatorField;
+  }
+  return normalized;
+}
+
+function cloneRecord(value: unknown, field: string) {
+  return { ...requireRecord(value, field) };
+}
+
+function normalizeFrontdeskSummary(value: unknown, field: string) {
+  const payload = requireRecord(value, field);
+  return {
+    frontdesk_command: requireString(payload.frontdesk_command, `${field}.frontdesk_command`),
+    recommended_command: requireString(payload.recommended_command, `${field}.recommended_command`),
+    operator_loop_command: requireString(payload.operator_loop_command, `${field}.operator_loop_command`),
+  };
+}
+
+function mergeExtraPayload(base: JsonRecord, extraPayload: unknown) {
+  if (extraPayload === undefined) {
+    return base;
+  }
+  const normalizedExtraPayload = cloneRecord(extraPayload, 'extra_payload');
+  for (const key of Object.keys(normalizedExtraPayload)) {
+    if (Object.prototype.hasOwnProperty.call(base, key)) {
+      throw new Error(`product frontdesk extra_payload 不允许覆盖核心字段: ${key}`);
+    }
   }
   return {
-    surface_kind: requireString(value.surface_kind, `${field}.surface_kind`),
-    command: requireString(value.command, `${field}.command`),
-    step_id: optionalString(value.step_id),
+    ...base,
+    ...normalizedExtraPayload,
   };
 }
 
@@ -196,4 +325,45 @@ export function buildProductEntryReadiness(input: BuildProductEntryReadinessInpu
     recommended_loop_command: requireString(input.recommended_loop_command, 'recommended_loop_command'),
     blocking_gaps: readStringList(input.blocking_gaps, 'blocking_gaps'),
   };
+}
+
+export function buildProductEntryStart(input: BuildProductEntryStartInput) {
+  const normalizedModes = input.modes.map((mode, index) => normalizeStartMode(mode, `modes[${index}]`));
+  const recommendedModeId = requireString(input.recommended_mode_id, 'recommended_mode_id');
+  if (!normalizedModes.some((mode) => mode.mode_id === recommendedModeId)) {
+    throw new Error('product entry start recommended_mode_id 必须引用现有 mode_id。');
+  }
+  return {
+    surface_kind: 'product_entry_start',
+    summary: requireString(input.summary, 'summary'),
+    recommended_mode_id: recommendedModeId,
+    modes: normalizedModes,
+    resume_surface: normalizeStartResumeSurface(input.resume_surface, 'resume_surface'),
+    human_gate_ids: readStringList(input.human_gate_ids, 'human_gate_ids'),
+  };
+}
+
+export function buildProductFrontdesk(input: BuildProductFrontdeskInput) {
+  const payload: JsonRecord = {
+    surface_kind: 'product_frontdesk',
+    recommended_action: requireString(input.recommended_action, 'recommended_action'),
+    target_domain_id: requireString(input.target_domain_id, 'target_domain_id'),
+    workspace_locator: cloneRecord(input.workspace_locator, 'workspace_locator'),
+    runtime: cloneRecord(input.runtime, 'runtime'),
+    product_entry_status: cloneRecord(input.product_entry_status, 'product_entry_status'),
+    frontdesk_surface: cloneRecord(input.frontdesk_surface, 'frontdesk_surface'),
+    operator_loop_surface: cloneRecord(input.operator_loop_surface, 'operator_loop_surface'),
+    operator_loop_actions: cloneRecord(input.operator_loop_actions, 'operator_loop_actions'),
+    product_entry_start: cloneRecord(input.product_entry_start, 'product_entry_start'),
+    product_entry_overview: cloneRecord(input.product_entry_overview, 'product_entry_overview'),
+    product_entry_preflight: cloneRecord(input.product_entry_preflight, 'product_entry_preflight'),
+    product_entry_readiness: cloneRecord(input.product_entry_readiness, 'product_entry_readiness'),
+    product_entry_quickstart: cloneRecord(input.product_entry_quickstart, 'product_entry_quickstart'),
+    family_orchestration: cloneRecord(input.family_orchestration, 'family_orchestration'),
+    product_entry_manifest: cloneRecord(input.product_entry_manifest, 'product_entry_manifest'),
+    entry_surfaces: cloneRecord(input.entry_surfaces, 'entry_surfaces'),
+    summary: normalizeFrontdeskSummary(input.summary, 'summary'),
+    notes: readStringList(input.notes, 'notes'),
+  };
+  return mergeExtraPayload(payload, input.extra_payload);
 }
