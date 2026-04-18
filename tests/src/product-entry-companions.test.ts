@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  buildFamilyProductEntryManifest,
   buildProductFrontdesk,
   buildProductEntryOverview,
   buildProductEntryQuickstart,
@@ -209,4 +210,145 @@ test('product entry companion helpers build canonical shared payloads', () => {
   assert.equal(frontdesk.schema_ref, 'contracts/schemas/v1/product-frontdesk.schema.json');
   const productEntryStart = frontdesk.product_entry_start as { recommended_mode_id: string };
   assert.equal(productEntryStart.recommended_mode_id, 'open_frontdesk');
+
+  const manifest = buildFamilyProductEntryManifest({
+    manifest_kind: 'redcube_product_entry_manifest',
+    target_domain_id: 'redcube_ai',
+    formal_entry: {
+      default: 'CLI',
+      supported_protocols: ['MCP'],
+      internal_surface: 'gateway',
+    },
+    workspace_locator: {
+      workspace_surface_kind: 'redcube_workspace',
+      workspace_root: '/tmp/redcube-workspace',
+    },
+    runtime: {
+      runtime_owner: 'upstream_hermes_agent',
+    },
+    product_entry_status: {
+      summary: 'The direct product-entry surface is usable now.',
+      next_focus: ['Keep the same session contract stable.'],
+      remaining_gaps_count: 1,
+    },
+    frontdesk_surface: {
+      shell_key: 'frontdesk',
+      command: 'redcube product frontdesk',
+      surface_kind: 'product_frontdesk',
+      summary: 'Open the direct frontdesk.',
+    },
+    operator_loop_surface: {
+      shell_key: 'direct',
+      command: 'redcube product invoke',
+      surface_kind: 'product_entry',
+      summary: 'Continue the same direct loop.',
+    },
+    operator_loop_actions: {
+      continue_session: {
+        command: 'redcube product invoke --entry-session-id <entry-session-id>',
+        surface_kind: 'product_entry',
+        summary: 'Continue the same session.',
+        requires: ['entry_session_id'],
+      },
+    },
+    recommended_shell: 'direct',
+    recommended_command: 'redcube product invoke',
+    product_entry_shell: {
+      frontdesk: {
+        command: 'redcube product frontdesk',
+        surface_kind: 'product_frontdesk',
+      },
+    },
+    shared_handoff: {
+      opl_return_surface: {
+        surface_kind: 'product_entry',
+        target_domain_id: 'redcube_ai',
+      },
+    },
+    product_entry_start: startWithResumeCommand,
+    product_entry_overview: overview,
+    product_entry_preflight: {
+      surface_kind: 'product_entry_preflight',
+      summary: 'Current preflight is green.',
+      ready_to_try_now: true,
+      recommended_check_command: 'redcube product preflight',
+      recommended_start_command: 'redcube product frontdesk',
+      blocking_check_ids: [],
+      checks: [],
+    },
+    product_entry_readiness: readiness,
+    product_entry_quickstart: quickstart,
+    family_orchestration: familyOrchestration,
+    runtime_inventory: {
+      surface_kind: 'runtime_inventory',
+      summary: 'Runtime inventory is shared.',
+    },
+    task_lifecycle: {
+      surface_kind: 'task_lifecycle',
+      summary: 'Task lifecycle is shared.',
+    },
+    skill_catalog: {
+      surface_kind: 'skill_catalog',
+      summary: 'Skill catalog is shared.',
+    },
+    automation: {
+      surface_kind: 'automation',
+      summary: 'Automation is shared.',
+      automations: [
+        {
+          surface_kind: 'automation_descriptor',
+          automation_id: 'redcube_autopilot',
+        },
+      ],
+    },
+    remaining_gaps: ['Managed web shell is still pending.'],
+    notes: ['Shared manifest shell is active.'],
+    extra_payload: {
+      recommended_action: 'invoke_product_entry',
+      current_truth: {
+        product_entry_contract: 'contracts/runtime-program/redcube-product-entry-mvp.json',
+      },
+    },
+  }) as {
+    surface_kind: string;
+    manifest_version: number;
+    recommended_action: string;
+    product_entry_start: { recommended_mode_id: string };
+  };
+  assert.equal(manifest.surface_kind, 'product_entry_manifest');
+  assert.equal(manifest.manifest_version, 2);
+  assert.equal(manifest.recommended_action, 'invoke_product_entry');
+  assert.equal(manifest.product_entry_start.recommended_mode_id, 'open_frontdesk');
+
+  assert.throws(
+    () =>
+      buildFamilyProductEntryManifest({
+        manifest_kind: 'redcube_product_entry_manifest',
+        target_domain_id: 'redcube_ai',
+        formal_entry: {
+          default: 'CLI',
+          supported_protocols: ['MCP'],
+        },
+        workspace_locator: {
+          workspace_surface_kind: 'redcube_workspace',
+          workspace_root: '/tmp/redcube-workspace',
+        },
+        product_entry_shell: {
+          frontdesk: {
+            command: 'redcube product frontdesk',
+          },
+        },
+        shared_handoff: {
+          opl_return_surface: {
+            surface_kind: 'product_entry',
+          },
+        },
+        product_entry_start: startWithResumeCommand,
+        family_orchestration: familyOrchestration,
+        extra_payload: {
+          target_domain_id: 'override',
+        },
+      }),
+    /extra_payload 不允许覆盖核心字段/,
+  );
 });

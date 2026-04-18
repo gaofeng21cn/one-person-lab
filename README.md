@@ -38,7 +38,7 @@
 
 - Start from one public front door instead of learning every repository before asking for help.
 - See which workstream belongs to medical research, grant writing, review work, or presentation production.
-- Keep shared context reusable across the lab without turning every workflow into one monolithic tool.
+- Keep shared context and execution visibility reusable across the lab without turning every workflow into one monolithic tool.
 - Understand what is already active today and what is still being defined.
 
 ## Current Live Paths
@@ -86,6 +86,7 @@ In plain language:
 
 `OPL` keeps the top-level `Gateway / Federation` role, while admitted domain repositories keep domain runtime ownership.
 The current public front path is `GUI front desk -> Codex -> OPL gateway surfaces`: `opl frontdesk bootstrap --path <workspace>` prepares the local `OPL Atlas` Desktop shell, the local web front desk stays as a companion surface, and both interaction plus execution default to `Codex`.
+The current active development host is Codex-only local sessions, while the preferred future substrate direction is a true upstream `Hermes-Agent` integration first proved inside a domain repository.
 `Hermes-Agent` remains available as an explicit alternate mode for interactive continuation and selected executor routing, while any honest upstream `Hermes-Agent` rollout still remains a domain-side migration target rather than a current OPL-layer fact.
 
 The shared architectural language under `OPL` is the `Unified Harness Engineering Substrate`, with its most important shared pieces converging into the [Shared Runtime Contract](./docs/shared-runtime-contract.md) and the [Shared Domain Contract](./docs/shared-domain-contract.md).
@@ -95,10 +96,11 @@ The current public mainline still carries the absorbed `Phase 1 / G2 release-clo
 The current `Phase 2 / Minimal admitted-domain federation activation package` covers the two already admitted domain surfaces only: `MedAutoScience` and `RedCube AI`.
 `Grant Foundry -> Med Auto Grant` stays the active medical Grant Ops repository line, while top-level federation admission and handoff wording remain separately gated at `OPL`.
 
-`OPL` now ships a local direct product-entry shell whose public front door centers on the GUI front desk, with `opl`, `opl "<request...>"`, and `opl web` as shell shortcuts or companion surfaces around the same entry.
+`OPL` now ships a local direct product-entry shell whose default front door is `opl`, while the GUI front desk remains the primary public companion entry and `opl "<request...>"` plus `opl web` stay as quick-ask or companion surfaces around the same entry.
 It follows `external kernel, managed by OPL product packaging`, not requiring users to manually install and understand `Hermes-Agent`.
-Current primary entry surfaces include `opl frontdesk bootstrap`, `opl`, `opl "<request...>"`, `opl ask`, `opl chat`, `opl resume`, `opl sessions`, `opl logs`, `opl repair-hermes-gateway`, and `opl web`.
+Current primary entry surfaces include `opl frontdesk bootstrap`, `opl`, `opl "<request...>"`, `opl doctor`, `opl ask`, `opl chat`, `opl resume`, `opl sessions`, `opl logs`, `opl repair-hermes-gateway`, and `opl web`.
 `Paperclip` stays as an optional downstream control-plane bridge, and `LibreChat` stays as an optional compatibility / fallback lane.
+Hosted productization is still not landed.
 
 Current top-level entry surfaces therefore already include a local `opl` shell and a local web front desk pilot.
 Current family management surfaces include `workspace-catalog`, `workspace-bind|activate|archive`, `domain-manifests`, `session-ledger`, and `dashboard`.

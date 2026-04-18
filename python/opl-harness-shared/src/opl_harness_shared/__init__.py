@@ -40,6 +40,7 @@ from .managed_runtime import (
     validate_managed_runtime_contract,
 )
 from .product_entry_companions import (
+    build_family_product_entry_manifest,
     build_product_entry_start,
     build_product_entry_overview,
     build_product_entry_quickstart,
@@ -92,6 +93,7 @@ __all__ = [
     "build_automation_descriptor",
     "build_checkpoint_summary",
     "build_explicit_checkpoint_policy",
+    "build_family_product_entry_manifest",
     "build_family_action_graph",
     "build_family_action_graph_edge",
     "build_family_action_graph_human_gate",

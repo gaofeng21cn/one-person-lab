@@ -39,6 +39,12 @@ def _require_string_list(value: object, field: str) -> list[str]:
     return [_require_string(entry, f"{field}[{index}]") for index, entry in enumerate(value)]
 
 
+def _optional_string_list(value: object, field: str) -> list[str] | None:
+    if not isinstance(value, list):
+        return None
+    return [_require_string(entry, f"{field}[{index}]") for index, entry in enumerate(value)]
+
+
 def _normalize_resume_contract(value: object, field: str) -> dict[str, str]:
     payload = _require_mapping(value, field)
     normalized = {
@@ -137,13 +143,13 @@ def _normalize_frontdesk_summary(value: object, field: str) -> dict[str, str]:
     }
 
 
-def _merge_extra_payload(base: dict[str, Any], extra_payload: object | None) -> dict[str, Any]:
+def _merge_extra_payload(base: dict[str, Any], extra_payload: object | None, *, surface_kind: str) -> dict[str, Any]:
     if extra_payload is None:
         return base
     normalized_extra_payload = _clone_mapping(extra_payload, "extra_payload")
     for key in normalized_extra_payload:
         if key in base:
-            raise ValueError(f"product frontdesk extra_payload 不允许覆盖核心字段: {key}")
+            raise ValueError(f"{surface_kind} extra_payload 不允许覆盖核心字段: {key}")
     return {
         **base,
         **normalized_extra_payload,
@@ -336,4 +342,83 @@ def build_product_frontdesk(
         "summary": _normalize_frontdesk_summary(summary, "summary"),
         "notes": _require_string_list(notes, "notes"),
     }
-    return _merge_extra_payload(payload, extra_payload)
+    return _merge_extra_payload(payload, extra_payload, surface_kind="product frontdesk")
+
+
+def build_family_product_entry_manifest(
+    *,
+    manifest_kind: str,
+    target_domain_id: str,
+    formal_entry: Mapping[str, Any],
+    workspace_locator: Mapping[str, Any],
+    product_entry_shell: Mapping[str, Any],
+    shared_handoff: Mapping[str, Any],
+    product_entry_start: Mapping[str, Any],
+    family_orchestration: Mapping[str, Any],
+    runtime: Mapping[str, Any] | None = None,
+    managed_runtime_contract: Mapping[str, Any] | None = None,
+    repo_mainline: Mapping[str, Any] | None = None,
+    product_entry_status: Mapping[str, Any] | None = None,
+    frontdesk_surface: Mapping[str, Any] | None = None,
+    operator_loop_surface: Mapping[str, Any] | None = None,
+    operator_loop_actions: Mapping[str, Any] | None = None,
+    recommended_shell: str | None = None,
+    recommended_command: str | None = None,
+    runtime_inventory: Mapping[str, Any] | None = None,
+    task_lifecycle: Mapping[str, Any] | None = None,
+    skill_catalog: Mapping[str, Any] | None = None,
+    automation: Mapping[str, Any] | None = None,
+    product_entry_overview: Mapping[str, Any] | None = None,
+    product_entry_preflight: Mapping[str, Any] | None = None,
+    product_entry_readiness: Mapping[str, Any] | None = None,
+    product_entry_quickstart: Mapping[str, Any] | None = None,
+    remaining_gaps: list[str] | None = None,
+    notes: list[str] | None = None,
+    extra_payload: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "surface_kind": "product_entry_manifest",
+        "manifest_version": 2,
+        "manifest_kind": _require_string(manifest_kind, "manifest_kind"),
+        "target_domain_id": _require_string(target_domain_id, "target_domain_id"),
+        "formal_entry": _clone_mapping(formal_entry, "formal_entry"),
+        "workspace_locator": _clone_mapping(workspace_locator, "workspace_locator"),
+        "product_entry_shell": _clone_mapping(product_entry_shell, "product_entry_shell"),
+        "shared_handoff": _clone_mapping(shared_handoff, "shared_handoff"),
+        "product_entry_start": _clone_mapping(product_entry_start, "product_entry_start"),
+        "family_orchestration": _clone_mapping(family_orchestration, "family_orchestration"),
+    }
+
+    for key, value in (
+        ("runtime", runtime),
+        ("managed_runtime_contract", managed_runtime_contract),
+        ("repo_mainline", repo_mainline),
+        ("product_entry_status", product_entry_status),
+        ("frontdesk_surface", frontdesk_surface),
+        ("operator_loop_surface", operator_loop_surface),
+        ("operator_loop_actions", operator_loop_actions),
+        ("runtime_inventory", runtime_inventory),
+        ("task_lifecycle", task_lifecycle),
+        ("skill_catalog", skill_catalog),
+        ("automation", automation),
+        ("product_entry_overview", product_entry_overview),
+        ("product_entry_preflight", product_entry_preflight),
+        ("product_entry_readiness", product_entry_readiness),
+        ("product_entry_quickstart", product_entry_quickstart),
+    ):
+        if value is not None:
+            payload[key] = _clone_mapping(value, key)
+
+    resolved_recommended_shell = _non_empty_text(recommended_shell)
+    if resolved_recommended_shell is not None:
+        payload["recommended_shell"] = resolved_recommended_shell
+    resolved_recommended_command = _non_empty_text(recommended_command)
+    if resolved_recommended_command is not None:
+        payload["recommended_command"] = resolved_recommended_command
+    normalized_remaining_gaps = _optional_string_list(remaining_gaps, "remaining_gaps")
+    if normalized_remaining_gaps is not None:
+        payload["remaining_gaps"] = normalized_remaining_gaps
+    normalized_notes = _optional_string_list(notes, "notes")
+    if normalized_notes is not None:
+        payload["notes"] = normalized_notes
+    return _merge_extra_payload(payload, extra_payload, surface_kind="product entry manifest")
