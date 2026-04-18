@@ -130,6 +130,63 @@
     "runtime_state_root": "/fixtures/redcube/runtime-state",
     "session_store_root": "/fixtures/redcube/runtime-state/product-entry-sessions"
   },
+  "schema_ref": "contracts/schemas/v1/product-entry-manifest.schema.json",
+  "domain_entry_contract": {
+    "entry_adapter": "RedCubeDomainEntry",
+    "service_safe_surface_kind": "redcube_service_safe_domain_entry",
+    "product_entry_builder_command": "redcube product invoke",
+    "supported_entry_modes": [
+      "redcube_product_entry",
+      "opl_gateway"
+    ],
+    "product_entry_kind": "redcube_product_entry",
+    "supported_commands": [
+      "redcube product frontdesk",
+      "redcube product invoke",
+      "redcube product session"
+    ],
+    "command_contracts": [
+      {
+        "command": "redcube product frontdesk",
+        "required_fields": [],
+        "optional_fields": []
+      },
+      {
+        "command": "redcube product invoke",
+        "required_fields": [
+          "entry_session_id",
+          "overlay",
+          "topic_id",
+          "deliverable_id"
+        ],
+        "optional_fields": []
+      },
+      {
+        "command": "redcube product session",
+        "required_fields": [
+          "entry_session_id"
+        ],
+        "optional_fields": []
+      }
+    ]
+  },
+  "gateway_interaction_contract": {
+    "surface_kind": "gateway_interaction_contract",
+    "frontdoor_owner": "opl_gateway_or_domain_gui",
+    "user_interaction_mode": "natural_language_frontdoor",
+    "user_commands_required": false,
+    "command_surfaces_for_agent_consumption_only": true,
+    "shared_downstream_entry": "RedCubeDomainEntry",
+    "shared_handoff_envelope": [
+      "target_domain_id",
+      "task_intent",
+      "entry_mode",
+      "workspace_locator",
+      "runtime_session_contract",
+      "return_surface_contract",
+      "entry_session_contract"
+    ]
+  },
   "managed_runtime_contract": {
     "shared_contract_ref": "contracts/opl-gateway/managed-runtime-three-layer-contract.json",
     "runtime_owner": "upstream_hermes_agent",

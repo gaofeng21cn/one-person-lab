@@ -82,6 +82,63 @@
       "current_owner_line": "external Hermes substrate + MedAutoGrant authority surfaces",
       "runtime_owner": "upstream_hermes_agent"
     },
+    "schema_ref": "contracts/schemas/v1/product-entry-manifest.schema.json",
+    "domain_entry_contract": {
+      "entry_adapter": "MedAutoGrantDomainEntry",
+      "service_safe_surface_kind": "grant_direct_entry",
+      "product_entry_builder_command": "build-product-entry",
+      "supported_entry_modes": [
+        "direct",
+        "opl-handoff"
+      ],
+      "product_entry_kind": "med_auto_grant_product_entry",
+      "supported_commands": [
+        "product-frontdesk",
+        "grant-user-loop",
+        "grant-direct-entry"
+      ],
+      "command_contracts": [
+        {
+          "command": "product-frontdesk",
+          "required_fields": [
+            "input_path"
+          ],
+          "optional_fields": []
+        },
+        {
+          "command": "grant-user-loop",
+          "required_fields": [
+            "input_path",
+            "task_intent"
+          ],
+          "optional_fields": []
+        },
+        {
+          "command": "grant-direct-entry",
+          "required_fields": [
+            "input_path",
+            "task_intent"
+          ],
+          "optional_fields": []
+        }
+      ]
+    },
+    "gateway_interaction_contract": {
+      "surface_kind": "gateway_interaction_contract",
+      "frontdoor_owner": "opl_gateway_or_domain_gui",
+      "user_interaction_mode": "natural_language_frontdoor",
+      "user_commands_required": false,
+      "command_surfaces_for_agent_consumption_only": true,
+      "shared_downstream_entry": "MedAutoGrantDomainEntry",
+      "shared_handoff_envelope": [
+        "target_domain_id",
+        "task_intent",
+        "entry_mode",
+        "workspace_locator",
+        "runtime_session_contract",
+        "return_surface_contract"
+      ]
+    },
     "managed_runtime_contract": {
       "shared_contract_ref": "contracts/opl-gateway/managed-runtime-three-layer-contract.json",
       "runtime_owner": "upstream_hermes_agent",

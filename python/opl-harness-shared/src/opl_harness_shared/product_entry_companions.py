@@ -528,6 +528,9 @@ def build_product_frontdesk(
     entry_surfaces: Mapping[str, Any],
     summary: Mapping[str, Any],
     notes: list[str],
+    schema_ref: str | None = None,
+    domain_entry_contract: Mapping[str, Any] | None = None,
+    gateway_interaction_contract: Mapping[str, Any] | None = None,
     extra_payload: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
@@ -551,6 +554,16 @@ def build_product_frontdesk(
         "summary": _normalize_frontdesk_summary(summary, "summary"),
         "notes": _require_string_list(notes, "notes"),
     }
+    resolved_schema_ref = _non_empty_text(schema_ref)
+    if resolved_schema_ref is not None:
+        payload["schema_ref"] = resolved_schema_ref
+    if domain_entry_contract is not None:
+        payload["domain_entry_contract"] = _clone_mapping(domain_entry_contract, "domain_entry_contract")
+    if gateway_interaction_contract is not None:
+        payload["gateway_interaction_contract"] = _clone_mapping(
+            gateway_interaction_contract,
+            "gateway_interaction_contract",
+        )
     return _merge_extra_payload(payload, extra_payload, surface_kind="product frontdesk")
 
 
@@ -633,6 +646,20 @@ def build_family_product_frontdesk(
             ),
         },
         notes=_require_string_list(notes, "notes"),
+        schema_ref=_non_empty_text(manifest.get("schema_ref")),
+        domain_entry_contract=(
+            _clone_mapping(manifest.get("domain_entry_contract"), "product_entry_manifest.domain_entry_contract")
+            if isinstance(manifest.get("domain_entry_contract"), Mapping)
+            else None
+        ),
+        gateway_interaction_contract=(
+            _clone_mapping(
+                manifest.get("gateway_interaction_contract"),
+                "product_entry_manifest.gateway_interaction_contract",
+            )
+            if isinstance(manifest.get("gateway_interaction_contract"), Mapping)
+            else None
+        ),
         extra_payload=extra_payload,
     )
 
@@ -666,6 +693,9 @@ def build_family_product_entry_manifest(
     product_entry_quickstart: Mapping[str, Any] | None = None,
     remaining_gaps: list[str] | None = None,
     notes: list[str] | None = None,
+    schema_ref: str | None = None,
+    domain_entry_contract: Mapping[str, Any] | None = None,
+    gateway_interaction_contract: Mapping[str, Any] | None = None,
     extra_payload: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
@@ -713,6 +743,16 @@ def build_family_product_entry_manifest(
     normalized_notes = _optional_string_list(notes, "notes")
     if normalized_notes is not None:
         payload["notes"] = normalized_notes
+    resolved_schema_ref = _non_empty_text(schema_ref)
+    if resolved_schema_ref is not None:
+        payload["schema_ref"] = resolved_schema_ref
+    if domain_entry_contract is not None:
+        payload["domain_entry_contract"] = _clone_mapping(domain_entry_contract, "domain_entry_contract")
+    if gateway_interaction_contract is not None:
+        payload["gateway_interaction_contract"] = _clone_mapping(
+            gateway_interaction_contract,
+            "gateway_interaction_contract",
+        )
     return _merge_extra_payload(payload, extra_payload, surface_kind="product entry manifest")
 
 

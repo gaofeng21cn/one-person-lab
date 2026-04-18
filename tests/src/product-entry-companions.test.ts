@@ -506,6 +506,34 @@ test('family product frontdesk builder projects manifest core into canonical fro
     product_entry_readiness: readiness,
     product_entry_quickstart: quickstart,
     family_orchestration: familyOrchestration,
+    schema_ref: 'contracts/schemas/v1/product-entry-manifest.schema.json',
+    domain_entry_contract: {
+      entry_adapter: 'RedCubeDomainEntry',
+      service_safe_surface_kind: 'redcube_service_safe_domain_entry',
+      product_entry_builder_command: 'redcube product invoke',
+      supported_commands: ['redcube product frontdesk', 'redcube product invoke'],
+      command_contracts: [
+        {
+          command: 'redcube product frontdesk',
+          required_fields: [],
+          optional_fields: [],
+        },
+        {
+          command: 'redcube product invoke',
+          required_fields: ['entry_session_id'],
+          optional_fields: ['overlay'],
+        },
+      ],
+    },
+    gateway_interaction_contract: {
+      surface_kind: 'gateway_interaction_contract',
+      frontdoor_owner: 'opl_gateway_or_domain_gui',
+      user_interaction_mode: 'natural_language_frontdoor',
+      user_commands_required: false,
+      command_surfaces_for_agent_consumption_only: true,
+      shared_downstream_entry: 'RedCubeDomainEntry',
+      shared_handoff_envelope: ['entry_session_contract'],
+    },
   });
 
   const manifestPayload = manifest as typeof manifest & {
@@ -539,6 +567,11 @@ test('family product frontdesk builder projects manifest core into canonical fro
   assert.equal(frontdesk.summary.frontdesk_command, 'redcube product frontdesk');
   assert.equal(frontdesk.summary.recommended_command, 'redcube product invoke');
   assert.equal(frontdesk.summary.operator_loop_command, 'redcube product invoke');
+  assert.equal(manifest.schema_ref, 'contracts/schemas/v1/product-entry-manifest.schema.json');
+  assert.equal(manifest.domain_entry_contract?.entry_adapter, 'RedCubeDomainEntry');
+  assert.equal(manifest.gateway_interaction_contract?.frontdoor_owner, 'opl_gateway_or_domain_gui');
+  assert.equal(frontdesk.domain_entry_contract?.entry_adapter, 'RedCubeDomainEntry');
+  assert.equal(frontdesk.gateway_interaction_contract?.shared_downstream_entry, 'RedCubeDomainEntry');
 });
 
 test('product entry companion validators normalize shared family payloads', () => {

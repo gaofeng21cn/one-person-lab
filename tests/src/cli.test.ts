@@ -3661,6 +3661,14 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
       1,
     );
     assert.equal(
+      dashboardOutput.dashboard.front_desk.domain_entry_parity.summary.domain_entry_contract_ready_count,
+      3,
+    );
+    assert.equal(
+      dashboardOutput.dashboard.front_desk.domain_entry_parity.summary.gateway_interaction_contract_ready_count,
+      3,
+    );
+    assert.equal(
       dashboardOutput.dashboard.front_desk.domain_entry_parity.summary.ready_for_opl_start_count,
       3,
     );
@@ -3682,16 +3690,22 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(grantParity.ready_for_opl_start, true);
     assert.equal(grantParity.ready_for_domain_handoff, true);
     assert.equal(grantParity.product_entry_readiness_verdict, 'agent_assisted_ready_not_product_grade');
+    assert.equal(grantParity.domain_entry_contract_status, 'ready');
+    assert.equal(grantParity.gateway_interaction_contract_status, 'ready');
     assert.equal(scienceParity.entry_parity_status, 'partial');
     assert.equal(scienceParity.direct_entry_locator_status, 'missing');
     assert.equal(scienceParity.ready_for_opl_start, true);
     assert.equal(scienceParity.ready_for_domain_handoff, true);
     assert.equal(scienceParity.product_entry_readiness_verdict, 'runtime_ready_not_standalone_product');
+    assert.equal(scienceParity.domain_entry_contract_status, 'ready');
+    assert.equal(scienceParity.gateway_interaction_contract_status, 'ready');
     assert.equal(redcubeParity.entry_parity_status, 'aligned');
     assert.equal(redcubeParity.direct_entry_locator_status, 'ready');
     assert.equal(redcubeParity.ready_for_opl_start, true);
     assert.equal(redcubeParity.ready_for_domain_handoff, true);
     assert.equal(redcubeParity.product_entry_readiness_verdict, 'service_surface_ready_not_managed_product');
+    assert.equal(redcubeParity.domain_entry_contract_status, 'ready');
+    assert.equal(redcubeParity.gateway_interaction_contract_status, 'ready');
     assert.equal(redcubeParity.recommended_start_command, 'redcube product frontdesk');
     assert.equal(
       redcubeParity.recommended_check_command,
@@ -3741,6 +3755,8 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(grantEntry.skill_catalog.surface_kind, 'skill_catalog');
     assert.equal(grantEntry.skill_catalog_skill_count, 2);
     assert.equal(grantEntry.skill_catalog_supported_commands[1], 'grant-user-loop');
+    assert.equal(grantEntry.domain_entry_contract.entry_adapter, 'MedAutoGrantDomainEntry');
+    assert.equal(grantEntry.gateway_interaction_contract.frontdoor_owner, 'opl_gateway_or_domain_gui');
     assert.equal(grantEntry.automation.surface_kind, 'automation');
     assert.equal(grantEntry.automation_count, 2);
     assert.equal(
@@ -3763,6 +3779,8 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(scienceEntry.skill_catalog.surface_kind, 'skill_catalog');
     assert.equal(scienceEntry.skill_catalog_skill_count, 2);
     assert.equal(scienceEntry.skill_catalog_supported_commands[0], 'product-frontdesk');
+    assert.equal(scienceEntry.domain_entry_contract.entry_adapter, 'MedAutoScienceDomainEntry');
+    assert.equal(scienceEntry.gateway_interaction_contract.shared_downstream_entry, 'MedAutoScienceDomainEntry');
     assert.equal(scienceEntry.automation.surface_kind, 'automation');
     assert.equal(scienceEntry.automation_count, 2);
     assert.equal(scienceEntry.product_entry_readiness_verdict, 'runtime_ready_not_standalone_product');
@@ -3833,6 +3851,8 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(recommendedEntry.skill_catalog.surface_kind, 'skill_catalog');
     assert.equal(recommendedEntry.skill_catalog_skill_count, 2);
     assert.equal(recommendedEntry.skill_catalog_supported_commands[3], 'product-session');
+    assert.equal(recommendedEntry.domain_entry_contract.entry_adapter, 'RedCubeDomainEntry');
+    assert.equal(recommendedEntry.gateway_interaction_contract.frontdoor_owner, 'opl_gateway_or_domain_gui');
     assert.equal(recommendedEntry.automation.surface_kind, 'automation');
     assert.equal(recommendedEntry.automation_count, 2);
     assert.equal(
@@ -3871,6 +3891,11 @@ test('domain-manifests resolves real family manifest fixtures while workspace-ca
     assert.equal(wiringOutput.frontdesk_domain_wiring.domain_entry_parity.summary.task_lifecycle_ready_count, 3);
     assert.equal(wiringOutput.frontdesk_domain_wiring.domain_entry_parity.summary.skill_catalog_ready_count, 3);
     assert.equal(wiringOutput.frontdesk_domain_wiring.domain_entry_parity.summary.automation_ready_count, 3);
+    assert.equal(wiringOutput.frontdesk_domain_wiring.domain_entry_parity.summary.domain_entry_contract_ready_count, 3);
+    assert.equal(
+      wiringOutput.frontdesk_domain_wiring.domain_entry_parity.summary.gateway_interaction_contract_ready_count,
+      3,
+    );
     const grantBindingParity = wiringOutput.frontdesk_domain_wiring.domain_binding_parity.projects.find(
       (entry: { project_id: string }) => entry.project_id === 'medautogrant',
     );
