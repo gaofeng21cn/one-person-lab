@@ -316,19 +316,19 @@
 历史上的 `Codex Host` / `OMX` 分工现在只保留在第三层历史迁移参考文档中，不再定义这份公开 gateway 文档的当前语义。
 在这条基线里，discovery contract 通过下面这些命令暴露：
 
-- `list-workstreams`
-- `get-workstream`
-- `list-domains`
-- `get-domain`
-- `list-surfaces`
-- `get-surface`
-- `resolve-request-surface`
-- `explain-domain-boundary`
+- `opl contract workstreams`
+- `opl contract workstream <workstream_id>`
+- `opl contract domains`
+- `opl contract domain <domain_id>`
+- `opl contract surfaces`
+- `opl contract surface <surface_id>`
+- `opl domain resolve-request`
+- `opl domain explain-boundary`
 
 配套 transport 命令还包括：
 
-- `help`
-- `validate-contracts`
+- `opl help`
+- `opl contract validate`
 
 docs-site navigation 与未来的 MCP discovery tools 仍然可以作为兼容 transport，只要共享同一份 contract。
 

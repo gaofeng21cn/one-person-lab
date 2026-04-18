@@ -22,15 +22,19 @@
 - 家族级入口真相继续分成 `operator entry`、`agent entry`、`product entry` 三层。
 - 家族默认执行器继续冻结在 `Codex CLI autonomous`，沿用本地 `Codex` 默认配置。
 - `Hermes-native` 继续只作为实验路线存在，目标是完整的 Hermes AIAgent agent loop，不是一条 chat relay，也不是一步一步 chat。
-
 - `opl frontdesk bootstrap --path <workspace>` 准备本地 `OPL Atlas` Desktop 壳，并把当前 workspace 接入 `OPL` 模块与项目 registry。
 - `opl web` 是同一产品壳的本地浏览器 companion surface。
-- `opl`、`opl "<request...>"`、`opl start --project <project_id> [--mode <mode_id>]`、`opl doctor`、`opl ask`、`opl chat`、`opl resume`、`opl sessions` 与 `opl logs` 都围绕同一产品入口。
+- `opl`、`opl "<request...>"`、`opl start --project <project_id> [--mode <mode_id>]`、`opl doctor`、`opl ask`、`opl chat` 与 `opl web` 共同组成当前顶层产品前门。
 - `opl frontdesk-librechat-install|status|start|stop|open` 与 `opl frontdesk-librechat-package` 保留为 hidden compatibility surface，默认入口保持 GUI 主路径。
 - `opl ask` 默认走 `Codex`；`opl chat`、`opl resume`、显式 executor 配置和 GUI 模式切换可以进入 `Hermes-Agent` 备用在线路径。
-- `workspace-catalog`、`workspace-bind|activate|archive` 与 `domain-manifests` 组成模块发现与绑定面。
-- `runtime-status`、`session-ledger` 与 `dashboard` 组成运行观察面。
-- `frontdesk-entry-guide`、`frontdesk-readiness` 与 `frontdesk-domain-wiring` 组成 GUI 启动与 readiness 面。
+- 当前 grouped command matrix 已经固定成：
+  - `contract ...`：`validate|workstreams|workstream|domains|domain|surfaces|surface|handoff-envelope`
+  - `domain ...`：`manifests|launch|resolve-request|explain-boundary`
+  - `status ...`：`workspace|runtime|dashboard`
+  - `workspace ...`：`projects|list|bind|activate|archive`
+  - `frontdesk ...`：`manifest|entry-guide|readiness|domain-wiring|hosted-bundle|hosted-package|service *|bootstrap`
+  - `session ...`：`list|resume|logs|ledger`
+  - `runtime repair-gateway`
 - GUI 的任务边栏应把 progress 状态和 files 交付区投射到当前 workspace。
 - `opl <request...>` 继续作为同一入口之上的 quick ask 路径。
 - 本地 web front desk pilot 已经落地；hosted / web 前台真相：`LibreChat-first` pilot 仍未落地为最终托管前台，比较基线包含 `Chatbot UI`、`LibreChat`、`Open WebUI` 与 `LobeChat`。

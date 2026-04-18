@@ -13,21 +13,32 @@
 `User -> opl front desk / quick ask / ops shell -> OPL Gateway -> Hermes Kernel -> Domain Handoff -> Domain Gateway / Domain Product Entry -> Domain Harness OS -> Domain Repository`
 
 这说明当前 `OPL` 已经拥有本地 direct product entry 的第一版入口壳；
-它不再只是 `opl doctor / ask / chat` 三条显式命令，而是已经具备：
+它现在通过一组清晰分层的 grouped command matrix 暴露正式壳面：
 
 - `opl`
   - 默认进入 family-level front desk
 - `opl <request...>`
   - 默认走 quick ask
-- `opl resume / sessions / logs / repair-hermes-gateway`
-  - 提供 landed local shell 的会话与 runtime 运维界面
-- `opl frontdesk-manifest / frontdesk-domain-wiring / frontdesk-hosted-bundle / frontdesk-hosted-package / frontdesk-librechat-package / session-ledger / handoff-envelope`
-  - 提供 hosted-friendly shell contract、hosted-friendly family wiring truth、hosted-pilot-ready shell bundle、self-hostable hosted pilot package、真实的 LibreChat-first hosted shell pilot package、OPL-managed session attribution 与 family handoff contract
-  - 当前 hosted shell bootstrap discovery 顺序固定为 `opl_frontdesk_entry_guide -> opl_frontdesk_readiness -> opl_workspace_catalog -> opl_session_ledger -> opl_project_progress`
-- `opl workspace-catalog / workspace-bind|activate|archive`
+- `opl start / doctor / ask / chat / web`
+  - 提供顶层产品前门、健康检查、one-shot ask、Hermes interactive lane 与本地浏览器 companion
+- `opl contract validate|workstreams|workstream|domains|domain|surfaces|surface|handoff-envelope`
+  - 提供 machine-readable gateway contracts、surface catalog 与 family handoff bundle
+- `opl domain manifests|launch|resolve-request|explain-boundary`
+  - 提供 admitted domain manifests、direct-entry locator launch、顶层请求解析与边界解释
+- `opl status workspace|runtime|dashboard`
+  - 提供 workspace、runtime 与 frontdesk aggregate 观察面
+- `opl workspace projects|list|bind|activate|archive`
   - 提供 file-backed workspace registry 与顶层到 domain 之间的 direct-entry locator 管理
+- `opl frontdesk manifest|entry-guide|readiness|domain-wiring|hosted-bundle|hosted-package|service *|bootstrap`
+  - 提供 hosted-friendly shell contract、family wiring truth、pilot bundle、hosted package、服务管理与桌面壳 bootstrap
+- `opl session list|resume|logs|ledger`
+  - 提供 landed local shell 的会话、日志与 OPL-owned session attribution
+- `opl runtime repair-gateway`
+  - 提供 Hermes gateway 修复入口
 - `opl web`
   - 提供 browser-based front desk，并把 workspace registry、managed session ledger 与 handoff-aware control room 一并带到前台
+
+代表性显式命令包括 `opl contract validate`、`opl domain manifests`、`opl status runtime`、`opl workspace bind`、`opl frontdesk entry-guide`、`opl session ledger` 与 `opl runtime repair-gateway`。
 
 但它还不是 managed hosted / web 形态的完整产品前台。
 当前这层 hosted / web 路线已经先落下了真实的 `LibreChat-first` pilot 壳，长期仍回到 `OPL` 自有 web front desk。

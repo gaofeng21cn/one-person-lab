@@ -217,7 +217,7 @@ function parseKeyValueArgs(
 
   if (!parsed.intent || !parsed.target || !parsed.goal) {
     throw buildUsageError(
-      'resolve-request-surface and explain-domain-boundary require --intent, --target, and --goal.',
+      'domain resolve-request and domain explain-boundary require --intent, --target, and --goal.',
       spec,
       { required: ['--intent', '--target', '--goal'] },
     );
@@ -430,7 +430,7 @@ function parseSessionsArgs(
         parsed.source = value;
         break;
       default:
-        throw buildUsageError(`Unknown option for sessions: ${token}.`, spec, {
+        throw buildUsageError(`Unknown option for session list: ${token}.`, spec, {
           option: token,
         });
     }
@@ -485,7 +485,7 @@ function parseLogsArgs(
         parsed.sessionId = value;
         break;
       default:
-        throw buildUsageError(`Unknown option for logs: ${token}.`, spec, {
+        throw buildUsageError(`Unknown option for session logs: ${token}.`, spec, {
           option: token,
         });
     }
@@ -523,7 +523,7 @@ function parseWorkspaceStatusArgs(
         parsed.workspacePath = value;
         break;
       default:
-        throw buildUsageError(`Unknown option for workspace-status: ${token}.`, spec, {
+        throw buildUsageError(`Unknown option for status workspace: ${token}.`, spec, {
           option: token,
         });
     }
@@ -561,7 +561,7 @@ function parseRuntimeStatusArgs(
         parsed.limit = parsePositiveInteger(token, value, spec);
         break;
       default:
-        throw buildUsageError(`Unknown option for runtime-status: ${token}.`, spec, {
+        throw buildUsageError(`Unknown option for status runtime: ${token}.`, spec, {
           option: token,
         });
     }
@@ -599,7 +599,7 @@ function parseSessionLedgerArgs(
         parsed.limit = parsePositiveInteger(token, value, spec);
         break;
       default:
-        throw buildUsageError(`Unknown option for session-ledger: ${token}.`, spec, {
+        throw buildUsageError(`Unknown option for session ledger: ${token}.`, spec, {
           option: token,
         });
     }
@@ -736,7 +736,7 @@ function parseLaunchDomainArgs(
         parsed.strategy = value as DomainLaunchStrategy;
         break;
       default:
-        throw buildUsageError(`Unknown option for launch-domain: ${token}.`, spec, {
+        throw buildUsageError(`Unknown option for domain launch: ${token}.`, spec, {
           option: token,
         });
     }
@@ -1477,20 +1477,20 @@ async function main() {
       handler: (args) => buildWorkspaceStatus(parseWorkspaceStatusArgs(args, commandSpecs['workspace-status'])),
     },
     'runtime-status': {
-      usage: 'opl runtime-status [--limit <n>]',
+      usage: 'opl status runtime [--limit <n>]',
       summary: 'Show Hermes runtime health, recent sessions, and runtime-level process resource usage.',
-      examples: ['opl runtime-status', 'opl runtime-status --limit 10'],
+      examples: ['opl status runtime', 'opl status runtime --limit 10'],
       handler: (args) => {
         const parsed = parseRuntimeStatusArgs(args, commandSpecs['runtime-status']);
         return buildRuntimeStatus({ sessionsLimit: parsed.limit });
       },
     },
     dashboard: {
-      usage: 'opl dashboard [--path <workspace_path>] [--sessions-limit <n>]',
+      usage: 'opl status dashboard [--path <workspace_path>] [--sessions-limit <n>]',
       summary: 'Aggregate the current OPL front-desk management view across projects, workspace, and runtime.',
       examples: [
-        'opl dashboard',
-        'opl dashboard --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
+        'opl status dashboard',
+        'opl status dashboard --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
       ],
       handler: (args) => buildFrontDeskDashboard(getContracts(), parseDashboardArgs(args, commandSpecs.dashboard)),
     },
@@ -1519,19 +1519,19 @@ async function main() {
     },
     'launch-domain': {
       usage:
-        'opl launch-domain --project <project_id> [--path <workspace_path>] [--strategy <auto|open_url|spawn_command>] [--dry-run]',
+        'opl domain launch --project <project_id> [--path <workspace_path>] [--strategy <auto|open_url|spawn_command>] [--dry-run]',
       summary:
         'Invoke one already-bound domain direct-entry locator without upgrading OPL into runtime ownership.',
       examples: [
-        'opl launch-domain --project redcube --dry-run',
-        'opl launch-domain --project redcube --strategy open_url',
-        'opl launch-domain --project med-autogrant --path /Users/gaofeng/workspace/med-autogrant --strategy spawn_command',
+        'opl domain launch --project redcube --dry-run',
+        'opl domain launch --project redcube --strategy open_url',
+        'opl domain launch --project med-autogrant --path /Users/gaofeng/workspace/med-autogrant --strategy spawn_command',
       ],
       handler: (args) => {
         const parsed = parseLaunchDomainArgs(args, commandSpecs['launch-domain']);
         if (!parsed.projectId) {
           throw buildUsageError(
-            'launch-domain requires --project.',
+            'domain launch requires --project.',
             commandSpecs['launch-domain'],
             { required: ['--project'] },
           );
@@ -1546,51 +1546,51 @@ async function main() {
       },
     },
     'domain-manifests': {
-      usage: 'opl domain-manifests',
+      usage: 'opl domain manifests',
       summary:
         'Resolve the active admitted-domain manifest_command bindings into machine-readable product-entry discovery surfaces.',
-      examples: ['opl domain-manifests'],
+      examples: ['opl domain manifests'],
       handler: (args) => {
         assertNoArgs(args, commandSpecs['domain-manifests']);
         return buildDomainManifestCatalog(getContracts());
       },
     },
     'frontdesk-manifest': {
-      usage: 'opl frontdesk-manifest',
+      usage: 'opl frontdesk manifest',
       summary:
         'Expose the hosted-friendly OPL front-desk shell contract without claiming hosted packaging is already landed.',
-      examples: ['opl frontdesk-manifest'],
+      examples: ['opl frontdesk manifest'],
       handler: (args) => {
         assertNoArgs(args, commandSpecs['frontdesk-manifest']);
         return buildFrontDeskManifest(getContracts());
       },
     },
     'frontdesk-entry-guide': {
-      usage: 'opl frontdesk-entry-guide',
+      usage: 'opl frontdesk entry-guide',
       summary:
         'Expose the machine-readable family entry guide that maps OPL workspace semantics onto domain start and workspace surfaces.',
-      examples: ['opl frontdesk-entry-guide'],
+      examples: ['opl frontdesk entry-guide'],
       handler: (args) => {
         assertNoArgs(args, commandSpecs['frontdesk-entry-guide']);
         return buildFrontDeskEntryGuide(getContracts());
       },
     },
     'frontdesk-readiness': {
-      usage: 'opl frontdesk-readiness [--path <workspace_path>] [--sessions-limit <n>]',
+      usage: 'opl frontdesk readiness [--path <workspace_path>] [--sessions-limit <n>]',
       summary:
         'Expose one operator-facing readiness surface for local shell, hosted pilot, and domain direct-entry parity.',
       examples: [
-        'opl frontdesk-readiness',
-        'opl frontdesk-readiness --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
+        'opl frontdesk readiness',
+        'opl frontdesk readiness --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
       ],
       handler: (args) =>
         buildFrontDeskReadiness(getContracts(), parseDashboardArgs(args, commandSpecs['frontdesk-readiness'])),
     },
     'frontdesk-domain-wiring': {
-      usage: 'opl frontdesk-domain-wiring',
+      usage: 'opl frontdesk domain-wiring',
       summary:
         'Expose the hosted-friendly family wiring surface that freezes runtime readiness, domain entry parity, and recommended entry surfaces.',
-      examples: ['opl frontdesk-domain-wiring'],
+      examples: ['opl frontdesk domain-wiring'],
       handler: (args) => {
         assertNoArgs(args, commandSpecs['frontdesk-domain-wiring']);
         return buildFrontDeskDomainWiring(getContracts());
@@ -1598,26 +1598,26 @@ async function main() {
     },
     'frontdesk-hosted-bundle': {
       usage:
-        'opl frontdesk-hosted-bundle [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>]',
+        'opl frontdesk hosted-bundle [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>]',
       summary:
         'Emit the hosted-pilot-ready front-desk bundle with base-path-aware entry and API endpoints.',
       examples: [
-        'opl frontdesk-hosted-bundle',
-        'opl frontdesk-hosted-bundle --host 0.0.0.0 --port 8787 --base-path /pilot/opl',
-        'opl frontdesk-hosted-bundle --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 9',
+        'opl frontdesk hosted-bundle',
+        'opl frontdesk hosted-bundle --host 0.0.0.0 --port 8787 --base-path /pilot/opl',
+        'opl frontdesk hosted-bundle --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 9',
       ],
       handler: (args) =>
         buildHostedPilotBundle(getContracts(), parseWebArgs(args, commandSpecs['frontdesk-hosted-bundle'])),
     },
     'frontdesk-hosted-package': {
       usage:
-        'opl frontdesk-hosted-package --output <dir> [--public-origin <origin>] [--host <host>] [--port <port>] [--sessions-limit <n>] [--base-path <base_path>]',
+        'opl frontdesk hosted-package --output <dir> [--public-origin <origin>] [--host <host>] [--port <port>] [--sessions-limit <n>] [--base-path <base_path>]',
       summary:
         'Export a self-hostable hosted pilot package with app snapshot, run script, service unit, and reverse-proxy assets.',
       examples: [
-        'opl frontdesk-hosted-package --output /tmp/opl-frontdesk-package',
-        'opl frontdesk-hosted-package --output /tmp/opl-frontdesk-package --public-origin https://opl.example.com --base-path /pilot/opl',
-        'opl frontdesk-hosted-package --output /tmp/opl-frontdesk-package --host 0.0.0.0 --port 8787 --sessions-limit 9',
+        'opl frontdesk hosted-package --output /tmp/opl-frontdesk-package',
+        'opl frontdesk hosted-package --output /tmp/opl-frontdesk-package --public-origin https://opl.example.com --base-path /pilot/opl',
+        'opl frontdesk hosted-package --output /tmp/opl-frontdesk-package --host 0.0.0.0 --port 8787 --sessions-limit 9',
       ],
       handler: (args) =>
         buildHostedPilotPackage(
@@ -1643,57 +1643,57 @@ async function main() {
     },
     'frontdesk-service-install': {
       usage:
-        'opl frontdesk-service-install [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>]',
+        'opl frontdesk service install [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>]',
       summary:
         'Install and bootstrap a local launchd-managed OPL web front-desk service for long-running direct entry.',
       examples: [
-        'opl frontdesk-service-install',
-        'opl frontdesk-service-install --port 8787',
-        'opl frontdesk-service-install --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 10 --base-path /pilot/opl',
+        'opl frontdesk service install',
+        'opl frontdesk service install --port 8787',
+        'opl frontdesk service install --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 10 --base-path /pilot/opl',
       ],
       handler: (args) => installFrontDeskService(getContracts(), parseWebArgs(args, commandSpecs['frontdesk-service-install'])),
     },
     'frontdesk-service-status': {
-      usage: 'opl frontdesk-service-status',
+      usage: 'opl frontdesk service status',
       summary:
         'Inspect whether the local launchd-managed OPL web front desk is installed, loaded, and reachable.',
-      examples: ['opl frontdesk-service-status'],
+      examples: ['opl frontdesk service status'],
       handler: (args) => {
         assertNoArgs(args, commandSpecs['frontdesk-service-status']);
         return getFrontDeskServiceStatus(getContracts());
       },
     },
     'frontdesk-service-start': {
-      usage: 'opl frontdesk-service-start',
+      usage: 'opl frontdesk service start',
       summary: 'Bootstrap and kickstart the installed local OPL web front-desk service.',
-      examples: ['opl frontdesk-service-start'],
+      examples: ['opl frontdesk service start'],
       handler: (args) => {
         assertNoArgs(args, commandSpecs['frontdesk-service-start']);
         return startFrontDeskService(getContracts());
       },
     },
     'frontdesk-service-stop': {
-      usage: 'opl frontdesk-service-stop',
+      usage: 'opl frontdesk service stop',
       summary: 'Stop the installed local OPL web front-desk service without removing its packaging files.',
-      examples: ['opl frontdesk-service-stop'],
+      examples: ['opl frontdesk service stop'],
       handler: (args) => {
         assertNoArgs(args, commandSpecs['frontdesk-service-stop']);
         return stopFrontDeskService(getContracts());
       },
     },
     'frontdesk-service-open': {
-      usage: 'opl frontdesk-service-open',
+      usage: 'opl frontdesk service open',
       summary: 'Open the configured local OPL web front-desk URL in the default browser.',
-      examples: ['opl frontdesk-service-open'],
+      examples: ['opl frontdesk service open'],
       handler: (args) => {
         assertNoArgs(args, commandSpecs['frontdesk-service-open']);
         return openFrontDeskService(getContracts());
       },
     },
     'frontdesk-service-uninstall': {
-      usage: 'opl frontdesk-service-uninstall',
+      usage: 'opl frontdesk service uninstall',
       summary: 'Remove the local launchd-managed OPL web front-desk service packaging.',
-      examples: ['opl frontdesk-service-uninstall'],
+      examples: ['opl frontdesk service uninstall'],
       handler: (args) => {
         assertNoArgs(args, commandSpecs['frontdesk-service-uninstall']);
         return uninstallFrontDeskService(getContracts());
@@ -1701,11 +1701,11 @@ async function main() {
     },
     'frontdesk-bootstrap': {
       usage:
-        'opl frontdesk-bootstrap [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>]',
+        'opl frontdesk bootstrap [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>]',
       summary:
         'Bootstrap the family front door in one shot: install the OPL Desktop shell, inherit the local Codex defaults, and bind the current workspace.',
       examples: [
-        'opl frontdesk-bootstrap --path /Users/gaofeng/workspace/Yang/NF-PitNET',
+        'opl frontdesk bootstrap --path /Users/gaofeng/workspace/Yang/NF-PitNET',
       ],
       handler: (args) =>
         bootstrapFrontDeskDesktop(
@@ -1841,27 +1841,27 @@ async function main() {
       handler: (args) => runProductEntryChat(parseProductEntryArgs(args, commandSpecs.chat), getContracts()),
     },
     resume: {
-      usage: 'opl resume <session_id>',
+      usage: 'opl session resume <session_id>',
       summary: 'Resume a Hermes-backed OPL session directly from the local product-entry shell.',
-      examples: ['opl resume run_7e2a41a19175465f809c0a7f151278ee'],
+      examples: ['opl session resume run_7e2a41a19175465f809c0a7f151278ee'],
       handler: (args) => runProductEntryResume(parseResumeArgs(args, commandSpecs.resume)),
     },
     sessions: {
-      usage: 'opl sessions [--limit <n>] [--source <source>]',
+      usage: 'opl session list [--limit <n>] [--source <source>]',
       summary: 'List recent Hermes sessions through a machine-readable OPL product-entry surface.',
-      examples: ['opl sessions', 'opl sessions --limit 10', 'opl sessions --limit 10 --source api_server'],
+      examples: ['opl session list', 'opl session list --limit 10', 'opl session list --limit 10 --source api_server'],
       handler: (args) => runProductEntrySessions(parseSessionsArgs(args, commandSpecs.sessions)),
     },
     logs: {
-      usage: 'opl logs [log_name] [--lines <n>] [--since <cursor>] [--level <level>] [--component <name>] [--session <id>]',
+      usage: 'opl session logs [log_name] [--lines <n>] [--since <cursor>] [--level <level>] [--component <name>] [--session <id>]',
       summary: 'Wrap Hermes log access in an OPL product-entry envelope for debugging and operations.',
-      examples: ['opl logs gateway', 'opl logs gateway --lines 50', 'opl logs worker --level info --component runtime'],
+      examples: ['opl session logs gateway', 'opl session logs gateway --lines 50', 'opl session logs worker --level info --component runtime'],
       handler: (args) => runProductEntryLogs(parseLogsArgs(args, commandSpecs.logs)),
     },
     'workspace-catalog': {
-      usage: 'opl workspace-catalog',
+      usage: 'opl workspace list',
       summary: 'Show the file-backed workspace registry for OPL and admitted domain project surfaces.',
-      examples: ['opl workspace-catalog'],
+      examples: ['opl workspace list'],
       handler: (args) => {
         assertNoArgs(args, commandSpecs['workspace-catalog']);
         return buildWorkspaceCatalog(getContracts());
@@ -1869,20 +1869,20 @@ async function main() {
     },
     'workspace-bind': {
       usage:
-        'opl workspace-bind --project <project_id> --path <workspace_path> [--label <label>] [--entry-command <command>] [--manifest-command <command>] [--entry-url <url>] [--workspace-root <dir>] [--profile <file>] [--input <file>]',
+        'opl workspace bind --project <project_id> --path <workspace_path> [--label <label>] [--entry-command <command>] [--manifest-command <command>] [--entry-url <url>] [--workspace-root <dir>] [--profile <file>] [--input <file>]',
       summary:
         'Bind and activate one workspace for an admitted project, optionally freezing or deriving its direct-entry locator.',
       examples: [
-        'opl workspace-bind --project redcube --path /Users/gaofeng/workspace/redcube-ai',
-        'opl workspace-bind --project redcube --path /Users/gaofeng/workspace/redcube-ai --entry-command "redcube-ai frontdesk" --manifest-command "redcube product manifest --workspace-root /Users/gaofeng/workspace/redcube-ai" --entry-url http://127.0.0.1:3310/redcube',
-        'opl workspace-bind --project medautoscience --path /Users/gaofeng/workspace/med-autoscience --profile /Users/gaofeng/workspace/med-autoscience/profiles/local.toml',
-        'opl workspace-bind --project medautogrant --path /Users/gaofeng/workspace/med-autogrant --input /Users/gaofeng/workspace/med-autogrant/examples/nsfc_workspace_p2c_critique.json',
+        'opl workspace bind --project redcube --path /Users/gaofeng/workspace/redcube-ai',
+        'opl workspace bind --project redcube --path /Users/gaofeng/workspace/redcube-ai --entry-command "redcube-ai frontdesk" --manifest-command "redcube product manifest --workspace-root /Users/gaofeng/workspace/redcube-ai" --entry-url http://127.0.0.1:3310/redcube',
+        'opl workspace bind --project medautoscience --path /Users/gaofeng/workspace/med-autoscience --profile /Users/gaofeng/workspace/med-autoscience/profiles/local.toml',
+        'opl workspace bind --project medautogrant --path /Users/gaofeng/workspace/med-autogrant --input /Users/gaofeng/workspace/med-autogrant/examples/nsfc_workspace_p2c_critique.json',
       ],
       handler: (args) => {
         const parsed = parseWorkspaceRegistryArgs(args, commandSpecs['workspace-bind']);
         if (!parsed.projectId || !parsed.workspacePath) {
           throw buildUsageError(
-            'workspace-bind requires both --project and --path.',
+            'workspace bind requires both --project and --path.',
             commandSpecs['workspace-bind'],
             { required: ['--project', '--path'] },
           );
@@ -1902,14 +1902,14 @@ async function main() {
       },
     },
     'workspace-activate': {
-      usage: 'opl workspace-activate --project <project_id> --path <workspace_path>',
+      usage: 'opl workspace activate --project <project_id> --path <workspace_path>',
       summary: 'Switch the active workspace binding for an admitted project.',
-      examples: ['opl workspace-activate --project redcube --path /Users/gaofeng/workspace/redcube-ai'],
+      examples: ['opl workspace activate --project redcube --path /Users/gaofeng/workspace/redcube-ai'],
       handler: (args) => {
         const parsed = parseWorkspaceRegistryArgs(args, commandSpecs['workspace-activate']);
         if (!parsed.projectId || !parsed.workspacePath) {
           throw buildUsageError(
-            'workspace-activate requires both --project and --path.',
+            'workspace activate requires both --project and --path.',
             commandSpecs['workspace-activate'],
             { required: ['--project', '--path'] },
           );
@@ -1922,14 +1922,14 @@ async function main() {
       },
     },
     'workspace-archive': {
-      usage: 'opl workspace-archive --project <project_id> --path <workspace_path>',
+      usage: 'opl workspace archive --project <project_id> --path <workspace_path>',
       summary: 'Archive one workspace binding so OPL no longer treats it as active or reusable.',
-      examples: ['opl workspace-archive --project redcube --path /Users/gaofeng/workspace/redcube-ai'],
+      examples: ['opl workspace archive --project redcube --path /Users/gaofeng/workspace/redcube-ai'],
       handler: (args) => {
         const parsed = parseWorkspaceRegistryArgs(args, commandSpecs['workspace-archive']);
         if (!parsed.projectId || !parsed.workspacePath) {
           throw buildUsageError(
-            'workspace-archive requires both --project and --path.',
+            'workspace archive requires both --project and --path.',
             commandSpecs['workspace-archive'],
             { required: ['--project', '--path'] },
           );
@@ -1942,25 +1942,25 @@ async function main() {
       },
     },
     'session-ledger': {
-      usage: 'opl session-ledger [--limit <n>]',
+      usage: 'opl session ledger [--limit <n>]',
       summary: 'Show OPL-managed session events with honest resource samples captured at event time.',
-      examples: ['opl session-ledger', 'opl session-ledger --limit 5'],
+      examples: ['opl session ledger', 'opl session ledger --limit 5'],
       handler: (args) => {
         const parsed = parseSessionLedgerArgs(args, commandSpecs['session-ledger']);
         return buildSessionLedger(parsed.limit);
       },
     },
     'repair-hermes-gateway': {
-      usage: 'opl repair-hermes-gateway',
+      usage: 'opl runtime repair-gateway',
       summary: 'Reinstall and recheck the Hermes gateway service used by the OPL product shell.',
-      examples: ['opl repair-hermes-gateway'],
+      examples: ['opl runtime repair-gateway'],
       handler: () => runProductEntryRepairHermesGateway(),
     },
     'resolve-request-surface': {
-      usage: 'opl resolve-request-surface --intent <intent> --target <target> --goal <goal> [--preferred-family <family>] [--request-kind <kind>]',
+      usage: 'opl domain resolve-request --intent <intent> --target <target> --goal <goal> [--preferred-family <family>] [--request-kind <kind>]',
       summary: 'Resolve a top-level request to an admitted workstream, domain boundary, or ambiguity envelope.',
       examples: [
-        'opl resolve-request-surface --intent presentation_delivery --target deliverable --goal "Prepare a defense-ready slide deck."',
+        'opl domain resolve-request --intent presentation_delivery --target deliverable --goal "Prepare a defense-ready slide deck."',
       ],
       handler: (args) => {
         const contracts = getContracts();
@@ -1973,11 +1973,11 @@ async function main() {
       },
     },
     'explain-domain-boundary': {
-      usage: 'opl explain-domain-boundary --intent <intent> --target <target> --goal <goal> [--preferred-family <family>] [--request-kind <kind>]',
+      usage: 'opl domain explain-boundary --intent <intent> --target <target> --goal <goal> [--preferred-family <family>] [--request-kind <kind>]',
       summary: 'Explain why a request routes to a domain, stays under definition, or stops at a family boundary.',
       examples: [
-        'opl explain-domain-boundary --intent create --target deliverable --goal "Prepare a xiaohongshu campaign pack." --preferred-family xiaohongshu',
-        'opl explain-domain-boundary --intent create --target deliverable --goal "Grant proposal reviewer simulation and revision planning."',
+        'opl domain explain-boundary --intent create --target deliverable --goal "Prepare a xiaohongshu campaign pack." --preferred-family xiaohongshu',
+        'opl domain explain-boundary --intent create --target deliverable --goal "Grant proposal reviewer simulation and revision planning."',
       ],
       handler: (args) => {
         const contracts = getContracts();
@@ -1991,12 +1991,12 @@ async function main() {
     },
     'handoff-envelope': {
       usage:
-        'opl handoff-envelope <request...> [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--workspace-path <path>]',
+        'opl contract handoff-envelope <request...> [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--workspace-path <path>]',
       summary:
         'Build a machine-readable OPL family handoff bundle for the current request and active workspace bindings.',
       examples: [
-        'opl handoff-envelope "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck',
-        'opl handoff-envelope "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck --workspace-path /Users/gaofeng/workspace/redcube-ai',
+        'opl contract handoff-envelope "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck',
+        'opl contract handoff-envelope "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck --workspace-path /Users/gaofeng/workspace/redcube-ai',
       ],
       handler: (args) =>
         buildProductEntryHandoffEnvelope(

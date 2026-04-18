@@ -382,7 +382,7 @@ This package is the local desktop-first front door for OPL.
 
 LibreChat has moved to an optional lane:
 
-- default local path: \`opl frontdesk-bootstrap\`
+- default local path: \`opl frontdesk bootstrap\`
 - optional Docker lane: \`opl frontdesk-librechat-install\`
 
 ## Launch

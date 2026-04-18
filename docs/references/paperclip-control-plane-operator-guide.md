@@ -11,10 +11,10 @@
 
 如果没有安装或配置 `Paperclip`，`OPL` 仍然应该正常运行：
 
-- `opl ask / chat / resume / sessions / logs`
-- `opl dashboard`
-- `opl session-ledger`
-- `opl handoff-envelope`
+- `opl ask / chat / session resume / session list / session logs`
+- `opl status dashboard`
+- `opl session ledger`
+- `opl contract handoff-envelope`
 - `opl web`
 
 这些主入口继续承担自然语言交互、进度可见性、handoff 与审计上下文。

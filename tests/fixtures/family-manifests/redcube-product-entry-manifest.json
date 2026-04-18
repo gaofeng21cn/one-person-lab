@@ -52,7 +52,7 @@
         "entry_session_id"
       ]
     },
-    "federated_handoff": {
+    "opl_bridge_handoff": {
       "command": "redcube product federate",
       "surface_kind": "federated_product_entry",
       "summary": "通过 family / OPL gateway 进入同一 downstream product entry。",
@@ -75,7 +75,7 @@
     "summary": "Repo-verified product-entry service surface 已 landed，但成熟终端用户前台壳与 managed web productization 仍未 landed。",
     "next_focus": [
       "继续把 mature end-user shell 建在已 landed 的 RedCube product-entry service surface 之上。",
-      "继续把 OPL federated handoff 与同一 downstream product-entry contract 对齐。"
+      "继续把 internal OPL bridge 与同一 downstream product-entry contract 对齐。"
     ],
     "remaining_gaps_count": 2
   },
@@ -195,7 +195,7 @@
       "command_template": "redcube product invoke --workspace-root /fixtures/redcube/workspace --entry-session-id <entry-session-id> --overlay <overlay-id> --topic-id <topic-id> --deliverable-id <deliverable-id>",
       "surface_kind": "product_entry"
     },
-    "federated": {
+    "opl_bridge": {
       "command": "redcube product federate",
       "command_template": "redcube product federate --workspace-root /fixtures/redcube/workspace --entry-session-id <entry-session-id> --target-domain-id redcube_ai --entry-mode opl_gateway --return-surface-kind product_entry --overlay <overlay-id> --topic-id <topic-id> --deliverable-id <deliverable-id>",
       "surface_kind": "federated_product_entry"
@@ -279,7 +279,7 @@
   },
   "product_entry_start": {
     "surface_kind": "product_entry_start",
-    "summary": "先打开 RedCube frontdesk；需要直接起一个新会话就走 direct session，需要走顶层联邦入口时使用 federated handoff，已有 session 则直接恢复。",
+    "summary": "先打开 RedCube frontdesk；需要直接起一个新会话就走 direct session，需要给外层 OPL shell 走 bridge contract 时使用 internal OPL bridge handoff，已有 session 则直接恢复。",
     "recommended_mode_id": "open_frontdesk",
     "modes": [
       {
@@ -304,11 +304,11 @@
         ]
       },
       {
-        "mode_id": "federated_handoff",
-        "title": "Federated handoff",
+        "mode_id": "opl_bridge_handoff",
+        "title": "Internal OPL bridge handoff",
         "command": "redcube product federate",
         "surface_kind": "federated_product_entry",
-        "summary": "Enter the same downstream product entry through OPL / family federation.",
+        "summary": "Reserved for OPL shell / compatibility bridge callers while preserving the same downstream product entry contract.",
         "requires": [
           "entry_session_id",
           "overlay",
@@ -357,7 +357,7 @@
     "recommended_step_id": "open_frontdesk",
     "next_focus": [
       "继续把 mature end-user shell 建在已 landed 的 RedCube product-entry service surface 之上。",
-      "继续把 OPL federated handoff 与同一 downstream product-entry contract 对齐。"
+      "继续把 internal OPL bridge 与同一 downstream product-entry contract 对齐。"
     ],
     "remaining_gaps_count": 2,
     "human_gate_ids": [
@@ -449,9 +449,9 @@
           "produces_checkpoint": true
         },
         {
-          "node_id": "step:federated_handoff",
+          "node_id": "step:opl_bridge_handoff",
           "node_kind": "federated_entry",
-          "title": "Enter the same loop through OPL handoff",
+          "title": "Enter the same loop through internal OPL bridge handoff",
           "surface_kind": "federated_product_entry",
           "produces_checkpoint": true
         },
@@ -471,7 +471,7 @@
         },
         {
           "from": "step:open_frontdesk",
-          "to": "step:federated_handoff",
+          "to": "step:opl_bridge_handoff",
           "on": "enter_via_opl"
         },
         {
@@ -480,7 +480,7 @@
           "on": "session_started"
         },
         {
-          "from": "step:federated_handoff",
+          "from": "step:opl_bridge_handoff",
           "to": "step:inspect_current_progress",
           "on": "handoff_completed"
         }
@@ -504,7 +504,7 @@
         "mode": "explicit_nodes",
         "checkpoint_nodes": [
           "step:continue_current_loop",
-          "step:federated_handoff",
+          "step:opl_bridge_handoff",
           "step:inspect_current_progress"
         ]
       }

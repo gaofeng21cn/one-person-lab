@@ -224,15 +224,17 @@
 - `opl doctor`
 - `opl ask`
 - `opl chat`
-- `opl frontdesk-manifest`
-- `opl frontdesk-domain-wiring`
-- `opl frontdesk-hosted-bundle`
-- `opl frontdesk-hosted-package`
-- `opl workspace-catalog`
-- `opl workspace-bind|activate|archive`
-- `opl session-ledger`
-- `opl handoff-envelope`
-- `opl dashboard`
+- `opl contract validate`
+- `opl domain manifests`
+- `opl frontdesk manifest`
+- `opl frontdesk domain-wiring`
+- `opl frontdesk hosted-bundle`
+- `opl frontdesk hosted-package`
+- `opl workspace list`
+- `opl workspace bind|activate|archive`
+- `opl session ledger`
+- `opl contract handoff-envelope`
+- `opl status dashboard`
 - `opl web`
 
 这一步现在已经继续往前落下了一层 service-safe 的本地 front desk packaging；

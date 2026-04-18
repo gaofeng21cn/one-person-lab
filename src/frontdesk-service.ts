@@ -124,7 +124,7 @@ function normalizeWorkspacePath(workspacePath?: string) {
   if (!fs.existsSync(resolved) || !fs.statSync(resolved).isDirectory()) {
     throw new GatewayContractError(
       'cli_usage_error',
-      'frontdesk-service-install requires an existing workspace directory.',
+      'frontdesk service install requires an existing workspace directory.',
       {
         workspace_path: resolved,
       },
@@ -458,7 +458,7 @@ export async function startFrontDeskService(contracts: GatewayContracts) {
   if (!config || !fs.existsSync(paths.launch_agent_plist)) {
     throw new GatewayContractError(
       'cli_usage_error',
-      'frontdesk-service-start requires an installed frontdesk service. Run frontdesk-service-install first.',
+      'frontdesk service start requires an installed frontdesk service. Run frontdesk service install first.',
     );
   }
 
@@ -497,7 +497,7 @@ export async function openFrontDeskService(contracts: GatewayContracts) {
   if (!config) {
     throw new GatewayContractError(
       'cli_usage_error',
-      'frontdesk-service-open requires an installed frontdesk service. Run frontdesk-service-install first.',
+      'frontdesk service open requires an installed frontdesk service. Run frontdesk service install first.',
     );
   }
 

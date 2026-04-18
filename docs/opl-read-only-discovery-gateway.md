@@ -316,19 +316,19 @@ That development host choice does not make Codex the product runtime substrate o
 The legacy `Codex Host` / `OMX` split now survives only in Layer 3 historical migration references and does not redefine this public gateway surface.
 In that baseline, the discovery contract is exposed through commands such as:
 
-- `list-workstreams`
-- `get-workstream`
-- `list-domains`
-- `get-domain`
-- `list-surfaces`
-- `get-surface`
-- `resolve-request-surface`
-- `explain-domain-boundary`
+- `opl contract workstreams`
+- `opl contract workstream <workstream_id>`
+- `opl contract domains`
+- `opl contract domain <domain_id>`
+- `opl contract surfaces`
+- `opl contract surface <surface_id>`
+- `opl domain resolve-request`
+- `opl domain explain-boundary`
 
 Companion transport commands also include:
 
-- `help`
-- `validate-contracts`
+- `opl help`
+- `opl contract validate`
 
 Docs-site navigation and future MCP discovery tools remain compatible transports if they keep the same contract.
 
