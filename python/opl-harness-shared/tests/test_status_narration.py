@@ -103,6 +103,27 @@ class StatusNarrationContractTest(unittest.TestCase):
         self.assertEqual(view["next_step"], "补齐作者、单位和伦理号。")
         self.assertEqual(view["current_blockers"], ["作者单位仍待确认。"])
 
+    def test_build_status_narration_human_view_humanizes_known_blocker_codes(self) -> None:
+        view = build_status_narration_human_view(
+            None,
+            fallback_current_stage="publication_supervision",
+            fallback_blockers=[
+                "missing_submission_minimal",
+                "submission checklist contains unclassified blocking items",
+                "claim evidence map missing or incomplete",
+            ],
+        )
+
+        self.assertEqual(
+            view["current_blockers"],
+            [
+                "缺少最小投稿包导出。",
+                "投稿检查清单里仍有未归类的硬阻塞。",
+                "关键 claim-to-evidence 对照仍不完整。",
+            ],
+        )
+        self.assertNotIn("missing_submission_minimal", view["status_summary"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -55,6 +55,14 @@ _PROGRESS_CODE_LABELS = {
     "freeze_ready": "已具备冻结条件",
     "rollback_required": "需要先回退修复",
     "submission_frozen": "投稿包冻结完成",
+    "missing_submission_minimal": "缺少最小投稿包导出。",
+    "medical_publication_surface_blocked": "论文叙事或方法/结果书写面仍有硬阻塞。",
+    "forbidden_manuscript_terminology": "当前稿件仍含不允许的术语表达，需要清理。",
+    "forbidden_manuscript_terms_present": "当前稿件仍含不允许的术语表达，需要清理。",
+    "submission_checklist_contains_unclassified_blocking_items": "投稿检查清单里仍有未归类的硬阻塞。",
+    "claim_evidence_map_missing_or_incomplete": "关键 claim-to-evidence 对照仍不完整。",
+    "figure_catalog_missing_or_incomplete": "关键图表目录仍不完整。",
+    "ama_pdf_defaults_missing": "AMA 稿件导出默认配置仍未补齐。",
 }
 
 
@@ -128,11 +136,25 @@ def _read_first_text(mapping: Mapping[str, Any] | None, *keys: str) -> str | Non
     return None
 
 
+def _normalized_progress_label_key(value: object) -> str | None:
+    text = _nonempty_text(value)
+    if text is None:
+        return None
+    return text.lower().replace("-", "_").replace(" ", "_")
+
+
+def _lookup_progress_label(value: object) -> str | None:
+    text = _nonempty_text(value)
+    if text is None:
+        return None
+    return _PROGRESS_CODE_LABELS.get(text) or _PROGRESS_CODE_LABELS.get(_normalized_progress_label_key(text) or "")
+
+
 def _humanize_progress_code(code: object) -> str | None:
     text = _nonempty_text(code)
     if text is None:
         return None
-    label = _PROGRESS_CODE_LABELS.get(text)
+    label = _lookup_progress_label(text)
     if label:
         return label
     words = [item for item in text.replace("-", "_").split("_") if item]
@@ -178,6 +200,7 @@ def build_status_narration_human_view(
         current_blockers = _normalized_text_list(fallback_blockers)
     if not current_blockers:
         current_blockers = _normalized_text_list(source.get("current_blockers"))
+    current_blockers = [_lookup_progress_label(item) or item for item in current_blockers]
 
     stage_parts: list[str] = []
     if current_stage_label:
