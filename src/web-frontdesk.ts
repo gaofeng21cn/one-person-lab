@@ -1057,6 +1057,100 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       typeof paperSnapshot?.page_count === 'number' ? `${paperSnapshot.page_count} 页 PDF` : null,
     ].filter(Boolean).join('，') || '当前还没有抽出图表与参考文献计数。',
   );
+  const progressFeedback = progress.progress_feedback
+    && typeof progress.progress_feedback === 'object'
+    && !Array.isArray(progress.progress_feedback)
+    ? progress.progress_feedback as Record<string, unknown>
+    : null;
+  const humanizeProgressCode = (value: string | null) => {
+    if (!value) {
+      return null;
+    }
+
+    const labels: Record<string, string> = {
+      publication_supervision: '论文可发表性监管',
+      bundle_stage_ready: '投稿打包就绪',
+      managed_runtime_recovering: '托管运行恢复中',
+      runtime_blocked: '运行阻塞',
+      live: '在线推进',
+      recovering: '恢复中',
+      stale: '进度陈旧',
+      fresh: '进度新鲜',
+    };
+
+    return labels[value] ?? value.replace(/_/g, ' ');
+  };
+  const progressFeedHeadline = escapeHtml(
+    typeof progressFeedback?.headline === 'string'
+      ? progressFeedback.headline
+      : typeof currentStudy?.current_stage_summary === 'string'
+        ? currentStudy.current_stage_summary
+        : '当前还没有读到自然语言进度摘要。',
+  );
+  const progressFeedLatestUpdate = escapeHtml(
+    typeof progressFeedback?.latest_update === 'string'
+      ? progressFeedback.latest_update
+      : recentActivity
+        ? [
+            typeof recentActivity.last_active === 'string' ? recentActivity.last_active : 'unknown time',
+            typeof recentActivity.preview === 'string' ? recentActivity.preview : null,
+          ].filter(Boolean).join(' · ')
+        : '当前还没有读到新的进度更新时间。',
+  );
+  const progressFeedNextStep = escapeHtml(
+    typeof progressFeedback?.next_step === 'string'
+      ? progressFeedback.next_step
+      : typeof currentStudy?.next_system_action === 'string'
+        ? currentStudy.next_system_action
+        : '继续读取当前论文的详细进度。',
+  );
+  const progressFeedStatusSummary = escapeHtml(
+    typeof progressFeedback?.status_summary === 'string'
+      ? progressFeedback.status_summary
+      : '当前还没有读到结构化状态。',
+  );
+  const progressFeedChips = [
+    typeof progressFeedback?.current_status === 'string'
+      ? `<span class="status-chip">${escapeHtml(humanizeProgressCode(progressFeedback.current_status) ?? progressFeedback.current_status)}</span>`
+      : null,
+    typeof progressFeedback?.runtime_status === 'string'
+      ? `<span class="status-chip">${escapeHtml(humanizeProgressCode(progressFeedback.runtime_status) ?? progressFeedback.runtime_status)}</span>`
+      : null,
+  ].filter(Boolean).join('');
+  const workspaceFiles = progress.workspace_files
+    && typeof progress.workspace_files === 'object'
+    && !Array.isArray(progress.workspace_files)
+    ? progress.workspace_files as Record<string, unknown>
+    : null;
+  const deliverableFiles = Array.isArray(workspaceFiles?.deliverable_files)
+    ? workspaceFiles.deliverable_files.filter((entry): entry is Record<string, unknown> => isRecord(entry))
+    : [];
+  const supportingFiles = Array.isArray(workspaceFiles?.supporting_files)
+    ? workspaceFiles.supporting_files.filter((entry): entry is Record<string, unknown> => isRecord(entry))
+    : [];
+  const renderFileList = (
+    files: Record<string, unknown>[],
+    emptyMessage: string,
+  ) => files.length > 0
+    ? `<ul class="file-list">${files.map((entry) => {
+      const label = escapeHtml(typeof entry.label === 'string' ? entry.label : 'Unnamed file');
+      const summary = escapeHtml(typeof entry.summary === 'string' ? entry.summary : '');
+      const fileId = escapeHtml(typeof entry.file_id === 'string' ? entry.file_id : 'file');
+      const filePath = escapeHtml(typeof entry.path === 'string' ? entry.path : 'unknown');
+      return `<li><div class="file-label-row"><span class="file-label">${label}</span><code>${fileId}</code></div>`
+        + `<div class="file-path">${filePath}</div>`
+        + (summary ? `<div class="muted">${summary}</div>` : '')
+        + `</li>`;
+    }).join('')}</ul>`
+    : `<p class="muted" style="margin-top: 12px;">${escapeHtml(emptyMessage)}</p>`;
+  const deliverableFilesHtml = renderFileList(
+    deliverableFiles,
+    '当前还没有抽出明确 deliverable 文件。',
+  );
+  const supportingFilesHtml = renderFileList(
+    supportingFiles,
+    '当前还没有抽出 supporting files。',
+  );
   const userOptions = Array.isArray(progress.user_options)
     ? progress.user_options
       .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
@@ -1149,11 +1243,12 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>OPL Machine Surface</title>
+    <title>OPL Workspace Home</title>
     <style>
       :root {
         --bg: #f6f2ea;
         --panel: rgba(255, 252, 246, 0.96);
+        --panel-strong: #fffdf8;
         --line: rgba(29, 52, 48, 0.12);
         --ink: #19342d;
         --ink-soft: #5e736b;
@@ -1181,7 +1276,7 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       }
 
       main {
-        width: min(960px, calc(100vw - 32px));
+        width: min(1180px, calc(100vw - 32px));
         margin: 24px auto 40px;
         display: grid;
         gap: 18px;
@@ -1197,6 +1292,7 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
 
       h1,
       h2,
+      h3,
       p,
       ul {
         margin: 0;
@@ -1215,15 +1311,27 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         margin-bottom: 12px;
       }
 
-      .lede {
-        margin-top: 12px;
-        line-height: 1.7;
+      h3 {
+        font-size: 1rem;
+      }
+
+      .lede,
+      .status-copy,
+      .muted {
         color: var(--ink-soft);
+        line-height: 1.7;
+      }
+
+      .entry-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        margin-top: 16px;
       }
 
       .entry-link {
         display: inline-flex;
-        margin-top: 16px;
         align-items: center;
         min-height: 44px;
         padding: 0 16px;
@@ -1234,30 +1342,22 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         font-weight: 600;
       }
 
-      .entry-actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-        align-items: center;
-      }
-
       .secondary-entry-link {
         background: rgba(31, 107, 90, 0.08);
         color: var(--accent-strong);
         border: 1px solid rgba(31, 107, 90, 0.22);
       }
 
-      .meta {
+      .workspace-layout {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 14px;
+        grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.9fr);
+        gap: 18px;
       }
 
-      .meta-card {
-        padding: 16px;
-        border-radius: var(--radius-md);
-        background: rgba(31, 107, 90, 0.06);
-        border: 1px solid rgba(31, 107, 90, 0.08);
+      .workspace-main,
+      .workspace-rail {
+        display: grid;
+        gap: 18px;
       }
 
       .snapshot-grid,
@@ -1265,6 +1365,18 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 14px;
+      }
+
+      .meta-card,
+      .rail-card {
+        padding: 16px;
+        border-radius: var(--radius-md);
+        background: rgba(31, 107, 90, 0.06);
+        border: 1px solid rgba(31, 107, 90, 0.08);
+      }
+
+      .rail-card {
+        background: var(--panel-strong);
       }
 
       .meta-label {
@@ -1276,52 +1388,104 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         margin-bottom: 8px;
       }
 
-      .api-list {
-        padding-left: 18px;
-        display: grid;
-        gap: 12px;
-      }
-
-      .api-list li {
-        color: var(--ink-soft);
-      }
-
-      .api-list a {
-        color: var(--accent-strong);
-        text-decoration: none;
-        font-family: var(--font-mono);
-      }
-
-      .api-list span {
-        display: block;
-        margin-top: 4px;
-      }
-
-      .detail-copy,
-      .meta-card div,
-      .lede,
-      .status-copy,
-      .inspect-list li,
-      .api-list li,
-      summary,
-      code {
-        overflow-wrap: anywhere;
-        word-break: break-word;
-      }
-
-      .status-copy,
-      .muted {
-        color: var(--ink-soft);
-        line-height: 1.7;
-      }
-
       .status-list,
-      .inspect-list {
+      .inspect-list,
+      .api-list,
+      .file-list {
         margin: 14px 0 0;
         padding-left: 18px;
         display: grid;
         gap: 10px;
         color: var(--ink-soft);
+      }
+
+      .file-list {
+        list-style: none;
+        padding-left: 0;
+      }
+
+      .file-list li {
+        padding: 12px 14px;
+        border: 1px solid rgba(31, 107, 90, 0.1);
+        border-radius: 12px;
+        background: rgba(31, 107, 90, 0.04);
+      }
+
+      .file-section + .file-section {
+        margin-top: 18px;
+      }
+
+      .file-label-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .file-label {
+        color: var(--ink);
+        font-weight: 600;
+      }
+
+      .file-path,
+      code,
+      .api-list a {
+        font-family: var(--font-mono);
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+
+      .file-path {
+        margin-top: 8px;
+        color: var(--ink-soft);
+        font-size: 0.9rem;
+      }
+
+      .feed-list {
+        margin-top: 14px;
+        display: grid;
+        gap: 12px;
+      }
+
+      .feed-item {
+        padding: 14px;
+        border-radius: 12px;
+        border: 1px solid rgba(31, 107, 90, 0.1);
+        background: rgba(31, 107, 90, 0.04);
+      }
+
+      .feed-kicker {
+        display: block;
+        font-size: 0.78rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--ink-soft);
+        margin-bottom: 8px;
+      }
+
+      .feed-copy {
+        color: var(--ink);
+        line-height: 1.7;
+      }
+
+      .status-chip-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      .status-chip {
+        display: inline-flex;
+        align-items: center;
+        min-height: 30px;
+        padding: 0 12px;
+        border-radius: 999px;
+        background: rgba(31, 107, 90, 0.1);
+        color: var(--accent-strong);
+        font-size: 0.88rem;
+        font-weight: 600;
       }
 
       .machine-detail {
@@ -1345,6 +1509,16 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
         margin-bottom: 12px;
       }
 
+      .api-list a {
+        color: var(--accent-strong);
+        text-decoration: none;
+      }
+
+      .api-list span {
+        display: block;
+        margin-top: 4px;
+      }
+
       .json-view {
         margin-top: 12px;
         padding: 16px;
@@ -1357,7 +1531,7 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       }
 
       @media (max-width: 1040px) {
-        .meta,
+        .workspace-layout,
         .snapshot-grid,
         .detail-grid {
           grid-template-columns: 1fr;
@@ -1375,10 +1549,10 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
   <body>
     <main>
       <section class="panel">
-        <h2>Machine surface</h2>
-        <h1>OPL Machine Surface</h1>
+        <h2>Workspace Home</h2>
+        <h1>OPL Workspace Home</h1>
         <p class="lede">
-          这里负责给当前工作区做人类可读的进度概览。自然语言交互走聊天界面，这一页负责把论文状态、卡点和可审阅路径讲明白。
+          OPL 以 workspace 组织任务、对话和最终交付文件。当前页先回答这三个问题：现在在做什么、下一步该做什么、哪些文件已经开始形成交付。
         </p>
         <div class="entry-actions">
           <a class="entry-link" href="/login">Open OPL Agent</a>
@@ -1387,133 +1561,179 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       </section>
 
       <section class="panel">
-        <h2>Project snapshot</h2>
-        <div class="snapshot-grid">
-          <div class="meta-card">
-            <span class="meta-label">Current workspace</span>
-            <div>${currentProjectLabel}</div>
+        <div class="workspace-layout">
+          <div class="workspace-main">
+            <div>
+              <h2>Workspace Home</h2>
+              <div class="snapshot-grid">
+                <div class="meta-card">
+                  <span class="meta-label">Current workspace</span>
+                  <div>${currentProjectLabel}</div>
+                </div>
+                <div class="meta-card">
+                  <span class="meta-label">Workspace path</span>
+                  <div>${bootstrap.web_frontdesk.defaults.workspace_path}</div>
+                </div>
+                <div class="meta-card">
+                  <span class="meta-label">Current bound project</span>
+                  <div>${escapeHtml(normalizeOptionalString(progress.current_project?.label) ?? 'Unbound workspace')}</div>
+                </div>
+                <div class="meta-card">
+                  <span class="meta-label">Chat entry</span>
+                  <div>/login</div>
+                </div>
+                <div class="meta-card">
+                  <span class="meta-label">Latest runtime activity</span>
+                  <div>${recentActivityText}</div>
+                </div>
+                <div class="meta-card">
+                  <span class="meta-label">Hosted shell</span>
+                  <div>${hostedShellSummary}</div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h2>Current Task</h2>
+              <p class="status-copy">${progressSummary}</p>
+              <div class="detail-grid" style="margin-top: 16px;">
+                <div class="meta-card">
+                  <span class="meta-label">Next focus</span>
+                  <div>${nextFocus}</div>
+                </div>
+                <div class="meta-card">
+                  <span class="meta-label">Current study</span>
+                  <div>${currentStudyId}</div>
+                </div>
+                <div class="meta-card">
+                  <span class="meta-label">Current stage</span>
+                  <div>${currentStudyStage}</div>
+                </div>
+                <div class="meta-card">
+                  <span class="meta-label">Runtime</span>
+                  <div>${currentStudyRuntime}</div>
+                </div>
+                <div class="meta-card">
+                  <span class="meta-label">Paper title</span>
+                  <div>${currentStudyTitle}</div>
+                </div>
+                <div class="meta-card">
+                  <span class="meta-label">Materialized draft</span>
+                  <div>${currentStudyMaterialized}</div>
+                </div>
+              </div>
+              <p class="status-copy" style="margin-top: 16px;"><strong>论文主线：</strong>${currentStudyStory}</p>
+              <p class="status-copy" style="margin-top: 12px;"><strong>临床问题：</strong>${currentStudyClinicalQuestion}</p>
+              <p class="status-copy" style="margin-top: 12px;"><strong>写作边界：</strong>${currentStudyInnovation}</p>
+              <p class="status-copy" style="margin-top: 12px;"><strong>当前结果：</strong>${currentStudyEffect}</p>
+              <p class="muted" style="margin-top: 12px;">下一步建议：${currentStudyNextAction}</p>
+              ${attentionItems.length > 0
+                ? `<ul class="status-list">${attentionItems.map((item) => `<li>${item}</li>`).join('')}</ul>`
+                : '<p class="muted" style="margin-top: 14px;">当前页面没有读到需要立刻处理的 blocker。</p>'}
+              ${userOptions.length > 0
+                ? `<div style="margin-top: 18px;"><span class="meta-label">Ask like this</span><ul class="inspect-list">${userOptions.map((item) => `<li>${item}</li>`).join('')}</ul></div>`
+                : ''}
+            </div>
           </div>
-          <div class="meta-card">
-            <span class="meta-label">Workspace path</span>
-            <div>${bootstrap.web_frontdesk.defaults.workspace_path}</div>
-          </div>
-          <div class="meta-card">
-            <span class="meta-label">Chat entry</span>
-            <div>/login</div>
-          </div>
-          <div class="meta-card">
-            <span class="meta-label">Latest runtime activity</span>
-            <div>${recentActivityText}</div>
-          </div>
-          <div class="meta-card">
-            <span class="meta-label">Hosted shell</span>
-            <div>${hostedShellSummary}</div>
-          </div>
-          <div class="meta-card">
-            <span class="meta-label">Hosted shell origin</span>
-            <div>${hostedShellOrigin}</div>
-          </div>
+
+          <aside class="workspace-rail">
+            <div class="rail-card">
+              <span class="meta-label">Progress Feed</span>
+              <p class="muted">把后台长任务压缩成一组人话更新，用户一眼就能知道现在做到哪里了。</p>
+              <div class="feed-list">
+                <div class="feed-item">
+                  <span class="feed-kicker">Now</span>
+                  <div class="feed-copy">${progressFeedHeadline}</div>
+                </div>
+                <div class="feed-item">
+                  <span class="feed-kicker">Current state</span>
+                  <div class="feed-copy">${progressFeedStatusSummary}</div>
+                  ${progressFeedChips ? `<div class="status-chip-row">${progressFeedChips}</div>` : ''}
+                </div>
+                <div class="feed-item">
+                  <span class="feed-kicker">Latest update</span>
+                  <div class="feed-copy">${progressFeedLatestUpdate}</div>
+                </div>
+                <div class="feed-item">
+                  <span class="feed-kicker">Next step</span>
+                  <div class="feed-copy">${progressFeedNextStep}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="rail-card">
+              <span class="meta-label">Files & Deliverables</span>
+              <p class="muted">当前 workspace 下最值得优先查看的交付文件和 supporting files 会固定在这里。</p>
+              <div class="file-section">
+                <span class="meta-label">Deliverables</span>
+                ${deliverableFilesHtml}
+              </div>
+              <div class="file-section">
+                <span class="meta-label">Supporting Files</span>
+                ${supportingFilesHtml}
+              </div>
+            </div>
+
+            <div class="rail-card">
+              <span class="meta-label">Where to inspect</span>
+              ${inspectPaths.length > 0
+                ? `<ul class="inspect-list">${inspectPaths.map((item) => `<li>${item}</li>`).join('')}</ul>`
+                : '<p class="muted" style="margin-top: 12px;">当前还没有推荐的 inspect path。</p>'}
+            </div>
+
+            <div class="rail-card">
+              <span class="meta-label">Hosted shell origin</span>
+              <div>${hostedShellOrigin}</div>
+            </div>
+          </aside>
         </div>
       </section>
 
       <section class="panel">
-        <h2>Binding Guide</h2>
-        <p class="status-copy">${bindingGuideSummary}</p>
-        <p class="muted" style="margin-top: 12px;">
-          这里冻结的是 OPL 如何从 workspace registry 诚实派生各业务仓 direct entry / manifest locator；不是把 OPL 写成 domain runtime owner。
-        </p>
-        <div class="detail-grid" style="margin-top: 16px;">
-          ${bindingGuideCards}
-        </div>
-      </section>
-
-      <section class="panel">
-        <h2>Session Resource Attribution</h2>
-        <p class="status-copy">${sessionResourceSummary}</p>
-        <p class="muted" style="margin-top: 12px;">
-          这里只显示 OPL 管理 session 的事件时采样，用来做可读归因；不声称是 Hermes kernel 的全局计费真相。
-        </p>
-        <div class="detail-grid" style="margin-top: 16px;">
-          <div class="meta-card">
-            <span class="meta-label">Latest session aggregate</span>
-            <div><strong>Session ID:</strong> ${latestLedgerSessionId}</div>
-            <div><strong>Domain:</strong> ${latestLedgerDomain}</div>
-            <div><strong>Workspace:</strong> ${latestLedgerWorkspace}</div>
-            <div><strong>Latest sample:</strong> ${latestLedgerSampleStatus}</div>
+        <h2>Operator Surfaces</h2>
+        <details class="machine-detail">
+          <summary>Workspace binding guide</summary>
+          <p class="status-copy">${bindingGuideSummary}</p>
+          <p class="muted" style="margin-top: 12px;">
+            这里冻结的是 OPL 如何从 workspace registry 诚实派生各业务仓 direct entry / manifest locator；不是把 OPL 写成 domain runtime owner。
+          </p>
+          <div class="detail-grid" style="margin-top: 16px;">
+            ${bindingGuideCards}
           </div>
-          <div class="meta-card">
-            <span class="meta-label">Latest resource sample</span>
-            <div><strong>Latest RSS:</strong> ${latestLedgerLatestRss}</div>
-            <div><strong>Latest CPU:</strong> ${latestLedgerLatestCpu}</div>
-            <div><strong>Peak RSS:</strong> ${latestLedgerPeakRss}</div>
-            <div><strong>Peak CPU:</strong> ${latestLedgerPeakCpu}</div>
+        </details>
+        <details class="machine-detail">
+          <summary>Session resource attribution</summary>
+          <p class="status-copy">${sessionResourceSummary}</p>
+          <p class="muted" style="margin-top: 12px;">
+            这里只显示 OPL 管理 session 的事件时采样，用来做可读归因；不声称是 Hermes kernel 的全局计费真相。
+          </p>
+          <div class="detail-grid" style="margin-top: 16px;">
+            <div class="meta-card">
+              <span class="meta-label">Latest session aggregate</span>
+              <div><strong>Session ID:</strong> ${latestLedgerSessionId}</div>
+              <div><strong>Domain:</strong> ${latestLedgerDomain}</div>
+              <div><strong>Workspace:</strong> ${latestLedgerWorkspace}</div>
+              <div><strong>Latest sample:</strong> ${latestLedgerSampleStatus}</div>
+            </div>
+            <div class="meta-card">
+              <span class="meta-label">Latest resource sample</span>
+              <div><strong>Latest RSS:</strong> ${latestLedgerLatestRss}</div>
+              <div><strong>Latest CPU:</strong> ${latestLedgerLatestCpu}</div>
+              <div><strong>Peak RSS:</strong> ${latestLedgerPeakRss}</div>
+              <div><strong>Peak CPU:</strong> ${latestLedgerPeakCpu}</div>
+            </div>
           </div>
-        </div>
-      </section>
-
-      <section class="panel">
-        <h2>Progress summary</h2>
-        <p class="status-copy">${progressSummary}</p>
-        <div class="detail-grid" style="margin-top: 16px;">
-          <div class="meta-card">
-            <span class="meta-label">Next focus</span>
-            <div>${nextFocus}</div>
-          </div>
-          <div class="meta-card">
-            <span class="meta-label">Hosted shell status</span>
-            <div>${hostedShellSummary}</div>
-          </div>
-        </div>
-        <div class="detail-grid" style="margin-top: 16px;">
-          <div class="meta-card">
-            <span class="meta-label">Current study</span>
-            <div>${currentStudyId}</div>
-          </div>
-          <div class="meta-card">
-            <span class="meta-label">Current stage</span>
-            <div>${currentStudyStage}</div>
-          </div>
-          <div class="meta-card">
-            <span class="meta-label">Paper title</span>
-            <div>${currentStudyTitle}</div>
-          </div>
-          <div class="meta-card">
-            <span class="meta-label">Runtime</span>
-            <div>${currentStudyRuntime}</div>
-          </div>
-          <div class="meta-card">
-            <span class="meta-label">Materialized draft</span>
-            <div>${currentStudyMaterialized}</div>
-          </div>
-        </div>
-        <p class="status-copy" style="margin-top: 16px;"><strong>论文主线：</strong>${currentStudyStory}</p>
-        <p class="status-copy" style="margin-top: 12px;"><strong>临床问题：</strong>${currentStudyClinicalQuestion}</p>
-        <p class="status-copy" style="margin-top: 12px;"><strong>写作边界：</strong>${currentStudyInnovation}</p>
-        <p class="status-copy" style="margin-top: 12px;"><strong>当前结果：</strong>${currentStudyEffect}</p>
-        <p class="muted" style="margin-top: 12px;">下一步建议：${currentStudyNextAction}</p>
-        ${attentionItems.length > 0
-          ? `<ul class="status-list">${attentionItems.map((item) => `<li>${item}</li>`).join('')}</ul>`
-          : '<p class="muted" style="margin-top: 14px;">No immediate blocker is being surfaced on this page right now.</p>'}
-        ${userOptions.length > 0
-          ? `<div style="margin-top: 18px;"><span class="meta-label">Ask like this</span><ul class="inspect-list">${userOptions.map((item) => `<li>${item}</li>`).join('')}</ul></div>`
-          : ''}
-        ${inspectPaths.length > 0
-          ? `<div style="margin-top: 18px;"><span class="meta-label">Where to inspect</span><ul class="inspect-list">${inspectPaths.map((item) => `<li>${item}</li>`).join('')}</ul></div>`
-          : ''}
-      </section>
-
-      <section class="panel">
-        <h2>Operator surfaces</h2>
+        </details>
         <details class="machine-detail">
           <summary>API surfaces</summary>
-          <p class="detail-copy muted">These links stay available for operators, automation, and machine consumers.</p>
+          <p class="muted">These links stay available for operators, automation, and machine consumers.</p>
           <ul class="api-list">
 ${apiLinks}
           </ul>
         </details>
         <details class="machine-detail">
           <summary>Bootstrap JSON</summary>
-          <p class="detail-copy muted">Kept collapsed by default so the main page stays readable for humans.</p>
+          <p class="muted">Kept collapsed by default so the main page stays readable for humans.</p>
           <script id="opl-bootstrap" type="application/json">${bootstrapJson}</script>
           <pre class="json-view">${bootstrapJson}</pre>
         </details>
