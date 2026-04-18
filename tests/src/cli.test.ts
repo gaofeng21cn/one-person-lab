@@ -1083,6 +1083,38 @@ async function startFakeFrontDeskApiServer() {
             current_stage: 'publication_supervision',
             current_stage_summary: '投稿打包阶段已被全局门控放行，可以进入关键路径。',
             next_system_action: 'continue bundle stage',
+            status_narration_contract: {
+              schema_version: 1,
+              contract_kind: 'ai_status_narration',
+              contract_id: 'study-progress::004-invasive-architecture',
+              surface_kind: 'study_progress',
+              audience: 'human_user',
+              milestone: {},
+              stage: {
+                current_stage: 'publication_supervision',
+                recommended_next_stage: 'bundle_stage_ready',
+                checkpoint_status: 'forward_progress',
+              },
+              readiness: {
+                needs_physician_decision: false,
+              },
+              remaining_scope: {},
+              current_blockers: [
+                'submission package 仍需补更多主图后再建议用户审阅。',
+              ],
+              latest_update: '论文主体内容已经完成，当前进入投稿打包收口。',
+              next_step: '优先核对 submission package 与 studies 目录中的交付面是否一致。',
+              human_gate: {},
+              facts: {
+                study_id: '004-invasive-architecture',
+              },
+              narration_policy: {
+                mode: 'ai_first',
+                legacy_summary_role: 'fallback_only',
+                style: 'plain_language',
+                answer_checklist: ['current_stage', 'current_blockers', 'next_step'],
+              },
+            },
           },
           next_focus: '继续补图表并把 submission package 更新到 studies 目录下可直接审阅的状态。',
           recent_activity: {
@@ -2782,6 +2814,8 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
       assert.match(progressContent[0].text, /当前论文：004-invasive-architecture/);
       assert.match(progressContent[0].text, /论文题目：NF-PitNET invasive phenotype architecture/);
       assert.match(progressContent[0].text, /论文主线：当前主线是首术 NF-PitNET 的侵袭表型 architecture/);
+      assert.match(progressContent[0].text, /当前阶段：论文主体内容已经完成，当前进入投稿打包收口。/);
+      assert.match(progressContent[0].text, /系统下一步：优先核对 submission package 与 studies 目录中的交付面是否一致。/);
       assert.match(progressContent[0].text, /当前进度：004 论文当前仍在推进证据补强/);
       assert.match(progressContent[0].text, /最近活动：2m ago/);
       assert.match(progressContent[0].text, /当前卡点：submission package 仍需补更多主图后再建议用户审阅/);
@@ -4296,6 +4330,39 @@ test('project-progress promotes current MAS study into a paper-facing summary in
           '当前论文交付目录与注册/合同约定不一致，需要先修正交付面。',
         ],
         next_system_action: 'continue bundle stage',
+        status_narration_contract: {
+          schema_version: 1,
+          contract_kind: 'ai_status_narration',
+          contract_id: `study-progress::${studyId}`,
+          surface_kind: 'study_progress',
+          audience: 'human_user',
+          milestone: {},
+          stage: {
+            current_stage: 'publication_supervision',
+            recommended_next_stage: 'bundle_stage_ready',
+            checkpoint_status: 'forward_progress',
+          },
+          readiness: {
+            needs_physician_decision: false,
+          },
+          remaining_scope: {},
+          current_blockers: [
+            '当前论文交付目录与注册/合同约定不一致，需要先修正交付面。',
+          ],
+          latest_update: '论文主体内容已经完成，当前进入投稿打包收口。',
+          next_step: '优先核对 submission package 与 studies 目录中的交付面是否一致。',
+          human_gate: {},
+          facts: {
+            study_id: studyId,
+            quest_id: '004-invasive-architecture-managed-20260408',
+          },
+          narration_policy: {
+            mode: 'ai_first',
+            legacy_summary_role: 'fallback_only',
+            style: 'plain_language',
+            answer_checklist: ['current_stage', 'current_blockers', 'next_step'],
+          },
+        },
         needs_physician_decision: false,
         monitoring: {
           browser_url: 'http://127.0.0.1:21001',
@@ -4384,6 +4451,39 @@ test('project-progress promotes current MAS study into a paper-facing summary in
       '当前论文交付目录与注册/合同约定不一致，需要先修正交付面。',
     ],
     next_system_action: 'continue bundle stage',
+    status_narration_contract: {
+      schema_version: 1,
+      contract_kind: 'ai_status_narration',
+      contract_id: `study-progress::${studyId}`,
+      surface_kind: 'study_progress',
+      audience: 'human_user',
+      milestone: {},
+      stage: {
+        current_stage: 'publication_supervision',
+        recommended_next_stage: 'bundle_stage_ready',
+        checkpoint_status: 'forward_progress',
+      },
+      readiness: {
+        needs_physician_decision: false,
+      },
+      remaining_scope: {},
+      current_blockers: [
+        '当前论文交付目录与注册/合同约定不一致，需要先修正交付面。',
+      ],
+      latest_update: '论文主体内容已经完成，当前进入投稿打包收口。',
+      next_step: '优先核对 submission package 与 studies 目录中的交付面是否一致。',
+      human_gate: {},
+      facts: {
+        study_id: studyId,
+        quest_id: '004-invasive-architecture-managed-20260408',
+      },
+      narration_policy: {
+        mode: 'ai_first',
+        legacy_summary_role: 'fallback_only',
+        style: 'plain_language',
+        answer_checklist: ['current_stage', 'current_blockers', 'next_step'],
+      },
+    },
     progress_freshness: {
       latest_progress_time_label: '2026-04-15 11:24 UTC',
       latest_progress_summary: '投稿打包阶段已被全局门控放行，可以进入关键路径。',
@@ -4480,11 +4580,15 @@ test('project-progress promotes current MAS study into a paper-facing summary in
     assert.match(payload.project_progress.progress_summary, /004-invasive-architecture/);
     assert.match(payload.project_progress.progress_summary, /3 张主图/);
     assert.match(payload.project_progress.progress_summary, /32 篇参考文献/);
+    assert.equal(currentStudy.status_narration_contract.latest_update, '论文主体内容已经完成，当前进入投稿打包收口。');
     assert.equal(payload.project_progress.progress_feedback.current_status, 'publication_supervision');
     assert.equal(payload.project_progress.progress_feedback.runtime_status, 'live');
-    assert.match(payload.project_progress.progress_feedback.headline, /投稿打包阶段/);
+    assert.equal(payload.project_progress.progress_feedback.headline, '论文主体内容已经完成，当前进入投稿打包收口。');
     assert.match(payload.project_progress.progress_feedback.latest_update, /2026-04-15 11:24 UTC/);
-    assert.match(payload.project_progress.progress_feedback.next_step, /continue bundle stage/);
+    assert.equal(
+      payload.project_progress.progress_feedback.next_step,
+      '优先核对 submission package 与 studies 目录中的交付面是否一致。',
+    );
     assert.equal(payload.project_progress.workspace_inbox.summary.known_task_count, 3);
     assert.equal(payload.project_progress.workspace_inbox.summary.running_count, 1);
     assert.equal(payload.project_progress.workspace_inbox.summary.waiting_count, 1);
@@ -4492,7 +4596,10 @@ test('project-progress promotes current MAS study into a paper-facing summary in
     assert.equal(payload.project_progress.workspace_inbox.summary.delivered_count, 1);
     assert.equal(payload.project_progress.workspace_inbox.summary.active_task_id, studyId);
     assert.equal(payload.project_progress.workspace_inbox.sections.running[0].task_id, studyId);
-    assert.match(payload.project_progress.workspace_inbox.sections.running[0].summary, /投稿打包阶段/);
+    assert.equal(
+      payload.project_progress.workspace_inbox.sections.running[0].summary,
+      '当前状态：论文可发表性监管；下一阶段：投稿打包就绪；当前卡点：当前论文交付目录与注册/合同约定不一致，需要先修正交付面。',
+    );
     assert.ok(
       payload.project_progress.workspace_inbox.sections.waiting.some(
         (entry: { task_id: string }) => entry.task_id === '003-endocrine-burden-followup',
@@ -5437,6 +5544,7 @@ exit 1
     assert.match(pageHtml, /id="opl-bootstrap"/);
     assert.match(pageHtml, /white-space: pre-wrap/);
     assert.match(pageHtml, /\/api\/frontdesk-entry-guide/);
+    assert.match(pageHtml, /下一步建议：继续读取当前论文的详细进度。/);
     assert.doesNotMatch(pageHtml, /Workspace Hub/);
 
     const dashboardResponse = await fetch(`${baseUrl}/api/dashboard`);
