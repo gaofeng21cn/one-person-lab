@@ -198,7 +198,12 @@ test('product entry companion helpers build canonical shared payloads', () => {
       ok: true,
       schema_ref: 'contracts/schemas/v1/product-frontdesk.schema.json',
     },
-  });
+  }) as {
+    surface_kind: string;
+    ok: boolean;
+    schema_ref: string;
+    product_entry_start: { recommended_mode_id: string };
+  };
   assert.equal(frontdesk.surface_kind, 'product_frontdesk');
   assert.equal(frontdesk.ok, true);
   assert.equal(frontdesk.schema_ref, 'contracts/schemas/v1/product-frontdesk.schema.json');

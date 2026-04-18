@@ -2,6 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  buildExplicitCheckpointPolicy,
+  buildFamilyActionGraph,
+  buildFamilyActionGraphEdge,
+  buildFamilyActionGraphHumanGate,
+  buildFamilyActionGraphNode,
   buildFamilyHumanGate,
   buildFamilyOrchestrationCompanion,
   buildFamilyOrchestrationTemplate,
@@ -23,7 +28,11 @@ test('buildFamilyHumanGate normalizes required gate fields', () => {
     request_surface_id: 'runtime_watch/latest.json',
     evidence_refs: [{ ref_kind: 'repo_path', ref: 'runtime_watch/latest.json', label: 'watch report' }],
     decision_options: ['approve', 'pause'],
-  });
+  }) as {
+    gate_id: string;
+    request_surface: { surface_kind: string };
+    decision_options: string[];
+  };
 
   assert.equal(gate.gate_id, 'gate-1');
   assert.equal(gate.request_surface.surface_kind, 'runtime_watch');
@@ -47,7 +56,12 @@ test('buildFamilyOrchestrationCompanion materializes event envelope and checkpoi
     human_gates: [{ gate_id: 'gate-1', status: 'requested' }],
     event_envelope_surface: { ref_kind: 'json_pointer', ref: '/runtime_watch/latest' },
     checkpoint_lineage_surface: { ref_kind: 'json_pointer', ref: '/runtime_watch/lineage' },
-  });
+  }) as unknown as {
+    resume_contract: { session_locator_field: string; checkpoint_locator_field: string };
+    event_envelope: { session: { active_run_id: string }; payload: { runtime_decision: string } };
+    checkpoint_lineage: { checkpoint_id: string };
+    human_gates: Array<{ gate_id: string }>;
+  };
 
   assert.equal(payload.resume_contract.session_locator_field, 'event_envelope.session.session_id');
   assert.equal(payload.resume_contract.checkpoint_locator_field, 'checkpoint_lineage.checkpoint_id');
@@ -78,7 +92,13 @@ test('buildFamilyOrchestrationTemplate normalizes shared preview surfaces', () =
     checkpoint_locator_field: 'controller_decision_path',
     event_envelope_surface: { ref_kind: 'workspace_locator', ref: 'studies/<study_id>/runtime_watch/latest.json' },
     checkpoint_lineage_surface: { ref_kind: 'workspace_locator', ref: 'studies/<study_id>/controller_decisions/latest.json' },
-  });
+  }) as unknown as {
+    action_graph_ref: { ref: string };
+    action_graph: { graph_id: string };
+    resume_contract: { surface_kind: string; session_locator_field: string; checkpoint_locator_field: string };
+    event_envelope_surface?: { ref_kind: string };
+    checkpoint_lineage_surface?: { ref_kind: string };
+  };
 
   assert.equal(payload.action_graph_ref.ref, '/family_orchestration/action_graph');
   assert.equal(payload.action_graph.graph_id, 'graph-1');
@@ -88,6 +108,58 @@ test('buildFamilyOrchestrationTemplate normalizes shared preview surfaces', () =
     session_locator_field: 'study_id',
     checkpoint_locator_field: 'controller_decision_path',
   });
+  assert.ok(payload.event_envelope_surface);
+  assert.ok(payload.checkpoint_lineage_surface);
   assert.equal(payload.event_envelope_surface.ref_kind, 'workspace_locator');
   assert.equal(payload.checkpoint_lineage_surface.ref_kind, 'workspace_locator');
+});
+
+test('buildFamilyActionGraph validates canonical family graph payloads', () => {
+  const graph = buildFamilyActionGraph({
+    graph_id: 'redcube_frontdoor_product_entry_graph',
+    target_domain_id: 'redcube_ai',
+    graph_kind: 'visual_deliverable_orchestration',
+    graph_version: '2026-04-18',
+    nodes: [
+      buildFamilyActionGraphNode({
+        node_id: 'step:open_frontdesk',
+        node_kind: 'frontdoor',
+        title: 'Open RedCube frontdesk',
+        surface_kind: 'product_frontdesk',
+      }),
+      buildFamilyActionGraphNode({
+        node_id: 'step:continue_current_loop',
+        node_kind: 'deliverable_runtime',
+        title: 'Start or continue the direct product loop',
+        surface_kind: 'product_entry',
+        produces_checkpoint: true,
+      }),
+    ],
+    edges: [
+      buildFamilyActionGraphEdge({
+        from: 'step:open_frontdesk',
+        to: 'step:continue_current_loop',
+        on: 'start_direct',
+      }),
+    ],
+    entry_nodes: ['step:open_frontdesk'],
+    exit_nodes: ['step:continue_current_loop'],
+    human_gates: [
+      buildFamilyActionGraphHumanGate({
+        gate_id: 'redcube_operator_review_gate',
+        trigger_nodes: ['step:continue_current_loop'],
+        blocking: true,
+      }),
+    ],
+    checkpoint_policy: buildExplicitCheckpointPolicy({
+      checkpoint_nodes: ['step:continue_current_loop'],
+    }),
+  });
+
+  assert.equal(graph.version, 'family-action-graph.v1');
+  assert.equal(graph.nodes[1].produces_checkpoint, true);
+  assert.deepEqual(graph.checkpoint_policy, {
+    mode: 'explicit_nodes',
+    checkpoint_nodes: ['step:continue_current_loop'],
+  });
 });

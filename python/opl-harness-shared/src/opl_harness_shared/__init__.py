@@ -5,6 +5,11 @@ from .automation_companions import (
     build_automation_descriptor,
 )
 from .family_orchestration import (
+    build_explicit_checkpoint_policy,
+    build_family_action_graph,
+    build_family_action_graph_edge,
+    build_family_action_graph_human_gate,
+    build_family_action_graph_node,
     build_family_human_gate,
     build_family_orchestration_companion,
     build_family_orchestration_template,
@@ -86,6 +91,11 @@ __all__ = [
     "build_automation_catalog",
     "build_automation_descriptor",
     "build_checkpoint_summary",
+    "build_explicit_checkpoint_policy",
+    "build_family_action_graph",
+    "build_family_action_graph_edge",
+    "build_family_action_graph_human_gate",
+    "build_family_action_graph_node",
     "build_family_human_gate",
     "build_family_orchestration_companion",
     "build_family_orchestration_template",
