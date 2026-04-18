@@ -6,6 +6,7 @@
 
 - `opl_harness_shared.managed_runtime`
 - `opl_harness_shared.hermes_supervision`
+- `opl_harness_shared.status_narration`
 
 设计边界：
 

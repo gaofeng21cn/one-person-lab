@@ -49,6 +49,14 @@ from .runtime_task_companions import (
     build_task_lifecycle,
     build_task_surface_descriptor,
 )
+from .status_narration import (
+    PAPER_MILESTONE_ANSWER_CHECKLIST,
+    PROGRESS_ANSWER_CHECKLIST,
+    RUNTIME_ALERT_ANSWER_CHECKLIST,
+    STATUS_NARRATION_CONTRACT_KIND,
+    STATUS_NARRATION_SCHEMA_VERSION,
+    build_status_narration_contract,
+)
 from .skill_catalog import (
     build_skill_catalog,
     build_skill_descriptor,
@@ -74,6 +82,7 @@ __all__ = [
     "build_runtime_inventory",
     "build_skill_catalog",
     "build_skill_descriptor",
+    "build_status_narration_contract",
     "build_task_lifecycle",
     "build_task_surface_descriptor",
     "collect_family_human_gate_ids",
@@ -82,6 +91,8 @@ __all__ = [
     "jobs_path",
     "load_jobs",
     "matching_jobs",
+    "PAPER_MILESTONE_ANSWER_CHECKLIST",
+    "PROGRESS_ANSWER_CHECKLIST",
     "read_bundled_managed_runtime_three_layer_contract",
     "read_managed_runtime_three_layer_contract",
     "remove_empty_parent_dirs",
@@ -93,5 +104,8 @@ __all__ = [
     "script_path",
     "select_primary_job",
     "status_summary",
+    "RUNTIME_ALERT_ANSWER_CHECKLIST",
+    "STATUS_NARRATION_CONTRACT_KIND",
+    "STATUS_NARRATION_SCHEMA_VERSION",
     "validate_managed_runtime_contract",
 ]
