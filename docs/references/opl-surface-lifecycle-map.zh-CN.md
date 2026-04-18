@@ -97,7 +97,7 @@
 ## 上位依据
 
 - [OPL Federation Contract](../opl-federation-contract.zh-CN.md)
-- [OPL 只读 Discovery Gateway](../opl-read-only-discovery-gateway.zh-CN.md)
+- [OPL Gateway 契约面](../opl-read-only-discovery-gateway.zh-CN.md)
 - [OPL Routed Action Gateway](../opl-routed-action-gateway.zh-CN.md)
 - [OPL Domain Onboarding Contract](../opl-domain-onboarding-contract.zh-CN.md)
 - [OPL Candidate Domain Backlog](./opl-candidate-domain-backlog.zh-CN.md)

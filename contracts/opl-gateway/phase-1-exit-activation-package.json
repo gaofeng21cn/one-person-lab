@@ -4,7 +4,7 @@
   "phase": "phase_1_exit",
   "package_status": "external_readiness_blocked",
   "phase_1_formal_entry": {
-    "entry_surface": "TypeScript CLI-first / read-only gateway surface",
+    "entry_surface": "TypeScript CLI-first / gateway contract surface",
     "runtime_owner": false,
     "mutation_entry": false,
     "run_launch": false,
@@ -118,7 +118,7 @@
     "scope": [
       "strengthen top-level gateway/federation expression for already admitted domains only",
       "freeze docs+contracts+tests first for a stronger admitted-domain federation surface",
-      "keep the formal entry CLI-first/read-only while improving federation-level public truth and contract clarity"
+      "keep the formal entry CLI-first / gateway contract while improving federation-level public truth and contract clarity"
     ],
     "non_goals": [
       "no routed-action runtime",

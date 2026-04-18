@@ -16,7 +16,7 @@
 Domain onboarding 建立在已冻结的 gateway 层之下：
 
 - [OPL Federation Contract](./opl-federation-contract.zh-CN.md)
-- [OPL 只读 Discovery Gateway](./opl-read-only-discovery-gateway.zh-CN.md)
+- [OPL Gateway 契约面](./opl-read-only-discovery-gateway.zh-CN.md)
 - [OPL Routed Action Gateway](./opl-routed-action-gateway.zh-CN.md)
 - [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.zh-CN.md)
 - 当前仓库中的机器可读合同面：[`../contracts/opl-gateway/README.zh-CN.md`](../contracts/opl-gateway/README.zh-CN.md)

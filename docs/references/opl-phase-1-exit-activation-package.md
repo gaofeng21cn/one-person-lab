@@ -31,7 +31,7 @@ The current `Phase 1` closeout is frozen as the following completed tranches:
 4. `Phase 1 / Review Ops candidate-domain backlog and onboarding-package hardening`
 5. `Phase 1 / Thesis Ops candidate-domain backlog and onboarding-package hardening`
 
-The resulting formal entry remains the current local `TypeScript CLI`-first / read-only gateway surface.
+The resulting formal entry remains the current local `TypeScript CLI`-first / gateway contract surface.
 That still means:
 
 - no mutation entry

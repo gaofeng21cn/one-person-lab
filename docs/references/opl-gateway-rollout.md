@@ -89,7 +89,7 @@ Goal:
 
 Current frozen state:
 
-- under the `Phase 1` public mainline, the CLI-first / read-only gateway baseline is already runnable
+- under the `Phase 1` public mainline, the CLI-first / gateway contract baseline is already runnable
 - the completed `Phase 1 / G2 release-closeout` has already closed that baseline into one stable repo-tracked `G2 stable public baseline`
 - above that unchanged formal-entry baseline, the active public front door is now the landed local `opl` shell plus the `opl web` pilot and their machine-readable discovery / handoff surfaces
 - the completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` remains closed at the planning-contract boundary
@@ -112,7 +112,7 @@ Completion signal:
 
 Detailed contract:
 
-- [OPL Read-Only Discovery Gateway](../opl-read-only-discovery-gateway.md)
+- [OPL Gateway Contract Surface](../opl-read-only-discovery-gateway.md)
 - [OPL Public Surface Index](../opl-public-surface-index.md)
 
 ## Phase G3: Routed Action Entry

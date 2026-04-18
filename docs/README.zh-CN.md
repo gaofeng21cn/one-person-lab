@@ -71,7 +71,7 @@
 - [Shared Runtime Contract](./shared-runtime-contract.zh-CN.md)
 - [Shared Domain Contract](./shared-domain-contract.zh-CN.md)
 - [OPL Runtime 命名与边界合同](./opl-runtime-naming-and-boundary-contract.zh-CN.md)
-- [OPL 只读 Discovery Gateway](./opl-read-only-discovery-gateway.zh-CN.md)
+- [OPL Gateway 契约面](./opl-read-only-discovery-gateway.zh-CN.md)
 - [OPL Routed Action Gateway](./opl-routed-action-gateway.zh-CN.md)
 - [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.zh-CN.md)
 - [OPL 公开界面索引](./opl-public-surface-index.zh-CN.md)
@@ -89,6 +89,7 @@
 - `docs/references/family-lightweight-direct-entry-rollout-board.md`
 - `docs/references/opl-hosted-web-frontdesk-benchmark.md`
 - `docs/references/opl-product-entry-and-hermes-kernel-integration.md`
+- `docs/references/family-product-entry-and-domain-handoff-architecture.md`
 - `docs/references/family-executor-adapter-defaults.md`
 - `docs/references/hermes-native-executor-proof-lane.md`
 - `docs/references/mas-top-level-cutover-board.md`

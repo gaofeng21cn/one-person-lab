@@ -16,7 +16,7 @@ The target is to require explicit boundary material before official inclusion.
 Domain onboarding is downstream of the already frozen gateway layers:
 
 - [OPL Federation Contract](./opl-federation-contract.md)
-- [OPL Read-Only Discovery Gateway](./opl-read-only-discovery-gateway.md)
+- [OPL Gateway Contract Surface](./opl-read-only-discovery-gateway.md)
 - [OPL Routed Action Gateway](./opl-routed-action-gateway.md)
 - [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.md)
 - the machine-readable contract surfaces in [`../contracts/opl-gateway/README.md`](../contracts/opl-gateway/README.md)

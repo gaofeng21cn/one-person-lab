@@ -15,7 +15,7 @@
 3. `OPL -> domain` 的 family-level lightweight entry 对齐还停在文档与概念层
 4. `MedAutoScience` 作为最重 runtime 主线，还缺一份与 OPL 顶层入口对齐的 cutover board
 
-这次设计的目标，是在不破坏已落下的 `Phase 1` read-only gateway contract 的前提下，把 `OPL` 往“真正可直接使用的本地产品前台”再推进一大步。
+这次设计的目标，是在不破坏已落下的 `Phase 1` gateway contract 的前提下，把 `OPL` 往“真正可直接使用的本地产品前台”再推进一大步。
 
 ## 设计目标
 
@@ -154,13 +154,13 @@
 - gateway service
 - profile substrate
 
-### 与现有 read-only gateway contract 的关系
+### 与现有 gateway contract 的关系
 
 这次新增的 front desk 不会替代当前 formal contract。
 
 当前仍然并行存在两层：
 
-1. `Phase 1` read-only gateway contract surface
+1. `Phase 1` gateway contract surface
 2. 本地 `OPL` product-entry / front-desk surface
 
 前者负责顶层联邦真相；后者负责用户入口。

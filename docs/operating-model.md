@@ -100,7 +100,7 @@ The key distinction is the layering rule: a future higher-judgment product sits 
 
 ## Product Entry And Online Runtime
 
-The current repo-tracked formal entry still remains the local `TypeScript CLI`-first / read-only gateway baseline.
+The current repo-tracked formal entry still remains the local `TypeScript CLI`-first / gateway contract baseline.
 That is the real entry today, but it should not be read as “the product will always depend on `Codex` as its only entry.”
 
 The more durable direction is:

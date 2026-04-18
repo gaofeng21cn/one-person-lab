@@ -4,7 +4,7 @@
 
 **Goal:** Make `opl frontdesk-bootstrap` install a Docker-free Desktop frontdoor by default while keeping LibreChat as an explicit optional lane.
 
-**Architecture:** Reuse the existing OPL frontdesk service and API surfaces as the single truth source. Add one Electron desktop shell package plus one desktop bootstrap state file, then repoint `frontdesk-bootstrap` to that shell while leaving `frontdesk librechat *` intact.
+**Architecture:** Reuse the existing OPL frontdesk service and API surfaces as the single truth source. Add one Electron desktop shell package plus one desktop bootstrap state file, then repoint `frontdesk-bootstrap` to that shell while leaving `frontdesk-librechat-*` intact.
 
 **Tech Stack:** TypeScript CLI, Node.js frontdesk service, Electron desktop shell, node:test, existing workspace registry and Paperclip bootstrap helpers
 
@@ -46,7 +46,7 @@ assert.equal(librechat.frontdesk_librechat.installed, true);
 
 - [ ] **Step 4: Run the focused test and confirm RED**
 
-Run: `NODE_NO_WARNINGS=1 node --experimental-strip-types --test tests/src/cli.test.ts --test-name-pattern='frontdesk bootstrap|frontdesk librechat install'`
+Run: `NODE_NO_WARNINGS=1 node --experimental-strip-types --test tests/src/cli.test.ts --test-name-pattern='frontdesk bootstrap|frontdesk-librechat-install'`
 
 Expected: FAIL because `frontdesk-bootstrap` still returns LibreChat payload.
 
@@ -110,12 +110,12 @@ handler: (args) =>
 
 ```ts
 'frontdesk-librechat-install': { ... } // unchanged behavior
-'frontdesk librechat install': { ... } // unchanged alias
+'frontdesk-librechat-install': { ... } // unchanged alias
 ```
 
 - [ ] **Step 4: Re-run focused tests and confirm GREEN**
 
-Run: `NODE_NO_WARNINGS=1 node --experimental-strip-types --test tests/src/cli.test.ts --test-name-pattern='frontdesk bootstrap|frontdesk librechat install'`
+Run: `NODE_NO_WARNINGS=1 node --experimental-strip-types --test tests/src/cli.test.ts --test-name-pattern='frontdesk bootstrap|frontdesk-librechat-install'`
 
 Expected: PASS
 
@@ -131,7 +131,7 @@ Expected: PASS
 
 ```md
 - `opl frontdesk-bootstrap --path <workspace>` now bootstraps the local `OPL Atlas` Desktop shell.
-- `opl frontdesk librechat install` remains available as an optional Docker-based shell lane.
+- `opl frontdesk-librechat-install` remains available as an optional Docker-based shell lane.
 ```
 
 - [ ] **Step 2: Update the current-state wording**

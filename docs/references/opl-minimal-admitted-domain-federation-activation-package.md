@@ -35,7 +35,7 @@ This package activates only the smallest contract-first federation follow-on:
 
 - strengthen top-level federation wording for already admitted domains only
 - make the two currently admitted domain surfaces explicit as the basis of the stronger federation expression
-- keep the `OPL` formal entry at the current local `TypeScript CLI`-first / read-only gateway surface
+- keep the `OPL` formal entry at the current local `TypeScript CLI`-first / gateway contract surface
 
 In other words, this is a docs+contracts+tests activation package, not a runtime package.
 

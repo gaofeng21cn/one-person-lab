@@ -99,7 +99,7 @@ Agent 主要负责：
 
 ## 产品入口与在线运行层
 
-当前 repo-tracked 的 formal entry，仍然是本地 `TypeScript CLI`-first / read-only gateway baseline。
+当前 repo-tracked 的 formal entry，仍然是本地 `TypeScript CLI`-first / gateway contract baseline。
 这是真实的当前入口，但它不应被理解成未来产品永远只能通过 `Codex` 接入。
 
 更合理的长期方向是：

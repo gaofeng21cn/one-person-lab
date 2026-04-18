@@ -51,10 +51,11 @@
 | Specialized domain agents | `MAS`, `MAG`, `RCA` | Medical research, grant work, and visual deliverables | Active module family |
 
 The GUI treats these three modes as peers. `Hermes-Agent` is exposed separately as the explicit backup online gateway.
+The active execution path remains `Codex-only` local sessions as the current development host, while the preferred future substrate direction is a true upstream `Hermes-Agent` integration proved in a domain repository first.
 
 ## Progress And Deliverables
 
-The right-side workspace rail should make long-running work easy to follow:
+The right-side workspace rail should make long-running work easy to follow with clear execution visibility:
 
 - Human-readable progress updates such as accepted, gathering material, drafting, running, waiting for review, and delivering files.
 - A task-oriented file area that keeps drafts, reports, slides, tables, and other deliverables visible per workspace.
@@ -64,6 +65,12 @@ The right-side workspace rail should make long-running work easy to follow:
 
 `Hermes-Agent` stays available for remote gateway experiments, alternate long-running sessions, and online fallback runs.
 Users enter it through an explicit mode switch or settings-level gateway configuration.
+
+## Frozen Federation Boundaries
+
+- `Phase 1 / G2 release-closeout` stays frozen as the top-level public baseline for the shared runtime layer, hosted entry surfaces, and any real `Hermes-Agent` rollout.
+- The current public federation freeze is the `Minimal admitted-domain federation activation package`. It covers the two already admitted domain surfaces, `MedAutoScience` and `RedCube AI`, while the formal entry remains the same local `TypeScript CLI`-first / gateway contract surface and runtime ownership stays with the admitted domains.
+- `Grant Foundry -> Med Auto Grant` is the active grant-domain repository line. At the `OPL` layer, its top-level federation admission and domain handoff wording remains separately gated.
 
 ## Active Modules
 
@@ -116,11 +123,19 @@ The settings surface should make module lifecycle visible:
 <details>
   <summary><strong>Technical Notes And Current Implementation Truth</strong></summary>
 
+`OPL` now ships a local direct product-entry shell whose default front door is `opl`.
+The frozen product-entry choice is `external kernel, managed by OPL product packaging`, not requiring users to manually install and understand `Hermes-Agent`.
+The current user-facing chain is `User -> OPL Product Entry -> OPL Gateway -> Domain Handoff -> Domain Product Entry / Domain Gateway`.
+The local web front desk pilot is landed, while the hosted web front desk is still not ready.
+
 `OPL` currently materializes the product shell in local CLI and GUI-facing surfaces.
 The public product direction is `GUI -> mode selection -> Codex or domain module`.
 `opl frontdesk bootstrap --path <workspace>` prepares the local `OPL Atlas` Desktop shell.
 `opl web` remains the local browser companion.
 `opl`, `opl "<request...>"`, `opl ask`, and `opl chat` remain shell surfaces around the same product entry.
+
+The explicit CLI surface order stays visible as `opl doctor`, `opl ask`, `opl chat`, `opl resume`, `opl sessions`, `opl logs`, `opl repair-hermes-gateway`, and `opl web`.
+`opl "<request...>"` remains the quick-ask shell path around the same direct product entry.
 
 Codex is the default engine for ordinary conversation and general local tasks.
 Domain agents remain independently owned modules with their own repository truth.

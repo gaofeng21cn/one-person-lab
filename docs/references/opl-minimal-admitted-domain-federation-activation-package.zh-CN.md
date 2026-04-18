@@ -35,7 +35,7 @@
 
 - 只针对已 admitted domain 收紧顶层 federation wording
 - 把当前两条已 admitted domain surface 显式写成更强 federation 表达的依据
-- 保持 `OPL` 的 formal entry 仍然是当前本地 `TypeScript CLI`-first / read-only gateway surface
+- 保持 `OPL` 的 formal entry 仍然是当前本地 `TypeScript CLI`-first / gateway contract surface
 
 换句话说，这是一份 docs+contracts+tests activation package，不是 runtime package。
 

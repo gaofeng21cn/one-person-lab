@@ -27,7 +27,7 @@ test('minimal admitted-domain federation activation package is frozen as an acti
   assert.equal(pkg.package_id, 'opl_minimal_admitted_domain_federation_activation_package');
   assert.equal(pkg.phase, 'phase_2_minimal_admitted_domain_federation_activation');
   assert.equal(pkg.package_status, 'activated');
-  assert.equal(pkg.formal_entry.entry_surface, 'TypeScript CLI-first / read-only gateway surface');
+  assert.equal(pkg.formal_entry.entry_surface, 'TypeScript CLI-first / gateway contract surface');
   assert.equal(pkg.formal_entry.runtime_owner, false);
   assert.equal(pkg.formal_entry.mutation_entry, false);
   assert.equal(pkg.formal_entry.run_launch, false);

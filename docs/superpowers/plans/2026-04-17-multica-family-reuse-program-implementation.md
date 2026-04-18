@@ -155,7 +155,7 @@
 
 `RCA`：
 
-1. 更新 `@redcube/gateway` 里的 `opl-readonly-gateway` 依赖 SHA。
+1. 更新 `@redcube/gateway` 里的 `opl-gateway-shared` 依赖 SHA。
 2. 把 `get-product-entry-manifest.js` 中手写的 `product_entry_quickstart / overview / readiness` 换成 shared helper。
 3. 保留 `family-orchestration-companion` 继续作为 RedCube visual-domain truth owner。
 4. 补跑 focused manifest/frontdesk tests。

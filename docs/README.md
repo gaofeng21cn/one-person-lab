@@ -71,7 +71,7 @@ These documents are still public and bilingual, but they are meant for technical
 - [Shared Runtime Contract](./shared-runtime-contract.md)
 - [Shared Domain Contract](./shared-domain-contract.md)
 - [OPL Runtime Naming And Boundary Contract](./opl-runtime-naming-and-boundary-contract.md)
-- [OPL Read-Only Discovery Gateway](./opl-read-only-discovery-gateway.md)
+- [OPL Gateway Contract Surface](./opl-read-only-discovery-gateway.md)
 - [OPL Routed Action Gateway](./opl-routed-action-gateway.md)
 - [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.md)
 - [OPL Public Surface Index](./opl-public-surface-index.md)
@@ -89,6 +89,7 @@ It is repo-tracked supporting material.
 - `docs/references/family-lightweight-direct-entry-rollout-board.md`
 - `docs/references/opl-hosted-web-frontdesk-benchmark.md`
 - `docs/references/opl-product-entry-and-hermes-kernel-integration.md`
+- `docs/references/family-product-entry-and-domain-handoff-architecture.md`
 - `docs/references/family-executor-adapter-defaults.md`
 - `docs/references/hermes-native-executor-proof-lane.md`
 - `docs/references/mas-top-level-cutover-board.md`

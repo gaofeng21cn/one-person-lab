@@ -238,7 +238,7 @@ MAS 的目标状态：
 - 所有 shared boundary modules 都在 `OPL` 同时维护 JS + Python 实现。
 - contract 名称、字段名、fail-closed rule、fixture corpus 由 `OPL` 单点冻结。
 - Python consumer 统一走 `opl-harness-shared`。
-- JS consumer 统一走 `opl-readonly-gateway` export。
+- JS consumer 统一走 `opl-gateway-shared` export。
 - 新增 shared module 必须同步有 JS/Python tests，避免一边领先一边漂移。
 
 ## Repo Surfaces To Land In This Tranche

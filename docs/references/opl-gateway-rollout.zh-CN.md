@@ -89,7 +89,7 @@ Human / Agent
 
 当前冻结状态：
 
-- `Phase 1` 公开主线下，CLI-first / read-only gateway baseline 已可运行
+- `Phase 1` 公开主线下，CLI-first / gateway contract baseline 已可运行
 - 已完成的 `Phase 1 / G2 release-closeout` 已把它收口成稳定、单一、repo-tracked 的 `G2 stable public baseline`
 - 在这条未变化的 formal-entry baseline 之上，当前活跃的公开前台已经是已落地的本地 `opl` shell、`opl web` pilot，以及围绕它们的 machine-readable discovery / handoff surface
 - 已完成的 repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` 继续停留在 planning-contract closeout 边界
@@ -112,7 +112,7 @@ Human / Agent
 
 详细契约：
 
-- [OPL 只读 Discovery Gateway](../opl-read-only-discovery-gateway.zh-CN.md)
+- [OPL Gateway 契约面](../opl-read-only-discovery-gateway.zh-CN.md)
 - [OPL Public Surface Index](../opl-public-surface-index.zh-CN.md)
 
 ## Phase G3：Routed Action Entry

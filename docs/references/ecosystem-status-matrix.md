@@ -124,7 +124,7 @@
 
 ### 顶层 OPL
 
-`OPL` 当前 repo-tracked formal entry 仍是本地 `TypeScript CLI + read-only gateway baseline`。
+`OPL` 当前 repo-tracked formal entry 仍是本地 `TypeScript CLI + gateway contract baseline`。
 它是顶层 `Gateway` 的 formal entry，不等于 domain runtime owner 入口。
 当前顶层 baton 同时继承并保持可追溯的前序锚点：
 

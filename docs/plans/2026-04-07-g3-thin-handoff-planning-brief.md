@@ -18,7 +18,7 @@
 
 ## freeze closeout 当时的阶段硬边界
 
-- 当时仓库仍停留在 `CLI-first / read-only gateway baseline + planning freeze`。
+- 当时仓库仍停留在 `CLI-first / gateway contract baseline + planning freeze`。
 - 当时不实现真正的 `G3 mutation/routed-action runtime`。
 - 当时不把 `OPL` 升格为统一 runtime owner。
 - 当时不抽共享执行内核。

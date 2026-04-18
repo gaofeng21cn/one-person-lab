@@ -31,7 +31,7 @@
 
 但它还不是 managed hosted / web 形态的完整产品前台。
 当前这层 hosted / web 路线已经先落下了真实的 `LibreChat-first` pilot 壳，长期仍回到 `OPL` 自有 web front desk。
-同时，`Phase 1` 的 read-only gateway commands 仍然是顶层联邦真相面的稳定 formal contract surface。
+同时，`Phase 1` 的 gateway contract commands 仍然是顶层联邦真相面的稳定 formal contract surface。
 
 目标产品链路应是：
 
