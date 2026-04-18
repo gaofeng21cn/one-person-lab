@@ -236,7 +236,7 @@ test('top-level execution mainline is framed as frontdesk hardening plus conditi
   assert.match(board, /opl-phase-2-central-reference-sync-board\.md/);
   assert.match(board, /admitted-domain.*delta|central reference surfaces drift|中央 reference surface/);
   assert.match(board, /hosted runtime hardening|hosted hardening/i);
-  assert.match(board, /locator|shared_handoff|domain-manifests/);
+  assert.match(board, /locator|shared_handoff|domain[- ]manifests/);
   assert.match(board, /下一条执行 issue|推荐下一条 issue/);
 });
 
@@ -492,7 +492,7 @@ test('product-entry docs freeze the managed external-kernel choice instead of fo
   assert.match(status, /Hermes Kernel Integration.*external kernel, managed by OPL product packaging/);
   assert.match(status, /家族级入口真相|operator entry.*agent entry.*product entry/);
   assert.match(status, /contract \.\.\.|domain \.\.\.|status \.\.\.|workspace \.\.\.|frontdesk \.\.\.|session \.\.\.|runtime repair-gateway/);
-  assert.doesNotMatch(status, /workspace-catalog|repair-hermes-gateway|opl sessions|opl logs/);
+  assert.doesNotMatch(status, /workspace-catalog|repair-hermes-gateway|opl sessions|opl logs|\bopl resume\b|\bopl handoff-envelope\b|launch-domain/);
   assert.match(status, /家族默认执行器.*Codex CLI autonomous.*Codex.*默认配置/);
   assert.match(status, /Hermes-native.*实验路线/);
   assert.match(status, /Hermes AIAgent.*完整.*agent loop|完整的 Hermes AIAgent/);
@@ -502,7 +502,7 @@ test('product-entry docs freeze the managed external-kernel choice instead of fo
   assert.match(architecture, /opl domain manifests/i);
   assert.match(architecture, /opl session ledger/i);
   assert.match(architecture, /opl runtime repair-gateway/i);
-  assert.doesNotMatch(architecture, /opl repair-hermes-gateway|opl sessions|opl logs|workspace-catalog/);
+  assert.doesNotMatch(architecture, /opl repair-hermes-gateway|opl sessions|opl logs|workspace-catalog|\bopl resume\b|\bopl handoff-envelope\b|launch-domain/);
   assert.match(architecture, /User -> OPL Product Entry -> OPL Gateway -> Hermes Kernel -> Domain Adapter/);
   assert.match(architecture, /target_domain_id/);
   assert.match(architecture, /return_surface_contract/);

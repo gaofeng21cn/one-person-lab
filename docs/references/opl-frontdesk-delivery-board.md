@@ -72,25 +72,25 @@
 
 - `opl web`
 - `/api/projects`
-- `/api/workspace-status`
-- `/api/workspace-catalog`
-- `/api/workspace-bind`
-- `/api/workspace-activate`
-- `/api/workspace-archive`
-- `/api/runtime-status`
-- `/api/session-ledger`
-- `/api/dashboard`
+- `/api/status/workspace`
+- `/api/workspace/list`
+- `/api/workspace/bind`
+- `/api/workspace/activate`
+- `/api/workspace/archive`
+- `/api/status/runtime`
+- `/api/session/ledger`
+- `/api/status/dashboard`
 - `/api/ask`
 - `/api/health`
-- `/api/frontdesk-manifest`
-- `/api/frontdesk-readiness`
-- `/api/frontdesk-domain-wiring`
-- `/api/hosted-bundle`
-- `/api/hosted-package`
-- `/api/handoff-envelope`
-- `/api/sessions`
-- `/api/resume`
-- `/api/logs`
+- `/api/frontdesk/manifest`
+- `/api/frontdesk/readiness`
+- `/api/frontdesk/domain-wiring`
+- `/api/frontdesk/hosted-bundle`
+- `/api/frontdesk/hosted-package`
+- `/api/contract/handoff-envelope`
+- `/api/session/list`
+- `/api/session/resume`
+- `/api/session/logs`
 
 当前含义：
 
@@ -227,7 +227,7 @@
 最需要继续收口的是：
 
 - `managed hosted runtime hardening` 仍未完成，当前仍只是本地 web pilot、hosted-friendly shell contract、self-hostable pilot package 与 `LibreChat-first` hosted shell pilot 的组合，还不能误写成 actual hosted runtime。
-- 顶层 `workspace registry / domain-manifests / dashboard / handoff-envelope / opl web` 已经能消费 domain discovery surface，但 domain locator wiring、`shared_handoff` 一致性与 direct-entry parity 还没有完全压稳。
+- 顶层 `workspace registry / domain manifests / status dashboard / contract handoff-envelope / opl web` 已经能消费 domain discovery surface，但 domain locator wiring、`shared_handoff` 一致性与 direct-entry parity 还没有完全压稳。
 - 顶层 `frontdesk domain-wiring` 已把这件事收成单独 surface，但仍需要随着 domain active binding 和 manifest 成熟度继续推进。
 
 ## 推荐下一条执行 issue
@@ -235,7 +235,7 @@
 建议下一条执行 issue：
 
 - 标题：`压实 OPL Front Desk hosted hardening 与 locator/handoff parity`
-- 目标：沿现有 `opl front desk -> domain-manifests / dashboard / handoff-envelope / opl web` 主线，继续把 hosted runtime hardening、domain locator wiring、`shared_handoff` 一致性与 direct-entry parity 压成更稳定的 family-level execution surface。
+- 目标：沿现有 `opl front desk -> domain manifests / status dashboard / contract handoff-envelope / opl web` 主线，继续把 hosted runtime hardening、domain locator wiring、`shared_handoff` 一致性与 direct-entry parity 压成更稳定的 family-level execution surface。
 - 边界：不新增 admitted domain、不重开 domain repo 内部实现、不把 `OPL` 写成 runtime owner；若没有新的 admitted-domain delta 或 central reference surfaces drift，也不重开 `docs/references/opl-phase-2-central-reference-sync-board.md` 那条中央同步线。
 - 完成信号：`docs/status.md`、`contracts/opl-gateway/README.md`、front desk 相关 reference docs 与验证口径都能一致表达“当前活跃主线是 frontdesk hardening + locator/handoff parity，而 central sync 只是条件性 follow-on”。
 

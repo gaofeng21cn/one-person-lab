@@ -1547,7 +1547,7 @@ export async function openPaperclipGate(
     request_surface: {
       surface_kind: 'opl_handoff_bundle',
       surface_id: 'opl_family_handoff_bundle',
-      command: 'opl handoff-envelope',
+      command: 'opl contract handoff-envelope',
     },
     evidence_refs: [
       {

@@ -493,7 +493,7 @@ function normalizeLaunchDomainInput(body: LaunchDomainRequestBody) {
   if (!projectId) {
     throw new GatewayContractError(
       'cli_usage_error',
-      'Web front-desk launch-domain requests require a non-empty project_id.',
+      'Web front-desk domain launch requests require a non-empty project_id.',
       {
         required: ['project_id'],
       },
@@ -504,7 +504,7 @@ function normalizeLaunchDomainInput(body: LaunchDomainRequestBody) {
   if (strategy && !['auto', 'open_url', 'spawn_command'].includes(strategy)) {
     throw new GatewayContractError(
       'cli_usage_error',
-      'Web front-desk launch-domain requests require strategy to be auto, open_url, or spawn_command.',
+      'Web front-desk domain launch requests require strategy to be auto, open_url, or spawn_command.',
       {
         strategy,
       },
@@ -2711,7 +2711,7 @@ function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
               <div style="height: 12px"></div>
               <div class="card">
                 <h3>Workspace Catalog</h3>
-                <pre class="json-view" id="workspace-catalog-json">{}</pre>
+                <pre class="json-view" id="workspace-list-json">{}</pre>
               </div>
             </div>
           </section>
@@ -2815,7 +2815,7 @@ function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
       const workspaceBindingSelect = document.getElementById('workspace-binding-select');
       const workspaceActiveSummary = document.getElementById('workspace-active-summary');
       const workspaceStatusLine = document.getElementById('workspace-status-line');
-      const workspaceCatalogJson = document.getElementById('workspace-catalog-json');
+      const workspaceCatalogJson = document.getElementById('workspace-list-json');
       const sessionLedgerJson = document.getElementById('session-ledger-json');
       const domainManifestJson = document.getElementById('domain-manifest-json');
       const previewButton = document.getElementById('preview-button');
@@ -4574,17 +4574,17 @@ async function handleRequest(
       return;
     }
 
-    if (method === 'GET' && routedPath === '/api/frontdesk-manifest') {
+    if (method === 'GET' && routedPath === '/api/frontdesk/manifest') {
       writeJson(response, 200, buildFrontDeskManifest(context.contracts, { basePath: context.basePath }));
       return;
     }
 
-    if (method === 'GET' && routedPath === '/api/frontdesk-entry-guide') {
+    if (method === 'GET' && routedPath === '/api/frontdesk/entry-guide') {
       writeJson(response, 200, buildFrontDeskEntryGuide(context.contracts, { basePath: context.basePath }));
       return;
     }
 
-    if (method === 'GET' && routedPath === '/api/frontdesk-readiness') {
+    if (method === 'GET' && routedPath === '/api/frontdesk/readiness') {
       writeJson(
         response,
         200,
@@ -4600,7 +4600,7 @@ async function handleRequest(
       return;
     }
 
-    if (method === 'GET' && routedPath === '/api/frontdesk-settings') {
+    if (method === 'GET' && routedPath === '/api/frontdesk/settings') {
       writeJson(response, 200, {
         version: 'g2',
         frontdesk_settings: readFrontDeskRuntimeModes(),
@@ -4608,7 +4608,7 @@ async function handleRequest(
       return;
     }
 
-    if (method === 'POST' && routedPath === '/api/frontdesk-settings') {
+    if (method === 'POST' && routedPath === '/api/frontdesk/settings') {
       const body = (await readJsonBody(request)) as FrontDeskSettingsRequestBody;
       writeJson(response, 200, {
         version: 'g2',
@@ -4617,12 +4617,12 @@ async function handleRequest(
       return;
     }
 
-    if (method === 'GET' && routedPath === '/api/frontdesk-librechat-status') {
+    if (method === 'GET' && routedPath === '/api/frontdesk/librechat/status') {
       writeJson(response, 200, await getFrontDeskLibreChatServiceStatus(context.contracts));
       return;
     }
 
-    if (method === 'POST' && routedPath === '/api/frontdesk-librechat-title-sync') {
+    if (method === 'POST' && routedPath === '/api/frontdesk/librechat/title-sync') {
       const body = (await readJsonBody(request)) as TitleSyncRequestBody;
       writeJson(response, 200, {
         frontdesk_librechat_title_sync: await queueFrontDeskLibreChatTitleSync(
@@ -4648,11 +4648,11 @@ async function handleRequest(
       return;
     }
 
-    if (method === 'GET' && routedPath === '/api/frontdesk-domain-wiring') {
+    if (method === 'GET' && routedPath === '/api/frontdesk/domain-wiring') {
       writeJson(response, 200, buildFrontDeskDomainWiring(context.contracts, { basePath: context.basePath }));
       return;
     }
-    if (method === 'GET' && routedPath === '/api/hosted-bundle') {
+    if (method === 'GET' && routedPath === '/api/frontdesk/hosted-bundle') {
       writeJson(
         response,
         200,
@@ -4667,7 +4667,7 @@ async function handleRequest(
       return;
     }
 
-    if (method === 'POST' && routedPath === '/api/hosted-package') {
+    if (method === 'POST' && routedPath === '/api/frontdesk/hosted-package') {
       writeJson(
         response,
         200,
@@ -4682,7 +4682,7 @@ async function handleRequest(
       return;
     }
 
-    if (method === 'POST' && routedPath === '/api/librechat-package') {
+    if (method === 'POST' && routedPath === '/api/frontdesk/librechat/package') {
       writeJson(
         response,
         200,
@@ -4702,7 +4702,7 @@ async function handleRequest(
       return;
     }
 
-    if (method === 'GET' && routedPath === '/api/workspace-status') {
+    if (method === 'GET' && routedPath === '/api/status/workspace') {
       writeJson(
         response,
         200,
@@ -4713,22 +4713,22 @@ async function handleRequest(
       return;
     }
 
-    if (method === 'GET' && routedPath === '/api/workspace-catalog') {
+    if (method === 'GET' && routedPath === '/api/workspace/list') {
       writeJson(response, 200, buildWorkspaceCatalog(context.contracts));
       return;
     }
 
-    if (method === 'GET' && routedPath === '/api/domain-manifests') {
+    if (method === 'GET' && routedPath === '/api/domain/manifests') {
       writeJson(response, 200, buildDomainManifestCatalog(context.contracts));
       return;
     }
 
-    if (method === 'POST' && routedPath === '/api/workspace-bind') {
+    if (method === 'POST' && routedPath === '/api/workspace/bind') {
       writeJson(response, 200, bindWorkspace(context.contracts, normalizeWorkspaceRegistryInput(await readJsonBody(request))));
       return;
     }
 
-    if (method === 'POST' && routedPath === '/api/workspace-activate') {
+    if (method === 'POST' && routedPath === '/api/workspace/activate') {
       writeJson(
         response,
         200,
@@ -4737,7 +4737,7 @@ async function handleRequest(
       return;
     }
 
-    if (method === 'POST' && routedPath === '/api/workspace-archive') {
+    if (method === 'POST' && routedPath === '/api/workspace/archive') {
       writeJson(
         response,
         200,
@@ -4746,7 +4746,7 @@ async function handleRequest(
       return;
     }
 
-    if (method === 'GET' && routedPath === '/api/runtime-status') {
+    if (method === 'GET' && routedPath === '/api/status/runtime') {
       writeJson(
         response,
         200,
@@ -4757,7 +4757,7 @@ async function handleRequest(
       return;
     }
 
-    if (method === 'GET' && routedPath === '/api/session-ledger') {
+    if (method === 'GET' && routedPath === '/api/session/ledger') {
       writeJson(
         response,
         200,
@@ -4766,7 +4766,7 @@ async function handleRequest(
       return;
     }
 
-    if (method === 'GET' && routedPath === '/api/dashboard') {
+    if (method === 'GET' && routedPath === '/api/status/dashboard') {
       writeJson(
         response,
         200,
@@ -4830,7 +4830,7 @@ async function handleRequest(
       return;
     }
 
-    if (method === 'POST' && routedPath === '/api/launch-domain') {
+    if (method === 'POST' && routedPath === '/api/domain/launch') {
       writeJson(
         response,
         200,
@@ -4842,13 +4842,13 @@ async function handleRequest(
       return;
     }
 
-    if (method === 'POST' && routedPath === '/api/handoff-envelope') {
+    if (method === 'POST' && routedPath === '/api/contract/handoff-envelope') {
       const body = (await readJsonBody(request)) as AskRequestBody;
       writeJson(response, 200, buildProductEntryHandoffEnvelope(normalizeAskInput(body), context.contracts));
       return;
     }
 
-    if (method === 'GET' && routedPath === '/api/sessions') {
+    if (method === 'GET' && routedPath === '/api/session/list') {
       writeJson(
         response,
         200,
@@ -4860,13 +4860,13 @@ async function handleRequest(
       return;
     }
 
-    if (method === 'POST' && routedPath === '/api/resume') {
+    if (method === 'POST' && routedPath === '/api/session/resume') {
       const body = (await readJsonBody(request)) as ResumeRequestBody;
       writeJson(response, 200, runProductEntryResume(normalizeResumeSessionId(body)));
       return;
     }
 
-    if (method === 'GET' && routedPath === '/api/logs') {
+    if (method === 'GET' && routedPath === '/api/session/logs') {
       writeJson(
         response,
         200,

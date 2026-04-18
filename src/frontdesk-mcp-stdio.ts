@@ -615,7 +615,7 @@ const TOOLS: ToolDefinition[] = [
           throw new Error('opl_workspace with action=activate requires project_id and workspace_path.');
         }
 
-        const payload = await fetchJson(options, '/workspace-activate', {}, {
+        const payload = await fetchJson(options, '/workspace/activate', {}, {
           method: 'POST',
           body: {
             project_id: projectId,
@@ -690,7 +690,7 @@ const TOOLS: ToolDefinition[] = [
           throw new Error('opl_session with action=resume requires a non-empty session_id.');
         }
 
-        const payload = await fetchJson(options, '/resume', {}, {
+        const payload = await fetchJson(options, '/session/resume', {}, {
           method: 'POST',
           body: {
             session_id: sessionId,
@@ -700,7 +700,7 @@ const TOOLS: ToolDefinition[] = [
       }
 
       if (action === 'logs') {
-        const payload = await fetchJson(options, '/logs', {
+        const payload = await fetchJson(options, '/session/logs', {
           log_name: normalizeOptionalString(args.log_name),
           lines: parsePositiveInteger(args.lines, 'lines'),
           since: normalizeOptionalString(args.since),
@@ -711,7 +711,7 @@ const TOOLS: ToolDefinition[] = [
         return renderRuntimeLogsBrief(payload);
       }
 
-      const payload = await fetchJson(options, '/sessions', {
+      const payload = await fetchJson(options, '/session/list', {
         limit: parsePositiveInteger(args.limit, 'limit'),
         source: normalizeOptionalString(args.source),
       });
@@ -841,7 +841,7 @@ async function handleRequest(
       state.titleSyncInFlight = true;
       state.lastTitleSyncAt = Date.now();
       try {
-        await fetchJson(options, '/frontdesk-librechat-title-sync', {}, {
+        await fetchJson(options, '/frontdesk/librechat/title-sync', {}, {
           method: 'POST',
           body: {
             limit: 3,

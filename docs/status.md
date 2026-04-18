@@ -26,7 +26,7 @@
 - `opl web` 是同一产品壳的本地浏览器 companion surface。
 - `opl`、`opl "<request...>"`、`opl start --project <project_id> [--mode <mode_id>]`、`opl doctor`、`opl ask`、`opl chat` 与 `opl web` 共同组成当前顶层产品前门。
 - `opl frontdesk-librechat-install|status|start|stop|open` 与 `opl frontdesk-librechat-package` 保留为 hidden compatibility surface，默认入口保持 GUI 主路径。
-- `opl ask` 默认走 `Codex`；`opl chat`、`opl resume`、显式 executor 配置和 GUI 模式切换可以进入 `Hermes-Agent` 备用在线路径。
+- `opl ask` 默认走 `Codex`；`opl chat`、`opl session resume`、显式 executor 配置和 GUI 模式切换可以进入 `Hermes-Agent` 备用在线路径。
 - 当前 grouped command matrix 已经固定成：
   - `contract ...`：`validate|workstreams|workstream|domains|domain|surfaces|surface|handoff-envelope`
   - `domain ...`：`manifests|launch|resolve-request|explain-boundary`
