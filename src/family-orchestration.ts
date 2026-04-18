@@ -75,6 +75,13 @@ export interface BuildFamilyOrchestrationTemplateInput {
   checkpoint_lineage_surface?: FamilyReference | null;
 }
 
+export interface BuildFamilyHumanGatePreviewInput {
+  gate_id: string;
+  title?: string | null;
+  status?: string | null;
+  review_surface?: FamilyReference | null;
+}
+
 export interface FamilyActionGraphNodeInput {
   node_id: string;
   node_kind: string;
@@ -110,6 +117,27 @@ export interface BuildFamilyActionGraphInput {
   exit_nodes: string[];
   human_gates?: FamilyActionGraphHumanGateInput[] | null;
   checkpoint_policy?: JsonRecord | null;
+}
+
+export interface BuildFamilyProductEntryOrchestrationInput {
+  graph_id: string;
+  target_domain_id: string;
+  graph_kind: string;
+  graph_version: string;
+  nodes: FamilyActionGraphNodeInput[];
+  edges: FamilyActionGraphEdgeInput[];
+  entry_nodes: string[];
+  exit_nodes: string[];
+  human_gates?: FamilyActionGraphHumanGateInput[] | null;
+  checkpoint_nodes?: string[] | null;
+  checkpoint_policy?: JsonRecord | null;
+  human_gate_previews?: BuildFamilyHumanGatePreviewInput[] | null;
+  resume_surface_kind: string;
+  session_locator_field: string;
+  checkpoint_locator_field: string;
+  action_graph_ref?: FamilyReference | null;
+  event_envelope_surface?: FamilyReference | null;
+  checkpoint_lineage_surface?: FamilyReference | null;
 }
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -252,6 +280,16 @@ export function buildFamilyActionGraphHumanGate(input: FamilyActionGraphHumanGat
   };
 }
 
+export function buildFamilyHumanGatePreview(input: BuildFamilyHumanGatePreviewInput) {
+  const reviewSurface = normalizeRef(input.review_surface, 'review_surface');
+  return {
+    gate_id: requireString(input.gate_id, 'gate_id'),
+    ...(optionalString(input.title) ? { title: optionalString(input.title)! } : {}),
+    ...(optionalString(input.status) ? { status: optionalString(input.status)! } : {}),
+    ...(reviewSurface ? { review_surface: reviewSurface } : {}),
+  };
+}
+
 export function buildExplicitCheckpointPolicy(input: BuildExplicitCheckpointPolicyInput) {
   return {
     mode: 'explicit_nodes',
@@ -334,6 +372,40 @@ export function buildFamilyOrchestrationTemplate(input: BuildFamilyOrchestration
     ...(eventEnvelopeSurface ? { event_envelope_surface: eventEnvelopeSurface } : {}),
     ...(checkpointLineageSurface ? { checkpoint_lineage_surface: checkpointLineageSurface } : {}),
   };
+}
+
+export function buildFamilyProductEntryOrchestration(input: BuildFamilyProductEntryOrchestrationInput) {
+  const checkpointPolicy = Array.isArray(input.checkpoint_nodes)
+    ? buildExplicitCheckpointPolicy({
+        checkpoint_nodes: input.checkpoint_nodes,
+      })
+    : (isRecord(input.checkpoint_policy) ? { ...input.checkpoint_policy } : null);
+
+  const humanGatePreviews = Array.isArray(input.human_gate_previews)
+    ? input.human_gate_previews.map((preview) => buildFamilyHumanGatePreview(preview))
+    : [];
+
+  return buildFamilyOrchestrationTemplate({
+    action_graph: buildFamilyActionGraph({
+      graph_id: input.graph_id,
+      target_domain_id: input.target_domain_id,
+      graph_kind: input.graph_kind,
+      graph_version: input.graph_version,
+      nodes: input.nodes,
+      edges: input.edges,
+      entry_nodes: input.entry_nodes,
+      exit_nodes: input.exit_nodes,
+      human_gates: input.human_gates,
+      ...(checkpointPolicy ? { checkpoint_policy: checkpointPolicy } : {}),
+    }),
+    human_gates: humanGatePreviews,
+    resume_surface_kind: input.resume_surface_kind,
+    session_locator_field: input.session_locator_field,
+    checkpoint_locator_field: input.checkpoint_locator_field,
+    action_graph_ref: input.action_graph_ref ?? null,
+    event_envelope_surface: input.event_envelope_surface ?? null,
+    checkpoint_lineage_surface: input.checkpoint_lineage_surface ?? null,
+  });
 }
 
 export function buildFamilyOrchestrationCompanion(input: BuildFamilyOrchestrationCompanionInput) {

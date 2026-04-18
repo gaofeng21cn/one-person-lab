@@ -6,8 +6,10 @@ import {
   buildFamilyActionGraph,
   buildFamilyActionGraphEdge,
   buildFamilyActionGraphHumanGate,
+  buildFamilyHumanGatePreview,
   buildFamilyActionGraphNode,
   buildFamilyHumanGate,
+  buildFamilyProductEntryOrchestration,
   buildFamilyOrchestrationCompanion,
   buildFamilyOrchestrationTemplate,
   resolveActiveRunId,
@@ -170,4 +172,134 @@ test('buildFamilyActionGraph validates canonical family graph payloads', () => {
     mode: 'explicit_nodes',
     checkpoint_nodes: ['step:continue_current_loop'],
   });
+});
+
+test('buildFamilyHumanGatePreview normalizes shared preview fields', () => {
+  const preview = buildFamilyHumanGatePreview({
+    gate_id: 'route-review',
+    title: 'Route review gate',
+    status: 'approved',
+    review_surface: {
+      ref_kind: 'json_pointer',
+      ref: '/product_entry_manifest/operator_loop_surface',
+      label: 'operator loop surface',
+    },
+  }) as {
+    gate_id: string;
+    title: string;
+    status: string;
+    review_surface: { ref_kind: string; ref: string; label: string };
+  };
+
+  assert.equal(preview.gate_id, 'route-review');
+  assert.equal(preview.title, 'Route review gate');
+  assert.equal(preview.status, 'approved');
+  assert.deepEqual(preview.review_surface, {
+    ref_kind: 'json_pointer',
+    ref: '/product_entry_manifest/operator_loop_surface',
+    label: 'operator loop surface',
+  });
+});
+
+test('buildFamilyProductEntryOrchestration materializes action graph and gate previews together', () => {
+  const orchestration = buildFamilyProductEntryOrchestration({
+    graph_id: 'redcube_frontdoor_product_entry_graph',
+    target_domain_id: 'redcube_ai',
+    graph_kind: 'visual_deliverable_orchestration',
+    graph_version: '2026-04-18',
+    nodes: [
+      {
+        node_id: 'step:open_frontdesk',
+        node_kind: 'frontdoor',
+        title: 'Open RedCube frontdesk',
+        surface_kind: 'product_frontdesk',
+      },
+      {
+        node_id: 'step:continue_current_loop',
+        node_kind: 'deliverable_runtime',
+        title: 'Continue current loop',
+        surface_kind: 'product_entry',
+        produces_checkpoint: true,
+      },
+      {
+        node_id: 'step:inspect_current_progress',
+        node_kind: 'progress_read',
+        title: 'Inspect current progress',
+        surface_kind: 'product_entry_session',
+        produces_checkpoint: true,
+      },
+    ],
+    edges: [
+      {
+        from: 'step:open_frontdesk',
+        to: 'step:continue_current_loop',
+        on: 'start_direct',
+      },
+      {
+        from: 'step:continue_current_loop',
+        to: 'step:inspect_current_progress',
+        on: 'session_started',
+      },
+    ],
+    entry_nodes: ['step:open_frontdesk'],
+    exit_nodes: ['step:inspect_current_progress'],
+    human_gates: [
+      {
+        gate_id: 'redcube_operator_review_gate',
+        trigger_nodes: ['step:inspect_current_progress'],
+        blocking: true,
+      },
+    ],
+    checkpoint_nodes: ['step:continue_current_loop', 'step:inspect_current_progress'],
+    human_gate_previews: [
+      {
+        gate_id: 'redcube_operator_review_gate',
+        title: 'RedCube operator review gate',
+        status: 'requested',
+        review_surface: {
+          ref_kind: 'json_pointer',
+          ref: '/operator_loop_actions/continue_session',
+          label: 'continue session surface',
+        },
+      },
+    ],
+    resume_surface_kind: 'product_entry_session',
+    session_locator_field: 'entry_session.entry_session_id',
+    checkpoint_locator_field: 'continuation_snapshot.latest_managed_run_id',
+    action_graph_ref: {
+      ref_kind: 'json_pointer',
+      ref: '/family_orchestration/action_graph',
+      label: 'redcube family action graph',
+    },
+    event_envelope_surface: {
+      ref_kind: 'json_pointer',
+      ref: '/recommended_command',
+      label: 'recommended command',
+    },
+  }) as unknown as {
+    action_graph_ref: { ref: string; label: string };
+    action_graph: { graph_id: string; checkpoint_policy: { checkpoint_nodes: string[] } };
+    human_gates: Array<{ gate_id: string; review_surface: { ref: string } }>;
+    resume_contract: { surface_kind: string; session_locator_field: string; checkpoint_locator_field: string };
+    event_envelope_surface: { ref: string };
+  };
+
+  assert.equal(orchestration.action_graph_ref.ref, '/family_orchestration/action_graph');
+  assert.equal(orchestration.action_graph_ref.label, 'redcube family action graph');
+  assert.equal(orchestration.action_graph.graph_id, 'redcube_frontdoor_product_entry_graph');
+  assert.deepEqual(orchestration.action_graph.checkpoint_policy, {
+    mode: 'explicit_nodes',
+    checkpoint_nodes: ['step:continue_current_loop', 'step:inspect_current_progress'],
+  });
+  assert.equal(orchestration.human_gates[0]?.gate_id, 'redcube_operator_review_gate');
+  assert.equal(
+    orchestration.human_gates[0]?.review_surface.ref,
+    '/operator_loop_actions/continue_session',
+  );
+  assert.deepEqual(orchestration.resume_contract, {
+    surface_kind: 'product_entry_session',
+    session_locator_field: 'entry_session.entry_session_id',
+    checkpoint_locator_field: 'continuation_snapshot.latest_managed_run_id',
+  });
+  assert.equal(orchestration.event_envelope_surface.ref, '/recommended_command');
 });

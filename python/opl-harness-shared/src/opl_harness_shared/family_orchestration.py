@@ -181,6 +181,26 @@ def build_family_action_graph_human_gate(
     }
 
 
+def build_family_human_gate_preview(
+    *,
+    gate_id: str,
+    title: str | None = None,
+    status: str | None = None,
+    review_surface: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "gate_id": _require_string(gate_id, "gate_id"),
+    }
+    if _text(title) is not None:
+        payload["title"] = _require_string(title, "title")
+    if _text(status) is not None:
+        payload["status"] = _require_string(status, "status")
+    normalized_review_surface = _normalize_ref(review_surface, "review_surface")
+    if normalized_review_surface is not None:
+        payload["review_surface"] = normalized_review_surface
+    return payload
+
+
 def build_explicit_checkpoint_policy(
     *,
     checkpoint_nodes: Sequence[str],
@@ -294,6 +314,70 @@ def build_family_orchestration_template(
             else {}
         ),
     }
+
+
+def build_family_product_entry_orchestration(
+    *,
+    graph_id: str,
+    target_domain_id: str,
+    graph_kind: str,
+    graph_version: str,
+    nodes: Sequence[Mapping[str, Any]],
+    edges: Sequence[Mapping[str, Any]],
+    entry_nodes: Sequence[str],
+    exit_nodes: Sequence[str],
+    human_gates: Sequence[Mapping[str, Any]] | None = None,
+    checkpoint_nodes: Sequence[str] | None = None,
+    checkpoint_policy: Mapping[str, Any] | None = None,
+    human_gate_previews: Sequence[Mapping[str, Any]] | None = None,
+    resume_surface_kind: str,
+    session_locator_field: str,
+    checkpoint_locator_field: str,
+    action_graph_ref: Mapping[str, Any] | None = None,
+    event_envelope_surface: Mapping[str, Any] | None = None,
+    checkpoint_lineage_surface: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    normalized_checkpoint_policy = (
+        build_explicit_checkpoint_policy(checkpoint_nodes=checkpoint_nodes)
+        if checkpoint_nodes is not None
+        else dict(checkpoint_policy)
+        if isinstance(checkpoint_policy, Mapping)
+        else None
+    )
+    normalized_human_gate_previews = [
+        build_family_human_gate_preview(
+            gate_id=_require_string(gate.get("gate_id"), f"human_gate_previews[{index}].gate_id"),
+            title=_text(gate.get("title")),
+            status=_text(gate.get("status")),
+            review_surface=gate.get("review_surface")
+            if isinstance(gate.get("review_surface"), Mapping)
+            else None,
+        )
+        for index, gate in enumerate(human_gate_previews or ())
+        if isinstance(gate, Mapping)
+    ]
+
+    return build_family_orchestration_template(
+        action_graph=build_family_action_graph(
+            graph_id=graph_id,
+            target_domain_id=target_domain_id,
+            graph_kind=graph_kind,
+            graph_version=graph_version,
+            nodes=nodes,
+            edges=edges,
+            entry_nodes=entry_nodes,
+            exit_nodes=exit_nodes,
+            human_gates=human_gates,
+            checkpoint_policy=normalized_checkpoint_policy,
+        ),
+        human_gates=normalized_human_gate_previews,
+        resume_surface_kind=resume_surface_kind,
+        session_locator_field=session_locator_field,
+        checkpoint_locator_field=checkpoint_locator_field,
+        action_graph_ref=action_graph_ref,
+        event_envelope_surface=event_envelope_surface,
+        checkpoint_lineage_surface=checkpoint_lineage_surface,
+    )
 
 
 def build_family_orchestration_companion(
