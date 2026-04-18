@@ -85,8 +85,8 @@ In plain language:
   <summary><strong>Technical Notes And Current Implementation Truth</strong></summary>
 
 `OPL` keeps the top-level `Gateway / Federation` role, while admitted domain repositories keep domain runtime ownership.
-The active execution path remains Codex-only as the development host, while the preferred future substrate direction is a true upstream `Hermes-Agent` integration.
-This top-level surface keeps execution visibility, audit, and delivery semantics aligned without turning `OPL` into the runtime owner.
+The current public front path is `GUI front desk -> Codex -> OPL gateway surfaces`: `opl frontdesk bootstrap --path <workspace>` prepares the local `OPL Atlas` Desktop shell, the local web front desk stays as a companion surface, and both interaction plus execution default to `Codex`.
+`Hermes-Agent` remains available as an explicit alternate mode for interactive continuation and selected executor routing, while any honest upstream `Hermes-Agent` rollout still remains a domain-side migration target rather than a current OPL-layer fact.
 
 The shared architectural language under `OPL` is the `Unified Harness Engineering Substrate`, with its most important shared pieces converging into the [Shared Runtime Contract](./docs/shared-runtime-contract.md) and the [Shared Domain Contract](./docs/shared-domain-contract.md).
 The shared runtime layer, hosted entry surfaces, and any real `Hermes-Agent` rollout still progress inside their respective repositories and contracts.
@@ -95,19 +95,19 @@ The current public mainline still carries the absorbed `Phase 1 / G2 release-clo
 The current `Phase 2 / Minimal admitted-domain federation activation package` covers the two already admitted domain surfaces only: `MedAutoScience` and `RedCube AI`.
 `Grant Foundry -> Med Auto Grant` stays the active medical Grant Ops repository line, while top-level federation admission and handoff wording remain separately gated at `OPL`.
 
-`OPL` now ships a local direct product-entry shell whose default front door is `opl`, plus a local web front desk pilot.
+`OPL` now ships a local direct product-entry shell whose public front door centers on the GUI front desk, with `opl`, `opl "<request...>"`, and `opl web` as shell shortcuts or companion surfaces around the same entry.
 It follows `external kernel, managed by OPL product packaging`, not requiring users to manually install and understand `Hermes-Agent`.
-`opl "<request...>"` acts as the fast natural-language path, and the current product-entry surface includes `opl doctor`, `opl ask`, `opl chat`, `opl resume`, `opl sessions`, `opl logs`, `opl repair-hermes-gateway`, and `opl web`.
-Hosted shell pilots are real, but managed hosted runtime is still not landed.
+Current primary entry surfaces include `opl frontdesk bootstrap`, `opl`, `opl "<request...>"`, `opl ask`, `opl chat`, `opl resume`, `opl sessions`, `opl logs`, `opl repair-hermes-gateway`, and `opl web`.
+`Paperclip` stays as an optional downstream control-plane bridge, and `LibreChat` stays as an optional compatibility / fallback lane.
 
 Current top-level entry surfaces therefore already include a local `opl` shell and a local web front desk pilot.
 Current family management surfaces include `workspace-catalog`, `workspace-bind|activate|archive`, `domain-manifests`, `session-ledger`, and `dashboard`.
 For AI / GUI shells, the new default bootstrap order is now explicit: start with `frontdesk-entry-guide`, then consult `frontdesk-readiness` and `frontdesk-domain-wiring`, and only use `dashboard` as the operator/debug aggregate surface.
 `workspace-bind` can now derive family `entry_command` plus `manifest_command` from structured workspace locators such as `--profile`, `--input`, and `--workspace-root`, instead of forcing every project onto handwritten raw commands.
 
-The intended family chain is:
+The current public family chain is:
 
-`User -> OPL Product Entry -> OPL Gateway -> Hermes Kernel -> Domain Handoff -> Domain Product Entry / Domain Gateway`
+`GUI Front Desk -> Codex -> OPL Product Entry / Gateway -> Domain Handoff -> Domain Product Entry / Domain Gateway`
 
 Current family state is intentionally uneven and should be described honestly:
 

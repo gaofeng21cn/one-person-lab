@@ -1395,7 +1395,6 @@ export function buildPaperclipBootstrap(
   options: PaperclipBootstrapOptions = {},
 ) {
   const summary = buildPaperclipControlPlaneSummary(contracts);
-  const endpoints = buildFrontDeskEndpoints(options.basePath);
 
   return {
     controlPlane: summary,
@@ -1419,11 +1418,6 @@ export function buildPaperclipBootstrap(
         status_command: 'opl paperclip-status',
         sync_command: 'opl paperclip sync --all',
         operator_loop_command: 'opl paperclip operator-loop --all --interval-ms 30000',
-        web: {
-          status: endpoints.paperclip_control_plane,
-          bootstrap: endpoints.paperclip_bootstrap,
-          sync: endpoints.paperclip_sync,
-        },
       },
       docs_ref: 'docs/references/paperclip-control-plane-operator-guide.md',
       notes: [

@@ -35,8 +35,10 @@ test('buildFamilyHumanGate normalizes required gate fields', () => {
   };
 
   assert.equal(gate.gate_id, 'gate-1');
-  assert.equal(gate.request_surface.surface_kind, 'runtime_watch');
-  assert.deepEqual(gate.decision_options, ['approve', 'pause']);
+  const requestSurface = gate.request_surface as { surface_kind: string };
+  const decisionOptions = gate.decision_options as string[];
+  assert.equal(requestSurface.surface_kind, 'runtime_watch');
+  assert.deepEqual(decisionOptions, ['approve', 'pause']);
 });
 
 test('buildFamilyOrchestrationCompanion materializes event envelope and checkpoint lineage', () => {
@@ -65,10 +67,16 @@ test('buildFamilyOrchestrationCompanion materializes event envelope and checkpoi
 
   assert.equal(payload.resume_contract.session_locator_field, 'event_envelope.session.session_id');
   assert.equal(payload.resume_contract.checkpoint_locator_field, 'checkpoint_lineage.checkpoint_id');
-  assert.equal(payload.event_envelope.session.active_run_id, 'run-1');
-  assert.equal(payload.event_envelope.payload.runtime_decision, 'continue');
-  assert.equal(payload.checkpoint_lineage.checkpoint_id.startsWith('checkpoint-'), true);
-  assert.equal(payload.human_gates[0]?.gate_id, 'gate-1');
+  const eventEnvelope = payload.event_envelope as {
+    session: { active_run_id: string };
+    payload: { runtime_decision: string };
+  };
+  const checkpointLineage = payload.checkpoint_lineage as { checkpoint_id: string };
+  const humanGates = payload.human_gates as Array<{ gate_id: string }>;
+  assert.equal(eventEnvelope.session.active_run_id, 'run-1');
+  assert.equal(eventEnvelope.payload.runtime_decision, 'continue');
+  assert.equal(checkpointLineage.checkpoint_id.startsWith('checkpoint-'), true);
+  assert.equal(humanGates[0]?.gate_id, 'gate-1');
 });
 
 test('buildFamilyOrchestrationTemplate normalizes shared preview surfaces', () => {

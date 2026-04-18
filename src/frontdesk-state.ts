@@ -8,6 +8,7 @@ export type FrontDeskStatePaths = {
   workspace_registry_file: string;
   session_ledger_file: string;
   task_state_dir: string;
+  runtime_modes_file: string;
   service_config_file: string;
   desktop_config_file: string;
   desktop_pilot_root: string;
@@ -29,6 +30,7 @@ export function resolveFrontDeskStatePaths(): FrontDeskStatePaths {
     workspace_registry_file: path.join(stateDir, 'workspace-registry.json'),
     session_ledger_file: path.join(stateDir, 'session-ledger.json'),
     task_state_dir: path.join(stateDir, 'tasks'),
+    runtime_modes_file: path.join(stateDir, 'runtime-modes.json'),
     service_config_file: path.join(stateDir, 'service-config.json'),
     desktop_config_file: path.join(stateDir, 'desktop-pilot', 'config', 'desktop-config.json'),
     desktop_pilot_root: path.join(stateDir, 'desktop-pilot'),

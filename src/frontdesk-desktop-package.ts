@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { GatewayContractError } from './contracts.ts';
+import type { FrontDeskRuntimeModes } from './frontdesk-runtime-modes.ts';
 import type { LocalCodexDefaults } from './local-codex-defaults.ts';
 
 export type FrontDeskDesktopPackageOptions = {
@@ -16,6 +17,7 @@ export type FrontDeskDesktopPackageOptions = {
   activeProjectId?: string | null;
   activeProjectLabel?: string | null;
   codexDefaults: LocalCodexDefaults;
+  runtimeModes: FrontDeskRuntimeModes;
 };
 
 export type FrontDeskDesktopPackageAssets = {
@@ -73,6 +75,8 @@ function buildDesktopConfig(options: FrontDeskDesktopPackageOptions) {
     sessions_limit: options.sessionsLimit,
     active_project_id: options.activeProjectId ?? null,
     active_project_label: options.activeProjectLabel ?? null,
+    interaction_mode: options.runtimeModes.interaction_mode,
+    execution_mode: options.runtimeModes.execution_mode,
     codex: {
       config_file: options.codexDefaults.config_path,
       model: options.codexDefaults.model,
@@ -328,6 +332,8 @@ function buildRendererHtml() {
           ['Front Desk URL', config.frontdesk_url],
           ['API Base', config.api_base_url],
           ['Project', config.active_project_label || 'Unbound workspace'],
+          ['Interaction Mode', config.interaction_mode],
+          ['Execution Mode', config.execution_mode],
           ['Agent', \`\${config.model_display_label} / \${config.codex.model}\`],
         ];
 
@@ -345,6 +351,9 @@ function buildRendererHtml() {
         copy.onclick = async () => {
           const text = [
             \`Workspace: \${config.workspace_path}\`,
+            \`Project: \${config.active_project_label || 'Unbound workspace'}\`,
+            \`Interaction Mode: \${config.interaction_mode}\`,
+            \`Execution Mode: \${config.execution_mode}\`,
             \`Front Desk URL: \${config.frontdesk_url}\`,
             \`API Base: \${config.api_base_url}\`,
           ].join('\\n');
@@ -368,6 +377,8 @@ This package is the local desktop-first front door for OPL.
 - Routed gateway: OPL Front Desk at ${options.frontdeskUrl}
 - Active workspace: ${options.workspacePath}
 - Active project: ${options.activeProjectLabel ?? 'Unbound workspace'}
+- Interaction mode: ${options.runtimeModes.interaction_mode}
+- Execution mode: ${options.runtimeModes.execution_mode}
 
 LibreChat has moved to an optional lane:
 

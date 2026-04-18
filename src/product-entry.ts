@@ -1,4 +1,10 @@
 import { findDomainOrThrow, GatewayContractError } from './contracts.ts';
+import {
+  buildCodexCliPreview,
+  buildCodexExecArgs,
+  parseCodexExecOutput,
+  runCodexCommand,
+} from './codex.ts';
 import { buildHandoffBundle } from './handoff-bundle.ts';
 import {
   buildHermesCliPreview,
@@ -35,6 +41,8 @@ export type ProductEntryMode =
   | 'logs'
   | 'repair_hermes_gateway';
 
+export type ProductEntryExecutor = 'codex' | 'hermes';
+
 export type ProductEntryCliInput = {
   dryRun: boolean;
   goal: string;
@@ -46,6 +54,7 @@ export type ProductEntryCliInput = {
   provider?: string;
   workspacePath?: string;
   skills: string[];
+  executor?: ProductEntryExecutor;
 };
 
 export type PreparedProductEntryAsk = {
@@ -94,6 +103,10 @@ function buildContractsContext(contracts: GatewayContracts) {
   };
 }
 
+function resolveProductEntryAskExecutor(input: ProductEntryCliInput): ProductEntryExecutor {
+  return input.executor ?? 'codex';
+}
+
 function normalizeHermesOutput(stdout: string, stderr = '') {
   return [stdout, stderr]
     .filter((chunk) => chunk.trim().length > 0)
@@ -118,6 +131,23 @@ function assertHermesSuccess(
   );
 }
 
+function assertCodexSuccess(
+  exitCode: number,
+  message: string,
+  details: Record<string, unknown>,
+) {
+  if (exitCode === 0) {
+    return;
+  }
+
+  throw new GatewayContractError(
+    'codex_command_failed',
+    message,
+    details,
+    exitCode,
+  );
+}
+
 function buildPromptHeader(
   mode: ProductEntryMode,
   input: ProductEntryCliInput,
@@ -136,6 +166,7 @@ function buildPromptHeader(
     '',
     'OPL routing contract:',
     `- mode: ${mode}`,
+    `- requested_executor: ${resolveProductEntryAskExecutor(input)}`,
     `- goal: ${input.goal}`,
     `- intent: ${input.intent}`,
     `- target: ${input.target}`,
@@ -162,6 +193,10 @@ function buildPromptHeader(
 
   if ('recommended_family' in resolution && resolution.recommended_family) {
     lines.push(`- recommended_family: ${resolution.recommended_family}`);
+  }
+
+  if (input.skills.length > 0) {
+    lines.push(`- requested_skills: ${input.skills.join(', ')}`);
   }
 
   lines.push(`- routing_reason: ${resolution.reason}`);
@@ -293,6 +328,7 @@ function buildPreviewPayload(
   });
 
   if (mode === 'ask') {
+    const executor = resolveProductEntryAskExecutor(input);
     return {
       version: 'g2',
       contracts_context: buildContractsContext(contracts),
@@ -300,14 +336,28 @@ function buildPreviewPayload(
         entry_surface: 'opl_local_product_entry_shell',
         mode,
         dry_run: true,
+        executor_backend: executor,
         input: resolveInput,
         routing,
         boundary,
         ...handoffBundle,
         handoff_prompt_preview: handoffPrompt,
-        hermes: {
-          command_preview: buildHermesCliPreview(buildAskArgs(input, handoffPrompt)),
-        },
+        ...(executor === 'codex'
+          ? {
+              codex: {
+                command_preview: buildCodexCliPreview(buildCodexExecArgs(handoffPrompt, {
+                  cwd: input.workspacePath,
+                  json: true,
+                  model: input.model,
+                  provider: input.provider,
+                })),
+              },
+            }
+          : {
+              hermes: {
+                command_preview: buildHermesCliPreview(buildAskArgs(input, handoffPrompt)),
+              },
+            }),
       },
     };
   }
@@ -365,6 +415,73 @@ export function runProductEntryAsk(
   }
 
   const preparedAsk = prepareProductEntryAsk(input, contracts);
+  const executor = resolveProductEntryAskExecutor(input);
+
+  if (executor === 'codex') {
+    const codexArgs = buildCodexExecArgs(preparedAsk.handoffPrompt, {
+      cwd: input.workspacePath,
+      json: true,
+      model: input.model,
+      provider: input.provider,
+    });
+    const codexResult = runCodexCommand(codexArgs);
+
+    assertCodexSuccess(
+      codexResult.exitCode,
+      'Codex ask query failed inside OPL Product Entry.',
+      {
+        args: buildCodexCliPreview(codexArgs),
+        stdout: codexResult.stdout,
+        stderr: codexResult.stderr,
+      },
+    );
+
+    const parsed = parseCodexExecOutput(codexResult.stdout);
+    const handoffBundle = buildHandoffBundle(contracts, {
+      mode: 'ask',
+      goal: input.goal,
+      intent: input.intent,
+      workspacePath: input.workspacePath,
+      routing: preparedAsk.routing,
+      boundary: preparedAsk.boundary,
+      sessionId: parsed.threadId ?? undefined,
+    });
+
+    if (parsed.threadId) {
+      recordSessionLedgerEntry({
+        sessionId: parsed.threadId,
+        mode: 'ask',
+        sourceSurface: 'opl_local_product_entry_shell',
+        domainId: 'domain_id' in preparedAsk.routing ? preparedAsk.routing.domain_id : null,
+        workstreamId: 'workstream_id' in preparedAsk.routing ? preparedAsk.routing.workstream_id : null,
+        goalPreview: input.goal,
+        workspaceLocator: handoffBundle.handoff_bundle.workspace_locator,
+      });
+    }
+
+    return {
+      version: 'g2',
+      contracts_context: buildContractsContext(contracts),
+      product_entry: {
+        entry_surface: 'opl_local_product_entry_shell',
+        mode: 'ask',
+        dry_run: false,
+        executor_backend: 'codex',
+        input: preparedAsk.resolveInput,
+        routing: preparedAsk.routing,
+        boundary: preparedAsk.boundary,
+        ...handoffBundle,
+        handoff_prompt_preview: preparedAsk.handoffPrompt,
+        codex: {
+          command_preview: buildCodexCliPreview(codexArgs),
+          response: parsed.finalMessage,
+          session_id: parsed.threadId,
+          exit_code: codexResult.exitCode,
+        },
+      },
+    };
+  }
+
   const hermesResult = runHermesCommand(preparedAsk.args);
 
   assertHermesSuccess(
@@ -404,6 +521,7 @@ export function runProductEntryAsk(
       entry_surface: 'opl_local_product_entry_shell',
       mode: 'ask',
       dry_run: false,
+      executor_backend: 'hermes',
       input: preparedAsk.resolveInput,
       routing: preparedAsk.routing,
       boundary: preparedAsk.boundary,
@@ -515,6 +633,17 @@ export function runProductEntryChat(
 ) {
   if (input.dryRun) {
     return buildPreviewPayload('chat', input, contracts);
+  }
+
+  if (input.executor && input.executor !== 'hermes') {
+    throw new GatewayContractError(
+      'cli_usage_error',
+      'chat currently supports the Hermes interactive lane only.',
+      {
+        executor: input.executor,
+      },
+      2,
+    );
   }
 
   const resolveInput = buildResolveRequestInput(input);

@@ -50,7 +50,6 @@ import {
   buildFrontDeskDomainWiring,
   buildHostedPilotBundle,
   buildFrontDeskManifest,
-  buildPaperclipControlPlaneStatus,
   buildProjectsOverview,
   buildRuntimeStatus,
   buildFrontDeskStart,
@@ -66,15 +65,6 @@ import {
   bindWorkspace,
   buildWorkspaceCatalog,
 } from './workspace-registry.ts';
-import {
-  buildPaperclipBootstrap,
-  bindPaperclipProject,
-  configurePaperclipControlPlane,
-  openPaperclipGate,
-  openPaperclipTask,
-  runPaperclipOperatorLoop,
-  syncPaperclipProjections,
-} from './paperclip-control-plane.ts';
 import { attachWebFrontDeskShutdown, startWebFrontDeskServer } from './web-frontdesk.ts';
 import type {
   GatewayContracts,
@@ -164,12 +154,9 @@ type WebCliInput = {
 
 type FrontDeskLibreChatCliInput = WebCliInput & {
   publicOrigin?: string;
-  paperclipBaseUrl?: string;
 };
 
-type FrontDeskDesktopCliInput = WebCliInput & {
-  paperclipBaseUrl?: string;
-};
+type FrontDeskDesktopCliInput = WebCliInput;
 
 type FrontDeskMcpCliInput = {
   apiBaseUrl?: string;
@@ -351,6 +338,15 @@ function parseProductEntryArgs(
             .map((entry) => entry.trim())
             .filter(Boolean),
         );
+        break;
+      case '--executor':
+        if (value !== 'codex' && value !== 'hermes') {
+          throw buildUsageError('Option --executor requires codex or hermes.', spec, {
+            option: token,
+            value,
+          });
+        }
+        parsed.executor = value;
         break;
       default:
         throw buildUsageError(`Unknown option for product entry: ${token}.`, spec, {
@@ -1061,9 +1057,6 @@ function parseFrontDeskLibreChatArgs(
       case '--public-origin':
         parsed.publicOrigin = value;
         break;
-      case '--paperclip-base-url':
-        parsed.paperclipBaseUrl = value;
-        break;
       default:
         throw buildUsageError(`Unknown option for frontdesk LibreChat command: ${token}.`, spec, {
           option: token,
@@ -1112,9 +1105,6 @@ function parseFrontDeskDesktopArgs(
         break;
       case '--base-path':
         parsed.basePath = value;
-        break;
-      case '--paperclip-base-url':
-        parsed.paperclipBaseUrl = value;
         break;
       default:
         throw buildUsageError(`Unknown option for frontdesk Desktop command: ${token}.`, spec, {
@@ -1647,7 +1637,6 @@ const COMMAND_GROUP_SUMMARIES: Record<string, string> = {
   domain: '解析域边界、域入口和域 manifest。',
   contract: '读取或验证 machine-readable contract / handoff surface。',
   frontdesk: '安装、打包、启动和检查前台壳。',
-  paperclip: 'Paperclip control-plane 绑定与同步。',
   session: '查看、恢复和审计会话。',
   runtime: '修复或检查底层 runtime 相关入口。',
 };
@@ -1747,9 +1736,6 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl frontdesk librechat open',
         'opl workspace bind --project redcube --path /Users/gaofeng/workspace/redcube-ai --entry-command "redcube-ai frontdesk" --manifest-command "redcube product manifest --workspace-root /Users/gaofeng/workspace/redcube-ai"',
         'opl domain launch --project redcube --dry-run',
-        'opl paperclip config --base-url https://paperclip.example.com --auth-header-env OPL_PAPERCLIP_AUTH_HEADER --control-company-id company-opl-control',
-        'opl paperclip bind --project redcube --company-id company-redcube --paperclip-project-id project-redcube --project-workspace-id workspace-redcube --execution-workspace shared_workspace',
-        'opl paperclip open-task "Prepare a defense-ready slide deck." --preferred-family ppt_deck --workspace-path /Users/gaofeng/workspace/redcube-ai --priority high',
         'opl contract handoff-envelope "Prepare a defense-ready slide deck." --preferred-family ppt_deck',
         'opl status workspace --path /Users/gaofeng/workspace/redcube-ai',
         'opl status runtime --limit 10',
@@ -2094,200 +2080,6 @@ async function main() {
         });
       },
     },
-    'paperclip-config': {
-      usage:
-        'opl paperclip-config [--base-url <url>] [--auth-header-env <env>] [--cookie-env <env>] [--control-company-id <company_id>] [--local-trusted-no-auth]',
-      summary: 'Configure the downstream Paperclip control-plane connection OPL will use for tasks and gates.',
-      examples: [
-        'opl paperclip-config --base-url https://paperclip.example.com --auth-header-env OPL_PAPERCLIP_AUTH_HEADER --control-company-id company-opl-control',
-        'opl paperclip-config --base-url http://127.0.0.1:3100 --control-company-id company-opl-control --local-trusted-no-auth',
-      ],
-      handler: (args) => {
-        const contracts = getContracts();
-        return withContractsContext(contracts, {
-          paperclip_control_plane: {
-            action: 'config',
-            ...configurePaperclipControlPlane(contracts, parsePaperclipConfigArgs(args, commandSpecs['paperclip-config'])),
-          },
-        });
-      },
-    },
-    'paperclip-bind': {
-      usage:
-        'opl paperclip-bind --project <project_id> --company-id <company_id> [--paperclip-project-id <project_id>] [--project-workspace-id <workspace_id>] [--execution-workspace <mode>]',
-      summary: 'Bind one admitted OPL project surface to its downstream Paperclip company/project/workspace mapping.',
-      examples: [
-        'opl paperclip-bind --project redcube --company-id company-redcube --paperclip-project-id project-redcube --project-workspace-id workspace-redcube --execution-workspace shared_workspace',
-      ],
-      handler: (args) => {
-        const parsed = parsePaperclipBindArgs(args, commandSpecs['paperclip-bind']);
-        if (!parsed.projectId || !parsed.companyId) {
-          throw buildUsageError(
-            'paperclip-bind requires both --project and --company-id.',
-            commandSpecs['paperclip-bind'],
-            { required: ['--project', '--company-id'] },
-          );
-        }
-
-        const contracts = getContracts();
-        return withContractsContext(contracts, {
-          paperclip_control_plane: {
-            action: 'bind',
-            ...bindPaperclipProject(contracts, {
-              projectId: parsed.projectId,
-              companyId: parsed.companyId,
-              paperclipProjectId: parsed.paperclipProjectId,
-              projectWorkspaceId: parsed.projectWorkspaceId,
-              executionWorkspacePreference: parsed.executionWorkspacePreference,
-            }),
-          },
-        });
-      },
-    },
-    'paperclip-status': {
-      usage: 'opl paperclip-status [--path <workspace_path>] [--sessions-limit <n>]',
-      summary: 'Aggregate the current OPL -> Paperclip bridge status together with the family dashboard it exposes.',
-      examples: [
-        'opl paperclip-status',
-        'opl paperclip-status --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
-      ],
-      handler: (args) => buildPaperclipControlPlaneStatus(getContracts(), parseDashboardArgs(args, commandSpecs['paperclip-status'])),
-    },
-    'paperclip-bootstrap': {
-      usage: 'opl paperclip-bootstrap',
-      summary: 'Show the operator bootstrap surface for Paperclip preflight, SOP loops, and sync endpoints.',
-      examples: ['opl paperclip-bootstrap'],
-      handler: (args) => {
-        assertNoArgs(args, commandSpecs['paperclip-bootstrap']);
-        const contracts = getContracts();
-        const result = buildPaperclipBootstrap(contracts);
-        return withContractsContext(contracts, {
-          paperclip_control_plane: {
-            action: 'bootstrap',
-            ...result.controlPlane,
-          },
-          paperclip_bootstrap: result.bootstrap,
-        });
-      },
-    },
-    'paperclip-open-task': {
-      usage:
-        'opl paperclip-open-task <request...> [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--workspace-path <path>] [--title <title>] [--priority <priority>]',
-      summary: 'Route an OPL request, freeze its handoff bundle, and create the corresponding Paperclip issue in the mapped project company.',
-      examples: [
-        'opl paperclip-open-task "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck --workspace-path /Users/gaofeng/workspace/redcube-ai --priority high',
-      ],
-      handler: async (args) => {
-        const contracts = getContracts();
-        const parsed = parsePaperclipTaskArgs(args, commandSpecs['paperclip-open-task']);
-        const result = await openPaperclipTask(parsed, contracts, {
-          title: parsed.title,
-          priority: parsed.priority,
-        });
-
-        return withContractsContext(contracts, {
-          paperclip_control_plane: {
-            action: 'open_task',
-            ...result.controlPlane,
-          },
-          paperclip_task: {
-            project_binding: result.projectBinding,
-            handoff_bundle: result.handoffBundle,
-            issue: result.issue,
-            tracked_projection: result.trackedProjection,
-          },
-        });
-      },
-    },
-    'paperclip-open-gate': {
-      usage:
-        'opl paperclip-open-gate <request...> [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--workspace-path <path>] [--title <title>] [--gate-kind <kind>] [--decision-options <csv>]',
-      summary: 'Route an OPL request and open a downstream Paperclip board-approval gate using the family-human-gate contract.',
-      examples: [
-        'opl paperclip-open-gate "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck --gate-kind publish_readiness',
-      ],
-      handler: async (args) => {
-        const contracts = getContracts();
-        const parsed = parsePaperclipGateArgs(args, commandSpecs['paperclip-open-gate']);
-        const result = await openPaperclipGate(parsed, contracts, {
-          title: parsed.title,
-          gateKind: parsed.gateKind,
-          decisionOptions: parsed.decisionOptions,
-        });
-
-        return withContractsContext(contracts, {
-          paperclip_control_plane: {
-            action: 'open_gate',
-            ...result.controlPlane,
-          },
-          paperclip_gate: {
-            handoff_bundle: result.handoffBundle,
-            family_human_gate: result.familyHumanGate,
-            issue: result.issue,
-            approval: result.approval,
-            tracked_projection: result.trackedProjection,
-          },
-        });
-      },
-    },
-    'paperclip-sync': {
-      usage:
-        'opl paperclip-sync [--issue-id <issue_id>] [--project <project_id>] [--path <workspace_path>] [--sessions-limit <n>] [--force]',
-      summary: 'Pull remote Paperclip issue / approval state back into OPL tracked projections, then write the latest OPL audit snapshot into downstream issue comments.',
-      examples: [
-        'opl paperclip-sync --all',
-        'opl paperclip-sync --issue-id issue-1 --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
-      ],
-      handler: async (args) => {
-        const contracts = getContracts();
-        const parsed = parsePaperclipSyncArgs(args, commandSpecs['paperclip-sync']);
-        const result = await syncPaperclipProjections(contracts, {
-          issueId: parsed.issueId,
-          projectId: parsed.projectId,
-          workspacePath: parsed.workspacePath,
-          sessionsLimit: parsed.sessionsLimit,
-          force: parsed.force,
-        });
-
-        return withContractsContext(contracts, {
-          paperclip_control_plane: {
-            action: 'sync',
-            ...result.controlPlane,
-          },
-          paperclip_sync: result.sync,
-        });
-      },
-    },
-    'paperclip-operator-loop': {
-      usage:
-        'opl paperclip-operator-loop [--issue-id <issue_id>] [--project <project_id>] [--path <workspace_path>] [--sessions-limit <n>] [--interval-ms <n>] [--cycles <n>] [--force]',
-      summary: 'Run the local file-backed Paperclip operator loop that repeatedly reconciles remote approval state and audit syncs.',
-      examples: [
-        'opl paperclip-operator-loop --project redcube --path /Users/gaofeng/workspace/redcube-ai --interval-ms 30000',
-        'opl paperclip-operator-loop --issue-id issue-1 --path /Users/gaofeng/workspace/one-person-lab --interval-ms 1000 --cycles 2',
-      ],
-      handler: async (args) => {
-        const contracts = getContracts();
-        const parsed = parsePaperclipOperatorLoopArgs(args, commandSpecs['paperclip-operator-loop']);
-        const result = await runPaperclipOperatorLoop(contracts, {
-          issueId: parsed.issueId,
-          projectId: parsed.projectId,
-          workspacePath: parsed.workspacePath,
-          sessionsLimit: parsed.sessionsLimit,
-          intervalMs: parsed.intervalMs,
-          cycles: parsed.cycles,
-          force: parsed.force,
-        });
-
-        return withContractsContext(contracts, {
-          paperclip_control_plane: {
-            action: 'operator_loop',
-            ...result.controlPlane,
-          },
-          paperclip_operator_loop: result.operatorLoop,
-        });
-      },
-    },
     'domain-manifests': {
       usage: 'opl domain-manifests',
       summary:
@@ -2444,12 +2236,11 @@ async function main() {
     },
     'frontdesk-bootstrap': {
       usage:
-        'opl frontdesk-bootstrap [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>] [--paperclip-base-url <url>]',
+        'opl frontdesk-bootstrap [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>]',
       summary:
         'Bootstrap the family front door in one shot: install the OPL Desktop shell, inherit the local Codex defaults, and bind the current workspace.',
       examples: [
         'opl frontdesk-bootstrap --path /Users/gaofeng/workspace/Yang/NF-PitNET',
-        'opl frontdesk-bootstrap --path /Users/gaofeng/workspace/Yang/NF-PitNET --paperclip-base-url http://127.0.0.1:3100',
       ],
       handler: (args) =>
         bootstrapFrontDeskDesktop(
@@ -2459,13 +2250,12 @@ async function main() {
     },
     'frontdesk-librechat-install': {
       usage:
-        'opl frontdesk-librechat-install [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>] [--public-origin <origin>] [--paperclip-base-url <url>]',
+        'opl frontdesk-librechat-install [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>] [--public-origin <origin>]',
       summary:
-        'Install and start the local LibreChat-first front door, wire it to the OPL front desk, and auto-bootstrap local trusted Paperclip when available.',
+        'Install and start the optional LibreChat compatibility lane, wired to the OPL front desk and local Codex defaults.',
       examples: [
         'opl frontdesk-librechat-install --path /Users/gaofeng/workspace/Yang/NF-PitNET',
         'opl frontdesk-librechat-install --path /Users/gaofeng/workspace/Yang/NF-PitNET --public-origin http://127.0.0.1:8080',
-        'opl frontdesk-librechat-install --path /Users/gaofeng/workspace/Yang/NF-PitNET --paperclip-base-url http://127.0.0.1:3100',
       ],
       handler: (args) =>
         installFrontDeskLibreChatService(
@@ -2476,7 +2266,7 @@ async function main() {
     'frontdesk-librechat-status': {
       usage: 'opl frontdesk-librechat-status',
       summary:
-        'Inspect whether the local LibreChat-first front door is installed, running, and still aligned with the OPL front desk and Paperclip bridge.',
+        'Inspect whether the local LibreChat compatibility shell is installed, running, and still aligned with the OPL front desk.',
       examples: ['opl frontdesk-librechat-status'],
       handler: (args) => {
         assertNoArgs(args, commandSpecs['frontdesk-librechat-status']);
@@ -2563,11 +2353,12 @@ async function main() {
     },
     ask: {
       usage:
-        'opl ask <request...> [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--model <model>] [--provider <provider>] [--workspace-path <path>] [--skills <skills>] [--dry-run]',
+        'opl ask <request...> [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--executor <codex|hermes>] [--workspace-path <path>] [--dry-run]',
       summary:
-        'Run a one-shot OPL product-entry request by routing through OPL and then querying Hermes.',
+        'Run a one-shot OPL product-entry request through the routed front door. Default executor: Codex.',
       examples: [
         'opl ask "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck',
+        'opl ask "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck --executor hermes',
         'opl ask --goal "Create a xiaohongshu campaign pack for a lab update." --preferred-family xiaohongshu --dry-run',
         'opl ask "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck --workspace-path /Users/gaofeng/workspace/redcube-ai',
       ],
@@ -2575,9 +2366,9 @@ async function main() {
     },
     chat: {
       usage:
-        'opl chat <request...> [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--model <model>] [--provider <provider>] [--workspace-path <path>] [--skills <skills>] [--dry-run]',
+        'opl chat <request...> [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--executor <hermes>] [--workspace-path <path>] [--dry-run]',
       summary:
-        'Seed a Hermes session from the OPL product entry and continue interactively inside the routed boundary.',
+        'Seed the Hermes interactive lane from the routed OPL front door and continue inside the resolved boundary.',
       examples: [
         'opl chat "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck',
         'opl chat "Plan a medical grant proposal revision loop." --workspace-path /Users/gaofeng/workspace/med-autogrant --dry-run',
@@ -3007,13 +2798,13 @@ async function main() {
     }),
     'frontdesk bootstrap': cloneCommandSpec(commandSpecs['frontdesk-bootstrap'], {
       usage:
-        'opl frontdesk bootstrap [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>] [--paperclip-base-url <url>]',
+        'opl frontdesk bootstrap [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>]',
       examples: ['opl frontdesk bootstrap --path /Users/gaofeng/workspace/Yang/NF-PitNET'],
       group: 'frontdesk',
     }),
     'frontdesk librechat install': cloneCommandSpec(commandSpecs['frontdesk-librechat-install'], {
       usage:
-        'opl frontdesk librechat install [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>] [--public-origin <origin>] [--paperclip-base-url <url>]',
+        'opl frontdesk librechat install [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>] [--public-origin <origin>]',
       examples: ['opl frontdesk librechat install --path /Users/gaofeng/workspace/Yang/NF-PitNET --public-origin http://127.0.0.1:8080'],
       group: 'frontdesk',
     }),
@@ -3036,51 +2827,6 @@ async function main() {
       usage: 'opl frontdesk librechat open',
       examples: ['opl frontdesk librechat open'],
       group: 'frontdesk',
-    }),
-    'paperclip config': cloneCommandSpec(commandSpecs['paperclip-config'], {
-      usage:
-        'opl paperclip config [--base-url <url>] [--auth-header-env <env>] [--cookie-env <env>] [--control-company-id <company_id>] [--local-trusted-no-auth]',
-      examples: ['opl paperclip config --base-url https://paperclip.example.com --auth-header-env OPL_PAPERCLIP_AUTH_HEADER --control-company-id company-opl-control'],
-      group: 'paperclip',
-    }),
-    'paperclip bind': cloneCommandSpec(commandSpecs['paperclip-bind'], {
-      usage:
-        'opl paperclip bind --project <project_id> --company-id <company_id> [--paperclip-project-id <project_id>] [--project-workspace-id <workspace_id>] [--execution-workspace <mode>]',
-      examples: ['opl paperclip bind --project redcube --company-id company-redcube --paperclip-project-id project-redcube --project-workspace-id workspace-redcube --execution-workspace shared_workspace'],
-      group: 'paperclip',
-    }),
-    'paperclip status': cloneCommandSpec(commandSpecs['paperclip-status'], {
-      usage: 'opl paperclip status [--path <workspace_path>] [--sessions-limit <n>]',
-      examples: ['opl paperclip status'],
-      group: 'paperclip',
-    }),
-    'paperclip bootstrap': cloneCommandSpec(commandSpecs['paperclip-bootstrap'], {
-      usage: 'opl paperclip bootstrap',
-      examples: ['opl paperclip bootstrap'],
-      group: 'paperclip',
-    }),
-    'paperclip open-task': cloneCommandSpec(commandSpecs['paperclip-open-task'], {
-      usage:
-        'opl paperclip open-task <request...> [--title <title>] [--priority <critical|high|medium|low>] [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--workspace-path <path>]',
-      examples: ['opl paperclip open-task "Prepare a defense-ready slide deck." --preferred-family ppt_deck --priority high'],
-      group: 'paperclip',
-    }),
-    'paperclip open-gate': cloneCommandSpec(commandSpecs['paperclip-open-gate'], {
-      usage:
-        'opl paperclip open-gate <request...> [--title <title>] [--gate-kind <kind>] [--decision-options <csv>] [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--workspace-path <path>]',
-      examples: ['opl paperclip open-gate "Approve the next grant revision step." --decision-options approve,revise,stop'],
-      group: 'paperclip',
-    }),
-    'paperclip sync': cloneCommandSpec(commandSpecs['paperclip-sync'], {
-      usage: 'opl paperclip sync [--issue-id <id>] [--project <project_id>] [--path <workspace_path>] [--sessions-limit <n>] [--all] [--force]',
-      examples: ['opl paperclip sync --all'],
-      group: 'paperclip',
-    }),
-    'paperclip operator-loop': cloneCommandSpec(commandSpecs['paperclip-operator-loop'], {
-      usage:
-        'opl paperclip operator-loop [--issue-id <id>] [--project <project_id>] [--path <workspace_path>] [--sessions-limit <n>] [--interval-ms <ms>] [--cycles <n>] [--all] [--force]',
-      examples: ['opl paperclip operator-loop --all --interval-ms 30000'],
-      group: 'paperclip',
     }),
     'session list': cloneCommandSpec(commandSpecs.sessions, {
       usage: 'opl session list [--limit <n>] [--source <source>]',

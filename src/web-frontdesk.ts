@@ -19,7 +19,6 @@ import {
   buildProjectProgressBrief,
   buildFrontDeskStart,
   buildHostedPilotBundle,
-  buildPaperclipControlPlaneStatus,
   buildProjectsOverview,
   buildRuntimeStatus,
   buildWorkspaceStatus,
@@ -30,9 +29,14 @@ import {
   readFrontDeskLibreChatTitleSyncConfig,
 } from './frontdesk-librechat-title-sync.ts';
 import { getFrontDeskLibreChatServiceStatus } from './frontdesk-librechat-service.ts';
+import {
+  readFrontDeskRuntimeModes,
+  writeFrontDeskRuntimeModes,
+  type FrontDeskAgentMode,
+  type FrontDeskRuntimeModes,
+} from './frontdesk-runtime-modes.ts';
 import { buildHostedPilotPackage } from './hosted-pilot-package.ts';
 import { buildLibreChatPilotPackage } from './librechat-pilot-package.ts';
-import { buildPaperclipBootstrap, syncPaperclipProjections } from './paperclip-control-plane.ts';
 import { readFrontDeskTaskStatus, submitFrontDeskAskTask } from './frontdesk-task-store.ts';
 import {
   buildProductEntryHandoffEnvelope,
@@ -82,6 +86,13 @@ type AskRequestBody = Partial<{
   workspacePath: string;
   workspace_path: string;
   skills: string[] | string;
+}>;
+
+type FrontDeskSettingsRequestBody = Partial<{
+  interactionMode: FrontDeskAgentMode;
+  interaction_mode: FrontDeskAgentMode;
+  executionMode: FrontDeskAgentMode;
+  execution_mode: FrontDeskAgentMode;
 }>;
 
 type ResumeRequestBody = Partial<{
@@ -136,18 +147,6 @@ type HostedPackageRequestBody = Partial<{
   sessions_limit: number | string;
 }>;
 
-type PaperclipSyncRequestBody = Partial<{
-  issueId: string;
-  issue_id: string;
-  projectId: string;
-  project_id: string;
-  workspacePath: string;
-  workspace_path: string;
-  sessionsLimit: number | string;
-  sessions_limit: number | string;
-  force: boolean;
-}>;
-
 type WebFrontDeskStartupPayload = {
   version: 'g2';
   contracts_context: {
@@ -175,6 +174,7 @@ type WebFrontDeskStartupPayload = {
       frontdesk_manifest: string;
       frontdesk_entry_guide: string;
       frontdesk_readiness: string;
+      frontdesk_settings: string;
       frontdesk_librechat_status: string;
       frontdesk_librechat_title_sync: string;
       project_progress: string;
@@ -184,9 +184,6 @@ type WebFrontDeskStartupPayload = {
       hosted_package: string;
       librechat_package: string;
       dashboard: string;
-      paperclip_control_plane: string;
-      paperclip_bootstrap: string;
-      paperclip_sync: string;
       projects: string;
       workspace_status: string;
       workspace_catalog: string;
@@ -204,6 +201,7 @@ type WebFrontDeskStartupPayload = {
       resume: string;
       logs: string;
     };
+    frontdesk_settings: FrontDeskRuntimeModes;
     shell_bootstrap: {
       primary_surface: {
         surface_id: string;
@@ -463,6 +461,18 @@ function normalizeAskInput(body: AskRequestBody): ProductEntryCliInput {
   };
 }
 
+function normalizeFrontDeskSettingsInput(body: FrontDeskSettingsRequestBody) {
+  const interactionMode =
+    normalizeOptionalString(body.interactionMode) ?? normalizeOptionalString(body.interaction_mode);
+  const executionMode =
+    normalizeOptionalString(body.executionMode) ?? normalizeOptionalString(body.execution_mode);
+
+  return {
+    interaction_mode: interactionMode as FrontDeskAgentMode | undefined,
+    execution_mode: executionMode as FrontDeskAgentMode | undefined,
+  };
+}
+
 function normalizeResumeSessionId(body: ResumeRequestBody) {
   const sessionId = normalizeOptionalString(body.sessionId) ?? normalizeOptionalString(body.session_id);
   if (!sessionId) {
@@ -507,33 +517,6 @@ function normalizeLaunchDomainInput(body: LaunchDomainRequestBody) {
       normalizeOptionalString(body.workspacePath) ?? normalizeOptionalString(body.workspace_path),
     strategy: strategy as DomainLaunchStrategy | undefined,
     dryRun: Boolean(body.dryRun ?? body.dry_run),
-  };
-}
-
-function normalizePaperclipSyncInput(body: PaperclipSyncRequestBody) {
-  const sessionsLimitValue = body.sessionsLimit ?? body.sessions_limit;
-  let sessionsLimit: number | undefined;
-  if (sessionsLimitValue !== undefined) {
-    const parsed = Number.parseInt(String(sessionsLimitValue), 10);
-    if (!Number.isInteger(parsed) || parsed <= 0) {
-      throw new GatewayContractError(
-        'cli_usage_error',
-        'Web Paperclip sync requests require sessions_limit to be a positive integer when provided.',
-        {
-          value: sessionsLimitValue,
-        },
-      );
-    }
-    sessionsLimit = parsed;
-  }
-
-  return {
-    issueId: normalizeOptionalString(body.issueId) ?? normalizeOptionalString(body.issue_id),
-    projectId: normalizeOptionalString(body.projectId) ?? normalizeOptionalString(body.project_id),
-    workspacePath:
-      normalizeOptionalString(body.workspacePath) ?? normalizeOptionalString(body.workspace_path),
-    sessionsLimit,
-    force: Boolean(body.force),
   };
 }
 
@@ -684,6 +667,7 @@ function buildStartupPayload(context: WebFrontDeskContext): WebFrontDeskStartupP
         frontdesk_manifest: manifest.frontdesk_manifest.endpoints.manifest,
         frontdesk_entry_guide: endpoints.frontdesk_entry_guide,
         frontdesk_readiness: endpoints.frontdesk_readiness,
+        frontdesk_settings: endpoints.frontdesk_settings,
         frontdesk_librechat_status: endpoints.frontdesk_librechat_status,
         frontdesk_librechat_title_sync: endpoints.frontdesk_librechat_title_sync,
         project_progress: endpoints.project_progress,
@@ -693,9 +677,6 @@ function buildStartupPayload(context: WebFrontDeskContext): WebFrontDeskStartupP
         hosted_package: endpoints.hosted_package,
         librechat_package: endpoints.librechat_package,
         dashboard: endpoints.dashboard,
-        paperclip_control_plane: endpoints.paperclip_control_plane,
-        paperclip_bootstrap: endpoints.paperclip_bootstrap,
-        paperclip_sync: endpoints.paperclip_sync,
         projects: endpoints.projects,
         workspace_status: endpoints.workspace_status,
         workspace_catalog: endpoints.workspace_catalog,
@@ -713,6 +694,7 @@ function buildStartupPayload(context: WebFrontDeskContext): WebFrontDeskStartupP
         resume: endpoints.resume,
         logs: endpoints.logs,
       },
+      frontdesk_settings: readFrontDeskRuntimeModes(),
       shell_bootstrap: manifest.frontdesk_manifest.shell_bootstrap,
       defaults: {
         workspace_path: context.workspacePath,
@@ -2404,7 +2386,7 @@ function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
               <h2 class="panel-title">Quick Ask</h2>
             </div>
             <p class="panel-copy">
-              Use preview to inspect routing and handoff truth first. Run ask when you want the pilot to call Hermes for a one-shot response.
+              先看 handoff preview，再提交后台 ask。当前交互模式会决定这条前台请求交给 Codex 还是 Hermes，并且结果会持续回写人话进度。
             </p>
             <div class="panel-body">
               <form id="ask-form">
@@ -2430,6 +2412,26 @@ function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
                     <input id="request-kind" name="request-kind" placeholder="Optional" />
                   </label>
                 </div>
+                <div class="field-grid">
+                  <label>
+                    Interaction Mode
+                    <select id="interaction-mode" name="interaction-mode">
+                      <option value="codex">Codex</option>
+                      <option value="hermes">Hermes-Agent</option>
+                    </select>
+                  </label>
+                  <label>
+                    Execution Mode
+                    <select id="execution-mode" name="execution-mode">
+                      <option value="codex">Codex</option>
+                      <option value="hermes">Hermes-Agent</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="button-row">
+                  <button class="ghost" type="button" id="save-settings-button">Save Modes</button>
+                </div>
+                <div class="status-line" id="settings-status" aria-live="polite"></div>
                 <div class="button-row">
                   <button class="secondary" type="button" id="preview-button">Preview Handoff</button>
                   <button class="primary" type="button" id="ask-button">Run Ask</button>
@@ -2444,7 +2446,7 @@ function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
               <h2 class="panel-title">Ask Result</h2>
             </div>
             <p class="panel-copy">
-              The panel below shows the current ask outcome, including routing summary, returned session id, and raw machine-readable payload.
+              这里会显示当前 ask 的路由结果、执行后端、最新会话标识，以及后台任务的人话进度。
             </p>
             <div class="panel-body">
               <div class="split-grid">
@@ -2453,8 +2455,8 @@ function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
                   <div id="ask-summary">No ask has run yet.</div>
                 </div>
                 <div class="card">
-                  <h3>Boundary Notes</h3>
-                  <div id="ask-boundary">Preview or run ask to inspect the routed boundary.</div>
+                  <h3>Progress Notes</h3>
+                  <div id="ask-boundary">Preview or run ask to inspect the routed boundary and live task narration.</div>
                 </div>
               </div>
               <div style="height: 12px"></div>
@@ -2748,12 +2750,17 @@ function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
         workspacePath: bootstrap.web_frontdesk.defaults.workspace_path,
         sessionsLimit: bootstrap.web_frontdesk.defaults.sessions_limit,
         workspaceBindings: [],
+        frontdeskSettings: bootstrap.web_frontdesk.frontdesk_settings,
+        activeTaskPoller: null,
       };
 
       const askStatus = document.getElementById('ask-status');
+      const settingsStatus = document.getElementById('settings-status');
       const askSummary = document.getElementById('ask-summary');
       const askBoundary = document.getElementById('ask-boundary');
       const askJson = document.getElementById('ask-json');
+      const interactionModeInput = document.getElementById('interaction-mode');
+      const executionModeInput = document.getElementById('execution-mode');
       const startProjectInput = document.getElementById('start-project');
       const startModeInput = document.getElementById('start-mode');
       const startStatus = document.getElementById('start-status');
@@ -2813,6 +2820,7 @@ function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
       const domainManifestJson = document.getElementById('domain-manifest-json');
       const previewButton = document.getElementById('preview-button');
       const askButton = document.getElementById('ask-button');
+      const saveSettingsButton = document.getElementById('save-settings-button');
       const startButton = document.getElementById('start-button');
       const launchPreviewButton = document.getElementById('launch-preview-button');
       const launchButton = document.getElementById('launch-button');
@@ -2825,9 +2833,20 @@ function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
 
       workspacePathInput.value = state.workspacePath;
 
+      function setSettingsStatus(message, tone = 'muted') {
+        settingsStatus.textContent = message;
+        settingsStatus.dataset.tone = tone;
+      }
+
       function setAskStatus(message, tone = 'muted') {
         askStatus.textContent = message;
         askStatus.dataset.tone = tone;
+      }
+
+      function renderFrontdeskSettings(settings) {
+        state.frontdeskSettings = settings;
+        interactionModeInput.value = settings.interaction_mode || 'codex';
+        executionModeInput.value = settings.execution_mode || 'codex';
       }
 
       function setStartStatus(message, tone = 'muted') {
@@ -3609,6 +3628,10 @@ function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
 
       function renderDashboard(payload) {
         const dashboard = payload.dashboard;
+        renderFrontdeskSettings({
+          interaction_mode: dashboard.front_desk.interaction_mode,
+          execution_mode: dashboard.front_desk.execution_mode,
+        });
         metricProjects.textContent = String(dashboard.projects.length);
         metricSessions.textContent = String(dashboard.runtime_status.recent_sessions.sessions.length);
         metricProcesses.textContent = String(dashboard.runtime_status.process_usage.summary.process_count);
@@ -3687,11 +3710,38 @@ function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
 
       function renderAskPayload(payload) {
         const entry = payload.product_entry;
+        if (entry.mode === 'task_status') {
+          const task = entry.task;
+          askSummary.innerHTML = [
+            '<p><strong>Mode:</strong> task_status</p>',
+            '<p><strong>Backend:</strong> ' + String(task.executor_backend || state.frontdeskSettings.interaction_mode) + '</p>',
+            '<p><strong>Task:</strong> ' + String(task.task_id) + '</p>',
+            '<p><strong>Status:</strong> ' + String(task.status) + '</p>',
+            '<p><strong>Stage:</strong> ' + String(task.stage) + '</p>',
+            task.session_id ? '<p><strong>Session:</strong> ' + String(task.session_id) + '</p>' : '',
+            task.exit_code !== null && task.exit_code !== undefined
+              ? '<p><strong>Exit Code:</strong> ' + String(task.exit_code) + '</p>'
+              : '',
+          ].filter(Boolean).join('');
+          askBoundary.innerHTML = [
+            '<p><strong>Summary:</strong> ' + String(task.summary || '') + '</p>',
+            task.recent_output
+              ? '<pre class="json-view">' + String(task.recent_output) + '</pre>'
+              : '<p>No recent output yet.</p>',
+          ].join('');
+          askJson.textContent = JSON.stringify(payload, null, 2);
+          return;
+        }
+
         const summaryLines = [
           '<p><strong>Mode:</strong> ' + entry.mode + '</p>',
           '<p><strong>Dry Run:</strong> ' + String(entry.dry_run) + '</p>',
           '<p><strong>Routing:</strong> ' + entry.routing.status + '</p>',
         ];
+
+        if (entry.executor_backend) {
+          summaryLines.push('<p><strong>Backend:</strong> ' + entry.executor_backend + '</p>');
+        }
 
         if (entry.execution_mode) {
           summaryLines.push('<p><strong>Execution:</strong> ' + entry.execution_mode + '</p>');
@@ -3703,6 +3753,22 @@ function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
 
         if (entry.task && entry.task.status) {
           summaryLines.push('<p><strong>Task Status:</strong> ' + entry.task.status + '</p>');
+        }
+
+        if (entry.task && entry.task.executor_backend) {
+          summaryLines.push('<p><strong>Task Backend:</strong> ' + entry.task.executor_backend + '</p>');
+        }
+
+        if (entry.task && entry.task.summary) {
+          summaryLines.push('<p><strong>Task Summary:</strong> ' + entry.task.summary + '</p>');
+        }
+
+        if (entry.codex && entry.codex.session_id) {
+          summaryLines.push('<p><strong>Session:</strong> ' + entry.codex.session_id + '</p>');
+        }
+
+        if (entry.codex && entry.codex.response) {
+          summaryLines.push('<p><strong>Response:</strong> ' + entry.codex.response + '</p>');
         }
 
         if (entry.hermes && entry.hermes.session_id) {
@@ -3717,8 +3783,87 @@ function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
         askBoundary.innerHTML = [
           '<p><strong>Boundary Status:</strong> ' + entry.boundary.boundary_status + '</p>',
           '<p><strong>Boundary Reason:</strong> ' + entry.boundary.reason + '</p>',
+          entry.task?.recent_output
+            ? '<pre class="json-view">' + entry.task.recent_output + '</pre>'
+            : '',
         ].join('');
         askJson.textContent = JSON.stringify(payload, null, 2);
+      }
+
+      async function loadFrontdeskSettings() {
+        const response = await fetch(bootstrap.web_frontdesk.api.frontdesk_settings);
+        if (!response.ok) {
+          throw new Error('Frontdesk settings request failed with status ' + response.status);
+        }
+
+        const payload = await response.json();
+        renderFrontdeskSettings(payload.frontdesk_settings);
+      }
+
+      async function saveFrontdeskSettings() {
+        setSettingsStatus('Saving frontdesk modes...', 'muted');
+
+        try {
+          const response = await fetch(bootstrap.web_frontdesk.api.frontdesk_settings, {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+            },
+            body: JSON.stringify({
+              interaction_mode: interactionModeInput.value,
+              execution_mode: executionModeInput.value,
+            }),
+          });
+          const payload = await response.json();
+
+          if (!response.ok) {
+            throw new Error(payload.error?.message || 'Frontdesk settings update failed.');
+          }
+
+          renderFrontdeskSettings(payload.frontdesk_settings);
+          setSettingsStatus('Frontdesk modes saved.', 'ok');
+        } catch (error) {
+          setSettingsStatus(error instanceof Error ? error.message : 'Frontdesk settings update failed.', 'warn');
+        }
+      }
+
+      async function fetchTaskStatus(taskId) {
+        const response = await fetch(
+          bootstrap.web_frontdesk.api.task_status
+            + '?task_id=' + encodeURIComponent(taskId)
+            + '&lines=20',
+        );
+        const payload = await response.json();
+
+        if (!response.ok) {
+          throw new Error(payload.error?.message || 'Task status request failed.');
+        }
+
+        renderAskPayload(payload);
+        const task = payload.product_entry.task;
+        const done = task.status === 'succeeded' || task.status === 'failed';
+        setAskStatus(task.summary || 'Task status updated.', done ? (task.status === 'succeeded' ? 'ok' : 'warn') : 'muted');
+        if (done && state.activeTaskPoller) {
+          window.clearInterval(state.activeTaskPoller);
+          state.activeTaskPoller = null;
+        }
+      }
+
+      function startTaskPolling(taskId) {
+        if (state.activeTaskPoller) {
+          window.clearInterval(state.activeTaskPoller);
+          state.activeTaskPoller = null;
+        }
+
+        void fetchTaskStatus(taskId).catch((error) => {
+          setAskStatus(error instanceof Error ? error.message : 'Task status request failed.', 'warn');
+        });
+
+        state.activeTaskPoller = window.setInterval(() => {
+          void fetchTaskStatus(taskId).catch((error) => {
+            setAskStatus(error instanceof Error ? error.message : 'Task status request failed.', 'warn');
+          });
+        }, 2000);
       }
 
       function renderStartPayload(payload) {
@@ -4118,7 +4263,7 @@ function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
       }
 
       async function refreshAll() {
-        await fetchWorkspaceCatalog();
+        await Promise.all([fetchWorkspaceCatalog(), loadFrontdeskSettings()]);
         await Promise.all([
           fetchDashboard(),
           fetchSessions(),
@@ -4264,8 +4409,11 @@ function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
           }
 
           renderAskPayload(payload);
+          if (!dryRun && payload.product_entry?.task?.task_id) {
+            startTaskPolling(String(payload.product_entry.task.task_id));
+          }
           setAskStatus(
-            dryRun ? 'Preview updated.' : 'Task accepted. Use task status to follow progress.',
+            dryRun ? 'Preview updated.' : 'Task accepted. Live progress polling has started.',
             'ok',
           );
         } catch (error) {
@@ -4330,6 +4478,9 @@ function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
       });
       askButton.addEventListener('click', () => {
         void submitAsk(false);
+      });
+      saveSettingsButton.addEventListener('click', () => {
+        void saveFrontdeskSettings();
       });
       launchPreviewButton.addEventListener('click', () => {
         void submitDomainLaunch(true);
@@ -4446,6 +4597,23 @@ async function handleRequest(
           basePath: context.basePath,
         }),
       );
+      return;
+    }
+
+    if (method === 'GET' && routedPath === '/api/frontdesk-settings') {
+      writeJson(response, 200, {
+        version: 'g2',
+        frontdesk_settings: readFrontDeskRuntimeModes(),
+      });
+      return;
+    }
+
+    if (method === 'POST' && routedPath === '/api/frontdesk-settings') {
+      const body = (await readJsonBody(request)) as FrontDeskSettingsRequestBody;
+      writeJson(response, 200, {
+        version: 'g2',
+        frontdesk_settings: writeFrontDeskRuntimeModes(normalizeFrontDeskSettingsInput(body)),
+      });
       return;
     }
 
@@ -4614,62 +4782,12 @@ async function handleRequest(
       return;
     }
 
-    if (method === 'GET' && routedPath === '/api/paperclip/control-plane') {
-      writeJson(
-        response,
-        200,
-        buildPaperclipControlPlaneStatus(context.contracts, {
-          workspacePath: url.searchParams.get('path') ?? context.workspacePath,
-          sessionsLimit: parsePositiveIntegerOrDefault(
-            url.searchParams.get('sessions-limit') ?? url.searchParams.get('sessions_limit'),
-            context.sessionsLimit,
-          ),
-          basePath: context.basePath,
-        }),
-      );
-      return;
-    }
-
-    if (method === 'GET' && routedPath === '/api/paperclip/control-plane/bootstrap') {
-      const result = buildPaperclipBootstrap(context.contracts, {
-        basePath: context.basePath,
-      });
-      writeJson(response, 200, {
-        version: 'g2',
-        contracts_context: {
-          contracts_dir: context.contracts.contractsDir,
-          contracts_root_source: context.contracts.contractsRootSource,
-        },
-        paperclip_control_plane: {
-          action: 'bootstrap',
-          ...result.controlPlane,
-        },
-        paperclip_bootstrap: result.bootstrap,
-      });
-      return;
-    }
-
-    if (method === 'POST' && routedPath === '/api/paperclip/control-plane/sync') {
-      const body = (await readJsonBody(request)) as PaperclipSyncRequestBody;
-      const result = await syncPaperclipProjections(context.contracts, normalizePaperclipSyncInput(body));
-      writeJson(response, 200, {
-        version: 'g2',
-        contracts_context: {
-          contracts_dir: context.contracts.contractsDir,
-          contracts_root_source: context.contracts.contractsRootSource,
-        },
-        paperclip_control_plane: {
-          action: 'sync',
-          ...result.controlPlane,
-        },
-        paperclip_sync: result.sync,
-      });
-      return;
-    }
-
     if (method === 'POST' && routedPath === '/api/ask') {
       const body = (await readJsonBody(request)) as AskRequestBody;
-      const normalizedInput = normalizeAskInput(body);
+      const normalizedInput = {
+        ...normalizeAskInput(body),
+        executor: readFrontDeskRuntimeModes().interaction_mode,
+      };
       writeJson(
         response,
         200,

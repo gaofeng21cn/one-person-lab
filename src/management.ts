@@ -9,7 +9,6 @@ import {
   buildFrontDeskEntryUrl,
   normalizeBasePath,
 } from './frontdesk-paths.ts';
-import { getFrontDeskLibreChatServiceStatus } from './frontdesk-librechat-service.ts';
 import { getFrontDeskServiceStatus } from './frontdesk-service.ts';
 import {
   buildDomainManifestCatalog,
@@ -23,6 +22,7 @@ import {
   runHermesCommand,
 } from './hermes.ts';
 import { buildFrontDeskHostedShellMcpWiring } from './frontdesk-librechat-identity.ts';
+import { readFrontDeskRuntimeModes } from './frontdesk-runtime-modes.ts';
 import { buildSessionLedger } from './session-ledger.ts';
 import {
   collectHermesProcessUsage,
@@ -30,7 +30,6 @@ import {
   parseHermesStatusOutput,
 } from './runtime-observer.ts';
 import { buildWorkspaceCatalog, getActiveWorkspaceBinding } from './workspace-registry.ts';
-import { buildPaperclipControlPlaneSummary } from './paperclip-control-plane.ts';
 import {
   humanizeProgressCode,
   readStatusNarrationContract,
@@ -1369,13 +1368,13 @@ export function buildHostedRuntimeReadiness() {
   return {
     surface_kind: 'opl_hosted_runtime_readiness',
     status: 'pilot_ready_not_managed',
-    shell_integration_target: 'librechat_first',
+    shell_integration_target: 'desktop_first',
     managed_hosted_runtime_landed: false,
     local_web_frontdesk_landed: true,
     hosted_friendly_contract_landed: true,
     hosted_pilot_bundle_landed: true,
     self_hostable_pilot_package_landed: true,
-    librechat_pilot_package_landed: true,
+    desktop_shell_landed: true,
     service_safe_local_packaging_landed: true,
     hosted_shell_mcp_wiring_landed: true,
     workspace_binding_tooling_landed: true,
@@ -1945,7 +1944,7 @@ export function buildFrontDeskEntryGuide(
       surface_id: 'opl_frontdesk_entry_guide',
       entry_surface: 'opl_local_web_frontdesk_pilot',
       runtime_substrate: 'external_hermes_kernel',
-      shell_integration_target: 'librechat_first',
+      shell_integration_target: 'desktop_first',
       base_path: normalizeBasePath(options.basePath),
       workspace_taxonomy: {
         family_workspace_kind: 'opl_family_workspace',
@@ -2006,7 +2005,7 @@ export function buildFrontDeskDomainWiring(
       surface_id: 'opl_frontdesk_domain_wiring',
       entry_surface: 'opl_local_web_frontdesk_pilot',
       runtime_substrate: 'external_hermes_kernel',
-      shell_integration_target: 'librechat_first',
+      shell_integration_target: 'desktop_first',
       base_path: normalizeBasePath(options.basePath),
       hosted_runtime_readiness: hostedRuntimeReadiness,
       domain_entry_parity: domainEntryParity,
@@ -2117,7 +2116,6 @@ export async function buildFrontDeskReadiness(
   const domainBindingParity = buildDomainBindingParity(contracts, options);
   const recommendedEntrySurfaces = buildRecommendedEntrySurfaces(domainManifests.projects);
   const localService = (await getFrontDeskServiceStatus(contracts)).frontdesk_service;
-  const localHostedShell = (await getFrontDeskLibreChatServiceStatus(contracts)).frontdesk_librechat;
   const projects = buildFrontDeskReadinessProjects(
     domainManifests.projects,
     domainEntryParity,
@@ -2148,13 +2146,7 @@ export async function buildFrontDeskReadiness(
   } else if (localService.health.status === 'unreachable') {
     recommendedNextActions.push('frontdesk service 已加载但健康检查失败，先执行 `opl frontdesk-service-status` 与 `opl logs`。');
   }
-  if (!localHostedShell.installed) {
-    recommendedNextActions.push('如需本地 hosted shell，执行 `opl frontdesk-bootstrap` 或 `opl frontdesk-librechat-install`。');
-  } else if (!localHostedShell.running) {
-    recommendedNextActions.push('local LibreChat front door 已安装但未运行，执行 `opl frontdesk-librechat-start`。');
-  } else if (localHostedShell.identity.sync_status === 'drifted') {
-    recommendedNextActions.push('local LibreChat front door 与当前 Codex 默认配置已漂移，执行 `opl frontdesk-librechat-start` 重新同步。');
-  }
+  recommendedNextActions.push('默认 GUI 入口使用 `opl frontdesk-bootstrap` 准备并启动 OPL Atlas Desktop。');
   if (summary.manifest_ready_projects_count < summary.total_projects_count) {
     recommendedNextActions.push('给仍缺 manifest 的 active binding 补 `manifest_command`。');
   }
@@ -2175,7 +2167,7 @@ export async function buildFrontDeskReadiness(
       surface_id: 'opl_frontdesk_readiness',
       entry_surface: 'opl_local_web_frontdesk_pilot',
       runtime_substrate: 'external_hermes_kernel',
-      shell_integration_target: 'librechat_first',
+      shell_integration_target: 'desktop_first',
       base_path: normalizeBasePath(options.basePath),
       overall_status:
         summary.usable_now_projects_count > 0
@@ -2187,12 +2179,9 @@ export async function buildFrontDeskReadiness(
         direct_entry_command: 'opl',
         quick_ask_command: 'opl <request...>',
         web_command: 'opl web',
+        desktop_command: 'opl frontdesk-bootstrap',
       },
       local_service: localService,
-      local_hosted_shell: {
-        surface_id: 'opl_frontdesk_librechat_status',
-        ...localHostedShell,
-      },
       hosted_runtime_readiness: hostedRuntimeReadiness,
       domain_entry_parity: domainEntryParity,
       domain_binding_parity: domainBindingParity,
@@ -2203,7 +2192,6 @@ export async function buildFrontDeskReadiness(
       endpoints: {
         frontdesk_readiness: endpoints.frontdesk_readiness,
         frontdesk_manifest: endpoints.manifest,
-        frontdesk_librechat_status: endpoints.frontdesk_librechat_status,
         frontdesk_domain_wiring: endpoints.frontdesk_domain_wiring,
         domain_manifests: endpoints.domain_manifests,
         dashboard: endpoints.dashboard,
@@ -2297,9 +2285,9 @@ export function buildFrontDeskManifest(contracts: GatewayContracts, options: { b
       surface_id: 'opl_hosted_friendly_frontdesk_manifest',
       entry_surface: 'opl_local_web_frontdesk_pilot',
       runtime_substrate: 'external_hermes_kernel',
-      shell_integration_target: 'librechat_first',
+      shell_integration_target: 'desktop_first',
       readiness: 'hosted_friendly_shell_pilot_landed',
-      hosted_packaging_status: 'librechat_pilot_landed',
+      hosted_packaging_status: 'frontdesk_package_landed',
       pilot_bundle_status: 'landed',
       base_path: normalizeBasePath(options.basePath),
       hosted_runtime_readiness: hostedRuntimeReadiness,
@@ -2318,7 +2306,7 @@ export function buildFrontDeskManifest(contracts: GatewayContracts, options: { b
       ],
       endpoints,
       notes: [
-        'This manifest freezes the local hosted-friendly shell contract now consumed by the landed LibreChat-first pilot package.',
+        'This manifest freezes the local hosted-friendly shell contract now consumed by the OPL-owned frontdesk package.',
         'It still does not claim managed hosted runtime ownership or multi-tenant platform readiness.',
       ],
     },
@@ -2354,7 +2342,7 @@ export function buildHostedPilotBundle(
     hosted_pilot_bundle: {
       surface_id: 'opl_hosted_frontdesk_pilot_bundle',
       runtime_substrate: 'external_hermes_kernel',
-      shell_integration_target: 'librechat_first',
+      shell_integration_target: 'desktop_first',
       pilot_bundle_status: 'landed',
       actual_hosted_runtime_status: 'not_landed',
       base_path: normalizedBasePath,
@@ -2371,7 +2359,7 @@ export function buildHostedPilotBundle(
       },
       notes: [
         'This bundle makes the current front desk hosted-pilot-ready through base-path-aware shell packaging.',
-        'It now feeds the landed LibreChat-first hosted shell pilot package, but it is still not a managed hosted runtime or multi-tenant platform deployment.',
+        'It now feeds the OPL-owned frontdesk package, but it is still not a managed hosted runtime or multi-tenant platform deployment.',
       ],
     },
   };
@@ -2457,7 +2445,7 @@ export function buildFrontDeskHealth(contracts: GatewayContracts, options: { bas
       runtime_substrate: 'external_hermes_kernel',
       base_path: normalizeBasePath(options.basePath),
       status,
-      hosted_packaging_status: 'librechat_pilot_landed',
+      hosted_packaging_status: 'frontdesk_package_landed',
       pilot_bundle_status: 'landed',
       checks: {
         hermes_binary: {
@@ -2473,7 +2461,7 @@ export function buildFrontDeskHealth(contracts: GatewayContracts, options: { bas
       },
       notes: [
         'Health here means the current front-desk shell can truthfully expose the Hermes-backed runtime status.',
-        'LibreChat-first hosted shell export is landed, but actual hosted runtime ownership is still not landed.',
+        'The OPL-owned frontdesk package is landed, while actual hosted runtime ownership is still not landed.',
       ],
     },
   };
@@ -2711,7 +2699,7 @@ export function buildFrontDeskDashboard(
   options: DashboardOptions = {},
 ) {
   const endpoints = buildFrontDeskEndpoints(options.basePath);
-  const paperclipControlPlane = buildPaperclipControlPlaneSummary(contracts);
+  const runtimeModes = readFrontDeskRuntimeModes();
   const projects = buildProjectsOverview(contracts).projects;
   const workspace = buildWorkspaceStatus({ workspacePath: options.workspacePath }).workspace;
   const runtimeStatus = buildRuntimeStatus({
@@ -2739,6 +2727,10 @@ export function buildFrontDeskDashboard(
         local_shell_status: 'landed',
         local_web_frontdesk_command: 'opl web',
         local_web_frontdesk_status: 'pilot_landed',
+        desktop_shell_status: 'landed',
+        desktop_default_entry_status: 'ready',
+        interaction_mode: runtimeModes.interaction_mode,
+        execution_mode: runtimeModes.execution_mode,
         hosted_friendly_surface_status: 'landed',
         hosted_pilot_bundle_status: 'landed',
         hosted_web_status: 'librechat_pilot_landed',
@@ -2751,10 +2743,6 @@ export function buildFrontDeskDashboard(
         session_ledger_status: 'landed',
         handoff_bundle_status: 'landed',
         domain_entry_parity: domainEntryParity,
-        paperclip_control_plane_status: paperclipControlPlane.readiness,
-        paperclip_control_plane_endpoint: endpoints.paperclip_control_plane,
-        paperclip_bound_projects_count: paperclipControlPlane.summary.project_bindings_count,
-        paperclip_control_company_id: paperclipControlPlane.connection.control_company_id,
         recommended_entry_surfaces_count: recommendedEntrySurfaces.length,
         recommended_entry_surfaces: recommendedEntrySurfaces,
         next_major_target: 'opl_hosted_runtime_hardening',
@@ -2765,60 +2753,20 @@ export function buildFrontDeskDashboard(
           'docs/references/family-lightweight-direct-entry-rollout-board.md',
           'docs/references/mas-top-level-cutover-board.md',
         ],
-      notes: [
-        'OPL now exposes a base-path-aware hosted pilot bundle in addition to the local web front-desk pilot.',
-        'Workspace registry, managed session ledger, and handoff bundle surfaces are now part of the top-level control room.',
-        'Paperclip can now sit downstream as an external control plane through a file-backed OPL bridge instead of becoming a replacement runtime.',
-        'workspace-catalog keeps manifest_command as non-executing registry state, while domain-manifests resolves the active bound machine-readable product-entry manifests.',
-        'Resolved domain manifests now also feed frontdesk surface plus operator-loop actions and recommended shell/command hints back into dashboard and handoff surfaces.',
-        'Resolved domain manifests now also surface family-orchestration companion previews so the top-level front desk can show human-gate and resume semantics instead of hiding them in domain docs.',
-        'The LibreChat-first hosted shell pilot is now landed through the export package, while managed hosted runtime readiness remains a separate follow-up track.',
-      ],
-    },
+        notes: [
+          'OPL now exposes a desktop-first control room together with the local web front-desk pilot and hosted bundle exports.',
+          'Workspace registry, managed session ledger, handoff bundle, and current Codex/Hermes mode selection are all visible from the same top-level board.',
+          'workspace-catalog keeps manifest_command as non-executing registry state, while domain-manifests resolves the active bound machine-readable product-entry manifests.',
+          'Resolved domain manifests now also feed frontdesk surface plus operator-loop actions and recommended shell/command hints back into dashboard and handoff surfaces.',
+          'Resolved domain manifests now also surface family-orchestration companion previews so the top-level front desk can show human-gate and resume semantics instead of hiding them in domain docs.',
+          'The LibreChat-first hosted shell pilot remains available as a fallback export lane, while managed hosted runtime readiness remains a separate follow-up track.',
+        ],
+      },
       projects,
       workspace,
       workspace_catalog: workspaceCatalog,
       domain_manifests: domainManifests,
       runtime_status: runtimeStatus,
-    },
-  };
-}
-
-export function buildPaperclipControlPlaneStatus(
-  contracts: GatewayContracts,
-  options: DashboardOptions = {},
-) {
-  const endpoints = buildFrontDeskEndpoints(options.basePath);
-  const paperclipControlPlane = buildPaperclipControlPlaneSummary(contracts);
-
-  return {
-    version: 'g2',
-    contracts_context: {
-      contracts_dir: contracts.contractsDir,
-      contracts_root_source: contracts.contractsRootSource,
-    },
-    paperclip_control_plane: {
-      action: 'status',
-      ...paperclipControlPlane,
-      gateway: {
-        surface: {
-          surface_id: 'opl_paperclip_control_plane_bridge_surface',
-          endpoints: {
-            control_plane: endpoints.paperclip_control_plane,
-            bootstrap: endpoints.paperclip_bootstrap,
-            sync: endpoints.paperclip_sync,
-            dashboard: endpoints.dashboard,
-            domain_manifests: endpoints.domain_manifests,
-            handoff_envelope: endpoints.handoff_envelope,
-          },
-          contract_refs: {
-            handoff: 'contracts/opl-gateway/handoff.schema.json',
-            family_human_gate: 'contracts/family-orchestration/family-human-gate.schema.json',
-            governance_audit: 'contracts/opl-gateway/governance-audit.schema.json',
-          },
-        },
-        dashboard: buildFrontDeskDashboard(contracts, options).dashboard,
-      },
     },
   };
 }
