@@ -755,6 +755,89 @@ function pickCurrentStudyEntry(studies: unknown) {
   return [...entries].sort((left, right) => scoreStudyEntry(right) - scoreStudyEntry(left))[0] ?? null;
 }
 
+function classifyStudyInboxLane(entry: Record<string, unknown>) {
+  const monitoring = isRecord(entry.monitoring) ? entry.monitoring : null;
+  const commands = isRecord(entry.commands) ? entry.commands : null;
+  const blockers = uniqueStrings(optionalStringList(entry.current_blockers));
+  const needsPhysicianDecision = entry.needs_physician_decision === true;
+  const currentStage = optionalString(entry.current_stage);
+  const healthStatus = optionalString(monitoring?.health_status);
+  const resumeCommand = optionalString(commands?.launch);
+  const progressCommand = optionalString(commands?.progress);
+
+  if (healthStatus === 'live') {
+    return 'running' as const;
+  }
+
+  if (blockers.length > 0 || needsPhysicianDecision || currentStage === 'runtime_blocked') {
+    return 'waiting' as const;
+  }
+
+  if (healthStatus === 'recovering') {
+    return 'running' as const;
+  }
+
+  if (resumeCommand || progressCommand) {
+    return 'ready' as const;
+  }
+
+  return 'ready' as const;
+}
+
+function buildStudyQueueCards(studies: unknown, workspacePath: string) {
+  if (!Array.isArray(studies)) {
+    return [];
+  }
+
+  const entries = studies.filter((entry): entry is Record<string, unknown> => isRecord(entry));
+  if (entries.length === 0) {
+    return [];
+  }
+
+  return [...entries]
+    .sort((left, right) => scoreStudyEntry(right) - scoreStudyEntry(left))
+    .map((entry) => {
+      const monitoring = isRecord(entry.monitoring) ? entry.monitoring : null;
+      const freshness = isRecord(entry.progress_freshness) ? entry.progress_freshness : null;
+      const blockers = uniqueStrings(optionalStringList(entry.current_blockers));
+      const currentStage = optionalString(entry.current_stage);
+      const currentStageSummary =
+        optionalString(entry.current_stage_summary)
+        ?? humanizeProgressCode(currentStage)
+        ?? '当前任务状态待确认。';
+      const latestProgressTimeLabel = optionalString(freshness?.latest_progress_time_label);
+      const latestProgressSummary = optionalString(freshness?.latest_progress_summary);
+      const latestUpdate =
+        normalizeInlineText([
+          latestProgressTimeLabel,
+          latestProgressSummary ?? currentStageSummary,
+        ].filter(Boolean).join(' · '))
+        ?? '当前还没有新的进度更新时间。';
+      const nextStep =
+        normalizeInlineText(optionalString(entry.next_system_action) ?? '继续查看这个研究任务的详细进度。')
+        ?? '继续查看这个研究任务的详细进度。';
+      const summary =
+        normalizeInlineText([
+          currentStageSummary,
+          blockers.length > 0 ? `当前卡点：${blockers.join('；')}` : null,
+        ].filter(Boolean).join(' '))
+        ?? currentStageSummary;
+
+      return {
+        task_id: optionalString(entry.study_id) ?? 'unnamed-study',
+        title: optionalString(entry.study_id) ?? 'Unnamed study',
+        lane: classifyStudyInboxLane(entry),
+        status_label: humanizeProgressCode(currentStage) ?? currentStageSummary,
+        summary,
+        latest_update: latestUpdate,
+        next_step: nextStep,
+        inspect_path: optionalString(entry.study_root) ?? workspacePath,
+        deliverable_count: 0,
+        source_surface: 'workspace_cockpit',
+      };
+    });
+}
+
 function readStudyCharter(studyRoot: string | null) {
   if (!studyRoot) {
     return null;
@@ -798,6 +881,7 @@ function buildStudyProgressSurface(options: {
       attentionItems,
       inspectPaths: [],
       recentActivity: null,
+      studyQueue: [],
       workspaceFiles: [],
       recommendedCommands: {
         progress: options.overview?.progress_surface?.command ?? null,
@@ -808,6 +892,7 @@ function buildStudyProgressSurface(options: {
   }
 
   const operatorLoopPayload = operatorLoop.payload;
+  const studyQueue = buildStudyQueueCards(operatorLoopPayload?.studies, options.workspacePath);
   const currentStudySummary = pickCurrentStudyEntry(operatorLoopPayload?.studies);
   if (!currentStudySummary) {
     return {
@@ -817,6 +902,7 @@ function buildStudyProgressSurface(options: {
       attentionItems,
       inspectPaths: [],
       recentActivity: null,
+      studyQueue,
       workspaceFiles: [],
       recommendedCommands: {
         progress: options.overview?.progress_surface?.command ?? null,
@@ -976,6 +1062,7 @@ function buildStudyProgressSurface(options: {
     attentionItems: blockers,
     inspectPaths,
     recentActivity,
+    studyQueue,
     workspaceFiles: paperSnapshot?.key_files ?? [],
     recommendedCommands: {
       progress: progressCommand,
@@ -1066,6 +1153,209 @@ function buildProgressFeedback(options: {
     latest_update: latestUpdate,
     next_step: nextStep,
     status_summary: statusSummary,
+  };
+}
+
+function buildTaskLifecycleInboxCard(options: {
+  taskLifecycle: NormalizedDomainManifest['task_lifecycle'];
+  workspacePath: string;
+}) {
+  const taskLifecycle = options.taskLifecycle;
+  if (!taskLifecycle) {
+    return null;
+  }
+
+  const lane =
+    taskLifecycle.human_gate_ids.length > 0
+      ? 'waiting'
+      : (
+          ['running', 'active', 'in_progress', 'recovering'].includes(taskLifecycle.status)
+            ? 'running'
+            : taskLifecycle.resume_surface
+              ? 'ready'
+              : 'ready'
+        );
+  const latestUpdate =
+    normalizeInlineText([
+      taskLifecycle.checkpoint_summary?.recorded_at,
+      taskLifecycle.checkpoint_summary?.summary,
+    ].filter(Boolean).join(' · '))
+    ?? taskLifecycle.checkpoint_summary?.summary
+    ?? '当前还没有新的 checkpoint 更新时间。';
+  const nextStep =
+    taskLifecycle.resume_surface
+      ? `从 ${taskLifecycle.resume_surface.surface_kind} 继续这个任务。`
+      : '继续查看这个任务的详细进度。';
+
+  return {
+    task_id: taskLifecycle.task_id,
+    title: taskLifecycle.task_kind,
+    lane: lane as 'running' | 'waiting' | 'ready',
+    status_label: humanizeProgressCode(taskLifecycle.status) ?? taskLifecycle.status,
+    summary: taskLifecycle.summary,
+    latest_update: latestUpdate,
+    next_step: nextStep,
+    inspect_path: options.workspacePath,
+    deliverable_count: 0,
+    source_surface: 'task_lifecycle',
+  };
+}
+
+function buildRecentSessionInboxCard(options: {
+  recentSession: {
+    session_id: string;
+    last_active: string;
+    source: string;
+    preview: string;
+  } | null;
+  workspacePath: string;
+}) {
+  if (!options.recentSession) {
+    return null;
+  }
+
+  return {
+    task_id: options.recentSession.session_id,
+    title: 'Recent agent session',
+    lane: 'running' as const,
+    status_label: '后台会话活跃',
+    summary: options.recentSession.preview || '当前有后台会话仍在持续推进。',
+    latest_update: normalizeInlineText([
+      options.recentSession.last_active,
+      options.recentSession.preview,
+    ].filter(Boolean).join(' · ')) ?? options.recentSession.last_active,
+    next_step: '继续查看这条后台会话的最新输出。',
+    inspect_path: options.workspacePath,
+    deliverable_count: 0,
+    source_surface: 'recent_sessions',
+  };
+}
+
+function buildDeliverableInboxCard(options: {
+  currentStudy: ReturnType<typeof buildStudyProgressSurface>['currentStudy'];
+  deliverableFiles: Array<{
+    file_id: string;
+    label: string;
+    kind: 'deliverable' | 'supporting';
+    path: string;
+    summary: string;
+  }>;
+  progressFeedback: ReturnType<typeof buildProgressFeedback>;
+  workspacePath: string;
+}) {
+  if (options.deliverableFiles.length === 0) {
+    return null;
+  }
+
+  const firstDeliverable = options.deliverableFiles[0];
+  const title =
+    optionalString(options.currentStudy?.title)
+    ?? optionalString(options.currentStudy?.study_id)
+    ?? 'Workspace deliverables';
+  const studyId = optionalString(options.currentStudy?.study_id);
+
+  return {
+    task_id: studyId
+      ? `${studyId}:deliverables`
+      : 'workspace-deliverables',
+    title,
+    lane: 'delivered' as const,
+    status_label: '已形成交付',
+    summary: `已产出 ${options.deliverableFiles.length} 个 deliverable 文件，当前最值得先看的文件是 ${firstDeliverable.label}。`,
+    latest_update: options.progressFeedback.latest_update,
+    next_step: `优先检查 ${firstDeliverable.label}，确认交付面和当前进度保持一致。`,
+    inspect_path: firstDeliverable.path ?? optionalString(options.currentStudy?.study_root) ?? options.workspacePath,
+    deliverable_count: options.deliverableFiles.length,
+    source_surface: 'workspace_files',
+  };
+}
+
+function buildWorkspaceInbox(options: {
+  studySurface: ReturnType<typeof buildStudyProgressSurface>;
+  manifest: NormalizedDomainManifest | null;
+  recentSession: {
+    session_id: string;
+    last_active: string;
+    source: string;
+    preview: string;
+  } | null;
+  deliverableFiles: Array<{
+    file_id: string;
+    label: string;
+    kind: 'deliverable' | 'supporting';
+    path: string;
+    summary: string;
+  }>;
+  progressFeedback: ReturnType<typeof buildProgressFeedback>;
+  workspacePath: string;
+}) {
+  const cards: Array<{
+    task_id: string;
+    title: string;
+    lane: 'running' | 'waiting' | 'ready' | 'delivered';
+    status_label: string;
+    summary: string;
+    latest_update: string;
+    next_step: string;
+    inspect_path: string;
+    deliverable_count: number;
+    source_surface: string;
+  }> = [];
+  const studyQueue = options.studySurface.studyQueue ?? [];
+
+  if (studyQueue.length > 0) {
+    cards.push(...studyQueue);
+  } else {
+    const taskLifecycleCard = buildTaskLifecycleInboxCard({
+      taskLifecycle: options.manifest?.task_lifecycle ?? null,
+      workspacePath: options.workspacePath,
+    });
+    if (taskLifecycleCard) {
+      cards.push(taskLifecycleCard);
+    }
+
+    const recentSessionCard = buildRecentSessionInboxCard({
+      recentSession: options.recentSession,
+      workspacePath: options.workspacePath,
+    });
+    if (recentSessionCard) {
+      cards.push(recentSessionCard);
+    }
+  }
+
+  const deliverableCard = buildDeliverableInboxCard({
+    currentStudy: options.studySurface.currentStudy,
+    deliverableFiles: options.deliverableFiles,
+    progressFeedback: options.progressFeedback,
+    workspacePath: options.workspacePath,
+  });
+  if (deliverableCard) {
+    cards.push(deliverableCard);
+  }
+
+  const sections = {
+    running: cards.filter((entry) => entry.lane === 'running'),
+    waiting: cards.filter((entry) => entry.lane === 'waiting'),
+    ready: cards.filter((entry) => entry.lane === 'ready'),
+    delivered: cards.filter((entry) => entry.lane === 'delivered'),
+  };
+  const activeTaskId =
+    sections.running[0]?.task_id
+    ?? sections.waiting[0]?.task_id
+    ?? sections.ready[0]?.task_id
+    ?? sections.delivered[0]?.task_id
+    ?? null;
+
+  return {
+    summary: {
+      known_task_count: cards.length,
+      running_count: sections.running.length,
+      waiting_count: sections.waiting.length,
+      ready_count: sections.ready.length,
+      delivered_count: sections.delivered.length,
+      active_task_id: activeTaskId,
+    },
+    sections,
   };
 }
 
@@ -2269,6 +2559,14 @@ export async function buildProjectProgressBrief(
     nextFocus,
     recentSession,
   });
+  const workspaceInbox = buildWorkspaceInbox({
+    studySurface,
+    manifest,
+    recentSession,
+    deliverableFiles,
+    progressFeedback,
+    workspacePath,
+  });
 
   return {
     version: 'g2',
@@ -2289,6 +2587,7 @@ export async function buildProjectProgressBrief(
       current_study: studySurface.currentStudy,
       next_focus: nextFocus,
       progress_feedback: progressFeedback,
+      workspace_inbox: workspaceInbox,
       recent_activity: recentSession
         ? {
             session_id: recentSession.session_id,
