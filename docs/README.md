@@ -42,11 +42,11 @@ The important change is both how readers enter it and which technical truth is c
 - technical planners should combine the technical working set with Layer 2
 - developers should treat Layers 3 and 4 as supporting material, not the public front page
 - live front-desk, hosted, and domain-entry truth should still be read from [Status](./status.md)
-- `opl frontdesk-bootstrap --path <workspace>` is now the shortest user-facing bootstrap for the local GUI stack: it lands `OPL Atlas`, `OPL Agent`, and the built-in `OPL Cortex` MCP bridge while inheriting the current local Codex defaults
+- `opl frontdesk-bootstrap --path <workspace>` is now the shortest user-facing bootstrap for the local GUI stack: it prepares the Docker-free `OPL Atlas` Desktop shell, aligns `OPL Agent` with the current local Codex defaults, and keeps the built-in `OPL Cortex` MCP bridge attached to the same frontdesk truth
 - the default `OPL Cortex` bridge is now intentionally small: `project progress`, `execute request`, `task status`, `recent sessions`, `resume session`, `runtime logs`, `projects`, and `activate workspace`
 - front-door execution requests now use async acceptance for real work: the shell returns a `task_id` quickly, then the user-facing shell follows progress through `task status` instead of waiting for a single long blocking tool call
 - `Codex CLI autonomous` remains the frozen family executor default; model and reasoning inherit the local Codex profile rather than a repo-pinned version
-- the shortest usable web path is currently the `LibreChat-first` hosted shell pilot, while the long-line target remains an `OPL`-owned web front desk and managed hosted runtime is still not landed
+- the default local GUI path is now `OPL Atlas` Desktop, while `LibreChat-first` remains the explicit hosted pilot and optional compatibility lane; the long-line target still remains an `OPL`-owned web front desk and managed hosted runtime is still not landed
 
 ## Layer 1. Default Public Mainline
 

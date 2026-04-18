@@ -3171,7 +3171,155 @@ test('mcp-stdio defaults to a LibreChat-compatible protocol version when the cli
   }
 });
 
-test('frontdesk bootstrap manages the local LibreChat shell, inherits local Codex defaults, and auto-bootstraps local trusted Paperclip', async () => {
+test('frontdesk bootstrap prepares the local Desktop shell, inherits local Codex defaults, and auto-bootstraps local trusted Paperclip', async () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-desktop-home-'));
+  const codexFixture = createCodexConfigFixture({
+    model: 'gpt-5.4-frontdoor',
+    reasoningEffort: 'xhigh',
+    baseUrl: 'https://codex-frontdoor.example.test/v1',
+    apiKey: 'codex-frontdoor-key',
+  });
+  const masWorkspaceFixture = createMasWorkspaceFixture();
+  const launchctlFixture = createFakeLaunchctlFixture();
+  const dockerFixture = createFakeDockerFixture();
+  const fakePaperclip = await startFakePaperclipPilotServer({
+    workspacePath: masWorkspaceFixture.fixtureRoot,
+  });
+  const hermesDir = path.join(homeRoot, '.hermes');
+  fs.mkdirSync(hermesDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(hermesDir, '.env'),
+    [
+      'OPENAI_API_KEY=legacy-hermes-key',
+      'OPENAI_BASE_URL=https://legacy-hermes.example.test/v1',
+      '',
+    ].join('\n'),
+    'utf8',
+  );
+  const serviceEnv = {
+    HOME: homeRoot,
+    CODEX_HOME: codexFixture.codexHome,
+    OPL_LAUNCHCTL_BIN: launchctlFixture.launchctlPath,
+    OPL_DOCKER_BIN: dockerFixture.dockerPath,
+  };
+
+  try {
+    const install = await runCliAsync([
+      'frontdesk',
+      'bootstrap',
+      '--host',
+      '127.0.0.1',
+      '--port',
+      '8911',
+      '--path',
+      masWorkspaceFixture.fixtureRoot,
+      '--sessions-limit',
+      '7',
+      '--paperclip-base-url',
+      fakePaperclip.baseUrl,
+    ], serviceEnv) as {
+      frontdesk_desktop: {
+        action: string;
+        installed: boolean;
+        default_entry: string;
+        shell_kind: string;
+        app_title: string;
+        model_display_label: string;
+        frontdesk_url: string;
+        api_base_url: string;
+        workspace_path: string;
+        active_project_id: string | null;
+        active_project_label: string | null;
+        librechat_retired_from_default: boolean;
+        launch_command: string;
+        assets: {
+          package_root: string;
+          package_json: string;
+          main_script: string;
+          preload_script: string;
+          renderer_html: string;
+          readme: string;
+          config_file: string;
+        };
+      };
+      frontdesk_service: {
+        loaded: boolean;
+      };
+      paperclip_control_plane: {
+        readiness: string;
+        connection: {
+          base_url: string;
+          auth: {
+            header_env: string | null;
+          };
+        };
+        project_bindings: Array<{
+          project_id: string;
+          paperclip_project_id: string | null;
+          project_workspace_id: string | null;
+        }>;
+      };
+    };
+
+    assert.equal(install.frontdesk_desktop.action, 'bootstrap');
+    assert.equal(install.frontdesk_desktop.installed, true);
+    assert.equal(install.frontdesk_desktop.default_entry, 'desktop');
+    assert.equal(install.frontdesk_desktop.shell_kind, 'electron_desktop_shell');
+    assert.equal(install.frontdesk_desktop.app_title, 'OPL Atlas');
+    assert.equal(install.frontdesk_desktop.model_display_label, 'OPL Agent');
+    assert.equal(install.frontdesk_desktop.frontdesk_url, 'http://127.0.0.1:8911/');
+    assert.equal(install.frontdesk_desktop.api_base_url, 'http://127.0.0.1:8911/api');
+    assert.equal(install.frontdesk_desktop.workspace_path, masWorkspaceFixture.fixtureRoot);
+    assert.equal(install.frontdesk_desktop.active_project_id, 'medautoscience');
+    assert.equal(install.frontdesk_desktop.active_project_label, 'med-autoscience');
+    assert.equal(install.frontdesk_desktop.librechat_retired_from_default, true);
+    assert.match(install.frontdesk_desktop.launch_command, /electron/i);
+    assert.equal(install.frontdesk_service.loaded, true);
+    assert.equal(install.paperclip_control_plane.readiness, 'configured');
+    assert.equal(install.paperclip_control_plane.connection.base_url, fakePaperclip.baseUrl);
+    assert.equal(install.paperclip_control_plane.connection.auth.header_env, null);
+    assert.equal(install.paperclip_control_plane.project_bindings.some((binding) =>
+      binding.project_id === 'medautoscience'
+      && binding.paperclip_project_id === fakePaperclip.projectId
+      && binding.project_workspace_id === fakePaperclip.workspaceId
+    ), true);
+    assert.equal(fs.existsSync(install.frontdesk_desktop.assets.package_root), true);
+    assert.equal(fs.existsSync(install.frontdesk_desktop.assets.package_json), true);
+    assert.equal(fs.existsSync(install.frontdesk_desktop.assets.main_script), true);
+    assert.equal(fs.existsSync(install.frontdesk_desktop.assets.preload_script), true);
+    assert.equal(fs.existsSync(install.frontdesk_desktop.assets.renderer_html), true);
+    assert.equal(fs.existsSync(install.frontdesk_desktop.assets.readme), true);
+    assert.equal(fs.existsSync(install.frontdesk_desktop.assets.config_file), true);
+    const desktopPackage = fs.readFileSync(install.frontdesk_desktop.assets.package_json, 'utf8');
+    assert.match(desktopPackage, /"electron"/);
+    assert.match(desktopPackage, /"start"/);
+    const desktopReadme = fs.readFileSync(install.frontdesk_desktop.assets.readme, 'utf8');
+    assert.match(desktopReadme, /OPL Atlas Desktop/);
+    assert.match(desktopReadme, /LibreChat has moved to an optional lane/i);
+    const desktopConfig = fs.readFileSync(install.frontdesk_desktop.assets.config_file, 'utf8');
+    assert.match(desktopConfig, /"frontdesk_url": "http:\/\/127\.0\.0\.1:8911\/"/);
+    assert.match(desktopConfig, /"workspace_path"/);
+    const workspaceRegistryPath = path.join(homeRoot, 'Library', 'Application Support', 'OPL', 'frontdesk', 'workspace-registry.json');
+    const workspaceRegistry = JSON.parse(fs.readFileSync(workspaceRegistryPath, 'utf8')) as {
+      bindings: Array<{ project_id: string; workspace_path: string; status: string }>;
+    };
+    assert.equal(workspaceRegistry.bindings.some((binding) =>
+      binding.project_id === 'medautoscience'
+      && binding.workspace_path === masWorkspaceFixture.fixtureRoot
+      && binding.status === 'active'
+    ), true);
+    assert.equal(fs.existsSync(dockerFixture.callsPath), false);
+  } finally {
+    await stopHttpServer(fakePaperclip.server);
+    fs.rmSync(codexFixture.codexHome, { recursive: true, force: true });
+    fs.rmSync(masWorkspaceFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(launchctlFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(dockerFixture.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('frontdesk librechat install manages the local LibreChat shell, inherits local Codex defaults, and auto-bootstraps local trusted Paperclip', async () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-librechat-home-'));
   const codexFixture = createCodexConfigFixture({
     model: 'gpt-5.4-frontdoor',
@@ -3208,7 +3356,8 @@ test('frontdesk bootstrap manages the local LibreChat shell, inherits local Code
   try {
     const install = await runCliAsync([
       'frontdesk',
-      'bootstrap',
+      'librechat',
+      'install',
       '--host',
       '127.0.0.1',
       '--port',

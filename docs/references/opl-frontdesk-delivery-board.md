@@ -143,6 +143,19 @@
 - 当前已经有了 launchd 驱动的 service-safe 本地包装层，可以把本地 front desk 作为长期运行的入口服务管理；
 - 但这仍然只是 host-side 的 local product packaging；`LibreChat-first` pilot 已接上，不代表 managed hosted runtime 已完成。
 
+### F2.D. Desktop-first 本机 GUI 入口
+
+已完成：
+
+- `opl frontdesk-bootstrap`
+- `OPL Atlas` Desktop bootstrap package
+
+当前含义：
+
+- 本机默认 GUI 路径已经从 Docker 驱动的 LibreChat 壳切到 `OPL Atlas` Desktop；
+- Desktop 当前先复用现有 `opl web` truth surface，把 Electron 壳与本地 frontdesk service 接起来；
+- `frontdesk librechat install` 继续保留，但角色已经收紧为 optional compatibility lane 与 hosted pilot 参考面。
+
 ### F3. hosted / web 路线冻结
 
 已完成：

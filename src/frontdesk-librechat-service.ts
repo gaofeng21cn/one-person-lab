@@ -620,7 +620,7 @@ async function buildPayload(
         'The chat shell talks to OPL through the shipped MCP stdio bridge, while the OPL front desk remains the routed gateway.',
         ...(config && !installedStackAssets
           ? [
-              'Recorded stack config exists but stack assets are missing. Re-run frontdesk-librechat-start or frontdesk-bootstrap to resync the local front door.',
+              'Recorded stack config exists but stack assets are missing. Re-run frontdesk-librechat-start or frontdesk-librechat-install to resync the local front door.',
             ]
           : []),
       ],
