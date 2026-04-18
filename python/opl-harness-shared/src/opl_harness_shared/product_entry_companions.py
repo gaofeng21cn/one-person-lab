@@ -345,6 +345,89 @@ def build_product_frontdesk(
     return _merge_extra_payload(payload, extra_payload, surface_kind="product frontdesk")
 
 
+def build_family_product_frontdesk(
+    *,
+    recommended_action: str,
+    product_entry_manifest: Mapping[str, Any],
+    entry_surfaces: Mapping[str, Any],
+    notes: list[str],
+    extra_payload: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    manifest = _clone_mapping(product_entry_manifest, "product_entry_manifest")
+    frontdesk_surface = _clone_mapping(
+        manifest.get("frontdesk_surface"),
+        "product_entry_manifest.frontdesk_surface",
+    )
+    operator_loop_surface = _clone_mapping(
+        manifest.get("operator_loop_surface"),
+        "product_entry_manifest.operator_loop_surface",
+    )
+    return build_product_frontdesk(
+        recommended_action=_require_string(recommended_action, "recommended_action"),
+        target_domain_id=_require_string(
+            manifest.get("target_domain_id"),
+            "product_entry_manifest.target_domain_id",
+        ),
+        workspace_locator=_clone_mapping(
+            manifest.get("workspace_locator"),
+            "product_entry_manifest.workspace_locator",
+        ),
+        runtime=_clone_mapping(manifest.get("runtime"), "product_entry_manifest.runtime"),
+        product_entry_status=_clone_mapping(
+            manifest.get("product_entry_status"),
+            "product_entry_manifest.product_entry_status",
+        ),
+        frontdesk_surface=frontdesk_surface,
+        operator_loop_surface=operator_loop_surface,
+        operator_loop_actions=_clone_mapping(
+            manifest.get("operator_loop_actions"),
+            "product_entry_manifest.operator_loop_actions",
+        ),
+        product_entry_start=_clone_mapping(
+            manifest.get("product_entry_start"),
+            "product_entry_manifest.product_entry_start",
+        ),
+        product_entry_overview=_clone_mapping(
+            manifest.get("product_entry_overview"),
+            "product_entry_manifest.product_entry_overview",
+        ),
+        product_entry_preflight=_clone_mapping(
+            manifest.get("product_entry_preflight"),
+            "product_entry_manifest.product_entry_preflight",
+        ),
+        product_entry_readiness=_clone_mapping(
+            manifest.get("product_entry_readiness"),
+            "product_entry_manifest.product_entry_readiness",
+        ),
+        product_entry_quickstart=_clone_mapping(
+            manifest.get("product_entry_quickstart"),
+            "product_entry_manifest.product_entry_quickstart",
+        ),
+        family_orchestration=_clone_mapping(
+            manifest.get("family_orchestration"),
+            "product_entry_manifest.family_orchestration",
+        ),
+        product_entry_manifest=manifest,
+        entry_surfaces=_clone_mapping(entry_surfaces, "entry_surfaces"),
+        summary={
+            "frontdesk_command": _require_string(
+                frontdesk_surface.get("command"),
+                "product_entry_manifest.frontdesk_surface.command",
+            ),
+            "recommended_command": _require_string(
+                manifest.get("recommended_command"),
+                "product_entry_manifest.recommended_command",
+            ),
+            "operator_loop_command": _require_string(
+                operator_loop_surface.get("command"),
+                "product_entry_manifest.operator_loop_surface.command",
+            ),
+        },
+        notes=_require_string_list(notes, "notes"),
+        extra_payload=extra_payload,
+    )
+
+
 def build_family_product_entry_manifest(
     *,
     manifest_kind: str,
