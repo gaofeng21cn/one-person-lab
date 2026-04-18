@@ -9,6 +9,9 @@ import {
   validateGatewayContracts,
 } from './contracts.ts';
 import {
+  bootstrapFrontDeskDesktop,
+} from './frontdesk-desktop-service.ts';
+import {
   getFrontDeskServiceStatus,
   installFrontDeskService,
   openFrontDeskService,
@@ -161,6 +164,10 @@ type WebCliInput = {
 
 type FrontDeskLibreChatCliInput = WebCliInput & {
   publicOrigin?: string;
+  paperclipBaseUrl?: string;
+};
+
+type FrontDeskDesktopCliInput = WebCliInput & {
   paperclipBaseUrl?: string;
 };
 
@@ -1069,6 +1076,58 @@ function parseFrontDeskLibreChatArgs(
   return parsed;
 }
 
+function parseFrontDeskDesktopArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): FrontDeskDesktopCliInput {
+  const parsed: FrontDeskDesktopCliInput = {};
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    if (!token.startsWith('--')) {
+      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
+        token,
+      });
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
+        option: token,
+      });
+    }
+
+    switch (token) {
+      case '--host':
+        parsed.host = value;
+        break;
+      case '--port':
+        parsed.port = parsePort(token, value, spec);
+        break;
+      case '--path':
+        parsed.workspacePath = value;
+        break;
+      case '--sessions-limit':
+        parsed.sessionsLimit = parsePositiveInteger(token, value, spec);
+        break;
+      case '--base-path':
+        parsed.basePath = value;
+        break;
+      case '--paperclip-base-url':
+        parsed.paperclipBaseUrl = value;
+        break;
+      default:
+        throw buildUsageError(`Unknown option for frontdesk Desktop command: ${token}.`, spec, {
+          option: token,
+        });
+    }
+
+    index += 1;
+  }
+
+  return parsed;
+}
+
 function parseFrontDeskMcpArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
@@ -1682,7 +1741,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl frontdesk hosted-bundle --base-path /pilot/opl',
         'opl frontdesk hosted-package --output /tmp/opl-hosted-package --public-origin https://opl.example.com --base-path /pilot/opl',
         'opl frontdesk librechat-package --output /tmp/opl-librechat-pilot --public-origin https://opl.example.com --base-path /pilot/opl',
-        'opl frontdesk bootstrap --path /Users/gaofeng/workspace/Yang/NF-PitNET --public-origin http://127.0.0.1:8080',
+        'opl frontdesk bootstrap --path /Users/gaofeng/workspace/Yang/NF-PitNET',
         'opl frontdesk service install --port 8787',
         'opl frontdesk librechat install --path /Users/gaofeng/workspace/Yang/NF-PitNET --public-origin http://127.0.0.1:8080',
         'opl frontdesk librechat open',
@@ -2385,18 +2444,17 @@ async function main() {
     },
     'frontdesk-bootstrap': {
       usage:
-        'opl frontdesk-bootstrap [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>] [--public-origin <origin>] [--paperclip-base-url <url>]',
+        'opl frontdesk-bootstrap [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>] [--paperclip-base-url <url>]',
       summary:
-        'Bootstrap the family front door in one shot: install the OPL workspace console, install the LibreChat shell, inherit the local Codex defaults, and bind the current workspace.',
+        'Bootstrap the family front door in one shot: install the OPL Desktop shell, inherit the local Codex defaults, and bind the current workspace.',
       examples: [
         'opl frontdesk-bootstrap --path /Users/gaofeng/workspace/Yang/NF-PitNET',
-        'opl frontdesk-bootstrap --path /Users/gaofeng/workspace/Yang/NF-PitNET --public-origin http://127.0.0.1:8080',
         'opl frontdesk-bootstrap --path /Users/gaofeng/workspace/Yang/NF-PitNET --paperclip-base-url http://127.0.0.1:3100',
       ],
       handler: (args) =>
-        installFrontDeskLibreChatService(
+        bootstrapFrontDeskDesktop(
           getContracts(),
-          parseFrontDeskLibreChatArgs(args, commandSpecs['frontdesk-bootstrap']),
+          parseFrontDeskDesktopArgs(args, commandSpecs['frontdesk-bootstrap']),
         ),
     },
     'frontdesk-librechat-install': {
@@ -2949,8 +3007,8 @@ async function main() {
     }),
     'frontdesk bootstrap': cloneCommandSpec(commandSpecs['frontdesk-bootstrap'], {
       usage:
-        'opl frontdesk bootstrap [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>] [--public-origin <origin>] [--paperclip-base-url <url>]',
-      examples: ['opl frontdesk bootstrap --path /Users/gaofeng/workspace/Yang/NF-PitNET --public-origin http://127.0.0.1:8080'],
+        'opl frontdesk bootstrap [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>] [--paperclip-base-url <url>]',
+      examples: ['opl frontdesk bootstrap --path /Users/gaofeng/workspace/Yang/NF-PitNET'],
       group: 'frontdesk',
     }),
     'frontdesk librechat install': cloneCommandSpec(commandSpecs['frontdesk-librechat-install'], {

@@ -9,6 +9,8 @@ export type FrontDeskStatePaths = {
   session_ledger_file: string;
   task_state_dir: string;
   service_config_file: string;
+  desktop_config_file: string;
+  desktop_pilot_root: string;
   librechat_service_file: string;
   librechat_pilot_root: string;
   paperclip_control_plane_file: string;
@@ -28,6 +30,8 @@ export function resolveFrontDeskStatePaths(): FrontDeskStatePaths {
     session_ledger_file: path.join(stateDir, 'session-ledger.json'),
     task_state_dir: path.join(stateDir, 'tasks'),
     service_config_file: path.join(stateDir, 'service-config.json'),
+    desktop_config_file: path.join(stateDir, 'desktop-pilot', 'config', 'desktop-config.json'),
+    desktop_pilot_root: path.join(stateDir, 'desktop-pilot'),
     librechat_service_file: path.join(stateDir, 'librechat-service.json'),
     librechat_pilot_root: path.join(stateDir, 'librechat-pilot'),
     paperclip_control_plane_file: path.join(stateDir, 'paperclip-control-plane.json'),
