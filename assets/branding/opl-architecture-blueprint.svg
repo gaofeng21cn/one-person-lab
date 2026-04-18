@@ -31,7 +31,7 @@
     OPL Product Shell Blueprint
   </text>
   <text x="800" y="148" text-anchor="middle" fill="#42627F" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="18">
-    GUI work modes, module management, progress, files, settings, and optional Hermes-Agent online gateway
+    GUI work modes, product families, current implementations, progress, files, settings, and optional Hermes-Agent online gateway
   </text>
 
   <g filter="url(#soft-shadow)">
@@ -88,10 +88,10 @@
 
   <rect x="100" y="694" width="1400" height="314" rx="24" fill="#F8FBFF" stroke="#B5CBE2" stroke-width="2"/>
   <text x="800" y="732" text-anchor="middle" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="24" font-weight="700">
-    GUI Work Modes and Domain Modules
+    GUI Modes and Product Families
   </text>
   <text x="800" y="758" text-anchor="middle" fill="#597793" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="16">
-    Three peer GUI modes sit beside module management; specialized domain agents are installed modules
+    General Codex modes sit beside product families; each family maps to a current implementation module
   </text>
 
   <g>
@@ -114,24 +114,24 @@
     <rect x="664" y="778" width="256" height="86" rx="20" fill="#FFF8ED" stroke="#D7C6A4"/>
     <rect x="680" y="792" width="76" height="22" rx="11" fill="#FFF0D1"/>
     <text x="718" y="807" text-anchor="middle" fill="#8A6415" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="700">ACTIVE</text>
-    <text x="680" y="836" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">MAS</text>
-    <text x="680" y="852" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Medical research agent</text>
+    <text x="680" y="836" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">Research Foundry</text>
+    <text x="680" y="852" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Current implementation: MAS</text>
   </g>
 
   <g>
     <rect x="936" y="778" width="256" height="86" rx="20" fill="#FFF8ED" stroke="#D7C6A4"/>
     <rect x="952" y="792" width="76" height="22" rx="11" fill="#FFF0D1"/>
     <text x="990" y="807" text-anchor="middle" fill="#8A6415" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="700">ACTIVE</text>
-    <text x="952" y="836" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">MAG</text>
-    <text x="952" y="852" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Grant and proposal agent</text>
+    <text x="952" y="836" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">Grant Foundry</text>
+    <text x="952" y="852" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Current implementation: MAG</text>
   </g>
 
   <g>
     <rect x="1208" y="778" width="272" height="86" rx="20" fill="#F2F8FF" stroke="#A9C3DF"/>
     <rect x="1224" y="792" width="66" height="22" rx="11" fill="#DDF7E8"/>
     <text x="1257" y="807" text-anchor="middle" fill="#22674B" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="700">ACTIVE</text>
-    <text x="1224" y="836" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">RCA</text>
-    <text x="1224" y="852" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Visual deliverable agent</text>
+    <text x="1224" y="836" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700">Presentation Ops</text>
+    <text x="1224" y="852" fill="#4A6781" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Current implementation: RCA</text>
   </g>
 
   <path d="M 248 864 L 248 924" stroke="#3B6EA5" stroke-width="3" marker-end="url(#arrow-head)"/>
@@ -142,7 +142,7 @@
 
   <rect x="585" y="886" width="430" height="38" rx="19" fill="#F8FBFF"/>
   <text x="800" y="911" text-anchor="middle" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="22" font-weight="700">
-    Installed Module Surfaces
+    Current Implementations
   </text>
 
   <rect x="120" y="924" width="256" height="76" rx="18" fill="#FFFFFF" stroke="#9FBFE0" stroke-width="2"/>
@@ -157,17 +157,17 @@
   <text x="414" y="962" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="16" font-weight="700">Default Task Runner</text>
   <text x="414" y="986" fill="#476684" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13">Engine: Codex task runner</text>
 
-  <text x="686" y="962" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="16" font-weight="700">MAS Module</text>
-  <text x="686" y="986" fill="#476684" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Carrier: Med Auto Science</text>
+  <text x="686" y="962" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="16" font-weight="700">MAS / Med Auto Science</text>
+  <text x="686" y="986" fill="#476684" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Research Foundry implementation</text>
 
-  <text x="958" y="962" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="16" font-weight="700">MAG Module</text>
-  <text x="958" y="986" fill="#476684" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Carrier: Med Auto Grant</text>
+  <text x="958" y="962" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="16" font-weight="700">MAG / Med Auto Grant</text>
+  <text x="958" y="986" fill="#476684" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Grant Foundry implementation</text>
 
-  <text x="1230" y="962" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="16" font-weight="700">RCA Module</text>
-  <text x="1230" y="986" fill="#476684" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Carrier: RedCube AI</text>
+  <text x="1230" y="962" fill="#173A5D" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="16" font-weight="700">RCA / RedCube AI</text>
+  <text x="1230" y="986" fill="#476684" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14">Presentation implementation</text>
 
   <rect x="128" y="1018" width="1344" height="30" rx="15" fill="#EAF2FB" stroke="#C6D8EA"/>
   <text x="152" y="1038" fill="#375B79" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13">
-    Blueprint rule: OPL presents one GUI product shell, shows human-readable progress plus deliverable files, manages modules in settings, and keeps Hermes-Agent as the explicit backup online gateway.
+    Blueprint rule: OPL presents one GUI product shell, makes product families and current implementations legible, shows human-readable progress plus deliverable files, and keeps Hermes-Agent as the explicit backup online gateway.
   </text>
 </svg>

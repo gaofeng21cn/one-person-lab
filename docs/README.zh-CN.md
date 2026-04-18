@@ -10,19 +10,21 @@
 
 | 读者 | 建议起点 | 目的 |
 | --- | --- | --- |
-| 潜在用户、人类专家、非技术读者 | [仓库首页](../README.zh-CN.md)、[路线图](./roadmap.zh-CN.md)、[任务版图](./task-map.zh-CN.md)、[运行模型](./operating-model.zh-CN.md) | 先理解 `OPL` 产品壳，再进入技术细节 |
+| 潜在用户、人类专家、非技术读者 | [仓库首页](../README.zh-CN.md)、[路线图](./roadmap.zh-CN.md)、[任务版图](./task-map.zh-CN.md)、[运行模型](./operating-model.zh-CN.md) | 先理解 `OPL` 的产品壳、产品家族和当前实现，再进入技术细节 |
 | 技术规划者、架构读者、方向同步读者 | [项目概览](./project.md)、[当前状态](./status.md)、[架构](./architecture.md)、[硬约束](./invariants.md)、[关键决策](./decisions.md)、[合同目录说明](../contracts/README.md) | 快速把握当前真相、边界和技术主线 |
 | 开发者与维护者 | [参考级索引](./references/README.zh-CN.md)、`docs/specs/`、`docs/plans/`、`docs/history/omx/` | 查看实现配套材料、历史记录和跟踪中的工作笔记 |
 
 ## 当前基线
 
-- `OPL` 是一人课题组 Agent 的 Codex-native GUI 产品壳与模块管理器。
-- GUI 中并列呈现三类工作模式：普通 Codex 对话、通用 Codex 任务、专用 domain agents。
+- `OPL` 是一人课题组智能体的 Codex-native GUI 产品壳与模块管理器。
+- 对外公开的阅读模型采用三层：产品壳 -> 产品家族 -> 当前实现。
+- GUI 中并列呈现三类工作模式：普通 Codex 对话、通用 Codex 任务、专用智能体模块。
+- `Research Foundry`、`Grant Foundry`、`Presentation Ops` 是当前活跃产品家族；`Thesis Ops` 与 `Review Ops` 继续处在定义阶段。
+- `MAS`、`MAG`、`RCA` 是这些产品家族当前已经公开的实现。
 - 设置面承载模块管理、模块升级、版本 pin、模块健康、默认模式和 online gateway 配置。
 - workspace 侧边栏承载人话进度、运行中的任务状态和交付文件。
-- `MAS`、`MAG`、`RCA` 是当前活跃的专用 domain-agent 模块。
 - `Hermes-Agent` 是显式备用模式与在线网关，用于远端或替代 runtime 路径。
-- Domain-agent 仓库继续维护各自专业能力和 readiness 真相。
+- 各智能体仓库继续维护各自专业能力和 readiness 真相。
 
 ## 技术工作集
 
@@ -43,6 +45,7 @@
 - 人类专家从仓库首页和第一层进入
 - 技术规划把“技术工作集”和第二层组合起来阅读
 - 开发实现把第三层和第四层视作配套材料
+- 当前公开产品心智以 `产品壳 -> 产品家族 -> 当前实现` 为准
 - 产品壳、模块、设置和 online gateway 的现时真相以 [当前状态](./status.md) 为准
 - `opl frontdesk bootstrap --path <workspace>` 准备本地 `OPL Atlas` Desktop 壳，并把 active workspace 接入模块 registry
 - 默认的 `OPL Cortex` 前台桥保持小而稳定：论文/项目进度、执行请求、任务状态、最近会话、恢复会话、运行日志、项目列表、切换 workspace

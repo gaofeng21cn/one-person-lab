@@ -142,6 +142,51 @@ test('core maintainer docs exist and are linked from docs index', () => {
   }
 });
 
+test('top-level docs expose the shell-family-implementation model across readmes, docs, and blueprint', () => {
+  const readme = read('README.md');
+  const readmeZh = read('README.zh-CN.md');
+  const project = read('docs/project.md');
+  const status = read('docs/status.md');
+  const docsIndex = read('docs/README.md');
+  const docsIndexZh = read('docs/README.zh-CN.md');
+  const blueprint = read('assets/branding/opl-architecture-blueprint.svg');
+
+  assert.match(readme, /product shell, product families, and current implementations/i);
+  assert.match(readme, /Research Foundry/);
+  assert.match(readme, /Grant Foundry/);
+  assert.match(readme, /Presentation Ops/);
+  assert.match(readme, /MAS \/ [`\[]?Med Auto Science/i);
+  assert.match(readme, /MAG \/ [`\[]?Med Auto Grant/i);
+  assert.match(readme, /RCA \/ [`\[]?RedCube AI/i);
+
+  assert.match(readmeZh, /产品壳、产品家族、当前实现/);
+  assert.match(readmeZh, /Research Foundry/);
+  assert.match(readmeZh, /Grant Foundry/);
+  assert.match(readmeZh, /Presentation Ops/);
+  assert.match(readmeZh, /MAS \/ [`\[]?Med Auto Science/i);
+  assert.match(readmeZh, /MAG \/ [`\[]?Med Auto Grant/i);
+  assert.match(readmeZh, /RCA \/ [`\[]?RedCube AI/i);
+
+  assert.match(project, /产品壳/);
+  assert.match(project, /产品家族/);
+  assert.match(project, /当前实现/);
+  assert.match(status, /当前产品家族/);
+  assert.match(status, /Research Foundry/);
+  assert.match(status, /Grant Foundry/);
+  assert.match(status, /Presentation Ops/);
+  assert.match(docsIndex, /product shell -> product families -> current implementations/i);
+  assert.match(docsIndexZh, /产品壳 -> 产品家族 -> 当前实现/);
+
+  assert.match(blueprint, /GUI Modes and Product Families/);
+  assert.match(blueprint, /Current Implementations/);
+  assert.match(blueprint, /Research Foundry/);
+  assert.match(blueprint, /Grant Foundry/);
+  assert.match(blueprint, /Presentation Ops/);
+  assert.match(blueprint, /Current implementation: MAS/);
+  assert.match(blueprint, /Current implementation: MAG/);
+  assert.match(blueprint, /Current implementation: RCA/);
+});
+
 test('hosted web front-desk decision stays aligned across decision-bearing docs', () => {
   const status = read('docs/status.md');
   const roadmap = read('docs/roadmap.md');

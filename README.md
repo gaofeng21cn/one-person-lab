@@ -15,15 +15,15 @@
   <tr>
     <td width="33%" valign="top">
       <strong>Who It Serves</strong><br/>
-      Clinicians, researchers, PIs, and small labs who want one GUI for lab work, Codex help, and specialized agents
+      Clinicians, researchers, grant writers, educators, and small teams who want one GUI for research, grant, and deliverable work
     </td>
     <td width="33%" valign="top">
-      <strong>What It Helps With</strong><br/>
-      Everyday discussion, general Codex tasks, and domain-specific work across research, grants, and visual deliverables
+      <strong>What It Covers</strong><br/>
+      General Codex conversation, executable Codex tasks, and specialized work across research, grants, and presentations
     </td>
     <td width="33%" valign="top">
       <strong>Public Role</strong><br/>
-      `OPL` is the product shell that chooses work mode, manages modules, and keeps domain agents available from one place
+      `OPL` is the product shell that chooses a work mode, manages modules, and keeps long-running work plus files visible from one place
     </td>
   </tr>
 </table>
@@ -32,15 +32,16 @@
   <img src="assets/branding/opl-architecture-blueprint.svg" alt="OPL architecture blueprint" width="100%" />
 </p>
 
-> `OPL` is the GUI-first product shell for a one-person lab. It lets the user choose between ordinary Codex conversation, general Codex tasks, and specialized domain agents, while the settings area manages modules and upgrades.
+> `OPL` is a GUI-first product shell for a one-person lab. It organizes work in three public layers: product shell, product families, and current implementations. The current strongest implementations are medical research, medical grant writing, and visual deliverables.
 
-## What People Use OPL For
+## Current Coverage
 
 - Open one GUI and choose the right working mode before starting.
 - Use ordinary Codex conversation for discussion, reading, planning, and quick clarification.
 - Turn a goal into a general Codex task when the work needs files, commands, or multi-step execution.
-- Send specialized work to domain agents such as `MAS`, `MAG`, and `RCA`.
-- Manage agent modules, local entry points, versions, and upgrades from settings.
+- Send specialized work to product families such as `Research Foundry`, `Grant Foundry`, and `Presentation Ops`.
+- Track progress and produced files in the workspace side rail.
+- Manage installed modules, local entry points, versions, and upgrades from settings.
 
 ## GUI Work Modes
 
@@ -48,39 +49,32 @@
 | --- | --- | --- | --- |
 | Ordinary Codex conversation | Codex | Discussion, explanation, lightweight planning, and quick analysis | Default GUI mode |
 | General Codex task | Codex task runner | Repository work, file edits, verification, and longer local tasks | Default execution mode |
-| Specialized domain agents | `MAS`, `MAG`, `RCA` | Medical research, grant work, and visual deliverables | Active module family |
+| Specialized product-family modules | `MAS`, `MAG`, `RCA` | Research, grant work, and visual deliverables | Active module family |
 
 The GUI treats these three modes as peers. `Hermes-Agent` is exposed separately as the explicit backup online gateway.
 The active execution path remains `Codex-only` local sessions as the current development host, while the preferred future substrate direction is a true upstream `Hermes-Agent` integration proved in a domain repository first.
 
-## Progress And Deliverables
+## Product Families
 
-The right-side workspace rail should make long-running work easy to follow with clear execution visibility:
+| Product family | Current implementation | Current scope | Status |
+| --- | --- | --- | --- |
+| Research Foundry | `MAS` / [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience) | Medical research, evidence packaging, manuscript delivery | Active |
+| Grant Foundry | `MAG` / [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) | Medical grant directions, proposal writing, author-side reviewer simulation | Active repository line |
+| Presentation Ops | `RCA` / [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) | Reports, lecture decks, slides, and visual deliverables | Active |
+| Thesis Ops | Planned | Dissertation assembly and defense preparation | Definition stage |
+| Review Ops | Planned | Review, rebuttal, and revision workflows | Definition stage |
+
+`OPL` keeps the shell stable, product families define the kind of work, and current implementations carry domain-specific truth. The current active implementations happen to be medical; the shell itself is organized by work family and can host additional domains over time.
+
+## Progress, Files, And Settings
+
+The right-side workspace rail and settings area should make long-running work easy to follow with clear execution visibility:
 
 - Human-readable progress updates such as accepted, gathering material, drafting, running, waiting for review, and delivering files.
 - A task-oriented file area that keeps drafts, reports, slides, tables, and other deliverables visible per workspace.
 - Resume-ready status cards that connect recent progress, running tasks, and the files already produced.
-
-## Backup Online Gateway
-
-`Hermes-Agent` stays available for remote gateway experiments, alternate long-running sessions, and online fallback runs.
-Users enter it through an explicit mode switch or settings-level gateway configuration.
-
-## Frozen Federation Boundaries
-
-- `Phase 1 / G2 release-closeout` stays frozen as the top-level public baseline for the shared runtime layer, hosted entry surfaces, and any real `Hermes-Agent` rollout.
-- The current public federation freeze is the `Minimal admitted-domain federation activation package`. It covers the two already admitted domain surfaces, `MedAutoScience` and `RedCube AI`, while the formal entry remains the same local `TypeScript CLI`-first / gateway contract surface and runtime ownership stays with the admitted domains.
-- `Grant Foundry -> Med Auto Grant` is the active grant-domain repository line. At the `OPL` layer, its top-level federation admission and domain handoff wording remains separately gated.
-
-## Active Modules
-
-| Module | Repository | Role | Status |
-| --- | --- | --- | --- |
-| `MAS` | [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience) | Medical research agent | Active |
-| `MAG` | [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) | Grant and proposal agent | Active |
-| `RCA` | [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) | Presentation and visual-deliverable agent | Active |
-| Future thesis module | Planned | Dissertation and defense preparation | Definition stage |
-| Future review module | Planned | Review, rebuttal, and revision work | Definition stage |
+- A module catalog that shows installed implementations, health, upgrades, pinned versions, and default launch preferences.
+- Explicit online gateway configuration for `Hermes-Agent` backup runs.
 
 ## How To Read This Repository
 
@@ -90,35 +84,29 @@ Users enter it through an explicit mode switch or settings-level gateway configu
 
 ## Plain-Language Architecture
 
-`OPL` is the user-facing shell above Codex and the domain agents.
-Its job is to present the work modes, keep modules manageable, and make domain agents available through one lab workspace.
+`OPL` is the user-facing shell above Codex and the product families.
+Its job is to present the work modes, keep families and modules manageable, and make domain implementations available through one lab workspace.
 
 ```text
 Human
   -> OPL GUI Product Shell
       -> Codex Conversation
       -> General Codex Task
-      -> Domain Agent Module: MAS / MAG / RCA
-      -> Settings: Module Management / Upgrades
+      -> Product Families
+          -> Research Foundry -> MAS / Med Auto Science
+          -> Grant Foundry -> MAG / Med Auto Grant
+          -> Presentation Ops -> RCA / RedCube AI
+      -> Settings: Modules / Upgrades / Health / Gateway
       -> Hermes-Agent Online Gateway
 ```
 
 In plain language:
 
-- `OPL` owns the GUI shell, mode picker, module catalog, settings, and upgrade path.
+- `OPL` owns the GUI shell, mode picker, progress view, file area, settings, and upgrade path.
+- Product families define the durable work categories: research, grants, presentation, thesis, and review.
+- Current implementations such as `MAS`, `MAG`, and `RCA` carry the domain-specific capability and repository truth.
 - Codex remains the default conversation and general task engine.
-- `MAS`, `MAG`, and `RCA` are specialized modules for scoped domain work.
 - `Hermes-Agent` stays available as backup mode and online gateway.
-
-## Module Management
-
-The settings surface should make module lifecycle visible:
-
-- Installed modules and their local repository paths.
-- Available upgrades and pinned versions.
-- Default work mode and per-module launch preferences.
-- Health, human-readable progress, produced files, and last verification status for each module.
-- Online gateway configuration for explicit Hermes-Agent backup runs.
 
 <details>
   <summary><strong>Technical Notes And Current Implementation Truth</strong></summary>
@@ -144,11 +132,15 @@ Domain agents remain independently owned modules with their own repository truth
 The shared architectural language under `OPL` remains the `Unified Harness Engineering Substrate`, with its most important shared pieces converging into the [Shared Runtime Contract](./docs/shared-runtime-contract.md) and the [Shared Domain Contract](./docs/shared-domain-contract.md).
 The module catalog and settings surface should expose the installed domain agents, their health, and their upgrade state.
 
+`Phase 1 / G2 release-closeout` stays frozen as the top-level public baseline for the shared runtime layer, hosted entry surfaces, and any real `Hermes-Agent` rollout.
+The current public federation freeze is the `Minimal admitted-domain federation activation package`. It covers the two already admitted domain surfaces, `MedAutoScience` and `RedCube AI`, while the formal entry remains the same local `TypeScript CLI`-first / gateway contract surface and runtime ownership stays with the admitted domains.
+`Grant Foundry -> Med Auto Grant` is the active grant-domain repository line. At the `OPL` layer, its top-level federation admission and domain handoff wording remains separately gated.
+
 Current family state is intentionally uneven and should be described honestly:
 
-- `MAS` is the medical research module.
-- `MAG` is the grant and proposal module.
-- `RCA` is the visual-deliverable module.
+- `Research Foundry -> MAS / Med Auto Science` is the active medical research implementation.
+- `Grant Foundry -> MAG / Med Auto Grant` is the active medical grant implementation.
+- `Presentation Ops -> RCA / RedCube AI` is the active visual-deliverable implementation.
 - Future thesis and review modules stay in definition.
 
 If you need the full technical reading path, continue to the [Docs Guide](./docs/README.md).
