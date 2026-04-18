@@ -18,6 +18,13 @@ from .family_orchestration import (
     resolve_active_run_id,
     resolve_program_id,
 )
+from .family_entry_contracts import (
+    build_domain_entry_command_contract,
+    build_family_domain_entry_contract,
+    build_gateway_interaction_contract,
+    validate_family_domain_entry_contract,
+    validate_gateway_interaction_contract,
+)
 from .hermes_supervision import (
     HermesSupervisionSpec,
     ensure_script_file,
@@ -98,6 +105,7 @@ __all__ = [
     "build_explicit_checkpoint_policy",
     "build_family_product_frontdesk",
     "build_family_product_entry_manifest",
+    "build_family_domain_entry_contract",
     "build_family_action_graph",
     "build_family_action_graph_edge",
     "build_family_action_graph_human_gate",
@@ -107,7 +115,9 @@ __all__ = [
     "build_family_orchestration_companion",
     "build_family_product_entry_orchestration",
     "build_family_orchestration_template",
+    "build_gateway_interaction_contract",
     "build_managed_runtime_contract",
+    "build_domain_entry_command_contract",
     "build_product_entry_start",
     "build_product_frontdesk",
     "build_product_entry_overview",
@@ -157,5 +167,7 @@ __all__ = [
     "RUNTIME_ALERT_ANSWER_CHECKLIST",
     "STATUS_NARRATION_CONTRACT_KIND",
     "STATUS_NARRATION_SCHEMA_VERSION",
+    "validate_family_domain_entry_contract",
+    "validate_gateway_interaction_contract",
     "validate_managed_runtime_contract",
 ]
