@@ -105,6 +105,38 @@
         "runtime_cannot_invent_domain_publishability_truth"
       ]
     },
+    "runtime_inventory": {
+      "surface_kind": "runtime_inventory",
+      "summary": "MAG 当前通过 upstream Hermes substrate 与 repo-tracked authoring shells 持续推进 grant loop。",
+      "runtime_owner": "upstream_hermes_agent",
+      "domain_owner": "med-autogrant",
+      "executor_owner": "med-autogrant",
+      "substrate": "external_hermes_substrate",
+      "availability": "ready",
+      "health_status": "healthy",
+      "status_surface": {
+        "ref_kind": "json_pointer",
+        "ref": "/product_entry_manifest/operator_loop_actions/inspect_progress",
+        "label": "grant_progress_surface"
+      },
+      "attention_surface": {
+        "ref_kind": "json_pointer",
+        "ref": "/product_entry_manifest/operator_loop_surface",
+        "label": "grant_user_loop_surface"
+      },
+      "recovery_surface": {
+        "ref_kind": "json_pointer",
+        "ref": "/product_entry_manifest/product_entry_start/resume_surface",
+        "label": "grant_user_loop_resume_surface"
+      },
+      "workspace_binding": {
+        "workspace_path": "/fixtures/med-autogrant/nsfc_workspace_p2c_critique.json"
+      },
+      "domain_projection": {
+        "grant_run_id": "grant-run-nsfc-demo-001-baseline-001",
+        "lifecycle_stage": "critique"
+      }
+    },
     "product_entry_shell": {
       "product_frontdesk": {
         "command": "uv run python -m med_autogrant product-frontdesk --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
@@ -349,6 +381,158 @@
         "ref": "/product_entry_manifest/repo_mainline/phase_status",
         "label": "family checkpoint lineage surface"
       }
+    },
+    "task_lifecycle": {
+      "surface_kind": "task_lifecycle",
+      "task_kind": "grant_authoring_loop",
+      "task_id": "grant-run-nsfc-demo-001-baseline-001",
+      "status": "resumable",
+      "summary": "当前 critique grant loop 可以继续通过同一 grant user loop 进入 revision 决策。",
+      "session_id": "grant-run-nsfc-demo-001-baseline-001",
+      "progress_surface": {
+        "surface_kind": "grant_progress",
+        "summary": "读取当前 workspace 的阶段摘要、checkpoint 与下一步。",
+        "command": "uv run python -m med_autogrant grant-progress --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+        "step_id": "inspect_progress"
+      },
+      "resume_surface": {
+        "surface_kind": "grant_user_loop",
+        "summary": "继续当前 direct grant user inbox shell。",
+        "command": "uv run python -m med_autogrant grant-user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
+        "locator_fields": [
+          "grant_run_id"
+        ]
+      },
+      "checkpoint_summary": {
+        "surface_kind": "checkpoint_summary",
+        "status": "critique",
+        "summary": "当前 workspace 停在 critique route，并已经给出 revision 方向。",
+        "checkpoint_id": "grant-run-nsfc-demo-001-baseline-001:critique",
+        "lineage_ref": {
+          "ref_kind": "json_pointer",
+          "ref": "/product_entry_manifest/repo_mainline/phase_status"
+        },
+        "verification_ref": {
+          "ref_kind": "json_pointer",
+          "ref": "/product_entry_manifest/product_entry_preflight/checks"
+        }
+      },
+      "human_gate_ids": [
+        "mag_route_gate_revision"
+      ],
+      "domain_projection": {
+        "recommended_next_stage": "revision"
+      }
+    },
+    "skill_catalog": {
+      "surface_kind": "skill_catalog",
+      "summary": "MAG 当前通过 repo-tracked grant entry shells 暴露 family 可复用技能。",
+      "skills": [
+        {
+          "surface_kind": "skill_descriptor",
+          "skill_id": "medautogrant_product_frontdesk",
+          "title": "MAG product frontdesk",
+          "owner": "med-autogrant",
+          "distribution_mode": "repo_tracked",
+          "target_surface_kind": "product_frontdesk",
+          "description": "打开当前 direct grant frontdesk。",
+          "command": "uv run python -m med_autogrant product-frontdesk --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+          "readiness": "landed",
+          "tags": [
+            "frontdesk",
+            "grant"
+          ]
+        },
+        {
+          "surface_kind": "skill_descriptor",
+          "skill_id": "medautogrant_grant_user_loop",
+          "title": "MAG grant user loop",
+          "owner": "med-autogrant",
+          "distribution_mode": "repo_tracked",
+          "target_surface_kind": "grant_user_loop",
+          "description": "继续当前 direct grant user inbox shell。",
+          "command": "uv run python -m med_autogrant grant-user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
+          "readiness": "landed",
+          "tags": [
+            "grant",
+            "revision",
+            "checkpoint"
+          ]
+        }
+      ],
+      "supported_commands": [
+        "product-frontdesk",
+        "grant-user-loop",
+        "grant-progress",
+        "grant-cockpit",
+        "grant-direct-entry"
+      ],
+      "command_contracts": [
+        {
+          "command": "product-frontdesk",
+          "owner": "med-autogrant",
+          "surface_kind": "product_frontdesk"
+        },
+        {
+          "command": "grant-user-loop",
+          "owner": "med-autogrant",
+          "surface_kind": "grant_user_loop"
+        },
+        {
+          "command": "grant-progress",
+          "owner": "med-autogrant",
+          "surface_kind": "grant_progress"
+        },
+        {
+          "command": "grant-cockpit",
+          "owner": "med-autogrant",
+          "surface_kind": "grant_cockpit"
+        },
+        {
+          "command": "grant-direct-entry",
+          "owner": "med-autogrant",
+          "surface_kind": "grant_direct_entry"
+        }
+      ]
+    },
+    "automation": {
+      "surface_kind": "automation",
+      "summary": "MAG 当前把 checkpoint 路由推进与 submission-ready export 提示暴露成 family 自动化面。",
+      "automations": [
+        {
+          "surface_kind": "automation_descriptor",
+          "automation_id": "medautogrant_revision_route_followup",
+          "title": "MAG revision route follow-up",
+          "owner": "med-autogrant",
+          "trigger_kind": "checkpoint_transition",
+          "target_surface_kind": "grant_user_loop",
+          "summary": "在 critique 完成后继续把 grant loop 推进到 revision route。",
+          "readiness_status": "automation_ready",
+          "gate_policy": "author_review_gated",
+          "output_expectation": [
+            "continue current grant loop",
+            "preserve critique to revision truth"
+          ],
+          "target_command": "uv run python -m med_autogrant grant-user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json"
+        },
+        {
+          "surface_kind": "automation_descriptor",
+          "automation_id": "medautogrant_submission_ready_export",
+          "title": "MAG submission-ready export",
+          "owner": "med-autogrant",
+          "trigger_kind": "stage_gate",
+          "target_surface_kind": "grant_cockpit",
+          "summary": "在后续主线满足条件时导出 submission-ready package。",
+          "readiness_status": "tracked_follow_on",
+          "gate_policy": "material_and_operator_gated",
+          "output_expectation": [
+            "build submission-ready package",
+            "respect material completeness gate"
+          ],
+          "target_command": "uv run python -m med_autogrant build-submission-ready-package --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --output-dir <output-dir> --format json"
+        }
+      ],
+      "readiness_summary": "Revision route follow-up 已 ready，submission-ready export 继续保持 tracked follow-on。"
     },
     "product_entry_status": {
       "summary": "把 direct grant product 面逐步收成当前用户 inbox shell，而不越界写成 mature Web UI 或 hosted runtime。",

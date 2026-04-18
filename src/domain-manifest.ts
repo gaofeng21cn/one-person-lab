@@ -6,6 +6,107 @@ import { getActiveWorkspaceBinding, type WorkspaceBinding } from './workspace-re
 
 type JsonRecord = Record<string, unknown>;
 
+export interface NormalizedSurfaceRef {
+  ref_kind: string;
+  ref: string;
+  role?: string;
+  label?: string;
+}
+
+export interface NormalizedTaskSurfaceDescriptor {
+  surface_kind: string;
+  summary: string;
+  command: string | null;
+  ref: NormalizedSurfaceRef | null;
+  step_id: string | null;
+  locator_fields: string[];
+}
+
+export interface NormalizedCheckpointSummary {
+  surface_kind: 'checkpoint_summary';
+  status: string;
+  summary: string;
+  checkpoint_id: string | null;
+  recorded_at: string | null;
+  lineage_ref: NormalizedSurfaceRef | null;
+  verification_ref: NormalizedSurfaceRef | null;
+}
+
+export interface NormalizedRuntimeInventory {
+  surface_kind: 'runtime_inventory';
+  summary: string;
+  runtime_owner: string;
+  domain_owner: string;
+  executor_owner: string;
+  substrate: string;
+  availability: string;
+  health_status: string;
+  status_surface: NormalizedSurfaceRef | null;
+  attention_surface: NormalizedSurfaceRef | null;
+  recovery_surface: NormalizedSurfaceRef | null;
+  workspace_binding: JsonRecord | null;
+  domain_projection: JsonRecord | null;
+}
+
+export interface NormalizedTaskLifecycle {
+  surface_kind: 'task_lifecycle';
+  task_kind: string;
+  task_id: string;
+  status: string;
+  summary: string;
+  session_id: string | null;
+  run_id: string | null;
+  progress_surface: NormalizedTaskSurfaceDescriptor | null;
+  resume_surface: NormalizedTaskSurfaceDescriptor | null;
+  checkpoint_summary: NormalizedCheckpointSummary | null;
+  human_gate_ids: string[];
+  domain_projection: JsonRecord | null;
+}
+
+export interface NormalizedSkillDescriptor {
+  surface_kind: 'skill_descriptor';
+  skill_id: string;
+  title: string;
+  owner: string;
+  distribution_mode: string;
+  target_surface_kind: string;
+  description: string;
+  command: string | null;
+  readiness: string;
+  tags: string[];
+  domain_projection: JsonRecord | null;
+}
+
+export interface NormalizedSkillCatalog {
+  surface_kind: 'skill_catalog';
+  summary: string;
+  skills: NormalizedSkillDescriptor[];
+  supported_commands: string[];
+  command_contracts: JsonRecord[];
+}
+
+export interface NormalizedAutomationDescriptor {
+  surface_kind: 'automation_descriptor';
+  automation_id: string;
+  title: string;
+  owner: string;
+  trigger_kind: string;
+  target_surface_kind: string;
+  summary: string;
+  readiness_status: string;
+  gate_policy: string;
+  output_expectation: string[];
+  target_command: string | null;
+  domain_projection: JsonRecord | null;
+}
+
+export interface NormalizedAutomationCatalog {
+  surface_kind: 'automation';
+  summary: string;
+  automations: NormalizedAutomationDescriptor[];
+  readiness_summary: string | null;
+}
+
 export type DomainManifestStatus =
   | 'not_bound'
   | 'manifest_not_configured'
@@ -166,6 +267,10 @@ export interface NormalizedDomainManifest {
     event_envelope_surface: JsonRecord | null;
     checkpoint_lineage_surface: JsonRecord | null;
   } | null;
+  runtime_inventory: NormalizedRuntimeInventory | null;
+  task_lifecycle: NormalizedTaskLifecycle | null;
+  skill_catalog: NormalizedSkillCatalog | null;
+  automation: NormalizedAutomationCatalog | null;
   remaining_gaps: string[];
   notes: string[];
 }
@@ -204,7 +309,7 @@ function requireString(value: unknown, field: string) {
   return text;
 }
 
-function readStringList(value: unknown) {
+function readStringList(value: unknown, _field?: string) {
   if (!Array.isArray(value)) {
     return [];
   }
@@ -246,6 +351,184 @@ function normalizeRecordList(value: unknown, field: string) {
     }
     return entry;
   });
+}
+
+function requireSurfaceKind(value: unknown, field: string, expected: string) {
+  const surfaceKind = requireString(value, `${field}.surface_kind`);
+  if (surfaceKind !== expected) {
+    throw new Error(`${field}.surface_kind must be ${expected}.`);
+  }
+  return surfaceKind;
+}
+
+function normalizeSurfaceRef(value: unknown, field: string): NormalizedSurfaceRef | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  return {
+    ref_kind: requireString(value.ref_kind, `${field}.ref_kind`),
+    ref: requireString(value.ref, `${field}.ref`),
+    ...(optionalString(value.role) ? { role: optionalString(value.role)! } : {}),
+    ...(optionalString(value.label) ? { label: optionalString(value.label)! } : {}),
+  };
+}
+
+function normalizeTaskSurfaceDescriptor(value: unknown, field: string): NormalizedTaskSurfaceDescriptor | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  return {
+    surface_kind: requireString(value.surface_kind, `${field}.surface_kind`),
+    summary: requireString(value.summary, `${field}.summary`),
+    command: optionalString(value.command),
+    ref: normalizeSurfaceRef(value.ref, `${field}.ref`),
+    step_id: optionalString(value.step_id),
+    locator_fields: readStringList(value.locator_fields, `${field}.locator_fields`),
+  };
+}
+
+function normalizeCheckpointSummary(value: unknown, field: string): NormalizedCheckpointSummary | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  requireSurfaceKind(value.surface_kind, field, 'checkpoint_summary');
+
+  return {
+    surface_kind: 'checkpoint_summary',
+    status: requireString(value.status, `${field}.status`),
+    summary: requireString(value.summary, `${field}.summary`),
+    checkpoint_id: optionalString(value.checkpoint_id),
+    recorded_at: optionalString(value.recorded_at),
+    lineage_ref: normalizeSurfaceRef(value.lineage_ref, `${field}.lineage_ref`),
+    verification_ref: normalizeSurfaceRef(value.verification_ref, `${field}.verification_ref`),
+  };
+}
+
+function normalizeRuntimeInventory(value: unknown): NormalizedRuntimeInventory | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  requireSurfaceKind(value.surface_kind, 'runtime_inventory', 'runtime_inventory');
+
+  return {
+    surface_kind: 'runtime_inventory',
+    summary: requireString(value.summary, 'runtime_inventory.summary'),
+    runtime_owner: requireString(value.runtime_owner, 'runtime_inventory.runtime_owner'),
+    domain_owner: requireString(value.domain_owner, 'runtime_inventory.domain_owner'),
+    executor_owner: requireString(value.executor_owner, 'runtime_inventory.executor_owner'),
+    substrate: requireString(value.substrate, 'runtime_inventory.substrate'),
+    availability: requireString(value.availability, 'runtime_inventory.availability'),
+    health_status: requireString(value.health_status, 'runtime_inventory.health_status'),
+    status_surface: normalizeSurfaceRef(value.status_surface, 'runtime_inventory.status_surface'),
+    attention_surface: normalizeSurfaceRef(value.attention_surface, 'runtime_inventory.attention_surface'),
+    recovery_surface: normalizeSurfaceRef(value.recovery_surface, 'runtime_inventory.recovery_surface'),
+    workspace_binding: isRecord(value.workspace_binding) ? value.workspace_binding : null,
+    domain_projection: isRecord(value.domain_projection) ? value.domain_projection : null,
+  };
+}
+
+function normalizeTaskLifecycle(value: unknown): NormalizedTaskLifecycle | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  requireSurfaceKind(value.surface_kind, 'task_lifecycle', 'task_lifecycle');
+
+  return {
+    surface_kind: 'task_lifecycle',
+    task_kind: requireString(value.task_kind, 'task_lifecycle.task_kind'),
+    task_id: requireString(value.task_id, 'task_lifecycle.task_id'),
+    status: requireString(value.status, 'task_lifecycle.status'),
+    summary: requireString(value.summary, 'task_lifecycle.summary'),
+    session_id: optionalString(value.session_id),
+    run_id: optionalString(value.run_id),
+    progress_surface: normalizeTaskSurfaceDescriptor(value.progress_surface, 'task_lifecycle.progress_surface'),
+    resume_surface: normalizeTaskSurfaceDescriptor(value.resume_surface, 'task_lifecycle.resume_surface'),
+    checkpoint_summary: normalizeCheckpointSummary(value.checkpoint_summary, 'task_lifecycle.checkpoint_summary'),
+    human_gate_ids: readStringList(value.human_gate_ids, 'task_lifecycle.human_gate_ids'),
+    domain_projection: isRecord(value.domain_projection) ? value.domain_projection : null,
+  };
+}
+
+function normalizeSkillCatalog(value: unknown): NormalizedSkillCatalog | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  requireSurfaceKind(value.surface_kind, 'skill_catalog', 'skill_catalog');
+
+  return {
+    surface_kind: 'skill_catalog',
+    summary: requireString(value.summary, 'skill_catalog.summary'),
+    skills: normalizeRecordList(value.skills, 'skill_catalog.skills').map((skill, index) => {
+      requireSurfaceKind(skill.surface_kind, `skill_catalog.skills[${index}]`, 'skill_descriptor');
+      return {
+        surface_kind: 'skill_descriptor',
+        skill_id: requireString(skill.skill_id, `skill_catalog.skills[${index}].skill_id`),
+        title: requireString(skill.title, `skill_catalog.skills[${index}].title`),
+        owner: requireString(skill.owner, `skill_catalog.skills[${index}].owner`),
+        distribution_mode: requireString(
+          skill.distribution_mode,
+          `skill_catalog.skills[${index}].distribution_mode`,
+        ),
+        target_surface_kind: requireString(
+          skill.target_surface_kind,
+          `skill_catalog.skills[${index}].target_surface_kind`,
+        ),
+        description: requireString(skill.description, `skill_catalog.skills[${index}].description`),
+        command: optionalString(skill.command),
+        readiness: requireString(skill.readiness, `skill_catalog.skills[${index}].readiness`),
+        tags: readStringList(skill.tags, `skill_catalog.skills[${index}].tags`),
+        domain_projection: isRecord(skill.domain_projection) ? skill.domain_projection : null,
+      };
+    }),
+    supported_commands: readStringList(value.supported_commands, 'skill_catalog.supported_commands'),
+    command_contracts: normalizeRecordList(value.command_contracts, 'skill_catalog.command_contracts'),
+  };
+}
+
+function normalizeAutomationCatalog(value: unknown): NormalizedAutomationCatalog | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  requireSurfaceKind(value.surface_kind, 'automation', 'automation');
+
+  return {
+    surface_kind: 'automation',
+    summary: requireString(value.summary, 'automation.summary'),
+    automations: normalizeRecordList(value.automations, 'automation.automations').map((entry, index) => {
+      requireSurfaceKind(entry.surface_kind, `automation.automations[${index}]`, 'automation_descriptor');
+      return {
+        surface_kind: 'automation_descriptor',
+        automation_id: requireString(entry.automation_id, `automation.automations[${index}].automation_id`),
+        title: requireString(entry.title, `automation.automations[${index}].title`),
+        owner: requireString(entry.owner, `automation.automations[${index}].owner`),
+        trigger_kind: requireString(entry.trigger_kind, `automation.automations[${index}].trigger_kind`),
+        target_surface_kind: requireString(
+          entry.target_surface_kind,
+          `automation.automations[${index}].target_surface_kind`,
+        ),
+        summary: requireString(entry.summary, `automation.automations[${index}].summary`),
+        readiness_status: requireString(
+          entry.readiness_status,
+          `automation.automations[${index}].readiness_status`,
+        ),
+        gate_policy: requireString(entry.gate_policy, `automation.automations[${index}].gate_policy`),
+        output_expectation: readStringList(
+          entry.output_expectation,
+          `automation.automations[${index}].output_expectation`,
+        ),
+        target_command: optionalString(entry.target_command),
+        domain_projection: isRecord(entry.domain_projection) ? entry.domain_projection : null,
+      };
+    }),
+    readiness_summary: optionalString(value.readiness_summary),
+  };
 }
 
 function unwrapManifestPayload(payload: JsonRecord) {
@@ -465,6 +748,10 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
   const productEntryReadiness = normalizeProductEntryReadiness(manifest.product_entry_readiness);
   const productEntryStart = normalizeProductEntryStart(manifest.product_entry_start);
   const productEntryQuickstart = normalizeProductEntryQuickstart(manifest.product_entry_quickstart);
+  const runtimeInventory = normalizeRuntimeInventory(manifest.runtime_inventory);
+  const taskLifecycle = normalizeTaskLifecycle(manifest.task_lifecycle);
+  const skillCatalog = normalizeSkillCatalog(manifest.skill_catalog);
+  const automation = normalizeAutomationCatalog(manifest.automation);
   const rawFamilyOrchestration = isRecord(manifest.family_orchestration)
     ? manifest.family_orchestration
     : null;
@@ -544,6 +831,10 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
             : null,
         }
       : null,
+    runtime_inventory: runtimeInventory,
+    task_lifecycle: taskLifecycle,
+    skill_catalog: skillCatalog,
+    automation,
     remaining_gaps: remainingGaps,
     notes: readStringList(manifest.notes),
   };

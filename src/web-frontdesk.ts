@@ -2827,6 +2827,87 @@ function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
                         .join('')
                       + '</ul></div>'
                     : '',
+                  manifestEntry.manifest?.runtime_inventory?.summary
+                    ? '<p><strong>Runtime Inventory:</strong> '
+                      + manifestEntry.manifest.runtime_inventory.summary
+                      + '</p>'
+                    : '',
+                  manifestEntry.manifest?.runtime_inventory?.runtime_owner
+                    ? '<p><strong>Runtime Owner:</strong> '
+                      + manifestEntry.manifest.runtime_inventory.runtime_owner
+                      + '</p>'
+                    : '',
+                  manifestEntry.manifest?.runtime_inventory?.availability
+                    ? '<p><strong>Runtime Availability:</strong> '
+                      + manifestEntry.manifest.runtime_inventory.availability
+                      + '</p>'
+                    : '',
+                  manifestEntry.manifest?.runtime_inventory?.health_status
+                    ? '<p><strong>Runtime Health:</strong> '
+                      + manifestEntry.manifest.runtime_inventory.health_status
+                      + '</p>'
+                    : '',
+                  manifestEntry.manifest?.task_lifecycle?.summary
+                    ? '<p><strong>Task Lifecycle:</strong> '
+                      + manifestEntry.manifest.task_lifecycle.summary
+                      + '</p>'
+                    : '',
+                  manifestEntry.manifest?.task_lifecycle?.status
+                    ? '<p><strong>Task Lifecycle Status:</strong> '
+                      + manifestEntry.manifest.task_lifecycle.status
+                      + '</p>'
+                    : '',
+                  manifestEntry.manifest?.task_lifecycle?.progress_surface?.command
+                    ? '<p><strong>Task Progress Command:</strong> <code>'
+                      + manifestEntry.manifest.task_lifecycle.progress_surface.command
+                      + '</code></p>'
+                    : '',
+                  manifestEntry.manifest?.task_lifecycle?.resume_surface?.surface_kind
+                    ? '<p><strong>Task Resume Surface:</strong> '
+                      + manifestEntry.manifest.task_lifecycle.resume_surface.surface_kind
+                      + '</p>'
+                    : '',
+                  Array.isArray(manifestEntry.manifest?.task_lifecycle?.human_gate_ids)
+                    && manifestEntry.manifest.task_lifecycle.human_gate_ids.length > 0
+                    ? '<p><strong>Task Human Gates:</strong> '
+                      + manifestEntry.manifest.task_lifecycle.human_gate_ids
+                        .map((gateId) => '<code>' + String(gateId) + '</code>')
+                        .join(', ')
+                      + '</p>'
+                    : '',
+                  manifestEntry.manifest?.skill_catalog?.summary
+                    ? '<p><strong>Skill Catalog:</strong> '
+                      + manifestEntry.manifest.skill_catalog.summary
+                      + '</p>'
+                    : '',
+                  Array.isArray(manifestEntry.manifest?.skill_catalog?.skills)
+                    ? '<p><strong>Skill Count:</strong> '
+                      + String(manifestEntry.manifest.skill_catalog.skills.length)
+                      + '</p>'
+                    : '',
+                  Array.isArray(manifestEntry.manifest?.skill_catalog?.supported_commands)
+                    && manifestEntry.manifest.skill_catalog.supported_commands.length > 0
+                    ? '<p><strong>Skill Commands:</strong> '
+                      + manifestEntry.manifest.skill_catalog.supported_commands
+                        .map((command) => '<code>' + String(command) + '</code>')
+                        .join(', ')
+                      + '</p>'
+                    : '',
+                  manifestEntry.manifest?.automation?.summary
+                    ? '<p><strong>Automation Catalog:</strong> '
+                      + manifestEntry.manifest.automation.summary
+                      + '</p>'
+                    : '',
+                  Array.isArray(manifestEntry.manifest?.automation?.automations)
+                    ? '<p><strong>Automation Count:</strong> '
+                      + String(manifestEntry.manifest.automation.automations.length)
+                      + '</p>'
+                    : '',
+                  manifestEntry.manifest?.automation?.readiness_summary
+                    ? '<p><strong>Automation Readiness:</strong> '
+                      + manifestEntry.manifest.automation.readiness_summary
+                      + '</p>'
+                    : '',
                   manifestEntry.manifest?.family_orchestration?.action_graph_ref?.ref
                     ? '<p><strong>Action Graph:</strong> '
                       + manifestEntry.manifest.family_orchestration.action_graph_ref.ref

@@ -41,6 +41,39 @@
       "runtime_cannot_invent_domain_publishability_truth"
     ]
   },
+  "runtime_inventory": {
+    "surface_kind": "runtime_inventory",
+    "summary": "MAS 当前通过 Hermes-hosted runtime 与 med-deepscientist backend 持续驱动 study 运行。",
+    "runtime_owner": "upstream_hermes_agent",
+    "domain_owner": "med-autoscience",
+    "executor_owner": "med_deepscientist",
+    "substrate": "external_hermes_agent_target",
+    "availability": "ready",
+    "health_status": "healthy",
+    "status_surface": {
+      "ref_kind": "repo_path",
+      "ref": "studies/<study_id>/artifacts/runtime_watch/latest.json",
+      "label": "runtime_watch_latest"
+    },
+    "attention_surface": {
+      "ref_kind": "json_pointer",
+      "ref": "/operator_loop_surface",
+      "label": "workspace_cockpit"
+    },
+    "recovery_surface": {
+      "ref_kind": "json_pointer",
+      "ref": "/product_entry_start/resume_surface",
+      "label": "launch_study_resume_surface"
+    },
+    "workspace_binding": {
+      "workspace_root": "/fixtures/med-autoscience/workspace",
+      "profile_ref": "/fixtures/med-autoscience/profile.local.toml"
+    },
+    "domain_projection": {
+      "default_study_id": "<study_id>",
+      "phase_id": "phase_2_user_product_loop"
+    }
+  },
   "executor_defaults": {
     "default_executor": "codex_cli_autonomous",
     "default_model": "inherit_local_codex_default",
@@ -123,6 +156,51 @@
       "继续把 workspace inbox、study progress 与恢复建议收成统一产品壳。"
     ],
     "remaining_gaps_count": 1
+  },
+  "task_lifecycle": {
+    "surface_kind": "task_lifecycle",
+    "task_kind": "study_runtime_loop",
+    "task_id": "fixture-med-autoscience-workspace-loop",
+    "status": "resumable",
+    "summary": "当前 workspace loop 可以先写 durable task，再恢复同一 study runtime。",
+    "progress_surface": {
+      "surface_kind": "study_progress",
+      "summary": "读取某个 study 的当前阶段、阻塞和监督 freshness。",
+      "command": "uv run python -m med_autoscience.cli study-progress --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>",
+      "step_id": "inspect_progress",
+      "locator_fields": [
+        "study_id"
+      ]
+    },
+    "resume_surface": {
+      "surface_kind": "launch_study",
+      "summary": "创建或恢复某个 study runtime，并回到当前研究主线。",
+      "command": "uv run python -m med_autoscience.cli launch-study --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>",
+      "locator_fields": [
+        "study_id"
+      ]
+    },
+    "checkpoint_summary": {
+      "surface_kind": "checkpoint_summary",
+      "status": "in_progress",
+      "summary": "Phase 2 user product loop 仍在当前 blocker closeout tranche 内持续推进。",
+      "checkpoint_id": "phase_2_user_product_loop",
+      "lineage_ref": {
+        "ref_kind": "json_pointer",
+        "ref": "/repo_mainline/current_program_phase_id"
+      },
+      "verification_ref": {
+        "ref_kind": "repo_path",
+        "ref": "studies/<study_id>/artifacts/runtime_watch/latest.json"
+      }
+    },
+    "human_gate_ids": [
+      "study_physician_decision_gate",
+      "publication_release_gate"
+    ],
+    "domain_projection": {
+      "phase_id": "phase_2_user_product_loop"
+    }
   },
   "product_entry_overview": {
     "surface_kind": "product_entry_overview",
@@ -308,6 +386,77 @@
       "purpose": "查看某一阶段当前可用入口、退出条件与关键文档。"
     }
   },
+  "skill_catalog": {
+    "surface_kind": "skill_catalog",
+    "summary": "MAS 当前通过 repo-tracked workspace shells 暴露 family 可复用的研究入口技能。",
+    "skills": [
+      {
+        "surface_kind": "skill_descriptor",
+        "skill_id": "medautoscience_product_frontdesk",
+        "title": "MAS product frontdesk",
+        "owner": "med-autoscience",
+        "distribution_mode": "repo_tracked",
+        "target_surface_kind": "product_frontdesk",
+        "description": "打开当前 research product frontdesk。",
+        "command": "uv run python -m med_autoscience.cli product-frontdesk --profile /fixtures/med-autoscience/profile.local.toml",
+        "readiness": "landed",
+        "tags": [
+          "frontdesk",
+          "workspace"
+        ]
+      },
+      {
+        "surface_kind": "skill_descriptor",
+        "skill_id": "medautoscience_workspace_cockpit",
+        "title": "MAS workspace cockpit",
+        "owner": "med-autoscience",
+        "distribution_mode": "repo_tracked",
+        "target_surface_kind": "workspace_cockpit",
+        "description": "继续当前 workspace 级用户 inbox 与研究推进回路。",
+        "command": "uv run python -m med_autoscience.cli workspace-cockpit --profile /fixtures/med-autoscience/profile.local.toml",
+        "readiness": "landed",
+        "tags": [
+          "study",
+          "runtime",
+          "workspace"
+        ]
+      }
+    ],
+    "supported_commands": [
+      "product-frontdesk",
+      "workspace-cockpit",
+      "submit-study-task",
+      "launch-study",
+      "study-progress"
+    ],
+    "command_contracts": [
+      {
+        "command": "product-frontdesk",
+        "owner": "med-autoscience",
+        "surface_kind": "product_frontdesk"
+      },
+      {
+        "command": "workspace-cockpit",
+        "owner": "med-autoscience",
+        "surface_kind": "workspace_cockpit"
+      },
+      {
+        "command": "submit-study-task",
+        "owner": "med-autoscience",
+        "surface_kind": "study_task_intake"
+      },
+      {
+        "command": "launch-study",
+        "owner": "med-autoscience",
+        "surface_kind": "launch_study"
+      },
+      {
+        "command": "study-progress",
+        "owner": "med-autoscience",
+        "surface_kind": "study_progress"
+      }
+    ]
+  },
   "shared_handoff": {
     "direct_entry_builder": {
       "command": "uv run python -m med_autoscience.cli build-product-entry --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id> --entry-mode direct",
@@ -439,6 +588,45 @@
       "ref": "studies/<study_id>/artifacts/controller_decisions/latest.json",
       "label": "controller checkpoint lineage companion"
     }
+  },
+  "automation": {
+    "surface_kind": "automation",
+    "summary": "MAS 当前把 runtime supervision 维护和 study continuation 暴露成 family 可见的自动化面。",
+    "automations": [
+      {
+        "surface_kind": "automation_descriptor",
+        "automation_id": "medautoscience_runtime_watch_refresh",
+        "title": "MAS runtime watch refresh",
+        "owner": "med-autoscience",
+        "trigger_kind": "interval",
+        "target_surface_kind": "workspace_cockpit",
+        "summary": "按固定节奏刷新 runtime supervision 与 intervention queue。",
+        "readiness_status": "automation_ready",
+        "gate_policy": "publication_gated",
+        "output_expectation": [
+          "refresh runtime watch",
+          "preserve study supervision truth"
+        ],
+        "target_command": "uv run python -m med_autoscience.cli watch --runtime-root /fixtures/med-autoscience/runtime --profile /fixtures/med-autoscience/profile.local.toml --ensure-study-runtimes --apply"
+      },
+      {
+        "surface_kind": "automation_descriptor",
+        "automation_id": "medautoscience_study_resume_followup",
+        "title": "MAS study resume follow-up",
+        "owner": "med-autoscience",
+        "trigger_kind": "attention_queue",
+        "target_surface_kind": "launch_study",
+        "summary": "在 attention queue 触发时恢复指定 study 的托管运行。",
+        "readiness_status": "operator_review_gated",
+        "gate_policy": "physician_and_publication_gated",
+        "output_expectation": [
+          "resume target study",
+          "respect study physician and publication gates"
+        ],
+        "target_command": "uv run python -m med_autoscience.cli launch-study --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>"
+      }
+    ],
+    "readiness_summary": "Workspace supervision automation 已 ready，study continuation 继续保持 operator-gated。"
   },
   "remaining_gaps": [
     "mature standalone medical product entry is still not landed"

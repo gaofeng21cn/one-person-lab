@@ -114,6 +114,10 @@ export function buildHandoffBundle(
             product_entry_overview: domainManifestEntry.manifest?.product_entry_overview ?? null,
             product_entry_quickstart: domainManifestEntry.manifest?.product_entry_quickstart ?? null,
             family_orchestration: domainManifestEntry.manifest?.family_orchestration ?? null,
+            runtime_inventory: domainManifestEntry.manifest?.runtime_inventory ?? null,
+            task_lifecycle: domainManifestEntry.manifest?.task_lifecycle ?? null,
+            skill_catalog: domainManifestEntry.manifest?.skill_catalog ?? null,
+            automation: domainManifestEntry.manifest?.automation ?? null,
             error: domainManifestEntry.error,
           }
         : null,
