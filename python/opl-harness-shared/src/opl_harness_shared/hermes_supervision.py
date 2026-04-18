@@ -73,6 +73,8 @@ def load_jobs(*, hermes_home_root: Path) -> list[dict[str, Any]]:
         payload = json.loads(target.read_text(encoding="utf-8")) or []
     except (OSError, json.JSONDecodeError):
         return []
+    if isinstance(payload, dict):
+        payload = payload.get("jobs") or []
     if not isinstance(payload, list):
         return []
     return [dict(item) for item in payload if isinstance(item, dict)]
