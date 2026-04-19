@@ -2,9 +2,16 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 
 import { GatewayContractError } from './contracts.ts';
 import {
+  buildFrontDeskInitialize,
   buildFrontDeskEnvironment,
   buildFrontDeskModules,
+  buildFrontDeskWorkspaceRootSurface,
+  runFrontDeskEngineAction,
   runFrontDeskModuleAction,
+  runFrontDeskSystemAction,
+  writeFrontDeskWorkspaceRootSurface,
+  type FrontDeskEngineAction,
+  type FrontDeskSystemAction,
   type FrontDeskModuleAction,
 } from './frontdesk-installation.ts';
 import {
@@ -99,6 +106,31 @@ type FrontDeskModuleActionRequestBody = Partial<{
   module_id: string;
 }>;
 
+type FrontDeskEngineActionRequestBody = Partial<{
+  action: FrontDeskEngineAction | string;
+  engineId: string;
+  engine_id: string;
+}>;
+
+type FrontDeskSystemActionRequestBody = Partial<{
+  action: FrontDeskSystemAction | string;
+  channel: string;
+  host: string;
+  port: number | string;
+  workspacePath: string;
+  workspace_path: string;
+  sessionsLimit: number | string;
+  sessions_limit: number | string;
+  basePath: string;
+  base_path: string;
+}>;
+
+type WorkspaceRootRequestBody = Partial<{
+  path: string;
+  workspaceRoot: string;
+  workspace_root: string;
+}>;
+
 type ResumeRequestBody = Partial<{
   sessionId: string;
   session_id: string;
@@ -174,8 +206,11 @@ type WebFrontDeskStartupPayload = {
       frontdesk_readiness: string;
       frontdesk_settings: string;
       frontdesk_environment: string;
+      frontdesk_initialize: string;
       frontdesk_modules: string;
+      frontdesk_engine_action: string;
       frontdesk_module_action: string;
+      frontdesk_system_action: string;
       project_progress: string;
       frontdesk_domain_wiring: string;
       domain_manifests: string;
@@ -184,6 +219,7 @@ type WebFrontDeskStartupPayload = {
       dashboard: string;
       projects: string;
       workspace_status: string;
+      workspace_root: string;
       workspace_catalog: string;
       workspace_bind: string;
       workspace_activate: string;
@@ -641,8 +677,11 @@ function buildStartupPayload(context: WebFrontDeskContext): WebFrontDeskStartupP
         frontdesk_readiness: endpoints.frontdesk_readiness,
         frontdesk_settings: endpoints.frontdesk_settings,
         frontdesk_environment: endpoints.frontdesk_environment,
+        frontdesk_initialize: endpoints.frontdesk_initialize,
         frontdesk_modules: endpoints.frontdesk_modules,
+        frontdesk_engine_action: endpoints.frontdesk_engine_action,
         frontdesk_module_action: endpoints.frontdesk_module_action,
+        frontdesk_system_action: endpoints.frontdesk_system_action,
         project_progress: endpoints.project_progress,
         frontdesk_domain_wiring: endpoints.frontdesk_domain_wiring,
         domain_manifests: endpoints.domain_manifests,
@@ -651,6 +690,7 @@ function buildStartupPayload(context: WebFrontDeskContext): WebFrontDeskStartupP
         dashboard: endpoints.dashboard,
         projects: endpoints.projects,
         workspace_status: endpoints.workspace_status,
+        workspace_root: endpoints.workspace_root,
         workspace_catalog: endpoints.workspace_catalog,
         workspace_bind: endpoints.workspace_bind,
         workspace_activate: endpoints.workspace_activate,
@@ -715,6 +755,144 @@ function normalizeFrontDeskModuleActionInput(body: FrontDeskModuleActionRequestB
   return {
     action: action as FrontDeskModuleAction,
     moduleId,
+  };
+}
+
+function normalizeFrontDeskEngineActionInput(body: FrontDeskEngineActionRequestBody) {
+  const action = typeof body.action === 'string' ? body.action.trim() : '';
+  const engineId =
+    typeof body.engine_id === 'string' && body.engine_id.trim().length > 0
+      ? body.engine_id.trim()
+      : typeof body.engineId === 'string' && body.engineId.trim().length > 0
+        ? body.engineId.trim()
+        : '';
+
+  if (!action || !['install', 'update', 'reinstall', 'remove'].includes(action)) {
+    throw new GatewayContractError(
+      'cli_usage_error',
+      'frontdesk engine action requires action=install|update|reinstall|remove.',
+      {
+        action: body.action ?? null,
+      },
+      2,
+    );
+  }
+
+  if (!engineId) {
+    throw new GatewayContractError(
+      'cli_usage_error',
+      'frontdesk engine action requires engine_id.',
+      {
+        engine_id: body.engine_id ?? body.engineId ?? null,
+      },
+      2,
+    );
+  }
+
+  return {
+    action: action as FrontDeskEngineAction,
+    engineId,
+  };
+}
+
+function normalizeFrontDeskSystemActionInput(body: FrontDeskSystemActionRequestBody) {
+  const action = typeof body.action === 'string' ? body.action.trim() : '';
+  if (!action || !['repair', 'reinstall_support', 'update_channel'].includes(action)) {
+    throw new GatewayContractError(
+      'cli_usage_error',
+      'frontdesk system action requires action=repair|reinstall_support|update_channel.',
+      {
+        action: body.action ?? null,
+      },
+      2,
+    );
+  }
+
+  const portValue = body.port;
+  let port: number | undefined;
+  if (typeof portValue === 'number' && Number.isInteger(portValue) && portValue >= 0 && portValue <= 65535) {
+    port = portValue;
+  } else if (typeof portValue === 'string' && portValue.trim().length > 0) {
+    const parsed = Number.parseInt(portValue, 10);
+    if (!Number.isInteger(parsed) || parsed < 0 || parsed > 65535) {
+      throw new GatewayContractError(
+        'cli_usage_error',
+        'frontdesk system action requires port to be an integer between 0 and 65535.',
+        {
+          port: portValue,
+        },
+        2,
+      );
+    }
+    port = parsed;
+  }
+
+  const sessionsLimitValue = body.sessionsLimit ?? body.sessions_limit;
+  let sessionsLimit: number | undefined;
+  if (
+    typeof sessionsLimitValue === 'number'
+    && Number.isInteger(sessionsLimitValue)
+    && sessionsLimitValue > 0
+  ) {
+    sessionsLimit = sessionsLimitValue;
+  } else if (typeof sessionsLimitValue === 'string' && sessionsLimitValue.trim().length > 0) {
+    const parsed = Number.parseInt(sessionsLimitValue, 10);
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+      throw new GatewayContractError(
+        'cli_usage_error',
+        'frontdesk system action requires sessions_limit to be a positive integer.',
+        {
+          sessions_limit: sessionsLimitValue,
+        },
+        2,
+      );
+    }
+    sessionsLimit = parsed;
+  }
+
+  const channel = normalizeOptionalString(body.channel);
+  if (channel && channel !== 'stable' && channel !== 'preview') {
+    throw new GatewayContractError(
+      'cli_usage_error',
+      'frontdesk system action update_channel accepts stable or preview.',
+      {
+        channel,
+      },
+      2,
+    );
+  }
+
+  return {
+    action: action as FrontDeskSystemAction,
+    channel: channel as 'stable' | 'preview' | undefined,
+    host: normalizeOptionalString(body.host),
+    port,
+    workspacePath:
+      normalizeOptionalString(body.workspacePath) ?? normalizeOptionalString(body.workspace_path),
+    sessionsLimit,
+    basePath: normalizeOptionalString(body.basePath) ?? normalizeOptionalString(body.base_path),
+  };
+}
+
+function normalizeWorkspaceRootInput(body: WorkspaceRootRequestBody) {
+  const selectedPath =
+    normalizeOptionalString(body.path)
+    ?? normalizeOptionalString(body.workspaceRoot)
+    ?? normalizeOptionalString(body.workspace_root);
+
+  if (!selectedPath) {
+    throw new GatewayContractError(
+      'cli_usage_error',
+      'workspace root requests require a non-empty path.',
+      {
+        required: ['path'],
+      },
+      2,
+    );
+  }
+
+  return {
+    path: selectedPath,
   };
 }
 
@@ -840,8 +1018,24 @@ async function handleRequest(
       return;
     }
 
+    if (method === 'GET' && routedPath === '/api/frontdesk/initialize') {
+      writeJson(response, 200, await buildFrontDeskInitialize(context.contracts));
+      return;
+    }
+
     if (method === 'GET' && routedPath === '/api/frontdesk/modules') {
       writeJson(response, 200, buildFrontDeskModules());
+      return;
+    }
+
+    if (method === 'POST' && routedPath === '/api/frontdesk/engine/action') {
+      const body = (await readJsonBody(request)) as FrontDeskEngineActionRequestBody;
+      const normalized = normalizeFrontDeskEngineActionInput(body);
+      writeJson(
+        response,
+        200,
+        await runFrontDeskEngineAction(context.contracts, normalized.action, normalized.engineId),
+      );
       return;
     }
 
@@ -849,6 +1043,17 @@ async function handleRequest(
       const body = (await readJsonBody(request)) as FrontDeskModuleActionRequestBody;
       const normalized = normalizeFrontDeskModuleActionInput(body);
       writeJson(response, 200, runFrontDeskModuleAction(normalized.action, normalized.moduleId));
+      return;
+    }
+
+    if (method === 'POST' && routedPath === '/api/frontdesk/system/action') {
+      const body = (await readJsonBody(request)) as FrontDeskSystemActionRequestBody;
+      const normalized = normalizeFrontDeskSystemActionInput(body);
+      writeJson(
+        response,
+        200,
+        await runFrontDeskSystemAction(context.contracts, normalized.action, normalized),
+      );
       return;
     }
 
@@ -918,8 +1123,24 @@ async function handleRequest(
       return;
     }
 
+    if (method === 'GET' && routedPath === '/api/workspace/root') {
+      writeJson(response, 200, buildFrontDeskWorkspaceRootSurface());
+      return;
+    }
+
     if (method === 'GET' && routedPath === '/api/workspace/list') {
       writeJson(response, 200, buildWorkspaceCatalog(context.contracts));
+      return;
+    }
+
+    if (method === 'POST' && routedPath === '/api/workspace/root') {
+      writeJson(
+        response,
+        200,
+        writeFrontDeskWorkspaceRootSurface(
+          normalizeWorkspaceRootInput((await readJsonBody(request)) as WorkspaceRootRequestBody).path,
+        ),
+      );
       return;
     }
 
