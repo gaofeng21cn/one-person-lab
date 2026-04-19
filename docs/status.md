@@ -74,6 +74,7 @@
 - AI / 维护者核心工作集：`project / architecture / invariants / decisions / status`。
 - 对外公开 docs：`README*`、`docs/README*`、路线图、任务版图、运行模型和 UHS 文档。
 - 机器合同：`contracts/` 保留 machine-readable contract surface。
+- `contracts/family-release/shared-owner-release.json` 冻结当前 released shared-owner commit；`npm run family:shared-release -- check` 用于发现 stale pin，`npm run family:shared-release -- sync` 用于把 MAS / MAG / RCA 同步到当前 released owner commit。
 - 参考级材料：`docs/references/` 承接实现记录、基准、推进板和边界说明。
 - 历史执行与迁移材料：从 `docs/history/omx/` 进入。
 - 当前已收录的 domain surface 已经是 `MedAutoScience`、`MedAutoGrant` 与 `RedCube AI`；formal entry 保持在本地 `TypeScript CLI`-first / gateway contract surface，runtime ownership 继续留在 admitted domain 一侧。
