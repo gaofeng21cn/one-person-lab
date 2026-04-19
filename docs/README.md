@@ -11,7 +11,7 @@ This guide points readers to the architecture, contracts, planning surfaces, and
 | Audience | Start here | Why |
 | --- | --- | --- |
 | Potential users and human experts | [Repository Home](../README.md), [Roadmap](./roadmap.md), [Task Map](./task-map.md), [Operating Model](./operating-model.md) | Understand the `OPL` shell, product families, and current implementations before reading technical details |
-| Technical readers and planners | [Project](./project.md), [Status](./status.md), [Architecture](./architecture.md), [Invariants](./invariants.md), [Decisions](./decisions.md), [Contracts Overview](../contracts/README.md) | Understand current truth, boundaries, and the active technical direction |
+| Technical readers and planners | [Project](./project.md), [Status](./status.md), [Architecture](./architecture.md), [Invariants](./invariants.md), [Decisions](./decisions.md), [Contracts Overview](../contracts/README.md) | Understand the current baseline, boundaries, and the active technical direction |
 | Developers and maintainers | [Reference Index](./references/README.md), `docs/specs/`, `docs/plans/`, `docs/history/omx/` | Inspect implementation support material, historical records, and tracked working notes |
 
 ## Current Baseline
@@ -96,8 +96,7 @@ It is repo-tracked supporting material.
 - `docs/references/family-executor-adapter-defaults.md`
 - `docs/references/hermes-native-executor-proof-lane.md`
 - `docs/references/mas-top-level-cutover-board.md`
-- `docs/references/opl-phase-2-central-reference-sync-board.md`
-- `docs/references/opl-phase-2-admitted-domain-delta-intake-refresh.md`
+- admitted-domain sync and delta-intake reference records
 - `docs/references/opl-gateway-rollout*`
 - `docs/references/opl-gateway-acceptance-test-spec*`
 - `docs/references/opl-candidate-domain-backlog*`
@@ -114,7 +113,7 @@ It is repo-tracked supporting material.
 ## Layer 4. Historical Specs And Plans
 
 Layer 4 is working history.
-It explains how or why a freeze happened, while [Status](./status.md) remains the current truth surface.
+It explains how or why a freeze happened, while [Status](./status.md) remains the active baseline surface.
 
 - `docs/specs/`
 - `docs/plans/`
