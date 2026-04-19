@@ -1,6 +1,6 @@
 import type { LocalCodexDefaults } from './local-codex-defaults.ts';
 
-export const OPL_FRONTDOOR_APP_TITLE = 'OPL Atlas';
+export const OPL_FRONTDOOR_APP_TITLE = 'OPL';
 export const OPL_FRONTDOOR_AGENT_LABEL = 'OPL Agent';
 export const OPL_FRONTDOOR_MCP_SERVER_KEY = 'opl_cortex';
 export const OPL_FRONTDOOR_MCP_SERVER_LABEL = 'OPL Cortex';

@@ -95,21 +95,21 @@
 
 当前冻结的 GUI 路线是：
 
-- 桌面端：`Onyx-style Desktop shell`
-- 浏览器端：`OPL web companion`
+- GUI 壳：独立 overlay 仓，优先跟随 `Onyx` 上游做最薄改造
+- 主仓：`OPL` 继续只保留 headless adapter / API truth
 - 长期 hosted / web：继续收口到 `OPL` 自有 front desk
 
 这条路线的含义是：
 
-- 前端壳尽量复用 `Onyx` 的成熟布局和交互范式。
+- GUI 壳尽量复用 `Onyx` 的成熟布局和交互范式，但保持在独立 overlay 仓里跟上游。
 - `OPL` 继续只维护自己的 truth surface、模块管理、路由语义和领域工作流。
-- 桌面壳与 web companion 读取同一套 `frontdesk manifest / entry-guide / readiness / environment / modules / project-progress`。
+- overlay 仓、hosted / web 前台与 CLI 一起读取同一套 `frontdesk manifest / entry-guide / readiness / environment / modules / project-progress`。
 
 ## 结构边界
 
 `Onyx` 负责的东西：
 
-- 桌面壳形态
+- overlay 仓的桌面壳形态
 - 左中右工作台布局
 - 多 workspace / 多会话的壳层交互
 - 视觉与组件骨架
@@ -127,14 +127,14 @@
 
 当前主线已经按下面的方式收口：
 
-- `opl frontdesk bootstrap` 准备本地 `OPL Atlas` Desktop 壳
-- `opl web` 提供同一套 truth surface 的浏览器 companion
+- `opl web` 提供本地 adapter service，根路由 `/` 返回 machine-readable root payload
+- `opl frontdesk service install|status|start|stop|open|uninstall` 管理长期运行的本地 adapter service
 - `opl frontdesk environment` 提供 `Codex` / `Hermes-Agent` / managed paths 的环境观察
 - `opl frontdesk modules` 与 `opl frontdesk module <action>` 提供模块安装、升级、重装和移除
 
 ## 下一步
 
-1. 继续把 `Onyx` 风格桌面壳打磨到更接近 `Codex App` 的工作台体验。
-2. 让 settings 页面直接消费 `environment / modules` 两类 surface。
+1. 继续把独立 overlay 仓打磨到更接近 `Codex App` 的工作台体验。
+2. 在独立 overlay 仓里让 settings 页面直接消费 `environment / modules` 两类 surface。
 3. 让右侧边栏稳定承载 progress feed、task cards 和 files deliverables。
-4. 让同一套 frontdesk truth surface 同时服务桌面端和 hosted / web 前台。
+4. 让同一套 frontdesk truth surface 同时服务 overlay、hosted / web 前台与 CLI。

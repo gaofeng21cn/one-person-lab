@@ -8,19 +8,19 @@
 
 ## 当前使用链路与目标产品链路
 
-当前 repo-tracked 的本地使用链路已经变成：
+当前 repo-tracked 的本地使用链路是：
 
-`User -> opl front desk / quick ask / ops shell -> Codex -> OPL Gateway -> Domain Handoff -> Domain Product Entry / Domain Module -> Domain Harness OS -> Domain Repository`
+`User / External GUI Overlay / CLI -> OPL CLI product entry or local frontdesk adapter -> Codex or Hermes alternate -> OPL Gateway -> Domain Handoff -> Domain Product Entry / Domain Module -> Domain Harness OS -> Domain Repository`
 
-这说明当前 `OPL` 已经拥有本地 direct product entry 的第一版入口壳；
-它现在通过一组清晰分层的 grouped command matrix 暴露正式壳面：
+这说明当前 `OPL` 已经拥有可直接使用的 CLI 产品入口，以及一组供外部 GUI overlay 消费的 adapter/API surfaces；
+它现在通过一组清晰分层的 grouped command matrix 暴露正式入口面：
 
 - `opl`
   - 默认进入 family-level front desk
 - `opl <request...>`
   - 默认走 quick ask
 - `opl start / doctor / ask / chat / web`
-  - 提供顶层产品前门、健康检查、one-shot ask、Hermes interactive lane 与本地浏览器 companion
+  - 提供顶层产品前门、健康检查、one-shot ask、Hermes interactive lane 与本地 adapter service
 - `opl contract validate|workstreams|workstream|domains|domain|surfaces|surface|handoff-envelope`
   - 提供 machine-readable gateway contracts、surface catalog 与 family handoff bundle
 - `opl domain manifests|launch|resolve-request|explain-boundary`
@@ -29,20 +29,20 @@
   - 提供 workspace、runtime 与 frontdesk aggregate 观察面
 - `opl workspace projects|list|bind|activate|archive`
   - 提供 file-backed workspace registry 与顶层到 domain 之间的 direct-entry locator 管理
-- `opl frontdesk manifest|entry-guide|readiness|domain-wiring|hosted-bundle|hosted-package|service *|bootstrap`
-  - 提供 hosted-friendly shell contract、family wiring truth、environment/modules 管理、pilot bundle、hosted package、服务管理与桌面壳 bootstrap
+- `opl frontdesk manifest|entry-guide|readiness|environment|modules|module *|domain-wiring|hosted-bundle|hosted-package|service *`
+  - 提供 hosted-friendly shell contract、family wiring truth、environment/modules 管理、pilot bundle、hosted package 与 adapter service 管理
 - `opl session list|resume|logs|ledger`
   - 提供 landed local shell 的会话、日志与 OPL-owned session attribution
 - `opl runtime repair-gateway`
   - 提供 Hermes gateway 修复入口
 - `opl web`
-  - 提供 browser-based front desk，并把 workspace registry、managed session ledger 与 handoff-aware control room 一并带到前台
+  - 提供本地 frontdesk adapter service；根路由 `/` 返回 machine-readable root payload，供外部 GUI overlay 读取
 
 代表性显式命令包括 `opl contract validate`、`opl domain manifests`、`opl status runtime`、`opl workspace bind`、`opl frontdesk entry-guide`、`opl session ledger` 与 `opl runtime repair-gateway`。
 
-但它还不是 managed hosted / web 形态的完整产品前台。
-当前这层 GUI 路线已经冻结为 `Onyx-style Desktop shell + OPL web companion`，hosted / web 前台继续围绕 `OPL` 自有 truth surfaces 收口。
-同时，gateway contract commands 仍然是顶层联邦真相面的稳定 formal contract surface。
+但它还不是 repo-tracked 的完整 GUI 产品前台。
+当前这层 GUI 路线已经冻结为 `OPL headless adapter in main repo + external overlay repo`；`Onyx` 只作为上游 benchmark / visual target，真正的 GUI 主线应在独立 overlay 仓里消费这些 truth surfaces。
+同时，`Phase 1` 的 gateway contract commands 仍然是顶层联邦真相面的稳定 formal contract surface。
 
 目标产品链路应是：
 

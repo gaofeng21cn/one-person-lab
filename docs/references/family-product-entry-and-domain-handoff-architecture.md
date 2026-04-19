@@ -167,7 +167,7 @@
 
 当前这一步的顶层 hosted / web 入口已冻结为：
 
-- 先走 `Onyx-style Desktop shell + OPL web companion`
+- 先走 `独立 overlay 仓 + OPL headless adapter surfaces`
 - 再回收到 `OPL` 自有 hosted / web front desk
 
 而家族级 direct entry 的四仓推进节奏，统一参考：

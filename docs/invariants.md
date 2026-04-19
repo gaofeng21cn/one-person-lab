@@ -23,6 +23,13 @@
 - 旧执行形态只能作为迁移桥、兼容层、回归基线或对照面存在，不得再被误写为长期产品方向。
 - 如果当前可运行基线与长线目标并存，必须在 `docs/status.md` 与 `docs/README*` 中显式拆开，禁止混写。
 
+## GUI 主线约束
+
+- `OPL` 主仓只跟踪 headless adapter / API truth，不跟踪产品 GUI 壳实现。
+- `opl web` 根路由只返回 machine-readable root payload；repo-tracked GUI 事实以 frontdesk APIs 与 service management 为准。
+- 外部产品名只能在 benchmark / upstream / planned overlay target 语境出现；current integrated dependency 必须按真实集成状态表述。
+- 任何把已批准的“外部 overlay + OPL adapter”路线改写成“仓内自写替代 GUI”的变更，都必须重新获得用户批准。
+
 ## 语言规则
 
 - 第一层和第二层公开文档必须双语同步。

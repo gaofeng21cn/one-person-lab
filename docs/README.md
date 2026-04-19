@@ -16,13 +16,14 @@ This guide points readers to the architecture, contracts, planning surfaces, and
 
 ## Current Baseline
 
-- `OPL` is the Codex-native GUI product shell and module manager for one-person-lab agents.
+- `OPL` main repo is the contract-first gateway, CLI product-entry surface, and headless adapter/API layer for one-person-lab agents.
 - The public reading model uses three layers: product shell -> product families -> current implementations.
-- The GUI presents three peer work modes: ordinary Codex conversation, general Codex task, and specialized domain agents.
+- Repo-tracked GUI truth stays on adapter surfaces: workspace, task, progress, files, environment, and modules.
+- The GUI mainline is now `external overlay repo -> OPL adapter surfaces`; the current recommended overlay target is `opl-onyx-shell`, while `Onyx` stays an upstream benchmark rather than an integrated dependency.
 - `Research Foundry`, `Grant Foundry`, and `Presentation Foundry` are the current active product families; `Thesis Foundry` and `Review Foundry` stay in definition.
 - `MAS`, `MAG`, and `RCA` are the current active implementations under those product families.
-- Settings own module management, module upgrades, version pins, module health, default mode, and online gateway configuration.
-- The workspace side rail owns human-readable progress, running-task status, and deliverable files.
+- Settings surfaces own module management, module upgrades, version pins, module health, default mode, and online gateway configuration.
+- Workspace-facing surfaces own human-readable progress, running-task status, and deliverable files.
 - `Hermes-Agent` is the explicit backup mode and online gateway for remote or alternate runtime paths.
 - Domain-agent repositories remain the source of truth for their specialized capabilities and readiness.
 
@@ -47,7 +48,8 @@ The current entry order is:
 - developers treat Layers 3 and 4 as supporting material
 - the public product mental model is `shell -> family -> implementation`
 - live product-shell, module, settings, and online-gateway truth is read from [Status](./status.md)
-- `opl frontdesk bootstrap --path <workspace>` prepares the local `OPL Atlas` Desktop shell and binds the active workspace into the module registry
+- `opl web` runs the local adapter service; `/` now returns a machine-readable root payload for external GUI overlays
+- `opl frontdesk service install|status|start|stop|open|uninstall` manages the long-running local adapter service
 - the default `OPL Cortex` bridge stays small: `project progress`, `execute request`, `task status`, `recent sessions`, `resume session`, `runtime logs`, `projects`, and `activate workspace`
 - front-door execution requests use async acceptance for real work: the shell returns a `task_id`, then the user-facing shell follows progress through `task status`
 - Codex remains the default engine for ordinary conversation and general local tasks

@@ -58,7 +58,7 @@
 
 下一棒：
 
-- 把 `Onyx-style Desktop shell` 与后续 hosted / web 前台继续接到已冻结的 hosted-friendly shell contract / hosted pilot bundle / self-hostable hosted pilot package 上；
+- 把独立 overlay 仓与后续 hosted / web 前台继续接到已冻结的 hosted-friendly shell contract / hosted pilot bundle / self-hostable hosted pilot package 上；
 - `OPL bootstrap / launcher / product packaging` 继续收紧；
 - family-level session / handoff / runtime ops 继续稳定，并保持顶层与 domain direct-entry locator 对齐。
 

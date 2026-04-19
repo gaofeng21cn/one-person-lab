@@ -248,7 +248,7 @@
 这一步的 hosted / web 前台并不是“随便找一个聊天壳就算完成”。
 当前已经冻结的前台选型是：
 
-- 当前 GUI：`Onyx-style Desktop shell + OPL web companion`
+- 当前 GUI 路线：`独立 overlay 仓 + OPL headless adapter surfaces`
 - 长期：`OPL` 自有 hosted / web front desk
 
 对应的选型说明见：

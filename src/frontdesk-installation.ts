@@ -404,7 +404,7 @@ export async function buildFrontDeskEnvironment(contracts: GatewayContracts) {
         service_installed: localService.installed,
         service_loaded: localService.loaded,
         service_health: localService.health.status,
-        desktop_default_entry: 'desktop',
+        gui_shell_strategy: 'external_overlay',
       },
       module_summary: moduleSummary,
       managed_paths: {
@@ -417,7 +417,7 @@ export async function buildFrontDeskEnvironment(contracts: GatewayContracts) {
       },
       notes: [
         'OPL owns the user-facing initialization surface and reports whether the local Codex and Hermes engines are ready to be reused.',
-        'Local frontdesk service remains optional for CLI use, but it is the default long-running entry surface for the desktop shell.',
+        'Local frontdesk service is the repo-tracked adapter/API surface for external GUI shells.',
         'Domain modules are tracked separately so the GUI can manage install and upgrade actions from one settings area.',
       ],
     },
