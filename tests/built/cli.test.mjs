@@ -614,8 +614,9 @@ exit 1
     const dashboardPayload = parseJsonOutput(dashboardResult);
     assert.equal(dashboardPayload.dashboard.projects.length, 3);
     assert.equal(dashboardPayload.dashboard.front_desk.local_web_frontdesk_status, 'pilot_landed');
-    assert.equal(dashboardPayload.dashboard.front_desk.hosted_web_status, 'librechat_pilot_landed');
-    assert.equal(dashboardPayload.dashboard.front_desk.librechat_pilot_package_status, 'landed');
+    assert.equal('hosted_web_status' in dashboardPayload.dashboard.front_desk, false);
+    assert.equal('librechat_pilot_package_status' in dashboardPayload.dashboard.front_desk, false);
+    assert.equal('frontdesk_librechat_status_surface' in dashboardPayload.dashboard.front_desk, false);
     assert.equal(dashboardPayload.dashboard.front_desk.recommended_entry_surfaces_count, 0);
     assert.equal(dashboardPayload.dashboard.runtime_status.recent_sessions.sessions.length, 1);
   } finally {
@@ -1439,12 +1440,13 @@ exit 1
 
     assert.equal(startup.payload.version, 'g2');
     assert.equal(startup.payload.web_frontdesk.entry_surface, 'opl_local_web_frontdesk_pilot');
-    assert.equal(startup.payload.web_frontdesk.hosted_status, 'librechat_pilot_landed');
     assert.equal(startup.payload.web_frontdesk.api.frontdesk_entry_guide, '/api/frontdesk/entry-guide');
     assert.equal(startup.payload.web_frontdesk.api.frontdesk_readiness, '/api/frontdesk/readiness');
     assert.equal(startup.payload.web_frontdesk.api.frontdesk_domain_wiring, '/api/frontdesk/domain-wiring');
-    assert.equal(startup.payload.web_frontdesk.api.librechat_package, '/api/frontdesk/librechat/package');
     assert.equal(startup.payload.web_frontdesk.api.launch_domain, '/api/domain/launch');
+    assert.equal('hosted_status' in startup.payload.web_frontdesk, false);
+    assert.equal('frontdesk_librechat_status' in startup.payload.web_frontdesk.api, false);
+    assert.equal('librechat_package' in startup.payload.web_frontdesk.api, false);
     assert.equal(startup.payload.web_frontdesk.shell_bootstrap.primary_surface.surface_id, 'opl_frontdesk_entry_guide');
     assert.equal(startup.payload.web_frontdesk.shell_bootstrap.primary_surface.endpoint, '/api/frontdesk/entry-guide');
     assert.deepEqual(
@@ -1468,6 +1470,8 @@ exit 1
     assert.doesNotMatch(pageHtml, /Workspace Hub/);
     assert.match(pageHtml, /id="opl-bootstrap"/);
     assert.match(pageHtml, /\/api\/frontdesk\/entry-guide/);
+    assert.doesNotMatch(pageHtml, /Hosted shell status/);
+    assert.doesNotMatch(pageHtml, /Optional Hosted-Shell Export/);
 
     const manifestResponse = await fetch(`${baseUrl}/api/frontdesk/manifest`);
     const manifestPayload = await manifestResponse.json();
@@ -1546,30 +1550,6 @@ exit 1
       assert.equal(existsSync(hostedPackagePayload.hosted_pilot_package.assets.run_script), true);
     } finally {
       rmSync(hostedPackageOutput, { recursive: true, force: true });
-    }
-
-    const librechatPackageOutput = mkdtempSync(path.join(os.tmpdir(), 'opl-built-web-librechat-package-'));
-    try {
-      const librechatPackageResponse = await fetch(`${baseUrl}/api/frontdesk/librechat/package`, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({
-          output_dir: librechatPackageOutput,
-          public_origin: 'https://opl.example.com',
-        }),
-      });
-      const librechatPackagePayload = await librechatPackageResponse.json();
-      assert.equal(
-        librechatPackagePayload.librechat_pilot_package.surface_id,
-        'opl_librechat_hosted_shell_pilot_package',
-      );
-      assert.equal(librechatPackagePayload.librechat_pilot_package.hosted_shell_status, 'landed');
-      assert.equal(existsSync(librechatPackagePayload.librechat_pilot_package.assets.compose_file), true);
-      assert.equal(existsSync(librechatPackagePayload.librechat_pilot_package.assets.caddyfile), true);
-    } finally {
-      rmSync(librechatPackageOutput, { recursive: true, force: true });
     }
 
     const resumeResponse = await fetch(`${baseUrl}/api/session/resume`, {
