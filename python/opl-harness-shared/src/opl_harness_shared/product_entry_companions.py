@@ -5,7 +5,11 @@ from typing import Any, Mapping
 from .family_entry_contracts import (
     validate_family_domain_entry_contract as _validate_shared_family_domain_entry_contract,
     validate_gateway_interaction_contract as _validate_shared_gateway_interaction_contract,
+    validate_shared_handoff as _validate_shared_handoff,
+    validate_shared_handoff_builder as _validate_shared_handoff_builder,
 )
+
+_FRONTDESK_SHARED_HANDOFF_KEYS = ("direct_entry_builder", "opl_handoff_builder")
 
 
 def _non_empty_text(value: object) -> str | None:
@@ -186,6 +190,50 @@ def _validate_domain_entry_contract_shape(value: object, field: str) -> dict[str
 
 def _validate_gateway_interaction_contract_shape(value: object, field: str) -> dict[str, Any]:
     return _validate_shared_gateway_interaction_contract(value, field)
+
+
+def validate_family_frontdesk_entry_surfaces(value: object, field: str) -> dict[str, Any]:
+    payload = _require_mapping(value, field)
+    normalized: dict[str, Any] = {
+        key: _clone_mapping(entry, f"{field}.{key}")
+        for key, entry in payload.items()
+    }
+    for key in _FRONTDESK_SHARED_HANDOFF_KEYS:
+        if payload.get(key) is not None:
+            normalized[key] = _validate_shared_handoff_builder(
+                payload.get(key),
+                f"{field}.{key}",
+            )
+    return normalized
+
+
+def build_family_frontdesk_entry_surfaces(
+    *,
+    product_entry_shell: Mapping[str, Any],
+    shell_aliases: Mapping[str, str],
+    shared_handoff: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    product_entry_shell_payload = _clone_mapping(product_entry_shell, "product_entry_shell")
+    shell_alias_payload = _clone_mapping(shell_aliases, "shell_aliases")
+    payload: dict[str, Any] = {}
+
+    for entry_key, raw_shell_key in shell_alias_payload.items():
+        shell_key = _require_string(raw_shell_key, f"shell_aliases.{entry_key}")
+        payload[entry_key] = _clone_mapping(
+            product_entry_shell_payload.get(shell_key),
+            f"product_entry_shell.{shell_key}",
+        )
+
+    if shared_handoff is not None:
+        shared_handoff_payload = _validate_shared_handoff(shared_handoff, "shared_handoff")
+        for key in _FRONTDESK_SHARED_HANDOFF_KEYS:
+            if shared_handoff_payload.get(key) is not None:
+                payload[key] = _validate_shared_handoff_builder(
+                    shared_handoff_payload.get(key),
+                    f"shared_handoff.{key}",
+                )
+
+    return validate_family_frontdesk_entry_surfaces(payload, "entry_surfaces")
 
 
 def _validate_surface_kind_mapping(value: object, field: str, expected_surface_kind: str) -> dict[str, Any]:
@@ -550,7 +598,7 @@ def build_product_frontdesk(
         "product_entry_quickstart": _clone_mapping(product_entry_quickstart, "product_entry_quickstart"),
         "family_orchestration": _clone_mapping(family_orchestration, "family_orchestration"),
         "product_entry_manifest": _clone_mapping(product_entry_manifest, "product_entry_manifest"),
-        "entry_surfaces": _clone_mapping(entry_surfaces, "entry_surfaces"),
+        "entry_surfaces": validate_family_frontdesk_entry_surfaces(entry_surfaces, "entry_surfaces"),
         "summary": _normalize_frontdesk_summary(summary, "summary"),
         "notes": _require_string_list(notes, "notes"),
     }
@@ -633,7 +681,7 @@ def build_family_product_frontdesk(
             "product_entry_manifest.family_orchestration",
         ),
         product_entry_manifest=manifest,
-        entry_surfaces=_clone_mapping(entry_surfaces, "entry_surfaces"),
+        entry_surfaces=validate_family_frontdesk_entry_surfaces(entry_surfaces, "entry_surfaces"),
         summary={
             "frontdesk_command": _require_string(
                 frontdesk_surface.get("command"),
@@ -713,7 +761,7 @@ def build_family_product_entry_manifest(
         "formal_entry": _clone_mapping(formal_entry, "formal_entry"),
         "workspace_locator": _clone_mapping(workspace_locator, "workspace_locator"),
         "product_entry_shell": _clone_mapping(product_entry_shell, "product_entry_shell"),
-        "shared_handoff": _clone_mapping(shared_handoff, "shared_handoff"),
+        "shared_handoff": _validate_shared_handoff(shared_handoff, "shared_handoff"),
         "product_entry_start": _clone_mapping(product_entry_start, "product_entry_start"),
         "family_orchestration": _clone_mapping(family_orchestration, "family_orchestration"),
     }
@@ -779,7 +827,10 @@ def validate_family_product_entry_manifest(
         "formal_entry": _clone_mapping(payload.get("formal_entry"), "product_entry_manifest.formal_entry"),
         "workspace_locator": _clone_mapping(payload.get("workspace_locator"), "product_entry_manifest.workspace_locator"),
         "product_entry_shell": _clone_mapping(payload.get("product_entry_shell"), "product_entry_manifest.product_entry_shell"),
-        "shared_handoff": _clone_mapping(payload.get("shared_handoff"), "product_entry_manifest.shared_handoff"),
+        "shared_handoff": _validate_shared_handoff(
+            payload.get("shared_handoff"),
+            "product_entry_manifest.shared_handoff",
+        ),
         "product_entry_start": _validate_product_entry_start_surface(
             payload.get("product_entry_start"),
             "product_entry_manifest.product_entry_start",
@@ -932,7 +983,10 @@ def validate_family_product_frontdesk(
             require_contract_bundle=require_contract_bundle,
             require_runtime_companions=require_runtime_companions,
         ),
-        "entry_surfaces": _clone_mapping(payload.get("entry_surfaces"), "product_frontdesk.entry_surfaces"),
+        "entry_surfaces": validate_family_frontdesk_entry_surfaces(
+            payload.get("entry_surfaces"),
+            "product_frontdesk.entry_surfaces",
+        ),
         "summary": _normalize_frontdesk_summary(payload.get("summary"), "product_frontdesk.summary"),
         "notes": _require_string_list(payload.get("notes"), "product_frontdesk.notes"),
     }

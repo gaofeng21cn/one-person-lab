@@ -3,6 +3,7 @@ from __future__ import annotations
 from copy import deepcopy
 
 from opl_harness_shared.product_entry_companions import (
+    build_family_frontdesk_entry_surfaces,
     build_family_product_frontdesk,
     build_family_product_entry_manifest,
     build_product_entry_start,
@@ -258,6 +259,7 @@ def test_collect_family_human_gate_ids_and_build_helpers() -> None:
         },
         shared_handoff={
             "opl_handoff_builder": {
+                "command": "uv run python -m med_autogrant build-product-entry --entry-mode opl-handoff --format json",
                 "entry_mode": "opl-handoff",
             }
         },
@@ -329,6 +331,7 @@ def test_collect_family_human_gate_ids_and_build_helpers() -> None:
             },
             shared_handoff={
                 "opl_handoff_builder": {
+                    "command": "uv run python -m med_autogrant build-product-entry --entry-mode opl-handoff --format json",
                     "entry_mode": "opl-handoff",
                 }
             },
@@ -469,6 +472,7 @@ def test_build_family_product_frontdesk_projects_manifest_core() -> None:
         },
         shared_handoff={
             "opl_handoff_builder": {
+                "command": "uv run python -m med_autogrant build-product-entry --entry-mode opl-handoff --format json",
                 "entry_mode": "opl-handoff",
             }
         },
@@ -518,6 +522,43 @@ def test_build_family_product_frontdesk_projects_manifest_core() -> None:
     )
 
 
+def test_build_family_frontdesk_entry_surfaces_projects_shell_aliases_and_shared_handoff() -> None:
+    entry_surfaces = build_family_frontdesk_entry_surfaces(
+        product_entry_shell={
+            "product_frontdesk": {
+                "command": "uv run python -m med_autogrant product-frontdesk --input /tmp/workspace.json --format json",
+                "surface_kind": "product_frontdesk",
+            },
+            "grant_user_loop": {
+                "command": "uv run python -m med_autogrant grant-user-loop --input /tmp/workspace.json --task-intent <intent> --format json",
+                "surface_kind": "grant_user_loop",
+            },
+        },
+        shell_aliases={
+            "frontdesk": "product_frontdesk",
+            "grant_user_loop": "grant_user_loop",
+        },
+        shared_handoff={
+            "direct_entry_builder": {
+                "command": "uv run python -m med_autogrant build-product-entry --entry-mode direct --format json",
+                "entry_mode": "direct",
+            },
+            "opl_return_surface": {
+                "surface_kind": "product_entry",
+                "target_domain_id": "med-autogrant",
+            },
+        },
+    )
+
+    assert (
+        entry_surfaces["frontdesk"]["command"]
+        == "uv run python -m med_autogrant product-frontdesk --input /tmp/workspace.json --format json"
+    )
+    assert entry_surfaces["grant_user_loop"]["surface_kind"] == "grant_user_loop"
+    assert entry_surfaces["direct_entry_builder"]["entry_mode"] == "direct"
+    assert "opl_return_surface" not in entry_surfaces
+
+
 def test_product_entry_companion_validators_normalize_shared_family_payloads() -> None:
     manifest = {
         "surface_kind": "product_entry_manifest",
@@ -541,6 +582,7 @@ def test_product_entry_companion_validators_normalize_shared_family_payloads() -
         },
         "shared_handoff": {
             "opl_handoff_builder": {
+                "command": "uv run python -m med_autogrant build-product-entry --entry-mode opl-handoff --format json",
                 "entry_mode": "opl-handoff",
             }
         },
@@ -757,6 +799,7 @@ def test_product_entry_companion_validators_fail_closed_on_missing_required_shar
         },
         "shared_handoff": {
             "opl_handoff_builder": {
+                "command": "uv run python -m med_autogrant build-product-entry --entry-mode opl-handoff --format json",
                 "entry_mode": "opl-handoff",
             }
         },

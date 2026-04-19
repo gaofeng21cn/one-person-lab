@@ -1,9 +1,17 @@
 import {
+  type FamilySharedHandoffSurface,
+  type SharedHandoffBuilderSurface,
   validateFamilyDomainEntryContract as validateSharedFamilyDomainEntryContract,
   validateGatewayInteractionContract as validateSharedGatewayInteractionContract,
+  validateSharedHandoff,
+  validateSharedHandoffBuilder,
 } from './family-entry-contracts.ts';
 
 export type JsonRecord = Record<string, unknown>;
+
+export type FamilyFrontdeskEntrySurfaces = Record<string, JsonRecord> & Partial<
+  Pick<FamilySharedHandoffSurface, 'direct_entry_builder' | 'opl_handoff_builder'>
+>;
 
 export interface ProductEntryResumeContract {
   surface_kind: string;
@@ -106,7 +114,7 @@ export interface BuildProductFrontdeskInput {
   product_entry_quickstart: JsonRecord;
   family_orchestration: JsonRecord;
   product_entry_manifest: JsonRecord;
-  entry_surfaces: JsonRecord;
+  entry_surfaces: FamilyFrontdeskEntrySurfaces;
   summary: BuildProductFrontdeskSummaryInput;
   notes: string[];
   schema_ref?: string | null;
@@ -118,12 +126,18 @@ export interface BuildProductFrontdeskInput {
 export interface BuildFamilyProductFrontdeskInput {
   recommended_action: string;
   product_entry_manifest: JsonRecord;
-  entry_surfaces: JsonRecord;
+  entry_surfaces: FamilyFrontdeskEntrySurfaces;
   notes: string[];
   schema_ref?: string | null;
   domain_entry_contract?: JsonRecord | null;
   gateway_interaction_contract?: JsonRecord | null;
   extra_payload?: JsonRecord;
+}
+
+export interface BuildFamilyFrontdeskEntrySurfacesInput {
+  product_entry_shell: Record<string, JsonRecord>;
+  shell_aliases: Record<string, string>;
+  shared_handoff?: FamilySharedHandoffSurface | JsonRecord | null;
 }
 
 export interface BuildFamilyProductEntryManifestInput {
@@ -132,7 +146,7 @@ export interface BuildFamilyProductEntryManifestInput {
   formal_entry: JsonRecord;
   workspace_locator: JsonRecord;
   product_entry_shell: JsonRecord;
-  shared_handoff: JsonRecord;
+  shared_handoff: FamilySharedHandoffSurface;
   product_entry_start: JsonRecord;
   family_orchestration: JsonRecord;
   runtime?: JsonRecord | null;
@@ -251,7 +265,7 @@ export type FamilyProductEntryManifestSurface = JsonRecord & {
   formal_entry: JsonRecord;
   workspace_locator: JsonRecord;
   product_entry_shell: JsonRecord;
-  shared_handoff: JsonRecord;
+  shared_handoff: FamilySharedHandoffSurface;
   product_entry_start: ProductEntryStartSurface;
   family_orchestration: FamilyOrchestrationCompanion;
   runtime?: JsonRecord;
@@ -295,7 +309,7 @@ export type FamilyProductFrontdeskSurface = JsonRecord & {
   product_entry_quickstart: ProductEntryQuickstartSurface;
   family_orchestration: FamilyOrchestrationCompanion;
   product_entry_manifest: FamilyProductEntryManifestSurface;
-  entry_surfaces: JsonRecord;
+  entry_surfaces: FamilyFrontdeskEntrySurfaces;
   summary: BuildProductFrontdeskSummaryInput;
   notes: string[];
   schema_ref?: string;
@@ -437,6 +451,11 @@ function cloneRecord(value: unknown, field: string): JsonRecord {
   return { ...requireRecord(value, field) };
 }
 
+const FRONTDESK_SHARED_HANDOFF_KEYS = [
+  'direct_entry_builder',
+  'opl_handoff_builder',
+] as const;
+
 function normalizeFrontdeskSummary(value: unknown, field: string) {
   const payload = requireRecord(value, field);
   return {
@@ -489,6 +508,52 @@ function validateDomainEntryContractShape(value: unknown, field: string) {
 
 function validateGatewayInteractionContractShape(value: unknown, field: string) {
   return validateSharedGatewayInteractionContract(value, field);
+}
+
+export function validateFamilyFrontdeskEntrySurfaces(
+  value: unknown,
+  field: string,
+): FamilyFrontdeskEntrySurfaces {
+  const payload = requireRecord(value, field);
+  const normalized = {} as FamilyFrontdeskEntrySurfaces;
+
+  for (const [key, entry] of Object.entries(payload)) {
+    normalized[key] = cloneRecord(entry, `${field}.${key}`);
+  }
+  for (const key of FRONTDESK_SHARED_HANDOFF_KEYS) {
+    if (payload[key] !== undefined) {
+      normalized[key] = validateSharedHandoffBuilder(payload[key], `${field}.${key}`);
+    }
+  }
+
+  return normalized;
+}
+
+export function buildFamilyFrontdeskEntrySurfaces(
+  input: BuildFamilyFrontdeskEntrySurfacesInput,
+): FamilyFrontdeskEntrySurfaces {
+  const productEntryShell = cloneRecord(input.product_entry_shell, 'product_entry_shell');
+  const shellAliases = cloneRecord(input.shell_aliases, 'shell_aliases');
+  const payload: JsonRecord = {};
+
+  for (const [entryKey, rawShellKey] of Object.entries(shellAliases)) {
+    const shellKey = requireString(rawShellKey, `shell_aliases.${entryKey}`);
+    payload[entryKey] = cloneRecord(
+      productEntryShell[shellKey],
+      `product_entry_shell.${shellKey}`,
+    );
+  }
+
+  if (input.shared_handoff !== undefined && input.shared_handoff !== null) {
+    const sharedHandoff = validateSharedHandoff(input.shared_handoff, 'shared_handoff');
+    for (const key of FRONTDESK_SHARED_HANDOFF_KEYS) {
+      if (sharedHandoff[key] !== undefined) {
+        payload[key] = sharedHandoff[key];
+      }
+    }
+  }
+
+  return validateFamilyFrontdeskEntrySurfaces(payload, 'entry_surfaces');
 }
 
 function validateSurfaceKindRecord(
@@ -805,7 +870,7 @@ export function buildProductFrontdesk(input: BuildProductFrontdeskInput): Family
     product_entry_quickstart: cloneRecord(input.product_entry_quickstart, 'product_entry_quickstart'),
     family_orchestration: cloneRecord(input.family_orchestration, 'family_orchestration'),
     product_entry_manifest: cloneRecord(input.product_entry_manifest, 'product_entry_manifest'),
-    entry_surfaces: cloneRecord(input.entry_surfaces, 'entry_surfaces'),
+    entry_surfaces: validateFamilyFrontdeskEntrySurfaces(input.entry_surfaces, 'entry_surfaces'),
     summary: normalizeFrontdeskSummary(input.summary, 'summary'),
     notes: readStringList(input.notes, 'notes'),
   };
@@ -881,7 +946,7 @@ export function buildFamilyProductFrontdesk(input: BuildFamilyProductFrontdeskIn
       'product_entry_manifest.family_orchestration',
     ),
     product_entry_manifest: manifest,
-    entry_surfaces: cloneRecord(input.entry_surfaces, 'entry_surfaces'),
+    entry_surfaces: validateFamilyFrontdeskEntrySurfaces(input.entry_surfaces, 'entry_surfaces'),
     summary: {
       frontdesk_command: requireString(
         frontdeskSurface.command,
@@ -923,7 +988,7 @@ export function buildFamilyProductEntryManifest(
     formal_entry: cloneRecord(input.formal_entry, 'formal_entry'),
     workspace_locator: cloneRecord(input.workspace_locator, 'workspace_locator'),
     product_entry_shell: cloneRecord(input.product_entry_shell, 'product_entry_shell'),
-    shared_handoff: cloneRecord(input.shared_handoff, 'shared_handoff'),
+    shared_handoff: validateSharedHandoff(input.shared_handoff, 'shared_handoff'),
     product_entry_start: cloneRecord(input.product_entry_start, 'product_entry_start'),
     family_orchestration: cloneRecord(input.family_orchestration, 'family_orchestration'),
   };
@@ -999,7 +1064,10 @@ export function validateFamilyProductEntryManifest(
     formal_entry: cloneRecord(payload.formal_entry, 'product_entry_manifest.formal_entry'),
     workspace_locator: cloneRecord(payload.workspace_locator, 'product_entry_manifest.workspace_locator'),
     product_entry_shell: cloneRecord(payload.product_entry_shell, 'product_entry_manifest.product_entry_shell'),
-    shared_handoff: cloneRecord(payload.shared_handoff, 'product_entry_manifest.shared_handoff'),
+    shared_handoff: validateSharedHandoff(
+      payload.shared_handoff,
+      'product_entry_manifest.shared_handoff',
+    ),
     product_entry_start: validateProductEntryStartSurface(
       payload.product_entry_start,
       'product_entry_manifest.product_entry_start',
@@ -1180,7 +1248,10 @@ export function validateFamilyProductFrontdesk(
       'product_frontdesk.family_orchestration',
     ),
     product_entry_manifest: validateFamilyProductEntryManifest(payload.product_entry_manifest, options),
-    entry_surfaces: cloneRecord(payload.entry_surfaces, 'product_frontdesk.entry_surfaces'),
+    entry_surfaces: validateFamilyFrontdeskEntrySurfaces(
+      payload.entry_surfaces,
+      'product_frontdesk.entry_surfaces',
+    ),
     summary: normalizeFrontdeskSummary(payload.summary, 'product_frontdesk.summary'),
     notes: readStringList(payload.notes, 'product_frontdesk.notes'),
   };
