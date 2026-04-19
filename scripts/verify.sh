@@ -9,6 +9,11 @@ case "$lane" in
     ;;
   family)
     npm run family:shared-release -- check
+    PYTHONPATH=python/opl-harness-shared/src \
+      pytest \
+      python/opl-harness-shared/tests/test_family_shared_release.py \
+      python/opl-harness-shared/tests/test_editable_dependency_bootstrap.py \
+      python/opl-harness-shared/tests/test_editable_consumer_bootstrap.py
     ;;
   meta)
     npm run test:meta
