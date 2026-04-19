@@ -26,6 +26,17 @@ export type GatewayInteractionContractSurface = JsonRecord & {
   shared_handoff_envelope: string[];
 };
 
+export type SharedHandoffBuilderSurface = JsonRecord & {
+  command: string;
+  entry_mode: string;
+  surface_kind?: string;
+};
+
+export type SharedHandoffReturnSurface = JsonRecord & {
+  surface_kind: string;
+  target_domain_id: string;
+};
+
 export interface BuildDomainEntryCommandContractInput {
   command: string;
   required_fields: string[];
@@ -52,6 +63,19 @@ export interface BuildGatewayInteractionContractInput {
   shared_downstream_entry: string;
   shared_handoff_envelope: string[];
   surface_kind?: string | null;
+  extra_payload?: JsonRecord;
+}
+
+export interface BuildSharedHandoffBuilderInput {
+  command: string;
+  entry_mode: string;
+  surface_kind?: string | null;
+  extra_payload?: JsonRecord;
+}
+
+export interface BuildSharedHandoffReturnSurfaceInput {
+  surface_kind: string;
+  target_domain_id: string;
   extra_payload?: JsonRecord;
 }
 
@@ -303,5 +327,69 @@ export function buildGatewayInteractionContract(
       'gateway_interaction_contract',
     ),
     'gateway_interaction_contract',
+  );
+}
+
+export function validateSharedHandoffBuilder(
+  value: unknown,
+  field: string,
+): SharedHandoffBuilderSurface {
+  const payload = requireRecord(value, field);
+  const normalized: SharedHandoffBuilderSurface = {
+    ...payload,
+    command: requireString(payload.command, `${field}.command`),
+    entry_mode: requireString(payload.entry_mode, `${field}.entry_mode`),
+  };
+  const surfaceKind = optionalString(payload.surface_kind);
+  if (surfaceKind) {
+    normalized.surface_kind = surfaceKind;
+  }
+  return normalized;
+}
+
+export function buildSharedHandoffBuilder(
+  input: BuildSharedHandoffBuilderInput,
+): SharedHandoffBuilderSurface {
+  return validateSharedHandoffBuilder(
+    mergeExtraPayload(
+      {
+        command: requireString(input.command, 'command'),
+        entry_mode: requireString(input.entry_mode, 'entry_mode'),
+        ...(optionalString(input.surface_kind)
+          ? { surface_kind: optionalString(input.surface_kind) }
+          : {}),
+      },
+      input.extra_payload,
+      'shared_handoff_builder',
+    ),
+    'shared_handoff_builder',
+  );
+}
+
+export function validateSharedHandoffReturnSurface(
+  value: unknown,
+  field: string,
+): SharedHandoffReturnSurface {
+  const payload = requireRecord(value, field);
+  return {
+    ...payload,
+    surface_kind: requireString(payload.surface_kind, `${field}.surface_kind`),
+    target_domain_id: requireString(payload.target_domain_id, `${field}.target_domain_id`),
+  };
+}
+
+export function buildSharedHandoffReturnSurface(
+  input: BuildSharedHandoffReturnSurfaceInput,
+): SharedHandoffReturnSurface {
+  return validateSharedHandoffReturnSurface(
+    mergeExtraPayload(
+      {
+        surface_kind: requireString(input.surface_kind, 'surface_kind'),
+        target_domain_id: requireString(input.target_domain_id, 'target_domain_id'),
+      },
+      input.extra_payload,
+      'shared_handoff_return_surface',
+    ),
+    'shared_handoff_return_surface',
   );
 }

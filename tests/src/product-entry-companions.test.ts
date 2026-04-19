@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
+import type {
+  FamilyProductEntryManifestSurface,
+  FamilyProductFrontdeskSurface,
+} from '../../src/product-entry-companions.ts';
 import {
   buildFamilyProductFrontdesk,
   buildFamilyProductEntryManifest,
@@ -202,11 +206,9 @@ test('product entry companion helpers build canonical shared payloads', () => {
       ok: true,
       schema_ref: 'contracts/schemas/v1/product-frontdesk.schema.json',
     },
-  }) as {
-    surface_kind: string;
+  }) as FamilyProductFrontdeskSurface & {
     ok: boolean;
     schema_ref: string;
-    product_entry_start: { recommended_mode_id: string };
   };
   assert.equal(frontdesk.surface_kind, 'product_frontdesk');
   assert.equal(frontdesk.ok, true);
@@ -312,11 +314,8 @@ test('product entry companion helpers build canonical shared payloads', () => {
         product_entry_contract: 'contracts/runtime-program/redcube-product-entry-mvp.json',
       },
     },
-  }) as {
-    surface_kind: string;
-    manifest_version: number;
+  }) as FamilyProductEntryManifestSurface & {
     recommended_action: string;
-    product_entry_start: { recommended_mode_id: string };
   };
   assert.equal(manifest.surface_kind, 'product_entry_manifest');
   assert.equal(manifest.manifest_version, 2);
@@ -536,7 +535,7 @@ test('family product frontdesk builder projects manifest core into canonical fro
     },
   });
 
-  const manifestPayload = manifest as typeof manifest & {
+  const manifestPayload = manifest as FamilyProductEntryManifestSurface & {
     product_entry_shell: {
       direct: Record<string, unknown>;
       session: Record<string, unknown>;
@@ -555,11 +554,8 @@ test('family product frontdesk builder projects manifest core into canonical fro
     extra_payload: {
       ok: true,
     },
-  }) as {
-    surface_kind: string;
+  }) as FamilyProductFrontdeskSurface & {
     ok: boolean;
-    target_domain_id: string;
-    summary: { frontdesk_command: string; recommended_command: string; operator_loop_command: string };
   };
 
   assert.equal(frontdesk.surface_kind, 'product_frontdesk');

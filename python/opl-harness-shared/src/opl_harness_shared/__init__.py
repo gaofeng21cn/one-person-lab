@@ -22,8 +22,12 @@ from .family_entry_contracts import (
     build_domain_entry_command_contract,
     build_family_domain_entry_contract,
     build_gateway_interaction_contract,
+    build_shared_handoff_builder,
+    build_shared_handoff_return_surface,
     validate_family_domain_entry_contract,
     validate_gateway_interaction_contract,
+    validate_shared_handoff_builder,
+    validate_shared_handoff_return_surface,
 )
 from .hermes_supervision import (
     HermesSupervisionSpec,
@@ -116,6 +120,8 @@ __all__ = [
     "build_family_product_entry_orchestration",
     "build_family_orchestration_template",
     "build_gateway_interaction_contract",
+    "build_shared_handoff_builder",
+    "build_shared_handoff_return_surface",
     "build_managed_runtime_contract",
     "build_domain_entry_command_contract",
     "build_product_entry_start",
@@ -169,5 +175,7 @@ __all__ = [
     "STATUS_NARRATION_SCHEMA_VERSION",
     "validate_family_domain_entry_contract",
     "validate_gateway_interaction_contract",
+    "validate_shared_handoff_builder",
+    "validate_shared_handoff_return_surface",
     "validate_managed_runtime_contract",
 ]

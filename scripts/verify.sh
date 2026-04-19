@@ -7,6 +7,9 @@ case "$lane" in
   smoke|fast)
     npm test
     ;;
+  family)
+    npm run family:shared-release -- check
+    ;;
   meta)
     npm run test:meta
     ;;
@@ -21,7 +24,7 @@ case "$lane" in
     ;;
   *)
     echo "Unknown lane: $lane" >&2
-    echo "Usage: scripts/verify.sh [smoke|fast|meta|artifact|full|typecheck]" >&2
+    echo "Usage: scripts/verify.sh [smoke|fast|family|meta|artifact|full|typecheck]" >&2
     exit 1
     ;;
 esac

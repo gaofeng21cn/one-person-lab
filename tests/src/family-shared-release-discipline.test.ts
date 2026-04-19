@@ -8,6 +8,8 @@ import {
   extractTrackedPins,
   inspectConsumerRepo,
   loadSharedOwnerReleaseContract,
+  resolveCanonicalRepoRoot,
+  resolveDefaultFamilyRoot,
   rewriteTrackedPins,
   runFamilySharedReleaseCli,
   SHARED_OWNER_RELEASE_CONTRACT_PATH,
@@ -36,6 +38,21 @@ test('shared owner release contract freezes a full owner commit and three consum
   assert.equal(contract.consumers.length, 3);
   assert.equal(contract.consumers[0].targets[0].kind, 'python_dependency');
   assert.equal(contract.consumers[2].targets[1].kind, 'js_lock');
+});
+
+test('default family root resolves from the canonical repo root in both main checkout and worktree checkouts', () => {
+  const canonicalRepoRoot = resolveCanonicalRepoRoot({ repoRoot });
+  const defaultFamilyRoot = resolveDefaultFamilyRoot({ repoRoot });
+
+  assert.equal(path.basename(canonicalRepoRoot), 'one-person-lab');
+  assert.equal(defaultFamilyRoot, path.resolve(canonicalRepoRoot, '..'));
+
+  const repoParent = path.resolve(repoRoot, '..');
+  if (repoRoot.includes(`${path.sep}.worktrees${path.sep}`)) {
+    assert.notEqual(defaultFamilyRoot, repoParent);
+  } else {
+    assert.equal(defaultFamilyRoot, repoParent);
+  }
 });
 
 test('rewriteTrackedPins rewrites python and js shared locators to the released owner commit', () => {
