@@ -123,4 +123,4 @@
 - 文档治理说明收口在 [series-doc-governance-checklist.md](./references/series-doc-governance-checklist.md)、技术工作集，以及仓库跟踪的 contract/doc surface 中。
 - 当前四仓对齐快照收口在 [four-repo-doc-series-sync-summary-2026-04-14.md](./references/four-repo-doc-series-sync-summary-2026-04-14.md)。
 - 可复用的 intake 起点收口在 [four-repo-doc-intake-template.md](./references/four-repo-doc-intake-template.md)。
-- 跨仓文档轮次应直接在受影响仓库里人工审阅，并配套各仓自己的 repo-local 常规验证入口。
+- 跨仓文档轮次应直接在受影响仓库里人工审阅，并以各仓当前公开定位、contracts 与 admitted-domain 状态为准。
