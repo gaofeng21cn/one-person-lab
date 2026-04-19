@@ -1,6 +1,9 @@
 {
   "version": "g1",
   "intent_id": [
+    "grant_direction_assessment",
+    "proposal_authoring",
+    "proposal_revision",
     "research_progression",
     "submission_delivery",
     "data_asset_governance",
@@ -9,10 +12,12 @@
     "defense_materials"
   ],
   "workstream_id": [
+    "grant_ops",
     "research_ops",
     "presentation_ops"
   ],
   "domain_id": [
+    "medautogrant",
     "medautoscience",
     "redcube"
   ],

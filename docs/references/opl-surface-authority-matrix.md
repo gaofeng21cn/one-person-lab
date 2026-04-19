@@ -73,6 +73,7 @@ Each entry stays derived/reference-only and carries only:
 
 ### Linked domain public-entry surfaces
 
+- `medautogrant_public_gateway`
 - `medautoscience_public_gateway`
 - `redcube_public_gateway`
 

@@ -6,7 +6,7 @@
 
 这份文档索引当前仍在定义中的 `OPL` workstream 的 machine-readable admission-blocker backlog。
 
-它的作用是明确说明：`Grant Ops`、`Thesis Ops`、`Review Ops` 在被正式收录为独立 domain gateway 之前，还缺哪些边界材料。
+它的作用是明确说明：`Thesis Ops`、`Review Ops` 在被正式收录为独立 domain gateway 之前，还缺哪些边界材料。
 
 它不是预收录 registry。
 它不是执行 surface。
@@ -47,7 +47,7 @@ Onboarding contract 负责定义正式收录门槛。
 这份 backlog 不负责：
 
 - 分配未来的 domain identity 或 gateway / harness surface metadata
-- 把 `Grant Ops`、`Thesis Ops`、`Review Ops` 改写成 `MedAutoScience` 或 `RedCube AI` 的扩展分支
+- 把 `Thesis Ops`、`Review Ops` 改写成 `MedAutoScience`、`MedAutoGrant` 或 `RedCube AI` 的扩展分支
 - 把候选项加入 `G1` registry
 - 创造 discovery target 或 routed-action target
 - 变成 approval queue、release plan 或 runtime planner
@@ -69,21 +69,6 @@ Onboarding contract 负责定义正式收录门槛。
 - `notes`
 
 ## 当前候选覆盖
-
-### Grant Ops
-
-`Grant Ops` 在 task map / task topology 中已经有明确的顶层语义。
-
-当前冻结下来的边界仍然是 proposal-facing：模拟评审与修订轨迹仍是作者侧的基金写作工件，而不是独立的 reviewer-role output。
-
-当前 `Grant Foundry -> Med Auto Grant` 公开 scaffold 只提供 top-level signal / domain-direction evidence。
-它不等于已正式收录的 domain gateway，也不等于 `G2` discovery readiness，也不等于 `G3` routed-action readiness，更不等于 handoff-ready surface。
-
-但它仍然缺少未来 domain boundary package：包括 registry material、public gateway docs、truth ownership、review surfaces、显式的 execution-model declaration、discovery readiness blocker、routing readiness blocker，以及 cross-domain wording。
-这份 execution-model declaration 还必须明确 stable agent runtime surface、说明 `Auto` 与 `Human-in-the-loop` 如何共享同一基座、解释 code-versus-Agent responsibility split，并明确排除 `fixed-code-first` 或长期单模的 framing。
-其中 discovery readiness blocker 必须把只读 discovery 明确指向未来的 `domain_gateway` 入口，但不能提前暗示 handoff readiness。
-其中 routing readiness blocker 必须冻结显式 route evidence，保持 `domain_gateway` 仍是唯一 allowed successful handoff target，并继续遵守不得直达 harness 的 no-bypass 规则。
-这些未来 package 只是 blocker，不代表 `Grant Ops` 现在已经具备 `G2` discovery readiness 或 `G3` routed-action readiness。
 
 ### Thesis Ops
 
@@ -120,8 +105,8 @@ Onboarding contract 负责定义正式收录门槛。
 如果 execution-model declaration 还缺失，该 workstream 就仍然只能停留在 under definition / deferred，而不能被写成 `ready`、`aligned` 或隐式 admitted。
 如果当前只存在公开 scaffold 或 domain-direction hint，它也仍然只能被解释为顶层信号/证据，而不能代替真实 boundary package。
 
-它也不允许 `OPL` 悄悄把这些仍在定义中的 workstream 吸收进 `MedAutoScience` 或 `RedCube AI`。
-这两个已收录 domain 仍然保持独立的 gateway / harness surface。
+它也不允许 `OPL` 悄悄把这些仍在定义中的 workstream 吸收进 `MedAutoScience`、`MedAutoGrant` 或 `RedCube AI`。
+这些已收录 domain 仍然保持独立的 gateway / harness surface。
 
 任何 backlog entry 都不授权 domain handoff、discovery target、routed-action target 或 harness access。
 

@@ -81,8 +81,8 @@ Each layer answers a different question:
 | `Unified Harness Engineering Substrate` | shared top-level Harness Engineering umbrella language across domains | layering rules, shared principles, contract family name | shared execution core |
 | `Shared Runtime Contract` | shared cross-domain contract for long-running runtime behavior | `runtime profile`, `session substrate`, `gateway runtime status` | domain truth |
 | `Shared Domain Contract` | shared cross-domain contract for formal product behavior | formal-entry matrix, the `per-run handle`, durable report, gate semantics | domain object model |
-| `Domain Gateway` | stable formal entry and public contract surface for one domain | `MedAutoScience`, `RedCube AI` | execution engine |
-| `Domain Harness OS` | execution, governance, audit, and delivery system for one domain | `MedAutoScience`, `RedCube AI` | top-level federation |
+| `Domain Gateway` | stable formal entry and public contract surface for one domain | `MedAutoScience`, `MedAutoGrant`, `RedCube AI` | execution engine |
+| `Domain Harness OS` | execution, governance, audit, and delivery system for one domain | `MedAutoScience`, `MedAutoGrant`, `RedCube AI` | top-level federation |
 | `Execution Plane` | the runtime layer that drives quests, runs, sessions, worktrees, watch, and resume | the layer currently carried by `MedDeepScientist` for `MedAutoScience` | top-level public product surface |
 | `Host-Agent Runtime` | a local deployment shape for the execution plane driven by a host agent on the user's machine | current `Codex-default host-agent runtime` | managed runtime |
 | `Managed Runtime` | a platform-managed deployment shape for the execution plane where lifecycle, scheduling, isolation, and recovery are platform-owned | future `managed web runtime` | domain gateway |
@@ -93,9 +93,9 @@ Each layer answers a different question:
 | Repository | Frozen current role | Runtime relationship |
 | --- | --- | --- |
 | `one-person-lab` | public explanation and contract-first surface for `OPL Gateway / Federation` | defines language and boundaries, not runtime ownership |
-| `med-autoscience` | `Domain Gateway + Domain Harness OS` for medical `Research Foundry` | owns medical domain contracts, governance, delivery, and external formal entry |
+| `med-autoscience` | `Domain Gateway + Domain Harness OS` for medical `Research Ops` | owns medical domain contracts, governance, delivery, and external formal entry |
 | `redcube-ai` | `Domain Gateway + Domain Harness OS` for visual delivery | owns visual-delivery contracts, governance, delivery, and external formal entry |
-| `med-autogrant` | future `Domain Gateway + Domain Harness OS` direction for `Grant Foundry` | currently still below admitted-domain runtime ownership |
+| `med-autogrant` | `Domain Gateway + Domain Harness OS` for `Grant Ops` | owns grant-domain contracts, governance, delivery, and external formal entry |
 
 `MedDeepScientist` is not one more top-level peer `domain repo` inside `OPL`.
 The more accurate wording today is:
@@ -232,7 +232,7 @@ Human / Agent
 Within that structure:
 
 - `MedAutoScience`
-  - is the `Domain Gateway + Domain Harness OS` for medical `Research Foundry`
+  - is the `Domain Gateway + Domain Harness OS` for medical `Research Ops`
   - is the formal public entry, domain-contract owner, governance owner, and delivery owner
 - `MedDeepScientist`
   - is the main current implementation of the `Execution Plane` under `MedAutoScience`

@@ -1,7 +1,7 @@
 {
   "version": "p17.m1",
   "scope": "opl_task_topology",
-  "description": "Machine-readable top-level task topology for OPL. It captures current admitted workstreams plus under-definition candidate workstreams without turning candidate boundaries into admitted domains, routing targets, or runtime entry surfaces.",
+  "description": "Machine-readable top-level task topology for OPL. It captures current admitted workstreams plus under-definition candidate workstreams without turning the remaining candidate boundaries into admitted domains, routing targets, or runtime entry surfaces.",
   "non_goals": [
     "domain_admission_registry",
     "runtime_router",
@@ -10,8 +10,8 @@
   ],
   "topology_rules": [
     "task topology defines top-level workstream semantics above domain gateways and harnesses",
-    "registered G1 workstreams remain research_ops and presentation_ops only",
-    "grant_ops, thesis_ops, and review_ops remain under definition until explicit domain boundaries are frozen and admitted through the onboarding gate",
+    "registered G1 workstreams remain grant_ops, research_ops, and presentation_ops",
+    "thesis_ops and review_ops remain under definition until explicit domain boundaries are frozen and admitted through the onboarding gate",
     "under-definition workstreams may list delivery objects and reusable assets without becoming admitted domains, discovery targets, or handoff-ready routed-action targets; at most they may surface as unknown_domain outcomes when top-level semantics are clear, and any future successful handoff remains domain_gateway-only with the no-bypass rule intact",
     "future admission or alignment requires a declared stable agent runtime surface plus a shared-base Auto/Human-in-the-loop convergence path; otherwise the workstream remains under definition / deferred",
     "task topology complements docs/task-map.md, workstreams.json, and the onboarding contract; it does not replace them"
@@ -26,7 +26,7 @@
   "workstreams": [
     {
       "workstream_id": "research_ops",
-      "label": "Research Foundry",
+      "label": "Research Ops",
       "boundary_state": "frozen",
       "registry_state": "registered",
       "routing_state": "domain_gateway_ready",
@@ -57,13 +57,13 @@
     },
     {
       "workstream_id": "grant_ops",
-      "label": "Grant Foundry",
-      "boundary_state": "under_definition",
-      "registry_state": "not_registered",
-      "routing_state": "unknown_domain_only",
-      "current_domain_id": null,
-      "entry_surface": null,
-      "formal_domain_required": true,
+      "label": "Grant Ops",
+      "boundary_state": "frozen",
+      "registry_state": "registered",
+      "routing_state": "domain_gateway_ready",
+      "current_domain_id": "medautogrant",
+      "entry_surface": "domain_gateway",
+      "formal_domain_required": false,
       "delivery_objects": [
         "grant_direction_assessment",
         "proposal_outline",
@@ -85,11 +85,11 @@
         "existing_study_results_and_figures"
       ],
       "family_boundary_notes": [],
-      "notes": "Still under definition. This workstream stays proposal-facing: proposal-side reviewer simulation and revision remain authoring aids rather than reviewer-role ownership. It does not imply an admitted domain or a G1 registry entry. Clear top-level requests may surface as unknown_domain, but no domain handoff is allowed before explicit domain boundaries are frozen. The current Grant Foundry -> Med Auto Grant public scaffold is only top-level signal and domain-direction evidence; it is not an admitted domain gateway, not G2 discovery-ready, not G3 routed-action-ready, and not handoff-ready. It also remains under definition because no stable agent runtime surface or shared-base Auto/Human-in-the-loop convergence path has been frozen yet."
+      "notes": "Currently maps directly to MedAutoGrant. Grant Ops stays proposal-facing: proposal-side reviewer simulation and revision remain authoring aids rather than reviewer-role ownership, and successful routing still targets the domain gateway only."
     },
     {
       "workstream_id": "thesis_ops",
-      "label": "Thesis Foundry",
+      "label": "Thesis Ops",
       "boundary_state": "under_definition",
       "registry_state": "not_registered",
       "routing_state": "unknown_domain_only",
@@ -116,11 +116,11 @@
         "shared_foundation_language"
       ],
       "family_boundary_notes": [],
-      "notes": "Closely coupled with Research Foundry, but the frozen boundary here is thesis assembly rather than core research execution: chapter-draft sets, cross-chapter synchronization packs, and defense-preparation packs may reuse Research Foundry evidence and may later feed Presentation Foundry / RedCube defense-deck outputs, yet they do not collapse Thesis Foundry into Research Foundry, MedAutoScience, or RedCube AI. Thesis Foundry still requires an explicit independent domain boundary before admission, and the future Thesis Foundry domain boundary package is still incomplete. Clear top-level requests may surface as unknown_domain, but no domain handoff is allowed yet. It also remains under definition until a stable agent runtime surface and a shared-base Auto/Human-in-the-loop convergence path are explicitly declared."
+      "notes": "Closely coupled with Research Ops, but the frozen boundary here is thesis assembly rather than core research execution: chapter-draft sets, cross-chapter synchronization packs, and defense-preparation packs may reuse Research Ops evidence and may later feed Presentation Ops / RedCube defense-deck outputs, yet they do not collapse Thesis Ops into Research Ops, MedAutoScience, or RedCube AI. Thesis Ops still requires an explicit independent domain boundary before admission, and the future Thesis Ops domain boundary package is still incomplete. Clear top-level requests may surface as unknown_domain, but no domain handoff is allowed yet. It also remains under definition until a stable agent runtime surface and a shared-base Auto/Human-in-the-loop convergence path are explicitly declared."
     },
     {
       "workstream_id": "review_ops",
-      "label": "Review Foundry",
+      "label": "Review Ops",
       "boundary_state": "under_definition",
       "registry_state": "not_registered",
       "routing_state": "unknown_domain_only",
@@ -146,11 +146,11 @@
         "shared_foundation_language"
       ],
       "family_boundary_notes": [],
-      "notes": "Still under definition. Review Foundry groups reviewer-role work plus response/rebuttal coordination as a top-level semantic bundle only; that combined label does not by itself freeze a distinct domain boundary, transfer canonical truth for review artifacts into OPL, or piggyback on another admitted domain as a hidden owner. It is not yet an admitted domain, discovery target, routed-action target, or handoff-ready surface. Clear top-level requests may surface only as unknown_domain until a real domain owner is admitted; no handoff payload is built, and any future successful handoff must remain domain_gateway-only with no harness bypass. It also remains under definition because no stable agent runtime surface, shared-base Auto/Human-in-the-loop convergence path, or explicit discovery/routing/cross-domain wording declarations have been frozen for a Review Foundry domain yet."
+      "notes": "Still under definition. Review Ops groups reviewer-role work plus response/rebuttal coordination as a top-level semantic bundle only; that combined label does not by itself freeze a distinct domain boundary, transfer canonical truth for review artifacts into OPL, or piggyback on another admitted domain as a hidden owner. It is not yet an admitted domain, discovery target, routed-action target, or handoff-ready surface. Clear top-level requests may surface only as unknown_domain until a real domain owner is admitted; no handoff payload is built, and any future successful handoff must remain domain_gateway-only with no harness bypass. It also remains under definition because no stable agent runtime surface, shared-base Auto/Human-in-the-loop convergence path, or explicit discovery/routing/cross-domain wording declarations have been frozen for a Review Ops domain yet."
     },
     {
       "workstream_id": "presentation_ops",
-      "label": "Presentation Foundry",
+      "label": "Presentation Ops",
       "boundary_state": "frozen",
       "registry_state": "registered",
       "routing_state": "domain_gateway_ready",
@@ -201,7 +201,7 @@
           "relation": "same_redcube_harness_non_equivalent_to_presentation_ops"
         }
       ],
-      "notes": "Currently maps directly to RedCube AI. ppt_deck is the direct top-level family map; xiaohongshu shares RedCube but is not automatically equal to Presentation Foundry."
+      "notes": "Currently maps directly to RedCube AI. ppt_deck is the direct top-level family map; xiaohongshu shares RedCube but is not automatically equal to Presentation Ops."
     }
   ]
 }

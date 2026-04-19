@@ -7,7 +7,7 @@
 - `Codex` 是默认交互与执行宿主，也是当前开发宿主；当前活跃执行入口仍是 `Codex-only` 本地会话，未来产品 runtime substrate 方向继续指向先在 domain 仓内证明的上游 `Hermes-Agent` 集成。
 - 当前默认入口是 `GUI 产品壳 -> 工作模式选择 -> Codex 对话 / Codex 任务 / 专用 domain agent`。
 - GUI 中并列呈现三类工作模式：普通 Codex 对话、通用 Codex 任务、专用智能体模块。
-- 产品家族定义长期稳定的工作类型，当前公开家族包括 `Research Foundry`、`Grant Foundry`、`Presentation Foundry`、`Thesis Foundry`、`Review Foundry`。
+- 产品家族定义长期稳定的工作类型，当前公开家族包括 `Research Foundry`、`Grant Foundry`、`Presentation Ops`、`Thesis Ops`、`Review Ops`。
 - 设置面承载模块安装、模块升级、版本 pin、默认模式、模块健康状态、最近验证状态和 online gateway 配置。
 - 右侧 workspace 边栏承载人话进度、任务状态与交付文件视图。
 - `OPL` 持有 family-level GUI、模块目录、shared helper 与 machine-readable contract；domain runtime ownership 继续留在各自仓库。
@@ -25,7 +25,7 @@
 - `opl frontdesk bootstrap --path <workspace>` 准备本地 `OPL Atlas` Desktop 壳，并把当前 workspace 接入 `OPL` 模块与项目 registry。
 - `opl web` 是同一产品壳的本地浏览器 companion surface。
 - `opl`、`opl "<request...>"`、`opl start --project <project_id> [--mode <mode_id>]`、`opl doctor`、`opl ask`、`opl chat` 与 `opl web` 共同组成当前顶层产品前门。
-- optional hosted-shell compatibility commands 继续保留为 command-scoped hidden surface，默认入口保持 GUI / Desktop 主路径。
+- `opl frontdesk-librechat-install|status|start|stop|open` 与 `opl frontdesk-librechat-package` 保留为 hidden compatibility surface，默认入口保持 GUI 主路径。
 - `opl ask` 默认走 `Codex`；`opl chat`、`opl session resume`、显式 executor 配置和 GUI 模式切换可以进入 `Hermes-Agent` 备用在线路径。
 - 当前 grouped command matrix 已经固定成：
   - `contract ...`：`validate|workstreams|workstream|domains|domain|surfaces|surface|handoff-envelope`
@@ -37,7 +37,7 @@
   - `runtime repair-gateway`
 - GUI 的任务边栏应把 progress 状态和 files 交付区投射到当前 workspace。
 - `opl <request...>` 继续作为同一入口之上的 quick ask 路径。
-- 本地 web front desk companion 已经落地；hosted bundle、hosted package 与 optional hosted-shell export 继续作为 packaging surface，managed hosted runtime 仍是后续工作。
+- 本地 web front desk pilot 已经落地；hosted / web 前台真相：`LibreChat-first` pilot 仍未落地为最终托管前台，比较基线包含 `Chatbot UI`、`LibreChat`、`Open WebUI` 与 `LobeChat`。
 
 ## GUI 工作模式
 
@@ -54,10 +54,10 @@
 | 产品家族 | 当前实现 | 当前覆盖范围 | 公开状态 |
 | --- | --- | --- | --- |
 | `Research Foundry` | `MAS / Med Auto Science` | 医学科研、证据整理、稿件交付 | 活跃 |
-| `Grant Foundry` | `MAG / Med Auto Grant` | 医学基金方向判断、申请书写作、作者侧模拟评审 | 活跃仓线，顶层 admission / handoff wording 单独门控 |
-| `Presentation Foundry` | `RCA / RedCube AI` | 汇报、讲课、幻灯片与视觉交付 | 活跃 |
-| `Thesis Foundry` | Planned | 学位论文装配与答辩准备 | 定义阶段 |
-| `Review Foundry` | Planned | 审稿、回复与修回 | 定义阶段 |
+| `Grant Foundry` | `MAG / Med Auto Grant` | 医学基金方向判断、申请书写作、作者侧模拟评审 | 活跃 |
+| `Presentation Ops` | `RCA / RedCube AI` | 汇报、讲课、幻灯片与视觉交付 | 活跃 |
+| `Thesis Ops` | Planned | 学位论文装配与答辩准备 | 定义阶段 |
+| `Review Ops` | Planned | 审稿、回复与修回 | 定义阶段 |
 
 ## 当前实现与模块
 
@@ -76,14 +76,14 @@
 - 机器合同：`contracts/` 保留 machine-readable contract surface。
 - 参考级材料：`docs/references/` 承接实现记录、基准、推进板和边界说明。
 - 历史执行与迁移材料：从 `docs/history/omx/` 进入。
-- 公开联邦冻结面继续是 `Minimal admitted-domain federation activation package`，当前只覆盖 `MedAutoScience` 与 `RedCube AI` 两条已 admitted domain surface；formal entry 保持在本地 `TypeScript CLI`-first / gateway contract surface，runtime ownership 继续留在 admitted domain 一侧。
-- `Grant Foundry -> Med Auto Grant` 已经是活跃的医学 `Grant Foundry` 业务仓路径；在 `OPL` 顶层，它的 federation admission 与 handoff wording 继续单独门控。
+- 当前已收录的 domain surface 已经是 `MedAutoScience`、`MedAutoGrant` 与 `RedCube AI`；formal entry 保持在本地 `TypeScript CLI`-first / gateway contract surface，runtime ownership 继续留在 admitted domain 一侧。
+- `Grant Foundry -> Med Auto Grant` 现在已经对应到 `MedAutoGrant` 这条已收录的 `Grant Ops` domain gateway 入口。
 
 ## 当前阶段
 
 - 把公开品牌主线稳定为 `产品壳 + 产品家族 + 当前实现 / 模块`。
 - 把 GUI 三类工作模式固定为普通 Codex 对话、通用 Codex 任务、专用智能体模块。
-- 把 `Research Foundry`、`Grant Foundry`、`Presentation Foundry`、`Thesis Foundry`、`Review Foundry` 固定为用户可理解的产品家族层。
+- 把 `Research Foundry`、`Grant Foundry`、`Presentation Ops`、`Thesis Ops`、`Review Ops` 固定为用户可理解的产品家族层。
 - 把设置面推进成模块安装、升级、版本 pin、健康状态、默认模式和 online gateway 配置的统一入口。
 - 把右侧边栏推进成人话 progress + files deliverables 的统一入口。
 - 把 `MAS`、`MAG`、`RCA` 的 module readiness、启动入口、最近运行状态和升级状态统一投射到 `OPL`。
