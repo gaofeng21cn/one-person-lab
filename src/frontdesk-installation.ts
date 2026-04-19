@@ -5,10 +5,21 @@ import { fileURLToPath } from 'node:url';
 
 import { resolveCodexBinary } from './codex.ts';
 import { GatewayContractError } from './contracts.ts';
+import { buildFrontDeskEndpoints } from './frontdesk-paths.ts';
+import {
+  buildFrontDeskWorkspaceRootStatus,
+  readFrontDeskUpdateChannel,
+  readFrontDeskWorkspaceRoot,
+  type FrontDeskUpdateChannel,
+  writeFrontDeskUpdateChannel,
+  writeFrontDeskWorkspaceRoot,
+} from './frontdesk-preferences.ts';
+import { readFrontDeskRuntimeModes } from './frontdesk-runtime-modes.ts';
 import { ensureFrontDeskStateDir, resolveFrontDeskStatePaths } from './frontdesk-state.ts';
-import { getFrontDeskServiceStatus } from './frontdesk-service.ts';
+import { getFrontDeskServiceStatus, installFrontDeskService } from './frontdesk-service.ts';
 import { inspectHermesRuntime } from './hermes.ts';
 import { readLocalCodexDefaultsIfAvailable } from './local-codex-defaults.ts';
+import { runProductEntryRepairHermesGateway } from './product-entry.ts';
 import type { GatewayContracts } from './types.ts';
 
 export type FrontDeskModuleId =
@@ -22,6 +33,19 @@ export type FrontDeskModuleAction =
   | 'update'
   | 'reinstall'
   | 'remove';
+
+export type FrontDeskEngineId = 'codex' | 'hermes';
+
+export type FrontDeskEngineAction =
+  | 'install'
+  | 'update'
+  | 'reinstall'
+  | 'remove';
+
+export type FrontDeskSystemAction =
+  | 'repair'
+  | 'reinstall_support'
+  | 'update_channel';
 
 type FrontDeskModuleInstallOrigin =
   | 'managed_root'
@@ -43,6 +67,13 @@ type CommandResult = {
   exitCode: number;
   stdout: string;
   stderr: string;
+};
+
+type FrontDeskShellActionSpec = {
+  strategy: 'env_override' | 'builtin' | 'manual_required';
+  command_preview: string[];
+  note: string | null;
+  executable: ((cwd?: string) => CommandResult) | null;
 };
 
 type GitRepoSnapshot = {
@@ -142,6 +173,21 @@ function runCommand(command: string, args: string[], cwd?: string): CommandResul
     stdout: result.stdout ?? '',
     stderr: result.stderr ?? '',
   };
+}
+
+function normalizeOutput(stdout: string, stderr = '') {
+  return [stdout, stderr]
+    .filter((chunk) => chunk.trim().length > 0)
+    .join('\n')
+    .trim();
+}
+
+function getShellBinary() {
+  return process.env.SHELL?.trim() || '/bin/bash';
+}
+
+function runShellCommand(command: string, cwd?: string): CommandResult {
+  return runCommand(getShellBinary(), ['-lc', command], cwd);
 }
 
 function runGit(args: string[], cwd?: string) {
@@ -348,6 +394,102 @@ function resolveCodexVersion() {
   };
 }
 
+function buildEngineActionEnvKey(engineId: FrontDeskEngineId, action: FrontDeskEngineAction) {
+  return `OPL_${engineId.toUpperCase()}_${action.toUpperCase()}_COMMAND`;
+}
+
+function resolveHermesInstallCommand() {
+  return 'curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash';
+}
+
+function resolveBuiltinEngineActionCommand(
+  engineId: FrontDeskEngineId,
+  action: FrontDeskEngineAction,
+) {
+  if (engineId === 'codex') {
+    switch (action) {
+      case 'install':
+      case 'update':
+      case 'reinstall':
+        return 'npm install -g @openai/codex';
+      case 'remove':
+        return 'npm uninstall -g @openai/codex';
+    }
+  }
+
+  const hermes = inspectHermesRuntime();
+
+  if (engineId === 'hermes') {
+    switch (action) {
+      case 'install':
+      case 'reinstall':
+        return resolveHermesInstallCommand();
+      case 'update':
+        return hermes.binary ? `${hermes.binary.path} update` : null;
+      case 'remove':
+        return null;
+    }
+  }
+
+  return null;
+}
+
+function resolveShellActionSpec(
+  envOverride: string | undefined,
+  builtinCommand: string | null,
+  manualNote: string,
+): FrontDeskShellActionSpec {
+  const normalizedOverride = normalizeOptionalString(envOverride);
+  if (normalizedOverride) {
+    const executablePath = path.resolve(normalizedOverride);
+    if (!/\s/.test(normalizedOverride) && fs.existsSync(executablePath) && fs.statSync(executablePath).isFile()) {
+      return {
+        strategy: 'env_override',
+        command_preview: [executablePath],
+        note: null,
+        executable: (cwd?: string) => runCommand(executablePath, [], cwd),
+      };
+    }
+
+    return {
+      strategy: 'env_override',
+      command_preview: [getShellBinary(), '-lc', normalizedOverride],
+      note: null,
+      executable: (cwd?: string) => runShellCommand(normalizedOverride, cwd),
+    };
+  }
+
+  if (builtinCommand) {
+    return {
+      strategy: 'builtin',
+      command_preview: [getShellBinary(), '-lc', builtinCommand],
+      note: null,
+      executable: (cwd?: string) => runShellCommand(builtinCommand, cwd),
+    };
+  }
+
+  return {
+    strategy: 'manual_required',
+    command_preview: [],
+    note: manualNote,
+    executable: null,
+  };
+}
+
+function resolveEngineActionSpec(
+  engineId: FrontDeskEngineId,
+  action: FrontDeskEngineAction,
+): FrontDeskShellActionSpec {
+  const envOverride = process.env[buildEngineActionEnvKey(engineId, action)];
+  const builtinCommand = resolveBuiltinEngineActionCommand(engineId, action);
+  const manualNote =
+    engineId === 'hermes' && action === 'remove'
+      ? 'Hermes remove does not currently have a safe cross-platform uninstall command. Use the installer-specific removal path manually.'
+      : `No built-in ${engineId} ${action} command is configured. Set ${buildEngineActionEnvKey(engineId, action)} to enable it.`;
+
+  return resolveShellActionSpec(envOverride, builtinCommand, manualNote);
+}
+
 export async function buildFrontDeskEnvironment(contracts: GatewayContracts) {
   const statePaths = ensureFrontDeskStateDir(resolveFrontDeskStatePaths());
   const codexDefaults = readLocalCodexDefaultsIfAvailable();
@@ -411,14 +553,122 @@ export async function buildFrontDeskEnvironment(contracts: GatewayContracts) {
         state_dir: statePaths.state_dir,
         modules_root: resolveManagedModulesRoot(),
         workspace_registry_file: statePaths.workspace_registry_file,
+        workspace_root_file: statePaths.workspace_root_file,
         session_ledger_file: statePaths.session_ledger_file,
         runtime_modes_file: statePaths.runtime_modes_file,
+        update_channel_file: statePaths.update_channel_file,
         service_config_file: statePaths.service_config_file,
       },
       notes: [
         'OPL owns the user-facing initialization surface and reports whether the local Codex and Hermes engines are ready to be reused.',
         'Local frontdesk service is the repo-tracked adapter/API surface for external GUI shells.',
         'Domain modules are tracked separately so the GUI can manage install and upgrade actions from one settings area.',
+      ],
+    },
+  };
+}
+
+export async function buildFrontDeskInitialize(contracts: GatewayContracts) {
+  const environmentPayload = await buildFrontDeskEnvironment(contracts);
+  const modulesPayload = buildFrontDeskModules();
+  const settings = readFrontDeskRuntimeModes();
+  const workspaceRoot = readFrontDeskWorkspaceRoot();
+  const updateChannel = readFrontDeskUpdateChannel();
+  const endpoints = buildFrontDeskEndpoints();
+
+  const checklist = [
+    {
+      item_id: 'codex',
+      label: 'Codex CLI',
+      status: environmentPayload.frontdesk_environment.core_engines.codex.health_status,
+    },
+    {
+      item_id: 'workspace_root',
+      label: 'Workspace Root',
+      status: workspaceRoot.health_status,
+    },
+    {
+      item_id: 'frontdesk_service',
+      label: 'Local Frontdesk Service',
+      status: environmentPayload.frontdesk_environment.local_frontdesk.service_health,
+    },
+  ];
+
+  const overallState =
+    environmentPayload.frontdesk_environment.core_engines.codex.health_status === 'ready'
+      && workspaceRoot.health_status === 'ready'
+      ? 'ready_to_finalize'
+      : 'attention_needed';
+
+  const recommendedNextAction =
+    workspaceRoot.health_status !== 'ready'
+      ? {
+          action_id: 'set_workspace_root',
+          label: 'Choose workspace root',
+          endpoint: endpoints.workspace_root,
+        }
+      : environmentPayload.frontdesk_environment.core_engines.codex.health_status !== 'ready'
+        ? {
+            action_id: 'install_or_configure_codex',
+            label: 'Install or configure Codex',
+            endpoint: endpoints.frontdesk_engine_action,
+          }
+        : {
+            action_id: 'open_environment_settings',
+            label: 'Review environment and modules',
+            endpoint: endpoints.frontdesk_initialize,
+          };
+
+  return {
+    version: 'g2',
+    frontdesk_initialize: {
+      surface_id: 'opl_frontdesk_initialize',
+      overall_state: overallState,
+      checklist,
+      core_engines: environmentPayload.frontdesk_environment.core_engines,
+      domain_modules: modulesPayload.frontdesk_modules,
+      settings: {
+        interaction_mode: settings.interaction_mode,
+        execution_mode: settings.execution_mode,
+        endpoint: endpoints.frontdesk_settings,
+        action_endpoint: endpoints.frontdesk_settings,
+      },
+      workspace_root: {
+        ...workspaceRoot,
+        endpoint: endpoints.workspace_root,
+        action_endpoint: endpoints.workspace_root,
+      },
+      system: {
+        update_channel: updateChannel.channel,
+        local_frontdesk: environmentPayload.frontdesk_environment.local_frontdesk,
+        actions: [
+          {
+            action_id: 'repair',
+            endpoint: endpoints.frontdesk_system_action,
+          },
+          {
+            action_id: 'reinstall_support',
+            endpoint: endpoints.frontdesk_system_action,
+          },
+          {
+            action_id: 'update_channel',
+            endpoint: endpoints.frontdesk_system_action,
+          },
+        ],
+      },
+      endpoints: {
+        frontdesk_initialize: endpoints.frontdesk_initialize,
+        frontdesk_environment: endpoints.frontdesk_environment,
+        frontdesk_modules: endpoints.frontdesk_modules,
+        frontdesk_settings: endpoints.frontdesk_settings,
+        frontdesk_engine_action: endpoints.frontdesk_engine_action,
+        workspace_root: endpoints.workspace_root,
+        frontdesk_system_action: endpoints.frontdesk_system_action,
+      },
+      recommended_next_action: recommendedNextAction,
+      notes: [
+        'Initialize OPL reuses the same truth surfaces as long-lived settings management.',
+        'Workspace root and update channel are stored in OPL-managed state files.',
       ],
     },
   };
@@ -542,5 +792,164 @@ export function runFrontDeskModuleAction(
       status: 'completed',
       module: inspectModule(spec),
     },
+  };
+}
+
+function findEngineOrThrow(engineId: string): FrontDeskEngineId {
+  const normalized = engineId.trim().toLowerCase();
+  if (normalized === 'codex' || normalized === 'hermes') {
+    return normalized;
+  }
+
+  throw new GatewayContractError(
+    'cli_usage_error',
+    'Unknown OPL engine id.',
+    {
+      engine_id: engineId,
+      available_engine_ids: ['codex', 'hermes'],
+    },
+    2,
+  );
+}
+
+export async function runFrontDeskEngineAction(
+  contracts: GatewayContracts,
+  action: FrontDeskEngineAction,
+  engineId: string,
+) {
+  const resolvedEngineId = findEngineOrThrow(engineId);
+  const spec = resolveEngineActionSpec(resolvedEngineId, action);
+
+  if (!spec.executable) {
+    return {
+      version: 'g2',
+      frontdesk_engine_action: {
+        engine_id: resolvedEngineId,
+        action,
+        status: 'manual_required',
+        strategy: spec.strategy,
+        command_preview: spec.command_preview,
+        note: spec.note,
+        stdout: '',
+        stderr: '',
+        frontdesk_environment: (await buildFrontDeskEnvironment(contracts)).frontdesk_environment,
+      },
+    };
+  }
+
+  const result = spec.executable();
+  if (result.exitCode !== 0) {
+    throw new GatewayContractError(
+      'build_command_failed',
+      `Failed to run ${resolvedEngineId} ${action} command for OPL frontdesk.`,
+      {
+        engine_id: resolvedEngineId,
+        action,
+        command_preview: spec.command_preview,
+        stdout: result.stdout,
+        stderr: result.stderr,
+      },
+    );
+  }
+
+  return {
+    version: 'g2',
+    frontdesk_engine_action: {
+      engine_id: resolvedEngineId,
+      action,
+      status: 'completed',
+      strategy: spec.strategy,
+      command_preview: spec.command_preview,
+      note: spec.note,
+      stdout: normalizeOutput(result.stdout, result.stderr),
+      stderr: result.stderr,
+      frontdesk_environment: (await buildFrontDeskEnvironment(contracts)).frontdesk_environment,
+    },
+  };
+}
+
+type FrontDeskSystemActionInput = Partial<{
+  channel: FrontDeskUpdateChannel;
+  host: string;
+  port: number;
+  workspacePath: string;
+  sessionsLimit: number;
+  basePath: string;
+}>;
+
+export async function runFrontDeskSystemAction(
+  contracts: GatewayContracts,
+  action: FrontDeskSystemAction,
+  input: FrontDeskSystemActionInput = {},
+) {
+  if (action === 'repair') {
+    const repairPayload = runProductEntryRepairHermesGateway();
+    return {
+      version: 'g2',
+      frontdesk_system_action: {
+        action,
+        status: 'completed',
+        update_channel: readFrontDeskUpdateChannel().channel,
+        workspace_root: readFrontDeskWorkspaceRoot(),
+        details: repairPayload.product_entry,
+      },
+    };
+  }
+
+  if (action === 'reinstall_support') {
+    const servicePayload = await installFrontDeskService(contracts, {
+      host: input.host,
+      port: input.port,
+      workspacePath: input.workspacePath ?? readFrontDeskWorkspaceRoot().selected_path ?? process.cwd(),
+      sessionsLimit: input.sessionsLimit,
+      basePath: input.basePath,
+    });
+    return {
+      version: 'g2',
+      frontdesk_system_action: {
+        action,
+        status: 'completed',
+        update_channel: readFrontDeskUpdateChannel().channel,
+        workspace_root: readFrontDeskWorkspaceRoot(),
+        details: servicePayload.frontdesk_service,
+      },
+    };
+  }
+
+  if (!input.channel) {
+    const current = readFrontDeskUpdateChannel();
+    return {
+      version: 'g2',
+      frontdesk_system_action: {
+        action,
+        status: 'completed',
+        update_channel: current.channel,
+        workspace_root: readFrontDeskWorkspaceRoot(),
+        details: current,
+      },
+    };
+  }
+
+  const payload = writeFrontDeskUpdateChannel(input.channel);
+  return {
+    version: 'g2',
+    frontdesk_system_action: {
+      action,
+      status: 'completed',
+      update_channel: payload.channel,
+      workspace_root: readFrontDeskWorkspaceRoot(),
+      details: payload,
+    },
+  };
+}
+
+export function buildFrontDeskWorkspaceRootSurface() {
+  return buildFrontDeskWorkspaceRootStatus();
+}
+
+export function writeFrontDeskWorkspaceRootSurface(workspaceRoot: string) {
+  return {
+    version: 'g2',
+    workspace_root: writeFrontDeskWorkspaceRoot(workspaceRoot),
   };
 }

@@ -5,14 +5,18 @@ export type FrontDeskEndpoints = {
   frontdesk_readiness: string;
   frontdesk_settings: string;
   frontdesk_environment: string;
+  frontdesk_initialize: string;
   frontdesk_modules: string;
+  frontdesk_engine_action: string;
   frontdesk_module_action: string;
+  frontdesk_system_action: string;
   project_progress: string;
   domain_manifests: string;
   hosted_bundle: string;
   hosted_package: string;
   projects: string;
   workspace_status: string;
+  workspace_root: string;
   workspace_catalog: string;
   workspace_bind: string;
   workspace_activate: string;
@@ -53,14 +57,18 @@ export function buildFrontDeskEndpoints(basePath = ''): FrontDeskEndpoints {
     frontdesk_readiness: `${apiBase}/frontdesk/readiness`,
     frontdesk_settings: `${apiBase}/frontdesk/settings`,
     frontdesk_environment: `${apiBase}/frontdesk/environment`,
+    frontdesk_initialize: `${apiBase}/frontdesk/initialize`,
     frontdesk_modules: `${apiBase}/frontdesk/modules`,
+    frontdesk_engine_action: `${apiBase}/frontdesk/engine/action`,
     frontdesk_module_action: `${apiBase}/frontdesk/module/action`,
+    frontdesk_system_action: `${apiBase}/frontdesk/system/action`,
     project_progress: `${apiBase}/project-progress`,
     domain_manifests: `${apiBase}/domain/manifests`,
     hosted_bundle: `${apiBase}/frontdesk/hosted-bundle`,
     hosted_package: `${apiBase}/frontdesk/hosted-package`,
     projects: `${apiBase}/projects`,
     workspace_status: `${apiBase}/status/workspace`,
+    workspace_root: `${apiBase}/workspace/root`,
     workspace_catalog: `${apiBase}/workspace/list`,
     workspace_bind: `${apiBase}/workspace/bind`,
     workspace_activate: `${apiBase}/workspace/activate`,

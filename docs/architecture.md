@@ -27,10 +27,10 @@
   - 提供 admitted domain manifests、direct-entry locator launch、顶层请求解析与边界解释
 - `opl status workspace|runtime|dashboard`
   - 提供 workspace、runtime 与 frontdesk aggregate 观察面
-- `opl workspace projects|list|bind|activate|archive`
-  - 提供 file-backed workspace registry 与顶层到 domain 之间的 direct-entry locator 管理
-- `opl frontdesk manifest|entry-guide|readiness|environment|modules|module *|domain-wiring|hosted-bundle|hosted-package|service *`
-  - 提供 hosted-friendly shell contract、family wiring truth、environment/modules 管理、pilot bundle、hosted package 与 adapter service 管理
+- `opl workspace projects|list|bind|activate|archive|root|root set|root doctor`
+  - 提供 file-backed workspace registry，以及 family workspace root 与顶层到 domain 之间的 direct-entry locator 管理
+- `opl frontdesk manifest|entry-guide|readiness|initialize|environment|modules|module *|engine *|repair|reinstall-support|update-channel|domain-wiring|hosted-bundle|hosted-package|service *`
+  - 提供 hosted-friendly shell contract、family wiring truth、initialize/settings 共用的 environment/modules/system 管理、pilot bundle、hosted package 与 adapter service 管理
 - `opl session list|resume|logs|ledger`
   - 提供 landed local shell 的会话、日志与 OPL-owned session attribution
 - `opl runtime repair-gateway`
@@ -38,7 +38,7 @@
 - `opl web`
   - 提供本地 frontdesk adapter service；根路由 `/` 返回 machine-readable root payload，供外部 GUI overlay 读取
 
-代表性显式命令包括 `opl contract validate`、`opl domain manifests`、`opl status runtime`、`opl workspace bind`、`opl frontdesk entry-guide`、`opl session ledger` 与 `opl runtime repair-gateway`。
+代表性显式命令包括 `opl contract validate`、`opl domain manifests`、`opl status runtime`、`opl workspace bind`、`opl workspace root`、`opl frontdesk initialize`、`opl frontdesk entry-guide`、`opl frontdesk update-channel`、`opl session ledger` 与 `opl runtime repair-gateway`。
 
 但它还不是 repo-tracked 的完整 GUI 产品前台。
 当前这层 GUI 路线已经冻结为 `OPL headless adapter in main repo + external overlay repo`；`Onyx` 只作为上游 benchmark / visual target，真正的 GUI 主线应在独立 overlay 仓里消费这些 truth surfaces。

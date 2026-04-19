@@ -63,17 +63,21 @@
 - `opl frontdesk manifest`
 - `opl frontdesk entry-guide`
 - `opl frontdesk readiness`
+- `opl frontdesk initialize`
 - `opl frontdesk domain-wiring`
 - `opl frontdesk hosted-bundle`
 - `opl frontdesk hosted-package`
 - `opl frontdesk environment`
+- `opl frontdesk engine install|update|reinstall|remove`
+- `opl frontdesk repair|reinstall-support|update-channel`
 - `opl frontdesk modules`
 - `opl frontdesk module install|update|reinstall|remove`
+- `opl workspace root|root set|root doctor`
 
 当前含义：
 
 - 外部 GUI overlay、hosted / web 前台与 CLI 已经可以共用一套 truth surfaces。
-- environment 与 modules 管理已经进入 `OPL` 主线，而不是散落在外部脚本里。
+- initialize、environment、modules、workspace root 与 system maintenance 已经进入同一条 `OPL` 主线，而不是散落在首启脚本和外部设置片段里。
 
 ### F3. 已退役的错误路线
 
@@ -118,12 +122,13 @@
 - 当前已具备 hosted 预备能力。
 - 正式 hosted front desk 还需要继续围绕同一套 truth surfaces 收口。
 
-### W3. 模块管理还缺更完整的产品体验
+### W3. 初始化与设置体验还缺更完整的产品体验
 
 缺口：
 
+- `Initialize OPL` 已经有稳定 action surface，首启向导与 overlay settings 还需要正式接线。
 - 版本展示、升级提示、健康状态和最近验证结果还要继续丰富。
-- GUI settings 还需要把模块操作做成更顺手的管理界面。
+- GUI settings 还需要把 core engines、workspace root、模块操作和 system actions 做成更顺手的管理界面。
 
 ## 当前进行中
 
@@ -138,25 +143,27 @@
 
 方向：
 
-- 让 GUI 直接消费 `frontdesk environment` 和 `frontdesk modules`。
+- 让 GUI 直接消费 `frontdesk initialize`、`frontdesk environment`、`frontdesk modules`、`workspace root` 与 `frontdesk system action`。
 - 让模块安装、升级、重装和移除都从 settings 进入。
+- 让 workspace root、update channel、repair / reinstall-support 与 core engine actions 在同一设置面闭环。
 
-### I3. 模块直达入口对齐
+### I3. 模块与环境直达入口对齐
 
 方向：
 
 - 继续把 `Med Auto Science`、`Med Deep Scientist`、`Med Auto Grant`、`RedCube AI` 的安装路径、状态和入口投射到统一模块目录。
 - 让 `Codex` 默认执行与 `Hermes-Agent` 备用模式在同一设置面完成切换。
+- 让 `Codex` / `Hermes-Agent` / workspace root / update channel 都通过同一套 adapter action surface 被 overlay 消费。
 
 ## 推荐下一条执行 issue
 
-- 标题：`Create opl-onyx-shell and wire it to OPL adapter surfaces`
-- 目标：在独立 overlay 仓里接入 workspace / task / progress / files / settings 主线，让 GUI 真正落到冻结路线。
+- 标题：`Wire Initialize OPL and settings cards to OPL adapter surfaces`
+- 目标：在独立 overlay 仓里接入 initialize、workspace / task / progress / files / settings 主线，让 GUI 真正落到冻结路线。
 - 边界：`OPL` 主仓继续只维护 adapter/API truth，不回头长自研 GUI。
 
 ## 下一棒
 
 1. 继续推进 overlay 仓的布局和视觉落地。
-2. 把 settings 接到 `environment / modules`。
+2. 把 `Initialize OPL`、workspace root、core engines、modules、system actions 接到 overlay settings。
 3. 把 progress feed 和 files deliverables 边栏继续压成稳定产品面。
 4. 让 overlay 仓与后续 hosted / web 前台继续共用同一套 truth surfaces。
