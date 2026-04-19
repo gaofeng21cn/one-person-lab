@@ -8,22 +8,22 @@
 
 <h1 align="center">One Person Lab</h1>
 
-<p align="center"><strong>The product shell and module manager for one-person-lab agents</strong></p>
-<p align="center">GUI First · Codex Native · Domain Agent Ready</p>
+<p align="center"><strong>A unified workbench and module manager for one-person labs</strong></p>
+<p align="center">Research work · Grant writing · Presentation deliverables</p>
 
 <table>
   <tr>
     <td width="33%" valign="top">
       <strong>Who It Serves</strong><br/>
-      Clinicians, researchers, grant writers, educators, and small teams who want one GUI for research, grant, and deliverable work
+      Clinicians, researchers, PIs, educators, and small teams who want one place for long-running work, file delivery, and specialized workflows
     </td>
     <td width="33%" valign="top">
-      <strong>What It Covers</strong><br/>
-      General Codex conversation, executable Codex tasks, and specialized work across research, grants, and presentations
+      <strong>What It Solves</strong><br/>
+      How research work keeps moving, how grant packages are organized, how presentation materials are delivered, and how progress stays visible
     </td>
     <td width="33%" valign="top">
-      <strong>Public Role</strong><br/>
-      `OPL` is the product shell that chooses a work mode, manages modules, and keeps long-running work plus files visible from one place
+      <strong>Current Role</strong><br/>
+      `OPL` is the unified workbench that organizes workflows, modules, progress feedback, and deliverable files
     </td>
   </tr>
 </table>
@@ -32,49 +32,64 @@
   <img src="assets/branding/opl-architecture-blueprint.svg" alt="OPL architecture blueprint" width="100%" />
 </p>
 
-> `OPL` is a GUI-first product shell for a one-person lab. It organizes work in three public layers: product shell, product families, and current implementations. The current strongest implementations are medical research, medical grant writing, and visual deliverables.
+> `OPL` is a unified workbench for a one-person lab. It brings everyday collaboration, specialized workflows, execution visibility, and file delivery into one place.
 
-## Current Coverage
+## What People Use It For
 
-- Open one GUI and choose the right working mode before starting.
-- Use ordinary Codex conversation for discussion, reading, planning, and quick clarification.
-- Turn a goal into a general Codex task when the work needs files, commands, or multi-step execution.
-- Send specialized work to product families such as `Research Foundry`, `Grant Foundry`, and `Presentation Ops`.
-- Track progress and produced files in the workspace side rail.
-- Manage installed modules, local entry points, versions, and upgrades from settings.
+- Discuss ideas, break work into steps, and keep ongoing tasks moving.
+- Run research workflows and see recent progress, current status, and produced files.
+- Organize grant directions, proposal drafts, revision material, and supporting documents.
+- Produce lecture decks, lab talks, reports, defense materials, and other deliverables.
+- Manage tasks, files, and installed modules inside the same workspace.
 
-## GUI Work Modes
+## Current Product Families
 
-| Mode | Primary agent | Use it for | Current status |
+| Product family | Current implementation | Best for | Typical deliverables |
 | --- | --- | --- | --- |
-| Ordinary Codex conversation | Codex | Discussion, explanation, lightweight planning, and quick analysis | Default GUI mode |
-| General Codex task | Codex task runner | Repository work, file edits, verification, and longer local tasks | Default execution mode |
-| Specialized product-family modules | `MAS`, `MAG`, `RCA` | Research, grant work, and visual deliverables | Active module family |
+| `Research Foundry` | [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience) | Medical research, evidence organization, manuscript preparation | Analysis packages, evidence packages, manuscripts |
+| `Grant Foundry` | [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) | Grant direction setting, proposal writing, author-side revision work | Proposals, outlines, revision packs |
+| `Presentation Ops` | [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) | Lectures, lab talks, reports, defense materials | Slide decks, scripts, presentation packages |
+| `Thesis Ops` | Planned | Thesis assembly and defense preparation | Chapter drafts, defense materials |
+| `Review Ops` | Planned | Review, rebuttal, and revision work | Review comments, response drafts, revision plans |
 
-The GUI treats these three modes as peers. `Hermes-Agent` is exposed separately as the explicit backup online gateway.
-The active execution path remains `Codex-only` local sessions as the current development host, while the preferred future substrate direction is a true upstream `Hermes-Agent` integration proved in a domain repository first.
+## What Lives In One Workbench
 
-## Product Families
+| Area | What the user sees | Current status |
+| --- | --- | --- |
+| Everyday collaboration | Discussion, reading, planning, quick clarification | Default entry |
+| General tasks | Multi-step task progress, file handling, result checks | Default execution area |
+| Specialized workflows | Research, grant, and presentation product families | Expanding |
 
-| Product family | Current implementation | Current scope | Status |
-| --- | --- | --- | --- |
-| Research Foundry | `MAS` / [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience) | Medical research, evidence packaging, manuscript delivery | Active |
-| Grant Foundry | `MAG` / [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) | Medical grant directions, proposal writing, author-side reviewer simulation | Active repository line |
-| Presentation Ops | `RCA` / [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) | Reports, lecture decks, slides, and visual deliverables | Active |
-| Thesis Ops | Planned | Dissertation assembly and defense preparation | Definition stage |
-| Review Ops | Planned | Review, rebuttal, and revision workflows | Definition stage |
+## Progress And Files
 
-`OPL` keeps the shell stable, product families define the kind of work, and current implementations carry domain-specific truth. The current active implementations happen to be medical; the shell itself is organized by work family and can host additional domains over time.
+The workspace side rail should make long-running work easy to follow with clear execution visibility:
 
-## Progress, Files, And Settings
+- Human-readable progress such as accepted, gathering material, drafting, running, waiting for review, and delivered.
+- Task- and workspace-level file organization for reports, decks, tables, and other outputs.
+- Recent progress, current status, and produced files in one place so work can be resumed naturally.
+- Module status, versioning, upgrades, and installation state from settings.
 
-The right-side workspace rail and settings area should make long-running work easy to follow with clear execution visibility:
+## OPL In Plain Language
 
-- Human-readable progress updates such as accepted, gathering material, drafting, running, waiting for review, and delivering files.
-- A task-oriented file area that keeps drafts, reports, slides, tables, and other deliverables visible per workspace.
-- Resume-ready status cards that connect recent progress, running tasks, and the files already produced.
-- A module catalog that shows installed implementations, health, upgrades, pinned versions, and default launch preferences.
-- Explicit online gateway configuration for `Hermes-Agent` backup runs.
+`OPL` owns the unified workbench itself.
+Product families define the kind of work, and current implementations carry the specialized capability and delivery surface.
+
+```text
+Human
+  -> OPL Workspace
+      -> Everyday Collaboration
+      -> General Tasks
+      -> Research Foundry -> Med Auto Science
+      -> Grant Foundry -> Med Auto Grant
+      -> Presentation Ops -> RedCube AI
+      -> Progress / Files / Settings
+```
+
+That means:
+
+- `OPL` owns the entry surface, workspace, module catalog, progress feedback, and file-delivery area.
+- Product families keep research, grant, presentation, thesis, and review work legible.
+- Current implementations carry the real workflow and deliverables for each domain.
 
 ## How To Read This Repository
 
@@ -82,79 +97,16 @@ The right-side workspace rail and settings area should make long-running work ea
 2. Technical readers and planners should continue to [Docs Guide](./docs/README.md), then read [Project](./docs/project.md), [Status](./docs/status.md), [Architecture](./docs/architecture.md), [Invariants](./docs/invariants.md), and [Decisions](./docs/decisions.md).
 3. Developers and maintainers should use [Contracts Overview](./contracts/README.md), [Reference Index](./docs/references/README.md), and the tracked records under `docs/specs/`, `docs/plans/`, and `docs/history/omx/`.
 
-## Plain-Language Architecture
-
-`OPL` is the user-facing shell above Codex and the product families.
-Its job is to present the work modes, keep families and modules manageable, and make domain implementations available through one lab workspace.
-
-```text
-Human
-  -> OPL GUI Product Shell
-      -> Codex Conversation
-      -> General Codex Task
-      -> Product Families
-          -> Research Foundry -> MAS / Med Auto Science
-          -> Grant Foundry -> MAG / Med Auto Grant
-          -> Presentation Ops -> RCA / RedCube AI
-      -> Settings: Modules / Upgrades / Health / Gateway
-      -> Hermes-Agent Online Gateway
-```
-
-In plain language:
-
-- `OPL` owns the GUI shell, mode picker, progress view, file area, settings, and upgrade path.
-- Product families define the durable work categories: research, grants, presentation, thesis, and review.
-- Current implementations such as `MAS`, `MAG`, and `RCA` carry the domain-specific capability and repository truth.
-- Codex remains the default conversation and general task engine.
-- `Hermes-Agent` stays available as backup mode and online gateway.
-
 <details>
-  <summary><strong>Technical Notes And Current Implementation Truth</strong></summary>
+  <summary><strong>Technical Reading Path</strong></summary>
 
-`OPL` now ships a local direct product-entry shell whose default front door is `opl`.
-The frozen product-entry choice is `external kernel, managed by OPL product packaging`, not requiring users to manually install and understand `Hermes-Agent`.
-The current user-facing chain is `User -> OPL Product Entry -> OPL Gateway -> Domain Handoff -> Domain Product Entry / Domain Gateway`.
-The local web front desk pilot is landed, while the hosted web front desk is still not ready.
+Implementation details, runtime truth, interface boundaries, and historical decisions live in:
 
-`OPL` currently materializes the product shell in local CLI and GUI-facing surfaces.
-The public product direction is `GUI -> mode selection -> Codex or domain module`.
-`opl frontdesk bootstrap --path <workspace>` prepares the local `OPL Atlas` Desktop shell.
-`opl web` remains the local browser companion.
-`opl`, `opl "<request...>"`, `opl start`, `opl ask`, and `opl chat` remain shell surfaces around the same product entry.
-The grouped CLI matrix now stays aligned with the landed front door:
+- [Docs Guide](./docs/README.md)
+- [Project](./docs/project.md)
+- [Status](./docs/status.md)
+- [Architecture](./docs/architecture.md)
 
-- top-level shell: `opl`, `opl "<request...>"`, `opl start`, `opl doctor`, `opl ask`, `opl chat`, `opl web`
-- contract surfaces: `opl contract validate|workstreams|workstream|domains|domain|surfaces|surface|handoff-envelope`
-- domain surfaces: `opl domain manifests|launch|resolve-request|explain-boundary`
-- status surfaces: `opl status workspace|runtime|dashboard`
-- workspace surfaces: `opl workspace projects|list|bind|activate|archive`
-- frontdesk surfaces: `opl frontdesk manifest|entry-guide|readiness|domain-wiring|hosted-bundle|hosted-package|service *|bootstrap`
-- session surfaces: `opl session list|resume|logs|ledger`
-- runtime ops: `opl runtime repair-gateway`
-
-Representative grouped commands now read as `opl contract validate`, `opl domain manifests`, `opl status runtime`, `opl workspace bind`, `opl frontdesk entry-guide`, `opl session ledger`, and `opl runtime repair-gateway`.
-
-`opl "<request...>"` remains the quick-ask shell path around the same direct product entry.
-
-Codex is the default engine for ordinary conversation and general local tasks.
-Domain agents remain independently owned modules with their own repository truth.
-`Hermes-Agent` is the explicit backup mode and online gateway for selected remote or alternate runtime paths.
-
-The shared architectural language under `OPL` remains the `Unified Harness Engineering Substrate`, with its most important shared pieces converging into the [Shared Runtime Contract](./docs/shared-runtime-contract.md) and the [Shared Domain Contract](./docs/shared-domain-contract.md).
-The module catalog and settings surface should expose the installed domain agents, their health, and their upgrade state.
-
-`Phase 1 / G2 release-closeout` stays frozen as the top-level public baseline for the shared runtime layer, hosted entry surfaces, and any real `Hermes-Agent` rollout.
-The current public federation freeze is the `Minimal admitted-domain federation activation package`. It covers the two already admitted domain surfaces, `MedAutoScience` and `RedCube AI`, while the formal entry remains the same local `TypeScript CLI`-first / gateway contract surface and runtime ownership stays with the admitted domains.
-`Grant Foundry -> Med Auto Grant` is the active grant-domain repository line. At the `OPL` layer, its top-level federation admission and domain handoff wording remains separately gated.
-
-Current family state is intentionally uneven and should be described honestly:
-
-- `Research Foundry -> MAS / Med Auto Science` is the active medical research implementation.
-- `Grant Foundry -> MAG / Med Auto Grant` is the active medical grant implementation.
-- `Presentation Ops -> RCA / RedCube AI` is the active visual-deliverable implementation.
-- Future thesis and review modules stay in definition.
-
-If you need the full technical reading path, continue to the [Docs Guide](./docs/README.md).
 </details>
 
 ## Further Reading

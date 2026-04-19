@@ -130,7 +130,7 @@ It explains how or why a freeze happened, while [Status](./status.md) remains th
 
 ## Governance
 
-- Governance rules live in [series-doc-governance-checklist.md](./references/series-doc-governance-checklist.md), the technical working set, and the repo-tracked contract/doc surfaces.
+- Governance notes live in [series-doc-governance-checklist.md](./references/series-doc-governance-checklist.md), the technical working set, and the repo-tracked contract/doc surfaces.
 - The current four-repo alignment snapshot lives in [four-repo-doc-series-sync-summary-2026-04-14.md](./references/four-repo-doc-series-sync-summary-2026-04-14.md).
 - The reusable intake starting point lives in [four-repo-doc-intake-template.md](./references/four-repo-doc-intake-template.md).
-- The default central drift audit command is `npm run audit:doc-series`.
+- Cross-repo doc rounds should be reviewed directly in the affected repositories and verified with their normal verification lanes.
