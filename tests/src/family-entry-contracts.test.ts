@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 
 import {
   buildDomainEntryCommandContract,
+  buildFamilyDirectOplSharedHandoff,
   buildFamilyDomainEntryContract,
+  buildFamilyGatewayInteractionContract,
   buildGatewayInteractionContract,
   buildSharedHandoff,
   buildSharedHandoffBuilder,
@@ -67,6 +69,33 @@ test('family entry contract helpers build and validate gateway interaction paylo
   assert.equal(validated.recommended_route_surface, 'product_frontdesk');
 });
 
+test('family entry contract helpers expose the default family gateway contract with extendable envelope fields', () => {
+  const contract = buildFamilyGatewayInteractionContract({
+    shared_downstream_entry: 'MedAutoScienceDomainEntry',
+    extra_shared_handoff_envelope: ['entry_session_contract'],
+    extra_payload: { recommended_route_surface: 'product_frontdesk' },
+  });
+
+  const validated = validateGatewayInteractionContract(
+    contract,
+    'product_entry_manifest.gateway_interaction_contract',
+  );
+  assert.equal(validated.frontdoor_owner, 'opl_gateway_or_domain_gui');
+  assert.equal(validated.user_interaction_mode, 'natural_language_frontdoor');
+  assert.equal(validated.user_commands_required, false);
+  assert.equal(validated.command_surfaces_for_agent_consumption_only, true);
+  assert.deepEqual(validated.shared_handoff_envelope, [
+    'target_domain_id',
+    'task_intent',
+    'entry_mode',
+    'workspace_locator',
+    'runtime_session_contract',
+    'return_surface_contract',
+    'entry_session_contract',
+  ]);
+  assert.equal(validated.recommended_route_surface, 'product_frontdesk');
+});
+
 test('family entry contract helpers build and validate shared handoff payloads', () => {
   const builder = buildSharedHandoffBuilder({
     command: 'medautoscience build-product-entry --entry-mode direct',
@@ -125,6 +154,29 @@ test('family entry contract helpers build and validate aggregate shared handoff 
     () => validateSharedHandoff({}, 'product_entry_manifest.shared_handoff'),
     /shared_handoff/,
   );
+});
+
+test('family entry contract helpers build the default direct and OPL handoff bundle', () => {
+  const validated = validateSharedHandoff(
+    buildFamilyDirectOplSharedHandoff({
+      direct_entry_builder_command: 'medautoscience build-product-entry --entry-mode direct',
+      opl_handoff_builder_command: 'medautoscience build-product-entry --entry-mode opl-handoff',
+      extra_payload: { contract_owner: 'family_shared_contract' },
+    }),
+    'product_entry_manifest.shared_handoff',
+  );
+
+  assert.equal(
+    validated.direct_entry_builder?.command,
+    'medautoscience build-product-entry --entry-mode direct',
+  );
+  assert.equal(validated.direct_entry_builder?.entry_mode, 'direct');
+  assert.equal(
+    validated.opl_handoff_builder?.command,
+    'medautoscience build-product-entry --entry-mode opl-handoff',
+  );
+  assert.equal(validated.opl_handoff_builder?.entry_mode, 'opl-handoff');
+  assert.equal(validated.contract_owner, 'family_shared_contract');
 });
 
 test('family entry contract validation fails closed when command contracts are missing', () => {

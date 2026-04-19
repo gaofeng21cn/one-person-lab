@@ -134,6 +134,15 @@ export interface BuildFamilyProductFrontdeskInput {
   extra_payload?: JsonRecord;
 }
 
+export interface BuildFamilyProductFrontdeskFromManifestInput {
+  recommended_action: string;
+  product_entry_manifest: JsonRecord;
+  shell_aliases: Record<string, string>;
+  notes: string[];
+  schema_ref?: string | null;
+  extra_payload?: JsonRecord;
+}
+
 export interface BuildFamilyFrontdeskEntrySurfacesInput {
   product_entry_shell: Record<string, JsonRecord>;
   shell_aliases: Record<string, string>;
@@ -973,6 +982,24 @@ export function buildFamilyProductFrontdesk(input: BuildFamilyProductFrontdeskIn
       : isRecord(manifest.gateway_interaction_contract)
       ? manifest.gateway_interaction_contract
       : null,
+    extra_payload: input.extra_payload,
+  });
+}
+
+export function buildFamilyProductFrontdeskFromManifest(
+  input: BuildFamilyProductFrontdeskFromManifestInput,
+): FamilyProductFrontdeskSurface {
+  const manifest = validateFamilyProductEntryManifest(input.product_entry_manifest);
+  return buildFamilyProductFrontdesk({
+    recommended_action: requireString(input.recommended_action, 'recommended_action'),
+    product_entry_manifest: manifest,
+    entry_surfaces: buildFamilyFrontdeskEntrySurfaces({
+      product_entry_shell: manifest.product_entry_shell as Record<string, JsonRecord>,
+      shell_aliases: input.shell_aliases,
+      shared_handoff: manifest.shared_handoff,
+    }),
+    notes: readStringList(input.notes, 'notes'),
+    schema_ref: optionalString(input.schema_ref) ?? optionalString(manifest.schema_ref),
     extra_payload: input.extra_payload,
   });
 }

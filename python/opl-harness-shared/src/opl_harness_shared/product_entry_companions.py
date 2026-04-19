@@ -719,6 +719,36 @@ def build_family_product_frontdesk(
     )
 
 
+def build_family_product_frontdesk_from_manifest(
+    *,
+    recommended_action: str,
+    product_entry_manifest: Mapping[str, Any],
+    shell_aliases: Mapping[str, str],
+    notes: list[str],
+    schema_ref: str | None = None,
+    extra_payload: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    manifest = validate_family_product_entry_manifest(product_entry_manifest)
+    return build_family_product_frontdesk(
+        recommended_action=_require_string(recommended_action, "recommended_action"),
+        product_entry_manifest=manifest,
+        entry_surfaces=build_family_frontdesk_entry_surfaces(
+            product_entry_shell=_clone_mapping(
+                manifest.get("product_entry_shell"),
+                "product_entry_manifest.product_entry_shell",
+            ),
+            shell_aliases=shell_aliases,
+            shared_handoff=_clone_mapping(
+                manifest.get("shared_handoff"),
+                "product_entry_manifest.shared_handoff",
+            ),
+        ),
+        notes=_require_string_list(notes, "notes"),
+        schema_ref=_non_empty_text(schema_ref) or _non_empty_text(manifest.get("schema_ref")),
+        extra_payload=extra_payload,
+    )
+
+
 def build_family_product_entry_manifest(
     *,
     manifest_kind: str,
