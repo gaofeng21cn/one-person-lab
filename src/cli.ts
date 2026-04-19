@@ -1629,7 +1629,7 @@ async function main() {
       usage:
         'opl frontdesk-librechat-package --output <dir> [--public-origin <origin>] [--host <host>] [--port <port>] [--sessions-limit <n>] [--base-path <base_path>]',
       summary:
-        'Export a real LibreChat-first hosted shell pilot that combines the OPL front-desk package with same-origin LibreChat deployment assets.',
+        'Export the optional hosted-shell compatibility package that combines the OPL front-desk package with same-origin hosted-shell deployment assets.',
       examples: [
         'opl frontdesk-librechat-package --output /tmp/opl-librechat-pilot --public-origin https://opl.example.com',
         'opl frontdesk-librechat-package --output /tmp/opl-librechat-pilot --public-origin http://127.0.0.1:8080 --base-path /pilot/opl',
@@ -1717,7 +1717,7 @@ async function main() {
       usage:
         'opl frontdesk-librechat-install [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>] [--public-origin <origin>]',
       summary:
-        'Install and start the optional LibreChat compatibility lane, wired to the OPL front desk and local Codex defaults.',
+        'Install and start the optional hosted-shell compatibility lane, wired to the OPL front desk and local Codex defaults.',
       examples: [
         'opl frontdesk-librechat-install --path /Users/gaofeng/workspace/Yang/NF-PitNET',
         'opl frontdesk-librechat-install --path /Users/gaofeng/workspace/Yang/NF-PitNET --public-origin http://127.0.0.1:8080',
@@ -1731,7 +1731,7 @@ async function main() {
     'frontdesk-librechat-status': {
       usage: 'opl frontdesk-librechat-status',
       summary:
-        'Inspect whether the local LibreChat compatibility shell is installed, running, and still aligned with the OPL front desk.',
+        'Inspect whether the optional hosted-shell compatibility lane is installed, running, and still aligned with the OPL front desk.',
       examples: ['opl frontdesk-librechat-status'],
       handler: (args) => {
         assertNoArgs(args, commandSpecs['frontdesk-librechat-status']);
@@ -1740,7 +1740,7 @@ async function main() {
     },
     'frontdesk-librechat-start': {
       usage: 'opl frontdesk-librechat-start',
-      summary: 'Start the installed local LibreChat-first front door and ensure the OPL front desk service is up.',
+      summary: 'Start the installed hosted-shell compatibility lane and ensure the OPL front desk service is up.',
       examples: ['opl frontdesk-librechat-start'],
       handler: (args) => {
         assertNoArgs(args, commandSpecs['frontdesk-librechat-start']);
@@ -1749,7 +1749,7 @@ async function main() {
     },
     'frontdesk-librechat-stop': {
       usage: 'opl frontdesk-librechat-stop',
-      summary: 'Stop the dockerized local LibreChat-first front door without removing its packaging files.',
+      summary: 'Stop the installed hosted-shell compatibility lane without removing its packaging files.',
       examples: ['opl frontdesk-librechat-stop'],
       handler: (args) => {
         assertNoArgs(args, commandSpecs['frontdesk-librechat-stop']);
@@ -1758,7 +1758,7 @@ async function main() {
     },
     'frontdesk-librechat-open': {
       usage: 'opl frontdesk-librechat-open',
-      summary: 'Open the local LibreChat-first front door in the default browser.',
+      summary: 'Open the installed hosted-shell compatibility lane in the default browser.',
       examples: ['opl frontdesk-librechat-open'],
       handler: (args) => {
         assertNoArgs(args, commandSpecs['frontdesk-librechat-open']);

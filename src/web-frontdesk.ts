@@ -701,8 +701,8 @@ function buildStartupPayload(context: WebFrontDeskContext): WebFrontDeskStartupP
         sessions_limit: context.sessionsLimit,
       },
       notes: [
-        'This is a local web front-desk pilot layered above the existing OPL CLI-first entry shell.',
-        'The real LibreChat-first hosted shell pilot export is now landed alongside the hosted bundle and hosted package.',
+        'This is a local web companion layered above the existing OPL CLI and desktop entry surfaces.',
+        'An optional hosted-shell compatibility export remains available alongside the hosted bundle and hosted package.',
         'Managed hosted runtime ownership is still not landed.',
       ],
     },
@@ -2288,11 +2288,11 @@ function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
         <div class="eyebrow">One Person Lab</div>
         <h1>OPL Front Desk Control Room</h1>
         <p>
-          Local web pilot for family routing, workspace inspection, runtime visibility, and quick ask.
-          It gives OPL a directly usable front desk without pretending that hosted packaging is already done.
+          Local web companion for family routing, workspace inspection, runtime visibility, and quick ask.
+          It gives OPL a directly usable front desk while keeping hosted packaging and optional compatibility lanes clearly separated.
         </p>
         <div class="hero-strip">
-          <div class="pill">Local web pilot landed</div>
+          <div class="pill">Local web companion ready</div>
           <div class="pill">Hosted packaging not landed</div>
           <div class="pill">Hermes stays the external kernel</div>
         </div>
@@ -2568,9 +2568,9 @@ function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
               </div>
               <div style="height: 12px"></div>
               <div class="card">
-                <h3>LibreChat-first Hosted Shell Export</h3>
+                <h3>Optional Hosted-Shell Export</h3>
                 <p class="panel-copy">
-                  Export the actual hosted shell pilot package: LibreChat at the public root, OPL Front Desk at the configured base path, and same-origin reverse-proxy assets that wire them together honestly.
+                  Export the optional hosted-shell compatibility package: the compatibility shell stays at the public root, OPL Front Desk stays at the configured base path, and the reverse-proxy assets keep the split explicit.
                 </p>
                 <form id="librechat-package-form">
                   <div class="field-grid">
@@ -2584,12 +2584,12 @@ function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
                     </label>
                   </div>
                   <div class="button-row">
-                    <button class="secondary" type="submit">Export LibreChat Pilot</button>
+                    <button class="secondary" type="submit">Export Compatibility Package</button>
                   </div>
                 </form>
                 <div class="status-line" id="librechat-package-status" aria-live="polite"></div>
                 <div style="height: 12px"></div>
-                <pre class="json-view" id="librechat-package-json">No LibreChat pilot export yet.</pre>
+                <pre class="json-view" id="librechat-package-json">No compatibility package export yet.</pre>
               </div>
               <div style="height: 12px"></div>
               <div class="split-grid">
@@ -4140,11 +4140,11 @@ function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
       async function exportLibreChatPackage() {
         const outputDir = librechatPackageOutputInput.value.trim();
         if (!outputDir) {
-          setLibreChatPackageStatus('LibreChat pilot export requires an output directory.', 'warn');
+          setLibreChatPackageStatus('Hosted-shell compatibility export requires an output directory.', 'warn');
           return;
         }
 
-        setLibreChatPackageStatus('Exporting LibreChat-first hosted pilot...', 'muted');
+        setLibreChatPackageStatus('Exporting hosted-shell compatibility package...', 'muted');
 
         try {
           const response = await fetch(bootstrap.web_frontdesk.api.librechat_package, {
@@ -4160,14 +4160,14 @@ function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
           const payload = await response.json();
 
           if (!response.ok) {
-            throw new Error(payload.error?.message || 'LibreChat pilot export failed.');
+            throw new Error(payload.error?.message || 'Hosted-shell compatibility export failed.');
           }
 
           librechatPackageJson.textContent = JSON.stringify(payload, null, 2);
-          setLibreChatPackageStatus('LibreChat-first hosted pilot exported.', 'ok');
+          setLibreChatPackageStatus('Hosted-shell compatibility package exported.', 'ok');
         } catch (error) {
           setLibreChatPackageStatus(
-            error instanceof Error ? error.message : 'LibreChat pilot export failed.',
+            error instanceof Error ? error.message : 'Hosted-shell compatibility export failed.',
             'warn',
           );
         }
