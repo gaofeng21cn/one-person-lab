@@ -4,28 +4,27 @@
 
 ## Purpose
 
-This document freezes the `G3` contract for the `OPL Gateway`.
+This document freezes the planning-only routed-action contract for the `OPL Gateway`.
 
-`G3` is the first phase where `OPL` may eventually accept a top-level action request and route it into the correct domain gateway.
-In the current `Phase 1`, this document is only a `G3 thin handoff planning` contract reference and now serves as the planning-level contract closed out by the `Phase 1 / G3 thin handoff planning freeze hardening`; it does not mean that the repository has already entered routed-action implementation.
-This is a planning gate, not a runtime gate. No mutation entry, run launch, or workspace write is added at this step.
+It defines how `OPL` classifies a top-level action request, builds a handoff payload, and records the routing trace before control reaches an admitted domain gateway.
+The current layer is planning-only. It does not grant runtime launch, mutation entry, or workspace write.
+The machine-readable examples in this document keep the current `g3` schema version.
 
-The goal is not to create a monolithic runtime.
 The goal is to make top-level routing explicit, auditable, and safe.
 
-## Relationship To G1 And G2
+## Current Dependency Baseline
 
-`G3` builds on:
+This contract builds on:
 
 - [OPL Federation Contract](./opl-federation-contract.md)
 - [OPL Gateway Contract Surface](./opl-read-only-discovery-gateway.md)
 - [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
 
-If `G1` is not frozen, or if `G2` discovery semantics are still ambiguous, `G3` should not proceed.
+These gateway-discovery surfaces provide the frozen dependency baseline for routed-action planning.
 
 ## Core Promise
 
-At the planning-level `G3` contract, an agent should eventually be able to:
+At this planning-level contract, an agent should be able to:
 
 - submit a top-level request to `OPL`
 - receive an explicit routing decision
@@ -277,15 +276,15 @@ Suggested response:
 
 ## Hard Boundary
 
-`OPL` must never use `G3` routing to jump directly into a domain harness.
+This layer routes only into a domain gateway.
 
-The only allowed next formal entry surface after a successful top-level route is:
+The allowed next formal entry surface after a successful top-level route is:
 
 ```text
 OPL Gateway -> Domain Gateway
 ```
 
-Not:
+The direct harness path stays outside this contract:
 
 ```text
 OPL Gateway -> Domain Harness OS
@@ -293,17 +292,17 @@ OPL Gateway -> Domain Harness OS
 
 ## Source-Of-Truth Rules
 
-At `G3`, `OPL` may own:
+At this planning layer, `OPL` owns:
 
 - the routing decision
 - the handoff payload
 - the top-level audit trace
 
-At `G3`, `OPL` may not own:
+At this planning layer, domain gateways keep:
 
 - domain-private runtime state
 - domain canonical truth
-- domain-internal replay history as if it were top-level truth
+- domain-internal replay history
 
 ## Machine-Readable Contract
 
@@ -311,15 +310,15 @@ The machine-readable schema for this layer lives at:
 
 - [`../contracts/opl-gateway/routed-actions.schema.json`](../contracts/opl-gateway/routed-actions.schema.json)
 
-At the current baseline, that schema is a planning dependency, not a launcher.
+At the current baseline, that schema stays in the planning dependency layer.
 
 Canonical routed-safety examples for the non-success states live at:
 
 - [OPL Routed-Safety Example Corpus](./references/opl-routed-safety-example-corpus.md)
 
-## Planning Freeze Completion Definition
+## Planning Contract Completion Definition
 
-The current `Phase 1 / G3 thin handoff planning freeze hardening` is complete when:
+This planning-only routed-action contract is complete when:
 
 - `route_request`, `build_handoff_payload`, and `audit_routing_decision` are frozen as stable planning-level operations
 - refusal, unknown-domain, and ambiguous-task handling are explicit
@@ -328,7 +327,7 @@ The current `Phase 1 / G3 thin handoff planning freeze hardening` is complete wh
 - the no-bypass rule still forbids bypassing domain gateways
 - the schema remains a planning dependency rather than a launcher
 
-The current planning freeze is not complete when:
+This planning-only routed-action contract needs more work when:
 
 - routing still depends on free-form prose alone
 - the top-level gateway invents ownership where none is registered

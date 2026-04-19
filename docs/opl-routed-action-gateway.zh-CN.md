@@ -4,28 +4,27 @@
 
 ## 目的
 
-这份文档冻结 `OPL Gateway` 的 `G3` 合同。
+这份文档冻结 `OPL Gateway` 当前 planning-only 的 routed-action contract。
 
-`G3` 是 `OPL` 后续第一次可以接收顶层 action request，并把它路由到正确 domain gateway 的阶段。
-在当前 `Phase 1`，这份文档只作为 `G3 thin handoff planning` 的合同参考，并承担已完成 `Phase 1 / G3 thin handoff planning freeze hardening` 后留下的 planning-level contract；它不表示当前仓库已经进入 routed-action implementation。
-当前这是 planning gate，不是 runtime gate。本轮不新增 mutation entry、run launch 或 workspace write。
+它定义的是：`OPL` 如何在控制权进入 admitted domain gateway 之前，对顶层 action request 做分类、构建 handoff payload，并记录 routing trace。
+当前这一层只停留在 planning-contract 层。本轮不授予 runtime launch、mutation entry 或 workspace write。
+文档里的 machine-readable 示例继续沿用现有 `g3` schema version。
 
-目标不是做成单体 runtime。
 目标是把顶层路由做成显式、可审计、可安全执行的合同。
 
-## 与 G1 / G2 的关系
+## 当前依赖基线
 
-`G3` 建立在下面这些东西之上：
+这份合同建立在下面这些东西之上：
 
 - [OPL Federation Contract](./opl-federation-contract.zh-CN.md)
 - [OPL Gateway 契约面](./opl-read-only-discovery-gateway.zh-CN.md)
 - [OPL Gateway Contracts](../contracts/opl-gateway/README.zh-CN.md)
 
-如果 `G1` 还没冻结，或者 `G2` discovery 语义仍然模糊，`G3` 不应继续推进。
+这些 gateway-discovery surface 构成 routed-action planning 的冻结依赖基线。
 
 ## 核心承诺
 
-在 planning-level 的 `G3` 合同里，Agent 后续应当能够：
+在当前 planning-level contract 里，Agent 应当能够：
 
 - 向 `OPL` 提交顶层 action request
 - 拿到显式 routing decision
@@ -277,15 +276,15 @@
 
 ## 硬边界
 
-`OPL` 绝不能借 `G3` 路由直接跳进 domain harness。
+这一层只把路由交给 domain gateway。
 
-成功顶层路由之后，唯一允许的下一层正式入口是：
+成功顶层路由之后，允许的下一层正式入口是：
 
 ```text
 OPL Gateway -> Domain Gateway
 ```
 
-而不是：
+domain harness 路径继续留在这份合同之外：
 
 ```text
 OPL Gateway -> Domain Harness OS
@@ -293,17 +292,17 @@ OPL Gateway -> Domain Harness OS
 
 ## Source-Of-Truth 规则
 
-在 `G3`，`OPL` 可以拥有：
+在当前 planning 层，`OPL` 持有：
 
 - routing decision
 - handoff payload
 - 顶层 audit trace
 
-在 `G3`，`OPL` 不可以拥有：
+在当前 planning 层，domain gateway 持有：
 
 - domain-private runtime state
 - domain canonical truth
-- 把 domain-internal replay history 当成顶层真相
+- domain-internal replay history
 
 ## Machine-Readable Contract
 
@@ -311,15 +310,15 @@ OPL Gateway -> Domain Harness OS
 
 - [`../contracts/opl-gateway/routed-actions.schema.json`](../contracts/opl-gateway/routed-actions.schema.json)
 
-在当前基线上，这份 schema 仍只是 planning dependency，不是 launcher。
+在当前基线上，这份 schema 继续停留在 planning dependency 层。
 
 显式非成功路由状态的 canonical routed-safety examples 位于：
 
 - [OPL Routed-Safety Example Corpus](./references/opl-routed-safety-example-corpus.zh-CN.md)
 
-## Planning Freeze 完成定义
+## Planning Contract 完成定义
 
-只有满足下面条件，当前 `Phase 1 / G3 thin handoff planning freeze hardening` 才算完成：
+只有满足下面条件，这份 planning-only routed-action contract 才算完成：
 
 - `route_request`、`build_handoff_payload`、`audit_routing_decision` 被冻结成稳定的 planning-level 操作
 - refusal / unknown-domain / ambiguous-task handling 被显式写清
@@ -328,7 +327,7 @@ OPL Gateway -> Domain Harness OS
 - 这份 no-bypass 合同仍然禁止绕过 domain gateway
 - schema 仍只是 planning dependency，而不是 launcher
 
-下面这些情况说明当前 planning freeze 还没完成：
+下面这些情况说明这份 planning-only routed-action contract 还需要继续补齐：
 
 - 路由仍然只靠自由 prose 解释
 - 顶层 gateway 在未注册 ownership 的情况下自行发明 owner
