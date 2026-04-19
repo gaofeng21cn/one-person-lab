@@ -10,7 +10,7 @@
 
 当前 repo-tracked 的本地使用链路已经变成：
 
-`User -> opl front desk / quick ask / ops shell -> OPL Gateway -> Hermes Kernel -> Domain Handoff -> Domain Gateway / Domain Product Entry -> Domain Harness OS -> Domain Repository`
+`User -> opl front desk / quick ask / ops shell -> Codex -> OPL Gateway -> Domain Handoff -> Domain Product Entry / Domain Module -> Domain Harness OS -> Domain Repository`
 
 这说明当前 `OPL` 已经拥有本地 direct product entry 的第一版入口壳；
 它现在通过一组清晰分层的 grouped command matrix 暴露正式壳面：
@@ -30,7 +30,7 @@
 - `opl workspace projects|list|bind|activate|archive`
   - 提供 file-backed workspace registry 与顶层到 domain 之间的 direct-entry locator 管理
 - `opl frontdesk manifest|entry-guide|readiness|domain-wiring|hosted-bundle|hosted-package|service *|bootstrap`
-  - 提供 hosted-friendly shell contract、family wiring truth、pilot bundle、hosted package、服务管理与桌面壳 bootstrap
+  - 提供 hosted-friendly shell contract、family wiring truth、environment/modules 管理、pilot bundle、hosted package、服务管理与桌面壳 bootstrap
 - `opl session list|resume|logs|ledger`
   - 提供 landed local shell 的会话、日志与 OPL-owned session attribution
 - `opl runtime repair-gateway`
@@ -40,12 +40,13 @@
 
 代表性显式命令包括 `opl contract validate`、`opl domain manifests`、`opl status runtime`、`opl workspace bind`、`opl frontdesk entry-guide`、`opl session ledger` 与 `opl runtime repair-gateway`。
 
-当前这层 hosted / web 路线已经落下本地 web companion 与 hosted bundle / package；optional hosted-shell compatibility export 继续留作 command-scoped hidden lane，长期仍回到 `OPL` 自有 web front desk。
-这组 gateway contract commands 继续作为顶层联邦真相面的稳定 formal contract surface。
+但它还不是 managed hosted / web 形态的完整产品前台。
+当前这层 GUI 路线已经冻结为 `Onyx-style Desktop shell + OPL web companion`，hosted / web 前台继续围绕 `OPL` 自有 truth surfaces 收口。
+同时，`Phase 1` 的 gateway contract commands 仍然是顶层联邦真相面的稳定 formal contract surface。
 
 目标产品链路应是：
 
-`User -> OPL Product Entry -> OPL Gateway -> Hermes Kernel -> Domain Adapter -> Domain Gateway -> Domain Harness OS -> Executor Adapter -> Concrete Executor`
+`User -> OPL Product Entry -> Codex session / Hermes alternate -> OPL Gateway -> Domain Adapter -> Domain Product Entry / Domain Gateway -> Domain Harness OS -> Executor Adapter -> Concrete Executor`
 
 其中：
 
@@ -113,9 +114,7 @@
 - 由 domain 程序统一 authority / contract / audit truth
 - 由 `Executor Adapter` 在每个 domain 内按 route 选择具体执行器
 
-当前冻结的 family-level 默认 route 是：
-
-其中，`Hermes-native` 当前只作为实验路线；只有完整的 Hermes AIAgent agent loop 才算成立，而一步一步 chat、单次 chat completion 或 chat relay 都不算目标主线。
+当前冻结的 family-level 默认 route 里，`Codex CLI autonomous` 是默认执行器，`Hermes-native` 当前只作为实验路线；只有完整的 Hermes AIAgent agent loop 才算成立，而一步一步 chat、单次 chat completion 或 chat relay 都不算目标主线。
 
 - `Codex CLI autonomous`
   - 当前正式默认执行器
@@ -145,11 +144,6 @@
 当前 `OPL` 已经把这层 envelope 做成 repo-tracked surface，并且通过 workspace registry 中显式配置的 direct-entry locator，把顶层 front desk 与 domain direct entry / domain gateway 连接起来；没有 locator 的 domain 不会被伪造成“已接好前台”。
 
 ## Hermes Kernel Integration 选型
-
-当前顶层已经冻结的选择不是：
-
-- fork / vendor `Hermes-Agent` 代码进 `OPL` 自己长期维护
-- 要求用户自己手工安装并理解 `Hermes-Agent` 后再使用 `OPL`
 
 当前冻结的选择是：
 

@@ -1,104 +1,61 @@
-# OPL Front Desk 落地推进板
+# OPL Front Desk Delivery Board
 
-状态锚点：`2026-04-14`
+状态锚点：`2026-04-19`
 
 ## 文档目的
 
-这份板面只负责回答一个问题：
+这份板面只回答三个问题：
 
-- `OPL Front Desk` 这条线现在到底已经落了什么；
-- 还缺什么；
-- 下一棒该继续往哪推进。
+1. `OPL Front Desk` 当前已经落下了哪些可用能力。
+2. 当前主线还缺哪些关键交付。
+3. 下一棒应该沿哪条主线继续推进。
 
-它是当前 top-level product-entry 线的内部交付板。
-它不替代：
+## 当前主线
 
-- `README.md` / `README.zh-CN.md`
-- `docs/status.md`
-- `docs/references/opl-hosted-web-frontdesk-benchmark.md`
-- `docs/references/family-lightweight-direct-entry-rollout-board.md`
+当前主线已经冻结为：
 
-## 当前已经落地
+- 桌面壳：`Onyx-style Desktop shell`
+- 浏览器 companion：`opl web`
+- 默认执行：`Codex`
+- 备用执行 / 在线网关：`Hermes-Agent`
+- 领域能力：以 `OPL` 管理的模块形式接入
 
-### F0. 本地 direct product-entry shell
+## 已落地能力
+
+### F0. 顶层直接入口
 
 已完成：
 
 - `opl`
 - `opl <request...>`
-- `opl doctor`
 - `opl ask`
 - `opl chat`
-- `opl session resume`
-- `opl session list`
-- `opl session logs`
-- `opl runtime repair-gateway`
+- `opl doctor`
+- `opl start`
+- `opl web`
+- `opl session list|resume|logs|ledger`
 
 当前含义：
 
-- `OPL` 已不再只是“只能在 Codex 里间接调用”的顶层说明面；
-- 本机用户已经可以直接通过 `opl` 进入 family-level front desk。
+- `OPL` 已经拥有直接可进的产品入口。
+- 默认入口已经是 `OPL` 自己的 front desk，而不是外部聊天壳。
 
-### F1. 顶层管理面第一版
+### F1. Workspace / task / progress / files 观察面
 
 已完成：
 
-- `opl projects`
-- `opl workspace-status`
-- `opl workspace list`
-- `opl workspace bind`
-- `opl workspace activate`
-- `opl workspace archive`
+- `opl status workspace`
 - `opl status runtime`
-- `opl frontdesk readiness`
-- `opl session ledger`
 - `opl status dashboard`
+- `opl workspace projects|list|bind|activate|archive`
 - `opl contract handoff-envelope`
 
 当前含义：
 
-- 已经有了第一版多项目 / 工作区 / 会话 / runtime 观测与可写管理面；
-- `status runtime` 已能看到 Hermes runtime 健康、最近会话以及 runtime-level 进程资源占用；
-- `session ledger` 已能提供 OPL-managed 的会话事件、诚实资源样本，以及按 session 聚合后的归因视图；
-- `frontdesk readiness` 已能把本地 service 状态、hosted pilot readiness、domain `product_entry_readiness / preflight` 与修复建议收成单一 operator-facing board；
-- `workspace bind|activate|archive` 已能把 workspace registry、direct-entry locator 与可选的 domain-owned `manifest_command` 作为顶层可写状态管理起来；
-- `workspace list` 现在还会输出 project-level binding summary、最近更新时间与可写 action 提示；
-- `contract handoff-envelope` 已能把顶层 front desk 到 domain direct entry / domain gateway 的最小交接面冻结出来；
-- `status dashboard` 已能把 front desk、projects、workspace、workspace registry、session ledger 与 runtime 汇总到一个管理面里。
+- 多 workspace、多任务、多会话的管理入口已经在 `OPL` 顶层收口。
+- progress narration、task 状态和 files deliverables 已经有统一观察面。
 
-### F2. 本地 web front desk pilot
-
-已完成：
-
-- `opl web`
-- `/api/projects`
-- `/api/status/workspace`
-- `/api/workspace/list`
-- `/api/workspace/bind`
-- `/api/workspace/activate`
-- `/api/workspace/archive`
-- `/api/status/runtime`
-- `/api/session/ledger`
-- `/api/status/dashboard`
-- `/api/ask`
-- `/api/health`
-- `/api/frontdesk/manifest`
-- `/api/frontdesk/readiness`
-- `/api/frontdesk/domain-wiring`
-- `/api/frontdesk/hosted-bundle`
-- `/api/frontdesk/hosted-package`
-- `/api/contract/handoff-envelope`
-- `/api/session/list`
-- `/api/session/resume`
-- `/api/session/logs`
-
-当前含义：
-
-- `OPL` 已经不只有 CLI 入口，而是已经有了可直接打开的本地浏览器前台；
-- 用户可以直接在浏览器里做 quick ask、查看项目、检查与绑定 workspace、查看 managed session ledger、观察 runtime，并在浏览器里直接看到 `Frontdesk Readiness` 的 operator triage 结果；
-- 这仍是 local pilot，不等于 hosted 包装完成。
-
-### F2.B. hosted-friendly shell contract 与 pilot package
+### F2. Frontdesk truth surfaces
 
 已完成：
 
@@ -108,42 +65,16 @@
 - `opl frontdesk domain-wiring`
 - `opl frontdesk hosted-bundle`
 - `opl frontdesk hosted-package`
-- `opl frontdesk-librechat-package`
-- 本地 web 前台已开始直接消费 `health / manifest / frontdesk-readiness / hosted-bundle / hosted-package / librechat-package / sessions / resume / logs / handoff-envelope` surfaces
+- `opl frontdesk environment`
+- `opl frontdesk modules`
+- `opl frontdesk module install|update|reinstall|remove`
 
 当前含义：
 
-- `OPL` 现在不只是“有一个本地浏览器 pilot”，而是已经冻结出一层 future hosted shell 可消费的 front-desk contract；
-- `frontdesk-entry-guide` 现在补上了 family workspace taxonomy、domain workspace mapping，以及每个 admitted domain 的 start / preflight / readiness 推荐，方便 AI / GUI 壳直接消费；
-- `frontdesk manifest`、`opl web` startup payload 与 `mcp-stdio` 现在也都已经显式声明 `frontdesk entry-guide` 是 shell bootstrap 的第一消费面，`status dashboard` 退回 operator debug / aggregate 视图；
-- `frontdesk readiness` 把本地 service 状态、hosted pilot readiness、domain readiness / preflight 与下一步修复建议收成单一 operator-facing board，但它继续只复用已有 truth，不构成第二真相源；
-- `frontdesk domain-wiring` 又把 `hosted_runtime_readiness / domain_entry_parity / recommended_entry_surfaces` 收成 hosted shell 与本地 front desk 都能直接消费的 family wiring truth；
-- `frontdesk domain-wiring` 现在还额外承载 `domain_binding_parity` 与 `workspace list / bind / activate / archive` 这些修复 locator parity 所需的 endpoint 引导，不再要求 hosted shell 自己去拼大而杂的 dashboard；
-- hosted-pilot-ready shell bundle 已经把 base-path-aware 的 entry / API endpoint 一并冻结下来；
-- self-hostable hosted pilot package 已经把 app snapshot、run script、env 模板、`systemd` unit、service-install / healthcheck helper 与反向代理资产一并导出来；
-- `frontdesk-librechat-package` 已经把 `LibreChat` 外层壳、同源反向代理与 `OPL Front Desk` 的真实 pilot 组合导出来；
-- 这层 contract 现在不再只是“等未来接壳”的 prep，而是已经支撑一条真实的 `LibreChat-first` hosted shell pilot；
-- 如果外层用户前台后续命名为 `OPL Cortex`，当前 tranche 也只把它当作壳层 branding，不会立即改写 repo 内部 `frontdesk_*` surface id；
-- 但它仍然不等于 managed hosted runtime 已完成。
+- GUI 壳和 web companion 已经可以共用一套 truth surfaces。
+- environment 与 modules 管理已经进入 `OPL` 主线，而不是散落在外部脚本里。
 
-### F2.C. service-safe 本地包装层
-
-已完成：
-
-- `opl frontdesk service install`
-- `opl frontdesk service status`
-- `opl frontdesk service start`
-- `opl frontdesk service stop`
-- `opl frontdesk service open`
-- `opl frontdesk service uninstall`
-
-当前含义：
-
-- `OPL` 的本地浏览器前台已经不再只能依赖“手动开一个终端跑 `opl web`”；
-- 当前已经有了 launchd 驱动的 service-safe 本地包装层，可以把本地 front desk 作为长期运行的入口服务管理；
-- 但这仍然只是 host-side 的 local product packaging；`LibreChat-first` pilot 已接上，不代表 managed hosted runtime 已完成。
-
-### F2.D. Desktop-first 本机 GUI 入口
+### F3. 本机 GUI 入口
 
 已完成：
 
@@ -152,103 +83,78 @@
 
 当前含义：
 
-- 本机默认 GUI 路径已经从 Docker 驱动的 LibreChat 壳切到 `OPL Atlas` Desktop；
-- Desktop 当前先复用现有 `opl web` truth surface，把 Electron 壳与本地 frontdesk service 接起来；
-- `frontdesk-librechat-install` 继续保留，但角色已经收紧为 optional compatibility lane 与 hosted pilot 参考面。
+- 本机默认 GUI 路径已经收口到桌面壳。
+- 桌面壳当前复用 `opl web` 的 truth surface，并向 `Onyx` 风格工作台靠拢。
 
-### F3. hosted / web 路线冻结
+### F4. 服务化运行与 hosted 预备
 
 已完成：
 
-- 短期：`LibreChat-first`
-- 长期：`OPL` 自有 web front desk
+- `opl frontdesk service install|status|start|stop|open|uninstall`
+- self-hostable hosted pilot package
+- base-path-aware hosted bundle
 
 当前含义：
 
-- 不再把 `Chatbot UI` 当主前台候选；
-- 不再把“套一个通用 chat UI”误写成最终产品形态。
+- 本地 front desk 已经可以长期运行。
+- hosted / web 路线已有可验证的包装层和 contract surface。
 
-## 当前还没有完成
+## 当前缺口
 
-### W1. managed hosted runtime / hosted hardening
+### W1. 桌面壳视觉与交互还需要继续打磨
 
-未完成：
+缺口：
 
-- 虽然已经有本地可打开的 web front desk pilot；
-- 虽然也已经有 hosted-friendly manifest / health / session / logs contract surface；
-- 虽然现在也已经有了 service-safe 的本地 packaging；
-- 虽然也已经有了带 service-install / healthcheck helper 的 self-hostable hosted pilot package；
-- 虽然现在也已经有了真实的 `LibreChat-first` hosted shell pilot package；
-- 但还没有 managed hosted runtime；
-- 也还没有把 pilot 收紧到更低运维摩擦的正式 hosted 运行面。
+- 左侧 workspace / task 管理还需要更贴近目标工作台形态。
+- 右侧 progress + files 边栏还需要更稳定的最终布局。
+- settings 还需要把 environment / modules 管理面完整接起来。
 
-### W2. 顶层与业务仓的前台联动
+### W2. hosted / web 入口还没有完全产品化
 
-未完成：
+缺口：
 
-- `OPL` 顶层现在已经有 front desk、workspace registry 与 family handoff bundle；
-- 三个业务仓现在都已经长出了 repo-tracked lightweight direct-entry shell，但 maturity、locator 配置与真正可直接进入的产品面仍不一致；
-- 当前仍只能通过 workspace registry 中显式配置的 direct-entry locator 把已知 domain 前台接进来，不能假装全家都已经齐了；
-- 顶层还需要把 domain shell metadata、locator wiring 与 family handoff proof 继续压实。
+- 当前已具备 hosted 预备能力。
+- 正式 hosted front desk 还需要继续围绕同一套 truth surfaces 收口。
+
+### W3. 模块管理还缺更完整的产品体验
+
+缺口：
+
+- 版本展示、升级提示、健康状态和最近验证结果还要继续丰富。
+- GUI settings 还需要把模块操作做成更顺手的管理界面。
 
 ## 当前进行中
 
-### I1. `OPL` hosted packaging / web front desk follow-up
+### I1. Onyx 风格桌面壳打磨
 
 方向：
 
-- 在已落地的本地 web pilot、hosted-friendly shell contract、self-hostable hosted pilot package、真实的 `LibreChat-first` hosted shell pilot package 与本地 service packaging 之上继续做 hosted follow-up；
-- 把 service、session、handoff、runtime ops 与后续 hosted 壳接起来。
+- 继续把桌面壳打磨到接近 `Codex App` 的浅色极简工作台体验。
+- 保持 `workspace + task + progress + files + modules` 为核心信息架构。
 
-### I2. family handoff 与 domain lightweight direct entry 对齐
-
-方向：
-
-- `OPL` 顶层入口继续只负责 front desk 与 handoff；
-- 业务仓继续补各自 direct entry，不让顶层把 domain 细节吞掉。
-
-### I3. `Med Auto Science` 非 display 主线 cutover
+### I2. Environment / Modules 设置面接线
 
 方向：
 
-- 继续走 research runtime 主线；
-- 不把 display / 配图资产支线混进来。
+- 让 GUI 直接消费 `frontdesk environment` 和 `frontdesk modules`。
+- 让模块安装、升级、重装和移除都从 settings 进入。
 
-## 与顶层 docs / contracts / central sync 的关系
+### I3. 模块直达入口对齐
 
-- `docs/status.md` 负责给出当前顶层真相与活跃阶段口径；这条板只负责把当前 front desk 交付线收成一条可继续执行的 owner line。
-- `contracts/opl-gateway/README.md` 继续冻结 machine-readable contract boundary、gateway contract / control-plane bridge 的 owner split，以及 “`OPL` 不升格成 runtime owner” 的硬边界；这条 front desk 主线只能在这个边界内继续压实。
-- `docs/references/opl-phase-2-central-reference-sync-board.md` 仍然保留，但它现在只应该在 admitted-domain 新 absorbed delta 到来、或 central reference surfaces drift 需要补同步时才重开；它不是当前默认活跃的 top-level execution mainline。
+方向：
 
-## 当前最大执行缺口
-
-当前最大的缺口不是再写一轮更大的平台叙事，而是把已经 landed 的 top-level front desk 压成更稳的 family-level execution surface。
-
-最需要继续收口的是：
-
-- `managed hosted runtime hardening` 仍未完成，当前仍只是本地 web pilot、hosted-friendly shell contract、self-hostable pilot package 与 `LibreChat-first` hosted shell pilot 的组合，还不能误写成 actual hosted runtime。
-- 顶层 `workspace registry / domain manifests / status dashboard / contract handoff-envelope / opl web` 已经能消费 domain discovery surface，但 domain locator wiring、`shared_handoff` 一致性与 direct-entry parity 还没有完全压稳。
-- 顶层 `frontdesk domain-wiring` 已把这件事收成单独 surface，但仍需要随着 domain active binding 和 manifest 成熟度继续推进。
+- 继续把 `Med Auto Science`、`Med Deep Scientist`、`Med Auto Grant`、`RedCube AI` 的安装路径、状态和入口投射到统一模块目录。
+- 让 `Codex` 默认执行与 `Hermes-Agent` 备用模式在同一设置面完成切换。
 
 ## 推荐下一条执行 issue
 
-建议下一条执行 issue：
-
-- 标题：`压实 OPL Front Desk hosted hardening 与 locator/handoff parity`
-- 目标：沿现有 `opl front desk -> domain manifests / status dashboard / contract handoff-envelope / opl web` 主线，继续把 hosted runtime hardening、domain locator wiring、`shared_handoff` 一致性与 direct-entry parity 压成更稳定的 family-level execution surface。
-- 边界：不新增 admitted domain、不重开 domain repo 内部实现、不把 `OPL` 写成 runtime owner；若没有新的 admitted-domain delta 或 central reference surfaces drift，也不重开 `docs/references/opl-phase-2-central-reference-sync-board.md` 那条中央同步线。
-- 完成信号：`docs/status.md`、`contracts/opl-gateway/README.md`、front desk 相关 reference docs 与验证口径都能一致表达“当前活跃主线是 frontdesk hardening + locator/handoff parity，而 central sync 只是条件性 follow-on”。
+- 标题：`Polish OPL Front Desk shell and wire environment/modules into settings`
+- 目标：把桌面壳、右侧边栏和 settings 主线一起压稳，让 `OPL` 形成可持续演进的工作台入口。
+- 边界：继续复用现有 truth surfaces，不引入新的外部聊天壳依赖，不把 `OPL` 写成 domain runtime owner。
 
 ## 下一棒
 
-最合理的下一棒顺序：
-
-1. 继续把已落地的 `LibreChat-first` hosted shell pilot 往 managed hosted runtime / hosted hardening 推进
-2. 让 `RedCube AI`、`Med Auto Grant`、`Med Auto Science` 的已 landed shell 与顶层 locator / handoff 继续对齐
-3. 让 `Med Auto Grant` 继续把 grant-only entry / runtime / export 压实
-4. 让 `Med Auto Science` 继续走非 display 主线的 real adapter cutover
-
-## 一句话结论
-
-`OPL Front Desk` 这条线现在已经从“只有 CLI 说明面”走到了“有本地 CLI 入口 + 有可写管理面 + 有 managed session ledger + 有 family handoff bundle + 有本地 web pilot + 有 hosted-friendly shell contract / hosted pilot bundle / self-hostable pilot package + 有真实的 LibreChat-first hosted shell pilot package + 有 service-safe 本地包装层 + 有明确 hosted 路线”的状态。
-下一步不该再回头争论方向，而是把 managed hosted runtime hardening 和后续家族级 direct entry 继续压实。
+1. 继续打磨桌面壳布局和视觉。
+2. 把 settings 接到 `environment / modules`。
+3. 把 progress feed 和 files deliverables 边栏继续压成稳定产品面。
+4. 让桌面端与后续 hosted / web 前台继续共用同一套 truth surfaces。

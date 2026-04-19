@@ -12,6 +12,12 @@ import {
   bootstrapFrontDeskDesktop,
 } from './frontdesk-desktop-service.ts';
 import {
+  buildFrontDeskEnvironment,
+  buildFrontDeskModules,
+  runFrontDeskModuleAction,
+  type FrontDeskModuleAction,
+} from './frontdesk-installation.ts';
+import {
   getFrontDeskServiceStatus,
   installFrontDeskService,
   openFrontDeskService,
@@ -19,13 +25,6 @@ import {
   stopFrontDeskService,
   uninstallFrontDeskService,
 } from './frontdesk-service.ts';
-import {
-  getFrontDeskLibreChatServiceStatus,
-  installFrontDeskLibreChatService,
-  openFrontDeskLibreChatService,
-  startFrontDeskLibreChatService,
-  stopFrontDeskLibreChatService,
-} from './frontdesk-librechat-service.ts';
 import { startFrontDeskMcpBridge } from './frontdesk-mcp-stdio.ts';
 import {
   buildProductEntryHandoffEnvelope,
@@ -56,7 +55,6 @@ import {
   buildWorkspaceStatus,
 } from './management.ts';
 import { buildHostedPilotPackage } from './hosted-pilot-package.ts';
-import { buildLibreChatPilotPackage } from './librechat-pilot-package.ts';
 import { buildSessionLedger } from './session-ledger.ts';
 import { explainDomainBoundary, resolveRequestSurface } from './resolver.ts';
 import {
@@ -152,10 +150,6 @@ type WebCliInput = {
   basePath?: string;
 };
 
-type FrontDeskLibreChatCliInput = WebCliInput & {
-  publicOrigin?: string;
-};
-
 type FrontDeskDesktopCliInput = WebCliInput;
 
 type FrontDeskMcpCliInput = {
@@ -171,6 +165,10 @@ type HostedPilotPackageCliInput = {
   port?: number;
   basePath?: string;
   sessionsLimit?: number;
+};
+
+type FrontDeskModuleCliInput = {
+  moduleId?: string;
 };
 
 function printJson(payload: unknown, stream: NodeJS.WriteStream = process.stdout) {
@@ -924,58 +922,6 @@ function parseHostedPilotPackageArgs(
   };
 }
 
-function parseFrontDeskLibreChatArgs(
-  args: string[],
-  spec: Pick<CommandSpec, 'usage' | 'examples'>,
-): FrontDeskLibreChatCliInput {
-  const parsed: FrontDeskLibreChatCliInput = {};
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-    if (!token.startsWith('--')) {
-      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
-        token,
-      });
-    }
-
-    const value = args[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
-        option: token,
-      });
-    }
-
-    switch (token) {
-      case '--host':
-        parsed.host = value;
-        break;
-      case '--port':
-        parsed.port = parsePort(token, value, spec);
-        break;
-      case '--path':
-        parsed.workspacePath = value;
-        break;
-      case '--sessions-limit':
-        parsed.sessionsLimit = parsePositiveInteger(token, value, spec);
-        break;
-      case '--base-path':
-        parsed.basePath = value;
-        break;
-      case '--public-origin':
-        parsed.publicOrigin = value;
-        break;
-      default:
-        throw buildUsageError(`Unknown option for frontdesk LibreChat command: ${token}.`, spec, {
-          option: token,
-        });
-    }
-
-    index += 1;
-  }
-
-  return parsed;
-}
-
 function parseFrontDeskDesktopArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
@@ -1067,6 +1013,61 @@ function parseFrontDeskMcpArgs(
   }
 
   return parsed;
+}
+
+function parseFrontDeskModuleArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): FrontDeskModuleCliInput {
+  const parsed: FrontDeskModuleCliInput = {};
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (!token.startsWith('--')) {
+      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
+        token,
+      });
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
+        option: token,
+      });
+    }
+
+    switch (token) {
+      case '--module':
+        parsed.moduleId = value;
+        break;
+      default:
+        throw buildUsageError(`Unknown option for frontdesk module command: ${token}.`, spec, {
+          option: token,
+        });
+    }
+
+    index += 1;
+  }
+
+  if (!parsed.moduleId) {
+    throw buildUsageError(
+      'frontdesk module commands require --module.',
+      spec,
+      { required: ['--module'] },
+    );
+  }
+
+  return parsed;
+}
+
+function runFrontDeskModuleActionCommand(
+  action: FrontDeskModuleAction,
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+) {
+  const parsed = parseFrontDeskModuleArgs(args, spec);
+  return runFrontDeskModuleAction(action, parsed.moduleId ?? '');
 }
 
 function assertNoArgs(
@@ -1586,6 +1587,50 @@ async function main() {
       handler: (args) =>
         buildFrontDeskReadiness(getContracts(), parseDashboardArgs(args, commandSpecs['frontdesk readiness'])),
     },
+    'frontdesk environment': {
+      usage: 'opl frontdesk environment',
+      summary:
+        'Show the user-facing OPL environment surface: core engines, frontdesk status, and managed install paths.',
+      examples: ['opl frontdesk environment'],
+      handler: (args) => {
+        assertNoArgs(args, commandSpecs['frontdesk environment']);
+        return buildFrontDeskEnvironment(getContracts());
+      },
+    },
+    'frontdesk modules': {
+      usage: 'opl frontdesk modules',
+      summary:
+        'List OPL-managed domain modules together with install state, checkout path, and upgrade actions.',
+      examples: ['opl frontdesk modules'],
+      handler: (args) => {
+        assertNoArgs(args, commandSpecs['frontdesk modules']);
+        return buildFrontDeskModules();
+      },
+    },
+    'frontdesk-module-install': {
+      usage: 'opl frontdesk module install --module <module_id>',
+      summary: 'Install an OPL-managed domain module into the managed modules root.',
+      examples: ['opl frontdesk module install --module medautoscience'],
+      handler: (args) => runFrontDeskModuleActionCommand('install', args, commandSpecs['frontdesk-module-install']),
+    },
+    'frontdesk-module-update': {
+      usage: 'opl frontdesk module update --module <module_id>',
+      summary: 'Update an installed OPL domain module with a fast-forward git pull.',
+      examples: ['opl frontdesk module update --module medautoscience'],
+      handler: (args) => runFrontDeskModuleActionCommand('update', args, commandSpecs['frontdesk-module-update']),
+    },
+    'frontdesk-module-reinstall': {
+      usage: 'opl frontdesk module reinstall --module <module_id>',
+      summary: 'Reinstall an OPL-managed domain module from its configured git source.',
+      examples: ['opl frontdesk module reinstall --module medautoscience'],
+      handler: (args) => runFrontDeskModuleActionCommand('reinstall', args, commandSpecs['frontdesk-module-reinstall']),
+    },
+    'frontdesk-module-remove': {
+      usage: 'opl frontdesk module remove --module <module_id>',
+      summary: 'Remove an OPL-managed domain module checkout from the managed modules root.',
+      examples: ['opl frontdesk module remove --module medautoscience'],
+      handler: (args) => runFrontDeskModuleActionCommand('remove', args, commandSpecs['frontdesk-module-remove']),
+    },
     'frontdesk domain-wiring': {
       usage: 'opl frontdesk domain-wiring',
       summary:
@@ -1623,22 +1668,6 @@ async function main() {
         buildHostedPilotPackage(
           getContracts(),
           parseHostedPilotPackageArgs(args, commandSpecs['frontdesk hosted-package']),
-        ),
-    },
-    'frontdesk-librechat-package': {
-      usage:
-        'opl frontdesk-librechat-package --output <dir> [--public-origin <origin>] [--host <host>] [--port <port>] [--sessions-limit <n>] [--base-path <base_path>]',
-      summary:
-        'Export the optional hosted-shell compatibility package that combines the OPL front-desk package with same-origin hosted-shell deployment assets.',
-      examples: [
-        'opl frontdesk-librechat-package --output /tmp/opl-librechat-pilot --public-origin https://opl.example.com',
-        'opl frontdesk-librechat-package --output /tmp/opl-librechat-pilot --public-origin http://127.0.0.1:8080 --base-path /pilot/opl',
-        'opl frontdesk-librechat-package --output /tmp/opl-librechat-pilot --host 0.0.0.0 --port 8787 --sessions-limit 9',
-      ],
-      handler: (args) =>
-        buildLibreChatPilotPackage(
-          getContracts(),
-          parseHostedPilotPackageArgs(args, commandSpecs['frontdesk-librechat-package']),
         ),
     },
     'frontdesk-service-install': {
@@ -1713,62 +1742,10 @@ async function main() {
           parseFrontDeskDesktopArgs(args, commandSpecs['frontdesk-bootstrap']),
         ),
     },
-    'frontdesk-librechat-install': {
-      usage:
-        'opl frontdesk-librechat-install [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>] [--public-origin <origin>]',
-      summary:
-        'Install and start the optional hosted-shell compatibility lane, wired to the OPL front desk and local Codex defaults.',
-      examples: [
-        'opl frontdesk-librechat-install --path /Users/gaofeng/workspace/Yang/NF-PitNET',
-        'opl frontdesk-librechat-install --path /Users/gaofeng/workspace/Yang/NF-PitNET --public-origin http://127.0.0.1:8080',
-      ],
-      handler: (args) =>
-        installFrontDeskLibreChatService(
-          getContracts(),
-          parseFrontDeskLibreChatArgs(args, commandSpecs['frontdesk-librechat-install']),
-        ),
-    },
-    'frontdesk-librechat-status': {
-      usage: 'opl frontdesk-librechat-status',
-      summary:
-        'Inspect whether the optional hosted-shell compatibility lane is installed, running, and still aligned with the OPL front desk.',
-      examples: ['opl frontdesk-librechat-status'],
-      handler: (args) => {
-        assertNoArgs(args, commandSpecs['frontdesk-librechat-status']);
-        return getFrontDeskLibreChatServiceStatus(getContracts());
-      },
-    },
-    'frontdesk-librechat-start': {
-      usage: 'opl frontdesk-librechat-start',
-      summary: 'Start the installed hosted-shell compatibility lane and ensure the OPL front desk service is up.',
-      examples: ['opl frontdesk-librechat-start'],
-      handler: (args) => {
-        assertNoArgs(args, commandSpecs['frontdesk-librechat-start']);
-        return startFrontDeskLibreChatService(getContracts());
-      },
-    },
-    'frontdesk-librechat-stop': {
-      usage: 'opl frontdesk-librechat-stop',
-      summary: 'Stop the installed hosted-shell compatibility lane without removing its packaging files.',
-      examples: ['opl frontdesk-librechat-stop'],
-      handler: (args) => {
-        assertNoArgs(args, commandSpecs['frontdesk-librechat-stop']);
-        return stopFrontDeskLibreChatService(getContracts());
-      },
-    },
-    'frontdesk-librechat-open': {
-      usage: 'opl frontdesk-librechat-open',
-      summary: 'Open the installed hosted-shell compatibility lane in the default browser.',
-      examples: ['opl frontdesk-librechat-open'],
-      handler: (args) => {
-        assertNoArgs(args, commandSpecs['frontdesk-librechat-open']);
-        return openFrontDeskLibreChatService(getContracts());
-      },
-    },
     'mcp-stdio': {
       usage:
         'opl mcp-stdio --api-base-url <url> [--workspace-path <workspace_path>] [--sessions-limit <n>]',
-      summary: 'Internal command: run the OPL front-desk MCP stdio bridge for chat shells such as LibreChat.',
+      summary: 'Internal command: run the OPL front-desk MCP stdio bridge for desktop or web shells.',
       examples: [
         'opl mcp-stdio --api-base-url http://host.docker.internal:8787/pilot/opl/api',
       ],
@@ -2018,11 +1995,11 @@ async function main() {
         }
 
         const helpTarget = args.join(' ');
-        const helpSpec = publicCommandSpecs[helpTarget] ?? compatibilityCommandSpecs[helpTarget];
+        const helpSpec = publicCommandSpecs[helpTarget];
         if (!helpSpec) {
           throw new GatewayContractError('unknown_command', `Unknown command: ${helpTarget}.`, {
             command: helpTarget,
-            commands: Object.keys({ ...publicCommandSpecs, ...compatibilityCommandSpecs }),
+            commands: Object.keys(publicCommandSpecs),
             usage: 'opl help',
           });
         }
@@ -2207,6 +2184,36 @@ async function main() {
       examples: ['opl frontdesk readiness', 'opl frontdesk readiness --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5'],
       group: 'frontdesk',
     }),
+    'frontdesk environment': cloneCommandSpec(commandSpecs['frontdesk environment'], {
+      usage: 'opl frontdesk environment',
+      examples: ['opl frontdesk environment'],
+      group: 'frontdesk',
+    }),
+    'frontdesk modules': cloneCommandSpec(commandSpecs['frontdesk modules'], {
+      usage: 'opl frontdesk modules',
+      examples: ['opl frontdesk modules'],
+      group: 'frontdesk',
+    }),
+    'frontdesk module install': cloneCommandSpec(commandSpecs['frontdesk-module-install'], {
+      usage: 'opl frontdesk module install --module <module_id>',
+      examples: ['opl frontdesk module install --module medautoscience'],
+      group: 'frontdesk',
+    }),
+    'frontdesk module update': cloneCommandSpec(commandSpecs['frontdesk-module-update'], {
+      usage: 'opl frontdesk module update --module <module_id>',
+      examples: ['opl frontdesk module update --module medautoscience'],
+      group: 'frontdesk',
+    }),
+    'frontdesk module reinstall': cloneCommandSpec(commandSpecs['frontdesk-module-reinstall'], {
+      usage: 'opl frontdesk module reinstall --module <module_id>',
+      examples: ['opl frontdesk module reinstall --module medautoscience'],
+      group: 'frontdesk',
+    }),
+    'frontdesk module remove': cloneCommandSpec(commandSpecs['frontdesk-module-remove'], {
+      usage: 'opl frontdesk module remove --module <module_id>',
+      examples: ['opl frontdesk module remove --module medautoscience'],
+      group: 'frontdesk',
+    }),
     'frontdesk domain-wiring': cloneCommandSpec(commandSpecs['frontdesk domain-wiring'], {
       usage: 'opl frontdesk domain-wiring',
       examples: ['opl frontdesk domain-wiring'],
@@ -2288,43 +2295,8 @@ async function main() {
     }),
   };
 
-  const compatibilityCommandSpecs: Record<string, CommandSpec> = {
-    'frontdesk-librechat-package': cloneCommandSpec(commandSpecs['frontdesk-librechat-package'], {
-      usage:
-        'opl frontdesk-librechat-package --output <dir> [--public-origin <origin>] [--host <host>] [--port <port>] [--sessions-limit <n>] [--base-path <base_path>]',
-      examples: ['opl frontdesk-librechat-package --output /tmp/opl-librechat-pilot --public-origin http://127.0.0.1:8080'],
-      group: 'compatibility',
-    }),
-    'frontdesk-librechat-install': cloneCommandSpec(commandSpecs['frontdesk-librechat-install'], {
-      usage:
-        'opl frontdesk-librechat-install [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>] [--public-origin <origin>]',
-      examples: ['opl frontdesk-librechat-install --path /Users/gaofeng/workspace/Yang/NF-PitNET --public-origin http://127.0.0.1:8080'],
-      group: 'compatibility',
-    }),
-    'frontdesk-librechat-status': cloneCommandSpec(commandSpecs['frontdesk-librechat-status'], {
-      usage: 'opl frontdesk-librechat-status',
-      examples: ['opl frontdesk-librechat-status'],
-      group: 'compatibility',
-    }),
-    'frontdesk-librechat-start': cloneCommandSpec(commandSpecs['frontdesk-librechat-start'], {
-      usage: 'opl frontdesk-librechat-start',
-      examples: ['opl frontdesk-librechat-start'],
-      group: 'compatibility',
-    }),
-    'frontdesk-librechat-stop': cloneCommandSpec(commandSpecs['frontdesk-librechat-stop'], {
-      usage: 'opl frontdesk-librechat-stop',
-      examples: ['opl frontdesk-librechat-stop'],
-      group: 'compatibility',
-    }),
-    'frontdesk-librechat-open': cloneCommandSpec(commandSpecs['frontdesk-librechat-open'], {
-      usage: 'opl frontdesk-librechat-open',
-      examples: ['opl frontdesk-librechat-open'],
-      group: 'compatibility',
-    }),
-  };
   const dispatchCommandSpecs: Record<string, CommandSpec> = {
     ...publicCommandSpecs,
-    ...compatibilityCommandSpecs,
   };
 
   const inputTokens = parsedInput.command ? [parsedInput.command, ...parsedInput.args] : [];

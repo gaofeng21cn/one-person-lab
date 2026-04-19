@@ -5,12 +5,11 @@
 - narrative 协作规则看仓库根 `AGENTS.md`
 - 默认人类/AI 入口看 `README*` 与 `docs/README*`
 - 顶层 gateway 合同入口看 `contracts/opl-gateway/README.md`
-- 当前公开默认主路径是 `GUI -> Codex -> OPL`；`Hermes` 只保留显式备用模式，optional hosted-shell / downstream bridge lane 留在默认主路径之外
+- 当前公开默认主路径是 `Onyx-style shell -> Codex -> OPL -> domain modules`；`Hermes-Agent` 只保留显式备用模式与 online gateway
 
 当前保留的 repo-tracked machine-readable truth：
 
 - `contracts/opl-gateway/*.json`：冻结的 gateway、admission、acceptance 与 supporting-surface contract
-- `contracts/opl-gateway/paperclip-control-plane.schema.json`：`OPL -> Paperclip` 可选下游 control-plane bridge 的 machine-readable schema；未配置 `Paperclip` 时 `OPL` 主入口仍然正常运行
 - `contracts/opl-gateway/README.md`：这些 JSON contract 的人类可读说明
 - `contracts/family-orchestration/*.schema.json`：跨四仓统一的 family orchestration companion schemas
 - `contracts/family-orchestration/README*.md`：这些 family orchestration schema 的人类可读说明

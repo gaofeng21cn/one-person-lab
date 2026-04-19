@@ -29,7 +29,7 @@ repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review 
 其中 `frontdesk-entry-guide` 是面向 AI / GUI 壳的 family-level machine-readable entry layer：它冻结 workspace taxonomy、domain workspace mapping 与每个 domain 的 start guidance，但不替代 domain 自己持有的 manifest truth。
 `opl frontdesk manifest` 与 `opl web` startup payload 现在也把 shell bootstrap 顺序显式冻结下来：`opl frontdesk entry-guide` 是 primary discovery surface，`opl frontdesk readiness` 与 `opl frontdesk domain-wiring` 是 follow-on alignment surface，而 `opl status dashboard` 明确退回 operator debug / aggregate surface，不再充当壳层默认入口来源。
 如果未来把更高层的用户前台命名为 `OPL Cortex`，那也只应被视为产品壳名字；repo 内部的 `frontdesk_*` contract id 继续保持不变，除非单独冻结新的 rename tranche。
-`Paperclip` 继续停留在主公开面之外的 optional downstream control-plane bridge，`LibreChat` 继续停留在主公开面之外的 optional compatibility / fallback lane。
+当前主前门已经收口到 Onyx 风格桌面壳与本地 web companion surface；`Hermes-Agent` 继续只保留显式备用模式与 online gateway 角色。
 这个交付目标把已有的顶层 contract language 继续维持为本地 GUI 与 CLI surface 可读取的合同入口；任何诚实的上游 `Hermes-Agent` rollout，仍然属于 domain 侧迁移目标，而不是当前 OPL 层既成事实。
 
 ## 当前参考同步配套文档
@@ -103,8 +103,6 @@ repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review 
 - [OPL Surface Lifecycle Map](../../docs/references/opl-surface-lifecycle-map.zh-CN.md) — 对当前已冻结 gateway / operating / supporting surfaces 的 derived machine-readable lifecycle 视图
 - [OPL Surface Authority Matrix](../../docs/references/opl-surface-authority-matrix.zh-CN.md) — 对当前已冻结 OPL surfaces 与 linked domain public-entry surfaces 的 derived machine-readable authority split
 - [OPL Surface Review Matrix](../../docs/references/opl-surface-review-matrix.zh-CN.md) — 对当前已冻结 OPL public / contract / supporting surfaces 的 derived machine-readable review obligation
-- [Paperclip Control Plane Operator Guide](../../docs/references/paperclip-control-plane-operator-guide.md) — 可选下游 Paperclip bridge 的 operator loop、bootstrap 与 sync 使用说明
-
 这些 backlog 与 mapping surfaces 都是 reference-only surface，继续作为本目录 governing contracts 的配套参考。
 
 ## 文件
@@ -117,7 +115,6 @@ repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review 
 - [`domain-onboarding-readiness.schema.json`](./domain-onboarding-readiness.schema.json) — machine-readable domain onboarding readiness gate 的 JSON Schema
 - [`family-executor-adapter-defaults.json`](./family-executor-adapter-defaults.json) — 当前家族默认 executor-adapter route 与硬 guardrail 的 machine-readable freeze
 - [`managed-runtime-three-layer-contract.json`](./managed-runtime-three-layer-contract.json) — 共享 `runtime_owner / domain_owner / executor_owner` envelope 与 supervision / recovery surface locator 的 machine-readable freeze
-- [`paperclip-control-plane.schema.json`](./paperclip-control-plane.schema.json) — 可选 `OPL -> Paperclip` 下游 control-plane bridge surface 的 JSON Schema，覆盖 config / binding / status / bootstrap / task / gate / sync payload；未配置 `Paperclip` 时不影响 `OPL` 主入口运行
 - [`governance-audit.schema.json`](./governance-audit.schema.json) — 已冻结的 P5.M1 governance / audit operating contract JSON Schema
 - [`publish-promotion.schema.json`](./publish-promotion.schema.json) — 已冻结的 P5.M2 publish / promotion operating contract JSON Schema
 - [`acceptance-matrix.json`](./acceptance-matrix.json) — 已冻结 gateway 与 operating surface 的 declarative acceptance matrix

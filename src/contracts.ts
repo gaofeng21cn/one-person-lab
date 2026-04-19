@@ -27,9 +27,7 @@ type ErrorCode =
   | 'hermes_binary_not_found'
   | 'hermes_command_failed'
   | 'hermes_output_parse_failed'
-  | 'codex_command_failed'
-  | 'paperclip_not_configured'
-  | 'paperclip_request_failed';
+  | 'codex_command_failed';
 
 const REQUIRED_CONTRACT_FILE_NAMES = [
   'workstreams.json',
@@ -74,8 +72,6 @@ function defaultExitCode(code: ErrorCode): number {
     case 'hermes_command_failed':
     case 'hermes_output_parse_failed':
     case 'codex_command_failed':
-    case 'paperclip_not_configured':
-    case 'paperclip_request_failed':
       return 4;
   }
 }

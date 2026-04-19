@@ -1,6 +1,6 @@
 import readline from 'node:readline';
 
-import { inferFrontDeskWorkspaceLabel } from './frontdesk-librechat-identity.ts';
+import { inferFrontDeskWorkspaceLabel } from './frontdesk-shell-identity.ts';
 import {
   humanizeProgressCode,
   readStatusNarrationContract,
@@ -18,8 +18,7 @@ export type FrontDeskMcpBridgeOptions = {
 };
 
 type FrontDeskMcpBridgeState = {
-  titleSyncInFlight: boolean;
-  lastTitleSyncAt: number;
+  initialized: boolean;
 };
 
 type JsonRpcRequest = {
@@ -54,8 +53,6 @@ const SUPPORTED_PROTOCOL_VERSIONS = [
   '2024-11-05',
 ] as const;
 const DEFAULT_PROTOCOL_VERSION = '2025-03-26';
-const TITLE_SYNC_COOLDOWN_MS = 15_000;
-
 function writeJsonLine(payload: JsonRpcResponse) {
   process.stdout.write(`${JSON.stringify(payload)}\n`);
 }
@@ -837,23 +834,6 @@ async function handleRequest(
   }
 
   if (request.method === 'tools/call') {
-    if (!state.titleSyncInFlight && Date.now() - state.lastTitleSyncAt >= TITLE_SYNC_COOLDOWN_MS) {
-      state.titleSyncInFlight = true;
-      state.lastTitleSyncAt = Date.now();
-      try {
-        await fetchJson(options, '/frontdesk/librechat/title-sync', {}, {
-          method: 'POST',
-          body: {
-            limit: 3,
-          },
-        });
-      } catch {
-        // Title sync is opportunistic; it should never block user-facing tool calls.
-      } finally {
-        state.titleSyncInFlight = false;
-      }
-    }
-
     const params = isRecord(request.params) ? request.params : {};
     const name = normalizeOptionalString(params.name);
     if (!name) {
@@ -898,8 +878,7 @@ export async function startFrontDeskMcpBridge(options: FrontDeskMcpBridgeOptions
     apiBaseUrl: normalizeApiBaseUrl(options.apiBaseUrl),
   } satisfies FrontDeskMcpBridgeOptions;
   const state: FrontDeskMcpBridgeState = {
-    titleSyncInFlight: false,
-    lastTitleSyncAt: 0,
+    initialized: false,
   };
 
   const rl = readline.createInterface({

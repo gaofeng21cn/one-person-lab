@@ -248,8 +248,8 @@
 这一步的 hosted / web 前台并不是“随便找一个聊天壳就算完成”。
 当前已经冻结的前台选型是：
 
-- 短期：`LibreChat-first`
-- 长期：`OPL` 自有 web front desk
+- 当前 GUI：`Onyx-style Desktop shell + OPL web companion`
+- 长期：`OPL` 自有 hosted / web front desk
 
 对应的选型说明见：
 

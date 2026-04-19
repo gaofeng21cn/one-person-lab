@@ -14,7 +14,7 @@ import { ensureFrontDeskStateDir } from './frontdesk-state.ts';
 import {
   OPL_FRONTDOOR_AGENT_LABEL,
   OPL_FRONTDOOR_APP_TITLE,
-} from './frontdesk-librechat-identity.ts';
+} from './frontdesk-shell-identity.ts';
 import { readFrontDeskRuntimeModes } from './frontdesk-runtime-modes.ts';
 import {
   installFrontDeskService,
@@ -170,7 +170,9 @@ export async function bootstrapFrontDeskDesktop(
       action: 'bootstrap',
       installed: true,
       default_entry: 'desktop',
-      shell_kind: 'electron_desktop_shell',
+      shell_kind: 'tauri_onyx_desktop_shell',
+      shell_upstream: 'onyx_foss_desktop',
+      desktop_runtime: 'tauri',
       app_title: OPL_FRONTDOOR_APP_TITLE,
       model_display_label: OPL_FRONTDOOR_AGENT_LABEL,
       frontdesk_url: frontdeskUrl,
@@ -184,13 +186,12 @@ export async function bootstrapFrontDeskDesktop(
       codex_reasoning_effort: codexDefaults.reasoning_effort ?? null,
       interaction_mode: runtimeModes.interaction_mode,
       execution_mode: runtimeModes.execution_mode,
-      librechat_retired_from_default: true,
       launch_command: desktopPackage.launch_command,
       assets: desktopPackage.assets,
       notes: [
         'This is the default local Desktop front door for OPL.',
-        'The Desktop shell reuses the existing OPL web front desk as its truth surface.',
-        'The desktop shell is now the only supported GUI path for OPL.',
+        'The Onyx-style desktop shell reuses the existing OPL web front desk as its truth surface.',
+        'The desktop shell is now the default native GUI path for OPL.',
       ],
     },
   };

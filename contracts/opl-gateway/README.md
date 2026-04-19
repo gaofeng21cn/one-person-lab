@@ -29,7 +29,7 @@ Within that front-desk set, `frontdesk-readiness` is the operator-facing derived
 Within the same set, `frontdesk-entry-guide` is the family-level machine-readable entry layer for AI / GUI shells: it freezes workspace taxonomy, domain workspace mapping, and per-domain start guidance without replacing domain-owned manifests.
 `opl frontdesk manifest` and the `opl web` startup payload now freeze the shell bootstrap order explicitly: `opl frontdesk entry-guide` is the primary discovery surface, `opl frontdesk readiness` plus `opl frontdesk domain-wiring` are follow-on alignment surfaces, and `opl status dashboard` is kept as the operator debug / aggregate surface rather than the default shell entry source.
 If a higher-level shell is later branded as `OPL Cortex`, that remains a product-shell name above these repo-internal `frontdesk_*` contract ids unless a separate rename tranche is explicitly frozen.
-`Paperclip` remains outside the primary front door as an optional downstream control-plane bridge, and `LibreChat` remains outside the primary front door as an optional compatibility / fallback lane.
+The current primary front door is the Onyx-fronted desktop shell plus the local web companion surface, while `Hermes-Agent` stays an explicit alternate mode and online gateway.
 That delivery target keeps the existing top-level contract language executable through local GUI and CLI surfaces, while any honest upstream `Hermes-Agent` rollout remains a domain-side migration target rather than a current OPL-layer fact.
 
 ## Current reference-sync companions
@@ -105,7 +105,6 @@ These corpora are companion references only. They do not replace the governing c
 - [OPL Surface Lifecycle Map](../../docs/references/opl-surface-lifecycle-map.md) — derived machine-readable lifecycle view across the frozen gateway / operating / supporting surfaces
 - [OPL Surface Authority Matrix](../../docs/references/opl-surface-authority-matrix.md) — derived machine-readable authority split across the frozen OPL surfaces and linked domain public-entry surfaces
 - [OPL Surface Review Matrix](../../docs/references/opl-surface-review-matrix.md) — derived machine-readable review obligations across the frozen OPL public, contract, and supporting surfaces
-- [Paperclip Control Plane Operator Guide](../../docs/references/paperclip-control-plane-operator-guide.md) — optional downstream Paperclip bridge operator loop, bootstrap, and sync guide
 
 These backlog and mapping surfaces stay reference-only companions to the governing contracts in this directory.
 
@@ -119,7 +118,6 @@ These backlog and mapping surfaces stay reference-only companions to the governi
 - [`domain-onboarding-readiness.schema.json`](./domain-onboarding-readiness.schema.json) — JSON Schema for the machine-readable domain onboarding readiness gate
 - [`family-executor-adapter-defaults.json`](./family-executor-adapter-defaults.json) — machine-readable freeze for the current family default executor-adapter route and its hard guardrails
 - [`managed-runtime-three-layer-contract.json`](./managed-runtime-three-layer-contract.json) — machine-readable freeze for the shared `runtime_owner / domain_owner / executor_owner` envelope plus supervision / recovery surface locators
-- [`paperclip-control-plane.schema.json`](./paperclip-control-plane.schema.json) — JSON Schema for the optional downstream `OPL -> Paperclip` control-plane bridge surface, including config/binding/status/bootstrap/task/gate/sync payloads
 - [`governance-audit.schema.json`](./governance-audit.schema.json) — JSON Schema for the frozen P5.M1 governance / audit operating contract
 - [`publish-promotion.schema.json`](./publish-promotion.schema.json) — JSON Schema for the frozen P5.M2 publish / promotion operating contract
 - [`acceptance-matrix.json`](./acceptance-matrix.json) — declarative acceptance matrix for the frozen gateway and operating surfaces

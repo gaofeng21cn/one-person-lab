@@ -21,7 +21,7 @@ import {
   parseHermesSessionsTable,
   runHermesCommand,
 } from './hermes.ts';
-import { buildFrontDeskHostedShellMcpWiring } from './frontdesk-librechat-identity.ts';
+import { buildFrontDeskShellMcpWiring } from './frontdesk-shell-identity.ts';
 import { readFrontDeskRuntimeModes } from './frontdesk-runtime-modes.ts';
 import { buildSessionLedger } from './session-ledger.ts';
 import {
@@ -2307,7 +2307,7 @@ export function buildProjectsOverview(contracts: GatewayContracts) {
 export function buildFrontDeskManifest(contracts: GatewayContracts, options: { basePath?: string } = {}) {
   const endpoints = buildFrontDeskEndpoints(options.basePath);
   const hostedRuntimeReadiness = buildHostedRuntimeReadiness();
-  const hostedShellMcpWiring = buildFrontDeskHostedShellMcpWiring();
+  const hostedShellMcpWiring = buildFrontDeskShellMcpWiring();
   const frontdeskEntryGuideSurface = buildFrontDeskEntryGuideSurfaceRef(contracts, options);
   const domainWiringSurface = buildFrontDeskDomainWiringSurfaceRef(contracts, options);
   const frontdeskReadinessSurface = buildFrontDeskReadinessSurfaceRef(options);
@@ -2363,7 +2363,7 @@ export function buildHostedPilotBundle(
   const baseUrl = `http://${normalizeBaseUrlHost(host)}:${port}`;
   const endpoints = buildFrontDeskEndpoints(normalizedBasePath);
   const hostedRuntimeReadiness = buildHostedRuntimeReadiness();
-  const hostedShellMcpWiring = buildFrontDeskHostedShellMcpWiring();
+  const hostedShellMcpWiring = buildFrontDeskShellMcpWiring();
   const frontdeskReadinessSurface = buildFrontDeskReadinessSurfaceRef({
     basePath: normalizedBasePath,
   });
@@ -2792,7 +2792,7 @@ export function buildFrontDeskDashboard(
           '`opl workspace list` keeps `manifest_command` as non-executing registry state, while `opl domain manifests` resolves the active bound machine-readable product-entry manifests.',
           'Resolved domain manifests now also feed frontdesk surface plus operator-loop actions and recommended shell/command hints back into dashboard and handoff surfaces.',
           'Resolved domain manifests now also surface family-orchestration companion previews so the top-level front desk can show human-gate and resume semantics instead of hiding them in domain docs.',
-          'Managed hosted runtime readiness remains a separate follow-up track from the default desktop, web, and hosted-package surfaces.',
+          'The GUI mainline now targets the Onyx-fronted desktop lane, while managed hosted runtime readiness remains a separate follow-up track.',
         ],
       },
       projects,
