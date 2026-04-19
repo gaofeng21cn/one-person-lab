@@ -2,9 +2,9 @@
 
 # OPL Docs Guide
 
-This directory is the technical reading layer for `One Person Lab`.
+This directory is the entry index for the repo-tracked docs surface of `One Person Lab`.
 The repository home is written first for potential users and human experts.
-This guide points readers to the architecture, contracts, planning surfaces, and implementation references behind the current product-shell story.
+This guide points readers to the core working set, layered doc structure, reference material, and historical records behind the current gateway and headless-adapter story.
 
 ## Start Here By Audience
 
@@ -12,24 +12,11 @@ This guide points readers to the architecture, contracts, planning surfaces, and
 | --- | --- | --- |
 | Potential users and human experts | [Repository Home](../README.md), [Roadmap](./roadmap.md), [Task Map](./task-map.md), [Operating Model](./operating-model.md) | Understand the `OPL` shell, product families, and current implementations before reading technical details |
 | Technical readers and planners | [Project](./project.md), [Status](./status.md), [Architecture](./architecture.md), [Invariants](./invariants.md), [Decisions](./decisions.md), [Contracts Overview](../contracts/README.md) | Understand the current baseline, boundaries, and the active technical direction |
-| Developers and maintainers | [Reference Index](./references/README.md), `docs/specs/`, `docs/plans/`, `docs/history/omx/` | Inspect implementation support material, historical records, and tracked working notes |
+| Developers and maintainers | [Reference Index](./references/README.md), `docs/specs/`, `docs/plans/`, `docs/history/frontdesk-legacy/`, `docs/history/omx/` | Inspect implementation support material, historical records, and tracked working notes |
 
-## Current Baseline
+## Fast Technical Working Set
 
-- `OPL` main repo is the contract-first gateway, CLI product-entry surface, and headless adapter/API layer for one-person-lab agents.
-- The public reading model uses three layers: product shell -> product families -> current implementations.
-- Repo-tracked GUI truth stays on adapter surfaces: workspace, task, progress, files, environment, and modules.
-- The GUI mainline is now `external overlay repo -> OPL adapter surfaces`; the current recommended overlay target is `opl-onyx-shell`, while `Onyx` stays an upstream benchmark rather than an integrated dependency.
-- `Research Foundry`, `Grant Foundry`, and `Presentation Foundry` are the current active product families; `Thesis Foundry` and `Review Foundry` stay in definition.
-- `MAS`, `MAG`, and `RCA` are the current active implementations under those product families.
-- Settings surfaces own module management, module upgrades, version pins, module health, default mode, and online gateway configuration.
-- Workspace-facing surfaces own human-readable progress, running-task status, and deliverable files.
-- `Hermes-Agent` is the explicit backup mode and online gateway for remote or alternate runtime paths.
-- Domain-agent repositories remain the source of truth for their specialized capabilities and readiness.
-
-## Technical Working Set
-
-These are the fastest files for understanding the live technical truth before changing repo state:
+These files give the fastest read on the current repo-tracked truth before you change anything:
 
 - [Project](./project.md)
 - [Status](./status.md)
@@ -41,19 +28,14 @@ These are the fastest files for understanding the live technical truth before ch
 ## The Existing Four-Layer Docs System
 
 The repository still uses the four-layer `OPL` docs system.
-The current entry order is:
+Use it like this:
 
 - human experts enter through the repository home and Layer 1
 - technical planners combine the technical working set with Layer 2
 - developers treat Layers 3 and 4 as supporting material
-- the public product mental model is `shell -> family -> implementation`
-- live product-shell, module, settings, and online-gateway truth is read from [Status](./status.md)
-- `opl web` runs the local adapter service; `/` now returns a machine-readable root payload for external GUI overlays
-- `opl frontdesk service install|status|start|stop|open|uninstall` manages the long-running local adapter service
-- the default `OPL Cortex` bridge stays small: `project progress`, `execute request`, `task status`, `recent sessions`, `resume session`, `runtime logs`, `projects`, and `activate workspace`
-- front-door execution requests use async acceptance for real work: the shell returns a `task_id`, then the user-facing shell follows progress through `task status`
-- Codex remains the default engine for ordinary conversation and general local tasks
-- `Hermes-Agent` remains the explicit backup online gateway
+- the public product mental model is `family entry surface -> family -> implementation`
+- [Status](./status.md) and [Architecture](./architecture.md) hold the live public boundary
+- [Reference Index](./references/README.md) and the history indexes hold supporting context and retired lanes
 
 ## Layer 1. Default Public Mainline
 
@@ -119,7 +101,15 @@ It explains how or why a freeze happened, while [Status](./status.md) remains th
 
 - `docs/specs/`
 - `docs/plans/`
+- `docs/history/frontdesk-legacy/`
 - `docs/history/omx/`
+
+## Where Current Truth Lives
+
+- Public role, active boundary, and default reading order: [Project](./project.md), [Status](./status.md), [Architecture](./architecture.md)
+- Machine-readable gateway and admission surfaces: [Contracts Overview](../contracts/README.md) and `contracts/opl-gateway/*.json`
+- Reference-grade supporting material: [Reference Index](./references/README.md)
+- Historical frontdesk and OMX lanes: `docs/history/frontdesk-legacy/`, `docs/history/omx/`
 
 ## Documentation Rules
 
@@ -134,4 +124,4 @@ It explains how or why a freeze happened, while [Status](./status.md) remains th
 - Governance notes live in [series-doc-governance-checklist.md](./references/series-doc-governance-checklist.md), the technical working set, and the repo-tracked contract/doc surfaces.
 - The current four-repo alignment snapshot lives in [four-repo-doc-series-sync-summary-2026-04-14.md](./references/four-repo-doc-series-sync-summary-2026-04-14.md).
 - The reusable intake starting point lives in [four-repo-doc-intake-template.md](./references/four-repo-doc-intake-template.md).
-- Cross-repo doc rounds should be reviewed directly in the affected repositories and verified with their normal verification lanes.
+- Cross-repo doc rounds should be reviewed directly in the affected repositories and verified with their normal repo-local verification lanes.

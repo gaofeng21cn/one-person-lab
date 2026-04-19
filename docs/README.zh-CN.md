@@ -2,9 +2,9 @@
 
 # OPL 文档索引
 
-这个目录是 `One Person Lab` 的技术阅读面。
+这个目录是 `One Person Lab` 仓库跟踪文档面的入口索引。
 仓库首页优先写给潜在用户、人类专家和非技术读者。
-这份索引承接当前产品壳叙事背后的架构、合同、规划和实现配套材料。
+这份索引把当前 gateway 与 headless-adapter 主线背后的核心工作集、分层文档、参考材料和历史记录串起来。
 
 ## 按读者类型进入
 
@@ -12,20 +12,7 @@
 | --- | --- | --- |
 | 潜在用户、人类专家、非技术读者 | [仓库首页](../README.zh-CN.md)、[路线图](./roadmap.zh-CN.md)、[任务版图](./task-map.zh-CN.md)、[运行模型](./operating-model.zh-CN.md) | 先理解 `OPL` 的产品壳、产品家族和当前实现，再进入技术细节 |
 | 技术规划者、架构读者、方向同步读者 | [项目概览](./project.md)、[当前状态](./status.md)、[架构](./architecture.md)、[硬约束](./invariants.md)、[关键决策](./decisions.md)、[合同目录说明](../contracts/README.md) | 快速把握当前基线、边界和技术主线 |
-| 开发者与维护者 | [参考级索引](./references/README.zh-CN.md)、`docs/specs/`、`docs/plans/`、`docs/history/omx/` | 查看实现配套材料、历史记录和跟踪中的工作笔记 |
-
-## 当前基线
-
-- `OPL` 主仓当前承担的是 contract-first gateway、CLI 产品入口，以及面向外部 GUI overlay 的 headless adapter / API 面。
-- 对外公开的阅读模型采用三层：产品壳 -> 产品家族 -> 当前实现。
-- 仓库跟踪的 GUI 真相当前收口在 adapter surfaces：workspace、task、progress、files、environment、modules。
-- GUI 主线已经冻结为 `外部 overlay 仓 -> OPL adapter surfaces`；当前推荐的 overlay 目标是 `opl-onyx-shell`，`Onyx` 只作为上游基准与参考，不作为已集成依赖来表述。
-- `Research Foundry`、`Grant Foundry`、`Presentation Foundry` 是当前活跃产品家族；`Thesis Foundry` 与 `Review Foundry` 继续处在定义阶段。
-- `MAS`、`MAG`、`RCA` 是这些产品家族当前已经公开的实现。
-- 设置类 surface 承载模块管理、模块升级、版本 pin、模块健康、默认模式和 online gateway 配置。
-- workspace 相关 surface 承载人话进度、运行中的任务状态和交付文件。
-- `Hermes-Agent` 是显式备用模式与在线网关，用于远端或替代 runtime 路径。
-- 各智能体仓库继续维护各自专业能力和 readiness 真相。
+| 开发者与维护者 | [参考级索引](./references/README.zh-CN.md)、`docs/specs/`、`docs/plans/`、`docs/history/frontdesk-legacy/`、`docs/history/omx/` | 查看实现配套材料、历史记录和跟踪中的工作笔记 |
 
 ## 技术工作集
 
@@ -46,14 +33,9 @@
 - 人类专家从仓库首页和第一层进入
 - 技术规划把“技术工作集”和第二层组合起来阅读
 - 开发实现把第三层和第四层视作配套材料
-- 当前公开产品心智以 `产品壳 -> 产品家族 -> 当前实现` 为准
-- 产品壳、模块、设置和 online gateway 的现时真相以 [当前状态](./status.md) 为准
-- `opl web` 启动本地 adapter service；根路由 `/` 返回给外部 GUI overlay 消费的 machine-readable root payload
-- `opl frontdesk service install|status|start|stop|open|uninstall` 管理长期运行的本地 adapter service
-- 默认的 `OPL Cortex` 前台桥保持小而稳定：论文/项目进度、执行请求、任务状态、最近会话、恢复会话、运行日志、项目列表、切换 workspace
-- 真正的前台执行请求采用“异步受理”语义：先返回 `task_id`，再通过任务状态面持续追踪
-- Codex 是普通对话与通用本地任务的默认执行者
-- `Hermes-Agent` 是显式备用在线网关
+- 当前公开产品心智以 `家族入口面 -> 产品家族 -> 当前实现` 为准
+- [当前状态](./status.md) 与 [架构](./architecture.md) 承担现时公开边界
+- [参考级索引](./references/README.zh-CN.md) 与历史索引承接配套背景和退役路线
 
 ## 第一层：默认公开主线
 
@@ -119,7 +101,15 @@
 
 - `docs/specs/`
 - `docs/plans/`
+- `docs/history/frontdesk-legacy/`
 - `docs/history/omx/`
+
+## 当前真相分别去哪看
+
+- 公开角色、活跃边界、默认阅读顺序： [项目概览](./project.md)、[当前状态](./status.md)、[架构](./architecture.md)
+- machine-readable gateway / admission surface： [合同目录说明](../contracts/README.md) 与 `contracts/opl-gateway/*.json`
+- 参考级配套材料： [参考级索引](./references/README.zh-CN.md)
+- frontdesk 与 OMX 历史线： `docs/history/frontdesk-legacy/`、`docs/history/omx/`
 
 ## 文档规则
 
@@ -134,4 +124,4 @@
 - 文档治理说明收口在 [series-doc-governance-checklist.md](./references/series-doc-governance-checklist.md)、技术工作集，以及仓库跟踪的 contract/doc surface 中。
 - 当前四仓对齐快照收口在 [four-repo-doc-series-sync-summary-2026-04-14.md](./references/four-repo-doc-series-sync-summary-2026-04-14.md)。
 - 可复用的 intake 起点收口在 [four-repo-doc-intake-template.md](./references/four-repo-doc-intake-template.md)。
-- 跨仓文档轮次应直接在受影响仓库里人工审阅，并配套各仓自己的常规验证入口。
+- 跨仓文档轮次应直接在受影响仓库里人工审阅，并配套各仓自己的 repo-local 常规验证入口。

@@ -8,7 +8,7 @@
 
 <h1 align="center">One Person Lab</h1>
 
-<p align="center"><strong>面向一人课题组的统一工作台与模块管理器</strong></p>
+<p align="center"><strong>面向一人课题组的 family gateway 与 headless adapter</strong></p>
 <p align="center">研究工作 · 基金申请 · 汇报交付</p>
 
 <table>
@@ -23,7 +23,7 @@
     </td>
     <td width="33%" valign="top">
       <strong>当前定位</strong><br/>
-      `OPL` 是统一工作台，负责组织工作流、模块、进度反馈和交付文件
+      `OPL` 跟踪 one-person-lab 产品面背后的 contract-first family gateway、模块目录和 headless adapter / API surfaces
     </td>
   </tr>
 </table>
@@ -32,15 +32,15 @@
   <img src="assets/branding/opl-workbench-overview.svg" alt="OPL workbench overview" width="100%" />
 </p>
 
-> `OPL` 是一人课题组的统一工作台。它把日常协作、专业工作流、执行可见性和文件交付放在同一个入口里。
+> `OPL` 负责把家族入口、进度 surfaces、模块目录和 domain handoff contract 对齐起来。外部 overlay 或 CLI 消费这些 surfaces，各 domain 仓继续持有专业 runtime 与交付。
 
 ## 可以用来做什么
 
-- 讨论课题、整理思路、拆解任务、持续推进工作。
-- 发起研究项目，查看最近进展、当前状态和已产出的文件。
-- 组织基金方向、申请书初稿、修订材料和配套文档。
-- 生成讲课、组会、汇报、答辩等交付材料。
-- 在同一个工作区里管理任务、文件和模块状态。
+- 从同一个 family-level 入口发起研究、基金和汇报相关工作。
+- 通过共享 adapter surfaces 查看最近进展、当前状态、已产出文件和模块状态。
+- 让基金申请书、提纲、讲稿、幻灯片等交付继续挂在同一套 family gateway 上。
+- 在保留顶层上下文的前提下把请求 handoff 到各 domain 产品入口。
+- 用同一套产品面管理模块安装、升级和 workspace 绑定。
 
 ## 当前覆盖的产品家族
 
@@ -52,50 +52,49 @@
 | `Thesis Foundry` | 规划中 | 学位论文与答辩准备 | 章节草稿、答辩材料 |
 | `Review Foundry` | 规划中 | 审稿、回复和修回 | 评审意见、回复草稿、修回计划 |
 
-## 在一个工作台里完成什么
+## OPL 串起什么
 
 | 工作区 | 用户看到的内容 | 当前状态 |
 | --- | --- | --- |
-| 日常协作 | 讨论、阅读、计划、快速澄清 | 默认入口 |
-| 通用任务 | 多步任务推进、文件处理、结果检查 | 默认执行区 |
-| 专业工作流 | 研究、基金、汇报等产品家族模块 | 持续扩展 |
+| 家族入口与路由 | 外部 GUI overlay 或 CLI 发起工作、选择家族、进入 domain 产品 | 默认公开入口 |
+| 进度与文件 surfaces | 共享 adapter / API surfaces 暴露状态、交付物、会话上下文和模块健康 | 仓库跟踪的 headless truth |
+| 专业工作流 | 研究、基金、汇报等产品家族继续路由到 domain-owned implementations | 活跃 |
 
-## 进度与文件
+## 进度、文件与模块
 
-右侧工作区应该把长任务做成清楚的执行可见性：
+仓库跟踪的 adapter surfaces 继续把长任务做成清楚的执行可见性：
 
 - 用人话显示进度，例如已受理、在查资料、在起草、执行中、等待审阅、已交付。
 - 以任务和工作区为单位集中管理报告、幻灯片、表格和其他交付物。
 - 把最近进展、当前状态和已产出文件放在一起，便于恢复工作。
-- 在设置里查看模块、版本、健康状态、升级与安装情况。
+- 在同一套家族 surfaces 里查看模块、版本、健康状态、升级与安装情况。
+- 外部 overlay 可以把同一套 surfaces 投射成更完整的 GUI 壳，而不改写仓库里的真相。
 
 ## 用人话理解 OPL
 
-`OPL` 负责的是统一工作台本身。
-产品家族定义工作类型，当前实现负责承接具体能力与交付。
+`OPL` 跟踪的是 family gateway 和 headless truth surfaces。
+外部 overlay 或 CLI 提供用户入口，当前实现继续承接 domain runtime 与交付。
 
 ```text
-Human
-  -> OPL Workspace
-      -> Everyday Collaboration
-      -> General Tasks
+Human / External GUI Overlay / CLI
+  -> OPL Family Gateway + Headless Adapter
       -> Research Foundry -> Med Auto Science
       -> Grant Foundry -> Med Auto Grant
       -> Presentation Foundry -> RedCube AI
-      -> Progress / Files / Settings
+      -> Progress / Files / Modules / Session Surfaces
 ```
 
 这意味着：
 
-- `OPL` 负责入口、工作区、模块目录、进度反馈和文件交付区。
-- 产品家族负责把研究、基金、汇报、学位论文、审稿修回这些工作类型组织清楚。
-- 当前实现负责在具体领域里完成任务与交付。
+- 这个仓库跟踪家族 gateway、模块目录、进度/文件/会话 surfaces，以及 machine-readable contracts。
+- 外部 GUI overlay 会消费同一套 adapter / API surfaces，提供更完整的壳层体验。
+- 当前实现继续持有 domain product entry、runtime 与交付。
 
 ## 这个仓库怎么读
 
 1. 潜在用户、人类专家和非技术读者，先读当前首页，再继续看 [路线图](./docs/roadmap.zh-CN.md)、[任务版图](./docs/task-map.zh-CN.md)、[运行模型](./docs/operating-model.zh-CN.md)。
 2. 技术规划、架构判断和方向同步，继续读 [文档索引](./docs/README.zh-CN.md)，再读 [项目概览](./docs/project.md)、[当前状态](./docs/status.md)、[架构](./docs/architecture.md)、[硬约束](./docs/invariants.md)、[关键决策](./docs/decisions.md)。
-3. 开发者和维护者，继续读 [合同目录说明](./contracts/README.md)、[参考级索引](./docs/references/README.zh-CN.md)，以及 `docs/specs/`、`docs/plans/`、`docs/history/omx/` 下的跟踪材料。
+3. 开发者和维护者，继续读 [合同目录说明](./contracts/README.md)、[参考级索引](./docs/references/README.zh-CN.md)，以及 `docs/specs/`、`docs/plans/`、`docs/history/frontdesk-legacy/`、`docs/history/omx/` 下的跟踪材料。
 
 <details>
   <summary><strong>技术阅读入口</strong></summary>

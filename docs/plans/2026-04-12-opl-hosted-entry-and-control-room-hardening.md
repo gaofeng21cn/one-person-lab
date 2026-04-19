@@ -1,16 +1,16 @@
-# OPL Hosted Entry And Control Room Hardening Implementation Plan
+# Historical OPL Hosted Entry And Control Room Hardening Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> Historical unfinished plan. This document preserves one retired hosted-frontdesk hardening outline from `2026-04-12`. Current truth now lives in `README.md`, `docs/project.md`, `docs/status.md`, and `docs/architecture.md`.
 
-**Goal:** 把 `OPL Front Desk` 从“本地 pilot + 只读控制台”推进到“hosted-pilot-ready + 可写工作区管理 + OPL-managed session ledger + 顶层到 domain 的可交接入口”。
+**Historical goal:** 把 `OPL Front Desk` 从“本地 pilot + 只读控制台”推进到“hosted-pilot-ready + 可写工作区管理 + OPL-managed session ledger + 顶层到 domain 的可交接入口”。
 
-**Architecture:** 继续沿现有 `opl / opl web / frontdesk-service-*` 主线推进，不另起第二套前台。`OPL` 继续只持有 family-level front desk、workspace binding、session ledger 与 handoff contract；`Hermes` 继续是 external runtime substrate；domain direct entry 仍通过 handoff bundle 与可配置 binding 连接，不在本仓伪造 domain runtime。
+**Historical architecture:** 继续沿现有 `opl / opl web / frontdesk-service-*` 主线推进，不另起第二套前台。`OPL` 继续只持有 family-level front desk、workspace binding、session ledger 与 handoff contract；`Hermes` 继续是 external runtime substrate；domain direct entry 仍通过 handoff bundle 与可配置 binding 连接，不在本仓伪造 domain runtime。
 
-**Tech Stack:** TypeScript CLI, Node.js HTTP server, file-backed local state, Hermes CLI integration, node:test
+**Historical tech stack:** TypeScript CLI, Node.js HTTP server, file-backed local state, Hermes CLI integration, node:test
 
 ---
 
-### Task 1: Hosted-Pilot Bundle And Base-Path Support
+### Historical Task 1: Hosted-Pilot Bundle And Base-Path Support
 
 **Files:**
 - Modify: `src/cli.ts`
@@ -27,7 +27,7 @@
 - [ ] 在 `src/cli.ts` 与 `src/frontdesk-service.ts` 接出对应命令与 service config
 - [ ] 复跑源码测试并同步 built CLI 覆盖
 
-### Task 2: Workspace Registry And Project Write Ops
+### Historical Task 2: Workspace Registry And Project Write Ops
 
 **Files:**
 - Create: `src/frontdesk-state.ts`
@@ -44,7 +44,7 @@
 - [ ] 把 registry 接入 dashboard / projects / web front desk
 - [ ] 复跑源码测试并同步 built CLI 覆盖
 
-### Task 3: OPL-Managed Session Ledger
+### Historical Task 3: OPL-Managed Session Ledger
 
 **Files:**
 - Create: `src/session-ledger.ts`
@@ -61,7 +61,7 @@
 - [ ] 保持口径诚实：这是 OPL-managed attribution，不是假装拿到了 Hermes 全局精确 per-session 账本
 - [ ] 复跑源码测试并同步 built CLI 覆盖
 
-### Task 4: Family Handoff Bundle And Domain Direct-Entry Linkage
+### Historical Task 4: Family Handoff Bundle And Domain Direct-Entry Linkage
 
 **Files:**
 - Modify: `src/product-entry.ts`
@@ -78,7 +78,7 @@
 - [ ] 利用 workspace registry 中的 direct-entry locator 把顶层与 domain 前台联动起来，但不伪造未配置 locator
 - [ ] 复跑源码测试并同步 built CLI 覆盖
 
-### Task 5: Docs And Truth Sync
+### Historical Task 5: Docs And Truth Sync
 
 **Files:**
 - Modify: `README.md`
@@ -100,7 +100,7 @@
 - [ ] 更新公开与参考文档，明确“hosted pilot bundle 已落地”与“actual hosted runtime 仍未落地”的边界
 - [ ] 复跑文档对齐测试
 
-### Task 6: Full Verification And Integration
+### Historical Task 6: Full Verification And Integration
 
 **Files:**
 - Verify only
