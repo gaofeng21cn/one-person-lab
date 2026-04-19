@@ -1,15 +1,15 @@
 {
   "contract_kind": "family_shared_owner_release.v1",
   "owner_repo": "one-person-lab",
-  "owner_commit": "559e488138e7b20644404226e10f3f40b3b7409c",
+  "owner_commit": "bc3159de148d783b214c4d0987eabc7344eae100",
   "packages": {
     "python": {
       "package_name": "opl-harness-shared",
-      "git_locator": "git+https://github.com/gaofeng21cn/one-person-lab.git@559e488138e7b20644404226e10f3f40b3b7409c#subdirectory=python/opl-harness-shared"
+      "git_locator": "git+https://github.com/gaofeng21cn/one-person-lab.git@bc3159de148d783b214c4d0987eabc7344eae100#subdirectory=python/opl-harness-shared"
     },
     "js": {
       "package_name": "opl-gateway-shared",
-      "git_locator": "git+https://github.com/gaofeng21cn/one-person-lab.git#559e488138e7b20644404226e10f3f40b3b7409c"
+      "git_locator": "git+https://github.com/gaofeng21cn/one-person-lab.git#bc3159de148d783b214c4d0987eabc7344eae100"
     }
   },
   "consumers": [
