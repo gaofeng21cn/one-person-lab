@@ -23,9 +23,9 @@
 - `ecosystem-status-matrix.md`
 - `family-user-facing-maturity-roadmap.md`
 - `four-repo-executor-follow-up-and-hermes-evaluation.md`
-- `opl-phase-2-central-reference-sync-board.md`
-- `opl-phase-2-admitted-domain-delta-intake-refresh.md`
-- `opl-phase2-ecosystem-sync-owner-line.md`
+- [中央 federation 参考面对齐看板](./opl-phase-2-central-reference-sync-board.md)
+- [已收录 domain 增量 intake 刷新记录](./opl-phase-2-admitted-domain-delta-intake-refresh.md)
+- [生态同步 owner line 记录](./opl-phase2-ecosystem-sync-owner-line.md)
 
 ## 二、runtime / substrate / 平台迁移参考
 
