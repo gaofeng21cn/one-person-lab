@@ -50,6 +50,11 @@ export interface BuildDomainEntryCommandContractInput {
   extra_payload?: JsonRecord;
 }
 
+export interface DomainEntryCommandCatalogSurface {
+  supported_commands: string[];
+  command_contracts: DomainEntryCommandContract[];
+}
+
 export interface BuildFamilyDomainEntryContractInput {
   entry_adapter: string;
   service_safe_surface_kind: string;
@@ -203,6 +208,31 @@ export function buildDomainEntryCommandContract(
     input.extra_payload,
     'command_contract',
   ) as DomainEntryCommandContract;
+}
+
+export function buildDomainEntryCommandCatalog(
+  inputs: BuildDomainEntryCommandContractInput[],
+): DomainEntryCommandCatalogSurface {
+  const commandContracts = inputs.map((input, index) =>
+    buildDomainEntryCommandContract({
+      command: requireString(input.command, `command_catalog[${index}].command`),
+      required_fields: readStringList(
+        input.required_fields,
+        `command_catalog[${index}].required_fields`,
+      ),
+      optional_fields:
+        readOptionalStringList(
+          input.optional_fields,
+          `command_catalog[${index}].optional_fields`,
+        ) ?? [],
+      extra_payload: input.extra_payload,
+    }),
+  );
+
+  return {
+    supported_commands: commandContracts.map((contract) => contract.command),
+    command_contracts: commandContracts,
+  };
 }
 
 export function validateFamilyDomainEntryContract(

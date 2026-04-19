@@ -84,6 +84,24 @@ def build_domain_entry_command_contract(
     )
 
 
+def build_domain_entry_command_catalog(
+    entries: list[Mapping[str, Any]],
+) -> dict[str, Any]:
+    command_contracts = [
+        build_domain_entry_command_contract(
+            command=_require_mapping(entry, f"command_catalog[{index}]").get("command"),  # type: ignore[arg-type]
+            required_fields=_require_mapping(entry, f"command_catalog[{index}]").get("required_fields"),  # type: ignore[arg-type]
+            optional_fields=_require_mapping(entry, f"command_catalog[{index}]").get("optional_fields"),  # type: ignore[arg-type]
+            extra_payload=_require_mapping(entry, f"command_catalog[{index}]").get("extra_payload"),  # type: ignore[arg-type]
+        )
+        for index, entry in enumerate(entries)
+    ]
+    return {
+        "supported_commands": [contract["command"] for contract in command_contracts],
+        "command_contracts": command_contracts,
+    }
+
+
 def validate_family_domain_entry_contract(value: object, field: str) -> dict[str, Any]:
     payload = _require_mapping(value, field)
     supported_commands = _require_string_list(

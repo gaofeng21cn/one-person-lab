@@ -61,19 +61,18 @@ def ensure_editable_dependency_paths(
     shared_package_name: str = "opl_harness_shared",
 ) -> tuple[Path, ...]:
     resolved_repo_root = Path(repo_root).expanduser().resolve()
-    if _module_spec(shared_package_name) is not None:
-        return ()
-
     added_paths: list[Path] = []
     for candidate_root in _candidate_shared_src_roots(resolved_repo_root, shared_package_name):
         if not (candidate_root / shared_package_name).exists():
             continue
         inserted = _prepend_path(candidate_root)
         _prefer_existing_package_path(candidate_root, shared_package_name)
-        if _module_spec(shared_package_name) is not None:
-            if inserted:
-                added_paths.append(candidate_root)
-            return tuple(added_paths)
+        if inserted:
+            added_paths.append(candidate_root)
+        return tuple(added_paths)
+
+    if _module_spec(shared_package_name) is not None:
+        return ()
 
     for candidate_root in _candidate_repo_site_packages_roots(resolved_repo_root):
         if _prepend_path(candidate_root):

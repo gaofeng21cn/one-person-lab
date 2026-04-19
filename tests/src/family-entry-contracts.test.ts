@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   buildDomainEntryCommandContract,
+  buildDomainEntryCommandCatalog,
   buildFamilyDirectOplSharedHandoff,
   buildFamilyDomainEntryContract,
   buildFamilyGatewayInteractionContract,
@@ -44,6 +45,45 @@ test('family entry contract helpers build and validate shared domain entry paylo
   assert.deepEqual(validated.supported_entry_modes, ['direct', 'opl-handoff']);
   assert.equal(validated.schema_ref, 'contracts/schemas/v1/product-entry-manifest.schema.json');
   assert.deepEqual(validated.command_contracts[0], workspaceCockpit);
+});
+
+test('family entry contract helpers build reusable command catalogs for cross-repo adapters', () => {
+  const catalog = buildDomainEntryCommandCatalog([
+    {
+      command: 'workspace-cockpit',
+      required_fields: ['profile_ref'],
+    },
+    {
+      command: 'study-progress',
+      required_fields: ['profile_ref', 'study_id'],
+      optional_fields: ['entry_mode'],
+      extra_payload: { target_surface_kind: 'study_progress' },
+    },
+  ]);
+
+  assert.deepEqual(catalog.supported_commands, ['workspace-cockpit', 'study-progress']);
+  assert.deepEqual(catalog.command_contracts, [
+    buildDomainEntryCommandContract({
+      command: 'workspace-cockpit',
+      required_fields: ['profile_ref'],
+    }),
+    buildDomainEntryCommandContract({
+      command: 'study-progress',
+      required_fields: ['profile_ref', 'study_id'],
+      optional_fields: ['entry_mode'],
+      extra_payload: { target_surface_kind: 'study_progress' },
+    }),
+  ]);
+
+  const contract = buildFamilyDomainEntryContract({
+    entry_adapter: 'MedAutoScienceDomainEntry',
+    service_safe_surface_kind: 'med_autoscience_service_safe_domain_entry',
+    product_entry_builder_command: 'build-product-entry',
+    ...catalog,
+  });
+
+  assert.deepEqual(contract.supported_commands, catalog.supported_commands);
+  assert.deepEqual(contract.command_contracts, catalog.command_contracts);
 });
 
 test('family entry contract helpers build and validate gateway interaction payloads', () => {
