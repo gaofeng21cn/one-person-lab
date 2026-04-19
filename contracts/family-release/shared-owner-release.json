@@ -1,0 +1,59 @@
+{
+  "contract_kind": "family_shared_owner_release.v1",
+  "owner_repo": "one-person-lab",
+  "owner_commit": "fe48267e287895b1d2d6be84c20f2bdcbedd5094",
+  "packages": {
+    "python": {
+      "package_name": "opl-harness-shared",
+      "git_locator": "git+https://github.com/gaofeng21cn/one-person-lab.git@fe48267e287895b1d2d6be84c20f2bdcbedd5094#subdirectory=python/opl-harness-shared"
+    },
+    "js": {
+      "package_name": "opl-gateway-shared",
+      "git_locator": "git+https://github.com/gaofeng21cn/one-person-lab.git#fe48267e287895b1d2d6be84c20f2bdcbedd5094"
+    }
+  },
+  "consumers": [
+    {
+      "repo_id": "medautoscience",
+      "repo_dir": "med-autoscience",
+      "targets": [
+        {
+          "file": "pyproject.toml",
+          "kind": "python_dependency"
+        },
+        {
+          "file": "uv.lock",
+          "kind": "python_lock"
+        }
+      ]
+    },
+    {
+      "repo_id": "medautogrant",
+      "repo_dir": "med-autogrant",
+      "targets": [
+        {
+          "file": "pyproject.toml",
+          "kind": "python_dependency"
+        },
+        {
+          "file": "uv.lock",
+          "kind": "python_lock"
+        }
+      ]
+    },
+    {
+      "repo_id": "redcube",
+      "repo_dir": "redcube-ai",
+      "targets": [
+        {
+          "file": "packages/redcube-gateway/package.json",
+          "kind": "js_dependency"
+        },
+        {
+          "file": "package-lock.json",
+          "kind": "js_lock"
+        }
+      ]
+    }
+  ]
+}
