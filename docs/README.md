@@ -12,7 +12,7 @@ This guide points readers to the core working set, layered doc structure, refere
 | --- | --- | --- |
 | Potential users and human experts | [Repository Home](../README.md), [Roadmap](./roadmap.md), [Task Map](./task-map.md), [Operating Model](./operating-model.md) | Understand the `OPL` shell, product families, and current implementations before reading technical details |
 | Technical readers and planners | [Project](./project.md), [Status](./status.md), [Architecture](./architecture.md), [Invariants](./invariants.md), [Decisions](./decisions.md), [Contracts Overview](../contracts/README.md) | Understand the current baseline, boundaries, and the active technical direction |
-| Developers and maintainers | [Reference Index](./references/README.md), `docs/specs/`, `docs/plans/`, `docs/history/frontdesk-legacy/`, `docs/history/omx/` | Inspect implementation support material, historical records, and tracked working notes |
+| Developers and maintainers | [Reference Index](./references/README.md), `docs/specs/`, `docs/plans/`, [History Archive](./history/README.md) | Inspect implementation support material, historical records, and tracked working notes |
 
 ## Fast Technical Working Set
 
@@ -101,15 +101,14 @@ It explains how or why a freeze happened, while [Status](./status.md) remains th
 
 - `docs/specs/`
 - `docs/plans/`
-- `docs/history/frontdesk-legacy/`
-- `docs/history/omx/`
+- [History Archive](./history/README.md)
 
 ## Where Current Truth Lives
 
 - Public role, active boundary, and default reading order: [Project](./project.md), [Status](./status.md), [Architecture](./architecture.md)
 - Machine-readable gateway and admission surfaces: [Contracts Overview](../contracts/README.md) and `contracts/opl-gateway/*.json`
 - Reference-grade supporting material: [Reference Index](./references/README.md)
-- Historical frontdesk and OMX lanes: `docs/history/frontdesk-legacy/`, `docs/history/omx/`
+- Historical and retired lanes: [History Archive](./history/README.md)
 
 ## Documentation Rules
 
