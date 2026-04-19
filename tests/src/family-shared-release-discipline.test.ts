@@ -133,11 +133,11 @@ test('family shared release CLI can sync explicit repo overrides and report alig
   assert.match(result.stdout, new RegExp(RELEASED_OWNER_COMMIT));
 });
 
-test('status doc exposes the canonical family shared release command and contract path', () => {
+test('family shared release stays on contract and script surfaces while public status stays clean', () => {
   const statusDoc = fs.readFileSync(path.join(repoRoot, 'docs/status.md'), 'utf8');
 
-  assert.match(statusDoc, /contracts\/family-release\/shared-owner-release\.json/);
-  assert.match(statusDoc, /npm run family:shared-release -- check/);
-  assert.match(statusDoc, /npm run family:shared-release -- sync/);
   assert.equal(fs.existsSync(path.join(repoRoot, SHARED_OWNER_RELEASE_CONTRACT_PATH)), true);
+  assert.doesNotMatch(statusDoc, /contracts\/family-release\/shared-owner-release\.json/);
+  assert.doesNotMatch(statusDoc, /npm run family:shared-release -- check/);
+  assert.doesNotMatch(statusDoc, /npm run family:shared-release -- sync/);
 });
