@@ -18,9 +18,19 @@ def _candidate_shared_src_roots(
     shared_package_name: str,
 ) -> tuple[Path, ...]:
     _ = shared_package_name
-    return (
+    candidates = [
         repo_root.parent / "one-person-lab" / "python" / "opl-harness-shared" / "src",
-    )
+    ]
+    if repo_root.parent.name in {".worktrees", "worktrees"}:
+        candidates.append(
+            repo_root.parent.parent.parent / "one-person-lab" / "python" / "opl-harness-shared" / "src"
+        )
+
+    unique_candidates: list[Path] = []
+    for candidate in candidates:
+        if candidate not in unique_candidates:
+            unique_candidates.append(candidate)
+    return tuple(unique_candidates)
 
 
 def _candidate_repo_site_packages_roots(repo_root: Path) -> tuple[Path, ...]:
