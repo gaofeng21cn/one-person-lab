@@ -30,7 +30,7 @@
 - `opl workspace projects|list|bind|activate|archive`
   - 提供 file-backed workspace registry 与顶层到 domain 之间的 direct-entry locator 管理
 - `opl frontdesk manifest|entry-guide|readiness|domain-wiring|hosted-bundle|hosted-package|service *|bootstrap`
-  - 提供 hosted-friendly shell contract、family wiring truth、pilot bundle、hosted package、服务管理与桌面壳 bootstrap
+  - 提供 hosted-friendly shell contract、family wiring truth、bundle/package export、服务管理与桌面壳 bootstrap
 - `opl session list|resume|logs|ledger`
   - 提供 landed local shell 的会话、日志与 OPL-owned session attribution
 - `opl runtime repair-gateway`
@@ -41,7 +41,7 @@
 代表性显式命令包括 `opl contract validate`、`opl domain manifests`、`opl status runtime`、`opl workspace bind`、`opl frontdesk entry-guide`、`opl session ledger` 与 `opl runtime repair-gateway`。
 
 但它还不是 managed hosted / web 形态的完整产品前台。
-当前这层 hosted / web 路线已经先落下了真实的 `LibreChat-first` pilot 壳，长期仍回到 `OPL` 自有 web front desk。
+当前这层 hosted / web 路线已经落下本地 web companion、hosted bundle / package 与 optional hosted-shell compatibility export；长期仍回到 `OPL` 自有 web front desk。
 同时，`Phase 1` 的 gateway contract commands 仍然是顶层联邦真相面的稳定 formal contract surface。
 
 目标产品链路应是：

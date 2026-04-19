@@ -25,7 +25,7 @@
 - `opl frontdesk bootstrap --path <workspace>` 准备本地 `OPL Atlas` Desktop 壳，并把当前 workspace 接入 `OPL` 模块与项目 registry。
 - `opl web` 是同一产品壳的本地浏览器 companion surface。
 - `opl`、`opl "<request...>"`、`opl start --project <project_id> [--mode <mode_id>]`、`opl doctor`、`opl ask`、`opl chat` 与 `opl web` 共同组成当前顶层产品前门。
-- `opl frontdesk-librechat-install|status|start|stop|open` 与 `opl frontdesk-librechat-package` 保留为 hidden compatibility surface，默认入口保持 GUI 主路径。
+- optional hosted-shell compatibility commands 继续保留为 command-scoped hidden surface，默认入口保持 GUI / Desktop 主路径。
 - `opl ask` 默认走 `Codex`；`opl chat`、`opl session resume`、显式 executor 配置和 GUI 模式切换可以进入 `Hermes-Agent` 备用在线路径。
 - 当前 grouped command matrix 已经固定成：
   - `contract ...`：`validate|workstreams|workstream|domains|domain|surfaces|surface|handoff-envelope`
@@ -37,7 +37,7 @@
   - `runtime repair-gateway`
 - GUI 的任务边栏应把 progress 状态和 files 交付区投射到当前 workspace。
 - `opl <request...>` 继续作为同一入口之上的 quick ask 路径。
-- 本地 web front desk pilot 已经落地；hosted / web 前台真相：`LibreChat-first` pilot 仍未落地为最终托管前台，比较基线包含 `Chatbot UI`、`LibreChat`、`Open WebUI` 与 `LobeChat`。
+- 本地 web front desk companion 已经落地；hosted bundle、hosted package 与 optional hosted-shell export 继续作为 packaging surface，managed hosted runtime 仍是后续工作。
 
 ## GUI 工作模式
 

@@ -5,7 +5,7 @@
 - narrative 协作规则看仓库根 `AGENTS.md`
 - 默认人类/AI 入口看 `README*` 与 `docs/README*`
 - 顶层 gateway 合同入口看 `contracts/opl-gateway/README.md`
-- 当前公开默认主路径是 `GUI -> Codex -> OPL`；`Hermes` 只保留显式备用模式，`LibreChat` 与 `Paperclip` 只保留 optional compatibility / bridge lane
+- 当前公开默认主路径是 `GUI -> Codex -> OPL`；`Hermes` 只保留显式备用模式，optional hosted-shell / downstream bridge lane 留在默认主路径之外
 
 当前保留的 repo-tracked machine-readable truth：
 
