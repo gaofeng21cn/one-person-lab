@@ -34,8 +34,8 @@ These companions materialize:
 - the top-level task topology as a machine-readable semantic surface
 - the missing admission-boundary materials for the current under-definition workstreams
 
-They may describe under-definition workstreams such as `Grant Ops`, `Thesis Ops`, and `Review Ops`, while keeping them on an explicit candidate/onboarding path.
-Formal admission, `G2` discovery readiness, and `G3` routed-action readiness still come from dedicated onboarding evidence.
+They may describe under-definition workstreams such as `Thesis Ops` and `Review Ops`, while keeping them on an explicit candidate/onboarding path.
+`Grant Ops` is already registered to the admitted `MedAutoGrant` domain gateway, while formal admission, `G2` discovery readiness, and `G3` routed-action readiness for the remaining under-definition workstreams still come from dedicated onboarding evidence.
 
 At the current baseline, `candidate-domain definition` is the composition of:
 
@@ -100,13 +100,11 @@ Typical delivery objects include:
 
 Current boundary status:
 
-- current lifecycle state: under-definition candidate workstream
-- admission path: waiting for formal domain admission and registered `G1` workstream/domain mapping
-- discovery and routing path: waiting for `G2` discovery readiness, `G3` routed-action readiness, and domain handoff eligibility
-- public surface: `Grant Foundry -> Med Auto Grant` currently points to the active medical `Grant Ops` repository line, while its top-level federation admission / handoff wording remains separately gated
-- tracked next steps: registry material, discovery evidence, routing evidence, and handoff evidence are tracked in [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.md)
-- routing rule: any future successful handoff may target only `domain_gateway`, with no direct harness bypass
-- current top-level handling: clear requests surface as `unknown_domain` with no handoff payload until a real domain owner is admitted
+- current lifecycle state: registered workstream mapped directly to the admitted `MedAutoGrant` domain gateway
+- formal mapping: `grant_ops -> medautogrant` is already frozen in the `G1` workstream/domain registry
+- public entry: the top-level domain entry is `MedAutoGrant`, and grant-direction, proposal authoring, proposal-side reviewer simulation, and revision truth remain domain-owned there
+- routing rule: successful handoff remains `domain_gateway`-only, with no direct harness bypass
+- top-level handling: clear requests resolve to `medautogrant` through the frozen routing vocabulary and domain manifest surfaces
 
 ## Thesis Ops
 

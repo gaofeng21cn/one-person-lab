@@ -102,6 +102,7 @@ repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review 
 
 这些界面由 `OPL` 做顶层索引，但 ownership 仍留在各自 domain：
 
+- `MedAutoGrant` 对应 `grant_ops`
 - `MedAutoScience` 对应 `research_ops`
 - `RedCube AI` 对应 `presentation_ops`
 
@@ -109,10 +110,9 @@ repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review 
 
 - `ppt_deck` 直接映射 `presentation_ops`
 - `xiaohongshu` 仍可路由到 `redcube`，并在 OPL 顶层保留独立 visual family 语义
-- 当前 `Minimal admitted-domain federation activation package` 只作用于已 admitted domain surface，也就是 `MedAutoScience` 与 `RedCube AI`
-- `Grant Ops`、`Review Ops`、`Thesis Ops` 当前以 under-definition workstream 的身份进入 candidate / onboarding 路径
-- 当前 `Grant Foundry -> Med Auto Grant` 指向活跃的 grant-domain 业务仓路径，但它在顶层 federation admission / handoff wording 上仍单独门控
-- 这些 under-definition workstream 的 admission blocker 继续记录在 candidate-domain backlog 中，并位于 onboarding gate 之下
+- 当前 linked domain public-entry set 已经是 `MedAutoGrant`、`MedAutoScience` 与 `RedCube AI`
+- `Grant Ops` 已经通过已收录的 `MedAutoGrant` domain gateway 承接，`Thesis Ops` 与 `Review Ops` 继续停留在 candidate / onboarding 路径
+- 剩余 under-definition workstream 的 admission blocker 继续记录在 candidate-domain backlog 中，并位于 onboarding gate 之下
 
 ## 阅读规则
 
@@ -122,7 +122,7 @@ repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review 
 如果某个界面是 `opl_operating_model`、`opl_shared_foundation` 或 `opl_shared_foundation_ownership`，那么它承担 shared-foundation 层的 boundary/reference 作用。
 如果某个界面是 `opl_task_map`，那么其中仍在定义中的 workstream 会继续停留在 candidate / onboarding 路径上，直到 registry 与 onboarding evidence 齐备。
 如果某个界面是 `opl_candidate_domain_backlog`，那么它承担这些路径上的 admission-blocker reference 角色。
-如果某处提到 `Grant Foundry -> Med Auto Grant`，应把它表达成活跃的 grant-domain 业务仓路径，同时明确它在顶层 federation admission / handoff wording 上仍单独门控。
+如果某处提到 `Grant Foundry -> Med Auto Grant`，应把它表达成由 `MedAutoGrant` 承接的已收录 `Grant Ops` domain gateway 入口。
 任何后续可能出现的 follow-on route 也仍然只能 targeting `domain_gateway`，并继续受不得直达 harness 的 no-bypass 规则约束。
 如果某个界面属于 routed-action prose 或 schema 这一层，那么在已完成的 repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` 之后，它会继续停留在 planning-contract / planning-dependency 层。
 如果某个界面属于 acceptance、matrix 或 example 这一层，那么它会继续停留在 discoverability / review companion 层。

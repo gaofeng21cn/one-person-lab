@@ -33,7 +33,7 @@
 - 当前有哪些 workstream？
 - 这个 workstream 由哪个 domain system 承接？
 - 哪些 family 直接映射这个 workstream？
-- 这个任务应该进 `MedAutoScience`、`RedCube AI`，还是都不是？
+- 这个任务应该进 `MedAutoScience`、`MedAutoGrant`、`RedCube AI`，还是都不是？
 - 下一步正式入口应该是什么？
 
 并得到稳定、机器可读、且不触碰 domain 内部的答案。
@@ -84,6 +84,12 @@
       "label": "Research Ops",
       "status": "active",
       "domain_id": "medautoscience"
+    },
+    {
+      "workstream_id": "grant_ops",
+      "label": "Grant Ops",
+      "status": "emerging",
+      "domain_id": "medautogrant"
     },
     {
       "workstream_id": "presentation_ops",
@@ -144,6 +150,13 @@
       ]
     },
     {
+      "domain_id": "medautogrant",
+      "gateway_surface": "Grant Ops Gateway",
+      "owned_workstreams": [
+        "grant_ops"
+      ]
+    },
+    {
       "domain_id": "redcube",
       "gateway_surface": "Visual Deliverable Gateway",
       "owned_workstreams": [
@@ -166,17 +179,15 @@
 {
   "version": "g2",
   "domain": {
-    "domain_id": "redcube",
-    "project": "redcube-ai",
-    "gateway_surface": "Visual Deliverable Gateway",
-    "harness_surface": "Visual Deliverable Domain Harness OS",
+    "domain_id": "medautogrant",
+    "project": "med-autogrant",
+    "gateway_surface": "Grant Ops Gateway",
+    "harness_surface": "Grant Writing Domain Harness OS",
     "standalone_allowed": true,
     "owned_workstreams": [
-      "presentation_ops"
+      "grant_ops"
     ],
-    "non_opl_families": [
-      "xiaohongshu"
-    ]
+    "non_opl_families": []
   }
 }
 ```

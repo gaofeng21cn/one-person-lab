@@ -89,6 +89,7 @@
         "opl_surface_authority_matrix",
         "opl_surface_review_matrix",
         "medautoscience_public_gateway",
+        "medautogrant_public_gateway",
         "redcube_public_gateway"
       ],
       "notes": [
@@ -185,7 +186,8 @@
       ],
       "domain_ids": [
         "medautoscience",
-        "redcube"
+        "redcube",
+        "medautogrant"
       ],
       "refs": [
         {
@@ -233,7 +235,8 @@
       ],
       "domain_ids": [
         "medautoscience",
-        "redcube"
+        "redcube",
+        "medautogrant"
       ],
       "refs": [
         {
@@ -276,7 +279,8 @@
       ],
       "domain_ids": [
         "medautoscience",
-        "redcube"
+        "redcube",
+        "medautogrant"
       ],
       "refs": [
         {
@@ -317,7 +321,8 @@
       ],
       "domain_ids": [
         "medautoscience",
-        "redcube"
+        "redcube",
+        "medautogrant"
       ],
       "refs": [
         {
@@ -359,7 +364,8 @@
       ],
       "domain_ids": [
         "medautoscience",
-        "redcube"
+        "redcube",
+        "medautogrant"
       ],
       "refs": [
         {
@@ -415,6 +421,7 @@
       "routes_to": [
         "opl_gateway_contract_hub",
         "medautoscience_public_gateway",
+        "medautogrant_public_gateway",
         "redcube_public_gateway",
         "opl_task_map"
       ],
@@ -438,7 +445,8 @@
       ],
       "domain_ids": [
         "medautoscience",
-        "redcube"
+        "redcube",
+        "medautogrant"
       ],
       "refs": [
         {
@@ -588,6 +596,7 @@
       ],
       "routes_to": [
         "medautoscience_public_gateway",
+        "medautogrant_public_gateway",
         "redcube_public_gateway"
       ],
       "notes": [
@@ -624,6 +633,7 @@
       "routes_to": [
         "opl_routed_safety_example_corpus",
         "medautoscience_public_gateway",
+        "medautogrant_public_gateway",
         "redcube_public_gateway"
       ],
       "notes": [
@@ -702,7 +712,7 @@
         "opl_gateway_acceptance_spec"
       ],
       "notes": [
-        "Reference-only admission-blocker backlog for the current under-definition workstreams.",
+        "Reference-only admission-blocker backlog for the remaining under-definition workstreams.",
         "Does not assign future domain identities, does not expand G1, and does not create G2/G3 readiness or routed-action targets."
       ]
     },
@@ -722,7 +732,8 @@
       ],
       "domain_ids": [
         "medautoscience",
-        "redcube"
+        "redcube",
+        "medautogrant"
       ],
       "refs": [
         {
@@ -823,6 +834,7 @@
       ],
       "routes_to": [
         "medautoscience_public_gateway",
+        "medautogrant_public_gateway",
         "redcube_public_gateway",
         "opl_operating_example_corpus",
         "opl_operating_record_catalog"
@@ -860,6 +872,7 @@
       ],
       "routes_to": [
         "medautoscience_public_gateway",
+        "medautogrant_public_gateway",
         "redcube_public_gateway",
         "opl_operating_example_corpus",
         "opl_operating_record_catalog"
@@ -949,6 +962,7 @@
       "routes_to": [
         "opl_routed_safety_example_corpus",
         "medautoscience_public_gateway",
+        "medautogrant_public_gateway",
         "redcube_public_gateway"
       ],
       "notes": [
@@ -1049,6 +1063,7 @@
         "opl_governance_audit_operating_surface",
         "opl_publish_promotion_operating_surface",
         "medautoscience_public_gateway",
+        "medautogrant_public_gateway",
         "redcube_public_gateway"
       ],
       "notes": [
@@ -1197,6 +1212,7 @@
         "opl_public_surface_index_doc",
         "opl_gateway_acceptance_spec",
         "medautoscience_public_gateway",
+        "medautogrant_public_gateway",
         "redcube_public_gateway"
       ],
       "notes": [
@@ -1298,6 +1314,7 @@
         "opl_surface_authority_matrix",
         "opl_surface_review_matrix",
         "medautoscience_public_gateway",
+        "medautogrant_public_gateway",
         "redcube_public_gateway",
         "opl_task_map",
         "opl_operating_model",
@@ -1306,6 +1323,31 @@
       ],
       "notes": [
         "Human-readable companion for the machine-readable public surface index."
+      ]
+    },
+    {
+      "surface_id": "medautogrant_public_gateway",
+      "category_id": "domain_public_entry",
+      "surface_kind": "domain_gateway_entry",
+      "boundary_role": "grant_ops_domain_entry",
+      "owner_scope": "domain",
+      "truth_mode": "domain_owned",
+      "workstream_ids": [
+        "grant_ops"
+      ],
+      "domain_ids": [
+        "medautogrant"
+      ],
+      "refs": [
+        {
+          "ref_kind": "external_url",
+          "ref": "https://github.com/gaofeng21cn/med-autogrant"
+        }
+      ],
+      "routes_to": [],
+      "notes": [
+        "Active Grant Ops domain gateway and harness entry under the OPL umbrella.",
+        "Proposal authoring, proposal-side review simulation, and revision truth remain in MedAutoGrant."
       ]
     },
     {

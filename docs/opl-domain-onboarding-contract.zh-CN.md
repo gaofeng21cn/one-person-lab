@@ -34,8 +34,8 @@ Domain onboarding 建立在已冻结的 gateway 层之下：
 这条 example record 只是 illustrative 示例，不构成正式 domain 收录。
 Candidate-domain backlog 则是位于它上游的 blocker surface，用来记录：对于仍在定义中的 workstream，在 onboarding-readiness record 出现之前还缺什么材料。它的人类可读配套说明见 [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.zh-CN.md)。
 `OPL` 当前不会在 task topology、backlog 与 onboarding 之间再定义一层独立的 candidate-domain-definition contract；除非先证明这三层之间还存在真实缺口，否则现有三层组合就是当前 definition path。
-公开 scaffold 或 domain-direction hint —— 例如当前 `Grant Ops` 方向上的 `Grant Foundry -> Med Auto Grant` —— 可以帮助说明 candidate path，但它们仍然只算 top-level signal / domain-direction evidence。
-它们不能替代 onboarding package，不等于已正式收录的 domain gateway，也不等于 `G2` discovery readiness，更不等于 `G3` routed-action readiness。
+公开 scaffold 或 domain-direction hint 可以帮助说明 candidate path，但在真实 boundary package 落地前，它们仍然只算 top-level signal / domain-direction evidence。
+这条规则现在只作用于剩余候选 workstream：`Grant Ops` 已经进入已收录的 `MedAutoGrant` domain gateway，而 `Thesis Ops` 与 `Review Ops` 仍然需要完整 onboarding package 才能完成正式收录。
 
 ## 执行模型审查配套文档
 

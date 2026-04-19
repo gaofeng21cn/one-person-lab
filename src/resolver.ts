@@ -123,6 +123,26 @@ export function resolveRequestSurface(
   }
 
   if (candidateWorkstream) {
+    if (candidateWorkstream === 'grant_ops') {
+      const workstream = findWorkstreamOrThrow(contracts, 'grant_ops');
+      return {
+        status: 'routed',
+        request_kind: requestKind(input),
+        workstream_id: workstream.workstream_id,
+        domain_id: workstream.domain_id,
+        entry_surface: 'domain_gateway',
+        recommended_family: null,
+        confidence: 'high',
+        reason:
+          'The requested output is a formal grant-authoring delivery owned by Grant Ops inside the MedAutoGrant gateway.',
+        routing_evidence: [
+          'grant delivery semantics',
+          'grant_ops registered ownership',
+          'domain gateway entry only',
+        ],
+      };
+    }
+
     return {
       status: 'unknown_domain',
       request_kind: requestKind(input),
@@ -238,6 +258,30 @@ export function explainDomainBoundary(
 
   switch (resolution.status) {
     case 'routed':
+      if (resolution.workstream_id === 'grant_ops') {
+        return {
+          request_summary: summary,
+          boundary_status: resolution.status,
+          boundary_evidence: resolution.routing_evidence,
+          resolved_domain: 'medautogrant',
+          resolved_workstream_id: 'grant_ops',
+          reason:
+            'The primary output is a formal grant-authoring delivery, so the request belongs to the MedAutoGrant gateway.',
+          rejected_domains: [
+            {
+              domain_id: 'medautoscience',
+              reason:
+                'Research evidence can support a grant, but the requested deliverable is a grant-authoring output.',
+            },
+            {
+              domain_id: 'redcube',
+              reason:
+                'Presentation artifacts can support the proposal later, while the current deliverable is still grant authoring.',
+            },
+          ],
+        };
+      }
+
       if (resolution.workstream_id === 'research_ops') {
         return {
           request_summary: summary,

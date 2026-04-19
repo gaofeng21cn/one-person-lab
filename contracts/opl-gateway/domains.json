@@ -2,6 +2,24 @@
   "version": "g1",
   "domains": [
     {
+      "domain_id": "medautogrant",
+      "label": "MedAutoGrant",
+      "project": "med-autogrant",
+      "role": "grant_ops_gateway",
+      "gateway_surface": "Grant Ops Gateway",
+      "harness_surface": "Grant Writing Domain Harness OS",
+      "standalone_allowed": true,
+      "owned_workstreams": [
+        "grant_ops"
+      ],
+      "non_opl_families": [],
+      "canonical_truth_owner": [
+        "grant_runs",
+        "workspace_state",
+        "submission_artifacts"
+      ]
+    },
+    {
       "domain_id": "medautoscience",
       "label": "MedAutoScience",
       "project": "med-autoscience",

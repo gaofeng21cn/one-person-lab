@@ -54,7 +54,7 @@
 | 产品家族 | 当前实现 | 当前覆盖范围 | 公开状态 |
 | --- | --- | --- | --- |
 | `Research Foundry` | `MAS / Med Auto Science` | 医学科研、证据整理、稿件交付 | 活跃 |
-| `Grant Foundry` | `MAG / Med Auto Grant` | 医学基金方向判断、申请书写作、作者侧模拟评审 | 活跃仓线，顶层 admission / handoff wording 单独门控 |
+| `Grant Foundry` | `MAG / Med Auto Grant` | 医学基金方向判断、申请书写作、作者侧模拟评审 | 活跃 |
 | `Presentation Ops` | `RCA / RedCube AI` | 汇报、讲课、幻灯片与视觉交付 | 活跃 |
 | `Thesis Ops` | Planned | 学位论文装配与答辩准备 | 定义阶段 |
 | `Review Ops` | Planned | 审稿、回复与修回 | 定义阶段 |
@@ -76,8 +76,8 @@
 - 机器合同：`contracts/` 保留 machine-readable contract surface。
 - 参考级材料：`docs/references/` 承接实现记录、基准、推进板和边界说明。
 - 历史执行与迁移材料：从 `docs/history/omx/` 进入。
-- 公开联邦冻结面继续是 `Minimal admitted-domain federation activation package`，当前只覆盖 `MedAutoScience` 与 `RedCube AI` 两条已 admitted domain surface；formal entry 保持在本地 `TypeScript CLI`-first / gateway contract surface，runtime ownership 继续留在 admitted domain 一侧。
-- `Grant Foundry -> Med Auto Grant` 已经是活跃的医学 `Grant Ops` 业务仓路径；在 `OPL` 顶层，它的 federation admission 与 handoff wording 继续单独门控。
+- 当前已收录的 domain surface 已经是 `MedAutoScience`、`MedAutoGrant` 与 `RedCube AI`；formal entry 保持在本地 `TypeScript CLI`-first / gateway contract surface，runtime ownership 继续留在 admitted domain 一侧。
+- `Grant Foundry -> Med Auto Grant` 现在已经对应到 `MedAutoGrant` 这条已收录的 `Grant Ops` domain gateway 入口。
 
 ## 当前阶段
 
