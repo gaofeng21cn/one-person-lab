@@ -104,8 +104,13 @@ test('scripts/verify.sh provides the canonical verification wrapper', () => {
 
 test('package.json exposes the canonical family shared release maintenance command', () => {
   assert.equal(packageJson.scripts?.['family:shared-release'], 'node ./scripts/family-shared-release.mjs');
+  assert.equal(packageJson.exports?.['./family-shared-release'], './dist/family-shared-release.js');
   assert.equal(
     fs.existsSync(path.join(repoRoot, 'scripts/family-shared-release.mjs')),
+    true,
+  );
+  assert.equal(
+    fs.existsSync(path.join(repoRoot, 'src/family-shared-release.ts')),
     true,
   );
 });
