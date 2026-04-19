@@ -9,6 +9,8 @@ export const SHARED_OWNER_RELEASE_CONTRACT_PATH = 'contracts/family-release/shar
 const PYTHON_DEPENDENCY_PATTERN = /opl-harness-shared @ git\+https:\/\/github\.com\/gaofeng21cn\/one-person-lab\.git@([0-9a-f]{40})#subdirectory=python\/opl-harness-shared/g;
 const PYTHON_LOCK_PATTERN = /https:\/\/github\.com\/gaofeng21cn\/one-person-lab\.git\?subdirectory=python%2Fopl-harness-shared&rev=([0-9a-f]{40})(#[0-9a-f]{40})?/g;
 const JS_GIT_PATTERN = /git\+https:\/\/github\.com\/gaofeng21cn\/one-person-lab\.git#([0-9a-f]{40})/g;
+const CONTRACT_PYTHON_PACKAGE_PATTERN = /git\+https:\/\/github\.com\/gaofeng21cn\/one-person-lab\.git@([0-9a-f]{40})#subdirectory=python\/opl-harness-shared/g;
+const CONTRACT_JS_PACKAGE_PATTERN = /git\+https:\/\/github\.com\/gaofeng21cn\/one-person-lab\.git#([0-9a-f]{40})/g;
 
 function repoRootFromImportMeta() {
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -38,6 +40,11 @@ function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
 
+function writeJson(filePath, value) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+}
+
 function unique(values) {
   return [...new Set(values)];
 }
@@ -52,6 +59,54 @@ export function loadSharedOwnerReleaseContract({ repoRoot = repoRootFromImportMe
     throw new Error('shared owner release contract must declare at least one consumer');
   }
   return contract;
+}
+
+function requireOwnerCommit(ownerCommit, context = 'owner_commit') {
+  const normalizedCommit = String(ownerCommit ?? '').trim();
+  if (!/^[0-9a-f]{40}$/.test(normalizedCommit)) {
+    throw new Error(`invalid ${context}: ${ownerCommit}`);
+  }
+  return normalizedCommit;
+}
+
+function rewriteContractPackageLocator(locator, ownerCommit) {
+  if (typeof locator !== 'string') {
+    return locator;
+  }
+  if (CONTRACT_PYTHON_PACKAGE_PATTERN.test(locator)) {
+    CONTRACT_PYTHON_PACKAGE_PATTERN.lastIndex = 0;
+    return locator.replace(CONTRACT_PYTHON_PACKAGE_PATTERN, () => (
+      `git+https://github.com/gaofeng21cn/one-person-lab.git@${ownerCommit}#subdirectory=python/opl-harness-shared`
+    ));
+  }
+  CONTRACT_PYTHON_PACKAGE_PATTERN.lastIndex = 0;
+  if (CONTRACT_JS_PACKAGE_PATTERN.test(locator)) {
+    CONTRACT_JS_PACKAGE_PATTERN.lastIndex = 0;
+    return locator.replace(CONTRACT_JS_PACKAGE_PATTERN, () => (
+      `git+https://github.com/gaofeng21cn/one-person-lab.git#${ownerCommit}`
+    ));
+  }
+  CONTRACT_JS_PACKAGE_PATTERN.lastIndex = 0;
+  return locator;
+}
+
+export function rewriteSharedOwnerReleaseContract(contract, ownerCommit) {
+  const nextOwnerCommit = requireOwnerCommit(ownerCommit);
+  const nextContract = JSON.parse(JSON.stringify(contract));
+  nextContract.owner_commit = nextOwnerCommit;
+  if (nextContract.packages?.python?.git_locator) {
+    nextContract.packages.python.git_locator = rewriteContractPackageLocator(
+      nextContract.packages.python.git_locator,
+      nextOwnerCommit,
+    );
+  }
+  if (nextContract.packages?.js?.git_locator) {
+    nextContract.packages.js.git_locator = rewriteContractPackageLocator(
+      nextContract.packages.js.git_locator,
+      nextOwnerCommit,
+    );
+  }
+  return nextContract;
 }
 
 export function extractTrackedPins(text, kind) {
@@ -280,14 +335,78 @@ function formatSync(results) {
   return lines.join('\n');
 }
 
+function formatRelease(result) {
+  return [
+    `released owner commit: ${result.owner_commit}`,
+    `updated contract: ${result.contract_path}`,
+  ].join('\n');
+}
+
+function resolveOwnerCommitForRelease({
+  repoRoot,
+  ownerCommit,
+}) {
+  if (ownerCommit) {
+    return requireOwnerCommit(ownerCommit, 'owner_commit');
+  }
+  try {
+    return requireOwnerCommit(
+      execFileSync('git', ['rev-parse', 'HEAD'], {
+        cwd: repoRoot,
+        encoding: 'utf8',
+      }).trim(),
+      'git HEAD',
+    );
+  } catch {
+    throw new Error('unable to resolve owner commit from git; pass --owner-commit <40-hex-sha>');
+  }
+}
+
+export function releaseFamilySharedPins({
+  repoRoot = repoRootFromImportMeta(),
+  familyRoot = resolveDefaultFamilyRoot({ repoRoot }),
+  repoOverrides = [],
+  ownerCommit,
+} = {}) {
+  const contractPath = path.join(repoRoot, SHARED_OWNER_RELEASE_CONTRACT_PATH);
+  const nextOwnerCommit = resolveOwnerCommitForRelease({ repoRoot, ownerCommit });
+  const nextContract = rewriteSharedOwnerReleaseContract(
+    loadSharedOwnerReleaseContract({ repoRoot }),
+    nextOwnerCommit,
+  );
+  writeJson(contractPath, nextContract);
+  const syncResults = syncFamilySharedPins({
+    contract: nextContract,
+    familyRoot,
+    repoOverrides,
+  });
+  const summary = inspectFamilySharedPins({
+    contract: nextContract,
+    familyRoot,
+    repoOverrides,
+  });
+  return {
+    owner_commit: nextOwnerCommit,
+    contract_path: contractPath,
+    sync_results: syncResults,
+    summary,
+  };
+}
+
 function parseArgs(argv, { repoRoot = repoRootFromImportMeta() } = {}) {
   const [command, ...rest] = argv;
   const repoOverrides = [];
   let familyRoot;
+  let ownerCommit;
   for (let index = 0; index < rest.length; index += 1) {
     const token = rest[index];
     if (token === '--family-root') {
       familyRoot = path.resolve(rest[index + 1]);
+      index += 1;
+      continue;
+    }
+    if (token === '--owner-commit') {
+      ownerCommit = rest[index + 1];
       index += 1;
       continue;
     }
@@ -301,6 +420,7 @@ function parseArgs(argv, { repoRoot = repoRootFromImportMeta() } = {}) {
   return {
     command: command ?? 'check',
     familyRoot: familyRoot ?? resolveDefaultFamilyRoot({ repoRoot }),
+    ownerCommit,
     repoOverrides,
   };
 }
@@ -335,7 +455,23 @@ export function runFamilySharedReleaseCli(argv, { repoRoot = repoRootFromImportM
       stdout: `${formatSync(syncResults)}\n${formatInspection(summary)}`.trim(),
     };
   }
-  throw new Error('usage: node scripts/family-shared-release.mjs <check|sync> [--family-root <path>] [--repo <repo_id>=<path>]');
+  if (parsed.command === 'release') {
+    const releaseResult = releaseFamilySharedPins({
+      repoRoot,
+      familyRoot: parsed.familyRoot,
+      repoOverrides: parsed.repoOverrides,
+      ownerCommit: parsed.ownerCommit,
+    });
+    return {
+      exit_code: releaseResult.summary.ok ? 0 : 1,
+      stdout: [
+        formatRelease(releaseResult),
+        formatSync(releaseResult.sync_results),
+        formatInspection(releaseResult.summary),
+      ].join('\n').trim(),
+    };
+  }
+  throw new Error('usage: node scripts/family-shared-release.mjs <check|sync|release> [--family-root <path>] [--owner-commit <40-hex-sha>] [--repo <repo_id>=<path>]');
 }
 
 const invokedAsScript = process.argv[1]
