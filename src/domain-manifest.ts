@@ -2,11 +2,13 @@ import { spawnSync } from 'node:child_process';
 
 import type {
   FamilyDomainEntryContractSurface,
+  FamilySharedHandoffSurface,
   GatewayInteractionContractSurface,
 } from './family-entry-contracts.ts';
 import {
   validateFamilyDomainEntryContract,
   validateGatewayInteractionContract,
+  validateSharedHandoff,
 } from './family-entry-contracts.ts';
 import type { GatewayContracts } from './types.ts';
 import { normalizeManagedRuntimeContract } from './managed-runtime-contract.ts';
@@ -183,7 +185,7 @@ export interface NormalizedDomainManifest {
   domain_entry_contract: FamilyDomainEntryContractSurface | null;
   gateway_interaction_contract: GatewayInteractionContractSurface | null;
   product_entry_shell: Record<string, JsonRecord>;
-  shared_handoff: Record<string, JsonRecord>;
+  shared_handoff: FamilySharedHandoffSurface;
   product_entry_overview: {
     surface_kind: string;
     summary: string | null;
@@ -958,7 +960,7 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
   const manifest = unwrapManifestPayload(payload);
   const formalEntry = requireRecord(manifest.formal_entry, 'formal_entry');
   const productEntryShell = normalizeRecordMap(manifest.product_entry_shell, 'product_entry_shell');
-  const sharedHandoff = normalizeRecordMap(manifest.shared_handoff, 'shared_handoff');
+  const sharedHandoff = validateSharedHandoff(manifest.shared_handoff, 'shared_handoff');
   const recommendedShell = optionalString(manifest.recommended_shell);
   const explicitRecommendedCommand = optionalString(manifest.recommended_command);
   const derivedRecommendedCommand = recommendedShell

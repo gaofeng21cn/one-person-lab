@@ -6,10 +6,12 @@ from opl_harness_shared.family_entry_contracts import (
     build_domain_entry_command_contract,
     build_family_domain_entry_contract,
     build_gateway_interaction_contract,
+    build_shared_handoff,
     build_shared_handoff_builder,
     build_shared_handoff_return_surface,
     validate_family_domain_entry_contract,
     validate_gateway_interaction_contract,
+    validate_shared_handoff,
     validate_shared_handoff_builder,
     validate_shared_handoff_return_surface,
 )
@@ -89,6 +91,34 @@ def test_family_entry_contract_helpers_build_and_validate_shared_handoff_payload
     assert validated_return_surface["surface_kind"] == "product_entry"
     assert validated_return_surface["target_domain_id"] == "redcube_ai"
     assert validated_return_surface["summary"] == "Return into RedCube product entry"
+
+
+def test_family_entry_contract_helpers_build_and_validate_aggregate_shared_handoff_payloads() -> None:
+    shared_handoff = build_shared_handoff(
+        direct_entry_builder={
+            "command": "medautoscience build-product-entry --entry-mode direct",
+            "entry_mode": "direct",
+            "summary": "Build direct product entry handoff",
+        },
+        opl_return_surface={
+            "surface_kind": "product_entry",
+            "target_domain_id": "redcube_ai",
+            "summary": "Return into RedCube product entry",
+        },
+        extra_payload={"contract_owner": "family_shared_contract"},
+    )
+
+    validated = validate_shared_handoff(
+        shared_handoff,
+        "product_entry_manifest.shared_handoff",
+    )
+    assert validated["direct_entry_builder"]["entry_mode"] == "direct"
+    assert validated["direct_entry_builder"]["summary"] == "Build direct product entry handoff"
+    assert validated["opl_return_surface"]["target_domain_id"] == "redcube_ai"
+    assert validated["contract_owner"] == "family_shared_contract"
+
+    with pytest.raises(ValueError, match="shared_handoff"):
+        validate_shared_handoff({}, "product_entry_manifest.shared_handoff")
 
 
 def test_family_entry_contract_validation_fails_closed_when_command_contracts_missing() -> None:

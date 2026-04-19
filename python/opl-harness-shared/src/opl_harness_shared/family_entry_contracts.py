@@ -302,3 +302,62 @@ def build_shared_handoff_return_surface(
         ),
         "shared_handoff_return_surface",
     )
+
+
+def validate_shared_handoff(value: object, field: str) -> dict[str, Any]:
+    payload = _require_mapping(value, field)
+    normalized = dict(payload)
+    has_known_surface = False
+
+    if payload.get("direct_entry_builder") is not None:
+        normalized["direct_entry_builder"] = validate_shared_handoff_builder(
+            payload.get("direct_entry_builder"),
+            f"{field}.direct_entry_builder",
+        )
+        has_known_surface = True
+    if payload.get("opl_handoff_builder") is not None:
+        normalized["opl_handoff_builder"] = validate_shared_handoff_builder(
+            payload.get("opl_handoff_builder"),
+            f"{field}.opl_handoff_builder",
+        )
+        has_known_surface = True
+    if payload.get("opl_return_surface") is not None:
+        normalized["opl_return_surface"] = validate_shared_handoff_return_surface(
+            payload.get("opl_return_surface"),
+            f"{field}.opl_return_surface",
+        )
+        has_known_surface = True
+
+    if not has_known_surface:
+        raise ValueError(f"family entry contract shared_handoff 至少需要一个已知 surface: {field}")
+
+    return normalized
+
+
+def build_shared_handoff(
+    *,
+    direct_entry_builder: Mapping[str, Any] | None = None,
+    opl_handoff_builder: Mapping[str, Any] | None = None,
+    opl_return_surface: Mapping[str, Any] | None = None,
+    extra_payload: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    base: dict[str, Any] = {}
+    if direct_entry_builder is not None:
+        base["direct_entry_builder"] = validate_shared_handoff_builder(
+            direct_entry_builder,
+            "shared_handoff.direct_entry_builder",
+        )
+    if opl_handoff_builder is not None:
+        base["opl_handoff_builder"] = validate_shared_handoff_builder(
+            opl_handoff_builder,
+            "shared_handoff.opl_handoff_builder",
+        )
+    if opl_return_surface is not None:
+        base["opl_return_surface"] = validate_shared_handoff_return_surface(
+            opl_return_surface,
+            "shared_handoff.opl_return_surface",
+        )
+    return validate_shared_handoff(
+        _merge_extra_payload(base, extra_payload, field="shared_handoff"),
+        "shared_handoff",
+    )

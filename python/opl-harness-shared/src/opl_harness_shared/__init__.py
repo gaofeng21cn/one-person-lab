@@ -22,10 +22,12 @@ from .family_entry_contracts import (
     build_domain_entry_command_contract,
     build_family_domain_entry_contract,
     build_gateway_interaction_contract,
+    build_shared_handoff,
     build_shared_handoff_builder,
     build_shared_handoff_return_surface,
     validate_family_domain_entry_contract,
     validate_gateway_interaction_contract,
+    validate_shared_handoff,
     validate_shared_handoff_builder,
     validate_shared_handoff_return_surface,
 )
@@ -53,6 +55,7 @@ from .managed_runtime import (
     validate_managed_runtime_contract,
 )
 from .product_entry_companions import (
+    build_family_frontdesk_entry_surfaces,
     build_family_product_frontdesk,
     build_family_product_entry_manifest,
     build_product_entry_start,
@@ -62,6 +65,7 @@ from .product_entry_companions import (
     build_product_entry_resume_surface,
     build_product_frontdesk,
     collect_family_human_gate_ids,
+    validate_family_frontdesk_entry_surfaces,
 )
 from .product_entry_program_companions import (
     build_backend_deconstruction_lane,
@@ -109,6 +113,7 @@ __all__ = [
     "build_explicit_checkpoint_policy",
     "build_family_product_frontdesk",
     "build_family_product_entry_manifest",
+    "build_family_frontdesk_entry_surfaces",
     "build_family_domain_entry_contract",
     "build_family_action_graph",
     "build_family_action_graph_edge",
@@ -120,6 +125,7 @@ __all__ = [
     "build_family_product_entry_orchestration",
     "build_family_orchestration_template",
     "build_gateway_interaction_contract",
+    "build_shared_handoff",
     "build_shared_handoff_builder",
     "build_shared_handoff_return_surface",
     "build_managed_runtime_contract",
@@ -174,7 +180,9 @@ __all__ = [
     "STATUS_NARRATION_CONTRACT_KIND",
     "STATUS_NARRATION_SCHEMA_VERSION",
     "validate_family_domain_entry_contract",
+    "validate_family_frontdesk_entry_surfaces",
     "validate_gateway_interaction_contract",
+    "validate_shared_handoff",
     "validate_shared_handoff_builder",
     "validate_shared_handoff_return_surface",
     "validate_managed_runtime_contract",

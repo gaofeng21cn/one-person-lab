@@ -37,6 +37,12 @@ export type SharedHandoffReturnSurface = JsonRecord & {
   target_domain_id: string;
 };
 
+export type FamilySharedHandoffSurface = JsonRecord & {
+  direct_entry_builder?: SharedHandoffBuilderSurface;
+  opl_handoff_builder?: SharedHandoffBuilderSurface;
+  opl_return_surface?: SharedHandoffReturnSurface;
+};
+
 export interface BuildDomainEntryCommandContractInput {
   command: string;
   required_fields: string[];
@@ -78,6 +84,19 @@ export interface BuildSharedHandoffReturnSurfaceInput {
   target_domain_id: string;
   extra_payload?: JsonRecord;
 }
+
+export interface BuildSharedHandoffInput {
+  direct_entry_builder?: SharedHandoffBuilderSurface | JsonRecord | null;
+  opl_handoff_builder?: SharedHandoffBuilderSurface | JsonRecord | null;
+  opl_return_surface?: SharedHandoffReturnSurface | JsonRecord | null;
+  extra_payload?: JsonRecord;
+}
+
+const SHARED_HANDOFF_KEYS = [
+  'direct_entry_builder',
+  'opl_handoff_builder',
+  'opl_return_surface',
+] as const;
 
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -391,5 +410,70 @@ export function buildSharedHandoffReturnSurface(
       'shared_handoff_return_surface',
     ),
     'shared_handoff_return_surface',
+  );
+}
+
+export function validateSharedHandoff(
+  value: unknown,
+  field: string,
+): FamilySharedHandoffSurface {
+  const payload = requireRecord(value, field);
+  const normalized: FamilySharedHandoffSurface = {
+    ...payload,
+  };
+  let hasKnownSurface = false;
+
+  if (payload.direct_entry_builder !== undefined) {
+    normalized.direct_entry_builder = validateSharedHandoffBuilder(
+      payload.direct_entry_builder,
+      `${field}.direct_entry_builder`,
+    );
+    hasKnownSurface = true;
+  }
+  if (payload.opl_handoff_builder !== undefined) {
+    normalized.opl_handoff_builder = validateSharedHandoffBuilder(
+      payload.opl_handoff_builder,
+      `${field}.opl_handoff_builder`,
+    );
+    hasKnownSurface = true;
+  }
+  if (payload.opl_return_surface !== undefined) {
+    normalized.opl_return_surface = validateSharedHandoffReturnSurface(
+      payload.opl_return_surface,
+      `${field}.opl_return_surface`,
+    );
+    hasKnownSurface = true;
+  }
+
+  if (!hasKnownSurface) {
+    throw new Error(`family entry contract shared_handoff 至少需要一个已知 surface: ${field}`);
+  }
+
+  return normalized;
+}
+
+export function buildSharedHandoff(
+  input: BuildSharedHandoffInput,
+): FamilySharedHandoffSurface {
+  const base: JsonRecord = {};
+
+  for (const key of SHARED_HANDOFF_KEYS) {
+    const value = input[key];
+    if (value === undefined || value === null) {
+      continue;
+    }
+    if (key === 'opl_return_surface') {
+      base[key] = validateSharedHandoffReturnSurface(
+        value,
+        `shared_handoff.${key}`,
+      );
+      continue;
+    }
+    base[key] = validateSharedHandoffBuilder(value, `shared_handoff.${key}`);
+  }
+
+  return validateSharedHandoff(
+    mergeExtraPayload(base, input.extra_payload, 'shared_handoff'),
+    'shared_handoff',
   );
 }

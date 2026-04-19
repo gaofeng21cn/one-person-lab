@@ -6,6 +6,7 @@ import type {
   FamilyProductFrontdeskSurface,
 } from '../../src/product-entry-companions.ts';
 import {
+  buildFamilyFrontdeskEntrySurfaces,
   buildFamilyProductFrontdesk,
   buildFamilyProductEntryManifest,
   buildProductFrontdesk,
@@ -343,6 +344,7 @@ test('product entry companion helpers build canonical shared payloads', () => {
         shared_handoff: {
           opl_return_surface: {
             surface_kind: 'product_entry',
+            target_domain_id: 'redcube_ai',
           },
         },
         product_entry_start: startWithResumeCommand,
@@ -572,6 +574,43 @@ test('family product frontdesk builder projects manifest core into canonical fro
   assert.equal(frontdesk.gateway_interaction_contract?.shared_downstream_entry, 'RedCubeDomainEntry');
 });
 
+test('product entry companion helpers build family frontdesk entry surfaces from manifest shells', () => {
+  const entrySurfaces = buildFamilyFrontdeskEntrySurfaces({
+    product_entry_shell: {
+      product_frontdesk: {
+        command: 'redcube product frontdesk',
+        surface_kind: 'product_frontdesk',
+      },
+      session: {
+        command: 'redcube product session --entry-session-id <entry-session-id>',
+        surface_kind: 'product_entry_session',
+      },
+    },
+    shell_aliases: {
+      frontdesk: 'product_frontdesk',
+      session: 'session',
+    },
+    shared_handoff: {
+      direct_entry_builder: {
+        command: 'redcube product invoke --entry-mode direct',
+        entry_mode: 'direct',
+      },
+      opl_return_surface: {
+        surface_kind: 'product_entry',
+        target_domain_id: 'redcube_ai',
+      },
+    },
+  });
+
+  assert.equal(entrySurfaces.frontdesk.command, 'redcube product frontdesk');
+  assert.equal(
+    entrySurfaces.session.command,
+    'redcube product session --entry-session-id <entry-session-id>',
+  );
+  assert.equal(entrySurfaces.direct_entry_builder?.entry_mode, 'direct');
+  assert.equal('opl_return_surface' in entrySurfaces, false);
+});
+
 test('product entry companion validators normalize shared family payloads', () => {
   const manifest = {
     surface_kind: 'product_entry_manifest',
@@ -596,6 +635,7 @@ test('product entry companion validators normalize shared family payloads', () =
     shared_handoff: {
       opl_return_surface: {
         surface_kind: 'product_entry',
+        target_domain_id: 'redcube_ai',
       },
     },
     product_entry_start: {
@@ -809,6 +849,7 @@ test('product entry companion validators fail closed on missing required shared 
     shared_handoff: {
       opl_return_surface: {
         surface_kind: 'product_entry',
+        target_domain_id: 'redcube_ai',
       },
     },
     product_entry_start: {

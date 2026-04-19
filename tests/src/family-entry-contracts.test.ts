@@ -5,10 +5,12 @@ import {
   buildDomainEntryCommandContract,
   buildFamilyDomainEntryContract,
   buildGatewayInteractionContract,
+  buildSharedHandoff,
   buildSharedHandoffBuilder,
   buildSharedHandoffReturnSurface,
   validateFamilyDomainEntryContract,
   validateGatewayInteractionContract,
+  validateSharedHandoff,
   validateSharedHandoffBuilder,
   validateSharedHandoffReturnSurface,
 } from '../../src/family-entry-contracts.ts';
@@ -91,6 +93,38 @@ test('family entry contract helpers build and validate shared handoff payloads',
   assert.equal(validatedReturnSurface.surface_kind, 'product_entry');
   assert.equal(validatedReturnSurface.target_domain_id, 'redcube_ai');
   assert.equal(validatedReturnSurface.summary, 'Return into RedCube product entry');
+});
+
+test('family entry contract helpers build and validate aggregate shared handoff payloads', () => {
+  const sharedHandoff = buildSharedHandoff({
+    direct_entry_builder: {
+      command: 'medautoscience build-product-entry --entry-mode direct',
+      entry_mode: 'direct',
+      summary: 'Build direct product entry handoff',
+    },
+    opl_return_surface: {
+      surface_kind: 'product_entry',
+      target_domain_id: 'redcube_ai',
+      summary: 'Return into RedCube product entry',
+    },
+    extra_payload: {
+      contract_owner: 'family_shared_contract',
+    },
+  });
+
+  const validated = validateSharedHandoff(
+    sharedHandoff,
+    'product_entry_manifest.shared_handoff',
+  );
+
+  assert.equal(validated.direct_entry_builder?.entry_mode, 'direct');
+  assert.equal(validated.direct_entry_builder?.summary, 'Build direct product entry handoff');
+  assert.equal(validated.opl_return_surface?.target_domain_id, 'redcube_ai');
+  assert.equal(validated.contract_owner, 'family_shared_contract');
+  assert.throws(
+    () => validateSharedHandoff({}, 'product_entry_manifest.shared_handoff'),
+    /shared_handoff/,
+  );
 });
 
 test('family entry contract validation fails closed when command contracts are missing', () => {
