@@ -5,8 +5,12 @@ import {
   buildDomainEntryCommandContract,
   buildFamilyDomainEntryContract,
   buildGatewayInteractionContract,
+  buildSharedHandoffBuilder,
+  buildSharedHandoffReturnSurface,
   validateFamilyDomainEntryContract,
   validateGatewayInteractionContract,
+  validateSharedHandoffBuilder,
+  validateSharedHandoffReturnSurface,
 } from '../../src/family-entry-contracts.ts';
 
 test('family entry contract helpers build and validate shared domain entry payloads', () => {
@@ -59,6 +63,34 @@ test('family entry contract helpers build and validate gateway interaction paylo
   );
   assert.equal(validated.surface_kind, 'gateway_interaction_contract');
   assert.equal(validated.recommended_route_surface, 'product_frontdesk');
+});
+
+test('family entry contract helpers build and validate shared handoff payloads', () => {
+  const builder = buildSharedHandoffBuilder({
+    command: 'medautoscience build-product-entry --entry-mode direct',
+    entry_mode: 'direct',
+    extra_payload: { summary: 'Build direct product entry handoff' },
+  });
+  const returnSurface = buildSharedHandoffReturnSurface({
+    surface_kind: 'product_entry',
+    target_domain_id: 'redcube_ai',
+    extra_payload: { summary: 'Return into RedCube product entry' },
+  });
+
+  const validatedBuilder = validateSharedHandoffBuilder(
+    builder,
+    'product_entry_manifest.shared_handoff.direct_entry_builder',
+  );
+  const validatedReturnSurface = validateSharedHandoffReturnSurface(
+    returnSurface,
+    'product_entry_manifest.shared_handoff.opl_return_surface',
+  );
+
+  assert.equal(validatedBuilder.entry_mode, 'direct');
+  assert.equal(validatedBuilder.summary, 'Build direct product entry handoff');
+  assert.equal(validatedReturnSurface.surface_kind, 'product_entry');
+  assert.equal(validatedReturnSurface.target_domain_id, 'redcube_ai');
+  assert.equal(validatedReturnSurface.summary, 'Return into RedCube product entry');
 });
 
 test('family entry contract validation fails closed when command contracts are missing', () => {

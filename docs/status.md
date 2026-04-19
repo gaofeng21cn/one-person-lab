@@ -64,5 +64,6 @@
 ## 默认验证
 
 - 默认最小验证：`scripts/verify.sh`
+- family release 漂移验证：`scripts/verify.sh family`
 - meta 验证：`scripts/verify.sh meta`
 - full 验证：`scripts/verify.sh full`

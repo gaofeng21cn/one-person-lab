@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 export const SHARED_OWNER_RELEASE_CONTRACT_PATH = 'contracts/family-release/shared-owner-release.json';
@@ -11,6 +12,26 @@ const JS_GIT_PATTERN = /git\+https:\/\/github\.com\/gaofeng21cn\/one-person-lab\
 
 function repoRootFromImportMeta() {
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+}
+
+export function resolveCanonicalRepoRoot({ repoRoot = repoRootFromImportMeta() } = {}) {
+  try {
+    const gitCommonDir = execFileSync(
+      'git',
+      ['rev-parse', '--path-format=absolute', '--git-common-dir'],
+      {
+        cwd: repoRoot,
+        encoding: 'utf8',
+      },
+    ).trim();
+    return path.resolve(gitCommonDir, '..');
+  } catch {
+    return repoRoot;
+  }
+}
+
+export function resolveDefaultFamilyRoot({ repoRoot = repoRootFromImportMeta() } = {}) {
+  return path.resolve(resolveCanonicalRepoRoot({ repoRoot }), '..');
 }
 
 function readJson(filePath) {
@@ -259,10 +280,10 @@ function formatSync(results) {
   return lines.join('\n');
 }
 
-function parseArgs(argv) {
+function parseArgs(argv, { repoRoot = repoRootFromImportMeta() } = {}) {
   const [command, ...rest] = argv;
   const repoOverrides = [];
-  let familyRoot = path.resolve(repoRootFromImportMeta(), '..');
+  let familyRoot;
   for (let index = 0; index < rest.length; index += 1) {
     const token = rest[index];
     if (token === '--family-root') {
@@ -279,14 +300,13 @@ function parseArgs(argv) {
   }
   return {
     command: command ?? 'check',
-    familyRoot,
+    familyRoot: familyRoot ?? resolveDefaultFamilyRoot({ repoRoot }),
     repoOverrides,
   };
 }
 
-export function runFamilySharedReleaseCli(argv) {
-  const parsed = parseArgs(argv);
-  const repoRoot = repoRootFromImportMeta();
+export function runFamilySharedReleaseCli(argv, { repoRoot = repoRootFromImportMeta() } = {}) {
+  const parsed = parseArgs(argv, { repoRoot });
   const contract = loadSharedOwnerReleaseContract({ repoRoot });
   if (parsed.command === 'check') {
     const summary = inspectFamilySharedPins({

@@ -241,3 +241,64 @@ def build_gateway_interaction_contract(
         ),
         "gateway_interaction_contract",
     )
+
+
+def validate_shared_handoff_builder(value: object, field: str) -> dict[str, Any]:
+    payload = _require_mapping(value, field)
+    normalized = {
+        **dict(payload),
+        "command": _require_string(payload.get("command"), f"{field}.command"),
+        "entry_mode": _require_string(payload.get("entry_mode"), f"{field}.entry_mode"),
+    }
+    surface_kind = _non_empty_text(payload.get("surface_kind"))
+    if surface_kind is not None:
+        normalized["surface_kind"] = surface_kind
+    return normalized
+
+
+def build_shared_handoff_builder(
+    *,
+    command: str,
+    entry_mode: str,
+    surface_kind: str | None = None,
+    extra_payload: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    base: dict[str, Any] = {
+        "command": _require_string(command, "command"),
+        "entry_mode": _require_string(entry_mode, "entry_mode"),
+    }
+    normalized_surface_kind = _non_empty_text(surface_kind)
+    if normalized_surface_kind is not None:
+        base["surface_kind"] = normalized_surface_kind
+    return validate_shared_handoff_builder(
+        _merge_extra_payload(base, extra_payload, field="shared_handoff_builder"),
+        "shared_handoff_builder",
+    )
+
+
+def validate_shared_handoff_return_surface(value: object, field: str) -> dict[str, Any]:
+    payload = _require_mapping(value, field)
+    return {
+        **dict(payload),
+        "surface_kind": _require_string(payload.get("surface_kind"), f"{field}.surface_kind"),
+        "target_domain_id": _require_string(payload.get("target_domain_id"), f"{field}.target_domain_id"),
+    }
+
+
+def build_shared_handoff_return_surface(
+    *,
+    surface_kind: str,
+    target_domain_id: str,
+    extra_payload: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    return validate_shared_handoff_return_surface(
+        _merge_extra_payload(
+            {
+                "surface_kind": _require_string(surface_kind, "surface_kind"),
+                "target_domain_id": _require_string(target_domain_id, "target_domain_id"),
+            },
+            extra_payload,
+            field="shared_handoff_return_surface",
+        ),
+        "shared_handoff_return_surface",
+    )

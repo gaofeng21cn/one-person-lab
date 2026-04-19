@@ -433,7 +433,7 @@ function normalizeStartResumeSurface(value: unknown, field: string): ProductEntr
   return normalized;
 }
 
-function cloneRecord(value: unknown, field: string) {
+function cloneRecord(value: unknown, field: string): JsonRecord {
   return { ...requireRecord(value, field) };
 }
 
@@ -446,7 +446,7 @@ function normalizeFrontdeskSummary(value: unknown, field: string) {
   };
 }
 
-function mergeExtraPayload(base: JsonRecord, extraPayload: unknown, surfaceKind: string) {
+function mergeExtraPayload<T extends JsonRecord>(base: T, extraPayload: unknown, surfaceKind: string): T {
   if (extraPayload === undefined) {
     return base;
   }
@@ -459,7 +459,7 @@ function mergeExtraPayload(base: JsonRecord, extraPayload: unknown, surfaceKind:
   return {
     ...base,
     ...normalizedExtraPayload,
-  };
+  } as T;
 }
 
 function validateFamilyReferenceRef(value: unknown, field: string): FamilyOrchestrationReferenceRef {
@@ -787,7 +787,7 @@ export function buildProductEntryStart(input: BuildProductEntryStartInput) {
   };
 }
 
-export function buildProductFrontdesk(input: BuildProductFrontdeskInput) {
+export function buildProductFrontdesk(input: BuildProductFrontdeskInput): FamilyProductFrontdeskSurface {
   const payload: JsonRecord = {
     surface_kind: 'product_frontdesk',
     recommended_action: requireString(input.recommended_action, 'recommended_action'),
@@ -822,10 +822,10 @@ export function buildProductFrontdesk(input: BuildProductFrontdeskInput) {
       'gateway_interaction_contract',
     );
   }
-  return mergeExtraPayload(payload, input.extra_payload, 'product frontdesk');
+  return mergeExtraPayload(payload, input.extra_payload, 'product frontdesk') as FamilyProductFrontdeskSurface;
 }
 
-export function buildFamilyProductFrontdesk(input: BuildFamilyProductFrontdeskInput) {
+export function buildFamilyProductFrontdesk(input: BuildFamilyProductFrontdeskInput): FamilyProductFrontdeskSurface {
   const manifest = cloneRecord(input.product_entry_manifest, 'product_entry_manifest');
   const frontdeskSurface = cloneRecord(
     manifest.frontdesk_surface,
@@ -912,7 +912,9 @@ export function buildFamilyProductFrontdesk(input: BuildFamilyProductFrontdeskIn
   });
 }
 
-export function buildFamilyProductEntryManifest(input: BuildFamilyProductEntryManifestInput) {
+export function buildFamilyProductEntryManifest(
+  input: BuildFamilyProductEntryManifestInput,
+): FamilyProductEntryManifestSurface {
   const payload: JsonRecord = {
     surface_kind: 'product_entry_manifest',
     manifest_version: 2,
@@ -980,7 +982,7 @@ export function buildFamilyProductEntryManifest(input: BuildFamilyProductEntryMa
     );
   }
 
-  return mergeExtraPayload(payload, input.extra_payload, 'product entry manifest');
+  return mergeExtraPayload(payload, input.extra_payload, 'product entry manifest') as FamilyProductEntryManifestSurface;
 }
 
 export function validateFamilyProductEntryManifest(
