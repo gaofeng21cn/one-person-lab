@@ -47,14 +47,15 @@ test('repo-tracked verification command surfaces reference valid npm scripts and
   }
 });
 
-test('root AGENTS freezes the canonical fast and full verification entrypoints', () => {
-  const agents = read('AGENTS.md');
+test('public docs keep the verification surface lightweight and current', () => {
+  const architectureDoc = read('docs/architecture.md');
+  const statusDoc = read('docs/status.md');
 
-  assert.match(agents, /默认最小验证入口是 `scripts\/verify\.sh`/);
-  assert.match(agents, /默认 smoke 是 `npm test` \/ `npm run test:fast`/);
-  assert.match(agents, /`npm run test:meta` 与 `npm run test:artifact` 是显式 lane/);
-  assert.match(agents, /`npm run test:full` 是 clean-clone 基线/);
-  assert.match(agents, /必须与 `package\.json` 和已跟踪测试保持一致/);
+  assert.match(statusDoc, /## 默认验证/);
+  assert.match(statusDoc, /scripts\/verify\.sh/);
+  assert.doesNotMatch(statusDoc, /## 当前阶段/);
+  assert.doesNotMatch(statusDoc, /## 下一阶段/);
+  assert.doesNotMatch(architectureDoc, /Phase 1/);
 });
 
 test('scripts/verify.sh provides the canonical verification wrapper', () => {

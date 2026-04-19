@@ -40,9 +40,8 @@
 
 代表性显式命令包括 `opl contract validate`、`opl domain manifests`、`opl status runtime`、`opl workspace bind`、`opl frontdesk entry-guide`、`opl session ledger` 与 `opl runtime repair-gateway`。
 
-但它还不是 managed hosted / web 形态的完整产品前台。
 当前这层 hosted / web 路线已经落下本地 web companion 与 hosted bundle / package；optional hosted-shell compatibility export 继续留作 command-scoped hidden lane，长期仍回到 `OPL` 自有 web front desk。
-同时，`Phase 1` 的 gateway contract commands 仍然是顶层联邦真相面的稳定 formal contract surface。
+这组 gateway contract commands 继续作为顶层联邦真相面的稳定 formal contract surface。
 
 目标产品链路应是：
 
