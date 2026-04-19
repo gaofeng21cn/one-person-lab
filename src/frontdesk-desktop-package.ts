@@ -104,11 +104,11 @@ function buildIndexHtml() {
     <style>
       :root {
         color-scheme: light;
-        --bg: #f5f6f8;
-        --panel: rgba(255, 255, 255, 0.9);
-        --line: rgba(15, 23, 42, 0.08);
+        --bg: #f7f7f4;
+        --panel: rgba(255, 255, 255, 0.88);
+        --line: rgba(20, 26, 39, 0.08);
         --text: #111827;
-        --muted: #667085;
+        --muted: #5b6474;
         --accent: #111827;
         --soft: rgba(17, 24, 39, 0.06);
       }
@@ -120,11 +120,11 @@ function buildIndexHtml() {
       body {
         margin: 0;
         min-height: 100vh;
-        font-family: "SF Pro Display", "SF Pro Text", "PingFang SC", sans-serif;
+        font-family: "SF Pro Text", "PingFang SC", sans-serif;
         color: var(--text);
         background:
-          radial-gradient(circle at top left, rgba(59, 130, 246, 0.12), transparent 26%),
-          radial-gradient(circle at bottom right, rgba(15, 118, 110, 0.1), transparent 24%),
+          radial-gradient(circle at top left, rgba(202, 214, 255, 0.35), transparent 28%),
+          radial-gradient(circle at bottom right, rgba(212, 243, 225, 0.28), transparent 30%),
           var(--bg);
       }
 
@@ -136,12 +136,12 @@ function buildIndexHtml() {
       }
 
       .panel {
-        width: min(860px, 100%);
-        padding: 30px;
-        border-radius: 30px;
+        width: min(760px, 100%);
+        padding: 28px;
+        border-radius: 28px;
         border: 1px solid var(--line);
         background: var(--panel);
-        backdrop-filter: blur(22px);
+        backdrop-filter: blur(18px);
         box-shadow: 0 24px 70px rgba(15, 23, 42, 0.08);
       }
 
@@ -165,12 +165,6 @@ function buildIndexHtml() {
         line-height: 1.08;
       }
 
-      h2 {
-        margin: 0;
-        font-size: 20px;
-        letter-spacing: -0.02em;
-      }
-
       p {
         margin: 0;
         color: var(--muted);
@@ -179,7 +173,6 @@ function buildIndexHtml() {
 
       .grid {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 12px;
         margin-top: 24px;
       }
@@ -203,36 +196,18 @@ function buildIndexHtml() {
         font-size: 15px;
         word-break: break-word;
       }
-
-      @media (max-width: 720px) {
-        .grid {
-          grid-template-columns: 1fr;
-        }
-      }
     </style>
   </head>
   <body>
     <main>
       <section class="panel">
-        <div class="eyebrow">OPL Workbench</div>
-        <h1>Workspace-first control room</h1>
-        <p>桌面壳会优先连接本机 OPL workbench 服务，服务就绪后直接载入完整工作台。</p>
+        <div class="eyebrow">Onyx Desktop Shell</div>
+        <h1>OPL 本机前台正在连接</h1>
+        <p>这个桌面壳会优先连接本机 OPL Front Desk，等本地服务就绪后直接载入 workspace-first 工作台。</p>
         <div class="grid">
           <div class="card">
             <div class="label">Status</div>
-            <div class="value">Waiting for the local OPL workbench service.</div>
-          </div>
-          <div class="card">
-            <div class="label">Scope</div>
-            <div class="value">Settings, modules, and progress stay aligned here.</div>
-          </div>
-          <div class="card">
-            <div class="label">Experience</div>
-            <div class="value">OPL Workbench keeps conversation, files, and progress in one shell.</div>
-          </div>
-          <div class="card">
-            <div class="label">Mode</div>
-            <div class="value">Desktop shell waiting for the local web companion to become reachable.</div>
+            <div class="value">Waiting for the local OPL front desk service.</div>
           </div>
         </div>
       </section>
