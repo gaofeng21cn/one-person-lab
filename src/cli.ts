@@ -9,9 +9,16 @@ import {
   validateGatewayContracts,
 } from './contracts.ts';
 import {
+  buildFrontDeskInitialize,
   buildFrontDeskEnvironment,
   buildFrontDeskModules,
+  buildFrontDeskWorkspaceRootSurface,
   runFrontDeskModuleAction,
+  runFrontDeskEngineAction,
+  runFrontDeskSystemAction,
+  writeFrontDeskWorkspaceRootSurface,
+  type FrontDeskEngineAction,
+  type FrontDeskSystemAction,
   type FrontDeskModuleAction,
 } from './frontdesk-installation.ts';
 import {
@@ -164,6 +171,18 @@ type HostedPilotPackageCliInput = {
 
 type FrontDeskModuleCliInput = {
   moduleId?: string;
+};
+
+type FrontDeskEngineCliInput = {
+  engineId?: string;
+};
+
+type WorkspaceRootCliInput = {
+  path?: string;
+};
+
+type UpdateChannelCliInput = {
+  channel?: 'stable' | 'preview';
 };
 
 function printJson(payload: unknown, stream: NodeJS.WriteStream = process.stdout) {
@@ -1016,6 +1035,145 @@ function runFrontDeskModuleActionCommand(
   return runFrontDeskModuleAction(action, parsed.moduleId ?? '');
 }
 
+function parseFrontDeskEngineArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): FrontDeskEngineCliInput {
+  const parsed: FrontDeskEngineCliInput = {};
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (!token.startsWith('--')) {
+      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
+        token,
+      });
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
+        option: token,
+      });
+    }
+
+    switch (token) {
+      case '--engine':
+      case '--engine-id':
+        parsed.engineId = value;
+        break;
+      default:
+        throw buildUsageError(`Unknown option for frontdesk engine command: ${token}.`, spec, {
+          option: token,
+        });
+    }
+
+    index += 1;
+  }
+
+  return parsed;
+}
+
+async function runFrontDeskEngineActionCommand(
+  getContracts: () => GatewayContracts,
+  action: FrontDeskEngineAction,
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+) {
+  const parsed = parseFrontDeskEngineArgs(args, spec);
+  if (!parsed.engineId) {
+    throw buildUsageError(
+      `frontdesk engine ${action} requires --engine.`,
+      spec,
+      { required: ['--engine'] },
+    );
+  }
+
+  return runFrontDeskEngineAction(getContracts(), action, parsed.engineId);
+}
+
+function parseWorkspaceRootArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): WorkspaceRootCliInput {
+  const parsed: WorkspaceRootCliInput = {};
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (!token.startsWith('--')) {
+      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
+        token,
+      });
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
+        option: token,
+      });
+    }
+
+    switch (token) {
+      case '--path':
+        parsed.path = value;
+        break;
+      default:
+        throw buildUsageError(`Unknown option for workspace root command: ${token}.`, spec, {
+          option: token,
+        });
+    }
+
+    index += 1;
+  }
+
+  return parsed;
+}
+
+function parseUpdateChannelArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): UpdateChannelCliInput {
+  const parsed: UpdateChannelCliInput = {};
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (!token.startsWith('--')) {
+      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
+        token,
+      });
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
+        option: token,
+      });
+    }
+
+    switch (token) {
+      case '--channel':
+        if (value !== 'stable' && value !== 'preview') {
+          throw buildUsageError('frontdesk update-channel requires stable or preview.', spec, {
+            option: token,
+            value,
+          });
+        }
+        parsed.channel = value;
+        break;
+      default:
+        throw buildUsageError(`Unknown option for frontdesk update-channel command: ${token}.`, spec, {
+          option: token,
+        });
+    }
+
+    index += 1;
+  }
+
+  return parsed;
+}
+
 function assertNoArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
@@ -1542,6 +1700,16 @@ async function main() {
         return buildFrontDeskEnvironment(getContracts());
       },
     },
+    'frontdesk initialize': {
+      usage: 'opl frontdesk initialize',
+      summary:
+        'Aggregate the Initialize OPL surface across engines, modules, workspace root, and local system support.',
+      examples: ['opl frontdesk initialize'],
+      handler: (args) => {
+        assertNoArgs(args, commandSpecs['frontdesk initialize']);
+        return buildFrontDeskInitialize(getContracts());
+      },
+    },
     'frontdesk modules': {
       usage: 'opl frontdesk modules',
       summary:
@@ -1575,6 +1743,70 @@ async function main() {
       summary: 'Remove an OPL-managed domain module checkout from the managed modules root.',
       examples: ['opl frontdesk module remove --module medautoscience'],
       handler: (args) => runFrontDeskModuleActionCommand('remove', args, commandSpecs['frontdesk-module-remove']),
+    },
+    'frontdesk engine install': {
+      usage: 'opl frontdesk engine install --engine <codex|hermes>',
+      summary: 'Run the configured install action for one OPL-managed core engine.',
+      examples: ['opl frontdesk engine install --engine codex'],
+      handler: (args) =>
+        runFrontDeskEngineActionCommand(getContracts, 'install', args, commandSpecs['frontdesk engine install']),
+    },
+    'frontdesk engine update': {
+      usage: 'opl frontdesk engine update --engine <codex|hermes>',
+      summary: 'Run the configured update action for one OPL-managed core engine.',
+      examples: ['opl frontdesk engine update --engine codex'],
+      handler: (args) =>
+        runFrontDeskEngineActionCommand(getContracts, 'update', args, commandSpecs['frontdesk engine update']),
+    },
+    'frontdesk engine reinstall': {
+      usage: 'opl frontdesk engine reinstall --engine <codex|hermes>',
+      summary: 'Run the configured reinstall action for one OPL-managed core engine.',
+      examples: ['opl frontdesk engine reinstall --engine codex'],
+      handler: (args) =>
+        runFrontDeskEngineActionCommand(getContracts, 'reinstall', args, commandSpecs['frontdesk engine reinstall']),
+    },
+    'frontdesk engine remove': {
+      usage: 'opl frontdesk engine remove --engine <codex|hermes>',
+      summary: 'Run the configured remove action for one OPL-managed core engine.',
+      examples: ['opl frontdesk engine remove --engine hermes'],
+      handler: (args) =>
+        runFrontDeskEngineActionCommand(getContracts, 'remove', args, commandSpecs['frontdesk engine remove']),
+    },
+    'frontdesk repair': {
+      usage: 'opl frontdesk repair',
+      summary: 'Repair OPL runtime support surfaces and return the refreshed system action payload.',
+      examples: ['opl frontdesk repair'],
+      handler: (args) => {
+        assertNoArgs(args, commandSpecs['frontdesk repair']);
+        return runFrontDeskSystemAction(getContracts(), 'repair');
+      },
+    },
+    'frontdesk reinstall-support': {
+      usage:
+        'opl frontdesk reinstall-support [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>]',
+      summary:
+        'Reinstall local OPL support surfaces that package the adapter service for desktop or overlay shells.',
+      examples: [
+        'opl frontdesk reinstall-support',
+        'opl frontdesk reinstall-support --port 8787 --base-path /pilot/opl',
+      ],
+      handler: (args) =>
+        runFrontDeskSystemAction(
+          getContracts(),
+          'reinstall_support',
+          parseWebArgs(args, commandSpecs['frontdesk reinstall-support']),
+        ),
+    },
+    'frontdesk update-channel': {
+      usage: 'opl frontdesk update-channel [--channel <stable|preview>]',
+      summary: 'Read or change the OPL update channel used by Initialize and Environment settings.',
+      examples: ['opl frontdesk update-channel', 'opl frontdesk update-channel --channel preview'],
+      handler: (args) => {
+        const parsed = parseUpdateChannelArgs(args, commandSpecs['frontdesk update-channel']);
+        return runFrontDeskSystemAction(getContracts(), 'update_channel', {
+          channel: parsed.channel,
+        });
+      },
     },
     'frontdesk domain-wiring': {
       usage: 'opl frontdesk domain-wiring',
@@ -1775,6 +2007,41 @@ async function main() {
         return buildWorkspaceCatalog(getContracts());
       },
     },
+    'workspace root': {
+      usage: 'opl workspace root',
+      summary: 'Show the current OPL workspace root preference and its readiness state.',
+      examples: ['opl workspace root'],
+      handler: (args) => {
+        assertNoArgs(args, commandSpecs['workspace root']);
+        return buildFrontDeskWorkspaceRootSurface();
+      },
+    },
+    'workspace root set': {
+      usage: 'opl workspace root set --path <workspace_root>',
+      summary: 'Persist the selected OPL workspace root for Initialize and GUI settings surfaces.',
+      examples: ['opl workspace root set --path /Users/gaofeng/workspace'],
+      handler: (args) => {
+        const parsed = parseWorkspaceRootArgs(args, commandSpecs['workspace root set']);
+        if (!parsed.path) {
+          throw buildUsageError(
+            'workspace root set requires --path.',
+            commandSpecs['workspace root set'],
+            { required: ['--path'] },
+          );
+        }
+
+        return writeFrontDeskWorkspaceRootSurface(parsed.path);
+      },
+    },
+    'workspace root doctor': {
+      usage: 'opl workspace root doctor',
+      summary: 'Re-read the current workspace root selection and report its health surface.',
+      examples: ['opl workspace root doctor'],
+      handler: (args) => {
+        assertNoArgs(args, commandSpecs['workspace root doctor']);
+        return buildFrontDeskWorkspaceRootSurface();
+      },
+    },
     'workspace-bind': {
       usage:
         'opl workspace bind --project <project_id> --path <workspace_path> [--label <label>] [--entry-command <command>] [--manifest-command <command>] [--entry-url <url>] [--workspace-root <dir>] [--profile <file>] [--input <file>]',
@@ -1972,6 +2239,21 @@ async function main() {
       examples: ['opl workspace list'],
       group: 'workspace',
     }),
+    'workspace root': cloneCommandSpec(commandSpecs['workspace root'], {
+      usage: 'opl workspace root',
+      examples: ['opl workspace root'],
+      group: 'workspace',
+    }),
+    'workspace root set': cloneCommandSpec(commandSpecs['workspace root set'], {
+      usage: 'opl workspace root set --path <workspace_root>',
+      examples: ['opl workspace root set --path /Users/gaofeng/workspace'],
+      group: 'workspace',
+    }),
+    'workspace root doctor': cloneCommandSpec(commandSpecs['workspace root doctor'], {
+      usage: 'opl workspace root doctor',
+      examples: ['opl workspace root doctor'],
+      group: 'workspace',
+    }),
     'workspace bind': cloneCommandSpec(commandSpecs['workspace-bind'], {
       usage:
         'opl workspace bind --project <project_id> --path <workspace_path> [--label <label>] [--entry-command <command>] [--manifest-command <command>] [--entry-url <url>] [--workspace-root <dir>] [--profile <file>] [--input <file>]',
@@ -2120,6 +2402,11 @@ async function main() {
       examples: ['opl frontdesk environment'],
       group: 'frontdesk',
     }),
+    'frontdesk initialize': cloneCommandSpec(commandSpecs['frontdesk initialize'], {
+      usage: 'opl frontdesk initialize',
+      examples: ['opl frontdesk initialize'],
+      group: 'frontdesk',
+    }),
     'frontdesk modules': cloneCommandSpec(commandSpecs['frontdesk modules'], {
       usage: 'opl frontdesk modules',
       examples: ['opl frontdesk modules'],
@@ -2143,6 +2430,42 @@ async function main() {
     'frontdesk module remove': cloneCommandSpec(commandSpecs['frontdesk-module-remove'], {
       usage: 'opl frontdesk module remove --module <module_id>',
       examples: ['opl frontdesk module remove --module medautoscience'],
+      group: 'frontdesk',
+    }),
+    'frontdesk engine install': cloneCommandSpec(commandSpecs['frontdesk engine install'], {
+      usage: 'opl frontdesk engine install --engine <codex|hermes>',
+      examples: ['opl frontdesk engine install --engine codex'],
+      group: 'frontdesk',
+    }),
+    'frontdesk engine update': cloneCommandSpec(commandSpecs['frontdesk engine update'], {
+      usage: 'opl frontdesk engine update --engine <codex|hermes>',
+      examples: ['opl frontdesk engine update --engine codex'],
+      group: 'frontdesk',
+    }),
+    'frontdesk engine reinstall': cloneCommandSpec(commandSpecs['frontdesk engine reinstall'], {
+      usage: 'opl frontdesk engine reinstall --engine <codex|hermes>',
+      examples: ['opl frontdesk engine reinstall --engine codex'],
+      group: 'frontdesk',
+    }),
+    'frontdesk engine remove': cloneCommandSpec(commandSpecs['frontdesk engine remove'], {
+      usage: 'opl frontdesk engine remove --engine <codex|hermes>',
+      examples: ['opl frontdesk engine remove --engine hermes'],
+      group: 'frontdesk',
+    }),
+    'frontdesk repair': cloneCommandSpec(commandSpecs['frontdesk repair'], {
+      usage: 'opl frontdesk repair',
+      examples: ['opl frontdesk repair'],
+      group: 'frontdesk',
+    }),
+    'frontdesk reinstall-support': cloneCommandSpec(commandSpecs['frontdesk reinstall-support'], {
+      usage:
+        'opl frontdesk reinstall-support [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>]',
+      examples: ['opl frontdesk reinstall-support', 'opl frontdesk reinstall-support --port 8787'],
+      group: 'frontdesk',
+    }),
+    'frontdesk update-channel': cloneCommandSpec(commandSpecs['frontdesk update-channel'], {
+      usage: 'opl frontdesk update-channel [--channel <stable|preview>]',
+      examples: ['opl frontdesk update-channel', 'opl frontdesk update-channel --channel preview'],
       group: 'frontdesk',
     }),
     'frontdesk domain-wiring': cloneCommandSpec(commandSpecs['frontdesk domain-wiring'], {
