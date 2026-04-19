@@ -60,7 +60,7 @@
         "README.md",
         "docs/roadmap.md",
         "contracts/opl-gateway/README.md",
-        "tests/src/opl-public-truth-docs.test.ts"
+        "tests/src/verification-command-surfaces.test.ts"
       ]
     },
     {

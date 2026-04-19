@@ -21,8 +21,6 @@ test('repo-tracked verification command surfaces reference valid npm scripts and
     'contracts/opl-gateway/minimal-admitted-domain-federation-activation-package.json',
     'contracts/opl-gateway/phase-2-central-reference-sync-board.json',
     'contracts/opl-gateway/phase-2-admitted-domain-delta-intake-refresh.json',
-    'docs/references/four-repo-doc-intake-template.md',
-    'docs/references/opl-phase2-ecosystem-sync-owner-line.md',
   ];
 
   const npmRunPattern = /npm run ([a-z0-9:-]+)/gi;
@@ -57,10 +55,6 @@ test('root AGENTS freezes the canonical fast and full verification entrypoints',
   assert.match(agents, /`npm run test:meta` 与 `npm run test:artifact` 是显式 lane/);
   assert.match(agents, /`npm run test:full` 是 clean-clone 基线/);
   assert.match(agents, /必须与 `package\.json` 和已跟踪测试保持一致/);
-});
-
-test('package.json exposes the central docs drift audit command', () => {
-  assert.equal(packageJson.scripts?.['audit:doc-series'], 'node ./scripts/audit-doc-series.mjs');
 });
 
 test('scripts/verify.sh provides the canonical verification wrapper', () => {

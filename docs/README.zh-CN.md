@@ -130,7 +130,7 @@
 
 ## 治理说明
 
-- 文档治理规则冻结在 [series-doc-governance-checklist.md](./references/series-doc-governance-checklist.md)、技术工作集，以及仓库跟踪的 contract/doc surface 中。
+- 文档治理说明收口在 [series-doc-governance-checklist.md](./references/series-doc-governance-checklist.md)、技术工作集，以及仓库跟踪的 contract/doc surface 中。
 - 当前四仓对齐快照收口在 [four-repo-doc-series-sync-summary-2026-04-14.md](./references/four-repo-doc-series-sync-summary-2026-04-14.md)。
 - 可复用的 intake 起点收口在 [four-repo-doc-intake-template.md](./references/four-repo-doc-intake-template.md)。
-- 默认中央漂移审计命令是 `npm run audit:doc-series`。
+- 跨仓文档轮次应直接在受影响仓库里人工审阅，并配套各仓自己的常规验证入口。
