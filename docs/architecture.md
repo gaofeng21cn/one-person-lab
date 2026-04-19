@@ -42,7 +42,7 @@
 
 但它还不是 managed hosted / web 形态的完整产品前台。
 当前这层 GUI 路线已经冻结为 `Onyx-style Desktop shell + OPL web companion`，hosted / web 前台继续围绕 `OPL` 自有 truth surfaces 收口。
-同时，`Phase 1` 的 gateway contract commands 仍然是顶层联邦真相面的稳定 formal contract surface。
+同时，gateway contract commands 仍然是顶层联邦真相面的稳定 formal contract surface。
 
 目标产品链路应是：
 

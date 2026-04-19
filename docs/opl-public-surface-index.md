@@ -8,12 +8,10 @@ This document indexes the current authoritative public surfaces for the `OPL Gat
 
 Its job is to make the top-level gateway easier to discover across README, roadmap, rollout, contracts, acceptance, examples, and linked domain gateway entries.
 
-Read it as the current public surface map for a two-layer OPL entry: the active user-facing front door is the local `opl` shell plus the `opl web` pilot, while the underlying formal entry still remains the CLI-first / gateway contract surface map built on the frozen Phase 1 gateway baseline and reused by the absorbed `Minimal admitted-domain federation activation package`.
-The completed `G2` closeout keeps the single repo-tracked top-level `G2` CLI-first / gateway contract baseline stable.
-That baseline remains the current `OPL` `Phase 1` formal entry contract and public system surface.
-The completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` remains closed at the planning-contract layer, and `G3` remains planning-only rather than an activated routed-action runtime.
-The repo-tracked `Phase 1` candidate-domain closeout order is frozen as `Review Ops` then `Thesis Ops`, the absorbed predecessor gate remains `Phase 1 exit + next-stage activation package freeze`, and the `Minimal admitted-domain federation activation package` is already absorbed into repo-tracked top-level truth. No new active follow-on tranche is open until an admitted-domain absorbed delta or central reference drift justifies another central sync.
-The current top-level formal entry therefore remains the CLI-first / gateway contract surface indexed here, even though the active public mainline above it is now the family-level front desk and hosted-entry hardening line.
+Read it as the current public surface map for a two-layer OPL entry.
+The active user-facing front door is the local `opl` shell plus the `opl web` pilot.
+The formal gateway entry remains the CLI-first / gateway contract surface indexed here.
+`MedAutoGrant`, `MedAutoScience`, and `RedCube AI` hold the admitted domain public-entry surfaces linked from this index, while historical freeze and activation-package context stays in `docs/references/`.
 Use the [Ecosystem Status Matrix](./references/ecosystem-status-matrix.md) as the internal reference-sync anchor for the current four-repo stage and maturity snapshot.
 
 For repository-wide document layering and reference-grade handling, see [Docs Index](./README.md).
@@ -70,7 +68,7 @@ These surfaces freeze the gateway and federation boundary:
 - [Shared Runtime Contract](./shared-runtime-contract.md)
 - [Shared Domain Contract](./shared-domain-contract.md)
 - [OPL Gateway Contract Surface](./opl-read-only-discovery-gateway.md)
-- [OPL Routed Action Gateway](./opl-routed-action-gateway.md) (planning-level contract only; repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` is already closed, the `Review Ops -> Thesis Ops` candidate-domain closeout remains below admission / discovery / routing readiness, the absorbed predecessor gate is `Phase 1 exit + next-stage activation package freeze`, and the current `Minimal admitted-domain federation activation package` is already absorbed into repo-tracked top-level truth)
+- [OPL Routed Action Gateway](./opl-routed-action-gateway.md) (planning-level contract only; historical freeze context stays in reference docs)
 - [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.md) + `domain-onboarding-readiness.schema.json`
 - [OPL Governance / Audit Operating Surface](./references/opl-governance-audit-operating-surface.md)
 - [OPL Publish / Promotion Operating Surface](./references/opl-publish-promotion-operating-surface.md)
@@ -124,7 +122,7 @@ If a surface is `opl_task_map`, under-definition workstreams stay on candidate/o
 If a surface is `opl_candidate_domain_backlog`, it serves as the admission-blocker reference for those lanes.
 If `Grant Foundry -> Med Auto Grant` is mentioned in public wording, it should be framed as the admitted `Grant Ops` domain gateway entry carried by `MedAutoGrant`.
 Any future follow-on route remains `domain_gateway`-only and follows the no-bypass rule against direct harness targeting.
-If a surface is the routed-action prose or schema layer, it stays at the planning-contract / planning-dependency layer after the completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening`.
+If a surface is the routed-action prose or schema layer, it stays at the planning-contract / planning-dependency layer.
 If a surface is the acceptance, matrix, or example layer, it stays in the discoverability/review companion layer.
 
 ## Governing Gateway Documents
@@ -138,7 +136,7 @@ If a surface is the acceptance, matrix, or example layer, it stays in the discov
 - [Shared Domain Contract](./shared-domain-contract.md)
 - [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
 - [OPL Gateway Contract Surface](./opl-read-only-discovery-gateway.md)
-- [OPL Routed Action Gateway](./opl-routed-action-gateway.md) (planning-level contract only; repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` is already closed, the `Review Ops -> Thesis Ops` candidate-domain closeout remains below admission / discovery / routing readiness, the absorbed predecessor gate is `Phase 1 exit + next-stage activation package freeze`, and the current `Minimal admitted-domain federation activation package` is already absorbed into repo-tracked top-level truth)
+- [OPL Routed Action Gateway](./opl-routed-action-gateway.md) (planning-level contract only; historical freeze context stays in reference docs)
 - [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.md)
 - [OPL Governance / Audit Operating Surface](./references/opl-governance-audit-operating-surface.md)
 - [OPL Publish / Promotion Operating Surface](./references/opl-publish-promotion-operating-surface.md)
