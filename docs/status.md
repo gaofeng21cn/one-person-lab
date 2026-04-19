@@ -37,7 +37,7 @@
   - `runtime repair-gateway`
 - GUI 的任务边栏应把 progress 状态和 files 交付区投射到当前 workspace。
 - `opl <request...>` 继续作为同一入口之上的 quick ask 路径。
-- 本地 web front desk pilot 已经落地；hosted / web 前台真相：`LibreChat-first` pilot 仍未落地为最终托管前台，比较基线包含 `Chatbot UI`、`LibreChat`、`Open WebUI` 与 `LobeChat`。
+- 本地 web front desk pilot 已经落地；hosted / web 前台继续以 `OPL` 自有 front desk surface 为公开真相，compatibility packaging 与 hosted-shell 对比评估继续留在 hidden compatibility / reference 层。
 
 ## GUI 工作模式
 
