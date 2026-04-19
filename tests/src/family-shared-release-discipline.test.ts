@@ -16,7 +16,7 @@ import {
   syncConsumerRepo,
 } from '../../scripts/family-shared-release.mjs';
 
-const RELEASED_OWNER_COMMIT = 'fe48267e287895b1d2d6be84c20f2bdcbedd5094';
+const RELEASED_OWNER_COMMIT = '559e488138e7b20644404226e10f3f40b3b7409c';
 const STALE_OWNER_COMMIT = '6a6823dba7f95de5ae3aafc477167bccb07de74c';
 const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..');
 
