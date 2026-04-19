@@ -2,15 +2,16 @@
 
 ## 项目是什么
 
-对外公开时，`One Person Lab` (`OPL`) 是一人课题组的 GUI 产品壳与模块管理器。
-在家族内部技术语义里，`OPL` 继续承担顶层 gateway 与 federation surface，负责把工作类型映射到 domain gateway 与 `Domain Harness OS`，并冻结跨仓共享的 substrate 语义、公开边界和 contract surface。
+对外公开时，`One Person Lab` (`OPL`) 是一人课题组产品家的顶层 gateway 与 headless adapter。
+当前仓库跟踪 CLI 产品入口、family gateway、模块目录、外部 overlay 消费的 adapter / API surfaces，以及跨仓共享的 contract surface。
+repo-tracked GUI 壳继续留在外部 overlay 仓；各 domain 仓继续持有自己的 product entry、runtime 与 deliverables。
 
 ## 产品层级
 
 `OPL` 当前对外使用三层结构组织产品认知：
 
-1. 产品壳
-   `OPL` 自己负责 GUI、工作模式、进度与文件视图、设置、模块管理、升级和入口治理。
+1. 家族入口与 adapter 层
+   `OPL` 负责 family-level 入口、progress/files/modules/session surfaces、family routing、gateway / federation 语言，以及供外部 overlay 或 CLI 消费的 headless adapter。
 2. 产品家族
    家族定义一类长期稳定的工作，例如 `Research Foundry`、`Grant Foundry`、`Presentation Foundry`、`Thesis Foundry`、`Review Foundry`。
 3. 当前实现
@@ -28,7 +29,7 @@
 
 ## 项目目标
 
-- 作为产品壳，给用户提供统一的 GUI 入口、模块管理和产品家族视图。
+- 作为 headless adapter，给 CLI 与外部 overlay 提供统一的 family-level 入口、progress/files/modules surfaces 与产品前门。
 - 作为顶层 gateway，定义 workstream、shared foundation 和 admitted domain 的关系。
 - 作为 federation 入口，明确每个 domain 仓在整体体系中的位置与边界。
 - 作为公开 contract surface，确保文档、gateway contracts 和 admitted domain 状态一致。
@@ -39,7 +40,8 @@
 
 ## 作用边界
 
-- `OPL` 负责产品壳、产品家族目录、顶层 gateway / federation 语言，而各 domain 仓继续负责自己的 runtime。
+- `OPL` 负责 family-level adapter surfaces、产品家族目录、顶层 gateway / federation 语言，而各 domain 仓继续负责自己的 runtime。
+- 外部 overlay 仓负责 repo-tracked GUI 壳；当前仓库只跟踪 headless adapter / API truth。
 - 产品家族负责表达一类工作，不直接替代具体实现仓。
 - 当前实现负责专业能力、领域真相、交付边界和运行时状态。
 - `OPL` 维护共享边界、任务语义与公开 contract surface。
@@ -62,4 +64,4 @@
 
 - 顶层叙事：`docs/roadmap*`、`docs/task-map*`、`docs/gateway-federation*`、`docs/operating-model*`
 - 公开合同：`contracts/opl-gateway/*.json` 与配套 README
-- 参考与历史：`docs/references/`、`docs/specs/`、`docs/plans/`、`docs/history/omx/`
+- 参考与历史：`docs/references/`、`docs/specs/`、`docs/plans/`、`docs/history/frontdesk-legacy/`、`docs/history/omx/`

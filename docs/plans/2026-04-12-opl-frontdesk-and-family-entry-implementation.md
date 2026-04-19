@@ -1,16 +1,16 @@
-# OPL Front Desk And Family Entry Implementation Plan
+# Historical OPL Front Desk And Family Entry Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> Historical completed plan. This document preserves one retired frontdesk-entry implementation slice from `2026-04-12`. Current truth now lives in `README.md`, `docs/project.md`, `docs/status.md`, and `docs/architecture.md`.
 
-**Goal:** 把 `opl` 升级成默认自然语言前台，同时补齐会话/运维入口、family entry 对齐文档与 MAS 顶层 cutover board。
+**Historical goal:** 把 `opl` 升级成默认自然语言前台，同时补齐会话/运维入口、family entry 对齐文档与 MAS 顶层 cutover board。
 
-**Architecture:** 在不动 `Phase 1` gateway contract 的前提下，给 `OPL` 增加一个更完整的本地 front-desk surface。入口层继续复用 Hermes 作为 session/logs/gateway/profile substrate，`OPL` 只负责 family routing、handoff 和产品壳语义。
+**Historical architecture:** 在不动 `Phase 1` gateway contract 的前提下，给 `OPL` 增加一个更完整的本地 front-desk surface。入口层继续复用 Hermes 作为 session/logs/gateway/profile substrate，`OPL` 只负责 family routing、handoff 和产品壳语义。
 
-**Tech Stack:** TypeScript CLI, Node.js child_process, Hermes CLI integration, repo-tracked markdown docs, node:test
+**Historical tech stack:** TypeScript CLI, Node.js child_process, Hermes CLI integration, repo-tracked markdown docs, node:test
 
 ---
 
-### Task 1: Front Desk Default Entry
+### Historical Task 1: Front Desk Default Entry
 
 **Files:**
 - Modify: `src/cli.ts`
@@ -25,7 +25,7 @@
 - [ ] 再跑 `NODE_NO_WARNINGS=1 node --experimental-strip-types --test tests/src/cli.test.ts`
 - [ ] 补 built CLI 覆盖并跑 `npm run build && NODE_NO_WARNINGS=1 node --test tests/built/**/*.test.mjs`
 
-### Task 2: Session / Logs / Repair Entry
+### Historical Task 2: Session / Logs / Repair Entry
 
 **Files:**
 - Modify: `src/cli.ts`
@@ -41,7 +41,7 @@
 - [ ] 让输出保持 machine-readable，不把 Hermes 原始表格直接裸透出为唯一结果
 - [ ] 复跑源码测试与 built CLI 测试
 
-### Task 3: Family Entry Contract And Docs
+### Historical Task 3: Family Entry Contract And Docs
 
 **Files:**
 - Modify: `README.md`
@@ -62,7 +62,7 @@
 - [ ] 更新公开文档和 SVG，使其与新入口行为一致
 - [ ] 复跑上述测试
 
-### Task 4: MAS Top-Level Cutover Board
+### Historical Task 4: MAS Top-Level Cutover Board
 
 **Files:**
 - Create: `docs/references/mas-top-level-cutover-board.md`
@@ -74,7 +74,7 @@
 - [ ] 在核心状态文档和 family entry 文档中挂接这个 board
 - [ ] 跑 `NODE_NO_WARNINGS=1 node --experimental-strip-types --test tests/src/opl-public-truth-docs.test.ts`
 
-### Task 5: Full Verification And Integration
+### Historical Task 5: Full Verification And Integration
 
 **Files:**
 - Verify only

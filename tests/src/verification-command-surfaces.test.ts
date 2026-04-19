@@ -47,13 +47,49 @@ test('repo-tracked verification command surfaces reference valid npm scripts and
   }
 });
 
-test('status doc publishes the canonical verification entrypoints', () => {
+test('repository home and project docs describe OPL as gateway and headless adapter surfaces', () => {
+  const englishReadme = read('README.md');
+  const chineseReadme = read('README.zh-CN.md');
+  const projectDoc = read('docs/project.md');
+
+  assert.match(englishReadme, /gateway/i);
+  assert.match(englishReadme, /headless adapter/i);
+  assert.doesNotMatch(englishReadme, /unified workbench/i);
+  assert.doesNotMatch(englishReadme, /OPL owns the unified workbench itself/i);
+
+  assert.match(chineseReadme, /gateway/i);
+  assert.match(chineseReadme, /headless adapter/i);
+  assert.doesNotMatch(chineseReadme, /统一工作台/);
+  assert.doesNotMatch(chineseReadme, /负责的是统一工作台本身/);
+
+  assert.match(projectDoc, /headless adapter/i);
+  assert.match(projectDoc, /gateway\s*\/\s*federation/i);
+  assert.doesNotMatch(projectDoc, /GUI 产品壳与模块管理器/);
+  assert.doesNotMatch(projectDoc, /OPL 自己负责 GUI/);
+});
+
+test('docs guides stay as entry indexes rather than live command matrices', () => {
+  const englishGuide = read('docs/README.md');
+  const chineseGuide = read('docs/README.zh-CN.md');
+
+  for (const guide of [englishGuide, chineseGuide]) {
+    assert.match(guide, /Layer 1|第一层/);
+    assert.match(guide, /Layer 4|第四层/);
+    assert.doesNotMatch(guide, /opl web/i);
+    assert.doesNotMatch(guide, /frontdesk service/i);
+    assert.doesNotMatch(guide, /scripts\/verify\.sh/i);
+    assert.doesNotMatch(guide, /grouped command matrix/i);
+  }
+});
+
+test('status doc keeps public runtime truth separate from maintainer verification flow', () => {
   const statusDoc = read('docs/status.md');
 
-  assert.match(statusDoc, /## 默认验证/);
-  assert.match(statusDoc, /scripts\/verify\.sh/);
-  assert.match(statusDoc, /scripts\/verify\.sh meta/);
-  assert.match(statusDoc, /scripts\/verify\.sh full/);
+  assert.match(statusDoc, /headless adapter/i);
+  assert.match(statusDoc, /external overlay/i);
+  assert.match(statusDoc, /domain runtime ownership/i);
+  assert.doesNotMatch(statusDoc, /## 默认验证/);
+  assert.doesNotMatch(statusDoc, /scripts\/verify\.sh/);
 });
 
 test('scripts/verify.sh provides the canonical verification wrapper', () => {

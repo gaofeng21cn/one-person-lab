@@ -1,4 +1,6 @@
-# OPL Phase 2 生态同步 Owner Line Brief
+# Historical OPL Phase 2 生态同步 Owner Line Brief
+
+> 历史 owner-line 简报，冻结于 `2026-04-13`。它保留当时的跨仓同步判断，供审计与回溯使用。当前有效真相以 `docs/project.md`、`docs/status.md`、`docs/references/ecosystem-status-matrix.md` 和 `contracts/opl-gateway/*.json` 为准。
 
 状态锚点：`2026-04-13`
 
@@ -25,7 +27,7 @@
 - `docs/references/opl-phase-2-central-reference-sync-board.md`
 - `docs/references/opl-phase-2-admitted-domain-delta-intake-refresh.md`
 
-## 当前结论
+## 当时结论
 
 `OPL` 当前最适合由 `OMX` 承接的新线，不是继续虚构更大的平台故事，而是：
 
@@ -51,7 +53,7 @@
   3. `phase_2_omx_prompt_and_worktree_handbook_sync`
   4. `phase_2_reference_regression_refresh`
 
-## 什么时候值得开这条线
+## 当时什么时候值得开这条线
 
 只有满足下面任一条件时，这条线才值得由 `OMX` 打开：
 
@@ -66,7 +68,7 @@
 
 如果上述条件都不满足，`OPL` 不应为了“保持在跑”而硬开一条 story-first 线。
 
-## 当前 owner line 目标
+## 当时的 owner line 目标
 
 这条线的目标固定为：
 
