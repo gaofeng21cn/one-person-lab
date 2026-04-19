@@ -72,6 +72,17 @@ export interface BuildGatewayInteractionContractInput {
   extra_payload?: JsonRecord;
 }
 
+export interface BuildFamilyGatewayInteractionContractInput {
+  shared_downstream_entry: string;
+  extra_shared_handoff_envelope?: string[] | null;
+  frontdoor_owner?: string | null;
+  user_interaction_mode?: string | null;
+  user_commands_required?: boolean | null;
+  command_surfaces_for_agent_consumption_only?: boolean | null;
+  surface_kind?: string | null;
+  extra_payload?: JsonRecord;
+}
+
 export interface BuildSharedHandoffBuilderInput {
   command: string;
   entry_mode: string;
@@ -92,10 +103,27 @@ export interface BuildSharedHandoffInput {
   extra_payload?: JsonRecord;
 }
 
+export interface BuildFamilyDirectOplSharedHandoffInput {
+  direct_entry_builder_command: string;
+  opl_handoff_builder_command: string;
+  direct_entry_mode?: string | null;
+  opl_handoff_entry_mode?: string | null;
+  extra_payload?: JsonRecord;
+}
+
 const SHARED_HANDOFF_KEYS = [
   'direct_entry_builder',
   'opl_handoff_builder',
   'opl_return_surface',
+] as const;
+
+export const DEFAULT_FAMILY_GATEWAY_SHARED_HANDOFF_ENVELOPE = [
+  'target_domain_id',
+  'task_intent',
+  'entry_mode',
+  'workspace_locator',
+  'runtime_session_contract',
+  'return_surface_contract',
 ] as const;
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -349,6 +377,35 @@ export function buildGatewayInteractionContract(
   );
 }
 
+export function buildFamilyGatewayInteractionContract(
+  input: BuildFamilyGatewayInteractionContractInput,
+): GatewayInteractionContractSurface {
+  const extraEnvelope = readOptionalStringList(
+    input.extra_shared_handoff_envelope,
+    'extra_shared_handoff_envelope',
+  ) ?? [];
+  const sharedHandoffEnvelope = Array.from(
+    new Set([
+      ...DEFAULT_FAMILY_GATEWAY_SHARED_HANDOFF_ENVELOPE,
+      ...extraEnvelope,
+    ]),
+  );
+  return buildGatewayInteractionContract({
+    frontdoor_owner: optionalString(input.frontdoor_owner) ?? 'opl_gateway_or_domain_gui',
+    user_interaction_mode: optionalString(input.user_interaction_mode) ?? 'natural_language_frontdoor',
+    user_commands_required: input.user_commands_required ?? false,
+    command_surfaces_for_agent_consumption_only:
+      input.command_surfaces_for_agent_consumption_only ?? true,
+    shared_downstream_entry: requireString(
+      input.shared_downstream_entry,
+      'shared_downstream_entry',
+    ),
+    shared_handoff_envelope: sharedHandoffEnvelope,
+    surface_kind: optionalString(input.surface_kind),
+    extra_payload: input.extra_payload,
+  });
+}
+
 export function validateSharedHandoffBuilder(
   value: unknown,
   field: string,
@@ -476,4 +533,26 @@ export function buildSharedHandoff(
     mergeExtraPayload(base, input.extra_payload, 'shared_handoff'),
     'shared_handoff',
   );
+}
+
+export function buildFamilyDirectOplSharedHandoff(
+  input: BuildFamilyDirectOplSharedHandoffInput,
+): FamilySharedHandoffSurface {
+  return buildSharedHandoff({
+    direct_entry_builder: buildSharedHandoffBuilder({
+      command: requireString(
+        input.direct_entry_builder_command,
+        'direct_entry_builder_command',
+      ),
+      entry_mode: optionalString(input.direct_entry_mode) ?? 'direct',
+    }),
+    opl_handoff_builder: buildSharedHandoffBuilder({
+      command: requireString(
+        input.opl_handoff_builder_command,
+        'opl_handoff_builder_command',
+      ),
+      entry_mode: optionalString(input.opl_handoff_entry_mode) ?? 'opl-handoff',
+    }),
+    extra_payload: input.extra_payload,
+  });
 }

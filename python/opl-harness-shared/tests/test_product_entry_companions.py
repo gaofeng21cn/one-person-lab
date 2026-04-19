@@ -5,6 +5,7 @@ from copy import deepcopy
 from opl_harness_shared.product_entry_companions import (
     build_family_frontdesk_entry_surfaces,
     build_family_product_frontdesk,
+    build_family_product_frontdesk_from_manifest,
     build_family_product_entry_manifest,
     build_product_entry_start,
     build_product_entry_overview,
@@ -311,6 +312,21 @@ def test_collect_family_human_gate_ids_and_build_helpers() -> None:
     assert manifest["manifest_version"] == 2
     assert manifest["current_truth"]["product_entry_contract"] == "contracts/runtime-program/current-program.json"
     assert manifest["product_entry_start"]["recommended_mode_id"] == "open_frontdesk"
+
+    frontdesk_from_manifest = build_family_product_frontdesk_from_manifest(
+        product_entry_manifest=manifest,
+        shell_aliases={"frontdesk": "frontdesk"},
+        recommended_action="inspect_or_prepare_grant_loop",
+        notes=["Shared frontdesk core is active."],
+        schema_ref="contracts/schemas/v1/product-frontdesk.schema.json",
+        extra_payload={"ok": True},
+    )
+    assert frontdesk_from_manifest["surface_kind"] == "product_frontdesk"
+    assert frontdesk_from_manifest["schema_ref"] == "contracts/schemas/v1/product-frontdesk.schema.json"
+    assert frontdesk_from_manifest["entry_surfaces"]["frontdesk"]["command"] == (
+        "uv run python -m med_autogrant product-frontdesk --input /tmp/workspace.json --format json"
+    )
+    assert frontdesk_from_manifest["ok"] is True
 
     try:
         build_family_product_entry_manifest(

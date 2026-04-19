@@ -2,6 +2,15 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
+DEFAULT_FAMILY_GATEWAY_SHARED_HANDOFF_ENVELOPE = (
+    "target_domain_id",
+    "task_intent",
+    "entry_mode",
+    "workspace_locator",
+    "runtime_session_contract",
+    "return_surface_contract",
+)
+
 
 def _non_empty_text(value: object) -> str | None:
     text = str(value or "").strip()
@@ -243,6 +252,50 @@ def build_gateway_interaction_contract(
     )
 
 
+def build_family_gateway_interaction_contract(
+    *,
+    shared_downstream_entry: str,
+    extra_shared_handoff_envelope: list[str] | None = None,
+    frontdoor_owner: str | None = None,
+    user_interaction_mode: str | None = None,
+    user_commands_required: bool | None = None,
+    command_surfaces_for_agent_consumption_only: bool | None = None,
+    surface_kind: str = "gateway_interaction_contract",
+    extra_payload: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    extra_envelope = _read_optional_string_list(
+        extra_shared_handoff_envelope,
+        "extra_shared_handoff_envelope",
+    ) or []
+    shared_handoff_envelope: list[str] = []
+    for field in (*DEFAULT_FAMILY_GATEWAY_SHARED_HANDOFF_ENVELOPE, *extra_envelope):
+        if field not in shared_handoff_envelope:
+            shared_handoff_envelope.append(field)
+    return build_gateway_interaction_contract(
+        frontdoor_owner=_non_empty_text(frontdoor_owner) or "opl_gateway_or_domain_gui",
+        user_interaction_mode=_non_empty_text(user_interaction_mode) or "natural_language_frontdoor",
+        user_commands_required=False if user_commands_required is None else _require_bool(
+            user_commands_required,
+            "user_commands_required",
+        ),
+        command_surfaces_for_agent_consumption_only=(
+            True
+            if command_surfaces_for_agent_consumption_only is None
+            else _require_bool(
+                command_surfaces_for_agent_consumption_only,
+                "command_surfaces_for_agent_consumption_only",
+            )
+        ),
+        shared_downstream_entry=_require_string(
+            shared_downstream_entry,
+            "shared_downstream_entry",
+        ),
+        shared_handoff_envelope=shared_handoff_envelope,
+        surface_kind=surface_kind,
+        extra_payload=extra_payload,
+    )
+
+
 def validate_shared_handoff_builder(value: object, field: str) -> dict[str, Any]:
     payload = _require_mapping(value, field)
     normalized = {
@@ -360,4 +413,25 @@ def build_shared_handoff(
     return validate_shared_handoff(
         _merge_extra_payload(base, extra_payload, field="shared_handoff"),
         "shared_handoff",
+    )
+
+
+def build_family_direct_opl_shared_handoff(
+    *,
+    direct_entry_builder_command: str,
+    opl_handoff_builder_command: str,
+    direct_entry_mode: str | None = None,
+    opl_handoff_entry_mode: str | None = None,
+    extra_payload: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    return build_shared_handoff(
+        direct_entry_builder=build_shared_handoff_builder(
+            command=_require_string(direct_entry_builder_command, "direct_entry_builder_command"),
+            entry_mode=_non_empty_text(direct_entry_mode) or "direct",
+        ),
+        opl_handoff_builder=build_shared_handoff_builder(
+            command=_require_string(opl_handoff_builder_command, "opl_handoff_builder_command"),
+            entry_mode=_non_empty_text(opl_handoff_entry_mode) or "opl-handoff",
+        ),
+        extra_payload=extra_payload,
     )

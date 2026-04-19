@@ -4,7 +4,9 @@ import pytest
 
 from opl_harness_shared.family_entry_contracts import (
     build_domain_entry_command_contract,
+    build_family_direct_opl_shared_handoff,
     build_family_domain_entry_contract,
+    build_family_gateway_interaction_contract,
     build_gateway_interaction_contract,
     build_shared_handoff,
     build_shared_handoff_builder,
@@ -66,6 +68,33 @@ def test_family_entry_contract_helpers_build_and_validate_gateway_payloads() -> 
     assert validated["recommended_route_surface"] == "product_frontdesk"
 
 
+def test_family_entry_contract_helpers_expose_default_family_gateway_payloads() -> None:
+    contract = build_family_gateway_interaction_contract(
+        shared_downstream_entry="MedAutoScienceDomainEntry",
+        extra_shared_handoff_envelope=["entry_session_contract"],
+        extra_payload={"recommended_route_surface": "product_frontdesk"},
+    )
+
+    validated = validate_gateway_interaction_contract(
+        contract,
+        "product_entry_manifest.gateway_interaction_contract",
+    )
+    assert validated["frontdoor_owner"] == "opl_gateway_or_domain_gui"
+    assert validated["user_interaction_mode"] == "natural_language_frontdoor"
+    assert validated["user_commands_required"] is False
+    assert validated["command_surfaces_for_agent_consumption_only"] is True
+    assert validated["shared_handoff_envelope"] == [
+        "target_domain_id",
+        "task_intent",
+        "entry_mode",
+        "workspace_locator",
+        "runtime_session_contract",
+        "return_surface_contract",
+        "entry_session_contract",
+    ]
+    assert validated["recommended_route_surface"] == "product_frontdesk"
+
+
 def test_family_entry_contract_helpers_build_and_validate_shared_handoff_payloads() -> None:
     builder = build_shared_handoff_builder(
         command="medautoscience build-product-entry --entry-mode direct",
@@ -119,6 +148,27 @@ def test_family_entry_contract_helpers_build_and_validate_aggregate_shared_hando
 
     with pytest.raises(ValueError, match="shared_handoff"):
         validate_shared_handoff({}, "product_entry_manifest.shared_handoff")
+
+
+def test_family_entry_contract_helpers_build_default_direct_and_opl_handoff_payloads() -> None:
+    validated = validate_shared_handoff(
+        build_family_direct_opl_shared_handoff(
+            direct_entry_builder_command="medautoscience build-product-entry --entry-mode direct",
+            opl_handoff_builder_command="medautoscience build-product-entry --entry-mode opl-handoff",
+            extra_payload={"contract_owner": "family_shared_contract"},
+        ),
+        "product_entry_manifest.shared_handoff",
+    )
+
+    assert validated["direct_entry_builder"]["command"] == (
+        "medautoscience build-product-entry --entry-mode direct"
+    )
+    assert validated["direct_entry_builder"]["entry_mode"] == "direct"
+    assert validated["opl_handoff_builder"]["command"] == (
+        "medautoscience build-product-entry --entry-mode opl-handoff"
+    )
+    assert validated["opl_handoff_builder"]["entry_mode"] == "opl-handoff"
+    assert validated["contract_owner"] == "family_shared_contract"
 
 
 def test_family_entry_contract_validation_fails_closed_when_command_contracts_missing() -> None:
