@@ -1843,6 +1843,20 @@ test('help advertises the local web front-desk pilot command surface', () => {
   assert.match(scoped.help.usage, /opl web/);
 });
 
+test('help advertises initialize and environment management command surfaces', () => {
+  const output = runCli(['help']);
+  const commands = output.help.commands.map((entry: { command: string }) => entry.command);
+
+  assert.equal(commands.includes('frontdesk initialize'), true);
+  assert.equal(commands.includes('frontdesk engine install'), true);
+  assert.equal(commands.includes('frontdesk repair'), true);
+  assert.equal(commands.includes('frontdesk reinstall-support'), true);
+  assert.equal(commands.includes('frontdesk update-channel'), true);
+  assert.equal(commands.includes('workspace root'), true);
+  assert.equal(commands.includes('workspace root set'), true);
+  assert.equal(commands.includes('workspace root doctor'), true);
+});
+
 test('frontdesk-manifest exposes the hosted-friendly OPL shell contract without claiming hosted readiness', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-frontdesk-manifest-state-'));
 
@@ -2697,6 +2711,234 @@ exit 1
     fs.rmSync(codexConfigFixture.codexHome, { recursive: true, force: true });
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(hermesFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('frontdesk initialize aggregates environment modules workspace and system surfaces', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-initialize-home-'));
+  const stateDir = path.join(homeRoot, 'opl-state');
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-root-'));
+  const codexConfigFixture = createCodexConfigFixture({
+    model: 'gpt-5.4-opl',
+    reasoningEffort: 'high',
+    baseUrl: 'https://codex-opl.example.test/v1',
+    apiKey: 'codex-opl-key',
+  });
+  const hermesFixture = createFakeHermesFixture(`
+if [[ "$1" == "version" ]]; then
+  echo "Hermes 1.2.3"
+  exit 0
+fi
+if [[ "$1" == "gateway" && "$2" == "status" ]]; then
+  echo "Gateway service is loaded"
+  exit 0
+fi
+echo "Unsupported hermes fixture command: $*" >&2
+exit 1
+`);
+  const codexFixture = createFakeCodexFixture(`
+if [[ "$1" == "--version" ]]; then
+  echo "codex 0.42.0"
+  exit 0
+fi
+echo "Unsupported codex fixture command: $*" >&2
+exit 1
+`);
+
+  try {
+    const output = runCli(
+      ['frontdesk', 'initialize'],
+      {
+        HOME: homeRoot,
+        CODEX_HOME: codexConfigFixture.codexHome,
+        OPL_HERMES_BIN: hermesFixture.hermesPath,
+        OPL_FRONTDESK_STATE_DIR: stateDir,
+        OPL_WORKSPACE_ROOT: workspaceRoot,
+        PATH: `${codexFixture.fixtureRoot}:${hermesFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
+      },
+    ) as {
+      frontdesk_initialize: {
+        surface_id: string;
+        overall_state: string;
+        core_engines: {
+          codex: { installed: boolean };
+          hermes: { installed: boolean };
+        };
+        domain_modules: {
+          modules: Array<{ module_id: string }>;
+        };
+        workspace_root: {
+          selected_path: string | null;
+          health_status: string;
+        };
+        system: {
+          update_channel: string;
+          local_frontdesk: {
+            service_health: string;
+          };
+        };
+        endpoints: {
+          frontdesk_initialize: string;
+          frontdesk_engine_action: string;
+          workspace_root: string;
+          frontdesk_system_action: string;
+        };
+        recommended_next_action: {
+          action_id: string;
+          label: string;
+        };
+      };
+    };
+
+    assert.equal(output.frontdesk_initialize.surface_id, 'opl_frontdesk_initialize');
+    assert.match(output.frontdesk_initialize.overall_state, /ready|attention_needed/);
+    assert.equal(output.frontdesk_initialize.core_engines.codex.installed, true);
+    assert.equal(output.frontdesk_initialize.core_engines.hermes.installed, true);
+    assert.equal(output.frontdesk_initialize.domain_modules.modules.length >= 4, true);
+    assert.equal(output.frontdesk_initialize.workspace_root.selected_path, workspaceRoot);
+    assert.equal(output.frontdesk_initialize.workspace_root.health_status, 'ready');
+    assert.equal(output.frontdesk_initialize.system.update_channel, 'stable');
+    assert.equal(output.frontdesk_initialize.system.local_frontdesk.service_health, 'not_installed');
+    assert.match(output.frontdesk_initialize.endpoints.frontdesk_initialize, /\/api\/frontdesk\/initialize$/);
+    assert.match(output.frontdesk_initialize.endpoints.frontdesk_engine_action, /\/api\/frontdesk\/engine\/action$/);
+    assert.match(output.frontdesk_initialize.endpoints.workspace_root, /\/api\/workspace\/root$/);
+    assert.match(output.frontdesk_initialize.endpoints.frontdesk_system_action, /\/api\/frontdesk\/system\/action$/);
+    assert.ok(output.frontdesk_initialize.recommended_next_action.action_id.length > 0);
+    assert.ok(output.frontdesk_initialize.recommended_next_action.label.length > 0);
+  } finally {
+    fs.rmSync(codexConfigFixture.codexHome, { recursive: true, force: true });
+    fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(hermesFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('frontdesk engine action executes env-overridden install commands and returns a structured action surface', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-engine-action-'));
+  const markerPath = path.join(fixtureRoot, 'codex-install.marker');
+  const installScript = path.join(fixtureRoot, 'install-codex.sh');
+
+  fs.writeFileSync(
+    installScript,
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      `touch ${shellSingleQuote(markerPath)}`,
+      'echo "codex install fixture completed"',
+      '',
+    ].join('\n'),
+    { mode: 0o755 },
+  );
+
+  try {
+    const output = runCli(
+      ['frontdesk', 'engine', 'install', '--engine', 'codex'],
+      {
+        OPL_CODEX_INSTALL_COMMAND: installScript,
+      },
+    ) as {
+      frontdesk_engine_action: {
+        engine_id: string;
+        action: string;
+        status: string;
+        command_preview: string[];
+      };
+    };
+
+    assert.equal(output.frontdesk_engine_action.engine_id, 'codex');
+    assert.equal(output.frontdesk_engine_action.action, 'install');
+    assert.equal(output.frontdesk_engine_action.status, 'completed');
+    assert.deepEqual(output.frontdesk_engine_action.command_preview, [installScript]);
+    assert.equal(fs.existsSync(markerPath), true);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('workspace root set persists the selected root and workspace root reads it back', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-root-home-'));
+  const stateDir = path.join(homeRoot, 'opl-state');
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-root-selected-'));
+
+  try {
+    const setOutput = runCli(
+      ['workspace', 'root', 'set', '--path', workspaceRoot],
+      {
+        HOME: homeRoot,
+        OPL_FRONTDESK_STATE_DIR: stateDir,
+      },
+    ) as {
+      workspace_root: {
+        selected_path: string | null;
+        health_status: string;
+      };
+    };
+
+    assert.equal(setOutput.workspace_root.selected_path, workspaceRoot);
+    assert.equal(setOutput.workspace_root.health_status, 'ready');
+
+    const readOutput = runCli(
+      ['workspace', 'root'],
+      {
+        HOME: homeRoot,
+        OPL_FRONTDESK_STATE_DIR: stateDir,
+      },
+    ) as {
+      workspace_root: {
+        selected_path: string | null;
+        health_status: string;
+      };
+    };
+
+    assert.equal(readOutput.workspace_root.selected_path, workspaceRoot);
+    assert.equal(readOutput.workspace_root.health_status, 'ready');
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('frontdesk update-channel reports and persists the selected release channel', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-update-channel-home-'));
+  const stateDir = path.join(homeRoot, 'opl-state');
+
+  try {
+    const initial = runCli(
+      ['frontdesk', 'update-channel'],
+      {
+        HOME: homeRoot,
+        OPL_FRONTDESK_STATE_DIR: stateDir,
+      },
+    ) as {
+      frontdesk_system_action: {
+        action: string;
+        update_channel: string;
+        status: string;
+      };
+    };
+    assert.equal(initial.frontdesk_system_action.action, 'update_channel');
+    assert.equal(initial.frontdesk_system_action.update_channel, 'stable');
+    assert.equal(initial.frontdesk_system_action.status, 'completed');
+
+    const updated = runCli(
+      ['frontdesk', 'update-channel', '--channel', 'preview'],
+      {
+        HOME: homeRoot,
+        OPL_FRONTDESK_STATE_DIR: stateDir,
+      },
+    ) as {
+      frontdesk_system_action: {
+        action: string;
+        update_channel: string;
+        status: string;
+      };
+    };
+    assert.equal(updated.frontdesk_system_action.action, 'update_channel');
+    assert.equal(updated.frontdesk_system_action.update_channel, 'preview');
+    assert.equal(updated.frontdesk_system_action.status, 'completed');
+  } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
 });
@@ -4678,6 +4920,20 @@ test('web starts a local front-desk adapter and serves JSON root plus ask surfac
     model: 'gpt-5.4-web',
     reasoningEffort: 'xhigh',
   });
+  const engineActionFixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-web-engine-action-'));
+  const engineMarkerPath = path.join(engineActionFixtureRoot, 'codex-install.marker');
+  const installScript = path.join(engineActionFixtureRoot, 'install-codex.sh');
+  fs.writeFileSync(
+    installScript,
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      `touch ${shellSingleQuote(engineMarkerPath)}`,
+      'echo "web codex install fixture completed"',
+      '',
+    ].join('\n'),
+    { mode: 0o755 },
+  );
   const { fixtureRoot: codexRuntimeFixtureRoot, codexPath } = createFakeCodexFixture(`
 if [ "$1" = "exec" ]; then
   cat <<'EOF'
@@ -4754,6 +5010,8 @@ exit 1
 `);
   const psFixture = createFakePsFixture(`27025 1 0.1 0.2 49616 22:46 /Users/test/.hermes/venv/bin/python -m hermes_cli.main gateway run --replace`);
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-web-home-'));
+  const stateDir = path.join(homeRoot, 'opl-state');
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-web-workspace-root-'));
 
   let child: ChildProcessByStdio<null, Readable, Readable> | null = null;
 
@@ -4764,7 +5022,9 @@ exit 1
         HOME: homeRoot,
         CODEX_HOME: codexFixture.codexHome,
         OPL_CODEX_BIN: codexPath,
+        OPL_CODEX_INSTALL_COMMAND: installScript,
         OPL_HERMES_BIN: hermesPath,
+        OPL_FRONTDESK_STATE_DIR: stateDir,
         PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
       },
     );
@@ -4795,7 +5055,11 @@ exit 1
         frontdesk_readiness: string;
         frontdesk_settings: string;
         frontdesk_environment: string;
+        frontdesk_initialize: string;
         frontdesk_modules: string;
+        frontdesk_engine_action: string;
+        workspace_root: string;
+        frontdesk_system_action: string;
         project_progress: string;
         frontdesk_domain_wiring: string;
         task_status: string;
@@ -4811,7 +5075,11 @@ exit 1
     assert.equal(webFrontdesk.api.frontdesk_readiness, '/api/frontdesk/readiness');
     assert.equal(webFrontdesk.api.frontdesk_settings, '/api/frontdesk/settings');
     assert.equal(webFrontdesk.api.frontdesk_environment, '/api/frontdesk/environment');
+    assert.equal(webFrontdesk.api.frontdesk_initialize, '/api/frontdesk/initialize');
     assert.equal(webFrontdesk.api.frontdesk_modules, '/api/frontdesk/modules');
+    assert.equal(webFrontdesk.api.frontdesk_engine_action, '/api/frontdesk/engine/action');
+    assert.equal(webFrontdesk.api.workspace_root, '/api/workspace/root');
+    assert.equal(webFrontdesk.api.frontdesk_system_action, '/api/frontdesk/system/action');
     assert.equal(webFrontdesk.api.project_progress, '/api/project-progress');
     assert.equal(webFrontdesk.api.frontdesk_domain_wiring, '/api/frontdesk/domain-wiring');
     assert.equal(webFrontdesk.api.task_status, '/api/task-status');
@@ -4886,6 +5154,13 @@ exit 1
     assert.equal(environmentPayload.frontdesk_environment.core_engines.codex.installed, true);
     assert.equal(environmentPayload.frontdesk_environment.core_engines.hermes.installed, true);
 
+    const initializeResponse = await fetch(`${baseUrl}/api/frontdesk/initialize`);
+    const initializePayload = await initializeResponse.json();
+    assert.equal(initializePayload.frontdesk_initialize.surface_id, 'opl_frontdesk_initialize');
+    assert.equal(initializePayload.frontdesk_initialize.core_engines.codex.installed, true);
+    assert.match(initializePayload.frontdesk_initialize.endpoints.workspace_root, /\/api\/workspace\/root$/);
+    assert.match(initializePayload.frontdesk_initialize.endpoints.frontdesk_system_action, /\/api\/frontdesk\/system\/action$/);
+
     const modulesResponse = await fetch(`${baseUrl}/api/frontdesk/modules`);
     const modulesPayload = await modulesResponse.json();
     assert.equal(modulesPayload.frontdesk_modules.surface_id, 'opl_frontdesk_modules');
@@ -4927,6 +5202,55 @@ exit 1
       readinessPayload.frontdesk_readiness.local_service.health.status,
       /^(ok|not_installed|unreachable)$/,
     );
+
+    const workspaceRootSetResponse = await fetch(`${baseUrl}/api/workspace/root`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        path: workspaceRoot,
+      }),
+    });
+    const workspaceRootSetPayload = await workspaceRootSetResponse.json();
+    assert.equal(workspaceRootSetPayload.workspace_root.selected_path, workspaceRoot);
+    assert.equal(workspaceRootSetPayload.workspace_root.health_status, 'ready');
+
+    const workspaceRootResponse = await fetch(`${baseUrl}/api/workspace/root`);
+    const workspaceRootPayload = await workspaceRootResponse.json();
+    assert.equal(workspaceRootPayload.workspace_root.selected_path, workspaceRoot);
+    assert.equal(workspaceRootPayload.workspace_root.health_status, 'ready');
+
+    const systemActionResponse = await fetch(`${baseUrl}/api/frontdesk/system/action`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'update_channel',
+        channel: 'preview',
+      }),
+    });
+    const systemActionPayload = await systemActionResponse.json();
+    assert.equal(systemActionPayload.frontdesk_system_action.action, 'update_channel');
+    assert.equal(systemActionPayload.frontdesk_system_action.update_channel, 'preview');
+    assert.equal(systemActionPayload.frontdesk_system_action.status, 'completed');
+
+    const engineActionResponse = await fetch(`${baseUrl}/api/frontdesk/engine/action`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'install',
+        engine_id: 'codex',
+      }),
+    });
+    const engineActionPayload = await engineActionResponse.json();
+    assert.equal(engineActionPayload.frontdesk_engine_action.engine_id, 'codex');
+    assert.equal(engineActionPayload.frontdesk_engine_action.action, 'install');
+    assert.equal(engineActionPayload.frontdesk_engine_action.status, 'completed');
+    assert.equal(fs.existsSync(engineMarkerPath), true);
 
     const progressResponse = await fetch(`${baseUrl}/api/project-progress`);
     const progressPayload = await progressResponse.json();
@@ -5042,9 +5366,11 @@ exit 1
     }
     fs.rmSync(codexRuntimeFixtureRoot, { recursive: true, force: true });
     fs.rmSync(codexFixture.codexHome, { recursive: true, force: true });
+    fs.rmSync(engineActionFixtureRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(psFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }
 });
 

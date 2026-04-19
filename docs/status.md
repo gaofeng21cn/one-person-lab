@@ -12,6 +12,7 @@
 
 - 当前产品入口真相：`OPL` 已经落下本地 direct product-entry shell，默认前门是 `opl`。
 - family-level 产品入口继续围绕同一套 gateway、progress/files surfaces、workspace registry、session ledger 与模块目录展开。
+- `Initialize OPL`、environment/modules settings、workspace root 与 system maintenance 现在共用同一套 headless adapter truth，不再分散成首启脚本和长期设置两套口径。
 - `opl web` 继续暴露本地 frontdesk adapter root 与 machine-readable surfaces，供 external overlay 或自动化入口消费。
 - GUI 主线保持 `external overlay repo -> OPL headless adapter / API surfaces`；`OPL` 主仓继续不跟踪 repo-local GUI 壳实现。
 - `Hermes Kernel Integration` 的冻结选择是 `external kernel, managed by OPL product packaging`。
@@ -58,6 +59,7 @@
 - `contracts/` 只保留 machine-readable contract surface。
 - `docs/references/` 承接参考级配套文档；`docs/specs/` 与 `docs/plans/` 承接设计与计划记录；`docs/history/` 承接历史归档。
 - 当前 admitted domain surface 是 `MedAutoScience`、`MedAutoGrant` 与 `RedCube AI`；formal entry 保持在本地 `TypeScript CLI`-first / gateway contract surface，runtime ownership 继续留在 admitted domain 一侧。
+- workspace root 与 update channel 当前都落在 `OPL` 自己的状态面里，external overlay 继续只消费这层已落地 truth。
 
 ## 参考入口
 
