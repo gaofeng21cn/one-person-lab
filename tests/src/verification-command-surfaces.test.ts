@@ -97,6 +97,7 @@ test('scripts/verify.sh provides the canonical verification wrapper', () => {
 
   assert.match(verifyScript, /npm test/);
   assert.match(verifyScript, /npm run family:shared-release -- check/);
+  assert.match(verifyScript, /python\/opl-harness-shared\/tests\/test_family_shared_release\.py/);
   assert.match(verifyScript, /npm run test:meta/);
   assert.match(verifyScript, /npm run test:artifact/);
   assert.match(verifyScript, /npm run test:full/);
