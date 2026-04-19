@@ -5981,13 +5981,13 @@ test('list-workstreams returns admitted workstream summaries', () => {
       },
       {
         workstream_id: 'research_ops',
-        label: 'Research Ops',
+        label: 'Research Foundry',
         status: 'active',
         domain_id: 'medautoscience',
       },
       {
         workstream_id: 'presentation_ops',
-        label: 'Presentation Ops',
+        label: 'Presentation Foundry',
         status: 'emerging',
         domain_id: 'redcube',
       },
@@ -6022,7 +6022,7 @@ test('contract domains returns the registered domain gateway summaries', () => {
       },
       {
         domain_id: 'medautoscience',
-        gateway_surface: 'Research Ops Gateway',
+        gateway_surface: 'Research Foundry Gateway',
         owned_workstreams: ['research_ops'],
       },
       {
@@ -6243,7 +6243,7 @@ test('domain explain-boundary explains xiaohongshu non-equivalence', () => {
   assertContractsContext(output, 'cwd');
   assert.equal(output.boundary_explanation.resolved_domain, 'redcube');
   assert.equal(output.boundary_explanation.resolved_workstream_id, null);
-  assert.match(output.boundary_explanation.reason, /not automatically equal presentation ops/i);
+  assert.match(output.boundary_explanation.reason, /not automatically equal presentation foundry/i);
 });
 
 test('domain explain-boundary explains under-definition requests', () => {
