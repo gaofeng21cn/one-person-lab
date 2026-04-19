@@ -81,13 +81,13 @@ Suggested response:
   "workstreams": [
     {
       "workstream_id": "research_ops",
-      "label": "Research Ops",
+      "label": "Research Foundry",
       "status": "active",
       "domain_id": "medautoscience"
     },
     {
       "workstream_id": "presentation_ops",
-      "label": "Presentation Ops",
+      "label": "Presentation Foundry",
       "status": "emerging",
       "domain_id": "redcube"
     }
@@ -108,7 +108,7 @@ Suggested response:
   "version": "g2",
   "workstream": {
     "workstream_id": "presentation_ops",
-    "label": "Presentation Ops",
+    "label": "Presentation Foundry",
     "status": "emerging",
     "domain_id": "redcube",
     "primary_families": [
@@ -119,7 +119,7 @@ Suggested response:
       "lecture_materials",
       "defense_materials"
     ],
-    "notes": "ppt_deck maps directly; xiaohongshu does not automatically equal Presentation Ops."
+    "notes": "ppt_deck maps directly; xiaohongshu does not automatically equal Presentation Foundry."
   }
 }
 ```
@@ -138,7 +138,7 @@ Suggested response:
   "domains": [
     {
       "domain_id": "medautoscience",
-      "gateway_surface": "Research Ops Gateway",
+      "gateway_surface": "Research Foundry Gateway",
       "owned_workstreams": [
         "research_ops"
       ]

@@ -96,7 +96,7 @@
 例如：
 
 - `OPL` 可以知道一份研究稿件、一个图表包、一个 venue-preference memory 与某个 presentation 请求有关
-- 但一旦任务进入 `Presentation Ops`，视觉交付 truth 仍由 `RedCube AI` 持有
+- 但一旦任务进入 `Presentation Foundry`，视觉交付 truth 仍由 `RedCube AI` 持有
 - 而上游稿件与研究图表的 research asset truth 仍由 `MedAutoScience` 持有
 
 ## 与未来 Shared Index 的关系

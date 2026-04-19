@@ -26,7 +26,7 @@
   "workstreams": [
     {
       "workstream_id": "research_ops",
-      "label": "Research Ops",
+      "label": "Research Foundry",
       "boundary_state": "frozen",
       "registry_state": "registered",
       "routing_state": "domain_gateway_ready",
@@ -57,7 +57,7 @@
     },
     {
       "workstream_id": "grant_ops",
-      "label": "Grant Ops",
+      "label": "Grant Foundry",
       "boundary_state": "under_definition",
       "registry_state": "not_registered",
       "routing_state": "unknown_domain_only",
@@ -89,7 +89,7 @@
     },
     {
       "workstream_id": "thesis_ops",
-      "label": "Thesis Ops",
+      "label": "Thesis Foundry",
       "boundary_state": "under_definition",
       "registry_state": "not_registered",
       "routing_state": "unknown_domain_only",
@@ -116,11 +116,11 @@
         "shared_foundation_language"
       ],
       "family_boundary_notes": [],
-      "notes": "Closely coupled with Research Ops, but the frozen boundary here is thesis assembly rather than core research execution: chapter-draft sets, cross-chapter synchronization packs, and defense-preparation packs may reuse Research Ops evidence and may later feed Presentation Ops / RedCube defense-deck outputs, yet they do not collapse Thesis Ops into Research Ops, MedAutoScience, or RedCube AI. Thesis Ops still requires an explicit independent domain boundary before admission, and the future Thesis Ops domain boundary package is still incomplete. Clear top-level requests may surface as unknown_domain, but no domain handoff is allowed yet. It also remains under definition until a stable agent runtime surface and a shared-base Auto/Human-in-the-loop convergence path are explicitly declared."
+      "notes": "Closely coupled with Research Foundry, but the frozen boundary here is thesis assembly rather than core research execution: chapter-draft sets, cross-chapter synchronization packs, and defense-preparation packs may reuse Research Foundry evidence and may later feed Presentation Foundry / RedCube defense-deck outputs, yet they do not collapse Thesis Foundry into Research Foundry, MedAutoScience, or RedCube AI. Thesis Foundry still requires an explicit independent domain boundary before admission, and the future Thesis Foundry domain boundary package is still incomplete. Clear top-level requests may surface as unknown_domain, but no domain handoff is allowed yet. It also remains under definition until a stable agent runtime surface and a shared-base Auto/Human-in-the-loop convergence path are explicitly declared."
     },
     {
       "workstream_id": "review_ops",
-      "label": "Review Ops",
+      "label": "Review Foundry",
       "boundary_state": "under_definition",
       "registry_state": "not_registered",
       "routing_state": "unknown_domain_only",
@@ -146,11 +146,11 @@
         "shared_foundation_language"
       ],
       "family_boundary_notes": [],
-      "notes": "Still under definition. Review Ops groups reviewer-role work plus response/rebuttal coordination as a top-level semantic bundle only; that combined label does not by itself freeze a distinct domain boundary, transfer canonical truth for review artifacts into OPL, or piggyback on another admitted domain as a hidden owner. It is not yet an admitted domain, discovery target, routed-action target, or handoff-ready surface. Clear top-level requests may surface only as unknown_domain until a real domain owner is admitted; no handoff payload is built, and any future successful handoff must remain domain_gateway-only with no harness bypass. It also remains under definition because no stable agent runtime surface, shared-base Auto/Human-in-the-loop convergence path, or explicit discovery/routing/cross-domain wording declarations have been frozen for a Review Ops domain yet."
+      "notes": "Still under definition. Review Foundry groups reviewer-role work plus response/rebuttal coordination as a top-level semantic bundle only; that combined label does not by itself freeze a distinct domain boundary, transfer canonical truth for review artifacts into OPL, or piggyback on another admitted domain as a hidden owner. It is not yet an admitted domain, discovery target, routed-action target, or handoff-ready surface. Clear top-level requests may surface only as unknown_domain until a real domain owner is admitted; no handoff payload is built, and any future successful handoff must remain domain_gateway-only with no harness bypass. It also remains under definition because no stable agent runtime surface, shared-base Auto/Human-in-the-loop convergence path, or explicit discovery/routing/cross-domain wording declarations have been frozen for a Review Foundry domain yet."
     },
     {
       "workstream_id": "presentation_ops",
-      "label": "Presentation Ops",
+      "label": "Presentation Foundry",
       "boundary_state": "frozen",
       "registry_state": "registered",
       "routing_state": "domain_gateway_ready",
@@ -201,7 +201,7 @@
           "relation": "same_redcube_harness_non_equivalent_to_presentation_ops"
         }
       ],
-      "notes": "Currently maps directly to RedCube AI. ppt_deck is the direct top-level family map; xiaohongshu shares RedCube but is not automatically equal to Presentation Ops."
+      "notes": "Currently maps directly to RedCube AI. ppt_deck is the direct top-level family map; xiaohongshu shares RedCube but is not automatically equal to Presentation Foundry."
     }
   ]
 }

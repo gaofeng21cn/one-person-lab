@@ -22,7 +22,7 @@
       "recommended_family": "ppt_deck",
       "preferred_profile": "defense_deck",
       "confidence": "high",
-      "reason": "The goal is a formal defense-ready presentation deliverable owned by Presentation Ops.",
+      "reason": "The goal is a formal defense-ready presentation deliverable owned by Presentation Foundry.",
       "routing_evidence": [
         "presentation_delivery intent",
         "ppt_deck directly maps to presentation_ops",

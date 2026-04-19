@@ -215,14 +215,14 @@
       {
         "ref_kind": "external_url",
         "ref": "https://example.com/opl/grant-ops",
-        "label": "Example OPL Grant Ops Surface"
+        "label": "Example OPL Grant Foundry Surface"
       }
     ],
     "domain_surface_refs": [
       {
         "ref_kind": "external_url",
         "ref": "https://example.com/example-domain/grant-ops",
-        "label": "Example Domain Grant Ops Surface"
+        "label": "Example Domain Grant Foundry Surface"
       }
     ],
     "top_level_role_language_aligned": true,

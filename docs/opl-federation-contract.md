@@ -66,7 +66,7 @@ Each workstream entry should define:
   "workstreams": [
     {
       "workstream_id": "research_ops",
-      "label": "Research Ops",
+      "label": "Research Foundry",
       "status": "active",
       "description": "Formal research work from data governance to manuscript and submission delivery.",
       "domain_id": "medautoscience",
@@ -81,7 +81,7 @@ Each workstream entry should define:
     },
     {
       "workstream_id": "presentation_ops",
-      "label": "Presentation Ops",
+      "label": "Presentation Foundry",
       "status": "emerging",
       "description": "Formal lecture, report, and defense material delivery.",
       "domain_id": "redcube",
@@ -94,7 +94,7 @@ Each workstream entry should define:
         "lecture_materials",
         "defense_materials"
       ],
-      "notes": "ppt_deck maps directly; xiaohongshu does not automatically equal Presentation Ops."
+      "notes": "ppt_deck maps directly; xiaohongshu does not automatically equal Presentation Foundry."
     }
   ]
 }
@@ -126,7 +126,7 @@ Each domain entry should define:
       "label": "MedAutoScience",
       "project": "med-autoscience",
       "role": "research_ops_gateway",
-      "gateway_surface": "Research Ops Gateway",
+      "gateway_surface": "Research Foundry Gateway",
       "harness_surface": "Medical Research Domain Harness OS",
       "standalone_allowed": true,
       "owned_workstreams": [

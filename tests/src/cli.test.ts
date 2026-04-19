@@ -417,7 +417,7 @@ function createFamilyContractsFixtureRoot() {
       label: 'MedAutoGrant',
       project: 'med-autogrant',
       role: 'grant_ops_gateway',
-      gateway_surface: 'Grant Ops Gateway',
+      gateway_surface: 'Grant Foundry Gateway',
       harness_surface: 'Grant Writing Domain Harness OS',
       standalone_allowed: true,
       owned_workstreams: ['grant_ops'],
@@ -1242,7 +1242,7 @@ test('loadGatewayContracts honors OPL_CONTRACTS_DIR when provided', () => {
 
   const workstreamsPath = path.join(tempContracts, 'workstreams.json');
   const workstreams = JSON.parse(fs.readFileSync(workstreamsPath, 'utf8'));
-  workstreams.workstreams[0].label = 'Research Ops Override';
+  workstreams.workstreams[0].label = 'Research Foundry Override';
   fs.writeFileSync(workstreamsPath, JSON.stringify(workstreams, null, 2));
 
   const output = runCli(['contract', 'workstream', 'research_ops'], {
@@ -1250,14 +1250,14 @@ test('loadGatewayContracts honors OPL_CONTRACTS_DIR when provided', () => {
   });
 
   assertContractsContext(output, 'env', tempContracts);
-  assert.equal(output.workstream.label, 'Research Ops Override');
+  assert.equal(output.workstream.label, 'Research Foundry Override');
 });
 
 test('global --contracts-dir override uses the explicit contract root', () => {
   const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((contractsRoot) => {
     const workstreamsPath = path.join(contractsRoot, 'workstreams.json');
     const workstreams = JSON.parse(fs.readFileSync(workstreamsPath, 'utf8'));
-    workstreams.workstreams[0].label = 'Research Ops From Flag';
+    workstreams.workstreams[0].label = 'Research Foundry From Flag';
     fs.writeFileSync(workstreamsPath, JSON.stringify(workstreams, null, 2));
   });
 
@@ -1271,7 +1271,7 @@ test('global --contracts-dir override uses the explicit contract root', () => {
     ]);
 
     assertContractsContext(output, 'cli_flag', fixtureContractsRoot);
-    assert.equal(output.workstream.label, 'Research Ops From Flag');
+    assert.equal(output.workstream.label, 'Research Foundry From Flag');
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
@@ -1281,13 +1281,13 @@ test('global --contracts-dir override takes precedence over OPL_CONTRACTS_DIR', 
   const envFixture = createContractsFixtureRoot((contractsRoot) => {
     const workstreamsPath = path.join(contractsRoot, 'workstreams.json');
     const workstreams = JSON.parse(fs.readFileSync(workstreamsPath, 'utf8'));
-    workstreams.workstreams[0].label = 'Research Ops From Env';
+    workstreams.workstreams[0].label = 'Research Foundry From Env';
     fs.writeFileSync(workstreamsPath, JSON.stringify(workstreams, null, 2));
   });
   const flagFixture = createContractsFixtureRoot((contractsRoot) => {
     const workstreamsPath = path.join(contractsRoot, 'workstreams.json');
     const workstreams = JSON.parse(fs.readFileSync(workstreamsPath, 'utf8'));
-    workstreams.workstreams[0].label = 'Research Ops From Flag';
+    workstreams.workstreams[0].label = 'Research Foundry From Flag';
     fs.writeFileSync(workstreamsPath, JSON.stringify(workstreams, null, 2));
   });
 
@@ -1298,7 +1298,7 @@ test('global --contracts-dir override takes precedence over OPL_CONTRACTS_DIR', 
     );
 
     assertContractsContext(output, 'cli_flag', flagFixture.fixtureContractsRoot);
-    assert.equal(output.workstream.label, 'Research Ops From Flag');
+    assert.equal(output.workstream.label, 'Research Foundry From Flag');
   } finally {
     fs.rmSync(envFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(flagFixture.fixtureRoot, { recursive: true, force: true });
@@ -5970,13 +5970,13 @@ test('list-workstreams returns admitted workstream summaries', () => {
     workstreams: [
       {
         workstream_id: 'research_ops',
-        label: 'Research Ops',
+        label: 'Research Foundry',
         status: 'active',
         domain_id: 'medautoscience',
       },
       {
         workstream_id: 'presentation_ops',
-        label: 'Presentation Ops',
+        label: 'Presentation Foundry',
         status: 'emerging',
         domain_id: 'redcube',
       },
@@ -6006,7 +6006,7 @@ test('contract domains returns the registered domain gateway summaries', () => {
     domains: [
       {
         domain_id: 'medautoscience',
-        gateway_surface: 'Research Ops Gateway',
+        gateway_surface: 'Research Foundry Gateway',
         owned_workstreams: ['research_ops'],
       },
       {
@@ -6225,7 +6225,7 @@ test('domain explain-boundary explains xiaohongshu non-equivalence', () => {
   assertContractsContext(output, 'cwd');
   assert.equal(output.boundary_explanation.resolved_domain, 'redcube');
   assert.equal(output.boundary_explanation.resolved_workstream_id, null);
-  assert.match(output.boundary_explanation.reason, /not automatically equal presentation ops/i);
+  assert.match(output.boundary_explanation.reason, /not automatically equal presentation foundry/i);
 });
 
 test('domain explain-boundary explains under-definition requests', () => {

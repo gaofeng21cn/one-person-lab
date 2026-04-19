@@ -23,8 +23,8 @@ Human / Agent
 
 Today, the clearest mapped domains are:
 
-- `Research Ops` -> `MedAutoScience`
-- `Presentation Ops` -> `RedCube AI` through `ppt_deck`
+- `Research Foundry` -> `MedAutoScience`
+- `Presentation Foundry` -> `RedCube AI` through `ppt_deck`
 
 ## Role Split
 
@@ -67,7 +67,7 @@ Each domain is expected to keep two distinct layers:
 
 For example:
 
-- `MedAutoScience` is the `Research Ops` domain gateway and harness
+- `MedAutoScience` is the `Research Foundry` domain gateway and harness
 - `RedCube AI` is the visual-deliverable domain gateway and harness
 
 ## Agent-First Execution

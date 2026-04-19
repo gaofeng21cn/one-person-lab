@@ -92,7 +92,7 @@ export function resolveRequestSurface(
       recommended_family: 'ppt_deck',
       confidence: 'high',
       reason:
-        'ppt_deck is a direct top-level family map to Presentation Ops and must stay inside the RedCube gateway.',
+        'ppt_deck is a direct top-level family map to Presentation Foundry and must stay inside the RedCube gateway.',
       routing_evidence: [
         'preferred_family=ppt_deck',
         'ppt_deck direct map to presentation_ops',
@@ -113,7 +113,7 @@ export function resolveRequestSurface(
       workstream_id: null,
       recommended_family: 'xiaohongshu',
       reason:
-        'xiaohongshu stays at the RedCube family boundary and is not automatically equal to Presentation Ops without explicit presentation-delivery semantics.',
+        'xiaohongshu stays at the RedCube family boundary and is not automatically equal to Presentation Foundry without explicit presentation-delivery semantics.',
       routing_evidence: [
         'preferred_family=xiaohongshu',
         'redcube family boundary',
@@ -168,7 +168,7 @@ export function resolveRequestSurface(
       recommended_family: null,
       confidence: 'high',
       reason:
-        'The requested output is a formal research delivery owned by Research Ops inside the MedAutoScience gateway.',
+        'The requested output is a formal research delivery owned by Research Foundry inside the MedAutoScience gateway.',
       routing_evidence: [
         'research delivery semantics',
         'research_ops registered ownership',
@@ -188,7 +188,7 @@ export function resolveRequestSurface(
       recommended_family: preferredFamily ?? 'ppt_deck',
       confidence: preferredFamily ? 'high' : 'medium',
       reason:
-        'The requested output is a visual deliverable owned by Presentation Ops inside the RedCube gateway.',
+        'The requested output is a visual deliverable owned by Presentation Foundry inside the RedCube gateway.',
       routing_evidence: [
         'presentation delivery semantics',
         'presentation_ops registered ownership',
@@ -205,7 +205,7 @@ export function resolveRequestSurface(
       workstream_id: null,
       recommended_family: 'xiaohongshu',
       reason:
-        'xiaohongshu stays discoverable through RedCube AI, but it does not automatically become Presentation Ops.',
+        'xiaohongshu stays discoverable through RedCube AI, but it does not automatically become Presentation Foundry.',
       routing_evidence: [
         'xiaohongshu family signal',
         'redcube ownership',
@@ -264,7 +264,7 @@ export function explainDomainBoundary(
         resolved_domain: 'redcube',
         resolved_workstream_id: 'presentation_ops',
         reason:
-          'The requested output is a visual deliverable, so the request belongs to RedCube AI rather than the Research Ops execution lane.',
+          'The requested output is a visual deliverable, so the request belongs to RedCube AI rather than the Research Foundry execution lane.',
         rejected_domains: [
           {
             domain_id: 'medautoscience',
@@ -282,7 +282,7 @@ export function explainDomainBoundary(
         resolved_domain: resolution.domain_id,
         resolved_workstream_id: null,
         reason:
-          'xiaohongshu is a RedCube-owned family boundary, but it is not automatically equal Presentation Ops until the request explicitly becomes a presentation deliverable.',
+          'xiaohongshu is a RedCube-owned family boundary, but it is not automatically equal Presentation Foundry until the request explicitly becomes a presentation deliverable.',
         rejected_domains: [
           {
             domain_id: 'medautoscience',
@@ -306,12 +306,12 @@ export function explainDomainBoundary(
           {
             domain_id: 'medautoscience',
             reason:
-              'The current request does not match the frozen Research Ops boundary.',
+              'The current request does not match the frozen Research Foundry boundary.',
           },
           {
             domain_id: 'redcube',
             reason:
-              'The current request does not match the frozen Presentation Ops boundary.',
+              'The current request does not match the frozen Presentation Foundry boundary.',
           },
         ],
       };

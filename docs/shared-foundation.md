@@ -102,13 +102,13 @@ That is why the shared foundation should stay above any single domain repository
 
 ## What Is Already Clear Today
 
-Today, the clearest embodiment of these layers in `Research Ops` is:
+Today, the clearest embodiment of these layers in `Research Foundry` is:
 
 - `MedAutoScience` as the active research domain gateway and harness
 
 The clearest emerging embodiment in visual delivery is:
 
-- `RedCube AI` as the visual-deliverable domain gateway and harness, with `ppt_deck` as the family that most directly maps to `Presentation Ops`
+- `RedCube AI` as the visual-deliverable domain gateway and harness, with `ppt_deck` as the family that most directly maps to `Presentation Foundry`
 
 This is why `OPL` is no longer only conceptual.
 It already has one active domain surface and one emerging second surface.

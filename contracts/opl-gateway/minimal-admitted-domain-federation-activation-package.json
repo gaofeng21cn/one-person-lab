@@ -29,8 +29,8 @@
           "contracts/opl-gateway/README.md"
         ],
         "basis_summary": [
-          "MedAutoScience remains the admitted Research Ops domain gateway and has absorbed its integration harness activation baseline on main.",
-          "RedCube AI remains the admitted Presentation Ops domain gateway family entry and has absorbed its source-intake plus shared-source-truth baseline on main.",
+          "MedAutoScience remains the admitted Research Foundry domain gateway and has absorbed its integration harness activation baseline on main.",
+          "RedCube AI remains the admitted Presentation Foundry domain gateway family entry and has absorbed its source-intake plus shared-source-truth baseline on main.",
           "Grant Foundry -> Med Auto Grant remains signal-only / domain-direction evidence only and does not count toward admitted-domain activation readiness."
         ]
       }
@@ -64,9 +64,9 @@
     "keep the formal entry at the TypeScript CLI-first / gateway contract surface while making admitted-domain federation status explicit"
   ],
   "explicit_non_qualifiers": [
-    "Grant Ops remains signal-only / domain-direction evidence only",
-    "Review Ops remains under-definition and blocked below onboarding",
-    "Thesis Ops remains under-definition and blocked below onboarding",
+    "Grant Foundry remains signal-only / domain-direction evidence only",
+    "Review Foundry remains under-definition and blocked below onboarding",
+    "Thesis Foundry remains under-definition and blocked below onboarding",
     "Med Auto Grant does not become an admitted domain gateway through this activation package"
   ],
   "non_goals": [

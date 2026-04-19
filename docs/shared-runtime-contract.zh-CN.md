@@ -152,7 +152,7 @@
 - `one-person-lab`
   - 负责定义这份共享运行合同的公开语言与边界
 - `med-autoscience`
-  - 在医学 `Research Ops` 主线里吸收并验证它
+  - 在医学 `Research Foundry` 主线里吸收并验证它
 - `redcube-ai`
   - 在视觉交付主线里吸收并验证它
 - `med-autogrant`

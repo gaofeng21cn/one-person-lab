@@ -93,9 +93,9 @@ Human / Agent
 | 仓库 | 当前固定定位 | 与 runtime 的关系 |
 | --- | --- | --- |
 | `one-person-lab` | `OPL Gateway / Federation` 的公开说明面与 contract-first surface | 负责定义语言与边界，不是 runtime owner |
-| `med-autoscience` | 医学 `Research Ops` 的 `Domain Gateway + Domain Harness OS` | 拥有医学领域 contract、governance、delivery 与外部 formal entry |
+| `med-autoscience` | 医学 `Research Foundry` 的 `Domain Gateway + Domain Harness OS` | 拥有医学领域 contract、governance、delivery 与外部 formal entry |
 | `redcube-ai` | 视觉交付 domain 的 `Domain Gateway + Domain Harness OS` | 拥有视觉交付领域 contract、governance、delivery 与外部 formal entry |
-| `med-autogrant` | future `Grant Ops` 的 `Domain Gateway + Domain Harness OS` 方向 | 当前仍停留在 future domain direction / signal-only 语义，不是 admitted runtime owner |
+| `med-autogrant` | future `Grant Foundry` 的 `Domain Gateway + Domain Harness OS` 方向 | 当前仍停留在 future domain direction / signal-only 语义，不是 admitted runtime owner |
 
 `MedDeepScientist` 不属于 `OPL` 顶层四仓中的一个平级 `domain repo`。
 当前更准确的表达是：
@@ -231,7 +231,7 @@ Human / Agent
 其中：
 
 - `MedAutoScience`
-  - 是医学 `Research Ops` 的 `Domain Gateway + Domain Harness OS`
+  - 是医学 `Research Foundry` 的 `Domain Gateway + Domain Harness OS`
   - 是对外正式入口、领域合同 owner、governance owner、delivery owner
 - `MedDeepScientist`
   - 是 `MedAutoScience` 当前 execution plane 的主要实现

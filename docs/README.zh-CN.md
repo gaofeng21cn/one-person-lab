@@ -19,7 +19,7 @@
 - `OPL` 是一人课题组智能体的 Codex-native GUI 产品壳与模块管理器。
 - 对外公开的阅读模型采用三层：产品壳 -> 产品家族 -> 当前实现。
 - GUI 中并列呈现三类工作模式：普通 Codex 对话、通用 Codex 任务、专用智能体模块。
-- `Research Foundry`、`Grant Foundry`、`Presentation Ops` 是当前活跃产品家族；`Thesis Ops` 与 `Review Ops` 继续处在定义阶段。
+- `Research Foundry`、`Grant Foundry`、`Presentation Foundry` 是当前活跃产品家族；`Thesis Foundry` 与 `Review Foundry` 继续处在定义阶段。
 - `MAS`、`MAG`、`RCA` 是这些产品家族当前已经公开的实现。
 - 设置面承载模块管理、模块升级、版本 pin、模块健康、默认模式和 online gateway 配置。
 - workspace 侧边栏承载人话进度、运行中的任务状态和交付文件。

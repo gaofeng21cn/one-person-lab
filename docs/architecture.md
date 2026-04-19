@@ -205,9 +205,9 @@
 
 ## 当前家族仓与联邦地位
 
-- `Research Foundry -> Med Auto Science`：活跃 `Research Ops` 线
-- `RedCube AI`：活跃 visual-deliverable / `Presentation Ops` 入口
-- `Grant Foundry -> Med Auto Grant`：活跃 author-side / proposal-facing `Grant Ops` 业务仓；但顶层 public federation contract 仍需与它的 admission / handoff state 分开表述
+- `Research Foundry -> Med Auto Science`：活跃 `Research Foundry` 线
+- `RedCube AI`：活跃 visual-deliverable / `Presentation Foundry` 入口
+- `Grant Foundry -> Med Auto Grant`：活跃 author-side / proposal-facing `Grant Foundry` 业务仓；但顶层 public federation contract 仍需与它的 admission / handoff state 分开表述
 
 ## 文档组织原则
 

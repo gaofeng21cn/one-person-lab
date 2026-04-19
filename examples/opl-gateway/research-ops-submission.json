@@ -22,7 +22,7 @@
       "recommended_family": "manuscript_submission",
       "preferred_profile": "journal_submission",
       "confidence": "high",
-      "reason": "The goal is a formal manuscript submission outcome owned by Research Ops.",
+      "reason": "The goal is a formal manuscript submission outcome owned by Research Foundry.",
       "routing_evidence": [
         "submission_delivery intent",
         "research_ops is owned by medautoscience",
@@ -40,7 +40,7 @@
       "request_kind": "publish",
       "resolved_workstream_id": "research_ops",
       "resolved_domain_id": "medautoscience",
-      "reason": "Formal manuscript submission stays inside the Research Ops domain gateway.",
+      "reason": "Formal manuscript submission stays inside the Research Foundry domain gateway.",
       "routing_evidence": [
         "submission_delivery intent",
         "research_ops ownership",

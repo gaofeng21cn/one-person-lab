@@ -12,7 +12,7 @@
 1. 产品壳
    `OPL` 自己负责 GUI、工作模式、进度与文件视图、设置、模块管理、升级和入口治理。
 2. 产品家族
-   家族定义一类长期稳定的工作，例如 `Research Foundry`、`Grant Foundry`、`Presentation Ops`、`Thesis Ops`、`Review Ops`。
+   家族定义一类长期稳定的工作，例如 `Research Foundry`、`Grant Foundry`、`Presentation Foundry`、`Thesis Foundry`、`Review Foundry`。
 3. 当前实现
    当前实现承接某个家族在特定领域里的能力与仓库真相，例如 `MAS / Med Auto Science`、`MAG / Med Auto Grant`、`RCA / RedCube AI`。
 
@@ -22,9 +22,9 @@
 | --- | --- | --- |
 | `Research Foundry` | `MAS / Med Auto Science` | 医学科研 |
 | `Grant Foundry` | `MAG / Med Auto Grant` | 医学基金与申请书 |
-| `Presentation Ops` | `RCA / RedCube AI` | 汇报、幻灯片、视觉交付 |
-| `Thesis Ops` | Planned | 学位论文与答辩 |
-| `Review Ops` | Planned | 审稿、回复与修回 |
+| `Presentation Foundry` | `RCA / RedCube AI` | 汇报、幻灯片、视觉交付 |
+| `Thesis Foundry` | Planned | 学位论文与答辩 |
+| `Review Foundry` | Planned | 审稿、回复与修回 |
 
 ## 项目目标
 

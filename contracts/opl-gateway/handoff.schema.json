@@ -93,7 +93,7 @@
     "preferred_family": {
       "type": "string",
       "minLength": 1,
-      "description": "Family preference after workstream semantics and domain ownership are resolved. ppt_deck directly maps to Presentation Ops; xiaohongshu may still route to redcube but does not automatically equal presentation_ops."
+      "description": "Family preference after workstream semantics and domain ownership are resolved. ppt_deck directly maps to Presentation Foundry; xiaohongshu may still route to redcube but does not automatically equal presentation_ops."
     },
     "preferred_profile": {
       "type": "string",

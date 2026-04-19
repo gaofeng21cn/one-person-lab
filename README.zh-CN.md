@@ -29,7 +29,7 @@
 </table>
 
 <p align="center">
-  <img src="assets/branding/opl-architecture-blueprint.svg" alt="OPL architecture blueprint" width="100%" />
+  <img src="assets/branding/opl-workbench-overview.svg" alt="OPL workbench overview" width="100%" />
 </p>
 
 > `OPL` 是一人课题组的统一工作台。它把日常协作、专业工作流、执行可见性和文件交付放在同一个入口里。
@@ -48,9 +48,9 @@
 | --- | --- | --- | --- |
 | `Research Foundry` | [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience) | 医学研究、证据整理、稿件准备 | 分析包、证据包、稿件 |
 | `Grant Foundry` | [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) | 基金方向判断、申请书写作、作者侧修订 | 申请书、提纲、修订包 |
-| `Presentation Ops` | [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) | 讲课、组会、汇报、答辩材料 | 幻灯片、讲稿、汇报材料 |
-| `Thesis Ops` | 规划中 | 学位论文与答辩准备 | 章节草稿、答辩材料 |
-| `Review Ops` | 规划中 | 审稿、回复和修回 | 评审意见、回复草稿、修回计划 |
+| `Presentation Foundry` | [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) | 讲课、组会、汇报、答辩材料 | 幻灯片、讲稿、汇报材料 |
+| `Thesis Foundry` | 规划中 | 学位论文与答辩准备 | 章节草稿、答辩材料 |
+| `Review Foundry` | 规划中 | 审稿、回复和修回 | 评审意见、回复草稿、修回计划 |
 
 ## 在一个工作台里完成什么
 
@@ -81,7 +81,7 @@ Human
       -> General Tasks
       -> Research Foundry -> Med Auto Science
       -> Grant Foundry -> Med Auto Grant
-      -> Presentation Ops -> RedCube AI
+      -> Presentation Foundry -> RedCube AI
       -> Progress / Files / Settings
 ```
 

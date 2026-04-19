@@ -19,7 +19,7 @@ This guide points readers to the architecture, contracts, planning surfaces, and
 - `OPL` is the Codex-native GUI product shell and module manager for one-person-lab agents.
 - The public reading model uses three layers: product shell -> product families -> current implementations.
 - The GUI presents three peer work modes: ordinary Codex conversation, general Codex task, and specialized domain agents.
-- `Research Foundry`, `Grant Foundry`, and `Presentation Ops` are the current active product families; `Thesis Ops` and `Review Ops` stay in definition.
+- `Research Foundry`, `Grant Foundry`, and `Presentation Foundry` are the current active product families; `Thesis Foundry` and `Review Foundry` stay in definition.
 - `MAS`, `MAG`, and `RCA` are the current active implementations under those product families.
 - Settings own module management, module upgrades, version pins, module health, default mode, and online gateway configuration.
 - The workspace side rail owns human-readable progress, running-task status, and deliverable files.

@@ -314,13 +314,13 @@ test('contract workstreams returns the admitted workstream summaries', () => {
   assert.deepEqual(payload.workstreams, [
     {
       workstream_id: 'research_ops',
-      label: 'Research Ops',
+      label: 'Research Foundry',
       status: 'active',
       domain_id: 'medautoscience',
     },
     {
       workstream_id: 'presentation_ops',
-      label: 'Presentation Ops',
+      label: 'Presentation Foundry',
       status: 'emerging',
       domain_id: 'redcube',
     },
@@ -1872,13 +1872,13 @@ test('global --contracts-dir override stays explicit and wins over OPL_CONTRACTS
   const envFixture = createContractsFixtureRoot((_fixtureRoot, contractsDir) => {
     const workstreamsPath = path.join(contractsDir, 'workstreams.json');
     const workstreams = JSON.parse(readFileSync(workstreamsPath, 'utf8'));
-    workstreams.workstreams[0].label = 'Research Ops From Env';
+    workstreams.workstreams[0].label = 'Research Foundry From Env';
     writeFileSync(workstreamsPath, JSON.stringify(workstreams, null, 2));
   });
   const flagFixture = createContractsFixtureRoot((_fixtureRoot, contractsDir) => {
     const workstreamsPath = path.join(contractsDir, 'workstreams.json');
     const workstreams = JSON.parse(readFileSync(workstreamsPath, 'utf8'));
-    workstreams.workstreams[0].label = 'Research Ops From Flag';
+    workstreams.workstreams[0].label = 'Research Foundry From Flag';
     writeFileSync(workstreamsPath, JSON.stringify(workstreams, null, 2));
   });
 
@@ -1898,7 +1898,7 @@ test('global --contracts-dir override stays explicit and wins over OPL_CONTRACTS
       contracts_dir: flagFixture.fixtureContractsRoot,
       contracts_root_source: 'cli_flag',
     });
-    assert.equal(payload.workstream.label, 'Research Ops From Flag');
+    assert.equal(payload.workstream.label, 'Research Foundry From Flag');
   } finally {
     rmSync(envFixture.fixtureRoot, { recursive: true, force: true });
     rmSync(flagFixture.fixtureRoot, { recursive: true, force: true });

@@ -67,18 +67,18 @@ The harness is the internal execution base, not the top-level product surface.
 
 ## Current Mapping
 
-### Research Ops
+### Research Foundry
 
-- `OPL workstream`: `Research Ops`
+- `OPL workstream`: `Research Foundry`
 - `domain gateway`: `MedAutoScience`
 - `domain harness`: the research harness controlled by `MedAutoScience`
 
-### Presentation Ops
+### Presentation Foundry
 
-- `OPL workstream`: `Presentation Ops`
+- `OPL workstream`: `Presentation Foundry`
 - `domain gateway`: `RedCube AI`
 - `direct family`: `ppt_deck`
-- note: `xiaohongshu` shares the RedCube harness but is not automatically identical to `Presentation Ops`
+- note: `xiaohongshu` shares the RedCube harness but is not automatically identical to `Presentation Foundry`
 
 ## Boundary Rules
 

@@ -3,7 +3,7 @@
   "workstreams": [
     {
       "workstream_id": "research_ops",
-      "label": "Research Ops",
+      "label": "Research Foundry",
       "status": "active",
       "description": "Formal research work from data governance to manuscript and submission delivery.",
       "domain_id": "medautoscience",
@@ -18,7 +18,7 @@
     },
     {
       "workstream_id": "presentation_ops",
-      "label": "Presentation Ops",
+      "label": "Presentation Foundry",
       "status": "emerging",
       "description": "Formal lecture, report, and defense material delivery.",
       "domain_id": "redcube",
@@ -31,7 +31,7 @@
         "lecture_materials",
         "defense_materials"
       ],
-      "notes": "ppt_deck maps directly; xiaohongshu routes to RedCube AI but does not automatically equal Presentation Ops."
+      "notes": "ppt_deck maps directly; xiaohongshu routes to RedCube AI but does not automatically equal Presentation Foundry."
     }
   ]
 }

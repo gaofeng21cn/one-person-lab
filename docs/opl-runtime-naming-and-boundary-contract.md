@@ -93,9 +93,9 @@ Each layer answers a different question:
 | Repository | Frozen current role | Runtime relationship |
 | --- | --- | --- |
 | `one-person-lab` | public explanation and contract-first surface for `OPL Gateway / Federation` | defines language and boundaries, not runtime ownership |
-| `med-autoscience` | `Domain Gateway + Domain Harness OS` for medical `Research Ops` | owns medical domain contracts, governance, delivery, and external formal entry |
+| `med-autoscience` | `Domain Gateway + Domain Harness OS` for medical `Research Foundry` | owns medical domain contracts, governance, delivery, and external formal entry |
 | `redcube-ai` | `Domain Gateway + Domain Harness OS` for visual delivery | owns visual-delivery contracts, governance, delivery, and external formal entry |
-| `med-autogrant` | future `Domain Gateway + Domain Harness OS` direction for `Grant Ops` | currently still below admitted-domain runtime ownership |
+| `med-autogrant` | future `Domain Gateway + Domain Harness OS` direction for `Grant Foundry` | currently still below admitted-domain runtime ownership |
 
 `MedDeepScientist` is not one more top-level peer `domain repo` inside `OPL`.
 The more accurate wording today is:
@@ -232,7 +232,7 @@ Human / Agent
 Within that structure:
 
 - `MedAutoScience`
-  - is the `Domain Gateway + Domain Harness OS` for medical `Research Ops`
+  - is the `Domain Gateway + Domain Harness OS` for medical `Research Foundry`
   - is the formal public entry, domain-contract owner, governance owner, and delivery owner
 - `MedDeepScientist`
   - is the main current implementation of the `Execution Plane` under `MedAutoScience`

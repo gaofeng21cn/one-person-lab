@@ -6,11 +6,11 @@
 
 `OPL` 把一人课题组的正式工作拆成五类工作流：
 
-- `Research Ops`
-- `Grant Ops`
-- `Thesis Ops`
-- `Review Ops`
-- `Presentation Ops`
+- `Research Foundry`
+- `Grant Foundry`
+- `Thesis Foundry`
+- `Review Foundry`
+- `Presentation Foundry`
 
 这个拆分定义的是顶层任务语义。
 在运行时，这些语义通过 `OPL Gateway` 路由到独立的 domain gateway，并保留清楚的 ownership 与 handoff 边界。
@@ -33,7 +33,7 @@
 - 顶层 task topology materialize 成 machine-readable 的语义 surface
 - 当前 under-definition workstream 仍缺哪些 admission boundary material 写成 machine-readable backlog
 
-它们可以描述 `Grant Ops`、`Thesis Ops`、`Review Ops` 这类仍在定义中的 workstream，并把它们保持在明确的 candidate / onboarding 路径上。
+它们可以描述 `Grant Foundry`、`Thesis Foundry`、`Review Foundry` 这类仍在定义中的 workstream，并把它们保持在明确的 candidate / onboarding 路径上。
 formal 收录、`G2` discovery readiness 与 `G3` routed-action readiness 仍然要通过单独的 onboarding evidence 获得。
 
 在当前基线上，`candidate-domain definition` 由三部分共同构成：
@@ -46,9 +46,9 @@ formal 收录、`G2` discovery readiness 与 `G3` routed-action readiness 仍然
 
 如果要查看这份 backlog 的人类可读配套说明，见 [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.zh-CN.md)。
 
-## Research Ops
+## Research Foundry
 
-`Research Ops` 负责从数据到论文交付的主研究链。
+`Research Foundry` 负责从数据到论文交付的主研究链。
 
 典型任务包括：
 
@@ -69,9 +69,9 @@ formal 收录、`G2` discovery readiness 与 `G3` routed-action readiness 仍然
 
 - [`MedAutoScience`](https://github.com/gaofeng21cn/med-autoscience)
 
-## Grant Ops
+## Grant Foundry
 
-`Grant Ops` 负责基金方向判断、申请书写作，以及处在申请书写作闭环里的作者侧模拟评审与修订。
+`Grant Foundry` 负责基金方向判断、申请书写作，以及处在申请书写作闭环里的作者侧模拟评审与修订。
 
 典型任务包括：
 
@@ -102,14 +102,14 @@ formal 收录、`G2` discovery readiness 与 `G3` routed-action readiness 仍然
 - 当前生命周期状态：under-definition candidate workstream
 - formal 收录路径：等待正式 domain admission 与注册后的 `G1` workstream/domain mapping
 - discovery / routing 路径：等待 `G2` discovery readiness、`G3` routed-action readiness 与 domain handoff 资格
-- 当前公开界面：`Grant Foundry -> Med Auto Grant` 当前指向活跃的医学 `Grant Ops` 业务仓路径，但它在顶层 federation admission / handoff 上仍单独门控
+- 当前公开界面：`Grant Foundry -> Med Auto Grant` 当前指向活跃的医学 `Grant Foundry` 业务仓路径，但它在顶层 federation admission / handoff 上仍单独门控
 - 已跟踪的下一步：registry material、discovery evidence、routing evidence 与 handoff evidence 继续在 [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.zh-CN.md) 中收口
 - 路由规则：任何未来的 successful handoff 仍然只能 targeting `domain_gateway`，并继续禁止 direct harness bypass
 - 当前顶层处理方式：在真实 domain owner 被收录前，清楚的请求会显式返回 `unknown_domain`，且不会构建 handoff payload
 
-## Thesis Ops
+## Thesis Foundry
 
-`Thesis Ops` 负责学位论文与答辩准备。
+`Thesis Foundry` 负责学位论文与答辩准备。
 
 典型任务包括：
 
@@ -119,8 +119,8 @@ formal 收录、`G2` discovery readiness 与 `G3` routed-action readiness 仍然
 - 摘要、引言和讨论层次组织
 - 答辩准备
 
-它和 `Research Ops` 高度相关，同时围绕学位论文装配与答辩准备保留自己的任务边界。
-现有 admitted surface 可以提供复用证据和下游衍生物，Thesis Ops 的 domain ownership 则通过单独 onboarding 路径来冻结。
+它和 `Research Foundry` 高度相关，同时围绕学位论文装配与答辩准备保留自己的任务边界。
+现有 admitted surface 可以提供复用证据和下游衍生物，Thesis Foundry 的 domain ownership 则通过单独 onboarding 路径来冻结。
 
 典型交付对象包括：
 
@@ -135,16 +135,16 @@ formal 收录、`G2` discovery readiness 与 `G3` routed-action readiness 仍然
 - formal 收录路径：等待正式 domain admission 与注册后的 `G1` workstream/domain mapping
 - discovery / routing 路径：等待 `G2` discovery readiness、`G3` routed-action readiness 与 domain handoff 资格
 - 已跟踪的 blocker package：`execution_model`、`discovery_readiness`、`routing_readiness` 与 `cross_domain_wording`
-- truth boundary：Thesis-specific canonical truth 会随着未来 Thesis Ops domain boundary 一起冻结
+- truth boundary：Thesis-specific canonical truth 会随着未来 Thesis Foundry domain boundary 一起冻结
 - 路由规则：任何未来的 successful handoff 仍然只能 targeting `domain_gateway`，并继续禁止 direct harness bypass
 - 当前顶层处理方式：在真实 domain owner 被收录前，清楚的请求会显式返回 `unknown_domain`，且不会构建 handoff payload
 
-## Review Ops
+## Review Foundry
 
-`Review Ops` 负责“站在评审方”与“回应评审方”两类任务。
+`Review Foundry` 负责“站在评审方”与“回应评审方”两类任务。
 
 这个组合当前仍处在顶层 semantic bundle 阶段。
-review artifact 的 truth 继续保持为 future domain-owned，直到 dedicated Review Ops boundary 被正式冻结。
+review artifact 的 truth 继续保持为 future domain-owned，直到 dedicated Review Foundry boundary 被正式冻结。
 
 典型任务包括：
 
@@ -168,13 +168,13 @@ review artifact 的 truth 继续保持为 future domain-owned，直到 dedicated
 - formal 收录路径：等待正式 domain admission 与注册后的 `G1` workstream/domain mapping
 - discovery / routing 路径：等待 `G2` discovery readiness、`G3` routed-action readiness 与 domain handoff 资格
 - 已跟踪的 blocker package：`execution_model`、`discovery_readiness`、`routing_readiness` 与 `cross_domain_wording`
-- truth boundary：review truth 会在 dedicated Review Ops boundary 冻结后继续保持为 domain-owned
+- truth boundary：review truth 会在 dedicated Review Foundry boundary 冻结后继续保持为 domain-owned
 - 路由规则：任何未来的 successful handoff 仍然只能 targeting `domain_gateway`，并继续禁止 direct harness bypass
 - 当前顶层处理方式：在真实 domain owner 被收录前，清楚的请求会显式返回 `unknown_domain`，且不会构建 handoff payload
 
-## Presentation Ops
+## Presentation Foundry
 
-`Presentation Ops` 负责讲课、组会、汇报和答辩材料。
+`Presentation Foundry` 负责讲课、组会、汇报和答辩材料。
 
 典型任务包括：
 
@@ -196,7 +196,7 @@ review artifact 的 truth 继续保持为 future domain-owned，直到 dedicated
 
 在这个 surface 内：
 
-- `ppt_deck` 是最直接映射到 `Presentation Ops` 的 family
+- `ppt_deck` 是最直接映射到 `Presentation Foundry` 的 family
 - `lecture_student`、`lecture_peer`、`executive_briefing`、`defense_deck` 这类差异应由 `profile pack` 控制
 - `xiaohongshu` 虽然共享同一 RedCube harness，但在 OPL 顶层继续保留独立的视觉 family 语义
 

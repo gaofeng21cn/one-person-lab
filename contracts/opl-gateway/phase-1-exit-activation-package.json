@@ -25,24 +25,24 @@
     },
     {
       "tranche_id": "grant_ops_candidate_closeout",
-      "label": "Phase 1 / Grant Ops candidate-domain backlog and onboarding-package hardening",
+      "label": "Phase 1 / Grant Foundry candidate-domain backlog and onboarding-package hardening",
       "status": "completed_with_signal_only_boundary"
     },
     {
       "tranche_id": "review_ops_candidate_closeout",
-      "label": "Phase 1 / Review Ops candidate-domain backlog and onboarding-package hardening",
+      "label": "Phase 1 / Review Foundry candidate-domain backlog and onboarding-package hardening",
       "status": "completed_below_onboarding"
     },
     {
       "tranche_id": "thesis_ops_candidate_closeout",
-      "label": "Phase 1 / Thesis Ops candidate-domain backlog and onboarding-package hardening",
+      "label": "Phase 1 / Thesis Foundry candidate-domain backlog and onboarding-package hardening",
       "status": "completed_below_onboarding"
     }
   ],
   "phase_1_deferred_items": [
-    "Grant Ops domain admission",
-    "Review Ops domain admission",
-    "Thesis Ops domain admission",
+    "Grant Foundry domain admission",
+    "Review Foundry domain admission",
+    "Thesis Foundry domain admission",
     "any Grant/Review/Thesis G2 discovery readiness",
     "any Grant/Review/Thesis G3 routed-action readiness",
     "any Grant/Review/Thesis handoff-ready surface",
@@ -157,6 +157,6 @@
     "no mutation entry, run launch, or workspace write",
     "no G3 mutation or routed-action runtime",
     "no shared execution core or managed web runtime",
-    "no admission or readiness promotion for Grant Ops, Review Ops, or Thesis Ops"
+    "no admission or readiness promotion for Grant Foundry, Review Foundry, or Thesis Foundry"
   ]
 }

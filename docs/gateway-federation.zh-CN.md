@@ -67,18 +67,18 @@ harness 是内部执行底座，不是顶层产品面。
 
 ## 当前映射
 
-### Research Ops
+### Research Foundry
 
-- `OPL workstream`: `Research Ops`
+- `OPL workstream`: `Research Foundry`
 - `domain gateway`: `MedAutoScience`
 - `domain harness`: 由 `MedAutoScience` 控制的 research harness
 
-### Presentation Ops
+### Presentation Foundry
 
-- `OPL workstream`: `Presentation Ops`
+- `OPL workstream`: `Presentation Foundry`
 - `domain gateway`: `RedCube AI`
 - `direct family`: `ppt_deck`
-- 说明：`xiaohongshu` 与 `ppt_deck` 共享 RedCube harness，但不自动等同于 `Presentation Ops`
+- 说明：`xiaohongshu` 与 `ppt_deck` 共享 RedCube harness，但不自动等同于 `Presentation Foundry`
 
 ## 边界规则
 
