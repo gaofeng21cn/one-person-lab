@@ -22,8 +22,8 @@ Human / Agent
 
 当前最清楚的两条映射是：
 
-- `Research Ops` -> `MedAutoScience`
-- `Presentation Ops` -> `RedCube AI` 里的 `ppt_deck`
+- `Research Foundry` -> `MedAutoScience`
+- `Presentation Foundry` -> `RedCube AI` 里的 `ppt_deck`
 
 ## 角色分工
 
@@ -66,7 +66,7 @@ Agent 主要负责：
 
 例如：
 
-- `MedAutoScience` 是 `Research Ops` 的 domain gateway 与 harness
+- `MedAutoScience` 是 `Research Foundry` 的 domain gateway 与 harness
 - `RedCube AI` 是视觉交付的 domain gateway 与 harness
 
 ## Agent-first 执行

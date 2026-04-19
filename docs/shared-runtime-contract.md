@@ -152,7 +152,7 @@ What may change is the runtime substrate implementation, not:
 - `one-person-lab`
   - defines the public language and boundary of this contract
 - `med-autoscience`
-  - adopts and validates it on the medical `Research Ops` line
+  - adopts and validates it on the medical `Research Foundry` line
 - `redcube-ai`
   - adopts and validates it on the visual-deliverable line
 - `med-autogrant`

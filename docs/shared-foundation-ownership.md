@@ -96,7 +96,7 @@ The intended flow is:
 For example:
 
 - `OPL` may know that a research manuscript, a figure bundle, and a venue-preference memory are relevant to a presentation request
-- but `RedCube AI` still owns the visual-deliverable truth once the task enters `Presentation Ops`
+- but `RedCube AI` still owns the visual-deliverable truth once the task enters `Presentation Foundry`
 - and `MedAutoScience` still owns the research asset truth that produced the upstream manuscript or figure bundle
 
 ## Relationship To Future Shared Indexes

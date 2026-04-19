@@ -20,7 +20,7 @@
 已完成的 `Phase 1 / G2 release-closeout` 已把 `G2 stable public baseline` 收口成稳定、单一、repo-tracked 的公开基线。
 因此，即便公开主线已经吸收了这份最小 admitted-domain federation package，并继续上移到 front-desk 层，这条 repo-tracked 基线也仍然是当前 `OPL` 的 formal entry contract 与 public system surface。
 已完成的 repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` 继续停留在 planning-contract closeout 层：当前目录冻结围绕 `route_request`、`build_handoff_payload`、`audit_routing_decision` 的 planning gate / planning-level contract。唯一允许的成功 handoff 目标仍只能是 `domain_gateway`；no-bypass 规则继续禁止直达 domain harness；`routed-actions.schema.json` 继续停留在 planning dependency 层。
-repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review Ops` 然后 `Thesis Ops`：这两条 candidate path 都继续停留在 domain admission、`G2` discovery readiness、`G3` routed-action readiness 与 handoff readiness 之下。
+repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review Foundry` 然后 `Thesis Foundry`：这两条 candidate path 都继续停留在 domain admission、`G2` discovery readiness、`G3` routed-action readiness 与 handoff readiness 之下。
 当前已 absorb 的前序门槛是 `Phase 1 exit + next-stage activation package freeze`；当前这份 `Phase 2 / Minimal admitted-domain federation activation package` 也已经被吸收到 repo-tracked 顶层真相中，只对已经 admitted 的 `MedAutoScience` 与 `RedCube AI` domain surface 生效。当前没有新的 active follow-on tranche 打开；只有 admitted-domain 仓再落下新的 absorbed delta，或中央 reference surfaces 发生真实漂移时，下一次 central sync 才是诚实的。runtime ownership 继续保留在 admitted domain 一侧。
 因此，当前 OPL 层的 repo-tracked formal entry 也仍然是这条本地 `TypeScript CLI`-first / gateway contract surface。
 而位于这层合同之上的当前用户前台，已经以 GUI front desk 为中心，并带着本地 shell shortcut 与 `opl web` companion surface；其中 hosted-friendly 的 `opl frontdesk manifest`、`opl frontdesk entry-guide`、`opl frontdesk readiness`、`opl frontdesk domain-wiring`、`opl frontdesk hosted-bundle` 等 surface 已作为当前前台 contract 的一部分落地。
@@ -160,7 +160,7 @@ repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review 
 - derived / reference-only 的 candidate-domain backlog 工件；它们只记录 admission boundary 还缺什么，不会虚构 placeholder domain 或 routed target
 - 在先证明存在真实缺失边界之前，不额外新增独立的 candidate-domain-definition contract surface；当前 `task-topology + candidate-domain-backlog + domain-onboarding` 的组合就是现行定义路径
 
-`Grant Ops`、`Review Ops`、`Thesis Ops` 等 planned workstream，在对应 domain 边界明确冻结之前，继续停留在 candidate-definition 路径上。
+`Grant Foundry`、`Review Foundry`、`Thesis Foundry` 等 planned workstream，在对应 domain 边界明确冻结之前，继续停留在 candidate-definition 路径上。
 如果当前公开文档里提到 `Grant Foundry -> Med Auto Grant`，应把它表达成活跃的 grant-domain 业务仓路径，同时明确它在顶层 federation admission / handoff wording 上仍单独门控；它不会自动等于 admitted、discovery-ready、routed-action-ready 或 handoff-ready surface。
 
 ## Materialization 说明

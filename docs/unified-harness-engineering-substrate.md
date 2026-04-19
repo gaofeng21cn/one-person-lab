@@ -156,11 +156,11 @@ It does not mean a unified platform runtime already exists today, and it does no
 The current `OPL` family can be read as:
 
 - `Med Auto Science`
-  - medical `Research Ops` `Domain Harness OS`
+  - medical `Research Foundry` `Domain Harness OS`
 - `RedCube AI`
   - visual-deliverable `Domain Harness OS`
 - `Med Auto Grant`
-  - future medical `Grant Ops` `Domain Harness OS` direction
+  - future medical `Grant Foundry` `Domain Harness OS` direction
 
 `OPL` itself is not one more `Domain Harness OS`.
 It remains the top-level gateway and federation layer above those domain systems.

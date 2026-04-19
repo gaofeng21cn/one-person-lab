@@ -1,7 +1,7 @@
 {
   "version": "p18.m1",
   "scope": "opl_candidate_domain_backlog",
-  "description": "Machine-readable reference backlog for the current under-definition OPL workstreams. It records which boundary materials are still missing before Grant Ops, Thesis Ops, and Review Ops can be formally admitted through the domain-onboarding gate.",
+  "description": "Machine-readable reference backlog for the current under-definition OPL workstreams. It records which boundary materials are still missing before Grant Foundry, Thesis Foundry, and Review Foundry can be formally admitted through the domain-onboarding gate.",
   "non_goals": [
     "domain_admission_registry",
     "discovery_target_registry",
@@ -42,7 +42,7 @@
   "candidate_workstreams": [
     {
       "workstream_id": "grant_ops",
-      "label": "Grant Ops",
+      "label": "Grant Foundry",
       "task_topology_state": {
         "boundary_state": "under_definition",
         "registry_state": "not_registered",
@@ -69,8 +69,8 @@
           "package_id": "registry_material",
           "status": "missing",
           "required_evidence": [
-            "future Grant Ops domain registry package with owned_workstreams, non_opl_families, canonical_truth_owner, and public boundary documentation",
-            "Grant Ops workstream registry entry or ownership transfer entry aligned to the future domain boundary package",
+            "future Grant Foundry domain registry package with owned_workstreams, non_opl_families, canonical_truth_owner, and public boundary documentation",
+            "Grant Foundry workstream registry entry or ownership transfer entry aligned to the future domain boundary package",
             "routing vocabulary impact statement for grant-direction, proposal, review-simulation, and revision deliverables"
           ],
           "forbidden_shortcuts": [
@@ -82,9 +82,9 @@
           "package_id": "public_documentation",
           "status": "missing",
           "required_evidence": [
-            "public domain README or equivalent gateway entry for the future Grant Ops domain",
+            "public domain README or equivalent gateway entry for the future Grant Foundry domain",
             "explicit domain-gateway-above-harness statement",
-            "public explanation of Grant Ops workstream ownership, deliverable objects, and proposal-side review-simulation semantics without claiming reviewer-role ownership"
+            "public explanation of Grant Foundry workstream ownership, deliverable objects, and proposal-side review-simulation semantics without claiming reviewer-role ownership"
           ],
           "forbidden_shortcuts": [
             "placeholder_domain_name_only",
@@ -119,8 +119,8 @@
           "package_id": "execution_model",
           "status": "missing",
           "required_evidence": [
-            "stable agent runtime surface for the future Grant Ops domain",
-            "explicit Auto/Human-in-the-loop shared-base convergence path for the future Grant Ops domain",
+            "stable agent runtime surface for the future Grant Foundry domain",
+            "explicit Auto/Human-in-the-loop shared-base convergence path for the future Grant Foundry domain",
             "code-versus-Agent responsibility split that keeps stable objects, controllers, tools, gates, review surfaces, and audit surfaces in code without redefining the mainline as fixed-code-first"
           ],
           "forbidden_shortcuts": [
@@ -134,7 +134,7 @@
           "package_id": "discovery_readiness",
           "status": "missing",
           "required_evidence": [
-            "read-only discovery entry that points Grant Ops to the future domain public entry",
+            "read-only discovery entry that points Grant Foundry to the future domain public entry",
             "explicit discovery wording that keeps the entry surface at domain_gateway without implying handoff readiness"
           ],
           "forbidden_shortcuts": [
@@ -147,7 +147,7 @@
           "package_id": "routing_readiness",
           "status": "missing",
           "required_evidence": [
-            "explicit routed-action evidence for Grant Ops -> future domain public entry",
+            "explicit routed-action evidence for Grant Foundry -> future domain public entry",
             "stable handoff evidence that keeps the only successful target at domain_gateway with no harness bypass"
           ],
           "forbidden_shortcuts": [
@@ -160,7 +160,7 @@
           "package_id": "cross_domain_wording",
           "status": "missing",
           "required_evidence": [
-            "aligned top-level role language between OPL public docs and the future Grant Ops domain public docs"
+            "aligned top-level role language between OPL public docs and the future Grant Foundry domain public docs"
           ],
           "forbidden_shortcuts": [
             "prose_only_role_guesswork",
@@ -174,8 +174,8 @@
           "package_id": "registry_material",
           "status": "missing",
           "required_evidence": [
-            "complete future domain registry package for Grant Ops",
-            "complete workstream registry package for Grant Ops",
+            "complete future domain registry package for Grant Foundry",
+            "complete workstream registry package for Grant Foundry",
             "explicit routing-vocabulary impact statement"
           ],
           "forbidden_shortcuts": [
@@ -188,7 +188,7 @@
           "package_id": "public_documentation",
           "status": "missing",
           "required_evidence": [
-            "public gateway entry that makes the future Grant Ops domain boundary legible without runtime guesswork"
+            "public gateway entry that makes the future Grant Foundry domain boundary legible without runtime guesswork"
           ],
           "forbidden_shortcuts": [
             "placeholder_domain_name_only",
@@ -212,7 +212,7 @@
           "package_id": "discovery_readiness",
           "status": "missing",
           "required_evidence": [
-            "G2 discovery surface that points Grant Ops to the future domain public entry"
+            "G2 discovery surface that points Grant Foundry to the future domain public entry"
           ],
           "forbidden_shortcuts": [
             "promote_to_g2_without_domain_gateway",
@@ -225,7 +225,7 @@
           "package_id": "routing_readiness",
           "status": "missing",
           "required_evidence": [
-            "G3 routing evidence and stable handoff boundary for Grant Ops -> future domain public entry"
+            "G3 routing evidence and stable handoff boundary for Grant Foundry -> future domain public entry"
           ],
           "forbidden_shortcuts": [
             "promote_to_g3_without_explicit_route_evidence",
@@ -238,7 +238,7 @@
           "package_id": "review_surfaces",
           "status": "missing",
           "required_evidence": [
-            "domain-owned review surfaces and quality gates for Grant Ops outputs"
+            "domain-owned review surfaces and quality gates for Grant Foundry outputs"
           ],
           "forbidden_shortcuts": [
             "execution_claim_without_review_surface",
@@ -250,8 +250,8 @@
           "package_id": "execution_model",
           "status": "missing",
           "required_evidence": [
-            "stable agent runtime surface for the future Grant Ops domain",
-            "explicit Auto/Human-in-the-loop shared-base convergence path for the future Grant Ops domain",
+            "stable agent runtime surface for the future Grant Foundry domain",
+            "explicit Auto/Human-in-the-loop shared-base convergence path for the future Grant Foundry domain",
             "code-versus-Agent responsibility split that keeps stable objects, controllers, tools, gates, review surfaces, and audit surfaces in code without redefining the mainline as fixed-code-first"
           ],
           "forbidden_shortcuts": [
@@ -266,7 +266,7 @@
           "package_id": "cross_domain_wording",
           "status": "missing",
           "required_evidence": [
-            "aligned OPL/domain wording for the future Grant Ops role"
+            "aligned OPL/domain wording for the future Grant Foundry role"
           ],
           "forbidden_shortcuts": [
             "prose_only_role_guesswork",
@@ -324,11 +324,11 @@
           ]
         }
       },
-      "notes": "Top-level semantics are explicit: Grant Ops stays proposal-facing, and its review-simulation / revision traces remain author-side artifacts while the future domain boundary package is still incomplete. The current Grant Foundry -> Med Auto Grant public scaffold provides top-level signal and domain-direction evidence only; it is not an admitted domain gateway, not G2 discovery-ready, not G3 routed-action-ready, and not handoff-ready."
+      "notes": "Top-level semantics are explicit: Grant Foundry stays proposal-facing, and its review-simulation / revision traces remain author-side artifacts while the future domain boundary package is still incomplete. The current Grant Foundry -> Med Auto Grant public scaffold provides top-level signal and domain-direction evidence only; it is not an admitted domain gateway, not G2 discovery-ready, not G3 routed-action-ready, and not handoff-ready."
     },
     {
       "workstream_id": "thesis_ops",
-      "label": "Thesis Ops",
+      "label": "Thesis Foundry",
       "task_topology_state": {
         "boundary_state": "under_definition",
         "registry_state": "not_registered",
@@ -354,8 +354,8 @@
           "package_id": "registry_material",
           "status": "missing",
           "required_evidence": [
-            "future Thesis Ops domain registry package with owned_workstreams, non_opl_families, canonical_truth_owner, and public boundary documentation",
-            "Thesis Ops workstream registry entry or ownership transfer entry aligned to the future domain boundary package",
+            "future Thesis Foundry domain registry package with owned_workstreams, non_opl_families, canonical_truth_owner, and public boundary documentation",
+            "Thesis Foundry workstream registry entry or ownership transfer entry aligned to the future domain boundary package",
             "routing vocabulary impact statement for chapter drafting, cross-chapter synchronization, and defense-preparation deliverables"
           ],
           "forbidden_shortcuts": [
@@ -367,9 +367,9 @@
           "package_id": "public_documentation",
           "status": "missing",
           "required_evidence": [
-            "public domain README or equivalent gateway entry for the future Thesis Ops domain",
+            "public domain README or equivalent gateway entry for the future Thesis Foundry domain",
             "explicit domain-gateway-above-harness statement",
-            "public explanation of Thesis Ops workstream ownership, deliverable objects, and thesis-specific review semantics, including what remains distinct from Research Ops manuscript/submission delivery and Presentation Ops defense-deck production"
+            "public explanation of Thesis Foundry workstream ownership, deliverable objects, and thesis-specific review semantics, including what remains distinct from Research Foundry manuscript/submission delivery and Presentation Foundry defense-deck production"
           ],
           "forbidden_shortcuts": [
             "placeholder_domain_name_only",
@@ -381,7 +381,7 @@
           "status": "missing",
           "required_evidence": [
             "explicit declaration of chapter-draft, cross-chapter synchronization, and defense-preparation truth owned by the future domain",
-            "explicit list of what OPL may index versus what it may not claim as canonical truth, with no silent transfer into Research Ops, MedAutoScience, or RedCube AI"
+            "explicit list of what OPL may index versus what it may not claim as canonical truth, with no silent transfer into Research Foundry, MedAutoScience, or RedCube AI"
           ],
           "forbidden_shortcuts": [
             "implicit_truth_transfer_to_opl",
@@ -404,8 +404,8 @@
           "package_id": "execution_model",
           "status": "missing",
           "required_evidence": [
-            "stable agent runtime surface for the future Thesis Ops domain",
-            "explicit Auto/Human-in-the-loop shared-base convergence path for the future Thesis Ops domain",
+            "stable agent runtime surface for the future Thesis Foundry domain",
+            "explicit Auto/Human-in-the-loop shared-base convergence path for the future Thesis Foundry domain",
             "code-versus-Agent responsibility split that keeps stable objects, controllers, tools, gates, review surfaces, and audit surfaces in code without redefining the mainline as fixed-code-first"
           ],
           "forbidden_shortcuts": [
@@ -419,7 +419,7 @@
           "package_id": "discovery_readiness",
           "status": "missing",
           "required_evidence": [
-            "read-only discovery entry that points Thesis Ops to the future domain public entry",
+            "read-only discovery entry that points Thesis Foundry to the future domain public entry",
             "explicit discovery wording that keeps the entry surface at domain_gateway without implying handoff readiness"
           ],
           "forbidden_shortcuts": [
@@ -432,7 +432,7 @@
           "package_id": "routing_readiness",
           "status": "missing",
           "required_evidence": [
-            "explicit routed-action evidence for Thesis Ops -> future domain public entry",
+            "explicit routed-action evidence for Thesis Foundry -> future domain public entry",
             "stable handoff evidence that keeps the only successful target at domain_gateway with no harness bypass"
           ],
           "forbidden_shortcuts": [
@@ -445,7 +445,7 @@
           "package_id": "cross_domain_wording",
           "status": "missing",
           "required_evidence": [
-            "aligned top-level role language between OPL public docs and the future Thesis Ops domain public docs without equating Thesis Ops to Research Ops manuscript flow or Presentation Ops deck flow"
+            "aligned top-level role language between OPL public docs and the future Thesis Foundry domain public docs without equating Thesis Foundry to Research Foundry manuscript flow or Presentation Foundry deck flow"
           ],
           "forbidden_shortcuts": [
             "prose_only_role_guesswork",
@@ -459,8 +459,8 @@
           "package_id": "registry_material",
           "status": "missing",
           "required_evidence": [
-            "complete future domain registry package for Thesis Ops",
-            "complete workstream registry package for Thesis Ops",
+            "complete future domain registry package for Thesis Foundry",
+            "complete workstream registry package for Thesis Foundry",
             "explicit routing-vocabulary impact statement"
           ],
           "forbidden_shortcuts": [
@@ -473,7 +473,7 @@
           "package_id": "public_documentation",
           "status": "missing",
           "required_evidence": [
-            "public gateway entry that makes the future Thesis Ops domain boundary legible without runtime guesswork"
+            "public gateway entry that makes the future Thesis Foundry domain boundary legible without runtime guesswork"
           ],
           "forbidden_shortcuts": [
             "placeholder_domain_name_only",
@@ -497,7 +497,7 @@
           "package_id": "discovery_readiness",
           "status": "missing",
           "required_evidence": [
-            "G2 discovery surface that points Thesis Ops to the future domain public entry"
+            "G2 discovery surface that points Thesis Foundry to the future domain public entry"
           ],
           "forbidden_shortcuts": [
             "promote_to_g2_without_domain_gateway",
@@ -510,7 +510,7 @@
           "package_id": "routing_readiness",
           "status": "missing",
           "required_evidence": [
-            "G3 routing evidence and stable handoff boundary for Thesis Ops -> future domain public entry"
+            "G3 routing evidence and stable handoff boundary for Thesis Foundry -> future domain public entry"
           ],
           "forbidden_shortcuts": [
             "promote_to_g3_without_explicit_route_evidence",
@@ -523,7 +523,7 @@
           "package_id": "review_surfaces",
           "status": "missing",
           "required_evidence": [
-            "domain-owned review surfaces and quality gates for Thesis Ops outputs"
+            "domain-owned review surfaces and quality gates for Thesis Foundry outputs"
           ],
           "forbidden_shortcuts": [
             "execution_claim_without_review_surface",
@@ -535,8 +535,8 @@
           "package_id": "execution_model",
           "status": "missing",
           "required_evidence": [
-            "stable agent runtime surface for the future Thesis Ops domain",
-            "explicit Auto/Human-in-the-loop shared-base convergence path for the future Thesis Ops domain",
+            "stable agent runtime surface for the future Thesis Foundry domain",
+            "explicit Auto/Human-in-the-loop shared-base convergence path for the future Thesis Foundry domain",
             "code-versus-Agent responsibility split that keeps stable objects, controllers, tools, gates, review surfaces, and audit surfaces in code without redefining the mainline as fixed-code-first"
           ],
           "forbidden_shortcuts": [
@@ -551,7 +551,7 @@
           "package_id": "cross_domain_wording",
           "status": "missing",
           "required_evidence": [
-            "aligned OPL/domain wording for the future Thesis Ops role"
+            "aligned OPL/domain wording for the future Thesis Foundry role"
           ],
           "forbidden_shortcuts": [
             "prose_only_role_guesswork",
@@ -609,11 +609,11 @@
           ]
         }
       },
-      "notes": "Top-level semantics are explicit, and the frozen negative boundary is that thesis assembly, cross-chapter synchronization, and defense-preparation coordination do not collapse into Research Ops manuscript flow or Presentation Ops / RedCube deck production; the future Thesis Ops domain boundary package is still incomplete."
+      "notes": "Top-level semantics are explicit, and the frozen negative boundary is that thesis assembly, cross-chapter synchronization, and defense-preparation coordination do not collapse into Research Foundry manuscript flow or Presentation Foundry / RedCube deck production; the future Thesis Foundry domain boundary package is still incomplete."
     },
     {
       "workstream_id": "review_ops",
-      "label": "Review Ops",
+      "label": "Review Foundry",
       "task_topology_state": {
         "boundary_state": "under_definition",
         "registry_state": "not_registered",
@@ -639,8 +639,8 @@
           "package_id": "registry_material",
           "status": "missing",
           "required_evidence": [
-            "future Review Ops domain registry package with owned_workstreams, non_opl_families, canonical_truth_owner, and public boundary documentation",
-            "Review Ops workstream registry entry or ownership transfer entry aligned to the future domain boundary package",
+            "future Review Foundry domain registry package with owned_workstreams, non_opl_families, canonical_truth_owner, and public boundary documentation",
+            "Review Foundry workstream registry entry or ownership transfer entry aligned to the future domain boundary package",
             "routing vocabulary impact statement for review reports, rebuttal plans, and revision-route deliverables"
           ],
           "forbidden_shortcuts": [
@@ -652,9 +652,9 @@
           "package_id": "public_documentation",
           "status": "missing",
           "required_evidence": [
-            "public domain README or equivalent gateway entry for the future Review Ops domain",
+            "public domain README or equivalent gateway entry for the future Review Foundry domain",
             "explicit domain-gateway-above-harness statement",
-            "public explanation of Review Ops workstream ownership, deliverable objects, and review semantics"
+            "public explanation of Review Foundry workstream ownership, deliverable objects, and review semantics"
           ],
           "forbidden_shortcuts": [
             "placeholder_domain_name_only",
@@ -689,8 +689,8 @@
           "package_id": "execution_model",
           "status": "missing",
           "required_evidence": [
-            "stable agent runtime surface for the future Review Ops domain",
-            "explicit Auto/Human-in-the-loop shared-base convergence path for the future Review Ops domain",
+            "stable agent runtime surface for the future Review Foundry domain",
+            "explicit Auto/Human-in-the-loop shared-base convergence path for the future Review Foundry domain",
             "code-versus-Agent responsibility split that keeps stable objects, controllers, tools, gates, review surfaces, and audit surfaces in code without redefining the mainline as fixed-code-first"
           ],
           "forbidden_shortcuts": [
@@ -704,7 +704,7 @@
           "package_id": "discovery_readiness",
           "status": "missing",
           "required_evidence": [
-            "read-only discovery entry that points Review Ops to the future domain public entry",
+            "read-only discovery entry that points Review Foundry to the future domain public entry",
             "explicit discovery wording that keeps the entry surface at domain_gateway without implying handoff readiness or silently transferring review truth into OPL or another admitted domain"
           ],
           "forbidden_shortcuts": [
@@ -717,7 +717,7 @@
           "package_id": "routing_readiness",
           "status": "missing",
           "required_evidence": [
-            "explicit routed-action evidence for Review Ops -> future domain public entry",
+            "explicit routed-action evidence for Review Foundry -> future domain public entry",
             "stable handoff evidence that keeps the only successful target at domain_gateway with no harness bypass and no silent transfer into another admitted domain"
           ],
           "forbidden_shortcuts": [
@@ -730,7 +730,7 @@
           "package_id": "cross_domain_wording",
           "status": "missing",
           "required_evidence": [
-            "aligned top-level role language between OPL public docs and the future Review Ops domain public docs without transferring review truth into OPL or collapsing response/rebuttal work into another admitted domain"
+            "aligned top-level role language between OPL public docs and the future Review Foundry domain public docs without transferring review truth into OPL or collapsing response/rebuttal work into another admitted domain"
           ],
           "forbidden_shortcuts": [
             "prose_only_role_guesswork",
@@ -744,8 +744,8 @@
           "package_id": "registry_material",
           "status": "missing",
           "required_evidence": [
-            "complete future domain registry package for Review Ops",
-            "complete workstream registry package for Review Ops",
+            "complete future domain registry package for Review Foundry",
+            "complete workstream registry package for Review Foundry",
             "explicit routing-vocabulary impact statement"
           ],
           "forbidden_shortcuts": [
@@ -758,7 +758,7 @@
           "package_id": "public_documentation",
           "status": "missing",
           "required_evidence": [
-            "public gateway entry that makes the future Review Ops domain boundary legible without runtime guesswork"
+            "public gateway entry that makes the future Review Foundry domain boundary legible without runtime guesswork"
           ],
           "forbidden_shortcuts": [
             "placeholder_domain_name_only",
@@ -782,7 +782,7 @@
           "package_id": "discovery_readiness",
           "status": "missing",
           "required_evidence": [
-            "G2 discovery surface that points Review Ops to the future domain public entry without silently transferring review truth into OPL or another admitted domain"
+            "G2 discovery surface that points Review Foundry to the future domain public entry without silently transferring review truth into OPL or another admitted domain"
           ],
           "forbidden_shortcuts": [
             "promote_to_g2_without_domain_gateway",
@@ -795,7 +795,7 @@
           "package_id": "routing_readiness",
           "status": "missing",
           "required_evidence": [
-            "G3 routing evidence and stable handoff boundary for Review Ops -> future domain public entry with domain_gateway-only / no-bypass semantics"
+            "G3 routing evidence and stable handoff boundary for Review Foundry -> future domain public entry with domain_gateway-only / no-bypass semantics"
           ],
           "forbidden_shortcuts": [
             "promote_to_g3_without_explicit_route_evidence",
@@ -808,7 +808,7 @@
           "package_id": "review_surfaces",
           "status": "missing",
           "required_evidence": [
-            "domain-owned review surfaces and quality gates for Review Ops outputs"
+            "domain-owned review surfaces and quality gates for Review Foundry outputs"
           ],
           "forbidden_shortcuts": [
             "execution_claim_without_review_surface",
@@ -820,8 +820,8 @@
           "package_id": "execution_model",
           "status": "missing",
           "required_evidence": [
-            "stable agent runtime surface for the future Review Ops domain",
-            "explicit Auto/Human-in-the-loop shared-base convergence path for the future Review Ops domain",
+            "stable agent runtime surface for the future Review Foundry domain",
+            "explicit Auto/Human-in-the-loop shared-base convergence path for the future Review Foundry domain",
             "code-versus-Agent responsibility split that keeps stable objects, controllers, tools, gates, review surfaces, and audit surfaces in code without redefining the mainline as fixed-code-first"
           ],
           "forbidden_shortcuts": [
@@ -836,7 +836,7 @@
           "package_id": "cross_domain_wording",
           "status": "missing",
           "required_evidence": [
-            "aligned OPL/domain wording for the future Review Ops role without transferring review truth into OPL or collapsing response/rebuttal work into another admitted domain"
+            "aligned OPL/domain wording for the future Review Foundry role without transferring review truth into OPL or collapsing response/rebuttal work into another admitted domain"
           ],
           "forbidden_shortcuts": [
             "prose_only_role_guesswork",
@@ -894,7 +894,7 @@
           ]
         }
       },
-      "notes": "Top-level semantics are explicit: Review Ops groups reviewer-role work plus response/rebuttal coordination as one candidate semantic bundle. That combined label still does not justify admission, discovery readiness, routed-action readiness, handoff readiness, or OPL ownership of review truth before the future Review Ops domain boundary package exists. Review Ops therefore stays blocked below onboarding: `execution_model`, `discovery_readiness`, `routing_readiness`, and `cross_domain_wording` remain explicit blocker packages. Clear top-level requests may surface only as unknown_domain until an explicit future domain_gateway entry, discovery declaration, routing declaration, and cross-domain wording package are all frozen; no handoff payload is built, and no other admitted domain may silently absorb Review Ops truth."
+      "notes": "Top-level semantics are explicit: Review Foundry groups reviewer-role work plus response/rebuttal coordination as one candidate semantic bundle. That combined label still does not justify admission, discovery readiness, routed-action readiness, handoff readiness, or OPL ownership of review truth before the future Review Foundry domain boundary package exists. Review Foundry therefore stays blocked below onboarding: `execution_model`, `discovery_readiness`, `routing_readiness`, and `cross_domain_wording` remain explicit blocker packages. Clear top-level requests may surface only as unknown_domain until an explicit future domain_gateway entry, discovery declaration, routing declaration, and cross-domain wording package are all frozen; no handoff payload is built, and no other admitted domain may silently absorb Review Foundry truth."
     }
   ]
 }

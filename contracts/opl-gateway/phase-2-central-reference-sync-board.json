@@ -38,7 +38,7 @@
   "hard_boundaries": [
     "do not promote OPL into a runtime owner",
     "do not promote OPL into a mutation gateway",
-    "do not admit Grant Ops, Review Ops, or Thesis Ops",
+    "do not admit Grant Foundry, Review Foundry, or Thesis Foundry",
     "do not create new G2 or G3 readiness claims",
     "do not activate routed-action runtime",
     "do not rewrite Grant Foundry -> Med Auto Grant as an admitted domain",

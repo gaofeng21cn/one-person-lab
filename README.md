@@ -29,7 +29,7 @@
 </table>
 
 <p align="center">
-  <img src="assets/branding/opl-architecture-blueprint.svg" alt="OPL architecture blueprint" width="100%" />
+  <img src="assets/branding/opl-workbench-overview.svg" alt="OPL workbench overview" width="100%" />
 </p>
 
 > `OPL` is a unified workbench for a one-person lab. It brings everyday collaboration, specialized workflows, execution visibility, and file delivery into one place.
@@ -48,9 +48,9 @@
 | --- | --- | --- | --- |
 | `Research Foundry` | [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience) | Medical research, evidence organization, manuscript preparation | Analysis packages, evidence packages, manuscripts |
 | `Grant Foundry` | [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) | Grant direction setting, proposal writing, author-side revision work | Proposals, outlines, revision packs |
-| `Presentation Ops` | [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) | Lectures, lab talks, reports, defense materials | Slide decks, scripts, presentation packages |
-| `Thesis Ops` | Planned | Thesis assembly and defense preparation | Chapter drafts, defense materials |
-| `Review Ops` | Planned | Review, rebuttal, and revision work | Review comments, response drafts, revision plans |
+| `Presentation Foundry` | [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) | Lectures, lab talks, reports, defense materials | Slide decks, scripts, presentation packages |
+| `Thesis Foundry` | Planned | Thesis assembly and defense preparation | Chapter drafts, defense materials |
+| `Review Foundry` | Planned | Review, rebuttal, and revision work | Review comments, response drafts, revision plans |
 
 ## What Lives In One Workbench
 
@@ -81,7 +81,7 @@ Human
       -> General Tasks
       -> Research Foundry -> Med Auto Science
       -> Grant Foundry -> Med Auto Grant
-      -> Presentation Ops -> RedCube AI
+      -> Presentation Foundry -> RedCube AI
       -> Progress / Files / Settings
 ```
 

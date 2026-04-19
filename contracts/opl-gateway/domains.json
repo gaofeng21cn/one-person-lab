@@ -6,7 +6,7 @@
       "label": "MedAutoScience",
       "project": "med-autoscience",
       "role": "research_ops_gateway",
-      "gateway_surface": "Research Ops Gateway",
+      "gateway_surface": "Research Foundry Gateway",
       "harness_surface": "Medical Research Domain Harness OS",
       "standalone_allowed": true,
       "owned_workstreams": [

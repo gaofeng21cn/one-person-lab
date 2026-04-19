@@ -102,13 +102,13 @@
 
 ## 当前已经清楚的部分
 
-今天，`Research Ops` 上这五层最清楚的具象化是：
+今天，`Research Foundry` 上这五层最清楚的具象化是：
 
 - `MedAutoScience` 作为 active 的 research domain gateway 与 harness
 
 视觉交付上最清楚的 emerging 具象化是：
 
-- `RedCube AI` 作为视觉交付 domain gateway 与 harness，其中 `ppt_deck` 是最直接映射到 `Presentation Ops` 的 family
+- `RedCube AI` 作为视觉交付 domain gateway 与 harness，其中 `ppt_deck` 是最直接映射到 `Presentation Foundry` 的 family
 
 也正因为如此，`OPL` 已经不只是概念层。
 它已经有一个 active 的 domain surface，和一个正在收敛的第二 surface。

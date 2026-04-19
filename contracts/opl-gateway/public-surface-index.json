@@ -1329,7 +1329,7 @@
       ],
       "routes_to": [],
       "notes": [
-        "Active Research Ops domain gateway and harness entry under the OPL umbrella.",
+        "Active Research Foundry domain gateway and harness entry under the OPL umbrella.",
         "Domain-owned review and submission truth remains in MedAutoScience."
       ]
     },
@@ -1354,7 +1354,7 @@
       ],
       "routes_to": [],
       "notes": [
-        "Emerging Presentation Ops-carrying domain gateway and harness entry under the OPL umbrella.",
+        "Emerging Presentation Foundry-carrying domain gateway and harness entry under the OPL umbrella.",
         "ppt_deck directly maps to presentation_ops.",
         "xiaohongshu may route to redcube without auto-equating to presentation_ops."
       ]

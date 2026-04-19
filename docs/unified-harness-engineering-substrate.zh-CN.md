@@ -154,11 +154,11 @@ Human / Agent
 当前 `OPL` 体系可以理解成：
 
 - `Med Auto Science`
-  - 医学 `Research Ops` 的 `Domain Harness OS`
+  - 医学 `Research Foundry` 的 `Domain Harness OS`
 - `RedCube AI`
   - 视觉交付的 `Domain Harness OS`
 - `Med Auto Grant`
-  - 未来医学 `Grant Ops` 的 `Domain Harness OS` 方向
+  - 未来医学 `Grant Foundry` 的 `Domain Harness OS` 方向
 
 `OPL` 本身不是再额外多出来的一个 `Domain Harness OS`。
 它仍然是位于这些 domain system 之上的顶层 gateway 与 federation layer。
