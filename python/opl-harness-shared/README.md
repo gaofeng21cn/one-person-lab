@@ -5,6 +5,7 @@
 当前导出的共享实现：
 
 - `opl_harness_shared.editable_dependency_bootstrap`
+- `opl_harness_shared.editable_consumer_bootstrap`
 - `opl_harness_shared.managed_runtime`
 - `opl_harness_shared.hermes_supervision`
 - `opl_harness_shared.status_narration`
