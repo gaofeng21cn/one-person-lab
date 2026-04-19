@@ -64,5 +64,4 @@
 ## 参考入口
 
 - `docs/references/README.md`
-- `docs/history/frontdesk-legacy/README.md`
-- `docs/history/omx/README.md`
+- `docs/history/README.md`

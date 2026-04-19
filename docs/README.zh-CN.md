@@ -12,7 +12,7 @@
 | --- | --- | --- |
 | 潜在用户、人类专家、非技术读者 | [仓库首页](../README.zh-CN.md)、[路线图](./roadmap.zh-CN.md)、[任务版图](./task-map.zh-CN.md)、[运行模型](./operating-model.zh-CN.md) | 先理解 `OPL` 的产品壳、产品家族和当前实现，再进入技术细节 |
 | 技术规划者、架构读者、方向同步读者 | [项目概览](./project.md)、[当前状态](./status.md)、[架构](./architecture.md)、[硬约束](./invariants.md)、[关键决策](./decisions.md)、[合同目录说明](../contracts/README.md) | 快速把握当前基线、边界和技术主线 |
-| 开发者与维护者 | [参考级索引](./references/README.zh-CN.md)、`docs/specs/`、`docs/plans/`、`docs/history/frontdesk-legacy/`、`docs/history/omx/` | 查看实现配套材料、历史记录和跟踪中的工作笔记 |
+| 开发者与维护者 | [参考级索引](./references/README.zh-CN.md)、`docs/specs/`、`docs/plans/`、[历史归档索引](./history/README.zh-CN.md) | 查看实现配套材料、历史记录和跟踪中的工作笔记 |
 
 ## 技术工作集
 
@@ -101,15 +101,14 @@
 
 - `docs/specs/`
 - `docs/plans/`
-- `docs/history/frontdesk-legacy/`
-- `docs/history/omx/`
+- [历史归档索引](./history/README.zh-CN.md)
 
 ## 当前真相分别去哪看
 
 - 公开角色、活跃边界、默认阅读顺序： [项目概览](./project.md)、[当前状态](./status.md)、[架构](./architecture.md)
 - machine-readable gateway / admission surface： [合同目录说明](../contracts/README.md) 与 `contracts/opl-gateway/*.json`
 - 参考级配套材料： [参考级索引](./references/README.zh-CN.md)
-- frontdesk 与 OMX 历史线： `docs/history/frontdesk-legacy/`、`docs/history/omx/`
+- 历史与退役路线： [历史归档索引](./history/README.zh-CN.md)
 
 ## 文档规则
 
