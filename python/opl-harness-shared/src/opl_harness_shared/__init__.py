@@ -20,6 +20,7 @@ from .family_orchestration import (
 )
 from .family_entry_contracts import (
     build_domain_entry_command_contract,
+    build_domain_entry_command_catalog,
     build_family_domain_entry_contract,
     build_gateway_interaction_contract,
     build_shared_handoff,
@@ -130,6 +131,7 @@ __all__ = [
     "build_shared_handoff_return_surface",
     "build_managed_runtime_contract",
     "build_domain_entry_command_contract",
+    "build_domain_entry_command_catalog",
     "build_product_entry_start",
     "build_product_frontdesk",
     "build_product_entry_overview",

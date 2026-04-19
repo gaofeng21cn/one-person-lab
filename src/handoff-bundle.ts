@@ -1,6 +1,6 @@
 import { findDomainOrThrow } from './contracts.ts';
 import { buildDomainManifestCatalog } from './domain-manifest.ts';
-import { buildDomainEntryParity } from './management.ts';
+import { buildDomainEntryParity } from './family-domain-catalog.ts';
 import { resolveWorkspaceLocator } from './workspace-registry.ts';
 import { buildFrontDeskEndpoints } from './frontdesk-paths.ts';
 import type { BoundaryExplanation, GatewayContracts, ResolutionResult } from './types.ts';

@@ -4,6 +4,7 @@ import pytest
 
 from opl_harness_shared.family_entry_contracts import (
     build_domain_entry_command_contract,
+    build_domain_entry_command_catalog,
     build_family_direct_opl_shared_handoff,
     build_family_domain_entry_contract,
     build_family_gateway_interaction_contract,
@@ -47,6 +48,47 @@ def test_family_entry_contract_helpers_build_and_validate_domain_entry_payloads(
     assert validated["supported_entry_modes"] == ["direct", "opl-handoff"]
     assert validated["schema_ref"] == "contracts/schemas/v1/product-entry-manifest.schema.json"
     assert validated["command_contracts"][0] == workspace_cockpit
+
+
+def test_family_entry_contract_helpers_build_reusable_command_catalogs_for_cross_repo_adapters() -> None:
+    catalog = build_domain_entry_command_catalog(
+        [
+            {
+                "command": "workspace-cockpit",
+                "required_fields": ["profile_ref"],
+            },
+            {
+                "command": "study-progress",
+                "required_fields": ["profile_ref", "study_id"],
+                "optional_fields": ["entry_mode"],
+                "extra_payload": {"target_surface_kind": "study_progress"},
+            },
+        ]
+    )
+
+    assert catalog["supported_commands"] == ["workspace-cockpit", "study-progress"]
+    assert catalog["command_contracts"] == [
+        build_domain_entry_command_contract(
+            command="workspace-cockpit",
+            required_fields=["profile_ref"],
+        ),
+        build_domain_entry_command_contract(
+            command="study-progress",
+            required_fields=["profile_ref", "study_id"],
+            optional_fields=["entry_mode"],
+            extra_payload={"target_surface_kind": "study_progress"},
+        ),
+    ]
+
+    contract = build_family_domain_entry_contract(
+        entry_adapter="MedAutoScienceDomainEntry",
+        service_safe_surface_kind="med_autoscience_service_safe_domain_entry",
+        product_entry_builder_command="build-product-entry",
+        **catalog,
+    )
+
+    assert contract["supported_commands"] == catalog["supported_commands"]
+    assert contract["command_contracts"] == catalog["command_contracts"]
 
 
 def test_family_entry_contract_helpers_build_and_validate_gateway_payloads() -> None:
