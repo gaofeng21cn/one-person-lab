@@ -150,6 +150,111 @@ test('family shared release CLI can sync explicit repo overrides and report alig
   assert.match(result.stdout, new RegExp(RELEASED_OWNER_COMMIT));
 });
 
+test('family shared release CLI can rewrite the owner contract and propagate a new owner commit in one step', () => {
+  const familyRoot = createConsumerFixtureRoot();
+  const ownerRepoRoot = path.join(familyRoot, 'one-person-lab');
+  const nextOwnerCommit = '7f84d0ad4cc6da5cfd094e2838425d44b4f3812a';
+  const scienceRepo = path.join(familyRoot, 'science-worktree');
+  const grantRepo = path.join(familyRoot, 'grant-worktree');
+  const redcubeRepo = path.join(familyRoot, 'redcube-worktree');
+
+  write(
+    path.join(ownerRepoRoot, SHARED_OWNER_RELEASE_CONTRACT_PATH),
+    JSON.stringify({
+      contract_kind: 'family_shared_owner_release.v1',
+      owner_repo: 'one-person-lab',
+      owner_commit: STALE_OWNER_COMMIT,
+      packages: {
+        python: {
+          package_name: 'opl-harness-shared',
+          git_locator: `git+https://github.com/gaofeng21cn/one-person-lab.git@${STALE_OWNER_COMMIT}#subdirectory=python/opl-harness-shared`,
+        },
+        js: {
+          package_name: 'opl-gateway-shared',
+          git_locator: `git+https://github.com/gaofeng21cn/one-person-lab.git#${STALE_OWNER_COMMIT}`,
+        },
+      },
+      consumers: [
+        {
+          repo_id: 'medautoscience',
+          repo_dir: 'med-autoscience',
+          targets: [
+            { file: 'pyproject.toml', kind: 'python_dependency' },
+            { file: 'uv.lock', kind: 'python_lock' },
+          ],
+        },
+        {
+          repo_id: 'medautogrant',
+          repo_dir: 'med-autogrant',
+          targets: [
+            { file: 'pyproject.toml', kind: 'python_dependency' },
+            { file: 'uv.lock', kind: 'python_lock' },
+          ],
+        },
+        {
+          repo_id: 'redcube',
+          repo_dir: 'redcube-ai',
+          targets: [
+            { file: 'packages/redcube-gateway/package.json', kind: 'js_dependency' },
+            { file: 'package-lock.json', kind: 'js_lock' },
+          ],
+        },
+      ],
+    }),
+  );
+  write(
+    path.join(scienceRepo, 'pyproject.toml'),
+    `[project]\ndependencies = ["opl-harness-shared @ git+https://github.com/gaofeng21cn/one-person-lab.git@${STALE_OWNER_COMMIT}#subdirectory=python/opl-harness-shared"]\n`,
+  );
+  write(
+    path.join(scienceRepo, 'uv.lock'),
+    `source = { git = "https://github.com/gaofeng21cn/one-person-lab.git?subdirectory=python%2Fopl-harness-shared&rev=${STALE_OWNER_COMMIT}#${STALE_OWNER_COMMIT}" }\n`,
+  );
+  write(
+    path.join(grantRepo, 'pyproject.toml'),
+    `[project]\ndependencies = ["opl-harness-shared @ git+https://github.com/gaofeng21cn/one-person-lab.git@${STALE_OWNER_COMMIT}#subdirectory=python/opl-harness-shared"]\n`,
+  );
+  write(
+    path.join(grantRepo, 'uv.lock'),
+    `source = { git = "https://github.com/gaofeng21cn/one-person-lab.git?subdirectory=python%2Fopl-harness-shared&rev=${STALE_OWNER_COMMIT}#${STALE_OWNER_COMMIT}" }\n`,
+  );
+  write(
+    path.join(redcubeRepo, 'packages/redcube-gateway/package.json'),
+    `{"dependencies":{"opl-gateway-shared":"git+https://github.com/gaofeng21cn/one-person-lab.git#${STALE_OWNER_COMMIT}"}}\n`,
+  );
+  write(
+    path.join(redcubeRepo, 'package-lock.json'),
+    `{"packages":{"packages/redcube-gateway":{"dependencies":{"opl-gateway-shared":"git+https://github.com/gaofeng21cn/one-person-lab.git#${STALE_OWNER_COMMIT}"}}}}\n`,
+  );
+
+  const result = runFamilySharedReleaseCli([
+    'release',
+    '--family-root', familyRoot,
+    '--owner-commit', nextOwnerCommit,
+    '--repo', `medautoscience=${scienceRepo}`,
+    '--repo', `medautogrant=${grantRepo}`,
+    '--repo', `redcube=${redcubeRepo}`,
+  ], { repoRoot: ownerRepoRoot });
+
+  const releasedContract = loadSharedOwnerReleaseContract({ repoRoot: ownerRepoRoot });
+
+  assert.equal(result.exit_code, 0);
+  assert.match(result.stdout, new RegExp(`released owner commit: ${nextOwnerCommit}`));
+  assert.equal(releasedContract.owner_commit, nextOwnerCommit);
+  assert.equal(
+    releasedContract.packages?.python?.git_locator,
+    `git+https://github.com/gaofeng21cn/one-person-lab.git@${nextOwnerCommit}#subdirectory=python/opl-harness-shared`,
+  );
+  assert.equal(
+    releasedContract.packages?.js?.git_locator,
+    `git+https://github.com/gaofeng21cn/one-person-lab.git#${nextOwnerCommit}`,
+  );
+  assert.match(result.stdout, /\[medautoscience\] synced/);
+  assert.match(result.stdout, /\[medautogrant\] synced/);
+  assert.match(result.stdout, /\[redcube\] synced/);
+  assert.match(result.stdout, new RegExp(nextOwnerCommit));
+});
+
 test('family shared release stays on contract and script surfaces while public status stays clean', () => {
   const statusDoc = fs.readFileSync(path.join(repoRoot, 'docs/status.md'), 'utf8');
 
