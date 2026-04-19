@@ -4,13 +4,13 @@ export type FrontDeskEndpoints = {
   frontdesk_entry_guide: string;
   frontdesk_readiness: string;
   frontdesk_settings: string;
-  frontdesk_librechat_status: string;
-  frontdesk_librechat_title_sync: string;
+  frontdesk_environment: string;
+  frontdesk_modules: string;
+  frontdesk_module_action: string;
   project_progress: string;
   domain_manifests: string;
   hosted_bundle: string;
   hosted_package: string;
-  librechat_package: string;
   projects: string;
   workspace_status: string;
   workspace_catalog: string;
@@ -52,13 +52,13 @@ export function buildFrontDeskEndpoints(basePath = ''): FrontDeskEndpoints {
     frontdesk_entry_guide: `${apiBase}/frontdesk/entry-guide`,
     frontdesk_readiness: `${apiBase}/frontdesk/readiness`,
     frontdesk_settings: `${apiBase}/frontdesk/settings`,
-    frontdesk_librechat_status: `${apiBase}/frontdesk/librechat/status`,
-    frontdesk_librechat_title_sync: `${apiBase}/frontdesk/librechat/title-sync`,
+    frontdesk_environment: `${apiBase}/frontdesk/environment`,
+    frontdesk_modules: `${apiBase}/frontdesk/modules`,
+    frontdesk_module_action: `${apiBase}/frontdesk/module/action`,
     project_progress: `${apiBase}/project-progress`,
     domain_manifests: `${apiBase}/domain/manifests`,
     hosted_bundle: `${apiBase}/frontdesk/hosted-bundle`,
     hosted_package: `${apiBase}/frontdesk/hosted-package`,
-    librechat_package: `${apiBase}/frontdesk/librechat/package`,
     projects: `${apiBase}/projects`,
     workspace_status: `${apiBase}/status/workspace`,
     workspace_catalog: `${apiBase}/workspace/list`,

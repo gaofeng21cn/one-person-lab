@@ -11,11 +11,28 @@
 ## 当前默认入口
 
 - 当前默认入口是 `GUI 产品壳 -> 工作模式选择 -> Codex 对话 / Codex 任务 / 专用 domain agent`。
-- CLI 前门保持在 `opl`、`opl "<request...>"`、`opl start --project <project_id> [--mode <mode_id>]`、`opl doctor`、`opl ask`、`opl chat` 与 `opl web`。
-- `opl frontdesk bootstrap --path <workspace>` 负责准备本地 `OPL Atlas` Desktop 壳，并把当前 workspace 接入 `OPL` 模块与项目 registry。
-- 家族级入口继续分成 `operator entry`、`agent entry`、`product entry` 三层。
-- 家族默认执行器保持 `Codex CLI autonomous`；`Hermes-native` 继续作为实验路线。
-- optional hosted-shell compatibility commands 继续留在 command-scoped hidden surface，默认公开入口保持 GUI / Desktop 主路径。
+- 当前产品入口真相：`OPL` 已经落下本地 direct product-entry shell，默认前门是 `opl`。
+- `Hermes Kernel Integration` 的冻结选择是 `external kernel, managed by OPL product packaging`。
+- 这条产品入口路径把用户留在 `OPL` 壳里，不要求用户先手工安装并理解 `Hermes-Agent`。
+- 家族级入口真相继续分成 `operator entry`、`agent entry`、`product entry` 三层。
+- 家族默认执行器继续冻结在 `Codex CLI autonomous`，沿用本地 `Codex` 默认配置。
+- `Hermes-native` 继续只作为实验路线存在，目标是完整的 Hermes AIAgent agent loop，不是一条 chat relay，也不是一步一步 chat。
+- `opl frontdesk bootstrap --path <workspace>` 准备本地 `OPL Atlas` Desktop 壳，并把当前 workspace 接入 `OPL` 模块与项目 registry。
+- `opl web` 是同一产品壳的本地浏览器 companion surface。
+- `opl frontdesk environment`、`opl frontdesk modules` 与 `opl frontdesk module install|update|reinstall|remove` 负责环境与模块管理。
+- `opl`、`opl "<request...>"`、`opl start --project <project_id> [--mode <mode_id>]`、`opl doctor`、`opl ask`、`opl chat` 与 `opl web` 共同组成当前顶层产品前门。
+- `opl ask` 默认走 `Codex`；`opl chat`、`opl session resume`、显式 executor 配置和 GUI 模式切换可以进入 `Hermes-Agent` 备用在线路径。
+- 当前 grouped command matrix 已经固定成：
+  - `contract ...`：`validate|workstreams|workstream|domains|domain|surfaces|surface|handoff-envelope`
+  - `domain ...`：`manifests|launch|resolve-request|explain-boundary`
+  - `status ...`：`workspace|runtime|dashboard`
+  - `workspace ...`：`projects|list|bind|activate|archive`
+  - `frontdesk ...`：`manifest|entry-guide|readiness|environment|modules|module *|domain-wiring|hosted-bundle|hosted-package|service *|bootstrap`
+  - `session ...`：`list|resume|logs|ledger`
+- `runtime repair-gateway`
+- GUI 的任务边栏应把 progress 状态和 files 交付区投射到当前 workspace。
+- `opl <request...>` 继续作为同一入口之上的 quick ask 路径。
+- 本地 web front desk pilot 已经落地；当前 GUI 主线冻结为 `Onyx-style Desktop shell + OPL web companion`，hosted / web 路线继续围绕 `OPL` 自有 truth surfaces 推进。
 
 ## GUI 工作模式
 

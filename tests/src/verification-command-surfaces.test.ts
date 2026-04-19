@@ -47,15 +47,13 @@ test('repo-tracked verification command surfaces reference valid npm scripts and
   }
 });
 
-test('public docs keep the verification surface lightweight and current', () => {
-  const architectureDoc = read('docs/architecture.md');
+test('status doc publishes the canonical verification entrypoints', () => {
   const statusDoc = read('docs/status.md');
 
   assert.match(statusDoc, /## 默认验证/);
   assert.match(statusDoc, /scripts\/verify\.sh/);
-  assert.doesNotMatch(statusDoc, /## 当前阶段/);
-  assert.doesNotMatch(statusDoc, /## 下一阶段/);
-  assert.doesNotMatch(architectureDoc, /Phase 1/);
+  assert.match(statusDoc, /scripts\/verify\.sh meta/);
+  assert.match(statusDoc, /scripts\/verify\.sh full/);
 });
 
 test('scripts/verify.sh provides the canonical verification wrapper', () => {

@@ -23,9 +23,10 @@ export type FrontDeskDesktopPackageOptions = {
 export type FrontDeskDesktopPackageAssets = {
   package_root: string;
   package_json: string;
-  main_script: string;
-  preload_script: string;
-  renderer_html: string;
+  src_index_html: string;
+  cargo_toml: string;
+  tauri_config: string;
+  tauri_main: string;
   readme: string;
   config_file: string;
 };
@@ -48,14 +49,17 @@ function buildPackageJson() {
     name: 'opl-atlas-desktop',
     version: '0.1.0',
     private: true,
-    type: 'module',
-    main: 'main.js',
+    description: 'OPL desktop shell powered by an Onyx-style Tauri wrapper.',
     scripts: {
-      start: 'electron .',
-      dev: 'electron .',
+      dev: 'tauri dev',
+      build: 'tauri build',
+      'build:dmg': 'tauri build --target universal-apple-darwin',
+    },
+    dependencies: {
+      '@tauri-apps/api': '^2.10.1',
     },
     devDependencies: {
-      electron: '^41.0.0',
+      '@tauri-apps/cli': '^2.10.1',
     },
   }, null, 2)}\n`;
 }
@@ -65,9 +69,13 @@ function buildDesktopConfig(options: FrontDeskDesktopPackageOptions) {
 
   return `${JSON.stringify({
     version: 'g2',
-    shell_kind: 'electron_desktop_shell',
+    shell_kind: 'tauri_onyx_desktop_shell',
+    shell_upstream: 'onyx_foss_desktop',
+    desktop_runtime: 'tauri',
     app_title: options.appTitle,
+    window_title: options.appTitle,
     model_display_label: options.modelDisplayLabel,
+    server_url: options.frontdeskUrl,
     frontdesk_url: options.frontdeskUrl,
     api_base_url: options.apiBaseUrl,
     health_url: healthUrl,
@@ -86,99 +94,7 @@ function buildDesktopConfig(options: FrontDeskDesktopPackageOptions) {
   }, null, 2)}\n`;
 }
 
-function buildMainScript() {
-  return `import { app, BrowserWindow, ipcMain } from 'electron';
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const configPath = path.join(__dirname, 'config', 'desktop-config.json');
-const fallbackHtml = path.join(__dirname, 'renderer', 'index.html');
-
-function readConfig() {
-  return JSON.parse(fs.readFileSync(configPath, 'utf8'));
-}
-
-let mainWindow = null;
-
-async function showFrontdesk(window) {
-  const config = readConfig();
-
-  try {
-    const health = await fetch(config.health_url);
-    if (health.ok) {
-      await window.loadURL(config.frontdesk_url);
-      return { loaded: 'frontdesk' };
-    }
-  } catch {
-    // Fall through to local fallback page.
-  }
-
-  await window.loadFile(fallbackHtml);
-  return { loaded: 'fallback' };
-}
-
-async function createWindow() {
-  const config = readConfig();
-  const window = new BrowserWindow({
-    width: 1540,
-    height: 980,
-    minWidth: 1200,
-    minHeight: 760,
-    title: config.app_title,
-    backgroundColor: '#f6f2ea',
-    autoHideMenuBar: true,
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      sandbox: false,
-    },
-  });
-
-  mainWindow = window;
-  await showFrontdesk(window);
-}
-
-app.whenReady().then(async () => {
-  ipcMain.handle('opl-atlas:get-config', () => readConfig());
-  ipcMain.handle('opl-atlas:retry-frontdesk', async () => {
-    if (!mainWindow) {
-      return { ok: false };
-    }
-
-    return await showFrontdesk(mainWindow);
-  });
-
-  await createWindow();
-
-  app.on('activate', async () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      await createWindow();
-    }
-  });
-});
-
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
-});
-`;
-}
-
-function buildPreloadScript() {
-  return `import { contextBridge, ipcRenderer } from 'electron';
-
-contextBridge.exposeInMainWorld('oplAtlasDesktop', {
-  getConfig: () => ipcRenderer.invoke('opl-atlas:get-config'),
-  retryFrontdesk: () => ipcRenderer.invoke('opl-atlas:retry-frontdesk'),
-});
-`;
-}
-
-function buildRendererHtml() {
+function buildIndexHtml() {
   return `<!doctype html>
 <html lang="zh-CN">
   <head>
@@ -188,13 +104,13 @@ function buildRendererHtml() {
     <style>
       :root {
         color-scheme: light;
-        --bg: #f6f2ea;
-        --panel: rgba(255, 252, 247, 0.92);
-        --line: rgba(103, 89, 72, 0.18);
-        --text: #2e261d;
-        --muted: #6e6256;
-        --accent: #b45a2a;
-        --accent-soft: rgba(180, 90, 42, 0.12);
+        --bg: #f7f7f4;
+        --panel: rgba(255, 255, 255, 0.88);
+        --line: rgba(20, 26, 39, 0.08);
+        --text: #111827;
+        --muted: #5b6474;
+        --accent: #111827;
+        --soft: rgba(17, 24, 39, 0.06);
       }
 
       * {
@@ -207,24 +123,26 @@ function buildRendererHtml() {
         font-family: "SF Pro Text", "PingFang SC", sans-serif;
         color: var(--text);
         background:
-          radial-gradient(circle at top left, rgba(217, 148, 112, 0.16), transparent 34%),
-          linear-gradient(180deg, #f8f4ec 0%, var(--bg) 100%);
+          radial-gradient(circle at top left, rgba(202, 214, 255, 0.35), transparent 28%),
+          radial-gradient(circle at bottom right, rgba(212, 243, 225, 0.28), transparent 30%),
+          var(--bg);
       }
 
-      .shell {
+      main {
         min-height: 100vh;
         display: grid;
         place-items: center;
-        padding: 40px;
+        padding: 32px;
       }
 
       .panel {
         width: min(760px, 100%);
-        background: var(--panel);
-        border: 1px solid var(--line);
-        border-radius: 24px;
         padding: 28px;
-        box-shadow: 0 20px 50px rgba(60, 38, 18, 0.08);
+        border-radius: 28px;
+        border: 1px solid var(--line);
+        background: var(--panel);
+        backdrop-filter: blur(18px);
+        box-shadow: 0 24px 70px rgba(15, 23, 42, 0.08);
       }
 
       .eyebrow {
@@ -232,44 +150,45 @@ function buildRendererHtml() {
         align-items: center;
         gap: 8px;
         border-radius: 999px;
-        background: var(--accent-soft);
-        color: var(--accent);
         padding: 8px 12px;
-        font-size: 13px;
+        background: var(--soft);
+        color: var(--muted);
+        font-size: 12px;
         font-weight: 700;
-        letter-spacing: 0.02em;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
       }
 
       h1 {
-        margin: 18px 0 12px;
+        margin: 16px 0 10px;
         font-size: 34px;
-        line-height: 1.1;
+        line-height: 1.08;
       }
 
       p {
         margin: 0;
         color: var(--muted);
-        line-height: 1.65;
+        line-height: 1.68;
       }
 
       .grid {
         display: grid;
-        gap: 14px;
+        gap: 12px;
         margin-top: 24px;
       }
 
       .card {
-        padding: 16px 18px;
+        padding: 14px 16px;
         border-radius: 18px;
         border: 1px solid var(--line);
-        background: rgba(255, 255, 255, 0.72);
+        background: rgba(255, 255, 255, 0.92);
       }
 
       .label {
         font-size: 12px;
-        color: var(--muted);
         text-transform: uppercase;
         letter-spacing: 0.08em;
+        color: var(--muted);
       }
 
       .value {
@@ -277,118 +196,161 @@ function buildRendererHtml() {
         font-size: 15px;
         word-break: break-word;
       }
-
-      .actions {
-        display: flex;
-        gap: 12px;
-        margin-top: 24px;
-      }
-
-      button {
-        border: 0;
-        border-radius: 14px;
-        padding: 12px 16px;
-        font: inherit;
-        cursor: pointer;
-      }
-
-      .primary {
-        background: var(--accent);
-        color: white;
-      }
-
-      .ghost {
-        background: rgba(255, 255, 255, 0.68);
-        color: var(--text);
-        border: 1px solid var(--line);
-      }
     </style>
   </head>
   <body>
-    <main class="shell">
+    <main>
       <section class="panel">
-        <div class="eyebrow">OPL Atlas Desktop</div>
-        <h1>本机 Front Desk 正在准备中</h1>
-        <p>
-          OPL Atlas 会优先连接本机 frontdesk service。只要本地 service 就绪，窗口会切回真正的
-          workspace-first 前台。
-        </p>
-        <div class="grid" id="meta"></div>
-        <div class="actions">
-          <button class="primary" id="retry">重新连接 Front Desk</button>
-          <button class="ghost" id="copy">复制启动信息</button>
+        <div class="eyebrow">Onyx Desktop Shell</div>
+        <h1>OPL 本机前台正在连接</h1>
+        <p>这个桌面壳会优先连接本机 OPL Front Desk，等本地服务就绪后直接载入 workspace-first 工作台。</p>
+        <div class="grid">
+          <div class="card">
+            <div class="label">Status</div>
+            <div class="value">Waiting for the local OPL front desk service.</div>
+          </div>
         </div>
       </section>
     </main>
-    <script type="module">
-      const meta = document.getElementById('meta');
-      const retry = document.getElementById('retry');
-      const copy = document.getElementById('copy');
-
-      async function render() {
-        const config = await window.oplAtlasDesktop.getConfig();
-        const entries = [
-          ['Workspace', config.workspace_path],
-          ['Front Desk URL', config.frontdesk_url],
-          ['API Base', config.api_base_url],
-          ['Project', config.active_project_label || 'Unbound workspace'],
-          ['Interaction Mode', config.interaction_mode],
-          ['Execution Mode', config.execution_mode],
-          ['Agent', \`\${config.model_display_label} / \${config.codex.model}\`],
-        ];
-
-        meta.innerHTML = entries.map(([label, value]) => \`
-          <div class="card">
-            <div class="label">\${label}</div>
-            <div class="value">\${value}</div>
-          </div>
-        \`).join('');
-
-        retry.onclick = async () => {
-          await window.oplAtlasDesktop.retryFrontdesk();
-        };
-
-        copy.onclick = async () => {
-          const text = [
-            \`Workspace: \${config.workspace_path}\`,
-            \`Project: \${config.active_project_label || 'Unbound workspace'}\`,
-            \`Interaction Mode: \${config.interaction_mode}\`,
-            \`Execution Mode: \${config.execution_mode}\`,
-            \`Front Desk URL: \${config.frontdesk_url}\`,
-            \`API Base: \${config.api_base_url}\`,
-          ].join('\\n');
-          await navigator.clipboard.writeText(text);
-        };
-      }
-
-      render();
-    </script>
   </body>
 </html>
+`;
+}
+
+function buildCargoToml() {
+  return `[package]
+name = "opl-atlas-desktop"
+version = "0.1.0"
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = { version = "2.0", features = ["macos-private-api"] }
+tauri-plugin-shell = "2.0"
+`;
+}
+
+function buildTauriConfig() {
+  return `${JSON.stringify({
+    $schema: 'https://schema.tauri.app/config/2.0.0',
+    productName: 'OPL Atlas',
+    version: '0.1.0',
+    identifier: 'app.opl.desktop',
+    build: {
+      beforeBuildCommand: '',
+      beforeDevCommand: '',
+      frontendDist: '../src',
+    },
+    app: {
+      withGlobalTauri: true,
+      windows: [
+        {
+          title: 'OPL Atlas',
+          label: 'main',
+          url: 'index.html',
+          width: 1400,
+          height: 920,
+          minWidth: 1100,
+          minHeight: 720,
+          resizable: true,
+          decorations: true,
+          transparent: true,
+          backgroundColor: '#f7f7f4',
+          titleBarStyle: 'Overlay',
+          hiddenTitle: true,
+          acceptFirstMouse: true,
+          tabbingIdentifier: 'opl-atlas',
+        },
+      ],
+      security: {
+        csp: null,
+      },
+      macOSPrivateApi: true,
+    },
+    bundle: {
+      active: false,
+      targets: 'all',
+      category: 'Productivity',
+      shortDescription: 'OPL desktop shell',
+      longDescription: 'An Onyx-style Tauri desktop shell for OPL.',
+      macOS: {
+        minimumSystemVersion: '10.15',
+      },
+    },
+    plugins: {
+      shell: {
+        open: true,
+      },
+    },
+  }, null, 2)}\n`;
+}
+
+function buildTauriMain() {
+  return `use serde::{Deserialize, Serialize};
+use std::fs;
+use std::path::PathBuf;
+use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct DesktopConfig {
+    server_url: String,
+    health_url: String,
+}
+
+fn config_path(app: &tauri::AppHandle) -> PathBuf {
+    app.path()
+        .app_config_dir()
+        .expect("config dir")
+        .join("desktop-config.json")
+}
+
+fn read_config(app: &tauri::AppHandle) -> DesktopConfig {
+    let path = config_path(app);
+    let raw = fs::read_to_string(path).expect("read config");
+    serde_json::from_str(&raw).expect("parse config")
+}
+
+fn main() {
+    tauri::Builder::default()
+        .plugin(tauri_plugin_shell::init())
+        .setup(|app| {
+            let config = read_config(&app.handle());
+            let main_window = app.get_webview_window("main").expect("main window");
+
+            if main_window.navigate(WebviewUrl::External(config.server_url.parse().expect("server url"))).is_err() {
+                let _ = main_window.navigate(WebviewUrl::App("index.html".into()));
+            }
+
+            Ok(())
+        })
+        .run(tauri::generate_context!())
+        .expect("run tauri");
+}
 `;
 }
 
 function buildReadme(options: FrontDeskDesktopPackageOptions, launchCommand: string) {
   return `# OPL Atlas Desktop
 
-This package is the local desktop-first front door for OPL.
+This package is the local Onyx Desktop Shell for OPL.
 
-- Desktop shell: Electron
+- Desktop shell: Onyx Desktop Shell
+- Runtime: Tauri
 - Routed gateway: OPL Front Desk at ${options.frontdeskUrl}
 - Active workspace: ${options.workspacePath}
 - Active project: ${options.activeProjectLabel ?? 'Unbound workspace'}
 - Interaction mode: ${options.runtimeModes.interaction_mode}
 - Execution mode: ${options.runtimeModes.execution_mode}
 
-LibreChat has moved to an optional lane:
-
-- default local path: \`opl frontdesk bootstrap\`
-- optional Docker lane: \`opl frontdesk-librechat-install\`
-
 ## Launch
 
 1. Ensure the local frontdesk service is installed and running.
-2. From this directory, run:
+2. Ensure Rust and the Tauri toolchain are available on this Mac.
+3. From this directory, run:
 
 \`\`\`bash
 ${launchCommand}
@@ -396,13 +358,13 @@ ${launchCommand}
 
 ## Notes
 
-- This shell reuses the existing OPL web front desk as its truth surface.
-- The Docker-based LibreChat shell remains available only for optional hosted or compatibility flows.
+- This shell follows the Onyx desktop wrapper shape and keeps OPL as the headless truth surface.
+- The window will load the local OPL front desk URL first, then fall back to the bundled splash page when the service is unavailable.
 `;
 }
 
 export function buildFrontDeskDesktopLaunchCommand(packageRoot: string) {
-  return `cd ${shellSingleQuote(packageRoot)} && npm install && npx electron .`;
+  return `cd ${shellSingleQuote(packageRoot)} && npm install && npx tauri dev`;
 }
 
 export function buildFrontDeskDesktopPackage(options: FrontDeskDesktopPackageOptions) {
@@ -418,17 +380,19 @@ export function buildFrontDeskDesktopPackage(options: FrontDeskDesktopPackageOpt
   ensureDirectory(outputDir);
 
   const packageJsonPath = path.join(outputDir, 'package.json');
-  const mainScriptPath = path.join(outputDir, 'main.js');
-  const preloadScriptPath = path.join(outputDir, 'preload.js');
-  const rendererHtmlPath = path.join(outputDir, 'renderer', 'index.html');
+  const srcIndexHtmlPath = path.join(outputDir, 'src', 'index.html');
+  const cargoTomlPath = path.join(outputDir, 'src-tauri', 'Cargo.toml');
+  const tauriConfigPath = path.join(outputDir, 'src-tauri', 'tauri.conf.json');
+  const tauriMainPath = path.join(outputDir, 'src-tauri', 'src', 'main.rs');
   const readmePath = path.join(outputDir, 'README.md');
   const configPath = path.resolve(options.configFile);
   const launchCommand = buildFrontDeskDesktopLaunchCommand(outputDir);
 
   writeFile(packageJsonPath, buildPackageJson());
-  writeFile(mainScriptPath, buildMainScript());
-  writeFile(preloadScriptPath, buildPreloadScript());
-  writeFile(rendererHtmlPath, buildRendererHtml());
+  writeFile(srcIndexHtmlPath, buildIndexHtml());
+  writeFile(cargoTomlPath, buildCargoToml());
+  writeFile(tauriConfigPath, buildTauriConfig());
+  writeFile(tauriMainPath, buildTauriMain());
   writeFile(configPath, buildDesktopConfig(options));
   writeFile(readmePath, buildReadme(options, launchCommand));
 
@@ -437,9 +401,10 @@ export function buildFrontDeskDesktopPackage(options: FrontDeskDesktopPackageOpt
     assets: {
       package_root: outputDir,
       package_json: packageJsonPath,
-      main_script: mainScriptPath,
-      preload_script: preloadScriptPath,
-      renderer_html: rendererHtmlPath,
+      src_index_html: srcIndexHtmlPath,
+      cargo_toml: cargoTomlPath,
+      tauri_config: tauriConfigPath,
+      tauri_main: tauriMainPath,
       readme: readmePath,
       config_file: configPath,
     } satisfies FrontDeskDesktopPackageAssets,

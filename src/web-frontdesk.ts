@@ -1,9 +1,13 @@
-import { spawn } from 'node:child_process';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
-import { fileURLToPath } from 'node:url';
 
 import { GatewayContractError } from './contracts.ts';
-import { inferFrontDeskWorkspaceLabel } from './frontdesk-librechat-identity.ts';
+import {
+  buildFrontDeskEnvironment,
+  buildFrontDeskModules,
+  runFrontDeskModuleAction,
+  type FrontDeskModuleAction,
+} from './frontdesk-installation.ts';
+import { inferFrontDeskWorkspaceLabel } from './frontdesk-shell-identity.ts';
 import {
   buildFrontDeskEndpoints,
   buildFrontDeskEntryUrl,
@@ -26,17 +30,12 @@ import {
 import { buildDomainManifestCatalog } from './domain-manifest.ts';
 import { launchDomainEntry, type DomainLaunchStrategy } from './domain-launch.ts';
 import {
-  readFrontDeskLibreChatTitleSyncConfig,
-} from './frontdesk-librechat-title-sync.ts';
-import { getFrontDeskLibreChatServiceStatus } from './frontdesk-librechat-service.ts';
-import {
   readFrontDeskRuntimeModes,
   writeFrontDeskRuntimeModes,
   type FrontDeskAgentMode,
   type FrontDeskRuntimeModes,
 } from './frontdesk-runtime-modes.ts';
 import { buildHostedPilotPackage } from './hosted-pilot-package.ts';
-import { buildLibreChatPilotPackage } from './librechat-pilot-package.ts';
 import { readFrontDeskTaskStatus, submitFrontDeskAskTask } from './frontdesk-task-store.ts';
 import {
   buildProductEntryHandoffEnvelope,
@@ -95,13 +94,15 @@ type FrontDeskSettingsRequestBody = Partial<{
   execution_mode: FrontDeskAgentMode;
 }>;
 
+type FrontDeskModuleActionRequestBody = Partial<{
+  action: FrontDeskModuleAction | string;
+  moduleId: string;
+  module_id: string;
+}>;
+
 type ResumeRequestBody = Partial<{
   sessionId: string;
   session_id: string;
-}>;
-
-type TitleSyncRequestBody = Partial<{
-  limit: number | string;
 }>;
 
 type LaunchDomainRequestBody = Partial<{
@@ -173,6 +174,9 @@ type WebFrontDeskStartupPayload = {
       frontdesk_entry_guide: string;
       frontdesk_readiness: string;
       frontdesk_settings: string;
+      frontdesk_environment: string;
+      frontdesk_modules: string;
+      frontdesk_module_action: string;
       project_progress: string;
       frontdesk_domain_wiring: string;
       domain_manifests: string;
@@ -233,22 +237,6 @@ type WebFrontDeskContext = {
 };
 
 type RecommendedEntrySurface = Record<string, unknown>;
-
-const FRONTDESK_LIBRECHAT_TITLE_SYNC_COOLDOWN_MS = 15_000;
-
-const frontDeskLibreChatTitleSyncState: {
-  inFlight: boolean;
-  lastStartedAt: number;
-  lastCompletedAt: number;
-  lastResult: Record<string, unknown> | null;
-  lastError: string | null;
-} = {
-  inFlight: false,
-  lastStartedAt: 0,
-  lastCompletedAt: 0,
-  lastResult: null,
-  lastError: null,
-};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -661,6 +649,9 @@ function buildStartupPayload(context: WebFrontDeskContext): WebFrontDeskStartupP
         frontdesk_entry_guide: endpoints.frontdesk_entry_guide,
         frontdesk_readiness: endpoints.frontdesk_readiness,
         frontdesk_settings: endpoints.frontdesk_settings,
+        frontdesk_environment: endpoints.frontdesk_environment,
+        frontdesk_modules: endpoints.frontdesk_modules,
+        frontdesk_module_action: endpoints.frontdesk_module_action,
         project_progress: endpoints.project_progress,
         frontdesk_domain_wiring: endpoints.frontdesk_domain_wiring,
         domain_manifests: endpoints.domain_manifests,
@@ -692,111 +683,47 @@ function buildStartupPayload(context: WebFrontDeskContext): WebFrontDeskStartupP
       },
       notes: [
         'This is a local web companion layered above the existing OPL CLI and desktop entry surfaces.',
-        'Optional hosted-shell compatibility commands remain available outside the default startup payload and front-page control room.',
+        'Environment status and domain module management are exposed as API surfaces for the desktop shell settings experience.',
         'Managed hosted runtime ownership is still not landed.',
       ],
     },
   };
 }
 
-async function queueFrontDeskLibreChatTitleSync(limit = 3) {
-  const now = Date.now();
-  if (frontDeskLibreChatTitleSyncState.inFlight) {
-    return {
-      status: 'in_progress',
-      limit,
-      last_completed_at: frontDeskLibreChatTitleSyncState.lastCompletedAt || null,
-      last_result: frontDeskLibreChatTitleSyncState.lastResult,
-      last_error: frontDeskLibreChatTitleSyncState.lastError,
-    };
+function normalizeFrontDeskModuleActionInput(body: FrontDeskModuleActionRequestBody) {
+  const action = typeof body.action === 'string' ? body.action.trim() : '';
+  const moduleId =
+    typeof body.module_id === 'string' && body.module_id.trim().length > 0
+      ? body.module_id.trim()
+      : typeof body.moduleId === 'string' && body.moduleId.trim().length > 0
+        ? body.moduleId.trim()
+        : '';
+
+  if (!action || !['install', 'update', 'reinstall', 'remove'].includes(action)) {
+    throw new GatewayContractError(
+      'cli_usage_error',
+      'frontdesk module action requires action=install|update|reinstall|remove.',
+      {
+        action: body.action ?? null,
+      },
+      2,
+    );
   }
 
-  if (
-    frontDeskLibreChatTitleSyncState.lastStartedAt > 0
-    && now - frontDeskLibreChatTitleSyncState.lastStartedAt < FRONTDESK_LIBRECHAT_TITLE_SYNC_COOLDOWN_MS
-  ) {
-    return {
-      status: 'cooldown',
-      limit,
-      last_completed_at: frontDeskLibreChatTitleSyncState.lastCompletedAt || null,
-      last_result: frontDeskLibreChatTitleSyncState.lastResult,
-      last_error: frontDeskLibreChatTitleSyncState.lastError,
-    };
+  if (!moduleId) {
+    throw new GatewayContractError(
+      'cli_usage_error',
+      'frontdesk module action requires module_id.',
+      {
+        module_id: body.module_id ?? body.moduleId ?? null,
+      },
+      2,
+    );
   }
-
-  let config;
-  try {
-    config = readFrontDeskLibreChatTitleSyncConfig();
-  } catch (error) {
-    return {
-      status: 'unavailable',
-      limit,
-      last_completed_at: frontDeskLibreChatTitleSyncState.lastCompletedAt || null,
-      last_result: frontDeskLibreChatTitleSyncState.lastResult,
-      last_error: error instanceof Error ? error.message : 'Unknown title sync availability failure.',
-    };
-  }
-
-  frontDeskLibreChatTitleSyncState.inFlight = true;
-  frontDeskLibreChatTitleSyncState.lastStartedAt = now;
-  frontDeskLibreChatTitleSyncState.lastError = null;
-  const currentModulePath = fileURLToPath(import.meta.url);
-  const workerSuffix = currentModulePath.endsWith('.js') ? '.js' : '.ts';
-  const workerPath = fileURLToPath(new URL(`./frontdesk-librechat-title-sync-worker${workerSuffix}`, import.meta.url));
-  const child = spawn(
-    process.execPath,
-    [
-      ...process.execArgv,
-      workerPath,
-      '--limit',
-      String(limit),
-    ],
-    {
-      env: process.env,
-      stdio: ['ignore', 'pipe', 'pipe'],
-    },
-  );
-
-  let stdout = '';
-  let stderr = '';
-
-  child.stdout?.on('data', (chunk: Buffer | string) => {
-    stdout += chunk.toString();
-  });
-  child.stderr?.on('data', (chunk: Buffer | string) => {
-    stderr += chunk.toString();
-  });
-
-  child.once('error', (error) => {
-    frontDeskLibreChatTitleSyncState.lastError = error.message;
-    frontDeskLibreChatTitleSyncState.inFlight = false;
-    frontDeskLibreChatTitleSyncState.lastCompletedAt = Date.now();
-  });
-
-  child.once('close', (code) => {
-    if (code === 0) {
-      try {
-        frontDeskLibreChatTitleSyncState.lastResult = JSON.parse(stdout.trim()) as Record<string, unknown>;
-        frontDeskLibreChatTitleSyncState.lastError = null;
-      } catch (error) {
-        frontDeskLibreChatTitleSyncState.lastError =
-          error instanceof Error ? error.message : 'Failed to parse title sync worker output.';
-      }
-    } else {
-      frontDeskLibreChatTitleSyncState.lastError =
-        stderr.trim() || stdout.trim() || `Title sync worker exited with code ${code ?? 1}.`;
-    }
-
-    frontDeskLibreChatTitleSyncState.inFlight = false;
-    frontDeskLibreChatTitleSyncState.lastCompletedAt = Date.now();
-  });
 
   return {
-    status: 'started',
-    limit,
-    last_completed_at: frontDeskLibreChatTitleSyncState.lastCompletedAt || null,
-    last_result: frontDeskLibreChatTitleSyncState.lastResult,
-    last_error: frontDeskLibreChatTitleSyncState.lastError,
+    action: action as FrontDeskModuleAction,
+    moduleId,
   };
 }
 
@@ -818,7 +745,6 @@ function escapeHtml(value: string) {
 
 async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
   const bootstrap = buildStartupPayload(context);
-  const libreChatStatusPayload = (await getFrontDeskLibreChatServiceStatus(context.contracts)).frontdesk_librechat;
   const frontdeskDashboard = buildFrontDeskDashboard(context.contracts, {
     workspacePath: context.workspacePath,
     sessionsLimit: context.sessionsLimit,
@@ -918,18 +844,8 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
       ? progress.next_focus
       : 'Ask OPL Agent for the next study step.',
   );
-  const hostedShellSummary = escapeHtml([
-    libreChatStatusPayload.installed ? 'installed' : 'not installed',
-    libreChatStatusPayload.running ? 'running' : 'stopped',
-    typeof libreChatStatusPayload.identity?.sync_status === 'string'
-      ? `identity ${libreChatStatusPayload.identity.sync_status}`
-      : null,
-  ].filter(Boolean).join(' · '));
-  const hostedShellOrigin = escapeHtml(
-    typeof libreChatStatusPayload.public_origin === 'string'
-      ? libreChatStatusPayload.public_origin
-      : '当前还没有记录 hosted shell public origin。',
-  );
+  const hostedShellSummary = 'desktop lane active · opl front desk api ready';
+  const hostedShellOrigin = escapeHtml(context.entryUrl);
   const recentActivity = progress.recent_activity
     && typeof progress.recent_activity === 'object'
     && !Array.isArray(progress.recent_activity)
@@ -3482,8 +3398,8 @@ function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
           '<p><strong>Managed Hosted Runtime Landed:</strong> '
             + String(readiness.managed_hosted_runtime_landed)
             + '</p>',
-          '<p><strong>LibreChat Pilot Package Landed:</strong> '
-            + String(readiness.librechat_pilot_package_landed)
+          '<p><strong>Self-hostable Pilot Package Landed:</strong> '
+            + String(readiness.self_hostable_pilot_package_landed)
             + '</p>',
           gaps ? '<ul>' + gaps + '</ul>' : '<p>No blocking gaps reported.</p>',
         ].join('');
@@ -4527,18 +4443,20 @@ async function handleRequest(
       return;
     }
 
-    if (method === 'GET' && routedPath === '/api/frontdesk/librechat/status') {
-      writeJson(response, 200, await getFrontDeskLibreChatServiceStatus(context.contracts));
+    if (method === 'GET' && routedPath === '/api/frontdesk/environment') {
+      writeJson(response, 200, await buildFrontDeskEnvironment(context.contracts));
       return;
     }
 
-    if (method === 'POST' && routedPath === '/api/frontdesk/librechat/title-sync') {
-      const body = (await readJsonBody(request)) as TitleSyncRequestBody;
-      writeJson(response, 200, {
-        frontdesk_librechat_title_sync: await queueFrontDeskLibreChatTitleSync(
-          parsePositiveIntegerFromBody(body.limit, 'limit') ?? 3,
-        ),
-      });
+    if (method === 'GET' && routedPath === '/api/frontdesk/modules') {
+      writeJson(response, 200, buildFrontDeskModules());
+      return;
+    }
+
+    if (method === 'POST' && routedPath === '/api/frontdesk/module/action') {
+      const body = (await readJsonBody(request)) as FrontDeskModuleActionRequestBody;
+      const normalized = normalizeFrontDeskModuleActionInput(body);
+      writeJson(response, 200, runFrontDeskModuleAction(normalized.action, normalized.moduleId));
       return;
     }
 
@@ -4582,21 +4500,6 @@ async function handleRequest(
         response,
         200,
         buildHostedPilotPackage(context.contracts, {
-          ...normalizeHostedPackageInput((await readJsonBody(request)) as HostedPackageRequestBody),
-          host: context.host,
-          port: context.port,
-          basePath: context.basePath,
-          sessionsLimit: context.sessionsLimit,
-        }),
-      );
-      return;
-    }
-
-    if (method === 'POST' && routedPath === '/api/frontdesk/librechat/package') {
-      writeJson(
-        response,
-        200,
-        buildLibreChatPilotPackage(context.contracts, {
           ...normalizeHostedPackageInput((await readJsonBody(request)) as HostedPackageRequestBody),
           host: context.host,
           port: context.port,

@@ -24,7 +24,7 @@ What is already clear today:
 - the current active development host is Codex-only local sessions, while the preferred future product-runtime substrate direction remains a true upstream `Hermes-Agent` integration proved inside a domain repository first
 - `OPL` now has a local direct product-entry shell whose default front door is `opl`; `opl <request...>` acts as quick ask, while the landed grouped CLI matrix stays organized as `opl start|doctor|ask|chat|web`, `opl contract ...`, `opl domain ...`, `opl status ...`, `opl workspace ...`, `opl frontdesk ...`, `opl session ...`, and `opl runtime repair-gateway`
 - `OPL` also now has a landed local web front desk pilot, plus a writable workspace-registry surface, a managed session ledger, and a machine-readable family handoff bundle
-- the hosted / web front-desk benchmark is now frozen: `LibreChat-first` is the shortest pilot path, and the real hosted shell pilot package is now landed, while the long-line target remains an `OPL`-owned web front desk
+- the GUI baseline is now frozen as `Onyx-style Desktop shell + OPL web companion`, while the long-line target remains an `OPL`-owned hosted / web front desk backed by the same truth surfaces
 - the frozen top-level integration choice is `external kernel, managed by OPL product packaging`: do not fork `Hermes-Agent`, and do not make user-managed Hermes installation the product prerequisite
 - the ecosystem is no longer at one uniform `Hermes-Agent` stage: `Med Auto Grant` has landed a true upstream substrate and already carries the admitted `Grant Ops` domain entry, `Med Auto Science` has completed external runtime bring-up and is moving toward real adapter cutover, `RedCube AI` has converged route / managed execution onto local `Codex CLI` host-agent runtime while keeping repo-verified product-entry federation, and `OPL` itself still stays above domain runtime ownership
 - the current repository already has a runnable local `TypeScript CLI`-first / gateway contract baseline
@@ -62,7 +62,7 @@ The next phase should prioritize:
 - defining the next candidate domains through clear task boundaries and delivery objects, using the current `task-topology + candidate-domain-backlog + domain-onboarding` path
 - continuing to harden the already landed local product-entry shell so it stays service-safe, clearly separated from the gateway contract surface, and honest about external-kernel ownership
 - extending that landed local shell toward stronger `OPL bootstrap / launcher` responsibility so the future entry remains `OPL`-owned even when the runtime kernel stays external
-- carrying the hosted / web front-desk route as `LibreChat-first pilot -> OPL-owned web front desk` instead of treating a generic chat shell as the final product identity
+- carrying the hosted / web front-desk route as `OPL truth surfaces -> Onyx-style desktop shell today -> OPL-owned hosted front desk later`
 
 The `Phase 1` candidate-domain closeout order is frozen as:
 

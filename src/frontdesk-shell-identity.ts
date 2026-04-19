@@ -13,7 +13,7 @@ type FrontDeskWelcomeOptions = {
   activeProjectLabel?: string | null;
 };
 
-export function buildFrontDeskHostedShellMcpWiring() {
+export function buildFrontDeskShellMcpWiring() {
   return {
     surface_kind: 'opl_hosted_shell_mcp_wiring',
     binding_context: {
@@ -32,7 +32,6 @@ export function buildFrontDeskHostedShellMcpWiring() {
       sessions_tool_name: 'opl_session',
       resume_tool_name: 'opl_session',
       logs_tool_name: 'opl_session',
-      auto_title_sync_surface_id: 'opl_frontdesk_librechat_title_sync',
     },
     discovery_order: [
       'opl_project_progress',
@@ -59,7 +58,7 @@ export function inferFrontDeskWorkspaceLabel(options: {
   return segments.at(-1) ?? normalized;
 }
 
-export function buildFrontDeskLibreChatWelcome(options: FrontDeskWelcomeOptions) {
+export function buildFrontDeskShellWelcome(options: FrontDeskWelcomeOptions) {
   const workspaceLabel = inferFrontDeskWorkspaceLabel({
     workspacePath: options.workspacePath,
     fallbackLabel: options.activeProjectLabel,
