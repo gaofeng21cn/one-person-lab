@@ -178,7 +178,7 @@ The onboarding gate passes only when all of the following are true:
 11. The onboarding contract remains non-executing, does not auto-admit domains, and does not replace the prose review gate.
 12. The onboarding contract explicitly forbids “placeholder first, boundary later”.
 13. The onboarding contract explicitly forbids treating future domains as internal `OPL` modules.
-14. Signal-only scaffolds such as `Grant Foundry -> Med Auto Grant` do not satisfy admission, discovery readiness, routing readiness, or handoff readiness by themselves.
+14. Signal-only scaffolds for the remaining candidate workstreams do not satisfy admission, discovery readiness, routing readiness, or handoff readiness by themselves.
 
 ### Verification
 
@@ -619,14 +619,14 @@ The wording-consistency gate passes only when all of the following are true:
    - `cross_domain_wording_aligned`
 9. Every candidate entry keeps each `required_onboarding_materials` status at `missing` and each `formal_inclusion_gate` status at `blocked` until a real domain boundary package exists.
 10. No candidate entry invents an admitted domain, a non-null entry surface, or domain-truth ownership as if it were already frozen.
-11. `Grant Ops` remains proposal-facing: task-topology, task-map, and candidate-backlog wording keep proposal-side reviewer simulation and revision as author-side grant-authoring aids/artifacts rather than reviewer-role ownership or a standalone reviewer surface.
-12. If `Grant Foundry -> Med Auto Grant` appears in public wording, it is framed only as top-level signal / domain-direction evidence; it is not an admitted domain gateway and does not count as G2 discovery readiness, G3 routed-action readiness, or a handoff-ready surface.
+11. `Grant Ops` remains proposal-facing in task-topology and task-map wording, while the candidate-domain backlog excludes it because `MedAutoGrant` is already the admitted grant-domain gateway.
+12. If `Grant Foundry -> Med Auto Grant` appears in public wording, it is framed as the admitted `Grant Ops` domain gateway entry carried by `MedAutoGrant`.
 13. `Thesis Ops` stays below onboarding in both task-map and candidate-backlog wording; this wording does not create a `G2` discovery target or a `G3` routed-action target before domain-onboarding evidence exists.
 14. `Thesis Ops` wording keeps thesis assembly distinct from `Research Ops` manuscript/submission flow and from `Presentation Ops` / `RedCube AI` deck production; reusable inputs or downstream derivatives do not transfer the `Thesis Ops` boundary into those admitted surfaces.
 15. `Thesis Ops` also keeps `execution_model`, `discovery_readiness`, `routing_readiness`, and `cross_domain_wording` explicit as blocked packages across task-map / candidate-backlog / domain-onboarding wording, and any future successful target remains `domain_gateway`-only / no-bypass.
 16. `Review Ops` keeps reviewer-role work plus response/rebuttal coordination as one under-definition semantic bundle only; this wording does not by itself admit a review domain, transfer review-truth ownership into `OPL`, create a `G2` discovery target, or create a `G3` routed-action target.
 17. `Review Ops` also keeps `execution_model`, `discovery_readiness`, `routing_readiness`, and `cross_domain_wording` explicit as blocked packages across task-map / candidate-backlog / domain-onboarding wording, and any future successful target remains `domain_gateway`-only / no-bypass.
-18. No candidate entry or backlog rule collapses `Grant Ops`, `Thesis Ops`, or `Review Ops` into `MedAutoScience` or `RedCube AI`; both admitted domains remain independent gateway-and-harness surfaces.
+18. No candidate entry or backlog rule collapses `Thesis Ops` or `Review Ops` into `MedAutoScience`, `MedAutoGrant`, or `RedCube AI`; all admitted domains remain independent gateway-and-harness surfaces.
 19. No `required_evidence` or note text assigns future `domain_id`, `gateway_surface`, or `harness_surface` metadata before the boundary package exists.
 20. `contracts/opl-gateway/public-surface-index.json`, `surface-review-matrix.json`, `surface-lifecycle-map.json`, and `surface-authority-matrix.json` expose the candidate-domain backlog as a supporting/reference surface, with exactly one `opl_candidate_domain_backlog` entry in the public-surface index and exactly one review entry in the surface-review matrix.
 21. Contract README, task-map docs, domain-onboarding docs, public-surface index docs, review-matrix docs, lifecycle/authority docs, and acceptance surfaces describe the backlog as reference-only, non-executing, non-admitting, and below the onboarding gate.
@@ -637,14 +637,15 @@ The wording-consistency gate passes only when all of the following are true:
 - Confirm the exact workstream set above and the exact alignment with the under-definition entries in `task-topology.json`.
 - Confirm every candidate entry has the eight onboarding-material packages above, every `required_onboarding_materials` package remains `missing`, every `formal_inclusion_gate` check remains `blocked`, and all readiness flags remain `false`.
 - Confirm no candidate entry carries placeholder future `domain_id`, `gateway_surface`, or `harness_surface` fields.
-- Confirm `Grant Ops` remains proposal-facing across `task-topology`, `task-map`, and candidate-backlog wording, so proposal-side reviewer simulation/revision stays author-side and does not become reviewer-role ownership.
-- Confirm any `Grant Foundry -> Med Auto Grant` wording stays at top-level signal / domain-direction evidence and does not count as admission, `G2` discovery readiness, `G3` routed-action readiness, or a handoff-ready surface.
+- Confirm `Grant Ops` remains proposal-facing across `task-topology` and `task-map` wording, so proposal-side reviewer simulation/revision stays author-side and does not become reviewer-role ownership.
+- Confirm the candidate-domain backlog excludes `Grant Ops` because it already routes to the admitted `MedAutoGrant` domain gateway.
+- Confirm any `Grant Foundry -> Med Auto Grant` wording is framed as the admitted `Grant Ops` domain gateway entry carried by `MedAutoGrant`.
 - Confirm `Thesis Ops` stays below onboarding across `task-map` and candidate-backlog wording, so it does not become a `G2` discovery target or a `G3` routed-action target before its domain-onboarding evidence exists.
 - Confirm `Thesis Ops` remains distinct from `Research Ops` manuscript/submission flow and from `Presentation Ops` / `RedCube AI` deck production, so reusable inputs or downstream derivatives do not transfer the `Thesis Ops` boundary into those admitted surfaces.
 - Confirm `Thesis Ops` also keeps `execution_model`, `discovery_readiness`, `routing_readiness`, and `cross_domain_wording` explicit as blocked packages across task-map / candidate-backlog / domain-onboarding wording, and confirm any future successful target remains `domain_gateway`-only / no-bypass.
 - Confirm `Review Ops` stays an under-definition semantic bundle across `task-topology`, `task-map`, and candidate-backlog wording, so reviewer-role work plus response/rebuttal coordination does not become an admitted review domain, an OPL-owned review-truth surface, a `G2` discovery target, or a `G3` routed-action target.
 - Confirm `Review Ops` also keeps `execution_model`, `discovery_readiness`, `routing_readiness`, and `cross_domain_wording` explicit as blocked packages across task-map / candidate-backlog / domain-onboarding wording, and confirm any future successful target remains `domain_gateway`-only / no-bypass.
-- Confirm the backlog rules do not collapse candidate workstreams into `MedAutoScience` or `RedCube AI`, and therefore keep both admitted domains as independent gateway-and-harness surfaces.
+- Confirm the backlog rules do not collapse candidate workstreams into `MedAutoScience`, `MedAutoGrant`, or `RedCube AI`, and therefore keep all admitted domains as independent gateway-and-harness surfaces.
 - Confirm no field or linked prose turns the backlog into a domain registry, discovery registry, routed-action surface, handoff surface, approval engine, or publish controller.
 - Confirm `required_evidence` and note text do not pre-assign future `domain_id`, `gateway_surface`, or `harness_surface` metadata.
 - Confirm `opl_candidate_domain_backlog` resolves exactly once inside `public-surface-index.json` and `surface-review-matrix.json`, and resolves inside `surface-lifecycle-map.json` and `surface-authority-matrix.json`.
@@ -956,7 +957,7 @@ task_map_zh = Path('docs/task-map.zh-CN.md').read_text()
 backlog_doc_en = Path('docs/references/opl-candidate-domain-backlog.md').read_text()
 backlog_doc_zh = Path('docs/references/opl-candidate-domain-backlog.zh-CN.md').read_text()
 
-expected = {'grant_ops', 'thesis_ops', 'review_ops'}
+expected = {'thesis_ops', 'review_ops'}
 task_entries = {entry['workstream_id']: entry for entry in task['workstreams']}
 backlog_entries = {entry['workstream_id']: entry for entry in backlog['candidate_workstreams']}
 assert set(backlog_entries) == expected, (set(backlog_entries), expected)
@@ -981,7 +982,7 @@ required_checks = {
     'cross_domain_wording_aligned',
 }
 banned_future_metadata = {'domain_id', 'gateway_surface', 'harness_surface'}
-non_collapse_rule = 'entries do not fold candidate workstreams into MedAutoScience or RedCube AI; admitted domains remain independent gateway and harness surfaces'
+non_collapse_rule = 'entries do not fold candidate workstreams into MedAutoScience, MedAutoGrant, or RedCube AI; admitted domains remain independent gateway and harness surfaces'
 grant_task_note = task_entries['grant_ops']['notes'].lower()
 thesis_task_note = task_entries['thesis_ops']['notes'].lower()
 review_task_note = task_entries['review_ops']['notes'].lower()
@@ -993,17 +994,11 @@ backlog_doc_en_lower = backlog_doc_en.lower()
 assert non_collapse_rule in backlog['backlog_rules'], backlog['backlog_rules']
 assert 'proposal-facing' in grant_task_note, grant_task_note
 assert 'proposal-side reviewer simulation and revision remain authoring aids rather than reviewer-role ownership' in grant_task_note, grant_task_note
-assert 'proposal-side reviewer simulation and revision inside the grant-writing loop' in task_map_en
-assert 'do not by themselves create a reviewer-role surface' in task_map_en
-assert 'proposal-facing' in backlog_doc_en
-assert 'author-side grant-authoring artifacts rather than standalone reviewer-role outputs' in backlog_doc_en
+assert 'registered workstream mapped directly to the admitted `medautogrant` domain gateway' in task_map_en_lower
+assert 'proposal-side reviewer simulation, and revision truth remain domain-owned there' in task_map_en
+assert '### grant ops' not in backlog_doc_en_lower
 assert 'future thesis ops domain boundary package is still incomplete' in thesis_task_note, thesis_task_note
 assert 'they do not collapse thesis ops into research ops, medautoscience, or redcube ai' in thesis_task_note, thesis_task_note
-assert '- not yet a `g2` discovery target' in thesis_task_map_en_lower
-assert '- not yet a `g3` routed-action target' in thesis_task_map_en_lower
-assert 'not the same as `research ops` manuscript/submission delivery' in thesis_task_map_en_lower
-assert 'not reducible to `presentation ops` / `redcube ai` deck production either' in thesis_task_map_en_lower
-assert 'they do not yet own a thesis ops domain boundary' in thesis_task_map_en_lower
 assert 'those future packages are blockers only; they do not make `thesis ops` currently `g2` discovery-ready or `g3` routed-action-ready.' in backlog_doc_en_lower
 assert 'are not identical to `research ops` manuscript/submission flow' in backlog_doc_en_lower
 assert 'does not collapse the workstream into `presentation ops` / `redcube ai`' in backlog_doc_en_lower
@@ -1014,22 +1009,13 @@ assert 'does not by itself freeze a distinct domain boundary or transfer canonic
 assert 'this combined label remains a top-level semantic bundle only; it does not by itself admit a distinct review domain or make opl the canonical truth owner of review artifacts.' in task_map_en_lower
 assert '- not yet a `g3` routed-action target' in task_map_en_lower
 assert 'the negative conclusion frozen here is that this combined label still does not justify admission, discovery readiness, routed-action readiness, or opl ownership of review truth.' in backlog_doc_en_lower
-assert '作者侧模拟评审与修订' in task_map_zh
-assert '不会自动变成“站在评审方”的 surface' in task_map_zh
-assert 'proposal-facing' in backlog_doc_zh
-assert '作者侧的基金写作工件，而不是独立的 reviewer-role output' in backlog_doc_zh
-assert '- 还不是 `G2` discovery target' in thesis_task_map_zh
-assert '- 还不是 `G3` routed-action target' in thesis_task_map_zh
-assert '并不等同于 `Research Ops` 里的 manuscript / submission delivery' in thesis_task_map_zh
-assert '被压缩成 `Presentation Ops` / `RedCube AI` 的 deck 生产' in thesis_task_map_zh
-assert '它们并不因此拥有 Thesis Ops 的 domain boundary。' in thesis_task_map_zh
+assert '作者侧模拟评审与修订 truth 都继续由它持有' in task_map_zh
+assert '已注册 workstream，并直接映射到已收录的 `MedAutoGrant` domain gateway' in task_map_zh
+assert '### Grant Ops' not in backlog_doc_zh
 assert '这些未来 package 只是 blocker，不代表 `Thesis Ops` 现在已经具备 `G2` discovery readiness 或 `G3` routed-action readiness。' in backlog_doc_zh
 assert '并不等同于 `Research Ops` 的 manuscript / submission flow' in backlog_doc_zh
 assert '不会把这个 workstream 压缩成 `Presentation Ops` / `RedCube AI`' in backlog_doc_zh
-assert '- 当前显式 blocker package 仍是 `execution_model`、`discovery_readiness`、`routing_readiness` 与 `cross_domain_wording`' in thesis_task_map_zh
-assert '在显式 discovery / routing / cross-domain wording declaration 出现前，Thesis Ops 仍然停留在 onboarding gate 之下，也不会变成 handoff-ready surface' in thesis_task_map_zh
 assert '它不会因此自动收录成独立 review domain，也不会让 OPL 成为这些评审工件的 canonical truth owner' in task_map_zh
-assert '- 还不是 `G3` routed-action target' in task_map_zh
 assert '这种组合语义仍不足以推出 formal admission、discovery readiness、routed-action readiness，或把 review truth ownership 上收到 OPL。' in backlog_doc_zh
 
 for workstream_id, entry in backlog_entries.items():

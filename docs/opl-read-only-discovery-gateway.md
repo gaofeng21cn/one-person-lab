@@ -33,7 +33,7 @@ At `G2`, an agent should be able to ask:
 - what workstreams exist?
 - what domain system owns this workstream?
 - which families map directly to that workstream?
-- does this task belong to `MedAutoScience`, `RedCube AI`, or neither?
+- does this task belong to `MedAutoScience`, `MedAutoGrant`, `RedCube AI`, or neither?
 - what is the correct next entry surface?
 
 And receive a stable, machine-readable answer without touching domain internals.
@@ -84,6 +84,12 @@ Suggested response:
       "label": "Research Foundry",
       "status": "active",
       "domain_id": "medautoscience"
+    },
+    {
+      "workstream_id": "grant_ops",
+      "label": "Grant Ops",
+      "status": "emerging",
+      "domain_id": "medautogrant"
     },
     {
       "workstream_id": "presentation_ops",
@@ -144,6 +150,13 @@ Suggested response:
       ]
     },
     {
+      "domain_id": "medautogrant",
+      "gateway_surface": "Grant Ops Gateway",
+      "owned_workstreams": [
+        "grant_ops"
+      ]
+    },
+    {
       "domain_id": "redcube",
       "gateway_surface": "Visual Deliverable Gateway",
       "owned_workstreams": [
@@ -166,17 +179,15 @@ Suggested response:
 {
   "version": "g2",
   "domain": {
-    "domain_id": "redcube",
-    "project": "redcube-ai",
-    "gateway_surface": "Visual Deliverable Gateway",
-    "harness_surface": "Visual Deliverable Domain Harness OS",
+    "domain_id": "medautogrant",
+    "project": "med-autogrant",
+    "gateway_surface": "Grant Ops Gateway",
+    "harness_surface": "Grant Writing Domain Harness OS",
     "standalone_allowed": true,
     "owned_workstreams": [
-      "presentation_ops"
+      "grant_ops"
     ],
-    "non_opl_families": [
-      "xiaohongshu"
-    ]
+    "non_opl_families": []
   }
 }
 ```

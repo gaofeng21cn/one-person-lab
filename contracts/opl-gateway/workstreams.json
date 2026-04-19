@@ -2,6 +2,21 @@
   "version": "g1",
   "workstreams": [
     {
+      "workstream_id": "grant_ops",
+      "label": "Grant Ops",
+      "status": "emerging",
+      "description": "Formal grant direction, proposal authoring, and proposal revision delivery.",
+      "domain_id": "medautogrant",
+      "entry_mode": "domain_gateway",
+      "primary_families": [],
+      "top_level_intents": [
+        "grant_direction_assessment",
+        "proposal_authoring",
+        "proposal_revision"
+      ],
+      "notes": "Maps directly to MedAutoGrant."
+    },
+    {
       "workstream_id": "research_ops",
       "label": "Research Foundry",
       "status": "active",

@@ -81,8 +81,8 @@ Human / Agent
 | `Unified Harness Engineering Substrate` | 多个 domain 共享的上位 Harness Engineering 语言 | 分层规则、共享原则、合同总名 | 共享执行内核 |
 | `Shared Runtime Contract` | 多个 domain 共享的长期在线运行合同 | `runtime profile`、`session substrate`、`gateway runtime status` | domain truth |
 | `Shared Domain Contract` | 多个 domain 共享的正式行为合同 | formal-entry matrix、`per-run handle`、durable report、gate semantics | domain object model |
-| `Domain Gateway` | 某个 domain 的稳定正式入口与公开 contract surface | `MedAutoScience`、`RedCube AI` | execution engine |
-| `Domain Harness OS` | 某个 domain 的执行编排、治理、审计、交付系统本体 | `MedAutoScience`、`RedCube AI` | 顶层 federation |
+| `Domain Gateway` | 某个 domain 的稳定正式入口与公开 contract surface | `MedAutoScience`、`MedAutoGrant`、`RedCube AI` | execution engine |
+| `Domain Harness OS` | 某个 domain 的执行编排、治理、审计、交付系统本体 | `MedAutoScience`、`MedAutoGrant`、`RedCube AI` | 顶层 federation |
 | `Execution Plane` | 实际驱动 quest、run、session、worktree、watch、resume 的运行层 | `MedDeepScientist` 当前对 `MedAutoScience` 承担的运行层 | 顶层公开产品面 |
 | `Host-Agent Runtime` | execution plane 的本地宿主部署形态，由本机 host agent 驱动 | 当前 `Codex-default host-agent runtime` | 托管 runtime |
 | `Managed Runtime` | execution plane 的平台托管部署形态，生命周期、调度、隔离和恢复由平台负责 | future `managed web runtime` | domain gateway |
@@ -93,9 +93,9 @@ Human / Agent
 | 仓库 | 当前固定定位 | 与 runtime 的关系 |
 | --- | --- | --- |
 | `one-person-lab` | `OPL Gateway / Federation` 的公开说明面与 contract-first surface | 负责定义语言与边界，不是 runtime owner |
-| `med-autoscience` | 医学 `Research Foundry` 的 `Domain Gateway + Domain Harness OS` | 拥有医学领域 contract、governance、delivery 与外部 formal entry |
+| `med-autoscience` | 医学 `Research Ops` 的 `Domain Gateway + Domain Harness OS` | 拥有医学领域 contract、governance、delivery 与外部 formal entry |
 | `redcube-ai` | 视觉交付 domain 的 `Domain Gateway + Domain Harness OS` | 拥有视觉交付领域 contract、governance、delivery 与外部 formal entry |
-| `med-autogrant` | future `Grant Foundry` 的 `Domain Gateway + Domain Harness OS` 方向 | 当前仍停留在 future domain direction / signal-only 语义，不是 admitted runtime owner |
+| `med-autogrant` | `Grant Ops` 的 `Domain Gateway + Domain Harness OS` | 拥有基金领域 contract、governance、delivery 与外部 formal entry |
 
 `MedDeepScientist` 不属于 `OPL` 顶层四仓中的一个平级 `domain repo`。
 当前更准确的表达是：
@@ -231,7 +231,7 @@ Human / Agent
 其中：
 
 - `MedAutoScience`
-  - 是医学 `Research Foundry` 的 `Domain Gateway + Domain Harness OS`
+  - 是医学 `Research Ops` 的 `Domain Gateway + Domain Harness OS`
   - 是对外正式入口、领域合同 owner、governance owner、delivery owner
 - `MedDeepScientist`
   - 是 `MedAutoScience` 当前 execution plane 的主要实现

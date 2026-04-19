@@ -12,7 +12,7 @@ Read it as the current public surface map for a two-layer OPL entry: the active 
 The completed `G2` closeout keeps the single repo-tracked top-level `G2` CLI-first / gateway contract baseline stable.
 That baseline remains the current `OPL` `Phase 1` formal entry contract and public system surface.
 The completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` remains closed at the planning-contract layer, and `G3` remains planning-only rather than an activated routed-action runtime.
-The repo-tracked `Phase 1` candidate-domain closeout order is frozen as `Review Foundry` then `Thesis Foundry`, the absorbed predecessor gate remains `Phase 1 exit + next-stage activation package freeze`, and the `Minimal admitted-domain federation activation package` is already absorbed into repo-tracked top-level truth. No new active follow-on tranche is open until an admitted-domain absorbed delta or central reference drift justifies another central sync.
+The repo-tracked `Phase 1` candidate-domain closeout order is frozen as `Review Ops` then `Thesis Ops`, the absorbed predecessor gate remains `Phase 1 exit + next-stage activation package freeze`, and the `Minimal admitted-domain federation activation package` is already absorbed into repo-tracked top-level truth. No new active follow-on tranche is open until an admitted-domain absorbed delta or central reference drift justifies another central sync.
 The current top-level formal entry therefore remains the CLI-first / gateway contract surface indexed here, even though the active public mainline above it is now the family-level front desk and hosted-entry hardening line.
 Use the [Ecosystem Status Matrix](./references/ecosystem-status-matrix.md) as the internal reference-sync anchor for the current four-repo stage and maturity snapshot.
 
@@ -70,7 +70,7 @@ These surfaces freeze the gateway and federation boundary:
 - [Shared Runtime Contract](./shared-runtime-contract.md)
 - [Shared Domain Contract](./shared-domain-contract.md)
 - [OPL Gateway Contract Surface](./opl-read-only-discovery-gateway.md)
-- [OPL Routed Action Gateway](./opl-routed-action-gateway.md) (planning-level contract only; repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` is already closed, the `Review Foundry -> Thesis Foundry` candidate-domain closeout remains below admission / discovery / routing readiness, the absorbed predecessor gate is `Phase 1 exit + next-stage activation package freeze`, and the current `Minimal admitted-domain federation activation package` is already absorbed into repo-tracked top-level truth)
+- [OPL Routed Action Gateway](./opl-routed-action-gateway.md) (planning-level contract only; repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` is already closed, the `Review Ops -> Thesis Ops` candidate-domain closeout remains below admission / discovery / routing readiness, the absorbed predecessor gate is `Phase 1 exit + next-stage activation package freeze`, and the current `Minimal admitted-domain federation activation package` is already absorbed into repo-tracked top-level truth)
 - [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.md) + `domain-onboarding-readiness.schema.json`
 - [OPL Governance / Audit Operating Surface](./references/opl-governance-audit-operating-surface.md)
 - [OPL Publish / Promotion Operating Surface](./references/opl-publish-promotion-operating-surface.md)
@@ -102,6 +102,7 @@ Related positioning companion:
 
 These are indexed from `OPL`, but remain domain-owned:
 
+- `MedAutoGrant` for `grant_ops`
 - `MedAutoScience` for `research_ops`
 - `RedCube AI` for `presentation_ops`
 
@@ -109,10 +110,9 @@ Important boundary:
 
 - `ppt_deck` directly maps to `presentation_ops`
 - `xiaohongshu` may still route to `redcube` and stays a separate visual family at the OPL layer
-- the current `Minimal admitted-domain federation activation package` applies to the already admitted domain surfaces only, namely `MedAutoScience` and `RedCube AI`
-- `Grant Foundry`, `Review Foundry`, and `Thesis Foundry` currently appear here as under-definition workstreams on candidate/onboarding lanes
-- `Grant Foundry -> Med Auto Grant` currently points to an active grant-domain repository line, while its top-level federation admission / handoff wording remains separately gated
-- the current admission blockers for those under-definition workstreams live in the candidate-domain backlog and remain below the onboarding gate
+- the current linked domain public-entry set is `MedAutoGrant`, `MedAutoScience`, and `RedCube AI`
+- `Grant Ops` now routes through the admitted `MedAutoGrant` domain gateway, while `Thesis Ops` and `Review Ops` remain on candidate/onboarding lanes
+- the current admission blockers for the remaining under-definition workstreams live in the candidate-domain backlog and remain below the onboarding gate
 
 ## Reading Rule
 
@@ -122,7 +122,7 @@ If a surface is domain-owned, `OPL` indexes its public entry role while runtime,
 If a surface is `opl_operating_model`, `opl_shared_foundation`, or `opl_shared_foundation_ownership`, it serves the shared-foundation boundary/reference layer.
 If a surface is `opl_task_map`, under-definition workstreams stay on candidate/onboarding lanes until their registry and onboarding evidence land.
 If a surface is `opl_candidate_domain_backlog`, it serves as the admission-blocker reference for those lanes.
-If `Grant Foundry -> Med Auto Grant` is mentioned in public wording, it should be framed as an active grant-domain repository line whose top-level federation admission / handoff wording is still separately gated.
+If `Grant Foundry -> Med Auto Grant` is mentioned in public wording, it should be framed as the admitted `Grant Ops` domain gateway entry carried by `MedAutoGrant`.
 Any future follow-on route remains `domain_gateway`-only and follows the no-bypass rule against direct harness targeting.
 If a surface is the routed-action prose or schema layer, it stays at the planning-contract / planning-dependency layer after the completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening`.
 If a surface is the acceptance, matrix, or example layer, it stays in the discoverability/review companion layer.
@@ -138,7 +138,7 @@ If a surface is the acceptance, matrix, or example layer, it stays in the discov
 - [Shared Domain Contract](./shared-domain-contract.md)
 - [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
 - [OPL Gateway Contract Surface](./opl-read-only-discovery-gateway.md)
-- [OPL Routed Action Gateway](./opl-routed-action-gateway.md) (planning-level contract only; repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` is already closed, the `Review Foundry -> Thesis Foundry` candidate-domain closeout remains below admission / discovery / routing readiness, the absorbed predecessor gate is `Phase 1 exit + next-stage activation package freeze`, and the current `Minimal admitted-domain federation activation package` is already absorbed into repo-tracked top-level truth)
+- [OPL Routed Action Gateway](./opl-routed-action-gateway.md) (planning-level contract only; repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` is already closed, the `Review Ops -> Thesis Ops` candidate-domain closeout remains below admission / discovery / routing readiness, the absorbed predecessor gate is `Phase 1 exit + next-stage activation package freeze`, and the current `Minimal admitted-domain federation activation package` is already absorbed into repo-tracked top-level truth)
 - [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.md)
 - [OPL Governance / Audit Operating Surface](./references/opl-governance-audit-operating-surface.md)
 - [OPL Publish / Promotion Operating Surface](./references/opl-publish-promotion-operating-surface.md)
