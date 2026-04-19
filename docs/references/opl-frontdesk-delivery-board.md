@@ -21,6 +21,10 @@
 - 备用执行 / 在线网关：`Hermes-Agent`
 - 领域能力：以 `OPL` 管理的模块形式接入
 
+当前产品规格锚点：
+
+- `docs/specs/2026-04-19-opl-initialize-and-environment-manager-design.md`
+
 ## 已落地能力
 
 ### F0. 顶层直接入口
@@ -129,6 +133,7 @@
 - `Initialize OPL` 已经有稳定 action surface，首启向导与 overlay settings 还需要正式接线。
 - 版本展示、升级提示、健康状态和最近验证结果还要继续丰富。
 - GUI settings 还需要把 core engines、workspace root、模块操作和 system actions 做成更顺手的管理界面。
+- `Initialize OPL`、`Core Engines`、`Domain Modules`、`System` 的正式卡片与状态机已冻结在设计文档里，GUI settings 还需要把 core engines、workspace root、模块操作和 system actions 做成更顺手的管理界面。
 
 ## 当前进行中
 
@@ -145,6 +150,8 @@
 
 - 让 GUI 直接消费 `frontdesk initialize`、`frontdesk environment`、`frontdesk modules`、`workspace root` 与 `frontdesk system action`。
 - 让模块安装、升级、重装和移除都从 settings 进入。
+- 让 workspace root、update channel、repair / reinstall-support 与 core engine actions 在同一设置面闭环。
+- `Initialize OPL` 与 settings 共用同一套环境真相，避免首启向导和长期设置长成两套口径。
 - 让 workspace root、update channel、repair / reinstall-support 与 core engine actions 在同一设置面闭环。
 
 ### I3. 模块与环境直达入口对齐

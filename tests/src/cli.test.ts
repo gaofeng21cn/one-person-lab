@@ -2715,7 +2715,7 @@ exit 1
   }
 });
 
-test('frontdesk initialize aggregates environment modules workspace and system surfaces', () => {
+test('frontdesk initialize aggregates environment modules settings workspace and system surfaces', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-initialize-home-'));
   const stateDir = path.join(homeRoot, 'opl-state');
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-root-'));
@@ -2768,6 +2768,10 @@ exit 1
         domain_modules: {
           modules: Array<{ module_id: string }>;
         };
+        settings: {
+          interaction_mode: string;
+          execution_mode: string;
+        };
         workspace_root: {
           selected_path: string | null;
           health_status: string;
@@ -2796,6 +2800,8 @@ exit 1
     assert.equal(output.frontdesk_initialize.core_engines.codex.installed, true);
     assert.equal(output.frontdesk_initialize.core_engines.hermes.installed, true);
     assert.equal(output.frontdesk_initialize.domain_modules.modules.length >= 4, true);
+    assert.equal(output.frontdesk_initialize.settings.interaction_mode, 'codex');
+    assert.equal(output.frontdesk_initialize.settings.execution_mode, 'codex');
     assert.equal(output.frontdesk_initialize.workspace_root.selected_path, workspaceRoot);
     assert.equal(output.frontdesk_initialize.workspace_root.health_status, 'ready');
     assert.equal(output.frontdesk_initialize.system.update_channel, 'stable');
@@ -2920,7 +2926,7 @@ test('frontdesk update-channel reports and persists the selected release channel
     };
     assert.equal(initial.frontdesk_system_action.action, 'update_channel');
     assert.equal(initial.frontdesk_system_action.update_channel, 'stable');
-    assert.equal(initial.frontdesk_system_action.status, 'completed');
+    assert.equal(initial.frontdesk_system_action.status, 'ready');
 
     const updated = runCli(
       ['frontdesk', 'update-channel', '--channel', 'preview'],
@@ -2942,7 +2948,6 @@ test('frontdesk update-channel reports and persists the selected release channel
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
 });
-
 test('frontdesk modules manages OPL-owned domain module installs and updates', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-modules-home-'));
   const modulesRoot = path.join(homeRoot, 'managed-modules');
@@ -5158,6 +5163,7 @@ exit 1
     const initializePayload = await initializeResponse.json();
     assert.equal(initializePayload.frontdesk_initialize.surface_id, 'opl_frontdesk_initialize');
     assert.equal(initializePayload.frontdesk_initialize.core_engines.codex.installed, true);
+    assert.equal(initializePayload.frontdesk_initialize.settings.interaction_mode, 'codex');
     assert.match(initializePayload.frontdesk_initialize.endpoints.workspace_root, /\/api\/workspace\/root$/);
     assert.match(initializePayload.frontdesk_initialize.endpoints.frontdesk_system_action, /\/api\/frontdesk\/system\/action$/);
 

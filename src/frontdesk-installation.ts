@@ -922,7 +922,7 @@ export async function runFrontDeskSystemAction(
       version: 'g2',
       frontdesk_system_action: {
         action,
-        status: 'completed',
+        status: 'ready',
         update_channel: current.channel,
         workspace_root: readFrontDeskWorkspaceRoot(),
         details: current,
