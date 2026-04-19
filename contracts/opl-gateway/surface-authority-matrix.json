@@ -36,7 +36,8 @@
     "opl_public_surface_index_doc",
     "opl_gateway_acceptance_spec",
     "medautoscience_public_gateway",
-    "redcube_public_gateway"
+    "redcube_public_gateway",
+    "medautogrant_public_gateway"
   ],
   "authority_entries": [
     {
@@ -441,6 +442,28 @@
         "docs/references/opl-gateway-acceptance-test-spec.md",
         "docs/references/opl-gateway-acceptance-test-spec.zh-CN.md",
         "contracts/opl-gateway/acceptance-matrix.json"
+      ]
+    },
+    {
+      "surface_id": "medautogrant_public_gateway",
+      "owner_scope": "domain",
+      "surface_role": "domain_public_gateway_entry",
+      "route_authority": "domain_gateway_local",
+      "execution_authority": "domain_harness_os",
+      "truth_authority": "domain_canonical_truth",
+      "review_authority": "domain_review_truth",
+      "publication_authority": "domain_publish_truth",
+      "allowed_follow_on_surface": null,
+      "forbidden_actions": [
+        "rewrite_as_opl_internal_module",
+        "transfer_truth_ownership_to_opl",
+        "transfer_runtime_ownership_to_opl"
+      ],
+      "governing_refs": [
+        "README.md",
+        "README.zh-CN.md",
+        "contracts/opl-gateway/domains.json",
+        "contracts/opl-gateway/public-surface-index.json"
       ]
     },
     {

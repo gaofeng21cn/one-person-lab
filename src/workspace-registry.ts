@@ -352,17 +352,17 @@ function buildDerivedDirectEntryLocator(workspaceLocator: BoundWorkspaceLocator 
 
   if (workspaceLocator.surface_kind === 'med_autoscience_workspace_profile' && workspaceLocator.profile_ref) {
     return {
-      command: `uv run python -m med_autoscience.cli product-frontdesk --profile ${workspaceLocator.profile_ref}`,
+      command: `uv run python -m med_autoscience.cli product frontdesk --profile ${workspaceLocator.profile_ref}`,
       manifest_command:
-        `uv run python -m med_autoscience.cli product-entry-manifest --profile ${workspaceLocator.profile_ref} --format json`,
+        `uv run python -m med_autoscience.cli product manifest --profile ${workspaceLocator.profile_ref} --format json`,
     };
   }
 
   if (workspaceLocator.surface_kind === 'med_autogrant_workspace_input' && workspaceLocator.input_path) {
     return {
-      command: `uv run python -m med_autogrant product-frontdesk --input ${workspaceLocator.input_path}`,
+      command: `uv run python -m med_autogrant product frontdesk --input ${workspaceLocator.input_path}`,
       manifest_command:
-        `uv run python -m med_autogrant product-entry-manifest --input ${workspaceLocator.input_path} --format json`,
+        `uv run python -m med_autogrant product manifest --input ${workspaceLocator.input_path} --format json`,
     };
   }
 
@@ -414,9 +414,9 @@ function buildProjectBindingContract(
       required_locator_fields: ['profile_ref'],
       optional_locator_fields: [],
       derived_frontdesk_command_template:
-        'uv run python -m med_autoscience.cli product-frontdesk --profile <profile_ref>',
+        'uv run python -m med_autoscience.cli product frontdesk --profile <profile_ref>',
       derived_manifest_command_template:
-        'uv run python -m med_autoscience.cli product-entry-manifest --profile <profile_ref> --format json',
+        'uv run python -m med_autoscience.cli product manifest --profile <profile_ref> --format json',
       quick_bind_hint: '绑定现有 MAS workspace_path 后，再给 profile_ref，OPL 就能稳定派生 direct entry 与 manifest surface。',
     };
   }
@@ -430,9 +430,9 @@ function buildProjectBindingContract(
       required_locator_fields: ['input_path'],
       optional_locator_fields: [],
       derived_frontdesk_command_template:
-        'uv run python -m med_autogrant product-frontdesk --input <input_path>',
+        'uv run python -m med_autogrant product frontdesk --input <input_path>',
       derived_manifest_command_template:
-        'uv run python -m med_autogrant product-entry-manifest --input <input_path> --format json',
+        'uv run python -m med_autogrant product manifest --input <input_path> --format json',
       quick_bind_hint: '绑定现有 MAG workspace_path 后，再给 input_path，OPL 就能诚实派生 grant direct entry 与 manifest command。',
     };
   }

@@ -1,7 +1,7 @@
 {
   "version": "p17.m1",
   "scope": "opl_task_topology",
-  "description": "Machine-readable top-level task topology for OPL. It captures current admitted workstreams plus under-definition candidate workstreams without turning candidate boundaries into admitted domains, routing targets, or runtime entry surfaces.",
+  "description": "Machine-readable top-level task topology for OPL. It captures current admitted workstreams plus under-definition candidate workstreams without turning the remaining candidate boundaries into admitted domains, routing targets, or runtime entry surfaces.",
   "non_goals": [
     "domain_admission_registry",
     "runtime_router",
@@ -10,8 +10,8 @@
   ],
   "topology_rules": [
     "task topology defines top-level workstream semantics above domain gateways and harnesses",
-    "registered G1 workstreams remain research_ops and presentation_ops only",
-    "grant_ops, thesis_ops, and review_ops remain under definition until explicit domain boundaries are frozen and admitted through the onboarding gate",
+    "registered G1 workstreams remain grant_ops, research_ops, and presentation_ops",
+    "thesis_ops and review_ops remain under definition until explicit domain boundaries are frozen and admitted through the onboarding gate",
     "under-definition workstreams may list delivery objects and reusable assets without becoming admitted domains, discovery targets, or handoff-ready routed-action targets; at most they may surface as unknown_domain outcomes when top-level semantics are clear, and any future successful handoff remains domain_gateway-only with the no-bypass rule intact",
     "future admission or alignment requires a declared stable agent runtime surface plus a shared-base Auto/Human-in-the-loop convergence path; otherwise the workstream remains under definition / deferred",
     "task topology complements docs/task-map.md, workstreams.json, and the onboarding contract; it does not replace them"
@@ -58,12 +58,12 @@
     {
       "workstream_id": "grant_ops",
       "label": "Grant Ops",
-      "boundary_state": "under_definition",
-      "registry_state": "not_registered",
-      "routing_state": "unknown_domain_only",
-      "current_domain_id": null,
-      "entry_surface": null,
-      "formal_domain_required": true,
+      "boundary_state": "frozen",
+      "registry_state": "registered",
+      "routing_state": "domain_gateway_ready",
+      "current_domain_id": "medautogrant",
+      "entry_surface": "domain_gateway",
+      "formal_domain_required": false,
       "delivery_objects": [
         "grant_direction_assessment",
         "proposal_outline",
@@ -85,7 +85,7 @@
         "existing_study_results_and_figures"
       ],
       "family_boundary_notes": [],
-      "notes": "Still under definition. This workstream stays proposal-facing: proposal-side reviewer simulation and revision remain authoring aids rather than reviewer-role ownership. It does not imply an admitted domain or a G1 registry entry. Clear top-level requests may surface as unknown_domain, but no domain handoff is allowed before explicit domain boundaries are frozen. The current Grant Foundry -> Med Auto Grant public scaffold is only top-level signal and domain-direction evidence; it is not an admitted domain gateway, not G2 discovery-ready, not G3 routed-action-ready, and not handoff-ready. It also remains under definition because no stable agent runtime surface or shared-base Auto/Human-in-the-loop convergence path has been frozen yet."
+      "notes": "Currently maps directly to MedAutoGrant. Grant Ops stays proposal-facing: proposal-side reviewer simulation and revision remain authoring aids rather than reviewer-role ownership, and successful routing still targets the domain gateway only."
     },
     {
       "workstream_id": "thesis_ops",

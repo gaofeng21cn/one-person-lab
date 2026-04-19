@@ -104,10 +104,10 @@ function syncMasWorkspaceBinding(
     workspacePath,
     entryCommand:
       `source ${shellSingleQuote(profile.sharedPath)}`
-      + ` && run_medautosci product-frontdesk --profile ${shellSingleQuote(profile.profilePath)}`,
+      + ` && run_medautosci product frontdesk --profile ${shellSingleQuote(profile.profilePath)}`,
     manifestCommand:
       `source ${shellSingleQuote(profile.sharedPath)}`
-      + ` && run_medautosci product-entry-manifest --profile ${shellSingleQuote(profile.profilePath)} --format json`,
+      + ` && run_medautosci product manifest --profile ${shellSingleQuote(profile.profilePath)} --format json`,
     entryUrl: frontdeskUrl,
   });
 

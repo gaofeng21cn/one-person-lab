@@ -162,8 +162,8 @@ This directory includes:
 - derived / reference-only candidate-domain backlog material that records missing admission boundaries without inventing placeholder domains or routed targets
 - no separate candidate-domain-definition contract surface beyond the current `task-topology + candidate-domain-backlog + domain-onboarding` composition unless a real missing boundary is first proven
 
-Planned workstreams such as `Grant Ops`, `Review Ops`, and `Thesis Ops` remain on candidate-definition paths until their domain boundaries are explicitly frozen.
-If the current public docs mention `Grant Foundry -> Med Auto Grant`, that mention should be framed as an active grant-domain repository line whose top-level federation admission / handoff wording is still separately gated; it does not automatically count as an admitted, discovery-ready, routed-action-ready, or handoff-ready surface.
+`Review Ops` and `Thesis Ops` remain on candidate-definition paths until their domain boundaries are explicitly frozen.
+If the current public docs mention `Grant Foundry -> Med Auto Grant`, that mention should be framed as the admitted `Grant Ops` domain gateway entry carried by `MedAutoGrant`; routing stays `domain_gateway`-only and grant truth continues to remain domain-owned there.
 
 ## Materialization note
 

@@ -6,7 +6,7 @@
 
 This document indexes the machine-readable admission-blocker backlog for the current under-definition `OPL` workstreams.
 
-Its job is to show what boundary material is still missing before `Grant Ops`, `Thesis Ops`, or `Review Ops` can be formally admitted as independent domain gateways.
+Its job is to show what boundary material is still missing before `Thesis Ops` or `Review Ops` can be formally admitted as independent domain gateways.
 
 It is not a pre-admission registry.
 It is not an execution surface.
@@ -47,7 +47,7 @@ Companion tranche summary:
 This backlog does not:
 
 - assign future domain identity or gateway/harness surface metadata
-- reframe `Grant Ops`, `Thesis Ops`, or `Review Ops` as extensions of `MedAutoScience` or `RedCube AI`
+- reframe `Thesis Ops` or `Review Ops` as extensions of `MedAutoScience`, `MedAutoGrant`, or `RedCube AI`
 - add candidate entries to the `G1` registry
 - create a discovery target or routed-action target
 - become an approval queue, release plan, or runtime planner
@@ -69,21 +69,6 @@ Each entry stays reference-only and carries only:
 - `notes`
 
 ## Current Candidate Coverage
-
-### Grant Ops
-
-`Grant Ops` already has explicit top-level semantics in the task map / task topology.
-
-That frozen boundary is still proposal-facing: review-simulation and revision traces remain author-side grant-authoring artifacts rather than standalone reviewer-role outputs.
-
-The current `Grant Foundry -> Med Auto Grant` public scaffold provides top-level signal / domain-direction evidence only.
-It is not an admitted domain gateway and does not count as G2 discovery readiness, G3 routed-action readiness, or a handoff-ready surface.
-
-What is still missing is a future domain boundary package that makes registry material, public gateway docs, truth ownership, review surfaces, an explicit execution-model declaration, a discovery readiness blocker, a routing readiness blocker, and cross-domain wording explicit.
-That execution-model declaration must identify the stable agent runtime surface, show how `Auto` and `Human-in-the-loop` share one base, explain the code-versus-Agent responsibility split, and keep the workstream out of any `fixed-code-first` or permanently single-mode framing.
-The discovery readiness blocker must point read-only discovery to the future `domain_gateway` entry without implying handoff readiness.
-The routing readiness blocker must freeze explicit routing evidence, keep the only successful handoff target at `domain_gateway`, and preserve the no-bypass rule against direct harness targeting.
-Those future packages are blockers only; they do not make `Grant Ops` currently `G2` discovery-ready or `G3` routed-action-ready.
 
 ### Thesis Ops
 
@@ -120,7 +105,7 @@ It means the required boundary package is still incomplete.
 If the execution-model declaration is still missing, the workstream remains under definition / deferred rather than becoming “ready,” “aligned,” or implicitly admitted.
 If a public scaffold or domain-direction hint exists, it still counts only as top-level signal/evidence until the real boundary package is present.
 
-It also does not let `OPL` quietly absorb these under-definition workstreams into `MedAutoScience` or `RedCube AI`.
+It also does not let `OPL` quietly absorb these under-definition workstreams into `MedAutoScience`, `MedAutoGrant`, or `RedCube AI`.
 Those admitted domains remain independent gateway-and-harness surfaces.
 
 No backlog entry authorizes a domain handoff, discovery target, routed-action target, or harness access.

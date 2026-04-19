@@ -412,22 +412,24 @@ function createFamilyContractsFixtureRoot() {
       domains: Array<Record<string, unknown>>;
     };
 
-    payload.domains.push({
-      domain_id: 'medautogrant',
-      label: 'MedAutoGrant',
-      project: 'med-autogrant',
-      role: 'grant_ops_gateway',
-      gateway_surface: 'Grant Ops Gateway',
-      harness_surface: 'Grant Writing Domain Harness OS',
-      standalone_allowed: true,
-      owned_workstreams: ['grant_ops'],
-      non_opl_families: [],
-      canonical_truth_owner: [
-        'grant_runs',
-        'workspace_state',
-        'submission_artifacts',
-      ],
-    });
+    if (!payload.domains.some((domain) => domain.domain_id === 'medautogrant')) {
+      payload.domains.push({
+        domain_id: 'medautogrant',
+        label: 'MedAutoGrant',
+        project: 'med-autogrant',
+        role: 'grant_ops_gateway',
+        gateway_surface: 'Grant Ops Gateway',
+        harness_surface: 'Grant Writing Domain Harness OS',
+        standalone_allowed: true,
+        owned_workstreams: ['grant_ops'],
+        non_opl_families: [],
+        canonical_truth_owner: [
+          'grant_runs',
+          'workspace_state',
+          'submission_artifacts',
+        ],
+      });
+    }
 
     fs.writeFileSync(domainsPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
   });
@@ -603,12 +605,12 @@ function createFamilyLocatorResolverFixture(options: {
     `#!/usr/bin/env bash
 set -euo pipefail
 
-if [[ "$*" == ${shellSingleQuote(`run python -m med_autoscience.cli product-entry-manifest --profile ${path.resolve(options.masProfile)} --format json`)} ]]; then
+if [[ "$*" == ${shellSingleQuote(`run python -m med_autoscience.cli product manifest --profile ${path.resolve(options.masProfile)} --format json`)} ]]; then
   cat ${shellSingleQuote(masManifestPath)}
   exit 0
 fi
 
-if [[ "$*" == ${shellSingleQuote(`run python -m med_autogrant product-entry-manifest --input ${path.resolve(options.magInput)} --format json`)} ]]; then
+if [[ "$*" == ${shellSingleQuote(`run python -m med_autogrant product manifest --input ${path.resolve(options.magInput)} --format json`)} ]]; then
   cat ${shellSingleQuote(magManifestPath)}
   exit 0
 fi
@@ -1242,7 +1244,7 @@ test('loadGatewayContracts honors OPL_CONTRACTS_DIR when provided', () => {
 
   const workstreamsPath = path.join(tempContracts, 'workstreams.json');
   const workstreams = JSON.parse(fs.readFileSync(workstreamsPath, 'utf8'));
-  workstreams.workstreams[0].label = 'Research Ops Override';
+  workstreams.workstreams.find((entry: { workstream_id: string }) => entry.workstream_id === 'research_ops').label = 'Research Ops Override';
   fs.writeFileSync(workstreamsPath, JSON.stringify(workstreams, null, 2));
 
   const output = runCli(['contract', 'workstream', 'research_ops'], {
@@ -1257,7 +1259,7 @@ test('global --contracts-dir override uses the explicit contract root', () => {
   const { fixtureRoot, fixtureContractsRoot } = createContractsFixtureRoot((contractsRoot) => {
     const workstreamsPath = path.join(contractsRoot, 'workstreams.json');
     const workstreams = JSON.parse(fs.readFileSync(workstreamsPath, 'utf8'));
-    workstreams.workstreams[0].label = 'Research Ops From Flag';
+    workstreams.workstreams.find((entry: { workstream_id: string }) => entry.workstream_id === 'research_ops').label = 'Research Ops From Flag';
     fs.writeFileSync(workstreamsPath, JSON.stringify(workstreams, null, 2));
   });
 
@@ -1281,13 +1283,13 @@ test('global --contracts-dir override takes precedence over OPL_CONTRACTS_DIR', 
   const envFixture = createContractsFixtureRoot((contractsRoot) => {
     const workstreamsPath = path.join(contractsRoot, 'workstreams.json');
     const workstreams = JSON.parse(fs.readFileSync(workstreamsPath, 'utf8'));
-    workstreams.workstreams[0].label = 'Research Ops From Env';
+    workstreams.workstreams.find((entry: { workstream_id: string }) => entry.workstream_id === 'research_ops').label = 'Research Ops From Env';
     fs.writeFileSync(workstreamsPath, JSON.stringify(workstreams, null, 2));
   });
   const flagFixture = createContractsFixtureRoot((contractsRoot) => {
     const workstreamsPath = path.join(contractsRoot, 'workstreams.json');
     const workstreams = JSON.parse(fs.readFileSync(workstreamsPath, 'utf8'));
-    workstreams.workstreams[0].label = 'Research Ops From Flag';
+    workstreams.workstreams.find((entry: { workstream_id: string }) => entry.workstream_id === 'research_ops').label = 'Research Ops From Flag';
     fs.writeFileSync(workstreamsPath, JSON.stringify(workstreams, null, 2));
   });
 
@@ -1436,12 +1438,13 @@ test('workspace projects returns the current OPL family project surfaces', () =>
   const output = runCli(['workspace', 'projects']);
 
   assert.equal(output.version, 'g2');
-  assert.equal(output.projects.length, 3);
+  assert.equal(output.projects.length, 4);
   assert.equal(output.projects[0].project_id, 'opl');
   assert.equal(output.projects[0].scope, 'family_gateway');
   assert.equal(output.projects[0].direct_entry_surface, 'opl');
-  assert.equal(output.projects[1].project_id, 'medautoscience');
-  assert.equal(output.projects[2].project_id, 'redcube');
+  assert.equal(output.projects[1].project_id, 'medautogrant');
+  assert.equal(output.projects[2].project_id, 'medautoscience');
+  assert.equal(output.projects[3].project_id, 'redcube');
 });
 
 test('status workspace reports git and worktree visibility for one workspace path', () => {
@@ -1519,8 +1522,9 @@ exit 1
 
     assert.equal(output.product_entry.mode, 'ask');
     assert.equal(output.product_entry.input.goal, 'Plan a medical grant proposal revision loop.');
-    assert.equal(output.product_entry.routing.status, 'unknown_domain');
-    assert.equal(output.product_entry.routing.candidate_workstream_id, 'grant_ops');
+    assert.equal(output.product_entry.routing.status, 'routed');
+    assert.equal(output.product_entry.routing.domain_id, 'medautogrant');
+    assert.equal(output.product_entry.routing.workstream_id, 'grant_ops');
     assert.equal(output.product_entry.executor_backend, 'codex');
     assert.equal(output.product_entry.codex.session_id, 'opl-quick-ask-session');
     assert.equal(output.product_entry.codex.response, 'AUTO ASK READY');
@@ -1836,8 +1840,8 @@ exit 1
     assert.equal(output.dashboard.front_desk.librechat_pilot_package_status, 'landed');
     assert.equal(output.dashboard.front_desk.recommended_entry_surfaces_count, 0);
     assert.deepEqual(output.dashboard.front_desk.recommended_entry_surfaces, []);
-    assert.equal(output.dashboard.projects.length, 3);
-    assert.equal(output.dashboard.domain_manifests.summary.total_projects_count, 2);
+    assert.equal(output.dashboard.projects.length, 4);
+    assert.equal(output.dashboard.domain_manifests.summary.total_projects_count, 3);
     assert.equal(output.dashboard.domain_manifests.summary.resolved_count, 0);
     assert.equal(output.dashboard.workspace.absolute_path, repoRoot);
     assert.equal(output.dashboard.runtime_status.recent_sessions.sessions.length, 1);
@@ -1931,7 +1935,7 @@ test('frontdesk-manifest exposes the hosted-friendly OPL shell contract without 
     );
     assert.equal(output.frontdesk_manifest.domain_wiring_surface.surface_id, 'opl_frontdesk_domain_wiring');
     assert.equal(output.frontdesk_manifest.domain_wiring_surface.endpoint, '/api/frontdesk/domain-wiring');
-    assert.equal(output.frontdesk_manifest.domain_wiring_surface.summary.total_projects_count, 2);
+    assert.equal(output.frontdesk_manifest.domain_wiring_surface.summary.total_projects_count, 3);
     assert.equal(output.frontdesk_manifest.domain_wiring_surface.summary.recommended_entry_surfaces_count, 0);
     assert.equal(output.frontdesk_manifest.frontdesk_entry_guide_surface.surface_id, 'opl_frontdesk_entry_guide');
     assert.equal(output.frontdesk_manifest.frontdesk_entry_guide_surface.endpoint, '/api/frontdesk/entry-guide');
@@ -1957,7 +1961,7 @@ test('frontdesk-entry-guide exposes family shell taxonomy and domain workspace m
   assert.equal(output.frontdesk_entry_guide.surface_id, 'opl_frontdesk_entry_guide');
   assert.equal(output.frontdesk_entry_guide.workspace_taxonomy.family_workspace_kind, 'opl_family_workspace');
   assert.equal(output.frontdesk_entry_guide.workspace_taxonomy.family_workspace_role, 'family_task_container');
-  assert.equal(output.frontdesk_entry_guide.summary.total_projects_count, 2);
+  assert.equal(output.frontdesk_entry_guide.summary.total_projects_count, 3);
   assert.equal(output.frontdesk_entry_guide.endpoints.frontdesk_entry_guide, '/api/frontdesk/entry-guide');
   assert.ok(Array.isArray(output.frontdesk_entry_guide.starter_prompts));
 });
@@ -1977,9 +1981,9 @@ test('frontdesk-domain-wiring exposes a dedicated hosted-friendly family wiring 
     assert.equal(output.frontdesk_domain_wiring.hosted_runtime_readiness.surface_kind, 'opl_hosted_runtime_readiness');
     assert.equal(output.frontdesk_domain_wiring.domain_entry_parity.surface_kind, 'opl_domain_entry_parity');
     assert.equal(output.frontdesk_domain_wiring.domain_binding_parity.surface_kind, 'opl_domain_binding_parity');
-    assert.equal(output.frontdesk_domain_wiring.summary.total_projects_count, 2);
-    assert.equal(output.frontdesk_domain_wiring.domain_entry_parity.summary.blocked_projects_count, 2);
-    assert.equal(output.frontdesk_domain_wiring.domain_binding_parity.summary.total_projects_count, 2);
+    assert.equal(output.frontdesk_domain_wiring.summary.total_projects_count, 3);
+    assert.equal(output.frontdesk_domain_wiring.domain_entry_parity.summary.blocked_projects_count, 3);
+    assert.equal(output.frontdesk_domain_wiring.domain_binding_parity.summary.total_projects_count, 3);
     assert.equal(output.frontdesk_domain_wiring.domain_binding_parity.summary.active_projects_count, 0);
     assert.equal(output.frontdesk_domain_wiring.domain_binding_parity.summary.manifest_ready_projects_count, 0);
     assert.equal(output.frontdesk_domain_wiring.summary.recommended_entry_surfaces_count, 0);
@@ -2053,7 +2057,7 @@ exit 1
     assert.equal(output.frontdesk_readiness.local_shell.web_command, 'opl web');
     assert.equal(output.frontdesk_readiness.local_shell.desktop_command, 'opl frontdesk bootstrap');
     assert.equal(output.frontdesk_readiness.hosted_runtime_readiness.status, 'pilot_ready_not_managed');
-    assert.equal(output.frontdesk_readiness.summary.total_projects_count, 2);
+    assert.equal(output.frontdesk_readiness.summary.total_projects_count, 3);
     assert.equal(output.frontdesk_readiness.summary.usable_now_projects_count, 0);
     assert.equal(output.frontdesk_readiness.summary.good_to_use_now_projects_count, 0);
     assert.equal(output.frontdesk_readiness.summary.fully_automatic_projects_count, 0);
@@ -3364,32 +3368,32 @@ test('workspace registry commands bind activate and archive project workspaces w
     const catalogOutput = runCli(['workspace', 'list'], {
       OPL_FRONTDESK_STATE_DIR: stateRoot,
     });
-    assert.equal(catalogOutput.workspace_catalog.projects.length, 3);
-    assert.equal(catalogOutput.workspace_catalog.projects[2].project_id, 'redcube');
-    assert.equal(catalogOutput.workspace_catalog.projects[2].active_binding.workspace_path, repoRoot);
-    assert.equal(catalogOutput.workspace_catalog.projects[2].bindings_count.total, 1);
-    assert.equal(catalogOutput.workspace_catalog.projects[2].bindings_count.direct_entry_ready, 1);
-    assert.equal(catalogOutput.workspace_catalog.projects[2].bindings_count.manifest_ready, 1);
-    assert.equal(catalogOutput.workspace_catalog.projects[2].last_updated_at, bindOutput.workspace_catalog.binding.updated_at);
-    assert.deepEqual(catalogOutput.workspace_catalog.projects[2].available_actions, ['bind', 'activate', 'archive', 'launch']);
+    assert.equal(catalogOutput.workspace_catalog.projects.length, 4);
+    assert.equal(catalogOutput.workspace_catalog.projects[3].project_id, 'redcube');
+    assert.equal(catalogOutput.workspace_catalog.projects[3].active_binding.workspace_path, repoRoot);
+    assert.equal(catalogOutput.workspace_catalog.projects[3].bindings_count.total, 1);
+    assert.equal(catalogOutput.workspace_catalog.projects[3].bindings_count.direct_entry_ready, 1);
+    assert.equal(catalogOutput.workspace_catalog.projects[3].bindings_count.manifest_ready, 1);
+    assert.equal(catalogOutput.workspace_catalog.projects[3].last_updated_at, bindOutput.workspace_catalog.binding.updated_at);
+    assert.deepEqual(catalogOutput.workspace_catalog.projects[3].available_actions, ['bind', 'activate', 'archive', 'launch']);
     assert.equal(
-      catalogOutput.workspace_catalog.projects[2].binding_contract.surface_id,
+      catalogOutput.workspace_catalog.projects[3].binding_contract.surface_id,
       'opl_project_workspace_binding_contract',
     );
     assert.deepEqual(
-      catalogOutput.workspace_catalog.projects[2].binding_contract.required_locator_fields,
+      catalogOutput.workspace_catalog.projects[3].binding_contract.required_locator_fields,
       [],
     );
     assert.deepEqual(
-      catalogOutput.workspace_catalog.projects[2].binding_contract.optional_locator_fields,
+      catalogOutput.workspace_catalog.projects[3].binding_contract.optional_locator_fields,
       ['workspace_root'],
     );
     assert.equal(
-      catalogOutput.workspace_catalog.projects[2].binding_contract.derived_frontdesk_command_template,
+      catalogOutput.workspace_catalog.projects[3].binding_contract.derived_frontdesk_command_template,
       'redcube product frontdesk --workspace-root <workspace_root>',
     );
     assert.equal(
-      catalogOutput.workspace_catalog.projects[2].binding_contract.derived_manifest_command_template,
+      catalogOutput.workspace_catalog.projects[3].binding_contract.derived_manifest_command_template,
       'redcube product manifest --workspace-root <workspace_root>',
     );
     assert.equal(catalogOutput.workspace_catalog.summary.active_projects_count, 1);
@@ -4476,11 +4480,11 @@ test('workspace-bind derives family direct-entry locators from structured projec
 
     assert.equal(
       magBind.workspace_catalog.binding.direct_entry.command,
-      `uv run python -m med_autogrant product-frontdesk --input ${path.resolve(magInputPath)}`,
+      `uv run python -m med_autogrant product frontdesk --input ${path.resolve(magInputPath)}`,
     );
     assert.equal(
       magBind.workspace_catalog.binding.direct_entry.manifest_command,
-      `uv run python -m med_autogrant product-entry-manifest --input ${path.resolve(magInputPath)} --format json`,
+      `uv run python -m med_autogrant product manifest --input ${path.resolve(magInputPath)} --format json`,
     );
     assert.deepEqual(magBind.workspace_catalog.binding.direct_entry.workspace_locator, {
       surface_kind: 'med_autogrant_workspace_input',
@@ -4491,11 +4495,11 @@ test('workspace-bind derives family direct-entry locators from structured projec
 
     assert.equal(
       masBind.workspace_catalog.binding.direct_entry.command,
-      `uv run python -m med_autoscience.cli product-frontdesk --profile ${path.resolve(masProfilePath)}`,
+      `uv run python -m med_autoscience.cli product frontdesk --profile ${path.resolve(masProfilePath)}`,
     );
     assert.equal(
       masBind.workspace_catalog.binding.direct_entry.manifest_command,
-      `uv run python -m med_autoscience.cli product-entry-manifest --profile ${path.resolve(masProfilePath)} --format json`,
+      `uv run python -m med_autoscience.cli product manifest --profile ${path.resolve(masProfilePath)} --format json`,
     );
     assert.deepEqual(masBind.workspace_catalog.binding.direct_entry.workspace_locator, {
       surface_kind: 'med_autoscience_workspace_profile',
@@ -4538,7 +4542,7 @@ test('workspace-bind derives family direct-entry locators from structured projec
     );
     assert.equal(
       magProject.binding_contract.derived_frontdesk_command_template,
-      'uv run python -m med_autogrant product-frontdesk --input <input_path>',
+      'uv run python -m med_autogrant product frontdesk --input <input_path>',
     );
     assert.deepEqual(masProject.binding_contract.required_locator_fields, ['profile_ref']);
     assert.equal(
@@ -4547,7 +4551,7 @@ test('workspace-bind derives family direct-entry locators from structured projec
     );
     assert.equal(
       masProject.binding_contract.derived_manifest_command_template,
-      'uv run python -m med_autoscience.cli product-entry-manifest --profile <profile_ref> --format json',
+      'uv run python -m med_autoscience.cli product manifest --profile <profile_ref> --format json',
     );
     assert.deepEqual(redcubeProject.binding_contract.optional_locator_fields, ['workspace_root']);
     assert.equal(
@@ -4559,11 +4563,11 @@ test('workspace-bind derives family direct-entry locators from structured projec
     assert.equal(manifestOutput.domain_manifests.summary.resolved_count, 3);
     assert.equal(
       manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) => entry.project_id === 'medautogrant')?.manifest_command,
-      `uv run python -m med_autogrant product-entry-manifest --input ${path.resolve(magInputPath)} --format json`,
+      `uv run python -m med_autogrant product manifest --input ${path.resolve(magInputPath)} --format json`,
     );
     assert.equal(
       manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) => entry.project_id === 'medautoscience')?.manifest_command,
-      `uv run python -m med_autoscience.cli product-entry-manifest --profile ${path.resolve(masProfilePath)} --format json`,
+      `uv run python -m med_autoscience.cli product manifest --profile ${path.resolve(masProfilePath)} --format json`,
     );
     assert.equal(
       manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) => entry.project_id === 'redcube')?.manifest_command,
@@ -4644,7 +4648,7 @@ test('domain manifests executes manifest_command with a bash-compatible shell', 
             command: null,
             manifest_command:
               `source ${shellSingleQuote(shellGuardPath)} && `
-              + `uv run python -m med_autoscience.cli product-entry-manifest --profile ${path.resolve(profilePath)} --format json`,
+              + `uv run python -m med_autoscience.cli product manifest --profile ${path.resolve(profilePath)} --format json`,
             url: null,
             workspace_locator: {
               surface_kind: 'med_autoscience_workspace_profile',
@@ -4917,7 +4921,7 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
       output.handoff_bundle.domain_manifest_recommendation.family_orchestration.action_graph_ref.ref,
       '/family_orchestration/action_graph',
     );
-    assert.equal(output.handoff_bundle.domain_entry_parity.summary.total_projects_count, 2);
+    assert.equal(output.handoff_bundle.domain_entry_parity.summary.total_projects_count, 3);
     assert.equal(output.handoff_bundle.domain_entry_parity.summary.aligned_projects_count, 1);
     assert.equal(output.handoff_bundle.domain_entry_parity.summary.runtime_inventory_ready_count, 1);
     assert.equal(output.handoff_bundle.domain_entry_parity.summary.task_lifecycle_ready_count, 1);
@@ -5358,15 +5362,15 @@ exit 1
     const dashboardResponse = await fetch(`${baseUrl}/api/status/dashboard`);
     const dashboardPayload = await dashboardResponse.json();
     assert.equal(dashboardPayload.dashboard.front_desk.local_web_frontdesk_status, 'pilot_landed');
-    assert.equal(dashboardPayload.dashboard.projects.length, 3);
-    assert.equal(dashboardPayload.dashboard.domain_manifests.summary.total_projects_count, 2);
+    assert.equal(dashboardPayload.dashboard.projects.length, 4);
+    assert.equal(dashboardPayload.dashboard.domain_manifests.summary.total_projects_count, 3);
     assert.equal(
       dashboardPayload.dashboard.front_desk.hosted_runtime_readiness.status,
       'pilot_ready_not_managed',
     );
     assert.equal(
       dashboardPayload.dashboard.front_desk.domain_entry_parity.summary.total_projects_count,
-      2,
+      3,
     );
 
     const healthResponse = await fetch(`${baseUrl}/api/health`);
@@ -5391,21 +5395,21 @@ exit 1
     const entryGuideResponse = await fetch(`${baseUrl}/api/frontdesk/entry-guide`);
     const entryGuidePayload = await entryGuideResponse.json();
     assert.equal(entryGuidePayload.frontdesk_entry_guide.surface_id, 'opl_frontdesk_entry_guide');
-    assert.equal(entryGuidePayload.frontdesk_entry_guide.summary.total_projects_count, 2);
+    assert.equal(entryGuidePayload.frontdesk_entry_guide.summary.total_projects_count, 3);
     assert.equal(entryGuidePayload.frontdesk_entry_guide.workspace_taxonomy.family_workspace_kind, 'opl_family_workspace');
 
     const wiringResponse = await fetch(`${baseUrl}/api/frontdesk/domain-wiring`);
     const wiringPayload = await wiringResponse.json();
     assert.equal(wiringPayload.frontdesk_domain_wiring.surface_id, 'opl_frontdesk_domain_wiring');
-    assert.equal(wiringPayload.frontdesk_domain_wiring.summary.total_projects_count, 2);
-    assert.equal(wiringPayload.frontdesk_domain_wiring.domain_binding_parity.summary.total_projects_count, 2);
+    assert.equal(wiringPayload.frontdesk_domain_wiring.summary.total_projects_count, 3);
+    assert.equal(wiringPayload.frontdesk_domain_wiring.domain_binding_parity.summary.total_projects_count, 3);
     assert.equal(wiringPayload.frontdesk_domain_wiring.domain_binding_parity.summary.active_projects_count, 0);
     assert.equal(wiringPayload.frontdesk_domain_wiring.summary.recommended_entry_surfaces_count, 0);
 
     const readinessResponse = await fetch(`${baseUrl}/api/frontdesk/readiness`);
     const readinessPayload = await readinessResponse.json();
     assert.equal(readinessPayload.frontdesk_readiness.surface_id, 'opl_frontdesk_readiness');
-    assert.equal(readinessPayload.frontdesk_readiness.summary.total_projects_count, 2);
+    assert.equal(readinessPayload.frontdesk_readiness.summary.total_projects_count, 3);
     assert.equal(readinessPayload.frontdesk_readiness.summary.usable_now_projects_count, 0);
     assert.equal(readinessPayload.frontdesk_readiness.shell_integration_target, 'desktop_first');
     assert.equal(readinessPayload.frontdesk_readiness.local_shell.desktop_command, 'opl frontdesk bootstrap');
@@ -5432,7 +5436,7 @@ exit 1
     assert.equal(typeof progressPayload.project_progress.progress_feedback.headline, 'string');
     const domainManifestResponse = await fetch(`${baseUrl}/api/domain/manifests`);
     const domainManifestPayload = await domainManifestResponse.json();
-    assert.equal(domainManifestPayload.domain_manifests.summary.total_projects_count, 2);
+    assert.equal(domainManifestPayload.domain_manifests.summary.total_projects_count, 3);
 
     const hostedPackageOutput = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-web-hosted-package-'));
     try {
@@ -5790,8 +5794,9 @@ test('chat --dry-run prepares a seeding query and a resume command for Hermes', 
   assert.equal(output.version, 'g2');
   assert.equal(output.product_entry.mode, 'chat');
   assert.equal(output.product_entry.dry_run, true);
-  assert.equal(output.product_entry.routing.status, 'unknown_domain');
-  assert.equal(output.product_entry.routing.candidate_workstream_id, 'grant_ops');
+  assert.equal(output.product_entry.routing.status, 'routed');
+  assert.equal(output.product_entry.routing.domain_id, 'medautogrant');
+  assert.equal(output.product_entry.routing.workstream_id, 'grant_ops');
   assert.equal(output.product_entry.hermes.seed_command_preview[0], 'hermes');
   assert.ok(output.product_entry.hermes.seed_command_preview.includes('--query'));
   assert.deepEqual(output.product_entry.hermes.resume_command_preview, [
@@ -5969,6 +5974,12 @@ test('list-workstreams returns admitted workstream summaries', () => {
     },
     workstreams: [
       {
+        workstream_id: 'grant_ops',
+        label: 'Grant Ops',
+        status: 'emerging',
+        domain_id: 'medautogrant',
+      },
+      {
         workstream_id: 'research_ops',
         label: 'Research Ops',
         status: 'active',
@@ -6004,6 +6015,11 @@ test('contract domains returns the registered domain gateway summaries', () => {
       contracts_root_source: 'cwd',
     },
     domains: [
+      {
+        domain_id: 'medautogrant',
+        gateway_surface: 'Grant Ops Gateway',
+        owned_workstreams: ['grant_ops'],
+      },
       {
         domain_id: 'medautoscience',
         gateway_surface: 'Research Ops Gateway',
@@ -6140,7 +6156,7 @@ test('resolveRequestSurface keeps xiaohongshu at the redcube family boundary', (
   assert.equal(output.resolution.workstream_id, null);
 });
 
-test('resolveRequestSurface returns unknown_domain for under-definition workstreams', () => {
+test('resolveRequestSurface routes grant work to medautogrant', () => {
   const output = runCli([
     'domain',
     'resolve-request',
@@ -6153,8 +6169,10 @@ test('resolveRequestSurface returns unknown_domain for under-definition workstre
   ]);
 
   assertContractsContext(output, 'cwd');
-  assert.equal(output.resolution.status, 'unknown_domain');
-  assert.equal(output.resolution.candidate_workstream_id, 'grant_ops');
+  assert.equal(output.resolution.status, 'routed');
+  assert.equal(output.resolution.domain_id, 'medautogrant');
+  assert.equal(output.resolution.workstream_id, 'grant_ops');
+  assert.equal(output.resolution.entry_surface, 'domain_gateway');
 });
 
 test('resolveRequestSurface returns ambiguous_task with explicit boundary evidence when the primary deliverable is unclear', () => {

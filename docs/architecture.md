@@ -207,7 +207,7 @@
 
 - `Research Foundry -> Med Auto Science`：活跃 `Research Ops` 线
 - `RedCube AI`：活跃 visual-deliverable / `Presentation Ops` 入口
-- `Grant Foundry -> Med Auto Grant`：活跃 author-side / proposal-facing `Grant Ops` 业务仓；但顶层 public federation contract 仍需与它的 admission / handoff state 分开表述
+- `Grant Foundry -> Med Auto Grant`：当前已收录的 `Grant Ops` domain gateway 入口，proposal authoring 与作者侧模拟评审 / 修订 truth 继续由 `MedAutoGrant` 持有
 
 ## 文档组织原则
 
