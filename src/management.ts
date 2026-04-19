@@ -1780,15 +1780,6 @@ function buildFrontDeskReadinessSurfaceRef(options: { basePath?: string } = {}) 
   };
 }
 
-function buildFrontDeskLibreChatStatusSurfaceRef(options: { basePath?: string } = {}) {
-  const endpoints = buildFrontDeskEndpoints(options.basePath);
-
-  return {
-    surface_id: 'opl_frontdesk_librechat_status',
-    endpoint: endpoints.frontdesk_librechat_status,
-  };
-}
-
 function buildFrontDeskDashboardSurfaceRef(options: { basePath?: string } = {}) {
   const endpoints = buildFrontDeskEndpoints(options.basePath);
 
@@ -2760,8 +2751,6 @@ export function buildFrontDeskDashboard(
   const recommendedEntrySurfaces = buildRecommendedEntrySurfaces(domainManifests.projects);
   const frontdeskEntryGuideSurface = buildFrontDeskEntryGuideSurfaceRef(contracts, options);
   const frontdeskReadinessSurface = buildFrontDeskReadinessSurfaceRef(options);
-  const frontdeskLibreChatStatusSurface = buildFrontDeskLibreChatStatusSurfaceRef(options);
-
   return {
     version: 'g2',
     contracts_context: {
@@ -2780,12 +2769,9 @@ export function buildFrontDeskDashboard(
         execution_mode: runtimeModes.execution_mode,
         hosted_friendly_surface_status: 'landed',
         hosted_pilot_bundle_status: 'landed',
-        hosted_web_status: 'librechat_pilot_landed',
-        librechat_pilot_package_status: 'landed',
         hosted_runtime_readiness: hostedRuntimeReadiness,
         frontdesk_entry_guide_surface: frontdeskEntryGuideSurface,
         frontdesk_readiness_surface: frontdeskReadinessSurface,
-        frontdesk_librechat_status_surface: frontdeskLibreChatStatusSurface,
         workspace_registry_status: 'landed',
         session_ledger_status: 'landed',
         handoff_bundle_status: 'landed',
@@ -2806,7 +2792,7 @@ export function buildFrontDeskDashboard(
           '`opl workspace list` keeps `manifest_command` as non-executing registry state, while `opl domain manifests` resolves the active bound machine-readable product-entry manifests.',
           'Resolved domain manifests now also feed frontdesk surface plus operator-loop actions and recommended shell/command hints back into dashboard and handoff surfaces.',
           'Resolved domain manifests now also surface family-orchestration companion previews so the top-level front desk can show human-gate and resume semantics instead of hiding them in domain docs.',
-          'The LibreChat-first hosted shell pilot remains available as a fallback export lane, while managed hosted runtime readiness remains a separate follow-up track.',
+          'Managed hosted runtime readiness remains a separate follow-up track from the default desktop, web, and hosted-package surfaces.',
         ],
       },
       projects,

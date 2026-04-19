@@ -25,7 +25,7 @@
 - `opl frontdesk bootstrap --path <workspace>` 准备本地 `OPL Atlas` Desktop 壳，并把当前 workspace 接入 `OPL` 模块与项目 registry。
 - `opl web` 是同一产品壳的本地浏览器 companion surface。
 - `opl`、`opl "<request...>"`、`opl start --project <project_id> [--mode <mode_id>]`、`opl doctor`、`opl ask`、`opl chat` 与 `opl web` 共同组成当前顶层产品前门。
-- `opl frontdesk-librechat-install|status|start|stop|open` 与 `opl frontdesk-librechat-package` 保留为 hidden compatibility surface，默认入口保持 GUI 主路径。
+- optional hosted-shell compatibility commands 继续保留为 command-scoped hidden surface，默认入口保持 GUI / Desktop 主路径，也不再进入默认 startup payload、dashboard 或 web control room。
 - `opl ask` 默认走 `Codex`；`opl chat`、`opl session resume`、显式 executor 配置和 GUI 模式切换可以进入 `Hermes-Agent` 备用在线路径。
 - 当前 grouped command matrix 已经固定成：
   - `contract ...`：`validate|workstreams|workstream|domains|domain|surfaces|surface|handoff-envelope`

@@ -1836,10 +1836,11 @@ exit 1
     assert.equal(output.version, 'g2');
     assert.equal(output.dashboard.front_desk.direct_entry_command, 'opl');
     assert.equal(output.dashboard.front_desk.local_web_frontdesk_status, 'pilot_landed');
-    assert.equal(output.dashboard.front_desk.hosted_web_status, 'librechat_pilot_landed');
-    assert.equal(output.dashboard.front_desk.librechat_pilot_package_status, 'landed');
     assert.equal(output.dashboard.front_desk.recommended_entry_surfaces_count, 0);
     assert.deepEqual(output.dashboard.front_desk.recommended_entry_surfaces, []);
+    assert.equal('hosted_web_status' in output.dashboard.front_desk, false);
+    assert.equal('librechat_pilot_package_status' in output.dashboard.front_desk, false);
+    assert.equal('frontdesk_librechat_status_surface' in output.dashboard.front_desk, false);
     assert.equal(output.dashboard.projects.length, 4);
     assert.equal(output.dashboard.domain_manifests.summary.total_projects_count, 3);
     assert.equal(output.dashboard.domain_manifests.summary.resolved_count, 0);
@@ -5279,7 +5280,6 @@ exit 1
 
     const webFrontdesk = startup.payload.web_frontdesk as {
       entry_surface: string;
-      hosted_status: string;
       frontdesk_settings: {
         interaction_mode: string;
         execution_mode: string;
@@ -5302,10 +5302,8 @@ exit 1
         frontdesk_entry_guide: string;
         frontdesk_readiness: string;
         frontdesk_settings: string;
-        frontdesk_librechat_status: string;
         project_progress: string;
         frontdesk_domain_wiring: string;
-        librechat_package: string;
         task_status: string;
       };
       listening: {
@@ -5315,15 +5313,15 @@ exit 1
 
     assert.equal(startup.payload.version, 'g2');
     assert.equal(webFrontdesk.entry_surface, 'opl_local_web_frontdesk_pilot');
-    assert.equal(webFrontdesk.hosted_status, 'librechat_pilot_landed');
     assert.equal(webFrontdesk.api.frontdesk_entry_guide, '/api/frontdesk/entry-guide');
     assert.equal(webFrontdesk.api.frontdesk_readiness, '/api/frontdesk/readiness');
     assert.equal(webFrontdesk.api.frontdesk_settings, '/api/frontdesk/settings');
     assert.equal(webFrontdesk.api.project_progress, '/api/project-progress');
     assert.equal(webFrontdesk.api.frontdesk_domain_wiring, '/api/frontdesk/domain-wiring');
-    assert.equal(webFrontdesk.api.frontdesk_librechat_status, '/api/frontdesk/librechat/status');
-    assert.equal(webFrontdesk.api.librechat_package, '/api/frontdesk/librechat/package');
     assert.equal(webFrontdesk.api.task_status, '/api/task-status');
+    assert.equal('hosted_status' in webFrontdesk, false);
+    assert.equal('frontdesk_librechat_status' in webFrontdesk.api, false);
+    assert.equal('librechat_package' in webFrontdesk.api, false);
     assert.equal(webFrontdesk.frontdesk_settings.interaction_mode, 'codex');
     assert.equal(webFrontdesk.frontdesk_settings.execution_mode, 'codex');
     assert.equal(webFrontdesk.shell_bootstrap.primary_surface.surface_id, 'opl_frontdesk_entry_guide');
@@ -5358,6 +5356,8 @@ exit 1
     assert.match(pageHtml, /\/api\/frontdesk\/entry-guide/);
     assert.match(pageHtml, /下一步建议：继续读取当前论文的详细进度。/);
     assert.doesNotMatch(pageHtml, /Workspace Hub/);
+    assert.doesNotMatch(pageHtml, /Hosted shell status/);
+    assert.doesNotMatch(pageHtml, /Optional Hosted-Shell Export/);
 
     const dashboardResponse = await fetch(`${baseUrl}/api/status/dashboard`);
     const dashboardPayload = await dashboardResponse.json();
@@ -5418,10 +5418,6 @@ exit 1
       /^(ok|not_installed|unreachable)$/,
     );
 
-    const librechatStatusResponse = await fetch(`${baseUrl}/api/frontdesk/librechat/status`);
-    const librechatStatusPayload = await librechatStatusResponse.json();
-    assert.equal(librechatStatusPayload.frontdesk_librechat.action, 'status');
-    assert.equal(librechatStatusPayload.frontdesk_librechat.identity.sync_status, 'not_installed');
     const progressResponse = await fetch(`${baseUrl}/api/project-progress`);
     const progressPayload = await progressResponse.json();
     assert.equal(progressPayload.project_progress.surface_id, 'opl_project_progress_brief');
@@ -5458,34 +5454,6 @@ exit 1
       assert.equal(fs.existsSync(hostedPackagePayload.hosted_pilot_package.assets.run_script), true);
     } finally {
       fs.rmSync(hostedPackageOutput, { recursive: true, force: true });
-    }
-
-    const librechatPackageOutput = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-web-librechat-package-'));
-    try {
-      const librechatPackageResponse = await fetch(`${baseUrl}/api/frontdesk/librechat/package`, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({
-          output_dir: librechatPackageOutput,
-          public_origin: 'https://opl.example.com',
-        }),
-      });
-      const librechatPackagePayload = await librechatPackageResponse.json();
-      assert.equal(
-        librechatPackagePayload.librechat_pilot_package.surface_id,
-        'opl_librechat_hosted_shell_pilot_package',
-      );
-      assert.equal(librechatPackagePayload.librechat_pilot_package.hosted_shell_status, 'landed');
-      assert.equal(
-        librechatPackagePayload.librechat_pilot_package.frontdesk_entry_url,
-        'https://opl.example.com/pilot/opl/',
-      );
-      assert.equal(fs.existsSync(librechatPackagePayload.librechat_pilot_package.assets.compose_file), true);
-      assert.equal(fs.existsSync(librechatPackagePayload.librechat_pilot_package.assets.caddyfile), true);
-    } finally {
-      fs.rmSync(librechatPackageOutput, { recursive: true, force: true });
     }
 
     const sessionsResponse = await fetch(`${baseUrl}/api/session/list?limit=1`);

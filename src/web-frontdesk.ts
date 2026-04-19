@@ -159,9 +159,7 @@ type WebFrontDeskStartupPayload = {
     mode: 'local_web_frontdesk';
     local_shell_command: 'opl web';
     local_only: true;
-    hosted_status: 'librechat_pilot_landed';
     pilot_bundle_status: 'landed';
-    librechat_pilot_package_status: 'landed';
     listening: {
       host: string;
       port: number;
@@ -175,14 +173,11 @@ type WebFrontDeskStartupPayload = {
       frontdesk_entry_guide: string;
       frontdesk_readiness: string;
       frontdesk_settings: string;
-      frontdesk_librechat_status: string;
-      frontdesk_librechat_title_sync: string;
       project_progress: string;
       frontdesk_domain_wiring: string;
       domain_manifests: string;
       hosted_bundle: string;
       hosted_package: string;
-      librechat_package: string;
       dashboard: string;
       projects: string;
       workspace_status: string;
@@ -652,9 +647,7 @@ function buildStartupPayload(context: WebFrontDeskContext): WebFrontDeskStartupP
       mode: 'local_web_frontdesk',
       local_shell_command: 'opl web',
       local_only: true,
-      hosted_status: 'librechat_pilot_landed',
       pilot_bundle_status: 'landed',
-      librechat_pilot_package_status: 'landed',
       listening: {
         host: context.host,
         port: context.port,
@@ -668,14 +661,11 @@ function buildStartupPayload(context: WebFrontDeskContext): WebFrontDeskStartupP
         frontdesk_entry_guide: endpoints.frontdesk_entry_guide,
         frontdesk_readiness: endpoints.frontdesk_readiness,
         frontdesk_settings: endpoints.frontdesk_settings,
-        frontdesk_librechat_status: endpoints.frontdesk_librechat_status,
-        frontdesk_librechat_title_sync: endpoints.frontdesk_librechat_title_sync,
         project_progress: endpoints.project_progress,
         frontdesk_domain_wiring: endpoints.frontdesk_domain_wiring,
         domain_manifests: endpoints.domain_manifests,
         hosted_bundle: endpoints.hosted_bundle,
         hosted_package: endpoints.hosted_package,
-        librechat_package: endpoints.librechat_package,
         dashboard: endpoints.dashboard,
         projects: endpoints.projects,
         workspace_status: endpoints.workspace_status,
@@ -702,7 +692,7 @@ function buildStartupPayload(context: WebFrontDeskContext): WebFrontDeskStartupP
       },
       notes: [
         'This is a local web companion layered above the existing OPL CLI and desktop entry surfaces.',
-        'An optional hosted-shell compatibility export remains available alongside the hosted bundle and hosted package.',
+        'Optional hosted-shell compatibility commands remain available outside the default startup payload and front-page control room.',
         'Managed hosted runtime ownership is still not landed.',
       ],
     },
@@ -852,10 +842,6 @@ async function buildWebFrontDeskHtml(context: WebFrontDeskContext) {
     {
       label: 'Frontdesk readiness',
       href: bootstrap.web_frontdesk.api.frontdesk_readiness,
-    },
-    {
-      label: 'Hosted shell status',
-      href: bootstrap.web_frontdesk.api.frontdesk_librechat_status,
     },
     {
       label: 'Frontdesk domain wiring',
@@ -2566,32 +2552,6 @@ function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
                 <div style="height: 12px"></div>
                 <pre class="json-view" id="hosted-package-json">No hosted package export yet.</pre>
               </div>
-              <div style="height: 12px"></div>
-              <div class="card">
-                <h3>Optional Hosted-Shell Export</h3>
-                <p class="panel-copy">
-                  Export the optional hosted-shell compatibility package: the compatibility shell stays at the public root, OPL Front Desk stays at the configured base path, and the reverse-proxy assets keep the split explicit.
-                </p>
-                <form id="librechat-package-form">
-                  <div class="field-grid">
-                    <label>
-                      Output Directory
-                      <input id="librechat-package-output" name="librechat-package-output" placeholder="/tmp/opl-librechat-pilot" />
-                    </label>
-                    <label>
-                      Public Origin
-                      <input id="librechat-package-public-origin" name="librechat-package-public-origin" placeholder="https://opl.example.com" />
-                    </label>
-                  </div>
-                  <div class="button-row">
-                    <button class="secondary" type="submit">Export Compatibility Package</button>
-                  </div>
-                </form>
-                <div class="status-line" id="librechat-package-status" aria-live="polite"></div>
-                <div style="height: 12px"></div>
-                <pre class="json-view" id="librechat-package-json">No compatibility package export yet.</pre>
-              </div>
-              <div style="height: 12px"></div>
               <div class="split-grid">
                 <div class="card">
                   <h3>Resume Session</h3>
@@ -2792,10 +2752,6 @@ function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
       const hostedPackagePublicOriginInput = document.getElementById('hosted-package-public-origin');
       const hostedPackageStatus = document.getElementById('hosted-package-status');
       const hostedPackageJson = document.getElementById('hosted-package-json');
-      const librechatPackageOutputInput = document.getElementById('librechat-package-output');
-      const librechatPackagePublicOriginInput = document.getElementById('librechat-package-public-origin');
-      const librechatPackageStatus = document.getElementById('librechat-package-status');
-      const librechatPackageJson = document.getElementById('librechat-package-json');
       const resumeSessionInput = document.getElementById('resume-session-id');
       const resumeStatus = document.getElementById('resume-status');
       const resumeOutput = document.getElementById('resume-output');
@@ -4132,47 +4088,6 @@ function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
         }
       }
 
-      function setLibreChatPackageStatus(message, tone = 'muted') {
-        librechatPackageStatus.textContent = message;
-        librechatPackageStatus.dataset.tone = tone;
-      }
-
-      async function exportLibreChatPackage() {
-        const outputDir = librechatPackageOutputInput.value.trim();
-        if (!outputDir) {
-          setLibreChatPackageStatus('Hosted-shell compatibility export requires an output directory.', 'warn');
-          return;
-        }
-
-        setLibreChatPackageStatus('Exporting hosted-shell compatibility package...', 'muted');
-
-        try {
-          const response = await fetch(bootstrap.web_frontdesk.api.librechat_package, {
-            method: 'POST',
-            headers: {
-              'content-type': 'application/json',
-            },
-            body: JSON.stringify({
-              output_dir: outputDir,
-              public_origin: librechatPackagePublicOriginInput.value.trim(),
-            }),
-          });
-          const payload = await response.json();
-
-          if (!response.ok) {
-            throw new Error(payload.error?.message || 'Hosted-shell compatibility export failed.');
-          }
-
-          librechatPackageJson.textContent = JSON.stringify(payload, null, 2);
-          setLibreChatPackageStatus('Hosted-shell compatibility package exported.', 'ok');
-        } catch (error) {
-          setLibreChatPackageStatus(
-            error instanceof Error ? error.message : 'Hosted-shell compatibility export failed.',
-            'warn',
-          );
-        }
-      }
-
       async function fetchWorkspaceCatalog() {
         const response = await fetch(bootstrap.web_frontdesk.api.workspace_catalog);
         if (!response.ok) {
@@ -4451,11 +4366,6 @@ function buildLegacyWebFrontDeskHtml(context: WebFrontDeskContext) {
       document.getElementById('hosted-package-form').addEventListener('submit', (event) => {
         event.preventDefault();
         void exportHostedPackage();
-      });
-
-      document.getElementById('librechat-package-form').addEventListener('submit', (event) => {
-        event.preventDefault();
-        void exportLibreChatPackage();
       });
 
       sessionsList.addEventListener('click', (event) => {
