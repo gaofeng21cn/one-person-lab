@@ -23,9 +23,9 @@ If you need to understand what `OPL` is today, go back to:
 - `ecosystem-status-matrix.md`
 - `family-user-facing-maturity-roadmap.md`
 - `four-repo-executor-follow-up-and-hermes-evaluation.md`
-- `opl-phase-2-central-reference-sync-board.md`
-- `opl-phase-2-admitted-domain-delta-intake-refresh.md`
-- `opl-phase2-ecosystem-sync-owner-line.md`
+- [Central federation reference sync board](./opl-phase-2-central-reference-sync-board.md)
+- [Admitted-domain delta intake refresh record](./opl-phase-2-admitted-domain-delta-intake-refresh.md)
+- [Ecosystem sync owner line record](./opl-phase2-ecosystem-sync-owner-line.md)
 
 ## 2. Runtime / Substrate / Migration References
 

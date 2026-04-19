@@ -2,124 +2,71 @@
 
 # OPL Roadmap
 
-## Current Phase
+## Current Role
 
-The priority of the current phase is not to launch every workstream at once.
-It is to freeze the `OPL Gateway` language and stabilize the domain federation around the workstreams that are already real.
+`OPL` is the top-level gateway and federation model for a one-person research lab.
+Its current roadmap keeps the family-level control language stable while domain repositories continue to own their domain truth.
 
-As of `2026-04-10`, the absorbed `Phase 2 / Minimal admitted-domain federation activation package` remains the latest completed top-level activation package beneath `OPL`.
-Above it, the public `OPL` mainline has already moved into `family-level front desk / hosted runtime hardening / domain lightweight direct-entry alignment`.
+Today the public `OPL` surface centers on:
 
-What is already clear today:
+- a stable `TypeScript CLI`-first gateway contract baseline
+- the local `opl` shell as the default front door
+- the `opl web` pilot plus machine-readable discovery and handoff surfaces
+- explicit admitted-domain federation across `MedAutoScience`, `MedAutoGrant`, and `RedCube AI`
 
-- `OPL` is the top-level gateway and federation model for a one-person research lab
-- the shared Harness Engineering umbrella language under `OPL` is now named the `Unified Harness Engineering Substrate`
-- the most important shared pieces inside `UHS` are now converging into a `Shared Runtime Contract` and a `Shared Domain Contract`
-- [`MedAutoScience`](https://github.com/gaofeng21cn/med-autoscience) is the active `Research Ops` domain gateway and harness
-- [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) is the currently admitted visual-deliverable domain gateway and harness
-- `ppt_deck` is the family that currently maps most directly to `Presentation Ops`
-- `Thesis Ops` and `Review Ops` remain under definition
-- [`MedAutoGrant`](https://github.com/gaofeng21cn/med-autogrant) is the active admitted `Grant Ops` domain gateway and harness
-- the shared target operating pattern is `Agent-first`: current domain repositories stay `Auto-only`, while any future `Human-in-the-loop` product should reuse the same substrate as a compatible sibling or upper-layer product rather than forcing same-repo dual-mode logic
-- the current active development host is Codex-only local sessions, while the preferred future product-runtime substrate direction remains a true upstream `Hermes-Agent` integration proved inside a domain repository first
-- `OPL` now has a local direct product-entry shell whose default front door is `opl`; `opl <request...>` acts as quick ask, while the landed grouped CLI matrix stays organized as `opl start|doctor|ask|chat|web`, `opl contract ...`, `opl domain ...`, `opl status ...`, `opl workspace ...`, `opl frontdesk ...`, `opl session ...`, and `opl runtime repair-gateway`
-- `OPL` also now has a landed local web front desk pilot, plus a writable workspace-registry surface, a managed session ledger, and a machine-readable family handoff bundle
-- the GUI baseline is now frozen as `Onyx-style Desktop shell + OPL web companion`, while the long-line target remains an `OPL`-owned hosted / web front desk backed by the same truth surfaces
-- the frozen top-level integration choice is `external kernel, managed by OPL product packaging`: do not fork `Hermes-Agent`, and do not make user-managed Hermes installation the product prerequisite
-- the ecosystem is no longer at one uniform `Hermes-Agent` stage: `Med Auto Grant` has landed a true upstream substrate and already carries the admitted `Grant Ops` domain entry, `Med Auto Science` has completed external runtime bring-up and is moving toward real adapter cutover, `RedCube AI` has converged route / managed execution onto local `Codex CLI` host-agent runtime while keeping repo-verified product-entry federation, and `OPL` itself still stays above domain runtime ownership
-- the current repository already has a runnable local `TypeScript CLI`-first / gateway contract baseline
-- that repo-tracked CLI-first / gateway contract baseline remains the current `OPL` `Phase 1` formal entry contract and public system surface
-- the current top-level formal entry at the OPL layer remains that local `TypeScript CLI`-first / gateway contract surface rather than a launcher or runtime-owner entry
-- the current user-facing front door above that formal entry is now the local `opl` shell plus the `opl web` pilot and their machine-readable discovery / handoff surfaces
-- the absorbed `Phase 1 exit + next-stage activation package freeze` now acts as the predecessor gate for the current `Minimal admitted-domain federation activation package`
-- `MedAutoScience` and `RedCube AI` now provide the two admitted domain surfaces that are stable enough for this minimum stronger federation activation, while the activation still applies to already admitted domains only
-- the current repository now carries two top-level layers in parallel: the stable `Phase 1` gateway contract surface, and a local direct product-entry shell above it
-- no new active follow-on tranche is currently open at the gateway-contract layer: the honest top-level state is a central-sync stop until an admitted-domain repository lands a new absorbed delta or the central reference surfaces drift
+## Active Route
 
-Current phase boundaries:
+The active route for `OPL` is:
 
-- keep each workstream on an explicit domain boundary
-- keep `OPL` at the gateway / federation layer
-- keep planned workstreams on their definition and onboarding lanes until their domain evidence is ready
-- keep shared execution-core extraction downstream of domain maturity and contract convergence
+`family-level front desk -> hosted runtime hardening -> lightweight domain direct-entry alignment`
 
-## Next Phase
+Current work on that route stays focused on four priorities:
 
-The next phase should prioritize:
+1. Keep `OPL Gateway -> domain gateway -> domain harness` as the stable control language.
+2. Keep `OPL` at the gateway and federation layer while admitted domains keep domain ownership.
+3. Harden the `opl` shell, `opl web`, workspace registry, session ledger, and handoff bundle as one coherent family entry surface.
+4. Keep public docs, contracts, and admitted-domain wording aligned with the real family topology.
 
-- keeping the completed `Phase 1 / G2 release-closeout` frozen as the `G2 stable public baseline`, while keeping the completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` closed at the planning-contract boundary
-- freezing the `OPL Gateway -> domain gateway -> domain harness` control language
-- freezing `route_request`, `build_handoff_payload`, and `audit_routing_decision` as planning-level contract operations only
-- keeping the only allowed successful handoff target at `domain_gateway`, with a hard no-bypass rule against direct domain-harness targeting
-- freezing the `UHS` language above the current domain repositories while keeping shared-code extraction decisions downstream of domain maturity
-- freezing the `Shared Runtime Contract` v1 object set clearly, at least around `runtime profile`, `session substrate`, `gateway runtime status`, `memory hook`, `delivery / cron`, and `approval / interrupt`
-- freezing the `Shared Domain Contract` v1 object set clearly, at least around the formal-entry matrix, the `per-run handle`, the durable report surface, the audit trail, gate semantics, and the no-bypass rule
-- keeping `MedAutoScience` explicit as the `Research Ops` domain surface
-- keeping `RedCube AI` explicit as the visual-deliverable domain surface
-- keeping the `Hermes-native` backup-executor route on an explicit full-agent-loop proof lane instead of loosening it into generic `chat_completions`, single-step relay, or repo-local chat wrappers
-- carrying the `Agent-first` plus `Auto-only current repo + future HITL layering` doctrine into future candidate-domain definitions
-- keeping the absorbed `Phase 1 exit + next-stage activation package freeze` explicit as the predecessor gate for the current `Minimal admitted-domain federation activation package`, with every candidate path staying in explicit admission, discovery, routing, and handoff review lanes
-- defining the next candidate domains through clear task boundaries and delivery objects, using the current `task-topology + candidate-domain-backlog + domain-onboarding` path
-- continuing to harden the already landed local product-entry shell so it stays service-safe, clearly separated from the gateway contract surface, and honest about external-kernel ownership
-- extending that landed local shell toward stronger `OPL bootstrap / launcher` responsibility so the future entry remains `OPL`-owned even when the runtime kernel stays external
-- carrying the hosted / web front-desk route as `OPL truth surfaces -> Onyx-style desktop shell today -> OPL-owned hosted front desk later`
+## Near-Term Priorities
 
-The `Phase 1` candidate-domain closeout order is frozen as:
+- keep the gateway and federation wording frozen while admitted domains continue to land their own absorbed deltas
+- keep `Unified Harness Engineering Substrate`, `Shared Runtime Contract`, and `Shared Domain Contract` scoped as shared-above-domain surfaces
+- keep external-kernel packaging honest around upstream `Hermes-Agent` ownership
+- keep future hosted and desktop entry work anchored to the same truth surfaces that already drive the local shell
+- keep candidate domains moving through explicit definition and onboarding lanes
 
-- `Review Ops`
-- `Thesis Ops`
+## Family Shape
 
-This ordering is a boundary-definition sequence that has now been frozen into the current `Phase 1 exit + next-stage activation package freeze`.
-`Grant Ops` has already moved onto the admitted `MedAutoGrant` domain gateway and no longer stays on the candidate-definition lane.
-`Review Ops` remains an under-definition semantic bundle, keeps review truth domain-owned, and continues through the explicit `execution_model`, `discovery_readiness`, `routing_readiness`, and `cross_domain_wording` packages.
-`Thesis Ops` follows the same package set while keeping its dissertation / defense role distinct from `Research Ops` manuscript flow and from `Presentation Ops` / `RedCube AI` deck production.
-The absorbed predecessor follow-on is `Phase 1 exit + next-stage activation package freeze`; that predecessor gate is what allowed the current `Minimal admitted-domain federation activation package` to activate once the two-admitted-domain threshold turned green.
-Any future successful handoff remains `domain_gateway`-only and subject to the no-bypass rule against direct harness targeting.
+The current family shape is already clear enough to guide the roadmap:
 
-At the current `2026-04-10` reassessment, that predecessor freeze has already done its job, and the `Minimal admitted-domain federation activation package` is already absorbed into the current top-level truth.
-The honest current top-level state is a central-sync stop: unless an admitted-domain repository lands a new absorbed delta or the central reference surfaces drift, no new active follow-on tranche is open.
-That absorbed federation package still strengthens top-level federation wording for the admitted domain set, keeps the formal entry at the same local `TypeScript CLI`-first / gateway contract surface, and keeps `Thesis Ops` plus `Review Ops` on their candidate-definition lanes.
-Above that absorbed package, the active public mainline is now the family-level front desk and hosted-entry hardening work around the local `opl` shell, `opl web`, and their machine-readable handoff surfaces.
+- `MedAutoScience` owns the `Research Ops` domain gateway and harness
+- `MedAutoGrant` owns the admitted `Grant Ops` domain gateway and harness
+- `RedCube AI` owns the visual-deliverable domain gateway and harness
+- `ppt_deck` remains the clearest current bridge into `Presentation Ops`
+- `Review Ops` and `Thesis Ops` stay on definition and onboarding lanes
 
-## Later Phase
+## Historical Records And Reference Surfaces
 
-Only after at least two domain surfaces are truly stable, and at least one domain has proven a real upstream `Hermes-Agent` pilot, should `OPL` move toward a fuller ecosystem expression, such as:
+Historical activation packages, phase freezes, convergence boards, and migration traces stay in `docs/references/` and `docs/history/`.
+The root roadmap keeps only the current family route and the reading path for active readers.
 
-- more formal cross-domain status maintenance
-- a stronger public entry surface for the top-level gateway
-- clearer shared protocols across domains
-- pulling back a shared runtime substrate
-- pulling back shared cross-domain formal behavior contracts
-- online product entry surfaces for vertical scenarios
-- a direct `OPL` product entry backed by an external kernel managed through `OPL` product packaging
-- a hosted / web `OPL` front desk that starts from the frozen pilot route but converges back to an `OPL`-owned branded entry
-
-The entrance condition for this phase is multiple domain surfaces with clear independent boundaries.
-
-For the detailed gateway rollout path, see:
+Use these reference surfaces when you need deeper context:
 
 - [OPL Gateway Rollout](./references/opl-gateway-rollout.md)
-- [OPL Federation Contract](opl-federation-contract.md)
-- [OPL Public Surface Index](opl-public-surface-index.md)
-- [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
-- [OPL Routed Action Gateway](opl-routed-action-gateway.md)
-- [OPL Domain Onboarding Contract](opl-domain-onboarding-contract.md)
 - [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.md)
 - [OPL Gateway Acceptance Test Spec](./references/opl-gateway-acceptance-test-spec.md)
 - [OPL Governance / Audit Operating Surface](./references/opl-governance-audit-operating-surface.md)
 - [OPL Publish / Promotion Operating Surface](./references/opl-publish-promotion-operating-surface.md)
 - [Ecosystem Status Matrix](./references/ecosystem-status-matrix.md)
 - [OPL Vertical Online Agent Platform Roadmap](./references/opl-vertical-online-agent-platform-roadmap.md)
+- [OPL Gateway Example Corpus](./references/opl-gateway-example-corpus.md)
 
-For canonical contract-level compositions across these frozen layers, see [OPL Gateway Example Corpus](./references/opl-gateway-example-corpus.md).
+## Evaluation Criteria
 
-## Current Evaluation Criteria
+The roadmap is healthy when readers can immediately understand:
 
-To judge whether `OPL` is moving in the right direction, these checks matter:
-
-- can readers understand that `OPL` is the top-level product and gateway language for the ecosystem?
-- can readers understand the gateway / federation role of `OPL` and the independent domain role of each admitted surface?
-- can readers understand that `MedAutoScience` remains the independent `Research Ops` domain gateway and harness?
-- can readers understand that `RedCube AI` remains the independent visual-deliverable domain gateway and harness?
-- can readers understand that `ppt_deck` maps directly to `Presentation Ops` while `xiaohongshu` stays a separate visual family at the OPL layer?
-- are new workstreams being defined as domain surfaces instead of scattered features?
+- `OPL` is the top-level product and gateway language for the family
+- admitted domains keep their own authority under that shell
+- the active front door is the local `opl` shell plus the web pilot and handoff surfaces
+- future hosted and desktop work continues the same family truth surfaces
+- new workstreams are entering as explicit domain surfaces with clear boundaries
