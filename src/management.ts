@@ -1368,13 +1368,13 @@ export function buildHostedRuntimeReadiness() {
   return {
     surface_kind: 'opl_hosted_runtime_readiness',
     status: 'pilot_ready_not_managed',
-    shell_integration_target: 'desktop_first',
+    shell_integration_target: 'external_gui_overlay',
     managed_hosted_runtime_landed: false,
     local_web_frontdesk_landed: true,
     hosted_friendly_contract_landed: true,
     hosted_pilot_bundle_landed: true,
     self_hostable_pilot_package_landed: true,
-    desktop_shell_landed: true,
+    desktop_shell_landed: false,
     service_safe_local_packaging_landed: true,
     hosted_shell_mcp_wiring_landed: true,
     workspace_binding_tooling_landed: true,
@@ -1386,7 +1386,7 @@ export function buildHostedRuntimeReadiness() {
     recommended_next_actions: [
       '把 managed hosted runtime 的 service orchestration、tenant boundary 与 policy surface 单独冻结。',
       '保持 Hermes 作为外部 runtime substrate，不在 OPL 仓内虚构托管完成度。',
-      '继续把 hosted shell 与 OPL 自有 web front desk 统一压到同一份 family contract / wiring truth 上。',
+      '把独立的 OPL x Onyx overlay 壳接到这些 API truth 上，不在 OPL 主仓继续长自研 GUI。',
     ],
   };
 }
@@ -1979,7 +1979,7 @@ export function buildFrontDeskEntryGuide(
       surface_id: 'opl_frontdesk_entry_guide',
       entry_surface: 'opl_local_web_frontdesk_pilot',
       runtime_substrate: 'external_hermes_kernel',
-      shell_integration_target: 'desktop_first',
+      shell_integration_target: 'external_gui_overlay',
       base_path: normalizeBasePath(options.basePath),
       workspace_taxonomy: {
         family_workspace_kind: 'opl_family_workspace',
@@ -2040,7 +2040,7 @@ export function buildFrontDeskDomainWiring(
       surface_id: 'opl_frontdesk_domain_wiring',
       entry_surface: 'opl_local_web_frontdesk_pilot',
       runtime_substrate: 'external_hermes_kernel',
-      shell_integration_target: 'desktop_first',
+      shell_integration_target: 'external_gui_overlay',
       base_path: normalizeBasePath(options.basePath),
       hosted_runtime_readiness: hostedRuntimeReadiness,
       domain_entry_parity: domainEntryParity,
@@ -2184,7 +2184,7 @@ export async function buildFrontDeskReadiness(
   } else if (localService.health.status === 'unreachable') {
     recommendedNextActions.push('frontdesk service 已加载但健康检查失败，先执行 `opl frontdesk service status` 与 `opl session logs`。');
   }
-  recommendedNextActions.push('默认 GUI 入口使用 `opl frontdesk bootstrap` 准备并启动 OPL Atlas Desktop。');
+  recommendedNextActions.push('GUI 壳应通过独立的 OPL x Onyx overlay repo 接入这些 API；OPL 主仓不再提供桌面壳。');
   if (summary.manifest_ready_projects_count < summary.total_projects_count) {
     recommendedNextActions.push('给仍缺 manifest 的 active binding 补 `manifest_command`。');
   }
@@ -2205,7 +2205,7 @@ export async function buildFrontDeskReadiness(
       surface_id: 'opl_frontdesk_readiness',
       entry_surface: 'opl_local_web_frontdesk_pilot',
       runtime_substrate: 'external_hermes_kernel',
-      shell_integration_target: 'desktop_first',
+      shell_integration_target: 'external_gui_overlay',
       base_path: normalizeBasePath(options.basePath),
       overall_status:
         summary.usable_now_projects_count > 0
@@ -2217,7 +2217,6 @@ export async function buildFrontDeskReadiness(
         direct_entry_command: 'opl',
         quick_ask_command: 'opl <request...>',
         web_command: 'opl web',
-        desktop_command: 'opl frontdesk bootstrap',
       },
       local_service: localService,
       hosted_runtime_readiness: hostedRuntimeReadiness,
@@ -2323,7 +2322,7 @@ export function buildFrontDeskManifest(contracts: GatewayContracts, options: { b
       surface_id: 'opl_hosted_friendly_frontdesk_manifest',
       entry_surface: 'opl_local_web_frontdesk_pilot',
       runtime_substrate: 'external_hermes_kernel',
-      shell_integration_target: 'desktop_first',
+      shell_integration_target: 'external_gui_overlay',
       readiness: 'hosted_friendly_shell_pilot_landed',
       hosted_packaging_status: 'frontdesk_package_landed',
       pilot_bundle_status: 'landed',
@@ -2344,7 +2343,7 @@ export function buildFrontDeskManifest(contracts: GatewayContracts, options: { b
       ],
       endpoints,
       notes: [
-        'This manifest freezes the local hosted-friendly shell contract now consumed by the OPL-owned frontdesk package.',
+        'This manifest freezes the hosted-friendly adapter contract now consumed by external GUI overlays.',
         'It still does not claim managed hosted runtime ownership or multi-tenant platform readiness.',
       ],
     },
@@ -2380,7 +2379,7 @@ export function buildHostedPilotBundle(
     hosted_pilot_bundle: {
       surface_id: 'opl_hosted_frontdesk_pilot_bundle',
       runtime_substrate: 'external_hermes_kernel',
-      shell_integration_target: 'desktop_first',
+      shell_integration_target: 'external_gui_overlay',
       pilot_bundle_status: 'landed',
       actual_hosted_runtime_status: 'not_landed',
       base_path: normalizedBasePath,
@@ -2397,7 +2396,7 @@ export function buildHostedPilotBundle(
       },
       notes: [
         'This bundle makes the current front desk hosted-pilot-ready through base-path-aware shell packaging.',
-        'It now feeds the OPL-owned frontdesk package, but it is still not a managed hosted runtime or multi-tenant platform deployment.',
+        'It now feeds external GUI overlays, but it is still not a managed hosted runtime or multi-tenant platform deployment.',
       ],
     },
   };
@@ -2499,7 +2498,7 @@ export function buildFrontDeskHealth(contracts: GatewayContracts, options: { bas
       },
       notes: [
         'Health here means the current front-desk shell can truthfully expose the Hermes-backed runtime status.',
-        'The OPL-owned frontdesk package is landed, while actual hosted runtime ownership is still not landed.',
+        'The repo-tracked frontdesk surface is API-first, while actual hosted runtime ownership is still not landed.',
       ],
     },
   };
@@ -2763,8 +2762,8 @@ export function buildFrontDeskDashboard(
         local_shell_status: 'landed',
         local_web_frontdesk_command: 'opl web',
         local_web_frontdesk_status: 'pilot_landed',
-        desktop_shell_status: 'landed',
-        desktop_default_entry_status: 'ready',
+        desktop_shell_status: 'not_repo_tracked',
+        desktop_default_entry_status: 'external_overlay_required',
         interaction_mode: runtimeModes.interaction_mode,
         execution_mode: runtimeModes.execution_mode,
         hosted_friendly_surface_status: 'landed',
@@ -2787,12 +2786,12 @@ export function buildFrontDeskDashboard(
           'docs/references/mas-top-level-cutover-board.md',
         ],
         notes: [
-          'OPL now exposes a desktop-first control room together with the local web front-desk pilot and hosted bundle exports.',
+          'OPL now exposes adapter/API truth together with the local web front-desk service and hosted bundle exports.',
           'Workspace registry, managed session ledger, handoff bundle, and current Codex/Hermes mode selection are all visible from the same top-level board.',
           '`opl workspace list` keeps `manifest_command` as non-executing registry state, while `opl domain manifests` resolves the active bound machine-readable product-entry manifests.',
           'Resolved domain manifests now also feed frontdesk surface plus operator-loop actions and recommended shell/command hints back into dashboard and handoff surfaces.',
           'Resolved domain manifests now also surface family-orchestration companion previews so the top-level front desk can show human-gate and resume semantics instead of hiding them in domain docs.',
-          'The GUI mainline now targets the Onyx-fronted desktop lane, while managed hosted runtime readiness remains a separate follow-up track.',
+          'The GUI mainline should live in an external OPL x Onyx overlay repo, while this repo stays headless and contract-first.',
         ],
       },
       projects,

@@ -14,8 +14,9 @@
 
 当前主线已经冻结为：
 
-- 桌面壳：`Onyx-style Desktop shell`
-- 浏览器 companion：`opl web`
+- 主仓：`OPL headless adapter + CLI product entry`
+- GUI：独立 overlay 仓消费 `OPL` adapter surfaces
+- 本地 adapter service：`opl web`
 - 默认执行：`Codex`
 - 备用执行 / 在线网关：`Hermes-Agent`
 - 领域能力：以 `OPL` 管理的模块形式接入
@@ -71,20 +72,21 @@
 
 当前含义：
 
-- GUI 壳和 web companion 已经可以共用一套 truth surfaces。
+- 外部 GUI overlay、hosted / web 前台与 CLI 已经可以共用一套 truth surfaces。
 - environment 与 modules 管理已经进入 `OPL` 主线，而不是散落在外部脚本里。
 
-### F3. 本机 GUI 入口
+### F3. 已退役的错误路线
 
-已完成：
+已清理：
 
-- `opl frontdesk bootstrap`
-- `OPL Atlas` Desktop bootstrap package
+- repo-tracked desktop shell
+- `frontdesk bootstrap`
+- fake `Onyx-style` / `OPL Atlas` 命名残留
 
 当前含义：
 
-- 本机默认 GUI 路径已经收口到桌面壳。
-- 桌面壳当前复用 `opl web` 的 truth surface，并向 `Onyx` 风格工作台靠拢。
+- `OPL` 主仓不再承担 GUI 壳实现。
+- GUI 主线回到“独立 overlay 仓 + `OPL` adapter surfaces”的冻结路线。
 
 ### F4. 服务化运行与 hosted 预备
 
@@ -101,13 +103,13 @@
 
 ## 当前缺口
 
-### W1. 桌面壳视觉与交互还需要继续打磨
+### W1. 独立 overlay 仓还需要正式落地
 
 缺口：
 
-- 左侧 workspace / task 管理还需要更贴近目标工作台形态。
-- 右侧 progress + files 边栏还需要更稳定的最终布局。
-- settings 还需要把 environment / modules 管理面完整接起来。
+- 还需要把真正的 GUI 壳落到独立 overlay 仓，而不是继续在 `OPL` 主仓内发明替代实现。
+- 左侧 workspace / task 管理、右侧 progress + files 边栏、settings 中的 environment / modules 管理，都要在 overlay 仓完成接线。
+- `Onyx` 只作为上游 benchmark / visual target，当前集成事实仍要保持诚实表述。
 
 ### W2. hosted / web 入口还没有完全产品化
 
@@ -125,11 +127,11 @@
 
 ## 当前进行中
 
-### I1. Onyx 风格桌面壳打磨
+### I1. 独立 overlay 仓接入 OPL adapter surfaces
 
 方向：
 
-- 继续把桌面壳打磨到接近 `Codex App` 的浅色极简工作台体验。
+- 在独立 overlay 仓里对齐 `Codex App` / `Onyx` 风格的浅色极简工作台体验。
 - 保持 `workspace + task + progress + files + modules` 为核心信息架构。
 
 ### I2. Environment / Modules 设置面接线
@@ -148,13 +150,13 @@
 
 ## 推荐下一条执行 issue
 
-- 标题：`Polish OPL Front Desk shell and wire environment/modules into settings`
-- 目标：把桌面壳、右侧边栏和 settings 主线一起压稳，让 `OPL` 形成可持续演进的工作台入口。
-- 边界：继续复用现有 truth surfaces，不引入新的外部聊天壳依赖，不把 `OPL` 写成 domain runtime owner。
+- 标题：`Create opl-onyx-shell and wire it to OPL adapter surfaces`
+- 目标：在独立 overlay 仓里接入 workspace / task / progress / files / settings 主线，让 GUI 真正落到冻结路线。
+- 边界：`OPL` 主仓继续只维护 adapter/API truth，不回头长自研 GUI。
 
 ## 下一棒
 
-1. 继续打磨桌面壳布局和视觉。
+1. 继续推进 overlay 仓的布局和视觉落地。
 2. 把 settings 接到 `environment / modules`。
 3. 把 progress feed 和 files deliverables 边栏继续压成稳定产品面。
-4. 让桌面端与后续 hosted / web 前台继续共用同一套 truth surfaces。
+4. 让 overlay 仓与后续 hosted / web 前台继续共用同一套 truth surfaces。

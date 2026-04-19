@@ -621,7 +621,8 @@ exit 1
     const dashboardPayload = parseJsonOutput(dashboardResult);
     assert.equal(dashboardPayload.dashboard.projects.length, 4);
     assert.equal(dashboardPayload.dashboard.front_desk.local_web_frontdesk_status, 'pilot_landed');
-    assert.equal(dashboardPayload.dashboard.front_desk.desktop_shell_status, 'landed');
+    assert.equal(dashboardPayload.dashboard.front_desk.desktop_shell_status, 'not_repo_tracked');
+    assert.equal(dashboardPayload.dashboard.front_desk.desktop_default_entry_status, 'external_overlay_required');
     assert.equal('hosted_web_status' in dashboardPayload.dashboard.front_desk, false);
     assert.equal('librechat_pilot_package_status' in dashboardPayload.dashboard.front_desk, false);
     assert.equal('frontdesk_librechat_status_surface' in dashboardPayload.dashboard.front_desk, false);
@@ -652,6 +653,7 @@ test('help exposes the public front-desk entrypoints through the built CLI entry
   assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk hosted-package'));
   assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk service install'));
   assert.ok(payload.help.commands.some((entry) => entry.command === 'frontdesk service status'));
+  assert.equal(payload.help.commands.some((entry) => entry.command === 'frontdesk bootstrap'), false);
   assert.ok(payload.help.commands.some((entry) => entry.command === 'workspace bind'));
   assert.ok(payload.help.commands.some((entry) => entry.command === 'domain launch'));
   assert.ok(payload.help.commands.some((entry) => entry.command === 'session ledger'));
@@ -677,7 +679,7 @@ test('frontdesk manifest stays machine-readable through the built CLI entrypoint
 
     const payload = parseJsonOutput(result);
     assert.equal(payload.frontdesk_manifest.surface_id, 'opl_hosted_friendly_frontdesk_manifest');
-    assert.equal(payload.frontdesk_manifest.shell_integration_target, 'desktop_first');
+    assert.equal(payload.frontdesk_manifest.shell_integration_target, 'external_gui_overlay');
     assert.equal(payload.frontdesk_manifest.endpoints.domain_manifests, '/api/domain/manifests');
     assert.equal(payload.frontdesk_manifest.endpoints.health, '/api/health');
     assert.equal(payload.frontdesk_manifest.endpoints.resume, '/api/session/resume');
@@ -972,7 +974,7 @@ test('frontdesk hosted-package stays machine-readable through the built CLI entr
 
     const payload = parseJsonOutput(result);
     assert.equal(payload.hosted_pilot_package.surface_id, 'opl_hosted_frontdesk_pilot_package');
-    assert.equal(payload.hosted_pilot_package.shell_integration_target, 'desktop_first');
+    assert.equal(payload.hosted_pilot_package.shell_integration_target, 'external_gui_overlay');
     assert.equal(payload.hosted_pilot_package.package_status, 'landed');
     assert.equal(payload.hosted_pilot_package.actual_hosted_runtime_status, 'not_landed');
     assert.equal(payload.hosted_pilot_package.public_origin, 'https://opl.example.com');
@@ -1433,24 +1435,20 @@ exit 1
 
     const baseUrl = String(startup.payload.web_frontdesk.listening.base_url);
     const pageResponse = await fetch(baseUrl);
-    const pageHtml = await pageResponse.text();
-    assert.match(pageHtml, /OPL Workspace Home/);
-    assert.match(pageHtml, /Open OPL Agent/);
-    assert.match(pageHtml, /Workspace Home/);
-    assert.match(pageHtml, /Current Task/);
-    assert.match(pageHtml, /Workspace Inbox/);
-    assert.match(pageHtml, /Files & Deliverables/);
-    assert.match(pageHtml, /Progress Feed/);
-    assert.match(pageHtml, /one-person-lab/);
-    assert.match(pageHtml, /href="\/login"/);
-    assert.doesNotMatch(pageHtml, /Workspace Hub/);
-    assert.match(pageHtml, /id="opl-bootstrap"/);
-    assert.match(pageHtml, /\/api\/frontdesk\/entry-guide/);
-    assert.doesNotMatch(pageHtml, /Hosted shell status/);
-    assert.doesNotMatch(pageHtml, /Optional Hosted-Shell Export/);
+    assert.match(pageResponse.headers.get('content-type') ?? '', /application\/json/i);
+    const rootPayload = await pageResponse.json();
+    assert.equal(rootPayload.frontdesk_adapter.surface_id, 'opl_frontdesk_adapter_root');
+    assert.equal(rootPayload.frontdesk_adapter.mode, 'api_only');
+    assert.equal(rootPayload.frontdesk_adapter.shell_integration_target, 'external_gui_overlay');
+    assert.equal(rootPayload.frontdesk_adapter.recommended_gui_overlay, 'opl-onyx-shell');
+    assert.equal(rootPayload.frontdesk_adapter.api.frontdesk_entry_guide, '/api/frontdesk/entry-guide');
+    assert.equal(rootPayload.frontdesk_adapter.api.dashboard, '/api/status/dashboard');
+    assert.match(rootPayload.frontdesk_adapter.summary, /headless adapter surfaces/i);
+    assert.equal(rootPayload.frontdesk_adapter.notes.includes('OPL main repo now stays headless and contract-first.'), true);
 
     const manifestResponse = await fetch(`${baseUrl}/api/frontdesk/manifest`);
     const manifestPayload = await manifestResponse.json();
+    assert.equal(manifestPayload.frontdesk_manifest.shell_integration_target, 'external_gui_overlay');
     assert.equal(manifestPayload.frontdesk_manifest.endpoints.logs, '/api/session/logs');
     assert.equal(manifestPayload.frontdesk_manifest.frontdesk_entry_guide_surface.surface_id, 'opl_frontdesk_entry_guide');
     assert.equal(manifestPayload.frontdesk_manifest.shell_bootstrap.primary_surface.surface_id, 'opl_frontdesk_entry_guide');
@@ -1476,6 +1474,8 @@ exit 1
     assert.equal(readinessPayload.frontdesk_readiness.surface_id, 'opl_frontdesk_readiness');
     assert.equal(readinessPayload.frontdesk_readiness.summary.total_projects_count, 3);
     assert.equal(readinessPayload.frontdesk_readiness.summary.usable_now_projects_count, 0);
+    assert.equal(readinessPayload.frontdesk_readiness.shell_integration_target, 'external_gui_overlay');
+    assert.equal('desktop_command' in readinessPayload.frontdesk_readiness.local_shell, false);
     assert.match(
       readinessPayload.frontdesk_readiness.local_service.health.status,
       /^(ok|not_installed|unreachable)$/,

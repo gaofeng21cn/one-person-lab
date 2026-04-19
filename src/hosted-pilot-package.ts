@@ -161,7 +161,7 @@ What it does **not** claim:
 
 ## Target shape
 
-- shell target: Onyx-fronted desktop-first pilot
+- shell target: external GUI overlay consuming OPL adapter surfaces
 - public origin: ${options.publicOrigin}
 - base path: ${options.basePath || '/'}
 - internal frontdesk port: ${options.port}
@@ -198,7 +198,7 @@ What it does **not** claim:
 ## Notes
 
 - This package is honest hostedization-prep and self-hostable pilot packaging.
-- It is designed to let a future Onyx-fronted or equivalent shell consume the OPL hosted pilot contract without pretending the full hosted platform already exists.
+- It is designed to let a future OPL x Onyx overlay or equivalent shell consume the OPL hosted pilot contract without pretending the full hosted platform already exists.
 `;
 }
 
@@ -470,7 +470,7 @@ export function buildHostedPilotPackage(
     },
     hosted_pilot_package: {
       surface_id: 'opl_hosted_frontdesk_pilot_package',
-      shell_integration_target: 'desktop_first',
+      shell_integration_target: 'external_gui_overlay',
       package_status: 'landed',
       actual_hosted_runtime_status: 'not_landed',
       runtime_substrate: 'external_hermes_kernel',
@@ -519,7 +519,7 @@ export function buildHostedPilotPackage(
         'This package is a self-hostable hosted pilot package for the OPL front desk.',
         'It still requires an external Hermes binary on the host and does not claim that the actual hosted runtime is landed.',
         'The package now carries service-install and healthcheck helpers so host-side bring-up does not depend on hand-edited service paths.',
-        'The immediate shell target is the Onyx-fronted desktop-first lane, while the long-line product identity remains an OPL-owned front desk.',
+        'The immediate shell target is an external OPL x Onyx overlay, while the long-line product identity remains an OPL-owned adapter surface.',
       ],
     },
   };

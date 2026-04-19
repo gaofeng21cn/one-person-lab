@@ -16,13 +16,14 @@
 
 ## 当前基线
 
-- `OPL` 是一人课题组智能体的 Codex-native GUI 产品壳与模块管理器。
+- `OPL` 主仓当前承担的是 contract-first gateway、CLI 产品入口，以及面向外部 GUI overlay 的 headless adapter / API 面。
 - 对外公开的阅读模型采用三层：产品壳 -> 产品家族 -> 当前实现。
-- GUI 中并列呈现三类工作模式：普通 Codex 对话、通用 Codex 任务、专用智能体模块。
+- 仓库跟踪的 GUI 真相当前收口在 adapter surfaces：workspace、task、progress、files、environment、modules。
+- GUI 主线已经冻结为 `外部 overlay 仓 -> OPL adapter surfaces`；当前推荐的 overlay 目标是 `opl-onyx-shell`，`Onyx` 只作为上游基准与参考，不作为已集成依赖来表述。
 - `Research Foundry`、`Grant Foundry`、`Presentation Foundry` 是当前活跃产品家族；`Thesis Foundry` 与 `Review Foundry` 继续处在定义阶段。
 - `MAS`、`MAG`、`RCA` 是这些产品家族当前已经公开的实现。
-- 设置面承载模块管理、模块升级、版本 pin、模块健康、默认模式和 online gateway 配置。
-- workspace 侧边栏承载人话进度、运行中的任务状态和交付文件。
+- 设置类 surface 承载模块管理、模块升级、版本 pin、模块健康、默认模式和 online gateway 配置。
+- workspace 相关 surface 承载人话进度、运行中的任务状态和交付文件。
 - `Hermes-Agent` 是显式备用模式与在线网关，用于远端或替代 runtime 路径。
 - 各智能体仓库继续维护各自专业能力和 readiness 真相。
 
@@ -47,7 +48,8 @@
 - 开发实现把第三层和第四层视作配套材料
 - 当前公开产品心智以 `产品壳 -> 产品家族 -> 当前实现` 为准
 - 产品壳、模块、设置和 online gateway 的现时真相以 [当前状态](./status.md) 为准
-- `opl frontdesk bootstrap --path <workspace>` 准备本地 `OPL Atlas` Desktop 壳，并把 active workspace 接入模块 registry
+- `opl web` 启动本地 adapter service；根路由 `/` 返回给外部 GUI overlay 消费的 machine-readable root payload
+- `opl frontdesk service install|status|start|stop|open|uninstall` 管理长期运行的本地 adapter service
 - 默认的 `OPL Cortex` 前台桥保持小而稳定：论文/项目进度、执行请求、任务状态、最近会话、恢复会话、运行日志、项目列表、切换 workspace
 - 真正的前台执行请求采用“异步受理”语义：先返回 `task_id`，再通过任务状态面持续追踪
 - Codex 是普通对话与通用本地任务的默认执行者

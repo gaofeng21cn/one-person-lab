@@ -9,9 +9,6 @@ import {
   validateGatewayContracts,
 } from './contracts.ts';
 import {
-  bootstrapFrontDeskDesktop,
-} from './frontdesk-desktop-service.ts';
-import {
   buildFrontDeskEnvironment,
   buildFrontDeskModules,
   runFrontDeskModuleAction,
@@ -149,8 +146,6 @@ type WebCliInput = {
   sessionsLimit?: number;
   basePath?: string;
 };
-
-type FrontDeskDesktopCliInput = WebCliInput;
 
 type FrontDeskMcpCliInput = {
   apiBaseUrl?: string;
@@ -922,55 +917,6 @@ function parseHostedPilotPackageArgs(
   };
 }
 
-function parseFrontDeskDesktopArgs(
-  args: string[],
-  spec: Pick<CommandSpec, 'usage' | 'examples'>,
-): FrontDeskDesktopCliInput {
-  const parsed: FrontDeskDesktopCliInput = {};
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-    if (!token.startsWith('--')) {
-      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
-        token,
-      });
-    }
-
-    const value = args[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
-        option: token,
-      });
-    }
-
-    switch (token) {
-      case '--host':
-        parsed.host = value;
-        break;
-      case '--port':
-        parsed.port = parsePort(token, value, spec);
-        break;
-      case '--path':
-        parsed.workspacePath = value;
-        break;
-      case '--sessions-limit':
-        parsed.sessionsLimit = parsePositiveInteger(token, value, spec);
-        break;
-      case '--base-path':
-        parsed.basePath = value;
-        break;
-      default:
-        throw buildUsageError(`Unknown option for frontdesk Desktop command: ${token}.`, spec, {
-          option: token,
-        });
-    }
-
-    index += 1;
-  }
-
-  return parsed;
-}
-
 function parseFrontDeskMcpArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
@@ -1198,7 +1144,6 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl frontdesk domain-wiring',
         'opl frontdesk hosted-bundle --base-path /pilot/opl',
         'opl frontdesk hosted-package --output /tmp/opl-hosted-package --public-origin https://opl.example.com --base-path /pilot/opl',
-        'opl frontdesk bootstrap --path /Users/gaofeng/workspace/Yang/NF-PitNET',
         'opl frontdesk service install --port 8787',
         'opl workspace bind --project redcube --path /Users/gaofeng/workspace/redcube-ai --entry-command "redcube-ai frontdesk" --manifest-command "redcube product manifest --workspace-root /Users/gaofeng/workspace/redcube-ai"',
         'opl domain launch --project redcube --dry-run',
@@ -1728,20 +1673,6 @@ async function main() {
         return uninstallFrontDeskService(getContracts());
       },
     },
-    'frontdesk-bootstrap': {
-      usage:
-        'opl frontdesk bootstrap [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>]',
-      summary:
-        'Bootstrap the family front door in one shot: install the OPL Desktop shell, inherit the local Codex defaults, and bind the current workspace.',
-      examples: [
-        'opl frontdesk bootstrap --path /Users/gaofeng/workspace/Yang/NF-PitNET',
-      ],
-      handler: (args) =>
-        bootstrapFrontDeskDesktop(
-          getContracts(),
-          parseFrontDeskDesktopArgs(args, commandSpecs['frontdesk-bootstrap']),
-        ),
-    },
     'mcp-stdio': {
       usage:
         'opl mcp-stdio --api-base-url <url> [--workspace-path <workspace_path>] [--sessions-limit <n>]',
@@ -1772,7 +1703,7 @@ async function main() {
     web: {
       usage:
         'opl web [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>]',
-      summary: 'Start the local OPL web front-desk pilot for direct browser-based entry and management.',
+      summary: 'Start the local OPL front-desk adapter service for external GUI shells and API consumers.',
       examples: [
         'opl web',
         'opl web --host 127.0.0.1 --port 8787',
@@ -2260,12 +2191,6 @@ async function main() {
     'frontdesk service uninstall': cloneCommandSpec(commandSpecs['frontdesk-service-uninstall'], {
       usage: 'opl frontdesk service uninstall',
       examples: ['opl frontdesk service uninstall'],
-      group: 'frontdesk',
-    }),
-    'frontdesk bootstrap': cloneCommandSpec(commandSpecs['frontdesk-bootstrap'], {
-      usage:
-        'opl frontdesk bootstrap [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>]',
-      examples: ['opl frontdesk bootstrap --path /Users/gaofeng/workspace/Yang/NF-PitNET'],
       group: 'frontdesk',
     }),
     'session list': cloneCommandSpec(commandSpecs.sessions, {

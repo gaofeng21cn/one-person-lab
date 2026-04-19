@@ -1,5 +1,28 @@
 # OPL 关键决策
 
+## 2026-04-19
+
+### 决策：GUI 主线冻结为“OPL 主仓 headless adapter + 独立 overlay 仓”
+
+原因：已经出现过把“参考 `Onyx` 的工作台风格”落成“仓内自写替代桌面壳”，并且继续沿用 `Onyx-style`、`OPL Atlas` 一类表述包装偏航结果。当前用户已明确冻结正确路线：`Onyx` 保持独立上游应用，`OPL` 主仓只保留 adapter/API truth，真正的 GUI 主线放在独立 overlay 仓里跟随上游。
+
+影响：
+
+- `OPL` 主仓只保留 CLI product entry、`opl web` adapter service、workspace/task/progress/files/environment/modules contracts，以及 Codex / Hermes mode config
+- `opl-onyx-shell` 或同等独立 overlay 仓负责真正的 GUI 壳
+- `opl web` 根路由只返回 machine-readable root payload，不再伪装产品 GUI
+- `frontdesk bootstrap`、repo-tracked desktop shell，以及任何同类仓内 GUI 替代实现都应退役
+
+### 决策：外部产品名只能在“benchmark / upstream / planned overlay target”语境出现
+
+原因：上一次事故的根因之一，是把“上游参考对象”写成“当前已复用 / 已集成事实”，再用相似命名掩盖实现偏航。文档、测试和代码中的产品名必须区分清楚角色。
+
+影响：
+
+- `Onyx`、`Open WebUI` 等外部产品名只能用于 benchmark、上游、参考或计划中的 overlay target
+- 只有真实集成发生后，才允许在 current status / current implementation 里写成已集成事实
+- 任何把“复用上游”改成“仓内自写替代”的变更，必须重新获得用户批准
+
 ## 2026-04-13
 
 ### 决策：以 contract-first 方式吸收 CrewAI 的 orchestration 优点，而不是引入 CrewAI 作为 family runtime dependency
