@@ -40,7 +40,7 @@ This active companion set is anchored to `2026-04-11` and carries the responsibi
 - [Ecosystem Status Matrix](../../docs/references/ecosystem-status-matrix.md) — Chinese-only internal reference for the current four-repo stage/status picture
 - [Contract Convergence v1 Execution Board](../../docs/references/contract-convergence-v1-execution-board.md) — Chinese-only internal reference for the current unified program, active phase, and exit criteria
 - [Codex-default Host-Agent Runtime Contract](../../docs/references/host-agent-runtime-contract.md) — Chinese-only internal reference for the current local default runtime wording
-- [Family Executor Adapter Defaults](../../docs/references/family-executor-adapter-defaults.md) — Chinese-only internal reference for the current family default executor route and Hermes-native guardrails
+- [Family Executor Adapter Defaults](../../docs/references/family-executor-adapter-defaults.md) — Chinese-only internal reference for the current family executor naming, default mode, and Hermes-Agent guardrails
 - [Four-Repo Executor Follow-up And Hermes Evaluation](../../docs/references/four-repo-executor-follow-up-and-hermes-evaluation.md) — Chinese-only internal reference for the remaining executor-unification work and Hermes-agent evaluation
 
 ## Historical migration references

@@ -6,7 +6,7 @@
 
 原因很直接：
 
-1. `Codex CLI autonomous` 已经是家族默认执行器主线，能力与语义都比 `CrewAI` 自带的 agent / LLM wrapper 路径更贴近当前目标。
+1. `Codex CLI` 已经是家族默认执行器主线，默认模式是 `autonomous`，能力与语义都比 `CrewAI` 自带的 agent / LLM wrapper 路径更贴近当前目标。
 2. `Hermes-Agent`、`Codex CLI`、`OPL`、各 domain 仓之间已经形成了比较清楚的 owner split；如果再塞一个框架进去，容易把 runtime substrate、executor、authority、truth 混成一层。
 3. 现在真正缺的不是“再来一层 agent framework”，而是“把跨仓已经反复出现的 orchestration 语义，冻结成 contract-first、machine-readable、可验证的统一 surface”。
 

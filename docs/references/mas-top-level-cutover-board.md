@@ -69,7 +69,7 @@
 ### C0. 顶层真相冻结
 
 - `OPL` 公开文档、reference docs、family entry 文档对齐
-- 不再把 `MAS` 写成“已经完全 Hermes-native”
+- 不再把 `MAS` 写成“已经完成 Hermes-Agent 执行器等价切换”
 - 不再把 display 线混入主切换线
 
 ### C1. Domain product entry 对齐

@@ -7,7 +7,7 @@
 这里吸收的是 `CrewAI` 一类编排框架里最值得复用的思想，但吸收方式是 contract-first，而不是把 `CrewAI` 直接引入为 family runtime dependency，也不是改写现有 owner split：
 
 - `Hermes-Agent` 继续只是外部 runtime substrate 方向
-- `Codex CLI autonomous` 继续是家族默认执行器路线
+- `Codex CLI` 继续是家族默认执行器正式名称，`autonomous` 继续是默认路线模式
 - 各 domain 仓继续持有 durable truth、audit truth 与 review truth
 
 ## 归属边界

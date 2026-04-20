@@ -1,4 +1,4 @@
-# Hermes-native 备选执行器 Proof Lane
+# Hermes-Agent 备选执行器评估
 
 状态锚点：`2026-04-13`
 
@@ -6,35 +6,36 @@
 
 这份文档只回答一件事：
 
-- 当 `Hermes-Agent` 被拿来当 `Codex CLI autonomous` 的备选执行器时，什么样的调用方式才算真实 proof，什么样的不算。
+- 当 `Hermes-Agent` 被拿来当 `Codex CLI` 的备选执行器时，什么样的调用方式算合格评估证据。
 
 它不做的事：
 
 - 不改写当前 family 默认执行器
 - 不把 runtime substrate 已落地，误写成 concrete executor 已等价
-- 不把 generic chat relay、单次 chat completion，误写成 `Hermes-native`
+- 不把 generic chat relay、单次 chat completion，误写成 `Hermes-Agent` 备选执行器已经成立
 
 ## 当前冻结前提
 
-- family 默认 concrete executor 仍然是 `Codex CLI autonomous`
+- family 默认 concrete executor 仍然是 `Codex CLI`
+- family 默认执行模式仍然是 `autonomous`
 - 默认模型与默认 reasoning effort / thinking 仍继承本机 `Codex` 默认配置
 - `Hermes-Agent` 在当前家族里首先承担 runtime substrate / orchestration，而不是自动等于默认执行器
-- `Hermes-native` proof 通过之前，任何 Hermes 路线都只允许写成 `experimental`、`migration_bridge` 或 `regression_oracle`
+- `Hermes-Agent` 备选执行路线完成评估前，任何 Hermes 路线都只允许写成 `experimental`、`migration_bridge` 或 `regression_oracle`
 
-## 什么才算 Hermes-native
+## 什么样的路线算合格评估对象
 
-只有下面两类入口，才允许进入 proof：
+只有下面两类入口，才允许进入评估：
 
 1. 直接实例化 `Hermes AIAgent` 并跑完整 agent loop
 2. 调用经证实会真实创建 `AIAgent`、并持续输出 terminal event stream 的 `/v1/runs`
 
-这两类 proof 都必须满足：
+这两类评估都必须满足：
 
 - 输入是完整 service-entry / task envelope，而不是手写拆成很多固定小步骤
 - agent 需要自己规划、调用工具、继续推进与收口
 - 运行过程中要有真实 `run_id`、event stream、terminal event、error / interrupt surface
 
-## 什么不算 Hermes-native
+## 什么样的路线不进入评估
 
 以下形式一律不算：
 
@@ -47,11 +48,11 @@
 
 ## 必须证明的能力
 
-proof 至少要同时覆盖这几组维度：
+评估至少要同时覆盖这几组维度：
 
 ### 1. 自主权
 
-- 能否像 `Codex CLI autonomous` 一样接收完整任务目标
+- 能否像 `Codex CLI` 的 `autonomous` 模式一样接收完整任务目标
 - 能否自主拆解、连续执行、根据中间结果调整下一步
 - 能否避免退化成“人工编排的小步 chat pipeline”
 
@@ -83,23 +84,23 @@ proof 至少要同时覆盖这几组维度：
 - 是否有稳定的 `run_id`
 - 是否有结构化 event stream
 - 是否有 terminal completion / failure signal
-- 缺少关键 proof 时是否会 fail-closed，而不是静默降级成普通 chat
+- 缺少关键评估证据时是否会 fail-closed，而不是静默降级成普通 chat
 
 ## 与 Codex CLI 的比较口径
 
 当前家族的统一判断仍然是：
 
-- `Codex CLI autonomous` 仍是质量最稳、路径最清楚的默认 concrete executor
+- `Codex CLI` 的 `autonomous` 模式仍是质量最稳、路径最清楚的默认 concrete executor
 - `Hermes-Agent` 的现实意义主要在多 provider 兼容性、runtime stack 一体化、以及长期备选执行器潜力
-- proof 通过后，也只代表“具备备选执行器候选资格”，不代表立刻替换 family 默认
+- 评估通过后，也只代表“具备备选执行器候选资格”，不代表立刻替换 family 默认
 
 ## 推荐执行顺序
 
-1. 先在独立 worktree / 独立 proof lane 内跑，不污染默认主线
-2. 先选与 `Codex CLI autonomous` 当前 reference implementation 同类的任务目标
+1. 先在独立 worktree / 独立评估线内跑，不污染默认主线
+2. 先选与 `Codex CLI` 当前 reference implementation 同类的任务目标
 3. 只允许走完整 `AIAgent` loop 或真实 `/v1/runs`
 4. 对比任务完成质量、工具使用、自主性、error handling、resume / memory、delegate 能力
-5. 只有 full-loop proof、reasoning proof、event proof 都成立，才允许讨论是否增加 family backup route
+5. 只有 full-loop、reasoning、event 这三组评估证据都成立，才允许讨论是否增加 family backup route
 
 ## 允许的 closeout 结论
 

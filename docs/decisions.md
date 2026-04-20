@@ -75,7 +75,7 @@
 
 ### 决策：统一 runtime substrate，不强制统一具体执行器
 
-原因：`Hermes-Agent` 更适合承担长期在线 runtime substrate，`Codex CLI autonomous` 当前仍是家族默认执行器。
+原因：`Hermes-Agent` 更适合承担长期在线 runtime substrate，`Codex CLI` 当前仍是家族默认执行器，默认模式是 `autonomous`。
 
 影响：
 
@@ -83,11 +83,13 @@
 - `OPL` 与各领域仓继续负责 gateway、authority、object contract、audit truth
 - 具体任务执行继续通过领域内部的执行路径完成
 
-### 决策：家族默认执行器冻结为 `Codex CLI autonomous`
+### 决策：家族默认执行器正式名称冻结为 `Codex CLI`
 
-原因：这是当前最成熟、质量最可控、并且已经在医学研究线证明可行的默认路线。
+原因：这是当前最成熟、质量最可控、并且已经在医学研究线证明可行的默认路线；把正式名称、默认模式与路线状态分开表达，更适合跨仓共享合同长期维护。
 
 影响：
 
-- 家族默认执行器统一写作 `Codex CLI autonomous`
+- 家族默认执行器正式名称统一写作 `Codex CLI`
+- 家族默认执行模式统一写作 `autonomous`
+- `Hermes-Agent` 继续保留正式名称，当前路线状态统一写作 `experimental`
 - 默认模型与默认 reasoning effort 继续继承本机 `Codex` 默认配置

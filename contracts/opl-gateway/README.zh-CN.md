@@ -40,7 +40,7 @@ repo-tracked 的 `Phase 1` candidate-domain closeout 顺序已冻结为 `Review 
 - [生态四仓统一状态总表](../../docs/references/ecosystem-status-matrix.md) — 当前四仓阶段/状态总览（中文内部参考）
 - [Contract Convergence v1 执行板](../../docs/references/contract-convergence-v1-execution-board.md) — 当前统一 program、active phase 与离场条件（中文内部参考）
 - [Codex-default Host-Agent Runtime 合同](../../docs/references/host-agent-runtime-contract.md) — 当前本地默认 runtime 口径（中文内部参考）
-- [家族 Executor Adapter 默认口径](../../docs/references/family-executor-adapter-defaults.md) — 当前家族默认执行器路线与 `Hermes-native` guardrail（中文内部参考）
+- [家族 Executor Adapter 默认口径](../../docs/references/family-executor-adapter-defaults.md) — 当前家族执行器命名、默认模式与 `Hermes-Agent` guardrail（中文内部参考）
 - [四仓执行器后续任务与 Hermes-Agent 备选执行器评估](../../docs/references/four-repo-executor-follow-up-and-hermes-evaluation.md) — 当前剩余执行器统一工作与 `Hermes-Agent` 备选执行器评估（中文内部参考）
 
 ## 历史迁移参考

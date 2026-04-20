@@ -4,18 +4,18 @@
 
 `OPL` 的当前主链路是：
 
-`Human / GUI Shell / CLI -> OPL Product Runtime -> Codex or Hermes -> Domain Agent Entry -> Domain Repository`
+`Human / GUI Shell / CLI -> OPL Product Runtime -> Codex CLI or Hermes-Agent -> Domain Agent Entry -> Domain Repository`
 
 ## 当前产品链路
 
 当前仓库跟踪的产品链路是：
 
-`User / External GUI Shell / CLI -> OPL Product API -> Codex session or Hermes alternate -> selected agent entry -> domain runtime and deliverables`
+`User / External GUI Shell / CLI -> OPL Product API -> Codex CLI session or Hermes-Agent alternate -> selected agent entry -> domain runtime and deliverables`
 
 这里的核心点是：
 
 - GUI 外壳与 CLI 消费同一套 `OPL Product API`
-- `Codex` 是默认交互和执行宿主
+- `Codex CLI` 是默认交互和执行宿主
 - `Hermes-Agent` 是备用执行器与长期在线网关
 - `MAS`、`MAG`、`RCA` 等领域智能体继续保持独立
 
@@ -51,7 +51,7 @@
 
 ### 2. Engines
 
-- `Codex`
+- `Codex CLI`
   - 默认交互与执行宿主
 - `Hermes-Agent`
   - 备用执行器与长期在线网关
@@ -82,9 +82,10 @@
 
 ## 默认执行策略
 
-- 默认执行器：`Codex CLI autonomous`
+- 默认执行器正式名称：`Codex CLI`
+- 默认执行模式：`autonomous`
 - 默认模型与默认 reasoning effort：继承本机 `Codex` 默认配置
-- `Hermes-native` 继续作为实验路线和备用路径
+- `Hermes-Agent` 当前作为 `experimental` 备选执行路线与长期在线网关
 
 ## 文档组织原则
 

@@ -72,7 +72,7 @@
       "phase_status": "in_progress",
       "phase_summary": "把 direct grant product 面逐步收成当前用户 inbox shell，而不越界写成 mature Web UI 或 hosted runtime。",
       "active_phase": "P4 mature direct grant product entry",
-      "active_tranche": "P4.D critique Codex CLI autonomous executor landing",
+      "active_tranche": "P4.D critique Codex CLI autonomous-mode executor landing",
       "next_focus": [
         "继续把 `grant-user-loop` 当作当前 direct grant user inbox shell，并保持主线 snapshot / route action / product entry truth 对齐。",
         "继续用 fresh proof 验证 critique / revision / final package / hosted contract bundle 在 Hermes substrate 上不漂移。"

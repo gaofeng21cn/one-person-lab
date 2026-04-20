@@ -10,14 +10,23 @@
     "repo_local_model_pin_as_family_default"
   ],
   "defaults": {
-    "default_executor": "codex_cli_autonomous",
+    "default_executor_name": "codex_cli",
+    "default_executor_mode": "autonomous",
     "default_model": "inherit_local_codex_default",
     "default_reasoning_effort": "inherit_local_codex_default",
     "default_semantics": "full_agent_loop_autonomous_execution"
   },
+  "executor_labels": {
+    "codex_cli": "Codex CLI",
+    "hermes_agent": "Hermes-Agent"
+  },
+  "executor_statuses": {
+    "codex_cli": "default",
+    "hermes_agent": "experimental"
+  },
   "guardrails": {
     "chat_completion_only_executor_forbidden": true,
-    "hermes_native_requires_full_agent_loop": true,
+    "hermes_agent_requires_full_agent_loop": true,
     "migration_bridge_label_required_for_non_default_routes": true,
     "experimental_label_required_for_non_default_routes": true,
     "regression_oracle_label_required_for_non_default_routes": true,
