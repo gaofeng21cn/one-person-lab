@@ -16,13 +16,14 @@
 
 ## 当前冻结默认
 
-- 默认执行器：`Codex CLI autonomous`
+- 默认执行器正式名称：`Codex CLI`
+- 默认执行模式：`autonomous`
 - 默认模型：继承本机 `Codex` 默认配置
 - 默认 reasoning effort / thinking：继承本机 `Codex` 默认配置
 - 默认语义：必须是能自主拆解、规划、执行、继续推进的 agent loop
+- `Hermes-Agent` 保留正式名称，当前执行路线状态写作 `experimental`
 
-这里说的 `Codex CLI autonomous`，不是一次性的 chat completion，也不是把大任务先拆成手写的固定小步骤再让模型逐步补空。
-它要求 `Executor Adapter` 把任务交给一个可以自主决策推进的 Codex agent route。
+这里说的 `Codex CLI` 默认路线，指的是把任务交给 `autonomous` agent loop 去自主推进，而不是人工先把任务拆成固定小步骤再逐步补空。
 
 ## Machine-Readable Mirror
 
@@ -45,39 +46,40 @@
 
 它不自动等于默认执行器。
 
-当前 `Hermes-native` 只算实验路线，而且语义必须非常严格：
+当前 `Hermes-Agent` 执行路线只算实验路线，而且语义必须非常严格：
 
-- 只有完整的 `Hermes AIAgent` agent loop 才能写成 `Hermes-native`
-- 一步一步 chat 不是 `Hermes-native`
-- 单次 chat completion 不是 `Hermes-native`
-- chat relay 不是 `Hermes-native`
-- 把 `/v1/runs` 只当成一次性模型代理，也不是 `Hermes-native`
-
-在真实 `Hermes-native` 路线被证明之前，这些实现都只能被记作迁移桥、实验路线或回归对照。
+- 满足 guardrail 的唯一形态，是完整的 `Hermes AIAgent` agent loop
+- 当前路线状态统一写作 `experimental`
+- 在这条路线完成独立评估前，相关实现只允许被记作迁移桥、实验路线或回归对照
 
 ## 三仓当前映射
 
 - `Med Auto Science / MedDeepScientist`
   - 当前最成熟的参考实现
-  - 已经以 `Codex CLI autonomous` 作为真实可证实的底层执行器
+  - 已经以 `Codex CLI` 的 `autonomous` 模式作为真实可证实的底层执行器
 - `RedCube AI`
-  - `Codex CLI autonomous` 默认路线已经吸收回 `main`
+  - `Codex CLI` 默认路线已经吸收回 `main`
   - 当前 repo-tracked truth 已同时包含 upstream runtime-owner cutover 与 repo-verified `product frontdesk / federated product entry / session continuity`
   - 现有 Hermes `/v1/runs` relay 继续只算迁移桥
 - `Med Auto Grant`
   - 真实上游 `Hermes-Agent` runtime substrate 已可运行
-  - `critique` route 已 landed 到 `Codex CLI autonomous`
+  - `critique` route 已 landed 到 `Codex CLI`
   - docs / contract 已与默认模型策略一起收口
 
 ## 统一 Contract 要求
 
 三个 domain 仓后续都应在各自的 `executor_routing_contract` 或等价 surface 中，显式表达同一组 family 默认字段：
 
-- `default_executor = codex_cli_autonomous`
+- `default_executor_name = codex_cli`
+- `default_executor_mode = autonomous`
 - `default_model = inherit_local_codex_default`
 - `default_reasoning_effort = inherit_local_codex_default`
+- `executor_labels.codex_cli = Codex CLI`
+- `executor_labels.hermes_agent = Hermes-Agent`
+- `executor_statuses.codex_cli = default`
+- `executor_statuses.hermes_agent = experimental`
 - `chat_completion_only_executor_forbidden = true`
-- `hermes_native_requires_full_agent_loop = true`
+- `hermes_agent_requires_full_agent_loop = true`
 
 如果某个仓需要保留过渡路线，也必须显式标明它是：
 

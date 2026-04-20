@@ -7,7 +7,7 @@ This directory freezes the machine-readable companion schemas for the family-lev
 These contracts absorb useful orchestration ideas from tools such as `CrewAI` in a contract-first way, but they do not make `CrewAI` a required runtime dependency and they do not replace the existing ownership split:
 
 - `Hermes-Agent` remains an external runtime substrate direction
-- `Codex CLI autonomous` remains the default family executor route
+- `Codex CLI` remains the default family executor name and `autonomous` remains the default route mode
 - domain repositories remain the owners of durable truth, audit truth, and review truth
 
 ## Ownership Boundary

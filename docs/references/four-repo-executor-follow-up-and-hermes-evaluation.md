@@ -25,10 +25,11 @@
 
 `OPL` 当前冻结的是 family-level executor contract，而不是 domain execution owner：
 
-- 家族默认执行器：`Codex CLI autonomous`
+- 家族默认执行器正式名称：`Codex CLI`
+- 默认执行模式：`autonomous`
 - 默认模型：`inherit_local_codex_default`
 - 默认 reasoning effort：`inherit_local_codex_default`
-- `Hermes-native` 只有完整 `Hermes AIAgent` agent loop 才算成立
+- `Hermes-Agent` 当前路线状态是 `experimental`，完整 `Hermes AIAgent` agent loop 是这条路线的硬 guardrail
 
 这一层现在已经同时落在：
 
@@ -83,7 +84,7 @@
 
 ### `RedCube AI`
 
-`RedCube AI` 的 `Codex CLI autonomous` 默认执行器实现已经吸收回 `main`。
+`RedCube AI` 的 `Codex CLI` 默认执行器实现已经吸收回 `main`，默认模式也保持为 `autonomous`。
 当前 repo-tracked truth 已经同时包含：
 
 - upstream `Hermes-Agent` runtime-owner cutover
@@ -95,7 +96,7 @@
 也就是说，`RedCube AI` 当前已经不再是“待吸收默认执行器”的状态；当前 honest next step 变成：
 
 - 把这条已 absorbed truth 持续同步进 `OPL` 顶层 central reference surfaces
-- 然后只把 `Hermes-native` 作为独立 backup-executor proof lane 去验证
+- 然后只把 `Hermes-Agent` 作为独立备选执行器评估线去验证
 
 ## 当前仍待完成的主线
 
@@ -119,9 +120,9 @@
 
 - 不允许再把 repo-local `gpt-5.4 / xhigh` 之类 pin 写回 family 默认
 - 不允许把 chat relay / 单次 chat completion 写成默认执行器
-- 不允许把 `Hermes-native` 的语义放松成非 full-agent-loop
+- 不允许把 `Hermes-Agent experimental` 的语义放松成非 full-agent-loop
 
-### 三、只在独立 proof lane 中验证 `Hermes-native`
+### 三、只在独立评估线中验证 `Hermes-Agent`
 
 这条线现在仍只算实验路线。
 后续如果要做，必须满足：
@@ -129,7 +130,7 @@
 - 入口不是一步一步 chat
 - 也不是把 `/v1/chat/completions` 当一次性模型代理
 - 而是直接调用 `Hermes AIAgent` full agent loop，或明确等价于该 loop 的 `/v1/runs` run surface
-- 验证口径统一收口到 `docs/references/hermes-native-executor-proof-lane.md`
+- 验证口径统一收口到 `docs/references/hermes-agent-executor-evaluation.md`
 
 ## 文档同步清单
 
@@ -140,7 +141,7 @@
   - `docs/README*`
   - `docs/roadmap*`
   - `docs/references/family-executor-adapter-defaults.md`
-  - `docs/references/hermes-native-executor-proof-lane.md`
+  - `docs/references/hermes-agent-executor-evaluation.md`
   - `docs/references/four-repo-executor-follow-up-and-hermes-evaluation.md`
   - `contracts/opl-gateway/family-executor-adapter-defaults.json`
   - `contracts/opl-gateway/README*.md`
@@ -150,20 +151,20 @@
 - `MedDeepScientist`
   - root `status / architecture` 本轮同步到“inherit local Codex default + CodexRunner -> codex exec”真相
 - `Med Auto Grant`
-  - 根级 `status / architecture / decisions / runtime-program current truth` 已对齐 critique `Codex CLI autonomous`
+  - 根级 `status / architecture / decisions / runtime-program current truth` 已对齐 critique `Codex CLI`
 - `RedCube AI`
   - `README*`
   - `docs/status.md`
   - `docs/architecture.md`
   - `contracts/runtime-program/current-program.json`
-  - 默认执行器 truth 已对齐 `Codex CLI autonomous`
+  - 默认执行器 truth 已对齐 `Codex CLI`
 
 ### 仍待同步
 
 - `OPL`
   - 后续若再出现 admitted-domain 新 absorbed delta，仍要继续重开 central sync，而不是回退成旧 snapshot
-- `Hermes-native`
-  - 还没有任何一仓被 repo-verified 成“已经能平替 `Codex CLI autonomous` 的 family default concrete executor”
+- `Hermes-Agent experimental`
+  - 还没有任何一仓被 repo-verified 成“已经能平替 `Codex CLI` 默认 `autonomous` 模式的 family executor”
 
 ## Hermes-Agent 作为备选执行器：已经具备什么
 
@@ -214,14 +215,14 @@
 
 ### 一、当前 family 落地成熟度：`Codex CLI` 更强
 
-在 `OPL` 这一系列仓里，当前已经 repo-verified、质量稳定、路径清楚的默认执行器，仍然是 `Codex CLI autonomous`。
+在 `OPL` 这一系列仓里，当前已经 repo-verified、质量稳定、路径清楚的默认执行器，仍然是 `Codex CLI`，默认模式是 `autonomous`。
 
 `Hermes-Agent` 当前在这几个仓里的主要已落地点，仍然是：
 
 - runtime substrate
 - gateway / API surface
 - run / event / session substrate
-- 局部 relay / pilot / proof gate
+- 局部 relay / pilot / evaluation gate
 
 它还没有被 repo-verified 成“当前就能替代 Codex CLI 的 family default concrete executor”。
 
@@ -251,21 +252,21 @@
 
 所以当前 family 的正确策略仍然是：
 
-- 默认执行器继续坚持 `Codex CLI autonomous`
-- `Hermes-Agent` 作为后续多 provider 备选执行器去做真实 proof，而不是先在主线上想当然平替
+- 默认执行器继续坚持 `Codex CLI` 与 `autonomous` 这一组默认组合
+- `Hermes-Agent` 作为后续多 provider 备选执行器去做真实评估，而不是先在主线上想当然平替
 
 ## 建议开工顺序
 
 1. 当前批次先把 `RedCube AI` 已 absorbed truth 写回 `OPL` 顶层 central reference sync 面。
-2. 继续守住 `Codex CLI autonomous + inherit local Codex default` 这条 family 默认执行器主线。
-3. 只在独立 proof lane 中测试真正的 `Hermes-native`，而且只允许基于真实 `AIAgent` / `/v1/runs` full-agent-loop 路线。
+2. 继续守住 `Codex CLI + autonomous + inherit local Codex default` 这条 family 默认执行器主线。
+3. 只在独立评估线中测试真正的 `Hermes-Agent experimental`，而且只允许基于真实 `AIAgent` / `/v1/runs` full-agent-loop 路线。
 4. 如果后续四仓再出现新的 admitted-domain absorbed delta，再重开下一轮 central sync。
 
 ## 一句话结论
 
 当前最诚实的判断是：
 
-- 家族默认 concrete executor 仍应坚持 `Codex CLI autonomous`
+- 家族默认 concrete executor 仍应坚持 `Codex CLI` 的 `autonomous` 模式
 - `Hermes-Agent` 已经具备真实 agent loop、工具自治、skills、browser、subagent 与多 provider 兼容能力，因此非常有资格成为后续备选执行器
 - 但在这几个仓里，它还没有被 repo-verified 成“当前就能平替 Codex CLI 的默认 concrete executor”
-- 因此下一步正确动作不是重新争论方向，而是先把中央 reference sync 与 `Hermes-native` proof lane 分 tranche 做完，并继续把默认主线守在 `Codex CLI autonomous`
+- 因此下一步正确动作是先把中央 reference sync 与 `Hermes-Agent` 备选执行器评估分 tranche 做完，并继续把默认主线守在 `Codex CLI` 的 `autonomous` 模式
