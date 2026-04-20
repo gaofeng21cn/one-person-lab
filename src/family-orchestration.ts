@@ -140,6 +140,39 @@ export interface BuildFamilyProductEntryOrchestrationInput {
   checkpoint_lineage_surface?: FamilyReference | null;
 }
 
+export interface BuildFamilyFrontdeskProductEntryOrchestrationInput {
+  graph_id: string;
+  target_domain_id: string;
+  graph_kind: string;
+  graph_version: string;
+  frontdesk_node_id?: string | null;
+  frontdesk_title: string;
+  frontdesk_surface_kind: string;
+  direct_node_id?: string | null;
+  direct_title: string;
+  direct_surface_kind: string;
+  direct_transition_event?: string | null;
+  federated_node_id?: string | null;
+  federated_title?: string | null;
+  federated_surface_kind?: string | null;
+  federated_transition_event?: string | null;
+  progress_node_id?: string | null;
+  progress_title: string;
+  progress_surface_kind: string;
+  direct_progress_event?: string | null;
+  federated_progress_event?: string | null;
+  review_gate_id: string;
+  review_gate_title?: string | null;
+  review_gate_status?: string | null;
+  review_surface?: FamilyReference | null;
+  resume_surface_kind: string;
+  session_locator_field: string;
+  checkpoint_locator_field: string;
+  action_graph_ref?: FamilyReference | null;
+  event_envelope_surface?: FamilyReference | null;
+  checkpoint_lineage_surface?: FamilyReference | null;
+}
+
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -399,6 +432,119 @@ export function buildFamilyProductEntryOrchestration(input: BuildFamilyProductEn
       ...(checkpointPolicy ? { checkpoint_policy: checkpointPolicy } : {}),
     }),
     human_gates: humanGatePreviews,
+    resume_surface_kind: input.resume_surface_kind,
+    session_locator_field: input.session_locator_field,
+    checkpoint_locator_field: input.checkpoint_locator_field,
+    action_graph_ref: input.action_graph_ref ?? null,
+    event_envelope_surface: input.event_envelope_surface ?? null,
+    checkpoint_lineage_surface: input.checkpoint_lineage_surface ?? null,
+  });
+}
+
+export function buildFamilyFrontdeskProductEntryOrchestration(
+  input: BuildFamilyFrontdeskProductEntryOrchestrationInput,
+) {
+  const frontdeskNodeId = optionalString(input.frontdesk_node_id) ?? 'step:open_frontdesk';
+  const directNodeId = optionalString(input.direct_node_id) ?? 'step:continue_current_loop';
+  const federatedNodeId = optionalString(input.federated_node_id) ?? 'step:opl_bridge_handoff';
+  const progressNodeId = optionalString(input.progress_node_id) ?? 'step:inspect_current_progress';
+  const directTransitionEvent = optionalString(input.direct_transition_event) ?? 'start_direct';
+  const federatedTransitionEvent = optionalString(input.federated_transition_event) ?? 'enter_via_opl_bridge';
+  const directProgressEvent = optionalString(input.direct_progress_event) ?? 'session_started';
+  const federatedProgressEvent = optionalString(input.federated_progress_event) ?? 'handoff_completed';
+  const federatedTitle = optionalString(input.federated_title);
+  const federatedSurfaceKind = optionalString(input.federated_surface_kind);
+
+  if (Boolean(federatedTitle) !== Boolean(federatedSurfaceKind)) {
+    throw new Error('family orchestration federated step requires both title and surface_kind');
+  }
+
+  const nodes: FamilyActionGraphNodeInput[] = [
+    {
+      node_id: frontdeskNodeId,
+      node_kind: 'frontdoor',
+      title: input.frontdesk_title,
+      surface_kind: input.frontdesk_surface_kind,
+    },
+    {
+      node_id: directNodeId,
+      node_kind: 'direct_entry',
+      title: input.direct_title,
+      surface_kind: input.direct_surface_kind,
+      produces_checkpoint: true,
+    },
+  ];
+  const edges: FamilyActionGraphEdgeInput[] = [
+    {
+      from: frontdeskNodeId,
+      to: directNodeId,
+      on: directTransitionEvent,
+    },
+  ];
+  const checkpointNodes = [directNodeId];
+
+  if (federatedTitle && federatedSurfaceKind) {
+    nodes.push({
+      node_id: federatedNodeId,
+      node_kind: 'federated_entry',
+      title: federatedTitle,
+      surface_kind: federatedSurfaceKind,
+      produces_checkpoint: true,
+    });
+    edges.push({
+      from: frontdeskNodeId,
+      to: federatedNodeId,
+      on: federatedTransitionEvent,
+    });
+    checkpointNodes.push(federatedNodeId);
+  }
+
+  nodes.push({
+    node_id: progressNodeId,
+    node_kind: 'progress_read',
+    title: input.progress_title,
+    surface_kind: input.progress_surface_kind,
+    produces_checkpoint: true,
+  });
+  edges.push({
+    from: directNodeId,
+    to: progressNodeId,
+    on: directProgressEvent,
+  });
+  if (federatedTitle && federatedSurfaceKind) {
+    edges.push({
+      from: federatedNodeId,
+      to: progressNodeId,
+      on: federatedProgressEvent,
+    });
+  }
+  checkpointNodes.push(progressNodeId);
+
+  return buildFamilyProductEntryOrchestration({
+    graph_id: input.graph_id,
+    target_domain_id: input.target_domain_id,
+    graph_kind: input.graph_kind,
+    graph_version: input.graph_version,
+    nodes,
+    edges,
+    entry_nodes: [frontdeskNodeId],
+    exit_nodes: [progressNodeId],
+    human_gates: [
+      {
+        gate_id: input.review_gate_id,
+        trigger_nodes: [progressNodeId],
+        blocking: true,
+      },
+    ],
+    checkpoint_nodes: checkpointNodes,
+    human_gate_previews: [
+      {
+        gate_id: input.review_gate_id,
+        ...(optionalString(input.review_gate_title) ? { title: optionalString(input.review_gate_title)! } : {}),
+        status: optionalString(input.review_gate_status) ?? 'requested',
+        ...(input.review_surface ? { review_surface: input.review_surface } : {}),
+      },
+    ],
     resume_surface_kind: input.resume_surface_kind,
     session_locator_field: input.session_locator_field,
     checkpoint_locator_field: input.checkpoint_locator_field,

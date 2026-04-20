@@ -263,3 +263,17 @@ test('family shared release stays on contract and script surfaces while public s
   assert.doesNotMatch(statusDoc, /npm run family:shared-release -- check/);
   assert.doesNotMatch(statusDoc, /npm run family:shared-release -- sync/);
 });
+
+test('family shared release maintainer doc stays on family shared module maintenance instead of domain release ownership', () => {
+  const maintainerDoc = fs.readFileSync(
+    path.join(repoRoot, 'docs/references/family-shared-release-maintenance.md'),
+    'utf8',
+  );
+
+  assert.match(maintainerDoc, /contracts\/family-release\/shared-owner-release\.json/);
+  assert.match(maintainerDoc, /npm run family:shared-release -- release/);
+  assert.match(maintainerDoc, /tests\/src\/family-shared-release-discipline\.test\.ts/);
+  assert.match(maintainerDoc, /shared module owner commit/i);
+  assert.doesNotMatch(maintainerDoc, /domain release owner/i);
+  assert.doesNotMatch(maintainerDoc, /submission owner/i);
+});

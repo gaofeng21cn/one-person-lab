@@ -4,6 +4,9 @@ from .automation_companions import (
     build_automation_catalog,
     build_automation_descriptor,
 )
+from .editable_consumer_launcher import (
+    ensure_repo_editable_dependency_paths,
+)
 from .family_orchestration import (
     build_explicit_checkpoint_policy,
     build_family_action_graph,
@@ -170,6 +173,7 @@ __all__ = [
     "build_task_lifecycle",
     "build_task_surface_descriptor",
     "collect_family_human_gate_ids",
+    "ensure_repo_editable_dependency_paths",
     "ensure_script_file",
     "extract_tracked_pins",
     "inspect_current_repo_family_shared_alignment",
