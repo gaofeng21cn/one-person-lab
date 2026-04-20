@@ -58,6 +58,11 @@ export function loadSharedOwnerReleaseContract({ repoRoot = repoRootFromImportMe
   if (!Array.isArray(contract.consumers) || contract.consumers.length === 0) {
     throw new Error('shared owner release contract must declare at least one consumer');
   }
+  for (const consumer of contract.consumers) {
+    if (typeof consumer.verify_command !== 'string' || consumer.verify_command.trim() === '') {
+      throw new Error(`shared owner release contract consumer is missing verify_command: ${consumer.repo_id}`);
+    }
+  }
   return contract;
 }
 
@@ -192,6 +197,7 @@ export function inspectConsumerRepo({
     return {
       repo_id: consumer.repo_id,
       repo_path: repoPath,
+      verify_command: consumer.verify_command,
       status: 'missing_repo',
       findings: [{
         file: null,
@@ -236,6 +242,7 @@ export function inspectConsumerRepo({
   return {
     repo_id: consumer.repo_id,
     repo_path: repoPath,
+    verify_command: consumer.verify_command,
     status: overallStatus,
     findings,
   };
@@ -311,6 +318,9 @@ function formatInspection(summary) {
   ];
   for (const repo of summary.repos) {
     lines.push(`[${repo.repo_id}] ${repo.status} ${repo.repo_path}`);
+    if (repo.verify_command) {
+      lines.push(`  verify: ${repo.verify_command}`);
+    }
     for (const finding of repo.findings) {
       const fileLabel = finding.file ?? '(repo)';
       const pins = finding.pins.length > 0 ? finding.pins.join(', ') : 'none';

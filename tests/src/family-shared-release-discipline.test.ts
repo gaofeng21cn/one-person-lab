@@ -16,9 +16,9 @@ import {
   syncConsumerRepo,
 } from '../../scripts/family-shared-release.mjs';
 
-const RELEASED_OWNER_COMMIT = 'cc1afc47ea2baca840e742155348f22de94ca50a';
 const STALE_OWNER_COMMIT = '6a6823dba7f95de5ae3aafc477167bccb07de74c';
 const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..');
+const RELEASED_OWNER_COMMIT = loadSharedOwnerReleaseContract({ repoRoot }).owner_commit;
 
 function write(filePath: string, content: string) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -36,6 +36,9 @@ test('shared owner release contract freezes a full owner commit and three consum
   assert.match(contract.owner_commit, /^[0-9a-f]{40}$/);
   assert.equal(contract.owner_commit, RELEASED_OWNER_COMMIT);
   assert.equal(contract.consumers.length, 3);
+  assert.equal(contract.consumers[0].verify_command, 'scripts/verify.sh family');
+  assert.equal(contract.consumers[1].verify_command, 'scripts/verify.sh family');
+  assert.equal(contract.consumers[2].verify_command, 'scripts/verify.sh family');
   assert.equal(contract.consumers[0].targets[0].kind, 'python_dependency');
   assert.equal(contract.consumers[2].targets[1].kind, 'js_lock');
 });
@@ -147,6 +150,7 @@ test('family shared release CLI can sync explicit repo overrides and report alig
   assert.match(result.stdout, /\[medautoscience\] synced/);
   assert.match(result.stdout, /\[medautogrant\] synced/);
   assert.match(result.stdout, /\[redcube\] synced/);
+  assert.match(result.stdout, /verify: scripts\/verify\.sh family/);
   assert.match(result.stdout, new RegExp(RELEASED_OWNER_COMMIT));
 });
 
@@ -178,6 +182,7 @@ test('family shared release CLI can rewrite the owner contract and propagate a n
         {
           repo_id: 'medautoscience',
           repo_dir: 'med-autoscience',
+          verify_command: 'scripts/verify.sh family',
           targets: [
             { file: 'pyproject.toml', kind: 'python_dependency' },
             { file: 'uv.lock', kind: 'python_lock' },
@@ -186,6 +191,7 @@ test('family shared release CLI can rewrite the owner contract and propagate a n
         {
           repo_id: 'medautogrant',
           repo_dir: 'med-autogrant',
+          verify_command: 'scripts/verify.sh family',
           targets: [
             { file: 'pyproject.toml', kind: 'python_dependency' },
             { file: 'uv.lock', kind: 'python_lock' },
@@ -194,6 +200,7 @@ test('family shared release CLI can rewrite the owner contract and propagate a n
         {
           repo_id: 'redcube',
           repo_dir: 'redcube-ai',
+          verify_command: 'scripts/verify.sh family',
           targets: [
             { file: 'packages/redcube-gateway/package.json', kind: 'js_dependency' },
             { file: 'package-lock.json', kind: 'js_lock' },

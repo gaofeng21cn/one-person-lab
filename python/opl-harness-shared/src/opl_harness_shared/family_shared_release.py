@@ -71,6 +71,17 @@ def load_shared_owner_release_contract(
     owner_commit = str(contract.get("owner_commit", ""))
     if not re.fullmatch(r"[0-9a-f]{40}", owner_commit):
         raise ValueError(f"shared owner release contract has invalid owner_commit: {owner_commit}")
+    consumers = contract.get("consumers")
+    if not isinstance(consumers, list) or not consumers:
+        raise ValueError("shared owner release contract must declare at least one consumer")
+    for consumer in consumers:
+        if not isinstance(consumer, dict):
+            raise ValueError("shared owner release contract consumer must be an object")
+        verify_command = str(consumer.get("verify_command", "")).strip()
+        if not verify_command:
+            raise ValueError(
+                f"shared owner release contract consumer is missing verify_command: {consumer.get('repo_id')}"
+            )
     return contract
 
 
@@ -106,6 +117,7 @@ def inspect_family_shared_consumer_alignment(
             "repo_id": consumer_repo_id,
             "repo_root": str(resolved_repo_root),
             "owner_commit": contract["owner_commit"],
+            "verify_command": None,
             "status": "missing_consumer",
             "findings": [],
         }
@@ -114,6 +126,7 @@ def inspect_family_shared_consumer_alignment(
             "repo_id": consumer_repo_id,
             "repo_root": str(resolved_repo_root),
             "owner_commit": contract["owner_commit"],
+            "verify_command": consumer["verify_command"],
             "status": "missing_repo",
             "findings": [
                 {
@@ -157,6 +170,7 @@ def inspect_family_shared_consumer_alignment(
         "repo_id": consumer_repo_id,
         "repo_root": str(resolved_repo_root),
         "owner_commit": contract["owner_commit"],
+        "verify_command": consumer["verify_command"],
         "status": "aligned" if all(item["status"] == "aligned" for item in findings) else "stale",
         "findings": findings,
     }

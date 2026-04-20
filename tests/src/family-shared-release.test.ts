@@ -35,6 +35,7 @@ test('loadSharedOwnerReleaseContract reads the owner release contract from an ex
         {
           repo_id: 'medautoscience',
           repo_dir: 'med-autoscience',
+          verify_command: 'scripts/verify.sh family',
           targets: [
             { file: 'pyproject.toml', kind: 'python_dependency' },
             { file: 'uv.lock', kind: 'python_lock' },
@@ -48,6 +49,7 @@ test('loadSharedOwnerReleaseContract reads the owner release contract from an ex
 
   assert.equal(contract.owner_commit, RELEASED_OWNER_COMMIT);
   assert.equal(contract.consumers[0]?.repo_id, 'medautoscience');
+  assert.equal(contract.consumers[0]?.verify_command, 'scripts/verify.sh family');
 });
 
 test('inspectFamilySharedConsumerAlignment reports stale and aligned python shared pins', () => {
@@ -64,6 +66,7 @@ test('inspectFamilySharedConsumerAlignment reports stale and aligned python shar
         {
           repo_id: 'medautoscience',
           repo_dir: 'med-autoscience',
+          verify_command: 'scripts/verify.sh family',
           targets: [
             { file: 'pyproject.toml', kind: 'python_dependency' },
             { file: 'uv.lock', kind: 'python_lock' },
@@ -119,6 +122,7 @@ test('inspectCurrentRepoFamilySharedAlignment resolves the owner repo from the c
         {
           repo_id: 'redcube',
           repo_dir: 'redcube-ai',
+          verify_command: 'scripts/verify.sh family',
           targets: [
             { file: 'packages/redcube-gateway/package.json', kind: 'js_dependency' },
             { file: 'package-lock.json', kind: 'js_lock' },
