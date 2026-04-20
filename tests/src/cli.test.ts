@@ -2779,7 +2779,7 @@ test('system initialize exposes first-run blocker metadata and actionable payloa
 
     assert.equal(output.system_initialize.overall_state, 'attention_needed');
     assert.equal(output.system_initialize.workspace_root.selected_path, null);
-    assert.equal(output.system_initialize.workspace_root.health_status, 'unset');
+    assert.equal(output.system_initialize.workspace_root.health_status, 'missing');
     assert.equal(output.system_initialize.recommended_next_action.action_id, 'set_workspace_root');
     assert.equal(output.system_initialize.recommended_next_action.method, 'POST');
     assert.deepEqual(output.system_initialize.recommended_next_action.request_fields, ['path']);
