@@ -15,17 +15,13 @@ import {
   type FrontDeskModuleAction,
 } from './frontdesk-installation.ts';
 import {
-  buildFrontDeskEndpoints,
   buildFrontDeskEntryUrl,
   stripFrontDeskBasePath,
 } from './frontdesk-paths.ts';
+import { buildOplApiCatalog, type OplApiCatalog } from './opl-api-paths.ts';
 import {
   buildFrontDeskDashboard,
-  buildFrontDeskEntryGuide,
-  buildFrontDeskReadiness,
   buildFrontDeskHealth,
-  buildFrontDeskDomainWiring,
-  buildFrontDeskManifest,
   buildProjectProgressBrief,
   buildFrontDeskStart,
   buildHostedPilotBundle,
@@ -41,6 +37,7 @@ import {
   type FrontDeskAgentMode,
   type FrontDeskRuntimeModes,
 } from './frontdesk-runtime-modes.ts';
+import { readFrontDeskUpdateChannel } from './frontdesk-preferences.ts';
 import { buildHostedPilotPackage } from './hosted-pilot-package.ts';
 import { readFrontDeskTaskStatus, submitFrontDeskAskTask } from './frontdesk-task-store.ts';
 import {
@@ -185,13 +182,13 @@ type WebFrontDeskStartupPayload = {
     contracts_dir: string;
     contracts_root_source: string;
   };
-  web_frontdesk: {
-    entry_surface: 'opl_local_web_frontdesk_pilot';
+  opl_api: {
+    surface_id: 'opl_product_api_bootstrap';
+    entry_surface: 'opl_product_api';
     runtime_substrate: 'external_hermes_kernel';
-    mode: 'local_frontdesk_adapter';
+    mode: 'local_product_api_adapter';
     local_shell_command: 'opl web';
     local_only: true;
-    pilot_bundle_status: 'landed';
     listening: {
       host: string;
       port: number;
@@ -199,63 +196,15 @@ type WebFrontDeskStartupPayload = {
       entry_url: string;
       base_path: string;
     };
-    api: {
-      health: string;
-      frontdesk_manifest: string;
-      frontdesk_entry_guide: string;
-      frontdesk_readiness: string;
-      frontdesk_settings: string;
-      frontdesk_environment: string;
-      frontdesk_initialize: string;
-      frontdesk_modules: string;
-      frontdesk_engine_action: string;
-      frontdesk_module_action: string;
-      frontdesk_system_action: string;
-      project_progress: string;
-      frontdesk_domain_wiring: string;
-      domain_manifests: string;
-      hosted_bundle: string;
-      hosted_package: string;
-      dashboard: string;
-      projects: string;
-      workspace_status: string;
-      workspace_root: string;
-      workspace_catalog: string;
-      workspace_bind: string;
-      workspace_activate: string;
-      workspace_archive: string;
-      runtime_status: string;
-      session_ledger: string;
-      ask: string;
-      task_status: string;
-      start: string;
-      launch_domain: string;
-      handoff_envelope: string;
-      sessions: string;
-      resume: string;
-      logs: string;
-    };
-    frontdesk_settings: FrontDeskRuntimeModes;
-    shell_bootstrap: {
-      primary_surface: {
-        surface_id: string;
-        endpoint: string;
-        summary?: unknown;
-      };
-      follow_on_surfaces: Array<{
-        surface_id: string;
-        endpoint: string;
-        summary?: unknown;
-      }>;
-      operator_debug_surface: {
-        surface_id: string;
-        endpoint: string;
-      };
-    };
+    resources: OplApiCatalog['resources'];
+    actions: OplApiCatalog['actions'];
+    debug: OplApiCatalog['debug'];
+    runtime_modes: FrontDeskRuntimeModes;
     defaults: {
       workspace_path: string;
       sessions_limit: number;
     };
+    recommended_gui_overlay: 'opl-onyx-shell';
     notes: string[];
   };
 };
@@ -273,12 +222,52 @@ type WebFrontDeskContext = {
 
 type RecommendedEntrySurface = Record<string, unknown>;
 
+type DomainAgentBlueprint = {
+  agent_id: 'mas' | 'mag' | 'rca';
+  module_id: 'medautoscience' | 'medautogrant' | 'redcube';
+  title: string;
+  description: string;
+  artifact_conventions: string;
+  progress_conventions: string;
+};
+
+const DOMAIN_AGENT_BLUEPRINTS: Record<string, DomainAgentBlueprint> = {
+  medautoscience: {
+    agent_id: 'mas',
+    module_id: 'medautoscience',
+    title: 'Med Auto Science',
+    description: 'Medical research and paper production inside a MAS workspace.',
+    artifact_conventions: 'paper_and_submission_package',
+    progress_conventions: 'study_runtime_narration',
+  },
+  medautogrant: {
+    agent_id: 'mag',
+    module_id: 'medautogrant',
+    title: 'Med Auto Grant',
+    description: 'Grant-writing and revision workflows inside a MAG workspace.',
+    artifact_conventions: 'grant_proposal_package',
+    progress_conventions: 'grant_workloop_narration',
+  },
+  redcube: {
+    agent_id: 'rca',
+    module_id: 'redcube',
+    title: 'RedCube AI',
+    description: 'Presentation and visual-deliverable workflows inside a RedCube workspace.',
+    artifact_conventions: 'deck_and_visual_delivery',
+    progress_conventions: 'deliverable_build_narration',
+  },
+};
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function normalizeOptionalString(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+function uniqueStrings(values: Array<string | null | undefined>) {
+  return [...new Set(values.filter((value): value is string => typeof value === 'string' && value.trim().length > 0))];
 }
 
 function parsePositiveIntegerFromBody(value: unknown, field: string) {
@@ -646,9 +635,527 @@ function normalizeBaseUrlHost(host: string) {
   return host.includes(':') && !host.startsWith('[') ? `[${host}]` : host;
 }
 
+function buildOplWorkspaceRootPayload(payload = buildFrontDeskWorkspaceRootSurface()) {
+  return {
+    version: 'g2' as const,
+    workspace_root: {
+      surface_id: 'opl_workspace_root',
+      ...payload.workspace_root,
+    },
+  };
+}
+
+function buildOplSystemActionPayload(payload: Awaited<ReturnType<typeof runFrontDeskSystemAction>>) {
+  return {
+    version: 'g2' as const,
+    system_action: {
+      surface_id: 'opl_system_action',
+      ...payload.frontdesk_system_action,
+    },
+  };
+}
+
+function buildOplSystemSnapshotFromFrontDeskEnvironment(
+  environment: Awaited<ReturnType<typeof buildFrontDeskEnvironment>>['frontdesk_environment'],
+) {
+  return {
+    surface_id: 'opl_system',
+    overall_status: environment.overall_status,
+    managed_paths: environment.managed_paths,
+    local_service: {
+      installed: environment.local_frontdesk.service_installed,
+      loaded: environment.local_frontdesk.service_loaded,
+      health_status: environment.local_frontdesk.service_health,
+      gui_shell_strategy: environment.local_frontdesk.gui_shell_strategy,
+    },
+    core_engines: environment.core_engines,
+    module_summary: environment.module_summary,
+    notes: environment.notes,
+  };
+}
+
+function buildOplSystemSettingsPayload(payload = readFrontDeskRuntimeModes()) {
+  return {
+    version: 'g2' as const,
+    system_settings: {
+      surface_id: 'opl_system_settings',
+      ...payload,
+    },
+  };
+}
+
+function buildOplEngineActionPayload(payload: Awaited<ReturnType<typeof runFrontDeskEngineAction>>) {
+  const { frontdesk_environment: environment, ...action } = payload.frontdesk_engine_action;
+
+  return {
+    version: 'g2' as const,
+    engine_action: {
+      surface_id: 'opl_engine_action',
+      ...action,
+      system: buildOplSystemSnapshotFromFrontDeskEnvironment(environment),
+    },
+  };
+}
+
+function buildOplModuleActionPayload(payload: ReturnType<typeof runFrontDeskModuleAction>) {
+  return {
+    version: 'g2' as const,
+    module_action: {
+      surface_id: 'opl_module_action',
+      ...payload.frontdesk_module_action,
+    },
+  };
+}
+
+function buildOplModulesPayload(payload: ReturnType<typeof buildFrontDeskModules>, api: OplApiCatalog) {
+  return {
+    version: 'g2' as const,
+    modules: {
+      surface_id: 'opl_modules',
+      modules_root: payload.frontdesk_modules.modules_root,
+      summary: payload.frontdesk_modules.summary,
+      items: payload.frontdesk_modules.modules,
+      actions_endpoint: api.actions.modules,
+      notes: payload.frontdesk_modules.notes,
+    },
+  };
+}
+
+function buildOplAgentsPayload(context: WebFrontDeskContext, api: OplApiCatalog) {
+  const workspaceCatalog = buildWorkspaceCatalog(context.contracts).workspace_catalog;
+  const installedModules = buildFrontDeskModules().frontdesk_modules.modules;
+  const moduleIndex = new Map(installedModules.map((entry) => [entry.module_id, entry]));
+  const generalAgents = [
+    {
+      agent_id: 'general-chat',
+      title: 'General Chat',
+      description: 'Open a plain-language Codex conversation with optional temporary workspace context.',
+      class: 'general',
+      module_id: null,
+      project_id: null,
+      default_engine: 'codex',
+      requires_workspace: false,
+      availability: 'ready',
+      health_status: 'ready',
+      locator_fields: {
+        required: [],
+        optional: ['cwd'],
+      },
+      active_workspace_path: null,
+      entry_spec: {
+        entry_kind: 'codex_chat_session',
+        workspace_requirement: 'ephemeral_allowed',
+        locator_schema: {
+          required_fields: [],
+          optional_fields: ['cwd'],
+        },
+        codex_entry_strategy: 'direct_chat',
+        artifact_conventions: 'optional_workspace_outputs',
+        progress_conventions: 'session_activity_feed',
+        command_template: 'codex',
+        manifest_command_template: null,
+      },
+    },
+    {
+      agent_id: 'general-task',
+      title: 'General Task',
+      description: 'Run a general-purpose Codex task in a chosen working directory.',
+      class: 'general',
+      module_id: null,
+      project_id: null,
+      default_engine: 'codex',
+      requires_workspace: true,
+      availability: 'ready',
+      health_status: 'ready',
+      locator_fields: {
+        required: ['cwd'],
+        optional: [],
+      },
+      active_workspace_path: null,
+      entry_spec: {
+        entry_kind: 'codex_task_session',
+        workspace_requirement: 'required',
+        locator_schema: {
+          required_fields: ['cwd'],
+          optional_fields: [],
+        },
+        codex_entry_strategy: 'workspace_task',
+        artifact_conventions: 'workspace_outputs',
+        progress_conventions: 'session_task_cards',
+        command_template: 'codex --cwd <cwd>',
+        manifest_command_template: null,
+      },
+    },
+  ];
+  const domainAgents = workspaceCatalog.projects
+    .filter((entry) => entry.project_id !== 'opl')
+    .flatMap((entry) => {
+      const blueprint = DOMAIN_AGENT_BLUEPRINTS[entry.project_id];
+      if (!blueprint) {
+        return [];
+      }
+
+      const moduleStatus = moduleIndex.get(blueprint.module_id);
+      const requiredFields = uniqueStrings(['cwd', ...entry.binding_contract.required_locator_fields]);
+      const optionalFields = uniqueStrings(entry.binding_contract.optional_locator_fields);
+      return [{
+        agent_id: blueprint.agent_id,
+        title: blueprint.title,
+        description: blueprint.description,
+        class: 'domain',
+        module_id: blueprint.module_id,
+        project_id: entry.project_id,
+        default_engine: 'codex',
+        requires_workspace: true,
+        availability:
+          moduleStatus?.health_status === 'ready'
+            ? 'ready'
+            : moduleStatus?.installed
+              ? 'attention_needed'
+              : 'install_available',
+        health_status: moduleStatus?.health_status ?? 'missing',
+        locator_fields: {
+          required: requiredFields,
+          optional: optionalFields,
+        },
+        active_workspace_path: entry.active_binding?.workspace_path ?? null,
+        entry_spec: {
+          entry_kind: 'domain_workspace_session',
+          workspace_requirement: 'required',
+          locator_schema: {
+            required_fields: requiredFields,
+            optional_fields: optionalFields,
+          },
+          codex_entry_strategy: 'domain_agent_entry',
+          artifact_conventions: blueprint.artifact_conventions,
+          progress_conventions: blueprint.progress_conventions,
+          command_template: entry.binding_contract.derived_entry_command_template,
+          manifest_command_template: entry.binding_contract.derived_manifest_command_template,
+        },
+      }];
+    });
+  const items = [...generalAgents, ...domainAgents];
+
+  return {
+    version: 'g2' as const,
+    agents: {
+      surface_id: 'opl_agents',
+      summary: {
+        total_agents_count: items.length,
+        general_agents_count: generalAgents.length,
+        domain_agents_count: domainAgents.length,
+        workspace_required_agents_count: items.filter((entry) => entry.requires_workspace).length,
+      },
+      items,
+      endpoints: {
+        sessions: api.resources.sessions,
+        workspaces: api.resources.workspaces,
+        modules: api.resources.modules,
+      },
+      notes: [
+        'Agents are the user-facing registry of reusable work modes exposed through OPL.',
+        'General Chat and General Task map to Codex-native interaction patterns.',
+        'Domain agents keep domain runtime ownership in their own repositories while OPL exposes one launcher registry.',
+      ],
+    },
+  };
+}
+
+function buildOplWorkspacesPayload(payload: ReturnType<typeof buildWorkspaceCatalog>, api: OplApiCatalog) {
+  return {
+    version: 'g2' as const,
+    workspaces: {
+      surface_id: 'opl_workspaces',
+      action: payload.workspace_catalog.action,
+      state_dir: payload.workspace_catalog.state_dir,
+      binding: payload.workspace_catalog.binding,
+      summary: payload.workspace_catalog.summary,
+      projects: payload.workspace_catalog.projects,
+      bindings: payload.workspace_catalog.bindings,
+      endpoints: {
+        workspace_root: api.actions.workspace_root,
+        bind: api.actions.workspace_bind,
+        activate: api.actions.workspace_activate,
+        archive: api.actions.workspace_archive,
+      },
+      notes: payload.workspace_catalog.notes,
+    },
+  };
+}
+
+async function buildOplSystemPayload(context: WebFrontDeskContext, api: OplApiCatalog) {
+  const environment = await buildFrontDeskEnvironment(context.contracts);
+  const workspaceRoot = buildOplWorkspaceRootPayload();
+  const updateChannel = readFrontDeskUpdateChannel();
+  const runtimeModes = readFrontDeskRuntimeModes();
+  const systemSnapshot = buildOplSystemSnapshotFromFrontDeskEnvironment(environment.frontdesk_environment);
+
+  return {
+    version: 'g2' as const,
+    system: {
+      ...systemSnapshot,
+      product_name: 'OPL',
+      runtime_substrate: 'external_hermes_kernel',
+      runtime_modes: runtimeModes,
+      workspace_root: workspaceRoot.workspace_root,
+      update_channel: {
+        channel: updateChannel.channel,
+        updated_at: updateChannel.updated_at,
+      },
+      endpoints: {
+        system_initialize: api.actions.system_initialize,
+        settings: api.actions.system_settings,
+        engines: api.resources.engines,
+        modules: api.resources.modules,
+        agents: api.resources.agents,
+        workspaces: api.resources.workspaces,
+        sessions: api.resources.sessions,
+        progress: api.resources.progress,
+        artifacts: api.resources.artifacts,
+        system_actions: api.actions.system,
+        workspace_root: api.actions.workspace_root,
+      },
+      notes: [
+        'System keeps the product-level runtime truth for OPL Desktop and GUI overlays.',
+        'Workspace root, update channel, and runtime modes remain OPL-managed shared state.',
+      ],
+    },
+  };
+}
+
+async function buildOplSystemInitializePayload(context: WebFrontDeskContext, api: OplApiCatalog) {
+  const payload = await buildFrontDeskInitialize(context.contracts);
+  const domainModules = payload.frontdesk_initialize.domain_modules;
+  const recommendedNextActionEndpoint =
+    payload.frontdesk_initialize.recommended_next_action.action_id === 'set_workspace_root'
+      ? api.actions.workspace_root
+      : api.actions.system_initialize;
+
+  return {
+    version: 'g2' as const,
+    system_initialize: {
+      surface_id: 'opl_system_initialize',
+      overall_state: payload.frontdesk_initialize.overall_state,
+      checklist: payload.frontdesk_initialize.checklist,
+      core_engines: payload.frontdesk_initialize.core_engines,
+      domain_modules: {
+        surface_id: 'opl_modules',
+        modules_root: domainModules.modules_root,
+        summary: domainModules.summary,
+        modules: domainModules.modules,
+        notes: domainModules.notes,
+      },
+      settings: {
+        ...payload.frontdesk_initialize.settings,
+        endpoint: api.actions.system_settings,
+        action_endpoint: api.actions.system_settings,
+      },
+      workspace_root: {
+        ...payload.frontdesk_initialize.workspace_root,
+        endpoint: api.actions.workspace_root,
+        action_endpoint: api.actions.workspace_root,
+      },
+      system: {
+        update_channel: payload.frontdesk_initialize.system.update_channel,
+        local_service: payload.frontdesk_initialize.system.local_frontdesk,
+        actions: payload.frontdesk_initialize.system.actions.map((entry) => ({
+          ...entry,
+          endpoint: api.actions.system,
+        })),
+      },
+      endpoints: {
+        system_initialize: api.actions.system_initialize,
+        system: api.resources.system,
+        modules: api.resources.modules,
+        settings: api.actions.system_settings,
+        engine_action: api.actions.engines,
+        workspace_root: api.actions.workspace_root,
+        system_action: api.actions.system,
+      },
+      recommended_next_action: {
+        ...payload.frontdesk_initialize.recommended_next_action,
+        endpoint: recommendedNextActionEndpoint,
+      },
+      notes: payload.frontdesk_initialize.notes,
+    },
+  };
+}
+
+async function buildOplEnginesPayload(context: WebFrontDeskContext, api: OplApiCatalog) {
+  const environment = await buildFrontDeskEnvironment(context.contracts);
+  const runtimeModes = readFrontDeskRuntimeModes();
+  const items = [
+    {
+      engine_id: 'codex' as const,
+      ...environment.frontdesk_environment.core_engines.codex,
+    },
+    {
+      engine_id: 'hermes' as const,
+      ...environment.frontdesk_environment.core_engines.hermes,
+    },
+  ];
+
+  return {
+    version: 'g2' as const,
+    engines: {
+      surface_id: 'opl_engines',
+      default_modes: runtimeModes,
+      summary: {
+        total_engines_count: items.length,
+        installed_engines_count: items.filter((entry) => entry.installed).length,
+        healthy_engines_count: items.filter((entry) => entry.health_status === 'ready').length,
+      },
+      items,
+      actions_endpoint: api.actions.engines,
+      notes: [
+        'Codex is the default interaction and execution engine.',
+        'Hermes stays available as a backup engine and long-running gateway surface.',
+      ],
+    },
+  };
+}
+
+function buildOplSessionsPayload(
+  productEntrySessions: ReturnType<typeof runProductEntrySessions>,
+  sessionLedger: ReturnType<typeof buildSessionLedger>,
+  api: OplApiCatalog,
+) {
+  return {
+    version: 'g2' as const,
+    sessions: {
+      surface_id: 'opl_sessions',
+      summary: {
+        requested_limit: productEntrySessions.product_entry.limit,
+        source_filter: productEntrySessions.product_entry.source_filter,
+        listed_sessions_count: productEntrySessions.product_entry.sessions.length,
+        ledger_sessions_count: sessionLedger.session_ledger.sessions.length,
+        ledger_entry_count: sessionLedger.session_ledger.summary.entry_count,
+      },
+      items: productEntrySessions.product_entry.sessions,
+      raw_output: productEntrySessions.product_entry.raw_output,
+      ledger: sessionLedger.session_ledger,
+      endpoints: {
+        create: api.actions.session_create,
+        resume: api.actions.session_resume,
+        logs: api.actions.session_logs,
+        progress: api.resources.progress,
+        artifacts: api.resources.artifacts,
+      },
+      notes: [
+        'Session list is sourced from the active executor runtime.',
+        'Session ledger is OPL-managed attribution for local workspace and resource context.',
+      ],
+    },
+  };
+}
+
+async function readOplProgressBrief(
+  context: WebFrontDeskContext,
+  workspacePath?: string,
+) {
+  return (await buildProjectProgressBrief(context.contracts, {
+    workspacePath: workspacePath ?? context.workspacePath,
+    sessionsLimit: context.sessionsLimit,
+    basePath: context.basePath,
+  })).project_progress;
+}
+
+async function buildOplProgressPayload(
+  context: WebFrontDeskContext,
+  api: OplApiCatalog,
+  options: {
+    workspacePath?: string;
+    sessionId?: string;
+    taskId?: string;
+    lines?: number;
+  } = {},
+) {
+  const progress = await readOplProgressBrief(context, options.workspacePath);
+  const taskPayload = options.taskId
+    ? readFrontDeskTaskStatus(options.taskId, options.lines ?? 20).product_entry.task
+    : null;
+  return {
+    version: 'g2' as const,
+    progress: {
+      surface_id: 'opl_progress',
+      session_id:
+        options.sessionId
+        ?? (isRecord(progress.recent_activity) && typeof progress.recent_activity.session_id === 'string'
+          ? progress.recent_activity.session_id
+          : null),
+      workspace_path: progress.current_project.workspace_path,
+      project_state: progress.project_state,
+      current_project: progress.current_project,
+      headline: progress.progress_feedback.headline,
+      latest_update: progress.progress_feedback.latest_update,
+      next_step: progress.progress_feedback.next_step,
+      status_summary: progress.progress_feedback.status_summary,
+      study: progress.current_study ?? null,
+      task: taskPayload,
+      task_cards: progress.workspace_inbox.sections,
+      recent_activity: progress.recent_activity,
+      inspect_paths: progress.inspect_paths,
+      attention_items: progress.attention_items,
+      configured_human_gates: progress.configured_human_gates,
+      recommended_commands: progress.recommended_commands,
+      endpoints: {
+        sessions: api.resources.sessions,
+        artifacts: api.resources.artifacts,
+      },
+      notes: [
+        'Progress is the plain-language session and workspace narration surface for the GUI.',
+        'Task cards are derived from workspace inbox sections so side panels can group running, waiting, ready, and delivered work.',
+      ],
+    },
+  };
+}
+
+async function buildOplArtifactsPayload(
+  context: WebFrontDeskContext,
+  api: OplApiCatalog,
+  options: {
+    workspacePath?: string;
+    sessionId?: string;
+  } = {},
+) {
+  const progress = await readOplProgressBrief(context, options.workspacePath);
+  const deliverableFiles = progress.workspace_files.deliverable_files;
+  const supportingFiles = progress.workspace_files.supporting_files;
+
+  return {
+    version: 'g2' as const,
+    artifacts: {
+      surface_id: 'opl_artifacts',
+      session_id:
+        options.sessionId
+        ?? (isRecord(progress.recent_activity) && typeof progress.recent_activity.session_id === 'string'
+          ? progress.recent_activity.session_id
+          : null),
+      workspace_path: progress.current_project.workspace_path,
+      current_project: progress.current_project,
+      summary: {
+        deliverable_files_count: deliverableFiles.length,
+        supporting_files_count: supportingFiles.length,
+        total_files_count: deliverableFiles.length + supportingFiles.length,
+      },
+      deliverable_files: deliverableFiles,
+      supporting_files: supportingFiles,
+      inspect_paths: progress.inspect_paths,
+      progress_headline: progress.progress_feedback.headline,
+      endpoints: {
+        progress: api.resources.progress,
+        sessions: api.resources.sessions,
+      },
+      notes: [
+        'Artifacts are grouped into deliverable files and supporting files for the right-side file panel.',
+        'This surface stays workspace-centric because final delivery is file-based across OPL product modes.',
+      ],
+    },
+  };
+}
+
 function buildStartupPayload(context: WebFrontDeskContext): WebFrontDeskStartupPayload {
-  const manifest = buildFrontDeskManifest(context.contracts, { basePath: context.basePath });
-  const endpoints = buildFrontDeskEndpoints(context.basePath);
+  const api = buildOplApiCatalog(context.basePath);
 
   return {
     version: 'g2',
@@ -656,13 +1163,13 @@ function buildStartupPayload(context: WebFrontDeskContext): WebFrontDeskStartupP
       contracts_dir: context.contracts.contractsDir,
       contracts_root_source: context.contracts.contractsRootSource,
     },
-    web_frontdesk: {
-      entry_surface: 'opl_local_web_frontdesk_pilot',
+    opl_api: {
+      surface_id: 'opl_product_api_bootstrap',
+      entry_surface: 'opl_product_api',
       runtime_substrate: 'external_hermes_kernel',
-      mode: 'local_frontdesk_adapter',
+      mode: 'local_product_api_adapter',
       local_shell_command: 'opl web',
       local_only: true,
-      pilot_bundle_status: 'landed',
       listening: {
         host: context.host,
         port: context.port,
@@ -670,52 +1177,19 @@ function buildStartupPayload(context: WebFrontDeskContext): WebFrontDeskStartupP
         entry_url: context.entryUrl,
         base_path: context.basePath,
       },
-      api: {
-        health: endpoints.health,
-        frontdesk_manifest: manifest.frontdesk_manifest.endpoints.manifest,
-        frontdesk_entry_guide: endpoints.frontdesk_entry_guide,
-        frontdesk_readiness: endpoints.frontdesk_readiness,
-        frontdesk_settings: endpoints.frontdesk_settings,
-        frontdesk_environment: endpoints.frontdesk_environment,
-        frontdesk_initialize: endpoints.frontdesk_initialize,
-        frontdesk_modules: endpoints.frontdesk_modules,
-        frontdesk_engine_action: endpoints.frontdesk_engine_action,
-        frontdesk_module_action: endpoints.frontdesk_module_action,
-        frontdesk_system_action: endpoints.frontdesk_system_action,
-        project_progress: endpoints.project_progress,
-        frontdesk_domain_wiring: endpoints.frontdesk_domain_wiring,
-        domain_manifests: endpoints.domain_manifests,
-        hosted_bundle: endpoints.hosted_bundle,
-        hosted_package: endpoints.hosted_package,
-        dashboard: endpoints.dashboard,
-        projects: endpoints.projects,
-        workspace_status: endpoints.workspace_status,
-        workspace_root: endpoints.workspace_root,
-        workspace_catalog: endpoints.workspace_catalog,
-        workspace_bind: endpoints.workspace_bind,
-        workspace_activate: endpoints.workspace_activate,
-        workspace_archive: endpoints.workspace_archive,
-        runtime_status: endpoints.runtime_status,
-        session_ledger: endpoints.session_ledger,
-        ask: endpoints.ask,
-        task_status: endpoints.task_status,
-        start: endpoints.start,
-        launch_domain: endpoints.launch_domain,
-        handoff_envelope: endpoints.handoff_envelope,
-        sessions: endpoints.sessions,
-        resume: endpoints.resume,
-        logs: endpoints.logs,
-      },
-      frontdesk_settings: readFrontDeskRuntimeModes(),
-      shell_bootstrap: manifest.frontdesk_manifest.shell_bootstrap,
+      resources: api.resources,
+      actions: api.actions,
+      debug: api.debug,
+      runtime_modes: readFrontDeskRuntimeModes(),
       defaults: {
         workspace_path: context.workspacePath,
         sessions_limit: context.sessionsLimit,
       },
+      recommended_gui_overlay: 'opl-onyx-shell',
       notes: [
-        'This is a local adapter service layered above the existing OPL CLI surfaces.',
-        'Environment status and domain module management are exposed as API surfaces for external GUI overlays.',
-        'Managed hosted runtime ownership is still not landed.',
+        'This bootstrap surface exposes the current OPL Product API for external GUI overlays.',
+        'System, engines, modules, agents, workspaces, sessions, progress, and artifacts are available as first-class resources.',
+        'OPL main repo stays headless while external overlays consume this product API.',
       ],
     },
   };
@@ -733,7 +1207,7 @@ function normalizeFrontDeskModuleActionInput(body: FrontDeskModuleActionRequestB
   if (!action || !['install', 'update', 'reinstall', 'remove'].includes(action)) {
     throw new GatewayContractError(
       'cli_usage_error',
-      'frontdesk module action requires action=install|update|reinstall|remove.',
+      'module action requires action=install|update|reinstall|remove.',
       {
         action: body.action ?? null,
       },
@@ -744,7 +1218,7 @@ function normalizeFrontDeskModuleActionInput(body: FrontDeskModuleActionRequestB
   if (!moduleId) {
     throw new GatewayContractError(
       'cli_usage_error',
-      'frontdesk module action requires module_id.',
+      'module action requires module_id.',
       {
         module_id: body.module_id ?? body.moduleId ?? null,
       },
@@ -770,7 +1244,7 @@ function normalizeFrontDeskEngineActionInput(body: FrontDeskEngineActionRequestB
   if (!action || !['install', 'update', 'reinstall', 'remove'].includes(action)) {
     throw new GatewayContractError(
       'cli_usage_error',
-      'frontdesk engine action requires action=install|update|reinstall|remove.',
+      'engine action requires action=install|update|reinstall|remove.',
       {
         action: body.action ?? null,
       },
@@ -781,7 +1255,7 @@ function normalizeFrontDeskEngineActionInput(body: FrontDeskEngineActionRequestB
   if (!engineId) {
     throw new GatewayContractError(
       'cli_usage_error',
-      'frontdesk engine action requires engine_id.',
+      'engine action requires engine_id.',
       {
         engine_id: body.engine_id ?? body.engineId ?? null,
       },
@@ -800,7 +1274,7 @@ function normalizeFrontDeskSystemActionInput(body: FrontDeskSystemActionRequestB
   if (!action || !['repair', 'reinstall_support', 'update_channel'].includes(action)) {
     throw new GatewayContractError(
       'cli_usage_error',
-      'frontdesk system action requires action=repair|reinstall_support|update_channel.',
+      'system action requires action=repair|reinstall_support|update_channel.',
       {
         action: body.action ?? null,
       },
@@ -817,7 +1291,7 @@ function normalizeFrontDeskSystemActionInput(body: FrontDeskSystemActionRequestB
     if (!Number.isInteger(parsed) || parsed < 0 || parsed > 65535) {
       throw new GatewayContractError(
         'cli_usage_error',
-        'frontdesk system action requires port to be an integer between 0 and 65535.',
+        'system action requires port to be an integer between 0 and 65535.',
         {
           port: portValue,
         },
@@ -840,7 +1314,7 @@ function normalizeFrontDeskSystemActionInput(body: FrontDeskSystemActionRequestB
     if (!Number.isInteger(parsed) || parsed <= 0) {
       throw new GatewayContractError(
         'cli_usage_error',
-        'frontdesk system action requires sessions_limit to be a positive integer.',
+        'system action requires sessions_limit to be a positive integer.',
         {
           sessions_limit: sessionsLimitValue,
         },
@@ -854,7 +1328,7 @@ function normalizeFrontDeskSystemActionInput(body: FrontDeskSystemActionRequestB
   if (channel && channel !== 'stable' && channel !== 'preview') {
     throw new GatewayContractError(
       'cli_usage_error',
-      'frontdesk system action update_channel accepts stable or preview.',
+      'system action update_channel accepts stable or preview.',
       {
         channel,
       },
@@ -902,24 +1376,25 @@ function buildWebFrontDeskRootPayload(context: WebFrontDeskContext) {
   return {
     version: 'g2',
     contracts_context: bootstrap.contracts_context,
-    frontdesk_adapter: {
-      surface_id: 'opl_frontdesk_adapter_root',
-      entry_surface: bootstrap.web_frontdesk.entry_surface,
-      runtime_substrate: bootstrap.web_frontdesk.runtime_substrate,
+    opl_api: {
+      surface_id: 'opl_product_api_root',
+      entry_surface: bootstrap.opl_api.entry_surface,
+      runtime_substrate: bootstrap.opl_api.runtime_substrate,
       mode: 'api_only',
-      local_shell_command: bootstrap.web_frontdesk.local_shell_command,
+      local_shell_command: bootstrap.opl_api.local_shell_command,
       shell_integration_target: 'external_gui_overlay',
-      summary: 'OPL serves headless adapter surfaces for external GUI overlays. This repo does not render a product GUI at /.',
-      listening: bootstrap.web_frontdesk.listening,
-      api: bootstrap.web_frontdesk.api,
-      shell_bootstrap: bootstrap.web_frontdesk.shell_bootstrap,
-      defaults: bootstrap.web_frontdesk.defaults,
-      frontdesk_settings: bootstrap.web_frontdesk.frontdesk_settings,
+      summary: 'OPL serves headless product API resources for external GUI overlays and desktop shells.',
+      listening: bootstrap.opl_api.listening,
+      resources: bootstrap.opl_api.resources,
+      actions: bootstrap.opl_api.actions,
+      debug: bootstrap.opl_api.debug,
+      defaults: bootstrap.opl_api.defaults,
+      runtime_modes: bootstrap.opl_api.runtime_modes,
       recommended_gui_overlay: 'opl-onyx-shell',
       notes: [
-        'Use an external GUI overlay to consume these adapter surfaces.',
+        'Use an external GUI overlay to consume these product API resources.',
         'OPL main repo now stays headless and contract-first.',
-        'Managed hosted runtime ownership is still not landed.',
+        'Debug and legacy routes remain internal implementation details while the public product API keeps stabilizing.',
       ],
     },
   };
@@ -933,7 +1408,7 @@ function writeApiError(response: ServerResponse<IncomingMessage>, error: unknown
 
   const unexpected = new GatewayContractError(
     'hermes_command_failed',
-    error instanceof Error ? error.message : 'Unexpected web front-desk failure.',
+    error instanceof Error ? error.message : 'Unexpected OPL web API failure.',
   );
   writeJson(response, 500, unexpected.toJSON());
 }
@@ -946,6 +1421,8 @@ async function handleRequest(
   const method = request.method ?? 'GET';
   const url = new URL(request.url ?? '/', context.baseUrl);
   const routedPath = stripFrontDeskBasePath(url.pathname, context.basePath);
+  const routedApi = buildOplApiCatalog();
+  const advertisedApi = buildOplApiCatalog(context.basePath);
 
   try {
     if (routedPath === null) {
@@ -953,7 +1430,7 @@ async function handleRequest(
         version: 'g2',
         error: {
           code: 'unknown_command',
-          message: `Unknown web front-desk route: ${method} ${url.pathname}`,
+          message: `Unknown OPL web route: ${method} ${url.pathname}`,
           exit_code: 2,
         },
       });
@@ -965,119 +1442,261 @@ async function handleRequest(
       return;
     }
 
-    if (method === 'GET' && routedPath === '/api/health') {
-      writeJson(response, 200, buildFrontDeskHealth(context.contracts, { basePath: context.basePath }));
+    if (method === 'GET' && routedPath === routedApi.resources.system) {
+      writeJson(response, 200, await buildOplSystemPayload(context, advertisedApi));
       return;
     }
 
-    if (method === 'GET' && routedPath === '/api/frontdesk/manifest') {
-      writeJson(response, 200, buildFrontDeskManifest(context.contracts, { basePath: context.basePath }));
+    if (method === 'GET' && routedPath === routedApi.actions.system_initialize) {
+      writeJson(response, 200, await buildOplSystemInitializePayload(context, advertisedApi));
       return;
     }
 
-    if (method === 'GET' && routedPath === '/api/frontdesk/entry-guide') {
-      writeJson(response, 200, buildFrontDeskEntryGuide(context.contracts, { basePath: context.basePath }));
+    if (method === 'GET' && routedPath === routedApi.actions.system_settings) {
+      writeJson(response, 200, buildOplSystemSettingsPayload());
       return;
     }
 
-    if (method === 'GET' && routedPath === '/api/frontdesk/readiness') {
-      writeJson(
-        response,
-        200,
-        await buildFrontDeskReadiness(context.contracts, {
-          workspacePath: url.searchParams.get('path') ?? context.workspacePath,
-          sessionsLimit: parsePositiveIntegerOrDefault(
-            url.searchParams.get('sessions-limit') ?? url.searchParams.get('sessions_limit'),
-            context.sessionsLimit,
-          ),
-          basePath: context.basePath,
-        }),
-      );
-      return;
-    }
-
-    if (method === 'GET' && routedPath === '/api/frontdesk/settings') {
-      writeJson(response, 200, {
-        version: 'g2',
-        frontdesk_settings: readFrontDeskRuntimeModes(),
-      });
-      return;
-    }
-
-    if (method === 'POST' && routedPath === '/api/frontdesk/settings') {
+    if (method === 'POST' && routedPath === routedApi.actions.system_settings) {
       const body = (await readJsonBody(request)) as FrontDeskSettingsRequestBody;
-      writeJson(response, 200, {
-        version: 'g2',
-        frontdesk_settings: writeFrontDeskRuntimeModes(normalizeFrontDeskSettingsInput(body)),
-      });
-      return;
-    }
-
-    if (method === 'GET' && routedPath === '/api/frontdesk/environment') {
-      writeJson(response, 200, await buildFrontDeskEnvironment(context.contracts));
-      return;
-    }
-
-    if (method === 'GET' && routedPath === '/api/frontdesk/initialize') {
-      writeJson(response, 200, await buildFrontDeskInitialize(context.contracts));
-      return;
-    }
-
-    if (method === 'GET' && routedPath === '/api/frontdesk/modules') {
-      writeJson(response, 200, buildFrontDeskModules());
-      return;
-    }
-
-    if (method === 'POST' && routedPath === '/api/frontdesk/engine/action') {
-      const body = (await readJsonBody(request)) as FrontDeskEngineActionRequestBody;
-      const normalized = normalizeFrontDeskEngineActionInput(body);
       writeJson(
         response,
         200,
-        await runFrontDeskEngineAction(context.contracts, normalized.action, normalized.engineId),
+        buildOplSystemSettingsPayload(writeFrontDeskRuntimeModes(normalizeFrontDeskSettingsInput(body))),
       );
       return;
     }
 
-    if (method === 'POST' && routedPath === '/api/frontdesk/module/action') {
-      const body = (await readJsonBody(request)) as FrontDeskModuleActionRequestBody;
-      const normalized = normalizeFrontDeskModuleActionInput(body);
-      writeJson(response, 200, runFrontDeskModuleAction(normalized.action, normalized.moduleId));
-      return;
-    }
-
-    if (method === 'POST' && routedPath === '/api/frontdesk/system/action') {
+    if (method === 'POST' && routedPath === routedApi.actions.system) {
       const body = (await readJsonBody(request)) as FrontDeskSystemActionRequestBody;
       const normalized = normalizeFrontDeskSystemActionInput(body);
       writeJson(
         response,
         200,
-        await runFrontDeskSystemAction(context.contracts, normalized.action, normalized),
+        buildOplSystemActionPayload(
+          await runFrontDeskSystemAction(context.contracts, normalized.action, normalized),
+        ),
       );
       return;
     }
 
-    if (method === 'GET' && routedPath === '/api/project-progress') {
+    if (method === 'GET' && routedPath === routedApi.resources.engines) {
+      writeJson(response, 200, await buildOplEnginesPayload(context, advertisedApi));
+      return;
+    }
+
+    if (method === 'POST' && routedPath === routedApi.actions.engines) {
+      const body = (await readJsonBody(request)) as FrontDeskEngineActionRequestBody;
+      const normalized = normalizeFrontDeskEngineActionInput(body);
       writeJson(
         response,
         200,
-        await buildProjectProgressBrief(context.contracts, {
-          workspacePath: url.searchParams.get('path') ?? context.workspacePath,
-          sessionsLimit: parsePositiveIntegerOrDefault(
-            url.searchParams.get('sessions-limit') ?? url.searchParams.get('sessions_limit'),
-            context.sessionsLimit,
+        buildOplEngineActionPayload(
+          await runFrontDeskEngineAction(context.contracts, normalized.action, normalized.engineId),
+        ),
+      );
+      return;
+    }
+
+    if (method === 'GET' && routedPath === routedApi.resources.modules) {
+      writeJson(response, 200, buildOplModulesPayload(buildFrontDeskModules(), advertisedApi));
+      return;
+    }
+
+    if (method === 'GET' && routedPath === routedApi.resources.agents) {
+      writeJson(response, 200, buildOplAgentsPayload(context, advertisedApi));
+      return;
+    }
+
+    if (method === 'POST' && routedPath === routedApi.actions.modules) {
+      const body = (await readJsonBody(request)) as FrontDeskModuleActionRequestBody;
+      const normalized = normalizeFrontDeskModuleActionInput(body);
+      writeJson(response, 200, buildOplModuleActionPayload(runFrontDeskModuleAction(normalized.action, normalized.moduleId)));
+      return;
+    }
+
+    if (method === 'GET' && routedPath === routedApi.resources.workspaces) {
+      writeJson(response, 200, buildOplWorkspacesPayload(buildWorkspaceCatalog(context.contracts), advertisedApi));
+      return;
+    }
+
+    if (method === 'GET' && routedPath === routedApi.actions.workspace_root) {
+      writeJson(response, 200, buildOplWorkspaceRootPayload());
+      return;
+    }
+
+    if (method === 'POST' && routedPath === routedApi.actions.workspace_root) {
+      writeJson(
+        response,
+        200,
+        buildOplWorkspaceRootPayload(
+          writeFrontDeskWorkspaceRootSurface(
+            normalizeWorkspaceRootInput((await readJsonBody(request)) as WorkspaceRootRequestBody).path,
           ),
-          basePath: context.basePath,
+        ),
+      );
+      return;
+    }
+
+    if (method === 'POST' && routedPath === routedApi.actions.workspace_bind) {
+      writeJson(
+        response,
+        200,
+        buildOplWorkspacesPayload(
+          bindWorkspace(context.contracts, normalizeWorkspaceRegistryInput(await readJsonBody(request))),
+          advertisedApi,
+        ),
+      );
+      return;
+    }
+
+    if (method === 'POST' && routedPath === routedApi.actions.workspace_activate) {
+      writeJson(
+        response,
+        200,
+        buildOplWorkspacesPayload(
+          activateWorkspaceBinding(context.contracts, normalizeWorkspaceRegistryInput(await readJsonBody(request))),
+          advertisedApi,
+        ),
+      );
+      return;
+    }
+
+    if (method === 'POST' && routedPath === routedApi.actions.workspace_archive) {
+      writeJson(
+        response,
+        200,
+        buildOplWorkspacesPayload(
+          archiveWorkspaceBinding(context.contracts, normalizeWorkspaceRegistryInput(await readJsonBody(request))),
+          advertisedApi,
+        ),
+      );
+      return;
+    }
+
+    if (method === 'GET' && routedPath === routedApi.resources.sessions) {
+      const sessionsPayload = runProductEntrySessions({
+        limit: parsePositiveIntegerOptional(url.searchParams.get('limit')) ?? context.sessionsLimit,
+        source: normalizeOptionalString(url.searchParams.get('source')),
+      });
+      const ledgerPayload = buildSessionLedger(
+        parsePositiveIntegerOptional(url.searchParams.get('limit')) ?? context.sessionsLimit,
+      );
+      writeJson(response, 200, buildOplSessionsPayload(sessionsPayload, ledgerPayload, advertisedApi));
+      return;
+    }
+
+    if (method === 'GET' && routedPath === routedApi.resources.progress) {
+      writeJson(
+        response,
+        200,
+        await buildOplProgressPayload(context, advertisedApi, {
+          workspacePath: normalizeOptionalString(url.searchParams.get('workspace_path')),
+          sessionId: normalizeOptionalString(url.searchParams.get('session_id')),
+          taskId: normalizeOptionalString(url.searchParams.get('task_id')),
+          lines: parsePositiveIntegerOptional(url.searchParams.get('lines')),
         }),
       );
       return;
     }
 
-    if (method === 'GET' && routedPath === '/api/frontdesk/domain-wiring') {
-      writeJson(response, 200, buildFrontDeskDomainWiring(context.contracts, { basePath: context.basePath }));
+    if (method === 'GET' && routedPath === routedApi.resources.artifacts) {
+      writeJson(
+        response,
+        200,
+        await buildOplArtifactsPayload(context, advertisedApi, {
+          workspacePath: normalizeOptionalString(url.searchParams.get('workspace_path')),
+          sessionId: normalizeOptionalString(url.searchParams.get('session_id')),
+        }),
+      );
       return;
     }
-    if (method === 'GET' && routedPath === '/api/frontdesk/hosted-bundle') {
+
+    if (method === 'POST' && routedPath === routedApi.actions.session_create) {
+      const body = (await readJsonBody(request)) as AskRequestBody;
+      const normalizedInput = {
+        ...normalizeAskInput(body),
+        executor: readFrontDeskRuntimeModes().interaction_mode,
+      };
+      const payload = normalizedInput.dryRun
+        ? runProductEntryAsk(normalizedInput, context.contracts)
+        : submitFrontDeskAskTask(normalizedInput, context.contracts);
+      writeJson(response, 200, {
+        version: 'g2',
+        session_create: {
+          surface_id: 'opl_session_create',
+          request_mode: normalizedInput.dryRun ? 'dry_run' : 'submitted',
+          payload,
+        },
+      });
+      return;
+    }
+
+    if (method === 'POST' && routedPath === routedApi.actions.session_resume) {
+      const body = (await readJsonBody(request)) as ResumeRequestBody;
+      const payload = runProductEntryResume(normalizeResumeSessionId(body));
+      writeJson(response, 200, {
+        version: 'g2',
+        session_resume: {
+          surface_id: 'opl_session_resume',
+          ...payload.product_entry,
+        },
+      });
+      return;
+    }
+
+    if (method === 'GET' && routedPath === routedApi.actions.session_logs) {
+      const payload = runProductEntryLogs({
+        logName: normalizeOptionalString(url.searchParams.get('log_name')),
+        lines: parsePositiveIntegerOptional(url.searchParams.get('lines')),
+        since: normalizeOptionalString(url.searchParams.get('since')),
+        level: normalizeOptionalString(url.searchParams.get('level')),
+        component: normalizeOptionalString(url.searchParams.get('component')),
+        sessionId:
+          normalizeOptionalString(url.searchParams.get('session_id'))
+          ?? normalizeOptionalString(url.searchParams.get('session')),
+      });
+      writeJson(response, 200, {
+        version: 'g2',
+        session_logs: {
+          surface_id: 'opl_session_logs',
+          ...payload.product_entry,
+        },
+      });
+      return;
+    }
+
+    if (method === 'GET' && routedPath === routedApi.actions.start) {
+      writeJson(
+        response,
+        200,
+        buildFrontDeskStart(context.contracts, {
+          projectId: normalizeOptionalString(url.searchParams.get('project')) ?? '',
+          modeId: normalizeOptionalString(url.searchParams.get('mode')),
+        }),
+      );
+      return;
+    }
+
+    if (method === 'POST' && routedPath === routedApi.actions.launch_domain) {
+      writeJson(
+        response,
+        200,
+        await launchDomainEntry(
+          context.contracts,
+          normalizeLaunchDomainInput((await readJsonBody(request)) as LaunchDomainRequestBody),
+        ),
+      );
+      return;
+    }
+
+    if (method === 'POST' && routedPath === routedApi.actions.handoff_envelope) {
+      const body = (await readJsonBody(request)) as AskRequestBody;
+      writeJson(response, 200, buildProductEntryHandoffEnvelope(normalizeAskInput(body), context.contracts));
+      return;
+    }
+
+    if (method === 'GET' && routedPath === routedApi.actions.web_bundle) {
       writeJson(
         response,
         200,
@@ -1092,7 +1711,7 @@ async function handleRequest(
       return;
     }
 
-    if (method === 'POST' && routedPath === '/api/frontdesk/hosted-package') {
+    if (method === 'POST' && routedPath === routedApi.actions.web_package) {
       writeJson(
         response,
         200,
@@ -1107,8 +1726,8 @@ async function handleRequest(
       return;
     }
 
-    if (method === 'GET' && routedPath === '/api/projects') {
-      writeJson(response, 200, buildProjectsOverview(context.contracts));
+    if (method === 'GET' && routedPath === '/api/health') {
+      writeJson(response, 200, buildFrontDeskHealth(context.contracts, { basePath: context.basePath }));
       return;
     }
 
@@ -1123,52 +1742,8 @@ async function handleRequest(
       return;
     }
 
-    if (method === 'GET' && routedPath === '/api/workspace/root') {
-      writeJson(response, 200, buildFrontDeskWorkspaceRootSurface());
-      return;
-    }
-
-    if (method === 'GET' && routedPath === '/api/workspace/list') {
-      writeJson(response, 200, buildWorkspaceCatalog(context.contracts));
-      return;
-    }
-
-    if (method === 'POST' && routedPath === '/api/workspace/root') {
-      writeJson(
-        response,
-        200,
-        writeFrontDeskWorkspaceRootSurface(
-          normalizeWorkspaceRootInput((await readJsonBody(request)) as WorkspaceRootRequestBody).path,
-        ),
-      );
-      return;
-    }
-
     if (method === 'GET' && routedPath === '/api/domain/manifests') {
       writeJson(response, 200, buildDomainManifestCatalog(context.contracts));
-      return;
-    }
-
-    if (method === 'POST' && routedPath === '/api/workspace/bind') {
-      writeJson(response, 200, bindWorkspace(context.contracts, normalizeWorkspaceRegistryInput(await readJsonBody(request))));
-      return;
-    }
-
-    if (method === 'POST' && routedPath === '/api/workspace/activate') {
-      writeJson(
-        response,
-        200,
-        activateWorkspaceBinding(context.contracts, normalizeWorkspaceRegistryInput(await readJsonBody(request))),
-      );
-      return;
-    }
-
-    if (method === 'POST' && routedPath === '/api/workspace/archive') {
-      writeJson(
-        response,
-        200,
-        archiveWorkspaceBinding(context.contracts, normalizeWorkspaceRegistryInput(await readJsonBody(request))),
-      );
       return;
     }
 
@@ -1208,113 +1783,11 @@ async function handleRequest(
       return;
     }
 
-    if (method === 'POST' && routedPath === '/api/ask') {
-      const body = (await readJsonBody(request)) as AskRequestBody;
-      const normalizedInput = {
-        ...normalizeAskInput(body),
-        executor: readFrontDeskRuntimeModes().interaction_mode,
-      };
-      writeJson(
-        response,
-        200,
-        normalizedInput.dryRun
-          ? runProductEntryAsk(normalizedInput, context.contracts)
-          : submitFrontDeskAskTask(normalizedInput, context.contracts),
-      );
-      return;
-    }
-
-    if (method === 'GET' && routedPath === '/api/task-status') {
-      const taskId = normalizeOptionalString(url.searchParams.get('task_id'));
-      if (!taskId) {
-        throw new GatewayContractError(
-          'cli_usage_error',
-          'task-status requires a non-empty task_id query parameter.',
-          {
-            required: ['task_id'],
-          },
-          2,
-        );
-      }
-      writeJson(
-        response,
-        200,
-        readFrontDeskTaskStatus(taskId, parsePositiveIntegerOrDefault(url.searchParams.get('lines'), 20)),
-      );
-      return;
-    }
-
-    if (method === 'GET' && routedPath === '/api/start') {
-      writeJson(
-        response,
-        200,
-        buildFrontDeskStart(context.contracts, {
-          projectId: normalizeOptionalString(url.searchParams.get('project')) ?? '',
-          modeId: normalizeOptionalString(url.searchParams.get('mode')),
-        }),
-      );
-      return;
-    }
-
-    if (method === 'POST' && routedPath === '/api/domain/launch') {
-      writeJson(
-        response,
-        200,
-        await launchDomainEntry(
-          context.contracts,
-          normalizeLaunchDomainInput((await readJsonBody(request)) as LaunchDomainRequestBody),
-        ),
-      );
-      return;
-    }
-
-    if (method === 'POST' && routedPath === '/api/contract/handoff-envelope') {
-      const body = (await readJsonBody(request)) as AskRequestBody;
-      writeJson(response, 200, buildProductEntryHandoffEnvelope(normalizeAskInput(body), context.contracts));
-      return;
-    }
-
-    if (method === 'GET' && routedPath === '/api/session/list') {
-      writeJson(
-        response,
-        200,
-        runProductEntrySessions({
-          limit: parsePositiveIntegerOptional(url.searchParams.get('limit')) ?? context.sessionsLimit,
-          source: normalizeOptionalString(url.searchParams.get('source')),
-        }),
-      );
-      return;
-    }
-
-    if (method === 'POST' && routedPath === '/api/session/resume') {
-      const body = (await readJsonBody(request)) as ResumeRequestBody;
-      writeJson(response, 200, runProductEntryResume(normalizeResumeSessionId(body)));
-      return;
-    }
-
-    if (method === 'GET' && routedPath === '/api/session/logs') {
-      writeJson(
-        response,
-        200,
-        runProductEntryLogs({
-          logName: normalizeOptionalString(url.searchParams.get('log_name')),
-          lines: parsePositiveIntegerOptional(url.searchParams.get('lines')),
-          since: normalizeOptionalString(url.searchParams.get('since')),
-          level: normalizeOptionalString(url.searchParams.get('level')),
-          component: normalizeOptionalString(url.searchParams.get('component')),
-          sessionId:
-            normalizeOptionalString(url.searchParams.get('session_id'))
-            ?? normalizeOptionalString(url.searchParams.get('session')),
-        }),
-      );
-      return;
-    }
-
     writeJson(response, 404, {
       version: 'g2',
       error: {
         code: 'unknown_command',
-        message: `Unknown web front-desk route: ${method} ${url.pathname}`,
+        message: `Unknown OPL web route: ${method} ${url.pathname}`,
         exit_code: 2,
       },
     });

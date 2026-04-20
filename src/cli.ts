@@ -48,17 +48,14 @@ import {
 } from './domain-manifest.ts';
 import {
   buildFrontDeskDashboard,
-  buildFrontDeskEntryGuide,
-  buildFrontDeskReadiness,
-  buildFrontDeskDomainWiring,
   buildHostedPilotBundle,
-  buildFrontDeskManifest,
   buildProjectsOverview,
   buildRuntimeStatus,
   buildFrontDeskStart,
   buildWorkspaceStatus,
 } from './management.ts';
 import { buildHostedPilotPackage } from './hosted-pilot-package.ts';
+import { buildOplApiCatalog } from './opl-api-paths.ts';
 import { buildSessionLedger } from './session-ledger.ts';
 import { explainDomainBoundary, resolveRequestSurface } from './resolver.ts';
 import {
@@ -1007,7 +1004,7 @@ function parseFrontDeskModuleArgs(
         parsed.moduleId = value;
         break;
       default:
-        throw buildUsageError(`Unknown option for frontdesk module command: ${token}.`, spec, {
+        throw buildUsageError(`Unknown option for module command: ${token}.`, spec, {
           option: token,
         });
     }
@@ -1017,7 +1014,7 @@ function parseFrontDeskModuleArgs(
 
   if (!parsed.moduleId) {
     throw buildUsageError(
-      'frontdesk module commands require --module.',
+      'module commands require --module.',
       spec,
       { required: ['--module'] },
     );
@@ -1063,7 +1060,7 @@ function parseFrontDeskEngineArgs(
         parsed.engineId = value;
         break;
       default:
-        throw buildUsageError(`Unknown option for frontdesk engine command: ${token}.`, spec, {
+        throw buildUsageError(`Unknown option for engine command: ${token}.`, spec, {
           option: token,
         });
     }
@@ -1083,7 +1080,7 @@ async function runFrontDeskEngineActionCommand(
   const parsed = parseFrontDeskEngineArgs(args, spec);
   if (!parsed.engineId) {
     throw buildUsageError(
-      `frontdesk engine ${action} requires --engine.`,
+      `engine ${action} requires --engine.`,
       spec,
       { required: ['--engine'] },
     );
@@ -1155,7 +1152,7 @@ function parseUpdateChannelArgs(
     switch (token) {
       case '--channel':
         if (value !== 'stable' && value !== 'preview') {
-          throw buildUsageError('frontdesk update-channel requires stable or preview.', spec, {
+          throw buildUsageError('system update-channel requires stable or preview.', spec, {
             option: token,
             value,
           });
@@ -1163,7 +1160,7 @@ function parseUpdateChannelArgs(
         parsed.channel = value;
         break;
       default:
-        throw buildUsageError(`Unknown option for frontdesk update-channel command: ${token}.`, spec, {
+        throw buildUsageError(`Unknown option for system update-channel command: ${token}.`, spec, {
           option: token,
         });
     }
@@ -1205,14 +1202,23 @@ function looksLikeNaturalLanguage(command: string, args: string[]) {
 
 const COMMAND_GROUP_SUMMARIES: Record<string, string> = {
   top_level: '直接产品入口与前台运行入口。',
+  web: '导出或查看 GUI/overlay 需要的 Web bundle 与打包资源。',
   status: '读取 family、workspace、runtime 和 dashboard 状态。',
+  system: '查看与维护 OPL 的系统状态、初始化和更新通道。',
+  engine: '安装、更新与维护执行引擎。',
+  module: '安装、更新与维护领域模块。',
+  service: '管理本地 OPL API 服务与桌面入口。',
   workspace: '管理项目与 workspace 绑定。',
   domain: '解析域边界、域入口和域 manifest。',
   contract: '读取或验证 machine-readable contract / handoff surface。',
-  frontdesk: '安装、打包、启动和检查前台壳。',
   session: '查看、恢复和审计会话。',
   runtime: '修复或检查底层 runtime 相关入口。',
+  legacy: '历史兼容命令。',
 };
+
+const RETIRED_COMMAND_PREFIXES = new Set([
+  'frontdesk',
+]);
 
 function cloneCommandSpec(
   base: CommandSpec,
@@ -1252,12 +1258,16 @@ function resolveCommandSpec(
 }
 
 function buildRootHelp(commands: Record<string, CommandSpec>) {
+  const visibleEntries = Object.entries(commands).filter(([, spec]) => spec.group !== 'legacy');
   const grouped = Object.entries(commands).reduce<Record<string, Array<{
     command: string;
     usage: string;
     summary: string;
     examples: string[];
   }>>>((acc, [command, spec]) => {
+    if (spec.group === 'legacy') {
+      return acc;
+    }
     const groupId = spec.group ?? 'top_level';
     acc[groupId] ??= [];
     acc[groupId].push({
@@ -1286,7 +1296,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         summary: COMMAND_GROUP_SUMMARIES[group_id] ?? '',
         commands: entries,
       })),
-      commands: Object.entries(commands).map(([command, spec]) => ({
+      commands: visibleEntries.map(([command, spec]) => ({
         command,
         usage: spec.usage,
         summary: spec.summary,
@@ -1296,13 +1306,15 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl help',
         'opl',
         'opl doctor',
+        'opl system',
+        'opl system initialize',
+        'opl modules',
+        'opl module install --module medautoscience',
+        'opl engine install --engine codex',
+        'opl service install --port 8787',
+        'opl web bundle --port 8787 --base-path /pilot/opl',
+        'opl web package --output /tmp/opl-web-package --public-origin https://opl.example.com',
         'opl workspace projects',
-        'opl frontdesk manifest',
-        'opl frontdesk readiness --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
-        'opl frontdesk domain-wiring',
-        'opl frontdesk hosted-bundle --base-path /pilot/opl',
-        'opl frontdesk hosted-package --output /tmp/opl-hosted-package --public-origin https://opl.example.com --base-path /pilot/opl',
-        'opl frontdesk service install --port 8787',
         'opl workspace bind --project redcube --path /Users/gaofeng/workspace/redcube-ai --entry-command "redcube-ai frontdesk" --manifest-command "redcube product manifest --workspace-root /Users/gaofeng/workspace/redcube-ai"',
         'opl domain launch --project redcube --dry-run',
         'opl contract handoff-envelope "Prepare a defense-ready slide deck." --preferred-family ppt_deck',
@@ -1348,6 +1360,154 @@ function withContractsContext<T extends Record<string, unknown>>(
     version: 'g2',
     contracts_context: buildContractsContext(contracts),
     ...payload,
+  };
+}
+
+function buildPublicSystemPayload(
+  payload: Awaited<ReturnType<typeof buildFrontDeskEnvironment>>,
+) {
+  return {
+    version: payload.version,
+    system: buildPublicSystemFromFrontDeskEnvironment(payload.frontdesk_environment),
+  };
+}
+
+function buildPublicSystemFromFrontDeskEnvironment(
+  environment: Awaited<ReturnType<typeof buildFrontDeskEnvironment>>['frontdesk_environment'],
+) {
+  return {
+    surface_id: 'opl_system',
+    overall_status: environment.overall_status,
+    core_engines: environment.core_engines,
+    local_service: environment.local_frontdesk,
+    module_summary: environment.module_summary,
+    managed_paths: environment.managed_paths,
+    notes: environment.notes,
+  };
+}
+
+function buildPublicSystemInitializePayload(
+  payload: Awaited<ReturnType<typeof buildFrontDeskInitialize>>,
+) {
+  const api = buildOplApiCatalog();
+  const domainModules = payload.frontdesk_initialize.domain_modules;
+  const recommendedNextActionEndpoint =
+    payload.frontdesk_initialize.recommended_next_action.action_id === 'set_workspace_root'
+      ? api.actions.workspace_root
+      : api.actions.system_initialize;
+  return {
+    version: payload.version,
+    system_initialize: {
+      surface_id: 'opl_system_initialize',
+      overall_state: payload.frontdesk_initialize.overall_state,
+      checklist: payload.frontdesk_initialize.checklist,
+      core_engines: payload.frontdesk_initialize.core_engines,
+      domain_modules: {
+        surface_id: 'opl_modules',
+        modules_root: domainModules.modules_root,
+        summary: domainModules.summary,
+        modules: domainModules.modules,
+        notes: domainModules.notes,
+      },
+      settings: {
+        ...payload.frontdesk_initialize.settings,
+        endpoint: api.actions.system_settings,
+        action_endpoint: api.actions.system_settings,
+      },
+      workspace_root: {
+        ...payload.frontdesk_initialize.workspace_root,
+        endpoint: api.actions.workspace_root,
+        action_endpoint: api.actions.workspace_root,
+      },
+      system: {
+        update_channel: payload.frontdesk_initialize.system.update_channel,
+        local_service: payload.frontdesk_initialize.system.local_frontdesk,
+        actions: payload.frontdesk_initialize.system.actions.map((entry) => ({
+          ...entry,
+          endpoint: api.actions.system,
+        })),
+      },
+      endpoints: {
+        system_initialize: api.actions.system_initialize,
+        system: api.resources.system,
+        modules: api.resources.modules,
+        settings: api.actions.system_settings,
+        engine_action: api.actions.engines,
+        workspace_root: api.actions.workspace_root,
+        system_action: api.actions.system,
+      },
+      recommended_next_action: {
+        ...payload.frontdesk_initialize.recommended_next_action,
+        endpoint: recommendedNextActionEndpoint,
+      },
+      notes: payload.frontdesk_initialize.notes,
+    },
+  };
+}
+
+function buildPublicModulesPayload(
+  payload: ReturnType<typeof buildFrontDeskModules>,
+) {
+  return {
+    version: payload.version,
+    modules: {
+      surface_id: 'opl_modules',
+      modules_root: payload.frontdesk_modules.modules_root,
+      summary: payload.frontdesk_modules.summary,
+      items: payload.frontdesk_modules.modules,
+      notes: payload.frontdesk_modules.notes,
+    },
+  };
+}
+
+function buildPublicModuleActionPayload(
+  payload: ReturnType<typeof runFrontDeskModuleAction>,
+) {
+  return {
+    version: payload.version,
+    module_action: {
+      surface_id: 'opl_module_action',
+      ...payload.frontdesk_module_action,
+    },
+  };
+}
+
+function buildPublicEngineActionPayload(
+  payload: Awaited<ReturnType<typeof runFrontDeskEngineAction>>,
+) {
+  const { frontdesk_environment: environment, ...action } = payload.frontdesk_engine_action;
+
+  return {
+    version: payload.version,
+    engine_action: {
+      surface_id: 'opl_engine_action',
+      ...action,
+      system: buildPublicSystemFromFrontDeskEnvironment(environment),
+    },
+  };
+}
+
+function buildPublicSystemActionPayload(
+  payload: Awaited<ReturnType<typeof runFrontDeskSystemAction>>,
+) {
+  return {
+    version: payload.version,
+    system_action: {
+      surface_id: 'opl_system_action',
+      ...payload.frontdesk_system_action,
+    },
+  };
+}
+
+function buildPublicServicePayload(
+  payload: Awaited<ReturnType<typeof getFrontDeskServiceStatus>>,
+) {
+  return {
+    version: payload.version,
+    service: {
+      surface_id: 'opl_service',
+      ...payload.frontdesk_service,
+    },
   };
 }
 
@@ -1659,37 +1819,6 @@ async function main() {
         return buildDomainManifestCatalog(getContracts());
       },
     },
-    'frontdesk manifest': {
-      usage: 'opl frontdesk manifest',
-      summary:
-        'Expose the hosted-friendly OPL front-desk shell contract without claiming hosted packaging is already landed.',
-      examples: ['opl frontdesk manifest'],
-      handler: (args) => {
-        assertNoArgs(args, commandSpecs['frontdesk manifest']);
-        return buildFrontDeskManifest(getContracts());
-      },
-    },
-    'frontdesk entry-guide': {
-      usage: 'opl frontdesk entry-guide',
-      summary:
-        'Expose the machine-readable family entry guide that maps OPL workspace semantics onto domain start and workspace surfaces.',
-      examples: ['opl frontdesk entry-guide'],
-      handler: (args) => {
-        assertNoArgs(args, commandSpecs['frontdesk entry-guide']);
-        return buildFrontDeskEntryGuide(getContracts());
-      },
-    },
-    'frontdesk readiness': {
-      usage: 'opl frontdesk readiness [--path <workspace_path>] [--sessions-limit <n>]',
-      summary:
-        'Expose one operator-facing readiness surface for local shell, hosted pilot, and domain direct-entry parity.',
-      examples: [
-        'opl frontdesk readiness',
-        'opl frontdesk readiness --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
-      ],
-      handler: (args) =>
-        buildFrontDeskReadiness(getContracts(), parseDashboardArgs(args, commandSpecs['frontdesk readiness'])),
-    },
     'frontdesk environment': {
       usage: 'opl frontdesk environment',
       summary:
@@ -1806,16 +1935,6 @@ async function main() {
         return runFrontDeskSystemAction(getContracts(), 'update_channel', {
           channel: parsed.channel,
         });
-      },
-    },
-    'frontdesk domain-wiring': {
-      usage: 'opl frontdesk domain-wiring',
-      summary:
-        'Expose the hosted-friendly family wiring surface that freezes runtime readiness, domain entry parity, and recommended entry surfaces.',
-      examples: ['opl frontdesk domain-wiring'],
-      handler: (args) => {
-        assertNoArgs(args, commandSpecs['frontdesk domain-wiring']);
-        return buildFrontDeskDomainWiring(getContracts());
       },
     },
     'frontdesk hosted-bundle': {
@@ -2185,7 +2304,7 @@ async function main() {
     help: {
       usage: 'opl help [command ...]',
       summary: 'Show the top-level command groups or command-scoped runnable examples.',
-      examples: ['opl help', 'opl help status workspace', 'opl help frontdesk service install'],
+      examples: ['opl help', 'opl help status workspace', 'opl help service install'],
       group: 'top_level',
       handler: (args) => {
         if (args.length === 0) {
@@ -2209,7 +2328,31 @@ async function main() {
     start: cloneCommandSpec(commandSpecs.start, { group: 'top_level' }),
     ask: cloneCommandSpec(commandSpecs.ask, { group: 'top_level' }),
     chat: cloneCommandSpec(commandSpecs.chat, { group: 'top_level' }),
-    web: cloneCommandSpec(commandSpecs.web, { group: 'top_level' }),
+    web: cloneCommandSpec(commandSpecs.web, {
+      summary: 'Start the local OPL Product API service for external GUI shells and API consumers.',
+      group: 'top_level',
+    }),
+    'web bundle': cloneCommandSpec(commandSpecs['frontdesk hosted-bundle'], {
+      usage:
+        'opl web bundle [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>]',
+      summary: 'Emit the hosted-pilot-ready OPL web bundle with base-path-aware entry and API endpoints.',
+      examples: [
+        'opl web bundle',
+        'opl web bundle --host 0.0.0.0 --port 8787 --base-path /pilot/opl',
+      ],
+      group: 'web',
+    }),
+    'web package': cloneCommandSpec(commandSpecs['frontdesk hosted-package'], {
+      usage:
+        'opl web package --output <dir> [--public-origin <origin>] [--host <host>] [--port <port>] [--sessions-limit <n>] [--base-path <base_path>]',
+      summary:
+        'Export a self-hostable OPL web package with app snapshot, run script, service unit, and reverse-proxy assets.',
+      examples: [
+        'opl web package --output /tmp/opl-web-package',
+        'opl web package --output /tmp/opl-web-package --public-origin https://opl.example.com',
+      ],
+      group: 'web',
+    }),
     'mcp-stdio': cloneCommandSpec(commandSpecs['mcp-stdio'], { group: 'top_level' }),
     'status workspace': cloneCommandSpec(commandSpecs['status workspace'], {
       usage: 'opl status workspace [--path <workspace_path>]',
@@ -2382,139 +2525,216 @@ async function main() {
       ],
       group: 'contract',
     }),
-    'frontdesk manifest': cloneCommandSpec(commandSpecs['frontdesk manifest'], {
-      usage: 'opl frontdesk manifest',
-      examples: ['opl frontdesk manifest'],
-      group: 'frontdesk',
+    system: cloneCommandSpec(commandSpecs['frontdesk environment'], {
+      usage: 'opl system',
+      summary: 'Show the user-facing OPL system surface: core engines, local service, and managed install paths.',
+      examples: ['opl system'],
+      group: 'system',
+      handler: async (args) => {
+        assertNoArgs(args, commandSpecs['frontdesk environment']);
+        return buildPublicSystemPayload(await buildFrontDeskEnvironment(getContracts()));
+      },
     }),
-    'frontdesk entry-guide': cloneCommandSpec(commandSpecs['frontdesk entry-guide'], {
-      usage: 'opl frontdesk entry-guide',
-      examples: ['opl frontdesk entry-guide'],
-      group: 'frontdesk',
+    'system initialize': cloneCommandSpec(commandSpecs['frontdesk initialize'], {
+      usage: 'opl system initialize',
+      examples: ['opl system initialize'],
+      group: 'system',
+      handler: async (args) => {
+        assertNoArgs(args, commandSpecs['frontdesk initialize']);
+        return buildPublicSystemInitializePayload(await buildFrontDeskInitialize(getContracts()));
+      },
     }),
-    'frontdesk readiness': cloneCommandSpec(commandSpecs['frontdesk readiness'], {
-      usage: 'opl frontdesk readiness [--path <workspace_path>] [--sessions-limit <n>]',
-      examples: ['opl frontdesk readiness', 'opl frontdesk readiness --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5'],
-      group: 'frontdesk',
+    'system repair': cloneCommandSpec(commandSpecs['frontdesk repair'], {
+      usage: 'opl system repair',
+      examples: ['opl system repair'],
+      group: 'system',
+      handler: async (args) => {
+        assertNoArgs(args, commandSpecs['frontdesk repair']);
+        return buildPublicSystemActionPayload(await runFrontDeskSystemAction(getContracts(), 'repair'));
+      },
     }),
-    'frontdesk environment': cloneCommandSpec(commandSpecs['frontdesk environment'], {
-      usage: 'opl frontdesk environment',
-      examples: ['opl frontdesk environment'],
-      group: 'frontdesk',
-    }),
-    'frontdesk initialize': cloneCommandSpec(commandSpecs['frontdesk initialize'], {
-      usage: 'opl frontdesk initialize',
-      examples: ['opl frontdesk initialize'],
-      group: 'frontdesk',
-    }),
-    'frontdesk modules': cloneCommandSpec(commandSpecs['frontdesk modules'], {
-      usage: 'opl frontdesk modules',
-      examples: ['opl frontdesk modules'],
-      group: 'frontdesk',
-    }),
-    'frontdesk module install': cloneCommandSpec(commandSpecs['frontdesk-module-install'], {
-      usage: 'opl frontdesk module install --module <module_id>',
-      examples: ['opl frontdesk module install --module medautoscience'],
-      group: 'frontdesk',
-    }),
-    'frontdesk module update': cloneCommandSpec(commandSpecs['frontdesk-module-update'], {
-      usage: 'opl frontdesk module update --module <module_id>',
-      examples: ['opl frontdesk module update --module medautoscience'],
-      group: 'frontdesk',
-    }),
-    'frontdesk module reinstall': cloneCommandSpec(commandSpecs['frontdesk-module-reinstall'], {
-      usage: 'opl frontdesk module reinstall --module <module_id>',
-      examples: ['opl frontdesk module reinstall --module medautoscience'],
-      group: 'frontdesk',
-    }),
-    'frontdesk module remove': cloneCommandSpec(commandSpecs['frontdesk-module-remove'], {
-      usage: 'opl frontdesk module remove --module <module_id>',
-      examples: ['opl frontdesk module remove --module medautoscience'],
-      group: 'frontdesk',
-    }),
-    'frontdesk engine install': cloneCommandSpec(commandSpecs['frontdesk engine install'], {
-      usage: 'opl frontdesk engine install --engine <codex|hermes>',
-      examples: ['opl frontdesk engine install --engine codex'],
-      group: 'frontdesk',
-    }),
-    'frontdesk engine update': cloneCommandSpec(commandSpecs['frontdesk engine update'], {
-      usage: 'opl frontdesk engine update --engine <codex|hermes>',
-      examples: ['opl frontdesk engine update --engine codex'],
-      group: 'frontdesk',
-    }),
-    'frontdesk engine reinstall': cloneCommandSpec(commandSpecs['frontdesk engine reinstall'], {
-      usage: 'opl frontdesk engine reinstall --engine <codex|hermes>',
-      examples: ['opl frontdesk engine reinstall --engine codex'],
-      group: 'frontdesk',
-    }),
-    'frontdesk engine remove': cloneCommandSpec(commandSpecs['frontdesk engine remove'], {
-      usage: 'opl frontdesk engine remove --engine <codex|hermes>',
-      examples: ['opl frontdesk engine remove --engine hermes'],
-      group: 'frontdesk',
-    }),
-    'frontdesk repair': cloneCommandSpec(commandSpecs['frontdesk repair'], {
-      usage: 'opl frontdesk repair',
-      examples: ['opl frontdesk repair'],
-      group: 'frontdesk',
-    }),
-    'frontdesk reinstall-support': cloneCommandSpec(commandSpecs['frontdesk reinstall-support'], {
+    'system reinstall-support': cloneCommandSpec(commandSpecs['frontdesk reinstall-support'], {
       usage:
-        'opl frontdesk reinstall-support [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>]',
-      examples: ['opl frontdesk reinstall-support', 'opl frontdesk reinstall-support --port 8787'],
-      group: 'frontdesk',
+        'opl system reinstall-support [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>]',
+      examples: ['opl system reinstall-support', 'opl system reinstall-support --port 8787'],
+      group: 'system',
+      handler: async (args) =>
+        buildPublicSystemActionPayload(
+          await runFrontDeskSystemAction(
+            getContracts(),
+            'reinstall_support',
+            parseWebArgs(args, commandSpecs['frontdesk reinstall-support']),
+          ),
+        ),
     }),
-    'frontdesk update-channel': cloneCommandSpec(commandSpecs['frontdesk update-channel'], {
-      usage: 'opl frontdesk update-channel [--channel <stable|preview>]',
-      examples: ['opl frontdesk update-channel', 'opl frontdesk update-channel --channel preview'],
-      group: 'frontdesk',
+    'system update-channel': cloneCommandSpec(commandSpecs['frontdesk update-channel'], {
+      usage: 'opl system update-channel [--channel <stable|preview>]',
+      examples: ['opl system update-channel', 'opl system update-channel --channel preview'],
+      group: 'system',
+      handler: async (args) => {
+        const parsed = parseUpdateChannelArgs(args, commandSpecs['frontdesk update-channel']);
+        return buildPublicSystemActionPayload(
+          await runFrontDeskSystemAction(getContracts(), 'update_channel', parsed),
+        );
+      },
     }),
-    'frontdesk domain-wiring': cloneCommandSpec(commandSpecs['frontdesk domain-wiring'], {
-      usage: 'opl frontdesk domain-wiring',
-      examples: ['opl frontdesk domain-wiring'],
-      group: 'frontdesk',
+    modules: cloneCommandSpec(commandSpecs['frontdesk modules'], {
+      usage: 'opl modules',
+      examples: ['opl modules'],
+      group: 'module',
+      handler: (args) => {
+        assertNoArgs(args, commandSpecs['frontdesk modules']);
+        return buildPublicModulesPayload(buildFrontDeskModules());
+      },
     }),
-    'frontdesk hosted-bundle': cloneCommandSpec(commandSpecs['frontdesk hosted-bundle'], {
+    'module install': cloneCommandSpec(commandSpecs['frontdesk-module-install'], {
+      usage: 'opl module install --module <module_id>',
+      examples: ['opl module install --module medautoscience'],
+      group: 'module',
+      handler: (args) =>
+        buildPublicModuleActionPayload(
+          runFrontDeskModuleAction('install', parseFrontDeskModuleArgs(args, commandSpecs['frontdesk-module-install']).moduleId!),
+        ),
+    }),
+    'module update': cloneCommandSpec(commandSpecs['frontdesk-module-update'], {
+      usage: 'opl module update --module <module_id>',
+      examples: ['opl module update --module medautoscience'],
+      group: 'module',
+      handler: (args) =>
+        buildPublicModuleActionPayload(
+          runFrontDeskModuleAction('update', parseFrontDeskModuleArgs(args, commandSpecs['frontdesk-module-update']).moduleId!),
+        ),
+    }),
+    'module reinstall': cloneCommandSpec(commandSpecs['frontdesk-module-reinstall'], {
+      usage: 'opl module reinstall --module <module_id>',
+      examples: ['opl module reinstall --module medautoscience'],
+      group: 'module',
+      handler: (args) =>
+        buildPublicModuleActionPayload(
+          runFrontDeskModuleAction('reinstall', parseFrontDeskModuleArgs(args, commandSpecs['frontdesk-module-reinstall']).moduleId!),
+        ),
+    }),
+    'module remove': cloneCommandSpec(commandSpecs['frontdesk-module-remove'], {
+      usage: 'opl module remove --module <module_id>',
+      examples: ['opl module remove --module medautoscience'],
+      group: 'module',
+      handler: (args) =>
+        buildPublicModuleActionPayload(
+          runFrontDeskModuleAction('remove', parseFrontDeskModuleArgs(args, commandSpecs['frontdesk-module-remove']).moduleId!),
+        ),
+    }),
+    'engine install': cloneCommandSpec(commandSpecs['frontdesk engine install'], {
+      usage: 'opl engine install --engine <codex|hermes>',
+      examples: ['opl engine install --engine codex'],
+      group: 'engine',
+      handler: async (args) =>
+        buildPublicEngineActionPayload(
+          await runFrontDeskEngineAction(
+            getContracts(),
+            'install',
+            parseFrontDeskEngineArgs(args, commandSpecs['frontdesk engine install']).engineId!,
+          ),
+        ),
+    }),
+    'engine update': cloneCommandSpec(commandSpecs['frontdesk engine update'], {
+      usage: 'opl engine update --engine <codex|hermes>',
+      examples: ['opl engine update --engine codex'],
+      group: 'engine',
+      handler: async (args) =>
+        buildPublicEngineActionPayload(
+          await runFrontDeskEngineAction(
+            getContracts(),
+            'update',
+            parseFrontDeskEngineArgs(args, commandSpecs['frontdesk engine update']).engineId!,
+          ),
+        ),
+    }),
+    'engine reinstall': cloneCommandSpec(commandSpecs['frontdesk engine reinstall'], {
+      usage: 'opl engine reinstall --engine <codex|hermes>',
+      examples: ['opl engine reinstall --engine codex'],
+      group: 'engine',
+      handler: async (args) =>
+        buildPublicEngineActionPayload(
+          await runFrontDeskEngineAction(
+            getContracts(),
+            'reinstall',
+            parseFrontDeskEngineArgs(args, commandSpecs['frontdesk engine reinstall']).engineId!,
+          ),
+        ),
+    }),
+    'engine remove': cloneCommandSpec(commandSpecs['frontdesk engine remove'], {
+      usage: 'opl engine remove --engine <codex|hermes>',
+      examples: ['opl engine remove --engine hermes'],
+      group: 'engine',
+      handler: async (args) =>
+        buildPublicEngineActionPayload(
+          await runFrontDeskEngineAction(
+            getContracts(),
+            'remove',
+            parseFrontDeskEngineArgs(args, commandSpecs['frontdesk engine remove']).engineId!,
+          ),
+        ),
+    }),
+    'service install': cloneCommandSpec(commandSpecs['frontdesk-service-install'], {
       usage:
-        'opl frontdesk hosted-bundle [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>]',
-      examples: ['opl frontdesk hosted-bundle', 'opl frontdesk hosted-bundle --host 0.0.0.0 --port 8787 --base-path /pilot/opl'],
-      group: 'frontdesk',
+        'opl service install [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>]',
+      summary: 'Install and bootstrap a local launchd-managed OPL API service for long-running desktop entry.',
+      examples: ['opl service install', 'opl service install --port 8787'],
+      group: 'service',
+      handler: async (args) =>
+        buildPublicServicePayload(
+          await installFrontDeskService(getContracts(), parseWebArgs(args, commandSpecs['frontdesk-service-install'])),
+        ),
     }),
-    'frontdesk hosted-package': cloneCommandSpec(commandSpecs['frontdesk hosted-package'], {
-      usage:
-        'opl frontdesk hosted-package --output <dir> [--public-origin <origin>] [--host <host>] [--port <port>] [--sessions-limit <n>] [--base-path <base_path>]',
-      examples: ['opl frontdesk hosted-package --output /tmp/opl-frontdesk-package'],
-      group: 'frontdesk',
+    'service status': cloneCommandSpec(commandSpecs['frontdesk-service-status'], {
+      usage: 'opl service status',
+      summary: 'Inspect whether the local OPL API service is installed, loaded, and reachable.',
+      examples: ['opl service status'],
+      group: 'service',
+      handler: async (args) => {
+        assertNoArgs(args, commandSpecs['frontdesk-service-status']);
+        return buildPublicServicePayload(await getFrontDeskServiceStatus(getContracts()));
+      },
     }),
-    'frontdesk service install': cloneCommandSpec(commandSpecs['frontdesk-service-install'], {
-      usage:
-        'opl frontdesk service install [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>]',
-      examples: ['opl frontdesk service install', 'opl frontdesk service install --port 8787'],
-      group: 'frontdesk',
+    'service start': cloneCommandSpec(commandSpecs['frontdesk-service-start'], {
+      usage: 'opl service start',
+      summary: 'Start the installed local OPL API service.',
+      examples: ['opl service start'],
+      group: 'service',
+      handler: async (args) => {
+        assertNoArgs(args, commandSpecs['frontdesk-service-start']);
+        return buildPublicServicePayload(await startFrontDeskService(getContracts()));
+      },
     }),
-    'frontdesk service status': cloneCommandSpec(commandSpecs['frontdesk-service-status'], {
-      usage: 'opl frontdesk service status',
-      examples: ['opl frontdesk service status'],
-      group: 'frontdesk',
+    'service stop': cloneCommandSpec(commandSpecs['frontdesk-service-stop'], {
+      usage: 'opl service stop',
+      summary: 'Stop the installed local OPL API service without removing its packaging files.',
+      examples: ['opl service stop'],
+      group: 'service',
+      handler: async (args) => {
+        assertNoArgs(args, commandSpecs['frontdesk-service-stop']);
+        return buildPublicServicePayload(await stopFrontDeskService(getContracts()));
+      },
     }),
-    'frontdesk service start': cloneCommandSpec(commandSpecs['frontdesk-service-start'], {
-      usage: 'opl frontdesk service start',
-      examples: ['opl frontdesk service start'],
-      group: 'frontdesk',
+    'service open': cloneCommandSpec(commandSpecs['frontdesk-service-open'], {
+      usage: 'opl service open',
+      summary: 'Open the configured local OPL API URL in the default browser.',
+      examples: ['opl service open'],
+      group: 'service',
+      handler: async (args) => {
+        assertNoArgs(args, commandSpecs['frontdesk-service-open']);
+        return buildPublicServicePayload(await openFrontDeskService(getContracts()));
+      },
     }),
-    'frontdesk service stop': cloneCommandSpec(commandSpecs['frontdesk-service-stop'], {
-      usage: 'opl frontdesk service stop',
-      examples: ['opl frontdesk service stop'],
-      group: 'frontdesk',
-    }),
-    'frontdesk service open': cloneCommandSpec(commandSpecs['frontdesk-service-open'], {
-      usage: 'opl frontdesk service open',
-      examples: ['opl frontdesk service open'],
-      group: 'frontdesk',
-    }),
-    'frontdesk service uninstall': cloneCommandSpec(commandSpecs['frontdesk-service-uninstall'], {
-      usage: 'opl frontdesk service uninstall',
-      examples: ['opl frontdesk service uninstall'],
-      group: 'frontdesk',
+    'service uninstall': cloneCommandSpec(commandSpecs['frontdesk-service-uninstall'], {
+      usage: 'opl service uninstall',
+      summary: 'Remove the local launchd-managed OPL API service packaging.',
+      examples: ['opl service uninstall'],
+      group: 'service',
+      handler: async (args) => {
+        assertNoArgs(args, commandSpecs['frontdesk-service-uninstall']);
+        return buildPublicServicePayload(await uninstallFrontDeskService(getContracts()));
+      },
     }),
     'session list': cloneCommandSpec(commandSpecs.sessions, {
       usage: 'opl session list [--limit <n>] [--source <source>]',
@@ -2567,7 +2787,12 @@ async function main() {
   const resolved = resolveCommandSpec(inputTokens, dispatchCommandSpecs);
   if (!resolved) {
     const [command, ...args] = inputTokens;
-    if (!parsedInput.helpRequested && command && looksLikeNaturalLanguage(command, args)) {
+    if (
+      !parsedInput.helpRequested
+      && command
+      && !RETIRED_COMMAND_PREFIXES.has(command)
+      && looksLikeNaturalLanguage(command, args)
+    ) {
       const result = await runProductEntryAsk(
         parseProductEntryArgs([command, ...args], commandSpecs.ask),
         getContracts(),

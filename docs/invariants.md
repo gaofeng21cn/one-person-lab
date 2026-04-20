@@ -2,43 +2,51 @@
 
 ## 顶层定位
 
-- `OPL` 是顶层 gateway 与 federation surface，不是 domain runtime owner。
-- `OPL` 不是第四个 `Domain Harness OS`。
+- `OPL` 是顶层产品运行时与共享接口层。
+- `OPL` 不持有领域运行时所有权。
+- `OPL` 不替代各个领域仓的智能体逻辑。
+
+## 当前公开产品模型
+
+- 当前主线公开模型固定为：
+  - `system`
+  - `engines`
+  - `modules`
+  - `agents`
+  - `workspaces`
+  - `sessions`
+  - `progress`
+  - `artifacts`
+- GUI 外壳与 CLI 必须围绕这组资源组织当前产品语义。
 
 ## 文档分层
 
 - `README*` 与 `docs/README*` 是默认公开入口。
 - `docs/project.md`、`docs/architecture.md`、`docs/invariants.md`、`docs/decisions.md`、`docs/status.md` 是 AI / 维护者核心工作集。
-- `docs/README*` 维护的四层文档体系继续有效：公开主线、公开合同配套、参考级配套、历史 specs/plans。
+- `docs/README*` 维护的四层文档体系继续有效：公开主线、公开合同配套、参考级配套、历史规格与计划。
 - 参考级与历史文档不得反向改写公开主线。
 
 ## 合同面
 
-- `contracts/` 只保留 machine-readable truth，不承载 narrative 规则。
-- 修改 gateway contracts、admission wording 或公开边界时，必须同步更新 docs 与测试。
+- `contracts/` 只保留机器可读真相，不承载叙事规则。
+- 修改网关合同、公开边界或已收录领域表述时，必须同步更新文档与测试。
 
 ## 目标优先级
 
-- 一旦系列项目的目标形态已经明确，新增投入默认服务该目标形态，而不是继续深磨已放弃路线。
-- 旧执行形态只能作为迁移桥、兼容层、回归基线或对照面存在，不得再被误写为长期产品方向。
-- 如果当前可运行基线与长线目标并存，必须在 `docs/status.md` 与 `docs/README*` 中显式拆开，禁止混写。
+- 一旦系列项目的目标形态已经明确，新增投入默认服务该目标形态。
+- 旧执行形态只能作为迁移桥、兼容层、回归基线或历史记录存在。
+- 当前主线禁止重新把 `frontdesk` 时代的公开语义拉回产品入口。
 
 ## GUI 主线约束
 
-- `OPL` 主仓只跟踪 headless adapter / API truth，不跟踪产品 GUI 壳实现。
-- `opl web` 根路由只返回 machine-readable root payload；repo-tracked GUI 事实以 frontdesk APIs 与 service management 为准。
-- 外部产品名只能在 benchmark / upstream / planned overlay target 语境出现；current integrated dependency 必须按真实集成状态表述。
-- 任何把已批准的“外部 overlay + OPL adapter”路线改写成“仓内自写替代 GUI”的变更，都必须重新获得用户批准。
+- `OPL` 主仓只跟踪共享运行时与 `Product API` 真相，不跟踪产品 GUI 外壳实现。
+- `opl web` 根路由只返回机器可读根载荷。
+- 外部产品名只能在基准、上游参考或规划中的界面目标语境出现。
 
 ## 语言规则
 
 - 第一层和第二层公开文档必须双语同步。
 - 内部技术、参考、维护、历史与规划文档默认中文。
-
-## OMX
-
-- OMX 已退场。
-- `docs/history/omx/` 只作为历史入口，不承担当前 workflow。
 
 ## 本地工具状态
 

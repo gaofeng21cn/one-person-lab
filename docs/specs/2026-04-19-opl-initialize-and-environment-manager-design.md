@@ -1,5 +1,7 @@
 # OPL Initialize 与 Environment / Modules 设计
 
+> 已退役。这个设计属于 `Initialize OPL + frontdesk` 公开语义阶段，当前主线已经改为 `OPL Product API + external overlay`。现行边界以 [`docs/specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md`](./2026-04-20-opl-product-api-and-domain-agent-boundary-design.md) 为准。保留本文只用于历史审计与迁移回顾。
+
 ## 背景
 
 截至 `2026-04-19`，`OPL` 主仓已经完成了 GUI 主线的第一轮收束：

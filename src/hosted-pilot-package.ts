@@ -6,11 +6,11 @@ import { fileURLToPath } from 'node:url';
 import { GatewayContractError } from './contracts.ts';
 import {
   buildFrontDeskApiBaseUrl,
-  buildFrontDeskEndpoints,
   buildFrontDeskEntryUrl,
   normalizeBasePath,
 } from './frontdesk-paths.ts';
 import { buildHostedRuntimeReadiness } from './management.ts';
+import { buildOplApiCatalog } from './opl-api-paths.ts';
 import type { GatewayContracts } from './types.ts';
 
 export type HostedPilotPackageOptions = {
@@ -25,12 +25,12 @@ export type HostedPilotPackageOptions = {
 type HostedPilotPackageAssets = {
   bundle_json: string;
   readme: string;
-  env_example: string;
-  run_script: string;
-  systemd_service: string;
-  install_service_script: string;
+  environment_template: string;
+  launch_script: string;
+  service_unit: string;
+  service_install_script: string;
   healthcheck_script: string;
-  caddyfile: string;
+  reverse_proxy_template: string;
   app_root: string;
   app_dist: string;
   app_contracts: string;
@@ -57,7 +57,7 @@ function normalizePublicOrigin(origin?: string) {
   } catch (error) {
     throw new GatewayContractError(
       'cli_usage_error',
-      'frontdesk-hosted-package requires --public-origin to be an absolute http(s) origin.',
+      'web package requires --public-origin to be an absolute http(s) origin.',
       {
         public_origin: trimmed,
         cause: error instanceof Error ? error.message : 'Unknown URL parse failure.',
@@ -68,7 +68,7 @@ function normalizePublicOrigin(origin?: string) {
   if (!/^https?:$/.test(parsed.protocol)) {
     throw new GatewayContractError(
       'cli_usage_error',
-      'frontdesk-hosted-package only supports http or https public origins.',
+      'web package only supports http or https public origins.',
       {
         public_origin: trimmed,
       },
@@ -140,18 +140,18 @@ function buildReadme(options: {
   port: number;
   sessionsLimit: number;
 }) {
-  return `# OPL Hosted Pilot Package
+  return `# OPL Web Package
 
-This package exports a self-hostable hosted pilot for the OPL Front Desk.
+This package exports a self-hostable web package for the OPL Product API.
 
 What it lands:
 
-- a runnable snapshot of the current OPL front-desk app
+- a runnable snapshot of the current OPL web app
 - a host-side run script
 - a rendered \`systemd\` unit plus an install helper
 - a host-side healthcheck helper
 - a \`Caddy\` reverse-proxy template
-- a machine-readable hosted pilot bundle
+- a machine-readable web package contract
 
 What it does **not** claim:
 
@@ -164,41 +164,41 @@ What it does **not** claim:
 - shell target: external GUI overlay consuming OPL adapter surfaces
 - public origin: ${options.publicOrigin}
 - base path: ${options.basePath || '/'}
-- internal frontdesk port: ${options.port}
+- internal web port: ${options.port}
 - sessions limit: ${options.sessionsLimit}
 
 ## Required host dependencies
 
 - Node.js 22+ (or an equivalent runtime that can run \`node app/dist/cli.js\`)
 - a runnable Hermes binary exposed through \`OPL_HERMES_BIN\`
-- a writable workspace path exposed through \`OPL_FRONTDESK_WORKSPACE\`
+- a writable workspace path exposed through \`OPL_WEB_WORKSPACE\`
 - a reverse proxy such as Caddy or Nginx
 
 ## Files
 
 - \`app/\`: exported OPL app snapshot
-- \`config/opl-frontdesk.env.example\`: host environment template
-- \`scripts/run-frontdesk.sh\`: host launch script
+- \`config/opl-web.env.example\`: host environment template
+- \`scripts/run-opl-web.sh\`: host launch script
 - \`scripts/install-systemd-service.sh\`: install/render the packaged \`systemd\` unit on the target host
-- \`scripts/check-frontdesk-health.sh\`: verify the packaged front desk exposes \`/api/health\`
-- \`systemd/opl-frontdesk.service\`: rendered \`systemd\` unit preview
+- \`scripts/check-opl-web-health.sh\`: verify the packaged web entry exposes \`/api/health\`
+- \`systemd/opl-web.service\`: rendered \`systemd\` unit preview
 - \`caddy/Caddyfile\`: reverse-proxy template
-- \`pilot-bundle.json\`: machine-readable deployment bundle
+- \`web-package.json\`: machine-readable deployment bundle
 
 ## Bring-up outline
 
 1. Copy this package to the target host.
-2. Duplicate \`config/opl-frontdesk.env.example\` to \`config/opl-frontdesk.env\` and fill in:
+2. Duplicate \`config/opl-web.env.example\` to \`config/opl-web.env\` and fill in:
    - \`OPL_HERMES_BIN\`
-   - \`OPL_FRONTDESK_WORKSPACE\`
-3. Run \`sudo scripts/install-systemd-service.sh --enable-now\` to install and start the packaged service, or use \`scripts/run-frontdesk.sh\` for a foreground bring-up.
-4. Run \`scripts/check-frontdesk-health.sh\` and confirm the local front desk is healthy before wiring the public reverse-proxy endpoint at \`${options.publicHealthUrl}\`.
-5. Load \`caddy/Caddyfile\` (or adapt it to your reverse proxy) so ${options.publicOrigin}${options.basePath || '/'} points at the local OPL front desk.
+   - \`OPL_WEB_WORKSPACE\`
+3. Run \`sudo scripts/install-systemd-service.sh --enable-now\` to install and start the packaged service, or use \`scripts/run-opl-web.sh\` for a foreground bring-up.
+4. Run \`scripts/check-opl-web-health.sh\` and confirm the local web entry is healthy before wiring the public reverse-proxy endpoint at \`${options.publicHealthUrl}\`.
+5. Load \`caddy/Caddyfile\` (or adapt it to your reverse proxy) so ${options.publicOrigin}${options.basePath || '/'} points at the local OPL web entry.
 
 ## Notes
 
 - This package is honest hostedization-prep and self-hostable pilot packaging.
-- It is designed to let a future OPL x Onyx overlay or equivalent shell consume the OPL hosted pilot contract without pretending the full hosted platform already exists.
+- It is designed to let a future OPL x Onyx overlay or equivalent shell consume the OPL web package contract without pretending the full hosted platform already exists.
 `;
 }
 
@@ -212,13 +212,13 @@ function buildEnvExample(options: {
 OPL_HERMES_BIN=/usr/local/bin/hermes
 
 # Required writable workspace path on the target host
-OPL_FRONTDESK_WORKSPACE=/srv/opl/workspaces/default
+OPL_WEB_WORKSPACE=/srv/opl/workspaces/default
 
-# Optional frontdesk runtime settings
-OPL_FRONTDESK_HOST=${options.host}
-OPL_FRONTDESK_PORT=${options.port}
-OPL_FRONTDESK_BASE_PATH=${options.basePath}
-OPL_FRONTDESK_SESSIONS_LIMIT=${options.sessionsLimit}
+# Optional web runtime settings
+OPL_WEB_HOST=${options.host}
+OPL_WEB_PORT=${options.port}
+OPL_WEB_BASE_PATH=${options.basePath}
+OPL_WEB_SESSIONS_LIMIT=${options.sessionsLimit}
 `;
 }
 
@@ -229,7 +229,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
 PACKAGE_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 APP_ROOT="$PACKAGE_ROOT/app"
-ENV_FILE="\${OPL_FRONTDESK_ENV_FILE:-$PACKAGE_ROOT/config/opl-frontdesk.env}"
+ENV_FILE="\${OPL_WEB_ENV_FILE:-$PACKAGE_ROOT/config/opl-web.env}"
 
 if [[ -f "$ENV_FILE" ]]; then
   set -a
@@ -239,19 +239,19 @@ if [[ -f "$ENV_FILE" ]]; then
 fi
 
 : "\${OPL_HERMES_BIN:?Set OPL_HERMES_BIN to a runnable Hermes binary.}"
-: "\${OPL_FRONTDESK_WORKSPACE:?Set OPL_FRONTDESK_WORKSPACE to a writable workspace path.}"
+: "\${OPL_WEB_WORKSPACE:?Set OPL_WEB_WORKSPACE to a writable workspace path.}"
 
-HOST="\${OPL_FRONTDESK_HOST:-0.0.0.0}"
-PORT="\${OPL_FRONTDESK_PORT:-8787}"
-BASE_PATH="\${OPL_FRONTDESK_BASE_PATH:-/pilot/opl}"
-SESSIONS_LIMIT="\${OPL_FRONTDESK_SESSIONS_LIMIT:-5}"
+HOST="\${OPL_WEB_HOST:-0.0.0.0}"
+PORT="\${OPL_WEB_PORT:-8787}"
+BASE_PATH="\${OPL_WEB_BASE_PATH:-/pilot/opl}"
+SESSIONS_LIMIT="\${OPL_WEB_SESSIONS_LIMIT:-5}"
 
 export OPL_HERMES_BIN
 
 exec node "$APP_ROOT/dist/cli.js" web \\
   --host "$HOST" \\
   --port "$PORT" \\
-  --path "$OPL_FRONTDESK_WORKSPACE" \\
+  --path "$OPL_WEB_WORKSPACE" \\
   --sessions-limit "$SESSIONS_LIMIT" \\
   --base-path "$BASE_PATH"
 `;
@@ -259,15 +259,15 @@ exec node "$APP_ROOT/dist/cli.js" web \\
 
 function buildRenderedSystemdService(packageRoot: string) {
   return `[Unit]
-Description=OPL Front Desk Hosted Pilot
+Description=OPL Web Package Service
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
 WorkingDirectory="${packageRoot}"
-EnvironmentFile="${packageRoot}/config/opl-frontdesk.env"
-ExecStart=/usr/bin/env bash "${packageRoot}/scripts/run-frontdesk.sh"
+EnvironmentFile="${packageRoot}/config/opl-web.env"
+ExecStart=/usr/bin/env bash "${packageRoot}/scripts/run-opl-web.sh"
 Restart=always
 RestartSec=3
 
@@ -282,9 +282,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
 PACKAGE_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-UNIT_DIR="\${OPL_FRONTDESK_SYSTEMD_UNIT_DIR:-/etc/systemd/system}"
-UNIT_NAME="opl-frontdesk.service"
-SYSTEMCTL_BIN="\${OPL_FRONTDESK_SYSTEMCTL_BIN:-systemctl}"
+UNIT_DIR="\${OPL_WEB_SYSTEMD_UNIT_DIR:-/etc/systemd/system}"
+UNIT_NAME="opl-web.service"
+SYSTEMCTL_BIN="\${OPL_WEB_SYSTEMCTL_BIN:-systemctl}"
 ENABLE_NOW=0
 
 while [[ $# -gt 0 ]]; do
@@ -309,15 +309,15 @@ TARGET="$UNIT_DIR/$UNIT_NAME"
 
 cat >"$TARGET" <<EOF
 [Unit]
-Description=OPL Front Desk Hosted Pilot
+Description=OPL Web Package Service
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
 WorkingDirectory="$PACKAGE_ROOT"
-EnvironmentFile="$PACKAGE_ROOT/config/opl-frontdesk.env"
-ExecStart=/usr/bin/env bash "$PACKAGE_ROOT/scripts/run-frontdesk.sh"
+EnvironmentFile="$PACKAGE_ROOT/config/opl-web.env"
+ExecStart=/usr/bin/env bash "$PACKAGE_ROOT/scripts/run-opl-web.sh"
 Restart=always
 RestartSec=3
 
@@ -346,7 +346,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
 PACKAGE_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-ENV_FILE="\${OPL_FRONTDESK_ENV_FILE:-$PACKAGE_ROOT/config/opl-frontdesk.env}"
+ENV_FILE="\${OPL_WEB_ENV_FILE:-$PACKAGE_ROOT/config/opl-web.env}"
 
 if [[ -f "$ENV_FILE" ]]; then
   set -a
@@ -355,13 +355,13 @@ if [[ -f "$ENV_FILE" ]]; then
   set +a
 fi
 
-HOST="\${OPL_FRONTDESK_HEALTH_HOST:-\${OPL_FRONTDESK_HOST:-${defaultHost}}}"
+HOST="\${OPL_WEB_HEALTH_HOST:-\${OPL_WEB_HOST:-${defaultHost}}}"
 if [[ "$HOST" == "0.0.0.0" || "$HOST" == "::" ]]; then
   HOST="127.0.0.1"
 fi
 
-PORT="\${OPL_FRONTDESK_PORT:-${options.port}}"
-BASE_PATH="\${OPL_FRONTDESK_BASE_PATH:-${options.basePath}}"
+PORT="\${OPL_WEB_PORT:-${options.port}}"
+BASE_PATH="\${OPL_WEB_BASE_PATH:-${options.basePath}}"
 URL="http://$HOST:$PORT$BASE_PATH/api/health"
 
 node -e "const url = process.argv[1]; fetch(url).then(async (response) => { const text = (await response.text()).trim(); if (!response.ok) { console.error(text || ('Healthcheck failed: ' + response.status)); process.exit(1); } console.log(text || 'ok'); }).catch((error) => { console.error(error instanceof Error ? error.message : String(error)); process.exit(1); });" "$URL"
@@ -391,7 +391,7 @@ export function buildHostedPilotPackage(
   const port = options.port ?? 8787;
   const sessionsLimit = options.sessionsLimit ?? 5;
   const publicOrigin = normalizePublicOrigin(options.publicOrigin) ?? `http://127.0.0.1:${port}`;
-  const endpoints = buildFrontDeskEndpoints(basePath);
+  const oplApi = buildOplApiCatalog(basePath);
   const entryUrl = buildFrontDeskEntryUrl(publicOrigin, basePath);
   const apiBaseUrl = buildFrontDeskApiBaseUrl(publicOrigin, basePath);
 
@@ -404,13 +404,13 @@ export function buildHostedPilotPackage(
   const scriptsDir = path.join(outputDir, 'scripts');
   const systemdDir = path.join(outputDir, 'systemd');
   const caddyDir = path.join(outputDir, 'caddy');
-  const bundleJsonPath = path.join(outputDir, 'pilot-bundle.json');
+  const bundleJsonPath = path.join(outputDir, 'web-package.json');
   const readmePath = path.join(outputDir, 'README.md');
-  const envExamplePath = path.join(configDir, 'opl-frontdesk.env.example');
-  const runScriptPath = path.join(scriptsDir, 'run-frontdesk.sh');
+  const envExamplePath = path.join(configDir, 'opl-web.env.example');
+  const runScriptPath = path.join(scriptsDir, 'run-opl-web.sh');
   const installServiceScriptPath = path.join(scriptsDir, 'install-systemd-service.sh');
-  const healthcheckScriptPath = path.join(scriptsDir, 'check-frontdesk-health.sh');
-  const systemdPath = path.join(systemdDir, 'opl-frontdesk.service');
+  const healthcheckScriptPath = path.join(scriptsDir, 'check-opl-web-health.sh');
+  const systemdPath = path.join(systemdDir, 'opl-web.service');
   const caddyfilePath = path.join(caddyDir, 'Caddyfile');
   const packageJsonPath = path.join(appRoot, 'package.json');
 
@@ -430,7 +430,7 @@ export function buildHostedPilotPackage(
     buildReadme({
       publicOrigin,
       basePath,
-      publicHealthUrl: `${publicOrigin}${endpoints.health}`,
+      publicHealthUrl: `${publicOrigin}${oplApi.debug.health}`,
       port,
       sessionsLimit,
     }),
@@ -458,8 +458,8 @@ export function buildHostedPilotPackage(
   fs.writeFileSync(caddyfilePath, buildCaddyfile({ publicOrigin, basePath, port }));
 
   const localHealthHost = host === '0.0.0.0' || host === '::' ? '127.0.0.1' : host;
-  const localHealthUrl = `http://${localHealthHost}:${port}${endpoints.health}`;
-  const publicHealthUrl = `${publicOrigin}${endpoints.health}`;
+  const localHealthUrl = `http://${localHealthHost}:${port}${oplApi.debug.health}`;
+  const publicHealthUrl = `${publicOrigin}${oplApi.debug.health}`;
   const hostedRuntimeReadiness = buildHostedRuntimeReadiness();
 
   const payload = {
@@ -468,11 +468,11 @@ export function buildHostedPilotPackage(
       contracts_dir: contracts.contractsDir,
       contracts_root_source: contracts.contractsRootSource,
     },
-    hosted_pilot_package: {
-      surface_id: 'opl_hosted_frontdesk_pilot_package',
+    web_package: {
+      surface_id: 'opl_web_package',
       shell_integration_target: 'external_gui_overlay',
       package_status: 'landed',
-      actual_hosted_runtime_status: 'not_landed',
+      hosted_runtime_status: 'not_landed',
       runtime_substrate: 'external_hermes_kernel',
       hosted_runtime_readiness: hostedRuntimeReadiness,
       public_origin: publicOrigin,
@@ -481,15 +481,15 @@ export function buildHostedPilotPackage(
       base_path: basePath,
       entry_url: entryUrl,
       api_base_url: apiBaseUrl,
-      endpoints,
+      opl_api: oplApi,
       defaults: {
         sessions_limit: sessionsLimit,
-        runtime_workspace_env: 'OPL_FRONTDESK_WORKSPACE',
+        runtime_workspace_env: 'OPL_WEB_WORKSPACE',
         hermes_binary_env: 'OPL_HERMES_BIN',
       },
       operations: {
         systemd: {
-          unit_name: 'opl-frontdesk.service',
+          unit_name: 'opl-web.service',
           rendered_unit_path: systemdPath,
           install_script: installServiceScriptPath,
           install_command: `sudo bash ${installServiceScriptPath} --enable-now`,
@@ -504,19 +504,19 @@ export function buildHostedPilotPackage(
       assets: {
         bundle_json: bundleJsonPath,
         readme: readmePath,
-        env_example: envExamplePath,
-        run_script: runScriptPath,
-        systemd_service: systemdPath,
-        install_service_script: installServiceScriptPath,
+        environment_template: envExamplePath,
+        launch_script: runScriptPath,
+        service_unit: systemdPath,
+        service_install_script: installServiceScriptPath,
         healthcheck_script: healthcheckScriptPath,
-        caddyfile: caddyfilePath,
+        reverse_proxy_template: caddyfilePath,
         app_root: appRoot,
         app_dist: appDist,
         app_contracts: appContracts,
         app_package_json: packageJsonPath,
       } satisfies HostedPilotPackageAssets,
       notes: [
-        'This package is a self-hostable hosted pilot package for the OPL front desk.',
+        'This package is a self-hostable web package for the OPL Product API.',
         'It still requires an external Hermes binary on the host and does not claim that the actual hosted runtime is landed.',
         'The package now carries service-install and healthcheck helpers so host-side bring-up does not depend on hand-edited service paths.',
         'The immediate shell target is an external OPL x Onyx overlay, while the long-line product identity remains an OPL-owned adapter surface.',

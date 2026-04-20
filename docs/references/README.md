@@ -13,6 +13,7 @@ If you need to understand what `OPL` is today, go back to:
 - [architecture.md](../architecture.md)
 - [invariants.md](../invariants.md)
 - [decisions.md](../decisions.md)
+- [2026-04-20 product API boundary design](../specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md)
 
 ## 1. Convergence And Status Alignment
 
@@ -39,8 +40,6 @@ If you need to understand what `OPL` is today, go back to:
 - `family-product-entry-and-domain-handoff-architecture.md`
 - `family-lightweight-direct-entry-rollout-board.md`
 - `mas-top-level-cutover-board.md`
-- `opl-frontdesk-delivery-board.md`
-- `opl-hosted-web-frontdesk-benchmark.md`
 - `opl-product-entry-and-hermes-kernel-integration.md`
 - `opl-vertical-online-agent-platform-roadmap.md`
 - `contract-convergence-v1-decision-note.md`
@@ -79,10 +78,13 @@ If you need to understand what `OPL` is today, go back to:
 - `opl-operating-record-catalog.md`
 - `opl-operating-record-catalog.zh-CN.md`
 
-## 5. Historical Migration And Legacy Execution References
+## 5. Retired Frontdesk-Era And Historical Migration References
 
 - `development-operating-model.md`
 - `runtime-alignment-taskboard.md`
+- `opl-frontdesk-delivery-board.md`
+- `opl-hosted-web-frontdesk-benchmark.md`
+- [Frontdesk legacy archive](../history/frontdesk-legacy/README.md)
 - [OMX historical archive](../history/omx/README.md)
 
 ## Usage Rules
@@ -90,5 +92,5 @@ If you need to understand what `OPL` is today, go back to:
 - These files may explain why a freeze happened, but they must not override `README*`, `docs/README*`, or the core maintainer working set.
 - `series-doc-governance-checklist.md` is the repo-scoped governance checklist for keeping this repository aligned with the four-repo series; the dated sync summary records one concrete cross-repo intake round.
 - `four-repo-doc-intake-template.md` is the reusable central intake form for documenting scope, affected repositories, verification, and cleanup across a cross-repo docs round.
-- New reference docs should be filed into the five buckets above. Historical closeout or migration traces should stay Layer 3 rather than leaking back into the default public mainline.
-- Runbooks, longrun prompt templates, and worktree discipline for the retired execution surface should no longer be entered from `docs/references/`; use `docs/history/omx/` instead.
+- New reference docs should be filed into the five buckets above.
+- Retired `frontdesk`-era material stays here for audit only and must not be treated as the current implementation basis.

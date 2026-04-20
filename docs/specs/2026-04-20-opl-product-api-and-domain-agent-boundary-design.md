@@ -4,19 +4,19 @@
 
 截至 `2026-04-20`，`OPL` 的产品形态已经明确：
 
-- GUI 主线采用 `Onyx` 作为独立 overlay 基座
-- `OPL` 主仓负责 headless runtime truth、agent registry、workspace/session/files/system API
+- GUI 主线采用 `Onyx` 作为独立界面基座
+- `OPL` 主仓负责共享运行时真相、智能体注册表、工作空间 / 会话 / 文件 / 系统接口
 - `Codex` 是默认交互与执行宿主
 - `Hermes-Agent` 是备用执行器与长期在线网关
-- `MAS`、`MAG`、`RCA` 等 domain 仓是可被 `Codex` 直接调用的专用智能体仓
+- `MAS`、`MAG`、`RCA` 等领域仓是可被 `Codex` 直接调用的专用智能体仓
 
 当前的主要问题已经从“界面长什么样”切换成“`OPL` 应该向 GUI 暴露什么样的产品接口”。历史 `frontdesk` 体系把多种阶段性语义揉在了一起：
 
-- GUI bootstrap
+- GUI 启动
 - 环境安装与升级
-- workspace registry
+- 工作空间注册
 - ask / task / progress / files
-- domain wiring
+- 领域接线
 - hosted pilot / package
 - readiness / entry guide / dashboard
 
@@ -27,39 +27,39 @@
 - `/api/opl/frontdesk/modules`
 - `/api/opl/frontdesk/domain-wiring`
 
-这些名字保留了历史阶段的实现痕迹，已经不再适合当前的 `OPL + Onyx overlay` 目标形态。
+这些名字保留了历史阶段的实现痕迹，已经不再适合当前的 `OPL + Onyx 界面壳` 目标形态。
 
-这份设计的目标，是把 `OPL` 重做成一个清晰、稳定、长期可维护的 `Product API`，同时明确它和各个 domain 仓之间的边界。
+这份设计的目标，是把 `OPL` 重做成一个清晰、稳定、长期可维护的 `Product API`，同时明确它和各个领域仓之间的边界。
 
 ## 设计目标
 
-### 1. OPL 只承担 family-level 产品运行时
+### 1. OPL 只承担顶层产品运行时
 
 `OPL` 的目标定位固定为：
 
 `OPL = runtime orchestrator + agent registry + workspace/session/file API`
 
-这里的 `runtime orchestrator` 只负责 family-level 的共享产品运行时，不负责替代各个 domain 仓自己的专业逻辑。
+这里的 `runtime orchestrator` 只负责顶层共享产品运行时，不负责替代各个领域仓自己的专业逻辑。
 
 ### 2. Domain Agents 与 OPL 保持松耦合
 
-`MAS`、`MAG`、`RCA` 等仓继续是独立的 domain agent 仓。
+`MAS`、`MAG`、`RCA` 等仓继续是独立的领域智能体仓。
 
 它们需要满足的核心要求是：
 
 - 可以被 `Codex` 直接调用
-- 可以被 `OPL` 通过统一 agent entry 方式调用
+- 可以被 `OPL` 通过统一智能体入口方式调用
 - 在“直接调用”和“通过 OPL GUI 调用”两种路径下，行为语义保持一致
 
-用户通过 `OPL GUI` 调用某个 agent，本质上等于：
+用户通过 `OPL GUI` 调用某个智能体，本质上等于：
 
 `GUI -> OPL session runtime -> Codex -> selected domain agent`
 
-用户直接在 `Codex` 中调用某个 domain agent，本质上等于：
+用户直接在 `Codex` 中调用某个领域智能体，本质上等于：
 
 `Codex -> selected domain agent`
 
-两条路径的差异只在入口和管理能力，不在 agent 本身的工作逻辑。
+两条路径的差异只在入口和管理能力，不在智能体本身的工作逻辑。
 
 ### 3. GUI 只消费产品资源模型
 
@@ -78,19 +78,19 @@ GUI 只消费下面几类资源：
 
 ### 4. 共享模块只保留真正跨域复用的能力
 
-`OPL` 可以继续维护各个 domain agent 的共享功能模块。
+`OPL` 可以继续维护各个领域智能体的共享功能模块。
 
-这部分属于 `runtime orchestrator` 的内部组成，但需要严格收窄，只保留真正跨域、长期稳定、由多个 agent 共同依赖的能力，例如：
+这部分属于 `runtime orchestrator` 的内部组成，但需要严格收窄，只保留真正跨域、长期稳定、由多个智能体共同依赖的能力，例如：
 
-- session / workspace registry
-- engine adapter
-- module registry
-- artifact discovery
-- progress narration
-- stable API contracts
-- shared config loading
+- 会话 / 工作空间注册
+- 引擎适配器
+- 模块注册表
+- 交付物发现
+- 进度叙述
+- 稳定接口合同
+- 共享配置加载
 
-领域专属逻辑继续留在各自 domain 仓内。
+领域专属逻辑继续留在各自仓内。
 
 ## OPL 的目标产品模型
 
@@ -125,7 +125,7 @@ GUI 只消费下面几类资源：
 
 #### 3. modules
 
-可选 domain 模块管理：
+可选领域模块管理：
 
 - `med-autoscience`
 - `med-autogrant`
@@ -226,7 +226,7 @@ GUI 只消费下面几类资源：
 
 ### 1. 运行时关系
 
-`OPL` 不持有 domain runtime owner 身份。
+`OPL` 不持有领域运行时所有权。
 
 `MAS`、`MAG`、`RCA` 各自继续持有：
 
@@ -234,13 +234,13 @@ GUI 只消费下面几类资源：
 - 领域产物结构
 - 领域规则
 - 领域 prompt / AGENTS / skill 组织
-- 领域专用 runtime 与工具链
+- 领域专用运行时与工具链
 
-`OPL` 持有的是 family-level 的统一入口与管理能力。
+`OPL` 持有的是顶层统一入口与管理能力。
 
 ### 2. 调用关系
 
-`OPL` 调用 domain agent 时，使用的是统一的 `agent entry spec`。
+`OPL` 调用领域智能体时，使用的是统一的 `agent entry spec`。
 
 这个 `agent entry spec` 至少需要定义：
 
@@ -254,8 +254,8 @@ GUI 只消费下面几类资源：
 
 这样一来：
 
-- `Codex` 直接调用 domain agent
-- `OPL` 通过 GUI 调用 domain agent
+- `Codex` 直接调用领域智能体
+- `OPL` 通过 GUI 调用领域智能体
 
 这两种路径都会走同一套 entry spec。
 
@@ -263,7 +263,7 @@ GUI 只消费下面几类资源：
 
 当前公开语义中的 `handoff`、`domain wiring` 更像历史设计阶段留下的解释层。
 
-在新的产品模型里，公开概念统一收敛成：
+新的产品模型里，公开概念统一收敛成：
 
 - 选择 agent
 - 选择 workspace
@@ -271,51 +271,62 @@ GUI 只消费下面几类资源：
 
 内部如果仍然存在一次 adapter dispatch，也只属于 `session start` 的内部实现细节，不再作为一等公共产品概念暴露。
 
-## 目标 API 设计
+## 当前 Product API 目录
 
-### 1. System
+当前主线实现收敛为八类顶层资源与少量动作入口。
+
+### 1. system
 
 - `GET /api/opl/system`
+- `GET /api/opl/system/initialize`
+- `POST /api/opl/system/actions`
+- `POST /api/opl/system/settings`
 
-### 2. Engines
+### 2. engines
 
 - `GET /api/opl/engines`
-- `POST /api/opl/engines/{engine_id}/actions/{action}`
+- `POST /api/opl/engines/actions`
 
-### 3. Modules
+### 3. modules
 
 - `GET /api/opl/modules`
-- `POST /api/opl/modules/{module_id}/actions/{action}`
+- `POST /api/opl/modules/actions`
 
-### 4. Agents
+### 4. agents
 
 - `GET /api/opl/agents`
-- `GET /api/opl/agents/{agent_id}`
 
-### 5. Workspaces
+### 5. workspaces
 
 - `GET /api/opl/workspaces`
-- `POST /api/opl/workspaces`
-- `PATCH /api/opl/workspaces/{workspace_id}`
-- `POST /api/opl/workspaces/{workspace_id}/activate`
-- `POST /api/opl/workspaces/{workspace_id}/archive`
+- `POST /api/opl/workspaces/root`
+- `POST /api/opl/workspaces/bind`
+- `POST /api/opl/workspaces/activate`
+- `POST /api/opl/workspaces/archive`
 
-### 6. Sessions
+### 6. sessions
 
 - `GET /api/opl/sessions`
 - `POST /api/opl/sessions`
-- `GET /api/opl/sessions/{session_id}`
-- `POST /api/opl/sessions/{session_id}/messages`
-- `POST /api/opl/sessions/{session_id}/resume`
-- `GET /api/opl/sessions/{session_id}/logs`
+- `POST /api/opl/sessions/resume`
+- `GET /api/opl/sessions/logs`
 
-### 7. Progress
+### 7. progress
 
-- `GET /api/opl/sessions/{session_id}/progress`
+- `GET /api/opl/progress`
 
-### 8. Artifacts
+### 8. artifacts
 
-- `GET /api/opl/sessions/{session_id}/artifacts`
+- `GET /api/opl/artifacts`
+
+调试与运行态排查继续保留独立 debug / ops 路由，例如：
+
+- `/api/health`
+- `/api/status/dashboard`
+- `/api/status/runtime`
+- `/api/status/workspace`
+- `/api/domain/manifests`
+- `/api/session/ledger`
 
 ## GUI 与 OPL 的映射
 
@@ -363,7 +374,7 @@ GUI 只消费下面几类资源：
 
 `OPL` 继续维护共享模块，前提是它们满足下面三个条件：
 
-1. 至少服务两个以上 domain agent
+1. 至少服务两个以上领域智能体
 2. 与具体领域逻辑无关
 3. 在 GUI 与 CLI 两条入口中都能复用
 
@@ -377,7 +388,7 @@ GUI 只消费下面几类资源：
 - `agent registry`
 - `shared contracts`
 
-建议回收到 domain 仓的能力：
+建议回收到领域仓的能力：
 
 - 领域 prompt 拼装
 - 领域专用产物约定
@@ -386,37 +397,40 @@ GUI 只消费下面几类资源：
 
 ## 可直接退役的旧公开语义
 
-这轮重做完成后，下面这些旧公开语义可以进入退役清单：
+这轮重做完成后，下面这些旧公开语义进入退役清单：
 
 - `frontdesk` 作为主线产品命名
-- `frontdesk initialize`
 - `frontdesk readiness`
 - `frontdesk entry-guide`
 - `frontdesk domain-wiring`
 - `frontdesk dashboard`
-- `frontdesk hosted-bundle`
-- `frontdesk hosted-package`
-- `local_frontdesk` 作为用户面概念
-- `handoff` 作为用户面主线概念
+- `/api/project-progress`
+- `/api/ask`
+- `/api/task-status`
+- `/api/session/list`
+- `/api/workspace/list`
+- `/api/start`
+- `/api/domain/launch`
+- `/api/contract/handoff-envelope`
 
-对应保留的真实能力，会迁移到新的产品资源模型中：
+对应保留的真实能力，迁移到新的产品资源模型中：
 
 - 安装与升级动作进入 `engines / modules / system`
-- workspace registry 进入 `workspaces`
-- ask / task-status 进入 `sessions`
-- 进度进入 `sessions/{id}/progress`
-- 文件进入 `sessions/{id}/artifacts`
+- workspace 管理进入 `workspaces`
+- 会话创建与恢复进入 `sessions`
+- 进度进入 `progress`
+- 交付文件进入 `artifacts`
 
 ## 对用户理解的直接结论
 
 当前产品定义下，下面这些判断成立：
 
 1. `OPL` 负责统一产品入口、共享运行时、系统管理与 GUI API
-2. `MAS`、`MAG`、`RCA` 等 domain 仓继续作为独立专用智能体仓存在
+2. `MAS`、`MAG`、`RCA` 等领域仓继续作为独立专用智能体仓存在
 3. `Codex` 继续承担默认交互与执行宿主
-4. `OPL GUI` 调用 domain agent，与用户直接在 `Codex` 里调用该 agent，工作逻辑保持一致
-5. `OPL` 与各个 domain 仓之间保持松耦合
-6. 历史 `frontdesk / handoff / readiness` 公共语义可以系统退役
+4. `OPL GUI` 调用领域智能体，与用户直接在 `Codex` 里调用该智能体，工作逻辑保持一致
+5. `OPL` 与各个领域仓之间保持松耦合
+6. 历史 `frontdesk / handoff / readiness` 公共语义进入退役或内部归档
 
 ## 本轮重构原则
 
@@ -429,7 +443,7 @@ GUI 只消费下面几类资源：
 
 ### 不做
 
-- 不保留面向当前产品主线的兼容层
+- 不保留面向当前产品主线的公开兼容层
 - 不继续给旧 `frontdesk` 体系增加新能力
 - 不再把历史阶段解释面继续暴露为 GUI 主线真相
 

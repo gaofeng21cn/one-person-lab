@@ -2,208 +2,93 @@
 
 ## 顶层分层
 
-`OPL` 的主链路是顶层 federation：
+`OPL` 的当前主链路是：
 
-`Human / Agent -> OPL Gateway -> Domain Gateway -> Domain Harness OS -> Domain Repository`
+`Human / GUI Shell / CLI -> OPL Product Runtime -> Codex or Hermes -> Domain Agent Entry -> Domain Repository`
 
-## 当前使用链路与目标产品链路
+## 当前产品链路
 
-当前 repo-tracked 的本地使用链路是：
+当前仓库跟踪的产品链路是：
 
-`User / External GUI Overlay / CLI -> OPL CLI product entry or local frontdesk adapter -> Codex or Hermes alternate -> OPL Gateway -> Domain Handoff -> Domain Product Entry / Domain Module -> Domain Harness OS -> Domain Repository`
+`User / External GUI Shell / CLI -> OPL Product API -> Codex session or Hermes alternate -> selected agent entry -> domain runtime and deliverables`
 
-这说明当前 `OPL` 已经拥有可直接使用的 CLI 产品入口，以及一组供外部 GUI overlay 消费的 adapter/API surfaces；
-它现在通过一组清晰分层的 grouped command matrix 暴露正式入口面：
+这里的核心点是：
 
-- `opl`
-  - 默认进入 family-level front desk
-- `opl <request...>`
-  - 默认走 quick ask
-- `opl start / doctor / ask / chat / web`
-  - 提供顶层产品前门、健康检查、one-shot ask、Hermes interactive lane 与本地 adapter service
-- `opl contract validate|workstreams|workstream|domains|domain|surfaces|surface|handoff-envelope`
-  - 提供 machine-readable gateway contracts、surface catalog 与 family handoff bundle
-- `opl domain manifests|launch|resolve-request|explain-boundary`
-  - 提供 admitted domain manifests、direct-entry locator launch、顶层请求解析与边界解释
-- `opl status workspace|runtime|dashboard`
-  - 提供 workspace、runtime 与 frontdesk aggregate 观察面
-- `opl workspace projects|list|bind|activate|archive|root|root set|root doctor`
-  - 提供 file-backed workspace registry，以及 family workspace root 与顶层到 domain 之间的 direct-entry locator 管理
-- `opl frontdesk manifest|entry-guide|readiness|initialize|environment|modules|module *|engine *|repair|reinstall-support|update-channel|domain-wiring|hosted-bundle|hosted-package|service *`
-  - 提供 hosted-friendly shell contract、family wiring truth、initialize/settings 共用的 environment/modules/system 管理、pilot bundle、hosted package 与 adapter service 管理
-- `opl session list|resume|logs|ledger`
-  - 提供 landed local shell 的会话、日志与 OPL-owned session attribution
-- `opl runtime repair-gateway`
-  - 提供 Hermes gateway 修复入口
-- `opl web`
-  - 提供本地 frontdesk adapter service；根路由 `/` 返回 machine-readable root payload，供外部 GUI overlay 读取
+- GUI 外壳与 CLI 消费同一套 `OPL Product API`
+- `Codex` 是默认交互和执行宿主
+- `Hermes-Agent` 是备用执行器与长期在线网关
+- `MAS`、`MAG`、`RCA` 等领域智能体继续保持独立
 
-代表性显式命令包括 `opl contract validate`、`opl domain manifests`、`opl status runtime`、`opl workspace bind`、`opl workspace root`、`opl frontdesk initialize`、`opl frontdesk entry-guide`、`opl frontdesk update-channel`、`opl session ledger` 与 `opl runtime repair-gateway`。
+## 当前主线资源
 
-但它还不是 repo-tracked 的完整 GUI 产品前台。
-当前这层 GUI 路线已经冻结为 `OPL headless adapter in main repo + external overlay repo`；`Onyx` 只作为上游 benchmark / visual target，真正的 GUI 主线应在独立 overlay 仓里消费这些 truth surfaces。
-同时，`Phase 1` 的 gateway contract commands 仍然是顶层联邦真相面的稳定 formal contract surface。
+`OPL` 当前主线只公开这组产品资源：
 
-目标产品链路应是：
+- `system`
+- `engines`
+- `modules`
+- `agents`
+- `workspaces`
+- `sessions`
+- `progress`
+- `artifacts`
 
-`User -> OPL Product Entry -> Codex session / Hermes alternate -> OPL Gateway -> Domain Adapter -> Domain Product Entry / Domain Gateway -> Domain Harness OS -> Executor Adapter -> Concrete Executor`
+这组资源一起定义了 GUI 与 CLI 的共同产品模型。
 
-其中：
+## 各层职责
 
-- `OPL Product Entry`
-  - 面向用户直接暴露入口，例如本地 launcher / CLI shell、未来 web/chat entry
-- `Hermes Kernel`
-  - 负责长期在线 runtime substrate，例如 session、memory、scheduler、interrupt / resume、delivery / cron
-- `Domain Adapter`
-  - 负责把通用 runtime substrate 接入具体 domain contract，而不是重写 domain truth
-- `Executor Adapter`
-  - 负责把 domain 内部动作路由到具体执行器，例如受控 backend、Hermes-native agent、Codex、Claude Code、Python/CLI toolchain
-  - 当前家族默认执行器固定为 `Codex CLI autonomous`；默认模型与默认 reasoning effort 统一继承本机 `Codex` 默认配置，不在 family contract 里固定 pin
-- `Concrete Executor`
-  - 负责完成单个步骤或局部工作，不自动上升为顶层 runtime substrate owner
+### 1. OPL Product Runtime
 
-同样的缺口也存在于三个业务仓：
+负责：
 
-- 它们今天很多已经具备 `operator entry` 或 `agent entry`
-- 但还没有全面长成“用户可直接进入”的轻量 `product entry`
-- 因此后续不仅要把 `OPL` 做成 direct entry，也要让各业务仓在各自 scope 内拥有 direct entry
+- 共享运行时
+- 引擎注册表
+- 模块注册表
+- 智能体注册表
+- 工作空间注册表
+- 会话状态
+- 进度叙述
+- 交付物发现
 
-## 统一入口 taxonomy 与 handoff 关系
+### 2. Engines
 
-四仓后续统一使用下面三层入口语义：
+- `Codex`
+  - 默认交互与执行宿主
+- `Hermes-Agent`
+  - 备用执行器与长期在线网关
 
-- `operator entry`
-  - 面向工程操作者的命令、脚本、调试入口
-- `agent entry`
-  - 面向 `Codex` / Claude Code / OpenClaw 这类 host-agent 的调用入口
-- `product entry`
-  - 面向最终用户的正式产品入口
+### 3. Domain Agent Entry
 
-`OPL` 的 direct entry 不会替代 domain 仓的 direct entry。
-更准确的 family-level 结构应是：
+各个领域仓继续持有自己的智能体入口。
 
-`User -> OPL Product Entry -> OPL Gateway -> Hermes Kernel -> Domain Handoff -> Domain Product Entry / Domain Gateway`
+它们负责：
 
-这意味着顶层和单仓都要成长出产品入口，只是作用域不同：
+- 领域逻辑
+- 领域规则
+- 领域运行时
+- 领域交付物
 
-- `OPL Product Entry`
-  - family-level 总入口
-- `Domain Product Entry`
-  - domain-scoped 轻量入口
+### 4. GUI Shell
 
-## Hermes Kernel 与具体执行器的协作边界
+外部界面仓负责 GUI 外壳。
+它读取同一套 Product API，把 `agents / workspaces / sessions / progress / artifacts` 映射为界面。
 
-`Hermes Kernel` 在家族级架构里负责的是：
+## OPL 与 Domain Agents 的关系
 
-- 长期在线 session / run substrate
-- gateway / messaging / cron / interrupt / resume
-- memory、scheduler、delivery 这类通用 runtime 能力
+- `OPL` 不持有领域运行时所有权
+- `OPL` 不替代领域智能体自己的逻辑
+- `OPL` 负责顶层共享运行时与统一入口
+- `MAS`、`MAG`、`RCA` 可以通过 `OPL` 调用，也可以被 `Codex` 直接调用
+- 两条入口的工作逻辑保持一致
 
-它不自动等于“唯一执行脑”。
+## 默认执行策略
 
-`OPL` 与各 domain 仓继续负责：
-
-- gateway / handoff / authority 边界
-- object model 与 domain durable surface
-- stage / gate / audit / publication 等业务判断
-- executor routing contract
-
-因此全家族统一的不是“每一步都必须由 Hermes 自己执行”，而是：
-
-- 由 `Hermes` 统一 runtime substrate / orchestration
-- 由 domain 程序统一 authority / contract / audit truth
-- 由 `Executor Adapter` 在每个 domain 内按 route 选择具体执行器
-
-当前冻结的 family-level 默认 route 里，`Codex CLI autonomous` 是默认执行器，`Hermes-native` 当前只作为实验路线；只有完整的 Hermes AIAgent agent loop 才算成立，而一步一步 chat、单次 chat completion 或 chat relay 都不算目标主线。
-
-- `Codex CLI autonomous`
-  - 当前正式默认执行器
-  - 默认模型：继承本机 `Codex` 默认配置
-  - 默认 reasoning effort：继承本机 `Codex` 默认配置
-  - 语义要求：必须是能自主拆解与执行的 agent loop，而不是一步一步 chat、单次 chat completion，或 chat relay
-- `Hermes-native`
-  - 当前只作为实验路线
-  - 只有完整的 Hermes AIAgent agent loop 才算 `Hermes-native`
-  - 任何把 `Hermes` 降格成一步一步 chat、单次 chat completion，或 chat relay 的实现，都只能算迁移桥 / 对照面，不算目标主线
-
-这允许系列项目在不改写顶层 runtime 语义的前提下，保留不同 domain 的最优执行方式。例如：
-
-- 医学研究线可继续通过受控 research backend 承载高复杂度 inner-loop execution
-- visual / grant 线可逐步把 repo-local helper、CLI pipeline 或 host-agent route 收敛到同一 substrate 下
-- 未来若某一类任务已经证明 `Hermes-native executor` 不降级，也可以单独迁过去，而不是一次性替换全仓执行器
-
-二者之间的最小 handoff envelope 应保持一致，至少包括：
-
-- `target_domain_id`
-- `task_intent`
-- `entry_mode`
-- `workspace_locator`
-- `runtime_session_contract`
-- `return_surface_contract`
-
-当前 `OPL` 已经把这层 envelope 做成 repo-tracked surface，并且通过 workspace registry 中显式配置的 direct-entry locator，把顶层 front desk 与 domain direct entry / domain gateway 连接起来；没有 locator 的 domain 不会被伪造成“已接好前台”。
-
-## Hermes Kernel Integration 选型
-
-当前冻结的选择是：
-
-- `external kernel, managed by OPL product packaging`
-
-也就是：
-
-- 代码层把 `Hermes-Agent` 视为外部 kernel；
-- 产品层由 `OPL` 自己负责 bootstrap、launcher、version pinning、runtime wiring 与受支持版本管理；
-- 对用户来说，接触的是 `OPL` 产品入口，而不是一个需要先会 `Hermes` 的拼装流程。
-
-详细对比与运维取舍见：
-
-- `docs/references/opl-product-entry-and-hermes-kernel-integration.md`
-- `docs/references/family-executor-adapter-defaults.md`
-- `docs/references/family-product-entry-and-domain-handoff-architecture.md`
-- `docs/references/opl-hosted-web-frontdesk-benchmark.md`
-- `docs/references/family-lightweight-direct-entry-rollout-board.md`
-
-## 结构角色
-
-### 1. OPL 顶层 gateway
-
-- 定义 workstream topology
-- 冻结 shared foundation 与 shared substrate 语义
-- 管理 admitted domains 与公开入口
-
-### 2. Gateway contracts
-
-- `contracts/opl-gateway/*.json`
-- `contracts/opl-gateway/README*`
-
-这层是 machine-readable contract surface，不负责 narrative 协作说明。
-
-### 3. Public docs
-
-- `docs/roadmap*`
-- `docs/task-map*`
-- `docs/gateway-federation*`
-- `docs/operating-model*`
-
-这层负责对外讲清 `OPL` 的角色、当前承载范围与 domain 边界。
-
-### 4. Reference / history docs
-
-- `docs/references/`
-- `docs/specs/`
-- `docs/plans/`
-- `docs/history/omx/`
-
-这层保留审计、验收、示例、计划与历史材料，但不反向改写当前主线。
-
-## 当前家族仓与联邦地位
-
-- `Research Foundry -> Med Auto Science`：活跃 `Research Ops` 线
-- `RedCube AI`：活跃 visual-deliverable / `Presentation Ops` 入口
-- `Grant Foundry -> Med Auto Grant`：当前已收录的 `Grant Ops` domain gateway 入口，proposal authoring 与作者侧模拟评审 / 修订 truth 继续由 `MedAutoGrant` 持有
+- 默认执行器：`Codex CLI autonomous`
+- 默认模型与默认 reasoning effort：继承本机 `Codex` 默认配置
+- `Hermes-native` 继续作为实验路线和备用路径
 
 ## 文档组织原则
 
 - AI / 维护者优先读取核心五件套。
 - 对外公开面继续按四层系统组织。
-- 机器合同、公开叙事、参考材料、历史记录分层维护，不混为一个入口。
+- 机器合同、公开叙事、参考材料、历史记录分层维护。
+- 历史 `frontdesk` 时代的公开语义只保留在参考与历史层，不再进入当前主线。

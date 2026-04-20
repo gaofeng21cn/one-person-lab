@@ -1,5 +1,7 @@
 # OPL Initialize And Onyx Overlay Implementation Plan
 
+> Superseded by [`docs/plans/2026-04-20-opl-product-api-reset-implementation.md`](./2026-04-20-opl-product-api-reset-implementation.md) and the current product boundary in [`docs/specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md`](../specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md). Keep this file only for archive and migration review.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Land the OPL-side initialize/environment management action surfaces and start the independent `opl-onyx-shell` GUI overlay on top of Onyx with an OPL-shaped workbench and settings entry.

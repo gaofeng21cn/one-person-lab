@@ -1,5 +1,7 @@
 # Historical OPL Front Desk And Family Entry Implementation Plan
 
+> Superseded by [`docs/plans/2026-04-20-opl-product-api-reset-implementation.md`](./2026-04-20-opl-product-api-reset-implementation.md) and the current product boundary in [`docs/specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md`](../specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md). Keep this file only for archive and migration review.
+
 > Historical completed plan. This document preserves one retired frontdesk-entry implementation slice from `2026-04-12`. Current truth now lives in `README.md`, `docs/project.md`, `docs/status.md`, and `docs/architecture.md`.
 
 **Historical goal:** 把 `opl` 升级成默认自然语言前台，同时补齐会话/运维入口、family entry 对齐文档与 MAS 顶层 cutover board。

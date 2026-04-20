@@ -663,7 +663,7 @@ async function readServerJsonBody(request: IncomingMessage) {
   });
 }
 
-async function startFakeFrontDeskApiServer() {
+async function startFakeOplApiServer() {
   let activeWorkspacePath = repoRoot;
   const requests: Array<{
     method: string;
@@ -719,50 +719,39 @@ async function startFakeFrontDeskApiServer() {
       return;
     }
 
-    if (request.method === 'GET' && url.pathname === '/api/frontdesk/readiness') {
+    if (request.method === 'GET' && url.pathname === '/api/opl/progress') {
+      const taskId = url.searchParams.get('task_id');
       response.statusCode = 200;
       response.end(JSON.stringify({
-        frontdesk_readiness: {
-          workspace_path: url.searchParams.get('path'),
-          sessions_limit: Number(url.searchParams.get('sessions_limit') ?? '0'),
-        },
-      }));
-      return;
-    }
-
-    if (request.method === 'GET' && url.pathname === '/api/frontdesk/entry-guide') {
-      response.statusCode = 200;
-      response.end(JSON.stringify({
-        frontdesk_entry_guide: {
-          surface_id: 'opl_frontdesk_entry_guide',
-          workspace_taxonomy: {
-            family_workspace_kind: 'opl_family_workspace',
-          },
-          summary: {
-            total_projects_count: 1,
-          },
-        },
-      }));
-      return;
-    }
-
-    if (request.method === 'GET' && url.pathname === '/api/project-progress') {
-      response.statusCode = 200;
-      response.end(JSON.stringify({
-        project_progress: {
+        progress: {
+          surface_id: 'opl_progress',
+          session_id: taskId ? 'sess-frontdesk-001' : 'sess-progress',
+          workspace_path: url.searchParams.get('workspace_path'),
+          project_state: 'active_study',
           current_project: {
             project_id: 'medautoscience',
             label: 'med-autoscience',
-            workspace_path: url.searchParams.get('path'),
+            workspace_path: url.searchParams.get('workspace_path'),
           },
-          progress_summary: '004 论文当前仍在推进证据补强，需要继续补主图和投稿包可审计物。',
-          current_study: {
+          headline: '004 论文当前仍在推进证据补强，需要继续补主图和投稿包可审计物。',
+          latest_update: '论文主体内容已经完成，当前进入投稿打包收口。',
+          next_step: '优先核对 submission package 与 studies 目录中的交付面是否一致。',
+          status_summary: '投稿打包阶段已被全局门控放行，可以进入关键路径。',
+          study: {
             study_id: '004-invasive-architecture',
             title: 'NF-PitNET invasive phenotype architecture with public-data anatomy and biology anchors',
             story_summary: '当前主线是首术 NF-PitNET 的侵袭表型 architecture：用本地队列重构侵袭、Knosp、视觉压迫与切除负担，并把公开 MRI / omics 作为 anatomy / biology anchors。',
+            clinical_question: '首术 NF-PitNET 的侵袭表型如何同时连接影像、临床负担与分子层面的 anatomy / biology anchors。',
             current_stage: 'publication_supervision',
             current_stage_summary: '投稿打包阶段已被全局门控放行，可以进入关键路径。',
-            next_system_action: 'continue bundle stage',
+            paper_snapshot: {
+              main_figure_count: 4,
+              supplementary_figure_count: 2,
+              main_table_count: 3,
+              supplementary_table_count: 1,
+              reference_count: 52,
+              page_count: 28,
+            },
             status_narration_contract: {
               schema_version: 1,
               contract_kind: 'ai_status_narration',
@@ -796,7 +785,18 @@ async function startFakeFrontDeskApiServer() {
               },
             },
           },
-          next_focus: '继续补图表并把 submission package 更新到 studies 目录下可直接审阅的状态。',
+          task_cards: {
+            running: [
+              {
+                task_id: 'task-frontdesk-001',
+                title: '刷新投稿包',
+                status: 'running',
+              },
+            ],
+            waiting: [],
+            ready: [],
+            delivered: [],
+          },
           recent_activity: {
             session_id: 'sess-progress',
             last_active: '2m ago',
@@ -804,34 +804,48 @@ async function startFakeFrontDeskApiServer() {
             preview: 'study 004 progress refresh',
           },
           inspect_paths: [
-            url.searchParams.get('path'),
+            url.searchParams.get('workspace_path'),
             '/tmp/opl-activated-workspace/studies/004-invasive-architecture',
           ],
           attention_items: [
             'submission package 仍需补更多主图后再建议用户审阅。',
           ],
-          user_options: [
-            '展开当前论文的详细进度',
-            '列出当前 workspace 的全部论文',
-            '切换到另一篇论文继续查看',
-          ],
+          configured_human_gates: [],
           recommended_commands: {
             progress: 'medautosci study-progress --study 004',
             resume: 'medautosci launch-study --study 004',
             start: null,
           },
+          ...(taskId
+            ? {
+                task: {
+                  task_id: taskId,
+                  status: 'running',
+                  stage: 'writing',
+                  summary: '正在补图和整理投稿包',
+                  recent_output: '主图更新完成，正在刷新审计目录',
+                  session_id: 'sess-frontdesk-001',
+                },
+              }
+            : {}),
         },
       }));
       return;
     }
 
-    if (request.method === 'GET' && url.pathname === '/api/session/list') {
+    if (request.method === 'GET' && url.pathname === '/api/opl/sessions') {
       response.statusCode = 200;
       response.end(JSON.stringify({
-        product_entry: {
-          limit: Number(url.searchParams.get('limit') ?? '0'),
-          source_filter: url.searchParams.get('source'),
-          sessions: [
+        sessions: {
+          surface_id: 'opl_sessions',
+          summary: {
+            requested_limit: Number(url.searchParams.get('limit') ?? '0'),
+            source_filter: url.searchParams.get('source'),
+            listed_sessions_count: 1,
+            ledger_sessions_count: 1,
+            ledger_entry_count: 1,
+          },
+          items: [
             {
               session_id: 'sess-frontdesk-001',
               source: 'opl-product-entry',
@@ -840,15 +854,30 @@ async function startFakeFrontDeskApiServer() {
             },
           ],
           raw_output: 'sess-frontdesk-001 opl-product-entry Resume 004 paper progression',
+          ledger: {
+            surface_id: 'opl_managed_session_ledger',
+            sessions: [
+              {
+                session_id: 'sess-frontdesk-001',
+                resource_totals: {
+                  latest_sample_status: 'captured',
+                },
+              },
+            ],
+            summary: {
+              entry_count: 1,
+            },
+          },
         },
       }));
       return;
     }
 
-    if (request.method === 'GET' && url.pathname === '/api/session/logs') {
+    if (request.method === 'GET' && url.pathname === '/api/opl/sessions/logs') {
       response.statusCode = 200;
       response.end(JSON.stringify({
-        product_entry: {
+        session_logs: {
+          surface_id: 'opl_session_logs',
           mode: 'logs',
           log_name: url.searchParams.get('log_name'),
           lines: Number(url.searchParams.get('lines') ?? '0'),
@@ -859,17 +888,15 @@ async function startFakeFrontDeskApiServer() {
       return;
     }
 
-    if (request.method === 'GET' && url.pathname === '/api/task-status') {
+    if (request.method === 'POST' && url.pathname === '/api/opl/sessions/resume') {
       response.statusCode = 200;
       response.end(JSON.stringify({
-        product_entry: {
-          task: {
-            task_id: url.searchParams.get('task_id'),
-            status: 'running',
-            stage: 'writing',
-            summary: '正在补图和整理投稿包',
-            recent_output: '主图更新完成，正在刷新审计目录',
-            session_id: 'sess-frontdesk-001',
+        session_resume: {
+          surface_id: 'opl_session_resume',
+          mode: 'resume',
+          resume: {
+            session_id: String(body?.session_id ?? 'sess-frontdesk-001'),
+            output: 'RUNTIME RESUME OUTPUT',
           },
         },
       }));
@@ -896,12 +923,15 @@ async function startFakeFrontDeskApiServer() {
       return;
     }
 
-    if (request.method === 'GET' && url.pathname === '/api/workspace/list') {
+    if (request.method === 'GET' && url.pathname === '/api/opl/workspaces') {
       response.statusCode = 200;
       response.end(JSON.stringify({
-        workspace_catalog: {
+        workspaces: {
+          surface_id: 'opl_workspaces',
+          action: 'list',
           summary: {
             active_projects_count: 1,
+            total_projects_count: 1,
           },
           projects: [
             {
@@ -920,6 +950,7 @@ async function startFakeFrontDeskApiServer() {
               },
             },
           ],
+          bindings: [],
         },
       }));
       return;
@@ -944,34 +975,46 @@ async function startFakeFrontDeskApiServer() {
       return;
     }
 
-    if (request.method === 'POST' && url.pathname === '/api/workspace/activate') {
+    if (request.method === 'POST' && url.pathname === '/api/opl/workspaces/activate') {
       activeWorkspacePath = String(body?.workspace_path ?? activeWorkspacePath);
       response.statusCode = 200;
       response.end(JSON.stringify({
-        workspace_catalog: {
+        workspaces: {
+          surface_id: 'opl_workspaces',
           action: 'activate',
           binding: {
             project_id: String(body?.project_id ?? 'unknown'),
             workspace_path: activeWorkspacePath,
             status: 'active',
           },
+          summary: {
+            active_projects_count: 1,
+            total_projects_count: 1,
+          },
         },
       }));
       return;
     }
 
-    if (request.method === 'POST' && url.pathname === '/api/ask') {
+    if (request.method === 'POST' && url.pathname === '/api/opl/sessions') {
       response.statusCode = 200;
       response.end(JSON.stringify({
-        product_entry: {
-          input: {
-            goal: String(body?.goal ?? ''),
-          },
-          task: {
-            task_id: 'task-frontdesk-001',
-            status: 'accepted',
-            summary: '请求已提交到后台执行队列',
-            session_id: null,
+        session_create: {
+          surface_id: 'opl_session_create',
+          request_mode: 'submitted',
+          payload: {
+            product_entry: {
+              entry_surface: 'opl_session_api',
+              input: {
+                goal: String(body?.goal ?? ''),
+              },
+              task: {
+                task_id: 'task-frontdesk-001',
+                status: 'accepted',
+                summary: '请求已提交到后台执行队列',
+                session_id: null,
+              },
+            },
           },
         },
       }));
@@ -995,7 +1038,7 @@ async function startFakeFrontDeskApiServer() {
   const address = server.address();
   if (!address || typeof address === 'string') {
     server.close();
-    throw new Error('Failed to bind fake frontdesk API server.');
+    throw new Error('Failed to bind fake OPL API server.');
   }
 
   return {
@@ -1414,18 +1457,18 @@ test('status workspace reports git and worktree visibility for one workspace pat
   assert.equal(typeof output.workspace.git.is_clean, 'boolean');
 });
 
-test('bare opl command seeds a front-desk session when not attached to a tty', () => {
+test('bare opl command seeds a product-entry session when not attached to a tty', () => {
   const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
 if [ "$1" = "chat" ]; then
   cat <<'EOF'
 ╭─ ⚕ Hermes ───────────────────────────────────────────────────────────────────╮
 OPL FRONT DESK READY
 
-session_id: opl-frontdesk-session
+session_id: opl-session-seed
 EOF
   exit 0
 fi
-if [ "$1" = "--resume" ] && [ "$2" = "opl-frontdesk-session" ]; then
+if [ "$1" = "--resume" ] && [ "$2" = "opl-session-seed" ]; then
   cat <<'EOF'
 OPL FRONT DESK RESUMED
 EOF
@@ -1441,11 +1484,15 @@ exit 1
     });
 
     assert.equal(output.version, 'g2');
-    assert.equal(output.product_entry.mode, 'frontdesk');
+    assert.equal(output.product_entry.mode, 'session_seed');
+    assert.doesNotMatch(output.product_entry.mode, /frontdesk/i);
     assert.equal(output.product_entry.interactive, false);
-    assert.equal(output.product_entry.seed.session_id, 'opl-frontdesk-session');
+    assert.doesNotMatch(output.product_entry.handoff_prompt_preview, /front[- ]?desk/i);
+    assert.equal(output.product_entry.seed.session_id, 'opl-session-seed');
+    assert.equal(output.product_entry.seed.command_preview.includes('opl-frontdesk'), false);
+    assert.equal(output.product_entry.seed.command_preview.includes('opl-session-seed'), true);
     assert.equal(output.product_entry.seed.response, 'OPL FRONT DESK READY');
-    assert.equal(output.product_entry.resume.session_id, 'opl-frontdesk-session');
+    assert.equal(output.product_entry.resume.session_id, 'opl-session-seed');
     assert.equal(output.product_entry.resume.output, 'OPL FRONT DESK RESUMED');
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
@@ -1788,22 +1835,22 @@ exit 1
     });
 
     assert.equal(output.version, 'g2');
-    assert.equal(output.dashboard.front_desk.direct_entry_command, 'opl');
-    assert.equal(output.dashboard.front_desk.local_web_frontdesk_status, 'pilot_landed');
-    assert.equal(output.dashboard.front_desk.desktop_shell_status, 'not_repo_tracked');
-    assert.equal(output.dashboard.front_desk.desktop_default_entry_status, 'external_overlay_required');
-    assert.equal(output.dashboard.front_desk.recommended_entry_surfaces_count, 0);
-    assert.deepEqual(output.dashboard.front_desk.recommended_entry_surfaces, []);
-    assert.equal(output.dashboard.front_desk.hosted_runtime_readiness.desktop_shell_landed, false);
-    assert.equal('hosted_web_status' in output.dashboard.front_desk, false);
-    assert.equal('librechat_pilot_package_status' in output.dashboard.front_desk, false);
-    assert.equal('frontdesk_librechat_status_surface' in output.dashboard.front_desk, false);
+    assert.equal(output.dashboard.product_api.direct_entry_command, 'opl');
+    assert.equal(output.dashboard.product_api.local_web_status, 'pilot_landed');
+    assert.equal(output.dashboard.product_api.desktop_shell_status, 'not_repo_tracked');
+    assert.equal(output.dashboard.product_api.desktop_default_entry_status, 'external_overlay_required');
+    assert.equal(output.dashboard.product_api.recommended_entry_surfaces_count, 0);
+    assert.deepEqual(output.dashboard.product_api.recommended_entry_surfaces, []);
+    assert.equal(output.dashboard.product_api.hosted_runtime_readiness.desktop_shell_landed, false);
+    assert.equal('hosted_web_status' in output.dashboard.product_api, false);
+    assert.equal('librechat_pilot_package_status' in output.dashboard.product_api, false);
+    assert.equal('frontdesk_librechat_status_surface' in output.dashboard.product_api, false);
     assert.equal(output.dashboard.projects.length, 4);
     assert.equal(output.dashboard.domain_manifests.summary.total_projects_count, 3);
     assert.equal(output.dashboard.domain_manifests.summary.resolved_count, 0);
     assert.equal(output.dashboard.workspace.absolute_path, repoRoot);
     assert.equal(output.dashboard.runtime_status.recent_sessions.sessions.length, 1);
-    assert.deepEqual(output.dashboard.front_desk.rollout_board_refs, [
+    assert.deepEqual(output.dashboard.product_api.rollout_board_refs, [
       'docs/references/opl-frontdesk-delivery-board.md',
       'docs/references/opl-hosted-web-frontdesk-benchmark.md',
       'docs/references/family-lightweight-direct-entry-rollout-board.md',
@@ -1823,16 +1870,16 @@ test('help advertises the local web front-desk pilot command surface', () => {
     output.help.commands.some((entry: { command: string }) => entry.command === 'web'),
   );
   assert.ok(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk manifest'),
+    output.help.commands.some((entry: { command: string }) => entry.command === 'system'),
   );
   assert.ok(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk entry-guide'),
+    output.help.commands.some((entry: { command: string }) => entry.command === 'system initialize'),
   );
   assert.ok(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk domain-wiring'),
+    output.help.commands.some((entry: { command: string }) => entry.command === 'service install'),
   );
   assert.ok(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk readiness'),
+    output.help.commands.some((entry: { command: string }) => entry.command === 'modules'),
   );
   assert.ok(
     output.help.commands.some((entry: { command: string }) => entry.command === 'domain launch'),
@@ -1847,215 +1894,35 @@ test('help advertises initialize and environment management command surfaces', (
   const output = runCli(['help']);
   const commands = output.help.commands.map((entry: { command: string }) => entry.command);
 
-  assert.equal(commands.includes('frontdesk initialize'), true);
-  assert.equal(commands.includes('frontdesk engine install'), true);
-  assert.equal(commands.includes('frontdesk repair'), true);
-  assert.equal(commands.includes('frontdesk reinstall-support'), true);
-  assert.equal(commands.includes('frontdesk update-channel'), true);
+  assert.equal(commands.includes('system initialize'), true);
+  assert.equal(commands.includes('engine install'), true);
+  assert.equal(commands.includes('system repair'), true);
+  assert.equal(commands.includes('system reinstall-support'), true);
+  assert.equal(commands.includes('system update-channel'), true);
+  assert.equal(commands.includes('modules'), true);
+  assert.equal(commands.includes('module install'), true);
   assert.equal(commands.includes('workspace root'), true);
   assert.equal(commands.includes('workspace root set'), true);
   assert.equal(commands.includes('workspace root doctor'), true);
 });
 
-test('frontdesk-manifest exposes the hosted-friendly OPL shell contract without claiming hosted readiness', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-frontdesk-manifest-state-'));
-
-  try {
-    const output = runCli(['frontdesk', 'manifest'], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
-    });
-
-    assert.equal(output.version, 'g2');
-    assert.equal(output.frontdesk_manifest.surface_id, 'opl_hosted_friendly_frontdesk_manifest');
-    assert.equal(output.frontdesk_manifest.entry_surface, 'opl_local_web_frontdesk_pilot');
-    assert.equal(output.frontdesk_manifest.shell_integration_target, 'external_gui_overlay');
-    assert.equal(output.frontdesk_manifest.readiness, 'hosted_friendly_shell_pilot_landed');
-    assert.equal(output.frontdesk_manifest.hosted_packaging_status, 'frontdesk_package_landed');
-    assert.deepEqual(output.frontdesk_manifest.handoff_envelope_fields, [
-      'target_domain_id',
-      'task_intent',
-      'entry_mode',
-      'workspace_locator',
-      'runtime_session_contract',
-      'return_surface_contract',
-    ]);
-    assert.equal(output.frontdesk_manifest.endpoints.manifest, '/api/frontdesk/manifest');
-    assert.equal(output.frontdesk_manifest.endpoints.domain_manifests, '/api/domain/manifests');
-    assert.equal(output.frontdesk_manifest.endpoints.health, '/api/health');
-    assert.equal(output.frontdesk_manifest.endpoints.resume, '/api/session/resume');
-    assert.equal(output.frontdesk_manifest.endpoints.logs, '/api/session/logs');
-    assert.equal(
-      output.frontdesk_manifest.hosted_runtime_readiness.surface_kind,
-      'opl_hosted_runtime_readiness',
-    );
-    assert.equal(output.frontdesk_manifest.hosted_runtime_readiness.status, 'pilot_ready_not_managed');
-    assert.equal(
-      output.frontdesk_manifest.hosted_runtime_readiness.shell_integration_target,
-      'external_gui_overlay',
-    );
-    assert.equal(
-      output.frontdesk_manifest.hosted_runtime_readiness.managed_hosted_runtime_landed,
-      false,
-    );
-    assert.equal(
-      output.frontdesk_manifest.hosted_runtime_readiness.hosted_pilot_bundle_landed,
-      true,
-    );
-    assert.equal(
-      output.frontdesk_manifest.hosted_runtime_readiness.desktop_shell_landed,
-      false,
-    );
-    assert.equal(output.frontdesk_manifest.domain_wiring_surface.surface_id, 'opl_frontdesk_domain_wiring');
-    assert.equal(output.frontdesk_manifest.domain_wiring_surface.endpoint, '/api/frontdesk/domain-wiring');
-    assert.equal(output.frontdesk_manifest.domain_wiring_surface.summary.total_projects_count, 3);
-    assert.equal(output.frontdesk_manifest.domain_wiring_surface.summary.recommended_entry_surfaces_count, 0);
-    assert.equal(output.frontdesk_manifest.frontdesk_entry_guide_surface.surface_id, 'opl_frontdesk_entry_guide');
-    assert.equal(output.frontdesk_manifest.frontdesk_entry_guide_surface.endpoint, '/api/frontdesk/entry-guide');
-    assert.equal(output.frontdesk_manifest.frontdesk_readiness_surface.surface_id, 'opl_frontdesk_readiness');
-    assert.equal(output.frontdesk_manifest.frontdesk_readiness_surface.endpoint, '/api/frontdesk/readiness');
-    assert.equal(output.frontdesk_manifest.shell_bootstrap.primary_surface.surface_id, 'opl_frontdesk_entry_guide');
-    assert.equal(output.frontdesk_manifest.shell_bootstrap.primary_surface.endpoint, '/api/frontdesk/entry-guide');
-    assert.deepEqual(
-      output.frontdesk_manifest.shell_bootstrap.follow_on_surfaces.map((entry: { surface_id: string }) => entry.surface_id),
-      ['opl_frontdesk_readiness', 'opl_frontdesk_domain_wiring', 'opl_frontdesk_dashboard'],
-    );
-    assert.equal(output.frontdesk_manifest.shell_bootstrap.operator_debug_surface.surface_id, 'opl_frontdesk_dashboard');
-    assert.equal(output.frontdesk_manifest.shell_bootstrap.operator_debug_surface.endpoint, '/api/status/dashboard');
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
+test('legacy frontdesk command surfaces are retired from the public CLI', () => {
+  for (const args of [
+    ['frontdesk', 'manifest'],
+    ['frontdesk', 'entry-guide'],
+    ['frontdesk', 'domain-wiring'],
+    ['frontdesk', 'readiness'],
+  ]) {
+    const { status, payload } = runCliFailure(args);
+    assert.equal(status, 2);
+    assert.equal(payload.error.code, 'unknown_command');
+    assert.equal(payload.error.details.command, 'frontdesk');
+    assert.ok(Array.isArray(payload.error.details.commands));
+    assert.equal(payload.error.details.commands.includes('frontdesk manifest'), false);
   }
 });
 
-test('frontdesk-entry-guide exposes family shell taxonomy and domain workspace mapping', () => {
-  const output = runCli(['frontdesk', 'entry-guide']);
-
-  assert.equal(output.version, 'g2');
-  assert.equal(output.frontdesk_entry_guide.surface_id, 'opl_frontdesk_entry_guide');
-  assert.equal(output.frontdesk_entry_guide.workspace_taxonomy.family_workspace_kind, 'opl_family_workspace');
-  assert.equal(output.frontdesk_entry_guide.workspace_taxonomy.family_workspace_role, 'family_task_container');
-  assert.equal(output.frontdesk_entry_guide.summary.total_projects_count, 3);
-  assert.equal(output.frontdesk_entry_guide.endpoints.frontdesk_entry_guide, '/api/frontdesk/entry-guide');
-  assert.ok(Array.isArray(output.frontdesk_entry_guide.starter_prompts));
-});
-
-test('frontdesk-domain-wiring exposes a dedicated hosted-friendly family wiring surface', () => {
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-wiring-state-'));
-
-  try {
-    const output = runCli(['frontdesk', 'domain-wiring'], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
-    });
-
-    assert.equal(output.version, 'g2');
-    assert.equal(output.frontdesk_domain_wiring.surface_id, 'opl_frontdesk_domain_wiring');
-    assert.equal(output.frontdesk_domain_wiring.entry_surface, 'opl_local_web_frontdesk_pilot');
-    assert.equal(output.frontdesk_domain_wiring.runtime_substrate, 'external_hermes_kernel');
-    assert.equal(output.frontdesk_domain_wiring.hosted_runtime_readiness.surface_kind, 'opl_hosted_runtime_readiness');
-    assert.equal(output.frontdesk_domain_wiring.domain_entry_parity.surface_kind, 'opl_domain_entry_parity');
-    assert.equal(output.frontdesk_domain_wiring.domain_binding_parity.surface_kind, 'opl_domain_binding_parity');
-    assert.equal(output.frontdesk_domain_wiring.summary.total_projects_count, 3);
-    assert.equal(output.frontdesk_domain_wiring.domain_entry_parity.summary.blocked_projects_count, 3);
-    assert.equal(output.frontdesk_domain_wiring.domain_binding_parity.summary.total_projects_count, 3);
-    assert.equal(output.frontdesk_domain_wiring.domain_binding_parity.summary.active_projects_count, 0);
-    assert.equal(output.frontdesk_domain_wiring.domain_binding_parity.summary.manifest_ready_projects_count, 0);
-    assert.equal(output.frontdesk_domain_wiring.summary.recommended_entry_surfaces_count, 0);
-    assert.equal(output.frontdesk_domain_wiring.endpoints.workspace_catalog, '/api/workspace/list');
-    assert.equal(output.frontdesk_domain_wiring.endpoints.workspace_bind, '/api/workspace/bind');
-    assert.equal(output.frontdesk_domain_wiring.endpoints.workspace_activate, '/api/workspace/activate');
-    assert.equal(output.frontdesk_domain_wiring.endpoints.workspace_archive, '/api/workspace/archive');
-    assert.deepEqual(output.frontdesk_domain_wiring.recommended_entry_surfaces, []);
-  } finally {
-    fs.rmSync(stateRoot, { recursive: true, force: true });
-  }
-});
-
-test('frontdesk-readiness exposes one operator-facing readiness surface for local service and domain entry state', () => {
-  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-frontdesk-readiness-home-'));
-  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
-if [ "$1" = "version" ]; then
-  echo "Hermes Agent v9.9.9-test"
-  exit 0
-fi
-if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
-  cat <<'EOF'
-Launchd plist: /tmp/ai.hermes.gateway.plist
-✓ Service definition matches the current Hermes install
-✓ Gateway service is loaded
-EOF
-  exit 0
-fi
-if [ "$1" = "status" ]; then
-  cat <<'EOF'
-◆ Environment
-  Project:      /tmp/hermes-agent
-◆ Gateway Service
-  Status:       ✓ loaded
-  Manager:      launchd
-◆ Scheduled Jobs
-  Jobs:         0
-◆ Sessions
-  Active:       1
-EOF
-  exit 0
-fi
-if [ "$1" = "sessions" ] && [ "$2" = "list" ]; then
-  cat <<'EOF'
-Preview                                            Last Active   Src    ID
-───────────────────────────────────────────────────────────────────────────────────────────────
-OPL readiness session                              1m ago        cli    sess_ready
-EOF
-  exit 0
-fi
-echo "unexpected fake-hermes args: $*" >&2
-exit 1
-`);
-  const psFixture = createFakePsFixture(`27025 1 0.1 0.2 49616 22:46 /Users/test/.hermes/venv/bin/python -m hermes_cli.main gateway run --replace`);
-
-  try {
-    const output = runCli(['frontdesk', 'readiness', '--path', repoRoot, '--sessions-limit', '1'], {
-      HOME: homeRoot,
-      OPL_HERMES_BIN: hermesPath,
-      PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
-    });
-
-    assert.equal(output.version, 'g2');
-    assert.equal(output.frontdesk_readiness.surface_id, 'opl_frontdesk_readiness');
-    assert.equal(output.frontdesk_readiness.runtime_substrate, 'external_hermes_kernel');
-    assert.equal(output.frontdesk_readiness.local_service.installed, false);
-    assert.equal(output.frontdesk_readiness.local_service.loaded, false);
-    assert.equal(output.frontdesk_readiness.local_service.health.status, 'not_installed');
-    assert.equal(output.frontdesk_readiness.shell_integration_target, 'external_gui_overlay');
-    assert.equal(output.frontdesk_readiness.local_shell.direct_entry_command, 'opl');
-    assert.equal(output.frontdesk_readiness.local_shell.quick_ask_command, 'opl <request...>');
-    assert.equal(output.frontdesk_readiness.local_shell.web_command, 'opl web');
-    assert.equal('desktop_command' in output.frontdesk_readiness.local_shell, false);
-    assert.equal(output.frontdesk_readiness.hosted_runtime_readiness.status, 'pilot_ready_not_managed');
-    assert.equal(output.frontdesk_readiness.summary.total_projects_count, 3);
-    assert.equal(output.frontdesk_readiness.summary.usable_now_projects_count, 0);
-    assert.equal(output.frontdesk_readiness.summary.good_to_use_now_projects_count, 0);
-    assert.equal(output.frontdesk_readiness.summary.fully_automatic_projects_count, 0);
-    assert.equal(output.frontdesk_readiness.summary.ready_to_try_now_projects_count, 0);
-    assert.equal(output.frontdesk_readiness.summary.ready_for_opl_start_count, 0);
-    assert.equal(output.frontdesk_readiness.summary.ready_for_domain_handoff_count, 0);
-  assert.equal(output.frontdesk_readiness.endpoints.frontdesk_readiness, '/api/frontdesk/readiness');
-  assert.equal(output.frontdesk_readiness.endpoints.frontdesk_domain_wiring, '/api/frontdesk/domain-wiring');
-    assert.equal(output.frontdesk_readiness.projects[0].manifest_status, 'not_bound');
-    assert.equal(output.frontdesk_readiness.projects[0].entry_parity_status, 'blocked');
-    assert.equal(output.frontdesk_readiness.projects[0].usable_now, false);
-    assert.equal(output.frontdesk_readiness.projects[0].recommended_start_command, null);
-    assert.ok(
-      output.frontdesk_readiness.recommended_next_actions.some((entry: string) =>
-        entry.includes('opl frontdesk service install'),
-      ),
-    );
-  } finally {
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(psFixture.fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(homeRoot, { recursive: true, force: true });
-  }
-});
-
-test('frontdesk-service commands manage the local launchd wrapper for the web pilot', async () => {
+test('service commands manage the local launchd wrapper for the web pilot', async () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-frontdesk-home-'));
   const launchctlFixture = createFakeLaunchctlFixture();
   const openFixture = createFakeOpenFixture();
@@ -2068,7 +1935,6 @@ test('frontdesk-service commands manage the local launchd wrapper for the web pi
 
   try {
     const install = runCli([
-      'frontdesk',
       'service',
       'install',
       '--host',
@@ -2081,52 +1947,52 @@ test('frontdesk-service commands manage the local launchd wrapper for the web pi
       '7',
     ], serviceEnv);
 
-    assert.equal(install.frontdesk_service.action, 'install');
-    assert.equal(install.frontdesk_service.installed, true);
-    assert.equal(install.frontdesk_service.loaded, true);
-    assert.equal(install.frontdesk_service.base_url, `http://127.0.0.1:${configuredPort}`);
-    assert.equal(install.frontdesk_service.paths.launch_agent_plist.endsWith('.plist'), true);
-    assert.equal(fs.existsSync(install.frontdesk_service.paths.launch_agent_plist), true);
-    assert.equal(fs.existsSync(install.frontdesk_service.paths.config_file), true);
+    assert.equal(install.service.action, 'install');
+    assert.equal(install.service.installed, true);
+    assert.equal(install.service.loaded, true);
+    assert.equal(install.service.base_url, `http://127.0.0.1:${configuredPort}`);
+    assert.equal(install.service.paths.launch_agent_plist.endsWith('.plist'), true);
+    assert.equal(fs.existsSync(install.service.paths.launch_agent_plist), true);
+    assert.equal(fs.existsSync(install.service.paths.config_file), true);
 
-    const plistText = fs.readFileSync(install.frontdesk_service.paths.launch_agent_plist, 'utf8');
+    const plistText = fs.readFileSync(install.service.paths.launch_agent_plist, 'utf8');
     assert.match(plistText, /<string>web<\/string>/);
     assert.match(plistText, new RegExp(String(configuredPort)));
 
-    const statusWithoutHealth = runCli(['frontdesk', 'service', 'status'], serviceEnv);
-    assert.equal(statusWithoutHealth.frontdesk_service.action, 'status');
-    assert.equal(statusWithoutHealth.frontdesk_service.installed, true);
-    assert.equal(statusWithoutHealth.frontdesk_service.loaded, true);
-    assert.equal(statusWithoutHealth.frontdesk_service.health.status, 'unreachable');
+    const statusWithoutHealth = runCli(['service', 'status'], serviceEnv);
+    assert.equal(statusWithoutHealth.service.action, 'status');
+    assert.equal(statusWithoutHealth.service.installed, true);
+    assert.equal(statusWithoutHealth.service.loaded, true);
+    assert.equal(statusWithoutHealth.service.health.status, 'unreachable');
 
-    const statusWithHealth = runCli(['frontdesk', 'service', 'status'], serviceEnv);
-    assert.equal(statusWithHealth.frontdesk_service.loaded, true);
-    assert.equal(statusWithHealth.frontdesk_service.health.status, 'unreachable');
+    const statusWithHealth = runCli(['service', 'status'], serviceEnv);
+    assert.equal(statusWithHealth.service.loaded, true);
+    assert.equal(statusWithHealth.service.health.status, 'unreachable');
     assert.equal(
-      statusWithHealth.frontdesk_service.health.url,
+      statusWithHealth.service.health.url,
       `http://127.0.0.1:${configuredPort}/api/health`,
     );
 
-    const openOutput = runCli(['frontdesk', 'service', 'open'], serviceEnv);
-    assert.equal(openOutput.frontdesk_service.action, 'open');
+    const openOutput = runCli(['service', 'open'], serviceEnv);
+    assert.equal(openOutput.service.action, 'open');
     assert.match(fs.readFileSync(openFixture.capturePath, 'utf8'), new RegExp(String(configuredPort)));
 
-    const stopOutput = runCli(['frontdesk', 'service', 'stop'], serviceEnv);
-    assert.equal(stopOutput.frontdesk_service.action, 'stop');
-    assert.equal(stopOutput.frontdesk_service.loaded, false);
+    const stopOutput = runCli(['service', 'stop'], serviceEnv);
+    assert.equal(stopOutput.service.action, 'stop');
+    assert.equal(stopOutput.service.loaded, false);
 
-    const stoppedStatus = runCli(['frontdesk', 'service', 'status'], serviceEnv);
-    assert.equal(stoppedStatus.frontdesk_service.loaded, false);
-    assert.equal(stoppedStatus.frontdesk_service.health.status, 'not_running');
+    const stoppedStatus = runCli(['service', 'status'], serviceEnv);
+    assert.equal(stoppedStatus.service.loaded, false);
+    assert.equal(stoppedStatus.service.health.status, 'not_running');
 
-    const startOutput = runCli(['frontdesk', 'service', 'start'], serviceEnv);
-    assert.equal(startOutput.frontdesk_service.action, 'start');
-    assert.equal(startOutput.frontdesk_service.loaded, true);
+    const startOutput = runCli(['service', 'start'], serviceEnv);
+    assert.equal(startOutput.service.action, 'start');
+    assert.equal(startOutput.service.loaded, true);
 
-    const uninstallOutput = runCli(['frontdesk', 'service', 'uninstall'], serviceEnv);
-    assert.equal(uninstallOutput.frontdesk_service.action, 'uninstall');
-    assert.equal(uninstallOutput.frontdesk_service.installed, false);
-    assert.equal(fs.existsSync(install.frontdesk_service.paths.launch_agent_plist), false);
+    const uninstallOutput = runCli(['service', 'uninstall'], serviceEnv);
+    assert.equal(uninstallOutput.service.action, 'uninstall');
+    assert.equal(uninstallOutput.service.installed, false);
+    assert.equal(fs.existsSync(install.service.paths.launch_agent_plist), false);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(launchctlFixture.fixtureRoot, { recursive: true, force: true });
@@ -2134,10 +2000,10 @@ test('frontdesk-service commands manage the local launchd wrapper for the web pi
   }
 });
 
-test('frontdesk-hosted-bundle exposes a hosted-pilot-ready bundle with base-path aware endpoints', () => {
+test('web bundle exposes an OPL web bundle with base-path aware product API endpoints', () => {
   const output = runCli([
-    'frontdesk',
-      'hosted-bundle',
+    'web',
+    'bundle',
     '--host',
     '0.0.0.0',
     '--port',
@@ -2151,38 +2017,40 @@ test('frontdesk-hosted-bundle exposes a hosted-pilot-ready bundle with base-path
   ]);
 
   assert.equal(output.version, 'g2');
-  assert.equal(output.hosted_pilot_bundle.surface_id, 'opl_hosted_frontdesk_pilot_bundle');
-  assert.equal(output.hosted_pilot_bundle.shell_integration_target, 'external_gui_overlay');
-  assert.equal(output.hosted_pilot_bundle.pilot_bundle_status, 'landed');
-  assert.equal(output.hosted_pilot_bundle.actual_hosted_runtime_status, 'not_landed');
-  assert.equal(output.hosted_pilot_bundle.base_path, '/pilot/opl');
-  assert.equal(output.hosted_pilot_bundle.entry_url, 'http://127.0.0.1:8787/pilot/opl/');
-  assert.equal(output.hosted_pilot_bundle.api_base_url, 'http://127.0.0.1:8787/pilot/opl/api');
-  assert.equal(output.hosted_pilot_bundle.endpoints.dashboard, '/pilot/opl/api/status/dashboard');
-  assert.equal(output.hosted_pilot_bundle.defaults.workspace_path, repoRoot);
-  assert.equal(output.hosted_pilot_bundle.defaults.sessions_limit, 9);
+  assert.equal(output.web_bundle.surface_id, 'opl_web_bundle');
+  assert.equal(output.web_bundle.shell_integration_target, 'external_gui_overlay');
+  assert.equal(output.web_bundle.bundle_status, 'landed');
+  assert.equal(output.web_bundle.hosted_runtime_status, 'not_landed');
+  assert.equal(output.web_bundle.base_path, '/pilot/opl');
+  assert.equal(output.web_bundle.entry_url, 'http://127.0.0.1:8787/pilot/opl/');
+  assert.equal(output.web_bundle.api_base_url, 'http://127.0.0.1:8787/pilot/opl/api');
+  assert.equal(output.web_bundle.opl_api.resources.system, '/pilot/opl/api/opl/system');
+  assert.equal(output.web_bundle.opl_api.actions.web_bundle, '/pilot/opl/api/opl/web/bundle');
+  assert.equal(output.web_bundle.opl_api.debug.dashboard, '/pilot/opl/api/status/dashboard');
+  assert.equal(output.web_bundle.defaults.workspace_path, repoRoot);
+  assert.equal(output.web_bundle.defaults.sessions_limit, 9);
   assert.equal(
-    output.hosted_pilot_bundle.hosted_runtime_readiness.surface_kind,
+    output.web_bundle.hosted_runtime_readiness.surface_kind,
     'opl_hosted_runtime_readiness',
   );
-  assert.equal(output.hosted_pilot_bundle.hosted_runtime_readiness.status, 'pilot_ready_not_managed');
+  assert.equal(output.web_bundle.hosted_runtime_readiness.status, 'pilot_ready_not_managed');
   assert.equal(
-    output.hosted_pilot_bundle.hosted_runtime_readiness.hosted_pilot_bundle_landed,
+    output.web_bundle.hosted_runtime_readiness.web_bundle_landed,
     true,
   );
   assert.equal(
-    output.hosted_pilot_bundle.hosted_runtime_readiness.self_hostable_pilot_package_landed,
+    output.web_bundle.hosted_runtime_readiness.self_hostable_web_package_landed,
     true,
   );
 });
 
-test('frontdesk-hosted-package exports a self-hostable hosted pilot package with runtime and proxy assets', () => {
+test('web package exports a self-hostable OPL web package with runtime and proxy assets', () => {
   const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-hosted-package-'));
 
   try {
     const output = runCli([
-      'frontdesk',
-      'hosted-package',
+      'web',
+      'package',
       '--output',
       outputDir,
       '--public-origin',
@@ -2198,108 +2066,110 @@ test('frontdesk-hosted-package exports a self-hostable hosted pilot package with
     ]);
 
     assert.equal(output.version, 'g2');
-    assert.equal(output.hosted_pilot_package.surface_id, 'opl_hosted_frontdesk_pilot_package');
-    assert.equal(output.hosted_pilot_package.shell_integration_target, 'external_gui_overlay');
-    assert.equal(output.hosted_pilot_package.package_status, 'landed');
-    assert.equal(output.hosted_pilot_package.actual_hosted_runtime_status, 'not_landed');
-    assert.equal(output.hosted_pilot_package.public_origin, 'https://opl.example.com');
-    assert.equal(output.hosted_pilot_package.entry_url, 'https://opl.example.com/pilot/opl/');
-    assert.equal(output.hosted_pilot_package.api_base_url, 'https://opl.example.com/pilot/opl/api');
+    assert.equal(output.web_package.surface_id, 'opl_web_package');
+    assert.equal(output.web_package.shell_integration_target, 'external_gui_overlay');
+    assert.equal(output.web_package.package_status, 'landed');
+    assert.equal(output.web_package.hosted_runtime_status, 'not_landed');
+    assert.equal(output.web_package.public_origin, 'https://opl.example.com');
+    assert.equal(output.web_package.entry_url, 'https://opl.example.com/pilot/opl/');
+    assert.equal(output.web_package.api_base_url, 'https://opl.example.com/pilot/opl/api');
+    assert.equal(output.web_package.opl_api.resources.system, '/pilot/opl/api/opl/system');
+    assert.equal(output.web_package.opl_api.actions.web_package, '/pilot/opl/api/opl/web/package');
     assert.equal(
-      output.hosted_pilot_package.hosted_runtime_readiness.surface_kind,
+      output.web_package.hosted_runtime_readiness.surface_kind,
       'opl_hosted_runtime_readiness',
     );
     assert.equal(
-      output.hosted_pilot_package.hosted_runtime_readiness.status,
+      output.web_package.hosted_runtime_readiness.status,
       'pilot_ready_not_managed',
     );
     assert.equal(
-      output.hosted_pilot_package.hosted_runtime_readiness.self_hostable_pilot_package_landed,
+      output.web_package.hosted_runtime_readiness.self_hostable_web_package_landed,
       true,
     );
     assert.equal(
-      output.hosted_pilot_package.hosted_runtime_readiness.service_safe_local_packaging_landed,
+      output.web_package.hosted_runtime_readiness.service_safe_local_packaging_landed,
       true,
     );
 
-    const assets = output.hosted_pilot_package.assets;
+    const assets = output.web_package.assets;
     assert.equal(fs.existsSync(assets.bundle_json), true);
     assert.equal(fs.existsSync(assets.readme), true);
-    assert.equal(fs.existsSync(assets.run_script), true);
-    assert.equal(fs.existsSync(assets.systemd_service), true);
-    assert.equal(fs.existsSync(assets.install_service_script), true);
+    assert.equal(fs.existsSync(assets.launch_script), true);
+    assert.equal(fs.existsSync(assets.service_unit), true);
+    assert.equal(fs.existsSync(assets.service_install_script), true);
     assert.equal(fs.existsSync(assets.healthcheck_script), true);
-    assert.equal(fs.existsSync(assets.caddyfile), true);
-    assert.equal(fs.existsSync(assets.env_example), true);
+    assert.equal(fs.existsSync(assets.reverse_proxy_template), true);
+    assert.equal(fs.existsSync(assets.environment_template), true);
     assert.equal(fs.existsSync(assets.app_dist), true);
     assert.equal(fs.existsSync(path.join(assets.app_dist, 'cli.js')), true);
     assert.equal(fs.existsSync(path.join(assets.app_contracts, 'opl-gateway', 'workstreams.json')), true);
 
-    assert.equal(output.hosted_pilot_package.operations.systemd.unit_name, 'opl-frontdesk.service');
+    assert.equal(output.web_package.operations.systemd.unit_name, 'opl-web.service');
     assert.equal(
-      output.hosted_pilot_package.operations.systemd.install_script,
-      assets.install_service_script,
+      output.web_package.operations.systemd.install_script,
+      assets.service_install_script,
     );
     assert.equal(
-      output.hosted_pilot_package.operations.healthcheck.script,
+      output.web_package.operations.healthcheck.script,
       assets.healthcheck_script,
     );
     assert.equal(
-      output.hosted_pilot_package.operations.healthcheck.local_url,
+      output.web_package.operations.healthcheck.local_url,
       'http://127.0.0.1:8787/pilot/opl/api/health',
     );
     assert.equal(
-      output.hosted_pilot_package.operations.healthcheck.public_url,
+      output.web_package.operations.healthcheck.public_url,
       'https://opl.example.com/pilot/opl/api/health',
     );
 
     const readme = fs.readFileSync(assets.readme, 'utf8');
-    assert.match(readme, /OPL Hosted Pilot Package/i);
+    assert.match(readme, /OPL Web Package/i);
     assert.match(readme, /OPL_HERMES_BIN/);
     assert.match(readme, /actual hosted runtime is still not landed/i);
     assert.match(readme, /install-systemd-service\.sh/);
-    assert.match(readme, /check-frontdesk-health\.sh/);
+    assert.match(readme, /check-opl-web-health\.sh/);
     assert.match(readme, /https:\/\/opl\.example\.com\/pilot\/opl\/api\/health/);
 
-    const service = fs.readFileSync(assets.systemd_service, 'utf8');
+    const service = fs.readFileSync(assets.service_unit, 'utf8');
     assert.match(service, /EnvironmentFile=/);
-    assert.match(service, /run-frontdesk\.sh/);
+    assert.match(service, /run-opl-web\.sh/);
 
-    const runScript = fs.readFileSync(assets.run_script, 'utf8');
+    const runScript = fs.readFileSync(assets.launch_script, 'utf8');
     assert.match(runScript, /--base-path/);
     assert.match(runScript, /\/pilot\/opl/);
-    assert.match(runScript, /OPL_FRONTDESK_WORKSPACE/);
+    assert.match(runScript, /OPL_WEB_WORKSPACE/);
 
-    const caddyfile = fs.readFileSync(assets.caddyfile, 'utf8');
+    const caddyfile = fs.readFileSync(assets.reverse_proxy_template, 'utf8');
     assert.match(caddyfile, /opl\.example\.com/);
     assert.match(caddyfile, /handle_path \/pilot\/opl\/\*/);
     assert.match(caddyfile, /reverse_proxy 127\.0\.0\.1:8787/);
 
-    const envExample = fs.readFileSync(assets.env_example, 'utf8');
+    const envExample = fs.readFileSync(assets.environment_template, 'utf8');
     assert.match(envExample, /OPL_HERMES_BIN=/);
-    assert.match(envExample, /OPL_FRONTDESK_WORKSPACE=/);
+    assert.match(envExample, /OPL_WEB_WORKSPACE=/);
 
-    const installScript = fs.readFileSync(assets.install_service_script, 'utf8');
+    const installScript = fs.readFileSync(assets.service_install_script, 'utf8');
     assert.match(installScript, /SYSTEMCTL_BIN/);
     assert.match(installScript, /daemon-reload/);
-    assert.match(installScript, /opl-frontdesk\.service/);
-    assert.match(installScript, /run-frontdesk\.sh/);
+    assert.match(installScript, /opl-web\.service/);
+    assert.match(installScript, /run-opl-web\.sh/);
 
     const healthcheckScript = fs.readFileSync(assets.healthcheck_script, 'utf8');
     assert.match(healthcheckScript, /api\/health/);
     assert.match(healthcheckScript, /node -e/);
 
     const bundleJson = JSON.parse(fs.readFileSync(assets.bundle_json, 'utf8'));
-    assert.equal(bundleJson.hosted_pilot_package.entry_url, 'https://opl.example.com/pilot/opl/');
-    assert.equal(bundleJson.hosted_pilot_package.base_path, '/pilot/opl');
-    assert.equal(bundleJson.hosted_pilot_package.operations.systemd.unit_name, 'opl-frontdesk.service');
+    assert.equal(bundleJson.web_package.entry_url, 'https://opl.example.com/pilot/opl/');
+    assert.equal(bundleJson.web_package.base_path, '/pilot/opl');
+    assert.equal(bundleJson.web_package.operations.systemd.unit_name, 'opl-web.service');
   } finally {
     fs.rmSync(outputDir, { recursive: true, force: true });
   }
 });
 
-test('mcp-stdio lists OPL tools and proxies dashboard calls through the configured frontdesk API', async () => {
-  const fakeApi = await startFakeFrontDeskApiServer();
+test('mcp-stdio lists OPL tools and proxies session/workspace calls through the configured OPL product API', async () => {
+  const fakeApi = await startFakeOplApiServer();
   const activatedWorkspacePath = '/tmp/opl-activated-workspace';
 
   try {
@@ -2425,7 +2295,6 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
       assert.match(progressContent[0].text, /当前进度：004 论文当前仍在推进证据补强/);
       assert.match(progressContent[0].text, /最近活动：2m ago/);
       assert.match(progressContent[0].text, /当前卡点：submission package 仍需补更多主图后再建议用户审阅/);
-      assert.match(progressContent[0].text, /你可以直接说：展开当前论文的详细进度；列出当前 workspace 的全部论文；切换到另一篇论文继续查看/);
       assert.match(progressContent[0].text, /查看位置：/);
       assert.doesNotMatch(progressContent[0].text, /entry_parity_status/);
       assert.doesNotMatch(progressContent[0].text, /continue bundle stage/i);
@@ -2507,20 +2376,20 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
       assert.doesNotMatch(content[0].text, /任务状态：running/);
       assert.doesNotMatch(content[0].text, /当前阶段：writing/);
       assert.equal(fakeApi.requests.some((request) =>
-        request.path === '/api/workspace/activate'
+        request.path === '/api/opl/workspaces/activate'
         && request.body?.project_id === 'medautoscience'
         && request.body?.workspace_path === activatedWorkspacePath
       ), true);
       assert.equal(fakeApi.requests.some((request) =>
-        request.path === '/api/session/list'
+        request.path === '/api/opl/sessions'
         && request.query.limit === '3'
       ), true);
       assert.equal(fakeApi.requests.some((request) =>
-        request.path === '/api/session/logs'
+        request.path === '/api/opl/sessions/logs'
         && request.query.lines === '10'
       ), true);
       assert.equal(fakeApi.requests.some((request) =>
-        request.path === '/api/task-status'
+        request.path === '/api/opl/progress'
         && request.query.task_id === 'task-frontdesk-001'
       ), true);
     } finally {
@@ -2533,7 +2402,7 @@ test('mcp-stdio lists OPL tools and proxies dashboard calls through the configur
 });
 
 test('mcp-stdio defaults to the current shell protocol version when the client does not negotiate one', async () => {
-  const fakeApi = await startFakeFrontDeskApiServer();
+  const fakeApi = await startFakeOplApiServer();
 
   try {
     const child = spawn(
@@ -2584,17 +2453,28 @@ test('help keeps the repo-tracked GUI lane on web adapter and service surfaces',
   const web = output.help.commands.find((entry: { command: string }) => entry.command === 'web');
 
   assert.ok(web);
-  assert.match(web.summary, /adapter service/i);
+  assert.match(web.summary, /service/i);
+  assert.match(web.summary, /GUI/i);
   assert.ok(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk service install'),
+    output.help.commands.some((entry: { command: string }) => entry.command === 'service install'),
+  );
+  assert.ok(
+    output.help.commands.some((entry: { command: string }) => entry.command === 'web bundle'),
+  );
+  assert.ok(
+    output.help.commands.some((entry: { command: string }) => entry.command === 'web package'),
   );
   assert.equal(
     output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk bootstrap'),
     false,
   );
+  assert.equal(
+    output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk manifest'),
+    false,
+  );
 });
 
-test('frontdesk environment exposes user-facing engine and managed-path status from OPL defaults', () => {
+test('system exposes user-facing engine and managed-path status from OPL defaults', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-environment-home-'));
   const codexConfigFixture = createCodexConfigFixture({
     model: 'gpt-5.4-opl',
@@ -2625,7 +2505,7 @@ exit 1
 
   try {
     const output = runCli(
-      ['frontdesk', 'environment'],
+      ['system'],
       {
         HOME: homeRoot,
         CODEX_HOME: codexConfigFixture.codexHome,
@@ -2633,7 +2513,7 @@ exit 1
         PATH: `${codexFixture.fixtureRoot}:${hermesFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
       },
     ) as {
-      frontdesk_environment: {
+      system: {
         surface_id: string;
         overall_status: string;
         core_engines: {
@@ -2653,7 +2533,7 @@ exit 1
             health_status: string;
           };
         };
-        local_frontdesk: {
+        local_service: {
           service_installed: boolean;
           service_loaded: boolean;
           service_health: string;
@@ -2668,43 +2548,43 @@ exit 1
       };
     };
 
-    assert.equal(output.frontdesk_environment.surface_id, 'opl_frontdesk_environment');
-    assert.equal(output.frontdesk_environment.overall_status, 'ready');
-    assert.equal(output.frontdesk_environment.core_engines.codex.installed, true);
-    assert.equal(output.frontdesk_environment.core_engines.codex.version, 'codex 0.42.0');
+    assert.equal(output.system.surface_id, 'opl_system');
+    assert.equal(output.system.overall_status, 'ready');
+    assert.equal(output.system.core_engines.codex.installed, true);
+    assert.equal(output.system.core_engines.codex.version, 'codex 0.42.0');
     assert.equal(
-      output.frontdesk_environment.core_engines.codex.config_path,
+      output.system.core_engines.codex.config_path,
       codexConfigFixture.configPath,
     );
-    assert.equal(output.frontdesk_environment.core_engines.codex.default_model, 'gpt-5.4-opl');
-    assert.equal(output.frontdesk_environment.core_engines.codex.default_reasoning_effort, 'high');
+    assert.equal(output.system.core_engines.codex.default_model, 'gpt-5.4-opl');
+    assert.equal(output.system.core_engines.codex.default_reasoning_effort, 'high');
     assert.equal(
-      output.frontdesk_environment.core_engines.codex.provider_base_url,
+      output.system.core_engines.codex.provider_base_url,
       'https://codex-opl.example.test/v1',
     );
-    assert.equal(output.frontdesk_environment.core_engines.codex.health_status, 'ready');
-    assert.equal(output.frontdesk_environment.core_engines.hermes.installed, true);
-    assert.equal(output.frontdesk_environment.core_engines.hermes.version, 'Hermes 1.2.3');
-    assert.equal(output.frontdesk_environment.core_engines.hermes.gateway_loaded, true);
-    assert.equal(output.frontdesk_environment.core_engines.hermes.health_status, 'ready');
-    assert.equal(output.frontdesk_environment.local_frontdesk.service_installed, false);
-    assert.equal(output.frontdesk_environment.local_frontdesk.service_loaded, false);
-    assert.equal(output.frontdesk_environment.local_frontdesk.service_health, 'not_installed');
-    assert.equal(output.frontdesk_environment.local_frontdesk.gui_shell_strategy, 'external_overlay');
+    assert.equal(output.system.core_engines.codex.health_status, 'ready');
+    assert.equal(output.system.core_engines.hermes.installed, true);
+    assert.equal(output.system.core_engines.hermes.version, 'Hermes 1.2.3');
+    assert.equal(output.system.core_engines.hermes.gateway_loaded, true);
+    assert.equal(output.system.core_engines.hermes.health_status, 'ready');
+    assert.equal(output.system.local_service.service_installed, false);
+    assert.equal(output.system.local_service.service_loaded, false);
+    assert.equal(output.system.local_service.service_health, 'not_installed');
+    assert.equal(output.system.local_service.gui_shell_strategy, 'external_overlay');
     assert.match(
-      output.frontdesk_environment.managed_paths.state_dir,
+      output.system.managed_paths.state_dir,
       /Library\/Application Support\/OPL\/frontdesk$/,
     );
     assert.match(
-      output.frontdesk_environment.managed_paths.modules_root,
+      output.system.managed_paths.modules_root,
       /Library\/Application Support\/OPL\/frontdesk\/modules$/,
     );
     assert.match(
-      output.frontdesk_environment.managed_paths.runtime_modes_file,
+      output.system.managed_paths.runtime_modes_file,
       /runtime-modes\.json$/,
     );
     assert.match(
-      output.frontdesk_environment.managed_paths.workspace_registry_file,
+      output.system.managed_paths.workspace_registry_file,
       /workspace-registry\.json$/,
     );
   } finally {
@@ -2715,7 +2595,7 @@ exit 1
   }
 });
 
-test('frontdesk initialize aggregates environment modules settings workspace and system surfaces', () => {
+test('system initialize aggregates environment modules settings workspace and system surfaces', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-initialize-home-'));
   const stateDir = path.join(homeRoot, 'opl-state');
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workspace-root-'));
@@ -2748,7 +2628,7 @@ exit 1
 
   try {
     const output = runCli(
-      ['frontdesk', 'initialize'],
+      ['system', 'initialize'],
       {
         HOME: homeRoot,
         CODEX_HOME: codexConfigFixture.codexHome,
@@ -2758,21 +2638,9 @@ exit 1
         PATH: `${codexFixture.fixtureRoot}:${hermesFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
       },
     ) as {
-      frontdesk_initialize: {
+      system_initialize: {
         surface_id: string;
         overall_state: string;
-        setup_flow: {
-          is_first_run: boolean;
-          phase: string;
-          ready_to_launch: boolean;
-          progress: {
-            required_completed_count: number;
-            required_total_count: number;
-          };
-          blocking_items: Array<{
-            item_id: string;
-          }>;
-        };
         core_engines: {
           codex: { installed: boolean };
           hermes: { installed: boolean };
@@ -2782,11 +2650,13 @@ exit 1
           required: boolean;
           blocking: boolean;
         }>;
-        module_summary: {
-          installed_modules_count: number;
-          total_modules_count: number;
-        };
         domain_modules: {
+          summary: {
+            installed_modules_count: number;
+            total_modules_count: number;
+          };
+          modules_root: string;
+          notes: string[];
           modules: Array<{ module_id: string }>;
         };
         settings: {
@@ -2799,15 +2669,18 @@ exit 1
         };
         system: {
           update_channel: string;
-          local_frontdesk: {
+          local_service: {
             service_health: string;
           };
         };
         endpoints: {
-          frontdesk_initialize: string;
-          frontdesk_engine_action: string;
+          system_initialize: string;
+          system: string;
+          modules: string;
+          settings: string;
+          engine_action: string;
           workspace_root: string;
-          frontdesk_system_action: string;
+          system_action: string;
         };
         recommended_next_action: {
           action_id: string;
@@ -2818,51 +2691,46 @@ exit 1
       };
     };
 
-    assert.equal(output.frontdesk_initialize.surface_id, 'opl_frontdesk_initialize');
-    assert.match(output.frontdesk_initialize.overall_state, /ready|attention_needed/);
-    assert.equal(output.frontdesk_initialize.setup_flow.is_first_run, false);
-    assert.equal(output.frontdesk_initialize.setup_flow.phase, 'review');
-    assert.equal(output.frontdesk_initialize.setup_flow.ready_to_launch, true);
+    assert.equal(output.system_initialize.surface_id, 'opl_system_initialize');
+    assert.match(output.system_initialize.overall_state, /ready|attention_needed/);
+    assert.equal(output.system_initialize.core_engines.codex.installed, true);
+    assert.equal(output.system_initialize.core_engines.hermes.installed, true);
     assert.equal(
-      output.frontdesk_initialize.setup_flow.progress.required_completed_count,
-      output.frontdesk_initialize.setup_flow.progress.required_total_count,
-    );
-    assert.equal(output.frontdesk_initialize.setup_flow.blocking_items.length, 0);
-    assert.equal(output.frontdesk_initialize.core_engines.codex.installed, true);
-    assert.equal(output.frontdesk_initialize.core_engines.hermes.installed, true);
-    assert.equal(
-      output.frontdesk_initialize.checklist.some((entry) => entry.item_id === 'workspace_root' && entry.required),
+      output.system_initialize.checklist.some((entry) => entry.item_id === 'workspace_root' && entry.required),
       true,
     );
     assert.equal(
-      output.frontdesk_initialize.checklist.some((entry) => entry.item_id === 'codex' && entry.required),
+      output.system_initialize.checklist.some((entry) => entry.item_id === 'codex' && entry.required),
       true,
     );
     assert.equal(
-      output.frontdesk_initialize.checklist.some((entry) => entry.item_id === 'domain_modules' && !entry.required),
+      output.system_initialize.checklist.some((entry) => entry.item_id === 'domain_modules' && !entry.required),
       true,
     );
-    assert.equal(output.frontdesk_initialize.module_summary.total_modules_count >= 4, true);
+    assert.equal(output.system_initialize.domain_modules.summary.total_modules_count >= 4, true);
     assert.equal(
-      output.frontdesk_initialize.module_summary.total_modules_count,
-      output.frontdesk_initialize.domain_modules.modules.length,
+      output.system_initialize.domain_modules.summary.total_modules_count,
+      output.system_initialize.domain_modules.modules.length,
     );
-    assert.equal(output.frontdesk_initialize.module_summary.installed_modules_count >= 0, true);
-    assert.equal(output.frontdesk_initialize.domain_modules.modules.length >= 4, true);
-    assert.equal(output.frontdesk_initialize.settings.interaction_mode, 'codex');
-    assert.equal(output.frontdesk_initialize.settings.execution_mode, 'codex');
-    assert.equal(output.frontdesk_initialize.workspace_root.selected_path, workspaceRoot);
-    assert.equal(output.frontdesk_initialize.workspace_root.health_status, 'ready');
-    assert.equal(output.frontdesk_initialize.system.update_channel, 'stable');
-    assert.equal(output.frontdesk_initialize.system.local_frontdesk.service_health, 'not_installed');
-    assert.match(output.frontdesk_initialize.endpoints.frontdesk_initialize, /\/api\/frontdesk\/initialize$/);
-    assert.match(output.frontdesk_initialize.endpoints.frontdesk_engine_action, /\/api\/frontdesk\/engine\/action$/);
-    assert.match(output.frontdesk_initialize.endpoints.workspace_root, /\/api\/workspace\/root$/);
-    assert.match(output.frontdesk_initialize.endpoints.frontdesk_system_action, /\/api\/frontdesk\/system\/action$/);
-    assert.ok(output.frontdesk_initialize.recommended_next_action.action_id.length > 0);
-    assert.ok(output.frontdesk_initialize.recommended_next_action.label.length > 0);
-    assert.equal(output.frontdesk_initialize.recommended_next_action.method, 'GET');
-    assert.deepEqual(output.frontdesk_initialize.recommended_next_action.request_fields, []);
+    assert.equal(output.system_initialize.domain_modules.summary.installed_modules_count >= 0, true);
+    assert.equal(output.system_initialize.domain_modules.modules.length >= 4, true);
+    assert.equal(output.system_initialize.settings.interaction_mode, 'codex');
+    assert.equal(output.system_initialize.settings.execution_mode, 'codex');
+    assert.equal(output.system_initialize.workspace_root.selected_path, workspaceRoot);
+    assert.equal(output.system_initialize.workspace_root.health_status, 'ready');
+    assert.equal(output.system_initialize.system.update_channel, 'stable');
+    assert.equal(output.system_initialize.system.local_service.service_health, 'not_installed');
+    assert.match(output.system_initialize.endpoints.system_initialize, /\/api\/opl\/system\/initialize$/);
+    assert.match(output.system_initialize.endpoints.system, /\/api\/opl\/system$/);
+    assert.match(output.system_initialize.endpoints.modules, /\/api\/opl\/modules$/);
+    assert.match(output.system_initialize.endpoints.settings, /\/api\/opl\/system\/settings$/);
+    assert.match(output.system_initialize.endpoints.engine_action, /\/api\/opl\/engines\/actions$/);
+    assert.match(output.system_initialize.endpoints.workspace_root, /\/api\/opl\/workspaces\/root$/);
+    assert.match(output.system_initialize.endpoints.system_action, /\/api\/opl\/system\/actions$/);
+    assert.ok(output.system_initialize.recommended_next_action.action_id.length > 0);
+    assert.ok(output.system_initialize.recommended_next_action.label.length > 0);
+    assert.equal(output.system_initialize.recommended_next_action.method, 'GET');
+    assert.deepEqual(output.system_initialize.recommended_next_action.request_fields, []);
   } finally {
     fs.rmSync(codexConfigFixture.codexHome, { recursive: true, force: true });
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
@@ -2872,28 +2740,21 @@ exit 1
   }
 });
 
-test('frontdesk initialize exposes first-run blocker metadata and actionable payload hints', () => {
+test('system initialize exposes first-run blocker metadata and actionable payload hints', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-initialize-first-run-home-'));
   const stateDir = path.join(homeRoot, 'opl-state');
 
   try {
     const output = runCli(
-      ['frontdesk', 'initialize'],
+      ['system', 'initialize'],
       {
         HOME: homeRoot,
         OPL_FRONTDESK_STATE_DIR: stateDir,
         PATH: '/usr/bin:/bin',
       },
     ) as {
-      frontdesk_initialize: {
-        setup_flow: {
-          is_first_run: boolean;
-          phase: string;
-          ready_to_launch: boolean;
-          blocking_items: Array<{
-            item_id: string;
-          }>;
-        };
+      system_initialize: {
+        overall_state: string;
         checklist: Array<{
           item_id: string;
           required: boolean;
@@ -2909,22 +2770,22 @@ test('frontdesk initialize exposes first-run blocker metadata and actionable pay
           method: string;
           request_fields: string[];
         };
+        workspace_root: {
+          selected_path: string | null;
+          health_status: string;
+        };
       };
     };
 
-    assert.equal(output.frontdesk_initialize.setup_flow.is_first_run, true);
-    assert.equal(output.frontdesk_initialize.setup_flow.phase, 'workspace_root');
-    assert.equal(output.frontdesk_initialize.setup_flow.ready_to_launch, false);
-    assert.deepEqual(
-      output.frontdesk_initialize.setup_flow.blocking_items.map((entry) => entry.item_id),
-      ['workspace_root', 'codex'],
-    );
-    assert.equal(output.frontdesk_initialize.recommended_next_action.action_id, 'set_workspace_root');
-    assert.equal(output.frontdesk_initialize.recommended_next_action.method, 'POST');
-    assert.deepEqual(output.frontdesk_initialize.recommended_next_action.request_fields, ['path']);
+    assert.equal(output.system_initialize.overall_state, 'attention_needed');
+    assert.equal(output.system_initialize.workspace_root.selected_path, null);
+    assert.equal(output.system_initialize.workspace_root.health_status, 'unset');
+    assert.equal(output.system_initialize.recommended_next_action.action_id, 'set_workspace_root');
+    assert.equal(output.system_initialize.recommended_next_action.method, 'POST');
+    assert.deepEqual(output.system_initialize.recommended_next_action.request_fields, ['path']);
 
-    const workspaceRootItem = output.frontdesk_initialize.checklist.find((entry) => entry.item_id === 'workspace_root');
-    const codexItem = output.frontdesk_initialize.checklist.find((entry) => entry.item_id === 'codex');
+    const workspaceRootItem = output.system_initialize.checklist.find((entry) => entry.item_id === 'workspace_root');
+    const codexItem = output.system_initialize.checklist.find((entry) => entry.item_id === 'codex');
 
     assert.ok(workspaceRootItem);
     assert.ok(codexItem);
@@ -2941,7 +2802,7 @@ test('frontdesk initialize exposes first-run blocker metadata and actionable pay
   }
 });
 
-test('frontdesk engine action executes env-overridden install commands and returns a structured action surface', () => {
+test('engine action executes env-overridden install commands and returns a structured action surface', () => {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-engine-action-'));
   const markerPath = path.join(fixtureRoot, 'codex-install.marker');
   const installScript = path.join(fixtureRoot, 'install-codex.sh');
@@ -2960,23 +2821,34 @@ test('frontdesk engine action executes env-overridden install commands and retur
 
   try {
     const output = runCli(
-      ['frontdesk', 'engine', 'install', '--engine', 'codex'],
+      ['engine', 'install', '--engine', 'codex'],
       {
         OPL_CODEX_INSTALL_COMMAND: installScript,
       },
     ) as {
-      frontdesk_engine_action: {
+      engine_action: {
         engine_id: string;
         action: string;
         status: string;
         command_preview: string[];
+        system: {
+          surface_id: string;
+          core_engines: {
+            codex: {
+              installed: boolean;
+            };
+          };
+        };
       };
     };
 
-    assert.equal(output.frontdesk_engine_action.engine_id, 'codex');
-    assert.equal(output.frontdesk_engine_action.action, 'install');
-    assert.equal(output.frontdesk_engine_action.status, 'completed');
-    assert.deepEqual(output.frontdesk_engine_action.command_preview, [installScript]);
+    assert.equal(output.engine_action.engine_id, 'codex');
+    assert.equal(output.engine_action.action, 'install');
+    assert.equal(output.engine_action.status, 'completed');
+    assert.deepEqual(output.engine_action.command_preview, [installScript]);
+    assert.equal('frontdesk_environment' in output.engine_action, false);
+    assert.equal(output.engine_action.system.surface_id, 'opl_system');
+    assert.equal(output.engine_action.system.core_engines.codex.installed, true);
     assert.equal(fs.existsSync(markerPath), true);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
@@ -3026,49 +2898,49 @@ test('workspace root set persists the selected root and workspace root reads it 
   }
 });
 
-test('frontdesk update-channel reports and persists the selected release channel', () => {
+test('system update-channel reports and persists the selected release channel', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-update-channel-home-'));
   const stateDir = path.join(homeRoot, 'opl-state');
 
   try {
     const initial = runCli(
-      ['frontdesk', 'update-channel'],
+      ['system', 'update-channel'],
       {
         HOME: homeRoot,
         OPL_FRONTDESK_STATE_DIR: stateDir,
       },
     ) as {
-      frontdesk_system_action: {
+      system_action: {
         action: string;
         update_channel: string;
         status: string;
       };
     };
-    assert.equal(initial.frontdesk_system_action.action, 'update_channel');
-    assert.equal(initial.frontdesk_system_action.update_channel, 'stable');
-    assert.equal(initial.frontdesk_system_action.status, 'ready');
+    assert.equal(initial.system_action.action, 'update_channel');
+    assert.equal(initial.system_action.update_channel, 'stable');
+    assert.equal(initial.system_action.status, 'ready');
 
     const updated = runCli(
-      ['frontdesk', 'update-channel', '--channel', 'preview'],
+      ['system', 'update-channel', '--channel', 'preview'],
       {
         HOME: homeRoot,
         OPL_FRONTDESK_STATE_DIR: stateDir,
       },
     ) as {
-      frontdesk_system_action: {
+      system_action: {
         action: string;
         update_channel: string;
         status: string;
       };
     };
-    assert.equal(updated.frontdesk_system_action.action, 'update_channel');
-    assert.equal(updated.frontdesk_system_action.update_channel, 'preview');
-    assert.equal(updated.frontdesk_system_action.status, 'completed');
+    assert.equal(updated.system_action.action, 'update_channel');
+    assert.equal(updated.system_action.update_channel, 'preview');
+    assert.equal(updated.system_action.status, 'completed');
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
 });
-test('frontdesk modules manages OPL-owned domain module installs and updates', () => {
+test('modules and module actions manage OPL-owned domain module installs and updates', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-modules-home-'));
   const modulesRoot = path.join(homeRoot, 'managed-modules');
   const medAutoScienceRemote = createGitModuleRemoteFixture('med-autoscience');
@@ -3079,13 +2951,13 @@ test('frontdesk modules manages OPL-owned domain module installs and updates', (
   };
 
   try {
-    const initial = runCli(['frontdesk', 'modules'], env) as {
-      frontdesk_modules: {
+    const initial = runCli(['modules'], env) as {
+      modules: {
         summary: {
           total_modules_count: number;
           installed_modules_count: number;
         };
-        modules: Array<{
+        items: Array<{
           module_id: string;
           installed: boolean;
           install_origin: string;
@@ -3093,18 +2965,18 @@ test('frontdesk modules manages OPL-owned domain module installs and updates', (
         }>;
       };
     };
-    assert.equal(initial.frontdesk_modules.summary.total_modules_count >= 4, true);
-    const initialMas = initial.frontdesk_modules.modules.find((entry) => entry.module_id === 'medautoscience');
+    assert.equal(initial.modules.summary.total_modules_count >= 4, true);
+    const initialMas = initial.modules.items.find((entry) => entry.module_id === 'medautoscience');
     assert.ok(initialMas);
     assert.equal(initialMas.installed, false);
     assert.equal(initialMas.install_origin, 'missing');
     assert.equal(initialMas.available_actions.includes('install'), true);
 
     const install = runCli(
-      ['frontdesk', 'module', 'install', '--module', 'medautoscience'],
+      ['module', 'install', '--module', 'medautoscience'],
       env,
     ) as {
-      frontdesk_module_action: {
+      module_action: {
         action: string;
         status: string;
         module: {
@@ -3118,17 +2990,17 @@ test('frontdesk modules manages OPL-owned domain module installs and updates', (
         };
       };
     };
-    assert.equal(install.frontdesk_module_action.action, 'install');
-    assert.equal(install.frontdesk_module_action.status, 'completed');
-    assert.equal(install.frontdesk_module_action.module.module_id, 'medautoscience');
-    assert.equal(install.frontdesk_module_action.module.installed, true);
-    assert.equal(install.frontdesk_module_action.module.install_origin, 'managed_root');
+    assert.equal(install.module_action.action, 'install');
+    assert.equal(install.module_action.status, 'completed');
+    assert.equal(install.module_action.module.module_id, 'medautoscience');
+    assert.equal(install.module_action.module.installed, true);
+    assert.equal(install.module_action.module.install_origin, 'managed_root');
     assert.equal(
-      install.frontdesk_module_action.module.git.head_sha,
+      install.module_action.module.git.head_sha,
       medAutoScienceRemote.getHeadSha(),
     );
     assert.equal(
-      fs.existsSync(path.join(install.frontdesk_module_action.module.checkout_path, 'README.md')),
+      fs.existsSync(path.join(install.module_action.module.checkout_path, 'README.md')),
       true,
     );
 
@@ -3138,10 +3010,10 @@ test('frontdesk modules manages OPL-owned domain module installs and updates', (
       'Advance module remote',
     );
     const update = runCli(
-      ['frontdesk', 'module', 'update', '--module', 'medautoscience'],
+      ['module', 'update', '--module', 'medautoscience'],
       env,
     ) as {
-      frontdesk_module_action: {
+      module_action: {
         action: string;
         status: string;
         module: {
@@ -3151,15 +3023,15 @@ test('frontdesk modules manages OPL-owned domain module installs and updates', (
         };
       };
     };
-    assert.equal(update.frontdesk_module_action.action, 'update');
-    assert.equal(update.frontdesk_module_action.status, 'completed');
-    assert.equal(update.frontdesk_module_action.module.git.head_sha, nextSha);
+    assert.equal(update.module_action.action, 'update');
+    assert.equal(update.module_action.status, 'completed');
+    assert.equal(update.module_action.module.git.head_sha, nextSha);
 
     const remove = runCli(
-      ['frontdesk', 'module', 'remove', '--module', 'medautoscience'],
+      ['module', 'remove', '--module', 'medautoscience'],
       env,
     ) as {
-      frontdesk_module_action: {
+      module_action: {
         action: string;
         status: string;
         module: {
@@ -3168,10 +3040,10 @@ test('frontdesk modules manages OPL-owned domain module installs and updates', (
         };
       };
     };
-    assert.equal(remove.frontdesk_module_action.action, 'remove');
-    assert.equal(remove.frontdesk_module_action.status, 'completed');
-    assert.equal(remove.frontdesk_module_action.module.installed, false);
-    assert.equal(fs.existsSync(remove.frontdesk_module_action.module.checkout_path), false);
+    assert.equal(remove.module_action.action, 'remove');
+    assert.equal(remove.module_action.status, 'completed');
+    assert.equal(remove.module_action.module.installed, false);
+    assert.equal(fs.existsSync(remove.module_action.module.checkout_path), false);
   } finally {
     fs.rmSync(medAutoScienceRemote.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
@@ -3183,12 +3055,23 @@ test('help keeps web adapter and service commands as the default GUI lane', () =
   const web = output.help.commands.find((entry: { command: string }) => entry.command === 'web');
 
   assert.ok(web);
-  assert.match(web.summary, /adapter service/i);
+  assert.match(web.summary, /service/i);
+  assert.match(web.summary, /GUI/i);
   assert.ok(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk service install'),
+    output.help.commands.some((entry: { command: string }) => entry.command === 'service install'),
+  );
+  assert.ok(
+    output.help.commands.some((entry: { command: string }) => entry.command === 'web bundle'),
+  );
+  assert.ok(
+    output.help.commands.some((entry: { command: string }) => entry.command === 'web package'),
   );
   assert.equal(
     output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk bootstrap'),
+    false,
+  );
+  assert.equal(
+    output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk manifest'),
     false,
   );
 });
@@ -3249,7 +3132,7 @@ test('workspace registry commands bind activate and archive project workspaces w
       ['workspace_root'],
     );
     assert.equal(
-      catalogOutput.workspace_catalog.projects[3].binding_contract.derived_frontdesk_command_template,
+      catalogOutput.workspace_catalog.projects[3].binding_contract.derived_entry_command_template,
       'redcube product frontdesk --workspace-root <workspace_root>',
     );
     assert.equal(
@@ -3477,76 +3360,59 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(redcube.manifest.product_entry_start.modes[2].mode_id, 'opl_bridge_handoff');
     assert.equal(redcube.manifest.product_entry_start.modes[3].mode_id, 'resume_session');
 
-    const guideOutput = runCli(['frontdesk', 'entry-guide'], env);
-    assert.equal(guideOutput.frontdesk_entry_guide.summary.total_projects_count, 3);
-    assert.equal(guideOutput.frontdesk_entry_guide.workspace_taxonomy.family_workspace_kind, 'opl_family_workspace');
-    const scienceGuide = guideOutput.frontdesk_entry_guide.projects.find(
-      (entry: { project_id: string }) => entry.project_id === 'medautoscience',
-    );
-    assert.equal(scienceGuide.project, 'med-autoscience');
-    assert.equal(scienceGuide.domain_workspace_kind, 'research_workspace');
-    assert.equal(scienceGuide.domain_workspace_label, 'study queue');
-    assert.equal(scienceGuide.workspace_mapping.family_workspace_role, 'family_task_container');
-    assert.equal(scienceGuide.workspace_mapping.domain_workspace_role, 'research_runtime_workspace');
-    assert.match(scienceGuide.workspace_mapping.summary, /OPL workspace/i);
-    assert.equal(scienceGuide.start.recommended_mode_id, 'open_frontdesk');
-    assert.equal(scienceGuide.start.mode_count, 3);
-    assert.equal(scienceGuide.preflight.ready_to_try_now, true);
-    assert.equal(scienceGuide.readiness.verdict, 'runtime_ready_not_standalone_product');
-
     const dashboardOutput = runCli(['status', 'dashboard', '--path', repoRoot, '--sessions-limit', '1'], env);
-    assert.equal(dashboardOutput.dashboard.front_desk.recommended_entry_surfaces_count, 3);
+    assert.equal(dashboardOutput.dashboard.product_api.recommended_entry_surfaces_count, 3);
     assert.equal(
-      dashboardOutput.dashboard.front_desk.hosted_runtime_readiness.surface_kind,
+      dashboardOutput.dashboard.product_api.hosted_runtime_readiness.surface_kind,
       'opl_hosted_runtime_readiness',
     );
     assert.equal(
-      dashboardOutput.dashboard.front_desk.hosted_runtime_readiness.status,
+      dashboardOutput.dashboard.product_api.hosted_runtime_readiness.status,
       'pilot_ready_not_managed',
     );
     assert.equal(
-      dashboardOutput.dashboard.front_desk.domain_entry_parity.summary.total_projects_count,
+      dashboardOutput.dashboard.product_api.domain_entry_parity.summary.total_projects_count,
       3,
     );
     assert.equal(
-      dashboardOutput.dashboard.front_desk.domain_entry_parity.summary.aligned_projects_count,
+      dashboardOutput.dashboard.product_api.domain_entry_parity.summary.aligned_projects_count,
       1,
     );
     assert.equal(
-      dashboardOutput.dashboard.front_desk.domain_entry_parity.summary.partial_projects_count,
+      dashboardOutput.dashboard.product_api.domain_entry_parity.summary.partial_projects_count,
       2,
     );
     assert.equal(
-      dashboardOutput.dashboard.front_desk.domain_entry_parity.summary.blocked_projects_count,
+      dashboardOutput.dashboard.product_api.domain_entry_parity.summary.blocked_projects_count,
       0,
     );
     assert.equal(
-      dashboardOutput.dashboard.front_desk.domain_entry_parity.summary.direct_entry_locator_ready_projects_count,
+      dashboardOutput.dashboard.product_api.domain_entry_parity.summary.direct_entry_locator_ready_projects_count,
       1,
     );
     assert.equal(
-      dashboardOutput.dashboard.front_desk.domain_entry_parity.summary.domain_entry_contract_ready_count,
+      dashboardOutput.dashboard.product_api.domain_entry_parity.summary.domain_entry_contract_ready_count,
       3,
     );
     assert.equal(
-      dashboardOutput.dashboard.front_desk.domain_entry_parity.summary.gateway_interaction_contract_ready_count,
+      dashboardOutput.dashboard.product_api.domain_entry_parity.summary.gateway_interaction_contract_ready_count,
       3,
     );
     assert.equal(
-      dashboardOutput.dashboard.front_desk.domain_entry_parity.summary.ready_for_opl_start_count,
+      dashboardOutput.dashboard.product_api.domain_entry_parity.summary.ready_for_opl_start_count,
       3,
     );
     assert.equal(
-      dashboardOutput.dashboard.front_desk.domain_entry_parity.summary.ready_for_domain_handoff_count,
+      dashboardOutput.dashboard.product_api.domain_entry_parity.summary.ready_for_domain_handoff_count,
       3,
     );
-    const grantParity = dashboardOutput.dashboard.front_desk.domain_entry_parity.projects.find(
+    const grantParity = dashboardOutput.dashboard.product_api.domain_entry_parity.projects.find(
       (entry: { project_id: string }) => entry.project_id === 'medautogrant',
     );
-    const scienceParity = dashboardOutput.dashboard.front_desk.domain_entry_parity.projects.find(
+    const scienceParity = dashboardOutput.dashboard.product_api.domain_entry_parity.projects.find(
       (entry: { project_id: string }) => entry.project_id === 'medautoscience',
     );
-    const redcubeParity = dashboardOutput.dashboard.front_desk.domain_entry_parity.projects.find(
+    const redcubeParity = dashboardOutput.dashboard.product_api.domain_entry_parity.projects.find(
       (entry: { project_id: string }) => entry.project_id === 'redcube',
     );
     assert.equal(grantParity.entry_parity_status, 'partial');
@@ -3575,13 +3441,13 @@ test('domain manifests resolves real family manifest fixtures while workspace li
       redcubeParity.recommended_check_command,
       'redcube workspace doctor --workspace-root /fixtures/redcube/workspace',
     );
-    const grantEntry = dashboardOutput.dashboard.front_desk.recommended_entry_surfaces.find(
+    const grantEntry = dashboardOutput.dashboard.product_api.recommended_entry_surfaces.find(
       (entry: { project_id: string }) => entry.project_id === 'medautogrant',
     );
-    const scienceEntry = dashboardOutput.dashboard.front_desk.recommended_entry_surfaces.find(
+    const scienceEntry = dashboardOutput.dashboard.product_api.recommended_entry_surfaces.find(
       (entry: { project_id: string }) => entry.project_id === 'medautoscience',
     );
-    const recommendedEntry = dashboardOutput.dashboard.front_desk.recommended_entry_surfaces.find(
+    const recommendedEntry = dashboardOutput.dashboard.product_api.recommended_entry_surfaces.find(
       (entry: { project_id: string }) => entry.project_id === 'redcube',
     );
     assert.equal(grantEntry.product_entry_shell.grant_user_loop.surface_kind, 'grant_user_loop');
@@ -3744,82 +3610,17 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(recommendedEntry.family_resume_surface_kind, 'product_entry_session');
     assert.equal(recommendedEntry.family_checkpoint_lineage_ref, 'runtime_watch/checkpoints/latest.json');
 
-    const wiringOutput = runCli(['frontdesk', 'domain-wiring'], env);
-    assert.equal(wiringOutput.frontdesk_domain_wiring.domain_binding_parity.surface_kind, 'opl_domain_binding_parity');
-    assert.equal(wiringOutput.frontdesk_domain_wiring.domain_binding_parity.summary.total_projects_count, 3);
-    assert.equal(wiringOutput.frontdesk_domain_wiring.domain_binding_parity.summary.active_projects_count, 3);
-    assert.equal(wiringOutput.frontdesk_domain_wiring.domain_binding_parity.summary.direct_entry_ready_projects_count, 1);
-    assert.equal(wiringOutput.frontdesk_domain_wiring.domain_binding_parity.summary.manifest_ready_projects_count, 3);
-    assert.equal(wiringOutput.frontdesk_domain_wiring.domain_binding_parity.summary.launch_ready_projects_count, 1);
-    assert.equal(wiringOutput.frontdesk_domain_wiring.domain_entry_parity.summary.runtime_inventory_ready_count, 3);
-    assert.equal(wiringOutput.frontdesk_domain_wiring.domain_entry_parity.summary.task_lifecycle_ready_count, 3);
-    assert.equal(wiringOutput.frontdesk_domain_wiring.domain_entry_parity.summary.skill_catalog_ready_count, 3);
-    assert.equal(wiringOutput.frontdesk_domain_wiring.domain_entry_parity.summary.automation_ready_count, 3);
-    assert.equal(wiringOutput.frontdesk_domain_wiring.domain_entry_parity.summary.domain_entry_contract_ready_count, 3);
-    assert.equal(
-      wiringOutput.frontdesk_domain_wiring.domain_entry_parity.summary.gateway_interaction_contract_ready_count,
-      3,
-    );
-    const grantBindingParity = wiringOutput.frontdesk_domain_wiring.domain_binding_parity.projects.find(
-      (entry: { project_id: string }) => entry.project_id === 'medautogrant',
-    );
-    const scienceBindingParity = wiringOutput.frontdesk_domain_wiring.domain_binding_parity.projects.find(
-      (entry: { project_id: string }) => entry.project_id === 'medautoscience',
-    );
-    const redcubeBindingParity = wiringOutput.frontdesk_domain_wiring.domain_binding_parity.projects.find(
-      (entry: { project_id: string }) => entry.project_id === 'redcube',
-    );
-    assert.equal(grantBindingParity.direct_entry_ready, false);
-    assert.equal(grantBindingParity.manifest_ready, true);
-    assert.equal(grantParity.runtime_inventory_status, 'ready');
-    assert.equal(grantParity.task_lifecycle_status, 'ready');
-    assert.equal(grantParity.skill_catalog_status, 'ready');
-    assert.equal(grantParity.automation_status, 'ready');
-    assert.deepEqual(grantBindingParity.available_actions, ['bind', 'activate', 'archive']);
-    assert.equal(scienceBindingParity.direct_entry_ready, false);
-    assert.equal(scienceBindingParity.manifest_ready, true);
-    assert.equal(scienceParity.runtime_inventory_status, 'ready');
-    assert.equal(scienceParity.task_lifecycle_status, 'ready');
-    assert.equal(scienceParity.skill_catalog_status, 'ready');
-    assert.equal(scienceParity.automation_status, 'ready');
-    assert.deepEqual(scienceBindingParity.available_actions, ['bind', 'activate', 'archive']);
-    assert.equal(redcubeBindingParity.direct_entry_ready, true);
-    assert.equal(redcubeBindingParity.manifest_ready, true);
-    assert.equal(redcubeParity.runtime_inventory_status, 'ready');
-    assert.equal(redcubeParity.task_lifecycle_status, 'ready');
-    assert.equal(redcubeParity.skill_catalog_status, 'ready');
-    assert.equal(redcubeParity.automation_status, 'ready');
-    assert.equal(redcubeBindingParity.active_binding.direct_entry.url, 'http://127.0.0.1:3310/redcube');
-    assert.deepEqual(redcubeBindingParity.available_actions, ['bind', 'activate', 'archive', 'launch']);
+    const retiredGuide = runCliFailure(['frontdesk', 'entry-guide'], env);
+    assert.equal(retiredGuide.status, 2);
+    assert.equal(retiredGuide.payload.error.code, 'unknown_command');
 
-    const readinessOutput = runCli(['frontdesk', 'readiness', '--path', repoRoot, '--sessions-limit', '1'], env);
-    assert.equal(readinessOutput.frontdesk_readiness.summary.total_projects_count, 3);
-    assert.equal(readinessOutput.frontdesk_readiness.summary.usable_now_projects_count, 3);
-    assert.equal(readinessOutput.frontdesk_readiness.summary.good_to_use_now_projects_count, 0);
-    assert.equal(readinessOutput.frontdesk_readiness.summary.fully_automatic_projects_count, 0);
-    assert.equal(readinessOutput.frontdesk_readiness.summary.ready_to_try_now_projects_count, 3);
-    assert.equal(readinessOutput.frontdesk_readiness.summary.ready_for_opl_start_count, 3);
-    assert.equal(readinessOutput.frontdesk_readiness.summary.ready_for_domain_handoff_count, 3);
-    assert.equal(readinessOutput.frontdesk_readiness.summary.direct_entry_ready_projects_count, 1);
-    const grantReadiness = readinessOutput.frontdesk_readiness.projects.find(
-      (entry: { project_id: string }) => entry.project_id === 'medautogrant',
-    );
-    const scienceReadiness = readinessOutput.frontdesk_readiness.projects.find(
-      (entry: { project_id: string }) => entry.project_id === 'medautoscience',
-    );
-    const redcubeReadiness = readinessOutput.frontdesk_readiness.projects.find(
-      (entry: { project_id: string }) => entry.project_id === 'redcube',
-    );
-    assert.equal(grantReadiness.usable_now, true);
-    assert.equal(grantReadiness.good_to_use_now, false);
-    assert.equal(grantReadiness.fully_automatic, false);
-    assert.equal(grantReadiness.ready_to_try_now, true);
-    assert.equal(grantReadiness.blocking_gaps_count, 3);
-    assert.equal(scienceReadiness.usable_now, true);
-    assert.equal(scienceReadiness.preflight_checks_count, 7);
-    assert.equal(redcubeReadiness.usable_now, true);
-    assert.equal(redcubeReadiness.binding_launch_ready, true);
-    assert.equal(redcubeReadiness.recommended_start_command, 'redcube product frontdesk');
+    const retiredWiring = runCliFailure(['frontdesk', 'domain-wiring'], env);
+    assert.equal(retiredWiring.status, 2);
+    assert.equal(retiredWiring.payload.error.code, 'unknown_command');
+
+    const retiredReadiness = runCliFailure(['frontdesk', 'readiness', '--path', repoRoot, '--sessions-limit', '1'], env);
+    assert.equal(retiredReadiness.status, 2);
+    assert.equal(retiredReadiness.payload.error.code, 'unknown_command');
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(stateRoot, { recursive: true, force: true });
@@ -4401,7 +4202,7 @@ test('workspace-bind derives family direct-entry locators from structured projec
       'med_autogrant_workspace_input',
     );
     assert.equal(
-      magProject.binding_contract.derived_frontdesk_command_template,
+      magProject.binding_contract.derived_entry_command_template,
       'uv run python -m med_autogrant product frontdesk --input <input_path>',
     );
     assert.deepEqual(masProject.binding_contract.required_locator_fields, ['profile_ref']);
@@ -4436,25 +4237,25 @@ test('workspace-bind derives family direct-entry locators from structured projec
 
     const dashboardOutput = runCli(['status', 'dashboard', '--path', repoRoot, '--sessions-limit', '1'], env);
     assert.equal(
-      dashboardOutput.dashboard.front_desk.domain_entry_parity.summary.aligned_projects_count,
+      dashboardOutput.dashboard.product_api.domain_entry_parity.summary.aligned_projects_count,
       3,
     );
     assert.equal(
-      dashboardOutput.dashboard.front_desk.domain_entry_parity.summary.partial_projects_count,
+      dashboardOutput.dashboard.product_api.domain_entry_parity.summary.partial_projects_count,
       0,
     );
     assert.equal(
-      dashboardOutput.dashboard.front_desk.domain_entry_parity.summary.direct_entry_locator_ready_projects_count,
+      dashboardOutput.dashboard.product_api.domain_entry_parity.summary.direct_entry_locator_ready_projects_count,
       3,
     );
     assert.equal(
-      dashboardOutput.dashboard.front_desk.domain_entry_parity.projects.find(
+      dashboardOutput.dashboard.product_api.domain_entry_parity.projects.find(
         (entry: { project_id: string }) => entry.project_id === 'medautogrant',
       )?.direct_entry_locator_status,
       'ready',
     );
     assert.equal(
-      dashboardOutput.dashboard.front_desk.domain_entry_parity.projects.find(
+      dashboardOutput.dashboard.product_api.domain_entry_parity.projects.find(
         (entry: { project_id: string }) => entry.project_id === 'medautoscience',
       )?.direct_entry_locator_status,
       'ready',
@@ -5155,39 +4956,35 @@ exit 1
     );
     child = startup.child;
 
-    const webFrontdesk = startup.payload.web_frontdesk as {
+    const oplApi = startup.payload.opl_api as {
+      surface_id: string;
       entry_surface: string;
-      frontdesk_settings: {
+      runtime_modes: {
         interaction_mode: string;
         execution_mode: string;
       };
-      shell_bootstrap: {
-        primary_surface: {
-          surface_id: string;
-          endpoint: string;
-        };
-        follow_on_surfaces: Array<{
-          surface_id: string;
-          endpoint: string;
-        }>;
-        operator_debug_surface: {
-          surface_id: string;
-          endpoint: string;
-        };
+      resources: {
+        system: string;
+        engines: string;
+        modules: string;
+        agents: string;
+        workspaces: string;
+        sessions: string;
+        progress: string;
+        artifacts: string;
       };
-      api: {
-        frontdesk_entry_guide: string;
-        frontdesk_readiness: string;
-        frontdesk_settings: string;
-        frontdesk_environment: string;
-        frontdesk_initialize: string;
-        frontdesk_modules: string;
-        frontdesk_engine_action: string;
+      actions: {
+        system: string;
+        engines: string;
+        modules: string;
         workspace_root: string;
-        frontdesk_system_action: string;
-        project_progress: string;
-        frontdesk_domain_wiring: string;
-        task_status: string;
+        session_create: string;
+        session_resume: string;
+        session_logs: string;
+      };
+      debug: {
+        dashboard: string;
+        health: string;
       };
       listening: {
         base_url: string;
@@ -5195,141 +4992,142 @@ exit 1
     };
 
     assert.equal(startup.payload.version, 'g2');
-    assert.equal(webFrontdesk.entry_surface, 'opl_local_web_frontdesk_pilot');
-    assert.equal(webFrontdesk.api.frontdesk_entry_guide, '/api/frontdesk/entry-guide');
-    assert.equal(webFrontdesk.api.frontdesk_readiness, '/api/frontdesk/readiness');
-    assert.equal(webFrontdesk.api.frontdesk_settings, '/api/frontdesk/settings');
-    assert.equal(webFrontdesk.api.frontdesk_environment, '/api/frontdesk/environment');
-    assert.equal(webFrontdesk.api.frontdesk_initialize, '/api/frontdesk/initialize');
-    assert.equal(webFrontdesk.api.frontdesk_modules, '/api/frontdesk/modules');
-    assert.equal(webFrontdesk.api.frontdesk_engine_action, '/api/frontdesk/engine/action');
-    assert.equal(webFrontdesk.api.workspace_root, '/api/workspace/root');
-    assert.equal(webFrontdesk.api.frontdesk_system_action, '/api/frontdesk/system/action');
-    assert.equal(webFrontdesk.api.project_progress, '/api/project-progress');
-    assert.equal(webFrontdesk.api.frontdesk_domain_wiring, '/api/frontdesk/domain-wiring');
-    assert.equal(webFrontdesk.api.task_status, '/api/task-status');
-    assert.equal('hosted_status' in webFrontdesk, false);
-    assert.equal('frontdesk_librechat_status' in webFrontdesk.api, false);
-    assert.equal('librechat_package' in webFrontdesk.api, false);
-    assert.equal(webFrontdesk.frontdesk_settings.interaction_mode, 'codex');
-    assert.equal(webFrontdesk.frontdesk_settings.execution_mode, 'codex');
-    assert.equal(webFrontdesk.shell_bootstrap.primary_surface.surface_id, 'opl_frontdesk_entry_guide');
-    assert.equal(webFrontdesk.shell_bootstrap.primary_surface.endpoint, '/api/frontdesk/entry-guide');
-    assert.deepEqual(
-      webFrontdesk.shell_bootstrap.follow_on_surfaces.map((entry: { surface_id: string }) => entry.surface_id),
-      ['opl_frontdesk_readiness', 'opl_frontdesk_domain_wiring', 'opl_frontdesk_dashboard'],
-    );
-    assert.equal(webFrontdesk.shell_bootstrap.operator_debug_surface.endpoint, '/api/status/dashboard');
+    assert.equal(oplApi.surface_id, 'opl_product_api_bootstrap');
+    assert.equal(oplApi.entry_surface, 'opl_product_api');
+    assert.equal(oplApi.resources.system, '/api/opl/system');
+    assert.equal(oplApi.resources.engines, '/api/opl/engines');
+    assert.equal(oplApi.resources.modules, '/api/opl/modules');
+    assert.equal(oplApi.resources.agents, '/api/opl/agents');
+    assert.equal(oplApi.resources.workspaces, '/api/opl/workspaces');
+    assert.equal(oplApi.resources.sessions, '/api/opl/sessions');
+    assert.equal(oplApi.resources.progress, '/api/opl/progress');
+    assert.equal(oplApi.resources.artifacts, '/api/opl/artifacts');
+    assert.equal(oplApi.actions.system, '/api/opl/system/actions');
+    assert.equal(oplApi.actions.engines, '/api/opl/engines/actions');
+    assert.equal(oplApi.actions.modules, '/api/opl/modules/actions');
+    assert.equal(oplApi.actions.workspace_root, '/api/opl/workspaces/root');
+    assert.equal(oplApi.actions.session_create, '/api/opl/sessions');
+    assert.equal(oplApi.actions.session_resume, '/api/opl/sessions/resume');
+    assert.equal(oplApi.actions.session_logs, '/api/opl/sessions/logs');
+    assert.equal(oplApi.runtime_modes.interaction_mode, 'codex');
+    assert.equal(oplApi.runtime_modes.execution_mode, 'codex');
 
-    const baseUrl = String(webFrontdesk.listening.base_url);
+    const baseUrl = String(oplApi.listening.base_url);
     const page = await fetch(baseUrl);
     assert.equal(page.status, 200);
     assert.match(page.headers.get('content-type') ?? '', /application\/json/i);
     const rootPayload = await page.json() as {
-      frontdesk_adapter: {
+      opl_api: {
         surface_id: string;
         mode: string;
         shell_integration_target: string;
         summary: string;
         recommended_gui_overlay: string;
-        api: {
-          frontdesk_entry_guide: string;
-          dashboard: string;
+        resources: {
+          system: string;
+          agents: string;
+          sessions: string;
+          progress: string;
+          artifacts: string;
         };
         notes: string[];
       };
     };
-    assert.equal(rootPayload.frontdesk_adapter.surface_id, 'opl_frontdesk_adapter_root');
-    assert.equal(rootPayload.frontdesk_adapter.mode, 'api_only');
-    assert.equal(rootPayload.frontdesk_adapter.shell_integration_target, 'external_gui_overlay');
-    assert.equal(rootPayload.frontdesk_adapter.recommended_gui_overlay, 'opl-onyx-shell');
-    assert.equal(rootPayload.frontdesk_adapter.api.frontdesk_entry_guide, '/api/frontdesk/entry-guide');
-    assert.equal(rootPayload.frontdesk_adapter.api.dashboard, '/api/status/dashboard');
-    assert.match(rootPayload.frontdesk_adapter.summary, /headless adapter surfaces/i);
-    assert.equal(rootPayload.frontdesk_adapter.notes.includes('OPL main repo now stays headless and contract-first.'), true);
+    assert.equal(rootPayload.opl_api.surface_id, 'opl_product_api_root');
+    assert.equal(rootPayload.opl_api.mode, 'api_only');
+    assert.equal(rootPayload.opl_api.shell_integration_target, 'external_gui_overlay');
+    assert.equal(rootPayload.opl_api.recommended_gui_overlay, 'opl-onyx-shell');
+    assert.equal(rootPayload.opl_api.resources.system, '/api/opl/system');
+    assert.equal(rootPayload.opl_api.resources.agents, '/api/opl/agents');
+    assert.equal(rootPayload.opl_api.resources.sessions, '/api/opl/sessions');
+    assert.equal(rootPayload.opl_api.resources.progress, '/api/opl/progress');
+    assert.equal(rootPayload.opl_api.resources.artifacts, '/api/opl/artifacts');
+    assert.match(rootPayload.opl_api.summary, /product API resources/i);
+    assert.equal(rootPayload.opl_api.notes.includes('OPL main repo now stays headless and contract-first.'), true);
 
     const dashboardResponse = await fetch(`${baseUrl}/api/status/dashboard`);
     const dashboardPayload = await dashboardResponse.json();
-    assert.equal(dashboardPayload.dashboard.front_desk.local_web_frontdesk_status, 'pilot_landed');
+    assert.equal(dashboardPayload.dashboard.product_api.local_web_status, 'pilot_landed');
     assert.equal(dashboardPayload.dashboard.projects.length, 4);
     assert.equal(dashboardPayload.dashboard.domain_manifests.summary.total_projects_count, 3);
     assert.equal(
-      dashboardPayload.dashboard.front_desk.hosted_runtime_readiness.status,
+      dashboardPayload.dashboard.product_api.hosted_runtime_readiness.status,
       'pilot_ready_not_managed',
     );
     assert.equal(
-      dashboardPayload.dashboard.front_desk.domain_entry_parity.summary.total_projects_count,
+      dashboardPayload.dashboard.product_api.domain_entry_parity.summary.total_projects_count,
       3,
     );
 
     const healthResponse = await fetch(`${baseUrl}/api/health`);
     const healthPayload = await healthResponse.json();
-    assert.equal(healthPayload.health.entry_surface, 'opl_local_web_frontdesk_pilot');
+    assert.equal(healthPayload.health.entry_surface, 'opl_local_web_product_api');
     assert.equal(healthPayload.health.status, 'ok');
     assert.equal(healthPayload.health.checks.gateway_service.loaded, true);
 
-    const settingsResponse = await fetch(`${baseUrl}/api/frontdesk/settings`);
-    const settingsPayload = await settingsResponse.json();
-    assert.equal(settingsPayload.frontdesk_settings.interaction_mode, 'codex');
-    assert.equal(settingsPayload.frontdesk_settings.execution_mode, 'codex');
+    const systemResponse = await fetch(`${baseUrl}/api/opl/system`);
+    const systemPayload = await systemResponse.json();
+    assert.equal(systemPayload.system.surface_id, 'opl_system');
+    assert.equal(systemPayload.system.runtime_modes.interaction_mode, 'codex');
+    assert.equal(systemPayload.system.workspace_root.health_status, 'missing');
+    assert.equal(systemPayload.system.endpoints.engines, '/api/opl/engines');
 
-    const environmentResponse = await fetch(`${baseUrl}/api/frontdesk/environment`);
-    const environmentPayload = await environmentResponse.json();
-    assert.equal(environmentPayload.frontdesk_environment.surface_id, 'opl_frontdesk_environment');
-    assert.equal(environmentPayload.frontdesk_environment.core_engines.codex.installed, true);
-    assert.equal(environmentPayload.frontdesk_environment.core_engines.hermes.installed, true);
+    const enginesResponse = await fetch(`${baseUrl}/api/opl/engines`);
+    const enginesPayload = await enginesResponse.json();
+    assert.equal(enginesPayload.engines.surface_id, 'opl_engines');
+    assert.equal(enginesPayload.engines.items.some((entry: { engine_id: string }) => entry.engine_id === 'codex'), true);
+    assert.equal(enginesPayload.engines.items.some((entry: { engine_id: string }) => entry.engine_id === 'hermes'), true);
 
-    const initializeResponse = await fetch(`${baseUrl}/api/frontdesk/initialize`);
-    const initializePayload = await initializeResponse.json();
-    assert.equal(initializePayload.frontdesk_initialize.surface_id, 'opl_frontdesk_initialize');
-    assert.equal(initializePayload.frontdesk_initialize.core_engines.codex.installed, true);
-    assert.equal(initializePayload.frontdesk_initialize.settings.interaction_mode, 'codex');
-    assert.match(initializePayload.frontdesk_initialize.endpoints.workspace_root, /\/api\/workspace\/root$/);
-    assert.match(initializePayload.frontdesk_initialize.endpoints.frontdesk_system_action, /\/api\/frontdesk\/system\/action$/);
-
-    const modulesResponse = await fetch(`${baseUrl}/api/frontdesk/modules`);
+    const modulesResponse = await fetch(`${baseUrl}/api/opl/modules`);
     const modulesPayload = await modulesResponse.json();
-    assert.equal(modulesPayload.frontdesk_modules.surface_id, 'opl_frontdesk_modules');
+    assert.equal(modulesPayload.modules.surface_id, 'opl_modules');
     assert.equal(
-      modulesPayload.frontdesk_modules.modules.some((entry: { module_id: string }) => entry.module_id === 'medautoscience'),
+      modulesPayload.modules.items.some((entry: { module_id: string }) => entry.module_id === 'medautoscience'),
       true,
     );
 
-    const manifestResponse = await fetch(`${baseUrl}/api/frontdesk/manifest`);
-    const manifestPayload = await manifestResponse.json();
-    assert.equal(manifestPayload.frontdesk_manifest.shell_integration_target, 'external_gui_overlay');
-    assert.equal(manifestPayload.frontdesk_manifest.endpoints.sessions, '/api/session/list');
-    assert.equal(manifestPayload.frontdesk_manifest.frontdesk_entry_guide_surface.surface_id, 'opl_frontdesk_entry_guide');
-    assert.equal(manifestPayload.frontdesk_manifest.shell_bootstrap.primary_surface.surface_id, 'opl_frontdesk_entry_guide');
-    assert.equal(manifestPayload.frontdesk_manifest.shell_bootstrap.operator_debug_surface.endpoint, '/api/status/dashboard');
+    const agentsResponse = await fetch(`${baseUrl}/api/opl/agents`);
+    const agentsPayload = await agentsResponse.json();
+    assert.equal(agentsPayload.agents.surface_id, 'opl_agents');
+    assert.equal(agentsPayload.agents.items.some((entry: { agent_id: string }) => entry.agent_id === 'general-chat'), true);
+    assert.equal(agentsPayload.agents.items.some((entry: { agent_id: string }) => entry.agent_id === 'general-task'), true);
+    const masAgent = agentsPayload.agents.items.find((entry: { agent_id: string }) => entry.agent_id === 'mas');
+    assert.equal(masAgent?.requires_workspace, true);
+    assert.deepEqual(masAgent?.locator_fields.required, ['cwd', 'profile_ref']);
 
-    const entryGuideResponse = await fetch(`${baseUrl}/api/frontdesk/entry-guide`);
-    const entryGuidePayload = await entryGuideResponse.json();
-    assert.equal(entryGuidePayload.frontdesk_entry_guide.surface_id, 'opl_frontdesk_entry_guide');
-    assert.equal(entryGuidePayload.frontdesk_entry_guide.summary.total_projects_count, 3);
-    assert.equal(entryGuidePayload.frontdesk_entry_guide.workspace_taxonomy.family_workspace_kind, 'opl_family_workspace');
+    const workspacesResponse = await fetch(`${baseUrl}/api/opl/workspaces`);
+    const workspacesPayload = await workspacesResponse.json();
+    assert.equal(workspacesPayload.workspaces.surface_id, 'opl_workspaces');
+    assert.equal(workspacesPayload.workspaces.summary.total_projects_count, 4);
 
-    const wiringResponse = await fetch(`${baseUrl}/api/frontdesk/domain-wiring`);
-    const wiringPayload = await wiringResponse.json();
-    assert.equal(wiringPayload.frontdesk_domain_wiring.surface_id, 'opl_frontdesk_domain_wiring');
-    assert.equal(wiringPayload.frontdesk_domain_wiring.summary.total_projects_count, 3);
-    assert.equal(wiringPayload.frontdesk_domain_wiring.domain_binding_parity.summary.total_projects_count, 3);
-    assert.equal(wiringPayload.frontdesk_domain_wiring.domain_binding_parity.summary.active_projects_count, 0);
-    assert.equal(wiringPayload.frontdesk_domain_wiring.summary.recommended_entry_surfaces_count, 0);
+    const systemInitializeResponse = await fetch(`${baseUrl}/api/opl/system/initialize`);
+    const systemInitializePayload = await systemInitializeResponse.json();
+    assert.equal(systemInitializePayload.system_initialize.surface_id, 'opl_system_initialize');
+    assert.equal(systemInitializePayload.system_initialize.settings.interaction_mode, 'codex');
+    assert.equal(systemInitializePayload.system_initialize.endpoints.system, '/api/opl/system');
+    assert.equal(systemInitializePayload.system_initialize.endpoints.settings, '/api/opl/system/settings');
 
-    const readinessResponse = await fetch(`${baseUrl}/api/frontdesk/readiness`);
-    const readinessPayload = await readinessResponse.json();
-    assert.equal(readinessPayload.frontdesk_readiness.surface_id, 'opl_frontdesk_readiness');
-    assert.equal(readinessPayload.frontdesk_readiness.summary.total_projects_count, 3);
-    assert.equal(readinessPayload.frontdesk_readiness.summary.usable_now_projects_count, 0);
-    assert.equal(readinessPayload.frontdesk_readiness.shell_integration_target, 'external_gui_overlay');
-    assert.equal('desktop_command' in readinessPayload.frontdesk_readiness.local_shell, false);
-    assert.match(
-      readinessPayload.frontdesk_readiness.local_service.health.status,
-      /^(ok|not_installed|unreachable)$/,
-    );
+    const settingsResponse = await fetch(`${baseUrl}/api/opl/system/settings`);
+    const settingsPayload = await settingsResponse.json();
+    assert.equal(settingsPayload.system_settings.surface_id, 'opl_system_settings');
+    assert.equal(settingsPayload.system_settings.interaction_mode, 'codex');
+    assert.equal(settingsPayload.system_settings.execution_mode, 'codex');
 
-    const workspaceRootSetResponse = await fetch(`${baseUrl}/api/workspace/root`, {
+    const settingsUpdateResponse = await fetch(`${baseUrl}/api/opl/system/settings`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        interaction_mode: 'hermes',
+        execution_mode: 'codex',
+      }),
+    });
+    const settingsUpdatePayload = await settingsUpdateResponse.json();
+    assert.equal(settingsUpdatePayload.system_settings.interaction_mode, 'hermes');
+    assert.equal(settingsUpdatePayload.system_settings.execution_mode, 'codex');
+
+    const workspaceRootSetResponse = await fetch(`${baseUrl}/api/opl/workspaces/root`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -5342,12 +5140,12 @@ exit 1
     assert.equal(workspaceRootSetPayload.workspace_root.selected_path, workspaceRoot);
     assert.equal(workspaceRootSetPayload.workspace_root.health_status, 'ready');
 
-    const workspaceRootResponse = await fetch(`${baseUrl}/api/workspace/root`);
+    const workspaceRootResponse = await fetch(`${baseUrl}/api/opl/workspaces/root`);
     const workspaceRootPayload = await workspaceRootResponse.json();
     assert.equal(workspaceRootPayload.workspace_root.selected_path, workspaceRoot);
     assert.equal(workspaceRootPayload.workspace_root.health_status, 'ready');
 
-    const systemActionResponse = await fetch(`${baseUrl}/api/frontdesk/system/action`, {
+    const systemActionResponse = await fetch(`${baseUrl}/api/opl/system/actions`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -5358,11 +5156,11 @@ exit 1
       }),
     });
     const systemActionPayload = await systemActionResponse.json();
-    assert.equal(systemActionPayload.frontdesk_system_action.action, 'update_channel');
-    assert.equal(systemActionPayload.frontdesk_system_action.update_channel, 'preview');
-    assert.equal(systemActionPayload.frontdesk_system_action.status, 'completed');
+    assert.equal(systemActionPayload.system_action.action, 'update_channel');
+    assert.equal(systemActionPayload.system_action.update_channel, 'preview');
+    assert.equal(systemActionPayload.system_action.status, 'completed');
 
-    const engineActionResponse = await fetch(`${baseUrl}/api/frontdesk/engine/action`, {
+    const engineActionResponse = await fetch(`${baseUrl}/api/opl/engines/actions`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -5373,30 +5171,39 @@ exit 1
       }),
     });
     const engineActionPayload = await engineActionResponse.json();
-    assert.equal(engineActionPayload.frontdesk_engine_action.engine_id, 'codex');
-    assert.equal(engineActionPayload.frontdesk_engine_action.action, 'install');
-    assert.equal(engineActionPayload.frontdesk_engine_action.status, 'completed');
+    assert.equal(engineActionPayload.engine_action.engine_id, 'codex');
+    assert.equal(engineActionPayload.engine_action.action, 'install');
+    assert.equal(engineActionPayload.engine_action.status, 'completed');
+    assert.equal('frontdesk_environment' in engineActionPayload.engine_action, false);
+    assert.equal(engineActionPayload.engine_action.system.surface_id, 'opl_system');
+    assert.equal(engineActionPayload.engine_action.system.core_engines.codex.installed, true);
     assert.equal(fs.existsSync(engineMarkerPath), true);
 
-    const progressResponse = await fetch(`${baseUrl}/api/project-progress`);
+    const progressResponse = await fetch(
+      `${baseUrl}/api/opl/progress?workspace_path=${encodeURIComponent(repoRoot)}`,
+    );
     const progressPayload = await progressResponse.json();
-    assert.equal(progressPayload.project_progress.surface_id, 'opl_project_progress_brief');
-    assert.equal(progressPayload.project_progress.current_project.workspace_path, repoRoot);
-    assert.ok(Array.isArray(progressPayload.project_progress.inspect_paths));
-    assert.equal(typeof progressPayload.project_progress.workspace_inbox.summary.known_task_count, 'number');
-    assert.ok(Array.isArray(progressPayload.project_progress.workspace_inbox.sections.running));
-    assert.ok(Array.isArray(progressPayload.project_progress.workspace_inbox.sections.waiting));
-    assert.ok(Array.isArray(progressPayload.project_progress.workspace_inbox.sections.delivered));
-    assert.ok(Array.isArray(progressPayload.project_progress.workspace_files.deliverable_files));
-    assert.ok(Array.isArray(progressPayload.project_progress.workspace_files.supporting_files));
-    assert.equal(typeof progressPayload.project_progress.progress_feedback.headline, 'string');
+    assert.equal(progressPayload.progress.surface_id, 'opl_progress');
+    assert.equal(progressPayload.progress.current_project.workspace_path, repoRoot);
+    assert.ok(Array.isArray(progressPayload.progress.inspect_paths));
+    assert.ok(Array.isArray(progressPayload.progress.task_cards.running));
+    assert.ok(Array.isArray(progressPayload.progress.task_cards.waiting));
+    assert.ok(Array.isArray(progressPayload.progress.task_cards.delivered));
+    assert.equal(typeof progressPayload.progress.headline, 'string');
+    assert.equal('study' in progressPayload.progress, true);
     const domainManifestResponse = await fetch(`${baseUrl}/api/domain/manifests`);
     const domainManifestPayload = await domainManifestResponse.json();
     assert.equal(domainManifestPayload.domain_manifests.summary.total_projects_count, 3);
 
     const hostedPackageOutput = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-web-hosted-package-'));
     try {
-      const hostedPackageResponse = await fetch(`${baseUrl}/api/frontdesk/hosted-package`, {
+      const hostedBundleResponse = await fetch(`${baseUrl}/api/opl/web/bundle`);
+      const hostedBundlePayload = await hostedBundleResponse.json();
+      assert.equal(hostedBundlePayload.web_bundle.surface_id, 'opl_web_bundle');
+      assert.equal(hostedBundlePayload.web_bundle.api_base_url, `${baseUrl}/api`);
+      assert.equal(hostedBundlePayload.web_bundle.opl_api.resources.agents, '/api/opl/agents');
+
+      const hostedPackageResponse = await fetch(`${baseUrl}/api/opl/web/package`, {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
@@ -5407,22 +5214,42 @@ exit 1
         }),
       });
       const hostedPackagePayload = await hostedPackageResponse.json();
-      assert.equal(hostedPackagePayload.hosted_pilot_package.surface_id, 'opl_hosted_frontdesk_pilot_package');
-      assert.equal(hostedPackagePayload.hosted_pilot_package.public_origin, 'https://opl.example.com');
-      assert.equal(hostedPackagePayload.hosted_pilot_package.entry_url, 'https://opl.example.com/pilot/opl/');
-      assert.equal(fs.existsSync(hostedPackagePayload.hosted_pilot_package.assets.bundle_json), true);
-      assert.equal(fs.existsSync(hostedPackagePayload.hosted_pilot_package.assets.run_script), true);
+      assert.equal(hostedPackagePayload.web_package.surface_id, 'opl_web_package');
+      assert.equal(hostedPackagePayload.web_package.public_origin, 'https://opl.example.com');
+      assert.equal(hostedPackagePayload.web_package.entry_url, 'https://opl.example.com/pilot/opl/');
+      assert.equal(fs.existsSync(hostedPackagePayload.web_package.assets.bundle_json), true);
+      assert.equal(fs.existsSync(hostedPackagePayload.web_package.assets.launch_script), true);
     } finally {
       fs.rmSync(hostedPackageOutput, { recursive: true, force: true });
     }
 
-    const sessionsResponse = await fetch(`${baseUrl}/api/session/list?limit=1`);
+    const sessionsResponse = await fetch(`${baseUrl}/api/opl/sessions?limit=1`);
     const sessionsPayload = await sessionsResponse.json();
-    assert.equal(sessionsPayload.product_entry.mode, 'sessions');
-    assert.equal(sessionsPayload.product_entry.sessions.length, 1);
-    assert.equal(sessionsPayload.product_entry.sessions[0].session_id, 'sess_web');
+    assert.equal(sessionsPayload.sessions.surface_id, 'opl_sessions');
+    assert.equal(sessionsPayload.sessions.items.length, 1);
+    assert.equal(sessionsPayload.sessions.items[0].session_id, 'sess_web');
 
-    const resumeResponse = await fetch(`${baseUrl}/api/session/resume`, {
+    const oplProgressResponse = await fetch(`${baseUrl}/api/opl/progress?workspace_path=${encodeURIComponent(repoRoot)}`);
+    const oplProgressPayload = await oplProgressResponse.json();
+    assert.equal(oplProgressPayload.progress.surface_id, 'opl_progress');
+    assert.equal(oplProgressPayload.progress.workspace_path, repoRoot);
+    assert.equal(typeof oplProgressPayload.progress.headline, 'string');
+    assert.equal(Array.isArray(oplProgressPayload.progress.task_cards.running), true);
+    assert.equal(Array.isArray(oplProgressPayload.progress.task_cards.delivered), true);
+    assert.equal(typeof oplProgressPayload.progress.recent_activity.preview, 'string');
+
+    const oplArtifactsResponse = await fetch(`${baseUrl}/api/opl/artifacts?workspace_path=${encodeURIComponent(repoRoot)}`);
+    const oplArtifactsPayload = await oplArtifactsResponse.json();
+    assert.equal(oplArtifactsPayload.artifacts.surface_id, 'opl_artifacts');
+    assert.equal(oplArtifactsPayload.artifacts.workspace_path, repoRoot);
+    assert.equal(Array.isArray(oplArtifactsPayload.artifacts.deliverable_files), true);
+    assert.equal(Array.isArray(oplArtifactsPayload.artifacts.supporting_files), true);
+    assert.equal(
+      oplArtifactsPayload.artifacts.summary.total_files_count,
+      oplArtifactsPayload.artifacts.deliverable_files.length + oplArtifactsPayload.artifacts.supporting_files.length,
+    );
+
+    const resumeResponse = await fetch(`${baseUrl}/api/opl/sessions/resume`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -5432,16 +5259,16 @@ exit 1
       }),
     });
     const resumePayload = await resumeResponse.json();
-    assert.equal(resumePayload.product_entry.mode, 'resume');
-    assert.match(resumePayload.product_entry.resume.output, /WEB PILOT RESUME OUTPUT/);
+    assert.equal(resumePayload.session_resume.mode, 'resume');
+    assert.match(resumePayload.session_resume.resume.output, /WEB PILOT RESUME OUTPUT/);
 
-    const logsResponse = await fetch(`${baseUrl}/api/session/logs?log_name=gateway&lines=20`);
+    const logsResponse = await fetch(`${baseUrl}/api/opl/sessions/logs?log_name=gateway&lines=20`);
     const logsPayload = await logsResponse.json();
-    assert.equal(logsPayload.product_entry.mode, 'logs');
-    assert.equal(logsPayload.product_entry.log_name, 'gateway');
-    assert.match(logsPayload.product_entry.raw_output, /hosted-friendly front desk ready/);
+    assert.equal(logsPayload.session_logs.mode, 'logs');
+    assert.equal(logsPayload.session_logs.log_name, 'gateway');
+    assert.match(logsPayload.session_logs.raw_output, /hosted-friendly front desk ready/);
 
-    const previewResponse = await fetch(`${baseUrl}/api/ask`, {
+    const previewResponse = await fetch(`${baseUrl}/api/opl/sessions`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -5453,11 +5280,12 @@ exit 1
       }),
     });
     const previewPayload = await previewResponse.json();
-    assert.equal(previewPayload.product_entry.dry_run, true);
-    assert.equal(previewPayload.product_entry.executor_backend, 'codex');
-    assert.equal(previewPayload.product_entry.routing.domain_id, 'redcube');
+    assert.equal(previewPayload.session_create.request_mode, 'dry_run');
+    assert.equal(previewPayload.session_create.payload.product_entry.dry_run, true);
+    assert.equal(previewPayload.session_create.payload.product_entry.executor_backend, 'hermes');
+    assert.equal(previewPayload.session_create.payload.product_entry.routing.domain_id, 'redcube');
 
-    const askResponse = await fetch(`${baseUrl}/api/ask`, {
+    const askResponse = await fetch(`${baseUrl}/api/opl/sessions`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -5468,24 +5296,41 @@ exit 1
       }),
     });
     const askPayload = await askResponse.json();
-    assert.equal(askPayload.product_entry.mode, 'ask');
-    assert.equal(askPayload.product_entry.dry_run, false);
-    assert.equal(askPayload.product_entry.execution_mode, 'async_accept');
-    assert.equal(askPayload.product_entry.executor_backend, 'codex');
-    assert.match(askPayload.product_entry.task.task_id, /^task_/);
-    assert.equal(askPayload.product_entry.task.status, 'accepted');
-    assert.equal(askPayload.product_entry.task.executor_backend, 'codex');
-    assert.match(askPayload.product_entry.task.summary, /后台|受理|执行/);
+    assert.equal(askPayload.session_create.request_mode, 'submitted');
+    assert.equal(askPayload.session_create.payload.product_entry.entry_surface, 'opl_session_api');
+    assert.doesNotMatch(askPayload.session_create.payload.product_entry.entry_surface, /frontdesk/i);
+    assert.equal(askPayload.session_create.payload.product_entry.mode, 'ask');
+    assert.equal(askPayload.session_create.payload.product_entry.dry_run, false);
+    assert.equal(askPayload.session_create.payload.product_entry.execution_mode, 'async_accept');
+    assert.equal(askPayload.session_create.payload.product_entry.executor_backend, 'hermes');
+    assert.match(askPayload.session_create.payload.product_entry.task.task_id, /^task_/);
+    assert.equal(askPayload.session_create.payload.product_entry.task.status, 'accepted');
+    assert.equal(askPayload.session_create.payload.product_entry.task.executor_backend, 'hermes');
+    assert.match(askPayload.session_create.payload.product_entry.task.summary, /后台|受理|执行/);
 
     const taskStatusResponse = await fetch(
-      `${baseUrl}/api/task-status?task_id=${encodeURIComponent(String(askPayload.product_entry.task.task_id))}&lines=20`,
+      `${baseUrl}/api/opl/progress?task_id=${encodeURIComponent(String(askPayload.session_create.payload.product_entry.task.task_id))}&workspace_path=${encodeURIComponent(repoRoot)}`,
     );
     const taskStatusPayload = await taskStatusResponse.json();
-    assert.equal(taskStatusPayload.product_entry.mode, 'task_status');
-    assert.equal(taskStatusPayload.product_entry.task.task_id, askPayload.product_entry.task.task_id);
-    assert.equal(taskStatusPayload.product_entry.task.executor_backend, 'codex');
-    assert.match(taskStatusPayload.product_entry.task.status, /accepted|running|succeeded|failed/);
-    assert.equal(typeof taskStatusPayload.product_entry.task.recent_output, 'string');
+    assert.equal(taskStatusPayload.progress.surface_id, 'opl_progress');
+    assert.equal(taskStatusPayload.progress.task.task_id, askPayload.session_create.payload.product_entry.task.task_id);
+    assert.equal(taskStatusPayload.progress.task.executor_backend, 'hermes');
+    assert.match(taskStatusPayload.progress.task.status, /accepted|running|succeeded|failed/);
+    assert.equal(typeof taskStatusPayload.progress.task.recent_output, 'string');
+
+    const retiredAskResponse = await fetch(`${baseUrl}/api/ask`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        goal: 'retired route probe',
+      }),
+    });
+    assert.equal(retiredAskResponse.status, 404);
+
+    const retiredTaskStatusResponse = await fetch(`${baseUrl}/api/task-status?task_id=retired-task`);
+    assert.equal(retiredTaskStatusResponse.status, 404);
   } finally {
     if (child) {
       await stopCliServer(child);
@@ -5576,36 +5421,32 @@ exit 1
     );
     child = startup.child;
 
-    const baseUrl = String((startup.payload.web_frontdesk as { listening: { base_url: string } }).listening.base_url);
+    const baseUrl = String((startup.payload.opl_api as { listening: { base_url: string } }).listening.base_url);
     const page = await fetch(baseUrl);
     assert.equal(page.status, 200);
     assert.match(page.headers.get('content-type') ?? '', /application\/json/i);
     const rootPayload = await page.json() as {
-      frontdesk_adapter: {
+      opl_api: {
         surface_id: string;
         mode: string;
         shell_integration_target: string;
         recommended_gui_overlay: string;
-        api: {
-          frontdesk_entry_guide: string;
-          start: string;
+        resources: {
+          system: string;
         };
-        shell_bootstrap: {
-          primary_surface: {
-            surface_id: string;
-          };
+        actions: {
+          start: string;
         };
       };
     };
-    assert.equal(rootPayload.frontdesk_adapter.surface_id, 'opl_frontdesk_adapter_root');
-    assert.equal(rootPayload.frontdesk_adapter.mode, 'api_only');
-    assert.equal(rootPayload.frontdesk_adapter.shell_integration_target, 'external_gui_overlay');
-    assert.equal(rootPayload.frontdesk_adapter.recommended_gui_overlay, 'opl-onyx-shell');
-    assert.equal(rootPayload.frontdesk_adapter.api.frontdesk_entry_guide, '/api/frontdesk/entry-guide');
-    assert.equal(rootPayload.frontdesk_adapter.api.start, '/api/start');
-    assert.equal(rootPayload.frontdesk_adapter.shell_bootstrap.primary_surface.surface_id, 'opl_frontdesk_entry_guide');
+    assert.equal(rootPayload.opl_api.surface_id, 'opl_product_api_root');
+    assert.equal(rootPayload.opl_api.mode, 'api_only');
+    assert.equal(rootPayload.opl_api.shell_integration_target, 'external_gui_overlay');
+    assert.equal(rootPayload.opl_api.recommended_gui_overlay, 'opl-onyx-shell');
+    assert.equal(rootPayload.opl_api.resources.system, '/api/opl/system');
+    assert.equal(rootPayload.opl_api.actions.start, '/api/opl/start');
 
-    const startResponse = await fetch(`${baseUrl}/api/start?project=redcube`);
+    const startResponse = await fetch(`${baseUrl}/api/opl/start?project=redcube`);
     assert.equal(startResponse.status, 200);
     const startPayload = await startResponse.json();
     assert.equal(startPayload.product_entry_start.surface_kind, 'opl_product_entry_start');
@@ -5615,13 +5456,13 @@ exit 1
     assert.equal(startPayload.product_entry_start.selected_mode.command, 'redcube product frontdesk');
     assert.deepEqual(startPayload.product_entry_start.human_gate_ids, ['redcube_operator_review_gate']);
 
-    const modeResponse = await fetch(`${baseUrl}/api/start?project=redcube&mode=opl_bridge_handoff`);
+    const modeResponse = await fetch(`${baseUrl}/api/opl/start?project=redcube&mode=opl_bridge_handoff`);
     assert.equal(modeResponse.status, 200);
     const modePayload = await modeResponse.json();
     assert.equal(modePayload.product_entry_start.selected_mode_id, 'opl_bridge_handoff');
     assert.equal(modePayload.product_entry_start.selected_mode.command, 'redcube product federate');
 
-    const launchResponse = await fetch(`${baseUrl}/api/domain/launch`, {
+    const launchResponse = await fetch(`${baseUrl}/api/opl/domain-launch`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -6208,7 +6049,7 @@ test('help returns command discovery and runnable examples', () => {
     output.help.commands.some((entry: { command: string }) => entry.command === 'contract validate'),
   );
   assert.ok(
-    ['frontdesk service install', 'frontdesk service status', 'frontdesk service open'].every((command) =>
+    ['service install', 'service status', 'service open'].every((command) =>
       output.help.commands.some((entry: { command: string }) => entry.command === command),
     ),
   );
@@ -6217,7 +6058,7 @@ test('help returns command discovery and runnable examples', () => {
     false,
   );
   assert.ok(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk hosted-package'),
+    output.help.commands.some((entry: { command: string }) => entry.command === 'system'),
   );
   assert.ok(
     output.help.commands.some(
@@ -6256,14 +6097,14 @@ test('command --help returns command-scoped usage and examples', () => {
   assert.ok(output.help.examples.includes('opl contract domain redcube'));
 });
 
-test('frontdesk service install --help returns command-scoped usage and examples', () => {
-  const output = runCli(['frontdesk', 'service', 'install', '--help']);
+test('service install --help returns command-scoped usage and examples', () => {
+  const output = runCli(['service', 'install', '--help']);
 
   assertNoContractsProvenance(output);
   assert.equal(output.version, 'g2');
-  assert.equal(output.help.command, 'frontdesk service install');
-  assert.match(output.help.usage, /opl frontdesk service install/);
-  assert.ok(output.help.examples.includes('opl frontdesk service install --port 8787'));
+  assert.equal(output.help.command, 'service install');
+  assert.match(output.help.usage, /opl service install/);
+  assert.ok(output.help.examples.includes('opl service install --port 8787'));
 });
 
 test('help <command> returns the same payload as command --help', () => {
