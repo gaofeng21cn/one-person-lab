@@ -16,14 +16,23 @@
    - `scripts/verify.sh family`
 2. 确认新的 shared module owner commit：
    - `git rev-parse HEAD`
-3. 用 owner repo 改写 contract 并同步 consumers pins：
+3. 确认这笔 owner commit 已经对 package locator 指向的 remote 可达：
+   - 先把 owner repo push 到承载 shared package locator 的 remote
+   - `release` 会 fail-closed 拒绝 unpublished owner commit
+4. 用 owner repo 改写 contract 并同步 consumers pins：
    - `npm run family:shared-release -- release --owner-commit <40-hex-sha>`
-4. 重新核对 alignment：
+5. 重新核对 alignment：
    - `npm run family:shared-release -- check`
-5. 在 consumers 仓补跑各自 family lane：
+6. 在 consumers 仓补跑各自 family lane：
    - `med-autoscience/scripts/verify.sh family`
    - `med-autogrant/scripts/verify.sh family`
    - `redcube-ai test:family lane`
+
+## Boundary Discipline
+
+- shared release 只维护 shared package owner commit、owner contract 与 consumer pins。
+- shared release 不改写各 domain repo 自己的 `entry_adapter`、`shared_downstream_entry`、`family_orchestration.action_graph.target_domain_id` 或 `resume_contract.session_locator_field`。
+- `OPL` 维护的是 boundary helper 与 release discipline；domain truth、domain route semantics、domain runtime owner truth 继续留在各自 repo。
 
 ## Invariants
 
