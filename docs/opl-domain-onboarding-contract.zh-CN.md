@@ -42,7 +42,7 @@ Candidate-domain backlog 则是位于它上游的 blocker surface，用来记录
 当审查者判断一个 onboarding package 是否真的与当前 `OPL` 的执行方向对齐时，应先看当前 Codex-only 执行口径：
 
 - [Codex-default Host-Agent Runtime 合同](./references/host-agent-runtime-contract.md) — 当前本地默认 runtime 口径（中文内部参考）
-- [家族 Executor Adapter 默认口径](./references/family-executor-adapter-defaults.md) — 当前家族默认执行器、默认模型与 `Hermes-native` 实验边界（中文内部参考）
+- [家族 Executor Adapter 默认口径](./references/family-executor-adapter-defaults.md) — 当前家族执行器命名、默认模式、默认模型与 `Hermes-Agent` 实验边界（中文内部参考）
 
 如果审查时仍需要追溯历史迁移上下文，再单独参考下面这些历史材料：
 
@@ -61,7 +61,7 @@ Candidate-domain backlog 则是位于它上游的 blocker surface，用来记录
 - 它的 truth ownership 是显式的
 - 它的 public gateway / harness boundary 是显式的
 - 它的 review surface 是显式的
-- 它的 execution model 与 `OPL` 的 `Codex CLI autonomous + 共享基座分层` 方向是显式对齐的
+- 它的 execution model 与 `OPL` 的 `Codex CLI + autonomous 模式 + 共享基座分层` 方向是显式对齐的
 - 顶层 discovery 与 routing 可以不靠 prose 猜测就指向它
 
 `OPL` 不接受“先挂名，后补边界”的 onboarding。
@@ -167,10 +167,10 @@ Onboarding package 必须说明：
 
 Onboarding package 必须说明：
 
-- 默认执行者是否是 `Codex CLI autonomous`、默认模型 / 默认 reasoning effort 是否继承本机 `Codex` 默认配置，以及它依赖的 stable agent runtime surface 是什么
+- 默认执行器正式名称是否是 `Codex CLI`、默认模式是否是 `autonomous`、默认模型 / 默认 reasoning effort 是否继承本机 `Codex` 默认配置，以及它依赖的 stable agent runtime surface 是什么
 - 当前仓库主线是否是 `Auto-only`；如果是，未来 `Human-in-the-loop` 产品会如何作为兼容 sibling 或 upper-layer product 复用同一 substrate，而不是把当前仓强行改成同仓双模
 - formal-entry matrix 如何通过 `default_formal_entry`、`supported_protocol_layer` 与 `internal_controller_surface` 表达
-- 任何被写成 `Hermes-native` 的 route，是否真的是完整 `Hermes AIAgent` loop，而不是单步 chat 或 chat relay
+- 任何被写成 `Hermes-Agent experimental` 的执行路线，是否真的是完整 `Hermes AIAgent` loop，而不是单步 chat 或 chat relay
 - 代码承担哪些 stable object / controller / tool / gate / review 责任
 - 哪些部分绝不能被描述成 `fixed-code-first` 主流程，只让 Agent 做少量 prompt 补位
 
