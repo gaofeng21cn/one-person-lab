@@ -28,6 +28,7 @@ import {
 import { buildFrontDeskShellMcpWiring } from './frontdesk-shell-identity.ts';
 import { readFrontDeskRuntimeModes } from './frontdesk-runtime-modes.ts';
 import { buildSessionLedger } from './session-ledger.ts';
+import { buildOplApiCatalog } from './opl-api-paths.ts';
 import {
   collectHermesProcessUsage,
   normalizeCommandOutput,
@@ -1350,10 +1351,10 @@ export function buildHostedRuntimeReadiness() {
     status: 'pilot_ready_not_managed',
     shell_integration_target: 'external_gui_overlay',
     managed_hosted_runtime_landed: false,
-    local_web_frontdesk_landed: true,
+    local_web_api_landed: true,
     hosted_friendly_contract_landed: true,
-    hosted_pilot_bundle_landed: true,
-    self_hostable_pilot_package_landed: true,
+    web_bundle_landed: true,
+    self_hostable_web_package_landed: true,
     desktop_shell_landed: false,
     service_safe_local_packaging_landed: true,
     hosted_shell_mcp_wiring_landed: true,
@@ -2020,15 +2021,9 @@ export function buildHostedPilotBundle(
   const sessionsLimit = options.sessionsLimit ?? 5;
   const normalizedBasePath = normalizeBasePath(options.basePath);
   const baseUrl = `http://${normalizeBaseUrlHost(host)}:${port}`;
-  const endpoints = buildFrontDeskEndpoints(normalizedBasePath);
+  const oplApi = buildOplApiCatalog(normalizedBasePath);
   const hostedRuntimeReadiness = buildHostedRuntimeReadiness();
   const hostedShellMcpWiring = buildFrontDeskShellMcpWiring();
-  const frontdeskReadinessSurface = buildFrontDeskReadinessSurfaceRef({
-    basePath: normalizedBasePath,
-  });
-  const domainWiringSurface = buildFrontDeskDomainWiringSurfaceRef(contracts, {
-    basePath: normalizedBasePath,
-  });
 
   return {
     version: 'g2',
@@ -2036,26 +2031,24 @@ export function buildHostedPilotBundle(
       contracts_dir: contracts.contractsDir,
       contracts_root_source: contracts.contractsRootSource,
     },
-    hosted_pilot_bundle: {
-      surface_id: 'opl_hosted_frontdesk_pilot_bundle',
+    web_bundle: {
+      surface_id: 'opl_web_bundle',
       runtime_substrate: 'external_hermes_kernel',
       shell_integration_target: 'external_gui_overlay',
-      pilot_bundle_status: 'landed',
-      actual_hosted_runtime_status: 'not_landed',
+      bundle_status: 'landed',
+      hosted_runtime_status: 'not_landed',
       base_path: normalizedBasePath,
       hosted_runtime_readiness: hostedRuntimeReadiness,
       hosted_shell_mcp_wiring: hostedShellMcpWiring,
-      frontdesk_readiness_surface: frontdeskReadinessSurface,
-      domain_wiring_surface: domainWiringSurface,
       entry_url: buildFrontDeskEntryUrl(baseUrl, normalizedBasePath),
       api_base_url: buildFrontDeskApiBaseUrl(baseUrl, normalizedBasePath),
-      endpoints,
+      opl_api: oplApi,
       defaults: {
         workspace_path: workspacePath,
         sessions_limit: sessionsLimit,
       },
       notes: [
-        'This bundle makes the current front desk hosted-pilot-ready through base-path-aware shell packaging.',
+        'This bundle packages the current OPL web entry with base-path-aware product API wiring.',
         'It now feeds external GUI overlays, but it is still not a managed hosted runtime or multi-tenant platform deployment.',
       ],
     },
@@ -2137,13 +2130,13 @@ export function buildFrontDeskHealth(contracts: GatewayContracts, options: { bas
       contracts_root_source: contracts.contractsRootSource,
     },
     health: {
-      surface_id: 'opl_frontdesk_health_surface',
-      entry_surface: 'opl_local_web_frontdesk_pilot',
+      surface_id: 'opl_web_health_surface',
+      entry_surface: 'opl_local_web_product_api',
       runtime_substrate: 'external_hermes_kernel',
       base_path: normalizeBasePath(options.basePath),
       status,
-      hosted_packaging_status: 'frontdesk_package_landed',
-      pilot_bundle_status: 'landed',
+      web_package_status: 'landed',
+      web_bundle_status: 'landed',
       checks: {
         hermes_binary: {
           found: Boolean(hermes.binary),
@@ -2157,8 +2150,8 @@ export function buildFrontDeskHealth(contracts: GatewayContracts, options: { bas
         issues: hermes.issues,
       },
       notes: [
-        'Health here means the current front-desk shell can truthfully expose the Hermes-backed runtime status.',
-        'The repo-tracked frontdesk surface is API-first, while actual hosted runtime ownership is still not landed.',
+        'Health here means the current OPL web entry can truthfully expose the Hermes-backed runtime status.',
+        'The repo-tracked web entry is API-first, while actual hosted runtime ownership is still not landed.',
       ],
     },
   };
@@ -2301,7 +2294,7 @@ export async function buildProjectProgressBrief(
         start: readinessEntry?.recommended_start_command ?? null,
       },
       notes: [
-        'This brief is a user-facing summary derived from workspace binding, domain manifest, frontdesk readiness, and runtime visibility.',
+        'This brief is a user-facing summary derived from workspace binding, domain manifest, product readiness, and runtime visibility.',
         'When the current domain exposes study-level truth, this brief promotes the most active study into a paper-facing summary instead of stopping at project-level wording.',
         'Configured human gates are capability hints from the domain manifest; they do not by themselves mean the system is currently waiting for user input.',
       ],
@@ -2417,20 +2410,20 @@ export function buildFrontDeskDashboard(
       contracts_root_source: contracts.contractsRootSource,
     },
     dashboard: {
-      front_desk: {
+      product_api: {
         direct_entry_command: 'opl',
         local_shell_status: 'landed',
-        local_web_frontdesk_command: 'opl web',
-        local_web_frontdesk_status: 'pilot_landed',
+        local_web_command: 'opl web',
+        local_web_status: 'pilot_landed',
         desktop_shell_status: 'not_repo_tracked',
         desktop_default_entry_status: 'external_overlay_required',
         interaction_mode: runtimeModes.interaction_mode,
         execution_mode: runtimeModes.execution_mode,
         hosted_friendly_surface_status: 'landed',
-        hosted_pilot_bundle_status: 'landed',
+        web_bundle_status: 'landed',
         hosted_runtime_readiness: hostedRuntimeReadiness,
-        frontdesk_entry_guide_surface: frontdeskEntryGuideSurface,
-        frontdesk_readiness_surface: frontdeskReadinessSurface,
+        entry_guide_surface: frontdeskEntryGuideSurface,
+        readiness_surface: frontdeskReadinessSurface,
         workspace_registry_status: 'landed',
         session_ledger_status: 'landed',
         handoff_bundle_status: 'landed',
@@ -2446,11 +2439,11 @@ export function buildFrontDeskDashboard(
           'docs/references/mas-top-level-cutover-board.md',
         ],
         notes: [
-          'OPL now exposes adapter/API truth together with the local web front-desk service and hosted bundle exports.',
+          'OPL now exposes adapter/API truth together with the local web entry and web bundle exports.',
           'Workspace registry, managed session ledger, handoff bundle, and current Codex/Hermes mode selection are all visible from the same top-level board.',
           '`opl workspace list` keeps `manifest_command` as non-executing registry state, while `opl domain manifests` resolves the active bound machine-readable product-entry manifests.',
-          'Resolved domain manifests now also feed frontdesk surface plus operator-loop actions and recommended shell/command hints back into dashboard and handoff surfaces.',
-          'Resolved domain manifests now also surface family-orchestration companion previews so the top-level front desk can show human-gate and resume semantics instead of hiding them in domain docs.',
+          'Resolved domain manifests now also feed domain entry surface plus operator-loop actions and recommended shell/command hints back into dashboard and handoff surfaces.',
+          'Resolved domain manifests now also surface family-orchestration companion previews so the top-level product API board can show human-gate and resume semantics instead of hiding them in domain docs.',
           'The GUI mainline should live in an external OPL x Onyx overlay repo, while this repo stays headless and contract-first.',
         ],
       },

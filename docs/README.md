@@ -4,15 +4,31 @@
 
 This directory is the entry index for the repo-tracked docs surface of `One Person Lab`.
 The repository home is written first for potential users and human experts.
-This guide points readers to the core working set, layered doc structure, reference material, and historical records behind the current gateway and headless-adapter story.
+This guide points readers to the current product model, the core working set, and the supporting reference and history layers.
+
+## Current Product Model
+
+The current public `OPL` model is:
+
+- `System`
+- `Engines`
+- `Modules`
+- `Agents`
+- `Workspaces`
+- `Sessions`
+- `Progress`
+- `Artifacts`
+
+GUI shells and the CLI consume these same product surfaces.
+Domain repositories keep their own agent logic, runtime rules, and deliverables.
 
 ## Start Here By Audience
 
 | Audience | Start here | Why |
 | --- | --- | --- |
-| Potential users and human experts | [Repository Home](../README.md), [Roadmap](./roadmap.md), [Task Map](./task-map.md), [Operating Model](./operating-model.md) | Understand the `OPL` shell, product families, and current implementations before reading technical details |
-| Technical readers and planners | [Project](./project.md), [Status](./status.md), [Architecture](./architecture.md), [Invariants](./invariants.md), [Decisions](./decisions.md), [Contracts Overview](../contracts/README.md) | Understand the current baseline, boundaries, and the active technical direction |
-| Developers and maintainers | [Reference Index](./references/README.md), `docs/specs/`, `docs/plans/`, [History Archive](./history/README.md) | Inspect implementation support material, historical records, and tracked working notes |
+| Potential users and human experts | [Repository Home](../README.md), [Roadmap](./roadmap.md), [Task Map](./task-map.md), [Operating Model](./operating-model.md) | Understand what `OPL` is used for and how the product families fit together |
+| Technical readers and planners | [Project](./project.md), [Status](./status.md), [Architecture](./architecture.md), [Invariants](./invariants.md), [Decisions](./decisions.md), [Contracts Overview](../contracts/README.md) | Understand the product boundary, resource model, and active technical direction |
+| Developers and maintainers | [Reference Index](./references/README.md), `docs/specs/`, `docs/plans/`, [History Archive](./history/README.md) | Inspect implementation support material, migration notes, and retired lanes |
 
 ## Fast Technical Working Set
 
@@ -33,9 +49,8 @@ Use it like this:
 - human experts enter through the repository home and Layer 1
 - technical planners combine the technical working set with Layer 2
 - developers treat Layers 3 and 4 as supporting material
-- the public product mental model is `family entry surface -> family -> implementation`
-- [Status](./status.md) and [Architecture](./architecture.md) hold the live public boundary
-- [Reference Index](./references/README.md) and the history indexes hold supporting context and retired lanes
+- the live public product model stays in [Project](./project.md), [Status](./status.md), and [Architecture](./architecture.md)
+- retired `frontdesk`-era material stays in reference or history layers only
 
 ## Layer 1. Default Public Mainline
 
@@ -66,33 +81,14 @@ These documents are still public and bilingual, but they are meant for technical
 
 ## Layer 3. Reference-Grade Supporting Docs
 
-Layer 3 holds review, audit, rollout, benchmark, and supporting reference material.
+Layer 3 holds review, audit, rollout, benchmark, and migration reference material.
 It is repo-tracked supporting material.
 
 - [Reference Index](./references/README.md)
-- `docs/references/contract-convergence-v1-execution-board.md`
-- `docs/references/hermes-agent-runtime-substrate-benchmark.md`
-- `docs/references/family-orchestration-contract-absorb-crewai.md`
-- `docs/references/family-lightweight-direct-entry-rollout-board.md`
-- `docs/references/opl-hosted-web-frontdesk-benchmark.md`
-- `docs/references/opl-product-entry-and-hermes-kernel-integration.md`
-- `docs/references/family-product-entry-and-domain-handoff-architecture.md`
-- `docs/references/family-executor-adapter-defaults.md`
-- `docs/references/hermes-native-executor-proof-lane.md`
-- `docs/references/mas-top-level-cutover-board.md`
-- admitted-domain sync and delta-intake reference records
-- `docs/references/opl-gateway-rollout*`
-- `docs/references/opl-gateway-acceptance-test-spec*`
-- `docs/references/opl-candidate-domain-backlog*`
-- `docs/references/opl-surface-lifecycle-map*`
-- `docs/references/opl-surface-authority-matrix*`
-- `docs/references/opl-surface-review-matrix*`
-- `docs/references/opl-governance-audit-operating-surface*`
-- `docs/references/opl-publish-promotion-operating-surface*`
-- `docs/references/opl-gateway-example-corpus*`
-- `docs/references/opl-routed-safety-example-corpus*`
-- `docs/references/opl-operating-example-corpus*`
-- `docs/references/opl-operating-record-catalog*`
+- product-runtime and executor reference notes
+- domain alignment and delta-intake records
+- benchmark and rollout boards
+- retired `frontdesk`-era reference material kept for audit only
 
 ## Layer 4. Historical Specs And Plans
 
@@ -106,7 +102,7 @@ It explains how or why a freeze happened, while [Status](./status.md) remains th
 ## Where Current Truth Lives
 
 - Public role, active boundary, and default reading order: [Project](./project.md), [Status](./status.md), [Architecture](./architecture.md)
-- Machine-readable gateway and admission surfaces: [Contracts Overview](../contracts/README.md) and `contracts/opl-gateway/*.json`
+- Machine-readable product surfaces: [Contracts Overview](../contracts/README.md) and `contracts/opl-gateway/*.json`
 - Reference-grade supporting material: [Reference Index](./references/README.md)
 - Historical and retired lanes: [History Archive](./history/README.md)
 
@@ -117,10 +113,3 @@ It explains how or why a freeze happened, while [Status](./status.md) remains th
 - Keep Layer 3 reference-grade and detailed.
 - Keep Layer 4 as tracked working history.
 - When a change affects public wording, contracts, or admitted-domain state, update docs, contracts, and related verification together.
-
-## Governance
-
-- Governance notes live in [series-doc-governance-checklist.md](./references/series-doc-governance-checklist.md), the technical working set, and the repo-tracked contract/doc surfaces.
-- The current four-repo alignment snapshot lives in [four-repo-doc-series-sync-summary-2026-04-14.md](./references/four-repo-doc-series-sync-summary-2026-04-14.md).
-- The reusable intake starting point lives in [four-repo-doc-intake-template.md](./references/four-repo-doc-intake-template.md).
-- Cross-repo doc rounds should be reviewed directly in the affected repositories, using each repo's current public positioning, contracts, and admitted-domain state as the source of truth.

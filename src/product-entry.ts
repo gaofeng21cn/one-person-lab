@@ -35,7 +35,7 @@ import type {
 export type ProductEntryMode =
   | 'ask'
   | 'chat'
-  | 'frontdesk'
+  | 'session_seed'
   | 'resume'
   | 'sessions'
   | 'logs'
@@ -283,7 +283,7 @@ function buildFrontDeskPrompt(contracts: GatewayContracts) {
   });
 
   return [
-    'You are the One Person Lab (OPL) Front Desk.',
+    'You are the One Person Lab (OPL) Product Entry.',
     'Your role is to be the default natural-language entry for OPL and route requests to the correct domain or family boundary.',
     '',
     'Current admitted domains:',
@@ -295,7 +295,7 @@ function buildFrontDeskPrompt(contracts: GatewayContracts) {
     'Hard boundary rules:',
     '- OPL is a gateway and federation shell. It is not the runtime truth owner of any domain.',
     '- Keep work inside admitted domain boundaries and family boundaries. Do not invent admission or hosted readiness.',
-    '- Hermes is the runtime substrate for this front-desk session.',
+    '- Hermes is the runtime substrate for this product-entry session.',
     '',
     'Task:',
     '- Greet briefly and keep momentum.',
@@ -306,7 +306,7 @@ function buildFrontDeskPrompt(contracts: GatewayContracts) {
 }
 
 function buildFrontDeskSeedArgs(prompt: string) {
-  return ['chat', '--query', prompt, '--quiet', '--source', 'opl-frontdesk'];
+  return ['chat', '--query', prompt, '--quiet', '--source', 'opl-session-seed'];
 }
 
 function buildPreviewPayload(
@@ -546,7 +546,7 @@ export function runProductEntryFrontDesk(
 
   assertHermesSuccess(
     seedResult.exitCode,
-    'Hermes front-desk seed failed inside OPL Product Entry.',
+    'Hermes session seed failed inside OPL Product Entry.',
     {
       args: buildHermesCliPreview(seedArgs),
       stdout: seedResult.stdout,
@@ -557,15 +557,15 @@ export function runProductEntryFrontDesk(
   const parsed = parseHermesQuietChatOutput(seedResult.stdout);
   recordSessionLedgerEntry({
     sessionId: parsed.sessionId,
-    mode: 'frontdesk',
+    mode: 'session_seed',
     sourceSurface: 'opl_local_product_entry_shell',
-    goalPreview: 'OPL Front Desk seed',
+    goalPreview: 'OPL session seed',
   });
 
   if (isInteractiveShell()) {
     process.stdout.write(
       [
-        'OPL Front Desk ready in Hermes.',
+        'OPL session seed ready in Hermes.',
         `Hermes session: ${parsed.sessionId}`,
         parsed.response ? `Seed response: ${parsed.response}` : null,
         '',
@@ -580,7 +580,7 @@ export function runProductEntryFrontDesk(
 
     assertHermesSuccess(
       resumeResult.exitCode,
-      'Hermes resume failed after OPL Front Desk seeded the session.',
+      'Hermes resume failed after OPL session seed.',
       {
         session_id: parsed.sessionId,
       },
@@ -595,7 +595,7 @@ export function runProductEntryFrontDesk(
 
   assertHermesSuccess(
     resumeResult.exitCode,
-    'Hermes resume failed after OPL Front Desk seeded the session.',
+    'Hermes resume failed after OPL session seed.',
     {
       session_id: parsed.sessionId,
       stdout: resumeResult.stdout,
@@ -608,7 +608,7 @@ export function runProductEntryFrontDesk(
     contracts_context: buildContractsContext(contracts),
     product_entry: {
       entry_surface: 'opl_local_product_entry_shell',
-      mode: 'frontdesk',
+      mode: 'session_seed',
       interactive: false,
       handoff_prompt_preview: prompt,
       seed: {

@@ -334,7 +334,7 @@ export function submitFrontDeskAskTask(
     version: 'g2',
     contracts_context: buildContractsContext(contracts),
     product_entry: {
-      entry_surface: 'opl_local_web_frontdesk_pilot',
+      entry_surface: 'opl_session_api',
       mode: 'ask',
       dry_run: false,
       execution_mode: 'async_accept',
