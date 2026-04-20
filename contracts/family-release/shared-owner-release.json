@@ -16,6 +16,7 @@
     {
       "repo_id": "medautoscience",
       "repo_dir": "med-autoscience",
+      "verify_command": "scripts/verify.sh family",
       "targets": [
         {
           "file": "pyproject.toml",
@@ -30,6 +31,7 @@
     {
       "repo_id": "medautogrant",
       "repo_dir": "med-autogrant",
+      "verify_command": "scripts/verify.sh family",
       "targets": [
         {
           "file": "pyproject.toml",
@@ -44,6 +46,7 @@
     {
       "repo_id": "redcube",
       "repo_dir": "redcube-ai",
+      "verify_command": "scripts/verify.sh family",
       "targets": [
         {
           "file": "packages/redcube-gateway/package.json",

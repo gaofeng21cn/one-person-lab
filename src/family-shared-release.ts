@@ -18,6 +18,7 @@ export interface FamilySharedReleaseTarget {
 export interface FamilySharedReleaseConsumer {
   repo_id: string;
   repo_dir: string;
+  verify_command: string;
   targets: FamilySharedReleaseTarget[];
 }
 
@@ -40,6 +41,7 @@ export interface FamilySharedReleaseInspection {
   repo_id: string;
   repo_root: string;
   owner_commit: string;
+  verify_command: string | null;
   status: 'aligned' | 'missing_consumer' | 'missing_repo' | 'stale';
   findings: FamilySharedReleaseFinding[];
 }
@@ -99,6 +101,14 @@ export function loadSharedOwnerReleaseContract({
   if (!/^[0-9a-f]{40}$/.test(contract.owner_commit)) {
     throw new Error(`shared owner release contract has invalid owner_commit: ${contract.owner_commit}`);
   }
+  if (!Array.isArray(contract.consumers) || contract.consumers.length === 0) {
+    throw new Error('shared owner release contract must declare at least one consumer');
+  }
+  for (const consumer of contract.consumers) {
+    if (typeof consumer.verify_command !== 'string' || consumer.verify_command.trim() === '') {
+      throw new Error(`shared owner release contract consumer is missing verify_command: ${consumer.repo_id}`);
+    }
+  }
   return contract;
 }
 
@@ -133,6 +143,7 @@ export function inspectFamilySharedConsumerAlignment({
       repo_id: consumerRepoId,
       repo_root: resolvedRepoRoot,
       owner_commit: contract.owner_commit,
+      verify_command: null,
       status: 'missing_consumer',
       findings: [],
     };
@@ -142,6 +153,7 @@ export function inspectFamilySharedConsumerAlignment({
       repo_id: consumerRepoId,
       repo_root: resolvedRepoRoot,
       owner_commit: contract.owner_commit,
+      verify_command: consumer.verify_command,
       status: 'missing_repo',
       findings: [{
         file: null,
@@ -192,6 +204,7 @@ export function inspectFamilySharedConsumerAlignment({
     repo_id: consumerRepoId,
     repo_root: resolvedRepoRoot,
     owner_commit: contract.owner_commit,
+    verify_command: consumer.verify_command,
     status,
     findings,
   };

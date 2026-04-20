@@ -28,6 +28,7 @@ def test_load_shared_owner_release_contract_reads_explicit_owner_repo_root(tmp_p
                     {
                         "repo_id": "medautoscience",
                         "repo_dir": "med-autoscience",
+                        "verify_command": "scripts/verify.sh family",
                         "targets": [
                             {"file": "pyproject.toml", "kind": "python_dependency"},
                             {"file": "uv.lock", "kind": "python_lock"},
@@ -42,6 +43,7 @@ def test_load_shared_owner_release_contract_reads_explicit_owner_repo_root(tmp_p
 
     assert contract["owner_commit"] == RELEASED_OWNER_COMMIT
     assert contract["consumers"][0]["repo_id"] == "medautoscience"
+    assert contract["consumers"][0]["verify_command"] == "scripts/verify.sh family"
 
 
 def test_inspect_family_shared_consumer_alignment_reports_stale_and_aligned_python_pins(tmp_path: Path) -> None:
@@ -58,6 +60,7 @@ def test_inspect_family_shared_consumer_alignment_reports_stale_and_aligned_pyth
                     {
                         "repo_id": "medautoscience",
                         "repo_dir": "med-autoscience",
+                        "verify_command": "scripts/verify.sh family",
                         "targets": [
                             {"file": "pyproject.toml", "kind": "python_dependency"},
                             {"file": "uv.lock", "kind": "python_lock"},
@@ -122,6 +125,7 @@ def test_inspect_current_repo_family_shared_alignment_resolves_owner_repo(tmp_pa
                     {
                         "repo_id": "redcube",
                         "repo_dir": "redcube-ai",
+                        "verify_command": "scripts/verify.sh family",
                         "targets": [
                             {"file": "packages/redcube-gateway/package.json", "kind": "js_dependency"},
                             {"file": "package-lock.json", "kind": "js_lock"},
@@ -165,3 +169,4 @@ def test_inspect_current_repo_family_shared_alignment_resolves_owner_repo(tmp_pa
     assert inspection["status"] == "aligned"
     assert inspection["owner_commit"] == RELEASED_OWNER_COMMIT
     assert inspection["findings"][0]["status"] == "aligned"
+    assert inspection["verify_command"] == "scripts/verify.sh family"
