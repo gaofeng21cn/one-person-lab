@@ -17,6 +17,7 @@ function read(relativePath: string) {
 test('repo-tracked verification command surfaces reference valid npm scripts and local test files', () => {
   const files = [
     'AGENTS.md',
+    'docs/references/family-shared-release-maintenance.md',
     'contracts/opl-gateway/phase-1-exit-activation-package.json',
     'contracts/opl-gateway/minimal-admitted-domain-federation-activation-package.json',
     'contracts/opl-gateway/phase-2-central-reference-sync-board.json',
@@ -98,6 +99,9 @@ test('scripts/verify.sh provides the canonical verification wrapper', () => {
   assert.match(verifyScript, /npm test/);
   assert.match(verifyScript, /npm run family:shared-release -- check/);
   assert.match(verifyScript, /python\/opl-harness-shared\/tests\/test_family_shared_release\.py/);
+  assert.match(verifyScript, /python\/opl-harness-shared\/tests\/test_editable_dependency_bootstrap\.py/);
+  assert.match(verifyScript, /python\/opl-harness-shared\/tests\/test_editable_consumer_bootstrap\.py/);
+  assert.match(verifyScript, /python\/opl-harness-shared\/tests\/test_editable_consumer_launcher\.py/);
   assert.match(verifyScript, /npm run test:meta/);
   assert.match(verifyScript, /npm run test:artifact/);
   assert.match(verifyScript, /npm run test:full/);

@@ -13,7 +13,8 @@ case "$lane" in
       pytest \
       python/opl-harness-shared/tests/test_family_shared_release.py \
       python/opl-harness-shared/tests/test_editable_dependency_bootstrap.py \
-      python/opl-harness-shared/tests/test_editable_consumer_bootstrap.py
+      python/opl-harness-shared/tests/test_editable_consumer_bootstrap.py \
+      python/opl-harness-shared/tests/test_editable_consumer_launcher.py
     ;;
   meta)
     npm run test:meta
