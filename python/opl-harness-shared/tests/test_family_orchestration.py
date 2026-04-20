@@ -3,6 +3,7 @@ from __future__ import annotations
 from opl_harness_shared.family_orchestration import (
     build_family_human_gate,
     build_family_human_gate_preview,
+    build_family_frontdesk_product_entry_orchestration,
     build_family_product_entry_orchestration,
     build_family_orchestration_companion,
     build_family_orchestration_template,
@@ -219,3 +220,60 @@ def test_build_family_product_entry_orchestration_materializes_action_graph_and_
         "checkpoint_locator_field": "continuation_snapshot.latest_managed_run_id",
     }
     assert payload["event_envelope_surface"]["ref"] == "/recommended_command"
+
+
+def test_build_family_frontdesk_product_entry_orchestration_materializes_canonical_frontdesk_graph() -> None:
+    payload = build_family_frontdesk_product_entry_orchestration(
+        graph_id="redcube_frontdoor_product_entry_graph",
+        target_domain_id="redcube_ai",
+        graph_kind="visual_deliverable_orchestration",
+        graph_version="2026-04-20",
+        frontdesk_title="Open RedCube frontdesk",
+        frontdesk_surface_kind="product_frontdesk",
+        direct_title="Start or continue the direct product loop",
+        direct_surface_kind="product_entry",
+        federated_title="Enter the same loop through internal OPL bridge",
+        federated_surface_kind="federated_product_entry",
+        progress_title="Inspect current product-entry progress",
+        progress_surface_kind="product_entry_session",
+        review_gate_id="redcube_operator_review_gate",
+        review_gate_title="RedCube operator review gate",
+        review_gate_status="requested",
+        review_surface={
+            "ref_kind": "json_pointer",
+            "ref": "/operator_loop_actions/continue_session",
+            "label": "continue session surface",
+        },
+        resume_surface_kind="product_entry_session",
+        session_locator_field="entry_session.entry_session_id",
+        checkpoint_locator_field="continuation_snapshot.latest_managed_run_id",
+        action_graph_ref={
+            "ref_kind": "json_pointer",
+            "ref": "/family_orchestration/action_graph",
+            "label": "redcube family action graph",
+        },
+    )
+
+    assert [node["node_id"] for node in payload["action_graph"]["nodes"]] == [
+        "step:open_frontdesk",
+        "step:continue_current_loop",
+        "step:opl_bridge_handoff",
+        "step:inspect_current_progress",
+    ]
+    assert [edge["on"] for edge in payload["action_graph"]["edges"]] == [
+        "start_direct",
+        "enter_via_opl_bridge",
+        "session_started",
+        "handoff_completed",
+    ]
+    assert payload["action_graph"]["checkpoint_policy"] == {
+        "mode": "explicit_nodes",
+        "checkpoint_nodes": [
+            "step:continue_current_loop",
+            "step:opl_bridge_handoff",
+            "step:inspect_current_progress",
+        ],
+    }
+    assert payload["human_gates"][0]["gate_id"] == "redcube_operator_review_gate"
+    assert payload["human_gates"][0]["review_surface"]["ref"] == "/operator_loop_actions/continue_session"
+    assert payload["resume_contract"]["session_locator_field"] == "entry_session.entry_session_id"
