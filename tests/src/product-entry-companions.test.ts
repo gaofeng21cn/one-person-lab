@@ -6,11 +6,14 @@ import type {
   FamilyProductFrontdeskSurface,
 } from '../../src/product-entry-companions.ts';
 import {
+  buildDeliveryIdentitySurface,
+  buildEntrySessionSurface,
   buildOperatorLoopActionCatalog,
   buildFamilyFrontdeskEntrySurfaces,
   buildFamilyProductFrontdesk,
   buildFamilyProductFrontdeskFromManifest,
   buildFamilyProductEntryManifest,
+  buildProductEntryContinuationSnapshot,
   buildProductEntryShellCatalog,
   buildProductEntryShellLinkedSurface,
   buildProductFrontdesk,
@@ -19,10 +22,79 @@ import {
   buildProductEntryReadiness,
   buildProductEntryResumeSurface,
   buildProductEntryStart,
+  buildReturnSurfaceContract,
+  buildRuntimeSessionContract,
   collectFamilyHumanGateIds,
   validateFamilyProductFrontdesk,
   validateFamilyProductEntryManifest,
 } from '../../src/product-entry-companions.ts';
+
+test('product entry session helpers normalize runtime, continuation, and delivery surfaces', () => {
+  const runtimeSessionContract = buildRuntimeSessionContract({
+    runtime_owner: 'upstream_hermes_agent',
+    expected_runtime_owner: 'upstream_hermes_agent',
+    default_adapter_surface: '@redcube/codex-cli-client',
+    default_session_mode: 'entry_session',
+  });
+  assert.deepEqual(runtimeSessionContract, {
+    runtime_owner: 'upstream_hermes_agent',
+    adapter_surface: '@redcube/codex-cli-client',
+    session_mode: 'entry_session',
+  });
+
+  const returnSurfaceContract = buildReturnSurfaceContract({
+    requested_surface_kind: 'managed_run',
+    expected_surface_kind: 'managed_run',
+    actual_surface_kind: 'managed_run',
+    durable_truth_surfaces: ['runtimeWatch', 'getReviewState'],
+  });
+  assert.deepEqual(returnSurfaceContract, {
+    requested_surface_kind: 'managed_run',
+    actual_surface_kind: 'managed_run',
+    durable_truth_surfaces: ['runtimeWatch', 'getReviewState'],
+  });
+
+  const continuationSnapshot = buildProductEntryContinuationSnapshot({
+    latest_managed_run_id: 'managed-run-1',
+    managed_progress_projection: {
+      stage: 'drafting',
+    },
+  });
+  assert.deepEqual(continuationSnapshot, {
+    latest_managed_run_id: 'managed-run-1',
+    latest_run_id: null,
+    managed_progress_projection: {
+      stage: 'drafting',
+    },
+    runtime_supervision: null,
+  });
+
+  const entrySession = buildEntrySessionSurface({
+    entry_session_id: 'entry-session-1',
+    session_file: '/tmp/entry-session-1.json',
+    runtime_owner: 'upstream_hermes_agent',
+    resumed_from_session: true,
+  });
+  assert.deepEqual(entrySession, {
+    entry_session_id: 'entry-session-1',
+    session_file: '/tmp/entry-session-1.json',
+    runtime_owner: 'upstream_hermes_agent',
+    resumed_from_session: true,
+  });
+
+  const deliveryIdentity = buildDeliveryIdentitySurface({
+    deliverable_family: 'ppt_deck',
+    topic_id: 'topic-1',
+    deliverable_id: 'deliverable-1',
+    profile_id: 'profile-1',
+  });
+  assert.deepEqual(deliveryIdentity, {
+    deliverable_family: 'ppt_deck',
+    topic_id: 'topic-1',
+    deliverable_id: 'deliverable-1',
+    profile_id: 'profile-1',
+  });
+});
 
 test('product entry shell scaffold helpers normalize shell surfaces and operator loop actions', () => {
   const productEntryShell = buildProductEntryShellCatalog({

@@ -197,6 +197,83 @@ export type OperatorLoopActionSurface = JsonRecord & {
   requires: string[];
 };
 
+export interface BuildRuntimeSessionContractInput {
+  runtime_owner: string;
+  expected_runtime_owner?: string | null;
+  adapter_surface?: string | null;
+  default_adapter_surface?: string | null;
+  session_mode?: string | null;
+  default_session_mode?: string | null;
+  extra_payload?: JsonRecord;
+}
+
+export type RuntimeSessionContractSurface = JsonRecord & {
+  runtime_owner: string;
+  adapter_surface?: string;
+  session_mode?: string;
+};
+
+export interface BuildReturnSurfaceContractInput {
+  requested_surface_kind: string;
+  expected_surface_kind?: string | null;
+  actual_surface_kind?: string | null;
+  durable_truth_surfaces?: string[] | null;
+  extra_payload?: JsonRecord;
+}
+
+export type ReturnSurfaceContractSurface = JsonRecord & {
+  requested_surface_kind: string;
+  actual_surface_kind?: string;
+  durable_truth_surfaces?: string[];
+};
+
+export interface BuildProductEntryContinuationSnapshotInput {
+  latest_managed_run_id?: string | null;
+  latest_run_id?: string | null;
+  managed_progress_projection?: JsonRecord | null;
+  runtime_supervision?: JsonRecord | null;
+  extra_payload?: JsonRecord;
+}
+
+export type ProductEntryContinuationSnapshotSurface = JsonRecord & {
+  latest_managed_run_id: string | null;
+  latest_run_id: string | null;
+  managed_progress_projection: JsonRecord | null;
+  runtime_supervision: JsonRecord | null;
+};
+
+export interface BuildEntrySessionSurfaceInput {
+  entry_session_id: string;
+  session_file: string;
+  runtime_owner: string;
+  resumed_from_session?: boolean | null;
+  created_deliverable?: boolean | null;
+  extra_payload?: JsonRecord;
+}
+
+export type EntrySessionSurface = JsonRecord & {
+  entry_session_id: string;
+  session_file: string;
+  runtime_owner: string;
+  resumed_from_session?: boolean;
+  created_deliverable?: boolean;
+};
+
+export interface BuildDeliveryIdentitySurfaceInput {
+  deliverable_family: string;
+  topic_id: string;
+  deliverable_id: string;
+  profile_id?: string | null;
+  extra_payload?: JsonRecord;
+}
+
+export type DeliveryIdentitySurface = JsonRecord & {
+  deliverable_family: string;
+  topic_id: string;
+  deliverable_id: string;
+  profile_id?: string;
+};
+
 export interface BuildFamilyProductEntryManifestInput {
   manifest_kind: string;
   target_domain_id: string;
@@ -743,6 +820,130 @@ export function buildOperatorLoopActionCatalog(
       buildOperatorLoopAction(normalizeOperatorLoopAction(value, `operator_loop_actions.${key}`)),
     ]),
   );
+}
+
+export function buildRuntimeSessionContract(
+  input: BuildRuntimeSessionContractInput,
+): RuntimeSessionContractSurface {
+  const runtimeOwner = requireString(input.runtime_owner, 'runtime_owner');
+  const expectedRuntimeOwner = optionalString(input.expected_runtime_owner);
+  if (expectedRuntimeOwner && runtimeOwner !== expectedRuntimeOwner) {
+    throw new Error(
+      `product entry companion runtime_owner 必须是 ${expectedRuntimeOwner}，当前为 ${runtimeOwner}`,
+    );
+  }
+
+  const payload: JsonRecord = {
+    runtime_owner: runtimeOwner,
+  };
+  const adapterSurface = optionalString(input.adapter_surface)
+    || optionalString(input.default_adapter_surface);
+  if (adapterSurface) {
+    payload.adapter_surface = adapterSurface;
+  }
+  const sessionMode = optionalString(input.session_mode)
+    || optionalString(input.default_session_mode);
+  if (sessionMode) {
+    payload.session_mode = sessionMode;
+  }
+  return mergeExtraPayload(
+    payload,
+    input.extra_payload,
+    'runtime session contract',
+  ) as RuntimeSessionContractSurface;
+}
+
+export function buildReturnSurfaceContract(
+  input: BuildReturnSurfaceContractInput,
+): ReturnSurfaceContractSurface {
+  const requestedSurfaceKind = requireString(
+    input.requested_surface_kind,
+    'requested_surface_kind',
+  );
+  const expectedSurfaceKind = optionalString(input.expected_surface_kind);
+  if (expectedSurfaceKind && requestedSurfaceKind !== expectedSurfaceKind) {
+    throw new Error(
+      `product entry companion requested_surface_kind 必须是 ${expectedSurfaceKind}，当前为 ${requestedSurfaceKind}`,
+    );
+  }
+
+  const payload: JsonRecord = {
+    requested_surface_kind: requestedSurfaceKind,
+  };
+  const actualSurfaceKind = optionalString(input.actual_surface_kind);
+  if (actualSurfaceKind) {
+    payload.actual_surface_kind = actualSurfaceKind;
+  }
+  const durableTruthSurfaces = input.durable_truth_surfaces === undefined || input.durable_truth_surfaces === null
+    ? null
+    : readStringList(input.durable_truth_surfaces, 'durable_truth_surfaces');
+  if (durableTruthSurfaces) {
+    payload.durable_truth_surfaces = durableTruthSurfaces;
+  }
+  return mergeExtraPayload(
+    payload,
+    input.extra_payload,
+    'return surface contract',
+  ) as ReturnSurfaceContractSurface;
+}
+
+export function buildProductEntryContinuationSnapshot(
+  input: BuildProductEntryContinuationSnapshotInput,
+): ProductEntryContinuationSnapshotSurface {
+  return mergeExtraPayload(
+    {
+      latest_managed_run_id: optionalString(input.latest_managed_run_id) ?? null,
+      latest_run_id: optionalString(input.latest_run_id) ?? null,
+      managed_progress_projection: input.managed_progress_projection
+        ? cloneRecord(input.managed_progress_projection, 'managed_progress_projection')
+        : null,
+      runtime_supervision: input.runtime_supervision
+        ? cloneRecord(input.runtime_supervision, 'runtime_supervision')
+        : null,
+    },
+    input.extra_payload,
+    'product entry continuation snapshot',
+  ) as ProductEntryContinuationSnapshotSurface;
+}
+
+export function buildEntrySessionSurface(
+  input: BuildEntrySessionSurfaceInput,
+): EntrySessionSurface {
+  const payload: JsonRecord = {
+    entry_session_id: requireString(input.entry_session_id, 'entry_session_id'),
+    session_file: requireString(input.session_file, 'session_file'),
+    runtime_owner: requireString(input.runtime_owner, 'runtime_owner'),
+  };
+  if (input.resumed_from_session !== undefined && input.resumed_from_session !== null) {
+    payload.resumed_from_session = requireBoolean(input.resumed_from_session, 'resumed_from_session');
+  }
+  if (input.created_deliverable !== undefined && input.created_deliverable !== null) {
+    payload.created_deliverable = requireBoolean(input.created_deliverable, 'created_deliverable');
+  }
+  return mergeExtraPayload(
+    payload,
+    input.extra_payload,
+    'entry session surface',
+  ) as EntrySessionSurface;
+}
+
+export function buildDeliveryIdentitySurface(
+  input: BuildDeliveryIdentitySurfaceInput,
+): DeliveryIdentitySurface {
+  const payload: JsonRecord = {
+    deliverable_family: requireString(input.deliverable_family, 'deliverable_family'),
+    topic_id: requireString(input.topic_id, 'topic_id'),
+    deliverable_id: requireString(input.deliverable_id, 'deliverable_id'),
+  };
+  const profileId = optionalString(input.profile_id);
+  if (profileId) {
+    payload.profile_id = profileId;
+  }
+  return mergeExtraPayload(
+    payload,
+    input.extra_payload,
+    'delivery identity surface',
+  ) as DeliveryIdentitySurface;
 }
 
 function validateSurfaceKindRecord(
