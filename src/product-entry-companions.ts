@@ -149,6 +149,54 @@ export interface BuildFamilyFrontdeskEntrySurfacesInput {
   shared_handoff?: FamilySharedHandoffSurface | JsonRecord | null;
 }
 
+export interface BuildProductEntryShellSurfaceInput {
+  command: string;
+  surface_kind: string;
+  summary?: string | null;
+  purpose?: string | null;
+  command_template?: string | null;
+  requires?: string[] | null;
+  extra_payload?: JsonRecord;
+}
+
+export type ProductEntryShellSurface = JsonRecord & {
+  command: string;
+  surface_kind: string;
+  summary?: string;
+  purpose?: string;
+  command_template?: string;
+  requires?: string[];
+};
+
+export interface BuildProductEntryShellLinkedSurfaceInput {
+  shell_key: string;
+  shell_surface: BuildProductEntryShellSurfaceInput | JsonRecord;
+  summary: string;
+  extra_payload?: JsonRecord;
+}
+
+export type ProductEntryShellLinkedSurface = JsonRecord & {
+  shell_key: string;
+  command: string;
+  surface_kind: string;
+  summary: string;
+};
+
+export interface BuildOperatorLoopActionInput {
+  command: string;
+  surface_kind: string;
+  summary: string;
+  requires: string[];
+  extra_payload?: JsonRecord;
+}
+
+export type OperatorLoopActionSurface = JsonRecord & {
+  command: string;
+  surface_kind: string;
+  summary: string;
+  requires: string[];
+};
+
 export interface BuildFamilyProductEntryManifestInput {
   manifest_kind: string;
   target_domain_id: string;
@@ -456,6 +504,49 @@ function normalizeStartResumeSurface(value: unknown, field: string): ProductEntr
   return normalized;
 }
 
+function normalizeProductEntryShellSurface(value: unknown, field: string): ProductEntryShellSurface {
+  const payload = requireRecord(value, field);
+  const normalized: ProductEntryShellSurface = {
+    command: requireString(payload.command, `${field}.command`),
+    surface_kind: requireString(payload.surface_kind, `${field}.surface_kind`),
+  };
+  const summary = readOptionalStringProperty(payload, 'summary', `${field}.summary`);
+  if (summary !== undefined) {
+    normalized.summary = summary;
+  }
+  const purpose = readOptionalStringProperty(payload, 'purpose', `${field}.purpose`);
+  if (purpose !== undefined) {
+    normalized.purpose = purpose;
+  }
+  const commandTemplate = readOptionalStringProperty(
+    payload,
+    'command_template',
+    `${field}.command_template`,
+  );
+  if (commandTemplate !== undefined) {
+    normalized.command_template = commandTemplate;
+  }
+  const requires = optionalStringList(payload.requires, `${field}.requires`);
+  if (requires !== null) {
+    normalized.requires = requires;
+  }
+  return {
+    ...payload,
+    ...normalized,
+  };
+}
+
+function normalizeOperatorLoopAction(value: unknown, field: string): OperatorLoopActionSurface {
+  const payload = requireRecord(value, field);
+  return {
+    ...payload,
+    command: requireString(payload.command, `${field}.command`),
+    surface_kind: requireString(payload.surface_kind, `${field}.surface_kind`),
+    summary: requireString(payload.summary, `${field}.summary`),
+    requires: readStringList(payload.requires, `${field}.requires`),
+  };
+}
+
 function cloneRecord(value: unknown, field: string): JsonRecord {
   return { ...requireRecord(value, field) };
 }
@@ -563,6 +654,95 @@ export function buildFamilyFrontdeskEntrySurfaces(
   }
 
   return validateFamilyFrontdeskEntrySurfaces(payload, 'entry_surfaces');
+}
+
+export function buildProductEntryShellSurface(
+  input: BuildProductEntryShellSurfaceInput,
+): ProductEntryShellSurface {
+  const payload: JsonRecord = {
+    command: requireString(input.command, 'command'),
+    surface_kind: requireString(input.surface_kind, 'surface_kind'),
+  };
+  const summary = optionalString(input.summary);
+  if (summary) {
+    payload.summary = summary;
+  }
+  const purpose = optionalString(input.purpose);
+  if (purpose) {
+    payload.purpose = purpose;
+  }
+  const commandTemplate = optionalString(input.command_template);
+  if (commandTemplate) {
+    payload.command_template = commandTemplate;
+  }
+  const requires = input.requires === undefined || input.requires === null
+    ? null
+    : readStringList(input.requires, 'requires');
+  if (requires) {
+    payload.requires = requires;
+  }
+  return normalizeProductEntryShellSurface(
+    mergeExtraPayload(payload, input.extra_payload, 'product entry shell surface'),
+    'product_entry_shell_surface',
+  );
+}
+
+export function buildProductEntryShellCatalog(
+  input: Record<string, BuildProductEntryShellSurfaceInput | JsonRecord>,
+): Record<string, ProductEntryShellSurface> {
+  return Object.fromEntries(
+    Object.entries(input).map(([key, value]) => [
+      key,
+      buildProductEntryShellSurface(
+        normalizeProductEntryShellSurface(value, `product_entry_shell.${key}`),
+      ),
+    ]),
+  );
+}
+
+export function buildProductEntryShellLinkedSurface(
+  input: BuildProductEntryShellLinkedSurfaceInput,
+): ProductEntryShellLinkedSurface {
+  const shellSurface = normalizeProductEntryShellSurface(input.shell_surface, 'shell_surface');
+  return mergeExtraPayload(
+    {
+      shell_key: requireString(input.shell_key, 'shell_key'),
+      command: shellSurface.command,
+      surface_kind: shellSurface.surface_kind,
+      summary: requireString(input.summary, 'summary'),
+    },
+    input.extra_payload,
+    'product entry shell linked surface',
+  ) as ProductEntryShellLinkedSurface;
+}
+
+export function buildOperatorLoopAction(
+  input: BuildOperatorLoopActionInput,
+): OperatorLoopActionSurface {
+  return normalizeOperatorLoopAction(
+    mergeExtraPayload(
+      {
+        command: requireString(input.command, 'command'),
+        surface_kind: requireString(input.surface_kind, 'surface_kind'),
+        summary: requireString(input.summary, 'summary'),
+        requires: readStringList(input.requires, 'requires'),
+      },
+      input.extra_payload,
+      'operator loop action',
+    ),
+    'operator_loop_action',
+  );
+}
+
+export function buildOperatorLoopActionCatalog(
+  input: Record<string, BuildOperatorLoopActionInput | JsonRecord>,
+): Record<string, OperatorLoopActionSurface> {
+  return Object.fromEntries(
+    Object.entries(input).map(([key, value]) => [
+      key,
+      buildOperatorLoopAction(normalizeOperatorLoopAction(value, `operator_loop_actions.${key}`)),
+    ]),
+  );
 }
 
 function validateSurfaceKindRecord(

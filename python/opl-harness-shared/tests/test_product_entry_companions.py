@@ -3,10 +3,13 @@ from __future__ import annotations
 from copy import deepcopy
 
 from opl_harness_shared.product_entry_companions import (
+    build_operator_loop_action_catalog,
     build_family_frontdesk_entry_surfaces,
     build_family_product_frontdesk,
     build_family_product_frontdesk_from_manifest,
     build_family_product_entry_manifest,
+    build_product_entry_shell_catalog,
+    build_product_entry_shell_linked_surface,
     build_product_entry_start,
     build_product_entry_overview,
     build_product_entry_quickstart,
@@ -17,6 +20,68 @@ from opl_harness_shared.product_entry_companions import (
     validate_family_product_frontdesk,
     validate_family_product_entry_manifest,
 )
+
+
+def test_product_entry_shell_scaffold_helpers_normalize_shell_surfaces_and_operator_loop_actions() -> None:
+    product_entry_shell = build_product_entry_shell_catalog(
+        {
+            "frontdesk": {
+                "command": "uv run python -m med_autogrant product-frontdesk",
+                "surface_kind": "product_frontdesk",
+                "purpose": "Open the direct frontdoor.",
+                "command_template": "uv run python -m med_autogrant product-frontdesk --input <workspace>",
+            },
+            "session": {
+                "command": "uv run python -m med_autogrant grant-user-loop",
+                "surface_kind": "grant_user_loop",
+                "command_template": (
+                    "uv run python -m med_autogrant grant-user-loop "
+                    "--input <workspace> --task-intent <intent>"
+                ),
+            },
+        }
+    )
+
+    assert product_entry_shell["frontdesk"]["command"] == "uv run python -m med_autogrant product-frontdesk"
+    assert product_entry_shell["frontdesk"]["purpose"] == "Open the direct frontdoor."
+    assert (
+        product_entry_shell["session"]["command_template"]
+        == "uv run python -m med_autogrant grant-user-loop --input <workspace> --task-intent <intent>"
+    )
+
+    frontdesk_surface = build_product_entry_shell_linked_surface(
+        shell_key="frontdesk",
+        shell_surface=product_entry_shell["frontdesk"],
+        summary="Open the direct frontdoor.",
+        extra_payload={"lane": "frontdesk"},
+    )
+    assert frontdesk_surface == {
+        "shell_key": "frontdesk",
+        "command": "uv run python -m med_autogrant product-frontdesk",
+        "surface_kind": "product_frontdesk",
+        "summary": "Open the direct frontdoor.",
+        "lane": "frontdesk",
+    }
+
+    operator_loop_actions = build_operator_loop_action_catalog(
+        {
+            "continue_loop": {
+                "command": (
+                    "uv run python -m med_autogrant grant-user-loop "
+                    "--input <workspace> --task-intent <intent>"
+                ),
+                "surface_kind": "grant_user_loop",
+                "summary": "Continue the current authoring loop.",
+                "requires": ["task_intent"],
+            }
+        }
+    )
+    assert operator_loop_actions["continue_loop"] == {
+        "command": "uv run python -m med_autogrant grant-user-loop --input <workspace> --task-intent <intent>",
+        "surface_kind": "grant_user_loop",
+        "summary": "Continue the current authoring loop.",
+        "requires": ["task_intent"],
+    }
 
 
 def test_collect_family_human_gate_ids_and_build_helpers() -> None:

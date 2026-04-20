@@ -136,6 +136,43 @@ def _normalize_start_resume_surface(value: object, field: str) -> dict[str, str]
     return normalized
 
 
+def _normalize_product_entry_shell_surface(value: object, field: str) -> dict[str, Any]:
+    payload = _require_mapping(value, field)
+    normalized: dict[str, Any] = {
+        **dict(payload),
+        "command": _require_string(payload.get("command"), f"{field}.command"),
+        "surface_kind": _require_string(payload.get("surface_kind"), f"{field}.surface_kind"),
+    }
+    summary = _read_optional_string_field(payload, "summary", f"{field}.summary")
+    if summary is not None:
+        normalized["summary"] = summary
+    purpose = _read_optional_string_field(payload, "purpose", f"{field}.purpose")
+    if purpose is not None:
+        normalized["purpose"] = purpose
+    command_template = _read_optional_string_field(
+        payload,
+        "command_template",
+        f"{field}.command_template",
+    )
+    if command_template is not None:
+        normalized["command_template"] = command_template
+    requires = _optional_string_list(payload.get("requires"), f"{field}.requires")
+    if requires is not None:
+        normalized["requires"] = requires
+    return normalized
+
+
+def _normalize_operator_loop_action(value: object, field: str) -> dict[str, Any]:
+    payload = _require_mapping(value, field)
+    return {
+        **dict(payload),
+        "command": _require_string(payload.get("command"), f"{field}.command"),
+        "surface_kind": _require_string(payload.get("surface_kind"), f"{field}.surface_kind"),
+        "summary": _require_string(payload.get("summary"), f"{field}.summary"),
+        "requires": _require_string_list(payload.get("requires"), f"{field}.requires"),
+    }
+
+
 def _clone_mapping(value: object, field: str) -> dict[str, Any]:
     return dict(_require_mapping(value, field))
 
@@ -234,6 +271,123 @@ def build_family_frontdesk_entry_surfaces(
                 )
 
     return validate_family_frontdesk_entry_surfaces(payload, "entry_surfaces")
+
+
+def build_product_entry_shell_surface(
+    *,
+    command: str,
+    surface_kind: str,
+    summary: str | None = None,
+    purpose: str | None = None,
+    command_template: str | None = None,
+    requires: list[str] | None = None,
+    extra_payload: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "command": _require_string(command, "command"),
+        "surface_kind": _require_string(surface_kind, "surface_kind"),
+    }
+    if _non_empty_text(summary) is not None:
+        payload["summary"] = _require_string(summary, "summary")
+    if _non_empty_text(purpose) is not None:
+        payload["purpose"] = _require_string(purpose, "purpose")
+    if _non_empty_text(command_template) is not None:
+        payload["command_template"] = _require_string(command_template, "command_template")
+    if requires is not None:
+        payload["requires"] = _require_string_list(requires, "requires")
+    return _normalize_product_entry_shell_surface(
+        _merge_extra_payload(payload, extra_payload, surface_kind="product entry shell surface"),
+        "product_entry_shell_surface",
+    )
+
+
+def build_product_entry_shell_catalog(
+    shell_surfaces: Mapping[str, Any],
+) -> dict[str, Any]:
+    payload = _clone_mapping(shell_surfaces, "product_entry_shell")
+    catalog: dict[str, Any] = {}
+    for key, value in payload.items():
+        normalized = _normalize_product_entry_shell_surface(value, f"product_entry_shell.{key}")
+        catalog[key] = build_product_entry_shell_surface(
+            command=normalized["command"],
+            surface_kind=normalized["surface_kind"],
+            summary=normalized.get("summary"),
+            purpose=normalized.get("purpose"),
+            command_template=normalized.get("command_template"),
+            requires=normalized.get("requires"),
+            extra_payload={
+                extra_key: extra_value
+                for extra_key, extra_value in normalized.items()
+                if extra_key not in {"command", "surface_kind", "summary", "purpose", "command_template", "requires"}
+            }
+            or None,
+        )
+    return catalog
+
+
+def build_product_entry_shell_linked_surface(
+    *,
+    shell_key: str,
+    shell_surface: Mapping[str, Any],
+    summary: str,
+    extra_payload: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    normalized_shell_surface = _normalize_product_entry_shell_surface(shell_surface, "shell_surface")
+    return _merge_extra_payload(
+        {
+            "shell_key": _require_string(shell_key, "shell_key"),
+            "command": normalized_shell_surface["command"],
+            "surface_kind": normalized_shell_surface["surface_kind"],
+            "summary": _require_string(summary, "summary"),
+        },
+        extra_payload,
+        surface_kind="product entry shell linked surface",
+    )
+
+
+def build_operator_loop_action(
+    *,
+    command: str,
+    surface_kind: str,
+    summary: str,
+    requires: list[str],
+    extra_payload: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    return _normalize_operator_loop_action(
+        _merge_extra_payload(
+            {
+                "command": _require_string(command, "command"),
+                "surface_kind": _require_string(surface_kind, "surface_kind"),
+                "summary": _require_string(summary, "summary"),
+                "requires": _require_string_list(requires, "requires"),
+            },
+            extra_payload,
+            surface_kind="operator loop action",
+        ),
+        "operator_loop_action",
+    )
+
+
+def build_operator_loop_action_catalog(
+    actions: Mapping[str, Any],
+) -> dict[str, Any]:
+    payload = _clone_mapping(actions, "operator_loop_actions")
+    catalog: dict[str, Any] = {}
+    for key, value in payload.items():
+        normalized = _normalize_operator_loop_action(value, f"operator_loop_actions.{key}")
+        catalog[key] = build_operator_loop_action(
+            command=normalized["command"],
+            surface_kind=normalized["surface_kind"],
+            summary=normalized["summary"],
+            requires=normalized["requires"],
+            extra_payload={
+                extra_key: extra_value
+                for extra_key, extra_value in normalized.items()
+                if extra_key not in {"command", "surface_kind", "summary", "requires"}
+            }
+            or None,
+        )
+    return catalog
 
 
 def _validate_surface_kind_mapping(value: object, field: str, expected_surface_kind: str) -> dict[str, Any]:
