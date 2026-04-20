@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 import { execFileSync } from 'node:child_process';
@@ -11,6 +12,8 @@ const PYTHON_LOCK_PATTERN = /https:\/\/github\.com\/gaofeng21cn\/one-person-lab\
 const JS_GIT_PATTERN = /git\+https:\/\/github\.com\/gaofeng21cn\/one-person-lab\.git#([0-9a-f]{40})/g;
 const CONTRACT_PYTHON_PACKAGE_PATTERN = /git\+https:\/\/github\.com\/gaofeng21cn\/one-person-lab\.git@([0-9a-f]{40})#subdirectory=python\/opl-harness-shared/g;
 const CONTRACT_JS_PACKAGE_PATTERN = /git\+https:\/\/github\.com\/gaofeng21cn\/one-person-lab\.git#([0-9a-f]{40})/g;
+const SHARED_PYTHON_GIT_LOCATOR_PATTERN = /^git\+(.+)@([0-9a-f]{40})#subdirectory=python\/opl-harness-shared$/;
+const SHARED_JS_GIT_LOCATOR_PATTERN = /^git\+(.+)#([0-9a-f]{40})$/;
 
 function repoRootFromImportMeta() {
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -74,24 +77,123 @@ function requireOwnerCommit(ownerCommit, context = 'owner_commit') {
   return normalizedCommit;
 }
 
+export function parseSharedPackageLocator(locator, context = 'shared package locator') {
+  const normalizedLocator = String(locator ?? '').trim();
+  let match = normalizedLocator.match(SHARED_PYTHON_GIT_LOCATOR_PATTERN);
+  if (match) {
+    return {
+      remote_url: match[1],
+      owner_commit: requireOwnerCommit(match[2], `${context} owner commit`),
+      package_kind: 'python',
+    };
+  }
+  match = normalizedLocator.match(SHARED_JS_GIT_LOCATOR_PATTERN);
+  if (match) {
+    return {
+      remote_url: match[1],
+      owner_commit: requireOwnerCommit(match[2], `${context} owner commit`),
+      package_kind: 'js',
+    };
+  }
+  throw new Error(`unsupported ${context}: ${locator}`);
+}
+
+export function collectSharedOwnerReleaseRemotes({
+  contract,
+  ownerCommit = contract?.owner_commit,
+} = {}) {
+  const expectedOwnerCommit = requireOwnerCommit(ownerCommit, 'owner_commit');
+  const locators = [
+    contract?.packages?.python?.git_locator,
+    contract?.packages?.js?.git_locator,
+  ].filter((value) => typeof value === 'string' && value.trim() !== '');
+  if (locators.length === 0) {
+    throw new Error('shared owner release contract must declare at least one package git locator');
+  }
+  return unique(locators.map((locator, index) => {
+    const parsed = parseSharedPackageLocator(locator, `contract.packages[${index}]`);
+    if (parsed.owner_commit !== expectedOwnerCommit) {
+      throw new Error(
+        `shared owner release contract package locator is not pinned to owner_commit ${expectedOwnerCommit}: ${locator}`,
+      );
+    }
+    return parsed.remote_url;
+  }));
+}
+
+function formatExecError(error) {
+  if (!error || typeof error !== 'object') {
+    return '';
+  }
+  const stderr = typeof error.stderr === 'string'
+    ? error.stderr.trim()
+    : Buffer.isBuffer(error.stderr)
+    ? error.stderr.toString('utf8').trim()
+    : '';
+  if (stderr) {
+    return stderr;
+  }
+  const message = typeof error.message === 'string' ? error.message.trim() : '';
+  return message;
+}
+
+function assertRemoteOwnerCommitReachable({
+  remoteUrl,
+  ownerCommit,
+}) {
+  const probeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-release-remote-probe-'));
+  try {
+    execFileSync('git', ['init', '--bare'], {
+      cwd: probeRoot,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    execFileSync(
+      'git',
+      ['-C', probeRoot, 'fetch', '--force', '--update-head-ok', remoteUrl, `+${ownerCommit}:refs/commit/${ownerCommit}`],
+      {
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      },
+    );
+  } catch (error) {
+    const detail = formatExecError(error);
+    throw new Error(
+      `owner commit ${ownerCommit} is not reachable from shared package remote ${remoteUrl}; push the owner repo first before release${detail ? ` (${detail})` : ''}`,
+    );
+  } finally {
+    fs.rmSync(probeRoot, { recursive: true, force: true });
+  }
+}
+
+export function assertPublishedOwnerCommitReachable({
+  contract,
+  ownerCommit = contract?.owner_commit,
+} = {}) {
+  const expectedOwnerCommit = requireOwnerCommit(ownerCommit, 'owner_commit');
+  const remotes = collectSharedOwnerReleaseRemotes({
+    contract,
+    ownerCommit: expectedOwnerCommit,
+  });
+  for (const remoteUrl of remotes) {
+    assertRemoteOwnerCommitReachable({
+      remoteUrl,
+      ownerCommit: expectedOwnerCommit,
+    });
+  }
+}
+
 function rewriteContractPackageLocator(locator, ownerCommit) {
   if (typeof locator !== 'string') {
     return locator;
   }
-  if (CONTRACT_PYTHON_PACKAGE_PATTERN.test(locator)) {
-    CONTRACT_PYTHON_PACKAGE_PATTERN.lastIndex = 0;
-    return locator.replace(CONTRACT_PYTHON_PACKAGE_PATTERN, () => (
-      `git+https://github.com/gaofeng21cn/one-person-lab.git@${ownerCommit}#subdirectory=python/opl-harness-shared`
-    ));
+  const parsed = parseSharedPackageLocator(locator);
+  if (parsed.package_kind === 'python') {
+    return `git+${parsed.remote_url}@${ownerCommit}#subdirectory=python/opl-harness-shared`;
   }
-  CONTRACT_PYTHON_PACKAGE_PATTERN.lastIndex = 0;
-  if (CONTRACT_JS_PACKAGE_PATTERN.test(locator)) {
-    CONTRACT_JS_PACKAGE_PATTERN.lastIndex = 0;
-    return locator.replace(CONTRACT_JS_PACKAGE_PATTERN, () => (
-      `git+https://github.com/gaofeng21cn/one-person-lab.git#${ownerCommit}`
-    ));
+  if (parsed.package_kind === 'js') {
+    return `git+${parsed.remote_url}#${ownerCommit}`;
   }
-  CONTRACT_JS_PACKAGE_PATTERN.lastIndex = 0;
   return locator;
 }
 
@@ -377,6 +479,7 @@ export function releaseFamilySharedPins({
   familyRoot = resolveDefaultFamilyRoot({ repoRoot }),
   repoOverrides = [],
   ownerCommit,
+  validatePublishedOwnerCommit = assertPublishedOwnerCommitReachable,
 } = {}) {
   const contractPath = path.join(repoRoot, SHARED_OWNER_RELEASE_CONTRACT_PATH);
   const nextOwnerCommit = resolveOwnerCommitForRelease({ repoRoot, ownerCommit });
@@ -384,6 +487,10 @@ export function releaseFamilySharedPins({
     loadSharedOwnerReleaseContract({ repoRoot }),
     nextOwnerCommit,
   );
+  validatePublishedOwnerCommit({
+    contract: nextContract,
+    ownerCommit: nextOwnerCommit,
+  });
   writeJson(contractPath, nextContract);
   const syncResults = syncFamilySharedPins({
     contract: nextContract,
@@ -435,7 +542,13 @@ function parseArgs(argv, { repoRoot = repoRootFromImportMeta() } = {}) {
   };
 }
 
-export function runFamilySharedReleaseCli(argv, { repoRoot = repoRootFromImportMeta() } = {}) {
+export function runFamilySharedReleaseCli(
+  argv,
+  {
+    repoRoot = repoRootFromImportMeta(),
+    validatePublishedOwnerCommit = assertPublishedOwnerCommitReachable,
+  } = {},
+) {
   const parsed = parseArgs(argv, { repoRoot });
   const contract = loadSharedOwnerReleaseContract({ repoRoot });
   if (parsed.command === 'check') {
@@ -471,6 +584,7 @@ export function runFamilySharedReleaseCli(argv, { repoRoot = repoRootFromImportM
       familyRoot: parsed.familyRoot,
       repoOverrides: parsed.repoOverrides,
       ownerCommit: parsed.ownerCommit,
+      validatePublishedOwnerCommit,
     });
     return {
       exit_code: releaseResult.summary.ok ? 0 : 1,
