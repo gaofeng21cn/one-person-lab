@@ -2761,9 +2761,30 @@ exit 1
       frontdesk_initialize: {
         surface_id: string;
         overall_state: string;
+        setup_flow: {
+          is_first_run: boolean;
+          phase: string;
+          ready_to_launch: boolean;
+          progress: {
+            required_completed_count: number;
+            required_total_count: number;
+          };
+          blocking_items: Array<{
+            item_id: string;
+          }>;
+        };
         core_engines: {
           codex: { installed: boolean };
           hermes: { installed: boolean };
+        };
+        checklist: Array<{
+          item_id: string;
+          required: boolean;
+          blocking: boolean;
+        }>;
+        module_summary: {
+          installed_modules_count: number;
+          total_modules_count: number;
         };
         domain_modules: {
           modules: Array<{ module_id: string }>;
@@ -2791,14 +2812,42 @@ exit 1
         recommended_next_action: {
           action_id: string;
           label: string;
+          method: string;
+          request_fields: string[];
         };
       };
     };
 
     assert.equal(output.frontdesk_initialize.surface_id, 'opl_frontdesk_initialize');
     assert.match(output.frontdesk_initialize.overall_state, /ready|attention_needed/);
+    assert.equal(output.frontdesk_initialize.setup_flow.is_first_run, false);
+    assert.equal(output.frontdesk_initialize.setup_flow.phase, 'review');
+    assert.equal(output.frontdesk_initialize.setup_flow.ready_to_launch, true);
+    assert.equal(
+      output.frontdesk_initialize.setup_flow.progress.required_completed_count,
+      output.frontdesk_initialize.setup_flow.progress.required_total_count,
+    );
+    assert.equal(output.frontdesk_initialize.setup_flow.blocking_items.length, 0);
     assert.equal(output.frontdesk_initialize.core_engines.codex.installed, true);
     assert.equal(output.frontdesk_initialize.core_engines.hermes.installed, true);
+    assert.equal(
+      output.frontdesk_initialize.checklist.some((entry) => entry.item_id === 'workspace_root' && entry.required),
+      true,
+    );
+    assert.equal(
+      output.frontdesk_initialize.checklist.some((entry) => entry.item_id === 'codex' && entry.required),
+      true,
+    );
+    assert.equal(
+      output.frontdesk_initialize.checklist.some((entry) => entry.item_id === 'domain_modules' && !entry.required),
+      true,
+    );
+    assert.equal(output.frontdesk_initialize.module_summary.total_modules_count >= 4, true);
+    assert.equal(
+      output.frontdesk_initialize.module_summary.total_modules_count,
+      output.frontdesk_initialize.domain_modules.modules.length,
+    );
+    assert.equal(output.frontdesk_initialize.module_summary.installed_modules_count >= 0, true);
     assert.equal(output.frontdesk_initialize.domain_modules.modules.length >= 4, true);
     assert.equal(output.frontdesk_initialize.settings.interaction_mode, 'codex');
     assert.equal(output.frontdesk_initialize.settings.execution_mode, 'codex');
@@ -2812,12 +2861,83 @@ exit 1
     assert.match(output.frontdesk_initialize.endpoints.frontdesk_system_action, /\/api\/frontdesk\/system\/action$/);
     assert.ok(output.frontdesk_initialize.recommended_next_action.action_id.length > 0);
     assert.ok(output.frontdesk_initialize.recommended_next_action.label.length > 0);
+    assert.equal(output.frontdesk_initialize.recommended_next_action.method, 'GET');
+    assert.deepEqual(output.frontdesk_initialize.recommended_next_action.request_fields, []);
   } finally {
     fs.rmSync(codexConfigFixture.codexHome, { recursive: true, force: true });
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(hermesFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('frontdesk initialize exposes first-run blocker metadata and actionable payload hints', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-initialize-first-run-home-'));
+  const stateDir = path.join(homeRoot, 'opl-state');
+
+  try {
+    const output = runCli(
+      ['frontdesk', 'initialize'],
+      {
+        HOME: homeRoot,
+        OPL_FRONTDESK_STATE_DIR: stateDir,
+        PATH: '/usr/bin:/bin',
+      },
+    ) as {
+      frontdesk_initialize: {
+        setup_flow: {
+          is_first_run: boolean;
+          phase: string;
+          ready_to_launch: boolean;
+          blocking_items: Array<{
+            item_id: string;
+          }>;
+        };
+        checklist: Array<{
+          item_id: string;
+          required: boolean;
+          blocking: boolean;
+          action: {
+            action_id: string;
+            method: string;
+            request_fields: string[];
+          } | null;
+        }>;
+        recommended_next_action: {
+          action_id: string;
+          method: string;
+          request_fields: string[];
+        };
+      };
+    };
+
+    assert.equal(output.frontdesk_initialize.setup_flow.is_first_run, true);
+    assert.equal(output.frontdesk_initialize.setup_flow.phase, 'workspace_root');
+    assert.equal(output.frontdesk_initialize.setup_flow.ready_to_launch, false);
+    assert.deepEqual(
+      output.frontdesk_initialize.setup_flow.blocking_items.map((entry) => entry.item_id),
+      ['workspace_root', 'codex'],
+    );
+    assert.equal(output.frontdesk_initialize.recommended_next_action.action_id, 'set_workspace_root');
+    assert.equal(output.frontdesk_initialize.recommended_next_action.method, 'POST');
+    assert.deepEqual(output.frontdesk_initialize.recommended_next_action.request_fields, ['path']);
+
+    const workspaceRootItem = output.frontdesk_initialize.checklist.find((entry) => entry.item_id === 'workspace_root');
+    const codexItem = output.frontdesk_initialize.checklist.find((entry) => entry.item_id === 'codex');
+
+    assert.ok(workspaceRootItem);
+    assert.ok(codexItem);
+    assert.equal(workspaceRootItem.required, true);
+    assert.equal(workspaceRootItem.blocking, true);
+    assert.equal(workspaceRootItem.action?.action_id, 'set_workspace_root');
+    assert.equal(workspaceRootItem.action?.method, 'POST');
+    assert.deepEqual(workspaceRootItem.action?.request_fields, ['path']);
+    assert.equal(codexItem.required, true);
+    assert.equal(codexItem.blocking, true);
+    assert.equal(codexItem.action?.action_id, 'install_or_configure_codex');
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
   }
 });
 
