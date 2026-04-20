@@ -13,6 +13,7 @@
 - [architecture.md](../architecture.md)
 - [invariants.md](../invariants.md)
 - [decisions.md](../decisions.md)
+- [2026-04-20 产品接口边界设计](../specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md)
 
 ## 一、统一收敛与状态对齐
 
@@ -27,8 +28,9 @@
 - [已收录 domain 增量 intake 刷新记录](./opl-phase-2-admitted-domain-delta-intake-refresh.md)
 - [生态同步 owner line 记录](./opl-phase2-ecosystem-sync-owner-line.md)
 
-## 二、runtime / substrate / 平台迁移参考
+## 二、运行时 / 底座 / 迁移参考
 
+- `family-shared-release-maintenance.md`
 - `host-agent-runtime-contract.md`
 - `managed-runtime-migration-readiness-checklist.md`
 - `hermes-agent-runtime-substrate-benchmark.md`
@@ -38,13 +40,11 @@
 - `family-product-entry-and-domain-handoff-architecture.md`
 - `family-lightweight-direct-entry-rollout-board.md`
 - `mas-top-level-cutover-board.md`
-- `opl-frontdesk-delivery-board.md`
-- `opl-hosted-web-frontdesk-benchmark.md`
 - `opl-product-entry-and-hermes-kernel-integration.md`
 - `opl-vertical-online-agent-platform-roadmap.md`
 - `contract-convergence-v1-decision-note.md`
 
-## 三、gateway / admission / surface 审计参考
+## 三、网关 / 收录 / 接口审计参考
 
 - `opl-gateway-rollout.md`
 - `opl-gateway-rollout.zh-CN.md`
@@ -78,16 +78,19 @@
 - `opl-operating-record-catalog.md`
 - `opl-operating-record-catalog.zh-CN.md`
 
-## 五、历史迁移与旧执行口径
+## 五、已退役 frontdesk 时代与历史迁移参考
 
 - `development-operating-model.md`
 - `runtime-alignment-taskboard.md`
+- `opl-frontdesk-delivery-board.md`
+- `opl-hosted-web-frontdesk-benchmark.md`
+- [Frontdesk 历史资料索引](../history/frontdesk-legacy/README.md)
 - [OMX 历史资料索引](../history/omx/README.zh-CN.md)
 
 ## 使用规则
 
 - 这些文档可以解释“为什么会这样冻结”，但不能反过来改写 `README*`、`docs/README*` 与核心五件套。
-- `series-doc-governance-checklist.md` 是当前仓与四仓系列项目保持一致时使用的仓级治理清单；带日期的同步摘要负责记录某一次具体跨仓梳理 / 对齐结果。
+- `series-doc-governance-checklist.md` 是当前仓与四仓系列项目保持一致时使用的仓级治理清单；带日期的同步摘要负责记录某一次具体跨仓梳理与对齐结果。
 - `four-repo-doc-intake-template.md` 是可复用的中央协调表单，用来记录跨仓文档轮次的范围、受影响仓、验证结果与清理状态。
-- 新参考文档优先按上面的五类归档；如果只是历史 closeout 或迁移痕迹，也应继续留在第三层，不要回灌到公开主线。
-- 退役执行面的 runbook、长线提示词模板和 worktree 规程，不再作为 `docs/references/` 的默认阅读入口；统一从 `docs/history/omx/` 进入。
+- 新参考文档优先按上面的五类归档。
+- 已退役的 `frontdesk` 时代材料只用于历史审计，不能再作为当前实现依据。

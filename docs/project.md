@@ -2,51 +2,44 @@
 
 ## 项目是什么
 
-对外公开时，`One Person Lab` (`OPL`) 是一人课题组产品家的顶层 gateway 与 headless adapter。
-当前仓库跟踪 CLI 产品入口、family gateway、模块目录、外部 overlay 消费的 adapter / API surfaces，以及跨仓共享的 contract surface。
-repo-tracked GUI 壳继续留在外部 overlay 仓；各 domain 仓继续持有自己的 product entry、runtime 与 deliverables。
+对外公开时，`One Person Lab` (`OPL`) 是一人课题组的顶层产品运行时与共享接口层。
+当前仓库跟踪：
 
-## 产品层级
+- CLI 产品入口
+- 顶层共享运行时
+- 执行引擎与模块注册表
+- 工作空间、会话、进度、交付物等接口面
+- 跨仓共享的机器可读合同
+
+图形界面外壳继续放在独立的界面仓中维护。
+各个领域仓继续持有自己的智能体入口、领域逻辑、运行规则与交付物。
+
+## 当前产品层级
 
 `OPL` 当前对外使用三层结构组织产品认知：
 
-1. 家族入口与 adapter 层
-   `OPL` 负责 family-level 入口、progress/files/modules/session surfaces、family routing、gateway / federation 语言，以及供外部 overlay 或 CLI 消费的 headless adapter。
+1. 产品运行时层
+   `OPL` 负责 `system / engines / modules / agents / workspaces / sessions / progress / artifacts` 这组顶层产品资源。
 2. 产品家族
    家族定义一类长期稳定的工作，例如 `Research Foundry`、`Grant Foundry`、`Presentation Foundry`、`Thesis Foundry`、`Review Foundry`。
 3. 当前实现
-   当前实现承接某个家族在特定领域里的能力与仓库真相，例如 `MAS / Med Auto Science`、`MAG / Med Auto Grant`、`RCA / RedCube AI`。
-
-当前家族与实现的对应关系：
-
-| 产品家族 | 当前实现 | 当前领域落点 |
-| --- | --- | --- |
-| `Research Foundry` | `MAS / Med Auto Science` | 医学科研 |
-| `Grant Foundry` | `MAG / Med Auto Grant` | 医学基金与申请书 |
-| `Presentation Foundry` | `RCA / RedCube AI` | 汇报、幻灯片、视觉交付 |
-| `Thesis Foundry` | Planned | 学位论文与答辩 |
-| `Review Foundry` | Planned | 审稿、回复与修回 |
+   当前实现承接某个家族在特定领域里的能力与仓库真相，例如 `Med Auto Science`、`Med Auto Grant`、`RedCube AI`。
 
 ## 项目目标
 
-- 作为 headless adapter，给 CLI 与外部 overlay 提供统一的 family-level 入口、progress/files/modules surfaces 与产品前门。
-- 作为顶层 gateway，定义 workstream、shared foundation 和 admitted domain 的关系。
-- 作为 federation 入口，明确每个 domain 仓在整体体系中的位置与边界。
-- 作为公开 contract surface，确保文档、gateway contracts 和 admitted domain 状态一致。
-
-当前关于“真实接入上游 `Hermes-Agent` 的标准是什么、理想形态相对当前状态的优缺点是什么”，统一以参考说明
-`docs/references/hermes-agent-truth-reset-and-target-state.md`
-为准；核心五件套只负责把当前真相、边界和下一步写清，不再在不同文件里各讲一套版本。
+- 给 GUI 外壳与 CLI 提供稳定一致的 `OPL Product API`
+- 统一管理执行引擎、模块、工作空间、会话、进度与交付物
+- 明确 `OPL` 与各个领域智能体仓的边界
+- 保持公开文档、网关合同与已收录领域状态一致
 
 ## 作用边界
 
-- `OPL` 负责 family-level adapter surfaces、产品家族目录、顶层 gateway / federation 语言，而各 domain 仓继续负责自己的 runtime。
-- 外部 overlay 仓负责 repo-tracked GUI 壳；当前仓库只跟踪 headless adapter / API truth。
-- 产品家族负责表达一类工作，不直接替代具体实现仓。
-- 当前实现负责专业能力、领域真相、交付边界和运行时状态。
-- `OPL` 维护共享边界、任务语义与公开 contract surface。
-- `OPL` 统一的是 runtime substrate、gateway/handoff envelope 与 authority 边界，不强制三个 domain 仓共享同一种具体执行器。
-- 历史 `Codex Host / OMX` 分工保留在历史材料里，不再承担当前主线角色。
+- `OPL` 负责顶层共享运行时与产品接口
+- `OPL` 不持有领域运行时所有权
+- `OPL` 不替代各个领域仓的智能体逻辑
+- 外部界面仓负责 GUI 外壳；当前仓库只跟踪产品运行时与接口真相
+- `Med Auto Science`、`Med Auto Grant`、`RedCube AI` 等仓继续是独立领域智能体
+- 这些领域智能体可以通过 `OPL` 调用，也可以被 `Codex` 直接调用，工作逻辑保持一致
 
 ## 默认入口
 

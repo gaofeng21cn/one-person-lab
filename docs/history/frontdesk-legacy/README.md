@@ -1,12 +1,22 @@
 # Frontdesk Legacy Notes
 
-这组历史材料对应 `2026-04-15` 到 `2026-04-18` 期间已经退役的前台路线，包括：
+这组历史材料对应 `2026-04-12` 到 `2026-04-19` 期间已经退役的前台路线，包括：
 
-- `LibreChat-first` GUI / hosted shell 假设
+- `LibreChat-first` GUI 与 hosted shell 假设
 - `Paperclip` control-plane bridge
 - 过时的 desktop bootstrap 兼容层设计
+- `Initialize OPL` 与 `frontdesk` 公开语义混写阶段
 
-这些计划和设计稿已经退出当前主线。
-当前有效路线以 `docs/status.md`、`docs/architecture.md`、`docs/roadmap*.md`、`docs/references/opl-frontdesk-delivery-board.md` 和 `docs/references/opl-hosted-web-frontdesk-benchmark.md` 为准。
+这些设计与计划已经退出当前主线。
+它们只保留给历史审计、迁移回顾和语义追溯使用。
 
-如需查看旧稿，请直接从 git history 回溯对应文件版本。
+当前有效路线以这些文件为准：
+
+- `docs/project.md`
+- `docs/status.md`
+- `docs/architecture.md`
+- `docs/decisions.md`
+- `docs/specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md`
+- `docs/plans/2026-04-20-opl-product-api-reset-implementation.md`
+
+如果需要追溯旧稿，请直接从 git history 或本目录下的历史文件进入，不再把它们当作当前实现依据。

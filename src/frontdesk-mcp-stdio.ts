@@ -203,23 +203,28 @@ function toHumanLine(label: string, value: string | null | undefined, lines: str
 }
 
 function renderProjectProgressBrief(payload: unknown) {
-  if (!isRecord(payload) || !isRecord(payload.project_progress)) {
+  if (
+    !isRecord(payload)
+    || (!isRecord(payload.project_progress) && !isRecord(payload.progress))
+  ) {
     return '当前没有读到可用的项目进度摘要。';
   }
 
-  const brief = payload.project_progress;
+  const brief = (isRecord(payload.progress) ? payload.progress : payload.project_progress) as Record<string, unknown>;
   const currentProject = isRecord(brief.current_project) ? brief.current_project : {};
-  const currentStudy = isRecord(brief.current_study) ? brief.current_study : null;
+  const currentStudy =
+    isRecord(brief.study)
+      ? brief.study
+      : isRecord(brief.current_study)
+        ? brief.current_study
+        : null;
   const paperSnapshot = currentStudy && isRecord(currentStudy.paper_snapshot) ? currentStudy.paper_snapshot : null;
   const recentActivity = isRecord(brief.recent_activity) ? brief.recent_activity : null;
   const inspectPaths = Array.isArray(brief.inspect_paths)
-    ? brief.inspect_paths.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+    ? brief.inspect_paths.filter((entry: unknown): entry is string => typeof entry === 'string' && entry.trim().length > 0)
     : [];
   const attentionItems = Array.isArray(brief.attention_items)
-    ? brief.attention_items.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
-    : [];
-  const userOptions = Array.isArray(brief.user_options)
-    ? brief.user_options.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+    ? brief.attention_items.filter((entry: unknown): entry is string => typeof entry === 'string' && entry.trim().length > 0)
     : [];
 
   const workspacePath = normalizeOptionalString(currentProject.workspace_path);
@@ -282,8 +287,16 @@ function renderProjectProgressBrief(payload: unknown) {
     lines.push('当前只能确认到项目级，暂时还不能锁定具体论文。');
   }
 
-  toHumanLine('当前进度', normalizeOptionalString(brief.progress_summary), lines);
-  toHumanLine('下一步', normalizeOptionalString(brief.next_focus), lines);
+  toHumanLine(
+    '当前进度',
+    normalizeOptionalString(brief.headline) ?? normalizeOptionalString(brief.progress_summary),
+    lines,
+  );
+  toHumanLine(
+    '下一步',
+    normalizeOptionalString(brief.next_step) ?? normalizeOptionalString(brief.next_focus),
+    lines,
+  );
 
   if (recentActivity) {
     const lastActive = normalizeOptionalString(recentActivity.last_active) ?? '未知时间';
@@ -302,19 +315,23 @@ function renderProjectProgressBrief(payload: unknown) {
     lines.push(`查看位置：${inspectPaths.join('；')}`);
   }
 
-  if (userOptions.length > 0) {
-    lines.push(`你可以直接说：${userOptions.join('；')}`);
-  }
-
   return lines.join('\n');
 }
 
 function renderExecuteRequestBrief(payload: unknown) {
-  if (!isRecord(payload) || !isRecord(payload.product_entry)) {
+  const productEntry =
+    isRecord(payload)
+    && isRecord(payload.session_create)
+    && isRecord(payload.session_create.payload)
+    && isRecord(payload.session_create.payload.product_entry)
+      ? payload.session_create.payload.product_entry
+      : isRecord(payload) && isRecord(payload.product_entry)
+        ? payload.product_entry
+        : null;
+
+  if (!productEntry) {
     return `当前没有拿到可用的执行结果。${buildJsonAppendix(payload)}`;
   }
-
-  const productEntry = payload.product_entry;
   const input = isRecord(productEntry.input) ? productEntry.input : null;
   const task = isRecord(productEntry.task) ? productEntry.task : null;
   const goal = normalizeOptionalString(input?.goal);
@@ -345,13 +362,20 @@ function renderExecuteRequestBrief(payload: unknown) {
 }
 
 function renderRecentSessionsBrief(payload: unknown) {
-  if (!isRecord(payload) || !isRecord(payload.product_entry)) {
+  const sessionsPayload =
+    isRecord(payload) && isRecord(payload.sessions)
+      ? payload.sessions
+      : isRecord(payload) && isRecord(payload.product_entry)
+        ? payload.product_entry
+        : null;
+
+  if (!sessionsPayload) {
     return `当前没有拿到最近会话列表。${buildJsonAppendix(payload)}`;
   }
-
-  const productEntry = payload.product_entry;
-  const sessions = Array.isArray(productEntry.sessions)
-    ? productEntry.sessions.filter((entry): entry is Record<string, unknown> => isRecord(entry))
+  const sessions = Array.isArray(sessionsPayload.items)
+    ? sessionsPayload.items.filter((entry): entry is Record<string, unknown> => isRecord(entry))
+    : Array.isArray(sessionsPayload.sessions)
+      ? sessionsPayload.sessions.filter((entry): entry is Record<string, unknown> => isRecord(entry))
     : [];
   const lines = [`最近会话：${sessions.length} 条。`];
 
@@ -366,11 +390,16 @@ function renderRecentSessionsBrief(payload: unknown) {
 }
 
 function renderResumeSessionBrief(payload: unknown) {
-  if (!isRecord(payload) || !isRecord(payload.product_entry) || !isRecord(payload.product_entry.resume)) {
+  const resume =
+    isRecord(payload) && isRecord(payload.session_resume) && isRecord(payload.session_resume.resume)
+      ? payload.session_resume.resume
+      : isRecord(payload) && isRecord(payload.product_entry) && isRecord(payload.product_entry.resume)
+        ? payload.product_entry.resume
+        : null;
+
+  if (!resume) {
     return `当前没有拿到可用的恢复结果。${buildJsonAppendix(payload)}`;
   }
-
-  const resume = payload.product_entry.resume;
   const sessionId = normalizeOptionalString(resume.session_id);
   const output = normalizeOptionalString(resume.output);
   const lines = ['已恢复先前会话。'];
@@ -384,14 +413,19 @@ function renderResumeSessionBrief(payload: unknown) {
 }
 
 function renderRuntimeLogsBrief(payload: unknown) {
-  if (!isRecord(payload) || !isRecord(payload.product_entry)) {
+  const logsPayload =
+    isRecord(payload) && isRecord(payload.session_logs)
+      ? payload.session_logs
+      : isRecord(payload) && isRecord(payload.product_entry)
+        ? payload.product_entry
+        : null;
+
+  if (!logsPayload) {
     return `当前没有拿到日志。${buildJsonAppendix(payload)}`;
   }
-
-  const productEntry = payload.product_entry;
-  const rawOutput = normalizeOptionalString(productEntry.raw_output);
-  const logName = normalizeOptionalString(productEntry.log_name);
-  const sessionId = normalizeOptionalString(productEntry.session_id);
+  const rawOutput = normalizeOptionalString(logsPayload.raw_output);
+  const logName = normalizeOptionalString(logsPayload.log_name);
+  const sessionId = normalizeOptionalString(logsPayload.session_id);
   const lines = ['最近日志：'];
   if (logName) {
     lines.push(`日志名：${logName}`);
@@ -408,11 +442,16 @@ function renderRuntimeLogsBrief(payload: unknown) {
 }
 
 function renderTaskStatusBrief(payload: unknown) {
-  if (!isRecord(payload) || !isRecord(payload.product_entry) || !isRecord(payload.product_entry.task)) {
+  const task =
+    isRecord(payload) && isRecord(payload.progress) && isRecord(payload.progress.task)
+      ? payload.progress.task
+      : isRecord(payload) && isRecord(payload.product_entry) && isRecord(payload.product_entry.task)
+        ? payload.product_entry.task
+        : null;
+
+  if (!task) {
     return `当前没有拿到任务状态。${buildJsonAppendix(payload)}`;
   }
-
-  const task = payload.product_entry.task;
   const taskId = normalizeOptionalString(task.task_id) ?? 'unknown-task';
   const rawStatus = normalizeOptionalString(task.status);
   const status = humanizeProgressCode(rawStatus ?? null) ?? rawStatus ?? '未知';
@@ -446,6 +485,8 @@ function renderWorkspaceBrief(payload: unknown, action: 'list' | 'activate') {
   if (action === 'activate') {
     const binding = isRecord(payload) && isRecord(payload.workspace_binding)
       ? payload.workspace_binding
+      : isRecord(payload) && isRecord(payload.workspaces) && isRecord(payload.workspaces.binding)
+        ? payload.workspaces.binding
       : isRecord(payload) && isRecord(payload.workspace_catalog) && isRecord(payload.workspace_catalog.binding)
         ? payload.workspace_catalog.binding
         : null;
@@ -464,18 +505,27 @@ function renderWorkspaceBrief(payload: unknown, action: 'list' | 'activate') {
     return lines.join('\n');
   }
 
-  if (!isRecord(payload) || !Array.isArray(payload.projects)) {
+  const projects = isRecord(payload) && isRecord(payload.workspaces) && Array.isArray(payload.workspaces.projects)
+    ? payload.workspaces.projects
+    : isRecord(payload) && Array.isArray(payload.projects)
+      ? payload.projects
+      : null;
+
+  if (!projects) {
     return `当前没有拿到项目与 workspace 列表。${buildJsonAppendix(payload)}`;
   }
 
-  const lines = [`当前项目：${payload.projects.length} 个。`];
-  for (const item of payload.projects.slice(0, 8)) {
+  const lines = [`当前项目：${projects.length} 个。`];
+  for (const item of projects.slice(0, 8)) {
     if (!isRecord(item)) {
       continue;
     }
     const projectId = normalizeOptionalString(item.project_id) ?? 'unknown-project';
-    const label = normalizeOptionalString(item.label);
-    const workspacePath = normalizeOptionalString(item.active_workspace_path);
+    const label = normalizeOptionalString(item.label) ?? normalizeOptionalString(item.project);
+    const activeBinding = isRecord(item.active_binding) ? item.active_binding : null;
+    const workspacePath =
+      normalizeOptionalString(item.active_workspace_path)
+      ?? normalizeOptionalString(activeBinding?.workspace_path);
     lines.push([projectId, label, workspacePath].filter(Boolean).join(' | '));
   }
   return lines.join('\n');
@@ -502,9 +552,8 @@ const TOOLS: ToolDefinition[] = [
       additionalProperties: false,
     },
     call: async (args, options) => {
-      const payload = await fetchJson(options, '/project-progress', {
-        path: normalizeOptionalString(args.workspace_path) ?? options.workspacePath,
-        sessions_limit: parsePositiveInteger(args.sessions_limit, 'sessions_limit') ?? options.sessionsLimit,
+      const payload = await fetchJson(options, '/opl/progress', {
+        workspace_path: normalizeOptionalString(args.workspace_path) ?? options.workspacePath,
       });
       return renderProjectProgressBrief(payload);
     },
@@ -561,7 +610,7 @@ const TOOLS: ToolDefinition[] = [
         throw new Error('opl_execute_request requires a non-empty goal.');
       }
 
-      const payload = await fetchJson(options, '/ask', {}, {
+      const payload = await fetchJson(options, '/opl/sessions', {}, {
         method: 'POST',
         body: {
           goal,
@@ -612,7 +661,7 @@ const TOOLS: ToolDefinition[] = [
           throw new Error('opl_workspace with action=activate requires project_id and workspace_path.');
         }
 
-        const payload = await fetchJson(options, '/workspace/activate', {}, {
+        const payload = await fetchJson(options, '/opl/workspaces/activate', {}, {
           method: 'POST',
           body: {
             project_id: projectId,
@@ -623,7 +672,7 @@ const TOOLS: ToolDefinition[] = [
         return renderWorkspaceBrief(payload, 'activate');
       }
 
-      const payload = await fetchJson(options, '/projects');
+      const payload = await fetchJson(options, '/opl/workspaces');
       return renderWorkspaceBrief(payload, 'list');
     },
   },
@@ -687,7 +736,7 @@ const TOOLS: ToolDefinition[] = [
           throw new Error('opl_session with action=resume requires a non-empty session_id.');
         }
 
-        const payload = await fetchJson(options, '/session/resume', {}, {
+        const payload = await fetchJson(options, '/opl/sessions/resume', {}, {
           method: 'POST',
           body: {
             session_id: sessionId,
@@ -697,7 +746,7 @@ const TOOLS: ToolDefinition[] = [
       }
 
       if (action === 'logs') {
-        const payload = await fetchJson(options, '/session/logs', {
+        const payload = await fetchJson(options, '/opl/sessions/logs', {
           log_name: normalizeOptionalString(args.log_name),
           lines: parsePositiveInteger(args.lines, 'lines'),
           since: normalizeOptionalString(args.since),
@@ -708,7 +757,7 @@ const TOOLS: ToolDefinition[] = [
         return renderRuntimeLogsBrief(payload);
       }
 
-      const payload = await fetchJson(options, '/session/list', {
+      const payload = await fetchJson(options, '/opl/sessions', {
         limit: parsePositiveInteger(args.limit, 'limit'),
         source: normalizeOptionalString(args.source),
       });
@@ -739,9 +788,9 @@ const TOOLS: ToolDefinition[] = [
       if (!taskId) {
         throw new Error('opl_task_status requires a non-empty task_id.');
       }
-      const payload = await fetchJson(options, '/task-status', {
+      const payload = await fetchJson(options, '/opl/progress', {
         task_id: taskId,
-        lines: parsePositiveInteger(args.lines, 'lines'),
+        workspace_path: options.workspacePath,
       });
       return renderTaskStatusBrief(payload);
     },
@@ -808,7 +857,7 @@ async function handleRequest(
           },
         },
         serverInfo: {
-          name: 'opl-frontdesk-mcp-bridge',
+          name: 'opl-product-api-mcp-bridge',
           version: '0.1.0',
         },
       },
