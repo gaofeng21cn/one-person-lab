@@ -6,10 +6,13 @@ import type {
   FamilyProductFrontdeskSurface,
 } from '../../src/product-entry-companions.ts';
 import {
+  buildOperatorLoopActionCatalog,
   buildFamilyFrontdeskEntrySurfaces,
   buildFamilyProductFrontdesk,
   buildFamilyProductFrontdeskFromManifest,
   buildFamilyProductEntryManifest,
+  buildProductEntryShellCatalog,
+  buildProductEntryShellLinkedSurface,
   buildProductFrontdesk,
   buildProductEntryOverview,
   buildProductEntryQuickstart,
@@ -20,6 +23,60 @@ import {
   validateFamilyProductFrontdesk,
   validateFamilyProductEntryManifest,
 } from '../../src/product-entry-companions.ts';
+
+test('product entry shell scaffold helpers normalize shell surfaces and operator loop actions', () => {
+  const productEntryShell = buildProductEntryShellCatalog({
+    frontdesk: {
+      command: 'redcube product frontdesk',
+      surface_kind: 'product_frontdesk',
+      purpose: 'Open the direct frontdoor.',
+      command_template: 'redcube product frontdesk --workspace-root <workspace-root>',
+    },
+    session: {
+      command: 'redcube product session',
+      surface_kind: 'product_entry_session',
+      command_template: 'redcube product session --entry-session-id <entry-session-id>',
+    },
+  });
+
+  assert.equal(productEntryShell.frontdesk.command, 'redcube product frontdesk');
+  assert.equal(productEntryShell.frontdesk.purpose, 'Open the direct frontdoor.');
+  assert.equal(
+    productEntryShell.session.command_template,
+    'redcube product session --entry-session-id <entry-session-id>',
+  );
+
+  const frontdeskSurface = buildProductEntryShellLinkedSurface({
+    shell_key: 'frontdesk',
+    shell_surface: productEntryShell.frontdesk,
+    summary: 'Open the direct frontdoor.',
+    extra_payload: {
+      lane: 'frontdesk',
+    },
+  });
+  assert.deepEqual(frontdeskSurface, {
+    shell_key: 'frontdesk',
+    command: 'redcube product frontdesk',
+    surface_kind: 'product_frontdesk',
+    summary: 'Open the direct frontdoor.',
+    lane: 'frontdesk',
+  });
+
+  const operatorLoopActions = buildOperatorLoopActionCatalog({
+    continue_session: {
+      command: 'redcube product session --entry-session-id <entry-session-id>',
+      surface_kind: 'product_entry_session',
+      summary: 'Continue the same deliverable loop.',
+      requires: ['entry_session_id'],
+    },
+  });
+  assert.deepEqual(operatorLoopActions.continue_session, {
+    command: 'redcube product session --entry-session-id <entry-session-id>',
+    surface_kind: 'product_entry_session',
+    summary: 'Continue the same deliverable loop.',
+    requires: ['entry_session_id'],
+  });
+});
 
 test('product entry companion helpers build canonical shared payloads', () => {
   const familyOrchestration = {
