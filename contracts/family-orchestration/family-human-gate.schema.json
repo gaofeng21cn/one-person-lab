@@ -181,8 +181,8 @@
   "examples": [
     {
       "version": "family-human-gate.v1",
-      "gate_id": "rca_operator_review_gate",
-      "target_domain_id": "redcube",
+      "gate_id": "redcube_operator_review_gate",
+      "target_domain_id": "redcube_ai",
       "gate_kind": "operator_review",
       "requested_at": "2026-04-13T08:40:00Z",
       "status": "requested",
