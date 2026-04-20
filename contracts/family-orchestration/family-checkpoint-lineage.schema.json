@@ -207,7 +207,7 @@
       "version": "family-checkpoint-lineage.v1",
       "lineage_id": "lineage-mas-2026-04-13-01",
       "checkpoint_id": "checkpoint_source_intake_01",
-      "target_domain_id": "medautoscience",
+      "target_domain_id": "med-autoscience",
       "session": {
         "session_id": "sess_mas_001",
         "active_run_id": "run_mas_001",

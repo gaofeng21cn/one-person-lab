@@ -1,5 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import {
   buildExplicitCheckpointPolicy,
@@ -16,6 +19,28 @@ import {
   resolveActiveRunId,
   resolveProgramId,
 } from '../../src/family-orchestration.ts';
+
+type Json = Record<string, unknown>;
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(__dirname, '..', '..');
+const familyManifestFixtureDir = path.join(repoRoot, 'tests', 'fixtures', 'family-manifests');
+
+function readJson(relativePath: string): Json {
+  return JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as Json;
+}
+
+function readFamilyManifestFixture(name: string): Json {
+  return JSON.parse(fs.readFileSync(path.join(familyManifestFixtureDir, name), 'utf8')) as Json;
+}
+
+function readFirstSchemaExample(relativePath: string): Json {
+  const payload = readJson(relativePath);
+  const examples = payload.examples;
+  assert.ok(Array.isArray(examples), `${relativePath} is missing examples`);
+  assert.ok(examples.length > 0, `${relativePath} is missing the first example`);
+  return examples[0] as Json;
+}
 
 test('resolveActiveRunId and resolveProgramId normalize canonical runtime identifiers', () => {
   assert.equal(resolveActiveRunId(null, '', 'run-123'), 'run-123');
@@ -375,4 +400,50 @@ test('buildFamilyFrontdeskProductEntryOrchestration materializes the canonical f
     orchestration.resume_contract.session_locator_field,
     'entry_session.entry_session_id',
   );
+});
+
+test('family orchestration schema examples stay aligned with canonical family manifest identifiers', () => {
+  const redcubeManifest = readFamilyManifestFixture('redcube-product-entry-manifest.json');
+  const redcubeExample = readFirstSchemaExample(
+    'contracts/family-orchestration/family-product-entry-manifest-v2.schema.json',
+  );
+  const humanGateExample = readFirstSchemaExample(
+    'contracts/family-orchestration/family-human-gate.schema.json',
+  );
+  const medAutoScienceManifest = readFamilyManifestFixture('med-autoscience-product-entry-manifest.json');
+  const eventEnvelopeExample = readFirstSchemaExample(
+    'contracts/family-orchestration/family-event-envelope.schema.json',
+  );
+  const checkpointLineageExample = readFirstSchemaExample(
+    'contracts/family-orchestration/family-checkpoint-lineage.schema.json',
+  );
+
+  assert.equal(redcubeExample.target_domain_id, redcubeManifest.target_domain_id);
+  assert.equal(
+    ((redcubeExample.formal_entry as Json).internal_surface),
+    ((redcubeManifest.formal_entry as Json).internal_surface),
+  );
+  assert.equal(
+    ((redcubeExample.shared_handoff as Json).opl_return_surface as Json).target_domain_id,
+    redcubeManifest.target_domain_id,
+  );
+  assert.deepEqual(
+    ((redcubeExample.family_orchestration as Json).action_graph_ref as Json),
+    ((redcubeManifest.family_orchestration as Json).action_graph_ref as Json),
+  );
+  assert.equal(
+    (((redcubeExample.family_orchestration as Json).resume_contract) as Json).checkpoint_locator_field,
+    (((redcubeManifest.family_orchestration as Json).resume_contract) as Json).checkpoint_locator_field,
+  );
+  assert.equal(
+    (((redcubeExample.family_orchestration as Json).resume_contract) as Json).session_locator_field,
+    (((redcubeManifest.family_orchestration as Json).resume_contract) as Json).session_locator_field,
+  );
+  assert.equal(humanGateExample.target_domain_id, redcubeManifest.target_domain_id);
+  assert.equal(
+    humanGateExample.gate_id,
+    (((redcubeManifest.family_orchestration as Json).human_gates as Json[])[0] as Json).gate_id,
+  );
+  assert.equal(eventEnvelopeExample.target_domain_id, medAutoScienceManifest.target_domain_id);
+  assert.equal(checkpointLineageExample.target_domain_id, medAutoScienceManifest.target_domain_id);
 });

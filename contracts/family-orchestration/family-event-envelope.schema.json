@@ -219,7 +219,7 @@
       "envelope_id": "evt-mas-2026-04-13-01",
       "event_name": "study_runtime.stage_completed",
       "event_time": "2026-04-13T08:30:00Z",
-      "target_domain_id": "medautoscience",
+      "target_domain_id": "med-autoscience",
       "producer": {
         "surface_kind": "study_runtime_status",
         "surface_id": "study_runtime"

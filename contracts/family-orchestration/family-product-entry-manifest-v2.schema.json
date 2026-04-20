@@ -1016,13 +1016,13 @@
       "surface_kind": "product_entry_manifest",
       "manifest_version": 2,
       "manifest_kind": "redcube_product_entry_manifest",
-      "target_domain_id": "redcube",
+      "target_domain_id": "redcube_ai",
       "formal_entry": {
         "default": "CLI",
         "supported_protocols": [
           "MCP"
         ],
-        "internal_surface": "controller"
+        "internal_surface": "gateway"
       },
       "workspace_locator": {
         "workspace_root": "/workspace/redcube-ai"
@@ -1064,26 +1064,26 @@
       "shared_handoff": {
         "opl_return_surface": {
           "surface_kind": "product_entry",
-          "target_domain_id": "redcube"
+          "target_domain_id": "redcube_ai"
         }
       },
       "family_orchestration": {
         "action_graph_ref": {
-          "ref_kind": "repo_path",
-          "ref": "contracts/runtime-program/action-graph.json",
-          "label": "operator loop graph"
+          "ref_kind": "json_pointer",
+          "ref": "/family_orchestration/action_graph",
+          "label": "redcube family action graph"
         },
         "human_gates": [
           {
-            "gate_id": "deliverable_publish_gate",
-            "title": "Deliverable publish gate",
+            "gate_id": "redcube_operator_review_gate",
+            "title": "RedCube operator review gate",
             "status": "requested"
           }
         ],
         "resume_contract": {
           "surface_kind": "product_entry_session",
-          "session_locator_field": "entry_session_id",
-          "checkpoint_locator_field": "checkpoint_lineage_id"
+          "session_locator_field": "entry_session_contract.entry_session_id",
+          "checkpoint_locator_field": "continuation_snapshot.latest_managed_run_id"
         },
         "event_envelope_surface": {
           "ref_kind": "repo_path",
