@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from opl_harness_shared.family_orchestration import (
     buildFamilyIntakeEvidenceCompanion,
+    buildFamilyProjectProfileCompanion,
     build_family_human_gate,
     build_family_human_gate_preview,
     build_family_intake_evidence_companion,
+    build_family_project_profile_companion,
     build_family_frontdesk_product_entry_orchestration,
     build_family_product_entry_orchestration,
     build_family_orchestration_companion,
@@ -128,6 +130,14 @@ def test_build_family_orchestration_companion_materializes_event_and_lineage() -
         human_gates=[{"gate_id": "gate-1", "status": "requested"}],
         event_envelope_surface={"ref_kind": "json_pointer", "ref": "/runtime_watch/latest"},
         checkpoint_lineage_surface={"ref_kind": "json_pointer", "ref": "/runtime_watch/lineage"},
+        intake_evidence_companion={
+            "version": "family-intake-evidence-companion.v1",
+            "target_domain_id": "medautoscience",
+        },
+        project_profile_companion={
+            "version": "family-project-profile-companion.v1",
+            "target_domain_id": "medautoscience",
+        },
     )
 
     assert payload["resume_contract"]["session_locator_field"] == "event_envelope.session.session_id"
@@ -136,6 +146,63 @@ def test_build_family_orchestration_companion_materializes_event_and_lineage() -
     assert payload["event_envelope"]["payload"]["runtime_decision"] == "continue"
     assert payload["checkpoint_lineage"]["checkpoint_id"].startswith("checkpoint-")
     assert payload["human_gates"][0]["gate_id"] == "gate-1"
+    assert payload["intake_evidence_companion"]["version"] == "family-intake-evidence-companion.v1"
+    assert payload["project_profile_companion"]["version"] == "family-project-profile-companion.v1"
+
+
+def test_build_family_project_profile_companion_normalizes_family_level_template_profile() -> None:
+    payload = build_family_project_profile_companion(
+        target_domain_id="med-autogrant",
+        project_profile={
+            "profile_id": "grant_nsfc_project_profile_v1",
+            "project_kind": "grant_program",
+            "template_family": "research_grant",
+            "template_id": "nsfc_blueprint_v2026",
+            "selection_mode": "preset",
+            "summary": "  NSFC preset selected for grant planning and authoring ",
+            "summary_ref": {
+                "ref_kind": "repo_path",
+                "ref": "docs/presets/nsfc-blueprint.md",
+                "label": "NSFC template brief",
+            },
+        },
+        preference_signals=[
+            "favor_explicit_scope_freeze",
+            "prefer_structured_review_rhythm",
+        ],
+        grounding_refs=[
+            {
+                "ref_kind": "repo_path",
+                "ref": "docs/project-profile/selection-context.md",
+                "label": "selection context",
+            }
+        ],
+    )
+    alias_payload = buildFamilyProjectProfileCompanion(
+        target_domain_id="med-autogrant",
+        project_profile={
+            "profile_id": "grant_default_profile",
+            "project_kind": "grant_program",
+            "template_family": "research_grant",
+            "template_id": "default_grant_template",
+            "selection_mode": "default",
+            "summary": "default family grant template profile",
+        },
+        preference_signals=[],
+        grounding_refs=[{"ref_kind": "repo_path", "ref": "docs/project-profile/default.md"}],
+    )
+
+    assert payload["version"] == "family-project-profile-companion.v1"
+    assert payload["target_domain_id"] == "med-autogrant"
+    assert payload["project_profile"]["profile_id"] == "grant_nsfc_project_profile_v1"
+    assert payload["project_profile"]["summary"] == "NSFC preset selected for grant planning and authoring"
+    assert payload["project_profile"]["summary_ref"]["ref"] == "docs/presets/nsfc-blueprint.md"
+    assert payload["preference_signals"] == [
+        "favor_explicit_scope_freeze",
+        "prefer_structured_review_rhythm",
+    ]
+    assert payload["grounding_refs"][0]["ref"] == "docs/project-profile/selection-context.md"
+    assert alias_payload["version"] == "family-project-profile-companion.v1"
 
 
 def test_build_family_orchestration_template_normalizes_shared_preview_surfaces() -> None:
@@ -201,6 +268,33 @@ def test_build_family_orchestration_template_passes_through_intake_evidence_comp
     )
 
     assert payload["intake_evidence_companion"]["version"] == "family-intake-evidence-companion.v1"
+
+
+def test_build_family_orchestration_template_passes_through_project_profile_companion() -> None:
+    payload = build_family_orchestration_template(
+        action_graph={
+            "version": "family-action-graph.v1",
+            "graph_id": "graph-2",
+            "target_domain_id": "med-autogrant",
+            "graph_kind": "grant_intake_orchestration",
+            "graph_version": "2026-04-21",
+            "nodes": [{"node_id": "step:intake"}],
+            "edges": [],
+            "entry_nodes": ["step:intake"],
+            "exit_nodes": ["step:intake"],
+            "human_gates": [],
+            "checkpoint_policy": {"mode": "explicit_nodes", "checkpoint_nodes": ["step:intake"]},
+        },
+        resume_surface_kind="grant_entry",
+        session_locator_field="grant_run_id",
+        checkpoint_locator_field="checkpoint_id",
+        project_profile_companion={
+            "version": "family-project-profile-companion.v1",
+            "target_domain_id": "med-autogrant",
+        },
+    )
+
+    assert payload["project_profile_companion"]["version"] == "family-project-profile-companion.v1"
 
 
 def test_build_family_human_gate_preview_normalizes_shared_preview_fields() -> None:
@@ -347,6 +441,34 @@ def test_build_family_product_entry_orchestration_passes_through_intake_evidence
     )
 
     assert payload["intake_evidence_companion"]["target_domain_id"] == "med-autogrant"
+
+
+def test_build_family_product_entry_orchestration_passes_through_project_profile_companion() -> None:
+    payload = build_family_product_entry_orchestration(
+        graph_id="mag_product_entry_graph",
+        target_domain_id="med-autogrant",
+        graph_kind="grant_intake_orchestration",
+        graph_version="2026-04-21",
+        nodes=[
+            {
+                "node_id": "step:open_frontdesk",
+                "node_kind": "frontdoor",
+                "title": "Open frontdesk",
+            }
+        ],
+        edges=[],
+        entry_nodes=["step:open_frontdesk"],
+        exit_nodes=["step:open_frontdesk"],
+        resume_surface_kind="grant_entry",
+        session_locator_field="grant_run_id",
+        checkpoint_locator_field="checkpoint_id",
+        project_profile_companion={
+            "version": "family-project-profile-companion.v1",
+            "target_domain_id": "med-autogrant",
+        },
+    )
+
+    assert payload["project_profile_companion"]["target_domain_id"] == "med-autogrant"
 
 
 def test_build_family_frontdesk_product_entry_orchestration_materializes_canonical_frontdesk_graph() -> None:
