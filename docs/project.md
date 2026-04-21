@@ -2,17 +2,17 @@
 
 ## 项目是什么
 
-对外公开时，`One Person Lab` (`OPL`) 是一人课题组的顶层产品运行时与共享接口层。
+对外公开时，`One Person Lab` (`OPL`) 是一人课题组的顶层产品运行时、shared session/runtime/projection 层，以及跨仓共享模块/合同/索引的归属层。
 当前仓库跟踪：
 
 - CLI / shell 产品入口
 - family-level session runtime
 - 执行引擎与模块注册表
 - 工作空间、会话、进度、交付物等接口面
-- 跨仓共享的机器可读合同
+- 跨仓共享的模块、机器可读合同与可发现索引
 
 图形界面外壳继续放在独立的界面仓中维护。
-各个领域仓继续持有自己的智能体入口、领域逻辑、运行规则与交付物。
+各个领域仓继续作为独立 `domain agent` 仓，持有自己的智能体入口、领域逻辑、运行规则与交付物真相。
 
 ## 当前产品层级
 
@@ -23,24 +23,26 @@
 2. 产品家族
    家族定义一类长期稳定的工作，例如 `Research Foundry`、`Grant Foundry`、`Presentation Foundry`、`Thesis Foundry`、`Review Foundry`。
 3. 当前实现
-   当前实现承接某个家族在特定领域里的能力与仓库真相，例如 `Med Auto Science`、`Med Auto Grant`、`RedCube AI`。
+   当前实现是各个独立 `domain agent` 仓，它们在特定领域里承接能力与仓库真相，例如 `Med Auto Science`、`Med Auto Grant`、`RedCube AI`。
 
 ## 项目目标
 
 - 给 `opl` shell / TUI、`Codex` 显式调用与外部壳提供稳定一致的 session runtime
 - 统一管理执行引擎、模块、工作空间、会话、进度与交付物
+- 维护 family-level shared modules、shared contracts 与 shared indexes
 - 让 `Product API`、`opl web` 与 GUI 壳继续作为 projection surface 存在
-- 明确 `OPL` 与各个领域智能体仓的边界
+- 明确 `OPL` 与各个独立 `domain agent` 仓的边界
 - 保持公开文档、网关合同与已收录领域状态一致
 
 ## 作用边界
 
-- `OPL` 负责 family-level session runtime 与产品 projection surface
+- `OPL` 负责 family-level session runtime、产品 projection surface，以及 shared modules / contracts / indexes
 - `OPL` 不持有领域运行时所有权
 - `OPL` 不替代各个领域仓的智能体逻辑
 - 外部界面仓负责 GUI 外壳；当前仓库只跟踪产品运行时与接口真相
-- `Med Auto Science`、`Med Auto Grant`、`RedCube AI` 等仓继续是独立领域智能体
-- 这些领域智能体可以通过 `OPL` 调用，也可以被 `Codex` 直接调用，工作逻辑保持一致
+- `Med Auto Science`、`Med Auto Grant`、`RedCube AI` 等仓继续是独立 `domain agent`
+- 这些 `domain agent` 可以通过 `OPL` 调用，也可以被 `Codex` 直接调用，工作逻辑保持一致
+- `gateway / harness` 继续作为各 domain 仓内部的边界层语言存在，但不再是顶层公开主语
 
 ## 默认入口
 

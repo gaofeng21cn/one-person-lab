@@ -45,6 +45,7 @@
 - 引擎注册表
 - 模块注册表
 - 智能体注册表
+- shared module / contract / index registration
 - 工作空间注册表
 - 会话生命周期
 - 进度投影
@@ -60,7 +61,7 @@
 
 ### 3. Domain Agent Entry
 
-各个领域仓继续持有自己的智能体入口。
+各个独立 `domain agent` 仓继续持有自己的智能体入口。
 
 它们负责：
 
@@ -68,6 +69,12 @@
 - 领域规则
 - 领域运行时
 - 领域交付物
+
+在当前定位下：
+
+- `agent entry` 是给 `Codex`、`OPL` 与其他通用 agent 调用的稳定入口
+- `direct entry / product entry` 是各个 domain agent 自己的轻量独立前门
+- `domain gateway / domain harness` 继续保留为仓内边界层与执行层语言，不再作为仓库对外第一身份
 
 ### 4. Shell Projection Layer
 
@@ -84,8 +91,8 @@
 
 - `OPL` 不持有领域运行时所有权
 - `OPL` 不替代领域智能体自己的逻辑
-- `OPL` 负责 family-level session runtime、统一入口与 projection surface
-- `MAS`、`MAG`、`RCA` 可以通过 `OPL` 调用，也可以被 `Codex` 直接调用
+- `OPL` 负责 family-level session runtime、shared modules/contracts/indexes、统一入口与 projection surface
+- `MAS`、`MAG`、`RCA` 作为独立 `domain agent`，可以通过 `OPL` 调用，也可以被 `Codex` 直接调用
 - 两条入口的工作逻辑保持一致
 
 ## 默认执行策略

@@ -2,6 +2,26 @@
 
 ## 2026-04-21
 
+### 决策：活跃 domain 仓对外统一写成独立 `domain agent`
+
+原因：在 `OPL` 已经收敛为 family-level `session runtime` 之后，`MAS`、`MAG`、`RCA` 的公开主语更准确地应是“可被 `Codex`、`OPL` 或其他通用 agent 直接调用的独立 `domain agent` 仓”。继续把 `domain gateway / domain harness` 当成仓库对外第一身份，容易把内部边界层语言和公开产品角色混在一起。
+
+影响：
+
+- `MAS`、`MAG`、`RCA` 当前公开主语统一收口为独立 `domain agent`
+- `agent entry / direct entry` 成为对外更优先的入口语言
+- `domain gateway / domain harness` 继续保留为各仓内部的边界层与执行层术语
+
+### 决策：`OPL` 继续持有 shared modules / contracts / indexes，但不制造 OPL-only domain semantics
+
+原因：系列项目必须有一层承接跨仓共享模块、共享合同和共享索引；这层归属继续属于 `OPL / UHS`。但共享模块的存在，不应把 domain-specific 行为语义绑成“只有经过 `OPL` 才成立”的特殊工作流。
+
+影响：
+
+- `OPL` 继续持有 family-level shared modules、shared contracts、shared indexes
+- `MAS`、`MAG`、`RCA` 通过 `OPL` 调用或被 `Codex` 直接调用时，领域语义保持一致
+- 顶层 session/runtime/projection 与 domain-specific truth/logic 继续分层
+
 ### 决策：`OPL` 主线切换为 `ACP-native session runtime`
 
 原因：对开发者和一线使用者来说，`OPL` 的一等使用路径不是直接调用 API，而是进入本地 `opl` shell / TUI、在 `Codex` 中显式调用 `OPL` 与其 domain agent，或让外部壳通过兼容层消费同一套 session runtime。继续把 `Product API` 作为主语，会把交互主线与真实用户路径写反。
@@ -49,7 +69,7 @@
 
 影响：
 
-- `OPL` 负责共享运行时与 `Product API`
+- `OPL` 负责共享运行时、shared modules/contracts/indexes 与 `Product API`
 - 各个领域仓继续持有智能体入口、领域逻辑、运行规则与交付物
 - 通过 `OPL` 调用领域智能体，与直接在 `Codex` 里调用该智能体，工作逻辑保持一致
 
