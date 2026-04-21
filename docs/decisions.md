@@ -1,5 +1,17 @@
 # OPL 关键决策
 
+## 2026-04-21
+
+### 决策：GUI 主线切换到 `AionUI`，`Onyx` 降为备线
+
+原因：`OPL` 的 GUI 本质上是 `Codex CLI` 的壳，需要优先满足目录绑定会话、对话主屏、进度 / 文件侧栏和设置中的环境管理。`AionUI` 与这条产品主线更贴近，`Onyx` 更适合作为备线和参考。
+
+影响：
+
+- `OPL` 主仓继续只保留 headless `Product API`、共享运行时真相和 `opl web`
+- 当前独立 GUI 壳按 `AionUI` 主线推进
+- 仓内已有 `Onyx` 计划、benchmark 和 overlay 材料只保留在参考层或历史层，不再作为当前实现依据
+
 ## 2026-04-20
 
 ### 决策：公开产品模型重置为 `Product API`
@@ -50,21 +62,22 @@
 
 ### 决策：GUI 主线冻结为“OPL 主仓共享运行时 + 独立界面仓”
 
-原因：`Onyx` 保持独立上游应用，`OPL` 主仓只保留运行时真相与接口面，真正的 GUI 主线放在独立界面仓里跟随上游。
+原因：GUI 壳与 `OPL` 运行时需要保持分仓演进；`OPL` 主仓只保留运行时真相与接口面，真正的 GUI 主线放在独立界面仓里推进。
 
 影响：
 
 - `OPL` 主仓只保留 CLI 产品入口、`opl web` API 服务、工作空间 / 会话 / 进度 / 交付物真相，以及 Codex / Hermes mode config
-- `opl-onyx-shell` 或同等独立界面仓负责真正的 GUI 外壳
+- 独立界面仓负责真正的 GUI 外壳
 - `opl web` 根路由只返回机器可读根载荷，不再伪装产品 GUI
 
-### 决策：外部产品名只能在“基准 / 上游参考 / 规划中的界面目标”语境出现
+### 决策：外部 GUI 基座只在“当前主线 / 基准 / 参考 / 备线”语境出现
 
 原因：必须持续区分“上游参考对象”和“当前已经真实集成的对象”。
 
 影响：
 
-- `Onyx`、`Open WebUI` 等外部产品名只能用于基准、上游、参考或计划中的界面目标
+- `AionUI` 可以作为当前 GUI 主线基座出现在 current status / implementation planning
+- `Onyx`、`Open WebUI` 等外部产品名只能用于基准、参考或备线语境
 - 只有真实集成发生后，才允许在 current status / current implementation 里写成已集成事实
 
 ## 2026-04-11

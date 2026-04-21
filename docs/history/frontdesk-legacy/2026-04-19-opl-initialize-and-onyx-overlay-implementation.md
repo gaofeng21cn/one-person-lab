@@ -1,6 +1,8 @@
 # OPL Initialize And Onyx Overlay Implementation Plan
 
-> Superseded by [`docs/plans/2026-04-20-opl-product-api-reset-implementation.md`](./2026-04-20-opl-product-api-reset-implementation.md) and the current product boundary in [`docs/specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md`](../specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md). Keep this file only for archive and migration review.
+> Historical backup line only. This plan records the `Onyx` route that is no longer the GUI mainline. Since `2026-04-21`, the active GUI mainline has moved to `AionUI`; keep this file only for archive and migration review.
+
+> Superseded by [`docs/plans/2026-04-20-opl-product-api-reset-implementation.md`](../../plans/2026-04-20-opl-product-api-reset-implementation.md), the current product boundary in [`docs/specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md`](../../specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md), and the pivot note in [`docs/references/2026-04-21-gui-mainline-pivot-to-aionui.md`](../../references/2026-04-21-gui-mainline-pivot-to-aionui.md).
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

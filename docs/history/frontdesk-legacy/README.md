@@ -10,6 +10,11 @@
 这些设计与计划已经退出当前主线。
 它们只保留给历史审计、迁移回顾和语义追溯使用。
 
+本目录当前收纳的关键历史文件：
+
+- `2026-04-19-opl-initialize-and-environment-manager-design.md`
+- `2026-04-19-opl-initialize-and-onyx-overlay-implementation.md`
+
 当前有效路线以这些文件为准：
 
 - `docs/project.md`

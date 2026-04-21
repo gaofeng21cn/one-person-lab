@@ -198,7 +198,7 @@ What it does **not** claim:
 ## Notes
 
 - This package is honest hostedization-prep and self-hostable pilot packaging.
-- It is designed to let a future OPL x Onyx overlay or equivalent shell consume the OPL web package contract without pretending the full hosted platform already exists.
+- It is designed to let a future external GUI shell consume the OPL web package contract without pretending the full hosted platform already exists.
 `;
 }
 
@@ -519,7 +519,7 @@ export function buildHostedPilotPackage(
         'This package is a self-hostable web package for the OPL Product API.',
         'It still requires an external Hermes binary on the host and does not claim that the actual hosted runtime is landed.',
         'The package now carries service-install and healthcheck helpers so host-side bring-up does not depend on hand-edited service paths.',
-        'The immediate shell target is an external OPL x Onyx overlay, while the long-line product identity remains an OPL-owned adapter surface.',
+        'The immediate shell target is an external GUI shell aligned to the current AionUI mainline, while the long-line product identity remains an OPL-owned adapter surface.',
       ],
     },
   };

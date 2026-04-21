@@ -17,6 +17,7 @@
 
 ## 一、统一收敛与状态对齐
 
+- [GUI 主线切换到 AionUI](./2026-04-21-gui-mainline-pivot-to-aionui.md)
 - `series-doc-governance-checklist.md`
 - `four-repo-doc-series-sync-summary-2026-04-14.md`
 - `four-repo-doc-intake-template.md`

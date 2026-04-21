@@ -1,5 +1,7 @@
 # OPL Front Desk Delivery Board
 
+> 历史收口说明：此板面记录的是 `frontdesk / overlay` 阶段的已落地 surfaces 与缺口。自 `2026-04-21` 起，GUI 主线已切到 `AionUI`；`Onyx` 只保留备线参考，本文不再作为当前 GUI 实施看板。
+
 状态锚点：`2026-04-19`
 
 ## 文档目的
@@ -15,7 +17,7 @@
 当前主线已经冻结为：
 
 - 主仓：`OPL headless adapter + CLI product entry`
-- GUI：独立 overlay 仓消费 `OPL` adapter surfaces
+- GUI：独立 shell 仓消费 `OPL Product API`，当前主线按 `AionUI` 推进
 - 本地 adapter service：`opl web`
 - 默认执行：`Codex`
 - 备用执行 / 在线网关：`Hermes-Agent`
@@ -23,7 +25,7 @@
 
 当前产品规格锚点：
 
-- `docs/specs/2026-04-19-opl-initialize-and-environment-manager-design.md`
+- `docs/history/frontdesk-legacy/2026-04-19-opl-initialize-and-environment-manager-design.md`
 
 ## 已落地能力
 
@@ -117,7 +119,7 @@
 
 - 还需要把真正的 GUI 壳落到独立 overlay 仓，而不是继续在 `OPL` 主仓内发明替代实现。
 - 左侧 workspace / task 管理、右侧 progress + files 边栏、settings 中的 environment / modules 管理，都要在 overlay 仓完成接线。
-- `Onyx` 只作为上游 benchmark / visual target，当前集成事实仍要保持诚实表述。
+- 当前 GUI 主线以 `AionUI` 为准；`Onyx` 只保留为备线 benchmark，当前集成事实仍要保持诚实表述。
 
 ### W2. hosted / web 入口还没有完全产品化
 
@@ -141,7 +143,7 @@
 
 方向：
 
-- 在独立 overlay 仓里对齐 `Codex App` / `Onyx` 风格的浅色极简工作台体验。
+- 在独立 GUI 壳里对齐 `Codex App` 风格的浅色极简工作台体验；`Onyx` 经验只保留为备线参考。
 - 保持 `workspace + task + progress + files + modules` 为核心信息架构。
 
 ### I2. Environment / Modules 设置面接线
