@@ -2,9 +2,9 @@
 
 ## 当前公开角色
 
-- `OPL` 是 one-person lab 的顶层产品运行时、共享接口真相与 CLI 产品入口。
+- `OPL` 是 one-person lab 的顶层 `session runtime`、共享接口真相与 CLI / shell 产品入口。
 - 当前公开认知保持三层：`产品运行时 -> 产品家族 -> 当前实现 / 模块`。
-- `OPL` 持有顶层共享运行时、智能体注册表、工作空间 / 会话 / 进度 / 交付物接口面，以及机器可读合同。
+- `OPL` 持有 family-level session runtime、智能体注册表、工作空间 / 会话 / 进度 / 交付物接口面，以及机器可读合同。
 - `Codex` 是默认交互与执行宿主；`Hermes-Agent` 是备用模式与长期在线网关。
 - 当前活跃领域智能体模块是 `MAS`、`MAG`、`RCA`；thesis 与 review 模块保持定义阶段。
 
@@ -21,15 +21,15 @@
 - `progress`
 - `artifacts`
 
-这组资源是 GUI 外壳与 CLI 的共同产品真相。
+这组资源是 `opl` shell / TUI、外部 GUI 壳与 `Product API` projection 的共同产品真相。
 
 ## 当前默认入口
 
-- 默认前门仍是 `opl`。
-- `opl <request...>` 继续提供快速提问路径。
-- GUI 主线保持 `独立界面仓 -> OPL Product API`。
-- 当前优先基座是 `AionUI`；`Onyx` 只保留为备线参考。
-- `opl web` 继续提供本地 API 服务和机器可读根载荷。
+- 默认前门是本地 `opl` shell；`opl <request...>` 继续提供快速提问路径。
+- `Codex` 中显式调用 `OPL` 与其 domain agents 是并列的一等使用方式。
+- GUI / Web 主线保持 `外部 shell -> OPL session runtime`。
+- 当前第一外部壳是 `AionUI`；`Onyx` 只保留为备线参考。
+- `opl web` 与 `Product API` 继续提供 projection、debug 与 hosted adapter surface。
 
 ## 当前交互模式
 
@@ -56,6 +56,7 @@
 - `contracts/` 只保留机器可读合同面。
 - `docs/references/` 承接参考级配套文档；`docs/specs/` 与 `docs/plans/` 承接设计与计划记录；`docs/history/` 承接历史归档。
 - 历史 `frontdesk / readiness / entry-guide / domain-wiring` 公开语义已经退出当前主线，只保留在参考或历史层。
+- `Product API` 继续保留，但语义上降为 session runtime 的 projection surface。
 
 ## 参考入口
 
