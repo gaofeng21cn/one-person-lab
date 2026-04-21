@@ -81,6 +81,21 @@ type CommandSpec = {
   group?: string;
 };
 
+const PRODUCT_ENTRY_AGENT_HANDLE_MAP = {
+  mas: {
+    preferredFamily: 'mas',
+  },
+  mag: {
+    preferredFamily: 'mag',
+  },
+  rca: {
+    preferredFamily: 'rca',
+  },
+  'general-task': {
+    preferredFamily: undefined,
+  },
+} as const;
+
 type ParsedCliInput = {
   helpRequested: boolean;
   command: string | null;
@@ -347,10 +362,60 @@ function parseProductEntryArgs(
     );
   }
 
+  const normalizedGoal = normalizeProductEntryGoalWithAgentHandle(goal, parsed.preferredFamily, spec);
+
   return {
     ...parsed,
-    goal,
+    goal: normalizedGoal.goal,
+    preferredFamily: normalizedGoal.preferredFamily,
     dryRun,
+  };
+}
+
+function normalizeProductEntryGoalWithAgentHandle(
+  goal: string,
+  preferredFamily: string | undefined,
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+) {
+  const trimmedGoal = goal.trim();
+  const match = trimmedGoal.match(/^@([a-z0-9-]+)(?:\s+(.+))?$/i);
+  if (!match) {
+    return {
+      goal: trimmedGoal,
+      preferredFamily,
+    };
+  }
+
+  const handle = match[1]?.toLowerCase() ?? '';
+  const mapped = PRODUCT_ENTRY_AGENT_HANDLE_MAP[handle as keyof typeof PRODUCT_ENTRY_AGENT_HANDLE_MAP];
+  if (!mapped) {
+    throw buildUsageError(`Unknown product-entry agent handle: @${handle}.`, spec, {
+      agent_handle: `@${handle}`,
+      allowed_handles: Object.keys(PRODUCT_ENTRY_AGENT_HANDLE_MAP).map((entry) => `@${entry}`),
+    });
+  }
+
+  if (preferredFamily) {
+    throw buildUsageError(
+      'Use either an @agent handle or --preferred-family for product-entry routing, not both.',
+      spec,
+      {
+        preferred_family: preferredFamily,
+        agent_handle: `@${handle}`,
+      },
+    );
+  }
+
+  const strippedGoal = (match[2] ?? '').trim();
+  if (!strippedGoal) {
+    throw buildUsageError(`Agent handle @${handle} requires a goal after the handle.`, spec, {
+      agent_handle: `@${handle}`,
+    });
+  }
+
+  return {
+    goal: strippedGoal,
+    preferredFamily: mapped.preferredFamily,
   };
 }
 
