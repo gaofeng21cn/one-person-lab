@@ -62,6 +62,17 @@ test('scripts/verify.sh provides the canonical verification wrapper', () => {
   assert.match(verifyScript, /npm run test:full/);
 });
 
+test('test:full delegates to the parallel test lane wrapper', () => {
+  const script = read('scripts/run-parallel-test-lanes.sh');
+
+  assert.equal(packageJson.scripts?.['test:full'], './scripts/run-parallel-test-lanes.sh full');
+  assert.match(script, /Usage: \$0 full/);
+  assert.match(script, /"test:fast"/);
+  assert.match(script, /"test:meta"/);
+  assert.match(script, /"test:artifact"/);
+  assert.match(script, /npm run "\$\{lane\}"/);
+});
+
 test('package.json exposes the canonical family shared release maintenance command', () => {
   assert.equal(packageJson.scripts?.['family:shared-release'], 'node ./scripts/family-shared-release.mjs');
   assert.equal(packageJson.exports?.['./family-shared-release'], './dist/family-shared-release.js');
