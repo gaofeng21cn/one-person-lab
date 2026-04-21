@@ -76,6 +76,19 @@ This repository tracks the shared runtime and contract truth consumed by that sh
 2. Technical readers and planners should continue to [Docs Guide](./docs/README.md), then read [Project](./docs/project.md), [Status](./docs/status.md), [Architecture](./docs/architecture.md), [Invariants](./docs/invariants.md), and [Decisions](./docs/decisions.md).
 3. Developers and maintainers should use [Contracts Overview](./contracts/README.md), [Reference Index](./docs/references/README.md), and the tracked records under `docs/specs/`, `docs/plans/`, and [History Archive](./docs/history/README.md).
 
+## Agent And Operator Quick Start
+
+<details>
+  <summary><strong>If you are handing OPL to Codex or another general-purpose Agent, start here</strong></summary>
+
+- Read the [Docs Guide](./docs/README.md) first. It already consolidates the current product model, technical working set, contract entry points, and document layering.
+- Then read [Project](./docs/project.md), [Status](./docs/status.md), [Architecture](./docs/architecture.md), [Invariants](./docs/invariants.md), and [Decisions](./docs/decisions.md). This is the fastest way to recover the top-level boundary, default execution host, and admitted domains.
+- The current top-level `OPL` formal-entry matrix stays explicit: default formal entry `CLI`, supported protocol layer `MCP`, and `controller` only as an internal control surface. The default executor name is `Codex CLI`.
+- The current active domain agents are [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience), [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant), and [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai). They carry medical research, grant writing, and visual delivery respectively; continue into [Status](./docs/status.md), [Architecture](./docs/architecture.md), and the [OPL Public Surface Index](./docs/opl-public-surface-index.md) to recover the family mapping and public entry surfaces.
+- Use `OPL` when the task needs top-level routing or shared `workspaces / sessions / progress / artifacts` surfaces. Use the corresponding domain repository when the task is already scoped to one domain and you want that domain's own public entry surface, operator path, and delivery boundary.
+
+</details>
+
 ## Further Reading
 
 - [Roadmap](./docs/roadmap.md)
