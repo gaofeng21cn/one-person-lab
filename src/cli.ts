@@ -55,6 +55,7 @@ import {
   buildWorkspaceStatus,
 } from './management.ts';
 import { buildHostedPilotPackage } from './hosted-pilot-package.ts';
+import { runAcpStdioBridge } from './opl-acp-stdio.ts';
 import { buildOplApiCatalog } from './opl-api-paths.ts';
 import { buildSessionLedger } from './session-ledger.ts';
 import { explainDomainBoundary, resolveRequestSurface } from './resolver.ts';
@@ -170,6 +171,10 @@ type FrontDeskMcpCliInput = {
   apiBaseUrl?: string;
   workspacePath?: string;
   sessionsLimit?: number;
+};
+
+type SessionRuntimeCliInput = {
+  acp: boolean;
 };
 
 type HostedPilotPackageCliInput = {
@@ -1040,6 +1045,28 @@ function parseFrontDeskMcpArgs(
   }
 
   return parsed;
+}
+
+function parseSessionRuntimeArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): SessionRuntimeCliInput {
+  let acp = false;
+
+  for (const token of args) {
+    if (token === '--acp') {
+      acp = true;
+      continue;
+    }
+
+    throw buildUsageError(`Unknown option for session-runtime: ${token}.`, spec, {
+      option: token,
+    });
+  }
+
+  return {
+    acp,
+  };
 }
 
 function parseFrontDeskModuleArgs(
@@ -2111,6 +2138,28 @@ async function main() {
           workspacePath: parsed.workspacePath,
           sessionsLimit: parsed.sessionsLimit,
         });
+        return {
+          __handled: true as const,
+        };
+      },
+    },
+    'session-runtime': {
+      usage: 'opl session-runtime --acp',
+      summary: 'Run the minimal OPL ACP stdio bridge entry for external shells.',
+      examples: [
+        'opl session-runtime --acp',
+      ],
+      handler: async (args) => {
+        const parsed = parseSessionRuntimeArgs(args, commandSpecs['session-runtime']);
+        if (!parsed.acp) {
+          throw buildUsageError(
+            'session-runtime currently requires --acp.',
+            commandSpecs['session-runtime'],
+            { required: ['--acp'] },
+          );
+        }
+
+        await runAcpStdioBridge();
         return {
           __handled: true as const,
         };
