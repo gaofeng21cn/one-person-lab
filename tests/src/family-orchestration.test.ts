@@ -9,6 +9,7 @@ import {
   buildFamilyActionGraph,
   buildFamilyActionGraphEdge,
   buildFamilyActionGraphHumanGate,
+  buildFamilyIntakeEvidenceCompanion,
   buildFamilyHumanGatePreview,
   buildFamilyActionGraphNode,
   buildFamilyHumanGate,
@@ -67,6 +68,83 @@ test('buildFamilyHumanGate normalizes required gate fields', () => {
   const decisionOptions = gate.decision_options as string[];
   assert.equal(requestSurface.surface_kind, 'runtime_watch');
   assert.deepEqual(decisionOptions, ['approve', 'pause']);
+});
+
+test('buildFamilyIntakeEvidenceCompanion normalizes intake audit and trust-ranked evidence refs', () => {
+  const companion = buildFamilyIntakeEvidenceCompanion({
+    target_domain_id: 'med-autogrant',
+    intake_audit: {
+      summary: '  intake audit passed with tracked caveats ',
+      verdict: 'ready_for_routing',
+      audited_at: '2026-04-21T01:02:03Z',
+      summary_ref: {
+        ref_kind: 'repo_path',
+        ref: 'runtime_watch/intake-audit/latest.json',
+        label: 'latest intake audit',
+      },
+    },
+    trust_ranked_evidence_refs: [
+      {
+        ref_kind: 'repo_path',
+        ref: 'evidence/secondary-notes.md',
+        trust_rank: 3,
+        trust_note: 'secondary operator note',
+      },
+      {
+        ref_kind: 'workspace_locator',
+        ref: 'grant_runs/<grant_run_id>/input/critique-package.json',
+        trust_rank: 1,
+        trust_note: 'primary intake package',
+        supports: ['scope_grounding', 'route_selection'],
+      },
+    ],
+    grounding_scope: {
+      scope_kind: 'grant_route_scope',
+      summary: 'route grounding frozen against intake package and critique context',
+      scope_refs: [
+        {
+          ref_kind: 'json_pointer',
+          ref: '/product_entry_manifest/domain_focus',
+          label: 'domain focus',
+        },
+      ],
+    },
+    human_gate_refs: [
+      {
+        ref_kind: 'family_human_gate_id',
+        ref: 'mag_route_gate_revision',
+      },
+    ],
+    checkpoint_lineage_refs: [
+      {
+        ref_kind: 'family_checkpoint_lineage_id',
+        ref: 'lineage-intake-20260421',
+      },
+    ],
+  }) as unknown as {
+    version: string;
+    target_domain_id: string;
+    intake_audit: { summary: string; verdict: string; summary_ref: { ref: string } };
+    trust_ranked_evidence_refs: Array<{ trust_rank: number; ref: string; supports?: string[] }>;
+    grounding_scope: { scope_kind: string; scope_refs: Array<{ ref: string }> };
+    human_gate_refs: Array<{ ref: string }>;
+    checkpoint_lineage_refs: Array<{ ref: string }>;
+  };
+
+  assert.equal(companion.version, 'family-intake-evidence-companion.v1');
+  assert.equal(companion.target_domain_id, 'med-autogrant');
+  assert.equal(companion.intake_audit.summary, 'intake audit passed with tracked caveats');
+  assert.equal(companion.intake_audit.verdict, 'ready_for_routing');
+  assert.equal(companion.intake_audit.summary_ref.ref, 'runtime_watch/intake-audit/latest.json');
+  assert.deepEqual(
+    companion.trust_ranked_evidence_refs.map((entry) => entry.trust_rank),
+    [1, 3],
+  );
+  assert.deepEqual(companion.trust_ranked_evidence_refs[0]?.supports, ['scope_grounding', 'route_selection']);
+  assert.equal(companion.grounding_scope.scope_kind, 'grant_route_scope');
+  assert.equal(companion.grounding_scope.scope_refs[0]?.ref, '/product_entry_manifest/domain_focus');
+  assert.equal(companion.human_gate_refs[0]?.ref, 'mag_route_gate_revision');
+  assert.equal(companion.checkpoint_lineage_refs[0]?.ref, 'lineage-intake-20260421');
 });
 
 test('buildFamilyOrchestrationCompanion materializes event envelope and checkpoint lineage', () => {
@@ -228,6 +306,29 @@ test('buildFamilyHumanGatePreview normalizes shared preview fields', () => {
 });
 
 test('buildFamilyProductEntryOrchestration materializes action graph and gate previews together', () => {
+  const intakeEvidenceCompanion = buildFamilyIntakeEvidenceCompanion({
+    target_domain_id: 'redcube_ai',
+    intake_audit: {
+      summary: 'redcube intake route audited for current deliverable',
+    },
+    trust_ranked_evidence_refs: [
+      {
+        ref_kind: 'json_pointer',
+        ref: '/product_entry_manifest/recommended_command',
+        trust_rank: 1,
+      },
+    ],
+    grounding_scope: {
+      scope_kind: 'deliverable_scope',
+      summary: 'grounding locked to current deliverable scope',
+      scope_refs: [
+        {
+          ref_kind: 'json_pointer',
+          ref: '/product_entry_manifest/domain_focus',
+        },
+      ],
+    },
+  });
   const orchestration = buildFamilyProductEntryOrchestration({
     graph_id: 'redcube_frontdoor_product_entry_graph',
     target_domain_id: 'redcube_ai',
@@ -302,12 +403,14 @@ test('buildFamilyProductEntryOrchestration materializes action graph and gate pr
       ref: '/recommended_command',
       label: 'recommended command',
     },
+    intake_evidence_companion: intakeEvidenceCompanion,
   }) as unknown as {
     action_graph_ref: { ref: string; label: string };
     action_graph: { graph_id: string; checkpoint_policy: { checkpoint_nodes: string[] } };
     human_gates: Array<{ gate_id: string; review_surface: { ref: string } }>;
     resume_contract: { surface_kind: string; session_locator_field: string; checkpoint_locator_field: string };
     event_envelope_surface: { ref: string };
+    intake_evidence_companion: { version: string };
   };
 
   assert.equal(orchestration.action_graph_ref.ref, '/family_orchestration/action_graph');
@@ -328,6 +431,10 @@ test('buildFamilyProductEntryOrchestration materializes action graph and gate pr
     checkpoint_locator_field: 'continuation_snapshot.latest_managed_run_id',
   });
   assert.equal(orchestration.event_envelope_surface.ref, '/recommended_command');
+  assert.equal(
+    orchestration.intake_evidence_companion.version,
+    'family-intake-evidence-companion.v1',
+  );
 });
 
 test('buildFamilyFrontdeskProductEntryOrchestration materializes the canonical frontdesk-direct-federated-progress graph preset', () => {

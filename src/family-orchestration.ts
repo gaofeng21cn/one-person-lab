@@ -62,6 +62,7 @@ export interface BuildFamilyOrchestrationCompanionInput {
   target_domain_id?: string | null;
   event_envelope_surface?: FamilyReference | null;
   checkpoint_lineage_surface?: FamilyReference | null;
+  intake_evidence_companion?: JsonRecord | null;
 }
 
 export interface BuildFamilyOrchestrationTemplateInput {
@@ -73,6 +74,7 @@ export interface BuildFamilyOrchestrationTemplateInput {
   action_graph_ref?: FamilyReference | null;
   event_envelope_surface?: FamilyReference | null;
   checkpoint_lineage_surface?: FamilyReference | null;
+  intake_evidence_companion?: JsonRecord | null;
 }
 
 export interface BuildFamilyHumanGatePreviewInput {
@@ -138,6 +140,7 @@ export interface BuildFamilyProductEntryOrchestrationInput {
   action_graph_ref?: FamilyReference | null;
   event_envelope_surface?: FamilyReference | null;
   checkpoint_lineage_surface?: FamilyReference | null;
+  intake_evidence_companion?: JsonRecord | null;
 }
 
 export interface BuildFamilyFrontdeskProductEntryOrchestrationInput {
@@ -171,6 +174,39 @@ export interface BuildFamilyFrontdeskProductEntryOrchestrationInput {
   action_graph_ref?: FamilyReference | null;
   event_envelope_surface?: FamilyReference | null;
   checkpoint_lineage_surface?: FamilyReference | null;
+  intake_evidence_companion?: JsonRecord | null;
+}
+
+export interface BuildFamilyIntakeAuditInput {
+  summary: string;
+  verdict?: string | null;
+  audited_at?: string | null;
+  summary_ref?: FamilyReference | null;
+}
+
+export interface BuildFamilyTrustRankedEvidenceRefInput {
+  ref_kind: string;
+  ref: string;
+  role?: string;
+  label?: string;
+  trust_rank: number;
+  trust_note?: string | null;
+  supports?: string[] | null;
+}
+
+export interface BuildFamilyGroundingScopeInput {
+  scope_kind: string;
+  summary: string;
+  scope_refs: FamilyReference[];
+}
+
+export interface BuildFamilyIntakeEvidenceCompanionInput {
+  target_domain_id?: string | null;
+  intake_audit: BuildFamilyIntakeAuditInput;
+  trust_ranked_evidence_refs: BuildFamilyTrustRankedEvidenceRefInput[];
+  grounding_scope: BuildFamilyGroundingScopeInput;
+  human_gate_refs?: FamilyReference[] | null;
+  checkpoint_lineage_refs?: FamilyReference[] | null;
 }
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -222,11 +258,25 @@ function requireBoolean(value: unknown, field: string) {
   return value;
 }
 
+function requirePositiveInteger(value: unknown, field: string) {
+  if (!Number.isInteger(value) || Number(value) <= 0) {
+    throw new Error(`family orchestration 缺少正整数字段: ${field}`);
+  }
+  return Number(value);
+}
+
 function readStringList(values: unknown, field: string) {
   if (!Array.isArray(values)) {
     throw new Error(`family orchestration 缺少数组字段: ${field}`);
   }
   return values.map((value, index) => requireString(value, `${field}[${index}]`));
+}
+
+function optionalStringList(values: unknown, field: string) {
+  if (values === null || values === undefined) {
+    return [] as string[];
+  }
+  return readStringList(values, field);
 }
 
 function stableId(prefix: string, ...parts: unknown[]) {
@@ -323,6 +373,71 @@ export function buildFamilyHumanGatePreview(input: BuildFamilyHumanGatePreviewIn
   };
 }
 
+export function buildFamilyIntakeEvidenceCompanion(input: BuildFamilyIntakeEvidenceCompanionInput) {
+  const intakeAudit = isRecord(input.intake_audit) ? input.intake_audit : null;
+  if (!intakeAudit) {
+    throw new Error('family orchestration 缺少 mapping 字段: intake_audit');
+  }
+
+  const trustRankedEvidenceRefs = Array.isArray(input.trust_ranked_evidence_refs)
+    ? input.trust_ranked_evidence_refs
+      .map((entry, index) => {
+        if (!isRecord(entry)) {
+          throw new Error(`family orchestration 缺少 mapping 字段: trust_ranked_evidence_refs[${index}]`);
+        }
+        const normalizedRef = normalizeRef(entry, `trust_ranked_evidence_refs[${index}]`);
+        if (!normalizedRef) {
+          throw new Error(`family orchestration reference 缺少字段: trust_ranked_evidence_refs[${index}]`);
+        }
+        const supports = optionalStringList(entry.supports, `trust_ranked_evidence_refs[${index}].supports`);
+        return {
+          ...normalizedRef,
+          trust_rank: requirePositiveInteger(entry.trust_rank, `trust_ranked_evidence_refs[${index}].trust_rank`),
+          ...(optionalString(entry.trust_note)
+            ? { trust_note: optionalString(entry.trust_note)! }
+            : {}),
+          ...(supports.length > 0 ? { supports } : {}),
+        };
+      })
+      .sort((left, right) => left.trust_rank - right.trust_rank || left.ref.localeCompare(right.ref))
+    : [];
+  if (trustRankedEvidenceRefs.length === 0) {
+    throw new Error('family orchestration 缺少数组字段: trust_ranked_evidence_refs');
+  }
+
+  const groundingScope = isRecord(input.grounding_scope) ? input.grounding_scope : null;
+  if (!groundingScope) {
+    throw new Error('family orchestration 缺少 mapping 字段: grounding_scope');
+  }
+  const scopeRefs = normalizeRefs(groundingScope.scope_refs, 'grounding_scope.scope_refs');
+  if (scopeRefs.length === 0) {
+    throw new Error('family orchestration 缺少数组字段: grounding_scope.scope_refs');
+  }
+
+  const humanGateRefs = normalizeRefs(input.human_gate_refs, 'human_gate_refs');
+  const checkpointLineageRefs = normalizeRefs(input.checkpoint_lineage_refs, 'checkpoint_lineage_refs');
+  const intakeAuditSummaryRef = normalizeRef(intakeAudit.summary_ref, 'intake_audit.summary_ref');
+
+  return {
+    version: 'family-intake-evidence-companion.v1',
+    target_domain_id: optionalString(input.target_domain_id) ?? 'unknown_domain',
+    intake_audit: {
+      summary: requireString(intakeAudit.summary, 'intake_audit.summary'),
+      ...(optionalString(intakeAudit.verdict) ? { verdict: optionalString(intakeAudit.verdict)! } : {}),
+      ...(optionalString(intakeAudit.audited_at) ? { audited_at: optionalString(intakeAudit.audited_at)! } : {}),
+      ...(intakeAuditSummaryRef ? { summary_ref: intakeAuditSummaryRef } : {}),
+    },
+    trust_ranked_evidence_refs: trustRankedEvidenceRefs,
+    grounding_scope: {
+      scope_kind: requireString(groundingScope.scope_kind, 'grounding_scope.scope_kind'),
+      summary: requireString(groundingScope.summary, 'grounding_scope.summary'),
+      scope_refs: scopeRefs,
+    },
+    ...(humanGateRefs.length > 0 ? { human_gate_refs: humanGateRefs } : {}),
+    ...(checkpointLineageRefs.length > 0 ? { checkpoint_lineage_refs: checkpointLineageRefs } : {}),
+  };
+}
+
 export function buildExplicitCheckpointPolicy(input: BuildExplicitCheckpointPolicyInput) {
   return {
     mode: 'explicit_nodes',
@@ -392,6 +507,9 @@ export function buildFamilyOrchestrationTemplate(input: BuildFamilyOrchestration
     ?? { ref_kind: 'json_pointer', ref: '/family_orchestration/action_graph', label: 'family action graph' };
   const eventEnvelopeSurface = normalizeRef(input.event_envelope_surface, 'event_envelope_surface');
   const checkpointLineageSurface = normalizeRef(input.checkpoint_lineage_surface, 'checkpoint_lineage_surface');
+  const intakeEvidenceCompanion = isRecord(input.intake_evidence_companion)
+    ? { ...input.intake_evidence_companion }
+    : null;
 
   return {
     action_graph_ref: actionGraphRef,
@@ -404,6 +522,7 @@ export function buildFamilyOrchestrationTemplate(input: BuildFamilyOrchestration
     },
     ...(eventEnvelopeSurface ? { event_envelope_surface: eventEnvelopeSurface } : {}),
     ...(checkpointLineageSurface ? { checkpoint_lineage_surface: checkpointLineageSurface } : {}),
+    ...(intakeEvidenceCompanion ? { intake_evidence_companion: intakeEvidenceCompanion } : {}),
   };
 }
 
@@ -438,6 +557,9 @@ export function buildFamilyProductEntryOrchestration(input: BuildFamilyProductEn
     action_graph_ref: input.action_graph_ref ?? null,
     event_envelope_surface: input.event_envelope_surface ?? null,
     checkpoint_lineage_surface: input.checkpoint_lineage_surface ?? null,
+    intake_evidence_companion: isRecord(input.intake_evidence_companion)
+      ? { ...input.intake_evidence_companion }
+      : null,
   });
 }
 
@@ -551,6 +673,9 @@ export function buildFamilyFrontdeskProductEntryOrchestration(
     action_graph_ref: input.action_graph_ref ?? null,
     event_envelope_surface: input.event_envelope_surface ?? null,
     checkpoint_lineage_surface: input.checkpoint_lineage_surface ?? null,
+    intake_evidence_companion: isRecord(input.intake_evidence_companion)
+      ? { ...input.intake_evidence_companion }
+      : null,
   });
 }
 
@@ -690,7 +815,13 @@ export function buildFamilyOrchestrationCompanion(input: BuildFamilyOrchestratio
     action_graph_ref: input.action_graph_ref ?? null,
     event_envelope_surface: input.event_envelope_surface ?? null,
     checkpoint_lineage_surface: input.checkpoint_lineage_surface ?? null,
+    intake_evidence_companion: isRecord(input.intake_evidence_companion)
+      ? { ...input.intake_evidence_companion }
+      : null,
   });
+  const intakeEvidenceCompanion = isRecord(template.intake_evidence_companion)
+    ? { ...template.intake_evidence_companion }
+    : null;
 
   return {
     ...template,
@@ -700,5 +831,11 @@ export function buildFamilyOrchestrationCompanion(input: BuildFamilyOrchestratio
     family_event_envelope: eventEnvelope,
     checkpoint_lineage: checkpointLineage,
     family_checkpoint_lineage: checkpointLineage,
+    ...(intakeEvidenceCompanion
+      ? {
+        intake_evidence_companion: intakeEvidenceCompanion,
+        family_intake_evidence_companion: intakeEvidenceCompanion,
+      }
+      : {}),
   };
 }
