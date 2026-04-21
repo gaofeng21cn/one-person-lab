@@ -63,6 +63,7 @@ export interface BuildFamilyOrchestrationCompanionInput {
   event_envelope_surface?: FamilyReference | null;
   checkpoint_lineage_surface?: FamilyReference | null;
   intake_evidence_companion?: JsonRecord | null;
+  project_profile_companion?: JsonRecord | null;
 }
 
 export interface BuildFamilyOrchestrationTemplateInput {
@@ -75,6 +76,7 @@ export interface BuildFamilyOrchestrationTemplateInput {
   event_envelope_surface?: FamilyReference | null;
   checkpoint_lineage_surface?: FamilyReference | null;
   intake_evidence_companion?: JsonRecord | null;
+  project_profile_companion?: JsonRecord | null;
 }
 
 export interface BuildFamilyHumanGatePreviewInput {
@@ -141,6 +143,7 @@ export interface BuildFamilyProductEntryOrchestrationInput {
   event_envelope_surface?: FamilyReference | null;
   checkpoint_lineage_surface?: FamilyReference | null;
   intake_evidence_companion?: JsonRecord | null;
+  project_profile_companion?: JsonRecord | null;
 }
 
 export interface BuildFamilyFrontdeskProductEntryOrchestrationInput {
@@ -175,6 +178,7 @@ export interface BuildFamilyFrontdeskProductEntryOrchestrationInput {
   event_envelope_surface?: FamilyReference | null;
   checkpoint_lineage_surface?: FamilyReference | null;
   intake_evidence_companion?: JsonRecord | null;
+  project_profile_companion?: JsonRecord | null;
 }
 
 export interface BuildFamilyIntakeAuditInput {
@@ -207,6 +211,23 @@ export interface BuildFamilyIntakeEvidenceCompanionInput {
   grounding_scope: BuildFamilyGroundingScopeInput;
   human_gate_refs?: FamilyReference[] | null;
   checkpoint_lineage_refs?: FamilyReference[] | null;
+}
+
+export interface BuildFamilyProjectProfileSummaryInput {
+  profile_id: string;
+  project_kind: string;
+  template_family: string;
+  template_id: string;
+  selection_mode: string;
+  summary: string;
+  summary_ref?: FamilyReference | null;
+}
+
+export interface BuildFamilyProjectProfileCompanionInput {
+  target_domain_id?: string | null;
+  project_profile: BuildFamilyProjectProfileSummaryInput;
+  preference_signals: string[];
+  grounding_refs: FamilyReference[];
 }
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -438,6 +459,35 @@ export function buildFamilyIntakeEvidenceCompanion(input: BuildFamilyIntakeEvide
   };
 }
 
+export function buildFamilyProjectProfileCompanion(input: BuildFamilyProjectProfileCompanionInput) {
+  const projectProfile = isRecord(input.project_profile) ? input.project_profile : null;
+  if (!projectProfile) {
+    throw new Error('family orchestration 缺少 mapping 字段: project_profile');
+  }
+  const preferenceSignals = readStringList(input.preference_signals, 'preference_signals');
+  const groundingRefs = normalizeRefs(input.grounding_refs, 'grounding_refs');
+  if (groundingRefs.length === 0) {
+    throw new Error('family orchestration 缺少数组字段: grounding_refs');
+  }
+  const projectProfileSummaryRef = normalizeRef(projectProfile.summary_ref, 'project_profile.summary_ref');
+
+  return {
+    version: 'family-project-profile-companion.v1',
+    target_domain_id: optionalString(input.target_domain_id) ?? 'unknown_domain',
+    project_profile: {
+      profile_id: requireString(projectProfile.profile_id, 'project_profile.profile_id'),
+      project_kind: requireString(projectProfile.project_kind, 'project_profile.project_kind'),
+      template_family: requireString(projectProfile.template_family, 'project_profile.template_family'),
+      template_id: requireString(projectProfile.template_id, 'project_profile.template_id'),
+      selection_mode: requireString(projectProfile.selection_mode, 'project_profile.selection_mode'),
+      summary: requireString(projectProfile.summary, 'project_profile.summary'),
+      ...(projectProfileSummaryRef ? { summary_ref: projectProfileSummaryRef } : {}),
+    },
+    preference_signals: preferenceSignals,
+    grounding_refs: groundingRefs,
+  };
+}
+
 export function buildExplicitCheckpointPolicy(input: BuildExplicitCheckpointPolicyInput) {
   return {
     mode: 'explicit_nodes',
@@ -510,6 +560,9 @@ export function buildFamilyOrchestrationTemplate(input: BuildFamilyOrchestration
   const intakeEvidenceCompanion = isRecord(input.intake_evidence_companion)
     ? { ...input.intake_evidence_companion }
     : null;
+  const projectProfileCompanion = isRecord(input.project_profile_companion)
+    ? { ...input.project_profile_companion }
+    : null;
 
   return {
     action_graph_ref: actionGraphRef,
@@ -523,6 +576,7 @@ export function buildFamilyOrchestrationTemplate(input: BuildFamilyOrchestration
     ...(eventEnvelopeSurface ? { event_envelope_surface: eventEnvelopeSurface } : {}),
     ...(checkpointLineageSurface ? { checkpoint_lineage_surface: checkpointLineageSurface } : {}),
     ...(intakeEvidenceCompanion ? { intake_evidence_companion: intakeEvidenceCompanion } : {}),
+    ...(projectProfileCompanion ? { project_profile_companion: projectProfileCompanion } : {}),
   };
 }
 
@@ -559,6 +613,9 @@ export function buildFamilyProductEntryOrchestration(input: BuildFamilyProductEn
     checkpoint_lineage_surface: input.checkpoint_lineage_surface ?? null,
     intake_evidence_companion: isRecord(input.intake_evidence_companion)
       ? { ...input.intake_evidence_companion }
+      : null,
+    project_profile_companion: isRecord(input.project_profile_companion)
+      ? { ...input.project_profile_companion }
       : null,
   });
 }
@@ -675,6 +732,9 @@ export function buildFamilyFrontdeskProductEntryOrchestration(
     checkpoint_lineage_surface: input.checkpoint_lineage_surface ?? null,
     intake_evidence_companion: isRecord(input.intake_evidence_companion)
       ? { ...input.intake_evidence_companion }
+      : null,
+    project_profile_companion: isRecord(input.project_profile_companion)
+      ? { ...input.project_profile_companion }
       : null,
   });
 }
@@ -818,9 +878,15 @@ export function buildFamilyOrchestrationCompanion(input: BuildFamilyOrchestratio
     intake_evidence_companion: isRecord(input.intake_evidence_companion)
       ? { ...input.intake_evidence_companion }
       : null,
+    project_profile_companion: isRecord(input.project_profile_companion)
+      ? { ...input.project_profile_companion }
+      : null,
   });
   const intakeEvidenceCompanion = isRecord(template.intake_evidence_companion)
     ? { ...template.intake_evidence_companion }
+    : null;
+  const projectProfileCompanion = isRecord(template.project_profile_companion)
+    ? { ...template.project_profile_companion }
     : null;
 
   return {
@@ -835,6 +901,12 @@ export function buildFamilyOrchestrationCompanion(input: BuildFamilyOrchestratio
       ? {
         intake_evidence_companion: intakeEvidenceCompanion,
         family_intake_evidence_companion: intakeEvidenceCompanion,
+      }
+      : {}),
+    ...(projectProfileCompanion
+      ? {
+        project_profile_companion: projectProfileCompanion,
+        family_project_profile_companion: projectProfileCompanion,
       }
       : {}),
   };

@@ -296,6 +296,53 @@ def buildFamilyIntakeEvidenceCompanion(**kwargs: Any) -> dict[str, Any]:
     return build_family_intake_evidence_companion(**kwargs)
 
 
+def build_family_project_profile_companion(
+    *,
+    project_profile: Mapping[str, Any],
+    preference_signals: Sequence[str],
+    grounding_refs: Sequence[Mapping[str, Any]],
+    target_domain_id: str = "unknown_domain",
+) -> dict[str, Any]:
+    if not isinstance(project_profile, Mapping):
+        raise ValueError("family orchestration 缺少 mapping 字段: project_profile")
+    if not isinstance(preference_signals, Sequence) or isinstance(
+        preference_signals, (str, bytes, bytearray)
+    ):
+        raise ValueError("family orchestration 缺少数组字段: preference_signals")
+    if not isinstance(grounding_refs, Sequence) or isinstance(
+        grounding_refs, (str, bytes, bytearray)
+    ):
+        raise ValueError("family orchestration 缺少数组字段: grounding_refs")
+
+    normalized_grounding_refs = _normalize_refs(grounding_refs, "grounding_refs")
+    if not normalized_grounding_refs:
+        raise ValueError("family orchestration 缺少数组字段: grounding_refs")
+
+    project_profile_payload: dict[str, Any] = {
+        "profile_id": _require_string(project_profile.get("profile_id"), "project_profile.profile_id"),
+        "project_kind": _require_string(project_profile.get("project_kind"), "project_profile.project_kind"),
+        "template_family": _require_string(project_profile.get("template_family"), "project_profile.template_family"),
+        "template_id": _require_string(project_profile.get("template_id"), "project_profile.template_id"),
+        "selection_mode": _require_string(project_profile.get("selection_mode"), "project_profile.selection_mode"),
+        "summary": _require_string(project_profile.get("summary"), "project_profile.summary"),
+    }
+    summary_ref = _normalize_ref(project_profile.get("summary_ref"), "project_profile.summary_ref")
+    if summary_ref is not None:
+        project_profile_payload["summary_ref"] = summary_ref
+
+    return {
+        "version": "family-project-profile-companion.v1",
+        "target_domain_id": _text(target_domain_id) or "unknown_domain",
+        "project_profile": project_profile_payload,
+        "preference_signals": _require_string_list(preference_signals, "preference_signals"),
+        "grounding_refs": normalized_grounding_refs,
+    }
+
+
+def buildFamilyProjectProfileCompanion(**kwargs: Any) -> dict[str, Any]:
+    return build_family_project_profile_companion(**kwargs)
+
+
 def build_explicit_checkpoint_policy(
     *,
     checkpoint_nodes: Sequence[str],
@@ -376,6 +423,7 @@ def build_family_orchestration_template(
     event_envelope_surface: Mapping[str, Any] | None = None,
     checkpoint_lineage_surface: Mapping[str, Any] | None = None,
     intake_evidence_companion: Mapping[str, Any] | None = None,
+    project_profile_companion: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     if not isinstance(action_graph, Mapping):
         raise ValueError("family orchestration 缺少 mapping 字段: action_graph")
@@ -393,6 +441,11 @@ def build_family_orchestration_template(
     normalized_intake_evidence_companion = (
         dict(intake_evidence_companion)
         if isinstance(intake_evidence_companion, Mapping)
+        else None
+    )
+    normalized_project_profile_companion = (
+        dict(project_profile_companion)
+        if isinstance(project_profile_companion, Mapping)
         else None
     )
     return {
@@ -419,6 +472,11 @@ def build_family_orchestration_template(
             if normalized_intake_evidence_companion is not None
             else {}
         ),
+        **(
+            {"project_profile_companion": normalized_project_profile_companion}
+            if normalized_project_profile_companion is not None
+            else {}
+        ),
     }
 
 
@@ -443,6 +501,7 @@ def build_family_product_entry_orchestration(
     event_envelope_surface: Mapping[str, Any] | None = None,
     checkpoint_lineage_surface: Mapping[str, Any] | None = None,
     intake_evidence_companion: Mapping[str, Any] | None = None,
+    project_profile_companion: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     normalized_checkpoint_policy = (
         build_explicit_checkpoint_policy(checkpoint_nodes=checkpoint_nodes)
@@ -489,6 +548,11 @@ def build_family_product_entry_orchestration(
             if isinstance(intake_evidence_companion, Mapping)
             else None
         ),
+        project_profile_companion=(
+            dict(project_profile_companion)
+            if isinstance(project_profile_companion, Mapping)
+            else None
+        ),
     )
 
 
@@ -517,6 +581,7 @@ def build_family_frontdesk_product_entry_orchestration(
     event_envelope_surface: Mapping[str, Any] | None = None,
     checkpoint_lineage_surface: Mapping[str, Any] | None = None,
     intake_evidence_companion: Mapping[str, Any] | None = None,
+    project_profile_companion: Mapping[str, Any] | None = None,
     frontdesk_node_id: str | None = None,
     direct_node_id: str | None = None,
     federated_node_id: str | None = None,
@@ -647,6 +712,11 @@ def build_family_frontdesk_product_entry_orchestration(
             if isinstance(intake_evidence_companion, Mapping)
             else None
         ),
+        project_profile_companion=(
+            dict(project_profile_companion)
+            if isinstance(project_profile_companion, Mapping)
+            else None
+        ),
     )
 
 
@@ -690,6 +760,8 @@ def build_family_orchestration_companion(
     target_domain_id: str = "unknown_domain",
     event_envelope_surface: Mapping[str, Any] | None = None,
     checkpoint_lineage_surface: Mapping[str, Any] | None = None,
+    intake_evidence_companion: Mapping[str, Any] | None = None,
+    project_profile_companion: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     resolved_event_time = _text(event_time) or _utc_now()
     resolved_surface_kind = _require_string(surface_kind, "surface_kind")
@@ -849,6 +921,26 @@ def build_family_orchestration_companion(
         action_graph_ref=action_graph_ref,
         event_envelope_surface=event_envelope_surface,
         checkpoint_lineage_surface=checkpoint_lineage_surface,
+        intake_evidence_companion=(
+            dict(intake_evidence_companion)
+            if isinstance(intake_evidence_companion, Mapping)
+            else None
+        ),
+        project_profile_companion=(
+            dict(project_profile_companion)
+            if isinstance(project_profile_companion, Mapping)
+            else None
+        ),
+    )
+    normalized_intake_evidence_companion = (
+        dict(template.get("intake_evidence_companion"))
+        if isinstance(template.get("intake_evidence_companion"), Mapping)
+        else None
+    )
+    normalized_project_profile_companion = (
+        dict(template.get("project_profile_companion"))
+        if isinstance(template.get("project_profile_companion"), Mapping)
+        else None
     )
 
     return {
@@ -859,4 +951,20 @@ def build_family_orchestration_companion(
         "family_event_envelope": event_envelope,
         "checkpoint_lineage": checkpoint_lineage_payload,
         "family_checkpoint_lineage": checkpoint_lineage_payload,
+        **(
+            {
+                "intake_evidence_companion": normalized_intake_evidence_companion,
+                "family_intake_evidence_companion": normalized_intake_evidence_companion,
+            }
+            if normalized_intake_evidence_companion is not None
+            else {}
+        ),
+        **(
+            {
+                "project_profile_companion": normalized_project_profile_companion,
+                "family_project_profile_companion": normalized_project_profile_companion,
+            }
+            if normalized_project_profile_companion is not None
+            else {}
+        ),
     }
