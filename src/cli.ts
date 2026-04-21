@@ -1060,9 +1060,9 @@ function parseSessionRuntimeArgs(
       continue;
     }
 
-    throw buildUsageError(`Unknown option for session-runtime: ${token}.`, spec, {
-      option: token,
-    });
+        throw buildUsageError(`Unknown option for session runtime: ${token}.`, spec, {
+          option: token,
+        });
   }
 
   return {
@@ -2144,18 +2144,18 @@ async function main() {
         };
       },
     },
-    'session-runtime': {
-      usage: 'opl session-runtime --acp',
+    'session runtime': {
+      usage: 'opl session runtime --acp',
       summary: 'Run the minimal OPL ACP stdio bridge entry for external shells.',
       examples: [
-        'opl session-runtime --acp',
+        'opl session runtime --acp',
       ],
       handler: async (args) => {
-        const parsed = parseSessionRuntimeArgs(args, commandSpecs['session-runtime']);
+        const parsed = parseSessionRuntimeArgs(args, commandSpecs['session runtime']);
         if (!parsed.acp) {
           throw buildUsageError(
-            'session-runtime currently requires --acp.',
-            commandSpecs['session-runtime'],
+            'session runtime currently requires --acp.',
+            commandSpecs['session runtime'],
             { required: ['--acp'] },
           );
         }
@@ -2882,6 +2882,11 @@ async function main() {
     'session logs': cloneCommandSpec(commandSpecs.logs, {
       usage: 'opl session logs [log_name] [--lines <n>] [--since <cursor>] [--level <level>] [--component <name>] [--session <id>]',
       examples: ['opl session logs gateway', 'opl session logs worker --level info --component runtime'],
+      group: 'session',
+    }),
+    'session runtime': cloneCommandSpec(commandSpecs['session runtime'], {
+      usage: 'opl session runtime --acp',
+      examples: ['opl session runtime --acp'],
       group: 'session',
     }),
     'session ledger': cloneCommandSpec(commandSpecs['session ledger'], {

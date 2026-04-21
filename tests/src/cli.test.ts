@@ -2597,15 +2597,16 @@ test('mcp-stdio lists OPL tools and proxies session/workspace calls through the 
   }
 });
 
-test('session-runtime --acp exposes a callable stdio bridge entry for external shells', async () => {
+test('session runtime --acp exposes a callable stdio bridge entry for external shells', async () => {
   const child = spawn(
     process.execPath,
-    [
-      '--experimental-strip-types',
-      cliPath,
-      'session-runtime',
-      '--acp',
-    ],
+      [
+        '--experimental-strip-types',
+        cliPath,
+        'session',
+        'runtime',
+        '--acp',
+      ],
     {
       cwd: repoRoot,
       env: {
