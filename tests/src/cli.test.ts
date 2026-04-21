@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn, spawnSync, type ChildProcessByStdio } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { once } from 'node:events';
 import fs from 'node:fs';
 import {
@@ -30,6 +31,61 @@ const repoRoot = path.resolve(__dirname, '..', '..');
 const cliPath = path.join(repoRoot, 'src', 'cli.ts');
 const contractsDir = path.join(repoRoot, 'contracts', 'opl-gateway');
 const familyManifestFixtureDir = path.join(repoRoot, 'tests', 'fixtures', 'family-manifests');
+const fixtureTemplateCacheRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-test-template-cache-'));
+const fixtureTemplateCache = new Map<string, string>();
+
+process.once('exit', () => {
+  fs.rmSync(fixtureTemplateCacheRoot, { recursive: true, force: true });
+});
+
+function hashFixtureContent(value: string) {
+  return createHash('sha256').update(value).digest('hex');
+}
+
+function getPreparedTemplate(
+  cacheKey: string,
+  prepare: (templateRoot: string) => void,
+) {
+  const cachedTemplateRoot = fixtureTemplateCache.get(cacheKey);
+  if (cachedTemplateRoot) {
+    return cachedTemplateRoot;
+  }
+
+  const templateRoot = path.join(fixtureTemplateCacheRoot, cacheKey);
+  fs.mkdirSync(templateRoot, { recursive: true });
+  prepare(templateRoot);
+  fixtureTemplateCache.set(cacheKey, templateRoot);
+  return templateRoot;
+}
+
+function clonePreparedFixtureRoot(
+  fixturePrefix: string,
+  cacheKey: string,
+  prepare: (templateRoot: string) => void,
+) {
+  const templateRoot = getPreparedTemplate(cacheKey, prepare);
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), fixturePrefix));
+  fs.cpSync(templateRoot, fixtureRoot, { recursive: true });
+  return fixtureRoot;
+}
+
+function createExecutableFixture(
+  fixturePrefix: string,
+  executableName: string,
+  scriptBody: string,
+) {
+  const fixtureRoot = clonePreparedFixtureRoot(
+    fixturePrefix,
+    `${executableName}-${hashFixtureContent(scriptBody)}`,
+    (templateRoot) => {
+      fs.writeFileSync(path.join(templateRoot, executableName), scriptBody, { mode: 0o755 });
+    },
+  );
+  return {
+    fixtureRoot,
+    executablePath: path.join(fixtureRoot, executableName),
+  };
+}
 
 function runCli(args: string[], envOverrides: Record<string, string> = {}) {
   return runCliInCwd(args, repoRoot, envOverrides);
@@ -153,66 +209,69 @@ async function runCliAsync(args: string[], envOverrides: Record<string, string> 
 }
 
 function createContractsFixtureRoot(mutator?: (contractsRoot: string) => void) {
-  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-contract-fixture-'));
+  const fixtureRoot = clonePreparedFixtureRoot(
+    'opl-contract-fixture-',
+    'contracts-base',
+    (templateRoot) => {
+      const templateContractsRoot = path.join(templateRoot, 'contracts', 'opl-gateway');
+      fs.mkdirSync(templateContractsRoot, { recursive: true });
+      fs.cpSync(contractsDir, templateContractsRoot, {
+        recursive: true,
+      });
+    },
+  );
   const fixtureContractsRoot = path.join(fixtureRoot, 'contracts', 'opl-gateway');
-  fs.mkdirSync(fixtureContractsRoot, { recursive: true });
-  fs.cpSync(contractsDir, fixtureContractsRoot, {
-    recursive: true,
-  });
   mutator?.(fixtureContractsRoot);
   return { fixtureRoot, fixtureContractsRoot };
 }
 
 function createFakeHermesFixture(handlerBody: string) {
-  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-hermes-fixture-'));
-  const hermesPath = path.join(fixtureRoot, 'fake-hermes');
-  fs.writeFileSync(
-    hermesPath,
-    `#!/usr/bin/env bash
+  const scriptBody = `#!/usr/bin/env bash
 set -euo pipefail
 ${handlerBody}
-`,
-    { mode: 0o755 },
+`;
+  const { fixtureRoot, executablePath } = createExecutableFixture(
+    'opl-hermes-fixture-',
+    'fake-hermes',
+    scriptBody,
   );
   return {
     fixtureRoot,
-    hermesPath,
+    hermesPath: executablePath,
   };
 }
 
 function createFakeCodexFixture(handlerBody: string) {
-  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-fixture-'));
-  const codexPath = path.join(fixtureRoot, 'codex');
-  fs.writeFileSync(
-    codexPath,
-    `#!/usr/bin/env bash
+  const scriptBody = `#!/usr/bin/env bash
 set -euo pipefail
 ${handlerBody}
-`,
-    { mode: 0o755 },
+`;
+  const { fixtureRoot, executablePath } = createExecutableFixture(
+    'opl-codex-fixture-',
+    'codex',
+    scriptBody,
   );
   return {
     fixtureRoot,
-    codexPath,
+    codexPath: executablePath,
   };
 }
 
 function createFakePsFixture(output: string) {
-  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-ps-fixture-'));
-  const psPath = path.join(fixtureRoot, 'ps');
-  fs.writeFileSync(
-    psPath,
-    `#!/usr/bin/env bash
+  const scriptBody = `#!/usr/bin/env bash
 set -euo pipefail
 cat <<'EOF'
 ${output}
 EOF
-`,
-    { mode: 0o755 },
+`;
+  const { fixtureRoot, executablePath } = createExecutableFixture(
+    'opl-ps-fixture-',
+    'ps',
+    scriptBody,
   );
   return {
     fixtureRoot,
-    psPath,
+    psPath: executablePath,
   };
 }
 
@@ -228,30 +287,31 @@ function createCodexConfigFixture(options: {
   baseUrl?: string;
   apiKey?: string;
 } = {}) {
-  const codexHome = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-home-'));
-  const configPath = path.join(codexHome, 'config.toml');
   const model = options.model ?? 'gpt-5.4-lab';
   const reasoningEffort = options.reasoningEffort ?? 'xhigh';
   const providerId = options.providerId ?? 'lab';
   const providerName = options.providerName ?? 'lab';
   const baseUrl = options.baseUrl ?? 'https://codex-provider.example.test/v1';
   const apiKey = options.apiKey ?? 'codex-provider-key';
-
-  fs.writeFileSync(
-    configPath,
-    [
-      `model_provider = "${providerId}"`,
-      `model = "${model}"`,
-      `model_reasoning_effort = "${reasoningEffort}"`,
-      '',
-      `[model_providers.${providerId}]`,
-      `name = "${providerName}"`,
-      `base_url = "${baseUrl}"`,
-      `experimental_bearer_token = "${apiKey}"`,
-      '',
-    ].join('\n'),
-    'utf8',
+  const configContent = [
+    `model_provider = "${providerId}"`,
+    `model = "${model}"`,
+    `model_reasoning_effort = "${reasoningEffort}"`,
+    '',
+    `[model_providers.${providerId}]`,
+    `name = "${providerName}"`,
+    `base_url = "${baseUrl}"`,
+    `experimental_bearer_token = "${apiKey}"`,
+    '',
+  ].join('\n');
+  const codexHome = clonePreparedFixtureRoot(
+    'opl-codex-home-',
+    `codex-config-${hashFixtureContent(configContent)}`,
+    (templateRoot) => {
+      fs.writeFileSync(path.join(templateRoot, 'config.toml'), configContent, 'utf8');
+    },
   );
+  const configPath = path.join(codexHome, 'config.toml');
 
   return {
     codexHome,
@@ -266,24 +326,30 @@ function createCodexConfigFixture(options: {
 }
 
 function createMasWorkspaceFixture(profileName = 'nfpitnet.workspace.toml') {
-  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-mas-workspace-'));
+  const fixtureRoot = clonePreparedFixtureRoot(
+    'opl-mas-workspace-',
+    `mas-workspace-${hashFixtureContent(profileName)}`,
+    (templateRoot) => {
+      const templateSharedPath = path.join(templateRoot, 'ops', 'medautoscience', 'bin', '_shared.sh');
+      const templateProfilePath = path.join(templateRoot, 'ops', 'medautoscience', 'profiles', profileName);
+      fs.mkdirSync(path.dirname(templateSharedPath), { recursive: true });
+      fs.mkdirSync(path.dirname(templateProfilePath), { recursive: true });
+      fs.writeFileSync(templateSharedPath, '#!/usr/bin/env bash\nset -euo pipefail\n', {
+        mode: 0o755,
+      });
+      fs.writeFileSync(
+        templateProfilePath,
+        [
+          '[workspace]',
+          'workspace_id = "mas-fixture"',
+          '',
+        ].join('\n'),
+        'utf8',
+      );
+    },
+  );
   const sharedPath = path.join(fixtureRoot, 'ops', 'medautoscience', 'bin', '_shared.sh');
   const profilePath = path.join(fixtureRoot, 'ops', 'medautoscience', 'profiles', profileName);
-
-  fs.mkdirSync(path.dirname(sharedPath), { recursive: true });
-  fs.mkdirSync(path.dirname(profilePath), { recursive: true });
-  fs.writeFileSync(sharedPath, '#!/usr/bin/env bash\nset -euo pipefail\n', {
-    mode: 0o755,
-  });
-  fs.writeFileSync(
-    profilePath,
-    [
-      '[workspace]',
-      'workspace_id = "mas-fixture"',
-      '',
-    ].join('\n'),
-    'utf8',
-  );
 
   return {
     fixtureRoot,
@@ -302,11 +368,21 @@ function readJsonFixture<T>(name: string) {
   ) as T;
 }
 
+function cloneJsonValue<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+const familyManifestFixtureCache = {
+  medautogrant: readJsonFixture<Record<string, unknown>>('med-autogrant-product-entry-manifest.json'),
+  medautoscience: readJsonFixture<Record<string, unknown>>('med-autoscience-product-entry-manifest.json'),
+  redcube: readJsonFixture<Record<string, unknown>>('redcube-product-entry-manifest.json'),
+};
+
 function loadFamilyManifestFixtures() {
   return {
-    medautogrant: readJsonFixture<Record<string, unknown>>('med-autogrant-product-entry-manifest.json'),
-    medautoscience: readJsonFixture<Record<string, unknown>>('med-autoscience-product-entry-manifest.json'),
-    redcube: readJsonFixture<Record<string, unknown>>('redcube-product-entry-manifest.json'),
+    medautogrant: cloneJsonValue(familyManifestFixtureCache.medautogrant),
+    medautoscience: cloneJsonValue(familyManifestFixtureCache.medautoscience),
+    redcube: cloneJsonValue(familyManifestFixtureCache.redcube),
   };
 }
 
@@ -400,34 +476,49 @@ function assertRedcubeActionGraph(actionGraph: Record<string, unknown>) {
 }
 
 function createFamilyContractsFixtureRoot() {
-  return createContractsFixtureRoot((fixtureContractsRoot) => {
-    const domainsPath = path.join(fixtureContractsRoot, 'domains.json');
-    const payload = JSON.parse(fs.readFileSync(domainsPath, 'utf8')) as {
-      version: string;
-      domains: Array<Record<string, unknown>>;
-    };
-
-    if (!payload.domains.some((domain) => domain.domain_id === 'medautogrant')) {
-      payload.domains.push({
-        domain_id: 'medautogrant',
-        label: 'MedAutoGrant',
-        project: 'med-autogrant',
-        role: 'grant_ops_gateway',
-        gateway_surface: 'Grant Ops Gateway',
-        harness_surface: 'Grant Writing Domain Harness OS',
-        standalone_allowed: true,
-        owned_workstreams: ['grant_ops'],
-        non_opl_families: [],
-        canonical_truth_owner: [
-          'grant_runs',
-          'workspace_state',
-          'submission_artifacts',
-        ],
+  const fixtureRoot = clonePreparedFixtureRoot(
+    'opl-contract-fixture-',
+    'contracts-family-medautogrant',
+    (templateRoot) => {
+      const fixtureContractsRoot = path.join(templateRoot, 'contracts', 'opl-gateway');
+      fs.mkdirSync(fixtureContractsRoot, { recursive: true });
+      fs.cpSync(contractsDir, fixtureContractsRoot, {
+        recursive: true,
       });
-    }
 
-    fs.writeFileSync(domainsPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
-  });
+      const domainsPath = path.join(fixtureContractsRoot, 'domains.json');
+      const payload = JSON.parse(fs.readFileSync(domainsPath, 'utf8')) as {
+        version: string;
+        domains: Array<Record<string, unknown>>;
+      };
+
+      if (!payload.domains.some((domain) => domain.domain_id === 'medautogrant')) {
+        payload.domains.push({
+          domain_id: 'medautogrant',
+          label: 'MedAutoGrant',
+          project: 'med-autogrant',
+          role: 'grant_ops_gateway',
+          gateway_surface: 'Grant Ops Gateway',
+          harness_surface: 'Grant Writing Domain Harness OS',
+          standalone_allowed: true,
+          owned_workstreams: ['grant_ops'],
+          non_opl_families: [],
+          canonical_truth_owner: [
+            'grant_runs',
+            'workspace_state',
+            'submission_artifacts',
+          ],
+        });
+      }
+
+      fs.writeFileSync(domainsPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+    },
+  );
+
+  return {
+    fixtureRoot,
+    fixtureContractsRoot: path.join(fixtureRoot, 'contracts', 'opl-gateway'),
+  };
 }
 
 function createFakeLaunchctlFixture() {
