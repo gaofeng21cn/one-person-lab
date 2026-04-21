@@ -42,6 +42,7 @@ import {
   runProductEntryResume,
   runProductEntrySessions,
 } from './product-entry.ts';
+import { isInteractiveShell } from './hermes.ts';
 import { launchDomainEntry, type DomainLaunchStrategy } from './domain-launch.ts';
 import {
   buildDomainManifestCatalog,
@@ -2213,6 +2214,24 @@ async function main() {
       ],
       handler: (args) => runProductEntryChat(parseProductEntryArgs(args, commandSpecs.chat), getContracts()),
     },
+    shell: {
+      usage:
+        'opl shell <request...> [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--workspace-path <path>] [--dry-run]',
+      summary:
+        'Enter the local OPL interactive shell lane, seeding Hermes with the routed request and continuing inside the same session boundary.',
+      examples: [
+        'opl shell "@mas tighten the manuscript argument around invasive phenotype findings"',
+        'opl shell "@rca build a defense-ready deck for next week" --workspace-path /Users/gaofeng/workspace/redcube-ai',
+      ],
+      handler: (args) =>
+        runProductEntryChat(
+          {
+            ...parseProductEntryArgs(args, commandSpecs.shell),
+            executor: 'hermes',
+          },
+          getContracts(),
+        ),
+    },
     resume: {
       usage: 'opl session resume <session_id>',
       summary: 'Resume a Hermes-backed OPL session directly from the local product-entry shell.',
@@ -2907,10 +2926,19 @@ async function main() {
       && !RETIRED_COMMAND_PREFIXES.has(command)
       && looksLikeNaturalLanguage(command, args)
     ) {
-      const result = await runProductEntryAsk(
-        parseProductEntryArgs([command, ...args], commandSpecs.ask),
-        getContracts(),
-      );
+      const interactive = isInteractiveShell();
+      const result = interactive
+        ? await runProductEntryChat(
+            {
+              ...parseProductEntryArgs([command, ...args], commandSpecs.chat),
+              executor: 'hermes',
+            },
+            getContracts(),
+          )
+        : await runProductEntryAsk(
+            parseProductEntryArgs([command, ...args], commandSpecs.ask),
+            getContracts(),
+          );
       printJson(result);
       return;
     }
