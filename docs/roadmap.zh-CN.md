@@ -10,29 +10,30 @@
 今天的公开 `OPL` 表面已经收口到这几层：
 
 - 稳定的 `TypeScript CLI`-first gateway contract 基线
-- 本地 `opl` shell 作为默认前台入口
-- `opl web` pilot 以及 machine-readable discovery / handoff surface
+- 本地 `opl` shell / TUI 作为默认前台入口
+- `opl web` pilot 与 `Product API` projection surface
+- `AionUI` 作为第一外部壳目标
 - `MedAutoScience`、`MedAutoGrant`、`RedCube AI` 三个 admitted domain 的显式 federation
 
 ## 活跃路线
 
 当前活跃路线收口为：
 
-`family-level front desk -> hosted runtime hardening -> lightweight domain direct-entry alignment`
+`ACP-native session runtime -> local opl shell / TUI -> AionUI first-shell cutover -> hosted / online projection`
 
 这条路线现在聚焦四件事：
 
 1. 保持 `OPL Gateway -> domain gateway -> domain harness` 作为稳定控制语言。
-2. 保持 `OPL` 位于 gateway / federation 层，admitted domain 继续持有各自 domain authority。
-3. 把 `opl` shell、`opl web`、workspace registry、session ledger 与 handoff bundle 继续收成一条统一 family entry surface。
+2. 把 `OPL` 的 canonical truth 收口到 family-level session runtime，而不是 API 或 GUI 壳。
+3. 先把本地 `opl` shell / TUI 跑成一等入口，再让 `AionUI` 作为第一外部壳验证同一条 runtime。
 4. 保持 public docs、contracts 与 admitted-domain wording 持续对齐真实家族拓扑。
 
 ## 近期重点
 
-- 保持 gateway / federation wording 冻结，等 admitted-domain 仓继续落下各自 absorbed delta
+- 保持 gateway / federation wording 冻结，同时把 session-runtime-first 语义写成主线
 - 保持 `Unified Harness Engineering Substrate`、`Shared Runtime Contract` 与 `Shared Domain Contract` 作为 domain 之上的共享边界
 - 保持 upstream `Hermes-Agent` external-kernel ownership 的诚实表达
-- 保持未来 hosted / desktop 入口继续围绕当前 shell 已经使用的 truth surfaces 演进
+- 保持未来 hosted / desktop 入口继续围绕当前 runtime truth 演进
 - 保持 candidate domain 沿定义、审查与 onboarding 路径推进
 
 ## 家族形态
@@ -67,6 +68,6 @@
 
 - `OPL` 是整个 family 的顶层产品与 gateway language
 - admitted domain 在这个壳层之下继续持有各自 authority
-- 当前活跃前台是本地 `opl` shell、`opl web` 与 handoff surface
-- 未来 hosted / desktop 工作继续沿同一套 truth surfaces 演进
+- 当前活跃前台是本地 `opl` shell / TUI，`AionUI` 是第一外部壳目标，`opl web` / `Product API` 是 projection surface
+- 未来 hosted / desktop 工作继续沿同一套 runtime truth 演进
 - 新工作线会以边界清楚的 domain surface 进入家族体系

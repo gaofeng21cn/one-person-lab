@@ -4,17 +4,18 @@
 
 `OPL` 的当前主链路是：
 
-`Human / GUI Shell / CLI -> OPL Product Runtime -> Codex CLI or Hermes-Agent -> Domain Agent Entry -> Domain Repository`
+`Human / Codex / opl shell / ACP shell / GUI shell -> OPL Session Runtime -> Codex CLI or Hermes-Agent -> Domain Agent Entry -> Domain Repository`
 
 ## 当前产品链路
 
 当前仓库跟踪的产品链路是：
 
-`User / External GUI Shell / CLI -> OPL Product API -> Codex CLI session or Hermes-Agent alternate -> selected agent entry -> domain runtime and deliverables`
+`User / Codex / opl shell / External Shell -> OPL Session Runtime -> Codex CLI session or Hermes-Agent alternate -> selected agent entry -> domain runtime and deliverables`
 
 这里的核心点是：
 
-- GUI 外壳与 CLI 消费同一套 `OPL Product API`
+- `OPL` 当前主线以 family-level `session runtime` 为 canonical truth
+- 本地 `opl` shell / TUI、`Codex` 显式调用、ACP-compatible 外部壳与 `Product API` 都消费同一套 runtime truth
 - `Codex CLI` 是默认交互和执行宿主
 - `Hermes-Agent` 是备用执行器与长期在线网关
 - `MAS`、`MAG`、`RCA` 等领域智能体继续保持独立
@@ -36,18 +37,19 @@
 
 ## 各层职责
 
-### 1. OPL Product Runtime
+### 1. OPL Session Runtime
 
 负责：
 
-- 共享运行时
+- family-level session runtime
 - 引擎注册表
 - 模块注册表
 - 智能体注册表
 - 工作空间注册表
-- 会话状态
-- 进度叙述
-- 交付物发现
+- 会话生命周期
+- 进度投影
+- 交付物投影
+- shell compatibility surfaces
 
 ### 2. Engines
 
@@ -67,16 +69,22 @@
 - 领域运行时
 - 领域交付物
 
-### 4. GUI Shell
+### 4. Shell Projection Layer
 
-外部界面仓负责 GUI 外壳。
-它读取同一套 Product API，把 `agents / workspaces / sessions / progress / artifacts` 映射为界面。
+外部界面仓、ACP-compatible 壳与 `Product API` projection 都属于这一层。
+它们读取同一套 session runtime truth，把 `agents / workspaces / sessions / progress / artifacts` 映射成：
+
+- 本地 `opl` shell / TUI
+- `Codex` 中的显式调用面
+- ACP-compatible 外部壳
+- `Product API` / `opl web`
+- 未来 hosted / online 壳
 
 ## OPL 与 Domain Agents 的关系
 
 - `OPL` 不持有领域运行时所有权
 - `OPL` 不替代领域智能体自己的逻辑
-- `OPL` 负责顶层共享运行时与统一入口
+- `OPL` 负责 family-level session runtime、统一入口与 projection surface
 - `MAS`、`MAG`、`RCA` 可以通过 `OPL` 调用，也可以被 `Codex` 直接调用
 - 两条入口的工作逻辑保持一致
 

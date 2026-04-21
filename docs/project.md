@@ -5,8 +5,8 @@
 对外公开时，`One Person Lab` (`OPL`) 是一人课题组的顶层产品运行时与共享接口层。
 当前仓库跟踪：
 
-- CLI 产品入口
-- 顶层共享运行时
+- CLI / shell 产品入口
+- family-level session runtime
 - 执行引擎与模块注册表
 - 工作空间、会话、进度、交付物等接口面
 - 跨仓共享的机器可读合同
@@ -27,14 +27,15 @@
 
 ## 项目目标
 
-- 给 GUI 外壳与 CLI 提供稳定一致的 `OPL Product API`
+- 给 `opl` shell / TUI、`Codex` 显式调用与外部壳提供稳定一致的 session runtime
 - 统一管理执行引擎、模块、工作空间、会话、进度与交付物
+- 让 `Product API`、`opl web` 与 GUI 壳继续作为 projection surface 存在
 - 明确 `OPL` 与各个领域智能体仓的边界
 - 保持公开文档、网关合同与已收录领域状态一致
 
 ## 作用边界
 
-- `OPL` 负责顶层共享运行时与产品接口
+- `OPL` 负责 family-level session runtime 与产品 projection surface
 - `OPL` 不持有领域运行时所有权
 - `OPL` 不替代各个领域仓的智能体逻辑
 - 外部界面仓负责 GUI 外壳；当前仓库只跟踪产品运行时与接口真相
