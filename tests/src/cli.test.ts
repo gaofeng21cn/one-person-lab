@@ -1457,7 +1457,7 @@ test('status workspace reports git and worktree visibility for one workspace pat
   assert.equal(typeof output.workspace.git.is_clean, 'boolean');
 });
 
-test('bare opl command seeds a product-entry session when not attached to a tty', () => {
+test('bare opl command still seeds a product-entry session when the session ledger file is corrupted', () => {
   const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
 if [ "$1" = "chat" ]; then
   cat <<'EOF'
@@ -1477,10 +1477,15 @@ fi
 echo "unexpected fake-hermes args: $*" >&2
 exit 1
 `);
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-corrupt-session-ledger-'));
+  const ledgerPath = path.join(stateRoot, 'session-ledger.json');
+  const corruptedLedgerContent = '{"version":"g2","entries":[{"broken":';
+  fs.writeFileSync(ledgerPath, corruptedLedgerContent);
 
   try {
     const output = runCli([], {
       OPL_HERMES_BIN: hermesPath,
+      OPL_FRONTDESK_STATE_DIR: stateRoot,
     });
 
     assert.equal(output.version, 'g2');
@@ -1494,8 +1499,26 @@ exit 1
     assert.equal(output.product_entry.seed.response, 'OPL FRONT DESK READY');
     assert.equal(output.product_entry.resume.session_id, 'opl-session-seed');
     assert.equal(output.product_entry.resume.output, 'OPL FRONT DESK RESUMED');
+    assert.equal(fs.existsSync(ledgerPath), true);
+    const recoveredLedger = JSON.parse(fs.readFileSync(ledgerPath, 'utf8')) as {
+      version: string;
+      entries: Array<{ session_id: string; mode: string }>;
+    };
+    assert.equal(recoveredLedger.version, 'g2');
+    assert.equal(recoveredLedger.entries.length > 0, true);
+    assert.equal(recoveredLedger.entries[0]?.session_id, 'opl-session-seed');
+    assert.equal(recoveredLedger.entries[0]?.mode, 'session_seed');
+    const archivedLedgerFiles = fs
+      .readdirSync(stateRoot)
+      .filter((entry) => /^session-ledger\.corrupt-.*\.json$/.test(entry));
+    assert.equal(archivedLedgerFiles.length, 1);
+    assert.equal(
+      fs.readFileSync(path.join(stateRoot, archivedLedgerFiles[0]), 'utf8'),
+      corruptedLedgerContent,
+    );
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
 
