@@ -19,7 +19,7 @@
 - `Progress`
 - `Artifacts`
 
-GUI 外壳和 CLI 消费的是同一套产品资源。
+`OPL` 的 canonical truth 是 session runtime；GUI 外壳、`opl` shell / TUI、CLI 与 `Product API` 消费的是同一套产品资源投影。
 各个领域仓继续持有自己的智能体逻辑、运行规则和交付物。
 
 ## 按读者类型进入
@@ -50,6 +50,7 @@ GUI 外壳和 CLI 消费的是同一套产品资源。
 - 技术规划把技术工作集和第二层组合起来阅读
 - 开发实现把第三层和第四层视作配套材料
 - 当前活跃的公开产品模型写在 [项目概览](./project.md)、[当前状态](./status.md) 和 [架构](./architecture.md)
+- 当前活跃交互主线写在本地 `opl` shell / TUI、`Codex` 中的显式调用与外部壳 projection 之间的关系里
 - 已退役的 `frontdesk` 时代材料只留在参考层或历史层
 
 ## 第一层：默认公开主线

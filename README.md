@@ -8,8 +8,8 @@
 
 <h1 align="center">One Person Lab</h1>
 
-<p align="center"><strong>A unified workbench for research, grant, and presentation work</strong></p>
-<p align="center">Start work, follow progress, and collect delivered files in one place</p>
+<p align="center"><strong>A session runtime and unified workbench for research, grant, and presentation work</strong></p>
+<p align="center">Start work, follow progress, collect delivered files, and let multiple shells share the same runtime truth</p>
 
 <table>
   <tr>
@@ -63,12 +63,13 @@
 ## What This Repository Tracks
 
 - The shared workbench runtime and public API surfaces behind the product family.
+- The family-level session runtime shared by the local `opl` shell / TUI and external shells.
 - Engine and module management.
 - Workspace, session, progress, and artifact discovery surfaces.
 - Machine-readable contracts for the shared product layer.
 
 The full GUI shell is maintained in an external overlay repository.
-This repository tracks the shared runtime and contract truth consumed by that shell and the CLI.
+This repository tracks the shared session runtime and contract truth consumed by that shell, the local `opl` shell, and the CLI.
 
 ## How To Read This Repository
 
@@ -84,8 +85,9 @@ This repository tracks the shared runtime and contract truth consumed by that sh
 - Read the [Docs Guide](./docs/README.md) first. It already consolidates the current product model, technical working set, contract entry points, and document layering.
 - Then read [Project](./docs/project.md), [Status](./docs/status.md), [Architecture](./docs/architecture.md), [Invariants](./docs/invariants.md), and [Decisions](./docs/decisions.md). This is the fastest way to recover the top-level boundary, default execution host, and admitted domains.
 - The current top-level `OPL` formal-entry matrix stays explicit: default formal entry `CLI`, supported protocol layer `MCP`, and `controller` only as an internal control surface. The default executor name is `Codex CLI`.
+- The active interaction route is runtime-first: the local `opl` shell / TUI, explicit `OPL` invocation from `Codex`, and future external shells that consume the same compatibility surface.
 - The current active domain agents are [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience), [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant), and [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai). They carry medical research, grant writing, and visual delivery respectively; continue into [Status](./docs/status.md), [Architecture](./docs/architecture.md), and the [OPL Public Surface Index](./docs/opl-public-surface-index.md) to recover the family mapping and public entry surfaces.
-- Use `OPL` when the task needs top-level routing or shared `workspaces / sessions / progress / artifacts` surfaces. Use the corresponding domain repository when the task is already scoped to one domain and you want that domain's own public entry surface, operator path, and delivery boundary.
+- Use `OPL` when the task needs the top-level session runtime or shared `workspaces / sessions / progress / artifacts` surfaces. Use the corresponding domain repository when the task is already scoped to one domain and you want that domain's own public entry surface, operator path, and delivery boundary.
 
 </details>
 

@@ -2,14 +2,25 @@
 
 ## 2026-04-21
 
-### 决策：GUI 主线切换到 `AionUI`，`Onyx` 降为备线
+### 决策：`OPL` 主线切换为 `ACP-native session runtime`
 
-原因：`OPL` 的 GUI 本质上是 `Codex CLI` 的壳，需要优先满足目录绑定会话、对话主屏、进度 / 文件侧栏和设置中的环境管理。`AionUI` 与这条产品主线更贴近，`Onyx` 更适合作为备线和参考。
+原因：对开发者和一线使用者来说，`OPL` 的一等使用路径不是直接调用 API，而是进入本地 `opl` shell / TUI、在 `Codex` 中显式调用 `OPL` 与其 domain agent，或让外部壳通过兼容层消费同一套 session runtime。继续把 `Product API` 作为主语，会把交互主线与真实用户路径写反。
 
 影响：
 
-- `OPL` 主仓继续只保留 headless `Product API`、共享运行时真相和 `opl web`
-- 当前独立 GUI 壳按 `AionUI` 主线推进
+- `OPL` 主仓当前主线以 family-level `session runtime` 为中心，而不是以 GUI 或 API 壳为中心
+- canonical truth 收敛到：workspace binding、session lifecycle、progress / artifact projection、agent entry dispatch、runtime mode
+- `Product API`、`opl web` 与未来 GUI / Web shell 都降为这套 session runtime 的 projection / compatibility surface
+- `AionUI` 是第一外部壳和验证目标，但不是 runtime owner
+
+### 决策：GUI 主线切换到 `AionUI`，`Onyx` 降为备线
+
+原因：在 `OPL` 已经明确走 `ACP-native session runtime` 主线之后，当前最贴近这条运行时形态的现成外部壳是 `AionUI`。它更适合作为第一外部壳验证“目录绑定 + 会话 + 对话/任务主屏 + progress / artifacts 侧栏”这条路径；`Onyx` 更适合作为备线和参考。
+
+影响：
+
+- `OPL` 主仓继续保留 family-level session runtime、`opl` shell / TUI、projection surfaces 与 `opl web`
+- 当前第一外部壳按 `AionUI` 主线推进
 - 仓内已有 `Onyx` 计划、benchmark 和 overlay 材料只保留在参考层或历史层，不再作为当前实现依据
 
 ## 2026-04-20
@@ -29,7 +40,7 @@
   - `sessions`
   - `progress`
   - `artifacts`
-- GUI 外壳与 CLI 共同消费这组产品资源
+- `opl` shell / TUI、GUI 外壳、CLI 与 `Product API` projection 共同消费这组产品资源
 - 历史 `frontdesk` 公开语义退出当前主线
 
 ### 决策：Domain Agents 与 OPL 保持松耦合

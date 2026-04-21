@@ -8,8 +8,8 @@
 
 <h1 align="center">One Person Lab</h1>
 
-<p align="center"><strong>面向一人课题组的统一工作台</strong></p>
-<p align="center">从同一个入口发起工作、查看进度、收集交付物</p>
+<p align="center"><strong>面向一人课题组的 session runtime 与统一工作台</strong></p>
+<p align="center">从同一个入口发起工作、查看进度、收集交付物，并让多个壳共享同一套运行时真相</p>
 
 <table>
   <tr>
@@ -63,12 +63,13 @@
 ## 这个仓库跟踪什么
 
 - 产品家族背后的共享工作台运行时与公开接口面。
+- 本地 `opl` shell / TUI 与外部壳共享的 session runtime。
 - 执行引擎和模块管理。
 - 工作空间、会话、进度与交付物的发现与组织能力。
 - 共享产品层的机器可读合同。
 
 完整图形界面外壳放在独立的界面仓中维护。
-当前仓库负责那套界面和 CLI 共同依赖的共享运行时与合同真相。
+当前仓库负责本地 `opl` shell、外部壳与 CLI 共同依赖的共享 session runtime 与合同真相。
 
 ## 这个仓库怎么读
 
@@ -84,8 +85,9 @@
 - 先读 [文档索引](./docs/README.zh-CN.md)。这里已经把当前产品模型、技术工作集、合同入口和文档分层收口好了。
 - 再读 [项目概览](./docs/project.md)、[当前状态](./docs/status.md)、[架构](./docs/architecture.md)、[硬约束](./docs/invariants.md) 和 [关键决策](./docs/decisions.md)。这是恢复顶层边界、默认执行宿主和 admitted domains 的最快路径。
 - 当前 `OPL` 顶层 formal-entry matrix 保持为：默认正式入口 `CLI`、支持协议层 `MCP`、`controller` 只作为 internal control surface。默认执行器正式名称是 `Codex CLI`。
+- 当前主线交互路径是：本地 `opl` shell / TUI、`Codex` 中的显式 `OPL` / domain-agent 调用，以及未来通过兼容层接入的外部壳。
 - 当前 active domain agents 是 [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience)、[`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) 和 [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai)。它们分别承接医学研究、基金写作和视觉交付；家族映射与公开入口可继续从 [当前状态](./docs/status.md)、[架构](./docs/architecture.md) 和 [OPL 公开界面索引](./docs/opl-public-surface-index.zh-CN.md) 进入。
-- 当任务需要顶层路由、共享 `workspaces / sessions / progress / artifacts` surfaces 时，从 `OPL` 进入；当任务已经明确落在某个 domain 上时，继续进入对应仓库首页和 `docs/README*`，按该 domain 的 public entry surface、operator path 与交付边界执行。
+- 当任务需要顶层 session runtime、共享 `workspaces / sessions / progress / artifacts` surfaces 时，从 `OPL` 进入；当任务已经明确落在某个 domain 上时，继续进入对应仓库首页和 `docs/README*`，按该 domain 的 public entry surface、operator path 与交付边界执行。
 
 </details>
 

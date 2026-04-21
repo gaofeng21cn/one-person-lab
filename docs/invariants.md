@@ -17,7 +17,8 @@
   - `sessions`
   - `progress`
   - `artifacts`
-- GUI 外壳与 CLI 必须围绕这组资源组织当前产品语义。
+- `OPL` 的 session runtime 是这组资源的 canonical truth。
+- `opl` shell / TUI、外部 GUI 壳与 `Product API` 必须围绕这组资源组织当前产品语义。
 
 ## 文档分层
 
@@ -39,8 +40,10 @@
 
 ## GUI 主线约束
 
-- `OPL` 主仓只跟踪共享运行时与 `Product API` 真相，不跟踪产品 GUI 外壳实现。
+- `OPL` 主仓跟踪 family-level session runtime、`opl` shell / TUI 与 `Product API` projection 真相，不跟踪外部 GUI 外壳实现。
 - `opl web` 根路由只返回机器可读根载荷。
+- `Product API` 与 `opl web` 是 projection surface，不是 `OPL` 的唯一主交互形态。
+- 外部壳不得反向定义 `workspace / session / agent / progress / artifacts` 的 canonical truth。
 - 外部产品名只能在基准、上游参考或规划中的界面目标语境出现。
 
 ## 语言规则

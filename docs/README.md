@@ -19,7 +19,7 @@ The current public `OPL` model is:
 - `Progress`
 - `Artifacts`
 
-GUI shells and the CLI consume these same product surfaces.
+The `OPL` session runtime is the canonical truth; GUI shells, the local `opl` shell / TUI, the CLI, and the `Product API` all consume projections of these same product surfaces.
 Domain repositories keep their own agent logic, runtime rules, and deliverables.
 
 ## Start Here By Audience
@@ -50,6 +50,7 @@ Use it like this:
 - technical planners combine the technical working set with Layer 2
 - developers treat Layers 3 and 4 as supporting material
 - the live public product model stays in [Project](./project.md), [Status](./status.md), and [Architecture](./architecture.md)
+- the live interaction model is runtime-first rather than API-first
 - retired `frontdesk`-era material stays in reference or history layers only
 
 ## Layer 1. Default Public Mainline
