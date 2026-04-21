@@ -5036,7 +5036,7 @@ exit 1
     assert.equal(rootPayload.opl_api.surface_id, 'opl_product_api_root');
     assert.equal(rootPayload.opl_api.mode, 'api_only');
     assert.equal(rootPayload.opl_api.shell_integration_target, 'external_gui_overlay');
-    assert.equal(rootPayload.opl_api.recommended_gui_overlay, 'opl-onyx-shell');
+    assert.equal(rootPayload.opl_api.recommended_gui_overlay, 'aionui_shell');
     assert.equal(rootPayload.opl_api.resources.system, '/api/opl/system');
     assert.equal(rootPayload.opl_api.resources.agents, '/api/opl/agents');
     assert.equal(rootPayload.opl_api.resources.sessions, '/api/opl/sessions');
@@ -5442,7 +5442,7 @@ exit 1
     assert.equal(rootPayload.opl_api.surface_id, 'opl_product_api_root');
     assert.equal(rootPayload.opl_api.mode, 'api_only');
     assert.equal(rootPayload.opl_api.shell_integration_target, 'external_gui_overlay');
-    assert.equal(rootPayload.opl_api.recommended_gui_overlay, 'opl-onyx-shell');
+    assert.equal(rootPayload.opl_api.recommended_gui_overlay, 'aionui_shell');
     assert.equal(rootPayload.opl_api.resources.system, '/api/opl/system');
     assert.equal(rootPayload.opl_api.actions.start, '/api/opl/start');
 

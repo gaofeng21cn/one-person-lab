@@ -1367,7 +1367,7 @@ export function buildHostedRuntimeReadiness() {
     recommended_next_actions: [
       '把 managed hosted runtime 的 service orchestration、tenant boundary 与 policy surface 单独冻结。',
       '保持 Hermes 作为外部 runtime substrate，不在 OPL 仓内虚构托管完成度。',
-      '把独立的 OPL x Onyx overlay 壳接到这些 API truth 上，不在 OPL 主仓继续长自研 GUI。',
+      '把独立 GUI 壳接到这些 API truth 上，当前主线按 AionUI 推进；OPL 主仓不在仓内继续长自研 GUI。',
     ],
   };
 }
@@ -1845,7 +1845,7 @@ export async function buildFrontDeskReadiness(
   } else if (localService.health.status === 'unreachable') {
     recommendedNextActions.push('frontdesk service 已加载但健康检查失败，先执行 `opl frontdesk service status` 与 `opl session logs`。');
   }
-  recommendedNextActions.push('GUI 壳应通过独立的 OPL x Onyx overlay repo 接入这些 API；OPL 主仓不再提供桌面壳。');
+  recommendedNextActions.push('GUI 壳应通过独立 GUI shell repo 接入这些 API；当前优先基于 AionUI，Onyx 只保留备线参考。');
   if (summary.manifest_ready_projects_count < summary.total_projects_count) {
     recommendedNextActions.push('给仍缺 manifest 的 active binding 补 `manifest_command`。');
   }
@@ -2444,7 +2444,7 @@ export function buildFrontDeskDashboard(
           '`opl workspace list` keeps `manifest_command` as non-executing registry state, while `opl domain manifests` resolves the active bound machine-readable product-entry manifests.',
           'Resolved domain manifests now also feed domain entry surface plus operator-loop actions and recommended shell/command hints back into dashboard and handoff surfaces.',
           'Resolved domain manifests now also surface family-orchestration companion previews so the top-level product API board can show human-gate and resume semantics instead of hiding them in domain docs.',
-          'The GUI mainline should live in an external OPL x Onyx overlay repo, while this repo stays headless and contract-first.',
+          'The GUI mainline should live in an external GUI shell repo, currently aligned around AionUI, while this repo stays headless and contract-first.',
         ],
       },
       projects,
