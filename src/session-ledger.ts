@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 
 import { GatewayContractError } from './contracts.ts';
@@ -82,6 +83,20 @@ type SessionAggregate = {
 
 type LedgerCountMap = Record<string, number>;
 
+function buildLedgerRecoveryFilePath(filePath: string) {
+  const directory = path.dirname(filePath);
+  const extension = path.extname(filePath);
+  const basename = path.basename(filePath, extension);
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  return path.join(directory, `${basename}.corrupt-${timestamp}-${randomUUID()}${extension}`);
+}
+
+function recoverCorruptSessionLedger(filePath: string) {
+  const recoveryPath = buildLedgerRecoveryFilePath(filePath);
+  fs.renameSync(filePath, recoveryPath);
+  return recoveryPath;
+}
+
 function readSessionLedgerFile(): SessionLedgerFile {
   const paths = resolveFrontDeskStatePaths();
   if (!fs.existsSync(paths.session_ledger_file)) {
@@ -102,14 +117,23 @@ function readSessionLedgerFile(): SessionLedgerFile {
       entries: parsed.entries as SessionLedgerEntry[],
     };
   } catch (error) {
-    throw new GatewayContractError(
-      'contract_shape_invalid',
-      'Existing session ledger file is invalid JSON or has an invalid shape.',
-      {
-        file: paths.session_ledger_file,
-        cause: error instanceof Error ? error.message : 'Unknown session ledger parse failure.',
-      },
-    );
+    try {
+      recoverCorruptSessionLedger(paths.session_ledger_file);
+      return {
+        version: 'g2',
+        entries: [],
+      };
+    } catch (recoveryError) {
+      throw new GatewayContractError(
+        'contract_shape_invalid',
+        'Existing session ledger file is invalid JSON or has an invalid shape.',
+        {
+          file: paths.session_ledger_file,
+          cause: error instanceof Error ? error.message : 'Unknown session ledger parse failure.',
+          recovery_cause: recoveryError instanceof Error ? recoveryError.message : 'Unknown session ledger recovery failure.',
+        },
+      );
+    }
   }
 }
 
