@@ -2461,6 +2461,79 @@ test('mcp-stdio lists OPL tools and proxies session/workspace calls through the 
   }
 });
 
+test('session-runtime --acp exposes a callable stdio bridge entry for external shells', async () => {
+  const child = spawn(
+    process.execPath,
+    [
+      '--experimental-strip-types',
+      cliPath,
+      'session-runtime',
+      '--acp',
+    ],
+    {
+      cwd: repoRoot,
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: '1',
+      },
+      stdio: ['pipe', 'pipe', 'pipe'],
+    },
+  );
+
+  try {
+    writeJsonLine(child.stdin, {
+      id: 'bridge-init-1',
+      command: 'initialize',
+    });
+    const initialize = await readJsonLine(child.stdout);
+    assert.equal(initialize.id, 'bridge-init-1');
+    assert.equal(initialize.command, 'initialize');
+    assert.equal(initialize.ok, true);
+    assert.equal((initialize.result as { surface_id: string }).surface_id, 'opl_acp_stdio_bridge');
+
+    writeJsonLine(child.stdin, {
+      id: 'bridge-create-1',
+      command: 'session_create',
+      payload: {
+        version: 'g2',
+        session_create: {
+          surface_id: 'opl_session_create',
+          request_mode: 'submitted',
+          payload: {
+            product_entry: {
+              entry_surface: 'opl_session_api',
+              mode: 'ask',
+              seed: {
+                session_id: 'sess-bridge-1',
+              },
+              task: {
+                task_id: 'task-bridge-1',
+                status: 'accepted',
+                stage: 'queued',
+                summary: 'request accepted',
+                executor_backend: 'codex',
+                session_id: null,
+              },
+            },
+          },
+        },
+      },
+    });
+    const created = await readJsonLine(child.stdout);
+    assert.equal(created.id, 'bridge-create-1');
+    assert.equal(created.command, 'session_create');
+    assert.equal(created.ok, true);
+    assert.equal((created.result as { session_id: string }).session_id, 'sess-bridge-1');
+    assert.equal(
+      (created.result as { task_acceptance: { task_id: string } }).task_acceptance.task_id,
+      'task-bridge-1',
+    );
+  } finally {
+    child.stdin.end();
+    child.kill();
+  }
+});
+
 test('mcp-stdio defaults to the current shell protocol version when the client does not negotiate one', async () => {
   const fakeApi = await startFakeOplApiServer();
 
