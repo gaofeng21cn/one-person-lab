@@ -7,7 +7,7 @@
 The core judgment of `OPL` is not “how to make one Agent finish one task once.”
 It is “how to let a research-oriented individual or a very small team continuously carry formal lab work through stable surfaces.”
 
-That is why `OPL` should be understood as the top-level gateway and federation model for continuous lab work.
+That is why `OPL` should be understood as the top-level gateway and federation model for continuous lab work, while also carrying the family-level session/runtime/projection layer and shared modules/contracts/indexes.
 
 ## Top-Level Chain
 
@@ -23,8 +23,9 @@ Human / Agent
 
 Today, the clearest mapped domains are:
 
-- `Research Foundry` -> `MedAutoScience`
-- `Presentation Foundry` -> `RedCube AI` through `ppt_deck`
+- `Research Foundry` -> independent domain agent `MedAutoScience`
+- `Grant Foundry` -> independent domain agent `MedAutoGrant`
+- `Presentation Foundry` -> independent domain agent `RedCube AI` through `ppt_deck`
 
 ## Role Split
 
@@ -58,17 +59,18 @@ The top-level `OPL Gateway` is responsible for:
 
 The current repository is the documentation-first public surface for this role.
 
-### Domain Gateway And Harness
+### Domain Agent, Gateway, And Harness
 
-Each domain is expected to keep two distinct layers:
+Each independent domain-agent repository is expected to keep three distinct layers:
 
-- a `domain gateway` that serves as the stable workstream entry surface
+- a `domain agent` as the public identity of the repository
+- a `domain gateway` that serves as the stable workstream boundary entry surface
 - a `Domain Harness OS` that executes, records, gates, and delivers domain work
 
 For example:
 
-- `MedAutoScience` is the `Research Foundry` domain gateway and harness
-- `RedCube AI` is the visual-deliverable domain gateway and harness
+- `MedAutoScience` is the independent domain agent for `Research Foundry`, with its own domain gateway and harness underneath
+- `RedCube AI` is the independent domain agent for visual delivery, with its own domain gateway and harness underneath
 
 ## Agent-First Execution
 
@@ -115,13 +117,13 @@ On that path:
 - `UHS` remains the shared Harness Engineering umbrella language
 - the `Shared Runtime Contract` gradually owns the shared contracts required for long-running online execution
 - the `Shared Domain Contract` gradually owns the cross-domain contracts for formal entry, run identity, report surfaces, audit surfaces, and gate semantics
-- each domain repository continues to own its product entry, domain workflow, and delivery truth
+- each independent domain-agent repository continues to own its product entry, domain workflow, and delivery truth
 
 That is how the ecosystem can grow into multiple vertical online agent products on one substrate rather than one giant runtime that swallows every domain.
 The full direction is not implemented yet, but it is the right structure to keep tightening toward.
 
 If the ecosystem later adopts the upstream `Hermes-Agent` as a runtime substrate, that choice belongs more accurately to the implementation layer of the `Shared Runtime Contract`, not as a synonym for `UHS`, `OPL`, or domain truth.
-As of today, none of the domain repositories has landed that integration yet.
+As of today, `Med Auto Grant` has landed a real upstream `Hermes-Agent` runtime substrate, while `Med Auto Science` and `RedCube AI` remain at earlier cutover/proof stages.
 
 ## Operating Principles
 
@@ -140,7 +142,7 @@ Use the following scope for `OPL`:
 
 - the top-level product and control language for the lab
 - the place where cross-domain semantics are frozen first
-- the federation layer above independent domain gateways and harnesses
+- the federation layer above independent domain-agent repositories
 - the gateway surface that links domain-owned runtimes without absorbing their identities
 
 ## Why Domain Gateways Must Stay

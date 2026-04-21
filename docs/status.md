@@ -2,11 +2,12 @@
 
 ## 当前公开角色
 
-- `OPL` 是 one-person lab 的顶层 `session runtime`、共享接口真相与 CLI / shell 产品入口。
+- `OPL` 是 one-person lab 的顶层 `session runtime`、shared session/runtime/projection 层，以及跨仓 shared modules / contracts / indexes 的归属层。
 - 当前公开认知保持三层：`产品运行时 -> 产品家族 -> 当前实现 / 模块`。
 - `OPL` 持有 family-level session runtime、智能体注册表、工作空间 / 会话 / 进度 / 交付物接口面，以及机器可读合同。
+- `OPL` 继续持有 family-level shared modules、shared contracts 与 shared indexes 的顶层语义与注册面。
 - `Codex` 是默认交互与执行宿主；`Hermes-Agent` 是备用模式与长期在线网关。
-- 当前活跃领域智能体模块是 `MAS`、`MAG`、`RCA`；thesis 与 review 模块保持定义阶段。
+- 当前活跃实现是三个独立 `domain agent` 仓：`MAS`、`MAG`、`RCA`；thesis 与 review 模块保持定义阶段。
 
 ## 当前主线产品模型
 
@@ -37,7 +38,7 @@
 | --- | --- | --- | --- |
 | 普通对话 | Codex | 讨论、解释、阅读、计划、轻量分析 | 默认 |
 | 通用任务 | Codex | 本地文件工作、命令执行、验证、多步任务 | 默认 |
-| 专用智能体 | `MAS`、`MAG`、`RCA` | 医学科研、基金写作、视觉交付 | 活跃 |
+| 专用智能体 / domain agent | `MAS`、`MAG`、`RCA` | 医学科研、基金写作、视觉交付 | 活跃 |
 
 ## 当前产品家族
 
@@ -57,6 +58,7 @@
 - `docs/references/` 承接参考级配套文档；`docs/specs/` 与 `docs/plans/` 承接设计与计划记录；`docs/history/` 承接历史归档。
 - 历史 `frontdesk / readiness / entry-guide / domain-wiring` 公开语义已经退出当前主线，只保留在参考或历史层。
 - `Product API` 继续保留，但语义上降为 session runtime 的 projection surface。
+- 各 domain 仓的 `gateway / harness` 继续作为内部分层语言存在；对外公开主语优先写成独立 `domain agent` 与其 `agent entry / direct entry`。
 
 ## 参考入口
 

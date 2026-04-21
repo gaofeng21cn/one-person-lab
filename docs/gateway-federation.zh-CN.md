@@ -7,8 +7,8 @@
 这份文档定义下面三者的关系：
 
 - 顶层 `OPL Gateway`
-- 独立的 `domain gateway`
-- 独立的 `domain harness`
+- 独立 `domain agent` 仓内部的 `domain gateway`
+- 独立 `domain agent` 仓内部的 `domain harness`
 
 它的作用是避免两个常见误判：
 
@@ -27,7 +27,13 @@ Human / Agent
 ```
 
 `OPL` 掌握顶层产品语言和路由语义。
-每个 domain 掌握自己的正式执行与交付面。
+每个独立 `domain agent` 仓掌握自己的正式执行与交付面。
+
+在当前定位下，更准确的公开主语是：
+
+- `OPL`：family-level session/runtime/projection 与 shared modules/contracts/indexes
+- `MAS`、`MAG`、`RCA`：独立 `domain agent`
+- `domain gateway / domain harness`：这些 domain agent 仓内部的边界层与执行层语言
 
 ## OPL Gateway 的职责
 
@@ -51,6 +57,7 @@ Human / Agent
 - 在需要时支持独立使用
 
 这也是为什么即使有 `OPL`，domain gateway 仍必须保留。
+它是 `domain agent` 仓内部的稳定边界层，不是已经过时的历史残留。
 
 ## Domain Harness 的职责
 
@@ -70,28 +77,37 @@ harness 是内部执行底座，不是顶层产品面。
 ### Research Foundry
 
 - `OPL workstream`: `Research Foundry`
-- `domain gateway`: `MedAutoScience`
+- `domain agent`: `MedAutoScience`
+- `domain gateway`: `MedAutoScience` 仓内 research gateway
 - `domain harness`: 由 `MedAutoScience` 控制的 research harness
 
 ### Presentation Foundry
 
 - `OPL workstream`: `Presentation Foundry`
-- `domain gateway`: `RedCube AI`
+- `domain agent`: `RedCube AI`
+- `domain gateway`: `RedCube AI` 仓内 visual gateway
 - `direct family`: `ppt_deck`
 - 说明：`xiaohongshu` 与 `ppt_deck` 共享 RedCube harness，但不自动等同于 `Presentation Foundry`
+
+### Grant Foundry
+
+- `OPL workstream`: `Grant Foundry`
+- `domain agent`: `MedAutoGrant`
+- `domain gateway`: `MedAutoGrant` 仓内 grant gateway
+- `domain harness`: 由 `MedAutoGrant` 控制的 grant harness
 
 ## 边界规则
 
 不要把系统写成：
 
 - `OPL` 取代所有 domain gateway
-- domain 项目退化成没有独立角色的私有实现细节
+- domain agent 仓退化成没有独立角色的私有实现细节
 - 一个 runtime 拥有全部工作流
 
 应该把系统写成：
 
 - 顶层的 `OPL Gateway`
-- 其下独立的 `domain gateway`
+- 其下独立 `domain agent` 仓内部的 `domain gateway`
 - 再其下独立的 `domain harness`
 
 ## 下一层具体契约

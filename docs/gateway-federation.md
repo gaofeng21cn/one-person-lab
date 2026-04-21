@@ -7,8 +7,8 @@
 This document defines the intended relationship between:
 
 - the top-level `OPL Gateway`
-- independent `domain gateways`
-- independent `domain harnesses`
+- `domain gateways` inside independent domain-agent repositories
+- `domain harnesses` inside independent domain-agent repositories
 
 It exists to prevent two common mistakes:
 
@@ -27,7 +27,13 @@ Human / Agent
 ```
 
 `OPL` owns the top-level product language and routing semantics.
-Each domain owns its own formal execution and delivery surface.
+Each independent domain-agent repository owns its own formal execution and delivery surface.
+
+Under the current positioning, the public identities are:
+
+- `OPL`: family-level session/runtime/projection plus shared modules/contracts/indexes
+- `MAS`, `MAG`, `RCA`: independent domain agents
+- `domain gateway / domain harness`: internal boundary and execution layers within those domain-agent repositories
 
 ## OPL Gateway Responsibilities
 
@@ -51,6 +57,7 @@ Each `domain gateway` is responsible for:
 - independent standalone use when needed
 
 This is why domain gateways must stay even if `OPL` exists above them.
+They remain the stable boundary layer inside each domain-agent repository, not a discarded historical naming artifact.
 
 ## Domain Harness Responsibilities
 
@@ -70,28 +77,37 @@ The harness is the internal execution base, not the top-level product surface.
 ### Research Foundry
 
 - `OPL workstream`: `Research Foundry`
-- `domain gateway`: `MedAutoScience`
+- `domain agent`: `MedAutoScience`
+- `domain gateway`: the research gateway inside `MedAutoScience`
 - `domain harness`: the research harness controlled by `MedAutoScience`
 
 ### Presentation Foundry
 
 - `OPL workstream`: `Presentation Foundry`
-- `domain gateway`: `RedCube AI`
+- `domain agent`: `RedCube AI`
+- `domain gateway`: the visual gateway inside `RedCube AI`
 - `direct family`: `ppt_deck`
 - note: `xiaohongshu` shares the RedCube harness but is not automatically identical to `Presentation Foundry`
+
+### Grant Foundry
+
+- `OPL workstream`: `Grant Foundry`
+- `domain agent`: `MedAutoGrant`
+- `domain gateway`: the grant gateway inside `MedAutoGrant`
+- `domain harness`: the grant harness controlled by `MedAutoGrant`
 
 ## Boundary Rules
 
 Do not describe the system as:
 
 - `OPL` replacing all domain gateways
-- domain projects becoming private implementation details with no standalone role
+- domain-agent repositories becoming private implementation details with no standalone role
 - a single runtime owning all workstreams
 
 Describe it as:
 
 - a top-level gateway above domains
-- independent domain gateways below it
+- domain gateways inside independent domain-agent repositories below it
 - independent harnesses below those gateways
 
 ## Next Contract Layer

@@ -6,7 +6,7 @@
 
 `OPL` 的核心判断，不是“怎么让一个 Agent 一次性做完一个任务”，而是“怎么让一个研究型个人或极小团队，通过稳定表面持续承担正式实验室工作”。
 
-所以，`OPL` 更准确的理解是面向持续实验室工作的顶层 Gateway 与 federation model。
+所以，`OPL` 更准确的理解是面向持续实验室工作的顶层 Gateway 与 federation model，同时承担 family-level session/runtime/projection 与 shared modules/contracts/indexes。
 
 ## 顶层链路
 
@@ -22,8 +22,9 @@ Human / Agent
 
 当前最清楚的两条映射是：
 
-- `Research Foundry` -> `MedAutoScience`
-- `Presentation Foundry` -> `RedCube AI` 里的 `ppt_deck`
+- `Research Foundry` -> 独立 `domain agent` `MedAutoScience`
+- `Grant Foundry` -> 独立 `domain agent` `MedAutoGrant`
+- `Presentation Foundry` -> 独立 `domain agent` `RedCube AI` 里的 `ppt_deck`
 
 ## 角色分工
 
@@ -57,17 +58,18 @@ Agent 主要负责：
 
 当前仓库承担的是这个角色的文档优先公开说明面。
 
-### Domain Gateway 与 Harness
+### Domain Agent、Gateway 与 Harness
 
-每个 domain 应保持两层分开：
+每个独立 `domain agent` 仓应保持三层分开：
 
-- `domain gateway` 作为该工作流的稳定入口
+- `domain agent` 作为仓库对外公开主语
+- `domain gateway` 作为该工作流的稳定边界入口
 - `Domain Harness OS` 作为该工作流的执行、记录、治理与交付底座
 
 例如：
 
-- `MedAutoScience` 是 `Research Foundry` 的 domain gateway 与 harness
-- `RedCube AI` 是视觉交付的 domain gateway 与 harness
+- `MedAutoScience` 是 `Research Foundry` 的独立 domain agent，其内部继续持有 domain gateway 与 harness
+- `RedCube AI` 是视觉交付的独立 domain agent，其内部继续持有 domain gateway 与 harness
 
 ## Agent-first 执行
 
@@ -114,13 +116,13 @@ Agent 主要负责：
 - `UHS` 继续作为共享 Harness Engineering 上位语言
 - `Shared Runtime Contract` 逐步承接长期在线运行所需的共享合同
 - `Shared Domain Contract` 逐步承接 formal entry、运行身份、报告面、审计面与 gate 语义这类跨 domain 正式行为合同
-- 各个 domain 仓继续承接自己的产品入口、domain workflow 与交付真相
+- 各个独立 `domain agent` 仓继续承接自己的产品入口、domain workflow 与交付真相
 
 因此，未来更像是“多个垂类在线 agent 产品复用同一 substrate”，而不是“一个顶层巨型 runtime 吞掉所有 domain”。
 这条方向当前还没有全部实现，但现在应该按这个结构推进。
 
 如果未来采用上游 `Hermes-Agent` 作为 runtime substrate，它也更准确地属于 `Shared Runtime Contract` 的实现层，而不是 `UHS`、`OPL` 或 domain truth 的同义词。
-截至目前，还没有任何一个 domain 仓真正落地了这件事。
+截至当前，`Med Auto Grant` 已经落地真实上游 `Hermes-Agent` runtime substrate；`Med Auto Science` 与 `RedCube AI` 继续分别处在更早的 cutover / proof 阶段。
 
 ## 运行原则
 
@@ -139,7 +141,7 @@ Agent 主要负责：
 
 - 实验室顶层产品与控制语言
 - 跨 domain 语义最先冻结的地方
-- 独立 domain gateway 与 harness 之上的 federation 层
+- 独立 domain agent 仓之上的 federation 层
 - 连接各个 domain-owned runtime、但不吞并其身份的 gateway surface
 
 ## 为什么 Domain Gateway 仍然必须保留
