@@ -1,6 +1,6 @@
 # OPL Initialize 与 Environment / Modules 设计
 
-> 已退役。这个设计属于 `Initialize OPL + frontdesk` 公开语义阶段，当前主线已经改为 `OPL Product API + external overlay`。现行边界以 [`docs/specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md`](./2026-04-20-opl-product-api-and-domain-agent-boundary-design.md) 为准。保留本文只用于历史审计与迁移回顾。
+> 已退役。这个设计属于 `Initialize OPL + frontdesk` 公开语义阶段，当前主线已经改为 `OPL Product API + 独立 GUI 壳`。自 `2026-04-21` 起，GUI 主线按 `AionUI` 推进，`Onyx` 只保留备线参考。现行边界以 [`docs/specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md`](../../specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md) 为准。保留本文只用于历史审计与迁移回顾。
 
 ## 背景
 
@@ -31,7 +31,7 @@
 - 初始化完成后进入 `OPL` 工作台
 - `Codex`、`Hermes-Agent`、`Med Auto Science`、`Med Deep Scientist`、`Med Auto Grant`、`RedCube AI` 都是 `OPL` 管理的环境项或模块
 
-`Onyx` 属于内部 GUI overlay 基座，不在用户界面里作为独立产品暴露。
+当前 GUI 基座属于内部实现选择，不在用户界面里作为独立产品暴露。
 
 ### 2. 首次启动由 OPL 接管环境
 
@@ -347,11 +347,11 @@ GUI 工作台继续保持三栏：
 - `opl frontdesk reinstall-support`
 - `opl frontdesk update-channel`
 
-## 与独立 Onyx overlay 仓的边界
+## 与独立 GUI 壳的边界
 
 独立 overlay 仓负责：
 
-- 复用 `Onyx` 的工作台布局和浅色极简视觉方向
+- 复用当前 GUI 主线的工作台布局和浅色极简视觉方向
 - 渲染 `Initialize OPL`
 - 渲染设置页 `Environment / Modules`
 - 把右侧 `progress / files` 边栏压成稳定产品面
@@ -373,11 +373,11 @@ GUI 工作台继续保持三栏：
 - `Workspace Root` actions
 - `System` maintenance actions
 
-### P2. 独立 overlay 仓起步
+### P2. 独立 GUI 壳起步
 
 交付：
 
-- 基于 `Onyx` 的最薄 overlay 仓
+- 基于外部 GUI 基座的最薄 shell 仓
 - 首屏三栏工作台
 - 设置页 `Environment / Modules`
 - 首次启动向导 `Initialize OPL`
@@ -393,6 +393,6 @@ GUI 工作台继续保持三栏：
 ## 明确不做
 
 - 不在 `OPL` 主仓内继续实现 repo-tracked GUI
-- 不把 `Onyx` 暴露成用户需要理解的独立产品
+- 不把当前 GUI 基座暴露成用户需要理解的独立产品
 - 不要求用户先手工学习 `Codex` 与 `Hermes-Agent` 的安装顺序
 - 不把 domain modules 写成脱离 `OPL` 管理的散装依赖

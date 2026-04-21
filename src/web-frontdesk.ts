@@ -204,7 +204,7 @@ type WebFrontDeskStartupPayload = {
       workspace_path: string;
       sessions_limit: number;
     };
-    recommended_gui_overlay: 'opl-onyx-shell';
+    recommended_gui_overlay: 'aionui_shell';
     notes: string[];
   };
 };
@@ -1185,7 +1185,7 @@ function buildStartupPayload(context: WebFrontDeskContext): WebFrontDeskStartupP
         workspace_path: context.workspacePath,
         sessions_limit: context.sessionsLimit,
       },
-      recommended_gui_overlay: 'opl-onyx-shell',
+      recommended_gui_overlay: 'aionui_shell',
       notes: [
         'This bootstrap surface exposes the current OPL Product API for external GUI overlays.',
         'System, engines, modules, agents, workspaces, sessions, progress, and artifacts are available as first-class resources.',
@@ -1390,7 +1390,7 @@ function buildWebFrontDeskRootPayload(context: WebFrontDeskContext) {
       debug: bootstrap.opl_api.debug,
       defaults: bootstrap.opl_api.defaults,
       runtime_modes: bootstrap.opl_api.runtime_modes,
-      recommended_gui_overlay: 'opl-onyx-shell',
+      recommended_gui_overlay: 'aionui_shell',
       notes: [
         'Use an external GUI overlay to consume these product API resources.',
         'OPL main repo now stays headless and contract-first.',
