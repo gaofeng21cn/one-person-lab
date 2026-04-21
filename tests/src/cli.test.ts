@@ -1582,6 +1582,43 @@ test('ask --dry-run produces a routed Codex handoff preview from a plain-languag
   assert.ok(output.product_entry.codex.command_preview.includes('--json'));
 });
 
+test('ask --dry-run routes explicit @mas handle into Research Foundry and strips the handle from goal', () => {
+  const output = runCli([
+    'ask',
+    '@mas tighten the manuscript argument around invasive phenotype findings',
+    '--dry-run',
+  ]);
+
+  assert.equal(output.product_entry.mode, 'ask');
+  assert.equal(output.product_entry.input.goal, 'tighten the manuscript argument around invasive phenotype findings');
+  assert.equal(output.product_entry.routing.status, 'routed');
+  assert.equal(output.product_entry.routing.domain_id, 'medautoscience');
+  assert.equal(output.product_entry.routing.workstream_id, 'research_ops');
+});
+
+test('ask --dry-run routes explicit @rca handle into Presentation Foundry and strips the handle from goal', () => {
+  const output = runCli([
+    'ask',
+    '@rca build a defense-ready deck for next week',
+    '--dry-run',
+  ]);
+
+  assert.equal(output.product_entry.mode, 'ask');
+  assert.equal(output.product_entry.input.goal, 'build a defense-ready deck for next week');
+  assert.equal(output.product_entry.routing.status, 'routed');
+  assert.equal(output.product_entry.routing.domain_id, 'redcube');
+  assert.equal(output.product_entry.routing.workstream_id, 'presentation_ops');
+});
+
+test('ask rejects unknown explicit @agent handles with a machine-readable usage error', () => {
+  const { status, payload } = runCliFailure(['ask', '@unknown-agent plan the next draft']);
+
+  assert.equal(status, 2);
+  assert.equal(payload.version, 'g2');
+  assert.equal(payload.error.code, 'cli_usage_error');
+  assert.match(payload.error.message, /Unknown product-entry agent handle/);
+});
+
 test('ask runs Codex through the resolved product-entry handoff and returns the captured response', () => {
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
 if [ "$1" = "exec" ]; then

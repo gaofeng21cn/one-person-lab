@@ -75,11 +75,74 @@ export function resolveRequestSurface(
 ): ResolutionResult {
   const text = normalizedText(input);
   const preferredFamily = input.preferredFamily?.toLowerCase() ?? null;
+  const explicitMas = preferredFamily === 'mas';
+  const explicitMag = preferredFamily === 'mag';
+  const explicitRca = preferredFamily === 'rca';
   const research = hasKeyword(text, RESEARCH_KEYWORDS);
   const presentation =
-    preferredFamily === 'ppt_deck' || hasKeyword(text, PRESENTATION_KEYWORDS);
+    preferredFamily === 'ppt_deck' || explicitRca || hasKeyword(text, PRESENTATION_KEYWORDS);
   const xiaohongshu = preferredFamily === 'xiaohongshu' || text.includes('xiaohongshu');
   const candidateWorkstream = detectCandidateWorkstream(text);
+
+  if (explicitMas) {
+    const workstream = findWorkstreamOrThrow(contracts, 'research_ops');
+    return {
+      status: 'routed',
+      request_kind: requestKind(input),
+      workstream_id: workstream.workstream_id,
+      domain_id: workstream.domain_id,
+      entry_surface: 'domain_gateway',
+      recommended_family: null,
+      confidence: 'high',
+      reason:
+        'The explicit @mas handle pins the request to Research Foundry inside the MedAutoScience gateway.',
+      routing_evidence: [
+        'preferred_family_alias=mas',
+        'explicit agent handle',
+        'research_ops registered ownership',
+      ],
+    };
+  }
+
+  if (explicitMag) {
+    const workstream = findWorkstreamOrThrow(contracts, 'grant_ops');
+    return {
+      status: 'routed',
+      request_kind: requestKind(input),
+      workstream_id: workstream.workstream_id,
+      domain_id: workstream.domain_id,
+      entry_surface: 'domain_gateway',
+      recommended_family: null,
+      confidence: 'high',
+      reason:
+        'The explicit @mag handle pins the request to Grant Foundry inside the MedAutoGrant gateway.',
+      routing_evidence: [
+        'preferred_family_alias=mag',
+        'explicit agent handle',
+        'grant_ops registered ownership',
+      ],
+    };
+  }
+
+  if (explicitRca) {
+    const workstream = findWorkstreamOrThrow(contracts, 'presentation_ops');
+    return {
+      status: 'routed',
+      request_kind: requestKind(input),
+      workstream_id: workstream.workstream_id,
+      domain_id: workstream.domain_id,
+      entry_surface: 'domain_gateway',
+      recommended_family: 'ppt_deck',
+      confidence: 'high',
+      reason:
+        'The explicit @rca handle pins the request to Presentation Foundry inside the RedCube gateway.',
+      routing_evidence: [
+        'preferred_family_alias=rca',
+        'explicit agent handle',
+        'presentation_ops registered ownership',
+      ],
+    };
+  }
 
   if (preferredFamily === 'ppt_deck') {
     const workstream = findWorkstreamOrThrow(contracts, 'presentation_ops');
