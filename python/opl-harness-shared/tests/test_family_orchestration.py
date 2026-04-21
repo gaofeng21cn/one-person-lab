@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from opl_harness_shared.family_orchestration import (
+    buildFamilyIntakeEvidenceCompanion,
     build_family_human_gate,
     build_family_human_gate_preview,
+    build_family_intake_evidence_companion,
     build_family_frontdesk_product_entry_orchestration,
     build_family_product_entry_orchestration,
     build_family_orchestration_companion,
@@ -31,6 +33,82 @@ def test_build_family_human_gate_normalizes_required_fields() -> None:
     assert gate["gate_id"] == "gate-1"
     assert gate["request_surface"]["surface_kind"] == "runtime_watch"
     assert gate["decision_options"] == ["approve", "pause"]
+
+
+def test_build_family_intake_evidence_companion_normalizes_shape_and_alias() -> None:
+    payload = build_family_intake_evidence_companion(
+        target_domain_id="med-autogrant",
+        intake_audit={
+            "summary": "  intake audit passed with tracked caveats ",
+            "verdict": "ready_for_routing",
+            "audited_at": "2026-04-21T01:02:03Z",
+            "summary_ref": {
+                "ref_kind": "repo_path",
+                "ref": "runtime_watch/intake-audit/latest.json",
+                "label": "latest intake audit",
+            },
+        },
+        trust_ranked_evidence_refs=[
+            {
+                "ref_kind": "repo_path",
+                "ref": "evidence/secondary-notes.md",
+                "trust_rank": 3,
+                "trust_note": "secondary operator note",
+            },
+            {
+                "ref_kind": "workspace_locator",
+                "ref": "grant_runs/<grant_run_id>/input/critique-package.json",
+                "trust_rank": 1,
+                "trust_note": "primary intake package",
+                "supports": ["scope_grounding", "route_selection"],
+            },
+        ],
+        grounding_scope={
+            "scope_kind": "grant_route_scope",
+            "summary": "route grounding frozen against intake package and critique context",
+            "scope_refs": [
+                {
+                    "ref_kind": "json_pointer",
+                    "ref": "/product_entry_manifest/domain_focus",
+                    "label": "domain focus",
+                },
+            ],
+        },
+        human_gate_refs=[
+            {
+                "ref_kind": "family_human_gate_id",
+                "ref": "mag_route_gate_revision",
+            },
+        ],
+        checkpoint_lineage_refs=[
+            {
+                "ref_kind": "family_checkpoint_lineage_id",
+                "ref": "lineage-intake-20260421",
+            },
+        ],
+    )
+    alias_payload = buildFamilyIntakeEvidenceCompanion(
+        target_domain_id="med-autogrant",
+        intake_audit={"summary": "intake audit passed"},
+        trust_ranked_evidence_refs=[
+            {"ref_kind": "repo_path", "ref": "a.md", "trust_rank": 1},
+        ],
+        grounding_scope={
+            "scope_kind": "grant_route_scope",
+            "summary": "scope summary",
+            "scope_refs": [{"ref_kind": "repo_path", "ref": "scope.md"}],
+        },
+    )
+
+    assert payload["version"] == "family-intake-evidence-companion.v1"
+    assert payload["target_domain_id"] == "med-autogrant"
+    assert payload["intake_audit"]["summary"] == "intake audit passed with tracked caveats"
+    assert [entry["trust_rank"] for entry in payload["trust_ranked_evidence_refs"]] == [1, 3]
+    assert payload["trust_ranked_evidence_refs"][0]["supports"] == ["scope_grounding", "route_selection"]
+    assert payload["grounding_scope"]["scope_refs"][0]["ref"] == "/product_entry_manifest/domain_focus"
+    assert payload["human_gate_refs"][0]["ref"] == "mag_route_gate_revision"
+    assert payload["checkpoint_lineage_refs"][0]["ref"] == "lineage-intake-20260421"
+    assert alias_payload["version"] == "family-intake-evidence-companion.v1"
 
 
 def test_build_family_orchestration_companion_materializes_event_and_lineage() -> None:
@@ -99,6 +177,30 @@ def test_build_family_orchestration_template_normalizes_shared_preview_surfaces(
     }
     assert payload["event_envelope_surface"]["ref_kind"] == "workspace_locator"
     assert payload["checkpoint_lineage_surface"]["ref_kind"] == "workspace_locator"
+
+
+def test_build_family_orchestration_template_passes_through_intake_evidence_companion() -> None:
+    payload = build_family_orchestration_template(
+        action_graph={
+            "version": "family-action-graph.v1",
+            "graph_id": "graph-1",
+            "target_domain_id": "med-autogrant",
+            "graph_kind": "grant_intake_orchestration",
+            "graph_version": "2026-04-21",
+            "nodes": [{"node_id": "step:intake"}],
+            "edges": [],
+            "entry_nodes": ["step:intake"],
+            "exit_nodes": ["step:intake"],
+            "human_gates": [],
+            "checkpoint_policy": {"mode": "explicit_nodes", "checkpoint_nodes": ["step:intake"]},
+        },
+        resume_surface_kind="grant_entry",
+        session_locator_field="grant_run_id",
+        checkpoint_locator_field="checkpoint_id",
+        intake_evidence_companion={"version": "family-intake-evidence-companion.v1", "target_domain_id": "med-autogrant"},
+    )
+
+    assert payload["intake_evidence_companion"]["version"] == "family-intake-evidence-companion.v1"
 
 
 def test_build_family_human_gate_preview_normalizes_shared_preview_fields() -> None:
@@ -220,6 +322,31 @@ def test_build_family_product_entry_orchestration_materializes_action_graph_and_
         "checkpoint_locator_field": "continuation_snapshot.latest_managed_run_id",
     }
     assert payload["event_envelope_surface"]["ref"] == "/recommended_command"
+
+
+def test_build_family_product_entry_orchestration_passes_through_intake_evidence_companion() -> None:
+    payload = build_family_product_entry_orchestration(
+        graph_id="mag_product_entry_graph",
+        target_domain_id="med-autogrant",
+        graph_kind="grant_intake_orchestration",
+        graph_version="2026-04-21",
+        nodes=[
+            {
+                "node_id": "step:open_frontdesk",
+                "node_kind": "frontdoor",
+                "title": "Open frontdesk",
+            }
+        ],
+        edges=[],
+        entry_nodes=["step:open_frontdesk"],
+        exit_nodes=["step:open_frontdesk"],
+        resume_surface_kind="grant_entry",
+        session_locator_field="grant_run_id",
+        checkpoint_locator_field="checkpoint_id",
+        intake_evidence_companion={"version": "family-intake-evidence-companion.v1", "target_domain_id": "med-autogrant"},
+    )
+
+    assert payload["intake_evidence_companion"]["target_domain_id"] == "med-autogrant"
 
 
 def test_build_family_frontdesk_product_entry_orchestration_materializes_canonical_frontdesk_graph() -> None:

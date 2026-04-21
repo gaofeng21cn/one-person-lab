@@ -33,6 +33,12 @@ def _require_bool(value: object, field: str) -> bool:
     return value
 
 
+def _require_positive_int(value: object, field: str) -> int:
+    if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+        raise ValueError(f"family orchestration 缺少正整数字段: {field}")
+    return value
+
+
 def _normalize_ref(value: object, field: str) -> dict[str, str] | None:
     if not isinstance(value, Mapping):
         return None
@@ -201,6 +207,95 @@ def build_family_human_gate_preview(
     return payload
 
 
+def build_family_intake_evidence_companion(
+    *,
+    intake_audit: Mapping[str, Any],
+    trust_ranked_evidence_refs: Sequence[Mapping[str, Any]],
+    grounding_scope: Mapping[str, Any],
+    target_domain_id: str = "unknown_domain",
+    human_gate_refs: Sequence[Mapping[str, Any]] | None = None,
+    checkpoint_lineage_refs: Sequence[Mapping[str, Any]] | None = None,
+) -> dict[str, Any]:
+    if not isinstance(intake_audit, Mapping):
+        raise ValueError("family orchestration 缺少 mapping 字段: intake_audit")
+    if not isinstance(grounding_scope, Mapping):
+        raise ValueError("family orchestration 缺少 mapping 字段: grounding_scope")
+    if not isinstance(trust_ranked_evidence_refs, Sequence) or isinstance(
+        trust_ranked_evidence_refs, (str, bytes, bytearray)
+    ):
+        raise ValueError("family orchestration 缺少数组字段: trust_ranked_evidence_refs")
+
+    normalized_trust_ranked_evidence_refs: list[dict[str, Any]] = []
+    for index, entry in enumerate(trust_ranked_evidence_refs):
+        if not isinstance(entry, Mapping):
+            raise ValueError(f"family orchestration 缺少 mapping 字段: trust_ranked_evidence_refs[{index}]")
+        normalized_ref = _normalize_ref(entry, f"trust_ranked_evidence_refs[{index}]")
+        if normalized_ref is None:
+            raise ValueError(f"family orchestration reference 缺少字段: trust_ranked_evidence_refs[{index}]")
+        supports = entry.get("supports", ())
+        supports_payload = (
+            _require_string_list(supports, f"trust_ranked_evidence_refs[{index}].supports")
+            if isinstance(supports, Sequence) and not isinstance(supports, (str, bytes, bytearray))
+            else []
+        )
+        normalized_entry: dict[str, Any] = {
+            **normalized_ref,
+            "trust_rank": _require_positive_int(entry.get("trust_rank"), f"trust_ranked_evidence_refs[{index}].trust_rank"),
+        }
+        trust_note = _text(entry.get("trust_note"))
+        if trust_note is not None:
+            normalized_entry["trust_note"] = trust_note
+        if supports_payload:
+            normalized_entry["supports"] = supports_payload
+        normalized_trust_ranked_evidence_refs.append(normalized_entry)
+    if not normalized_trust_ranked_evidence_refs:
+        raise ValueError("family orchestration 缺少数组字段: trust_ranked_evidence_refs")
+    normalized_trust_ranked_evidence_refs.sort(
+        key=lambda value: (
+            int(value.get("trust_rank") or 0),
+            str(value.get("ref") or ""),
+        )
+    )
+
+    scope_refs = _normalize_refs(grounding_scope.get("scope_refs"), "grounding_scope.scope_refs")
+    if not scope_refs:
+        raise ValueError("family orchestration 缺少数组字段: grounding_scope.scope_refs")
+
+    intake_audit_payload: dict[str, Any] = {
+        "summary": _require_string(intake_audit.get("summary"), "intake_audit.summary"),
+    }
+    for key in ("verdict", "audited_at"):
+        value = _text(intake_audit.get(key))
+        if value is not None:
+            intake_audit_payload[key] = value
+    summary_ref = _normalize_ref(intake_audit.get("summary_ref"), "intake_audit.summary_ref")
+    if summary_ref is not None:
+        intake_audit_payload["summary_ref"] = summary_ref
+
+    payload: dict[str, Any] = {
+        "version": "family-intake-evidence-companion.v1",
+        "target_domain_id": _text(target_domain_id) or "unknown_domain",
+        "intake_audit": intake_audit_payload,
+        "trust_ranked_evidence_refs": normalized_trust_ranked_evidence_refs,
+        "grounding_scope": {
+            "scope_kind": _require_string(grounding_scope.get("scope_kind"), "grounding_scope.scope_kind"),
+            "summary": _require_string(grounding_scope.get("summary"), "grounding_scope.summary"),
+            "scope_refs": scope_refs,
+        },
+    }
+    normalized_human_gate_refs = _normalize_refs(human_gate_refs, "human_gate_refs")
+    if normalized_human_gate_refs:
+        payload["human_gate_refs"] = normalized_human_gate_refs
+    normalized_checkpoint_lineage_refs = _normalize_refs(checkpoint_lineage_refs, "checkpoint_lineage_refs")
+    if normalized_checkpoint_lineage_refs:
+        payload["checkpoint_lineage_refs"] = normalized_checkpoint_lineage_refs
+    return payload
+
+
+def buildFamilyIntakeEvidenceCompanion(**kwargs: Any) -> dict[str, Any]:
+    return build_family_intake_evidence_companion(**kwargs)
+
+
 def build_explicit_checkpoint_policy(
     *,
     checkpoint_nodes: Sequence[str],
@@ -280,6 +375,7 @@ def build_family_orchestration_template(
     action_graph_ref: Mapping[str, Any] | None = None,
     event_envelope_surface: Mapping[str, Any] | None = None,
     checkpoint_lineage_surface: Mapping[str, Any] | None = None,
+    intake_evidence_companion: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     if not isinstance(action_graph, Mapping):
         raise ValueError("family orchestration 缺少 mapping 字段: action_graph")
@@ -293,6 +389,11 @@ def build_family_orchestration_template(
     normalized_checkpoint_lineage_surface = _normalize_ref(
         checkpoint_lineage_surface,
         "checkpoint_lineage_surface",
+    )
+    normalized_intake_evidence_companion = (
+        dict(intake_evidence_companion)
+        if isinstance(intake_evidence_companion, Mapping)
+        else None
     )
     return {
         "action_graph_ref": normalized_action_graph_ref,
@@ -311,6 +412,11 @@ def build_family_orchestration_template(
         **(
             {"checkpoint_lineage_surface": normalized_checkpoint_lineage_surface}
             if normalized_checkpoint_lineage_surface is not None
+            else {}
+        ),
+        **(
+            {"intake_evidence_companion": normalized_intake_evidence_companion}
+            if normalized_intake_evidence_companion is not None
             else {}
         ),
     }
@@ -336,6 +442,7 @@ def build_family_product_entry_orchestration(
     action_graph_ref: Mapping[str, Any] | None = None,
     event_envelope_surface: Mapping[str, Any] | None = None,
     checkpoint_lineage_surface: Mapping[str, Any] | None = None,
+    intake_evidence_companion: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     normalized_checkpoint_policy = (
         build_explicit_checkpoint_policy(checkpoint_nodes=checkpoint_nodes)
@@ -377,6 +484,11 @@ def build_family_product_entry_orchestration(
         action_graph_ref=action_graph_ref,
         event_envelope_surface=event_envelope_surface,
         checkpoint_lineage_surface=checkpoint_lineage_surface,
+        intake_evidence_companion=(
+            dict(intake_evidence_companion)
+            if isinstance(intake_evidence_companion, Mapping)
+            else None
+        ),
     )
 
 
@@ -404,6 +516,7 @@ def build_family_frontdesk_product_entry_orchestration(
     action_graph_ref: Mapping[str, Any] | None = None,
     event_envelope_surface: Mapping[str, Any] | None = None,
     checkpoint_lineage_surface: Mapping[str, Any] | None = None,
+    intake_evidence_companion: Mapping[str, Any] | None = None,
     frontdesk_node_id: str | None = None,
     direct_node_id: str | None = None,
     federated_node_id: str | None = None,
@@ -529,6 +642,11 @@ def build_family_frontdesk_product_entry_orchestration(
         action_graph_ref=action_graph_ref,
         event_envelope_surface=event_envelope_surface,
         checkpoint_lineage_surface=checkpoint_lineage_surface,
+        intake_evidence_companion=(
+            dict(intake_evidence_companion)
+            if isinstance(intake_evidence_companion, Mapping)
+            else None
+        ),
     )
 
 

@@ -8,10 +8,12 @@ from .editable_consumer_launcher import (
     ensure_repo_editable_dependency_paths,
 )
 from .family_orchestration import (
+    buildFamilyIntakeEvidenceCompanion,
     build_explicit_checkpoint_policy,
     build_family_action_graph,
     build_family_action_graph_edge,
     build_family_action_graph_human_gate,
+    build_family_intake_evidence_companion,
     build_family_action_graph_node,
     build_family_human_gate,
     build_family_human_gate_preview,
@@ -131,6 +133,7 @@ __all__ = [
     "build_automation_descriptor",
     "build_checkpoint_summary",
     "build_explicit_checkpoint_policy",
+    "buildFamilyIntakeEvidenceCompanion",
     "build_family_product_frontdesk",
     "build_family_product_entry_manifest",
     "build_family_frontdesk_entry_surfaces",
@@ -139,6 +142,7 @@ __all__ = [
     "build_family_action_graph_edge",
     "build_family_action_graph_human_gate",
     "build_family_action_graph_node",
+    "build_family_intake_evidence_companion",
     "build_family_human_gate",
     "build_family_human_gate_preview",
     "build_family_frontdesk_product_entry_orchestration",
