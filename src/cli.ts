@@ -2889,6 +2889,14 @@ async function main() {
       examples: ['opl session runtime --acp'],
       group: 'session',
     }),
+    shell: cloneCommandSpec(commandSpecs.shell, {
+      usage:
+        'opl shell <request...> [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--workspace-path <path>] [--dry-run]',
+      examples: [
+        'opl shell "@mas tighten the manuscript argument around invasive phenotype findings"',
+        'opl shell "@rca build a defense-ready deck for next week" --workspace-path /Users/gaofeng/workspace/redcube-ai',
+      ],
+    }),
     'session ledger': cloneCommandSpec(commandSpecs['session ledger'], {
       usage: 'opl session ledger [--limit <n>]',
       examples: ['opl session ledger', 'opl session ledger --limit 5'],
