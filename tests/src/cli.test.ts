@@ -1619,6 +1619,51 @@ test('ask rejects unknown explicit @agent handles with a machine-readable usage 
   assert.match(payload.error.message, /Unknown product-entry agent handle/);
 });
 
+test('shell seeds the interactive Hermes lane through the same routed OPL entry in non-interactive mode', () => {
+  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "chat" ]; then
+  cat <<'EOF'
+OPL SHELL READY
+
+session_id: opl-shell-session
+EOF
+  exit 0
+fi
+if [ "$1" = "--resume" ] && [ "$2" = "opl-shell-session" ]; then
+  cat <<'EOF'
+OPL SHELL RESUMED
+EOF
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+
+  try {
+    const output = runCli(
+      ['shell', '@mas tighten the manuscript argument around invasive phenotype findings'],
+      {
+        OPL_HERMES_BIN: hermesPath,
+      },
+    );
+
+    assert.equal(output.product_entry.mode, 'chat');
+    assert.equal(output.product_entry.input.goal, 'tighten the manuscript argument around invasive phenotype findings');
+    assert.equal(output.product_entry.routing.domain_id, 'medautoscience');
+    assert.equal(output.product_entry.routing.workstream_id, 'research_ops');
+    assert.equal(output.product_entry.seed.session_id, 'opl-shell-session');
+    assert.equal(output.product_entry.resume.output, 'OPL SHELL RESUMED');
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('help advertises the shell command as the local interactive opl lane', () => {
+  const output = runCli(['help']);
+  const commands = output.help.commands.map((entry: { command: string }) => entry.command);
+  assert.equal(commands.includes('shell'), true);
+});
+
 test('ask runs Codex through the resolved product-entry handoff and returns the captured response', () => {
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
 if [ "$1" = "exec" ]; then
