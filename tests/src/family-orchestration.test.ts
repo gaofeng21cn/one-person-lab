@@ -10,6 +10,7 @@ import {
   buildFamilyActionGraphEdge,
   buildFamilyActionGraphHumanGate,
   buildFamilyIntakeEvidenceCompanion,
+  buildFamilyProjectProfileCompanion,
   buildFamilyHumanGatePreview,
   buildFamilyActionGraphNode,
   buildFamilyHumanGate,
@@ -147,6 +148,53 @@ test('buildFamilyIntakeEvidenceCompanion normalizes intake audit and trust-ranke
   assert.equal(companion.checkpoint_lineage_refs[0]?.ref, 'lineage-intake-20260421');
 });
 
+test('buildFamilyProjectProfileCompanion normalizes family-level project profile template payload', () => {
+  const companion = buildFamilyProjectProfileCompanion({
+    target_domain_id: 'med-autogrant',
+    project_profile: {
+      profile_id: 'grant_nsfc_project_profile_v1',
+      project_kind: 'grant_program',
+      template_family: 'research_grant',
+      template_id: 'nsfc_blueprint_v2026',
+      selection_mode: 'preset',
+      summary: '  NSFC preset selected for grant planning and authoring ',
+      summary_ref: {
+        ref_kind: 'repo_path',
+        ref: 'docs/presets/nsfc-blueprint.md',
+        label: 'NSFC template brief',
+      },
+    },
+    preference_signals: [
+      'favor_explicit_scope_freeze',
+      'prefer_structured_review_rhythm',
+    ],
+    grounding_refs: [
+      {
+        ref_kind: 'repo_path',
+        ref: 'docs/project-profile/selection-context.md',
+        label: 'selection context',
+      },
+    ],
+  }) as {
+    version: string;
+    target_domain_id: string;
+    project_profile: { profile_id: string; summary: string; summary_ref: { ref: string } };
+    preference_signals: string[];
+    grounding_refs: Array<{ ref: string }>;
+  };
+
+  assert.equal(companion.version, 'family-project-profile-companion.v1');
+  assert.equal(companion.target_domain_id, 'med-autogrant');
+  assert.equal(companion.project_profile.profile_id, 'grant_nsfc_project_profile_v1');
+  assert.equal(companion.project_profile.summary, 'NSFC preset selected for grant planning and authoring');
+  assert.equal(companion.project_profile.summary_ref.ref, 'docs/presets/nsfc-blueprint.md');
+  assert.deepEqual(companion.preference_signals, [
+    'favor_explicit_scope_freeze',
+    'prefer_structured_review_rhythm',
+  ]);
+  assert.equal(companion.grounding_refs[0]?.ref, 'docs/project-profile/selection-context.md');
+});
+
 test('buildFamilyOrchestrationCompanion materializes event envelope and checkpoint lineage', () => {
   const payload = buildFamilyOrchestrationCompanion({
     surface_kind: 'runtime_watch',
@@ -164,11 +212,21 @@ test('buildFamilyOrchestrationCompanion materializes event envelope and checkpoi
     human_gates: [{ gate_id: 'gate-1', status: 'requested' }],
     event_envelope_surface: { ref_kind: 'json_pointer', ref: '/runtime_watch/latest' },
     checkpoint_lineage_surface: { ref_kind: 'json_pointer', ref: '/runtime_watch/lineage' },
+    intake_evidence_companion: {
+      version: 'family-intake-evidence-companion.v1',
+      target_domain_id: 'med-autoscience',
+    },
+    project_profile_companion: {
+      version: 'family-project-profile-companion.v1',
+      target_domain_id: 'med-autoscience',
+    },
   }) as unknown as {
     resume_contract: { session_locator_field: string; checkpoint_locator_field: string };
     event_envelope: { session: { active_run_id: string }; payload: { runtime_decision: string } };
     checkpoint_lineage: { checkpoint_id: string };
     human_gates: Array<{ gate_id: string }>;
+    intake_evidence_companion: { version: string };
+    project_profile_companion: { version: string };
   };
 
   assert.equal(payload.resume_contract.session_locator_field, 'event_envelope.session.session_id');
@@ -183,6 +241,8 @@ test('buildFamilyOrchestrationCompanion materializes event envelope and checkpoi
   assert.equal(eventEnvelope.payload.runtime_decision, 'continue');
   assert.equal(checkpointLineage.checkpoint_id.startsWith('checkpoint-'), true);
   assert.equal(humanGates[0]?.gate_id, 'gate-1');
+  assert.equal(payload.intake_evidence_companion.version, 'family-intake-evidence-companion.v1');
+  assert.equal(payload.project_profile_companion.version, 'family-project-profile-companion.v1');
 });
 
 test('buildFamilyOrchestrationTemplate normalizes shared preview surfaces', () => {
@@ -226,6 +286,36 @@ test('buildFamilyOrchestrationTemplate normalizes shared preview surfaces', () =
   assert.ok(payload.checkpoint_lineage_surface);
   assert.equal(payload.event_envelope_surface.ref_kind, 'workspace_locator');
   assert.equal(payload.checkpoint_lineage_surface.ref_kind, 'workspace_locator');
+});
+
+test('buildFamilyOrchestrationTemplate passes through project_profile_companion', () => {
+  const payload = buildFamilyOrchestrationTemplate({
+    action_graph: {
+      version: 'family-action-graph.v1',
+      graph_id: 'graph-2',
+      target_domain_id: 'med-autogrant',
+      graph_kind: 'grant_intake_orchestration',
+      graph_version: '2026-04-21',
+      nodes: [{ node_id: 'step:intake' }],
+      edges: [],
+      entry_nodes: ['step:intake'],
+      exit_nodes: ['step:intake'],
+      human_gates: [],
+      checkpoint_policy: { mode: 'explicit_nodes', checkpoint_nodes: ['step:intake'] },
+    },
+    resume_surface_kind: 'grant_entry',
+    session_locator_field: 'grant_run_id',
+    checkpoint_locator_field: 'checkpoint_id',
+    project_profile_companion: {
+      version: 'family-project-profile-companion.v1',
+      target_domain_id: 'med-autogrant',
+    },
+  }) as { project_profile_companion?: { version: string } };
+
+  assert.equal(
+    payload.project_profile_companion?.version,
+    'family-project-profile-companion.v1',
+  );
 });
 
 test('buildFamilyActionGraph validates canonical family graph payloads', () => {
@@ -434,6 +524,58 @@ test('buildFamilyProductEntryOrchestration materializes action graph and gate pr
   assert.equal(
     orchestration.intake_evidence_companion.version,
     'family-intake-evidence-companion.v1',
+  );
+});
+
+test('buildFamilyProductEntryOrchestration passes through project_profile_companion', () => {
+  const projectProfileCompanion = buildFamilyProjectProfileCompanion({
+    target_domain_id: 'med-autogrant',
+    project_profile: {
+      profile_id: 'grant_nsfc_project_profile_v1',
+      project_kind: 'grant_program',
+      template_family: 'research_grant',
+      template_id: 'nsfc_blueprint_v2026',
+      selection_mode: 'preset',
+      summary: 'NSFC preset selected for grant planning and authoring',
+    },
+    preference_signals: ['favor_explicit_scope_freeze'],
+    grounding_refs: [
+      {
+        ref_kind: 'repo_path',
+        ref: 'docs/project-profile/selection-context.md',
+      },
+    ],
+  });
+  const orchestration = buildFamilyProductEntryOrchestration({
+    graph_id: 'mag_product_entry_graph',
+    target_domain_id: 'med-autogrant',
+    graph_kind: 'grant_intake_orchestration',
+    graph_version: '2026-04-21',
+    nodes: [
+      {
+        node_id: 'step:open_frontdesk',
+        node_kind: 'frontdoor',
+        title: 'Open frontdesk',
+      },
+    ],
+    edges: [],
+    entry_nodes: ['step:open_frontdesk'],
+    exit_nodes: ['step:open_frontdesk'],
+    resume_surface_kind: 'grant_entry',
+    session_locator_field: 'grant_run_id',
+    checkpoint_locator_field: 'checkpoint_id',
+    project_profile_companion: projectProfileCompanion,
+  }) as {
+    project_profile_companion: { version: string; target_domain_id: string };
+  };
+
+  assert.equal(
+    orchestration.project_profile_companion.version,
+    'family-project-profile-companion.v1',
+  );
+  assert.equal(
+    orchestration.project_profile_companion.target_domain_id,
+    'med-autogrant',
   );
 });
 
