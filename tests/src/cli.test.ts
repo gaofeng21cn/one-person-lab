@@ -5101,6 +5101,10 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
       'artifact_inventory',
     );
     assert.equal(
+      output.handoff_bundle.domain_manifest_recommendation.runtime_control.surface_kind,
+      'runtime_control',
+    );
+    assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.skill_catalog.surface_kind,
       'skill_catalog',
     );
@@ -5541,21 +5545,60 @@ exit 1
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-web-home-'));
   const stateDir = path.join(homeRoot, 'opl-state');
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-web-workspace-root-'));
+  const fixtures = loadFamilyManifestFixtures();
+  const { fixtureRoot: familyContractsFixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const sharedEnv = {
+    HOME: homeRoot,
+    CODEX_HOME: codexFixture.codexHome,
+    OPL_CODEX_BIN: codexPath,
+    OPL_CODEX_INSTALL_COMMAND: installScript,
+    OPL_HERMES_BIN: hermesPath,
+    OPL_FRONTDESK_STATE_DIR: stateDir,
+    OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
+  };
 
   let child: ChildProcessByStdio<null, Readable, Readable> | null = null;
 
   try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautogrant',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildManifestCommand(fixtures.medautogrant),
+    ], sharedEnv);
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildManifestCommand(fixtures.medautoscience),
+    ], sharedEnv);
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'redcube',
+      '--path',
+      repoRoot,
+      '--entry-command',
+      'redcube-ai frontdesk',
+      '--manifest-command',
+      buildManifestCommand(fixtures.redcube),
+      '--entry-url',
+      'http://127.0.0.1:3310/redcube',
+    ], sharedEnv);
+
     const startup = await startCliServer(
       ['web', '--host', '127.0.0.1', '--port', '0', '--path', repoRoot, '--sessions-limit', '1'],
-      {
-        HOME: homeRoot,
-        CODEX_HOME: codexFixture.codexHome,
-        OPL_CODEX_BIN: codexPath,
-        OPL_CODEX_INSTALL_COMMAND: installScript,
-        OPL_HERMES_BIN: hermesPath,
-        OPL_FRONTDESK_STATE_DIR: stateDir,
-        PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
-      },
+      sharedEnv,
     );
     child = startup.child;
 
@@ -5832,7 +5875,9 @@ exit 1
     assert.equal(sessionsPayload.sessions.surface_id, 'opl_sessions');
     assert.equal(sessionsPayload.sessions.items.length, 1);
     assert.equal(sessionsPayload.sessions.items[0].session_id, 'sess_web');
-    assert.equal(sessionsPayload.sessions.current_runtime_continuity, null);
+    assert.equal(sessionsPayload.sessions.current_runtime_continuity.project_id, 'medautogrant');
+    assert.equal(sessionsPayload.sessions.current_runtime_continuity.domain_agent_id, 'mag');
+    assert.equal(sessionsPayload.sessions.current_runtime_continuity.runtime_control.surface_kind, 'runtime_control');
 
     const oplProgressResponse = await fetch(`${baseUrl}/api/opl/progress?workspace_path=${encodeURIComponent(repoRoot)}`);
     const oplProgressPayload = await oplProgressResponse.json();
@@ -5842,8 +5887,9 @@ exit 1
     assert.equal(Array.isArray(oplProgressPayload.progress.task_cards.running), true);
     assert.equal(Array.isArray(oplProgressPayload.progress.task_cards.delivered), true);
     assert.equal(typeof oplProgressPayload.progress.recent_activity.preview, 'string');
-    assert.equal(oplProgressPayload.progress.repo_runtime_control, null);
-    assert.equal(oplProgressPayload.progress.approval_surface, null);
+    assert.equal(oplProgressPayload.progress.domain_agent_id, 'mag');
+    assert.equal(oplProgressPayload.progress.repo_runtime_control.surface_kind, 'runtime_control');
+    assert.equal(oplProgressPayload.progress.approval_surface.surface_kind, 'grant_user_loop');
     assert.equal(oplProgressPayload.progress.interrupt_surface, null);
 
     const oplArtifactsResponse = await fetch(`${baseUrl}/api/opl/artifacts?workspace_path=${encodeURIComponent(repoRoot)}`);
@@ -5852,8 +5898,9 @@ exit 1
     assert.equal(oplArtifactsPayload.artifacts.workspace_path, repoRoot);
     assert.equal(Array.isArray(oplArtifactsPayload.artifacts.deliverable_files), true);
     assert.equal(Array.isArray(oplArtifactsPayload.artifacts.supporting_files), true);
-    assert.equal(oplArtifactsPayload.artifacts.repo_runtime_control, null);
-    assert.equal(oplArtifactsPayload.artifacts.artifact_pickup_surface, null);
+    assert.equal(oplArtifactsPayload.artifacts.domain_agent_id, 'mag');
+    assert.equal(oplArtifactsPayload.artifacts.repo_runtime_control.surface_kind, 'runtime_control');
+    assert.equal(oplArtifactsPayload.artifacts.artifact_pickup_surface.surface_kind, 'artifact_inventory');
     assert.equal(
       oplArtifactsPayload.artifacts.summary.total_files_count,
       oplArtifactsPayload.artifacts.deliverable_files.length + oplArtifactsPayload.artifacts.supporting_files.length,
@@ -5928,6 +5975,38 @@ exit 1
     assert.match(taskStatusPayload.progress.task.status, /accepted|running|succeeded|failed/);
     assert.equal(typeof taskStatusPayload.progress.task.recent_output, 'string');
 
+    const refreshedSessionsResponse = await fetch(`${baseUrl}/api/opl/sessions?limit=1`);
+    const refreshedSessionsPayload = await refreshedSessionsResponse.json();
+    assert.equal(refreshedSessionsPayload.sessions.current_runtime_continuity.project_id, 'redcube');
+    assert.equal(refreshedSessionsPayload.sessions.current_runtime_continuity.domain_agent_id, 'rca');
+    assert.equal(
+      refreshedSessionsPayload.sessions.current_runtime_continuity.runtime_control.surface_kind,
+      'runtime_control',
+    );
+    assert.equal(
+      refreshedSessionsPayload.sessions.current_runtime_continuity.restore_surface.surface_kind,
+      'product_entry_session',
+    );
+
+    const refreshedProgressResponse = await fetch(
+      `${baseUrl}/api/opl/progress?workspace_path=${encodeURIComponent(repoRoot)}`,
+    );
+    const refreshedProgressPayload = await refreshedProgressResponse.json();
+    assert.equal(refreshedProgressPayload.progress.domain_agent_id, 'rca');
+    assert.equal(refreshedProgressPayload.progress.repo_progress_projection.surface_kind, 'progress_projection');
+    assert.equal(refreshedProgressPayload.progress.repo_runtime_control.surface_kind, 'runtime_control');
+    assert.equal(refreshedProgressPayload.progress.approval_surface.surface_kind, 'product_entry_session');
+    assert.equal(refreshedProgressPayload.progress.restore_surface.surface_kind, 'product_entry_session');
+
+    const refreshedArtifactsResponse = await fetch(
+      `${baseUrl}/api/opl/artifacts?workspace_path=${encodeURIComponent(repoRoot)}`,
+    );
+    const refreshedArtifactsPayload = await refreshedArtifactsResponse.json();
+    assert.equal(refreshedArtifactsPayload.artifacts.domain_agent_id, 'rca');
+    assert.equal(refreshedArtifactsPayload.artifacts.repo_artifact_inventory.surface_kind, 'artifact_inventory');
+    assert.equal(refreshedArtifactsPayload.artifacts.repo_runtime_control.surface_kind, 'runtime_control');
+    assert.equal(refreshedArtifactsPayload.artifacts.artifact_pickup_surface.surface_kind, 'artifact_inventory');
+
     const retiredAskResponse = await fetch(`${baseUrl}/api/ask`, {
       method: 'POST',
       headers: {
@@ -5952,6 +6031,7 @@ exit 1
     fs.rmSync(psFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    fs.rmSync(familyContractsFixtureRoot, { recursive: true, force: true });
   }
 });
 

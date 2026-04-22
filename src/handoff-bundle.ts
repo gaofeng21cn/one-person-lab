@@ -118,6 +118,7 @@ export function buildHandoffBundle(
             family_orchestration: domainManifestEntry.manifest?.family_orchestration ?? null,
             runtime_inventory: domainManifestEntry.manifest?.runtime_inventory ?? null,
             task_lifecycle: domainManifestEntry.manifest?.task_lifecycle ?? null,
+            runtime_control: domainManifestEntry.manifest?.runtime_control ?? null,
             session_continuity: domainManifestEntry.manifest?.session_continuity ?? null,
             progress_projection: domainManifestEntry.manifest?.progress_projection ?? null,
             artifact_inventory: domainManifestEntry.manifest?.artifact_inventory ?? null,
