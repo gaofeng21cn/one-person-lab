@@ -294,6 +294,9 @@ export interface BuildFamilyProductEntryManifestInput {
   recommended_command?: string | null;
   runtime_inventory?: JsonRecord | null;
   task_lifecycle?: JsonRecord | null;
+  session_continuity?: JsonRecord | null;
+  progress_projection?: JsonRecord | null;
+  artifact_inventory?: JsonRecord | null;
   skill_catalog?: JsonRecord | null;
   automation?: JsonRecord | null;
   product_entry_overview?: JsonRecord | null;
@@ -413,6 +416,9 @@ export type FamilyProductEntryManifestSurface = JsonRecord & {
   recommended_command?: string;
   runtime_inventory?: JsonRecord;
   task_lifecycle?: JsonRecord;
+  session_continuity?: JsonRecord;
+  progress_projection?: JsonRecord;
+  artifact_inventory?: JsonRecord;
   skill_catalog?: JsonRecord;
   automation?: JsonRecord;
   product_entry_overview?: ProductEntryOverviewSurface;
@@ -1411,6 +1417,9 @@ export function buildFamilyProductEntryManifest(
     ['operator_loop_actions', input.operator_loop_actions],
     ['runtime_inventory', input.runtime_inventory],
     ['task_lifecycle', input.task_lifecycle],
+    ['session_continuity', input.session_continuity],
+    ['progress_projection', input.progress_projection],
+    ['artifact_inventory', input.artifact_inventory],
     ['skill_catalog', input.skill_catalog],
     ['automation', input.automation],
     ['product_entry_overview', input.product_entry_overview],
@@ -1525,6 +1534,27 @@ export function validateFamilyProductEntryManifest(
     normalized.task_lifecycle = cloneRecord(
       payload.task_lifecycle,
       'product_entry_manifest.task_lifecycle',
+    );
+  }
+  if (payload.session_continuity !== undefined) {
+    normalized.session_continuity = validateSurfaceKindRecord(
+      payload.session_continuity,
+      'product_entry_manifest.session_continuity',
+      'session_continuity',
+    );
+  }
+  if (payload.progress_projection !== undefined) {
+    normalized.progress_projection = validateSurfaceKindRecord(
+      payload.progress_projection,
+      'product_entry_manifest.progress_projection',
+      'progress_projection',
+    );
+  }
+  if (payload.artifact_inventory !== undefined) {
+    normalized.artifact_inventory = validateSurfaceKindRecord(
+      payload.artifact_inventory,
+      'product_entry_manifest.artifact_inventory',
+      'artifact_inventory',
     );
   }
   if (payload.skill_catalog !== undefined) {

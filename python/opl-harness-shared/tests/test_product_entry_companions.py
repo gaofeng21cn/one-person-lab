@@ -724,6 +724,15 @@ def test_product_entry_companion_validators_normalize_shared_family_payloads() -
         "task_lifecycle": {
             "surface_kind": "task_lifecycle",
         },
+        "session_continuity": {
+            "surface_kind": "session_continuity",
+        },
+        "progress_projection": {
+            "surface_kind": "progress_projection",
+        },
+        "artifact_inventory": {
+            "surface_kind": "artifact_inventory",
+        },
         "skill_catalog": {
             "surface_kind": "skill_catalog",
         },
@@ -803,6 +812,9 @@ def test_product_entry_companion_validators_normalize_shared_family_payloads() -
     assert validated_manifest["product_entry_start"]["resume_surface"]["surface_kind"] == "grant_user_loop"
     assert validated_manifest["domain_entry_contract"]["entry_adapter"] == "MedAutoGrantDomainEntry"
     assert validated_manifest["runtime_inventory"]["surface_kind"] == "runtime_inventory"
+    assert validated_manifest["session_continuity"]["surface_kind"] == "session_continuity"
+    assert validated_manifest["progress_projection"]["surface_kind"] == "progress_projection"
+    assert validated_manifest["artifact_inventory"]["surface_kind"] == "artifact_inventory"
 
     frontdesk = {
         "surface_kind": "product_frontdesk",
@@ -941,6 +953,15 @@ def test_product_entry_companion_validators_fail_closed_on_missing_required_shar
         "task_lifecycle": {
             "surface_kind": "task_lifecycle",
         },
+        "session_continuity": {
+            "surface_kind": "session_continuity",
+        },
+        "progress_projection": {
+            "surface_kind": "progress_projection",
+        },
+        "artifact_inventory": {
+            "surface_kind": "artifact_inventory",
+        },
         "skill_catalog": {
             "surface_kind": "skill_catalog",
         },
@@ -972,6 +993,18 @@ def test_product_entry_companion_validators_fail_closed_on_missing_required_shar
         assert "runtime_inventory.surface_kind" in str(exc)
     else:
         raise AssertionError("expected wrong runtime_inventory surface kind to fail closed")
+
+    wrong_session_continuity = deepcopy(manifest)
+    wrong_session_continuity["session_continuity"]["surface_kind"] = "session_continuity_preview"
+    try:
+        validate_family_product_entry_manifest(
+            wrong_session_continuity,
+            require_runtime_companions=True,
+        )
+    except ValueError as exc:
+        assert "session_continuity.surface_kind" in str(exc)
+    else:
+        raise AssertionError("expected wrong session_continuity surface kind to fail closed")
 
     frontdesk = {
         "surface_kind": "product_frontdesk",
