@@ -66,3 +66,42 @@ export interface AcpArtifactEventView {
   summary: AcpArtifactSummaryView;
   files: AcpArtifactFileView[];
 }
+
+export interface AcpSessionListItemView {
+  session_id: string;
+  source: string | null;
+  preview: string | null;
+  updated_at: string | null;
+}
+
+export interface AcpSessionListView {
+  surface_id: string;
+  mode: string;
+  limit: number | null;
+  items: AcpSessionListItemView[];
+}
+
+export interface AcpSessionLedgerView {
+  surface_id: string;
+  ledger_scope: string;
+  summary: Record<string, unknown>;
+  sessions: Array<{
+    session_id: string;
+    event_count: number;
+    last_recorded_at: string;
+  }>;
+}
+
+export interface AcpWorkspaceListItemView {
+  project_id: string;
+  label: string | null;
+  workspace_path: string | null;
+  status: string | null;
+}
+
+export interface AcpWorkspaceListView {
+  surface_id: string;
+  mode: string;
+  projects: AcpWorkspaceListItemView[];
+  active_binding_count: number | null;
+}

@@ -1,6 +1,9 @@
 import type {
   AcpArtifactEventView,
   AcpArtifactFileView,
+  AcpSessionLedgerView,
+  AcpSessionListView,
+  AcpWorkspaceListView,
   AcpResumeView,
   AcpSessionSeedView,
   AcpTaskAcceptanceView,
@@ -186,5 +189,73 @@ export function translateArtifactsPayload(payload: unknown): AcpArtifactEventVie
         .map((entry) => readArtifactFile(entry, 'supporting'))
         .filter((entry): entry is AcpArtifactFileView => Boolean(entry)),
     ],
+  };
+}
+
+export function translateSessionListPayload(payload: unknown): AcpSessionListView {
+  const envelope = requiredRecord(payload, 'payload');
+  const productEntry = requiredRecord(envelope.product_entry, 'product_entry');
+  const sessions = Array.isArray(productEntry.sessions) ? productEntry.sessions : [];
+
+  return {
+    surface_id: requiredString(productEntry.entry_surface, 'product_entry.entry_surface'),
+    mode: requiredString(productEntry.mode, 'product_entry.mode'),
+    limit: typeof productEntry.limit === 'number' ? productEntry.limit : null,
+    items: sessions.map((entry, index) => {
+      const session = requiredRecord(entry, `product_entry.sessions[${index}]`);
+      return {
+        session_id: requiredString(session.session_id, `product_entry.sessions[${index}].session_id`),
+        source: optionalString(session.source),
+        preview: optionalString(session.preview),
+        updated_at: optionalString(session.updated_at) ?? optionalString(session.last_updated_at),
+      };
+    }),
+  };
+}
+
+export function translateSessionLedgerPayload(payload: unknown): AcpSessionLedgerView {
+  const envelope = requiredRecord(payload, 'payload');
+  const ledger = requiredRecord(envelope.session_ledger, 'session_ledger');
+  const sessions = Array.isArray(ledger.sessions) ? ledger.sessions : [];
+
+  return {
+    surface_id: requiredString(ledger.surface_id, 'session_ledger.surface_id'),
+    ledger_scope: requiredString(ledger.ledger_scope, 'session_ledger.ledger_scope'),
+    summary: requiredRecord(ledger.summary, 'session_ledger.summary'),
+    sessions: sessions.map((entry, index) => {
+      const session = requiredRecord(entry, `session_ledger.sessions[${index}]`);
+      return {
+        session_id: requiredString(session.session_id, `session_ledger.sessions[${index}].session_id`),
+        event_count: typeof session.event_count === 'number' ? session.event_count : 0,
+        last_recorded_at: requiredString(
+          session.last_recorded_at,
+          `session_ledger.sessions[${index}].last_recorded_at`,
+        ),
+      };
+    }),
+  };
+}
+
+export function translateWorkspaceListPayload(payload: unknown): AcpWorkspaceListView {
+  const envelope = requiredRecord(payload, 'payload');
+  const catalog = requiredRecord(envelope.workspace_catalog, 'workspace_catalog');
+  const projects = Array.isArray(catalog.projects) ? catalog.projects : [];
+  const summary = isRecord(catalog.summary) ? catalog.summary : null;
+
+  return {
+    surface_id: requiredString(catalog.surface_id, 'workspace_catalog.surface_id'),
+    mode: requiredString(catalog.mode, 'workspace_catalog.mode'),
+    active_binding_count:
+      summary && typeof summary.active_binding_count === 'number' ? summary.active_binding_count : null,
+    projects: projects.map((entry, index) => {
+      const project = requiredRecord(entry, `workspace_catalog.projects[${index}]`);
+      const activeBinding = isRecord(project.active_binding) ? project.active_binding : null;
+      return {
+        project_id: requiredString(project.project_id, `workspace_catalog.projects[${index}].project_id`),
+        label: optionalString(project.label),
+        workspace_path: activeBinding ? optionalString(activeBinding.workspace_path) : null,
+        status: activeBinding ? optionalString(activeBinding.status) : null,
+      };
+    }),
   };
 }
