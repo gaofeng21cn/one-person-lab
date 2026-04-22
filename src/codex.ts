@@ -17,6 +17,10 @@ export interface CodexCommandResult {
   stderr: string;
 }
 
+export interface CodexCommandOptions {
+  inheritStdio?: boolean;
+}
+
 export interface CodexExecOptions {
   cwd?: string;
   json?: boolean;
@@ -113,6 +117,7 @@ export function buildCodexCliPreview(args: string[]) {
 
 export function runCodexCommand(
   args: string[],
+  options: CodexCommandOptions = {},
 ): CodexCommandResult {
   const codexBinary = resolveCodexBinary();
 
@@ -128,6 +133,7 @@ export function runCodexCommand(
 
   const result = spawnSync(codexBinary.path, args, {
     encoding: 'utf8',
+    stdio: options.inheritStdio ? 'inherit' : 'pipe',
     env: process.env,
   });
 

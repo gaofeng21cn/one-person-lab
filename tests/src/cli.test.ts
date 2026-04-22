@@ -1477,24 +1477,15 @@ test('status workspace reports git and worktree visibility for one workspace pat
   assert.equal(typeof output.workspace.git.is_clean, 'boolean');
 });
 
-test('bare opl command still seeds a product-entry session when the session ledger file is corrupted', () => {
-  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
-if [ "$1" = "chat" ]; then
+test('bare opl command keeps the Codex frontdoor stable even when the session ledger file is corrupted', () => {
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$#" -eq 0 ]; then
   cat <<'EOF'
-╭─ ⚕ Hermes ───────────────────────────────────────────────────────────────────╮
-OPL FRONT DESK READY
-
-session_id: opl-session-seed
+CODEX FRONTDOOR
 EOF
   exit 0
 fi
-if [ "$1" = "--resume" ] && [ "$2" = "opl-session-seed" ]; then
-  cat <<'EOF'
-OPL FRONT DESK RESUMED
-EOF
-  exit 0
-fi
-echo "unexpected fake-hermes args: $*" >&2
+echo "unexpected fake-codex args: $*" >&2
 exit 1
 `);
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-corrupt-session-ledger-'));
@@ -1504,38 +1495,18 @@ exit 1
 
   try {
     const output = runCli([], {
-      OPL_HERMES_BIN: hermesPath,
+      OPL_CODEX_BIN: codexPath,
       OPL_FRONTDESK_STATE_DIR: stateRoot,
     });
 
     assert.equal(output.version, 'g2');
-    assert.equal(output.product_entry.mode, 'session_seed');
-    assert.doesNotMatch(output.product_entry.mode, /frontdesk/i);
+    assert.equal(output.product_entry.mode, 'frontdoor');
     assert.equal(output.product_entry.interactive, false);
     assert.doesNotMatch(output.product_entry.handoff_prompt_preview, /front[- ]?desk/i);
-    assert.equal(output.product_entry.seed.session_id, 'opl-session-seed');
-    assert.equal(output.product_entry.seed.command_preview.includes('opl-frontdesk'), false);
-    assert.equal(output.product_entry.seed.command_preview.includes('opl-session-seed'), true);
-    assert.equal(output.product_entry.seed.response, 'OPL FRONT DESK READY');
-    assert.equal(output.product_entry.resume.session_id, 'opl-session-seed');
-    assert.equal(output.product_entry.resume.output, 'OPL FRONT DESK RESUMED');
-    assert.equal(fs.existsSync(ledgerPath), true);
-    const recoveredLedger = JSON.parse(fs.readFileSync(ledgerPath, 'utf8')) as {
-      version: string;
-      entries: Array<{ session_id: string; mode: string }>;
-    };
-    assert.equal(recoveredLedger.version, 'g2');
-    assert.equal(recoveredLedger.entries.length > 0, true);
-    assert.equal(recoveredLedger.entries[0]?.session_id, 'opl-session-seed');
-    assert.equal(recoveredLedger.entries[0]?.mode, 'session_seed');
-    const archivedLedgerFiles = fs
-      .readdirSync(stateRoot)
-      .filter((entry) => /^session-ledger\.corrupt-.*\.json$/.test(entry));
-    assert.equal(archivedLedgerFiles.length, 1);
-    assert.equal(
-      fs.readFileSync(path.join(stateRoot, archivedLedgerFiles[0]), 'utf8'),
-      corruptedLedgerContent,
-    );
+    assert.equal(output.product_entry.executor_backend, 'codex');
+    assert.deepEqual(output.product_entry.codex.command_preview, ['codex']);
+    assert.equal(output.product_entry.codex.resume_command_preview[0], 'codex');
+    assert.equal(fs.readFileSync(ledgerPath, 'utf8'), corruptedLedgerContent);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(stateRoot, { recursive: true, force: true });
@@ -1639,23 +1610,15 @@ test('ask rejects unknown explicit @agent handles with a machine-readable usage 
   assert.match(payload.error.message, /Unknown product-entry agent handle/);
 });
 
-test('shell seeds the interactive Hermes lane through the same routed OPL entry in non-interactive mode', () => {
-  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
-if [ "$1" = "chat" ]; then
+test('shell keeps the routed compatibility lane but defaults to Codex in non-interactive mode', () => {
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$#" -eq 0 ]; then
   cat <<'EOF'
-OPL SHELL READY
-
-session_id: opl-shell-session
+CODEX SHELL READY
 EOF
   exit 0
 fi
-if [ "$1" = "--resume" ] && [ "$2" = "opl-shell-session" ]; then
-  cat <<'EOF'
-OPL SHELL RESUMED
-EOF
-  exit 0
-fi
-echo "unexpected fake-hermes args: $*" >&2
+echo "unexpected fake-codex args: $*" >&2
 exit 1
 `);
 
@@ -1663,72 +1626,67 @@ exit 1
     const output = runCli(
       ['shell', '@mas tighten the manuscript argument around invasive phenotype findings'],
       {
-        OPL_HERMES_BIN: hermesPath,
+        OPL_CODEX_BIN: codexPath,
       },
     );
 
     assert.equal(output.product_entry.mode, 'chat');
+    assert.equal(output.product_entry.executor_backend, 'codex');
     assert.equal(output.product_entry.input.goal, 'tighten the manuscript argument around invasive phenotype findings');
     assert.equal(output.product_entry.routing.domain_id, 'medautoscience');
     assert.equal(output.product_entry.routing.workstream_id, 'research_ops');
-    assert.equal(output.product_entry.seed.session_id, 'opl-shell-session');
-    assert.equal(output.product_entry.resume.output, 'OPL SHELL RESUMED');
+    assert.deepEqual(output.product_entry.codex.command_preview, ['codex']);
+    assert.equal(output.product_entry.codex.resume_command_preview[0], 'codex');
+    assert.ok(output.product_entry.codex.one_shot_command_preview.includes('--json'));
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
 
-test('shell without arguments seeds the local OPL frontdesk/session entry lane', () => {
-  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
-if [ "$1" = "chat" ]; then
+test('shell without arguments now exposes the Codex frontdoor lane', () => {
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$#" -eq 0 ]; then
   cat <<'EOF'
-OPL SHELL FRONTDOOR READY
-
-session_id: opl-shell-frontdoor
+CODEX SHELL FRONTDOOR
 EOF
   exit 0
 fi
-if [ "$1" = "--resume" ] && [ "$2" = "opl-shell-frontdoor" ]; then
-  cat <<'EOF'
-OPL SHELL FRONTDOOR RESUMED
-EOF
-  exit 0
-fi
-echo "unexpected fake-hermes args: $*" >&2
+echo "unexpected fake-codex args: $*" >&2
 exit 1
 `);
 
   try {
     const output = runCli(['shell'], {
-      OPL_HERMES_BIN: hermesPath,
+      OPL_CODEX_BIN: codexPath,
     });
 
-    assert.equal(output.product_entry.mode, 'session_seed');
-    assert.equal(output.product_entry.seed.session_id, 'opl-shell-frontdoor');
-    assert.equal(output.product_entry.resume.output, 'OPL SHELL FRONTDOOR RESUMED');
+    assert.equal(output.product_entry.mode, 'frontdoor');
+    assert.equal(output.product_entry.executor_backend, 'codex');
+    assert.deepEqual(output.product_entry.codex.command_preview, ['codex']);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
 
-test('shell --resume resumes an existing Hermes session through the local shell lane', () => {
-  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
-if [ "$1" = "--resume" ] && [ "$2" = "sess-shell-resume-1" ]; then
+test('shell --resume resumes an existing Codex session through the local shell lane by default', () => {
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$1" = "resume" ] && [ "$2" = "sess-shell-resume-1" ]; then
   cat <<'EOF'
 OPL SHELL RESUME OUTPUT
 EOF
   exit 0
 fi
-echo "unexpected fake-hermes args: $*" >&2
+echo "unexpected fake-codex args: $*" >&2
 exit 1
 `);
 
   try {
     const output = runCli(['shell', '--resume', 'sess-shell-resume-1'], {
-      OPL_HERMES_BIN: hermesPath,
+      OPL_CODEX_BIN: codexPath,
     });
 
     assert.equal(output.product_entry.mode, 'resume');
+    assert.equal(output.product_entry.executor_backend, 'codex');
     assert.equal(output.product_entry.resume.session_id, 'sess-shell-resume-1');
     assert.equal(output.product_entry.resume.output, 'OPL SHELL RESUME OUTPUT');
   } finally {
@@ -1841,25 +1799,26 @@ exit 1
   }
 });
 
-test('resume returns captured session output in non-interactive mode', () => {
-  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
-if [ "$1" = "--resume" ] && [ "$2" = "opl-test-session" ]; then
+test('resume returns captured Codex session output in non-interactive mode by default', () => {
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$1" = "resume" ] && [ "$2" = "opl-test-session" ]; then
   cat <<'EOF'
 RESUMED SESSION BODY
 EOF
   exit 0
 fi
-echo "unexpected fake-hermes args: $*" >&2
+echo "unexpected fake-codex args: $*" >&2
 exit 1
 `);
 
   try {
     const output = runCli(['session', 'resume', 'opl-test-session'], {
-      OPL_HERMES_BIN: hermesPath,
+      OPL_CODEX_BIN: codexPath,
     });
 
     assert.equal(output.product_entry.mode, 'resume');
     assert.equal(output.product_entry.interactive, false);
+    assert.equal(output.product_entry.executor_backend, 'codex');
     assert.equal(output.product_entry.resume.session_id, 'opl-test-session');
     assert.equal(output.product_entry.resume.output, 'RESUMED SESSION BODY');
   } finally {
@@ -5373,7 +5332,7 @@ exit 1
     });
     assert.equal(askOutput.product_entry.hermes.session_id, 'sess_ledger');
 
-    const resumeOutput = runCli(['session', 'resume', 'sess_ledger'], {
+    const resumeOutput = runCli(['session', 'resume', 'sess_ledger', '--executor', 'hermes'], {
       OPL_HERMES_BIN: hermesPath,
       OPL_FRONTDESK_STATE_DIR: stateRoot,
       PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
@@ -5452,6 +5411,12 @@ if [ "$1" = "exec" ]; then
 {"item":{"type":"command_execution","command":"opl handoff","status":"in_progress"}}
 {"item":{"type":"agent_message","text":"WEB PILOT ASK RESPONSE"}}
 {"type":"turn.completed"}
+EOF
+  exit 0
+fi
+if [ "$1" = "resume" ] && [ "$2" = "sess_web" ]; then
+  cat <<'EOF'
+WEB PILOT RESUME OUTPUT
 EOF
   exit 0
 fi
@@ -6138,7 +6103,7 @@ exit 1
   }
 });
 
-test('chat --dry-run prepares a seeding query and a resume command for Hermes', () => {
+test('chat --dry-run prepares Codex-default compatibility previews', () => {
   const output = runCli([
     'chat',
     'Plan a medical grant proposal revision loop.',
@@ -6151,13 +6116,16 @@ test('chat --dry-run prepares a seeding query and a resume command for Hermes', 
   assert.equal(output.product_entry.routing.status, 'routed');
   assert.equal(output.product_entry.routing.domain_id, 'medautogrant');
   assert.equal(output.product_entry.routing.workstream_id, 'grant_ops');
-  assert.equal(output.product_entry.hermes.seed_command_preview[0], 'hermes');
-  assert.ok(output.product_entry.hermes.seed_command_preview.includes('--query'));
-  assert.deepEqual(output.product_entry.hermes.resume_command_preview, [
-    'hermes',
-    '--resume',
-    '<session_id>',
+  assert.equal(output.product_entry.executor_backend, 'codex');
+  assert.deepEqual(output.product_entry.codex.command_preview, [
+    'codex',
   ]);
+  assert.deepEqual(output.product_entry.codex.resume_command_preview, [
+    'codex',
+    'resume',
+    '<thread_id>',
+  ]);
+  assert.ok(output.product_entry.codex.one_shot_command_preview.includes('--json'));
 });
 
 test('contract validate exposes env contract-root provenance', () => {
