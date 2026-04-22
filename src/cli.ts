@@ -34,15 +34,16 @@ import {
   buildProductEntryHandoffEnvelope,
   buildProductEntryDoctor,
   type ProductEntryCliInput,
+  type ProductEntryExecutor,
   runProductEntryAsk,
   runProductEntryChat,
+  runProductEntryExec,
   runProductEntryFrontDesk,
   runProductEntryLogs,
   runProductEntryRepairHermesGateway,
   runProductEntryResume,
   runProductEntrySessions,
 } from './product-entry.ts';
-import { isInteractiveShell } from './hermes.ts';
 import { launchDomainEntry, type DomainLaunchStrategy } from './domain-launch.ts';
 import {
   buildDomainManifestCatalog,
@@ -174,6 +175,20 @@ type FrontDeskMcpCliInput = {
   sessionsLimit?: number;
 };
 
+type ExecCliInput = {
+  prompt: string;
+  dryRun: boolean;
+  model?: string;
+  provider?: string;
+  workspacePath?: string;
+  json: boolean;
+};
+
+type ResumeCliInput = {
+  sessionId: string;
+  executor: ProductEntryExecutor;
+};
+
 type ShellCliInput =
   | {
       mode: 'frontdesk';
@@ -181,6 +196,7 @@ type ShellCliInput =
   | {
       mode: 'resume';
       sessionId: string;
+      executor: ProductEntryExecutor;
     }
   | {
       mode: 'chat';
@@ -229,6 +245,21 @@ function buildUsageError(
     ...details,
     ...(spec ? { usage: spec.usage, examples: spec.examples } : {}),
   });
+}
+
+function parseExecutorValue(
+  option: string,
+  value: string,
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): ProductEntryExecutor {
+  if (value !== 'codex' && value !== 'hermes') {
+    throw buildUsageError('Option --executor requires codex or hermes.', spec, {
+      option,
+      value,
+    });
+  }
+
+  return value;
 }
 
 function parseKeyValueArgs(
@@ -342,13 +373,7 @@ function parseProductEntryArgs(
         );
         break;
       case '--executor':
-        if (value !== 'codex' && value !== 'hermes') {
-          throw buildUsageError('Option --executor requires codex or hermes.', spec, {
-            option: token,
-            value,
-          });
-        }
-        parsed.executor = value;
+        parsed.executor = parseExecutorValue(token, value, spec);
         break;
       default:
         throw buildUsageError(`Unknown option for product entry: ${token}.`, spec, {
@@ -391,6 +416,92 @@ function parseProductEntryArgs(
   };
 }
 
+function parseExecArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): ExecCliInput {
+  let dryRun = false;
+  let explicitGoal: string | undefined;
+  const positionalGoalParts: string[] = [];
+  const parsed: Omit<ExecCliInput, 'prompt' | 'dryRun'> = {
+    json: true,
+  };
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (token === '--dry-run') {
+      dryRun = true;
+      continue;
+    }
+
+    if (token === '--json') {
+      parsed.json = true;
+      continue;
+    }
+
+    if (!token.startsWith('--')) {
+      positionalGoalParts.push(token);
+      continue;
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
+        option: token,
+      });
+    }
+
+    switch (token) {
+      case '--goal':
+        explicitGoal = value;
+        break;
+      case '--model':
+        parsed.model = value;
+        break;
+      case '--provider':
+        parsed.provider = value;
+        break;
+      case '--workspace-path':
+        parsed.workspacePath = value;
+        break;
+      default:
+        throw buildUsageError(`Unknown option for exec: ${token}.`, spec, {
+          option: token,
+        });
+    }
+
+    index += 1;
+  }
+
+  if (explicitGoal && positionalGoalParts.length > 0) {
+    throw buildUsageError(
+      'Use either a positional request or --goal for exec, not both.',
+      spec,
+      {
+        positional_request: positionalGoalParts.join(' '),
+      },
+    );
+  }
+
+  const prompt = (explicitGoal ?? positionalGoalParts.join(' ')).trim();
+  if (!prompt) {
+    throw buildUsageError(
+      'exec requires a plain-language request, either as positional text or via --goal.',
+      spec,
+      {
+        required: ['<request...> or --goal <text>'],
+      },
+    );
+  }
+
+  return {
+    ...parsed,
+    prompt,
+    dryRun,
+  };
+}
+
 function parseShellArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
@@ -409,24 +520,36 @@ function parseShellArgs(
       });
     }
 
-    if (args.length > 2) {
-      throw buildUsageError('shell --resume accepts only one session id.', spec, {
-        extra_args: args.slice(2),
-      });
+    let executor: ProductEntryExecutor = 'codex';
+    for (let index = 2; index < args.length; index += 1) {
+      const token = args[index];
+      if (token !== '--executor') {
+        throw buildUsageError('shell --resume accepts only --executor after the session id.', spec, {
+          token,
+        });
+      }
+
+      const value = args[index + 1];
+      if (!value || value.startsWith('--')) {
+        throw buildUsageError('shell --resume requires a value for --executor.', spec, {
+          option: '--executor',
+        });
+      }
+
+      executor = parseExecutorValue(token, value, spec);
+      index += 1;
     }
 
     return {
       mode: 'resume',
       sessionId,
+      executor,
     };
   }
 
   return {
     mode: 'chat',
-    input: {
-      ...parseProductEntryArgs(args, spec),
-      executor: 'hermes',
-    },
+    input: parseProductEntryArgs(args, spec),
   };
 }
 
@@ -514,8 +637,8 @@ function parsePort(
 function parseResumeArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
-) {
-  const [sessionId, ...extraArgs] = args;
+): ResumeCliInput {
+  const [sessionId, ...rest] = args;
 
   if (!sessionId) {
     throw buildUsageError('resume requires a session id.', spec, {
@@ -523,13 +646,30 @@ function parseResumeArgs(
     });
   }
 
-  if (extraArgs.length > 0) {
-    throw buildUsageError(`Unexpected positional argument: ${extraArgs[0]}.`, spec, {
-      token: extraArgs[0],
-    });
+  let executor: ProductEntryExecutor = 'codex';
+  for (let index = 0; index < rest.length; index += 1) {
+    const token = rest[index];
+    if (token !== '--executor') {
+      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
+        token,
+      });
+    }
+
+    const value = rest[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError('resume requires a value for --executor.', spec, {
+        option: '--executor',
+      });
+    }
+
+    executor = parseExecutorValue(token, value, spec);
+    index += 1;
   }
 
-  return sessionId;
+  return {
+    sessionId,
+    executor,
+  };
 }
 
 function parseSessionsArgs(
@@ -1469,6 +1609,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl web --host 127.0.0.1 --port 8787 --base-path /pilot/opl --path /Users/gaofeng/workspace/one-person-lab',
         'opl "Plan a medical grant proposal revision loop."',
         'opl ask "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck --workspace-path /Users/gaofeng/workspace/redcube-ai',
+        'opl exec "Plan a medical grant proposal revision loop."',
         'opl chat "Plan a medical grant proposal revision loop." --workspace-path /Users/gaofeng/workspace/med-autogrant',
         'opl contract validate',
         'opl domain resolve-request --intent presentation_delivery --target deliverable --goal "Prepare a defense-ready slide deck."',
@@ -2255,26 +2396,40 @@ async function main() {
       ],
       handler: (args) => runProductEntryAsk(parseProductEntryArgs(args, commandSpecs.ask), getContracts()),
     },
+    exec: {
+      usage:
+        'opl exec <request...> [--goal <text>] [--workspace-path <path>] [--model <model>] [--provider <provider>] [--dry-run]',
+      summary:
+        'Run a Codex one-shot command through the OPL wrapper (default runtime: Codex).',
+      examples: [
+        'opl exec "Plan a medical grant proposal revision loop."',
+        'opl exec --goal "Prepare a defense-ready slide deck for a thesis committee." --workspace-path /Users/gaofeng/workspace/redcube-ai',
+        'opl exec "Summarize current workspace status." --model gpt-5.4 --provider openai',
+      ],
+      handler: (args) => runProductEntryExec(parseExecArgs(args, commandSpecs.exec)),
+    },
     chat: {
       usage:
-        'opl chat <request...> [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--executor <hermes>] [--workspace-path <path>] [--dry-run]',
+        'opl chat <request...> [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--executor <codex|hermes>] [--workspace-path <path>] [--dry-run]',
       summary:
-        'Seed the Hermes interactive lane from the routed OPL front door and continue inside the resolved boundary.',
+        'Compatibility alias for the routed interactive lane. Default executor: Codex, use --executor hermes for explicit Hermes.',
       examples: [
         'opl chat "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck',
+        'opl chat "Plan a medical grant proposal revision loop." --executor hermes',
         'opl chat "Plan a medical grant proposal revision loop." --workspace-path /Users/gaofeng/workspace/med-autogrant --dry-run',
       ],
       handler: (args) => runProductEntryChat(parseProductEntryArgs(args, commandSpecs.chat), getContracts()),
     },
     shell: {
       usage:
-        'opl shell [<request...> | --resume <session_id>] [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--workspace-path <path>] [--dry-run]',
+        'opl shell [<request...> | --resume <session_id>] [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--executor <codex|hermes>] [--workspace-path <path>] [--dry-run]',
       summary:
-        'Enter the local OPL interactive shell lane, seeding Hermes with the routed request and continuing inside the same session boundary.',
+        'Compatibility alias for local interactive entry. Default executor: Codex; Hermes is opt-in via --executor hermes.',
       examples: [
         'opl shell',
         'opl shell --resume run_7e2a41a19175465f809c0a7f151278ee',
         'opl shell "@mas tighten the manuscript argument around invasive phenotype findings"',
+        'opl shell "@mas tighten the manuscript argument around invasive phenotype findings" --executor hermes',
         'opl shell "@rca build a defense-ready deck for next week" --workspace-path /Users/gaofeng/workspace/redcube-ai',
       ],
       handler: (args) => {
@@ -2283,17 +2438,23 @@ async function main() {
           case 'frontdesk':
             return runProductEntryFrontDesk(getContracts());
           case 'resume':
-            return runProductEntryResume(parsed.sessionId);
+            return runProductEntryResume(parsed.sessionId, parsed.executor);
           case 'chat':
             return runProductEntryChat(parsed.input, getContracts());
         }
       },
     },
     resume: {
-      usage: 'opl session resume <session_id>',
-      summary: 'Resume a Hermes-backed OPL session directly from the local product-entry shell.',
-      examples: ['opl session resume run_7e2a41a19175465f809c0a7f151278ee'],
-      handler: (args) => runProductEntryResume(parseResumeArgs(args, commandSpecs.resume)),
+      usage: 'opl session resume <session_id> [--executor <codex|hermes>]',
+      summary: 'Resume an OPL session. Default executor: Codex, use --executor hermes when required.',
+      examples: [
+        'opl session resume run_7e2a41a19175465f809c0a7f151278ee',
+        'opl session resume run_7e2a41a19175465f809c0a7f151278ee --executor hermes',
+      ],
+      handler: (args) => {
+        const parsed = parseResumeArgs(args, commandSpecs.resume);
+        return runProductEntryResume(parsed.sessionId, parsed.executor);
+      },
     },
     sessions: {
       usage: 'opl session list [--limit <n>] [--source <source>]',
@@ -2517,6 +2678,7 @@ async function main() {
     doctor: cloneCommandSpec(commandSpecs.doctor, { group: 'top_level' }),
     start: cloneCommandSpec(commandSpecs.start, { group: 'top_level' }),
     ask: cloneCommandSpec(commandSpecs.ask, { group: 'top_level' }),
+    exec: cloneCommandSpec(commandSpecs.exec, { group: 'top_level' }),
     chat: cloneCommandSpec(commandSpecs.chat, { group: 'top_level' }),
     web: cloneCommandSpec(commandSpecs.web, {
       summary: 'Start the local OPL Product API service for external GUI shells and API consumers.',
@@ -2932,8 +3094,11 @@ async function main() {
       group: 'session',
     }),
     'session resume': cloneCommandSpec(commandSpecs.resume, {
-      usage: 'opl session resume <session_id>',
-      examples: ['opl session resume run_7e2a41a19175465f809c0a7f151278ee'],
+      usage: 'opl session resume <session_id> [--executor <codex|hermes>]',
+      examples: [
+        'opl session resume run_7e2a41a19175465f809c0a7f151278ee',
+        'opl session resume run_7e2a41a19175465f809c0a7f151278ee --executor hermes',
+      ],
       group: 'session',
     }),
     'session logs': cloneCommandSpec(commandSpecs.logs, {
@@ -2948,9 +3113,10 @@ async function main() {
     }),
     shell: cloneCommandSpec(commandSpecs.shell, {
       usage:
-        'opl shell <request...> [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--workspace-path <path>] [--dry-run]',
+        'opl shell <request...> [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--executor <codex|hermes>] [--workspace-path <path>] [--dry-run]',
       examples: [
         'opl shell "@mas tighten the manuscript argument around invasive phenotype findings"',
+        'opl shell "@mas tighten the manuscript argument around invasive phenotype findings" --executor hermes',
         'opl shell "@rca build a defense-ready deck for next week" --workspace-path /Users/gaofeng/workspace/redcube-ai',
       ],
     }),
@@ -2996,19 +3162,10 @@ async function main() {
       && !RETIRED_COMMAND_PREFIXES.has(command)
       && looksLikeNaturalLanguage(command, args)
     ) {
-      const interactive = isInteractiveShell();
-      const result = interactive
-        ? await runProductEntryChat(
-            {
-              ...parseProductEntryArgs([command, ...args], commandSpecs.chat),
-              executor: 'hermes',
-            },
-            getContracts(),
-          )
-        : await runProductEntryAsk(
-            parseProductEntryArgs([command, ...args], commandSpecs.ask),
-            getContracts(),
-          );
+      const result = await runProductEntryAsk(
+        parseProductEntryArgs([command, ...args], commandSpecs.ask),
+        getContracts(),
+      );
       printJson(result);
       return;
     }
