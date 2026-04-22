@@ -44,7 +44,27 @@ These schemas therefore freeze interoperability surfaces, not a monolithic runti
 - `family-human-gate.schema.json`
   - shared human-review gate request / decision / resume surface
 - `family-product-entry-manifest-v2.schema.json`
-  - shared product-entry discovery surface that can point at graphs, gates, resume contracts, and runtime companions
+  - shared product-entry discovery surface that can point at graphs, gates, resume contracts, runtime continuity companions, and repo-owned runtime control projections
+
+## Runtime Continuity Freeze
+
+`family-product-entry-manifest-v2.schema.json` now freezes the shared runtime continuity discovery layer that `OPL` consumes across the three domain repositories.
+
+The shared family-level surface names are:
+
+- `runtime_inventory`
+- `task_lifecycle`
+- `session_continuity`
+- `progress_projection`
+- `artifact_inventory`
+
+The shared control references that close the loop are:
+
+- `runtime_control`
+- `runtime_loop_closure`
+- a repo-owned `research_runtime_control_projection` companion carried inside a shared projection surface
+
+This means `OPL` can keep consuming one family contract for session / progress / artifact / restore-point continuity, while each domain repository still owns the underlying runtime truth and any extra repo-specific projection fields.
 
 ## What This Directory Does Not Freeze
 

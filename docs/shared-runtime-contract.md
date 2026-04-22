@@ -21,6 +21,7 @@ The `Shared Runtime Contract` owns the shared runtime objects and behavior surfa
 - `approval / interrupt / resume`
 - `family event envelope`
 - `family checkpoint lineage`
+ - `product-entry runtime continuity discovery`
 
 These are cross-domain runtime requirements.
 They define what the runtime layer must expose structurally, not what any one domain decides about artifacts, review, or delivery truth.
@@ -87,6 +88,8 @@ To avoid coupling the family runtime layer to one orchestration framework, the m
    - shared event correlation, producer, session, and audit-reference envelope
 2. `family checkpoint lineage`
    - shared checkpoint ancestry, resume, and state-reference envelope
+3. `product-entry runtime continuity discovery`
+   - shared `runtime inventory + task lifecycle + session continuity + progress projection + artifact inventory` discovery surface, with `runtime_control` / `runtime_loop_closure` as control references and repo-owned runtime-control projections still owned by domain repositories
 
 These schemas live in `contracts/family-orchestration/`.
 They freeze interoperability surfaces that multiple domain runtimes can adopt while still keeping runtime ownership and durable truth local to each domain repository.
@@ -123,7 +126,7 @@ As of the current public mainline, the true state remains:
 - the current active development host is still Codex-only local sessions
 - the current public OPL entry remains the local `TypeScript CLI`-first / gateway contract surface
 - the `Shared Runtime Contract` is still being frozen and progressively landed
-- the runtime-oriented family orchestration companion schemas now live in `contracts/family-orchestration/` and freeze the shared `event envelope + checkpoint lineage` semantics without turning them into one runtime owner
+- the runtime-oriented family orchestration companion schemas now live in `contracts/family-orchestration/` and freeze the shared `event envelope + checkpoint lineage + product-entry runtime continuity discovery` semantics without turning them into one runtime owner
 - the four repositories are no longer at the same integration depth: `Med Auto Grant` has landed a real upstream `Hermes-Agent` runtime substrate, `Med Auto Science` has completed external runtime bring-up and is entering real adapter cutover, `RedCube AI` has already landed upstream runtime-owner cutover plus repo-verified product-entry federation, and `OPL` itself stays at the top-level gateway / federation layer
 - an upstream `Hermes-Agent` runtime substrate remains the preferred future implementation direction for this contract, not a landed public fact
 

@@ -1,5 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import type {
   FamilyProductEntryManifestSurface,
@@ -28,6 +31,15 @@ import {
   validateFamilyProductFrontdesk,
   validateFamilyProductEntryManifest,
 } from '../../src/product-entry-companions.ts';
+
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+
+function readFamilyManifestFixture(fileName: string) {
+  const payload = JSON.parse(
+    fs.readFileSync(path.join(repoRoot, 'tests/fixtures/family-manifests', fileName), 'utf8'),
+  ) as Record<string, unknown>;
+  return (payload.product_entry_manifest as Record<string, unknown> | undefined) ?? payload;
+}
 
 test('product entry session helpers normalize runtime, continuation, and delivery surfaces', () => {
   const runtimeSessionContract = buildRuntimeSessionContract({
@@ -1006,6 +1018,9 @@ test('product entry companion validators normalize shared family payloads', () =
     task_lifecycle: {
       surface_kind: 'task_lifecycle',
     },
+    runtime_loop_closure: {
+      surface_kind: 'runtime_loop_closure',
+    },
     session_continuity: {
       surface_kind: 'session_continuity',
     },
@@ -1088,11 +1103,13 @@ test('product entry companion validators normalize shared family payloads', () =
   const validatedManifest = validateFamilyProductEntryManifest(manifest, {
     requireContractBundle: true,
     requireRuntimeCompanions: true,
+    requireRuntimeContinuity: true,
   });
   assert.equal(validatedManifest.surface_kind, 'product_entry_manifest');
   assert.equal(validatedManifest.product_entry_start.resume_surface.surface_kind, 'product_entry_session');
   assert.equal(validatedManifest.domain_entry_contract?.entry_adapter, 'RedCubeDomainEntry');
   assert.equal(validatedManifest.runtime_inventory?.surface_kind, 'runtime_inventory');
+  assert.equal(validatedManifest.runtime_loop_closure?.surface_kind, 'runtime_loop_closure');
   assert.equal(validatedManifest.session_continuity?.surface_kind, 'session_continuity');
   assert.equal(validatedManifest.progress_projection?.surface_kind, 'progress_projection');
   assert.equal(validatedManifest.artifact_inventory?.surface_kind, 'artifact_inventory');
@@ -1146,6 +1163,24 @@ test('product entry companion validators normalize shared family payloads', () =
   assert.equal(validatedFrontdesk.surface_kind, 'product_frontdesk');
   assert.equal(validatedFrontdesk.product_entry_manifest.surface_kind, 'product_entry_manifest');
   assert.equal(validatedFrontdesk.gateway_interaction_contract?.frontdoor_owner, 'opl_gateway_or_domain_gui');
+});
+
+test('runtime continuity validation accepts MAS, MAG, and RCA manifest fixtures', () => {
+  const fixtureNames = [
+    'med-autoscience-product-entry-manifest.json',
+    'med-autogrant-product-entry-manifest.json',
+    'redcube-product-entry-manifest.json',
+  ];
+
+  for (const fileName of fixtureNames) {
+    const manifest = readFamilyManifestFixture(fileName);
+    const validated = validateFamilyProductEntryManifest(manifest, {
+      requireRuntimeContinuity: true,
+    });
+    assert.equal(validated.session_continuity?.surface_kind, 'session_continuity', fileName);
+    assert.equal(validated.progress_projection?.surface_kind, 'progress_projection', fileName);
+    assert.equal(validated.artifact_inventory?.surface_kind, 'artifact_inventory', fileName);
+  }
 });
 
 test('product entry companion validators fail closed on missing required shared fields', () => {
@@ -1232,6 +1267,9 @@ test('product entry companion validators fail closed on missing required shared 
     task_lifecycle: {
       surface_kind: 'task_lifecycle',
     },
+    runtime_control: {
+      surface_kind: 'runtime_control',
+    },
     session_continuity: {
       surface_kind: 'session_continuity',
     },
@@ -1268,6 +1306,13 @@ test('product entry companion validators fail closed on missing required shared 
   assert.throws(
     () => validateFamilyProductEntryManifest(wrongSessionContinuity),
     /session_continuity\.surface_kind/,
+  );
+
+  const missingRuntimeControlReference = structuredClone(manifest);
+  delete missingRuntimeControlReference.runtime_control;
+  assert.throws(
+    () => validateFamilyProductEntryManifest(missingRuntimeControlReference, { requireRuntimeContinuity: true }),
+    /runtime continuity control reference/,
   );
 
   const frontdesk = {
