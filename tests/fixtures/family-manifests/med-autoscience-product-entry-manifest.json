@@ -395,7 +395,42 @@
     ],
     "domain_projection": {
       "recommended_restore_command": "uv run python -m med_autoscience.cli launch-study --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>",
-      "recommended_progress_command": "uv run python -m med_autoscience.cli study-progress --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>"
+      "recommended_progress_command": "uv run python -m med_autoscience.cli study-progress --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>",
+      "research_runtime_control_projection": {
+        "surface_kind": "research_runtime_control_projection",
+        "study_session_owner": {
+          "runtime_owner": "upstream_hermes_agent",
+          "study_owner": "med-autoscience",
+          "executor_owner": "med_deepscientist"
+        },
+        "restore_point_surface": {
+          "surface_kind": "study_progress",
+          "field_path": "autonomy_contract.restore_point"
+        },
+        "progress_cursor_surface": {
+          "surface_kind": "study_progress",
+          "field_path": "operator_status_card.current_focus"
+        },
+        "artifact_inventory_surface": {
+          "surface_kind": "artifact_inventory",
+          "field_path": "supporting_files"
+        },
+        "artifact_pickup_surface": {
+          "surface_kind": "artifact_inventory",
+          "field_path": "deliverable_files"
+        },
+        "command_templates": {
+          "resume": "uv run python -m med_autoscience.cli launch-study --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>",
+          "check_progress": "uv run python -m med_autoscience.cli study-progress --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id> --format json",
+          "check_runtime_status": "uv run python -m med_autoscience.cli study-runtime-status --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id> --format json"
+        },
+        "research_gate_surface": {
+          "surface_kind": "study_progress",
+          "field_path": "intervention_lane",
+          "approval_gate_field": "requires_physician_decision",
+          "interrupt_policy_field": "recommended_action_id"
+        }
+      }
     }
   },
   "artifact_inventory": {
@@ -463,6 +498,43 @@
     "domain_projection": {
       "recommended_restore_command": "uv run python -m med_autoscience.cli launch-study --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>",
       "recommended_progress_command": "uv run python -m med_autoscience.cli study-progress --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>"
+    }
+  },
+  "return_surface_contract": {
+    "research_runtime_control_projection_contract": {
+      "surface_kind": "research_runtime_control_projection_contract",
+      "study_session_owner": {
+        "runtime_owner": "upstream_hermes_agent",
+        "study_owner": "med-autoscience",
+        "executor_owner": "med_deepscientist"
+      },
+      "restore_point_surface": {
+        "surface_kind": "study_progress",
+        "field_path": "autonomy_contract.restore_point"
+      },
+      "progress_cursor_surface": {
+        "surface_kind": "study_progress",
+        "field_path": "operator_status_card.current_focus"
+      },
+      "artifact_inventory_surface": {
+        "surface_kind": "artifact_inventory",
+        "field_path": "supporting_files"
+      },
+      "artifact_pickup_surface": {
+        "surface_kind": "artifact_inventory",
+        "field_path": "deliverable_files"
+      },
+      "command_templates": {
+        "resume": "uv run python -m med_autoscience.cli launch-study --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>",
+        "check_progress": "uv run python -m med_autoscience.cli study-progress --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id> --format json",
+        "check_runtime_status": "uv run python -m med_autoscience.cli study-runtime-status --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>"
+      },
+      "research_gate_surface": {
+        "surface_kind": "study_progress",
+        "field_path": "intervention_lane",
+        "approval_gate_field": "requires_physician_decision",
+        "interrupt_policy_field": "recommended_action_id"
+      }
     }
   },
   "product_entry_overview": {

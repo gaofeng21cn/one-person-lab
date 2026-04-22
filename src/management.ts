@@ -861,11 +861,12 @@ function buildManifestContinuitySurface(options: {
   overview: NormalizedDomainManifest['product_entry_overview'] | null;
   manifest: NormalizedDomainManifest | null;
 }) {
+  const control = options.manifest?.runtime_control ?? null;
   const session = options.manifest?.session_continuity ?? null;
   const progress = options.manifest?.progress_projection ?? null;
   const artifacts = options.manifest?.artifact_inventory ?? null;
 
-  if (!session && !progress && !artifacts) {
+  if (!control && !session && !progress && !artifacts) {
     return null;
   }
 
@@ -886,14 +887,23 @@ function buildManifestContinuitySurface(options: {
     })),
   ];
   const progressCommand =
-    progress?.progress_surface?.command
+    control?.control_surfaces.progress?.command
+    ?? progress?.progress_surface?.command
     ?? session?.progress_surface?.command
     ?? options.overview?.progress_surface?.command
     ?? null;
   const resumeCommand =
-    session?.restore_surface?.command
+    control?.control_surfaces.resume?.command
+    ?? session?.restore_surface?.command
     ?? options.manifest?.task_lifecycle?.resume_surface?.command
     ?? options.overview?.resume_surface?.command
+    ?? null;
+  const approvalCommand = control?.control_surfaces.approval?.command ?? null;
+  const interruptCommand = control?.control_surfaces.interrupt?.command ?? null;
+  const artifactCommand =
+    control?.control_surfaces.artifact_pickup?.command
+    ?? artifacts?.artifact_surface?.command
+    ?? session?.artifact_surface?.command
     ?? null;
   const inspectPaths = uniqueStrings([
     artifacts?.workspace_path ?? null,
@@ -929,13 +939,18 @@ function buildManifestContinuitySurface(options: {
     recommendedCommands: {
       progress: progressCommand,
       resume: resumeCommand,
+      approval: approvalCommand,
+      interrupt: interruptCommand,
+      artifacts: artifactCommand,
     },
     userOptions: [
       '展开当前 runtime continuity 详情',
       ...(workspaceFiles.length > 0 ? ['列出当前 deliverable 与 supporting files'] : []),
       ...(resumeCommand ? ['按当前 restore surface 继续推进'] : []),
+      ...(approvalCommand ? ['查看当前 domain approval/control gate'] : []),
     ],
     continuity: {
+      control,
       session,
       progress,
       artifacts,
@@ -978,9 +993,16 @@ function buildStudyProgressSurface(options: {
       recommendedCommands: {
         progress: options.overview?.progress_surface?.command ?? null,
         resume: options.overview?.resume_surface?.command ?? null,
+        approval: options.manifest?.runtime_control?.control_surfaces.approval?.command ?? null,
+        interrupt: options.manifest?.runtime_control?.control_surfaces.interrupt?.command ?? null,
+        artifacts:
+          options.manifest?.runtime_control?.control_surfaces.artifact_pickup?.command
+          ?? options.manifest?.artifact_inventory?.artifact_surface?.command
+          ?? null,
       },
       userOptions: buildCurrentStudyUserOptions(false),
       continuity: continuitySurface?.continuity ?? {
+        control: options.manifest?.runtime_control ?? null,
         session: options.manifest?.session_continuity ?? null,
         progress: options.manifest?.progress_projection ?? null,
         artifacts: options.manifest?.artifact_inventory ?? null,
@@ -1004,9 +1026,16 @@ function buildStudyProgressSurface(options: {
       recommendedCommands: {
         progress: options.overview?.progress_surface?.command ?? null,
         resume: options.overview?.resume_surface?.command ?? null,
+        approval: options.manifest?.runtime_control?.control_surfaces.approval?.command ?? null,
+        interrupt: options.manifest?.runtime_control?.control_surfaces.interrupt?.command ?? null,
+        artifacts:
+          options.manifest?.runtime_control?.control_surfaces.artifact_pickup?.command
+          ?? options.manifest?.artifact_inventory?.artifact_surface?.command
+          ?? null,
       },
       userOptions: buildCurrentStudyUserOptions(false),
       continuity: continuitySurface?.continuity ?? {
+        control: options.manifest?.runtime_control ?? null,
         session: options.manifest?.session_continuity ?? null,
         progress: options.manifest?.progress_projection ?? null,
         artifacts: options.manifest?.artifact_inventory ?? null,
@@ -1171,9 +1200,16 @@ function buildStudyProgressSurface(options: {
     recommendedCommands: {
       progress: progressCommand,
       resume: resumeCommand,
+      approval: options.manifest?.runtime_control?.control_surfaces.approval?.command ?? null,
+      interrupt: options.manifest?.runtime_control?.control_surfaces.interrupt?.command ?? null,
+      artifacts:
+        options.manifest?.runtime_control?.control_surfaces.artifact_pickup?.command
+        ?? options.manifest?.artifact_inventory?.artifact_surface?.command
+        ?? null,
     },
     userOptions: buildCurrentStudyUserOptions(true, Boolean(paperSnapshot)),
     continuity: {
+      control: options.manifest?.runtime_control ?? null,
       session: options.manifest?.session_continuity ?? null,
       progress: options.manifest?.progress_projection ?? null,
       artifacts: options.manifest?.artifact_inventory ?? null,
@@ -2418,6 +2454,7 @@ export async function buildProjectProgressBrief(
         supporting_files: supportingFiles,
       },
       runtime_continuity: {
+        control: manifest?.runtime_control ?? null,
         session: manifest?.session_continuity ?? null,
         progress: manifest?.progress_projection ?? null,
         artifacts: manifest?.artifact_inventory ?? null,
@@ -2431,6 +2468,13 @@ export async function buildProjectProgressBrief(
       recommended_commands: {
         progress: studySurface.recommendedCommands.progress ?? overview?.progress_surface?.command ?? null,
         resume: studySurface.recommendedCommands.resume ?? overview?.resume_surface?.command ?? null,
+        approval: studySurface.recommendedCommands.approval ?? manifest?.runtime_control?.control_surfaces.approval?.command ?? null,
+        interrupt: studySurface.recommendedCommands.interrupt ?? manifest?.runtime_control?.control_surfaces.interrupt?.command ?? null,
+        artifacts:
+          studySurface.recommendedCommands.artifacts
+          ?? manifest?.runtime_control?.control_surfaces.artifact_pickup?.command
+          ?? manifest?.artifact_inventory?.artifact_surface?.command
+          ?? null,
         start: readinessEntry?.recommended_start_command ?? null,
       },
       notes: [

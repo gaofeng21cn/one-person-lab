@@ -58,6 +58,7 @@ test('family domain catalog derives parity status from manifests and active bind
       },
       runtime_inventory: { surface_kind: 'runtime_inventory' },
       task_lifecycle: { surface_kind: 'task_lifecycle' },
+      runtime_control: { surface_kind: 'runtime_control' },
       skill_catalog: { surface_kind: 'skill_catalog' },
       automation: { surface_kind: 'automation' },
       product_entry_readiness: { verdict: 'good_to_use_now' },
@@ -89,6 +90,7 @@ test('family domain catalog derives parity status from manifests and active bind
       gateway_interaction_contract: {
         surface_kind: 'gateway_interaction_contract',
       },
+      runtime_control: { surface_kind: 'runtime_control' },
     }),
     {
       project_id: 'redcube-ai',
@@ -134,6 +136,7 @@ test('family domain catalog derives parity status from manifests and active bind
   assert.equal(parity.summary.ready_for_opl_start_count, 2);
   assert.equal(parity.summary.ready_for_domain_handoff_count, 1);
   assert.equal(parity.summary.domain_agent_entry_spec_ready_count, 2);
+  assert.equal(parity.summary.runtime_control_ready_count, 2);
 
   const alignedProject = parity.projects.find((entry) => entry.project_id === 'med-autoscience');
   const partialProject = parity.projects.find((entry) => entry.project_id === 'med-autogrant');
@@ -141,8 +144,10 @@ test('family domain catalog derives parity status from manifests and active bind
 
   assert.equal(alignedProject?.entry_parity_status, 'aligned');
   assert.equal(alignedProject?.direct_entry_locator_status, 'ready');
+  assert.equal(alignedProject?.runtime_control_status, 'ready');
   assert.equal(alignedProject?.recommended_check_command, 'medautoscience study-runtime-status');
   assert.equal(partialProject?.entry_parity_status, 'partial');
+  assert.equal(partialProject?.runtime_control_status, 'ready');
   assert.match(partialProject?.gaps.join('\n') ?? '', /shared handoff surface/);
   assert.equal(blockedProject?.entry_parity_status, 'blocked');
   assert.match(blockedProject?.recommended_next_actions.join('\n') ?? '', /repo-tracked product-entry manifest/);
@@ -248,6 +253,25 @@ test('family domain catalog derives recommended entry surfaces with active bindi
           progress_surface: { command: 'medautoscience study-progress' },
           resume_surface: { surface_kind: 'study_runtime_status' },
         },
+        runtime_control: {
+          surface_kind: 'runtime_control',
+          summary: 'control',
+          status: 'study_scoped',
+          restore_point: 'phase_2_user_product_loop',
+          control_gate_ids: ['human-review'],
+          control_surfaces: {
+            resume: {
+              surface_kind: 'study_runtime_status',
+              command: 'medautoscience study-runtime-status',
+              summary: 'resume',
+            },
+            approval: {
+              surface_kind: 'workspace_cockpit',
+              command: 'medautoscience workspace-cockpit',
+              summary: 'approval',
+            },
+          },
+        },
         skill_catalog: {
           surface_kind: 'skill_catalog',
           skills: [{ skill_id: 'workspace-cockpit' }],
@@ -310,5 +334,11 @@ test('family domain catalog derives recommended entry surfaces with active bindi
   assert.equal(recommended[0]?.domain_agent_entry_spec?.agent_id, 'mas');
   assert.equal(recommended[0]?.gateway_interaction_contract_status, 'ready');
   assert.equal(recommended[0]?.product_entry_preflight_recommended_start_command, 'medautoscience product-start');
+  assert.equal(recommended[0]?.runtime_control.surface_kind, 'runtime_control');
+  assert.equal(recommended[0]?.runtime_control_status, 'ready');
+  assert.equal(recommended[0]?.runtime_control_restore_point, 'phase_2_user_product_loop');
+  assert.equal(recommended[0]?.runtime_control_resume_command, 'medautoscience study-runtime-status');
+  assert.equal(recommended[0]?.runtime_control_approval_command, 'medautoscience workspace-cockpit');
+  assert.deepEqual(recommended[0]?.runtime_control_gate_ids, ['human-review']);
   assert.deepEqual(recommended[0]?.family_human_gate_ids, ['human-review']);
 });
