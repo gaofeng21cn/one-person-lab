@@ -35,6 +35,10 @@ function runCli(args: string[], envOverrides: Record<string, string> = {}) {
   return runCliInCwd(args, repoRoot, envOverrides);
 }
 
+function runCliRaw(args: string[], envOverrides: Record<string, string> = {}) {
+  return runCliRawInCwd(args, repoRoot, envOverrides);
+}
+
 function runCliInCwd(
   args: string[],
   cwd: string,
@@ -56,6 +60,29 @@ function runCliInCwd(
 
   assert.equal(result.status, 0, result.stderr);
   return JSON.parse(result.stdout);
+}
+
+function runCliRawInCwd(
+  args: string[],
+  cwd: string,
+  envOverrides: Record<string, string> = {},
+) {
+  const result = spawnSync(
+    process.execPath,
+    ['--experimental-strip-types', cliPath, ...args],
+    {
+      cwd,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: '1',
+        ...envOverrides,
+      },
+    },
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  return result;
 }
 
 function runCliViaEntryPathInCwd(
@@ -1477,7 +1504,7 @@ test('status workspace reports git and worktree visibility for one workspace pat
   assert.equal(typeof output.workspace.git.is_clean, 'boolean');
 });
 
-test('bare opl command keeps the Codex frontdoor stable even when the session ledger file is corrupted', () => {
+test('bare opl command keeps raw Codex frontdoor behavior even when the session ledger file is corrupted', () => {
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
 if [ "$#" -eq 0 ]; then
   cat <<'EOF'
@@ -1494,18 +1521,13 @@ exit 1
   fs.writeFileSync(ledgerPath, corruptedLedgerContent);
 
   try {
-    const output = runCli([], {
+    const result = runCliRaw([], {
       OPL_CODEX_BIN: codexPath,
       OPL_FRONTDESK_STATE_DIR: stateRoot,
     });
 
-    assert.equal(output.version, 'g2');
-    assert.equal(output.product_entry.mode, 'frontdoor');
-    assert.equal(output.product_entry.interactive, false);
-    assert.doesNotMatch(output.product_entry.handoff_prompt_preview, /front[- ]?desk/i);
-    assert.equal(output.product_entry.executor_backend, 'codex');
-    assert.deepEqual(output.product_entry.codex.command_preview, ['codex']);
-    assert.equal(output.product_entry.codex.resume_command_preview[0], 'codex');
+    assert.equal(result.stdout, 'CODEX FRONTDOOR\n');
+    assert.equal(result.stderr, '');
     assert.equal(fs.readFileSync(ledgerPath, 'utf8'), corruptedLedgerContent);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
@@ -1513,13 +1535,13 @@ exit 1
   }
 });
 
-test('natural-language fallback routes multi-token input through the default Codex quick ask path', () => {
+test('natural-language fallback is a raw Codex passthrough unless the request enters explicit OPL routing', () => {
+  const capturePath = path.join(os.tmpdir(), `opl-natural-fallback-args-${process.pid}.txt`);
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
-if [ "$1" = "exec" ]; then
+printf '%s\\n' "$@" > ${JSON.stringify(capturePath)}
+if [ "$#" -gt 0 ]; then
   cat <<'EOF'
-{"type":"thread.started","thread_id":"opl-quick-ask-session"}
-{"type":"turn.started"}
-{"item":{"type":"agent_message","text":"AUTO ASK READY"}}
+AUTO ASK READY
 EOF
   exit 0
 fi
@@ -1528,23 +1550,26 @@ exit 1
 `);
 
   try {
-    const output = runCli(
+    const result = runCliRaw(
       ['Plan', 'a', 'medical', 'grant', 'proposal', 'revision', 'loop.'],
       {
         OPL_CODEX_BIN: codexPath,
       },
     );
 
-    assert.equal(output.product_entry.mode, 'ask');
-    assert.equal(output.product_entry.input.goal, 'Plan a medical grant proposal revision loop.');
-    assert.equal(output.product_entry.routing.status, 'routed');
-    assert.equal(output.product_entry.routing.domain_id, 'medautogrant');
-    assert.equal(output.product_entry.routing.workstream_id, 'grant_ops');
-    assert.equal(output.product_entry.executor_backend, 'codex');
-    assert.equal(output.product_entry.codex.session_id, 'opl-quick-ask-session');
-    assert.equal(output.product_entry.codex.response, 'AUTO ASK READY');
+    assert.equal(result.stdout, 'AUTO ASK READY\n');
+    assert.deepEqual(fs.readFileSync(capturePath, 'utf8').trim().split('\n'), [
+      'Plan',
+      'a',
+      'medical',
+      'grant',
+      'proposal',
+      'revision',
+      'loop.',
+    ]);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(capturePath, { force: true });
   }
 });
 
@@ -1643,7 +1668,7 @@ exit 1
   }
 });
 
-test('shell without arguments now exposes the Codex frontdoor lane', () => {
+test('shell without arguments now exposes the raw Codex frontdoor lane', () => {
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
 if [ "$#" -eq 0 ]; then
   cat <<'EOF'
@@ -1656,19 +1681,18 @@ exit 1
 `);
 
   try {
-    const output = runCli(['shell'], {
+    const result = runCliRaw(['shell'], {
       OPL_CODEX_BIN: codexPath,
     });
 
-    assert.equal(output.product_entry.mode, 'frontdoor');
-    assert.equal(output.product_entry.executor_backend, 'codex');
-    assert.deepEqual(output.product_entry.codex.command_preview, ['codex']);
+    assert.equal(result.stdout, 'CODEX SHELL FRONTDOOR\n');
+    assert.equal(result.stderr, '');
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
 
-test('shell --resume resumes an existing Codex session through the local shell lane by default', () => {
+test('shell --resume is a raw Codex resume passthrough by default', () => {
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
 if [ "$1" = "resume" ] && [ "$2" = "sess-shell-resume-1" ]; then
   cat <<'EOF'
@@ -1681,14 +1705,12 @@ exit 1
 `);
 
   try {
-    const output = runCli(['shell', '--resume', 'sess-shell-resume-1'], {
+    const result = runCliRaw(['shell', '--resume', 'sess-shell-resume-1'], {
       OPL_CODEX_BIN: codexPath,
     });
 
-    assert.equal(output.product_entry.mode, 'resume');
-    assert.equal(output.product_entry.executor_backend, 'codex');
-    assert.equal(output.product_entry.resume.session_id, 'sess-shell-resume-1');
-    assert.equal(output.product_entry.resume.output, 'OPL SHELL RESUME OUTPUT');
+    assert.equal(result.stdout, 'OPL SHELL RESUME OUTPUT\n');
+    assert.equal(result.stderr, '');
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
@@ -1799,7 +1821,7 @@ exit 1
   }
 });
 
-test('resume returns captured Codex session output in non-interactive mode by default', () => {
+test('session resume returns raw Codex session output in non-interactive mode by default', () => {
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
 if [ "$1" = "resume" ] && [ "$2" = "opl-test-session" ]; then
   cat <<'EOF'
@@ -1812,15 +1834,12 @@ exit 1
 `);
 
   try {
-    const output = runCli(['session', 'resume', 'opl-test-session'], {
+    const result = runCliRaw(['session', 'resume', 'opl-test-session'], {
       OPL_CODEX_BIN: codexPath,
     });
 
-    assert.equal(output.product_entry.mode, 'resume');
-    assert.equal(output.product_entry.interactive, false);
-    assert.equal(output.product_entry.executor_backend, 'codex');
-    assert.equal(output.product_entry.resume.session_id, 'opl-test-session');
-    assert.equal(output.product_entry.resume.output, 'RESUMED SESSION BODY');
+    assert.equal(result.stdout, 'RESUMED SESSION BODY\n');
+    assert.equal(result.stderr, '');
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
