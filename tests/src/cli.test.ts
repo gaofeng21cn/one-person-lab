@@ -2684,15 +2684,15 @@ exit 1
     );
     assert.equal(
       notifications.some((entry) => JSON.stringify(entry).includes('OPL ACP 正在通过 Codex 默认运行时处理当前会话请求。')),
-      true,
+      false,
     );
     assert.equal(
       notifications.some((entry) => JSON.stringify(entry).includes('Codex 已接管任务，会话 opl-acp-thread-1 已创建。')),
-      true,
+      false,
     );
     assert.equal(
       notifications.some((entry) => JSON.stringify(entry).includes('Codex 正在读取上下文并规划下一步。')),
-      true,
+      false,
     );
 
     writeJsonLine(child.stdin, {
