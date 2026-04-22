@@ -231,6 +231,23 @@ type DomainAgentBlueprint = {
   progress_conventions: string;
 };
 
+type DomainAgentEntrySpec = {
+  agent_id: string;
+  title: string;
+  description: string;
+  default_engine: string;
+  workspace_requirement: string;
+  locator_schema: {
+    required_fields: string[];
+    optional_fields: string[];
+  };
+  codex_entry_strategy: string;
+  artifact_conventions: string;
+  progress_conventions: string;
+  entry_command: string;
+  manifest_command: string;
+};
+
 const DOMAIN_AGENT_BLUEPRINTS: Record<string, DomainAgentBlueprint> = {
   medautoscience: {
     agent_id: 'mas',
@@ -268,6 +285,69 @@ function normalizeOptionalString(value: unknown) {
 
 function uniqueStrings(values: Array<string | null | undefined>) {
   return [...new Set(values.filter((value): value is string => typeof value === 'string' && value.trim().length > 0))];
+}
+
+function readStringListFromRecord(value: unknown) {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+  const items = value
+    .map((entry) => normalizeOptionalString(entry))
+    .filter((entry): entry is string => typeof entry === 'string');
+  return items.length === value.length ? items : null;
+}
+
+function readDomainAgentEntrySpec(value: unknown): DomainAgentEntrySpec | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  const locatorSchema = isRecord(value.locator_schema) ? value.locator_schema : null;
+  const requiredFields = readStringListFromRecord(locatorSchema?.required_fields);
+  const optionalFields = readStringListFromRecord(locatorSchema?.optional_fields);
+  const agentId = normalizeOptionalString(value.agent_id);
+  const title = normalizeOptionalString(value.title);
+  const description = normalizeOptionalString(value.description);
+  const defaultEngine = normalizeOptionalString(value.default_engine);
+  const workspaceRequirement = normalizeOptionalString(value.workspace_requirement);
+  const codexEntryStrategy = normalizeOptionalString(value.codex_entry_strategy);
+  const artifactConventions = normalizeOptionalString(value.artifact_conventions);
+  const progressConventions = normalizeOptionalString(value.progress_conventions);
+  const entryCommand = normalizeOptionalString(value.entry_command);
+  const manifestCommand = normalizeOptionalString(value.manifest_command);
+
+  if (
+    !agentId
+    || !title
+    || !description
+    || !defaultEngine
+    || !workspaceRequirement
+    || !codexEntryStrategy
+    || !artifactConventions
+    || !progressConventions
+    || !entryCommand
+    || !manifestCommand
+    || !requiredFields
+    || !optionalFields
+  ) {
+    return null;
+  }
+
+  return {
+    agent_id: agentId,
+    title,
+    description,
+    default_engine: defaultEngine,
+    workspace_requirement: workspaceRequirement,
+    locator_schema: {
+      required_fields: requiredFields,
+      optional_fields: optionalFields,
+    },
+    codex_entry_strategy: codexEntryStrategy,
+    artifact_conventions: artifactConventions,
+    progress_conventions: progressConventions,
+    entry_command: entryCommand,
+    manifest_command: manifestCommand,
+  };
 }
 
 function parsePositiveIntegerFromBody(value: unknown, field: string) {
@@ -723,6 +803,11 @@ function buildOplModulesPayload(payload: ReturnType<typeof buildFrontDeskModules
 
 function buildOplAgentsPayload(context: WebFrontDeskContext, api: OplApiCatalog) {
   const workspaceCatalog = buildWorkspaceCatalog(context.contracts).workspace_catalog;
+  const resolvedManifestIndex = new Map(
+    buildDomainManifestCatalog(context.contracts).domain_manifests.projects
+      .filter((entry) => entry.status === 'resolved' && entry.manifest)
+      .map((entry) => [entry.project_id, entry.manifest] as const),
+  );
   const installedModules = buildFrontDeskModules().frontdesk_modules.modules;
   const moduleIndex = new Map(installedModules.map((entry) => [entry.module_id, entry]));
   const generalAgents = [
@@ -791,22 +876,36 @@ function buildOplAgentsPayload(context: WebFrontDeskContext, api: OplApiCatalog)
     .filter((entry) => entry.project_id !== 'opl')
     .flatMap((entry) => {
       const blueprint = DOMAIN_AGENT_BLUEPRINTS[entry.project_id];
-      if (!blueprint) {
+      const manifest = resolvedManifestIndex.get(entry.project_id);
+      const exportedSpec = readDomainAgentEntrySpec(
+        manifest?.domain_entry_contract?.domain_agent_entry_spec,
+      );
+      if (!blueprint && !exportedSpec) {
         return [];
       }
 
-      const moduleStatus = moduleIndex.get(blueprint.module_id);
-      const requiredFields = uniqueStrings(['cwd', ...entry.binding_contract.required_locator_fields]);
-      const optionalFields = uniqueStrings(entry.binding_contract.optional_locator_fields);
+      const moduleId = blueprint?.module_id ?? entry.project_id;
+      const moduleStatus = moduleIndex.get(moduleId);
+      const requiresWorkspace =
+        (exportedSpec?.workspace_requirement ?? 'required') !== 'none';
+      const requiredFields = uniqueStrings([
+        requiresWorkspace ? 'cwd' : null,
+        ...entry.binding_contract.required_locator_fields,
+        ...(exportedSpec?.locator_schema.required_fields ?? []),
+      ]);
+      const optionalFields = uniqueStrings([
+        ...entry.binding_contract.optional_locator_fields,
+        ...(exportedSpec?.locator_schema.optional_fields ?? []),
+      ]);
       return [{
-        agent_id: blueprint.agent_id,
-        title: blueprint.title,
-        description: blueprint.description,
+        agent_id: exportedSpec?.agent_id ?? blueprint?.agent_id,
+        title: exportedSpec?.title ?? blueprint?.title,
+        description: exportedSpec?.description ?? blueprint?.description,
         class: 'domain',
-        module_id: blueprint.module_id,
+        module_id: moduleId,
         project_id: entry.project_id,
-        default_engine: 'codex',
-        requires_workspace: true,
+        default_engine: exportedSpec?.default_engine ?? 'codex',
+        requires_workspace: requiresWorkspace,
         availability:
           moduleStatus?.health_status === 'ready'
             ? 'ready'
@@ -821,16 +920,20 @@ function buildOplAgentsPayload(context: WebFrontDeskContext, api: OplApiCatalog)
         active_workspace_path: entry.active_binding?.workspace_path ?? null,
         entry_spec: {
           entry_kind: 'domain_workspace_session',
-          workspace_requirement: 'required',
+          workspace_requirement: exportedSpec?.workspace_requirement ?? 'required',
           locator_schema: {
             required_fields: requiredFields,
             optional_fields: optionalFields,
           },
-          codex_entry_strategy: 'domain_agent_entry',
-          artifact_conventions: blueprint.artifact_conventions,
-          progress_conventions: blueprint.progress_conventions,
-          command_template: entry.binding_contract.derived_entry_command_template,
-          manifest_command_template: entry.binding_contract.derived_manifest_command_template,
+          codex_entry_strategy: exportedSpec?.codex_entry_strategy ?? 'domain_agent_entry',
+          artifact_conventions: exportedSpec?.artifact_conventions ?? blueprint?.artifact_conventions,
+          progress_conventions: exportedSpec?.progress_conventions ?? blueprint?.progress_conventions,
+          entry_command: exportedSpec?.entry_command ?? null,
+          manifest_command: exportedSpec?.manifest_command ?? null,
+          command_template:
+            entry.binding_contract.derived_entry_command_template ?? exportedSpec?.entry_command ?? null,
+          manifest_command_template:
+            entry.binding_contract.derived_manifest_command_template ?? exportedSpec?.manifest_command ?? null,
         },
       }];
     });

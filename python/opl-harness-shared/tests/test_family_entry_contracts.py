@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from opl_harness_shared.family_entry_contracts import (
+    build_domain_agent_entry_spec,
     build_domain_entry_command_contract,
     build_domain_entry_command_catalog,
     build_family_direct_opl_shared_handoff,
@@ -13,6 +14,7 @@ from opl_harness_shared.family_entry_contracts import (
     build_shared_handoff_builder,
     build_shared_handoff_return_surface,
     validate_family_domain_entry_contract,
+    validate_domain_agent_entry_spec,
     validate_gateway_interaction_contract,
     validate_shared_handoff,
     validate_shared_handoff_builder,
@@ -89,6 +91,34 @@ def test_family_entry_contract_helpers_build_reusable_command_catalogs_for_cross
 
     assert contract["supported_commands"] == catalog["supported_commands"]
     assert contract["command_contracts"] == catalog["command_contracts"]
+
+
+def test_family_entry_contract_helpers_build_and_validate_domain_agent_entry_specs() -> None:
+    spec = build_domain_agent_entry_spec(
+        agent_id="mas",
+        title="Med Auto Science",
+        description="Medical research domain agent.",
+        default_engine="codex",
+        workspace_requirement="required",
+        locator_schema={
+            "required_fields": ["profile_ref"],
+            "optional_fields": ["study_id"],
+        },
+        codex_entry_strategy="domain_agent_entry",
+        artifact_conventions="paper_and_submission_package",
+        progress_conventions="study_runtime_narration",
+        entry_command="product-frontdesk",
+        manifest_command="product-entry-manifest",
+    )
+
+    validated = validate_domain_agent_entry_spec(
+        spec,
+        "domain_entry_contract.domain_agent_entry_spec",
+    )
+    assert validated["surface_kind"] == "domain_agent_entry_spec"
+    assert validated["agent_id"] == "mas"
+    assert validated["locator_schema"]["required_fields"] == ["profile_ref"]
+    assert validated["locator_schema"]["optional_fields"] == ["study_id"]
 
 
 def test_family_entry_contract_helpers_build_and_validate_gateway_payloads() -> None:
@@ -211,6 +241,51 @@ def test_family_entry_contract_helpers_build_default_direct_and_opl_handoff_payl
     )
     assert validated["opl_handoff_builder"]["entry_mode"] == "opl-handoff"
     assert validated["contract_owner"] == "family_shared_contract"
+
+
+def test_family_entry_contract_helpers_validate_nested_domain_agent_specs_inside_domain_entry_contract() -> None:
+    contract = build_family_domain_entry_contract(
+        entry_adapter="MedAutoScienceDomainEntry",
+        service_safe_surface_kind="med_autoscience_service_safe_domain_entry",
+        product_entry_builder_command="build-product-entry",
+        supported_commands=["workspace-cockpit"],
+        command_contracts=[
+            build_domain_entry_command_contract(
+                command="workspace-cockpit",
+                required_fields=["profile_ref"],
+            )
+        ],
+        domain_agent_entry_spec={
+            "surface_kind": "domain_agent_entry_spec",
+            "agent_id": "mas",
+            "title": "Med Auto Science",
+            "description": "Medical research domain agent.",
+            "default_engine": "codex",
+            "workspace_requirement": "required",
+            "locator_schema": {
+                "required_fields": ["profile_ref"],
+                "optional_fields": [],
+            },
+            "codex_entry_strategy": "domain_agent_entry",
+            "artifact_conventions": "paper_and_submission_package",
+            "progress_conventions": "study_runtime_narration",
+            "entry_command": "product-frontdesk",
+            "manifest_command": "product-entry-manifest",
+        },
+    )
+    assert contract["domain_agent_entry_spec"]["agent_id"] == "mas"
+
+    with pytest.raises(ValueError, match="domain_agent_entry_spec\\.title"):
+        validate_family_domain_entry_contract(
+            {
+                **contract,
+                "domain_agent_entry_spec": {
+                    "surface_kind": "domain_agent_entry_spec",
+                    "agent_id": "mas",
+                },
+            },
+            "product_entry_manifest.domain_entry_contract",
+        )
 
 
 def test_family_entry_contract_validation_fails_closed_when_command_contracts_missing() -> None:

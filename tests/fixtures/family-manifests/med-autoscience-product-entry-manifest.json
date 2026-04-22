@@ -60,7 +60,28 @@
           "force"
         ]
       }
-    ]
+    ],
+    "domain_agent_entry_spec": {
+      "surface_kind": "domain_agent_entry_spec",
+      "agent_id": "mas",
+      "title": "Med Auto Science",
+      "description": "Medical research and paper production inside a MAS workspace.",
+      "default_engine": "codex",
+      "workspace_requirement": "required",
+      "locator_schema": {
+        "required_fields": [
+          "profile_ref"
+        ],
+        "optional_fields": [
+          "study_id"
+        ]
+      },
+      "codex_entry_strategy": "domain_agent_entry",
+      "artifact_conventions": "paper_and_submission_package",
+      "progress_conventions": "study_runtime_narration",
+      "entry_command": "product-frontdesk",
+      "manifest_command": "product-entry-manifest"
+    }
   },
   "gateway_interaction_contract": {
     "surface_kind": "gateway_interaction_contract",
