@@ -74,14 +74,14 @@ function spawnAcpRuntime(codexPath?: string) {
   );
 }
 
-test('acp json-rpc prompt lifecycle keeps mode compatibility and streams Codex progress', async () => {
+test('acp json-rpc prompt lifecycle keeps mode compatibility without leaking bridge status chatter into chat output', async () => {
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
 if [ "$1" = "exec" ]; then
   cat <<'EOF'
 {"type":"thread.started","thread_id":"opl-acp-thread-1"}
 {"type":"turn.started"}
 EOF
-  sleep 1
+  sleep 6
   cat <<'EOF'
 {"item":{"type":"agent_message","text":"ACP HELLO FROM CODEX"}}
 {"type":"turn.completed"}
@@ -153,16 +153,24 @@ exit 1
 
     assert.equal(promptResponse.result?.stopReason, 'end_turn');
     assert.equal(
-      notifications.some((entry) => JSON.stringify(entry).includes('OPL ACP 正在通过 Codex 默认运行时处理当前会话请求。')),
+      notifications.some(
+        (entry) =>
+          (entry.params as { update?: { sessionUpdate?: string } } | undefined)?.update?.sessionUpdate ===
+          'user_message_chunk',
+      ),
       true,
+    );
+    assert.equal(
+      notifications.some((entry) => JSON.stringify(entry).includes('OPL ACP 正在通过 Codex 默认运行时处理当前会话请求。')),
+      false,
     );
     assert.equal(
       notifications.some((entry) => JSON.stringify(entry).includes('Codex 已接管任务，会话 opl-acp-thread-1 已创建。')),
-      true,
+      false,
     );
     assert.equal(
       notifications.some((entry) => JSON.stringify(entry).includes('Codex 正在读取上下文并规划下一步。')),
-      true,
+      false,
     );
     assert.equal(
       notifications.some((entry) => JSON.stringify(entry).includes('ACP HELLO FROM CODEX')),

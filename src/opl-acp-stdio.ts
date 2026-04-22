@@ -16,7 +16,6 @@ import {
   buildCodexExecArgs,
   parseCodexExecOutput,
   runCodexCommandStreaming,
-  summarizeCodexOutputLine,
 } from './codex.ts';
 import { loadGatewayContracts } from './contracts.ts';
 import { buildSessionLedger, recordSessionLedgerEntry } from './session-ledger.ts';
@@ -321,20 +320,18 @@ function emitAssistantChunk(
   });
 }
 
-function emitStatusChunk(
+function emitKeepaliveUpdate(
   writable: NodeJS.WritableStream,
   session: BridgeSessionRecord,
-  text: string,
 ) {
-  recordBridgeUpdate(session, 'status', text);
   emitJsonRpcNotification(writable, 'session/update', {
     sessionId: session.sessionId,
     update: {
-      sessionUpdate: 'agent_message_chunk',
-      messageId: 'opl-acp-status',
+      sessionUpdate: 'user_message_chunk',
+      messageId: 'opl-acp-keepalive',
       content: {
         type: 'text',
-        text,
+        text: '',
       },
     },
   });
@@ -458,31 +455,15 @@ async function executeBridgePrompt(
       });
 
   let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
-  let lastStreamText = '';
-  const emitStreamStatus = (text: string) => {
-    if (!writable || !text || text === lastStreamText) {
-      return;
-    }
-    lastStreamText = text;
-    emitStatusChunk(writable, session, text);
-  };
-
   if (writable) {
     heartbeatTimer = setInterval(() => {
-      emitStatusChunk(writable, session, 'Codex 正在继续处理当前会话请求。');
+      emitKeepaliveUpdate(writable, session);
     }, 5000);
   }
 
   let result: Awaited<ReturnType<typeof runCodexCommandStreaming>>;
   try {
-    result = await runCodexCommandStreaming(args, {
-      onStdoutLine: (line) => {
-        const summary = summarizeCodexOutputLine(line);
-        if (summary) {
-          emitStreamStatus(summary);
-        }
-      },
-    });
+    result = await runCodexCommandStreaming(args);
   } finally {
     if (heartbeatTimer) {
       clearInterval(heartbeatTimer);
@@ -789,8 +770,6 @@ async function handleJsonRpcRequest(
         }
         const session = requireBridgeSession(state, sessionId);
         const promptText = buildPromptText(params);
-
-        emitStatusChunk(writable, session, 'OPL ACP 正在通过 Codex 默认运行时处理当前会话请求。');
         const executed = await executeBridgePrompt(session, promptText, writable);
         for (const chunk of splitResponseText(executed.parsed.finalMessage)) {
           emitAssistantChunk(writable, session, chunk);
