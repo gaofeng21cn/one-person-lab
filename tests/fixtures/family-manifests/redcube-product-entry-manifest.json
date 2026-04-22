@@ -168,7 +168,26 @@
         ],
         "optional_fields": []
       }
-    ]
+    ],
+    "domain_agent_entry_spec": {
+      "surface_kind": "domain_agent_entry_spec",
+      "agent_id": "rca",
+      "title": "RedCube AI",
+      "description": "Presentation and visual-deliverable workflows inside a RedCube workspace.",
+      "default_engine": "codex",
+      "workspace_requirement": "required",
+      "locator_schema": {
+        "required_fields": [
+          "workspace_root"
+        ],
+        "optional_fields": []
+      },
+      "codex_entry_strategy": "domain_agent_entry",
+      "artifact_conventions": "deck_and_visual_delivery",
+      "progress_conventions": "deliverable_build_narration",
+      "entry_command": "redcube product frontdesk",
+      "manifest_command": "redcube product manifest"
+    }
   },
   "gateway_interaction_contract": {
     "surface_kind": "gateway_interaction_contract",

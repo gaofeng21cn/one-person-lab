@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  buildDomainAgentEntrySpec,
   buildDomainEntryCommandContract,
   buildDomainEntryCommandCatalog,
   buildFamilyDirectOplSharedHandoff,
@@ -12,6 +13,7 @@ import {
   buildSharedHandoffBuilder,
   buildSharedHandoffReturnSurface,
   validateFamilyDomainEntryContract,
+  validateDomainAgentEntrySpec,
   validateGatewayInteractionContract,
   validateSharedHandoff,
   validateSharedHandoffBuilder,
@@ -84,6 +86,31 @@ test('family entry contract helpers build reusable command catalogs for cross-re
 
   assert.deepEqual(contract.supported_commands, catalog.supported_commands);
   assert.deepEqual(contract.command_contracts, catalog.command_contracts);
+});
+
+test('family entry contract helpers build and validate domain agent entry specs', () => {
+  const spec = buildDomainAgentEntrySpec({
+    agent_id: 'mas',
+    title: 'Med Auto Science',
+    description: 'Medical research domain agent.',
+    default_engine: 'codex',
+    workspace_requirement: 'required',
+    locator_schema: {
+      required_fields: ['profile_ref'],
+      optional_fields: ['study_id'],
+    },
+    codex_entry_strategy: 'domain_agent_entry',
+    artifact_conventions: 'paper_and_submission_package',
+    progress_conventions: 'study_runtime_narration',
+    entry_command: 'product-frontdesk',
+    manifest_command: 'product-entry-manifest',
+  });
+
+  const validated = validateDomainAgentEntrySpec(spec, 'domain_entry_contract.domain_agent_entry_spec');
+  assert.equal(validated.surface_kind, 'domain_agent_entry_spec');
+  assert.equal(validated.agent_id, 'mas');
+  assert.deepEqual(validated.locator_schema.required_fields, ['profile_ref']);
+  assert.deepEqual(validated.locator_schema.optional_fields, ['study_id']);
 });
 
 test('family entry contract helpers build and validate gateway interaction payloads', () => {
@@ -217,6 +244,54 @@ test('family entry contract helpers build the default direct and OPL handoff bun
   );
   assert.equal(validated.opl_handoff_builder?.entry_mode, 'opl-handoff');
   assert.equal(validated.contract_owner, 'family_shared_contract');
+});
+
+test('family entry contract helpers validate nested domain agent entry specs inside the domain entry contract', () => {
+  const contract = buildFamilyDomainEntryContract({
+    entry_adapter: 'MedAutoScienceDomainEntry',
+    service_safe_surface_kind: 'med_autoscience_service_safe_domain_entry',
+    product_entry_builder_command: 'build-product-entry',
+    supported_commands: ['workspace-cockpit'],
+    command_contracts: [
+      buildDomainEntryCommandContract({
+        command: 'workspace-cockpit',
+        required_fields: ['profile_ref'],
+      }),
+    ],
+    domain_agent_entry_spec: {
+      surface_kind: 'domain_agent_entry_spec',
+      agent_id: 'mas',
+      title: 'Med Auto Science',
+      description: 'Medical research domain agent.',
+      default_engine: 'codex',
+      workspace_requirement: 'required',
+      locator_schema: {
+        required_fields: ['profile_ref'],
+        optional_fields: [],
+      },
+      codex_entry_strategy: 'domain_agent_entry',
+      artifact_conventions: 'paper_and_submission_package',
+      progress_conventions: 'study_runtime_narration',
+      entry_command: 'product-frontdesk',
+      manifest_command: 'product-entry-manifest',
+    },
+  });
+
+  assert.equal(contract.domain_agent_entry_spec?.agent_id, 'mas');
+  assert.throws(
+    () =>
+      validateFamilyDomainEntryContract(
+        {
+          ...contract,
+          domain_agent_entry_spec: {
+            surface_kind: 'domain_agent_entry_spec',
+            agent_id: 'mas',
+          },
+        },
+        'product_entry_manifest.domain_entry_contract',
+      ),
+    /domain_agent_entry_spec\.title/,
+  );
 });
 
 test('family entry contract validation fails closed when command contracts are missing', () => {

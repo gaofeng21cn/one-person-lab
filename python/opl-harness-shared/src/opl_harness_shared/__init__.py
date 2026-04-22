@@ -27,6 +27,7 @@ from .family_orchestration import (
     resolve_program_id,
 )
 from .family_entry_contracts import (
+    build_domain_agent_entry_spec,
     build_domain_entry_command_contract,
     build_domain_entry_command_catalog,
     build_family_domain_entry_contract,
@@ -35,6 +36,7 @@ from .family_entry_contracts import (
     build_shared_handoff_builder,
     build_shared_handoff_return_surface,
     validate_family_domain_entry_contract,
+    validate_domain_agent_entry_spec,
     validate_gateway_interaction_contract,
     validate_shared_handoff,
     validate_shared_handoff_builder,
@@ -160,6 +162,7 @@ __all__ = [
     "build_managed_runtime_contract",
     "build_domain_entry_command_contract",
     "build_domain_entry_command_catalog",
+    "build_domain_agent_entry_spec",
     "build_operator_loop_action",
     "build_operator_loop_action_catalog",
     "build_product_entry_start",
@@ -224,6 +227,7 @@ __all__ = [
     "STATUS_NARRATION_CONTRACT_KIND",
     "STATUS_NARRATION_SCHEMA_VERSION",
     "validate_family_domain_entry_contract",
+    "validate_domain_agent_entry_spec",
     "validate_family_frontdesk_entry_surfaces",
     "validate_gateway_interaction_contract",
     "validate_shared_handoff",

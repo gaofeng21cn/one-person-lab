@@ -310,6 +310,26 @@ function loadFamilyManifestFixtures() {
   };
 }
 
+test('family manifest fixtures expose domain agent entry spec v1', () => {
+  const fixtures = loadFamilyManifestFixtures();
+  const scienceSpec = (fixtures.medautoscience.domain_entry_contract as Record<string, unknown>).domain_agent_entry_spec as Record<string, unknown>;
+  const grantSpec = (fixtures.medautogrant.product_entry_manifest as Record<string, unknown>).domain_entry_contract as Record<string, unknown>;
+  const grantEntrySpec = grantSpec.domain_agent_entry_spec as Record<string, unknown>;
+  const redcubeSpec = (fixtures.redcube.domain_entry_contract as Record<string, unknown>).domain_agent_entry_spec as Record<string, unknown>;
+
+  assert.equal(scienceSpec.agent_id, 'mas');
+  assert.equal(scienceSpec.entry_command, 'product-frontdesk');
+  assert.equal(scienceSpec.manifest_command, 'product-entry-manifest');
+
+  assert.equal(grantEntrySpec.agent_id, 'mag');
+  assert.equal(grantEntrySpec.entry_command, 'product-frontdesk');
+  assert.equal(grantEntrySpec.manifest_command, 'product-entry-manifest');
+
+  assert.equal(redcubeSpec.agent_id, 'rca');
+  assert.equal(redcubeSpec.entry_command, 'redcube product frontdesk');
+  assert.equal(redcubeSpec.manifest_command, 'redcube product manifest');
+});
+
 function assertMagActionGraph(actionGraph: Record<string, unknown>) {
   assert.equal(actionGraph.graph_id, 'mag_critique_to_revision_graph');
   assert.equal(actionGraph.target_domain_id, 'med-autogrant');
@@ -5331,6 +5351,7 @@ exit 1
     const masAgent = agentsPayload.agents.items.find((entry: { agent_id: string }) => entry.agent_id === 'mas');
     assert.equal(masAgent?.requires_workspace, true);
     assert.deepEqual(masAgent?.locator_fields.required, ['cwd', 'profile_ref']);
+    assert.equal(masAgent?.entry_spec.codex_entry_strategy, 'domain_agent_entry');
 
     const workspacesResponse = await fetch(`${baseUrl}/api/opl/workspaces`);
     const workspacesPayload = await workspacesResponse.json();

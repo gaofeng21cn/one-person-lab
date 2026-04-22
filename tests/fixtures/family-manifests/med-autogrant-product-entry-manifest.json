@@ -121,7 +121,26 @@
           ],
           "optional_fields": []
         }
-      ]
+      ],
+      "domain_agent_entry_spec": {
+        "surface_kind": "domain_agent_entry_spec",
+        "agent_id": "mag",
+        "title": "Med Auto Grant",
+        "description": "Grant-writing and revision workflows inside a MAG workspace.",
+        "default_engine": "codex",
+        "workspace_requirement": "required",
+        "locator_schema": {
+          "required_fields": [
+            "input_path"
+          ],
+          "optional_fields": []
+        },
+        "codex_entry_strategy": "domain_agent_entry",
+        "artifact_conventions": "grant_proposal_package",
+        "progress_conventions": "grant_workloop_narration",
+        "entry_command": "product-frontdesk",
+        "manifest_command": "product-entry-manifest"
+      }
     },
     "gateway_interaction_contract": {
       "surface_kind": "gateway_interaction_contract",
