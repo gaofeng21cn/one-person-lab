@@ -924,6 +924,9 @@ def build_family_product_entry_manifest(
     recommended_command: str | None = None,
     runtime_inventory: Mapping[str, Any] | None = None,
     task_lifecycle: Mapping[str, Any] | None = None,
+    session_continuity: Mapping[str, Any] | None = None,
+    progress_projection: Mapping[str, Any] | None = None,
+    artifact_inventory: Mapping[str, Any] | None = None,
     skill_catalog: Mapping[str, Any] | None = None,
     automation: Mapping[str, Any] | None = None,
     product_entry_overview: Mapping[str, Any] | None = None,
@@ -960,6 +963,9 @@ def build_family_product_entry_manifest(
         ("operator_loop_actions", operator_loop_actions),
         ("runtime_inventory", runtime_inventory),
         ("task_lifecycle", task_lifecycle),
+        ("session_continuity", session_continuity),
+        ("progress_projection", progress_projection),
+        ("artifact_inventory", artifact_inventory),
         ("skill_catalog", skill_catalog),
         ("automation", automation),
         ("product_entry_overview", product_entry_overview),
@@ -1049,7 +1055,15 @@ def validate_family_product_entry_manifest(
     )
     if recommended_command is not None:
         normalized["recommended_command"] = recommended_command
-    for field in ("runtime_inventory", "task_lifecycle", "skill_catalog", "automation"):
+    for field in (
+        "runtime_inventory",
+        "task_lifecycle",
+        "session_continuity",
+        "progress_projection",
+        "artifact_inventory",
+        "skill_catalog",
+        "automation",
+    ):
         if payload.get(field) is not None:
             normalized[field] = _clone_mapping(payload.get(field), f"product_entry_manifest.{field}")
     if payload.get("product_entry_overview") is not None:
@@ -1101,6 +1115,24 @@ def validate_family_product_entry_manifest(
             "product_entry_manifest.task_lifecycle",
             "task_lifecycle",
         )
+        if payload.get("session_continuity") is not None:
+            normalized["session_continuity"] = _validate_surface_kind_mapping(
+                payload.get("session_continuity"),
+                "product_entry_manifest.session_continuity",
+                "session_continuity",
+            )
+        if payload.get("progress_projection") is not None:
+            normalized["progress_projection"] = _validate_surface_kind_mapping(
+                payload.get("progress_projection"),
+                "product_entry_manifest.progress_projection",
+                "progress_projection",
+            )
+        if payload.get("artifact_inventory") is not None:
+            normalized["artifact_inventory"] = _validate_surface_kind_mapping(
+                payload.get("artifact_inventory"),
+                "product_entry_manifest.artifact_inventory",
+                "artifact_inventory",
+            )
         normalized["skill_catalog"] = _validate_surface_kind_mapping(
             payload.get("skill_catalog"),
             "product_entry_manifest.skill_catalog",

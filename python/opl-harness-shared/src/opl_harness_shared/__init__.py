@@ -110,8 +110,12 @@ from .product_entry_program_companions import (
     build_workflow_coverage_item,
 )
 from .runtime_task_companions import (
+    build_artifact_file_descriptor,
+    build_artifact_inventory,
     build_checkpoint_summary,
+    build_progress_projection,
     build_runtime_inventory,
+    build_session_continuity,
     build_task_lifecycle,
     build_task_surface_descriptor,
 )
@@ -188,7 +192,11 @@ __all__ = [
     "build_program_sequence_step",
     "build_platform_target",
     "build_workflow_coverage_item",
+    "build_artifact_file_descriptor",
+    "build_artifact_inventory",
+    "build_progress_projection",
     "build_runtime_inventory",
+    "build_session_continuity",
     "build_skill_catalog",
     "build_skill_descriptor",
     "build_status_narration_contract",
