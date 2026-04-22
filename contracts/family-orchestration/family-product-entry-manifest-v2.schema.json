@@ -4,7 +4,7 @@
   "title": "OPL Family Product Entry Manifest v2",
   "description": "Shared family-level product-entry discovery manifest for direct-entry, operator-loop, gate, and orchestration discovery across domain repositories.",
   "type": "object",
-  "additionalProperties": false,
+  "additionalProperties": true,
   "required": [
     "surface_kind",
     "manifest_version",
@@ -20,6 +20,10 @@
   "properties": {
     "surface_kind": {
       "const": "product_entry_manifest"
+    },
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
     },
     "manifest_version": {
       "const": 2
@@ -60,11 +64,21 @@
     "workspace_locator": {
       "type": "object"
     },
+    "managed_runtime_contract": {
+      "type": "object"
+    },
     "runtime": {
+      "type": "object"
+    },
+    "executor_defaults": {
       "type": "object"
     },
     "repo_mainline": {
       "type": "object"
+    },
+    "recommended_action": {
+      "type": "string",
+      "minLength": 1
     },
     "product_entry_status": {
       "type": "object",
@@ -106,6 +120,36 @@
       "type": "string",
       "minLength": 1
     },
+    "runtime_inventory": {
+      "$ref": "#/$defs/runtimeInventorySurface"
+    },
+    "task_lifecycle": {
+      "$ref": "#/$defs/taskLifecycleSurface"
+    },
+    "runtime_control": {
+      "$ref": "#/$defs/runtimeControlSurface"
+    },
+    "runtime_loop_closure": {
+      "$ref": "#/$defs/runtimeLoopClosureSurface"
+    },
+    "session_continuity": {
+      "$ref": "#/$defs/sessionContinuitySurface"
+    },
+    "progress_projection": {
+      "$ref": "#/$defs/progressProjectionSurface"
+    },
+    "artifact_inventory": {
+      "$ref": "#/$defs/artifactInventorySurface"
+    },
+    "skill_catalog": {
+      "$ref": "#/$defs/skillCatalogSurface"
+    },
+    "automation": {
+      "$ref": "#/$defs/automationSurface"
+    },
+    "product_entry_overview": {
+      "$ref": "#/$defs/productEntryOverviewSurface"
+    },
     "product_entry_start": {
       "$ref": "#/$defs/productEntryStart"
     },
@@ -114,6 +158,9 @@
     },
     "product_entry_readiness": {
       "$ref": "#/$defs/productEntryReadiness"
+    },
+    "product_entry_quickstart": {
+      "$ref": "#/$defs/productEntryQuickstartSurface"
     },
     "grant_authoring_readiness": {
       "$ref": "#/$defs/grantAuthoringReadiness"
@@ -143,6 +190,16 @@
       "additionalProperties": {
         "type": "object"
       }
+    },
+    "schema_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "domain_entry_contract": {
+      "type": "object"
+    },
+    "gateway_interaction_contract": {
+      "type": "object"
     },
     "family_orchestration": {
       "type": "object",
@@ -360,6 +417,138 @@
         }
       }
     },
+    "runtimeInventorySurface": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "surface_kind"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "runtime_inventory"
+        }
+      }
+    },
+    "taskLifecycleSurface": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "surface_kind"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "task_lifecycle"
+        }
+      }
+    },
+    "runtimeControlSurface": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "surface_kind"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "runtime_control"
+        }
+      }
+    },
+    "runtimeLoopClosureSurface": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "surface_kind"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "runtime_loop_closure"
+        }
+      }
+    },
+    "sessionContinuitySurface": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "surface_kind"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "session_continuity"
+        }
+      }
+    },
+    "progressProjectionSurface": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "surface_kind"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "progress_projection"
+        }
+      }
+    },
+    "artifactInventorySurface": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "surface_kind"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "artifact_inventory"
+        }
+      }
+    },
+    "skillCatalogSurface": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "surface_kind"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "skill_catalog"
+        }
+      }
+    },
+    "automationSurface": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "surface_kind"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "automation"
+        }
+      }
+    },
+    "productEntryOverviewSurface": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "surface_kind"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "product_entry_overview"
+        }
+      }
+    },
+    "productEntryQuickstartSurface": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "surface_kind"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "product_entry_quickstart"
+        }
+      }
+    },
     "gatePreview": {
       "type": "object",
       "additionalProperties": false,
@@ -448,6 +637,9 @@
         "recommended_start_command": {
           "type": "string",
           "minLength": 1
+        },
+        "runtime_loop_closure": {
+          "$ref": "#/$defs/runtimeLoopClosureSurface"
         },
         "blocking_check_ids": {
           "type": "array",
@@ -1041,6 +1233,121 @@
       },
       "recommended_shell": "direct",
       "recommended_command": "redcube product invoke",
+      "runtime_inventory": {
+        "surface_kind": "runtime_inventory",
+        "runtime_owner": "upstream_hermes_agent",
+        "domain_owner": "redcube_ai",
+        "executor_owner": "redcube_ai",
+        "status_surface": {
+          "ref_kind": "json_pointer",
+          "ref": "/operator_loop_actions/continue_session",
+          "label": "entry session progress"
+        }
+      },
+      "task_lifecycle": {
+        "surface_kind": "task_lifecycle",
+        "status": "resumable",
+        "progress_surface": {
+          "surface_kind": "product_entry_session",
+          "command": "redcube product session --entry-session-id <entry-session-id>"
+        },
+        "resume_surface": {
+          "surface_kind": "product_entry_session",
+          "command": "redcube product session --entry-session-id <entry-session-id>"
+        }
+      },
+      "session_continuity": {
+        "surface_kind": "session_continuity",
+        "session_command_template": "redcube product session --entry-session-id <entry-session-id>",
+        "progress_surface_ref": {
+          "ref_kind": "json_pointer",
+          "ref": "/progress_projection",
+          "label": "progress projection surface"
+        },
+        "artifact_surface_ref": {
+          "ref_kind": "json_pointer",
+          "ref": "/artifact_inventory",
+          "label": "artifact inventory surface"
+        },
+        "restore_point_surface_ref": {
+          "ref_kind": "json_pointer",
+          "ref": "/session_continuity/restore_point",
+          "label": "restore point surface"
+        }
+      },
+      "progress_projection": {
+        "surface_kind": "progress_projection",
+        "projection_field_ref": {
+          "ref_kind": "json_pointer",
+          "ref": "/progress_projection/projection",
+          "label": "progress projection payload"
+        },
+        "runtime_refs_ref": {
+          "ref_kind": "json_pointer",
+          "ref": "/progress_projection/refs",
+          "label": "runtime supervision refs"
+        }
+      },
+      "artifact_inventory": {
+        "surface_kind": "artifact_inventory",
+        "artifact_refs_ref": {
+          "ref_kind": "json_pointer",
+          "ref": "/artifact_inventory/artifact_refs",
+          "label": "artifact refs list"
+        },
+        "restore_point_ref": {
+          "ref_kind": "json_pointer",
+          "ref": "/artifact_inventory/restore_point",
+          "label": "artifact restore point"
+        }
+      },
+      "runtime_loop_closure": {
+        "surface_kind": "runtime_loop_closure",
+        "runtime_owner": "upstream_hermes_agent",
+        "domain_owner": "redcube_ai",
+        "executor_owner": "redcube_ai",
+        "resume_point": {
+          "surface_kind": "product_entry_session",
+          "surface_ref": "/entry_session",
+          "resume_command_template": "redcube product session --entry-session-id <entry-session-id>",
+          "checkpoint_locator_field": "continuation_snapshot.latest_managed_run_id"
+        },
+        "continuity_cursor": {
+          "surface_kind": "session_continuity",
+          "surface_ref": "/session_continuity",
+          "entry_session_id": null,
+          "latest_handle": null
+        },
+        "progress_cursor": {
+          "surface_kind": "progress_projection",
+          "surface_ref": "/progress_projection"
+        },
+        "artifact_pickup": {
+          "surface_kind": "artifact_inventory",
+          "surface_ref": "/artifact_inventory",
+          "artifact_ref_count": 0
+        },
+        "control_policy": {
+          "approval_gate_id": "redcube_operator_review_gate",
+          "approval_required": true,
+          "gate_status": "requested",
+          "interrupt_policy": "human_gate_required_before_continuation",
+          "continue_action": {
+            "command": "redcube product session --entry-session-id <entry-session-id>",
+            "surface_kind": "product_entry_session"
+          },
+          "human_gate_ids": [
+            "redcube_operator_review_gate"
+          ]
+        },
+        "source_linkage": {
+          "current_source": "manifest",
+          "entry_mode": "manifest_projection",
+          "direct_surface_kind": "product_entry",
+          "federated_surface_kind": "federated_product_entry",
+          "session_surface_kind": "product_entry_session"
+        }
+      },
       "product_entry_preflight": {
         "surface_kind": "product_entry_preflight",
         "ready_to_try_now": true,

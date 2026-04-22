@@ -688,6 +688,26 @@ test('family orchestration schema examples stay aligned with canonical family ma
     (((redcubeExample.family_orchestration as Json).resume_contract) as Json).session_locator_field,
     (((redcubeManifest.family_orchestration as Json).resume_contract) as Json).session_locator_field,
   );
+  assert.equal(
+    ((redcubeExample.session_continuity as Json).surface_kind),
+    ((redcubeManifest.session_continuity as Json).surface_kind),
+  );
+  assert.equal(
+    ((redcubeExample.progress_projection as Json).surface_kind),
+    ((redcubeManifest.progress_projection as Json).surface_kind),
+  );
+  assert.equal(
+    ((redcubeExample.artifact_inventory as Json).surface_kind),
+    ((redcubeManifest.artifact_inventory as Json).surface_kind),
+  );
+  assert.equal(
+    ((redcubeExample.runtime_loop_closure as Json).surface_kind),
+    ((redcubeManifest.runtime_loop_closure as Json).surface_kind),
+  );
+  assert.equal(
+    (((redcubeExample.runtime_loop_closure as Json).source_linkage) as Json).entry_mode,
+    (((redcubeManifest.runtime_loop_closure as Json).source_linkage) as Json).entry_mode,
+  );
   assert.equal(humanGateExample.target_domain_id, redcubeManifest.target_domain_id);
   assert.equal(
     humanGateExample.gate_id,
