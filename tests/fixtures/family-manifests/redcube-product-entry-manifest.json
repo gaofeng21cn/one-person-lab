@@ -276,6 +276,60 @@
       }
     ]
   },
+  "runtime_loop_closure": {
+    "surface_kind": "runtime_loop_closure",
+    "loop_owner": {
+      "runtime_owner": "upstream_hermes_agent",
+      "domain_owner": "redcube_ai",
+      "product_entry_owner": "redcube_ai"
+    },
+    "resume_point": {
+      "entry_session_id": null,
+      "session_file": null,
+      "latest_managed_run_id": null,
+      "latest_run_id": null,
+      "latest_handle": null,
+      "resume_command_template": "redcube product session --entry-session-id <entry-session-id>",
+      "checkpoint_locator_field": "continuation_snapshot.latest_managed_run_id"
+    },
+    "progress_cursor": {
+      "surface_kind": "progress_projection",
+      "surface_ref": "/progress_projection",
+      "managed_run_id": null,
+      "current_stage": null,
+      "content_status": null,
+      "needs_user_decision": false
+    },
+    "artifact_pickup": {
+      "surface_kind": "artifact_inventory",
+      "surface_ref": "/artifact_inventory",
+      "deliverable_family": null,
+      "topic_id": null,
+      "deliverable_id": null,
+      "artifact_refs": [],
+      "artifact_ref_count": 0
+    },
+    "control_policy": {
+      "approval_gate_id": "redcube_operator_review_gate",
+      "approval_required": true,
+      "interrupt_policy": "human_gate_required_before_continuation",
+      "continue_action": {
+        "command": "redcube product session --entry-session-id <entry-session-id>",
+        "surface_kind": "product_entry_session"
+      },
+      "human_gate_ids": [
+        "redcube_operator_review_gate"
+      ]
+    },
+    "source_linkage": {
+      "current_source": "manifest",
+      "entry_mode": "manifest_projection",
+      "direct_surface_kind": "product_entry",
+      "federated_surface_kind": "federated_product_entry",
+      "session_surface_kind": "product_entry_session",
+      "downstream_entry_surface_kind": "domain_entry"
+    }
+  },
   "runtime": {
     "runtime_owner": "upstream_hermes_agent",
     "runtime_state_root": "/fixtures/redcube/runtime-state",

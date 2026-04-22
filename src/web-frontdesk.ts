@@ -1127,6 +1127,9 @@ function buildOplSessionsPayload(
   const continuitySession = isRecord(currentProgress?.runtime_continuity?.session)
     ? currentProgress.runtime_continuity.session
     : null;
+  const continuityControl = isRecord(currentProgress?.runtime_continuity?.control)
+    ? currentProgress.runtime_continuity.control
+    : null;
   const runtimeInventory = isRecord(currentProgress?.runtime_continuity?.runtime_inventory)
     ? currentProgress.runtime_continuity.runtime_inventory
     : null;
@@ -1151,33 +1154,58 @@ function buildOplSessionsPayload(
         progress: api.resources.progress,
         artifacts: api.resources.artifacts,
       },
-      current_runtime_continuity: continuitySession
+      current_runtime_continuity: continuitySession || continuityControl || runtimeInventory
         ? {
             project_id: currentProgress?.current_project?.project_id ?? null,
             domain_agent_id:
-              typeof continuitySession.domain_agent_id === 'string' ? continuitySession.domain_agent_id : null,
-            session_id: typeof continuitySession.session_id === 'string' ? continuitySession.session_id : null,
+              typeof continuitySession?.domain_agent_id === 'string'
+                ? continuitySession.domain_agent_id
+                : typeof continuityControl?.domain_agent_id === 'string'
+                  ? continuityControl.domain_agent_id
+                  : null,
+            session_id:
+              typeof continuitySession?.session_id === 'string'
+                ? continuitySession.session_id
+                : typeof continuityControl?.session_id === 'string'
+                  ? continuityControl.session_id
+                  : null,
             runtime_owner:
-              typeof continuitySession.runtime_owner === 'string'
+              typeof continuitySession?.runtime_owner === 'string'
                 ? continuitySession.runtime_owner
+                : typeof continuityControl?.runtime_owner === 'string'
+                  ? continuityControl.runtime_owner
                 : typeof runtimeInventory?.runtime_owner === 'string'
                   ? runtimeInventory.runtime_owner
                   : null,
             domain_owner:
-              typeof continuitySession.domain_owner === 'string'
+              typeof continuitySession?.domain_owner === 'string'
                 ? continuitySession.domain_owner
+                : typeof continuityControl?.domain_owner === 'string'
+                  ? continuityControl.domain_owner
                 : typeof runtimeInventory?.domain_owner === 'string'
                   ? runtimeInventory.domain_owner
                   : null,
             executor_owner:
-              typeof continuitySession.executor_owner === 'string'
+              typeof continuitySession?.executor_owner === 'string'
                 ? continuitySession.executor_owner
+                : typeof continuityControl?.executor_owner === 'string'
+                  ? continuityControl.executor_owner
                 : typeof runtimeInventory?.executor_owner === 'string'
                   ? runtimeInventory.executor_owner
                   : null,
-            progress_surface: continuitySession.progress_surface ?? null,
-            artifact_surface: continuitySession.artifact_surface ?? null,
-            restore_surface: continuitySession.restore_surface ?? null,
+            progress_surface:
+              continuitySession?.progress_surface
+              ?? continuityControl?.control_surfaces?.progress
+              ?? null,
+            artifact_surface:
+              continuitySession?.artifact_surface
+              ?? continuityControl?.control_surfaces?.artifact_pickup
+              ?? null,
+            restore_surface:
+              continuitySession?.restore_surface
+              ?? continuityControl?.control_surfaces?.resume
+              ?? null,
+            runtime_control: continuityControl ?? null,
           }
         : null,
       notes: [
@@ -1215,6 +1243,9 @@ async function buildOplProgressPayload(
     : null;
   const continuitySession = isRecord(progress.runtime_continuity?.session)
     ? progress.runtime_continuity.session
+    : null;
+  const continuityControl = isRecord(progress.runtime_continuity?.control)
+    ? progress.runtime_continuity.control
     : null;
   const continuityProgress = isRecord(progress.runtime_continuity?.progress)
     ? progress.runtime_continuity.progress
@@ -1266,10 +1297,13 @@ async function buildOplProgressPayload(
             ? runtimeInventory.executor_owner
             : null,
       repo_progress_projection: continuityProgress ?? null,
+      repo_runtime_control: continuityControl ?? null,
       restore_surface:
         continuitySession?.restore_surface
         ?? progress.runtime_continuity?.task_lifecycle?.resume_surface
         ?? null,
+      approval_surface: continuityControl?.control_surfaces?.approval ?? null,
+      interrupt_surface: continuityControl?.control_surfaces?.interrupt ?? null,
       artifact_surface:
         continuityProgress?.artifact_surface
         ?? continuitySession?.artifact_surface
@@ -1300,6 +1334,9 @@ async function buildOplArtifactsPayload(
   const supportingFiles = progress.workspace_files.supporting_files;
   const continuitySession = isRecord(progress.runtime_continuity?.session)
     ? progress.runtime_continuity.session
+    : null;
+  const continuityControl = isRecord(progress.runtime_continuity?.control)
+    ? progress.runtime_continuity.control
     : null;
   const continuityArtifacts = isRecord(progress.runtime_continuity?.artifacts)
     ? progress.runtime_continuity.artifacts
@@ -1352,7 +1389,13 @@ async function buildOplArtifactsPayload(
         continuityArtifacts?.artifact_surface
         ?? continuitySession?.artifact_surface
         ?? null,
+      artifact_pickup_surface:
+        continuityControl?.control_surfaces?.artifact_pickup
+        ?? continuityArtifacts?.artifact_surface
+        ?? continuitySession?.artifact_surface
+        ?? null,
       repo_artifact_inventory: continuityArtifacts ?? null,
+      repo_runtime_control: continuityControl ?? null,
       endpoints: {
         progress: api.resources.progress,
         sessions: api.resources.sessions,

@@ -625,6 +625,60 @@
         }
       ]
     },
+    "runtime_control": {
+      "surface_kind": "runtime_control",
+      "version": 2,
+      "summary": "repo-owned runtime control reference：显式导出 owner 语义、restore point、progress/artifact/approval surface 与 direct-entry locator。",
+      "runtime_owner": "upstream_hermes_agent",
+      "domain_owner": "med-autogrant",
+      "executor_owner": "med-autogrant",
+      "session_locator": {
+        "locator_field": "grant_run_id",
+        "locator_value": "grant-run-nsfc-demo-001-baseline-001",
+        "workspace_id": "nsfc-demo-001",
+        "lifecycle_stage": "critique"
+      },
+      "restore_point": {
+        "session_id": "grant-run-nsfc-demo-001-baseline-001",
+        "workspace_id": "nsfc-demo-001",
+        "lifecycle_stage": "critique",
+        "journal_path": "$CODEX_HOME/projects/med-autogrant/runtime-state/sessions/grant-run-nsfc-demo-001-baseline-001.json",
+        "resume_command": "uv run python -m med_autogrant runtime-resume --journal $CODEX_HOME/projects/med-autogrant/runtime-state/sessions/grant-run-nsfc-demo-001-baseline-001.json --format json",
+        "resume_surface_kind": "runtime_resume"
+      },
+      "progress_surface": {
+        "surface_kind": "grant_progress",
+        "command": "uv run python -m med_autogrant grant-progress --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+        "ref_kind": "json_pointer",
+        "ref": "/product_entry_manifest/progress_projection",
+        "summary": "当前 grant progress projection surface。"
+      },
+      "artifact_pickup_surface": {
+        "surface_kind": "artifact_inventory",
+        "command": "uv run python -m med_autogrant summarize-workspace --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+        "ref_kind": "json_pointer",
+        "ref": "/product_entry_manifest/artifact_inventory",
+        "summary": "当前 workspace artifact pickup index surface。"
+      },
+      "approval_control_surface": {
+        "surface_kind": "grant_user_loop",
+        "command": "uv run python -m med_autogrant grant-user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
+        "ref_kind": "json_pointer",
+        "ref": "/product_entry_manifest/operator_loop_surface",
+        "summary": "当前人工 gate / control action 入口。"
+      },
+      "direct_entry": {
+        "surface_kind": "grant_direct_entry",
+        "command": "uv run python -m med_autogrant grant-direct-entry --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
+        "ref_kind": "json_pointer",
+        "ref": "/product_entry_manifest/product_entry_shell/grant_direct_entry",
+        "summary": "直接导出当前 grant direct-entry command 与 locator。"
+      },
+      "domain_projection": {
+        "journal_path": "$CODEX_HOME/projects/med-autogrant/runtime-state/sessions/grant-run-nsfc-demo-001-baseline-001.json",
+        "workspace_path": "/fixtures/med-autogrant/nsfc_workspace_p2c_critique.json"
+      }
+    },
     "skill_catalog": {
       "surface_kind": "skill_catalog",
       "summary": "MAG 当前通过 repo-tracked grant entry shells 暴露 family 可复用技能。",
