@@ -39,7 +39,11 @@ import {
 } from './frontdesk-runtime-modes.ts';
 import { readFrontDeskUpdateChannel } from './frontdesk-preferences.ts';
 import { buildHostedPilotPackage } from './hosted-pilot-package.ts';
-import { readFrontDeskTaskStatus, submitFrontDeskAskTask } from './frontdesk-task-store.ts';
+import {
+  readFrontDeskTaskStatus,
+  readLatestFrontDeskTaskProjection,
+  submitFrontDeskAskTask,
+} from './frontdesk-task-store.ts';
 import {
   buildProductEntryHandoffEnvelope,
   runProductEntryAsk,
@@ -1118,21 +1122,212 @@ async function buildOplEnginesPayload(context: WebFrontDeskContext, api: OplApiC
   };
 }
 
+type OplRuntimeContinuityProjection = {
+  project_id: string | null;
+  session_id: string | null;
+  domain_agent_id: string | null;
+  runtime_owner: string | null;
+  domain_owner: string | null;
+  executor_owner: string | null;
+  runtime_control: Record<string, unknown> | null;
+  session_continuity: Record<string, unknown> | null;
+  progress_projection: Record<string, unknown> | null;
+  artifact_inventory: Record<string, unknown> | null;
+  runtime_inventory: Record<string, unknown> | null;
+  task_lifecycle: Record<string, unknown> | null;
+  progress_surface: Record<string, unknown> | null;
+  artifact_surface: Record<string, unknown> | null;
+  artifact_pickup_surface: Record<string, unknown> | null;
+  restore_surface: Record<string, unknown> | null;
+  approval_surface: Record<string, unknown> | null;
+  interrupt_surface: Record<string, unknown> | null;
+};
+
+function buildRuntimeContinuityProjection(options: {
+  projectId: string | null;
+  sessionId?: string | null;
+  runtimeControl?: unknown;
+  sessionContinuity?: unknown;
+  progressProjection?: unknown;
+  artifactInventory?: unknown;
+  runtimeInventory?: unknown;
+  taskLifecycle?: unknown;
+}) {
+  const runtimeControl = isRecord(options.runtimeControl) ? options.runtimeControl : null;
+  const sessionContinuity = isRecord(options.sessionContinuity) ? options.sessionContinuity : null;
+  const progressProjection = isRecord(options.progressProjection) ? options.progressProjection : null;
+  const artifactInventory = isRecord(options.artifactInventory) ? options.artifactInventory : null;
+  const runtimeInventory = isRecord(options.runtimeInventory) ? options.runtimeInventory : null;
+  const taskLifecycle = isRecord(options.taskLifecycle) ? options.taskLifecycle : null;
+  const controlSurfaces = isRecord(runtimeControl?.control_surfaces) ? runtimeControl.control_surfaces : null;
+  const progressSurface =
+    (isRecord(sessionContinuity?.progress_surface) ? sessionContinuity.progress_surface : null)
+    ?? (isRecord(controlSurfaces?.progress) ? controlSurfaces.progress : null)
+    ?? (isRecord(progressProjection?.progress_surface) ? progressProjection.progress_surface : null);
+  const artifactSurface =
+    (isRecord(sessionContinuity?.artifact_surface) ? sessionContinuity.artifact_surface : null)
+    ?? (isRecord(controlSurfaces?.artifact_pickup) ? controlSurfaces.artifact_pickup : null)
+    ?? (isRecord(artifactInventory?.artifact_surface) ? artifactInventory.artifact_surface : null)
+    ?? (isRecord(progressProjection?.artifact_surface) ? progressProjection.artifact_surface : null);
+  const restoreSurface =
+    (isRecord(sessionContinuity?.restore_surface) ? sessionContinuity.restore_surface : null)
+    ?? (isRecord(controlSurfaces?.resume) ? controlSurfaces.resume : null)
+    ?? (isRecord(taskLifecycle?.resume_surface) ? taskLifecycle.resume_surface : null);
+  const approvalSurface = isRecord(controlSurfaces?.approval) ? controlSurfaces.approval : null;
+  const interruptSurface = isRecord(controlSurfaces?.interrupt) ? controlSurfaces.interrupt : null;
+  const artifactPickupSurface =
+    (isRecord(controlSurfaces?.artifact_pickup) ? controlSurfaces.artifact_pickup : null)
+    ?? (isRecord(artifactInventory?.artifact_surface) ? artifactInventory.artifact_surface : null)
+    ?? (isRecord(sessionContinuity?.artifact_surface) ? sessionContinuity.artifact_surface : null);
+
+  if (
+    !runtimeControl
+    && !sessionContinuity
+    && !progressProjection
+    && !artifactInventory
+    && !runtimeInventory
+    && !taskLifecycle
+  ) {
+    return null;
+  }
+
+  return {
+    project_id: options.projectId,
+    session_id:
+      normalizeOptionalString(options.sessionId)
+      ?? normalizeOptionalString(sessionContinuity?.session_id)
+      ?? normalizeOptionalString(runtimeControl?.session_id)
+      ?? null,
+    domain_agent_id:
+      normalizeOptionalString(sessionContinuity?.domain_agent_id)
+      ?? normalizeOptionalString(runtimeControl?.domain_agent_id)
+      ?? null,
+    runtime_owner:
+      normalizeOptionalString(sessionContinuity?.runtime_owner)
+      ?? normalizeOptionalString(runtimeControl?.runtime_owner)
+      ?? normalizeOptionalString(runtimeInventory?.runtime_owner)
+      ?? null,
+    domain_owner:
+      normalizeOptionalString(sessionContinuity?.domain_owner)
+      ?? normalizeOptionalString(runtimeControl?.domain_owner)
+      ?? normalizeOptionalString(runtimeInventory?.domain_owner)
+      ?? null,
+    executor_owner:
+      normalizeOptionalString(sessionContinuity?.executor_owner)
+      ?? normalizeOptionalString(runtimeControl?.executor_owner)
+      ?? normalizeOptionalString(runtimeInventory?.executor_owner)
+      ?? null,
+    runtime_control: runtimeControl,
+    session_continuity: sessionContinuity,
+    progress_projection: progressProjection,
+    artifact_inventory: artifactInventory,
+    runtime_inventory: runtimeInventory,
+    task_lifecycle: taskLifecycle,
+    progress_surface: progressSurface,
+    artifact_surface: artifactSurface,
+    artifact_pickup_surface: artifactPickupSurface,
+    restore_surface: restoreSurface,
+    approval_surface: approvalSurface,
+    interrupt_surface: interruptSurface,
+  } satisfies OplRuntimeContinuityProjection;
+}
+
+function pickLedgerSessionForRuntimeContinuity(
+  sessionLedger: ReturnType<typeof buildSessionLedger>,
+  workspacePath: string,
+  sessionId?: string | null,
+) {
+  const sessions = sessionLedger.session_ledger.sessions;
+  const workspaceMatched = sessions.filter(
+    (entry) => entry.workspace_locator?.absolute_path === workspacePath && typeof entry.domain_id === 'string',
+  );
+
+  return (
+    workspaceMatched.find((entry) => entry.session_id === sessionId)
+    ?? workspaceMatched[0]
+    ?? sessions.find((entry) => entry.session_id === sessionId && typeof entry.domain_id === 'string')
+    ?? sessions.find((entry) => typeof entry.domain_id === 'string')
+    ?? null
+  );
+}
+
+function resolveRuntimeContinuityProjection(
+  context: WebFrontDeskContext,
+  currentProgress: Awaited<ReturnType<typeof readOplProgressBrief>> | null,
+  sessionLedger: ReturnType<typeof buildSessionLedger>,
+  workspacePath: string,
+  sessionId?: string | null,
+) {
+  const currentProject = isRecord(currentProgress?.current_project) ? currentProgress.current_project : null;
+  const currentProjection = buildRuntimeContinuityProjection({
+    projectId: normalizeOptionalString(currentProject?.project_id) ?? null,
+    sessionId,
+    runtimeControl: currentProgress?.runtime_continuity?.control,
+    sessionContinuity: currentProgress?.runtime_continuity?.session,
+    progressProjection: currentProgress?.runtime_continuity?.progress,
+    artifactInventory: currentProgress?.runtime_continuity?.artifacts,
+    runtimeInventory: currentProgress?.runtime_continuity?.runtime_inventory,
+    taskLifecycle: currentProgress?.runtime_continuity?.task_lifecycle,
+  });
+  const ledgerSession = pickLedgerSessionForRuntimeContinuity(sessionLedger, workspacePath, sessionId);
+  if (!ledgerSession?.domain_id) {
+    return currentProjection;
+  }
+
+  if (currentProjection?.project_id === ledgerSession.domain_id) {
+    return currentProjection;
+  }
+
+  const domainManifests = buildDomainManifestCatalog(context.contracts).domain_manifests;
+  const manifestEntry = domainManifests.projects.find(
+    (entry) => entry.project_id === ledgerSession.domain_id && entry.status === 'resolved' && entry.manifest,
+  );
+  if (manifestEntry?.manifest) {
+    return buildRuntimeContinuityProjection({
+      projectId: manifestEntry.project_id,
+      sessionId: ledgerSession.session_id,
+      runtimeControl: manifestEntry.manifest.runtime_control,
+      sessionContinuity: manifestEntry.manifest.session_continuity,
+      progressProjection: manifestEntry.manifest.progress_projection,
+      artifactInventory: manifestEntry.manifest.artifact_inventory,
+      runtimeInventory: manifestEntry.manifest.runtime_inventory,
+      taskLifecycle: manifestEntry.manifest.task_lifecycle,
+    });
+  }
+
+  const taskProjection = readLatestFrontDeskTaskProjection(workspacePath);
+  if (taskProjection) {
+    const projectedTaskContinuity = buildRuntimeContinuityProjection({
+      projectId: taskProjection.project_id,
+      sessionId: sessionId ?? taskProjection.session_id,
+      runtimeControl: taskProjection.runtime_control,
+      sessionContinuity: taskProjection.session_continuity,
+      progressProjection: taskProjection.progress_projection,
+      artifactInventory: taskProjection.artifact_inventory,
+      runtimeInventory: taskProjection.runtime_inventory,
+      taskLifecycle: taskProjection.task_lifecycle,
+    });
+    if (projectedTaskContinuity) {
+      return projectedTaskContinuity;
+    }
+  }
+
+  return currentProjection;
+}
+
 function buildOplSessionsPayload(
+  context: WebFrontDeskContext,
   productEntrySessions: ReturnType<typeof runProductEntrySessions>,
   sessionLedger: ReturnType<typeof buildSessionLedger>,
   api: OplApiCatalog,
   currentProgress: Awaited<ReturnType<typeof readOplProgressBrief>> | null,
 ) {
-  const continuitySession = isRecord(currentProgress?.runtime_continuity?.session)
-    ? currentProgress.runtime_continuity.session
-    : null;
-  const continuityControl = isRecord(currentProgress?.runtime_continuity?.control)
-    ? currentProgress.runtime_continuity.control
-    : null;
-  const runtimeInventory = isRecord(currentProgress?.runtime_continuity?.runtime_inventory)
-    ? currentProgress.runtime_continuity.runtime_inventory
-    : null;
+  const continuity = resolveRuntimeContinuityProjection(
+    context,
+    currentProgress,
+    sessionLedger,
+    context.workspacePath,
+  );
   return {
     version: 'g2' as const,
     sessions: {
@@ -1154,58 +1349,18 @@ function buildOplSessionsPayload(
         progress: api.resources.progress,
         artifacts: api.resources.artifacts,
       },
-      current_runtime_continuity: continuitySession || continuityControl || runtimeInventory
+      current_runtime_continuity: continuity
         ? {
-            project_id: currentProgress?.current_project?.project_id ?? null,
-            domain_agent_id:
-              typeof continuitySession?.domain_agent_id === 'string'
-                ? continuitySession.domain_agent_id
-                : typeof continuityControl?.domain_agent_id === 'string'
-                  ? continuityControl.domain_agent_id
-                  : null,
-            session_id:
-              typeof continuitySession?.session_id === 'string'
-                ? continuitySession.session_id
-                : typeof continuityControl?.session_id === 'string'
-                  ? continuityControl.session_id
-                  : null,
-            runtime_owner:
-              typeof continuitySession?.runtime_owner === 'string'
-                ? continuitySession.runtime_owner
-                : typeof continuityControl?.runtime_owner === 'string'
-                  ? continuityControl.runtime_owner
-                : typeof runtimeInventory?.runtime_owner === 'string'
-                  ? runtimeInventory.runtime_owner
-                  : null,
-            domain_owner:
-              typeof continuitySession?.domain_owner === 'string'
-                ? continuitySession.domain_owner
-                : typeof continuityControl?.domain_owner === 'string'
-                  ? continuityControl.domain_owner
-                : typeof runtimeInventory?.domain_owner === 'string'
-                  ? runtimeInventory.domain_owner
-                  : null,
-            executor_owner:
-              typeof continuitySession?.executor_owner === 'string'
-                ? continuitySession.executor_owner
-                : typeof continuityControl?.executor_owner === 'string'
-                  ? continuityControl.executor_owner
-                : typeof runtimeInventory?.executor_owner === 'string'
-                  ? runtimeInventory.executor_owner
-                  : null,
-            progress_surface:
-              continuitySession?.progress_surface
-              ?? continuityControl?.control_surfaces?.progress
-              ?? null,
-            artifact_surface:
-              continuitySession?.artifact_surface
-              ?? continuityControl?.control_surfaces?.artifact_pickup
-              ?? null,
-            restore_surface:
-              continuitySession?.restore_surface
-              ?? continuityControl?.control_surfaces?.resume
-              ?? null,
-            runtime_control: continuityControl ?? null,
+            project_id: continuity.project_id,
+            domain_agent_id: continuity.domain_agent_id,
+            session_id: continuity.session_id,
+            runtime_owner: continuity.runtime_owner,
+            domain_owner: continuity.domain_owner,
+            executor_owner: continuity.executor_owner,
+            progress_surface: continuity.progress_surface,
+            artifact_surface: continuity.artifact_surface,
+            restore_surface: continuity.restore_surface,
+            runtime_control: continuity.runtime_control,
           }
         : null,
       notes: [
@@ -1238,20 +1393,16 @@ async function buildOplProgressPayload(
   } = {},
 ) {
   const progress = await readOplProgressBrief(context, options.workspacePath);
+  const sessionLedger = buildSessionLedger(context.sessionsLimit);
+  const continuity = resolveRuntimeContinuityProjection(
+    context,
+    progress,
+    sessionLedger,
+    progress.current_project.workspace_path,
+    options.sessionId,
+  );
   const taskPayload = options.taskId
     ? readFrontDeskTaskStatus(options.taskId, options.lines ?? 20).product_entry.task
-    : null;
-  const continuitySession = isRecord(progress.runtime_continuity?.session)
-    ? progress.runtime_continuity.session
-    : null;
-  const continuityControl = isRecord(progress.runtime_continuity?.control)
-    ? progress.runtime_continuity.control
-    : null;
-  const continuityProgress = isRecord(progress.runtime_continuity?.progress)
-    ? progress.runtime_continuity.progress
-    : null;
-  const runtimeInventory = isRecord(progress.runtime_continuity?.runtime_inventory)
-    ? progress.runtime_continuity.runtime_inventory
     : null;
   return {
     version: 'g2' as const,
@@ -1259,6 +1410,7 @@ async function buildOplProgressPayload(
       surface_id: 'opl_progress',
       session_id:
         options.sessionId
+        ?? continuity?.session_id
         ?? (isRecord(progress.recent_activity) && typeof progress.recent_activity.session_id === 'string'
           ? progress.recent_activity.session_id
           : null),
@@ -1276,38 +1428,16 @@ async function buildOplProgressPayload(
       inspect_paths: progress.inspect_paths,
       attention_items: progress.attention_items,
       configured_human_gates: progress.configured_human_gates,
-      domain_agent_id:
-        typeof continuitySession?.domain_agent_id === 'string' ? continuitySession.domain_agent_id : null,
-      runtime_owner:
-        typeof continuitySession?.runtime_owner === 'string'
-          ? continuitySession.runtime_owner
-          : typeof runtimeInventory?.runtime_owner === 'string'
-            ? runtimeInventory.runtime_owner
-            : null,
-      domain_owner:
-        typeof continuitySession?.domain_owner === 'string'
-          ? continuitySession.domain_owner
-          : typeof runtimeInventory?.domain_owner === 'string'
-            ? runtimeInventory.domain_owner
-            : null,
-      executor_owner:
-        typeof continuitySession?.executor_owner === 'string'
-          ? continuitySession.executor_owner
-          : typeof runtimeInventory?.executor_owner === 'string'
-            ? runtimeInventory.executor_owner
-            : null,
-      repo_progress_projection: continuityProgress ?? null,
-      repo_runtime_control: continuityControl ?? null,
-      restore_surface:
-        continuitySession?.restore_surface
-        ?? progress.runtime_continuity?.task_lifecycle?.resume_surface
-        ?? null,
-      approval_surface: continuityControl?.control_surfaces?.approval ?? null,
-      interrupt_surface: continuityControl?.control_surfaces?.interrupt ?? null,
-      artifact_surface:
-        continuityProgress?.artifact_surface
-        ?? continuitySession?.artifact_surface
-        ?? null,
+      domain_agent_id: continuity?.domain_agent_id ?? null,
+      runtime_owner: continuity?.runtime_owner ?? null,
+      domain_owner: continuity?.domain_owner ?? null,
+      executor_owner: continuity?.executor_owner ?? null,
+      repo_progress_projection: continuity?.progress_projection ?? null,
+      repo_runtime_control: continuity?.runtime_control ?? null,
+      restore_surface: continuity?.restore_surface ?? null,
+      approval_surface: continuity?.approval_surface ?? null,
+      interrupt_surface: continuity?.interrupt_surface ?? null,
+      artifact_surface: continuity?.artifact_surface ?? null,
       recommended_commands: progress.recommended_commands,
       endpoints: {
         sessions: api.resources.sessions,
@@ -1330,20 +1460,16 @@ async function buildOplArtifactsPayload(
   } = {},
 ) {
   const progress = await readOplProgressBrief(context, options.workspacePath);
+  const sessionLedger = buildSessionLedger(context.sessionsLimit);
+  const continuity = resolveRuntimeContinuityProjection(
+    context,
+    progress,
+    sessionLedger,
+    progress.current_project.workspace_path,
+    options.sessionId,
+  );
   const deliverableFiles = progress.workspace_files.deliverable_files;
   const supportingFiles = progress.workspace_files.supporting_files;
-  const continuitySession = isRecord(progress.runtime_continuity?.session)
-    ? progress.runtime_continuity.session
-    : null;
-  const continuityControl = isRecord(progress.runtime_continuity?.control)
-    ? progress.runtime_continuity.control
-    : null;
-  const continuityArtifacts = isRecord(progress.runtime_continuity?.artifacts)
-    ? progress.runtime_continuity.artifacts
-    : null;
-  const runtimeInventory = isRecord(progress.runtime_continuity?.runtime_inventory)
-    ? progress.runtime_continuity.runtime_inventory
-    : null;
 
   return {
     version: 'g2' as const,
@@ -1351,6 +1477,7 @@ async function buildOplArtifactsPayload(
       surface_id: 'opl_artifacts',
       session_id:
         options.sessionId
+        ?? continuity?.session_id
         ?? (isRecord(progress.recent_activity) && typeof progress.recent_activity.session_id === 'string'
           ? progress.recent_activity.session_id
           : null),
@@ -1365,37 +1492,14 @@ async function buildOplArtifactsPayload(
       supporting_files: supportingFiles,
       inspect_paths: progress.inspect_paths,
       progress_headline: progress.progress_feedback.headline,
-      domain_agent_id:
-        typeof continuitySession?.domain_agent_id === 'string' ? continuitySession.domain_agent_id : null,
-      runtime_owner:
-        typeof continuitySession?.runtime_owner === 'string'
-          ? continuitySession.runtime_owner
-          : typeof runtimeInventory?.runtime_owner === 'string'
-            ? runtimeInventory.runtime_owner
-            : null,
-      domain_owner:
-        typeof continuitySession?.domain_owner === 'string'
-          ? continuitySession.domain_owner
-          : typeof runtimeInventory?.domain_owner === 'string'
-            ? runtimeInventory.domain_owner
-            : null,
-      executor_owner:
-        typeof continuitySession?.executor_owner === 'string'
-          ? continuitySession.executor_owner
-          : typeof runtimeInventory?.executor_owner === 'string'
-            ? runtimeInventory.executor_owner
-            : null,
-      artifact_surface:
-        continuityArtifacts?.artifact_surface
-        ?? continuitySession?.artifact_surface
-        ?? null,
-      artifact_pickup_surface:
-        continuityControl?.control_surfaces?.artifact_pickup
-        ?? continuityArtifacts?.artifact_surface
-        ?? continuitySession?.artifact_surface
-        ?? null,
-      repo_artifact_inventory: continuityArtifacts ?? null,
-      repo_runtime_control: continuityControl ?? null,
+      domain_agent_id: continuity?.domain_agent_id ?? null,
+      runtime_owner: continuity?.runtime_owner ?? null,
+      domain_owner: continuity?.domain_owner ?? null,
+      executor_owner: continuity?.executor_owner ?? null,
+      artifact_surface: continuity?.artifact_surface ?? null,
+      artifact_pickup_surface: continuity?.artifact_pickup_surface ?? null,
+      repo_artifact_inventory: continuity?.artifact_inventory ?? null,
+      repo_runtime_control: continuity?.runtime_control ?? null,
       endpoints: {
         progress: api.resources.progress,
         sessions: api.resources.sessions,
@@ -1840,6 +1944,7 @@ async function handleRequest(
         response,
         200,
         buildOplSessionsPayload(
+          context,
           sessionsPayload,
           ledgerPayload,
           advertisedApi,
@@ -1877,8 +1982,10 @@ async function handleRequest(
 
     if (method === 'POST' && routedPath === routedApi.actions.session_create) {
       const body = (await readJsonBody(request)) as AskRequestBody;
+      const askInput = normalizeAskInput(body);
       const normalizedInput = {
-        ...normalizeAskInput(body),
+        ...askInput,
+        workspacePath: askInput.workspacePath ?? context.workspacePath,
         executor: readFrontDeskRuntimeModes().interaction_mode,
       };
       const payload = normalizedInput.dryRun
@@ -1955,7 +2062,18 @@ async function handleRequest(
 
     if (method === 'POST' && routedPath === routedApi.actions.handoff_envelope) {
       const body = (await readJsonBody(request)) as AskRequestBody;
-      writeJson(response, 200, buildProductEntryHandoffEnvelope(normalizeAskInput(body), context.contracts));
+      const askInput = normalizeAskInput(body);
+      writeJson(
+        response,
+        200,
+        buildProductEntryHandoffEnvelope(
+          {
+            ...askInput,
+            workspacePath: askInput.workspacePath ?? context.workspacePath,
+          },
+          context.contracts,
+        ),
+      );
       return;
     }
 

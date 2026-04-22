@@ -17,6 +17,7 @@ import {
   parseHermesQuietChatOutput,
   resolveHermesBinary,
 } from './hermes.ts';
+import { recordSessionLedgerEntry } from './session-ledger.ts';
 import {
   prepareProductEntryAsk,
   type PreparedProductEntryAsk,
@@ -48,6 +49,12 @@ type FrontDeskTaskRecord = {
   routing_status: string;
   domain_id: string | null;
   workstream_id: string | null;
+  runtime_control: Record<string, unknown> | null;
+  session_continuity: Record<string, unknown> | null;
+  progress_projection: Record<string, unknown> | null;
+  artifact_inventory: Record<string, unknown> | null;
+  runtime_inventory: Record<string, unknown> | null;
+  task_lifecycle: Record<string, unknown> | null;
 };
 
 function buildContractsContext(contracts: GatewayContracts) {
@@ -55,6 +62,12 @@ function buildContractsContext(contracts: GatewayContracts) {
     contracts_dir: contracts.contractsDir,
     contracts_root_source: contracts.contractsRootSource,
   };
+}
+
+function asRecord(value: unknown) {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
 }
 
 function ensureTaskStateDir() {
@@ -239,6 +252,9 @@ export function submitFrontDeskAskTask(
   contracts: GatewayContracts,
 ) {
   const preparedAsk = prepareProductEntryAsk(input, contracts);
+  const handoffRecommendation = asRecord(
+    preparedAsk.handoffBundle.handoff_bundle.domain_manifest_recommendation,
+  );
   const executorBackend = resolveFrontDeskAskExecutor(input);
   const taskExecution = buildTaskExecution(input, preparedAsk, executorBackend);
   const taskId = buildTaskId();
@@ -267,8 +283,23 @@ export function submitFrontDeskAskTask(
     routing_status: preparedAsk.routing.status,
     domain_id: 'domain_id' in preparedAsk.routing ? preparedAsk.routing.domain_id : null,
     workstream_id: 'workstream_id' in preparedAsk.routing ? preparedAsk.routing.workstream_id : null,
+    runtime_control: asRecord(handoffRecommendation?.runtime_control),
+    session_continuity: asRecord(handoffRecommendation?.session_continuity),
+    progress_projection: asRecord(handoffRecommendation?.progress_projection),
+    artifact_inventory: asRecord(handoffRecommendation?.artifact_inventory),
+    runtime_inventory: asRecord(handoffRecommendation?.runtime_inventory),
+    task_lifecycle: asRecord(handoffRecommendation?.task_lifecycle),
   };
   writeTaskRecord(initialTask);
+  recordSessionLedgerEntry({
+    sessionId: taskId,
+    mode: 'ask',
+    sourceSurface: 'opl_session_api',
+    domainId: initialTask.domain_id,
+    workstreamId: initialTask.workstream_id,
+    goalPreview: input.goal,
+    workspaceLocator: preparedAsk.handoffBundle.handoff_bundle.workspace_locator,
+  });
 
   const child = spawn(taskExecution.command, taskExecution.args, {
     cwd: input.workspacePath ?? process.cwd(),
@@ -314,6 +345,17 @@ export function submitFrontDeskAskTask(
   child.once('close', (code) => {
     const rawOutput = fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8') : '';
     const completion = extractTaskCompletionPayload(rawOutput, executorBackend);
+    if (code === 0 && completion.sessionId) {
+      recordSessionLedgerEntry({
+        sessionId: completion.sessionId,
+        mode: 'ask',
+        sourceSurface: 'opl_session_api',
+        domainId: initialTask.domain_id,
+        workstreamId: initialTask.workstream_id,
+        goalPreview: input.goal,
+        workspaceLocator: preparedAsk.handoffBundle.handoff_bundle.workspace_locator,
+      });
+    }
     updateTaskRecord(taskId, (current) => ({
       ...current,
       status: code === 0 ? 'succeeded' : 'failed',
@@ -386,5 +428,29 @@ export function readFrontDeskTaskStatus(taskId: string, lines = 20) {
         updated_at: task.updated_at,
       },
     },
+  };
+}
+
+export function readLatestFrontDeskTaskProjection(workspacePath: string) {
+  const paths = ensureTaskStateDir();
+  const records = fs.readdirSync(paths.task_state_dir)
+    .filter((entry) => entry.endsWith('.json'))
+    .map((entry) => JSON.parse(fs.readFileSync(path.join(paths.task_state_dir, entry), 'utf8')) as FrontDeskTaskRecord)
+    .filter((entry) => entry.workspace_path === workspacePath && entry.domain_id && entry.status !== 'failed')
+    .sort((left, right) => Date.parse(right.updated_at) - Date.parse(left.updated_at));
+  const task = records[0] ?? null;
+  if (!task) {
+    return null;
+  }
+
+  return {
+    project_id: task.domain_id,
+    session_id: task.session_id ?? task.task_id,
+    runtime_control: task.runtime_control,
+    session_continuity: task.session_continuity,
+    progress_projection: task.progress_projection,
+    artifact_inventory: task.artifact_inventory,
+    runtime_inventory: task.runtime_inventory,
+    task_lifecycle: task.task_lifecycle,
   };
 }
