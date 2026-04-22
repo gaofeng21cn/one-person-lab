@@ -3765,6 +3765,13 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(medautogrant.manifest.task_lifecycle.surface_kind, 'task_lifecycle');
     assert.equal(medautogrant.manifest.task_lifecycle.resume_surface.surface_kind, 'grant_user_loop');
     assert.equal(medautogrant.manifest.task_lifecycle.checkpoint_summary.status, 'critique');
+    assert.equal(medautogrant.manifest.session_continuity.surface_kind, 'session_continuity');
+    assert.equal(medautogrant.manifest.session_continuity.session_id, 'grant-run-nsfc-demo-001-baseline-001');
+    assert.equal(medautogrant.manifest.session_continuity.restore_surface.surface_kind, 'runtime_resume');
+    assert.equal(medautogrant.manifest.progress_projection.surface_kind, 'progress_projection');
+    assert.equal(medautogrant.manifest.progress_projection.current_status, 'critique');
+    assert.equal(medautogrant.manifest.artifact_inventory.surface_kind, 'artifact_inventory');
+    assert.equal(medautogrant.manifest.artifact_inventory.supporting_files.length, 2);
     assert.equal(medautogrant.manifest.skill_catalog.surface_kind, 'skill_catalog');
     assert.equal(medautogrant.manifest.skill_catalog.skills.length, 2);
     assert.equal(medautogrant.manifest.skill_catalog.supported_commands[1], 'grant-user-loop');
@@ -3811,6 +3818,12 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(medautoscience.manifest.task_lifecycle.surface_kind, 'task_lifecycle');
     assert.equal(medautoscience.manifest.task_lifecycle.resume_surface.surface_kind, 'launch_study');
     assert.equal(medautoscience.manifest.task_lifecycle.human_gate_ids.length, 2);
+    assert.equal(medautoscience.manifest.session_continuity.surface_kind, 'session_continuity');
+    assert.equal(medautoscience.manifest.session_continuity.domain_agent_id, 'mas');
+    assert.equal(medautoscience.manifest.progress_projection.surface_kind, 'progress_projection');
+    assert.equal(medautoscience.manifest.progress_projection.runtime_status, 'ready');
+    assert.equal(medautoscience.manifest.artifact_inventory.surface_kind, 'artifact_inventory');
+    assert.equal(medautoscience.manifest.artifact_inventory.summary.supporting_files_count, 5);
     assert.equal(medautoscience.manifest.skill_catalog.surface_kind, 'skill_catalog');
     assert.equal(medautoscience.manifest.skill_catalog.supported_commands[0], 'product-frontdesk');
     assert.equal(medautoscience.manifest.skill_catalog.skills[1].skill_id, 'medautoscience_workspace_cockpit');
@@ -3854,6 +3867,10 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(redcube.manifest.task_lifecycle.surface_kind, 'task_lifecycle');
     assert.equal(redcube.manifest.task_lifecycle.resume_surface.surface_kind, 'product_entry_session');
     assert.equal(redcube.manifest.task_lifecycle.checkpoint_summary.status, 'operator_review_requested');
+    assert.equal(redcube.manifest.session_continuity.surface_kind, 'session_continuity');
+    assert.equal(redcube.manifest.session_continuity.status, 'repo_tracked');
+    assert.equal(redcube.manifest.progress_projection.surface_kind, 'progress_projection');
+    assert.equal(redcube.manifest.artifact_inventory.surface_kind, 'artifact_inventory');
     assert.equal(redcube.manifest.skill_catalog.surface_kind, 'skill_catalog');
     assert.equal(redcube.manifest.skill_catalog.supported_commands[3], 'product-session');
     assert.equal(redcube.manifest.automation.surface_kind, 'automation');
@@ -5055,6 +5072,18 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
       'product_entry_session',
     );
     assert.equal(
+      output.handoff_bundle.domain_manifest_recommendation.session_continuity.surface_kind,
+      'session_continuity',
+    );
+    assert.equal(
+      output.handoff_bundle.domain_manifest_recommendation.progress_projection.surface_kind,
+      'progress_projection',
+    );
+    assert.equal(
+      output.handoff_bundle.domain_manifest_recommendation.artifact_inventory.surface_kind,
+      'artifact_inventory',
+    );
+    assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.skill_catalog.surface_kind,
       'skill_catalog',
     );
@@ -5122,6 +5151,9 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     assert.equal(output.handoff_bundle.domain_entry_parity.summary.aligned_projects_count, 1);
     assert.equal(output.handoff_bundle.domain_entry_parity.summary.runtime_inventory_ready_count, 1);
     assert.equal(output.handoff_bundle.domain_entry_parity.summary.task_lifecycle_ready_count, 1);
+    assert.equal(output.handoff_bundle.domain_entry_parity.summary.session_continuity_ready_count, 1);
+    assert.equal(output.handoff_bundle.domain_entry_parity.summary.progress_projection_ready_count, 1);
+    assert.equal(output.handoff_bundle.domain_entry_parity.summary.artifact_inventory_ready_count, 1);
     assert.equal(output.handoff_bundle.domain_entry_parity.summary.skill_catalog_ready_count, 1);
     assert.equal(output.handoff_bundle.domain_entry_parity.summary.automation_ready_count, 1);
     assert.equal(
@@ -5137,6 +5169,9 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     assert.equal(routedParity.ready_for_domain_handoff, true);
     assert.equal(routedParity.runtime_inventory_status, 'ready');
     assert.equal(routedParity.task_lifecycle_status, 'ready');
+    assert.equal(routedParity.session_continuity_status, 'ready');
+    assert.equal(routedParity.progress_projection_status, 'ready');
+    assert.equal(routedParity.artifact_inventory_status, 'ready');
     assert.equal(routedParity.skill_catalog_status, 'ready');
     assert.equal(routedParity.automation_status, 'ready');
     assertRedcubeActionGraph(
