@@ -48,6 +48,15 @@ def _read_optional_string_list(value: object, field: str) -> list[str] | None:
     return _require_string_list(value, field)
 
 
+def validate_domain_agent_entry_locator_schema(value: object, field: str) -> dict[str, Any]:
+    payload = _require_mapping(value, field)
+    return {
+        **dict(payload),
+        "required_fields": _require_string_list(payload.get("required_fields"), f"{field}.required_fields"),
+        "optional_fields": _require_string_list(payload.get("optional_fields"), f"{field}.optional_fields"),
+    }
+
+
 def _merge_extra_payload(base: dict[str, Any], extra_payload: object | None, *, field: str) -> dict[str, Any]:
     if extra_payload is None:
         return base
@@ -102,6 +111,97 @@ def build_domain_entry_command_catalog(
     }
 
 
+def validate_domain_agent_entry_spec(value: object, field: str) -> dict[str, Any]:
+    payload = _require_mapping(value, field)
+    return {
+        **dict(payload),
+        "surface_kind": _non_empty_text(payload.get("surface_kind")) or "domain_agent_entry_spec",
+        "agent_id": _require_string(payload.get("agent_id"), f"{field}.agent_id"),
+        "title": _require_string(payload.get("title"), f"{field}.title"),
+        "description": _require_string(payload.get("description"), f"{field}.description"),
+        "default_engine": _require_string(payload.get("default_engine"), f"{field}.default_engine"),
+        "workspace_requirement": _require_string(
+            payload.get("workspace_requirement"),
+            f"{field}.workspace_requirement",
+        ),
+        "locator_schema": validate_domain_agent_entry_locator_schema(
+            payload.get("locator_schema"),
+            f"{field}.locator_schema",
+        ),
+        "codex_entry_strategy": _require_string(
+            payload.get("codex_entry_strategy"),
+            f"{field}.codex_entry_strategy",
+        ),
+        "artifact_conventions": _require_string(
+            payload.get("artifact_conventions"),
+            f"{field}.artifact_conventions",
+        ),
+        "progress_conventions": _require_string(
+            payload.get("progress_conventions"),
+            f"{field}.progress_conventions",
+        ),
+        "entry_command": _require_string(payload.get("entry_command"), f"{field}.entry_command"),
+        "manifest_command": _require_string(
+            payload.get("manifest_command"),
+            f"{field}.manifest_command",
+        ),
+    }
+
+
+def build_domain_agent_entry_spec(
+    *,
+    agent_id: str,
+    title: str,
+    description: str,
+    default_engine: str,
+    workspace_requirement: str,
+    locator_schema: Mapping[str, Any],
+    codex_entry_strategy: str,
+    artifact_conventions: str,
+    progress_conventions: str,
+    entry_command: str,
+    manifest_command: str,
+    surface_kind: str = "domain_agent_entry_spec",
+    extra_payload: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    return validate_domain_agent_entry_spec(
+        _merge_extra_payload(
+            {
+                "surface_kind": _require_string(surface_kind, "surface_kind"),
+                "agent_id": _require_string(agent_id, "agent_id"),
+                "title": _require_string(title, "title"),
+                "description": _require_string(description, "description"),
+                "default_engine": _require_string(default_engine, "default_engine"),
+                "workspace_requirement": _require_string(
+                    workspace_requirement,
+                    "workspace_requirement",
+                ),
+                "locator_schema": validate_domain_agent_entry_locator_schema(
+                    locator_schema,
+                    "locator_schema",
+                ),
+                "codex_entry_strategy": _require_string(
+                    codex_entry_strategy,
+                    "codex_entry_strategy",
+                ),
+                "artifact_conventions": _require_string(
+                    artifact_conventions,
+                    "artifact_conventions",
+                ),
+                "progress_conventions": _require_string(
+                    progress_conventions,
+                    "progress_conventions",
+                ),
+                "entry_command": _require_string(entry_command, "entry_command"),
+                "manifest_command": _require_string(manifest_command, "manifest_command"),
+            },
+            extra_payload,
+            field="domain_agent_entry_spec",
+        ),
+        "domain_agent_entry_spec",
+    )
+
+
 def validate_family_domain_entry_contract(value: object, field: str) -> dict[str, Any]:
     payload = _require_mapping(value, field)
     supported_commands = _require_string_list(
@@ -146,6 +246,11 @@ def validate_family_domain_entry_contract(value: object, field: str) -> dict[str
     product_entry_kind = _non_empty_text(payload.get("product_entry_kind"))
     if product_entry_kind is not None:
         normalized["product_entry_kind"] = product_entry_kind
+    if payload.get("domain_agent_entry_spec") is not None:
+        normalized["domain_agent_entry_spec"] = validate_domain_agent_entry_spec(
+            payload.get("domain_agent_entry_spec"),
+            f"{field}.domain_agent_entry_spec",
+        )
     return normalized
 
 
@@ -158,6 +263,7 @@ def build_family_domain_entry_contract(
     command_contracts: list[Mapping[str, Any]],
     supported_entry_modes: list[str] | None = None,
     product_entry_kind: str | None = None,
+    domain_agent_entry_spec: Mapping[str, Any] | None = None,
     extra_payload: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     base: dict[str, Any] = {
@@ -191,6 +297,11 @@ def build_family_domain_entry_contract(
         )
     if _non_empty_text(product_entry_kind) is not None:
         base["product_entry_kind"] = _non_empty_text(product_entry_kind)
+    if domain_agent_entry_spec is not None:
+        base["domain_agent_entry_spec"] = validate_domain_agent_entry_spec(
+            domain_agent_entry_spec,
+            "domain_agent_entry_spec",
+        )
     return validate_family_domain_entry_contract(
         _merge_extra_payload(base, extra_payload, field="domain_entry_contract"),
         "domain_entry_contract",

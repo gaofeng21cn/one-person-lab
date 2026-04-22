@@ -6,6 +6,26 @@ export type DomainEntryCommandContract = JsonRecord & {
   optional_fields: string[];
 };
 
+export type DomainAgentEntryLocatorSchema = JsonRecord & {
+  required_fields: string[];
+  optional_fields: string[];
+};
+
+export type DomainAgentEntrySpecSurface = JsonRecord & {
+  surface_kind: string;
+  agent_id: string;
+  title: string;
+  description: string;
+  default_engine: string;
+  workspace_requirement: string;
+  locator_schema: DomainAgentEntryLocatorSchema;
+  codex_entry_strategy: string;
+  artifact_conventions: string;
+  progress_conventions: string;
+  entry_command: string;
+  manifest_command: string;
+};
+
 export type FamilyDomainEntryContractSurface = JsonRecord & {
   entry_adapter: string;
   service_safe_surface_kind: string;
@@ -14,6 +34,7 @@ export type FamilyDomainEntryContractSurface = JsonRecord & {
   command_contracts: DomainEntryCommandContract[];
   supported_entry_modes?: string[];
   product_entry_kind?: string;
+  domain_agent_entry_spec?: DomainAgentEntrySpecSurface;
 };
 
 export type GatewayInteractionContractSurface = JsonRecord & {
@@ -63,6 +84,23 @@ export interface BuildFamilyDomainEntryContractInput {
   command_contracts: Array<DomainEntryCommandContract | JsonRecord>;
   supported_entry_modes?: string[] | null;
   product_entry_kind?: string | null;
+  domain_agent_entry_spec?: DomainAgentEntrySpecSurface | JsonRecord | null;
+  extra_payload?: JsonRecord;
+}
+
+export interface BuildDomainAgentEntrySpecInput {
+  surface_kind?: string | null;
+  agent_id: string;
+  title: string;
+  description: string;
+  default_engine: string;
+  workspace_requirement: string;
+  locator_schema: DomainAgentEntryLocatorSchema | JsonRecord;
+  codex_entry_strategy: string;
+  artifact_conventions: string;
+  progress_conventions: string;
+  entry_command: string;
+  manifest_command: string;
   extra_payload?: JsonRecord;
 }
 
@@ -175,6 +213,18 @@ function readOptionalStringList(value: unknown, field: string) {
   return readStringList(value, field);
 }
 
+function validateDomainAgentEntryLocatorSchema(
+  value: unknown,
+  field: string,
+): DomainAgentEntryLocatorSchema {
+  const payload = requireRecord(value, field);
+  return {
+    ...payload,
+    required_fields: readStringList(payload.required_fields, `${field}.required_fields`),
+    optional_fields: readStringList(payload.optional_fields, `${field}.optional_fields`),
+  };
+}
+
 function mergeExtraPayload(base: JsonRecord, extraPayload: unknown, field: string) {
   if (extraPayload === undefined || extraPayload === null) {
     return base;
@@ -235,6 +285,57 @@ export function buildDomainEntryCommandCatalog(
   };
 }
 
+export function validateDomainAgentEntrySpec(
+  value: unknown,
+  field: string,
+): DomainAgentEntrySpecSurface {
+  const payload = requireRecord(value, field);
+  return {
+    ...payload,
+    surface_kind: optionalString(payload.surface_kind) ?? 'domain_agent_entry_spec',
+    agent_id: requireString(payload.agent_id, `${field}.agent_id`),
+    title: requireString(payload.title, `${field}.title`),
+    description: requireString(payload.description, `${field}.description`),
+    default_engine: requireString(payload.default_engine, `${field}.default_engine`),
+    workspace_requirement: requireString(payload.workspace_requirement, `${field}.workspace_requirement`),
+    locator_schema: validateDomainAgentEntryLocatorSchema(
+      payload.locator_schema,
+      `${field}.locator_schema`,
+    ),
+    codex_entry_strategy: requireString(payload.codex_entry_strategy, `${field}.codex_entry_strategy`),
+    artifact_conventions: requireString(payload.artifact_conventions, `${field}.artifact_conventions`),
+    progress_conventions: requireString(payload.progress_conventions, `${field}.progress_conventions`),
+    entry_command: requireString(payload.entry_command, `${field}.entry_command`),
+    manifest_command: requireString(payload.manifest_command, `${field}.manifest_command`),
+  };
+}
+
+export function buildDomainAgentEntrySpec(
+  input: BuildDomainAgentEntrySpecInput,
+): DomainAgentEntrySpecSurface {
+  return validateDomainAgentEntrySpec(
+    mergeExtraPayload(
+      {
+        surface_kind: optionalString(input.surface_kind) ?? 'domain_agent_entry_spec',
+        agent_id: requireString(input.agent_id, 'agent_id'),
+        title: requireString(input.title, 'title'),
+        description: requireString(input.description, 'description'),
+        default_engine: requireString(input.default_engine, 'default_engine'),
+        workspace_requirement: requireString(input.workspace_requirement, 'workspace_requirement'),
+        locator_schema: validateDomainAgentEntryLocatorSchema(input.locator_schema, 'locator_schema'),
+        codex_entry_strategy: requireString(input.codex_entry_strategy, 'codex_entry_strategy'),
+        artifact_conventions: requireString(input.artifact_conventions, 'artifact_conventions'),
+        progress_conventions: requireString(input.progress_conventions, 'progress_conventions'),
+        entry_command: requireString(input.entry_command, 'entry_command'),
+        manifest_command: requireString(input.manifest_command, 'manifest_command'),
+      },
+      input.extra_payload,
+      'domain_agent_entry_spec',
+    ),
+    'domain_agent_entry_spec',
+  );
+}
+
 export function validateFamilyDomainEntryContract(
   value: unknown,
   field: string,
@@ -289,6 +390,12 @@ export function validateFamilyDomainEntryContract(
   if (productEntryKind) {
     normalized.product_entry_kind = productEntryKind;
   }
+  if (payload.domain_agent_entry_spec !== undefined && payload.domain_agent_entry_spec !== null) {
+    normalized.domain_agent_entry_spec = validateDomainAgentEntrySpec(
+      payload.domain_agent_entry_spec,
+      `${field}.domain_agent_entry_spec`,
+    );
+  }
   return normalized;
 }
 
@@ -335,6 +442,12 @@ export function buildFamilyDomainEntryContract(
   const productEntryKind = optionalString(input.product_entry_kind);
   if (productEntryKind) {
     base.product_entry_kind = productEntryKind;
+  }
+  if (input.domain_agent_entry_spec !== undefined && input.domain_agent_entry_spec !== null) {
+    base.domain_agent_entry_spec = validateDomainAgentEntrySpec(
+      input.domain_agent_entry_spec,
+      'domain_agent_entry_spec',
+    );
   }
   return validateFamilyDomainEntryContract(
     mergeExtraPayload(base, input.extra_payload, 'domain_entry_contract'),
