@@ -54,6 +54,62 @@ interface BuildTaskLifecycleInput {
   domain_projection?: JsonRecord | null;
 }
 
+interface BuildSessionContinuityInput {
+  summary: string;
+  domain_agent_id: string;
+  runtime_owner: string;
+  domain_owner: string;
+  executor_owner: string;
+  status: string;
+  session_id?: string | null;
+  run_id?: string | null;
+  entry_surface?: ReturnType<typeof buildTaskSurfaceDescriptor> | null;
+  progress_surface?: ReturnType<typeof buildTaskSurfaceDescriptor> | null;
+  artifact_surface?: ReturnType<typeof buildTaskSurfaceDescriptor> | null;
+  restore_surface?: ReturnType<typeof buildTaskSurfaceDescriptor> | null;
+  checkpoint_summary?: ReturnType<typeof buildCheckpointSummary> | null;
+  human_gate_ids?: string[];
+  domain_projection?: JsonRecord | null;
+}
+
+interface BuildProgressProjectionInput {
+  headline: string;
+  latest_update: string;
+  next_step: string;
+  status_summary: string;
+  session_id?: string | null;
+  current_status?: string | null;
+  runtime_status?: string | null;
+  progress_surface?: ReturnType<typeof buildTaskSurfaceDescriptor> | null;
+  artifact_surface?: ReturnType<typeof buildTaskSurfaceDescriptor> | null;
+  inspect_paths?: string[];
+  attention_items?: string[];
+  human_gate_ids?: string[];
+  domain_projection?: JsonRecord | null;
+}
+
+export type ArtifactFileKind = 'deliverable' | 'supporting';
+
+interface BuildArtifactFileDescriptorInput {
+  file_id: string;
+  label: string;
+  kind: ArtifactFileKind;
+  path: string;
+  summary: string;
+  ref?: FamilyReference | null;
+}
+
+interface BuildArtifactInventoryInput {
+  deliverable_files: Array<ReturnType<typeof buildArtifactFileDescriptor> | BuildArtifactFileDescriptorInput>;
+  supporting_files?: Array<ReturnType<typeof buildArtifactFileDescriptor> | BuildArtifactFileDescriptorInput>;
+  session_id?: string | null;
+  workspace_path?: string | null;
+  progress_headline?: string | null;
+  artifact_surface?: ReturnType<typeof buildTaskSurfaceDescriptor> | null;
+  inspect_paths?: string[];
+  domain_projection?: JsonRecord | null;
+}
+
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -153,6 +209,97 @@ export function buildTaskLifecycle(input: BuildTaskLifecycleInput) {
     ...(input.resume_surface ? { resume_surface: buildTaskSurfaceDescriptor(input.resume_surface) } : {}),
     ...(input.checkpoint_summary ? { checkpoint_summary: buildCheckpointSummary(input.checkpoint_summary) } : {}),
     human_gate_ids: readStringList(input.human_gate_ids, 'human_gate_ids'),
+    ...(isRecord(input.domain_projection) ? { domain_projection: { ...input.domain_projection } } : {}),
+  };
+}
+
+export function buildSessionContinuity(input: BuildSessionContinuityInput) {
+  return {
+    surface_kind: 'session_continuity',
+    summary: requireString(input.summary, 'summary'),
+    domain_agent_id: requireString(input.domain_agent_id, 'domain_agent_id'),
+    runtime_owner: requireString(input.runtime_owner, 'runtime_owner'),
+    domain_owner: requireString(input.domain_owner, 'domain_owner'),
+    executor_owner: requireString(input.executor_owner, 'executor_owner'),
+    status: requireString(input.status, 'status'),
+    ...(optionalString(input.session_id) ? { session_id: optionalString(input.session_id)! } : {}),
+    ...(optionalString(input.run_id) ? { run_id: optionalString(input.run_id)! } : {}),
+    ...(input.entry_surface ? { entry_surface: buildTaskSurfaceDescriptor(input.entry_surface) } : {}),
+    ...(input.progress_surface ? { progress_surface: buildTaskSurfaceDescriptor(input.progress_surface) } : {}),
+    ...(input.artifact_surface ? { artifact_surface: buildTaskSurfaceDescriptor(input.artifact_surface) } : {}),
+    ...(input.restore_surface ? { restore_surface: buildTaskSurfaceDescriptor(input.restore_surface) } : {}),
+    ...(input.checkpoint_summary ? { checkpoint_summary: buildCheckpointSummary(input.checkpoint_summary) } : {}),
+    human_gate_ids: readStringList(input.human_gate_ids, 'human_gate_ids'),
+    ...(isRecord(input.domain_projection) ? { domain_projection: { ...input.domain_projection } } : {}),
+  };
+}
+
+export function buildProgressProjection(input: BuildProgressProjectionInput) {
+  return {
+    surface_kind: 'progress_projection',
+    headline: requireString(input.headline, 'headline'),
+    latest_update: requireString(input.latest_update, 'latest_update'),
+    next_step: requireString(input.next_step, 'next_step'),
+    status_summary: requireString(input.status_summary, 'status_summary'),
+    ...(optionalString(input.session_id) ? { session_id: optionalString(input.session_id)! } : {}),
+    ...(optionalString(input.current_status) ? { current_status: optionalString(input.current_status)! } : {}),
+    ...(optionalString(input.runtime_status) ? { runtime_status: optionalString(input.runtime_status)! } : {}),
+    ...(input.progress_surface ? { progress_surface: buildTaskSurfaceDescriptor(input.progress_surface) } : {}),
+    ...(input.artifact_surface ? { artifact_surface: buildTaskSurfaceDescriptor(input.artifact_surface) } : {}),
+    inspect_paths: readStringList(input.inspect_paths, 'inspect_paths'),
+    attention_items: readStringList(input.attention_items, 'attention_items'),
+    human_gate_ids: readStringList(input.human_gate_ids, 'human_gate_ids'),
+    ...(isRecord(input.domain_projection) ? { domain_projection: { ...input.domain_projection } } : {}),
+  };
+}
+
+export function buildArtifactFileDescriptor(input: BuildArtifactFileDescriptorInput) {
+  return {
+    file_id: requireString(input.file_id, 'file_id'),
+    label: requireString(input.label, 'label'),
+    kind: requireString(input.kind, 'kind') as ArtifactFileKind,
+    path: requireString(input.path, 'path'),
+    summary: requireString(input.summary, 'summary'),
+    ...(normalizeRef(input.ref, 'ref') ? { ref: normalizeRef(input.ref, 'ref') } : {}),
+  };
+}
+
+export function buildArtifactInventory(input: BuildArtifactInventoryInput) {
+  const deliverableFiles = input.deliverable_files.map((entry, index) =>
+    buildArtifactFileDescriptor({
+      file_id: requireString(entry.file_id, `deliverable_files[${index}].file_id`),
+      label: requireString(entry.label, `deliverable_files[${index}].label`),
+      kind: 'deliverable',
+      path: requireString(entry.path, `deliverable_files[${index}].path`),
+      summary: requireString(entry.summary, `deliverable_files[${index}].summary`),
+      ref: entry.ref,
+    }),
+  );
+  const supportingFiles = (input.supporting_files ?? []).map((entry, index) =>
+    buildArtifactFileDescriptor({
+      file_id: requireString(entry.file_id, `supporting_files[${index}].file_id`),
+      label: requireString(entry.label, `supporting_files[${index}].label`),
+      kind: 'supporting',
+      path: requireString(entry.path, `supporting_files[${index}].path`),
+      summary: requireString(entry.summary, `supporting_files[${index}].summary`),
+      ref: entry.ref,
+    }),
+  );
+
+  return {
+    surface_kind: 'artifact_inventory',
+    ...(optionalString(input.session_id) ? { session_id: optionalString(input.session_id)! } : {}),
+    ...(optionalString(input.workspace_path) ? { workspace_path: optionalString(input.workspace_path)! } : {}),
+    summary: {
+      deliverable_files_count: deliverableFiles.length,
+      supporting_files_count: supportingFiles.length,
+      total_files_count: deliverableFiles.length + supportingFiles.length,
+    },
+    deliverable_files: deliverableFiles,
+    supporting_files: supportingFiles,
+    ...(optionalString(input.progress_headline) ? { progress_headline: optionalString(input.progress_headline)! } : {}),
+    ...(input.artifact_surface ? { artifact_surface: buildTaskSurfaceDescriptor(input.artifact_surface) } : {}),
+    inspect_paths: readStringList(input.inspect_paths, 'inspect_paths'),
     ...(isRecord(input.domain_projection) ? { domain_projection: { ...input.domain_projection } } : {}),
   };
 }

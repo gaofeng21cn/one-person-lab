@@ -1006,6 +1006,15 @@ test('product entry companion validators normalize shared family payloads', () =
     task_lifecycle: {
       surface_kind: 'task_lifecycle',
     },
+    session_continuity: {
+      surface_kind: 'session_continuity',
+    },
+    progress_projection: {
+      surface_kind: 'progress_projection',
+    },
+    artifact_inventory: {
+      surface_kind: 'artifact_inventory',
+    },
     skill_catalog: {
       surface_kind: 'skill_catalog',
     },
@@ -1084,6 +1093,9 @@ test('product entry companion validators normalize shared family payloads', () =
   assert.equal(validatedManifest.product_entry_start.resume_surface.surface_kind, 'product_entry_session');
   assert.equal(validatedManifest.domain_entry_contract?.entry_adapter, 'RedCubeDomainEntry');
   assert.equal(validatedManifest.runtime_inventory?.surface_kind, 'runtime_inventory');
+  assert.equal(validatedManifest.session_continuity?.surface_kind, 'session_continuity');
+  assert.equal(validatedManifest.progress_projection?.surface_kind, 'progress_projection');
+  assert.equal(validatedManifest.artifact_inventory?.surface_kind, 'artifact_inventory');
 
   const frontdesk = {
     surface_kind: 'product_frontdesk',
@@ -1220,6 +1232,15 @@ test('product entry companion validators fail closed on missing required shared 
     task_lifecycle: {
       surface_kind: 'task_lifecycle',
     },
+    session_continuity: {
+      surface_kind: 'session_continuity',
+    },
+    progress_projection: {
+      surface_kind: 'progress_projection',
+    },
+    artifact_inventory: {
+      surface_kind: 'artifact_inventory',
+    },
     skill_catalog: {
       surface_kind: 'skill_catalog',
     },
@@ -1240,6 +1261,13 @@ test('product entry companion validators fail closed on missing required shared 
   assert.throws(
     () => validateFamilyProductEntryManifest(wrongRuntimeInventory, { requireRuntimeCompanions: true }),
     /runtime_inventory\.surface_kind/,
+  );
+
+  const wrongSessionContinuity = structuredClone(manifest);
+  wrongSessionContinuity.session_continuity.surface_kind = 'session_continuity_preview';
+  assert.throws(
+    () => validateFamilyProductEntryManifest(wrongSessionContinuity),
+    /session_continuity\.surface_kind/,
   );
 
   const frontdesk = {
