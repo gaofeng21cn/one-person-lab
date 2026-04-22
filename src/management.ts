@@ -1713,6 +1713,7 @@ export function buildFrontDeskDomainWiring(
         ready_for_opl_start_count: domainEntryParity.summary.ready_for_opl_start_count,
         ready_for_domain_handoff_count: domainEntryParity.summary.ready_for_domain_handoff_count,
         domain_entry_contract_ready_count: domainEntryParity.summary.domain_entry_contract_ready_count,
+        domain_agent_entry_spec_ready_count: domainEntryParity.summary.domain_agent_entry_spec_ready_count,
         gateway_interaction_contract_ready_count:
           domainEntryParity.summary.gateway_interaction_contract_ready_count,
         active_binding_projects_count: domainBindingParity.summary.active_projects_count,

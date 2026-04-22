@@ -187,6 +187,8 @@ export async function launchDomainEntry(
         selected_strategy: selectedStrategy,
         available_strategies: availableStrategies(locator),
         launch_status: 'preview_only',
+        domain_agent_entry_spec:
+          manifestEntry?.manifest?.domain_entry_contract?.domain_agent_entry_spec ?? null,
         workspace_locator: {
           project_id: workspaceLocator.project_id,
           absolute_path: workspaceLocator.absolute_path,
@@ -198,6 +200,8 @@ export async function launchDomainEntry(
         domain_manifest_recommendation: manifestEntry
           ? {
               status: manifestEntry.status,
+              domain_agent_entry_spec:
+                manifestEntry.manifest?.domain_entry_contract?.domain_agent_entry_spec ?? null,
               frontdesk_surface: manifestEntry.manifest?.frontdesk_surface ?? null,
               recommended_command: manifestEntry.manifest?.recommended_command ?? null,
               product_entry_readiness: manifestEntry.manifest?.product_entry_readiness ?? null,
@@ -230,6 +234,8 @@ export async function launchDomainEntry(
       selected_strategy: selectedStrategy,
       available_strategies: availableStrategies(locator),
       launch_status: 'launched',
+      domain_agent_entry_spec:
+        manifestEntry?.manifest?.domain_entry_contract?.domain_agent_entry_spec ?? null,
       workspace_locator: {
         project_id: workspaceLocator.project_id,
         absolute_path: workspaceLocator.absolute_path,
@@ -241,6 +247,8 @@ export async function launchDomainEntry(
       domain_manifest_recommendation: manifestEntry
         ? {
             status: manifestEntry.status,
+            domain_agent_entry_spec:
+              manifestEntry.manifest?.domain_entry_contract?.domain_agent_entry_spec ?? null,
             frontdesk_surface: manifestEntry.manifest?.frontdesk_surface ?? null,
             recommended_command: manifestEntry.manifest?.recommended_command ?? null,
             product_entry_readiness: manifestEntry.manifest?.product_entry_readiness ?? null,
