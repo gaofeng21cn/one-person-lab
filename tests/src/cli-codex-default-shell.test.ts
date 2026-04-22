@@ -34,6 +34,28 @@ function runCliRaw(args: string[], envOverrides: Record<string, string> = {}) {
   return runEntryPathRaw(cliPath, args, envOverrides);
 }
 
+function runCliFailure(args: string[], envOverrides: Record<string, string> = {}) {
+  const result = spawnSync(
+    process.execPath,
+    ['--experimental-strip-types', cliPath, ...args],
+    {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: '1',
+        ...envOverrides,
+      },
+    },
+  );
+
+  assert.notEqual(result.status, 0);
+  return {
+    status: result.status ?? 1,
+    payload: JSON.parse(result.stderr),
+  };
+}
+
 function runEntryPathRaw(
   entryPath: string,
   args: string[],
@@ -255,85 +277,32 @@ exit 1
   }
 });
 
-test('chat and shell keep compatibility aliases with Codex raw defaults', () => {
-  const capturePath = path.join(os.tmpdir(), `opl-codex-chat-shell-args-${process.pid}.txt`);
-  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
-printf '%s\\n' "$@" >> ${JSON.stringify(capturePath)}
-echo "CODEX RAW: $*"
-exit 0
-echo "unexpected fake-codex args: $*" >&2
-exit 1
-`);
+test('ask chat and shell are retired in favor of opl, opl exec, and explicit domain handles', () => {
+  const ask = runCliFailure(['ask', 'Plan the next paper submission steps.']);
+  assert.equal(ask.status, 2);
+  assert.equal(ask.payload.error.code, 'cli_usage_error');
+  assert.match(ask.payload.error.message, /Command "opl ask" has been retired/);
+  assert.match(ask.payload.error.message, /opl exec/);
 
-  try {
-    const chatResult = runCliRaw(['chat', 'Plan the next paper submission steps.'], {
-      OPL_CODEX_BIN: codexPath,
-    });
-    assert.equal(chatResult.stdout, 'CODEX RAW: Plan the next paper submission steps.\n');
+  const chat = runCliFailure(['chat', 'Plan the next paper submission steps.']);
+  assert.equal(chat.status, 2);
+  assert.equal(chat.payload.error.code, 'cli_usage_error');
+  assert.match(chat.payload.error.message, /Command "opl chat" has been retired/);
+  assert.match(chat.payload.error.message, /Use `opl`/);
 
-    const shellResult = runCliRaw(['shell'], {
-      OPL_CODEX_BIN: codexPath,
-    });
-    assert.equal(shellResult.stdout, 'CODEX RAW: \n');
-    assert.equal(fs.readFileSync(capturePath, 'utf8'), 'Plan the next paper submission steps.\n\n');
-  } finally {
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(capturePath, { force: true });
-  }
+  const shell = runCliFailure(['shell']);
+  assert.equal(shell.status, 2);
+  assert.equal(shell.payload.error.code, 'cli_usage_error');
+  assert.match(shell.payload.error.message, /Command "opl shell" has been retired/);
+  assert.match(shell.payload.error.message, /opl resume <session_id>/);
 });
 
-test('chat --executor hermes keeps explicit Hermes switch available', () => {
-  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
-if [ "$1" = "chat" ]; then
-  cat <<'EOF'
-EXPLICIT HERMES READY
-
-session_id: hermes-explicit-session
-EOF
-  exit 0
-fi
-if [ "$1" = "--resume" ] && [ "$2" = "hermes-explicit-session" ]; then
-  cat <<'EOF'
-EXPLICIT HERMES RESUME
-EOF
-  exit 0
-fi
-echo "unexpected fake-hermes args: $*" >&2
-exit 1
-`);
-
-  try {
-    const output = runCli(
-      ['chat', 'Plan', 'the', 'next', 'paper', 'submission', 'steps.', '--executor', 'hermes'],
-      {
-        OPL_HERMES_BIN: hermesPath,
-      },
-    );
-
-    assert.equal(output.product_entry.mode, 'chat');
-    assert.equal(output.product_entry.executor_backend, 'hermes');
-    assert.equal(output.product_entry.seed.session_id, 'hermes-explicit-session');
-    assert.equal(output.product_entry.resume.output, 'EXPLICIT HERMES RESUME');
-  } finally {
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-  }
-});
-
-test('help text advertises Codex as the default entry and lists opl exec', () => {
+test('help text advertises Codex as the default entry and lists opl exec without retired aliases', () => {
   const output = runCli(['help']);
   const commands = output.help.commands as Array<{ command: string; summary: string }>;
 
   assert.equal(commands.some((entry) => entry.command === 'exec'), true);
-  assert.equal(
-    commands.some(
-      (entry) => entry.command === 'chat' && /Codex/i.test(entry.summary),
-    ),
-    true,
-  );
-  assert.equal(
-    commands.some(
-      (entry) => entry.command === 'shell' && /Codex/i.test(entry.summary),
-    ),
-    true,
-  );
+  assert.equal(commands.some((entry) => entry.command === 'ask'), false);
+  assert.equal(commands.some((entry) => entry.command === 'chat'), false);
+  assert.equal(commands.some((entry) => entry.command === 'shell'), false);
 });
