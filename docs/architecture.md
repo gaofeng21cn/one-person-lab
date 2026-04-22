@@ -75,6 +75,7 @@
 - `agent entry` 是给 `Codex`、`OPL` 与其他通用 agent 调用的稳定入口
 - `direct entry / product entry` 是各个 domain agent 自己的轻量独立前门
 - `domain gateway / domain harness` 继续保留为仓内边界层与执行层语言，不再作为仓库对外第一身份
+- `OPL` 当前通过 repo-owned `domain agent entry spec` 消费各 domain agent 的基础入口真相，而不再只依赖顶层硬编码蓝图
 
 ### 4. Shell Projection Layer
 

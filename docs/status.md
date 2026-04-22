@@ -23,6 +23,7 @@
 - `artifacts`
 
 这组资源是 `opl` shell / TUI、外部 GUI 壳与 `Product API` projection 的共同产品真相。
+其中 `agents` 资源已经开始消费各 domain 仓 repo-owned 的 `domain agent entry spec`，而不是只由 OPL 顶层静态描述。
 
 ## 当前默认入口
 
