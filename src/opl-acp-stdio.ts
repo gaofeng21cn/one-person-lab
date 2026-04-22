@@ -12,7 +12,12 @@ import {
   translateSessionResumePayload,
   translateWorkspaceListPayload,
 } from './opl-acp-bridge.ts';
-import { buildCodexExecArgs, parseCodexExecOutput, runCodexCommand } from './codex.ts';
+import {
+  buildCodexExecArgs,
+  parseCodexExecOutput,
+  runCodexCommandStreaming,
+  summarizeCodexOutputLine,
+} from './codex.ts';
 import { loadGatewayContracts } from './contracts.ts';
 import { buildSessionLedger, recordSessionLedgerEntry } from './session-ledger.ts';
 import { buildWorkspaceCatalog } from './workspace-registry.ts';
@@ -104,6 +109,15 @@ const SUPPORTED_COMMANDS: AcpStdioCommand[] = [
   'prompt',
   'session_updates',
 ];
+
+const DEFAULT_SESSION_MODES = {
+  currentModeId: 'default',
+  availableModes: [{ id: 'default', name: 'Default' }],
+};
+
+const DEFAULT_SESSION_MODE_IDS = new Set(
+  DEFAULT_SESSION_MODES.availableModes.map((mode) => mode.id),
+);
 
 function buildErrorResponse(
   request: AcpStdioRequest,
@@ -431,9 +445,10 @@ function buildCodexResumeArgs(sessionId: string, prompt: string) {
   ];
 }
 
-function executeBridgePrompt(
+async function executeBridgePrompt(
   session: BridgeSessionRecord,
   promptText: string,
+  writable?: NodeJS.WritableStream,
 ) {
   const args = session.runtimeSessionId
     ? buildCodexResumeArgs(session.runtimeSessionId, promptText)
@@ -442,7 +457,38 @@ function executeBridgePrompt(
         json: true,
       });
 
-  const result = runCodexCommand(args);
+  let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+  let lastStreamText = '';
+  const emitStreamStatus = (text: string) => {
+    if (!writable || !text || text === lastStreamText) {
+      return;
+    }
+    lastStreamText = text;
+    emitStatusChunk(writable, session, text);
+  };
+
+  if (writable) {
+    heartbeatTimer = setInterval(() => {
+      emitStatusChunk(writable, session, 'Codex 正在继续处理当前会话请求。');
+    }, 5000);
+  }
+
+  let result: Awaited<ReturnType<typeof runCodexCommandStreaming>>;
+  try {
+    result = await runCodexCommandStreaming(args, {
+      onStdoutLine: (line) => {
+        const summary = summarizeCodexOutputLine(line);
+        if (summary) {
+          emitStreamStatus(summary);
+        }
+      },
+    });
+  } finally {
+    if (heartbeatTimer) {
+      clearInterval(heartbeatTimer);
+    }
+  }
+
   if (result.exitCode !== 0) {
     throw new AcpBridgePayloadError(result.stderr.trim() || 'Codex prompt failed inside ACP bridge.');
   }
@@ -507,10 +553,10 @@ export function createAcpStdioBridgeState(): AcpStdioBridgeState {
   };
 }
 
-export function handleAcpStdioRequest(
+export async function handleAcpStdioRequest(
   request: AcpStdioRequest,
   state: AcpStdioBridgeState,
-): AcpStdioResponse {
+): Promise<AcpStdioResponse> {
   const command = typeof request.command === 'string' ? request.command : null;
   if (!command) {
     return buildErrorResponse(request, 'invalid_request', 'ACP stdio bridge requires a command.');
@@ -622,7 +668,7 @@ export function handleAcpStdioRequest(
           sessionId,
           cwd: readOptionalString(payload.cwd),
         });
-        const executed = executeBridgePrompt(session, prompt);
+        const executed = await executeBridgePrompt(session, prompt);
         return {
           id: typeof request.id === 'string' ? request.id : null,
           command,
@@ -685,10 +731,7 @@ async function handleJsonRpcRequest(
         });
         return buildJsonRpcResult(request.id ?? null, {
           sessionId: session.sessionId,
-          modes: {
-            currentModeId: 'default',
-            availableModes: [{ id: 'default', name: 'Default' }],
-          },
+          modes: DEFAULT_SESSION_MODES,
           configOptions: [],
           models: {
             currentModelId: 'codex-default',
@@ -709,15 +752,32 @@ async function handleJsonRpcRequest(
         }
         return buildJsonRpcResult(request.id ?? null, {
           sessionId: session.sessionId,
-          modes: {
-            currentModeId: 'default',
-            availableModes: [{ id: 'default', name: 'Default' }],
-          },
+          modes: DEFAULT_SESSION_MODES,
           configOptions: [],
           models: {
             currentModelId: 'codex-default',
             availableModels: [{ id: 'codex-default', name: 'Codex Default' }],
           },
+        });
+      }
+      case 'session/set_mode': {
+        requireInitializedJsonRpc(state, request);
+        const params = toRecord(request.params) ?? {};
+        const sessionId = readOptionalString(params.sessionId);
+        const modeId = readOptionalString(params.modeId);
+        if (!sessionId) {
+          return buildJsonRpcError(request.id ?? null, -32602, 'session/set_mode requires sessionId.');
+        }
+        if (!modeId) {
+          return buildJsonRpcError(request.id ?? null, -32602, 'session/set_mode requires modeId.');
+        }
+        if (!DEFAULT_SESSION_MODE_IDS.has(modeId)) {
+          return buildJsonRpcError(request.id ?? null, -32602, `Unsupported session mode: ${modeId}`);
+        }
+        const session = requireBridgeSession(state, sessionId);
+        return buildJsonRpcResult(request.id ?? null, {
+          sessionId: session.sessionId,
+          modes: DEFAULT_SESSION_MODES,
         });
       }
       case 'session/prompt': {
@@ -731,7 +791,7 @@ async function handleJsonRpcRequest(
         const promptText = buildPromptText(params);
 
         emitStatusChunk(writable, session, 'OPL ACP 正在通过 Codex 默认运行时处理当前会话请求。');
-        const executed = executeBridgePrompt(session, promptText);
+        const executed = await executeBridgePrompt(session, promptText, writable);
         for (const chunk of splitResponseText(executed.parsed.finalMessage)) {
           emitAssistantChunk(writable, session, chunk);
         }
@@ -803,7 +863,7 @@ export async function runAcpStdioBridge(
       continue;
     }
 
-    const response = handleAcpStdioRequest(request as AcpStdioRequest, state);
+    const response = await handleAcpStdioRequest(request as AcpStdioRequest, state);
     writable.write(`${JSON.stringify(response)}\n`);
   }
 }

@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -23,6 +23,11 @@ export interface CodexPassthroughResult {
 
 export interface CodexCommandOptions {
   inheritStdio?: boolean;
+}
+
+export interface CodexStreamingCommandOptions {
+  onStdoutLine?: (line: string) => void;
+  onStderrLine?: (line: string) => void;
 }
 
 export interface CodexExecOptions {
@@ -160,6 +165,68 @@ export function runCodexCommand(
   };
 }
 
+export async function runCodexCommandStreaming(
+  args: string[],
+  options: CodexStreamingCommandOptions = {},
+): Promise<CodexCommandResult> {
+  const codexBinary = resolveCodexBinary();
+
+  if (!codexBinary) {
+    throw new GatewayContractError(
+      'surface_not_found',
+      'Codex binary is required for Codex-backed OPL ask execution.',
+      {
+        env_var: 'OPL_CODEX_BIN',
+      },
+    );
+  }
+
+  return await new Promise<CodexCommandResult>((resolve, reject) => {
+    const child = spawn(codexBinary.path, args, {
+      env: process.env,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+
+    let stdout = '';
+    let stderr = '';
+
+    const flushStdout = attachLineBuffer(child.stdout, (line) => {
+      stdout += `${line}\n`;
+      options.onStdoutLine?.(line);
+    });
+    const flushStderr = attachLineBuffer(child.stderr, (line) => {
+      stderr += `${line}\n`;
+      options.onStderrLine?.(line);
+    });
+
+    child.once('error', (error) => {
+      reject(
+        new GatewayContractError(
+          'codex_command_failed',
+          `Failed to launch Codex for: codex ${args.join(' ')}`,
+          {
+            codex_binary: codexBinary.path,
+            args,
+            cause: error.message,
+          },
+        ),
+      );
+    });
+
+    child.once('close', (code) => {
+      flushStdout();
+      flushStderr();
+      resolve({
+        exitCode: code ?? 1,
+        stdout,
+        stderr,
+      });
+    });
+
+    child.stdin.end();
+  });
+}
+
 export function runCodexPassthrough(args: string[]): CodexPassthroughResult {
   const codexBinary = resolveCodexBinary();
 
@@ -208,8 +275,71 @@ function parseCodexJsonLine(line: string) {
   }
 }
 
+function attachLineBuffer(
+  stream: NodeJS.ReadableStream | null,
+  onLine: (line: string) => void,
+) {
+  if (!stream) {
+    return () => '';
+  }
+
+  let buffer = '';
+  stream.setEncoding?.('utf8');
+  stream.on('data', (chunk: string | Buffer) => {
+    buffer += chunk.toString();
+    while (true) {
+      const newlineIndex = buffer.indexOf('\n');
+      if (newlineIndex === -1) {
+        break;
+      }
+      const line = buffer.slice(0, newlineIndex).replace(/\r$/, '');
+      buffer = buffer.slice(newlineIndex + 1);
+      onLine(line);
+    }
+  });
+
+  return () => {
+    if (!buffer) {
+      return '';
+    }
+    const remainder = buffer.replace(/\r$/, '');
+    buffer = '';
+    if (remainder) {
+      onLine(remainder);
+    }
+    return remainder;
+  };
+}
+
 function normalizeInlineText(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+function extractAgentMessageText(itemRecord: Record<string, unknown>) {
+  const directText = normalizeInlineText(itemRecord.text);
+  if (directText) {
+    return directText;
+  }
+
+  const content = itemRecord.content;
+  if (!Array.isArray(content)) {
+    return null;
+  }
+
+  const parts = content
+    .map((entry) => {
+      if (typeof entry === 'string') {
+        return normalizeInlineText(entry);
+      }
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+        return null;
+      }
+      const textEntry = entry as Record<string, unknown>;
+      return normalizeInlineText(textEntry.text) ?? normalizeInlineText(textEntry.value);
+    })
+    .filter((entry): entry is string => Boolean(entry));
+
+  return parts.length > 0 ? parts.join('\n') : null;
 }
 
 function trimCommand(command: string) {
@@ -245,7 +375,7 @@ function summarizeCodexEvent(event: Record<string, unknown>) {
   }
 
   if (itemType === 'agent_message') {
-    return normalizeInlineText((item as Record<string, unknown>).text);
+    return extractAgentMessageText(item as Record<string, unknown>);
   }
 
   if (itemType === 'command_execution') {
@@ -273,10 +403,14 @@ function summarizeCodexEvent(event: Record<string, unknown>) {
   return null;
 }
 
+export function summarizeCodexOutputLine(line: string) {
+  return summarizeCodexEvent(parseCodexJsonLine(line) ?? {});
+}
+
 export function extractCodexRecentOutput(output: string, lines = 6) {
   const humanLines = output
     .split(/\r?\n/)
-    .map((line) => summarizeCodexEvent(parseCodexJsonLine(line) ?? {}))
+    .map((line) => summarizeCodexOutputLine(line))
     .filter((line): line is string => Boolean(line))
     .slice(-lines);
 
@@ -308,7 +442,7 @@ export function parseCodexExecOutput(output: string): ParsedCodexExecOutput {
       continue;
     }
 
-    const message = normalizeInlineText(itemRecord.text);
+    const message = extractAgentMessageText(itemRecord);
     if (message) {
       messages.push(message);
     }
