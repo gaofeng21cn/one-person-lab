@@ -192,15 +192,6 @@ type FrontDeskMcpCliInput = {
   sessionsLimit?: number;
 };
 
-type ExecCliInput = {
-  prompt: string;
-  dryRun: boolean;
-  model?: string;
-  provider?: string;
-  workspacePath?: string;
-  json: boolean;
-};
-
 type ResumeCliInput = {
   sessionId: string;
   executor: ProductEntryExecutor;
@@ -484,92 +475,6 @@ function parseProductEntryArgs(
     ...parsed,
     goal: normalizedGoal.goal,
     preferredFamily: normalizedGoal.preferredFamily,
-    dryRun,
-  };
-}
-
-function parseExecArgs(
-  args: string[],
-  spec: Pick<CommandSpec, 'usage' | 'examples'>,
-): ExecCliInput {
-  let dryRun = false;
-  let explicitGoal: string | undefined;
-  const positionalGoalParts: string[] = [];
-  const parsed: Omit<ExecCliInput, 'prompt' | 'dryRun'> = {
-    json: true,
-  };
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-
-    if (token === '--dry-run') {
-      dryRun = true;
-      continue;
-    }
-
-    if (token === '--json') {
-      parsed.json = true;
-      continue;
-    }
-
-    if (!token.startsWith('--')) {
-      positionalGoalParts.push(token);
-      continue;
-    }
-
-    const value = args[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
-        option: token,
-      });
-    }
-
-    switch (token) {
-      case '--goal':
-        explicitGoal = value;
-        break;
-      case '--model':
-        parsed.model = value;
-        break;
-      case '--provider':
-        parsed.provider = value;
-        break;
-      case '--workspace-path':
-        parsed.workspacePath = value;
-        break;
-      default:
-        throw buildUsageError(`Unknown option for exec: ${token}.`, spec, {
-          option: token,
-        });
-    }
-
-    index += 1;
-  }
-
-  if (explicitGoal && positionalGoalParts.length > 0) {
-    throw buildUsageError(
-      'Use either a positional request or --goal for exec, not both.',
-      spec,
-      {
-        positional_request: positionalGoalParts.join(' '),
-      },
-    );
-  }
-
-  const prompt = (explicitGoal ?? positionalGoalParts.join(' ')).trim();
-  if (!prompt) {
-    throw buildUsageError(
-      'exec requires a plain-language request, either as positional text or via --goal.',
-      spec,
-      {
-        required: ['<request...> or --goal <text>'],
-      },
-    );
-  }
-
-  return {
-    ...parsed,
-    prompt,
     dryRun,
   };
 }

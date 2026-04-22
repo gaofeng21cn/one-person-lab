@@ -162,7 +162,7 @@ exit 0
 `);
 
   try {
-    const result = runEntryPathRaw(binPath, ['exec', '--model', 'gpt-5.4', 'hello'], {
+    const result = runEntryPathRaw(binPath, ['exec', '--cd', '/tmp/opl-exec-smoke', '--model', 'gpt-5.4', 'hello'], {
       OPL_CODEX_BIN: codexPath,
     });
 
@@ -170,6 +170,8 @@ exit 0
     assert.equal(result.stderr, '');
     assert.deepEqual(fs.readFileSync(capturePath, 'utf8').trim().split('\n'), [
       'exec',
+      '--cd',
+      '/tmp/opl-exec-smoke',
       '--model',
       'gpt-5.4',
       'hello',
@@ -197,15 +199,20 @@ exit 1
 `);
 
   try {
-    const result = runCliRaw(['exec', '--model', 'gpt-5.4', 'Plan a medical grant proposal revision loop.'], {
-      OPL_CODEX_BIN: codexPath,
-    });
+    const result = runCliRaw(
+      ['exec', '--cd', '/tmp/opl-exec-smoke', '--model', 'gpt-5.4', 'Plan a medical grant proposal revision loop.'],
+      {
+        OPL_CODEX_BIN: codexPath,
+      },
+    );
 
     assert.match(result.stdout, /"thread_id":"codex-exec-session"/);
     assert.match(result.stdout, /CODEX EXEC ONE SHOT/);
     assert.equal(result.stderr, '');
     assert.deepEqual(fs.readFileSync(capturePath, 'utf8').trim().split('\n'), [
       'exec',
+      '--cd',
+      '/tmp/opl-exec-smoke',
       '--model',
       'gpt-5.4',
       'Plan a medical grant proposal revision loop.',
