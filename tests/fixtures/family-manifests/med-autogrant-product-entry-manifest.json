@@ -526,6 +526,105 @@
         "recommended_next_stage": "revision"
       }
     },
+    "session_continuity": {
+      "surface_kind": "session_continuity",
+      "version": 1,
+      "summary": "显式锚定 session locator 与 journal durable anchor，避免依赖默认 journal 推断。",
+      "session_locator_field": "grant_run_id",
+      "session_handle_kind": "grant_run_id",
+      "session_id": "grant-run-nsfc-demo-001-baseline-001",
+      "journal_path": "$CODEX_HOME/projects/med-autogrant/runtime-state/sessions/grant-run-nsfc-demo-001-baseline-001.json",
+      "runtime_state_contract": {
+        "session_journal_root": "$CODEX_HOME/projects/med-autogrant/runtime-state/sessions/",
+        "substrate_state_db_path_template": "$CODEX_HOME/projects/med-autogrant/runtime-state/hermes/state.db"
+      },
+      "workspace_id": "nsfc-demo-001",
+      "lifecycle_stage": "critique",
+      "runtime_entries": {
+        "runtime_run": {
+          "command": "uv run python -m med_autogrant runtime-run --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --journal $CODEX_HOME/projects/med-autogrant/runtime-state/sessions/grant-run-nsfc-demo-001-baseline-001.json --format json",
+          "surface_kind": "runtime_run",
+          "summary": "用显式 --journal 启动或继续当前 workspace 的 runtime run。"
+        },
+        "runtime_resume": {
+          "command": "uv run python -m med_autogrant runtime-resume --journal $CODEX_HOME/projects/med-autogrant/runtime-state/sessions/grant-run-nsfc-demo-001-baseline-001.json --format json",
+          "surface_kind": "runtime_resume",
+          "summary": "用显式 --journal 恢复当前 session。"
+        }
+      },
+      "repo_owned_truth": {
+        "workspace_surface_kind": "nsfc_workspace",
+        "workspace_path": "/fixtures/med-autogrant/nsfc_workspace_p2c_critique.json",
+        "truth_owner": "med-autogrant"
+      }
+    },
+    "progress_projection": {
+      "surface_kind": "progress_projection",
+      "version": 1,
+      "summary": "repo-owned workspace truth 上的 grant progress projection。",
+      "workspace_surface_kind": "nsfc_workspace",
+      "workspace_path": "/fixtures/med-autogrant/nsfc_workspace_p2c_critique.json",
+      "grant_run_id": "grant-run-nsfc-demo-001-baseline-001",
+      "workspace_id": "nsfc-demo-001",
+      "lifecycle_stage": "critique",
+      "projection_kind": "grant_progress",
+      "projection": {
+        "current_stage": "critique",
+        "current_stage_summary": "当前 critique grant loop 可以继续通过同一 grant user loop 进入 revision 决策。",
+        "next_system_action": "先进入 grant-user-loop 继续 revision 决策。",
+        "current_blockers": []
+      },
+      "truth_anchors": {
+        "workspace_document": {
+          "ref_kind": "path",
+          "ref": "/fixtures/med-autogrant/nsfc_workspace_p2c_critique.json",
+          "label": "workspace JSON (repo-owned truth)"
+        },
+        "stage_route_report": {
+          "ref_kind": "command",
+          "ref": "uv run python -m med_autogrant stage-route-report --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+          "label": "stage-route-report (derives from workspace truth)"
+        },
+        "summarize_workspace": {
+          "ref_kind": "command",
+          "ref": "uv run python -m med_autogrant summarize-workspace --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+          "label": "summarize-workspace (derives from workspace truth)"
+        },
+        "inspect_progress": {
+          "ref_kind": "command",
+          "ref": "uv run python -m med_autogrant grant-progress --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+          "label": "grant-progress (projection surface)"
+        }
+      }
+    },
+    "artifact_inventory": {
+      "surface_kind": "artifact_inventory",
+      "version": 1,
+      "summary": "汇总 workspace 内当前被选中的主要对象与 draft 工件，作为 repo-owned continuity truth 的索引。",
+      "workspace_surface_kind": "nsfc_workspace",
+      "workspace_path": "/fixtures/med-autogrant/nsfc_workspace_p2c_critique.json",
+      "grant_run_id": "grant-run-nsfc-demo-001-baseline-001",
+      "workspace_id": "nsfc-demo-001",
+      "lifecycle_stage": "critique",
+      "artifacts": [
+        {
+          "artifact_kind": "workspace_document",
+          "label": "workspace JSON (repo-owned truth)",
+          "ref": {
+            "ref_kind": "path",
+            "ref": "/fixtures/med-autogrant/nsfc_workspace_p2c_critique.json"
+          }
+        },
+        {
+          "artifact_kind": "active_draft",
+          "label": "active draft: draft-p2c-001",
+          "ref": {
+            "ref_kind": "workspace_locator",
+            "ref": "grant_workspace::nsfc-demo-001::application_drafts::draft-p2c-001"
+          }
+        }
+      ]
+    },
     "skill_catalog": {
       "surface_kind": "skill_catalog",
       "summary": "MAG 当前通过 repo-tracked grant entry shells 暴露 family 可复用技能。",

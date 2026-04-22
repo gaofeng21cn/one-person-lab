@@ -856,11 +856,106 @@ function readStudyCharter(studyRoot: string | null) {
   };
 }
 
+function buildManifestContinuitySurface(options: {
+  workspacePath: string;
+  overview: NormalizedDomainManifest['product_entry_overview'] | null;
+  manifest: NormalizedDomainManifest | null;
+}) {
+  const session = options.manifest?.session_continuity ?? null;
+  const progress = options.manifest?.progress_projection ?? null;
+  const artifacts = options.manifest?.artifact_inventory ?? null;
+
+  if (!session && !progress && !artifacts) {
+    return null;
+  }
+
+  const workspaceFiles = [
+    ...(artifacts?.deliverable_files ?? []).map((entry) => ({
+      file_id: entry.file_id,
+      label: entry.label,
+      kind: entry.kind,
+      path: entry.path,
+      summary: entry.summary,
+    })),
+    ...(artifacts?.supporting_files ?? []).map((entry) => ({
+      file_id: entry.file_id,
+      label: entry.label,
+      kind: entry.kind,
+      path: entry.path,
+      summary: entry.summary,
+    })),
+  ];
+  const progressCommand =
+    progress?.progress_surface?.command
+    ?? session?.progress_surface?.command
+    ?? options.overview?.progress_surface?.command
+    ?? null;
+  const resumeCommand =
+    session?.restore_surface?.command
+    ?? options.manifest?.task_lifecycle?.resume_surface?.command
+    ?? options.overview?.resume_surface?.command
+    ?? null;
+  const inspectPaths = uniqueStrings([
+    artifacts?.workspace_path ?? null,
+    ...(progress?.inspect_paths ?? []),
+    ...(artifacts?.inspect_paths ?? []),
+  ]);
+  const recentActivity =
+    progress || session
+      ? {
+          session_id: progress?.session_id ?? session?.session_id ?? 'domain-runtime-session',
+          last_active: progress?.latest_update ?? session?.summary ?? '当前 session 仍可恢复',
+          source:
+            progress?.progress_surface?.surface_kind
+            ?? session?.progress_surface?.surface_kind
+            ?? 'domain_runtime_continuity',
+          preview: progress?.headline ?? session?.summary ?? '当前 runtime continuity 已暴露',
+        }
+      : null;
+
+  return {
+    currentStudy: null,
+    progressSummary: progress?.headline ?? session?.summary ?? null,
+    nextFocus:
+      progress?.next_step
+      ?? session?.restore_surface?.summary
+      ?? options.overview?.next_focus[0]
+      ?? null,
+    attentionItems: progress?.attention_items ?? [],
+    inspectPaths,
+    recentActivity,
+    studyQueue: [],
+    workspaceFiles,
+    recommendedCommands: {
+      progress: progressCommand,
+      resume: resumeCommand,
+    },
+    userOptions: [
+      '展开当前 runtime continuity 详情',
+      ...(workspaceFiles.length > 0 ? ['列出当前 deliverable 与 supporting files'] : []),
+      ...(resumeCommand ? ['按当前 restore surface 继续推进'] : []),
+    ],
+    continuity: {
+      session,
+      progress,
+      artifacts,
+    },
+  };
+}
+
 function buildStudyProgressSurface(options: {
   workspacePath: string;
   overview: NormalizedDomainManifest['product_entry_overview'] | null;
   manifest: NormalizedDomainManifest | null;
 }) {
+  const continuitySurface = buildManifestContinuitySurface(options);
+  if (
+    continuitySurface
+    && options.manifest?.operator_loop_surface?.surface_kind !== 'workspace_cockpit'
+  ) {
+    return continuitySurface;
+  }
+
   const operatorLoopCommand =
     options.overview?.operator_loop_command
     ?? options.manifest?.operator_loop_surface?.command
@@ -885,6 +980,11 @@ function buildStudyProgressSurface(options: {
         resume: options.overview?.resume_surface?.command ?? null,
       },
       userOptions: buildCurrentStudyUserOptions(false),
+      continuity: continuitySurface?.continuity ?? {
+        session: options.manifest?.session_continuity ?? null,
+        progress: options.manifest?.progress_projection ?? null,
+        artifacts: options.manifest?.artifact_inventory ?? null,
+      },
     };
   }
 
@@ -906,6 +1006,11 @@ function buildStudyProgressSurface(options: {
         resume: options.overview?.resume_surface?.command ?? null,
       },
       userOptions: buildCurrentStudyUserOptions(false),
+      continuity: continuitySurface?.continuity ?? {
+        session: options.manifest?.session_continuity ?? null,
+        progress: options.manifest?.progress_projection ?? null,
+        artifacts: options.manifest?.artifact_inventory ?? null,
+      },
     };
   }
 
@@ -1068,6 +1173,11 @@ function buildStudyProgressSurface(options: {
       resume: resumeCommand,
     },
     userOptions: buildCurrentStudyUserOptions(true, Boolean(paperSnapshot)),
+    continuity: {
+      session: options.manifest?.session_continuity ?? null,
+      progress: options.manifest?.progress_projection ?? null,
+      artifacts: options.manifest?.artifact_inventory ?? null,
+    },
   };
 }
 
@@ -1083,16 +1193,30 @@ function buildProgressFeedback(options: {
   } | null;
 }) {
   const currentStudy = options.studySurface.currentStudy;
+  const continuitySession = isRecord(options.studySurface.continuity?.session)
+    ? options.studySurface.continuity.session
+    : null;
+  const continuityProgress = isRecord(options.studySurface.continuity?.progress)
+    ? options.studySurface.continuity.progress
+    : null;
+  const preferContinuity = !currentStudy;
   const monitoring = isRecord(currentStudy?.monitoring) ? currentStudy.monitoring : null;
   const latestProgress = isRecord(currentStudy?.latest_progress) ? currentStudy.latest_progress : null;
   const latestEvent = isRecord(currentStudy?.latest_event) ? currentStudy.latest_event : null;
   const narrationContract = readStatusNarrationContract(currentStudy?.status_narration_contract);
   const recentActivity = options.studySurface.recentActivity;
-  const currentStatus = optionalString(currentStudy?.current_stage);
-  const runtimeStatus = optionalString(monitoring?.health_status);
+  const currentStatus =
+    optionalString(currentStudy?.current_stage)
+    ?? optionalString(continuityProgress?.current_status)
+    ?? optionalString(continuitySession?.status);
+  const runtimeStatus =
+    optionalString(monitoring?.health_status)
+    ?? optionalString(continuityProgress?.runtime_status);
   const headline =
     normalizeInlineText(
-      statusNarrationLatestUpdate(narrationContract)
+      (preferContinuity ? optionalString(continuityProgress?.headline) : null)
+      ?? (preferContinuity ? optionalString(continuitySession?.summary) : null)
+      ?? statusNarrationLatestUpdate(narrationContract)
       ?? statusNarrationStageSummary(narrationContract)
       ?? optionalString(currentStudy?.current_stage_summary)
       ?? optionalString(latestProgress?.summary)
@@ -1102,23 +1226,30 @@ function buildProgressFeedback(options: {
     ?? '当前还没有读到结构化的研究推进摘要。';
   const latestUpdate =
     normalizeInlineText([
-      optionalString(latestProgress?.time_label)
+      (preferContinuity ? optionalString(continuityProgress?.latest_update) : null)
+      ?? optionalString(latestProgress?.time_label)
       ?? optionalString(latestEvent?.time_label)
       ?? recentActivity?.last_active
       ?? options.recentSession?.last_active
       ?? null,
-      statusNarrationLatestUpdate(narrationContract)
+      (preferContinuity ? optionalString(continuityProgress?.headline) : null)
+      ?? statusNarrationLatestUpdate(narrationContract)
       ?? optionalString(latestProgress?.summary)
       ?? optionalString(latestEvent?.summary)
       ?? recentActivity?.preview
       ?? options.recentSession?.preview
       ?? optionalString(currentStudy?.current_stage_summary)
+      ?? (preferContinuity ? optionalString(continuitySession?.summary) : null)
       ?? null,
     ].filter(Boolean).join(' · '))
     ?? '当前还没有读到新的进度更新时间。';
   const nextStep =
     normalizeInlineText(
-      statusNarrationNextStep(narrationContract)
+      (preferContinuity ? optionalString(continuityProgress?.next_step) : null)
+      ?? (preferContinuity
+        ? optionalString((continuitySession?.restore_surface as Record<string, unknown> | undefined)?.summary)
+        : null)
+      ?? statusNarrationNextStep(narrationContract)
       ?? optionalString(currentStudy?.next_system_action)
       ?? options.nextFocus
       ?? '继续展开当前任务的详细进度。',
@@ -1126,6 +1257,7 @@ function buildProgressFeedback(options: {
     ?? '继续展开当前任务的详细进度。';
   const statusSummary =
     normalizeInlineText([
+      preferContinuity ? optionalString(continuityProgress?.status_summary) : null,
       statusNarrationSummary(narrationContract),
       currentStatus ? `当前状态：${humanizeProgressCode(currentStatus) ?? currentStatus}` : null,
       runtimeStatus ? `运行态：${humanizeProgressCode(runtimeStatus) ?? runtimeStatus}` : null,
@@ -2284,6 +2416,13 @@ export async function buildProjectProgressBrief(
       workspace_files: {
         deliverable_files: deliverableFiles,
         supporting_files: supportingFiles,
+      },
+      runtime_continuity: {
+        session: manifest?.session_continuity ?? null,
+        progress: manifest?.progress_projection ?? null,
+        artifacts: manifest?.artifact_inventory ?? null,
+        runtime_inventory: manifest?.runtime_inventory ?? null,
+        task_lifecycle: manifest?.task_lifecycle ?? null,
       },
       inspect_paths: inspectPaths,
       attention_items: attentionItems,

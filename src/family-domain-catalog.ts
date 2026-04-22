@@ -88,6 +88,15 @@ export function buildDomainEntryParity(
     );
     const runtimeInventoryReady = Boolean(manifest?.runtime_inventory?.surface_kind === 'runtime_inventory');
     const taskLifecycleReady = Boolean(manifest?.task_lifecycle?.surface_kind === 'task_lifecycle');
+    const sessionContinuityReady = Boolean(
+      manifest?.session_continuity?.surface_kind === 'session_continuity',
+    );
+    const progressProjectionReady = Boolean(
+      manifest?.progress_projection?.surface_kind === 'progress_projection',
+    );
+    const artifactInventoryReady = Boolean(
+      manifest?.artifact_inventory?.surface_kind === 'artifact_inventory',
+    );
     const skillCatalogReady = Boolean(manifest?.skill_catalog?.surface_kind === 'skill_catalog');
     const automationReady = Boolean(manifest?.automation?.surface_kind === 'automation');
     const readyForOplStart = Boolean(manifestResolved && startSurfaceReady);
@@ -128,6 +137,15 @@ export function buildDomainEntryParity(
     }
     if (manifestResolved && !taskLifecycleReady) {
       gaps.push('manifest 尚未暴露 task_lifecycle surface。');
+    }
+    if (manifestResolved && !sessionContinuityReady) {
+      gaps.push('manifest 尚未暴露 session_continuity surface。');
+    }
+    if (manifestResolved && !progressProjectionReady) {
+      gaps.push('manifest 尚未暴露 progress_projection surface。');
+    }
+    if (manifestResolved && !artifactInventoryReady) {
+      gaps.push('manifest 尚未暴露 artifact_inventory surface。');
     }
     if (manifestResolved && !skillCatalogReady) {
       gaps.push('manifest 尚未暴露 skill_catalog surface。');
@@ -181,6 +199,15 @@ export function buildDomainEntryParity(
     if (manifestResolved && !taskLifecycleReady) {
       recommendedNextActions.push('补齐 task_lifecycle surface，让 continuation 和 checkpoint truth 不再散落在 repo 私有字段里。');
     }
+    if (manifestResolved && !sessionContinuityReady) {
+      recommendedNextActions.push('补齐 session_continuity surface，让 OPL 能直接知道当前 session 属于哪个 domain agent、该怎么恢复。');
+    }
+    if (manifestResolved && !progressProjectionReady) {
+      recommendedNextActions.push('补齐 progress_projection surface，让 OPL progress 面直接消费 repo-owned runtime narration。');
+    }
+    if (manifestResolved && !artifactInventoryReady) {
+      recommendedNextActions.push('补齐 artifact_inventory surface，让 OPL artifacts 面直接消费 repo-owned artifact truth。');
+    }
     if (manifestResolved && !skillCatalogReady) {
       recommendedNextActions.push('补齐 skill_catalog surface，让 family command/skill reuse 可以直接消费。');
     }
@@ -204,6 +231,9 @@ export function buildDomainEntryParity(
       gateway_interaction_contract_status: gatewayInteractionContractReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
       runtime_inventory_status: runtimeInventoryReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
       task_lifecycle_status: taskLifecycleReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
+      session_continuity_status: sessionContinuityReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
+      progress_projection_status: progressProjectionReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
+      artifact_inventory_status: artifactInventoryReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
       skill_catalog_status: skillCatalogReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
       automation_status: automationReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
       ready_for_opl_start: readyForOplStart,
@@ -239,6 +269,12 @@ export function buildDomainEntryParity(
         normalizedProjects.filter((entry) => entry.runtime_inventory_status === 'ready').length,
       task_lifecycle_ready_count:
         normalizedProjects.filter((entry) => entry.task_lifecycle_status === 'ready').length,
+      session_continuity_ready_count:
+        normalizedProjects.filter((entry) => entry.session_continuity_status === 'ready').length,
+      progress_projection_ready_count:
+        normalizedProjects.filter((entry) => entry.progress_projection_status === 'ready').length,
+      artifact_inventory_ready_count:
+        normalizedProjects.filter((entry) => entry.artifact_inventory_status === 'ready').length,
       skill_catalog_ready_count:
         normalizedProjects.filter((entry) => entry.skill_catalog_status === 'ready').length,
       automation_ready_count:
@@ -368,6 +404,21 @@ export function buildRecommendedEntrySurfaces(
         task_lifecycle_resume_surface_kind:
           entry.manifest?.task_lifecycle?.resume_surface?.surface_kind ?? null,
         task_lifecycle_human_gate_ids: entry.manifest?.task_lifecycle?.human_gate_ids ?? [],
+        session_continuity: entry.manifest?.session_continuity ?? null,
+        session_continuity_status: entry.manifest?.session_continuity?.status ?? null,
+        session_continuity_session_id: entry.manifest?.session_continuity?.session_id ?? null,
+        session_continuity_restore_command:
+          entry.manifest?.session_continuity?.restore_surface?.command ?? null,
+        progress_projection: entry.manifest?.progress_projection ?? null,
+        progress_projection_headline: entry.manifest?.progress_projection?.headline ?? null,
+        progress_projection_next_step: entry.manifest?.progress_projection?.next_step ?? null,
+        progress_projection_progress_command:
+          entry.manifest?.progress_projection?.progress_surface?.command ?? null,
+        artifact_inventory: entry.manifest?.artifact_inventory ?? null,
+        artifact_inventory_total_files_count:
+          entry.manifest?.artifact_inventory?.summary.total_files_count ?? null,
+        artifact_inventory_workspace_path:
+          entry.manifest?.artifact_inventory?.workspace_path ?? null,
         skill_catalog: entry.manifest?.skill_catalog ?? null,
         skill_catalog_supported_commands: entry.manifest?.skill_catalog?.supported_commands ?? [],
         skill_catalog_skill_count: entry.manifest?.skill_catalog?.skills.length ?? 0,

@@ -1,12 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
+import type { DomainManifestCatalogEntry } from '../../src/domain-manifest.ts';
+import type { WorkspaceBinding } from '../../src/workspace-registry.ts';
 import {
   buildDomainEntryParity,
   buildRecommendedEntrySurfaces,
 } from '../../src/family-domain-catalog.ts';
 
-function createResolvedProject(projectId: string, manifest: Record<string, unknown>) {
+function createResolvedProject(
+  projectId: string,
+  manifest: Record<string, unknown>,
+): DomainManifestCatalogEntry {
   return {
     project_id: projectId,
     project: projectId,
@@ -14,13 +19,13 @@ function createResolvedProject(projectId: string, manifest: Record<string, unkno
     workspace_path: `/tmp/${projectId}`,
     manifest_command: `${projectId} product-entry-manifest`,
     status: 'resolved',
-    manifest,
+    manifest: manifest as any,
     error: null,
-  };
+  } as DomainManifestCatalogEntry;
 }
 
 test('family domain catalog derives parity status from manifests and active bindings', () => {
-  const projects = [
+  const projects: DomainManifestCatalogEntry[] = [
     createResolvedProject('med-autoscience', {
       target_domain_id: 'med-autoscience',
       frontdesk_surface: {
@@ -95,7 +100,7 @@ test('family domain catalog derives parity status from manifests and active bind
       manifest: null,
       error: null,
     },
-  ] as const;
+  ];
 
   const parity = buildDomainEntryParity(projects, {
     resolveActiveWorkspaceBinding(projectId) {
@@ -103,15 +108,20 @@ test('family domain catalog derives parity status from manifests and active bind
         return {
           binding_id: 'binding-med-autoscience',
           project_id: 'med-autoscience',
+          project: 'med-autoscience',
+          label: 'med-autoscience',
           workspace_path: '/tmp/med-autoscience',
           status: 'active',
+          created_at: '2026-04-22T00:00:00Z',
+          updated_at: '2026-04-22T00:00:00Z',
+          archived_at: null,
           direct_entry: {
             command: 'medautoscience product-frontdesk',
             url: null,
             manifest_command: 'medautoscience product-entry-manifest',
             workspace_locator: 'workspace_root',
           },
-        };
+        } as WorkspaceBinding;
       }
       return null;
     },
@@ -268,15 +278,20 @@ test('family domain catalog derives recommended entry surfaces with active bindi
         return {
           binding_id: 'binding-med-autoscience',
           project_id: 'med-autoscience',
+          project: 'med-autoscience',
+          label: 'med-autoscience',
           workspace_path: '/tmp/med-autoscience',
           status: 'active',
+          created_at: '2026-04-22T00:00:00Z',
+          updated_at: '2026-04-22T00:00:00Z',
+          archived_at: null,
           direct_entry: {
             command: 'medautoscience product-frontdesk',
             url: null,
             manifest_command: 'medautoscience product-entry-manifest',
             workspace_locator: 'workspace_root',
           },
-        };
+        } as WorkspaceBinding;
       },
     },
   );

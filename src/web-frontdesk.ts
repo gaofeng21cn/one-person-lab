@@ -1122,7 +1122,14 @@ function buildOplSessionsPayload(
   productEntrySessions: ReturnType<typeof runProductEntrySessions>,
   sessionLedger: ReturnType<typeof buildSessionLedger>,
   api: OplApiCatalog,
+  currentProgress: Awaited<ReturnType<typeof readOplProgressBrief>> | null,
 ) {
+  const continuitySession = isRecord(currentProgress?.runtime_continuity?.session)
+    ? currentProgress.runtime_continuity.session
+    : null;
+  const runtimeInventory = isRecord(currentProgress?.runtime_continuity?.runtime_inventory)
+    ? currentProgress.runtime_continuity.runtime_inventory
+    : null;
   return {
     version: 'g2' as const,
     sessions: {
@@ -1144,6 +1151,35 @@ function buildOplSessionsPayload(
         progress: api.resources.progress,
         artifacts: api.resources.artifacts,
       },
+      current_runtime_continuity: continuitySession
+        ? {
+            project_id: currentProgress?.current_project?.project_id ?? null,
+            domain_agent_id:
+              typeof continuitySession.domain_agent_id === 'string' ? continuitySession.domain_agent_id : null,
+            session_id: typeof continuitySession.session_id === 'string' ? continuitySession.session_id : null,
+            runtime_owner:
+              typeof continuitySession.runtime_owner === 'string'
+                ? continuitySession.runtime_owner
+                : typeof runtimeInventory?.runtime_owner === 'string'
+                  ? runtimeInventory.runtime_owner
+                  : null,
+            domain_owner:
+              typeof continuitySession.domain_owner === 'string'
+                ? continuitySession.domain_owner
+                : typeof runtimeInventory?.domain_owner === 'string'
+                  ? runtimeInventory.domain_owner
+                  : null,
+            executor_owner:
+              typeof continuitySession.executor_owner === 'string'
+                ? continuitySession.executor_owner
+                : typeof runtimeInventory?.executor_owner === 'string'
+                  ? runtimeInventory.executor_owner
+                  : null,
+            progress_surface: continuitySession.progress_surface ?? null,
+            artifact_surface: continuitySession.artifact_surface ?? null,
+            restore_surface: continuitySession.restore_surface ?? null,
+          }
+        : null,
       notes: [
         'Session list is sourced from the active executor runtime.',
         'Session ledger is OPL-managed attribution for local workspace and resource context.',
@@ -1177,6 +1213,15 @@ async function buildOplProgressPayload(
   const taskPayload = options.taskId
     ? readFrontDeskTaskStatus(options.taskId, options.lines ?? 20).product_entry.task
     : null;
+  const continuitySession = isRecord(progress.runtime_continuity?.session)
+    ? progress.runtime_continuity.session
+    : null;
+  const continuityProgress = isRecord(progress.runtime_continuity?.progress)
+    ? progress.runtime_continuity.progress
+    : null;
+  const runtimeInventory = isRecord(progress.runtime_continuity?.runtime_inventory)
+    ? progress.runtime_continuity.runtime_inventory
+    : null;
   return {
     version: 'g2' as const,
     progress: {
@@ -1200,6 +1245,35 @@ async function buildOplProgressPayload(
       inspect_paths: progress.inspect_paths,
       attention_items: progress.attention_items,
       configured_human_gates: progress.configured_human_gates,
+      domain_agent_id:
+        typeof continuitySession?.domain_agent_id === 'string' ? continuitySession.domain_agent_id : null,
+      runtime_owner:
+        typeof continuitySession?.runtime_owner === 'string'
+          ? continuitySession.runtime_owner
+          : typeof runtimeInventory?.runtime_owner === 'string'
+            ? runtimeInventory.runtime_owner
+            : null,
+      domain_owner:
+        typeof continuitySession?.domain_owner === 'string'
+          ? continuitySession.domain_owner
+          : typeof runtimeInventory?.domain_owner === 'string'
+            ? runtimeInventory.domain_owner
+            : null,
+      executor_owner:
+        typeof continuitySession?.executor_owner === 'string'
+          ? continuitySession.executor_owner
+          : typeof runtimeInventory?.executor_owner === 'string'
+            ? runtimeInventory.executor_owner
+            : null,
+      repo_progress_projection: continuityProgress ?? null,
+      restore_surface:
+        continuitySession?.restore_surface
+        ?? progress.runtime_continuity?.task_lifecycle?.resume_surface
+        ?? null,
+      artifact_surface:
+        continuityProgress?.artifact_surface
+        ?? continuitySession?.artifact_surface
+        ?? null,
       recommended_commands: progress.recommended_commands,
       endpoints: {
         sessions: api.resources.sessions,
@@ -1224,6 +1298,15 @@ async function buildOplArtifactsPayload(
   const progress = await readOplProgressBrief(context, options.workspacePath);
   const deliverableFiles = progress.workspace_files.deliverable_files;
   const supportingFiles = progress.workspace_files.supporting_files;
+  const continuitySession = isRecord(progress.runtime_continuity?.session)
+    ? progress.runtime_continuity.session
+    : null;
+  const continuityArtifacts = isRecord(progress.runtime_continuity?.artifacts)
+    ? progress.runtime_continuity.artifacts
+    : null;
+  const runtimeInventory = isRecord(progress.runtime_continuity?.runtime_inventory)
+    ? progress.runtime_continuity.runtime_inventory
+    : null;
 
   return {
     version: 'g2' as const,
@@ -1245,6 +1328,31 @@ async function buildOplArtifactsPayload(
       supporting_files: supportingFiles,
       inspect_paths: progress.inspect_paths,
       progress_headline: progress.progress_feedback.headline,
+      domain_agent_id:
+        typeof continuitySession?.domain_agent_id === 'string' ? continuitySession.domain_agent_id : null,
+      runtime_owner:
+        typeof continuitySession?.runtime_owner === 'string'
+          ? continuitySession.runtime_owner
+          : typeof runtimeInventory?.runtime_owner === 'string'
+            ? runtimeInventory.runtime_owner
+            : null,
+      domain_owner:
+        typeof continuitySession?.domain_owner === 'string'
+          ? continuitySession.domain_owner
+          : typeof runtimeInventory?.domain_owner === 'string'
+            ? runtimeInventory.domain_owner
+            : null,
+      executor_owner:
+        typeof continuitySession?.executor_owner === 'string'
+          ? continuitySession.executor_owner
+          : typeof runtimeInventory?.executor_owner === 'string'
+            ? runtimeInventory.executor_owner
+            : null,
+      artifact_surface:
+        continuityArtifacts?.artifact_surface
+        ?? continuitySession?.artifact_surface
+        ?? null,
+      repo_artifact_inventory: continuityArtifacts ?? null,
       endpoints: {
         progress: api.resources.progress,
         sessions: api.resources.sessions,
@@ -1685,7 +1793,16 @@ async function handleRequest(
       const ledgerPayload = buildSessionLedger(
         parsePositiveIntegerOptional(url.searchParams.get('limit')) ?? context.sessionsLimit,
       );
-      writeJson(response, 200, buildOplSessionsPayload(sessionsPayload, ledgerPayload, advertisedApi));
+      writeJson(
+        response,
+        200,
+        buildOplSessionsPayload(
+          sessionsPayload,
+          ledgerPayload,
+          advertisedApi,
+          await readOplProgressBrief(context, context.workspacePath),
+        ),
+      );
       return;
     }
 
