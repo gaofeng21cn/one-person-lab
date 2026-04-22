@@ -1658,6 +1658,64 @@ exit 1
   }
 });
 
+test('shell without arguments seeds the local OPL frontdesk/session entry lane', () => {
+  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "chat" ]; then
+  cat <<'EOF'
+OPL SHELL FRONTDOOR READY
+
+session_id: opl-shell-frontdoor
+EOF
+  exit 0
+fi
+if [ "$1" = "--resume" ] && [ "$2" = "opl-shell-frontdoor" ]; then
+  cat <<'EOF'
+OPL SHELL FRONTDOOR RESUMED
+EOF
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+
+  try {
+    const output = runCli(['shell'], {
+      OPL_HERMES_BIN: hermesPath,
+    });
+
+    assert.equal(output.product_entry.mode, 'session_seed');
+    assert.equal(output.product_entry.seed.session_id, 'opl-shell-frontdoor');
+    assert.equal(output.product_entry.resume.output, 'OPL SHELL FRONTDOOR RESUMED');
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('shell --resume resumes an existing Hermes session through the local shell lane', () => {
+  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "--resume" ] && [ "$2" = "sess-shell-resume-1" ]; then
+  cat <<'EOF'
+OPL SHELL RESUME OUTPUT
+EOF
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+
+  try {
+    const output = runCli(['shell', '--resume', 'sess-shell-resume-1'], {
+      OPL_HERMES_BIN: hermesPath,
+    });
+
+    assert.equal(output.product_entry.mode, 'resume');
+    assert.equal(output.product_entry.resume.session_id, 'sess-shell-resume-1');
+    assert.equal(output.product_entry.resume.output, 'OPL SHELL RESUME OUTPUT');
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('help advertises the shell command as the local interactive opl lane', () => {
   const output = runCli(['help']);
   const commands = output.help.commands.map((entry: { command: string }) => entry.command);

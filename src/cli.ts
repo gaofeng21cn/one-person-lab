@@ -174,6 +174,19 @@ type FrontDeskMcpCliInput = {
   sessionsLimit?: number;
 };
 
+type ShellCliInput =
+  | {
+      mode: 'frontdesk';
+    }
+  | {
+      mode: 'resume';
+      sessionId: string;
+    }
+  | {
+      mode: 'chat';
+      input: ProductEntryCliInput;
+    };
+
 type SessionRuntimeCliInput = {
   acp: boolean;
 };
@@ -375,6 +388,45 @@ function parseProductEntryArgs(
     goal: normalizedGoal.goal,
     preferredFamily: normalizedGoal.preferredFamily,
     dryRun,
+  };
+}
+
+function parseShellArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): ShellCliInput {
+  if (args.length === 0) {
+    return {
+      mode: 'frontdesk',
+    };
+  }
+
+  if (args[0] === '--resume') {
+    const sessionId = args[1];
+    if (!sessionId || sessionId.startsWith('--')) {
+      throw buildUsageError('shell --resume requires a session id.', spec, {
+        required: ['--resume <session_id>'],
+      });
+    }
+
+    if (args.length > 2) {
+      throw buildUsageError('shell --resume accepts only one session id.', spec, {
+        extra_args: args.slice(2),
+      });
+    }
+
+    return {
+      mode: 'resume',
+      sessionId,
+    };
+  }
+
+  return {
+    mode: 'chat',
+    input: {
+      ...parseProductEntryArgs(args, spec),
+      executor: 'hermes',
+    },
   };
 }
 
@@ -2216,21 +2268,26 @@ async function main() {
     },
     shell: {
       usage:
-        'opl shell <request...> [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--workspace-path <path>] [--dry-run]',
+        'opl shell [<request...> | --resume <session_id>] [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--workspace-path <path>] [--dry-run]',
       summary:
         'Enter the local OPL interactive shell lane, seeding Hermes with the routed request and continuing inside the same session boundary.',
       examples: [
+        'opl shell',
+        'opl shell --resume run_7e2a41a19175465f809c0a7f151278ee',
         'opl shell "@mas tighten the manuscript argument around invasive phenotype findings"',
         'opl shell "@rca build a defense-ready deck for next week" --workspace-path /Users/gaofeng/workspace/redcube-ai',
       ],
-      handler: (args) =>
-        runProductEntryChat(
-          {
-            ...parseProductEntryArgs(args, commandSpecs.shell),
-            executor: 'hermes',
-          },
-          getContracts(),
-        ),
+      handler: (args) => {
+        const parsed = parseShellArgs(args, commandSpecs.shell);
+        switch (parsed.mode) {
+          case 'frontdesk':
+            return runProductEntryFrontDesk(getContracts());
+          case 'resume':
+            return runProductEntryResume(parsed.sessionId);
+          case 'chat':
+            return runProductEntryChat(parsed.input, getContracts());
+        }
+      },
     },
     resume: {
       usage: 'opl session resume <session_id>',
