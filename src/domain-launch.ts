@@ -205,6 +205,9 @@ export async function launchDomainEntry(
               frontdesk_surface: manifestEntry.manifest?.frontdesk_surface ?? null,
               recommended_command: manifestEntry.manifest?.recommended_command ?? null,
               product_entry_readiness: manifestEntry.manifest?.product_entry_readiness ?? null,
+              session_continuity: manifestEntry.manifest?.session_continuity ?? null,
+              progress_projection: manifestEntry.manifest?.progress_projection ?? null,
+              artifact_inventory: manifestEntry.manifest?.artifact_inventory ?? null,
             }
           : null,
         action,
@@ -252,6 +255,9 @@ export async function launchDomainEntry(
             frontdesk_surface: manifestEntry.manifest?.frontdesk_surface ?? null,
             recommended_command: manifestEntry.manifest?.recommended_command ?? null,
             product_entry_readiness: manifestEntry.manifest?.product_entry_readiness ?? null,
+            session_continuity: manifestEntry.manifest?.session_continuity ?? null,
+            progress_projection: manifestEntry.manifest?.progress_projection ?? null,
+            artifact_inventory: manifestEntry.manifest?.artifact_inventory ?? null,
           }
         : null,
       action: executedAction,

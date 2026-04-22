@@ -292,6 +292,179 @@
       "phase_id": "phase_2_user_product_loop"
     }
   },
+  "session_continuity": {
+    "surface_kind": "session_continuity",
+    "summary": "MAS session continuity 指针已就绪；恢复入口与进度/工件真相仍以 study-local durable surfaces 为 authority。",
+    "domain_agent_id": "mas",
+    "runtime_owner": "upstream_hermes_agent",
+    "domain_owner": "med-autoscience",
+    "executor_owner": "med_deepscientist",
+    "status": "ready",
+    "progress_surface": {
+      "surface_kind": "study_progress",
+      "summary": "读取 study progress projection（只读投影，不替代 runtime/controller 真相）。",
+      "command": "uv run python -m med_autoscience.cli study-progress --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>",
+      "step_id": "inspect_progress",
+      "locator_fields": [
+        "profile_ref",
+        "study_id"
+      ]
+    },
+    "artifact_surface": {
+      "surface_kind": "study_runtime_status",
+      "summary": "读取 runtime 恢复合同与运行态，必要时决定接管/重启。",
+      "command": "uv run python -m med_autoscience.cli study-runtime-status --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>",
+      "step_id": "inspect_runtime_status",
+      "locator_fields": [
+        "profile_ref",
+        "study_id"
+      ]
+    },
+    "restore_surface": {
+      "surface_kind": "launch_study",
+      "summary": "按 study_id 启动或续跑当前研究运行（restore 指针）。",
+      "command": "uv run python -m med_autoscience.cli launch-study --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>",
+      "step_id": "continue_study",
+      "locator_fields": [
+        "profile_ref",
+        "study_id"
+      ]
+    },
+    "checkpoint_summary": {
+      "surface_kind": "checkpoint_summary",
+      "status": "in_progress",
+      "summary": "Phase 2 user product loop 仍在当前 blocker closeout tranche 内持续推进。",
+      "checkpoint_id": "phase_2_user_product_loop",
+      "lineage_ref": {
+        "ref_kind": "json_pointer",
+        "ref": "/repo_mainline/current_program_phase_id"
+      },
+      "verification_ref": {
+        "ref_kind": "repo_path",
+        "ref": "studies/<study_id>/artifacts/runtime_watch/latest.json"
+      }
+    },
+    "human_gate_ids": [
+      "study_physician_decision_gate",
+      "publication_release_gate"
+    ],
+    "domain_projection": {
+      "runtime_supervision_path_template": "studies/<study_id>/artifacts/runtime/runtime_supervision/latest.json",
+      "publication_eval_path_template": "studies/<study_id>/artifacts/publication_eval/latest.json",
+      "controller_decision_path_template": "studies/<study_id>/artifacts/controller_decisions/latest.json"
+    }
+  },
+  "progress_projection": {
+    "surface_kind": "progress_projection",
+    "headline": "继续收口 blocker 并把用户入口壳压实。",
+    "latest_update": "把用户 inbox 与持续进度回路收成稳定壳。",
+    "next_step": "uv run python -m med_autoscience.cli workspace-cockpit --profile /fixtures/med-autoscience/profile.local.toml",
+    "status_summary": "当前 product-entry 仍需继续收口 blocker，但 repo-owned progress truth 已可直接读取。",
+    "current_status": "runtime_ready_not_standalone_product",
+    "runtime_status": "ready",
+    "progress_surface": {
+      "surface_kind": "workspace_cockpit",
+      "summary": "读取 workspace attention queue 与监督在线态（progress 指针）。",
+      "command": "uv run python -m med_autoscience.cli workspace-cockpit --profile /fixtures/med-autoscience/profile.local.toml",
+      "step_id": "open_loop",
+      "locator_fields": [
+        "profile_ref"
+      ]
+    },
+    "artifact_surface": {
+      "surface_kind": "study_runtime_status",
+      "summary": "按 study_id 读取 runtime 恢复合同与运行态（artifact/restore 辅助指针）。",
+      "command": "uv run python -m med_autoscience.cli study-runtime-status --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>",
+      "step_id": "inspect_runtime_status",
+      "locator_fields": [
+        "profile_ref",
+        "study_id"
+      ]
+    },
+    "inspect_paths": [
+      "/fixtures/med-autoscience/workspace",
+      "/fixtures/med-autoscience/runtime",
+      "studies/<study_id>/artifacts"
+    ],
+    "attention_items": [
+      "继续把 workspace inbox、study progress 与恢复建议收成统一产品壳。"
+    ],
+    "human_gate_ids": [
+      "study_physician_decision_gate",
+      "publication_release_gate"
+    ],
+    "domain_projection": {
+      "recommended_restore_command": "uv run python -m med_autoscience.cli launch-study --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>",
+      "recommended_progress_command": "uv run python -m med_autoscience.cli study-progress --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>"
+    }
+  },
+  "artifact_inventory": {
+    "surface_kind": "artifact_inventory",
+    "workspace_path": "/fixtures/med-autoscience/workspace",
+    "summary": {
+      "deliverable_files_count": 0,
+      "supporting_files_count": 5,
+      "total_files_count": 5
+    },
+    "deliverable_files": [],
+    "supporting_files": [
+      {
+        "file_id": "task_intake_latest",
+        "label": "Study task intake (latest)",
+        "kind": "supporting",
+        "path": "studies/<study_id>/artifacts/controller/task_intake/latest.json",
+        "summary": "durable task intake truth (task_id/intent/entry_mode/return_surface_contract)."
+      },
+      {
+        "file_id": "runtime_watch_latest",
+        "label": "Runtime watch (latest)",
+        "kind": "supporting",
+        "path": "studies/<study_id>/artifacts/runtime_watch/latest.json",
+        "summary": "runtime watch event companion for supervision freshness."
+      },
+      {
+        "file_id": "runtime_supervision_latest",
+        "label": "Runtime supervision (latest)",
+        "kind": "supporting",
+        "path": "studies/<study_id>/artifacts/runtime/runtime_supervision/latest.json",
+        "summary": "runtime supervision truth owned by MAS runtime/progress durable surfaces."
+      },
+      {
+        "file_id": "publication_eval_latest",
+        "label": "Publication eval (latest)",
+        "kind": "supporting",
+        "path": "studies/<study_id>/artifacts/publication_eval/latest.json",
+        "summary": "publication eval truth (publishability/quality closure state)."
+      },
+      {
+        "file_id": "controller_decisions_latest",
+        "label": "Controller decisions (latest)",
+        "kind": "supporting",
+        "path": "studies/<study_id>/artifacts/controller_decisions/latest.json",
+        "summary": "controller decision truth (gate decisions / interventions / followthrough)."
+      }
+    ],
+    "progress_headline": "继续收口 blocker 并把用户入口壳压实。",
+    "artifact_surface": {
+      "surface_kind": "study_runtime_status",
+      "summary": "按 study_id 读取 runtime 恢复合同与运行态。",
+      "command": "uv run python -m med_autoscience.cli study-runtime-status --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>",
+      "step_id": "inspect_runtime_status",
+      "locator_fields": [
+        "profile_ref",
+        "study_id"
+      ]
+    },
+    "inspect_paths": [
+      "/fixtures/med-autoscience/workspace",
+      "studies/<study_id>/artifacts",
+      "/fixtures/med-autoscience/runtime"
+    ],
+    "domain_projection": {
+      "recommended_restore_command": "uv run python -m med_autoscience.cli launch-study --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>",
+      "recommended_progress_command": "uv run python -m med_autoscience.cli study-progress --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>"
+    }
+  },
   "product_entry_overview": {
     "surface_kind": "product_entry_overview",
     "summary": "继续收口 blocker 并把用户入口壳压实。",

@@ -73,6 +73,68 @@ export interface NormalizedTaskLifecycle {
   domain_projection: JsonRecord | null;
 }
 
+export interface NormalizedSessionContinuity {
+  surface_kind: 'session_continuity';
+  summary: string;
+  domain_agent_id: string;
+  runtime_owner: string;
+  domain_owner: string;
+  executor_owner: string;
+  status: string;
+  session_id: string | null;
+  run_id: string | null;
+  entry_surface: NormalizedTaskSurfaceDescriptor | null;
+  progress_surface: NormalizedTaskSurfaceDescriptor | null;
+  artifact_surface: NormalizedTaskSurfaceDescriptor | null;
+  restore_surface: NormalizedTaskSurfaceDescriptor | null;
+  checkpoint_summary: NormalizedCheckpointSummary | null;
+  human_gate_ids: string[];
+  domain_projection: JsonRecord | null;
+}
+
+export interface NormalizedProgressProjection {
+  surface_kind: 'progress_projection';
+  headline: string;
+  latest_update: string;
+  next_step: string;
+  status_summary: string;
+  session_id: string | null;
+  current_status: string | null;
+  runtime_status: string | null;
+  progress_surface: NormalizedTaskSurfaceDescriptor | null;
+  artifact_surface: NormalizedTaskSurfaceDescriptor | null;
+  inspect_paths: string[];
+  attention_items: string[];
+  human_gate_ids: string[];
+  domain_projection: JsonRecord | null;
+}
+
+export interface NormalizedArtifactFileDescriptor {
+  file_id: string;
+  label: string;
+  kind: 'deliverable' | 'supporting';
+  path: string;
+  summary: string;
+  ref: NormalizedSurfaceRef | null;
+}
+
+export interface NormalizedArtifactInventory {
+  surface_kind: 'artifact_inventory';
+  session_id: string | null;
+  workspace_path: string | null;
+  summary: {
+    deliverable_files_count: number;
+    supporting_files_count: number;
+    total_files_count: number;
+  };
+  deliverable_files: NormalizedArtifactFileDescriptor[];
+  supporting_files: NormalizedArtifactFileDescriptor[];
+  progress_headline: string | null;
+  artifact_surface: NormalizedTaskSurfaceDescriptor | null;
+  inspect_paths: string[];
+  domain_projection: JsonRecord | null;
+}
+
 export interface NormalizedSkillDescriptor {
   surface_kind: 'skill_descriptor';
   skill_id: string;
@@ -387,6 +449,9 @@ export interface NormalizedDomainManifest {
   } | null;
   runtime_inventory: NormalizedRuntimeInventory | null;
   task_lifecycle: NormalizedTaskLifecycle | null;
+  session_continuity: NormalizedSessionContinuity | null;
+  progress_projection: NormalizedProgressProjection | null;
+  artifact_inventory: NormalizedArtifactInventory | null;
   skill_catalog: NormalizedSkillCatalog | null;
   automation: NormalizedAutomationCatalog | null;
   remaining_gaps: string[];
@@ -562,13 +627,375 @@ function normalizeTaskLifecycle(value: unknown): NormalizedTaskLifecycle | null 
     task_id: requireString(value.task_id, 'task_lifecycle.task_id'),
     status: requireString(value.status, 'task_lifecycle.status'),
     summary: requireString(value.summary, 'task_lifecycle.summary'),
-    session_id: optionalString(value.session_id),
+    session_id:
+      optionalString(value.session_id)
+      ?? optionalString(value.grant_run_id)
+      ?? optionalString(value.entry_session_id),
     run_id: optionalString(value.run_id),
     progress_surface: normalizeTaskSurfaceDescriptor(value.progress_surface, 'task_lifecycle.progress_surface'),
     resume_surface: normalizeTaskSurfaceDescriptor(value.resume_surface, 'task_lifecycle.resume_surface'),
     checkpoint_summary: normalizeCheckpointSummary(value.checkpoint_summary, 'task_lifecycle.checkpoint_summary'),
     human_gate_ids: readStringList(value.human_gate_ids, 'task_lifecycle.human_gate_ids'),
     domain_projection: isRecord(value.domain_projection) ? value.domain_projection : null,
+  };
+}
+
+function buildInlineTaskSurfaceDescriptor(value: {
+  surface_kind: string;
+  summary: string;
+  command?: string | null;
+  ref?: NormalizedSurfaceRef | null;
+  step_id?: string | null;
+  locator_fields?: string[];
+} | null): NormalizedTaskSurfaceDescriptor | null {
+  if (!value) {
+    return null;
+  }
+
+  return {
+    surface_kind: value.surface_kind,
+    summary: value.summary,
+    command: value.command ?? null,
+    ref: value.ref ?? null,
+    step_id: value.step_id ?? null,
+    locator_fields: value.locator_fields ?? [],
+  };
+}
+
+function normalizeSessionContinuity(
+  value: unknown,
+  options: {
+    domainAgentId: string | null;
+    runtimeInventory: NormalizedRuntimeInventory | null;
+    taskLifecycle: NormalizedTaskLifecycle | null;
+    productEntryOverview: NormalizedDomainManifest['product_entry_overview'];
+    productEntryStatus: NormalizedDomainManifest['product_entry_status'];
+  },
+): NormalizedSessionContinuity | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  requireSurfaceKind(value.surface_kind, 'session_continuity', 'session_continuity');
+  const runtimeEntries = isRecord(value.runtime_entries) ? value.runtime_entries : null;
+  const runtimeRun = isRecord(runtimeEntries?.runtime_run)
+    ? buildInlineTaskSurfaceDescriptor({
+        surface_kind: requireString(runtimeEntries.runtime_run.surface_kind, 'session_continuity.runtime_entries.runtime_run.surface_kind'),
+        summary: requireString(runtimeEntries.runtime_run.summary, 'session_continuity.runtime_entries.runtime_run.summary'),
+        command: optionalString(runtimeEntries.runtime_run.command),
+      })
+    : null;
+  const runtimeResume = isRecord(runtimeEntries?.runtime_resume)
+    ? buildInlineTaskSurfaceDescriptor({
+        surface_kind: requireString(runtimeEntries.runtime_resume.surface_kind, 'session_continuity.runtime_entries.runtime_resume.surface_kind'),
+        summary: requireString(runtimeEntries.runtime_resume.summary, 'session_continuity.runtime_entries.runtime_resume.summary'),
+        command: optionalString(runtimeEntries.runtime_resume.command),
+      })
+    : null;
+  const descriptorCommand = optionalString(value.session_command_template);
+  const descriptorRestoreSurface = descriptorCommand
+    ? buildInlineTaskSurfaceDescriptor({
+        surface_kind: 'product_entry_session',
+        summary: 'Read the repo-owned same-session continuity surface.',
+        command: descriptorCommand,
+      })
+    : null;
+  const derivedProgressSurface =
+    buildInlineTaskSurfaceDescriptor({
+      surface_kind: options.productEntryOverview?.progress_surface?.surface_kind ?? 'progress_surface',
+      summary: 'Inspect the repo-owned runtime progress surface.',
+      command: options.productEntryOverview?.progress_surface?.command ?? null,
+      step_id: options.productEntryOverview?.progress_surface?.step_id ?? null,
+    })
+    ?? null;
+  const domainProjection =
+    isRecord(value.domain_projection)
+      ? value.domain_projection
+      : isRecord(value.repo_owned_truth)
+        ? value.repo_owned_truth
+        : isRecord(value.runtime_entries)
+          ? value.runtime_entries
+          : null;
+
+  return {
+    surface_kind: 'session_continuity',
+    summary:
+      optionalString(value.summary)
+      ?? options.productEntryStatus?.summary
+      ?? options.taskLifecycle?.summary
+      ?? 'Repo-owned session continuity is available.',
+    domain_agent_id: optionalString(value.domain_agent_id) ?? options.domainAgentId ?? 'unknown',
+    runtime_owner:
+      optionalString(value.runtime_owner)
+      ?? options.runtimeInventory?.runtime_owner
+      ?? 'unknown',
+    domain_owner:
+      optionalString(value.domain_owner)
+      ?? options.runtimeInventory?.domain_owner
+      ?? 'unknown',
+    executor_owner:
+      optionalString(value.executor_owner)
+      ?? options.runtimeInventory?.executor_owner
+      ?? 'unknown',
+    status:
+      optionalString(value.status)
+      ?? optionalString(value.lifecycle_stage)
+      ?? options.taskLifecycle?.status
+      ?? 'available',
+    session_id:
+      optionalString(value.session_id)
+      ?? optionalString(value.grant_run_id)
+      ?? optionalString(value.entry_session_id),
+    run_id: optionalString(value.run_id),
+    entry_surface:
+      normalizeTaskSurfaceDescriptor(value.entry_surface, 'session_continuity.entry_surface')
+      ?? runtimeRun,
+    progress_surface:
+      normalizeTaskSurfaceDescriptor(value.progress_surface, 'session_continuity.progress_surface')
+      ?? derivedProgressSurface,
+    artifact_surface:
+      normalizeTaskSurfaceDescriptor(value.artifact_surface, 'session_continuity.artifact_surface')
+      ?? descriptorRestoreSurface,
+    restore_surface:
+      normalizeTaskSurfaceDescriptor(value.restore_surface, 'session_continuity.restore_surface')
+      ?? runtimeResume
+      ?? descriptorRestoreSurface
+      ?? options.taskLifecycle?.resume_surface
+      ?? null,
+    checkpoint_summary: normalizeCheckpointSummary(
+      value.checkpoint_summary,
+      'session_continuity.checkpoint_summary',
+    )
+      ?? options.taskLifecycle?.checkpoint_summary
+      ?? null,
+    human_gate_ids:
+      readStringList(value.human_gate_ids, 'session_continuity.human_gate_ids').length > 0
+        ? readStringList(value.human_gate_ids, 'session_continuity.human_gate_ids')
+        : options.taskLifecycle?.human_gate_ids ?? [],
+    domain_projection: domainProjection,
+  };
+}
+
+function normalizeProgressProjection(
+  value: unknown,
+  options: {
+    runtimeInventory: NormalizedRuntimeInventory | null;
+    taskLifecycle: NormalizedTaskLifecycle | null;
+    productEntryOverview: NormalizedDomainManifest['product_entry_overview'];
+    productEntryStatus: NormalizedDomainManifest['product_entry_status'];
+  },
+): NormalizedProgressProjection | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  requireSurfaceKind(value.surface_kind, 'progress_projection', 'progress_projection');
+  const projection = isRecord(value.projection) ? value.projection : null;
+  const truthAnchors = isRecord(value.truth_anchors) ? value.truth_anchors : null;
+  const inspectProgressAnchor = isRecord(truthAnchors?.inspect_progress) ? truthAnchors.inspect_progress : null;
+  const progressSurface =
+    normalizeTaskSurfaceDescriptor(value.progress_surface, 'progress_projection.progress_surface')
+    ?? (
+      inspectProgressAnchor && optionalString(inspectProgressAnchor.ref_kind) === 'command'
+        ? buildInlineTaskSurfaceDescriptor({
+            surface_kind: options.productEntryOverview?.progress_surface?.surface_kind ?? 'progress_projection',
+            summary: 'Inspect the repo-owned runtime progress projection.',
+            command: optionalString(inspectProgressAnchor.ref),
+          })
+        : buildInlineTaskSurfaceDescriptor({
+            surface_kind: options.productEntryOverview?.progress_surface?.surface_kind ?? 'progress_projection',
+            summary: 'Inspect the repo-owned runtime progress projection.',
+            command: options.productEntryOverview?.progress_surface?.command ?? null,
+          })
+    );
+  const artifactSurface =
+    normalizeTaskSurfaceDescriptor(value.artifact_surface, 'progress_projection.artifact_surface')
+    ?? options.taskLifecycle?.resume_surface
+    ?? null;
+  const inspectPaths = readStringList(value.inspect_paths, 'progress_projection.inspect_paths');
+  if (inspectPaths.length === 0 && truthAnchors) {
+    for (const anchor of Object.values(truthAnchors)) {
+      if (isRecord(anchor) && optionalString(anchor.ref_kind) === 'path' && optionalString(anchor.ref)) {
+        inspectPaths.push(optionalString(anchor.ref)!);
+      }
+    }
+  }
+  const attentionItems = readStringList(value.attention_items, 'progress_projection.attention_items');
+  if (attentionItems.length === 0 && Array.isArray(projection?.current_blockers)) {
+    for (const item of projection.current_blockers) {
+      if (typeof item === 'string' && item.trim()) {
+        attentionItems.push(item.trim());
+      }
+    }
+  }
+  const projectionStatusNarration = isRecord(projection?.status_narration_contract)
+    ? projection.status_narration_contract
+    : null;
+
+  return {
+    surface_kind: 'progress_projection',
+    headline:
+      optionalString(value.headline)
+      ?? optionalString(projectionStatusNarration?.latest_update)
+      ?? optionalString(projection?.current_stage_summary)
+      ?? optionalString(value.summary)
+      ?? options.productEntryStatus?.summary
+      ?? 'Repo-owned runtime progress projection is available.',
+    latest_update:
+      optionalString(value.latest_update)
+      ?? optionalString(projectionStatusNarration?.latest_update)
+      ?? optionalString(projection?.current_stage_summary)
+      ?? optionalString(value.summary)
+      ?? options.productEntryStatus?.summary
+      ?? '当前还没有新的进度更新时间。',
+    next_step:
+      optionalString(value.next_step)
+      ?? optionalString(projection?.next_system_action)
+      ?? options.taskLifecycle?.resume_surface?.summary
+      ?? '继续查看当前 runtime progress。',
+    status_summary:
+      optionalString(value.status_summary)
+      ?? optionalString(projectionStatusNarration?.summary)
+      ?? optionalString(value.summary)
+      ?? options.productEntryStatus?.summary
+      ?? '当前还没有结构化状态摘要。',
+    session_id:
+      optionalString(value.session_id)
+      ?? optionalString(value.grant_run_id)
+      ?? optionalString(value.entry_session_id),
+    current_status:
+      optionalString(value.current_status)
+      ?? optionalString(projection?.current_stage)
+      ?? options.taskLifecycle?.status
+      ?? null,
+    runtime_status:
+      optionalString(value.runtime_status)
+      ?? options.runtimeInventory?.health_status
+      ?? null,
+    progress_surface: progressSurface,
+    artifact_surface: artifactSurface,
+    inspect_paths: inspectPaths,
+    attention_items: attentionItems,
+    human_gate_ids:
+      readStringList(value.human_gate_ids, 'progress_projection.human_gate_ids').length > 0
+        ? readStringList(value.human_gate_ids, 'progress_projection.human_gate_ids')
+        : options.taskLifecycle?.human_gate_ids ?? [],
+    domain_projection:
+      isRecord(value.domain_projection)
+      ? value.domain_projection
+      : projection,
+  };
+}
+
+function normalizeArtifactFileDescriptor(
+  value: unknown,
+  field: string,
+): NormalizedArtifactFileDescriptor | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const kind = requireString(value.kind, `${field}.kind`);
+  if (kind !== 'deliverable' && kind !== 'supporting') {
+    throw new Error(`${field}.kind must be deliverable or supporting.`);
+  }
+
+  return {
+    file_id: requireString(value.file_id, `${field}.file_id`),
+    label: requireString(value.label, `${field}.label`),
+    kind,
+    path: requireString(value.path, `${field}.path`),
+    summary: requireString(value.summary, `${field}.summary`),
+    ref: normalizeSurfaceRef(value.ref, `${field}.ref`),
+  };
+}
+
+function normalizeArtifactInventory(
+  value: unknown,
+  options: {
+    progressProjection: NormalizedProgressProjection | null;
+    sessionContinuity: NormalizedSessionContinuity | null;
+  },
+): NormalizedArtifactInventory | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  requireSurfaceKind(value.surface_kind, 'artifact_inventory', 'artifact_inventory');
+  const deliverableFiles = normalizeRecordList(value.deliverable_files, 'artifact_inventory.deliverable_files')
+    .map((entry, index) => normalizeArtifactFileDescriptor(entry, `artifact_inventory.deliverable_files[${index}]`))
+    .filter((entry): entry is NormalizedArtifactFileDescriptor => entry !== null);
+  const supportingFileCandidates: Array<NormalizedArtifactFileDescriptor | null> = [
+    ...normalizeRecordList(value.supporting_files, 'artifact_inventory.supporting_files').map(
+      (entry, index) =>
+        normalizeArtifactFileDescriptor(entry, `artifact_inventory.supporting_files[${index}]`),
+    ),
+    ...normalizeRecordList(value.artifacts, 'artifact_inventory.artifacts').map((entry, index) => {
+      if (!isRecord(entry)) {
+        return null;
+      }
+      const ref = isRecord(entry.ref) ? entry.ref : null;
+      return {
+        file_id: requireString(entry.artifact_kind, `artifact_inventory.artifacts[${index}].artifact_kind`),
+        label: requireString(entry.label, `artifact_inventory.artifacts[${index}].label`),
+        kind: 'supporting' as const,
+        path: optionalString(ref?.ref) ?? `artifact_inventory:${index}`,
+        summary: requireString(entry.label, `artifact_inventory.artifacts[${index}].label`),
+        ref: normalizeSurfaceRef(ref, `artifact_inventory.artifacts[${index}].ref`),
+      };
+    }),
+  ];
+  const supportingFiles = supportingFileCandidates.filter(
+    (entry): entry is NormalizedArtifactFileDescriptor => entry !== null,
+  );
+  const summary = isRecord(value.summary) ? value.summary : {};
+  const inspectPaths = readStringList(value.inspect_paths, 'artifact_inventory.inspect_paths');
+  if (inspectPaths.length === 0) {
+    for (const entry of [...deliverableFiles, ...supportingFiles]) {
+      if (entry.path) {
+        inspectPaths.push(entry.path);
+      }
+    }
+  }
+  const artifactSurface =
+    normalizeTaskSurfaceDescriptor(value.artifact_surface, 'artifact_inventory.artifact_surface')
+    ?? options.sessionContinuity?.artifact_surface
+    ?? options.sessionContinuity?.restore_surface
+    ?? null;
+
+  return {
+    surface_kind: 'artifact_inventory',
+    session_id: optionalString(value.session_id),
+    workspace_path: optionalString(value.workspace_path),
+    summary: {
+      deliverable_files_count:
+        typeof summary.deliverable_files_count === 'number'
+          ? summary.deliverable_files_count
+          : deliverableFiles.length,
+      supporting_files_count:
+        typeof summary.supporting_files_count === 'number'
+          ? summary.supporting_files_count
+          : supportingFiles.length,
+      total_files_count:
+        typeof summary.total_files_count === 'number'
+          ? summary.total_files_count
+          : deliverableFiles.length + supportingFiles.length,
+    },
+    deliverable_files: deliverableFiles,
+    supporting_files: supportingFiles,
+    progress_headline:
+      optionalString(value.progress_headline)
+      ?? options.progressProjection?.headline
+      ?? optionalString(value.summary)
+      ?? null,
+    artifact_surface: artifactSurface,
+    inspect_paths: inspectPaths,
+    domain_projection:
+      isRecord(value.domain_projection)
+      ? value.domain_projection
+      : isRecord(value.repo_owned_truth)
+        ? value.repo_owned_truth
+        : null,
   };
 }
 
@@ -997,8 +1424,6 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
   const productEntryQuickstart = normalizeProductEntryQuickstart(manifest.product_entry_quickstart);
   const runtimeInventory = normalizeRuntimeInventory(manifest.runtime_inventory);
   const taskLifecycle = normalizeTaskLifecycle(manifest.task_lifecycle);
-  const skillCatalog = normalizeSkillCatalog(manifest.skill_catalog);
-  const automation = normalizeAutomationCatalog(manifest.automation);
   const schemaRef = optionalString(manifest.schema_ref);
   const domainEntryContract = manifest.domain_entry_contract === undefined
     ? null
@@ -1012,6 +1437,45 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
   const rawFamilyOrchestration = isRecord(manifest.family_orchestration)
     ? manifest.family_orchestration
     : null;
+  const remainingGaps = readStringList(manifest.remaining_gaps);
+  const rawProductEntryStatus = isRecord(manifest.product_entry_status) ? manifest.product_entry_status : null;
+  const sessionContinuity = normalizeSessionContinuity(manifest.session_continuity, {
+    domainAgentId: domainEntryContract?.domain_agent_entry_spec?.agent_id ?? null,
+    runtimeInventory,
+    taskLifecycle,
+    productEntryOverview,
+    productEntryStatus: rawProductEntryStatus
+      ? {
+          summary: optionalString(rawProductEntryStatus.summary),
+          next_focus: readStringList(rawProductEntryStatus.next_focus),
+          remaining_gaps_count:
+            typeof rawProductEntryStatus.remaining_gaps_count === 'number'
+              ? rawProductEntryStatus.remaining_gaps_count
+              : remainingGaps.length,
+        }
+      : null,
+  });
+  const progressProjection = normalizeProgressProjection(manifest.progress_projection, {
+    runtimeInventory,
+    taskLifecycle,
+    productEntryOverview,
+    productEntryStatus: rawProductEntryStatus
+      ? {
+          summary: optionalString(rawProductEntryStatus.summary),
+          next_focus: readStringList(rawProductEntryStatus.next_focus),
+          remaining_gaps_count:
+            typeof rawProductEntryStatus.remaining_gaps_count === 'number'
+              ? rawProductEntryStatus.remaining_gaps_count
+              : remainingGaps.length,
+        }
+      : null,
+  });
+  const artifactInventory = normalizeArtifactInventory(manifest.artifact_inventory, {
+    progressProjection,
+    sessionContinuity,
+  });
+  const skillCatalog = normalizeSkillCatalog(manifest.skill_catalog);
+  const automation = normalizeAutomationCatalog(manifest.automation);
 
   if (recommendedShell && !productEntryShell[recommendedShell]) {
     throw new Error(`recommended_shell points at unknown shell key: ${recommendedShell}`);
@@ -1024,8 +1488,6 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
   ) {
     throw new Error('recommended_command must match the command declared by recommended_shell.');
   }
-  const remainingGaps = readStringList(manifest.remaining_gaps);
-  const rawProductEntryStatus = isRecord(manifest.product_entry_status) ? manifest.product_entry_status : null;
 
   return {
     surface_kind: optionalString(manifest.surface_kind) ?? 'product_entry_manifest',
@@ -1098,6 +1560,9 @@ function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest {
       : null,
     runtime_inventory: runtimeInventory,
     task_lifecycle: taskLifecycle,
+    session_continuity: sessionContinuity,
+    progress_projection: progressProjection,
+    artifact_inventory: artifactInventory,
     skill_catalog: skillCatalog,
     automation,
     remaining_gaps: remainingGaps,
