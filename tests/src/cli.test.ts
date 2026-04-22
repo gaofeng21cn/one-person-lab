@@ -3791,6 +3791,11 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(medautogrant.manifest.progress_projection.current_status, 'critique');
     assert.equal(medautogrant.manifest.artifact_inventory.surface_kind, 'artifact_inventory');
     assert.equal(medautogrant.manifest.artifact_inventory.supporting_files.length, 2);
+    assert.equal(medautogrant.manifest.runtime_control.surface_kind, 'runtime_control');
+    assert.equal(medautogrant.manifest.runtime_control.status, 'resumable');
+    assert.equal(medautogrant.manifest.runtime_control.restore_point, 'grant-run-nsfc-demo-001-baseline-001:critique');
+    assert.equal(medautogrant.manifest.runtime_control.control_surfaces.resume.surface_kind, 'runtime_resume');
+    assert.equal(medautogrant.manifest.runtime_control.control_surfaces.approval.surface_kind, 'grant_user_loop');
     assert.equal(medautogrant.manifest.skill_catalog.surface_kind, 'skill_catalog');
     assert.equal(medautogrant.manifest.skill_catalog.skills.length, 2);
     assert.equal(medautogrant.manifest.skill_catalog.supported_commands[1], 'grant-user-loop');
@@ -3843,6 +3848,11 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(medautoscience.manifest.progress_projection.runtime_status, 'ready');
     assert.equal(medautoscience.manifest.artifact_inventory.surface_kind, 'artifact_inventory');
     assert.equal(medautoscience.manifest.artifact_inventory.summary.supporting_files_count, 5);
+    assert.equal(medautoscience.manifest.runtime_control.surface_kind, 'runtime_control');
+    assert.equal(medautoscience.manifest.runtime_control.status, 'study_scoped');
+    assert.equal(medautoscience.manifest.runtime_control.restore_point, 'phase_2_user_product_loop');
+    assert.equal(medautoscience.manifest.runtime_control.control_surfaces.resume.surface_kind, 'launch_study');
+    assert.equal(medautoscience.manifest.runtime_control.control_surfaces.approval.surface_kind, 'study_progress');
     assert.equal(medautoscience.manifest.skill_catalog.surface_kind, 'skill_catalog');
     assert.equal(medautoscience.manifest.skill_catalog.supported_commands[0], 'product-frontdesk');
     assert.equal(medautoscience.manifest.skill_catalog.skills[1].skill_id, 'medautoscience_workspace_cockpit');
@@ -3890,6 +3900,11 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(redcube.manifest.session_continuity.status, 'repo_tracked');
     assert.equal(redcube.manifest.progress_projection.surface_kind, 'progress_projection');
     assert.equal(redcube.manifest.artifact_inventory.surface_kind, 'artifact_inventory');
+    assert.equal(redcube.manifest.runtime_control.surface_kind, 'runtime_control');
+    assert.equal(redcube.manifest.runtime_control.status, 'operator_review_requested');
+    assert.equal(redcube.manifest.runtime_control.restore_point, 'continuation_snapshot.latest_managed_run_id');
+    assert.equal(redcube.manifest.runtime_control.control_surfaces.resume.surface_kind, 'product_entry_session');
+    assert.equal(redcube.manifest.runtime_control.control_surfaces.approval.surface_kind, 'product_entry_session');
     assert.equal(redcube.manifest.skill_catalog.surface_kind, 'skill_catalog');
     assert.equal(redcube.manifest.skill_catalog.supported_commands[3], 'product-session');
     assert.equal(redcube.manifest.automation.surface_kind, 'automation');
@@ -4603,6 +4618,20 @@ test('project-progress promotes current MAS study into a paper-facing summary in
     assert.equal(payload.project_progress.workspace_inbox.summary.delivered_count, 1);
     assert.equal(payload.project_progress.workspace_inbox.summary.active_task_id, studyId);
     assert.equal(payload.project_progress.workspace_inbox.sections.running[0].task_id, studyId);
+    assert.equal(payload.project_progress.runtime_continuity.control.surface_kind, 'runtime_control');
+    assert.equal(payload.project_progress.runtime_continuity.control.restore_point, 'phase_2_user_product_loop');
+    assert.equal(
+      payload.project_progress.runtime_continuity.control.control_surfaces.resume.surface_kind,
+      'launch_study',
+    );
+    assert.equal(
+      payload.project_progress.recommended_commands.approval,
+      'uv run python -m med_autoscience.cli study-runtime-status --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id> --format json',
+    );
+    assert.equal(
+      payload.project_progress.recommended_commands.artifacts,
+      'uv run python -m med_autoscience.cli study-runtime-status --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id> --format json',
+    );
     assert.equal(
       payload.project_progress.workspace_inbox.sections.running[0].summary,
       '当前状态：论文可发表性监管；下一阶段：投稿打包就绪；当前卡点：当前论文交付目录与注册/合同约定不一致，需要先修正交付面。',
@@ -5170,6 +5199,7 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     assert.equal(output.handoff_bundle.domain_entry_parity.summary.aligned_projects_count, 1);
     assert.equal(output.handoff_bundle.domain_entry_parity.summary.runtime_inventory_ready_count, 1);
     assert.equal(output.handoff_bundle.domain_entry_parity.summary.task_lifecycle_ready_count, 1);
+    assert.equal(output.handoff_bundle.domain_entry_parity.summary.runtime_control_ready_count, 1);
     assert.equal(output.handoff_bundle.domain_entry_parity.summary.session_continuity_ready_count, 1);
     assert.equal(output.handoff_bundle.domain_entry_parity.summary.progress_projection_ready_count, 1);
     assert.equal(output.handoff_bundle.domain_entry_parity.summary.artifact_inventory_ready_count, 1);
@@ -5188,6 +5218,7 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     assert.equal(routedParity.ready_for_domain_handoff, true);
     assert.equal(routedParity.runtime_inventory_status, 'ready');
     assert.equal(routedParity.task_lifecycle_status, 'ready');
+    assert.equal(routedParity.runtime_control_status, 'ready');
     assert.equal(routedParity.session_continuity_status, 'ready');
     assert.equal(routedParity.progress_projection_status, 'ready');
     assert.equal(routedParity.artifact_inventory_status, 'ready');
@@ -5832,6 +5863,7 @@ exit 1
     assert.equal(sessionsPayload.sessions.surface_id, 'opl_sessions');
     assert.equal(sessionsPayload.sessions.items.length, 1);
     assert.equal(sessionsPayload.sessions.items[0].session_id, 'sess_web');
+    assert.equal(sessionsPayload.sessions.current_runtime_continuity, null);
 
     const oplProgressResponse = await fetch(`${baseUrl}/api/opl/progress?workspace_path=${encodeURIComponent(repoRoot)}`);
     const oplProgressPayload = await oplProgressResponse.json();
@@ -5841,6 +5873,9 @@ exit 1
     assert.equal(Array.isArray(oplProgressPayload.progress.task_cards.running), true);
     assert.equal(Array.isArray(oplProgressPayload.progress.task_cards.delivered), true);
     assert.equal(typeof oplProgressPayload.progress.recent_activity.preview, 'string');
+    assert.equal(oplProgressPayload.progress.repo_runtime_control, null);
+    assert.equal(oplProgressPayload.progress.approval_surface, null);
+    assert.equal(oplProgressPayload.progress.interrupt_surface, null);
 
     const oplArtifactsResponse = await fetch(`${baseUrl}/api/opl/artifacts?workspace_path=${encodeURIComponent(repoRoot)}`);
     const oplArtifactsPayload = await oplArtifactsResponse.json();
@@ -5848,6 +5883,8 @@ exit 1
     assert.equal(oplArtifactsPayload.artifacts.workspace_path, repoRoot);
     assert.equal(Array.isArray(oplArtifactsPayload.artifacts.deliverable_files), true);
     assert.equal(Array.isArray(oplArtifactsPayload.artifacts.supporting_files), true);
+    assert.equal(oplArtifactsPayload.artifacts.repo_runtime_control, null);
+    assert.equal(oplArtifactsPayload.artifacts.artifact_pickup_surface, null);
     assert.equal(
       oplArtifactsPayload.artifacts.summary.total_files_count,
       oplArtifactsPayload.artifacts.deliverable_files.length + oplArtifactsPayload.artifacts.supporting_files.length,

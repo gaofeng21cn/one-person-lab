@@ -88,6 +88,7 @@ export function buildDomainEntryParity(
     );
     const runtimeInventoryReady = Boolean(manifest?.runtime_inventory?.surface_kind === 'runtime_inventory');
     const taskLifecycleReady = Boolean(manifest?.task_lifecycle?.surface_kind === 'task_lifecycle');
+    const runtimeControlReady = Boolean(manifest?.runtime_control?.surface_kind === 'runtime_control');
     const sessionContinuityReady = Boolean(
       manifest?.session_continuity?.surface_kind === 'session_continuity',
     );
@@ -137,6 +138,9 @@ export function buildDomainEntryParity(
     }
     if (manifestResolved && !taskLifecycleReady) {
       gaps.push('manifest 尚未暴露 task_lifecycle surface。');
+    }
+    if (manifestResolved && !runtimeControlReady) {
+      gaps.push('manifest 尚未暴露 runtime_control surface。');
     }
     if (manifestResolved && !sessionContinuityReady) {
       gaps.push('manifest 尚未暴露 session_continuity surface。');
@@ -199,6 +203,9 @@ export function buildDomainEntryParity(
     if (manifestResolved && !taskLifecycleReady) {
       recommendedNextActions.push('补齐 task_lifecycle surface，让 continuation 和 checkpoint truth 不再散落在 repo 私有字段里。');
     }
+    if (manifestResolved && !runtimeControlReady) {
+      recommendedNextActions.push('补齐 runtime_control surface，让 OPL 能直接读取 resume / approval / interrupt / artifact pickup control loop truth。');
+    }
     if (manifestResolved && !sessionContinuityReady) {
       recommendedNextActions.push('补齐 session_continuity surface，让 OPL 能直接知道当前 session 属于哪个 domain agent、该怎么恢复。');
     }
@@ -231,6 +238,7 @@ export function buildDomainEntryParity(
       gateway_interaction_contract_status: gatewayInteractionContractReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
       runtime_inventory_status: runtimeInventoryReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
       task_lifecycle_status: taskLifecycleReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
+      runtime_control_status: runtimeControlReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
       session_continuity_status: sessionContinuityReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
       progress_projection_status: progressProjectionReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
       artifact_inventory_status: artifactInventoryReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
@@ -269,6 +277,8 @@ export function buildDomainEntryParity(
         normalizedProjects.filter((entry) => entry.runtime_inventory_status === 'ready').length,
       task_lifecycle_ready_count:
         normalizedProjects.filter((entry) => entry.task_lifecycle_status === 'ready').length,
+      runtime_control_ready_count:
+        normalizedProjects.filter((entry) => entry.runtime_control_status === 'ready').length,
       session_continuity_ready_count:
         normalizedProjects.filter((entry) => entry.session_continuity_status === 'ready').length,
       progress_projection_ready_count:
@@ -404,6 +414,19 @@ export function buildRecommendedEntrySurfaces(
         task_lifecycle_resume_surface_kind:
           entry.manifest?.task_lifecycle?.resume_surface?.surface_kind ?? null,
         task_lifecycle_human_gate_ids: entry.manifest?.task_lifecycle?.human_gate_ids ?? [],
+        runtime_control: entry.manifest?.runtime_control ?? null,
+        runtime_control_status: entry.manifest?.runtime_control ? 'ready' : 'missing',
+        runtime_control_loop_status: entry.manifest?.runtime_control?.status ?? null,
+        runtime_control_restore_point: entry.manifest?.runtime_control?.restore_point ?? null,
+        runtime_control_resume_command:
+          entry.manifest?.runtime_control?.control_surfaces.resume?.command ?? null,
+        runtime_control_approval_command:
+          entry.manifest?.runtime_control?.control_surfaces.approval?.command ?? null,
+        runtime_control_interrupt_command:
+          entry.manifest?.runtime_control?.control_surfaces.interrupt?.command ?? null,
+        runtime_control_artifact_pickup_command:
+          entry.manifest?.runtime_control?.control_surfaces.artifact_pickup?.command ?? null,
+        runtime_control_gate_ids: entry.manifest?.runtime_control?.control_gate_ids ?? [],
         session_continuity: entry.manifest?.session_continuity ?? null,
         session_continuity_status: entry.manifest?.session_continuity?.status ?? null,
         session_continuity_session_id: entry.manifest?.session_continuity?.session_id ?? null,
