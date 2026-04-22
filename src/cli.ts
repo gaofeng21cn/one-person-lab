@@ -3257,11 +3257,6 @@ async function main() {
 	      return;
 	    }
 
-	    if (!parsedInput.helpRequested && command && !RETIRED_COMMAND_PREFIXES.has(command)) {
-	      runCodexPassthroughHandled(inputTokens);
-	      return;
-	    }
-
 	    if (
 	      !parsedInput.helpRequested
 	      && command
