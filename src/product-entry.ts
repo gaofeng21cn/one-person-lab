@@ -33,7 +33,9 @@ import type {
 } from './types.ts';
 
 export type ProductEntryMode =
+  | 'frontdoor'
   | 'ask'
+  | 'exec'
   | 'chat'
   | 'session_seed'
   | 'resume'
@@ -55,6 +57,15 @@ export type ProductEntryCliInput = {
   workspacePath?: string;
   skills: string[];
   executor?: ProductEntryExecutor;
+};
+
+export type ProductEntryExecInput = {
+  dryRun: boolean;
+  prompt: string;
+  model?: string;
+  provider?: string;
+  workspacePath?: string;
+  json?: boolean;
 };
 
 export type PreparedProductEntryAsk = {
@@ -103,11 +114,18 @@ function buildContractsContext(contracts: GatewayContracts) {
   };
 }
 
-function resolveProductEntryAskExecutor(input: ProductEntryCliInput): ProductEntryExecutor {
+function resolveProductEntryExecutor(input: ProductEntryCliInput): ProductEntryExecutor {
   return input.executor ?? 'codex';
 }
 
 function normalizeHermesOutput(stdout: string, stderr = '') {
+  return [stdout, stderr]
+    .filter((chunk) => chunk.trim().length > 0)
+    .join('\n')
+    .trim();
+}
+
+function normalizeCodexOutput(stdout: string, stderr = '') {
   return [stdout, stderr]
     .filter((chunk) => chunk.trim().length > 0)
     .join('\n')
@@ -166,7 +184,7 @@ function buildPromptHeader(
     '',
     'OPL routing contract:',
     `- mode: ${mode}`,
-    `- requested_executor: ${resolveProductEntryAskExecutor(input)}`,
+    `- requested_executor: ${resolveProductEntryExecutor(input)}`,
     `- goal: ${input.goal}`,
     `- intent: ${input.intent}`,
     `- target: ${input.target}`,
@@ -212,7 +230,7 @@ function buildPromptHeader(
     '- If the request is routed, continue within that domain boundary. If it is unknown or ambiguous, help the user clarify without inventing admission or handoff readiness.',
   );
   lines.push(
-    '- Hermes is the runtime substrate for this session, not proof that domain authority or object truth moved into OPL.',
+    '- Runtime substrate follows the requested executor; Hermes is used only when explicitly selected.',
   );
   lines.push('');
   lines.push('User request:');
@@ -295,7 +313,8 @@ function buildFrontDeskPrompt(contracts: GatewayContracts) {
     'Hard boundary rules:',
     '- OPL is a gateway and federation shell. It is not the runtime truth owner of any domain.',
     '- Keep work inside admitted domain boundaries and family boundaries. Do not invent admission or hosted readiness.',
-    '- Hermes is the runtime substrate for this product-entry session.',
+    '- Codex is the default runtime substrate for this product-entry session.',
+    '- Hermes remains available only when explicitly requested.',
     '',
     'Task:',
     '- Greet briefly and keep momentum.',
@@ -303,10 +322,6 @@ function buildFrontDeskPrompt(contracts: GatewayContracts) {
     '- If the task maps to an admitted domain or family, continue with that boundary explicitly.',
     '- If it does not, explain the boundary honestly and help the user refine the request.',
   ].join('\n');
-}
-
-function buildFrontDeskSeedArgs(prompt: string) {
-  return ['chat', '--query', prompt, '--quiet', '--source', 'opl-session-seed'];
 }
 
 function buildPreviewPayload(
@@ -328,7 +343,7 @@ function buildPreviewPayload(
   });
 
   if (mode === 'ask') {
-    const executor = resolveProductEntryAskExecutor(input);
+    const executor = resolveProductEntryExecutor(input);
     return {
       version: 'g2',
       contracts_context: buildContractsContext(contracts),
@@ -362,6 +377,7 @@ function buildPreviewPayload(
     };
   }
 
+  const executor = resolveProductEntryExecutor(input);
   return {
     version: 'g2',
     contracts_context: buildContractsContext(contracts),
@@ -369,15 +385,31 @@ function buildPreviewPayload(
       entry_surface: 'opl_local_product_entry_shell',
       mode,
       dry_run: true,
+      executor_backend: executor,
       input: resolveInput,
       routing,
       boundary,
       ...handoffBundle,
       handoff_prompt_preview: handoffPrompt,
-      hermes: {
-        seed_command_preview: buildHermesCliPreview(buildChatSeedArgs(input, handoffPrompt)),
-        resume_command_preview: ['hermes', '--resume', '<session_id>'],
-      },
+      ...(executor === 'codex'
+        ? {
+            codex: {
+              command_preview: ['codex'],
+              resume_command_preview: ['codex', 'resume', '<thread_id>'],
+              one_shot_command_preview: buildCodexCliPreview(buildCodexExecArgs(handoffPrompt, {
+                cwd: input.workspacePath,
+                json: true,
+                model: input.model,
+                provider: input.provider,
+              })),
+            },
+          }
+        : {
+            hermes: {
+              seed_command_preview: buildHermesCliPreview(buildChatSeedArgs(input, handoffPrompt)),
+              resume_command_preview: ['hermes', '--resume', '<session_id>'],
+            },
+          }),
     },
   };
 }
@@ -415,7 +447,7 @@ export function runProductEntryAsk(
   }
 
   const preparedAsk = prepareProductEntryAsk(input, contracts);
-  const executor = resolveProductEntryAskExecutor(input);
+  const executor = resolveProductEntryExecutor(input);
 
   if (executor === 'codex') {
     const codexArgs = buildCodexExecArgs(preparedAsk.handoffPrompt, {
@@ -537,53 +569,84 @@ export function runProductEntryAsk(
   };
 }
 
-export function runProductEntryFrontDesk(
-  contracts: GatewayContracts,
-) {
-  const prompt = buildFrontDeskPrompt(contracts);
-  const seedArgs = buildFrontDeskSeedArgs(prompt);
-  const seedResult = runHermesCommand(seedArgs);
+export function runProductEntryExec(input: ProductEntryExecInput) {
+  const json = input.json ?? true;
+  const codexArgs = buildCodexExecArgs(input.prompt, {
+    cwd: input.workspacePath,
+    json,
+    model: input.model,
+    provider: input.provider,
+  });
 
-  assertHermesSuccess(
-    seedResult.exitCode,
-    'Hermes session seed failed inside OPL Product Entry.',
+  if (input.dryRun) {
+    return {
+      version: 'g2',
+      product_entry: {
+        entry_surface: 'opl_local_product_entry_shell',
+        mode: 'exec',
+        dry_run: true,
+        executor_backend: 'codex',
+        input: {
+          prompt: input.prompt,
+          workspace_path: input.workspacePath ?? null,
+          model: input.model ?? null,
+          provider: input.provider ?? null,
+        },
+        codex: {
+          command_preview: buildCodexCliPreview(codexArgs),
+        },
+      },
+    };
+  }
+
+  const codexResult = runCodexCommand(codexArgs);
+  assertCodexSuccess(
+    codexResult.exitCode,
+    'Codex exec command failed inside OPL Product Entry.',
     {
-      args: buildHermesCliPreview(seedArgs),
-      stdout: seedResult.stdout,
-      stderr: seedResult.stderr,
+      args: buildCodexCliPreview(codexArgs),
+      stdout: codexResult.stdout,
+      stderr: codexResult.stderr,
     },
   );
 
-  const parsed = parseHermesQuietChatOutput(seedResult.stdout);
-  recordSessionLedgerEntry({
-    sessionId: parsed.sessionId,
-    mode: 'session_seed',
-    sourceSurface: 'opl_local_product_entry_shell',
-    goalPreview: 'OPL session seed',
-  });
+  const parsed = json ? parseCodexExecOutput(codexResult.stdout) : null;
+  return {
+    version: 'g2',
+    product_entry: {
+      entry_surface: 'opl_local_product_entry_shell',
+      mode: 'exec',
+      dry_run: false,
+      executor_backend: 'codex',
+      input: {
+        prompt: input.prompt,
+        workspace_path: input.workspacePath ?? null,
+        model: input.model ?? null,
+        provider: input.provider ?? null,
+      },
+      codex: {
+        command_preview: buildCodexCliPreview(codexArgs),
+        session_id: parsed?.threadId ?? null,
+        response: parsed?.finalMessage ?? '',
+        raw_output: normalizeCodexOutput(codexResult.stdout, codexResult.stderr),
+        exit_code: codexResult.exitCode,
+      },
+    },
+  };
+}
 
+export function runProductEntryFrontDesk(
+  contracts: GatewayContracts,
+) {
   if (isInteractiveShell()) {
-    process.stdout.write(
-      [
-        'OPL session seed ready in Hermes.',
-        `Hermes session: ${parsed.sessionId}`,
-        parsed.response ? `Seed response: ${parsed.response}` : null,
-        '',
-      ]
-        .filter(Boolean)
-        .join('\n'),
-    );
-
-    const resumeResult = runHermesResume(parsed.sessionId, {
+    const frontDoorResult = runCodexCommand([], {
       inheritStdio: true,
     });
 
-    assertHermesSuccess(
-      resumeResult.exitCode,
-      'Hermes resume failed after OPL session seed.',
-      {
-        session_id: parsed.sessionId,
-      },
+    assertCodexSuccess(
+      frontDoorResult.exitCode,
+      'Codex frontdoor failed inside OPL Product Entry.',
+      {},
     );
 
     return {
@@ -591,37 +654,18 @@ export function runProductEntryFrontDesk(
     };
   }
 
-  const resumeResult = runHermesResume(parsed.sessionId);
-
-  assertHermesSuccess(
-    resumeResult.exitCode,
-    'Hermes resume failed after OPL session seed.',
-    {
-      session_id: parsed.sessionId,
-      stdout: resumeResult.stdout,
-      stderr: resumeResult.stderr,
-    },
-  );
-
   return {
     version: 'g2',
     contracts_context: buildContractsContext(contracts),
     product_entry: {
       entry_surface: 'opl_local_product_entry_shell',
-      mode: 'session_seed',
+      mode: 'frontdoor',
       interactive: false,
-      handoff_prompt_preview: prompt,
-      seed: {
-        command_preview: buildHermesCliPreview(seedArgs),
-        response: parsed.response,
-        session_id: parsed.sessionId,
-        exit_code: seedResult.exitCode,
-      },
-      resume: {
-        command_preview: buildHermesCliPreview(['--resume', parsed.sessionId]),
-        session_id: parsed.sessionId,
-        output: normalizeHermesOutput(resumeResult.stdout, resumeResult.stderr),
-        exit_code: resumeResult.exitCode,
+      executor_backend: 'codex',
+      handoff_prompt_preview: buildFrontDeskPrompt(contracts),
+      codex: {
+        command_preview: ['codex'],
+        resume_command_preview: ['codex', 'resume', '<thread_id>'],
       },
     },
   };
@@ -635,21 +679,67 @@ export function runProductEntryChat(
     return buildPreviewPayload('chat', input, contracts);
   }
 
-  if (input.executor && input.executor !== 'hermes') {
-    throw new GatewayContractError(
-      'cli_usage_error',
-      'chat currently supports the Hermes interactive lane only.',
-      {
-        executor: input.executor,
-      },
-      2,
-    );
-  }
-
+  const executor = resolveProductEntryExecutor(input);
   const resolveInput = buildResolveRequestInput(input);
   const routing = resolveRequestSurface(resolveInput, contracts);
   const boundary = explainDomainBoundary(resolveInput, contracts);
   const handoffPrompt = buildPromptHeader('chat', input, routing, boundary, contracts);
+
+  if (executor === 'codex') {
+    const handoffBundle = buildHandoffBundle(contracts, {
+      mode: 'chat',
+      goal: input.goal,
+      intent: input.intent,
+      workspacePath: input.workspacePath,
+      routing,
+      boundary,
+    });
+
+    if (isInteractiveShell()) {
+      const frontDoorResult = runCodexCommand([handoffPrompt], {
+        inheritStdio: true,
+      });
+      assertCodexSuccess(
+        frontDoorResult.exitCode,
+        'Codex frontdoor failed after OPL Product Entry chat routing.',
+        {
+          routing_status: routing.status,
+        },
+      );
+
+      return {
+        __handled: true as const,
+      };
+    }
+
+    return {
+      version: 'g2',
+      contracts_context: buildContractsContext(contracts),
+      product_entry: {
+        entry_surface: 'opl_local_product_entry_shell',
+        mode: 'chat',
+        dry_run: false,
+        interactive: false,
+        executor_backend: 'codex',
+        input: resolveInput,
+        routing,
+        boundary,
+        ...handoffBundle,
+        handoff_prompt_preview: handoffPrompt,
+        codex: {
+          command_preview: ['codex'],
+          resume_command_preview: ['codex', 'resume', '<thread_id>'],
+          one_shot_command_preview: buildCodexCliPreview(buildCodexExecArgs(handoffPrompt, {
+            cwd: input.workspacePath,
+            json: true,
+            model: input.model,
+            provider: input.provider,
+          })),
+        },
+      },
+    };
+  }
+
   const seedArgs = buildChatSeedArgs(input, handoffPrompt);
   const seedResult = runHermesCommand(seedArgs);
 
@@ -733,6 +823,7 @@ export function runProductEntryChat(
       mode: 'chat',
       dry_run: false,
       interactive: false,
+      executor_backend: 'hermes',
       input: resolveInput,
       routing,
       boundary,
@@ -754,7 +845,64 @@ export function runProductEntryChat(
   };
 }
 
-export function runProductEntryResume(sessionId: string) {
+export function runProductEntryResume(
+  sessionId: string,
+  executor: ProductEntryExecutor = 'codex',
+) {
+  if (executor === 'codex') {
+    const codexArgs = ['resume', sessionId];
+    if (isInteractiveShell()) {
+      const resumeResult = runCodexCommand(codexArgs, {
+        inheritStdio: true,
+      });
+
+      assertCodexSuccess(
+        resumeResult.exitCode,
+        'Codex resume failed inside OPL Product Entry.',
+        {
+          session_id: sessionId,
+        },
+      );
+
+      return {
+        __handled: true as const,
+      };
+    }
+
+    const resumeResult = runCodexCommand(codexArgs);
+    assertCodexSuccess(
+      resumeResult.exitCode,
+      'Codex resume failed inside OPL Product Entry.',
+      {
+        session_id: sessionId,
+        stdout: resumeResult.stdout,
+        stderr: resumeResult.stderr,
+      },
+    );
+
+    recordSessionLedgerEntry({
+      sessionId,
+      mode: 'resume',
+      sourceSurface: 'opl_local_product_entry_shell',
+    });
+
+    return {
+      version: 'g2',
+      product_entry: {
+        entry_surface: 'opl_local_product_entry_shell',
+        mode: 'resume',
+        interactive: false,
+        executor_backend: 'codex',
+        resume: {
+          command_preview: ['codex', ...codexArgs],
+          session_id: sessionId,
+          output: normalizeCodexOutput(resumeResult.stdout, resumeResult.stderr),
+          exit_code: resumeResult.exitCode,
+        },
+      },
+    };
+  }
+
   if (isInteractiveShell()) {
     const resumeResult = runHermesResume(sessionId, {
       inheritStdio: true,
@@ -796,6 +944,7 @@ export function runProductEntryResume(sessionId: string) {
       entry_surface: 'opl_local_product_entry_shell',
       mode: 'resume',
       interactive: false,
+      executor_backend: 'hermes',
       resume: {
         command_preview: buildHermesCliPreview(['--resume', sessionId]),
         session_id: sessionId,
