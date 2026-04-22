@@ -2642,6 +2642,9 @@ if [ "$1" = "exec" ]; then
   cat <<'EOF'
 {"type":"thread.started","thread_id":"opl-acp-thread-1"}
 {"type":"turn.started"}
+EOF
+  sleep 1
+  cat <<'EOF'
 {"item":{"type":"agent_message","text":"ACP HELLO FROM CODEX"}}
 {"type":"turn.completed"}
 EOF
@@ -2701,6 +2704,19 @@ exit 1
 
     writeJsonLine(child.stdin, {
       jsonrpc: '2.0',
+      id: 22,
+      method: 'session/set_mode',
+      params: {
+        sessionId: bridgeSessionId,
+        modeId: 'default',
+      },
+    });
+    const setModeResponse = await readJsonLine(child.stdout);
+    assert.equal(setModeResponse.id, 22);
+    assert.equal((setModeResponse.result as { modes: { currentModeId: string } }).modes.currentModeId, 'default');
+
+    writeJsonLine(child.stdin, {
+      jsonrpc: '2.0',
       id: 3,
       method: 'session/prompt',
       params: {
@@ -2723,6 +2739,18 @@ exit 1
     assert.equal(promptResponse.result.stopReason, 'end_turn');
     assert.equal(
       notifications.some((entry) => entry.method === 'session/update'),
+      true,
+    );
+    assert.equal(
+      notifications.some((entry) => JSON.stringify(entry).includes('OPL ACP 正在通过 Codex 默认运行时处理当前会话请求。')),
+      true,
+    );
+    assert.equal(
+      notifications.some((entry) => JSON.stringify(entry).includes('Codex 已接管任务，会话 opl-acp-thread-1 已创建。')),
+      true,
+    );
+    assert.equal(
+      notifications.some((entry) => JSON.stringify(entry).includes('Codex 正在读取上下文并规划下一步。')),
       true,
     );
 
