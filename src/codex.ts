@@ -17,6 +17,10 @@ export interface CodexCommandResult {
   stderr: string;
 }
 
+export interface CodexPassthroughResult {
+  exitCode: number;
+}
+
 export interface CodexCommandOptions {
   inheritStdio?: boolean;
 }
@@ -153,6 +157,41 @@ export function runCodexCommand(
     exitCode: result.status ?? 1,
     stdout: result.stdout ?? '',
     stderr: result.stderr ?? '',
+  };
+}
+
+export function runCodexPassthrough(args: string[]): CodexPassthroughResult {
+  const codexBinary = resolveCodexBinary();
+
+  if (!codexBinary) {
+    throw new GatewayContractError(
+      'surface_not_found',
+      'Codex binary is required for OPL Codex passthrough execution.',
+      {
+        env_var: 'OPL_CODEX_BIN',
+      },
+    );
+  }
+
+  const result = spawnSync(codexBinary.path, args, {
+    stdio: 'inherit',
+    env: process.env,
+  });
+
+  if (result.error) {
+    throw new GatewayContractError(
+      'codex_command_failed',
+      `Failed to launch Codex for: codex ${args.join(' ')}`,
+      {
+        codex_binary: codexBinary.path,
+        args,
+        cause: result.error.message,
+      },
+    );
+  }
+
+  return {
+    exitCode: result.status ?? 1,
   };
 }
 

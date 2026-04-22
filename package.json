@@ -16,9 +16,10 @@
     "./skill-catalog": "./dist/skill-catalog.js"
   },
   "bin": {
-    "opl": "./dist/cli.js"
+    "opl": "./bin/opl"
   },
   "files": [
+    "bin/opl",
     "dist",
     "contracts/opl-gateway"
   ],
