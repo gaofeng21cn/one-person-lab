@@ -2658,6 +2658,302 @@ test('session runtime --acp exposes a callable stdio bridge entry for external s
   }
 });
 
+test('session runtime --acp supports ACP JSON-RPC lifecycle with prompt streaming and pollable session updates', async () => {
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$1" = "exec" ]; then
+  cat <<'EOF'
+{"type":"thread.started","thread_id":"opl-acp-thread-1"}
+{"type":"turn.started"}
+{"item":{"type":"agent_message","text":"ACP HELLO FROM CODEX"}}
+{"type":"turn.completed"}
+EOF
+  exit 0
+fi
+echo "unexpected fake-codex args: $*" >&2
+exit 1
+`);
+
+  const child = spawn(
+    process.execPath,
+    [
+      '--experimental-strip-types',
+      cliPath,
+      'session',
+      'runtime',
+      '--acp',
+    ],
+    {
+      cwd: repoRoot,
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: '1',
+        OPL_CODEX_BIN: codexPath,
+      },
+      stdio: ['pipe', 'pipe', 'pipe'],
+    },
+  );
+
+  try {
+    writeJsonLine(child.stdin, {
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'initialize',
+      params: {
+        protocolVersion: 1,
+        clientCapabilities: {},
+      },
+    });
+    const initialize = await readJsonLine(child.stdout);
+    assert.equal(initialize.jsonrpc, '2.0');
+    assert.equal(initialize.id, 1);
+    assert.equal((initialize.result as { protocolVersion: number }).protocolVersion, 1);
+
+    writeJsonLine(child.stdin, {
+      jsonrpc: '2.0',
+      id: 2,
+      method: 'session/new',
+      params: {
+        cwd: repoRoot,
+        mcpServers: [],
+      },
+    });
+    const sessionCreated = await readJsonLine(child.stdout);
+    const bridgeSessionId = (sessionCreated.result as { sessionId: string }).sessionId;
+    assert.match(bridgeSessionId, /^opl-acp-session-/);
+
+    writeJsonLine(child.stdin, {
+      jsonrpc: '2.0',
+      id: 3,
+      method: 'session/prompt',
+      params: {
+        sessionId: bridgeSessionId,
+        prompt: [{ type: 'text', text: 'Say hello from the OPL ACP bridge.' }],
+      },
+    });
+
+    const notifications: Array<Record<string, unknown>> = [];
+    let promptResponse: Record<string, unknown> | null = null;
+    while (!promptResponse) {
+      const message = await readJsonLine(child.stdout);
+      if (message.id === 3) {
+        promptResponse = message;
+        break;
+      }
+      notifications.push(message);
+    }
+
+    assert.equal(promptResponse.result.stopReason, 'end_turn');
+    assert.equal(
+      notifications.some((entry) => entry.method === 'session/update'),
+      true,
+    );
+
+    writeJsonLine(child.stdin, {
+      id: 'bridge-updates-1',
+      command: 'session_updates',
+      payload: {
+        session_id: bridgeSessionId,
+      },
+    });
+    const updates = await readJsonLine(child.stdout);
+    assert.equal(updates.ok, true);
+    assert.equal((updates.result as { session_id: string }).session_id, bridgeSessionId);
+    assert.equal(
+      ((updates.result as { updates: Array<{ text: string }> }).updates).some((entry) =>
+        /ACP HELLO FROM CODEX/.test(entry.text)
+      ),
+      true,
+    );
+
+    writeJsonLine(child.stdin, {
+      id: 'bridge-list-1',
+      command: 'session_list',
+      payload: {
+        limit: 5,
+      },
+    });
+    const listed = await readJsonLine(child.stdout);
+    assert.equal(listed.ok, true);
+    assert.equal(
+      ((listed.result as { items: Array<{ session_id: string }> }).items).some((entry) =>
+        entry.session_id === bridgeSessionId
+      ),
+      true,
+    );
+  } finally {
+    child.stdin.end();
+    child.kill();
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('session runtime --acp loads existing bridge sessions and routes follow-up prompts through codex exec resume', async () => {
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$1" = "exec" ] && [ "\${2:-}" = "resume" ]; then
+  cat <<'EOF'
+{"type":"thread.started","thread_id":"opl-acp-thread-1"}
+{"type":"turn.started"}
+{"item":{"type":"agent_message","text":"ACP RESUME TURN"}}
+{"type":"turn.completed"}
+EOF
+  exit 0
+fi
+if [ "$1" = "exec" ]; then
+  cat <<'EOF'
+{"type":"thread.started","thread_id":"opl-acp-thread-1"}
+{"type":"turn.started"}
+{"item":{"type":"agent_message","text":"ACP INITIAL TURN"}}
+{"type":"turn.completed"}
+EOF
+  exit 0
+fi
+echo "unexpected fake-codex args: $*" >&2
+exit 1
+`);
+
+  const child = spawn(
+    process.execPath,
+    [
+      '--experimental-strip-types',
+      cliPath,
+      'session',
+      'runtime',
+      '--acp',
+    ],
+    {
+      cwd: repoRoot,
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: '1',
+        OPL_CODEX_BIN: codexPath,
+      },
+      stdio: ['pipe', 'pipe', 'pipe'],
+    },
+  );
+
+  try {
+    writeJsonLine(child.stdin, {
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'initialize',
+      params: {
+        protocolVersion: 1,
+        clientCapabilities: {},
+      },
+    });
+    await readJsonLine(child.stdout);
+
+    writeJsonLine(child.stdin, {
+      jsonrpc: '2.0',
+      id: 2,
+      method: 'session/new',
+      params: {
+        cwd: repoRoot,
+      },
+    });
+    const created = await readJsonLine(child.stdout);
+    const bridgeSessionId = (created.result as { sessionId: string }).sessionId;
+
+    writeJsonLine(child.stdin, {
+      jsonrpc: '2.0',
+      id: 3,
+      method: 'session/prompt',
+      params: {
+        sessionId: bridgeSessionId,
+        prompt: [{ type: 'text', text: 'First turn' }],
+      },
+    });
+    while (true) {
+      const message = await readJsonLine(child.stdout);
+      if (message.id === 3) {
+        break;
+      }
+    }
+
+    writeJsonLine(child.stdin, {
+      jsonrpc: '2.0',
+      id: 4,
+      method: 'session/load',
+      params: {
+        sessionId: bridgeSessionId,
+        cwd: repoRoot,
+      },
+    });
+    const loaded = await readJsonLine(child.stdout);
+    assert.equal((loaded.result as { sessionId: string }).sessionId, bridgeSessionId);
+
+    writeJsonLine(child.stdin, {
+      jsonrpc: '2.0',
+      id: 5,
+      method: 'session/prompt',
+      params: {
+        sessionId: bridgeSessionId,
+        prompt: [{ type: 'text', text: 'Follow-up turn' }],
+      },
+    });
+
+    let resumedPrompt: Record<string, unknown> | null = null;
+    const resumedNotifications: Array<Record<string, unknown>> = [];
+    while (!resumedPrompt) {
+      const message = await readJsonLine(child.stdout);
+      if (message.id === 5) {
+        resumedPrompt = message;
+        break;
+      }
+      resumedNotifications.push(message);
+    }
+
+    assert.equal(resumedPrompt.result.stopReason, 'end_turn');
+    assert.equal(
+      resumedNotifications.some((entry) =>
+        JSON.stringify(entry).includes('ACP RESUME TURN')
+      ),
+      true,
+    );
+  } finally {
+    child.stdin.end();
+    child.kill();
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('session runtime --acp fails closed for unsupported ACP methods', async () => {
+  const child = spawn(
+    process.execPath,
+    [
+      '--experimental-strip-types',
+      cliPath,
+      'session',
+      'runtime',
+      '--acp',
+    ],
+    {
+      cwd: repoRoot,
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: '1',
+      },
+      stdio: ['pipe', 'pipe', 'pipe'],
+    },
+  );
+
+  try {
+    writeJsonLine(child.stdin, {
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'unknown/method',
+      params: {},
+    });
+    const response = await readJsonLine(child.stdout);
+    assert.equal(response.jsonrpc, '2.0');
+    assert.equal(response.id, 1);
+    assert.equal((response.error as { code: number }).code, -32601);
+  } finally {
+    child.stdin.end();
+    child.kill();
+  }
+});
+
 test('mcp-stdio defaults to the current shell protocol version when the client does not negotiate one', async () => {
   const fakeApi = await startFakeOplApiServer();
 
