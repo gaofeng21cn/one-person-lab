@@ -98,19 +98,6 @@ const PRODUCT_ENTRY_AGENT_HANDLE_MAP = {
   },
 } as const;
 
-const OPL_PRODUCT_ENTRY_OPTIONS = new Set([
-  '--dry-run',
-  '--goal',
-  '--intent',
-  '--target',
-  '--preferred-family',
-  '--request-kind',
-  '--workspace-path',
-  '--skills',
-  '--executor',
-  '--provider',
-]);
-
 const CODEX_COMMAND_HELP_PASSTHROUGH = new Set([
   'exec',
   'resume',
@@ -197,20 +184,6 @@ type ResumeCliInput = {
   executor: ProductEntryExecutor;
 };
 
-type ShellCliInput =
-  | {
-      mode: 'frontdesk';
-    }
-  | {
-      mode: 'resume';
-      sessionId: string;
-      executor: ProductEntryExecutor;
-    }
-  | {
-      mode: 'chat';
-      input: ProductEntryCliInput;
-    };
-
 type SessionRuntimeCliInput = {
   acp: boolean;
 };
@@ -255,6 +228,22 @@ function buildUsageError(
   });
 }
 
+function buildRetiredCommandError(
+  command: string,
+  replacement: string,
+  spec?: Pick<CommandSpec, 'usage' | 'examples'>,
+) {
+  return buildUsageError(
+    `Command "${command}" has been retired. ${replacement}`,
+    spec,
+    {
+      command,
+      retired: true,
+      replacement,
+    },
+  );
+}
+
 function parseExecutorValue(
   option: string,
   value: string,
@@ -276,33 +265,6 @@ function runCodexPassthroughHandled(args: string[]) {
   return {
     __handled: true as const,
   };
-}
-
-function firstPositionalArg(args: string[]) {
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-    if (!token.startsWith('--')) {
-      return token;
-    }
-
-    if (OPL_PRODUCT_ENTRY_OPTIONS.has(token)) {
-      index += 1;
-    }
-  }
-
-  return null;
-}
-
-function hasOplProductEntryOption(args: string[]) {
-  return args.some((token) => OPL_PRODUCT_ENTRY_OPTIONS.has(token));
-}
-
-function startsWithExplicitAgentHandle(args: string[]) {
-  return firstPositionalArg(args)?.startsWith('@') ?? false;
-}
-
-function shouldUseOplProductEntry(args: string[]) {
-  return hasOplProductEntryOption(args) || startsWithExplicitAgentHandle(args);
 }
 
 function hasExplicitHermesExecutor(args: string[]) {
@@ -461,7 +423,7 @@ function parseProductEntryArgs(
 
   if (!goal) {
     throw buildUsageError(
-      'ask and chat require a plain-language request, either as positional text or via --goal.',
+      'Product-entry requests require a plain-language request, either as positional text or via --goal.',
       spec,
       {
         required: ['<request...> or --goal <text>'],
@@ -476,57 +438,6 @@ function parseProductEntryArgs(
     goal: normalizedGoal.goal,
     preferredFamily: normalizedGoal.preferredFamily,
     dryRun,
-  };
-}
-
-function parseShellArgs(
-  args: string[],
-  spec: Pick<CommandSpec, 'usage' | 'examples'>,
-): ShellCliInput {
-  if (args.length === 0) {
-    return {
-      mode: 'frontdesk',
-    };
-  }
-
-  if (args[0] === '--resume') {
-    const sessionId = args[1];
-    if (!sessionId || sessionId.startsWith('--')) {
-      throw buildUsageError('shell --resume requires a session id.', spec, {
-        required: ['--resume <session_id>'],
-      });
-    }
-
-    let executor: ProductEntryExecutor = 'codex';
-    for (let index = 2; index < args.length; index += 1) {
-      const token = args[index];
-      if (token !== '--executor') {
-        throw buildUsageError('shell --resume accepts only --executor after the session id.', spec, {
-          token,
-        });
-      }
-
-      const value = args[index + 1];
-      if (!value || value.startsWith('--')) {
-        throw buildUsageError('shell --resume requires a value for --executor.', spec, {
-          option: '--executor',
-        });
-      }
-
-      executor = parseExecutorValue(token, value, spec);
-      index += 1;
-    }
-
-    return {
-      mode: 'resume',
-      sessionId,
-      executor,
-    };
-  }
-
-  return {
-    mode: 'chat',
-    input: parseProductEntryArgs(args, spec),
   };
 }
 
@@ -1480,7 +1391,20 @@ const COMMAND_GROUP_SUMMARIES: Record<string, string> = {
 
 const RETIRED_COMMAND_PREFIXES = new Set([
   'frontdesk',
+  'ask',
+  'chat',
+  'shell',
 ]);
+
+const EXPLICIT_AGENT_HANDLE_SPEC = {
+  usage:
+    'opl @mas|@mag|@rca <request...> [--executor <codex|hermes>] [--workspace-path <path>] [--dry-run]',
+  examples: [
+    'opl @mas tighten the manuscript argument around invasive phenotype findings --dry-run',
+    'opl @rca build a defense-ready deck for next week',
+    'opl @mag draft a grant revision response pack --executor hermes',
+  ],
+} satisfies Pick<CommandSpec, 'usage' | 'examples'>;
 
 function cloneCommandSpec(
   base: CommandSpec,
@@ -1585,10 +1509,10 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl status dashboard --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
         'opl web --host 127.0.0.1 --port 8787 --base-path /pilot/opl --path /Users/gaofeng/workspace/one-person-lab',
         'opl "Plan a medical grant proposal revision loop."',
-        'opl ask "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck --workspace-path /Users/gaofeng/workspace/redcube-ai',
         'opl exec "Plan a medical grant proposal revision loop."',
         'opl resume --last',
-        'opl chat "Plan a medical grant proposal revision loop." --workspace-path /Users/gaofeng/workspace/med-autogrant',
+        'opl @rca build a defense-ready slide deck for a thesis committee.',
+        'opl @mag draft a grant revision response pack --dry-run',
         'opl contract validate',
         'opl domain resolve-request --intent presentation_delivery --target deliverable --goal "Prepare a defense-ready slide deck."',
         'opl domain explain-boundary --intent create --target deliverable --goal "Prepare a xiaohongshu campaign pack." --preferred-family xiaohongshu',
@@ -2358,19 +2282,17 @@ async function main() {
 	      usage:
 	        'opl ask <request...> [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--executor <codex|hermes>] [--workspace-path <path>] [--dry-run]',
 	      summary:
-	        'Compatibility one-shot entry. Plain requests pass through to codex exec; explicit OPL routing options use the product-entry layer.',
+	        'Retired compatibility command.',
 	      examples: [
-	        'opl ask "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck',
-	        'opl ask "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck --executor hermes',
-	        'opl ask --goal "Create a xiaohongshu campaign pack for a lab update." --preferred-family xiaohongshu --dry-run',
-	        'opl ask "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck --workspace-path /Users/gaofeng/workspace/redcube-ai',
+	        'opl exec "Summarize current workspace status."',
+	        'opl @mas tighten the manuscript argument around invasive phenotype findings --dry-run',
+	        'opl @rca build a defense-ready deck for next week',
 	      ],
-	      handler: (args) => {
-	        if (!shouldUseOplProductEntry(args)) {
-	          return runCodexPassthroughHandled(['exec', ...args]);
-	        }
-
-	        return runProductEntryAsk(parseProductEntryArgs(args, commandSpecs.ask), getContracts());
+	      handler: () => {
+	        throw buildRetiredCommandError(
+	          'opl ask',
+	          'Use `opl exec <request...>` for raw Codex one-shot requests, or explicit domain handles such as `opl @mas ...`, `opl @mag ...`, or `opl @rca ...`.'
+	        );
 	      },
 	    },
 	    exec: {
@@ -2389,56 +2311,36 @@ async function main() {
 	      usage:
 	        'opl chat <request...> [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--executor <codex|hermes>] [--workspace-path <path>] [--dry-run]',
 	      summary:
-	        'Compatibility interactive alias. Plain requests pass through to codex; explicit OPL routing options use the product-entry layer.',
+	        'Retired compatibility command.',
 	      examples: [
-	        'opl chat "Prepare a defense-ready slide deck for a thesis committee." --preferred-family ppt_deck',
-	        'opl chat "Plan a medical grant proposal revision loop." --executor hermes',
-	        'opl chat "Plan a medical grant proposal revision loop." --workspace-path /Users/gaofeng/workspace/med-autogrant --dry-run',
+	        'opl',
+	        'opl resume run_7e2a41a19175465f809c0a7f151278ee',
+	        'opl @mas tighten the manuscript argument around invasive phenotype findings',
 	      ],
-	      handler: (args) => {
-	        if (!shouldUseOplProductEntry(args)) {
-	          return runCodexPassthroughHandled(args);
-	        }
-
-	        return runProductEntryChat(parseProductEntryArgs(args, commandSpecs.chat), getContracts());
+	      handler: () => {
+	        throw buildRetiredCommandError(
+	          'opl chat',
+	          'Use `opl` for the default Codex interactive session, `opl resume <session_id>` to continue a session, or explicit domain handles such as `opl @mas ...` when you need OPL routing.'
+	        );
 	      },
 	    },
 	    shell: {
 	      usage:
 	        'opl shell [<request...> | --resume <session_id>] [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--executor <codex|hermes>] [--workspace-path <path>] [--dry-run]',
 	      summary:
-	        'Compatibility alias for local interactive entry. Plain requests pass through to codex; Hermes and domain routing are explicit.',
+	        'Retired compatibility command.',
 	      examples: [
-	        'opl shell',
-	        'opl shell --resume run_7e2a41a19175465f809c0a7f151278ee',
-	        'opl shell "@mas tighten the manuscript argument around invasive phenotype findings"',
-	        'opl shell "@mas tighten the manuscript argument around invasive phenotype findings" --executor hermes',
-	        'opl shell "@rca build a defense-ready deck for next week" --workspace-path /Users/gaofeng/workspace/redcube-ai',
+	        'opl',
+	        'opl resume run_7e2a41a19175465f809c0a7f151278ee',
+	        'opl @rca build a defense-ready deck for next week',
 	      ],
-	      handler: (args) => {
-	        if (args.length === 0) {
-	          return runCodexPassthroughHandled([]);
-	        }
-
-	        if (args[0] === '--resume' && !hasExplicitHermesExecutor(args)) {
-	          return runCodexPassthroughHandled(['resume', ...stripExplicitCodexExecutor(args.slice(1))]);
-	        }
-
-	        if (args[0] !== '--resume' && !shouldUseOplProductEntry(args)) {
-	          return runCodexPassthroughHandled(args);
-	        }
-
-	        const parsed = parseShellArgs(args, commandSpecs.shell);
-	        switch (parsed.mode) {
-	          case 'frontdesk':
-	            return runCodexPassthroughHandled([]);
-	          case 'resume':
-	            return runProductEntryResume(parsed.sessionId, parsed.executor);
-	          case 'chat':
-	            return runProductEntryChat(parsed.input, getContracts());
-	        }
-      },
-    },
+	      handler: () => {
+	        throw buildRetiredCommandError(
+	          'opl shell',
+	          'Use `opl` for the default Codex frontdoor, `opl resume <session_id>` to continue a session, or explicit domain handles such as `opl @mas ...` and `opl @rca ...`.'
+	        );
+	      },
+	    },
 	    resume: {
 	      usage: 'opl resume [codex resume args...] [--executor hermes]',
 	      summary: 'Resume a Codex session as a raw passthrough; use --executor hermes for explicit Hermes sessions.',
@@ -2677,10 +2579,11 @@ async function main() {
     },
     doctor: cloneCommandSpec(commandSpecs.doctor, { group: 'top_level' }),
     start: cloneCommandSpec(commandSpecs.start, { group: 'top_level' }),
-	    ask: cloneCommandSpec(commandSpecs.ask, { group: 'top_level' }),
 	    exec: cloneCommandSpec(commandSpecs.exec, { group: 'top_level' }),
-	    chat: cloneCommandSpec(commandSpecs.chat, { group: 'top_level' }),
 	    resume: cloneCommandSpec(commandSpecs.resume, { group: 'top_level' }),
+	    ask: cloneCommandSpec(commandSpecs.ask, { group: 'legacy' }),
+	    chat: cloneCommandSpec(commandSpecs.chat, { group: 'legacy' }),
+	    shell: cloneCommandSpec(commandSpecs.shell, { group: 'legacy' }),
 	    web: cloneCommandSpec(commandSpecs.web, {
       summary: 'Start the local OPL Product API service for external GUI shells and API consumers.',
       group: 'top_level',
@@ -3113,15 +3016,6 @@ async function main() {
       examples: ['opl session runtime --acp'],
       group: 'session',
     }),
-    shell: cloneCommandSpec(commandSpecs.shell, {
-      usage:
-        'opl shell <request...> [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--executor <codex|hermes>] [--workspace-path <path>] [--dry-run]',
-      examples: [
-        'opl shell "@mas tighten the manuscript argument around invasive phenotype findings"',
-        'opl shell "@mas tighten the manuscript argument around invasive phenotype findings" --executor hermes',
-        'opl shell "@rca build a defense-ready deck for next week" --workspace-path /Users/gaofeng/workspace/redcube-ai',
-      ],
-    }),
     'session ledger': cloneCommandSpec(commandSpecs['session ledger'], {
       usage: 'opl session ledger [--limit <n>]',
       examples: ['opl session ledger', 'opl session ledger --limit 5'],
@@ -3155,7 +3049,7 @@ async function main() {
 	    const [command, ...args] = inputTokens;
 	    if (!parsedInput.helpRequested && command && !RETIRED_COMMAND_PREFIXES.has(command) && command.startsWith('@')) {
 	      const result = await runProductEntryAsk(
-	        parseProductEntryArgs([command, ...args], commandSpecs.ask),
+	        parseProductEntryArgs([command, ...args], EXPLICIT_AGENT_HANDLE_SPEC),
 	        getContracts(),
 	      );
 	      printJson(result);
