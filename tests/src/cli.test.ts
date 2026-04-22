@@ -3652,6 +3652,10 @@ test('domain manifests resolves real family manifest fixtures while workspace li
       3,
     );
     assert.equal(
+      dashboardOutput.dashboard.product_api.domain_entry_parity.summary.domain_agent_entry_spec_ready_count,
+      3,
+    );
+    assert.equal(
       dashboardOutput.dashboard.product_api.domain_entry_parity.summary.gateway_interaction_contract_ready_count,
       3,
     );
@@ -3678,6 +3682,7 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(grantParity.ready_for_domain_handoff, true);
     assert.equal(grantParity.product_entry_readiness_verdict, 'agent_assisted_ready_not_product_grade');
     assert.equal(grantParity.domain_entry_contract_status, 'ready');
+    assert.equal(grantParity.domain_agent_entry_spec_status, 'ready');
     assert.equal(grantParity.gateway_interaction_contract_status, 'ready');
     assert.equal(scienceParity.entry_parity_status, 'partial');
     assert.equal(scienceParity.direct_entry_locator_status, 'missing');
@@ -3685,6 +3690,7 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(scienceParity.ready_for_domain_handoff, true);
     assert.equal(scienceParity.product_entry_readiness_verdict, 'runtime_ready_not_standalone_product');
     assert.equal(scienceParity.domain_entry_contract_status, 'ready');
+    assert.equal(scienceParity.domain_agent_entry_spec_status, 'ready');
     assert.equal(scienceParity.gateway_interaction_contract_status, 'ready');
     assert.equal(redcubeParity.entry_parity_status, 'aligned');
     assert.equal(redcubeParity.direct_entry_locator_status, 'ready');
@@ -3692,6 +3698,7 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(redcubeParity.ready_for_domain_handoff, true);
     assert.equal(redcubeParity.product_entry_readiness_verdict, 'service_surface_ready_not_managed_product');
     assert.equal(redcubeParity.domain_entry_contract_status, 'ready');
+    assert.equal(redcubeParity.domain_agent_entry_spec_status, 'ready');
     assert.equal(redcubeParity.gateway_interaction_contract_status, 'ready');
     assert.equal(redcubeParity.recommended_start_command, 'redcube product frontdesk');
     assert.equal(
@@ -3743,6 +3750,9 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(grantEntry.skill_catalog_skill_count, 2);
     assert.equal(grantEntry.skill_catalog_supported_commands[1], 'grant-user-loop');
     assert.equal(grantEntry.domain_entry_contract.entry_adapter, 'MedAutoGrantDomainEntry');
+    assert.equal(grantEntry.domain_agent_entry_id, 'mag');
+    assert.equal(grantEntry.domain_agent_entry_entry_command, 'product-frontdesk');
+    assert.equal(grantEntry.domain_agent_entry_manifest_command, 'product-entry-manifest');
     assert.equal(grantEntry.gateway_interaction_contract.frontdoor_owner, 'opl_gateway_or_domain_gui');
     assert.equal(grantEntry.automation.surface_kind, 'automation');
     assert.equal(grantEntry.automation_count, 2);
@@ -3767,6 +3777,9 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(scienceEntry.skill_catalog_skill_count, 2);
     assert.equal(scienceEntry.skill_catalog_supported_commands[0], 'product-frontdesk');
     assert.equal(scienceEntry.domain_entry_contract.entry_adapter, 'MedAutoScienceDomainEntry');
+    assert.equal(scienceEntry.domain_agent_entry_id, 'mas');
+    assert.equal(scienceEntry.domain_agent_entry_entry_command, 'product-frontdesk');
+    assert.equal(scienceEntry.domain_agent_entry_manifest_command, 'product-entry-manifest');
     assert.equal(scienceEntry.gateway_interaction_contract.shared_downstream_entry, 'MedAutoScienceDomainEntry');
     assert.equal(scienceEntry.automation.surface_kind, 'automation');
     assert.equal(scienceEntry.automation_count, 2);
@@ -3839,6 +3852,9 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(recommendedEntry.skill_catalog_skill_count, 2);
     assert.equal(recommendedEntry.skill_catalog_supported_commands[3], 'product-session');
     assert.equal(recommendedEntry.domain_entry_contract.entry_adapter, 'RedCubeDomainEntry');
+    assert.equal(recommendedEntry.domain_agent_entry_id, 'rca');
+    assert.equal(recommendedEntry.domain_agent_entry_entry_command, 'redcube product frontdesk');
+    assert.equal(recommendedEntry.domain_agent_entry_manifest_command, 'redcube product manifest');
     assert.equal(recommendedEntry.gateway_interaction_contract.frontdoor_owner, 'opl_gateway_or_domain_gui');
     assert.equal(recommendedEntry.automation.surface_kind, 'automation');
     assert.equal(recommendedEntry.automation_count, 2);
@@ -4752,6 +4768,14 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
       'federated_product_entry',
     );
     assert.equal(
+      output.handoff_bundle.domain_manifest_recommendation.domain_agent_entry_spec.agent_id,
+      'rca',
+    );
+    assert.equal(
+      output.handoff_bundle.domain_manifest_recommendation.domain_agent_entry_spec.entry_command,
+      'redcube product frontdesk',
+    );
+    assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.shared_handoff.opl_return_surface.target_domain_id,
       'redcube_ai',
     );
@@ -4876,6 +4900,7 @@ test('domain launch resolves a bound direct-entry locator into an honest launche
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-domain-launch-state-'));
   const openFixture = createFakeOpenFixture();
   const shellFixture = createFakeShellCommandFixture();
+  const resolvedManifest = loadFamilyManifestFixtures().redcube;
 
   try {
     runCli([
@@ -4887,6 +4912,8 @@ test('domain launch resolves a bound direct-entry locator into an honest launche
       repoRoot,
       '--entry-command',
       `${shellFixture.commandPath} --workspace ${repoRoot}`,
+      '--manifest-command',
+      buildManifestCommand(resolvedManifest),
       '--entry-url',
       'http://127.0.0.1:3310/redcube',
     ], {
@@ -4909,6 +4936,8 @@ test('domain launch resolves a bound direct-entry locator into an honest launche
     assert.equal(preview.domain_entry_launch.dry_run, true);
     assert.equal(preview.domain_entry_launch.selected_strategy, 'open_url');
     assert.equal(preview.domain_entry_launch.launch_status, 'preview_only');
+    assert.equal(preview.domain_entry_launch.domain_agent_entry_spec.agent_id, 'rca');
+    assert.equal(preview.domain_entry_launch.domain_agent_entry_spec.entry_command, 'redcube product frontdesk');
     assert.equal(preview.domain_entry_launch.workspace_locator.absolute_path, repoRoot);
     assert.equal(preview.domain_entry_launch.available_strategies[0], 'open_url');
     assert.equal(preview.domain_entry_launch.available_strategies[1], 'spawn_command');
@@ -4928,6 +4957,7 @@ test('domain launch resolves a bound direct-entry locator into an honest launche
 
     assert.equal(openResult.domain_entry_launch.selected_strategy, 'open_url');
     assert.equal(openResult.domain_entry_launch.launch_status, 'launched');
+    assert.equal(openResult.domain_entry_launch.domain_agent_entry_spec.agent_id, 'rca');
     assert.equal(openResult.domain_entry_launch.action.kind, 'open_url');
     assert.equal(fs.readFileSync(openFixture.capturePath, 'utf8').trim(), 'http://127.0.0.1:3310/redcube');
 
@@ -4945,6 +4975,7 @@ test('domain launch resolves a bound direct-entry locator into an honest launche
 
     assert.equal(spawnResult.domain_entry_launch.selected_strategy, 'spawn_command');
     assert.equal(spawnResult.domain_entry_launch.launch_status, 'launched');
+    assert.equal(spawnResult.domain_entry_launch.domain_agent_entry_spec.agent_id, 'rca');
     assert.equal(spawnResult.domain_entry_launch.action.kind, 'spawn_command');
     assert.equal(typeof spawnResult.domain_entry_launch.action.pid, 'number');
 

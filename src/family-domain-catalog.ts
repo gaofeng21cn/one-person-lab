@@ -40,6 +40,21 @@ function resolveActiveBinding(
   return (options.resolveActiveWorkspaceBinding ?? getActiveWorkspaceBinding)(projectId);
 }
 
+function hasDomainAgentEntrySpec(manifest: DomainManifestCatalogEntry['manifest']) {
+  const spec = manifest?.domain_entry_contract?.domain_agent_entry_spec;
+  return Boolean(
+    spec
+      && typeof spec.agent_id === 'string'
+      && spec.agent_id.trim().length > 0
+      && typeof spec.title === 'string'
+      && spec.title.trim().length > 0
+      && typeof spec.entry_command === 'string'
+      && spec.entry_command.trim().length > 0
+      && typeof spec.manifest_command === 'string'
+      && spec.manifest_command.trim().length > 0,
+  );
+}
+
 export function buildDomainEntryParity(
   projects: DomainManifestCatalogEntry[],
   options: BuildFamilyDomainCatalogOptions = {},
@@ -67,6 +82,7 @@ export function buildDomainEntryParity(
       && Array.isArray(manifest?.domain_entry_contract?.command_contracts)
       && manifest.domain_entry_contract.command_contracts.length > 0,
     );
+    const domainAgentEntrySpecReady = hasDomainAgentEntrySpec(manifest);
     const gatewayInteractionContractReady = Boolean(
       manifest?.gateway_interaction_contract?.surface_kind === 'gateway_interaction_contract',
     );
@@ -100,6 +116,9 @@ export function buildDomainEntryParity(
     }
     if (manifestResolved && !domainEntryContractReady) {
       gaps.push('manifest 尚未暴露显式 domain_entry_contract。');
+    }
+    if (manifestResolved && !domainAgentEntrySpecReady) {
+      gaps.push('manifest 尚未暴露显式 domain_agent_entry_spec。');
     }
     if (manifestResolved && !gatewayInteractionContractReady) {
       gaps.push('manifest 尚未暴露显式 gateway_interaction_contract。');
@@ -150,6 +169,9 @@ export function buildDomainEntryParity(
     if (manifestResolved && !domainEntryContractReady) {
       recommendedNextActions.push('补齐 domain_entry_contract，让 repo-owned entry truth 进入统一 family contract。');
     }
+    if (manifestResolved && !domainAgentEntrySpecReady) {
+      recommendedNextActions.push('补齐 domain_agent_entry_spec，让 OPL launcher registry 与后续 projection 直接消费 repo-owned agent entry truth。');
+    }
     if (manifestResolved && !gatewayInteractionContractReady) {
       recommendedNextActions.push('补齐 gateway_interaction_contract，让 frontdoor owner / handoff envelope 进入统一 family contract。');
     }
@@ -178,6 +200,7 @@ export function buildDomainEntryParity(
       start_surface_status: startSurfaceReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
       shared_handoff_status: sharedHandoffReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
       domain_entry_contract_status: domainEntryContractReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
+      domain_agent_entry_spec_status: domainAgentEntrySpecReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
       gateway_interaction_contract_status: gatewayInteractionContractReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
       runtime_inventory_status: runtimeInventoryReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
       task_lifecycle_status: taskLifecycleReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
@@ -208,6 +231,8 @@ export function buildDomainEntryParity(
         normalizedProjects.filter((entry) => entry.direct_entry_locator_status === 'ready').length,
       domain_entry_contract_ready_count:
         normalizedProjects.filter((entry) => entry.domain_entry_contract_status === 'ready').length,
+      domain_agent_entry_spec_ready_count:
+        normalizedProjects.filter((entry) => entry.domain_agent_entry_spec_status === 'ready').length,
       gateway_interaction_contract_ready_count:
         normalizedProjects.filter((entry) => entry.gateway_interaction_contract_status === 'ready').length,
       runtime_inventory_ready_count:
@@ -266,6 +291,7 @@ export function buildRecommendedEntrySurfaces(
         recommended_command: entry.manifest?.recommended_command ?? null,
         schema_ref: entry.manifest?.schema_ref ?? null,
         domain_entry_contract: entry.manifest?.domain_entry_contract ?? null,
+        domain_agent_entry_spec: entry.manifest?.domain_entry_contract?.domain_agent_entry_spec ?? null,
         gateway_interaction_contract: entry.manifest?.gateway_interaction_contract ?? null,
         product_entry_shell: entry.manifest?.product_entry_shell ?? {},
         shared_handoff: entry.manifest?.shared_handoff ?? {},
@@ -323,6 +349,12 @@ export function buildRecommendedEntrySurfaces(
           entry.manifest?.product_entry_readiness?.recommended_loop_command ?? null,
         product_entry_readiness_blocking_gaps:
           entry.manifest?.product_entry_readiness?.blocking_gaps ?? [],
+        domain_agent_entry_id: entry.manifest?.domain_entry_contract?.domain_agent_entry_spec?.agent_id ?? null,
+        domain_agent_entry_title: entry.manifest?.domain_entry_contract?.domain_agent_entry_spec?.title ?? null,
+        domain_agent_entry_entry_command:
+          entry.manifest?.domain_entry_contract?.domain_agent_entry_spec?.entry_command ?? null,
+        domain_agent_entry_manifest_command:
+          entry.manifest?.domain_entry_contract?.domain_agent_entry_spec?.manifest_command ?? null,
         runtime_inventory: entry.manifest?.runtime_inventory ?? null,
         runtime_inventory_summary: entry.manifest?.runtime_inventory?.summary ?? null,
         runtime_inventory_runtime_owner: entry.manifest?.runtime_inventory?.runtime_owner ?? null,

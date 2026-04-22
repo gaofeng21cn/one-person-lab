@@ -41,6 +41,12 @@ test('family domain catalog derives parity status from manifests and active bind
         entry_adapter: 'MedAutoScienceDomainEntry',
         service_safe_surface_kind: 'med_autoscience_service_safe_domain_entry',
         command_contracts: [{ command: 'study-progress' }],
+        domain_agent_entry_spec: {
+          agent_id: 'mas',
+          title: 'Med Auto Science',
+          entry_command: 'product-frontdesk',
+          manifest_command: 'product-entry-manifest',
+        },
       },
       gateway_interaction_contract: {
         surface_kind: 'gateway_interaction_contract',
@@ -68,6 +74,12 @@ test('family domain catalog derives parity status from manifests and active bind
         entry_adapter: 'MedAutoGrantDomainEntry',
         service_safe_surface_kind: 'service-safe-domain-entry-command',
         command_contracts: [{ command: 'runtime-run' }],
+        domain_agent_entry_spec: {
+          agent_id: 'mag',
+          title: 'Med Auto Grant',
+          entry_command: 'product-frontdesk',
+          manifest_command: 'product-entry-manifest',
+        },
       },
       gateway_interaction_contract: {
         surface_kind: 'gateway_interaction_contract',
@@ -111,6 +123,7 @@ test('family domain catalog derives parity status from manifests and active bind
   assert.equal(parity.summary.blocked_projects_count, 1);
   assert.equal(parity.summary.ready_for_opl_start_count, 2);
   assert.equal(parity.summary.ready_for_domain_handoff_count, 1);
+  assert.equal(parity.summary.domain_agent_entry_spec_ready_count, 2);
 
   const alignedProject = parity.projects.find((entry) => entry.project_id === 'med-autoscience');
   const partialProject = parity.projects.find((entry) => entry.project_id === 'med-autogrant');
@@ -189,6 +202,12 @@ test('family domain catalog derives recommended entry surfaces with active bindi
           entry_adapter: 'MedAutoScienceDomainEntry',
           service_safe_surface_kind: 'med_autoscience_service_safe_domain_entry',
           command_contracts: [{ command: 'study-progress' }],
+          domain_agent_entry_spec: {
+            agent_id: 'mas',
+            title: 'Med Auto Science',
+            entry_command: 'product-frontdesk',
+            manifest_command: 'product-entry-manifest',
+          },
         },
         gateway_interaction_contract: {
           surface_kind: 'gateway_interaction_contract',
@@ -269,6 +288,11 @@ test('family domain catalog derives recommended entry surfaces with active bindi
   assert.equal(recommended[0]?.active_binding_locator_status, 'ready');
   assert.equal(recommended[0]?.active_binding_locator.command, 'medautoscience product-frontdesk');
   assert.equal(recommended[0]?.domain_entry_contract_status, 'ready');
+  assert.equal(recommended[0]?.domain_agent_entry_id, 'mas');
+  assert.equal(recommended[0]?.domain_agent_entry_title, 'Med Auto Science');
+  assert.equal(recommended[0]?.domain_agent_entry_entry_command, 'product-frontdesk');
+  assert.equal(recommended[0]?.domain_agent_entry_manifest_command, 'product-entry-manifest');
+  assert.equal(recommended[0]?.domain_agent_entry_spec?.agent_id, 'mas');
   assert.equal(recommended[0]?.gateway_interaction_contract_status, 'ready');
   assert.equal(recommended[0]?.product_entry_preflight_recommended_start_command, 'medautoscience product-start');
   assert.deepEqual(recommended[0]?.family_human_gate_ids, ['human-review']);
