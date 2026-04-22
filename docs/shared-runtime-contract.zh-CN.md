@@ -21,6 +21,7 @@
 - `approval / interrupt / resume`
 - `family event envelope`
 - `family checkpoint lineage`
+ - `product-entry runtime continuity discovery`
 
 这些对象是跨 domain 共享的运行底座要求。
 它们描述的是 runtime 应具备怎样的结构化能力，而不是某个 domain 自己的对象、评审标准或交付真相。
@@ -87,6 +88,8 @@
    - 统一 event correlation、producer、session、audit reference 的 envelope
 2. `family checkpoint lineage`
    - 统一 checkpoint ancestry、resume、state reference 的 envelope
+3. `product-entry runtime continuity discovery`
+   - 统一 `runtime inventory + task lifecycle + session continuity + progress projection + artifact inventory` 的发现面，并把 `runtime_control` / `runtime_loop_closure` 作为共享 control reference；repo-owned runtime-control projection 继续由各 domain 仓自己持有
 
 这些 schema 位于 `contracts/family-orchestration/`。
 它们冻结的是多个 domain runtime 都能吸收的互操作语义，同时继续把 runtime ownership 与 durable truth 留在各自 domain 仓。
@@ -123,7 +126,7 @@
 - 当前活跃开发宿主仍是 Codex-only 本地会话
 - 当前公开的 OPL 入口仍是本地 `TypeScript CLI`-first / gateway contract surface
 - `Shared Runtime Contract` 还处于冻结与逐步落地阶段
-- runtime-oriented 的 family orchestration companion schemas 已经落在 `contracts/family-orchestration/`，先冻结共享 `event envelope + checkpoint lineage` 语义，而不是把它们误写成某个统一 runtime owner
+- runtime-oriented 的 family orchestration companion schemas 已经落在 `contracts/family-orchestration/`，先冻结共享 `event envelope + checkpoint lineage + product-entry runtime continuity discovery` 语义，而不是把它们误写成某个统一 runtime owner
 - 四个仓已经不处在同一集成深度：`Med Auto Grant` 已落地真实上游 `Hermes-Agent` runtime substrate，`Med Auto Science` 已完成 external runtime bring-up 并进入 real adapter cutover 前态，`RedCube AI` 也已经落下 upstream runtime-owner cutover 与 repo-verified product-entry federation，而 `OPL` 自身继续停留在顶层 gateway / federation 层
 - 上游 `Hermes-Agent` 运行底座仍是这份合同优选的未来实现方向，而不是已经落地的公开事实
 

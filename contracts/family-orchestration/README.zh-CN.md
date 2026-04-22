@@ -44,7 +44,27 @@
 - `family-human-gate.schema.json`
   - 冻结共享的 human-review gate request / decision / resume surface
 - `family-product-entry-manifest-v2.schema.json`
-  - 冻结共享的 product-entry discovery surface，可指向 graph、gate、resume contract 与 runtime companion
+  - 冻结共享的 product-entry discovery surface，可指向 graph、gate、resume contract、runtime continuity companion，以及 repo-owned runtime control projection
+
+## Runtime Continuity Freeze
+
+`family-product-entry-manifest-v2.schema.json` 现在正式冻结 `OPL` 跨三仓消费的 runtime continuity discovery layer。
+
+当前 family-level 共享 surface 名称包括：
+
+- `runtime_inventory`
+- `task_lifecycle`
+- `session_continuity`
+- `progress_projection`
+- `artifact_inventory`
+
+负责把回路闭合成 runtime continuity truth 的 control reference 包括：
+
+- `runtime_control`
+- `runtime_loop_closure`
+- 挂在共享 projection surface 里的 repo-owned `research_runtime_control_projection` companion
+
+这样一来，`OPL` 可以继续只消费统一的 session / progress / artifact / restore-point continuity 合同，而底层 runtime truth 与 repo-specific projection 字段仍由各 domain 仓自己持有。
 
 ## 这个目录不冻结什么
 
