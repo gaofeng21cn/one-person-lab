@@ -11,7 +11,7 @@ import {
 } from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
-import type { Readable } from 'node:stream';
+import { PassThrough, type Readable } from 'node:stream';
 import { fileURLToPath } from 'node:url';
 
 import {
@@ -1095,24 +1095,64 @@ async function startFakeOplApiServer() {
   };
 }
 
+const jsonLineReadState = new WeakMap<Readable, { bufferedText: string }>();
+
+function getJsonLineReadState(stream: Readable) {
+  let state = jsonLineReadState.get(stream);
+  if (!state) {
+    state = { bufferedText: '' };
+    jsonLineReadState.set(stream, state);
+  }
+  return state;
+}
+
+function takeBufferedJsonLine(stream: Readable) {
+  const state = getJsonLineReadState(stream);
+
+  while (true) {
+    const newlineIndex = state.bufferedText.indexOf('\n');
+    if (newlineIndex === -1) {
+      return null;
+    }
+
+    const line = state.bufferedText.slice(0, newlineIndex).trim();
+    state.bufferedText = state.bufferedText.slice(newlineIndex + 1);
+    if (line) {
+      return line;
+    }
+  }
+}
+
 async function readJsonLine(stream: Readable) {
+  const bufferedLine = takeBufferedJsonLine(stream);
+  if (bufferedLine) {
+    return JSON.parse(bufferedLine) as Record<string, unknown>;
+  }
+
   return await new Promise<Record<string, unknown>>((resolve, reject) => {
-    let buffer = '';
-    const onData = (chunk: Buffer | string) => {
-      buffer += chunk.toString();
-      const newlineIndex = buffer.indexOf('\n');
-      if (newlineIndex === -1) {
-        return;
-      }
-
-      const line = buffer.slice(0, newlineIndex).trim();
-      buffer = buffer.slice(newlineIndex + 1);
+    const onError = (error: Error) => {
+      cleanup();
+      reject(error);
+    };
+    const onClose = () => {
+      cleanup();
+      reject(new Error('MCP bridge closed before emitting the next JSON line.'));
+    };
+    const cleanup = () => {
       stream.off('data', onData);
+      stream.off('error', onError);
+      stream.off('end', onClose);
+      stream.off('close', onClose);
+    };
+    const onData = (chunk: Buffer | string) => {
+      const state = getJsonLineReadState(stream);
+      state.bufferedText += chunk.toString();
+      const line = takeBufferedJsonLine(stream);
       if (!line) {
-        reject(new Error('Received empty JSON line from MCP bridge.'));
         return;
       }
 
+      cleanup();
       try {
         resolve(JSON.parse(line) as Record<string, unknown>);
       } catch (error) {
@@ -1121,12 +1161,37 @@ async function readJsonLine(stream: Readable) {
     };
 
     stream.on('data', onData);
-    stream.once('error', reject);
+    stream.once('error', onError);
+    stream.once('end', onClose);
+    stream.once('close', onClose);
   });
 }
 
 function writeJsonLine(stream: NodeJS.WritableStream, payload: Record<string, unknown>) {
   stream.write(`${JSON.stringify(payload)}\n`);
+}
+
+async function stopCliPipeChild(
+  child: ChildProcessByStdio<NodeJS.WritableStream, Readable, Readable>,
+) {
+  if (child.exitCode !== null || child.signalCode !== null) {
+    return;
+  }
+
+  child.stdin.end();
+  await new Promise<void>((resolve) => {
+    const forceKill = setTimeout(() => {
+      if (child.exitCode === null && child.signalCode === null) {
+        child.kill('SIGKILL');
+      }
+    }, 2_000);
+
+    child.once('exit', () => {
+      clearTimeout(forceKill);
+      resolve();
+    });
+    child.kill('SIGTERM');
+  });
 }
 
 async function stopHttpServer(server: Server) {
@@ -1260,6 +1325,53 @@ test('loadGatewayContracts returns the frozen gateway registries', () => {
     contracts.publicSurfaceIndex.scope,
     'opl_public_gateway_surface_index',
   );
+});
+
+test('readJsonLine removes transient error listeners after each parsed line', async () => {
+  const stream = new PassThrough();
+
+  stream.write('{"id":1}\n');
+  const first = await readJsonLine(stream);
+  assert.equal(first.id, 1);
+  assert.equal(stream.listenerCount('error'), 0);
+
+  stream.write('{"id":2}\n');
+  const second = await readJsonLine(stream);
+  assert.equal(second.id, 2);
+  assert.equal(stream.listenerCount('error'), 0);
+});
+
+test('readJsonLine preserves buffered sibling lines from the same chunk', async () => {
+  const stream = new PassThrough();
+
+  stream.write('{"id":1}\n{"id":2}\n');
+  const first = await readJsonLine(stream);
+  assert.equal(first.id, 1);
+
+  const second = await Promise.race([
+    readJsonLine(stream),
+    new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error('readJsonLine did not flush the second line from the same chunk.'));
+      }, 100);
+    }),
+  ]);
+  assert.equal(second.id, 2);
+  assert.equal(stream.listenerCount('error'), 0);
+});
+
+test('stopCliPipeChild waits for spawned stdio children to exit', async () => {
+  const child = spawn(
+    process.execPath,
+    ['-e', 'setInterval(() => {}, 1000)'],
+    {
+      cwd: repoRoot,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    },
+  );
+
+  await stopCliPipeChild(child);
+  assert.notEqual(child.exitCode === null && child.signalCode === null, true);
 });
 
 test('loadGatewayContracts rejects missing files with a stable error', async (t) => {
@@ -2572,8 +2684,7 @@ test('session runtime --acp exposes a callable stdio bridge entry for external s
       'task-bridge-1',
     );
   } finally {
-    child.stdin.end();
-    child.kill();
+    await stopCliPipeChild(child);
   }
 });
 
@@ -2728,8 +2839,7 @@ exit 1
       true,
     );
   } finally {
-    child.stdin.end();
-    child.kill();
+    await stopCliPipeChild(child);
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
@@ -2858,8 +2968,7 @@ exit 1
       true,
     );
   } finally {
-    child.stdin.end();
-    child.kill();
+    await stopCliPipeChild(child);
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
@@ -2896,8 +3005,7 @@ test('session runtime --acp fails closed for unsupported ACP methods', async () 
     assert.equal(response.id, 1);
     assert.equal((response.error as { code: number }).code, -32601);
   } finally {
-    child.stdin.end();
-    child.kill();
+    await stopCliPipeChild(child);
   }
 });
 
@@ -5371,14 +5479,12 @@ exit 1
 
   try {
     const askOutput = runCli([
-      'ask',
+      '@rca',
       'Prepare',
       'a',
       'defense-ready',
       'slide',
       'deck.',
-      '--preferred-family',
-      'ppt_deck',
       '--executor',
       'hermes',
       '--workspace-path',
