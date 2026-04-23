@@ -2,11 +2,11 @@
 
 ## 当前公开角色
 
-- `OPL` 是 one-person lab 的顶层 `session runtime`、shared session/runtime/projection 层，以及跨仓 shared modules / contracts / indexes 的归属层。
+- `OPL` 是 one-person lab 的顶层 `Codex-default session runtime`、显式 activation 层，以及跨仓 shared modules / contracts / indexes 的归属层。
 - 当前公开认知保持三层：`产品运行时 -> 产品家族 -> 当前实现 / 模块`。
-- `OPL` 持有 family-level session runtime、智能体注册表、工作空间 / 会话 / 进度 / 交付物接口面，以及机器可读合同。
+- `OPL` 持有 Codex-default session/runtime、智能体注册表、工作空间 / 会话 / 进度 / 交付物接口面，以及机器可读合同。
 - `OPL` 继续持有 family-level shared modules、shared contracts 与 shared indexes 的顶层语义与注册面。
-- `Codex` 是默认交互与执行宿主；`Hermes-Agent` 是备用模式与长期在线网关。
+- `Codex` 是唯一默认交互与执行宿主；`Hermes-Agent` 只在显式切换时作为备选 runtime。
 - 当前活跃实现是三个独立 `domain agent` 仓：`MAS`、`MAG`、`RCA`；thesis 与 review 模块保持定义阶段。
 
 ## 当前主线产品模型
@@ -22,13 +22,15 @@
 - `progress`
 - `artifacts`
 
-这组资源是 `opl` shell / TUI、外部 GUI 壳与 `Product API` projection 的共同产品真相。
+这组资源是 `opl`、外部 GUI 壳与 `Product API` projection 的共同产品真相。
 其中 `agents` 资源已经开始消费各 domain 仓 repo-owned 的 `domain agent entry spec`，而不是只由 OPL 顶层静态描述。
 
 ## 当前默认入口
 
-- 默认前门是本地 `opl` shell；`opl <request...>` 继续提供快速提问路径。
+- 默认前门是 `opl`；`opl exec` 负责一次性请求，`opl resume` 负责续接会话。
+- 这几个入口默认继承 `Codex` 语义；只有显式 runtime switch 或显式 domain activation 才进入不同语义。
 - `Codex` 中显式调用 `OPL` 与其 domain agents 是并列的一等使用方式。
+- `@mas`、`@mag`、`@rca` 等 handle 属于显式 activation layer，背后继续落到各 domain 仓自己的 CLI / 程序 / 脚本 / contract。
 - GUI / Web 主线保持 `外部 shell -> OPL session runtime`。
 - 当前第一外部壳是 `AionUI`；`Onyx` 只保留为备线参考。
 - `opl web` 与 `Product API` 继续提供 projection、debug 与 hosted adapter surface。
