@@ -2,7 +2,9 @@
 
 ## 顶层定位
 
-- `OPL` 是顶层产品运行时与共享接口层。
+- `OPL` 是顶层 `Codex-default session runtime` 与共享接口层。
+- `OPL` 的默认 runtime 只有一个：`Codex`。
+- 只有显式 domain activation 或显式 runtime switch，才允许离开 Codex-default 语义。
 - `OPL` 不持有领域运行时所有权。
 - `OPL` 不替代各个领域仓的智能体逻辑。
 
@@ -18,7 +20,8 @@
   - `progress`
   - `artifacts`
 - `OPL` 的 session runtime 是这组资源的 canonical truth。
-- `opl` shell / TUI、外部 GUI 壳与 `Product API` 必须围绕这组资源组织当前产品语义。
+- `opl`、`opl exec`、`opl resume`、外部 GUI 壳与 `Product API` 必须围绕这组资源组织当前产品语义。
+- `agents` 资源必须指向 admitted domain 仓的稳定 capability surface，而不是重新发明第二套 domain 协议。
 
 ## 文档分层
 
@@ -31,6 +34,7 @@
 
 - `contracts/` 只保留机器可读真相，不承载叙事规则。
 - 修改网关合同、公开边界或已收录领域表述时，必须同步更新文档与测试。
+- admitted domain 仓对外应继续暴露本地 CLI、程序/脚本与 repo-tracked contract；`OPL` activation 只消费这些稳定 surface。
 
 ## 目标优先级
 
@@ -44,6 +48,7 @@
 - `opl web` 根路由只返回机器可读根载荷。
 - `Product API` 与 `opl web` 是 projection surface，不是 `OPL` 的唯一主交互形态。
 - 外部壳不得反向定义 `workspace / session / agent / progress / artifacts` 的 canonical truth。
+- 外部壳不得反向改写默认 runtime 合同；GUI 定制只能建立在 Codex-default 路径之上。
 - 外部产品名只能在基准、上游参考或规划中的界面目标语境出现。
 
 ## 语言规则

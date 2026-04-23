@@ -1,5 +1,27 @@
 # OPL 关键决策
 
+## 2026-04-23
+
+### 决策：`OPL` 默认合同冻结为 `Codex-default session runtime + explicit activation layer`
+
+原因：当前产品目标已经明确为“默认尽量等价 Codex，只在显式切换 runtime 或显式调用 domain agent 时进入 OPL 增量语义”。继续把 `OPL` 叙事写成 wrapper-first、GUI-first 或混合默认 runtime，会直接污染默认交互合同。
+
+影响：
+
+- `opl`、`opl exec`、`opl resume` 继续以 `Codex` 语义为默认前门
+- `@mas`、`@mag`、`@rca` 与显式 routing handle 收口为 activation layer，而不是第二套默认 runtime
+- GUI 壳、`Product API` 与 ACP-compatible 外壳都围绕同一套 Codex-default runtime contract 工作
+
+### 决策：admitted domain 通过 repo-owned capability surface 接入 `OPL`
+
+原因：系列项目需要让 `Codex` / `OPL` 调用 domain agent 时尽量保持同一使用体验。更自然的接入方式不是为每个 domain 发明 ask-wrapper，而是让 domain 仓把 CLI、本地程序/脚本与 repo-tracked contract 暴露成稳定 capability surface，再由 `OPL` activation 层消费。
+
+影响：
+
+- `MAS`、`MAG`、`RCA` 等 admitted domain 继续以 repo-owned CLI / 程序 / 脚本 / contract 作为稳定接入面
+- `OPL` 负责 activation / dispatch，不把 domain-specific 行为改写成 OPL-only 语义
+- 直接在 `Codex` 中调用某个 domain，与先进入 `OPL` 再显式激活该 domain，工作逻辑保持一致
+
 ## 2026-04-21
 
 ### 决策：活跃 domain 仓对外统一写成独立 `domain agent`
@@ -24,11 +46,11 @@
 
 ### 决策：`OPL` 主线切换为 `ACP-native session runtime`
 
-原因：对开发者和一线使用者来说，`OPL` 的一等使用路径不是直接调用 API，而是进入本地 `opl` shell / TUI、在 `Codex` 中显式调用 `OPL` 与其 domain agent，或让外部壳通过兼容层消费同一套 session runtime。继续把 `Product API` 作为主语，会把交互主线与真实用户路径写反。
+原因：对开发者和一线使用者来说，`OPL` 的一等使用路径不是直接调用 API，而是进入本地 `opl`、在 `Codex` 中显式激活 `OPL` 与其 domain agent，或让外部壳通过兼容层消费同一套 session runtime。继续把 `Product API` 作为主语，会把交互主线与真实用户路径写反。
 
 影响：
 
-- `OPL` 主仓当前主线以 family-level `session runtime` 为中心，而不是以 GUI 或 API 壳为中心
+- `OPL` 主仓当前主线以 `Codex-default session runtime + activation layer` 为中心，而不是以 GUI 或 API 壳为中心
 - canonical truth 收敛到：workspace binding、session lifecycle、progress / artifact projection、agent entry dispatch、runtime mode
 - `Product API`、`opl web` 与未来 GUI / Web shell 都降为这套 session runtime 的 projection / compatibility surface
 - `AionUI` 是第一外部壳和验证目标，但不是 runtime owner
