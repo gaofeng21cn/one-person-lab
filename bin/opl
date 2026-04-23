@@ -3,19 +3,6 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-OPL_OPTION_TOKENS=(
-  --dry-run
-  --goal
-  --intent
-  --target
-  --preferred-family
-  --request-kind
-  --workspace-path
-  --skills
-  --executor
-  --provider
-)
-
 run_opl() {
   if [[ -f "$ROOT_DIR/src/cli.ts" ]]; then
     exec node --experimental-strip-types "$ROOT_DIR/src/cli.ts" "$@"
@@ -30,18 +17,6 @@ run_codex() {
   fi
 
   exec codex "$@"
-}
-
-is_opl_option() {
-  local token="$1"
-  local option
-  for option in "${OPL_OPTION_TOKENS[@]}"; do
-    if [[ "$option" == "$token" ]]; then
-      return 0
-    fi
-  done
-
-  return 1
 }
 
 has_explicit_hermes_executor() {
@@ -73,42 +48,6 @@ strip_explicit_codex_executor() {
   printf '%s\0' "${output[@]}"
 }
 
-first_positional_arg() {
-  local args=("$@")
-  local index
-
-  for ((index = 0; index < ${#args[@]}; index += 1)); do
-    if [[ "${args[index]}" != --* ]]; then
-      printf '%s\n' "${args[index]}"
-      return 0
-    fi
-
-    if is_opl_option "${args[index]}"; then
-      index=$((index + 1))
-    fi
-  done
-
-  return 1
-}
-
-should_use_opl_product_entry() {
-  local args=("$@")
-  local token
-  for token in "${args[@]}"; do
-    if is_opl_option "$token"; then
-      return 0
-    fi
-  done
-
-  local first_positional=""
-  if first_positional="$(first_positional_arg "${args[@]}" 2>/dev/null)"; then
-    [[ "$first_positional" == @* ]]
-    return
-  fi
-
-  return 1
-}
-
 read_null_terminated_args() {
   local -n target_ref=$1
   shift
@@ -138,36 +77,14 @@ case "$1" in
     ;;
   ask)
     shift
-    if should_use_opl_product_entry "$@"; then
-      run_opl ask "$@"
-    fi
-    run_codex exec "$@"
+    run_opl ask "$@"
     ;;
   chat)
     shift
-    if should_use_opl_product_entry "$@"; then
-      run_opl chat "$@"
-    fi
-    run_codex "$@"
+    run_opl chat "$@"
     ;;
   shell)
     shift
-    if [[ "$#" -eq 0 ]]; then
-      run_codex
-    fi
-    if [[ "${1:-}" == "--resume" ]]; then
-      if has_explicit_hermes_executor "$@"; then
-        run_opl shell "$@"
-      fi
-
-      shift
-      stripped_args=()
-      read_null_terminated_args stripped_args strip_explicit_codex_executor "$@"
-      run_codex resume "${stripped_args[@]}"
-    fi
-    if [[ "${1:-}" != "--resume" ]] && ! should_use_opl_product_entry "$@"; then
-      run_codex "$@"
-    fi
     run_opl shell "$@"
     ;;
   session)

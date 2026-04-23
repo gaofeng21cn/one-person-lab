@@ -3,6 +3,7 @@ import {
   buildCodexCliPreview,
   buildCodexExecArgs,
   parseCodexExecOutput,
+  resolveCodexBinary,
   runCodexCommand,
 } from './codex.ts';
 import { buildHandoffBundle } from './handoff-bundle.ts';
@@ -415,8 +416,9 @@ function buildPreviewPayload(
 }
 
 export function buildProductEntryDoctor(validation: ContractValidationSummary) {
+  const codex = resolveCodexBinary();
   const hermes = inspectHermesRuntime();
-  const localEntryReady = Boolean(hermes.binary);
+  const localEntryReady = Boolean(codex);
   const ready = localEntryReady;
 
   return {
@@ -424,15 +426,16 @@ export function buildProductEntryDoctor(validation: ContractValidationSummary) {
     validation,
     product_entry: {
       entry_surface: 'opl_local_product_entry_shell',
-      runtime_substrate: 'external_hermes_kernel',
+      runtime_substrate: 'codex_default_runtime',
       ready,
       local_entry_ready: localEntryReady,
       messaging_gateway_ready: hermes.gateway_service.loaded,
       hermes,
       issues: hermes.issues,
       notes: [
-        'Local direct entry is provided through `opl`, `opl doctor`, `opl ask`, and `opl chat`.',
-        'Hermes gateway service only gates messaging-style product entry; local ask/chat can still work when it is not loaded.',
+        'Codex-default local entry is provided through `opl`, `opl exec`, and `opl resume`.',
+        'Explicit domain activation uses `opl @mas ...`, `opl @mag ...`, and `opl @rca ...`.',
+        'Hermes remains an explicit opt-in runtime via `--executor hermes`; its gateway only affects Hermes-backed lanes.',
       ],
     },
   };
