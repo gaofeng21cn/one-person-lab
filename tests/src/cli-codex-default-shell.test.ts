@@ -84,6 +84,37 @@ function runEntryPathRaw(
   return result;
 }
 
+function runEntryPathFailure(
+  entryPath: string,
+  args: string[],
+  envOverrides: Record<string, string> = {},
+) {
+  const command = entryPath === cliPath ? process.execPath : entryPath;
+  const commandArgs =
+    entryPath === cliPath
+      ? ['--experimental-strip-types', cliPath, ...args]
+      : args;
+  const result = spawnSync(
+    command,
+    commandArgs,
+    {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: '1',
+        ...envOverrides,
+      },
+    },
+  );
+
+  assert.notEqual(result.status, 0);
+  return {
+    status: result.status ?? 1,
+    payload: JSON.parse(result.stderr),
+  };
+}
+
 function createFakeCodexFixture(handlerBody: string) {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-default-fixture-'));
   const codexPath = path.join(fixtureRoot, 'codex');
@@ -198,6 +229,41 @@ exit 0
       'gpt-5.4',
       'hello',
     ]);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(capturePath, { force: true });
+  }
+});
+
+test('installed opl launcher routes retired ask chat and shell commands into CLI usage errors', () => {
+  const capturePath = path.join(os.tmpdir(), `opl-launcher-retired-capture-${process.pid}.txt`);
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+printf '%s\\n' "$@" > ${JSON.stringify(capturePath)}
+echo "SHOULD NOT RUN"
+exit 0
+`);
+
+  try {
+    const ask = runEntryPathFailure(binPath, ['ask', 'Plan the next paper submission steps.'], {
+      OPL_CODEX_BIN: codexPath,
+    });
+    assert.equal(ask.status, 2);
+    assert.match(ask.payload.error.message, /Command "opl ask" has been retired/);
+    assert.equal(fs.existsSync(capturePath), false);
+
+    const chat = runEntryPathFailure(binPath, ['chat', 'Plan the next paper submission steps.'], {
+      OPL_CODEX_BIN: codexPath,
+    });
+    assert.equal(chat.status, 2);
+    assert.match(chat.payload.error.message, /Command "opl chat" has been retired/);
+    assert.equal(fs.existsSync(capturePath), false);
+
+    const shell = runEntryPathFailure(binPath, ['shell'], {
+      OPL_CODEX_BIN: codexPath,
+    });
+    assert.equal(shell.status, 2);
+    assert.match(shell.payload.error.message, /Command "opl shell" has been retired/);
+    assert.equal(fs.existsSync(capturePath), false);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(capturePath, { force: true });

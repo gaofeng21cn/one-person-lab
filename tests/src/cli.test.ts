@@ -1552,8 +1552,12 @@ test('contract validate returns a stable machine-readable contract summary', () 
   });
 });
 
-test('doctor reports a ready local product-entry shell when Hermes is available', () => {
-  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
+test('doctor reports a Codex-default ready local entry and Hermes gateway availability when Hermes is available', () => {
+  const { fixtureRoot: codexFixtureRoot, codexPath } = createFakeCodexFixture(`
+echo "unused"
+exit 0
+`);
+  const { fixtureRoot: hermesFixtureRoot, hermesPath } = createFakeHermesFixture(`
 if [ "$1" = "version" ]; then
   echo "Hermes Agent v9.9.9-test"
   exit 0
@@ -1572,19 +1576,55 @@ exit 1
 
   try {
     const output = runCli(['doctor'], {
+      OPL_CODEX_BIN: codexPath,
       OPL_HERMES_BIN: hermesPath,
     });
 
     assert.equal(output.version, 'g2');
     assert.equal(output.product_entry.entry_surface, 'opl_local_product_entry_shell');
+    assert.equal(output.product_entry.runtime_substrate, 'codex_default_runtime');
     assert.equal(output.product_entry.ready, true);
     assert.equal(output.product_entry.local_entry_ready, true);
     assert.equal(output.product_entry.messaging_gateway_ready, true);
     assert.equal(output.product_entry.hermes.binary.path, hermesPath);
     assert.equal(output.product_entry.hermes.version, 'Hermes Agent v9.9.9-test');
     assert.equal(output.product_entry.hermes.gateway_service.loaded, true);
+    assert.match(output.product_entry.notes[0], /opl exec/);
+    assert.match(output.product_entry.notes[0], /opl resume/);
+    assert.match(output.product_entry.notes[1], /opl @mas/);
+    assert.match(output.product_entry.notes[2], /--executor hermes/);
     assert.deepEqual(output.product_entry.issues, []);
     assert.equal(output.validation.status, 'valid');
+  } finally {
+    fs.rmSync(codexFixtureRoot, { recursive: true, force: true });
+    fs.rmSync(hermesFixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('doctor keeps Codex-default local entry ready even when Hermes is unavailable', () => {
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+echo "unused"
+exit 0
+`);
+
+  try {
+    const output = runCli(['doctor'], {
+      OPL_CODEX_BIN: codexPath,
+      PATH: fixtureRoot,
+    });
+
+    assert.equal(output.product_entry.runtime_substrate, 'codex_default_runtime');
+    assert.equal(output.product_entry.ready, true);
+    assert.equal(output.product_entry.local_entry_ready, true);
+    assert.equal(output.product_entry.messaging_gateway_ready, false);
+    assert.equal(output.product_entry.hermes.binary, null);
+    assert.match(output.product_entry.notes[2], /--executor hermes/);
+    assert.equal(
+      output.product_entry.issues.includes(
+        'Hermes binary not found. Set OPL_HERMES_BIN or install `hermes` into PATH.',
+      ),
+      true,
+    );
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
