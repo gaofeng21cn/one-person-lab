@@ -57,6 +57,10 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
         service_action: unknown | null;
         web_open_action: unknown | null;
         gui_open_action: unknown | null;
+        companion_skill_sync: {
+          surface_id: string;
+          summary: { total: number };
+        };
         system_initialize: {
           surface_id: string;
           recommended_skills: { surface_id: string };
@@ -78,6 +82,8 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
     assert.equal(output.install.service_action, null);
     assert.equal(output.install.web_open_action, null);
     assert.equal(output.install.gui_open_action, null);
+    assert.equal(output.install.companion_skill_sync.surface_id, 'opl_companion_skill_sync');
+    assert.equal(output.install.companion_skill_sync.summary.total >= 6, true);
     assert.equal(output.install.system_initialize.surface_id, 'opl_frontdesk_initialize');
     assert.equal(output.install.system_initialize.recommended_skills.surface_id, 'opl_recommended_skill_bundle');
     assert.equal(output.install.system_initialize.gui_shell.shell_id, 'opl_aion_shell');

@@ -1,5 +1,5 @@
 import { openFrontDeskService } from '../frontdesk-service.ts';
-import { buildOplGuiShellSurface } from '../install-companions.ts';
+import { buildOplGuiShellSurface, syncOplCompanionSkills } from '../install-companions.ts';
 import type { GatewayContracts } from '../types.ts';
 
 import { runFrontDeskEngineAction } from './engine-actions.ts';
@@ -110,6 +110,7 @@ export async function runFrontDeskTurnkeyInstall(
     ? null
     : await openFrontDeskService(contracts);
   const guiOpenAction = input.skipGuiOpen ? null : tryOpenOplGui();
+  const companionSkillSync = syncOplCompanionSkills();
   const initialize = await buildFrontDeskInitialize(contracts);
 
   return {
@@ -125,9 +126,10 @@ export async function runFrontDeskTurnkeyInstall(
       web_open_action: webOpenAction?.frontdesk_service ?? null,
       gui_open_action: guiOpenAction,
       gui_shell: buildOplGuiShellSurface(resolveProjectRoot()),
+      companion_skill_sync: companionSkillSync,
       system_initialize: initialize.frontdesk_initialize,
       notes: [
-        'This command is the user-facing one-shot path for OPL + Codex CLI + Hermes-Agent + family modules + local Product API.',
+        'This command is the user-facing one-shot path for OPL + Codex CLI + Hermes-Agent + family modules + companion Codex skills.',
         'GUI startup only opens an installed OPL-branded desktop app. The upstream AionUI app is not treated as the OPL GUI.',
       ],
     },
