@@ -7,7 +7,7 @@ import {
   runFrontDeskSystemAction,
   writeFrontDeskWorkspaceRootSurface,
 } from '../frontdesk-installation.ts';
-import { stripFrontDeskBasePath } from '../frontdesk-paths.ts';
+import { stripOplWebBasePath } from '../opl-web-paths.ts';
 import { buildOplApiCatalog } from '../opl-api-paths.ts';
 import {
   buildFrontDeskDashboard,
@@ -91,7 +91,7 @@ export async function handleWebFrontDeskRequest(
 ) {
   const method = request.method ?? 'GET';
   const url = new URL(request.url ?? '/', context.baseUrl);
-  const routedPath = stripFrontDeskBasePath(url.pathname, context.basePath);
+  const routedPath = stripOplWebBasePath(url.pathname, context.basePath);
   const routedApi = buildOplApiCatalog();
   const advertisedApi = buildOplApiCatalog(context.basePath);
 

@@ -291,7 +291,7 @@ function buildChatSeedArgs(
   return appendHermesOptions(['chat', '--query', prompt, '--quiet'], input);
 }
 
-function buildFrontDeskPrompt(contracts: GatewayContracts) {
+function buildProductEntryFrontdoorPrompt(contracts: GatewayContracts) {
   const domainLines = contracts.domains.domains.map((domain) => {
     const workstreams = domain.owned_workstreams.join(', ');
     return `- ${domain.domain_id}: ${domain.gateway_surface} -> workstreams: ${workstreams}`;
@@ -638,7 +638,7 @@ export function runProductEntryExec(input: ProductEntryExecInput) {
   };
 }
 
-export function runProductEntryFrontDesk(
+export function runProductEntryFrontdoor(
   contracts: GatewayContracts,
 ) {
   if (isInteractiveShell()) {
@@ -665,7 +665,7 @@ export function runProductEntryFrontDesk(
       mode: 'frontdoor',
       interactive: false,
       executor_backend: 'codex',
-      handoff_prompt_preview: buildFrontDeskPrompt(contracts),
+      handoff_prompt_preview: buildProductEntryFrontdoorPrompt(contracts),
       codex: {
         command_preview: ['codex'],
         resume_command_preview: ['codex', 'resume', '<thread_id>'],

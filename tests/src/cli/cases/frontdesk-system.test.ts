@@ -1,4 +1,53 @@
 import { GatewayContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeHermesFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakePsFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadGatewayContracts, once, os, path, readJsonFixture, readJsonLine, repoRoot, resolveRequestSurface, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateGatewayContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
+import { buildInternalCommandSpecs } from '../../../../src/cli/cases/private-command-specs.ts';
+import { buildPublicCommandSpecs } from '../../../../src/cli/cases/public-command-specs.ts';
+
+test('public command specs no longer depend on legacy frontdesk command ids', () => {
+  const contracts = loadGatewayContracts({ contractsDir });
+  const internalSpecs = buildInternalCommandSpecs(
+    {
+      helpRequested: false,
+      command: null,
+      args: [],
+      loadOptions: { contractsDir },
+    },
+    () => contracts,
+  );
+
+  for (const key of [
+    'frontdesk hosted-bundle',
+    'frontdesk hosted-package',
+    'frontdesk environment',
+    'frontdesk initialize',
+    'frontdesk repair',
+    'frontdesk reinstall-support',
+    'frontdesk update-channel',
+    'frontdesk modules',
+    'frontdesk-module-install',
+    'frontdesk-module-update',
+    'frontdesk-module-reinstall',
+    'frontdesk-module-remove',
+    'frontdesk engine install',
+    'frontdesk engine update',
+    'frontdesk engine reinstall',
+    'frontdesk engine remove',
+    'frontdesk-service-install',
+    'frontdesk-service-status',
+    'frontdesk-service-start',
+    'frontdesk-service-stop',
+    'frontdesk-service-open',
+    'frontdesk-service-uninstall',
+  ]) {
+    delete internalSpecs[key];
+  }
+
+  const publicSpecs = buildPublicCommandSpecs(internalSpecs, () => contracts);
+  assert.equal(typeof publicSpecs.system.handler, 'function');
+  assert.equal(typeof publicSpecs['web bundle'].handler, 'function');
+  assert.equal(typeof publicSpecs['module install'].handler, 'function');
+  assert.equal(typeof publicSpecs['engine install'].handler, 'function');
+  assert.equal(typeof publicSpecs['service install'].handler, 'function');
+});
 
 test('status dashboard aggregates front-desk management surfaces into one view', () => {
   const { fixtureRoot, hermesPath } = createFakeHermesFixture(`

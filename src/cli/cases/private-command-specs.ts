@@ -198,7 +198,7 @@ export function buildInternalCommandSpecs(
     },
     dashboard: {
       usage: 'opl status dashboard [--path <workspace_path>] [--sessions-limit <n>]',
-      summary: 'Aggregate the current OPL front-desk management view across projects, workspace, and runtime.',
+      summary: 'Aggregate the current OPL product-runtime view across projects, workspace, and runtime.',
       examples: [
         'opl status dashboard',
         'opl status dashboard --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
@@ -417,7 +417,7 @@ export function buildInternalCommandSpecs(
       usage:
         'opl frontdesk hosted-bundle [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>]',
       summary:
-        'Emit the hosted-pilot-ready front-desk bundle with base-path-aware entry and API endpoints.',
+        'Legacy compatibility command: emit the hosted-pilot-ready OPL web bundle with base-path-aware entry and API endpoints.',
       examples: [
         'opl frontdesk hosted-bundle',
         'opl frontdesk hosted-bundle --host 0.0.0.0 --port 8787 --base-path /pilot/opl',
@@ -446,7 +446,7 @@ export function buildInternalCommandSpecs(
       usage:
         'opl frontdesk service install [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>]',
       summary:
-        'Install and bootstrap a local launchd-managed OPL web front-desk service for long-running direct entry.',
+        'Install and bootstrap a local launchd-managed OPL web Product API service for long-running direct entry.',
       examples: [
         'opl frontdesk service install',
         'opl frontdesk service install --port 8787',
@@ -457,7 +457,7 @@ export function buildInternalCommandSpecs(
     'frontdesk-service-status': {
       usage: 'opl frontdesk service status',
       summary:
-        'Inspect whether the local launchd-managed OPL web front desk is installed, loaded, and reachable.',
+        'Inspect whether the local launchd-managed OPL web Product API service is installed, loaded, and reachable.',
       examples: ['opl frontdesk service status'],
       handler: (args) => {
         assertNoArgs(args, commandSpecs['frontdesk-service-status']);
@@ -466,7 +466,7 @@ export function buildInternalCommandSpecs(
     },
     'frontdesk-service-start': {
       usage: 'opl frontdesk service start',
-      summary: 'Bootstrap and kickstart the installed local OPL web front-desk service.',
+      summary: 'Bootstrap and kickstart the installed local OPL web Product API service.',
       examples: ['opl frontdesk service start'],
       handler: (args) => {
         assertNoArgs(args, commandSpecs['frontdesk-service-start']);
@@ -475,7 +475,7 @@ export function buildInternalCommandSpecs(
     },
     'frontdesk-service-stop': {
       usage: 'opl frontdesk service stop',
-      summary: 'Stop the installed local OPL web front-desk service without removing its packaging files.',
+      summary: 'Stop the installed local OPL web Product API service without removing its packaging files.',
       examples: ['opl frontdesk service stop'],
       handler: (args) => {
         assertNoArgs(args, commandSpecs['frontdesk-service-stop']);
@@ -484,7 +484,7 @@ export function buildInternalCommandSpecs(
     },
     'frontdesk-service-open': {
       usage: 'opl frontdesk service open',
-      summary: 'Open the configured local OPL web front-desk URL in the default browser.',
+      summary: 'Open the configured local OPL web Product API URL in the default browser.',
       examples: ['opl frontdesk service open'],
       handler: (args) => {
         assertNoArgs(args, commandSpecs['frontdesk-service-open']);
@@ -493,7 +493,7 @@ export function buildInternalCommandSpecs(
     },
     'frontdesk-service-uninstall': {
       usage: 'opl frontdesk service uninstall',
-      summary: 'Remove the local launchd-managed OPL web front-desk service packaging.',
+      summary: 'Remove the local launchd-managed OPL web Product API service packaging.',
       examples: ['opl frontdesk service uninstall'],
       handler: (args) => {
         assertNoArgs(args, commandSpecs['frontdesk-service-uninstall']);
@@ -503,7 +503,7 @@ export function buildInternalCommandSpecs(
     'mcp-stdio': {
       usage:
         'opl mcp-stdio --api-base-url <url> [--workspace-path <workspace_path>] [--sessions-limit <n>]',
-      summary: 'Internal command: run the OPL front-desk MCP stdio bridge for desktop or web shells.',
+      summary: 'Internal command: run the OPL Product API MCP stdio bridge for desktop or web shells.',
       examples: [
         'opl mcp-stdio --api-base-url http://host.docker.internal:8787/pilot/opl/api',
       ],
@@ -552,7 +552,7 @@ export function buildInternalCommandSpecs(
     web: {
       usage:
         'opl web [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>]',
-      summary: 'Start the local OPL front-desk adapter service for external GUI shells and API consumers.',
+      summary: 'Start the local OPL web Product API adapter service for external GUI shells and API consumers.',
       examples: [
         'opl web',
         'opl web --host 127.0.0.1 --port 8787',
