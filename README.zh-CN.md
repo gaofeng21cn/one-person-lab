@@ -32,6 +32,9 @@
   <img src="assets/branding/opl-workbench-overview.svg" alt="OPL workbench overview" width="100%" />
 </p>
 
+<h2 align="center">架构与产品规划</h2>
+<p align="center">展示 OPL 工作台、活跃 Foundry 与共享可信表面的高层结构。</p>
+
 <p align="center">
   <img src="assets/branding/opl-architecture-plan.svg" alt="OPL architecture and product plan" width="100%" />
 </p>

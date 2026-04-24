@@ -21,37 +21,38 @@
   </defs>
   <rect width="1600" height="420" fill="url(#banner-bg)"/>
   <rect x="44" y="40" width="1512" height="340" rx="34" fill="#FFFFFF" fill-opacity="0.82" stroke="#D5E3F2" stroke-width="2"/>
-  <g filter="url(#soft-shadow)">
-    <rect x="104" y="94" width="260" height="232" rx="56" fill="url(#icon-bg)"/>
-    <rect x="148" y="124" width="172" height="182" rx="42" fill="url(#icon-card)"/>
-    <path d="M234 142C180.981 142 138 184.981 138 238C138 291.019 180.981 334 234 334C287.019 334 330 291.019 330 238" transform="translate(0 -24)" stroke="#0E385D" stroke-width="15" stroke-linecap="round"/>
-    <path d="M234 170C196.445 170 166 200.445 166 238C166 275.555 196.445 306 234 306C271.555 306 302 275.555 302 238" transform="translate(0 -24)" stroke="#2BB8B0" stroke-width="13" stroke-linecap="round"/>
-    <circle cx="234" cy="214" r="31" fill="#0E385D"/>
-    <circle cx="234" cy="214" r="14" fill="#7CE8E0"/>
-    <circle cx="174" cy="166" r="12" fill="#2BB8B0"/>
-    <circle cx="304" cy="166" r="12" fill="#F3B44B"/>
-    <circle cx="304" cy="268" r="12" fill="#7CA7FF"/>
-    <path d="M187 178L220 203" stroke="#0E385D" stroke-width="10" stroke-linecap="round"/>
-    <path d="M286 178L248 203" stroke="#0E385D" stroke-width="10" stroke-linecap="round"/>
-    <path d="M282 260L248 226" stroke="#0E385D" stroke-width="10" stroke-linecap="round"/>
-    <rect x="190" y="286" width="92" height="13" rx="6.5" fill="#0E385D" fill-opacity="0.20"/>
+  <g transform="translate(98 86) scale(0.238)">
+    <rect x="64" y="64" width="896" height="896" rx="210" fill="url(#icon-bg)"/>
+    <rect x="214" y="190" width="596" height="644" rx="118" fill="url(#icon-card)" fill-opacity="0.98"/>
+    <path d="M512 270C392.706 270 296 366.706 296 486C296 605.294 392.706 702 512 702C631.294 702 728 605.294 728 486" stroke="#0E385D" stroke-width="34" stroke-linecap="round"/>
+    <path d="M512 332C426.948 332 358 400.948 358 486C358 571.052 426.948 640 512 640C597.052 640 666 571.052 666 486" stroke="#2BB8B0" stroke-width="30" stroke-linecap="round"/>
+    <circle cx="512" cy="486" r="76" fill="#0E385D"/>
+    <circle cx="512" cy="486" r="34" fill="#7CE8E0"/>
+    <rect x="332" y="746" width="360" height="34" rx="17" fill="#0E385D" fill-opacity="0.18"/>
+    <rect x="384" y="736" width="256" height="34" rx="17" fill="#0E385D" fill-opacity="0.28"/>
+    <circle cx="356" cy="358" r="28" fill="#2BB8B0"/>
+    <circle cx="684" cy="358" r="28" fill="#F3B44B"/>
+    <circle cx="684" cy="634" r="28" fill="#7CA7FF"/>
+    <path d="M381 376L459 446" stroke="#0E385D" stroke-width="20" stroke-linecap="round"/>
+    <path d="M644 376L565 446" stroke="#0E385D" stroke-width="20" stroke-linecap="round"/>
+    <path d="M644 619L566 530" stroke="#0E385D" stroke-width="20" stroke-linecap="round"/>
   </g>
-  <text x="438" y="126" fill="#0D2A45" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="23" font-weight="700" letter-spacing="3">ONE PERSON LAB</text>
-  <text x="438" y="186" fill="#0D2A45" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="48" font-weight="800">One workbench for serious expert work</text>
-  <text x="440" y="232" fill="#49677F" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="23">Plan long-running research, grants, and presentations with expert agents,</text>
-  <text x="440" y="264" fill="#49677F" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="23">trusted progress, and organized deliverables.</text>
+  <text x="448" y="126" fill="#0D2A45" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="23" font-weight="700" letter-spacing="3">ONE PERSON LAB</text>
+  <text x="448" y="186" fill="#0D2A45" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="48" font-weight="800">One workbench for serious expert work</text>
+  <text x="450" y="232" fill="#49677F" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="23">Plan long-running research, grants, and presentations with expert agents,</text>
+  <text x="450" y="264" fill="#49677F" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="23">trusted progress, and organized deliverables.</text>
   <g font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17" font-weight="700">
-    <rect x="440" y="304" width="166" height="44" rx="22" fill="#EAF3FF" stroke="#BBD2EC"/>
-    <text x="523" y="332" text-anchor="middle" fill="#174A73">Research</text>
-    <rect x="622" y="304" width="136" height="44" rx="22" fill="#FFF4DD" stroke="#E3C27B"/>
-    <text x="690" y="332" text-anchor="middle" fill="#8A6415">Grants</text>
-    <rect x="774" y="304" width="178" height="44" rx="22" fill="#E8FAF8" stroke="#AADAD6"/>
-    <text x="863" y="332" text-anchor="middle" fill="#247A75">Presentations</text>
-    <rect x="968" y="304" width="162" height="44" rx="22" fill="#F1F5FA" stroke="#CAD6E4"/>
-    <text x="1049" y="332" text-anchor="middle" fill="#3E5D78">Progress</text>
-    <rect x="1146" y="304" width="132" height="44" rx="22" fill="#F1F5FA" stroke="#CAD6E4"/>
-    <text x="1212" y="332" text-anchor="middle" fill="#3E5D78">Files</text>
-    <rect x="1294" y="304" width="164" height="44" rx="22" fill="#F1F5FA" stroke="#CAD6E4"/>
-    <text x="1376" y="332" text-anchor="middle" fill="#3E5D78">Recovery</text>
+    <rect x="450" y="304" width="166" height="44" rx="22" fill="#EAF3FF" stroke="#BBD2EC"/>
+    <text x="533" y="332" text-anchor="middle" fill="#174A73">Research</text>
+    <rect x="632" y="304" width="136" height="44" rx="22" fill="#FFF4DD" stroke="#E3C27B"/>
+    <text x="700" y="332" text-anchor="middle" fill="#8A6415">Grants</text>
+    <rect x="784" y="304" width="178" height="44" rx="22" fill="#E8FAF8" stroke="#AADAD6"/>
+    <text x="873" y="332" text-anchor="middle" fill="#247A75">Presentations</text>
+    <rect x="978" y="304" width="162" height="44" rx="22" fill="#F1F5FA" stroke="#CAD6E4"/>
+    <text x="1059" y="332" text-anchor="middle" fill="#3E5D78">Progress</text>
+    <rect x="1156" y="304" width="132" height="44" rx="22" fill="#F1F5FA" stroke="#CAD6E4"/>
+    <text x="1222" y="332" text-anchor="middle" fill="#3E5D78">Files</text>
+    <rect x="1304" y="304" width="164" height="44" rx="22" fill="#F1F5FA" stroke="#CAD6E4"/>
+    <text x="1386" y="332" text-anchor="middle" fill="#3E5D78">Recovery</text>
   </g>
 </svg>
