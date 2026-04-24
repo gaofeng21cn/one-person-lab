@@ -696,7 +696,23 @@
           "tags": [
             "frontdesk",
             "grant"
-          ]
+          ],
+          "domain_projection": {
+            "runtime_continuity": {
+              "surface_kind": "skill_runtime_continuity",
+              "runtime_owner": "upstream_hermes_agent",
+              "domain_owner": "med-autogrant",
+              "executor_owner": "med-autogrant",
+              "session_locator_field": "grant_run_id",
+              "session_surface_ref": "/product_entry_manifest/session_continuity",
+              "progress_surface_ref": "/product_entry_manifest/progress_projection",
+              "artifact_surface_ref": "/product_entry_manifest/artifact_inventory",
+              "restore_point_surface_ref": "/product_entry_manifest/runtime_control/restore_point",
+              "recommended_resume_command": "uv run python -m med_autogrant runtime-resume --journal $CODEX_HOME/projects/med-autogrant/runtime-state/sessions/grant-run-nsfc-demo-001-baseline-001.json --format json",
+              "recommended_progress_command": "uv run python -m med_autogrant grant-progress --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+              "recommended_artifact_command": "uv run python -m med_autogrant summarize-workspace --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json"
+            }
+          }
         },
         {
           "surface_kind": "skill_descriptor",
