@@ -8,8 +8,8 @@
 
 <h1 align="center">One Person Lab</h1>
 
-<p align="center"><strong>面向一人课题组的 Codex-default session runtime 与统一工作台</strong></p>
-<p align="center">以 Codex-default 会话为默认入口，在需要时显式激活 domain agent，并让可选外壳共享同一套运行时真相</p>
+<p align="center"><strong>面向认真研究、基金和汇报工作的统一工作台</strong></p>
+<p align="center">从一个入口发起专业工作，持续查看进度，并把交付物收在可信的位置。</p>
 
 <table>
   <tr>
@@ -41,7 +41,7 @@
 
 > `OPL` 把发起工作、查看进度和收集交付物放到同一个入口里，而每个专业产品家族继续保留自己的方法、规则和交付边界。
 
-## 全新 Mac 最快用起来
+## 最快用起来
 
 给用户的一行命令：
 
@@ -51,9 +51,9 @@ git clone https://github.com/gaofeng21cn/one-person-lab.git && cd one-person-lab
 
 给 Codex Agent 的一句话：
 
-> 安装并配置这个 OPL repo：clone repo，安装 OPL CLI，运行 `opl install`，确认 Codex CLI、Hermes-Agent、MAS/MAG/RCA、skills、本地 Product API service 和 OPL GUI 都准备好；如果某一步缺失，直接补齐或报告准确阻塞。
+> 安装并配置这个 OPL repo：clone repo，安装 OPL CLI，运行 `opl install`，确认 One Person Lab App、本地网页入口，以及 Research / Grant / Presentation Foundry 模块都准备好；如果某一步缺失，直接补齐或报告准确阻塞。
 
-`opl install` 会一揽子配置 `Codex CLI`、`Hermes-Agent`、`MAS`、`MAG`、`RCA`、短名 Codex skills、本地 Product API service，并启动已安装的 OPL GUI。
+`opl install` 会一揽子准备 OPL CLI、本地网页入口、已安装的 One Person Lab App，以及当前活跃的产品家族模块。
 
 ## 可以用来做什么
 
@@ -83,15 +83,14 @@ git clone https://github.com/gaofeng21cn/one-person-lab.git && cd one-person-lab
 
 ## 这个仓库跟踪什么
 
-这个仓库是 OPL 的产品 / runtime gateway，不是 GUI 外壳仓，也不是某个 domain agent 的实现仓。它跟踪：
+这个仓库跟踪 OPL 的共享工作台层，不是专业 domain agent 的实现仓。它负责让产品家族保持一致：
 
-- `opl`、直接 Codex 使用和外部壳共同消费的 Codex-default session/runtime 路径。
-- 让 `MAS`、`MAG`、`RCA` 以短名 skill 被调用的 activation layer。
-- 模块安装、skill 同步、service 配置和健康检查面。
-- 工作空间、会话、进度与交付物的发现与组织能力。
-- 共享产品层的机器可读合同。
+- 提供发起和恢复专业工作的共同入口。
+- 提供模块安装、skill 同步、service 配置和健康检查面。
+- 提供工作空间、会话、进度与交付物的发现和组织能力。
+- 提供共享合同，让 Research、Grant 和 Presentation Foundry 能在同一个工作台里被看见。
 
-桌面 GUI 由 [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) 作为基于 AionUI codebase 的 OPL 品牌壳维护。OPL 提供这个 GUI、网页入口和 Codex 共同消费的本地 Product API 与运行时真相。
+桌面 GUI 由 [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) 作为 OPL 品牌 App 外壳维护。这个仓库提供该 App、网页入口和 Codex 共同消费的本地工作台服务与共享产品表面。
 
 ## 这个仓库怎么读
 
