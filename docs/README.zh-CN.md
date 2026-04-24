@@ -3,8 +3,8 @@
 # OPL 文档索引
 
 这个目录是 `One Person Lab` 仓库跟踪文档面的入口索引。
-仓库首页优先写给潜在用户、人类专家和非技术读者。
-这份索引把当前产品模型、活跃 runtime/activation 主线，以及参考层和历史层串起来。
+仓库首页优先写给想安装并开始工作的用户。
+这份索引服务需要理解当前产品模型、活跃 runtime/activation 主线，以及参考层和历史层的读者。
 
 ## 当前产品模型
 
@@ -26,7 +26,7 @@
 
 | 读者 | 建议起点 | 目的 |
 | --- | --- | --- |
-| 潜在用户、人类专家、非技术读者 | [仓库首页](../README.zh-CN.md)、[路线图](./roadmap.zh-CN.md)、[任务版图](./task-map.zh-CN.md)、[运行模型](./operating-model.zh-CN.md) | 先理解 `OPL` 用来解决什么问题，以及产品家族怎么组织 |
+| 用户 | [仓库首页](../README.zh-CN.md) | 安装 OPL、启动 GUI 或网页入口，并按任务选择 Codex 或 domain agent |
 | 技术规划者、架构读者、方向同步读者 | [项目概览](./project.md)、[当前状态](./status.md)、[架构](./architecture.md)、[硬约束](./invariants.md)、[关键决策](./decisions.md)、[合同目录说明](../contracts/README.md) | 恢复当前边界、运行时模型和 admitted-domain split |
 | 开发者与维护者 | [参考级索引](./references/README.zh-CN.md)、`docs/specs/`、`docs/plans/`、[历史归档索引](./history/README.zh-CN.md) | 查看配套材料、兼容说明和退役路线 |
 
@@ -45,7 +45,7 @@
 
 仓库仍然沿用四层 `OPL` 文档体系，使用方式如下：
 
-- 第一层解释默认公开产品叙事。
+- 第一层解释用户视角的安装、启动和产品叙事。
 - 第二层解释当前活跃的 runtime/activation 主线。
 - 第三层承接 reference、compatibility、audit 和 migration 材料。
 - 第四层承接仓库跟踪的工作历史。
@@ -56,8 +56,7 @@
 
 ## 第一层：默认公开主线
 
-这一层是外部读者理解 `OPL` 的默认公开叙事。
-它们必须保持双语、可读、适合第一次接触项目的人。
+这一层是外部读者理解 `OPL` 的默认公开叙事。仓库首页是用户快速启动入口，必须保持安装优先、双语、可读。路线图和运行模型在用户知道如何启动后，再解释产品方向。
 
 - [仓库首页](../README.zh-CN.md)
 - [路线图](./roadmap.zh-CN.md)
@@ -115,7 +114,7 @@
 
 ## 文档规则
 
-- 继续把 [仓库首页](../README.zh-CN.md) 保持成潜在用户、医生、专家和其他非技术读者可读的公开入口。
+- 继续把 [仓库首页](../README.zh-CN.md) 保持成安装优先、用户视角、医生/专家和其他非技术读者可读的公开入口。
 - 活跃公开文档继续保持双语。
 - 第三层必须把 compatibility surface 和 current truth 区分清楚。
 - 第四层继续作为仓库跟踪历史。
