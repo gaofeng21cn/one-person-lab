@@ -8,8 +8,8 @@
 
 <h1 align="center">One Person Lab</h1>
 
-<p align="center"><strong>A Codex-default session runtime and unified workbench for research, grant, and presentation work</strong></p>
-<p align="center">Start work through Codex-default sessions, activate domain agents when needed, and let optional shells share the same runtime truth</p>
+<p align="center"><strong>One workbench for serious research, grant, and presentation work</strong></p>
+<p align="center">Start expert work, keep progress visible, and collect deliverables in one trusted place.</p>
 
 <table>
   <tr>
@@ -41,7 +41,7 @@
 
 > `OPL` gives one place to start work, keep progress legible, and collect outputs, while each specialized product family keeps its own methods and deliverables.
 
-## Fast Start On A New Mac
+## Fast Start
 
 One command for a human user:
 
@@ -51,9 +51,9 @@ git clone https://github.com/gaofeng21cn/one-person-lab.git && cd one-person-lab
 
 One instruction for a Codex Agent:
 
-> Install and configure this OPL repo: clone it, install the OPL CLI, run `opl install`, and ensure Codex CLI, Hermes-Agent, MAS/MAG/RCA, skills, the local Product API service, and the OPL GUI are ready; if anything is missing, fix it or report the exact blocker.
+> Install and configure this OPL repo: clone it, install the OPL CLI, run `opl install`, and ensure the One Person Lab App, local web entry, and the Research / Grant / Presentation Foundry modules are ready; if anything is missing, fix it or report the exact blocker.
 
-`opl install` configures `Codex CLI`, `Hermes-Agent`, `MAS`, `MAG`, `RCA`, short Codex skills, the local Product API service, and the installed OPL GUI in one pass.
+`opl install` prepares the OPL CLI, the local web entry, the installed One Person Lab App when present, and the active product-family modules in one pass.
 
 ## What People Use It For
 
@@ -83,15 +83,14 @@ One instruction for a Codex Agent:
 
 ## What This Repository Tracks
 
-This repository is the OPL product/runtime gateway, not the GUI shell and not a domain-agent implementation. It tracks:
+This repository tracks the shared OPL workbench layer, not the specialized domain-agent implementations. It keeps the product family coherent by providing:
 
-- The Codex-default session/runtime path used by `opl`, direct Codex usage, and external shells.
-- The activation layer that makes `MAS`, `MAG`, and `RCA` callable as short skills.
-- Module installation, skill sync, service setup, and health surfaces.
+- A common place to start and resume expert work.
+- Module installation, skill sync, service setup, and health checks.
 - Workspace, session, progress, and artifact discovery surfaces.
-- Machine-readable contracts for the shared product layer.
+- Shared contracts that let Research, Grant, and Presentation Foundries stay visible from one workbench.
 
-The desktop GUI is maintained by [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) as an OPL-branded shell built on the AionUI codebase. OPL provides the local Product API and runtime truth consumed by that GUI, by the web entry, and by Codex.
+The desktop GUI is maintained by [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) as the OPL-branded app shell. This repository provides the local workbench services and shared product surfaces consumed by that app, by the web entry, and by Codex.
 
 ## How To Read This Repository
 
