@@ -48,14 +48,14 @@ Supported environment: macOS is the primary desktop App target; Linux supports t
 One command for a human user:
 
 ```bash
-git clone https://github.com/gaofeng21cn/one-person-lab.git && cd one-person-lab && npm install && npm link && opl install
+curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/install.sh | bash
 ```
 
 One instruction for a Codex Agent:
 
 > Install and configure this OPL repo: clone it, install the OPL CLI, run `opl install`, and ensure the One Person Lab App Remote Connection WebUI and the Research / Grant / Presentation Foundry modules are ready; if anything is missing, fix it or report the exact blocker.
 
-`opl install` prepares the OPL CLI, active product-family modules, Codex skills, and the One Person Lab App in one pass. The desktop app is distributed from this repository’s GitHub Releases; browser access is enabled from the App’s Remote Connection tab.
+The installer clones or updates OPL under `~/.opl/one-person-lab`, links the `opl` CLI, then runs `opl install`. `opl install` prepares the OPL CLI, active product-family modules, Codex skills, and the One Person Lab App in one pass. The desktop app is distributed from this repository’s GitHub Releases; browser access is enabled from the App’s Remote Connection tab.
 
 ## What People Use It For
 
