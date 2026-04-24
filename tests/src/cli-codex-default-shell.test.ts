@@ -157,6 +157,7 @@ function createFakeFamilySkillWorkspace(captureDir: string) {
     {
       project: 'med-autoscience',
       plugin: 'med-autoscience',
+      canonicalPlugin: 'mas',
       installer: path.join('scripts', 'install-codex-plugin.sh'),
       scriptBody: `#!/usr/bin/env bash
 set -euo pipefail
@@ -169,6 +170,7 @@ EOF
     {
       project: 'med-autogrant',
       plugin: 'med-autogrant',
+      canonicalPlugin: 'mag',
       installer: path.join('scripts', 'install-codex-plugin.sh'),
       scriptBody: `#!/usr/bin/env bash
 set -euo pipefail
@@ -181,6 +183,7 @@ EOF
     {
       project: 'redcube-ai',
       plugin: 'redcube-ai',
+      canonicalPlugin: 'rca',
       installer: path.join('scripts', 'install-codex-plugin.mjs'),
       scriptBody: `import fs from 'node:fs';
 fs.appendFileSync(${JSON.stringify(path.join(captureDir, 'sync.log'))}, 'redcube-ai\\n');
@@ -191,17 +194,17 @@ process.stdout.write(JSON.stringify({ repo: 'redcube-ai', sync: 'ok' }) + '\\n')
 
   for (const spec of specs) {
     const repoRoot = path.join(workspaceRoot, spec.project);
-    const pluginRoot = path.join(repoRoot, 'plugins', spec.plugin);
-    const skillRoot = path.join(pluginRoot, 'skills', spec.plugin);
+    const pluginRoot = path.join(repoRoot, 'plugins', spec.canonicalPlugin);
+    const skillRoot = path.join(pluginRoot, 'skills', spec.canonicalPlugin);
     const installerPath = path.join(repoRoot, spec.installer);
     fs.mkdirSync(path.join(pluginRoot, '.codex-plugin'), { recursive: true });
     fs.mkdirSync(skillRoot, { recursive: true });
     fs.mkdirSync(path.dirname(installerPath), { recursive: true });
     fs.writeFileSync(
       path.join(pluginRoot, '.codex-plugin', 'plugin.json'),
-      JSON.stringify({ name: spec.plugin, skills: './skills/' }, null, 2),
+      JSON.stringify({ name: spec.canonicalPlugin, skills: './skills/' }, null, 2),
     );
-    fs.writeFileSync(path.join(skillRoot, 'SKILL.md'), `# ${spec.plugin}\n`);
+    fs.writeFileSync(path.join(skillRoot, 'SKILL.md'), `# ${spec.canonicalPlugin}\n`);
     fs.writeFileSync(installerPath, spec.scriptBody, { mode: 0o755 });
   }
 
@@ -347,6 +350,12 @@ test('opl skill list discovers the family plugin packs through the configured si
       output.skill_catalog.packs.map((entry: { domain_id: string }) => entry.domain_id),
       ['medautoscience', 'medautogrant', 'redcube'],
     );
+    assert.deepEqual(
+      output.skill_catalog.packs.map((entry: { canonical_plugin_name: string }) => entry.canonical_plugin_name),
+      ['mas', 'mag', 'rca'],
+    );
+    assert.match(output.skill_catalog.packs[0].plugin_manifest_path, /plugins\/mas\/\.codex-plugin\/plugin\.json$/);
+    assert.match(output.skill_catalog.packs[0].skill_entry_path, /plugins\/mas\/skills\/mas\/SKILL\.md$/);
     assert.equal(fs.existsSync(syncLogPath), false);
   } finally {
     fs.rmSync(captureDir, { recursive: true, force: true });

@@ -3,6 +3,8 @@ set -euo pipefail
 
 lane="${1:-smoke}"
 
+node scripts/line-budget.mjs
+
 case "$lane" in
   smoke|fast)
     npm test
