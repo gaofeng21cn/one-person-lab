@@ -20,6 +20,9 @@ import {
 import { runProductEntrySessions } from '../product-entry.ts';
 import { buildSessionLedger } from '../session-ledger.ts';
 import {
+  pickSkillActivationProjection,
+} from '../family-domain-catalog.ts';
+import {
   activateWorkspaceBinding,
   archiveWorkspaceBinding,
   bindWorkspace,
@@ -35,6 +38,7 @@ type RecommendedEntrySurface = Record<string, unknown>;
 type DomainAgentBlueprint = {
   agent_id: 'mas' | 'mag' | 'rca';
   module_id: 'medautoscience' | 'medautogrant' | 'redcube';
+  plugin_name: 'med-autoscience' | 'med-autogrant' | 'redcube-ai';
   title: string;
   description: string;
   artifact_conventions: string;
@@ -62,6 +66,7 @@ const DOMAIN_AGENT_BLUEPRINTS: Record<string, DomainAgentBlueprint> = {
   medautoscience: {
     agent_id: 'mas',
     module_id: 'medautoscience',
+    plugin_name: 'med-autoscience',
     title: 'Med Auto Science',
     description: 'Medical research and paper production inside a MAS workspace.',
     artifact_conventions: 'paper_and_submission_package',
@@ -70,6 +75,7 @@ const DOMAIN_AGENT_BLUEPRINTS: Record<string, DomainAgentBlueprint> = {
   medautogrant: {
     agent_id: 'mag',
     module_id: 'medautogrant',
+    plugin_name: 'med-autogrant',
     title: 'Med Auto Grant',
     description: 'Grant-writing and revision workflows inside a MAG workspace.',
     artifact_conventions: 'grant_proposal_package',
@@ -78,6 +84,7 @@ const DOMAIN_AGENT_BLUEPRINTS: Record<string, DomainAgentBlueprint> = {
   redcube: {
     agent_id: 'rca',
     module_id: 'redcube',
+    plugin_name: 'redcube-ai',
     title: 'RedCube AI',
     description: 'Presentation and visual-deliverable workflows inside a RedCube workspace.',
     artifact_conventions: 'deck_and_visual_delivery',
@@ -358,6 +365,7 @@ export function buildOplAgentsPayload(context: WebFrontDeskContext, api: OplApiC
     .flatMap((entry) => {
       const blueprint = DOMAIN_AGENT_BLUEPRINTS[entry.project_id];
       const manifest = resolvedManifestIndex.get(entry.project_id);
+      const skillActivation = pickSkillActivationProjection(manifest ?? null);
       const exportedSpec = readDomainAgentEntrySpec(
         manifest?.domain_entry_contract?.domain_agent_entry_spec,
       );
@@ -378,13 +386,27 @@ export function buildOplAgentsPayload(context: WebFrontDeskContext, api: OplApiC
         ...entry.binding_contract.optional_locator_fields,
         ...(exportedSpec?.locator_schema.optional_fields ?? []),
       ]);
+      const entryCommand = skillActivation?.entry_command ?? exportedSpec?.entry_command ?? null;
+      const activationKind =
+        skillActivation?.activation_kind
+        ?? (entry.active_binding?.direct_entry.url ? 'open_url' : entryCommand ? 'shell_command' : null);
       return [{
         agent_id: exportedSpec?.agent_id ?? blueprint?.agent_id,
-        title: exportedSpec?.title ?? blueprint?.title,
-        description: exportedSpec?.description ?? blueprint?.description,
+        title: skillActivation?.title ?? exportedSpec?.title ?? blueprint?.title,
+        description: skillActivation?.description ?? exportedSpec?.description ?? blueprint?.description,
         class: 'domain',
         module_id: moduleId,
         project_id: entry.project_id,
+        skill_id: skillActivation?.skill_id ?? null,
+        plugin_name: skillActivation?.plugin_name ?? blueprint?.plugin_name ?? null,
+        skill_semantics: skillActivation?.skill_semantics ?? null,
+        activation_kind: activationKind,
+        target_surface_kind: skillActivation?.target_surface_kind ?? null,
+        entry_shell_key: skillActivation?.entry_shell_key ?? null,
+        entry_command: entryCommand,
+        supporting_shell_keys: skillActivation?.supporting_shell_keys ?? [],
+        shell_commands: skillActivation?.shell_commands ?? {},
+        runtime_continuity: skillActivation?.runtime_continuity ?? null,
         default_engine: exportedSpec?.default_engine ?? 'codex',
         requires_workspace: requiresWorkspace,
         availability:
@@ -406,13 +428,16 @@ export function buildOplAgentsPayload(context: WebFrontDeskContext, api: OplApiC
             required_fields: requiredFields,
             optional_fields: optionalFields,
           },
-          codex_entry_strategy: exportedSpec?.codex_entry_strategy ?? 'domain_agent_entry',
+          codex_entry_strategy:
+            skillActivation?.entry_command
+              ? 'skill_activation_projection'
+              : exportedSpec?.codex_entry_strategy ?? 'domain_agent_entry',
           artifact_conventions: exportedSpec?.artifact_conventions ?? blueprint?.artifact_conventions,
           progress_conventions: exportedSpec?.progress_conventions ?? blueprint?.progress_conventions,
-          entry_command: exportedSpec?.entry_command ?? null,
+          entry_command: entryCommand,
           manifest_command: exportedSpec?.manifest_command ?? null,
           command_template:
-            entry.binding_contract.derived_entry_command_template ?? exportedSpec?.entry_command ?? null,
+            entry.binding_contract.derived_entry_command_template ?? entryCommand,
           manifest_command_template:
             entry.binding_contract.derived_manifest_command_template ?? exportedSpec?.manifest_command ?? null,
         },
@@ -439,7 +464,7 @@ export function buildOplAgentsPayload(context: WebFrontDeskContext, api: OplApiC
       notes: [
         'Agents are the user-facing registry of reusable work modes exposed through OPL.',
         'General Chat and General Task map to Codex-native interaction patterns.',
-        'Domain agents keep domain runtime ownership in their own repositories while OPL exposes one launcher registry.',
+        'Domain agents stay skill-backed and repo-owned while OPL only projects one shared activation registry.',
       ],
     },
   };

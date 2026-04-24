@@ -5,12 +5,115 @@ type BuildFamilyDomainCatalogOptions = {
   resolveActiveWorkspaceBinding?: (projectId: string) => WorkspaceBinding | null;
 };
 
+type SkillActivationShellCommand = {
+  command: string | null;
+  target_surface_kind: string | null;
+};
+
+type SkillActivationProjection = {
+  skill_id: string | null;
+  title: string | null;
+  description: string | null;
+  target_surface_kind: string | null;
+  plugin_name: string | null;
+  skill_semantics: string | null;
+  activation_kind: string | null;
+  entry_shell_key: string | null;
+  entry_command: string | null;
+  supporting_shell_keys: string[];
+  shell_commands: Record<string, SkillActivationShellCommand>;
+  runtime_continuity: Record<string, unknown> | null;
+};
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function hasResolvedCommand(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0;
+}
+
+function normalizeOptionalString(value: unknown) {
+  return typeof value === 'string' && value.trim().length > 0 ? value : null;
+}
+
+function readStringList(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((entry) => normalizeOptionalString(entry))
+    .filter((entry): entry is string => typeof entry === 'string');
+}
+
+function readSkillActivationShellCommands(value: unknown) {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const shellCommands: Record<string, SkillActivationShellCommand> = {};
+  for (const [shellKey, descriptor] of Object.entries(value)) {
+    const normalizedShellKey = normalizeOptionalString(shellKey);
+    if (!normalizedShellKey) {
+      continue;
+    }
+    if (typeof descriptor === 'string') {
+      shellCommands[normalizedShellKey] = {
+        command: descriptor.trim().length > 0 ? descriptor : null,
+        target_surface_kind: null,
+      };
+      continue;
+    }
+    if (!isRecord(descriptor)) {
+      continue;
+    }
+    shellCommands[normalizedShellKey] = {
+      command: normalizeOptionalString(descriptor.command),
+      target_surface_kind: normalizeOptionalString(descriptor.target_surface_kind),
+    };
+  }
+
+  return Object.keys(shellCommands).length > 0 ? shellCommands : null;
+}
+
+function buildManifestShellCommands(manifest: DomainManifestCatalogEntry['manifest']) {
+  const shellCommands: Record<string, SkillActivationShellCommand> = {};
+  const pushShellCommand = (shellKey: unknown, descriptor: unknown) => {
+    const normalizedShellKey = normalizeOptionalString(shellKey);
+    if (!normalizedShellKey || !isRecord(descriptor)) {
+      return;
+    }
+    const command = normalizeOptionalString(descriptor.command);
+    const targetSurfaceKind = normalizeOptionalString(descriptor.surface_kind);
+    if (!command && !targetSurfaceKind) {
+      return;
+    }
+    shellCommands[normalizedShellKey] = {
+      command,
+      target_surface_kind: targetSurfaceKind,
+    };
+  };
+
+  pushShellCommand(manifest?.frontdesk_surface?.shell_key, manifest?.frontdesk_surface);
+  pushShellCommand(manifest?.operator_loop_surface?.shell_key, manifest?.operator_loop_surface);
+  for (const [shellKey, descriptor] of Object.entries(manifest?.product_entry_shell ?? {})) {
+    pushShellCommand(shellKey, descriptor);
+  }
+  const recommendedShell = normalizeOptionalString(manifest?.recommended_shell);
+  const recommendedCommand = normalizeOptionalString(manifest?.recommended_command);
+  if (
+    recommendedShell
+    && recommendedCommand
+    && !Object.prototype.hasOwnProperty.call(shellCommands, recommendedShell)
+  ) {
+    shellCommands[recommendedShell] = {
+      command: recommendedCommand,
+      target_surface_kind: null,
+    };
+  }
+
+  return shellCommands;
 }
 
 function pickManifestPhaseId(repoMainline: Record<string, unknown> | null) {
@@ -60,7 +163,18 @@ function hasDomainAgentEntrySpec(manifest: DomainManifestCatalogEntry['manifest'
 }
 
 function pickSkillRuntimeContinuity(manifest: DomainManifestCatalogEntry['manifest']) {
+  return pickSkillActivationProjection(manifest)?.runtime_continuity ?? null;
+}
+
+export function pickSkillActivationProjection(manifest: DomainManifestCatalogEntry['manifest']) {
   const skills = Array.isArray(manifest?.skill_catalog?.skills) ? manifest.skill_catalog.skills : [];
+  const manifestShellCommands = buildManifestShellCommands(manifest);
+  const frontdeskSurfaceKind = normalizeOptionalString(manifest?.frontdesk_surface?.surface_kind);
+  const frontdeskCommand = normalizeOptionalString(manifest?.frontdesk_surface?.command);
+  const recommendedCommand = normalizeOptionalString(manifest?.recommended_command);
+  let bestProjection: SkillActivationProjection | null = null;
+  let bestScore = -1;
+
   for (const skill of skills) {
     if (!isRecord(skill)) {
       continue;
@@ -69,13 +183,64 @@ function pickSkillRuntimeContinuity(manifest: DomainManifestCatalogEntry['manife
     const runtimeContinuity = domainProjection && isRecord(domainProjection.runtime_continuity)
       ? domainProjection.runtime_continuity
       : null;
-    if (!runtimeContinuity) {
+    const activationSurface = domainProjection && isRecord(domainProjection.skill_activation)
+      ? domainProjection.skill_activation
+      : domainProjection;
+    const shellCommands =
+      readSkillActivationShellCommands(activationSurface?.shell_commands)
+      ?? manifestShellCommands;
+    const entryShellKey = normalizeOptionalString(activationSurface?.entry_shell_key)
+      ?? normalizeOptionalString(activationSurface?.skill_entry)
+      ?? normalizeOptionalString(activationSurface?.recommended_shell);
+    const entryCommand = normalizeOptionalString(activationSurface?.entry_command)
+      ?? normalizeOptionalString(skill.command)
+      ?? (entryShellKey ? shellCommands[entryShellKey]?.command ?? null : null)
+      ?? frontdeskCommand
+      ?? recommendedCommand;
+    const supportingShellKeys = [...new Set([
+      ...readStringList(activationSurface?.supporting_shell_keys),
+      ...Object.keys(shellCommands).filter((shellKey) => shellKey !== entryShellKey),
+    ])];
+    const hasActivationHints = Boolean(
+      normalizeOptionalString(activationSurface?.plugin_name)
+      || normalizeOptionalString(activationSurface?.skill_semantics)
+      || normalizeOptionalString(activationSurface?.activation_kind)
+      || entryShellKey
+      || normalizeOptionalString(activationSurface?.entry_command)
+      || readStringList(activationSurface?.supporting_shell_keys).length > 0
+      || Object.keys(shellCommands).length > 0,
+    );
+    const targetSurfaceKind = normalizeOptionalString(skill.target_surface_kind);
+    const score =
+      (hasActivationHints ? 10 : 0)
+      + (runtimeContinuity ? 5 : 0)
+      + (targetSurfaceKind === frontdeskSurfaceKind || targetSurfaceKind === 'product_frontdesk' ? 3 : 0)
+      + (entryCommand && entryCommand === frontdeskCommand ? 2 : 0)
+      + (entryCommand && entryCommand === recommendedCommand ? 1 : 0);
+
+    if (score <= 0 || score < bestScore) {
       continue;
     }
 
-    return runtimeContinuity;
+    bestProjection = {
+      skill_id: normalizeOptionalString(skill.skill_id),
+      title: normalizeOptionalString(skill.title),
+      description: normalizeOptionalString(skill.description),
+      target_surface_kind: targetSurfaceKind,
+      plugin_name: normalizeOptionalString(activationSurface?.plugin_name),
+      skill_semantics: normalizeOptionalString(activationSurface?.skill_semantics),
+      activation_kind: normalizeOptionalString(activationSurface?.activation_kind)
+        ?? (entryCommand ? 'shell_command' : null),
+      entry_shell_key: entryShellKey,
+      entry_command: entryCommand,
+      supporting_shell_keys: supportingShellKeys,
+      shell_commands: shellCommands,
+      runtime_continuity: runtimeContinuity,
+    };
+    bestScore = score;
   }
-  return null;
+
+  return bestProjection;
 }
 
 function hasSkillRuntimeContinuity(manifest: DomainManifestCatalogEntry['manifest']) {
@@ -370,8 +535,10 @@ export function buildRecommendedEntrySurfaces(
     .filter((entry) => entry.status === 'resolved' && entry.manifest?.recommended_command)
     .map((entry) => {
       const activeBinding = resolveActiveBinding(entry.project_id, options);
+      const skillActivation = pickSkillActivationProjection(entry.manifest ?? null);
       const skillRuntimeContinuity = pickSkillRuntimeContinuity(entry.manifest ?? null);
       const skillRuntimeContinuityReady = hasSkillRuntimeContinuity(entry.manifest ?? null);
+      const skillActivationReady = Boolean(skillActivation?.entry_command);
 
       return {
         project_id: entry.project_id,
@@ -506,6 +673,20 @@ export function buildRecommendedEntrySurfaces(
         skill_catalog: entry.manifest?.skill_catalog ?? null,
         skill_catalog_supported_commands: entry.manifest?.skill_catalog?.supported_commands ?? [],
         skill_catalog_skill_count: entry.manifest?.skill_catalog?.skills.length ?? 0,
+        skill_activation: skillActivation,
+        skill_activation_status:
+          skillActivationReady ? 'ready' : entry.manifest?.skill_catalog ? 'missing' : 'blocked',
+        skill_activation_skill_id: skillActivation?.skill_id ?? null,
+        skill_activation_title: skillActivation?.title ?? null,
+        skill_activation_description: skillActivation?.description ?? null,
+        skill_activation_target_surface_kind: skillActivation?.target_surface_kind ?? null,
+        skill_activation_plugin_name: skillActivation?.plugin_name ?? null,
+        skill_activation_skill_semantics: skillActivation?.skill_semantics ?? null,
+        skill_activation_kind: skillActivation?.activation_kind ?? null,
+        skill_activation_entry_shell_key: skillActivation?.entry_shell_key ?? null,
+        skill_activation_entry_command: skillActivation?.entry_command ?? null,
+        skill_activation_supporting_shell_keys: skillActivation?.supporting_shell_keys ?? [],
+        skill_activation_shell_commands: skillActivation?.shell_commands ?? {},
         skill_runtime_continuity: skillRuntimeContinuity,
         skill_runtime_continuity_status:
           skillRuntimeContinuityReady ? 'ready' : entry.manifest?.skill_catalog ? 'missing' : 'blocked',

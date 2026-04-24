@@ -868,6 +868,25 @@
           "workspace"
         ],
         "domain_projection": {
+          "plugin_name": "med-autoscience",
+          "skill_entry": "med-autoscience",
+          "recommended_shell": "workspace_cockpit",
+          "skill_semantics": "domain_app",
+          "entry_shell_key": "product_frontdesk",
+          "entry_command": "uv run python -m med_autoscience.cli product-frontdesk --profile /fixtures/med-autoscience/profile.local.toml",
+          "supporting_shell_keys": [
+            "workspace_cockpit",
+            "submit_study_task",
+            "launch_study",
+            "study_progress"
+          ],
+          "shell_commands": {
+            "product_frontdesk": "uv run python -m med_autoscience.cli product-frontdesk --profile /fixtures/med-autoscience/profile.local.toml",
+            "workspace_cockpit": "uv run python -m med_autoscience.cli workspace-cockpit --profile /fixtures/med-autoscience/profile.local.toml",
+            "submit_study_task": "uv run python -m med_autoscience.cli submit-study-task --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id> --task-intent '<task_intent>'",
+            "launch_study": "uv run python -m med_autoscience.cli launch-study --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>",
+            "study_progress": "uv run python -m med_autoscience.cli study-progress --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>"
+          },
           "runtime_continuity": {
             "surface_kind": "skill_runtime_continuity",
             "runtime_owner": "upstream_hermes_agent",

@@ -506,6 +506,30 @@
           "deliverable"
         ],
         "domain_projection": {
+          "skill_activation": {
+            "plugin_name": "redcube-ai",
+            "skill_semantics": "single_domain_app_skill",
+            "entry_shell_key": "frontdesk",
+            "entry_command": "redcube product frontdesk",
+            "supporting_shell_keys": [
+              "direct",
+              "session"
+            ],
+            "shell_commands": {
+              "frontdesk": {
+                "command": "redcube product frontdesk",
+                "target_surface_kind": "product_frontdesk"
+              },
+              "direct": {
+                "command": "redcube product invoke",
+                "target_surface_kind": "product_entry"
+              },
+              "session": {
+                "command": "redcube product session",
+                "target_surface_kind": "product_entry_session"
+              }
+            }
+          },
           "runtime_continuity": {
             "surface_kind": "skill_runtime_continuity",
             "runtime_owner": "upstream_hermes_agent",

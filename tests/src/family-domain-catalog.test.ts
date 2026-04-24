@@ -156,7 +156,7 @@ test('family domain catalog derives parity status from manifests and active bind
             manifest_command: 'medautoscience product-entry-manifest',
             workspace_locator: 'workspace_root',
           },
-        } as WorkspaceBinding;
+        } as unknown as WorkspaceBinding;
       }
       return null;
     },
@@ -320,6 +320,23 @@ test('family domain catalog derives recommended entry surfaces with active bindi
               readiness: 'landed',
               tags: [],
               domain_projection: {
+                skill_activation: {
+                  plugin_name: 'med-autoscience',
+                  skill_semantics: 'single_domain_app_skill',
+                  entry_shell_key: 'frontdesk',
+                  entry_command: 'medautoscience product-frontdesk',
+                  supporting_shell_keys: ['workspace-cockpit'],
+                  shell_commands: {
+                    frontdesk: {
+                      command: 'medautoscience product-frontdesk',
+                      target_surface_kind: 'product_frontdesk',
+                    },
+                    'workspace-cockpit': {
+                      command: 'medautoscience workspace-cockpit',
+                      target_surface_kind: 'workspace_cockpit',
+                    },
+                  },
+                },
                 runtime_continuity: {
                   surface_kind: 'skill_runtime_continuity',
                   runtime_owner: 'codex_cli',
@@ -377,7 +394,7 @@ test('family domain catalog derives recommended entry surfaces with active bindi
             manifest_command: 'medautoscience product-entry-manifest',
             workspace_locator: 'workspace_root',
           },
-        } as WorkspaceBinding;
+        } as unknown as WorkspaceBinding;
       },
     },
   );
@@ -396,12 +413,27 @@ test('family domain catalog derives recommended entry surfaces with active bindi
   assert.equal(recommended[0]?.domain_agent_entry_spec?.agent_id, 'mas');
   assert.equal(recommended[0]?.gateway_interaction_contract_status, 'ready');
   assert.equal(recommended[0]?.product_entry_preflight_recommended_start_command, 'medautoscience product-start');
-  assert.equal(recommended[0]?.runtime_control.surface_kind, 'runtime_control');
+  assert.equal(recommended[0]?.runtime_control?.surface_kind, 'runtime_control');
   assert.equal(recommended[0]?.runtime_control_status, 'ready');
   assert.equal(recommended[0]?.runtime_control_restore_point, 'phase_2_user_product_loop');
   assert.equal(recommended[0]?.runtime_control_resume_command, 'medautoscience study-runtime-status');
   assert.equal(recommended[0]?.runtime_control_approval_command, 'medautoscience workspace-cockpit');
   assert.deepEqual(recommended[0]?.runtime_control_gate_ids, ['human-review']);
+  assert.equal(recommended[0]?.skill_activation_status, 'ready');
+  assert.equal(recommended[0]?.skill_activation_skill_id, 'med-autoscience');
+  assert.equal(recommended[0]?.skill_activation_plugin_name, 'med-autoscience');
+  assert.equal(recommended[0]?.skill_activation_skill_semantics, 'single_domain_app_skill');
+  assert.equal(recommended[0]?.skill_activation_entry_shell_key, 'frontdesk');
+  assert.equal(recommended[0]?.skill_activation_entry_command, 'medautoscience product-frontdesk');
+  assert.deepEqual(recommended[0]?.skill_activation_supporting_shell_keys, ['workspace-cockpit']);
+  assert.equal(
+    recommended[0]?.skill_activation_shell_commands.frontdesk.command,
+    'medautoscience product-frontdesk',
+  );
+  assert.equal(
+    recommended[0]?.skill_activation_shell_commands['workspace-cockpit'].target_surface_kind,
+    'workspace_cockpit',
+  );
   assert.equal(recommended[0]?.skill_runtime_continuity_status, 'ready');
   assert.equal(recommended[0]?.skill_runtime_continuity_session_locator_field, 'study_id');
   assert.equal(recommended[0]?.skill_runtime_continuity_session_surface_ref, '/session_continuity');
