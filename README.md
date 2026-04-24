@@ -55,7 +55,7 @@ One instruction for a Codex Agent:
 
 > Install and configure this OPL repo: clone it, install the OPL CLI, run `opl install`, and ensure the One Person Lab App Remote Connection WebUI and the Research / Grant / Presentation Foundry modules are ready; if anything is missing, fix it or report the exact blocker.
 
-`opl install` prepares the OPL CLI, the installed One Person Lab App when present, and the active product-family modules in one pass. Browser access is enabled from the App’s Remote Connection tab.
+`opl install` prepares the OPL CLI, active product-family modules, Codex skills, and the One Person Lab App in one pass. The desktop app is distributed from this repository’s GitHub Releases; browser access is enabled from the App’s Remote Connection tab.
 
 ## What People Use It For
 
@@ -92,7 +92,7 @@ This repository tracks the shared OPL workbench layer, not the specialized domai
 - Workspace, session, progress, and artifact discovery surfaces.
 - Shared contracts that let Research, Grant, and Presentation Foundries stay visible from one workbench.
 
-The desktop GUI is maintained by [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) as the OPL-branded app shell. This repository provides the local workbench services and shared product surfaces consumed by that app, by the web entry, and by Codex.
+The desktop GUI source is maintained in [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) as an internal OPL-branded app-shell build input. Users download One Person Lab App packages from this repository’s GitHub Releases, and this repository provides the local workbench services and shared product surfaces consumed by the app, the web entry, and Codex.
 
 ## How To Read This Repository
 
@@ -112,7 +112,7 @@ The desktop GUI is maintained by [`opl-aion-shell`](https://github.com/gaofeng21
 - The shortest first-run command is `opl install`. It installs/configures `Codex CLI` and `Hermes-Agent`, installs the default family modules (`MAS` with its `MDS` dependency, `MAG`, `RCA`), syncs their Codex skills, opens the installed One Person Lab App when present, and leaves browser access to the App’s Remote Connection WebUI.
 - If one of the admitted domain repositories is not present yet, run `opl module install --module <module_id>`. The install path is now a turnkey loop: clone into the OPL-managed modules root, run the repo-specific bootstrap, sync the matching Codex skill pack, then finish with a repo health check.
 - For a first-run install surface, run `opl system initialize`. It exposes runtime dependencies, domain modules, the recommended companion skill bundle (`superpowers`, `officecli`, and native Office skills when present), and the OPL-branded GUI shell strategy in one machine-readable payload.
-- GUI packaging is owned by the sibling `opl-aion-shell` repository. A valid prebuilt GUI package means an OPL-branded Electron-builder release asset uploaded to GitHub Releases (`.dmg`, `.exe`, or `.deb`) plus updater metadata (`latest*.yml`); source build is the fallback when no asset matches the local platform and architecture.
+- GUI source/build input lives in the sibling `opl-aion-shell` repository, but user-facing app packages are released from `one-person-lab`. A valid prebuilt GUI package is an OPL-versioned asset such as `One Person Lab-26.4.25-mac-arm64.dmg`; source build from `opl-aion-shell` is only the fallback when no asset matches the local platform and architecture.
 - The default local state directory is `~/Library/Application Support/OPL/state`. Override it with `OPL_STATE_DIR` when you need a non-default local state root.
 - The current active domain agents are [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience), [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant), and [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai). They expose stable capability surfaces as local CLIs, programs/scripts, and repo-tracked contracts; continue into [Status](./docs/status.md), [Architecture](./docs/architecture.md), and the [OPL Public Surface Index](./docs/opl-public-surface-index.md) to recover the family mapping and public entry surfaces.
 - Use `OPL` when the task needs the top-level session/runtime path, shared `workspaces / sessions / progress / artifacts` surfaces, or explicit domain activation. Use the corresponding domain repository when the task is already scoped to one domain and you want that repo's own CLI/scripts/contracts boundary.

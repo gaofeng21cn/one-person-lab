@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+import { buildOplGuiArtifactName, buildOplReleaseTag, getOplReleaseRepo, getOplReleaseVersion } from './opl-release.ts';
 import { resolveFamilyWorkspaceRootFromRepoRoot } from './opl-skills.ts';
 
 export type OplCompanionSkillStatus = 'ready' | 'missing';
@@ -50,6 +51,9 @@ export type OplGuiShellSurface = {
   base_shell: 'aionui';
   relation_to_opl: 'opl_branded_gui_shell';
   repo_url: string;
+  release_repo: string;
+  release_tag: string;
+  opl_release_version: string;
   sibling_checkout_path: string;
   sibling_checkout_found: boolean;
   product_identity: {
@@ -270,6 +274,7 @@ export function buildOplRecommendedSkills(home = resolveHomeDir()): OplRecommend
 export function buildOplGuiShellSurface(repoRoot: string): OplGuiShellSurface {
   const workspaceRoot = resolveFamilyWorkspaceRootFromRepoRoot(repoRoot);
   const siblingCheckoutPath = path.join(workspaceRoot, 'opl-aion-shell');
+  const releaseVersion = getOplReleaseVersion();
 
   return {
     shell_id: 'opl_aion_shell',
@@ -278,6 +283,9 @@ export function buildOplGuiShellSurface(repoRoot: string): OplGuiShellSurface {
     base_shell: 'aionui',
     relation_to_opl: 'opl_branded_gui_shell',
     repo_url: 'https://github.com/gaofeng21cn/opl-aion-shell',
+    release_repo: getOplReleaseRepo(),
+    release_tag: buildOplReleaseTag(releaseVersion),
+    opl_release_version: releaseVersion,
     sibling_checkout_path: siblingCheckoutPath,
     sibling_checkout_found: fs.existsSync(siblingCheckoutPath) && fs.statSync(siblingCheckoutPath).isDirectory(),
     product_identity: {
@@ -291,19 +299,28 @@ export function buildOplGuiShellSurface(repoRoot: string): OplGuiShellSurface {
       {
         platform: 'macos',
         architectures: ['x64', 'arm64'],
-        distributable_patterns: ['OPL-<version>-mac-x64.dmg', 'OPL-<version>-mac-arm64.dmg'],
+        distributable_patterns: [
+          buildOplGuiArtifactName({ platform: 'macos', arch: 'x64', ext: 'dmg', version: releaseVersion }),
+          buildOplGuiArtifactName({ platform: 'macos', arch: 'arm64', ext: 'dmg', version: releaseVersion }),
+        ],
         updater_metadata: ['latest-mac.yml', 'latest-arm64-mac.yml'],
       },
       {
         platform: 'windows',
         architectures: ['x64', 'arm64'],
-        distributable_patterns: ['OPL-<version>-win-x64.exe', 'OPL-<version>-win-arm64.exe'],
+        distributable_patterns: [
+          buildOplGuiArtifactName({ platform: 'windows', arch: 'x64', ext: 'exe', version: releaseVersion }),
+          buildOplGuiArtifactName({ platform: 'windows', arch: 'arm64', ext: 'exe', version: releaseVersion }),
+        ],
         updater_metadata: ['latest.yml', 'latest-win-arm64.yml'],
       },
       {
         platform: 'linux',
         architectures: ['x64', 'arm64'],
-        distributable_patterns: ['OPL-<version>.deb', 'OPL-<version>-arm64.deb'],
+        distributable_patterns: [
+          buildOplGuiArtifactName({ platform: 'linux', arch: 'x64', ext: 'deb', version: releaseVersion }),
+          buildOplGuiArtifactName({ platform: 'linux', arch: 'arm64', ext: 'deb', version: releaseVersion }),
+        ],
         updater_metadata: ['latest-linux.yml', 'latest-linux-arm64.yml'],
       },
     ],
@@ -315,7 +332,7 @@ export function buildOplGuiShellSurface(repoRoot: string): OplGuiShellSurface {
     ],
     notes: [
       'OPL owns the runtime contract and Product API truth; opl-aion-shell owns the OPL-branded desktop GUI package built on the AionUI codebase.',
-      'A valid OPL GUI package is an OPL-branded Electron-builder distributable plus updater metadata uploaded to a GitHub Release.',
+      'A valid OPL GUI package is an OPL-branded Electron-builder distributable uploaded to the one-person-lab GitHub Release. The GUI source repository is internal build input.',
       'The upstream AionUI app is not itself the OPL GUI.',
       'Source build is only the fallback when no release asset matches the local platform and architecture.',
     ],
