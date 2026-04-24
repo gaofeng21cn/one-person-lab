@@ -257,6 +257,27 @@ function maybeParseJsonRecord(raw: string) {
   return null;
 }
 
+function syncCodexSkillMirror(inspected: InspectFamilySkillPack, home?: string) {
+  if (!inspected.skill_entry_found) {
+    return null;
+  }
+
+  const resolvedHome = home ? path.resolve(home) : (process.env.HOME ?? null);
+  if (!resolvedHome) {
+    return null;
+  }
+
+  const codexSkillDir = path.join(resolvedHome, '.codex', 'skills', inspected.canonical_plugin_name);
+  fs.mkdirSync(codexSkillDir, { recursive: true });
+  const targetPath = path.join(codexSkillDir, 'SKILL.md');
+  fs.copyFileSync(inspected.skill_entry_path, targetPath);
+
+  return {
+    skill_root: codexSkillDir,
+    skill_entry_path: targetPath,
+  };
+}
+
 function inspectFamilySkillPack(spec: SkillPackSpec): InspectFamilySkillPack {
   return inspectFamilySkillPackAtRepoRoot(spec, resolveRepoRoot(spec));
 }
@@ -346,10 +367,16 @@ function runInstaller(
     );
   }
 
+  const installerResult = maybeParseJsonRecord(result.stdout ?? '');
+  const codexSkillMirror = syncCodexSkillMirror(inspected, home);
+
   return {
     ...inspected,
     sync_status: 'synced',
-    installer_result: maybeParseJsonRecord(result.stdout ?? ''),
+    installer_result: {
+      ...(installerResult ?? {}),
+      ...(codexSkillMirror ? { codex_skill_mirror: codexSkillMirror } : {}),
+    },
     stdout: result.stdout ?? '',
     stderr: result.stderr ?? '',
   };
