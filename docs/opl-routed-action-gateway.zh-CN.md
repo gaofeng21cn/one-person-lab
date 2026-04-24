@@ -2,6 +2,8 @@
 
 # OPL Routed Action Gateway
 
+> 历史说明（`2026-04-24`）：这份文档保留的是 gateway-first 阶段 planning-only 的 routed-action 冻结件。当前 `OPL` 不再把它当作默认 runtime/activation 合同。
+
 ## 目的
 
 这份文档冻结 `OPL Gateway` 当前 planning-only 的 routed-action contract。
