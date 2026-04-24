@@ -1231,11 +1231,11 @@ exit 1
     assert.equal(output.system.local_service.gui_shell_strategy, 'external_overlay');
     assert.match(
       output.system.managed_paths.state_dir,
-      /Library\/Application Support\/OPL\/frontdesk$/,
+      /Library\/Application Support\/OPL\/state$/,
     );
     assert.match(
       output.system.managed_paths.modules_root,
-      /Library\/Application Support\/OPL\/frontdesk\/modules$/,
+      /Library\/Application Support\/OPL\/state\/modules$/,
     );
     assert.match(
       output.system.managed_paths.runtime_modes_file,
@@ -1601,11 +1601,40 @@ test('system update-channel reports and persists the selected release channel', 
 test('modules and module actions manage OPL-owned domain module installs and updates', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-modules-home-'));
   const modulesRoot = path.join(homeRoot, 'managed-modules');
-  const medAutoScienceRemote = createGitModuleRemoteFixture('med-autoscience');
+  const turnkeyLogPath = path.join(homeRoot, 'turnkey.log');
+  const medAutoScienceRemote = createGitModuleRemoteFixture('med-autoscience', {
+    extraFiles: {
+      'plugins/med-autoscience/.codex-plugin/plugin.json': JSON.stringify({
+        name: 'med-autoscience',
+        skills: './skills/',
+      }, null, 2),
+      'plugins/med-autoscience/skills/med-autoscience/SKILL.md': '# med-autoscience\n',
+      'scripts/opl-module-bootstrap.sh': `#!/usr/bin/env bash
+set -euo pipefail
+printf 'bootstrap\\n' >> ${JSON.stringify(turnkeyLogPath)}
+`,
+      'scripts/install-codex-plugin.sh': `#!/usr/bin/env bash
+set -euo pipefail
+printf 'skill-sync\\n' >> ${JSON.stringify(turnkeyLogPath)}
+cat <<'EOF'
+{"repo":"med-autoscience","sync":"ok"}
+EOF
+`,
+      'scripts/opl-module-healthcheck.sh': `#!/usr/bin/env bash
+set -euo pipefail
+test -f ${JSON.stringify(turnkeyLogPath)}
+printf 'health\\n' >> ${JSON.stringify(turnkeyLogPath)}
+cat <<'EOF'
+{"status":"ok"}
+EOF
+`,
+    },
+  });
   const env = {
     HOME: homeRoot,
     OPL_MODULES_ROOT: modulesRoot,
     OPL_MODULE_REPO_URL_MEDAUTOSCIENCE: medAutoScienceRemote.remoteRoot,
+    OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
   };
 
   try {
@@ -1637,6 +1666,18 @@ test('modules and module actions manage OPL-owned domain module installs and upd
       module_action: {
         action: string;
         status: string;
+        turnkey: {
+          bootstrap: {
+            status: string;
+          };
+          skill_sync: {
+            status: string;
+            domain_id: string | null;
+          };
+          health_check: {
+            status: string;
+          };
+        };
         module: {
           module_id: string;
           installed: boolean;
@@ -1653,6 +1694,10 @@ test('modules and module actions manage OPL-owned domain module installs and upd
     assert.equal(install.module_action.module.module_id, 'medautoscience');
     assert.equal(install.module_action.module.installed, true);
     assert.equal(install.module_action.module.install_origin, 'managed_root');
+    assert.equal(install.module_action.turnkey.bootstrap.status, 'completed');
+    assert.equal(install.module_action.turnkey.skill_sync.status, 'completed');
+    assert.equal(install.module_action.turnkey.skill_sync.domain_id, 'medautoscience');
+    assert.equal(install.module_action.turnkey.health_check.status, 'completed');
     assert.equal(
       install.module_action.module.git.head_sha,
       medAutoScienceRemote.getHeadSha(),
@@ -1660,6 +1705,10 @@ test('modules and module actions manage OPL-owned domain module installs and upd
     assert.equal(
       fs.existsSync(path.join(install.module_action.module.checkout_path, 'README.md')),
       true,
+    );
+    assert.deepEqual(
+      fs.readFileSync(turnkeyLogPath, 'utf8').trim().split('\n'),
+      ['bootstrap', 'skill-sync', 'health'],
     );
 
     const nextSha = medAutoScienceRemote.advance(
@@ -1684,6 +1733,10 @@ test('modules and module actions manage OPL-owned domain module installs and upd
     assert.equal(update.module_action.action, 'update');
     assert.equal(update.module_action.status, 'completed');
     assert.equal(update.module_action.module.git.head_sha, nextSha);
+    assert.deepEqual(
+      fs.readFileSync(turnkeyLogPath, 'utf8').trim().split('\n'),
+      ['bootstrap', 'skill-sync', 'health', 'bootstrap', 'skill-sync', 'health'],
+    );
 
     const remove = runCli(
       ['module', 'remove', '--module', 'medautoscience'],
