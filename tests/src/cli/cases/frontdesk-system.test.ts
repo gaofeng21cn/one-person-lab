@@ -93,7 +93,7 @@ exit 1
 
   try {
     const output = runCli(['status', 'dashboard', '--path', repoRoot, '--sessions-limit', '1'], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_STATE_DIR: stateRoot,
       OPL_HERMES_BIN: hermesPath,
       PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
     });
@@ -1331,7 +1331,7 @@ exit 1
         HOME: homeRoot,
         CODEX_HOME: codexConfigFixture.codexHome,
         OPL_HERMES_BIN: hermesFixture.hermesPath,
-        OPL_FRONTDESK_STATE_DIR: stateDir,
+        OPL_STATE_DIR: stateDir,
         OPL_WORKSPACE_ROOT: workspaceRoot,
         PATH: `${codexFixture.fixtureRoot}:${hermesFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
       },
@@ -1447,7 +1447,7 @@ test('system initialize exposes first-run blocker metadata and actionable payloa
       ['system', 'initialize'],
       {
         HOME: homeRoot,
-        OPL_FRONTDESK_STATE_DIR: stateDir,
+        OPL_STATE_DIR: stateDir,
         PATH: '/usr/bin:/bin',
       },
     ) as {
@@ -1563,7 +1563,7 @@ test('workspace root set persists the selected root and workspace root reads it 
       ['workspace', 'root', 'set', '--path', workspaceRoot],
       {
         HOME: homeRoot,
-        OPL_FRONTDESK_STATE_DIR: stateDir,
+        OPL_STATE_DIR: stateDir,
       },
     ) as {
       workspace_root: {
@@ -1579,7 +1579,7 @@ test('workspace root set persists the selected root and workspace root reads it 
       ['workspace', 'root'],
       {
         HOME: homeRoot,
-        OPL_FRONTDESK_STATE_DIR: stateDir,
+        OPL_STATE_DIR: stateDir,
       },
     ) as {
       workspace_root: {
@@ -1605,7 +1605,7 @@ test('system update-channel reports and persists the selected release channel', 
       ['system', 'update-channel'],
       {
         HOME: homeRoot,
-        OPL_FRONTDESK_STATE_DIR: stateDir,
+        OPL_STATE_DIR: stateDir,
       },
     ) as {
       system_action: {
@@ -1622,7 +1622,7 @@ test('system update-channel reports and persists the selected release channel', 
       ['system', 'update-channel', '--channel', 'preview'],
       {
         HOME: homeRoot,
-        OPL_FRONTDESK_STATE_DIR: stateDir,
+        OPL_STATE_DIR: stateDir,
       },
     ) as {
       system_action: {

@@ -32,14 +32,12 @@ test('frontdesk endpoint catalog advertises OPL product API URLs for public reso
   assert.equal(endpoints.logs, '/pilot/opl/api/opl/sessions/logs');
 });
 
-test('frontdesk state paths default to OPL state dir and preserve legacy frontdesk dir when it already exists', () => {
+test('frontdesk state paths default to OPL state dir and ignore retired frontdesk legacy state paths', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-state-paths-'));
   const previousHome = process.env.HOME;
   const previousStateDir = process.env.OPL_STATE_DIR;
-  const previousLegacyStateDir = process.env.OPL_FRONTDESK_STATE_DIR;
 
   delete process.env.OPL_STATE_DIR;
-  delete process.env.OPL_FRONTDESK_STATE_DIR;
   process.env.HOME = homeRoot;
 
   try {
@@ -48,7 +46,7 @@ test('frontdesk state paths default to OPL state dir and preserve legacy frontde
     assert.equal(resolveFrontDeskStatePaths().state_dir, expectedStateDir);
 
     fs.mkdirSync(path.join(baseDir, 'frontdesk'), { recursive: true });
-    assert.equal(resolveFrontDeskStatePaths().state_dir, path.join(baseDir, 'frontdesk'));
+    assert.equal(resolveFrontDeskStatePaths().state_dir, expectedStateDir);
   } finally {
     if (previousHome === undefined) {
       delete process.env.HOME;
@@ -59,11 +57,6 @@ test('frontdesk state paths default to OPL state dir and preserve legacy frontde
       delete process.env.OPL_STATE_DIR;
     } else {
       process.env.OPL_STATE_DIR = previousStateDir;
-    }
-    if (previousLegacyStateDir === undefined) {
-      delete process.env.OPL_FRONTDESK_STATE_DIR;
-    } else {
-      process.env.OPL_FRONTDESK_STATE_DIR = previousLegacyStateDir;
     }
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }

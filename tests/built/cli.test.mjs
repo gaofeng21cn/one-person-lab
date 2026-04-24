@@ -612,7 +612,7 @@ exit 1
 
     const dashboardResult = runCli(['status', 'dashboard', '--path', repoRoot, '--sessions-limit', '1'], {
       env: {
-        OPL_FRONTDESK_STATE_DIR: stateRoot,
+        OPL_STATE_DIR: stateRoot,
         OPL_HERMES_BIN: hermesPath,
         PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
       },
@@ -800,7 +800,7 @@ test('web bundle stays machine-readable through the built CLI entrypoint', () =>
       '9',
     ], {
       env: {
-        OPL_FRONTDESK_STATE_DIR: stateRoot,
+        OPL_STATE_DIR: stateRoot,
       },
     });
     assert.equal(result.status, 0, formatFailure(result));
@@ -892,7 +892,7 @@ test('workspace registry and contract handoff surfaces stay machine-readable thr
       'http://127.0.0.1:3310/redcube',
     ], {
       env: {
-        OPL_FRONTDESK_STATE_DIR: stateRoot,
+        OPL_STATE_DIR: stateRoot,
       },
     });
     assert.equal(bindResult.status, 0, formatFailure(bindResult));
@@ -902,7 +902,7 @@ test('workspace registry and contract handoff surfaces stay machine-readable thr
 
     const catalogResult = runCli(['workspace', 'list'], {
       env: {
-        OPL_FRONTDESK_STATE_DIR: stateRoot,
+        OPL_STATE_DIR: stateRoot,
       },
     });
     assert.equal(catalogResult.status, 0, formatFailure(catalogResult));
@@ -935,7 +935,7 @@ test('workspace registry and contract handoff surfaces stay machine-readable thr
       repoRoot,
     ], {
       env: {
-        OPL_FRONTDESK_STATE_DIR: stateRoot,
+        OPL_STATE_DIR: stateRoot,
       },
     });
     assert.equal(handoffResult.status, 0, formatFailure(handoffResult));
@@ -954,7 +954,7 @@ test('workspace registry and contract handoff surfaces stay machine-readable thr
       repoRoot,
     ], {
       env: {
-        OPL_FRONTDESK_STATE_DIR: stateRoot,
+        OPL_STATE_DIR: stateRoot,
       },
     });
     assert.equal(archiveResult.status, 0, formatFailure(archiveResult));
@@ -984,7 +984,7 @@ test('domain launch stays machine-readable through the built CLI entrypoint', as
       'http://127.0.0.1:3310/redcube',
     ], {
       env: {
-        OPL_FRONTDESK_STATE_DIR: stateRoot,
+        OPL_STATE_DIR: stateRoot,
       },
     });
     assert.equal(bindResult.status, 0, formatFailure(bindResult));
@@ -997,7 +997,7 @@ test('domain launch stays machine-readable through the built CLI entrypoint', as
       '--dry-run',
     ], {
       env: {
-        OPL_FRONTDESK_STATE_DIR: stateRoot,
+        OPL_STATE_DIR: stateRoot,
         OPL_OPEN_BIN: openFixture.openPath,
       },
     });
@@ -1014,7 +1014,7 @@ test('domain launch stays machine-readable through the built CLI entrypoint', as
       'redcube',
     ], {
       env: {
-        OPL_FRONTDESK_STATE_DIR: stateRoot,
+        OPL_STATE_DIR: stateRoot,
         OPL_OPEN_BIN: openFixture.openPath,
       },
     });
@@ -1030,7 +1030,7 @@ test('domain launch stays machine-readable through the built CLI entrypoint', as
       'spawn_command',
     ], {
       env: {
-        OPL_FRONTDESK_STATE_DIR: stateRoot,
+        OPL_STATE_DIR: stateRoot,
         OPL_OPEN_BIN: openFixture.openPath,
       },
     });
@@ -1130,7 +1130,7 @@ exit 1
     ], {
       env: {
         OPL_HERMES_BIN: hermesPath,
-        OPL_FRONTDESK_STATE_DIR: stateRoot,
+        OPL_STATE_DIR: stateRoot,
         PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
       },
     });
@@ -1139,7 +1139,7 @@ exit 1
     const resumeResult = runCli(['session', 'resume', 'built_sess_ledger'], {
       env: {
         OPL_HERMES_BIN: hermesPath,
-        OPL_FRONTDESK_STATE_DIR: stateRoot,
+        OPL_STATE_DIR: stateRoot,
         PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
       },
     });
@@ -1148,7 +1148,7 @@ exit 1
     const ledgerResult = runCli(['session', 'ledger', '--limit', '5'], {
       env: {
         OPL_HERMES_BIN: hermesPath,
-        OPL_FRONTDESK_STATE_DIR: stateRoot,
+        OPL_STATE_DIR: stateRoot,
         PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
       },
     });
@@ -1269,7 +1269,7 @@ exit 1
       'http://127.0.0.1:3310/redcube',
     ], {
       env: {
-        OPL_FRONTDESK_STATE_DIR: stateRoot,
+        OPL_STATE_DIR: stateRoot,
       },
     });
     assert.equal(bindResult.status, 0, formatFailure(bindResult));
@@ -1280,7 +1280,7 @@ exit 1
         env: {
           OPL_CODEX_BIN: codexPath,
           OPL_HERMES_BIN: hermesPath,
-          OPL_FRONTDESK_STATE_DIR: stateRoot,
+          OPL_STATE_DIR: stateRoot,
           PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
         },
       },

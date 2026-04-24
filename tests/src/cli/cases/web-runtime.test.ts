@@ -124,7 +124,7 @@ exit 1
     OPL_CODEX_BIN: codexPath,
     OPL_CODEX_INSTALL_COMMAND: installScript,
     OPL_HERMES_BIN: hermesPath,
-    OPL_FRONTDESK_STATE_DIR: stateDir,
+    OPL_STATE_DIR: stateDir,
     OPL_CONTRACTS_DIR: fixtureContractsRoot,
     PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
   };
@@ -674,7 +674,7 @@ exit 1
       '--entry-url',
       'http://127.0.0.1:3310/redcube',
     ], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     });
 
@@ -682,7 +682,7 @@ exit 1
       ['web', '--host', '127.0.0.1', '--port', '0', '--path', repoRoot, '--sessions-limit', '1'],
       {
         OPL_CONTRACTS_DIR: fixtureContractsRoot,
-        OPL_FRONTDESK_STATE_DIR: stateRoot,
+        OPL_STATE_DIR: stateRoot,
         OPL_HERMES_BIN: hermesPath,
         PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
       },

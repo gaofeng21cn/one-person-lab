@@ -87,7 +87,7 @@
 - 默认前门是 `opl`、`opl exec` 和 `opl resume`。除非显式切换 runtime 或显式激活 domain agent，这几个入口都继承 Codex-default 语义。`MCP` 继续是支持协议层，`controller` 继续只是 internal surface。
 - 当前主线交互路径以 Codex-default 为先：本地 `opl`、直接 `Codex` 使用，以及未来外部壳都消费同一套 session/runtime truth。`opl skill sync` 现在默认会按 workspace 布局自动发现 sibling family repo，worktree 场景不再需要额外设置 `OPL_FAMILY_WORKSPACE_ROOT` 才能把家族 skill pack 装进 Codex。
 - 如果某个 admitted domain repo 还没落地到本机，运行 `opl module install --module <module_id>`。这条安装线现在是闭环：先 clone 到 OPL-managed modules root，再执行仓库自己的 bootstrap、同步对应 Codex skill pack，最后跑仓库健康检查。
-- 默认本地状态目录是 `~/Library/Application Support/OPL/state`。优先使用 `OPL_STATE_DIR` 覆盖；`OPL_FRONTDESK_STATE_DIR` 继续保留为 legacy-compatible alias。
+- 默认本地状态目录是 `~/Library/Application Support/OPL/state`。如果需要改到其他本地状态根目录，直接设置 `OPL_STATE_DIR`。
 - 当前 active domain agents 是 [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience)、[`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) 和 [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai)。它们分别承接医学研究、基金写作和视觉交付，并把本地 CLI、程序/脚本与 repo-tracked contract 暴露成稳定 capability surface；家族映射与公开入口可继续从 [当前状态](./docs/status.md)、[架构](./docs/architecture.md) 和 [OPL 公开界面索引](./docs/opl-public-surface-index.zh-CN.md) 进入。
 - 当任务需要顶层 session/runtime 路径、共享 `workspaces / sessions / progress / artifacts` surface 或显式 domain activation 时，从 `OPL` 进入；当任务已经明确落在某个 domain 上时，继续进入对应仓库首页和 `docs/README*`，按该仓自己的 CLI/脚本/contract 边界执行。
 

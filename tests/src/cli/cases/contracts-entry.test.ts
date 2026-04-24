@@ -362,7 +362,7 @@ exit 1
   try {
     const result = runCliRaw([], {
       OPL_CODEX_BIN: codexPath,
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_STATE_DIR: stateRoot,
     });
 
     assert.equal(result.stdout, 'CODEX FRONTDOOR\n');

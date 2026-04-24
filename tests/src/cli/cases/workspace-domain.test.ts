@@ -20,7 +20,7 @@ test('workspace registry commands bind activate and archive project workspaces w
       '--entry-url',
       'http://127.0.0.1:3310/redcube',
     ], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_STATE_DIR: stateRoot,
     });
 
     assert.equal(bindOutput.workspace_catalog.action, 'bind');
@@ -33,7 +33,7 @@ test('workspace registry commands bind activate and archive project workspaces w
     assert.equal(bindOutput.workspace_catalog.binding.direct_entry.url, 'http://127.0.0.1:3310/redcube');
 
     const catalogOutput = runCli(['workspace', 'list'], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_STATE_DIR: stateRoot,
     });
     assert.equal(catalogOutput.workspace_catalog.projects.length, 4);
     assert.equal(catalogOutput.workspace_catalog.projects[3].project_id, 'redcube');
@@ -76,7 +76,7 @@ test('workspace registry commands bind activate and archive project workspaces w
       '--path',
       repoRoot,
     ], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_STATE_DIR: stateRoot,
     });
     assert.equal(archiveOutput.workspace_catalog.action, 'archive');
     assert.equal(archiveOutput.workspace_catalog.binding.status, 'archived');
@@ -90,7 +90,7 @@ test('domain manifests resolves real family manifest fixtures while workspace li
   const fixtures = loadFamilyManifestFixtures();
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const env = {
-    OPL_FRONTDESK_STATE_DIR: stateRoot,
+    OPL_STATE_DIR: stateRoot,
     OPL_CONTRACTS_DIR: fixtureContractsRoot,
   };
 
@@ -959,18 +959,18 @@ test('project-progress promotes current MAS study into a paper-facing summary in
       '--manifest-command',
       buildManifestCommand(manifest),
     ], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
     });
 
     const contracts = loadGatewayContracts({ contractsDir: fixtureContractsRoot });
     const originalArgv1 = process.argv[1];
-    const originalStateDir = process.env.OPL_FRONTDESK_STATE_DIR;
+    const originalStateDir = process.env.OPL_STATE_DIR;
     const originalContractsDir = process.env.OPL_CONTRACTS_DIR;
     let payload: Awaited<ReturnType<typeof buildProjectProgressBrief>>;
     try {
       process.argv[1] = cliPath;
-      process.env.OPL_FRONTDESK_STATE_DIR = stateRoot;
+      process.env.OPL_STATE_DIR = stateRoot;
       process.env.OPL_CONTRACTS_DIR = fixtureContractsRoot;
       payload = await buildProjectProgressBrief(contracts, {
         workspacePath: masWorkspace.fixtureRoot,
@@ -979,9 +979,9 @@ test('project-progress promotes current MAS study into a paper-facing summary in
     } finally {
       process.argv[1] = originalArgv1;
       if (originalStateDir === undefined) {
-        delete process.env.OPL_FRONTDESK_STATE_DIR;
+        delete process.env.OPL_STATE_DIR;
       } else {
-        process.env.OPL_FRONTDESK_STATE_DIR = originalStateDir;
+        process.env.OPL_STATE_DIR = originalStateDir;
       }
       if (originalContractsDir === undefined) {
         delete process.env.OPL_CONTRACTS_DIR;
@@ -1114,7 +1114,7 @@ test('workspace-bind derives family direct-entry locators from structured projec
   fs.writeFileSync(magInputPath, '{}\n', 'utf8');
 
   const env = {
-    OPL_FRONTDESK_STATE_DIR: stateRoot,
+    OPL_STATE_DIR: stateRoot,
     OPL_CONTRACTS_DIR: fixtureContractsRoot,
     PATH: `${commandFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
   };
@@ -1339,7 +1339,7 @@ test('domain manifests executes manifest_command with a bash-compatible shell', 
 
   try {
     const output = runCli(['domain', 'manifests'], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
       PATH: `${commandFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
     });
@@ -1361,7 +1361,7 @@ test('start returns the routed family start surface for a bound project', () => 
   const fixtures = loadFamilyManifestFixtures();
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const env = {
-    OPL_FRONTDESK_STATE_DIR: stateRoot,
+    OPL_STATE_DIR: stateRoot,
     OPL_CONTRACTS_DIR: fixtureContractsRoot,
   };
 
@@ -1412,11 +1412,11 @@ test('domain manifests reports invalid json when a bound manifest command is mal
       '--manifest-command',
       "printf 'not-json'",
     ], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_STATE_DIR: stateRoot,
     });
 
     const manifestOutput = runCli(['domain', 'manifests'], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_STATE_DIR: stateRoot,
     });
     const medautoscience = manifestOutput.domain_manifests.projects.find((entry: { project_id: string }) => entry.project_id === 'medautoscience');
 
@@ -1446,7 +1446,7 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
       '--entry-url',
       'http://127.0.0.1:3310/redcube',
     ], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_STATE_DIR: stateRoot,
     });
 
     const output = runCli([
@@ -1466,7 +1466,7 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
       '--workspace-path',
       repoRoot,
     ], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_STATE_DIR: stateRoot,
     });
 
     assert.equal(output.handoff_bundle.target_domain_id, 'redcube');
@@ -1692,7 +1692,7 @@ test('domain launch resolves a bound direct-entry locator into an honest launche
       '--entry-url',
       'http://127.0.0.1:3310/redcube',
     ], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_STATE_DIR: stateRoot,
     });
 
     const preview = runCli([
@@ -1702,7 +1702,7 @@ test('domain launch resolves a bound direct-entry locator into an honest launche
       'redcube',
       '--dry-run',
     ], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_STATE_DIR: stateRoot,
       OPL_OPEN_BIN: openFixture.openPath,
     });
 
@@ -1726,7 +1726,7 @@ test('domain launch resolves a bound direct-entry locator into an honest launche
       '--project',
       'redcube',
     ], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_STATE_DIR: stateRoot,
       OPL_OPEN_BIN: openFixture.openPath,
     });
 
@@ -1744,7 +1744,7 @@ test('domain launch resolves a bound direct-entry locator into an honest launche
       '--strategy',
       'spawn_command',
     ], {
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_STATE_DIR: stateRoot,
       OPL_OPEN_BIN: openFixture.openPath,
     });
 
@@ -1857,14 +1857,14 @@ exit 1
 
     const resumeOutput = runCli(['session', 'resume', 'sess_ledger', '--executor', 'hermes'], {
       OPL_HERMES_BIN: hermesPath,
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_STATE_DIR: stateRoot,
       PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
     });
     assert.equal(resumeOutput.product_entry.mode, 'resume');
 
     const ledgerOutput = runCli(['session', 'ledger', '--limit', '5'], {
       OPL_HERMES_BIN: hermesPath,
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_STATE_DIR: stateRoot,
       PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
     });
 
@@ -1893,7 +1893,7 @@ exit 1
 
     const runtimeOutput = runCli(['status', 'runtime', '--limit', '2'], {
       OPL_HERMES_BIN: hermesPath,
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
+      OPL_STATE_DIR: stateRoot,
       PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
     });
     assert.equal(runtimeOutput.runtime_status.managed_session_ledger.summary.entry_count, 2);
