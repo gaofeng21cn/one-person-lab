@@ -59,7 +59,40 @@ test('family domain catalog derives parity status from manifests and active bind
       runtime_inventory: { surface_kind: 'runtime_inventory' },
       task_lifecycle: { surface_kind: 'task_lifecycle' },
       runtime_control: { surface_kind: 'runtime_control' },
-      skill_catalog: { surface_kind: 'skill_catalog' },
+      skill_catalog: {
+        surface_kind: 'skill_catalog',
+        skills: [
+          {
+            surface_kind: 'skill_descriptor',
+            skill_id: 'med-autoscience',
+            title: 'Med Auto Science',
+            owner: 'med-autoscience',
+            distribution_mode: 'repo_tracked',
+            target_surface_kind: 'product_frontdesk',
+            description: 'MAS app skill',
+            readiness: 'landed',
+            tags: [],
+            domain_projection: {
+              runtime_continuity: {
+                surface_kind: 'skill_runtime_continuity',
+                runtime_owner: 'codex_cli',
+                domain_owner: 'med-autoscience',
+                executor_owner: 'mas_controller',
+                session_locator_field: 'study_id',
+                session_surface_ref: '/session_continuity',
+                progress_surface_ref: '/progress_projection',
+                artifact_surface_ref: '/artifact_inventory',
+                restore_point_surface_ref: '/runtime_control/restore_point',
+                recommended_resume_command: 'medautoscience workspace-cockpit',
+                recommended_progress_command: 'medautoscience study-progress',
+                recommended_artifact_command: 'medautoscience workspace-cockpit --artifacts',
+              },
+            },
+          },
+        ],
+        supported_commands: ['study-progress'],
+        command_contracts: [],
+      },
       automation: { surface_kind: 'automation' },
       product_entry_readiness: { verdict: 'good_to_use_now' },
       product_entry_preflight: {
@@ -137,6 +170,7 @@ test('family domain catalog derives parity status from manifests and active bind
   assert.equal(parity.summary.ready_for_domain_handoff_count, 1);
   assert.equal(parity.summary.domain_agent_entry_spec_ready_count, 2);
   assert.equal(parity.summary.runtime_control_ready_count, 2);
+  assert.equal(parity.summary.skill_runtime_continuity_ready_count, 1);
 
   const alignedProject = parity.projects.find((entry) => entry.project_id === 'med-autoscience');
   const partialProject = parity.projects.find((entry) => entry.project_id === 'med-autogrant');
@@ -274,7 +308,35 @@ test('family domain catalog derives recommended entry surfaces with active bindi
         },
         skill_catalog: {
           surface_kind: 'skill_catalog',
-          skills: [{ skill_id: 'workspace-cockpit' }],
+          skills: [
+            {
+              surface_kind: 'skill_descriptor',
+              skill_id: 'med-autoscience',
+              title: 'Med Auto Science',
+              owner: 'med-autoscience',
+              distribution_mode: 'repo_tracked',
+              target_surface_kind: 'product_frontdesk',
+              description: 'MAS app skill',
+              readiness: 'landed',
+              tags: [],
+              domain_projection: {
+                runtime_continuity: {
+                  surface_kind: 'skill_runtime_continuity',
+                  runtime_owner: 'codex_cli',
+                  domain_owner: 'med-autoscience',
+                  executor_owner: 'mas_controller',
+                  session_locator_field: 'study_id',
+                  session_surface_ref: '/session_continuity',
+                  progress_surface_ref: '/progress_projection',
+                  artifact_surface_ref: '/artifact_inventory',
+                  restore_point_surface_ref: '/runtime_control/restore_point',
+                  recommended_resume_command: 'medautoscience study-runtime-status',
+                  recommended_progress_command: 'medautoscience study-progress',
+                  recommended_artifact_command: 'medautoscience workspace-cockpit --artifacts',
+                },
+              },
+            },
+          ],
           supported_commands: ['workspace-cockpit'],
         },
         automation: {
@@ -340,5 +402,14 @@ test('family domain catalog derives recommended entry surfaces with active bindi
   assert.equal(recommended[0]?.runtime_control_resume_command, 'medautoscience study-runtime-status');
   assert.equal(recommended[0]?.runtime_control_approval_command, 'medautoscience workspace-cockpit');
   assert.deepEqual(recommended[0]?.runtime_control_gate_ids, ['human-review']);
+  assert.equal(recommended[0]?.skill_runtime_continuity_status, 'ready');
+  assert.equal(recommended[0]?.skill_runtime_continuity_session_locator_field, 'study_id');
+  assert.equal(recommended[0]?.skill_runtime_continuity_session_surface_ref, '/session_continuity');
+  assert.equal(recommended[0]?.skill_runtime_continuity_progress_surface_ref, '/progress_projection');
+  assert.equal(recommended[0]?.skill_runtime_continuity_artifact_surface_ref, '/artifact_inventory');
+  assert.equal(recommended[0]?.skill_runtime_continuity_restore_point_surface_ref, '/runtime_control/restore_point');
+  assert.equal(recommended[0]?.skill_runtime_continuity_resume_command, 'medautoscience study-runtime-status');
+  assert.equal(recommended[0]?.skill_runtime_continuity_progress_command, 'medautoscience study-progress');
+  assert.equal(recommended[0]?.skill_runtime_continuity_artifact_command, 'medautoscience workspace-cockpit --artifacts');
   assert.deepEqual(recommended[0]?.family_human_gate_ids, ['human-review']);
 });

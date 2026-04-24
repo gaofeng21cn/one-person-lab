@@ -866,7 +866,23 @@
         "tags": [
           "frontdesk",
           "workspace"
-        ]
+        ],
+        "domain_projection": {
+          "runtime_continuity": {
+            "surface_kind": "skill_runtime_continuity",
+            "runtime_owner": "upstream_hermes_agent",
+            "domain_owner": "med-autoscience",
+            "executor_owner": "med_deepscientist",
+            "session_locator_field": "study_id",
+            "session_surface_ref": "/session_continuity",
+            "progress_surface_ref": "/progress_projection",
+            "artifact_surface_ref": "/artifact_inventory",
+            "restore_point_surface_ref": "/return_surface_contract/research_runtime_control_projection_contract/restore_point_surface",
+            "recommended_resume_command": "uv run python -m med_autoscience.cli launch-study --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>",
+            "recommended_progress_command": "uv run python -m med_autoscience.cli study-progress --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id> --format json",
+            "recommended_artifact_command": "uv run python -m med_autoscience.cli study-runtime-status --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>"
+          }
+        }
       },
       {
         "surface_kind": "skill_descriptor",

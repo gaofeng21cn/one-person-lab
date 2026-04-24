@@ -1,6 +1,6 @@
 import { findDomainOrThrow } from './contracts.ts';
 import { buildDomainManifestCatalog } from './domain-manifest.ts';
-import { buildDomainEntryParity } from './family-domain-catalog.ts';
+import { buildDomainEntryParity, buildRecommendedEntrySurfaces } from './family-domain-catalog.ts';
 import { resolveWorkspaceLocator } from './workspace-registry.ts';
 import { buildFrontDeskEndpoints } from './frontdesk-paths.ts';
 import type { BoundaryExplanation, GatewayContracts, ResolutionResult } from './types.ts';
@@ -46,6 +46,10 @@ export function buildHandoffBundle(
       ) ?? null
     : null;
   const domainEntryParity = buildDomainEntryParity(domainManifestCatalog.projects);
+  const recommendedEntrySurfaces = buildRecommendedEntrySurfaces(domainManifestCatalog.projects);
+  const domainManifestRecommendation = targetDomainId
+    ? recommendedEntrySurfaces.find((entry) => entry.project_id === targetDomainId) ?? null
+    : null;
   const endpoints = buildFrontDeskEndpoints(options.basePath);
 
   return {
@@ -124,6 +128,7 @@ export function buildHandoffBundle(
             artifact_inventory: domainManifestEntry.manifest?.artifact_inventory ?? null,
             skill_catalog: domainManifestEntry.manifest?.skill_catalog ?? null,
             automation: domainManifestEntry.manifest?.automation ?? null,
+            ...(domainManifestRecommendation ?? {}),
             error: domainManifestEntry.error,
           }
         : null,

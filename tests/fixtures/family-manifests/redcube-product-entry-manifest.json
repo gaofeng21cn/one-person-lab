@@ -504,7 +504,23 @@
         "tags": [
           "frontdesk",
           "deliverable"
-        ]
+        ],
+        "domain_projection": {
+          "runtime_continuity": {
+            "surface_kind": "skill_runtime_continuity",
+            "runtime_owner": "upstream_hermes_agent",
+            "domain_owner": "redcube_ai",
+            "executor_owner": "codex_cli",
+            "session_locator_field": "entry_session_id",
+            "session_surface_ref": "/session_continuity",
+            "progress_surface_ref": "/progress_projection",
+            "artifact_surface_ref": "/artifact_inventory",
+            "restore_point_surface_ref": "/session_continuity/restore_point",
+            "recommended_resume_command": "redcube product session --entry-session-id <entry-session-id>",
+            "recommended_progress_command": "redcube product session --entry-session-id <entry-session-id>",
+            "recommended_artifact_command": "redcube product session --entry-session-id <entry-session-id>"
+          }
+        }
       },
       {
         "surface_kind": "skill_descriptor",

@@ -5,6 +5,10 @@ type BuildFamilyDomainCatalogOptions = {
   resolveActiveWorkspaceBinding?: (projectId: string) => WorkspaceBinding | null;
 };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 function hasResolvedCommand(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0;
 }
@@ -55,6 +59,50 @@ function hasDomainAgentEntrySpec(manifest: DomainManifestCatalogEntry['manifest'
   );
 }
 
+function pickSkillRuntimeContinuity(manifest: DomainManifestCatalogEntry['manifest']) {
+  const skills = Array.isArray(manifest?.skill_catalog?.skills) ? manifest.skill_catalog.skills : [];
+  for (const skill of skills) {
+    if (!isRecord(skill)) {
+      continue;
+    }
+    const domainProjection = isRecord(skill.domain_projection) ? skill.domain_projection : null;
+    const runtimeContinuity = domainProjection && isRecord(domainProjection.runtime_continuity)
+      ? domainProjection.runtime_continuity
+      : null;
+    if (!runtimeContinuity) {
+      continue;
+    }
+
+    return runtimeContinuity;
+  }
+  return null;
+}
+
+function hasSkillRuntimeContinuity(manifest: DomainManifestCatalogEntry['manifest']) {
+  const runtimeContinuity = pickSkillRuntimeContinuity(manifest);
+  return Boolean(
+    runtimeContinuity
+      && runtimeContinuity.surface_kind === 'skill_runtime_continuity'
+      && hasResolvedCommand(runtimeContinuity.recommended_resume_command)
+      && hasResolvedCommand(runtimeContinuity.recommended_progress_command)
+      && hasResolvedCommand(runtimeContinuity.recommended_artifact_command)
+      && typeof runtimeContinuity.runtime_owner === 'string'
+      && runtimeContinuity.runtime_owner.trim().length > 0
+      && typeof runtimeContinuity.domain_owner === 'string'
+      && runtimeContinuity.domain_owner.trim().length > 0
+      && typeof runtimeContinuity.session_locator_field === 'string'
+      && runtimeContinuity.session_locator_field.trim().length > 0
+      && typeof runtimeContinuity.session_surface_ref === 'string'
+      && runtimeContinuity.session_surface_ref.trim().length > 0
+      && typeof runtimeContinuity.progress_surface_ref === 'string'
+      && runtimeContinuity.progress_surface_ref.trim().length > 0
+      && typeof runtimeContinuity.artifact_surface_ref === 'string'
+      && runtimeContinuity.artifact_surface_ref.trim().length > 0
+      && typeof runtimeContinuity.restore_point_surface_ref === 'string'
+      && runtimeContinuity.restore_point_surface_ref.trim().length > 0,
+  );
+}
+
 export function buildDomainEntryParity(
   projects: DomainManifestCatalogEntry[],
   options: BuildFamilyDomainCatalogOptions = {},
@@ -99,6 +147,7 @@ export function buildDomainEntryParity(
       manifest?.artifact_inventory?.surface_kind === 'artifact_inventory',
     );
     const skillCatalogReady = Boolean(manifest?.skill_catalog?.surface_kind === 'skill_catalog');
+    const skillRuntimeContinuityReady = hasSkillRuntimeContinuity(manifest);
     const automationReady = Boolean(manifest?.automation?.surface_kind === 'automation');
     const readyForOplStart = Boolean(manifestResolved && startSurfaceReady);
     const readyForDomainHandoff = Boolean(
@@ -153,6 +202,9 @@ export function buildDomainEntryParity(
     }
     if (manifestResolved && !skillCatalogReady) {
       gaps.push('manifest 尚未暴露 skill_catalog surface。');
+    }
+    if (manifestResolved && skillCatalogReady && !skillRuntimeContinuityReady) {
+      gaps.push('skill catalog 尚未暴露统一的 skill runtime continuity envelope。');
     }
     if (manifestResolved && !automationReady) {
       gaps.push('manifest 尚未暴露 automation surface。');
@@ -218,6 +270,9 @@ export function buildDomainEntryParity(
     if (manifestResolved && !skillCatalogReady) {
       recommendedNextActions.push('补齐 skill_catalog surface，让 family command/skill reuse 可以直接消费。');
     }
+    if (manifestResolved && skillCatalogReady && !skillRuntimeContinuityReady) {
+      recommendedNextActions.push('把 repo-owned session/progress/artifact/restore truth 收成 skill runtime continuity envelope，让 OPL activation/discovery 可以薄消费。');
+    }
     if (manifestResolved && !automationReady) {
       recommendedNextActions.push('补齐 automation surface，让 automation/autopilot truth 能沿同一 manifest 暴露。');
     }
@@ -243,6 +298,8 @@ export function buildDomainEntryParity(
       progress_projection_status: progressProjectionReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
       artifact_inventory_status: artifactInventoryReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
       skill_catalog_status: skillCatalogReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
+      skill_runtime_continuity_status:
+        skillRuntimeContinuityReady ? 'ready' : skillCatalogReady ? 'missing' : manifestResolved ? 'blocked' : 'blocked',
       automation_status: automationReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
       ready_for_opl_start: readyForOplStart,
       ready_for_domain_handoff: readyForDomainHandoff,
@@ -287,6 +344,8 @@ export function buildDomainEntryParity(
         normalizedProjects.filter((entry) => entry.artifact_inventory_status === 'ready').length,
       skill_catalog_ready_count:
         normalizedProjects.filter((entry) => entry.skill_catalog_status === 'ready').length,
+      skill_runtime_continuity_ready_count:
+        normalizedProjects.filter((entry) => entry.skill_runtime_continuity_status === 'ready').length,
       automation_ready_count:
         normalizedProjects.filter((entry) => entry.automation_status === 'ready').length,
       ready_for_opl_start_count:
@@ -311,6 +370,8 @@ export function buildRecommendedEntrySurfaces(
     .filter((entry) => entry.status === 'resolved' && entry.manifest?.recommended_command)
     .map((entry) => {
       const activeBinding = resolveActiveBinding(entry.project_id, options);
+      const skillRuntimeContinuity = pickSkillRuntimeContinuity(entry.manifest ?? null);
+      const skillRuntimeContinuityReady = hasSkillRuntimeContinuity(entry.manifest ?? null);
 
       return {
         project_id: entry.project_id,
@@ -445,6 +506,41 @@ export function buildRecommendedEntrySurfaces(
         skill_catalog: entry.manifest?.skill_catalog ?? null,
         skill_catalog_supported_commands: entry.manifest?.skill_catalog?.supported_commands ?? [],
         skill_catalog_skill_count: entry.manifest?.skill_catalog?.skills.length ?? 0,
+        skill_runtime_continuity: skillRuntimeContinuity,
+        skill_runtime_continuity_status:
+          skillRuntimeContinuityReady ? 'ready' : entry.manifest?.skill_catalog ? 'missing' : 'blocked',
+        skill_runtime_continuity_session_locator_field:
+          typeof skillRuntimeContinuity?.session_locator_field === 'string'
+            ? skillRuntimeContinuity.session_locator_field
+            : null,
+        skill_runtime_continuity_session_surface_ref:
+          typeof skillRuntimeContinuity?.session_surface_ref === 'string'
+            ? skillRuntimeContinuity.session_surface_ref
+            : null,
+        skill_runtime_continuity_progress_surface_ref:
+          typeof skillRuntimeContinuity?.progress_surface_ref === 'string'
+            ? skillRuntimeContinuity.progress_surface_ref
+            : null,
+        skill_runtime_continuity_artifact_surface_ref:
+          typeof skillRuntimeContinuity?.artifact_surface_ref === 'string'
+            ? skillRuntimeContinuity.artifact_surface_ref
+            : null,
+        skill_runtime_continuity_restore_point_surface_ref:
+          typeof skillRuntimeContinuity?.restore_point_surface_ref === 'string'
+            ? skillRuntimeContinuity.restore_point_surface_ref
+            : null,
+        skill_runtime_continuity_resume_command:
+          typeof skillRuntimeContinuity?.recommended_resume_command === 'string'
+            ? skillRuntimeContinuity.recommended_resume_command
+            : null,
+        skill_runtime_continuity_progress_command:
+          typeof skillRuntimeContinuity?.recommended_progress_command === 'string'
+            ? skillRuntimeContinuity.recommended_progress_command
+            : null,
+        skill_runtime_continuity_artifact_command:
+          typeof skillRuntimeContinuity?.recommended_artifact_command === 'string'
+            ? skillRuntimeContinuity.recommended_artifact_command
+            : null,
         automation: entry.manifest?.automation ?? null,
         automation_count: entry.manifest?.automation?.automations.length ?? 0,
         automation_readiness_summary: entry.manifest?.automation?.readiness_summary ?? null,
