@@ -34,6 +34,25 @@
 
 > `OPL` 把发起工作、查看进度和收集交付物放到同一个入口里，而每个专业产品家族继续保留自己的方法、规则和交付边界。
 
+## 全新 Mac 最快用起来
+
+如果目标是先把 OPL + MAS/MAG/RCA + GUI 跑起来，不需要先读完整仓库。
+
+1. 从这个仓库安装 OPL CLI。
+2. 运行 `opl install`。
+3. 用 `open /Applications/AionUi.app` 打开桌面 GUI，或直接访问 `http://127.0.0.1:8787/`。
+4. 普通工作默认用 Codex / OPL；需要专业智能体时再显式选择 `MAS`、`MAG` 或 `RCA`。
+
+`opl install` 会做这些事：
+
+- 安装默认家族模块：`MAS`、`MAG`、`RCA`。
+- 同步短名 Codex skills，让它们既能被 OPL 调用，也能被原版 Codex 直接调用。
+- 安装并打开本地 OPL Product API service。
+- 如果本机已经安装 AionUI，直接尝试启动桌面 GUI。
+- 如果 AionUI 尚未安装，返回 `opl-aion-shell` 对应 release 预编译包或源码构建 fallback 的说明。
+
+在这台机器上，本地服务入口是 `http://127.0.0.1:8787/`，桌面应用路径是 `/Applications/AionUi.app`。
+
 ## 可以用来做什么
 
 - 在同一个工作台里发起普通对话或多步骤任务。
@@ -62,18 +81,19 @@
 
 ## 这个仓库跟踪什么
 
-- 产品家族背后的 Codex-default session/runtime 路径与公开 projection surface。
-- 把 `OPL` 与 domain-agent 调用映射到 repo-owned capability surface 的激活与分发层。
-- 执行引擎和模块管理。
+这个仓库是 OPL 的产品 / runtime gateway，不是 GUI 外壳仓，也不是某个 domain agent 的实现仓。它跟踪：
+
+- `opl`、直接 Codex 使用和外部壳共同消费的 Codex-default session/runtime 路径。
+- 让 `MAS`、`MAG`、`RCA` 以短名 skill 被调用的 activation layer。
+- 模块安装、skill 同步、service 配置和健康检查面。
 - 工作空间、会话、进度与交付物的发现与组织能力。
 - 共享产品层的机器可读合同。
 
-完整图形界面外壳放在独立的界面仓中维护。
-当前仓库负责本地 `opl`、GUI 外壳与兼容层共同依赖的 Codex-default 运行时合同、OPL 激活层与共享真相。
+桌面 GUI 由 [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) 维护。OPL 提供这个 GUI、网页入口和 Codex 共同消费的本地 Product API 与运行时真相。
 
 ## 这个仓库怎么读
 
-1. 潜在用户、人类专家和非技术读者，先读当前首页，再继续看 [路线图](./docs/roadmap.zh-CN.md)、[任务版图](./docs/task-map.zh-CN.md)、[运行模型](./docs/operating-model.zh-CN.md)。
+1. 用户先读当前首页和上面的 `opl install` 路径。
 2. 技术规划、架构判断和方向同步，继续读 [文档索引](./docs/README.zh-CN.md)，再读 [项目概览](./docs/project.md)、[当前状态](./docs/status.md)、[架构](./docs/architecture.md)、[硬约束](./docs/invariants.md)、[关键决策](./docs/decisions.md)。
 3. 开发者和维护者，继续读 [合同目录说明](./contracts/README.md)、[参考级索引](./docs/references/README.zh-CN.md)，以及 `docs/specs/`、`docs/plans/` 和 [历史归档索引](./docs/history/README.zh-CN.md) 下的跟踪材料。
 
