@@ -6,6 +6,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { resolveFamilyWorkspaceRootFromRepoRoot } from '../../src/opl-skills.ts';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 const cliPath = path.join(repoRoot, 'src', 'cli.ts');
@@ -349,6 +351,58 @@ test('opl skill list discovers the family plugin packs through the configured si
   } finally {
     fs.rmSync(captureDir, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('nested worktree repo roots resolve the family workspace root without OPL_FAMILY_WORKSPACE_ROOT', () => {
+  assert.equal(
+    resolveFamilyWorkspaceRootFromRepoRoot('/tmp/workspace/one-person-lab/.worktrees/codex-opl-turnkey'),
+    '/tmp/workspace',
+  );
+  assert.equal(
+    resolveFamilyWorkspaceRootFromRepoRoot('/tmp/workspace/one-person-lab'),
+    '/tmp/workspace',
+  );
+});
+
+test('opl skill list discovers OPL-managed module installs without OPL_FAMILY_WORKSPACE_ROOT', () => {
+  const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-skill-list-managed-'));
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-skill-home-'));
+  const stateDir = path.join(homeRoot, 'opl-state');
+  const managedModulesRoot = path.join(stateDir, 'modules');
+  const { workspaceRoot } = createFakeFamilySkillWorkspace(captureDir);
+  const missingRepoRoot = path.join(homeRoot, 'missing-repo-root');
+
+  try {
+    fs.mkdirSync(managedModulesRoot, { recursive: true });
+    fs.renameSync(
+      path.join(workspaceRoot, 'med-autoscience'),
+      path.join(managedModulesRoot, 'med-autoscience'),
+    );
+
+    const output = runCli(['skill', 'list'], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
+      OPL_MEDAUTOGRANT_REPO_ROOT: path.join(missingRepoRoot, 'med-autogrant'),
+      OPL_REDCUBE_REPO_ROOT: path.join(missingRepoRoot, 'redcube-ai'),
+    });
+
+    const medAutoScience = output.skill_catalog.packs.find(
+      (entry: { domain_id: string }) => entry.domain_id === 'medautoscience',
+    );
+    assert.ok(medAutoScience);
+    assert.equal(output.skill_catalog.summary.repo_found, 1);
+    assert.equal(output.skill_catalog.summary.ready_to_sync, 1);
+    assert.equal(medAutoScience.repo_found, true);
+    assert.equal(medAutoScience.ready_to_sync, true);
+    assert.equal(
+      medAutoScience.repo_root,
+      path.join(managedModulesRoot, 'med-autoscience'),
+    );
+  } finally {
+    fs.rmSync(captureDir, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
   }
 });
 

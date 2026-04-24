@@ -1,8 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { GatewayContractError } from '../contracts.ts';
 import { ensureFrontDeskStateDir, resolveFrontDeskStatePaths } from '../frontdesk-state.ts';
+import {
+  resolveFamilyWorkspaceRootFromRepoRoot,
+  syncFamilySkillPackFromRepoRoot,
+} from '../opl-skills.ts';
 
 import {
   type DomainModuleSpec,
@@ -13,11 +18,33 @@ import {
   type ModuleInspection,
   assertGitSuccess,
   normalizeOptionalString,
-  resolveSiblingWorkspaceRoot,
+  runCommand,
   runGit,
 } from './shared.ts';
 
-const DOMAIN_MODULE_SPECS: DomainModuleSpec[] = [
+type DomainModuleRuntimeSpec = DomainModuleSpec & {
+  bootstrap_command?: (checkoutPath: string) => { command: string; args: string[] } | null;
+  health_check_command?: (checkoutPath: string) => { command: string; args: string[] } | null;
+  skill_sync_domain?: 'medautoscience' | 'medautogrant' | 'redcube';
+};
+
+type ModuleActionStepResult = {
+  status: 'completed' | 'skipped';
+  summary: string;
+  command_preview: string[] | null;
+  stdout: string;
+  stderr: string;
+  result: Record<string, unknown> | null;
+  domain_id?: string | null;
+};
+
+type ModuleActionWorkflow = {
+  bootstrap: ModuleActionStepResult;
+  skill_sync: ModuleActionStepResult;
+  health_check: ModuleActionStepResult;
+};
+
+const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
   {
     module_id: 'medautoscience',
     label: 'Med Auto Science',
@@ -25,6 +52,15 @@ const DOMAIN_MODULE_SPECS: DomainModuleSpec[] = [
     repo_url: 'https://github.com/gaofeng21cn/med-autoscience.git',
     scope: 'domain_module',
     description: 'Research Foundry in medicine: study execution, paper drafting, progress narration, and deliverable files.',
+    bootstrap_command: (checkoutPath) => (
+      resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-bootstrap.sh'))
+      ?? buildPythonEditableBootstrapCommand(checkoutPath, '3.12')
+    ),
+    health_check_command: (checkoutPath) => (
+      resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-healthcheck.sh'))
+      ?? { command: 'bash', args: [path.join('scripts', 'verify.sh'), 'fast'] }
+    ),
+    skill_sync_domain: 'medautoscience',
   },
   {
     module_id: 'meddeepscientist',
@@ -33,6 +69,14 @@ const DOMAIN_MODULE_SPECS: DomainModuleSpec[] = [
     repo_url: 'https://github.com/gaofeng21cn/med-deepscientist.git',
     scope: 'domain_module',
     description: 'Long-horizon research worker and analysis module for deeper experiment and runtime supervision lanes.',
+    bootstrap_command: (checkoutPath) => (
+      resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-bootstrap.sh'))
+      ?? buildPythonEditableBootstrapCommand(checkoutPath, '3.11')
+    ),
+    health_check_command: (checkoutPath) => (
+      resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-healthcheck.sh'))
+      ?? { command: 'bash', args: [path.join('scripts', 'verify.sh'), 'smoke'] }
+    ),
   },
   {
     module_id: 'medautogrant',
@@ -41,6 +85,15 @@ const DOMAIN_MODULE_SPECS: DomainModuleSpec[] = [
     repo_url: 'https://github.com/gaofeng21cn/med-autogrant.git',
     scope: 'domain_module',
     description: 'Grant Foundry for proposal planning, critique, revision, and package assembly.',
+    bootstrap_command: (checkoutPath) => (
+      resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-bootstrap.sh'))
+      ?? buildPythonEditableBootstrapCommand(checkoutPath, '3.12')
+    ),
+    health_check_command: (checkoutPath) => (
+      resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-healthcheck.sh'))
+      ?? { command: 'bash', args: [path.join('scripts', 'verify.sh'), 'fast'] }
+    ),
+    skill_sync_domain: 'medautogrant',
   },
   {
     module_id: 'redcube',
@@ -49,8 +102,44 @@ const DOMAIN_MODULE_SPECS: DomainModuleSpec[] = [
     repo_url: 'https://github.com/gaofeng21cn/redcube-ai.git',
     scope: 'domain_module',
     description: 'Presentation Ops module for slide decks and other visual deliverables.',
+    bootstrap_command: (checkoutPath) => (
+      resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-bootstrap.sh'))
+      ?? { command: 'npm', args: ['install'] }
+    ),
+    health_check_command: (checkoutPath) => (
+      resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-healthcheck.sh'))
+      ?? { command: 'bash', args: [path.join('scripts', 'verify.sh'), 'fast'] }
+    ),
+    skill_sync_domain: 'redcube',
   },
 ];
+
+function resolveRepoRoot() {
+  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+}
+
+function resolveSiblingWorkspaceRoot() {
+  return resolveFamilyWorkspaceRootFromRepoRoot(resolveRepoRoot());
+}
+
+function resolveRepoOwnedScriptCommand(checkoutPath: string, relativePath: string) {
+  const scriptPath = path.join(checkoutPath, relativePath);
+  if (!fs.existsSync(scriptPath) || !fs.statSync(scriptPath).isFile()) {
+    return null;
+  }
+
+  return {
+    command: 'bash',
+    args: [scriptPath],
+  };
+}
+
+function buildPythonEditableBootstrapCommand(checkoutPath: string, pythonVersion: string) {
+  return {
+    command: 'uv',
+    args: ['tool', 'install', '--managed-python', '--python', pythonVersion, '--force', '--editable', checkoutPath],
+  };
+}
 
 function isGitRepo(repoPath: string) {
   if (!fs.existsSync(repoPath)) {
@@ -183,7 +272,7 @@ function inspectModule(spec: DomainModuleSpec): ModuleInspection {
   };
 }
 
-function findModuleSpecOrThrow(moduleId: string): DomainModuleSpec {
+function findModuleSpecOrThrow(moduleId: string): DomainModuleRuntimeSpec {
   const normalized = moduleId.trim().toLowerCase();
   const aliases = new Map<string, FrontDeskModuleId>([
     ['med-autoscience', 'medautoscience'],
@@ -248,17 +337,186 @@ function cloneManagedModule(spec: DomainModuleSpec, checkoutPath: string) {
   });
 }
 
+function readHomeDir() {
+  return process.env.HOME?.trim() || resolveFrontDeskStatePaths().home_dir;
+}
+
+function maybeParseJsonRecord(raw: string) {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed) as unknown;
+    if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+function runModuleStep(
+  spec: DomainModuleRuntimeSpec,
+  stepId: 'bootstrap' | 'health_check',
+  commandPreview: { command: string; args: string[] } | null,
+  checkoutPath: string,
+  skippedSummary: string,
+) {
+  if (!commandPreview) {
+    return {
+      status: 'skipped',
+      summary: skippedSummary,
+      command_preview: null,
+      stdout: '',
+      stderr: '',
+      result: null,
+    } satisfies ModuleActionStepResult;
+  }
+
+  const result = runCommand(commandPreview.command, commandPreview.args, checkoutPath);
+  if (result.exitCode !== 0) {
+    throw new GatewayContractError(
+      'build_command_failed',
+      `Failed to run OPL module ${stepId}.`,
+      {
+        module_id: spec.module_id,
+        checkout_path: checkoutPath,
+        command: [commandPreview.command, ...commandPreview.args],
+        stdout: result.stdout,
+        stderr: result.stderr,
+      },
+    );
+  }
+
+  return {
+    status: 'completed',
+    summary: stepId === 'bootstrap'
+      ? 'Completed repo bootstrap.'
+      : 'Completed repo health check.',
+    command_preview: [commandPreview.command, ...commandPreview.args],
+    stdout: result.stdout,
+    stderr: result.stderr,
+    result: maybeParseJsonRecord(result.stdout),
+  } satisfies ModuleActionStepResult;
+}
+
+function runModuleBootstrap(spec: DomainModuleRuntimeSpec, checkoutPath: string) {
+  return runModuleStep(
+    spec,
+    'bootstrap',
+    spec.bootstrap_command?.(checkoutPath) ?? null,
+    checkoutPath,
+    'No repo-specific bootstrap installer is declared for this module.',
+  );
+}
+
+function runModuleSkillSync(spec: DomainModuleRuntimeSpec, checkoutPath: string) {
+  if (!spec.skill_sync_domain) {
+    return {
+      status: 'skipped',
+      summary: 'No Codex skill pack is declared for this module.',
+      command_preview: null,
+      stdout: '',
+      stderr: '',
+      result: null,
+      domain_id: null,
+    } satisfies ModuleActionStepResult;
+  }
+
+  const syncResult = syncFamilySkillPackFromRepoRoot(
+    spec.skill_sync_domain,
+    checkoutPath,
+    { home: readHomeDir() },
+  );
+
+  return {
+    status: 'completed',
+    summary: 'Synced the matching Codex skill pack into the current home.',
+    command_preview: syncResult.command_preview,
+    stdout: syncResult.stdout,
+    stderr: syncResult.stderr,
+    result: {
+      domain_id: syncResult.domain_id,
+      repo_root: syncResult.repo_root,
+      sync_status: syncResult.sync_status,
+      installer_result: syncResult.installer_result,
+    },
+    domain_id: spec.skill_sync_domain,
+  } satisfies ModuleActionStepResult;
+}
+
+function runModuleHealthCheck(spec: DomainModuleRuntimeSpec, checkoutPath: string) {
+  return runModuleStep(
+    spec,
+    'health_check',
+    spec.health_check_command?.(checkoutPath) ?? null,
+    checkoutPath,
+    'No repo-specific health check is declared for this module.',
+  );
+}
+
+function runManagedModuleWorkflow(spec: DomainModuleRuntimeSpec, checkoutPath: string) {
+  const bootstrap = runModuleBootstrap(spec, checkoutPath);
+  const skill_sync = runModuleSkillSync(spec, checkoutPath);
+  const health_check = runModuleHealthCheck(spec, checkoutPath);
+
+  return {
+    bootstrap,
+    skill_sync,
+    health_check,
+  } satisfies ModuleActionWorkflow;
+}
+
+function buildSkippedWorkflow(summary: string): ModuleActionWorkflow {
+  return {
+    bootstrap: {
+      status: 'skipped',
+      summary,
+      command_preview: null,
+      stdout: '',
+      stderr: '',
+      result: null,
+    },
+    skill_sync: {
+      status: 'skipped',
+      summary,
+      command_preview: null,
+      stdout: '',
+      stderr: '',
+      result: null,
+      domain_id: null,
+    },
+    health_check: {
+      status: 'skipped',
+      summary,
+      command_preview: null,
+      stdout: '',
+      stderr: '',
+      result: null,
+    },
+  };
+}
+
 export function runFrontDeskModuleAction(
   action: FrontDeskModuleAction,
   moduleId: string,
 ) {
   const spec = findModuleSpecOrThrow(moduleId);
   const current = inspectModule(spec);
+  let workflow: ModuleActionWorkflow = buildSkippedWorkflow('Workflow not required for this action.');
 
   switch (action) {
     case 'install': {
       if (!current.installed) {
         cloneManagedModule(spec, current.managed_checkout_path);
+      }
+      const installed = inspectModule(spec);
+      if (installed.install_origin === 'managed_root') {
+        workflow = runManagedModuleWorkflow(spec, installed.checkout_path);
       }
       break;
     }
@@ -290,6 +548,14 @@ export function runFrontDeskModuleAction(
         module_id: spec.module_id,
         checkout_path: current.checkout_path,
       });
+      const updated = inspectModule(spec);
+      if (updated.install_origin === 'managed_root') {
+        workflow = runManagedModuleWorkflow(spec, updated.checkout_path);
+      } else {
+        workflow = buildSkippedWorkflow(
+          'External developer checkouts are updated in place without OPL-managed turnkey steps.',
+        );
+      }
       break;
     }
     case 'reinstall': {
@@ -307,6 +573,7 @@ export function runFrontDeskModuleAction(
       }
       fs.rmSync(current.managed_checkout_path, { recursive: true, force: true });
       cloneManagedModule(spec, current.managed_checkout_path);
+      workflow = runManagedModuleWorkflow(spec, current.managed_checkout_path);
       break;
     }
     case 'remove': {
@@ -333,6 +600,7 @@ export function runFrontDeskModuleAction(
       action,
       status: 'completed',
       module: inspectModule(spec),
+      turnkey: workflow,
     },
   };
 }
