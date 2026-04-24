@@ -278,7 +278,7 @@ exit 1
     assert.equal(output.product_entry.hermes.gateway_service.loaded, true);
     assert.match(output.product_entry.notes[0], /opl exec/);
     assert.match(output.product_entry.notes[0], /opl resume/);
-    assert.match(output.product_entry.notes[1], /opl @mas/);
+    assert.match(output.product_entry.notes[1], /opl skill sync/);
     assert.match(output.product_entry.notes[2], /--executor hermes/);
     assert.deepEqual(output.product_entry.issues, []);
     assert.equal(output.validation.status, 'valid');
@@ -412,84 +412,14 @@ exit 1
   }
 });
 
-test('top-level explicit @mas --dry-run produces a routed Codex handoff preview', () => {
-  const output = runCli([
-    '@mas',
-    'tighten the manuscript argument around invasive phenotype findings',
-    '--dry-run',
-  ]);
-
-  assert.equal(output.version, 'g2');
-  assert.equal(output.product_entry.mode, 'ask');
-  assert.equal(output.product_entry.dry_run, true);
-  assert.equal(output.product_entry.input.goal, 'tighten the manuscript argument around invasive phenotype findings');
-  assert.equal(output.product_entry.routing.status, 'routed');
-  assert.equal(output.product_entry.routing.domain_id, 'medautoscience');
-  assert.equal(output.product_entry.routing.workstream_id, 'research_ops');
-  assert.equal(output.product_entry.executor_backend, 'codex');
-  assert.match(output.product_entry.handoff_prompt_preview, /One Person Lab \(OPL\) Product Entry/);
-  assert.match(output.product_entry.handoff_prompt_preview, /research_ops/);
-  assert.equal(output.product_entry.codex.command_preview[0], 'codex');
-  assert.ok(output.product_entry.codex.command_preview.includes('--json'));
-});
-
-test('top-level explicit @rca --dry-run routes into Presentation Foundry and strips the handle from goal', () => {
-  const output = runCli([
-    '@rca',
-    'build a defense-ready deck for next week',
-    '--dry-run',
-  ]);
-
-  assert.equal(output.product_entry.mode, 'ask');
-  assert.equal(output.product_entry.input.goal, 'build a defense-ready deck for next week');
-  assert.equal(output.product_entry.routing.status, 'routed');
-  assert.equal(output.product_entry.routing.domain_id, 'redcube');
-  assert.equal(output.product_entry.routing.workstream_id, 'presentation_ops');
-});
-
-test('top-level explicit unknown @agent handle fails with a machine-readable usage error', () => {
-  const { status, payload } = runCliFailure(['@unknown-agent', 'plan the next draft']);
+test('top-level @agent aliases are retired in favor of skill sync plus plain Codex entry', () => {
+  const { status, payload } = runCliFailure(['@mas', 'tighten the manuscript argument around invasive phenotype findings']);
 
   assert.equal(status, 2);
   assert.equal(payload.version, 'g2');
   assert.equal(payload.error.code, 'cli_usage_error');
-  assert.match(payload.error.message, /Unknown product-entry agent handle/);
-});
-
-test('top-level explicit @mas executes the routed Codex domain-agent lane', () => {
-  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
-if [ "$1" = "exec" ]; then
-  cat <<'EOF'
-{"type":"thread.started","thread_id":"opl-mas-session"}
-{"type":"turn.started"}
-{"item":{"type":"agent_message","text":"MAS READY FROM OPL"}}
-{"type":"turn.completed"}
-EOF
-  exit 0
-fi
-echo "unexpected fake-codex args: $*" >&2
-exit 1
-`);
-
-  try {
-    const output = runCli(
-      ['@mas', 'tighten the manuscript argument around invasive phenotype findings'],
-      {
-        OPL_CODEX_BIN: codexPath,
-      },
-    );
-
-    assert.equal(output.product_entry.mode, 'ask');
-    assert.equal(output.product_entry.executor_backend, 'codex');
-    assert.equal(output.product_entry.input.goal, 'tighten the manuscript argument around invasive phenotype findings');
-    assert.equal(output.product_entry.routing.domain_id, 'medautoscience');
-    assert.equal(output.product_entry.routing.workstream_id, 'research_ops');
-    assert.equal(output.product_entry.codex.session_id, 'opl-mas-session');
-    assert.equal(output.product_entry.codex.response, 'MAS READY FROM OPL');
-    assert.equal(output.product_entry.codex.exit_code, 0);
-  } finally {
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-  }
+  assert.match(payload.error.message, /Command "opl @mas" has been retired/);
+  assert.match(payload.error.message, /opl skill sync/);
 });
 
 test('help no longer advertises retired ask chat shell aliases', () => {
@@ -499,106 +429,13 @@ test('help no longer advertises retired ask chat shell aliases', () => {
   assert.equal(commands.includes('ask'), false);
   assert.equal(commands.includes('chat'), false);
   assert.equal(commands.includes('shell'), false);
+  assert.equal(commands.includes('skill list'), true);
+  assert.equal(commands.includes('skill sync'), true);
   assert.equal(examples.some((entry) => entry.includes('opl ask')), false);
   assert.equal(examples.some((entry) => entry.includes('opl chat')), false);
   assert.equal(examples.some((entry) => entry.includes('opl shell')), false);
-});
-
-test('explicit @rca runs Codex through the resolved product-entry handoff and returns the captured response', () => {
-  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
-if [ "$1" = "exec" ]; then
-  cat <<'EOF'
-{"type":"thread.started","thread_id":"opl-test-session"}
-{"type":"turn.started"}
-{"item":{"type":"command_execution","command":"npm test","status":"completed","aggregated_output":"2 passed"}}
-{"item":{"type":"agent_message","text":"READY FROM OPL"}}
-{"type":"turn.completed"}
-EOF
-  exit 0
-fi
-echo "unexpected fake-codex args: $*" >&2
-exit 1
-`);
-
-  try {
-    const output = runCli(
-      [
-        '@rca',
-        'Build a defense-ready deck for the next review meeting.',
-      ],
-      {
-        OPL_CODEX_BIN: codexPath,
-      },
-    );
-
-    assert.equal(output.version, 'g2');
-    assert.equal(output.product_entry.mode, 'ask');
-    assert.equal(output.product_entry.dry_run, false);
-    assert.equal(output.product_entry.executor_backend, 'codex');
-    assert.equal(output.product_entry.routing.status, 'routed');
-    assert.equal(output.product_entry.routing.domain_id, 'redcube');
-    assert.equal(output.product_entry.routing.workstream_id, 'presentation_ops');
-    assert.equal(output.product_entry.codex.session_id, 'opl-test-session');
-    assert.equal(output.product_entry.codex.response, 'READY FROM OPL');
-    assert.equal(output.product_entry.codex.exit_code, 0);
-  } finally {
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-  }
-});
-
-test('explicit @rca --executor hermes keeps the Hermes fallback lane available', () => {
-  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
-if [ "$1" = "version" ]; then
-  echo "Hermes Agent v9.9.9-test"
-  exit 0
-fi
-if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
-  cat <<'EOF'
-Launchd plist: /tmp/ai.hermes.gateway.plist
-✓ Service definition matches the current Hermes install
-✓ Gateway service is loaded
-EOF
-  exit 0
-fi
-if [ "$1" = "chat" ]; then
-  cat <<'EOF'
-╭─ ⚕ Hermes ───────────────────────────────────────────────────────────────────╮
-READY FROM OPL
-
-session_id: opl-test-session
-EOF
-  exit 0
-fi
-echo "unexpected fake-hermes args: $*" >&2
-exit 1
-`);
-
-  try {
-    const output = runCli(
-      [
-        '@rca',
-        'Build a defense-ready deck for the next review meeting.',
-        '--executor',
-        'hermes',
-      ],
-      {
-        OPL_HERMES_BIN: hermesPath,
-      },
-    );
-
-    assert.equal(output.version, 'g2');
-    assert.equal(output.product_entry.mode, 'ask');
-    assert.equal(output.product_entry.dry_run, false);
-    assert.equal(output.product_entry.executor_backend, 'hermes');
-    assert.equal(output.product_entry.routing.status, 'routed');
-    assert.equal(output.product_entry.routing.domain_id, 'redcube');
-    assert.equal(output.product_entry.routing.workstream_id, 'presentation_ops');
-    assert.equal(output.product_entry.hermes.session_id, 'opl-test-session');
-    assert.equal(output.product_entry.hermes.response, 'READY FROM OPL');
-    assert.equal(output.product_entry.hermes.exit_code, 0);
-  } finally {
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-  }
+  assert.equal(examples.some((entry) => entry.includes('opl @')), false);
+  assert.equal(examples.some((entry) => entry.includes('opl skill sync')), true);
 });
 
 test('session resume returns raw Codex session output in non-interactive mode by default', () => {

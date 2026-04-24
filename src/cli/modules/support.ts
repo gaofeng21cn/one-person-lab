@@ -1,7 +1,6 @@
 export {
   CODEX_COMMAND_HELP_PASSTHROUGH,
   COMMAND_GROUP_SUMMARIES,
-  EXPLICIT_AGENT_HANDLE_SPEC,
   RETIRED_COMMAND_PREFIXES,
   buildCommandHelp,
   buildContractsContext,
@@ -36,6 +35,7 @@ export {
   parseProductEntryArgs,
   parseResumeArgs,
   parseRuntimeStatusArgs,
+  parseSkillPackArgs,
   parseSessionLedgerArgs,
   parseSessionsArgs,
   parseStartArgs,
@@ -71,6 +71,7 @@ export type {
   SessionLedgerCliInput,
   SessionRuntimeCliInput,
   SessionsCliInput,
+  SkillPacksCliInput,
   StartCliInput,
   UpdateChannelCliInput,
   WebCliInput,

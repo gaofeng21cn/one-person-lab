@@ -8,12 +8,13 @@ import { buildDomainManifestCatalog } from '../../domain-manifest.ts';
 import { buildFrontDeskDashboard, buildFrontDeskStart, buildHostedPilotBundle, buildProjectsOverview, buildRuntimeStatus, buildWorkspaceStatus } from '../../management.ts';
 import { buildHostedPilotPackage } from '../../hosted-pilot-package.ts';
 import { runAcpStdioBridge } from '../../opl-acp-stdio.ts';
+import { readFamilySkillPacks, syncFamilySkillPacks } from '../../opl-skills.ts';
 import { buildSessionLedger } from '../../session-ledger.ts';
 import { explainDomainBoundary, resolveRequestSurface } from '../../resolver.ts';
 import { activateWorkspaceBinding, archiveWorkspaceBinding, bindWorkspace, buildWorkspaceCatalog } from '../../workspace-registry.ts';
 import { attachWebFrontDeskShutdown, startWebFrontDeskServer } from '../../web-frontdesk.ts';
 import type { GatewayContracts } from '../../types.ts';
-import { assertNoArgs, buildCommandHelp, buildRetiredCommandError, buildRootHelp, buildUsageError, hasExplicitHermesExecutor, parseDashboardArgs, parseFrontDeskMcpArgs, parseHostedPilotPackageArgs, parseKeyValueArgs, parseLaunchDomainArgs, parseLogsArgs, parseProductEntryArgs, parseResumeArgs, parseRuntimeStatusArgs, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSessionsArgs, parseStartArgs, parseUpdateChannelArgs, parseWebArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, parseWorkspaceStatusArgs, printJson, runCodexPassthroughHandled, runFrontDeskEngineActionCommand, runFrontDeskModuleActionCommand, stripExplicitCodexExecutor, withContractsContext } from '../modules/support.ts';
+import { assertNoArgs, buildCommandHelp, buildRetiredCommandError, buildRootHelp, buildUsageError, hasExplicitHermesExecutor, parseDashboardArgs, parseFrontDeskMcpArgs, parseHostedPilotPackageArgs, parseKeyValueArgs, parseLaunchDomainArgs, parseLogsArgs, parseProductEntryArgs, parseResumeArgs, parseRuntimeStatusArgs, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSessionsArgs, parseSkillPackArgs, parseStartArgs, parseUpdateChannelArgs, parseWebArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, parseWorkspaceStatusArgs, printJson, runCodexPassthroughHandled, runFrontDeskEngineActionCommand, runFrontDeskModuleActionCommand, stripExplicitCodexExecutor, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec, ParsedCliInput } from '../modules/support.ts';
 
 export function buildInternalCommandSpecs(
@@ -224,6 +225,35 @@ export function buildInternalCommandSpecs(
         return buildFrontDeskStart(getContracts(), {
           projectId: parsed.projectId,
           modeId: parsed.modeId,
+        });
+      },
+    },
+    'skill-list': {
+      usage: 'opl skill list [--domain <domain_id>]',
+      summary: 'Inspect the family domain plugin packs that OPL can register into the local Codex environment.',
+      examples: [
+        'opl skill list',
+        'opl skill list --domain medautoscience',
+        'opl skill list --domain rca',
+      ],
+      handler: (args) => {
+        const parsed = parseSkillPackArgs(args, commandSpecs['skill-list']);
+        return readFamilySkillPacks({ domains: parsed.domains });
+      },
+    },
+    'skill-sync': {
+      usage: 'opl skill sync [--domain <domain_id>] [--home <home_path>] [--quiet]',
+      summary: 'Register the family domain plugin packs into the local Codex environment without changing the default Codex runtime semantics.',
+      examples: [
+        'opl skill sync',
+        'opl skill sync --domain medautoscience',
+        'opl skill sync --home /tmp/codex-home',
+      ],
+      handler: (args) => {
+        const parsed = parseSkillPackArgs(args, commandSpecs['skill-sync']);
+        return syncFamilySkillPacks({
+          domains: parsed.domains,
+          home: parsed.home,
         });
       },
     },
@@ -550,13 +580,13 @@ export function buildInternalCommandSpecs(
 	        'Retired compatibility command.',
 	      examples: [
 	        'opl exec "Summarize current workspace status."',
-	        'opl @mas tighten the manuscript argument around invasive phenotype findings --dry-run',
-	        'opl @rca build a defense-ready deck for next week',
+	        'opl skill sync',
+	        'opl exec "Prepare a defense-ready deck for next week."',
 	      ],
 	      handler: () => {
 	        throw buildRetiredCommandError(
 	          'opl ask',
-	          'Use `opl exec <request...>` for raw Codex one-shot requests, or explicit domain handles such as `opl @mas ...`, `opl @mag ...`, or `opl @rca ...`.'
+	          'Use `opl exec <request...>` for raw Codex one-shot work. If you need MAS/MAG/RCA inside Codex, run `opl skill sync` first and continue through `opl` or `opl exec`.'
 	        );
 	      },
 	    },
@@ -580,12 +610,12 @@ export function buildInternalCommandSpecs(
 	      examples: [
 	        'opl',
 	        'opl resume run_7e2a41a19175465f809c0a7f151278ee',
-	        'opl @mas tighten the manuscript argument around invasive phenotype findings',
+	        'opl skill sync',
 	      ],
 	      handler: () => {
 	        throw buildRetiredCommandError(
 	          'opl chat',
-	          'Use `opl` for the default Codex interactive session, `opl resume <session_id>` to continue a session, or explicit domain handles such as `opl @mas ...` when you need OPL routing.'
+	          'Use `opl` for the default Codex interactive session, `opl resume <session_id>` to continue a session, and `opl skill sync` when you want the family domain skill packs available inside Codex.'
 	        );
 	      },
 	    },
@@ -597,12 +627,12 @@ export function buildInternalCommandSpecs(
 	      examples: [
 	        'opl',
 	        'opl resume run_7e2a41a19175465f809c0a7f151278ee',
-	        'opl @rca build a defense-ready deck for next week',
+	        'opl skill sync',
 	      ],
 	      handler: () => {
 	        throw buildRetiredCommandError(
 	          'opl shell',
-	          'Use `opl` for the default Codex frontdoor, `opl resume <session_id>` to continue a session, or explicit domain handles such as `opl @mas ...` and `opl @rca ...`.'
+	          'Use `opl` for the default Codex frontdoor, `opl resume <session_id>` to continue a session, and `opl skill sync` to register the family domain skill packs.'
 	        );
 	      },
 	    },

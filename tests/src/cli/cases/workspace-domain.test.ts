@@ -1734,15 +1734,6 @@ test('domain launch resolves a bound direct-entry locator into an honest launche
 
 test('session-ledger captures OPL-managed session events with honest resource samples', () => {
   const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
-if [ "$1" = "chat" ]; then
-  cat <<'EOF'
-╭─ ⚕ Hermes ───────────────────────────────────────────────────────────────────╮
-SESSION LEDGER ASK RESPONSE
-
-session_id: sess_ledger
-EOF
-  exit 0
-fi
 if [ "$1" = "--resume" ] && [ "$2" = "sess_ledger" ]; then
   cat <<'EOF'
 ╭─ ⚕ Hermes ───────────────────────────────────────────────────────────────────╮
@@ -1794,23 +1785,37 @@ exit 1
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-ledger-state-'));
 
   try {
-    const askOutput = runCli([
-      '@rca',
-      'Prepare',
-      'a',
-      'defense-ready',
-      'slide',
-      'deck.',
-      '--executor',
-      'hermes',
-      '--workspace-path',
-      repoRoot,
-    ], {
-      OPL_HERMES_BIN: hermesPath,
-      OPL_FRONTDESK_STATE_DIR: stateRoot,
-      PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
-    });
-    assert.equal(askOutput.product_entry.hermes.session_id, 'sess_ledger');
+    fs.writeFileSync(
+      path.join(stateRoot, 'session-ledger.json'),
+      `${JSON.stringify({
+        version: 'g2',
+        entries: [
+          {
+            ledger_id: 'seed-ledger-entry',
+            recorded_at: '2026-04-24T00:00:00.000Z',
+            session_id: 'sess_ledger',
+            mode: 'ask',
+            source_surface: 'opl_local_product_entry_shell',
+            domain_id: 'redcube',
+            workstream_id: 'ppt_deck',
+            goal_preview: 'Prepare a defense-ready slide deck.',
+            workspace_locator: {
+              project_id: 'redcube',
+              absolute_path: repoRoot,
+              source: 'workspace_binding',
+              binding_id: 'seed-redcube-binding',
+            },
+            resource_sample: {
+              status: 'captured',
+              capture_scope: 'opl_managed_runtime_sample',
+              process_count: 2,
+              total_rss_kb: 174616,
+              total_cpu_percent: 4.4,
+            },
+          },
+        ],
+      }, null, 2)}\n`,
+    );
 
     const resumeOutput = runCli(['session', 'resume', 'sess_ledger', '--executor', 'hermes'], {
       OPL_HERMES_BIN: hermesPath,

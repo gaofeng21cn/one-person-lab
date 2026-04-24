@@ -17,7 +17,7 @@
 - `OPL` 当前主线以 `Codex-default session/runtime + explicit activation layer` 为 canonical truth
 - 本地 `opl`、直接 `Codex` 使用、ACP-compatible 外部壳与 `Product API` 都消费同一套 runtime truth
 - `opl`、`opl exec`、`opl resume` 默认继承 `Codex CLI` 语义
-- `@mas`、`@mag`、`@rca` 与其他显式 routing handle 才进入 activation layer
+- `opl skill sync` 把 family domain skill pack 注册到 Codex 环境；显式 runtime switch 或 domain contract 调用才进入 activation layer
 - `Hermes-Agent` 只作为显式 opt-in 的备选 runtime
 - `MAS`、`MAG`、`RCA` 等领域智能体继续保持独立，并通过 CLI / 本地程序 / 脚本 / contract 暴露 capability surface
 
@@ -59,7 +59,8 @@
 - 模块注册表
 - 智能体注册表
 - shared module / contract / index registration
-- 显式 domain-handle dispatch
+- family skill pack discovery / sync
+- 显式 domain contract dispatch
 - domain capability surface discovery
 
 ### 3. Engines

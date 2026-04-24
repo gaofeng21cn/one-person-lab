@@ -35,6 +35,14 @@ export function buildPublicCommandSpecs(
     },
     doctor: cloneCommandSpec(commandSpecs.doctor, { group: 'top_level' }),
     start: cloneCommandSpec(commandSpecs.start, { group: 'top_level' }),
+    'skill list': cloneCommandSpec(commandSpecs['skill-list'], {
+      usage: 'opl skill list [--domain <domain_id>]',
+      group: 'skill',
+    }),
+    'skill sync': cloneCommandSpec(commandSpecs['skill-sync'], {
+      usage: 'opl skill sync [--domain <domain_id>] [--home <home_path>] [--quiet]',
+      group: 'skill',
+    }),
 	    exec: cloneCommandSpec(commandSpecs.exec, { group: 'top_level' }),
 	    resume: cloneCommandSpec(commandSpecs.resume, { group: 'top_level' }),
 	    ask: cloneCommandSpec(commandSpecs.ask, { group: 'legacy' }),

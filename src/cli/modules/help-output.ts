@@ -28,6 +28,7 @@ function looksLikeNaturalLanguage(command: string, args: string[]) {
 
 const COMMAND_GROUP_SUMMARIES: Record<string, string> = {
   top_level: '直接产品入口与前台运行入口。',
+  skill: '同步 family domain plugin，并查看当前 Codex skill pack 安装状态。',
   web: '导出或查看 GUI/overlay 需要的 Web bundle 与打包资源。',
   status: '读取 family、workspace、runtime 和 dashboard 状态。',
   system: '查看与维护 OPL 的系统状态、初始化和更新通道。',
@@ -48,16 +49,6 @@ const RETIRED_COMMAND_PREFIXES = new Set([
   'chat',
   'shell',
 ]);
-
-const EXPLICIT_AGENT_HANDLE_SPEC = {
-  usage:
-    'opl @mas|@mag|@rca <request...> [--executor <codex|hermes>] [--workspace-path <path>] [--dry-run]',
-  examples: [
-    'opl @mas tighten the manuscript argument around invasive phenotype findings --dry-run',
-    'opl @rca build a defense-ready deck for next week',
-    'opl @mag draft a grant revision response pack --executor hermes',
-  ],
-} satisfies Pick<CommandSpec, 'usage' | 'examples'>;
 
 function cloneCommandSpec(
   base: CommandSpec,
@@ -145,6 +136,8 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl help',
         'opl',
         'opl doctor',
+        'opl skill list',
+        'opl skill sync',
         'opl system',
         'opl system initialize',
         'opl modules',
@@ -164,8 +157,6 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl "Plan a medical grant proposal revision loop."',
         'opl exec "Plan a medical grant proposal revision loop."',
         'opl resume --last',
-        'opl @rca build a defense-ready slide deck for a thesis committee.',
-        'opl @mag draft a grant revision response pack --dry-run',
         'opl contract validate',
         'opl domain resolve-request --intent presentation_delivery --target deliverable --goal "Prepare a defense-ready slide deck."',
         'opl domain explain-boundary --intent create --target deliverable --goal "Prepare a xiaohongshu campaign pack." --preferred-family xiaohongshu',
@@ -403,7 +394,6 @@ function parseCliInput(argv: string[]): ParsedCliInput {
 export {
   CODEX_COMMAND_HELP_PASSTHROUGH,
   COMMAND_GROUP_SUMMARIES,
-  EXPLICIT_AGENT_HANDLE_SPEC,
   RETIRED_COMMAND_PREFIXES,
   buildCommandHelp,
   buildContractsContext,

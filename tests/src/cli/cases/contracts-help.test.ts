@@ -62,24 +62,17 @@ exit 1
   }
 });
 
-test('explicit @mag --dry-run prepares Codex-default compatibility previews', () => {
-  const output = runCli([
+test('top-level @mag alias is retired in favor of skill sync plus plain Codex entry', () => {
+  const { status, payload } = runCliFailure([
     '@mag',
     'Draft a grant revision response pack.',
     '--dry-run',
   ]);
 
-  assert.equal(output.version, 'g2');
-  assert.equal(output.product_entry.mode, 'ask');
-  assert.equal(output.product_entry.dry_run, true);
-  assert.equal(output.product_entry.routing.status, 'routed');
-  assert.equal(output.product_entry.routing.domain_id, 'medautogrant');
-  assert.equal(output.product_entry.routing.workstream_id, 'grant_ops');
-  assert.equal(output.product_entry.executor_backend, 'codex');
-  assert.equal(output.product_entry.codex.command_preview[0], 'codex');
-  assert.equal(output.product_entry.codex.command_preview[1], 'exec');
-  assert.ok(output.product_entry.codex.command_preview.includes('--json'));
-  assert.match(output.product_entry.handoff_prompt_preview, /grant_ops/);
+  assert.equal(status, 2);
+  assert.equal(payload.error.code, 'cli_usage_error');
+  assert.match(payload.error.message, /Command "opl @mag" has been retired/);
+  assert.match(payload.error.message, /opl skill sync/);
 });
 
 test('contract validate exposes env contract-root provenance', () => {

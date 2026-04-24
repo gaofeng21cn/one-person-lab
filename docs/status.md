@@ -29,8 +29,9 @@
 
 - 默认前门是 `opl`；`opl exec` 负责一次性请求，`opl resume` 负责续接会话。
 - 这几个入口默认继承 `Codex` 语义；只有显式 runtime switch 或显式 domain activation 才进入不同语义。
+- `opl skill sync` 负责把家族 domain app skill pack 同步到 Codex 环境，供默认 `opl` / `opl exec` / `opl resume` 直接使用。
 - `Codex` 中显式调用 `OPL` 与其 domain agents 是并列的一等使用方式。
-- `@mas`、`@mag`、`@rca` 等 handle 属于显式 activation layer，背后继续落到各 domain 仓自己的 CLI / 程序 / 脚本 / contract。
+- Domain app 通过各自仓库提供的本地 CLI / 程序 / 脚本 / contract 与 skill pack 接入；`OPL` 负责统一同步与发现。
 - GUI / Web 主线保持 `外部 shell -> OPL session runtime`。
 - 当前第一外部壳是 `AionUI`；`Onyx` 只保留为备线参考。
 - `opl web` 与 `Product API` 继续提供 projection、debug 与 hosted adapter surface。
