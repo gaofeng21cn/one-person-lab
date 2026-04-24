@@ -35,7 +35,7 @@ export function buildHostedRuntimeReadiness() {
     recommended_next_actions: [
       '把 managed hosted runtime 的 service orchestration、tenant boundary 与 policy surface 单独冻结。',
       '保持 Hermes 作为外部 runtime substrate，不在 OPL 仓内虚构托管完成度。',
-      '把独立 GUI 壳接到这些 API truth 上，当前主线按 AionUI 推进；OPL 主仓不在仓内继续长自研 GUI。',
+      '把 OPL 品牌 GUI 壳接到这些 API truth 上，当前主线在 opl-aion-shell 内基于 AionUI codebase 推进；OPL 主仓不在仓内继续长自研 GUI。',
     ],
   };
 }

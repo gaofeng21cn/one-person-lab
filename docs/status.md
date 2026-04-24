@@ -28,18 +28,18 @@
 ## 当前默认入口
 
 - 默认前门是 `opl`；`opl exec` 负责一次性请求，`opl resume` 负责续接会话。
-- `opl install` 是当前最短一键安装入口：默认安装 `MAS`、`MAG`、`RCA`，同步短名 Codex skills，安装并打开本地 Product API service，并尝试启动已安装的 AionUI GUI。
+- `opl install` 是当前最短一键安装入口：默认安装或配置 `Codex CLI` 与 `Hermes-Agent`，安装 `MAS`、`MAG`、`RCA`，同步短名 Codex skills，安装并打开本地 Product API service，并且只尝试启动已安装的 OPL 品牌 GUI。
 - 这几个入口默认继承 `Codex` 语义；只有显式 runtime switch 或显式 domain activation 才进入不同语义。
 - `opl skill sync` 负责把家族 domain app skill pack 同步到 Codex 环境，供默认 `opl` / `opl exec` / `opl resume` 直接使用；默认 sibling repo 发现已经按 workspace/worktree 布局自动解析，不再依赖 `OPL_FAMILY_WORKSPACE_ROOT`。
 - `opl module install --module <module_id>` 现在走完整闭环：clone 到 OPL-managed modules root，执行仓库 bootstrap，同步对应 skill pack，再跑仓库健康检查。
-- `opl system initialize` 是当前一键配置安装的聚合面：同时暴露 workspace root、Codex、domain modules、推荐 companion skills、AionUI GUI shell、local support service 与下一步动作。
+- `opl system initialize` 是当前一键配置安装的聚合面：同时暴露 workspace root、Codex / Hermes runtime dependencies、domain modules、推荐 companion skills、OPL 品牌 GUI shell、local support service 与下一步动作。
 - 推荐 companion skills 当前包括 `superpowers`、`officecli` 和 Codex native Office skill 组；它们不改变 OPL runtime 语义，只作为 MAS / MAG / RCA 工作流的增强能力。
 - 默认本地状态目录是 `~/Library/Application Support/OPL/state`；如需切换到其他本地状态根目录，使用 `OPL_STATE_DIR`。
 - `Codex` 中显式调用 `OPL` 与其 domain agents 是并列的一等使用方式。
 - Domain app 通过各自仓库提供的本地 CLI / 程序 / 脚本 / contract 与 skill pack 接入；`OPL` 负责统一同步与发现。
 - GUI / Web 主线保持 `外部 shell -> OPL session runtime`。
-- 当前第一外部壳是 `AionUI`，由 sibling `opl-aion-shell` 负责 GUI 打包；OPL 一键安装优先消费其 GitHub Release 预编译包，只有缺少匹配平台 / 架构 artifact 时才回退源码构建。
-- `AionUI` 预编译包指 Electron-builder 产出的 `.dmg` / `.exe` / `.deb` 分发文件及 `latest*.yml` updater metadata；这些 release artifact 可以由我们在 `opl-aion-shell` release 流程中预先构建并上传。
+- 当前 GUI 交付物是 `opl-aion-shell` 维护的 OPL 品牌桌面壳，它基于 AionUI codebase 做 OPL 裁剪与品牌化；原版 AionUI app 不算 OPL GUI。OPL 一键安装优先消费其 GitHub Release 里的 OPL 品牌预编译包，只有缺少匹配平台 / 架构 artifact 时才回退源码构建。
+- `OPL GUI` 预编译包指 Electron-builder 产出的 OPL 品牌 `.dmg` / `.exe` / `.deb` 分发文件及 `latest*.yml` updater metadata；这些 release artifact 应在 `opl-aion-shell` release 流程中预先构建并上传。
 - `opl web` 与 `Product API` 继续提供 projection、debug 与 hosted adapter surface。
 
 ## 当前交互模式
