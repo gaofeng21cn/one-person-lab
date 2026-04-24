@@ -4,6 +4,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 import { GatewayContractError } from './contracts.ts';
+import { syncOplCompanionSkills } from './install-companions.ts';
 import { resolveFrontDeskStatePaths } from './frontdesk-state.ts';
 
 type SkillPackInstallerKind = 'bash' | 'node';
@@ -435,6 +436,7 @@ export function syncFamilySkillPacks(options: SyncFamilySkillPacksOptions = {}) 
     .filter((spec) => !selectedDomains || selectedDomains.has(spec.domain_id))
     .map((spec) => inspectFamilySkillPack(spec));
   const packs = inspectedPacks.map((inspected) => runInstaller(inspected, resolvedHome ?? undefined));
+  const companion_skills = syncOplCompanionSkills(resolvedHome ?? undefined);
 
   return {
     version: 'g2',
@@ -443,6 +445,7 @@ export function syncFamilySkillPacks(options: SyncFamilySkillPacksOptions = {}) 
       workspace_root: resolveDefaultFamilyWorkspaceRoot(),
       home: resolvedHome ?? process.env.HOME ?? null,
       packs,
+      companion_skills,
       summary: {
         total: packs.length,
         synced: packs.filter((entry) => entry.sync_status === 'synced').length,
