@@ -355,6 +355,10 @@ test('domain manifests resolves real family manifest fixtures while workspace li
       3,
     );
     assert.equal(
+      dashboardOutput.dashboard.product_api.domain_entry_parity.summary.skill_runtime_continuity_ready_count,
+      3,
+    );
+    assert.equal(
       dashboardOutput.dashboard.product_api.domain_entry_parity.summary.gateway_interaction_contract_ready_count,
       3,
     );
@@ -383,6 +387,7 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(grantParity.domain_entry_contract_status, 'ready');
     assert.equal(grantParity.domain_agent_entry_spec_status, 'ready');
     assert.equal(grantParity.gateway_interaction_contract_status, 'ready');
+    assert.equal(grantParity.skill_runtime_continuity_status, 'ready');
     assert.equal(scienceParity.entry_parity_status, 'partial');
     assert.equal(scienceParity.direct_entry_locator_status, 'missing');
     assert.equal(scienceParity.ready_for_opl_start, true);
@@ -391,6 +396,7 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(scienceParity.domain_entry_contract_status, 'ready');
     assert.equal(scienceParity.domain_agent_entry_spec_status, 'ready');
     assert.equal(scienceParity.gateway_interaction_contract_status, 'ready');
+    assert.equal(scienceParity.skill_runtime_continuity_status, 'ready');
     assert.equal(redcubeParity.entry_parity_status, 'aligned');
     assert.equal(redcubeParity.direct_entry_locator_status, 'ready');
     assert.equal(redcubeParity.ready_for_opl_start, true);
@@ -399,6 +405,7 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(redcubeParity.domain_entry_contract_status, 'ready');
     assert.equal(redcubeParity.domain_agent_entry_spec_status, 'ready');
     assert.equal(redcubeParity.gateway_interaction_contract_status, 'ready');
+    assert.equal(redcubeParity.skill_runtime_continuity_status, 'ready');
     assert.equal(redcubeParity.recommended_start_command, 'redcube product frontdesk');
     assert.equal(
       redcubeParity.recommended_check_command,
@@ -448,6 +455,11 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(grantEntry.skill_catalog.surface_kind, 'skill_catalog');
     assert.equal(grantEntry.skill_catalog_skill_count, 2);
     assert.equal(grantEntry.skill_catalog_supported_commands[1], 'grant-user-loop');
+    assert.equal(grantEntry.skill_runtime_continuity_status, 'ready');
+    assert.equal(grantEntry.skill_runtime_continuity_session_locator_field, 'grant_run_id');
+    assert.equal(grantEntry.skill_runtime_continuity_progress_surface_ref, '/product_entry_manifest/progress_projection');
+    assert.match(grantEntry.skill_runtime_continuity_resume_command, /runtime-resume/);
+    assert.match(grantEntry.skill_runtime_continuity_artifact_command, /summarize-workspace/);
     assert.equal(grantEntry.domain_entry_contract.entry_adapter, 'MedAutoGrantDomainEntry');
     assert.equal(grantEntry.domain_agent_entry_id, 'mag');
     assert.equal(grantEntry.domain_agent_entry_entry_command, 'product-frontdesk');
@@ -475,6 +487,11 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(scienceEntry.skill_catalog.surface_kind, 'skill_catalog');
     assert.equal(scienceEntry.skill_catalog_skill_count, 2);
     assert.equal(scienceEntry.skill_catalog_supported_commands[0], 'product-frontdesk');
+    assert.equal(scienceEntry.skill_runtime_continuity_status, 'ready');
+    assert.equal(scienceEntry.skill_runtime_continuity_session_locator_field, 'study_id');
+    assert.equal(scienceEntry.skill_runtime_continuity_progress_surface_ref, '/progress_projection');
+    assert.match(scienceEntry.skill_runtime_continuity_resume_command, /launch-study/);
+    assert.match(scienceEntry.skill_runtime_continuity_artifact_command, /study-runtime-status/);
     assert.equal(scienceEntry.domain_entry_contract.entry_adapter, 'MedAutoScienceDomainEntry');
     assert.equal(scienceEntry.domain_agent_entry_id, 'mas');
     assert.equal(scienceEntry.domain_agent_entry_entry_command, 'product-frontdesk');
@@ -550,6 +567,13 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(recommendedEntry.skill_catalog.surface_kind, 'skill_catalog');
     assert.equal(recommendedEntry.skill_catalog_skill_count, 2);
     assert.equal(recommendedEntry.skill_catalog_supported_commands[3], 'product-session');
+    assert.equal(recommendedEntry.skill_runtime_continuity_status, 'ready');
+    assert.equal(recommendedEntry.skill_runtime_continuity_session_locator_field, 'entry_session_id');
+    assert.equal(recommendedEntry.skill_runtime_continuity_progress_surface_ref, '/progress_projection');
+    assert.equal(
+      recommendedEntry.skill_runtime_continuity_resume_command,
+      'redcube product session --entry-session-id <entry-session-id>',
+    );
     assert.equal(recommendedEntry.domain_entry_contract.entry_adapter, 'RedCubeDomainEntry');
     assert.equal(recommendedEntry.domain_agent_entry_id, 'rca');
     assert.equal(recommendedEntry.domain_agent_entry_entry_command, 'redcube product frontdesk');
@@ -1601,6 +1625,7 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     assert.equal(output.handoff_bundle.domain_entry_parity.summary.progress_projection_ready_count, 1);
     assert.equal(output.handoff_bundle.domain_entry_parity.summary.artifact_inventory_ready_count, 1);
     assert.equal(output.handoff_bundle.domain_entry_parity.summary.skill_catalog_ready_count, 1);
+    assert.equal(output.handoff_bundle.domain_entry_parity.summary.skill_runtime_continuity_ready_count, 1);
     assert.equal(output.handoff_bundle.domain_entry_parity.summary.automation_ready_count, 1);
     assert.equal(
       output.handoff_bundle.domain_entry_parity.summary.direct_entry_locator_ready_projects_count,
@@ -1620,7 +1645,20 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     assert.equal(routedParity.progress_projection_status, 'ready');
     assert.equal(routedParity.artifact_inventory_status, 'ready');
     assert.equal(routedParity.skill_catalog_status, 'ready');
+    assert.equal(routedParity.skill_runtime_continuity_status, 'ready');
     assert.equal(routedParity.automation_status, 'ready');
+    assert.equal(
+      output.handoff_bundle.domain_manifest_recommendation.skill_runtime_continuity_status,
+      'ready',
+    );
+    assert.equal(
+      output.handoff_bundle.domain_manifest_recommendation.skill_runtime_continuity_session_locator_field,
+      'entry_session_id',
+    );
+    assert.equal(
+      output.handoff_bundle.domain_manifest_recommendation.skill_runtime_continuity_resume_command,
+      'redcube product session --entry-session-id <entry-session-id>',
+    );
     assertRedcubeActionGraph(
       output.handoff_bundle.domain_manifest_recommendation.family_orchestration.action_graph,
     );
