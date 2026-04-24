@@ -36,22 +36,44 @@
 
 ## Fast Start On A New Mac
 
-Use this path when you want the shortest working setup instead of reading the repository first.
+Use this path when you want OPL, its runtime dependencies, the active domain agents, and the OPL GUI prepared in one pass.
 
-1. Install the OPL CLI from this repository.
-2. Run `opl install`.
-3. Open the GUI with `open /Applications/AionUi.app`, or use the web entry at `http://127.0.0.1:8787/`.
-4. Start general work in Codex or OPL by default; explicitly choose `MAS`, `MAG`, or `RCA` when the task needs a domain agent.
+For a human user:
 
-What `opl install` does:
+```bash
+git clone https://github.com/gaofeng21cn/one-person-lab.git
+cd one-person-lab
+npm install
+npm link
+opl install
+```
 
-- Installs the default family modules: `MAS`, `MAG`, and `RCA`.
-- Syncs their short Codex skills so they can be called directly from Codex or through OPL.
-- Installs and opens the local OPL Product API service.
-- Starts the installed AionUI desktop app when it is already present.
-- If AionUI is missing, reports the matching `opl-aion-shell` release package or source-build fallback.
+Then open the user-facing entry:
 
-For local testing on this machine, the service entry is `http://127.0.0.1:8787/` and the desktop app path is `/Applications/AionUi.app`.
+```bash
+open /Applications/OPL.app
+```
+
+If the OPL desktop app is not installed yet, use the web entry while the branded GUI package is being prepared:
+
+```bash
+open http://127.0.0.1:8787/
+```
+
+What `opl install` is responsible for:
+
+- Install or configure the required runtime dependencies: `Codex CLI` and `Hermes-Agent`.
+- Install the active family modules: `MAS`, `MAG`, and `RCA`.
+- Sync short Codex skills so `MAS`, `MAG`, and `RCA` can be called directly from Codex or through OPL.
+- Install and open the local OPL Product API service.
+- Open the installed OPL-branded desktop GUI when `/Applications/OPL.app` is present.
+- If the OPL GUI is missing, report the matching `opl-aion-shell` OPL release package or source-build fallback.
+
+For an Agent in Codex, the intended instruction is:
+
+> Install and configure this OPL repo on this Mac. Clone the repo if needed, install the OPL CLI, run `opl install`, ensure Codex CLI and Hermes-Agent are installed, install MAS/MAG/RCA, sync their skills, start the local Product API service, and open the OPL GUI or report the exact missing GUI release/build step.
+
+The OPL GUI is an OPL-branded shell built from `opl-aion-shell` on top of the AionUI codebase. The upstream AionUI application is not itself the OPL GUI.
 
 ## What People Use It For
 
@@ -89,7 +111,7 @@ This repository is the OPL product/runtime gateway, not the GUI shell and not a 
 - Workspace, session, progress, and artifact discovery surfaces.
 - Machine-readable contracts for the shared product layer.
 
-The desktop GUI is maintained by [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell). OPL provides the local Product API and runtime truth consumed by that GUI, by the web entry, and by Codex.
+The desktop GUI is maintained by [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) as an OPL-branded shell built on the AionUI codebase. OPL provides the local Product API and runtime truth consumed by that GUI, by the web entry, and by Codex.
 
 ## How To Read This Repository
 
@@ -106,10 +128,10 @@ The desktop GUI is maintained by [`opl-aion-shell`](https://github.com/gaofeng21
 - Then read [Project](./docs/project.md), [Status](./docs/status.md), [Architecture](./docs/architecture.md), [Invariants](./docs/invariants.md), and [Decisions](./docs/decisions.md). This is the fastest way to recover the top-level boundary, the Codex-default runtime contract, the explicit activation layer, and the admitted domains.
 - The default frontdoors are `opl`, `opl exec`, and `opl resume`. They inherit Codex-default semantics unless you explicitly switch runtime or activate a domain agent. `MCP` stays the supported protocol layer, and `controller` stays internal.
 - The active interaction route is Codex-default first: local `opl`, direct `Codex` usage, and future external shells all consume the same session/runtime truth. `opl skill sync` now auto-discovers sibling family repositories from the workspace layout by default, so local worktrees no longer need `OPL_FAMILY_WORKSPACE_ROOT` just to surface the family skill packs inside Codex.
-- The shortest first-run command is `opl install`. It installs the default family modules (`MAS`, `MAG`, `RCA`), syncs their Codex skills, installs/opens the local Product API service, and tries to open an installed AionUI app; when AionUI is not installed it returns the release-asset/source-build fallback instructions in the payload.
+- The shortest first-run command is `opl install`. It installs/configures `Codex CLI` and `Hermes-Agent`, installs the default family modules (`MAS`, `MAG`, `RCA`), syncs their Codex skills, installs/opens the local Product API service, and only opens an installed OPL-branded desktop app; upstream AionUI is not treated as the OPL GUI.
 - If one of the admitted domain repositories is not present yet, run `opl module install --module <module_id>`. The install path is now a turnkey loop: clone into the OPL-managed modules root, run the repo-specific bootstrap, sync the matching Codex skill pack, then finish with a repo health check.
-- For a first-run install surface, run `opl system initialize`. It now exposes the domain modules, the recommended companion skill bundle (`superpowers`, `officecli`, and native Office skills when present), and the external AionUI GUI shell strategy in one machine-readable payload.
-- GUI packaging is owned by the sibling `opl-aion-shell` repository. A prebuilt GUI package means the Electron-builder release asset uploaded to GitHub Releases (`.dmg`, `.exe`, or `.deb`) plus its updater metadata (`latest*.yml`); source build is the fallback when no asset matches the local platform and architecture.
+- For a first-run install surface, run `opl system initialize`. It exposes runtime dependencies, domain modules, the recommended companion skill bundle (`superpowers`, `officecli`, and native Office skills when present), and the OPL-branded GUI shell strategy in one machine-readable payload.
+- GUI packaging is owned by the sibling `opl-aion-shell` repository. A valid prebuilt GUI package means an OPL-branded Electron-builder release asset uploaded to GitHub Releases (`.dmg`, `.exe`, or `.deb`) plus updater metadata (`latest*.yml`); source build is the fallback when no asset matches the local platform and architecture.
 - The default local state directory is `~/Library/Application Support/OPL/state`. Override it with `OPL_STATE_DIR` when you need a non-default local state root.
 - The current active domain agents are [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience), [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant), and [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai). They expose stable capability surfaces as local CLIs, programs/scripts, and repo-tracked contracts; continue into [Status](./docs/status.md), [Architecture](./docs/architecture.md), and the [OPL Public Surface Index](./docs/opl-public-surface-index.md) to recover the family mapping and public entry surfaces.
 - Use `OPL` when the task needs the top-level session/runtime path, shared `workspaces / sessions / progress / artifacts` surfaces, or explicit domain activation. Use the corresponding domain repository when the task is already scoped to one domain and you want that repo's own CLI/scripts/contracts boundary.

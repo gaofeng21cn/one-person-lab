@@ -2,6 +2,8 @@ import { openFrontDeskService } from '../frontdesk-service.ts';
 import { buildOplGuiShellSurface } from '../install-companions.ts';
 import type { GatewayContracts } from '../types.ts';
 
+import { runFrontDeskEngineAction } from './engine-actions.ts';
+import { buildFrontDeskEnvironment } from './environment.ts';
 import { buildFrontDeskInitialize } from './initialize.ts';
 import { runFrontDeskModuleAction } from './modules.ts';
 import { resolveProjectRoot, runCommand } from './shared.ts';
@@ -9,6 +11,7 @@ import { runFrontDeskSystemAction } from './system-actions.ts';
 import type { FrontDeskModuleId, FrontDeskTurnkeyInstallInput } from './shared.ts';
 
 const DEFAULT_MODULES: FrontDeskModuleId[] = ['medautoscience', 'medautogrant', 'redcube'];
+const DEFAULT_ENGINES = ['codex', 'hermes'] as const;
 
 function normalizeModuleId(raw: string): FrontDeskModuleId {
   const normalized = raw.trim().toLowerCase();
@@ -38,15 +41,15 @@ function normalizeModuleSelection(modules?: string[]) {
   return [...new Set(selected.map((moduleId) => normalizeModuleId(moduleId)))];
 }
 
-function tryOpenAionUi() {
-  const candidates = ['/Applications/AionUi.app', '/Applications/AionUI.app'];
+function tryOpenOplGui() {
+  const candidates = ['/Applications/OPL.app', '/Applications/One Person Lab.app'];
   const candidate = candidates.find((appPath) => runCommand('test', ['-d', appPath]).exitCode === 0);
   if (!candidate) {
     return {
       status: 'manual_required' as const,
-      strategy: 'prebuilt_release_or_source_build',
-      command_preview: ['open', '/Applications/AionUi.app'],
-      note: 'AionUI.app is not installed under /Applications. Install a matching opl-aion-shell release asset, or build from source as the fallback.',
+      strategy: 'opl_branded_prebuilt_release_or_source_build',
+      command_preview: ['open', '/Applications/OPL.app'],
+      note: 'The OPL-branded desktop GUI is not installed under /Applications. Install a matching opl-aion-shell OPL release asset, or build the OPL-branded shell from source as the fallback. The upstream AionUI.app is not treated as the OPL GUI.',
     };
   }
 
@@ -64,6 +67,29 @@ export async function runFrontDeskTurnkeyInstall(
   input: FrontDeskTurnkeyInstallInput = {},
 ) {
   const modules = normalizeModuleSelection(input.modules);
+  const environment = (await buildFrontDeskEnvironment(contracts)).frontdesk_environment;
+  const engineActions = input.skipEngines
+    ? []
+    : await Promise.all(DEFAULT_ENGINES.map(async (engineId) => {
+      const engine = environment.core_engines[engineId];
+      if (engine.installed) {
+        return {
+          version: 'g2',
+          frontdesk_engine_action: {
+            engine_id: engineId,
+            action: 'install' as const,
+            status: 'skipped_installed' as const,
+            strategy: 'already_installed',
+            command_preview: [],
+            note: `${engineId} is already installed; OPL install reuses the existing local runtime dependency.`,
+            stdout: '',
+            stderr: '',
+            frontdesk_environment: environment,
+          },
+        };
+      }
+      return runFrontDeskEngineAction(contracts, 'install', engineId);
+    }));
   const moduleActions = input.skipModules
     ? []
     : modules.map((moduleId) => runFrontDeskModuleAction('install', moduleId));
@@ -79,7 +105,7 @@ export async function runFrontDeskTurnkeyInstall(
   const webOpenAction = input.skipWebOpen || input.skipService
     ? null
     : await openFrontDeskService(contracts);
-  const guiOpenAction = input.skipGuiOpen ? null : tryOpenAionUi();
+  const guiOpenAction = input.skipGuiOpen ? null : tryOpenOplGui();
   const initialize = await buildFrontDeskInitialize(contracts);
 
   return {
@@ -87,7 +113,9 @@ export async function runFrontDeskTurnkeyInstall(
     frontdesk_turnkey_install: {
       surface_id: 'opl_install',
       status: 'completed',
+      selected_engines: [...DEFAULT_ENGINES],
       selected_modules: modules,
+      engine_actions: engineActions.map((entry) => entry.frontdesk_engine_action),
       module_actions: moduleActions.map((entry) => entry.frontdesk_module_action),
       service_action: serviceAction?.frontdesk_system_action ?? null,
       web_open_action: webOpenAction?.frontdesk_service ?? null,
@@ -95,8 +123,8 @@ export async function runFrontDeskTurnkeyInstall(
       gui_shell: buildOplGuiShellSurface(resolveProjectRoot()),
       system_initialize: initialize.frontdesk_initialize,
       notes: [
-        'This command is the user-facing one-shot path for OPL + family modules + local Product API.',
-        'GUI startup opens an installed AionUI app when present; otherwise the payload points to the prebuilt release or source-build fallback.',
+        'This command is the user-facing one-shot path for OPL + Codex CLI + Hermes-Agent + family modules + local Product API.',
+        'GUI startup only opens an installed OPL-branded desktop app. The upstream AionUI app is not treated as the OPL GUI.',
       ],
     },
   };
