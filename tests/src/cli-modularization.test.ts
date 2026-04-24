@@ -10,6 +10,11 @@ const repoRoot = path.resolve(__dirname, '..', '..');
 test('CLI modularization keeps stable entry files while extracting modules and cases', () => {
   assert.equal(fs.existsSync(path.join(repoRoot, 'src', 'cli.ts')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, 'src', 'cli', 'main.ts')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'src', 'cli', 'modules', 'types.ts')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'src', 'cli', 'modules', 'runtime-helpers.ts')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'src', 'cli', 'modules', 'request-parsers.ts')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'src', 'cli', 'modules', 'frontdesk-parsers.ts')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'src', 'cli', 'modules', 'help-output.ts')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, 'tests', 'src', 'cli.test.ts')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, 'tests', 'src', 'cli', 'cases')), true);
 });
