@@ -10,6 +10,7 @@ import type {
   RuntimeStatusCliInput,
   SessionLedgerCliInput,
   SessionsCliInput,
+  SkillPacksCliInput,
   StartCliInput,
   WorkspaceStatusCliInput,
 } from './types.ts';
@@ -650,6 +651,55 @@ function parseLaunchDomainArgs(
   return parsed;
 }
 
+function parseSkillPackArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): SkillPacksCliInput {
+  const parsed: SkillPacksCliInput = {
+    domains: [],
+    quiet: false,
+  };
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (token === '--quiet') {
+      parsed.quiet = true;
+      continue;
+    }
+
+    if (!token.startsWith('--')) {
+      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
+        token,
+      });
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
+        option: token,
+      });
+    }
+
+    switch (token) {
+      case '--domain':
+        parsed.domains.push(value);
+        break;
+      case '--home':
+        parsed.home = value;
+        break;
+      default:
+        throw buildUsageError(`Unknown option for skill pack command: ${token}.`, spec, {
+          option: token,
+        });
+    }
+
+    index += 1;
+  }
+
+  return parsed;
+}
+
 export {
   parseDashboardArgs,
   parseKeyValueArgs,
@@ -660,6 +710,7 @@ export {
   parseProductEntryArgs,
   parseResumeArgs,
   parseRuntimeStatusArgs,
+  parseSkillPackArgs,
   parseSessionLedgerArgs,
   parseSessionsArgs,
   parseStartArgs,

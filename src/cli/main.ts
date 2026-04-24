@@ -1,6 +1,5 @@
 import { GatewayContractError, loadGatewayContracts } from '../contracts.ts';
-import { runProductEntryAsk } from '../product-entry.ts';
-import { buildCommandHelp, buildRootHelp, buildUsageError, looksLikeNaturalLanguage, parseCliInput, parseProductEntryArgs, printJson, resolveCommandSpec, runCodexPassthroughHandled, CODEX_COMMAND_HELP_PASSTHROUGH, EXPLICIT_AGENT_HANDLE_SPEC, RETIRED_COMMAND_PREFIXES } from './modules/support.ts';
+import { buildCommandHelp, buildRetiredCommandError, buildRootHelp, buildUsageError, looksLikeNaturalLanguage, parseCliInput, printJson, resolveCommandSpec, runCodexPassthroughHandled, CODEX_COMMAND_HELP_PASSTHROUGH, RETIRED_COMMAND_PREFIXES } from './modules/support.ts';
 import { buildInternalCommandSpecs } from './cases/private-command-specs.ts';
 import { buildPublicCommandSpecs } from './cases/public-command-specs.ts';
 
@@ -29,13 +28,11 @@ export async function main() {
   const resolved = resolveCommandSpec(inputTokens, publicCommandSpecs);
   if (!resolved) {
     const [command, ...args] = inputTokens;
-    if (!parsedInput.helpRequested && command && !RETIRED_COMMAND_PREFIXES.has(command) && command.startsWith('@')) {
-      const result = await runProductEntryAsk(
-        parseProductEntryArgs([command, ...args], EXPLICIT_AGENT_HANDLE_SPEC),
-        getContracts(),
+    if (!parsedInput.helpRequested && command && command.startsWith('@')) {
+      throw buildRetiredCommandError(
+        `opl ${command}`,
+        'Use `opl skill sync` to register the family domain skill packs, then continue through `opl`, `opl exec`, or `opl resume`.',
       );
-      printJson(result);
-      return;
     }
 
     if (

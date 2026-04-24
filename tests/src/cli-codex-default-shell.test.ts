@@ -149,6 +149,66 @@ ${handlerBody}
   };
 }
 
+function createFakeFamilySkillWorkspace(captureDir: string) {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-skills-'));
+  const specs = [
+    {
+      project: 'med-autoscience',
+      plugin: 'med-autoscience',
+      installer: path.join('scripts', 'install-codex-plugin.sh'),
+      scriptBody: `#!/usr/bin/env bash
+set -euo pipefail
+printf 'med-autoscience\\n' >> ${JSON.stringify(path.join(captureDir, 'sync.log'))}
+cat <<'EOF'
+{"repo":"med-autoscience","sync":"ok"}
+EOF
+`,
+    },
+    {
+      project: 'med-autogrant',
+      plugin: 'med-autogrant',
+      installer: path.join('scripts', 'install-codex-plugin.sh'),
+      scriptBody: `#!/usr/bin/env bash
+set -euo pipefail
+printf 'med-autogrant\\n' >> ${JSON.stringify(path.join(captureDir, 'sync.log'))}
+cat <<'EOF'
+{"repo":"med-autogrant","sync":"ok"}
+EOF
+`,
+    },
+    {
+      project: 'redcube-ai',
+      plugin: 'redcube-ai',
+      installer: path.join('scripts', 'install-codex-plugin.mjs'),
+      scriptBody: `import fs from 'node:fs';
+fs.appendFileSync(${JSON.stringify(path.join(captureDir, 'sync.log'))}, 'redcube-ai\\n');
+process.stdout.write(JSON.stringify({ repo: 'redcube-ai', sync: 'ok' }) + '\\n');
+`,
+    },
+  ];
+
+  for (const spec of specs) {
+    const repoRoot = path.join(workspaceRoot, spec.project);
+    const pluginRoot = path.join(repoRoot, 'plugins', spec.plugin);
+    const skillRoot = path.join(pluginRoot, 'skills', spec.plugin);
+    const installerPath = path.join(repoRoot, spec.installer);
+    fs.mkdirSync(path.join(pluginRoot, '.codex-plugin'), { recursive: true });
+    fs.mkdirSync(skillRoot, { recursive: true });
+    fs.mkdirSync(path.dirname(installerPath), { recursive: true });
+    fs.writeFileSync(
+      path.join(pluginRoot, '.codex-plugin', 'plugin.json'),
+      JSON.stringify({ name: spec.plugin, skills: './skills/' }, null, 2),
+    );
+    fs.writeFileSync(path.join(skillRoot, 'SKILL.md'), `# ${spec.plugin}\n`);
+    fs.writeFileSync(installerPath, spec.scriptBody, { mode: 0o755 });
+  }
+
+  return {
+    workspaceRoot,
+    syncLogPath: path.join(captureDir, 'sync.log'),
+  };
+}
+
 test('bare opl command is a raw Codex frontdoor passthrough by default', () => {
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
 if [ "$#" -eq 0 ]; then
@@ -270,6 +330,79 @@ exit 0
   }
 });
 
+test('opl skill list discovers the family plugin packs through the configured sibling workspace root', () => {
+  const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-skill-list-'));
+  const { workspaceRoot, syncLogPath } = createFakeFamilySkillWorkspace(captureDir);
+
+  try {
+    const output = runCli(['skill', 'list'], {
+      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+    });
+
+    assert.equal(output.skill_catalog.summary.total, 3);
+    assert.equal(output.skill_catalog.summary.ready_to_sync, 3);
+    assert.deepEqual(
+      output.skill_catalog.packs.map((entry: { domain_id: string }) => entry.domain_id),
+      ['medautoscience', 'medautogrant', 'redcube'],
+    );
+    assert.equal(fs.existsSync(syncLogPath), false);
+  } finally {
+    fs.rmSync(captureDir, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('opl skill sync runs the lightweight family plugin installers and returns machine-readable results', () => {
+  const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-skill-sync-'));
+  const { workspaceRoot, syncLogPath } = createFakeFamilySkillWorkspace(captureDir);
+
+  try {
+    const output = runCli(['skill', 'sync'], {
+      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+    });
+
+    assert.equal(output.skill_sync.summary.synced, 3);
+    assert.deepEqual(fs.readFileSync(syncLogPath, 'utf8').trim().split('\n'), [
+      'med-autoscience',
+      'med-autogrant',
+      'redcube-ai',
+    ]);
+    assert.equal(output.skill_sync.packs[0].installer_result.repo, 'med-autoscience');
+    assert.equal(output.skill_sync.packs[1].installer_result.repo, 'med-autogrant');
+    assert.equal(output.skill_sync.packs[2].installer_result.repo, 'redcube-ai');
+  } finally {
+    fs.rmSync(captureDir, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test('installed opl launcher syncs family skill packs before opening the raw Codex frontdoor', () => {
+  const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-launcher-skill-sync-'));
+  const { workspaceRoot, syncLogPath } = createFakeFamilySkillWorkspace(captureDir);
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+echo "CODEX FRONTDOOR"
+exit 0
+`);
+
+  try {
+    const result = runEntryPathRaw(binPath, [], {
+      OPL_CODEX_BIN: codexPath,
+      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+    });
+
+    assert.equal(result.stdout, 'CODEX FRONTDOOR\n');
+    assert.deepEqual(fs.readFileSync(syncLogPath, 'utf8').trim().split('\n'), [
+      'med-autoscience',
+      'med-autogrant',
+      'redcube-ai',
+    ]);
+  } finally {
+    fs.rmSync(captureDir, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('exec command is a raw codex exec passthrough', () => {
   const capturePath = path.join(os.tmpdir(), `opl-codex-exec-args-${process.pid}.txt`);
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
@@ -343,24 +476,33 @@ exit 1
   }
 });
 
-test('ask chat and shell are retired in favor of opl, opl exec, and explicit domain handles', () => {
+test('ask chat and shell are retired in favor of opl, opl exec, and opl skill sync', () => {
   const ask = runCliFailure(['ask', 'Plan the next paper submission steps.']);
   assert.equal(ask.status, 2);
   assert.equal(ask.payload.error.code, 'cli_usage_error');
   assert.match(ask.payload.error.message, /Command "opl ask" has been retired/);
   assert.match(ask.payload.error.message, /opl exec/);
+  assert.match(ask.payload.error.message, /opl skill sync/);
 
   const chat = runCliFailure(['chat', 'Plan the next paper submission steps.']);
   assert.equal(chat.status, 2);
   assert.equal(chat.payload.error.code, 'cli_usage_error');
   assert.match(chat.payload.error.message, /Command "opl chat" has been retired/);
-  assert.match(chat.payload.error.message, /Use `opl`/);
+  assert.match(chat.payload.error.message, /opl skill sync/);
 
   const shell = runCliFailure(['shell']);
   assert.equal(shell.status, 2);
   assert.equal(shell.payload.error.code, 'cli_usage_error');
   assert.match(shell.payload.error.message, /Command "opl shell" has been retired/);
-  assert.match(shell.payload.error.message, /opl resume <session_id>/);
+  assert.match(shell.payload.error.message, /opl skill sync/);
+});
+
+test('top-level @agent aliases are retired in favor of skill sync plus plain Codex entry', () => {
+  const retired = runCliFailure(['@mas', 'tighten the manuscript argument around invasive phenotype findings']);
+  assert.equal(retired.status, 2);
+  assert.equal(retired.payload.error.code, 'cli_usage_error');
+  assert.match(retired.payload.error.message, /Command "opl @mas" has been retired/);
+  assert.match(retired.payload.error.message, /opl skill sync/);
 });
 
 test('help text advertises Codex as the default entry and lists opl exec without retired aliases', () => {
@@ -371,4 +513,6 @@ test('help text advertises Codex as the default entry and lists opl exec without
   assert.equal(commands.some((entry) => entry.command === 'ask'), false);
   assert.equal(commands.some((entry) => entry.command === 'chat'), false);
   assert.equal(commands.some((entry) => entry.command === 'shell'), false);
+  assert.equal(commands.some((entry) => entry.command === 'skill list'), true);
+  assert.equal(commands.some((entry) => entry.command === 'skill sync'), true);
 });

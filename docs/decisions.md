@@ -9,7 +9,7 @@
 影响：
 
 - `opl`、`opl exec`、`opl resume` 继续以 `Codex` 语义为默认前门
-- `@mas`、`@mag`、`@rca` 与显式 routing handle 收口为 activation layer，而不是第二套默认 runtime
+- `opl skill sync` 成为 family domain skill pack 的统一同步入口；默认前门继续保持原生 Codex 语义
 - GUI 壳、`Product API` 与 ACP-compatible 外壳都围绕同一套 Codex-default runtime contract 工作
 
 ### 决策：admitted domain 通过 repo-owned capability surface 接入 `OPL`
