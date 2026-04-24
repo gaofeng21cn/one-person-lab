@@ -50,6 +50,8 @@
 
 `family-product-entry-manifest-v2.schema.json` 现在正式冻结 `OPL` 跨三仓消费的 runtime continuity discovery layer。
 
+这个 schema 现在 fail-closed 要求 family caller 必须能发现单一 app skill、runtime control、session continuity、progress projection、artifact inventory 与 runtime loop closure；这些字段只指向 repo-owned truth，不把底层 domain runtime 迁到 `OPL`。
+
 当前 family-level 共享 surface 名称包括：
 
 - `runtime_inventory`
