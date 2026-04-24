@@ -36,44 +36,17 @@
 
 ## Fast Start On A New Mac
 
-Use this path when you want OPL, its runtime dependencies, the active domain agents, and the OPL GUI prepared in one pass.
-
-For a human user:
+One command for a human user:
 
 ```bash
-git clone https://github.com/gaofeng21cn/one-person-lab.git
-cd one-person-lab
-npm install
-npm link
-opl install
+git clone https://github.com/gaofeng21cn/one-person-lab.git && cd one-person-lab && npm install && npm link && opl install
 ```
 
-Then open the user-facing entry:
+One instruction for a Codex Agent:
 
-```bash
-open /Applications/OPL.app
-```
+> Install and configure this OPL repo: clone it, install the OPL CLI, run `opl install`, and ensure Codex CLI, Hermes-Agent, MAS/MAG/RCA, skills, the local Product API service, and the OPL GUI are ready; if anything is missing, fix it or report the exact blocker.
 
-If the OPL desktop app is not installed yet, use the web entry while the branded GUI package is being prepared:
-
-```bash
-open http://127.0.0.1:8787/
-```
-
-What `opl install` is responsible for:
-
-- Install or configure the required runtime dependencies: `Codex CLI` and `Hermes-Agent`.
-- Install the active family modules: `MAS`, `MAG`, and `RCA`.
-- Sync short Codex skills so `MAS`, `MAG`, and `RCA` can be called directly from Codex or through OPL.
-- Install and open the local OPL Product API service.
-- Open the installed OPL-branded desktop GUI when `/Applications/OPL.app` is present.
-- If the OPL GUI is missing, report the matching `opl-aion-shell` OPL release package or source-build fallback.
-
-For an Agent in Codex, the intended instruction is:
-
-> Install and configure this OPL repo on this Mac. Clone the repo if needed, install the OPL CLI, run `opl install`, ensure Codex CLI and Hermes-Agent are installed, install MAS/MAG/RCA, sync their skills, start the local Product API service, and open the OPL GUI or report the exact missing GUI release/build step.
-
-The OPL GUI is an OPL-branded shell built from `opl-aion-shell` on top of the AionUI codebase. The upstream AionUI application is not itself the OPL GUI.
+`opl install` configures `Codex CLI`, `Hermes-Agent`, `MAS`, `MAG`, `RCA`, short Codex skills, the local Product API service, and the installed OPL GUI in one pass.
 
 ## What People Use It For
 
