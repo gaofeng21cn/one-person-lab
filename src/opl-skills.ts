@@ -13,6 +13,7 @@ type SkillPackSpec = {
   project: string;
   label: string;
   plugin_name: string;
+  canonical_plugin_name: 'mas' | 'mag' | 'rca';
   installer_kind: SkillPackInstallerKind;
   installer_relative_path: string;
 };
@@ -22,6 +23,7 @@ type InspectFamilySkillPack = {
   project: string;
   label: string;
   plugin_name: string;
+  canonical_plugin_name: string;
   repo_root: string;
   repo_found: boolean;
   plugin_manifest_path: string;
@@ -56,6 +58,7 @@ const FAMILY_SKILL_PACK_SPECS: SkillPackSpec[] = [
     project: 'med-autoscience',
     label: 'Med Auto Science',
     plugin_name: 'med-autoscience',
+    canonical_plugin_name: 'mas',
     installer_kind: 'bash',
     installer_relative_path: path.join('scripts', 'install-codex-plugin.sh'),
   },
@@ -64,6 +67,7 @@ const FAMILY_SKILL_PACK_SPECS: SkillPackSpec[] = [
     project: 'med-autogrant',
     label: 'Med Auto Grant',
     plugin_name: 'med-autogrant',
+    canonical_plugin_name: 'mag',
     installer_kind: 'bash',
     installer_relative_path: path.join('scripts', 'install-codex-plugin.sh'),
   },
@@ -72,6 +76,7 @@ const FAMILY_SKILL_PACK_SPECS: SkillPackSpec[] = [
     project: 'redcube-ai',
     label: 'RedCube AI',
     plugin_name: 'redcube-ai',
+    canonical_plugin_name: 'rca',
     installer_kind: 'node',
     installer_relative_path: path.join('scripts', 'install-codex-plugin.mjs'),
   },
@@ -195,15 +200,25 @@ function resolveRepoRoot(spec: SkillPackSpec) {
 }
 
 function buildPluginManifestPath(spec: SkillPackSpec, repoRoot: string) {
-  return path.join(repoRoot, 'plugins', spec.plugin_name, '.codex-plugin', 'plugin.json');
+  return resolveFirstExistingPath([
+    path.join(repoRoot, 'plugins', spec.canonical_plugin_name, '.codex-plugin', 'plugin.json'),
+    path.join(repoRoot, 'plugins', spec.plugin_name, '.codex-plugin', 'plugin.json'),
+  ]);
 }
 
 function buildSkillEntryPath(spec: SkillPackSpec, repoRoot: string) {
-  return path.join(repoRoot, 'plugins', spec.plugin_name, 'skills', spec.plugin_name, 'SKILL.md');
+  return resolveFirstExistingPath([
+    path.join(repoRoot, 'plugins', spec.canonical_plugin_name, 'skills', spec.canonical_plugin_name, 'SKILL.md'),
+    path.join(repoRoot, 'plugins', spec.plugin_name, 'skills', spec.plugin_name, 'SKILL.md'),
+  ]);
 }
 
 function buildInstallerPath(spec: SkillPackSpec, repoRoot: string) {
   return path.join(repoRoot, spec.installer_relative_path);
+}
+
+function resolveFirstExistingPath(candidates: string[]) {
+  return candidates.find((candidate) => fs.existsSync(candidate)) ?? candidates[0];
 }
 
 function buildInstallerCommandPreview(
@@ -263,6 +278,7 @@ function inspectFamilySkillPackAtRepoRoot(
     project: spec.project,
     label: spec.label,
     plugin_name: spec.plugin_name,
+    canonical_plugin_name: spec.canonical_plugin_name,
     repo_root: repoRoot,
     repo_found: repoFound,
     plugin_manifest_path: pluginManifestPath,

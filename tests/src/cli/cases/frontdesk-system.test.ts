@@ -1357,6 +1357,29 @@ exit 1
           notes: string[];
           modules: Array<{ module_id: string }>;
         };
+        recommended_skills: {
+          surface_id: string;
+          summary: {
+            total: number;
+            ready: number;
+            missing: number;
+          };
+          skills: Array<{
+            skill_id: string;
+            status: string;
+          }>;
+        };
+        gui_shell: {
+          shell_id: string;
+          owner: string;
+          relation_to_opl: string;
+          release_strategy: string;
+          prebuilt_artifacts: Array<{
+            platform: string;
+            distributable_patterns: string[];
+            updater_metadata: string[];
+          }>;
+        };
         settings: {
           interaction_mode: string;
           execution_mode: string;
@@ -1405,6 +1428,14 @@ exit 1
       output.system_initialize.checklist.some((entry) => entry.item_id === 'domain_modules' && !entry.required),
       true,
     );
+    assert.equal(
+      output.system_initialize.checklist.some((entry) => entry.item_id === 'recommended_skills' && !entry.required),
+      true,
+    );
+    assert.equal(
+      output.system_initialize.checklist.some((entry) => entry.item_id === 'gui_shell' && !entry.required),
+      true,
+    );
     assert.equal(output.system_initialize.domain_modules.summary.total_modules_count >= 4, true);
     assert.equal(
       output.system_initialize.domain_modules.summary.total_modules_count,
@@ -1412,6 +1443,15 @@ exit 1
     );
     assert.equal(output.system_initialize.domain_modules.summary.installed_modules_count >= 0, true);
     assert.equal(output.system_initialize.domain_modules.modules.length >= 4, true);
+    assert.equal(output.system_initialize.recommended_skills.surface_id, 'opl_recommended_skill_bundle');
+    assert.equal(output.system_initialize.recommended_skills.summary.total, output.system_initialize.recommended_skills.skills.length);
+    assert.equal(output.system_initialize.recommended_skills.skills.some((entry) => entry.skill_id === 'superpowers'), true);
+    assert.equal(output.system_initialize.recommended_skills.skills.some((entry) => entry.skill_id === 'officecli'), true);
+    assert.equal(output.system_initialize.gui_shell.shell_id, 'aionui');
+    assert.equal(output.system_initialize.gui_shell.owner, 'opl-aion-shell');
+    assert.equal(output.system_initialize.gui_shell.relation_to_opl, 'external_gui_shell');
+    assert.equal(output.system_initialize.gui_shell.release_strategy, 'prefer_prebuilt_release_then_source_build');
+    assert.equal(output.system_initialize.gui_shell.prebuilt_artifacts.some((entry) => entry.platform === 'macos'), true);
     assert.equal(output.system_initialize.settings.interaction_mode, 'codex');
     assert.equal(output.system_initialize.settings.execution_mode, 'codex');
     assert.equal(output.system_initialize.workspace_root.selected_path, workspaceRoot);

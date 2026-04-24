@@ -554,6 +554,8 @@ export async function buildOplSystemInitializePayload(context: WebFrontDeskConte
         modules: domainModules.modules,
         notes: domainModules.notes,
       },
+      recommended_skills: payload.frontdesk_initialize.recommended_skills,
+      gui_shell: payload.frontdesk_initialize.gui_shell,
       settings: {
         ...payload.frontdesk_initialize.settings,
         endpoint: api.actions.system_settings,

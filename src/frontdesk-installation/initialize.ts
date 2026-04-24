@@ -4,6 +4,7 @@ import {
   readFrontDeskWorkspaceRoot,
 } from '../frontdesk-preferences.ts';
 import { readFrontDeskRuntimeModes } from '../frontdesk-runtime-modes.ts';
+import { buildOplGuiShellSurface, buildOplRecommendedSkills } from '../install-companions.ts';
 import type { GatewayContracts } from '../types.ts';
 
 import { buildFrontDeskEnvironment } from './environment.ts';
@@ -14,6 +15,7 @@ import type {
   FrontDeskInitializePhase,
   FrontDeskInitializeSectionId,
 } from './shared.ts';
+import { resolveProjectRoot } from './shared.ts';
 
 function buildInitializeActionDescriptor(input: {
   action_id: string;
@@ -41,6 +43,10 @@ function buildInitializeOptionalStatus(installedCount: number) {
   return installedCount > 0 ? 'ready' : 'attention_needed';
 }
 
+function buildRecommendedSkillsStatus() {
+  return buildOplRecommendedSkills().some((skill) => skill.status === 'ready') ? 'ready' : 'attention_needed';
+}
+
 export async function buildFrontDeskInitialize(contracts: GatewayContracts) {
   const environmentPayload = await buildFrontDeskEnvironment(contracts);
   const modulesPayload = buildFrontDeskModules();
@@ -50,6 +56,8 @@ export async function buildFrontDeskInitialize(contracts: GatewayContracts) {
   const endpoints = buildFrontDeskEndpoints();
   const environment = environmentPayload.frontdesk_environment;
   const moduleSummary = modulesPayload.frontdesk_modules.summary;
+  const recommendedSkills = buildOplRecommendedSkills();
+  const guiShell = buildOplGuiShellSurface(resolveProjectRoot());
 
   const setWorkspaceRootAction = buildInitializeActionDescriptor({
     action_id: 'set_workspace_root',
@@ -170,6 +178,32 @@ export async function buildFrontDeskInitialize(contracts: GatewayContracts) {
       action: reviewModulesAction,
     },
     {
+      item_id: 'recommended_skills',
+      label: 'Recommended Skills',
+      status: buildRecommendedSkillsStatus(),
+      required: false,
+      blocking: false,
+      section_id: 'modules',
+      detail_summary: `${recommendedSkills.filter((skill) => skill.status === 'ready').length}/${recommendedSkills.length} companion skill groups detected for MAS/MAG/RCA workflows.`,
+      endpoint: endpoints.frontdesk_initialize,
+      action_endpoint: endpoints.frontdesk_initialize,
+      action: reviewInitializeAction,
+    },
+    {
+      item_id: 'gui_shell',
+      label: 'AionUI GUI Shell',
+      status: guiShell.sibling_checkout_found ? 'ready' : 'attention_needed',
+      required: false,
+      blocking: false,
+      section_id: 'system',
+      detail_summary: guiShell.sibling_checkout_found
+        ? `AionUI shell checkout found at ${guiShell.sibling_checkout_path}`
+        : 'Use a prebuilt AionUI release package when available; source build remains the fallback.',
+      endpoint: endpoints.frontdesk_initialize,
+      action_endpoint: endpoints.frontdesk_initialize,
+      action: reviewInitializeAction,
+    },
+    {
       item_id: 'frontdesk_service',
       label: 'Local Frontdesk Service',
       status: environment.local_frontdesk.service_health,
@@ -238,6 +272,16 @@ export async function buildFrontDeskInitialize(contracts: GatewayContracts) {
       core_engines: environment.core_engines,
       module_summary: moduleSummary,
       domain_modules: modulesPayload.frontdesk_modules,
+      recommended_skills: {
+        surface_id: 'opl_recommended_skill_bundle',
+        skills: recommendedSkills,
+        summary: {
+          total: recommendedSkills.length,
+          ready: recommendedSkills.filter((skill) => skill.status === 'ready').length,
+          missing: recommendedSkills.filter((skill) => skill.status === 'missing').length,
+        },
+      },
+      gui_shell: guiShell,
       settings: {
         interaction_mode: settings.interaction_mode,
         execution_mode: settings.execution_mode,
@@ -280,6 +324,7 @@ export async function buildFrontDeskInitialize(contracts: GatewayContracts) {
       notes: [
         'Initialize OPL reuses the same truth surfaces as long-lived settings management.',
         'Workspace root and update channel are stored in OPL-managed state files.',
+        'AionUI remains an external GUI shell: OPL consumes its release artifact or source checkout, but does not own the GUI runtime package.',
       ],
     },
   };
