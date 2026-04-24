@@ -34,6 +34,25 @@
 
 > `OPL` gives one place to start work, keep progress legible, and collect outputs, while each specialized product family keeps its own methods and deliverables.
 
+## Fast Start On A New Mac
+
+Use this path when you want the shortest working setup instead of reading the repository first.
+
+1. Install the OPL CLI from this repository.
+2. Run `opl install`.
+3. Open the GUI with `open /Applications/AionUi.app`, or use the web entry at `http://127.0.0.1:8787/`.
+4. Start general work in Codex or OPL by default; explicitly choose `MAS`, `MAG`, or `RCA` when the task needs a domain agent.
+
+What `opl install` does:
+
+- Installs the default family modules: `MAS`, `MAG`, and `RCA`.
+- Syncs their short Codex skills so they can be called directly from Codex or through OPL.
+- Installs and opens the local OPL Product API service.
+- Starts the installed AionUI desktop app when it is already present.
+- If AionUI is missing, reports the matching `opl-aion-shell` release package or source-build fallback.
+
+For local testing on this machine, the service entry is `http://127.0.0.1:8787/` and the desktop app path is `/Applications/AionUi.app`.
+
 ## What People Use It For
 
 - Start a general conversation or a multi-step task from the same workbench.
@@ -62,18 +81,19 @@
 
 ## What This Repository Tracks
 
-- The Codex-default session/runtime path and public projection surfaces behind the product family.
-- The activation and dispatch layer that maps `OPL` and domain-agent invocations onto repo-owned capability surfaces.
-- Engine and module management.
+This repository is the OPL product/runtime gateway, not the GUI shell and not a domain-agent implementation. It tracks:
+
+- The Codex-default session/runtime path used by `opl`, direct Codex usage, and external shells.
+- The activation layer that makes `MAS`, `MAG`, and `RCA` callable as short skills.
+- Module installation, skill sync, service setup, and health surfaces.
 - Workspace, session, progress, and artifact discovery surfaces.
 - Machine-readable contracts for the shared product layer.
 
-The full GUI shell is maintained in an external overlay repository.
-This repository tracks the Codex-default runtime contract, the OPL activation layer, and the shared truth consumed by local `opl`, GUI shells, and compatibility surfaces.
+The desktop GUI is maintained by [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell). OPL provides the local Product API and runtime truth consumed by that GUI, by the web entry, and by Codex.
 
 ## How To Read This Repository
 
-1. Potential users and human experts should start here, then continue to [Roadmap](./docs/roadmap.md), [Task Map](./docs/task-map.md), and [Operating Model](./docs/operating-model.md).
+1. Users should start with this README and the `opl install` path above.
 2. Technical readers and planners should continue to [Docs Guide](./docs/README.md), then read [Project](./docs/project.md), [Status](./docs/status.md), [Architecture](./docs/architecture.md), [Invariants](./docs/invariants.md), and [Decisions](./docs/decisions.md).
 3. Developers and maintainers should use [Contracts Overview](./contracts/README.md), [Reference Index](./docs/references/README.md), and the tracked records under `docs/specs/`, `docs/plans/`, and [History Archive](./docs/history/README.md).
 

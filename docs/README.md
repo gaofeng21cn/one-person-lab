@@ -3,8 +3,8 @@
 # OPL Docs Guide
 
 This directory is the entry index for the repo-tracked docs surface of `One Person Lab`.
-The repository home is written first for potential users and human experts.
-This guide points readers to the current product model, the active runtime/activation mainline, and the supporting reference and history layers.
+The repository home is written first for users who want to install and start working.
+This guide is for readers who need the current product model, the active runtime/activation mainline, and the supporting reference and history layers.
 
 ## Current Product Model
 
@@ -26,7 +26,7 @@ Admitted domain repositories keep their own agent logic, runtime rules, progress
 
 | Audience | Start here | Why |
 | --- | --- | --- |
-| Potential users and human experts | [Repository Home](../README.md), [Roadmap](./roadmap.md), [Task Map](./task-map.md), [Operating Model](./operating-model.md) | Understand what `OPL` is used for and how the product families fit together |
+| Users | [Repository Home](../README.md) | Install OPL, start the GUI or web entry, and choose Codex or a domain agent for work |
 | Technical readers and planners | [Project](./project.md), [Status](./status.md), [Architecture](./architecture.md), [Invariants](./invariants.md), [Decisions](./decisions.md), [Contracts Overview](../contracts/README.md) | Recover the active boundary, the runtime model, and the admitted-domain split |
 | Developers and maintainers | [Reference Index](./references/README.md), `docs/specs/`, `docs/plans/`, [History Archive](./history/README.md) | Inspect supporting material, compatibility notes, and retired lanes |
 
@@ -46,7 +46,7 @@ These files give the fastest read on the current repo-tracked truth before you c
 The repository still uses the four-layer `OPL` docs system.
 Use it like this:
 
-- Layer 1 explains the default public product narrative.
+- Layer 1 explains the user-facing install, start, and product narrative.
 - Layer 2 explains the active runtime/activation mainline.
 - Layer 3 keeps reference, compatibility, audit, and migration material.
 - Layer 4 keeps tracked history.
@@ -57,8 +57,7 @@ Retired `gateway / federation / routed-action` corpus and retired `frontdesk`-er
 
 ## Layer 1. Default Public Mainline
 
-These are the first documents for external readers who want the public narrative.
-They must stay bilingual and easy to read.
+These are the first documents for external readers. The repository home is the user quick-start and must stay install-first, bilingual, and easy to read. Roadmap and operating-model documents explain product direction after the user knows how to start.
 
 - [Repository Home](../README.md)
 - [Roadmap](./roadmap.md)
@@ -116,7 +115,7 @@ It explains how or why a freeze happened, while [Status](./status.md) remains th
 
 ## Documentation Rules
 
-- Keep [Repository Home](../README.md) user-facing and readable for potential users, clinicians, and other non-technical experts.
+- Keep [Repository Home](../README.md) install-first, user-facing, and readable for potential users, clinicians, and other non-technical experts.
 - Keep active public docs bilingual.
 - Keep Layer 3 reference-grade and explicit about compatibility vs current truth.
 - Keep Layer 4 as tracked working history.
