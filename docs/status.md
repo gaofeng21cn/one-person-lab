@@ -60,6 +60,7 @@
 - 默认公开文档保持在 `README*` 与 `docs/README*`。
 - `contracts/` 只保留机器可读合同面。
 - `docs/references/` 承接参考级配套文档；`docs/specs/` 与 `docs/plans/` 承接设计与计划记录；`docs/history/` 承接历史归档。
+- 历史 `gateway / federation / routed-action` 语料已经退到 reference / compatibility 层，不再作为默认实现依据。
 - 历史 `frontdesk / readiness / entry-guide / domain-wiring` 公开语义已经退出当前主线，只保留在参考或历史层。
 - `Product API` 继续保留，但语义上降为 session runtime 的 projection surface。
 - 各 domain 仓的 `gateway / harness` 继续作为内部分层语言存在；对外公开主语优先写成独立 `domain agent` 与其 `agent entry / direct entry`。

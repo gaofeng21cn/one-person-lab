@@ -79,7 +79,18 @@ If you need to understand what `OPL` is today, go back to:
 - `opl-operating-record-catalog.md`
 - `opl-operating-record-catalog.zh-CN.md`
 
-## 5. Retired Frontdesk-Era And Historical Migration References
+## 5. Retired Gateway / Federation Compatibility References
+
+- `../gateway-federation.md`
+- `../gateway-federation.zh-CN.md`
+- `../opl-federation-contract.md`
+- `../opl-federation-contract.zh-CN.md`
+- `../opl-routed-action-gateway.md`
+- `../opl-routed-action-gateway.zh-CN.md`
+- `../../contracts/opl-gateway/README.md`
+- `../../contracts/opl-gateway/README.zh-CN.md`
+
+## 6. Retired Frontdesk-Era And Historical Migration References
 
 - `development-operating-model.md`
 - `runtime-alignment-taskboard.md`
@@ -93,5 +104,6 @@ If you need to understand what `OPL` is today, go back to:
 - These files may explain why a freeze happened, but they must not override `README*`, `docs/README*`, or the core maintainer working set.
 - `series-doc-governance-checklist.md` is the repo-scoped governance checklist for keeping this repository aligned with the four-repo series; the dated sync summary records one concrete cross-repo intake round.
 - `four-repo-doc-intake-template.md` is the reusable central intake form for documenting scope, affected repositories, verification, and cleanup across a cross-repo docs round.
-- New reference docs should be filed into the five buckets above.
+- New reference docs should be filed into the six buckets above.
+- Retired gateway/federation corpus stays here or in the paired compatibility surfaces and must not be treated as the current implementation basis.
 - Retired `frontdesk`-era material stays here for audit only and must not be treated as the current implementation basis.

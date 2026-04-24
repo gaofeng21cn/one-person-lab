@@ -2,6 +2,16 @@
 
 ## 2026-04-23
 
+### 决策：gateway-first 合同语料退到 reference / compatibility 层
+
+原因：当前 `OPL` 的一等主线已经明确是 `Codex-default session/runtime + explicit activation layer + family skill sync/discovery`。继续把 `gateway-federation`、`opl-federation-contract`、`opl-routed-action-gateway` 与 `contracts/opl-gateway/*` 这批旧语料写成默认公开集成合同，只会制造第二真相。
+
+影响：
+
+- 这批 gateway-first 语料继续 repo-tracked，但角色收口为 reference / compatibility surface
+- 当前真相优先回到 `README*`、核心五件套与 `contracts/README.md`
+- 已收录 domain 的实际接入单元继续写成 repo-owned capability surface 与单一 app skill
+
 ### 决策：`OPL` 默认合同冻结为 `Codex-default session runtime + explicit activation layer`
 
 原因：当前产品目标已经明确为“默认尽量等价 Codex，只在显式切换 runtime 或显式调用 domain agent 时进入 OPL 增量语义”。继续把 `OPL` 叙事写成 wrapper-first、GUI-first 或混合默认 runtime，会直接污染默认交互合同。

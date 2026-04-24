@@ -4,170 +4,95 @@
 
 ## Purpose
 
-This document indexes the current authoritative public surfaces for the `OPL Gateway`.
+This document maps the current authoritative public surfaces for `OPL`.
 
-Its job is to make the top-level gateway easier to discover across README, roadmap, rollout, contracts, acceptance, examples, and linked domain gateway entries.
+The current mainline is:
 
-Read it as the current public surface map for a two-layer OPL entry.
-The active user-facing front door is the local `opl` shell plus the `opl web` pilot.
-The formal gateway entry remains the CLI-first / gateway contract surface indexed here.
-`MedAutoGrant`, `MedAutoScience`, and `RedCube AI` hold the admitted domain public-entry surfaces linked from this index, while historical freeze and activation-package context stays in `docs/references/`.
-Use the [Ecosystem Status Matrix](./references/ecosystem-status-matrix.md) as the internal reference-sync anchor for the current four-repo stage and maturity snapshot.
+- `Codex-default session/runtime`
+- `explicit activation layer`
+- `family domain skill sync / discovery`
 
-For repository-wide document layering and reference-grade handling, see [Docs Index](./README.md).
+`OPL` no longer treats the older gateway/federation corpus as its default public integration contract.
+That corpus is still repo-tracked for audit, compatibility checks, and schema archaeology, but it is no longer the first place to recover the current runtime model.
 
-## Machine-Readable Artifact
+For repository-wide document layering and reference handling, see [Docs Index](./README.md).
 
-- [`../contracts/opl-gateway/public-surface-index.json`](../contracts/opl-gateway/public-surface-index.json)
+## Current Active Surfaces
 
-The current CLI-first gateway contract baseline can expose this same artifact through:
+### 1. OPL-owned runtime and activation surfaces
 
-- `list-surfaces`
-- `get-surface`
-
-## Coverage
-
-This index focuses on:
-
-- public-entry surfaces for the top-level gateway
-- the user-facing front door layered above the formal gateway contract
-- contract surfaces that freeze federation boundaries
-- supporting reference surfaces used for review and discoverability
-- linked domain public-entry surfaces that remain domain-owned
-
-## Shared-Foundation Ownership Boundary
-
-This index sits in the shared-foundation discoverability layer only.
-`OPL` owns the top-level surface language, indexing, and cross-domain navigation hints collected here, but domain gateways still own runtime execution, canonical truth, review truth, and publication truth once work crosses the domain boundary.
-That makes this index a reference surface for discoverability and acceptance alignment.
-For the broader ownership split, see [Shared Foundation Ownership](./shared-foundation-ownership.md).
-
-## Indexed Surface Categories
-
-### 1. OPL public-entry surfaces
-
-These surfaces position and navigate the top-level gateway:
+These documents define the current `OPL` mainline:
 
 - [README](../README.md)
-- [Roadmap](./roadmap.md)
-- [OPL Task Map](./task-map.md)
-- [Gateway Rollout](./references/opl-gateway-rollout.md)
+- [Project](./project.md)
+- [Status](./status.md)
+- [Architecture](./architecture.md)
+- [Invariants](./invariants.md)
+- [Decisions](./decisions.md)
+- [Contracts Overview](../contracts/README.md)
 
-At the current public layer, those surfaces should be read together with the landed local `opl` shell and `opl web` pilot: they provide the active front door above the unchanged formal-entry contract.
+These surfaces explain the default entry (`opl`, `opl exec`, `opl resume`), the current resource model (`workspaces / sessions / progress / artifacts`), and the rule that explicit activation or runtime switching is opt-in.
 
-### 2. OPL contract surfaces
+### 2. Linked domain capability surfaces
 
-These surfaces freeze the gateway and federation boundary:
+These are indexed by `OPL`, but remain repo-owned:
 
-- [Gateway Federation](./gateway-federation.md)
-- [OPL Federation Contract](./opl-federation-contract.md)
-- [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
-- [OPL Operating Model](./operating-model.md)
+- `Med Auto Science`
+- `Med Auto Grant`
+- `RedCube AI`
+
+`OPL` discovers and activates them through `opl skill sync` plus each domain repository's own CLI / program / script / contract surfaces.
+The current top-level integration unit is therefore the repo-owned domain app skill and its underlying command contracts, not an OPL-owned gateway handoff vocabulary.
+
+### 3. Shared-foundation companion surfaces
+
+These remain active as shared boundary documents:
+
 - [Shared Foundation](./shared-foundation.md)
 - [Shared Foundation Ownership](./shared-foundation-ownership.md)
 - [Shared Runtime Contract](./shared-runtime-contract.md)
 - [Shared Domain Contract](./shared-domain-contract.md)
+- [OPL Runtime Naming And Boundary Contract](./opl-runtime-naming-and-boundary-contract.md)
+
+They support the current runtime/activation model, but they do not reintroduce a gateway-first public storyline.
+
+## Legacy Compatibility Surfaces
+
+The following corpus is retained as legacy compatibility material from the earlier gateway-first phase:
+
+- [Gateway Federation](./gateway-federation.md)
+- [OPL Federation Contract](./opl-federation-contract.md)
+- [OPL Routed Action Gateway](./opl-routed-action-gateway.md)
 - [OPL Gateway Contract Surface](./opl-read-only-discovery-gateway.md)
-- [OPL Routed Action Gateway](./opl-routed-action-gateway.md) (planning-level contract only; historical freeze context stays in reference docs)
-- [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.md) + `domain-onboarding-readiness.schema.json`
-- [OPL Governance / Audit Operating Surface](./references/opl-governance-audit-operating-surface.md)
-- [OPL Publish / Promotion Operating Surface](./references/opl-publish-promotion-operating-surface.md)
+- [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.md)
+- [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
+- [`../contracts/opl-gateway/public-surface-index.json`](../contracts/opl-gateway/public-surface-index.json)
 
-### 3. OPL reference-grade supporting surfaces
+These surfaces may still appear in tests, audit workflows, compatibility checks, and historical design reviews.
+They must not be used as the default implementation basis for today's `OPL`.
 
-These surfaces improve review and discoverability without becoming execution layers:
+## Reference-Grade Supporting Material
 
-- [OPL Gateway Acceptance Test Spec](./references/opl-gateway-acceptance-test-spec.md)
-- [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.md)
-- [OPL Phase 1 Exit Activation Package](./references/opl-phase-1-exit-activation-package.md)
-- [OPL Minimal Admitted-Domain Federation Activation Package](./references/opl-minimal-admitted-domain-federation-activation-package.md)
-- [OPL Gateway Example Corpus](./references/opl-gateway-example-corpus.md)
-- [OPL Routed-Safety Example Corpus](./references/opl-routed-safety-example-corpus.md)
-- [OPL Operating Example Corpus](./references/opl-operating-example-corpus.md)
-- [OPL Operating Record Catalog](./references/opl-operating-record-catalog.md)
-- [OPL Surface Lifecycle Map](./references/opl-surface-lifecycle-map.md)
-- [OPL Surface Authority Matrix](./references/opl-surface-authority-matrix.md)
-- [OPL Surface Review Matrix](./references/opl-surface-review-matrix.md)
-- [OPL Public Surface Index](./opl-public-surface-index.md)
+These surfaces continue to support review and traceability:
 
-Related positioning companion:
-
-- [Unified Harness Engineering Substrate](./unified-harness-engineering-substrate.md) — a top-level shared umbrella-language explanation, not a shared public code framework, and it remains outside the current machine-readable indexed surface set
-- [Shared Runtime Contract](./shared-runtime-contract.md) — the cross-domain runtime contract surface
-- [Shared Domain Contract](./shared-domain-contract.md) — the cross-domain formal product-behavior contract surface
-
-### 4. Linked domain public-entry surfaces
-
-These are indexed from `OPL`, but remain domain-owned:
-
-- `MedAutoGrant` for `grant_ops`
-- `MedAutoScience` for `research_ops`
-- `RedCube AI` for `presentation_ops`
-
-Important boundary:
-
-- `ppt_deck` directly maps to `presentation_ops`
-- `xiaohongshu` may still route to `redcube` and stays a separate visual family at the OPL layer
-- the current linked domain public-entry set is `MedAutoGrant`, `MedAutoScience`, and `RedCube AI`
-- `Grant Ops` now routes through the admitted `MedAutoGrant` domain gateway, while `Thesis Ops` and `Review Ops` remain on candidate/onboarding lanes
-- the current admission blockers for the remaining under-definition workstreams live in the candidate-domain backlog and remain below the onboarding gate
+- [Reference Index](./references/README.md)
+- [History Archive](./history/README.md)
+- [Ecosystem Status Matrix](./references/ecosystem-status-matrix.md)
+- the retained gateway/federation corpora, examples, lifecycle maps, and acceptance specs under `docs/references/`
 
 ## Reading Rule
 
-Read this index as a **surface map**.
+Read this index as a **runtime/activation map**.
 
-If a surface is domain-owned, `OPL` indexes its public entry role while runtime, review, release, and submission truth stay in the owning domain.
-If a surface is `opl_operating_model`, `opl_shared_foundation`, or `opl_shared_foundation_ownership`, it serves the shared-foundation boundary/reference layer.
-If a surface is `opl_task_map`, under-definition workstreams stay on candidate/onboarding lanes until their registry and onboarding evidence land.
-If a surface is `opl_candidate_domain_backlog`, it serves as the admission-blocker reference for those lanes.
-If `Grant Foundry -> Med Auto Grant` is mentioned in public wording, it should be framed as the admitted `Grant Ops` domain gateway entry carried by `MedAutoGrant`.
-Any future follow-on route remains `domain_gateway`-only and follows the no-bypass rule against direct harness targeting.
-If a surface is the routed-action prose or schema layer, it stays at the planning-contract / planning-dependency layer.
-If a surface is the acceptance, matrix, or example layer, it stays in the discoverability/review companion layer.
-
-## Governing Gateway Documents
-
-- [Gateway Federation](./gateway-federation.md)
-- [OPL Federation Contract](./opl-federation-contract.md)
-- [OPL Operating Model](./operating-model.md)
-- [Shared Foundation](./shared-foundation.md)
-- [Shared Foundation Ownership](./shared-foundation-ownership.md)
-- [Shared Runtime Contract](./shared-runtime-contract.md)
-- [Shared Domain Contract](./shared-domain-contract.md)
-- [OPL Gateway Contracts](../contracts/opl-gateway/README.md)
-- [OPL Gateway Contract Surface](./opl-read-only-discovery-gateway.md)
-- [OPL Routed Action Gateway](./opl-routed-action-gateway.md) (planning-level contract only; historical freeze context stays in reference docs)
-- [OPL Domain Onboarding Contract](./opl-domain-onboarding-contract.md)
-- [OPL Governance / Audit Operating Surface](./references/opl-governance-audit-operating-surface.md)
-- [OPL Publish / Promotion Operating Surface](./references/opl-publish-promotion-operating-surface.md)
-
-## Supporting Example / Review / Mapping Surfaces
-
-These supporting surfaces improve discoverability and reviewability only.
-They do not become governing gateway surfaces.
-They also do not become a runtime controller, authority matrix for execution, or blanket promotion gate just because they are indexed here.
-
-- [OPL Gateway Acceptance Test Spec](./references/opl-gateway-acceptance-test-spec.md)
-- [OPL Gateway Example Corpus](./references/opl-gateway-example-corpus.md)
-- [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.md)
-- [OPL Phase 1 Exit Activation Package](./references/opl-phase-1-exit-activation-package.md)
-- [OPL Routed-Safety Example Corpus](./references/opl-routed-safety-example-corpus.md)
-- [OPL Operating Example Corpus](./references/opl-operating-example-corpus.md)
-- [OPL Operating Record Catalog](./references/opl-operating-record-catalog.md)
-- [OPL Surface Lifecycle Map](./references/opl-surface-lifecycle-map.md)
-- [OPL Surface Authority Matrix](./references/opl-surface-authority-matrix.md)
-- [OPL Surface Review Matrix](./references/opl-surface-review-matrix.md)
+- If you want the current `OPL` truth, start with the core maintainer working set and `Contracts Overview`.
+- If you want the current cross-repo integration unit, read the linked domain repositories and their app-skill surfaces.
+- If a document still centers `OPL Gateway`, `domain_gateway`, routed handoff payloads, or gateway-owned public-surface indexing, treat it as legacy compatibility material unless a newer core doc explicitly promotes it back.
 
 ## Completion Definition
 
-The public surface index is acceptable only when:
+This surface index is acceptable only when:
 
-- it stays machine-readable
-- it distinguishes OPL-owned surfaces from domain-owned public entries
-- it exposes the derived surface lifecycle map as a supporting/reference surface
-- it exposes the derived surface authority matrix as a supporting/reference surface
-- it exposes the derived surface review matrix as a supporting/reference surface
-- it exposes the candidate-domain backlog as a supporting/reference surface below the onboarding gate
-- it exposes `opl_operating_model`, `opl_shared_foundation`, and `opl_shared_foundation_ownership` as OPL-owned contract/reference surfaces only
-- it exposes the task-map / task-topology surface without turning under-definition workstreams into admitted domains
-- it keeps launcher/runtime authority and domain truth ownership scoped to the correct owning surfaces
+- it makes the current `Codex-default runtime + activation + skill sync` mainline obvious
+- it distinguishes OPL-owned runtime/activation surfaces from repo-owned domain capability surfaces
+- it clearly marks legacy gateway/federation material as reference or compatibility content
+- it keeps domain runtime truth, progress truth, and artifact truth owned by the corresponding domain repositories

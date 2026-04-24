@@ -2,6 +2,8 @@
 
 # OPL Federation Contract
 
+> Historical note (`2026-04-24`): this document is retained as a legacy gateway-first freeze. The current `OPL` mainline is `Codex-default session/runtime + explicit activation layer + family skill sync/discovery`. Do not use this file as the default implementation basis; return to [Project](./project.md), [Status](./status.md), [Architecture](./architecture.md), [Decisions](./decisions.md), and [Contracts Overview](../contracts/README.md) for current truth.
+
 ## Purpose
 
 This document freezes the `G1` contract for the `OPL Gateway`.

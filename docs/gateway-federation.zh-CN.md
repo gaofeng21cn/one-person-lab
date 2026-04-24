@@ -2,6 +2,8 @@
 
 # OPL Gateway Federation
 
+> 历史说明（`2026-04-24`）：这份文档保留的是 gateway-first 阶段的边界语料。当前 `OPL` 主线已经转成 runtime-first、skill-first；这里只应作为历史或兼容背景阅读。
+
 ## 目的
 
 这份文档定义下面三者的关系：

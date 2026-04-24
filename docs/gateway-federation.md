@@ -2,6 +2,8 @@
 
 # OPL Gateway Federation
 
+> Historical note (`2026-04-24`): this document is retained as legacy boundary wording from the gateway-first phase. The current `OPL` mainline is runtime-first and skill-first. Read it only as historical or compatibility context.
+
 ## Purpose
 
 This document defines the intended relationship between:
