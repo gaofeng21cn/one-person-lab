@@ -32,6 +32,9 @@
   <img src="assets/branding/opl-workbench-overview.svg" alt="OPL workbench overview" width="100%" />
 </p>
 
+<h2 align="center">Architecture And Product Plan</h2>
+<p align="center">A higher-level map of the workbench, active foundries, and shared confidence surfaces.</p>
+
 <p align="center">
   <img src="assets/branding/opl-architecture-plan.svg" alt="OPL architecture and product plan" width="100%" />
 </p>
