@@ -204,7 +204,10 @@ process.stdout.write(JSON.stringify({ repo: 'redcube-ai', sync: 'ok' }) + '\\n')
       path.join(pluginRoot, '.codex-plugin', 'plugin.json'),
       JSON.stringify({ name: spec.canonicalPlugin, skills: './skills/' }, null, 2),
     );
-    fs.writeFileSync(path.join(skillRoot, 'SKILL.md'), `# ${spec.canonicalPlugin}\n`);
+    fs.writeFileSync(
+      path.join(skillRoot, 'SKILL.md'),
+      `---\nname: ${spec.canonicalPlugin}\ndescription: ${spec.canonicalPlugin} test skill\n---\n\n# ${spec.canonicalPlugin}\n`,
+    );
     fs.writeFileSync(installerPath, spec.scriptBody, { mode: 0o755 });
   }
 
@@ -418,9 +421,12 @@ test('opl skill list discovers OPL-managed module installs without OPL_FAMILY_WO
 test('opl skill sync runs the lightweight family plugin installers and returns machine-readable results', () => {
   const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-skill-sync-'));
   const { workspaceRoot, syncLogPath } = createFakeFamilySkillWorkspace(captureDir);
+  const homeDir = path.join(captureDir, 'home');
+  fs.mkdirSync(homeDir, { recursive: true });
 
   try {
     const output = runCli(['skill', 'sync'], {
+      HOME: homeDir,
       OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
     });
 
@@ -435,6 +441,11 @@ test('opl skill sync runs the lightweight family plugin installers and returns m
     assert.equal(output.skill_sync.packs[2].installer_result.repo, 'redcube-ai');
     assert.equal(output.skill_sync.companion_skills.surface_id, 'opl_companion_skill_sync');
     assert.equal(output.skill_sync.companion_skills.summary.total >= 6, true);
+    for (const skillName of ['mas', 'mag', 'rca']) {
+      const skillPath = path.join(homeDir, '.codex', 'skills', skillName, 'SKILL.md');
+      const content = fs.readFileSync(skillPath, 'utf8');
+      assert.match(content, /^---\nname: /);
+    }
   } finally {
     fs.rmSync(captureDir, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
