@@ -28,6 +28,7 @@ export interface CodexCommandOptions {
 export interface CodexStreamingCommandOptions {
   onStdoutLine?: (line: string) => void;
   onStderrLine?: (line: string) => void;
+  onStdoutEvent?: (event: CodexExecEvent) => void;
 }
 
 export interface CodexExecOptions {
@@ -42,6 +43,36 @@ export interface ParsedCodexExecOutput {
   finalMessage: string;
   messages: string[];
 }
+
+export type CodexExecEvent =
+  | {
+      type: 'thread.started';
+      threadId: string | null;
+    }
+  | {
+      type: 'turn.started';
+    }
+  | {
+      type: 'turn.completed';
+    }
+  | {
+      type: 'agent_message';
+      messageId: string;
+      text: string;
+    }
+  | {
+      type: 'command_execution';
+      toolCallId: string;
+      title: string;
+      status: 'pending' | 'in_progress' | 'completed' | 'failed';
+      output: string | null;
+    };
+
+type CodexExecEventParserState = {
+  turnIndex: number;
+  commandCounter: number;
+  activeCommandIds: Map<string, string>;
+};
 
 function isExecutableCandidate(filePath: string) {
   return fs.existsSync(filePath) && fs.statSync(filePath).isFile();
@@ -186,6 +217,7 @@ export async function runCodexCommandStreaming(
       env: process.env,
       stdio: ['pipe', 'pipe', 'pipe'],
     });
+    const stdoutEventParserState = createCodexExecEventParserState();
 
     let stdout = '';
     let stderr = '';
@@ -193,6 +225,10 @@ export async function runCodexCommandStreaming(
     const flushStdout = attachLineBuffer(child.stdout, (line) => {
       stdout += `${line}\n`;
       options.onStdoutLine?.(line);
+      const event = parseCodexExecEventFromLine(line, stdoutEventParserState);
+      if (event) {
+        options.onStdoutEvent?.(event);
+      }
     });
     const flushStderr = attachLineBuffer(child.stderr, (line) => {
       stderr += `${line}\n`;
@@ -315,8 +351,125 @@ function normalizeInlineText(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
+function normalizeChunkText(value: unknown) {
+  return typeof value === 'string' && value.trim().length > 0 ? value : null;
+}
+
+function createCodexExecEventParserState(): CodexExecEventParserState {
+  return {
+    turnIndex: 0,
+    commandCounter: 0,
+    activeCommandIds: new Map(),
+  };
+}
+
+function resolveFallbackToolCallId(
+  state: CodexExecEventParserState,
+  command: string | null,
+  status: 'pending' | 'in_progress' | 'completed' | 'failed',
+) {
+  if (!command) {
+    state.commandCounter += 1;
+    return `codex-turn-${Math.max(state.turnIndex, 1)}-command-${state.commandCounter}`;
+  }
+
+  const existing = state.activeCommandIds.get(command);
+  if (existing) {
+    if (status === 'completed' || status === 'failed') {
+      state.activeCommandIds.delete(command);
+    }
+    return existing;
+  }
+
+  state.commandCounter += 1;
+  const toolCallId = `codex-turn-${Math.max(state.turnIndex, 1)}-command-${state.commandCounter}`;
+  if (status === 'pending' || status === 'in_progress') {
+    state.activeCommandIds.set(command, toolCallId);
+  }
+  return toolCallId;
+}
+
+function parseCodexExecEventFromLine(
+  line: string,
+  state: CodexExecEventParserState,
+): CodexExecEvent | null {
+  const event = parseCodexJsonLine(line);
+  if (!event) {
+    return null;
+  }
+
+  const eventType = normalizeInlineText(event.type);
+  if (eventType === 'thread.started') {
+    return {
+      type: 'thread.started',
+      threadId: normalizeInlineText(event.thread_id),
+    };
+  }
+
+  if (eventType === 'turn.started') {
+    state.turnIndex += 1;
+    state.activeCommandIds.clear();
+    return { type: 'turn.started' };
+  }
+
+  if (eventType === 'turn.completed') {
+    state.activeCommandIds.clear();
+    return { type: 'turn.completed' };
+  }
+
+  const item = event.item;
+  if (!item || typeof item !== 'object' || Array.isArray(item)) {
+    return null;
+  }
+
+  const itemRecord = item as Record<string, unknown>;
+  const itemType = normalizeInlineText(itemRecord.type);
+  if (!itemType) {
+    return null;
+  }
+
+  if (itemType === 'agent_message') {
+    const text = extractAgentMessageText(itemRecord);
+    if (!text) {
+      return null;
+    }
+    return {
+      type: 'agent_message',
+      messageId:
+        normalizeInlineText(itemRecord.id) ??
+        `codex-turn-${Math.max(state.turnIndex, 1)}-assistant`,
+      text,
+    };
+  }
+
+  if (itemType === 'command_execution') {
+    const title = normalizeInlineText(itemRecord.command);
+    const status = normalizeInlineText(itemRecord.status);
+    if (
+      status !== 'pending' &&
+      status !== 'in_progress' &&
+      status !== 'completed' &&
+      status !== 'failed'
+    ) {
+      return null;
+    }
+
+    return {
+      type: 'command_execution',
+      toolCallId:
+        normalizeInlineText(itemRecord.id) ??
+        resolveFallbackToolCallId(state, title, status),
+      title: title ?? 'codex command',
+      status,
+      output: normalizeInlineText(itemRecord.aggregated_output),
+    };
+  }
+
+  return null;
+}
+
 function extractAgentMessageText(itemRecord: Record<string, unknown>) {
-  const directText = normalizeInlineText(itemRecord.text);
+  const directText = normalizeChunkText(itemRecord.text);
   if (directText) {
     return directText;
   }
@@ -329,13 +482,13 @@ function extractAgentMessageText(itemRecord: Record<string, unknown>) {
   const parts = content
     .map((entry) => {
       if (typeof entry === 'string') {
-        return normalizeInlineText(entry);
+        return normalizeChunkText(entry);
       }
       if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
         return null;
       }
       const textEntry = entry as Record<string, unknown>;
-      return normalizeInlineText(textEntry.text) ?? normalizeInlineText(textEntry.value);
+      return normalizeChunkText(textEntry.text) ?? normalizeChunkText(textEntry.value);
     })
     .filter((entry): entry is string => Boolean(entry));
 
@@ -420,37 +573,27 @@ export function extractCodexRecentOutput(output: string, lines = 6) {
 export function parseCodexExecOutput(output: string): ParsedCodexExecOutput {
   let threadId: string | null = null;
   const messages: string[] = [];
+  const parserState = createCodexExecEventParserState();
 
   for (const rawLine of output.split(/\r?\n/)) {
-    const event = parseCodexJsonLine(rawLine);
+    const event = parseCodexExecEventFromLine(rawLine, parserState);
     if (!event) {
       continue;
     }
 
-    if (normalizeInlineText(event.type) === 'thread.started') {
-      threadId = normalizeInlineText(event.thread_id);
+    if (event.type === 'thread.started') {
+      threadId = event.threadId;
       continue;
     }
 
-    const item = event.item;
-    if (!item || typeof item !== 'object' || Array.isArray(item)) {
-      continue;
-    }
-
-    const itemRecord = item as Record<string, unknown>;
-    if (normalizeInlineText(itemRecord.type) !== 'agent_message') {
-      continue;
-    }
-
-    const message = extractAgentMessageText(itemRecord);
-    if (message) {
-      messages.push(message);
+    if (event.type === 'agent_message') {
+      messages.push(event.text);
     }
   }
 
   return {
     threadId,
-    finalMessage: messages.at(-1) ?? '',
+    finalMessage: messages.join(''),
     messages,
   };
 }
