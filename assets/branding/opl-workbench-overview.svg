@@ -1,75 +1,60 @@
 <svg width="1600" height="1080" viewBox="0 0 1600 1080" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="One Person Lab workbench overview">
   <title>One Person Lab workbench overview</title>
   <defs>
-    <linearGradient id="bg" x1="80" y1="60" x2="1520" y2="1040" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#F8FCFF"/>
-      <stop offset="1" stop-color="#EEF8F7"/>
-    </linearGradient>
-    <filter id="shadow" x="0" y="0" width="1600" height="1080" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-      <feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#173A5D" flood-opacity="0.12"/>
-    </filter>
-    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-      <path d="M0 0L10 5L0 10Z" fill="#2A6F9E"/>
-    </marker>
+    <linearGradient id="bg" x1="80" y1="60" x2="1520" y2="1040" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#F8FCFF"/><stop offset="1" stop-color="#EEF8F7"/></linearGradient>
+    <filter id="shadow" x="0" y="0" width="1600" height="1080" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#173A5D" flood-opacity="0.12"/></filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#2A6F9E"/></marker>
   </defs>
   <rect width="1600" height="1080" fill="url(#bg)"/>
   <rect x="70" y="62" width="1460" height="956" rx="38" fill="#FFFFFF" fill-opacity="0.72" stroke="#D4E3F1" stroke-width="2"/>
   <text x="800" y="124" text-anchor="middle" fill="#0D2A45" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="42" font-weight="800">How One Person Lab Helps Work Move Forward</text>
   <text x="800" y="166" text-anchor="middle" fill="#506B83" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="21">Start from one place, choose the right expert agent, keep progress visible, and collect finished work.</text>
   <g filter="url(#shadow)">
-    <rect x="142" y="228" width="300" height="142" rx="30" fill="#0D2A45"/>
-    <text x="292" y="278" text-anchor="middle" fill="#EAF7FF" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="24" font-weight="800">Start Work</text>
-    <text x="292" y="316" text-anchor="middle" fill="#BFD6EA" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">A question, goal, file,</text>
-    <text x="292" y="342" text-anchor="middle" fill="#BFD6EA" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">workspace, or ongoing task</text>
-    <rect x="500" y="228" width="300" height="142" rx="30" fill="#F8FCFF" stroke="#BBD2EC" stroke-width="2"/>
-    <text x="650" y="278" text-anchor="middle" fill="#174A73" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="24" font-weight="800">Choose Agent</text>
-    <text x="650" y="316" text-anchor="middle" fill="#4D6E8A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">Research, grant,</text>
-    <text x="650" y="342" text-anchor="middle" fill="#4D6E8A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">presentation, and more</text>
-    <rect x="858" y="228" width="300" height="142" rx="30" fill="#F8FCFF" stroke="#BBD2EC" stroke-width="2"/>
-    <text x="1008" y="278" text-anchor="middle" fill="#174A73" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="24" font-weight="800">Track Progress</text>
-    <text x="1008" y="316" text-anchor="middle" fill="#4D6E8A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">See what happened,</text>
-    <text x="1008" y="342" text-anchor="middle" fill="#4D6E8A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">what is blocked, what is next</text>
-    <rect x="1216" y="228" width="300" height="142" rx="30" fill="#F8FCFF" stroke="#BBD2EC" stroke-width="2"/>
-    <text x="1366" y="278" text-anchor="middle" fill="#174A73" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="24" font-weight="800">Collect Deliverables</text>
-    <text x="1366" y="316" text-anchor="middle" fill="#4D6E8A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">Manuscripts, proposals,</text>
-    <text x="1366" y="342" text-anchor="middle" fill="#4D6E8A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">decks, reviews, and files</text>
+    <rect x="128" y="228" width="292" height="142" rx="30" fill="#0D2A45"/>
+    <text x="274" y="278" text-anchor="middle" fill="#EAF7FF" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="24" font-weight="800">Start Work</text>
+    <text x="274" y="316" text-anchor="middle" fill="#BFD6EA" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">A question, goal, file,</text>
+    <text x="274" y="342" text-anchor="middle" fill="#BFD6EA" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">workspace, or ongoing task</text>
+    <rect x="486" y="228" width="292" height="142" rx="30" fill="#F8FCFF" stroke="#BBD2EC" stroke-width="2"/>
+    <text x="632" y="278" text-anchor="middle" fill="#174A73" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="24" font-weight="800">Choose Agent</text>
+    <text x="632" y="316" text-anchor="middle" fill="#4D6E8A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">Research, grant,</text>
+    <text x="632" y="342" text-anchor="middle" fill="#4D6E8A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">presentation, and more</text>
+    <rect x="844" y="228" width="292" height="142" rx="30" fill="#F8FCFF" stroke="#BBD2EC" stroke-width="2"/>
+    <text x="990" y="278" text-anchor="middle" fill="#174A73" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="24" font-weight="800">Track Progress</text>
+    <text x="990" y="316" text-anchor="middle" fill="#4D6E8A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">See what happened,</text>
+    <text x="990" y="342" text-anchor="middle" fill="#4D6E8A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">what is blocked, what is next</text>
+    <rect x="1202" y="228" width="270" height="142" rx="30" fill="#F8FCFF" stroke="#BBD2EC" stroke-width="2"/>
+    <text x="1337" y="278" text-anchor="middle" fill="#174A73" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="23" font-weight="800">Collect Deliverables</text>
+    <text x="1337" y="316" text-anchor="middle" fill="#4D6E8A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="16">Manuscripts, proposals,</text>
+    <text x="1337" y="342" text-anchor="middle" fill="#4D6E8A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="16">decks, reviews, and files</text>
   </g>
-  <path d="M442 299H500" stroke="#2A6F9E" stroke-width="5" marker-end="url(#arrow)"/>
-  <path d="M800 299H858" stroke="#2A6F9E" stroke-width="5" marker-end="url(#arrow)"/>
-  <path d="M1158 299H1216" stroke="#2A6F9E" stroke-width="5" marker-end="url(#arrow)"/>
+  <path d="M420 299H486" stroke="#2A6F9E" stroke-width="5" marker-end="url(#arrow)"/>
+  <path d="M778 299H844" stroke="#2A6F9E" stroke-width="5" marker-end="url(#arrow)"/>
+  <path d="M1136 299H1202" stroke="#2A6F9E" stroke-width="5" marker-end="url(#arrow)"/>
   <text x="800" y="460" text-anchor="middle" fill="#0D2A45" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="30" font-weight="800">Active Expert Foundries</text>
   <g filter="url(#shadow)">
     <rect x="150" y="508" width="390" height="196" rx="32" fill="#F1F8FF" stroke="#BBD2EC" stroke-width="2"/>
-    <circle cx="214" cy="572" r="28" fill="#2A6F9E"/>
-    <path d="M201 572H227M214 559V585" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="214" cy="572" r="28" fill="#2A6F9E"/><path d="M201 572H227M214 559V585" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round"/>
     <text x="260" y="566" fill="#123A5A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="24" font-weight="800">Research Foundry</text>
     <text x="190" y="626" fill="#4D6E8A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">For evidence, analysis, manuscripts,</text>
     <text x="190" y="654" fill="#4D6E8A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">quality gates, and publication work.</text>
     <rect x="606" y="508" width="390" height="196" rx="32" fill="#FFF8EB" stroke="#E3C27B" stroke-width="2"/>
-    <circle cx="670" cy="572" r="28" fill="#D89C27"/>
-    <path d="M656 574L668 586L690 556" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="670" cy="572" r="28" fill="#D89C27"/><path d="M656 574L668 586L690 556" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
     <text x="716" y="566" fill="#5D4210" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="24" font-weight="800">Grant Foundry</text>
     <text x="646" y="626" fill="#715928" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">For funding choices, proposal drafts,</text>
     <text x="646" y="654" fill="#715928" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">reviews, revisions, and packages.</text>
     <rect x="1062" y="508" width="390" height="196" rx="32" fill="#ECFAF8" stroke="#AADAD6" stroke-width="2"/>
-    <circle cx="1126" cy="572" r="28" fill="#27958E"/>
-    <path d="M1110 586L1126 558L1142 586H1110Z" fill="#FFFFFF"/>
+    <circle cx="1126" cy="572" r="28" fill="#27958E"/><path d="M1110 586L1126 558L1142 586H1110Z" fill="#FFFFFF"/>
     <text x="1172" y="566" fill="#125854" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="24" font-weight="800">Presentation Foundry</text>
     <text x="1102" y="626" fill="#426F6B" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">For lecture decks, lab reports,</text>
     <text x="1102" y="654" fill="#426F6B" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">visual stories, and review loops.</text>
   </g>
   <text x="800" y="792" text-anchor="middle" fill="#0D2A45" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="30" font-weight="800">What Makes The Work Trustworthy</text>
   <g font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="18" font-weight="700">
-    <rect x="176" y="838" width="210" height="74" rx="24" fill="#FFFFFF" stroke="#CAD8E6"/>
-    <text x="281" y="883" text-anchor="middle" fill="#315B7B">Progress you can read</text>
-    <rect x="424" y="838" width="210" height="74" rx="24" fill="#FFFFFF" stroke="#CAD8E6"/>
-    <text x="529" y="883" text-anchor="middle" fill="#315B7B">Resume long work</text>
-    <rect x="672" y="838" width="210" height="74" rx="24" fill="#FFFFFF" stroke="#CAD8E6"/>
-    <text x="777" y="883" text-anchor="middle" fill="#315B7B">Review quality gates</text>
-    <rect x="920" y="838" width="210" height="74" rx="24" fill="#FFFFFF" stroke="#CAD8E6"/>
-    <text x="1025" y="883" text-anchor="middle" fill="#315B7B">Find every file</text>
-    <rect x="1168" y="838" width="256" height="74" rx="24" fill="#FFFFFF" stroke="#CAD8E6"/>
-    <text x="1296" y="883" text-anchor="middle" fill="#315B7B">Recover with confidence</text>
+    <rect x="176" y="838" width="210" height="74" rx="24" fill="#FFFFFF" stroke="#CAD8E6"/><text x="281" y="883" text-anchor="middle" fill="#315B7B">Progress you can read</text>
+    <rect x="424" y="838" width="210" height="74" rx="24" fill="#FFFFFF" stroke="#CAD8E6"/><text x="529" y="883" text-anchor="middle" fill="#315B7B">Resume long work</text>
+    <rect x="672" y="838" width="210" height="74" rx="24" fill="#FFFFFF" stroke="#CAD8E6"/><text x="777" y="883" text-anchor="middle" fill="#315B7B">Review quality gates</text>
+    <rect x="920" y="838" width="210" height="74" rx="24" fill="#FFFFFF" stroke="#CAD8E6"/><text x="1025" y="883" text-anchor="middle" fill="#315B7B">Find every file</text>
+    <rect x="1168" y="838" width="256" height="74" rx="24" fill="#FFFFFF" stroke="#CAD8E6"/><text x="1296" y="883" text-anchor="middle" fill="#315B7B">Recover with confidence</text>
   </g>
   <text x="800" y="978" text-anchor="middle" fill="#5B7388" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="18">Designed for clinicians, researchers, PIs, educators, and small teams doing serious long-running work.</text>
 </svg>

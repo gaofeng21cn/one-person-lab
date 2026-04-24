@@ -3,44 +3,55 @@
   <defs>
     <linearGradient id="banner-bg" x1="0" y1="0" x2="1600" y2="420" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#F7FBFF"/>
-      <stop offset="0.58" stop-color="#EEF6FF"/>
+      <stop offset="0.62" stop-color="#EEF6FF"/>
       <stop offset="1" stop-color="#EAF8F7"/>
     </linearGradient>
-    <linearGradient id="icon-bg" x1="96" y1="82" x2="414" y2="338" gradientUnits="userSpaceOnUse">
+    <linearGradient id="icon-bg" x1="92" y1="86" x2="372" y2="334" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#08233D"/>
-      <stop offset="0.62" stop-color="#0F4D7D"/>
+      <stop offset="0.56" stop-color="#0F4D7D"/>
       <stop offset="1" stop-color="#2BB8B0"/>
+    </linearGradient>
+    <linearGradient id="icon-card" x1="142" y1="122" x2="326" y2="318" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F8FCFF"/>
+      <stop offset="1" stop-color="#DCEEFF"/>
     </linearGradient>
     <filter id="soft-shadow" x="-40" y="-40" width="1680" height="500" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
       <feDropShadow dx="0" dy="16" stdDeviation="22" flood-color="#173A5D" flood-opacity="0.12"/>
     </filter>
   </defs>
   <rect width="1600" height="420" fill="url(#banner-bg)"/>
-  <rect x="40" y="38" width="1520" height="344" rx="34" fill="#FFFFFF" fill-opacity="0.78" stroke="#D5E3F2" stroke-width="2"/>
+  <rect x="44" y="40" width="1512" height="340" rx="34" fill="#FFFFFF" fill-opacity="0.82" stroke="#D5E3F2" stroke-width="2"/>
   <g filter="url(#soft-shadow)">
-    <rect x="104" y="84" width="292" height="252" rx="62" fill="url(#icon-bg)"/>
-    <rect x="158" y="126" width="184" height="190" rx="42" fill="#F8FCFF" fill-opacity="0.96"/>
-    <path d="M250 158C188.144 158 138 208.144 138 270C138 331.856 188.144 382 250 382" transform="translate(0 -48)" stroke="#0E385D" stroke-width="16" stroke-linecap="round"/>
-    <path d="M250 190C205.817 190 170 225.817 170 270C170 314.183 205.817 350 250 350" transform="translate(0 -48)" stroke="#2BB8B0" stroke-width="14" stroke-linecap="round"/>
-    <circle cx="250" cy="222" r="34" fill="#0E385D"/>
-    <circle cx="250" cy="222" r="15" fill="#7CE8E0"/>
-    <circle cx="174" cy="172" r="12" fill="#2BB8B0"/>
-    <circle cx="326" cy="172" r="12" fill="#F3B44B"/>
-    <circle cx="326" cy="274" r="12" fill="#7CA7FF"/>
+    <rect x="104" y="94" width="260" height="232" rx="56" fill="url(#icon-bg)"/>
+    <rect x="148" y="124" width="172" height="182" rx="42" fill="url(#icon-card)"/>
+    <path d="M234 142C180.981 142 138 184.981 138 238C138 291.019 180.981 334 234 334C287.019 334 330 291.019 330 238" transform="translate(0 -24)" stroke="#0E385D" stroke-width="15" stroke-linecap="round"/>
+    <path d="M234 170C196.445 170 166 200.445 166 238C166 275.555 196.445 306 234 306C271.555 306 302 275.555 302 238" transform="translate(0 -24)" stroke="#2BB8B0" stroke-width="13" stroke-linecap="round"/>
+    <circle cx="234" cy="214" r="31" fill="#0E385D"/>
+    <circle cx="234" cy="214" r="14" fill="#7CE8E0"/>
+    <circle cx="174" cy="166" r="12" fill="#2BB8B0"/>
+    <circle cx="304" cy="166" r="12" fill="#F3B44B"/>
+    <circle cx="304" cy="268" r="12" fill="#7CA7FF"/>
+    <path d="M187 178L220 203" stroke="#0E385D" stroke-width="10" stroke-linecap="round"/>
+    <path d="M286 178L248 203" stroke="#0E385D" stroke-width="10" stroke-linecap="round"/>
+    <path d="M282 260L248 226" stroke="#0E385D" stroke-width="10" stroke-linecap="round"/>
+    <rect x="190" y="286" width="92" height="13" rx="6.5" fill="#0E385D" fill-opacity="0.20"/>
   </g>
-  <text x="472" y="126" fill="#0D2A45" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="24" font-weight="700" letter-spacing="3.2">ONE PERSON LAB</text>
-  <text x="472" y="188" fill="#0D2A45" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="54" font-weight="800">One workbench for serious expert work</text>
-  <text x="474" y="238" fill="#49677F" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="25">Plan long-running research, grants, and presentations with expert agents, trusted progress, and organized deliverables.</text>
-  <g font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="18" font-weight="700">
-    <rect x="474" y="286" width="188" height="48" rx="24" fill="#EAF3FF" stroke="#BBD2EC"/>
-    <text x="568" y="316" text-anchor="middle" fill="#174A73">Research</text>
-    <rect x="682" y="286" width="154" height="48" rx="24" fill="#FFF4DD" stroke="#E3C27B"/>
-    <text x="759" y="316" text-anchor="middle" fill="#8A6415">Grants</text>
-    <rect x="856" y="286" width="202" height="48" rx="24" fill="#E8FAF8" stroke="#AADAD6"/>
-    <text x="957" y="316" text-anchor="middle" fill="#247A75">Presentations</text>
-    <rect x="1078" y="286" width="190" height="48" rx="24" fill="#F1F5FA" stroke="#CAD6E4"/>
-    <text x="1173" y="316" text-anchor="middle" fill="#3E5D78">Progress</text>
-    <rect x="1288" y="286" width="154" height="48" rx="24" fill="#F1F5FA" stroke="#CAD6E4"/>
-    <text x="1365" y="316" text-anchor="middle" fill="#3E5D78">Files</text>
+  <text x="438" y="126" fill="#0D2A45" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="23" font-weight="700" letter-spacing="3">ONE PERSON LAB</text>
+  <text x="438" y="186" fill="#0D2A45" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="48" font-weight="800">One workbench for serious expert work</text>
+  <text x="440" y="232" fill="#49677F" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="23">Plan long-running research, grants, and presentations with expert agents,</text>
+  <text x="440" y="264" fill="#49677F" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="23">trusted progress, and organized deliverables.</text>
+  <g font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17" font-weight="700">
+    <rect x="440" y="304" width="166" height="44" rx="22" fill="#EAF3FF" stroke="#BBD2EC"/>
+    <text x="523" y="332" text-anchor="middle" fill="#174A73">Research</text>
+    <rect x="622" y="304" width="136" height="44" rx="22" fill="#FFF4DD" stroke="#E3C27B"/>
+    <text x="690" y="332" text-anchor="middle" fill="#8A6415">Grants</text>
+    <rect x="774" y="304" width="178" height="44" rx="22" fill="#E8FAF8" stroke="#AADAD6"/>
+    <text x="863" y="332" text-anchor="middle" fill="#247A75">Presentations</text>
+    <rect x="968" y="304" width="162" height="44" rx="22" fill="#F1F5FA" stroke="#CAD6E4"/>
+    <text x="1049" y="332" text-anchor="middle" fill="#3E5D78">Progress</text>
+    <rect x="1146" y="304" width="132" height="44" rx="22" fill="#F1F5FA" stroke="#CAD6E4"/>
+    <text x="1212" y="332" text-anchor="middle" fill="#3E5D78">Files</text>
+    <rect x="1294" y="304" width="164" height="44" rx="22" fill="#F1F5FA" stroke="#CAD6E4"/>
+    <text x="1376" y="332" text-anchor="middle" fill="#3E5D78">Recovery</text>
   </g>
 </svg>
