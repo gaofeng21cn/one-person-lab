@@ -51,6 +51,7 @@ test('repo-tracked verification command surfaces reference valid npm scripts and
 test('scripts/verify.sh provides the canonical verification wrapper', () => {
   const verifyScript = read('scripts/verify.sh');
 
+  assert.match(verifyScript, /node scripts\/line-budget\.mjs/);
   assert.match(verifyScript, /npm test/);
   assert.match(verifyScript, /npm run family:shared-release -- check/);
   assert.match(verifyScript, /python\/opl-harness-shared\/tests\/test_family_shared_release\.py/);
@@ -60,6 +61,11 @@ test('scripts/verify.sh provides the canonical verification wrapper', () => {
   assert.match(verifyScript, /npm run test:meta/);
   assert.match(verifyScript, /npm run test:artifact/);
   assert.match(verifyScript, /npm run test:full/);
+});
+
+test('lint includes the tracked code line-budget guard', () => {
+  assert.equal(packageJson.scripts?.lint, 'node ./scripts/lint.mjs && node ./scripts/line-budget.mjs');
+  assert.equal(fs.existsSync(path.join(repoRoot, 'scripts/line-budget.mjs')), true);
 });
 
 test('test:full delegates to the parallel test lane wrapper', () => {
