@@ -23,14 +23,14 @@
 1. 默认运行时层
    `OPL` 以 `Codex-default session runtime` 组织 `system / engines / modules / agents / workspaces / sessions / progress / artifacts` 这组顶层产品资源。
 2. 显式激活层
-   `OPL` 负责 `domain-agent` handle、shared dispatch、family-level shared surfaces，以及把调用映射到各个 admitted domain 仓的稳定 capability surface。
+   `OPL` 负责 family skill pack 注册与同步、shared dispatch、family-level shared surfaces，以及把调用映射到各个 admitted domain 仓的稳定 capability surface。
 3. 可选外壳与投影层
    GUI shell、`Product API`、`opl web` 与其他兼容层继续围绕同一套 runtime/activation truth 做展示与投影，而不是重新定义默认交互合同。
 
 ## 项目目标
 
 - 给 `opl`、`opl exec`、`opl resume`、直接 `Codex` 使用和外部壳提供稳定一致的 Codex-default session/runtime 合同
-- 把 `@mas`、`@mag`、`@rca` 等显式入口收口成统一 activation layer
+- 把 domain app 以可同步的 skill pack 与稳定 contract 接入统一 activation layer
 - 统一管理执行引擎、模块、工作空间、会话、进度与交付物
 - 维护 family-level shared modules、shared contracts 与 shared indexes
 - 让 `Product API`、`opl web` 与 GUI 壳继续作为 projection surface 存在

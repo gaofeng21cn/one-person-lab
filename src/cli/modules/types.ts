@@ -142,6 +142,12 @@ type UpdateChannelCliInput = {
   channel?: 'stable' | 'preview';
 };
 
+type SkillPacksCliInput = {
+  domains: string[];
+  home?: string;
+  quiet?: boolean;
+};
+
 export type {
   CommandHandler,
   CommandSpec,
@@ -159,6 +165,7 @@ export type {
   SessionRuntimeCliInput,
   SessionsCliInput,
   StartCliInput,
+  SkillPacksCliInput,
   UpdateChannelCliInput,
   WebCliInput,
   WorkspaceRegistryCliInput,

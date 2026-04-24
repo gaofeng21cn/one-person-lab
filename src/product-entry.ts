@@ -434,7 +434,7 @@ export function buildProductEntryDoctor(validation: ContractValidationSummary) {
       issues: hermes.issues,
       notes: [
         'Codex-default local entry is provided through `opl`, `opl exec`, and `opl resume`.',
-        'Explicit domain activation uses `opl @mas ...`, `opl @mag ...`, and `opl @rca ...`.',
+        'Use `opl skill sync` to register the family domain skill packs before default Codex sessions.',
         'Hermes remains an explicit opt-in runtime via `--executor hermes`; its gateway only affects Hermes-backed lanes.',
       ],
     },
