@@ -1447,9 +1447,9 @@ exit 1
     assert.equal(output.system_initialize.recommended_skills.summary.total, output.system_initialize.recommended_skills.skills.length);
     assert.equal(output.system_initialize.recommended_skills.skills.some((entry) => entry.skill_id === 'superpowers'), true);
     assert.equal(output.system_initialize.recommended_skills.skills.some((entry) => entry.skill_id === 'officecli'), true);
-    assert.equal(output.system_initialize.gui_shell.shell_id, 'aionui');
+    assert.equal(output.system_initialize.gui_shell.shell_id, 'opl_aion_shell');
     assert.equal(output.system_initialize.gui_shell.owner, 'opl-aion-shell');
-    assert.equal(output.system_initialize.gui_shell.relation_to_opl, 'external_gui_shell');
+    assert.equal(output.system_initialize.gui_shell.relation_to_opl, 'opl_branded_gui_shell');
     assert.equal(output.system_initialize.gui_shell.release_strategy, 'prefer_prebuilt_release_then_source_build');
     assert.equal(output.system_initialize.gui_shell.prebuilt_artifacts.some((entry) => entry.platform === 'macos'), true);
     assert.equal(output.system_initialize.settings.interaction_mode, 'codex');

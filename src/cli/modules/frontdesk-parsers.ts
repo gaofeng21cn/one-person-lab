@@ -141,6 +141,10 @@ function parseTurnkeyInstallArgs(
       parsed.skipModules = true;
       continue;
     }
+    if (token === '--skip-engines') {
+      parsed.skipEngines = true;
+      continue;
+    }
     if (token === '--skip-service') {
       parsed.skipService = true;
       continue;

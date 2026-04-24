@@ -187,7 +187,7 @@ export function buildFrontDeskDashboard(
           '`opl workspace list` keeps `manifest_command` as non-executing registry state, while `opl domain manifests` resolves the active bound machine-readable product-entry manifests.',
           'Resolved domain manifests now also feed domain entry surface plus operator-loop actions and recommended shell/command hints back into dashboard and handoff surfaces.',
           'Resolved domain manifests now also surface family-orchestration companion previews so the top-level product API board can show human-gate and resume semantics instead of hiding them in domain docs.',
-          'The GUI mainline should live in an external GUI shell repo, currently aligned around AionUI, while this repo stays headless and contract-first.',
+          'The GUI mainline should live in the opl-aion-shell repo as an OPL-branded shell built on the AionUI codebase, while this repo stays headless and contract-first.',
         ],
       },
       projects,

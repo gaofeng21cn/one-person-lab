@@ -133,6 +133,7 @@ export type FrontDeskTurnkeyInstallInput = Partial<{
   sessionsLimit: number;
   basePath: string;
   skipModules: boolean;
+  skipEngines: boolean;
   skipService: boolean;
   skipWebOpen: boolean;
   skipGuiOpen: boolean;

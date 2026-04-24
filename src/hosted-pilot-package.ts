@@ -519,7 +519,7 @@ export function buildHostedPilotPackage(
         'This package is a self-hostable web package for the OPL Product API.',
         'It still requires an external Hermes binary on the host and does not claim that the actual hosted runtime is landed.',
         'The package now carries service-install and healthcheck helpers so host-side bring-up does not depend on hand-edited service paths.',
-        'The immediate shell target is an external GUI shell aligned to the current AionUI mainline, while the long-line product identity remains an OPL-owned adapter surface.',
+        'The immediate shell target is the OPL-branded GUI shell maintained in opl-aion-shell on the AionUI codebase, while the long-line product identity remains an OPL-owned adapter surface.',
       ],
     },
   };

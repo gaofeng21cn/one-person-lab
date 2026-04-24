@@ -63,16 +63,16 @@
 - `OPL` 主仓当前主线以 `Codex-default session runtime + activation layer` 为中心，而不是以 GUI 或 API 壳为中心
 - canonical truth 收敛到：workspace binding、session lifecycle、progress / artifact projection、agent entry dispatch、runtime mode
 - `Product API`、`opl web` 与未来 GUI / Web shell 都降为这套 session runtime 的 projection / compatibility surface
-- `AionUI` 是第一外部壳和验证目标，但不是 runtime owner
+- `opl-aion-shell` 是第一 GUI 交付仓；它基于 AionUI codebase 产出 OPL 品牌壳，但原版 AionUI app 不是 OPL GUI，也不是 runtime owner
 
-### 决策：GUI 主线切换到 `AionUI`，`Onyx` 降为备线
+### 决策：GUI 主线切换到基于 AionUI codebase 的 OPL 品牌壳，`Onyx` 降为备线
 
-原因：在 `OPL` 已经明确走 `ACP-native session runtime` 主线之后，当前最贴近这条运行时形态的现成外部壳是 `AionUI`。它更适合作为第一外部壳验证“目录绑定 + 会话 + 对话/任务主屏 + progress / artifacts 侧栏”这条路径；`Onyx` 更适合作为备线和参考。
+原因：在 `OPL` 已经明确走 `Codex-default session runtime + activation layer` 主线之后，当前最贴近这条运行时形态的界面基座是 AionUI codebase。但用户面对的交付物必须是 OPL 品牌壳：去掉 OPL 用不上的通用 AionUI 模块，替换品牌、文案和安装包身份，并消费 OPL Product API；`Onyx` 只作为备线和参考。
 
 影响：
 
 - `OPL` 主仓继续保留 family-level session runtime、`opl` shell / TUI、projection surfaces 与 `opl web`
-- 当前第一外部壳按 `AionUI` 主线推进
+- 当前第一 GUI 交付物按 `opl-aion-shell` 的 OPL 品牌壳推进
 - 仓内已有 `Onyx` 计划、benchmark 和 overlay 材料只保留在参考层或历史层，不再作为当前实现依据
 
 ## 2026-04-20
@@ -140,7 +140,7 @@
 
 影响：
 
-- `AionUI` 可以作为当前 GUI 主线基座出现在 current status / implementation planning
+- AionUI codebase 可以作为当前 GUI 主线基座出现在 current status / implementation planning，但必须明确用户交付物是 OPL 品牌壳
 - `Onyx`、`Open WebUI` 等外部产品名只能用于基准、参考或备线语境
 - 只有真实集成发生后，才允许在 current status / current implementation 里写成已集成事实
 

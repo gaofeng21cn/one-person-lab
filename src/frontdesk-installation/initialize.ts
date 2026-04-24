@@ -191,14 +191,14 @@ export async function buildFrontDeskInitialize(contracts: GatewayContracts) {
     },
     {
       item_id: 'gui_shell',
-      label: 'AionUI GUI Shell',
+      label: 'OPL Desktop GUI',
       status: guiShell.sibling_checkout_found ? 'ready' : 'attention_needed',
       required: false,
       blocking: false,
       section_id: 'system',
       detail_summary: guiShell.sibling_checkout_found
-        ? `AionUI shell checkout found at ${guiShell.sibling_checkout_path}`
-        : 'Use a prebuilt AionUI release package when available; source build remains the fallback.',
+        ? `OPL GUI shell checkout found at ${guiShell.sibling_checkout_path}`
+        : 'Use a prebuilt OPL desktop GUI release package when available; source build remains the fallback.',
       endpoint: endpoints.frontdesk_initialize,
       action_endpoint: endpoints.frontdesk_initialize,
       action: reviewInitializeAction,
@@ -324,7 +324,7 @@ export async function buildFrontDeskInitialize(contracts: GatewayContracts) {
       notes: [
         'Initialize OPL reuses the same truth surfaces as long-lived settings management.',
         'Workspace root and update channel are stored in OPL-managed state files.',
-        'AionUI remains an external GUI shell: OPL consumes its release artifact or source checkout, but does not own the GUI runtime package.',
+        'The OPL desktop GUI is an OPL-branded shell maintained in opl-aion-shell on top of the AionUI codebase; the upstream AionUI app is not itself the OPL GUI.',
       ],
     },
   };

@@ -36,22 +36,44 @@
 
 ## 全新 Mac 最快用起来
 
-如果目标是先把 OPL + MAS/MAG/RCA + GUI 跑起来，不需要先读完整仓库。
+如果目标是把 OPL、运行依赖、当前 active domain agents 和 OPL GUI 一次配好，走这条路径。
 
-1. 从这个仓库安装 OPL CLI。
-2. 运行 `opl install`。
-3. 用 `open /Applications/AionUi.app` 打开桌面 GUI，或直接访问 `http://127.0.0.1:8787/`。
-4. 普通工作默认用 Codex / OPL；需要专业智能体时再显式选择 `MAS`、`MAG` 或 `RCA`。
+给用户的最短命令：
 
-`opl install` 会做这些事：
+```bash
+git clone https://github.com/gaofeng21cn/one-person-lab.git
+cd one-person-lab
+npm install
+npm link
+opl install
+```
 
-- 安装默认家族模块：`MAS`、`MAG`、`RCA`。
-- 同步短名 Codex skills，让它们既能被 OPL 调用，也能被原版 Codex 直接调用。
+然后打开用户入口：
+
+```bash
+open /Applications/OPL.app
+```
+
+如果 OPL 桌面应用还没有安装，可以先用网页入口测试本地 Product API：
+
+```bash
+open http://127.0.0.1:8787/
+```
+
+`opl install` 应负责这一整套事情：
+
+- 安装或配置必需运行依赖：`Codex CLI` 和 `Hermes-Agent`。
+- 安装当前 active 家族模块：`MAS`、`MAG`、`RCA`。
+- 同步短名 Codex skills，让 `MAS`、`MAG`、`RCA` 既能被 OPL 调用，也能被原版 Codex 直接调用。
 - 安装并打开本地 OPL Product API service。
-- 如果本机已经安装 AionUI，直接尝试启动桌面 GUI。
-- 如果 AionUI 尚未安装，返回 `opl-aion-shell` 对应 release 预编译包或源码构建 fallback 的说明。
+- 当 `/Applications/OPL.app` 已存在时，打开 OPL 品牌桌面 GUI。
+- 当 OPL GUI 缺失时，返回 `opl-aion-shell` 对应 OPL release 预编译包或源码构建 fallback 的明确步骤。
 
-在这台机器上，本地服务入口是 `http://127.0.0.1:8787/`，桌面应用路径是 `/Applications/AionUi.app`。
+给 Codex Agent 的可读指令版本：
+
+> 在这台 Mac 上安装并配置这个 OPL repo。必要时 clone repo，安装 OPL CLI，运行 `opl install`，确认 Codex CLI 和 Hermes-Agent 已安装，安装 MAS/MAG/RCA，同步它们的 skills，启动本地 Product API service，并打开 OPL GUI；如果 GUI 缺失，报告准确的 OPL GUI release 或源码构建步骤。
+
+OPL GUI 是 `opl-aion-shell` 基于 AionUI codebase 做的 OPL 品牌壳。原版 AionUI 应用本身不是 OPL GUI。
 
 ## 可以用来做什么
 
@@ -89,7 +111,7 @@
 - 工作空间、会话、进度与交付物的发现与组织能力。
 - 共享产品层的机器可读合同。
 
-桌面 GUI 由 [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) 维护。OPL 提供这个 GUI、网页入口和 Codex 共同消费的本地 Product API 与运行时真相。
+桌面 GUI 由 [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) 作为基于 AionUI codebase 的 OPL 品牌壳维护。OPL 提供这个 GUI、网页入口和 Codex 共同消费的本地 Product API 与运行时真相。
 
 ## 这个仓库怎么读
 

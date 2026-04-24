@@ -42,11 +42,13 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
   };
 
   try {
-    const output = runCli(['install', '--modules', 'mas', '--skip-service', '--skip-gui-open'], env) as {
+    const output = runCli(['install', '--modules', 'mas', '--skip-engines', '--skip-service', '--skip-gui-open'], env) as {
       install: {
         surface_id: string;
         status: string;
+        selected_engines: string[];
         selected_modules: string[];
+        engine_actions: unknown[];
         module_actions: Array<{
           action: string;
           module: { module_id: string; installed: boolean };
@@ -65,6 +67,8 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
 
     assert.equal(output.install.surface_id, 'opl_install');
     assert.equal(output.install.status, 'completed');
+    assert.deepEqual(output.install.selected_engines, ['codex', 'hermes']);
+    assert.deepEqual(output.install.engine_actions, []);
     assert.deepEqual(output.install.selected_modules, ['medautoscience']);
     assert.equal(output.install.module_actions.length, 1);
     assert.equal(output.install.module_actions[0].action, 'install');
@@ -76,11 +80,62 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
     assert.equal(output.install.gui_open_action, null);
     assert.equal(output.install.system_initialize.surface_id, 'opl_frontdesk_initialize');
     assert.equal(output.install.system_initialize.recommended_skills.surface_id, 'opl_recommended_skill_bundle');
-    assert.equal(output.install.system_initialize.gui_shell.shell_id, 'aionui');
+    assert.equal(output.install.system_initialize.gui_shell.shell_id, 'opl_aion_shell');
     assert.deepEqual(fs.readFileSync(turnkeyLogPath, 'utf8').trim().split('\n'), ['bootstrap', 'skill-sync', 'health']);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(medAutoScienceRemote.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+
+test('install command reuses already installed runtime dependencies', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-engines-home-'));
+  const codexFixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-codex-'));
+  const hermesFixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-hermes-'));
+  const codexPath = path.join(codexFixtureRoot, 'codex');
+  const hermesPath = path.join(hermesFixtureRoot, 'hermes');
+
+  fs.writeFileSync(codexPath, '#!/usr/bin/env bash\necho "codex 1.2.3"\n', { mode: 0o755 });
+  fs.writeFileSync(
+    hermesPath,
+    [
+      '#!/usr/bin/env bash',
+      'if [ "$1" = "version" ]; then echo "Hermes 2.3.4"; exit 0; fi',
+      'if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then echo "Gateway service is loaded"; exit 0; fi',
+      'echo "unexpected hermes args: $*" >&2',
+      'exit 1',
+      '',
+    ].join('\n'),
+    { mode: 0o755 },
+  );
+
+  try {
+    const output = runCli(
+      ['install', '--skip-modules', '--skip-service', '--skip-gui-open'],
+      {
+        HOME: homeRoot,
+        OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+        OPL_HERMES_BIN: hermesPath,
+        PATH: `${codexFixtureRoot}:${process.env.PATH ?? ''}`,
+      },
+    ) as {
+      install: {
+        engine_actions: Array<{ engine_id: string; status: string; strategy: string }>;
+      };
+    };
+
+    assert.deepEqual(
+      output.install.engine_actions.map((entry) => [entry.engine_id, entry.status, entry.strategy]),
+      [
+        ['codex', 'skipped_installed', 'already_installed'],
+        ['hermes', 'skipped_installed', 'already_installed'],
+      ],
+    );
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(codexFixtureRoot, { recursive: true, force: true });
+    fs.rmSync(hermesFixtureRoot, { recursive: true, force: true });
   }
 });
 
@@ -100,6 +155,7 @@ test('install command can start and open local web service without launching GUI
     const output = runCli([
       'install',
       '--skip-modules',
+      '--skip-engines',
       '--skip-gui-open',
       '--port',
       String(configuredPort),
@@ -107,12 +163,14 @@ test('install command can start and open local web service without launching GUI
       repoRoot,
     ], env) as {
       install: {
+        engine_actions: unknown[];
         module_actions: unknown[];
         service_action: { action: string; status: string } | null;
         web_open_action: { action: string; entry_url: string } | null;
       };
     };
 
+    assert.deepEqual(output.install.engine_actions, []);
     assert.deepEqual(output.install.module_actions, []);
     assert.equal(output.install.service_action?.action, 'reinstall_support');
     assert.equal(output.install.service_action?.status, 'completed');

@@ -18,13 +18,20 @@ export type OplRecommendedSkill = {
 };
 
 export type OplGuiShellSurface = {
-  shell_id: 'aionui';
-  label: 'AionUI';
+  shell_id: 'opl_aion_shell';
+  label: 'OPL Desktop GUI';
   owner: 'opl-aion-shell';
-  relation_to_opl: 'external_gui_shell';
+  base_shell: 'aionui';
+  relation_to_opl: 'opl_branded_gui_shell';
   repo_url: string;
   sibling_checkout_path: string;
   sibling_checkout_found: boolean;
+  product_identity: {
+    app_name: string;
+    bundle_name: string;
+    required_branding: string[];
+    hidden_upstream_modules: string[];
+  };
   release_strategy: 'prefer_prebuilt_release_then_source_build';
   prebuilt_artifacts: Array<{
     platform: 'macos' | 'windows' | 'linux';
@@ -105,31 +112,38 @@ export function buildOplGuiShellSurface(repoRoot: string): OplGuiShellSurface {
   const siblingCheckoutPath = path.join(workspaceRoot, 'opl-aion-shell');
 
   return {
-    shell_id: 'aionui',
-    label: 'AionUI',
+    shell_id: 'opl_aion_shell',
+    label: 'OPL Desktop GUI',
     owner: 'opl-aion-shell',
-    relation_to_opl: 'external_gui_shell',
+    base_shell: 'aionui',
+    relation_to_opl: 'opl_branded_gui_shell',
     repo_url: 'https://github.com/gaofeng21cn/opl-aion-shell',
     sibling_checkout_path: siblingCheckoutPath,
     sibling_checkout_found: fs.existsSync(siblingCheckoutPath) && fs.statSync(siblingCheckoutPath).isDirectory(),
+    product_identity: {
+      app_name: 'OPL',
+      bundle_name: 'OPL.app',
+      required_branding: ['One Person Lab', 'OPL iconography', 'OPL product wording'],
+      hidden_upstream_modules: ['AionUI team management', 'AionUI scheduled tasks', 'generic upstream branding'],
+    },
     release_strategy: 'prefer_prebuilt_release_then_source_build',
     prebuilt_artifacts: [
       {
         platform: 'macos',
         architectures: ['x64', 'arm64'],
-        distributable_patterns: ['AionUi-<version>-mac-x64.dmg', 'AionUi-<version>-mac-arm64.dmg'],
+        distributable_patterns: ['OPL-<version>-mac-x64.dmg', 'OPL-<version>-mac-arm64.dmg'],
         updater_metadata: ['latest-mac.yml', 'latest-arm64-mac.yml'],
       },
       {
         platform: 'windows',
         architectures: ['x64', 'arm64'],
-        distributable_patterns: ['AionUi-<version>-win-x64.exe', 'AionUi-<version>-win-arm64.exe'],
+        distributable_patterns: ['OPL-<version>-win-x64.exe', 'OPL-<version>-win-arm64.exe'],
         updater_metadata: ['latest.yml', 'latest-win-arm64.yml'],
       },
       {
         platform: 'linux',
         architectures: ['x64', 'arm64'],
-        distributable_patterns: ['AionUi-<version>.deb', 'AionUi-<version>-arm64.deb'],
+        distributable_patterns: ['OPL-<version>.deb', 'OPL-<version>-arm64.deb'],
         updater_metadata: ['latest-linux.yml', 'latest-linux-arm64.yml'],
       },
     ],
@@ -140,8 +154,9 @@ export function buildOplGuiShellSurface(repoRoot: string): OplGuiShellSurface {
       'bun run dist:linux',
     ],
     notes: [
-      'OPL owns the runtime contract and Product API truth; opl-aion-shell owns the desktop GUI package.',
-      'A prebuilt package is the Electron-builder distributable plus updater metadata uploaded to a GitHub Release.',
+      'OPL owns the runtime contract and Product API truth; opl-aion-shell owns the OPL-branded desktop GUI package built on the AionUI codebase.',
+      'A valid OPL GUI package is an OPL-branded Electron-builder distributable plus updater metadata uploaded to a GitHub Release.',
+      'The upstream AionUI app is not itself the OPL GUI.',
       'Source build is only the fallback when no release asset matches the local platform and architecture.',
     ],
   };
