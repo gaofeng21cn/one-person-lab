@@ -92,11 +92,11 @@ export function buildPublicCommandSpecs(
 
   const installSpec: CommandSpec = {
     usage:
-      'opl install [--modules <mas,mag,rca>] [--module <module_id>] [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>] [--skip-modules] [--skip-engines] [--skip-service] [--skip-web-open] [--skip-gui-open]',
+      'opl install [--modules <mas,mds,mag,rca>] [--module <module_id>] [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>] [--skip-modules] [--skip-engines] [--skip-service] [--skip-web-open] [--skip-gui-open]',
     summary: 'One-shot install for OPL dependencies, family modules, Codex skills, local Product API service, and OPL GUI launch hints.',
     examples: [
       'opl install',
-      'opl install --modules mas,mag,rca',
+      'opl install --modules mas,mds,mag,rca',
       'opl install --modules mas --skip-engines --skip-gui-open',
     ],
     group: 'top_level',

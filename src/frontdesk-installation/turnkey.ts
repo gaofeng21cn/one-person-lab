@@ -10,7 +10,7 @@ import { resolveProjectRoot, runCommand } from './shared.ts';
 import { runFrontDeskSystemAction } from './system-actions.ts';
 import type { FrontDeskModuleId, FrontDeskTurnkeyInstallInput } from './shared.ts';
 
-const DEFAULT_MODULES: FrontDeskModuleId[] = ['medautoscience', 'medautogrant', 'redcube'];
+const DEFAULT_MODULES: FrontDeskModuleId[] = ['medautoscience', 'meddeepscientist', 'medautogrant', 'redcube'];
 const DEFAULT_ENGINES = ['codex', 'hermes'] as const;
 
 function normalizeModuleId(raw: string): FrontDeskModuleId {
@@ -20,6 +20,10 @@ function normalizeModuleId(raw: string): FrontDeskModuleId {
     ['med-autoscience', 'medautoscience'],
     ['med_autoscience', 'medautoscience'],
     ['medautoscience', 'medautoscience'],
+    ['mds', 'meddeepscientist'],
+    ['med-deepscientist', 'meddeepscientist'],
+    ['med_deepscientist', 'meddeepscientist'],
+    ['meddeepscientist', 'meddeepscientist'],
     ['mag', 'medautogrant'],
     ['med-autogrant', 'medautogrant'],
     ['med_autogrant', 'medautogrant'],
@@ -42,13 +46,13 @@ function normalizeModuleSelection(modules?: string[]) {
 }
 
 function tryOpenOplGui() {
-  const candidates = ['/Applications/OPL.app', '/Applications/One Person Lab.app'];
+  const candidates = ['/Applications/One Person Lab.app', '/Applications/OPL.app'];
   const candidate = candidates.find((appPath) => runCommand('test', ['-d', appPath]).exitCode === 0);
   if (!candidate) {
     return {
       status: 'manual_required' as const,
       strategy: 'opl_branded_prebuilt_release_or_source_build',
-      command_preview: ['open', '/Applications/OPL.app'],
+      command_preview: ['open', '/Applications/One Person Lab.app'],
       note: 'The OPL-branded desktop GUI is not installed under /Applications. Install a matching opl-aion-shell OPL release asset, or build the OPL-branded shell from source as the fallback. The upstream AionUI.app is not treated as the OPL GUI.',
     };
   }
