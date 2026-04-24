@@ -136,7 +136,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl help',
         'opl',
         'opl install',
-        'opl install --modules mas,mag,rca',
+        'opl install --modules mas,mds,mag,rca',
         'opl doctor',
         'opl skill list',
         'opl skill sync',
