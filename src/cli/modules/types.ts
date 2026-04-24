@@ -102,6 +102,14 @@ type WebCliInput = {
   basePath?: string;
 };
 
+type TurnkeyInstallCliInput = WebCliInput & {
+  modules: string[];
+  skipModules?: boolean;
+  skipService?: boolean;
+  skipWebOpen?: boolean;
+  skipGuiOpen?: boolean;
+};
+
 type FrontDeskMcpCliInput = {
   apiBaseUrl?: string;
   workspacePath?: string;
@@ -166,6 +174,7 @@ export type {
   SessionsCliInput,
   StartCliInput,
   SkillPacksCliInput,
+  TurnkeyInstallCliInput,
   UpdateChannelCliInput,
   WebCliInput,
   WorkspaceRegistryCliInput,

@@ -11,6 +11,7 @@ export { runFrontDeskEngineAction } from './frontdesk-installation/engine-action
 export { buildFrontDeskInitialize } from './frontdesk-installation/initialize.ts';
 export { buildFrontDeskModules, runFrontDeskModuleAction } from './frontdesk-installation/modules.ts';
 export { runFrontDeskSystemAction } from './frontdesk-installation/system-actions.ts';
+export { runFrontDeskTurnkeyInstall } from './frontdesk-installation/turnkey.ts';
 export {
   buildFrontDeskWorkspaceRootSurface,
   writeFrontDeskWorkspaceRootSurface,

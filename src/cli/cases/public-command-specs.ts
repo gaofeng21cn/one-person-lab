@@ -1,10 +1,10 @@
 import { GatewayContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkstreamOrThrow } from '../../contracts.ts';
-import { buildFrontDeskEnvironment, buildFrontDeskInitialize, buildFrontDeskModules, runFrontDeskEngineAction, runFrontDeskModuleAction, runFrontDeskSystemAction } from '../../frontdesk-installation.ts';
+import { buildFrontDeskEnvironment, buildFrontDeskInitialize, buildFrontDeskModules, runFrontDeskEngineAction, runFrontDeskModuleAction, runFrontDeskSystemAction, runFrontDeskTurnkeyInstall } from '../../frontdesk-installation.ts';
 import { getFrontDeskServiceStatus, installFrontDeskService, openFrontDeskService, startFrontDeskService, stopFrontDeskService, uninstallFrontDeskService } from '../../frontdesk-service.ts';
 import { buildHostedPilotPackage } from '../../hosted-pilot-package.ts';
 import { buildHostedPilotBundle } from '../../management.ts';
 import type { GatewayContracts } from '../../types.ts';
-import { assertNoArgs, buildCommandHelp, buildPublicEngineActionPayload, buildPublicModuleActionPayload, buildPublicModulesPayload, buildPublicServicePayload, buildPublicSystemActionPayload, buildPublicSystemInitializePayload, buildPublicSystemPayload, buildRootHelp, buildUsageError, cloneCommandSpec, parseFrontDeskEngineArgs, parseFrontDeskModuleArgs, parseHostedPilotPackageArgs, parseUpdateChannelArgs, parseWebArgs, withContractsContext } from '../modules/support.ts';
+import { assertNoArgs, buildCommandHelp, buildPublicEngineActionPayload, buildPublicModuleActionPayload, buildPublicModulesPayload, buildPublicServicePayload, buildPublicSystemActionPayload, buildPublicSystemInitializePayload, buildPublicSystemPayload, buildPublicTurnkeyInstallPayload, buildRootHelp, buildUsageError, cloneCommandSpec, parseFrontDeskEngineArgs, parseFrontDeskModuleArgs, parseHostedPilotPackageArgs, parseTurnkeyInstallArgs, parseUpdateChannelArgs, parseWebArgs, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
 
 export function buildPublicCommandSpecs(
@@ -88,6 +88,22 @@ export function buildPublicCommandSpecs(
     ],
     group: 'web',
     handler: (args) => buildHostedPilotPackage(getContracts(), parseHostedPilotPackageArgs(args, webPackageSpec)),
+  };
+
+  const installSpec: CommandSpec = {
+    usage:
+      'opl install [--modules <mas,mag,rca>] [--module <module_id>] [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>] [--skip-modules] [--skip-service] [--skip-web-open] [--skip-gui-open]',
+    summary: 'One-shot install for OPL family modules, Codex skills, local Product API service, and GUI launch hints.',
+    examples: [
+      'opl install',
+      'opl install --modules mas,mag,rca',
+      'opl install --modules mas --skip-gui-open',
+    ],
+    group: 'top_level',
+    handler: async (args) =>
+      buildPublicTurnkeyInstallPayload(
+        await runFrontDeskTurnkeyInstall(getContracts(), parseTurnkeyInstallArgs(args, installSpec)),
+      ),
   };
 
   const systemSpec = buildNoArgSpec(
@@ -287,6 +303,7 @@ export function buildPublicCommandSpecs(
         return buildCommandHelp(helpTarget, helpSpec);
       },
     },
+    install: installSpec,
     doctor: cloneCommandSpec(commandSpecs.doctor, { group: 'top_level' }),
     start: cloneCommandSpec(commandSpecs.start, { group: 'top_level' }),
     'skill list': cloneCommandSpec(commandSpecs['skill-list'], {
