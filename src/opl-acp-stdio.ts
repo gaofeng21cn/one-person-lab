@@ -14,6 +14,7 @@ import {
 } from './opl-acp-bridge.ts';
 import {
   buildCodexExecArgs,
+  type CodexExecEvent,
   parseCodexExecOutput,
   runCodexCommandStreaming,
 } from './codex.ts';
@@ -196,18 +197,6 @@ function readOptionalString(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
 }
 
-function splitResponseText(text: string, chunkSize = 80) {
-  if (text.length <= chunkSize) {
-    return [text];
-  }
-
-  const chunks: string[] = [];
-  for (let index = 0; index < text.length; index += chunkSize) {
-    chunks.push(text.slice(index, index + chunkSize));
-  }
-  return chunks;
-}
-
 function isJsonRpcRequest(value: unknown): value is JsonRpcRequest {
   const record = toRecord(value);
   if (!record) {
@@ -269,6 +258,7 @@ function recordBridgeUpdate(
   session: BridgeSessionRecord,
   source: BridgeUpdateEntry['source'],
   text: string,
+  messageId?: string,
 ) {
   const entry: BridgeUpdateEntry = {
     cursor: session.updates.length + 1,
@@ -277,12 +267,12 @@ function recordBridgeUpdate(
     source,
     text,
     created_at: new Date().toISOString(),
-    message_id: source === 'assistant' ? 'opl-acp-assistant' : 'opl-acp-status',
+    message_id: messageId ?? (source === 'assistant' ? 'opl-acp-assistant' : 'opl-acp-status'),
   };
   session.updates.push(entry);
   session.updatedAt = entry.created_at;
   if (source === 'assistant') {
-    session.lastResponse = text;
+    session.lastResponse = `${session.lastResponse ?? ''}${text}`;
   }
   return entry;
 }
@@ -302,11 +292,15 @@ function emitJsonRpcNotification(
 }
 
 function emitAssistantChunk(
-  writable: NodeJS.WritableStream,
+  writable: NodeJS.WritableStream | undefined,
   session: BridgeSessionRecord,
   text: string,
+  messageId?: string,
 ) {
-  const update = recordBridgeUpdate(session, 'assistant', text);
+  const update = recordBridgeUpdate(session, 'assistant', text, messageId);
+  if (!writable) {
+    return;
+  }
   emitJsonRpcNotification(writable, 'session/update', {
     sessionId: session.sessionId,
     update: {
@@ -318,6 +312,81 @@ function emitAssistantChunk(
       },
     },
   });
+}
+
+function emitToolCallStarted(
+  writable: NodeJS.WritableStream,
+  session: BridgeSessionRecord,
+  event: Extract<CodexExecEvent, { type: 'command_execution' }>,
+) {
+  emitJsonRpcNotification(writable, 'session/update', {
+    sessionId: session.sessionId,
+    update: {
+      sessionUpdate: 'tool_call',
+      toolCallId: event.toolCallId,
+      status: event.status,
+      title: event.title,
+      kind: 'execute',
+      rawInput: {
+        command: event.title,
+      },
+    },
+  });
+}
+
+function emitToolCallCompleted(
+  writable: NodeJS.WritableStream,
+  session: BridgeSessionRecord,
+  event: Extract<CodexExecEvent, { type: 'command_execution' }>,
+) {
+  emitJsonRpcNotification(writable, 'session/update', {
+    sessionId: session.sessionId,
+    update: {
+      sessionUpdate: 'tool_call_update',
+      toolCallId: event.toolCallId,
+      status: event.status,
+      ...(event.output
+        ? {
+            content: [
+              {
+                type: 'content',
+                content: {
+                  type: 'text',
+                  text: event.output,
+                },
+              },
+            ],
+          }
+        : {}),
+    },
+  });
+}
+
+function applyCodexExecEvent(
+  session: BridgeSessionRecord,
+  event: CodexExecEvent,
+  writable?: NodeJS.WritableStream,
+) {
+  switch (event.type) {
+    case 'thread.started':
+      session.runtimeSessionId = event.threadId ?? session.runtimeSessionId;
+      return;
+    case 'agent_message':
+      emitAssistantChunk(writable, session, event.text, event.messageId);
+      return;
+    case 'command_execution':
+      if (!writable) {
+        return;
+      }
+      if (event.status === 'pending' || event.status === 'in_progress') {
+        emitToolCallStarted(writable, session, event);
+        return;
+      }
+      emitToolCallCompleted(writable, session, event);
+      return;
+    default:
+      return;
+  }
 }
 
 function emitKeepaliveUpdate(
@@ -461,9 +530,16 @@ async function executeBridgePrompt(
     }, 5000);
   }
 
+  session.lastPrompt = promptText;
+  session.lastResponse = null;
+
   let result: Awaited<ReturnType<typeof runCodexCommandStreaming>>;
   try {
-    result = await runCodexCommandStreaming(args);
+    result = await runCodexCommandStreaming(args, {
+      onStdoutEvent: (event) => {
+        applyCodexExecEvent(session, event, writable);
+      },
+    });
   } finally {
     if (heartbeatTimer) {
       clearInterval(heartbeatTimer);
@@ -476,8 +552,10 @@ async function executeBridgePrompt(
 
   const parsed = parseCodexExecOutput(result.stdout);
   session.runtimeSessionId = parsed.threadId ?? session.runtimeSessionId;
-  session.lastPrompt = promptText;
-  session.lastResponse = parsed.finalMessage;
+  const finalMessage = session.lastResponse ?? parsed.finalMessage;
+  if (!session.lastResponse && finalMessage) {
+    emitAssistantChunk(undefined, session, finalMessage);
+  }
   session.updatedAt = new Date().toISOString();
   recordSessionLedgerEntry({
     sessionId: session.sessionId,
@@ -492,7 +570,11 @@ async function executeBridgePrompt(
 
   return {
     args,
-    parsed,
+    parsed: {
+      ...parsed,
+      threadId: session.runtimeSessionId ?? parsed.threadId,
+      finalMessage,
+    },
   };
 }
 
@@ -771,9 +853,6 @@ async function handleJsonRpcRequest(
         const session = requireBridgeSession(state, sessionId);
         const promptText = buildPromptText(params);
         const executed = await executeBridgePrompt(session, promptText, writable);
-        for (const chunk of splitResponseText(executed.parsed.finalMessage)) {
-          emitAssistantChunk(writable, session, chunk);
-        }
 
         return buildJsonRpcResult(request.id ?? null, {
           stopReason: 'end_turn',

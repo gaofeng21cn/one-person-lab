@@ -744,10 +744,11 @@ if [ "$1" = "exec" ]; then
   cat <<'EOF'
 {"type":"thread.started","thread_id":"opl-acp-thread-1"}
 {"type":"turn.started"}
+{"item":{"type":"agent_message","text":"ACP "}}
 EOF
   sleep 1
   cat <<'EOF'
-{"item":{"type":"agent_message","text":"ACP HELLO FROM CODEX"}}
+{"item":{"type":"agent_message","text":"HELLO FROM CODEX"}}
 {"type":"turn.completed"}
 EOF
   exit 0
@@ -828,6 +829,33 @@ exit 1
     });
 
     const notifications: Array<Record<string, unknown>> = [];
+    const firstNotification = await Promise.race([
+      readJsonLine(child.stdout),
+      new Promise<Record<string, unknown>>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('ACP runtime did not emit a streaming assistant update before turn completion.'));
+        }, 400);
+      }),
+    ]);
+    notifications.push(firstNotification);
+    assert.equal(firstNotification.method, 'session/update');
+    assert.equal(
+      (
+        firstNotification.params as {
+          update?: { sessionUpdate?: string; content?: { type?: string; text?: string } };
+        }
+      ).update?.sessionUpdate,
+      'agent_message_chunk',
+    );
+    assert.equal(
+      (
+        firstNotification.params as {
+          update?: { content?: { type?: string; text?: string } };
+        }
+      ).update?.content?.text,
+      'ACP ',
+    );
+
     let promptResponse: Record<string, unknown> | null = null;
     while (!promptResponse) {
       const message = await readJsonLine(child.stdout);
@@ -855,6 +883,14 @@ exit 1
       notifications.some((entry) => JSON.stringify(entry).includes('Codex 正在读取上下文并规划下一步。')),
       false,
     );
+    assert.equal(
+      notifications.some((entry) => JSON.stringify(entry).includes('"text":"ACP "')),
+      true,
+    );
+    assert.equal(
+      notifications.some((entry) => JSON.stringify(entry).includes('"text":"HELLO FROM CODEX"')),
+      true,
+    );
 
     writeJsonLine(child.stdin, {
       id: 'bridge-updates-1',
@@ -866,11 +902,15 @@ exit 1
     const updates = await readJsonLine(child.stdout);
     assert.equal(updates.ok, true);
     assert.equal((updates.result as { session_id: string }).session_id, bridgeSessionId);
-    assert.equal(
-      ((updates.result as { updates: Array<{ text: string }> }).updates).some((entry) =>
-        /ACP HELLO FROM CODEX/.test(entry.text)
-      ),
-      true,
+    assert.deepEqual(
+      ((updates.result as { updates: Array<{ text: string; source: string }> }).updates).map((entry) => ({
+        source: entry.source,
+        text: entry.text,
+      })),
+      [
+        { source: 'assistant', text: 'ACP ' },
+        { source: 'assistant', text: 'HELLO FROM CODEX' },
+      ],
     );
 
     writeJsonLine(child.stdin, {

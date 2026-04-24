@@ -1,10 +1,30 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import test from 'node:test';
 
 import {
   createAcpStdioBridgeState,
   handleAcpStdioRequest,
 } from '../../src/opl-acp-stdio.ts';
+
+function createFakeCodexFixture(handlerBody: string) {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-acp-stdio-codex-'));
+  const codexPath = path.join(fixtureRoot, 'codex');
+  fs.writeFileSync(
+    codexPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+${handlerBody}
+`,
+    { mode: 0o755 },
+  );
+  return {
+    fixtureRoot,
+    codexPath,
+  };
+}
 
 test('acp stdio initialize handshake 返回最小能力面', async () => {
   const state = createAcpStdioBridgeState();
@@ -150,5 +170,77 @@ test('acp stdio session_list / session_ledger 暴露 bridge lifecycle surfaces',
   assert.equal(
     typeof (ledger.result as { summary?: { entry_count?: number } }).summary?.entry_count,
     'number',
+  );
+});
+
+test('acp stdio prompt 按 Codex assistant chunk 记录 session_updates 并聚合最终响应', async (t) => {
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+if [ "$1" = "exec" ]; then
+  cat <<'EOF'
+{"type":"thread.started","thread_id":"opl-acp-stdio-thread-1"}
+{"type":"turn.started"}
+{"item":{"type":"agent_message","text":"ACP "}}
+{"item":{"type":"agent_message","text":"HELLO"}}
+{"type":"turn.completed"}
+EOF
+  exit 0
+fi
+echo "unexpected fake-codex args: $*" >&2
+exit 1
+`);
+  const previousCodexBin = process.env.OPL_CODEX_BIN;
+  process.env.OPL_CODEX_BIN = codexPath;
+  t.after(() => {
+    if (previousCodexBin === undefined) {
+      delete process.env.OPL_CODEX_BIN;
+    } else {
+      process.env.OPL_CODEX_BIN = previousCodexBin;
+    }
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  });
+
+  const state = createAcpStdioBridgeState();
+  await handleAcpStdioRequest({ id: 'req-init-4', command: 'initialize' }, state);
+
+  const prompted = await handleAcpStdioRequest(
+    {
+      id: 'req-prompt-1',
+      command: 'prompt',
+      payload: {
+        session_id: 'sess-prompt-1',
+        prompt: 'Say hello from ACP stdio prompt.',
+        cwd: process.cwd(),
+      },
+    },
+    state,
+  );
+
+  assert.equal(prompted.ok, true);
+  assert.equal(prompted.result?.surface_id, 'opl_acp_prompt');
+  assert.equal(prompted.result?.runtime_session_id, 'opl-acp-stdio-thread-1');
+  assert.equal(prompted.result?.stop_reason, 'end_turn');
+  assert.equal(prompted.result?.response, 'ACP HELLO');
+
+  const updates = await handleAcpStdioRequest(
+    {
+      id: 'req-updates-1',
+      command: 'session_updates',
+      payload: {
+        session_id: 'sess-prompt-1',
+      },
+    },
+    state,
+  );
+
+  assert.equal(updates.ok, true);
+  assert.deepEqual(
+    ((updates.result as { updates: Array<{ source: string; text: string }> }).updates).map((entry) => ({
+      source: entry.source,
+      text: entry.text,
+    })),
+    [
+      { source: 'assistant', text: 'ACP ' },
+      { source: 'assistant', text: 'HELLO' },
+    ],
   );
 });
