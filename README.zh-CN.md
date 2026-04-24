@@ -43,7 +43,7 @@
 
 ## 最快用起来
 
-支持环境：macOS 是桌面 App 的主目标；Linux 在具备 Node.js 22+、git 和各模块工具链时支持 CLI 与本地 Web App。一键安装或启动后，本地 Web App 默认访问地址是 `http://127.0.0.1:8787/`。
+支持环境：macOS 是桌面 App 的主目标；Linux 在具备 Node.js 22+、git 和各模块工具链时支持 CLI 路径。浏览器访问由 One Person Lab App 的「远程连接」设置开启。
 
 给用户的一行命令：
 
@@ -53,9 +53,9 @@ git clone https://github.com/gaofeng21cn/one-person-lab.git && cd one-person-lab
 
 给 Codex Agent 的一句话：
 
-> 安装并配置这个 OPL repo：clone repo，安装 OPL CLI，运行 `opl install`，确认 One Person Lab App、本地网页入口，以及 Research / Grant / Presentation Foundry 模块都准备好；如果某一步缺失，直接补齐或报告准确阻塞。
+> 安装并配置这个 OPL repo：clone repo，安装 OPL CLI，运行 `opl install`，确认 One Person Lab App 的「远程连接」WebUI，以及 Research / Grant / Presentation Foundry 模块都准备好；如果某一步缺失，直接补齐或报告准确阻塞。
 
-`opl install` 会一揽子准备 OPL CLI、本地网页入口、已安装的 One Person Lab App，以及当前活跃的产品家族模块。本地 Web App 默认访问地址是 `http://127.0.0.1:8787/`。
+`opl install` 会一揽子准备 OPL CLI、已安装的 One Person Lab App，以及当前活跃的产品家族模块。浏览器访问在 App 的「远程连接」里开启。
 
 ## 可以用来做什么
 
