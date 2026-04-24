@@ -1,0 +1,33 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="One Person Lab app icon">
+  <title>One Person Lab</title>
+  <defs>
+    <linearGradient id="bg" x1="112" y1="96" x2="912" y2="928" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#08233D"/>
+      <stop offset="0.56" stop-color="#0F4D7D"/>
+      <stop offset="1" stop-color="#2BB8B0"/>
+    </linearGradient>
+    <linearGradient id="card" x1="238" y1="210" x2="786" y2="824" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F8FCFF"/>
+      <stop offset="1" stop-color="#DCEEFF"/>
+    </linearGradient>
+    <filter id="shadow" x="80" y="80" width="864" height="864" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="28" stdDeviation="34" flood-color="#031323" flood-opacity="0.24"/>
+    </filter>
+  </defs>
+  <rect x="64" y="64" width="896" height="896" rx="210" fill="url(#bg)"/>
+  <g filter="url(#shadow)">
+    <rect x="214" y="190" width="596" height="644" rx="118" fill="url(#card)" fill-opacity="0.98"/>
+    <path d="M512 270C392.706 270 296 366.706 296 486C296 605.294 392.706 702 512 702C631.294 702 728 605.294 728 486" stroke="#0E385D" stroke-width="34" stroke-linecap="round"/>
+    <path d="M512 332C426.948 332 358 400.948 358 486C358 571.052 426.948 640 512 640C597.052 640 666 571.052 666 486" stroke="#2BB8B0" stroke-width="30" stroke-linecap="round"/>
+    <circle cx="512" cy="486" r="76" fill="#0E385D"/>
+    <circle cx="512" cy="486" r="34" fill="#7CE8E0"/>
+    <rect x="332" y="746" width="360" height="34" rx="17" fill="#0E385D" fill-opacity="0.18"/>
+    <rect x="384" y="736" width="256" height="34" rx="17" fill="#0E385D" fill-opacity="0.28"/>
+    <circle cx="356" cy="358" r="28" fill="#2BB8B0"/>
+    <circle cx="684" cy="358" r="28" fill="#F3B44B"/>
+    <circle cx="684" cy="634" r="28" fill="#7CA7FF"/>
+    <path d="M381 376L459 446" stroke="#0E385D" stroke-width="20" stroke-linecap="round"/>
+    <path d="M644 376L565 446" stroke="#0E385D" stroke-width="20" stroke-linecap="round"/>
+    <path d="M644 619L566 530" stroke="#0E385D" stroke-width="20" stroke-linecap="round"/>
+  </g>
+</svg>
