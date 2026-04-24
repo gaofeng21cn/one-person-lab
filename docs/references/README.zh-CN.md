@@ -79,7 +79,18 @@
 - `opl-operating-record-catalog.md`
 - `opl-operating-record-catalog.zh-CN.md`
 
-## 五、已退役 frontdesk 时代与历史迁移参考
+## 五、已退役 gateway / federation 兼容语料
+
+- `../gateway-federation.md`
+- `../gateway-federation.zh-CN.md`
+- `../opl-federation-contract.md`
+- `../opl-federation-contract.zh-CN.md`
+- `../opl-routed-action-gateway.md`
+- `../opl-routed-action-gateway.zh-CN.md`
+- `../../contracts/opl-gateway/README.md`
+- `../../contracts/opl-gateway/README.zh-CN.md`
+
+## 六、已退役 frontdesk 时代与历史迁移参考
 
 - `development-operating-model.md`
 - `runtime-alignment-taskboard.md`
@@ -93,5 +104,6 @@
 - 这些文档可以解释“为什么会这样冻结”，但不能反过来改写 `README*`、`docs/README*` 与核心五件套。
 - `series-doc-governance-checklist.md` 是当前仓与四仓系列项目保持一致时使用的仓级治理清单；带日期的同步摘要负责记录某一次具体跨仓梳理与对齐结果。
 - `four-repo-doc-intake-template.md` 是可复用的中央协调表单，用来记录跨仓文档轮次的范围、受影响仓、验证结果与清理状态。
-- 新参考文档优先按上面的五类归档。
+- 新参考文档优先按上面的六类归档。
+- 已退役的 gateway / federation 语料只用于历史审计、兼容性检查和 schema 追溯，不能再作为当前实现依据。
 - 已退役的 `frontdesk` 时代材料只用于历史审计，不能再作为当前实现依据。

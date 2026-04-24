@@ -2,6 +2,8 @@
 
 # OPL Routed Action Gateway
 
+> Historical note (`2026-04-24`): this document is retained as the planning-only routed-action freeze from the gateway-first phase. Current `OPL` does not use this file as its default runtime/activation contract.
+
 ## Purpose
 
 This document freezes the planning-only routed-action contract for the `OPL Gateway`.
