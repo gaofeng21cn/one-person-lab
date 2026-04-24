@@ -28,6 +28,7 @@
 ## 当前默认入口
 
 - 默认前门是 `opl`；`opl exec` 负责一次性请求，`opl resume` 负责续接会话。
+- `opl install` 是当前最短一键安装入口：默认安装 `MAS`、`MAG`、`RCA`，同步短名 Codex skills，安装并打开本地 Product API service，并尝试启动已安装的 AionUI GUI。
 - 这几个入口默认继承 `Codex` 语义；只有显式 runtime switch 或显式 domain activation 才进入不同语义。
 - `opl skill sync` 负责把家族 domain app skill pack 同步到 Codex 环境，供默认 `opl` / `opl exec` / `opl resume` 直接使用；默认 sibling repo 发现已经按 workspace/worktree 布局自动解析，不再依赖 `OPL_FAMILY_WORKSPACE_ROOT`。
 - `opl module install --module <module_id>` 现在走完整闭环：clone 到 OPL-managed modules root，执行仓库 bootstrap，同步对应 skill pack，再跑仓库健康检查。

@@ -1,4 +1,4 @@
-import { buildFrontDeskEnvironment, buildFrontDeskInitialize, buildFrontDeskModules, runFrontDeskEngineAction, runFrontDeskModuleAction, runFrontDeskSystemAction } from '../../frontdesk-installation.ts';
+import { buildFrontDeskEnvironment, buildFrontDeskInitialize, buildFrontDeskModules, runFrontDeskEngineAction, runFrontDeskModuleAction, runFrontDeskSystemAction, runFrontDeskTurnkeyInstall } from '../../frontdesk-installation.ts';
 import { getFrontDeskServiceStatus } from '../../frontdesk-service.ts';
 import { buildOplApiCatalog } from '../../opl-api-paths.ts';
 import type { GatewayContracts, GatewayContractsLoadOptions } from '../../types.ts';
@@ -135,6 +135,8 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
       examples: [
         'opl help',
         'opl',
+        'opl install',
+        'opl install --modules mas,mag,rca',
         'opl doctor',
         'opl skill list',
         'opl skill sync',
@@ -279,6 +281,17 @@ function buildPublicSystemInitializePayload(
   };
 }
 
+function buildPublicTurnkeyInstallPayload(
+  payload: Awaited<ReturnType<typeof runFrontDeskTurnkeyInstall>>,
+) {
+  return {
+    version: payload.version,
+    install: {
+      ...payload.frontdesk_turnkey_install,
+    },
+  };
+}
+
 function buildPublicModulesPayload(
   payload: ReturnType<typeof buildFrontDeskModules>,
 ) {
@@ -406,6 +419,7 @@ export {
   buildPublicSystemActionPayload,
   buildPublicSystemInitializePayload,
   buildPublicSystemPayload,
+  buildPublicTurnkeyInstallPayload,
   buildRootHelp,
   cloneCommandSpec,
   looksLikeNaturalLanguage,

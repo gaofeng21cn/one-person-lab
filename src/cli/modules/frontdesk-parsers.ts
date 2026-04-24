@@ -7,6 +7,7 @@ import type {
   FrontDeskModuleCliInput,
   HostedPilotPackageCliInput,
   SessionRuntimeCliInput,
+  TurnkeyInstallCliInput,
   UpdateChannelCliInput,
   WebCliInput,
   WorkspaceRegistryCliInput,
@@ -119,6 +120,73 @@ function parseWebArgs(
         throw buildUsageError(`Unknown option for web: ${token}.`, spec, {
           option: token,
         });
+    }
+
+    index += 1;
+  }
+
+  return parsed;
+}
+
+function parseTurnkeyInstallArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): TurnkeyInstallCliInput {
+  const parsed: TurnkeyInstallCliInput = { modules: [] };
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (token === '--skip-modules') {
+      parsed.skipModules = true;
+      continue;
+    }
+    if (token === '--skip-service') {
+      parsed.skipService = true;
+      continue;
+    }
+    if (token === '--skip-web-open') {
+      parsed.skipWebOpen = true;
+      continue;
+    }
+    if (token === '--skip-gui-open') {
+      parsed.skipGuiOpen = true;
+      continue;
+    }
+
+    if (!token.startsWith('--')) {
+      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, { token });
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, { option: token });
+    }
+
+    switch (token) {
+      case '--module':
+        parsed.modules.push(value);
+        break;
+      case '--modules':
+        parsed.modules.push(...value.split(',').map((entry) => entry.trim()).filter(Boolean));
+        break;
+      case '--host':
+        parsed.host = value;
+        break;
+      case '--port':
+        parsed.port = parsePort(token, value, spec);
+        break;
+      case '--path':
+        parsed.workspacePath = value;
+        break;
+      case '--sessions-limit':
+        parsed.sessionsLimit = parsePositiveInteger(token, value, spec);
+        break;
+      case '--base-path':
+        parsed.basePath = value;
+        break;
+      default:
+        throw buildUsageError(`Unknown option for install command: ${token}.`, spec, { option: token });
     }
 
     index += 1;
@@ -472,6 +540,7 @@ export {
   parseFrontDeskModuleArgs,
   parseHostedPilotPackageArgs,
   parseSessionRuntimeArgs,
+  parseTurnkeyInstallArgs,
   parseUpdateChannelArgs,
   parseWebArgs,
   parseWorkspaceRegistryArgs,

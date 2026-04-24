@@ -125,6 +125,19 @@ export type FrontDeskSystemActionInput = Partial<{
   basePath: string;
 }>;
 
+export type FrontDeskTurnkeyInstallInput = Partial<{
+  modules: string[];
+  host: string;
+  port: number;
+  workspacePath: string;
+  sessionsLimit: number;
+  basePath: string;
+  skipModules: boolean;
+  skipService: boolean;
+  skipWebOpen: boolean;
+  skipGuiOpen: boolean;
+}>;
+
 export function normalizeOptionalString(value: string | null | undefined) {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
