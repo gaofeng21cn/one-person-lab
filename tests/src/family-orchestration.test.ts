@@ -716,3 +716,19 @@ test('family orchestration schema examples stay aligned with canonical family ma
   assert.equal(eventEnvelopeExample.target_domain_id, medAutoScienceManifest.target_domain_id);
   assert.equal(checkpointLineageExample.target_domain_id, medAutoScienceManifest.target_domain_id);
 });
+
+test('family manifest schema requires repo-owned runtime continuity discovery surfaces', () => {
+  const schema = readJson('contracts/family-orchestration/family-product-entry-manifest-v2.schema.json');
+  const required = schema.required as string[];
+
+  assert.ok(required.includes('skill_catalog'));
+  assert.ok(required.includes('runtime_control'));
+  assert.ok(required.includes('session_continuity'));
+  assert.ok(required.includes('progress_projection'));
+  assert.ok(required.includes('artifact_inventory'));
+  assert.ok(required.includes('runtime_loop_closure'));
+
+  const properties = schema.properties as Json;
+  const runtimeControl = properties.runtime_control as Json;
+  assert.equal(runtimeControl.$ref, '#/$defs/runtimeControlSurface');
+});
