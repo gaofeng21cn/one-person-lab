@@ -1,4 +1,4 @@
-import { normalizeBasePath } from './frontdesk-paths.ts';
+import { normalizeOplWebBasePath } from './opl-web-paths.ts';
 
 export type OplApiCatalog = {
   resources: {
@@ -41,7 +41,7 @@ export type OplApiCatalog = {
 };
 
 export function buildOplApiCatalog(basePath = ''): OplApiCatalog {
-  const prefix = normalizeBasePath(basePath);
+  const prefix = normalizeOplWebBasePath(basePath);
   const apiBase = `${prefix}/api`;
   const oplBase = `${apiBase}/opl`;
 

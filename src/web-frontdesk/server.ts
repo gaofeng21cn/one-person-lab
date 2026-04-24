@@ -1,7 +1,7 @@
 import { createServer, type Server } from 'node:http';
 
 import { GatewayContractError } from '../contracts.ts';
-import { buildFrontDeskEntryUrl } from '../frontdesk-paths.ts';
+import { buildOplWebEntryUrl } from '../opl-web-paths.ts';
 import type { GatewayContracts } from '../types.ts';
 
 import { normalizeBaseUrlHost } from './normalization.ts';
@@ -30,7 +30,7 @@ export async function startWebFrontDeskServer(
         host: requestedHost,
         port: actualPort,
         baseUrl,
-        entryUrl: buildFrontDeskEntryUrl(baseUrl, basePath),
+        entryUrl: buildOplWebEntryUrl(baseUrl, basePath),
         basePath,
         workspacePath,
         sessionsLimit,
@@ -68,7 +68,7 @@ export async function startWebFrontDeskServer(
     host: requestedHost,
     port: resolvedPort,
     baseUrl,
-    entryUrl: buildFrontDeskEntryUrl(baseUrl, basePath),
+    entryUrl: buildOplWebEntryUrl(baseUrl, basePath),
     basePath,
     workspacePath,
     sessionsLimit,
