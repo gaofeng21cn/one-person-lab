@@ -698,6 +698,25 @@
             "grant"
           ],
           "domain_projection": {
+            "plugin_name": "med-autogrant",
+            "skill_entry": "med-autogrant",
+            "skill_semantics": "domain_app",
+            "entry_shell_key": "product_frontdesk",
+            "entry_command": "uv run python -m med_autogrant product-frontdesk --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+            "recommended_shell": "product_frontdesk",
+            "supporting_shell_keys": [
+              "grant_progress",
+              "grant_cockpit",
+              "grant_direct_entry",
+              "grant_user_loop"
+            ],
+            "shell_commands": {
+              "product_frontdesk": "uv run python -m med_autogrant product-frontdesk --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+              "grant_progress": "uv run python -m med_autogrant grant-progress --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+              "grant_cockpit": "uv run python -m med_autogrant grant-cockpit --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+              "grant_direct_entry": "uv run python -m med_autogrant grant-direct-entry --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
+              "grant_user_loop": "uv run python -m med_autogrant grant-user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json"
+            },
             "runtime_continuity": {
               "surface_kind": "skill_runtime_continuity",
               "runtime_owner": "upstream_hermes_agent",

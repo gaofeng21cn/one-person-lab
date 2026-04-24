@@ -106,7 +106,17 @@ exit 1
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-web-home-'));
   const stateDir = path.join(homeRoot, 'opl-state');
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-web-workspace-root-'));
-  const fixtures = loadFamilyManifestFixtures();
+  const fixtures = loadFamilyManifestFixtures() as any;
+  const masSkillProjection = fixtures.medautoscience.skill_catalog.skills[0].domain_projection;
+  masSkillProjection.plugin_name = 'med-autoscience';
+  masSkillProjection.skill_semantics = 'domain_app';
+  masSkillProjection.entry_shell_key = 'product_frontdesk';
+  masSkillProjection.entry_command = fixtures.medautoscience.skill_catalog.skills[0].command;
+  masSkillProjection.supporting_shell_keys = ['workspace_cockpit'];
+  masSkillProjection.shell_commands = {
+    product_frontdesk: fixtures.medautoscience.skill_catalog.skills[0].command,
+    workspace_cockpit: fixtures.medautoscience.operator_loop_surface.command,
+  };
   const { fixtureRoot: familyContractsFixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const sharedEnv = {
     HOME: homeRoot,
@@ -301,7 +311,14 @@ exit 1
     const masAgent = agentsPayload.agents.items.find((entry: { agent_id: string }) => entry.agent_id === 'mas');
     assert.equal(masAgent?.requires_workspace, true);
     assert.deepEqual(masAgent?.locator_fields.required, ['cwd', 'profile_ref']);
-    assert.equal(masAgent?.entry_spec.codex_entry_strategy, 'domain_agent_entry');
+    assert.equal(masAgent?.entry_spec.codex_entry_strategy, 'skill_activation_projection');
+    assert.equal(masAgent?.skill_id, 'medautoscience_product_frontdesk');
+    assert.equal(masAgent?.plugin_name, 'med-autoscience');
+    assert.equal(masAgent?.entry_shell_key, 'product_frontdesk');
+    assert.match(masAgent?.entry_command ?? '', /product-frontdesk/);
+    assert.deepEqual(masAgent?.supporting_shell_keys, ['workspace_cockpit']);
+    assert.match(masAgent?.shell_commands.product_frontdesk.command ?? '', /product-frontdesk/);
+    assert.equal(masAgent?.runtime_continuity.session_locator_field, 'study_id');
 
     const workspacesResponse = await fetch(`${baseUrl}/api/opl/workspaces`);
     const workspacesPayload = await workspacesResponse.json();
