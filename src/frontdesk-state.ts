@@ -16,10 +16,30 @@ export type FrontDeskStatePaths = {
   desktop_pilot_root: string;
 };
 
+function normalizeExplicitStateDir() {
+  return process.env.OPL_STATE_DIR?.trim() || process.env.OPL_FRONTDESK_STATE_DIR?.trim() || null;
+}
+
+function resolveDefaultStateDir(homeDir: string) {
+  const oplRoot = path.join(homeDir, 'Library', 'Application Support', 'OPL');
+  const runtimeStateDir = path.join(oplRoot, 'state');
+  const legacyStateDir = path.join(oplRoot, 'frontdesk');
+
+  if (fs.existsSync(runtimeStateDir)) {
+    return runtimeStateDir;
+  }
+
+  if (fs.existsSync(legacyStateDir)) {
+    return legacyStateDir;
+  }
+
+  return runtimeStateDir;
+}
+
 export function resolveFrontDeskStatePaths(): FrontDeskStatePaths {
-  const explicitStateDir = process.env.OPL_FRONTDESK_STATE_DIR?.trim();
+  const explicitStateDir = normalizeExplicitStateDir();
   const homeDir = process.env.HOME?.trim() || os.homedir();
-  const stateDir = explicitStateDir || path.join(homeDir, 'Library', 'Application Support', 'OPL', 'frontdesk');
+  const stateDir = explicitStateDir ? path.resolve(explicitStateDir) : resolveDefaultStateDir(homeDir);
 
   return {
     home_dir: homeDir,

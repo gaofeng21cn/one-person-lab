@@ -1,7 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 import { buildFrontDeskEndpoints } from '../../src/frontdesk-paths.ts';
+import { resolveFrontDeskStatePaths } from '../../src/frontdesk-state.ts';
 
 test('frontdesk endpoint catalog advertises OPL product API URLs for public resources and actions', () => {
   const endpoints = buildFrontDeskEndpoints('/pilot/opl');
@@ -26,4 +30,41 @@ test('frontdesk endpoint catalog advertises OPL product API URLs for public reso
   assert.equal(endpoints.sessions, '/pilot/opl/api/opl/sessions');
   assert.equal(endpoints.resume, '/pilot/opl/api/opl/sessions/resume');
   assert.equal(endpoints.logs, '/pilot/opl/api/opl/sessions/logs');
+});
+
+test('frontdesk state paths default to OPL state dir and preserve legacy frontdesk dir when it already exists', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-state-paths-'));
+  const previousHome = process.env.HOME;
+  const previousStateDir = process.env.OPL_STATE_DIR;
+  const previousLegacyStateDir = process.env.OPL_FRONTDESK_STATE_DIR;
+
+  delete process.env.OPL_STATE_DIR;
+  delete process.env.OPL_FRONTDESK_STATE_DIR;
+  process.env.HOME = homeRoot;
+
+  try {
+    const baseDir = path.join(homeRoot, 'Library', 'Application Support', 'OPL');
+    const expectedStateDir = path.join(baseDir, 'state');
+    assert.equal(resolveFrontDeskStatePaths().state_dir, expectedStateDir);
+
+    fs.mkdirSync(path.join(baseDir, 'frontdesk'), { recursive: true });
+    assert.equal(resolveFrontDeskStatePaths().state_dir, path.join(baseDir, 'frontdesk'));
+  } finally {
+    if (previousHome === undefined) {
+      delete process.env.HOME;
+    } else {
+      process.env.HOME = previousHome;
+    }
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    if (previousLegacyStateDir === undefined) {
+      delete process.env.OPL_FRONTDESK_STATE_DIR;
+    } else {
+      process.env.OPL_FRONTDESK_STATE_DIR = previousLegacyStateDir;
+    }
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
 });

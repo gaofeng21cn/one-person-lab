@@ -568,7 +568,13 @@ function runGitFixtureCommand(
   return result;
 }
 
-function createGitModuleRemoteFixture(moduleName = 'med-autoscience') {
+function createGitModuleRemoteFixture(
+  moduleName = 'med-autoscience',
+  options: Partial<{
+    extraFiles: Record<string, string>;
+    executableFiles: string[];
+  }> = {},
+) {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-module-remote-'));
   const sourceRoot = path.join(fixtureRoot, 'source');
   const remoteRoot = path.join(fixtureRoot, `${moduleName}.git`);
@@ -580,7 +586,21 @@ function createGitModuleRemoteFixture(moduleName = 'med-autoscience') {
   runGitFixtureCommand(sourceRoot, ['config', 'user.email', 'opl@example.test']);
 
   fs.writeFileSync(path.join(sourceRoot, 'README.md'), `# ${moduleName}\n`, 'utf8');
+  for (const [relativePath, contents] of Object.entries(options.extraFiles ?? {})) {
+    const targetPath = path.join(sourceRoot, relativePath);
+    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+    fs.writeFileSync(targetPath, contents, {
+      encoding: 'utf8',
+      mode:
+        relativePath.endsWith('.sh') || (options.executableFiles ?? []).includes(relativePath)
+          ? 0o755
+          : undefined,
+    });
+  }
   runGitFixtureCommand(sourceRoot, ['add', 'README.md']);
+  if (options.extraFiles && Object.keys(options.extraFiles).length > 0) {
+    runGitFixtureCommand(sourceRoot, ['add', ...Object.keys(options.extraFiles)]);
+  }
   runGitFixtureCommand(sourceRoot, ['commit', '-m', 'Initial module snapshot']);
 
   runGitFixtureCommand(fixtureRoot, ['init', '--bare', remoteRoot]);

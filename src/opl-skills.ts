@@ -4,6 +4,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 import { GatewayContractError } from './contracts.ts';
+import { resolveFrontDeskStatePaths } from './frontdesk-state.ts';
 
 type SkillPackInstallerKind = 'bash' | 'node';
 
@@ -91,12 +92,56 @@ const DOMAIN_ALIAS_MAP = new Map<string, SkillPackSpec['domain_id']>([
   ['redcube_ai', 'redcube'],
 ]);
 
-function resolveProjectRoot() {
-  return path.resolve(path.dirname(fileURLToPath(import.meta.url)));
+type ResolveFamilyWorkspaceRootOptions = {
+  repoRootHint?: string;
+};
+
+function isDirectory(filePath: string) {
+  return fs.existsSync(filePath) && fs.statSync(filePath).isDirectory();
 }
 
-function resolveSiblingWorkspaceRoot() {
-  return path.dirname(resolveProjectRoot());
+function resolveRepoRootPath(options: ResolveFamilyWorkspaceRootOptions = {}) {
+  const repoRootHint = normalizeOptionalString(options.repoRootHint);
+  if (repoRootHint) {
+    return path.resolve(repoRootHint);
+  }
+
+  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+}
+
+export function resolveFamilyWorkspaceRootFromRepoRoot(repoRoot: string) {
+  let current = path.resolve(repoRoot);
+
+  while (true) {
+    const baseName = path.basename(current);
+    if (baseName === '.worktrees' || baseName === 'worktrees') {
+      return path.dirname(path.dirname(current));
+    }
+
+    const parent = path.dirname(current);
+    if (parent === current) {
+      return path.dirname(path.resolve(repoRoot));
+    }
+    current = parent;
+  }
+}
+
+export function resolveDefaultFamilyWorkspaceRoot(options: ResolveFamilyWorkspaceRootOptions = {}) {
+  const configuredWorkspaceRoot = normalizeOptionalString(process.env.OPL_FAMILY_WORKSPACE_ROOT);
+  if (configuredWorkspaceRoot) {
+    return path.resolve(configuredWorkspaceRoot);
+  }
+
+  return resolveFamilyWorkspaceRootFromRepoRoot(resolveRepoRootPath(options));
+}
+
+function resolveManagedModulesRoot() {
+  const explicitRoot = normalizeOptionalString(process.env.OPL_MODULES_ROOT);
+  if (explicitRoot) {
+    return path.resolve(explicitRoot);
+  }
+
+  return path.join(resolveFrontDeskStatePaths().state_dir, 'modules');
 }
 
 function normalizeOptionalString(value: string | undefined | null) {
@@ -136,11 +181,17 @@ function resolveRepoRoot(spec: SkillPackSpec) {
     return path.resolve(envValue);
   }
 
-  const configuredWorkspaceRoot = normalizeOptionalString(process.env.OPL_FAMILY_WORKSPACE_ROOT);
-  const workspaceRoot = configuredWorkspaceRoot
-    ? path.resolve(configuredWorkspaceRoot)
-    : resolveSiblingWorkspaceRoot();
-  return path.join(workspaceRoot, spec.project);
+  const managedRepoRoot = path.join(resolveManagedModulesRoot(), spec.project);
+  if (isDirectory(managedRepoRoot)) {
+    return managedRepoRoot;
+  }
+
+  const siblingRepoRoot = path.join(resolveDefaultFamilyWorkspaceRoot(), spec.project);
+  if (isDirectory(siblingRepoRoot)) {
+    return siblingRepoRoot;
+  }
+
+  return managedRepoRoot;
 }
 
 function buildPluginManifestPath(spec: SkillPackSpec, repoRoot: string) {
@@ -192,7 +243,13 @@ function maybeParseJsonRecord(raw: string) {
 }
 
 function inspectFamilySkillPack(spec: SkillPackSpec): InspectFamilySkillPack {
-  const repoRoot = resolveRepoRoot(spec);
+  return inspectFamilySkillPackAtRepoRoot(spec, resolveRepoRoot(spec));
+}
+
+function inspectFamilySkillPackAtRepoRoot(
+  spec: SkillPackSpec,
+  repoRoot: string,
+): InspectFamilySkillPack {
   const repoFound = fs.existsSync(repoRoot) && fs.statSync(repoRoot).isDirectory();
   const pluginManifestPath = buildPluginManifestPath(spec, repoRoot);
   const skillEntryPath = buildSkillEntryPath(spec, repoRoot);
@@ -282,6 +339,31 @@ function runInstaller(
   };
 }
 
+export function syncFamilySkillPackFromRepoRoot(
+  domainId: SkillPackSpec['domain_id'],
+  repoRoot: string,
+  options: Partial<{
+    home: string;
+  }> = {},
+) {
+  const spec = FAMILY_SKILL_PACK_SPECS.find((entry) => entry.domain_id === domainId);
+  if (!spec) {
+    throw new GatewayContractError(
+      'cli_usage_error',
+      `Unknown skill pack domain: ${domainId}.`,
+      {
+        domain_id: domainId,
+        allowed_domains: FAMILY_SKILL_PACK_SPECS.map((entry) => entry.domain_id),
+      },
+    );
+  }
+
+  return runInstaller(
+    inspectFamilySkillPackAtRepoRoot(spec, path.resolve(repoRoot)),
+    normalizeOptionalString(options.home) ?? undefined,
+  );
+}
+
 export function readFamilySkillPacks(options: ReadFamilySkillPacksOptions = {}) {
   const selectedDomains = normalizeDomainSelection(options.domains);
   const packs = FAMILY_SKILL_PACK_SPECS
@@ -292,7 +374,7 @@ export function readFamilySkillPacks(options: ReadFamilySkillPacksOptions = {}) 
     version: 'g2',
     skill_catalog: {
       surface_id: 'opl_skill_catalog',
-      workspace_root: normalizeOptionalString(process.env.OPL_FAMILY_WORKSPACE_ROOT) ?? resolveSiblingWorkspaceRoot(),
+      workspace_root: resolveDefaultFamilyWorkspaceRoot(),
       packs,
       summary: {
         total: packs.length,
@@ -315,7 +397,7 @@ export function syncFamilySkillPacks(options: SyncFamilySkillPacksOptions = {}) 
     version: 'g2',
     skill_sync: {
       surface_id: 'opl_skill_sync',
-      workspace_root: normalizeOptionalString(process.env.OPL_FAMILY_WORKSPACE_ROOT) ?? resolveSiblingWorkspaceRoot(),
+      workspace_root: resolveDefaultFamilyWorkspaceRoot(),
       home: resolvedHome ?? process.env.HOME ?? null,
       packs,
       summary: {
