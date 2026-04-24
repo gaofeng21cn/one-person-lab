@@ -7,6 +7,7 @@ node scripts/line-budget.mjs
 
 case "$lane" in
   smoke|fast)
+    npm run line-budget
     npm test
     ;;
   family)
@@ -27,12 +28,18 @@ case "$lane" in
   full)
     npm run test:full
     ;;
+  lint)
+    npm run lint
+    ;;
+  line-budget)
+    npm run line-budget
+    ;;
   typecheck)
     npm run typecheck
     ;;
   *)
     echo "Unknown lane: $lane" >&2
-    echo "Usage: scripts/verify.sh [smoke|fast|family|meta|artifact|full|typecheck]" >&2
+    echo "Usage: scripts/verify.sh [smoke|fast|family|meta|artifact|full|lint|line-budget|typecheck]" >&2
     exit 1
     ;;
 esac

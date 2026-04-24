@@ -33,7 +33,8 @@
     "test:meta": "NODE_NO_WARNINGS=1 node --experimental-strip-types --test tests/src/verification-command-surfaces.test.ts tests/src/family-shared-release-discipline.test.ts tests/src/family-shared-release.test.ts",
     "test:artifact": "npm run build && NODE_NO_WARNINGS=1 node --test tests/built/**/*.test.mjs",
     "test:full": "./scripts/run-parallel-test-lanes.sh full",
-    "test": "npm run test:fast"
+    "test": "npm run test:fast",
+    "line-budget": "node ./scripts/line-budget.mjs"
   },
   "devDependencies": {
     "@types/node": "^24.5.2",

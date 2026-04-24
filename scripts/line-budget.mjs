@@ -7,16 +7,10 @@ process.chdir(repoRoot);
 
 const DEFAULT_LIMIT = 1000;
 const BASELINE = new Map(Object.entries({
-  "python/opl-harness-shared/src/opl_harness_shared/product_entry_companions.py": 1221,
-  "python/opl-harness-shared/tests/test_product_entry_companions.py": 1111,
-  "src/product-entry-companions.ts": 1796,
   "src/product-entry.ts": 1079,
   "src/web-frontdesk/payload-builders.ts": 1023,
   "tests/built/cli.test.mjs": 1745,
-  "tests/src/cli/cases/frontdesk-system.test.ts": 1868,
-  "tests/src/cli/cases/workspace-domain.test.ts": 1908,
   "tests/src/cli/helpers.ts": 1390,
-  "tests/src/product-entry-companions.test.ts": 1415,
 }));
 const CODE_EXTENSIONS = new Set(['.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx', '.mts', '.cts', '.py', '.sh', '.bash', '.zsh', '.rs', '.go']);
 const IGNORED_PARTS = new Set(['node_modules', 'dist', 'build', 'coverage', '.venv', '__pycache__']);
