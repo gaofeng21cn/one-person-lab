@@ -43,7 +43,7 @@
 
 ## Fast Start
 
-Supported environment: macOS is the primary desktop App target; the CLI and local Web App are supported on Linux when Node.js 22+, git, and the module toolchains are available. The default Web App URL after install/start is `http://127.0.0.1:8787/`.
+Supported environment: macOS is the primary desktop App target; Linux supports the CLI path when Node.js 22+, git, and the module toolchains are available. Remote browser access is provided by the One Person Lab App WebUI from the Remote Connection settings tab.
 
 One command for a human user:
 
@@ -53,9 +53,9 @@ git clone https://github.com/gaofeng21cn/one-person-lab.git && cd one-person-lab
 
 One instruction for a Codex Agent:
 
-> Install and configure this OPL repo: clone it, install the OPL CLI, run `opl install`, and ensure the One Person Lab App, local web entry, and the Research / Grant / Presentation Foundry modules are ready; if anything is missing, fix it or report the exact blocker.
+> Install and configure this OPL repo: clone it, install the OPL CLI, run `opl install`, and ensure the One Person Lab App Remote Connection WebUI and the Research / Grant / Presentation Foundry modules are ready; if anything is missing, fix it or report the exact blocker.
 
-`opl install` prepares the OPL CLI, the local web entry, the installed One Person Lab App when present, and the active product-family modules in one pass. The local Web App opens at `http://127.0.0.1:8787/` by default.
+`opl install` prepares the OPL CLI, the installed One Person Lab App when present, and the active product-family modules in one pass. Browser access is enabled from the App’s Remote Connection tab.
 
 ## What People Use It For
 
@@ -109,7 +109,7 @@ The desktop GUI is maintained by [`opl-aion-shell`](https://github.com/gaofeng21
 - Then read [Project](./docs/project.md), [Status](./docs/status.md), [Architecture](./docs/architecture.md), [Invariants](./docs/invariants.md), and [Decisions](./docs/decisions.md). This is the fastest way to recover the top-level boundary, the Codex-default runtime contract, the explicit activation layer, and the admitted domains.
 - The default frontdoors are `opl`, `opl exec`, and `opl resume`. They inherit Codex-default semantics unless you explicitly switch runtime or activate a domain agent. `MCP` stays the supported protocol layer, and `controller` stays internal.
 - The active interaction route is Codex-default first: local `opl`, direct `Codex` usage, and future external shells all consume the same session/runtime truth. `opl skill sync` now auto-discovers sibling family repositories from the workspace layout by default, so local worktrees no longer need `OPL_FAMILY_WORKSPACE_ROOT` just to surface the family skill packs inside Codex.
-- The shortest first-run command is `opl install`. It installs/configures `Codex CLI` and `Hermes-Agent`, installs the default family modules (`MAS` with its `MDS` dependency, `MAG`, `RCA`), syncs their Codex skills, installs/opens the local Product API service, and opens the installed One Person Lab App when present.
+- The shortest first-run command is `opl install`. It installs/configures `Codex CLI` and `Hermes-Agent`, installs the default family modules (`MAS` with its `MDS` dependency, `MAG`, `RCA`), syncs their Codex skills, opens the installed One Person Lab App when present, and leaves browser access to the App’s Remote Connection WebUI.
 - If one of the admitted domain repositories is not present yet, run `opl module install --module <module_id>`. The install path is now a turnkey loop: clone into the OPL-managed modules root, run the repo-specific bootstrap, sync the matching Codex skill pack, then finish with a repo health check.
 - For a first-run install surface, run `opl system initialize`. It exposes runtime dependencies, domain modules, the recommended companion skill bundle (`superpowers`, `officecli`, and native Office skills when present), and the OPL-branded GUI shell strategy in one machine-readable payload.
 - GUI packaging is owned by the sibling `opl-aion-shell` repository. A valid prebuilt GUI package means an OPL-branded Electron-builder release asset uploaded to GitHub Releases (`.dmg`, `.exe`, or `.deb`) plus updater metadata (`latest*.yml`); source build is the fallback when no asset matches the local platform and architecture.
