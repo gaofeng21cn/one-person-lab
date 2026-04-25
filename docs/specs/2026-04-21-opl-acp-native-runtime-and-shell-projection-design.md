@@ -6,7 +6,7 @@
 
 截至 `2026-04-21`，`OPL` 已经完成两轮重要收口：
 
-- GUI 主线从 `Onyx` 切到 `AionUI`
+- GUI 主线确定为基于 `AionUI` codebase 的 `opl-aion-shell`
 - 公开产品模型已经统一到 `system / engines / modules / agents / workspaces / sessions / progress / artifacts`
 
 但这两轮收口之后，新的关键问题已经不是“GUI 基座选谁”，而是：

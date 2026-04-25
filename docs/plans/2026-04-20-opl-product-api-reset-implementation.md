@@ -39,7 +39,6 @@
 - Modify: `docs/specs/2026-04-12-opl-frontdesk-and-family-entry-design.md`
 - Modify: `docs/history/frontdesk-legacy/2026-04-19-opl-initialize-and-environment-manager-design.md`
 - Modify: `docs/plans/2026-04-12-opl-frontdesk-and-family-entry-implementation.md`
-- Modify: `docs/history/frontdesk-legacy/2026-04-19-opl-initialize-and-onyx-overlay-implementation.md`
 
 - [ ] 给仍然保留的历史 `frontdesk` 设计和计划文档加上“已退役 / superseded”标识。
 - [ ] 更新历史索引和参考索引，明确这些文档只作历史审计，不再作为当前实现依据。
