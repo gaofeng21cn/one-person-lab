@@ -12,23 +12,29 @@ type OplCompanionSkillSourceCandidate = {
   report_path: string;
   link_path: string;
 };
-export type OplCompanionSkillSyncStatus = 'synced' | 'available' | 'installed' | 'missing_source' | 'failed';
+export type OplCompanionSkillActionStatus = 'planned' | 'ready' | 'missing_source' | 'synced' | 'available' | 'installed' | 'failed';
+export type OplCompanionSkillApplyMode = 'observe' | 'ask_to_apply' | 'managed';
+export type OplSuperpowersProfile = 'keep' | 'lite' | 'full';
 
 export type OplCompanionSkillSyncItem = {
   skill_id: string;
   source_path: string | null;
   target_path: string;
-  status: OplCompanionSkillSyncStatus;
-  action: 'symlink' | 'clone_and_symlink' | 'update_and_symlink' | 'discover_only';
+  status: OplCompanionSkillActionStatus;
+  action: 'none' | 'symlink' | 'clone_and_symlink' | 'update_and_symlink' | 'discover_only';
   note: string | null;
 };
 
 export type OplCompanionSkillSyncResult = {
   surface_id: 'opl_companion_skill_sync';
+  mode: OplCompanionSkillApplyMode;
+  superpowers_profile: OplSuperpowersProfile;
   codex_skills_dir: string;
+  agents_skills_dir: string;
   items: OplCompanionSkillSyncItem[];
   summary: {
     total: number;
+    ready: number;
     synced: number;
     missing_source: number;
     failed: number;
@@ -198,7 +204,89 @@ function pickFirstExistingSkillSource(paths: string[]) {
   return null;
 }
 
-export function syncOplCompanionSkills(home = resolveHomeDir()): OplCompanionSkillSyncResult {
+function resolveSuperpowersLiteSource(home: string): OplCompanionSkillSourceCandidate | null {
+  const liteSkillPath = path.join(home, '.skills-manager', 'skills', 'superpowers-lite');
+  return resolveSkillSourceCandidate(liteSkillPath);
+}
+
+function resolveRecommendedSkillTarget(home: string, skill: OplRecommendedSkill, superpowersProfile: OplSuperpowersProfile) {
+  if (skill.source !== 'superpowers') {
+    return path.join(resolveCodexSkillsDir(home), skill.skill_id);
+  }
+  if (superpowersProfile === 'lite') {
+    return path.join(resolveAgentsSkillsDir(home), 'superpowers-lite');
+  }
+  if (superpowersProfile === 'full') {
+    return path.join(resolveAgentsSkillsDir(home), 'superpowers');
+  }
+  return path.join(resolveAgentsSkillsDir(home), 'superpowers');
+}
+
+function buildObservedCompanionItem(
+  home: string,
+  skill: OplRecommendedSkill,
+  superpowersProfile: OplSuperpowersProfile,
+): OplCompanionSkillSyncItem {
+  const targetPath = resolveRecommendedSkillTarget(home, skill, superpowersProfile);
+  const source = skill.source === 'superpowers'
+    ? (superpowersProfile === 'lite' ? resolveSuperpowersLiteSource(home) : resolveSuperpowersSourceCandidate(home))
+    : pickFirstExistingSkillSource(skill.expected_paths);
+
+  return {
+    skill_id: skill.skill_id,
+    source_path: source?.report_path ?? null,
+    target_path: targetPath,
+    status: skill.status === 'ready' ? 'ready' : 'planned',
+    action: skill.source === 'codex_builtin' ? 'discover_only' : 'none',
+    note: skill.status === 'ready' ? null : skill.install_hint,
+  };
+}
+
+function buildNoApplyCompanionResult(
+  home: string,
+  mode: OplCompanionSkillApplyMode,
+  superpowersProfile: OplSuperpowersProfile,
+): OplCompanionSkillSyncResult {
+  const items = buildOplRecommendedSkills(home).map((skill) => buildObservedCompanionItem(home, skill, superpowersProfile));
+  return buildCompanionResult(home, mode, superpowersProfile, items);
+}
+
+function buildCompanionResult(
+  home: string,
+  mode: OplCompanionSkillApplyMode,
+  superpowersProfile: OplSuperpowersProfile,
+  items: OplCompanionSkillSyncItem[],
+): OplCompanionSkillSyncResult {
+  return {
+    surface_id: 'opl_companion_skill_sync',
+    mode,
+    superpowers_profile: superpowersProfile,
+    codex_skills_dir: resolveCodexSkillsDir(home),
+    agents_skills_dir: resolveAgentsSkillsDir(home),
+    items,
+    summary: {
+      total: items.length,
+      ready: items.filter((entry) => entry.status === 'ready' || entry.status === 'available').length,
+      synced: items.filter((entry) => entry.status === 'synced' || entry.status === 'installed' || entry.status === 'available').length,
+      missing_source: items.filter((entry) => entry.status === 'missing_source').length,
+      failed: items.filter((entry) => entry.status === 'failed').length,
+    },
+  };
+}
+
+export function syncOplCompanionSkills(
+  home = resolveHomeDir(),
+  options: Partial<{
+    mode: OplCompanionSkillApplyMode;
+    superpowersProfile: OplSuperpowersProfile;
+  }> = {},
+): OplCompanionSkillSyncResult {
+  const mode = options.mode ?? 'observe';
+  const superpowersProfile = options.superpowersProfile ?? 'keep';
+  if (mode !== 'managed') {
+    return buildNoApplyCompanionResult(home, mode, superpowersProfile);
+  }
+
   const codexSkillsDir = resolveCodexSkillsDir(home);
   const agentsSkillsDir = resolveAgentsSkillsDir(home);
   const recommendedSkills = buildOplRecommendedSkills(home);
@@ -206,7 +294,47 @@ export function syncOplCompanionSkills(home = resolveHomeDir()): OplCompanionSki
 
   for (const skill of recommendedSkills) {
     if (skill.source === 'superpowers') {
-      const targetPath = path.join(agentsSkillsDir, 'superpowers');
+      const targetPath = resolveRecommendedSkillTarget(home, skill, superpowersProfile);
+      if (superpowersProfile === 'keep') {
+        items.push(buildObservedCompanionItem(home, skill, superpowersProfile));
+        continue;
+      }
+      if (superpowersProfile === 'lite') {
+        const source = resolveSuperpowersLiteSource(home);
+        if (!source) {
+          items.push({
+            skill_id: skill.skill_id,
+            source_path: null,
+            target_path: targetPath,
+            status: 'missing_source',
+            action: 'symlink',
+            note: 'Superpowers lite profile requires ~/.skills-manager/skills/superpowers-lite.',
+          });
+          continue;
+        }
+        try {
+          forceSymlinkDirectory(source.link_path, targetPath);
+          items.push({
+            skill_id: skill.skill_id,
+            source_path: source.report_path,
+            target_path: targetPath,
+            status: 'synced',
+            action: 'symlink',
+            note: 'Preserved lite Superpowers profile instead of enabling upstream using-superpowers.',
+          });
+        } catch (error) {
+          items.push({
+            skill_id: skill.skill_id,
+            source_path: source.report_path,
+            target_path: targetPath,
+            status: 'failed',
+            action: 'symlink',
+            note: error instanceof Error ? error.message : String(error),
+          });
+        }
+        continue;
+      }
+
       const ensured = ensureSuperpowersSource(home);
       if (!ensured.source) {
         items.push({
@@ -292,17 +420,7 @@ export function syncOplCompanionSkills(home = resolveHomeDir()): OplCompanionSki
     }
   }
 
-  return {
-    surface_id: 'opl_companion_skill_sync',
-    codex_skills_dir: codexSkillsDir,
-    items,
-    summary: {
-      total: items.length,
-      synced: items.filter((entry) => entry.status === 'synced' || entry.status === 'installed' || entry.status === 'available').length,
-      missing_source: items.filter((entry) => entry.status === 'missing_source').length,
-      failed: items.filter((entry) => entry.status === 'failed').length,
-    },
-  };
+  return buildCompanionResult(home, mode, superpowersProfile, items);
 }
 
 export function buildOplRecommendedSkills(home = resolveHomeDir()): OplRecommendedSkill[] {
@@ -370,15 +488,6 @@ export function buildOplRecommendedSkills(home = resolveHomeDir()): OplRecommend
       expected_paths: [path.join(skillsManagerHome, 'skills', 'officecli-xlsx', 'SKILL.md')],
       install_hint: 'Install officecli-xlsx for spreadsheet and dashboard work.',
       supports: ['xlsx', 'dashboard'],
-    },
-    {
-      skill_id: 'morph-ppt',
-      label: 'Morph presentation skill',
-      required: false,
-      source: 'skills_manager',
-      expected_paths: [path.join(skillsManagerHome, 'skills', 'morph-ppt', 'SKILL.md')],
-      install_hint: 'Install morph-ppt for animated presentation deliverables.',
-      supports: ['pptx', 'morph_transition'],
     },
     {
       skill_id: 'openai_primary_runtime_office',
