@@ -2,15 +2,16 @@ import { GatewayContractError, PassThrough, assert, buildManifestCommand, buildP
 import { buildInternalCommandSpecs } from '../../../../src/cli/cases/private-command-specs.ts';
 import { buildPublicCommandSpecs } from '../../../../src/cli/cases/public-command-specs.ts';
 
-test('help keeps the repo-tracked GUI lane on web adapter and service surfaces', () => {
+test('help keeps GUI lane on the explicit web adapter without launchd service commands', () => {
   const output = runCli(['help']);
   const web = output.help.commands.find((entry: { command: string }) => entry.command === 'web');
 
   assert.ok(web);
-  assert.match(web.summary, /service/i);
-  assert.match(web.summary, /GUI/i);
-  assert.ok(
+  assert.match(web.summary, /explicit/i);
+  assert.match(web.summary, /adapter/i);
+  assert.equal(
     output.help.commands.some((entry: { command: string }) => entry.command === 'service install'),
+    false,
   );
   assert.ok(
     output.help.commands.some((entry: { command: string }) => entry.command === 'web bundle'),
@@ -657,15 +658,16 @@ EOF
   }
 });
 
-test('help keeps web adapter and service commands as the default GUI lane', () => {
+test('help keeps web adapter without service commands as the default GUI lane', () => {
   const output = runCli(['help']);
   const web = output.help.commands.find((entry: { command: string }) => entry.command === 'web');
 
   assert.ok(web);
-  assert.match(web.summary, /service/i);
-  assert.match(web.summary, /GUI/i);
-  assert.ok(
+  assert.match(web.summary, /explicit/i);
+  assert.match(web.summary, /adapter/i);
+  assert.equal(
     output.help.commands.some((entry: { command: string }) => entry.command === 'service install'),
+    false,
   );
   assert.ok(
     output.help.commands.some((entry: { command: string }) => entry.command === 'web bundle'),

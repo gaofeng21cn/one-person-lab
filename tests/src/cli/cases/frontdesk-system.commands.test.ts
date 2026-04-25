@@ -46,7 +46,7 @@ test('public command specs no longer depend on legacy frontdesk command ids', ()
   assert.equal(typeof publicSpecs['web bundle'].handler, 'function');
   assert.equal(typeof publicSpecs['module install'].handler, 'function');
   assert.equal(typeof publicSpecs['engine install'].handler, 'function');
-  assert.equal(typeof publicSpecs['service install'].handler, 'function');
+  assert.equal(publicSpecs['service install'], undefined);
 });
 
 test('status dashboard aggregates front-desk management surfaces into one view', () => {
@@ -138,8 +138,9 @@ test('help advertises the local web front-desk pilot command surface', () => {
   assert.ok(
     output.help.commands.some((entry: { command: string }) => entry.command === 'system initialize'),
   );
-  assert.ok(
+  assert.equal(
     output.help.commands.some((entry: { command: string }) => entry.command === 'service install'),
+    false,
   );
   assert.ok(
     output.help.commands.some((entry: { command: string }) => entry.command === 'modules'),
@@ -160,7 +161,7 @@ test('help advertises initialize and environment management command surfaces', (
   assert.equal(commands.includes('system initialize'), true);
   assert.equal(commands.includes('engine install'), true);
   assert.equal(commands.includes('system repair'), true);
-  assert.equal(commands.includes('system reinstall-support'), true);
+  assert.equal(commands.includes('system reinstall-support'), false);
   assert.equal(commands.includes('system update-channel'), true);
   assert.equal(commands.includes('modules'), true);
   assert.equal(commands.includes('module install'), true);
@@ -185,84 +186,21 @@ test('legacy frontdesk command surfaces are retired from the public CLI', () => 
   }
 });
 
-test('service commands manage the local launchd wrapper for the web pilot', async () => {
-  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-frontdesk-home-'));
-  const launchctlFixture = createFakeLaunchctlFixture();
-  const openFixture = createFakeOpenFixture();
-  const serviceEnv = {
-    HOME: homeRoot,
-    OPL_LAUNCHCTL_BIN: launchctlFixture.launchctlPath,
-    OPL_OPEN_BIN: openFixture.openPath,
-  };
-  const configuredPort = 8911;
+test('public service commands are retired from the default CLI surface', () => {
+  const output = runCli(['help']);
+  const commands = output.help.commands.map((entry: { command: string }) => entry.command);
 
-  try {
-    const install = runCli([
-      'service',
-      'install',
-      '--host',
-      '127.0.0.1',
-      '--port',
-      String(configuredPort),
-      '--path',
-      repoRoot,
-      '--sessions-limit',
-      '7',
-    ], serviceEnv);
-
-    assert.equal(install.service.action, 'install');
-    assert.equal(install.service.installed, true);
-    assert.equal(install.service.loaded, true);
-    assert.equal(install.service.base_url, `http://127.0.0.1:${configuredPort}`);
-    assert.equal(install.service.paths.launch_agent_plist.endsWith('.plist'), true);
-    assert.equal(fs.existsSync(install.service.paths.launch_agent_plist), true);
-    assert.equal(fs.existsSync(install.service.paths.config_file), true);
-
-    const plistText = fs.readFileSync(install.service.paths.launch_agent_plist, 'utf8');
-    assert.match(plistText, /<string>web<\/string>/);
-    assert.match(plistText, new RegExp(String(configuredPort)));
-
-    const statusWithoutHealth = runCli(['service', 'status'], serviceEnv);
-    assert.equal(statusWithoutHealth.service.action, 'status');
-    assert.equal(statusWithoutHealth.service.installed, true);
-    assert.equal(statusWithoutHealth.service.loaded, true);
-    assert.equal(statusWithoutHealth.service.health.status, 'unreachable');
-
-    const statusWithHealth = runCli(['service', 'status'], serviceEnv);
-    assert.equal(statusWithHealth.service.loaded, true);
-    assert.equal(statusWithHealth.service.health.status, 'unreachable');
-    assert.equal(
-      statusWithHealth.service.health.url,
-      `http://127.0.0.1:${configuredPort}/api/health`,
-    );
-
-    const openOutput = runCli(['service', 'open'], serviceEnv);
-    assert.equal(openOutput.service.action, 'open');
-    assert.match(fs.readFileSync(openFixture.capturePath, 'utf8'), new RegExp(String(configuredPort)));
-
-    const stopOutput = runCli(['service', 'stop'], serviceEnv);
-    assert.equal(stopOutput.service.action, 'stop');
-    assert.equal(stopOutput.service.loaded, false);
-
-    const stoppedStatus = runCli(['service', 'status'], serviceEnv);
-    assert.equal(stoppedStatus.service.loaded, false);
-    assert.equal(stoppedStatus.service.health.status, 'not_running');
-
-    const startOutput = runCli(['service', 'start'], serviceEnv);
-    assert.equal(startOutput.service.action, 'start');
-    assert.equal(startOutput.service.loaded, true);
-
-    const uninstallOutput = runCli(['service', 'uninstall'], serviceEnv);
-    assert.equal(uninstallOutput.service.action, 'uninstall');
-    assert.equal(uninstallOutput.service.installed, false);
-    assert.equal(fs.existsSync(install.service.paths.launch_agent_plist), false);
-  } finally {
-    fs.rmSync(homeRoot, { recursive: true, force: true });
-    fs.rmSync(launchctlFixture.fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(openFixture.fixtureRoot, { recursive: true, force: true });
+  for (const command of [
+    'service install',
+    'service status',
+    'service start',
+    'service stop',
+    'service open',
+    'service uninstall',
+  ]) {
+    assert.equal(commands.includes(command), false);
   }
 });
-
 test('web bundle exposes an OPL web bundle with base-path aware product API endpoints', () => {
   const output = runCli([
     'web',

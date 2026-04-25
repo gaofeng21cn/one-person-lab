@@ -145,7 +145,6 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl modules',
         'opl module install --module medautoscience',
         'opl engine install --engine codex',
-        'opl service install --port 8787',
         'opl web bundle --port 8787 --base-path /pilot/opl',
         'opl web package --output /tmp/opl-web-package --public-origin https://opl.example.com',
         'opl workspace projects',

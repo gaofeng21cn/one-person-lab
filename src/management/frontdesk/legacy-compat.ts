@@ -481,14 +481,10 @@ export async function buildFrontDeskReadiness(
   };
 
   const recommendedNextActions: string[] = [];
-  if (!localService.installed) {
-    recommendedNextActions.push('如需长期本地产品入口，先执行 `opl frontdesk service install`。');
-  } else if (!localService.loaded) {
-    recommendedNextActions.push('frontdesk service 已安装但未加载，执行 `opl frontdesk service start`。');
-  } else if (localService.health.status === 'unreachable') {
-    recommendedNextActions.push('frontdesk service 已加载但健康检查失败，先执行 `opl frontdesk service status` 与 `opl session logs`。');
+  if (localService.installed || localService.loaded) {
+    recommendedNextActions.push('8787 Product API service 属于历史 adapter 面；当前默认用户路径不再要求安装或启动它。');
   }
-  recommendedNextActions.push('GUI 壳应通过独立 GUI shell repo 接入这些 API；当前在 opl-aion-shell 内基于 AionUI codebase 产出 OPL 品牌壳。');
+  recommendedNextActions.push('GUI 壳应通过独立 GUI shell repo 与 Codex-default runtime 接入；当前在 opl-aion-shell 内基于 AionUI codebase 产出 OPL 品牌壳。');
   if (summary.manifest_ready_projects_count < summary.total_projects_count) {
     recommendedNextActions.push('给仍缺 manifest 的 active binding 补 `manifest_command`。');
   }
