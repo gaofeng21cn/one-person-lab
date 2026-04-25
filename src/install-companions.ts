@@ -37,7 +37,7 @@ export type OplRecommendedSkill = {
   skill_id: string;
   label: string;
   required: boolean;
-  source: 'superpowers' | 'skills_manager' | 'codex_builtin';
+  source: 'superpowers' | 'skills_manager' | 'codex_builtin' | 'github';
   expected_paths: string[];
   status: OplCompanionSkillStatus;
   install_hint: string;
@@ -213,6 +213,15 @@ export function buildOplRecommendedSkills(home = resolveHomeDir()): OplRecommend
       expected_paths: [path.join(skillsManagerHome, 'skills', 'officecli', 'SKILL.md')],
       install_hint: 'Install the officecli skill and binary so MAS/MAG/RCA can handle Office deliverables.',
       supports: ['docx', 'pptx', 'xlsx'],
+    },
+    {
+      skill_id: 'ui-ux-pro-max',
+      label: 'UI UX Pro Max skill',
+      required: false,
+      source: 'github',
+      expected_paths: [path.join(skillsManagerHome, 'skills', 'ui-ux-pro-max', 'SKILL.md')],
+      install_hint: 'Install https://github.com/nextlevelbuilder/ui-ux-pro-max-skill so RCA can review and improve visual deliverables.',
+      supports: ['rca', 'ui_review', 'ux_design', 'presentation_visuals'],
     },
     {
       skill_id: 'officecli-docx',

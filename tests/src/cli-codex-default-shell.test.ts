@@ -440,7 +440,7 @@ test('opl skill sync runs the lightweight family plugin installers and returns m
     assert.equal(output.skill_sync.packs[1].installer_result.repo, 'med-autogrant');
     assert.equal(output.skill_sync.packs[2].installer_result.repo, 'redcube-ai');
     assert.equal(output.skill_sync.companion_skills.surface_id, 'opl_companion_skill_sync');
-    assert.equal(output.skill_sync.companion_skills.summary.total >= 6, true);
+    assert.equal(output.skill_sync.companion_skills.summary.total >= 7, true);
     for (const skillName of ['mas', 'mag', 'rca']) {
       const skillPath = path.join(homeDir, '.codex', 'skills', skillName, 'SKILL.md');
       const content = fs.readFileSync(skillPath, 'utf8');
