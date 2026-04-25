@@ -2,9 +2,11 @@
 
 # 共享基础结构
 
+> 当前状态说明（`2026-04-25`）：本文是共享基础结构参考，早于当前公开主语收口。下文 `domain gateway / harness` 按内部兼容语言理解；当前公开文档应把 `MAS`、`MAG`、`RCA` 写成可由 OPL activation 或 Codex/app-skill direct entry 调用的独立 domain agents。
+
 `OPL` 之所以能把多个工作流纳入同一体系，不只是因为它们都能让 Agent 参与，而是因为它们通过 federation model 复用同一套基础层。
 
-共享基础结构的含义是：不同 domain gateway 使用兼容的资产、记忆、治理、交付与执行语言。
+共享基础结构的含义是：不同 domain agent 使用兼容的资产、记忆、治理、交付与执行语言。
 `OPL` 负责共享语言与索引层，而具体对象的 canonical truth 继续留在 domain-owned surface，或留在尚未进入 formal domain admission 的 human/private 材料里。
 
 ## 当前 Auto 主线与未来 HITL 分层
@@ -94,9 +96,9 @@
 
 在理想的 `OPL` 结构里：
 
-- `OPL Gateway` 负责声明共享基础结构语言
-- 每个 `domain gateway` 把这套语言水化到自己的工作流
-- 每个 `domain harness` 再按 domain 规则执行、落盘、审计与交付
+- OPL 在 session/runtime、activation 与 indexing 层声明共享基础结构语言
+- 每个 domain agent 把这套语言水化到自己的工作流
+- 每个 domain-owned truth surface 再按 domain 规则执行、落盘、审计与交付
 
 这就是为什么共享基础结构应位于任何单一 domain 仓库之上。
 
@@ -104,14 +106,14 @@
 
 今天，`Research Foundry` 上这五层最清楚的具象化是：
 
-- `MedAutoScience` 作为 active 的 research domain gateway 与 harness
+- `MedAutoScience` 作为 active 的 research domain agent
 
 视觉交付上最清楚的 emerging 具象化是：
 
-- `RedCube AI` 作为视觉交付 domain gateway 与 harness，其中 `ppt_deck` 是最直接映射到 `Presentation Foundry` 的 family
+- `RedCube AI` 作为视觉交付 domain agent，其中 `ppt_deck` 是最直接映射到 `Presentation Foundry` 的 family
 
 也正因为如此，`OPL` 已经不只是概念层。
-它已经有一个 active 的 domain surface，和一个正在收敛的第二 surface。
+它已经有三个 active domain-agent surface：`MAS`、`MAG`、`RCA`。
 
 ## 延伸阅读
 

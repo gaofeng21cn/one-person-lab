@@ -4,14 +4,14 @@
 
 - narrative 协作规则看仓库根 `AGENTS.md`
 - 默认人类/AI 入口看 `README*` 与 `docs/README*`
-- 顶层 gateway 合同入口看 `contracts/opl-gateway/README.md`
+- 历史 gateway/federation 兼容合同入口看 `contracts/opl-gateway/README.md`
 - 当前公开默认主路径是 `external shell or CLI -> OPL session runtime -> selected domain agent entry`；`Hermes-Agent` 只保留显式备用模式与 online gateway
 
 当前保留的 repo-tracked machine-readable truth：
 
-- `contracts/opl-gateway/*.json`：冻结的 gateway、admission、acceptance 与 supporting-surface contract
+- `contracts/opl-gateway/*.json`：历史 gateway-first 阶段冻结的 gateway、admission、acceptance 与 supporting-surface compatibility contract
 - `contracts/opl-gateway/README.md`：这些 JSON contract 的人类可读说明
-- `contracts/family-orchestration/*.schema.json`：跨四仓统一的 family orchestration companion schemas
+- `contracts/family-orchestration/*.schema.json`：跨 active 四仓线（`one-person-lab` + `MAS` + `MAG` + `RCA`）统一的 family orchestration companion schemas
 - `contracts/family-orchestration/README*.md`：这些 family orchestration schema 的人类可读说明
 
 围绕这些 machine-readable contract 的上位共享合同，当前统一在 `docs/` 层维护：

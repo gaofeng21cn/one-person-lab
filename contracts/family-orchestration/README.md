@@ -2,7 +2,7 @@
 
 # Family Orchestration Contracts
 
-This directory freezes the machine-readable companion schemas for the family-level orchestration surfaces shared across the `OPL` four-repository line.
+This directory freezes the machine-readable companion schemas for the family-level orchestration surfaces shared across the current active four-repository line: `one-person-lab`, `med-autoscience`, `med-autogrant`, and `redcube-ai`.
 
 These contracts absorb useful orchestration ideas from tools such as `CrewAI` in a contract-first way, but they do not make `CrewAI` a required runtime dependency and they do not replace the existing ownership split:
 
@@ -73,7 +73,7 @@ This directory does not:
 - standardize one LLM wrapper
 - standardize one `Crew` / `Agent` / `Memory` runtime object model
 - pin a specific model family
-- redefine `OPL` as the runtime owner of a domain harness
+- redefine `OPL` as the runtime owner of domain-owned truth
 - imply cross-repo runtime-core ingest has already happened
 
 ## Intended Adoption Path

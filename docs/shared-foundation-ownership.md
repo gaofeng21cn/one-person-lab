@@ -2,6 +2,8 @@
 
 # Shared Foundation Ownership
 
+> Current-status note (`2026-04-25`): this document is retained as a shared-foundation ownership reference. Read `domain gateway / harness` below as compatibility language; the current public model uses independent domain agents (`MAS`, `MAG`, `RCA`) with domain-owned truth surfaces.
+
 ## Purpose
 
 This document clarifies who manages the `Shared Foundation` in `OPL`.
@@ -19,7 +21,7 @@ It is not a new execution surface, and it is not a new domain-admission contract
 The correct split is:
 
 - `OPL` owns the top-level semantic, indexing, identity, and cross-domain reuse rules for shared-foundation objects
-- each `domain gateway` and `domain harness` owns the canonical truth, mutation, audit writeback, and delivery truth for domain-local objects
+- each domain agent owns the canonical truth, mutation, audit writeback, and delivery truth for domain-local objects
 - humans or private workspaces may still own source materials that have not yet been formalized into domain truth
 
 So “shared foundation is centrally managed” should be read as:
@@ -45,7 +47,7 @@ At the top level, `OPL` may own:
 - index/catalog surfaces that help humans and Agents discover reusable objects
 - handoff expectations for what may be passed into a domain
 
-### `Domain gateway + harness` owns
+### Domain agent owns
 
 Each domain remains responsible for:
 
@@ -82,13 +84,13 @@ Humans or private workspaces may still own:
 | `review memory` | cross-domain summary/index language only when needed for discoverability | full review history, review state, review decisions, domain-specific review writeback | private reviewer notes, temporary comments | canonical review truth |
 | `venue memory` | strongest candidate for top-level shared indexing and reusable semantics | domain-local venue fit decisions tied to concrete work products | personal preference notes not yet formalized | domain-specific submission truth |
 
-## Integration With Domain Gateways
+## Integration With Domain Agents
 
 The intended flow is:
 
 1. A human or Agent starts from `OPL` with a top-level request.
 2. `OPL` identifies which shared-foundation objects are relevant at the semantic/index layer.
-3. `OPL` routes the request into the correct `domain gateway` with references, not with top-level truth replacement.
+3. `OPL` activates or routes the request into the correct domain-agent entry with references, not with top-level truth replacement.
 4. The target domain resolves the concrete objects it actually owns.
 5. The domain writes back its own runtime truth, review truth, and delivery truth to domain-owned surfaces.
 6. `OPL` may retain top-level references, summaries, or auditable routing signals, but not the domain's canonical object truth.
@@ -142,7 +144,7 @@ This ownership model does not allow:
 - `shared asset index` becoming a mutation owner
 - `shared memory index` becoming a replacement for domain review or workspace evidence
 - reducing `MedAutoScience` or `RedCube AI` to private implementation details under `OPL`
-- bypassing a domain gateway because a top-level shared object exists
+- bypassing a domain-agent entry because a top-level shared object exists
 
 ## Current Practical Reading
 

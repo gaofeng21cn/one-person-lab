@@ -8,11 +8,11 @@ This document defines which skills One Person Lab App and `opl install` should m
 
 | Layer | Examples | Default install / sync path | Ownership rule |
 | --- | --- | --- | --- |
-| OPL family domain skills | MAS, MDS, MAG, RCA | Codex plugin / family skill sync | Owned by each domain repo; OPL registers and syncs them |
+| OPL family domain skills | MAS, MAG, RCA | Codex plugin / family skill sync | Owned by each active domain-agent repo; OPL registers and syncs them |
 | OPL companion skills | Superpowers, officecli, officecli-docx/pptx/xlsx, ui-ux-pro-max | User-level Codex / agent skill discovery paths | OPL detects, plans, and applies only through explicit user or managed-profile action |
 | Codex bundled skills | Documents, Presentations, Spreadsheets | Codex plugin cache | OPL detects availability and does not copy them into `~/.codex/skills` |
 
-MAS/MDS internal skills such as `scout`, `review`, `baseline`, `experiment`, and `write` are not part of the OPL default global ecosystem. They should stay project-local or domain-runtime-local and be invoked by MAS/MDS.
+MDS internal skills such as `scout`, `review`, `baseline`, `experiment`, and `write` are not part of the OPL default global ecosystem. They should stay MAS-controlled, project-local, or domain-runtime-local instead of becoming OPL default family skills.
 
 ## Official Superpowers Model
 
@@ -63,7 +63,7 @@ Recommended order:
 2. `ask_to_apply`: build a plan and wait for user confirmation.
 3. `managed`: apply the recommended profile for OPL App / Docker / OPL-owned `CODEX_HOME`.
 4. Detect Codex bundled skills without copying them.
-5. Keep MAS/MDS project-local skills out of the global system list.
+5. Keep MDS and other MAS-internal project-local skills out of the global system list.
 
 ## Verification
 

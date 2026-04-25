@@ -15,7 +15,7 @@ import { runFrontDeskModuleAction } from './modules.ts';
 import { resolveProjectRoot, runCommand } from './shared.ts';
 import type { FrontDeskModuleId, FrontDeskTurnkeyInstallInput } from './shared.ts';
 
-const DEFAULT_MODULES: FrontDeskModuleId[] = ['medautoscience', 'meddeepscientist', 'medautogrant', 'redcube'];
+const DEFAULT_MODULES: FrontDeskModuleId[] = ['medautoscience', 'medautogrant', 'redcube'];
 const DEFAULT_ENGINES = ['codex', 'hermes'] as const;
 
 function normalizeModuleId(raw: string): FrontDeskModuleId {
@@ -25,10 +25,6 @@ function normalizeModuleId(raw: string): FrontDeskModuleId {
     ['med-autoscience', 'medautoscience'],
     ['med_autoscience', 'medautoscience'],
     ['medautoscience', 'medautoscience'],
-    ['mds', 'meddeepscientist'],
-    ['med-deepscientist', 'meddeepscientist'],
-    ['med_deepscientist', 'meddeepscientist'],
-    ['meddeepscientist', 'meddeepscientist'],
     ['mag', 'medautogrant'],
     ['med-autogrant', 'medautogrant'],
     ['med_autogrant', 'medautogrant'],
