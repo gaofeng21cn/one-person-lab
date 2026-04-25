@@ -1,4 +1,4 @@
-import { findDomainOrThrow, GatewayContractError } from './contracts.ts';
+import type { ContractValidationSummary, GatewayContracts } from './types.ts';
 import {
   buildCodexCliPreview,
   buildCodexExecArgs,
@@ -6,7 +6,6 @@ import {
   resolveCodexBinary,
   runCodexCommand,
 } from './codex.ts';
-import { buildHandoffBundle } from './handoff-bundle.ts';
 import {
   buildHermesCliPreview,
   buildHermesLogsArgs,
@@ -26,235 +25,36 @@ import {
 import { explainDomainBoundary, resolveRequestSurface } from './resolver.ts';
 import { recordSessionLedgerEntry } from './session-ledger.ts';
 import type {
-  BoundaryExplanation,
-  ContractValidationSummary,
-  GatewayContracts,
-  ResolutionResult,
-  ResolveRequestInput,
-} from './types.ts';
+  ProductEntryCliInput,
+  ProductEntryExecInput,
+  ProductEntryExecutor,
+  ProductEntryMode,
+  PreparedProductEntryAsk,
+} from './product-entry-parts/types.ts';
+import {
+  buildAskArgs,
+  buildChatSeedArgs,
+  buildContractsContext,
+  buildProductEntryFrontdoorPrompt,
+  buildProductEntryHandoffBundle,
+  buildPromptHeader,
+  buildResolveRequestInput,
+  resolveProductEntryExecutor,
+} from './product-entry-parts/builders.ts';
+import {
+  assertCodexSuccess,
+  assertHermesSuccess,
+  normalizeCodexOutput,
+  normalizeHermesOutput,
+} from './product-entry-parts/output.ts';
 
-export type ProductEntryMode =
-  | 'frontdoor'
-  | 'ask'
-  | 'exec'
-  | 'chat'
-  | 'session_seed'
-  | 'resume'
-  | 'sessions'
-  | 'logs'
-  | 'repair_hermes_gateway';
-
-export type ProductEntryExecutor = 'codex' | 'hermes';
-
-export type ProductEntryCliInput = {
-  dryRun: boolean;
-  goal: string;
-  intent: string;
-  target: string;
-  preferredFamily?: string;
-  requestKind?: string;
-  model?: string;
-  provider?: string;
-  workspacePath?: string;
-  skills: string[];
-  executor?: ProductEntryExecutor;
+export type {
+  ProductEntryCliInput,
+  ProductEntryExecInput,
+  ProductEntryExecutor,
+  ProductEntryMode,
+  PreparedProductEntryAsk,
 };
-
-export type ProductEntryExecInput = {
-  dryRun: boolean;
-  prompt: string;
-  model?: string;
-  provider?: string;
-  workspacePath?: string;
-  json?: boolean;
-};
-
-export type PreparedProductEntryAsk = {
-  resolveInput: ResolveRequestInput;
-  routing: ResolutionResult;
-  boundary: BoundaryExplanation;
-  handoffPrompt: string;
-  args: string[];
-  handoffBundle: ReturnType<typeof buildHandoffBundle>;
-};
-
-function appendHermesOptions(
-  args: string[],
-  input: Pick<ProductEntryCliInput, 'model' | 'provider' | 'skills'>,
-) {
-  if (input.model) {
-    args.push('--model', input.model);
-  }
-
-  if (input.provider) {
-    args.push('--provider', input.provider);
-  }
-
-  if (input.skills.length > 0) {
-    args.push('--skills', input.skills.join(','));
-  }
-
-  args.push('--source', 'opl-product-entry');
-  return args;
-}
-
-function buildResolveRequestInput(input: ProductEntryCliInput): ResolveRequestInput {
-  return {
-    intent: input.intent,
-    target: input.target,
-    goal: input.goal,
-    preferredFamily: input.preferredFamily,
-    requestKind: input.requestKind,
-  };
-}
-
-function buildContractsContext(contracts: GatewayContracts) {
-  return {
-    contracts_dir: contracts.contractsDir,
-    contracts_root_source: contracts.contractsRootSource,
-  };
-}
-
-function resolveProductEntryExecutor(input: ProductEntryCliInput): ProductEntryExecutor {
-  return input.executor ?? 'codex';
-}
-
-function normalizeHermesOutput(stdout: string, stderr = '') {
-  return [stdout, stderr]
-    .filter((chunk) => chunk.trim().length > 0)
-    .join('\n')
-    .trim();
-}
-
-function normalizeCodexOutput(stdout: string, stderr = '') {
-  return [stdout, stderr]
-    .filter((chunk) => chunk.trim().length > 0)
-    .join('\n')
-    .trim();
-}
-
-function assertHermesSuccess(
-  exitCode: number,
-  message: string,
-  details: Record<string, unknown>,
-) {
-  if (exitCode === 0) {
-    return;
-  }
-
-  throw new GatewayContractError(
-    'hermes_command_failed',
-    message,
-    details,
-    exitCode,
-  );
-}
-
-function assertCodexSuccess(
-  exitCode: number,
-  message: string,
-  details: Record<string, unknown>,
-) {
-  if (exitCode === 0) {
-    return;
-  }
-
-  throw new GatewayContractError(
-    'codex_command_failed',
-    message,
-    details,
-    exitCode,
-  );
-}
-
-function buildPromptHeader(
-  mode: ProductEntryMode,
-  input: ProductEntryCliInput,
-  resolution: ResolutionResult,
-  boundary: BoundaryExplanation,
-  contracts: GatewayContracts,
-) {
-  const domainId = 'domain_id' in resolution ? resolution.domain_id : null;
-  const domain =
-    domainId && resolution.status !== 'ambiguous_task'
-      ? findDomainOrThrow(contracts, domainId)
-      : null;
-
-  const lines = [
-    'You are continuing a session that started from the One Person Lab (OPL) Product Entry.',
-    '',
-    'OPL routing contract:',
-    `- mode: ${mode}`,
-    `- requested_executor: ${resolveProductEntryExecutor(input)}`,
-    `- goal: ${input.goal}`,
-    `- intent: ${input.intent}`,
-    `- target: ${input.target}`,
-    `- request_kind: ${input.requestKind ?? 'product_entry'}`,
-    `- routing_status: ${resolution.status}`,
-    `- boundary_status: ${boundary.boundary_status}`,
-    `- workspace_locator: ${input.workspacePath ?? 'not_provided'}`,
-  ];
-
-  if ('workstream_id' in resolution && resolution.workstream_id) {
-    lines.push(`- resolved_workstream_id: ${resolution.workstream_id}`);
-  }
-
-  if ('candidate_workstream_id' in resolution) {
-    lines.push(`- candidate_workstream_id: ${resolution.candidate_workstream_id}`);
-  }
-
-  if (domain) {
-    lines.push(`- resolved_domain_id: ${domain.domain_id}`);
-    lines.push(`- resolved_domain_project: ${domain.project}`);
-    lines.push(`- domain_gateway_surface: ${domain.gateway_surface}`);
-    lines.push(`- domain_harness_surface: ${domain.harness_surface}`);
-  }
-
-  if ('recommended_family' in resolution && resolution.recommended_family) {
-    lines.push(`- recommended_family: ${resolution.recommended_family}`);
-  }
-
-  if (input.skills.length > 0) {
-    lines.push(`- requested_skills: ${input.skills.join(', ')}`);
-  }
-
-  lines.push(`- routing_reason: ${resolution.reason}`);
-  lines.push(`- boundary_reason: ${boundary.reason}`);
-  lines.push(`- routing_evidence: ${resolution.routing_evidence.join(' | ')}`);
-  lines.push(`- boundary_evidence: ${boundary.boundary_evidence.join(' | ')}`);
-  lines.push('');
-  lines.push('Hard boundary rules:');
-  lines.push(
-    '- Respect the OPL routing result. Do not claim that OPL itself owns domain runtime truth or domain publication truth.',
-  );
-  lines.push(
-    '- If the request is routed, continue within that domain boundary. If it is unknown or ambiguous, help the user clarify without inventing admission or handoff readiness.',
-  );
-  lines.push(
-    '- Runtime substrate follows the requested executor; Hermes is used only when explicitly selected.',
-  );
-  lines.push('');
-  lines.push('User request:');
-  lines.push(input.goal);
-  lines.push('');
-
-  if (mode === 'ask') {
-    lines.push('Task: answer the user directly, practically, and within the routing boundary above.');
-  } else {
-    lines.push(
-      'Task: acknowledge the OPL handoff briefly, then continue the conversation as the active session for this request.',
-    );
-  }
-
-  return lines.join('\n');
-}
-
-function buildAskArgs(
-  input: ProductEntryCliInput,
-  prompt: string,
-) {
-  return appendHermesOptions(['chat', '--query', prompt, '--quiet'], input);
-}
 
 export function prepareProductEntryAsk(
   input: ProductEntryCliInput,
@@ -265,14 +65,13 @@ export function prepareProductEntryAsk(
   const boundary = explainDomainBoundary(resolveInput, contracts);
   const handoffPrompt = buildPromptHeader('ask', input, routing, boundary, contracts);
   const args = buildAskArgs(input, handoffPrompt);
-  const handoffBundle = buildHandoffBundle(contracts, {
-    mode: 'ask',
-    goal: input.goal,
-    intent: input.intent,
-    workspacePath: input.workspacePath,
+  const handoffBundle = buildProductEntryHandoffBundle(
+    contracts,
+    'ask',
+    input,
     routing,
     boundary,
-  });
+  );
 
   return {
     resolveInput,
@@ -284,47 +83,6 @@ export function prepareProductEntryAsk(
   };
 }
 
-function buildChatSeedArgs(
-  input: ProductEntryCliInput,
-  prompt: string,
-) {
-  return appendHermesOptions(['chat', '--query', prompt, '--quiet'], input);
-}
-
-function buildProductEntryFrontdoorPrompt(contracts: GatewayContracts) {
-  const domainLines = contracts.domains.domains.map((domain) => {
-    const workstreams = domain.owned_workstreams.join(', ');
-    return `- ${domain.domain_id}: ${domain.gateway_surface} -> workstreams: ${workstreams}`;
-  });
-  const workstreamLines = contracts.workstreams.workstreams.map((workstream) => {
-    const families = workstream.primary_families.join(', ');
-    return `- ${workstream.workstream_id}: ${workstream.label} -> primary families: ${families}`;
-  });
-
-  return [
-    'You are the One Person Lab (OPL) Product Entry.',
-    'Your role is to be the default natural-language entry for OPL and route requests to the correct domain or family boundary.',
-    '',
-    'Current admitted domains:',
-    ...domainLines,
-    '',
-    'Current admitted workstreams:',
-    ...workstreamLines,
-    '',
-    'Hard boundary rules:',
-    '- OPL is a gateway and federation shell. It is not the runtime truth owner of any domain.',
-    '- Keep work inside admitted domain boundaries and family boundaries. Do not invent admission or hosted readiness.',
-    '- Codex is the default runtime substrate for this product-entry session.',
-    '- Hermes remains available only when explicitly requested.',
-    '',
-    'Task:',
-    '- Greet briefly and keep momentum.',
-    '- Clarify only when required.',
-    '- If the task maps to an admitted domain or family, continue with that boundary explicitly.',
-    '- If it does not, explain the boundary honestly and help the user refine the request.',
-  ].join('\n');
-}
-
 function buildPreviewPayload(
   mode: ProductEntryMode,
   input: ProductEntryCliInput,
@@ -334,14 +92,13 @@ function buildPreviewPayload(
   const routing = resolveRequestSurface(resolveInput, contracts);
   const boundary = explainDomainBoundary(resolveInput, contracts);
   const handoffPrompt = buildPromptHeader(mode, input, routing, boundary, contracts);
-  const handoffBundle = buildHandoffBundle(contracts, {
+  const handoffBundle = buildProductEntryHandoffBundle(
+    contracts,
     mode,
-    goal: input.goal,
-    intent: input.intent,
-    workspacePath: input.workspacePath,
+    input,
     routing,
     boundary,
-  });
+  );
 
   if (mode === 'ask') {
     const executor = resolveProductEntryExecutor(input);
@@ -472,15 +229,14 @@ export function runProductEntryAsk(
     );
 
     const parsed = parseCodexExecOutput(codexResult.stdout);
-    const handoffBundle = buildHandoffBundle(contracts, {
-      mode: 'ask',
-      goal: input.goal,
-      intent: input.intent,
-      workspacePath: input.workspacePath,
-      routing: preparedAsk.routing,
-      boundary: preparedAsk.boundary,
-      sessionId: parsed.threadId ?? undefined,
-    });
+    const handoffBundle = buildProductEntryHandoffBundle(
+      contracts,
+      'ask',
+      input,
+      preparedAsk.routing,
+      preparedAsk.boundary,
+      parsed.threadId ?? undefined,
+    );
 
     if (parsed.threadId) {
       recordSessionLedgerEntry({
@@ -530,15 +286,14 @@ export function runProductEntryAsk(
   );
 
   const parsed = parseHermesQuietChatOutput(hermesResult.stdout);
-  const handoffBundle = buildHandoffBundle(contracts, {
-    mode: 'ask',
-    goal: input.goal,
-    intent: input.intent,
-    workspacePath: input.workspacePath,
-    routing: preparedAsk.routing,
-    boundary: preparedAsk.boundary,
-    sessionId: parsed.sessionId,
-  });
+  const handoffBundle = buildProductEntryHandoffBundle(
+    contracts,
+    'ask',
+    input,
+    preparedAsk.routing,
+    preparedAsk.boundary,
+    parsed.sessionId,
+  );
   recordSessionLedgerEntry({
     sessionId: parsed.sessionId,
     mode: 'ask',
@@ -689,14 +444,13 @@ export function runProductEntryChat(
   const handoffPrompt = buildPromptHeader('chat', input, routing, boundary, contracts);
 
   if (executor === 'codex') {
-    const handoffBundle = buildHandoffBundle(contracts, {
-      mode: 'chat',
-      goal: input.goal,
-      intent: input.intent,
-      workspacePath: input.workspacePath,
+    const handoffBundle = buildProductEntryHandoffBundle(
+      contracts,
+      'chat',
+      input,
       routing,
       boundary,
-    });
+    );
 
     if (isInteractiveShell()) {
       const frontDoorResult = runCodexCommand([handoffPrompt], {
@@ -757,15 +511,14 @@ export function runProductEntryChat(
   );
 
   const parsed = parseHermesQuietChatOutput(seedResult.stdout);
-  const handoffBundle = buildHandoffBundle(contracts, {
-    mode: 'chat',
-    goal: input.goal,
-    intent: input.intent,
-    workspacePath: input.workspacePath,
+  const handoffBundle = buildProductEntryHandoffBundle(
+    contracts,
+    'chat',
+    input,
     routing,
     boundary,
-    sessionId: parsed.sessionId,
-  });
+    parsed.sessionId,
+  );
   recordSessionLedgerEntry({
     sessionId: parsed.sessionId,
     mode: 'chat',
@@ -1067,13 +820,12 @@ export function buildProductEntryHandoffEnvelope(
   return {
     version: 'g2',
     contracts_context: buildContractsContext(contracts),
-    ...buildHandoffBundle(contracts, {
-      mode: 'ask',
-      goal: input.goal,
-      intent: input.intent,
-      workspacePath: input.workspacePath,
+    ...buildProductEntryHandoffBundle(
+      contracts,
+      'ask',
+      input,
       routing,
       boundary,
-    }),
+    ),
   };
 }
