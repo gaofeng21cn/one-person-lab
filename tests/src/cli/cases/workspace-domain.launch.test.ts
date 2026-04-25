@@ -159,25 +159,25 @@ test('workspace-bind derives family direct-entry locators from structured projec
 
     const dashboardOutput = runCli(['status', 'dashboard', '--path', repoRoot, '--sessions-limit', '1'], env);
     assert.equal(
-      dashboardOutput.dashboard.product_api.domain_entry_parity.summary.aligned_projects_count,
+      dashboardOutput.dashboard.gui_runtime.domain_entry_parity.summary.aligned_projects_count,
       3,
     );
     assert.equal(
-      dashboardOutput.dashboard.product_api.domain_entry_parity.summary.partial_projects_count,
+      dashboardOutput.dashboard.gui_runtime.domain_entry_parity.summary.partial_projects_count,
       0,
     );
     assert.equal(
-      dashboardOutput.dashboard.product_api.domain_entry_parity.summary.direct_entry_locator_ready_projects_count,
+      dashboardOutput.dashboard.gui_runtime.domain_entry_parity.summary.direct_entry_locator_ready_projects_count,
       3,
     );
     assert.equal(
-      dashboardOutput.dashboard.product_api.domain_entry_parity.projects.find(
+      dashboardOutput.dashboard.gui_runtime.domain_entry_parity.projects.find(
         (entry: { project_id: string }) => entry.project_id === 'medautogrant',
       )?.direct_entry_locator_status,
       'ready',
     );
     assert.equal(
-      dashboardOutput.dashboard.product_api.domain_entry_parity.projects.find(
+      dashboardOutput.dashboard.gui_runtime.domain_entry_parity.projects.find(
         (entry: { project_id: string }) => entry.project_id === 'medautoscience',
       )?.direct_entry_locator_status,
       'ready',

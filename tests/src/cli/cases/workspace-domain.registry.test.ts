@@ -317,66 +317,66 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(redcube.manifest.product_entry_start.modes[3].mode_id, 'resume_session');
 
     const dashboardOutput = runCli(['status', 'dashboard', '--path', repoRoot, '--sessions-limit', '1'], env);
-    assert.equal(dashboardOutput.dashboard.product_api.recommended_entry_surfaces_count, 3);
+    assert.equal(dashboardOutput.dashboard.gui_runtime.recommended_entry_surfaces_count, 3);
     assert.equal(
-      dashboardOutput.dashboard.product_api.hosted_runtime_readiness.surface_kind,
+      dashboardOutput.dashboard.gui_runtime.hosted_runtime_readiness.surface_kind,
       'opl_hosted_runtime_readiness',
     );
     assert.equal(
-      dashboardOutput.dashboard.product_api.hosted_runtime_readiness.status,
-      'pilot_ready_not_managed',
+      dashboardOutput.dashboard.gui_runtime.hosted_runtime_readiness.status,
+      'retired',
     );
     assert.equal(
-      dashboardOutput.dashboard.product_api.domain_entry_parity.summary.total_projects_count,
+      dashboardOutput.dashboard.gui_runtime.domain_entry_parity.summary.total_projects_count,
       3,
     );
     assert.equal(
-      dashboardOutput.dashboard.product_api.domain_entry_parity.summary.aligned_projects_count,
+      dashboardOutput.dashboard.gui_runtime.domain_entry_parity.summary.aligned_projects_count,
       1,
     );
     assert.equal(
-      dashboardOutput.dashboard.product_api.domain_entry_parity.summary.partial_projects_count,
+      dashboardOutput.dashboard.gui_runtime.domain_entry_parity.summary.partial_projects_count,
       2,
     );
     assert.equal(
-      dashboardOutput.dashboard.product_api.domain_entry_parity.summary.blocked_projects_count,
+      dashboardOutput.dashboard.gui_runtime.domain_entry_parity.summary.blocked_projects_count,
       0,
     );
     assert.equal(
-      dashboardOutput.dashboard.product_api.domain_entry_parity.summary.direct_entry_locator_ready_projects_count,
+      dashboardOutput.dashboard.gui_runtime.domain_entry_parity.summary.direct_entry_locator_ready_projects_count,
       1,
     );
     assert.equal(
-      dashboardOutput.dashboard.product_api.domain_entry_parity.summary.domain_entry_contract_ready_count,
+      dashboardOutput.dashboard.gui_runtime.domain_entry_parity.summary.domain_entry_contract_ready_count,
       3,
     );
     assert.equal(
-      dashboardOutput.dashboard.product_api.domain_entry_parity.summary.domain_agent_entry_spec_ready_count,
+      dashboardOutput.dashboard.gui_runtime.domain_entry_parity.summary.domain_agent_entry_spec_ready_count,
       3,
     );
     assert.equal(
-      dashboardOutput.dashboard.product_api.domain_entry_parity.summary.skill_runtime_continuity_ready_count,
+      dashboardOutput.dashboard.gui_runtime.domain_entry_parity.summary.skill_runtime_continuity_ready_count,
       3,
     );
     assert.equal(
-      dashboardOutput.dashboard.product_api.domain_entry_parity.summary.gateway_interaction_contract_ready_count,
+      dashboardOutput.dashboard.gui_runtime.domain_entry_parity.summary.gateway_interaction_contract_ready_count,
       3,
     );
     assert.equal(
-      dashboardOutput.dashboard.product_api.domain_entry_parity.summary.ready_for_opl_start_count,
+      dashboardOutput.dashboard.gui_runtime.domain_entry_parity.summary.ready_for_opl_start_count,
       3,
     );
     assert.equal(
-      dashboardOutput.dashboard.product_api.domain_entry_parity.summary.ready_for_domain_handoff_count,
+      dashboardOutput.dashboard.gui_runtime.domain_entry_parity.summary.ready_for_domain_handoff_count,
       3,
     );
-    const grantParity = dashboardOutput.dashboard.product_api.domain_entry_parity.projects.find(
+    const grantParity = dashboardOutput.dashboard.gui_runtime.domain_entry_parity.projects.find(
       (entry: { project_id: string }) => entry.project_id === 'medautogrant',
     );
-    const scienceParity = dashboardOutput.dashboard.product_api.domain_entry_parity.projects.find(
+    const scienceParity = dashboardOutput.dashboard.gui_runtime.domain_entry_parity.projects.find(
       (entry: { project_id: string }) => entry.project_id === 'medautoscience',
     );
-    const redcubeParity = dashboardOutput.dashboard.product_api.domain_entry_parity.projects.find(
+    const redcubeParity = dashboardOutput.dashboard.gui_runtime.domain_entry_parity.projects.find(
       (entry: { project_id: string }) => entry.project_id === 'redcube',
     );
     assert.equal(grantParity.entry_parity_status, 'partial');
@@ -411,13 +411,13 @@ test('domain manifests resolves real family manifest fixtures while workspace li
       redcubeParity.recommended_check_command,
       'redcube workspace doctor --workspace-root /fixtures/redcube/workspace',
     );
-    const grantEntry = dashboardOutput.dashboard.product_api.recommended_entry_surfaces.find(
+    const grantEntry = dashboardOutput.dashboard.gui_runtime.recommended_entry_surfaces.find(
       (entry: { project_id: string }) => entry.project_id === 'medautogrant',
     );
-    const scienceEntry = dashboardOutput.dashboard.product_api.recommended_entry_surfaces.find(
+    const scienceEntry = dashboardOutput.dashboard.gui_runtime.recommended_entry_surfaces.find(
       (entry: { project_id: string }) => entry.project_id === 'medautoscience',
     );
-    const recommendedEntry = dashboardOutput.dashboard.product_api.recommended_entry_surfaces.find(
+    const recommendedEntry = dashboardOutput.dashboard.gui_runtime.recommended_entry_surfaces.find(
       (entry: { project_id: string }) => entry.project_id === 'redcube',
     );
     assert.equal(grantEntry.product_entry_shell.grant_user_loop.surface_kind, 'grant_user_loop');

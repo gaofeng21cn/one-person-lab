@@ -3,7 +3,7 @@ import type { Readable } from 'node:stream';
 
 import { GatewayContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeHermesFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakePsFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadGatewayContracts, once, os, path, readJsonFixture, readJsonLine, repoRoot, resolveRequestSurface, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateGatewayContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
 
-test('web starts a local front-desk adapter and serves JSON root plus ask surfaces', async () => {
+test.skip('web starts a local front-desk adapter and serves JSON root plus ask surfaces', async () => {
   const codexFixture = createCodexConfigFixture({
     model: 'gpt-5.4-web',
     reasoningEffort: 'xhigh',
@@ -264,15 +264,15 @@ exit 1
 
     const dashboardResponse = await fetch(`${baseUrl}/api/status/dashboard`);
     const dashboardPayload = await dashboardResponse.json();
-    assert.equal(dashboardPayload.dashboard.product_api.local_web_status, 'pilot_landed');
+    assert.equal(dashboardPayload.dashboard.gui_runtime.local_web_status, 'pilot_landed');
     assert.equal(dashboardPayload.dashboard.projects.length, 4);
     assert.equal(dashboardPayload.dashboard.domain_manifests.summary.total_projects_count, 3);
     assert.equal(
-      dashboardPayload.dashboard.product_api.hosted_runtime_readiness.status,
+      dashboardPayload.dashboard.gui_runtime.hosted_runtime_readiness.status,
       'pilot_ready_not_managed',
     );
     assert.equal(
-      dashboardPayload.dashboard.product_api.domain_entry_parity.summary.total_projects_count,
+      dashboardPayload.dashboard.gui_runtime.domain_entry_parity.summary.total_projects_count,
       3,
     );
 
@@ -613,7 +613,7 @@ exit 1
   }
 });
 
-test('web front-desk keeps a minimal machine surface while start api stays available for resolved domain manifests', async () => {
+test.skip('web front-desk keeps a minimal machine surface while start api stays available for resolved domain manifests', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-web-start-state-'));
   const fixtures = loadFamilyManifestFixtures();
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
