@@ -4,6 +4,7 @@ import { buildOplGuiShellSurface, syncOplCompanionSkills } from '../install-comp
 import type { GatewayContracts } from '../types.ts';
 
 import { runFrontDeskEngineAction } from './engine-actions.ts';
+import { registerOplFamilyCodexPlugins } from './codex-plugin-registry.ts';
 import { buildFrontDeskEnvironment } from './environment.ts';
 import { buildFrontDeskInitialize } from './initialize.ts';
 import { runFrontDeskModuleAction } from './modules.ts';
@@ -126,6 +127,13 @@ export async function runFrontDeskTurnkeyInstall(
   const moduleActions = input.skipModules
     ? []
     : modules.map((moduleId) => runFrontDeskModuleAction('install', moduleId));
+  const moduleRepoPaths = new Map<FrontDeskModuleId, string>(
+    moduleActions.map((entry) => [
+      entry.frontdesk_module_action.module.module_id,
+      entry.frontdesk_module_action.module.checkout_path,
+    ]),
+  );
+  const codexPluginRegistry = registerOplFamilyCodexPlugins(modules, moduleRepoPaths);
   const serviceAction = input.skipService
     ? null
     : await runFrontDeskSystemAction(contracts, 'reinstall_support', {
@@ -149,6 +157,7 @@ export async function runFrontDeskTurnkeyInstall(
       status: 'completed',
       selected_engines: [...DEFAULT_ENGINES],
       selected_modules: modules,
+      codex_plugin_registry: codexPluginRegistry,
       engine_actions: engineActions.map((entry) => entry.frontdesk_engine_action),
       module_actions: moduleActions.map((entry) => entry.frontdesk_module_action),
       service_action: serviceAction?.frontdesk_system_action ?? null,
