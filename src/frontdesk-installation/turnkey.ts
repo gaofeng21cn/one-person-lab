@@ -1,5 +1,8 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
 import { buildOplGuiArtifactName, buildOplReleaseTag, getOplReleaseRepo, getOplReleaseVersion } from '../opl-release.ts';
-import { openFrontDeskService } from '../frontdesk-service.ts';
 import { buildOplGuiShellSurface, syncOplCompanionSkills } from '../install-companions.ts';
 import type { GatewayContracts } from '../types.ts';
 
@@ -59,41 +62,185 @@ function buildOplGuiReleaseUrl() {
   return `https://github.com/${releaseRepo}/releases/download/${releaseTag}/${encodeURIComponent(assetName)}`;
 }
 
-function tryOpenOplGui() {
-  const candidates = ['/Applications/One Person Lab.app', '/Applications/OPL.app'];
-  const candidate = candidates.find((appPath) => runCommand('test', ['-d', appPath]).exitCode === 0);
+
+function getOpenCommand() {
+  return process.env.OPL_OPEN_BIN ?? 'open';
+}
+
+function getCurlCommand() {
+  return process.env.OPL_CURL_BIN ?? 'curl';
+}
+
+function getHdiutilCommand() {
+  return process.env.OPL_HDIUTIL_BIN ?? 'hdiutil';
+}
+
+function getApplicationsDir() {
+  return process.env.OPL_APPLICATIONS_DIR ?? '/Applications';
+}
+
+function getGuiInstallPlatform() {
+  return process.env.OPL_GUI_INSTALL_PLATFORM ?? process.platform;
+}
+
+function buildGuiActionBase() {
   const releaseVersion = getOplReleaseVersion();
   const releaseRepo = getOplReleaseRepo();
   const releaseTag = buildOplReleaseTag(releaseVersion);
-  const releaseAsset = process.platform === 'darwin' ? buildMacReleaseAssetName() : null;
-  const releaseUrl = process.platform === 'darwin' ? buildOplGuiReleaseUrl() : null;
+  const releaseAsset = getGuiInstallPlatform() === 'darwin' ? buildMacReleaseAssetName() : null;
+  const releaseUrl = getGuiInstallPlatform() === 'darwin' ? buildOplGuiReleaseUrl() : null;
+  return { releaseVersion, releaseRepo, releaseTag, releaseAsset, releaseUrl };
+}
 
-  if (!candidate) {
-    return {
-      status: 'manual_required' as const,
-      strategy: 'download_opl_release_asset_then_open_app',
-      release_repo: releaseRepo,
-      release_tag: releaseTag,
-      opl_release_version: releaseVersion,
-      release_asset: releaseAsset,
-      release_url: releaseUrl,
-      command_preview: releaseUrl ? ['open', releaseUrl] : ['open', '/Applications/One Person Lab.app'],
-      note: 'The One Person Lab desktop app is distributed from the one-person-lab GitHub Release. The opl-aion-shell repository is the internal GUI source/build input and is only used for fallback source builds.',
-    };
-  }
-
-  const result = runCommand('open', [candidate]);
+function openInstalledOplGui(appPath: string, base = buildGuiActionBase()) {
+  const result = runCommand(getOpenCommand(), [appPath]);
   return {
     status: result.exitCode === 0 ? 'completed' as const : 'failed' as const,
     strategy: 'open_installed_app',
-    release_repo: releaseRepo,
-    release_tag: releaseTag,
-    opl_release_version: releaseVersion,
-    release_asset: releaseAsset,
-    release_url: releaseUrl,
-    command_preview: ['open', candidate],
+    release_repo: base.releaseRepo,
+    release_tag: base.releaseTag,
+    opl_release_version: base.releaseVersion,
+    release_asset: base.releaseAsset,
+    release_url: base.releaseUrl,
+    installed_app_path: appPath,
+    command_preview: [getOpenCommand(), appPath],
     note: result.exitCode === 0 ? null : (result.stderr || result.stdout || 'open command failed'),
   };
+}
+
+function copyMountedApp(mountPoint: string, applicationsDir: string) {
+  try {
+    const appName = fs.readdirSync(mountPoint).find((entry) => entry.endsWith('.app'));
+    if (!appName) {
+      return {
+        exitCode: 1,
+        stdout: '',
+        stderr: `No .app bundle found in mounted OPL GUI image: ${mountPoint}`,
+        appPath: null,
+      };
+    }
+
+    fs.mkdirSync(applicationsDir, { recursive: true });
+    const sourcePath = path.join(mountPoint, appName);
+    const appPath = path.join(applicationsDir, appName);
+    fs.rmSync(appPath, { recursive: true, force: true });
+    fs.cpSync(sourcePath, appPath, { recursive: true });
+    return {
+      exitCode: 0,
+      stdout: '',
+      stderr: '',
+      appPath,
+    };
+  } catch (error) {
+    return {
+      exitCode: 1,
+      stdout: '',
+      stderr: error instanceof Error ? error.message : String(error),
+      appPath: null,
+    };
+  }
+}
+
+function installOplGuiFromRelease(base = buildGuiActionBase()) {
+  if (getGuiInstallPlatform() !== 'darwin' || !base.releaseUrl || !base.releaseAsset) {
+    return {
+      status: 'unsupported_platform' as const,
+      strategy: 'install_release_asset_then_open_app',
+      release_repo: base.releaseRepo,
+      release_tag: base.releaseTag,
+      opl_release_version: base.releaseVersion,
+      release_asset: base.releaseAsset,
+      release_url: base.releaseUrl,
+      installed_app_path: null,
+      command_preview: [],
+      note: 'Automatic OPL GUI installation currently supports macOS release DMG assets only.',
+    };
+  }
+
+  const workRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-gui-install-'));
+  const dmgPath = path.join(workRoot, base.releaseAsset);
+  const mountPoint = path.join(workRoot, 'mount');
+  fs.mkdirSync(mountPoint, { recursive: true });
+
+  const curlResult = runCommand(getCurlCommand(), ['-fL', '--create-dirs', '-o', dmgPath, base.releaseUrl]);
+  if (curlResult.exitCode !== 0) {
+    fs.rmSync(workRoot, { recursive: true, force: true });
+    return {
+      status: 'failed' as const,
+      strategy: 'install_release_asset_then_open_app',
+      release_repo: base.releaseRepo,
+      release_tag: base.releaseTag,
+      opl_release_version: base.releaseVersion,
+      release_asset: base.releaseAsset,
+      release_url: base.releaseUrl,
+      installed_app_path: null,
+      command_preview: [getCurlCommand(), '-fL', '--create-dirs', '-o', dmgPath, base.releaseUrl],
+      note: curlResult.stderr || curlResult.stdout || 'GUI release asset download failed',
+    };
+  }
+
+  const attachResult = runCommand(getHdiutilCommand(), ['attach', dmgPath, '-nobrowse', '-readonly', '-mountpoint', mountPoint]);
+  if (attachResult.exitCode !== 0) {
+    fs.rmSync(workRoot, { recursive: true, force: true });
+    return {
+      status: 'failed' as const,
+      strategy: 'install_release_asset_then_open_app',
+      release_repo: base.releaseRepo,
+      release_tag: base.releaseTag,
+      opl_release_version: base.releaseVersion,
+      release_asset: base.releaseAsset,
+      release_url: base.releaseUrl,
+      installed_app_path: null,
+      command_preview: [getHdiutilCommand(), 'attach', dmgPath, '-nobrowse', '-readonly', '-mountpoint', mountPoint],
+      note: attachResult.stderr || attachResult.stdout || 'GUI release asset mount failed',
+    };
+  }
+
+  try {
+    const copyResult = copyMountedApp(mountPoint, getApplicationsDir());
+    if (copyResult.exitCode !== 0 || !copyResult.appPath) {
+      return {
+        status: 'failed' as const,
+        strategy: 'install_release_asset_then_open_app',
+        release_repo: base.releaseRepo,
+        release_tag: base.releaseTag,
+        opl_release_version: base.releaseVersion,
+        release_asset: base.releaseAsset,
+        release_url: base.releaseUrl,
+        installed_app_path: null,
+        command_preview: ['cp', '-R', `${mountPoint}/*.app`, getApplicationsDir()],
+        note: copyResult.stderr || copyResult.stdout || 'GUI app copy failed',
+      };
+    }
+
+    const openResult = openInstalledOplGui(copyResult.appPath, base);
+    return {
+      ...openResult,
+      strategy: 'install_release_asset_then_open_app' as const,
+      installed_app_path: copyResult.appPath,
+      command_preview: [
+        getCurlCommand(), '-fL', '--create-dirs', '-o', dmgPath, base.releaseUrl,
+        '&&', getHdiutilCommand(), 'attach', dmgPath, '-nobrowse', '-readonly', '-mountpoint', mountPoint,
+        '&&', 'cp', '-R', `${mountPoint}/*.app`, getApplicationsDir(),
+        '&&', getOpenCommand(), copyResult.appPath,
+      ],
+    };
+  } finally {
+    runCommand(getHdiutilCommand(), ['detach', mountPoint]);
+    fs.rmSync(workRoot, { recursive: true, force: true });
+  }
+}
+
+function installOrOpenOplGui() {
+  const candidates = [
+    path.join(getApplicationsDir(), 'One Person Lab.app'),
+    path.join(getApplicationsDir(), 'OPL.app'),
+  ];
+  const candidate = candidates.find((appPath) => runCommand('test', ['-d', appPath]).exitCode === 0);
+  if (candidate) {
+    return openInstalledOplGui(candidate);
+  }
+  return installOplGuiFromRelease();
 }
 
 export async function runFrontDeskTurnkeyInstall(
@@ -143,10 +290,8 @@ export async function runFrontDeskTurnkeyInstall(
       sessionsLimit: input.sessionsLimit,
       basePath: input.basePath,
     });
-  const webOpenAction = input.skipWebOpen || input.skipService
-    ? null
-    : await openFrontDeskService(contracts);
-  const guiOpenAction = input.skipGuiOpen ? null : tryOpenOplGui();
+  const webOpenAction = null;
+  const guiOpenAction = input.skipGuiOpen ? null : installOrOpenOplGui();
   const companionSkillSync = syncOplCompanionSkills();
   const initialize = await buildFrontDeskInitialize(contracts);
 
@@ -161,14 +306,14 @@ export async function runFrontDeskTurnkeyInstall(
       engine_actions: engineActions.map((entry) => entry.frontdesk_engine_action),
       module_actions: moduleActions.map((entry) => entry.frontdesk_module_action),
       service_action: serviceAction?.frontdesk_system_action ?? null,
-      web_open_action: webOpenAction?.frontdesk_service ?? null,
+      web_open_action: webOpenAction,
       gui_open_action: guiOpenAction,
       gui_shell: buildOplGuiShellSurface(resolveProjectRoot()),
       companion_skill_sync: companionSkillSync,
       system_initialize: initialize.frontdesk_initialize,
       notes: [
         'This command is the user-facing one-shot path for OPL + Codex CLI + Hermes-Agent + family modules + companion Codex skills.',
-        'GUI startup opens the installed One Person Lab app when present; otherwise it reports the matching one-person-lab release asset to download. opl-aion-shell remains an internal GUI source/build input.',
+        'GUI startup opens the installed One Person Lab app when present; otherwise it downloads and installs the matching one-person-lab release asset before opening the app. opl-aion-shell remains an internal GUI source/build input.',
       ],
     },
   };

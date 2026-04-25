@@ -174,16 +174,14 @@ test('install command reuses already installed runtime dependencies', () => {
   }
 });
 
-test('install command can start and open local web service without launching GUI app', () => {
+test('install command starts local service without opening the Product API page', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-service-home-'));
   const launchctlFixture = createFakeLaunchctlFixture();
-  const openFixture = createFakeOpenFixture();
   const configuredPort = 8912;
   const env = {
     HOME: homeRoot,
     OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
     OPL_LAUNCHCTL_BIN: launchctlFixture.launchctlPath,
-    OPL_OPEN_BIN: openFixture.openPath,
   };
 
   try {
@@ -201,7 +199,7 @@ test('install command can start and open local web service without launching GUI
         engine_actions: unknown[];
         module_actions: unknown[];
         service_action: { action: string; status: string } | null;
-        web_open_action: { action: string; entry_url: string } | null;
+        web_open_action: unknown | null;
       };
     };
 
@@ -209,12 +207,111 @@ test('install command can start and open local web service without launching GUI
     assert.deepEqual(output.install.module_actions, []);
     assert.equal(output.install.service_action?.action, 'reinstall_support');
     assert.equal(output.install.service_action?.status, 'completed');
-    assert.equal(output.install.web_open_action?.action, 'open');
-    assert.equal(output.install.web_open_action?.entry_url, `http://127.0.0.1:${configuredPort}/`);
-    assert.equal(fs.readFileSync(openFixture.capturePath, 'utf8').trim(), `http://127.0.0.1:${configuredPort}/`);
+    assert.equal(output.install.web_open_action, null);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(launchctlFixture.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+
+test('install command downloads installs and opens the OPL GUI when it is missing', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-gui-home-'));
+  const applicationsDir = path.join(homeRoot, 'Applications');
+  const toolRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-gui-tools-'));
+  const curlPath = path.join(toolRoot, 'curl');
+  const hdiutilPath = path.join(toolRoot, 'hdiutil');
+  const openFixture = createFakeOpenFixture();
+  const toolLogPath = path.join(toolRoot, 'tools.log');
+
+  fs.writeFileSync(
+    curlPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+printf 'curl %s\n' "$*" >> ${JSON.stringify(toolLogPath)}
+out=''
+while [ "$#" -gt 0 ]; do
+  if [ "$1" = '-o' ]; then
+    out="$2"
+    shift 2
+    continue
+  fi
+  shift
+done
+mkdir -p "$(dirname "$out")"
+printf 'fake dmg\n' > "$out"
+`,
+    { mode: 0o755 },
+  );
+  fs.writeFileSync(
+    hdiutilPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+printf 'hdiutil %s\n' "$*" >> ${JSON.stringify(toolLogPath)}
+if [ "$1" = 'attach' ]; then
+  mountpoint=''
+  while [ "$#" -gt 0 ]; do
+    if [ "$1" = '-mountpoint' ]; then
+      mountpoint="$2"
+      shift 2
+      continue
+    fi
+    shift
+  done
+  mkdir -p "$mountpoint/One Person Lab.app/Contents"
+  printf 'app\n' > "$mountpoint/One Person Lab.app/Contents/Info.plist"
+  exit 0
+fi
+if [ "$1" = 'detach' ]; then
+  exit 0
+fi
+echo "unexpected hdiutil args: $*" >&2
+exit 1
+`,
+    { mode: 0o755 },
+  );
+
+  try {
+    const output = runCli([
+      'install',
+      '--skip-modules',
+      '--skip-engines',
+      '--skip-service',
+    ], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      OPL_GUI_INSTALL_PLATFORM: 'darwin',
+      OPL_APPLICATIONS_DIR: applicationsDir,
+      OPL_CURL_BIN: curlPath,
+      OPL_HDIUTIL_BIN: hdiutilPath,
+      OPL_OPEN_BIN: openFixture.openPath,
+      OPL_RELEASE_VERSION: '26.4.25',
+    }) as {
+      install: {
+        web_open_action: unknown | null;
+        gui_open_action: {
+          status: string;
+          strategy: string;
+          release_asset: string;
+          installed_app_path: string;
+        } | null;
+      };
+    };
+
+    assert.equal(output.install.web_open_action, null);
+    assert.equal(output.install.gui_open_action?.status, 'completed');
+    assert.equal(output.install.gui_open_action?.strategy, 'install_release_asset_then_open_app');
+    assert.match(output.install.gui_open_action?.release_asset ?? '', /^One Person Lab-26\.4\.25-mac-/);
+    assert.equal(output.install.gui_open_action?.installed_app_path, path.join(applicationsDir, 'One Person Lab.app'));
+    assert.equal(fs.existsSync(path.join(applicationsDir, 'One Person Lab.app', 'Contents', 'Info.plist')), true);
+    assert.equal(fs.readFileSync(openFixture.capturePath, 'utf8').trim(), path.join(applicationsDir, 'One Person Lab.app'));
+    const toolLog = fs.readFileSync(toolLogPath, 'utf8');
+    assert.match(toolLog, /curl .*github\.com\/gaofeng21cn\/one-person-lab\/releases\/download\/v26\.4\.25/);
+    assert.match(toolLog, /hdiutil attach /);
+    assert.match(toolLog, /hdiutil detach /);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(toolRoot, { recursive: true, force: true });
     fs.rmSync(openFixture.fixtureRoot, { recursive: true, force: true });
   }
 });
