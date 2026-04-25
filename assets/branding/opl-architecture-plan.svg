@@ -7,15 +7,15 @@
   </defs>
   <rect width="1600" height="980" fill="url(#bg)"/>
   <rect x="70" y="58" width="1460" height="864" rx="36" fill="#FFFFFF" fill-opacity="0.76" stroke="#D4E3F1" stroke-width="2"/>
-  <text x="800" y="120" text-anchor="middle" fill="#0D2A45" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="40" font-weight="800">Architecture And Product Plan</text>
-  <text x="800" y="160" text-anchor="middle" fill="#506B83" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="20">A user-facing workbench backed by expert product families, shared confidence surfaces, and repo-owned delivery truth.</text>
+  <text x="800" y="120" text-anchor="middle" fill="#0D2A45" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="40" font-weight="800">Current OPL Architecture</text>
+  <text x="800" y="160" text-anchor="middle" fill="#506B83" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="20">Codex-default session semantics with explicit domain-agent activation and repo-owned delivery truth.</text>
   <g filter="url(#shadow)">
     <rect x="150" y="218" width="1300" height="92" rx="28" fill="#0D2A45"/>
     <text x="800" y="258" text-anchor="middle" fill="#FFFFFF" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="28" font-weight="800">User Entry</text>
-    <text x="800" y="288" text-anchor="middle" fill="#CDE2F5" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="18">Codex, OPL app, web shell, local workspace, and future GUI surfaces</text>
+    <text x="800" y="288" text-anchor="middle" fill="#CDE2F5" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="18">Codex, One Person Lab app, terminal install, and local workspace context</text>
     <rect x="210" y="372" width="1180" height="116" rx="30" fill="#F8FCFF" stroke="#BBD2EC" stroke-width="2"/>
     <text x="800" y="417" text-anchor="middle" fill="#174A73" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="28" font-weight="800">OPL Workbench Layer</text>
-    <text x="800" y="452" text-anchor="middle" fill="#4D6E8A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="18">Start work, activate expert agents, show progress, organize files, resume long-running sessions</text>
+    <text x="800" y="452" text-anchor="middle" fill="#4D6E8A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="18">Inherit Codex defaults, activate domain agents, show progress, organize files, resume sessions</text>
     <rect x="150" y="552" width="380" height="138" rx="30" fill="#F1F8FF" stroke="#BBD2EC" stroke-width="2"/>
     <text x="340" y="598" text-anchor="middle" fill="#123A5A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="25" font-weight="800">Research Foundry</text>
     <text x="340" y="632" text-anchor="middle" fill="#4D6E8A" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">Med Auto Science</text>
@@ -30,7 +30,7 @@
     <text x="1260" y="660" text-anchor="middle" fill="#426F6B" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="16">Decks, visuals, delivery loops</text>
     <rect x="190" y="770" width="1220" height="88" rx="28" fill="#F4F7FB" stroke="#CBD8E6" stroke-width="2"/>
     <text x="800" y="806" text-anchor="middle" fill="#315B7B" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="24" font-weight="800">Shared Confidence Surfaces</text>
-    <text x="800" y="838" text-anchor="middle" fill="#5B7388" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">Progress · sessions · quality gates · artifacts · recovery · module health · future thesis and review foundries</text>
+    <text x="800" y="838" text-anchor="middle" fill="#5B7388" font-family="Inter, Avenir Next, Helvetica, Arial, sans-serif" font-size="17">Progress · sessions · quality gates · artifacts · recovery · domain health · candidate foundries under definition</text>
   </g>
   <path d="M800 310V372" stroke="#2A6F9E" stroke-width="5" marker-end="url(#arrow)"/>
   <path d="M800 488V532" stroke="#2A6F9E" stroke-width="5" marker-end="url(#arrow)"/>
