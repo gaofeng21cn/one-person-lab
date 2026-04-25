@@ -153,6 +153,12 @@ function parseTurnkeyInstallArgs(
       parsed.skipGuiOpen = true;
       continue;
     }
+    if (token === '--serve-web') {
+      parsed.serveWeb = true;
+      parsed.skipGuiOpen = true;
+      parsed.basePath ??= '/opl';
+      continue;
+    }
 
     if (!token.startsWith('--')) {
       throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, { token });
