@@ -90,6 +90,7 @@ It is repo-tracked supporting material, not the default implementation basis.
 
 - [Reference Index](./references/README.md)
 - [Docker WebUI deployment reference](./references/opl-docker-webui-deployment.md)
+- [OPL default skill ecosystem reference](./references/opl-default-skill-ecosystem.md)
 - product-runtime and executor reference notes
 - domain alignment and delta-intake records
 - benchmark and rollout boards
