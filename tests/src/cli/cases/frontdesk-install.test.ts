@@ -16,6 +16,17 @@ test('install command runs selected module installs and returns one-shot setup p
   const medAutoScienceRemote = createGitModuleRemoteFixture('med-autoscience', {
     extraFiles: {
       'plugins/mas/.codex-plugin/plugin.json': JSON.stringify({ name: 'mas', skills: './skills/' }, null, 2),
+      '.agents/plugins/marketplace.json': JSON.stringify({
+        name: 'mas-local',
+        plugins: [
+          {
+            name: 'mas',
+            source: { source: 'local', path: './plugins/mas' },
+            policy: { installation: 'AVAILABLE', authentication: 'ON_INSTALL' },
+            category: 'Research',
+          },
+        ],
+      }, null, 2),
       'plugins/mas/skills/mas/SKILL.md': '# mas\n',
       'scripts/opl-module-bootstrap.sh': `#!/usr/bin/env bash
 set -euo pipefail
@@ -48,6 +59,10 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
         status: string;
         selected_engines: string[];
         selected_modules: string[];
+        codex_plugin_registry: {
+          surface_id: string;
+          summary: { registered: number };
+        };
         engine_actions: unknown[];
         module_actions: Array<{
           action: string;
@@ -74,6 +89,8 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
     assert.deepEqual(output.install.selected_engines, ['codex', 'hermes']);
     assert.deepEqual(output.install.engine_actions, []);
     assert.deepEqual(output.install.selected_modules, ['medautoscience']);
+    assert.equal(output.install.codex_plugin_registry.surface_id, 'opl_codex_plugin_registry');
+    assert.equal(output.install.codex_plugin_registry.summary.registered, 1);
     assert.equal(output.install.module_actions.length, 1);
     assert.equal(output.install.module_actions[0].action, 'install');
     assert.equal(output.install.module_actions[0].module.module_id, 'medautoscience');
@@ -87,6 +104,18 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
     assert.equal(output.install.system_initialize.surface_id, 'opl_frontdesk_initialize');
     assert.equal(output.install.system_initialize.recommended_skills.surface_id, 'opl_recommended_skill_bundle');
     assert.equal(output.install.system_initialize.gui_shell.shell_id, 'opl_aion_shell');
+    assert.equal(
+      fs.readFileSync(path.join(homeRoot, '.codex', 'config.toml'), 'utf8').includes(
+        `[marketplaces.mas-local]\nsource_type = "local"\nsource = "${path.join(modulesRoot, 'med-autoscience')}"`,
+      ),
+      true,
+    );
+    assert.equal(
+      fs.readFileSync(path.join(homeRoot, '.codex', 'config.toml'), 'utf8').includes(
+        '[plugins."mas@mas-local"]\nenabled = true',
+      ),
+      true,
+    );
     assert.deepEqual(fs.readFileSync(turnkeyLogPath, 'utf8').trim().split('\n'), ['bootstrap', 'skill-sync', 'health']);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
