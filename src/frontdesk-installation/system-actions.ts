@@ -3,7 +3,6 @@ import {
   readFrontDeskWorkspaceRoot,
   writeFrontDeskUpdateChannel,
 } from '../frontdesk-preferences.ts';
-import { installFrontDeskService } from '../frontdesk-service.ts';
 import { runProductEntryRepairHermesGateway } from '../product-entry.ts';
 import type { GatewayContracts } from '../types.ts';
 
@@ -27,26 +26,6 @@ export async function runFrontDeskSystemAction(
         update_channel: readFrontDeskUpdateChannel().channel,
         workspace_root: readFrontDeskWorkspaceRoot(),
         details: repairPayload.product_entry,
-      },
-    };
-  }
-
-  if (action === 'reinstall_support') {
-    const servicePayload = await installFrontDeskService(contracts, {
-      host: input.host,
-      port: input.port,
-      workspacePath: input.workspacePath ?? readFrontDeskWorkspaceRoot().selected_path ?? process.cwd(),
-      sessionsLimit: input.sessionsLimit,
-      basePath: input.basePath,
-    });
-    return {
-      version: 'g2',
-      frontdesk_system_action: {
-        action,
-        status: 'completed',
-        update_channel: readFrontDeskUpdateChannel().channel,
-        workspace_root: readFrontDeskWorkspaceRoot(),
-        details: servicePayload.frontdesk_service,
       },
     };
   }

@@ -2,23 +2,15 @@ import { GatewayContractError, PassThrough, assert, buildManifestCommand, buildP
 import { buildInternalCommandSpecs } from '../../../../src/cli/cases/private-command-specs.ts';
 import { buildPublicCommandSpecs } from '../../../../src/cli/cases/public-command-specs.ts';
 
-test('help keeps GUI lane on the explicit web adapter without launchd service commands', () => {
+test('help keeps GUI lane on AionUI without Product API service commands', () => {
   const output = runCli(['help']);
-  const web = output.help.commands.find((entry: { command: string }) => entry.command === 'web');
-
-  assert.ok(web);
-  assert.match(web.summary, /explicit/i);
-  assert.match(web.summary, /adapter/i);
+  assert.equal(output.help.commands.some((entry: { command: string }) => entry.command === 'web'), false);
   assert.equal(
     output.help.commands.some((entry: { command: string }) => entry.command === 'service install'),
     false,
   );
-  assert.ok(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'web bundle'),
-  );
-  assert.ok(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'web package'),
-  );
+  assert.equal(output.help.commands.some((entry: { command: string }) => entry.command === 'web bundle'), false);
+  assert.equal(output.help.commands.some((entry: { command: string }) => entry.command === 'web package'), false);
   assert.equal(
     output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk bootstrap'),
     false,
@@ -88,11 +80,10 @@ exit 1
             health_status: string;
           };
         };
-        local_service: {
-          service_installed: boolean;
-          service_loaded: boolean;
-          service_health: string;
-          gui_shell_strategy: string;
+        gui_shell: {
+          strategy: string;
+          service_dependency: string;
+          local_product_api_retired: boolean;
         };
         managed_paths: {
           state_dir: string;
@@ -122,10 +113,9 @@ exit 1
     assert.equal(output.system.core_engines.hermes.version, 'Hermes 1.2.3');
     assert.equal(output.system.core_engines.hermes.gateway_loaded, true);
     assert.equal(output.system.core_engines.hermes.health_status, 'ready');
-    assert.equal(output.system.local_service.service_installed, false);
-    assert.equal(output.system.local_service.service_loaded, false);
-    assert.equal(output.system.local_service.service_health, 'not_installed');
-    assert.equal(output.system.local_service.gui_shell_strategy, 'external_overlay');
+    assert.equal(output.system.gui_shell.strategy, 'aionui_remote_webui');
+    assert.equal(output.system.gui_shell.service_dependency, 'none');
+    assert.equal(output.system.gui_shell.local_product_api_retired, true);
     assert.match(
       output.system.managed_paths.state_dir,
       /Library\/Application Support\/OPL\/state$/,
@@ -224,19 +214,9 @@ exit 1
         };
         system: {
           update_channel: string;
-          local_service: {
-            service_health: string;
-          };
+          gui_shell: { local_product_api_retired: boolean };
         };
-        endpoints: {
-          system_initialize: string;
-          system: string;
-          modules: string;
-          settings: string;
-          engine_action: string;
-          workspace_root: string;
-          system_action: string;
-        };
+
         recommended_next_action: {
           action_id: string;
           label: string;
@@ -274,14 +254,7 @@ exit 1
     assert.equal(output.system_initialize.workspace_root.selected_path, workspaceRoot);
     assert.equal(output.system_initialize.workspace_root.health_status, 'ready');
     assert.equal(output.system_initialize.system.update_channel, 'stable');
-    assert.equal(output.system_initialize.system.local_service.service_health, 'not_installed');
-    assert.match(output.system_initialize.endpoints.system_initialize, /\/api\/opl\/system\/initialize$/);
-    assert.match(output.system_initialize.endpoints.system, /\/api\/opl\/system$/);
-    assert.match(output.system_initialize.endpoints.modules, /\/api\/opl\/modules$/);
-    assert.match(output.system_initialize.endpoints.settings, /\/api\/opl\/system\/settings$/);
-    assert.match(output.system_initialize.endpoints.engine_action, /\/api\/opl\/engines\/actions$/);
-    assert.match(output.system_initialize.endpoints.workspace_root, /\/api\/opl\/workspaces\/root$/);
-    assert.match(output.system_initialize.endpoints.system_action, /\/api\/opl\/system\/actions$/);
+    assert.equal(output.system_initialize.system.gui_shell.local_product_api_retired, true);
     assert.ok(output.system_initialize.recommended_next_action.action_id.length > 0);
     assert.ok(output.system_initialize.recommended_next_action.label.length > 0);
     assert.equal(output.system_initialize.recommended_next_action.method, 'GET');
@@ -658,23 +631,15 @@ EOF
   }
 });
 
-test('help keeps web adapter without service commands as the default GUI lane', () => {
+test('help keeps AionUI GUI lane without Product API commands', () => {
   const output = runCli(['help']);
-  const web = output.help.commands.find((entry: { command: string }) => entry.command === 'web');
-
-  assert.ok(web);
-  assert.match(web.summary, /explicit/i);
-  assert.match(web.summary, /adapter/i);
+  assert.equal(output.help.commands.some((entry: { command: string }) => entry.command === 'web'), false);
   assert.equal(
     output.help.commands.some((entry: { command: string }) => entry.command === 'service install'),
     false,
   );
-  assert.ok(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'web bundle'),
-  );
-  assert.ok(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'web package'),
-  );
+  assert.equal(output.help.commands.some((entry: { command: string }) => entry.command === 'web bundle'), false);
+  assert.equal(output.help.commands.some((entry: { command: string }) => entry.command === 'web package'), false);
   assert.equal(
     output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk bootstrap'),
     false,

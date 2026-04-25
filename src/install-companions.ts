@@ -331,7 +331,7 @@ export function buildOplGuiShellSurface(repoRoot: string): OplGuiShellSurface {
       'bun run dist:linux',
     ],
     notes: [
-      'OPL owns the runtime contract and Product API truth; opl-aion-shell owns the OPL-branded desktop GUI package built on the AionUI codebase.',
+      'OPL owns the runtime contract and release distribution surface; opl-aion-shell owns the OPL-branded desktop GUI package built on the AionUI codebase.',
       'A valid OPL GUI package is an OPL-branded Electron-builder distributable uploaded to the one-person-lab GitHub Release. The GUI source repository is internal build input.',
       'The upstream AionUI app is not itself the OPL GUI.',
       'Source build is only the fallback when no release asset matches the local platform and architecture.',

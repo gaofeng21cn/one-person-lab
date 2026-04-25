@@ -1,6 +1,4 @@
 import { buildFrontDeskEnvironment, buildFrontDeskInitialize, buildFrontDeskModules, runFrontDeskEngineAction, runFrontDeskModuleAction, runFrontDeskSystemAction, runFrontDeskTurnkeyInstall } from '../../frontdesk-installation.ts';
-import { getFrontDeskServiceStatus } from '../../frontdesk-service.ts';
-import { buildOplApiCatalog } from '../../opl-api-paths.ts';
 import type { GatewayContracts, GatewayContractsLoadOptions } from '../../types.ts';
 import type { CommandHandler, CommandSpec, ParsedCliInput } from './types.ts';
 import { buildUsageError } from './runtime-helpers.ts';
@@ -29,12 +27,10 @@ function looksLikeNaturalLanguage(command: string, args: string[]) {
 const COMMAND_GROUP_SUMMARIES: Record<string, string> = {
   top_level: '直接产品入口与前台运行入口。',
   skill: '同步 family domain plugin，并查看当前 Codex skill pack 安装状态。',
-  web: '导出或查看 GUI/overlay 需要的 Web bundle 与打包资源。',
   status: '读取 family、workspace、runtime 和 dashboard 状态。',
   system: '查看与维护 OPL 的系统状态、初始化和更新通道。',
   engine: '安装、更新与维护执行引擎。',
   module: '安装、更新与维护领域模块。',
-  service: '管理本地 OPL API 服务与桌面入口。',
   workspace: '管理项目与 workspace 绑定。',
   domain: '解析域边界、域入口和域 manifest。',
   contract: '读取或验证 machine-readable contract / handoff surface。',
@@ -145,8 +141,6 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl modules',
         'opl module install --module medautoscience',
         'opl engine install --engine codex',
-        'opl web bundle --port 8787 --base-path /pilot/opl',
-        'opl web package --output /tmp/opl-web-package --public-origin https://opl.example.com',
         'opl workspace projects',
         'opl workspace bind --project redcube --path /Users/gaofeng/workspace/redcube-ai --entry-command "redcube-ai frontdesk" --manifest-command "redcube product manifest --workspace-root /Users/gaofeng/workspace/redcube-ai"',
         'opl domain launch --project redcube --dry-run',
@@ -154,7 +148,6 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl status workspace --path /Users/gaofeng/workspace/redcube-ai',
         'opl status runtime --limit 10',
         'opl status dashboard --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
-        'opl web --host 127.0.0.1 --port 8787 --base-path /pilot/opl --path /Users/gaofeng/workspace/one-person-lab',
         'opl "Plan a medical grant proposal revision loop."',
         'opl exec "Plan a medical grant proposal revision loop."',
         'opl resume --last',
@@ -212,8 +205,8 @@ function buildPublicSystemFromFrontDeskEnvironment(
     surface_id: 'opl_system',
     overall_status: environment.overall_status,
     core_engines: environment.core_engines,
-    local_service: environment.local_frontdesk,
     module_summary: environment.module_summary,
+    gui_shell: environment.gui_shell,
     managed_paths: environment.managed_paths,
     notes: environment.notes,
   };
@@ -222,12 +215,7 @@ function buildPublicSystemFromFrontDeskEnvironment(
 function buildPublicSystemInitializePayload(
   payload: Awaited<ReturnType<typeof buildFrontDeskInitialize>>,
 ) {
-  const api = buildOplApiCatalog();
   const domainModules = payload.frontdesk_initialize.domain_modules;
-  const recommendedNextActionEndpoint =
-    payload.frontdesk_initialize.recommended_next_action.action_id === 'set_workspace_root'
-      ? api.actions.workspace_root
-      : api.actions.system_initialize;
   return {
     version: payload.version,
     system_initialize: {
@@ -246,35 +234,18 @@ function buildPublicSystemInitializePayload(
       gui_shell: payload.frontdesk_initialize.gui_shell,
       settings: {
         ...payload.frontdesk_initialize.settings,
-        endpoint: api.actions.system_settings,
-        action_endpoint: api.actions.system_settings,
       },
       workspace_root: {
         ...payload.frontdesk_initialize.workspace_root,
-        endpoint: api.actions.workspace_root,
-        action_endpoint: api.actions.workspace_root,
       },
       system: {
         update_channel: payload.frontdesk_initialize.system.update_channel,
-        local_service: payload.frontdesk_initialize.system.local_frontdesk,
+        gui_shell: payload.frontdesk_initialize.system.gui_shell,
         actions: payload.frontdesk_initialize.system.actions.map((entry) => ({
           ...entry,
-          endpoint: api.actions.system,
         })),
       },
-      endpoints: {
-        system_initialize: api.actions.system_initialize,
-        system: api.resources.system,
-        modules: api.resources.modules,
-        settings: api.actions.system_settings,
-        engine_action: api.actions.engines,
-        workspace_root: api.actions.workspace_root,
-        system_action: api.actions.system,
-      },
-      recommended_next_action: {
-        ...payload.frontdesk_initialize.recommended_next_action,
-        endpoint: recommendedNextActionEndpoint,
-      },
+      recommended_next_action: payload.frontdesk_initialize.recommended_next_action,
       notes: payload.frontdesk_initialize.notes,
     },
   };
@@ -345,18 +316,6 @@ function buildPublicSystemActionPayload(
   };
 }
 
-function buildPublicServicePayload(
-  payload: Awaited<ReturnType<typeof getFrontDeskServiceStatus>>,
-) {
-  return {
-    version: payload.version,
-    service: {
-      surface_id: 'opl_service',
-      ...payload.frontdesk_service,
-    },
-  };
-}
-
 function parseCliInput(argv: string[]): ParsedCliInput {
   const args = [...argv];
   const loadOptions: GatewayContractsLoadOptions = {};
@@ -414,7 +373,6 @@ export {
   buildPublicEngineActionPayload,
   buildPublicModuleActionPayload,
   buildPublicModulesPayload,
-  buildPublicServicePayload,
   buildPublicSystemActionPayload,
   buildPublicSystemInitializePayload,
   buildPublicSystemPayload,

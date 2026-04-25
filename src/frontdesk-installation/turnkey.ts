@@ -13,7 +13,6 @@ import { buildFrontDeskEnvironment } from './environment.ts';
 import { buildFrontDeskInitialize } from './initialize.ts';
 import { runFrontDeskModuleAction } from './modules.ts';
 import { resolveProjectRoot, runCommand } from './shared.ts';
-import { runFrontDeskSystemAction } from './system-actions.ts';
 import type { FrontDeskModuleId, FrontDeskTurnkeyInstallInput } from './shared.ts';
 
 const DEFAULT_MODULES: FrontDeskModuleId[] = ['medautoscience', 'meddeepscientist', 'medautogrant', 'redcube'];
@@ -284,7 +283,6 @@ export async function runFrontDeskTurnkeyInstall(
   );
   const codexPluginRegistry = registerOplFamilyCodexPlugins(modules, moduleRepoPaths);
   const serviceAction: null = null;
-  const webOpenAction = null;
   const guiOpenAction = input.skipGuiOpen ? null : installOrOpenOplGui();
   const companionSkillSync = syncOplCompanionSkills();
   const initialize = await buildFrontDeskInitialize(contracts);
@@ -300,15 +298,12 @@ export async function runFrontDeskTurnkeyInstall(
       codex_plugin_registry: codexPluginRegistry,
       engine_actions: engineActions.map((entry) => entry.frontdesk_engine_action),
       module_actions: moduleActions.map((entry) => entry.frontdesk_module_action),
-      service_action: serviceAction,
-      web_open_action: webOpenAction,
       gui_open_action: guiOpenAction,
       gui_shell: buildOplGuiShellSurface(resolveProjectRoot()),
       companion_skill_sync: companionSkillSync,
       system_initialize: initialize.frontdesk_initialize,
       notes: [
         'This command is the user-facing one-shot path for OPL + Codex CLI + Hermes-Agent + family modules + companion Codex skills + desktop GUI.',
-        'In Linux or Docker, use `opl install --serve-web --host 0.0.0.0 --port 8787` as the foreground browser entry process after providing Codex defaults through OPL_CODEX_MODEL, OPL_CODEX_BASE_URL, and OPL_CODEX_API_KEY.',
         'GUI startup opens the installed One Person Lab app when present; otherwise it downloads and installs the matching one-person-lab release asset before opening the app. opl-aion-shell remains an internal GUI source/build input.',
       ],
     },

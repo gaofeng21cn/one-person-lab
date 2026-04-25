@@ -51,17 +51,17 @@
 curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/install.sh | bash
 ```
 
-Docker / Linux 服务器直接开放 WebUI：
+Docker / Linux 服务器使用 WebUI：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/install.sh | bash -s -- --serve-web --host 0.0.0.0 --port 8787
+curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/install.sh | bash
 ```
 
 给 Codex Agent 的一句话：
 
 > 安装并配置这个 OPL repo：clone repo，安装 OPL CLI，运行 `opl install`，确认 One Person Lab App 的「远程连接」WebUI，以及 Research / Grant / Presentation Foundry 模块都准备好；如果某一步缺失，直接补齐或报告准确阻塞。
 
-`opl install` 会一揽子准备 OPL CLI、当前活跃的产品家族模块、Codex skills 和 One Person Lab App。macOS 会优先打开或安装桌面 App；Linux / Docker 用 `--serve-web` 以前台进程启动 WebUI，默认访问地址是 `http://<host>:8787/opl/`。
+`opl install` 会一揽子准备 OPL CLI、当前活跃的产品家族模块、Codex skills 和 One Person Lab App。macOS 会优先打开或安装桌面 App；Linux / Docker 的浏览器 WebUI 由 OPL 品牌的 AionUI shell 提供，不再由 OPL 主仓启动本地 8787 Product API 服务。
 
 如果容器或服务器没有现成的 Codex 配置，可以在安装前提供默认模型配置；OPL 会写入 `CODEX_HOME/config.toml`，并且不会在安装输出里回显 API key：
 
@@ -71,7 +71,7 @@ export OPL_CODEX_MODEL=gpt-5.5
 export OPL_CODEX_REASONING_EFFORT=xhigh
 export OPL_CODEX_BASE_URL=https://your-provider.example/v1
 export OPL_CODEX_API_KEY=sk-...
-curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/install.sh | bash -s -- --serve-web --host 0.0.0.0 --port 8787
+curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/install.sh | bash
 ```
 
 ## 可以用来做什么

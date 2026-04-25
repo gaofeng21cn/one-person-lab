@@ -11,7 +11,7 @@
 - 执行引擎与模块注册表
 - 工作空间、会话、进度、交付物等接口面
 - 跨仓共享的模块、机器可读合同与可发现索引
-- `Product API`、`opl web` 与 GUI 壳使用的 projection surface
+- OPL-branded AionUI GUI/WebUI 使用的 runtime/release surface
 
 图形界面外壳继续放在独立的界面仓中维护。
 各个领域仓继续作为独立 `domain agent` 仓，持有自己的智能体入口、领域逻辑、运行规则与交付物真相。
@@ -25,7 +25,7 @@
 2. 显式激活层
    `OPL` 负责 family skill pack 注册与同步、shared dispatch、family-level shared surfaces，以及把调用映射到各个 admitted domain 仓的稳定 capability surface。
 3. 可选外壳与投影层
-   GUI shell、`Product API`、`opl web` 与其他兼容层继续围绕同一套 runtime/activation truth 做展示与投影，而不是重新定义默认交互合同。
+   GUI shell 与其他兼容层继续围绕同一套 runtime/activation truth 做展示与投影，而不是重新定义默认交互合同。
 
 ## 项目目标
 
@@ -33,13 +33,13 @@
 - 把 domain app 以可同步的 skill pack 与稳定 contract 接入统一 activation layer
 - 统一管理执行引擎、模块、工作空间、会话、进度与交付物
 - 维护 family-level shared modules、shared contracts 与 shared indexes
-- 让 `Product API`、`opl web` 与 GUI 壳继续作为 projection surface 存在
+- 让 OPL-branded AionUI GUI/WebUI 作为用户可见外壳，复用同一套 runtime/activation truth
 - 明确 `OPL` 与各个独立 `domain agent` 仓的边界
 - 保持公开文档、网关合同与已收录领域状态一致
 
 ## 作用边界
 
-- `OPL` 负责 Codex-default session/runtime、activation layer、产品 projection surface，以及 shared modules / contracts / indexes
+- `OPL` 负责 Codex-default session/runtime、activation layer、release distribution surface，以及 shared modules / contracts / indexes
 - `OPL` 的默认 runtime 只有一个：`Codex`
 - `Hermes-Agent` 只作为显式切换的备选 runtime
 - `OPL` 不持有领域运行时所有权
