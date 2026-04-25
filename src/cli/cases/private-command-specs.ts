@@ -417,85 +417,85 @@ export function buildInternalCommandSpecs(
       },
     },
     ask: {
-	      usage:
-	        'opl ask <request...> [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--executor <codex|hermes>] [--workspace-path <path>] [--dry-run]',
-	      summary:
-	        'Retired compatibility command.',
-	      examples: [
-	        'opl exec "Summarize current workspace status."',
-	        'opl skill sync',
-	        'opl exec "Prepare a defense-ready deck for next week."',
-	      ],
-	      handler: () => {
-	        throw buildRetiredCommandError(
-	          'opl ask',
-	          'Use `opl exec <request...>` for raw Codex one-shot work. If you need MAS/MAG/RCA inside Codex, run `opl skill sync` first and continue through `opl` or `opl exec`.'
-	        );
-	      },
-	    },
-	    exec: {
-	      usage:
-	        'opl exec [codex exec args...]',
-	      summary:
-	        'Run codex exec as a raw passthrough.',
-	      examples: [
-	        'opl exec "Plan a medical grant proposal revision loop."',
-	        'opl exec --cd /Users/gaofeng/workspace/redcube-ai "Prepare a defense-ready slide deck for a thesis committee."',
-	        'opl exec --model gpt-5.4 "Summarize current workspace status."',
-	      ],
-	      handler: (args) => runCodexPassthroughHandled(['exec', ...args]),
-	    },
-	    chat: {
-	      usage:
-	        'opl chat <request...> [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--executor <codex|hermes>] [--workspace-path <path>] [--dry-run]',
-	      summary:
-	        'Retired compatibility command.',
-	      examples: [
-	        'opl',
-	        'opl resume run_7e2a41a19175465f809c0a7f151278ee',
-	        'opl skill sync',
-	      ],
-	      handler: () => {
-	        throw buildRetiredCommandError(
-	          'opl chat',
-	          'Use `opl` for the default Codex interactive session, `opl resume <session_id>` to continue a session, and `opl skill sync` when you want the family domain skill packs available inside Codex.'
-	        );
-	      },
-	    },
-	    shell: {
-	      usage:
-	        'opl shell [<request...> | --resume <session_id>] [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--executor <codex|hermes>] [--workspace-path <path>] [--dry-run]',
-	      summary:
-	        'Retired compatibility command.',
-	      examples: [
-	        'opl',
-	        'opl resume run_7e2a41a19175465f809c0a7f151278ee',
-	        'opl skill sync',
-	      ],
-	      handler: () => {
-	        throw buildRetiredCommandError(
-	          'opl shell',
-	          'Use `opl` for the default Codex frontdoor, `opl resume <session_id>` to continue a session, and `opl skill sync` to register the family domain skill packs.'
-	        );
-	      },
-	    },
-	    resume: {
-	      usage: 'opl resume [codex resume args...] [--executor hermes]',
-	      summary: 'Resume a Codex session as a raw passthrough; use --executor hermes for explicit Hermes sessions.',
-	      examples: [
-	        'opl resume run_7e2a41a19175465f809c0a7f151278ee',
-	        'opl resume --last',
-	        'opl resume run_7e2a41a19175465f809c0a7f151278ee --executor hermes',
-	      ],
-	      handler: (args) => {
-	        if (!hasExplicitHermesExecutor(args)) {
-	          return runCodexPassthroughHandled(['resume', ...stripExplicitCodexExecutor(args)]);
-	        }
+  usage:
+    'opl ask <request...> [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--executor <codex|hermes>] [--workspace-path <path>] [--dry-run]',
+  summary:
+    'Retired compatibility command.',
+  examples: [
+    'opl exec "Summarize current workspace status."',
+    'opl skill sync',
+    'opl exec "Prepare a defense-ready deck for next week."',
+  ],
+  handler: () => {
+    throw buildRetiredCommandError(
+      'opl ask',
+      'Use `opl exec <request...>` for raw Codex one-shot work. If you need MAS/MAG/RCA inside Codex, run `opl skill sync` first and continue through `opl` or `opl exec`.'
+    );
+  },
+},
+exec: {
+  usage:
+    'opl exec [codex exec args...]',
+  summary:
+    'Run codex exec as a raw passthrough.',
+  examples: [
+    'opl exec "Plan a medical grant proposal revision loop."',
+    'opl exec --cd /Users/gaofeng/workspace/redcube-ai "Prepare a defense-ready slide deck for a thesis committee."',
+    'opl exec --model gpt-5.4 "Summarize current workspace status."',
+  ],
+  handler: (args) => runCodexPassthroughHandled(['exec', ...args]),
+},
+chat: {
+  usage:
+    'opl chat <request...> [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--executor <codex|hermes>] [--workspace-path <path>] [--dry-run]',
+  summary:
+    'Retired compatibility command.',
+  examples: [
+    'opl',
+    'opl resume run_7e2a41a19175465f809c0a7f151278ee',
+    'opl skill sync',
+  ],
+  handler: () => {
+    throw buildRetiredCommandError(
+      'opl chat',
+      'Use `opl` for the default Codex interactive session, `opl resume <session_id>` to continue a session, and `opl skill sync` when you want the family domain skill packs available inside Codex.'
+    );
+  },
+},
+shell: {
+  usage:
+    'opl shell [<request...> | --resume <session_id>] [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--executor <codex|hermes>] [--workspace-path <path>] [--dry-run]',
+  summary:
+    'Retired compatibility command.',
+  examples: [
+    'opl',
+    'opl resume run_7e2a41a19175465f809c0a7f151278ee',
+    'opl skill sync',
+  ],
+  handler: () => {
+    throw buildRetiredCommandError(
+      'opl shell',
+      'Use `opl` for the default Codex frontdoor, `opl resume <session_id>` to continue a session, and `opl skill sync` to register the family domain skill packs.'
+    );
+  },
+},
+resume: {
+  usage: 'opl resume [codex resume args...] [--executor hermes]',
+  summary: 'Resume a Codex session as a raw passthrough; use --executor hermes for explicit Hermes sessions.',
+  examples: [
+    'opl resume run_7e2a41a19175465f809c0a7f151278ee',
+    'opl resume --last',
+    'opl resume run_7e2a41a19175465f809c0a7f151278ee --executor hermes',
+  ],
+  handler: (args) => {
+    if (!hasExplicitHermesExecutor(args)) {
+      return runCodexPassthroughHandled(['resume', ...stripExplicitCodexExecutor(args)]);
+    }
 
-	        const parsed = parseResumeArgs(args, commandSpecs.resume);
-	        return runProductEntryResume(parsed.sessionId, parsed.executor);
-	      },
-	    },
+    const parsed = parseResumeArgs(args, commandSpecs.resume);
+    return runProductEntryResume(parsed.sessionId, parsed.executor);
+  },
+},
     sessions: {
       usage: 'opl session list [--limit <n>] [--source <source>]',
       summary: 'List recent Hermes sessions through a machine-readable OPL product-entry surface.',

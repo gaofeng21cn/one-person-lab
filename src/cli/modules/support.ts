@@ -4,6 +4,8 @@ export {
   RETIRED_COMMAND_PREFIXES,
   buildCommandHelp,
   buildContractsContext,
+  formatHumanCommandHelp,
+  formatHumanRootHelp,
   buildPublicEngineActionPayload,
   buildPublicModuleActionPayload,
   buildPublicModulesPayload,

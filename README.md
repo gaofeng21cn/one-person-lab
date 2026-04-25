@@ -11,59 +11,21 @@
 <p align="center"><strong>One workbench for serious research, grant, and presentation work</strong></p>
 <p align="center">Start expert work, keep progress visible, and collect deliverables in one trusted place.</p>
 
-<table>
-  <tr>
-    <td width="33%" valign="top">
-      <strong>Who It Serves</strong><br/>
-      Clinicians, researchers, PIs, educators, and small teams who want one entry point for long-running expert work
-    </td>
-    <td width="33%" valign="top">
-      <strong>What It Helps Manage</strong><br/>
-      Conversations, workspace-based tasks, progress updates, delivered files, and specialized workflows
-    </td>
-    <td width="33%" valign="top">
-      <strong>Current Scope</strong><br/>
-      <code>OPL</code> is the top-level workbench for the product family, with active coverage in medical research, grant work, and presentation delivery
-    </td>
-  </tr>
-</table>
-
-<p align="center">
-  <img src="assets/branding/opl-workbench-overview.svg" alt="OPL workbench overview" width="100%" />
-</p>
-
-<h2 align="center">Architecture And Product Plan</h2>
-<p align="center">A higher-level map of the workbench, active foundries, and shared confidence surfaces.</p>
-
-<p align="center">
-  <img src="assets/branding/opl-architecture-plan.svg" alt="OPL architecture and product plan" width="100%" />
-</p>
-
-> `OPL` gives one place to start work, keep progress legible, and collect outputs, while each specialized product family keeps its own methods and deliverables.
-
 ## Fast Start
 
-Supported environment: macOS is the primary desktop App target; Linux and Docker support the CLI + WebUI path for browser-based access.
-
-One command for a human user:
+For macOS desktop users:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/install.sh | bash
 ```
 
-Docker / Linux server WebUI:
+After installation, open `One Person Lab.app`, choose a workspace root, and start general work, medical research, grant writing, or presentation/PPT work from the same interface.
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/install.sh | bash
-```
+For Linux / Docker / server users:
 
-One instruction for a Codex Agent:
-
-> Install and configure this OPL repo: clone it, install the OPL CLI, run `opl install`, and ensure the One Person Lab App Remote Connection WebUI and the Research / Grant / Presentation Foundry modules are ready; if anything is missing, fix it or report the exact blocker.
-
-The installer clones or updates OPL under `~/.opl/one-person-lab`, links the `opl` CLI, then runs `opl install`. `opl install` prepares the OPL CLI, active product-family modules, Codex skills, and the One Person Lab App in one pass. On macOS it opens or installs the desktop App from the OPL GitHub Release; browser-style WebUI access is provided by the OPL-branded AionUI shell rather than a local 8787 Product API service.
-
-When a container or server does not already have Codex defaults, provide them before installing. OPL writes `CODEX_HOME/config.toml` and never echoes the API key in the install payload:
+- CLI installation uses the same one-line command.
+- Browser access uses the OPL-branded AionUI WebUI; deployment, no-auth mode, Chinese defaults, and Codex configuration injection are documented in the [Docker WebUI deployment reference](./docs/references/opl-docker-webui-deployment.md).
+- If the container or server does not already have Codex defaults, inject these variables before installing or starting the service:
 
 ```bash
 export CODEX_HOME=/data/codex
@@ -74,19 +36,33 @@ export OPL_CODEX_API_KEY=sk-...
 curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/install.sh | bash
 ```
 
-## What People Use It For
+One instruction for a Codex Agent:
 
-- Start a general conversation or a multi-step task from the same workbench.
-- Open workspace-based work when a task needs a fixed directory and file context.
-- Run specialized product families for research, grant, and presentation work.
-- Keep long-running progress visible in plain language.
-- Gather manuscripts, proposals, slide decks, tables, review files, and other deliverables in one place.
+> Install and configure this OPL repo: clone it, install the OPL CLI, run `opl install`, and ensure Codex CLI, Hermes-Agent, MAS/MDS/MAG/RCA, recommended skills, the One Person Lab App, and the WebUI entry are ready; if anything is missing, fix it or report the exact blocker.
+
+`opl install` prepares the OPL CLI, Codex CLI, Hermes-Agent, active product-family modules, Codex skills, and the One Person Lab App in one pass. On macOS it opens or installs the desktop App first; Linux and Docker use the browser WebUI path.
+
+## What New Users Can Do First
+
+- **Medical research**: ask Research Foundry to move evidence organization, analysis, manuscript drafts, and deliverable packages forward.
+- **Grant applications**: ask Grant Foundry to shape direction, structure a proposal, and prepare revision packages.
+- **Presentations and PPT**: ask Presentation Foundry to prepare lectures, lab talks, defenses, and project reports.
+- **General long-running work**: keep discussion, file reading, document editing, progress, and deliverables in one workbench.
+
+## Common Commands After Installation
+
+```bash
+opl system initialize   # Inspect Codex, Hermes-Agent, modules, skills, GUI, and workspace-root state
+opl modules             # Check MAS/MDS/MAG/RCA module installation and health
+opl skill sync          # Sync OPL family skills into the Codex-visible skill path
+opl help --text         # Human-readable help; use opl help --json for machine-readable output
+```
 
 ## Current Product Families
 
 | Product family | Current product | Best for | Typical deliverables |
 | --- | --- | --- | --- |
-| `Research Foundry` | [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience) | Medical research, evidence organization, manuscript preparation | Analysis packages, evidence packages, manuscripts |
+| `Research Foundry` | [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience) + [`Med Deep Scientist`](https://github.com/gaofeng21cn/med-deepscientist) | Medical research, evidence organization, manuscript preparation, deep analysis | Analysis packages, evidence packages, manuscripts |
 | `Grant Foundry` | [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) | Grant direction setting, proposal writing, revision work | Proposals, outlines, revision packs |
 | `Presentation Foundry` | [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) | Lectures, lab talks, reports, defense materials | Slide decks, scripts, presentation packages |
 | `Thesis Foundry` | Planned | Thesis assembly and defense preparation | Chapter drafts, defense materials |
@@ -98,7 +74,19 @@ curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/ins
 - Workspace-based work for tasks that need a real directory and persistent file context.
 - Specialized product families for domain-specific expert workflows.
 - Progress and file views that stay attached to ongoing work.
-- Central management for engines, modules, and health status.
+- Central management for engines, modules, skills, GUI, and health status.
+
+<p align="center">
+  <img src="assets/branding/opl-workbench-overview.svg" alt="OPL workbench overview" width="100%" />
+</p>
+
+## Architecture And Product Plan
+
+A higher-level map of the workbench, active foundries, and shared confidence surfaces.
+
+<p align="center">
+  <img src="assets/branding/opl-architecture-plan.svg" alt="OPL architecture and product plan" width="100%" />
+</p>
 
 ## What This Repository Tracks
 
@@ -125,13 +113,10 @@ The desktop GUI source is maintained in [`opl-aion-shell`](https://github.com/ga
 - Read the [Docs Guide](./docs/README.md) first. It already consolidates the current product model, technical working set, contract entry points, and document layering.
 - Then read [Project](./docs/project.md), [Status](./docs/status.md), [Architecture](./docs/architecture.md), [Invariants](./docs/invariants.md), and [Decisions](./docs/decisions.md). This is the fastest way to recover the top-level boundary, the Codex-default runtime contract, the explicit activation layer, and the admitted domains.
 - The default frontdoors are `opl`, `opl exec`, and `opl resume`. They inherit Codex-default semantics unless you explicitly switch runtime or activate a domain agent. `MCP` stays the supported protocol layer, and `controller` stays internal.
-- The active interaction route is Codex-default first: local `opl`, direct `Codex` usage, and future external shells all consume the same session/runtime truth. `opl skill sync` now auto-discovers sibling family repositories from the workspace layout by default, so local worktrees no longer need `OPL_FAMILY_WORKSPACE_ROOT` just to surface the family skill packs inside Codex.
-- The shortest first-run command is `opl install`. It installs/configures `Codex CLI` and `Hermes-Agent`, installs the default family modules (`MAS` with its `MDS` dependency, `MAG`, `RCA`), syncs their Codex skills, and opens the One Person Lab App; when the App is missing on macOS, it downloads and installs the matching release DMG first.
-- If one of the admitted domain repositories is not present yet, run `opl module install --module <module_id>`. The install path is now a turnkey loop: clone into the OPL-managed modules root, run the repo-specific bootstrap, sync the matching Codex skill pack, then finish with a repo health check.
-- For a first-run install surface, run `opl system initialize`. It exposes runtime dependencies, domain modules, the recommended companion skill bundle (`superpowers`, `officecli`, and native Office skills when present), and the OPL-branded GUI shell strategy in one machine-readable payload.
-- GUI source/build input lives in the sibling `opl-aion-shell` repository, but user-facing app packages are released from `one-person-lab`; maintainers publish them with `npm run gui:release`. A valid prebuilt GUI package is an OPL-versioned asset such as `One.Person.Lab-26.4.25-mac-arm64.dmg`; source build from `opl-aion-shell` is only the fallback when no asset matches the local platform and architecture.
+- The active interaction route is Codex-default first: local `opl`, direct `Codex` usage, and future external shells all consume the same session/runtime truth. `opl skill sync` auto-discovers sibling family repositories from the workspace layout by default, so local worktrees no longer need `OPL_FAMILY_WORKSPACE_ROOT` just to surface the family skill packs inside Codex.
+- If one of the admitted domain repositories is not present yet, run `opl module install --module <module_id>`. The install path is a turnkey loop: clone into the OPL-managed modules root, run the repo-specific bootstrap, sync the matching Codex skill pack, then finish with a repo health check.
 - The default local state directory is `~/Library/Application Support/OPL/state`. Override it with `OPL_STATE_DIR` when you need a non-default local state root.
-- The current active domain agents are [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience), [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant), and [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai). They expose stable capability surfaces as local CLIs, programs/scripts, and repo-tracked contracts; continue into [Status](./docs/status.md), [Architecture](./docs/architecture.md), and the [OPL Public Surface Index](./docs/opl-public-surface-index.md) to recover the family mapping and public entry surfaces.
+- The current active domain agents are [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience), [`Med Deep Scientist`](https://github.com/gaofeng21cn/med-deepscientist), [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant), and [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai). They expose stable capability surfaces as local CLIs, programs/scripts, and repo-tracked contracts; continue into [Status](./docs/status.md), [Architecture](./docs/architecture.md), and the [OPL Public Surface Index](./docs/opl-public-surface-index.md) to recover the family mapping and public entry surfaces.
 - Use `OPL` when the task needs the top-level session/runtime path, shared `workspaces / sessions / progress / artifacts` surfaces, or explicit domain activation. Use the corresponding domain repository when the task is already scoped to one domain and you want that repo's own CLI/scripts/contracts boundary.
 
 </details>
