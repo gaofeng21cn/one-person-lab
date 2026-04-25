@@ -4,8 +4,8 @@
 
 截至 `2026-04-21`，`OPL` 的产品形态已经明确：
 
-- GUI 主线采用 `AionUI` 作为更贴近 `Codex CLI` 壳的独立界面基座
-- `Onyx` 降为备线与 benchmark
+- GUI 主线采用基于 `AionUI` codebase 的 `opl-aion-shell`，作为更贴近 `Codex CLI` 壳的独立界面基座
+- 旧 GUI 备线路线已退役，不再作为当前备选或 benchmark
 - `OPL` 主仓负责共享运行时真相、智能体注册表、工作空间 / 会话 / 文件 / 系统接口
 - `Codex` 是默认交互与执行宿主
 - `Hermes-Agent` 是备用执行器与长期在线网关

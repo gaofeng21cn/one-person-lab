@@ -177,7 +177,6 @@ export function buildFrontDeskDashboard(
         hosted_friendly_endpoints: endpoints,
         rollout_board_refs: [
           'docs/references/opl-frontdesk-delivery-board.md',
-          'docs/references/opl-hosted-web-frontdesk-benchmark.md',
           'docs/references/family-lightweight-direct-entry-rollout-board.md',
           'docs/references/mas-top-level-cutover-board.md',
         ],
