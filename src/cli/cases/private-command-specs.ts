@@ -5,6 +5,7 @@ import { launchDomainEntry } from '../../domain-launch.ts';
 import { buildDomainManifestCatalog } from '../../domain-manifest.ts';
 import { buildFrontDeskDashboard, buildFrontDeskStart, buildProjectsOverview, buildRuntimeStatus, buildWorkspaceStatus } from '../../management.ts';
 import { runAcpStdioBridge } from '../../opl-acp-stdio.ts';
+import { syncOplCompanionSkills } from '../../install-companions.ts';
 import { readFamilySkillPacks, syncFamilySkillPacks } from '../../opl-skills.ts';
 import { buildSessionLedger } from '../../session-ledger.ts';
 import { explainDomainBoundary, resolveRequestSurface } from '../../resolver.ts';
@@ -250,7 +251,47 @@ export function buildInternalCommandSpecs(
         return syncFamilySkillPacks({
           domains: parsed.domains,
           home: parsed.home,
+          companionMode: parsed.companionMode,
+          superpowersProfile: parsed.superpowersProfile,
         });
+      },
+    },
+    'skill-companion-status': {
+      usage: 'opl skill companion status [--home <home_path>] [--superpowers <keep|lite|full>]',
+      summary: 'Inspect the OPL recommended companion skill ecosystem without changing user skill configuration.',
+      examples: [
+        'opl skill companion status',
+        'opl skill companion status --superpowers lite',
+      ],
+      handler: (args) => {
+        const parsed = parseSkillPackArgs(args, commandSpecs['skill-companion-status']);
+        return {
+          version: 'g2',
+          companion_skills: syncOplCompanionSkills(parsed.home, {
+            mode: 'observe',
+            superpowersProfile: parsed.superpowersProfile ?? 'keep',
+          }),
+        };
+      },
+    },
+    'skill-companion-apply': {
+      usage: 'opl skill companion apply --mode <ask_to_apply|managed> [--home <home_path>] [--superpowers <keep|lite|full>]',
+      summary: 'Apply OPL companion skill recommendations only when the user or OPL-managed profile explicitly permits it.',
+      examples: [
+        'opl skill companion apply --mode managed --superpowers keep',
+        'opl skill companion apply --mode managed --superpowers lite',
+        'opl skill companion apply --mode managed --superpowers full',
+      ],
+      handler: (args) => {
+        const parsed = parseSkillPackArgs(args, commandSpecs['skill-companion-apply']);
+        const mode = parsed.companionMode ?? 'ask_to_apply';
+        return {
+          version: 'g2',
+          companion_skills: syncOplCompanionSkills(parsed.home, {
+            mode,
+            superpowersProfile: parsed.superpowersProfile ?? 'keep',
+          }),
+        };
       },
     },
     'domain launch': {

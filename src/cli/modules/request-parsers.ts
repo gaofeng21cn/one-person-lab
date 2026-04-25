@@ -688,6 +688,18 @@ function parseSkillPackArgs(
       case '--home':
         parsed.home = value;
         break;
+      case '--mode':
+        if (value !== 'observe' && value !== 'ask_to_apply' && value !== 'managed') {
+          throw buildUsageError('Option --mode requires observe, ask_to_apply, or managed.', spec, { option: token, value });
+        }
+        parsed.companionMode = value;
+        break;
+      case '--superpowers':
+        if (value !== 'keep' && value !== 'lite' && value !== 'full') {
+          throw buildUsageError('Option --superpowers requires keep, lite, or full.', spec, { option: token, value });
+        }
+        parsed.superpowersProfile = value;
+        break;
       default:
         throw buildUsageError(`Unknown option for skill pack command: ${token}.`, spec, {
           option: token,

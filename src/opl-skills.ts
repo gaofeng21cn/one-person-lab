@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 import { GatewayContractError } from './contracts.ts';
-import { syncOplCompanionSkills } from './install-companions.ts';
+import { syncOplCompanionSkills, type OplCompanionSkillApplyMode, type OplSuperpowersProfile } from './install-companions.ts';
 import { resolveFrontDeskStatePaths } from './frontdesk-state.ts';
 
 type SkillPackInstallerKind = 'bash' | 'node';
@@ -51,6 +51,8 @@ type ReadFamilySkillPacksOptions = {
 
 type SyncFamilySkillPacksOptions = ReadFamilySkillPacksOptions & {
   home?: string;
+  companionMode?: OplCompanionSkillApplyMode;
+  superpowersProfile?: OplSuperpowersProfile;
 };
 
 const FAMILY_SKILL_PACK_SPECS: SkillPackSpec[] = [
@@ -436,7 +438,10 @@ export function syncFamilySkillPacks(options: SyncFamilySkillPacksOptions = {}) 
     .filter((spec) => !selectedDomains || selectedDomains.has(spec.domain_id))
     .map((spec) => inspectFamilySkillPack(spec));
   const packs = inspectedPacks.map((inspected) => runInstaller(inspected, resolvedHome ?? undefined));
-  const companion_skills = syncOplCompanionSkills(resolvedHome ?? undefined);
+  const companion_skills = syncOplCompanionSkills(resolvedHome ?? undefined, {
+    mode: options.companionMode ?? 'observe',
+    superpowersProfile: options.superpowersProfile ?? 'keep',
+  });
 
   return {
     version: 'g2',

@@ -152,6 +152,8 @@ type SkillPacksCliInput = {
   domains: string[];
   home?: string;
   quiet?: boolean;
+  companionMode?: 'observe' | 'ask_to_apply' | 'managed';
+  superpowersProfile?: 'keep' | 'lite' | 'full';
 };
 
 export type {
