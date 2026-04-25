@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import { buildOplGuiArtifactName, buildOplReleaseTag, getOplReleaseRepo, getOplReleaseVersion } from './opl-release.ts';
 import { resolveFamilyWorkspaceRootFromRepoRoot } from './opl-skills.ts';
+import { runGit } from './frontdesk-installation/shared.ts';
 
 export type OplCompanionSkillStatus = 'ready' | 'missing';
 
@@ -11,13 +12,14 @@ type OplCompanionSkillSourceCandidate = {
   report_path: string;
   link_path: string;
 };
-export type OplCompanionSkillSyncStatus = 'synced' | 'available' | 'missing_source' | 'failed';
+export type OplCompanionSkillSyncStatus = 'synced' | 'available' | 'installed' | 'missing_source' | 'failed';
 
 export type OplCompanionSkillSyncItem = {
   skill_id: string;
   source_path: string | null;
   target_path: string;
   status: OplCompanionSkillSyncStatus;
+  action: 'symlink' | 'clone_and_symlink' | 'update_and_symlink' | 'discover_only';
   note: string | null;
 };
 
@@ -41,6 +43,7 @@ export type OplRecommendedSkill = {
   expected_paths: string[];
   status: OplCompanionSkillStatus;
   install_hint: string;
+  update_hint?: string;
   supports: string[];
 };
 
@@ -85,15 +88,85 @@ function buildSkillStatus(expectedPaths: string[]): OplCompanionSkillStatus {
   return expectedPaths.some((candidate) => resolveSkillSourceCandidate(candidate)) ? 'ready' : 'missing';
 }
 
+function resolveCodexHome(home: string) {
+  return process.env.CODEX_HOME?.trim() || path.join(home, '.codex');
+}
+
 function resolveCodexSkillsDir(home: string) {
-  const codexHome = process.env.CODEX_HOME?.trim() || path.join(home, '.codex');
-  return path.join(codexHome, 'skills');
+  return path.join(resolveCodexHome(home), 'skills');
+}
+
+function resolveAgentsSkillsDir(home: string) {
+  return path.join(home, '.agents', 'skills');
+}
+
+function resolveSuperpowersRepoDir(home: string) {
+  return process.env.OPL_SUPERPOWERS_DIR?.trim() || path.join(resolveCodexHome(home), 'superpowers');
+}
+
+function getSuperpowersRepoUrl() {
+  return process.env.OPL_SUPERPOWERS_REPO_URL?.trim() || 'https://github.com/obra/superpowers.git';
 }
 
 function forceSymlinkDirectory(sourcePath: string, targetPath: string) {
   fs.mkdirSync(path.dirname(targetPath), { recursive: true });
   fs.rmSync(targetPath, { recursive: true, force: true });
   fs.symlinkSync(sourcePath, targetPath, 'junction');
+}
+
+function removeLegacySuperpowersCodexSkillLink(home: string) {
+  const legacyPath = path.join(resolveCodexSkillsDir(home), 'superpowers');
+  if (!pathExists(legacyPath)) {
+    return;
+  }
+
+  try {
+    const stat = fs.lstatSync(legacyPath);
+    if (stat.isSymbolicLink()) {
+      fs.rmSync(legacyPath, { recursive: true, force: true });
+    }
+  } catch {
+    // Leave non-removable user-managed paths alone; the install report still records the official target.
+  }
+}
+
+function isSuperpowersBundleReady(repoDir: string) {
+  return (
+    pathExists(path.join(repoDir, 'skills', 'using-superpowers', 'SKILL.md'))
+    && pathExists(path.join(repoDir, 'skills', 'verification-before-completion', 'SKILL.md'))
+  );
+}
+
+function resolveSuperpowersSourceCandidate(home: string): OplCompanionSkillSourceCandidate | null {
+  const repoDir = resolveSuperpowersRepoDir(home);
+  if (!isSuperpowersBundleReady(repoDir)) {
+    return null;
+  }
+  return { report_path: repoDir, link_path: path.join(repoDir, 'skills') };
+}
+
+function ensureSuperpowersSource(home: string) {
+  const repoDir = resolveSuperpowersRepoDir(home);
+  const existing = resolveSuperpowersSourceCandidate(home);
+  if (existing) {
+    const pullResult = runGit(['pull', '--ff-only'], repoDir);
+    if (pullResult.exitCode !== 0) {
+      return { source: existing, action: 'symlink' as const, note: pullResult.stderr || pullResult.stdout || 'Superpowers update skipped.' };
+    }
+    return { source: existing, action: 'update_and_symlink' as const, note: null };
+  }
+
+  if (pathExists(repoDir) && !pathExists(path.join(repoDir, '.git'))) {
+    return { source: null, action: 'clone_and_symlink' as const, note: `Superpowers path exists but is not a git checkout: ${repoDir}` };
+  }
+
+  fs.mkdirSync(path.dirname(repoDir), { recursive: true });
+  const cloneResult = runGit(['clone', getSuperpowersRepoUrl(), repoDir]);
+  if (cloneResult.exitCode !== 0) {
+    return { source: null, action: 'clone_and_symlink' as const, note: cloneResult.stderr || cloneResult.stdout || 'Superpowers git clone failed.' };
+  }
+
+  return { source: resolveSuperpowersSourceCandidate(home), action: 'clone_and_symlink' as const, note: null };
 }
 
 function resolveSkillSourceCandidate(candidatePath: string): OplCompanionSkillSourceCandidate | null {
@@ -127,10 +200,50 @@ function pickFirstExistingSkillSource(paths: string[]) {
 
 export function syncOplCompanionSkills(home = resolveHomeDir()): OplCompanionSkillSyncResult {
   const codexSkillsDir = resolveCodexSkillsDir(home);
+  const agentsSkillsDir = resolveAgentsSkillsDir(home);
   const recommendedSkills = buildOplRecommendedSkills(home);
   const items: OplCompanionSkillSyncItem[] = [];
 
   for (const skill of recommendedSkills) {
+    if (skill.source === 'superpowers') {
+      const targetPath = path.join(agentsSkillsDir, 'superpowers');
+      const ensured = ensureSuperpowersSource(home);
+      if (!ensured.source) {
+        items.push({
+          skill_id: skill.skill_id,
+          source_path: null,
+          target_path: targetPath,
+          status: 'missing_source',
+          action: ensured.action,
+          note: ensured.note || skill.install_hint,
+        });
+        continue;
+      }
+
+      try {
+        forceSymlinkDirectory(ensured.source.link_path, targetPath);
+        removeLegacySuperpowersCodexSkillLink(home);
+        items.push({
+          skill_id: skill.skill_id,
+          source_path: ensured.source.report_path,
+          target_path: targetPath,
+          status: ensured.action === 'clone_and_symlink' ? 'installed' : 'synced',
+          action: ensured.action,
+          note: ensured.note,
+        });
+      } catch (error) {
+        items.push({
+          skill_id: skill.skill_id,
+          source_path: ensured.source.report_path,
+          target_path: targetPath,
+          status: 'failed',
+          action: ensured.action,
+          note: error instanceof Error ? error.message : String(error),
+        });
+      }
+      continue;
+    }
+
     const source = pickFirstExistingSkillSource(skill.expected_paths);
     const targetPath = path.join(codexSkillsDir, skill.skill_id);
     if (!source) {
@@ -139,6 +252,7 @@ export function syncOplCompanionSkills(home = resolveHomeDir()): OplCompanionSki
         source_path: null,
         target_path: targetPath,
         status: 'missing_source',
+        action: 'symlink',
         note: skill.install_hint,
       });
       continue;
@@ -152,6 +266,7 @@ export function syncOplCompanionSkills(home = resolveHomeDir()): OplCompanionSki
           source_path: source.report_path,
           target_path: targetPath,
           status: 'available',
+          action: 'discover_only',
           note: 'Codex bundled skills are discovered from the plugin cache and are not mirrored into ~/.codex/skills.',
         });
       } else {
@@ -161,6 +276,7 @@ export function syncOplCompanionSkills(home = resolveHomeDir()): OplCompanionSki
           source_path: source.report_path,
           target_path: targetPath,
           status: 'synced',
+          action: 'symlink',
           note: null,
         });
       }
@@ -170,6 +286,7 @@ export function syncOplCompanionSkills(home = resolveHomeDir()): OplCompanionSki
         source_path: source.report_path,
         target_path: targetPath,
         status: 'failed',
+        action: 'symlink',
         note: error instanceof Error ? error.message : String(error),
       });
     }
@@ -181,7 +298,7 @@ export function syncOplCompanionSkills(home = resolveHomeDir()): OplCompanionSki
     items,
     summary: {
       total: items.length,
-      synced: items.filter((entry) => entry.status === 'synced' || entry.status === 'available').length,
+      synced: items.filter((entry) => entry.status === 'synced' || entry.status === 'installed' || entry.status === 'available').length,
       missing_source: items.filter((entry) => entry.status === 'missing_source').length,
       failed: items.filter((entry) => entry.status === 'failed').length,
     },
@@ -189,7 +306,9 @@ export function syncOplCompanionSkills(home = resolveHomeDir()): OplCompanionSki
 }
 
 export function buildOplRecommendedSkills(home = resolveHomeDir()): OplRecommendedSkill[] {
-  const codexHome = path.join(home, '.codex');
+  const codexHome = resolveCodexHome(home);
+  const superpowersRepoDir = resolveSuperpowersRepoDir(home);
+  const agentsSuperpowersDir = path.join(resolveAgentsSkillsDir(home), 'superpowers');
   const skillsManagerHome = path.join(home, '.skills-manager');
 
   const specs: Array<Omit<OplRecommendedSkill, 'status'>> = [
@@ -199,11 +318,13 @@ export function buildOplRecommendedSkills(home = resolveHomeDir()): OplRecommend
       required: false,
       source: 'superpowers',
       expected_paths: [
-        path.join(codexHome, 'superpowers', 'skills', 'using-superpowers', 'SKILL.md'),
-        path.join(codexHome, 'superpowers', 'skills', 'verification-before-completion', 'SKILL.md'),
+        path.join(superpowersRepoDir, 'skills', 'using-superpowers', 'SKILL.md'),
+        path.join(superpowersRepoDir, 'skills', 'verification-before-completion', 'SKILL.md'),
+        path.join(agentsSuperpowersDir, 'using-superpowers', 'SKILL.md'),
       ],
-      install_hint: 'Install the Superpowers skill pack into ~/.codex/superpowers before first OPL use.',
-      supports: ['planning', 'debugging', 'verification', 'branch_finish'],
+      install_hint: 'OPL installs the official Superpowers bundle by cloning https://github.com/obra/superpowers.git into ~/.codex/superpowers and linking ~/.agents/skills/superpowers to the full skills directory.',
+      update_hint: 'Update with: cd ~/.codex/superpowers && git pull --ff-only. The ~/.agents/skills/superpowers symlink makes updates visible after Codex/App restart.',
+      supports: ['planning', 'debugging', 'verification', 'branch_finish', 'skill_methodology'],
     },
     {
       skill_id: 'officecli',
