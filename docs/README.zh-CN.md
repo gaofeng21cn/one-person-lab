@@ -88,6 +88,7 @@
 它们继续被仓库跟踪，但不是当前默认实现依据。
 
 - [参考级索引](./references/README.zh-CN.md)
+- [Docker WebUI 部署参考](./references/opl-docker-webui-deployment.zh-CN.md)
 - 产品运行时与执行器参考说明
 - 领域对齐与增量收录记录
 - 基准与 rollout 看板
