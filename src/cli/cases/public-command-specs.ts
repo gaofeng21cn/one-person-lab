@@ -207,6 +207,14 @@ export function buildPublicCommandSpecs(
       usage: 'opl skill sync [--domain <domain_id>] [--home <home_path>] [--quiet]',
       group: 'skill',
     }),
+    'skill companion status': cloneCommandSpec(commandSpecs['skill-companion-status'], {
+      usage: 'opl skill companion status [--home <home_path>] [--superpowers <keep|lite|full>]',
+      group: 'skill',
+    }),
+    'skill companion apply': cloneCommandSpec(commandSpecs['skill-companion-apply'], {
+      usage: 'opl skill companion apply --mode <ask_to_apply|managed> [--home <home_path>] [--superpowers <keep|lite|full>]',
+      group: 'skill',
+    }),
     exec: cloneCommandSpec(commandSpecs.exec, { group: 'top_level' }),
     resume: cloneCommandSpec(commandSpecs.resume, { group: 'top_level' }),
     ask: cloneCommandSpec(commandSpecs.ask, { group: 'legacy' }),
