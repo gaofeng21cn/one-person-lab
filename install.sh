@@ -12,7 +12,27 @@ log() {
 need_cmd() {
   if ! command -v "$1" >/dev/null 2>&1; then
     printf 'Missing required command: %s\n' "$1" >&2
-    printf 'Install it first, then rerun this installer.\n' >&2
+    printf '\n' >&2
+    printf 'One Person Lab needs git, Node.js, and npm before it can run the one-shot installer.\n' >&2
+    if [ "$(uname -s)" = "Darwin" ]; then
+      printf 'Fastest macOS setup:\n' >&2
+      printf '  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"\n' >&2
+      printf '  brew install git node\n' >&2
+    elif command -v apt-get >/dev/null 2>&1; then
+      printf 'Fastest Debian/Ubuntu setup:\n' >&2
+      printf '  sudo apt-get update && sudo apt-get install -y git nodejs npm\n' >&2
+    elif command -v dnf >/dev/null 2>&1; then
+      printf 'Fastest Fedora/RHEL setup:\n' >&2
+      printf '  sudo dnf install -y git nodejs npm\n' >&2
+    elif command -v apk >/dev/null 2>&1; then
+      printf 'Fastest Alpine setup:\n' >&2
+      printf '  apk add --no-cache git nodejs npm\n' >&2
+    else
+      printf 'Install git, Node.js, and npm with your system package manager, then rerun this installer.\n' >&2
+    fi
+    printf '\n' >&2
+    printf 'After that, rerun:\n' >&2
+    printf '  curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/install.sh | bash\n' >&2
     exit 1
   fi
 }
@@ -52,3 +72,7 @@ else
 fi
 
 log "One Person Lab is ready"
+printf '\nNext steps:\n'
+printf '  1. Open the One Person Lab App on macOS, or open the Docker/WebUI URL from your deployment.\n'
+printf '  2. Choose a workspace root when the App asks for it.\n'
+printf '  3. Run "opl system initialize" to inspect Codex, Hermes-Agent, modules, skills, and GUI state.\n'

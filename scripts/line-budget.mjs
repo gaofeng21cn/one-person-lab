@@ -8,7 +8,6 @@ process.chdir(repoRoot);
 const DEFAULT_LIMIT = 1000;
 const BASELINE = new Map(Object.entries({
   "src/product-entry.ts": 1079,
-  "src/web-frontdesk/payload-builders.ts": 1023,
   "tests/built/cli.test.mjs": 1745,
   "tests/src/cli/helpers.ts": 1390,
 }));

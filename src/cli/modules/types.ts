@@ -34,6 +34,8 @@ const CODEX_COMMAND_HELP_PASSTHROUGH = new Set([
 
 type ParsedCliInput = {
   helpRequested: boolean;
+  jsonOutput: boolean;
+  textOutput: boolean;
   command: string | null;
   args: string[];
   loadOptions?: GatewayContractsLoadOptions;
