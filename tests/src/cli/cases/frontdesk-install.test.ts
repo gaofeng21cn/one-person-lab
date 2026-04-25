@@ -69,8 +69,6 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
           module: { module_id: string; installed: boolean };
           turnkey: { skill_sync: { status: string } };
         }>;
-        service_action: unknown | null;
-        web_open_action: unknown | null;
         gui_open_action: unknown | null;
         codex_config_bootstrap: { status: string; api_key_present: boolean };
         companion_skill_sync: {
@@ -97,8 +95,6 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
     assert.equal(output.install.module_actions[0].module.module_id, 'medautoscience');
     assert.equal(output.install.module_actions[0].module.installed, true);
     assert.equal(output.install.module_actions[0].turnkey.skill_sync.status, 'completed');
-    assert.equal(output.install.service_action, null);
-    assert.equal(output.install.web_open_action, null);
     assert.equal(output.install.gui_open_action, null);
     assert.equal(output.install.codex_config_bootstrap.status, 'skipped_missing_input');
     assert.equal(output.install.codex_config_bootstrap.api_key_present, false);
@@ -169,7 +165,7 @@ test('install command can bootstrap Codex defaults from environment without leak
   }
 });
 
-test('install command advertises the foreground WebUI path for Linux and Docker', () => {
+test('install command points WebUI users to the AionUI shell instead of a local Product API service', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-webui-note-home-'));
 
   try {
@@ -178,7 +174,8 @@ test('install command advertises the foreground WebUI path for Linux and Docker'
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
     }) as { install: { notes: string[] } };
 
-    assert.match(output.install.notes.join('\n'), /opl install --serve-web --host 0\.0\.0\.0 --port 8787/);
+    assert.doesNotMatch(output.install.notes.join('\n'), /serve-web|8787|Product API service/);
+    assert.match(output.install.notes.join('\n'), /GUI startup opens/);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
@@ -307,7 +304,6 @@ exit 1
       OPL_RELEASE_VERSION: '26.4.25',
     }) as {
       install: {
-        web_open_action: unknown | null;
         gui_open_action: {
           status: string;
           strategy: string;
@@ -317,7 +313,6 @@ exit 1
       };
     };
 
-    assert.equal(output.install.web_open_action, null);
     assert.equal(output.install.gui_open_action?.status, 'completed');
     assert.equal(output.install.gui_open_action?.strategy, 'install_release_asset_then_open_app');
     assert.match(output.install.gui_open_action?.release_asset ?? '', /^One\.Person\.Lab-26\.4\.25-mac-/);

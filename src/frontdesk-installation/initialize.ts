@@ -100,19 +100,7 @@ export async function buildFrontDeskInitialize(contracts: GatewayContracts) {
     description: 'Pick the OPL domain modules that should be available in this installation.',
     section_id: 'modules',
     endpoint: endpoints.frontdesk_modules,
-  });
-  const installFrontdeskSupportAction = buildInitializeActionDescriptor({
-    action_id: 'install_frontdesk_support',
-    label: 'Install local support service',
-    description: 'Install the local OPL adapter service so desktop and web shells can reconnect cleanly.',
-    section_id: 'system',
-    endpoint: endpoints.frontdesk_system_action,
-    method: 'POST',
-    payload_template: {
-      action: 'reinstall_support',
-    },
-  });
-  const reviewInitializeAction = buildInitializeActionDescriptor({
+  });  const reviewInitializeAction = buildInitializeActionDescriptor({
     action_id: 'review_initialize',
     label: 'Review initialize state',
     description: 'Re-open the aggregated Initialize OPL surface and confirm the remaining setup choices.',
@@ -203,20 +191,6 @@ export async function buildFrontDeskInitialize(contracts: GatewayContracts) {
       action_endpoint: endpoints.frontdesk_initialize,
       action: reviewInitializeAction,
     },
-    {
-      item_id: 'frontdesk_service',
-      label: 'Local Frontdesk Service',
-      status: environment.local_frontdesk.service_health,
-      required: false,
-      blocking: false,
-      section_id: 'system',
-      detail_summary: `Current service health: ${environment.local_frontdesk.service_health}.`,
-      endpoint: endpoints.frontdesk_initialize,
-      action_endpoint: endpoints.frontdesk_system_action,
-      action: environment.local_frontdesk.service_health === 'ready'
-        ? reviewInitializeAction
-        : installFrontdeskSupportAction,
-    },
   ];
 
   const requiredChecklist = checklist.filter((item) => item.required);
@@ -295,7 +269,7 @@ export async function buildFrontDeskInitialize(contracts: GatewayContracts) {
       },
       system: {
         update_channel: updateChannel.channel,
-        local_frontdesk: environmentPayload.frontdesk_environment.local_frontdesk,
+        gui_shell: environmentPayload.frontdesk_environment.gui_shell,
         actions: [
           {
             action_id: 'repair',

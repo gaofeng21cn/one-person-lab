@@ -1,5 +1,4 @@
 import { buildFrontDeskEndpoints, normalizeBasePath } from '../../frontdesk-paths.ts';
-import { getFrontDeskServiceStatus } from '../../frontdesk-service.ts';
 import {
   buildDomainManifestCatalog,
   type DomainManifestCatalogEntry,
@@ -13,8 +12,24 @@ import { buildFrontDeskShellMcpWiring } from '../../frontdesk-shell-identity.ts'
 import { buildWorkspaceCatalog } from '../../workspace-registry.ts';
 import type { GatewayContracts } from '../../types.ts';
 
-import { buildHostedRuntimeReadiness } from '../hosted.ts';
 import type { DashboardOptions } from '../types.ts';
+
+
+function buildRetiredHostedRuntimeReadiness() {
+  return {
+    surface_kind: 'opl_hosted_runtime_readiness',
+    status: 'retired',
+    local_product_api_landed: false,
+    web_bundle_landed: false,
+    self_hostable_web_package_landed: false,
+    service_safe_local_packaging_landed: false,
+    replacement_surface: 'AionUI remote WebUI',
+    blocking_gaps: [],
+    recommended_next_actions: [
+      'Use the OPL desktop GUI / AionUI remote WebUI path instead of the retired local Product API service.',
+    ],
+  };
+}
 
 function buildDomainBindingParity(
   contracts: GatewayContracts,
@@ -280,9 +295,9 @@ export function buildFrontDeskEntryGuide(
     },
     frontdesk_entry_guide: {
       surface_id: 'opl_frontdesk_entry_guide',
-      entry_surface: 'opl_local_web_frontdesk_pilot',
+      entry_surface: 'opl_codex_default_session_runtime',
       runtime_substrate: 'external_hermes_kernel',
-      shell_integration_target: 'external_gui_overlay',
+      shell_integration_target: 'aionui_remote_webui',
       base_path: normalizeBasePath(options.basePath),
       workspace_taxonomy: {
         family_workspace_kind: 'opl_family_workspace',
@@ -328,7 +343,7 @@ export function buildFrontDeskDomainWiring(
 ) {
   const endpoints = buildFrontDeskEndpoints(options.basePath);
   const domainManifests = buildDomainManifestCatalog(contracts).domain_manifests;
-  const hostedRuntimeReadiness = buildHostedRuntimeReadiness();
+  const hostedRuntimeReadiness = buildRetiredHostedRuntimeReadiness();
   const domainEntryParity = buildDomainEntryParity(domainManifests.projects);
   const domainBindingParity = buildDomainBindingParity(contracts, options);
   const recommendedEntrySurfaces = buildRecommendedEntrySurfaces(domainManifests.projects);
@@ -341,9 +356,9 @@ export function buildFrontDeskDomainWiring(
     },
     frontdesk_domain_wiring: {
       surface_id: 'opl_frontdesk_domain_wiring',
-      entry_surface: 'opl_local_web_frontdesk_pilot',
+      entry_surface: 'opl_codex_default_session_runtime',
       runtime_substrate: 'external_hermes_kernel',
-      shell_integration_target: 'external_gui_overlay',
+      shell_integration_target: 'aionui_remote_webui',
       base_path: normalizeBasePath(options.basePath),
       hosted_runtime_readiness: hostedRuntimeReadiness,
       domain_entry_parity: domainEntryParity,
@@ -452,12 +467,11 @@ export async function buildFrontDeskReadiness(
   options: DashboardOptions = {},
 ) {
   const endpoints = buildFrontDeskEndpoints(options.basePath);
-  const hostedRuntimeReadiness = buildHostedRuntimeReadiness();
+  const hostedRuntimeReadiness = buildRetiredHostedRuntimeReadiness();
   const domainManifests = buildDomainManifestCatalog(contracts).domain_manifests;
   const domainEntryParity = buildDomainEntryParity(domainManifests.projects);
   const domainBindingParity = buildDomainBindingParity(contracts, options);
   const recommendedEntrySurfaces = buildRecommendedEntrySurfaces(domainManifests.projects);
-  const localService = (await getFrontDeskServiceStatus(contracts)).frontdesk_service;
   const projects = buildFrontDeskReadinessProjects(
     domainManifests.projects,
     domainEntryParity,
@@ -481,9 +495,6 @@ export async function buildFrontDeskReadiness(
   };
 
   const recommendedNextActions: string[] = [];
-  if (localService.installed || localService.loaded) {
-    recommendedNextActions.push('8787 Product API service 属于历史 adapter 面；当前默认用户路径不再要求安装或启动它。');
-  }
   recommendedNextActions.push('GUI 壳应通过独立 GUI shell repo 与 Codex-default runtime 接入；当前在 opl-aion-shell 内基于 AionUI codebase 产出 OPL 品牌壳。');
   if (summary.manifest_ready_projects_count < summary.total_projects_count) {
     recommendedNextActions.push('给仍缺 manifest 的 active binding 补 `manifest_command`。');
@@ -503,22 +514,18 @@ export async function buildFrontDeskReadiness(
     },
     frontdesk_readiness: {
       surface_id: 'opl_frontdesk_readiness',
-      entry_surface: 'opl_local_web_frontdesk_pilot',
+      entry_surface: 'opl_codex_default_session_runtime',
       runtime_substrate: 'external_hermes_kernel',
-      shell_integration_target: 'external_gui_overlay',
+      shell_integration_target: 'aionui_remote_webui',
       base_path: normalizeBasePath(options.basePath),
-      overall_status:
-        summary.usable_now_projects_count > 0
-          ? localService.health.status === 'ok'
-            ? 'usable_with_known_gaps'
-            : 'domain_ready_local_service_optional'
-          : 'setup_incomplete',
+      overall_status: summary.usable_now_projects_count > 0 ? 'usable_with_known_gaps' : 'setup_incomplete',
       local_shell: {
         direct_entry_command: 'opl',
         quick_ask_command: 'opl <request...>',
-        web_command: 'opl web',
+        web_command: null,
+        web_status: 'retired',
       },
-      local_service: localService,
+      local_product_api_service: { status: 'retired', port: null, replacement_surface: 'AionUI remote WebUI' },
       hosted_runtime_readiness: hostedRuntimeReadiness,
       domain_entry_parity: domainEntryParity,
       domain_binding_parity: domainBindingParity,
@@ -557,7 +564,7 @@ export function buildFrontDeskManifest(
   options: { basePath?: string } = {},
 ) {
   const endpoints = buildFrontDeskEndpoints(options.basePath);
-  const hostedRuntimeReadiness = buildHostedRuntimeReadiness();
+  const hostedRuntimeReadiness = buildRetiredHostedRuntimeReadiness();
   const hostedShellMcpWiring = buildFrontDeskShellMcpWiring();
   const frontdeskEntryGuideSurface = buildFrontDeskEntryGuideSurfaceRef(contracts, options);
   const domainWiringSurface = buildFrontDeskDomainWiringSurfaceRef(contracts, options);
@@ -572,9 +579,9 @@ export function buildFrontDeskManifest(
     },
     frontdesk_manifest: {
       surface_id: 'opl_hosted_friendly_frontdesk_manifest',
-      entry_surface: 'opl_local_web_frontdesk_pilot',
+      entry_surface: 'opl_codex_default_session_runtime',
       runtime_substrate: 'external_hermes_kernel',
-      shell_integration_target: 'external_gui_overlay',
+      shell_integration_target: 'aionui_remote_webui',
       readiness: 'hosted_friendly_shell_pilot_landed',
       hosted_packaging_status: 'frontdesk_package_landed',
       pilot_bundle_status: 'landed',

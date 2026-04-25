@@ -3,18 +3,15 @@ import type { GatewayContracts } from '../../types.ts';
 import type {
   CommandSpec,
   FrontDeskEngineCliInput,
-  FrontDeskMcpCliInput,
   FrontDeskModuleCliInput,
-  HostedPilotPackageCliInput,
   SessionRuntimeCliInput,
   TurnkeyInstallCliInput,
   UpdateChannelCliInput,
-  WebCliInput,
   WorkspaceRegistryCliInput,
   WorkspaceRootCliInput,
 } from './types.ts';
 import { buildUsageError } from './runtime-helpers.ts';
-import { parsePort, parsePositiveInteger } from './request-parsers.ts';
+
 
 function parseWorkspaceRegistryArgs(
   args: string[],
@@ -78,56 +75,6 @@ function parseWorkspaceRegistryArgs(
   return parsed;
 }
 
-function parseWebArgs(
-  args: string[],
-  spec: Pick<CommandSpec, 'usage' | 'examples'>,
-): WebCliInput {
-  const parsed: WebCliInput = {};
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-
-    if (!token.startsWith('--')) {
-      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
-        token,
-      });
-    }
-
-    const value = args[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
-        option: token,
-      });
-    }
-
-    switch (token) {
-      case '--host':
-        parsed.host = value;
-        break;
-      case '--port':
-        parsed.port = parsePort(token, value, spec);
-        break;
-      case '--path':
-        parsed.workspacePath = value;
-        break;
-      case '--sessions-limit':
-        parsed.sessionsLimit = parsePositiveInteger(token, value, spec);
-        break;
-      case '--base-path':
-        parsed.basePath = value;
-        break;
-      default:
-        throw buildUsageError(`Unknown option for web: ${token}.`, spec, {
-          option: token,
-        });
-    }
-
-    index += 1;
-  }
-
-  return parsed;
-}
-
 function parseTurnkeyInstallArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
@@ -145,18 +92,8 @@ function parseTurnkeyInstallArgs(
       parsed.skipEngines = true;
       continue;
     }
-    if (token === '--skip-web-open') {
-      parsed.skipWebOpen = true;
-      continue;
-    }
     if (token === '--skip-gui-open') {
       parsed.skipGuiOpen = true;
-      continue;
-    }
-    if (token === '--serve-web') {
-      parsed.serveWeb = true;
-      parsed.skipGuiOpen = true;
-      parsed.basePath ??= '/opl';
       continue;
     }
 
@@ -176,21 +113,6 @@ function parseTurnkeyInstallArgs(
       case '--modules':
         parsed.modules.push(...value.split(',').map((entry) => entry.trim()).filter(Boolean));
         break;
-      case '--host':
-        parsed.host = value;
-        break;
-      case '--port':
-        parsed.port = parsePort(token, value, spec);
-        break;
-      case '--path':
-        parsed.workspacePath = value;
-        break;
-      case '--sessions-limit':
-        parsed.sessionsLimit = parsePositiveInteger(token, value, spec);
-        break;
-      case '--base-path':
-        parsed.basePath = value;
-        break;
       default:
         throw buildUsageError(`Unknown option for install command: ${token}.`, spec, { option: token });
     }
@@ -199,137 +121,6 @@ function parseTurnkeyInstallArgs(
   }
 
   return parsed;
-}
-
-function parseHostedPilotPackageArgs(
-  args: string[],
-  spec: Pick<CommandSpec, 'usage' | 'examples'>,
-): HostedPilotPackageCliInput {
-  let outputDir: string | undefined;
-  const parsed: Omit<HostedPilotPackageCliInput, 'outputDir'> = {};
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-
-    if (!token.startsWith('--')) {
-      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
-        token,
-      });
-    }
-
-    const value = args[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
-        option: token,
-      });
-    }
-
-    switch (token) {
-      case '--output':
-        outputDir = value;
-        break;
-      case '--public-origin':
-        parsed.publicOrigin = value;
-        break;
-      case '--host':
-        parsed.host = value;
-        break;
-      case '--port':
-        parsed.port = parsePort(token, value, spec);
-        break;
-      case '--base-path':
-        parsed.basePath = value;
-        break;
-      case '--sessions-limit':
-        parsed.sessionsLimit = parsePositiveInteger(token, value, spec);
-        break;
-      default:
-        throw buildUsageError(`Unknown option for hosted package export: ${token}.`, spec, {
-          option: token,
-        });
-    }
-
-    index += 1;
-  }
-
-  if (!outputDir) {
-    throw buildUsageError(
-      'This hosted package export requires --output.',
-      spec,
-      { required: ['--output'] },
-    );
-  }
-
-  return {
-    outputDir,
-    ...parsed,
-  };
-}
-
-function parseFrontDeskMcpArgs(
-  args: string[],
-  spec: Pick<CommandSpec, 'usage' | 'examples'>,
-): FrontDeskMcpCliInput {
-  const parsed: FrontDeskMcpCliInput = {};
-
-  for (let index = 0; index < args.length; index += 1) {
-    const token = args[index];
-
-    if (!token.startsWith('--')) {
-      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
-        token,
-      });
-    }
-
-    const value = args[index + 1];
-    if (!value || value.startsWith('--')) {
-      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
-        option: token,
-      });
-    }
-
-    switch (token) {
-      case '--api-base-url':
-        parsed.apiBaseUrl = value;
-        break;
-      case '--workspace-path':
-        parsed.workspacePath = value;
-        break;
-      case '--sessions-limit':
-        parsed.sessionsLimit = parsePositiveInteger(token, value, spec);
-        break;
-      default:
-        throw buildUsageError(`Unknown option for MCP bridge command: ${token}.`, spec, {
-          option: token,
-        });
-    }
-
-    index += 1;
-  }
-
-  return parsed;
-}
-
-function parseSessionRuntimeArgs(
-  args: string[],
-  spec: Pick<CommandSpec, 'usage' | 'examples'>,
-): SessionRuntimeCliInput {
-  let acp = false;
-
-  for (const token of args) {
-    if (token === '--acp') {
-      acp = true;
-      continue;
-    }
-
-        throw buildUsageError(`Unknown option for session runtime: ${token}.`, spec, {
-          option: token,
-        });
-  }
-
-  return {
-    acp,
-  };
 }
 
 function parseFrontDeskModuleArgs(
@@ -444,6 +235,21 @@ async function runFrontDeskEngineActionCommand(
   return runFrontDeskEngineAction(getContracts(), action, parsed.engineId);
 }
 
+function parseSessionRuntimeArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): SessionRuntimeCliInput {
+  let acp = false;
+  for (const token of args) {
+    if (token === '--acp') {
+      acp = true;
+      continue;
+    }
+    throw buildUsageError(`Unknown option for session runtime: ${token}.`, spec, { option: token });
+  }
+  return { acp };
+}
+
 function parseWorkspaceRootArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
@@ -542,13 +348,10 @@ function assertNoArgs(
 export {
   assertNoArgs,
   parseFrontDeskEngineArgs,
-  parseFrontDeskMcpArgs,
   parseFrontDeskModuleArgs,
-  parseHostedPilotPackageArgs,
   parseSessionRuntimeArgs,
   parseTurnkeyInstallArgs,
   parseUpdateChannelArgs,
-  parseWebArgs,
   parseWorkspaceRegistryArgs,
   parseWorkspaceRootArgs,
   runFrontDeskEngineActionCommand,

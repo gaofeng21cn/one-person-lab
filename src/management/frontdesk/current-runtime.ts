@@ -1,3 +1,20 @@
+
+function buildRetiredHostedRuntimeReadiness() {
+  return {
+    surface_kind: 'opl_hosted_runtime_readiness',
+    status: 'retired',
+    local_product_api_landed: false,
+    web_bundle_landed: false,
+    self_hostable_web_package_landed: false,
+    service_safe_local_packaging_landed: false,
+    replacement_surface: 'AionUI remote WebUI',
+    blocking_gaps: [],
+    recommended_next_actions: [
+      'Use the OPL desktop GUI / AionUI remote WebUI path instead of the retired local Product API service.',
+    ],
+  };
+}
+
 import { findDomainOrThrow, GatewayContractError } from '../../contracts.ts';
 import { buildDomainManifestCatalog } from '../../domain-manifest.ts';
 import { buildDomainEntryParity, buildRecommendedEntrySurfaces } from '../../family-domain-catalog.ts';
@@ -6,7 +23,6 @@ import { readFrontDeskRuntimeModes } from '../../frontdesk-runtime-modes.ts';
 import { buildWorkspaceCatalog, getActiveWorkspaceBinding } from '../../workspace-registry.ts';
 import type { GatewayContracts } from '../../types.ts';
 
-import { buildHostedRuntimeReadiness } from '../hosted.ts';
 import type { DashboardOptions, StartSurfaceOptions } from '../types.ts';
 import { buildRuntimeStatus, buildWorkspaceStatus } from '../workspace-runtime.ts';
 
@@ -141,7 +157,7 @@ export function buildFrontDeskDashboard(
   }).runtime_status;
   const workspaceCatalog = buildWorkspaceCatalog(contracts).workspace_catalog;
   const domainManifests = buildDomainManifestCatalog(contracts).domain_manifests;
-  const hostedRuntimeReadiness = buildHostedRuntimeReadiness();
+  const hostedRuntimeReadiness = buildRetiredHostedRuntimeReadiness();
   const domainEntryParity = buildDomainEntryParity(domainManifests.projects);
   const recommendedEntrySurfaces = buildRecommendedEntrySurfaces(domainManifests.projects);
   const frontdeskEntryGuideSurface = buildFrontDeskEntryGuideSurfaceRef(contracts, options);
@@ -153,13 +169,13 @@ export function buildFrontDeskDashboard(
       contracts_root_source: contracts.contractsRootSource,
     },
     dashboard: {
-      product_api: {
+      gui_runtime: {
         direct_entry_command: 'opl',
         local_shell_status: 'landed',
-        local_web_command: 'opl web',
-        local_web_status: 'pilot_landed',
-        desktop_shell_status: 'not_repo_tracked',
-        desktop_default_entry_status: 'external_overlay_required',
+        local_web_command: null,
+        local_web_status: 'retired',
+        desktop_shell_status: 'aionui_shell',
+        desktop_default_entry_status: 'release_or_installed_app',
         interaction_mode: runtimeModes.interaction_mode,
         execution_mode: runtimeModes.execution_mode,
         hosted_friendly_surface_status: 'landed',
@@ -181,7 +197,7 @@ export function buildFrontDeskDashboard(
           'docs/references/mas-top-level-cutover-board.md',
         ],
         notes: [
-          'OPL now exposes adapter/API truth together with the local web entry and web bundle exports.',
+          'OPL no longer ships a local 8787 Product API service; GUI/WebUI integration belongs to the OPL-branded AionUI shell path.',
           'Workspace registry, managed session ledger, handoff bundle, and current Codex/Hermes mode selection are all visible from the same top-level board.',
           '`opl workspace list` keeps `manifest_command` as non-executing registry state, while `opl domain manifests` resolves the active bound machine-readable product-entry manifests.',
           'Resolved domain manifests now also feed domain entry surface plus operator-loop actions and recommended shell/command hints back into dashboard and handoff surfaces.',

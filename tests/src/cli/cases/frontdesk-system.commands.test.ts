@@ -43,7 +43,8 @@ test('public command specs no longer depend on legacy frontdesk command ids', ()
 
   const publicSpecs = buildPublicCommandSpecs(internalSpecs, () => contracts);
   assert.equal(typeof publicSpecs.system.handler, 'function');
-  assert.equal(typeof publicSpecs['web bundle'].handler, 'function');
+  assert.equal(publicSpecs['web bundle'], undefined);
+  assert.equal(publicSpecs['web package'], undefined);
   assert.equal(typeof publicSpecs['module install'].handler, 'function');
   assert.equal(typeof publicSpecs['engine install'].handler, 'function');
   assert.equal(publicSpecs['service install'], undefined);
@@ -99,22 +100,21 @@ exit 1
     });
 
     assert.equal(output.version, 'g2');
-    assert.equal(output.dashboard.product_api.direct_entry_command, 'opl');
-    assert.equal(output.dashboard.product_api.local_web_status, 'pilot_landed');
-    assert.equal(output.dashboard.product_api.desktop_shell_status, 'not_repo_tracked');
-    assert.equal(output.dashboard.product_api.desktop_default_entry_status, 'external_overlay_required');
-    assert.equal(output.dashboard.product_api.recommended_entry_surfaces_count, 0);
-    assert.deepEqual(output.dashboard.product_api.recommended_entry_surfaces, []);
-    assert.equal(output.dashboard.product_api.hosted_runtime_readiness.desktop_shell_landed, false);
-    assert.equal('hosted_web_status' in output.dashboard.product_api, false);
-    assert.equal('librechat_pilot_package_status' in output.dashboard.product_api, false);
-    assert.equal('frontdesk_librechat_status_surface' in output.dashboard.product_api, false);
+    assert.equal(output.dashboard.gui_runtime.direct_entry_command, 'opl');
+    assert.equal(output.dashboard.gui_runtime.local_web_status, 'retired');
+    assert.equal(output.dashboard.gui_runtime.local_web_command, null);
+    assert.equal(output.dashboard.gui_runtime.desktop_shell_status, 'aionui_shell');
+    assert.equal(output.dashboard.gui_runtime.desktop_default_entry_status, 'release_or_installed_app');
+    assert.equal(output.dashboard.gui_runtime.recommended_entry_surfaces_count, 0);
+    assert.deepEqual(output.dashboard.gui_runtime.recommended_entry_surfaces, []);
+    assert.equal(output.dashboard.gui_runtime.hosted_runtime_readiness.status, 'retired');
+    assert.equal('hosted_web_status' in output.dashboard.gui_runtime, false);
     assert.equal(output.dashboard.projects.length, 4);
     assert.equal(output.dashboard.domain_manifests.summary.total_projects_count, 3);
     assert.equal(output.dashboard.domain_manifests.summary.resolved_count, 0);
     assert.equal(output.dashboard.workspace.absolute_path, repoRoot);
     assert.equal(output.dashboard.runtime_status.recent_sessions.sessions.length, 1);
-    assert.deepEqual(output.dashboard.product_api.rollout_board_refs, [
+    assert.deepEqual(output.dashboard.gui_runtime.rollout_board_refs, [
       'docs/references/opl-frontdesk-delivery-board.md',
       'docs/references/family-lightweight-direct-entry-rollout-board.md',
       'docs/references/mas-top-level-cutover-board.md',
@@ -126,12 +126,10 @@ exit 1
   }
 });
 
-test('help advertises the local web front-desk pilot command surface', () => {
+test('help excludes retired local web front-desk pilot command surface', () => {
   const output = runCli(['help']);
 
-  assert.ok(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'web'),
-  );
+  assert.equal(output.help.commands.some((entry: { command: string }) => entry.command === 'web'), false);
   assert.ok(
     output.help.commands.some((entry: { command: string }) => entry.command === 'system'),
   );
@@ -149,9 +147,9 @@ test('help advertises the local web front-desk pilot command surface', () => {
     output.help.commands.some((entry: { command: string }) => entry.command === 'domain launch'),
   );
 
-  const scoped = runCli(['web', '--help']);
+  const scoped = runCli(['web', '--help']) as { help: { command: string; summary: string } };
   assert.equal(scoped.help.command, 'web');
-  assert.match(scoped.help.usage, /opl web/);
+  assert.match(scoped.help.summary, /Retired/);
 });
 
 test('help advertises initialize and environment management command surfaces', () => {
@@ -201,170 +199,14 @@ test('public service commands are retired from the default CLI surface', () => {
     assert.equal(commands.includes(command), false);
   }
 });
-test('web bundle exposes an OPL web bundle with base-path aware product API endpoints', () => {
-  const output = runCli([
-    'web',
-    'bundle',
-    '--host',
-    '0.0.0.0',
-    '--port',
-    '8787',
-    '--base-path',
-    '/pilot/opl',
-    '--path',
-    repoRoot,
-    '--sessions-limit',
-    '9',
-  ]);
+test('web bundle and web package commands are retired from the public CLI', () => {
+  const bundle = runCli(['web', 'bundle']) as { error: { code: string; details: { command: string; retired: boolean } } };
+  assert.equal(bundle.error.code, 'cli_usage_error');
+  assert.equal(bundle.error.details.command, 'web');
+  assert.equal(bundle.error.details.retired, true);
 
-  assert.equal(output.version, 'g2');
-  assert.equal(output.web_bundle.surface_id, 'opl_web_bundle');
-  assert.equal(output.web_bundle.shell_integration_target, 'external_gui_overlay');
-  assert.equal(output.web_bundle.bundle_status, 'landed');
-  assert.equal(output.web_bundle.hosted_runtime_status, 'not_landed');
-  assert.equal(output.web_bundle.base_path, '/pilot/opl');
-  assert.equal(output.web_bundle.entry_url, 'http://127.0.0.1:8787/pilot/opl/');
-  assert.equal(output.web_bundle.api_base_url, 'http://127.0.0.1:8787/pilot/opl/api');
-  assert.equal(output.web_bundle.opl_api.resources.system, '/pilot/opl/api/opl/system');
-  assert.equal(output.web_bundle.opl_api.actions.web_bundle, '/pilot/opl/api/opl/web/bundle');
-  assert.equal(output.web_bundle.opl_api.debug.dashboard, '/pilot/opl/api/status/dashboard');
-  assert.equal(output.web_bundle.defaults.workspace_path, repoRoot);
-  assert.equal(output.web_bundle.defaults.sessions_limit, 9);
-  assert.equal(
-    output.web_bundle.hosted_runtime_readiness.surface_kind,
-    'opl_hosted_runtime_readiness',
-  );
-  assert.equal(output.web_bundle.hosted_runtime_readiness.status, 'pilot_ready_not_managed');
-  assert.equal(
-    output.web_bundle.hosted_runtime_readiness.web_bundle_landed,
-    true,
-  );
-  assert.equal(
-    output.web_bundle.hosted_runtime_readiness.self_hostable_web_package_landed,
-    true,
-  );
-});
-
-test('web package exports a self-hostable OPL web package with runtime and proxy assets', () => {
-  const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-hosted-package-'));
-
-  try {
-    const output = runCli([
-      'web',
-      'package',
-      '--output',
-      outputDir,
-      '--public-origin',
-      'https://opl.example.com',
-      '--base-path',
-      '/pilot/opl',
-      '--host',
-      '0.0.0.0',
-      '--port',
-      '8787',
-      '--sessions-limit',
-      '9',
-    ]);
-
-    assert.equal(output.version, 'g2');
-    assert.equal(output.web_package.surface_id, 'opl_web_package');
-    assert.equal(output.web_package.shell_integration_target, 'external_gui_overlay');
-    assert.equal(output.web_package.package_status, 'landed');
-    assert.equal(output.web_package.hosted_runtime_status, 'not_landed');
-    assert.equal(output.web_package.public_origin, 'https://opl.example.com');
-    assert.equal(output.web_package.entry_url, 'https://opl.example.com/pilot/opl/');
-    assert.equal(output.web_package.api_base_url, 'https://opl.example.com/pilot/opl/api');
-    assert.equal(output.web_package.opl_api.resources.system, '/pilot/opl/api/opl/system');
-    assert.equal(output.web_package.opl_api.actions.web_package, '/pilot/opl/api/opl/web/package');
-    assert.equal(
-      output.web_package.hosted_runtime_readiness.surface_kind,
-      'opl_hosted_runtime_readiness',
-    );
-    assert.equal(
-      output.web_package.hosted_runtime_readiness.status,
-      'pilot_ready_not_managed',
-    );
-    assert.equal(
-      output.web_package.hosted_runtime_readiness.self_hostable_web_package_landed,
-      true,
-    );
-    assert.equal(
-      output.web_package.hosted_runtime_readiness.service_safe_local_packaging_landed,
-      true,
-    );
-
-    const assets = output.web_package.assets;
-    assert.equal(fs.existsSync(assets.bundle_json), true);
-    assert.equal(fs.existsSync(assets.readme), true);
-    assert.equal(fs.existsSync(assets.launch_script), true);
-    assert.equal(fs.existsSync(assets.service_unit), true);
-    assert.equal(fs.existsSync(assets.service_install_script), true);
-    assert.equal(fs.existsSync(assets.healthcheck_script), true);
-    assert.equal(fs.existsSync(assets.reverse_proxy_template), true);
-    assert.equal(fs.existsSync(assets.environment_template), true);
-    assert.equal(fs.existsSync(assets.app_dist), true);
-    assert.equal(fs.existsSync(path.join(assets.app_dist, 'cli.js')), true);
-    assert.equal(fs.existsSync(path.join(assets.app_contracts, 'opl-gateway', 'workstreams.json')), true);
-
-    assert.equal(output.web_package.operations.systemd.unit_name, 'opl-web.service');
-    assert.equal(
-      output.web_package.operations.systemd.install_script,
-      assets.service_install_script,
-    );
-    assert.equal(
-      output.web_package.operations.healthcheck.script,
-      assets.healthcheck_script,
-    );
-    assert.equal(
-      output.web_package.operations.healthcheck.local_url,
-      'http://127.0.0.1:8787/pilot/opl/api/health',
-    );
-    assert.equal(
-      output.web_package.operations.healthcheck.public_url,
-      'https://opl.example.com/pilot/opl/api/health',
-    );
-
-    const readme = fs.readFileSync(assets.readme, 'utf8');
-    assert.match(readme, /OPL Web Package/i);
-    assert.match(readme, /OPL_HERMES_BIN/);
-    assert.match(readme, /actual hosted runtime is still not landed/i);
-    assert.match(readme, /install-systemd-service\.sh/);
-    assert.match(readme, /check-opl-web-health\.sh/);
-    assert.match(readme, /https:\/\/opl\.example\.com\/pilot\/opl\/api\/health/);
-
-    const service = fs.readFileSync(assets.service_unit, 'utf8');
-    assert.match(service, /EnvironmentFile=/);
-    assert.match(service, /run-opl-web\.sh/);
-
-    const runScript = fs.readFileSync(assets.launch_script, 'utf8');
-    assert.match(runScript, /--base-path/);
-    assert.match(runScript, /\/pilot\/opl/);
-    assert.match(runScript, /OPL_WEB_WORKSPACE/);
-
-    const caddyfile = fs.readFileSync(assets.reverse_proxy_template, 'utf8');
-    assert.match(caddyfile, /opl\.example\.com/);
-    assert.match(caddyfile, /handle_path \/pilot\/opl\/\*/);
-    assert.match(caddyfile, /reverse_proxy 127\.0\.0\.1:8787/);
-
-    const envExample = fs.readFileSync(assets.environment_template, 'utf8');
-    assert.match(envExample, /OPL_HERMES_BIN=/);
-    assert.match(envExample, /OPL_WEB_WORKSPACE=/);
-
-    const installScript = fs.readFileSync(assets.service_install_script, 'utf8');
-    assert.match(installScript, /SYSTEMCTL_BIN/);
-    assert.match(installScript, /daemon-reload/);
-    assert.match(installScript, /opl-web\.service/);
-    assert.match(installScript, /run-opl-web\.sh/);
-
-    const healthcheckScript = fs.readFileSync(assets.healthcheck_script, 'utf8');
-    assert.match(healthcheckScript, /api\/health/);
-    assert.match(healthcheckScript, /node -e/);
-
-    const bundleJson = JSON.parse(fs.readFileSync(assets.bundle_json, 'utf8'));
-    assert.equal(bundleJson.web_package.entry_url, 'https://opl.example.com/pilot/opl/');
-    assert.equal(bundleJson.web_package.base_path, '/pilot/opl');
-    assert.equal(bundleJson.web_package.operations.systemd.unit_name, 'opl-web.service');
-  } finally {
-    fs.rmSync(outputDir, { recursive: true, force: true });
-  }
+  const pack = runCli(['web', 'package']) as { error: { code: string; details: { command: string; retired: boolean } } };
+  assert.equal(pack.error.code, 'cli_usage_error');
+  assert.equal(pack.error.details.command, 'web');
+  assert.equal(pack.error.details.retired, true);
 });

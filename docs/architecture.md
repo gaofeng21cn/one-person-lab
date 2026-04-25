@@ -15,7 +15,7 @@
 这里的核心点是：
 
 - `OPL` 当前主线以 `Codex-default session/runtime + explicit activation layer` 为 canonical truth
-- 本地 `opl`、直接 `Codex` 使用、ACP-compatible 外部壳与 `Product API` 都消费同一套 runtime truth
+- 本地 `opl`、直接 `Codex` 使用、ACP-compatible 外部壳与 OPL-branded AionUI GUI/WebUI 都消费同一套 runtime truth
 - `opl`、`opl exec`、`opl resume` 默认继承 `Codex CLI` 语义
 - `opl skill sync` 把 family domain skill pack 注册到 Codex 环境，并按 workspace/worktree 布局自动发现 sibling repo；显式 runtime switch 或 domain contract 调用才进入 activation layer
 - `opl module install` 负责把缺失 domain repo 拉进 OPL-managed modules root，并串起 repo bootstrap、skill sync 与 health check 这条闭环安装线
@@ -92,13 +92,13 @@
 
 ### 5. Shell Projection Layer
 
-外部界面仓、ACP-compatible 壳与 `Product API` projection 都属于这一层。
+外部界面仓与 ACP-compatible 壳属于这一层。
 它们读取同一套 session runtime truth，把 `agents / workspaces / sessions / progress / artifacts` 映射成：
 
 - 本地 `opl` shell / TUI
 - `Codex` 中的显式调用面
 - ACP-compatible 外部壳
-- `Product API` / `opl web`
+- OPL-branded AionUI GUI/WebUI
 - 未来 hosted / online 壳
 
 ## OPL 与 Domain Agents 的关系
