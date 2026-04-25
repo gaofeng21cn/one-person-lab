@@ -6,7 +6,7 @@
 
 This document indexes the machine-readable admission-blocker backlog for the current under-definition `OPL` workstreams.
 
-Its job is to show what boundary material is still missing before `Thesis Ops` or `Review Ops` can be formally admitted as independent domain gateways.
+Its job is to show what boundary material is still missing before `IP Ops`, `Award Ops`, `Thesis Ops`, or `Review Ops` can be formally admitted as independent domain gateways.
 
 It is not a pre-admission registry.
 It is not an execution surface.
@@ -47,7 +47,7 @@ Companion tranche summary:
 This backlog does not:
 
 - assign future domain identity or gateway/harness surface metadata
-- reframe `Thesis Ops` or `Review Ops` as extensions of `MedAutoScience`, `MedAutoGrant`, or `RedCube AI`
+- reframe `IP Ops`, `Award Ops`, `Thesis Ops`, or `Review Ops` as extensions of `MedAutoScience`, `MedAutoGrant`, or `RedCube AI`
 - add candidate entries to the `G1` registry
 - create a discovery target or routed-action target
 - become an approval queue, release plan, or runtime planner
@@ -70,9 +70,29 @@ Each entry stays reference-only and carries only:
 
 ## Current Candidate Coverage
 
+### IP Ops
+
+`IP Ops` already has explicit top-level semantics in the task map / task topology: it covers intellectual-property protection outputs such as invention disclosures, patent application drafts, claims, embodiments, and office-action response plans.
+
+What is still missing is a future domain boundary package that makes patent-specific registry material, public gateway docs, truth ownership for patent drafts / claims / embodiments / prior-art positioning / office-action responses, human/legal review surfaces, an explicit execution-model declaration, discovery readiness, routing readiness, and cross-domain wording explicit.
+That execution-model declaration must identify the stable agent runtime surface, show how `Auto` and `Human-in-the-loop` share one base, explain the code-versus-Agent responsibility split, and keep the workstream out of any `fixed-code-first` or permanently single-mode framing.
+The routing readiness blocker must also prove that patent requests do not route to `MedAutoGrant` unless the request is actually Grant Ops proposal work.
+
+The negative conclusion frozen here is that `IP Foundry` / `Med Auto Patent` wording is a candidate product-family signal only; it does not justify admission, discovery readiness, routed-action readiness, handoff readiness, or OPL ownership of patent truth.
+
+### Award Ops
+
+`Award Ops` already has explicit top-level semantics in the task map / task topology: it covers science-and-technology award applications, achievement summaries, contribution ranking, impact evidence, and recommendation materials.
+
+What is still missing is a future domain boundary package that makes award-specific registry material, public gateway docs, truth ownership for award applications / achievement summaries / contribution ranking / impact evidence / recommendation materials, human expert review surfaces, an explicit execution-model declaration, discovery readiness, routing readiness, and cross-domain wording explicit.
+That execution-model declaration must identify the stable agent runtime surface, show how `Auto` and `Human-in-the-loop` share one base, explain the code-versus-Agent responsibility split, and keep the workstream out of any `fixed-code-first` or permanently single-mode framing.
+The routing readiness blocker must also prove that award requests do not route to `MedAutoGrant` as grant proposal work, even though Award Ops may reuse Grant Ops authoring substrate.
+
+The negative conclusion frozen here is that `Award Foundry` / `Med Auto Award` wording is a candidate product-family signal only; it does not justify admission, discovery readiness, routed-action readiness, handoff readiness, or OPL ownership of award truth.
+
 ### Thesis Ops
 
-`Thesis Ops` already has explicit top-level semantics in the task map / task topology.
+`Thesis Ops` already has explicit top-level semantics in the task map / task topology. `Thesis Foundry` / `Med Auto Thesis` is the planned product-family wording for this candidate lane.
 
 The negative conclusion frozen in the current path is that thesis assembly does add top-level boundary truth, but only as a reference-only candidate boundary inside the existing topology/backlog/onboarding chain: chapter-draft sets, cross-chapter synchronization, and defense-preparation coordination are not identical to `Research Ops` manuscript/submission flow, and a downstream `defense_deck` derivative does not collapse the workstream into `Presentation Ops` / `RedCube AI`.
 
@@ -85,7 +105,7 @@ Those future packages are blockers only; they do not make `Thesis Ops` currently
 
 ### Review Ops
 
-`Review Ops` already has explicit top-level semantics in the task map / task topology: it groups reviewer-role work plus response/rebuttal coordination under one candidate semantic bundle.
+`Review Ops` already has explicit top-level semantics in the task map / task topology: it groups reviewer-role work plus response/rebuttal coordination under one candidate semantic bundle. `Review Foundry` / `Med Auto Review` is the planned product-family wording for this candidate lane.
 
 What is still missing is a future domain boundary package that makes review-specific registry material, public gateway docs, truth ownership for review reports / comment structures / rebuttal plans / revision-route maps, review surfaces, an explicit execution-model declaration, discovery readiness, routing readiness, and cross-domain wording explicit.
 That execution-model declaration must identify the stable agent runtime surface, show how `Auto` and `Human-in-the-loop` share one base, explain the code-versus-Agent responsibility split, and keep the workstream out of any `fixed-code-first` or permanently single-mode framing.

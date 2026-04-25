@@ -157,7 +157,7 @@ Contract extension needed before adding more domains:
 
 At the current baseline, candidate-domain definition remains the composition of `task-topology`, `candidate-domain backlog`, and `domain-onboarding`.
 Do not insert a separate intermediate candidate-definition control surface unless those layers first prove insufficient to express a real missing boundary.
-For the current Grant Ops path, `Grant Foundry -> Med Auto Grant` now resolves to the admitted `MedAutoGrant` domain gateway entry. The remaining candidate-domain path continues to apply only to `Thesis Ops` and `Review Ops`.
+For the current Grant Ops path, `Grant Foundry -> Med Auto Grant` now resolves to the admitted `MedAutoGrant` domain gateway entry. The remaining candidate-domain path now applies to `IP Ops`, `Award Ops`, `Thesis Ops`, and `Review Ops`.
 
 Detailed contract:
 

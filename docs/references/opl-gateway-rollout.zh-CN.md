@@ -157,7 +157,7 @@ Human / Agent
 
 在当前基线上，candidate-domain definition 仍由 `task-topology`、`candidate-domain backlog` 与 `domain-onboarding` 三层共同构成。
 除非先证明这三层不足以表达一个真实缺失边界，否则不要再插入一层额外的 candidate-definition control surface。
-对当前 `Grant Ops` 路径而言，`Grant Foundry -> Med Auto Grant` 现在已经解析到已收录的 `MedAutoGrant` domain gateway 入口。剩余的 candidate-domain 路径只继续适用于 `Thesis Ops` 与 `Review Ops`。
+对当前 `Grant Ops` 路径而言，`Grant Foundry -> Med Auto Grant` 现在已经解析到已收录的 `MedAutoGrant` domain gateway 入口。剩余的 candidate-domain 路径现在适用于 `IP Ops`、`Award Ops`、`Thesis Ops` 与 `Review Ops`。
 
 具体合同：
 
