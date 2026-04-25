@@ -2,15 +2,15 @@
 
 ## 2026-04-25
 
-### 决策：8787 Product API launchd service 退出默认用户路径
+### 决策：8787 Product API service 模块退役
 
-原因：当前 OPL GUI 主线不消费 8787 launchd Product API service；该 service 主要来自 frontdesk/web adapter 历史阶段，默认安装或暴露会把后台 JSON/adapter 面误导成用户入口。
+原因：当前 OPL GUI/WebUI 主线由 OPL-branded AionUI shell 提供，不消费仓内 8787 Product API service。该 service 来自 frontdesk/web adapter 历史阶段，继续保留模块本体会把后台 JSON/adapter 面误导成当前产品能力。
 
 影响：
 
 - `opl install` 不再安装、启动或打开 8787 Product API service
-- public `opl service *` 与 `opl system reinstall-support` 退出当前默认命令面
-- `opl web` / `web bundle` / `web package` 仅作为显式开发、兼容和 hosted adapter 参考面保留
+- public `opl service *`、`opl system reinstall-support`、`opl web`、`web bundle` 与 `web package` 退出当前命令面
+- 仓内 `frontdesk-service`、`web-frontdesk` 与 self-hostable web package 实现删除，避免继续形成第二产品入口
 - GUI 分发由 `opl-aion-shell` 构建、`one-person-lab` GitHub Release 暴露；维护者用 `npm run gui:release` 发布 artifact
 
 ## 2026-04-23
@@ -33,7 +33,7 @@
 
 - `opl`、`opl exec`、`opl resume` 继续以 `Codex` 语义为默认前门
 - `opl skill sync` 成为 family domain skill pack 的统一同步入口；默认前门继续保持原生 Codex 语义
-- GUI 壳、`Product API` 与 ACP-compatible 外壳都围绕同一套 Codex-default runtime contract 工作
+- GUI 壳与 ACP-compatible 外壳都围绕同一套 Codex-default runtime contract 工作
 
 ### 决策：admitted domain 通过 repo-owned capability surface 接入 `OPL`
 
@@ -75,22 +75,22 @@
 
 - `OPL` 主仓当前主线以 `Codex-default session runtime + activation layer` 为中心，而不是以 GUI 或 API 壳为中心
 - canonical truth 收敛到：workspace binding、session lifecycle、progress / artifact projection、agent entry dispatch、runtime mode
-- `Product API`、`opl web` 与未来 GUI / Web shell 都降为这套 session runtime 的 projection / compatibility surface
+- GUI / Web shell 使用这套 session runtime；本地 8787 Product API / `opl web` 模块退役
 - `opl-aion-shell` 是第一 GUI 交付仓；它基于 AionUI codebase 产出 OPL 品牌壳，但原版 AionUI app 不是 OPL GUI，也不是 runtime owner
 
 ### 决策：GUI 主线确定为基于 AionUI codebase 的 OPL 品牌壳
 
-原因：在 `OPL` 已经明确走 `Codex-default session runtime + activation layer` 主线之后，当前 GUI 形态确定为基于 AionUI codebase 的 OPL 品牌壳。用户面对的交付物必须是 OPL 品牌壳：去掉 OPL 用不上的通用 AionUI 模块，替换品牌、文案和安装包身份，并消费 OPL Product API。
+原因：在 `OPL` 已经明确走 `Codex-default session runtime + activation layer` 主线之后，当前 GUI 形态确定为基于 AionUI codebase 的 OPL 品牌壳。用户面对的交付物必须是 OPL 品牌壳：去掉 OPL 用不上的通用 AionUI 模块，替换品牌、文案和安装包身份，并消费 OPL runtime/release contracts。
 
 影响：
 
-- `OPL` 主仓继续保留 family-level session runtime、`opl` shell / TUI、projection surfaces 与 `opl web`
+- `OPL` 主仓继续保留 family-level session runtime、`opl` shell / TUI、release distribution surface 与 activation contracts
 - 当前第一 GUI 交付物按 `opl-aion-shell` 的 OPL 品牌壳推进
 - 仓内已移除旧 GUI 备线材料；当前 GUI 实施依据收敛到 `opl-aion-shell` 与 AionUI codebase
 
 ## 2026-04-20
 
-### 决策：公开产品模型重置为 `Product API`
+### 历史决策：公开产品模型曾重置为 `Product API`
 
 原因：历史 `frontdesk` 体系把 GUI 启动、环境管理、工作空间、任务、进度、文件、领域接线和 hosted 试验语义揉在了一层，已经不适合当前 `OPL + 独立界面仓` 目标形态。
 
@@ -105,7 +105,7 @@
   - `sessions`
   - `progress`
   - `artifacts`
-- `opl` shell / TUI、GUI 外壳、CLI 与 `Product API` projection 共同消费这组产品资源
+- `opl` shell / TUI、GUI 外壳与 CLI 共同消费这组产品资源
 - 历史 `frontdesk` 公开语义退出当前主线
 
 ### 决策：Domain Agents 与 OPL 保持松耦合
@@ -114,7 +114,7 @@
 
 影响：
 
-- `OPL` 负责共享运行时、shared modules/contracts/indexes 与 `Product API`
+- `OPL` 负责共享运行时、shared modules/contracts/indexes 与 release distribution surface
 - 各个领域仓继续持有智能体入口、领域逻辑、运行规则与交付物
 - 通过 `OPL` 调用领域智能体，与直接在 `Codex` 里调用该智能体，工作逻辑保持一致
 
@@ -131,7 +131,6 @@
   - `domain-wiring`
   - `hosted-bundle`
   - `hosted-package`
-  - `local_frontdesk`
 - 相关文档只留在参考层或历史层
 
 ## 2026-04-19
@@ -142,10 +141,9 @@
 
 影响：
 
-- `OPL` 主仓只保留 CLI 产品入口、`opl web` API 服务、工作空间 / 会话 / 进度 / 交付物真相，以及 Codex / Hermes mode config
+- `OPL` 主仓只保留 CLI 产品入口、工作空间 / 会话 / 进度 / 交付物真相、release distribution surface，以及 Codex / Hermes mode config
 - 独立界面仓负责真正的 GUI 外壳
 - 一键安装默认打开已安装 GUI；macOS 上缺失时自动下载、挂载并安装 one-person-lab release 中匹配当前平台的 OPL 品牌 Electron DMG；缺少匹配 release asset 时才把 `opl-aion-shell` 源码构建作为 fallback
-- `opl web` 根路由只返回机器可读根载荷，不再伪装产品 GUI
 
 ### 决策：外部 GUI 基座只在“当前主线 / 基准 / 参考 / 备线”语境出现
 

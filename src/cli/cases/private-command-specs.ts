@@ -1,20 +1,16 @@
 import { GatewayContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkstreamOrThrow, validateGatewayContracts } from '../../contracts.ts';
 import { buildFrontDeskInitialize, buildFrontDeskEnvironment, buildFrontDeskModules, buildFrontDeskWorkspaceRootSurface, runFrontDeskSystemAction, writeFrontDeskWorkspaceRootSurface } from '../../frontdesk-installation.ts';
-import { getFrontDeskServiceStatus, installFrontDeskService, openFrontDeskService, startFrontDeskService, stopFrontDeskService, uninstallFrontDeskService } from '../../frontdesk-service.ts';
-import { startFrontDeskMcpBridge } from '../../frontdesk-mcp-stdio.ts';
 import { buildProductEntryDoctor, buildProductEntryHandoffEnvelope, runProductEntryLogs, runProductEntryRepairHermesGateway, runProductEntryResume, runProductEntrySessions } from '../../product-entry.ts';
 import { launchDomainEntry } from '../../domain-launch.ts';
 import { buildDomainManifestCatalog } from '../../domain-manifest.ts';
-import { buildFrontDeskDashboard, buildFrontDeskStart, buildHostedPilotBundle, buildProjectsOverview, buildRuntimeStatus, buildWorkspaceStatus } from '../../management.ts';
-import { buildHostedPilotPackage } from '../../hosted-pilot-package.ts';
+import { buildFrontDeskDashboard, buildFrontDeskStart, buildProjectsOverview, buildRuntimeStatus, buildWorkspaceStatus } from '../../management.ts';
 import { runAcpStdioBridge } from '../../opl-acp-stdio.ts';
 import { readFamilySkillPacks, syncFamilySkillPacks } from '../../opl-skills.ts';
 import { buildSessionLedger } from '../../session-ledger.ts';
 import { explainDomainBoundary, resolveRequestSurface } from '../../resolver.ts';
 import { activateWorkspaceBinding, archiveWorkspaceBinding, bindWorkspace, buildWorkspaceCatalog } from '../../workspace-registry.ts';
-import { attachWebFrontDeskShutdown, startWebFrontDeskServer } from '../../web-frontdesk.ts';
 import type { GatewayContracts } from '../../types.ts';
-import { assertNoArgs, buildCommandHelp, buildRetiredCommandError, buildRootHelp, buildUsageError, hasExplicitHermesExecutor, parseDashboardArgs, parseFrontDeskMcpArgs, parseHostedPilotPackageArgs, parseKeyValueArgs, parseLaunchDomainArgs, parseLogsArgs, parseProductEntryArgs, parseResumeArgs, parseRuntimeStatusArgs, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSessionsArgs, parseSkillPackArgs, parseStartArgs, parseUpdateChannelArgs, parseWebArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, parseWorkspaceStatusArgs, printJson, runCodexPassthroughHandled, runFrontDeskEngineActionCommand, runFrontDeskModuleActionCommand, stripExplicitCodexExecutor, withContractsContext } from '../modules/support.ts';
+import { assertNoArgs, buildCommandHelp, buildRetiredCommandError, buildRootHelp, buildUsageError, hasExplicitHermesExecutor, parseDashboardArgs, parseKeyValueArgs, parseLaunchDomainArgs, parseLogsArgs, parseProductEntryArgs, parseResumeArgs, parseRuntimeStatusArgs, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSessionsArgs, parseSkillPackArgs, parseStartArgs, parseUpdateChannelArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, parseWorkspaceStatusArgs, printJson, runCodexPassthroughHandled, runFrontDeskEngineActionCommand, runFrontDeskModuleActionCommand, stripExplicitCodexExecutor, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec, ParsedCliInput } from '../modules/support.ts';
 
 export function buildInternalCommandSpecs(
@@ -386,146 +382,17 @@ export function buildInternalCommandSpecs(
         return runFrontDeskSystemAction(getContracts(), 'repair');
       },
     },
-    'frontdesk reinstall-support': {
-      usage:
-        'opl frontdesk reinstall-support [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>]',
-      summary:
-        'Reinstall local OPL support surfaces that package the adapter service for desktop or overlay shells.',
-      examples: [
-        'opl frontdesk reinstall-support',
-        'opl frontdesk reinstall-support --port 8787 --base-path /pilot/opl',
-      ],
-      handler: (args) =>
-        runFrontDeskSystemAction(
-          getContracts(),
-          'reinstall_support',
-          parseWebArgs(args, commandSpecs['frontdesk reinstall-support']),
-        ),
-    },
-    'frontdesk update-channel': {
-      usage: 'opl frontdesk update-channel [--channel <stable|preview>]',
-      summary: 'Read or change the OPL update channel used by Initialize and Environment settings.',
-      examples: ['opl frontdesk update-channel', 'opl frontdesk update-channel --channel preview'],
-      handler: (args) => {
-        const parsed = parseUpdateChannelArgs(args, commandSpecs['frontdesk update-channel']);
-        return runFrontDeskSystemAction(getContracts(), 'update_channel', {
-          channel: parsed.channel,
-        });
-      },
-    },
-    'frontdesk hosted-bundle': {
-      usage:
-        'opl frontdesk hosted-bundle [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>]',
-      summary:
-        'Legacy compatibility command: emit the hosted-pilot-ready OPL web bundle with base-path-aware entry and API endpoints.',
-      examples: [
-        'opl frontdesk hosted-bundle',
-        'opl frontdesk hosted-bundle --host 0.0.0.0 --port 8787 --base-path /pilot/opl',
-        'opl frontdesk hosted-bundle --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 9',
-      ],
-      handler: (args) =>
-        buildHostedPilotBundle(getContracts(), parseWebArgs(args, commandSpecs['frontdesk hosted-bundle'])),
-    },
-    'frontdesk hosted-package': {
-      usage:
-        'opl frontdesk hosted-package --output <dir> [--public-origin <origin>] [--host <host>] [--port <port>] [--sessions-limit <n>] [--base-path <base_path>]',
-      summary:
-        'Export a self-hostable hosted pilot package with app snapshot, run script, service unit, and reverse-proxy assets.',
-      examples: [
-        'opl frontdesk hosted-package --output /tmp/opl-frontdesk-package',
-        'opl frontdesk hosted-package --output /tmp/opl-frontdesk-package --public-origin https://opl.example.com --base-path /pilot/opl',
-        'opl frontdesk hosted-package --output /tmp/opl-frontdesk-package --host 0.0.0.0 --port 8787 --sessions-limit 9',
-      ],
-      handler: (args) =>
-        buildHostedPilotPackage(
-          getContracts(),
-          parseHostedPilotPackageArgs(args, commandSpecs['frontdesk hosted-package']),
-        ),
-    },
-    'frontdesk-service-install': {
-      usage:
-        'opl frontdesk service install [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>]',
-      summary:
-        'Install and bootstrap a local launchd-managed OPL web Product API service for long-running direct entry.',
-      examples: [
-        'opl frontdesk service install',
-        'opl frontdesk service install --port 8787',
-        'opl frontdesk service install --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 10 --base-path /pilot/opl',
-      ],
-      handler: (args) => installFrontDeskService(getContracts(), parseWebArgs(args, commandSpecs['frontdesk-service-install'])),
-    },
-    'frontdesk-service-status': {
-      usage: 'opl frontdesk service status',
-      summary:
-        'Inspect whether the local launchd-managed OPL web Product API service is installed, loaded, and reachable.',
-      examples: ['opl frontdesk service status'],
-      handler: (args) => {
-        assertNoArgs(args, commandSpecs['frontdesk-service-status']);
-        return getFrontDeskServiceStatus(getContracts());
-      },
-    },
-    'frontdesk-service-start': {
-      usage: 'opl frontdesk service start',
-      summary: 'Bootstrap and kickstart the installed local OPL web Product API service.',
-      examples: ['opl frontdesk service start'],
-      handler: (args) => {
-        assertNoArgs(args, commandSpecs['frontdesk-service-start']);
-        return startFrontDeskService(getContracts());
-      },
-    },
-    'frontdesk-service-stop': {
-      usage: 'opl frontdesk service stop',
-      summary: 'Stop the installed local OPL web Product API service without removing its packaging files.',
-      examples: ['opl frontdesk service stop'],
-      handler: (args) => {
-        assertNoArgs(args, commandSpecs['frontdesk-service-stop']);
-        return stopFrontDeskService(getContracts());
-      },
-    },
-    'frontdesk-service-open': {
-      usage: 'opl frontdesk service open',
-      summary: 'Open the configured local OPL web Product API URL in the default browser.',
-      examples: ['opl frontdesk service open'],
-      handler: (args) => {
-        assertNoArgs(args, commandSpecs['frontdesk-service-open']);
-        return openFrontDeskService(getContracts());
-      },
-    },
-    'frontdesk-service-uninstall': {
-      usage: 'opl frontdesk service uninstall',
-      summary: 'Remove the local launchd-managed OPL web Product API service packaging.',
-      examples: ['opl frontdesk service uninstall'],
-      handler: (args) => {
-        assertNoArgs(args, commandSpecs['frontdesk-service-uninstall']);
-        return uninstallFrontDeskService(getContracts());
-      },
-    },
     'mcp-stdio': {
-      usage:
-        'opl mcp-stdio --api-base-url <url> [--workspace-path <workspace_path>] [--sessions-limit <n>]',
-      summary: 'Internal command: run the OPL Product API MCP stdio bridge for desktop or web shells.',
-      examples: [
-        'opl mcp-stdio --api-base-url http://host.docker.internal:8787/pilot/opl/api',
-      ],
-      handler: async (args) => {
-        const parsed = parseFrontDeskMcpArgs(args, commandSpecs['mcp-stdio']);
-        if (!parsed.apiBaseUrl) {
-          throw buildUsageError(
-            'mcp-stdio requires --api-base-url.',
-            commandSpecs['mcp-stdio'],
-            { required: ['--api-base-url'] },
-          );
-        }
-
-        await startFrontDeskMcpBridge({
-          apiBaseUrl: parsed.apiBaseUrl,
-          workspacePath: parsed.workspacePath,
-          sessionsLimit: parsed.sessionsLimit,
-        });
-        return {
-          __handled: true as const,
-        };
-      },
+      usage: 'opl mcp-stdio',
+      summary: 'Retired Product API MCP bridge command.',
+      examples: ['opl mcp-stdio'],
+      handler: () => buildRetiredCommandError('mcp-stdio', 'Product API MCP bridge is retired; use the OPL GUI / AionUI WebUI path instead.'),
+    },
+    web: {
+      usage: 'opl web',
+      summary: 'Retired local Product API web server command.',
+      examples: ['opl web'],
+      handler: () => buildRetiredCommandError('web', 'Local Product API web server is retired; use the OPL GUI / AionUI WebUI path instead.'),
     },
     'session runtime': {
       usage: 'opl session runtime --acp',
@@ -549,31 +416,7 @@ export function buildInternalCommandSpecs(
         };
       },
     },
-    web: {
-      usage:
-        'opl web [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>]',
-      summary: 'Start the local OPL web Product API adapter service for external GUI shells and API consumers.',
-      examples: [
-        'opl web',
-        'opl web --host 127.0.0.1 --port 8787',
-        'opl web --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 10',
-        'opl web --host 127.0.0.1 --port 8787 --base-path /pilot/opl',
-      ],
-      handler: async (args) => {
-        const { server, startupPayload } = await startWebFrontDeskServer(
-          getContracts(),
-          parseWebArgs(args, commandSpecs.web),
-        );
-
-        attachWebFrontDeskShutdown(server);
-        printJson(startupPayload);
-
-        return {
-          __handled: true as const,
-        };
-      },
-    },
-	    ask: {
+    ask: {
 	      usage:
 	        'opl ask <request...> [--intent <intent>] [--target <target>] [--preferred-family <family>] [--request-kind <kind>] [--executor <codex|hermes>] [--workspace-path <path>] [--dry-run]',
 	      summary:

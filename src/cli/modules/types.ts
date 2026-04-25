@@ -111,11 +111,6 @@ type TurnkeyInstallCliInput = WebCliInput & {
   serveWeb?: boolean;
 };
 
-type FrontDeskMcpCliInput = {
-  apiBaseUrl?: string;
-  workspacePath?: string;
-  sessionsLimit?: number;
-};
 
 type ResumeCliInput = {
   sessionId: string;
@@ -162,7 +157,6 @@ export type {
   CommandSpec,
   DashboardCliInput,
   FrontDeskEngineCliInput,
-  FrontDeskMcpCliInput,
   FrontDeskModuleCliInput,
   HostedPilotPackageCliInput,
   LaunchDomainCliInput,

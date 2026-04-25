@@ -1,10 +1,7 @@
 import { GatewayContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkstreamOrThrow } from '../../contracts.ts';
 import { buildFrontDeskEnvironment, buildFrontDeskInitialize, buildFrontDeskModules, runFrontDeskEngineAction, runFrontDeskModuleAction, runFrontDeskSystemAction, runFrontDeskTurnkeyInstall } from '../../frontdesk-installation.ts';
-import { buildHostedPilotPackage } from '../../hosted-pilot-package.ts';
-import { buildHostedPilotBundle } from '../../management.ts';
-import { attachWebFrontDeskShutdown, startWebFrontDeskServer } from '../../web-frontdesk.ts';
 import type { GatewayContracts } from '../../types.ts';
-import { assertNoArgs, buildCommandHelp, buildPublicEngineActionPayload, buildPublicModuleActionPayload, buildPublicModulesPayload, buildPublicSystemActionPayload, buildPublicSystemInitializePayload, buildPublicSystemPayload, buildPublicTurnkeyInstallPayload, buildRootHelp, buildUsageError, cloneCommandSpec, parseFrontDeskEngineArgs, parseFrontDeskModuleArgs, parseHostedPilotPackageArgs, parseTurnkeyInstallArgs, parseUpdateChannelArgs, parseWebArgs, printJson, withContractsContext } from '../modules/support.ts';
+import { assertNoArgs, buildCommandHelp, buildPublicEngineActionPayload, buildPublicModuleActionPayload, buildPublicModulesPayload, buildPublicSystemActionPayload, buildPublicSystemInitializePayload, buildPublicSystemPayload, buildPublicTurnkeyInstallPayload, buildRootHelp, buildUsageError, cloneCommandSpec, parseFrontDeskEngineArgs, parseFrontDeskModuleArgs, parseTurnkeyInstallArgs, parseUpdateChannelArgs, printJson, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
 
 export function buildPublicCommandSpecs(
@@ -65,62 +62,19 @@ export function buildPublicCommandSpecs(
     return spec;
   };
 
-  const webBundleSpec: CommandSpec = {
-    usage:
-      'opl web bundle [--host <host>] [--port <port>] [--path <workspace_path>] [--sessions-limit <n>] [--base-path <base_path>]',
-    summary: 'Emit the OPL web bundle with base-path-aware entry and Product API endpoints.',
-    examples: [
-      'opl web bundle',
-      'opl web bundle --host 0.0.0.0 --port 8787 --base-path /pilot/opl',
-    ],
-    group: 'web',
-    handler: (args) => buildHostedPilotBundle(getContracts(), parseWebArgs(args, webBundleSpec)),
-  };
-
-  const webPackageSpec: CommandSpec = {
-    usage:
-      'opl web package --output <dir> [--public-origin <origin>] [--host <host>] [--port <port>] [--sessions-limit <n>] [--base-path <base_path>]',
-    summary:
-      'Export a self-hostable OPL web package with app snapshot, run script, service unit, and reverse-proxy assets.',
-    examples: [
-      'opl web package --output /tmp/opl-web-package',
-      'opl web package --output /tmp/opl-web-package --public-origin https://opl.example.com',
-    ],
-    group: 'web',
-    handler: (args) => buildHostedPilotPackage(getContracts(), parseHostedPilotPackageArgs(args, webPackageSpec)),
-  };
-
   const installSpec: CommandSpec = {
     usage:
-      'opl install [--modules <mas,mds,mag,rca>] [--module <module_id>] [--skip-modules] [--skip-engines] [--skip-gui-open] [--serve-web] [--host <host>] [--port <port>]',
+      'opl install [--modules <mas,mds,mag,rca>] [--module <module_id>] [--skip-modules] [--skip-engines] [--skip-gui-open]',
     summary: 'One-shot install for OPL dependencies, family modules, Codex skills, and the OPL GUI app.',
     examples: [
       'opl install',
       'opl install --modules mas,mds,mag,rca',
       'opl install --modules mas --skip-engines --skip-gui-open',
-      'opl install --serve-web --host 0.0.0.0 --port 8787',
     ],
     group: 'top_level',
-    handler: async (args) => {
-      const parsed = parseTurnkeyInstallArgs(args, installSpec);
-      const installPayload = buildPublicTurnkeyInstallPayload(
-        await runFrontDeskTurnkeyInstall(getContracts(), parsed),
-      );
-
-      if (!parsed.serveWeb) {
-        return installPayload;
-      }
-
-      const { server, startupPayload } = await startWebFrontDeskServer(getContracts(), parsed);
-      attachWebFrontDeskShutdown(server);
-      printJson({
-        ...installPayload,
-        web_frontdesk: startupPayload.opl_api,
-      });
-      return {
-        __handled: true as const,
-      };
-    },
+    handler: async (args) => buildPublicTurnkeyInstallPayload(
+      await runFrontDeskTurnkeyInstall(getContracts(), parseTurnkeyInstallArgs(args, installSpec)),
+    ),
   };
 
   const systemSpec = buildNoArgSpec(
@@ -258,13 +212,7 @@ export function buildPublicCommandSpecs(
     ask: cloneCommandSpec(commandSpecs.ask, { group: 'legacy' }),
     chat: cloneCommandSpec(commandSpecs.chat, { group: 'legacy' }),
     shell: cloneCommandSpec(commandSpecs.shell, { group: 'legacy' }),
-    web: cloneCommandSpec(commandSpecs.web, {
-      summary: 'Start an explicit OPL web adapter server for development and compatibility checks.',
-      group: 'top_level',
-    }),
-    'web bundle': webBundleSpec,
-    'web package': webPackageSpec,
-    'mcp-stdio': cloneCommandSpec(commandSpecs['mcp-stdio'], { group: 'top_level' }),
+    web: cloneCommandSpec(commandSpecs.web, { group: 'legacy' }),
     'status workspace': cloneCommandSpec(commandSpecs['status workspace'], {
       usage: 'opl status workspace [--path <workspace_path>]',
       examples: ['opl status workspace', 'opl status workspace --path /Users/gaofeng/workspace/redcube-ai'],

@@ -22,13 +22,13 @@
 - `progress`
 - `artifacts`
 
-这组资源是 `opl`、外部 GUI 壳与 `Product API` projection 的共同产品真相。
+这组资源是 `opl` 与 OPL-branded AionUI GUI/WebUI 的共同产品真相。
 其中 `agents` 资源已经开始消费各 domain 仓 repo-owned 的 `domain agent entry spec`，而不是只由 OPL 顶层静态描述。
 
 ## 当前默认入口
 
 - 默认前门是 `opl`；`opl exec` 负责一次性请求，`opl resume` 负责续接会话。
-- `opl install` 是当前最短一键安装入口：默认安装或配置 `Codex CLI` 与 `Hermes-Agent`，安装 `MAS`、`MAG`、`RCA`，同步短名 Codex skills；若 OPL 品牌 GUI 已安装则尝试打开，macOS 上未安装时会自动下载并安装匹配当前平台的 release DMG 后再打开；历史 8787 Product API launchd service 已退出默认用户路径。
+- `opl install` 是当前最短一键安装入口：默认安装或配置 `Codex CLI` 与 `Hermes-Agent`，安装 `MAS`、`MAG`、`RCA`，同步短名 Codex skills；若 OPL 品牌 GUI 已安装则尝试打开，macOS 上未安装时会自动下载并安装匹配当前平台的 release DMG 后再打开；历史 8787 Product API service 模块已退役。
 - 这几个入口默认继承 `Codex` 语义；只有显式 runtime switch 或显式 domain activation 才进入不同语义。
 - `opl skill sync` 负责把家族 domain app skill pack 同步到 Codex 环境，供默认 `opl` / `opl exec` / `opl resume` 直接使用；默认 sibling repo 发现已经按 workspace/worktree 布局自动解析，不再依赖 `OPL_FAMILY_WORKSPACE_ROOT`。
 - `opl module install --module <module_id>` 现在走完整闭环：clone 到 OPL-managed modules root，执行仓库 bootstrap，同步对应 skill pack，再跑仓库健康检查。
@@ -40,7 +40,7 @@
 - GUI / Web 主线保持 `外部 shell -> OPL session runtime`。
 - 当前 GUI 交付物是 `opl-aion-shell` 维护的 OPL 品牌桌面壳，它基于 AionUI codebase 做 OPL 裁剪与品牌化；原版 AionUI app 不算 OPL GUI。OPL 一键安装负责打开已安装 GUI，macOS 上缺失时自动消费 one-person-lab GitHub Release 里的 OPL 品牌预编译 DMG；只有缺少匹配平台 / 架构 artifact 时才回退源码构建。
 - `OPL GUI` 预编译包指 Electron-builder 产出的 OPL 品牌 `.dmg` / `.exe` / `.deb` 分发文件及 `latest*.yml` updater metadata；这些 release artifact 由 `opl-aion-shell` 构建，再通过 `npm run gui:release` 上传到 `one-person-lab` GitHub Release。
-- `opl web` 与 `Product API` 继续提供 projection、debug 与 hosted adapter surface。
+- 本地 8787 `Product API` / `opl web` 模块已退役；WebUI 路径由 OPL-branded AionUI shell 提供。
 
 ## 当前交互模式
 
@@ -68,7 +68,7 @@
 - `docs/references/` 承接参考级配套文档；`docs/specs/` 与 `docs/plans/` 承接设计与计划记录；`docs/history/` 承接历史归档。
 - 历史 `gateway / federation / routed-action` 语料已经退到 reference / compatibility 层，不再作为默认实现依据。
 - 历史 `frontdesk / readiness / entry-guide / domain-wiring` 公开语义已经退出当前主线，只保留在参考或历史层。
-- `Product API` 继续保留，但语义上降为 session runtime 的 projection surface。
+- 本地 Product API projection 已退役，避免把历史 adapter 面误导成当前产品主线。
 - 各 domain 仓的 `gateway / harness` 继续作为内部分层语言存在；对外公开主语优先写成独立 `domain agent` 与其 `agent entry / direct entry`。
 
 ## 参考入口

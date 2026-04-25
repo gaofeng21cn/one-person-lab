@@ -20,7 +20,7 @@
   - `progress`
   - `artifacts`
 - `OPL` 的 session runtime 是这组资源的 canonical truth。
-- `opl`、`opl exec`、`opl resume`、外部 GUI 壳与 `Product API` 必须围绕这组资源组织当前产品语义。
+- `opl`、`opl exec`、`opl resume` 与 OPL-branded AionUI GUI/WebUI 必须围绕这组资源组织当前产品语义。
 - `agents` 资源必须指向 admitted domain 仓的稳定 capability surface，而不是重新发明第二套 domain 协议。
 
 ## 文档分层
@@ -44,9 +44,8 @@
 
 ## GUI 主线约束
 
-- `OPL` 主仓跟踪 family-level session runtime、`opl` shell / TUI 与 `Product API` projection 真相，不跟踪外部 GUI 外壳实现。
-- `opl web` 根路由只返回机器可读根载荷。
-- `Product API` 与 `opl web` 是 projection surface，不是 `OPL` 的唯一主交互形态。
+- `OPL` 主仓跟踪 family-level session runtime、`opl` shell / TUI、release distribution 与 activation contracts，不跟踪外部 GUI 外壳实现。
+- 本地 8787 `Product API` / `opl web` 模块已退役，不再作为 projection surface 或用户入口保留。
 - 外部壳不得反向定义 `workspace / session / agent / progress / artifacts` 的 canonical truth。
 - 外部壳不得反向改写默认 runtime 合同；GUI 定制只能建立在 Codex-default 路径之上。
 - 外部产品名只能在基准、上游参考或规划中的界面目标语境出现。

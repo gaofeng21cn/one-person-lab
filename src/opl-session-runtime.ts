@@ -4,7 +4,7 @@ export type OplInteractionSurfaceId =
   | 'opl_shell'
   | 'codex_explicit'
   | 'acp_shell'
-  | 'product_api_projection';
+;
 
 export interface OplInteractionSurfaceDescriptor {
   surface_id: OplInteractionSurfaceId;
@@ -77,19 +77,12 @@ const CANONICAL_INTERACTION_SURFACES: Record<OplInteractionSurfaceId, OplInterac
     surface_kind: 'bridge',
     summary: 'ACP bridge shell lane that reuses the same interaction/execution descriptor.',
   },
-  product_api_projection: {
-    surface_id: 'product_api_projection',
-    label: 'Product API projection',
-    surface_kind: 'api_projection',
-    summary: 'Product entry projection surface aligned to the same runtime descriptor and naming.',
-  },
 };
 
 const CANONICAL_INTERACTION_SURFACE_ORDER: OplInteractionSurfaceId[] = [
   'opl_shell',
   'codex_explicit',
   'acp_shell',
-  'product_api_projection',
 ];
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -129,8 +122,7 @@ function isOplInteractionSurfaceId(value: unknown): value is OplInteractionSurfa
   return (
     value === 'opl_shell' ||
     value === 'codex_explicit' ||
-    value === 'acp_shell' ||
-    value === 'product_api_projection'
+    value === 'acp_shell'
   );
 }
 

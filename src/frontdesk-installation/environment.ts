@@ -1,5 +1,4 @@
 import { ensureFrontDeskStateDir, resolveFrontDeskStatePaths } from '../frontdesk-state.ts';
-import { getFrontDeskServiceStatus } from '../frontdesk-service.ts';
 import { inspectHermesRuntime } from '../hermes.ts';
 import { readLocalCodexDefaultsIfAvailable } from '../local-codex-defaults.ts';
 import type { GatewayContracts } from '../types.ts';
@@ -12,7 +11,6 @@ export async function buildFrontDeskEnvironment(contracts: GatewayContracts) {
   const codexDefaults = readLocalCodexDefaultsIfAvailable();
   const codexBinary = resolveCodexVersion();
   const hermes = inspectHermesRuntime();
-  const localService = (await getFrontDeskServiceStatus(contracts)).frontdesk_service;
   const modulesPayload = buildFrontDeskModules().frontdesk_modules;
   const moduleSummary = modulesPayload.summary;
   const codexHealthStatus =
@@ -60,11 +58,10 @@ export async function buildFrontDeskEnvironment(contracts: GatewayContracts) {
           issues: hermes.issues,
         },
       },
-      local_frontdesk: {
-        service_installed: localService.installed,
-        service_loaded: localService.loaded,
-        service_health: localService.health.status,
-        gui_shell_strategy: 'external_overlay',
+      gui_shell: {
+        strategy: 'aionui_remote_webui',
+        service_dependency: 'none',
+        local_product_api_retired: true,
       },
       module_summary: moduleSummary,
       managed_paths: {
@@ -75,11 +72,10 @@ export async function buildFrontDeskEnvironment(contracts: GatewayContracts) {
         session_ledger_file: statePaths.session_ledger_file,
         runtime_modes_file: statePaths.runtime_modes_file,
         update_channel_file: statePaths.update_channel_file,
-        service_config_file: statePaths.service_config_file,
       },
       notes: [
         'OPL owns the user-facing initialization surface and reports whether the local Codex and Hermes engines are ready to be reused.',
-        'Local frontdesk service is the repo-tracked adapter/API surface for external GUI shells.',
+        'AionUI provides the GUI/WebUI shell; OPL no longer hosts a local Product API service on port 8787.',
         'Domain modules are tracked separately so the GUI can manage install and upgrade actions from one settings area.',
       ],
     },
