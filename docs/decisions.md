@@ -131,7 +131,7 @@
 
 - `OPL` 主仓只保留 CLI 产品入口、`opl web` API 服务、工作空间 / 会话 / 进度 / 交付物真相，以及 Codex / Hermes mode config
 - 独立界面仓负责真正的 GUI 外壳
-- 一键安装优先下载独立界面仓发布的预编译 Electron artifact；缺少匹配 release asset 时，才把源码构建作为 fallback
+- 一键安装只打开已安装 GUI 或报告 one-person-lab release 中匹配当前平台的 OPL 品牌 Electron artifact；实际安装由用户或外层 installer 执行，缺少匹配 release asset 时才把 `opl-aion-shell` 源码构建作为 fallback
 - `opl web` 根路由只返回机器可读根载荷，不再伪装产品 GUI
 
 ### 决策：外部 GUI 基座只在“当前主线 / 基准 / 参考 / 备线”语境出现

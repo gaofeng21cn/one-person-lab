@@ -55,7 +55,7 @@ git clone https://github.com/gaofeng21cn/one-person-lab.git && cd one-person-lab
 
 > 安装并配置这个 OPL repo：clone repo，安装 OPL CLI，运行 `opl install`，确认 One Person Lab App 的「远程连接」WebUI，以及 Research / Grant / Presentation Foundry 模块都准备好；如果某一步缺失，直接补齐或报告准确阻塞。
 
-`opl install` 会一揽子准备 OPL CLI、已安装的 One Person Lab App，以及当前活跃的产品家族模块。浏览器访问在 App 的「远程连接」里开启。
+`opl install` 会一揽子准备 OPL CLI、当前活跃的产品家族模块、Codex skills、本地 Product API service，以及 One Person Lab App 的启动指引。若桌面 App 已安装，它会直接打开；若尚未安装，它会返回匹配当前平台的 GitHub Release 安装包信息供手动安装。浏览器访问需要在已安装 App 的「远程连接」里开启。
 
 ## 可以用来做什么
 
