@@ -2,7 +2,7 @@
 
 # Family Orchestration Contracts
 
-这个目录冻结的是 `OPL` 四仓主线共享的 family-level orchestration machine-readable companion schemas。
+这个目录冻结的是当前 active 四仓线（`one-person-lab`、`med-autoscience`、`med-autogrant`、`redcube-ai`）共享的 family-level orchestration machine-readable companion schemas。
 
 这里吸收的是 `CrewAI` 一类编排框架里最值得复用的思想，但吸收方式是 contract-first，而不是把 `CrewAI` 直接引入为 family runtime dependency，也不是改写现有 owner split：
 
@@ -75,7 +75,7 @@
 - 统一某一套 LLM wrapper
 - 统一某一套 `Crew` / `Agent` / `Memory` runtime object model
 - 固定某个具体模型家族
-- 把 `OPL` 改写成 domain harness 的 runtime owner
+- 把 `OPL` 改写成 domain-owned truth 的 runtime owner
 - 暗示跨仓 runtime core ingest 已经完成
 
 ## 预期吸收路径

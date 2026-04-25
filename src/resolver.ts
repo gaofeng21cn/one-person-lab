@@ -130,7 +130,7 @@ export function resolveRequestSurface(
       recommended_family: null,
       confidence: 'high',
       reason:
-        'The explicit @mas handle pins the request to Research Foundry inside the MedAutoScience gateway.',
+        'The explicit @mas handle pins the request to Research Foundry inside the MedAutoScience domain-agent entry.',
       routing_evidence: [
         'preferred_family_alias=mas',
         'explicit agent handle',
@@ -150,7 +150,7 @@ export function resolveRequestSurface(
       recommended_family: null,
       confidence: 'high',
       reason:
-        'The explicit @mag handle pins the request to Grant Foundry inside the MedAutoGrant gateway.',
+        'The explicit @mag handle pins the request to Grant Foundry inside the MedAutoGrant domain-agent entry.',
       routing_evidence: [
         'preferred_family_alias=mag',
         'explicit agent handle',
@@ -170,7 +170,7 @@ export function resolveRequestSurface(
       recommended_family: 'ppt_deck',
       confidence: 'high',
       reason:
-        'The explicit @rca handle pins the request to Presentation Foundry inside the RedCube gateway.',
+        'The explicit @rca handle pins the request to Presentation Foundry inside the RedCube domain-agent entry.',
       routing_evidence: [
         'preferred_family_alias=rca',
         'explicit agent handle',
@@ -190,11 +190,11 @@ export function resolveRequestSurface(
       recommended_family: 'ppt_deck',
       confidence: 'high',
       reason:
-        'ppt_deck is a direct top-level family map to Presentation Foundry and must stay inside the RedCube gateway.',
+        'ppt_deck is a direct top-level family map to Presentation Foundry and must stay inside the RedCube domain-agent entry.',
       routing_evidence: [
         'preferred_family=ppt_deck',
         'ppt_deck direct map to presentation_ops',
-        'domain gateway entry only',
+        'domain-agent entry only',
       ],
     };
   }
@@ -232,11 +232,11 @@ export function resolveRequestSurface(
         recommended_family: null,
         confidence: 'high',
         reason:
-          'The requested output is a formal grant-authoring delivery owned by Grant Ops inside the MedAutoGrant gateway.',
+          'The requested output is a formal grant-authoring delivery owned by Grant Ops inside the MedAutoGrant domain-agent entry.',
         routing_evidence: [
           'grant delivery semantics',
           'grant_ops registered ownership',
-          'domain gateway entry only',
+          'domain-agent entry only',
         ],
       };
     }
@@ -246,7 +246,7 @@ export function resolveRequestSurface(
       request_kind: requestKind(input),
       candidate_workstream_id: candidateWorkstream,
       reason:
-        `${candidateWorkstream} semantics are recognizable, but that workstream remains under definition and has no admitted domain gateway yet.`,
+        `${candidateWorkstream} semantics are recognizable, but that workstream remains under definition and has no admitted domain-agent entry yet.`,
       routing_evidence: [
         `candidate_workstream=${candidateWorkstream}`,
         'under_definition workstream',
@@ -286,11 +286,11 @@ export function resolveRequestSurface(
       recommended_family: null,
       confidence: 'high',
       reason:
-        'The requested output is a formal research delivery owned by Research Foundry inside the MedAutoScience gateway.',
+        'The requested output is a formal research delivery owned by Research Foundry inside the MedAutoScience domain-agent entry.',
       routing_evidence: [
         'research delivery semantics',
         'research_ops registered ownership',
-        'domain gateway entry only',
+        'domain-agent entry only',
       ],
     };
   }
@@ -306,7 +306,7 @@ export function resolveRequestSurface(
       recommended_family: preferredFamily ?? 'ppt_deck',
       confidence: preferredFamily ? 'high' : 'medium',
       reason:
-        'The requested output is a visual deliverable owned by Presentation Foundry inside the RedCube gateway.',
+        'The requested output is a visual deliverable owned by Presentation Foundry inside the RedCube domain-agent entry.',
       routing_evidence: [
         'presentation delivery semantics',
         'presentation_ops registered ownership',
@@ -364,7 +364,7 @@ export function explainDomainBoundary(
           resolved_domain: 'medautogrant',
           resolved_workstream_id: 'grant_ops',
           reason:
-            'The primary output is a formal grant-authoring delivery, so the request belongs to the MedAutoGrant gateway.',
+            'The primary output is a formal grant-authoring delivery, so the request belongs to the MedAutoGrant domain-agent entry.',
           rejected_domains: [
             {
               domain_id: 'medautoscience',
@@ -388,7 +388,7 @@ export function explainDomainBoundary(
           resolved_domain: 'medautoscience',
           resolved_workstream_id: 'research_ops',
           reason:
-            'The primary output is a formal research delivery, so the request belongs to the MedAutoScience gateway rather than the visual-deliverable lane.',
+            'The primary output is a formal research delivery, so the request belongs to the MedAutoScience domain-agent entry rather than the visual-deliverable lane.',
           rejected_domains: [
             {
               domain_id: 'redcube',

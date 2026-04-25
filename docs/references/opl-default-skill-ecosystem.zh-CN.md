@@ -8,11 +8,11 @@
 
 | 层级 | 例子 | 默认安装/同步位置 | 维护原则 |
 | --- | --- | --- | --- |
-| OPL family domain skills | MAS、MDS、MAG、RCA | Codex plugin / family skill sync | 由各 domain 仓维护，OPL 只负责注册和同步 |
+| OPL family domain skills | MAS、MAG、RCA | Codex plugin / family skill sync | 由各 active domain-agent 仓维护，OPL 只负责注册和同步 |
 | OPL companion skills | Superpowers、officecli、officecli-docx/pptx/xlsx、ui-ux-pro-max | 用户级 Codex/agent skill discovery 路径 | OPL 负责检测、计划和显式 apply；默认不改用户全局配置 |
 | Codex bundled skills | Documents、Presentations、Spreadsheets | Codex plugin cache | 只检测可用性，不复制到 `~/.codex/skills` |
 
-MAS/MDS 内部的 `scout`、`review`、`baseline`、`experiment`、`write` 等项目专用 skill 不属于 OPL 默认系统级生态。它们应该留在 MAS/MDS 项目目录或对应 domain runtime 内部，由 MAS/MDS 自己调用。
+MDS 内部的 `scout`、`review`、`baseline`、`experiment`、`write` 等项目专用 skill 不属于 OPL 默认系统级生态。它们应该留在 MAS 控制下的项目目录或 domain runtime 内部，不升级为 OPL 默认 family skill。
 
 ## Superpowers 的官方安装模型
 
@@ -63,7 +63,7 @@ OPL App 默认应该优先复用 Codex 的用户级 skill discovery 路径；是
 2. `ask_to_apply`：生成计划和按钮，等用户确认。
 3. `managed`：OPL App / Docker / OPL 专用 `CODEX_HOME` 才执行推荐配置。
 4. 对 Codex bundled skills 只显示可用性，不复制。
-5. 对 MAS/MDS 项目专用 skill 不做系统级展示。
+5. 对 MDS 以及其他 MAS-internal 项目专用 skill 不做系统级展示。
 
 ## 验证
 

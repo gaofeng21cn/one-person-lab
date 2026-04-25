@@ -48,7 +48,7 @@ Need Docker, Linux, or server deployment? See the [Docker and browser deployment
 
 | Product family | Current product | Best for | Typical deliverables |
 | --- | --- | --- | --- |
-| `Research Foundry` | [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience) + [`Med Deep Scientist`](https://github.com/gaofeng21cn/med-deepscientist) | Medical research, evidence organization, manuscript preparation, deep analysis | Analysis packages, evidence packages, manuscripts |
+| `Research Foundry` | [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience) | Medical research, evidence organization, manuscript preparation, deep analysis | Analysis packages, evidence packages, manuscripts |
 | `Grant Foundry` | [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) | Grant direction setting, proposal writing, revision work | Proposals, outlines, revision packs |
 | `Presentation Foundry` | [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) | Lectures, lab talks, reports, defense materials | Slide decks, scripts, presentation packages |
 | `IP Foundry` | `Med Auto Patent` planned | Patent applications, invention disclosures, claims, embodiment organization | Invention disclosures, patent drafts, claim sets |
@@ -71,13 +71,13 @@ Need Docker, Linux, or server deployment? See the [Docker and browser deployment
 
 ### One instruction for a Codex Agent
 
-> Install and configure this OPL repo: clone it, install the OPL CLI, run `opl install`, and ensure Codex CLI, Hermes-Agent, MAS/MDS/MAG/RCA, recommended skills, the One Person Lab App, and the browser entry are ready; if anything is missing, fix it or report the exact blocker.
+> Install and configure this OPL repo: clone it, install the OPL CLI, run `opl install`, and ensure Codex CLI, Hermes-Agent, MAS/MAG/RCA, recommended skills, the One Person Lab App, and the browser entry are ready; if anything is missing, fix it or report the exact blocker.
 
 ### Common commands after installation
 
 ```bash
 opl system initialize   # Inspect Codex, Hermes-Agent, modules, skills, GUI, and workspace-root state
-opl modules             # Check MAS/MDS/MAG/RCA module installation and health
+opl modules             # Check MAS/MAG/RCA module installation and health
 opl skill sync          # Sync OPL family skills into the Codex-visible skill path
 opl help --text         # Human-readable help; use opl help --json for machine-readable output
 ```
@@ -104,7 +104,8 @@ The desktop GUI source is maintained in [`opl-aion-shell`](https://github.com/ga
 - Default front doors are `opl`, `opl exec`, and `opl resume`. Unless a runtime or domain agent is explicitly selected, these paths keep Codex-default semantics.
 - If an admitted domain repo is missing locally, run `opl module install --module <module_id>`.
 - The default local state directory is `~/Library/Application Support/OPL/state`. Set `OPL_STATE_DIR` to use another local state root.
-- Active domain agents are [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience), [`Med Deep Scientist`](https://github.com/gaofeng21cn/med-deepscientist), [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant), and [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai).
+- Active domain agents are [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience), [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant), and [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai).
+- [`Med Deep Scientist`](https://github.com/gaofeng21cn/med-deepscientist) remains the controlled runtime/backend companion under `Med Auto Science`; it is not a top-level OPL domain agent or a default OPL-managed module.
 - When a task needs top-level session/runtime paths, shared `workspaces / sessions / progress / artifacts` surfaces, or explicit domain activation, enter through `OPL`. When a task is already clearly inside one domain, continue through that repo’s README and `docs/README*`.
 
 </details>

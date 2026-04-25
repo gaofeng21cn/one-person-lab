@@ -7,7 +7,6 @@ node scripts/line-budget.mjs
 
 case "$lane" in
   smoke|fast)
-    npm run line-budget
     npm test
     ;;
   family)
@@ -32,7 +31,7 @@ case "$lane" in
     npm run lint
     ;;
   line-budget)
-    npm run line-budget
+    :
     ;;
   typecheck)
     npm run typecheck

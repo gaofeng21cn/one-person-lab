@@ -52,6 +52,10 @@ test('scripts/verify.sh provides the canonical verification wrapper', () => {
   const verifyScript = read('scripts/verify.sh');
 
   assert.match(verifyScript, /node scripts\/line-budget\.mjs/);
+  assert.equal(
+    (verifyScript.match(/node scripts\/line-budget\.mjs/g) ?? []).length,
+    1,
+  );
   assert.match(verifyScript, /npm test/);
   assert.match(verifyScript, /npm run family:shared-release -- check/);
   assert.match(verifyScript, /python\/opl-harness-shared\/tests\/test_family_shared_release\.py/);
