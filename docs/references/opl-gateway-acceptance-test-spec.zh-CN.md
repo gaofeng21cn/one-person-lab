@@ -567,7 +567,7 @@ wording-consistency gate 只有在下面全部成立时才算通过：
    - `presentation_ops`
 4. `research_ops` 仍保持 `registry_state = registered`、`routing_state = domain_gateway_ready`、`current_domain_id = medautoscience`、`entry_surface = domain_gateway`。
 5. `presentation_ops` 仍保持 `registry_state = registered`、`routing_state = domain_gateway_ready`、`current_domain_id = redcube`、`entry_surface = domain_gateway`。
-6. `grant_ops`、`thesis_ops`、`review_ops` 都仍保持 `boundary_state = under_definition`、`registry_state = not_registered`、`routing_state = unknown_domain_only`、`current_domain_id = null`、`entry_surface = null`。
+6. `ip_ops`、`award_ops`、`thesis_ops`、`review_ops` 都仍保持 `boundary_state = under_definition`、`registry_state = not_registered`、`routing_state = unknown_domain_only`、`current_domain_id = null`、`entry_surface = null`。
 7. `presentation_ops` 保持 `ppt_deck` 为 direct map，同时把 `xiaohongshu` 留在同一 RedCube family/harness 语境里，但不自动等同于 `presentation_ops`。
 8. `contracts/opl-gateway/workstreams.json` 与 `domains.json` 仍只注册当前已收录 workstream / domain；task-topology 工件不会悄悄扩张 G1 registry。
 9. `contracts/opl-gateway/public-surface-index.json` 把 `opl_task_map` 暴露成 `opl_public_entry` surface。
@@ -963,7 +963,7 @@ task_map_zh = Path('docs/task-map.zh-CN.md').read_text()
 backlog_doc_en = Path('docs/references/opl-candidate-domain-backlog.md').read_text()
 backlog_doc_zh = Path('docs/references/opl-candidate-domain-backlog.zh-CN.md').read_text()
 
-expected = {'thesis_ops', 'review_ops'}
+expected = {'ip_ops', 'award_ops', 'thesis_ops', 'review_ops'}
 task_entries = {entry['workstream_id']: entry for entry in task['workstreams']}
 backlog_entries = {entry['workstream_id']: entry for entry in backlog['candidate_workstreams']}
 assert set(backlog_entries) == expected, (set(backlog_entries), expected)

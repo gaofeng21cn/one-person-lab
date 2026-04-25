@@ -6,7 +6,7 @@ import type {
   ResolutionResult,
 } from './types.ts';
 
-type CandidateKind = 'grant_ops' | 'thesis_ops' | 'review_ops';
+type CandidateKind = 'grant_ops' | 'thesis_ops' | 'review_ops' | 'ip_ops' | 'award_ops';
 
 const RESEARCH_KEYWORDS = [
   'research',
@@ -30,6 +30,33 @@ const PRESENTATION_KEYWORDS = [
 ];
 
 const GRANT_KEYWORDS = ['grant', 'proposal'];
+const IP_KEYWORDS = [
+  'patent',
+  'invention disclosure',
+  'claims',
+  'embodiment',
+  'office action',
+  'intellectual property',
+  '专利',
+  '技术交底',
+  '权利要求',
+  '实施例',
+  '知识产权',
+];
+const AWARD_KEYWORDS = [
+  'award',
+  'science and technology award',
+  'achievement summary',
+  'contribution ranking',
+  'impact evidence',
+  'recommendation materials',
+  '报奖',
+  '科技进步奖',
+  '自然科学奖',
+  '成果奖',
+  '成果总结',
+  '贡献排序',
+];
 const THESIS_KEYWORDS = ['thesis', 'chapter', 'defense preparation'];
 const REVIEW_KEYWORDS = ['peer review', 'reviewer', 'rebuttal', 'revision route'];
 
@@ -50,6 +77,14 @@ function hasKeyword(text: string, keywords: string[]): boolean {
 }
 
 function detectCandidateWorkstream(text: string): CandidateKind | null {
+  if (hasKeyword(text, IP_KEYWORDS)) {
+    return 'ip_ops';
+  }
+
+  if (hasKeyword(text, AWARD_KEYWORDS)) {
+    return 'award_ops';
+  }
+
   if (hasKeyword(text, GRANT_KEYWORDS)) {
     return 'grant_ops';
   }

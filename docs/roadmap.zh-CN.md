@@ -44,7 +44,10 @@
 - `MedAutoGrant` 持有 admitted 的 `Grant Ops` domain gateway 与 harness
 - `RedCube AI` 持有视觉交付 domain gateway 与 harness
 - `ppt_deck` 继续是当前最直接映射到 `Presentation Ops` 的 family
-- `Review Ops` 与 `Thesis Ops` 继续留在定义与 onboarding 路径
+- `IP Ops` 继续作为 `IP Foundry` / `Med Auto Patent` 的定义与 onboarding 路径推进
+- `Award Ops` 继续作为 `Award Foundry` / `Med Auto Award` 的定义与 onboarding 路径推进
+- `Thesis Ops` 继续作为 `Thesis Foundry` / `Med Auto Thesis` 的定义与 onboarding 路径推进
+- `Review Ops` 继续作为 `Review Foundry` / `Med Auto Review` 的定义与 onboarding 路径推进
 
 ## 历史记录与参考入口
 

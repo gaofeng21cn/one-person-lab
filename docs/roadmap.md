@@ -44,7 +44,10 @@ The current family shape is already clear enough to guide the roadmap:
 - `MedAutoGrant` owns the admitted `Grant Ops` domain gateway and harness
 - `RedCube AI` owns the visual-deliverable domain gateway and harness
 - `ppt_deck` remains the clearest current bridge into `Presentation Ops`
-- `Review Ops` and `Thesis Ops` stay on definition and onboarding lanes
+- `IP Ops` stays on the definition and onboarding lane for `IP Foundry` / `Med Auto Patent`
+- `Award Ops` stays on the definition and onboarding lane for `Award Foundry` / `Med Auto Award`
+- `Thesis Ops` stays on the definition and onboarding lane for `Thesis Foundry` / `Med Auto Thesis`
+- `Review Ops` stays on the definition and onboarding lane for `Review Foundry` / `Med Auto Review`
 
 ## Historical Records And Reference Surfaces
 

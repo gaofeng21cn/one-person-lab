@@ -4,10 +4,12 @@
 
 ## 总览
 
-`OPL` 把一人课题组的正式工作拆成五类工作流：
+`OPL` 把一人课题组的正式工作拆成七类工作流：
 
 - `Research Ops`
 - `Grant Ops`
+- `IP Ops`
+- `Award Ops`
 - `Thesis Ops`
 - `Review Ops`
 - `Presentation Ops`
@@ -33,7 +35,7 @@
 - 顶层 task topology materialize 成 machine-readable 的语义 surface
 - 当前 under-definition workstream 仍缺哪些 admission boundary material 写成 machine-readable backlog
 
-它们可以描述 `Thesis Ops`、`Review Ops` 这类仍在定义中的 workstream，并把它们保持在明确的 candidate / onboarding 路径上。
+它们可以描述 `IP Ops`、`Award Ops`、`Thesis Ops`、`Review Ops` 这类仍在定义中的 workstream，并把它们保持在明确的 candidate / onboarding 路径上。
 `Grant Ops` 已经注册到已收录的 `MedAutoGrant` domain gateway，而剩余 under-definition workstream 的 formal 收录、`G2` discovery readiness 与 `G3` routed-action readiness 仍然要通过单独的 onboarding evidence 获得。
 
 在当前基线上，`candidate-domain definition` 由三部分共同构成：
@@ -105,6 +107,70 @@
 - 路由规则：successful handoff 仍然只能 targeting `domain_gateway`，并继续禁止 direct harness bypass
 - 当前顶层处理方式：清楚的请求会通过已冻结 routing vocabulary 与 domain manifest surface 直接解析到 `medautogrant`
 
+## IP Ops
+
+`IP Ops` 负责围绕科研成果做知识产权保护材料。
+
+典型任务包括：
+
+- 专利可申请性 framing
+- 技术交底组织
+- 权利要求与实施例起草
+- 现有技术、新颖性和创造性定位
+- 审查意见答复路线规划
+
+它可以复用研究证据、基金叙事、图表和技术路线，但专利申请的 canonical truth 必须独立于基金申请 truth 和论文发表 truth。
+
+典型交付对象包括：
+
+- 技术交底书
+- 专利申请书草稿
+- 权利要求书
+- 实施例材料包
+- 审查意见答复计划
+
+当前边界状态：
+
+- 当前生命周期状态：under-definition candidate workstream
+- 规划产品表达：`IP Foundry` / 知产工坊，首个规划产品为 `Med Auto Patent`
+- formal 收录路径：等待正式 domain admission 与注册后的 `G1` workstream/domain mapping
+- discovery / routing 路径：等待 `G2` discovery readiness、`G3` routed-action readiness 与 domain handoff 资格
+- 已跟踪的 blocker package：`truth_ownership`、`review_surfaces`、`execution_model`、`discovery_readiness`、`routing_readiness` 与 `cross_domain_wording`
+- truth boundary：专利 canonical truth 与人工/法律审阅 gate 必须由未来 IP Ops domain boundary 持有
+- 路由规则：清楚的专利请求可以返回 `unknown_domain`；不得作为基金申请工作路由到 `MedAutoGrant`
+
+## Award Ops
+
+`Award Ops` 负责报奖申请和成果推广型材料。
+
+典型任务包括：
+
+- 奖项类别与匹配度判断
+- 成果主线组织
+- 贡献与创新排序
+- 影响力与应用佐证材料整理
+- 报奖评审意见答复路线规划
+
+它可以复用 Research Ops 的证据和 Grant Ops 的写作基座，但报奖中的贡献、影响力、推荐材料 truth 必须独立于基金申请 truth。
+
+典型交付对象包括：
+
+- 报奖书草稿
+- 成果总结
+- 贡献排序材料包
+- 影响力佐证材料包
+- 推荐材料
+
+当前边界状态：
+
+- 当前生命周期状态：under-definition candidate workstream
+- 规划产品表达：`Award Foundry` / 报奖工坊，首个规划产品为 `Med Auto Award`
+- formal 收录路径：等待正式 domain admission 与注册后的 `G1` workstream/domain mapping
+- discovery / routing 路径：等待 `G2` discovery readiness、`G3` routed-action readiness 与 domain handoff 资格
+- 已跟踪的 blocker package：`truth_ownership`、`review_surfaces`、`execution_model`、`discovery_readiness`、`routing_readiness` 与 `cross_domain_wording`
+- truth boundary：报奖 canonical truth 与人工专家审阅 gate 必须由未来 Award Ops domain boundary 持有
+- 路由规则：清楚的报奖请求可以返回 `unknown_domain`；不得作为基金申请工作路由到 `MedAutoGrant`
+
 ## Thesis Ops
 
 `Thesis Ops` 负责学位论文与答辩准备。
@@ -130,6 +196,7 @@
 当前边界状态：
 
 - 当前生命周期状态：under-definition candidate workstream
+- 规划产品表达：`Thesis Foundry` / 学位论文工坊，首个规划产品为 `Med Auto Thesis`
 - formal 收录路径：等待正式 domain admission 与注册后的 `G1` workstream/domain mapping
 - discovery / routing 路径：等待 `G2` discovery readiness、`G3` routed-action readiness 与 domain handoff 资格
 - 已跟踪的 blocker package：`execution_model`、`discovery_readiness`、`routing_readiness` 与 `cross_domain_wording`
@@ -163,6 +230,7 @@ review artifact 的 truth 继续保持为 future domain-owned，直到 dedicated
 当前边界状态：
 
 - 当前生命周期状态：under-definition candidate workstream
+- 规划产品表达：`Review Foundry` / 评审工坊，首个规划产品为 `Med Auto Review`
 - formal 收录路径：等待正式 domain admission 与注册后的 `G1` workstream/domain mapping
 - discovery / routing 路径：等待 `G2` discovery readiness、`G3` routed-action readiness 与 domain handoff 资格
 - 已跟踪的 blocker package：`execution_model`、`discovery_readiness`、`routing_readiness` 与 `cross_domain_wording`

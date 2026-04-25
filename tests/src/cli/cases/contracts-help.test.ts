@@ -425,6 +425,44 @@ test('resolveRequestSurface keeps xiaohongshu at the redcube family boundary', (
   assert.equal(output.resolution.workstream_id, null);
 });
 
+test('resolveRequestSurface keeps patent requests on the IP Ops candidate lane', () => {
+  const output = runCli([
+    'domain',
+    'resolve-request',
+    '--intent',
+    'create',
+    '--target',
+    'deliverable',
+    '--goal',
+    'Draft a patent application with claims and embodiments from this medical research result.',
+  ]);
+
+  assertContractsContext(output, 'cwd');
+  assert.equal(output.resolution.status, 'unknown_domain');
+  assert.equal(output.resolution.candidate_workstream_id, 'ip_ops');
+  assert.equal(output.resolution.domain_id, undefined);
+  assert.match(output.resolution.reason, /under definition/i);
+});
+
+test('resolveRequestSurface keeps award requests off the MedAutoGrant route', () => {
+  const output = runCli([
+    'domain',
+    'resolve-request',
+    '--intent',
+    'create',
+    '--target',
+    'deliverable',
+    '--goal',
+    'Prepare a science and technology award application with achievement summary and impact evidence.',
+  ]);
+
+  assertContractsContext(output, 'cwd');
+  assert.equal(output.resolution.status, 'unknown_domain');
+  assert.equal(output.resolution.candidate_workstream_id, 'award_ops');
+  assert.equal(output.resolution.domain_id, undefined);
+  assert.match(output.resolution.reason, /under definition/i);
+});
+
 test('resolveRequestSurface routes grant work to medautogrant', () => {
   const output = runCli([
     'domain',

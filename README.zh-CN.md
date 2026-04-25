@@ -51,8 +51,10 @@ curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/ins
 | `Research Foundry` | [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience) + [`Med Deep Scientist`](https://github.com/gaofeng21cn/med-deepscientist) | 医学研究、证据整理、稿件准备、深度分析 | 分析包、证据包、稿件 |
 | `Grant Foundry` | [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) | 基金方向判断、申请书写作、修订工作 | 申请书、提纲、修订包 |
 | `Presentation Foundry` | [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) | 讲课、组会、汇报、答辩材料 | 幻灯片、讲稿、汇报材料 |
-| `Thesis Foundry` | 规划中 | 学位论文装配与答辩准备 | 章节草稿、答辩材料 |
-| `Review Foundry` | 规划中 | 审稿、回复和修回 | 评审意见、回复草稿、修回计划 |
+| `IP Foundry` | `Med Auto Patent` 规划中 | 专利申请、技术交底、权利要求、实施例整理 | 技术交底书、专利申请书、权利要求书 |
+| `Award Foundry` | `Med Auto Award` 规划中 | 科技进步奖、自然科学奖、成果奖和荣誉材料 | 报奖书、成果总结、佐证材料包 |
+| `Thesis Foundry` | `Med Auto Thesis` 规划中 | 学位论文装配与答辩准备 | 章节草稿、答辩材料 |
+| `Review Foundry` | `Med Auto Review` 规划中 | 审稿、回复和修回 | 评审意见、回复草稿、修回计划 |
 
 ## 这套工作台怎么组织
 

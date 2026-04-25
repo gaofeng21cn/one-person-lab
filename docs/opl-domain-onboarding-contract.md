@@ -35,7 +35,7 @@ The example record is illustrative only and does not count as a formal domain ad
 The candidate-domain backlog is the upstream blocker surface for under-definition workstreams; it records what is still missing before an onboarding-readiness record can even exist. For the human-readable companion, see [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.md).
 `OPL` does not currently define a separate candidate-domain-definition contract between task topology, backlog, and onboarding; the existing three-layer composition is the current definition path unless a real missing boundary is proven.
 Public scaffolds or domain-direction hints may clarify a candidate path, but they still count only as top-level signal / domain-direction evidence until the real boundary package lands.
-This rule now applies to the remaining candidate workstreams only: `Grant Ops` has already moved onto the admitted `MedAutoGrant` domain gateway, while `Thesis Ops` and `Review Ops` still require full onboarding packages before admission.
+This rule now applies to the remaining candidate workstreams only: `Grant Ops` has already moved onto the admitted `MedAutoGrant` domain gateway, while `IP Ops`, `Award Ops`, `Thesis Ops`, and `Review Ops` still require full onboarding packages before admission.
 
 ## Execution-Model Review Companions
 
@@ -213,7 +213,9 @@ The onboarding package must identify:
 
 If this wording cannot be reviewed explicitly, the domain remains below formal inclusion.
 
-For the current `Phase 1` candidate path, both `Review Ops` and `Thesis Ops` remain below formal inclusion.
+For the current candidate path, `IP Ops`, `Award Ops`, `Review Ops`, and `Thesis Ops` remain below formal inclusion.
+`IP Ops` keeps patent truth and human/legal review gates outside `OPL` and outside `MedAutoGrant` until a future domain boundary package exists.
+`Award Ops` keeps award truth and human expert review gates outside `OPL` and outside `MedAutoGrant` until a future domain boundary package exists.
 `Review Ops` keeps `execution_model`, `discovery_readiness`, `routing_readiness`, and `cross_domain_wording` explicit as blocked packages, keeps review truth outside `OPL`, keeps no handoff-ready surface, and keeps any future successful handoff at `domain_gateway`-only / no-bypass.
 `Thesis Ops` also keeps `execution_model`, `discovery_readiness`, `routing_readiness`, and `cross_domain_wording` explicit as blocked packages; it remains distinct from `Research Ops` manuscript/submission flow and from `Presentation Ops` / `RedCube AI` deck production, keeps no handoff-ready surface, and keeps any future successful handoff at `domain_gateway`-only / no-bypass.
 

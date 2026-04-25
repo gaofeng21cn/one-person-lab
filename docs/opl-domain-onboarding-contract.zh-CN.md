@@ -35,7 +35,7 @@ Domain onboarding 建立在已冻结的 gateway 层之下：
 Candidate-domain backlog 则是位于它上游的 blocker surface，用来记录：对于仍在定义中的 workstream，在 onboarding-readiness record 出现之前还缺什么材料。它的人类可读配套说明见 [OPL Candidate Domain Backlog](./references/opl-candidate-domain-backlog.zh-CN.md)。
 `OPL` 当前不会在 task topology、backlog 与 onboarding 之间再定义一层独立的 candidate-domain-definition contract；除非先证明这三层之间还存在真实缺口，否则现有三层组合就是当前 definition path。
 公开 scaffold 或 domain-direction hint 可以帮助说明 candidate path，但在真实 boundary package 落地前，它们仍然只算 top-level signal / domain-direction evidence。
-这条规则现在只作用于剩余候选 workstream：`Grant Ops` 已经进入已收录的 `MedAutoGrant` domain gateway，而 `Thesis Ops` 与 `Review Ops` 仍然需要完整 onboarding package 才能完成正式收录。
+这条规则现在只作用于剩余候选 workstream：`Grant Ops` 已经进入已收录的 `MedAutoGrant` domain gateway，而 `IP Ops`、`Award Ops`、`Thesis Ops` 与 `Review Ops` 仍然需要完整 onboarding package 才能完成正式收录。
 
 ## 执行模型审查配套文档
 
@@ -213,7 +213,9 @@ Onboarding package 必须说明：
 
 如果这组 wording 不能被显式审查，这个 domain 就仍然位于 formal inclusion 之下。
 
-就当前 `Phase 1` 的 candidate path 而言，`Review Ops` 与 `Thesis Ops` 都仍然位于 formal inclusion 之下。
+就当前 candidate path 而言，`IP Ops`、`Award Ops`、`Review Ops` 与 `Thesis Ops` 都仍然位于 formal inclusion 之下。
+`IP Ops` 会把 patent truth 与人工/法律审阅 gate 留在未来 domain 一侧，并在 future domain boundary package 存在前保持在 `OPL` 与 `MedAutoGrant` 之外。
+`Award Ops` 会把 award truth 与人工专家审阅 gate 留在未来 domain 一侧，并在 future domain boundary package 存在前保持在 `OPL` 与 `MedAutoGrant` 之外。
 `Review Ops` 会把 `execution_model`、`discovery_readiness`、`routing_readiness` 与 `cross_domain_wording` 四类 package 持续保持为显式 blocker，同时把 review truth 留在未来 domain 一侧、继续不具备 handoff-ready surface，任何未来 successful handoff 也仍只能是 `domain_gateway`-only / no-bypass。
 `Thesis Ops` 也会把 `execution_model`、`discovery_readiness`、`routing_readiness` 与 `cross_domain_wording` 四类 package 持续保持为显式 blocker；它继续区别于 `Research Ops` 的 manuscript/submission flow 与 `Presentation Ops` / `RedCube AI` 的 deck production、继续不具备 handoff-ready surface，任何未来 successful handoff 也仍只能是 `domain_gateway`-only / no-bypass。
 

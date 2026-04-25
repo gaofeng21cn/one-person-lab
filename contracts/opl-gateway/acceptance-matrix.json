@@ -455,15 +455,15 @@
         "docs/opl-domain-onboarding-contract.zh-CN.md"
       ],
       "contract_assertions": [
-        "task topology covers research_ops, grant_ops, thesis_ops, review_ops, and presentation_ops with explicit boundary, registry, and routing states",
+        "task topology covers research_ops, grant_ops, ip_ops, award_ops, thesis_ops, review_ops, and presentation_ops with explicit boundary, registry, and routing states",
         "grant_ops remains registered and mapped to medautogrant while research_ops remains registered and mapped to medautoscience and presentation_ops remains registered and mapped to redcube",
-        "thesis_ops and review_ops remain under_definition, not_registered, and unknown_domain_only until explicit domain boundaries are frozen",
+        "ip_ops, award_ops, thesis_ops, and review_ops remain under_definition, not_registered, and unknown_domain_only until explicit domain boundaries are frozen",
         "presentation_ops keeps ppt_deck as the direct map and keeps xiaohongshu inside redcube without auto-equating it to presentation_ops",
-        "task-map docs, contract hub, public-surface index, and review matrix expose task topology as a top-level semantic surface without treating thesis_ops or review_ops as admitted domains or handoff-ready routes",
+        "task-map docs, contract hub, public-surface index, and review matrix expose task topology as a top-level semantic surface without treating ip_ops, award_ops, thesis_ops, or review_ops as admitted domains or handoff-ready routes",
         "task topology remains the governing semantic source above the candidate-domain backlog, which may list admission blockers for the remaining under-definition workstreams without admitting domains or handoff-ready routes"
       ],
       "forbidden_regressions": [
-        "thesis_ops or review_ops become admitted domains or routed targets before onboarding evidence lands",
+        "ip_ops, award_ops, thesis_ops, or review_ops become admitted domains or routed targets before onboarding evidence lands",
         "task topology becomes a runtime router or replaces the G1 registry",
         "xiaohongshu automatically equals presentation_ops",
         "candidate-domain backlog contradicts task topology by assigning admitted domains or routed-ready entry surfaces to the remaining under-definition workstreams"
@@ -500,7 +500,7 @@
         "docs/references/opl-surface-authority-matrix.zh-CN.md"
       ],
       "contract_assertions": [
-        "candidate-domain backlog covers exactly thesis_ops and review_ops as under-definition workstreams that still require formal domain admission material",
+        "candidate-domain backlog covers exactly ip_ops, award_ops, thesis_ops, and review_ops as under-definition workstreams that still require formal domain admission material",
         "each candidate entry preserves the current task-topology state, keeps readiness flags false, and does not carry placeholder future domain_id, gateway_surface, or harness_surface fields",
         "Grant Ops is absent from the candidate-domain backlog because it already routes to the admitted MedAutoGrant domain gateway",
         "Thesis Ops stays below onboarding in task-map/backlog wording and does not become a G2 discovery target or G3 routed-action target before domain-onboarding evidence exists",
@@ -508,7 +508,7 @@
         "Thesis Ops keeps execution_model, discovery_readiness, routing_readiness, and cross_domain_wording explicit as blocked packages across task-map/backlog/onboarding wording, and any future successful target remains domain_gateway-only / no-bypass",
         "Review Ops keeps reviewer-role work plus response/rebuttal coordination as one under-definition semantic bundle only; this does not by itself admit a review domain, transfer review-truth ownership into OPL, create a G2 discovery target, or create a G3 routed-action target",
         "Review Ops keeps execution_model, discovery_readiness, routing_readiness, and cross_domain_wording explicit as blocked packages across task-map/backlog/onboarding wording, and any future successful target remains domain_gateway-only / no-bypass",
-        "candidate entries and backlog rules do not collapse Thesis Ops or Review Ops into MedAutoScience, MedAutoGrant, or RedCube AI; admitted domains remain independent gateway-and-harness surfaces",
+        "candidate entries and backlog rules do not collapse IP Ops, Award Ops, Thesis Ops, or Review Ops into MedAutoScience, MedAutoGrant, or RedCube AI; admitted domains remain independent gateway-and-harness surfaces",
         "required_evidence and notes do not pre-assign future domain_id, gateway_surface, or harness_surface metadata before the boundary package exists",
         "required_onboarding_materials align to registry material, public documentation, truth ownership, review surfaces, execution model, discovery readiness, routing readiness, and cross-domain wording",
         "Grant-facing public wording now treats MedAutoGrant as the admitted Grant Ops domain gateway rather than a candidate-domain hint",
@@ -609,9 +609,9 @@
         "surface lifecycle map remains derived/reference-only",
         "authority matrix remains derived/reference-only",
         "surface review matrix remains derived/reference-only",
-        "task map keeps current admitted workstreams explicit while keeping Grant/Review/Thesis Ops under definition",
+        "task map keeps current admitted workstreams explicit while keeping IP/Award/Review/Thesis Ops under definition",
         "candidate-domain backlog remains reference-only, non-admitting, and below the domain-onboarding gate",
-        "candidate backlog keeps Grant/Review/Thesis Ops blocked below the onboarding gate",
+        "candidate backlog keeps IP/Award/Review/Thesis Ops blocked below the onboarding gate",
         "operating-model, shared-foundation, and shared-foundation-ownership docs keep OPL at the top-level semantic/index/reuse layer while domains keep canonical truth, mutation, runtime writeback, review truth, and delivery/publication truth",
         "shared asset index, shared memory index, shared domain registry, and shared publication/delivery catalog stay roadmap-only/future-only/reference-only/non-admitting candidates until a later explicit readiness contract and acceptance alignment freeze them",
         "central reference-sync companions keep the current admitted-domain absorbed deltas explicit, including RedCube quickstart bootstrap-writer wording, Med Auto Grant post-R5A walkthrough/output-consistency plus root-program-identity hardening, and MedAutoScience manual-stabilization/publication-gate repo-side hardening, without reopening unabsorbed tranches",

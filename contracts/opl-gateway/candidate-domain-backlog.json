@@ -1,7 +1,7 @@
 {
-  "version": "p18.m2",
+  "version": "p18.m3",
   "scope": "opl_candidate_domain_backlog",
-  "description": "Machine-readable reference backlog for the current under-definition OPL workstreams. It records which boundary materials are still missing before Thesis Ops and Review Ops can be formally admitted through the domain-onboarding gate.",
+  "description": "Machine-readable reference backlog for the current under-definition OPL workstreams. It records which boundary materials are still missing before Thesis Ops, Review Ops, IP Ops, and Award Ops can be formally admitted through the domain-onboarding gate.",
   "non_goals": [
     "domain_admission_registry",
     "discovery_target_registry",
@@ -11,7 +11,7 @@
   "backlog_rules": [
     "entries stay reference-only and enumerate missing boundary materials only",
     "entries do not assign future domain identities or expand the admitted G1 registry",
-    "entries do not fold candidate workstreams into MedAutoScience, MedAutoGrant, or RedCube AI; admitted domains remain independent gateway and harness surfaces",
+    "entries do not fold candidate workstreams into MedAutoScience, MedAutoGrant, or RedCube AI; IP Ops and Award Ops in particular must not be absorbed into Grant Ops or MedAutoGrant; admitted domains remain independent gateway and harness surfaces",
     "entries do not create G2 discovery readiness or G3 routed-action readiness",
     "package-level blockers align to the onboarding package requirements in the domain-onboarding contract",
     "check-level blockers align to the formal inclusion gate in the domain-onboarding contract",
@@ -323,7 +323,7 @@
           ]
         }
       },
-      "notes": "Top-level semantics are explicit, and the frozen negative boundary is that thesis assembly, cross-chapter synchronization, and defense-preparation coordination do not collapse into Research Ops manuscript flow or Presentation Ops / RedCube deck production; the future Thesis Ops domain boundary package is still incomplete."
+      "notes": "Top-level semantics are explicit, and the frozen negative boundary is that thesis assembly, cross-chapter synchronization, and defense-preparation coordination do not collapse into Research Ops manuscript flow or Presentation Ops / RedCube deck production; the future Thesis Ops domain boundary package is still incomplete. Thesis Foundry / Med Auto Thesis is the planned product-family wording for this candidate lane and does not change admission status."
     },
     {
       "workstream_id": "review_ops",
@@ -608,7 +608,577 @@
           ]
         }
       },
-      "notes": "Top-level semantics are explicit: Review Ops groups reviewer-role work plus response/rebuttal coordination as one candidate semantic bundle. That combined label still does not justify admission, discovery readiness, routed-action readiness, handoff readiness, or OPL ownership of review truth before the future Review Ops domain boundary package exists. Review Ops therefore stays blocked below onboarding: `execution_model`, `discovery_readiness`, `routing_readiness`, and `cross_domain_wording` remain explicit blocker packages. Clear top-level requests may surface only as unknown_domain until an explicit future domain_gateway entry, discovery declaration, routing declaration, and cross-domain wording package are all frozen; no handoff payload is built, and no other admitted domain may silently absorb Review Ops truth."
+      "notes": "Top-level semantics are explicit: Review Ops groups reviewer-role work plus response/rebuttal coordination as one candidate semantic bundle. That combined label still does not justify admission, discovery readiness, routed-action readiness, handoff readiness, or OPL ownership of review truth before the future Review Ops domain boundary package exists. Review Ops therefore stays blocked below onboarding: `execution_model`, `discovery_readiness`, `routing_readiness`, and `cross_domain_wording` remain explicit blocker packages. Clear top-level requests may surface only as unknown_domain until an explicit future domain_gateway entry, discovery declaration, routing declaration, and cross-domain wording package are all frozen; no handoff payload is built, and no other admitted domain may silently absorb Review Ops truth. Review Foundry / Med Auto Review is the planned product-family wording for this candidate lane and does not change admission status."
+    },
+    {
+      "workstream_id": "ip_ops",
+      "label": "IP Ops",
+      "task_topology_state": {
+        "boundary_state": "under_definition",
+        "registry_state": "not_registered",
+        "routing_state": "unknown_domain_only",
+        "current_domain_id": null,
+        "entry_surface": null,
+        "formal_domain_required": true
+      },
+      "top_level_signal_refs": [
+        "contracts/opl-gateway/task-topology.json#workstreams/ip_ops",
+        "docs/task-map.md#ip-ops",
+        "docs/task-map.zh-CN.md#ip-ops"
+      ],
+      "admission_status": "blocked",
+      "readiness_flags": {
+        "discovery_ready": false,
+        "routing_ready": false,
+        "handoff_ready": false,
+        "formal_inclusion_ready": false
+      },
+      "required_onboarding_materials": [
+        {
+          "package_id": "registry_material",
+          "status": "missing",
+          "required_evidence": [
+            "future IP Ops domain registry package with owned_workstreams, non_opl_families, canonical_truth_owner, and public boundary documentation",
+            "IP Ops workstream registry entry or ownership transfer entry aligned to the future domain boundary package",
+            "routing vocabulary impact statement for invention disclosure, patent application, claims, embodiments, and office-action response deliverables"
+          ],
+          "forbidden_shortcuts": [
+            "assign_future_domain_identity_early",
+            "expand_g1_registry_without_boundary_package"
+          ]
+        },
+        {
+          "package_id": "public_documentation",
+          "status": "missing",
+          "required_evidence": [
+            "public domain README or equivalent gateway entry for the future IP Ops domain",
+            "explicit domain-gateway-above-harness statement",
+            "public explanation of IP Ops workstream ownership, deliverable objects, required human review gates, and what stays distinct from Grant Ops proposal writing and Research Ops manuscript/submission delivery"
+          ],
+          "forbidden_shortcuts": [
+            "placeholder_domain_name_only",
+            "internal_module_framing"
+          ]
+        },
+        {
+          "package_id": "truth_ownership",
+          "status": "missing",
+          "required_evidence": [
+            "explicit declaration of invention disclosure, patent application draft, claims, embodiment, prior-art positioning, and office-action response truth owned by the future domain",
+            "explicit list of what OPL may index versus what it may not claim as canonical truth, with no silent transfer into Research Ops, Grant Ops, MedAutoScience, MedAutoGrant, or RedCube AI"
+          ],
+          "forbidden_shortcuts": [
+            "implicit_truth_transfer_to_opl",
+            "leave_canonical_truth_unspecified"
+          ]
+        },
+        {
+          "package_id": "review_surfaces",
+          "status": "missing",
+          "required_evidence": [
+            "human expert review surfaces for IP Ops outputs",
+            "release/export or equivalent quality-gate surfaces inside the future domain"
+          ],
+          "forbidden_shortcuts": [
+            "execution_claim_without_review_surface",
+            "treat_opl_review_matrix_as_domain_review_owner"
+          ]
+        },
+        {
+          "package_id": "execution_model",
+          "status": "missing",
+          "required_evidence": [
+            "stable agent runtime surface for the future IP Ops domain",
+            "explicit Auto/Human-in-the-loop shared-base convergence path for the future IP Ops domain",
+            "code-versus-Agent responsibility split that keeps stable objects, controllers, tools, gates, review surfaces, and audit surfaces in code without redefining the mainline as fixed-code-first"
+          ],
+          "forbidden_shortcuts": [
+            "omit_stable_agent_runtime_surface",
+            "claim_alignment_without_shared_base_convergence",
+            "fixed_code_first_mainline",
+            "single_mode_steady_state"
+          ]
+        },
+        {
+          "package_id": "discovery_readiness",
+          "status": "missing",
+          "required_evidence": [
+            "G2 discovery declaration for IP Ops that points only to the future domain gateway public entry",
+            "evidence that discovery does not imply routed action, handoff readiness, or admitted-domain ownership"
+          ],
+          "forbidden_shortcuts": [
+            "promote_to_g2_without_domain_gateway",
+            "treat_top_level_signal_as_discovery_ready",
+            "bypass_domain_gateway_to_harness"
+          ]
+        },
+        {
+          "package_id": "routing_readiness",
+          "status": "missing",
+          "required_evidence": [
+            "G3 routing evidence and stable handoff boundary for IP Ops -> future domain public entry with domain_gateway-only / no-bypass semantics",
+            "explicit negative routing evidence showing requests are not routed to MedAutoGrant unless they are actually Grant Ops proposal work"
+          ],
+          "forbidden_shortcuts": [
+            "promote_to_g3_without_explicit_route_evidence",
+            "treat_top_level_signal_as_routing_ready",
+            "bypass_domain_gateway_to_harness"
+          ]
+        },
+        {
+          "package_id": "cross_domain_wording",
+          "status": "missing",
+          "required_evidence": [
+            "aligned OPL/domain wording for the future IP Ops role without collapsing it into Grant Ops, Research Ops, Presentation Ops, or their admitted domain gateways"
+          ],
+          "forbidden_shortcuts": [
+            "prose_only_role_guesswork",
+            "admitted_domain_wording_before_boundary_freeze"
+          ]
+        }
+      ],
+      "missing_boundary_materials": [
+        {
+          "maps_to_formal_inclusion_check": "registry_complete",
+          "package_id": "registry_material",
+          "status": "missing",
+          "required_evidence": [
+            "complete future domain registry package for IP Ops",
+            "complete workstream registry package for IP Ops",
+            "explicit routing-vocabulary impact statement"
+          ],
+          "forbidden_shortcuts": [
+            "assign_future_domain_identity_early",
+            "expand_g1_registry_without_boundary_package"
+          ]
+        },
+        {
+          "maps_to_formal_inclusion_check": "boundary_explicit",
+          "package_id": "public_documentation",
+          "status": "missing",
+          "required_evidence": [
+            "public gateway entry that makes the future IP Ops domain boundary legible without runtime guesswork"
+          ],
+          "forbidden_shortcuts": [
+            "placeholder_domain_name_only",
+            "internal_module_framing"
+          ]
+        },
+        {
+          "maps_to_formal_inclusion_check": "truth_ownership_explicit",
+          "package_id": "truth_ownership",
+          "status": "missing",
+          "required_evidence": [
+            "explicit truth-ownership declaration for invention disclosure, patent application draft, claims, embodiment, prior-art positioning, and office-action response records without silent transfer into OPL or another admitted domain"
+          ],
+          "forbidden_shortcuts": [
+            "implicit_truth_transfer_to_opl",
+            "leave_canonical_truth_unspecified"
+          ]
+        },
+        {
+          "maps_to_formal_inclusion_check": "review_ready",
+          "package_id": "review_surfaces",
+          "status": "missing",
+          "required_evidence": [
+            "domain-owned human expert review surfaces and quality gates for IP Ops outputs"
+          ],
+          "forbidden_shortcuts": [
+            "execution_claim_without_review_surface",
+            "treat_opl_review_matrix_as_domain_review_owner"
+          ]
+        },
+        {
+          "maps_to_formal_inclusion_check": "execution_model_aligned",
+          "package_id": "execution_model",
+          "status": "missing",
+          "required_evidence": [
+            "stable agent runtime surface for the future IP Ops domain",
+            "explicit Auto/Human-in-the-loop shared-base convergence path for the future IP Ops domain",
+            "code-versus-Agent responsibility split that keeps stable objects, controllers, tools, gates, review surfaces, and audit surfaces in code without redefining the mainline as fixed-code-first"
+          ],
+          "forbidden_shortcuts": [
+            "omit_stable_agent_runtime_surface",
+            "claim_alignment_without_shared_base_convergence",
+            "fixed_code_first_mainline",
+            "single_mode_steady_state"
+          ]
+        },
+        {
+          "maps_to_formal_inclusion_check": "discovery_ready",
+          "package_id": "discovery_readiness",
+          "status": "missing",
+          "required_evidence": [
+            "G2 discovery surface that points IP Ops to the future domain public entry without silently transferring truth into OPL or another admitted domain"
+          ],
+          "forbidden_shortcuts": [
+            "promote_to_g2_without_domain_gateway",
+            "treat_top_level_signal_as_discovery_ready",
+            "bypass_domain_gateway_to_harness"
+          ]
+        },
+        {
+          "maps_to_formal_inclusion_check": "routing_ready",
+          "package_id": "routing_readiness",
+          "status": "missing",
+          "required_evidence": [
+            "G3 routing evidence and stable handoff boundary for IP Ops -> future domain public entry with domain_gateway-only / no-bypass semantics"
+          ],
+          "forbidden_shortcuts": [
+            "promote_to_g3_without_explicit_route_evidence",
+            "treat_top_level_signal_as_routing_ready",
+            "bypass_domain_gateway_to_harness"
+          ]
+        },
+        {
+          "maps_to_formal_inclusion_check": "cross_domain_wording_aligned",
+          "package_id": "cross_domain_wording",
+          "status": "missing",
+          "required_evidence": [
+            "aligned OPL/domain wording for the future IP Ops role without collapsing it into an admitted domain"
+          ],
+          "forbidden_shortcuts": [
+            "prose_only_role_guesswork",
+            "admitted_domain_wording_before_boundary_freeze"
+          ]
+        }
+      ],
+      "formal_inclusion_gate": {
+        "registry_complete": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "registry_material"
+          ]
+        },
+        "boundary_explicit": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "public_documentation"
+          ]
+        },
+        "truth_ownership_explicit": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "truth_ownership"
+          ]
+        },
+        "discovery_ready": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "discovery_readiness"
+          ]
+        },
+        "routing_ready": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "routing_readiness"
+          ]
+        },
+        "review_ready": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "review_surfaces"
+          ]
+        },
+        "execution_model_aligned": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "execution_model"
+          ]
+        },
+        "cross_domain_wording_aligned": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "cross_domain_wording"
+          ]
+        }
+      },
+      "notes": "Top-level semantics are explicit: IP Ops covers intellectual-property protection outputs such as invention disclosures, patent application drafts, claims, embodiments, and office-action response plans. That signal still does not justify admission, discovery readiness, routed-action readiness, handoff readiness, or OPL ownership of patent truth before a future IP Ops domain boundary package exists. IP Ops therefore stays blocked below onboarding, and no other admitted domain may silently absorb its truth."
+    },
+    {
+      "workstream_id": "award_ops",
+      "label": "Award Ops",
+      "task_topology_state": {
+        "boundary_state": "under_definition",
+        "registry_state": "not_registered",
+        "routing_state": "unknown_domain_only",
+        "current_domain_id": null,
+        "entry_surface": null,
+        "formal_domain_required": true
+      },
+      "top_level_signal_refs": [
+        "contracts/opl-gateway/task-topology.json#workstreams/award_ops",
+        "docs/task-map.md#award-ops",
+        "docs/task-map.zh-CN.md#award-ops"
+      ],
+      "admission_status": "blocked",
+      "readiness_flags": {
+        "discovery_ready": false,
+        "routing_ready": false,
+        "handoff_ready": false,
+        "formal_inclusion_ready": false
+      },
+      "required_onboarding_materials": [
+        {
+          "package_id": "registry_material",
+          "status": "missing",
+          "required_evidence": [
+            "future Award Ops domain registry package with owned_workstreams, non_opl_families, canonical_truth_owner, and public boundary documentation",
+            "Award Ops workstream registry entry or ownership transfer entry aligned to the future domain boundary package",
+            "routing vocabulary impact statement for award application, achievement summary, contribution ranking, impact evidence, and recommendation-material deliverables"
+          ],
+          "forbidden_shortcuts": [
+            "assign_future_domain_identity_early",
+            "expand_g1_registry_without_boundary_package"
+          ]
+        },
+        {
+          "package_id": "public_documentation",
+          "status": "missing",
+          "required_evidence": [
+            "public domain README or equivalent gateway entry for the future Award Ops domain",
+            "explicit domain-gateway-above-harness statement",
+            "public explanation of Award Ops workstream ownership, deliverable objects, required human review gates, and what stays distinct from Grant Ops proposal writing and Research Ops manuscript/submission delivery"
+          ],
+          "forbidden_shortcuts": [
+            "placeholder_domain_name_only",
+            "internal_module_framing"
+          ]
+        },
+        {
+          "package_id": "truth_ownership",
+          "status": "missing",
+          "required_evidence": [
+            "explicit declaration of award application draft, achievement summary, contribution ranking, impact evidence, recommendation-material, and award-review response truth owned by the future domain",
+            "explicit list of what OPL may index versus what it may not claim as canonical truth, with no silent transfer into Research Ops, Grant Ops, MedAutoScience, MedAutoGrant, or RedCube AI"
+          ],
+          "forbidden_shortcuts": [
+            "implicit_truth_transfer_to_opl",
+            "leave_canonical_truth_unspecified"
+          ]
+        },
+        {
+          "package_id": "review_surfaces",
+          "status": "missing",
+          "required_evidence": [
+            "human expert review surfaces for Award Ops outputs",
+            "release/export or equivalent quality-gate surfaces inside the future domain"
+          ],
+          "forbidden_shortcuts": [
+            "execution_claim_without_review_surface",
+            "treat_opl_review_matrix_as_domain_review_owner"
+          ]
+        },
+        {
+          "package_id": "execution_model",
+          "status": "missing",
+          "required_evidence": [
+            "stable agent runtime surface for the future Award Ops domain",
+            "explicit Auto/Human-in-the-loop shared-base convergence path for the future Award Ops domain",
+            "code-versus-Agent responsibility split that keeps stable objects, controllers, tools, gates, review surfaces, and audit surfaces in code without redefining the mainline as fixed-code-first"
+          ],
+          "forbidden_shortcuts": [
+            "omit_stable_agent_runtime_surface",
+            "claim_alignment_without_shared_base_convergence",
+            "fixed_code_first_mainline",
+            "single_mode_steady_state"
+          ]
+        },
+        {
+          "package_id": "discovery_readiness",
+          "status": "missing",
+          "required_evidence": [
+            "G2 discovery declaration for Award Ops that points only to the future domain gateway public entry",
+            "evidence that discovery does not imply routed action, handoff readiness, or admitted-domain ownership"
+          ],
+          "forbidden_shortcuts": [
+            "promote_to_g2_without_domain_gateway",
+            "treat_top_level_signal_as_discovery_ready",
+            "bypass_domain_gateway_to_harness"
+          ]
+        },
+        {
+          "package_id": "routing_readiness",
+          "status": "missing",
+          "required_evidence": [
+            "G3 routing evidence and stable handoff boundary for Award Ops -> future domain public entry with domain_gateway-only / no-bypass semantics",
+            "explicit negative routing evidence showing requests are not routed to MedAutoGrant unless they are actually Grant Ops proposal work"
+          ],
+          "forbidden_shortcuts": [
+            "promote_to_g3_without_explicit_route_evidence",
+            "treat_top_level_signal_as_routing_ready",
+            "bypass_domain_gateway_to_harness"
+          ]
+        },
+        {
+          "package_id": "cross_domain_wording",
+          "status": "missing",
+          "required_evidence": [
+            "aligned OPL/domain wording for the future Award Ops role without collapsing it into Grant Ops, Research Ops, Presentation Ops, or their admitted domain gateways"
+          ],
+          "forbidden_shortcuts": [
+            "prose_only_role_guesswork",
+            "admitted_domain_wording_before_boundary_freeze"
+          ]
+        }
+      ],
+      "missing_boundary_materials": [
+        {
+          "maps_to_formal_inclusion_check": "registry_complete",
+          "package_id": "registry_material",
+          "status": "missing",
+          "required_evidence": [
+            "complete future domain registry package for Award Ops",
+            "complete workstream registry package for Award Ops",
+            "explicit routing-vocabulary impact statement"
+          ],
+          "forbidden_shortcuts": [
+            "assign_future_domain_identity_early",
+            "expand_g1_registry_without_boundary_package"
+          ]
+        },
+        {
+          "maps_to_formal_inclusion_check": "boundary_explicit",
+          "package_id": "public_documentation",
+          "status": "missing",
+          "required_evidence": [
+            "public gateway entry that makes the future Award Ops domain boundary legible without runtime guesswork"
+          ],
+          "forbidden_shortcuts": [
+            "placeholder_domain_name_only",
+            "internal_module_framing"
+          ]
+        },
+        {
+          "maps_to_formal_inclusion_check": "truth_ownership_explicit",
+          "package_id": "truth_ownership",
+          "status": "missing",
+          "required_evidence": [
+            "explicit truth-ownership declaration for award application draft, achievement summary, contribution ranking, impact evidence, recommendation-material, and award-review response records without silent transfer into OPL or another admitted domain"
+          ],
+          "forbidden_shortcuts": [
+            "implicit_truth_transfer_to_opl",
+            "leave_canonical_truth_unspecified"
+          ]
+        },
+        {
+          "maps_to_formal_inclusion_check": "review_ready",
+          "package_id": "review_surfaces",
+          "status": "missing",
+          "required_evidence": [
+            "domain-owned human expert review surfaces and quality gates for Award Ops outputs"
+          ],
+          "forbidden_shortcuts": [
+            "execution_claim_without_review_surface",
+            "treat_opl_review_matrix_as_domain_review_owner"
+          ]
+        },
+        {
+          "maps_to_formal_inclusion_check": "execution_model_aligned",
+          "package_id": "execution_model",
+          "status": "missing",
+          "required_evidence": [
+            "stable agent runtime surface for the future Award Ops domain",
+            "explicit Auto/Human-in-the-loop shared-base convergence path for the future Award Ops domain",
+            "code-versus-Agent responsibility split that keeps stable objects, controllers, tools, gates, review surfaces, and audit surfaces in code without redefining the mainline as fixed-code-first"
+          ],
+          "forbidden_shortcuts": [
+            "omit_stable_agent_runtime_surface",
+            "claim_alignment_without_shared_base_convergence",
+            "fixed_code_first_mainline",
+            "single_mode_steady_state"
+          ]
+        },
+        {
+          "maps_to_formal_inclusion_check": "discovery_ready",
+          "package_id": "discovery_readiness",
+          "status": "missing",
+          "required_evidence": [
+            "G2 discovery surface that points Award Ops to the future domain public entry without silently transferring truth into OPL or another admitted domain"
+          ],
+          "forbidden_shortcuts": [
+            "promote_to_g2_without_domain_gateway",
+            "treat_top_level_signal_as_discovery_ready",
+            "bypass_domain_gateway_to_harness"
+          ]
+        },
+        {
+          "maps_to_formal_inclusion_check": "routing_ready",
+          "package_id": "routing_readiness",
+          "status": "missing",
+          "required_evidence": [
+            "G3 routing evidence and stable handoff boundary for Award Ops -> future domain public entry with domain_gateway-only / no-bypass semantics"
+          ],
+          "forbidden_shortcuts": [
+            "promote_to_g3_without_explicit_route_evidence",
+            "treat_top_level_signal_as_routing_ready",
+            "bypass_domain_gateway_to_harness"
+          ]
+        },
+        {
+          "maps_to_formal_inclusion_check": "cross_domain_wording_aligned",
+          "package_id": "cross_domain_wording",
+          "status": "missing",
+          "required_evidence": [
+            "aligned OPL/domain wording for the future Award Ops role without collapsing it into an admitted domain"
+          ],
+          "forbidden_shortcuts": [
+            "prose_only_role_guesswork",
+            "admitted_domain_wording_before_boundary_freeze"
+          ]
+        }
+      ],
+      "formal_inclusion_gate": {
+        "registry_complete": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "registry_material"
+          ]
+        },
+        "boundary_explicit": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "public_documentation"
+          ]
+        },
+        "truth_ownership_explicit": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "truth_ownership"
+          ]
+        },
+        "discovery_ready": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "discovery_readiness"
+          ]
+        },
+        "routing_ready": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "routing_readiness"
+          ]
+        },
+        "review_ready": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "review_surfaces"
+          ]
+        },
+        "execution_model_aligned": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "execution_model"
+          ]
+        },
+        "cross_domain_wording_aligned": {
+          "status": "blocked",
+          "blocking_package_ids": [
+            "cross_domain_wording"
+          ]
+        }
+      },
+      "notes": "Top-level semantics are explicit: Award Ops covers science-and-technology award applications, achievement summaries, contribution ranking, impact evidence, and recommendation materials. That signal still does not justify admission, discovery readiness, routed-action readiness, handoff readiness, or OPL ownership of award truth before a future Award Ops domain boundary package exists. Award Ops may reuse Grant Ops authoring substrate, but award requests must not be routed to MedAutoGrant as grant proposal work."
     }
   ]
 }

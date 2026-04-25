@@ -1,7 +1,7 @@
 {
-  "version": "p17.m1",
+  "version": "p17.m2",
   "scope": "opl_task_topology",
-  "description": "Machine-readable top-level task topology for OPL. It captures current admitted workstreams plus under-definition candidate workstreams without turning the remaining candidate boundaries into admitted domains, routing targets, or runtime entry surfaces.",
+  "description": "Machine-readable top-level task topology for OPL. It captures current admitted workstreams plus under-definition candidate workstreams, including IP Ops and Award Ops, without turning candidate boundaries into admitted domains, routing targets, or runtime entry surfaces.",
   "non_goals": [
     "domain_admission_registry",
     "runtime_router",
@@ -11,7 +11,7 @@
   "topology_rules": [
     "task topology defines top-level workstream semantics above domain gateways and harnesses",
     "registered G1 workstreams remain grant_ops, research_ops, and presentation_ops",
-    "thesis_ops and review_ops remain under definition until explicit domain boundaries are frozen and admitted through the onboarding gate",
+    "thesis_ops, review_ops, ip_ops, and award_ops remain under definition until explicit domain boundaries are frozen and admitted through the onboarding gate",
     "under-definition workstreams may list delivery objects and reusable assets without becoming admitted domains, discovery targets, or handoff-ready routed-action targets; at most they may surface as unknown_domain outcomes when top-level semantics are clear, and any future successful handoff remains domain_gateway-only with the no-bypass rule intact",
     "future admission or alignment requires a declared stable agent runtime surface plus a shared-base Auto/Human-in-the-loop convergence path; otherwise the workstream remains under definition / deferred",
     "task topology complements docs/task-map.md, workstreams.json, and the onboarding contract; it does not replace them"
@@ -115,8 +115,17 @@
         "formal_delivery_surfaces",
         "shared_foundation_language"
       ],
-      "family_boundary_notes": [],
-      "notes": "Closely coupled with Research Ops, but the frozen boundary here is thesis assembly rather than core research execution: chapter-draft sets, cross-chapter synchronization packs, and defense-preparation packs may reuse Research Ops evidence and may later feed Presentation Ops / RedCube defense-deck outputs, yet they do not collapse Thesis Ops into Research Ops, MedAutoScience, or RedCube AI. Thesis Ops still requires an explicit independent domain boundary before admission, and the future Thesis Ops domain boundary package is still incomplete. Clear top-level requests may surface as unknown_domain, but no domain handoff is allowed yet. It also remains under definition until a stable agent runtime surface and a shared-base Auto/Human-in-the-loop convergence path are explicitly declared."
+      "family_boundary_notes": [
+        {
+          "family_id": "thesis_foundry",
+          "relation": "candidate_foundry_for_med_auto_thesis"
+        },
+        {
+          "family_id": "med_auto_thesis",
+          "relation": "planned_first_product_not_admitted_domain"
+        }
+      ],
+      "notes": "Closely coupled with Research Ops, but the frozen boundary here is thesis assembly rather than core research execution: chapter-draft sets, cross-chapter synchronization packs, and defense-preparation packs may reuse Research Ops evidence and may later feed Presentation Ops / RedCube defense-deck outputs, yet they do not collapse Thesis Ops into Research Ops, MedAutoScience, or RedCube AI. Thesis Foundry / Med Auto Thesis is the planned product-family wording. Thesis Ops still requires an explicit independent domain boundary before admission, and the future Thesis Ops domain boundary package is still incomplete. Clear top-level requests may surface as unknown_domain, but no domain handoff is allowed yet. It also remains under definition until a stable agent runtime surface and a shared-base Auto/Human-in-the-loop convergence path are explicitly declared."
     },
     {
       "workstream_id": "review_ops",
@@ -145,8 +154,104 @@
         "references_and_external_evidence",
         "shared_foundation_language"
       ],
-      "family_boundary_notes": [],
-      "notes": "Still under definition. Review Ops groups reviewer-role work plus response/rebuttal coordination as a top-level semantic bundle only; that combined label does not by itself freeze a distinct domain boundary, transfer canonical truth for review artifacts into OPL, or piggyback on another admitted domain as a hidden owner. It is not yet an admitted domain, discovery target, routed-action target, or handoff-ready surface. Clear top-level requests may surface only as unknown_domain until a real domain owner is admitted; no handoff payload is built, and any future successful handoff must remain domain_gateway-only with no harness bypass. It also remains under definition because no stable agent runtime surface, shared-base Auto/Human-in-the-loop convergence path, or explicit discovery/routing/cross-domain wording declarations have been frozen for a Review Ops domain yet."
+      "family_boundary_notes": [
+        {
+          "family_id": "review_foundry",
+          "relation": "candidate_foundry_for_med_auto_review"
+        },
+        {
+          "family_id": "med_auto_review",
+          "relation": "planned_first_product_not_admitted_domain"
+        }
+      ],
+      "notes": "Review Foundry / Med Auto Review is the planned product-family wording. Review Ops groups reviewer-role work plus response/rebuttal coordination as a top-level semantic bundle only; that combined label does not by itself freeze a distinct domain boundary, transfer canonical truth for review artifacts into OPL, or piggyback on another admitted domain as a hidden owner. It is not yet an admitted domain, discovery target, routed-action target, or handoff-ready surface. Clear top-level requests may surface only as unknown_domain until a real domain owner is admitted; no handoff payload is built, and any future successful handoff must remain domain_gateway-only with no harness bypass. It also remains under definition because no stable agent runtime surface, shared-base Auto/Human-in-the-loop convergence path, or explicit discovery/routing/cross-domain wording declarations have been frozen for a Review Ops domain yet."
+    },
+    {
+      "workstream_id": "ip_ops",
+      "label": "IP Ops",
+      "boundary_state": "under_definition",
+      "registry_state": "not_registered",
+      "routing_state": "unknown_domain_only",
+      "current_domain_id": null,
+      "entry_surface": null,
+      "formal_domain_required": true,
+      "delivery_objects": [
+        "invention_disclosure",
+        "patent_application_draft",
+        "claims_structure",
+        "embodiment_pack",
+        "office_action_response_plan"
+      ],
+      "typical_tasks": [
+        "patentability_framing",
+        "technical_disclosure_organization",
+        "claim_and_embodiment_drafting",
+        "prior_art_and_novelty_positioning",
+        "office_action_response_planning"
+      ],
+      "reuse_dependencies": [
+        "datasets_and_figures",
+        "references_and_external_evidence",
+        "research_questions_and_judgments",
+        "existing_study_results_and_figures",
+        "formal_delivery_surfaces",
+        "shared_foundation_language"
+      ],
+      "family_boundary_notes": [
+        {
+          "family_id": "ip_foundry",
+          "relation": "candidate_foundry_for_med_auto_patent"
+        },
+        {
+          "family_id": "med_auto_patent",
+          "relation": "planned_first_product_not_admitted_domain"
+        }
+      ],
+      "notes": "IP Ops is a candidate workstream for intellectual-property protection outputs such as invention disclosures, patent application drafts, claims, embodiments, and office-action response plans. It may reuse research and grant materials, but patent canonical truth and human/legal review gates must belong to a future independent domain gateway; it must not collapse into Grant Ops or MedAutoGrant."
+    },
+    {
+      "workstream_id": "award_ops",
+      "label": "Award Ops",
+      "boundary_state": "under_definition",
+      "registry_state": "not_registered",
+      "routing_state": "unknown_domain_only",
+      "current_domain_id": null,
+      "entry_surface": null,
+      "formal_domain_required": true,
+      "delivery_objects": [
+        "award_application_draft",
+        "achievement_summary",
+        "contribution_ranking_pack",
+        "impact_evidence_pack",
+        "recommendation_materials"
+      ],
+      "typical_tasks": [
+        "award_category_and_fit_assessment",
+        "achievement_storyline_organization",
+        "contribution_and_innovation_ranking",
+        "impact_and_adoption_evidence_packaging",
+        "award_review_response_planning"
+      ],
+      "reuse_dependencies": [
+        "datasets_and_figures",
+        "references_and_external_evidence",
+        "research_memory",
+        "review_memory",
+        "existing_study_results_and_figures",
+        "formal_delivery_surfaces",
+        "shared_foundation_language"
+      ],
+      "family_boundary_notes": [
+        {
+          "family_id": "award_foundry",
+          "relation": "candidate_foundry_for_med_auto_award"
+        },
+        {
+          "family_id": "med_auto_award",
+          "relation": "planned_first_product_not_admitted_domain"
+        }
+      ],
+      "notes": "Award Ops is a candidate workstream for science-and-technology award applications, achievement summaries, contribution ranking, impact evidence, and recommendation materials. It may reuse Grant Ops authoring substrate and Research Ops evidence, but award canonical truth must belong to a future independent domain gateway; award requests must not be routed to MedAutoGrant as grant proposal work."
     },
     {
       "workstream_id": "presentation_ops",
