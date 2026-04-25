@@ -259,7 +259,7 @@ exit 1
     assert.equal(output.install.web_open_action, null);
     assert.equal(output.install.gui_open_action?.status, 'completed');
     assert.equal(output.install.gui_open_action?.strategy, 'install_release_asset_then_open_app');
-    assert.match(output.install.gui_open_action?.release_asset ?? '', /^One Person Lab-26\.4\.25-mac-/);
+    assert.match(output.install.gui_open_action?.release_asset ?? '', /^One\.Person\.Lab-26\.4\.25-mac-/);
     assert.equal(output.install.gui_open_action?.installed_app_path, path.join(applicationsDir, 'One Person Lab.app'));
     assert.equal(fs.existsSync(path.join(applicationsDir, 'One Person Lab.app', 'Contents', 'Info.plist')), true);
     assert.equal(fs.readFileSync(openFixture.capturePath, 'utf8').trim(), path.join(applicationsDir, 'One Person Lab.app'));

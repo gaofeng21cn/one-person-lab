@@ -65,12 +65,20 @@ function run(command, args, options = {}) {
 }
 
 function findArtifacts(shellRoot, version) {
-  const releaseDir = path.join(shellRoot, 'release');
-  if (!fs.existsSync(releaseDir)) {
-    throw new Error(`Missing release directory: ${releaseDir}`);
+  const releaseDir = ['release', 'out']
+    .map((entry) => path.join(shellRoot, entry))
+    .find((candidate) => fs.existsSync(candidate));
+  if (!releaseDir) {
+    throw new Error(`Missing GUI artifact directory: expected ${path.join(shellRoot, 'release')} or ${path.join(shellRoot, 'out')}`);
   }
   const files = fs.readdirSync(releaseDir).filter((name) => {
-    if (name.startsWith('One Person Lab-') && name.includes(version) && name.endsWith('.dmg')) {
+    if ((name.startsWith('One Person Lab-') || name.startsWith('One.Person.Lab-')) && name.includes(version) && name.endsWith('.dmg')) {
+      return true;
+    }
+    if ((name.startsWith('One Person Lab-') || name.startsWith('One.Person.Lab-')) && name.includes(version) && name.endsWith('.zip')) {
+      return true;
+    }
+    if ((name.startsWith('One Person Lab-') || name.startsWith('One.Person.Lab-')) && name.includes(version) && name.endsWith('.blockmap')) {
       return true;
     }
     return /^latest.*\.yml$/.test(name);
@@ -78,7 +86,25 @@ function findArtifacts(shellRoot, version) {
   if (!files.some((name) => name.endsWith('.dmg'))) {
     throw new Error(`No One Person Lab ${version} DMG found under ${releaseDir}`);
   }
-  return files.map((name) => path.join(releaseDir, name));
+  const artifacts = files.map((name) => {
+    const source = path.join(releaseDir, name);
+    if (/^latest.*\.yml$/.test(name)) {
+      const patched = fs.readFileSync(source, 'utf8')
+        .replaceAll('One-Person-Lab-', 'One.Person.Lab-')
+        .replaceAll('One Person Lab-', 'One.Person.Lab-');
+      const uploadPath = path.join(releaseDir, name);
+      fs.writeFileSync(uploadPath, patched);
+      return uploadPath;
+    }
+    if (!name.includes(' ')) {
+      return source;
+    }
+    const uploadName = name.replaceAll(' ', '.');
+    const uploadPath = path.join(releaseDir, uploadName);
+    fs.copyFileSync(source, uploadPath);
+    return uploadPath;
+  });
+  return [...new Set(artifacts)];
 }
 
 function releaseExists(repo, tag) {
