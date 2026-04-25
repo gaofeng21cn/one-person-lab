@@ -34,7 +34,8 @@
     "test:artifact": "npm run build && NODE_NO_WARNINGS=1 node --test tests/built/**/*.test.mjs",
     "test:full": "./scripts/run-parallel-test-lanes.sh full",
     "test": "npm run test:fast",
-    "line-budget": "node ./scripts/line-budget.mjs"
+    "line-budget": "node ./scripts/line-budget.mjs",
+    "gui:release": "node ./scripts/publish-gui-release.mjs"
   },
   "devDependencies": {
     "@types/node": "^24.5.2",

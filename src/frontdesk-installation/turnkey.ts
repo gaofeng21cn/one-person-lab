@@ -281,15 +281,7 @@ export async function runFrontDeskTurnkeyInstall(
     ]),
   );
   const codexPluginRegistry = registerOplFamilyCodexPlugins(modules, moduleRepoPaths);
-  const serviceAction = input.skipService
-    ? null
-    : await runFrontDeskSystemAction(contracts, 'reinstall_support', {
-      host: input.host,
-      port: input.port,
-      workspacePath: input.workspacePath,
-      sessionsLimit: input.sessionsLimit,
-      basePath: input.basePath,
-    });
+  const serviceAction: null = null;
   const webOpenAction = null;
   const guiOpenAction = input.skipGuiOpen ? null : installOrOpenOplGui();
   const companionSkillSync = syncOplCompanionSkills();
@@ -305,14 +297,14 @@ export async function runFrontDeskTurnkeyInstall(
       codex_plugin_registry: codexPluginRegistry,
       engine_actions: engineActions.map((entry) => entry.frontdesk_engine_action),
       module_actions: moduleActions.map((entry) => entry.frontdesk_module_action),
-      service_action: serviceAction?.frontdesk_system_action ?? null,
+      service_action: serviceAction,
       web_open_action: webOpenAction,
       gui_open_action: guiOpenAction,
       gui_shell: buildOplGuiShellSurface(resolveProjectRoot()),
       companion_skill_sync: companionSkillSync,
       system_initialize: initialize.frontdesk_initialize,
       notes: [
-        'This command is the user-facing one-shot path for OPL + Codex CLI + Hermes-Agent + family modules + companion Codex skills.',
+        'This command is the user-facing one-shot path for OPL + Codex CLI + Hermes-Agent + family modules + companion Codex skills + desktop GUI.',
         'GUI startup opens the installed One Person Lab app when present; otherwise it downloads and installs the matching one-person-lab release asset before opening the app. opl-aion-shell remains an internal GUI source/build input.',
       ],
     },

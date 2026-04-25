@@ -548,10 +548,11 @@ test('help returns command discovery and runnable examples', () => {
   assert.ok(
     output.help.commands.some((entry: { command: string }) => entry.command === 'contract validate'),
   );
-  assert.ok(
-    ['service install', 'service status', 'service open'].every((command) =>
+  assert.equal(
+    ['service install', 'service status', 'service open'].some((command) =>
       output.help.commands.some((entry: { command: string }) => entry.command === command),
     ),
+    false,
   );
   assert.equal(
     output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk bootstrap'),
@@ -595,16 +596,6 @@ test('command --help returns command-scoped usage and examples', () => {
   assert.equal(output.help.command, 'contract domain');
   assert.equal(output.help.usage, 'opl contract domain <domain_id>');
   assert.ok(output.help.examples.includes('opl contract domain redcube'));
-});
-
-test('service install --help returns command-scoped usage and examples', () => {
-  const output = runCli(['service', 'install', '--help']);
-
-  assertNoContractsProvenance(output);
-  assert.equal(output.version, 'g2');
-  assert.equal(output.help.command, 'service install');
-  assert.match(output.help.usage, /opl service install/);
-  assert.ok(output.help.examples.includes('opl service install --port 8787'));
 });
 
 test('help <command> returns the same payload as command --help', () => {

@@ -53,7 +53,7 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
   };
 
   try {
-    const output = runCli(['install', '--modules', 'mas', '--skip-engines', '--skip-service', '--skip-gui-open'], env) as {
+    const output = runCli(['install', '--modules', 'mas', '--skip-engines', '--skip-gui-open'], env) as {
       install: {
         surface_id: string;
         status: string;
@@ -147,7 +147,7 @@ test('install command reuses already installed runtime dependencies', () => {
 
   try {
     const output = runCli(
-      ['install', '--skip-modules', '--skip-service', '--skip-gui-open'],
+      ['install', '--skip-modules', '--skip-gui-open'],
       {
         HOME: homeRoot,
         OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
@@ -173,47 +173,6 @@ test('install command reuses already installed runtime dependencies', () => {
     fs.rmSync(hermesFixtureRoot, { recursive: true, force: true });
   }
 });
-
-test('install command starts local service without opening the Product API page', () => {
-  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-service-home-'));
-  const launchctlFixture = createFakeLaunchctlFixture();
-  const configuredPort = 8912;
-  const env = {
-    HOME: homeRoot,
-    OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
-    OPL_LAUNCHCTL_BIN: launchctlFixture.launchctlPath,
-  };
-
-  try {
-    const output = runCli([
-      'install',
-      '--skip-modules',
-      '--skip-engines',
-      '--skip-gui-open',
-      '--port',
-      String(configuredPort),
-      '--path',
-      repoRoot,
-    ], env) as {
-      install: {
-        engine_actions: unknown[];
-        module_actions: unknown[];
-        service_action: { action: string; status: string } | null;
-        web_open_action: unknown | null;
-      };
-    };
-
-    assert.deepEqual(output.install.engine_actions, []);
-    assert.deepEqual(output.install.module_actions, []);
-    assert.equal(output.install.service_action?.action, 'reinstall_support');
-    assert.equal(output.install.service_action?.status, 'completed');
-    assert.equal(output.install.web_open_action, null);
-  } finally {
-    fs.rmSync(homeRoot, { recursive: true, force: true });
-    fs.rmSync(launchctlFixture.fixtureRoot, { recursive: true, force: true });
-  }
-});
-
 
 test('install command downloads installs and opens the OPL GUI when it is missing', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-gui-home-'));
@@ -276,7 +235,6 @@ exit 1
       'install',
       '--skip-modules',
       '--skip-engines',
-      '--skip-service',
     ], {
       HOME: homeRoot,
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),

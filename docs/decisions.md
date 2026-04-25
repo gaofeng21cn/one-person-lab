@@ -1,5 +1,18 @@
 # OPL 关键决策
 
+## 2026-04-25
+
+### 决策：8787 Product API launchd service 退出默认用户路径
+
+原因：当前 OPL GUI 主线不消费 8787 launchd Product API service；该 service 主要来自 frontdesk/web adapter 历史阶段，默认安装或暴露会把后台 JSON/adapter 面误导成用户入口。
+
+影响：
+
+- `opl install` 不再安装、启动或打开 8787 Product API service
+- public `opl service *` 与 `opl system reinstall-support` 退出当前默认命令面
+- `opl web` / `web bundle` / `web package` 仅作为显式开发、兼容和 hosted adapter 参考面保留
+- GUI 分发由 `opl-aion-shell` 构建、`one-person-lab` GitHub Release 暴露；维护者用 `npm run gui:release` 发布 artifact
+
 ## 2026-04-23
 
 ### 决策：gateway-first 合同语料退到 reference / compatibility 层

@@ -145,10 +145,6 @@ function parseTurnkeyInstallArgs(
       parsed.skipEngines = true;
       continue;
     }
-    if (token === '--skip-service') {
-      parsed.skipService = true;
-      continue;
-    }
     if (token === '--skip-web-open') {
       parsed.skipWebOpen = true;
       continue;
