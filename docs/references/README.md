@@ -19,6 +19,7 @@ If you need to understand what `OPL` is today, go back to:
 
 - [GUI mainline pivot to AionUI](./2026-04-21-gui-mainline-pivot-to-aionui.md)
 - [Docker WebUI deployment reference](./opl-docker-webui-deployment.md)
+- [OPL default skill ecosystem reference](./opl-default-skill-ecosystem.md)
 - `series-doc-governance-checklist.md`
 - `four-repo-doc-series-sync-summary-2026-04-14.md`
 - `four-repo-doc-intake-template.md`

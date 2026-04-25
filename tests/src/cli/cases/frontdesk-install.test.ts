@@ -329,3 +329,73 @@ exit 1
     fs.rmSync(openFixture.fixtureRoot, { recursive: true, force: true });
   }
 });
+
+test('install command installs Superpowers as the official full bundle for Codex-compatible agents', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-superpowers-home-'));
+  const superpowersRemote = createGitModuleRemoteFixture('superpowers', {
+    extraFiles: {
+      'skills/using-superpowers/SKILL.md': '# using-superpowers\n',
+      'skills/verification-before-completion/SKILL.md': '# verification-before-completion\n',
+      'skills/systematic-debugging/SKILL.md': '# systematic-debugging\n',
+    },
+  });
+
+  try {
+    const output = runCli([
+      'install',
+      '--skip-modules',
+      '--skip-engines',
+      '--skip-gui-open',
+    ], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      OPL_SUPERPOWERS_REPO_URL: superpowersRemote.remoteRoot,
+    }) as {
+      install: {
+        companion_skill_sync: {
+          items: Array<{
+            skill_id: string;
+            source_path: string | null;
+            target_path: string;
+            status: string;
+            action: string;
+          }>;
+        };
+        system_initialize: {
+          recommended_skills: {
+            skills: Array<{
+              skill_id: string;
+              status: string;
+              expected_paths: string[];
+              install_hint: string;
+              update_hint?: string;
+            }>;
+          };
+        };
+      };
+    };
+
+    const superpowers = output.install.companion_skill_sync.items.find((entry) => entry.skill_id === 'superpowers');
+    assert.equal(superpowers?.status, 'installed');
+    assert.equal(superpowers?.action, 'clone_and_symlink');
+    assert.equal(superpowers?.source_path, path.join(homeRoot, '.codex', 'superpowers'));
+    assert.equal(superpowers?.target_path, path.join(homeRoot, '.agents', 'skills', 'superpowers'));
+    assert.equal(
+      fs.realpathSync(path.join(homeRoot, '.agents', 'skills', 'superpowers')),
+      fs.realpathSync(path.join(homeRoot, '.codex', 'superpowers', 'skills')),
+    );
+    assert.equal(
+      fs.existsSync(path.join(homeRoot, '.agents', 'skills', 'superpowers', 'using-superpowers', 'SKILL.md')),
+      true,
+    );
+
+    const recommended = output.install.system_initialize.recommended_skills.skills.find((entry) => entry.skill_id === 'superpowers');
+    assert.equal(recommended?.status, 'ready');
+    assert.equal(recommended?.expected_paths.includes(path.join(homeRoot, '.agents', 'skills', 'superpowers', 'using-superpowers', 'SKILL.md')), true);
+    assert.match(recommended?.install_hint ?? '', /official Superpowers bundle/);
+    assert.match(recommended?.update_hint ?? '', /git pull --ff-only/);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(superpowersRemote.fixtureRoot, { recursive: true, force: true });
+  }
+});
