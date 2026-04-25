@@ -567,7 +567,7 @@ The wording-consistency gate passes only when all of the following are true:
    - `presentation_ops`
 4. `research_ops` remains `registry_state = registered`, `routing_state = domain_gateway_ready`, `current_domain_id = medautoscience`, and `entry_surface = domain_gateway`.
 5. `presentation_ops` remains `registry_state = registered`, `routing_state = domain_gateway_ready`, `current_domain_id = redcube`, and `entry_surface = domain_gateway`.
-6. `grant_ops`, `thesis_ops`, and `review_ops` all remain `boundary_state = under_definition`, `registry_state = not_registered`, `routing_state = unknown_domain_only`, `current_domain_id = null`, and `entry_surface = null`.
+6. `ip_ops`, `award_ops`, `thesis_ops`, and `review_ops` all remain `boundary_state = under_definition`, `registry_state = not_registered`, `routing_state = unknown_domain_only`, `current_domain_id = null`, and `entry_surface = null`.
 7. `presentation_ops` preserves `ppt_deck` as the direct map while keeping `xiaohongshu` in the same RedCube family/harness context without auto-equating it to `presentation_ops`.
 8. `contracts/opl-gateway/workstreams.json` and `domains.json` still register only the currently admitted workstreams/domains, and the task-topology artifact does not silently expand the G1 registry.
 9. `contracts/opl-gateway/public-surface-index.json` exposes `opl_task_map` as an `opl_public_entry` surface.
@@ -593,7 +593,8 @@ The wording-consistency gate passes only when all of the following are true:
 1. `contracts/opl-gateway/candidate-domain-backlog.json` exists and is valid JSON.
 2. `docs/references/opl-candidate-domain-backlog.md` and `docs/references/opl-candidate-domain-backlog.zh-CN.md` both exist and link to the machine-readable backlog artifact.
 3. The candidate-domain backlog covers exactly these under-definition workstreams:
-   - `grant_ops`
+   - `ip_ops`
+   - `award_ops`
    - `thesis_ops`
    - `review_ops`
 4. Every candidate entry preserves the current task-topology state: `boundary_state = under_definition`, `registry_state = not_registered`, `routing_state = unknown_domain_only`, `current_domain_id = null`, `entry_surface = null`, and `formal_domain_required = true`.
@@ -957,7 +958,7 @@ task_map_zh = Path('docs/task-map.zh-CN.md').read_text()
 backlog_doc_en = Path('docs/references/opl-candidate-domain-backlog.md').read_text()
 backlog_doc_zh = Path('docs/references/opl-candidate-domain-backlog.zh-CN.md').read_text()
 
-expected = {'thesis_ops', 'review_ops'}
+expected = {'ip_ops', 'award_ops', 'thesis_ops', 'review_ops'}
 task_entries = {entry['workstream_id']: entry for entry in task['workstreams']}
 backlog_entries = {entry['workstream_id']: entry for entry in backlog['candidate_workstreams']}
 assert set(backlog_entries) == expected, (set(backlog_entries), expected)

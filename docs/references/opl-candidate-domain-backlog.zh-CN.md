@@ -6,7 +6,7 @@
 
 这份文档索引当前仍在定义中的 `OPL` workstream 的 machine-readable admission-blocker backlog。
 
-它的作用是明确说明：`Thesis Ops`、`Review Ops` 在被正式收录为独立 domain gateway 之前，还缺哪些边界材料。
+它的作用是明确说明：`IP Ops`、`Award Ops`、`Thesis Ops`、`Review Ops` 在被正式收录为独立 domain gateway 之前，还缺哪些边界材料。
 
 它不是预收录 registry。
 它不是执行 surface。
@@ -47,7 +47,7 @@ Onboarding contract 负责定义正式收录门槛。
 这份 backlog 不负责：
 
 - 分配未来的 domain identity 或 gateway / harness surface metadata
-- 把 `Thesis Ops`、`Review Ops` 改写成 `MedAutoScience`、`MedAutoGrant` 或 `RedCube AI` 的扩展分支
+- 把 `IP Ops`、`Award Ops`、`Thesis Ops`、`Review Ops` 改写成 `MedAutoScience`、`MedAutoGrant` 或 `RedCube AI` 的扩展分支
 - 把候选项加入 `G1` registry
 - 创造 discovery target 或 routed-action target
 - 变成 approval queue、release plan 或 runtime planner
@@ -70,9 +70,29 @@ Onboarding contract 负责定义正式收录门槛。
 
 ## 当前候选覆盖
 
+### IP Ops
+
+`IP Ops` 在 task map / task topology 中已经有明确的顶层语义：它覆盖技术交底书、专利申请书草稿、权利要求、实施例和审查意见答复计划这类知识产权保护交付物。
+
+但它仍然缺少未来 domain boundary package：包括 patent-specific registry material、public gateway docs、专利申请书 / 权利要求 / 实施例 / 现有技术定位 / 审查意见答复的 truth ownership、人工/法律审阅 surface、显式的 execution-model declaration、discovery readiness、routing readiness，以及 cross-domain wording。
+这份 execution-model declaration 还必须明确 stable agent runtime surface、说明 `Auto` 与 `Human-in-the-loop` 如何共享同一基座、解释 code-versus-Agent responsibility split，并明确排除 `fixed-code-first` 或长期单模的 framing。
+routing readiness blocker 还必须证明专利请求不会被路由到 `MedAutoGrant`，除非该请求实际属于 Grant Ops 基金申请工作。
+
+这里冻结下来的 negative conclusion 是：`IP Foundry` / `Med Auto Patent` 只是 candidate product-family signal；它不足以推出 formal admission、discovery readiness、routed-action readiness、handoff readiness，或把 patent truth ownership 上收到 OPL。
+
+### Award Ops
+
+`Award Ops` 在 task map / task topology 中已经有明确的顶层语义：它覆盖科技进步奖、自然科学奖、成果奖、人才/项目荣誉材料中的报奖书、成果总结、贡献排序、影响力佐证和推荐材料。
+
+但它仍然缺少未来 domain boundary package：包括 award-specific registry material、public gateway docs、报奖书 / 成果总结 / 贡献排序 / 影响力佐证 / 推荐材料的 truth ownership、人工专家审阅 surface、显式的 execution-model declaration、discovery readiness、routing readiness，以及 cross-domain wording。
+这份 execution-model declaration 还必须明确 stable agent runtime surface、说明 `Auto` 与 `Human-in-the-loop` 如何共享同一基座、解释 code-versus-Agent responsibility split，并明确排除 `fixed-code-first` 或长期单模的 framing。
+routing readiness blocker 还必须证明报奖请求不会作为基金申请工作路由到 `MedAutoGrant`，即使 Award Ops 可以复用 Grant Ops 的写作基座。
+
+这里冻结下来的 negative conclusion 是：`Award Foundry` / `Med Auto Award` 只是 candidate product-family signal；它不足以推出 formal admission、discovery readiness、routed-action readiness、handoff readiness，或把 award truth ownership 上收到 OPL。
+
 ### Thesis Ops
 
-`Thesis Ops` 在 task map / task topology 中已经有明确的顶层语义。
+`Thesis Ops` 在 task map / task topology 中已经有明确的顶层语义。`Thesis Foundry` / `Med Auto Thesis` 是这条 candidate lane 的规划产品表达。
 
 当前路径里冻结下来的 negative conclusion 是：Thesis Ops 的 thesis assembly 确实增加了顶层边界语义，但这种边界只以 reference-only candidate boundary 的形式存在于现有 topology / backlog / onboarding 链路中；章节草稿集、跨章节同步、答辩准备协调，并不等同于 `Research Ops` 的 manuscript / submission flow，而下游可能派生出的 `defense_deck` 也不会把这个 workstream 压缩成 `Presentation Ops` / `RedCube AI`。
 
@@ -85,7 +105,7 @@ Onboarding contract 负责定义正式收录门槛。
 
 ### Review Ops
 
-`Review Ops` 在 task map / task topology 中已经有明确的顶层语义：它把 reviewer-role work 与 response / rebuttal coordination 放在同一个 candidate semantic bundle 里。
+`Review Ops` 在 task map / task topology 中已经有明确的顶层语义：它把 reviewer-role work 与 response / rebuttal coordination 放在同一个 candidate semantic bundle 里。`Review Foundry` / `Med Auto Review` 是这条 candidate lane 的规划产品表达。
 
 但它仍然缺少未来 domain boundary package：包括 review-specific registry material、review reports / comment structures / rebuttal plans / revision-route maps 的 truth ownership、public gateway docs、review surfaces、显式的 execution-model declaration、discovery readiness、routing readiness，以及 cross-domain wording。
 这份 execution-model declaration 还必须明确 stable agent runtime surface、说明 `Auto` 与 `Human-in-the-loop` 如何共享同一基座、解释 code-versus-Agent responsibility split，并明确排除 `fixed-code-first` 或长期单模的 framing。
