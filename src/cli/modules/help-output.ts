@@ -171,6 +171,59 @@ function buildCommandHelp(command: string, spec: CommandSpec) {
   };
 }
 
+function formatHumanRootHelp(payload: ReturnType<typeof buildRootHelp>) {
+  const lines = [
+    'One Person Lab (OPL)',
+    '',
+    'Usage:',
+    `  ${payload.help.usage}`,
+    '',
+    'Fast start:',
+    '  opl install                    Install engines, modules, Codex skills, and the One Person Lab App',
+    '  opl system initialize          Check first-run state and remaining setup actions',
+    '  opl modules                    Inspect MAS/MDS/MAG/RCA module health',
+    '  opl skill sync                 Sync family skills into the Codex skill path',
+    '  opl "your task"                Start from the default Codex runtime',
+    '',
+    'Common commands:',
+  ];
+
+  for (const group of payload.help.command_groups) {
+    lines.push('', `${group.group_id}: ${group.summary}`);
+    for (const entry of group.commands) {
+      lines.push(`  ${entry.usage}`);
+      lines.push(`    ${entry.summary}`);
+    }
+  }
+
+  lines.push('', 'Machine-readable output:', '  opl help --json', '  opl help <command> --json');
+
+  return `${lines.join('\n')}\n`;
+}
+
+function formatHumanCommandHelp(payload: ReturnType<typeof buildCommandHelp>) {
+  const lines = [
+    `One Person Lab command: ${payload.help.command}`,
+    '',
+    'Usage:',
+    `  ${payload.help.usage}`,
+    '',
+    'What it does:',
+    `  ${payload.help.summary}`,
+  ];
+
+  if (payload.help.examples.length > 0) {
+    lines.push('', 'Examples:');
+    for (const example of payload.help.examples) {
+      lines.push(`  ${example}`);
+    }
+  }
+
+  lines.push('', 'Machine-readable output:', `  opl help ${payload.help.command} --json`);
+
+  return `${lines.join('\n')}\n`;
+}
+
 function buildContractsContext(contracts: GatewayContracts) {
   return {
     contracts_dir: contracts.contractsDir,
@@ -320,9 +373,35 @@ function parseCliInput(argv: string[]): ParsedCliInput {
   const args = [...argv];
   const loadOptions: GatewayContractsLoadOptions = {};
   let helpRequested = false;
+  let jsonOutput = false;
+  let textOutput = false;
+
+  const jsonIndex = args.indexOf('--json');
+  if (jsonIndex >= 0) {
+    jsonOutput = true;
+    args.splice(jsonIndex, 1);
+  }
+
+  const textIndex = args.indexOf('--text');
+  if (textIndex >= 0) {
+    textOutput = true;
+    args.splice(textIndex, 1);
+  }
 
   while (args[0]?.startsWith('--')) {
     const token = args[0];
+
+    if (token === '--json') {
+      jsonOutput = true;
+      args.shift();
+      continue;
+    }
+
+    if (token === '--text') {
+      textOutput = true;
+      args.shift();
+      continue;
+    }
 
     if (token === '--help') {
       helpRequested = true;
@@ -358,6 +437,8 @@ function parseCliInput(argv: string[]): ParsedCliInput {
 
   return {
     helpRequested,
+    jsonOutput,
+    textOutput,
     command: args.shift() ?? null,
     args,
     loadOptions: loadOptions.contractsDir ? loadOptions : undefined,
@@ -370,6 +451,8 @@ export {
   RETIRED_COMMAND_PREFIXES,
   buildCommandHelp,
   buildContractsContext,
+  formatHumanCommandHelp,
+  formatHumanRootHelp,
   buildPublicEngineActionPayload,
   buildPublicModuleActionPayload,
   buildPublicModulesPayload,

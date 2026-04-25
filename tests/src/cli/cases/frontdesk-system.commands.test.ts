@@ -168,6 +168,26 @@ test('help advertises initialize and environment management command surfaces', (
   assert.equal(commands.includes('workspace root doctor'), true);
 });
 
+test('help keeps JSON output available through explicit flag for machine readers', () => {
+  const root = runCli(['help', '--json']);
+  assert.equal(root.help.usage, 'opl [command ...|request...] [args]');
+
+  const scoped = runCli(['help', 'install', '--json']);
+  assert.equal(scoped.help.command, 'install');
+  assert.match(scoped.help.summary, /One-shot install/);
+});
+
+test('help supports explicit text output for human readers', () => {
+  const root = runCliRaw(['help', '--text']);
+  assert.match(root.stdout, /One Person Lab \(OPL\)/);
+  assert.match(root.stdout, /Fast start:/);
+  assert.match(root.stdout, /opl install/);
+
+  const scoped = runCliRaw(['help', 'install', '--text']);
+  assert.match(scoped.stdout, /One Person Lab command: install/);
+  assert.match(scoped.stdout, /One-shot install/);
+});
+
 test('legacy frontdesk command surfaces are retired from the public CLI', () => {
   for (const args of [
     ['frontdesk', 'manifest'],

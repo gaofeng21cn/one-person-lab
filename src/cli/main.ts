@@ -1,10 +1,11 @@
 import { GatewayContractError, loadGatewayContracts } from '../contracts.ts';
-import { buildCommandHelp, buildRetiredCommandError, buildRootHelp, buildUsageError, looksLikeNaturalLanguage, parseCliInput, printJson, resolveCommandSpec, runCodexPassthroughHandled, CODEX_COMMAND_HELP_PASSTHROUGH, RETIRED_COMMAND_PREFIXES } from './modules/support.ts';
+import { buildCommandHelp, buildRetiredCommandError, buildRootHelp, buildUsageError, formatHumanCommandHelp, formatHumanRootHelp, looksLikeNaturalLanguage, parseCliInput, printJson, resolveCommandSpec, runCodexPassthroughHandled, CODEX_COMMAND_HELP_PASSTHROUGH, RETIRED_COMMAND_PREFIXES } from './modules/support.ts';
 import { buildInternalCommandSpecs } from './cases/private-command-specs.ts';
 import { buildPublicCommandSpecs } from './cases/public-command-specs.ts';
 
 export async function main() {
   const parsedInput = parseCliInput(process.argv.slice(2));
+  const shouldPrintHumanHelp = parsedInput.textOutput || (process.stdout.isTTY && !parsedInput.jsonOutput);
   let cachedContracts = null;
   const getContracts = () => {
     cachedContracts ??= loadGatewayContracts(parsedInput.loadOptions);
@@ -17,7 +18,12 @@ export async function main() {
 
   if (inputTokens.length === 0) {
     if (parsedInput.helpRequested) {
-      printJson(buildRootHelp(publicCommandSpecs));
+      const payload = buildRootHelp(publicCommandSpecs);
+      if (shouldPrintHumanHelp) {
+        process.stdout.write(formatHumanRootHelp(payload));
+      } else {
+        printJson(payload);
+      }
       return;
     }
 
@@ -73,16 +79,41 @@ export async function main() {
     )
   ) {
     if (command === 'help') {
-      printJson(await spec.handler(args.filter((arg) => arg !== '--help')));
+      const payload = await spec.handler(args.filter((arg) => arg !== '--help' && arg !== '--json' && arg !== '--text'));
+      if (shouldPrintHumanHelp && typeof payload === 'object' && payload !== null && 'help' in payload) {
+        const helpPayload = payload as ReturnType<typeof buildRootHelp> | ReturnType<typeof buildCommandHelp>;
+        if (helpPayload.help.command) {
+          process.stdout.write(formatHumanCommandHelp(helpPayload as ReturnType<typeof buildCommandHelp>));
+        } else {
+          process.stdout.write(formatHumanRootHelp(helpPayload as ReturnType<typeof buildRootHelp>));
+        }
+      } else {
+        printJson(payload);
+      }
       return;
     }
 
-    printJson(buildCommandHelp(command, spec));
+    const payload = buildCommandHelp(command, spec);
+    if (shouldPrintHumanHelp) {
+      process.stdout.write(formatHumanCommandHelp(payload));
+    } else {
+      printJson(payload);
+    }
     return;
   }
 
   const result = await spec.handler(args);
   if (typeof result === 'object' && result !== null && '__handled' in result) {
+    return;
+  }
+
+  if (command === 'help' && shouldPrintHumanHelp && typeof result === 'object' && result !== null && 'help' in result) {
+    const helpPayload = result as ReturnType<typeof buildRootHelp> | ReturnType<typeof buildCommandHelp>;
+    if (helpPayload.help.command) {
+      process.stdout.write(formatHumanCommandHelp(helpPayload as ReturnType<typeof buildCommandHelp>));
+    } else {
+      process.stdout.write(formatHumanRootHelp(helpPayload as ReturnType<typeof buildRootHelp>));
+    }
     return;
   }
 

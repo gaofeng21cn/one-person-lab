@@ -11,59 +11,21 @@
 <p align="center"><strong>面向认真研究、基金和汇报工作的统一工作台</strong></p>
 <p align="center">从一个入口发起专业工作，持续查看进度，并把交付物收在可信的位置。</p>
 
-<table>
-  <tr>
-    <td width="33%" valign="top">
-      <strong>适合谁</strong><br/>
-      医生、研究者、PI、教师与小团队，适合希望把长期专业工作收进同一套界面的人
-    </td>
-    <td width="33%" valign="top">
-      <strong>它帮助管理什么</strong><br/>
-      对话、基于目录的任务、进度反馈、交付文件，以及各类专业工作流
-    </td>
-    <td width="33%" valign="top">
-      <strong>当前覆盖范围</strong><br/>
-      <code>OPL</code> 是整个产品家族的顶层工作台，当前活跃方向包括医学研究、基金申请和汇报交付
-    </td>
-  </tr>
-</table>
-
-<p align="center">
-  <img src="assets/branding/opl-workbench-overview.svg" alt="OPL workbench overview" width="100%" />
-</p>
-
-<h2 align="center">架构与产品规划</h2>
-<p align="center">展示 OPL 工作台、活跃 Foundry 与共享可信表面的高层结构。</p>
-
-<p align="center">
-  <img src="assets/branding/opl-architecture-plan.svg" alt="OPL architecture and product plan" width="100%" />
-</p>
-
-> `OPL` 把发起工作、查看进度和收集交付物放到同一个入口里，而每个专业产品家族继续保留自己的方法、规则和交付边界。
-
 ## 最快用起来
 
-支持环境：macOS 是桌面 App 的主目标；Linux 和 Docker 支持 CLI + WebUI 路径，适合把服务端口开放给浏览器使用。
-
-给用户的一行命令：
+macOS 桌面用户：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/install.sh | bash
 ```
 
-Docker / Linux 服务器使用 WebUI：
+安装完成后，打开 `One Person Lab.app`，选择一个工作目录，就可以从同一个界面发起普通任务、医学研究、基金写作和汇报/PPT 工作。
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/install.sh | bash
-```
+Linux / Docker / 服务器用户：
 
-给 Codex Agent 的一句话：
-
-> 安装并配置这个 OPL repo：clone repo，安装 OPL CLI，运行 `opl install`，确认 One Person Lab App 的「远程连接」WebUI，以及 Research / Grant / Presentation Foundry 模块都准备好；如果某一步缺失，直接补齐或报告准确阻塞。
-
-`opl install` 会一揽子准备 OPL CLI、当前活跃的产品家族模块、Codex skills 和 One Person Lab App。macOS 会优先打开或安装桌面 App；Linux / Docker 的浏览器 WebUI 由 OPL 品牌的 AionUI shell 提供，不再由 OPL 主仓启动本地 8787 Product API 服务。
-
-如果容器或服务器没有现成的 Codex 配置，可以在安装前提供默认模型配置；OPL 会写入 `CODEX_HOME/config.toml`，并且不会在安装输出里回显 API key：
+- CLI 安装仍使用同一条命令。
+- 浏览器 WebUI 使用 One Person Lab 品牌的 AionUI WebUI；部署、免登录、中文默认和 Codex 配置注入见 [Docker WebUI 部署参考](./docs/references/opl-docker-webui-deployment.zh-CN.md)。
+- 容器或服务器没有现成 Codex 配置时，在安装或启动前注入这些环境变量：
 
 ```bash
 export CODEX_HOME=/data/codex
@@ -74,19 +36,33 @@ export OPL_CODEX_API_KEY=sk-...
 curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/install.sh | bash
 ```
 
-## 可以用来做什么
+给 Codex Agent 的一句话：
 
-- 在同一个工作台里发起普通对话或多步骤任务。
-- 在任务需要固定目录和文件上下文时，直接绑定真实工作目录。
-- 调用研究、基金、汇报等专门产品家族完成专业工作。
-- 用人话持续查看长任务当前做到哪里。
-- 把稿件、申请书、幻灯片、表格、审阅文件等交付物集中起来管理。
+> 安装并配置这个 OPL repo：clone repo，安装 OPL CLI，运行 `opl install`，确认 Codex CLI、Hermes-Agent、MAS/MDS/MAG/RCA、推荐 skills、One Person Lab App 和 WebUI 入口都准备好；如果某一步缺失，直接补齐或报告准确阻塞。
+
+`opl install` 会一揽子准备 OPL CLI、Codex CLI、Hermes-Agent、当前活跃的产品家族模块、Codex skills 和 One Person Lab App。macOS 会优先打开或安装桌面 App；Linux / Docker 通过浏览器 WebUI 使用。
+
+## 新手可以直接做什么
+
+- **医学研究**：让 Research Foundry 帮你推进证据整理、数据分析、论文草稿和交付包。
+- **基金申请**：让 Grant Foundry 帮你判断方向、搭建申请书结构、生成修订包。
+- **汇报和 PPT**：让 Presentation Foundry 帮你准备讲课、组会、答辩和项目汇报材料。
+- **普通长任务**：在同一个工作台里继续讨论、读文件、改文档、看进度和收交付物。
+
+## 安装后常用命令
+
+```bash
+opl system initialize   # 查看 Codex、Hermes-Agent、模块、skills、GUI 和工作目录状态
+opl modules             # 查看 MAS/MDS/MAG/RCA 等模块是否已安装和健康
+opl skill sync          # 把 OPL 家族 skills 同步到 Codex 可见路径
+opl help --text         # 查看人类可读帮助；机器可读输出用 opl help --json
+```
 
 ## 当前产品家族
 
 | 产品家族 | 当前产品 | 适合问题 | 常见交付物 |
 | --- | --- | --- | --- |
-| `Research Foundry` | [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience) | 医学研究、证据整理、稿件准备 | 分析包、证据包、稿件 |
+| `Research Foundry` | [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience) + [`Med Deep Scientist`](https://github.com/gaofeng21cn/med-deepscientist) | 医学研究、证据整理、稿件准备、深度分析 | 分析包、证据包、稿件 |
 | `Grant Foundry` | [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) | 基金方向判断、申请书写作、修订工作 | 申请书、提纲、修订包 |
 | `Presentation Foundry` | [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai) | 讲课、组会、汇报、答辩材料 | 幻灯片、讲稿、汇报材料 |
 | `Thesis Foundry` | 规划中 | 学位论文装配与答辩准备 | 章节草稿、答辩材料 |
@@ -100,6 +76,18 @@ curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/ins
 - 进度与文件视图：持续挂在任务旁边，方便恢复和交付。
 - 环境与模块管理：统一查看安装状态、版本和健康情况。
 
+<p align="center">
+  <img src="assets/branding/opl-workbench-overview.svg" alt="OPL workbench overview" width="100%" />
+</p>
+
+## 架构与产品规划
+
+展示 OPL 工作台、活跃 Foundry 与共享可信表面的高层结构。
+
+<p align="center">
+  <img src="assets/branding/opl-architecture-plan.svg" alt="OPL architecture and product plan" width="100%" />
+</p>
+
 ## 这个仓库跟踪什么
 
 这个仓库跟踪 OPL 的共享工作台层，不是专业 domain agent 的实现仓。它负责让产品家族保持一致：
@@ -109,7 +97,7 @@ curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/ins
 - 提供工作空间、会话、进度与交付物的发现和组织能力。
 - 提供共享合同，让 Research、Grant 和 Presentation Foundry 能在同一个工作台里被看见。
 
-桌面 GUI 由 [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) 作为 OPL 品牌 App 外壳维护。这个仓库提供该 App 和 Codex 共同消费的共享合同与产品表面。
+桌面 GUI 由 [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) 作为 OPL 品牌 App 外壳维护。用户从这个仓库的 GitHub Releases 获取 One Person Lab App 包；这个仓库提供 App 和 Codex 共同消费的共享合同与产品表面。
 
 ## 这个仓库怎么读
 
@@ -128,7 +116,7 @@ curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/ins
 - 当前主线交互路径以 Codex-default 为先：本地 `opl`、直接 `Codex` 使用，以及未来外部壳都消费同一套 session/runtime truth。`opl skill sync` 现在默认会按 workspace 布局自动发现 sibling family repo，worktree 场景不再需要额外设置 `OPL_FAMILY_WORKSPACE_ROOT` 才能把家族 skill pack 装进 Codex。
 - 如果某个 admitted domain repo 还没落地到本机，运行 `opl module install --module <module_id>`。这条安装线现在是闭环：先 clone 到 OPL-managed modules root，再执行仓库自己的 bootstrap、同步对应 Codex skill pack，最后跑仓库健康检查。
 - 默认本地状态目录是 `~/Library/Application Support/OPL/state`。如果需要改到其他本地状态根目录，直接设置 `OPL_STATE_DIR`。
-- 当前 active domain agents 是 [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience)、[`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) 和 [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai)。它们分别承接医学研究、基金写作和视觉交付，并把本地 CLI、程序/脚本与 repo-tracked contract 暴露成稳定 capability surface；家族映射与公开入口可继续从 [当前状态](./docs/status.md)、[架构](./docs/architecture.md) 和 [OPL 公开界面索引](./docs/opl-public-surface-index.zh-CN.md) 进入。
+- 当前 active domain agents 是 [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience)、[`Med Deep Scientist`](https://github.com/gaofeng21cn/med-deepscientist)、[`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) 和 [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai)。它们分别承接医学研究、深度分析、基金写作和视觉交付，并把本地 CLI、程序/脚本与 repo-tracked contract 暴露成稳定 capability surface；家族映射与公开入口可继续从 [当前状态](./docs/status.md)、[架构](./docs/architecture.md) 和 [OPL 公开界面索引](./docs/opl-public-surface-index.zh-CN.md) 进入。
 - 当任务需要顶层 session/runtime 路径、共享 `workspaces / sessions / progress / artifacts` surface 或显式 domain activation 时，从 `OPL` 进入；当任务已经明确落在某个 domain 上时，继续进入对应仓库首页和 `docs/README*`，按该仓自己的 CLI/脚本/contract 边界执行。
 
 </details>
