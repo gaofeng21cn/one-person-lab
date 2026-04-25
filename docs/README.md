@@ -89,6 +89,7 @@ Layer 3 holds review, audit, rollout, benchmark, migration, and retired contract
 It is repo-tracked supporting material, not the default implementation basis.
 
 - [Reference Index](./references/README.md)
+- [Docker WebUI deployment reference](./references/opl-docker-webui-deployment.md)
 - product-runtime and executor reference notes
 - domain alignment and delta-intake records
 - benchmark and rollout boards
