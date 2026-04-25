@@ -136,6 +136,7 @@ export type FrontDeskTurnkeyInstallInput = Partial<{
   skipEngines: boolean;
   skipWebOpen: boolean;
   skipGuiOpen: boolean;
+  serveWeb: boolean;
 }>;
 
 export function normalizeOptionalString(value: string | null | undefined) {

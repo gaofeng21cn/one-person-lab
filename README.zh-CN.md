@@ -43,19 +43,36 @@
 
 ## 最快用起来
 
-支持环境：macOS 是桌面 App 的主目标；Linux 在具备 Node.js 22+、git 和各模块工具链时支持 CLI 路径。浏览器访问由 One Person Lab App 的「远程连接」设置开启。
+支持环境：macOS 是桌面 App 的主目标；Linux 和 Docker 支持 CLI + WebUI 路径，适合把服务端口开放给浏览器使用。
 
 给用户的一行命令：
 
 ```bash
-git clone https://github.com/gaofeng21cn/one-person-lab.git && cd one-person-lab && npm install && npm link && opl install
+curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/install.sh | bash
+```
+
+Docker / Linux 服务器直接开放 WebUI：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/install.sh | bash -s -- --serve-web --host 0.0.0.0 --port 8787
 ```
 
 给 Codex Agent 的一句话：
 
 > 安装并配置这个 OPL repo：clone repo，安装 OPL CLI，运行 `opl install`，确认 One Person Lab App 的「远程连接」WebUI，以及 Research / Grant / Presentation Foundry 模块都准备好；如果某一步缺失，直接补齐或报告准确阻塞。
 
-`opl install` 会一揽子准备 OPL CLI、当前活跃的产品家族模块、Codex skills 和 One Person Lab App。若桌面 App 已安装，它会直接打开；若 macOS 上尚未安装，它会自动下载并安装匹配当前平台的 GitHub Release DMG 后再打开。浏览器访问需要在已安装 App 的「远程连接」里开启。
+`opl install` 会一揽子准备 OPL CLI、当前活跃的产品家族模块、Codex skills 和 One Person Lab App。macOS 会优先打开或安装桌面 App；Linux / Docker 用 `--serve-web` 以前台进程启动 WebUI，默认访问地址是 `http://<host>:8787/opl/`。
+
+如果容器或服务器没有现成的 Codex 配置，可以在安装前提供默认模型配置；OPL 会写入 `CODEX_HOME/config.toml`，并且不会在安装输出里回显 API key：
+
+```bash
+export CODEX_HOME=/data/codex
+export OPL_CODEX_MODEL=gpt-5.5
+export OPL_CODEX_REASONING_EFFORT=xhigh
+export OPL_CODEX_BASE_URL=https://your-provider.example/v1
+export OPL_CODEX_API_KEY=sk-...
+curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/install.sh | bash -s -- --serve-web --host 0.0.0.0 --port 8787
+```
 
 ## 可以用来做什么
 

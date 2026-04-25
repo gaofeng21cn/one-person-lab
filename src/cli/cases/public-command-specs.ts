@@ -2,8 +2,9 @@ import { GatewayContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkst
 import { buildFrontDeskEnvironment, buildFrontDeskInitialize, buildFrontDeskModules, runFrontDeskEngineAction, runFrontDeskModuleAction, runFrontDeskSystemAction, runFrontDeskTurnkeyInstall } from '../../frontdesk-installation.ts';
 import { buildHostedPilotPackage } from '../../hosted-pilot-package.ts';
 import { buildHostedPilotBundle } from '../../management.ts';
+import { attachWebFrontDeskShutdown, startWebFrontDeskServer } from '../../web-frontdesk.ts';
 import type { GatewayContracts } from '../../types.ts';
-import { assertNoArgs, buildCommandHelp, buildPublicEngineActionPayload, buildPublicModuleActionPayload, buildPublicModulesPayload, buildPublicSystemActionPayload, buildPublicSystemInitializePayload, buildPublicSystemPayload, buildPublicTurnkeyInstallPayload, buildRootHelp, buildUsageError, cloneCommandSpec, parseFrontDeskEngineArgs, parseFrontDeskModuleArgs, parseHostedPilotPackageArgs, parseTurnkeyInstallArgs, parseUpdateChannelArgs, parseWebArgs, withContractsContext } from '../modules/support.ts';
+import { assertNoArgs, buildCommandHelp, buildPublicEngineActionPayload, buildPublicModuleActionPayload, buildPublicModulesPayload, buildPublicSystemActionPayload, buildPublicSystemInitializePayload, buildPublicSystemPayload, buildPublicTurnkeyInstallPayload, buildRootHelp, buildUsageError, cloneCommandSpec, parseFrontDeskEngineArgs, parseFrontDeskModuleArgs, parseHostedPilotPackageArgs, parseTurnkeyInstallArgs, parseUpdateChannelArgs, parseWebArgs, printJson, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
 
 export function buildPublicCommandSpecs(
@@ -91,18 +92,35 @@ export function buildPublicCommandSpecs(
 
   const installSpec: CommandSpec = {
     usage:
-      'opl install [--modules <mas,mds,mag,rca>] [--module <module_id>] [--skip-modules] [--skip-engines] [--skip-gui-open]',
+      'opl install [--modules <mas,mds,mag,rca>] [--module <module_id>] [--skip-modules] [--skip-engines] [--skip-gui-open] [--serve-web] [--host <host>] [--port <port>]',
     summary: 'One-shot install for OPL dependencies, family modules, Codex skills, and the OPL GUI app.',
     examples: [
       'opl install',
       'opl install --modules mas,mds,mag,rca',
       'opl install --modules mas --skip-engines --skip-gui-open',
+      'opl install --serve-web --host 0.0.0.0 --port 8787',
     ],
     group: 'top_level',
-    handler: async (args) =>
-      buildPublicTurnkeyInstallPayload(
-        await runFrontDeskTurnkeyInstall(getContracts(), parseTurnkeyInstallArgs(args, installSpec)),
-      ),
+    handler: async (args) => {
+      const parsed = parseTurnkeyInstallArgs(args, installSpec);
+      const installPayload = buildPublicTurnkeyInstallPayload(
+        await runFrontDeskTurnkeyInstall(getContracts(), parsed),
+      );
+
+      if (!parsed.serveWeb) {
+        return installPayload;
+      }
+
+      const { server, startupPayload } = await startWebFrontDeskServer(getContracts(), parsed);
+      attachWebFrontDeskShutdown(server);
+      printJson({
+        ...installPayload,
+        web_frontdesk: startupPayload.opl_api,
+      });
+      return {
+        __handled: true as const,
+      };
+    },
   };
 
   const systemSpec = buildNoArgSpec(

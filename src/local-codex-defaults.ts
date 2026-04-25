@@ -14,6 +14,15 @@ export type LocalCodexDefaults = {
   provider_api_key: string | null;
 };
 
+export type BootstrapLocalCodexDefaultsInput = Partial<{
+  model_provider: string;
+  model: string;
+  reasoning_effort: string;
+  provider_name: string;
+  provider_base_url: string;
+  provider_api_key: string;
+}>;
+
 function normalizeOptionalString(value: string | null | undefined) {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
@@ -78,6 +87,105 @@ export function resolveLocalCodexConfigPath() {
   const homeDir = normalizeOptionalString(process.env.HOME) ?? os.homedir();
   const codexHome = explicitCodexHome ?? path.join(homeDir, '.codex');
   return path.join(codexHome, 'config.toml');
+}
+
+function quoteTomlString(value: string) {
+  return JSON.stringify(value);
+}
+
+function readBootstrapInputFromEnv(): BootstrapLocalCodexDefaultsInput {
+  return {
+    model_provider: normalizeOptionalString(process.env.OPL_CODEX_MODEL_PROVIDER)
+      ?? normalizeOptionalString(process.env.CODEX_MODEL_PROVIDER)
+      ?? undefined,
+    model: normalizeOptionalString(process.env.OPL_CODEX_MODEL)
+      ?? normalizeOptionalString(process.env.CODEX_MODEL)
+      ?? undefined,
+    reasoning_effort: normalizeOptionalString(process.env.OPL_CODEX_REASONING_EFFORT)
+      ?? normalizeOptionalString(process.env.CODEX_REASONING_EFFORT)
+      ?? undefined,
+    provider_name: normalizeOptionalString(process.env.OPL_CODEX_PROVIDER_NAME)
+      ?? normalizeOptionalString(process.env.CODEX_PROVIDER_NAME)
+      ?? undefined,
+    provider_base_url: normalizeOptionalString(process.env.OPL_CODEX_BASE_URL)
+      ?? normalizeOptionalString(process.env.CODEX_BASE_URL)
+      ?? normalizeOptionalString(process.env.OPENAI_BASE_URL)
+      ?? undefined,
+    provider_api_key: normalizeOptionalString(process.env.OPL_CODEX_API_KEY)
+      ?? normalizeOptionalString(process.env.CODEX_API_KEY)
+      ?? normalizeOptionalString(process.env.OPENAI_API_KEY)
+      ?? undefined,
+  };
+}
+
+export function bootstrapLocalCodexDefaults(input: BootstrapLocalCodexDefaultsInput = {}) {
+  const merged = {
+    ...readBootstrapInputFromEnv(),
+    ...input,
+  };
+
+  const model = normalizeOptionalString(merged.model);
+  const providerBaseUrl = normalizeOptionalString(merged.provider_base_url);
+  const providerApiKey = normalizeOptionalString(merged.provider_api_key);
+
+  if (!model || !providerBaseUrl || !providerApiKey) {
+    return {
+      status: 'skipped_missing_input' as const,
+      config_path: resolveLocalCodexConfigPath(),
+      required_env: ['OPL_CODEX_MODEL', 'OPL_CODEX_BASE_URL', 'OPL_CODEX_API_KEY'],
+      optional_env: ['OPL_CODEX_MODEL_PROVIDER', 'OPL_CODEX_REASONING_EFFORT', 'OPL_CODEX_PROVIDER_NAME'],
+      wrote_config: false,
+      provider_base_url: providerBaseUrl,
+      model,
+      reasoning_effort: normalizeOptionalString(merged.reasoning_effort),
+      api_key_present: Boolean(providerApiKey),
+    };
+  }
+
+  const configPath = resolveLocalCodexConfigPath();
+  if (fs.existsSync(configPath) && fs.statSync(configPath).isFile()) {
+    const existing = readLocalCodexDefaults();
+    return {
+      status: 'skipped_existing_config' as const,
+      config_path: configPath,
+      wrote_config: false,
+      provider_base_url: existing.provider_base_url,
+      model: existing.model,
+      reasoning_effort: existing.reasoning_effort,
+      api_key_present: Boolean(existing.provider_api_key),
+    };
+  }
+
+  const providerId = normalizeOptionalString(merged.model_provider) ?? 'opl';
+  const providerName = normalizeOptionalString(merged.provider_name) ?? 'OPL configured provider';
+  const reasoningEffort = normalizeOptionalString(merged.reasoning_effort);
+  const configDir = path.dirname(configPath);
+  fs.mkdirSync(configDir, { recursive: true });
+  fs.writeFileSync(
+    configPath,
+    [
+      `model_provider = ${quoteTomlString(providerId)}`,
+      `model = ${quoteTomlString(model)}`,
+      ...(reasoningEffort ? [`model_reasoning_effort = ${quoteTomlString(reasoningEffort)}`] : []),
+      '',
+      `[model_providers.${providerId}]`,
+      `name = ${quoteTomlString(providerName)}`,
+      `base_url = ${quoteTomlString(providerBaseUrl)}`,
+      `experimental_bearer_token = ${quoteTomlString(providerApiKey)}`,
+      '',
+    ].join('\n'),
+    { mode: 0o600 },
+  );
+
+  return {
+    status: 'completed' as const,
+    config_path: configPath,
+    wrote_config: true,
+    provider_base_url: providerBaseUrl,
+    model,
+    reasoning_effort: reasoningEffort,
+    api_key_present: true,
+  };
 }
 
 export function readLocalCodexDefaults(): LocalCodexDefaults {
