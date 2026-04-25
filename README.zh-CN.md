@@ -55,7 +55,7 @@ git clone https://github.com/gaofeng21cn/one-person-lab.git && cd one-person-lab
 
 > 安装并配置这个 OPL repo：clone repo，安装 OPL CLI，运行 `opl install`，确认 One Person Lab App 的「远程连接」WebUI，以及 Research / Grant / Presentation Foundry 模块都准备好；如果某一步缺失，直接补齐或报告准确阻塞。
 
-`opl install` 会一揽子准备 OPL CLI、当前活跃的产品家族模块、Codex skills、本地 Product API service，以及 One Person Lab App。若桌面 App 已安装，它会直接打开；若 macOS 上尚未安装，它会自动下载并安装匹配当前平台的 GitHub Release DMG 后再打开。浏览器访问需要在已安装 App 的「远程连接」里开启。
+`opl install` 会一揽子准备 OPL CLI、当前活跃的产品家族模块、Codex skills 和 One Person Lab App。若桌面 App 已安装，它会直接打开；若 macOS 上尚未安装，它会自动下载并安装匹配当前平台的 GitHub Release DMG 后再打开。浏览器访问需要在已安装 App 的「远程连接」里开启。
 
 ## 可以用来做什么
 
@@ -92,7 +92,7 @@ git clone https://github.com/gaofeng21cn/one-person-lab.git && cd one-person-lab
 - 提供工作空间、会话、进度与交付物的发现和组织能力。
 - 提供共享合同，让 Research、Grant 和 Presentation Foundry 能在同一个工作台里被看见。
 
-桌面 GUI 由 [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) 作为 OPL 品牌 App 外壳维护。这个仓库提供该 App、网页入口和 Codex 共同消费的本地工作台服务与共享产品表面。
+桌面 GUI 由 [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) 作为 OPL 品牌 App 外壳维护。这个仓库提供该 App 和 Codex 共同消费的共享合同与产品表面。
 
 ## 这个仓库怎么读
 
