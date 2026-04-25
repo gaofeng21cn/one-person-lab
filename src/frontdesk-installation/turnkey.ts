@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import { buildOplGuiArtifactName, buildOplReleaseTag, getOplReleaseRepo, getOplReleaseVersion } from '../opl-release.ts';
 import { buildOplGuiShellSurface, syncOplCompanionSkills } from '../install-companions.ts';
+import { bootstrapLocalCodexDefaults } from '../local-codex-defaults.ts';
 import type { GatewayContracts } from '../types.ts';
 
 import { runFrontDeskEngineAction } from './engine-actions.ts';
@@ -247,6 +248,7 @@ export async function runFrontDeskTurnkeyInstall(
   contracts: GatewayContracts,
   input: FrontDeskTurnkeyInstallInput = {},
 ) {
+  const codexConfigBootstrap = bootstrapLocalCodexDefaults();
   const modules = normalizeModuleSelection(input.modules);
   const environment = (await buildFrontDeskEnvironment(contracts)).frontdesk_environment;
   const engineActions = input.skipEngines
@@ -294,6 +296,7 @@ export async function runFrontDeskTurnkeyInstall(
       status: 'completed',
       selected_engines: [...DEFAULT_ENGINES],
       selected_modules: modules,
+      codex_config_bootstrap: codexConfigBootstrap,
       codex_plugin_registry: codexPluginRegistry,
       engine_actions: engineActions.map((entry) => entry.frontdesk_engine_action),
       module_actions: moduleActions.map((entry) => entry.frontdesk_module_action),
@@ -305,6 +308,7 @@ export async function runFrontDeskTurnkeyInstall(
       system_initialize: initialize.frontdesk_initialize,
       notes: [
         'This command is the user-facing one-shot path for OPL + Codex CLI + Hermes-Agent + family modules + companion Codex skills + desktop GUI.',
+        'In Linux or Docker, use `opl install --serve-web --host 0.0.0.0 --port 8787` as the foreground browser entry process after providing Codex defaults through OPL_CODEX_MODEL, OPL_CODEX_BASE_URL, and OPL_CODEX_API_KEY.',
         'GUI startup opens the installed One Person Lab app when present; otherwise it downloads and installs the matching one-person-lab release asset before opening the app. opl-aion-shell remains an internal GUI source/build input.',
       ],
     },

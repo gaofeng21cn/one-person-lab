@@ -43,7 +43,7 @@
 
 ## Fast Start
 
-Supported environment: macOS is the primary desktop App target; Linux supports the CLI path when Node.js 22+, git, and the module toolchains are available. Remote browser access is provided by the One Person Lab App WebUI from the Remote Connection settings tab.
+Supported environment: macOS is the primary desktop App target; Linux and Docker support the CLI + WebUI path for browser-based access.
 
 One command for a human user:
 
@@ -51,11 +51,28 @@ One command for a human user:
 curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/install.sh | bash
 ```
 
+Docker / Linux server WebUI:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/install.sh | bash -s -- --serve-web --host 0.0.0.0 --port 8787
+```
+
 One instruction for a Codex Agent:
 
 > Install and configure this OPL repo: clone it, install the OPL CLI, run `opl install`, and ensure the One Person Lab App Remote Connection WebUI and the Research / Grant / Presentation Foundry modules are ready; if anything is missing, fix it or report the exact blocker.
 
-The installer clones or updates OPL under `~/.opl/one-person-lab`, links the `opl` CLI, then runs `opl install`. `opl install` prepares the OPL CLI, active product-family modules, Codex skills, and the One Person Lab App in one pass. If the desktop app is already installed, it opens it; otherwise it downloads and installs the matching package from this repository’s GitHub Releases before opening it. Browser access is enabled from the App’s Remote Connection tab after the App is installed and Remote Connection is enabled.
+The installer clones or updates OPL under `~/.opl/one-person-lab`, links the `opl` CLI, then runs `opl install`. `opl install` prepares the OPL CLI, active product-family modules, Codex skills, and the One Person Lab App in one pass. On macOS it opens or installs the desktop App; on Linux / Docker, `--serve-web` starts the WebUI as the foreground process. The default browser entry is `http://<host>:8787/opl/`.
+
+When a container or server does not already have Codex defaults, provide them before installing. OPL writes `CODEX_HOME/config.toml` and never echoes the API key in the install payload:
+
+```bash
+export CODEX_HOME=/data/codex
+export OPL_CODEX_MODEL=gpt-5.5
+export OPL_CODEX_REASONING_EFFORT=xhigh
+export OPL_CODEX_BASE_URL=https://your-provider.example/v1
+export OPL_CODEX_API_KEY=sk-...
+curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/install.sh | bash -s -- --serve-web --host 0.0.0.0 --port 8787
+```
 
 ## What People Use It For
 

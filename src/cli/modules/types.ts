@@ -108,6 +108,7 @@ type TurnkeyInstallCliInput = WebCliInput & {
   skipEngines?: boolean;
   skipWebOpen?: boolean;
   skipGuiOpen?: boolean;
+  serveWeb?: boolean;
 };
 
 type FrontDeskMcpCliInput = {

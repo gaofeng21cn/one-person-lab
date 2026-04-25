@@ -72,6 +72,7 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
         service_action: unknown | null;
         web_open_action: unknown | null;
         gui_open_action: unknown | null;
+        codex_config_bootstrap: { status: string; api_key_present: boolean };
         companion_skill_sync: {
           surface_id: string;
           summary: { total: number };
@@ -99,6 +100,8 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
     assert.equal(output.install.service_action, null);
     assert.equal(output.install.web_open_action, null);
     assert.equal(output.install.gui_open_action, null);
+    assert.equal(output.install.codex_config_bootstrap.status, 'skipped_missing_input');
+    assert.equal(output.install.codex_config_bootstrap.api_key_present, false);
     assert.equal(output.install.companion_skill_sync.surface_id, 'opl_companion_skill_sync');
     assert.equal(output.install.companion_skill_sync.summary.total >= 6, true);
     assert.equal(output.install.system_initialize.surface_id, 'opl_frontdesk_initialize');
@@ -120,6 +123,64 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(medAutoScienceRemote.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('install command can bootstrap Codex defaults from environment without leaking the API key', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-codex-defaults-home-'));
+
+  try {
+    const output = runCli(['install', '--skip-modules', '--skip-engines', '--skip-gui-open'], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      OPL_CODEX_MODEL: 'gpt-5.5',
+      OPL_CODEX_REASONING_EFFORT: 'xhigh',
+      OPL_CODEX_BASE_URL: 'https://codex-provider.example.test/v1',
+      OPL_CODEX_API_KEY: 'secret-test-key',
+    }) as {
+      install: {
+        codex_config_bootstrap: {
+          status: string;
+          config_path: string;
+          model: string;
+          reasoning_effort: string;
+          provider_base_url: string;
+          api_key_present: boolean;
+        };
+      };
+    };
+
+    const bootstrap = output.install.codex_config_bootstrap;
+    assert.equal(bootstrap.status, 'completed');
+    assert.equal(bootstrap.model, 'gpt-5.5');
+    assert.equal(bootstrap.reasoning_effort, 'xhigh');
+    assert.equal(bootstrap.provider_base_url, 'https://codex-provider.example.test/v1');
+    assert.equal(bootstrap.api_key_present, true);
+    assert.equal(JSON.stringify(output).includes('secret-test-key'), false);
+
+    const config = fs.readFileSync(bootstrap.config_path, 'utf8');
+    assert.match(config, /model = "gpt-5\.5"/);
+    assert.match(config, /model_reasoning_effort = "xhigh"/);
+    assert.match(config, /base_url = "https:\/\/codex-provider\.example\.test\/v1"/);
+    assert.match(config, /experimental_bearer_token = "secret-test-key"/);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('install command advertises the foreground WebUI path for Linux and Docker', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-webui-note-home-'));
+
+  try {
+    const output = runCli(['install', '--skip-modules', '--skip-engines', '--skip-gui-open'], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+    }) as { install: { notes: string[] } };
+
+    assert.match(output.install.notes.join('\n'), /opl install --serve-web --host 0\.0\.0\.0 --port 8787/);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
   }
 });
 
