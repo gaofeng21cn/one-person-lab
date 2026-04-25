@@ -7,7 +7,6 @@ import type { FrontDeskUpdateChannel } from '../frontdesk-preferences.ts';
 
 export type FrontDeskModuleId =
   | 'medautoscience'
-  | 'meddeepscientist'
   | 'medautogrant'
   | 'redcube';
 

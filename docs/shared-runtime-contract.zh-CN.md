@@ -2,6 +2,8 @@
 
 # Shared Runtime Contract
 
+> 当前状态说明（`2026-04-25`）：本文作为共享边界参考保留。当前 `OPL` 公开主线是 `Codex-default session/runtime + explicit activation layer + MAS/MAG/RCA domain agents`；`MedDeepScientist` 是 MAS 之下的受控 backend companion，不是 OPL 顶层 domain agent。下文旧的 `gateway / harness` 词汇按内部边界兼容语言理解，不作为当前默认公开产品模型。
+
 ## 目的
 
 这份文档用于冻结 `OPL` 体系下跨 domain 共享的运行合同。
@@ -33,7 +35,7 @@
 - 定义 domain-specific object model
 - 定义 domain-specific artifact schema
 - 定义某个 domain 的 gate / audit / delivery 真相
-- 让 `OPL` 越过 `domain gateway` 直接接管 domain harness
+- 让 `OPL` 越过 domain-agent entry 直接接管 domain-owned runtime 或 delivery truth
 - 把某个具体 execution plane 直接写成 `OPL` 当前既成事实
 
 ## 当前冻结的 v1 对象
@@ -102,7 +104,7 @@
 
 - 在 contract 层吸收 event correlation、checkpoint lineage、flow introspection 与 human-gate pause / resume 语义
 - 不把 `CrewAI` 统一成默认 `LLM`、`Agent`、`Crew` 或 memory owner
-- 不让 `CrewAI` 替代 `Hermes-Agent`、`Codex CLI`、`OPL Gateway` 或任何 `Domain Gateway`
+- 不让 `CrewAI` 替代 `Hermes-Agent`、`Codex CLI`、OPL session/runtime 入口或任何 domain-agent entry
 
 ## 与 Hermes-Agent 的关系
 
@@ -112,7 +114,7 @@
 
 - 上游 `Hermes-Agent` 支撑的 runtime substrate，是 `Shared Runtime Contract` 的优选未来实现方向
 - `Hermes-Agent` 不是整个 `UHS`
-- `Hermes-Agent` 也不会替代 `OPL Gateway`、`Domain Gateway` 或 `Domain Harness OS`
+- `Hermes-Agent` 也不会替代 OPL session/runtime 入口、任何 domain-agent entry 或 domain-owned truth surface
 - 优选的集成方式是 `external kernel, managed by OPL product packaging`，而不是长期 fork，也不是把手工安装前置给用户
 
 也就是说，`Hermes` 更适合承接“怎么稳定地跑”，而不是“什么才算过 gate、交付、审计、domain truth”。
@@ -121,14 +123,13 @@
 
 截至当前公开主线，真实状态仍然是：
 
-- 顶层 formal entry 仍是 `CLI-first`
-- `MCP` 仍是 supported protocol layer
-- 当前活跃开发宿主仍是 Codex-only 本地会话
-- 当前公开的 OPL 入口仍是本地 `TypeScript CLI`-first / gateway contract surface
-- `Shared Runtime Contract` 还处于冻结与逐步落地阶段
+- 默认 OPL 入口是本地 `opl` / `opl exec` / `opl resume`，并继承 Codex-default 语义
+- 显式 activation 只路由到已收录 domain agents：`MAS`、`MAG`、`RCA`
+- `MCP` 与其他 protocol surface 保持为 supporting 或 domain-owned 层
+- `Shared Runtime Contract` 是当前共享边界下的参考合同，不是默认产品入口
 - runtime-oriented 的 family orchestration companion schemas 已经落在 `contracts/family-orchestration/`，先冻结共享 `event envelope + checkpoint lineage + product-entry runtime continuity discovery` 语义，而不是把它们误写成某个统一 runtime owner
-- 四个仓已经不处在同一集成深度：`Med Auto Grant` 已落地真实上游 `Hermes-Agent` runtime substrate，`Med Auto Science` 已完成 external runtime bring-up 并进入 real adapter cutover 前态，`RedCube AI` 也已经落下 upstream runtime-owner cutover 与 repo-verified product-entry federation，而 `OPL` 自身继续停留在顶层 gateway / federation 层
-- 上游 `Hermes-Agent` 运行底座仍是这份合同优选的未来实现方向，而不是已经落地的公开事实
+- 当前活跃四仓公开线是 `one-person-lab + MAS + MAG + RCA`；`MDS` 保持在 MAS 之下作为受控 runtime/backend companion
+- 上游 `Hermes-Agent` 运行底座仍是这份合同的显式可选或未来实现方向，而不是默认 OPL 公开事实
 
 ## 实现边界
 
@@ -145,9 +146,9 @@
 
 变化的应只是 runtime substrate 的承载方式，而不是：
 
-- `OPL` 的 federation 语义
+- `OPL` 的 session/runtime 与 activation 语义
 - formal-entry matrix
-- domain gateway 边界
+- domain-agent 边界
 - domain-owned artifact / audit / delivery truth
 
 ## 四仓中的位置

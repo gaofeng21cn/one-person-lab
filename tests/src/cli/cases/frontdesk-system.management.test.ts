@@ -242,13 +242,13 @@ exit 1
       output.system_initialize.checklist.some((entry) => entry.item_id === 'domain_modules' && !entry.required),
       true,
     );
-    assert.equal(output.system_initialize.domain_modules.summary.total_modules_count >= 4, true);
+    assert.equal(output.system_initialize.domain_modules.summary.total_modules_count, 3);
     assert.equal(
       output.system_initialize.domain_modules.summary.total_modules_count,
       output.system_initialize.domain_modules.modules.length,
     );
     assert.equal(output.system_initialize.domain_modules.summary.installed_modules_count >= 0, true);
-    assert.equal(output.system_initialize.domain_modules.modules.length >= 4, true);
+    assert.equal(output.system_initialize.domain_modules.modules.length, 3);
     assert.equal(output.system_initialize.settings.interaction_mode, 'codex');
     assert.equal(output.system_initialize.settings.execution_mode, 'codex');
     assert.equal(output.system_initialize.workspace_root.selected_path, workspaceRoot);
@@ -522,7 +522,7 @@ EOF
         }>;
       };
     };
-    assert.equal(initial.modules.summary.total_modules_count >= 4, true);
+    assert.equal(initial.modules.summary.total_modules_count, 3);
     const initialMas = initial.modules.items.find((entry) => entry.module_id === 'medautoscience');
     assert.ok(initialMas);
     assert.equal(initialMas.installed, false);

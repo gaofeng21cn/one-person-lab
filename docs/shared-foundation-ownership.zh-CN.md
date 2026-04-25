@@ -2,6 +2,8 @@
 
 # 共享基础结构归属
 
+> 当前状态说明（`2026-04-25`）：本文作为 shared-foundation ownership 参考保留。下文 `domain gateway / harness` 按兼容语言理解；当前公开模型使用独立 domain agents（`MAS`、`MAG`、`RCA`）与各自 domain-owned truth surfaces。
+
 ## 目的
 
 这份文档用来澄清：在 `OPL` 里，`Shared Foundation` 到底由谁管理。
@@ -19,7 +21,7 @@
 正确分工是：
 
 - `OPL` 负责 shared-foundation 对象的顶层语义、索引、身份和跨域复用规则
-- 各 `domain gateway` 与 `domain harness` 负责 domain-local 对象的 canonical truth、mutation、审计回写与交付真相
+- 各 domain agent 负责 domain-local 对象的 canonical truth、mutation、审计回写与交付真相
 - 人类或私有 workspace 仍然可以持有尚未正式进入 domain truth 的源材料
 
 所以，“shared foundation 被统一管理”更准确的意思是：
@@ -45,7 +47,7 @@
 - 帮助人类与 Agent 发现可复用对象的 index / catalog surface
 - 允许哪些对象被带入 domain 的 handoff expectation
 
-### `Domain gateway + harness` 负责
+### Domain agent 负责
 
 每个 domain 仍然负责：
 
@@ -82,13 +84,13 @@
 | `review memory` | 仅在 discoverability 需要时提供跨域 summary / index 语言 | 完整 review history、review state、review decision、domain-specific review writeback | 私有评审笔记、临时批注 | canonical review truth |
 | `venue memory` | 最适合做顶层 shared index 与可复用语义 | 绑定具体 work product 的 domain-local venue fit 判断 | 尚未 formalize 的个人偏好笔记 | domain-specific submission truth |
 
-## 与 Domain Gateway 的整合方式
+## 与 Domain Agent 的整合方式
 
 理想流程是：
 
 1. 人类或 Agent 从 `OPL` 顶层发起请求。
 2. `OPL` 先在语义层 / 索引层识别哪些 shared-foundation 对象相关。
-3. `OPL` 把请求路由到正确的 `domain gateway`，并带过去的是引用，不是顶层 truth 替换。
+3. `OPL` 把请求通过 activation 或 routing 交给正确的 domain-agent entry，并带过去的是引用，不是顶层 truth 替换。
 4. 目标 domain 再去解析自己真正拥有的具体对象。
 5. 该 domain 把自己的 runtime truth、review truth 与 delivery truth 写回到 domain-owned surface。
 6. `OPL` 可以保留顶层引用、摘要或可审计的 routing signal，但不接管 domain 的 canonical object truth。
@@ -142,7 +144,7 @@
 - 让 `shared asset index` 变成 mutation owner
 - 让 `shared memory index` 取代 domain review 或 workspace 证据
 - 把 `MedAutoScience` 或 `RedCube AI` 降格成 `OPL` 下面的私有实现细节
-- 因为顶层 shared object 存在，就绕过 domain gateway
+- 因为顶层 shared object 存在，就绕过 domain-agent entry
 
 ## 当前阶段的实际解读
 

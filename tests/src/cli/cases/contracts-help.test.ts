@@ -274,7 +274,7 @@ test('contract workstream returns the full registered workstream meaning', () =>
   assert.deepEqual(output.workstream.primary_families, ['ppt_deck']);
 });
 
-test('contract domains returns the registered domain gateway summaries', () => {
+test('contract domains returns the registered domain-agent summaries', () => {
   const output = runCli(['contract', 'domains']);
 
   assert.deepEqual(output, {

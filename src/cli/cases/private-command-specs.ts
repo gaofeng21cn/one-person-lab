@@ -85,7 +85,7 @@ export function buildInternalCommandSpecs(
     },
     'list-domains': {
       usage: 'opl list-domains',
-      summary: 'List admitted domain gateway summaries.',
+      summary: 'List admitted domain-agent summaries from the legacy gateway contract registry.',
       examples: ['opl list-domains'],
       handler: () => {
         const contracts = getContracts();
@@ -100,7 +100,7 @@ export function buildInternalCommandSpecs(
     },
     'get-domain': {
       usage: 'opl get-domain <domain_id>',
-      summary: 'Show the full registered meaning for one domain gateway.',
+      summary: 'Show the full registered meaning for one admitted domain agent.',
       examples: ['opl get-domain medautoscience', 'opl get-domain redcube'],
       handler: (args) => {
         const [domainId] = args;

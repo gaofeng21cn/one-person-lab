@@ -2,10 +2,12 @@
 
 # Shared Domain Contract
 
+> 当前状态说明（`2026-04-25`）：本文作为共享边界参考保留。当前 active public domain-agent 集合是 `MAS`、`MAG`、`RCA`；`MDS` 是 MAS 之下的受控 backend companion。下文旧的 `Domain Gateway` / `Domain Harness OS` 词汇按内部边界兼容语言理解；当前公开文档优先使用独立 `domain agent` 与 app skill 口径。
+
 ## 目的
 
 这份文档用于冻结 `OPL` 体系下跨 domain 共享的产品语义与行为合同。
-它回答的是“多个 `Domain Harness OS` 至少要在哪些公开行为面上保持一致”，而不是“它们是否必须共享同一套 domain object model”。
+它回答的是“多个 domain agent 至少要在哪些公开行为面上保持一致”，而不是“它们是否必须共享同一套 domain object model”。
 
 这份合同同样属于 `Unified Harness Engineering Substrate` 之内，但它与 `Shared Runtime Contract` 不是一回事。
 
@@ -51,8 +53,8 @@
    - 不能把未冻结的判断写成已通过 gate 的事实
 
 6. no-bypass
-   - 顶层与跨域 handoff 只能 targeting `domain_gateway`
-   - 不允许把 `OPL` 直接写成 domain harness 的 runtime owner
+   - 顶层与跨域 activation 只能指向 domain-agent entry
+   - 不允许把 `OPL` 直接写成 domain-owned truth 的 runtime owner
 
 7. operating posture
    - 当前 admitted mainline 统一按 `Auto-only` 理解
@@ -112,7 +114,7 @@
 - `MCP-supported`
 - `controller internal only`
 - `Auto-only` mainline
-- no-bypass to `domain_gateway`
+- 不绕过 domain-agent entry
 - domain-oriented 的 family orchestration companion schemas 已冻结为 `family action graph + family human gate + family product-entry manifest v2`
 
 但 `per-run handle`、durable report、audit trail、gate semantics 仍在持续往 repo-verified 行为面压实，不应被夸写成“已经在所有仓完全统一实现”。

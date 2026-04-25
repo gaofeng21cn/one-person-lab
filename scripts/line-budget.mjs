@@ -6,11 +6,7 @@ const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '
 process.chdir(repoRoot);
 
 const DEFAULT_LIMIT = 1000;
-const BASELINE = new Map(Object.entries({
-  "src/product-entry.ts": 1079,
-  "tests/built/cli.test.mjs": 1745,
-  "tests/src/cli/helpers.ts": 1390,
-}));
+const BASELINE = new Map();
 const CODE_EXTENSIONS = new Set(['.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx', '.mts', '.cts', '.py', '.sh', '.bash', '.zsh', '.rs', '.go']);
 const IGNORED_PARTS = new Set(['node_modules', 'dist', 'build', 'coverage', '.venv', '__pycache__']);
 const IGNORED_SUFFIXES = ['.min.js'];
@@ -58,6 +54,14 @@ if (mode === 'list') {
 const staleBaseline = [...BASELINE.keys()].filter((relativePath) => !fs.existsSync(path.join(repoRoot, relativePath)));
 for (const relativePath of staleBaseline) {
   failures.push(`${relativePath}: stale line-budget baseline entry; remove it after deleting or renaming the file`);
+}
+
+const retiredBaseline = [...BASELINE.keys()].filter((relativePath) => {
+  const absolutePath = path.join(repoRoot, relativePath);
+  return fs.existsSync(absolutePath) && countLines(fs.readFileSync(absolutePath, 'utf8')) <= DEFAULT_LIMIT;
+});
+for (const relativePath of retiredBaseline) {
+  failures.push(`${relativePath}: retired line-budget baseline entry; remove it because the file is back under ${DEFAULT_LIMIT} lines`);
 }
 
 if (failures.length > 0) {

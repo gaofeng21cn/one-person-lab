@@ -77,9 +77,6 @@
 - [合同目录说明](../contracts/README.md)
 - [共享基础结构](./shared-foundation.zh-CN.md)
 - [共享基础结构归属](./shared-foundation-ownership.zh-CN.md)
-- [共享运行时合同](./shared-runtime-contract.zh-CN.md)
-- [共享领域合同](./shared-domain-contract.zh-CN.md)
-- [OPL 运行时命名与边界合同](./opl-runtime-naming-and-boundary-contract.zh-CN.md)
 - [OPL 公开界面索引](./opl-public-surface-index.zh-CN.md)
 
 ## 第三层：参考 / 兼容文档
@@ -91,6 +88,7 @@
 - [Docker WebUI 部署参考](./references/opl-docker-webui-deployment.zh-CN.md)
 - [OPL 默认 Skill 生态参考](./references/opl-default-skill-ecosystem.zh-CN.md)
 - 产品运行时与执行器参考说明
+- [共享运行时合同](./shared-runtime-contract.zh-CN.md)、[共享领域合同](./shared-domain-contract.zh-CN.md) 与 [OPL 运行时命名与边界合同](./opl-runtime-naming-and-boundary-contract.zh-CN.md) 作为共享边界参考保留；其中的 `gateway / harness` 词汇按当前 domain-agent 模型下的兼容语言理解。
 - 领域对齐与增量收录记录
 - 基准与 rollout 看板
 - 已退役的 `gateway / federation / routed-action` 合同语料

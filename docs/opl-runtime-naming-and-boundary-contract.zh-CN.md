@@ -2,11 +2,13 @@
 
 # OPL Runtime 命名与边界合同
 
+> 当前状态说明（`2026-04-25`）：本文作为 gateway/federation 命名阶段留下的共享边界参考保留。当前默认公开口径是 `Codex-default session/runtime -> explicit OPL activation -> MAS/MAG/RCA domain-agent entry`。`MedDeepScientist` 继续作为 MAS 之下的受控 execution-plane/backend companion，不是 OPL 顶层 domain agent，也不是默认 OPL-managed module。除非当前核心文档显式提升，下文 `gateway / harness` 词汇均按内部兼容语言理解。
+
 ## 目的
 
 这份文档用于冻结 `OPL` 体系下与 runtime 相关的核心命名，避免把下面几层继续混写成一团：
 
-- 顶层 `Gateway / Federation`
+- 顶层 `Codex-default session/runtime` 与 explicit activation
 - `Unified Harness Engineering Substrate`
 - `Shared Runtime Contract`
 - `Shared Domain Contract`
@@ -56,8 +58,8 @@ Human / Agent
 
 每一层回答不同问题：
 
-- `OPL Gateway / Federation`
-  - 顶层任务语义、跨域路由、admission 语言与边界合同
+- `OPL session/runtime + activation`
+  - 默认 session/runtime 语义、显式 domain-agent activation、admission 语言与边界合同
 - `Unified Harness Engineering Substrate`
   - 跨域共享的上位 Harness Engineering 语言
 - `Shared Runtime Contract`
@@ -77,12 +79,12 @@ Human / Agent
 
 | 术语 | 固定定义 | 当前或未来例子 | 明确不是什么 |
 | --- | --- | --- | --- |
-| `OPL Gateway / Federation` | 顶层任务语义、跨域路由、边界冻结与 admission 语言 | `one-person-lab` | domain-local runtime owner |
+| `OPL session/runtime + activation` | Codex-default session/runtime、显式 domain-agent activation、边界冻结与 admission 语言 | `one-person-lab` | domain-local runtime owner |
 | `Unified Harness Engineering Substrate` | 多个 domain 共享的上位 Harness Engineering 语言 | 分层规则、共享原则、合同总名 | 共享执行内核 |
 | `Shared Runtime Contract` | 多个 domain 共享的长期在线运行合同 | `runtime profile`、`session substrate`、`gateway runtime status` | domain truth |
 | `Shared Domain Contract` | 多个 domain 共享的正式行为合同 | formal-entry matrix、`per-run handle`、durable report、gate semantics | domain object model |
-| `Domain Gateway` | 某个 domain 的稳定正式入口与公开 contract surface | `MedAutoScience`、`MedAutoGrant`、`RedCube AI` | execution engine |
-| `Domain Harness OS` | 某个 domain 的执行编排、治理、审计、交付系统本体 | `MedAutoScience`、`MedAutoGrant`、`RedCube AI` | 顶层 federation |
+| `Domain Agent Entry` | 某个 domain agent 的稳定 app skill、CLI、MCP 或 product-entry surface | `MedAutoScience`、`MedAutoGrant`、`RedCube AI` | execution engine |
+| `Domain-Owned Truth Surface` | 某个 domain agent 的执行、治理、审计与交付真相 | `MedAutoScience`、`MedAutoGrant`、`RedCube AI` | 顶层 OPL runtime |
 | `Execution Plane` | 实际驱动 quest、run、session、worktree、watch、resume 的运行层 | `MedDeepScientist` 当前对 `MedAutoScience` 承担的运行层 | 顶层公开产品面 |
 | `Host-Agent Runtime` | execution plane 的本地宿主部署形态，由本机 host agent 驱动 | 当前 `Codex-default host-agent runtime` | 托管 runtime |
 | `Managed Runtime` | execution plane 的平台托管部署形态，生命周期、调度、隔离和恢复由平台负责 | future `managed web runtime` | domain gateway |
@@ -92,10 +94,10 @@ Human / Agent
 
 | 仓库 | 当前固定定位 | 与 runtime 的关系 |
 | --- | --- | --- |
-| `one-person-lab` | `OPL Gateway / Federation` 的公开说明面与 contract-first surface | 负责定义语言与边界，不是 runtime owner |
-| `med-autoscience` | 医学 `Research Ops` 的 `Domain Gateway + Domain Harness OS` | 拥有医学领域 contract、governance、delivery 与外部 formal entry |
-| `redcube-ai` | 视觉交付 domain 的 `Domain Gateway + Domain Harness OS` | 拥有视觉交付领域 contract、governance、delivery 与外部 formal entry |
-| `med-autogrant` | `Grant Ops` 的 `Domain Gateway + Domain Harness OS` | 拥有基金领域 contract、governance、delivery 与外部 formal entry |
+| `one-person-lab` | OPL session/runtime、activation 与 shared indexes 的公开说明面和 contract-first surface | 负责定义语言与边界，不接管 domain truth |
+| `med-autoscience` | 独立 medical research domain agent | 拥有医学领域 contract、governance、delivery 与外部 formal entry |
+| `redcube-ai` | 独立 visual-deliverable domain agent | 拥有视觉交付领域 contract、governance、delivery 与外部 formal entry |
+| `med-autogrant` | 独立 grant-writing domain agent | 拥有基金领域 contract、governance、delivery 与外部 formal entry |
 
 `MedDeepScientist` 不属于 `OPL` 顶层四仓中的一个平级 `domain repo`。
 当前更准确的表达是：

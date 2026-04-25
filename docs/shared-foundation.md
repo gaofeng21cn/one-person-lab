@@ -2,9 +2,11 @@
 
 # Shared Foundation
 
+> Current-status note (`2026-04-25`): this shared-foundation reference predates the current public wording. Read `domain gateway / harness` below as internal compatibility language; current public docs should describe `MAS`, `MAG`, and `RCA` as independent domain agents reached through OPL activation or direct Codex/app-skill entry.
+
 `OPL` groups multiple workstreams into one system not simply because they all involve Agents, but because they reuse the same foundational layers through a federation model.
 
-The shared foundation means different domain gateways speak compatible asset, memory, governance, delivery, and execution language.
+The shared foundation means different domain agents speak compatible asset, memory, governance, delivery, and execution language.
 `OPL` owns the shared language and indexing layer, while canonical truth for concrete objects stays with domain-owned surfaces or with human/private materials that remain below domain admission.
 
 ## Current Auto Mainlines And Future HITL Layers
@@ -94,9 +96,9 @@ It also means `OPL` defaults to an `Agent-first` execution model and keeps code 
 
 In the intended `OPL` structure:
 
-- the `OPL Gateway` declares the shared-foundation language
-- each `domain gateway` hydrates that language for its own workstream
-- each `domain harness` persists, audits, and delivers according to domain rules
+- OPL declares the shared-foundation language at the session/runtime, activation, and indexing layers
+- each domain agent hydrates that language for its own workstream
+- each domain-owned truth surface persists, audits, and delivers according to domain rules
 
 That is why the shared foundation should stay above any single domain repository.
 
@@ -104,14 +106,14 @@ That is why the shared foundation should stay above any single domain repository
 
 Today, the clearest embodiment of these layers in `Research Foundry` is:
 
-- `MedAutoScience` as the active research domain gateway and harness
+- `MedAutoScience` as the active research domain agent
 
 The clearest emerging embodiment in visual delivery is:
 
-- `RedCube AI` as the visual-deliverable domain gateway and harness, with `ppt_deck` as the family that most directly maps to `Presentation Foundry`
+- `RedCube AI` as the visual-deliverable domain agent, with `ppt_deck` as the family that most directly maps to `Presentation Foundry`
 
 This is why `OPL` is no longer only conceptual.
-It already has one active domain surface and one emerging second surface.
+It already has three active domain-agent surfaces: `MAS`, `MAG`, and `RCA`.
 
 ## Further Reading
 

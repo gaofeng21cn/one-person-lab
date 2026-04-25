@@ -2,10 +2,12 @@
 
 # Shared Domain Contract
 
+> Current-status note (`2026-04-25`): this document is retained as a shared-boundary reference. The active public domain-agent set is `MAS`, `MAG`, and `RCA`; `MDS` is a MAS-controlled backend companion. Older `Domain Gateway` / `Domain Harness OS` wording below is compatibility language for internal boundaries, while current public docs should use independent `domain agent` and app-skill wording.
+
 ## Purpose
 
 This document freezes the cross-domain product semantics and behavior contract used across the `OPL` ecosystem.
-It answers “which public behavior surfaces multiple `Domain Harness OS` implementations should keep aligned,” not “whether they must all share one identical domain object model.”
+It answers “which public behavior surfaces multiple domain agents should keep aligned,” not “whether they must all share one identical domain object model.”
 
 This contract also lives inside the `Unified Harness Engineering Substrate`, but it is distinct from the `Shared Runtime Contract`.
 
@@ -52,8 +54,8 @@ The first objects and rules to keep aligned are:
    - unfrozen judgment must not be rewritten as “gate passed” fact
 
 6. no-bypass
-   - top-level and cross-domain handoff should target `Domain Gateway` only
-   - `OPL` must not be rewritten as the runtime owner of a domain harness
+  - top-level and cross-domain activation should target domain-agent entries only
+  - `OPL` must not be rewritten as the runtime owner of domain-owned truth
 
 7. operating posture
    - current admitted mainlines remain `Auto-only`
@@ -113,7 +115,7 @@ As of the current public mainline, this contract is already partially visible in
 - `MCP-supported`
 - `controller internal only`
 - `Auto-only` mainline
-- no-bypass to `Domain Gateway`
+- no-bypass around domain-agent entries
 - the domain-oriented family orchestration companion schemas are now frozen as `family action graph + family human gate + family product-entry manifest v2`
 
 But the `per-run handle`, durable report, audit trail, and gate semantics are still being tightened into repo-verified behavior surfaces and should not be overstated as already fully unified across every repository.

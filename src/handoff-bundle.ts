@@ -141,7 +141,7 @@ export function buildHandoffBundle(
           }
         : null,
       notes: [
-        'This handoff bundle freezes the family-level transfer from OPL product entry into a domain direct entry or domain gateway.',
+        'This handoff bundle freezes the family-level transfer from OPL product entry into a domain direct entry or domain-agent entry.',
         'A domain direct-entry locator is only included when the workspace registry has one configured for the routed project.',
         'When a routed domain publishes a machine-readable manifest, the same bundle also carries the routed frontdesk plus recommended shell and command so callers do not have to guess the next step.',
       ],

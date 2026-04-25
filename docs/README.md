@@ -78,9 +78,6 @@ They define the current `OPL` mainline: `Codex-default session/runtime + explici
 - [Contracts Overview](../contracts/README.md)
 - [Shared Foundation](./shared-foundation.md)
 - [Shared Foundation Ownership](./shared-foundation-ownership.md)
-- [Shared Runtime Contract](./shared-runtime-contract.md)
-- [Shared Domain Contract](./shared-domain-contract.md)
-- [OPL Runtime Naming And Boundary Contract](./opl-runtime-naming-and-boundary-contract.md)
 - [OPL Public Surface Index](./opl-public-surface-index.md)
 
 ## Layer 3. Reference / Compatibility Docs
@@ -92,6 +89,7 @@ It is repo-tracked supporting material, not the default implementation basis.
 - [Docker WebUI deployment reference](./references/opl-docker-webui-deployment.md)
 - [OPL default skill ecosystem reference](./references/opl-default-skill-ecosystem.md)
 - product-runtime and executor reference notes
+- [Shared Runtime Contract](./shared-runtime-contract.md), [Shared Domain Contract](./shared-domain-contract.md), and [OPL Runtime Naming And Boundary Contract](./opl-runtime-naming-and-boundary-contract.md) are retained as shared-boundary reference documents; their `gateway / harness` wording is compatibility language under the current domain-agent model.
 - domain alignment and delta-intake records
 - benchmark and rollout boards
 - retired `gateway / federation / routed-action` contract corpus kept for audit, compatibility, and schema archaeology
