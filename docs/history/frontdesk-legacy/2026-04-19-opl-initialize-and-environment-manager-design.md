@@ -1,6 +1,6 @@
 # OPL Initialize 与 Environment / Modules 设计
 
-> 已退役。这个设计属于 `Initialize OPL + frontdesk` 公开语义阶段，当前主线已经改为 `OPL Product API + 独立 GUI 壳`。自 `2026-04-21` 起，GUI 主线按 `AionUI` 推进，`Onyx` 只保留备线参考。现行边界以 [`docs/specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md`](../../specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md) 为准。保留本文只用于历史审计与迁移回顾。
+> 已退役。这个设计属于 `Initialize OPL + frontdesk` 公开语义阶段，当前主线已经改为 `OPL Product API + 独立 GUI 壳`，GUI 主线确定为基于 `AionUI` codebase 的 `opl-aion-shell`。现行边界以 [`docs/specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md`](../../specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md) 为准。保留本文只用于历史审计与迁移回顾。
 
 ## 背景
 

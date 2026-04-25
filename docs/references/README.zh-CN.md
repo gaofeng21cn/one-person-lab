@@ -95,7 +95,6 @@
 - `development-operating-model.md`
 - `runtime-alignment-taskboard.md`
 - `opl-frontdesk-delivery-board.md`
-- `opl-hosted-web-frontdesk-benchmark.md`
 - [Frontdesk 历史资料索引](../history/frontdesk-legacy/README.md)
 - [OMX 历史资料索引](../history/omx/README.zh-CN.md)
 

@@ -95,7 +95,6 @@ If you need to understand what `OPL` is today, go back to:
 - `development-operating-model.md`
 - `runtime-alignment-taskboard.md`
 - `opl-frontdesk-delivery-board.md`
-- `opl-hosted-web-frontdesk-benchmark.md`
 - [Frontdesk legacy archive](../history/frontdesk-legacy/README.md)
 - [OMX historical archive](../history/omx/README.md)
 

@@ -116,7 +116,6 @@ exit 1
     assert.equal(output.dashboard.runtime_status.recent_sessions.sessions.length, 1);
     assert.deepEqual(output.dashboard.product_api.rollout_board_refs, [
       'docs/references/opl-frontdesk-delivery-board.md',
-      'docs/references/opl-hosted-web-frontdesk-benchmark.md',
       'docs/references/family-lightweight-direct-entry-rollout-board.md',
       'docs/references/mas-top-level-cutover-board.md',
     ]);
@@ -431,4 +430,3 @@ test('web package exports a self-hostable OPL web package with runtime and proxy
     fs.rmSync(outputDir, { recursive: true, force: true });
   }
 });
-

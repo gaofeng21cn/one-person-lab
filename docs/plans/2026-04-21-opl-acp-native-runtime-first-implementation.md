@@ -138,5 +138,5 @@
 - 不先追求 hosted / online 完整产品
 - 不先追求与 `Codex App` 完全等像素
 - 不让 `AionUI` 重新定义 `OPL` 的 canonical runtime
-- 不把 `Onyx` 恢复成现行主线
+- 不再维护旧 GUI 备线路线
 

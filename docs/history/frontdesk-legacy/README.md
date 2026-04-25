@@ -13,7 +13,6 @@
 本目录当前收纳的关键历史文件：
 
 - `2026-04-19-opl-initialize-and-environment-manager-design.md`
-- `2026-04-19-opl-initialize-and-onyx-overlay-implementation.md`
 
 当前有效路线以这些文件为准：
 

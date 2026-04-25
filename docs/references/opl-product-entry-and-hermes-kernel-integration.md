@@ -251,9 +251,10 @@
 - 当前 GUI 路线：`独立 overlay 仓 + OPL headless adapter surfaces`
 - 长期：`OPL` 自有 hosted / web front desk
 
-对应的选型说明见：
+对应的当前 GUI 实施依据见：
 
-- `docs/references/opl-hosted-web-frontdesk-benchmark.md`
+- `docs/references/2026-04-21-gui-mainline-pivot-to-aionui.md`
+- sibling repo `opl-aion-shell`
 
 ## 9. 一句话结论
 

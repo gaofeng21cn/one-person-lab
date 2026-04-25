@@ -1,6 +1,6 @@
 # OPL Front Desk Delivery Board
 
-> 历史收口说明：此板面记录的是 `frontdesk / overlay` 阶段的已落地 surfaces 与缺口。自 `2026-04-21` 起，GUI 主线已切到 `AionUI`；`Onyx` 只保留备线参考，本文不再作为当前 GUI 实施看板。
+> 历史收口说明：此板面记录的是 `frontdesk / overlay` 阶段的已落地 surfaces 与缺口。当前 GUI 主线已确定为基于 `AionUI` codebase 的 `opl-aion-shell`，本文不再作为当前 GUI 实施看板。
 
 状态锚点：`2026-04-19`
 
@@ -91,7 +91,7 @@
 
 - repo-tracked desktop shell
 - `frontdesk bootstrap`
-- fake `Onyx-style` / `OPL Atlas` 命名残留
+- fake GUI-shell / `OPL Atlas` 命名残留
 
 当前含义：
 
@@ -119,7 +119,7 @@
 
 - 还需要把真正的 GUI 壳落到独立 overlay 仓，而不是继续在 `OPL` 主仓内发明替代实现。
 - 左侧 workspace / task 管理、右侧 progress + files 边栏、settings 中的 environment / modules 管理，都要在 overlay 仓完成接线。
-- 当前 GUI 主线以 `AionUI` 为准；`Onyx` 只保留为备线 benchmark，当前集成事实仍要保持诚实表述。
+- 当前 GUI 主线以 `AionUI` codebase 与 `opl-aion-shell` 为准，当前集成事实仍要保持诚实表述。
 
 ### W2. hosted / web 入口还没有完全产品化
 
@@ -143,7 +143,7 @@
 
 方向：
 
-- 在独立 GUI 壳里对齐 `Codex App` 风格的浅色极简工作台体验；`Onyx` 经验只保留为备线参考。
+- 在独立 GUI 壳里对齐 `Codex App` 风格的浅色极简工作台体验。
 - 保持 `workspace + task + progress + files + modules` 为核心信息架构。
 
 ### I2. Environment / Modules 设置面接线

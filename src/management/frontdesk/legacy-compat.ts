@@ -488,7 +488,7 @@ export async function buildFrontDeskReadiness(
   } else if (localService.health.status === 'unreachable') {
     recommendedNextActions.push('frontdesk service 已加载但健康检查失败，先执行 `opl frontdesk service status` 与 `opl session logs`。');
   }
-  recommendedNextActions.push('GUI 壳应通过独立 GUI shell repo 接入这些 API；当前优先在 opl-aion-shell 内基于 AionUI codebase 产出 OPL 品牌壳，Onyx 只保留备线参考。');
+  recommendedNextActions.push('GUI 壳应通过独立 GUI shell repo 接入这些 API；当前在 opl-aion-shell 内基于 AionUI codebase 产出 OPL 品牌壳。');
   if (summary.manifest_ready_projects_count < summary.total_projects_count) {
     recommendedNextActions.push('给仍缺 manifest 的 active binding 补 `manifest_command`。');
   }
