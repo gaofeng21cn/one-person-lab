@@ -13,6 +13,8 @@ const CRATE_NAME: &str = env!("CARGO_PKG_NAME");
 const CRATE_VERSION: &str = env!("CARGO_PKG_VERSION");
 const SOURCE_OF_TRUTH_RULE: &str =
     "native helpers index local file surfaces but never replace domain-owned durable truth";
+const DEFAULT_MAX_FILES: usize = 10_000;
+const DEFAULT_MAX_JSON_BYTES: u64 = 5 * 1024 * 1024;
 
 #[derive(Debug, Serialize)]
 struct HelperError {
@@ -88,7 +90,22 @@ struct JsonValidationEntry {
     path: String,
     relative_path: String,
     valid: bool,
+    skipped: bool,
     error: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    skip_reason: Option<String>,
+}
+
+#[derive(Clone, Debug)]
+struct ScanLimits {
+    max_files: usize,
+}
+
+#[derive(Clone, Debug)]
+struct ScanReport {
+    files: Vec<FileEntry>,
+    truncated: bool,
+    max_files: usize,
 }
 
 pub fn run_stdio(helper_id: &str) {
@@ -105,7 +122,9 @@ pub fn run_stdio(helper_id: &str) {
 
     let mut stdout = io::stdout().lock();
     serde_json::to_writer(&mut stdout, &response).expect("failed to serialize helper response");
-    stdout.write_all(b"\n").expect("failed to write helper response");
+    stdout
+        .write_all(b"\n")
+        .expect("failed to write helper response");
 }
 
 fn run_helper(helper_id: &str, input: &str) -> HelperResponse {
@@ -191,8 +210,13 @@ fn build_doctor_snapshot() -> Value {
 fn build_artifact_index(request: &Value) -> Result<Value, HelperError> {
     let workspace_root = required_path(request, "workspace_root")?;
     let max_depth = optional_u64(request, "max_depth").unwrap_or(8) as usize;
-    let artifact_roots = path_list(request, "artifact_roots")
-        .unwrap_or_else(|| vec![workspace_root.join("artifacts"), workspace_root.join("manuscript")]);
+    let limits = scan_limits(request)?;
+    let artifact_roots = path_list(request, "artifact_roots").unwrap_or_else(|| {
+        vec![
+            workspace_root.join("artifacts"),
+            workspace_root.join("manuscript"),
+        ]
+    });
     let extensions = string_list(request, "artifact_extensions").unwrap_or_else(|| {
         vec![
             "json".to_string(),
@@ -206,53 +230,88 @@ fn build_artifact_index(request: &Value) -> Result<Value, HelperError> {
         ]
     });
 
-    let mut files = Vec::new();
+    let mut report = ScanReport::new(&limits);
     for root in artifact_roots {
         scan_files(
             &root,
             &workspace_root,
             max_depth,
             &|path| extension_matches(path, &extensions),
-            &mut files,
+            &limits,
+            &mut report,
         )?;
     }
-    files.sort_by(|left, right| left.relative_path.cmp(&right.relative_path));
+    report
+        .files
+        .sort_by(|left, right| left.relative_path.cmp(&right.relative_path));
 
     Ok(json!({
         "surface_kind": "native_artifact_manifest",
         "source_of_truth_rule": SOURCE_OF_TRUTH_RULE,
         "workspace_root": path_to_string(workspace_root),
         "summary": {
-            "total_files_count": files.len(),
-            "total_bytes": files.iter().map(|entry| entry.bytes).sum::<u64>()
+            "total_files_count": report.files.len(),
+            "total_bytes": report.files.iter().map(|entry| entry.bytes).sum::<u64>(),
+            "truncated": report.truncated,
+            "max_files": report.max_files
         },
-        "files": files
+        "files": report.files
     }))
 }
 
 fn build_state_index(request: &Value) -> Result<Value, HelperError> {
     let workspace_roots = path_list(request, "workspace_roots")
-        .or_else(|| required_path(request, "workspace_root").ok().map(|root| vec![root]))
-        .ok_or_else(|| HelperError::new("missing_workspace_roots", "workspace_roots[] or workspace_root is required"))?;
+        .or_else(|| {
+            required_path(request, "workspace_root")
+                .ok()
+                .map(|root| vec![root])
+        })
+        .ok_or_else(|| {
+            HelperError::new(
+                "missing_workspace_roots",
+                "workspace_roots[] or workspace_root is required",
+            )
+        })?;
     let max_depth = optional_u64(request, "max_depth").unwrap_or(8) as usize;
+    let limits = scan_limits(request)?;
+    let max_json_bytes = optional_limit_u64(request, "max_json_bytes", DEFAULT_MAX_JSON_BYTES)?;
 
     let mut root_entries = Vec::new();
     let mut json_entries = Vec::new();
     for root in workspace_roots {
-        let mut files = Vec::new();
-        scan_files(&root, &root, max_depth, &|path| path.is_file(), &mut files)?;
-        files.sort_by(|left, right| left.relative_path.cmp(&right.relative_path));
-        for file in files.iter().filter(|entry| entry.path.ends_with(".json")) {
-            json_entries.push(validate_json_file(file));
+        let mut report = ScanReport::new(&limits);
+        scan_files(
+            &root,
+            &root,
+            max_depth,
+            &|path| path.is_file(),
+            &limits,
+            &mut report,
+        )?;
+        report
+            .files
+            .sort_by(|left, right| left.relative_path.cmp(&right.relative_path));
+        for file in report
+            .files
+            .iter()
+            .filter(|entry| entry.path.ends_with(".json"))
+        {
+            json_entries.push(validate_json_file(file, max_json_bytes));
         }
         root_entries.push(json!({
             "root": path_to_string(root),
-            "file_count": files.len(),
-            "total_bytes": files.iter().map(|entry| entry.bytes).sum::<u64>(),
+            "file_count": report.files.len(),
+            "total_bytes": report.files.iter().map(|entry| entry.bytes).sum::<u64>(),
+            "truncated": report.truncated,
+            "max_files": report.max_files
         }));
     }
 
-    let invalid_json_count = json_entries.iter().filter(|entry| !entry.valid).count();
+    let invalid_json_count = json_entries
+        .iter()
+        .filter(|entry| !entry.valid && !entry.skipped)
+        .count();
+    let skipped_json_count = json_entries.iter().filter(|entry| entry.skipped).count();
     Ok(json!({
         "surface_kind": "native_state_index",
         "source_of_truth_rule": SOURCE_OF_TRUTH_RULE,
@@ -261,6 +320,8 @@ fn build_state_index(request: &Value) -> Result<Value, HelperError> {
             "surface_kind": "large_json_validation_index",
             "checked_files_count": json_entries.len(),
             "invalid_files_count": invalid_json_count,
+            "skipped_files_count": skipped_json_count,
+            "max_json_bytes": max_json_bytes,
             "files": json_entries
         }
     }))
@@ -268,17 +329,36 @@ fn build_state_index(request: &Value) -> Result<Value, HelperError> {
 
 fn build_runtime_watch(request: &Value) -> Result<Value, HelperError> {
     let watch_roots = path_list(request, "watch_roots")
-        .or_else(|| required_path(request, "workspace_root").ok().map(|root| vec![root]))
-        .ok_or_else(|| HelperError::new("missing_watch_roots", "watch_roots[] or workspace_root is required"))?;
+        .or_else(|| {
+            required_path(request, "workspace_root")
+                .ok()
+                .map(|root| vec![root])
+        })
+        .ok_or_else(|| {
+            HelperError::new(
+                "missing_watch_roots",
+                "watch_roots[] or workspace_root is required",
+            )
+        })?;
     let max_depth = optional_u64(request, "max_depth").unwrap_or(6) as usize;
+    let limits = scan_limits(request)?;
     let mut roots = Vec::new();
     for root in watch_roots {
-        let mut files = Vec::new();
-        scan_files(&root, &root, max_depth, &|path| path.is_file(), &mut files)?;
-        let fingerprint = stable_file_fingerprint(&files);
+        let mut report = ScanReport::new(&limits);
+        scan_files(
+            &root,
+            &root,
+            max_depth,
+            &|path| path.is_file(),
+            &limits,
+            &mut report,
+        )?;
+        let fingerprint = stable_file_fingerprint(&report.files);
         roots.push(json!({
             "root": path_to_string(root),
-            "file_count": files.len(),
+            "file_count": report.files.len(),
+            "truncated": report.truncated,
+            "max_files": report.max_files,
             "fingerprint": fingerprint
         }));
     }
@@ -296,12 +376,13 @@ fn scan_files(
     base: &Path,
     max_depth: usize,
     accepts: &dyn Fn(&Path) -> bool,
-    files: &mut Vec<FileEntry>,
+    limits: &ScanLimits,
+    report: &mut ScanReport,
 ) -> Result<(), HelperError> {
     if !root.exists() {
         return Ok(());
     }
-    scan_files_inner(root, base, max_depth, 0, accepts, files)
+    scan_files_inner(root, base, max_depth, 0, accepts, limits, report)
 }
 
 fn scan_files_inner(
@@ -310,17 +391,29 @@ fn scan_files_inner(
     max_depth: usize,
     depth: usize,
     accepts: &dyn Fn(&Path) -> bool,
-    files: &mut Vec<FileEntry>,
+    limits: &ScanLimits,
+    report: &mut ScanReport,
 ) -> Result<(), HelperError> {
+    if report.truncated {
+        return Ok(());
+    }
     if depth > max_depth {
         return Ok(());
     }
 
-    let metadata = fs::symlink_metadata(root)
-        .map_err(|error| HelperError::new("metadata_failed", format!("{}: {error}", path_to_string(root))))?;
+    let metadata = fs::symlink_metadata(root).map_err(|error| {
+        HelperError::new(
+            "metadata_failed",
+            format!("{}: {error}", path_to_string(root)),
+        )
+    })?;
     if metadata.is_file() {
         if accepts(root) {
-            files.push(file_entry(root, base, &metadata));
+            if report.files.len() >= limits.max_files {
+                report.truncated = true;
+                return Ok(());
+            }
+            report.files.push(file_entry(root, base, &metadata));
         }
         return Ok(());
     }
@@ -328,16 +421,27 @@ fn scan_files_inner(
         return Ok(());
     }
 
-    let entries = fs::read_dir(root)
-        .map_err(|error| HelperError::new("read_dir_failed", format!("{}: {error}", path_to_string(root))))?;
-    for entry_result in entries {
+    let mut entries = fs::read_dir(root).map_err(|error| {
+        HelperError::new(
+            "read_dir_failed",
+            format!("{}: {error}", path_to_string(root)),
+        )
+    })?;
+    let mut paths = Vec::new();
+    for entry_result in entries.by_ref() {
         let entry = entry_result
             .map_err(|error| HelperError::new("read_dir_entry_failed", error.to_string()))?;
-        let path = entry.path();
+        paths.push(entry.path());
+    }
+    paths.sort();
+    for path in paths {
         if should_skip_dir(&path) {
             continue;
         }
-        scan_files_inner(&path, base, max_depth, depth + 1, accepts, files)?;
+        scan_files_inner(&path, base, max_depth, depth + 1, accepts, limits, report)?;
+        if report.truncated {
+            return Ok(());
+        }
     }
     Ok(())
 }
@@ -359,27 +463,44 @@ fn file_entry(path: &Path, base: &Path, metadata: &fs::Metadata) -> FileEntry {
     }
 }
 
-fn validate_json_file(file: &FileEntry) -> JsonValidationEntry {
+fn validate_json_file(file: &FileEntry, max_json_bytes: u64) -> JsonValidationEntry {
+    if file.bytes > max_json_bytes {
+        return JsonValidationEntry {
+            path: file.path.clone(),
+            relative_path: file.relative_path.clone(),
+            valid: false,
+            skipped: true,
+            error: None,
+            skip_reason: Some(format!("file exceeds max_json_bytes ({max_json_bytes})")),
+        };
+    }
+
     match fs::read_to_string(&file.path) {
         Ok(content) => match serde_json::from_str::<Value>(&content) {
             Ok(_) => JsonValidationEntry {
                 path: file.path.clone(),
                 relative_path: file.relative_path.clone(),
                 valid: true,
+                skipped: false,
                 error: None,
+                skip_reason: None,
             },
             Err(error) => JsonValidationEntry {
                 path: file.path.clone(),
                 relative_path: file.relative_path.clone(),
                 valid: false,
+                skipped: false,
                 error: Some(error.to_string()),
+                skip_reason: None,
             },
         },
         Err(error) => JsonValidationEntry {
             path: file.path.clone(),
             relative_path: file.relative_path.clone(),
             valid: false,
+            skipped: false,
             error: Some(error.to_string()),
+            skip_reason: None,
         },
     }
 }
@@ -387,7 +508,10 @@ fn validate_json_file(file: &FileEntry) -> JsonValidationEntry {
 fn stable_file_fingerprint(files: &[FileEntry]) -> String {
     let mut normalized = BTreeMap::new();
     for file in files {
-        normalized.insert(file.relative_path.clone(), (file.bytes, file.modified_unix_ms));
+        normalized.insert(
+            file.relative_path.clone(),
+            (file.bytes, file.modified_unix_ms),
+        );
     }
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     normalized.hash(&mut hasher);
@@ -458,6 +582,57 @@ fn optional_u64(request: &Value, key: &str) -> Option<u64> {
     request.get(key)?.as_u64()
 }
 
+fn scan_limits(request: &Value) -> Result<ScanLimits, HelperError> {
+    Ok(ScanLimits {
+        max_files: optional_limit_usize(request, "max_files", DEFAULT_MAX_FILES)?,
+    })
+}
+
+fn optional_limit_usize(
+    request: &Value,
+    key: &str,
+    default_value: usize,
+) -> Result<usize, HelperError> {
+    let Some(value) = optional_u64(request, key) else {
+        return Ok(default_value);
+    };
+    if value == 0 {
+        return Err(HelperError::new(
+            "invalid_limit",
+            format!("{key} must be greater than zero"),
+        ));
+    }
+    usize::try_from(value).map_err(|_| {
+        HelperError::new(
+            "invalid_limit",
+            format!("{key} is larger than this platform can scan safely"),
+        )
+    })
+}
+
+fn optional_limit_u64(request: &Value, key: &str, default_value: u64) -> Result<u64, HelperError> {
+    let Some(value) = optional_u64(request, key) else {
+        return Ok(default_value);
+    };
+    if value == 0 {
+        return Err(HelperError::new(
+            "invalid_limit",
+            format!("{key} must be greater than zero"),
+        ));
+    }
+    Ok(value)
+}
+
+impl ScanReport {
+    fn new(limits: &ScanLimits) -> Self {
+        Self {
+            files: Vec::new(),
+            truncated: false,
+            max_files: limits.max_files,
+        }
+    }
+}
+
 fn path_to_string(path: impl AsRef<Path>) -> String {
     path.as_ref().to_string_lossy().to_string()
 }
@@ -513,6 +688,62 @@ mod tests {
         assert_eq!(result["surface_kind"], "native_state_index");
         assert_eq!(result["json_validation"]["checked_files_count"], 2);
         assert_eq!(result["json_validation"]["invalid_files_count"], 1);
+        assert_eq!(result["json_validation"]["skipped_files_count"], 0);
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn artifact_indexer_truncates_at_requested_file_limit() {
+        let root = unique_temp_root();
+        fs::create_dir_all(root.join("artifacts")).unwrap();
+        fs::write(root.join("artifacts").join("a.json"), "{\"ok\":true}").unwrap();
+        fs::write(root.join("artifacts").join("b.json"), "{\"ok\":true}").unwrap();
+
+        let response = run_helper(
+            "opl-artifact-indexer",
+            &json!({
+                "workspace_root": path_to_string(&root),
+                "artifact_roots": [path_to_string(root.join("artifacts"))],
+                "artifact_extensions": ["json"],
+                "max_files": 1
+            })
+            .to_string(),
+        );
+
+        assert!(response.ok);
+        let result = response.result.unwrap();
+        assert_eq!(result["summary"]["total_files_count"], 1);
+        assert_eq!(result["summary"]["truncated"], true);
+        assert_eq!(result["summary"]["max_files"], 1);
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn state_indexer_skips_json_files_above_validation_budget() {
+        let root = unique_temp_root();
+        fs::create_dir_all(&root).unwrap();
+        fs::write(root.join("large.json"), "{\"payload\":\"abcdef\"}").unwrap();
+
+        let response = run_helper(
+            "opl-state-indexer",
+            &json!({
+                "workspace_root": path_to_string(&root),
+                "max_depth": 1,
+                "max_json_bytes": 4
+            })
+            .to_string(),
+        );
+
+        assert!(response.ok);
+        let result = response.result.unwrap();
+        assert_eq!(result["json_validation"]["checked_files_count"], 1);
+        assert_eq!(result["json_validation"]["invalid_files_count"], 0);
+        assert_eq!(result["json_validation"]["skipped_files_count"], 1);
+        assert_eq!(result["json_validation"]["files"][0]["skipped"], true);
+        assert_eq!(
+            result["json_validation"]["files"][0]["skip_reason"],
+            "file exceeds max_json_bytes (4)"
+        );
         fs::remove_dir_all(root).unwrap();
     }
 
@@ -532,7 +763,10 @@ mod tests {
         assert_eq!(response.crate_version, env!("CARGO_PKG_VERSION"));
         let result = response.result.unwrap();
         assert_eq!(result["toolchain"]["crate_name"], env!("CARGO_PKG_NAME"));
-        assert_eq!(result["toolchain"]["crate_version"], env!("CARGO_PKG_VERSION"));
+        assert_eq!(
+            result["toolchain"]["crate_version"],
+            env!("CARGO_PKG_VERSION")
+        );
     }
 
     fn unique_temp_root() -> PathBuf {
