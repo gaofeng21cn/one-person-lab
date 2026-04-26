@@ -195,7 +195,7 @@ function archivePrebuild() {
   const archivesDir = path.join(prebuildRoot, 'archives');
   const archiveFile = path.join(archivesDir, archiveFileName());
   fs.mkdirSync(archivesDir, { recursive: true });
-  const result = spawnSync('tar', ['-czf', archiveFile, '-C', prebuildDir(), '.'], {
+  const result = spawnSync('tar', tarArgs(['-czf', archiveFile, '-C', prebuildDir(), '.']), {
     encoding: 'utf8',
   });
   if (result.status !== 0) {
@@ -261,7 +261,7 @@ function restoreReleaseArchive() {
     const archivePath = archivePathFromUrl(archiveUrl, tempRoot);
     fs.rmSync(prebuildDir(), { recursive: true, force: true });
     fs.mkdirSync(prebuildDir(), { recursive: true });
-    const result = spawnSync('tar', ['-xzf', archivePath, '-C', prebuildDir()], {
+    const result = spawnSync('tar', tarArgs(['-xzf', archivePath, '-C', prebuildDir()]), {
       encoding: 'utf8',
     });
     if (result.status !== 0) {
@@ -314,6 +314,10 @@ function archivePathFromUrl(archiveUrl, tempRoot) {
     return target;
   }
   return path.resolve(archiveUrl);
+}
+
+function tarArgs(args) {
+  return process.platform === 'win32' ? ['--force-local', ...args] : args;
 }
 
 function prebuildDir() {
