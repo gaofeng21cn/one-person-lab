@@ -63,6 +63,18 @@ esac
     assert.equal(staleFreshness.status, 'stale_last_success_available');
     assert.equal(staleFreshness.last_success_expired, false);
     assert.equal(staleFreshness.failure_count, 1);
+    const failureLines = fs.readFileSync(successPersistence.failure_file, 'utf8').trim().split('\n');
+    const failure = JSON.parse(failureLines[failureLines.length - 1]);
+    assert.equal(failure.category, 'helper_unavailable');
+    assert.equal(failure.details.helpers.length, 3);
+    assert.deepEqual(
+      failure.details.helpers.map((helper: { index_key: string; status: string }) => [helper.index_key, helper.status]),
+      [
+        ['state_index', 'unavailable'],
+        ['artifact_manifest', 'unavailable'],
+        ['runtime_health', 'unavailable'],
+      ],
+    );
     assert.equal(typeof staleFreshness.last_success_generated_at, 'string');
     assert.equal(stale.runtime_manager.reconcile.overall_status, 'attention_needed');
     assert.deepEqual(
@@ -89,6 +101,137 @@ esac
     fs.rmSync(helperBinDir, { recursive: true, force: true });
   }
 });
+
+test('runtime manager records structured native index diff and history GC reporting', () => {
+  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "version" ]; then
+  echo "Hermes Agent v9.9.9-test"
+  exit 0
+fi
+if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
+  echo "Gateway service is loaded"
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-index-gc-state-'));
+  const helperBinDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-native-helper-index-gc-bin-'));
+  const runtimeDir = path.join(stateRoot, 'runtime-manager');
+  fs.mkdirSync(runtimeDir, { recursive: true });
+  writeRuntimeManagerNativeHelpers(helperBinDir);
+
+  const historyFile = path.join(runtimeDir, 'native-state-index-history.jsonl');
+  for (let index = 0; index < 55; index += 1) {
+    fs.appendFileSync(
+      historyFile,
+      `${JSON.stringify({
+        generated_at: `2026-04-25T00:00:${String(index).padStart(2, '0')}.000Z`,
+        summary: { seeded: 'ok' },
+      })}\n`,
+    );
+  }
+  fs.writeFileSync(
+    path.join(runtimeDir, 'native-state-index.json'),
+    `${JSON.stringify({
+      surface_kind: 'opl_runtime_manager_native_state_projection',
+      generated_at: '2026-04-25T00:00:00.000Z',
+      lifecycle: {
+        expires_at: '2026-04-26T00:00:00.000Z',
+      },
+      native_indexes: {
+        artifact_manifest: {
+          helper_id: 'opl-artifact-indexer',
+          request_id: 'runtime-manager-artifact-index',
+          status: 'execution_error',
+          result: {
+            surface_kind: 'legacy_artifact_manifest',
+          },
+          errors: [{ code: 'execution_error', message: 'old failure' }],
+        },
+        legacy_index: {
+          helper_id: 'opl-legacy-helper',
+          request_id: 'runtime-manager-legacy-index',
+          status: 'ok',
+          result: {
+            surface_kind: 'legacy_surface',
+          },
+          errors: [],
+        },
+      },
+    }, null, 2)}\n`,
+  );
+
+  try {
+    const output = runCli(['runtime', 'manager'], {
+      OPL_HERMES_BIN: hermesPath,
+      OPL_STATE_DIR: stateRoot,
+      OPL_NATIVE_HELPER_BIN_DIR: helperBinDir,
+    });
+    const persistence = output.runtime_manager.state_index_target.persistence;
+
+    assert.equal(persistence.status, 'written');
+    assert.equal(persistence.diff.changed, true);
+    assert.deepEqual(persistence.diff.summary, {
+      previous_index_count: 2,
+      current_index_count: 3,
+      added_count: 2,
+      removed_count: 1,
+      changed_count: 1,
+      unchanged_count: 0,
+      helper_changed_count: 0,
+      result_surface_changed_count: 1,
+      status_changed_count: 1,
+    });
+    const detailByKey = new Map(
+      persistence.diff.details.map((detail: { index_key: string }) => [detail.index_key, detail]),
+    );
+    assert.deepEqual(detailByKey.get('state_index').change, 'added');
+    assert.deepEqual(detailByKey.get('legacy_index').change, 'removed');
+    assert.deepEqual(detailByKey.get('artifact_manifest').changed_fields, ['result_surface_kind', 'status']);
+    assert.equal(persistence.gc.retained_history_count, 50);
+    assert.equal(persistence.gc.max_history_entries, 50);
+    assert.equal(persistence.gc.preserved_count, 50);
+    assert.equal(persistence.gc.removed_count, 6);
+    assert.equal(persistence.gc.history_count_before_gc, 56);
+    assert.equal(persistence.gc.history_count_after_gc, 50);
+
+    const historyLines = fs.readFileSync(historyFile, 'utf8').trim().split('\n');
+    assert.equal(historyLines.length, 50);
+    const latestHistoryEntry = JSON.parse(historyLines[historyLines.length - 1]);
+    assert.deepEqual(latestHistoryEntry.gc, persistence.gc);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(helperBinDir, { recursive: true, force: true });
+  }
+});
+
+function writeRuntimeManagerNativeHelpers(helperBinDir: string) {
+  for (const binary of ['opl-doctor-native', 'opl-runtime-watch', 'opl-artifact-indexer', 'opl-state-indexer']) {
+    fs.writeFileSync(
+      path.join(helperBinDir, binary),
+      `#!/bin/sh
+cat >/dev/null
+case "$(basename "$0")" in
+  opl-doctor-native)
+    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-doctor-native","helper_version":"0.1.0","crate_name":"opl-native-helper","crate_version":"0.1.0","ok":true,"request_id":"runtime-manager-doctor","result":{"surface_kind":"native_doctor_snapshot"},"errors":[]}'
+    ;;
+  opl-runtime-watch)
+    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-runtime-watch","helper_version":"0.1.0","crate_name":"opl-native-helper","crate_version":"0.1.0","ok":true,"request_id":"runtime-manager-runtime-watch","result":{"surface_kind":"runtime_health_snapshot_index","roots":[]},"errors":[]}'
+    ;;
+  opl-artifact-indexer)
+    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-artifact-indexer","helper_version":"0.1.0","crate_name":"opl-native-helper","crate_version":"0.1.0","ok":true,"request_id":"runtime-manager-artifact-index","result":{"surface_kind":"native_artifact_manifest","summary":{"total_files_count":1},"files":[]},"errors":[]}'
+    ;;
+  opl-state-indexer)
+    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-state-indexer","helper_version":"0.1.0","crate_name":"opl-native-helper","crate_version":"0.1.0","ok":true,"request_id":"runtime-manager-state-index","result":{"surface_kind":"native_state_index","roots":[],"json_validation":{"checked_files_count":0,"invalid_files_count":0,"files":[]}},"errors":[]}'
+    ;;
+esac
+`,
+      { mode: 0o755 },
+    );
+  }
+}
 
 test('runtime manager reconcile recommends Hermes setup without taking kernel ownership', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-reconcile-state-'));
