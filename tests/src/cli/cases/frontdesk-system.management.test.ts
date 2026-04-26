@@ -280,6 +280,50 @@ exit 1
   }
 });
 
+test('system treats a compatible Codex CLI as ready even before reading a local config file', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-no-config-home-'));
+  const codexFixture = createFakeCodexFixture(`
+if [[ "$1" == "--version" ]]; then
+  echo "codex-cli 0.125.0"
+  exit 0
+fi
+echo "Unsupported codex fixture command: $*" >&2
+exit 1
+`);
+
+  try {
+    const output = runCli(
+      ['system'],
+      {
+        HOME: homeRoot,
+        CODEX_HOME: path.join(homeRoot, 'codex-home'),
+        PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
+      },
+    ) as {
+      system: {
+        core_engines: {
+          codex: {
+            installed: boolean;
+            config_path: string | null;
+            config_status: string;
+            health_status: string;
+            issues: string[];
+          };
+        };
+      };
+    };
+
+    assert.equal(output.system.core_engines.codex.installed, true);
+    assert.equal(output.system.core_engines.codex.config_path, null);
+    assert.equal(output.system.core_engines.codex.config_status, 'not_detected');
+    assert.equal(output.system.core_engines.codex.health_status, 'ready');
+    assert.deepEqual(output.system.core_engines.codex.issues, []);
+  } finally {
+    fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
 test('system flags conflicting Codex CLI PATH candidates as attention needed', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-conflicting-codex-home-'));
   const codexConfigFixture = createCodexConfigFixture({
@@ -395,6 +439,7 @@ exit 1
         CODEX_HOME: codexConfigFixture.codexHome,
         OPL_HERMES_BIN: hermesFixture.hermesPath,
         OPL_STATE_DIR: stateDir,
+        OPL_MODULES_ROOT: path.join(homeRoot, 'modules'),
         OPL_WORKSPACE_ROOT: workspaceRoot,
         PATH: `${codexFixture.fixtureRoot}:${hermesFixture.fixtureRoot}:/usr/bin:/bin`,
       },
@@ -402,6 +447,22 @@ exit 1
       system_initialize: {
         surface_id: string;
         overall_state: string;
+        setup_flow: {
+          is_first_run: boolean;
+          phase: string;
+          ready_to_launch: boolean;
+          blocking_items: string[];
+          progress: {
+            ready_required_count: number;
+            total_required_count: number;
+            ready_optional_count: number;
+            total_optional_count: number;
+          };
+        };
+        module_summary: {
+          installed_modules_count: number;
+          total_modules_count: number;
+        };
         core_engines: {
           codex: { installed: boolean };
           hermes: { installed: boolean };
@@ -452,11 +513,24 @@ exit 1
           method: string;
           request_fields: string[];
         };
+        endpoints: {
+          frontdesk_initialize: string;
+          workspace_root: string;
+        };
       };
     };
 
     assert.equal(output.system_initialize.surface_id, 'opl_system_initialize');
-    assert.match(output.system_initialize.overall_state, /ready|attention_needed/);
+    assert.equal(output.system_initialize.overall_state, 'attention_needed');
+    assert.equal(output.system_initialize.setup_flow.is_first_run, false);
+    assert.equal(output.system_initialize.setup_flow.ready_to_launch, false);
+    assert.equal(output.system_initialize.setup_flow.phase, 'modules');
+    assert.deepEqual(output.system_initialize.setup_flow.blocking_items, ['domain_modules']);
+    assert.equal(
+      output.system_initialize.setup_flow.progress.ready_required_count <
+      output.system_initialize.setup_flow.progress.total_required_count,
+      true,
+    );
     assert.equal(output.system_initialize.core_engines.codex.installed, true);
     assert.equal(output.system_initialize.core_engines.hermes.installed, true);
     assert.equal(output.system_initialize.native_helpers.lifecycle.commands.repair, 'npm run native:repair');
@@ -469,7 +543,7 @@ exit 1
       true,
     );
     assert.equal(
-      output.system_initialize.checklist.some((entry) => entry.item_id === 'domain_modules' && !entry.required),
+      output.system_initialize.checklist.some((entry) => entry.item_id === 'domain_modules' && entry.required),
       true,
     );
     const nativeHelperItem = output.system_initialize.checklist.find((entry) => entry.item_id === 'native_helpers');
@@ -485,6 +559,7 @@ exit 1
     }
     assert.equal(nativeHelperItem.status, output.system_initialize.native_helpers.health_status);
     assert.equal(output.system_initialize.domain_modules.summary.total_modules_count, 4);
+    assert.deepEqual(output.system_initialize.module_summary, output.system_initialize.domain_modules.summary);
     assert.equal(
       output.system_initialize.domain_modules.summary.total_modules_count,
       output.system_initialize.domain_modules.modules.length,
@@ -501,6 +576,8 @@ exit 1
     assert.ok(output.system_initialize.recommended_next_action.label.length > 0);
     assert.equal(output.system_initialize.recommended_next_action.method, 'GET');
     assert.deepEqual(output.system_initialize.recommended_next_action.request_fields, []);
+    assert.equal(output.system_initialize.endpoints.frontdesk_initialize, '/api/opl/system/initialize');
+    assert.equal(output.system_initialize.endpoints.workspace_root, '/api/opl/workspaces/root');
   } finally {
     fs.rmSync(codexConfigFixture.codexHome, { recursive: true, force: true });
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
@@ -520,11 +597,22 @@ test('system initialize exposes first-run blocker metadata and actionable payloa
       {
         HOME: homeRoot,
         OPL_STATE_DIR: stateDir,
+        OPL_MODULES_ROOT: path.join(homeRoot, 'modules'),
         PATH: '/usr/bin:/bin',
       },
     ) as {
       system_initialize: {
         overall_state: string;
+        setup_flow: {
+          is_first_run: boolean;
+          phase: string;
+          ready_to_launch: boolean;
+          blocking_items: string[];
+          progress: {
+            ready_required_count: number;
+            total_required_count: number;
+          };
+        };
         checklist: Array<{
           item_id: string;
           required: boolean;
@@ -548,11 +636,21 @@ test('system initialize exposes first-run blocker metadata and actionable payloa
     };
 
     assert.equal(output.system_initialize.overall_state, 'attention_needed');
-    assert.equal(output.system_initialize.workspace_root.selected_path, null);
-    assert.equal(output.system_initialize.workspace_root.health_status, 'missing');
-    assert.equal(output.system_initialize.recommended_next_action.action_id, 'set_workspace_root');
+    assert.equal(output.system_initialize.setup_flow.is_first_run, true);
+    assert.equal(output.system_initialize.setup_flow.ready_to_launch, false);
+    assert.equal(output.system_initialize.setup_flow.phase, 'environment');
+    assert.equal(output.system_initialize.setup_flow.blocking_items.includes('codex'), true);
+    assert.equal(output.system_initialize.setup_flow.blocking_items.includes('domain_modules'), true);
+    assert.equal(
+      output.system_initialize.setup_flow.progress.ready_required_count <
+        output.system_initialize.setup_flow.progress.total_required_count,
+      true,
+    );
+    assert.equal(output.system_initialize.workspace_root.selected_path, homeRoot);
+    assert.equal(output.system_initialize.workspace_root.health_status, 'ready');
+    assert.equal(output.system_initialize.recommended_next_action.action_id, 'install_or_configure_codex');
     assert.equal(output.system_initialize.recommended_next_action.method, 'POST');
-    assert.deepEqual(output.system_initialize.recommended_next_action.request_fields, ['path']);
+    assert.deepEqual(output.system_initialize.recommended_next_action.request_fields, []);
 
     const workspaceRootItem = output.system_initialize.checklist.find((entry) => entry.item_id === 'workspace_root');
     const codexItem = output.system_initialize.checklist.find((entry) => entry.item_id === 'codex');
@@ -560,10 +658,10 @@ test('system initialize exposes first-run blocker metadata and actionable payloa
     assert.ok(workspaceRootItem);
     assert.ok(codexItem);
     assert.equal(workspaceRootItem.required, true);
-    assert.equal(workspaceRootItem.blocking, true);
-    assert.equal(workspaceRootItem.action?.action_id, 'set_workspace_root');
-    assert.equal(workspaceRootItem.action?.method, 'POST');
-    assert.deepEqual(workspaceRootItem.action?.request_fields, ['path']);
+    assert.equal(workspaceRootItem.blocking, false);
+    assert.equal(workspaceRootItem.action?.action_id, 'open_workspace_root');
+    assert.equal(workspaceRootItem.action?.method, 'GET');
+    assert.deepEqual(workspaceRootItem.action?.request_fields, []);
     assert.equal(codexItem.required, true);
     assert.equal(codexItem.blocking, true);
     assert.equal(codexItem.action?.action_id, 'install_or_configure_codex');

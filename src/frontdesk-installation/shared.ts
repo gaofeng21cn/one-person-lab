@@ -67,7 +67,7 @@ export type FrontDeskInitializeSectionId =
   | 'settings'
   | 'system';
 
-export type FrontDeskInitializePhase = 'workspace_root' | 'environment' | 'review';
+export type FrontDeskInitializePhase = 'workspace_root' | 'environment' | 'modules' | 'review';
 
 export type FrontDeskInitializeActionDescriptor = {
   action_id: string;

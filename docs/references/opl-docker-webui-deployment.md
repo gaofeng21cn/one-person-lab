@@ -75,8 +75,12 @@ Compatibility alias:
 
 OPL reads Codex defaults from environment variables at install or runtime. These values are not baked into the Dockerfile and should be supplied by `docker run -e`, Docker Compose `environment:`, deployment-platform environment variables, or secret managers.
 
+When no workspace root is supplied, OPL uses the container user’s home directory as the workspace root. For persistent Docker deployments, set `HOME=/data` or `OPL_WORKSPACE_ROOT=/data/workspaces` so workspaces survive container replacement.
+
 | Variable | Purpose |
 | --- | --- |
+| `HOME` | Default home and implicit workspace root when `OPL_WORKSPACE_ROOT` is not set |
+| `OPL_WORKSPACE_ROOT` | Explicit workspace root, for example `/data/workspaces` |
 | `CODEX_HOME` | Codex config directory inside the container, for example `/data/codex` |
 | `OPL_CODEX_MODEL` | Default Codex model written to `CODEX_HOME/config.toml` |
 | `OPL_CODEX_REASONING_EFFORT` | Default reasoning effort, for example `xhigh` |
@@ -91,6 +95,8 @@ docker run --rm \
   -v opl-data:/data \
   -e ALLOW_REMOTE=true \
   -e DATA_DIR=/data \
+  -e HOME=/data \
+  -e OPL_WORKSPACE_ROOT=/data/workspaces \
   -e CODEX_HOME=/data/codex \
   -e OPL_CODEX_MODEL=gpt-5.5 \
   -e OPL_CODEX_REASONING_EFFORT=xhigh \
@@ -114,6 +120,8 @@ services:
     environment:
       ALLOW_REMOTE: "true"
       DATA_DIR: /data
+      HOME: /data
+      OPL_WORKSPACE_ROOT: /data/workspaces
       CODEX_HOME: /data/codex
       OPL_WEBUI_AUTH_MODE: none
       OPL_CODEX_MODEL: gpt-5.5
