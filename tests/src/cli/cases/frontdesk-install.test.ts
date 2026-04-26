@@ -72,7 +72,7 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
   };
 
   try {
-    const output = runCli(['install', '--modules', 'mas', '--skip-engines', '--skip-gui-open'], env) as {
+    const output = runCli(['install', '--modules', 'mas', '--skip-engines', '--skip-gui-open', '--skip-native-helper-repair'], env) as {
       install: {
         surface_id: string;
         status: string;
@@ -143,11 +143,82 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
   }
 });
 
+test('install command repairs native helpers and returns the refreshed lifecycle report', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-native-home-'));
+  const helperBinDir = path.join(homeRoot, 'native-bin');
+  const repairScript = path.join(homeRoot, 'repair-native.sh');
+  fs.mkdirSync(helperBinDir, { recursive: true });
+  fs.writeFileSync(
+    repairScript,
+    `#!/usr/bin/env bash
+set -euo pipefail
+for binary in opl-doctor-native opl-runtime-watch opl-artifact-indexer opl-state-indexer; do
+  cat > "${helperBinDir}/$binary" <<'EOS'
+#!/bin/sh
+cat >/dev/null
+case "$(basename "$0")" in
+  opl-doctor-native)
+    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-doctor-native","ok":true,"request_id":"runtime-manager-doctor","result":{"surface_kind":"native_doctor_snapshot"},"errors":[]}'
+    ;;
+  opl-runtime-watch)
+    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-runtime-watch","ok":true,"request_id":"runtime-manager-runtime-watch","result":{"surface_kind":"runtime_health_snapshot_index","roots":[]},"errors":[]}'
+    ;;
+  opl-artifact-indexer)
+    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-artifact-indexer","ok":true,"request_id":"runtime-manager-artifact-index","result":{"surface_kind":"native_artifact_manifest","summary":{"total_files_count":0},"files":[]},"errors":[]}'
+    ;;
+  opl-state-indexer)
+    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-state-indexer","ok":true,"request_id":"runtime-manager-state-index","result":{"surface_kind":"native_state_index","roots":[],"json_validation":{"checked_files_count":0,"invalid_files_count":0,"files":[]}},"errors":[]}'
+    ;;
+esac
+EOS
+  chmod +x "${helperBinDir}/$binary"
+done
+printf 'native repair completed\\n'
+`,
+    { mode: 0o755 },
+  );
+
+  try {
+    const output = runCli(['install', '--skip-modules', '--skip-engines', '--skip-gui-open'], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      OPL_NATIVE_HELPER_BIN_DIR: helperBinDir,
+      OPL_NATIVE_HELPER_REPAIR_COMMAND: repairScript,
+    }) as {
+      install: {
+        native_helper_action: {
+          action: string;
+          status: string;
+          command_preview: string[];
+          before: { runtime: { status: string } };
+          after: { runtime: { status: string } };
+        };
+        system_initialize: {
+          native_helpers: {
+            health_status: string;
+            runtime: { status: string };
+          };
+        };
+      };
+    };
+
+    assert.equal(output.install.native_helper_action.action, 'repair_native_helpers');
+    assert.equal(output.install.native_helper_action.status, 'completed');
+    assert.deepEqual(output.install.native_helper_action.command_preview, [repairScript]);
+    assert.equal(output.install.native_helper_action.before.runtime.status, 'unavailable');
+    assert.equal(output.install.native_helper_action.after.runtime.status, 'available');
+    assert.equal(output.install.system_initialize.native_helpers.runtime.status, 'available');
+    assert.equal(output.install.system_initialize.native_helpers.health_status, 'ready');
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
 test('install command can bootstrap Codex defaults from environment without leaking the API key', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-codex-defaults-home-'));
 
   try {
-    const output = runCli(['install', '--skip-modules', '--skip-engines', '--skip-gui-open'], {
+    const output = runCli(['install', '--skip-modules', '--skip-engines', '--skip-gui-open', '--skip-native-helper-repair'], {
       HOME: homeRoot,
       CODEX_HOME: path.join(homeRoot, 'codex-home'),
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
@@ -190,7 +261,7 @@ test('install command points WebUI users to the AionUI shell instead of a local 
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-webui-note-home-'));
 
   try {
-    const output = runCli(['install', '--skip-modules', '--skip-engines', '--skip-gui-open'], {
+    const output = runCli(['install', '--skip-modules', '--skip-engines', '--skip-gui-open', '--skip-native-helper-repair'], {
       HOME: homeRoot,
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
     }) as { install: { notes: string[] } };
@@ -227,7 +298,7 @@ test('install command reuses already installed runtime dependencies', () => {
 
   try {
     const output = runCli(
-      ['install', '--skip-modules', '--skip-gui-open'],
+      ['install', '--skip-modules', '--skip-gui-open', '--skip-native-helper-repair'],
       {
         HOME: homeRoot,
         CODEX_HOME: codexConfigFixture.codexHome,
@@ -317,6 +388,7 @@ exit 1
       'install',
       '--skip-modules',
       '--skip-engines',
+      '--skip-native-helper-repair',
     ], {
       HOME: homeRoot,
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),

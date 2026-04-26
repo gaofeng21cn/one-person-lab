@@ -96,6 +96,10 @@ function parseTurnkeyInstallArgs(
       parsed.skipGuiOpen = true;
       continue;
     }
+    if (token === '--skip-native-helper-repair') {
+      parsed.skipNativeHelperRepair = true;
+      continue;
+    }
 
     if (!token.startsWith('--')) {
       throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, { token });

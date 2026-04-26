@@ -1,6 +1,7 @@
 import { ensureFrontDeskStateDir, resolveFrontDeskStatePaths } from '../frontdesk-state.ts';
 import { inspectHermesRuntime } from '../hermes.ts';
 import { readLocalCodexDefaultsIfAvailable } from '../local-codex-defaults.ts';
+import { buildNativeHelperHealthStatus } from '../native-helper-runtime.ts';
 import type { GatewayContracts } from '../types.ts';
 
 import { resolveCodexVersion } from './engine-helpers.ts';
@@ -11,6 +12,7 @@ export async function buildFrontDeskEnvironment(contracts: GatewayContracts) {
   const codexDefaults = readLocalCodexDefaultsIfAvailable();
   const codexBinary = resolveCodexVersion();
   const hermes = inspectHermesRuntime();
+  const nativeHelpers = buildNativeHelperHealthStatus();
   const modulesPayload = buildFrontDeskModules().frontdesk_modules;
   const moduleSummary = modulesPayload.summary;
   const codexIssues = [
@@ -70,6 +72,7 @@ export async function buildFrontDeskEnvironment(contracts: GatewayContracts) {
           issues: hermes.issues,
         },
       },
+      native_helpers: nativeHelpers,
       gui_shell: {
         strategy: 'aionui_remote_webui',
         service_dependency: 'none',
@@ -87,6 +90,7 @@ export async function buildFrontDeskEnvironment(contracts: GatewayContracts) {
       },
       notes: [
         'OPL owns the user-facing initialization surface and reports whether the local Codex and Hermes engines are ready to be reused.',
+        'OPL reports native helper lifecycle readiness here; opl install can run the native repair path when helper binaries are missing.',
         'AionUI provides the GUI/WebUI shell; OPL no longer hosts a local Product API service on port 8787.',
         'Domain modules are tracked separately so the GUI can manage install and upgrade actions from one settings area.',
       ],

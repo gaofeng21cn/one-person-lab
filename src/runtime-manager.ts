@@ -1,5 +1,5 @@
 import { inspectHermesRuntime } from './hermes.ts';
-import { buildNativeHelperProjection } from './native-helper-runtime.ts';
+import { DEFAULT_NATIVE_HELPERS, buildNativeHelperProjection } from './native-helper-runtime.ts';
 
 const ADMITTED_DOMAIN_OWNERS = [
   {
@@ -178,7 +178,7 @@ const STATE_INDEX_CATALOG = {
 export function buildRuntimeManager() {
   const hermes = inspectHermesRuntime();
   const hermesReady = Boolean(hermes.binary && hermes.version && hermes.gateway_service.loaded);
-  const nativeHelperProjection = buildNativeHelperProjection(NATIVE_HELPERS);
+  const nativeHelperProjection = buildNativeHelperProjection(DEFAULT_NATIVE_HELPERS);
 
   return {
     version: 'g2',

@@ -27,7 +27,8 @@ export type FrontDeskEngineAction =
 export type FrontDeskSystemAction =
   | 'repair'
   | 'reinstall_support'
-  | 'update_channel';
+  | 'update_channel'
+  | 'repair_native_helpers';
 
 export type FrontDeskModuleInstallOrigin =
   | 'managed_root'
@@ -133,6 +134,7 @@ export type FrontDeskTurnkeyInstallInput = Partial<{
   basePath: string;
   skipModules: boolean;
   skipEngines: boolean;
+  skipNativeHelperRepair: boolean;
   skipWebOpen: boolean;
   skipGuiOpen: boolean;
   serveWeb: boolean;

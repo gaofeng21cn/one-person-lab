@@ -65,6 +65,10 @@ test('scripts/verify.sh provides the canonical verification wrapper', () => {
   assert.match(verifyScript, /npm run test:meta/);
   assert.match(verifyScript, /npm run test:artifact/);
   assert.match(verifyScript, /npm run test:full/);
+  assert.match(verifyScript, /npm run native:doctor/);
+  assert.match(verifyScript, /npm run native:pack-check/);
+  assert.match(verifyScript, /npm run native:test/);
+  assert.match(verifyScript, /smoke\|fast\|family\|meta\|artifact\|native\|full\|lint\|line-budget\|typecheck/);
 });
 
 test('lint includes the tracked code line-budget guard', () => {
@@ -94,4 +98,11 @@ test('package.json exposes the canonical family shared release maintenance comma
     fs.existsSync(path.join(repoRoot, 'src/family-shared-release.ts')),
     true,
   );
+});
+
+test('package.json exposes native helper gate scripts and package dry-run check', () => {
+  assert.equal(packageJson.scripts?.['native:doctor'], 'node ./scripts/native-helper-doctor.mjs');
+  assert.equal(packageJson.scripts?.['native:pack-check'], 'node ./scripts/native-helper-pack-check.mjs');
+  assert.equal(packageJson.scripts?.['native:test'], 'cargo test --workspace');
+  assert.equal(fs.existsSync(path.join(repoRoot, 'scripts/native-helper-pack-check.mjs')), true);
 });

@@ -87,6 +87,17 @@ export async function buildFrontDeskInitialize(contracts: GatewayContracts) {
     section_id: 'environment',
     endpoint: endpoints.frontdesk_environment,
   });
+  const repairNativeHelpersAction = buildInitializeActionDescriptor({
+    action_id: 'repair_native_helpers',
+    label: 'Repair native helpers',
+    description: 'Build or refresh the OPL Rust helper binaries used for doctor, watch, and indexing checks.',
+    section_id: 'environment',
+    endpoint: endpoints.frontdesk_system_action,
+    method: 'POST',
+    payload_template: {
+      action: 'repair_native_helpers',
+    },
+  });
   const openWorkspaceRootAction = buildInitializeActionDescriptor({
     action_id: 'open_workspace_root',
     label: 'Review workspace root',
@@ -152,6 +163,20 @@ export async function buildFrontDeskInitialize(contracts: GatewayContracts) {
       endpoint: endpoints.frontdesk_environment,
       action_endpoint: endpoints.frontdesk_engine_action,
       action: openEnvironmentAction,
+    },
+    {
+      item_id: 'native_helpers',
+      label: 'OPL Native Helpers',
+      status: environment.native_helpers.health_status,
+      required: false,
+      blocking: false,
+      section_id: 'environment',
+      detail_summary: environment.native_helpers.health_status === 'ready'
+        ? 'Rust helper binaries are available for native doctor, watch, and indexing checks.'
+        : 'Run native helper repair to build or refresh Rust helper binaries for faster local checks.',
+      endpoint: endpoints.frontdesk_environment,
+      action_endpoint: endpoints.frontdesk_system_action,
+      action: environment.native_helpers.health_status === 'ready' ? openEnvironmentAction : repairNativeHelpersAction,
     },
     {
       item_id: 'domain_modules',
@@ -244,6 +269,7 @@ export async function buildFrontDeskInitialize(contracts: GatewayContracts) {
       },
       checklist,
       core_engines: environment.core_engines,
+      native_helpers: environment.native_helpers,
       module_summary: moduleSummary,
       domain_modules: modulesPayload.frontdesk_modules,
       recommended_skills: {
@@ -281,6 +307,10 @@ export async function buildFrontDeskInitialize(contracts: GatewayContracts) {
           },
           {
             action_id: 'update_channel',
+            endpoint: endpoints.frontdesk_system_action,
+          },
+          {
+            action_id: 'repair_native_helpers',
             endpoint: endpoints.frontdesk_system_action,
           },
         ],
