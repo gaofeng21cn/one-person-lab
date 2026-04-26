@@ -14,6 +14,7 @@ const requiredFiles = [
   'native/opl-native-helper/Cargo.toml',
   'native/opl-native-helper/src/lib.rs',
   'scripts/native-helper-doctor.mjs',
+  'scripts/native-helper-family-smoke.mjs',
   'scripts/native-helper-pack-check.mjs',
   'scripts/native-helper-repair.mjs',
 ];
