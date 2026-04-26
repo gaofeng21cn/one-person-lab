@@ -258,6 +258,7 @@ function buildPublicSystemFromFrontDeskEnvironment(
     surface_id: 'opl_system',
     overall_status: environment.overall_status,
     core_engines: environment.core_engines,
+    native_helpers: environment.native_helpers,
     module_summary: environment.module_summary,
     gui_shell: environment.gui_shell,
     managed_paths: environment.managed_paths,
@@ -276,6 +277,7 @@ function buildPublicSystemInitializePayload(
       overall_state: payload.frontdesk_initialize.overall_state,
       checklist: payload.frontdesk_initialize.checklist,
       core_engines: payload.frontdesk_initialize.core_engines,
+      native_helpers: payload.frontdesk_initialize.native_helpers,
       domain_modules: {
         surface_id: 'opl_modules',
         modules_root: domainModules.modules_root,

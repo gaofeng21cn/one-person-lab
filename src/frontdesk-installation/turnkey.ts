@@ -5,6 +5,7 @@ import path from 'node:path';
 import { buildOplGuiArtifactName, buildOplReleaseTag, getOplReleaseRepo, getOplReleaseVersion } from '../opl-release.ts';
 import { buildOplGuiShellSurface, syncOplCompanionSkills } from '../install-companions.ts';
 import { bootstrapLocalCodexDefaults } from '../local-codex-defaults.ts';
+import { runNativeHelperRepairAction } from '../native-helper-runtime.ts';
 import type { GatewayContracts } from '../types.ts';
 
 import { runFrontDeskEngineAction } from './engine-actions.ts';
@@ -280,6 +281,7 @@ export async function runFrontDeskTurnkeyInstall(
   const codexPluginRegistry = registerOplFamilyCodexPlugins(modules, moduleRepoPaths);
   const serviceAction: null = null;
   const guiOpenAction = input.skipGuiOpen ? null : installOrOpenOplGui();
+  const nativeHelperAction = runNativeHelperRepairAction({ skip: input.skipNativeHelperRepair });
   const companionSkillSync = syncOplCompanionSkills(undefined, { mode: 'observe', superpowersProfile: 'keep' });
   const initialize = await buildFrontDeskInitialize(contracts);
 
@@ -296,6 +298,7 @@ export async function runFrontDeskTurnkeyInstall(
       module_actions: moduleActions.map((entry) => entry.frontdesk_module_action),
       gui_open_action: guiOpenAction,
       gui_shell: buildOplGuiShellSurface(resolveProjectRoot()),
+      native_helper_action: nativeHelperAction,
       companion_skill_sync: companionSkillSync,
       system_initialize: initialize.frontdesk_initialize,
       notes: [

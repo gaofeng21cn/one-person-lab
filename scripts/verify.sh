@@ -24,6 +24,11 @@ case "$lane" in
   artifact)
     npm run test:artifact
     ;;
+  native)
+    npm run native:doctor
+    npm run native:pack-check
+    npm run native:test
+    ;;
   full)
     npm run test:full
     ;;
@@ -38,7 +43,7 @@ case "$lane" in
     ;;
   *)
     echo "Unknown lane: $lane" >&2
-    echo "Usage: scripts/verify.sh [smoke|fast|family|meta|artifact|full|lint|line-budget|typecheck]" >&2
+    echo "Usage: scripts/verify.sh [smoke|fast|family|meta|artifact|native|full|lint|line-budget|typecheck]" >&2
     exit 1
     ;;
 esac
