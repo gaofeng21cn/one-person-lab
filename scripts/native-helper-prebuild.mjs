@@ -49,7 +49,7 @@ try {
 function packPrebuild() {
   const sourceDir = resolveSourceDir();
   const missing = helperBinaries
-    .map((binary) => path.join(sourceDir, binary))
+    .map((binary) => path.join(sourceDir, binaryFileName(binary)))
     .filter((filePath) => !fs.existsSync(filePath));
   if (missing.length > 0) {
     throw new Error(`native helper prebuild pack missing binaries:\n${missing.map((entry) => `- ${entry}`).join('\n')}`);
@@ -60,8 +60,8 @@ function packPrebuild() {
   fs.mkdirSync(outDir, { recursive: true });
 
   const binaries = helperBinaries.map((binary) => {
-    const source = path.join(sourceDir, binary);
-    const target = path.join(outDir, binary);
+    const source = path.join(sourceDir, binaryFileName(binary));
+    const target = path.join(outDir, binaryFileName(binary));
     fs.copyFileSync(source, target);
     fs.chmodSync(target, 0o755);
     return binaryManifestEntry(binary, target);
@@ -85,8 +85,8 @@ function installPrebuild() {
 
   fs.mkdirSync(cacheDir(), { recursive: true });
   for (const binary of helperBinaries) {
-    const source = path.join(prebuildDir(), binary);
-    const target = path.join(cacheDir(), binary);
+    const source = path.join(prebuildDir(), binaryFileName(binary));
+    const target = path.join(cacheDir(), binaryFileName(binary));
     fs.copyFileSync(source, target);
     fs.chmodSync(target, 0o755);
   }
@@ -127,7 +127,7 @@ function checkPrebuild() {
 
   const binaries = [];
   for (const binary of helperBinaries) {
-    const filePath = path.join(prebuildDir(), binary);
+    const filePath = path.join(prebuildDir(), binaryFileName(binary));
     if (!fs.existsSync(filePath)) {
       errors.push({ code: 'prebuild_binary_missing', message: `${filePath} is not present` });
       continue;
@@ -180,6 +180,7 @@ function binaryManifestEntry(binary, filePath) {
   const bytes = fs.readFileSync(filePath);
   return {
     binary,
+    file_name: path.basename(filePath),
     path: filePath,
     bytes: bytes.length,
     sha256: crypto.createHash('sha256').update(bytes).digest('hex'),
@@ -192,7 +193,7 @@ function resolveSourceDir() {
     return path.resolve(explicit);
   }
   for (const candidate of [path.join(rootDir, 'target', 'release'), path.join(rootDir, 'target', 'debug')]) {
-    if (helperBinaries.every((binary) => fs.existsSync(path.join(candidate, binary)))) {
+    if (helperBinaries.every((binary) => fs.existsSync(path.join(candidate, binaryFileName(binary))))) {
       return candidate;
     }
   }
@@ -214,6 +215,10 @@ function cacheDir() {
 function nativeHelperCrateVersion() {
   const packageToml = fs.readFileSync(path.join(rootDir, 'native/opl-native-helper/Cargo.toml'), 'utf8');
   return packageToml.match(/^version\s*=\s*"([^"]+)"/m)?.[1] ?? '0.0.0';
+}
+
+function binaryFileName(binary) {
+  return targetTriple.startsWith('win32-') ? `${binary}.exe` : binary;
 }
 
 function parseOptions(rawArgs) {

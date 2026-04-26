@@ -74,6 +74,63 @@ test('native helper prebuild script packs and installs platform binaries into th
   }
 });
 
+test('native helper prebuild script preserves Windows executable names for release artifacts', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-native-prebuild-win-'));
+  const sourceDir = path.join(fixtureRoot, 'source');
+  const prebuildRoot = path.join(fixtureRoot, 'prebuilds');
+  const stateDir = path.join(fixtureRoot, 'state');
+  const windowsTarget = 'win32-x64';
+  fs.mkdirSync(sourceDir, { recursive: true });
+
+  for (const binary of helperBinaries) {
+    fs.writeFileSync(path.join(sourceDir, `${binary}.exe`), `@echo off\necho ${binary}\n`);
+  }
+
+  try {
+    const pack = spawnSync(process.execPath, [
+      path.join(repoRoot, 'scripts/native-helper-prebuild.mjs'),
+      'pack',
+      '--source-dir',
+      sourceDir,
+      '--prebuild-root',
+      prebuildRoot,
+      '--target',
+      windowsTarget,
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+    });
+    assert.equal(pack.status, 0, pack.stderr);
+    const packOutput = JSON.parse(pack.stdout);
+    assert.equal(packOutput.target_triple, windowsTarget);
+    assert.equal(packOutput.binaries[0].binary, 'opl-sysprobe');
+    assert.equal(packOutput.binaries[0].file_name, 'opl-sysprobe.exe');
+    assert.equal(
+      fs.existsSync(path.join(prebuildRoot, windowsTarget, crateVersion, 'opl-state-indexer.exe')),
+      true,
+    );
+
+    const install = spawnSync(process.execPath, [
+      path.join(repoRoot, 'scripts/native-helper-prebuild.mjs'),
+      'install',
+      '--prebuild-root',
+      prebuildRoot,
+      '--state-dir',
+      stateDir,
+      '--target',
+      windowsTarget,
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+    });
+    assert.equal(install.status, 0, install.stderr);
+    const installOutput = JSON.parse(install.stdout);
+    assert.equal(fs.existsSync(path.join(installOutput.cache_dir, 'opl-state-indexer.exe')), true);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('native helper repair consumes a valid prebuild before falling back to Cargo build', () => {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-native-repair-prebuild-'));
   const sourceDir = path.join(fixtureRoot, 'source');

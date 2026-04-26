@@ -625,22 +625,25 @@ function resolveNativeHelper(helper: NativeHelperDefinition): HelperResolution {
 
   const explicitBinDir = process.env.OPL_NATIVE_HELPER_BIN_DIR?.trim();
   if (explicitBinDir) {
-    const candidate = path.join(explicitBinDir, helper.binary);
+    const candidate = path.join(explicitBinDir, nativeHelperExecutableName(helper.binary));
     return pathExists(candidate) ? resolved(helper, candidate, 'explicit_bin_dir') : missing(helper, 'explicit_bin_dir');
   }
 
-  const stateCacheCandidate = path.join(nativeHelperCacheDir(resolveFrontDeskStatePaths().state_dir), helper.binary);
+  const stateCacheCandidate = path.join(
+    nativeHelperCacheDir(resolveFrontDeskStatePaths().state_dir),
+    nativeHelperExecutableName(helper.binary),
+  );
   if (pathExists(stateCacheCandidate)) {
     return resolved(helper, stateCacheCandidate, 'state_cache');
   }
 
-  const targetDebugCandidate = path.join(repoRoot(), 'target', 'debug', helper.binary);
+  const targetDebugCandidate = path.join(repoRoot(), 'target', 'debug', nativeHelperExecutableName(helper.binary));
   if (pathExists(targetDebugCandidate)) {
     return resolved(helper, targetDebugCandidate, 'workspace_target_debug');
   }
 
   for (const entry of (process.env.PATH ?? '').split(path.delimiter).filter(Boolean)) {
-    const candidate = path.join(entry, helper.binary);
+    const candidate = path.join(entry, nativeHelperExecutableName(helper.binary));
     if (pathExists(candidate)) {
       return resolved(helper, candidate, 'path');
     }
@@ -911,6 +914,10 @@ function nativeHelperCacheDir(stateDir: string) {
 
 function nativeHelperTargetTriple() {
   return `${process.platform}-${process.arch}`;
+}
+
+function nativeHelperExecutableName(binary: string) {
+  return process.platform === 'win32' ? `${binary}.exe` : binary;
 }
 
 function nativeHelperCrateVersion() {

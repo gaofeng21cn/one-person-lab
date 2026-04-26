@@ -88,6 +88,29 @@ test('GitHub verification workflow runs the native helper production gates', () 
   assert.match(workflow, /FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'/);
 });
 
+test('GitHub native helper prebuild workflow packs release artifacts across supported platforms', () => {
+  const workflow = read('.github/workflows/native-helper-prebuilds.yml');
+
+  assert.match(workflow, /macos-latest/);
+  assert.match(workflow, /ubuntu-latest/);
+  assert.match(workflow, /windows-latest/);
+  assert.match(workflow, /cargo build --release --workspace/);
+  assert.match(workflow, /npm run native:prebuild-pack -- --source-dir target\/release/);
+  assert.match(workflow, /npm run native:prebuild-check -- --prebuild-root dist\/native-helper-prebuilds/);
+  assert.match(workflow, /actions\/upload-artifact@v4/);
+  assert.match(workflow, /FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'/);
+});
+
+test('native helper prebuild script handles platform executable names', () => {
+  const prebuildScript = read('scripts/native-helper-prebuild.mjs');
+  const cacheScript = read('scripts/native-helper-cache.mjs');
+  const runtime = read('src/native-helper-runtime.ts');
+
+  assert.match(prebuildScript, /targetTriple\.startsWith\('win32-'\)/);
+  assert.match(cacheScript, /process\.platform === 'win32'/);
+  assert.match(runtime, /nativeHelperExecutableName/);
+});
+
 test('lint includes the tracked code line-budget guard', () => {
   assert.equal(packageJson.scripts?.lint, 'node ./scripts/lint.mjs && node ./scripts/line-budget.mjs');
   assert.equal(fs.existsSync(path.join(repoRoot, 'scripts/line-budget.mjs')), true);
