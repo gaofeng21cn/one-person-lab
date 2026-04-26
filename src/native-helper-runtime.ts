@@ -89,6 +89,9 @@ type NativeHelperLifecycle = {
     build: 'npm run native:build';
     cache: 'npm run native:cache';
     doctor: 'npm run native:doctor';
+    prebuild: 'npm run native:prebuild';
+    prebuild_pack: 'npm run native:prebuild-pack';
+    prebuild_check: 'npm run native:prebuild-check';
     repair: 'npm run native:repair';
     test: 'npm run native:test';
   };
@@ -97,6 +100,13 @@ type NativeHelperLifecycle = {
     required_files: string[];
     missing_files: string[];
     npm_files: string[];
+  };
+  prebuild: {
+    install_command: 'npm run native:prebuild';
+    pack_command: 'npm run native:prebuild-pack';
+    check_command: 'npm run native:prebuild-check';
+    default_prebuild_root: string;
+    restore_order: string[];
   };
   discovery: {
     binary_discovery_order: string[];
@@ -141,6 +151,9 @@ const NATIVE_HELPER_COMMANDS = {
   build: 'npm run native:build',
   cache: 'npm run native:cache',
   doctor: 'npm run native:doctor',
+  prebuild: 'npm run native:prebuild',
+  prebuild_pack: 'npm run native:prebuild-pack',
+  prebuild_check: 'npm run native:prebuild-check',
   repair: 'npm run native:repair',
   test: 'npm run native:test',
 } as const;
@@ -163,6 +176,7 @@ const NATIVE_HELPER_PACKAGE_FILES = [
   'scripts/native-helper-doctor.mjs',
   'scripts/native-helper-family-smoke.mjs',
   'scripts/native-helper-pack-check.mjs',
+  'scripts/native-helper-prebuild.mjs',
   'scripts/native-helper-repair.mjs',
 ] as const;
 
@@ -175,6 +189,7 @@ const NATIVE_HELPER_NPM_FILES = [
   'scripts/native-helper-doctor.mjs',
   'scripts/native-helper-family-smoke.mjs',
   'scripts/native-helper-pack-check.mjs',
+  'scripts/native-helper-prebuild.mjs',
   'scripts/native-helper-repair.mjs',
 ] as const;
 
@@ -345,6 +360,17 @@ export function buildNativeHelperLifecycle(): NativeHelperLifecycle {
       required_files: [...NATIVE_HELPER_PACKAGE_FILES],
       missing_files: allMissing,
       npm_files: npmFiles,
+    },
+    prebuild: {
+      install_command: 'npm run native:prebuild',
+      pack_command: 'npm run native:prebuild-pack',
+      check_command: 'npm run native:prebuild-check',
+      default_prebuild_root: path.join(repoRoot(), 'native-helper-prebuilds'),
+      restore_order: [
+        'OPL_NATIVE_HELPER_PREBUILD_ROOT',
+        'package native-helper-prebuilds',
+        'local Cargo build fallback',
+      ],
     },
     discovery: {
       binary_discovery_order: [

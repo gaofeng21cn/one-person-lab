@@ -26,6 +26,7 @@ case "$lane" in
     ;;
   native)
     npm run native:doctor
+    npm run native:prebuild-check
     npm run native:pack-check
     npm run native:test
     npm run native:build

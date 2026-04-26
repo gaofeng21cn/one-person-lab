@@ -66,6 +66,7 @@ test('scripts/verify.sh provides the canonical verification wrapper', () => {
   assert.match(verifyScript, /npm run test:artifact/);
   assert.match(verifyScript, /npm run test:full/);
   assert.match(verifyScript, /npm run native:doctor/);
+  assert.match(verifyScript, /npm run native:prebuild-check/);
   assert.match(verifyScript, /npm run native:pack-check/);
   assert.match(verifyScript, /npm run native:test/);
   assert.match(verifyScript, /npm run native:build/);
@@ -105,8 +106,12 @@ test('package.json exposes the canonical family shared release maintenance comma
 
 test('package.json exposes native helper gate scripts and package dry-run check', () => {
   assert.equal(packageJson.scripts?.['native:doctor'], 'node ./scripts/native-helper-doctor.mjs');
+  assert.equal(packageJson.scripts?.['native:prebuild'], 'node ./scripts/native-helper-prebuild.mjs install');
+  assert.equal(packageJson.scripts?.['native:prebuild-pack'], 'node ./scripts/native-helper-prebuild.mjs pack');
+  assert.equal(packageJson.scripts?.['native:prebuild-check'], 'node ./scripts/native-helper-prebuild.mjs check');
   assert.equal(packageJson.scripts?.['native:pack-check'], 'node ./scripts/native-helper-pack-check.mjs');
   assert.equal(packageJson.scripts?.['native:test'], 'cargo test --workspace');
+  assert.equal(fs.existsSync(path.join(repoRoot, 'scripts/native-helper-prebuild.mjs')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, 'scripts/native-helper-pack-check.mjs')), true);
 });
 
