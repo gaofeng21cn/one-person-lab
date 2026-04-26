@@ -444,6 +444,11 @@ export function buildPublicCommandSpecs(
       examples: ['opl runtime manager'],
       group: 'runtime',
     }),
+    'runtime manager action': cloneCommandSpec(commandSpecs['runtime manager action'], {
+      usage: 'opl runtime manager action (--dry-run|--apply)',
+      examples: ['opl runtime manager action --dry-run', 'opl runtime manager action --apply'],
+      group: 'runtime',
+    }),
     'runtime index': cloneCommandSpec(commandSpecs['runtime index'], {
       usage: 'opl runtime index',
       examples: ['opl runtime index'],

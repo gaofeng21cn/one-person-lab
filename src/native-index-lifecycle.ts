@@ -73,7 +73,7 @@ export type NativeIndexGcReport = {
 export type NativeIndexFailureCategory = 'helper_unavailable' | 'helper_error' | 'write_failed';
 
 export type NativeStateIndexPersistence = {
-  status: 'written' | 'skipped_helper_unavailable' | 'skipped_helper_error' | 'write_failed';
+  status: 'written' | 'skipped_helper_unavailable' | 'skipped_helper_error' | 'write_failed' | 'read_only';
   state_dir: string;
   index_file: string;
   history_file: string;
@@ -84,7 +84,12 @@ export type NativeStateIndexPersistence = {
   diff: NativeIndexDiffSummary;
   gc: NativeIndexGcReport;
   freshness: {
-    status: 'fresh' | 'stale_last_success_available' | 'expired_last_success' | 'unavailable_no_success';
+    status:
+      | 'fresh'
+      | 'expired_current_index'
+      | 'stale_last_success_available'
+      | 'expired_last_success'
+      | 'unavailable_no_success';
     current_generated_at: string | null;
     current_expires_at: string | null;
     current_expired: boolean;
@@ -217,6 +222,46 @@ export function nativeStateIndexPaths(stateDir: string) {
     historyFile: path.join(root, 'native-state-index-history.jsonl'),
     failureFile: path.join(root, 'native-state-index-failures.jsonl'),
     lastSuccessFile: path.join(root, 'native-state-index-last-success.json'),
+  };
+}
+
+export function readNativeStateIndexPersistence(input: {
+  stateDir: string;
+  sourceOfTruthRule: string;
+}): NativeStateIndexPersistence {
+  const paths = nativeStateIndexPaths(input.stateDir);
+  const current = readPreviousNativeIndex(paths.indexFile);
+  const lastSuccess = readPreviousNativeIndex(paths.lastSuccessFile);
+  const selected = current ?? lastSuccess;
+  const selectedGeneratedAt = stringRecordField(selected, 'generated_at');
+  const selectedExpiresAt = readLastSuccessExpiresAt(selected);
+  const historyCount = countJsonlLines(paths.historyFile);
+
+  return {
+    status: 'read_only',
+    state_dir: input.stateDir,
+    index_file: paths.indexFile,
+    history_file: paths.historyFile,
+    failure_file: paths.failureFile,
+    last_success_file: paths.lastSuccessFile,
+    ttl_ms: NATIVE_INDEX_TTL_MS,
+    expires_at: selectedExpiresAt ?? new Date(Date.now() + NATIVE_INDEX_TTL_MS).toISOString(),
+    diff: {
+      ...emptyDiff(),
+      previous_index_file: current ? paths.indexFile : lastSuccess ? paths.lastSuccessFile : null,
+      previous_generated_at: selectedGeneratedAt,
+    },
+    gc: {
+      retained_history_count: historyCount,
+      max_history_entries: NATIVE_INDEX_MAX_HISTORY_ENTRIES,
+      preserved_count: historyCount,
+      removed_count: 0,
+      history_count_before_gc: historyCount,
+      history_count_after_gc: historyCount,
+    },
+    freshness: readOnlyNativeIndexFreshness(paths, current, lastSuccess),
+    source_of_truth_rule: input.sourceOfTruthRule,
+    errors: [],
   };
 }
 
@@ -440,6 +485,57 @@ function buildNativeIndexFreshness(
   };
 }
 
+function readOnlyNativeIndexFreshness(
+  paths: ReturnType<typeof nativeStateIndexPaths>,
+  current: Record<string, unknown> | null,
+  lastSuccess: Record<string, unknown> | null,
+): NativeStateIndexPersistence['freshness'] {
+  const failureCount = countJsonlLines(paths.failureFile);
+  const lastGeneratedAt = stringRecordField(lastSuccess, 'generated_at');
+  const lastExpiresAt = readLastSuccessExpiresAt(lastSuccess);
+  const lastExpired = lastExpiresAt ? Date.parse(lastExpiresAt) <= Date.now() : null;
+
+  if (current) {
+    const currentGeneratedAt = stringRecordField(current, 'generated_at');
+    const currentExpiresAt = readLastSuccessExpiresAt(current);
+    const currentExpired = currentExpiresAt ? Date.parse(currentExpiresAt) <= Date.now() : true;
+    return {
+      status: currentExpired ? 'expired_current_index' : 'fresh',
+      current_generated_at: currentGeneratedAt,
+      current_expires_at: currentExpiresAt,
+      current_expired: currentExpired,
+      last_success_generated_at: lastGeneratedAt,
+      last_success_expires_at: lastExpiresAt,
+      last_success_expired: lastExpired,
+      failure_count: failureCount,
+    };
+  }
+
+  if (!lastSuccess || !lastGeneratedAt || !lastExpiresAt) {
+    return {
+      status: 'unavailable_no_success',
+      current_generated_at: null,
+      current_expires_at: null,
+      current_expired: false,
+      last_success_generated_at: lastGeneratedAt,
+      last_success_expires_at: lastExpiresAt,
+      last_success_expired: lastExpired,
+      failure_count: failureCount,
+    };
+  }
+
+  return {
+    status: lastExpired ? 'expired_last_success' : 'stale_last_success_available',
+    current_generated_at: null,
+    current_expires_at: null,
+    current_expired: false,
+    last_success_generated_at: lastGeneratedAt,
+    last_success_expires_at: lastExpiresAt,
+    last_success_expired: lastExpired,
+    failure_count: failureCount,
+  };
+}
+
 function readLastSuccessExpiresAt(lastSuccess: Record<string, unknown> | null) {
   const lifecycle = lastSuccess?.lifecycle;
   if (typeof lifecycle !== 'object' || lifecycle === null) {
@@ -447,6 +543,11 @@ function readLastSuccessExpiresAt(lastSuccess: Record<string, unknown> | null) {
   }
   const expiresAt = (lifecycle as Record<string, unknown>).expires_at;
   return typeof expiresAt === 'string' ? expiresAt : null;
+}
+
+function stringRecordField(payload: Record<string, unknown> | null, key: string) {
+  const value = payload?.[key];
+  return typeof value === 'string' ? value : null;
 }
 
 function failureHelperDetails(entries: Array<{ spec: NativeIndexSpec; invocation: NativeIndexInvocation }>) {

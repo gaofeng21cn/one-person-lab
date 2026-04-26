@@ -1,5 +1,6 @@
 import { inspectHermesRuntime } from './hermes.ts';
-import { DEFAULT_NATIVE_HELPERS, buildNativeHelperProjection } from './native-helper-runtime.ts';
+import { DEFAULT_NATIVE_HELPERS, buildNativeHelperProjection, runNativeHelperRepairAction } from './native-helper-runtime.ts';
+import { runProductEntryRepairHermesGateway } from './product-entry.ts';
 
 const ADMITTED_DOMAIN_OWNERS = [
   {
@@ -175,11 +176,18 @@ const STATE_INDEX_CATALOG = {
   },
 } as const;
 
-export function buildRuntimeManager() {
+type RuntimeManagerActionMode = 'dry_run' | 'apply';
+type RuntimeManagerActionInput = {
+  mode: RuntimeManagerActionMode;
+};
+
+export function buildRuntimeManager(input: { persistNativeIndexes?: boolean } = {}) {
   const hermes = inspectHermesRuntime();
   const hermesReady = Boolean(hermes.binary && hermes.version && hermes.gateway_service.loaded);
-  const nativeHelperProjection = buildNativeHelperProjection(DEFAULT_NATIVE_HELPERS);
-  const reconcile = buildRuntimeManagerReconcile(hermesReady, nativeHelperProjection);
+  const nativeHelperProjection = buildNativeHelperProjection(DEFAULT_NATIVE_HELPERS, {
+    persistIndexes: input.persistNativeIndexes,
+  });
+  const reconcile = buildRuntimeManagerReconcile(hermes, nativeHelperProjection);
 
   return {
     version: 'g2',
@@ -280,21 +288,187 @@ export function buildRuntimeManager() {
   };
 }
 
+export function runRuntimeManagerAction(input: RuntimeManagerActionInput) {
+  const before = buildRuntimeManager({ persistNativeIndexes: false });
+  const recommendedActions = before.runtime_manager.reconcile.recommended_actions;
+  const plannedActions = recommendedActions.map((action) => ({
+    ...action,
+    execution_status: 'not_executed',
+    dry_run_note:
+      'Dry run did not run native helper repair, did not write refreshed native indexes, and did not reinstall the Hermes gateway service.',
+  }));
+
+  if (input.mode === 'dry_run') {
+    return {
+      version: 'g2',
+      runtime_manager_action: {
+        surface_kind: 'opl_runtime_manager_action',
+        mode: input.mode,
+        dry_run: true,
+        status: 'planned',
+        note:
+          'Dry run did not run native helper repair, did not write refreshed native indexes, and did not reinstall the Hermes gateway service.',
+        before: summarizeRuntimeManagerForAction(before),
+        after: null,
+        planned_actions: plannedActions,
+        executed_actions: [],
+        non_goals: [
+          'does_not_schedule_tasks',
+          'does_not_store_session_memory',
+          'does_not_replace_domain_truth',
+          'does_not_private_fork_hermes_agent',
+        ],
+      },
+    };
+  }
+
+  const executedActions = [];
+  let after: ReturnType<typeof buildRuntimeManager> | null = null;
+
+  for (const action of recommendedActions) {
+    if (action.action_id === 'repair_hermes_gateway') {
+      executedActions.push(runHermesGatewayAction());
+      continue;
+    }
+
+    if (action.action_id === 'repair_native_helpers') {
+      const repair = runNativeHelperRepairAction();
+      executedActions.push({
+        action_id: action.action_id,
+        status: repair.status === 'completed' || repair.status === 'skipped_ready' ? 'completed' : repair.status,
+        command_preview: repair.command_preview,
+        details: repair,
+      });
+      continue;
+    }
+
+    if (action.action_id === 'refresh_native_indexes') {
+      after = buildRuntimeManager({ persistNativeIndexes: true });
+      const persistence = after.runtime_manager.state_index_target.persistence;
+      executedActions.push({
+        action_id: action.action_id,
+        status: persistence.status === 'written' ? 'completed' : 'failed',
+        command_preview: ['opl', 'runtime', 'manager'],
+        details: {
+          persistence_status: persistence.status,
+          freshness: persistence.freshness,
+          index_file: persistence.index_file,
+          errors: persistence.errors,
+        },
+      });
+      continue;
+    }
+
+    executedActions.push({
+      action_id: action.action_id,
+      status: 'skipped_unavailable',
+      command_preview: action.command ? action.command.split(' ') : [],
+      note: 'No Runtime Manager apply implementation exists for this recommendation.',
+    });
+  }
+
+  after ??= buildRuntimeManager({ persistNativeIndexes: false });
+  const afterSummary = summarizeRuntimeManagerForAction(after);
+  const hasFailure = executedActions.some((action) => action.status === 'failed');
+  const hasSkipped = executedActions.some((action) => action.status === 'skipped_unavailable');
+  const status = hasFailure
+    ? 'failed'
+    : hasSkipped || afterSummary.reconcile.recommended_actions.length > 0
+      ? 'completed_with_attention'
+      : 'completed';
+
+  return {
+    version: 'g2',
+    runtime_manager_action: {
+      surface_kind: 'opl_runtime_manager_action',
+      mode: input.mode,
+      dry_run: false,
+      status,
+      note:
+        'Apply executed only Runtime Manager adapter actions backed by existing OPL helper and external Hermes gateway surfaces.',
+      before: summarizeRuntimeManagerForAction(before),
+      after: afterSummary,
+      planned_actions: plannedActions,
+      executed_actions: executedActions,
+      non_goals: [
+        'does_not_schedule_tasks',
+        'does_not_store_session_memory',
+        'does_not_replace_domain_truth',
+        'does_not_private_fork_hermes_agent',
+      ],
+    },
+  };
+}
+
+function summarizeRuntimeManagerForAction(payload: ReturnType<typeof buildRuntimeManager>) {
+  const runtimeManager = payload.runtime_manager;
+
+  return {
+    status: runtimeManager.status,
+    reconcile: runtimeManager.reconcile,
+    hermes_runtime: {
+      binary: runtimeManager.hermes_runtime.binary,
+      version: runtimeManager.hermes_runtime.version,
+      gateway_service: runtimeManager.hermes_runtime.gateway_service,
+      issues: runtimeManager.hermes_runtime.issues,
+    },
+    native_helper_runtime: {
+      status: runtimeManager.native_helper_target.runtime.status,
+      invocations: runtimeManager.native_helper_target.runtime.invocations.map((invocation) => ({
+        helper_id: invocation.helper_id,
+        status: invocation.status,
+      })),
+    },
+    native_index_persistence: runtimeManager.state_index_target.persistence,
+  };
+}
+
+function runHermesGatewayAction() {
+  try {
+    const repair = runProductEntryRepairHermesGateway();
+    return {
+      action_id: 'repair_hermes_gateway',
+      status: repair.product_entry.gateway_service.loaded ? 'completed' : 'failed',
+      command_preview: repair.product_entry.install_command_preview,
+      details: repair.product_entry,
+    };
+  } catch (error) {
+    return {
+      action_id: 'repair_hermes_gateway',
+      status: 'failed',
+      command_preview: ['hermes', 'gateway', 'install'],
+      details: {
+        error: error instanceof Error ? error.message : String(error),
+      },
+    };
+  }
+}
+
 function buildRuntimeManagerReconcile(
-  hermesReady: boolean,
+  hermes: ReturnType<typeof inspectHermesRuntime>,
   nativeHelperProjection: ReturnType<typeof buildNativeHelperProjection>,
 ) {
   const recommendedActions = [];
+  const hermesInstalled = Boolean(hermes.binary && hermes.version);
+  const hermesReady = Boolean(hermesInstalled && hermes.gateway_service.loaded);
   const nativeRuntimeStatus = nativeHelperProjection.runtime.status;
   const indexFreshnessStatus = nativeHelperProjection.persistence.freshness.status;
 
-  if (!hermesReady) {
+  if (!hermesInstalled) {
     recommendedActions.push({
       action_id: 'install_or_start_hermes',
       priority: 'p0_runtime_substrate',
       blocking: true,
       command: 'opl engine install --engine hermes',
       reason: 'Hermes-Agent is the external long-running runtime substrate and is not ready.',
+    });
+  } else if (!hermes.gateway_service.loaded) {
+    recommendedActions.push({
+      action_id: 'repair_hermes_gateway',
+      priority: 'p0_runtime_substrate',
+      blocking: true,
+      command: 'opl runtime repair-gateway',
+      reason: 'Hermes-Agent is installed, but the external gateway service is not loaded.',
     });
   }
 
