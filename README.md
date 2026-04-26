@@ -76,7 +76,7 @@ Need Docker, Linux, or server deployment? See the [Docker and browser deployment
 ### Common commands after installation
 
 ```bash
-opl system initialize   # Inspect Codex, Hermes-Agent, modules, skills, GUI, and workspace-root state
+opl system initialize   # Inspect the Codex version policy, Hermes-Agent, modules, skills, GUI, and workspace-root state
 opl modules             # Check MAS/MAG/RCA module installation and health
 opl skill sync          # Sync OPL family skills into the Codex-visible skill path
 opl help --text         # Human-readable help; use opl help --json for machine-readable output
@@ -102,6 +102,7 @@ The desktop GUI source is maintained in [`opl-aion-shell`](https://github.com/ga
 ### Runtime notes
 
 - Default front doors are `opl`, `opl exec`, and `opl resume`. Unless a runtime or domain agent is explicitly selected, these paths keep Codex-default semantics.
+- OPL treats `Codex CLI` as a managed runtime dependency: `opl system` reports the selected binary, version, minimum-version policy, and conflicting PATH candidates; versions below the minimum or conflicting candidate versions are marked `attention_needed`.
 - If an admitted domain repo is missing locally, run `opl module install --module <module_id>`.
 - The default local state directory is `~/Library/Application Support/OPL/state`. Set `OPL_STATE_DIR` to use another local state root.
 - Active domain agents are [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience), [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant), and [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai).
