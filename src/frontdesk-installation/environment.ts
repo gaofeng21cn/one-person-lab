@@ -64,6 +64,8 @@ export async function buildFrontDeskEnvironment(contracts: GatewayContracts) {
         hermes: {
           installed: Boolean(hermes.binary),
           version: hermes.version,
+          update_available: hermes.update_available,
+          update_summary: hermes.update_summary,
           binary_path: hermes.binary?.path ?? null,
           binary_source: hermes.binary?.source ?? null,
           gateway_loaded: hermes.gateway_service.loaded,
