@@ -17,6 +17,16 @@ if (buildResult.status !== 0) {
   process.exit(buildResult.status ?? 1);
 }
 
+const cacheResult = spawnSync(npmCommand, ['run', 'native:cache'], {
+  cwd: rootDir,
+  env: process.env,
+  stdio: 'inherit',
+});
+
+if (cacheResult.status !== 0) {
+  process.exit(cacheResult.status ?? 1);
+}
+
 const doctorResult = spawnSync(process.execPath, [path.join(scriptDir, 'native-helper-doctor.mjs')], {
   cwd: rootDir,
   env: process.env,

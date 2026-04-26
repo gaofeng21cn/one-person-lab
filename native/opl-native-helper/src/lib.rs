@@ -9,6 +9,8 @@ use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 
 const PROTOCOL_VERSION: &str = "opl_native_helper.v1";
+const CRATE_NAME: &str = env!("CARGO_PKG_NAME");
+const CRATE_VERSION: &str = env!("CARGO_PKG_VERSION");
 const SOURCE_OF_TRUTH_RULE: &str =
     "native helpers index local file surfaces but never replace domain-owned durable truth";
 
@@ -31,6 +33,10 @@ impl HelperError {
 struct HelperResponse {
     protocol_version: &'static str,
     helper_id: String,
+    helper_version: &'static str,
+    binary_version: &'static str,
+    crate_name: &'static str,
+    crate_version: &'static str,
     ok: bool,
     request_id: Option<String>,
     result: Option<Value>,
@@ -42,6 +48,10 @@ impl HelperResponse {
         Self {
             protocol_version: PROTOCOL_VERSION,
             helper_id: helper_id.to_string(),
+            helper_version: CRATE_VERSION,
+            binary_version: CRATE_VERSION,
+            crate_name: CRATE_NAME,
+            crate_version: CRATE_VERSION,
             ok: true,
             request_id,
             result: Some(result),
@@ -53,6 +63,10 @@ impl HelperResponse {
         Self {
             protocol_version: PROTOCOL_VERSION,
             helper_id: helper_id.to_string(),
+            helper_version: CRATE_VERSION,
+            binary_version: CRATE_VERSION,
+            crate_name: CRATE_NAME,
+            crate_version: CRATE_VERSION,
             ok: false,
             request_id,
             result: None,
@@ -151,7 +165,10 @@ fn build_sysprobe() -> Value {
             .map(|value| env::split_paths(&value).map(path_to_string).collect::<Vec<_>>())
             .unwrap_or_default(),
         "toolchain": {
-            "rust_helper": true
+            "rust_helper": true,
+            "crate_name": CRATE_NAME,
+            "crate_version": CRATE_VERSION,
+            "binary_version": CRATE_VERSION
         }
     })
 }
@@ -504,6 +521,18 @@ mod tests {
         let response = run_helper("opl-sysprobe", "{");
         assert!(!response.ok);
         assert_eq!(response.errors[0].code, "invalid_json");
+    }
+
+    #[test]
+    fn helper_response_reports_crate_and_binary_versions() {
+        let response = run_helper("opl-sysprobe", "{}");
+        assert!(response.ok);
+        assert_eq!(response.helper_version, env!("CARGO_PKG_VERSION"));
+        assert_eq!(response.crate_name, env!("CARGO_PKG_NAME"));
+        assert_eq!(response.crate_version, env!("CARGO_PKG_VERSION"));
+        let result = response.result.unwrap();
+        assert_eq!(result["toolchain"]["crate_name"], env!("CARGO_PKG_NAME"));
+        assert_eq!(result["toolchain"]["crate_version"], env!("CARGO_PKG_VERSION"));
     }
 
     fn unique_temp_root() -> PathBuf {

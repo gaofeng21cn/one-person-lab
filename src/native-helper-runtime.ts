@@ -8,6 +8,8 @@ import { ensureFrontDeskStateDir, resolveFrontDeskStatePaths } from './frontdesk
 const PROTOCOL_VERSION = 'opl_native_helper.v1';
 const SOURCE_OF_TRUTH_RULE =
   'OPL persists native helper indexes for fast lookup, then dereferences domain-owned durable truth before acting.';
+const INDEX_TTL_MS = 86_400_000;
+const MAX_HISTORY_ENTRIES = 50;
 
 type NativeHelperDefinition = {
   helper_id: string;
@@ -18,7 +20,7 @@ type HelperResolution = {
   helper_id: string;
   binary: string;
   status: 'resolved' | 'missing';
-  source: 'explicit_binary' | 'explicit_bin_dir' | 'workspace_target_debug' | 'path' | 'not_found';
+  source: 'explicit_binary' | 'explicit_bin_dir' | 'state_cache' | 'workspace_target_debug' | 'path' | 'not_found';
   path?: string;
   repair_hint?: string;
 };
@@ -28,6 +30,10 @@ type NativeHelperInvocation = {
   request_id: string;
   status: 'ok' | 'unavailable' | 'execution_error' | 'protocol_error' | 'helper_error';
   resolution: HelperResolution;
+  helper_version?: string;
+  binary_version?: string;
+  crate_name?: string;
+  crate_version?: string;
   result?: unknown;
   errors: Array<{ code: string; message: string }>;
 };
@@ -48,6 +54,20 @@ type NativeHelperProjection = {
     status: 'written' | 'skipped_helper_unavailable' | 'skipped_helper_error' | 'write_failed';
     state_dir: string;
     index_file: string;
+    history_file: string;
+    failure_file: string;
+    last_success_file: string;
+    ttl_ms: number;
+    expires_at: string;
+    diff: {
+      changed: boolean;
+      previous_index_file: string | null;
+      previous_generated_at: string | null;
+    };
+    gc: {
+      retained_history_count: number;
+      max_history_entries: number;
+    };
     source_of_truth_rule: typeof SOURCE_OF_TRUTH_RULE;
     errors: Array<{ code: string; message: string }>;
   };
@@ -57,6 +77,7 @@ type NativeHelperLifecycle = {
   status: 'ready_to_build' | 'package_source_incomplete';
   commands: {
     build: 'npm run native:build';
+    cache: 'npm run native:cache';
     doctor: 'npm run native:doctor';
     repair: 'npm run native:repair';
     test: 'npm run native:test';
@@ -71,6 +92,12 @@ type NativeHelperLifecycle = {
     binary_discovery_order: string[];
     helper_bin_dir_env: 'OPL_NATIVE_HELPER_BIN_DIR';
     helper_binary_env_template: 'OPL_NATIVE_HELPER_<HELPER_ID>_BIN';
+  };
+  cache: {
+    command: 'npm run native:cache';
+    cache_dir: string;
+    target_triple: string;
+    crate_version: string;
   };
 };
 
@@ -102,6 +129,7 @@ export type NativeHelperRepairAction = {
 
 const NATIVE_HELPER_COMMANDS = {
   build: 'npm run native:build',
+  cache: 'npm run native:cache',
   doctor: 'npm run native:doctor',
   repair: 'npm run native:repair',
   test: 'npm run native:test',
@@ -121,6 +149,7 @@ const NATIVE_HELPER_PACKAGE_FILES = [
   'native/opl-native-helper/Cargo.toml',
   'native/opl-native-helper/src/lib.rs',
   'native/opl-native-helper/src/bin',
+  'scripts/native-helper-cache.mjs',
   'scripts/native-helper-doctor.mjs',
   'scripts/native-helper-repair.mjs',
 ] as const;
@@ -130,6 +159,7 @@ const NATIVE_HELPER_NPM_FILES = [
   'Cargo.lock',
   'native/opl-native-helper/Cargo.toml',
   'native/opl-native-helper/src',
+  'scripts/native-helper-cache.mjs',
   'scripts/native-helper-doctor.mjs',
   'scripts/native-helper-repair.mjs',
 ] as const;
@@ -179,10 +209,9 @@ export function buildNativeHelperProjection(
   helpers: readonly NativeHelperDefinition[],
 ): NativeHelperProjection {
   const statePaths = ensureFrontDeskStateDir();
-  const indexFile = path.join(statePaths.state_dir, 'runtime-manager', 'native-state-index.json');
   const lifecycle = buildNativeHelperLifecycle();
   const runtime = inspectNativeHelperRuntime(helpers);
-  const persistence = persistNativeStateIndex(indexFile, statePaths.state_dir, runtime.invocations);
+  const persistence = persistNativeStateIndex(statePaths.state_dir, runtime.invocations);
 
   return {
     lifecycle,
@@ -307,11 +336,18 @@ export function buildNativeHelperLifecycle(): NativeHelperLifecycle {
       binary_discovery_order: [
         'OPL_NATIVE_HELPER_<HELPER_ID>_BIN',
         'OPL_NATIVE_HELPER_BIN_DIR',
+        'OPL_STATE_DIR native-helper cache',
         'workspace target/debug',
         'PATH',
       ],
       helper_bin_dir_env: 'OPL_NATIVE_HELPER_BIN_DIR',
       helper_binary_env_template: 'OPL_NATIVE_HELPER_<HELPER_ID>_BIN',
+    },
+    cache: {
+      command: 'npm run native:cache',
+      cache_dir: nativeHelperCacheDir(resolveFrontDeskStatePaths().state_dir),
+      target_triple: nativeHelperTargetTriple(),
+      crate_version: nativeHelperCrateVersion(),
     },
   };
 }
@@ -421,6 +457,10 @@ function invokeNativeHelper(
       request_id: requestId,
       status: 'helper_error',
       resolution,
+      helper_version: stringValue(payload.helper_version),
+      binary_version: stringValue(payload.binary_version),
+      crate_name: stringValue(payload.crate_name),
+      crate_version: stringValue(payload.crate_version),
       errors,
     };
   }
@@ -430,32 +470,40 @@ function invokeNativeHelper(
     request_id: requestId,
     status: 'ok',
     resolution,
+    helper_version: stringValue(payload.helper_version),
+    binary_version: stringValue(payload.binary_version),
+    crate_name: stringValue(payload.crate_name),
+    crate_version: stringValue(payload.crate_version),
     result: payload.result,
     errors,
   };
 }
 
 function persistNativeStateIndex(
-  indexFile: string,
   stateDir: string,
   invocations: readonly NativeHelperInvocation[],
 ): NativeHelperProjection['persistence'] {
+  const paths = nativeStateIndexPaths(stateDir);
   const indexInvocations = invocations.filter((invocation) => invocation.helper_id !== 'opl-doctor-native');
   if (indexInvocations.some((invocation) => invocation.status === 'unavailable')) {
-    return persistenceStatus('skipped_helper_unavailable', stateDir, indexFile, [
+    const errors = [
       {
         code: 'native_index_helper_unavailable',
         message: 'one or more native index helpers are unavailable',
       },
-    ]);
+    ];
+    recordNativeIndexFailure(paths, 'skipped_helper_unavailable', errors);
+    return persistenceStatus('skipped_helper_unavailable', stateDir, paths, errors);
   }
   if (indexInvocations.some((invocation) => invocation.status !== 'ok')) {
-    return persistenceStatus('skipped_helper_error', stateDir, indexFile, [
+    const errors = [
       {
         code: 'native_index_helper_failed',
         message: 'one or more native index helpers failed',
       },
-    ]);
+    ];
+    recordNativeIndexFailure(paths, 'skipped_helper_error', errors);
+    return persistenceStatus('skipped_helper_error', stateDir, paths, errors);
   }
 
   const nativeIndexes = Object.fromEntries(
@@ -465,33 +513,64 @@ function persistNativeStateIndex(
     }),
   );
 
+  const generatedAt = new Date();
+  const previous = readPreviousNativeIndex(paths.indexFile);
+  const changed = !previous || JSON.stringify(previous.native_indexes ?? null) !== JSON.stringify(nativeIndexes);
+  const expiresAt = new Date(generatedAt.getTime() + INDEX_TTL_MS).toISOString();
+  const diff = {
+    changed,
+    previous_index_file: previous ? paths.indexFile : null,
+    previous_generated_at: typeof previous?.generated_at === 'string' ? previous.generated_at : null,
+  };
+  const payload = {
+    surface_kind: 'opl_runtime_manager_native_state_projection',
+    version: 'v1',
+    protocol_version: PROTOCOL_VERSION,
+    source_of_truth_rule: SOURCE_OF_TRUTH_RULE,
+    generated_at: generatedAt.toISOString(),
+    lifecycle: {
+      ttl_ms: INDEX_TTL_MS,
+      expires_at: expiresAt,
+      expired: false,
+      history_file: paths.historyFile,
+      failure_file: paths.failureFile,
+      last_success_file: paths.lastSuccessFile,
+    },
+    diff,
+    native_indexes: nativeIndexes,
+  };
+
+  let retainedHistoryCount = 0;
   try {
-    fs.mkdirSync(path.dirname(indexFile), { recursive: true });
-    fs.writeFileSync(
-      indexFile,
-      `${JSON.stringify(
-        {
-          surface_kind: 'opl_runtime_manager_native_state_projection',
-          version: 'v1',
-          protocol_version: PROTOCOL_VERSION,
-          source_of_truth_rule: SOURCE_OF_TRUTH_RULE,
-          generated_at: new Date().toISOString(),
-          native_indexes: nativeIndexes,
-        },
-        null,
-        2,
-      )}\n`,
-    );
+    fs.mkdirSync(path.dirname(paths.indexFile), { recursive: true });
+    fs.writeFileSync(paths.indexFile, `${JSON.stringify(payload, null, 2)}\n`);
+    fs.writeFileSync(paths.lastSuccessFile, `${JSON.stringify(payload, null, 2)}\n`);
+    appendJsonLine(paths.historyFile, {
+      generated_at: payload.generated_at,
+      index_file: paths.indexFile,
+      diff,
+      summary: Object.fromEntries(Object.entries(nativeIndexes).map(([key, value]) => [
+        key,
+        (value as NativeHelperInvocation | undefined)?.status ?? 'missing',
+      ])),
+    });
+    retainedHistoryCount = gcJsonlByCount(paths.historyFile, MAX_HISTORY_ENTRIES);
   } catch (error) {
-    return persistenceStatus('write_failed', stateDir, indexFile, [
+    const errors = [
       {
         code: 'native_state_index_write_failed',
         message: error instanceof Error ? error.message : String(error),
       },
-    ]);
+    ];
+    recordNativeIndexFailure(paths, 'write_failed', errors);
+    return persistenceStatus('write_failed', stateDir, paths, errors);
   }
 
-  return persistenceStatus('written', stateDir, indexFile, []);
+  return persistenceStatus('written', stateDir, paths, [], {
+    expiresAt,
+    diff,
+    retainedHistoryCount,
+  });
 }
 
 function resolveNativeHelper(helper: NativeHelperDefinition): HelperResolution {
@@ -507,6 +586,11 @@ function resolveNativeHelper(helper: NativeHelperDefinition): HelperResolution {
   if (explicitBinDir) {
     const candidate = path.join(explicitBinDir, helper.binary);
     return pathExists(candidate) ? resolved(helper, candidate, 'explicit_bin_dir') : missing(helper, 'explicit_bin_dir');
+  }
+
+  const stateCacheCandidate = path.join(nativeHelperCacheDir(resolveFrontDeskStatePaths().state_dir), helper.binary);
+  if (pathExists(stateCacheCandidate)) {
+    return resolved(helper, stateCacheCandidate, 'state_cache');
   }
 
   const targetDebugCandidate = path.join(repoRoot(), 'target', 'debug', helper.binary);
@@ -569,16 +653,96 @@ function invocationError(
 function persistenceStatus(
   status: NativeHelperProjection['persistence']['status'],
   stateDir: string,
-  indexFile: string,
+  paths: ReturnType<typeof nativeStateIndexPaths>,
   errors: NativeHelperProjection['persistence']['errors'],
+  input: Partial<{
+    expiresAt: string;
+    diff: NativeHelperProjection['persistence']['diff'];
+    retainedHistoryCount: number;
+  }> = {},
 ): NativeHelperProjection['persistence'] {
   return {
     status,
     state_dir: stateDir,
-    index_file: indexFile,
+    index_file: paths.indexFile,
+    history_file: paths.historyFile,
+    failure_file: paths.failureFile,
+    last_success_file: paths.lastSuccessFile,
+    ttl_ms: INDEX_TTL_MS,
+    expires_at: input.expiresAt ?? new Date(Date.now() + INDEX_TTL_MS).toISOString(),
+    diff: input.diff ?? {
+      changed: false,
+      previous_index_file: null,
+      previous_generated_at: null,
+    },
+    gc: {
+      retained_history_count: input.retainedHistoryCount ?? countJsonlLines(paths.historyFile),
+      max_history_entries: MAX_HISTORY_ENTRIES,
+    },
     source_of_truth_rule: SOURCE_OF_TRUTH_RULE,
     errors,
   };
+}
+
+function nativeStateIndexPaths(stateDir: string) {
+  const root = path.join(stateDir, 'runtime-manager');
+  return {
+    indexFile: path.join(root, 'native-state-index.json'),
+    historyFile: path.join(root, 'native-state-index-history.jsonl'),
+    failureFile: path.join(root, 'native-state-index-failures.jsonl'),
+    lastSuccessFile: path.join(root, 'native-state-index-last-success.json'),
+  };
+}
+
+function readPreviousNativeIndex(indexFile: string): Record<string, unknown> | null {
+  try {
+    return JSON.parse(fs.readFileSync(indexFile, 'utf8')) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+function appendJsonLine(filePath: string, value: unknown) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.appendFileSync(filePath, `${JSON.stringify(value)}\n`);
+}
+
+function gcJsonlByCount(filePath: string, maxEntries: number) {
+  const lines = readJsonlLines(filePath).slice(-maxEntries);
+  fs.writeFileSync(filePath, lines.length > 0 ? `${lines.join('\n')}\n` : '');
+  return lines.length;
+}
+
+function countJsonlLines(filePath: string) {
+  return readJsonlLines(filePath).length;
+}
+
+function readJsonlLines(filePath: string) {
+  try {
+    return fs.readFileSync(filePath, 'utf8').split('\n').filter((line) => line.trim().length > 0);
+  } catch {
+    return [];
+  }
+}
+
+function recordNativeIndexFailure(
+  paths: ReturnType<typeof nativeStateIndexPaths>,
+  status: NativeHelperProjection['persistence']['status'],
+  errors: NativeHelperProjection['persistence']['errors'],
+) {
+  try {
+    appendJsonLine(paths.failureFile, {
+      generated_at: new Date().toISOString(),
+      status,
+      errors,
+    });
+  } catch {
+    // Failure telemetry must not mask the original native-helper status.
+  }
+}
+
+function stringValue(value: unknown) {
+  return typeof value === 'string' ? value : undefined;
 }
 
 function normalizeErrors(value: unknown): Array<{ code: string; message: string }> {
@@ -635,6 +799,24 @@ function packageJsonFiles(packageRoot: string): string[] {
     return packageJson.files.filter((entry): entry is string => typeof entry === 'string');
   } catch {
     return [];
+  }
+}
+
+function nativeHelperCacheDir(stateDir: string) {
+  return path.join(stateDir, 'native-helper', 'bin', nativeHelperTargetTriple(), nativeHelperCrateVersion());
+}
+
+function nativeHelperTargetTriple() {
+  return `${process.platform}-${process.arch}`;
+}
+
+function nativeHelperCrateVersion() {
+  try {
+    const cargoToml = fs.readFileSync(path.join(repoRoot(), 'native/opl-native-helper/Cargo.toml'), 'utf8');
+    const match = cargoToml.match(/^version\s*=\s*"([^"]+)"/m);
+    return match?.[1] ?? '0.0.0';
+  } catch {
+    return '0.0.0';
   }
 }
 
