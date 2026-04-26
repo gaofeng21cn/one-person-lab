@@ -1,4 +1,5 @@
 import { inspectHermesRuntime } from './hermes.ts';
+import { buildNativeHelperProjection } from './native-helper-runtime.ts';
 
 const ADMITTED_DOMAIN_OWNERS = [
   {
@@ -177,6 +178,7 @@ const STATE_INDEX_CATALOG = {
 export function buildRuntimeManager() {
   const hermes = inspectHermesRuntime();
   const hermesReady = Boolean(hermes.binary && hermes.version && hermes.gateway_service.loaded);
+  const nativeHelperProjection = buildNativeHelperProjection(NATIVE_HELPERS);
 
   return {
     version: 'g2',
@@ -237,6 +239,7 @@ export function buildRuntimeManager() {
         protocol: NATIVE_HELPER_PROTOCOL,
         allowed_shape: 'small_json_stdio_or_cli_helpers_managed_by_opl',
         helpers: NATIVE_HELPERS,
+        runtime: nativeHelperProjection.runtime,
         non_goals: [
           'not_a_domain_truth_owner',
           'not_a_runtime_kernel',
@@ -249,6 +252,7 @@ export function buildRuntimeManager() {
         index_owner: 'one-person-lab',
         source_of_truth_rule: 'indexes project runtime surfaces but never replace domain-owned durable truth',
         index_catalog: STATE_INDEX_CATALOG,
+        persistence: nativeHelperProjection.persistence,
         candidate_indexes: [
           'workspace_registry_index',
           'managed_session_ledger_index',

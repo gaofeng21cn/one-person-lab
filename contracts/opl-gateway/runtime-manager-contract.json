@@ -60,6 +60,17 @@
     "language": "rust",
     "protocol_ref": "contracts/opl-gateway/native-helper-contract.json",
     "allowed_shape": "small_json_stdio_or_cli_helpers_managed_by_opl",
+    "runtime_invocation": {
+      "status_surface": "native_helper_target.runtime",
+      "discovery_env": "OPL_NATIVE_HELPER_BIN_DIR",
+      "repair_command": "npm run native:build",
+      "required_runtime_manager_invocations": [
+        "opl-doctor-native",
+        "opl-state-indexer",
+        "opl-artifact-indexer",
+        "opl-runtime-watch"
+      ]
+    },
     "candidate_helpers": [
       "opl-sysprobe",
       "opl-doctor-native",
@@ -71,6 +82,11 @@
   "state_index_target": {
     "status": "rust_helper_backed_contract_first",
     "source_of_truth_rule": "indexes project runtime surfaces but never replace domain-owned durable truth",
+    "persistence": {
+      "status_surface": "state_index_target.persistence",
+      "default_index_file": "${OPL_STATE_DIR}/runtime-manager/native-state-index.json",
+      "persisted_surface_kind": "opl_runtime_manager_native_state_projection"
+    },
     "candidate_indexes": [
       "workspace_registry_index",
       "managed_session_ledger_index",

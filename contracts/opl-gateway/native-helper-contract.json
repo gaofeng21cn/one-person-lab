@@ -28,6 +28,17 @@
       "redcube-ai"
     ]
   },
+  "runtime_manager_consumption": {
+    "binary_discovery_order": [
+      "OPL_NATIVE_HELPER_<HELPER_ID>_BIN",
+      "OPL_NATIVE_HELPER_BIN_DIR",
+      "workspace target/debug",
+      "PATH"
+    ],
+    "repair_command": "npm run native:build",
+    "persisted_projection": "${OPL_STATE_DIR}/runtime-manager/native-state-index.json",
+    "persisted_surface_kind": "opl_runtime_manager_native_state_projection"
+  },
   "helpers": [
     {
       "helper_id": "opl-sysprobe",
