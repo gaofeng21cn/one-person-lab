@@ -593,6 +593,20 @@ exit 1
     assert.equal(output.runtime_manager.owner_split.runtime_kernel_owner, 'upstream_hermes_agent');
     assert.equal(output.runtime_manager.owner_split.product_manager_owner, 'one-person-lab');
     assert.equal(output.runtime_manager.non_goals.includes('not_a_scheduler_kernel'), true);
+    assert.equal(output.runtime_manager.registration_registry.surface_kind, 'opl_runtime_manager_registration_registry');
+    assert.equal(output.runtime_manager.registration_registry.domains.length, 3);
+    assert.equal(
+      output.runtime_manager.registration_registry.domains[0].expected_registration_surface.ref,
+      '/skill_catalog/skills/0/domain_projection/opl_runtime_manager_registration',
+    );
+    assert.deepEqual(
+      output.runtime_manager.registration_registry.domains[2].consumable_projection_refs.slice(-2),
+      ['/review_state', '/publication_projection'],
+    );
+    assert.equal(
+      output.runtime_manager.registration_registry.required_domain_registration_fields.includes('state_index_inputs'),
+      true,
+    );
     assert.equal(output.runtime_manager.native_helper_target.candidates.length, 3);
     assert.equal(output.runtime_manager.future_sidecar_migration.enabled_now, false);
   } finally {

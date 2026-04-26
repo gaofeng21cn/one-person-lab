@@ -23,6 +23,31 @@
     "catalog_optional_native_helpers",
     "catalog_high_frequency_state_indexes"
   ],
+  "domain_registration_registry": {
+    "surface_kind": "opl_runtime_manager_registration_registry",
+    "version": "v1",
+    "registration_status": "declared_projection_contracts",
+    "source_of_truth_rule": "OPL indexes declared domain registration surfaces and must dereference domain-owned durable truth before acting.",
+    "registered_domains": [
+      "medautoscience",
+      "medautogrant",
+      "redcube"
+    ],
+    "required_domain_registration_fields": [
+      "surface_kind",
+      "registration_id",
+      "domain_id",
+      "domain_owner",
+      "runtime_owner",
+      "domain_entry_surface",
+      "consumable_projection_refs",
+      "state_index_inputs",
+      "non_goals"
+    ],
+    "domain_surface_refs": [
+      "/skill_catalog/skills/0/domain_projection/opl_runtime_manager_registration"
+    ]
+  },
   "non_goals": [
     "not_a_scheduler_kernel",
     "not_a_session_or_memory_store",

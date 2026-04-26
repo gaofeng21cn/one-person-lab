@@ -18,6 +18,79 @@ const ADMITTED_DOMAIN_OWNERS = [
   },
 ] as const;
 
+const DOMAIN_REGISTRATION_REGISTRY = [
+  {
+    domain_id: 'medautoscience',
+    project: 'med-autoscience',
+    registration_id: 'mas.opl_runtime_manager.registration.v1',
+    expected_registration_surface: {
+      surface_kind: 'opl_runtime_manager_domain_registration',
+      ref: '/skill_catalog/skills/0/domain_projection/opl_runtime_manager_registration',
+      command: 'uv run python -m med_autoscience.cli skill-catalog --profile <profile> --format json',
+    },
+    consumable_projection_refs: [
+      '/skill_catalog/skills/0/domain_projection/runtime_continuity',
+      '/progress_projection/domain_projection/research_runtime_control_projection',
+      '/artifact_inventory/artifact_surface',
+      '/automation/automations/0',
+    ],
+    state_index_inputs: {
+      workspace_registry_index: '/workspace_locator',
+      managed_session_ledger_index: '/session_continuity',
+      artifact_projection_index: '/artifact_inventory',
+      attention_queue_index: '/automation/automations/0',
+      runtime_health_snapshot_index: '/runtime_inventory',
+    },
+  },
+  {
+    domain_id: 'medautogrant',
+    project: 'med-autogrant',
+    registration_id: 'mag.opl_runtime_manager.registration.v1',
+    expected_registration_surface: {
+      surface_kind: 'opl_runtime_manager_domain_registration',
+      ref: '/skill_catalog/skills/0/domain_projection/opl_runtime_manager_registration',
+      command: 'uv run python -m med_autogrant skill-catalog --input <workspace.json> --format json',
+    },
+    consumable_projection_refs: [
+      '/skill_catalog/skills/0/domain_projection/runtime_continuity',
+      '/runtime_control/semantic_closure',
+      '/artifact_inventory',
+      '/automation/automations/1',
+    ],
+    state_index_inputs: {
+      workspace_registry_index: '/workspace_locator',
+      managed_session_ledger_index: '/session_continuity',
+      artifact_projection_index: '/artifact_inventory',
+      attention_queue_index: '/automation/automations/1',
+      runtime_health_snapshot_index: '/runtime_inventory',
+    },
+  },
+  {
+    domain_id: 'redcube',
+    project: 'redcube-ai',
+    registration_id: 'rca.opl_runtime_manager.registration.v1',
+    expected_registration_surface: {
+      surface_kind: 'opl_runtime_manager_domain_registration',
+      ref: '/skill_catalog/skills/0/domain_projection/opl_runtime_manager_registration',
+      command: 'redcube product manifest --workspace-root <workspace_root>',
+    },
+    consumable_projection_refs: [
+      '/skill_catalog/skills/0/domain_projection/runtime_continuity',
+      '/product_entry_shell/opl_bridge',
+      '/artifact_inventory',
+      '/review_state',
+      '/publication_projection',
+    ],
+    state_index_inputs: {
+      workspace_registry_index: '/workspace_locator',
+      managed_session_ledger_index: '/session_continuity',
+      artifact_projection_index: '/artifact_inventory',
+      attention_queue_index: '/automation/automations/0',
+      runtime_health_snapshot_index: '/runtime_inventory',
+    },
+  },
+] as const;
+
 export function buildRuntimeManager() {
   const hermes = inspectHermesRuntime();
   const hermesReady = Boolean(hermes.binary && hermes.version && hermes.gateway_service.loaded);
@@ -55,6 +128,25 @@ export function buildRuntimeManager() {
         version: hermes.version,
         gateway_service: hermes.gateway_service,
         issues: hermes.issues,
+      },
+      registration_registry: {
+        surface_kind: 'opl_runtime_manager_registration_registry',
+        version: 'v1',
+        registration_status: 'declared_projection_contracts',
+        source_of_truth_rule:
+          'OPL indexes declared domain registration surfaces and must dereference domain-owned durable truth before acting.',
+        domains: DOMAIN_REGISTRATION_REGISTRY,
+        required_domain_registration_fields: [
+          'surface_kind',
+          'registration_id',
+          'domain_id',
+          'domain_owner',
+          'runtime_owner',
+          'domain_entry_surface',
+          'consumable_projection_refs',
+          'state_index_inputs',
+          'non_goals',
+        ],
       },
       native_helper_target: {
         status: 'planned_optional_substrate',
