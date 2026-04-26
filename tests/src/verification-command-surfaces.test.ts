@@ -68,6 +68,7 @@ test('scripts/verify.sh provides the canonical verification wrapper', () => {
   assert.match(verifyScript, /npm run native:doctor/);
   assert.match(verifyScript, /npm run native:pack-check/);
   assert.match(verifyScript, /npm run native:test/);
+  assert.match(verifyScript, /npm run native:family-smoke/);
   assert.match(verifyScript, /smoke\|fast\|family\|meta\|artifact\|native\|full\|lint\|line-budget\|typecheck/);
 });
 
@@ -105,4 +106,12 @@ test('package.json exposes native helper gate scripts and package dry-run check'
   assert.equal(packageJson.scripts?.['native:pack-check'], 'node ./scripts/native-helper-pack-check.mjs');
   assert.equal(packageJson.scripts?.['native:test'], 'cargo test --workspace');
   assert.equal(fs.existsSync(path.join(repoRoot, 'scripts/native-helper-pack-check.mjs')), true);
+});
+
+test('package.json exposes the native MAS/MAG family indexing smoke command', () => {
+  assert.equal(packageJson.scripts?.['native:family-smoke'], 'node ./scripts/native-helper-family-smoke.mjs');
+  assert.equal(
+    fs.existsSync(path.join(repoRoot, 'scripts/native-helper-family-smoke.mjs')),
+    true,
+  );
 });
