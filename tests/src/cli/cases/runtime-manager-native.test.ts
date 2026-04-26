@@ -49,6 +49,9 @@ esac
     const successPersistence = success.runtime_manager.state_index_target.persistence;
     assert.equal(successPersistence.status, 'written');
     assert.equal(successPersistence.freshness.status, 'fresh');
+    assert.equal(success.runtime_manager.reconcile.surface_kind, 'opl_runtime_manager_reconcile');
+    assert.equal(success.runtime_manager.reconcile.overall_status, 'ready');
+    assert.deepEqual(success.runtime_manager.reconcile.recommended_actions, []);
 
     const stale = runCli(['runtime', 'manager'], {
       OPL_HERMES_BIN: hermesPath,
@@ -61,6 +64,11 @@ esac
     assert.equal(staleFreshness.last_success_expired, false);
     assert.equal(staleFreshness.failure_count, 1);
     assert.equal(typeof staleFreshness.last_success_generated_at, 'string');
+    assert.equal(stale.runtime_manager.reconcile.overall_status, 'attention_needed');
+    assert.deepEqual(
+      stale.runtime_manager.reconcile.recommended_actions.map((action: { action_id: string }) => action.action_id),
+      ['repair_native_helpers', 'refresh_native_indexes'],
+    );
 
     const lastSuccess = JSON.parse(fs.readFileSync(successPersistence.last_success_file, 'utf8'));
     lastSuccess.lifecycle.expires_at = '2000-01-01T00:00:00.000Z';
@@ -79,5 +87,38 @@ esac
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(helperBinDir, { recursive: true, force: true });
+  }
+});
+
+test('runtime manager reconcile recommends Hermes setup without taking kernel ownership', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-reconcile-state-'));
+
+  try {
+    const output = runCli(['runtime', 'manager'], {
+      OPL_HERMES_BIN: '',
+      OPL_STATE_DIR: stateRoot,
+      OPL_NATIVE_HELPER_BIN_DIR: path.join(stateRoot, 'missing-native-bin'),
+      PATH: '',
+    });
+    const reconcile = output.runtime_manager.reconcile;
+
+    assert.equal(output.runtime_manager.status, 'needs_runtime_setup');
+    assert.equal(reconcile.surface_kind, 'opl_runtime_manager_reconcile');
+    assert.equal(reconcile.overall_status, 'attention_needed');
+    assert.equal(reconcile.checked_surfaces.hermes_runtime, 'needs_runtime_setup');
+    assert.equal(reconcile.non_goals.includes('does_not_schedule_tasks'), true);
+    assert.deepEqual(
+      reconcile.recommended_actions.map((action: { action_id: string; blocking: boolean }) => [
+        action.action_id,
+        action.blocking,
+      ]),
+      [
+        ['install_or_start_hermes', true],
+        ['repair_native_helpers', false],
+        ['refresh_native_indexes', false],
+      ],
+    );
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
