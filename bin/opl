@@ -125,7 +125,7 @@ case "$1" in
     fi
     run_opl "$@"
     ;;
-  help|doctor|start|web|mcp-stdio|status|workspace|domain|contract|system|modules|module|engine|service|runtime|skill)
+  help|doctor|install|start|web|mcp-stdio|status|workspace|domain|contract|system|modules|module|engine|service|runtime|skill)
     run_opl "$@"
     ;;
   *)

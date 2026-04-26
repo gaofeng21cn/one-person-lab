@@ -315,6 +315,31 @@ exit 0
   }
 });
 
+test('installed opl launcher routes install to OPL instead of Codex passthrough', () => {
+  const capturePath = path.join(os.tmpdir(), `opl-launcher-install-capture-${process.pid}.txt`);
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+printf '%s\\n' "$@" > ${JSON.stringify(capturePath)}
+echo "SHOULD NOT RUN CODEX"
+exit 0
+`);
+
+  try {
+    const result = runEntryPathRaw(binPath, ['install', '--help'], {
+      OPL_CODEX_BIN: codexPath,
+      OPL_SKIP_SKILL_SYNC: '1',
+    });
+
+    const payload = JSON.parse(result.stdout);
+    assert.equal(payload.help.command, 'install');
+    assert.match(payload.help.usage, /--skip-gui-open/);
+    assert.equal(result.stderr, '');
+    assert.equal(fs.existsSync(capturePath), false);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(capturePath, { force: true });
+  }
+});
+
 test('installed opl launcher routes retired ask chat and shell commands into CLI usage errors', () => {
   const capturePath = path.join(os.tmpdir(), `opl-launcher-retired-capture-${process.pid}.txt`);
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
