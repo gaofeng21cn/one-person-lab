@@ -13,8 +13,15 @@ export async function buildFrontDeskEnvironment(contracts: GatewayContracts) {
   const hermes = inspectHermesRuntime();
   const modulesPayload = buildFrontDeskModules().frontdesk_modules;
   const moduleSummary = modulesPayload.summary;
+  const codexIssues = [
+    ...codexBinary.issues,
+    ...(codexDefaults ? [] : ['codex_config_missing']),
+  ];
   const codexHealthStatus =
-    codexBinary.installed && codexDefaults
+    codexBinary.installed
+      && codexDefaults
+      && codexBinary.version_status === 'compatible'
+      && codexBinary.issues.length === 0
       ? 'ready'
       : codexBinary.installed
         ? 'attention_needed'
@@ -39,13 +46,18 @@ export async function buildFrontDeskEnvironment(contracts: GatewayContracts) {
         codex: {
           installed: codexBinary.installed,
           version: codexBinary.version,
+          parsed_version: codexBinary.parsed_version,
+          minimum_version: codexBinary.minimum_version,
+          version_status: codexBinary.version_status,
           binary_path: codexBinary.binary_path,
           binary_source: codexBinary.binary_source,
+          candidates: codexBinary.candidates,
           config_path: codexDefaults?.config_path ?? null,
           default_model: codexDefaults?.model ?? null,
           default_reasoning_effort: codexDefaults?.reasoning_effort ?? null,
           provider_base_url: codexDefaults?.provider_base_url ?? null,
           health_status: codexHealthStatus,
+          issues: codexIssues,
         },
         hermes: {
           installed: Boolean(hermes.binary),

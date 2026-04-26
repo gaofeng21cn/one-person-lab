@@ -9,28 +9,162 @@ import {
   type FrontDeskEngineId,
   type FrontDeskShellActionSpec,
   getShellBinary,
+  normalizeOutput,
   normalizeOptionalString,
   runCommand,
   runShellCommand,
 } from './shared.ts';
 
+const DEFAULT_MINIMUM_CODEX_CLI_VERSION = '0.125.0';
+
+type ParsedCliVersion = {
+  version: string;
+  parts: [number, number, number];
+};
+
+function resolveMinimumCodexCliVersion() {
+  return normalizeOptionalString(process.env.OPL_MIN_CODEX_CLI_VERSION)
+    ?? DEFAULT_MINIMUM_CODEX_CLI_VERSION;
+}
+
+function parseCliVersion(output: string | null | undefined): ParsedCliVersion | null {
+  const match = normalizeOptionalString(output)?.match(/(\d+)\.(\d+)\.(\d+)/);
+  if (!match) {
+    return null;
+  }
+
+  return {
+    version: `${Number(match[1])}.${Number(match[2])}.${Number(match[3])}`,
+    parts: [Number(match[1]), Number(match[2]), Number(match[3])],
+  };
+}
+
+function compareCliVersions(left: ParsedCliVersion, right: ParsedCliVersion) {
+  for (let index = 0; index < left.parts.length; index += 1) {
+    const diff = left.parts[index] - right.parts[index];
+    if (diff !== 0) {
+      return diff;
+    }
+  }
+  return 0;
+}
+
+function resolveVersionStatus(rawVersion: string | null, minimumVersion: string) {
+  const parsedVersion = parseCliVersion(rawVersion);
+  const parsedMinimum = parseCliVersion(minimumVersion);
+
+  if (!parsedVersion || !parsedMinimum) {
+    return {
+      parsed_version: parsedVersion?.version ?? null,
+      version_status: 'unknown' as const,
+    };
+  }
+
+  return {
+    parsed_version: parsedVersion.version,
+    version_status: compareCliVersions(parsedVersion, parsedMinimum) >= 0
+      ? 'compatible' as const
+      : 'outdated' as const,
+  };
+}
+
+function inspectCodexCandidate(candidatePath: string, selectedPath: string | null, minimumVersion: string) {
+  const versionResult = runCommand(candidatePath, ['--version']);
+  const version = normalizeOptionalString(normalizeOutput(versionResult.stdout, versionResult.stderr));
+  const policy = resolveVersionStatus(version, minimumVersion);
+  return {
+    path: candidatePath,
+    selected: selectedPath === candidatePath,
+    version,
+    parsed_version: policy.parsed_version,
+    version_status: policy.version_status,
+  };
+}
+
+function enumeratePathCodexCandidates() {
+  const candidates: string[] = [];
+  const seen = new Set<string>();
+
+  for (const entry of (process.env.PATH ?? '').split(path.delimiter)) {
+    const normalized = normalizeOptionalString(entry);
+    if (!normalized) {
+      continue;
+    }
+
+    const candidate = path.join(normalized, 'codex');
+    if (!fs.existsSync(candidate) || !fs.statSync(candidate).isFile()) {
+      continue;
+    }
+
+    if (seen.has(candidate)) {
+      continue;
+    }
+
+    seen.add(candidate);
+    candidates.push(candidate);
+  }
+
+  return candidates;
+}
+
+function enumerateCodexCandidates(selectedPath: string) {
+  const candidates: string[] = [];
+  const seen = new Set<string>();
+
+  for (const candidate of [selectedPath, ...enumeratePathCodexCandidates()]) {
+    if (seen.has(candidate)) {
+      continue;
+    }
+    seen.add(candidate);
+    candidates.push(candidate);
+  }
+
+  return candidates;
+}
+
 export function resolveCodexVersion() {
+  const minimumVersion = resolveMinimumCodexCliVersion();
   const binary = resolveCodexBinary();
   if (!binary) {
     return {
       installed: false,
       version: null,
+      parsed_version: null,
+      minimum_version: minimumVersion,
+      version_status: 'missing',
       binary_path: null,
       binary_source: null,
+      candidates: [],
+      issues: ['codex_cli_missing'],
     };
   }
 
   const versionResult = runCommand(binary.path, ['--version']);
+  const version = normalizeOptionalString(normalizeOutput(versionResult.stdout, versionResult.stderr));
+  const policy = resolveVersionStatus(version, minimumVersion);
+  const candidates = enumerateCodexCandidates(binary.path)
+    .map((candidate) => inspectCodexCandidate(candidate, binary.path, minimumVersion));
+  const candidateVersions = new Set(
+    candidates
+      .map((candidate) => candidate.parsed_version)
+      .filter(Boolean),
+  );
+  const issues = [
+    ...(policy.version_status === 'outdated' ? ['codex_cli_version_outdated'] : []),
+    ...(policy.version_status === 'unknown' ? ['codex_cli_version_unknown'] : []),
+    ...(candidateVersions.size > 1 ? ['codex_cli_path_version_conflict'] : []),
+  ];
+
   return {
     installed: true,
-    version: normalizeOptionalString(versionResult.stdout) ?? normalizeOptionalString(versionResult.stderr),
+    version,
+    parsed_version: policy.parsed_version,
+    minimum_version: minimumVersion,
+    version_status: policy.version_status,
     binary_path: binary.path,
     binary_source: binary.source,
+    candidates,
+    issues,
   };
 }
 
@@ -60,7 +194,7 @@ function resolveBuiltinEngineActionCommand(
       case 'install':
       case 'update':
       case 'reinstall':
-        return 'npm install -g @openai/codex';
+        return 'npm install -g @openai/codex@latest';
       case 'remove':
         return 'npm uninstall -g @openai/codex';
     }

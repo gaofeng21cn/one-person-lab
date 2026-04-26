@@ -1,10 +1,21 @@
-import { assert, contractsDir, createFakeLaunchctlFixture, createFakeOpenFixture, createGitModuleRemoteFixture, fs, loadGatewayContracts, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, contractsDir, createCodexConfigFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createGitModuleRemoteFixture, fs, loadGatewayContracts, os, path, repoRoot, runCli, test } from '../helpers.ts';
 import { buildInternalCommandSpecs } from '../../../../src/cli/cases/private-command-specs.ts';
 import { buildPublicCommandSpecs } from '../../../../src/cli/cases/public-command-specs.ts';
 
 test('public command specs expose the one-shot install command', () => {
   const contracts = loadGatewayContracts({ contractsDir });
-  const publicSpecs = buildPublicCommandSpecs(buildInternalCommandSpecs({ helpRequested: false, command: null, args: [], loadOptions: { contractsDir } }, () => contracts), () => contracts);
+  const internalSpecs = buildInternalCommandSpecs(
+    {
+      helpRequested: false,
+      jsonOutput: true,
+      textOutput: false,
+      command: null,
+      args: [],
+      loadOptions: { contractsDir },
+    },
+    () => contracts,
+  );
+  const publicSpecs = buildPublicCommandSpecs(internalSpecs, () => contracts);
 
   assert.equal(typeof publicSpecs.install.handler, 'function');
 });
@@ -27,7 +38,15 @@ test('install command runs selected module installs and returns one-shot setup p
           },
         ],
       }, null, 2),
-      'plugins/mas/skills/mas/SKILL.md': '# mas\n',
+      'plugins/mas/skills/mas/SKILL.md': [
+        '---',
+        'name: mas',
+        'description: Use MAS runtime through its OPL-managed product entry.',
+        '---',
+        '',
+        '# MAS Skill',
+        '',
+      ].join('\n'),
       'scripts/opl-module-bootstrap.sh': `#!/usr/bin/env bash
 set -euo pipefail
 printf 'bootstrap\n' >> ${JSON.stringify(turnkeyLogPath)}
@@ -188,10 +207,11 @@ test('install command reuses already installed runtime dependencies', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-engines-home-'));
   const codexFixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-codex-'));
   const hermesFixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-hermes-'));
+  const codexConfigFixture = createCodexConfigFixture();
   const codexPath = path.join(codexFixtureRoot, 'codex');
   const hermesPath = path.join(hermesFixtureRoot, 'hermes');
 
-  fs.writeFileSync(codexPath, '#!/usr/bin/env bash\necho "codex 1.2.3"\n', { mode: 0o755 });
+  fs.writeFileSync(codexPath, '#!/usr/bin/env bash\necho "codex-cli 0.125.0"\n', { mode: 0o755 });
   fs.writeFileSync(
     hermesPath,
     [
@@ -210,9 +230,10 @@ test('install command reuses already installed runtime dependencies', () => {
       ['install', '--skip-modules', '--skip-gui-open'],
       {
         HOME: homeRoot,
+        CODEX_HOME: codexConfigFixture.codexHome,
         OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
         OPL_HERMES_BIN: hermesPath,
-        PATH: `${codexFixtureRoot}:${process.env.PATH ?? ''}`,
+        PATH: `${codexFixtureRoot}:${hermesFixtureRoot}:/usr/bin:/bin`,
       },
     ) as {
       install: {
@@ -228,6 +249,7 @@ test('install command reuses already installed runtime dependencies', () => {
       ],
     );
   } finally {
+    fs.rmSync(codexConfigFixture.codexHome, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(codexFixtureRoot, { recursive: true, force: true });
     fs.rmSync(hermesFixtureRoot, { recursive: true, force: true });

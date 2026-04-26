@@ -250,7 +250,7 @@ export async function runFrontDeskTurnkeyInstall(
     ? []
     : await Promise.all(DEFAULT_ENGINES.map(async (engineId) => {
       const engine = environment.core_engines[engineId];
-      if (engine.installed) {
+      if (engine.health_status === 'ready') {
         return {
           version: 'g2',
           frontdesk_engine_action: {
