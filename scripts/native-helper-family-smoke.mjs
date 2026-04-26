@@ -192,6 +192,10 @@ function resolveHelper(binary) {
       return { source: 'explicit_bin_dir', path: candidate };
     }
   }
+  const cacheCandidate = path.join(nativeHelperCacheDir(), binary);
+  if (fs.existsSync(cacheCandidate)) {
+    return { source: 'state_cache', path: cacheCandidate };
+  }
   const targetDebug = path.join(repoRoot, 'target', 'debug', binary);
   if (fs.existsSync(targetDebug)) {
     return { source: 'workspace_target_debug', path: targetDebug };
@@ -203,6 +207,21 @@ function resolveHelper(binary) {
     }
   }
   return { source: 'not_found', path: null };
+}
+
+function nativeHelperCacheDir() {
+  const stateDir = process.env.OPL_STATE_DIR
+    ?? path.join(process.env.HOME ?? repoRoot, 'Library/Application Support/OPL/state');
+  return path.join(stateDir, 'native-helper', 'bin', `${process.platform}-${process.arch}`, nativeHelperCrateVersion());
+}
+
+function nativeHelperCrateVersion() {
+  try {
+    const cargoToml = fs.readFileSync(path.join(repoRoot, 'native/opl-native-helper/Cargo.toml'), 'utf8');
+    return cargoToml.match(/^version\s*=\s*"([^"]+)"/m)?.[1] ?? '0.0.0';
+  } catch {
+    return '0.0.0';
+  }
 }
 
 function sanitizeResolution(resolution) {

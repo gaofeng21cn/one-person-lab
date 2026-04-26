@@ -28,6 +28,8 @@ case "$lane" in
     npm run native:doctor
     npm run native:pack-check
     npm run native:test
+    npm run native:build
+    npm run native:cache
     npm run native:family-smoke
     ;;
   full)

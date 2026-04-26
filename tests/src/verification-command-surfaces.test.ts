@@ -68,6 +68,8 @@ test('scripts/verify.sh provides the canonical verification wrapper', () => {
   assert.match(verifyScript, /npm run native:doctor/);
   assert.match(verifyScript, /npm run native:pack-check/);
   assert.match(verifyScript, /npm run native:test/);
+  assert.match(verifyScript, /npm run native:build/);
+  assert.match(verifyScript, /npm run native:cache/);
   assert.match(verifyScript, /npm run native:family-smoke/);
   assert.match(verifyScript, /smoke\|fast\|family\|meta\|artifact\|native\|full\|lint\|line-budget\|typecheck/);
 });

@@ -151,6 +151,8 @@ const NATIVE_HELPER_PACKAGE_FILES = [
   'native/opl-native-helper/src/bin',
   'scripts/native-helper-cache.mjs',
   'scripts/native-helper-doctor.mjs',
+  'scripts/native-helper-family-smoke.mjs',
+  'scripts/native-helper-pack-check.mjs',
   'scripts/native-helper-repair.mjs',
 ] as const;
 
@@ -161,6 +163,8 @@ const NATIVE_HELPER_NPM_FILES = [
   'native/opl-native-helper/src',
   'scripts/native-helper-cache.mjs',
   'scripts/native-helper-doctor.mjs',
+  'scripts/native-helper-family-smoke.mjs',
+  'scripts/native-helper-pack-check.mjs',
   'scripts/native-helper-repair.mjs',
 ] as const;
 

@@ -13,6 +13,7 @@ const requiredFiles = [
   'Cargo.lock',
   'native/opl-native-helper/Cargo.toml',
   'native/opl-native-helper/src/lib.rs',
+  'scripts/native-helper-cache.mjs',
   'scripts/native-helper-doctor.mjs',
   'scripts/native-helper-family-smoke.mjs',
   'scripts/native-helper-pack-check.mjs',
