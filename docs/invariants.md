@@ -4,6 +4,7 @@
 
 - `OPL` 是顶层 `Codex-default session runtime` 与共享接口层。
 - `OPL` 的默认 runtime 只有一个：`Codex`。
+- `Codex CLI` 是 OPL 的受管 runtime dependency：OPL 必须检测实际命中的 binary、版本、最低版本策略和 PATH 冲突；低于当前最低版本或存在候选版本冲突的 Codex CLI 只能进入 `attention_needed`，不得被报告为 ready。
 - 只有显式 domain activation 或显式 runtime switch，才允许离开 Codex-default 语义。
 - `OPL Runtime Manager` 只能是产品级薄管理/投影层，不得被写成 scheduler、session store、memory store、domain truth owner 或 concrete executor。
 - `Hermes-Agent` 继续是外部 runtime substrate owner；OPL 可以管理、pin、诊断和投影它，但不得 fork/vendor 成 OPL 私有 runtime kernel。

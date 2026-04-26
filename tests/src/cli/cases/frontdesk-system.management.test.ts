@@ -43,7 +43,7 @@ exit 1
 `);
   const codexFixture = createFakeCodexFixture(`
 if [[ "$1" == "--version" ]]; then
-  echo "codex 0.42.0"
+  echo "codex-cli 0.125.0"
   exit 0
 fi
 echo "Unsupported codex fixture command: $*" >&2
@@ -57,7 +57,7 @@ exit 1
         HOME: homeRoot,
         CODEX_HOME: codexConfigFixture.codexHome,
         OPL_HERMES_BIN: hermesFixture.hermesPath,
-        PATH: `${codexFixture.fixtureRoot}:${hermesFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
+        PATH: `${codexFixture.fixtureRoot}:${hermesFixture.fixtureRoot}:/usr/bin:/bin`,
       },
     ) as {
       system: {
@@ -67,11 +67,15 @@ exit 1
           codex: {
             installed: boolean;
             version: string | null;
+            parsed_version: string | null;
+            minimum_version: string;
+            version_status: string;
             config_path: string | null;
             default_model: string | null;
             default_reasoning_effort: string | null;
             provider_base_url: string | null;
             health_status: string;
+            issues: string[];
           };
           hermes: {
             installed: boolean;
@@ -97,7 +101,10 @@ exit 1
     assert.equal(output.system.surface_id, 'opl_system');
     assert.equal(output.system.overall_status, 'ready');
     assert.equal(output.system.core_engines.codex.installed, true);
-    assert.equal(output.system.core_engines.codex.version, 'codex 0.42.0');
+    assert.equal(output.system.core_engines.codex.version, 'codex-cli 0.125.0');
+    assert.equal(output.system.core_engines.codex.parsed_version, '0.125.0');
+    assert.equal(output.system.core_engines.codex.minimum_version, '0.125.0');
+    assert.equal(output.system.core_engines.codex.version_status, 'compatible');
     assert.equal(
       output.system.core_engines.codex.config_path,
       codexConfigFixture.configPath,
@@ -109,6 +116,7 @@ exit 1
       'https://codex-opl.example.test/v1',
     );
     assert.equal(output.system.core_engines.codex.health_status, 'ready');
+    assert.deepEqual(output.system.core_engines.codex.issues, []);
     assert.equal(output.system.core_engines.hermes.installed, true);
     assert.equal(output.system.core_engines.hermes.version, 'Hermes 1.2.3');
     assert.equal(output.system.core_engines.hermes.gateway_loaded, true);
@@ -140,6 +148,139 @@ exit 1
   }
 });
 
+test('system flags outdated Codex CLI versions as attention needed', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-outdated-codex-home-'));
+  const codexConfigFixture = createCodexConfigFixture({
+    model: 'gpt-5.5',
+    reasoningEffort: 'xhigh',
+    baseUrl: 'https://codex-opl.example.test/v1',
+    apiKey: 'codex-opl-key',
+  });
+  const codexFixture = createFakeCodexFixture(`
+if [[ "$1" == "--version" ]]; then
+  echo "codex-cli 0.121.0"
+  exit 0
+fi
+echo "Unsupported codex fixture command: $*" >&2
+exit 1
+`);
+
+  try {
+    const output = runCli(
+      ['system'],
+      {
+        HOME: homeRoot,
+        CODEX_HOME: codexConfigFixture.codexHome,
+        PATH: `${codexFixture.fixtureRoot}:/usr/bin:/bin`,
+      },
+    ) as {
+      system: {
+        overall_status: string;
+        core_engines: {
+          codex: {
+            installed: boolean;
+            version: string | null;
+            parsed_version: string | null;
+            minimum_version: string;
+            version_status: string;
+            health_status: string;
+            issues: string[];
+          };
+        };
+      };
+    };
+
+    assert.equal(output.system.overall_status, 'attention_needed');
+    assert.equal(output.system.core_engines.codex.installed, true);
+    assert.equal(output.system.core_engines.codex.version, 'codex-cli 0.121.0');
+    assert.equal(output.system.core_engines.codex.parsed_version, '0.121.0');
+    assert.equal(output.system.core_engines.codex.minimum_version, '0.125.0');
+    assert.equal(output.system.core_engines.codex.version_status, 'outdated');
+    assert.equal(output.system.core_engines.codex.health_status, 'attention_needed');
+    assert.deepEqual(output.system.core_engines.codex.issues, ['codex_cli_version_outdated']);
+  } finally {
+    fs.rmSync(codexConfigFixture.codexHome, { recursive: true, force: true });
+    fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('system flags conflicting Codex CLI PATH candidates as attention needed', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-conflicting-codex-home-'));
+  const codexConfigFixture = createCodexConfigFixture({
+    model: 'gpt-5.5',
+    reasoningEffort: 'xhigh',
+    baseUrl: 'https://codex-opl.example.test/v1',
+    apiKey: 'codex-opl-key',
+  });
+  const compatibleCodexFixture = createFakeCodexFixture(`
+if [[ "$1" == "--version" ]]; then
+  echo "codex-cli 0.125.0"
+  exit 0
+fi
+echo "Unsupported compatible codex fixture command: $*" >&2
+exit 1
+`);
+  const outdatedCodexFixture = createFakeCodexFixture(`
+if [[ "$1" == "--version" ]]; then
+  echo "codex-cli 0.121.0"
+  exit 0
+fi
+echo "Unsupported outdated codex fixture command: $*" >&2
+exit 1
+`);
+
+  try {
+    const output = runCli(
+      ['system'],
+      {
+        HOME: homeRoot,
+        CODEX_HOME: codexConfigFixture.codexHome,
+        PATH: `${compatibleCodexFixture.fixtureRoot}:${outdatedCodexFixture.fixtureRoot}:/usr/bin:/bin`,
+      },
+    ) as {
+      system: {
+        overall_status: string;
+        core_engines: {
+          codex: {
+            version_status: string;
+            health_status: string;
+            issues: string[];
+            candidates: Array<{
+              path: string;
+              selected: boolean;
+              parsed_version: string | null;
+              version_status: string;
+            }>;
+          };
+        };
+      };
+    };
+
+    assert.equal(output.system.overall_status, 'attention_needed');
+    assert.equal(output.system.core_engines.codex.version_status, 'compatible');
+    assert.equal(output.system.core_engines.codex.health_status, 'attention_needed');
+    assert.deepEqual(output.system.core_engines.codex.issues, ['codex_cli_path_version_conflict']);
+    assert.deepEqual(
+      output.system.core_engines.codex.candidates.map((candidate) => [
+        candidate.path,
+        candidate.selected,
+        candidate.parsed_version,
+        candidate.version_status,
+      ]),
+      [
+        [compatibleCodexFixture.codexPath, true, '0.125.0', 'compatible'],
+        [outdatedCodexFixture.codexPath, false, '0.121.0', 'outdated'],
+      ],
+    );
+  } finally {
+    fs.rmSync(codexConfigFixture.codexHome, { recursive: true, force: true });
+    fs.rmSync(compatibleCodexFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(outdatedCodexFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
 test('system initialize aggregates environment modules settings workspace and system surfaces', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-initialize-home-'));
   const stateDir = path.join(homeRoot, 'opl-state');
@@ -164,7 +305,7 @@ exit 1
 `);
   const codexFixture = createFakeCodexFixture(`
 if [[ "$1" == "--version" ]]; then
-  echo "codex 0.42.0"
+  echo "codex-cli 0.125.0"
   exit 0
 fi
 echo "Unsupported codex fixture command: $*" >&2
@@ -180,7 +321,7 @@ exit 1
         OPL_HERMES_BIN: hermesFixture.hermesPath,
         OPL_STATE_DIR: stateDir,
         OPL_WORKSPACE_ROOT: workspaceRoot,
-        PATH: `${codexFixture.fixtureRoot}:${hermesFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
+        PATH: `${codexFixture.fixtureRoot}:${hermesFixture.fixtureRoot}:/usr/bin:/bin`,
       },
     ) as {
       system_initialize: {
