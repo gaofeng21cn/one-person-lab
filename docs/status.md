@@ -29,12 +29,12 @@
 ## 当前默认入口
 
 - 默认前门是 `opl`；`opl exec` 负责一次性请求，`opl resume` 负责续接会话。
-- `opl install` 是当前最短一键安装入口：默认安装或配置 `Codex CLI` 与 `Hermes-Agent`，安装 `MAS`、`MDS`、`MAG`、`RCA`，同步短名 Codex skills；其中 `MDS` 是 `MAS` 的隐藏运行依赖，不进入首页 domain-agent 入口。若 OPL 品牌 GUI 已安装则尝试打开，macOS 上未安装时会自动下载并安装匹配当前平台的 release DMG 后再打开；历史 8787 Product API service 模块已退役。
-- `opl system` / `opl system initialize` 现在把 `Codex CLI` 当作受管 runtime dependency：报告实际命中的 binary path、raw version、parsed version、最低版本策略、版本状态、PATH 候选与冲突 issue。低于最低版本或存在候选版本冲突时不会报告为 ready；当前默认最低版本是 `0.125.0`，可用 `OPL_MIN_CODEX_CLI_VERSION` 覆盖。
+- `opl install` 是当前最短一键安装入口：默认安装或配置 `Codex CLI` 与 `Hermes-Agent`，安装 `MAS`、`MDS`、`MAG`、`RCA`，同步短名 Codex skills，并以保守 managed 模式同步推荐 companion skills；其中 `MDS` 是 `MAS` 的隐藏运行依赖，不进入首页 domain-agent 入口。若 OPL 品牌 GUI 已安装则尝试打开，macOS 上未安装时会自动下载并安装匹配当前平台的 release DMG 后再打开；历史 8787 Product API service 模块已退役。
+- `opl system` / `opl system initialize` 现在把 `Codex CLI` 当作受管 runtime dependency：报告实际命中的 binary path、raw version、parsed version、最低版本策略、版本状态、PATH 候选与冲突 issue。低于最低版本或存在候选版本冲突时不会报告为 ready；缺少可读 Codex config 不再单独阻塞首启，只在可读时展示继承到的模型与 provider 信息。当前默认最低版本是 `0.125.0`，可用 `OPL_MIN_CODEX_CLI_VERSION` 覆盖。
 - 这几个入口默认继承 `Codex` 语义；只有显式 runtime switch 或显式 domain activation 才进入不同语义。
 - `opl skill sync` 负责把家族 domain app skill pack 同步到 Codex 环境，供默认 `opl` / `opl exec` / `opl resume` 直接使用；默认 sibling repo 发现已经按 workspace/worktree 布局自动解析，不再依赖 `OPL_FAMILY_WORKSPACE_ROOT`。
 - `opl module install --module <module_id>` 现在走完整闭环：clone 到 OPL-managed modules root，执行仓库 bootstrap，同步对应 skill pack，再跑仓库健康检查。
-- `opl system initialize` 是当前一键配置安装的聚合面：同时暴露 workspace root、Codex / Hermes runtime dependencies、domain modules、推荐 companion skills、OPL 品牌 GUI shell、local support service 与下一步动作。
+- `opl system initialize` 是当前一键配置安装的聚合面：同时暴露 workspace root、Codex / Hermes runtime dependencies、domain modules、推荐 companion skills、OPL 品牌 GUI shell、local support service 与下一步动作；没有显式 workspace root 时默认使用用户 Home 目录。
 - `opl runtime manager` 是当前 Runtime Manager 的机器可读 projection：它展示 OPL 管理外部 `Hermes-Agent` substrate 的 owner split、非目标、v1 domain registration registry、Rust native helper lifecycle、native helper target 与 state index target；Rust helper 源码、doctor/repair/prebuild 脚本和 Cargo workspace 已进入 npm package surface；当 helper 可发现时，它会调用 native doctor / state indexer / artifact indexer / runtime watch，并把 `opl_runtime_manager_native_state_projection` 写入 `OPL_STATE_DIR/runtime-manager/native-state-index.json`，同时报告 TTL、history、failure、last-success、freshness、结构化 diff 与 history GC preserved/removed 状态。
 - Rust native helper 的生产化门禁已经进入仓库验证面：`native:doctor`、prebuild check、`npm pack --dry-run`、Rust tests/build、state cache 与 MAS/MAG family smoke 共同构成 native lane；CI 使用 fixture family smoke 验证 MAS/MAG 已声明的 `opl_runtime_manager_registration` 与 `native_helper_consumption.proof_surface` 投影，本地集成机继续可以对真实 MAS/MAG sibling workspace 做只读 indexing / registration / proof smoke。
 - 推荐 companion skills 当前包括 `superpowers`、`officecli`、`ui-ux-pro-max` 和 Codex native Office skill 组；它们不改变 OPL runtime 语义，只作为 MAS / MAG / RCA 工作流的增强能力。

@@ -120,6 +120,23 @@ function forceSymlinkDirectory(sourcePath: string, targetPath: string) {
   fs.symlinkSync(sourcePath, targetPath, 'junction');
 }
 
+function isUserManagedSkillDirectory(targetPath: string) {
+  if (!pathExists(targetPath)) {
+    return false;
+  }
+
+  try {
+    const stat = fs.lstatSync(targetPath);
+    return !stat.isSymbolicLink() && stat.isDirectory() && pathExists(path.join(targetPath, 'SKILL.md'));
+  } catch {
+    return false;
+  }
+}
+
+function isSameResolvedPath(left: string, right: string) {
+  return path.resolve(left) === path.resolve(right);
+}
+
 function removeLegacySuperpowersCodexSkillLink(home: string) {
   const legacyPath = path.join(resolveCodexSkillsDir(home), 'superpowers');
   if (!pathExists(legacyPath)) {
@@ -375,6 +392,18 @@ export function syncOplCompanionSkills(
     const source = pickFirstExistingSkillSource(skill.expected_paths);
     const targetPath = path.join(codexSkillsDir, skill.skill_id);
     if (!source) {
+      if (resolveSkillSourceCandidate(targetPath)) {
+        items.push({
+          skill_id: skill.skill_id,
+          source_path: targetPath,
+          target_path: targetPath,
+          status: 'ready',
+          action: 'none',
+          note: 'Existing Codex skill is already available.',
+        });
+        continue;
+      }
+
       items.push({
         skill_id: skill.skill_id,
         source_path: null,
@@ -396,6 +425,24 @@ export function syncOplCompanionSkills(
           status: 'available',
           action: 'discover_only',
           note: 'Codex bundled skills are discovered from the plugin cache and are not mirrored into ~/.codex/skills.',
+        });
+      } else if (isSameResolvedPath(source.link_path, targetPath)) {
+        items.push({
+          skill_id: skill.skill_id,
+          source_path: source.report_path,
+          target_path: targetPath,
+          status: 'ready',
+          action: 'none',
+          note: 'Existing Codex skill is already installed at the target path.',
+        });
+      } else if (isUserManagedSkillDirectory(targetPath)) {
+        items.push({
+          skill_id: skill.skill_id,
+          source_path: targetPath,
+          target_path: targetPath,
+          status: 'ready',
+          action: 'none',
+          note: 'Preserved existing user-managed Codex skill directory.',
         });
       } else {
         forceSymlinkDirectory(source.link_path, targetPath);
@@ -504,10 +551,19 @@ export function buildOplRecommendedSkills(home = resolveHomeDir()): OplRecommend
     },
   ];
 
-  return specs.map((spec) => ({
-    ...spec,
-    status: buildSkillStatus(spec.expected_paths),
-  }));
+  return specs.map((spec) => {
+    const expectedPaths = spec.source === 'codex_builtin' || spec.source === 'superpowers'
+      ? spec.expected_paths
+      : [
+        ...spec.expected_paths,
+        path.join(codexHome, 'skills', spec.skill_id, 'SKILL.md'),
+      ];
+    return {
+      ...spec,
+      expected_paths: expectedPaths,
+      status: buildSkillStatus(expectedPaths),
+    };
+  });
 }
 
 export function buildOplGuiShellSurface(repoRoot: string): OplGuiShellSurface {

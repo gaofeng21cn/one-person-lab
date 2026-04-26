@@ -1,4 +1,4 @@
-const DEFAULT_OPL_RELEASE_VERSION = '26.4.25';
+const DEFAULT_OPL_RELEASE_VERSION = '26.4.27';
 const DEFAULT_OPL_RELEASE_REPO = 'gaofeng21cn/one-person-lab';
 
 export function getOplReleaseVersion(): string {

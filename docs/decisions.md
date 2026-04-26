@@ -2,6 +2,18 @@
 
 ## 2026-04-26
 
+### 决策：首启默认走静默自动配置，减少新手选择障碍
+
+原因：One Person Lab App 和 Docker WebUI 的首要目标是让新手或 OPL-first 用户尽快进入可用界面。workspace root、模块安装、推荐 skills 这类可以合理默认或自动修复的事项不应变成首启向导问题；命令行 `opl install` 已完成的配置也不应在 App 首启时重复打断用户。
+
+影响：
+
+- 未显式配置 workspace root 时，`opl system initialize` 默认使用用户 Home 目录
+- 兼容版本的 `Codex CLI` 已可用时，不因缺少可读 Codex config 单独阻塞首启
+- `opl install` 默认安装/检查 domain modules，并以保守 managed 模式同步推荐 companion skills
+- App 首启先静默读取 `opl system initialize`；若命令行安装已经完成，则不再运行安装或打开首启向导
+- 只有缺少 Codex CLI、模块无法安装、版本冲突等不可自动解决事项，才进入环境管理提示
+
 ### 决策：`MDS` 作为 `MAS` 隐藏运行依赖进入安装与环境管理面
 
 原因：`MAS` 的深度研究运行链路依赖 `Med Deep Scientist`，新手用户用 `One Person Lab App` 或 `opl install` 初始化时，不应再手工发现和安装这条依赖。同时，`MDS` 仍然不是面向用户选择的顶层 domain agent，不能和 `MAS`、`MAG`、`RCA` 并列进入首页产品入口。

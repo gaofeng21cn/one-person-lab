@@ -107,11 +107,12 @@ export async function buildFrontDeskInitialize(contracts: GatewayContracts) {
   });
   const reviewModulesAction = buildInitializeActionDescriptor({
     action_id: 'review_modules',
-    label: 'Choose domain modules',
-    description: 'Pick the OPL domain modules that should be available in this installation.',
+    label: 'Install domain modules',
+    description: 'Install the OPL domain modules that should be available in this installation.',
     section_id: 'modules',
     endpoint: endpoints.frontdesk_modules,
-  });  const reviewInitializeAction = buildInitializeActionDescriptor({
+  });
+  const reviewInitializeAction = buildInitializeActionDescriptor({
     action_id: 'review_initialize',
     label: 'Review initialize state',
     description: 'Re-open the aggregated Initialize OPL surface and confirm the remaining setup choices.',
@@ -182,8 +183,8 @@ export async function buildFrontDeskInitialize(contracts: GatewayContracts) {
       item_id: 'domain_modules',
       label: 'Domain Modules',
       status: buildInitializeOptionalStatus(moduleSummary.installed_modules_count),
-      required: false,
-      blocking: false,
+      required: true,
+      blocking: moduleSummary.installed_modules_count < moduleSummary.total_modules_count,
       section_id: 'modules',
       detail_summary: `${moduleSummary.installed_modules_count}/${moduleSummary.total_modules_count} modules installed.`,
       endpoint: endpoints.frontdesk_modules,
@@ -222,17 +223,12 @@ export async function buildFrontDeskInitialize(contracts: GatewayContracts) {
   const optionalChecklist = checklist.filter((item) => !item.required);
   const blockingItems = checklist
     .filter((item) => item.blocking)
-    .map((item) => ({
-      item_id: item.item_id,
-      label: item.label,
-      status: item.status,
-      section_id: item.section_id,
-      action: item.action,
-    }));
+    .map((item) => item.item_id);
 
   const overallState =
     environment.core_engines.codex.health_status === 'ready'
-      && workspaceRoot.health_status === 'ready'
+    && workspaceRoot.health_status === 'ready'
+      && moduleSummary.installed_modules_count === moduleSummary.total_modules_count
       ? 'ready_to_finalize'
       : 'attention_needed';
   const setupPhase: FrontDeskInitializePhase =
@@ -240,15 +236,20 @@ export async function buildFrontDeskInitialize(contracts: GatewayContracts) {
       ? 'workspace_root'
       : environment.core_engines.codex.health_status !== 'ready'
         ? 'environment'
-        : 'review';
+        : moduleSummary.installed_modules_count < moduleSummary.total_modules_count
+          ? 'modules'
+          : 'review';
   const recommendedNextAction =
     setupPhase === 'workspace_root'
       ? setWorkspaceRootAction
       : setupPhase === 'environment'
         ? installCodexAction
-        : moduleSummary.installed_modules_count === 0
+        : setupPhase === 'modules'
           ? reviewModulesAction
           : reviewInitializeAction;
+  const requiredCompletedCount = requiredChecklist.filter((item) => !item.blocking).length;
+  const optionalCompletedCount = optionalChecklist.filter((item) => item.status === 'ready').length;
+  const isFirstRun = workspaceRoot.source === 'default_home' && overallState !== 'ready_to_finalize';
 
   return {
     version: 'g2',
@@ -256,14 +257,18 @@ export async function buildFrontDeskInitialize(contracts: GatewayContracts) {
       surface_id: 'opl_frontdesk_initialize',
       overall_state: overallState,
       setup_flow: {
-        is_first_run: workspaceRoot.source === 'unset',
+        is_first_run: isFirstRun,
         phase: setupPhase,
         ready_to_launch: requiredChecklist.every((item) => !item.blocking),
         progress: {
-          required_completed_count: requiredChecklist.filter((item) => !item.blocking).length,
+          required_completed_count: requiredCompletedCount,
           required_total_count: requiredChecklist.length,
-          optional_completed_count: optionalChecklist.filter((item) => item.status === 'ready').length,
+          optional_completed_count: optionalCompletedCount,
           optional_total_count: optionalChecklist.length,
+          ready_required_count: requiredCompletedCount,
+          total_required_count: requiredChecklist.length,
+          ready_optional_count: optionalCompletedCount,
+          total_optional_count: optionalChecklist.length,
         },
         blocking_items: blockingItems,
       },

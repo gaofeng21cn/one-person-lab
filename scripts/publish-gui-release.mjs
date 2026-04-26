@@ -11,7 +11,7 @@ function parseArgs(argv) {
   const parsed = {
     shellRoot: process.env.OPL_AION_SHELL_ROOT || defaultShellRoot,
     releaseRepo: process.env.OPL_RELEASE_REPO || 'gaofeng21cn/one-person-lab',
-    version: process.env.OPL_RELEASE_VERSION || '26.4.25',
+    version: process.env.OPL_RELEASE_VERSION || '26.4.27',
     build: true,
     dryRun: false,
   };
@@ -85,6 +85,11 @@ function findArtifacts(shellRoot, version) {
   });
   if (!files.some((name) => name.endsWith('.dmg'))) {
     throw new Error(`No One Person Lab ${version} DMG found under ${releaseDir}`);
+  }
+  if (files.some((name) => name.includes('-mac-arm64.')) && files.includes('latest-mac.yml')) {
+    const arm64MetadataName = 'latest-arm64-mac.yml';
+    fs.copyFileSync(path.join(releaseDir, 'latest-mac.yml'), path.join(releaseDir, arm64MetadataName));
+    files.push(arm64MetadataName);
   }
   const artifacts = files.map((name) => {
     const source = path.join(releaseDir, name);
