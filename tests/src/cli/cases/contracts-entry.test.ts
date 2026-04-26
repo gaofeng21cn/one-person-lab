@@ -721,6 +721,139 @@ esac
   }
 });
 
+test('runtime manager discovers cached native helpers and records index lifecycle metadata', () => {
+  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "version" ]; then
+  echo "Hermes Agent v9.9.9-test"
+  exit 0
+fi
+if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
+  echo "Gateway service is loaded"
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-cache-state-'));
+  const helperCacheDir = path.join(
+    stateRoot,
+    'native-helper',
+    'bin',
+    `${process.platform}-${process.arch}`,
+    '0.1.0',
+  );
+  fs.mkdirSync(helperCacheDir, { recursive: true });
+
+  for (const binary of ['opl-doctor-native', 'opl-runtime-watch', 'opl-artifact-indexer', 'opl-state-indexer']) {
+    fs.writeFileSync(
+      path.join(helperCacheDir, binary),
+      `#!/bin/sh
+cat >/dev/null
+case "$(basename "$0")" in
+  opl-doctor-native)
+    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-doctor-native","helper_version":"0.1.0","crate_name":"opl-native-helper","crate_version":"0.1.0","ok":true,"request_id":"runtime-manager-doctor","result":{"surface_kind":"native_doctor_snapshot"},"errors":[]}'
+    ;;
+  opl-runtime-watch)
+    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-runtime-watch","helper_version":"0.1.0","crate_name":"opl-native-helper","crate_version":"0.1.0","ok":true,"request_id":"runtime-manager-runtime-watch","result":{"surface_kind":"runtime_health_snapshot_index","roots":[]},"errors":[]}'
+    ;;
+  opl-artifact-indexer)
+    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-artifact-indexer","helper_version":"0.1.0","crate_name":"opl-native-helper","crate_version":"0.1.0","ok":true,"request_id":"runtime-manager-artifact-index","result":{"surface_kind":"native_artifact_manifest","summary":{"total_files_count":1},"files":[]},"errors":[]}'
+    ;;
+  opl-state-indexer)
+    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-state-indexer","helper_version":"0.1.0","crate_name":"opl-native-helper","crate_version":"0.1.0","ok":true,"request_id":"runtime-manager-state-index","result":{"surface_kind":"native_state_index","roots":[],"json_validation":{"checked_files_count":0,"invalid_files_count":0,"files":[]}},"errors":[]}'
+    ;;
+esac
+`,
+      { mode: 0o755 },
+    );
+  }
+
+  try {
+    const output = runCli(['runtime', 'manager'], {
+      OPL_HERMES_BIN: hermesPath,
+      OPL_STATE_DIR: stateRoot,
+    });
+    const helperSources = output.runtime_manager.native_helper_target.runtime.discovery.helpers
+      .filter((helper: { helper_id: string }) => helper.helper_id !== 'opl-sysprobe')
+      .map((helper: { helper_id: string; source: string }) => [helper.helper_id, helper.source]);
+    assert.deepEqual(helperSources, [
+      ['opl-doctor-native', 'state_cache'],
+      ['opl-runtime-watch', 'state_cache'],
+      ['opl-artifact-indexer', 'state_cache'],
+      ['opl-state-indexer', 'state_cache'],
+    ]);
+    assert.deepEqual(
+      output.runtime_manager.native_helper_target.runtime.invocations.map(
+        (invocation: { helper_version: string; crate_name: string; crate_version: string }) => [
+          invocation.helper_version,
+          invocation.crate_name,
+          invocation.crate_version,
+        ],
+      ),
+      [
+        ['0.1.0', 'opl-native-helper', '0.1.0'],
+        ['0.1.0', 'opl-native-helper', '0.1.0'],
+        ['0.1.0', 'opl-native-helper', '0.1.0'],
+        ['0.1.0', 'opl-native-helper', '0.1.0'],
+      ],
+    );
+
+    const persistence = output.runtime_manager.state_index_target.persistence;
+    assert.equal(persistence.status, 'written');
+    assert.equal(persistence.ttl_ms, 86_400_000);
+    assert.match(persistence.history_file, /native-state-index-history\.jsonl$/);
+    assert.match(persistence.failure_file, /native-state-index-failures\.jsonl$/);
+    assert.match(persistence.last_success_file, /native-state-index-last-success\.json$/);
+    assert.equal(persistence.diff.changed, true);
+    assert.equal(persistence.gc.retained_history_count, 1);
+
+    const persisted = JSON.parse(fs.readFileSync(persistence.index_file, 'utf8'));
+    assert.equal(persisted.lifecycle.expired, false);
+    assert.equal(persisted.lifecycle.ttl_ms, 86_400_000);
+    assert.equal(persisted.diff.changed, true);
+    assert.equal(fs.existsSync(persistence.history_file), true);
+    assert.equal(fs.existsSync(persistence.last_success_file), true);
+    assert.equal(fs.readFileSync(persistence.history_file, 'utf8').trim().split('\n').length, 1);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime manager records native index failure lifecycle when helpers are unavailable', () => {
+  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "version" ]; then
+  echo "Hermes Agent v9.9.9-test"
+  exit 0
+fi
+if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
+  echo "Gateway service is loaded"
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-failure-state-'));
+
+  try {
+    const output = runCli(['runtime', 'manager'], {
+      OPL_HERMES_BIN: hermesPath,
+      OPL_STATE_DIR: stateRoot,
+      OPL_NATIVE_HELPER_BIN_DIR: path.join(stateRoot, 'missing-native-bin'),
+    });
+    const persistence = output.runtime_manager.state_index_target.persistence;
+    assert.equal(persistence.status, 'skipped_helper_unavailable');
+    assert.match(persistence.failure_file, /native-state-index-failures\.jsonl$/);
+    assert.equal(fs.existsSync(persistence.failure_file), true);
+    const failure = JSON.parse(fs.readFileSync(persistence.failure_file, 'utf8').trim());
+    assert.equal(failure.status, 'skipped_helper_unavailable');
+    assert.equal(failure.errors[0].code, 'native_index_helper_unavailable');
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('runtime manager reports the native helper package and repair lifecycle', () => {
   const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
 if [ "$1" = "version" ]; then
@@ -749,10 +882,16 @@ exit 1
     assert.equal(output.runtime_manager.native_helper_target.lifecycle.status, 'ready_to_build');
     assert.deepEqual(output.runtime_manager.native_helper_target.lifecycle.commands, {
       build: 'npm run native:build',
+      cache: 'npm run native:cache',
       doctor: 'npm run native:doctor',
       repair: 'npm run native:repair',
       test: 'npm run native:test',
     });
+    assert.match(
+      output.runtime_manager.native_helper_target.lifecycle.cache.cache_dir,
+      /native-helper\/bin\/.+\/0\.1\.0$/,
+    );
+    assert.equal(output.runtime_manager.native_helper_target.lifecycle.cache.target_triple, `${process.platform}-${process.arch}`);
     assert.equal(output.runtime_manager.native_helper_target.lifecycle.package.status, 'included');
     assert.equal(
       output.runtime_manager.native_helper_target.lifecycle.package.required_files.includes('native/opl-native-helper/src/lib.rs'),
@@ -760,6 +899,7 @@ exit 1
     );
 
     const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
+    assert.equal(packageJson.scripts['native:cache'], 'node ./scripts/native-helper-cache.mjs');
     assert.equal(packageJson.scripts['native:doctor'], 'node ./scripts/native-helper-doctor.mjs');
     assert.equal(packageJson.scripts['native:repair'], 'node ./scripts/native-helper-repair.mjs');
     assert.equal(packageJson.files.includes('native/opl-native-helper/src'), true);
