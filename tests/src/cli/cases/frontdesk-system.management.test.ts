@@ -430,13 +430,13 @@ exit 1
       assert.deepEqual(nativeHelperItem.action?.payload_template, { action: 'repair_native_helpers' });
     }
     assert.equal(nativeHelperItem.status, output.system_initialize.native_helpers.health_status);
-    assert.equal(output.system_initialize.domain_modules.summary.total_modules_count, 3);
+    assert.equal(output.system_initialize.domain_modules.summary.total_modules_count, 4);
     assert.equal(
       output.system_initialize.domain_modules.summary.total_modules_count,
       output.system_initialize.domain_modules.modules.length,
     );
     assert.equal(output.system_initialize.domain_modules.summary.installed_modules_count >= 0, true);
-    assert.equal(output.system_initialize.domain_modules.modules.length, 3);
+    assert.equal(output.system_initialize.domain_modules.modules.length, 4);
     assert.equal(output.system_initialize.settings.interaction_mode, 'codex');
     assert.equal(output.system_initialize.settings.execution_mode, 'codex');
     assert.equal(output.system_initialize.workspace_root.selected_path, workspaceRoot);
@@ -720,7 +720,7 @@ EOF
         }>;
       };
     };
-    assert.equal(initial.modules.summary.total_modules_count, 3);
+    assert.equal(initial.modules.summary.total_modules_count, 4);
     const initialMas = initial.modules.items.find((entry) => entry.module_id === 'medautoscience');
     assert.ok(initialMas);
     assert.equal(initialMas.installed, false);

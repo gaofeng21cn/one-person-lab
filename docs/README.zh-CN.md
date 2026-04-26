@@ -89,6 +89,7 @@
 - [OPL Runtime Manager 目标形态](./references/opl-runtime-manager-target.md)
 - [Docker WebUI 部署参考](./references/opl-docker-webui-deployment.zh-CN.md)
 - [OPL 默认 Skill 生态参考](./references/opl-default-skill-ecosystem.zh-CN.md)
+- [OPL Release 与 Packages 模块化分发参考](./references/opl-release-packages-modular-distribution.zh-CN.md)
 - 产品运行时与执行器参考说明
 - [共享运行时合同](./shared-runtime-contract.zh-CN.md)、[共享领域合同](./shared-domain-contract.zh-CN.md) 与 [OPL 运行时命名与边界合同](./opl-runtime-naming-and-boundary-contract.zh-CN.md) 作为共享边界参考保留；其中的 `gateway / harness` 词汇按当前 domain-agent 模型下的兼容语言理解。
 - 领域对齐与增量收录记录

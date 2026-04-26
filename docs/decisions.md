@@ -2,6 +2,17 @@
 
 ## 2026-04-26
 
+### 决策：`MDS` 作为 `MAS` 隐藏运行依赖进入安装与环境管理面
+
+原因：`MAS` 的深度研究运行链路依赖 `Med Deep Scientist`，新手用户用 `One Person Lab App` 或 `opl install` 初始化时，不应再手工发现和安装这条依赖。同时，`MDS` 仍然不是面向用户选择的顶层 domain agent，不能和 `MAS`、`MAG`、`RCA` 并列进入首页产品入口。
+
+影响：
+
+- `opl install` 默认安装/检查 `meddeepscientist`
+- `opl modules` 与 App 设置里的环境管理显示 `MDS`，并提供安装、更新、修复状态入口
+- 首页和 domain-agent 入口继续只露出 `MAS`、`MAG`、`RCA`
+- `MDS` 的项目专用 skills 继续由 `MAS/MDS` 项目目录或运行时内部管理，不升级成 OPL 默认系统级 skill
+
 ### 决策：冻结 `OPL Runtime Manager` 为薄产品管理层，而不是自有完整 runtime sidecar
 
 原因：当前长跑任务目标已经确定为把任务注册到外部 `Hermes-Agent` runtime substrate，由它负责 session、scheduler、wakeup、interrupt/resume、memory 与 delivery/cron。OPL 需要的是产品级 provision、version pin、profile wiring、domain task registration hydration、诊断、恢复入口、native helper catalog 与高频状态索引，而不是复制一套 runtime kernel。

@@ -71,13 +71,13 @@ Need Docker, Linux, or server deployment? See the [Docker and browser deployment
 
 ### One instruction for a Codex Agent
 
-> Install and configure this OPL repo: clone it, install the OPL CLI, run `opl install`, and ensure Codex CLI, Hermes-Agent, MAS/MAG/RCA, recommended skills, the One Person Lab App, and the browser entry are ready; if anything is missing, fix it or report the exact blocker.
+> Install and configure this OPL repo: clone it, install the OPL CLI, run `opl install`, and ensure Codex CLI, Hermes-Agent, MAS/MDS/MAG/RCA, recommended skills, the One Person Lab App, and the browser entry are ready; if anything is missing, fix it or report the exact blocker.
 
 ### Common commands after installation
 
 ```bash
 opl system initialize   # Inspect the Codex version policy, Hermes-Agent, modules, skills, GUI, and workspace-root state
-opl modules             # Check MAS/MAG/RCA module installation and health
+opl modules             # Check MAS/MDS/MAG/RCA module installation and health
 opl skill sync          # Sync OPL family skills into the Codex-visible skill path
 opl help --text         # Human-readable help; use opl help --json for machine-readable output
 ```
@@ -106,7 +106,7 @@ The desktop GUI source is maintained in [`opl-aion-shell`](https://github.com/ga
 - If an admitted domain repo is missing locally, run `opl module install --module <module_id>`.
 - The default local state directory is `~/Library/Application Support/OPL/state`. Set `OPL_STATE_DIR` to use another local state root.
 - Active domain agents are [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience), [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant), and [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai).
-- [`Med Deep Scientist`](https://github.com/gaofeng21cn/med-deepscientist) remains the controlled runtime/backend companion under `Med Auto Science`; it is not a top-level OPL domain agent or a default OPL-managed module.
+- [`Med Deep Scientist`](https://github.com/gaofeng21cn/med-deepscientist) remains the controlled runtime/backend companion under `Med Auto Science`; OPL install and Environment Management maintain it as a MAS dependency, but it is not a top-level OPL domain agent.
 - When a task needs top-level session/runtime paths, shared `workspaces / sessions / progress / artifacts` surfaces, or explicit domain activation, enter through `OPL`. When a task is already clearly inside one domain, continue through that repo’s README and `docs/README*`.
 
 </details>

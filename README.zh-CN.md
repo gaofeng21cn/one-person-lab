@@ -71,13 +71,13 @@ curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/ins
 
 ### 交给 Codex Agent 的一句话
 
-> 安装并配置这个 OPL 仓库：clone 仓库、安装 OPL CLI、运行 `opl install`，并确保 Codex CLI、Hermes-Agent、MAS/MAG/RCA、推荐 skills、One Person Lab App 和浏览器入口都可用；如果缺任何东西，直接修复或报告精确阻塞点。
+> 安装并配置这个 OPL 仓库：clone 仓库、安装 OPL CLI、运行 `opl install`，并确保 Codex CLI、Hermes-Agent、MAS/MDS/MAG/RCA、推荐 skills、One Person Lab App 和浏览器入口都可用；如果缺任何东西，直接修复或报告精确阻塞点。
 
 ### 安装后常用命令
 
 ```bash
 opl system initialize   # 检查 Codex 版本策略、Hermes-Agent、模块、skills、GUI 和工作目录状态
-opl modules             # 查看 MAS/MAG/RCA 模块安装和健康情况
+opl modules             # 查看 MAS/MDS/MAG/RCA 模块安装和健康情况
 opl skill sync          # 把 OPL 家族 skills 同步到 Codex 可见路径
 opl help --text         # 人类可读帮助；机器读取使用 opl help --json
 ```
@@ -106,7 +106,7 @@ opl help --text         # 人类可读帮助；机器读取使用 opl help --jso
 - 如果某个 admitted domain repo 还没落地到本机，运行 `opl module install --module <module_id>`。
 - 默认本地状态目录是 `~/Library/Application Support/OPL/state`。如果需要改到其他本地状态根目录，直接设置 `OPL_STATE_DIR`。
 - 当前 active domain agents 是 [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience)、[`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) 和 [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai)。
-- [`Med Deep Scientist`](https://github.com/gaofeng21cn/med-deepscientist) 继续作为 `Med Auto Science` 之下的受控 runtime/backend companion 存在，不作为 OPL 顶层 domain agent 或默认 OPL-managed module。
+- [`Med Deep Scientist`](https://github.com/gaofeng21cn/med-deepscientist) 继续作为 `Med Auto Science` 之下的受控 runtime/backend companion 存在；OPL 安装与环境管理会把它作为 MAS 依赖维护，但它不作为 OPL 顶层 domain agent。
 - 当任务需要顶层 session/runtime 路径、共享 `workspaces / sessions / progress / artifacts` surface 或显式 domain activation 时，从 `OPL` 进入；当任务已经明确落在某个 domain 上时，继续进入对应仓库首页和 `docs/README*`，按该仓自己的 CLI/脚本/contract 边界执行。
 
 </details>

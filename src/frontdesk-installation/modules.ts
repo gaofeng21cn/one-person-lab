@@ -63,6 +63,22 @@ const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
     skill_sync_domain: 'medautoscience',
   },
   {
+    module_id: 'meddeepscientist',
+    label: 'Med Deep Scientist',
+    repo_name: 'med-deepscientist',
+    repo_url: 'https://github.com/gaofeng21cn/med-deepscientist.git',
+    scope: 'runtime_dependency',
+    description: 'MAS-controlled deep-research backend companion for long-running scientific workflows.',
+    bootstrap_command: (checkoutPath) => (
+      resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-bootstrap.sh'))
+      ?? buildPythonEditableBootstrapCommand(checkoutPath, '3.11')
+    ),
+    health_check_command: (checkoutPath) => (
+      resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-healthcheck.sh'))
+      ?? { command: 'bash', args: [path.join('scripts', 'verify.sh'), 'fast'] }
+    ),
+  },
+  {
     module_id: 'medautogrant',
     label: 'Med Auto Grant',
     repo_name: 'med-autogrant',
@@ -262,6 +278,10 @@ function findModuleSpecOrThrow(moduleId: string): DomainModuleRuntimeSpec {
     ['med-autoscience', 'medautoscience'],
     ['med_autoscience', 'medautoscience'],
     ['mas', 'medautoscience'],
+    ['mds', 'meddeepscientist'],
+    ['med-deepscientist', 'meddeepscientist'],
+    ['med_deepscientist', 'meddeepscientist'],
+    ['meddeepscientist', 'meddeepscientist'],
     ['med-autogrant', 'medautogrant'],
     ['med_autogrant', 'medautogrant'],
     ['mag', 'medautogrant'],
