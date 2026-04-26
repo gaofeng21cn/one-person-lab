@@ -90,6 +90,7 @@ It is repo-tracked supporting material, not the default implementation basis.
 - [OPL Runtime Manager target](./references/opl-runtime-manager-target.md)
 - [Docker WebUI deployment reference](./references/opl-docker-webui-deployment.md)
 - [OPL default skill ecosystem reference](./references/opl-default-skill-ecosystem.md)
+- [OPL release and Packages modular distribution reference](./references/opl-release-packages-modular-distribution.zh-CN.md)
 - product-runtime and executor reference notes
 - [Shared Runtime Contract](./shared-runtime-contract.md), [Shared Domain Contract](./shared-domain-contract.md), and [OPL Runtime Naming And Boundary Contract](./opl-runtime-naming-and-boundary-contract.md) are retained as shared-boundary reference documents; their `gateway / harness` wording is compatibility language under the current domain-agent model.
 - domain alignment and delta-intake records

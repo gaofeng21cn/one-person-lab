@@ -7,6 +7,7 @@ import type { FrontDeskUpdateChannel } from '../frontdesk-preferences.ts';
 
 export type FrontDeskModuleId =
   | 'medautoscience'
+  | 'meddeepscientist'
   | 'medautogrant'
   | 'redcube';
 
@@ -42,7 +43,7 @@ export type DomainModuleSpec = {
   label: string;
   repo_name: string;
   repo_url: string;
-  scope: 'domain_module';
+  scope: 'domain_module' | 'runtime_dependency';
   description: string;
 };
 
@@ -103,7 +104,7 @@ export type GitRepoSnapshot = {
 export type ModuleInspection = {
   module_id: FrontDeskModuleId;
   label: string;
-  scope: 'domain_module';
+  scope: 'domain_module' | 'runtime_dependency';
   description: string;
   repo_url: string;
   installed: boolean;
