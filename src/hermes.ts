@@ -19,6 +19,8 @@ export interface HermesGatewayServiceStatus {
 export interface HermesRuntimeInspection {
   binary: HermesBinaryInfo | null;
   version: string | null;
+  update_available: boolean;
+  update_summary: string | null;
   gateway_service: HermesGatewayServiceStatus;
   issues: string[];
 }
@@ -133,6 +135,14 @@ function runBinary(
   };
 }
 
+function parseHermesUpdateSummary(versionOutput: string | null): string | null {
+  const updateLine = versionOutput
+    ?.split(/\r?\n/)
+    .map((line) => line.trim())
+    .find((line) => /^Update available:/i.test(line));
+  return updateLine || null;
+}
+
 export function inspectHermesRuntime(): HermesRuntimeInspection {
   const binary = resolveHermesBinary();
 
@@ -140,6 +150,8 @@ export function inspectHermesRuntime(): HermesRuntimeInspection {
     return {
       binary: null,
       version: null,
+      update_available: false,
+      update_summary: null,
       gateway_service: {
         loaded: false,
         raw_output: '',
@@ -154,6 +166,7 @@ export function inspectHermesRuntime(): HermesRuntimeInspection {
 
   const versionResult = runBinary(binary, ['version']);
   const version = versionResult.exitCode === 0 ? versionResult.stdout.trim() : null;
+  const updateSummary = parseHermesUpdateSummary(version);
   if (!version) {
     issues.push('Hermes version command did not return a usable version string.');
   }
@@ -176,6 +189,8 @@ export function inspectHermesRuntime(): HermesRuntimeInspection {
   return {
     binary,
     version,
+    update_available: Boolean(updateSummary),
+    update_summary: updateSummary,
     gateway_service: {
       loaded: gatewayLoaded,
       raw_output: gatewayRawOutput,
