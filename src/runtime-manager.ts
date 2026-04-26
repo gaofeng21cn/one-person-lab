@@ -179,6 +179,7 @@ export function buildRuntimeManager() {
   const hermes = inspectHermesRuntime();
   const hermesReady = Boolean(hermes.binary && hermes.version && hermes.gateway_service.loaded);
   const nativeHelperProjection = buildNativeHelperProjection(DEFAULT_NATIVE_HELPERS);
+  const reconcile = buildRuntimeManagerReconcile(hermesReady, nativeHelperProjection);
 
   return {
     version: 'g2',
@@ -214,6 +215,7 @@ export function buildRuntimeManager() {
         gateway_service: hermes.gateway_service,
         issues: hermes.issues,
       },
+      reconcile,
       registration_registry: {
         surface_kind: 'opl_runtime_manager_registration_registry',
         version: 'v1',
@@ -275,5 +277,63 @@ export function buildRuntimeManager() {
         'MAS, MAG, and RCA keep domain-owned truth and route-selected executor semantics.',
       ],
     },
+  };
+}
+
+function buildRuntimeManagerReconcile(
+  hermesReady: boolean,
+  nativeHelperProjection: ReturnType<typeof buildNativeHelperProjection>,
+) {
+  const recommendedActions = [];
+  const nativeRuntimeStatus = nativeHelperProjection.runtime.status;
+  const indexFreshnessStatus = nativeHelperProjection.persistence.freshness.status;
+
+  if (!hermesReady) {
+    recommendedActions.push({
+      action_id: 'install_or_start_hermes',
+      priority: 'p0_runtime_substrate',
+      blocking: true,
+      command: 'opl engine install --engine hermes',
+      reason: 'Hermes-Agent is the external long-running runtime substrate and is not ready.',
+    });
+  }
+
+  if (nativeRuntimeStatus !== 'available') {
+    recommendedActions.push({
+      action_id: 'repair_native_helpers',
+      priority: 'p1_native_helper',
+      blocking: false,
+      command: 'npm run native:repair',
+      reason: `Native helper runtime is ${nativeRuntimeStatus}.`,
+    });
+  }
+
+  if (indexFreshnessStatus !== 'fresh') {
+    recommendedActions.push({
+      action_id: 'refresh_native_indexes',
+      priority: 'p2_high_frequency_index',
+      blocking: false,
+      command: 'opl runtime manager',
+      reason: `Native state index freshness is ${indexFreshnessStatus}.`,
+    });
+  }
+
+  return {
+    surface_kind: 'opl_runtime_manager_reconcile',
+    version: 'v1',
+    overall_status: hermesReady && recommendedActions.length === 0 ? 'ready' : 'attention_needed',
+    checked_surfaces: {
+      hermes_runtime: hermesReady ? 'ready' : 'needs_runtime_setup',
+      native_helper_runtime: nativeRuntimeStatus,
+      native_index_freshness: indexFreshnessStatus,
+      domain_registration_registry: 'declared_projection_contracts',
+    },
+    recommended_actions: recommendedActions,
+    non_goals: [
+      'does_not_schedule_tasks',
+      'does_not_store_session_memory',
+      'does_not_replace_domain_truth',
+      'does_not_private_fork_hermes_agent',
+    ],
   };
 }
