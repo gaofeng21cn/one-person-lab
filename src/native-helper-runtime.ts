@@ -68,6 +68,16 @@ type NativeHelperProjection = {
       retained_history_count: number;
       max_history_entries: number;
     };
+    freshness: {
+      status: 'fresh' | 'stale_last_success_available' | 'expired_last_success' | 'unavailable_no_success';
+      current_generated_at: string | null;
+      current_expires_at: string | null;
+      current_expired: boolean;
+      last_success_generated_at: string | null;
+      last_success_expires_at: string | null;
+      last_success_expired: boolean | null;
+      failure_count: number;
+    };
     source_of_truth_rule: typeof SOURCE_OF_TRUTH_RULE;
     errors: Array<{ code: string; message: string }>;
   };
@@ -571,6 +581,7 @@ function persistNativeStateIndex(
   }
 
   return persistenceStatus('written', stateDir, paths, [], {
+    generatedAt: payload.generated_at,
     expiresAt,
     diff,
     retainedHistoryCount,
@@ -660,6 +671,7 @@ function persistenceStatus(
   paths: ReturnType<typeof nativeStateIndexPaths>,
   errors: NativeHelperProjection['persistence']['errors'],
   input: Partial<{
+    generatedAt: string;
     expiresAt: string;
     diff: NativeHelperProjection['persistence']['diff'];
     retainedHistoryCount: number;
@@ -683,6 +695,10 @@ function persistenceStatus(
       retained_history_count: input.retainedHistoryCount ?? countJsonlLines(paths.historyFile),
       max_history_entries: MAX_HISTORY_ENTRIES,
     },
+    freshness: buildNativeIndexFreshness(status, paths, {
+      generatedAt: input.generatedAt ?? null,
+      expiresAt: input.expiresAt ?? null,
+    }),
     source_of_truth_rule: SOURCE_OF_TRUTH_RULE,
     errors,
   };
@@ -696,6 +712,63 @@ function nativeStateIndexPaths(stateDir: string) {
     failureFile: path.join(root, 'native-state-index-failures.jsonl'),
     lastSuccessFile: path.join(root, 'native-state-index-last-success.json'),
   };
+}
+
+function buildNativeIndexFreshness(
+  status: NativeHelperProjection['persistence']['status'],
+  paths: ReturnType<typeof nativeStateIndexPaths>,
+  current: { generatedAt: string | null; expiresAt: string | null },
+): NativeHelperProjection['persistence']['freshness'] {
+  const failureCount = countJsonlLines(paths.failureFile);
+  if (status === 'written') {
+    return {
+      status: 'fresh',
+      current_generated_at: current.generatedAt,
+      current_expires_at: current.expiresAt,
+      current_expired: false,
+      last_success_generated_at: current.generatedAt,
+      last_success_expires_at: current.expiresAt,
+      last_success_expired: false,
+      failure_count: failureCount,
+    };
+  }
+
+  const lastSuccess = readPreviousNativeIndex(paths.lastSuccessFile);
+  const lastGeneratedAt = typeof lastSuccess?.generated_at === 'string' ? lastSuccess.generated_at : null;
+  const lastExpiresAt = readLastSuccessExpiresAt(lastSuccess);
+  if (!lastSuccess || !lastGeneratedAt || !lastExpiresAt) {
+    return {
+      status: 'unavailable_no_success',
+      current_generated_at: null,
+      current_expires_at: null,
+      current_expired: false,
+      last_success_generated_at: lastGeneratedAt,
+      last_success_expires_at: lastExpiresAt,
+      last_success_expired: null,
+      failure_count: failureCount,
+    };
+  }
+
+  const lastExpired = Date.parse(lastExpiresAt) <= Date.now();
+  return {
+    status: lastExpired ? 'expired_last_success' : 'stale_last_success_available',
+    current_generated_at: null,
+    current_expires_at: null,
+    current_expired: false,
+    last_success_generated_at: lastGeneratedAt,
+    last_success_expires_at: lastExpiresAt,
+    last_success_expired: lastExpired,
+    failure_count: failureCount,
+  };
+}
+
+function readLastSuccessExpiresAt(lastSuccess: Record<string, unknown> | null) {
+  const lifecycle = lastSuccess?.lifecycle;
+  if (typeof lifecycle !== 'object' || lifecycle === null) {
+    return null;
+  }
+  const expiresAt = (lifecycle as Record<string, unknown>).expires_at;
+  return typeof expiresAt === 'string' ? expiresAt : null;
 }
 
 function readPreviousNativeIndex(indexFile: string): Record<string, unknown> | null {

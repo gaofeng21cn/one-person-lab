@@ -1,16 +1,12 @@
 #!/usr/bin/env node
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, '..');
-const familyRoot = process.env.OPL_FAMILY_WORKSPACE_ROOT
-  ? path.resolve(process.env.OPL_FAMILY_WORKSPACE_ROOT)
-  : defaultFamilyWorkspaceRoot();
-const requireRealWorkspaces = process.argv.includes('--require-real-workspaces');
-
 const domains = [
   {
     domain_id: 'medautoscience',
@@ -23,12 +19,19 @@ const domains = [
     repo_name: 'med-autogrant',
   },
 ];
+const fixtureMode = process.argv.includes('--fixture');
+const fixtureFamilyRoot = fixtureMode ? createFixtureFamilyRoot() : null;
+const familyRoot = fixtureFamilyRoot ?? (process.env.OPL_FAMILY_WORKSPACE_ROOT
+  ? path.resolve(process.env.OPL_FAMILY_WORKSPACE_ROOT)
+  : defaultFamilyWorkspaceRoot());
+const requireRealWorkspaces = process.argv.includes('--require-real-workspaces');
 
 const artifactIndexer = resolveHelper('opl-artifact-indexer');
 const stateIndexer = resolveHelper('opl-state-indexer');
 const output = {
   surface_kind: 'opl_native_helper_family_index_smoke',
   version: 'v1',
+  fixture_mode: fixtureMode,
   family_root: familyRoot,
   helper_resolution: {
     artifact_indexer: sanitizeResolution(artifactIndexer),
@@ -49,6 +52,9 @@ for (const domain of domains) {
 }
 
 process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
+if (fixtureFamilyRoot) {
+  fs.rmSync(path.dirname(fixtureFamilyRoot), { recursive: true, force: true });
+}
 if (requireRealWorkspaces && hasFailure) {
   process.exit(1);
 }
@@ -237,4 +243,17 @@ function defaultFamilyWorkspaceRoot() {
     return path.dirname(path.dirname(parent));
   }
   return parent;
+}
+
+function createFixtureFamilyRoot() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-smoke-fixture-'));
+  const familyRoot = path.join(root, 'workspace');
+  for (const domain of domains) {
+    const repoPath = path.join(familyRoot, domain.repo_name);
+    fs.mkdirSync(path.join(repoPath, 'docs'), { recursive: true });
+    fs.mkdirSync(path.join(repoPath, 'contracts'), { recursive: true });
+    fs.writeFileSync(path.join(repoPath, 'docs', 'status.md'), `# ${domain.label} fixture\n`);
+    fs.writeFileSync(path.join(repoPath, 'contracts', 'surface.json'), '{"surface_kind":"fixture"}\n');
+  }
+  return familyRoot;
 }

@@ -48,7 +48,19 @@
       "scripts/native-helper-repair.mjs"
     ],
     "persisted_projection": "${OPL_STATE_DIR}/runtime-manager/native-state-index.json",
-    "persisted_surface_kind": "opl_runtime_manager_native_state_projection"
+    "persisted_surface_kind": "opl_runtime_manager_native_state_projection",
+    "index_lifecycle": {
+      "ttl_ms": 86400000,
+      "history_file": "${OPL_STATE_DIR}/runtime-manager/native-state-index-history.jsonl",
+      "failure_file": "${OPL_STATE_DIR}/runtime-manager/native-state-index-failures.jsonl",
+      "last_success_file": "${OPL_STATE_DIR}/runtime-manager/native-state-index-last-success.json",
+      "freshness_statuses": [
+        "fresh",
+        "stale_last_success_available",
+        "expired_last_success",
+        "unavailable_no_success"
+      ]
+    }
   },
   "helpers": [
     {
