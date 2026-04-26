@@ -12,6 +12,9 @@
 - 新增 `contracts/opl-gateway/runtime-manager-contract.json` 冻结 owner split、responsibilities、non-goals、native helper target 与 state index target
 - `opl runtime manager` 可以发现并调用可选 Rust native helper，把 `opl_runtime_manager_native_state_projection` 持久化到 OPL 本地 state；缺少 helper 时只报告 repair hint，不把 helper 伪装成 runtime kernel
 - Rust native helper 现在作为 OPL package lifecycle 的一等面分发：npm package 包含 Cargo workspace 和 doctor/repair 脚本，`native:repair` 负责重建 helper 后输出 lifecycle doctor JSON
+- native helper lifecycle 继续收紧为生产门禁：CI 跑 build、meta、native 与 lint；native lane 覆盖 doctor、prebuild check、package dry-run、Rust test/build、state cache 与 family smoke
+- prebuild/cache 策略先按 manifest 和 `OPL_STATE_DIR` cache 落地，目标是让 fresh install 优先恢复匹配平台的 helper binary，只有缺失或无效时才走本地 Cargo build
+- native state index 的 lifecycle 必须输出 TTL、history、failure、last-success 与 freshness，避免 helper 短暂不可用时丢失“上次成功快照是否仍可用”的判断
 - `Hermes-Agent` 继续是外部 runtime kernel owner；`OPL Runtime Manager` 只做产品管理和投影
 - `MAS`、`MAG`、`RCA` 继续持有 domain truth 与 route-selected executor 语义
 - 未来如需迁移到 OPL 自有完整 sidecar，必须先证明 `Hermes-Agent` 无法表达必要的 task、wakeup、approval、audit 或产品隔离合同
