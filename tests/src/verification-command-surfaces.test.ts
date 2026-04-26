@@ -85,6 +85,7 @@ test('GitHub verification workflow runs the native helper production gates', () 
   assert.match(workflow, /\.\/scripts\/verify\.sh lint/);
   assert.match(workflow, /npm run native:family-smoke -- --fixture --require-real-workspaces/);
   assert.match(workflow, /rust-toolchain/);
+  assert.match(workflow, /FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'/);
 });
 
 test('lint includes the tracked code line-budget guard', () => {
