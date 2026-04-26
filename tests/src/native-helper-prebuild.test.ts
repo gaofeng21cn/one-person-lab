@@ -74,6 +74,116 @@ test('native helper prebuild script packs and installs platform binaries into th
   }
 });
 
+test('native helper prebuild script restores release archive assets before installing', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-native-prebuild-release-'));
+  const sourceDir = path.join(fixtureRoot, 'source');
+  const packRoot = path.join(fixtureRoot, 'pack-root');
+  const installRoot = path.join(fixtureRoot, 'install-root');
+  const stateDir = path.join(fixtureRoot, 'state');
+  fs.mkdirSync(sourceDir, { recursive: true });
+
+  for (const binary of helperBinaries) {
+    fs.writeFileSync(path.join(sourceDir, binary), `#!/bin/sh\necho ${binary}\n`, { mode: 0o755 });
+  }
+
+  try {
+    const pack = spawnSync(process.execPath, [
+      path.join(repoRoot, 'scripts/native-helper-prebuild.mjs'),
+      'pack',
+      '--source-dir',
+      sourceDir,
+      '--prebuild-root',
+      packRoot,
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+    });
+    assert.equal(pack.status, 0, pack.stderr);
+
+    const archive = spawnSync(process.execPath, [
+      path.join(repoRoot, 'scripts/native-helper-prebuild.mjs'),
+      'archive',
+      '--prebuild-root',
+      packRoot,
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+    });
+    assert.equal(archive.status, 0, archive.stderr);
+    const archiveOutput = JSON.parse(archive.stdout);
+    assert.equal(archiveOutput.status, 'archived');
+    assert.match(archiveOutput.archive_name, /^opl-native-helper-.+\.tar\.gz$/);
+
+    const install = spawnSync(process.execPath, [
+      path.join(repoRoot, 'scripts/native-helper-prebuild.mjs'),
+      'install',
+      '--prebuild-root',
+      installRoot,
+      '--state-dir',
+      stateDir,
+      '--release-archive-url',
+      `file://${archiveOutput.archive_file}`,
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+    });
+    assert.equal(install.status, 0, install.stderr);
+    const installOutput = JSON.parse(install.stdout);
+    assert.equal(installOutput.status, 'installed');
+    assert.equal(installOutput.restore_attempts[0].status, 'restored_release_archive');
+    assert.equal(fs.existsSync(path.join(installOutput.cache_dir, 'opl-state-indexer')), true);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('native helper prebuild script rejects binaries that do not match the manifest', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-native-prebuild-invalid-'));
+  const sourceDir = path.join(fixtureRoot, 'source');
+  const prebuildRoot = path.join(fixtureRoot, 'prebuilds');
+  fs.mkdirSync(sourceDir, { recursive: true });
+
+  for (const binary of helperBinaries) {
+    fs.writeFileSync(path.join(sourceDir, binary), `#!/bin/sh\necho ${binary}\n`, { mode: 0o755 });
+  }
+
+  try {
+    const pack = spawnSync(process.execPath, [
+      path.join(repoRoot, 'scripts/native-helper-prebuild.mjs'),
+      'pack',
+      '--source-dir',
+      sourceDir,
+      '--prebuild-root',
+      prebuildRoot,
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+    });
+    assert.equal(pack.status, 0, pack.stderr);
+
+    fs.appendFileSync(path.join(prebuildRoot, targetTriple, crateVersion, 'opl-state-indexer'), '\nmodified\n');
+
+    const check = spawnSync(process.execPath, [
+      path.join(repoRoot, 'scripts/native-helper-prebuild.mjs'),
+      'check',
+      '--prebuild-root',
+      prebuildRoot,
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+    });
+    assert.equal(check.status, 1);
+    const checkOutput = JSON.parse(check.stdout);
+    assert.equal(checkOutput.status, 'invalid_prebuild');
+    assert.equal(
+      checkOutput.errors.some((entry: { code?: string }) => entry.code === 'prebuild_binary_checksum_mismatch'),
+      true,
+    );
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('native helper prebuild script preserves Windows executable names for release artifacts', () => {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-native-prebuild-win-'));
   const sourceDir = path.join(fixtureRoot, 'source');

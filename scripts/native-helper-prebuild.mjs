@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import crypto from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -33,6 +35,8 @@ const stateDir = path.resolve(
 try {
   if (command === 'pack') {
     writeJson(packPrebuild());
+  } else if (command === 'archive') {
+    writeJson(archivePrebuild());
   } else if (command === 'install') {
     writeJson(installPrebuild());
   } else if (command === 'check') {
@@ -72,13 +76,22 @@ function packPrebuild() {
 }
 
 function installPrebuild() {
-  const check = checkPrebuild();
+  const restoreAttempts = [];
+  let check = checkPrebuild();
+  if (check.status !== 'available') {
+    const restore = restoreReleaseArchive();
+    if (restore) {
+      restoreAttempts.push(restore);
+      check = checkPrebuild();
+    }
+  }
   if (check.status !== 'available') {
     return {
       ...basePayload('missing_prebuild'),
       prebuild_dir: prebuildDir(),
       cache_dir: cacheDir(),
       reason: check.status,
+      restore_attempts: restoreAttempts,
       errors: check.errors,
     };
   }
@@ -95,6 +108,7 @@ function installPrebuild() {
     ...basePayload('installed'),
     prebuild_dir: prebuildDir(),
     cache_dir: cacheDir(),
+    restore_attempts: restoreAttempts,
     binaries: check.binaries,
   };
 }
@@ -125,6 +139,7 @@ function checkPrebuild() {
     });
   }
 
+  const manifestBinaries = Array.isArray(manifest.binaries) ? manifest.binaries : [];
   const binaries = [];
   for (const binary of helperBinaries) {
     const filePath = path.join(prebuildDir(), binaryFileName(binary));
@@ -132,7 +147,15 @@ function checkPrebuild() {
       errors.push({ code: 'prebuild_binary_missing', message: `${filePath} is not present` });
       continue;
     }
-    binaries.push(binaryManifestEntry(binary, filePath));
+    const actual = binaryManifestEntry(binary, filePath);
+    const expected = manifestBinaries.find((entry) => entry?.binary === binary);
+    if (expected && (expected.sha256 !== actual.sha256 || expected.bytes !== actual.bytes)) {
+      errors.push({
+        code: 'prebuild_binary_checksum_mismatch',
+        message: `${filePath} does not match the packed prebuild manifest`,
+      });
+    }
+    binaries.push(actual);
   }
 
   if (errors.length > 0) {
@@ -160,6 +183,33 @@ function buildManifest(status, binaries) {
     manifest_file: manifestPath(),
     prebuild_dir: prebuildDir(),
     binaries,
+    errors: [],
+  };
+}
+
+function archivePrebuild() {
+  const check = checkPrebuild();
+  if (check.status !== 'available') {
+    throw new Error(`native helper prebuild archive requires an available prebuild, found ${check.status}`);
+  }
+  const archivesDir = path.join(prebuildRoot, 'archives');
+  const archiveFile = path.join(archivesDir, archiveFileName());
+  fs.mkdirSync(archivesDir, { recursive: true });
+  const result = spawnSync('tar', ['-czf', archiveFile, '-C', prebuildDir(), '.'], {
+    encoding: 'utf8',
+  });
+  if (result.status !== 0) {
+    throw new Error(result.stderr.trim() || `tar exited with status ${result.status}`);
+  }
+  const bytes = fs.readFileSync(archiveFile);
+  return {
+    ...basePayload('archived'),
+    archive_file: archiveFile,
+    archive_name: path.basename(archiveFile),
+    prebuild_dir: prebuildDir(),
+    bytes: bytes.length,
+    sha256: crypto.createHash('sha256').update(bytes).digest('hex'),
+    binaries: check.binaries,
     errors: [],
   };
 }
@@ -200,12 +250,82 @@ function resolveSourceDir() {
   return path.join(rootDir, 'target', 'release');
 }
 
+function restoreReleaseArchive() {
+  const archiveUrl = resolveReleaseArchiveUrl();
+  if (!archiveUrl) {
+    return null;
+  }
+
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-native-prebuild-archive-'));
+  try {
+    const archivePath = archivePathFromUrl(archiveUrl, tempRoot);
+    fs.rmSync(prebuildDir(), { recursive: true, force: true });
+    fs.mkdirSync(prebuildDir(), { recursive: true });
+    const result = spawnSync('tar', ['-xzf', archivePath, '-C', prebuildDir()], {
+      encoding: 'utf8',
+    });
+    if (result.status !== 0) {
+      return {
+        status: 'release_archive_extract_failed',
+        archive_url: archiveUrl,
+        error: result.stderr.trim() || `tar exited with status ${result.status}`,
+      };
+    }
+    return {
+      status: 'restored_release_archive',
+      archive_url: archiveUrl,
+      prebuild_dir: prebuildDir(),
+    };
+  } catch (error) {
+    return {
+      status: 'release_archive_restore_failed',
+      archive_url: archiveUrl,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+}
+
+function resolveReleaseArchiveUrl() {
+  const explicit = options['release-archive-url'] ?? process.env.OPL_NATIVE_HELPER_PREBUILD_ARCHIVE_URL;
+  if (explicit) {
+    return explicit;
+  }
+  const base = options['release-base-url'] ?? process.env.OPL_NATIVE_HELPER_PREBUILD_RELEASE_BASE_URL;
+  if (!base) {
+    return null;
+  }
+  return `${base.replace(/\/$/, '')}/${archiveFileName()}`;
+}
+
+function archivePathFromUrl(archiveUrl, tempRoot) {
+  if (archiveUrl.startsWith('file://')) {
+    return fileURLToPath(archiveUrl);
+  }
+  if (/^https?:\/\//.test(archiveUrl)) {
+    const target = path.join(tempRoot, archiveFileName());
+    const result = spawnSync('curl', ['-fsSL', archiveUrl, '-o', target], {
+      encoding: 'utf8',
+    });
+    if (result.status !== 0) {
+      throw new Error(result.stderr.trim() || `curl exited with status ${result.status}`);
+    }
+    return target;
+  }
+  return path.resolve(archiveUrl);
+}
+
 function prebuildDir() {
   return path.join(prebuildRoot, targetTriple, crateVersion);
 }
 
 function manifestPath() {
   return path.join(prebuildDir(), 'manifest.json');
+}
+
+function archiveFileName() {
+  return `opl-native-helper-${targetTriple}-${crateVersion}.tar.gz`;
 }
 
 function cacheDir() {
