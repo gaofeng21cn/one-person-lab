@@ -1,0 +1,76 @@
+name: Native Helper Prebuilds
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - Cargo.lock
+      - Cargo.toml
+      - native/opl-native-helper/**
+      - scripts/native-helper-prebuild.mjs
+      - .github/workflows/native-helper-prebuilds.yml
+  push:
+    branches:
+      - main
+    paths:
+      - Cargo.lock
+      - Cargo.toml
+      - native/opl-native-helper/**
+      - scripts/native-helper-prebuild.mjs
+      - .github/workflows/native-helper-prebuilds.yml
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  pack-native-helper:
+    name: Pack native helper prebuild (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
+          - windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            . -> target
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build release native helpers
+        run: cargo build --release --workspace
+
+      - name: Pack native helper prebuild
+        shell: bash
+        run: |
+          set -euo pipefail
+          target_triple="$(node -p "process.platform + '-' + process.arch")"
+          npm run native:prebuild-pack -- --source-dir target/release --prebuild-root dist/native-helper-prebuilds --target "$target_triple"
+          npm run native:prebuild-check -- --prebuild-root dist/native-helper-prebuilds --target "$target_triple"
+
+      - name: Upload native helper prebuild
+        uses: actions/upload-artifact@v4
+        with:
+          name: opl-native-helper-prebuild-${{ runner.os }}-${{ runner.arch }}
+          path: dist/native-helper-prebuilds
+          if-no-files-found: error

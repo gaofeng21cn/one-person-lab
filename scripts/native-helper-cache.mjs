@@ -25,8 +25,9 @@ fs.mkdirSync(cacheDir, { recursive: true });
 const copied = [];
 const missing = [];
 for (const binary of binaries) {
-  const source = path.join(sourceDir, binary);
-  const target = path.join(cacheDir, binary);
+  const fileName = binaryFileName(binary);
+  const source = path.join(sourceDir, fileName);
+  const target = path.join(cacheDir, fileName);
   if (!fs.existsSync(source)) {
     missing.push(source);
     continue;
@@ -50,3 +51,6 @@ process.stdout.write(`${JSON.stringify({
   copied_binaries: copied,
 }, null, 2)}\n`);
 
+function binaryFileName(binary) {
+  return process.platform === 'win32' ? `${binary}.exe` : binary;
+}
