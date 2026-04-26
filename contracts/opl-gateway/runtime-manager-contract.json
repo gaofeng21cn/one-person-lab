@@ -63,6 +63,9 @@
     "lifecycle": {
       "status_surface": "native_helper_target.lifecycle",
       "build_command": "npm run native:build",
+      "prebuild_install_command": "npm run native:prebuild",
+      "prebuild_pack_command": "npm run native:prebuild-pack",
+      "prebuild_check_command": "npm run native:prebuild-check",
       "doctor_command": "npm run native:doctor",
       "repair_command": "npm run native:repair",
       "test_command": "npm run native:test",
@@ -72,8 +75,18 @@
         "native/opl-native-helper/Cargo.toml",
         "native/opl-native-helper/src",
         "scripts/native-helper-doctor.mjs",
+        "scripts/native-helper-prebuild.mjs",
         "scripts/native-helper-repair.mjs"
-      ]
+      ],
+      "prebuild_cache_strategy": {
+        "manifest": "native-helper-prebuilds/<target_triple>/<crate_version>/manifest.json",
+        "restore_order": [
+          "OPL_NATIVE_HELPER_PREBUILD_ROOT",
+          "package native-helper-prebuilds",
+          "local Cargo build fallback"
+        ],
+        "cache_destination": "${OPL_STATE_DIR}/native-helper/bin/<target_triple>/<crate_version>"
+      }
     },
     "runtime_invocation": {
       "status_surface": "native_helper_target.runtime",
