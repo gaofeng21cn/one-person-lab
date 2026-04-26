@@ -135,6 +135,8 @@ exit 1
     assert.deepEqual(output.system.core_engines.codex.issues, []);
     assert.equal(output.system.core_engines.hermes.installed, true);
     assert.equal(output.system.core_engines.hermes.version, 'Hermes 1.2.3');
+    assert.equal(output.system.core_engines.hermes.update_available, false);
+    assert.equal(output.system.core_engines.hermes.update_summary, null);
     assert.equal(output.system.core_engines.hermes.gateway_loaded, true);
     assert.equal(output.system.core_engines.hermes.health_status, 'ready');
     assert.equal(output.system.native_helpers.lifecycle.status, 'ready_to_build');
@@ -164,6 +166,58 @@ exit 1
   } finally {
     fs.rmSync(codexConfigFixture.codexHome, { recursive: true, force: true });
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(hermesFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('system exposes Hermes update availability separately from readiness', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-hermes-update-home-'));
+  const hermesFixture = createFakeHermesFixture(`
+if [[ "$1" == "version" ]]; then
+  cat <<'EOF'
+Hermes Agent v0.10.0 (2026.4.16)
+Project: /tmp/hermes-agent
+Update available: 42 commits behind — run 'hermes update'
+EOF
+  exit 0
+fi
+if [[ "$1" == "gateway" && "$2" == "status" ]]; then
+  echo "✓ Gateway service is loaded"
+  exit 0
+fi
+echo "Unsupported hermes fixture command: $*" >&2
+exit 1
+`);
+
+  try {
+    const output = runCli(
+      ['system'],
+      {
+        HOME: homeRoot,
+        OPL_HERMES_BIN: hermesFixture.hermesPath,
+      },
+    ) as {
+      system: {
+        core_engines: {
+          hermes: {
+            installed: boolean;
+            update_available: boolean;
+            update_summary: string | null;
+            health_status: string;
+          };
+        };
+      };
+    };
+
+    assert.equal(output.system.core_engines.hermes.installed, true);
+    assert.equal(output.system.core_engines.hermes.update_available, true);
+    assert.equal(
+      output.system.core_engines.hermes.update_summary,
+      "Update available: 42 commits behind — run 'hermes update'",
+    );
+    assert.equal(output.system.core_engines.hermes.health_status, 'ready');
+  } finally {
     fs.rmSync(hermesFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
