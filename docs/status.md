@@ -6,7 +6,7 @@
 - 当前公开认知保持三层：`产品运行时 -> 产品家族 -> 当前实现 / 模块`。
 - `OPL` 持有 Codex-default session/runtime、智能体注册表、工作空间 / 会话 / 进度 / 交付物接口面，以及机器可读合同。
 - `OPL` 继续持有 family-level shared modules、shared contracts 与 shared indexes 的顶层语义与注册面。
-- `OPL Runtime Manager` 已冻结为 thin product-managed adapter：它管理外部 `Hermes-Agent` 的 provision、profile、task registration、诊断、恢复入口、native helper catalog 与高频状态索引规划，但不承担 scheduler/session/memory kernel。
+- `OPL Runtime Manager` 已冻结为 thin product-managed adapter：它管理外部 `Hermes-Agent` 的 provision、profile、task registration、诊断、恢复入口、Rust native helper catalog 与高频状态索引，但不承担 scheduler/session/memory kernel。
 - `Codex` 是唯一默认交互与执行宿主；`Hermes-Agent` 只在显式切换时作为备选 runtime。
 - 当前活跃实现是三个独立 `domain agent` 仓：`MAS`、`MAG`、`RCA`；thesis 与 review 模块保持定义阶段。
 
@@ -34,7 +34,7 @@
 - `opl skill sync` 负责把家族 domain app skill pack 同步到 Codex 环境，供默认 `opl` / `opl exec` / `opl resume` 直接使用；默认 sibling repo 发现已经按 workspace/worktree 布局自动解析，不再依赖 `OPL_FAMILY_WORKSPACE_ROOT`。
 - `opl module install --module <module_id>` 现在走完整闭环：clone 到 OPL-managed modules root，执行仓库 bootstrap，同步对应 skill pack，再跑仓库健康检查。
 - `opl system initialize` 是当前一键配置安装的聚合面：同时暴露 workspace root、Codex / Hermes runtime dependencies、domain modules、推荐 companion skills、OPL 品牌 GUI shell、local support service 与下一步动作。
-- `opl runtime manager` 是当前 Runtime Manager 的机器可读 projection：它展示 OPL 管理外部 `Hermes-Agent` substrate 的 owner split、非目标、v1 domain registration registry、native helper target 与 state index target。
+- `opl runtime manager` 是当前 Runtime Manager 的机器可读 projection：它展示 OPL 管理外部 `Hermes-Agent` substrate 的 owner split、非目标、v1 domain registration registry、Rust native helper target 与 state index target。
 - 推荐 companion skills 当前包括 `superpowers`、`officecli`、`ui-ux-pro-max` 和 Codex native Office skill 组；它们不改变 OPL runtime 语义，只作为 MAS / MAG / RCA 工作流的增强能力。
 - 默认本地状态目录是 `~/Library/Application Support/OPL/state`；如需切换到其他本地状态根目录，使用 `OPL_STATE_DIR`。
 - `Codex` 中显式调用 `OPL` 与其 domain agents 是并列的一等使用方式。

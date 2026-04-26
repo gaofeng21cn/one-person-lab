@@ -77,8 +77,8 @@
 - domain task registration contract 的 hydration
 - runtime status、session、progress、artifact、attention queue 的 OPL 产品级投影
 - `opl runtime manager`、doctor、repair、resume 等诊断和恢复入口
-- 可选 `OPL native helper` 的 registry，例如 system probe、artifact indexer、state indexer
-- 高频文件/状态索引的 contract-first catalog
+- 可选 Rust `OPL native helper` 的 registry，例如 system probe、native doctor、runtime watch、artifact indexer、state indexer
+- 高频文件/状态索引的 contract-first catalog；workspace 扫描、session ledger 索引、artifact manifest、large JSON 校验与目录 snapshot 优先由 Rust helper 承担
 
 不负责：
 
