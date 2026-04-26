@@ -36,6 +36,7 @@
 - `family-shared-release-maintenance.md`
 - `host-agent-runtime-contract.md`
 - `managed-runtime-migration-readiness-checklist.md`
+- [OPL Runtime Manager 目标形态](./opl-runtime-manager-target.md)
 - `hermes-agent-runtime-substrate-benchmark.md`
 - `family-executor-adapter-defaults.md`
 - `hermes-agent-executor-evaluation.md`

@@ -439,6 +439,11 @@ export function buildPublicCommandSpecs(
       examples: ['opl runtime repair-gateway'],
       group: 'runtime',
     }),
+    'runtime manager': cloneCommandSpec(commandSpecs['runtime manager'], {
+      usage: 'opl runtime manager',
+      examples: ['opl runtime manager'],
+      group: 'runtime',
+    }),
   };
 
   return publicCommandSpecs;

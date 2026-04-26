@@ -562,3 +562,40 @@ exit 1
     fs.rmSync(psFixture.fixtureRoot, { recursive: true, force: true });
   }
 });
+
+test('runtime manager reports OPL-managed adapter boundary over external Hermes', () => {
+  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "version" ]; then
+  echo "Hermes Agent v9.9.9-test"
+  exit 0
+fi
+if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
+  cat <<'EOF'
+Launchd plist: /tmp/ai.hermes.gateway.plist
+✓ Service definition matches the current Hermes install
+✓ Gateway service is loaded
+EOF
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+
+  try {
+    const output = runCli(['runtime', 'manager'], {
+      OPL_HERMES_BIN: hermesPath,
+    });
+
+    assert.equal(output.version, 'g2');
+    assert.equal(output.runtime_manager.surface_id, 'opl_runtime_manager');
+    assert.equal(output.runtime_manager.layer_role, 'product_managed_adapter_over_external_kernel');
+    assert.equal(output.runtime_manager.status, 'ready');
+    assert.equal(output.runtime_manager.owner_split.runtime_kernel_owner, 'upstream_hermes_agent');
+    assert.equal(output.runtime_manager.owner_split.product_manager_owner, 'one-person-lab');
+    assert.equal(output.runtime_manager.non_goals.includes('not_a_scheduler_kernel'), true);
+    assert.equal(output.runtime_manager.native_helper_target.candidates.length, 3);
+    assert.equal(output.runtime_manager.future_sidecar_migration.enabled_now, false);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});

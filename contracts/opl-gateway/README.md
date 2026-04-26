@@ -28,7 +28,7 @@ Read the linked domain repositories when you need the current repo-owned capabil
 ## How To Read This Directory
 
 - `workstreams.json`, `domains.json`, `routing-vocabulary.json`, `handoff.schema.json`, `routed-actions.schema.json`, and `public-surface-index.json` are legacy gateway-first material.
-- `managed-runtime-three-layer-contract.json` and `family-executor-adapter-defaults.json` remain useful as shared compatibility artifacts.
+- `managed-runtime-three-layer-contract.json`, `runtime-manager-contract.json`, and `family-executor-adapter-defaults.json` remain useful as shared compatibility artifacts.
 - onboarding, backlog, acceptance, example, and operating-record files remain reference-grade audit material.
 
 Unless a newer core document explicitly promotes a file back into the active mainline, treat everything here as compatibility or historical support material.
@@ -43,6 +43,7 @@ Unless a newer core document explicitly promotes a file back into the active mai
 - `domain-onboarding-readiness.schema.json`
 - `family-executor-adapter-defaults.json`
 - `managed-runtime-three-layer-contract.json`
+- `runtime-manager-contract.json`
 - `governance-audit.schema.json`
 - `publish-promotion.schema.json`
 - `acceptance-matrix.json`

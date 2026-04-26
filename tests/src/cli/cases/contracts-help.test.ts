@@ -579,7 +579,7 @@ test('help returns command discovery and runnable examples', () => {
   assert.equal(output.help.command, null);
   assert.equal(output.help.usage, 'opl [command ...|request...] [args]');
   assert.ok(
-    ['contract workstreams', 'contract workstream', 'contract domains', 'contract domain', 'contract surfaces', 'contract surface', 'domain resolve-request', 'domain explain-boundary'].every((command) =>
+    ['contract workstreams', 'contract workstream', 'contract domains', 'contract domain', 'contract surfaces', 'contract surface', 'domain resolve-request', 'domain explain-boundary', 'runtime manager'].every((command) =>
       output.help.commands.some((entry: { command: string }) => entry.command === command),
     ),
   );

@@ -12,10 +12,15 @@
 
 `User / Codex / opl / External Shell -> Codex-default session/runtime path -> explicit OPL activation when needed -> selected domain capability surface -> domain runtime and deliverables`
 
+长跑任务的目标链路在这个主链路下增加一层薄管理面：
+
+`OPL Product Entry / GUI / CLI -> OPL Runtime Manager -> external Hermes-Agent runtime substrate -> Domain Adapter -> selected domain capability surface -> domain runtime and deliverables`
+
 这里的核心点是：
 
 - `OPL` 当前主线以 `Codex-default session/runtime + explicit activation layer` 为 canonical truth
 - 本地 `opl`、直接 `Codex` 使用、ACP-compatible 外部壳与 OPL-branded AionUI GUI/WebUI 都消费同一套 runtime truth
+- `OPL Runtime Manager` 是 OPL 产品级管理/诊断/投影层；它管理受支持的外部 `Hermes-Agent` kernel，但不复制 runtime kernel
 - `opl`、`opl exec`、`opl resume` 默认继承 `Codex CLI` 语义
 - `opl skill sync` 把 family domain skill pack 注册到 Codex 环境，并按 workspace/worktree 布局自动发现 sibling repo；显式 runtime switch 或 domain contract 调用才进入 activation layer
 - `opl module install` 负责把缺失 domain repo 拉进 OPL-managed modules root，并串起 repo bootstrap、skill sync 与 health check 这条闭环安装线
@@ -64,12 +69,33 @@
 - 显式 domain contract dispatch
 - domain capability surface discovery
 
+### 2.5 OPL Runtime Manager
+
+负责：
+
+- 受支持 `Hermes-Agent` runtime 的 provision / version pin / profile wiring
+- domain task registration contract 的 hydration
+- runtime status、session、progress、artifact、attention queue 的 OPL 产品级投影
+- `opl runtime manager`、doctor、repair、resume 等诊断和恢复入口
+- 可选 `OPL native helper` 的 registry，例如 system probe、artifact indexer、state indexer
+- 高频文件/状态索引的 contract-first catalog
+
+不负责：
+
+- scheduler kernel
+- session / memory store
+- domain truth
+- concrete executor
+- 私有 fork / vendor 一份 `Hermes-Agent`
+
+这层让未来如果真的需要迁移到自有完整长期常驻 sidecar，已有 task registration、status projection、native helper、state index 与 domain owner 边界可以直接复用；但当前 promotion gate 是外部 `Hermes-Agent` 无法表达 OPL 必需的 task、wakeup、approval、audit 或产品隔离合同时，才进入完整 sidecar 评估。
+
 ### 3. Engines
 
 - `Codex CLI`
   - 默认交互与执行宿主
 - `Hermes-Agent`
-  - 显式切换时才启用的备选 runtime
+  - 显式切换或长跑托管时使用的外部 runtime substrate owner；由 `OPL Runtime Manager` 做产品级管理和投影
 
 ### 4. Domain Capability Surface And Entry
 

@@ -1,0 +1,52 @@
+{
+  "version": "v1",
+  "contract_id": "opl_runtime_manager_contract",
+  "contract_ref": "contracts/opl-gateway/runtime-manager-contract.json",
+  "scope": "opl_product_managed_adapter_over_external_runtime_kernel",
+  "description": "Freezes the first OPL Runtime Manager boundary. OPL manages provisioning, profile wiring, diagnostics, task registration hydration, status projection, optional native helper catalog, and high-frequency state indexes while Hermes-Agent remains the external runtime kernel owner.",
+  "owner_split": {
+    "product_manager_owner": "one-person-lab",
+    "runtime_kernel_owner": "upstream_hermes_agent",
+    "domain_truth_owners": [
+      "med-autoscience",
+      "med-autogrant",
+      "redcube-ai"
+    ],
+    "concrete_executor_owner": "route_selected_by_domain_contract"
+  },
+  "manager_responsibilities": [
+    "provision_supported_hermes_runtime",
+    "pin_runtime_version_and_profile",
+    "hydrate_domain_task_registration_contracts",
+    "project_runtime_status_into_opl_sessions_progress_artifacts",
+    "provide_runtime_doctor_repair_resume_entrypoints",
+    "catalog_optional_native_helpers",
+    "catalog_high_frequency_state_indexes"
+  ],
+  "non_goals": [
+    "not_a_scheduler_kernel",
+    "not_a_session_or_memory_store",
+    "not_a_domain_truth_owner",
+    "not_a_concrete_executor",
+    "not_a_private_fork_of_hermes_agent"
+  ],
+  "native_helper_target": {
+    "allowed_shape": "small_json_stdio_or_cli_helpers_managed_by_opl",
+    "candidate_helpers": [
+      "opl-sysprobe",
+      "opl-artifact-indexer",
+      "opl-state-indexer"
+    ]
+  },
+  "state_index_target": {
+    "source_of_truth_rule": "indexes project runtime surfaces but never replace domain-owned durable truth",
+    "candidate_indexes": [
+      "workspace_registry_index",
+      "managed_session_ledger_index",
+      "artifact_projection_index",
+      "attention_queue_index",
+      "runtime_health_snapshot_index"
+    ]
+  },
+  "future_sidecar_promotion_gate": "Only promote beyond a thin manager if Hermes cannot express required task, wakeup, approval, audit, or product isolation contracts."
+}

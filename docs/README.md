@@ -40,6 +40,7 @@ These files give the fastest read on the current repo-tracked truth before you c
 - [Invariants](./invariants.md)
 - [Decisions](./decisions.md)
 - [Contracts Overview](../contracts/README.md)
+- [OPL Runtime Manager Target](./references/opl-runtime-manager-target.md)
 
 ## The Four-Layer Docs System
 
@@ -86,6 +87,7 @@ Layer 3 holds review, audit, rollout, benchmark, migration, and retired contract
 It is repo-tracked supporting material, not the default implementation basis.
 
 - [Reference Index](./references/README.md)
+- [OPL Runtime Manager target](./references/opl-runtime-manager-target.md)
 - [Docker WebUI deployment reference](./references/opl-docker-webui-deployment.md)
 - [OPL default skill ecosystem reference](./references/opl-default-skill-ecosystem.md)
 - product-runtime and executor reference notes
