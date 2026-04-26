@@ -422,8 +422,13 @@ exit 1
     assert.ok(nativeHelperItem);
     assert.equal(nativeHelperItem.required, false);
     assert.equal(nativeHelperItem.blocking, false);
-    assert.equal(nativeHelperItem.action?.action_id, 'repair_native_helpers');
-    assert.deepEqual(nativeHelperItem.action?.payload_template, { action: 'repair_native_helpers' });
+    assert.equal(
+      nativeHelperItem.action?.action_id,
+      nativeHelperItem.status === 'ready' ? 'open_environment' : 'repair_native_helpers',
+    );
+    if (nativeHelperItem.status !== 'ready') {
+      assert.deepEqual(nativeHelperItem.action?.payload_template, { action: 'repair_native_helpers' });
+    }
     assert.equal(nativeHelperItem.status, output.system_initialize.native_helpers.health_status);
     assert.equal(output.system_initialize.domain_modules.summary.total_modules_count, 3);
     assert.equal(
