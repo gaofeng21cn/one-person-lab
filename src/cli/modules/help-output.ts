@@ -275,6 +275,8 @@ function buildPublicSystemInitializePayload(
     system_initialize: {
       surface_id: 'opl_system_initialize',
       overall_state: payload.frontdesk_initialize.overall_state,
+      setup_flow: payload.frontdesk_initialize.setup_flow,
+      module_summary: payload.frontdesk_initialize.module_summary,
       checklist: payload.frontdesk_initialize.checklist,
       core_engines: payload.frontdesk_initialize.core_engines,
       native_helpers: payload.frontdesk_initialize.native_helpers,
@@ -301,6 +303,7 @@ function buildPublicSystemInitializePayload(
         })),
       },
       recommended_next_action: payload.frontdesk_initialize.recommended_next_action,
+      endpoints: payload.frontdesk_initialize.endpoints,
       notes: payload.frontdesk_initialize.notes,
     },
   };

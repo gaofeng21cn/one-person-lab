@@ -9,7 +9,7 @@ export type FrontDeskUpdateChannel = 'stable' | 'preview';
 export type FrontDeskWorkspaceRoot = {
   version: 'g1';
   selected_path: string | null;
-  source: 'env' | 'state' | 'unset';
+  source: 'env' | 'state' | 'default_home';
   exists: boolean;
   writable: boolean;
   health_status: 'ready' | 'attention_needed' | 'missing';
@@ -115,15 +115,16 @@ function writeWorkspaceRootFile(selectedPath: string | null) {
 }
 
 export function readFrontDeskWorkspaceRoot(): FrontDeskWorkspaceRoot {
+  const paths = ensureFrontDeskStateDir(resolveFrontDeskStatePaths());
   const envSelectedPath = normalizeOptionalString(process.env.OPL_WORKSPACE_ROOT);
   const persisted = readWorkspaceRootFile();
-  const selectedPath = envSelectedPath ?? persisted?.selected_path ?? null;
+  const selectedPath = envSelectedPath ?? persisted?.selected_path ?? paths.home_dir;
   const source: FrontDeskWorkspaceRoot['source'] =
     envSelectedPath
       ? 'env'
       : persisted?.selected_path
         ? 'state'
-        : 'unset';
+        : 'default_home';
   const exists = Boolean(selectedPath && fs.existsSync(selectedPath) && fs.statSync(selectedPath).isDirectory());
   const writable = Boolean(selectedPath && exists && canWriteDirectory(selectedPath));
   const healthStatus: FrontDeskWorkspaceRoot['health_status'] =

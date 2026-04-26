@@ -15,13 +15,9 @@ export async function buildFrontDeskEnvironment(contracts: GatewayContracts) {
   const nativeHelpers = buildNativeHelperHealthStatus();
   const modulesPayload = buildFrontDeskModules().frontdesk_modules;
   const moduleSummary = modulesPayload.summary;
-  const codexIssues = [
-    ...codexBinary.issues,
-    ...(codexDefaults ? [] : ['codex_config_missing']),
-  ];
+  const codexIssues = [...codexBinary.issues];
   const codexHealthStatus =
     codexBinary.installed
-      && codexDefaults
       && codexBinary.version_status === 'compatible'
       && codexBinary.issues.length === 0
       ? 'ready'
@@ -59,6 +55,7 @@ export async function buildFrontDeskEnvironment(contracts: GatewayContracts) {
           default_reasoning_effort: codexDefaults?.reasoning_effort ?? null,
           provider_base_url: codexDefaults?.provider_base_url ?? null,
           health_status: codexHealthStatus,
+          config_status: codexDefaults ? 'detected' : 'not_detected',
           issues: codexIssues,
         },
         hermes: {
@@ -92,6 +89,7 @@ export async function buildFrontDeskEnvironment(contracts: GatewayContracts) {
       },
       notes: [
         'OPL owns the user-facing initialization surface and reports whether the local Codex and Hermes engines are ready to be reused.',
+        'Codex config is inherited when present; a missing readable config is not a first-run blocker when the Codex CLI itself is available and compatible.',
         'OPL reports native helper lifecycle readiness here; opl install can run the native repair path when helper binaries are missing.',
         'AionUI provides the GUI/WebUI shell; OPL no longer hosts a local Product API service on port 8787.',
         'Domain modules are tracked separately so the GUI can manage install and upgrade actions from one settings area.',

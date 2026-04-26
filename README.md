@@ -30,9 +30,9 @@
 
 For macOS desktop users, download the App directly:
 
-[Download One Person Lab for macOS](https://github.com/gaofeng21cn/one-person-lab/releases/download/v26.4.25/One.Person.Lab-26.4.25-mac-arm64.dmg)
+[Download One Person Lab for macOS](https://github.com/gaofeng21cn/one-person-lab/releases/download/v26.4.27/One.Person.Lab-26.4.27-mac-arm64.dmg)
 
-Open `One Person Lab.app`; on first launch it prepares the local environment and helps configure Codex, modules, skills, and the desktop workbench without opening any extra service window.
+Open `One Person Lab.app`; on first launch it quietly checks the local environment, uses your home directory as the default workspace root, and installs missing OPL modules and recommended skills when it can do so safely.
 
 If you prefer Terminal installation:
 
@@ -40,7 +40,7 @@ If you prefer Terminal installation:
 curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/install.sh | bash
 ```
 
-After installation, open `One Person Lab.app`, choose a workspace root, and start general work, medical research, grant writing, or presentation/PPT work from the same interface.
+After installation, open `One Person Lab.app` and start general work, medical research, grant writing, or presentation/PPT work from the same interface. The App reuses the setup done by `opl install`; it only asks for configuration when a required dependency cannot be installed or detected automatically.
 
 Need Docker, Linux, or server deployment? See the [Docker and browser deployment reference](./docs/references/opl-docker-webui-deployment.md).
 
@@ -102,9 +102,9 @@ The desktop GUI source is maintained in [`opl-aion-shell`](https://github.com/ga
 ### Runtime notes
 
 - Default front doors are `opl`, `opl exec`, and `opl resume`. Unless a runtime or domain agent is explicitly selected, these paths keep Codex-default semantics.
-- OPL treats `Codex CLI` as a managed runtime dependency: `opl system` reports the selected binary, version, minimum-version policy, and conflicting PATH candidates; versions below the minimum or conflicting candidate versions are marked `attention_needed`.
+- OPL treats `Codex CLI` as a managed runtime dependency: `opl system` reports the selected binary, version, minimum-version policy, and conflicting PATH candidates; versions below the minimum or conflicting candidate versions are marked `attention_needed`. If a compatible Codex CLI is already usable, OPL does not force a separate Codex configuration step on first launch.
 - If an admitted domain repo is missing locally, run `opl module install --module <module_id>`.
-- The default local state directory is `~/Library/Application Support/OPL/state`. Set `OPL_STATE_DIR` to use another local state root.
+- The default workspace root is your home directory. The default local state directory is `~/Library/Application Support/OPL/state`. Set `OPL_STATE_DIR` to use another local state root.
 - Active domain agents are [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience), [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant), and [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai).
 - [`Med Deep Scientist`](https://github.com/gaofeng21cn/med-deepscientist) remains the controlled runtime/backend companion under `Med Auto Science`; OPL install and Environment Management maintain it as a MAS dependency, but it is not a top-level OPL domain agent.
 - When a task needs top-level session/runtime paths, shared `workspaces / sessions / progress / artifacts` surfaces, or explicit domain activation, enter through `OPL`. When a task is already clearly inside one domain, continue through that repo’s README and `docs/README*`.

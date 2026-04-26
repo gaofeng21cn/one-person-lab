@@ -75,8 +75,12 @@ docker run --rm \
 
 OPL 在安装或运行时从环境变量读取 Codex 默认配置。这些值不是写死在 Dockerfile 里，而是通过 `docker run -e`、Docker Compose `environment:`、部署平台环境变量或 secret manager 注入。
 
+没有显式指定 workspace root 时，OPL 会使用容器用户的 Home 目录。持久化 Docker 部署建议设置 `HOME=/data`，或显式设置 `OPL_WORKSPACE_ROOT=/data/workspaces`，这样容器替换后 workspace 仍然保留。
+
 | 变量 | 用途 |
 | --- | --- |
+| `HOME` | 默认 Home；未设置 `OPL_WORKSPACE_ROOT` 时也作为隐式 workspace root |
+| `OPL_WORKSPACE_ROOT` | 显式 workspace root，例如 `/data/workspaces` |
 | `CODEX_HOME` | 容器内 Codex 配置目录，例如 `/data/codex` |
 | `OPL_CODEX_MODEL` | 写入 `CODEX_HOME/config.toml` 的默认 Codex 模型 |
 | `OPL_CODEX_REASONING_EFFORT` | 默认 reasoning effort，例如 `xhigh` |
@@ -91,6 +95,8 @@ docker run --rm \
   -v opl-data:/data \
   -e ALLOW_REMOTE=true \
   -e DATA_DIR=/data \
+  -e HOME=/data \
+  -e OPL_WORKSPACE_ROOT=/data/workspaces \
   -e CODEX_HOME=/data/codex \
   -e OPL_CODEX_MODEL=gpt-5.5 \
   -e OPL_CODEX_REASONING_EFFORT=xhigh \
@@ -114,6 +120,8 @@ services:
     environment:
       ALLOW_REMOTE: "true"
       DATA_DIR: /data
+      HOME: /data
+      OPL_WORKSPACE_ROOT: /data/workspaces
       CODEX_HOME: /data/codex
       OPL_WEBUI_AUTH_MODE: none
       OPL_CODEX_MODEL: gpt-5.5

@@ -46,26 +46,26 @@
 
 ```json
 {
-  "opl_version": "26.4.25",
+  "opl_version": "26.4.27",
   "gui_version": "1.9.21",
   "release_channel": "stable",
-  "generated_at": "2026-04-26T00:00:00Z",
+  "generated_at": "2026-04-27T00:00:00Z",
   "modules": {
     "medautoscience": {
       "channel": "stable",
-      "version": "26.4.25",
+      "version": "26.4.27",
       "artifact_kind": "source_archive",
-      "artifact": "ghcr.io/gaofeng21cn/one-person-lab-modules/med-autoscience:26.4.25",
-      "fallback_source_archive": "https://github.com/gaofeng21cn/med-autoscience/releases/download/26.4.25/med-autoscience-26.4.25.tar.gz",
+      "artifact": "ghcr.io/gaofeng21cn/one-person-lab-modules/med-autoscience:26.4.27",
+      "fallback_source_archive": "https://github.com/gaofeng21cn/med-autoscience/releases/download/26.4.27/med-autoscience-26.4.27.tar.gz",
       "sha256": "<checksum>",
       "install_strategy": "extract_to_managed_modules_root",
-      "rollback": "26.4.24"
+      "rollback": "26.4.26"
     },
     "meddeepscientist": {
       "channel": "stable",
-      "version": "26.4.25",
+      "version": "26.4.27",
       "artifact_kind": "source_archive",
-      "artifact": "ghcr.io/gaofeng21cn/one-person-lab-modules/med-deepscientist:26.4.25",
+      "artifact": "ghcr.io/gaofeng21cn/one-person-lab-modules/med-deepscientist:26.4.27",
       "sha256": "<checksum>",
       "install_strategy": "extract_to_managed_modules_root",
       "dependency_of": ["medautoscience"]
