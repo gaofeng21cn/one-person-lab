@@ -151,6 +151,12 @@ ${handlerBody}
   };
 }
 
+const fakeFamilySkillDescriptions: Record<string, string> = {
+  mas: 'Use when Codex should operate MedAutoScience through its stable runtime, controller, overlay, and workspace contracts instead of ad-hoc scripts.',
+  mag: 'Use when Codex should operate Med Auto Grant through its grant-authoring product entry, user-loop, and schema-backed contracts instead of ad-hoc repo scripting.',
+  rca: 'Operate RedCube AI as the formal RCA visual-deliverable domain app through product-entry, recoverable deliverable runtime, and same-session continuation contracts.',
+};
+
 function createFakeFamilySkillWorkspace(captureDir: string) {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-skills-'));
   const specs = [
@@ -206,7 +212,7 @@ process.stdout.write(JSON.stringify({ repo: 'redcube-ai', sync: 'ok' }) + '\\n')
     );
     fs.writeFileSync(
       path.join(skillRoot, 'SKILL.md'),
-      `---\nname: ${spec.canonicalPlugin}\ndescription: ${spec.canonicalPlugin} test skill\n---\n\n# ${spec.canonicalPlugin}\n`,
+      `---\nname: ${spec.canonicalPlugin}\ndescription: ${fakeFamilySkillDescriptions[spec.canonicalPlugin]}\n---\n\n# ${spec.canonicalPlugin.toUpperCase()} App Skill\n\nThis fixture represents a canonical family app skill with a real workflow entry, not a placeholder.\n`,
     );
     fs.writeFileSync(installerPath, spec.scriptBody, { mode: 0o755 });
   }
@@ -285,6 +291,7 @@ exit 0
   try {
     const result = runEntryPathRaw(binPath, ['exec', '--cd', '/tmp/opl-exec-smoke', '--model', 'gpt-5.4', 'hello'], {
       OPL_CODEX_BIN: codexPath,
+      OPL_SKIP_SKILL_SYNC: '1',
     });
 
     assert.equal(result.stdout, 'LAUNCHER RAW EXEC\n');
@@ -359,6 +366,10 @@ test('opl skill list discovers the family plugin packs through the configured si
     );
     assert.match(output.skill_catalog.packs[0].plugin_manifest_path, /plugins\/mas\/\.codex-plugin\/plugin\.json$/);
     assert.match(output.skill_catalog.packs[0].skill_entry_path, /plugins\/mas\/skills\/mas\/SKILL\.md$/);
+    assert.deepEqual(
+      output.skill_catalog.packs.map((entry: { skill_entry_valid: boolean }) => entry.skill_entry_valid),
+      [true, true, true],
+    );
     assert.equal(fs.existsSync(syncLogPath), false);
   } finally {
     fs.rmSync(captureDir, { recursive: true, force: true });
@@ -418,6 +429,45 @@ test('opl skill list discovers OPL-managed module installs without OPL_FAMILY_WO
   }
 });
 
+test('opl skill sync refuses to mirror legacy test skill stubs', () => {
+  const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-skill-sync-invalid-'));
+  const { workspaceRoot, syncLogPath } = createFakeFamilySkillWorkspace(captureDir);
+  const homeDir = path.join(captureDir, 'home');
+  fs.mkdirSync(homeDir, { recursive: true });
+  const stubPath = path.join(
+    workspaceRoot,
+    'med-autoscience',
+    'plugins',
+    'mas',
+    'skills',
+    'mas',
+    'SKILL.md',
+  );
+  fs.writeFileSync(stubPath, '---\nname: mas\ndescription: mas test skill\n---\n\n# mas\n');
+
+  try {
+    const output = runCli(['skill', 'sync', '--domain', 'medautoscience'], {
+      HOME: homeDir,
+      OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
+    });
+
+    const pack = output.skill_sync.packs[0];
+    assert.equal(output.skill_sync.summary.synced, 0);
+    assert.equal(output.skill_sync.summary.skipped, 1);
+    assert.equal(pack.ready_to_sync, false);
+    assert.equal(pack.skill_entry_valid, false);
+    assert.deepEqual(pack.skill_entry_errors, [
+      'legacy_test_skill_description',
+      'legacy_test_skill_body',
+    ]);
+    assert.equal(fs.existsSync(path.join(homeDir, '.codex', 'skills', 'mas')), false);
+    assert.equal(fs.existsSync(syncLogPath), false);
+  } finally {
+    fs.rmSync(captureDir, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
 test('opl skill sync runs the lightweight family plugin installers and returns machine-readable results', () => {
   const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-skill-sync-'));
   const { workspaceRoot, syncLogPath } = createFakeFamilySkillWorkspace(captureDir);
@@ -446,6 +496,7 @@ test('opl skill sync runs the lightweight family plugin installers and returns m
       const skillPath = path.join(homeDir, '.codex', 'skills', skillName, 'SKILL.md');
       const content = fs.readFileSync(skillPath, 'utf8');
       assert.match(content, /^---\nname: /);
+      assert.doesNotMatch(content, /test skill/i);
     }
   } finally {
     fs.rmSync(captureDir, { recursive: true, force: true });
@@ -455,14 +506,17 @@ test('opl skill sync runs the lightweight family plugin installers and returns m
 
 test('installed opl launcher syncs family skill packs before opening the raw Codex frontdoor', () => {
   const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-launcher-skill-sync-'));
+  const homeDir = path.join(captureDir, 'home');
   const { workspaceRoot, syncLogPath } = createFakeFamilySkillWorkspace(captureDir);
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
 echo "CODEX FRONTDOOR"
 exit 0
 `);
+  fs.mkdirSync(homeDir, { recursive: true });
 
   try {
     const result = runEntryPathRaw(binPath, [], {
+      HOME: homeDir,
       OPL_CODEX_BIN: codexPath,
       OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
     });
