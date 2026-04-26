@@ -124,7 +124,50 @@
         "stale_last_success_available",
         "expired_last_success",
         "unavailable_no_success"
-      ]
+      ],
+      "diff_summary": {
+        "compared_fields": [
+          "index_key",
+          "helper_id",
+          "result_surface_kind",
+          "status"
+        ],
+        "count_fields": [
+          "previous_index_count",
+          "current_index_count",
+          "added_count",
+          "removed_count",
+          "changed_count",
+          "unchanged_count",
+          "helper_changed_count",
+          "result_surface_changed_count",
+          "status_changed_count"
+        ]
+      },
+      "failure_record": {
+        "required_fields": [
+          "generated_at",
+          "status",
+          "category",
+          "errors",
+          "details"
+        ],
+        "categories": [
+          "helper_unavailable",
+          "helper_error",
+          "write_failed"
+        ]
+      },
+      "history_gc": {
+        "max_history_entries": 50,
+        "reporting_fields": [
+          "retained_history_count",
+          "preserved_count",
+          "removed_count",
+          "history_count_before_gc",
+          "history_count_after_gc"
+        ]
+      }
     },
     "candidate_indexes": [
       "workspace_registry_index",

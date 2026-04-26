@@ -4,12 +4,14 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { ensureFrontDeskStateDir, resolveFrontDeskStatePaths } from './frontdesk-state.ts';
+import {
+  type NativeStateIndexPersistence,
+  persistNativeStateIndex,
+} from './native-index-lifecycle.ts';
 
 const PROTOCOL_VERSION = 'opl_native_helper.v1';
 const SOURCE_OF_TRUTH_RULE =
   'OPL persists native helper indexes for fast lookup, then dereferences domain-owned durable truth before acting.';
-const INDEX_TTL_MS = 86_400_000;
-const MAX_HISTORY_ENTRIES = 50;
 
 type NativeHelperDefinition = {
   helper_id: string;
@@ -50,37 +52,7 @@ type NativeHelperProjection = {
     };
     invocations: NativeHelperInvocation[];
   };
-  persistence: {
-    status: 'written' | 'skipped_helper_unavailable' | 'skipped_helper_error' | 'write_failed';
-    state_dir: string;
-    index_file: string;
-    history_file: string;
-    failure_file: string;
-    last_success_file: string;
-    ttl_ms: number;
-    expires_at: string;
-    diff: {
-      changed: boolean;
-      previous_index_file: string | null;
-      previous_generated_at: string | null;
-    };
-    gc: {
-      retained_history_count: number;
-      max_history_entries: number;
-    };
-    freshness: {
-      status: 'fresh' | 'stale_last_success_available' | 'expired_last_success' | 'unavailable_no_success';
-      current_generated_at: string | null;
-      current_expires_at: string | null;
-      current_expired: boolean;
-      last_success_generated_at: string | null;
-      last_success_expires_at: string | null;
-      last_success_expired: boolean | null;
-      failure_count: number;
-    };
-    source_of_truth_rule: typeof SOURCE_OF_TRUTH_RULE;
-    errors: Array<{ code: string; message: string }>;
-  };
+  persistence: NativeStateIndexPersistence;
 };
 
 type NativeHelperLifecycle = {
@@ -240,7 +212,15 @@ export function buildNativeHelperProjection(
   const statePaths = ensureFrontDeskStateDir();
   const lifecycle = buildNativeHelperLifecycle();
   const runtime = inspectNativeHelperRuntime(helpers);
-  const persistence = persistNativeStateIndex(statePaths.state_dir, runtime.invocations);
+  const persistence = persistNativeStateIndex({
+    stateDir: statePaths.state_dir,
+    invocations: runtime.invocations,
+    indexSpecs: RUNTIME_MANAGER_HELPER_SEQUENCE
+      .filter((spec) => spec.helper_id !== 'opl-doctor-native')
+      .map((spec) => ({ helper_id: spec.helper_id, index_key: spec.index_key })),
+    protocolVersion: PROTOCOL_VERSION,
+    sourceOfTruthRule: SOURCE_OF_TRUTH_RULE,
+  });
 
   return {
     lifecycle,
@@ -519,101 +499,6 @@ function invokeNativeHelper(
   };
 }
 
-function persistNativeStateIndex(
-  stateDir: string,
-  invocations: readonly NativeHelperInvocation[],
-): NativeHelperProjection['persistence'] {
-  const paths = nativeStateIndexPaths(stateDir);
-  const indexInvocations = invocations.filter((invocation) => invocation.helper_id !== 'opl-doctor-native');
-  if (indexInvocations.some((invocation) => invocation.status === 'unavailable')) {
-    const errors = [
-      {
-        code: 'native_index_helper_unavailable',
-        message: 'one or more native index helpers are unavailable',
-      },
-    ];
-    recordNativeIndexFailure(paths, 'skipped_helper_unavailable', errors);
-    return persistenceStatus('skipped_helper_unavailable', stateDir, paths, errors);
-  }
-  if (indexInvocations.some((invocation) => invocation.status !== 'ok')) {
-    const errors = [
-      {
-        code: 'native_index_helper_failed',
-        message: 'one or more native index helpers failed',
-      },
-    ];
-    recordNativeIndexFailure(paths, 'skipped_helper_error', errors);
-    return persistenceStatus('skipped_helper_error', stateDir, paths, errors);
-  }
-
-  const nativeIndexes = Object.fromEntries(
-    RUNTIME_MANAGER_HELPER_SEQUENCE.filter((spec) => spec.helper_id !== 'opl-doctor-native').map((spec) => {
-      const invocation = invocations.find((candidate) => candidate.helper_id === spec.helper_id);
-      return [spec.index_key, invocation];
-    }),
-  );
-
-  const generatedAt = new Date();
-  const previous = readPreviousNativeIndex(paths.indexFile);
-  const changed = !previous || JSON.stringify(previous.native_indexes ?? null) !== JSON.stringify(nativeIndexes);
-  const expiresAt = new Date(generatedAt.getTime() + INDEX_TTL_MS).toISOString();
-  const diff = {
-    changed,
-    previous_index_file: previous ? paths.indexFile : null,
-    previous_generated_at: typeof previous?.generated_at === 'string' ? previous.generated_at : null,
-  };
-  const payload = {
-    surface_kind: 'opl_runtime_manager_native_state_projection',
-    version: 'v1',
-    protocol_version: PROTOCOL_VERSION,
-    source_of_truth_rule: SOURCE_OF_TRUTH_RULE,
-    generated_at: generatedAt.toISOString(),
-    lifecycle: {
-      ttl_ms: INDEX_TTL_MS,
-      expires_at: expiresAt,
-      expired: false,
-      history_file: paths.historyFile,
-      failure_file: paths.failureFile,
-      last_success_file: paths.lastSuccessFile,
-    },
-    diff,
-    native_indexes: nativeIndexes,
-  };
-
-  let retainedHistoryCount = 0;
-  try {
-    fs.mkdirSync(path.dirname(paths.indexFile), { recursive: true });
-    fs.writeFileSync(paths.indexFile, `${JSON.stringify(payload, null, 2)}\n`);
-    fs.writeFileSync(paths.lastSuccessFile, `${JSON.stringify(payload, null, 2)}\n`);
-    appendJsonLine(paths.historyFile, {
-      generated_at: payload.generated_at,
-      index_file: paths.indexFile,
-      diff,
-      summary: Object.fromEntries(Object.entries(nativeIndexes).map(([key, value]) => [
-        key,
-        (value as NativeHelperInvocation | undefined)?.status ?? 'missing',
-      ])),
-    });
-    retainedHistoryCount = gcJsonlByCount(paths.historyFile, MAX_HISTORY_ENTRIES);
-  } catch (error) {
-    const errors = [
-      {
-        code: 'native_state_index_write_failed',
-        message: error instanceof Error ? error.message : String(error),
-      },
-    ];
-    recordNativeIndexFailure(paths, 'write_failed', errors);
-    return persistenceStatus('write_failed', stateDir, paths, errors);
-  }
-
-  return persistenceStatus('written', stateDir, paths, [], {
-    generatedAt: payload.generated_at,
-    expiresAt,
-    diff,
-    retainedHistoryCount,
-  });
-}
-
 function resolveNativeHelper(helper: NativeHelperDefinition): HelperResolution {
   const explicitBinaryEnv = `OPL_NATIVE_HELPER_${helper.helper_id.toUpperCase().replaceAll('-', '_')}_BIN`;
   const explicitBinary = process.env[explicitBinaryEnv]?.trim();
@@ -692,159 +577,6 @@ function invocationError(
     resolution,
     errors: [{ code: status, message }],
   };
-}
-
-function persistenceStatus(
-  status: NativeHelperProjection['persistence']['status'],
-  stateDir: string,
-  paths: ReturnType<typeof nativeStateIndexPaths>,
-  errors: NativeHelperProjection['persistence']['errors'],
-  input: Partial<{
-    generatedAt: string;
-    expiresAt: string;
-    diff: NativeHelperProjection['persistence']['diff'];
-    retainedHistoryCount: number;
-  }> = {},
-): NativeHelperProjection['persistence'] {
-  return {
-    status,
-    state_dir: stateDir,
-    index_file: paths.indexFile,
-    history_file: paths.historyFile,
-    failure_file: paths.failureFile,
-    last_success_file: paths.lastSuccessFile,
-    ttl_ms: INDEX_TTL_MS,
-    expires_at: input.expiresAt ?? new Date(Date.now() + INDEX_TTL_MS).toISOString(),
-    diff: input.diff ?? {
-      changed: false,
-      previous_index_file: null,
-      previous_generated_at: null,
-    },
-    gc: {
-      retained_history_count: input.retainedHistoryCount ?? countJsonlLines(paths.historyFile),
-      max_history_entries: MAX_HISTORY_ENTRIES,
-    },
-    freshness: buildNativeIndexFreshness(status, paths, {
-      generatedAt: input.generatedAt ?? null,
-      expiresAt: input.expiresAt ?? null,
-    }),
-    source_of_truth_rule: SOURCE_OF_TRUTH_RULE,
-    errors,
-  };
-}
-
-function nativeStateIndexPaths(stateDir: string) {
-  const root = path.join(stateDir, 'runtime-manager');
-  return {
-    indexFile: path.join(root, 'native-state-index.json'),
-    historyFile: path.join(root, 'native-state-index-history.jsonl'),
-    failureFile: path.join(root, 'native-state-index-failures.jsonl'),
-    lastSuccessFile: path.join(root, 'native-state-index-last-success.json'),
-  };
-}
-
-function buildNativeIndexFreshness(
-  status: NativeHelperProjection['persistence']['status'],
-  paths: ReturnType<typeof nativeStateIndexPaths>,
-  current: { generatedAt: string | null; expiresAt: string | null },
-): NativeHelperProjection['persistence']['freshness'] {
-  const failureCount = countJsonlLines(paths.failureFile);
-  if (status === 'written') {
-    return {
-      status: 'fresh',
-      current_generated_at: current.generatedAt,
-      current_expires_at: current.expiresAt,
-      current_expired: false,
-      last_success_generated_at: current.generatedAt,
-      last_success_expires_at: current.expiresAt,
-      last_success_expired: false,
-      failure_count: failureCount,
-    };
-  }
-
-  const lastSuccess = readPreviousNativeIndex(paths.lastSuccessFile);
-  const lastGeneratedAt = typeof lastSuccess?.generated_at === 'string' ? lastSuccess.generated_at : null;
-  const lastExpiresAt = readLastSuccessExpiresAt(lastSuccess);
-  if (!lastSuccess || !lastGeneratedAt || !lastExpiresAt) {
-    return {
-      status: 'unavailable_no_success',
-      current_generated_at: null,
-      current_expires_at: null,
-      current_expired: false,
-      last_success_generated_at: lastGeneratedAt,
-      last_success_expires_at: lastExpiresAt,
-      last_success_expired: null,
-      failure_count: failureCount,
-    };
-  }
-
-  const lastExpired = Date.parse(lastExpiresAt) <= Date.now();
-  return {
-    status: lastExpired ? 'expired_last_success' : 'stale_last_success_available',
-    current_generated_at: null,
-    current_expires_at: null,
-    current_expired: false,
-    last_success_generated_at: lastGeneratedAt,
-    last_success_expires_at: lastExpiresAt,
-    last_success_expired: lastExpired,
-    failure_count: failureCount,
-  };
-}
-
-function readLastSuccessExpiresAt(lastSuccess: Record<string, unknown> | null) {
-  const lifecycle = lastSuccess?.lifecycle;
-  if (typeof lifecycle !== 'object' || lifecycle === null) {
-    return null;
-  }
-  const expiresAt = (lifecycle as Record<string, unknown>).expires_at;
-  return typeof expiresAt === 'string' ? expiresAt : null;
-}
-
-function readPreviousNativeIndex(indexFile: string): Record<string, unknown> | null {
-  try {
-    return JSON.parse(fs.readFileSync(indexFile, 'utf8')) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-}
-
-function appendJsonLine(filePath: string, value: unknown) {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.appendFileSync(filePath, `${JSON.stringify(value)}\n`);
-}
-
-function gcJsonlByCount(filePath: string, maxEntries: number) {
-  const lines = readJsonlLines(filePath).slice(-maxEntries);
-  fs.writeFileSync(filePath, lines.length > 0 ? `${lines.join('\n')}\n` : '');
-  return lines.length;
-}
-
-function countJsonlLines(filePath: string) {
-  return readJsonlLines(filePath).length;
-}
-
-function readJsonlLines(filePath: string) {
-  try {
-    return fs.readFileSync(filePath, 'utf8').split('\n').filter((line) => line.trim().length > 0);
-  } catch {
-    return [];
-  }
-}
-
-function recordNativeIndexFailure(
-  paths: ReturnType<typeof nativeStateIndexPaths>,
-  status: NativeHelperProjection['persistence']['status'],
-  errors: NativeHelperProjection['persistence']['errors'],
-) {
-  try {
-    appendJsonLine(paths.failureFile, {
-      generated_at: new Date().toISOString(),
-      status,
-      errors,
-    });
-  } catch {
-    // Failure telemetry must not mask the original native-helper status.
-  }
 }
 
 function stringValue(value: unknown) {
