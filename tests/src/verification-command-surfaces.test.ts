@@ -75,6 +75,18 @@ test('scripts/verify.sh provides the canonical verification wrapper', () => {
   assert.match(verifyScript, /smoke\|fast\|family\|meta\|artifact\|native\|full\|lint\|line-budget\|typecheck/);
 });
 
+test('GitHub verification workflow runs the native helper production gates', () => {
+  const workflow = read('.github/workflows/verify.yml');
+
+  assert.match(workflow, /npm ci/);
+  assert.match(workflow, /npm run build/);
+  assert.match(workflow, /npm run test:meta/);
+  assert.match(workflow, /\.\/scripts\/verify\.sh native/);
+  assert.match(workflow, /\.\/scripts\/verify\.sh lint/);
+  assert.match(workflow, /npm run native:family-smoke -- --fixture --require-real-workspaces/);
+  assert.match(workflow, /rust-toolchain/);
+});
+
 test('lint includes the tracked code line-budget guard', () => {
   assert.equal(packageJson.scripts?.lint, 'node ./scripts/lint.mjs && node ./scripts/line-budget.mjs');
   assert.equal(fs.existsSync(path.join(repoRoot, 'scripts/line-budget.mjs')), true);
