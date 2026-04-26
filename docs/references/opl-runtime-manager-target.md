@@ -19,11 +19,22 @@
 ## 当前要落地的最小面
 
 1. `opl runtime manager`
-   输出当前 owner split、Hermes readiness、native helper target、state index target 与 sidecar promotion gate。
+   输出当前 owner split、Hermes readiness、domain registration registry、native helper target、state index target 与 sidecar promotion gate。
 2. `contracts/opl-gateway/runtime-manager-contract.json`
-   冻结 Runtime Manager 的 machine-readable 合同。
+   冻结 Runtime Manager 的 machine-readable 合同，以及三类 domain registration surface 的必需字段。
 3. 核心 docs 对齐
    `project / architecture / invariants / decisions / status` 共同说明 Runtime Manager 是薄层，不是 kernel。
+
+## Domain Registration Registry
+
+v1 registry 只登记 MAS、MAG、RCA 已声明的 projection surface：
+
+- `skill_catalog.domain_projection.opl_runtime_manager_registration`
+- `runtime_continuity` / runtime-control projection
+- artifact / attention / runtime health index input
+- domain-owned resume、progress、approval 或 review/publication truth ref
+
+这些 registration 只是 OPL 侧索引入口；执行前仍必须回到 domain 仓暴露的 durable truth surface。
 
 ## OPL Native Helper
 
