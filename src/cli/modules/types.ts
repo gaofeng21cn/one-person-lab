@@ -70,6 +70,10 @@ type RuntimeStatusCliInput = {
   limit?: number;
 };
 
+type RuntimeManagerActionCliInput = {
+  mode: 'dry_run' | 'apply';
+};
+
 type SessionLedgerCliInput = {
   limit?: number;
 };
@@ -168,6 +172,7 @@ export type {
   LogsCliInput,
   ParsedCliInput,
   ResumeCliInput,
+  RuntimeManagerActionCliInput,
   RuntimeStatusCliInput,
   SessionLedgerCliInput,
   SessionRuntimeCliInput,

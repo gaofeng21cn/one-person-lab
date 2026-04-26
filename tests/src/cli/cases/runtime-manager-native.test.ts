@@ -1,5 +1,40 @@
 import { assert, createFakeHermesFixture, fs, os, path, runCli, test } from '../helpers.ts';
 
+function createNativeHelperRepairScript(root: string, helperBinDir: string) {
+  const repairScript = path.join(root, 'repair-native.sh');
+  fs.writeFileSync(
+    repairScript,
+    `#!/usr/bin/env bash
+set -euo pipefail
+mkdir -p "${helperBinDir}"
+for binary in opl-doctor-native opl-runtime-watch opl-artifact-indexer opl-state-indexer; do
+  cat > "${helperBinDir}/$binary" <<'EOS'
+#!/bin/sh
+cat >/dev/null
+case "$(basename "$0")" in
+  opl-doctor-native)
+    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-doctor-native","helper_version":"0.1.0","crate_name":"opl-native-helper","crate_version":"0.1.0","ok":true,"request_id":"runtime-manager-doctor","result":{"surface_kind":"native_doctor_snapshot"},"errors":[]}'
+    ;;
+  opl-runtime-watch)
+    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-runtime-watch","helper_version":"0.1.0","crate_name":"opl-native-helper","crate_version":"0.1.0","ok":true,"request_id":"runtime-manager-runtime-watch","result":{"surface_kind":"runtime_health_snapshot_index","roots":[]},"errors":[]}'
+    ;;
+  opl-artifact-indexer)
+    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-artifact-indexer","helper_version":"0.1.0","crate_name":"opl-native-helper","crate_version":"0.1.0","ok":true,"request_id":"runtime-manager-artifact-index","result":{"surface_kind":"native_artifact_manifest","summary":{"total_files_count":1},"files":[]},"errors":[]}'
+    ;;
+  opl-state-indexer)
+    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-state-indexer","helper_version":"0.1.0","crate_name":"opl-native-helper","crate_version":"0.1.0","ok":true,"request_id":"runtime-manager-state-index","result":{"surface_kind":"native_state_index","roots":[],"json_validation":{"checked_files_count":0,"invalid_files_count":0,"files":[]}},"errors":[]}'
+    ;;
+esac
+EOS
+  chmod +x "${helperBinDir}/$binary"
+done
+printf 'native helper repair completed\\n'
+`,
+    { mode: 0o755 },
+  );
+  return repairScript;
+}
+
 test('runtime manager reports stale and expired native index freshness from the last successful snapshot', () => {
   const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
 if [ "$1" = "version" ]; then
@@ -263,5 +298,114 @@ test('runtime manager reconcile recommends Hermes setup without taking kernel ow
     );
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime manager action dry-run plans repairs without mutating native index files', () => {
+  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "version" ]; then
+  echo "Hermes Agent v9.9.9-test"
+  exit 0
+fi
+if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
+  echo "Gateway service is loaded"
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-action-dry-state-'));
+
+  try {
+    const output = runCli(['runtime', 'manager', 'action', '--dry-run'], {
+      OPL_HERMES_BIN: hermesPath,
+      OPL_STATE_DIR: stateRoot,
+      OPL_NATIVE_HELPER_BIN_DIR: path.join(stateRoot, 'missing-native-bin'),
+    });
+    const action = output.runtime_manager_action;
+
+    assert.equal(action.surface_kind, 'opl_runtime_manager_action');
+    assert.equal(action.mode, 'dry_run');
+    assert.equal(action.dry_run, true);
+    assert.equal(action.after, null);
+    assert.deepEqual(
+      action.planned_actions.map((entry: { action_id: string; execution_status: string }) => [
+        entry.action_id,
+        entry.execution_status,
+      ]),
+      [
+        ['repair_native_helpers', 'not_executed'],
+        ['refresh_native_indexes', 'not_executed'],
+      ],
+    );
+    assert.equal(action.before.reconcile.overall_status, 'attention_needed');
+    assert.match(action.note, /did not run native helper repair/);
+    assert.equal(fs.existsSync(path.join(stateRoot, 'runtime-manager', 'native-state-index.json')), false);
+    assert.equal(fs.existsSync(path.join(stateRoot, 'runtime-manager', 'native-state-index-failures.jsonl')), false);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime manager action apply repairs available surfaces and returns before after reconcile summaries', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-action-apply-'));
+  const gatewayState = path.join(fixtureRoot, 'gateway-ready');
+  const { fixtureRoot: hermesFixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "version" ]; then
+  echo "Hermes Agent v9.9.9-test"
+  exit 0
+fi
+if [ "$1" = "gateway" ] && [ "$2" = "install" ]; then
+  echo "gateway repair completed"
+  touch "${gatewayState}"
+  exit 0
+fi
+if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
+  if [ -f "${gatewayState}" ]; then
+    echo "Gateway service is loaded"
+  else
+    echo "Gateway service is not loaded"
+  fi
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+  const stateRoot = path.join(fixtureRoot, 'state');
+  const helperBinDir = path.join(fixtureRoot, 'native-bin');
+  const repairScript = createNativeHelperRepairScript(fixtureRoot, helperBinDir);
+
+  try {
+    const output = runCli(['runtime', 'manager', 'action', '--apply'], {
+      OPL_HERMES_BIN: hermesPath,
+      OPL_STATE_DIR: stateRoot,
+      OPL_NATIVE_HELPER_BIN_DIR: helperBinDir,
+      OPL_NATIVE_HELPER_REPAIR_COMMAND: repairScript,
+    });
+    const action = output.runtime_manager_action;
+
+    assert.equal(action.mode, 'apply');
+    assert.equal(action.dry_run, false);
+    assert.equal(action.before.reconcile.checked_surfaces.hermes_runtime, 'needs_runtime_setup');
+    assert.equal(action.after.reconcile.overall_status, 'ready');
+    assert.deepEqual(action.after.reconcile.recommended_actions, []);
+    assert.deepEqual(
+      action.executed_actions.map((entry: { action_id: string; status: string }) => [
+        entry.action_id,
+        entry.status,
+      ]),
+      [
+        ['repair_hermes_gateway', 'completed'],
+        ['repair_native_helpers', 'completed'],
+        ['refresh_native_indexes', 'completed'],
+      ],
+    );
+    assert.equal(action.after.native_helper_runtime.status, 'available');
+    assert.equal(action.after.native_index_persistence.status, 'written');
+    assert.equal(fs.existsSync(path.join(stateRoot, 'runtime-manager', 'native-state-index.json')), true);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(hermesFixtureRoot, { recursive: true, force: true });
   }
 });

@@ -7,6 +7,7 @@ import type {
   LaunchDomainCliInput,
   LogsCliInput,
   ResumeCliInput,
+  RuntimeManagerActionCliInput,
   RuntimeStatusCliInput,
   SessionLedgerCliInput,
   SessionsCliInput,
@@ -476,6 +477,47 @@ function parseRuntimeStatusArgs(
   return parsed;
 }
 
+function parseRuntimeManagerActionArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): RuntimeManagerActionCliInput {
+  let mode: RuntimeManagerActionCliInput['mode'] | null = null;
+
+  for (const token of args) {
+    if (token === '--dry-run') {
+      if (mode) {
+        throw buildUsageError('runtime manager action accepts exactly one of --dry-run or --apply.', spec, {
+          option: token,
+        });
+      }
+      mode = 'dry_run';
+      continue;
+    }
+
+    if (token === '--apply') {
+      if (mode) {
+        throw buildUsageError('runtime manager action accepts exactly one of --dry-run or --apply.', spec, {
+          option: token,
+        });
+      }
+      mode = 'apply';
+      continue;
+    }
+
+    throw buildUsageError(`Unknown option for runtime manager action: ${token}.`, spec, {
+      option: token,
+    });
+  }
+
+  if (!mode) {
+    throw buildUsageError('runtime manager action requires either --dry-run or --apply.', spec, {
+      required: ['--dry-run or --apply'],
+    });
+  }
+
+  return { mode };
+}
+
 function parseSessionLedgerArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
@@ -721,6 +763,7 @@ export {
   parsePositiveInteger,
   parseProductEntryArgs,
   parseResumeArgs,
+  parseRuntimeManagerActionArgs,
   parseRuntimeStatusArgs,
   parseSkillPackArgs,
   parseSessionLedgerArgs,

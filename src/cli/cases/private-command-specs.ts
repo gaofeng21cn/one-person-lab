@@ -1,7 +1,7 @@
 import { GatewayContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkstreamOrThrow, validateGatewayContracts } from '../../contracts.ts';
 import { buildFrontDeskInitialize, buildFrontDeskEnvironment, buildFrontDeskModules, buildFrontDeskWorkspaceRootSurface, runFrontDeskSystemAction, writeFrontDeskWorkspaceRootSurface } from '../../frontdesk-installation.ts';
 import { buildProductEntryDoctor, buildProductEntryHandoffEnvelope, runProductEntryLogs, runProductEntryRepairHermesGateway, runProductEntryResume, runProductEntrySessions } from '../../product-entry.ts';
-import { buildRuntimeManager } from '../../runtime-manager.ts';
+import { buildRuntimeManager, runRuntimeManagerAction } from '../../runtime-manager.ts';
 import { buildNativeIndexSummary } from '../../native-index-summary.ts';
 import { launchDomainEntry } from '../../domain-launch.ts';
 import { buildDomainManifestCatalog } from '../../domain-manifest.ts';
@@ -13,7 +13,7 @@ import { buildSessionLedger } from '../../session-ledger.ts';
 import { explainDomainBoundary, resolveRequestSurface } from '../../resolver.ts';
 import { activateWorkspaceBinding, archiveWorkspaceBinding, bindWorkspace, buildWorkspaceCatalog } from '../../workspace-registry.ts';
 import type { GatewayContracts } from '../../types.ts';
-import { assertNoArgs, buildCommandHelp, buildRetiredCommandError, buildRootHelp, buildUsageError, hasExplicitHermesExecutor, parseDashboardArgs, parseKeyValueArgs, parseLaunchDomainArgs, parseLogsArgs, parseProductEntryArgs, parseResumeArgs, parseRuntimeStatusArgs, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSessionsArgs, parseSkillPackArgs, parseStartArgs, parseUpdateChannelArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, parseWorkspaceStatusArgs, printJson, runCodexPassthroughHandled, runFrontDeskEngineActionCommand, runFrontDeskModuleActionCommand, stripExplicitCodexExecutor, withContractsContext } from '../modules/support.ts';
+import { assertNoArgs, buildCommandHelp, buildRetiredCommandError, buildRootHelp, buildUsageError, hasExplicitHermesExecutor, parseDashboardArgs, parseKeyValueArgs, parseLaunchDomainArgs, parseLogsArgs, parseProductEntryArgs, parseResumeArgs, parseRuntimeManagerActionArgs, parseRuntimeStatusArgs, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSessionsArgs, parseSkillPackArgs, parseStartArgs, parseUpdateChannelArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, parseWorkspaceStatusArgs, printJson, runCodexPassthroughHandled, runFrontDeskEngineActionCommand, runFrontDeskModuleActionCommand, stripExplicitCodexExecutor, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec, ParsedCliInput } from '../modules/support.ts';
 
 export function buildInternalCommandSpecs(
@@ -204,6 +204,15 @@ export function buildInternalCommandSpecs(
         assertNoArgs(args, commandSpecs['runtime manager']);
         return buildRuntimeManager();
       },
+    },
+    'runtime manager action': {
+      usage: 'opl runtime manager action (--dry-run|--apply)',
+      summary:
+        'Plan or apply Runtime Manager adapter actions without making OPL a scheduler or domain truth owner.',
+      examples: ['opl runtime manager action --dry-run', 'opl runtime manager action --apply'],
+      handler: (args) => runRuntimeManagerAction(
+        parseRuntimeManagerActionArgs(args, commandSpecs['runtime manager action']),
+      ),
     },
     'runtime index': {
       usage: 'opl runtime index',
