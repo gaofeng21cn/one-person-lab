@@ -4,6 +4,7 @@
 .worktrees/
 dist/
 node_modules/
+target/
 __pycache__/
 *.pyc
 *.tsbuildinfo

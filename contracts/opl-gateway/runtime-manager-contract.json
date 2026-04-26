@@ -56,14 +56,20 @@
     "not_a_private_fork_of_hermes_agent"
   ],
   "native_helper_target": {
+    "status": "contracted_optional_rust_helpers",
+    "language": "rust",
+    "protocol_ref": "contracts/opl-gateway/native-helper-contract.json",
     "allowed_shape": "small_json_stdio_or_cli_helpers_managed_by_opl",
     "candidate_helpers": [
       "opl-sysprobe",
+      "opl-doctor-native",
+      "opl-runtime-watch",
       "opl-artifact-indexer",
       "opl-state-indexer"
     ]
   },
   "state_index_target": {
+    "status": "rust_helper_backed_contract_first",
     "source_of_truth_rule": "indexes project runtime surfaces but never replace domain-owned durable truth",
     "candidate_indexes": [
       "workspace_registry_index",
