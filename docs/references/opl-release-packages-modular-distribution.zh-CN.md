@@ -33,26 +33,65 @@
 
 ## Packages 适用方式
 
-你的理解基本正确：`Packages` 可以作为 App 不变时的机器更新通道，但它不替代 `Releases` 的用户下载入口。新手用户仍从 `Releases` 下载桌面安装包；`opl install`、环境管理和 Docker 启动脚本再从 `Packages` 或 release artifact 拉取可独立更新的内核与模块。
+当前还没有把 GitHub Packages 接成实际安装源。现状是：
 
-推荐先落一个 machine-readable release manifest，再让 App 环境管理和 `opl install` 消费它：
+- 用户下载入口仍是 GitHub Releases 里的桌面 App 安装包。
+- `opl install` 和环境管理当前仍通过 git checkout / npm / 本地 sibling repo 做模块安装和更新。
+- Native helper 只有 CI artifact 预构建流程，还没有发布到 Packages。
+- Docker/WebUI 镜像还没有发布到 GHCR。
+
+你的理解是对的：`Packages` 适合作为 App 不变时的机器更新通道，但它不替代 `Releases` 的用户下载入口。新手用户仍从 `Releases` 下载桌面安装包；`opl install`、环境管理和 Docker 启动脚本再从 `Packages` 或 release artifact 拉取可独立更新的内核与模块。
+
+推荐先落一个 machine-readable release manifest，再让 App 环境管理和 `opl install` 消费它。Manifest 先放在 `one-person-lab` 的 Release artifact，后续也可以同步到 `ghcr.io/gaofeng21cn/one-person-lab/manifest:<opl_version>`：
 
 ```json
 {
   "opl_version": "26.4.25",
   "gui_version": "1.9.21",
+  "release_channel": "stable",
+  "generated_at": "2026-04-26T00:00:00Z",
   "modules": {
     "medautoscience": {
       "channel": "stable",
-      "artifact": "ghcr.io/gaofeng21cn/med-autoscience:<version>",
-      "source_archive": "https://github.com/gaofeng21cn/med-autoscience/releases/download/<tag>/med-autoscience.tar.gz",
-      "sha256": "<checksum>"
+      "version": "26.4.25",
+      "artifact_kind": "source_archive",
+      "artifact": "ghcr.io/gaofeng21cn/one-person-lab-modules/med-autoscience:26.4.25",
+      "fallback_source_archive": "https://github.com/gaofeng21cn/med-autoscience/releases/download/26.4.25/med-autoscience-26.4.25.tar.gz",
+      "sha256": "<checksum>",
+      "install_strategy": "extract_to_managed_modules_root",
+      "rollback": "26.4.24"
+    },
+    "meddeepscientist": {
+      "channel": "stable",
+      "version": "26.4.25",
+      "artifact_kind": "source_archive",
+      "artifact": "ghcr.io/gaofeng21cn/one-person-lab-modules/med-deepscientist:26.4.25",
+      "sha256": "<checksum>",
+      "install_strategy": "extract_to_managed_modules_root",
+      "dependency_of": ["medautoscience"]
     }
   }
 }
 ```
 
-最小可行规则：
+具体发布物按三层切开：
+
+| 发布物 | 推荐 Packages 名称 | 内容 | 触发方 |
+| --- | --- | --- | --- |
+| Docker/WebUI 镜像 | `ghcr.io/gaofeng21cn/one-person-lab-webui:<opl_version>` | OPL WebUI runtime、Codex/Hermes 初始化脚本、浏览器入口 | Docker 用户直接 `docker run` |
+| 模块源码包 | `ghcr.io/gaofeng21cn/one-person-lab-modules/<module>:<version>` | 不含 `.git`、缓存、venv、node_modules 的模块源码归档 | `opl install` 与 App 环境管理 |
+| Native helper prebuild | `ghcr.io/gaofeng21cn/one-person-lab-native-helper:<target>-<version>` | Rust helper 二进制、manifest、checksum | `opl native:repair` / `opl install` |
+| OPL core npm 包 | `@gaofeng21cn/one-person-lab` 或 npm public package | CLI、contracts、shared helpers、安装脚本 | npm / 一键安装脚本 |
+| Release manifest | Release artifact 或 `one-person-lab-manifest:<opl_version>` | 所有制品版本、URL、sha256、回滚目标 | App 环境管理与 CLI |
+
+落地顺序：
+
+1. 先发布 Docker/WebUI 镜像到 GHCR，因为这是服务器用户的完整入口。
+2. 再发布模块源码包到 GHCR，并让 `opl module install/update` 优先读 manifest，失败时回退到 git clone。
+3. 再把 native helper prebuild 从 CI artifact 升级为 GHCR package，`native:repair` 优先拉取匹配平台包。
+4. 最后把环境管理的“最新版本”从 `GitHub main` 改成 manifest 中的目标版本。
+
+最小可行规则保持不变：
 
 - Release 继续放 DMG/ZIP/DEB 等用户安装包。
 - Packages 放 OPL CLI/core、WebUI Docker 镜像和 domain module 的机器消费制品。
