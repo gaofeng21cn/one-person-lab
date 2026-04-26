@@ -2,6 +2,7 @@ import { GatewayContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkst
 import { buildFrontDeskInitialize, buildFrontDeskEnvironment, buildFrontDeskModules, buildFrontDeskWorkspaceRootSurface, runFrontDeskSystemAction, writeFrontDeskWorkspaceRootSurface } from '../../frontdesk-installation.ts';
 import { buildProductEntryDoctor, buildProductEntryHandoffEnvelope, runProductEntryLogs, runProductEntryRepairHermesGateway, runProductEntryResume, runProductEntrySessions } from '../../product-entry.ts';
 import { buildRuntimeManager } from '../../runtime-manager.ts';
+import { buildNativeIndexSummary } from '../../native-index-summary.ts';
 import { launchDomainEntry } from '../../domain-launch.ts';
 import { buildDomainManifestCatalog } from '../../domain-manifest.ts';
 import { buildFrontDeskDashboard, buildFrontDeskStart, buildProjectsOverview, buildRuntimeStatus, buildWorkspaceStatus } from '../../management.ts';
@@ -202,6 +203,16 @@ export function buildInternalCommandSpecs(
       handler: (args) => {
         assertNoArgs(args, commandSpecs['runtime manager']);
         return buildRuntimeManager();
+      },
+    },
+    'runtime index': {
+      usage: 'opl runtime index',
+      summary:
+        'Explain the persisted native helper state index without rescanning workspaces or owning domain truth.',
+      examples: ['opl runtime index'],
+      handler: (args) => {
+        assertNoArgs(args, commandSpecs['runtime index']);
+        return buildNativeIndexSummary();
       },
     },
     dashboard: {
