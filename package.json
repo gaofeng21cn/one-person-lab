@@ -43,6 +43,7 @@
     "native:doctor": "node ./scripts/native-helper-doctor.mjs",
     "native:prebuild": "node ./scripts/native-helper-prebuild.mjs install",
     "native:prebuild-pack": "node ./scripts/native-helper-prebuild.mjs pack",
+    "native:prebuild-archive": "node ./scripts/native-helper-prebuild.mjs archive",
     "native:prebuild-check": "node ./scripts/native-helper-prebuild.mjs check",
     "native:pack-check": "node ./scripts/native-helper-pack-check.mjs",
     "native:repair": "node ./scripts/native-helper-repair.mjs",

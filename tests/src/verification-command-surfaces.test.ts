@@ -97,6 +97,8 @@ test('GitHub native helper prebuild workflow packs release artifacts across supp
   assert.match(workflow, /cargo build --release --workspace/);
   assert.match(workflow, /npm run native:prebuild-pack -- --source-dir target\/release/);
   assert.match(workflow, /npm run native:prebuild-check -- --prebuild-root dist\/native-helper-prebuilds/);
+  assert.match(workflow, /npm run native:prebuild-archive -- --prebuild-root dist\/native-helper-prebuilds/);
+  assert.match(workflow, /dist\/native-helper-prebuilds\/archives\/\*\.tar\.gz/);
   assert.match(workflow, /actions\/upload-artifact@v4/);
   assert.match(workflow, /FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'/);
 });
@@ -144,6 +146,7 @@ test('package.json exposes native helper gate scripts and package dry-run check'
   assert.equal(packageJson.scripts?.['native:doctor'], 'node ./scripts/native-helper-doctor.mjs');
   assert.equal(packageJson.scripts?.['native:prebuild'], 'node ./scripts/native-helper-prebuild.mjs install');
   assert.equal(packageJson.scripts?.['native:prebuild-pack'], 'node ./scripts/native-helper-prebuild.mjs pack');
+  assert.equal(packageJson.scripts?.['native:prebuild-archive'], 'node ./scripts/native-helper-prebuild.mjs archive');
   assert.equal(packageJson.scripts?.['native:prebuild-check'], 'node ./scripts/native-helper-prebuild.mjs check');
   assert.equal(packageJson.scripts?.['native:pack-check'], 'node ./scripts/native-helper-pack-check.mjs');
   assert.equal(packageJson.scripts?.['native:test'], 'cargo test --workspace');
