@@ -15,6 +15,7 @@ export function buildNativeIndexSummary() {
   const source = current ? 'current_index' : lastSuccess ? 'last_success' : 'none';
   const failures = readJsonl(paths.failure_file);
   const history = readJsonl(paths.history_file);
+  const freshness = buildFreshness(current, lastSuccess, failures.length);
 
   return {
     version: 'g2',
@@ -25,7 +26,15 @@ export function buildNativeIndexSummary() {
       state_dir: stateDir,
       files: paths,
       source,
-      freshness: buildFreshness(current, lastSuccess, failures.length),
+      freshness,
+      health: buildHealthSummary({
+        current,
+        lastSuccess,
+        history,
+        failures,
+        source,
+        freshness,
+      }),
       indexes: summarizeIndexes(selected),
       history: {
         entry_count: history.length,
@@ -37,6 +46,85 @@ export function buildNativeIndexSummary() {
       },
     },
   };
+}
+
+function buildHealthSummary(input: {
+  current: Record<string, unknown> | null;
+  lastSuccess: Record<string, unknown> | null;
+  history: Array<Record<string, unknown>>;
+  failures: Array<Record<string, unknown>>;
+  source: 'current_index' | 'last_success' | 'none';
+  freshness: ReturnType<typeof buildFreshness>;
+}) {
+  const lastHistory = input.history.at(-1) ?? null;
+  const lastFailure = input.failures.at(-1) ?? null;
+  return {
+    status: input.freshness.status,
+    source: input.source,
+    current: summarizeSnapshotHealth(input.current),
+    last_success: summarizeSnapshotHealth(input.lastSuccess),
+    history: {
+      entry_count: input.history.length,
+      latest_generated_at: stringField(lastHistory, 'generated_at'),
+      latest_summary: objectField(lastHistory, 'summary'),
+      latest_gc: objectField(lastHistory, 'gc'),
+    },
+    failure: {
+      failure_count: input.failures.length,
+      latest_generated_at: stringField(lastFailure, 'generated_at'),
+      latest_status: stringField(lastFailure, 'status'),
+      latest_category: stringField(lastFailure, 'category'),
+      latest_error_codes: errorCodes(lastFailure),
+    },
+    latest_diff: compactLatestDiff(input.current, input.lastSuccess, lastHistory),
+  };
+}
+
+function summarizeSnapshotHealth(payload: Record<string, unknown> | null) {
+  const indexes = summarizeIndexes(payload);
+  const expiresAt = lifecycleExpiresAt(payload);
+  return {
+    present: Boolean(payload),
+    generated_at: stringField(payload, 'generated_at'),
+    expires_at: expiresAt,
+    expired: payload ? expiresAt ? Date.parse(expiresAt) <= Date.now() : true : null,
+    index_count: indexes.length,
+    status_counts: indexes.reduce<Record<string, number>>((counts, index) => {
+      counts[index.status] = (counts[index.status] ?? 0) + 1;
+      return counts;
+    }, {}),
+  };
+}
+
+function compactLatestDiff(
+  current: Record<string, unknown> | null,
+  lastSuccess: Record<string, unknown> | null,
+  lastHistory: Record<string, unknown> | null,
+) {
+  const diff = objectField(current, 'diff') ?? objectField(lastSuccess, 'diff') ?? objectField(lastHistory, 'diff');
+  if (!diff) {
+    return null;
+  }
+  return {
+    changed: booleanField(diff, 'changed') ?? false,
+    previous_generated_at: stringField(diff, 'previous_generated_at'),
+    summary: objectField(diff, 'summary') ?? {},
+    details: compactDiffDetails(diff),
+  };
+}
+
+function compactDiffDetails(diff: Record<string, unknown>) {
+  const details = diff.details;
+  if (!Array.isArray(details)) {
+    return [];
+  }
+  return details
+    .filter((entry): entry is Record<string, unknown> => typeof entry === 'object' && entry !== null)
+    .map((entry) => ({
+      index_key: stringField(entry, 'index_key') ?? 'unknown',
+      change: stringField(entry, 'change') ?? 'changed',
+      changed_fields: stringArrayField(entry, 'changed_fields').map(compactChangedField),
+    }));
 }
 
 function nativeIndexPaths(stateDir: string) {
@@ -119,6 +207,47 @@ function lifecycleExpiresAt(payload: Record<string, unknown> | null) {
 function stringField(payload: Record<string, unknown> | null, key: string) {
   const value = payload?.[key];
   return typeof value === 'string' ? value : null;
+}
+
+function booleanField(payload: Record<string, unknown> | null, key: string) {
+  const value = payload?.[key];
+  return typeof value === 'boolean' ? value : null;
+}
+
+function objectField(payload: Record<string, unknown> | null, key: string) {
+  const value = payload?.[key];
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function stringArrayField(payload: Record<string, unknown>, key: string) {
+  const value = payload[key];
+  return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : [];
+}
+
+function errorCodes(payload: Record<string, unknown> | null) {
+  const errors = payload?.errors;
+  if (!Array.isArray(errors)) {
+    return [];
+  }
+  return errors
+    .filter((entry): entry is Record<string, unknown> => typeof entry === 'object' && entry !== null)
+    .map((entry) => stringField(entry, 'code'))
+    .filter((entry): entry is string => Boolean(entry));
+}
+
+function compactChangedField(field: string) {
+  if (field === 'helper_id') {
+    return 'helper_changed';
+  }
+  if (field === 'result_surface_kind') {
+    return 'result_surface_changed';
+  }
+  if (field === 'status') {
+    return 'status_changed';
+  }
+  return `${field}_changed`;
 }
 
 function readJson(filePath: string): Record<string, unknown> | null {
