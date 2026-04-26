@@ -21,13 +21,21 @@
   "files": [
     "bin/opl",
     "dist",
-    "contracts/opl-gateway"
+    "contracts/opl-gateway",
+    "Cargo.toml",
+    "Cargo.lock",
+    "native/opl-native-helper/Cargo.toml",
+    "native/opl-native-helper/src",
+    "scripts/native-helper-doctor.mjs",
+    "scripts/native-helper-repair.mjs"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "prepare": "npm run build",
     "native:build": "cargo build --workspace",
+    "native:doctor": "node ./scripts/native-helper-doctor.mjs",
+    "native:repair": "node ./scripts/native-helper-repair.mjs",
     "native:test": "cargo test --workspace",
     "family:shared-release": "node ./scripts/family-shared-release.mjs",
     "lint": "node ./scripts/lint.mjs && node ./scripts/line-budget.mjs",

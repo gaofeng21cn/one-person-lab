@@ -33,11 +33,12 @@ type NativeHelperInvocation = {
 };
 
 type NativeHelperProjection = {
+  lifecycle: NativeHelperLifecycle;
   runtime: {
     status: 'available' | 'degraded' | 'unavailable';
     protocol_version: typeof PROTOCOL_VERSION;
     discovery: {
-      repair_command: 'npm run native:build';
+      repair_command: 'npm run native:repair';
       helper_bin_dir_env: 'OPL_NATIVE_HELPER_BIN_DIR';
       helpers: HelperResolution[];
     };
@@ -51,6 +52,60 @@ type NativeHelperProjection = {
     errors: Array<{ code: string; message: string }>;
   };
 };
+
+type NativeHelperLifecycle = {
+  status: 'ready_to_build' | 'package_source_incomplete';
+  commands: {
+    build: 'npm run native:build';
+    doctor: 'npm run native:doctor';
+    repair: 'npm run native:repair';
+    test: 'npm run native:test';
+  };
+  package: {
+    status: 'included' | 'missing_files';
+    required_files: string[];
+    missing_files: string[];
+    npm_files: string[];
+  };
+  discovery: {
+    binary_discovery_order: string[];
+    helper_bin_dir_env: 'OPL_NATIVE_HELPER_BIN_DIR';
+    helper_binary_env_template: 'OPL_NATIVE_HELPER_<HELPER_ID>_BIN';
+  };
+};
+
+export type NativeHelperDoctor = {
+  surface_kind: 'opl_native_helper_lifecycle_doctor';
+  lifecycle: NativeHelperLifecycle;
+  runtime: NativeHelperProjection['runtime'];
+  source_of_truth_rule: typeof SOURCE_OF_TRUTH_RULE;
+};
+
+const NATIVE_HELPER_COMMANDS = {
+  build: 'npm run native:build',
+  doctor: 'npm run native:doctor',
+  repair: 'npm run native:repair',
+  test: 'npm run native:test',
+} as const;
+
+const NATIVE_HELPER_PACKAGE_FILES = [
+  'Cargo.toml',
+  'Cargo.lock',
+  'native/opl-native-helper/Cargo.toml',
+  'native/opl-native-helper/src/lib.rs',
+  'native/opl-native-helper/src/bin',
+  'scripts/native-helper-doctor.mjs',
+  'scripts/native-helper-repair.mjs',
+] as const;
+
+const NATIVE_HELPER_NPM_FILES = [
+  'Cargo.toml',
+  'Cargo.lock',
+  'native/opl-native-helper/Cargo.toml',
+  'native/opl-native-helper/src',
+  'scripts/native-helper-doctor.mjs',
+  'scripts/native-helper-repair.mjs',
+] as const;
 
 const RUNTIME_MANAGER_HELPER_SEQUENCE = [
   {
@@ -98,6 +153,62 @@ export function buildNativeHelperProjection(
 ): NativeHelperProjection {
   const statePaths = ensureFrontDeskStateDir();
   const indexFile = path.join(statePaths.state_dir, 'runtime-manager', 'native-state-index.json');
+  const lifecycle = buildNativeHelperLifecycle();
+  const runtime = inspectNativeHelperRuntime(helpers);
+  const persistence = persistNativeStateIndex(indexFile, statePaths.state_dir, runtime.invocations);
+
+  return {
+    lifecycle,
+    runtime,
+    persistence,
+  };
+}
+
+export function buildNativeHelperDoctor(
+  helpers: readonly NativeHelperDefinition[],
+): NativeHelperDoctor {
+  return {
+    surface_kind: 'opl_native_helper_lifecycle_doctor',
+    lifecycle: buildNativeHelperLifecycle(),
+    runtime: inspectNativeHelperRuntime(helpers),
+    source_of_truth_rule: SOURCE_OF_TRUTH_RULE,
+  };
+}
+
+export function buildNativeHelperLifecycle(): NativeHelperLifecycle {
+  const packageRoot = repoRoot();
+  const missingFiles = NATIVE_HELPER_PACKAGE_FILES.filter((requiredFile) => {
+    return !pathExists(path.join(packageRoot, requiredFile));
+  });
+  const npmFiles = packageJsonFiles(packageRoot);
+  const missingNpmFiles = NATIVE_HELPER_NPM_FILES.filter((requiredFile) => !npmFiles.includes(requiredFile));
+  const allMissing = [...missingFiles, ...missingNpmFiles];
+
+  return {
+    status: allMissing.length === 0 ? 'ready_to_build' : 'package_source_incomplete',
+    commands: NATIVE_HELPER_COMMANDS,
+    package: {
+      status: allMissing.length === 0 ? 'included' : 'missing_files',
+      required_files: [...NATIVE_HELPER_PACKAGE_FILES],
+      missing_files: allMissing,
+      npm_files: npmFiles,
+    },
+    discovery: {
+      binary_discovery_order: [
+        'OPL_NATIVE_HELPER_<HELPER_ID>_BIN',
+        'OPL_NATIVE_HELPER_BIN_DIR',
+        'workspace target/debug',
+        'PATH',
+      ],
+      helper_bin_dir_env: 'OPL_NATIVE_HELPER_BIN_DIR',
+      helper_binary_env_template: 'OPL_NATIVE_HELPER_<HELPER_ID>_BIN',
+    },
+  };
+}
+
+function inspectNativeHelperRuntime(
+  helpers: readonly NativeHelperDefinition[],
+): NativeHelperProjection['runtime'] {
   const resolutions = helpers.map(resolveNativeHelper);
   const helperById = new Map(helpers.map((helper) => [helper.helper_id, helper]));
   const resolutionById = new Map(resolutions.map((resolution) => [resolution.helper_id, resolution]));
@@ -115,21 +226,15 @@ export function buildNativeHelperProjection(
     });
   });
 
-  const runtimeStatus = resolveRuntimeStatus(invocations);
-  const persistence = persistNativeStateIndex(indexFile, statePaths.state_dir, invocations);
-
   return {
-    runtime: {
-      status: runtimeStatus,
-      protocol_version: PROTOCOL_VERSION,
-      discovery: {
-        repair_command: 'npm run native:build',
-        helper_bin_dir_env: 'OPL_NATIVE_HELPER_BIN_DIR',
-        helpers: resolutions,
-      },
-      invocations,
+    status: resolveRuntimeStatus(invocations),
+    protocol_version: PROTOCOL_VERSION,
+    discovery: {
+      repair_command: 'npm run native:repair',
+      helper_bin_dir_env: 'OPL_NATIVE_HELPER_BIN_DIR',
+      helpers: resolutions,
     },
-    persistence,
+    invocations,
   };
 }
 
@@ -148,7 +253,7 @@ function invokeNativeHelper(
       errors: [
         {
           code: 'helper_binary_missing',
-          message: `${helper.binary} is not available; run npm run native:build or set OPL_NATIVE_HELPER_BIN_DIR.`,
+          message: `${helper.binary} is not available; run npm run native:repair or set OPL_NATIVE_HELPER_BIN_DIR.`,
         },
       ],
     };
@@ -329,7 +434,7 @@ function missingInvocation(helperId: string, requestId: string): NativeHelperInv
       binary: helperId,
       status: 'missing',
       source: 'not_found',
-      repair_hint: 'Run npm run native:build or set OPL_NATIVE_HELPER_BIN_DIR.',
+      repair_hint: 'Run npm run native:repair or set OPL_NATIVE_HELPER_BIN_DIR.',
     },
     errors: [{ code: 'helper_definition_missing', message: `${helperId} is not present in the helper catalog` }],
   };
@@ -401,12 +506,26 @@ function missing(
     binary: helper.binary,
     status: 'missing',
     source,
-    repair_hint: 'Run npm run native:build or set OPL_NATIVE_HELPER_BIN_DIR.',
+    repair_hint: 'Run npm run native:repair or set OPL_NATIVE_HELPER_BIN_DIR.',
   };
 }
 
 function pathExists(candidate: string) {
   return fs.existsSync(candidate);
+}
+
+function packageJsonFiles(packageRoot: string): string[] {
+  try {
+    const packageJson = JSON.parse(fs.readFileSync(path.join(packageRoot, 'package.json'), 'utf8')) as {
+      files?: unknown;
+    };
+    if (!Array.isArray(packageJson.files)) {
+      return [];
+    }
+    return packageJson.files.filter((entry): entry is string => typeof entry === 'string');
+  } catch {
+    return [];
+  }
 }
 
 function repoRoot() {

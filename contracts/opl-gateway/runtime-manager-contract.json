@@ -60,10 +60,25 @@
     "language": "rust",
     "protocol_ref": "contracts/opl-gateway/native-helper-contract.json",
     "allowed_shape": "small_json_stdio_or_cli_helpers_managed_by_opl",
+    "lifecycle": {
+      "status_surface": "native_helper_target.lifecycle",
+      "build_command": "npm run native:build",
+      "doctor_command": "npm run native:doctor",
+      "repair_command": "npm run native:repair",
+      "test_command": "npm run native:test",
+      "packaged_source_files": [
+        "Cargo.toml",
+        "Cargo.lock",
+        "native/opl-native-helper/Cargo.toml",
+        "native/opl-native-helper/src",
+        "scripts/native-helper-doctor.mjs",
+        "scripts/native-helper-repair.mjs"
+      ]
+    },
     "runtime_invocation": {
       "status_surface": "native_helper_target.runtime",
       "discovery_env": "OPL_NATIVE_HELPER_BIN_DIR",
-      "repair_command": "npm run native:build",
+      "repair_command": "npm run native:repair",
       "required_runtime_manager_invocations": [
         "opl-doctor-native",
         "opl-state-indexer",

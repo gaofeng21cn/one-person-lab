@@ -239,6 +239,7 @@ export function buildRuntimeManager() {
         protocol: NATIVE_HELPER_PROTOCOL,
         allowed_shape: 'small_json_stdio_or_cli_helpers_managed_by_opl',
         helpers: NATIVE_HELPERS,
+        lifecycle: nativeHelperProjection.lifecycle,
         runtime: nativeHelperProjection.runtime,
         non_goals: [
           'not_a_domain_truth_owner',

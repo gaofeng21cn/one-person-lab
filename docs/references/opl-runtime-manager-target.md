@@ -19,11 +19,13 @@
 ## 当前要落地的最小面
 
 1. `opl runtime manager`
-   输出当前 owner split、Hermes readiness、domain registration registry、native helper target、state index target 与 sidecar promotion gate。
+   输出当前 owner split、Hermes readiness、domain registration registry、native helper lifecycle、native helper target、state index target 与 sidecar promotion gate。
 2. `contracts/opl-gateway/runtime-manager-contract.json`
    冻结 Runtime Manager 的 machine-readable 合同，以及三类 domain registration surface 的必需字段。
 3. 核心 docs 对齐
    `project / architecture / invariants / decisions / status` 共同说明 Runtime Manager 是薄层，不是 kernel。
+4. Native helper lifecycle
+   `native:build`、`native:doctor`、`native:repair` 与 `native:test` 成为 OPL package surface 的一部分；npm package 必须带上 Cargo workspace、Rust helper source 与 doctor/repair 脚本。
 
 ## Domain Registration Registry
 
@@ -49,6 +51,13 @@ v1 registry 只登记 MAS、MAG、RCA 已声明的 projection surface：
 - `opl-state-indexer`：session / progress / artifact projection index 与 large JSON validation
 
 这些 helper 不持有 domain truth，不直接执行 MAS/MAG/RCA 任务，不替代 `Hermes-Agent`。所有 helper 使用 `contracts/opl-gateway/native-helper-contract.json` 冻结 JSON stdin/stdout 边界，由 TypeScript / Python 调用方通过 contract 消费。
+
+当前 package lifecycle：
+
+- `npm run native:build`：构建 Rust helper binaries
+- `npm run native:doctor`：输出 helper package、discovery 与 runtime invocation 的 JSON doctor
+- `npm run native:repair`：重建 helper binaries 后再次运行 doctor
+- `npm run native:test`：运行 Rust helper workspace 测试
 
 ## 高频文件与状态索引
 

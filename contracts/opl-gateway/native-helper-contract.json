@@ -35,7 +35,18 @@
       "workspace target/debug",
       "PATH"
     ],
-    "repair_command": "npm run native:build",
+    "build_command": "npm run native:build",
+    "doctor_command": "npm run native:doctor",
+    "repair_command": "npm run native:repair",
+    "test_command": "npm run native:test",
+    "packaged_source_files": [
+      "Cargo.toml",
+      "Cargo.lock",
+      "native/opl-native-helper/Cargo.toml",
+      "native/opl-native-helper/src",
+      "scripts/native-helper-doctor.mjs",
+      "scripts/native-helper-repair.mjs"
+    ],
     "persisted_projection": "${OPL_STATE_DIR}/runtime-manager/native-state-index.json",
     "persisted_surface_kind": "opl_runtime_manager_native_state_projection"
   },
