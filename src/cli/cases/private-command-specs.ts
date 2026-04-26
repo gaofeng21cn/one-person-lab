@@ -1,6 +1,7 @@
 import { GatewayContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkstreamOrThrow, validateGatewayContracts } from '../../contracts.ts';
 import { buildFrontDeskInitialize, buildFrontDeskEnvironment, buildFrontDeskModules, buildFrontDeskWorkspaceRootSurface, runFrontDeskSystemAction, writeFrontDeskWorkspaceRootSurface } from '../../frontdesk-installation.ts';
 import { buildProductEntryDoctor, buildProductEntryHandoffEnvelope, runProductEntryLogs, runProductEntryRepairHermesGateway, runProductEntryResume, runProductEntrySessions } from '../../product-entry.ts';
+import { buildRuntimeManager } from '../../runtime-manager.ts';
 import { launchDomainEntry } from '../../domain-launch.ts';
 import { buildDomainManifestCatalog } from '../../domain-manifest.ts';
 import { buildFrontDeskDashboard, buildFrontDeskStart, buildProjectsOverview, buildRuntimeStatus, buildWorkspaceStatus } from '../../management.ts';
@@ -191,6 +192,16 @@ export function buildInternalCommandSpecs(
       handler: (args) => {
         const parsed = parseRuntimeStatusArgs(args, commandSpecs['status runtime']);
         return buildRuntimeStatus({ sessionsLimit: parsed.limit });
+      },
+    },
+    'runtime manager': {
+      usage: 'opl runtime manager',
+      summary:
+        'Show the OPL Runtime Manager boundary over the external Hermes runtime substrate.',
+      examples: ['opl runtime manager'],
+      handler: (args) => {
+        assertNoArgs(args, commandSpecs['runtime manager']);
+        return buildRuntimeManager();
       },
     },
     dashboard: {

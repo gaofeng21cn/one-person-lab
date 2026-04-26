@@ -1,5 +1,19 @@
 # OPL 关键决策
 
+## 2026-04-26
+
+### 决策：冻结 `OPL Runtime Manager` 为薄产品管理层，而不是自有完整 runtime sidecar
+
+原因：当前长跑任务目标已经确定为把任务注册到外部 `Hermes-Agent` runtime substrate，由它负责 session、scheduler、wakeup、interrupt/resume、memory 与 delivery/cron。OPL 需要的是产品级 provision、version pin、profile wiring、domain task registration hydration、诊断、恢复入口、native helper catalog 与高频状态索引，而不是复制一套 runtime kernel。
+
+影响：
+
+- 新增 `opl runtime manager` 作为 Runtime Manager 的机器可读 projection
+- 新增 `contracts/opl-gateway/runtime-manager-contract.json` 冻结 owner split、responsibilities、non-goals、native helper target 与 state index target
+- `Hermes-Agent` 继续是外部 runtime kernel owner；`OPL Runtime Manager` 只做产品管理和投影
+- `MAS`、`MAG`、`RCA` 继续持有 domain truth 与 route-selected executor 语义
+- 未来如需迁移到 OPL 自有完整 sidecar，必须先证明 `Hermes-Agent` 无法表达必要的 task、wakeup、approval、audit 或产品隔离合同
+
 ## 2026-04-25
 
 ### 决策：8787 Product API service 模块退役

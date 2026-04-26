@@ -5,6 +5,9 @@
 - `OPL` 是顶层 `Codex-default session runtime` 与共享接口层。
 - `OPL` 的默认 runtime 只有一个：`Codex`。
 - 只有显式 domain activation 或显式 runtime switch，才允许离开 Codex-default 语义。
+- `OPL Runtime Manager` 只能是产品级薄管理/投影层，不得被写成 scheduler、session store、memory store、domain truth owner 或 concrete executor。
+- `Hermes-Agent` 继续是外部 runtime substrate owner；OPL 可以管理、pin、诊断和投影它，但不得 fork/vendor 成 OPL 私有 runtime kernel。
+- `OPL native helper` 与高频状态索引只能加速系统探测、artifact discovery、session/progress/artifact projection，不得替代 admitted domain 仓自己的 durable truth。
 - `OPL` 不持有领域运行时所有权。
 - `OPL` 不替代各个领域仓的智能体逻辑。
 

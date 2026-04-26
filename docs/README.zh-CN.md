@@ -40,6 +40,7 @@
 - [硬约束](./invariants.md)
 - [关键决策](./decisions.md)
 - [合同目录说明](../contracts/README.md)
+- [OPL Runtime Manager 目标形态](./references/opl-runtime-manager-target.md)
 
 ## 四层文档体系怎么用
 
@@ -85,6 +86,7 @@
 它们继续被仓库跟踪，但不是当前默认实现依据。
 
 - [参考级索引](./references/README.zh-CN.md)
+- [OPL Runtime Manager 目标形态](./references/opl-runtime-manager-target.md)
 - [Docker WebUI 部署参考](./references/opl-docker-webui-deployment.zh-CN.md)
 - [OPL 默认 Skill 生态参考](./references/opl-default-skill-ecosystem.zh-CN.md)
 - 产品运行时与执行器参考说明
