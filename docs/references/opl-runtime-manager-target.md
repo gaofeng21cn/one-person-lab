@@ -25,7 +25,9 @@
 3. 核心 docs 对齐
    `project / architecture / invariants / decisions / status` 共同说明 Runtime Manager 是薄层，不是 kernel。
 4. Native helper lifecycle
-   `native:build`、`native:doctor`、`native:repair` 与 `native:test` 成为 OPL package surface 的一部分；npm package 必须带上 Cargo workspace、Rust helper source 与 doctor/repair 脚本。
+   `native:build`、`native:doctor`、`native:repair`、`native:prebuild*` 与 `native:test` 成为 OPL package surface 的一部分；npm package 必须带上 Cargo workspace、Rust helper source、doctor/repair/prebuild 脚本与可选 prebuild manifest 目录。
+5. Production verification
+   CI 与本地验证都必须覆盖 native helper doctor、prebuild manifest check、package dry-run、Rust test/build、state cache 与 family smoke。CI 用 fixture family smoke 保持可复现；本地集成机可加 `--require-real-workspaces` 对真实 MAS/MAG sibling repo 做端到端 indexing。
 
 ## Domain Registration Registry
 
@@ -56,7 +58,10 @@ v1 registry 只登记 MAS、MAG、RCA 已声明的 projection surface：
 
 - `npm run native:build`：构建 Rust helper binaries
 - `npm run native:doctor`：输出 helper package、discovery 与 runtime invocation 的 JSON doctor
-- `npm run native:repair`：重建 helper binaries 后再次运行 doctor
+- `npm run native:prebuild`：把匹配平台与 crate version 的 prebuild binaries 安装进 `OPL_STATE_DIR` cache
+- `npm run native:prebuild-pack`：把本地已构建的 helper binaries 打包成带 manifest 的 prebuild 目录
+- `npm run native:prebuild-check`：验证 prebuild manifest；没有 prebuild 时报告 skipped，不阻断源码构建路线
+- `npm run native:repair`：优先恢复 prebuild cache，失败或缺失时重建 helper binaries 后再次运行 doctor
 - `npm run native:test`：运行 Rust helper workspace 测试
 
 ## 高频文件与状态索引
@@ -73,6 +78,7 @@ v1 registry 只登记 MAS、MAG、RCA 已声明的 projection surface：
 
 - index 可以缓存与加速 OPL projection
 - 高频扫描、artifact manifest、session ledger/file state、目录 snapshot 与 large JSON validation 优先落在 Rust helper
+- index lifecycle 必须记录 TTL、diff history、failure log、last-success snapshot 与 freshness 状态；当前 helper 不可用时，OPL 需要明确报告是否还能临时信任上次成功快照
 - index 不得成为 domain-owned durable truth
 - domain 仓仍以各自 repo-tracked contract、workspace state 与 artifact record 为权威
 
