@@ -329,13 +329,12 @@ function syncCodexSkillMirror(inspected: InspectFamilySkillPack, home?: string) 
   }
 
   const codexSkillDir = path.join(resolvedHome, '.codex', 'skills', inspected.canonical_plugin_name);
-  fs.mkdirSync(codexSkillDir, { recursive: true });
-  const targetPath = path.join(codexSkillDir, 'SKILL.md');
-  fs.copyFileSync(inspected.skill_entry_path, targetPath);
+  fs.rmSync(codexSkillDir, { recursive: true, force: true });
+  fs.cpSync(path.dirname(inspected.skill_entry_path), codexSkillDir, { recursive: true });
 
   return {
     skill_root: codexSkillDir,
-    skill_entry_path: targetPath,
+    skill_entry_path: path.join(codexSkillDir, 'SKILL.md'),
   };
 }
 
