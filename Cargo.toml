@@ -1,0 +1,3 @@
+[workspace]
+members = ["native/opl-native-helper"]
+resolver = "2"

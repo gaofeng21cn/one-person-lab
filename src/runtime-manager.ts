@@ -91,6 +91,89 @@ const DOMAIN_REGISTRATION_REGISTRY = [
   },
 ] as const;
 
+const NATIVE_HELPER_PROTOCOL = {
+  version: 'opl_native_helper.v1',
+  language: 'rust',
+  transport: 'cli_stdio',
+  input: 'json_object_on_stdin',
+  output: 'json_object_on_stdout',
+  error_shape: {
+    ok: false,
+    errors: ['{code,message}'],
+  },
+} as const;
+
+const NATIVE_HELPERS = [
+  {
+    helper_id: 'opl-sysprobe',
+    priority: 'p1_native_helper',
+    binary: 'opl-sysprobe',
+    crate: 'opl-native-helper',
+    purpose: 'portable system, toolchain, and runtime dependency inspection',
+    contract_ref: 'contracts/opl-gateway/native-helper-contract.json#/helpers/opl-sysprobe',
+  },
+  {
+    helper_id: 'opl-doctor-native',
+    priority: 'p1_native_helper',
+    binary: 'opl-doctor-native',
+    crate: 'opl-native-helper',
+    purpose: 'native doctor snapshot for local toolchain and runtime readiness inputs',
+    contract_ref: 'contracts/opl-gateway/native-helper-contract.json#/helpers/opl-doctor-native',
+  },
+  {
+    helper_id: 'opl-runtime-watch',
+    priority: 'p1_native_helper',
+    binary: 'opl-runtime-watch',
+    crate: 'opl-native-helper',
+    purpose: 'snapshot watched runtime roots and emit deterministic change fingerprints',
+    contract_ref: 'contracts/opl-gateway/native-helper-contract.json#/helpers/opl-runtime-watch',
+  },
+  {
+    helper_id: 'opl-artifact-indexer',
+    priority: 'p2_high_frequency_index',
+    binary: 'opl-artifact-indexer',
+    crate: 'opl-native-helper',
+    purpose: 'fast workspace artifact discovery without owning domain truth',
+    contract_ref: 'contracts/opl-gateway/native-helper-contract.json#/helpers/opl-artifact-indexer',
+  },
+  {
+    helper_id: 'opl-state-indexer',
+    priority: 'p2_high_frequency_index',
+    binary: 'opl-state-indexer',
+    crate: 'opl-native-helper',
+    purpose: 'high-frequency session, progress, artifact projection, and JSON validity indexing',
+    contract_ref: 'contracts/opl-gateway/native-helper-contract.json#/helpers/opl-state-indexer',
+  },
+] as const;
+
+const STATE_INDEX_CATALOG = {
+  workspace_registry_index: {
+    backing_helper_id: 'opl-state-indexer',
+    input_contract: 'workspace_roots[]',
+    output_surface: 'workspace_registry_index',
+  },
+  managed_session_ledger_index: {
+    backing_helper_id: 'opl-state-indexer',
+    input_contract: 'session_ledger_roots[]',
+    output_surface: 'managed_session_ledger_index',
+  },
+  artifact_projection_index: {
+    backing_helper_id: 'opl-artifact-indexer',
+    input_contract: 'workspace_root + artifact_roots[]',
+    output_surface: 'native_artifact_manifest',
+  },
+  attention_queue_index: {
+    backing_helper_id: 'opl-state-indexer',
+    input_contract: 'attention_queue_roots[]',
+    output_surface: 'attention_queue_index',
+  },
+  runtime_health_snapshot_index: {
+    backing_helper_id: 'opl-runtime-watch',
+    input_contract: 'watch_roots[]',
+    output_surface: 'runtime_health_snapshot_index',
+  },
+} as const;
+
 export function buildRuntimeManager() {
   const hermes = inspectHermesRuntime();
   const hermesReady = Boolean(hermes.binary && hermes.version && hermes.gateway_service.loaded);
@@ -149,27 +232,23 @@ export function buildRuntimeManager() {
         ],
       },
       native_helper_target: {
-        status: 'planned_optional_substrate',
+        status: 'contracted_optional_rust_helpers',
+        language: 'rust',
+        protocol: NATIVE_HELPER_PROTOCOL,
         allowed_shape: 'small_json_stdio_or_cli_helpers_managed_by_opl',
-        candidates: [
-          {
-            helper_id: 'opl-sysprobe',
-            purpose: 'portable system, toolchain, and runtime dependency inspection',
-          },
-          {
-            helper_id: 'opl-artifact-indexer',
-            purpose: 'fast workspace artifact discovery without owning domain truth',
-          },
-          {
-            helper_id: 'opl-state-indexer',
-            purpose: 'high-frequency session, progress, and artifact projection indexing',
-          },
+        helpers: NATIVE_HELPERS,
+        non_goals: [
+          'not_a_domain_truth_owner',
+          'not_a_runtime_kernel',
+          'not_a_concrete_executor',
+          'not_a_python_domain_logic_replacement',
         ],
       },
       state_index_target: {
-        status: 'planned_contract_first',
+        status: 'rust_helper_backed_contract_first',
         index_owner: 'one-person-lab',
         source_of_truth_rule: 'indexes project runtime surfaces but never replace domain-owned durable truth',
+        index_catalog: STATE_INDEX_CATALOG,
         candidate_indexes: [
           'workspace_registry_index',
           'managed_session_ledger_index',

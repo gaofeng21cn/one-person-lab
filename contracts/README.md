@@ -12,6 +12,7 @@
 - `contracts/opl-gateway/*.json`：历史 gateway-first 阶段冻结的 gateway、admission、acceptance 与 supporting-surface compatibility contract
 - `contracts/opl-gateway/README.md`：这些 JSON contract 的人类可读说明
 - `contracts/opl-gateway/runtime-manager-contract.json`：当前 OPL Runtime Manager 薄管理层合同；它冻结 OPL 如何管理外部 `Hermes-Agent` runtime substrate、可选 native helper 与高频状态索引，同时明确不复制 runtime kernel
+- `contracts/opl-gateway/native-helper-contract.json`：OPL Rust native helper 的 JSON stdio 合同；它冻结 `opl-sysprobe`、`opl-doctor-native`、`opl-runtime-watch`、`opl-artifact-indexer` 与 `opl-state-indexer` 的输入输出边界
 - `contracts/family-orchestration/*.schema.json`：跨 active 四仓线（`one-person-lab` + `MAS` + `MAG` + `RCA`）统一的 family orchestration companion schemas
 - `contracts/family-orchestration/README*.md`：这些 family orchestration schema 的人类可读说明
 

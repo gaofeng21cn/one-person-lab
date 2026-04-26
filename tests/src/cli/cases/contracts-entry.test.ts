@@ -607,7 +607,25 @@ exit 1
       output.runtime_manager.registration_registry.required_domain_registration_fields.includes('state_index_inputs'),
       true,
     );
-    assert.equal(output.runtime_manager.native_helper_target.candidates.length, 3);
+    assert.equal(output.runtime_manager.native_helper_target.status, 'contracted_optional_rust_helpers');
+    assert.equal(output.runtime_manager.native_helper_target.language, 'rust');
+    assert.equal(output.runtime_manager.native_helper_target.protocol.transport, 'cli_stdio');
+    assert.deepEqual(
+      output.runtime_manager.native_helper_target.helpers.map((helper: { helper_id: string }) => helper.helper_id),
+      ['opl-sysprobe', 'opl-doctor-native', 'opl-runtime-watch', 'opl-artifact-indexer', 'opl-state-indexer'],
+    );
+    assert.equal(output.runtime_manager.state_index_target.status, 'rust_helper_backed_contract_first');
+    assert.equal(
+      output.runtime_manager.state_index_target.index_catalog.artifact_projection_index.backing_helper_id,
+      'opl-artifact-indexer',
+    );
+    const nativeHelperContract = JSON.parse(
+      fs.readFileSync(path.join(repoRoot, 'contracts/opl-gateway/native-helper-contract.json'), 'utf8'),
+    );
+    assert.deepEqual(
+      nativeHelperContract.helpers.map((helper: { helper_id: string }) => helper.helper_id),
+      output.runtime_manager.native_helper_target.helpers.map((helper: { helper_id: string }) => helper.helper_id),
+    );
     assert.equal(output.runtime_manager.future_sidecar_migration.enabled_now, false);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });

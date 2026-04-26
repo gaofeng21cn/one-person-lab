@@ -38,15 +38,17 @@ v1 registry 只登记 MAS、MAG、RCA 已声明的 projection surface：
 
 ## OPL Native Helper
 
-`OPL native helper` 只允许是小型、可替换、JSON stdio/CLI 边界清楚的便携 helper。
+`OPL native helper` 只允许是小型、可替换、JSON stdio/CLI 边界清楚的 Rust helper。
 
 候选：
 
 - `opl-sysprobe`：系统、工具链、runtime dependency 检查
+- `opl-doctor-native`：本机 doctor 输入聚合与协议级健康快照
+- `opl-runtime-watch`：runtime / workspace watched roots 的 snapshot 与变更 fingerprint
 - `opl-artifact-indexer`：workspace artifact discovery
-- `opl-state-indexer`：session / progress / artifact projection index
+- `opl-state-indexer`：session / progress / artifact projection index 与 large JSON validation
 
-这些 helper 不持有 domain truth，不直接执行 MAS/MAG/RCA 任务，不替代 `Hermes-Agent`。
+这些 helper 不持有 domain truth，不直接执行 MAS/MAG/RCA 任务，不替代 `Hermes-Agent`。所有 helper 使用 `contracts/opl-gateway/native-helper-contract.json` 冻结 JSON stdin/stdout 边界，由 TypeScript / Python 调用方通过 contract 消费。
 
 ## 高频文件与状态索引
 
@@ -61,6 +63,7 @@ v1 registry 只登记 MAS、MAG、RCA 已声明的 projection surface：
 索引规则：
 
 - index 可以缓存与加速 OPL projection
+- 高频扫描、artifact manifest、session ledger/file state、目录 snapshot 与 large JSON validation 优先落在 Rust helper
 - index 不得成为 domain-owned durable truth
 - domain 仓仍以各自 repo-tracked contract、workspace state 与 artifact record 为权威
 

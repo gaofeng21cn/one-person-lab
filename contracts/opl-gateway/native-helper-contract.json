@@ -1,0 +1,76 @@
+{
+  "version": "v1",
+  "contract_id": "opl_native_helper_contract",
+  "contract_ref": "contracts/opl-gateway/native-helper-contract.json",
+  "scope": "opl_rust_native_helper_json_stdio_boundary",
+  "language": "rust",
+  "protocol": {
+    "version": "opl_native_helper.v1",
+    "transport": "cli_stdio",
+    "input": "json_object_on_stdin",
+    "output": "json_object_on_stdout",
+    "error_shape": {
+      "ok": false,
+      "errors": [
+        {
+          "code": "string",
+          "message": "string"
+        }
+      ]
+    }
+  },
+  "owner_split": {
+    "helper_owner": "one-person-lab",
+    "runtime_kernel_owner": "upstream_hermes_agent",
+    "domain_truth_owners": [
+      "med-autoscience",
+      "med-autogrant",
+      "redcube-ai"
+    ]
+  },
+  "helpers": [
+    {
+      "helper_id": "opl-sysprobe",
+      "priority": "p1_native_helper",
+      "binary": "opl-sysprobe",
+      "input_contract": "optional request_id and probe_paths",
+      "output_surface": "native_system_probe"
+    },
+    {
+      "helper_id": "opl-doctor-native",
+      "priority": "p1_native_helper",
+      "binary": "opl-doctor-native",
+      "input_contract": "optional request_id and probe_paths",
+      "output_surface": "native_doctor_snapshot"
+    },
+    {
+      "helper_id": "opl-runtime-watch",
+      "priority": "p1_native_helper",
+      "binary": "opl-runtime-watch",
+      "input_contract": "watch_roots[] and optional max_depth",
+      "output_surface": "runtime_health_snapshot_index"
+    },
+    {
+      "helper_id": "opl-artifact-indexer",
+      "priority": "p2_high_frequency_index",
+      "binary": "opl-artifact-indexer",
+      "input_contract": "workspace_root plus optional artifact_roots[] and artifact_extensions[]",
+      "output_surface": "native_artifact_manifest"
+    },
+    {
+      "helper_id": "opl-state-indexer",
+      "priority": "p2_high_frequency_index",
+      "binary": "opl-state-indexer",
+      "input_contract": "workspace_roots[], session_ledger_roots[], attention_queue_roots[], and optional max_depth",
+      "output_surface": "native_state_index"
+    }
+  ],
+  "non_goals": [
+    "not_a_scheduler_kernel",
+    "not_a_session_or_memory_store",
+    "not_a_domain_truth_owner",
+    "not_a_concrete_executor",
+    "not_a_python_domain_logic_replacement"
+  ],
+  "source_of_truth_rule": "Rust helpers may index, validate, and accelerate local file surfaces, but they must not replace MAS, MAG, or RCA domain-owned durable truth."
+}
