@@ -109,6 +109,7 @@ test('native helper prebuild script handles platform executable names', () => {
   const runtime = read('src/native-helper-runtime.ts');
 
   assert.match(prebuildScript, /targetTriple\.startsWith\('win32-'\)/);
+  assert.match(prebuildScript, /--force-local/);
   assert.match(cacheScript, /process\.platform === 'win32'/);
   assert.match(runtime, /nativeHelperExecutableName/);
 });
