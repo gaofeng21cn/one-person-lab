@@ -214,6 +214,11 @@ process.stdout.write(JSON.stringify({ repo: 'redcube-ai', sync: 'ok' }) + '\\n')
       path.join(skillRoot, 'SKILL.md'),
       `---\nname: ${spec.canonicalPlugin}\ndescription: ${fakeFamilySkillDescriptions[spec.canonicalPlugin]}\n---\n\n# ${spec.canonicalPlugin.toUpperCase()} App Skill\n\nThis fixture represents a canonical family app skill with a real workflow entry, not a placeholder.\n`,
     );
+    fs.mkdirSync(path.join(skillRoot, 'agents'), { recursive: true });
+    fs.writeFileSync(
+      path.join(skillRoot, 'agents', 'openai.yaml'),
+      `interface:\n  display_name: "${spec.project === 'med-autoscience' ? 'Med Auto Science' : spec.project === 'med-autogrant' ? 'Med Auto Grant' : 'RedCube AI'}"\n  short_description: "Canonical family app skill"\n  default_prompt: "Use $${spec.canonicalPlugin} to inspect the current family app state."\n`,
+    );
     fs.writeFileSync(installerPath, spec.scriptBody, { mode: 0o755 });
   }
 
@@ -494,9 +499,13 @@ test('opl skill sync runs the lightweight family plugin installers and returns m
     assert.equal(output.skill_sync.companion_skills.summary.total >= 6, true);
     for (const skillName of ['mas', 'mag', 'rca']) {
       const skillPath = path.join(homeDir, '.codex', 'skills', skillName, 'SKILL.md');
+      const metadataPath = path.join(homeDir, '.codex', 'skills', skillName, 'agents', 'openai.yaml');
       const content = fs.readFileSync(skillPath, 'utf8');
+      const metadata = fs.readFileSync(metadataPath, 'utf8');
       assert.match(content, /^---\nname: /);
       assert.doesNotMatch(content, /test skill/i);
+      assert.match(metadata, /display_name: "(Med Auto Science|Med Auto Grant|RedCube AI)"/);
+      assert.match(metadata, new RegExp(`default_prompt: "Use \\$${skillName}\\b`));
     }
   } finally {
     fs.rmSync(captureDir, { recursive: true, force: true });
