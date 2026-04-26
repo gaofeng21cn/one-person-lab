@@ -444,6 +444,11 @@ export function buildPublicCommandSpecs(
       examples: ['opl runtime manager'],
       group: 'runtime',
     }),
+    'runtime index': cloneCommandSpec(commandSpecs['runtime index'], {
+      usage: 'opl runtime index',
+      examples: ['opl runtime index'],
+      group: 'runtime',
+    }),
   };
 
   return publicCommandSpecs;
