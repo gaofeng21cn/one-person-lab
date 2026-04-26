@@ -84,6 +84,22 @@ exit 1
             health_status: string;
           };
         };
+        native_helpers: {
+          health_status: string;
+          lifecycle: {
+            status: string;
+            commands: {
+              repair: string;
+            };
+          };
+          runtime: {
+            status: string;
+            discovery: {
+              repair_command: string;
+            };
+          };
+          issues: string[];
+        };
         gui_shell: {
           strategy: string;
           service_dependency: string;
@@ -121,6 +137,11 @@ exit 1
     assert.equal(output.system.core_engines.hermes.version, 'Hermes 1.2.3');
     assert.equal(output.system.core_engines.hermes.gateway_loaded, true);
     assert.equal(output.system.core_engines.hermes.health_status, 'ready');
+    assert.equal(output.system.native_helpers.lifecycle.status, 'ready_to_build');
+    assert.equal(output.system.native_helpers.lifecycle.commands.repair, 'npm run native:repair');
+    assert.equal(output.system.native_helpers.runtime.discovery.repair_command, 'npm run native:repair');
+    assert.equal(['ready', 'attention_needed'].includes(output.system.native_helpers.health_status), true);
+    assert.equal(Array.isArray(output.system.native_helpers.issues), true);
     assert.equal(output.system.gui_shell.strategy, 'aionui_remote_webui');
     assert.equal(output.system.gui_shell.service_dependency, 'none');
     assert.equal(output.system.gui_shell.local_product_api_retired, true);
@@ -331,10 +352,23 @@ exit 1
           codex: { installed: boolean };
           hermes: { installed: boolean };
         };
+        native_helpers: {
+          health_status: string;
+          lifecycle: {
+            commands: {
+              repair: string;
+            };
+          };
+        };
         checklist: Array<{
           item_id: string;
           required: boolean;
           blocking: boolean;
+          status: string;
+          action: {
+            action_id: string;
+            payload_template: Record<string, string> | null;
+          } | null;
         }>;
         domain_modules: {
           summary: {
@@ -371,6 +405,7 @@ exit 1
     assert.match(output.system_initialize.overall_state, /ready|attention_needed/);
     assert.equal(output.system_initialize.core_engines.codex.installed, true);
     assert.equal(output.system_initialize.core_engines.hermes.installed, true);
+    assert.equal(output.system_initialize.native_helpers.lifecycle.commands.repair, 'npm run native:repair');
     assert.equal(
       output.system_initialize.checklist.some((entry) => entry.item_id === 'workspace_root' && entry.required),
       true,
@@ -383,6 +418,13 @@ exit 1
       output.system_initialize.checklist.some((entry) => entry.item_id === 'domain_modules' && !entry.required),
       true,
     );
+    const nativeHelperItem = output.system_initialize.checklist.find((entry) => entry.item_id === 'native_helpers');
+    assert.ok(nativeHelperItem);
+    assert.equal(nativeHelperItem.required, false);
+    assert.equal(nativeHelperItem.blocking, false);
+    assert.equal(nativeHelperItem.action?.action_id, 'repair_native_helpers');
+    assert.deepEqual(nativeHelperItem.action?.payload_template, { action: 'repair_native_helpers' });
+    assert.equal(nativeHelperItem.status, output.system_initialize.native_helpers.health_status);
     assert.equal(output.system_initialize.domain_modules.summary.total_modules_count, 3);
     assert.equal(
       output.system_initialize.domain_modules.summary.total_modules_count,

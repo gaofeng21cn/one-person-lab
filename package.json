@@ -27,6 +27,7 @@
     "native/opl-native-helper/Cargo.toml",
     "native/opl-native-helper/src",
     "scripts/native-helper-doctor.mjs",
+    "scripts/native-helper-pack-check.mjs",
     "scripts/native-helper-repair.mjs"
   ],
   "scripts": {
@@ -35,6 +36,7 @@
     "prepare": "npm run build",
     "native:build": "cargo build --workspace",
     "native:doctor": "node ./scripts/native-helper-doctor.mjs",
+    "native:pack-check": "node ./scripts/native-helper-pack-check.mjs",
     "native:repair": "node ./scripts/native-helper-repair.mjs",
     "native:test": "cargo test --workspace",
     "family:shared-release": "node ./scripts/family-shared-release.mjs",

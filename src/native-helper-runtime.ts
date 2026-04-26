@@ -81,12 +81,39 @@ export type NativeHelperDoctor = {
   source_of_truth_rule: typeof SOURCE_OF_TRUTH_RULE;
 };
 
+export type NativeHelperHealthStatus = {
+  surface_kind: 'opl_native_helper_environment_status';
+  health_status: 'ready' | 'attention_needed' | 'missing';
+  lifecycle: NativeHelperLifecycle;
+  runtime: NativeHelperProjection['runtime'];
+  issues: string[];
+};
+
+export type NativeHelperRepairAction = {
+  action: 'repair_native_helpers';
+  status: 'completed' | 'failed' | 'skipped_ready' | 'skipped_requested';
+  command_preview: string[];
+  before: NativeHelperDoctor;
+  after: NativeHelperDoctor;
+  stdout: string;
+  stderr: string;
+  note: string | null;
+};
+
 const NATIVE_HELPER_COMMANDS = {
   build: 'npm run native:build',
   doctor: 'npm run native:doctor',
   repair: 'npm run native:repair',
   test: 'npm run native:test',
 } as const;
+
+export const DEFAULT_NATIVE_HELPERS = [
+  { helper_id: 'opl-sysprobe', binary: 'opl-sysprobe' },
+  { helper_id: 'opl-doctor-native', binary: 'opl-doctor-native' },
+  { helper_id: 'opl-runtime-watch', binary: 'opl-runtime-watch' },
+  { helper_id: 'opl-artifact-indexer', binary: 'opl-artifact-indexer' },
+  { helper_id: 'opl-state-indexer', binary: 'opl-state-indexer' },
+] as const;
 
 const NATIVE_HELPER_PACKAGE_FILES = [
   'Cargo.toml',
@@ -172,6 +199,89 @@ export function buildNativeHelperDoctor(
     lifecycle: buildNativeHelperLifecycle(),
     runtime: inspectNativeHelperRuntime(helpers),
     source_of_truth_rule: SOURCE_OF_TRUTH_RULE,
+  };
+}
+
+export function buildNativeHelperHealthStatus(
+  helpers: readonly NativeHelperDefinition[] = DEFAULT_NATIVE_HELPERS,
+): NativeHelperHealthStatus {
+  const doctor = buildNativeHelperDoctor(helpers);
+  const runtimeIssues = doctor.runtime.invocations.flatMap((invocation) => invocation.errors.map((error) => error.code));
+  const packageIssues = doctor.lifecycle.package.missing_files.map((file) => `missing_package_file:${file}`);
+  const healthStatus =
+    doctor.lifecycle.package.status === 'missing_files'
+      ? 'missing'
+      : doctor.runtime.status === 'available'
+        ? 'ready'
+        : 'attention_needed';
+
+  return {
+    surface_kind: 'opl_native_helper_environment_status',
+    health_status: healthStatus,
+    lifecycle: doctor.lifecycle,
+    runtime: doctor.runtime,
+    issues: [...new Set([...packageIssues, ...runtimeIssues])],
+  };
+}
+
+export function runNativeHelperRepairAction(input: { skip?: boolean } = {}): NativeHelperRepairAction {
+  const before = buildNativeHelperDoctor(DEFAULT_NATIVE_HELPERS);
+  if (input.skip) {
+    return {
+      action: 'repair_native_helpers',
+      status: 'skipped_requested',
+      command_preview: [],
+      before,
+      after: before,
+      stdout: '',
+      stderr: '',
+      note: 'Native helper repair was skipped by the install command input.',
+    };
+  }
+  if (before.runtime.status === 'available') {
+    return {
+      action: 'repair_native_helpers',
+      status: 'skipped_ready',
+      command_preview: [],
+      before,
+      after: before,
+      stdout: '',
+      stderr: '',
+      note: 'Native helpers are already available.',
+    };
+  }
+
+  const overrideCommand = process.env.OPL_NATIVE_HELPER_REPAIR_COMMAND?.trim();
+  const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+  const commandPreview = overrideCommand ? [overrideCommand] : [npmCommand, 'run', 'native:repair'];
+  const result = overrideCommand
+    ? spawnSync(overrideCommand, {
+      cwd: repoRoot(),
+      env: process.env,
+      encoding: 'utf8',
+      shell: true,
+      maxBuffer: 8 * 1024 * 1024,
+    })
+    : spawnSync(npmCommand, ['run', 'native:repair'], {
+      cwd: repoRoot(),
+      env: process.env,
+      encoding: 'utf8',
+      maxBuffer: 8 * 1024 * 1024,
+    });
+  const after = buildNativeHelperDoctor(DEFAULT_NATIVE_HELPERS);
+  const status = result.status === 0 && after.runtime.status === 'available' ? 'completed' : 'failed';
+
+  return {
+    action: 'repair_native_helpers',
+    status,
+    command_preview: commandPreview,
+    before,
+    after,
+    stdout: result.stdout ?? '',
+    stderr: result.stderr ?? '',
+    note: status === 'completed'
+      ? null
+      : 'Native helper repair command finished without making every runtime helper available.',
   };
 }
 

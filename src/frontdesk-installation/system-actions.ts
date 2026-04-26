@@ -4,6 +4,7 @@ import {
   writeFrontDeskUpdateChannel,
 } from '../frontdesk-preferences.ts';
 import { runProductEntryRepairHermesGateway } from '../product-entry.ts';
+import { runNativeHelperRepairAction } from '../native-helper-runtime.ts';
 import type { GatewayContracts } from '../types.ts';
 
 import type {
@@ -26,6 +27,22 @@ export async function runFrontDeskSystemAction(
         update_channel: readFrontDeskUpdateChannel().channel,
         workspace_root: readFrontDeskWorkspaceRoot(),
         details: repairPayload.product_entry,
+      },
+    };
+  }
+
+  if (action === 'repair_native_helpers') {
+    const repairPayload = runNativeHelperRepairAction();
+    return {
+      version: 'g2',
+      frontdesk_system_action: {
+        action,
+        status: repairPayload.status === 'completed' || repairPayload.status === 'skipped_ready'
+          ? 'completed'
+          : repairPayload.status,
+        update_channel: readFrontDeskUpdateChannel().channel,
+        workspace_root: readFrontDeskWorkspaceRoot(),
+        details: repairPayload,
       },
     };
   }
