@@ -31,6 +31,8 @@ type InspectFamilySkillPack = {
   plugin_manifest_found: boolean;
   skill_entry_path: string;
   skill_entry_found: boolean;
+  skill_entry_valid: boolean;
+  skill_entry_errors: string[];
   installer_path: string;
   installer_found: boolean;
   ready_to_sync: boolean;
@@ -260,8 +262,64 @@ function maybeParseJsonRecord(raw: string) {
   return null;
 }
 
+function normalizeFrontmatterScalar(value: string | undefined) {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return '';
+  }
+
+  return trimmed.replace(/^['"]|['"]$/g, '').trim();
+}
+
+function readSkillFrontmatter(content: string) {
+  const match = content.match(/^---\n([\s\S]*?)\n---\n?/);
+  const frontmatter = match?.[1] ?? '';
+  const body = match ? content.slice(match[0].length) : content;
+  const name = normalizeFrontmatterScalar(frontmatter.match(/^name:\s*(.+)$/m)?.[1]);
+  const description = normalizeFrontmatterScalar(frontmatter.match(/^description:\s*(.+)$/m)?.[1]);
+
+  return { name, description, body };
+}
+
+function validateSkillEntry(spec: SkillPackSpec, skillEntryPath: string, skillEntryFound: boolean) {
+  const errors: string[] = [];
+
+  if (!skillEntryFound) {
+    return { valid: false, errors };
+  }
+
+  let content = '';
+  try {
+    content = fs.readFileSync(skillEntryPath, 'utf8');
+  } catch (error) {
+    return {
+      valid: false,
+      errors: [`failed_to_read_skill_entry:${error instanceof Error ? error.message : String(error)}`],
+    };
+  }
+
+  const { name, description, body } = readSkillFrontmatter(content);
+  if (name !== spec.canonical_plugin_name) {
+    errors.push(`skill_name_mismatch:${name || '<missing>'}`);
+  }
+  if (!description) {
+    errors.push('missing_skill_description');
+  }
+  if (/\btest skill\b/i.test(description)) {
+    errors.push('legacy_test_skill_description');
+  }
+  if (body.trim() === `# ${spec.canonical_plugin_name}`) {
+    errors.push('legacy_test_skill_body');
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+  };
+}
+
 function syncCodexSkillMirror(inspected: InspectFamilySkillPack, home?: string) {
-  if (!inspected.skill_entry_found) {
+  if (!inspected.skill_entry_found || !inspected.skill_entry_valid) {
     return null;
   }
 
@@ -295,6 +353,7 @@ function inspectFamilySkillPackAtRepoRoot(
   const installerPath = buildInstallerPath(spec, repoRoot);
   const pluginManifestFound = fs.existsSync(pluginManifestPath) && fs.statSync(pluginManifestPath).isFile();
   const skillEntryFound = fs.existsSync(skillEntryPath) && fs.statSync(skillEntryPath).isFile();
+  const skillEntryValidation = validateSkillEntry(spec, skillEntryPath, skillEntryFound);
   const installerFound = fs.existsSync(installerPath) && fs.statSync(installerPath).isFile();
 
   return {
@@ -309,9 +368,11 @@ function inspectFamilySkillPackAtRepoRoot(
     plugin_manifest_found: pluginManifestFound,
     skill_entry_path: skillEntryPath,
     skill_entry_found: skillEntryFound,
+    skill_entry_valid: skillEntryValidation.valid,
+    skill_entry_errors: skillEntryValidation.errors,
     installer_path: installerPath,
     installer_found: installerFound,
-    ready_to_sync: repoFound && pluginManifestFound && skillEntryFound && installerFound,
+    ready_to_sync: repoFound && pluginManifestFound && skillEntryFound && skillEntryValidation.valid && installerFound,
     installer_kind: spec.installer_kind,
     command_preview: buildInstallerCommandPreview(spec, repoRoot),
   };
