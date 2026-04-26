@@ -1,3 +1,5 @@
+import { spawnSync } from 'node:child_process';
+
 import { GatewayContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeHermesFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakePsFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadGatewayContracts, once, os, path, readJsonFixture, readJsonLine, repoRoot, resolveRequestSurface, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateGatewayContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
 
 test('loadGatewayContracts returns the frozen gateway registries', () => {
@@ -716,5 +718,106 @@ esac
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(helperBinDir, { recursive: true, force: true });
+  }
+});
+
+test('runtime manager reports the native helper package and repair lifecycle', () => {
+  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "version" ]; then
+  echo "Hermes Agent v9.9.9-test"
+  exit 0
+fi
+if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
+  cat <<'EOF'
+Launchd plist: /tmp/ai.hermes.gateway.plist
+✓ Service definition matches the current Hermes install
+✓ Gateway service is loaded
+EOF
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-state-'));
+
+  try {
+    const output = runCli(['runtime', 'manager'], {
+      OPL_HERMES_BIN: hermesPath,
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    assert.equal(output.runtime_manager.native_helper_target.lifecycle.status, 'ready_to_build');
+    assert.deepEqual(output.runtime_manager.native_helper_target.lifecycle.commands, {
+      build: 'npm run native:build',
+      doctor: 'npm run native:doctor',
+      repair: 'npm run native:repair',
+      test: 'npm run native:test',
+    });
+    assert.equal(output.runtime_manager.native_helper_target.lifecycle.package.status, 'included');
+    assert.equal(
+      output.runtime_manager.native_helper_target.lifecycle.package.required_files.includes('native/opl-native-helper/src/lib.rs'),
+      true,
+    );
+
+    const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
+    assert.equal(packageJson.scripts['native:doctor'], 'node ./scripts/native-helper-doctor.mjs');
+    assert.equal(packageJson.scripts['native:repair'], 'node ./scripts/native-helper-repair.mjs');
+    assert.equal(packageJson.files.includes('native/opl-native-helper/src'), true);
+    assert.equal(packageJson.files.includes('scripts/native-helper-doctor.mjs'), true);
+    assert.equal(packageJson.files.includes('scripts/native-helper-repair.mjs'), true);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('native helper doctor script emits lifecycle JSON without mutating domain truth', () => {
+  const helperBinDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-native-helper-bin-'));
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-state-'));
+
+  for (const binary of ['opl-doctor-native', 'opl-runtime-watch', 'opl-artifact-indexer', 'opl-state-indexer']) {
+    const helperPath = path.join(helperBinDir, binary);
+    fs.writeFileSync(
+      helperPath,
+      `#!/bin/sh
+cat >/dev/null
+case "$(basename "$0")" in
+  opl-doctor-native)
+    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-doctor-native","ok":true,"request_id":"runtime-manager-doctor","result":{"surface_kind":"native_doctor_snapshot"},"errors":[]}'
+    ;;
+  opl-runtime-watch)
+    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-runtime-watch","ok":true,"request_id":"runtime-manager-runtime-watch","result":{"surface_kind":"runtime_health_snapshot_index","roots":[]},"errors":[]}'
+    ;;
+  opl-artifact-indexer)
+    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-artifact-indexer","ok":true,"request_id":"runtime-manager-artifact-index","result":{"surface_kind":"native_artifact_manifest","summary":{"total_files_count":0},"files":[]},"errors":[]}'
+    ;;
+  opl-state-indexer)
+    printf '%s\\n' '{"protocol_version":"opl_native_helper.v1","helper_id":"opl-state-indexer","ok":true,"request_id":"runtime-manager-state-index","result":{"surface_kind":"native_state_index","roots":[],"json_validation":{"checked_files_count":0,"invalid_files_count":0,"files":[]}},"errors":[]}'
+    ;;
+esac
+`,
+      { mode: 0o755 },
+    );
+  }
+
+  try {
+    const result = spawnSync(process.execPath, [path.join(repoRoot, 'scripts/native-helper-doctor.mjs')], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        OPL_NATIVE_HELPER_BIN_DIR: helperBinDir,
+        OPL_STATE_DIR: stateRoot,
+      },
+    });
+    assert.equal(result.status, 0, result.stderr);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.surface_kind, 'opl_native_helper_lifecycle_doctor');
+    assert.equal(output.lifecycle.commands.repair, 'npm run native:repair');
+    assert.equal(output.runtime.status, 'available');
+    assert.equal(fs.existsSync(path.join(stateRoot, 'runtime-manager', 'native-state-index.json')), false);
+  } finally {
+    fs.rmSync(helperBinDir, { recursive: true, force: true });
+    fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
