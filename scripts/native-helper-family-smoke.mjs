@@ -182,7 +182,7 @@ if (fixtureFamilyRoot) {
   fs.rmSync(path.dirname(fixtureFamilyRoot), { recursive: true, force: true });
 }
 if (requireRealWorkspaces && hasFailure) {
-  process.exit(1);
+  process.exitCode = 1;
 }
 
 function indexDomain(domain, workspacePath) {
