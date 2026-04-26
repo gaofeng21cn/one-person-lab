@@ -17,6 +17,7 @@ const requiredFiles = [
   'scripts/native-helper-doctor.mjs',
   'scripts/native-helper-family-smoke.mjs',
   'scripts/native-helper-pack-check.mjs',
+  'scripts/native-helper-prebuild.mjs',
   'scripts/native-helper-repair.mjs',
 ];
 

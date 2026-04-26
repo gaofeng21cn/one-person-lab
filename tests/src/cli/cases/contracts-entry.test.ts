@@ -968,9 +968,20 @@ exit 1
       build: 'npm run native:build',
       cache: 'npm run native:cache',
       doctor: 'npm run native:doctor',
+      prebuild: 'npm run native:prebuild',
+      prebuild_pack: 'npm run native:prebuild-pack',
+      prebuild_check: 'npm run native:prebuild-check',
       repair: 'npm run native:repair',
       test: 'npm run native:test',
     });
+    assert.equal(
+      output.runtime_manager.native_helper_target.lifecycle.prebuild.install_command,
+      'npm run native:prebuild',
+    );
+    assert.deepEqual(
+      output.runtime_manager.native_helper_target.lifecycle.prebuild.restore_order,
+      ['OPL_NATIVE_HELPER_PREBUILD_ROOT', 'package native-helper-prebuilds', 'local Cargo build fallback'],
+    );
     assert.match(
       output.runtime_manager.native_helper_target.lifecycle.cache.cache_dir,
       /native-helper\/bin\/.+\/0\.1\.0$/,
@@ -985,9 +996,12 @@ exit 1
     const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
     assert.equal(packageJson.scripts['native:cache'], 'node ./scripts/native-helper-cache.mjs');
     assert.equal(packageJson.scripts['native:doctor'], 'node ./scripts/native-helper-doctor.mjs');
+    assert.equal(packageJson.scripts['native:prebuild'], 'node ./scripts/native-helper-prebuild.mjs install');
     assert.equal(packageJson.scripts['native:repair'], 'node ./scripts/native-helper-repair.mjs');
+    assert.equal(packageJson.files.includes('native-helper-prebuilds'), true);
     assert.equal(packageJson.files.includes('native/opl-native-helper/src'), true);
     assert.equal(packageJson.files.includes('scripts/native-helper-doctor.mjs'), true);
+    assert.equal(packageJson.files.includes('scripts/native-helper-prebuild.mjs'), true);
     assert.equal(packageJson.files.includes('scripts/native-helper-repair.mjs'), true);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
