@@ -36,6 +36,7 @@ If you need to understand what `OPL` is today, go back to:
 - `family-shared-release-maintenance.md`
 - `host-agent-runtime-contract.md`
 - `managed-runtime-migration-readiness-checklist.md`
+- [OPL Runtime Manager target](./opl-runtime-manager-target.md)
 - `hermes-agent-runtime-substrate-benchmark.md`
 - `family-executor-adapter-defaults.md`
 - `hermes-agent-executor-evaluation.md`

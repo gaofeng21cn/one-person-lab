@@ -8,6 +8,7 @@
 - `opl` / `opl exec` / `opl resume` 这组 CLI / shell 前门
 - Codex-default session/runtime 路径
 - domain-agent activation / dispatch 规格
+- `OPL Runtime Manager` 薄管理层：负责把受支持的外部 `Hermes-Agent` runtime substrate 纳入 OPL 产品级安装、profile、任务注册、诊断和状态投影
 - 执行引擎与模块注册表
 - 工作空间、会话、进度、交付物等接口面
 - 跨仓共享的模块、机器可读合同与可发现索引
@@ -27,9 +28,13 @@
 3. 可选外壳与投影层
    GUI shell 与其他兼容层继续围绕同一套 runtime/activation truth 做展示与投影，而不是重新定义默认交互合同。
 
+其中 `OPL Runtime Manager` 位于默认运行时层与显式激活层之间。它是产品级管理/投影层，不是新的 runtime kernel：`Hermes-Agent` 继续持有长期在线 session、scheduler、wakeup、interrupt/resume、memory 与 delivery/cron；`OPL Runtime Manager` 只负责把这个外部 kernel 的受支持版本、profile、domain task registration、诊断、恢复入口、可选 native helper 与高频状态索引统一投影进 `sessions / progress / artifacts / attention queue`。
+
 ## 项目目标
 
 - 给 `opl`、`opl exec`、`opl resume`、直接 `Codex` 使用和外部壳提供稳定一致的 Codex-default session/runtime 合同
+- 冻结 `OPL Runtime Manager` 的薄管理层合同，让 OPL 能管理外部 `Hermes-Agent` runtime substrate，而不复制一套 scheduler/session/memory kernel
+- 以 contract-first 方式规划 `OPL native helper` 与高频文件/状态索引：只做系统探测、artifact discovery、状态投影加速，不替代 domain-owned durable truth
 - 把 domain app 以可同步的 skill pack 与稳定 contract 接入统一 activation layer
 - 统一管理执行引擎、模块、工作空间、会话、进度与交付物
 - 维护 family-level shared modules、shared contracts 与 shared indexes
@@ -40,6 +45,8 @@
 ## 作用边界
 
 - `OPL` 负责 Codex-default session/runtime、activation layer、release distribution surface，以及 shared modules / contracts / indexes
+- `OPL Runtime Manager` 负责产品级 runtime provisioning、profile wiring、task registration hydration、diagnostics、status projection、native helper catalog 与 state index catalog
+- `OPL Runtime Manager` 不拥有 scheduler、session store、memory store、domain truth 或 concrete executor
 - `OPL` 的默认 runtime 只有一个：`Codex`
 - `Hermes-Agent` 只作为显式切换的备选 runtime
 - `OPL` 不持有领域运行时所有权
