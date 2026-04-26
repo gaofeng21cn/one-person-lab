@@ -7,6 +7,7 @@ import { ensureFrontDeskStateDir, resolveFrontDeskStatePaths } from './frontdesk
 import {
   type NativeStateIndexPersistence,
   persistNativeStateIndex,
+  readNativeStateIndexPersistence,
 } from './native-index-lifecycle.ts';
 
 const PROTOCOL_VERSION = 'opl_native_helper.v1';
@@ -208,19 +209,25 @@ const RUNTIME_MANAGER_HELPER_SEQUENCE = [
 
 export function buildNativeHelperProjection(
   helpers: readonly NativeHelperDefinition[],
+  input: { persistIndexes?: boolean } = {},
 ): NativeHelperProjection {
   const statePaths = ensureFrontDeskStateDir();
   const lifecycle = buildNativeHelperLifecycle();
   const runtime = inspectNativeHelperRuntime(helpers);
-  const persistence = persistNativeStateIndex({
-    stateDir: statePaths.state_dir,
-    invocations: runtime.invocations,
-    indexSpecs: RUNTIME_MANAGER_HELPER_SEQUENCE
-      .filter((spec) => spec.helper_id !== 'opl-doctor-native')
-      .map((spec) => ({ helper_id: spec.helper_id, index_key: spec.index_key })),
-    protocolVersion: PROTOCOL_VERSION,
-    sourceOfTruthRule: SOURCE_OF_TRUTH_RULE,
-  });
+  const persistence = input.persistIndexes === false
+    ? readNativeStateIndexPersistence({
+      stateDir: statePaths.state_dir,
+      sourceOfTruthRule: SOURCE_OF_TRUTH_RULE,
+    })
+    : persistNativeStateIndex({
+      stateDir: statePaths.state_dir,
+      invocations: runtime.invocations,
+      indexSpecs: RUNTIME_MANAGER_HELPER_SEQUENCE
+        .filter((spec) => spec.helper_id !== 'opl-doctor-native')
+        .map((spec) => ({ helper_id: spec.helper_id, index_key: spec.index_key })),
+      protocolVersion: PROTOCOL_VERSION,
+      sourceOfTruthRule: SOURCE_OF_TRUTH_RULE,
+    });
 
   return {
     lifecycle,
