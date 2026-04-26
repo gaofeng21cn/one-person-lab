@@ -32,6 +32,7 @@
     "binary_discovery_order": [
       "OPL_NATIVE_HELPER_<HELPER_ID>_BIN",
       "OPL_NATIVE_HELPER_BIN_DIR",
+      "OPL_STATE_DIR native-helper cache",
       "workspace target/debug",
       "PATH"
     ],
