@@ -474,11 +474,21 @@ test('modules and module actions manage OPL-owned domain module installs and upd
   const turnkeyLogPath = path.join(homeRoot, 'turnkey.log');
   const medAutoScienceRemote = createGitModuleRemoteFixture('med-autoscience', {
     extraFiles: {
-      'plugins/med-autoscience/.codex-plugin/plugin.json': JSON.stringify({
-        name: 'med-autoscience',
+      'plugins/mas/.codex-plugin/plugin.json': JSON.stringify({
+        name: 'mas',
         skills: './skills/',
       }, null, 2),
-      'plugins/med-autoscience/skills/med-autoscience/SKILL.md': '# med-autoscience\n',
+      'plugins/mas/skills/mas/SKILL.md': [
+        '---',
+        'name: mas',
+        'description: Use when Codex should operate MedAutoScience through its stable runtime, controller, overlay, and workspace contracts instead of ad-hoc scripts.',
+        '---',
+        '',
+        '# MAS App Skill',
+        '',
+        'Use this fixture as the canonical MAS family app skill entry.',
+        '',
+      ].join('\n'),
       'scripts/opl-module-bootstrap.sh': `#!/usr/bin/env bash
 set -euo pipefail
 printf 'bootstrap\\n' >> ${JSON.stringify(turnkeyLogPath)}
