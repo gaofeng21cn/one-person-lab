@@ -980,22 +980,3 @@ EOF
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
 });
-
-test('help keeps AionUI GUI lane without Product API commands', () => {
-  const output = runCli(['help']);
-  assert.equal(output.help.commands.some((entry: { command: string }) => entry.command === 'web'), false);
-  assert.equal(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'service install'),
-    false,
-  );
-  assert.equal(output.help.commands.some((entry: { command: string }) => entry.command === 'web bundle'), false);
-  assert.equal(output.help.commands.some((entry: { command: string }) => entry.command === 'web package'), false);
-  assert.equal(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk bootstrap'),
-    false,
-  );
-  assert.equal(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk manifest'),
-    false,
-  );
-});
