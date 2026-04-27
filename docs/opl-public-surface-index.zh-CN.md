@@ -10,6 +10,7 @@
 
 - `Codex-default session/runtime`
 - `explicit activation layer`
+- `shared modules / contracts / indexes`
 - `family domain skill sync / discovery`
 
 `OPL` 已经不再把旧的 gateway/federation 语料当作默认公开集成合同。
@@ -32,6 +33,7 @@
 - [合同目录说明](../contracts/README.md)
 
 这些界面解释默认入口（`opl`、`opl exec`、`opl resume`）、当前资源模型（`workspaces / sessions / progress / artifacts`），以及“只有显式 activation 或 runtime switch 才进入 OPL 增量语义”这条规则。
+它们也把 `OPL Runtime Manager` 限定为 external `Hermes-Agent` 之上的 product-managed 薄 adapter，并把 Rust native helper / index 工作限定在 native assistance 与 indexed discovery。
 
 ### 2. 已链接的 domain capability surface
 
@@ -90,7 +92,7 @@
 
 只有当下面这些条件都成立时，这份 public surface index 才算合格：
 
-- 它把当前 `Codex-default runtime + activation + skill sync` 主线讲清楚
+- 它把当前 `Codex-default runtime + activation + shared modules/contracts/indexes + skill sync` 主线讲清楚
 - 它区分 OPL-owned 的 runtime/activation surface 与 repo-owned 的 domain capability surface
 - 它明确标出旧 gateway/federation 语料已经退到 reference/compatibility 层
 - 它继续把 domain runtime truth、progress truth 与 artifact truth 放在对应 domain 仓自己名下

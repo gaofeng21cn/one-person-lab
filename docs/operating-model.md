@@ -7,7 +7,7 @@
 The core judgment of `OPL` is not “how to make one Agent finish one task once.”
 It is “how to let a research-oriented individual or a very small team continuously carry formal lab work through stable surfaces.”
 
-That is why `OPL` should be understood as the top-level gateway and federation model for continuous lab work, while also carrying the family-level session/runtime/projection layer and shared modules/contracts/indexes.
+That is why `OPL` should be understood as the Codex-default session/runtime layer, explicit activation layer, and owner of shared modules, contracts, and indexes for continuous lab work.
 
 ## Top-Level Chain
 
@@ -15,10 +15,10 @@ The intended chain is:
 
 ```text
 Human / Agent
-  -> OPL Gateway
-      -> Domain Gateway
-          -> Domain Harness OS
-              -> Review Surfaces / Deliveries / Audit Truth
+  -> Codex-default session/runtime
+      -> explicit OPL activation
+          -> selected domain agent entry
+              -> Domain Harness OS / Review Surfaces / Deliveries / Audit Truth
 ```
 
 Today, the clearest mapped domains are:
@@ -47,35 +47,37 @@ The Agent is primarily responsible for:
 - organizing intermediate and formal outputs
 - writing key execution traces back to auditable surfaces
 
-### OPL Gateway
+### OPL Activation And Shared Foundation
 
-The top-level `OPL Gateway` is responsible for:
+The top-level `OPL` layer is responsible for:
 
 - expressing top-level task semantics
-- routing work into the correct domain surface
+- activating work into the correct domain surface only when explicitly requested
 - defining shared foundation expectations across domains
 - owning shared-foundation control language without taking over domain-owned canonical truth
 - keeping cross-domain identity, governance, and delivery language aligned
+- maintaining family-level shared modules, contracts, and indexes
 
 The current repository is the documentation-first public surface for this role.
 
-### Domain Agent, Gateway, And Harness
+### Domain Agent, Entry, And Harness
 
 Each independent domain-agent repository is expected to keep three distinct layers:
 
 - a `domain agent` as the public identity of the repository
-- a `domain gateway` that serves as the stable workstream boundary entry surface
+- a domain-owned entry surface that serves as the stable workstream boundary
 - a `Domain Harness OS` that executes, records, gates, and delivers domain work
 
 For example:
 
-- `MedAutoScience` is the independent domain agent for `Research Foundry`, with its own domain gateway and harness underneath
-- `RedCube AI` is the independent domain agent for visual delivery, with its own domain gateway and harness underneath
+- `MedAutoScience` is the independent domain agent for `Research Foundry`, with its own domain entry, runtime truth, and harness underneath
+- `RedCube AI` is the independent domain agent for visual delivery, with its own domain entry, runtime truth, and harness underneath
 
 ## Agent-First Execution
 
 `OPL` defaults to `Agent-first` execution.
-Domains can choose their model interfaces, but the primary workstream driver is an Agent runtime that reads state, calls tools and gateways, organizes intermediate artifacts, advances gates, and writes key traces back to auditable surfaces.
+Domains can choose their model interfaces, but the default executor path at the `OPL` layer is `Codex CLI`.
+The primary workstream driver reads state, calls stable domain-owned tools, organizes intermediate artifacts, advances gates, and writes key traces back to auditable surfaces.
 
 In that model, code mainly exists to provide:
 
@@ -100,20 +102,21 @@ The current aligned rule is:
 The key distinction is the layering rule: a future higher-judgment product sits above the current `Auto-only` mainline while reusing the same stable contracts, objects, audit surfaces, and execution modules.
 `OPL` freezes that layering rule now and keeps the current mainline definition clean.
 
-## Product Entry And Online Runtime
+## Product Entry And Runtime Manager
 
-The current repo-tracked formal entry still remains the local `TypeScript CLI`-first / gateway contract baseline.
-That is the real entry today, but it should not be read as “the product will always depend on `Codex` as its only entry.”
+The current repo-tracked formal entry is the `Codex CLI`-default path exposed through `opl`, `opl exec`, and `opl resume`.
+That is the real default entry today, while explicit activation can still select a domain agent or a non-default runtime.
 
 The more durable direction is:
 
-- keep local `CLI-first` as the current formal entry
+- keep `Codex CLI` as the current formal executor
 - keep `MCP` as the supported protocol layer
-- progressively add domain-owned product entry surfaces such as local product CLIs and future `Web / API / gateway` surfaces
+- keep domain-owned product entry surfaces as the ownership boundary for domain workflow, runtime truth, and delivery truth
+- keep `OPL Runtime Manager` as a thin product-managed adapter over external `Hermes-Agent`
 
 On that path:
 
-- top-level `OPL` continues to define the system family and federation language
+- top-level `OPL` continues to define the system family, explicit activation semantics, and shared indexes
 - `UHS` remains the shared Harness Engineering umbrella language
 - the `Shared Runtime Contract` gradually owns the shared contracts required for long-running online execution
 - the `Shared Domain Contract` gradually owns the cross-domain contracts for formal entry, run identity, report surfaces, audit surfaces, and gate semantics
@@ -122,8 +125,9 @@ On that path:
 That is how the ecosystem can grow into multiple vertical online agent products on one substrate rather than one giant runtime that swallows every domain.
 The full direction is not implemented yet, but it is the right structure to keep tightening toward.
 
-If the ecosystem later adopts the upstream `Hermes-Agent` as a runtime substrate, that choice belongs more accurately to the implementation layer of the `Shared Runtime Contract`, not as a synonym for `UHS`, `OPL`, or domain truth.
-As of today, `Med Auto Grant` has landed a real upstream `Hermes-Agent` runtime substrate, while `Med Auto Science` and `RedCube AI` remain at earlier cutover/proof stages.
+`Hermes-Agent` is an upstream external runtime project/service.
+`OPL Runtime Manager` may adapt product-managed runtime operations over that external project, but it must not be described as a scheduler, session store, memory owner, domain truth owner, or concrete executor owner.
+Rust native helper / index-only work may support native assistance and indexed discovery, but it must not become the owner of domain execution or truth.
 
 ## Operating Principles
 
@@ -131,7 +135,7 @@ At the top level, `OPL` follows these principles:
 
 - read state before making changes
 - keep important actions auditable
-- prefer stable gateways over ad hoc bypasses
+- prefer stable domain-owned entry contracts over ad hoc bypasses
 - prefer shared assets over duplicated context
 - preserve domain boundaries instead of collapsing everything into one runtime
 - keep humans at the review and decision surfaces rather than at low-level execution details
@@ -142,12 +146,12 @@ Use the following scope for `OPL`:
 
 - the top-level product and control language for the lab
 - the place where cross-domain semantics are frozen first
-- the federation layer above independent domain-agent repositories
-- the gateway surface that links domain-owned runtimes without absorbing their identities
+- the explicit activation layer above independent domain-agent repositories
+- the shared modules/contracts/indexes owner that links domain-owned runtimes without absorbing their identities
 
-## Why Domain Gateways Must Stay
+## Why Domain Entries Must Stay
 
-Even with an `OPL Gateway`, domain gateways should remain because they provide:
+Even with shared `OPL` activation, domain-owned entries should remain because they provide:
 
 - a standalone surface for independent use
 - domain-specific validation, governance, and delivery contracts
@@ -156,8 +160,8 @@ Even with an `OPL Gateway`, domain gateways should remain because they provide:
 
 That means the right direction is:
 
-- `OPL Gateway` above domains
-- thinner but explicit domain gateways
+- Codex-default `OPL` runtime plus explicit activation above domains
+- thinner but explicit domain-owned entries
 - explicit domain harnesses underneath
 
 ## Further Reading
