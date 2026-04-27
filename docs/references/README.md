@@ -18,6 +18,7 @@ If you need to understand what `OPL` is today, go back to:
 ## 1. Convergence And Status Alignment
 
 - [GUI mainline pivot to AionUI](./2026-04-21-gui-mainline-pivot-to-aionui.md)
+- [OPL GUI shell adapter boundary](./opl-gui-shell-adapter-boundary.zh-CN.md)
 - [Docker WebUI deployment reference](./opl-docker-webui-deployment.md)
 - [OPL default skill ecosystem reference](./opl-default-skill-ecosystem.md)
 - [OPL release and Packages modular distribution reference](./opl-release-packages-modular-distribution.zh-CN.md)

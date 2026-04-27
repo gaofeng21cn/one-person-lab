@@ -18,6 +18,7 @@
 ## 一、统一收敛与状态对齐
 
 - [GUI 主线切换到 AionUI](./2026-04-21-gui-mainline-pivot-to-aionui.md)
+- [OPL GUI Shell Adapter 边界说明](./opl-gui-shell-adapter-boundary.zh-CN.md)
 - [Docker WebUI 部署参考](./opl-docker-webui-deployment.zh-CN.md)
 - [OPL 默认 Skill 生态参考](./opl-default-skill-ecosystem.zh-CN.md)
 - [OPL Release 与 Packages 模块化分发参考](./opl-release-packages-modular-distribution.zh-CN.md)
