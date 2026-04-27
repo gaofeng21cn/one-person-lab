@@ -12,10 +12,10 @@
 | --- | --- | --- | --- |
 | One Person Lab 桌面 App | GitHub Releases | 是 | 用户直接下载和安装 |
 | OPL CLI / shared contracts / native helper | npm 或 GitHub Packages | 随一键安装获取 | App 不变时也需要独立修复和更新 |
-| MAS | GitHub Packages 或 release artifact | 否 | domain agent 独立演进，按环境管理安装/更新 |
-| MDS | GitHub Packages 或 release artifact | 否 | MAS 隐藏运行依赖，在环境管理中维护 |
-| MAG | GitHub Packages 或 release artifact | 否 | domain agent 独立演进，按环境管理安装/更新 |
-| RCA | GitHub Packages 或 release artifact | 否 | 交付物链路可能较大，不应拖慢 App 更新 |
+| MAS | GitHub Packages / GHCR 模块包 | 否 | domain agent 独立演进，按环境管理安装/更新 |
+| MDS | GitHub Packages / GHCR 模块包 | 否 | MAS 隐藏运行依赖，在环境管理中维护 |
+| MAG | GitHub Packages / GHCR 模块包 | 否 | domain agent 独立演进，按环境管理安装/更新 |
+| RCA | GitHub Packages / GHCR 模块包 | 否 | 交付物链路可能较大，不应拖慢 App 更新 |
 | WebUI Docker 镜像 | GitHub Packages container registry | 否 | 服务器/Docker 场景由镜像直接启动浏览器入口 |
 
 ## 模块体积基线
@@ -41,7 +41,7 @@
 - Native helper 预构建 workflow 会继续上传 CI artifact，同时把 tar.gz archive 推送到 GHCR。
 - `opl install` 和环境管理当前仍通过 git checkout / npm / 本地 sibling repo 做模块安装和更新；下一步才会让 `opl module install/update` 优先消费 manifest，失败时回退 git。
 
-你的理解是对的：`Packages` 适合作为 App 不变时的机器更新通道，但它不替代 `Releases` 的用户下载入口。新手用户仍从 `Releases` 下载桌面安装包；`opl install`、环境管理和 Docker 启动脚本再从 `Packages` 或 release artifact 拉取可独立更新的内核与模块。
+你的理解是对的：`Packages` 适合作为 App 不变时的机器更新通道，但它不替代 `Releases` 的用户下载入口。新手用户仍从 `one-person-lab` 的 `Releases` 下载桌面安装包；`opl install`、环境管理和 Docker 启动脚本再从 `Packages` / GHCR 拉取可独立更新的内核与模块。MAS/MDS/MAG/RCA 等 domain repo 不再提供用户安装型 GitHub Release。
 
 Manifest 的本地入口：
 
