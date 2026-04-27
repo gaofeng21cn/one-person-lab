@@ -22,6 +22,10 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   pack-native-helper:
     name: Pack native helper prebuild (${{ matrix.os }})
@@ -82,3 +86,23 @@ jobs:
           name: opl-native-helper-release-archive-${{ runner.os }}-${{ runner.arch }}
           path: dist/native-helper-prebuilds/archives/*.tar.gz
           if-no-files-found: error
+
+      - name: Setup ORAS
+        uses: oras-project/setup-oras@v1
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Push native helper archive to GHCR
+        shell: bash
+        run: |
+          set -euo pipefail
+          helper_version="$(node -e "const fs=require('fs'); const raw=fs.readFileSync('native/opl-native-helper/Cargo.toml','utf8'); console.log(raw.match(/^version\\s*=\\s*\"([^\"]+)\"/m)[1])")"
+          target_triple="$(node -p "process.platform + '-' + process.arch")"
+          archive="dist/native-helper-prebuilds/archives/opl-native-helper-${target_triple}-${helper_version}.tar.gz"
+          oras push \
+            "ghcr.io/${{ github.repository_owner }}/one-person-lab-native-helper:${target_triple}-${helper_version}" \
+            "$archive:application/vnd.onepersonlab.native-helper.v1+gzip" \
+            --annotation "org.opencontainers.image.title=one-person-lab-native-helper" \
+            --annotation "org.opencontainers.image.version=${helper_version}" \
+            --annotation "org.opencontainers.image.source=https://github.com/${{ github.repository }}"
