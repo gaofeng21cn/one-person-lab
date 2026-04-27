@@ -4,6 +4,20 @@ set -euo pipefail
 REPO_URL=${OPL_REPO_URL:-https://github.com/gaofeng21cn/one-person-lab.git}
 INSTALL_DIR=${OPL_INSTALL_DIR:-$HOME/.opl/one-person-lab}
 BRANCH=${OPL_INSTALL_BRANCH:-main}
+BOOTSTRAP_ONLY=${OPL_BOOTSTRAP_ONLY:-0}
+
+INSTALL_ARGS=()
+for arg in "$@"; do
+  case "$arg" in
+    --bootstrap-only)
+      BOOTSTRAP_ONLY=1
+      ;;
+    *)
+      INSTALL_ARGS+=("$arg")
+      ;;
+  esac
+done
+set -- "${INSTALL_ARGS[@]}"
 
 log() {
   printf '==> %s\n' "$1"
@@ -63,6 +77,11 @@ cd "$INSTALL_DIR"
 log "Installing OPL CLI"
 npm install
 npm link
+
+if [ "$BOOTSTRAP_ONLY" = "1" ]; then
+  log "OPL CLI is ready"
+  exit 0
+fi
 
 log "Running one-shot OPL setup"
 if command -v opl >/dev/null 2>&1; then

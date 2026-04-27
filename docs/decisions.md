@@ -1,5 +1,18 @@
 # OPL 关键决策
 
+## 2026-04-27
+
+### 决策：One Person Lab App 只做 CLI-backed GUI，不复制安装与环境管理逻辑
+
+原因：OPL 的可维护边界应是 CLI 提供安装、初始化、诊断、更新、模块管理与 workspace 管理等完整能力；GUI 只负责触发命令、展示状态与提供更低门槛的交互界面。这样命令行一键安装、App 首启、Docker WebUI 与后续自动修复能共享同一套行为，不形成 GUI-only 第二实现。
+
+影响：
+
+- App 首启继续通过 `opl system initialize` 读取状态，必要时通过 `opl install --skip-gui-open` 自动补齐环境
+- 设置里的环境管理继续通过 `opl doctor`、`opl install`、`opl modules`、`opl module *`、`opl engine *` 与 `opl workspace *` 完成动作
+- GUI fallback 只负责在找不到 `opl` 命令时调用 OPL 主仓安装脚本的 bootstrap-only 模式取得 CLI，然后回到 `opl ...` 命令面
+- 新增安装、修复或状态能力时，先落到 OPL CLI 与机器可读输出，再由 GUI 消费
+
 ## 2026-04-26
 
 ### 决策：首启默认走静默自动配置，减少新手选择障碍
