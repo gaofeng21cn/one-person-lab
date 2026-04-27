@@ -160,6 +160,29 @@
     "default_executor_mode": "autonomous",
     "default_model": "inherit_local_codex_default",
     "default_reasoning_effort": "inherit_local_codex_default",
+    "canonical_executor_backends": [
+      "codex_cli",
+      "hermes_agent"
+    ],
+    "compatibility_aliases": {
+      "host_agent": "codex_cli"
+    },
+    "execution_shapes": {
+      "structured_call": {
+        "summary": "single structured input/output call under a domain-owned schema",
+        "allowed_backends": [
+          "codex_cli",
+          "hermes_agent"
+        ]
+      },
+      "agent_loop": {
+        "summary": "multi-step agent run with events, tool use, repair, and review-loop proof",
+        "allowed_backends": [
+          "codex_cli",
+          "hermes_agent"
+        ]
+      }
+    },
     "executor_labels": {
       "codex_cli": "Codex CLI",
       "hermes_agent": "Hermes-Agent"
@@ -170,6 +193,8 @@
     },
     "chat_completion_only_executor_forbidden": true,
     "hermes_agent_requires_full_agent_loop": true,
+    "simple_llm_backend_forbidden": true,
+    "openai_compatible_gateway_backend_forbidden": true,
     "current_backend_chain": [
       "med_autoscience.runtime_transport.hermes -> med_autoscience.runtime_transport.med_deepscientist",
       "med_deepscientist CodexRunner -> codex exec autonomous agent loop"

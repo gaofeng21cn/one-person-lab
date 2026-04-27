@@ -22,6 +22,10 @@
 - 默认 reasoning effort / thinking：继承本机 `Codex` 默认配置
 - 默认语义：必须是能自主拆解、规划、执行、继续推进的 agent loop
 - `Hermes-Agent` 保留正式名称，当前执行路线状态写作 `experimental`
+- 家族一等 executor backend 只冻结为 `codex_cli` 与 `hermes_agent`
+- 调用形态单独写作 `execution_shape`：`structured_call` 表示 schema 约束下的一次性结构化输入输出；`agent_loop` 表示带事件、工具使用、修复和 review-loop proof 的多步 agent run
+- `host_agent` 只作为旧合同输入兼容别名映射到 `codex_cli`；新的 public contract 不再输出它
+- `simple_llm` 与 `openai_compatible_gateway` 不作为家族一等 backend；不同 provider/model 的适配继续交给 domain 仓或外部 runtime，例如 `Hermes-Agent`
 
 这里说的 `Codex CLI` 默认路线，指的是把任务交给 `autonomous` agent loop 去自主推进，而不是人工先把任务拆成固定小步骤再逐步补空。
 
@@ -80,6 +84,10 @@
 - `executor_statuses.hermes_agent = experimental`
 - `chat_completion_only_executor_forbidden = true`
 - `hermes_agent_requires_full_agent_loop = true`
+- `canonical_executor_backends = [codex_cli, hermes_agent]`
+- `execution_shapes.structured_call` 与 `execution_shapes.agent_loop` 必须分开表达
+- `simple_llm_backend_forbidden = true`
+- `openai_compatible_gateway_backend_forbidden = true`
 
 如果某个仓需要保留过渡路线，也必须显式标明它是：
 
