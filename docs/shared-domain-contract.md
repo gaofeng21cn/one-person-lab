@@ -57,7 +57,12 @@ The first objects and rules to keep aligned are:
   - top-level and cross-domain activation should target domain-agent entries only
   - `OPL` must not be rewritten as the runtime owner of domain-owned truth
 
-7. operating posture
+7. AI-first quality boundary
+   - creative authorship, scientific judgment, reviewer judgment, and deliverable-quality judgment remain domain-owned AI artifact responsibilities
+   - shared contracts, graphs, gates, indexes, scorecards, and projections may carry evidence, provenance, status, and routing signals only
+   - `OPL` must not promote a projection-only or scorecard-only signal into a domain-ready verdict
+
+8. operating posture
    - current admitted mainlines remain `Auto-only`
    - any future `Human-in-the-loop` product should reuse stable modules as a sibling or upper-layer product rather than forcing same-repository dual-mode logic
 
@@ -94,6 +99,7 @@ This contract does not:
 - unify every domain's internal object model
 - unify the content structure of every domain artifact
 - unify each domain's detailed review standard
+- own domain author/reviewer judgment, AI-first quality verdicts, or submission/publication/deliverable readiness verdicts
 - decide which concrete runtime substrate implementation must be used
 
 ## Relationship To The Shared Runtime Contract
