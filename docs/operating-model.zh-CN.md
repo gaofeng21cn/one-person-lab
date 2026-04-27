@@ -6,7 +6,7 @@
 
 `OPL` 的核心判断，不是“怎么让一个 Agent 一次性做完一个任务”，而是“怎么让一个研究型个人或极小团队，通过稳定表面持续承担正式实验室工作”。
 
-所以，`OPL` 更准确的理解是面向持续实验室工作的顶层 Gateway 与 federation model，同时承担 family-level session/runtime/projection 与 shared modules/contracts/indexes。
+所以，`OPL` 更准确的理解是面向持续实验室工作的 Codex-default session/runtime 层、显式 activation 层，以及 shared modules / contracts / indexes 的归属层。
 
 ## 顶层链路
 
@@ -14,13 +14,13 @@
 
 ```text
 Human / Agent
-  -> OPL Gateway
-      -> Domain Gateway
-          -> Domain Harness OS
-              -> Review Surfaces / Deliveries / Audit Truth
+  -> Codex-default session/runtime
+      -> explicit OPL activation
+          -> selected domain agent entry
+              -> Domain Harness OS / Review Surfaces / Deliveries / Audit Truth
 ```
 
-当前最清楚的两条映射是：
+当前最清楚的三条映射是：
 
 - `Research Foundry` -> 独立 `domain agent` `MedAutoScience`
 - `Grant Foundry` -> 独立 `domain agent` `MedAutoGrant`
@@ -46,35 +46,37 @@ Agent 主要负责：
 - 组织中间产物和正式产物
 - 把关键执行过程写回可审计表面
 
-### OPL Gateway
+### OPL Activation 与共享基础结构
 
-顶层 `OPL Gateway` 负责：
+顶层 `OPL` 层负责：
 
 - 表达顶层任务语义
-- 把任务路由到正确的 domain surface
+- 只在显式请求时把任务 activation 到正确的 domain surface
 - 定义跨 domain 的共享基础结构要求
 - 拥有 shared-foundation 的顶层控制语言，但不接管各 domain 的 canonical truth
 - 让跨 domain 的身份、治理与交付语言保持一致
+- 维护 family-level shared modules、contracts 与 indexes
 
 当前仓库承担的是这个角色的文档优先公开说明面。
 
-### Domain Agent、Gateway 与 Harness
+### Domain Agent、Entry 与 Harness
 
 每个独立 `domain agent` 仓应保持三层分开：
 
 - `domain agent` 作为仓库对外公开主语
-- `domain gateway` 作为该工作流的稳定边界入口
+- domain-owned entry surface 作为该工作流的稳定边界入口
 - `Domain Harness OS` 作为该工作流的执行、记录、治理与交付底座
 
 例如：
 
-- `MedAutoScience` 是 `Research Foundry` 的独立 domain agent，其内部继续持有 domain gateway 与 harness
-- `RedCube AI` 是视觉交付的独立 domain agent，其内部继续持有 domain gateway 与 harness
+- `MedAutoScience` 是 `Research Foundry` 的独立 domain agent，其内部继续持有 domain entry、runtime truth 与 harness
+- `RedCube AI` 是视觉交付的独立 domain agent，其内部继续持有 domain entry、runtime truth 与 harness
 
 ## Agent-first 执行
 
 `OPL` 默认采用 `Agent-first` 执行。
-各个 domain 可以选择自己的模型接口，但主流程的默认驱动者是 Agent runtime：由 Agent 负责读状态、调用工具和 gateway、组织中间产物、推进 gate，并把关键痕迹写回可审计表面。
+各个 domain 可以选择自己的模型接口，但 `OPL` 层的默认 executor 路径是 `Codex CLI`。
+主流程驱动者负责读状态、调用稳定的 domain-owned 工具、组织中间产物、推进 gate，并把关键痕迹写回可审计表面。
 
 在这个模型里，代码的主要职责是提供：
 
@@ -99,20 +101,21 @@ Agent 主要负责：
 这里的关键区别在于分层方式：未来更高判断密度的上层产品，建立在当前 `Auto-only` 主线之上，并复用同一套稳定 contract、对象语义、审计面与执行模块。
 `OPL` 现在冻结的是这种分层规则，并保持当前主线定义清楚。
 
-## 产品入口与在线运行层
+## 产品入口与 Runtime Manager
 
-当前 repo-tracked 的 formal entry，仍然是本地 `TypeScript CLI`-first / gateway contract baseline。
-这是真实的当前入口，但它不应被理解成未来产品永远只能通过 `Codex` 接入。
+当前 repo-tracked 的 formal entry，是通过 `opl`、`opl exec` 与 `opl resume` 暴露的 `Codex CLI` default 路径。
+这是当前真实默认入口，同时显式 activation 仍可以选择 domain agent 或非默认 runtime。
 
 更合理的长期方向是：
 
-- 当前继续以本地 `CLI-first` 作为 formal entry
+- 当前继续以 `Codex CLI` 作为 formal executor
 - `MCP` 继续作为 supported protocol layer
-- 后续逐步补齐 domain 自己的产品入口，例如本地产品 CLI、future `Web / API / gateway` 入口
+- domain-owned product entry surface 继续作为 domain workflow、runtime truth 与 delivery truth 的 ownership 边界
+- `OPL Runtime Manager` 只作为 external `Hermes-Agent` 之上的 product-managed 薄 adapter
 
 在这条演进线上：
 
-- 顶层 `OPL` 继续定义产品体系与 federation 语言
+- 顶层 `OPL` 继续定义产品体系、显式 activation 语义与 shared indexes
 - `UHS` 继续作为共享 Harness Engineering 上位语言
 - `Shared Runtime Contract` 逐步承接长期在线运行所需的共享合同
 - `Shared Domain Contract` 逐步承接 formal entry、运行身份、报告面、审计面与 gate 语义这类跨 domain 正式行为合同
@@ -121,8 +124,9 @@ Agent 主要负责：
 因此，未来更像是“多个垂类在线 agent 产品复用同一 substrate”，而不是“一个顶层巨型 runtime 吞掉所有 domain”。
 这条方向当前还没有全部实现，但现在应该按这个结构推进。
 
-如果未来采用上游 `Hermes-Agent` 作为 runtime substrate，它也更准确地属于 `Shared Runtime Contract` 的实现层，而不是 `UHS`、`OPL` 或 domain truth 的同义词。
-截至当前，`Med Auto Grant` 已经落地真实上游 `Hermes-Agent` runtime substrate；`Med Auto Science` 与 `RedCube AI` 继续分别处在更早的 cutover / proof 阶段。
+`Hermes-Agent` 是上游外部 runtime project / service。
+`OPL Runtime Manager` 可以在它之上适配 product-managed runtime operations，但不能写成 scheduler、session store、memory owner、domain truth owner 或 concrete executor owner。
+Rust native helper / index-only 工作可以支持 native assistance 与 indexed discovery，但不能成为 domain execution 或 truth 的 owner。
 
 ## 运行原则
 
@@ -130,7 +134,7 @@ Agent 主要负责：
 
 - 先读状态，再做变更
 - 关键动作必须留下可审计结果
-- 优先走稳定 gateway，而不是临时旁路
+- 优先走稳定 domain-owned entry contract，而不是临时旁路
 - 优先复用共享资产，而不是复制上下文
 - 保留 domain 边界，而不是把一切压成一个 runtime
 - 让人类停留在审核与决策面，而不是盯底层执行细节
@@ -141,12 +145,12 @@ Agent 主要负责：
 
 - 实验室顶层产品与控制语言
 - 跨 domain 语义最先冻结的地方
-- 独立 domain agent 仓之上的 federation 层
-- 连接各个 domain-owned runtime、但不吞并其身份的 gateway surface
+- 独立 domain agent 仓之上的显式 activation 层
+- 连接各个 domain-owned runtime、但不吞并其身份的 shared modules / contracts / indexes owner
 
-## 为什么 Domain Gateway 仍然必须保留
+## 为什么 Domain Entry 仍然必须保留
 
-即使存在 `OPL Gateway`，domain gateway 仍然必须保留，因为它们提供：
+即使存在共享 `OPL` activation，domain-owned entry 仍然必须保留，因为它们提供：
 
 - 独立使用的稳定入口
 - domain-specific 的校验、治理与交付合同
@@ -155,8 +159,8 @@ Agent 主要负责：
 
 所以正确方向是：
 
-- `OPL Gateway` 在上层
-- 显式而精简的 domain gateway 在中层
+- Codex-default `OPL` runtime 加显式 activation 在 domain 之上
+- 显式而精简的 domain-owned entry 在中层
 - 明确的 domain harness 在下层
 
 ## 延伸阅读

@@ -10,6 +10,7 @@ The current mainline is:
 
 - `Codex-default session/runtime`
 - `explicit activation layer`
+- `shared modules / contracts / indexes`
 - `family domain skill sync / discovery`
 
 `OPL` no longer treats the older gateway/federation corpus as its default public integration contract.
@@ -32,6 +33,7 @@ These documents define the current `OPL` mainline:
 - [Contracts Overview](../contracts/README.md)
 
 These surfaces explain the default entry (`opl`, `opl exec`, `opl resume`), the current resource model (`workspaces / sessions / progress / artifacts`), and the rule that explicit activation or runtime switching is opt-in.
+They also keep `OPL Runtime Manager` scoped as a thin product-managed adapter over external `Hermes-Agent`, with Rust native helper / index work limited to native assistance and indexed discovery.
 
 ### 2. Linked domain capability surfaces
 
@@ -92,7 +94,7 @@ Read this index as a **runtime/activation map**.
 
 This surface index is acceptable only when:
 
-- it makes the current `Codex-default runtime + activation + skill sync` mainline obvious
+- it makes the current `Codex-default runtime + activation + shared modules/contracts/indexes + skill sync` mainline obvious
 - it distinguishes OPL-owned runtime/activation surfaces from repo-owned domain capability surfaces
 - it clearly marks legacy gateway/federation material as reference or compatibility content
 - it keeps domain runtime truth, progress truth, and artifact truth owned by the corresponding domain repositories
