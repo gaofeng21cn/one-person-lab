@@ -9,6 +9,7 @@
 - `OPL Runtime Manager` 只能是产品级薄管理/投影层，不得被写成 scheduler、session store、memory store、domain truth owner 或 concrete executor。
 - `Hermes-Agent` 继续是外部 runtime substrate owner；OPL 可以管理、pin、诊断和投影它，但不得 fork/vendor 成 OPL 私有 runtime kernel。
 - `OPL native helper` 与高频状态索引只能加速系统探测、artifact discovery、session/progress/artifact projection，不得替代 admitted domain 仓自己的 durable truth。
+- `OPL` 的 shared contract、graph、gate、index、scorecard 与 projection 只能携带证据、provenance、状态和路由信号；不得替 MAS/MAG/RCA 或未来 domain 持有 AI-first 作者判断、审稿判断、质量裁决或 ready verdict。
 - `OPL` 不持有领域运行时所有权。
 - `OPL` 不替代各个领域仓的智能体逻辑。
 

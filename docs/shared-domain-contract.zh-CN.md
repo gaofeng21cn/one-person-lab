@@ -56,7 +56,12 @@
    - 顶层与跨域 activation 只能指向 domain-agent entry
    - 不允许把 `OPL` 直接写成 domain-owned truth 的 runtime owner
 
-7. operating posture
+7. AI-first 质量边界
+   - 创作判断、科学判断、审稿判断与交付质量判断继续由各 domain 拥有的 AI artifact 持有
+   - shared contract、graph、gate、index、scorecard 与 projection 只能携带证据、provenance、状态与路由信号
+   - `OPL` 不能把 projection-only 或 scorecard-only 信号提升成 domain-ready verdict
+
+8. operating posture
    - 当前 admitted mainline 统一按 `Auto-only` 理解
    - future `Human-in-the-loop` 产品应作为 sibling 或 upper-layer product 复用稳定模块，而不是把当前仓改成同仓双模
 
@@ -93,6 +98,7 @@
 - 统一各 domain 的内部对象模型
 - 统一各 domain 的 artifact 内容结构
 - 统一各 domain 的具体评审标准
+- 持有 domain 的作者 / reviewer 判断、AI-first 质量裁决，或投稿 / 发表 / 交付 ready 裁决
 - 决定 runtime substrate 用哪一个具体实现
 
 ## 与 Shared Runtime Contract 的关系
