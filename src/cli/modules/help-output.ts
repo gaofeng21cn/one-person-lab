@@ -31,6 +31,7 @@ const COMMAND_GROUP_SUMMARIES: Record<string, string> = {
   system: '查看与维护 OPL 的系统状态、初始化和更新通道。',
   engine: '安装、更新与维护执行引擎。',
   module: '安装、更新与维护领域模块。',
+  package: '查看 OPL release / Packages 的机器消费 manifest。',
   workspace: '管理项目与 workspace 绑定。',
   domain: '解析域边界、域入口和域 manifest。',
   contract: '读取或验证 machine-readable contract / handoff surface。',

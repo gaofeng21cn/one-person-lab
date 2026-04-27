@@ -2,6 +2,28 @@
 
 ## 2026-04-27
 
+### 决策：App 更新按 OPL 日期版本判断，GUI 基线版本只作为内部兼容信息
+
+原因：用户下载和检查更新时看到的是 One Person Lab 版本，而不是 AionUI upstream package 版本。GUI 继续跟随 AionUI 大版本演进，但自动更新、Release tag、安装包文件名和环境管理里的最新版本判断都应使用 OPL 日期版本。
+
+影响：
+
+- `opl-aion-shell` 打包时把 Electron updater 元数据写成 `OPL_RELEASE_VERSION`
+- App 关于页继续单独展示 OPL 版本与 GUI 基线版本
+- GUI package.json 的 upstream/AionUI 基线版本不再决定 One Person Lab 自动更新顺序
+
+### 决策：Packages 作为机器消费通道，Releases 继续作为用户下载通道
+
+原因：桌面 App、Docker WebUI、native helper 和 domain modules 的更新节奏不同。把所有东西塞进 App release 会拖慢发布和回滚；只用 git repo 又缺少固定版本、校验和与机器可读更新面。
+
+影响：
+
+- `opl packages manifest` 成为 Packages 坐标的机器可读入口
+- 模块源码归档和 release manifest 通过 GHCR 发布，git repo 保留为 fallback
+- WebUI Docker 镜像通过 GHCR 发布，服务 Docker/浏览器-only 场景
+- Native helper 预构建 archive 同步发布到 GHCR，后续 `native:repair` 可优先消费
+- `MAS/MDS/MAG/RCA` 仍不打进默认桌面 App；环境管理负责安装、更新和修复
+
 ### 决策：One Person Lab App 只做 CLI-backed GUI，不复制安装与环境管理逻辑
 
 原因：OPL 的可维护边界应是 CLI 提供安装、初始化、诊断、更新、模块管理与 workspace 管理等完整能力；GUI 只负责触发命令、展示状态与提供更低门槛的交互界面。这样命令行一键安装、App 首启、Docker WebUI 与后续自动修复能共享同一套行为，不形成 GUI-only 第二实现。

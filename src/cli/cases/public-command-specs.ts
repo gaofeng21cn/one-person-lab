@@ -1,5 +1,6 @@
 import { GatewayContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkstreamOrThrow } from '../../contracts.ts';
 import { buildFrontDeskEnvironment, buildFrontDeskInitialize, buildFrontDeskModules, runFrontDeskEngineAction, runFrontDeskModuleAction, runFrontDeskSystemAction, runFrontDeskTurnkeyInstall } from '../../frontdesk-installation.ts';
+import { buildOplPackageManifest } from '../../package-distribution.ts';
 import type { GatewayContracts } from '../../types.ts';
 import { assertNoArgs, buildCommandHelp, buildPublicEngineActionPayload, buildPublicModuleActionPayload, buildPublicModulesPayload, buildPublicSystemActionPayload, buildPublicSystemInitializePayload, buildPublicSystemPayload, buildPublicTurnkeyInstallPayload, buildRootHelp, buildUsageError, cloneCommandSpec, parseFrontDeskEngineArgs, parseFrontDeskModuleArgs, parseTurnkeyInstallArgs, parseUpdateChannelArgs, printJson, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
@@ -130,6 +131,19 @@ export function buildPublicCommandSpecs(
     () => buildPublicModulesPayload(buildFrontDeskModules()),
   );
 
+  const packagesManifestSpec = buildNoArgSpec(
+    {
+      usage: 'opl packages manifest',
+      summary: 'Show the machine-readable OPL Packages manifest for GUI, Docker, native helper, and domain modules.',
+      examples: ['opl packages manifest'],
+      group: 'package',
+    },
+    () => ({
+      version: 'g2',
+      packages_manifest: buildOplPackageManifest(),
+    }),
+  );
+
   const moduleInstallSpec = buildModuleActionSpec(
     'install',
     'opl module install --module <module_id>',
@@ -197,6 +211,7 @@ export function buildPublicCommandSpecs(
       },
     },
     install: installSpec,
+    'packages manifest': packagesManifestSpec,
     doctor: cloneCommandSpec(commandSpecs.doctor, { group: 'top_level' }),
     start: cloneCommandSpec(commandSpecs.start, { group: 'top_level' }),
     'skill list': cloneCommandSpec(commandSpecs['skill-list'], {

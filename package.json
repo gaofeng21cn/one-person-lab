@@ -50,6 +50,7 @@
     "native:test": "cargo test --workspace",
     "native:family-smoke": "node ./scripts/native-helper-family-smoke.mjs",
     "family:shared-release": "node ./scripts/family-shared-release.mjs",
+    "packages:manifest": "node --experimental-strip-types ./scripts/package-module-archives.mjs",
     "lint": "node ./scripts/lint.mjs && node ./scripts/line-budget.mjs",
     "test:fast": "NODE_NO_WARNINGS=1 node --experimental-strip-types --test tests/src/cli.test.ts tests/src/cli-codex-default-shell.test.ts tests/src/frontdesk-paths.test.ts tests/src/family-domain-catalog.test.ts tests/src/family-entry-contracts.test.ts tests/src/family-executor-adapter-contract.test.ts tests/src/product-entry-companions.test.ts tests/src/product-entry-program-companions.test.ts tests/src/family-orchestration.test.ts tests/src/runtime-task-companions.test.ts tests/src/skill-catalog.test.ts tests/src/automation-companions.test.ts",
     "test:meta": "NODE_NO_WARNINGS=1 node --experimental-strip-types --test tests/src/verification-command-surfaces.test.ts tests/src/family-shared-release-discipline.test.ts tests/src/family-shared-release.test.ts tests/src/native-helper-family-smoke.test.ts tests/src/native-helper-prebuild.test.ts",

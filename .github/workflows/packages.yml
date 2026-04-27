@@ -1,0 +1,127 @@
+name: Publish OPL Packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      opl_version:
+        description: OPL version to publish, for example 26.4.27
+        required: true
+        type: string
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  module-packages:
+    name: Publish module source archives
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout OPL
+        uses: actions/checkout@v4
+
+      - name: Resolve OPL version
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "${{ inputs.opl_version }}" ]; then
+            version="${{ inputs.opl_version }}"
+          else
+            version="${GITHUB_REF_NAME#v}"
+          fi
+          echo "OPL_RELEASE_VERSION=$version" >> "$GITHUB_ENV"
+          echo "OPL_PACKAGES_OWNER=${{ github.repository_owner }}" >> "$GITHUB_ENV"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build module archives and release manifest
+        run: npm run packages:manifest -- --version "$OPL_RELEASE_VERSION" --owner "$OPL_PACKAGES_OWNER" --out-dir dist/opl-packages
+
+      - name: Upload package manifest artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: opl-release-manifest-${{ env.OPL_RELEASE_VERSION }}
+          path: dist/opl-packages
+          if-no-files-found: error
+
+      - name: Setup ORAS
+        uses: oras-project/setup-oras@v1
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Push module archives to GHCR
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          for archive in dist/opl-packages/modules/*.tar.gz; do
+            base="$(basename "$archive")"
+            module="${base%-${OPL_RELEASE_VERSION}.tar.gz}"
+            oras push \
+              "ghcr.io/${OPL_PACKAGES_OWNER}/one-person-lab-modules/${module}:${OPL_RELEASE_VERSION}" \
+              "$archive:application/vnd.onepersonlab.module.source.v1+gzip" \
+              --annotation "org.opencontainers.image.title=${module}" \
+              --annotation "org.opencontainers.image.version=${OPL_RELEASE_VERSION}" \
+              --annotation "org.opencontainers.image.source=https://github.com/${{ github.repository }}"
+          done
+
+      - name: Push release manifest to GHCR
+        run: |
+          oras push \
+            "ghcr.io/${OPL_PACKAGES_OWNER}/one-person-lab-manifest:${OPL_RELEASE_VERSION}" \
+            "dist/opl-packages/opl-release-manifest.json:application/vnd.onepersonlab.release.manifest.v1+json" \
+            --annotation "org.opencontainers.image.title=one-person-lab-manifest" \
+            --annotation "org.opencontainers.image.version=${OPL_RELEASE_VERSION}" \
+            --annotation "org.opencontainers.image.source=https://github.com/${{ github.repository }}"
+
+  webui-image:
+    name: Publish WebUI Docker image
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Resolve OPL version
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "${{ inputs.opl_version }}" ]; then
+            version="${{ inputs.opl_version }}"
+          else
+            version="${GITHUB_REF_NAME#v}"
+          fi
+          echo "OPL_RELEASE_VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push WebUI image
+        uses: docker/build-push-action@v6
+        with:
+          context: https://github.com/gaofeng21cn/opl-aion-shell.git#main
+          push: true
+          build-args: |
+            VITE_OPL_DEFAULT_LANGUAGE=zh-CN
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/one-person-lab-webui:${{ env.OPL_RELEASE_VERSION }}
+            ghcr.io/${{ github.repository_owner }}/one-person-lab-webui:latest
