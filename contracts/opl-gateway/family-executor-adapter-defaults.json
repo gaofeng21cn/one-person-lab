@@ -41,6 +41,50 @@
       ]
     }
   },
+  "layered_executor_semantics": {
+    "user_interaction_shell": {
+      "owner": "opl_or_domain_frontdoor",
+      "scope": "user-facing natural-language or session shell",
+      "selects_effective_default_executor": false,
+      "holds_domain_truth": false
+    },
+    "effective_default_executor": {
+      "owner": "opl_family_runtime_config",
+      "scope": "family-level default executor resolution",
+      "default_backend": "codex_cli",
+      "concrete_executor_implementation_owned_here": false,
+      "domain_truth_owned_here": false
+    },
+    "route_level_structured_call_routing": {
+      "owner": "domain_route_contract",
+      "scope": "domain-owned schema and route-level structured_call selection",
+      "execution_shape": "structured_call",
+      "may_accept_request_explicit_executor": true
+    }
+  },
+  "effective_default_executor_resolution": [
+    {
+      "priority": 1,
+      "source": "request_explicit_executor",
+      "summary": "A request-scoped explicit executor wins when present."
+    },
+    {
+      "priority": 2,
+      "source": "opl_runtime_manager_or_handoff_default_executor",
+      "summary": "An OPL Runtime Manager or handoff-level default executor wins when no request explicit executor is present."
+    },
+    {
+      "priority": 3,
+      "source": "domain_local_user_config",
+      "summary": "Domain-local user config applies when no request or OPL handoff default is present."
+    },
+    {
+      "priority": 4,
+      "source": "domain_built_in_default_codex_cli",
+      "executor": "codex_cli",
+      "summary": "The domain built-in default remains Codex CLI."
+    }
+  ],
   "executor_labels": {
     "codex_cli": "Codex CLI",
     "hermes_agent": "Hermes-Agent"
@@ -54,10 +98,46 @@
     "hermes_agent_requires_full_agent_loop": true,
     "simple_llm_backend_forbidden": true,
     "openai_compatible_gateway_backend_forbidden": true,
+    "domain_repo_provider_catalog_forbidden": true,
     "migration_bridge_label_required_for_non_default_routes": true,
     "experimental_label_required_for_non_default_routes": true,
     "regression_oracle_label_required_for_non_default_routes": true,
     "domain_runtime_authority_stays_domain_owned": true
+  },
+  "ownership_boundaries": {
+    "opl_owns": [
+      "family_level_user_runtime_config",
+      "effective_default_executor_semantics"
+    ],
+    "opl_does_not_own": [
+      "redcube_domain_truth",
+      "domain_artifact_truth",
+      "concrete_executor_implementation",
+      "provider_catalog"
+    ],
+    "domain_truth_stays_domain_owned": true,
+    "concrete_executor_implementation_stays_runtime_or_domain_owned": true
+  },
+  "standalone_domain_behavior": {
+    "without_opl_config": "use_domain_defaults",
+    "domain_default_executor": "codex_cli",
+    "opl_config_required_for_family_override": true
+  },
+  "runtime_profile_catalog_boundary": {
+    "catalog_owner": "opl_runtime_manager_or_hermes_agent_config_reference",
+    "domain_repo_provider_catalog_forbidden": true,
+    "forbidden_domain_repo_fields": [
+      "provider",
+      "base_url",
+      "api_key",
+      "model_list"
+    ]
+  },
+  "configuration_examples": {
+    "activation_status": "example_only_not_default_active",
+    "default_active_backend": "codex_cli",
+    "sample_non_default_backend": "hermes_agent",
+    "activation_requires": "explicit_request_or_runtime_manager_handoff_config"
   },
   "topology_split": {
     "opl_role": "top_level_gateway_and_federation_contract",

@@ -29,6 +29,33 @@
 
 这里说的 `Codex CLI` 默认路线，指的是把任务交给 `autonomous` agent loop 去自主推进，而不是人工先把任务拆成固定小步骤再逐步补空。
 
+## Layered Executor 语义
+
+当前共享合同把 executor 配置拆成三层，不再把用户入口、默认执行器和 route 级结构化调用揉成一层：
+
+- `user_interaction_shell`：用户可见的自然语言 / session 外壳，可以由 `OPL` frontdoor 或 domain frontdoor 承担；这一层不选择 effective default executor，也不持有 domain truth。
+- `effective_default_executor`：family-level 默认执行器解析语义，归 `OPL` family runtime config / handoff default 管；默认 backend 仍是 `codex_cli`，这一层不持有 `RedCube AI` 等 domain truth，也不持有具体 executor 实现。
+- `route_level_structured_call_routing`：domain 自己的 schema、route 和 structured call 选择；它可以接收 request-scoped explicit executor，但 route truth 和 domain truth 仍归 domain 仓。
+
+Effective default executor 的解析顺序固定为：
+
+1. `request_explicit_executor`
+2. `opl_runtime_manager_or_handoff_default_executor`
+3. `domain_local_user_config`
+4. `domain_built_in_default_codex_cli`
+
+这意味着顶层 `OPL` 可以传递 family-level user/runtime config 或 handoff default executor，但不能把 domain local config、domain built-in default、domain route truth 或 concrete executor implementation 收到 `OPL` 仓。
+
+## Standalone Domain 行为
+
+如果没有 `OPL` config 或 handoff default，`RCA`、`MAS`、`MAG` 等 domain 必须按自己的 domain defaults 独立运行。当前 family contract 只要求这些 defaults 与家族默认字段可对齐；它不要求 standalone domain 依赖 `OPL` 才能选择执行器。
+
+## 配置示例边界
+
+可以保留 `Hermes-Agent` 等非默认 backend 的配置示例，但示例必须标记为 `example_only_not_default_active`。默认激活 backend 仍是 `codex_cli`；非默认 backend 只有在 request explicit executor 或 `OPL Runtime Manager` / handoff default executor 显式配置时才生效。
+
+`Hermes` runtime / profile catalog 属于 `OPL Runtime Manager` 或 `Hermes-Agent` 配置引用层。`provider`、`base_url`、API key、model list 这类 provider catalog 不写入 domain repo，也不写成 domain-owned executor truth。
+
 ## Machine-Readable Mirror
 
 这组默认值现在不再只停留在参考文档中，也已经同步冻结到：
