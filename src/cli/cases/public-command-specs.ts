@@ -2,7 +2,7 @@ import { GatewayContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkst
 import { buildFrontDeskEnvironment, buildFrontDeskInitialize, buildFrontDeskModules, runFrontDeskEngineAction, runFrontDeskModuleAction, runFrontDeskSystemAction, runFrontDeskTurnkeyInstall } from '../../frontdesk-installation.ts';
 import { buildOplPackageManifest } from '../../package-distribution.ts';
 import type { GatewayContracts } from '../../types.ts';
-import { assertNoArgs, buildCommandHelp, buildPublicEngineActionPayload, buildPublicModuleActionPayload, buildPublicModulesPayload, buildPublicSystemActionPayload, buildPublicSystemInitializePayload, buildPublicSystemPayload, buildPublicTurnkeyInstallPayload, buildRootHelp, buildUsageError, cloneCommandSpec, parseFrontDeskEngineArgs, parseFrontDeskModuleArgs, parseTurnkeyInstallArgs, parseUpdateChannelArgs, printJson, withContractsContext } from '../modules/support.ts';
+import { assertNoArgs, buildCommandHelp, buildPublicEngineActionPayload, buildPublicModuleActionPayload, buildPublicModulesPayload, buildPublicSystemActionPayload, buildPublicSystemInitializePayload, buildPublicSystemPayload, buildPublicTurnkeyInstallPayload, buildRetiredCommandError, buildRootHelp, buildUsageError, cloneCommandSpec, parseFrontDeskEngineArgs, parseFrontDeskModuleArgs, parseTurnkeyInstallArgs, parseUpdateChannelArgs, printJson, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
 
 export function buildPublicCommandSpecs(
@@ -59,6 +59,23 @@ export function buildPublicCommandSpecs(
             parseFrontDeskEngineArgs(args, spec).engineId!,
           ),
         ),
+    };
+    return spec;
+  };
+
+  const buildRetiredFrontDeskAliasSpec = (
+    command: string,
+    replacement: string,
+    examples: string[],
+  ): CommandSpec => {
+    const spec: CommandSpec = {
+      usage: `opl ${command}`,
+      summary: 'Retired historical frontdesk compatibility command.',
+      examples,
+      group: 'legacy',
+      handler: () => {
+        throw buildRetiredCommandError(`opl ${command}`, replacement, spec);
+      },
     };
     return spec;
   };
@@ -236,6 +253,91 @@ export function buildPublicCommandSpecs(
     chat: cloneCommandSpec(commandSpecs.chat, { group: 'legacy' }),
     shell: cloneCommandSpec(commandSpecs.shell, { group: 'legacy' }),
     web: cloneCommandSpec(commandSpecs.web, { group: 'legacy' }),
+    'frontdesk environment': buildRetiredFrontDeskAliasSpec(
+      'frontdesk environment',
+      'Use `opl system` for the current Codex-default system surface.',
+      ['opl frontdesk environment'],
+    ),
+    'frontdesk initialize': buildRetiredFrontDeskAliasSpec(
+      'frontdesk initialize',
+      'Use `opl system initialize` for the current first-run setup surface.',
+      ['opl frontdesk initialize'],
+    ),
+    'frontdesk repair': buildRetiredFrontDeskAliasSpec(
+      'frontdesk repair',
+      'Use `opl system repair` for the current system repair surface.',
+      ['opl frontdesk repair'],
+    ),
+    'frontdesk modules': buildRetiredFrontDeskAliasSpec(
+      'frontdesk modules',
+      'Use `opl modules` for the current module inventory surface.',
+      ['opl frontdesk modules'],
+    ),
+    'frontdesk module install': buildRetiredFrontDeskAliasSpec(
+      'frontdesk module install --module <module_id>',
+      'Use `opl module install --module <module_id>` for current module installation.',
+      ['opl frontdesk module install --module medautoscience'],
+    ),
+    'frontdesk module update': buildRetiredFrontDeskAliasSpec(
+      'frontdesk module update --module <module_id>',
+      'Use `opl module update --module <module_id>` for current module updates.',
+      ['opl frontdesk module update --module medautoscience'],
+    ),
+    'frontdesk module reinstall': buildRetiredFrontDeskAliasSpec(
+      'frontdesk module reinstall --module <module_id>',
+      'Use `opl module reinstall --module <module_id>` for current module reinstalls.',
+      ['opl frontdesk module reinstall --module medautoscience'],
+    ),
+    'frontdesk module remove': buildRetiredFrontDeskAliasSpec(
+      'frontdesk module remove --module <module_id>',
+      'Use `opl module remove --module <module_id>` for current module removal.',
+      ['opl frontdesk module remove --module medautoscience'],
+    ),
+    'frontdesk engine install': buildRetiredFrontDeskAliasSpec(
+      'frontdesk engine install --engine <codex|hermes>',
+      'Use `opl engine install --engine <codex|hermes>` for current engine installation.',
+      ['opl frontdesk engine install --engine codex'],
+    ),
+    'frontdesk engine update': buildRetiredFrontDeskAliasSpec(
+      'frontdesk engine update --engine <codex|hermes>',
+      'Use `opl engine update --engine <codex|hermes>` for current engine updates.',
+      ['opl frontdesk engine update --engine codex'],
+    ),
+    'frontdesk engine reinstall': buildRetiredFrontDeskAliasSpec(
+      'frontdesk engine reinstall --engine <codex|hermes>',
+      'Use `opl engine reinstall --engine <codex|hermes>` for current engine reinstalls.',
+      ['opl frontdesk engine reinstall --engine codex'],
+    ),
+    'frontdesk engine remove': buildRetiredFrontDeskAliasSpec(
+      'frontdesk engine remove --engine <codex|hermes>',
+      'Use `opl engine remove --engine <codex|hermes>` for current engine removal.',
+      ['opl frontdesk engine remove --engine hermes'],
+    ),
+    'frontdesk readiness': buildRetiredFrontDeskAliasSpec(
+      'frontdesk readiness',
+      'Use `opl status dashboard` and domain-owned product-entry readiness surfaces.',
+      ['opl frontdesk readiness'],
+    ),
+    'frontdesk entry-guide': buildRetiredFrontDeskAliasSpec(
+      'frontdesk entry-guide',
+      'Use `opl start --project <project_id>` or `opl domain manifests` for current domain entry guidance.',
+      ['opl frontdesk entry-guide'],
+    ),
+    'frontdesk domain-wiring': buildRetiredFrontDeskAliasSpec(
+      'frontdesk domain-wiring',
+      'Use `opl workspace list`, `opl domain manifests`, and `opl domain launch` for current domain wiring.',
+      ['opl frontdesk domain-wiring'],
+    ),
+    'frontdesk hosted-bundle': buildRetiredFrontDeskAliasSpec(
+      'frontdesk hosted-bundle',
+      'Use the OPL ACP runtime surface and the opl-aion-shell AionUI adapter instead.',
+      ['opl frontdesk hosted-bundle'],
+    ),
+    'frontdesk hosted-package': buildRetiredFrontDeskAliasSpec(
+      'frontdesk hosted-package',
+      'Use the OPL release package surfaces and the opl-aion-shell AionUI adapter instead.',
+      ['opl frontdesk hosted-package'],
+    ),
     'status workspace': cloneCommandSpec(commandSpecs['status workspace'], {
       usage: 'opl status workspace [--path <workspace_path>]',
       examples: ['opl status workspace', 'opl status workspace --path /Users/gaofeng/workspace/redcube-ai'],
