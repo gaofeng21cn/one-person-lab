@@ -1,4 +1,3 @@
-import { buildFrontDeskEnvironment, buildFrontDeskInitialize, buildFrontDeskModules, runFrontDeskEngineAction, runFrontDeskModuleAction, runFrontDeskSystemAction, runFrontDeskTurnkeyInstall } from '../../system-installation.ts';
 import type { GatewayContracts, GatewayContractsLoadOptions } from '../../types.ts';
 import type { CommandHandler, CommandSpec, ParsedCliInput } from './types.ts';
 import { buildUsageError } from './runtime-helpers.ts';
@@ -243,138 +242,6 @@ function withContractsContext<T extends Record<string, unknown>>(
   };
 }
 
-function buildPublicSystemPayload(
-  payload: Awaited<ReturnType<typeof buildFrontDeskEnvironment>>,
-) {
-  return {
-    version: payload.version,
-    system: buildPublicSystemFromFrontDeskEnvironment(payload.frontdesk_environment),
-  };
-}
-
-function buildPublicSystemFromFrontDeskEnvironment(
-  environment: Awaited<ReturnType<typeof buildFrontDeskEnvironment>>['frontdesk_environment'],
-) {
-  return {
-    surface_id: 'opl_system',
-    overall_status: environment.overall_status,
-    core_engines: environment.core_engines,
-    native_helpers: environment.native_helpers,
-    module_summary: environment.module_summary,
-    gui_shell: environment.gui_shell,
-    managed_paths: environment.managed_paths,
-    notes: environment.notes,
-  };
-}
-
-function buildPublicSystemInitializePayload(
-  payload: Awaited<ReturnType<typeof buildFrontDeskInitialize>>,
-) {
-  const domainModules = payload.frontdesk_initialize.domain_modules;
-  return {
-    version: payload.version,
-    system_initialize: {
-      surface_id: 'opl_system_initialize',
-      overall_state: payload.frontdesk_initialize.overall_state,
-      setup_flow: payload.frontdesk_initialize.setup_flow,
-      module_summary: payload.frontdesk_initialize.module_summary,
-      checklist: payload.frontdesk_initialize.checklist,
-      core_engines: payload.frontdesk_initialize.core_engines,
-      native_helpers: payload.frontdesk_initialize.native_helpers,
-      domain_modules: {
-        surface_id: 'opl_modules',
-        modules_root: domainModules.modules_root,
-        summary: domainModules.summary,
-        modules: domainModules.modules,
-        notes: domainModules.notes,
-      },
-      recommended_skills: payload.frontdesk_initialize.recommended_skills,
-      gui_shell: payload.frontdesk_initialize.gui_shell,
-      settings: {
-        ...payload.frontdesk_initialize.settings,
-      },
-      workspace_root: {
-        ...payload.frontdesk_initialize.workspace_root,
-      },
-      system: {
-        update_channel: payload.frontdesk_initialize.system.update_channel,
-        gui_shell: payload.frontdesk_initialize.system.gui_shell,
-        actions: payload.frontdesk_initialize.system.actions.map((entry) => ({
-          ...entry,
-        })),
-      },
-      recommended_next_action: payload.frontdesk_initialize.recommended_next_action,
-      endpoints: payload.frontdesk_initialize.endpoints,
-      notes: payload.frontdesk_initialize.notes,
-    },
-  };
-}
-
-function buildPublicTurnkeyInstallPayload(
-  payload: Awaited<ReturnType<typeof runFrontDeskTurnkeyInstall>>,
-) {
-  return {
-    version: payload.version,
-    install: {
-      ...payload.frontdesk_turnkey_install,
-    },
-  };
-}
-
-function buildPublicModulesPayload(
-  payload: ReturnType<typeof buildFrontDeskModules>,
-) {
-  return {
-    version: payload.version,
-    modules: {
-      surface_id: 'opl_modules',
-      modules_root: payload.frontdesk_modules.modules_root,
-      summary: payload.frontdesk_modules.summary,
-      items: payload.frontdesk_modules.modules,
-      notes: payload.frontdesk_modules.notes,
-    },
-  };
-}
-
-function buildPublicModuleActionPayload(
-  payload: ReturnType<typeof runFrontDeskModuleAction>,
-) {
-  return {
-    version: payload.version,
-    module_action: {
-      surface_id: 'opl_module_action',
-      ...payload.frontdesk_module_action,
-    },
-  };
-}
-
-function buildPublicEngineActionPayload(
-  payload: Awaited<ReturnType<typeof runFrontDeskEngineAction>>,
-) {
-  const { frontdesk_environment: environment, ...action } = payload.frontdesk_engine_action;
-
-  return {
-    version: payload.version,
-    engine_action: {
-      surface_id: 'opl_engine_action',
-      ...action,
-      system: buildPublicSystemFromFrontDeskEnvironment(environment),
-    },
-  };
-}
-
-function buildPublicSystemActionPayload(
-  payload: Awaited<ReturnType<typeof runFrontDeskSystemAction>>,
-) {
-  return {
-    version: payload.version,
-    system_action: {
-      surface_id: 'opl_system_action',
-      ...payload.frontdesk_system_action,
-    },
-  };
-}
-
 function parseCliInput(argv: string[]): ParsedCliInput {
   const args = [...argv];
   const loadOptions: GatewayContractsLoadOptions = {};
@@ -459,13 +326,6 @@ export {
   buildContractsContext,
   formatHumanCommandHelp,
   formatHumanRootHelp,
-  buildPublicEngineActionPayload,
-  buildPublicModuleActionPayload,
-  buildPublicModulesPayload,
-  buildPublicSystemActionPayload,
-  buildPublicSystemInitializePayload,
-  buildPublicSystemPayload,
-  buildPublicTurnkeyInstallPayload,
   buildRootHelp,
   cloneCommandSpec,
   looksLikeNaturalLanguage,

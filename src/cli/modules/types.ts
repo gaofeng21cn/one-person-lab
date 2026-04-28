@@ -1,5 +1,3 @@
-import type { DomainLaunchStrategy } from '../../domain-launch.ts';
-import type { ProductEntryCliInput, ProductEntryExecutor } from '../../product-entry.ts';
 import type { GatewayContractsLoadOptions } from '../../types.ts';
 
 type CommandHandler = (args: string[]) => unknown | Promise<unknown>;
@@ -10,6 +8,24 @@ type CommandSpec = {
   examples: string[];
   handler: CommandHandler;
   group?: string;
+};
+
+type DomainLaunchStrategy = 'auto' | 'open_url' | 'spawn_command';
+
+type ProductEntryExecutor = 'codex' | 'hermes';
+
+type ProductEntryCliInput = {
+  dryRun: boolean;
+  goal: string;
+  intent: string;
+  target: string;
+  preferredFamily?: string;
+  requestKind?: string;
+  model?: string;
+  provider?: string;
+  workspacePath?: string;
+  skills: string[];
+  executor?: ProductEntryExecutor;
 };
 
 const PRODUCT_ENTRY_AGENT_HANDLE_MAP = {
@@ -165,12 +181,15 @@ export type {
   CommandHandler,
   CommandSpec,
   DashboardCliInput,
+  DomainLaunchStrategy,
   FrontDeskEngineCliInput,
   FrontDeskModuleCliInput,
   HostedPilotPackageCliInput,
   LaunchDomainCliInput,
   LogsCliInput,
   ParsedCliInput,
+  ProductEntryCliInput,
+  ProductEntryExecutor,
   ResumeCliInput,
   RuntimeManagerActionCliInput,
   RuntimeStatusCliInput,
