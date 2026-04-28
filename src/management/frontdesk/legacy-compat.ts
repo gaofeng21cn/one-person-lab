@@ -1,8 +1,6 @@
 import { buildFrontDeskEndpoints, normalizeBasePath } from '../../frontdesk-paths.ts';
-import {
-  buildDomainManifestCatalog,
-  type DomainManifestCatalogEntry,
-} from '../../domain-manifest.ts';
+import { buildDomainManifestCatalog } from '../../domain-manifest/catalog-builder.ts';
+import type { DomainManifestCatalogEntry } from '../../domain-manifest/types.ts';
 import {
   buildDomainEntryParity,
   buildRecommendedEntrySurfaces,

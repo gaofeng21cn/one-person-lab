@@ -1,4 +1,4 @@
-import { buildDomainManifestCatalog } from '../domain-manifest.ts';
+import { buildDomainManifestCatalog } from '../domain-manifest/catalog-builder.ts';
 import { buildWorkspaceCatalog } from '../workspace-registry.ts';
 import type { GatewayContracts } from '../types.ts';
 
@@ -176,4 +176,3 @@ export async function buildProjectProgressBrief(
     },
   };
 }
-

@@ -1,11 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import {
-  buildDomainManifestCatalog,
-  type DomainManifestCatalogEntry,
-} from '../domain-manifest.ts';
-import type { NormalizedDomainManifest } from '../domain-manifest.ts';
+import { buildDomainManifestCatalog } from '../domain-manifest/catalog-builder.ts';
+import type {
+  DomainManifestCatalogEntry,
+  NormalizedDomainManifest,
+} from '../domain-manifest/types.ts';
 import { buildWorkspaceCatalog } from '../workspace-registry.ts';
 import {
   humanizeProgressCode,

@@ -16,7 +16,7 @@ function buildRetiredHostedRuntimeReadiness() {
 }
 
 import { findDomainOrThrow, GatewayContractError } from '../../contracts.ts';
-import { buildDomainManifestCatalog } from '../../domain-manifest.ts';
+import { buildDomainManifestCatalog } from '../../domain-manifest/catalog-builder.ts';
 import { buildDomainEntryParity, buildRecommendedEntrySurfaces } from '../../family-domain-catalog.ts';
 import { buildFrontDeskEndpoints } from '../../frontdesk-paths.ts';
 import { readFrontDeskRuntimeModes } from '../../frontdesk-runtime-modes.ts';

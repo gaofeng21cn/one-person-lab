@@ -1,5 +1,5 @@
 import { findDomainOrThrow } from './contracts.ts';
-import { buildDomainManifestCatalog } from './domain-manifest.ts';
+import { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 import { buildDomainEntryParity, buildRecommendedEntrySurfaces } from './family-domain-catalog.ts';
 import { resolveWorkspaceLocator } from './workspace-registry.ts';
 import { buildFrontDeskEndpoints } from './frontdesk-paths.ts';
