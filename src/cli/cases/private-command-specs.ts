@@ -4,9 +4,8 @@ import { buildProductEntryDoctor, buildProductEntryHandoffEnvelope, runProductEn
 import { buildRuntimeManager, runRuntimeManagerAction } from '../../runtime-manager.ts';
 import { buildNativeIndexSummary } from '../../native-index-summary.ts';
 import { launchDomainEntry } from '../../domain-launch.ts';
-import { buildDomainManifestCatalog } from '../../domain-manifest/catalog-builder.ts';
-import { buildFrontDeskDashboard, buildFrontDeskStart, buildProjectsOverview } from '../../management/frontdesk.ts';
-import { buildRuntimeStatus, buildWorkspaceStatus } from '../../management/workspace-runtime.ts';
+import { buildDomainManifestCatalog } from '../../domain-manifest.ts';
+import { buildFrontDeskDashboard, buildFrontDeskStart, buildProjectsOverview, buildRuntimeStatus, buildWorkspaceStatus } from '../../management/index.ts';
 import { runAcpStdioBridge } from '../../opl-acp-stdio.ts';
 import { syncOplCompanionSkills } from '../../install-companions.ts';
 import { readFamilySkillPacks, syncFamilySkillPacks } from '../../opl-skills.ts';

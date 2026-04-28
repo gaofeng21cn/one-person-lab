@@ -1,11 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { buildDomainManifestCatalog } from '../domain-manifest/catalog-builder.ts';
-import type {
-  DomainManifestCatalogEntry,
-  NormalizedDomainManifest,
-} from '../domain-manifest/types.ts';
 import { buildWorkspaceCatalog } from '../workspace-registry.ts';
 import {
   humanizeProgressCode,
@@ -31,6 +26,11 @@ import {
   summarizeTableCounts,
   uniqueStrings,
 } from './shared.ts';
+import {
+  buildDomainManifestCatalog,
+  type DomainManifestCatalogEntry,
+  type NormalizedDomainManifest,
+} from './domain-manifest-catalog.ts';
 
 function buildPaperFacingSnapshot(options: {
   studyRoot: string | null;
