@@ -88,12 +88,15 @@ jobs:
           if-no-files-found: error
 
       - name: Setup ORAS
+        if: github.event_name != 'pull_request'
         uses: oras-project/setup-oras@v1
 
       - name: Login to GHCR
+        if: github.event_name != 'pull_request'
         run: echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Push native helper archive to GHCR
+        if: github.event_name != 'pull_request'
         shell: bash
         run: |
           set -euo pipefail
