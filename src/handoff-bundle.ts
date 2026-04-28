@@ -3,6 +3,7 @@ import { buildDomainManifestCatalog } from './domain-manifest.ts';
 import { buildDomainEntryParity, buildRecommendedEntrySurfaces } from './family-domain-catalog.ts';
 import { resolveWorkspaceLocator } from './workspace-registry.ts';
 import { buildFrontDeskEndpoints } from './frontdesk-paths.ts';
+import type { HandoffBundleResult } from './handoff-bundle-types.ts';
 import type { BoundaryExplanation, GatewayContracts, ResolutionResult } from './types.ts';
 
 type BuildHandoffBundleOptions = {
@@ -27,7 +28,7 @@ function resolveRoutedDomainId(routing: ResolutionResult) {
 export function buildHandoffBundle(
   contracts: GatewayContracts,
   options: BuildHandoffBundleOptions,
-) {
+): HandoffBundleResult {
   const targetDomainId = resolveRoutedDomainId(options.routing);
   const domain = targetDomainId ? findDomainOrThrow(contracts, targetDomainId) : null;
   const workspaceLocator = targetDomainId

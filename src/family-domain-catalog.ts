@@ -1,4 +1,4 @@
-import type { DomainManifestCatalogEntry } from './domain-manifest.ts';
+import type { DomainManifestCatalogEntry } from './domain-manifest/types.ts';
 import { getActiveWorkspaceBinding, type WorkspaceBinding } from './workspace-registry.ts';
 
 type BuildFamilyDomainCatalogOptions = {
