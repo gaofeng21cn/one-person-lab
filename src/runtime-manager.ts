@@ -1,6 +1,6 @@
 import { inspectHermesRuntime } from './hermes.ts';
 import { DEFAULT_NATIVE_HELPERS, buildNativeHelperProjection, runNativeHelperRepairAction } from './native-helper-runtime.ts';
-import { runProductEntryRepairHermesGateway } from './product-entry.ts';
+import { runProductEntryRepairHermesGateway } from './product-entry-runtime.ts';
 
 const ADMITTED_DOMAIN_OWNERS = [
   {
