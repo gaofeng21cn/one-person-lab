@@ -24,12 +24,8 @@ import type { GatewayContracts } from '../types.ts';
 
 import type { DashboardOptions, StartSurfaceOptions } from './types.ts';
 import { buildDomainManifestCatalog } from './domain-manifest-catalog.ts';
+import { buildCurrentDashboardSurfaceRefs } from './readiness.ts';
 import { buildRuntimeStatus, buildWorkspaceStatus } from './workspace-runtime.ts';
-
-import {
-  buildFrontDeskEntryGuideSurfaceRef,
-  buildFrontDeskReadinessSurfaceRef,
-} from './legacy-frontdesk.ts';
 
 export function buildProjectsOverview(contracts: GatewayContracts) {
   return {
@@ -160,8 +156,7 @@ export function buildFrontDeskDashboard(
   const hostedRuntimeReadiness = buildRetiredHostedRuntimeReadiness();
   const domainEntryParity = buildDomainEntryParity(domainManifests.projects);
   const recommendedEntrySurfaces = buildRecommendedEntrySurfaces(domainManifests.projects);
-  const frontdeskEntryGuideSurface = buildFrontDeskEntryGuideSurfaceRef(contracts, options);
-  const frontdeskReadinessSurface = buildFrontDeskReadinessSurfaceRef(options);
+  const currentSurfaceRefs = buildCurrentDashboardSurfaceRefs(options);
   return {
     version: 'g2',
     contracts_context: {
@@ -181,8 +176,8 @@ export function buildFrontDeskDashboard(
         hosted_friendly_surface_status: 'landed',
         web_bundle_status: 'landed',
         hosted_runtime_readiness: hostedRuntimeReadiness,
-        entry_guide_surface: frontdeskEntryGuideSurface,
-        readiness_surface: frontdeskReadinessSurface,
+        entry_guide_surface: currentSurfaceRefs.entry_guide_surface,
+        readiness_surface: currentSurfaceRefs.readiness_surface,
         workspace_registry_status: 'landed',
         session_ledger_status: 'landed',
         handoff_bundle_status: 'landed',

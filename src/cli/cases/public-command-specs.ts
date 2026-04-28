@@ -1,6 +1,11 @@
 import { GatewayContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkstreamOrThrow } from '../../contracts.ts';
-import { buildFrontDeskEnvironment, buildFrontDeskInitialize, buildFrontDeskModules, runFrontDeskEngineAction, runFrontDeskModuleAction, runFrontDeskSystemAction, runFrontDeskTurnkeyInstall } from '../../system-installation.ts';
 import { buildOplPackageManifest } from '../../package-distribution.ts';
+import { runFrontDeskEngineAction } from '../../system-installation/engine-actions.ts';
+import { buildFrontDeskEnvironment } from '../../system-installation/environment.ts';
+import { buildFrontDeskInitialize } from '../../system-installation/initialize.ts';
+import { buildFrontDeskModules, runFrontDeskModuleAction } from '../../system-installation/modules.ts';
+import { runFrontDeskSystemAction } from '../../system-installation/system-actions.ts';
+import { runFrontDeskTurnkeyInstall } from '../../system-installation/turnkey.ts';
 import type { GatewayContracts } from '../../types.ts';
 import {
   buildPublicEngineActionPayload,
