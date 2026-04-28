@@ -2,7 +2,7 @@ import { findDomainOrThrow } from './contracts.ts';
 import { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 import { buildDomainEntryParity, buildRecommendedEntrySurfaces } from './family-domain-catalog.ts';
 import { resolveWorkspaceLocator } from './workspace-registry.ts';
-import { buildFrontDeskEndpoints } from './legacy-frontdesk-paths.ts';
+import { buildOplRuntimeEndpoints } from './legacy-frontdesk-paths/current.ts';
 import type { HandoffBundleResult } from './handoff-bundle-types.ts';
 import type { BoundaryExplanation, GatewayContracts, ResolutionResult } from './types.ts';
 
@@ -51,7 +51,7 @@ export function buildHandoffBundle(
   const domainManifestRecommendation = targetDomainId
     ? recommendedEntrySurfaces.find((entry) => entry.project_id === targetDomainId) ?? null
     : null;
-  const endpoints = buildFrontDeskEndpoints(options.basePath);
+  const endpoints = buildOplRuntimeEndpoints(options.basePath);
 
   return {
     handoff_bundle: {
