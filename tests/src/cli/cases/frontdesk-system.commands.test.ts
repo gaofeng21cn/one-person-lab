@@ -189,18 +189,24 @@ test('help supports explicit text output for human readers', () => {
 });
 
 test('legacy frontdesk command surfaces are retired from the public CLI', () => {
-  for (const args of [
-    ['frontdesk', 'manifest'],
-    ['frontdesk', 'entry-guide'],
-    ['frontdesk', 'domain-wiring'],
-    ['frontdesk', 'readiness'],
-  ]) {
+  for (const [args, replacement] of [
+    [['frontdesk', 'environment'], 'opl system'],
+    [['frontdesk', 'initialize'], 'opl system initialize'],
+    [['frontdesk', 'modules'], 'opl modules'],
+    [['frontdesk', 'module', 'install', '--module', 'medautoscience'], 'opl module install'],
+    [['frontdesk', 'engine', 'install', '--engine', 'codex'], 'opl engine install'],
+    [['frontdesk', 'repair'], 'opl system repair'],
+    [['frontdesk', 'entry-guide'], 'opl start'],
+    [['frontdesk', 'domain-wiring'], 'opl workspace list'],
+    [['frontdesk', 'readiness'], 'opl status dashboard'],
+    [['frontdesk', 'hosted-bundle'], 'OPL ACP runtime surface'],
+    [['frontdesk', 'hosted-package'], 'OPL release package surfaces'],
+  ] as const) {
     const { status, payload } = runCliFailure(args);
     assert.equal(status, 2);
-    assert.equal(payload.error.code, 'unknown_command');
-    assert.equal(payload.error.details.command, 'frontdesk');
-    assert.ok(Array.isArray(payload.error.details.commands));
-    assert.equal(payload.error.details.commands.includes('frontdesk manifest'), false);
+    assert.equal(payload.error.code, 'cli_usage_error');
+    assert.equal(payload.error.details.retired, true);
+    assert.match(payload.error.details.replacement, new RegExp(replacement.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
 });
 

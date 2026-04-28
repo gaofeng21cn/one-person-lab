@@ -1,5 +1,5 @@
 import { GatewayContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkstreamOrThrow, validateGatewayContracts } from '../../contracts.ts';
-import { buildFrontDeskInitialize, buildFrontDeskEnvironment, buildFrontDeskModules, buildFrontDeskWorkspaceRootSurface, runFrontDeskSystemAction, writeFrontDeskWorkspaceRootSurface } from '../../frontdesk-installation.ts';
+import { buildFrontDeskWorkspaceRootSurface, writeFrontDeskWorkspaceRootSurface } from '../../frontdesk-installation.ts';
 import { buildProductEntryDoctor, buildProductEntryHandoffEnvelope, runProductEntryLogs, runProductEntryRepairHermesGateway, runProductEntryResume, runProductEntrySessions } from '../../product-entry.ts';
 import { buildRuntimeManager, runRuntimeManagerAction } from '../../runtime-manager.ts';
 import { buildNativeIndexSummary } from '../../native-index-summary.ts';
@@ -13,13 +13,30 @@ import { buildSessionLedger } from '../../session-ledger.ts';
 import { explainDomainBoundary, resolveRequestSurface } from '../../resolver.ts';
 import { activateWorkspaceBinding, archiveWorkspaceBinding, bindWorkspace, buildWorkspaceCatalog } from '../../workspace-registry.ts';
 import type { GatewayContracts } from '../../types.ts';
-import { assertNoArgs, buildCommandHelp, buildRetiredCommandError, buildRootHelp, buildUsageError, hasExplicitHermesExecutor, parseDashboardArgs, parseKeyValueArgs, parseLaunchDomainArgs, parseLogsArgs, parseProductEntryArgs, parseResumeArgs, parseRuntimeManagerActionArgs, parseRuntimeStatusArgs, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSessionsArgs, parseSkillPackArgs, parseStartArgs, parseUpdateChannelArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, parseWorkspaceStatusArgs, printJson, runCodexPassthroughHandled, runFrontDeskEngineActionCommand, runFrontDeskModuleActionCommand, stripExplicitCodexExecutor, withContractsContext } from '../modules/support.ts';
+import { assertNoArgs, buildCommandHelp, buildRetiredCommandError, buildRootHelp, buildUsageError, hasExplicitHermesExecutor, parseDashboardArgs, parseKeyValueArgs, parseLaunchDomainArgs, parseLogsArgs, parseProductEntryArgs, parseResumeArgs, parseRuntimeManagerActionArgs, parseRuntimeStatusArgs, parseSessionLedgerArgs, parseSessionRuntimeArgs, parseSessionsArgs, parseSkillPackArgs, parseStartArgs, parseWorkspaceRegistryArgs, parseWorkspaceRootArgs, parseWorkspaceStatusArgs, printJson, runCodexPassthroughHandled, stripExplicitCodexExecutor, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec, ParsedCliInput } from '../modules/support.ts';
 
 export function buildInternalCommandSpecs(
   parsedInput: ParsedCliInput,
   getContracts: () => GatewayContracts,
 ): Record<string, CommandSpec> {
+  const buildRetiredFrontDeskSpec = (
+    command: string,
+    replacement: string,
+    examples: string[],
+  ): CommandSpec => {
+    const spec: CommandSpec = {
+      usage: `opl ${command}`,
+      summary: 'Retired historical frontdesk compatibility command.',
+      examples,
+      group: 'legacy',
+      handler: () => {
+        throw buildRetiredCommandError(`opl ${command}`, replacement, spec);
+      },
+    };
+    return spec;
+  };
+
   const commandSpecs: Record<string, CommandSpec> = {
     help: {
       usage: 'opl help [command]',
@@ -365,93 +382,94 @@ export function buildInternalCommandSpecs(
     },
     'frontdesk environment': {
       usage: 'opl frontdesk environment',
-      summary:
-        'Show the user-facing OPL environment surface: core engines, frontdesk status, and managed install paths.',
+      summary: 'Retired historical frontdesk compatibility command.',
       examples: ['opl frontdesk environment'],
-      handler: (args) => {
-        assertNoArgs(args, commandSpecs['frontdesk environment']);
-        return buildFrontDeskEnvironment(getContracts());
+      group: 'legacy',
+      handler: () => {
+        throw buildRetiredCommandError(
+          'opl frontdesk environment',
+          'Use `opl system` for the current Codex-default system surface.',
+          commandSpecs['frontdesk environment'],
+        );
       },
     },
     'frontdesk initialize': {
       usage: 'opl frontdesk initialize',
-      summary:
-        'Aggregate the Initialize OPL surface across engines, modules, workspace root, and local system support.',
+      summary: 'Retired historical frontdesk compatibility command.',
       examples: ['opl frontdesk initialize'],
-      handler: (args) => {
-        assertNoArgs(args, commandSpecs['frontdesk initialize']);
-        return buildFrontDeskInitialize(getContracts());
+      group: 'legacy',
+      handler: () => {
+        throw buildRetiredCommandError(
+          'opl frontdesk initialize',
+          'Use `opl system initialize` for the current first-run setup surface.',
+          commandSpecs['frontdesk initialize'],
+        );
       },
     },
     'frontdesk modules': {
       usage: 'opl frontdesk modules',
-      summary:
-        'List OPL-managed domain modules together with install state, checkout path, and upgrade actions.',
+      summary: 'Retired historical frontdesk compatibility command.',
       examples: ['opl frontdesk modules'],
-      handler: (args) => {
-        assertNoArgs(args, commandSpecs['frontdesk modules']);
-        return buildFrontDeskModules();
+      group: 'legacy',
+      handler: () => {
+        throw buildRetiredCommandError(
+          'opl frontdesk modules',
+          'Use `opl modules` for the current module inventory surface.',
+          commandSpecs['frontdesk modules'],
+        );
       },
     },
-    'frontdesk-module-install': {
-      usage: 'opl frontdesk module install --module <module_id>',
-      summary: 'Install an OPL-managed domain module into the managed modules root.',
-      examples: ['opl frontdesk module install --module medautoscience'],
-      handler: (args) => runFrontDeskModuleActionCommand('install', args, commandSpecs['frontdesk-module-install']),
-    },
-    'frontdesk-module-update': {
-      usage: 'opl frontdesk module update --module <module_id>',
-      summary: 'Update an installed OPL domain module with a fast-forward git pull.',
-      examples: ['opl frontdesk module update --module medautoscience'],
-      handler: (args) => runFrontDeskModuleActionCommand('update', args, commandSpecs['frontdesk-module-update']),
-    },
-    'frontdesk-module-reinstall': {
-      usage: 'opl frontdesk module reinstall --module <module_id>',
-      summary: 'Reinstall an OPL-managed domain module from its configured git source.',
-      examples: ['opl frontdesk module reinstall --module medautoscience'],
-      handler: (args) => runFrontDeskModuleActionCommand('reinstall', args, commandSpecs['frontdesk-module-reinstall']),
-    },
-    'frontdesk-module-remove': {
-      usage: 'opl frontdesk module remove --module <module_id>',
-      summary: 'Remove an OPL-managed domain module checkout from the managed modules root.',
-      examples: ['opl frontdesk module remove --module medautoscience'],
-      handler: (args) => runFrontDeskModuleActionCommand('remove', args, commandSpecs['frontdesk-module-remove']),
-    },
-    'frontdesk engine install': {
-      usage: 'opl frontdesk engine install --engine <codex|hermes>',
-      summary: 'Run the configured install action for one OPL-managed core engine.',
-      examples: ['opl frontdesk engine install --engine codex'],
-      handler: (args) =>
-        runFrontDeskEngineActionCommand(getContracts, 'install', args, commandSpecs['frontdesk engine install']),
-    },
-    'frontdesk engine update': {
-      usage: 'opl frontdesk engine update --engine <codex|hermes>',
-      summary: 'Run the configured update action for one OPL-managed core engine.',
-      examples: ['opl frontdesk engine update --engine codex'],
-      handler: (args) =>
-        runFrontDeskEngineActionCommand(getContracts, 'update', args, commandSpecs['frontdesk engine update']),
-    },
-    'frontdesk engine reinstall': {
-      usage: 'opl frontdesk engine reinstall --engine <codex|hermes>',
-      summary: 'Run the configured reinstall action for one OPL-managed core engine.',
-      examples: ['opl frontdesk engine reinstall --engine codex'],
-      handler: (args) =>
-        runFrontDeskEngineActionCommand(getContracts, 'reinstall', args, commandSpecs['frontdesk engine reinstall']),
-    },
-    'frontdesk engine remove': {
-      usage: 'opl frontdesk engine remove --engine <codex|hermes>',
-      summary: 'Run the configured remove action for one OPL-managed core engine.',
-      examples: ['opl frontdesk engine remove --engine hermes'],
-      handler: (args) =>
-        runFrontDeskEngineActionCommand(getContracts, 'remove', args, commandSpecs['frontdesk engine remove']),
-    },
+    'frontdesk-module-install': buildRetiredFrontDeskSpec(
+      'frontdesk module install --module <module_id>',
+      'Use `opl module install --module <module_id>` for current module installation.',
+      ['opl frontdesk module install --module medautoscience'],
+    ),
+    'frontdesk-module-update': buildRetiredFrontDeskSpec(
+      'frontdesk module update --module <module_id>',
+      'Use `opl module update --module <module_id>` for current module updates.',
+      ['opl frontdesk module update --module medautoscience'],
+    ),
+    'frontdesk-module-reinstall': buildRetiredFrontDeskSpec(
+      'frontdesk module reinstall --module <module_id>',
+      'Use `opl module reinstall --module <module_id>` for current module reinstalls.',
+      ['opl frontdesk module reinstall --module medautoscience'],
+    ),
+    'frontdesk-module-remove': buildRetiredFrontDeskSpec(
+      'frontdesk module remove --module <module_id>',
+      'Use `opl module remove --module <module_id>` for current module removal.',
+      ['opl frontdesk module remove --module medautoscience'],
+    ),
+    'frontdesk engine install': buildRetiredFrontDeskSpec(
+      'frontdesk engine install --engine <codex|hermes>',
+      'Use `opl engine install --engine <codex|hermes>` for current engine installation.',
+      ['opl frontdesk engine install --engine codex'],
+    ),
+    'frontdesk engine update': buildRetiredFrontDeskSpec(
+      'frontdesk engine update --engine <codex|hermes>',
+      'Use `opl engine update --engine <codex|hermes>` for current engine updates.',
+      ['opl frontdesk engine update --engine codex'],
+    ),
+    'frontdesk engine reinstall': buildRetiredFrontDeskSpec(
+      'frontdesk engine reinstall --engine <codex|hermes>',
+      'Use `opl engine reinstall --engine <codex|hermes>` for current engine reinstalls.',
+      ['opl frontdesk engine reinstall --engine codex'],
+    ),
+    'frontdesk engine remove': buildRetiredFrontDeskSpec(
+      'frontdesk engine remove --engine <codex|hermes>',
+      'Use `opl engine remove --engine <codex|hermes>` for current engine removal.',
+      ['opl frontdesk engine remove --engine hermes'],
+    ),
     'frontdesk repair': {
       usage: 'opl frontdesk repair',
-      summary: 'Repair OPL runtime support surfaces and return the refreshed system action payload.',
+      summary: 'Retired historical frontdesk compatibility command.',
       examples: ['opl frontdesk repair'],
-      handler: (args) => {
-        assertNoArgs(args, commandSpecs['frontdesk repair']);
-        return runFrontDeskSystemAction(getContracts(), 'repair');
+      group: 'legacy',
+      handler: () => {
+        throw buildRetiredCommandError(
+          'opl frontdesk repair',
+          'Use `opl system repair` for the current system repair surface.',
+          commandSpecs['frontdesk repair'],
+        );
       },
     },
     'mcp-stdio': {
