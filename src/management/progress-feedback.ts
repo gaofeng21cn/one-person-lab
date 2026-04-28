@@ -1,4 +1,4 @@
-import type { NormalizedDomainManifest } from '../domain-manifest.ts';
+import type { NormalizedDomainManifest } from '../domain-manifest/types.ts';
 import { humanizeProgressCode, readStatusNarrationContract, statusNarrationLatestUpdate, statusNarrationNextStep, statusNarrationStageSummary, statusNarrationSummary } from '../status-narration.ts';
 
 import { buildStudyProgressSurface } from './progress-study.ts';
@@ -303,4 +303,3 @@ export function buildWorkspaceInbox(options: {
     sections,
   };
 }
-
