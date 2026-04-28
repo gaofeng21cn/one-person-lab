@@ -8,7 +8,7 @@ export { default as path } from 'node:path';
 export { PassThrough } from 'node:stream';
 
 export { GatewayContractError, loadGatewayContracts, validateGatewayContracts } from '../../../src/contracts.ts';
-export { buildProjectProgressBrief } from '../../../src/management.ts';
+export { buildProjectProgressBrief } from '../../../src/management/projects.ts';
 export { explainDomainBoundary, resolveRequestSurface } from '../../../src/resolver.ts';
 
 export { cliPath, contractsDir, familyManifestFixtureDir, repoRoot } from './helpers-parts/constants.ts';

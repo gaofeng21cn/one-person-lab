@@ -1,7 +1,7 @@
 import { spawn, spawnSync } from 'node:child_process';
 
 import { findDomainOrThrow, GatewayContractError } from './contracts.ts';
-import { buildDomainManifestCatalog } from './domain-manifest.ts';
+import { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 import { resolveWorkspaceLocator } from './workspace-registry.ts';
 import type { GatewayContracts } from './types.ts';
 
