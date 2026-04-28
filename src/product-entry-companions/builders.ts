@@ -39,6 +39,9 @@ import {
   validateFamilyProductEntryManifest,
   validateFamilyProductFrontdesk,
 } from './validators.ts';
+import { buildProductEntryResumeSurface } from './resume-surface.ts';
+
+export { buildProductEntryResumeSurface } from './resume-surface.ts';
 
 export function collectFamilyHumanGateIds(familyOrchestration: unknown) {
   if (!isRecord(familyOrchestration) || !Array.isArray(familyOrchestration.human_gates)) {
@@ -47,16 +50,6 @@ export function collectFamilyHumanGateIds(familyOrchestration: unknown) {
   return familyOrchestration.human_gates
     .map((gate, index) => (isRecord(gate) ? requireString(gate.gate_id, `human_gates[${index}].gate_id`) : null))
     .filter((gateId): gateId is string => Boolean(gateId));
-}
-
-export function buildProductEntryResumeSurface(command: string, resumeContract: unknown) {
-  const normalizedContract = normalizeResumeContract(resumeContract, 'resume_contract');
-  return {
-    surface_kind: normalizedContract.surface_kind,
-    command: requireString(command, 'command'),
-    session_locator_field: normalizedContract.session_locator_field,
-    checkpoint_locator_field: normalizedContract.checkpoint_locator_field,
-  };
 }
 
 export function buildProductEntryQuickstart(input: BuildProductEntryQuickstartInput) {
@@ -344,4 +337,3 @@ export function buildFamilyProductEntryManifest(
 
   return mergeExtraPayload(payload, input.extra_payload, 'product entry manifest') as FamilyProductEntryManifestSurface;
 }
-

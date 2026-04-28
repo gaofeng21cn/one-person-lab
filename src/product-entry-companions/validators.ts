@@ -35,7 +35,7 @@ import {
   validateOptionalFamilyReferenceRef,
 } from './internal.ts';
 import { validateSharedHandoff } from '../family-entry-contracts.ts';
-import { buildProductEntryResumeSurface } from './builders.ts';
+import { buildProductEntryResumeSurface } from './resume-surface.ts';
 import { validateFamilyFrontdeskEntrySurfaces } from './shell-surfaces.ts';
 
 function validateSurfaceKindRecord(
