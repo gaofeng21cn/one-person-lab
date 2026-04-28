@@ -1,4 +1,4 @@
-import { runFrontDeskEngineAction, runFrontDeskModuleAction, type FrontDeskEngineAction, type FrontDeskModuleAction } from '../../frontdesk-installation.ts';
+import { runFrontDeskEngineAction, runFrontDeskModuleAction, type FrontDeskEngineAction, type FrontDeskModuleAction } from '../../system-installation.ts';
 import type { GatewayContracts } from '../../types.ts';
 import type {
   CommandSpec,

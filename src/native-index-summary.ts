@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { resolveFrontDeskStatePaths } from './frontdesk-state.ts';
+import { resolveFrontDeskStatePaths } from './runtime-state-paths.ts';
 
 const SOURCE_OF_TRUTH_RULE =
   'OPL reads native helper indexes for fast lookup, then dereferences domain-owned durable truth before acting.';

@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { GatewayContractError } from '../contracts.ts';
-import type { FrontDeskUpdateChannel } from '../frontdesk-preferences.ts';
+import type { FrontDeskUpdateChannel } from '../system-preferences.ts';
 
 export type FrontDeskModuleId =
   | 'medautoscience'

@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { buildOplGuiArtifactName, buildOplReleaseTag, getOplReleaseRepo, getOplReleaseVersion } from './opl-release.ts';
 import { resolveFamilyWorkspaceRootFromRepoRoot } from './family-workspace-root.ts';
-import { runGit } from './frontdesk-installation/shared.ts';
+import { runGit } from './system-installation/shared.ts';
 
 export type OplCompanionSkillStatus = 'ready' | 'missing';
 

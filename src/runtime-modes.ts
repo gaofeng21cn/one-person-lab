@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 
 import { GatewayContractError } from './contracts.ts';
-import { ensureFrontDeskStateDir, resolveFrontDeskStatePaths } from './frontdesk-state.ts';
+import { ensureFrontDeskStateDir, resolveFrontDeskStatePaths } from './runtime-state-paths.ts';
 
 export type FrontDeskAgentMode = 'codex' | 'hermes';
 

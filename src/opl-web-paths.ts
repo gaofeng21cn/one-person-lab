@@ -2,7 +2,7 @@ import {
   buildFrontDeskEntryUrl,
   normalizeBasePath,
   stripFrontDeskBasePath,
-} from './frontdesk-paths.ts';
+} from './legacy-frontdesk-paths.ts';
 
 export function normalizeOplWebBasePath(basePath?: string) {
   return normalizeBasePath(basePath);

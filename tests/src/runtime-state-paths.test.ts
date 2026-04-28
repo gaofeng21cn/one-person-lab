@@ -4,8 +4,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { buildFrontDeskEndpoints } from '../../src/frontdesk-paths.ts';
-import { resolveFrontDeskStatePaths } from '../../src/frontdesk-state.ts';
+import { buildFrontDeskEndpoints } from '../../src/legacy-frontdesk-paths.ts';
+import { resolveFrontDeskStatePaths } from '../../src/runtime-state-paths.ts';
 
 test('frontdesk endpoint catalog advertises OPL product API URLs for public resources and actions', () => {
   const endpoints = buildFrontDeskEndpoints('/pilot/opl');

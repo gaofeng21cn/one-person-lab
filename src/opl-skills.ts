@@ -8,7 +8,7 @@ import {
   resolveDefaultFamilyWorkspaceRoot as resolveDefaultFamilyWorkspaceRootImpl,
   resolveFamilyWorkspaceRootFromRepoRoot as resolveFamilyWorkspaceRootFromRepoRootImpl,
 } from './family-workspace-root.ts';
-import { resolveFrontDeskStatePaths } from './frontdesk-state.ts';
+import { resolveFrontDeskStatePaths } from './runtime-state-paths.ts';
 
 export const resolveDefaultFamilyWorkspaceRoot = resolveDefaultFamilyWorkspaceRootImpl;
 export const resolveFamilyWorkspaceRootFromRepoRoot = resolveFamilyWorkspaceRootFromRepoRootImpl;
