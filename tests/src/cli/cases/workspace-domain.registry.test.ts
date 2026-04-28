@@ -608,18 +608,23 @@ test('domain manifests resolves real family manifest fixtures while workspace li
 
     const retiredGuide = runCliFailure(['frontdesk', 'entry-guide'], env);
     assert.equal(retiredGuide.status, 2);
-    assert.equal(retiredGuide.payload.error.code, 'unknown_command');
+    assert.equal(retiredGuide.payload.error.code, 'cli_usage_error');
+    assert.equal(retiredGuide.payload.error.details.retired, true);
+    assert.match(retiredGuide.payload.error.details.replacement, /opl start/);
 
     const retiredWiring = runCliFailure(['frontdesk', 'domain-wiring'], env);
     assert.equal(retiredWiring.status, 2);
-    assert.equal(retiredWiring.payload.error.code, 'unknown_command');
+    assert.equal(retiredWiring.payload.error.code, 'cli_usage_error');
+    assert.equal(retiredWiring.payload.error.details.retired, true);
+    assert.match(retiredWiring.payload.error.details.replacement, /opl workspace list/);
 
     const retiredReadiness = runCliFailure(['frontdesk', 'readiness', '--path', repoRoot, '--sessions-limit', '1'], env);
     assert.equal(retiredReadiness.status, 2);
-    assert.equal(retiredReadiness.payload.error.code, 'unknown_command');
+    assert.equal(retiredReadiness.payload.error.code, 'cli_usage_error');
+    assert.equal(retiredReadiness.payload.error.details.retired, true);
+    assert.match(retiredReadiness.payload.error.details.replacement, /opl status dashboard/);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
-
