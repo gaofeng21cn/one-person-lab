@@ -1,4 +1,4 @@
-import { buildFrontDeskEnvironment, buildFrontDeskInitialize, buildFrontDeskModules, runFrontDeskEngineAction, runFrontDeskModuleAction, runFrontDeskSystemAction, runFrontDeskTurnkeyInstall } from '../../frontdesk-installation.ts';
+import { buildFrontDeskEnvironment, buildFrontDeskInitialize, buildFrontDeskModules, runFrontDeskEngineAction, runFrontDeskModuleAction, runFrontDeskSystemAction, runFrontDeskTurnkeyInstall } from '../../system-installation.ts';
 import type { GatewayContracts, GatewayContractsLoadOptions } from '../../types.ts';
 import type { CommandHandler, CommandSpec, ParsedCliInput } from './types.ts';
 import { buildUsageError } from './runtime-helpers.ts';

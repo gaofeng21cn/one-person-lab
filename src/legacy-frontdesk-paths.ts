@@ -1,13 +1,13 @@
 import {
   buildFrontDeskCompatEndpoints,
   type FrontDeskCompatEndpoints,
-} from './frontdesk-paths/legacy.ts';
+} from './legacy-frontdesk-paths/legacy.ts';
 import {
   buildOplRuntimeEndpoints,
   type OplRuntimeEndpoints,
-} from './frontdesk-paths/current.ts';
-import { normalizeBasePath } from './frontdesk-paths/shared.ts';
-export { normalizeBasePath } from './frontdesk-paths/shared.ts';
+} from './legacy-frontdesk-paths/current.ts';
+import { normalizeBasePath } from './legacy-frontdesk-paths/shared.ts';
+export { normalizeBasePath } from './legacy-frontdesk-paths/shared.ts';
 
 export type FrontDeskEndpoints = OplRuntimeEndpoints & FrontDeskCompatEndpoints;
 

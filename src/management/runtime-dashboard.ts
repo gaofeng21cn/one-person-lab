@@ -15,21 +15,21 @@ function buildRetiredHostedRuntimeReadiness() {
   };
 }
 
-import { findDomainOrThrow, GatewayContractError } from '../../contracts.ts';
-import { buildDomainEntryParity, buildRecommendedEntrySurfaces } from '../../family-domain-catalog.ts';
-import { buildFrontDeskEndpoints } from '../../frontdesk-paths.ts';
-import { readFrontDeskRuntimeModes } from '../../frontdesk-runtime-modes.ts';
-import { buildWorkspaceCatalog, getActiveWorkspaceBinding } from '../../workspace-registry.ts';
-import type { GatewayContracts } from '../../types.ts';
+import { findDomainOrThrow, GatewayContractError } from '../contracts.ts';
+import { buildDomainEntryParity, buildRecommendedEntrySurfaces } from '../family-domain-catalog.ts';
+import { buildFrontDeskEndpoints } from '../legacy-frontdesk-paths.ts';
+import { readFrontDeskRuntimeModes } from '../runtime-modes.ts';
+import { buildWorkspaceCatalog, getActiveWorkspaceBinding } from '../workspace-registry.ts';
+import type { GatewayContracts } from '../types.ts';
 
-import type { DashboardOptions, StartSurfaceOptions } from '../types.ts';
-import { buildDomainManifestCatalog } from '../domain-manifest-catalog.ts';
-import { buildRuntimeStatus, buildWorkspaceStatus } from '../workspace-runtime.ts';
+import type { DashboardOptions, StartSurfaceOptions } from './types.ts';
+import { buildDomainManifestCatalog } from './domain-manifest-catalog.ts';
+import { buildRuntimeStatus, buildWorkspaceStatus } from './workspace-runtime.ts';
 
 import {
   buildFrontDeskEntryGuideSurfaceRef,
   buildFrontDeskReadinessSurfaceRef,
-} from './legacy-compat.ts';
+} from './legacy-frontdesk.ts';
 
 export function buildProjectsOverview(contracts: GatewayContracts) {
   return {

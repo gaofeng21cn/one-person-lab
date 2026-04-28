@@ -2,7 +2,7 @@ import {
   readFrontDeskUpdateChannel,
   readFrontDeskWorkspaceRoot,
   writeFrontDeskUpdateChannel,
-} from '../frontdesk-preferences.ts';
+} from '../system-preferences.ts';
 import { runProductEntryRepairHermesGateway } from '../product-entry.ts';
 import { runNativeHelperRepairAction } from '../native-helper-runtime.ts';
 import type { GatewayContracts } from '../types.ts';

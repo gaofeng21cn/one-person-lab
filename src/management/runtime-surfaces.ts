@@ -5,9 +5,9 @@ export {
   buildFrontDeskHealth,
   buildFrontDeskManifest,
   buildFrontDeskReadiness,
-} from './frontdesk/legacy-compat.ts';
+} from './legacy-frontdesk.ts';
 export {
   buildFrontDeskDashboard,
   buildFrontDeskStart,
   buildProjectsOverview,
-} from './frontdesk/current-runtime.ts';
+} from './runtime-dashboard.ts';

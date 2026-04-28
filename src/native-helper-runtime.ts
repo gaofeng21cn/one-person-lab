@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { ensureFrontDeskStateDir, resolveFrontDeskStatePaths } from './frontdesk-state.ts';
+import { ensureFrontDeskStateDir, resolveFrontDeskStatePaths } from './runtime-state-paths.ts';
 import {
   type NativeStateIndexPersistence,
   persistNativeStateIndex,

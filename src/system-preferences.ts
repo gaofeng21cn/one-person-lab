@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { GatewayContractError } from './contracts.ts';
-import { ensureFrontDeskStateDir, resolveFrontDeskStatePaths } from './frontdesk-state.ts';
+import { ensureFrontDeskStateDir, resolveFrontDeskStatePaths } from './runtime-state-paths.ts';
 
 export type FrontDeskUpdateChannel = 'stable' | 'preview';
 

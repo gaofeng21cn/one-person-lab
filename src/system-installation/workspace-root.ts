@@ -1,7 +1,7 @@
 import {
   buildFrontDeskWorkspaceRootStatus,
   writeFrontDeskWorkspaceRoot,
-} from '../frontdesk-preferences.ts';
+} from '../system-preferences.ts';
 
 export function buildFrontDeskWorkspaceRootSurface() {
   return buildFrontDeskWorkspaceRootStatus();

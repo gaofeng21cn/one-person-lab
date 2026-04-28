@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { GatewayContractError } from '../contracts.ts';
-import { ensureFrontDeskStateDir, resolveFrontDeskStatePaths } from '../frontdesk-state.ts';
+import { ensureFrontDeskStateDir, resolveFrontDeskStatePaths } from '../runtime-state-paths.ts';
 import {
   resolveFamilyWorkspaceRootFromRepoRoot,
   syncFamilySkillPackFromRepoRoot,

@@ -2,7 +2,7 @@ import { buildWorkspaceCatalog } from '../workspace-registry.ts';
 import type { GatewayContracts } from '../types.ts';
 
 import { buildDomainManifestCatalog } from './domain-manifest-catalog.ts';
-import { buildFrontDeskReadiness } from './frontdesk.ts';
+import { buildFrontDeskReadiness } from './runtime-surfaces.ts';
 import { buildProgressFeedback, buildWorkspaceInbox } from './progress-feedback.ts';
 import {
   buildStudyProgressSurface,

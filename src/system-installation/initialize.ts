@@ -1,9 +1,9 @@
-import { buildFrontDeskEndpoints } from '../frontdesk-paths.ts';
+import { buildFrontDeskEndpoints } from '../legacy-frontdesk-paths.ts';
 import {
   readFrontDeskUpdateChannel,
   readFrontDeskWorkspaceRoot,
-} from '../frontdesk-preferences.ts';
-import { readFrontDeskRuntimeModes } from '../frontdesk-runtime-modes.ts';
+} from '../system-preferences.ts';
+import { readFrontDeskRuntimeModes } from '../runtime-modes.ts';
 import { buildOplGuiShellSurface, buildOplRecommendedSkills } from '../install-companions.ts';
 import type { GatewayContracts } from '../types.ts';
 

@@ -2,7 +2,7 @@ import { findDomainOrThrow } from './contracts.ts';
 import { buildDomainManifestCatalog } from './domain-manifest.ts';
 import { buildDomainEntryParity, buildRecommendedEntrySurfaces } from './family-domain-catalog.ts';
 import { resolveWorkspaceLocator } from './workspace-registry.ts';
-import { buildFrontDeskEndpoints } from './frontdesk-paths.ts';
+import { buildFrontDeskEndpoints } from './legacy-frontdesk-paths.ts';
 import type { HandoffBundleResult } from './handoff-bundle-types.ts';
 import type { BoundaryExplanation, GatewayContracts, ResolutionResult } from './types.ts';
 

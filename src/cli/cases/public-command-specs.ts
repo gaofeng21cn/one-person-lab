@@ -1,5 +1,5 @@
 import { GatewayContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkstreamOrThrow } from '../../contracts.ts';
-import { buildFrontDeskEnvironment, buildFrontDeskInitialize, buildFrontDeskModules, runFrontDeskEngineAction, runFrontDeskModuleAction, runFrontDeskSystemAction, runFrontDeskTurnkeyInstall } from '../../frontdesk-installation.ts';
+import { buildFrontDeskEnvironment, buildFrontDeskInitialize, buildFrontDeskModules, runFrontDeskEngineAction, runFrontDeskModuleAction, runFrontDeskSystemAction, runFrontDeskTurnkeyInstall } from '../../system-installation.ts';
 import { buildOplPackageManifest } from '../../package-distribution.ts';
 import type { GatewayContracts } from '../../types.ts';
 import { assertNoArgs, buildCommandHelp, buildPublicEngineActionPayload, buildPublicModuleActionPayload, buildPublicModulesPayload, buildPublicSystemActionPayload, buildPublicSystemInitializePayload, buildPublicSystemPayload, buildPublicTurnkeyInstallPayload, buildRetiredCommandError, buildRootHelp, buildUsageError, cloneCommandSpec, parseFrontDeskEngineArgs, parseFrontDeskModuleArgs, parseTurnkeyInstallArgs, parseUpdateChannelArgs, printJson, withContractsContext } from '../modules/support.ts';

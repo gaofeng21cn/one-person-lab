@@ -55,7 +55,7 @@ export {
   parseWorkspaceRootArgs,
   runFrontDeskEngineActionCommand,
   runFrontDeskModuleActionCommand,
-} from './frontdesk-parsers.ts';
+} from './system-action-parsers.ts';
 export type {
   CommandHandler,
   CommandSpec,

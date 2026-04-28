@@ -1,18 +1,18 @@
-import { buildFrontDeskEndpoints, normalizeBasePath } from '../../frontdesk-paths.ts';
+import { buildFrontDeskEndpoints, normalizeBasePath } from '../legacy-frontdesk-paths.ts';
 import {
   buildDomainEntryParity,
   buildRecommendedEntrySurfaces,
-} from '../../family-domain-catalog.ts';
-import { inspectHermesRuntime } from '../../hermes.ts';
-import { buildFrontDeskShellMcpWiring } from '../../frontdesk-shell-identity.ts';
-import { buildWorkspaceCatalog } from '../../workspace-registry.ts';
-import type { GatewayContracts } from '../../types.ts';
+} from '../family-domain-catalog.ts';
+import { inspectHermesRuntime } from '../hermes.ts';
+import { buildFrontDeskShellMcpWiring } from '../aionui-acp-shell.ts';
+import { buildWorkspaceCatalog } from '../workspace-registry.ts';
+import type { GatewayContracts } from '../types.ts';
 
 import {
   buildDomainManifestCatalog,
   type DomainManifestCatalogEntry,
-} from '../domain-manifest-catalog.ts';
-import type { DashboardOptions } from '../types.ts';
+} from './domain-manifest-catalog.ts';
+import type { DashboardOptions } from './types.ts';
 
 
 function buildRetiredHostedRuntimeReadiness() {
