@@ -1,5 +1,3 @@
-import { runFrontDeskEngineAction, runFrontDeskModuleAction, type FrontDeskEngineAction, type FrontDeskModuleAction } from '../../system-installation.ts';
-import type { GatewayContracts } from '../../types.ts';
 import type {
   CommandSpec,
   FrontDeskEngineCliInput,
@@ -173,15 +171,6 @@ function parseFrontDeskModuleArgs(
   return parsed;
 }
 
-function runFrontDeskModuleActionCommand(
-  action: FrontDeskModuleAction,
-  args: string[],
-  spec: Pick<CommandSpec, 'usage' | 'examples'>,
-) {
-  const parsed = parseFrontDeskModuleArgs(args, spec);
-  return runFrontDeskModuleAction(action, parsed.moduleId ?? '');
-}
-
 function parseFrontDeskEngineArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
@@ -219,24 +208,6 @@ function parseFrontDeskEngineArgs(
   }
 
   return parsed;
-}
-
-async function runFrontDeskEngineActionCommand(
-  getContracts: () => GatewayContracts,
-  action: FrontDeskEngineAction,
-  args: string[],
-  spec: Pick<CommandSpec, 'usage' | 'examples'>,
-) {
-  const parsed = parseFrontDeskEngineArgs(args, spec);
-  if (!parsed.engineId) {
-    throw buildUsageError(
-      `engine ${action} requires --engine.`,
-      spec,
-      { required: ['--engine'] },
-    );
-  }
-
-  return runFrontDeskEngineAction(getContracts(), action, parsed.engineId);
 }
 
 function parseSessionRuntimeArgs(
@@ -358,6 +329,4 @@ export {
   parseUpdateChannelArgs,
   parseWorkspaceRegistryArgs,
   parseWorkspaceRootArgs,
-  runFrontDeskEngineActionCommand,
-  runFrontDeskModuleActionCommand,
 };

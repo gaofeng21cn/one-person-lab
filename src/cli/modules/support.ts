@@ -6,13 +6,6 @@ export {
   buildContractsContext,
   formatHumanCommandHelp,
   formatHumanRootHelp,
-  buildPublicEngineActionPayload,
-  buildPublicModuleActionPayload,
-  buildPublicModulesPayload,
-  buildPublicSystemActionPayload,
-  buildPublicSystemInitializePayload,
-  buildPublicSystemPayload,
-  buildPublicTurnkeyInstallPayload,
   buildRootHelp,
   cloneCommandSpec,
   looksLikeNaturalLanguage,
@@ -53,8 +46,6 @@ export {
   parseUpdateChannelArgs,
   parseWorkspaceRegistryArgs,
   parseWorkspaceRootArgs,
-  runFrontDeskEngineActionCommand,
-  runFrontDeskModuleActionCommand,
 } from './system-action-parsers.ts';
 export type {
   CommandHandler,

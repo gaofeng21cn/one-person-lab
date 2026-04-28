@@ -1,7 +1,6 @@
 import { GatewayContractError } from '../../contracts.ts';
 import { runCodexPassthrough } from '../../codex.ts';
-import type { CommandSpec } from './types.ts';
-import type { ProductEntryExecutor } from '../../product-entry.ts';
+import type { CommandSpec, ProductEntryExecutor } from './types.ts';
 
 function printJson(payload: unknown, stream: NodeJS.WriteStream = process.stdout) {
   stream.write(`${JSON.stringify(payload, null, 2)}\n`);

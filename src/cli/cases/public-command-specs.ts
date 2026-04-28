@@ -2,7 +2,16 @@ import { GatewayContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkst
 import { buildFrontDeskEnvironment, buildFrontDeskInitialize, buildFrontDeskModules, runFrontDeskEngineAction, runFrontDeskModuleAction, runFrontDeskSystemAction, runFrontDeskTurnkeyInstall } from '../../system-installation.ts';
 import { buildOplPackageManifest } from '../../package-distribution.ts';
 import type { GatewayContracts } from '../../types.ts';
-import { assertNoArgs, buildCommandHelp, buildPublicEngineActionPayload, buildPublicModuleActionPayload, buildPublicModulesPayload, buildPublicSystemActionPayload, buildPublicSystemInitializePayload, buildPublicSystemPayload, buildPublicTurnkeyInstallPayload, buildRetiredCommandError, buildRootHelp, buildUsageError, cloneCommandSpec, parseFrontDeskEngineArgs, parseFrontDeskModuleArgs, parseTurnkeyInstallArgs, parseUpdateChannelArgs, printJson, withContractsContext } from '../modules/support.ts';
+import {
+  buildPublicEngineActionPayload,
+  buildPublicModuleActionPayload,
+  buildPublicModulesPayload,
+  buildPublicSystemActionPayload,
+  buildPublicSystemInitializePayload,
+  buildPublicSystemPayload,
+  buildPublicTurnkeyInstallPayload,
+} from '../modules/public-payloads.ts';
+import { assertNoArgs, buildCommandHelp, buildRetiredCommandError, buildRootHelp, buildUsageError, cloneCommandSpec, parseFrontDeskEngineArgs, parseFrontDeskModuleArgs, parseTurnkeyInstallArgs, parseUpdateChannelArgs, printJson, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
 
 export function buildPublicCommandSpecs(

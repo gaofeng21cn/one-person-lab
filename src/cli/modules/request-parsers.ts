@@ -1,11 +1,12 @@
-import type { DomainLaunchStrategy } from '../../domain-launch.ts';
-import type { ProductEntryCliInput, ProductEntryExecutor } from '../../product-entry.ts';
 import type { ResolveRequestInput } from '../../types.ts';
 import type {
   CommandSpec,
   DashboardCliInput,
+  DomainLaunchStrategy,
   LaunchDomainCliInput,
   LogsCliInput,
+  ProductEntryCliInput,
+  ProductEntryExecutor,
   ResumeCliInput,
   RuntimeManagerActionCliInput,
   RuntimeStatusCliInput,
