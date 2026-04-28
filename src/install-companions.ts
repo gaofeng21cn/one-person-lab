@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { buildOplGuiArtifactName, buildOplReleaseTag, getOplReleaseRepo, getOplReleaseVersion } from './opl-release.ts';
-import { resolveFamilyWorkspaceRootFromRepoRoot } from './opl-skills.ts';
+import { resolveFamilyWorkspaceRootFromRepoRoot } from './family-workspace-root.ts';
 import { runGit } from './frontdesk-installation/shared.ts';
 
 export type OplCompanionSkillStatus = 'ready' | 'missing';

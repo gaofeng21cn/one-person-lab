@@ -1,11 +1,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
 
 import { GatewayContractError } from './contracts.ts';
 import { syncOplCompanionSkills, type OplCompanionSkillApplyMode, type OplSuperpowersProfile } from './install-companions.ts';
+import { resolveDefaultFamilyWorkspaceRoot } from './family-workspace-root.ts';
 import { resolveFrontDeskStatePaths } from './frontdesk-state.ts';
+
+export {
+  resolveDefaultFamilyWorkspaceRoot,
+  resolveFamilyWorkspaceRootFromRepoRoot,
+} from './family-workspace-root.ts';
 
 type SkillPackInstallerKind = 'bash' | 'node';
 
@@ -102,47 +107,8 @@ const DOMAIN_ALIAS_MAP = new Map<string, SkillPackSpec['domain_id']>([
   ['redcube_ai', 'redcube'],
 ]);
 
-type ResolveFamilyWorkspaceRootOptions = {
-  repoRootHint?: string;
-};
-
 function isDirectory(filePath: string) {
   return fs.existsSync(filePath) && fs.statSync(filePath).isDirectory();
-}
-
-function resolveRepoRootPath(options: ResolveFamilyWorkspaceRootOptions = {}) {
-  const repoRootHint = normalizeOptionalString(options.repoRootHint);
-  if (repoRootHint) {
-    return path.resolve(repoRootHint);
-  }
-
-  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-}
-
-export function resolveFamilyWorkspaceRootFromRepoRoot(repoRoot: string) {
-  let current = path.resolve(repoRoot);
-
-  while (true) {
-    const baseName = path.basename(current);
-    if (baseName === '.worktrees' || baseName === 'worktrees') {
-      return path.dirname(path.dirname(current));
-    }
-
-    const parent = path.dirname(current);
-    if (parent === current) {
-      return path.dirname(path.resolve(repoRoot));
-    }
-    current = parent;
-  }
-}
-
-export function resolveDefaultFamilyWorkspaceRoot(options: ResolveFamilyWorkspaceRootOptions = {}) {
-  const configuredWorkspaceRoot = normalizeOptionalString(process.env.OPL_FAMILY_WORKSPACE_ROOT);
-  if (configuredWorkspaceRoot) {
-    return path.resolve(configuredWorkspaceRoot);
-  }
-
-  return resolveFamilyWorkspaceRootFromRepoRoot(resolveRepoRootPath(options));
 }
 
 function resolveManagedModulesRoot() {
