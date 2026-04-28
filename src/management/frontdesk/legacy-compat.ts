@@ -1,6 +1,4 @@
 import { buildFrontDeskEndpoints, normalizeBasePath } from '../../frontdesk-paths.ts';
-import { buildDomainManifestCatalog } from '../../domain-manifest/catalog-builder.ts';
-import type { DomainManifestCatalogEntry } from '../../domain-manifest/types.ts';
 import {
   buildDomainEntryParity,
   buildRecommendedEntrySurfaces,
@@ -10,6 +8,10 @@ import { buildFrontDeskShellMcpWiring } from '../../frontdesk-shell-identity.ts'
 import { buildWorkspaceCatalog } from '../../workspace-registry.ts';
 import type { GatewayContracts } from '../../types.ts';
 
+import {
+  buildDomainManifestCatalog,
+  type DomainManifestCatalogEntry,
+} from '../domain-manifest-catalog.ts';
 import type { DashboardOptions } from '../types.ts';
 
 

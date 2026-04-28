@@ -4,13 +4,14 @@ import { spawnSync } from 'node:child_process';
 
 import { GatewayContractError } from './contracts.ts';
 import { syncOplCompanionSkills, type OplCompanionSkillApplyMode, type OplSuperpowersProfile } from './install-companions.ts';
-import { resolveDefaultFamilyWorkspaceRoot } from './family-workspace-root.ts';
+import {
+  resolveDefaultFamilyWorkspaceRoot as resolveDefaultFamilyWorkspaceRootImpl,
+  resolveFamilyWorkspaceRootFromRepoRoot as resolveFamilyWorkspaceRootFromRepoRootImpl,
+} from './family-workspace-root.ts';
 import { resolveFrontDeskStatePaths } from './frontdesk-state.ts';
 
-export {
-  resolveDefaultFamilyWorkspaceRoot,
-  resolveFamilyWorkspaceRootFromRepoRoot,
-} from './family-workspace-root.ts';
+export const resolveDefaultFamilyWorkspaceRoot = resolveDefaultFamilyWorkspaceRootImpl;
+export const resolveFamilyWorkspaceRootFromRepoRoot = resolveFamilyWorkspaceRootFromRepoRootImpl;
 
 type SkillPackInstallerKind = 'bash' | 'node';
 
