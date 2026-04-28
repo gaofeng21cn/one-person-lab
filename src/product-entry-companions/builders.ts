@@ -39,9 +39,9 @@ import {
   validateFamilyProductEntryManifest,
   validateFamilyProductFrontdesk,
 } from './validators.ts';
-import { buildProductEntryResumeSurface } from './resume-surface.ts';
+import { buildProductEntryResumeSurface as buildProductEntryResumeSurfaceImpl } from './resume-surface.ts';
 
-export { buildProductEntryResumeSurface } from './resume-surface.ts';
+export const buildProductEntryResumeSurface = buildProductEntryResumeSurfaceImpl;
 
 export function collectFamilyHumanGateIds(familyOrchestration: unknown) {
   if (!isRecord(familyOrchestration) || !Array.isArray(familyOrchestration.human_gates)) {
