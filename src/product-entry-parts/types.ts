@@ -1,4 +1,4 @@
-import type { buildHandoffBundle } from '../handoff-bundle.ts';
+import type { HandoffBundleResult } from '../handoff-bundle-types.ts';
 import type {
   BoundaryExplanation,
   ResolutionResult,
@@ -47,5 +47,5 @@ export type PreparedProductEntryAsk = {
   boundary: BoundaryExplanation;
   handoffPrompt: string;
   args: string[];
-  handoffBundle: ReturnType<typeof buildHandoffBundle>;
+  handoffBundle: HandoffBundleResult;
 };
