@@ -1,11 +1,13 @@
 import { GatewayContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkstreamOrThrow, validateGatewayContracts } from '../../contracts.ts';
-import { buildFrontDeskWorkspaceRootSurface, writeFrontDeskWorkspaceRootSurface } from '../../system-installation.ts';
+import { buildFrontDeskWorkspaceRootSurface, writeFrontDeskWorkspaceRootSurface } from '../../system-installation/workspace-root.ts';
 import { buildProductEntryDoctor, buildProductEntryHandoffEnvelope, runProductEntryLogs, runProductEntryRepairHermesGateway, runProductEntryResume, runProductEntrySessions } from '../../product-entry.ts';
 import { buildRuntimeManager, runRuntimeManagerAction } from '../../runtime-manager.ts';
 import { buildNativeIndexSummary } from '../../native-index-summary.ts';
 import { launchDomainEntry } from '../../domain-launch.ts';
-import { buildDomainManifestCatalog } from '../../domain-manifest.ts';
-import { buildFrontDeskDashboard, buildFrontDeskStart, buildProjectsOverview, buildRuntimeStatus, buildWorkspaceStatus } from '../../management/index.ts';
+import { buildDomainManifestCatalog } from '../../domain-manifest/catalog-builder.ts';
+import { buildFrontDeskDashboard, buildFrontDeskStart, buildProjectsOverview } from '../../management/runtime-dashboard.ts';
+import { buildRuntimeStatus } from '../../management/runtime.ts';
+import { buildWorkspaceStatus } from '../../management/workspace.ts';
 import { runAcpStdioBridge } from '../../opl-acp-stdio.ts';
 import { syncOplCompanionSkills } from '../../install-companions.ts';
 import { readFamilySkillPacks, syncFamilySkillPacks } from '../../opl-skills.ts';

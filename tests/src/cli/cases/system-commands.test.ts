@@ -1,6 +1,10 @@
 import { GatewayContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeHermesFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakePsFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadGatewayContracts, once, os, path, readJsonFixture, readJsonLine, repoRoot, resolveRequestSurface, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateGatewayContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
 import { buildInternalCommandSpecs } from '../../../../src/cli/cases/private-command-specs.ts';
 import { buildPublicCommandSpecs } from '../../../../src/cli/cases/public-command-specs.ts';
+import { buildDomainManifestCatalog } from '../../../../src/management/domain-manifest-catalog.ts';
+import { buildCurrentDashboardSurfaceRefs, buildCurrentReadinessProjection } from '../../../../src/management/readiness.ts';
+import { buildFrontDeskDashboard } from '../../../../src/management/runtime-dashboard.ts';
+import { buildWorkspaceCatalog } from '../../../../src/workspace-registry.ts';
 
 test('public command specs no longer depend on legacy frontdesk command ids', () => {
   const contracts = loadGatewayContracts({ contractsDir });
@@ -50,7 +54,35 @@ test('public command specs no longer depend on legacy frontdesk command ids', ()
   assert.equal(publicSpecs['service install'], undefined);
 });
 
-test('status dashboard aggregates front-desk management surfaces into one view', () => {
+test('current readiness projection is derived from current OPL surfaces', () => {
+  const contracts = loadGatewayContracts({ contractsDir });
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-current-readiness-state-'));
+  const previousStateDir = process.env.OPL_STATE_DIR;
+
+  try {
+    process.env.OPL_STATE_DIR = stateRoot;
+    const domainManifests = buildDomainManifestCatalog(contracts).domain_manifests;
+    const workspaceCatalog = buildWorkspaceCatalog(contracts).workspace_catalog;
+    const readiness = buildCurrentReadinessProjection(domainManifests.projects, workspaceCatalog);
+    const refs = buildCurrentDashboardSurfaceRefs();
+
+    assert.equal(readiness.surface_id, 'opl_current_readiness_projection');
+    assert.equal(readiness.summary.total_projects_count, 3);
+    assert.equal(readiness.projects.length, 3);
+    assert.equal(readiness.domain_binding_parity.summary.total_projects_count, 3);
+    assert.equal(refs.entry_guide_surface.command, 'opl start --project <project_id>');
+    assert.equal(refs.readiness_surface.command, 'opl status dashboard');
+  } finally {
+    if (previousStateDir === undefined) {
+      delete process.env.OPL_STATE_DIR;
+    } else {
+      process.env.OPL_STATE_DIR = previousStateDir;
+    }
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('status dashboard aggregates current OPL management surfaces into one view', () => {
   const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
 if [ "$1" = "version" ]; then
   echo "Hermes Agent v9.9.9-test"
@@ -98,8 +130,41 @@ exit 1
       OPL_HERMES_BIN: hermesPath,
       PATH: `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`,
     });
+    const previousEnv = {
+      OPL_STATE_DIR: process.env.OPL_STATE_DIR,
+      OPL_HERMES_BIN: process.env.OPL_HERMES_BIN,
+      PATH: process.env.PATH,
+    };
+
+    let directDashboard: ReturnType<typeof buildFrontDeskDashboard> | null = null;
+    try {
+      process.env.OPL_STATE_DIR = stateRoot;
+      process.env.OPL_HERMES_BIN = hermesPath;
+      process.env.PATH = `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`;
+      directDashboard = buildFrontDeskDashboard(loadGatewayContracts({ contractsDir }), {
+        workspacePath: repoRoot,
+        sessionsLimit: 1,
+      });
+    } finally {
+      if (previousEnv.OPL_STATE_DIR === undefined) {
+        delete process.env.OPL_STATE_DIR;
+      } else {
+        process.env.OPL_STATE_DIR = previousEnv.OPL_STATE_DIR;
+      }
+      if (previousEnv.OPL_HERMES_BIN === undefined) {
+        delete process.env.OPL_HERMES_BIN;
+      } else {
+        process.env.OPL_HERMES_BIN = previousEnv.OPL_HERMES_BIN;
+      }
+      if (previousEnv.PATH === undefined) {
+        delete process.env.PATH;
+      } else {
+        process.env.PATH = previousEnv.PATH;
+      }
+    }
 
     assert.equal(output.version, 'g2');
+    assert.equal(directDashboard?.dashboard.gui_runtime.entry_guide_surface.surface_id, 'opl_current_entry_guide');
     assert.equal(output.dashboard.gui_runtime.direct_entry_command, 'opl');
     assert.equal(output.dashboard.gui_runtime.local_web_status, 'retired');
     assert.equal(output.dashboard.gui_runtime.local_web_command, null);
@@ -108,6 +173,8 @@ exit 1
     assert.equal(output.dashboard.gui_runtime.recommended_entry_surfaces_count, 0);
     assert.deepEqual(output.dashboard.gui_runtime.recommended_entry_surfaces, []);
     assert.equal(output.dashboard.gui_runtime.hosted_runtime_readiness.status, 'retired');
+    assert.equal(output.dashboard.gui_runtime.entry_guide_surface.surface_id, 'opl_current_entry_guide');
+    assert.equal(output.dashboard.gui_runtime.readiness_surface.surface_id, 'opl_current_readiness_projection');
     assert.equal('hosted_web_status' in output.dashboard.gui_runtime, false);
     assert.equal(output.dashboard.projects.length, 4);
     assert.equal(output.dashboard.domain_manifests.summary.total_projects_count, 3);

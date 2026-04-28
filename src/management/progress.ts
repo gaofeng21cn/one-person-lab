@@ -2,7 +2,7 @@ import { buildWorkspaceCatalog } from '../workspace-registry.ts';
 import type { GatewayContracts } from '../types.ts';
 
 import { buildDomainManifestCatalog } from './domain-manifest-catalog.ts';
-import { buildFrontDeskReadiness } from './runtime-surfaces.ts';
+import { buildCurrentReadinessProjection } from './readiness.ts';
 import { buildProgressFeedback, buildWorkspaceInbox } from './progress-feedback.ts';
 import {
   buildStudyProgressSurface,
@@ -24,11 +24,7 @@ export async function buildProjectProgressBrief(
   const workspacePath = normalizeWorkspacePath(options.workspacePath);
   const workspaceCatalog = buildWorkspaceCatalog(contracts).workspace_catalog;
   const domainManifests = buildDomainManifestCatalog(contracts).domain_manifests;
-  const readiness = (await buildFrontDeskReadiness(contracts, {
-    workspacePath,
-    sessionsLimit: options.sessionsLimit,
-    basePath: options.basePath,
-  })).frontdesk_readiness;
+  const readiness = buildCurrentReadinessProjection(domainManifests.projects, workspaceCatalog);
   const runtimeStatus = buildRuntimeStatus({
     sessionsLimit: options.sessionsLimit,
     ledgerLimit: options.sessionsLimit,

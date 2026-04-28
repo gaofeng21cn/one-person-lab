@@ -1,5 +1,7 @@
 export {
   buildDomainManifestCatalog,
-  type DomainManifestCatalogEntry,
-  type NormalizedDomainManifest,
-} from '../domain-manifest.ts';
+} from '../domain-manifest/catalog-builder.ts';
+export type {
+  DomainManifestCatalogEntry,
+  NormalizedDomainManifest,
+} from '../domain-manifest/types.ts';
