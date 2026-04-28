@@ -17,7 +17,7 @@ function buildRetiredHostedRuntimeReadiness() {
 
 import { findDomainOrThrow, GatewayContractError } from '../contracts.ts';
 import { buildDomainEntryParity, buildRecommendedEntrySurfaces } from '../family-domain-catalog.ts';
-import { buildFrontDeskEndpoints } from '../legacy-frontdesk-paths.ts';
+import { buildOplRuntimeEndpoints } from '../legacy-frontdesk-paths/current.ts';
 import { readFrontDeskRuntimeModes } from '../runtime-modes.ts';
 import { buildWorkspaceCatalog, getActiveWorkspaceBinding } from '../workspace-registry.ts';
 import type { GatewayContracts } from '../types.ts';
@@ -143,7 +143,7 @@ export function buildFrontDeskDashboard(
   contracts: GatewayContracts,
   options: DashboardOptions = {},
 ) {
-  const endpoints = buildFrontDeskEndpoints(options.basePath);
+  const endpoints = buildOplRuntimeEndpoints(options.basePath);
   const runtimeModes = readFrontDeskRuntimeModes();
   const projects = buildProjectsOverview(contracts).projects;
   const workspace = buildWorkspaceStatus({ workspacePath: options.workspacePath }).workspace;
