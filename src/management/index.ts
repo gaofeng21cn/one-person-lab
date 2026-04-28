@@ -18,4 +18,4 @@ export {
   buildFrontDeskManifest,
   buildFrontDeskReadiness,
   buildFrontDeskStart,
-} from './frontdesk.ts';
+} from './runtime-surfaces.ts';

@@ -1,4 +1,4 @@
-import { ensureFrontDeskStateDir, resolveFrontDeskStatePaths } from '../frontdesk-state.ts';
+import { ensureFrontDeskStateDir, resolveFrontDeskStatePaths } from '../runtime-state-paths.ts';
 import { inspectHermesRuntime } from '../hermes.ts';
 import { readLocalCodexDefaultsIfAvailable } from '../local-codex-defaults.ts';
 import { buildNativeHelperHealthStatus } from '../native-helper-runtime.ts';

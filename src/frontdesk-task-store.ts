@@ -10,8 +10,8 @@ import {
   resolveCodexBinary,
 } from './codex.ts';
 import { GatewayContractError } from './contracts.ts';
-import { readFrontDeskRuntimeModes } from './frontdesk-runtime-modes.ts';
-import { ensureFrontDeskStateDir, resolveFrontDeskStatePaths } from './frontdesk-state.ts';
+import { readFrontDeskRuntimeModes } from './runtime-modes.ts';
+import { ensureFrontDeskStateDir, resolveFrontDeskStatePaths } from './runtime-state-paths.ts';
 import {
   buildHermesCliPreview,
   parseHermesQuietChatOutput,
