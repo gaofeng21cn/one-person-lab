@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import type { DomainManifestCatalogEntry } from '../../src/domain-manifest.ts';
+import type { DomainManifestCatalogEntry } from '../../src/domain-manifest/types.ts';
 import type { WorkspaceBinding } from '../../src/workspace-registry.ts';
 import {
   buildDomainEntryParity,
