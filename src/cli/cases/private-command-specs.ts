@@ -1,6 +1,7 @@
 import { GatewayContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkstreamOrThrow, validateGatewayContracts } from '../../contracts.ts';
 import { buildFrontDeskWorkspaceRootSurface, writeFrontDeskWorkspaceRootSurface } from '../../system-installation/workspace-root.ts';
-import { buildProductEntryDoctor, buildProductEntryHandoffEnvelope, runProductEntryLogs, runProductEntryRepairHermesGateway, runProductEntryResume, runProductEntrySessions } from '../../product-entry.ts';
+import { buildProductEntryHandoffEnvelope } from '../../product-entry-handoff-envelope.ts';
+import { buildProductEntryDoctor, runProductEntryLogs, runProductEntryRepairHermesGateway, runProductEntryResume, runProductEntrySessions } from '../../product-entry-runtime.ts';
 import { buildRuntimeManager, runRuntimeManagerAction } from '../../runtime-manager.ts';
 import { buildNativeIndexSummary } from '../../native-index-summary.ts';
 import { launchDomainEntry } from '../../domain-launch.ts';
