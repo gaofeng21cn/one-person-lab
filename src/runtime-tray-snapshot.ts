@@ -1,3 +1,6 @@
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import { inspectHermesRuntime } from './hermes.ts';
 import { buildDomainManifestCatalog } from './management/domain-manifest-catalog.ts';
 import type { DomainManifestCatalogEntry, NormalizedDomainManifest, NormalizedSurfaceRef } from './domain-manifest/types.ts';
@@ -27,6 +30,25 @@ type RuntimeTrayItem = {
   workspace_path: string | null;
   runtime_owner: 'upstream_hermes_agent';
   domain_owner: string;
+  source_refs: RuntimeTraySourceRef[];
+};
+
+type HermesCronJob = {
+  id?: unknown;
+  name?: unknown;
+  script?: unknown;
+  schedule_display?: unknown;
+  enabled?: unknown;
+  state?: unknown;
+  next_run_at?: unknown;
+  last_run_at?: unknown;
+  last_status?: unknown;
+  last_error?: unknown;
+  last_delivery_error?: unknown;
+};
+
+type HermesCronProjection = {
+  items: RuntimeTrayItem[];
   source_refs: RuntimeTraySourceRef[];
 };
 
@@ -132,6 +154,15 @@ function normalizeSourceRef(
 function sourceRef(ref: string, role: string, label?: string): RuntimeTraySourceRef {
   return {
     ref_kind: 'json_pointer',
+    ref,
+    role,
+    label,
+  };
+}
+
+function fileSourceRef(ref: string, role: string, label?: string): RuntimeTraySourceRef {
+  return {
+    ref_kind: 'file',
     ref,
     role,
     label,
@@ -286,13 +317,154 @@ function sortItems(left: RuntimeTrayItem, right: RuntimeTrayItem) {
   return left.project_label.localeCompare(right.project_label) || left.item_id.localeCompare(right.item_id);
 }
 
+function hermesHomeRoot() {
+  return process.env.HERMES_HOME
+    ? path.resolve(process.env.HERMES_HOME)
+    : path.join(os.homedir(), '.hermes');
+}
+
+function hermesCronJobsPath() {
+  return process.env.OPL_HERMES_CRON_JOBS_FILE
+    ? path.resolve(process.env.OPL_HERMES_CRON_JOBS_FILE)
+    : path.join(hermesHomeRoot(), 'cron', 'jobs.json');
+}
+
+function latestHermesCronOutputPath(hermesHome: string, jobId: string) {
+  const outputDir = path.join(hermesHome, 'cron', 'output', jobId);
+  try {
+    const latestFile = fs.readdirSync(outputDir)
+      .filter((name) => name.endsWith('.md'))
+      .sort()
+      .at(-1);
+    return latestFile ? path.join(outputDir, latestFile) : null;
+  } catch {
+    return null;
+  }
+}
+
+function latestHermesCronOutputHasScriptError(outputPath: string | null) {
+  if (!outputPath) {
+    return false;
+  }
+
+  try {
+    const content = fs.readFileSync(outputPath, 'utf8');
+    return content.includes('## Script Error') || content.includes('The data-collection script failed');
+  } catch {
+    return false;
+  }
+}
+
+function readHermesCronJobs() {
+  const jobsPath = hermesCronJobsPath();
+  try {
+    const payload = JSON.parse(fs.readFileSync(jobsPath, 'utf8')) as { jobs?: unknown };
+    return {
+      jobsPath,
+      jobs: Array.isArray(payload.jobs) ? payload.jobs as HermesCronJob[] : [],
+    };
+  } catch {
+    return {
+      jobsPath,
+      jobs: [],
+    };
+  }
+}
+
+function isMasHermesCronJob(job: HermesCronJob) {
+  const name = optionalString(job.name)?.toLowerCase() ?? '';
+  const script = optionalString(job.script)?.toLowerCase() ?? '';
+  return name.startsWith('medautoscience-') || script.includes('med-autoscience/');
+}
+
+function titleFromHermesCronJob(job: HermesCronJob) {
+  const script = optionalString(job.script);
+  const scriptMatch = script?.match(/med-autoscience\/([^/]+)\//);
+  if (scriptMatch?.[1]) {
+    return `${scriptMatch[1]} supervision`;
+  }
+
+  const name = optionalString(job.name);
+  if (!name) {
+    return 'MAS supervision';
+  }
+
+  return name.replace(/^medautoscience-/, '').replace(/[-_]+/g, ' ').trim() || 'MAS supervision';
+}
+
+function buildHermesCronProjection(): HermesCronProjection {
+  const hermesHome = hermesHomeRoot();
+  const { jobsPath, jobs } = readHermesCronJobs();
+  const items = jobs
+    .filter(isMasHermesCronJob)
+    .map((job): RuntimeTrayItem | null => {
+      const jobId = optionalString(job.id);
+      if (!jobId) {
+        return null;
+      }
+
+      const enabled = job.enabled !== false;
+      const state = optionalString(job.state) ?? (enabled ? 'scheduled' : 'paused');
+      const latestOutputPath = latestHermesCronOutputPath(hermesHome, jobId);
+      const scriptErrored = latestHermesCronOutputHasScriptError(latestOutputPath);
+      const hasRecordedError =
+        Boolean(optionalString(job.last_error) || optionalString(job.last_delivery_error))
+        || optionalString(job.last_status) === 'error'
+        || scriptErrored;
+      const lane: RuntimeTrayLane = hasRecordedError || !enabled ? 'attention' : 'running';
+      const status = hasRecordedError ? 'needs_attention' : enabled ? state : 'paused';
+      const schedule = optionalString(job.schedule_display);
+      const lastRun = optionalString(job.last_run_at);
+      const nextRun = optionalString(job.next_run_at);
+      const summaryParts = [
+        schedule ? `schedule ${schedule}` : null,
+        lastRun ? `last run ${lastRun}` : null,
+        nextRun ? `next run ${nextRun}` : null,
+      ].filter((value): value is string => Boolean(value));
+      const sourceRefs = uniqueByRef([
+        fileSourceRef(jobsPath, 'hermes_cron_jobs', 'Hermes cron jobs'),
+        latestOutputPath ? fileSourceRef(latestOutputPath, 'hermes_cron_output', 'latest cron output') : null,
+      ].filter((ref): ref is RuntimeTraySourceRef => Boolean(ref)));
+
+      return {
+        item_id: `medautoscience:hermes-cron:${jobId}`,
+        project_id: 'medautoscience',
+        project_label: PROJECT_LABELS.medautoscience,
+        lane,
+        title: titleFromHermesCronJob(job),
+        status,
+        status_label: hasRecordedError ? 'Needs attention' : enabled ? 'Supervising' : 'Paused',
+        summary: summaryParts.length > 0 ? summaryParts.join('; ') : null,
+        updated_at: lastRun,
+        command: `hermes cron run ${jobId}`,
+        workspace_path: null,
+        runtime_owner: 'upstream_hermes_agent' as const,
+        domain_owner: 'med-autoscience',
+        source_refs: sourceRefs,
+      };
+    })
+    .filter((item): item is RuntimeTrayItem => Boolean(item));
+
+  return {
+    items,
+    source_refs: items.length > 0
+      ? [
+        fileSourceRef(jobsPath, 'hermes_cron_projection', 'Hermes cron jobs'),
+        sourceRef('/runtime_tray_snapshot/hermes_cron_items', 'runtime_projection'),
+      ]
+      : [],
+  };
+}
+
 export function buildRuntimeTraySnapshot(contracts: GatewayContracts) {
   const hermes = inspectHermesRuntime();
   const hermesReady = Boolean(hermes.binary && hermes.version && hermes.gateway_service.loaded);
   const domainManifests = buildDomainManifestCatalog(contracts).domain_manifests;
-  const items = domainManifests.projects
+  const domainItems = domainManifests.projects
     .map((entry) => entry.status === 'resolved' ? buildResolvedItem(entry) : buildAttentionItemForUnresolved(entry))
     .filter((entry): entry is RuntimeTrayItem => Boolean(entry));
+  const hermesCronProjection = buildHermesCronProjection();
+  const items = [...domainItems, ...hermesCronProjection.items];
   const runningItems = items.filter((entry) => entry.lane === 'running').sort(sortItems);
   const attentionItems = items.filter((entry) => entry.lane === 'attention').sort(sortItems);
   const recentItems = items.filter((entry) => entry.lane === 'recent').sort(sortItems);
@@ -339,6 +511,7 @@ export function buildRuntimeTraySnapshot(contracts: GatewayContracts) {
         sourceRef('/domain_manifests', 'domain_manifest_catalog'),
         sourceRef('/runtime_manager/owner_split', 'runtime_owner_split'),
         sourceRef('/runtime_manager/future_sidecar_migration', 'daemon_policy'),
+        ...hermesCronProjection.source_refs,
       ]),
       daemon_policy: {
         local_daemon_added: false,

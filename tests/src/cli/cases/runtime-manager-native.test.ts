@@ -245,6 +245,7 @@ exit 1
 test('runtime snapshot projects active domain manifests into tray lanes without owning runtime truth', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-state-'));
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-workspace-'));
+  const hermesHome = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-hermes-home-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
   const fixtures = loadFamilyManifestFixtures();
   fs.mkdirSync(path.join(workspaceRoot, 'mas'), { recursive: true });
@@ -361,6 +362,7 @@ exit 1
       OPL_STATE_DIR: stateRoot,
       OPL_CONTRACTS_DIR: fixtureContractsRoot,
       OPL_HERMES_BIN: hermesPath,
+      HERMES_HOME: hermesHome,
     });
     const snapshot = output.runtime_tray_snapshot;
 
@@ -383,6 +385,101 @@ exit 1
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    fs.rmSync(hermesHome, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(hermesFixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime snapshot projects Hermes-hosted MAS cron supervision jobs when workspace bindings are absent', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-cron-state-'));
+  const hermesHome = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-cron-home-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const { fixtureRoot: hermesFixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "version" ]; then
+  echo "Hermes Agent v9.9.9-test"
+  exit 0
+fi
+if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
+  echo "Gateway service is loaded"
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+  const jobsPath = path.join(hermesHome, 'cron', 'jobs.json');
+  fs.mkdirSync(path.dirname(jobsPath), { recursive: true });
+  fs.mkdirSync(path.join(hermesHome, 'cron', 'output', 'cron-running'), { recursive: true });
+  fs.mkdirSync(path.join(hermesHome, 'cron', 'output', 'cron-attention'), { recursive: true });
+  fs.writeFileSync(
+    path.join(hermesHome, 'cron', 'output', 'cron-running', '2026-04-29_20-00-00.md'),
+    '# Cron Job: medautoscience-supervision-nfpitnet\n\n## Response\n\n[SILENT]\n',
+  );
+  fs.writeFileSync(
+    path.join(hermesHome, 'cron', 'output', 'cron-attention', '2026-04-29_20-05-00.md'),
+    '# Cron Job: medautoscience-supervision-dm-cvd\n\n## Script Error\nThe data-collection script failed.\n',
+  );
+  fs.writeFileSync(
+    jobsPath,
+    `${JSON.stringify({
+      jobs: [
+        {
+          id: 'cron-running',
+          name: 'medautoscience-supervision-nfpitnet-be4c006a',
+          script: 'med-autoscience/nfpitnet-be4c006a/watch_runtime_tick.py',
+          schedule_display: 'every 5m',
+          enabled: true,
+          state: 'scheduled',
+          next_run_at: '2026-04-29T20:05:00+08:00',
+          last_run_at: '2026-04-29T20:00:00+08:00',
+          last_status: 'ok',
+        },
+        {
+          id: 'cron-attention',
+          name: 'medautoscience-supervision-dm-cvd-mortality-risk-b8331468',
+          script: 'med-autoscience/dm-cvd-mortality-risk-b8331468/watch_runtime_tick.py',
+          schedule_display: 'every 5m',
+          enabled: true,
+          state: 'scheduled',
+          next_run_at: '2026-04-29T20:10:00+08:00',
+          last_run_at: '2026-04-29T20:05:00+08:00',
+          last_status: 'ok',
+        },
+        {
+          id: 'non-mas',
+          name: 'daily-housekeeping',
+          script: 'ops/housekeeping.py',
+          enabled: true,
+          state: 'scheduled',
+        },
+      ],
+    }, null, 2)}\n`,
+  );
+
+  try {
+    const output = runCli(['runtime', 'snapshot'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_HERMES_BIN: hermesPath,
+      HERMES_HOME: hermesHome,
+    });
+    const snapshot = output.runtime_tray_snapshot;
+
+    assert.equal(snapshot.runtime_health.status, 'needs_attention');
+    assert.equal(snapshot.running_items.length, 1);
+    assert.equal(snapshot.running_items[0].item_id, 'medautoscience:hermes-cron:cron-running');
+    assert.equal(snapshot.running_items[0].project_label, 'MAS');
+    assert.equal(snapshot.running_items[0].status_label, 'Supervising');
+    assert.equal(snapshot.running_items[0].source_refs.some((ref: { role: string }) => ref.role === 'hermes_cron_jobs'), true);
+    assert.equal(snapshot.attention_items.length, 1);
+    assert.equal(snapshot.attention_items[0].item_id, 'medautoscience:hermes-cron:cron-attention');
+    assert.equal(snapshot.attention_items[0].status_label, 'Needs attention');
+    assert.equal(snapshot.attention_items[0].source_refs.some((ref: { role: string }) => ref.role === 'hermes_cron_output'), true);
+    assert.equal(snapshot.recent_items.length, 0);
+    assert.equal(snapshot.source_refs.some((ref: { role: string }) => ref.role === 'hermes_cron_projection'), true);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(hermesHome, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(hermesFixtureRoot, { recursive: true, force: true });
   }
