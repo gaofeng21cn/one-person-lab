@@ -1,15 +1,15 @@
 import {
-  buildFrontDeskWorkspaceRootStatus,
-  writeFrontDeskWorkspaceRoot,
+  buildOplWorkspaceRootStatus,
+  writeOplWorkspaceRoot,
 } from '../system-preferences.ts';
 
-export function buildFrontDeskWorkspaceRootSurface() {
-  return buildFrontDeskWorkspaceRootStatus();
+export function buildOplWorkspaceRootSurface() {
+  return buildOplWorkspaceRootStatus();
 }
 
-export function writeFrontDeskWorkspaceRootSurface(workspaceRoot: string) {
+export function writeOplWorkspaceRootSurface(workspaceRoot: string) {
   return {
     version: 'g2',
-    workspace_root: writeFrontDeskWorkspaceRoot(workspaceRoot),
+    workspace_root: writeOplWorkspaceRoot(workspaceRoot),
   };
 }

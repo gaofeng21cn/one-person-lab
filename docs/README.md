@@ -54,7 +54,7 @@ Use it like this:
 
 The live public model stays in [Project](./project.md), [Status](./status.md), and [Architecture](./architecture.md).
 The live interaction model is runtime-first and skill-first.
-Retired `gateway / federation / routed-action` corpus and retired `frontdesk`-era material stay below the active layers.
+Retired `gateway / federation / routed-action` corpus and old local Product API / UI-adapter material stay below the active layers.
 
 ## Layer 1. Default Public Mainline
 
@@ -97,7 +97,7 @@ It is repo-tracked supporting material, not the default implementation basis.
 - domain alignment and delta-intake records
 - benchmark and rollout boards
 - retired `gateway / federation / routed-action` contract corpus kept for audit, compatibility, and schema archaeology
-- retired `frontdesk`-era reference material kept for audit only
+- old local Product API / UI-adapter reference material kept for audit only
 
 ## Layer 4. Historical Specs And Plans
 

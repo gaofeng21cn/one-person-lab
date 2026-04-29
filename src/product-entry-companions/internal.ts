@@ -196,10 +196,10 @@ export const FRONTDESK_SHARED_HANDOFF_KEYS = [
   'opl_handoff_builder',
 ] as const;
 
-export function normalizeFrontdeskSummary(value: unknown, field: string) {
+export function normalizeFrontdoorSummary(value: unknown, field: string) {
   const payload = requireRecord(value, field);
   return {
-    frontdesk_command: requireString(payload.frontdesk_command, `${field}.frontdesk_command`),
+    frontdoor_command: requireString(payload.frontdoor_command, `${field}.frontdoor_command`),
     recommended_command: requireString(payload.recommended_command, `${field}.recommended_command`),
     operator_loop_command: requireString(payload.operator_loop_command, `${field}.operator_loop_command`),
   };

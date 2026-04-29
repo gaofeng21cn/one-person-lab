@@ -3,35 +3,35 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { GatewayContractError } from '../contracts.ts';
-import type { FrontDeskUpdateChannel } from '../system-preferences.ts';
+import type { OplUpdateChannel } from '../system-preferences.ts';
 
-export type FrontDeskModuleId =
+export type OplModuleId =
   | 'medautoscience'
   | 'meddeepscientist'
   | 'medautogrant'
   | 'redcube';
 
-export type FrontDeskModuleAction =
+export type OplModuleAction =
   | 'install'
   | 'update'
   | 'reinstall'
   | 'remove';
 
-export type FrontDeskEngineId = 'codex' | 'hermes';
+export type OplEngineId = 'codex' | 'hermes';
 
-export type FrontDeskEngineAction =
+export type OplEngineAction =
   | 'install'
   | 'update'
   | 'reinstall'
   | 'remove';
 
-export type FrontDeskSystemAction =
+export type OplSystemAction =
   | 'repair'
   | 'reinstall_support'
   | 'update_channel'
   | 'repair_native_helpers';
 
-export type FrontDeskModuleInstallOrigin =
+export type OplModuleInstallOrigin =
   | 'managed_root'
   | 'sibling_workspace'
   | 'env_override'
@@ -39,7 +39,7 @@ export type FrontDeskModuleInstallOrigin =
   | 'invalid_checkout';
 
 export type DomainModuleSpec = {
-  module_id: FrontDeskModuleId;
+  module_id: OplModuleId;
   label: string;
   repo_name: string;
   repo_url: string;
@@ -53,44 +53,44 @@ export type CommandResult = {
   stderr: string;
 };
 
-export type FrontDeskShellActionSpec = {
+export type OplShellActionSpec = {
   strategy: 'env_override' | 'builtin' | 'manual_required';
   command_preview: string[];
   note: string | null;
   executable: ((cwd?: string) => CommandResult) | null;
 };
 
-export type FrontDeskInitializeSectionId =
+export type OplInitializeSectionId =
   | 'workspace_root'
   | 'environment'
   | 'modules'
   | 'settings'
   | 'system';
 
-export type FrontDeskInitializePhase = 'workspace_root' | 'environment' | 'modules' | 'review';
+export type OplInitializePhase = 'workspace_root' | 'environment' | 'modules' | 'review';
 
-export type FrontDeskInitializeActionDescriptor = {
+export type OplInitializeActionDescriptor = {
   action_id: string;
   label: string;
   description: string;
-  section_id: FrontDeskInitializeSectionId;
+  section_id: OplInitializeSectionId;
   endpoint: string;
   method: 'GET' | 'POST';
   request_fields: string[];
   payload_template: Record<string, string> | null;
 };
 
-export type FrontDeskInitializeChecklistItem = {
+export type OplInitializeChecklistItem = {
   item_id: string;
   label: string;
   status: string;
   required: boolean;
   blocking: boolean;
-  section_id: FrontDeskInitializeSectionId;
+  section_id: OplInitializeSectionId;
   detail_summary: string;
   endpoint: string;
   action_endpoint: string;
-  action: FrontDeskInitializeActionDescriptor | null;
+  action: OplInitializeActionDescriptor | null;
 };
 
 export type GitRepoSnapshot = {
@@ -102,23 +102,23 @@ export type GitRepoSnapshot = {
 };
 
 export type ModuleInspection = {
-  module_id: FrontDeskModuleId;
+  module_id: OplModuleId;
   label: string;
   scope: 'domain_module' | 'runtime_dependency';
   description: string;
   repo_url: string;
   installed: boolean;
-  install_origin: FrontDeskModuleInstallOrigin;
+  install_origin: OplModuleInstallOrigin;
   checkout_path: string;
   managed_checkout_path: string;
   health_status: 'ready' | 'missing' | 'invalid_checkout' | 'dirty';
   git: GitRepoSnapshot | null;
-  available_actions: FrontDeskModuleAction[];
-  recommended_action: FrontDeskModuleAction | null;
+  available_actions: OplModuleAction[];
+  recommended_action: OplModuleAction | null;
 };
 
-export type FrontDeskSystemActionInput = Partial<{
-  channel: FrontDeskUpdateChannel;
+export type OplSystemActionInput = Partial<{
+  channel: OplUpdateChannel;
   host: string;
   port: number;
   workspacePath: string;
@@ -126,7 +126,7 @@ export type FrontDeskSystemActionInput = Partial<{
   basePath: string;
 }>;
 
-export type FrontDeskTurnkeyInstallInput = Partial<{
+export type OplTurnkeyInstallInput = Partial<{
   modules: string[];
   host: string;
   port: number;

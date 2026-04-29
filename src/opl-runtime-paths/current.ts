@@ -11,6 +11,13 @@ export type OplRuntimeEndpoints = {
   workspace_bind: string;
   workspace_activate: string;
   workspace_archive: string;
+  system_environment: string;
+  system_settings: string;
+  system_initialize: string;
+  modules: string;
+  engine_action: string;
+  module_action: string;
+  system_action: string;
   runtime_status: string;
   session_ledger: string;
   dashboard: string;
@@ -40,6 +47,13 @@ export function buildOplRuntimeEndpoints(basePath = ''): OplRuntimeEndpoints {
     workspace_bind: `${oplBase}/workspaces/bind`,
     workspace_activate: `${oplBase}/workspaces/activate`,
     workspace_archive: `${oplBase}/workspaces/archive`,
+    system_environment: `${oplBase}/system`,
+    system_settings: `${oplBase}/system/settings`,
+    system_initialize: `${oplBase}/system/initialize`,
+    modules: `${oplBase}/modules`,
+    engine_action: `${oplBase}/engines/actions`,
+    module_action: `${oplBase}/modules/actions`,
+    system_action: `${oplBase}/system/actions`,
     runtime_status: `${apiBase}/status/runtime`,
     session_ledger: `${apiBase}/session/ledger`,
     dashboard: `${apiBase}/status/dashboard`,

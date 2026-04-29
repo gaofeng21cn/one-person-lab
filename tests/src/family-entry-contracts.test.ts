@@ -102,7 +102,7 @@ test('family entry contract helpers build and validate domain agent entry specs'
     codex_entry_strategy: 'domain_agent_entry',
     artifact_conventions: 'paper_and_submission_package',
     progress_conventions: 'study_runtime_narration',
-    entry_command: 'product-frontdesk',
+    entry_command: 'product-frontdoor',
     manifest_command: 'product-entry-manifest',
   });
 
@@ -125,7 +125,7 @@ test('family entry contract helpers build and validate gateway interaction paylo
       'task_intent',
       'entry_mode',
     ],
-    extra_payload: { recommended_route_surface: 'product_frontdesk' },
+    extra_payload: { recommended_route_surface: 'product_frontdoor' },
   });
 
   const validated = validateGatewayInteractionContract(
@@ -133,14 +133,14 @@ test('family entry contract helpers build and validate gateway interaction paylo
     'product_entry_manifest.gateway_interaction_contract',
   );
   assert.equal(validated.surface_kind, 'gateway_interaction_contract');
-  assert.equal(validated.recommended_route_surface, 'product_frontdesk');
+  assert.equal(validated.recommended_route_surface, 'product_frontdoor');
 });
 
 test('family entry contract helpers expose the default family gateway contract with extendable envelope fields', () => {
   const contract = buildFamilyGatewayInteractionContract({
     shared_downstream_entry: 'MedAutoScienceDomainEntry',
     extra_shared_handoff_envelope: ['entry_session_contract'],
-    extra_payload: { recommended_route_surface: 'product_frontdesk' },
+    extra_payload: { recommended_route_surface: 'product_frontdoor' },
   });
 
   const validated = validateGatewayInteractionContract(
@@ -160,7 +160,7 @@ test('family entry contract helpers expose the default family gateway contract w
     'return_surface_contract',
     'entry_session_contract',
   ]);
-  assert.equal(validated.recommended_route_surface, 'product_frontdesk');
+  assert.equal(validated.recommended_route_surface, 'product_frontdoor');
 });
 
 test('family entry contract helpers build and validate shared handoff payloads', () => {
@@ -272,7 +272,7 @@ test('family entry contract helpers validate nested domain agent entry specs ins
       codex_entry_strategy: 'domain_agent_entry',
       artifact_conventions: 'paper_and_submission_package',
       progress_conventions: 'study_runtime_narration',
-      entry_command: 'product-frontdesk',
+      entry_command: 'product-frontdoor',
       manifest_command: 'product-entry-manifest',
     },
   });

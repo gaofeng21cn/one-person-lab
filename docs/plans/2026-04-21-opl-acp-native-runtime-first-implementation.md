@@ -48,8 +48,8 @@
 
 - `src/cli.ts`
 - `src/codex.ts`
-- `src/frontdesk-runtime-modes.ts`
-- `src/frontdesk-task-store.ts`
+- `src/frontdoor-runtime-modes.ts`
+- `src/frontdoor-task-store.ts`
 - 新增 `src/opl-shell-*.ts`
 - `tests/src/cli.test.ts`
 
@@ -75,7 +75,7 @@
 - 新增 `src/acp-runtime-*.ts`
 - 新增 `src/acp-bridge-*.ts`
 - `src/types.ts`
-- `src/frontdesk-mcp-stdio.ts`
+- `src/frontdoor-mcp-stdio.ts`
 - `tests/src/cli.test.ts`
 - 新增 ACP bridge tests
 

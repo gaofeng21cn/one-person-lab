@@ -18,11 +18,11 @@
   },
   "recommended_shell": "direct",
   "recommended_command": "redcube product invoke",
-  "frontdesk_surface": {
-    "shell_key": "frontdesk",
-    "command": "redcube product frontdesk",
-    "surface_kind": "product_frontdesk",
-    "summary": "当前 direct RedCube frontdesk，先暴露 direct / federated / session 三种 operator-facing 入口。"
+  "frontdoor_surface": {
+    "shell_key": "frontdoor",
+    "command": "redcube product frontdoor",
+    "surface_kind": "product_frontdoor",
+    "summary": "当前 direct RedCube frontdoor，先暴露 direct / federated / session 三种 operator-facing 入口。"
   },
   "operator_loop_surface": {
     "shell_key": "direct",
@@ -346,13 +346,13 @@
     ],
     "product_entry_kind": "redcube_product_entry",
     "supported_commands": [
-      "redcube product frontdesk",
+      "redcube product frontdoor",
       "redcube product invoke",
       "redcube product session"
     ],
     "command_contracts": [
       {
-        "command": "redcube product frontdesk",
+        "command": "redcube product frontdoor",
         "required_fields": [],
         "optional_fields": []
       },
@@ -390,7 +390,7 @@
       "codex_entry_strategy": "domain_agent_entry",
       "artifact_conventions": "deck_and_visual_delivery",
       "progress_conventions": "deliverable_build_narration",
-      "entry_command": "redcube product frontdesk",
+      "entry_command": "redcube product frontdoor",
       "manifest_command": "redcube product manifest"
     }
   },
@@ -421,7 +421,7 @@
       "owner": "redcube_ai"
     },
     "attention_queue_surface": {
-      "surface_kind": "product_frontdesk",
+      "surface_kind": "product_frontdoor",
       "owner": "redcube_ai"
     },
     "recovery_contract_surface": {
@@ -450,8 +450,8 @@
     },
     "attention_surface": {
       "ref_kind": "json_pointer",
-      "ref": "/frontdesk_surface",
-      "label": "redcube_frontdesk"
+      "ref": "/frontdoor_surface",
+      "label": "redcube_frontdoor"
     },
     "recovery_surface": {
       "ref_kind": "json_pointer",
@@ -466,10 +466,10 @@
     }
   },
   "product_entry_shell": {
-    "frontdesk": {
-      "command": "redcube product frontdesk",
-      "command_template": "redcube product frontdesk --workspace-root /fixtures/redcube/workspace",
-      "surface_kind": "product_frontdesk"
+    "frontdoor": {
+      "command": "redcube product frontdoor",
+      "command_template": "redcube product frontdoor --workspace-root /fixtures/redcube/workspace",
+      "surface_kind": "product_frontdoor"
     },
     "direct": {
       "command": "redcube product invoke",
@@ -493,32 +493,32 @@
     "skills": [
       {
         "surface_kind": "skill_descriptor",
-        "skill_id": "redcube_product_frontdesk",
-        "title": "RedCube product frontdesk",
+        "skill_id": "redcube_product_frontdoor",
+        "title": "RedCube product frontdoor",
         "owner": "redcube_ai",
         "distribution_mode": "repo_tracked",
-        "target_surface_kind": "product_frontdesk",
-        "description": "打开当前 RedCube frontdesk。",
-        "command": "redcube product frontdesk",
+        "target_surface_kind": "product_frontdoor",
+        "description": "打开当前 RedCube frontdoor。",
+        "command": "redcube product frontdoor",
         "readiness": "landed",
         "tags": [
-          "frontdesk",
+          "frontdoor",
           "deliverable"
         ],
         "domain_projection": {
           "skill_activation": {
             "plugin_name": "redcube-ai",
             "skill_semantics": "single_domain_app_skill",
-            "entry_shell_key": "frontdesk",
-            "entry_command": "redcube product frontdesk",
+            "entry_shell_key": "frontdoor",
+            "entry_command": "redcube product frontdoor",
             "supporting_shell_keys": [
               "direct",
               "session"
             ],
             "shell_commands": {
-              "frontdesk": {
-                "command": "redcube product frontdesk",
-                "target_surface_kind": "product_frontdesk"
+              "frontdoor": {
+                "command": "redcube product frontdoor",
+                "target_surface_kind": "product_frontdoor"
               },
               "direct": {
                 "command": "redcube product invoke",
@@ -564,16 +564,16 @@
       }
     ],
     "supported_commands": [
-      "product-frontdesk",
+      "product-frontdoor",
       "product-invoke",
       "product-federate",
       "product-session"
     ],
     "command_contracts": [
       {
-        "command": "product-frontdesk",
+        "command": "product-frontdoor",
         "owner": "redcube_ai",
-        "surface_kind": "product_frontdesk"
+        "surface_kind": "product_frontdoor"
       },
       {
         "command": "product-invoke",
@@ -600,15 +600,15 @@
   },
   "product_entry_start": {
     "surface_kind": "product_entry_start",
-    "summary": "先打开 RedCube frontdesk；需要直接起一个新会话就走 direct session，需要给外层 OPL shell 走 bridge contract 时使用 internal OPL bridge handoff，已有 session 则直接恢复。",
-    "recommended_mode_id": "open_frontdesk",
+    "summary": "先打开 RedCube frontdoor；需要直接起一个新会话就走 direct session，需要给外层 OPL shell 走 bridge contract 时使用 internal OPL bridge handoff，已有 session 则直接恢复。",
+    "recommended_mode_id": "open_frontdoor",
     "modes": [
       {
-        "mode_id": "open_frontdesk",
-        "title": "Open RedCube frontdesk",
-        "command": "redcube product frontdesk",
-        "surface_kind": "product_frontdesk",
-        "summary": "Open the direct RedCube frontdesk for the current workspace.",
+        "mode_id": "open_frontdoor",
+        "title": "Open RedCube frontdoor",
+        "command": "redcube product frontdoor",
+        "surface_kind": "product_frontdoor",
+        "summary": "Open the direct RedCube frontdoor for the current workspace.",
         "requires": []
       },
       {
@@ -661,7 +661,7 @@
   "product_entry_overview": {
     "surface_kind": "product_entry_overview",
     "summary": "Repo-verified product-entry service surface 已 landed，但成熟终端用户前台壳与 managed web productization 仍未 landed。",
-    "frontdesk_command": "redcube product frontdesk",
+    "frontdoor_command": "redcube product frontdoor",
     "recommended_command": "redcube product invoke",
     "operator_loop_command": "redcube product invoke",
     "progress_surface": {
@@ -675,7 +675,7 @@
       "session_locator_field": "entry_session_contract.entry_session_id",
       "checkpoint_locator_field": "continuation_snapshot.latest_managed_run_id"
     },
-    "recommended_step_id": "open_frontdesk",
+    "recommended_step_id": "open_frontdoor",
     "next_focus": [
       "继续把 mature end-user shell 建在已 landed 的 RedCube product-entry service surface 之上。",
       "继续把 internal OPL bridge 与同一 downstream product-entry contract 对齐。"
@@ -687,10 +687,10 @@
   },
   "product_entry_preflight": {
     "surface_kind": "product_entry_preflight",
-    "summary": "Current product-entry preflight passed; inspect the workspace doctor output and then open the RedCube frontdesk.",
+    "summary": "Current product-entry preflight passed; inspect the workspace doctor output and then open the RedCube frontdoor.",
     "ready_to_try_now": true,
     "recommended_check_command": "redcube workspace doctor --workspace-root /fixtures/redcube/workspace",
-    "recommended_start_command": "redcube product frontdesk --workspace-root /fixtures/redcube/workspace",
+    "recommended_start_command": "redcube product frontdoor --workspace-root /fixtures/redcube/workspace",
     "blocking_check_ids": [],
     "checks": [
       {
@@ -722,8 +722,8 @@
         "title": "Frontdoor Contract Landed",
         "status": "pass",
         "blocking": true,
-        "summary": "direct RedCube frontdoor contract 已 landed，可由 frontdesk / manifest 直接消费。",
-        "command": "redcube product frontdesk --workspace-root /fixtures/redcube/workspace"
+        "summary": "direct RedCube frontdoor contract 已 landed，可由 frontdoor / manifest 直接消费。",
+        "command": "redcube product frontdoor --workspace-root /fixtures/redcube/workspace"
       }
     ]
   },
@@ -733,9 +733,9 @@
     "usable_now": true,
     "good_to_use_now": false,
     "fully_automatic": false,
-    "summary": "当前可以作为 RedCube 的 direct frontdesk / CLI product-entry 主线使用，但还不是成熟的最终用户前台或托管 Web 产品。",
-    "recommended_start_surface": "product_frontdesk",
-    "recommended_start_command": "redcube product frontdesk",
+    "summary": "当前可以作为 RedCube 的 direct frontdoor / CLI product-entry 主线使用，但还不是成熟的最终用户前台或托管 Web 产品。",
+    "recommended_start_surface": "product_frontdoor",
+    "recommended_start_command": "redcube product frontdoor",
     "recommended_loop_surface": "product_entry",
     "recommended_loop_command": "redcube product invoke",
     "blocking_gaps": [
@@ -757,10 +757,10 @@
       "graph_version": "2026-04-13",
       "nodes": [
         {
-          "node_id": "step:open_frontdesk",
+          "node_id": "step:open_frontdoor",
           "node_kind": "frontdoor",
-          "title": "Open RedCube frontdesk",
-          "surface_kind": "product_frontdesk"
+          "title": "Open RedCube frontdoor",
+          "surface_kind": "product_frontdoor"
         },
         {
           "node_id": "step:continue_current_loop",
@@ -786,12 +786,12 @@
       ],
       "edges": [
         {
-          "from": "step:open_frontdesk",
+          "from": "step:open_frontdoor",
           "to": "step:continue_current_loop",
           "on": "start_direct"
         },
         {
-          "from": "step:open_frontdesk",
+          "from": "step:open_frontdoor",
           "to": "step:opl_bridge_handoff",
           "on": "enter_via_opl"
         },
@@ -807,7 +807,7 @@
         }
       ],
       "entry_nodes": [
-        "step:open_frontdesk"
+        "step:open_frontdoor"
       ],
       "exit_nodes": [
         "step:inspect_current_progress"
@@ -884,7 +884,7 @@
         "title": "RedCube review state sync",
         "owner": "redcube_ai",
         "trigger_kind": "review_gate",
-        "target_surface_kind": "product_frontdesk",
+        "target_surface_kind": "product_frontdoor",
         "summary": "在 operator review gate 周围同步当前 deliverable 的审阅状态。",
         "readiness_status": "operator_review_gated",
         "gate_policy": "operator_review_gated",
@@ -892,7 +892,7 @@
           "preserve operator review truth",
           "surface latest continuation checkpoint"
         ],
-        "target_command": "redcube product frontdesk --workspace-root /fixtures/redcube/workspace"
+        "target_command": "redcube product frontdoor --workspace-root /fixtures/redcube/workspace"
       }
     ],
     "readiness_summary": "Continuation automation 继续保持 tracked follow-on，review state sync 保持 operator-gated。"

@@ -4,7 +4,7 @@ type VersionedPayload = {
 
 type UnknownRecord = Record<string, unknown>;
 
-type FrontDeskEnvironmentProjection = {
+type OplEnvironmentProjection = {
   overall_status: unknown;
   core_engines: unknown;
   native_helpers: unknown;
@@ -14,21 +14,21 @@ type FrontDeskEnvironmentProjection = {
   notes: unknown;
 };
 
-type FrontDeskModulesProjection = {
+type OplModulesProjection = {
   modules_root: unknown;
   summary: unknown;
   modules: unknown;
   notes: unknown;
 };
 
-type FrontDeskInitializeProjection = {
+type OplInitializeProjection = {
   overall_state: unknown;
   setup_flow: unknown;
   module_summary: unknown;
   checklist: unknown;
   core_engines: unknown;
   native_helpers: unknown;
-  domain_modules: FrontDeskModulesProjection;
+  domain_modules: OplModulesProjection;
   recommended_skills: unknown;
   gui_shell: unknown;
   settings: UnknownRecord;
@@ -43,11 +43,11 @@ type FrontDeskInitializeProjection = {
   notes: unknown;
 };
 
-type FrontDeskEngineActionProjection = UnknownRecord & {
-  frontdesk_environment: FrontDeskEnvironmentProjection;
+type OplEngineActionProjection = UnknownRecord & {
+  system_environment: OplEnvironmentProjection;
 };
 
-function buildPublicSystemFromFrontDeskEnvironment(environment: FrontDeskEnvironmentProjection) {
+function buildPublicSystemFromOplEnvironment(environment: OplEnvironmentProjection) {
   return {
     surface_id: 'opl_system',
     overall_status: environment.overall_status,
@@ -60,27 +60,27 @@ function buildPublicSystemFromFrontDeskEnvironment(environment: FrontDeskEnviron
   };
 }
 
-function buildPublicSystemPayload(payload: VersionedPayload & { frontdesk_environment: FrontDeskEnvironmentProjection }) {
+function buildPublicSystemPayload(payload: VersionedPayload & { system_environment: OplEnvironmentProjection }) {
   return {
     version: payload.version,
-    system: buildPublicSystemFromFrontDeskEnvironment(payload.frontdesk_environment),
+    system: buildPublicSystemFromOplEnvironment(payload.system_environment),
   };
 }
 
 function buildPublicSystemInitializePayload(
-  payload: VersionedPayload & { frontdesk_initialize: FrontDeskInitializeProjection },
+  payload: VersionedPayload & { system_initialize: OplInitializeProjection },
 ) {
-  const domainModules = payload.frontdesk_initialize.domain_modules;
+  const domainModules = payload.system_initialize.domain_modules;
   return {
     version: payload.version,
     system_initialize: {
       surface_id: 'opl_system_initialize',
-      overall_state: payload.frontdesk_initialize.overall_state,
-      setup_flow: payload.frontdesk_initialize.setup_flow,
-      module_summary: payload.frontdesk_initialize.module_summary,
-      checklist: payload.frontdesk_initialize.checklist,
-      core_engines: payload.frontdesk_initialize.core_engines,
-      native_helpers: payload.frontdesk_initialize.native_helpers,
+      overall_state: payload.system_initialize.overall_state,
+      setup_flow: payload.system_initialize.setup_flow,
+      module_summary: payload.system_initialize.module_summary,
+      checklist: payload.system_initialize.checklist,
+      core_engines: payload.system_initialize.core_engines,
+      native_helpers: payload.system_initialize.native_helpers,
       domain_modules: {
         surface_id: 'opl_modules',
         modules_root: domainModules.modules_root,
@@ -88,81 +88,81 @@ function buildPublicSystemInitializePayload(
         modules: domainModules.modules,
         notes: domainModules.notes,
       },
-      recommended_skills: payload.frontdesk_initialize.recommended_skills,
-      gui_shell: payload.frontdesk_initialize.gui_shell,
+      recommended_skills: payload.system_initialize.recommended_skills,
+      gui_shell: payload.system_initialize.gui_shell,
       settings: {
-        ...payload.frontdesk_initialize.settings,
+        ...payload.system_initialize.settings,
       },
       workspace_root: {
-        ...payload.frontdesk_initialize.workspace_root,
+        ...payload.system_initialize.workspace_root,
       },
       system: {
-        update_channel: payload.frontdesk_initialize.system.update_channel,
-        gui_shell: payload.frontdesk_initialize.system.gui_shell,
-        actions: payload.frontdesk_initialize.system.actions.map((entry) => ({
+        update_channel: payload.system_initialize.system.update_channel,
+        gui_shell: payload.system_initialize.system.gui_shell,
+        actions: payload.system_initialize.system.actions.map((entry) => ({
           ...entry,
         })),
       },
-      recommended_next_action: payload.frontdesk_initialize.recommended_next_action,
-      endpoints: payload.frontdesk_initialize.endpoints,
-      notes: payload.frontdesk_initialize.notes,
+      recommended_next_action: payload.system_initialize.recommended_next_action,
+      endpoints: payload.system_initialize.endpoints,
+      notes: payload.system_initialize.notes,
     },
   };
 }
 
-function buildPublicTurnkeyInstallPayload(payload: VersionedPayload & { frontdesk_turnkey_install: UnknownRecord }) {
+function buildPublicTurnkeyInstallPayload(payload: VersionedPayload & { opl_install: UnknownRecord }) {
   return {
     version: payload.version,
     install: {
-      ...payload.frontdesk_turnkey_install,
+      ...payload.opl_install,
     },
   };
 }
 
-function buildPublicModulesPayload(payload: VersionedPayload & { frontdesk_modules: FrontDeskModulesProjection }) {
+function buildPublicModulesPayload(payload: VersionedPayload & { modules: OplModulesProjection }) {
   return {
     version: payload.version,
     modules: {
       surface_id: 'opl_modules',
-      modules_root: payload.frontdesk_modules.modules_root,
-      summary: payload.frontdesk_modules.summary,
-      items: payload.frontdesk_modules.modules,
-      notes: payload.frontdesk_modules.notes,
+      modules_root: payload.modules.modules_root,
+      summary: payload.modules.summary,
+      items: payload.modules.modules,
+      notes: payload.modules.notes,
     },
   };
 }
 
-function buildPublicModuleActionPayload(payload: VersionedPayload & { frontdesk_module_action: UnknownRecord }) {
+function buildPublicModuleActionPayload(payload: VersionedPayload & { module_action: UnknownRecord }) {
   return {
     version: payload.version,
     module_action: {
       surface_id: 'opl_module_action',
-      ...payload.frontdesk_module_action,
+      ...payload.module_action,
     },
   };
 }
 
 function buildPublicEngineActionPayload(
-  payload: VersionedPayload & { frontdesk_engine_action: FrontDeskEngineActionProjection },
+  payload: VersionedPayload & { engine_action: OplEngineActionProjection },
 ) {
-  const { frontdesk_environment: environment, ...action } = payload.frontdesk_engine_action;
+  const { system_environment: environment, ...action } = payload.engine_action;
 
   return {
     version: payload.version,
     engine_action: {
       surface_id: 'opl_engine_action',
       ...action,
-      system: buildPublicSystemFromFrontDeskEnvironment(environment),
+      system: buildPublicSystemFromOplEnvironment(environment),
     },
   };
 }
 
-function buildPublicSystemActionPayload(payload: VersionedPayload & { frontdesk_system_action: UnknownRecord }) {
+function buildPublicSystemActionPayload(payload: VersionedPayload & { system_action: UnknownRecord }) {
   return {
     version: payload.version,
     system_action: {
       surface_id: 'opl_system_action',
-      ...payload.frontdesk_system_action,
+      ...payload.system_action,
     },
   };
 }

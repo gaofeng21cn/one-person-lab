@@ -593,7 +593,7 @@ test('help returns command discovery and runnable examples', () => {
     false,
   );
   assert.equal(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk bootstrap'),
+    output.help.commands.some((entry: { command: string }) => entry.command === 'frontdoor bootstrap'),
     false,
   );
   assert.ok(

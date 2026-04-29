@@ -36,7 +36,7 @@
 ### Task 3: Normalize And Consume `domain_agent_entry_spec` In OPL
 
 **Files:**
-- Modify: `src/web-frontdesk.ts`
+- Modify: `src/web-frontdoor.ts`
 - Modify: `tests/src/cli.test.ts`
 - Modify: `tests/fixtures/family-manifests/*.json`
 

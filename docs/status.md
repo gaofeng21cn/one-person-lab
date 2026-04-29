@@ -73,7 +73,7 @@
 - `contracts/` 只保留机器可读合同面。
 - `docs/references/` 承接参考级配套文档；`docs/specs/` 与 `docs/plans/` 承接设计与计划记录；`docs/history/` 承接历史归档。
 - 历史 `gateway / federation / routed-action` 语料已经退到 reference / compatibility 层，不再作为默认实现依据。
-- 历史 `frontdesk / readiness / entry-guide / domain-wiring` 公开语义已经退出当前主线，只保留在参考或历史层。
+- 旧本地 Product API / UI-adapter 公开语义已经退出当前主线，只保留在参考或历史层。
 - 本地 Product API projection 已退役，避免把历史 adapter 面误导成当前产品主线。
 - 自有完整长期常驻 runtime sidecar 不是当前 active work；当前只通过 Runtime Manager 冻结可迁移边界。只有外部 `Hermes-Agent` 不能表达 OPL 必需的 task/wakeup/approval/audit/product isolation contract 时，才评估 promotion。
 - 各 domain 仓的 `gateway / harness` 继续作为内部分层语言存在；对外公开主语优先写成独立 `domain agent` 与其 `agent entry / direct entry`。

@@ -1,6 +1,6 @@
 import { validateSharedHandoff, validateSharedHandoffBuilder } from '../family-entry-contracts.ts';
 import type {
-  BuildFamilyFrontdeskEntrySurfacesInput,
+  BuildFamilyFrontdoorEntrySurfacesInput,
   BuildOperatorLoopActionInput,
   BuildProductEntryShellLinkedSurfaceInput,
   BuildProductEntryShellSurfaceInput,
@@ -10,7 +10,7 @@ import type {
   BuildEntrySessionSurfaceInput,
   BuildDeliveryIdentitySurfaceInput,
   EntrySessionSurface,
-  FamilyFrontdeskEntrySurfaces,
+  FamilyFrontdoorEntrySurfaces,
   JsonRecord,
   OperatorLoopActionSurface,
   ProductEntryContinuationSnapshotSurface,
@@ -34,12 +34,12 @@ import {
   requireString,
 } from './internal.ts';
 
-export function validateFamilyFrontdeskEntrySurfaces(
+export function validateFamilyFrontdoorEntrySurfaces(
   value: unknown,
   field: string,
-): FamilyFrontdeskEntrySurfaces {
+): FamilyFrontdoorEntrySurfaces {
   const payload = requireRecord(value, field);
-  const normalized = {} as FamilyFrontdeskEntrySurfaces;
+  const normalized = {} as FamilyFrontdoorEntrySurfaces;
 
   for (const [key, entry] of Object.entries(payload)) {
     normalized[key] = cloneRecord(entry, `${field}.${key}`);
@@ -53,9 +53,9 @@ export function validateFamilyFrontdeskEntrySurfaces(
   return normalized;
 }
 
-export function buildFamilyFrontdeskEntrySurfaces(
-  input: BuildFamilyFrontdeskEntrySurfacesInput,
-): FamilyFrontdeskEntrySurfaces {
+export function buildFamilyFrontdoorEntrySurfaces(
+  input: BuildFamilyFrontdoorEntrySurfacesInput,
+): FamilyFrontdoorEntrySurfaces {
   const productEntryShell = cloneRecord(input.product_entry_shell, 'product_entry_shell');
   const shellAliases = cloneRecord(input.shell_aliases, 'shell_aliases');
   const payload: JsonRecord = {};
@@ -77,7 +77,7 @@ export function buildFamilyFrontdeskEntrySurfaces(
     }
   }
 
-  return validateFamilyFrontdeskEntrySurfaces(payload, 'entry_surfaces');
+  return validateFamilyFrontdoorEntrySurfaces(payload, 'entry_surfaces');
 }
 
 export function buildProductEntryShellSurface(

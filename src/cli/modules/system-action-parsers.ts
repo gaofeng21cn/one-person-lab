@@ -1,7 +1,7 @@
 import type {
   CommandSpec,
-  FrontDeskEngineCliInput,
-  FrontDeskModuleCliInput,
+  OplEngineCliInput,
+  OplModuleCliInput,
   SessionRuntimeCliInput,
   TurnkeyInstallCliInput,
   UpdateChannelCliInput,
@@ -125,11 +125,11 @@ function parseTurnkeyInstallArgs(
   return parsed;
 }
 
-function parseFrontDeskModuleArgs(
+function parseOplModuleArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
-): FrontDeskModuleCliInput {
-  const parsed: FrontDeskModuleCliInput = {};
+): OplModuleCliInput {
+  const parsed: OplModuleCliInput = {};
 
   for (let index = 0; index < args.length; index += 1) {
     const token = args[index];
@@ -171,11 +171,11 @@ function parseFrontDeskModuleArgs(
   return parsed;
 }
 
-function parseFrontDeskEngineArgs(
+function parseOplEngineArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
-): FrontDeskEngineCliInput {
-  const parsed: FrontDeskEngineCliInput = {};
+): OplEngineCliInput {
+  const parsed: OplEngineCliInput = {};
 
   for (let index = 0; index < args.length; index += 1) {
     const token = args[index];
@@ -322,8 +322,8 @@ function assertNoArgs(
 
 export {
   assertNoArgs,
-  parseFrontDeskEngineArgs,
-  parseFrontDeskModuleArgs,
+  parseOplEngineArgs,
+  parseOplModuleArgs,
   parseSessionRuntimeArgs,
   parseTurnkeyInstallArgs,
   parseUpdateChannelArgs,

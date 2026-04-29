@@ -2,7 +2,7 @@ import {
   buildDomainEntryParity,
   buildRecommendedEntrySurfaces,
 } from '../family-domain-catalog.ts';
-import { buildOplRuntimeEndpoints } from '../legacy-frontdesk-paths/current.ts';
+import { buildOplRuntimeEndpoints } from '../opl-runtime-paths/current.ts';
 import type { buildWorkspaceCatalog } from '../workspace-registry.ts';
 import type { DomainManifestCatalogEntry } from '../domain-manifest/types.ts';
 
@@ -74,8 +74,8 @@ function buildCurrentReadinessProjects(
       ready_for_domain_handoff: entryParity?.ready_for_domain_handoff ?? false,
       verdict: readiness?.verdict ?? null,
       summary: readiness?.summary ?? manifest?.product_entry_status?.summary ?? null,
-      frontdesk_command:
-        manifest?.frontdesk_surface?.command
+      frontdoor_command:
+        manifest?.frontdoor_surface?.command
         ?? manifest?.recommended_command
         ?? null,
       recommended_start_command:

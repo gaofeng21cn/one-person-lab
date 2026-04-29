@@ -66,7 +66,7 @@ class ManagedRuntimeContractTest(unittest.TestCase):
                     "domain_owner": "redcube_ai",
                     "executor_owner": "codex_cli",
                     "supervision_status_surface": {"surface_kind": "product_entry_session", "owner": "redcube_ai"},
-                    "attention_queue_surface": {"surface_kind": "product_frontdesk", "owner": "redcube_ai"},
+                    "attention_queue_surface": {"surface_kind": "product_frontdoor", "owner": "redcube_ai"},
                     "recovery_contract_surface": {"surface_kind": "product_entry_session", "owner": "redcube_ai"},
                     "fail_closed_rules": ["wrong"],
                 }

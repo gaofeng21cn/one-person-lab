@@ -65,7 +65,7 @@ test('handoff-envelope routes a manuscript request to medautoscience and exposes
       '--manifest-command',
       buildManifestCommand(fixtures.medautoscience),
       '--entry-command',
-      'uv run python -m med_autoscience.cli product-frontdesk --profile /fixtures/med-autoscience/profile.local.toml',
+      'uv run python -m med_autoscience.cli product-frontdoor --profile /fixtures/med-autoscience/profile.local.toml',
     ], {
       OPL_FRONTDESK_STATE_DIR: stateRoot,
     });

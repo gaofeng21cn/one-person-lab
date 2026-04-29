@@ -7,7 +7,7 @@ from opl_harness_shared.family_orchestration import (
     build_family_human_gate_preview,
     build_family_intake_evidence_companion,
     build_family_project_profile_companion,
-    build_family_frontdesk_product_entry_orchestration,
+    build_family_frontdoor_product_entry_orchestration,
     build_family_product_entry_orchestration,
     build_family_orchestration_companion,
     build_family_orchestration_template,
@@ -213,12 +213,12 @@ def test_build_family_orchestration_template_normalizes_shared_preview_surfaces(
             "target_domain_id": "med-autoscience",
             "graph_kind": "study_runtime_orchestration",
             "graph_version": "2026-04-18",
-            "nodes": [{"node_id": "step:open_frontdesk"}],
+            "nodes": [{"node_id": "step:open_frontdoor"}],
             "edges": [],
-            "entry_nodes": ["step:open_frontdesk"],
-            "exit_nodes": ["step:open_frontdesk"],
-            "human_gates": [{"gate_id": "gate-1", "trigger_nodes": ["step:open_frontdesk"], "blocking": True}],
-            "checkpoint_policy": {"mode": "explicit_nodes", "checkpoint_nodes": ["step:open_frontdesk"]},
+            "entry_nodes": ["step:open_frontdoor"],
+            "exit_nodes": ["step:open_frontdoor"],
+            "human_gates": [{"gate_id": "gate-1", "trigger_nodes": ["step:open_frontdoor"], "blocking": True}],
+            "checkpoint_policy": {"mode": "explicit_nodes", "checkpoint_nodes": ["step:open_frontdoor"]},
         },
         human_gates=[{"gate_id": "gate-1", "title": "Gate 1", "status": "requested"}],
         resume_surface_kind="launch_study",
@@ -329,10 +329,10 @@ def test_build_family_product_entry_orchestration_materializes_action_graph_and_
         graph_version="2026-04-18",
         nodes=[
             {
-                "node_id": "step:open_frontdesk",
+                "node_id": "step:open_frontdoor",
                 "node_kind": "frontdoor",
-                "title": "Open RedCube frontdesk",
-                "surface_kind": "product_frontdesk",
+                "title": "Open RedCube frontdoor",
+                "surface_kind": "product_frontdoor",
             },
             {
                 "node_id": "step:continue_current_loop",
@@ -351,7 +351,7 @@ def test_build_family_product_entry_orchestration_materializes_action_graph_and_
         ],
         edges=[
             {
-                "from": "step:open_frontdesk",
+                "from": "step:open_frontdoor",
                 "to": "step:continue_current_loop",
                 "on": "start_direct",
             },
@@ -361,7 +361,7 @@ def test_build_family_product_entry_orchestration_materializes_action_graph_and_
                 "on": "session_started",
             },
         ],
-        entry_nodes=["step:open_frontdesk"],
+        entry_nodes=["step:open_frontdoor"],
         exit_nodes=["step:inspect_current_progress"],
         human_gates=[
             {
@@ -426,14 +426,14 @@ def test_build_family_product_entry_orchestration_passes_through_intake_evidence
         graph_version="2026-04-21",
         nodes=[
             {
-                "node_id": "step:open_frontdesk",
+                "node_id": "step:open_frontdoor",
                 "node_kind": "frontdoor",
-                "title": "Open frontdesk",
+                "title": "Open frontdoor",
             }
         ],
         edges=[],
-        entry_nodes=["step:open_frontdesk"],
-        exit_nodes=["step:open_frontdesk"],
+        entry_nodes=["step:open_frontdoor"],
+        exit_nodes=["step:open_frontdoor"],
         resume_surface_kind="grant_entry",
         session_locator_field="grant_run_id",
         checkpoint_locator_field="checkpoint_id",
@@ -451,14 +451,14 @@ def test_build_family_product_entry_orchestration_passes_through_project_profile
         graph_version="2026-04-21",
         nodes=[
             {
-                "node_id": "step:open_frontdesk",
+                "node_id": "step:open_frontdoor",
                 "node_kind": "frontdoor",
-                "title": "Open frontdesk",
+                "title": "Open frontdoor",
             }
         ],
         edges=[],
-        entry_nodes=["step:open_frontdesk"],
-        exit_nodes=["step:open_frontdesk"],
+        entry_nodes=["step:open_frontdoor"],
+        exit_nodes=["step:open_frontdoor"],
         resume_surface_kind="grant_entry",
         session_locator_field="grant_run_id",
         checkpoint_locator_field="checkpoint_id",
@@ -471,14 +471,14 @@ def test_build_family_product_entry_orchestration_passes_through_project_profile
     assert payload["project_profile_companion"]["target_domain_id"] == "med-autogrant"
 
 
-def test_build_family_frontdesk_product_entry_orchestration_materializes_canonical_frontdesk_graph() -> None:
-    payload = build_family_frontdesk_product_entry_orchestration(
+def test_build_family_frontdoor_product_entry_orchestration_materializes_canonical_frontdoor_graph() -> None:
+    payload = build_family_frontdoor_product_entry_orchestration(
         graph_id="redcube_frontdoor_product_entry_graph",
         target_domain_id="redcube_ai",
         graph_kind="visual_deliverable_orchestration",
         graph_version="2026-04-20",
-        frontdesk_title="Open RedCube frontdesk",
-        frontdesk_surface_kind="product_frontdesk",
+        frontdoor_title="Open RedCube frontdoor",
+        frontdoor_surface_kind="product_frontdoor",
         direct_title="Start or continue the direct product loop",
         direct_surface_kind="product_entry",
         federated_title="Enter the same loop through internal OPL bridge",
@@ -504,7 +504,7 @@ def test_build_family_frontdesk_product_entry_orchestration_materializes_canonic
     )
 
     assert [node["node_id"] for node in payload["action_graph"]["nodes"]] == [
-        "step:open_frontdesk",
+        "step:open_frontdoor",
         "step:continue_current_loop",
         "step:opl_bridge_handoff",
         "step:inspect_current_progress",

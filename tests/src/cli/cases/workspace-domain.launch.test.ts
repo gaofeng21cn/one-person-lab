@@ -63,7 +63,7 @@ test('workspace-bind derives family direct-entry locators from structured projec
 
     assert.equal(
       magBind.workspace_catalog.binding.direct_entry.command,
-      `uv run python -m med_autogrant product frontdesk --input ${path.resolve(magInputPath)}`,
+      `uv run python -m med_autogrant product frontdoor --input ${path.resolve(magInputPath)}`,
     );
     assert.equal(
       magBind.workspace_catalog.binding.direct_entry.manifest_command,
@@ -78,7 +78,7 @@ test('workspace-bind derives family direct-entry locators from structured projec
 
     assert.equal(
       masBind.workspace_catalog.binding.direct_entry.command,
-      `uv run python -m med_autoscience.cli product frontdesk --profile ${path.resolve(masProfilePath)}`,
+      `uv run python -m med_autoscience.cli product frontdoor --profile ${path.resolve(masProfilePath)}`,
     );
     assert.equal(
       masBind.workspace_catalog.binding.direct_entry.manifest_command,
@@ -93,7 +93,7 @@ test('workspace-bind derives family direct-entry locators from structured projec
 
     assert.equal(
       redcubeBind.workspace_catalog.binding.direct_entry.command,
-      `redcube product frontdesk --workspace-root ${path.resolve(redcubeWorkspacePath)}`,
+      `redcube product frontdoor --workspace-root ${path.resolve(redcubeWorkspacePath)}`,
     );
     assert.equal(
       redcubeBind.workspace_catalog.binding.direct_entry.manifest_command,
@@ -125,7 +125,7 @@ test('workspace-bind derives family direct-entry locators from structured projec
     );
     assert.equal(
       magProject.binding_contract.derived_entry_command_template,
-      'uv run python -m med_autogrant product frontdesk --input <input_path>',
+      'uv run python -m med_autogrant product frontdoor --input <input_path>',
     );
     assert.deepEqual(masProject.binding_contract.required_locator_fields, ['profile_ref']);
     assert.equal(
@@ -286,7 +286,7 @@ test('start returns the routed family start surface for a bound project', () => 
       '--path',
       repoRoot,
       '--entry-command',
-      'redcube-ai frontdesk',
+      'redcube-ai frontdoor',
       '--manifest-command',
       buildManifestCommand(fixtures.redcube),
       '--entry-url',
@@ -297,10 +297,10 @@ test('start returns the routed family start surface for a bound project', () => 
     assert.equal(output.product_entry_start.surface_kind, 'opl_product_entry_start');
     assert.equal(output.product_entry_start.project_id, 'redcube');
     assert.equal(output.product_entry_start.target_domain_id, 'redcube_ai');
-    assert.equal(output.product_entry_start.recommended_mode_id, 'open_frontdesk');
-    assert.equal(output.product_entry_start.selected_mode_id, 'open_frontdesk');
-    assert.equal(output.product_entry_start.selected_mode.mode_id, 'open_frontdesk');
-    assert.equal(output.product_entry_start.selected_mode.command, 'redcube product frontdesk');
+    assert.equal(output.product_entry_start.recommended_mode_id, 'open_frontdoor');
+    assert.equal(output.product_entry_start.selected_mode_id, 'open_frontdoor');
+    assert.equal(output.product_entry_start.selected_mode.mode_id, 'open_frontdoor');
+    assert.equal(output.product_entry_start.selected_mode.command, 'redcube product frontdoor');
     assert.equal(output.product_entry_start.available_modes[2].mode_id, 'opl_bridge_handoff');
     assert.equal(output.product_entry_start.resume_surface.surface_kind, 'product_entry_session');
     assert.deepEqual(output.product_entry_start.human_gate_ids, ['redcube_operator_review_gate']);
@@ -352,7 +352,7 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
       '--path',
       repoRoot,
       '--entry-command',
-      'redcube-ai frontdesk',
+      'redcube-ai frontdoor',
       '--manifest-command',
       buildManifestCommand(resolvedManifest),
       '--entry-url',
@@ -392,7 +392,7 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
       'opl session logs gateway --session <session_id>',
     );
     assert.equal(output.handoff_bundle.return_surface_contract.opl.dashboard_command, 'opl status dashboard');
-    assert.equal(output.handoff_bundle.domain_direct_entry.command, 'redcube-ai frontdesk');
+    assert.equal(output.handoff_bundle.domain_direct_entry.command, 'redcube-ai frontdoor');
     assert.equal(
       output.handoff_bundle.domain_direct_entry.manifest_command,
       buildManifestCommand(resolvedManifest),
@@ -401,7 +401,7 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     assert.equal(output.handoff_bundle.domain_manifest_recommendation.status, 'resolved');
     assert.equal(output.handoff_bundle.domain_manifest_recommendation.recommended_shell, 'direct');
     assert.equal(output.handoff_bundle.domain_manifest_recommendation.recommended_command, 'redcube product invoke');
-    assert.equal(output.handoff_bundle.domain_manifest_recommendation.frontdesk_surface.command, 'redcube product frontdesk');
+    assert.equal(output.handoff_bundle.domain_manifest_recommendation.frontdoor_surface.command, 'redcube product frontdoor');
     assert.equal(output.handoff_bundle.domain_manifest_recommendation.operator_loop_surface.shell_key, 'direct');
     assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.operator_loop_surface.continuation_command,
@@ -422,7 +422,7 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     );
     assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.domain_agent_entry_spec.entry_command,
-      'redcube product frontdesk',
+      'redcube product frontdoor',
     );
     assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.shared_handoff.opl_return_surface.target_domain_id,
@@ -486,7 +486,7 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     );
     assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.product_entry_readiness.recommended_start_command,
-      'redcube product frontdesk',
+      'redcube product frontdoor',
     );
     assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.product_entry_preflight.surface_kind,
@@ -506,7 +506,7 @@ test('handoff-envelope returns a machine-readable family handoff bundle aligned 
     );
     assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.product_entry_start.recommended_mode_id,
-      'open_frontdesk',
+      'open_frontdoor',
     );
     assert.equal(
       output.handoff_bundle.domain_manifest_recommendation.product_entry_start.modes[2].mode_id,
@@ -624,7 +624,7 @@ test('domain launch resolves a bound direct-entry locator into an honest launche
     assert.equal(preview.domain_entry_launch.selected_strategy, 'open_url');
     assert.equal(preview.domain_entry_launch.launch_status, 'preview_only');
     assert.equal(preview.domain_entry_launch.domain_agent_entry_spec.agent_id, 'rca');
-    assert.equal(preview.domain_entry_launch.domain_agent_entry_spec.entry_command, 'redcube product frontdesk');
+    assert.equal(preview.domain_entry_launch.domain_agent_entry_spec.entry_command, 'redcube product frontdoor');
     assert.equal(preview.domain_entry_launch.workspace_locator.absolute_path, repoRoot);
     assert.equal(preview.domain_entry_launch.available_strategies[0], 'open_url');
     assert.equal(preview.domain_entry_launch.available_strategies[1], 'spawn_command');

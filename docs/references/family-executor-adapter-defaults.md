@@ -90,7 +90,7 @@ Effective default executor 的解析顺序固定为：
   - 已经以 `Codex CLI` 的 `autonomous` 模式作为真实可证实的底层执行器
 - `RedCube AI`
   - `Codex CLI` 默认路线已经吸收回 `main`
-  - 当前 repo-tracked truth 已同时包含 upstream runtime-owner cutover 与 repo-verified `product frontdesk / federated product entry / session continuity`
+  - 当前 repo-tracked truth 已同时包含 upstream runtime-owner cutover 与 repo-verified `product frontdoor / federated product entry / session continuity`
   - 现有 Hermes `/v1/runs` relay 继续只算迁移桥
 - `Med Auto Grant`
   - 真实上游 `Hermes-Agent` runtime substrate 已可运行

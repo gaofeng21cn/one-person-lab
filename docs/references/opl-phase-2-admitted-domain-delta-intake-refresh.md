@@ -22,7 +22,7 @@
 - 当前 absorbed 主线锚点：已经不再只是 `Phase 2 / runtime watch locator integrity hardening`；当前 repo-tracked truth 已推进到 upstream runtime-owner cutover 与 `Repo-Verified Product Entry And OPL Federation`
 - 中央 sync 最小要求：
   - 不再把 `RedCube AI` 写成 upstream pilot prep、待吸收默认执行器，或只停留在 quickstart provenance
-  - 要把 upstream runtime-owner cutover、`redcube product frontdesk`、federated product entry、session continuity、family manifest companion，以及 latest `product_entry_readiness` companion 一并写回中央参考面
+  - 要把 upstream runtime-owner cutover、`redcube product frontdoor`、federated product entry、session continuity、family manifest companion，以及 latest `product_entry_readiness` companion 一并写回中央参考面
 
 ### 2. `MedAutoScience`
 

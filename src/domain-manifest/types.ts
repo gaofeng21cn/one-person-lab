@@ -238,7 +238,7 @@ export interface NormalizedDomainManifest {
     next_focus: string[];
     remaining_gaps_count: number | null;
   } | null;
-  frontdesk_surface: {
+  frontdoor_surface: {
     shell_key: string;
     command: string | null;
     surface_kind: string | null;
@@ -265,7 +265,7 @@ export interface NormalizedDomainManifest {
   product_entry_overview: {
     surface_kind: string;
     summary: string | null;
-    frontdesk_command: string | null;
+    frontdoor_command: string | null;
     recommended_command: string | null;
     operator_loop_command: string | null;
     progress_surface: {

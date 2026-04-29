@@ -10,7 +10,7 @@
 - 当前 follow-up 与执行器统一口径请优先读 `docs/status.md`、`docs/project.md`、`docs/architecture.md`，再读 [`four-repo-executor-follow-up-and-hermes-evaluation.md`](./four-repo-executor-follow-up-and-hermes-evaluation.md) 与 [`hermes-agent-executor-evaluation.md`](./hermes-agent-executor-evaluation.md)。
 - 当前 active domain-agent 集合是 `MAS / MAG / RCA`；`MDS` 是 `MAS` 下层受控 runtime/backend companion，不作为 OPL 默认 active domain agent 或 OPL-managed module。默认 OPL 本地入口继承 `Codex CLI` / Codex-default 语义。
 - `Hermes-Agent` 当前仍是后续评估路线，路线状态写作 `experimental`；完整 `Hermes AIAgent` agent loop 是这条路线的硬 guardrail。
-- `RedCube` 当前 repo-tracked truth 已经包含 upstream runtime-owner cutover、`redcube product frontdesk`、federated product entry、session continuity、family manifest companion，以及 `Codex CLI` 默认执行器与 `autonomous` 默认模式。
+- `RedCube` 当前 repo-tracked truth 已经包含 upstream runtime-owner cutover、`redcube product frontdoor`、federated product entry、session continuity、family manifest companion，以及 `Codex CLI` 默认执行器与 `autonomous` 默认模式。
 - 本文中出现的 `Codex-default host-agent runtime` 为当时历史措辞；如与当前口径冲突，以 follow-up 文档和 `docs/status.md` 为准。
 
 ## 文档目的

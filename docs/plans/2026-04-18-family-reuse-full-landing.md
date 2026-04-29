@@ -44,7 +44,7 @@
 **Files:**
 - Modify: `src/med_autogrant/product_entry.py`
 - Modify: `schemas/v1/product-entry-manifest.schema.json`
-- Modify: `schemas/v1/product-frontdesk.schema.json`
+- Modify: `schemas/v1/product-frontdoor.schema.json`
 - Modify: `tests/**`
 - Modify: `docs/status.md` if needed
 

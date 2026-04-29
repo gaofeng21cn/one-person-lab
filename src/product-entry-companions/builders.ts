@@ -1,21 +1,21 @@
 import type {
-  BuildFamilyProductFrontdeskFromManifestInput,
-  BuildFamilyProductFrontdeskInput,
+  BuildFamilyProductFrontdoorFromManifestInput,
+  BuildFamilyProductFrontdoorInput,
   BuildFamilyProductEntryManifestInput,
   BuildProductEntryOverviewInput,
   BuildProductEntryQuickstartInput,
   BuildProductEntryReadinessInput,
   BuildProductEntryStartInput,
-  BuildProductFrontdeskInput,
+  BuildProductFrontdoorInput,
   FamilyProductEntryManifestSurface,
-  FamilyProductFrontdeskSurface,
+  FamilyProductFrontdoorSurface,
   JsonRecord,
 } from './types.ts';
 import {
   cloneRecord,
   isRecord,
   mergeExtraPayload,
-  normalizeFrontdeskSummary,
+  normalizeFrontdoorSummary,
   normalizeProgressSurface,
   normalizeResumeContract,
   normalizeStartMode,
@@ -31,13 +31,13 @@ import {
 } from './internal.ts';
 import { validateSharedHandoff } from '../family-entry-contracts.ts';
 import {
-  buildFamilyFrontdeskEntrySurfaces,
-  validateFamilyFrontdeskEntrySurfaces,
+  buildFamilyFrontdoorEntrySurfaces,
+  validateFamilyFrontdoorEntrySurfaces,
 } from './shell-surfaces.ts';
 import {
   validateFamilyOrchestrationCompanion,
   validateFamilyProductEntryManifest,
-  validateFamilyProductFrontdesk,
+  validateFamilyProductFrontdoor,
 } from './validators.ts';
 import { buildProductEntryResumeSurface as buildProductEntryResumeSurfaceImpl } from './resume-surface.ts';
 
@@ -73,7 +73,7 @@ export function buildProductEntryOverview(input: BuildProductEntryOverviewInput)
   return {
     surface_kind: 'product_entry_overview',
     summary: requireString(input.summary, 'summary'),
-    frontdesk_command: requireString(input.frontdesk_command, 'frontdesk_command'),
+    frontdoor_command: requireString(input.frontdoor_command, 'frontdoor_command'),
     recommended_command: requireString(input.recommended_command, 'recommended_command'),
     operator_loop_command: requireString(input.operator_loop_command, 'operator_loop_command'),
     progress_surface: normalizeProgressSurface(input.progress_surface, 'progress_surface'),
@@ -117,15 +117,15 @@ export function buildProductEntryStart(input: BuildProductEntryStartInput) {
   };
 }
 
-export function buildProductFrontdesk(input: BuildProductFrontdeskInput): FamilyProductFrontdeskSurface {
+export function buildProductFrontdoor(input: BuildProductFrontdoorInput): FamilyProductFrontdoorSurface {
   const payload: JsonRecord = {
-    surface_kind: 'product_frontdesk',
+    surface_kind: 'product_frontdoor',
     recommended_action: requireString(input.recommended_action, 'recommended_action'),
     target_domain_id: requireString(input.target_domain_id, 'target_domain_id'),
     workspace_locator: cloneRecord(input.workspace_locator, 'workspace_locator'),
     runtime: cloneRecord(input.runtime, 'runtime'),
     product_entry_status: cloneRecord(input.product_entry_status, 'product_entry_status'),
-    frontdesk_surface: cloneRecord(input.frontdesk_surface, 'frontdesk_surface'),
+    frontdoor_surface: cloneRecord(input.frontdoor_surface, 'frontdoor_surface'),
     operator_loop_surface: cloneRecord(input.operator_loop_surface, 'operator_loop_surface'),
     operator_loop_actions: cloneRecord(input.operator_loop_actions, 'operator_loop_actions'),
     product_entry_start: cloneRecord(input.product_entry_start, 'product_entry_start'),
@@ -135,8 +135,8 @@ export function buildProductFrontdesk(input: BuildProductFrontdeskInput): Family
     product_entry_quickstart: cloneRecord(input.product_entry_quickstart, 'product_entry_quickstart'),
     family_orchestration: cloneRecord(input.family_orchestration, 'family_orchestration'),
     product_entry_manifest: cloneRecord(input.product_entry_manifest, 'product_entry_manifest'),
-    entry_surfaces: validateFamilyFrontdeskEntrySurfaces(input.entry_surfaces, 'entry_surfaces'),
-    summary: normalizeFrontdeskSummary(input.summary, 'summary'),
+    entry_surfaces: validateFamilyFrontdoorEntrySurfaces(input.entry_surfaces, 'entry_surfaces'),
+    summary: normalizeFrontdoorSummary(input.summary, 'summary'),
     notes: readStringList(input.notes, 'notes'),
   };
   const schemaRef = optionalString(input.schema_ref);
@@ -152,20 +152,20 @@ export function buildProductFrontdesk(input: BuildProductFrontdeskInput): Family
       'gateway_interaction_contract',
     );
   }
-  return mergeExtraPayload(payload, input.extra_payload, 'product frontdesk') as FamilyProductFrontdeskSurface;
+  return mergeExtraPayload(payload, input.extra_payload, 'product frontdoor') as FamilyProductFrontdoorSurface;
 }
 
-export function buildFamilyProductFrontdesk(input: BuildFamilyProductFrontdeskInput): FamilyProductFrontdeskSurface {
+export function buildFamilyProductFrontdoor(input: BuildFamilyProductFrontdoorInput): FamilyProductFrontdoorSurface {
   const manifest = cloneRecord(input.product_entry_manifest, 'product_entry_manifest');
-  const frontdeskSurface = cloneRecord(
-    manifest.frontdesk_surface,
-    'product_entry_manifest.frontdesk_surface',
+  const frontdoorSurface = cloneRecord(
+    manifest.frontdoor_surface,
+    'product_entry_manifest.frontdoor_surface',
   );
   const operatorLoopSurface = cloneRecord(
     manifest.operator_loop_surface,
     'product_entry_manifest.operator_loop_surface',
   );
-  return buildProductFrontdesk({
+  return buildProductFrontdoor({
     recommended_action: requireString(input.recommended_action, 'recommended_action'),
     target_domain_id: requireString(
       manifest.target_domain_id,
@@ -180,7 +180,7 @@ export function buildFamilyProductFrontdesk(input: BuildFamilyProductFrontdeskIn
       manifest.product_entry_status,
       'product_entry_manifest.product_entry_status',
     ),
-    frontdesk_surface: frontdeskSurface,
+    frontdoor_surface: frontdoorSurface,
     operator_loop_surface: operatorLoopSurface,
     operator_loop_actions: cloneRecord(
       manifest.operator_loop_actions,
@@ -211,11 +211,11 @@ export function buildFamilyProductFrontdesk(input: BuildFamilyProductFrontdeskIn
       'product_entry_manifest.family_orchestration',
     ),
     product_entry_manifest: manifest,
-    entry_surfaces: validateFamilyFrontdeskEntrySurfaces(input.entry_surfaces, 'entry_surfaces'),
+    entry_surfaces: validateFamilyFrontdoorEntrySurfaces(input.entry_surfaces, 'entry_surfaces'),
     summary: {
-      frontdesk_command: requireString(
-        frontdeskSurface.command,
-        'product_entry_manifest.frontdesk_surface.command',
+      frontdoor_command: requireString(
+        frontdoorSurface.command,
+        'product_entry_manifest.frontdoor_surface.command',
       ),
       recommended_command: requireString(
         manifest.recommended_command,
@@ -242,14 +242,14 @@ export function buildFamilyProductFrontdesk(input: BuildFamilyProductFrontdeskIn
   });
 }
 
-export function buildFamilyProductFrontdeskFromManifest(
-  input: BuildFamilyProductFrontdeskFromManifestInput,
-): FamilyProductFrontdeskSurface {
+export function buildFamilyProductFrontdoorFromManifest(
+  input: BuildFamilyProductFrontdoorFromManifestInput,
+): FamilyProductFrontdoorSurface {
   const manifest = validateFamilyProductEntryManifest(input.product_entry_manifest);
-  return buildFamilyProductFrontdesk({
+  return buildFamilyProductFrontdoor({
     recommended_action: requireString(input.recommended_action, 'recommended_action'),
     product_entry_manifest: manifest,
-    entry_surfaces: buildFamilyFrontdeskEntrySurfaces({
+    entry_surfaces: buildFamilyFrontdoorEntrySurfaces({
       product_entry_shell: manifest.product_entry_shell as Record<string, JsonRecord>,
       shell_aliases: input.shell_aliases,
       shared_handoff: manifest.shared_handoff,
@@ -281,7 +281,7 @@ export function buildFamilyProductEntryManifest(
     ['managed_runtime_contract', input.managed_runtime_contract],
     ['repo_mainline', input.repo_mainline],
     ['product_entry_status', input.product_entry_status],
-    ['frontdesk_surface', input.frontdesk_surface],
+    ['frontdoor_surface', input.frontdoor_surface],
     ['operator_loop_surface', input.operator_loop_surface],
     ['operator_loop_actions', input.operator_loop_actions],
     ['runtime_inventory', input.runtime_inventory],

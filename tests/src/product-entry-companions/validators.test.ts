@@ -6,20 +6,20 @@ import { fileURLToPath } from 'node:url';
 
 import type {
   FamilyProductEntryManifestSurface,
-  FamilyProductFrontdeskSurface,
+  FamilyProductFrontdoorSurface,
 } from '../../../src/product-entry-companions.ts';
 import {
   buildDeliveryIdentitySurface,
   buildEntrySessionSurface,
   buildOperatorLoopActionCatalog,
-  buildFamilyFrontdeskEntrySurfaces,
-  buildFamilyProductFrontdesk,
-  buildFamilyProductFrontdeskFromManifest,
+  buildFamilyFrontdoorEntrySurfaces,
+  buildFamilyProductFrontdoor,
+  buildFamilyProductFrontdoorFromManifest,
   buildFamilyProductEntryManifest,
   buildProductEntryContinuationSnapshot,
   buildProductEntryShellCatalog,
   buildProductEntryShellLinkedSurface,
-  buildProductFrontdesk,
+  buildProductFrontdoor,
   buildProductEntryOverview,
   buildProductEntryQuickstart,
   buildProductEntryReadiness,
@@ -28,7 +28,7 @@ import {
   buildReturnSurfaceContract,
   buildRuntimeSessionContract,
   collectFamilyHumanGateIds,
-  validateFamilyProductFrontdesk,
+  validateFamilyProductFrontdoor,
   validateFamilyProductEntryManifest,
 } from '../../../src/product-entry-companions.ts';
 
@@ -58,9 +58,9 @@ test('product entry companion validators normalize shared family payloads', () =
       workspace_root: '/tmp/redcube-workspace',
     },
     product_entry_shell: {
-      frontdesk: {
-        command: 'redcube product frontdesk',
-        surface_kind: 'product_frontdesk',
+      frontdoor: {
+        command: 'redcube product frontdoor',
+        surface_kind: 'product_frontdoor',
       },
     },
     shared_handoff: {
@@ -71,15 +71,15 @@ test('product entry companion validators normalize shared family payloads', () =
     },
     product_entry_start: {
       surface_kind: 'product_entry_start',
-      summary: 'Open the frontdesk first.',
-      recommended_mode_id: 'open_frontdesk',
+      summary: 'Open the frontdoor first.',
+      recommended_mode_id: 'open_frontdoor',
       modes: [
         {
-          mode_id: 'open_frontdesk',
-          title: 'Open frontdesk',
-          command: 'redcube product frontdesk',
-          surface_kind: 'product_frontdesk',
-          summary: 'Open the direct frontdesk.',
+          mode_id: 'open_frontdoor',
+          title: 'Open frontdoor',
+          command: 'redcube product frontdoor',
+          surface_kind: 'product_frontdoor',
+          summary: 'Open the direct frontdoor.',
           requires: [],
         },
       ],
@@ -102,10 +102,10 @@ test('product entry companion validators normalize shared family payloads', () =
       entry_adapter: 'RedCubeDomainEntry',
       service_safe_surface_kind: 'domain_entry',
       product_entry_builder_command: 'redcube product entry',
-      supported_commands: ['product-frontdesk'],
+      supported_commands: ['product-frontdoor'],
       command_contracts: [
         {
-          command: 'product-frontdesk',
+          command: 'product-frontdoor',
           required_fields: [],
           optional_fields: [],
         },
@@ -147,7 +147,7 @@ test('product entry companion validators normalize shared family payloads', () =
     product_entry_overview: {
       surface_kind: 'product_entry_overview',
       summary: 'Current product-entry surface is usable.',
-      frontdesk_command: 'redcube product frontdesk',
+      frontdoor_command: 'redcube product frontdoor',
       recommended_command: 'redcube product invoke',
       operator_loop_command: 'redcube product invoke',
       progress_surface: {
@@ -159,7 +159,7 @@ test('product entry companion validators normalize shared family payloads', () =
         command: 'redcube product session --entry-session-id <entry-session-id>',
         session_locator_field: 'entry_session_contract.entry_session_id',
       },
-      recommended_step_id: 'open_frontdesk',
+      recommended_step_id: 'open_frontdoor',
       next_focus: ['Keep the direct loop stable.'],
       remaining_gaps_count: 1,
       human_gate_ids: ['alpha_gate'],
@@ -169,7 +169,7 @@ test('product entry companion validators normalize shared family payloads', () =
       summary: 'Current preflight is green.',
       ready_to_try_now: true,
       recommended_check_command: 'redcube product preflight',
-      recommended_start_command: 'redcube product frontdesk',
+      recommended_start_command: 'redcube product frontdoor',
       blocking_check_ids: [],
       checks: [],
     },
@@ -180,23 +180,23 @@ test('product entry companion validators normalize shared family payloads', () =
       good_to_use_now: false,
       fully_automatic: false,
       summary: 'Usable now with operator guidance.',
-      recommended_start_surface: 'product_frontdesk',
-      recommended_start_command: 'redcube product frontdesk',
+      recommended_start_surface: 'product_frontdoor',
+      recommended_start_command: 'redcube product frontdoor',
       recommended_loop_surface: 'product_entry',
       recommended_loop_command: 'redcube product invoke',
       blocking_gaps: ['Managed product shell still pending.'],
     },
     product_entry_quickstart: {
       surface_kind: 'product_entry_quickstart',
-      recommended_step_id: 'open_frontdesk',
-      summary: 'Open the frontdesk first.',
+      recommended_step_id: 'open_frontdoor',
+      summary: 'Open the frontdoor first.',
       steps: [
         {
-          step_id: 'open_frontdesk',
-          title: 'Open frontdesk',
-          command: 'redcube product frontdesk',
-          surface_kind: 'product_frontdesk',
-          summary: 'Open the direct frontdesk.',
+          step_id: 'open_frontdoor',
+          title: 'Open frontdoor',
+          command: 'redcube product frontdoor',
+          surface_kind: 'product_frontdoor',
+          summary: 'Open the direct frontdoor.',
           requires: [],
         },
       ],
@@ -222,8 +222,8 @@ test('product entry companion validators normalize shared family payloads', () =
   assert.equal(validatedManifest.progress_projection?.surface_kind, 'progress_projection');
   assert.equal(validatedManifest.artifact_inventory?.surface_kind, 'artifact_inventory');
 
-  const frontdesk = {
-    surface_kind: 'product_frontdesk',
+  const frontdoor = {
+    surface_kind: 'product_frontdoor',
     recommended_action: 'inspect_or_start_product_entry',
     target_domain_id: 'redcube_ai',
     workspace_locator: {
@@ -238,9 +238,9 @@ test('product entry companion validators normalize shared family payloads', () =
       next_focus: ['Keep the same session contract stable.'],
       remaining_gaps_count: 1,
     },
-    frontdesk_surface: {
-      surface_kind: 'product_frontdesk',
-      command: 'redcube product frontdesk',
+    frontdoor_surface: {
+      surface_kind: 'product_frontdoor',
+      command: 'redcube product frontdoor',
     },
     operator_loop_surface: {
       surface_kind: 'product_entry',
@@ -256,21 +256,21 @@ test('product entry companion validators normalize shared family payloads', () =
     product_entry_manifest: manifest,
     entry_surfaces: {},
     summary: {
-      frontdesk_command: 'redcube product frontdesk',
+      frontdoor_command: 'redcube product frontdoor',
       recommended_command: 'redcube product invoke',
       operator_loop_command: 'redcube product invoke',
     },
-    notes: ['Thin frontdesk adapter is active.'],
-    schema_ref: 'contracts/schemas/v1/product-frontdesk.schema.json',
+    notes: ['Thin frontdoor adapter is active.'],
+    schema_ref: 'contracts/schemas/v1/product-frontdoor.schema.json',
     domain_entry_contract: manifest.domain_entry_contract,
     gateway_interaction_contract: manifest.gateway_interaction_contract,
   };
-  const validatedFrontdesk = validateFamilyProductFrontdesk(frontdesk, {
+  const validatedFrontdoor = validateFamilyProductFrontdoor(frontdoor, {
     requireContractBundle: true,
   });
-  assert.equal(validatedFrontdesk.surface_kind, 'product_frontdesk');
-  assert.equal(validatedFrontdesk.product_entry_manifest.surface_kind, 'product_entry_manifest');
-  assert.equal(validatedFrontdesk.gateway_interaction_contract?.frontdoor_owner, 'opl_gateway_or_domain_gui');
+  assert.equal(validatedFrontdoor.surface_kind, 'product_frontdoor');
+  assert.equal(validatedFrontdoor.product_entry_manifest.surface_kind, 'product_entry_manifest');
+  assert.equal(validatedFrontdoor.gateway_interaction_contract?.frontdoor_owner, 'opl_gateway_or_domain_gui');
 });
 
 test('runtime continuity validation accepts MAS, MAG, and RCA manifest fixtures', () => {
@@ -307,9 +307,9 @@ test('product entry companion validators fail closed on missing required shared 
       workspace_root: '/tmp/redcube-workspace',
     },
     product_entry_shell: {
-      frontdesk: {
-        command: 'redcube product frontdesk',
-        surface_kind: 'product_frontdesk',
+      frontdoor: {
+        command: 'redcube product frontdoor',
+        surface_kind: 'product_frontdoor',
       },
     },
     shared_handoff: {
@@ -320,15 +320,15 @@ test('product entry companion validators fail closed on missing required shared 
     },
     product_entry_start: {
       surface_kind: 'product_entry_start',
-      summary: 'Open the frontdesk first.',
-      recommended_mode_id: 'open_frontdesk',
+      summary: 'Open the frontdoor first.',
+      recommended_mode_id: 'open_frontdoor',
       modes: [
         {
-          mode_id: 'open_frontdesk',
-          title: 'Open frontdesk',
-          command: 'redcube product frontdesk',
-          surface_kind: 'product_frontdesk',
-          summary: 'Open the direct frontdesk.',
+          mode_id: 'open_frontdoor',
+          title: 'Open frontdoor',
+          command: 'redcube product frontdoor',
+          surface_kind: 'product_frontdoor',
+          summary: 'Open the direct frontdoor.',
           requires: [],
         },
       ],
@@ -351,10 +351,10 @@ test('product entry companion validators fail closed on missing required shared 
       entry_adapter: 'RedCubeDomainEntry',
       service_safe_surface_kind: 'domain_entry',
       product_entry_builder_command: 'redcube product entry',
-      supported_commands: ['product-frontdesk'],
+      supported_commands: ['product-frontdoor'],
       command_contracts: [
         {
-          command: 'product-frontdesk',
+          command: 'product-frontdoor',
           required_fields: [],
           optional_fields: [],
         },
@@ -423,8 +423,8 @@ test('product entry companion validators fail closed on missing required shared 
     /runtime continuity control reference/,
   );
 
-  const frontdesk = {
-    surface_kind: 'product_frontdesk',
+  const frontdoor = {
+    surface_kind: 'product_frontdoor',
     recommended_action: 'inspect_or_start_product_entry',
     target_domain_id: 'redcube_ai',
     workspace_locator: {
@@ -439,9 +439,9 @@ test('product entry companion validators fail closed on missing required shared 
       next_focus: ['Keep the same session contract stable.'],
       remaining_gaps_count: 1,
     },
-    frontdesk_surface: {
-      surface_kind: 'product_frontdesk',
-      command: 'redcube product frontdesk',
+    frontdoor_surface: {
+      surface_kind: 'product_frontdoor',
+      command: 'redcube product frontdoor',
     },
     operator_loop_surface: {
       surface_kind: 'product_entry',
@@ -452,7 +452,7 @@ test('product entry companion validators fail closed on missing required shared 
     product_entry_overview: {
       surface_kind: 'product_entry_overview',
       summary: 'Current product-entry surface is usable.',
-      frontdesk_command: 'redcube product frontdesk',
+      frontdoor_command: 'redcube product frontdoor',
       recommended_command: 'redcube product invoke',
       operator_loop_command: 'redcube product invoke',
       progress_surface: {
@@ -460,7 +460,7 @@ test('product entry companion validators fail closed on missing required shared 
         command: 'redcube product session --entry-session-id <entry-session-id>',
       },
       resume_surface: manifest.product_entry_start.resume_surface,
-      recommended_step_id: 'open_frontdesk',
+      recommended_step_id: 'open_frontdoor',
       next_focus: ['Keep the direct loop stable.'],
       remaining_gaps_count: 1,
       human_gate_ids: ['alpha_gate'],
@@ -470,7 +470,7 @@ test('product entry companion validators fail closed on missing required shared 
       summary: 'Current preflight is green.',
       ready_to_try_now: true,
       recommended_check_command: 'redcube product preflight',
-      recommended_start_command: 'redcube product frontdesk',
+      recommended_start_command: 'redcube product frontdoor',
       blocking_check_ids: [],
       checks: [],
     },
@@ -481,23 +481,23 @@ test('product entry companion validators fail closed on missing required shared 
       good_to_use_now: false,
       fully_automatic: false,
       summary: 'Usable now with operator guidance.',
-      recommended_start_surface: 'product_frontdesk',
-      recommended_start_command: 'redcube product frontdesk',
+      recommended_start_surface: 'product_frontdoor',
+      recommended_start_command: 'redcube product frontdoor',
       recommended_loop_surface: 'product_entry',
       recommended_loop_command: 'redcube product invoke',
       blocking_gaps: ['Managed product shell still pending.'],
     },
     product_entry_quickstart: {
       surface_kind: 'product_entry_quickstart',
-      recommended_step_id: 'open_frontdesk',
-      summary: 'Open the frontdesk first.',
+      recommended_step_id: 'open_frontdoor',
+      summary: 'Open the frontdoor first.',
       steps: [
         {
-          step_id: 'open_frontdesk',
-          title: 'Open frontdesk',
-          command: 'redcube product frontdesk',
-          surface_kind: 'product_frontdesk',
-          summary: 'Open the direct frontdesk.',
+          step_id: 'open_frontdoor',
+          title: 'Open frontdoor',
+          command: 'redcube product frontdoor',
+          surface_kind: 'product_frontdoor',
+          summary: 'Open the direct frontdoor.',
           requires: [],
         },
       ],
@@ -508,16 +508,16 @@ test('product entry companion validators fail closed on missing required shared 
     product_entry_manifest: manifest,
     entry_surfaces: {},
     summary: {
-      frontdesk_command: 'redcube product frontdesk',
+      frontdoor_command: 'redcube product frontdoor',
       recommended_command: 'redcube product invoke',
       operator_loop_command: 'redcube product invoke',
     },
-    notes: ['Thin frontdesk adapter is active.'],
-    schema_ref: 'contracts/schemas/v1/product-frontdesk.schema.json',
+    notes: ['Thin frontdoor adapter is active.'],
+    schema_ref: 'contracts/schemas/v1/product-frontdoor.schema.json',
     domain_entry_contract: manifest.domain_entry_contract,
   };
   assert.throws(
-    () => validateFamilyProductFrontdesk(frontdesk, { requireContractBundle: true }),
+    () => validateFamilyProductFrontdoor(frontdoor, { requireContractBundle: true }),
     /gateway_interaction_contract/,
   );
 });

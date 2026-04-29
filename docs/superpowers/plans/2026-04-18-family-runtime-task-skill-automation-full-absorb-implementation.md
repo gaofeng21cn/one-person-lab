@@ -39,8 +39,8 @@
 - Modify: `src/handoff-bundle.ts`
 - Historical target: `src/management.ts`（已退役；当前实现使用 `src/management/*` leaf surfaces）
 - Modify: `src/product-entry.ts`
-- Modify: `src/web-frontdesk.ts`
-- Test: existing focused OPL consumer tests that cover domain manifests, handoff, management, and web frontdesk
+- Modify: `src/web-frontdoor.ts`
+- Test: existing focused OPL consumer tests that cover domain manifests, handoff, management, and web frontdoor
 
 ### MAS adapters
 
@@ -292,7 +292,7 @@ Use current repo data patterns:
 
 - MAS `supported_commands / command_contracts / medical_overlay_skills`
 - MAG `supported_commands / command_contracts / automation_scope`
-- RCA frontdesk/operator commands and autopilot continuation metadata
+- RCA frontdoor/operator commands and autopilot continuation metadata
 
 - [ ] **Step 5: Verify the skill and automation tests fail**
 
@@ -368,7 +368,7 @@ git commit -m "feat: add shared runtime task skill and automation helpers"
 - Modify: `src/handoff-bundle.ts`
 - Historical target: `src/management.ts`（已退役；当前实现使用 `src/management/*` leaf surfaces）
 - Modify: `src/product-entry.ts`
-- Modify: `src/web-frontdesk.ts`
+- Modify: `src/web-frontdoor.ts`
 - Test: focused consumer tests already covering manifests, handoff, management, and web startup payloads
 
 - [ ] **Step 1: Add failing OPL consumer tests for new normalized surfaces**
@@ -382,13 +382,13 @@ Update existing tests to assert that normalized manifests and downstream bundles
 
 - [ ] **Step 2: Run the focused consumer tests to verify they fail**
 
-Run the smallest relevant existing test commands for domain manifest, handoff bundle, management, and web frontdesk payloads.
+Run the smallest relevant existing test commands for domain manifest, handoff bundle, management, and web frontdoor payloads.
 
 Expected: FAIL because the new surfaces are not normalized yet.
 
 - [ ] **Step 3: Implement the normalization changes**
 
-Use the new shared helper contracts to normalize the four surfaces in `domain-manifest.ts`, then thread them through handoff, management, product-entry, and web frontdesk.
+Use the new shared helper contracts to normalize the four surfaces in `domain-manifest.ts`, then thread them through handoff, management, product-entry, and web frontdoor.
 
 - [ ] **Step 4: Re-run the focused consumer tests**
 
@@ -402,7 +402,7 @@ git add \
   src/handoff-bundle.ts \
   src/management/* \
   src/product-entry.ts \
-  src/web-frontdesk.ts \
+  src/web-frontdoor.ts \
   <focused-opl-consumer-tests>
 git commit -m "feat: expose shared runtime task skill and automation surfaces"
 ```
@@ -554,7 +554,7 @@ Expected: FAIL
 Map:
 
 - product entry session and rerun lineage -> shared task lifecycle
-- product/frontdesk command surfaces -> shared skill catalog
+- product/frontdoor command surfaces -> shared skill catalog
 - autopilot continuation board and governance truth -> shared automation descriptor
 
 - [ ] **Step 4: Run focused RCA tests to verify they pass**

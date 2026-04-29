@@ -1,6 +1,6 @@
 # OPL Initialize 与 Environment / Modules 设计
 
-> 已退役。这个设计属于 `Initialize OPL + frontdesk` 公开语义阶段，当前主线已经改为 `OPL Product API + 独立 GUI 壳`，GUI 主线确定为基于 `AionUI` codebase 的 `opl-aion-shell`。现行边界以 [`docs/specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md`](../../specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md) 为准。保留本文只用于历史审计与迁移回顾。
+> 已退役。这个设计属于 `Initialize OPL + frontdoor` 公开语义阶段，当前主线已经改为 `OPL Product API + 独立 GUI 壳`，GUI 主线确定为基于 `AionUI` codebase 的 `opl-aion-shell`。现行边界以 [`docs/specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md`](../../specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md) 为准。保留本文只用于历史审计与迁移回顾。
 
 ## 背景
 
@@ -8,8 +8,8 @@
 
 - `OPL` 主仓只保留 headless adapter、CLI product entry、module registry、bootstrap/install surfaces。
 - `opl web` 根路由 `/` 返回 machine-readable adapter payload，供外部 GUI overlay 消费。
-- `opl frontdesk environment` 已能汇总 `Codex`、`Hermes-Agent`、frontdesk service、managed paths。
-- `opl frontdesk modules` 与 `opl frontdesk module install|update|reinstall|remove` 已能管理 domain modules。
+- `opl frontdoor environment` 已能汇总 `Codex`、`Hermes-Agent`、frontdoor service、managed paths。
+- `opl frontdoor modules` 与 `opl frontdoor module install|update|reinstall|remove` 已能管理 domain modules。
 
 当前缺口集中在产品体验层：
 
@@ -69,7 +69,7 @@
 - runtime truth
 - module registry
 - installation / repair action surfaces
-- workspace root 与 frontdesk service management
+- workspace root 与 frontdoor service management
 
 独立 overlay 仓负责：
 
@@ -84,13 +84,13 @@
 
 - `opl web`
   - 提供 headless adapter service
-- `opl frontdesk environment`
-  - 提供 `core_engines`、`local_frontdesk`、`managed_paths`
-- `opl frontdesk modules`
+- `opl frontdoor environment`
+  - 提供 `core_engines`、`local_frontdoor`、`managed_paths`
+- `opl frontdoor modules`
   - 提供 domain modules 列表与健康状态
-- `opl frontdesk module install|update|reinstall|remove`
+- `opl frontdoor module install|update|reinstall|remove`
   - 提供模块动作
-- `opl frontdesk service install|status|start|stop|open|uninstall`
+- `opl frontdoor service install|status|start|stop|open|uninstall`
   - 提供本地 adapter service 管理
 
 ### 还缺的 surfaces
@@ -181,7 +181,7 @@
 - runtime modes
 - workspace root
 - selected modules
-- local frontdesk service settings
+- local frontdoor service settings
 
 随后直接进入工作台。
 
@@ -297,7 +297,7 @@ GUI 工作台继续保持三栏：
 
 - `Codex` 可用
 - `Workspace Root` 已选择
-- frontdesk service 可以按需启动
+- frontdoor service 可以按需启动
 
 `Hermes-Agent` 和 domain modules 支持稍后补装。
 
@@ -307,8 +307,8 @@ GUI 工作台继续保持三栏：
 
 建议新增：
 
-- `opl frontdesk initialize`
-- `GET /api/frontdesk/initialize`
+- `opl frontdoor initialize`
+- `GET /api/frontdoor/initialize`
 
 返回内容：
 
@@ -317,17 +317,17 @@ GUI 工作台继续保持三栏：
 - core_engines
 - domain_modules
 - workspace_root
-- local_frontdesk
+- local_frontdoor
 - recommended_next_action
 
 ### 2. Core engine actions
 
 建议新增：
 
-- `opl frontdesk engine install --engine codex|hermes`
-- `opl frontdesk engine update --engine codex|hermes`
-- `opl frontdesk engine reinstall --engine codex|hermes`
-- `opl frontdesk engine remove --engine hermes`
+- `opl frontdoor engine install --engine codex|hermes`
+- `opl frontdoor engine update --engine codex|hermes`
+- `opl frontdoor engine reinstall --engine codex|hermes`
+- `opl frontdoor engine remove --engine hermes`
 - 对应 web action endpoint
 
 ### 3. Workspace root actions
@@ -343,9 +343,9 @@ GUI 工作台继续保持三栏：
 
 建议新增：
 
-- `opl frontdesk repair`
-- `opl frontdesk reinstall-support`
-- `opl frontdesk update-channel`
+- `opl frontdoor repair`
+- `opl frontdoor reinstall-support`
+- `opl frontdoor update-channel`
 
 ## 与独立 GUI 壳的边界
 

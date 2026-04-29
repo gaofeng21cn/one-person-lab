@@ -168,7 +168,7 @@ test('mcp-stdio lists OPL tools and proxies session/workspace calls through the 
       }).content;
       assert.equal(sessionsContent[0].type, 'text');
       assert.match(sessionsContent[0].text, /最近会话：1 条/);
-      assert.match(sessionsContent[0].text, /sess-frontdesk-001/);
+      assert.match(sessionsContent[0].text, /sess-frontdoor-001/);
 
       writeJsonLine(child.stdin, {
         jsonrpc: '2.0',
@@ -196,7 +196,7 @@ test('mcp-stdio lists OPL tools and proxies session/workspace calls through the 
         params: {
           name: 'opl_task_status',
           arguments: {
-            task_id: 'task-frontdesk-001',
+            task_id: 'task-frontdoor-001',
           },
         },
       });
@@ -224,7 +224,7 @@ test('mcp-stdio lists OPL tools and proxies session/workspace calls through the 
       ), true);
       assert.equal(fakeApi.requests.some((request) =>
         request.path === '/api/opl/progress'
-        && request.query.task_id === 'task-frontdesk-001'
+        && request.query.task_id === 'task-frontdoor-001'
       ), true);
     } finally {
       child.kill('SIGTERM');

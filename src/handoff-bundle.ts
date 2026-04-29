@@ -2,7 +2,7 @@ import { findDomainOrThrow } from './contracts.ts';
 import { buildDomainManifestCatalog } from './domain-manifest/catalog-builder.ts';
 import { buildDomainEntryParity, buildRecommendedEntrySurfaces } from './family-domain-catalog.ts';
 import { resolveWorkspaceLocator } from './workspace-registry.ts';
-import { buildOplRuntimeEndpoints } from './legacy-frontdesk-paths/current.ts';
+import { buildOplRuntimeEndpoints } from './opl-runtime-paths/current.ts';
 import type { HandoffBundleResult } from './handoff-bundle-types.ts';
 import type { BoundaryExplanation, GatewayContracts, ResolutionResult } from './types.ts';
 
@@ -102,7 +102,7 @@ export function buildHandoffBundle(
             binding_id: domainManifestEntry.binding_id,
             workspace_path: domainManifestEntry.workspace_path,
             manifest_target_domain_id: domainManifestEntry.manifest?.target_domain_id ?? null,
-            frontdesk_surface: domainManifestEntry.manifest?.frontdesk_surface ?? null,
+            frontdoor_surface: domainManifestEntry.manifest?.frontdoor_surface ?? null,
             operator_loop_surface: domainManifestEntry.manifest?.operator_loop_surface ?? null,
             operator_loop_actions: domainManifestEntry.manifest?.operator_loop_actions ?? {},
             recommended_shell: domainManifestEntry.manifest?.recommended_shell ?? null,
@@ -144,7 +144,7 @@ export function buildHandoffBundle(
       notes: [
         'This handoff bundle freezes the family-level transfer from OPL product entry into a domain direct entry or domain-agent entry.',
         'A domain direct-entry locator is only included when the workspace registry has one configured for the routed project.',
-        'When a routed domain publishes a machine-readable manifest, the same bundle also carries the routed frontdesk plus recommended shell and command so callers do not have to guess the next step.',
+        'When a routed domain publishes a machine-readable manifest, the same bundle also carries the routed direct-entry surface plus recommended shell and command so callers do not have to guess the next step.',
       ],
     },
   };
