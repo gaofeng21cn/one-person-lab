@@ -31,6 +31,16 @@ type RuntimeTrayItem = {
   runtime_owner: 'upstream_hermes_agent';
   domain_owner: string;
   source_refs: RuntimeTraySourceRef[];
+  study_id?: string | null;
+  workspace_label?: string | null;
+  detail_summary?: string | null;
+  next_action_summary?: string | null;
+  active_run_id?: string | null;
+  browser_url?: string | null;
+  quest_session_api_url?: string | null;
+  health_status?: string | null;
+  blockers?: string[];
+  recommended_commands?: RuntimeTrayCommand[];
 };
 
 type HermesCronJob = {
@@ -49,6 +59,22 @@ type HermesCronJob = {
 
 type HermesCronProjection = {
   items: RuntimeTrayItem[];
+  source_refs: RuntimeTraySourceRef[];
+};
+
+type RuntimeTrayCommand = {
+  step_id: string;
+  title: string;
+  surface_kind: string;
+  command: string;
+};
+
+type JsonRecord = Record<string, unknown>;
+
+type MasWorkspaceProjectionRef = {
+  workspace_root: string;
+  profile_ref: string | null;
+  profile_name: string | null;
   source_refs: RuntimeTraySourceRef[];
 };
 
@@ -92,6 +118,10 @@ function optionalString(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
+function optionalBoolean(value: unknown) {
+  return typeof value === 'boolean' ? value : null;
+}
+
 function firstString(...values: unknown[]) {
   for (const value of values) {
     const normalized = optionalString(value);
@@ -100,6 +130,33 @@ function firstString(...values: unknown[]) {
     }
   }
   return null;
+}
+
+function readJsonRecord(filePath: string): JsonRecord | null {
+  try {
+    const value = JSON.parse(fs.readFileSync(filePath, 'utf8')) as unknown;
+    return value && typeof value === 'object' && !Array.isArray(value) ? value as JsonRecord : null;
+  } catch {
+    return null;
+  }
+}
+
+function nestedRecord(record: JsonRecord | null | undefined, key: string): JsonRecord | null {
+  const value = record?.[key];
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as JsonRecord : null;
+}
+
+function stringListFromRecords(value: unknown, key: string, limit = 5) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((entry) => entry && typeof entry === 'object' && !Array.isArray(entry)
+      ? optionalString((entry as JsonRecord)[key])
+      : optionalString(entry))
+    .filter((entry): entry is string => Boolean(entry))
+    .slice(0, limit);
 }
 
 function firstStringFromList(values: string[]) {
@@ -167,6 +224,25 @@ function fileSourceRef(ref: string, role: string, label?: string): RuntimeTraySo
     role,
     label,
   };
+}
+
+function commandForMasStudy(profileRef: string | null, studyId: string, command: 'study-progress' | 'study-runtime-status') {
+  if (!profileRef) {
+    return null;
+  }
+  return [
+    'uv run python -m med_autoscience.cli',
+    command,
+    '--profile',
+    shellArgument(profileRef),
+    '--study-id',
+    shellArgument(studyId),
+    ...(command === 'study-progress' ? ['--format', 'json'] : []),
+  ].join(' ');
+}
+
+function shellArgument(value: string) {
+  return value.includes(' ') || value.includes("'") ? `'${value.replace(/'/g, `'\\''`)}'` : value;
 }
 
 function projectLabel(entry: DomainManifestCatalogEntry) {
@@ -392,6 +468,320 @@ function titleFromHermesCronJob(job: HermesCronJob) {
   return name.replace(/^medautoscience-/, '').replace(/[-_]+/g, ' ').trim() || 'MAS supervision';
 }
 
+function scriptPathForHermesCronJob(hermesHome: string, job: HermesCronJob) {
+  const script = optionalString(job.script);
+  if (!script) {
+    return null;
+  }
+  return path.isAbsolute(script) ? script : path.join(hermesHome, 'scripts', script);
+}
+
+function masWorkspaceRootFromCronScript(scriptPath: string | null) {
+  if (!scriptPath) {
+    return null;
+  }
+
+  try {
+    const script = fs.readFileSync(scriptPath, 'utf8');
+    const marker = '/ops/medautoscience/bin/watch-runtime';
+    const markerIndex = script.indexOf(marker);
+    if (markerIndex === -1) {
+      return null;
+    }
+
+    const beforeMarker = script.slice(0, markerIndex);
+    const quoteIndex = Math.max(beforeMarker.lastIndexOf('"'), beforeMarker.lastIndexOf("'"));
+    const workspaceRoot = beforeMarker.slice(quoteIndex + 1);
+    return workspaceRoot.startsWith('/') ? workspaceRoot : null;
+  } catch {
+    return null;
+  }
+}
+
+function profileForMasWorkspace(workspaceRoot: string) {
+  const profileDir = path.join(workspaceRoot, 'ops', 'medautoscience', 'profiles');
+  try {
+    const profile = fs.readdirSync(profileDir)
+      .filter((name) => name.endsWith('.workspace.toml'))
+      .sort()
+      .at(0);
+    return profile ? path.join(profileDir, profile) : null;
+  } catch {
+    return null;
+  }
+}
+
+function masWorkspaceRefsFromDomainManifests(entries: DomainManifestCatalogEntry[]) {
+  return entries
+    .filter((entry) => entry.project_id === 'medautoscience' && entry.status === 'resolved' && entry.manifest)
+    .map((entry): MasWorkspaceProjectionRef | null => {
+      const locator = entry.manifest?.workspace_locator as JsonRecord | null;
+      const workspaceRoot = firstString(locator?.workspace_root, entry.workspace_path);
+      if (!workspaceRoot) {
+        return null;
+      }
+
+      return {
+        workspace_root: workspaceRoot,
+        profile_ref: firstString(locator?.profile_ref),
+        profile_name: firstString(locator?.profile_name),
+        source_refs: [
+          sourceRef('/domain_manifests/projects/medautoscience/product_entry_manifest', 'domain_manifest'),
+          sourceRef('/workspace_locator', 'mas_workspace_locator'),
+        ],
+      };
+    })
+    .filter((entry): entry is MasWorkspaceProjectionRef => Boolean(entry));
+}
+
+function masWorkspaceRefsFromHermesCronJobs() {
+  const hermesHome = hermesHomeRoot();
+  const { jobsPath, jobs } = readHermesCronJobs();
+  return jobs
+    .filter(isMasHermesCronJob)
+    .map((job): MasWorkspaceProjectionRef | null => {
+      const scriptPath = scriptPathForHermesCronJob(hermesHome, job);
+      const workspaceRoot = masWorkspaceRootFromCronScript(scriptPath);
+      if (!workspaceRoot) {
+        return null;
+      }
+
+      const profileRef = profileForMasWorkspace(workspaceRoot);
+      return {
+        workspace_root: workspaceRoot,
+        profile_ref: profileRef,
+        profile_name: profileRef ? path.basename(profileRef).replace(/\.workspace\.toml$/, '') : path.basename(workspaceRoot),
+        source_refs: uniqueByRef([
+          fileSourceRef(jobsPath, 'hermes_cron_jobs', 'Hermes cron jobs'),
+          scriptPath ? fileSourceRef(scriptPath, 'hermes_cron_script', 'Hermes cron script') : null,
+        ].filter((ref): ref is RuntimeTraySourceRef => Boolean(ref))),
+      };
+    })
+    .filter((entry): entry is MasWorkspaceProjectionRef => Boolean(entry));
+}
+
+function uniqueMasWorkspaces(workspaces: MasWorkspaceProjectionRef[]) {
+  const seen = new Set<string>();
+  return workspaces.filter((workspace) => {
+    const key = path.resolve(workspace.workspace_root);
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+
+function immediateStudyRoots(workspaceRoot: string) {
+  const studiesDir = path.join(workspaceRoot, 'studies');
+  try {
+    return fs.readdirSync(studiesDir, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => path.join(studiesDir, entry.name))
+      .sort();
+  } catch {
+    return [];
+  }
+}
+
+function isParkedMasHandoffStudy(
+  supervision: JsonRecord | null,
+  statusSummary: JsonRecord | null,
+  controllerDecision: JsonRecord | null,
+) {
+  const activeRunId = optionalString(supervision?.active_run_id);
+  const workerRunning = optionalBoolean(supervision?.worker_running);
+  const recoveryActionMode = normalizeStatusCode(firstString(statusSummary?.recovery_action_mode) ?? '');
+  const currentRequiredAction = normalizeStatusCode(firstString(statusSummary?.current_required_action) ?? '');
+
+  return Boolean(
+    !activeRunId
+      && workerRunning !== true
+      && recoveryActionMode === 'auto_runtime_parked'
+      && currentRequiredAction === 'continue_bundle_stage'
+      && firstString(controllerDecision?.decision_type, controllerDecision?.reason),
+  );
+}
+
+function isActiveMasStudy(
+  supervision: JsonRecord | null,
+  statusSummary: JsonRecord | null,
+  controllerDecision: JsonRecord | null,
+) {
+  const questStatus = normalizeStatusCode(firstString(supervision?.quest_status) ?? '');
+  const healthStatus = normalizeStatusCode(firstString(supervision?.health_status, statusSummary?.health_status) ?? '');
+  const activeRunId = optionalString(supervision?.active_run_id);
+  const workerRunning = optionalBoolean(supervision?.worker_running);
+  const needsHumanIntervention = optionalBoolean(supervision?.needs_human_intervention)
+    || optionalBoolean(statusSummary?.needs_human_intervention);
+  const recoveryActionMode = normalizeStatusCode(firstString(statusSummary?.recovery_action_mode) ?? '');
+  const currentRequiredAction = normalizeStatusCode(firstString(statusSummary?.current_required_action) ?? '');
+  const parkedHandoff = isParkedMasHandoffStudy(supervision, statusSummary, controllerDecision);
+  const stoppedOrParked = recoveryActionMode === 'auto_runtime_parked'
+    || currentRequiredAction === 'stop_runtime'
+    || questStatus === 'stopped';
+
+  if (parkedHandoff) {
+    return true;
+  }
+
+  if (stoppedOrParked && !activeRunId && workerRunning !== true) {
+    return Boolean(needsHumanIntervention && recoveryActionMode !== 'auto_runtime_parked');
+  }
+
+  return Boolean(
+    activeRunId
+      || workerRunning
+      || needsHumanIntervention
+      || ['active', 'running', 'retrying', 'waiting_for_user'].includes(questStatus)
+      || ['live', 'recovering', 'running'].includes(healthStatus),
+  );
+}
+
+function buildMasStudyItem(workspace: MasWorkspaceProjectionRef, studyRoot: string): RuntimeTrayItem | null {
+  const studyId = path.basename(studyRoot);
+  const runtimeStatusPath = path.join(studyRoot, 'artifacts', 'runtime', 'runtime_status_summary.json');
+  const runtimeSupervisionPath = path.join(studyRoot, 'artifacts', 'runtime', 'runtime_supervision', 'latest.json');
+  const controllerDecisionPath = path.join(studyRoot, 'artifacts', 'controller_decisions', 'latest.json');
+  const publicationEvalPath = path.join(studyRoot, 'artifacts', 'publication_eval', 'latest.json');
+  const statusSummary = readJsonRecord(runtimeStatusPath);
+  const supervision = readJsonRecord(runtimeSupervisionPath);
+  if (!statusSummary && !supervision) {
+    return null;
+  }
+  const controllerDecision = readJsonRecord(controllerDecisionPath);
+  if (!isActiveMasStudy(supervision, statusSummary, controllerDecision)) {
+    return null;
+  }
+
+  const publicationEval = readJsonRecord(publicationEvalPath);
+  const publicationVerdict = nestedRecord(publicationEval, 'verdict');
+  const publicationGaps = stringListFromRecords(publicationEval?.gaps, 'summary');
+  const recommendedActionSummaries = stringListFromRecords(publicationEval?.recommended_actions, 'reason', 3);
+  const activeRunId = firstString(supervision?.active_run_id);
+  const healthStatus = firstString(supervision?.health_status, statusSummary?.health_status);
+  const questStatus = firstString(supervision?.quest_status);
+  const needsHumanIntervention = optionalBoolean(supervision?.needs_human_intervention)
+    || optionalBoolean(statusSummary?.needs_human_intervention)
+    || optionalBoolean(controllerDecision?.requires_human_confirmation)
+    || false;
+  const publicationBlocked = normalizeStatusCode(firstString(publicationVerdict?.overall_verdict) ?? '') === 'blocked';
+  const parkedHandoff = isParkedMasHandoffStudy(supervision, statusSummary, controllerDecision);
+  const lane: RuntimeTrayLane = parkedHandoff ? 'recent' : needsHumanIntervention || publicationBlocked ? 'attention' : 'running';
+  const routeTarget = firstString(controllerDecision?.route_target);
+  const routeKeyQuestion = firstString(controllerDecision?.route_key_question);
+  const statusLabel = parkedHandoff
+    ? 'Stopped: waiting review'
+    : needsHumanIntervention
+    ? 'Waiting for user'
+    : publicationBlocked
+      ? `Live: ${humanizeStatusLabel(routeTarget ?? 'needs_attention')}`
+      : humanizeStatusLabel(healthStatus ?? questStatus ?? 'running');
+  const progressCommand = commandForMasStudy(workspace.profile_ref, studyId, 'study-progress');
+  const runtimeStatusCommand = commandForMasStudy(workspace.profile_ref, studyId, 'study-runtime-status');
+  const recommendedCommands = [
+    progressCommand
+      ? {
+        step_id: 'inspect_study_progress',
+        title: 'Inspect study progress',
+        surface_kind: 'study_progress',
+        command: progressCommand,
+      }
+      : null,
+    runtimeStatusCommand
+      ? {
+        step_id: 'inspect_runtime_status',
+        title: 'Inspect runtime status',
+        surface_kind: 'study_runtime_status',
+        command: runtimeStatusCommand,
+      }
+      : null,
+  ].filter((entry): entry is RuntimeTrayCommand => Boolean(entry));
+  const primaryCommand = recommendedCommands[0]?.command ?? null;
+  const blockers = parkedHandoff
+    ? []
+    : uniqueStrings([
+      ...publicationGaps,
+      routeKeyQuestion,
+      ...recommendedActionSummaries,
+    ].filter((entry): entry is string => Boolean(entry))).slice(0, 6);
+  const sourceRefs = uniqueByRef([
+    ...workspace.source_refs,
+    fileSourceRef(runtimeSupervisionPath, 'runtime_supervision', 'runtime_supervision/latest.json'),
+    statusSummary ? fileSourceRef(runtimeStatusPath, 'runtime_status_summary', 'runtime_status_summary.json') : null,
+    controllerDecision ? fileSourceRef(controllerDecisionPath, 'controller_decision', 'controller_decisions/latest.json') : null,
+    publicationEval ? fileSourceRef(publicationEvalPath, 'publication_eval', 'publication_eval/latest.json') : null,
+  ].filter((ref): ref is RuntimeTraySourceRef => Boolean(ref)));
+  const statusText = firstString(statusSummary?.status_summary, supervision?.summary);
+  const publicationSummary = firstString(publicationVerdict?.summary, publicationEval?.summary);
+  const nextActionSummary = parkedHandoff
+    ? firstString(statusSummary?.next_action_summary, controllerDecision?.reason, supervision?.next_action_summary)
+    : firstString(controllerDecision?.reason, statusSummary?.next_action_summary, supervision?.next_action_summary)
+      ?? recommendedActionSummaries[0]
+      ?? null;
+
+  return {
+    item_id: `medautoscience:study:${studyId}`,
+    project_id: 'medautoscience',
+    project_label: PROJECT_LABELS.medautoscience,
+    lane,
+    title: studyId,
+    status: parkedHandoff ? 'auto_runtime_parked' : firstString(questStatus, healthStatus, routeTarget),
+    status_label: statusLabel,
+    summary: parkedHandoff ? statusText : publicationBlocked ? publicationSummary ?? statusText : statusText,
+    updated_at: firstString(statusSummary?.generated_at, supervision?.recorded_at, controllerDecision?.emitted_at),
+    command: primaryCommand,
+    workspace_path: workspace.workspace_root,
+    runtime_owner: 'upstream_hermes_agent',
+    domain_owner: 'med-autoscience',
+    source_refs: sourceRefs,
+    study_id: studyId,
+    workspace_label: workspace.profile_name,
+    detail_summary: statusText,
+    next_action_summary: nextActionSummary,
+    active_run_id: activeRunId,
+    browser_url: null,
+    quest_session_api_url: null,
+    health_status: healthStatus,
+    blockers,
+    recommended_commands: recommendedCommands,
+  };
+}
+
+function uniqueStrings(values: string[]) {
+  const seen = new Set<string>();
+  return values.filter((value) => {
+    const normalized = value.trim();
+    if (!normalized || seen.has(normalized)) {
+      return false;
+    }
+    seen.add(normalized);
+    return true;
+  });
+}
+
+function buildMasStudyProjection(domainManifests: { projects: DomainManifestCatalogEntry[] }) {
+  const workspaces = uniqueMasWorkspaces([
+    ...masWorkspaceRefsFromDomainManifests(domainManifests.projects),
+    ...masWorkspaceRefsFromHermesCronJobs(),
+  ]);
+  const items = workspaces.flatMap((workspace) =>
+    immediateStudyRoots(workspace.workspace_root)
+      .map((studyRoot) => buildMasStudyItem(workspace, studyRoot))
+      .filter((entry): entry is RuntimeTrayItem => Boolean(entry))
+  );
+
+  return {
+    items,
+    source_refs: workspaces.length > 0
+      ? [
+        sourceRef('/runtime_tray_snapshot/mas_study_items', 'runtime_projection'),
+        ...workspaces.flatMap((workspace) => workspace.source_refs),
+      ]
+      : [],
+  };
+}
+
 function buildHermesCronProjection(): HermesCronProjection {
   const hermesHome = hermesHomeRoot();
   const { jobsPath, jobs } = readHermesCronJobs();
@@ -411,7 +801,11 @@ function buildHermesCronProjection(): HermesCronProjection {
         Boolean(optionalString(job.last_error) || optionalString(job.last_delivery_error))
         || optionalString(job.last_status) === 'error'
         || scriptErrored;
-      const lane: RuntimeTrayLane = hasRecordedError || !enabled ? 'attention' : 'running';
+      if (!hasRecordedError && enabled) {
+        return null;
+      }
+
+      const lane: RuntimeTrayLane = 'attention';
       const status = hasRecordedError ? 'needs_attention' : enabled ? state : 'paused';
       const schedule = optionalString(job.schedule_display);
       const lastRun = optionalString(job.last_run_at);
@@ -429,11 +823,11 @@ function buildHermesCronProjection(): HermesCronProjection {
       return {
         item_id: `medautoscience:hermes-cron:${jobId}`,
         project_id: 'medautoscience',
-        project_label: PROJECT_LABELS.medautoscience,
+        project_label: `${PROJECT_LABELS.medautoscience} infra`,
         lane,
-        title: titleFromHermesCronJob(job),
+        title: `Workspace supervision job: ${titleFromHermesCronJob(job)}`,
         status,
-        status_label: hasRecordedError ? 'Needs attention' : enabled ? 'Supervising' : 'Paused',
+        status_label: hasRecordedError ? 'Infrastructure attention' : 'Paused',
         summary: summaryParts.length > 0 ? summaryParts.join('; ') : null,
         updated_at: lastRun,
         command: `hermes cron run ${jobId}`,
@@ -463,8 +857,9 @@ export function buildRuntimeTraySnapshot(contracts: GatewayContracts) {
   const domainItems = domainManifests.projects
     .map((entry) => entry.status === 'resolved' ? buildResolvedItem(entry) : buildAttentionItemForUnresolved(entry))
     .filter((entry): entry is RuntimeTrayItem => Boolean(entry));
+  const masStudyProjection = buildMasStudyProjection(domainManifests);
   const hermesCronProjection = buildHermesCronProjection();
-  const items = [...domainItems, ...hermesCronProjection.items];
+  const items = [...domainItems, ...masStudyProjection.items, ...hermesCronProjection.items];
   const runningItems = items.filter((entry) => entry.lane === 'running').sort(sortItems);
   const attentionItems = items.filter((entry) => entry.lane === 'attention').sort(sortItems);
   const recentItems = items.filter((entry) => entry.lane === 'recent').sort(sortItems);
@@ -511,6 +906,7 @@ export function buildRuntimeTraySnapshot(contracts: GatewayContracts) {
         sourceRef('/domain_manifests', 'domain_manifest_catalog'),
         sourceRef('/runtime_manager/owner_split', 'runtime_owner_split'),
         sourceRef('/runtime_manager/future_sidecar_migration', 'daemon_policy'),
+        ...masStudyProjection.source_refs,
         ...hermesCronProjection.source_refs,
       ]),
       daemon_policy: {
