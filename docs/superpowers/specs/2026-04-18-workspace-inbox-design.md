@@ -26,7 +26,7 @@
 
 技术路线是 `contract-first + server-side aggregation + thin frontdesk rendering`：
 
-1. 管理层继续由 `src/management.ts` 负责聚合。
+1. 历史版本曾由 `src/management.ts` 负责聚合；当前实现已退役该顶层 barrel，改为直接维护 `src/management/*` leaf surfaces。
 2. 任务 truth 优先级按：
    - `workspace_cockpit.studies`
    - `project_progress.current_study`

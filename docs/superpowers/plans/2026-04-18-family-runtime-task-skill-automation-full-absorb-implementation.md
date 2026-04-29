@@ -37,7 +37,7 @@
 
 - Modify: `src/domain-manifest.ts`
 - Modify: `src/handoff-bundle.ts`
-- Modify: `src/management.ts`
+- Historical target: `src/management.ts`（已退役；当前实现使用 `src/management/*` leaf surfaces）
 - Modify: `src/product-entry.ts`
 - Modify: `src/web-frontdesk.ts`
 - Test: existing focused OPL consumer tests that cover domain manifests, handoff, management, and web frontdesk
@@ -366,7 +366,7 @@ git commit -m "feat: add shared runtime task skill and automation helpers"
 **Files:**
 - Modify: `src/domain-manifest.ts`
 - Modify: `src/handoff-bundle.ts`
-- Modify: `src/management.ts`
+- Historical target: `src/management.ts`（已退役；当前实现使用 `src/management/*` leaf surfaces）
 - Modify: `src/product-entry.ts`
 - Modify: `src/web-frontdesk.ts`
 - Test: focused consumer tests already covering manifests, handoff, management, and web startup payloads
@@ -400,7 +400,7 @@ Expected: PASS
 git add \
   src/domain-manifest.ts \
   src/handoff-bundle.ts \
-  src/management.ts \
+  src/management/* \
   src/product-entry.ts \
   src/web-frontdesk.ts \
   <focused-opl-consumer-tests>

@@ -167,7 +167,7 @@ Python 侧新增：
 
 - `src/domain-manifest.ts`
 - `src/handoff-bundle.ts`
-- `src/management.ts`
+- `src/management/*` leaf surfaces（历史计划曾指向已退役的 `src/management.ts` 聚合入口）
 - `src/product-entry.ts`
 - `src/web-frontdesk.ts`
 
