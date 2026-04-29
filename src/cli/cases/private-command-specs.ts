@@ -3,6 +3,7 @@ import { buildOplWorkspaceRootSurface, writeOplWorkspaceRootSurface } from '../.
 import { buildProductEntryHandoffEnvelope } from '../../product-entry-handoff-envelope.ts';
 import { buildProductEntryDoctor, runProductEntryLogs, runProductEntryRepairHermesGateway, runProductEntryResume, runProductEntrySessions } from '../../product-entry-runtime.ts';
 import { buildRuntimeManager, runRuntimeManagerAction } from '../../runtime-manager.ts';
+import { buildRuntimeTraySnapshot } from '../../runtime-tray-snapshot.ts';
 import { buildNativeIndexSummary } from '../../native-index-summary.ts';
 import { launchDomainEntry } from '../../domain-launch.ts';
 import { buildDomainManifestCatalog } from '../../domain-manifest/catalog-builder.ts';
@@ -216,6 +217,16 @@ export function buildInternalCommandSpecs(
       handler: (args) => runRuntimeManagerAction(
         parseRuntimeManagerActionArgs(args, commandSpecs['runtime manager action']),
       ),
+    },
+    'runtime snapshot': {
+      usage: 'opl runtime snapshot',
+      summary:
+        'Project active domain progress surfaces into the desktop tray snapshot without starting a local daemon.',
+      examples: ['opl runtime snapshot', 'opl runtime snapshot --json'],
+      handler: (args) => {
+        assertNoArgs(args, commandSpecs['runtime snapshot']);
+        return buildRuntimeTraySnapshot(getContracts());
+      },
     },
     'runtime index': {
       usage: 'opl runtime index',
