@@ -1,4 +1,4 @@
-import { assert, createFakeHermesFixture, fs, os, path, runCli, test } from '../helpers.ts';
+import { assert, buildManifestCommand, createFakeHermesFixture, createFamilyContractsFixtureRoot, fs, loadFamilyManifestFixtures, os, path, runCli, test } from '../helpers.ts';
 
 function createNativeHelperRepairScript(root: string, helperBinDir: string) {
   const repairScript = path.join(root, 'repair-native.sh');
@@ -239,6 +239,152 @@ exit 1
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(helperBinDir, { recursive: true, force: true });
+  }
+});
+
+test('runtime snapshot projects active domain manifests into tray lanes without owning runtime truth', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-state-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-workspace-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const fixtures = loadFamilyManifestFixtures();
+  fs.mkdirSync(path.join(workspaceRoot, 'mas'), { recursive: true });
+  fs.mkdirSync(path.join(workspaceRoot, 'redcube'), { recursive: true });
+  fs.mkdirSync(path.join(workspaceRoot, 'mag'), { recursive: true });
+  const { fixtureRoot: hermesFixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "version" ]; then
+  echo "Hermes Agent v9.9.9-test"
+  exit 0
+fi
+if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
+  echo "Gateway service is loaded"
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+
+  const runningManifest = structuredClone(fixtures.medautoscience);
+  runningManifest.task_lifecycle = {
+    ...(runningManifest.task_lifecycle as Record<string, unknown>),
+    status: 'running',
+    human_gate_ids: [],
+    summary: 'MAS study runtime is actively processing the current study.',
+  };
+  runningManifest.progress_projection = {
+    ...(runningManifest.progress_projection as Record<string, unknown>),
+    current_status: 'in_progress',
+    runtime_status: 'ready',
+    headline: 'MAS study runtime is actively processing the current study.',
+    attention_items: [],
+    human_gate_ids: [],
+  };
+  runningManifest.product_entry_start = {
+    ...(runningManifest.product_entry_start as Record<string, unknown>),
+    human_gate_ids: [],
+  };
+
+  const attentionManifest = structuredClone(fixtures.redcube);
+  attentionManifest.task_lifecycle = {
+    ...(attentionManifest.task_lifecycle as Record<string, unknown>),
+    status: 'operator_review_requested',
+    human_gate_ids: ['redcube_operator_review_gate'],
+    summary: 'RCA deliverable loop is waiting for operator review.',
+  };
+  attentionManifest.progress_projection = {
+    ...(attentionManifest.progress_projection as Record<string, unknown>),
+    attention_items: ['Review the generated deck before continuing.'],
+  };
+
+  const recentManifest = structuredClone(fixtures.medautogrant);
+  recentManifest.product_entry_manifest = {
+    ...((recentManifest.product_entry_manifest as Record<string, unknown>) ?? {}),
+    task_lifecycle: {
+      ...(((recentManifest.product_entry_manifest as Record<string, unknown>)?.task_lifecycle as Record<string, unknown>) ?? {}),
+      status: 'completed',
+      task_id: 'mag-completed-route',
+      task_kind: 'grant_authoring_loop',
+      summary: 'MAG critique route completed and is ready for archive review.',
+      human_gate_ids: [],
+    },
+    progress_projection: {
+      ...(((recentManifest.product_entry_manifest as Record<string, unknown>)?.progress_projection as Record<string, unknown>) ?? {}),
+      current_status: 'completed',
+      runtime_status: 'ready',
+      headline: 'MAG critique route completed and is ready for archive review.',
+      attention_items: [],
+      human_gate_ids: [],
+    },
+  };
+
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautoscience',
+      '--path',
+      path.join(workspaceRoot, 'mas'),
+      '--manifest-command',
+      buildManifestCommand(runningManifest),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'redcube',
+      '--path',
+      path.join(workspaceRoot, 'redcube'),
+      '--manifest-command',
+      buildManifestCommand(attentionManifest),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'medautogrant',
+      '--path',
+      path.join(workspaceRoot, 'mag'),
+      '--manifest-command',
+      buildManifestCommand(recentManifest),
+    ], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+    });
+
+    const output = runCli(['runtime', 'snapshot'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_HERMES_BIN: hermesPath,
+    });
+    const snapshot = output.runtime_tray_snapshot;
+
+    assert.equal(snapshot.schema_version, 'runtime_tray_snapshot.v1');
+    assert.equal(snapshot.runtime_health.status, 'needs_attention');
+    assert.equal(snapshot.running_items.length, 1);
+    assert.equal(snapshot.running_items[0].project_id, 'medautoscience');
+    assert.equal(snapshot.running_items[0].runtime_owner, 'upstream_hermes_agent');
+    assert.equal(snapshot.attention_items.length, 1);
+    assert.equal(snapshot.attention_items[0].project_id, 'redcube');
+    assert.equal(snapshot.attention_items[0].source_refs.some((ref: { ref: string }) => ref.ref === '/progress_projection/attention_items'), true);
+    assert.equal(snapshot.recent_items.length, 1);
+    assert.equal(snapshot.recent_items[0].project_id, 'medautogrant');
+    assert.deepEqual(snapshot.daemon_policy, {
+      local_daemon_added: false,
+      runtime_kernel_owner: 'upstream_hermes_agent',
+      sidecar_promotion_gate:
+        'Only promote beyond a thin manager if Hermes cannot express required task, wakeup, approval, audit, or product isolation contracts.',
+    });
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(hermesFixtureRoot, { recursive: true, force: true });
   }
 });
 

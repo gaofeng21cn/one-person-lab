@@ -177,5 +177,31 @@
       "runtime_health_snapshot_index"
     ]
   },
+  "tray_snapshot_projection": {
+    "surface_kind": "opl_runtime_tray_snapshot",
+    "schema_version": "runtime_tray_snapshot.v1",
+    "command": "opl runtime snapshot",
+    "consumer": "One Person Lab desktop tray",
+    "source_of_truth_rule": "OPL projects active domain-owned manifest and progress surfaces into tray lanes; cached or indexed values are not authoritative.",
+    "required_fields": [
+      "schema_version",
+      "runtime_health",
+      "last_updated",
+      "running_items",
+      "attention_items",
+      "recent_items",
+      "source_refs"
+    ],
+    "lanes": [
+      "attention_items",
+      "running_items",
+      "recent_items"
+    ],
+    "daemon_policy": {
+      "local_daemon_added": false,
+      "runtime_kernel_owner": "upstream_hermes_agent",
+      "sidecar_promotion_gate": "Only promote beyond a thin manager if Hermes cannot express required task, wakeup, approval, audit, or product isolation contracts."
+    }
+  },
   "future_sidecar_promotion_gate": "Only promote beyond a thin manager if Hermes cannot express required task, wakeup, approval, audit, or product isolation contracts."
 }
