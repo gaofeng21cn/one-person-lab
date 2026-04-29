@@ -391,7 +391,7 @@ exit 1
   }
 });
 
-test('runtime snapshot projects Hermes-hosted MAS cron supervision jobs when workspace bindings are absent', () => {
+test('runtime snapshot projects Hermes-hosted MAS cron failures as infrastructure attention', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-cron-state-'));
   const hermesHome = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-cron-home-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
@@ -466,20 +466,210 @@ exit 1
     const snapshot = output.runtime_tray_snapshot;
 
     assert.equal(snapshot.runtime_health.status, 'needs_attention');
-    assert.equal(snapshot.running_items.length, 1);
-    assert.equal(snapshot.running_items[0].item_id, 'medautoscience:hermes-cron:cron-running');
-    assert.equal(snapshot.running_items[0].project_label, 'MAS');
-    assert.equal(snapshot.running_items[0].status_label, 'Supervising');
-    assert.equal(snapshot.running_items[0].source_refs.some((ref: { role: string }) => ref.role === 'hermes_cron_jobs'), true);
+    assert.equal(snapshot.running_items.length, 0);
     assert.equal(snapshot.attention_items.length, 1);
     assert.equal(snapshot.attention_items[0].item_id, 'medautoscience:hermes-cron:cron-attention');
-    assert.equal(snapshot.attention_items[0].status_label, 'Needs attention');
+    assert.equal(snapshot.attention_items[0].project_label, 'MAS infra');
+    assert.equal(snapshot.attention_items[0].status_label, 'Infrastructure attention');
     assert.equal(snapshot.attention_items[0].source_refs.some((ref: { role: string }) => ref.role === 'hermes_cron_output'), true);
     assert.equal(snapshot.recent_items.length, 0);
     assert.equal(snapshot.source_refs.some((ref: { role: string }) => ref.role === 'hermes_cron_projection'), true);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(hermesHome, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(hermesFixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('runtime snapshot projects MAS live study artifacts discovered from Hermes supervision scripts', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-study-state-'));
+  const hermesHome = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-study-home-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-tray-mas-workspace-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const { fixtureRoot: hermesFixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "version" ]; then
+  echo "Hermes Agent v9.9.9-test"
+  exit 0
+fi
+if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
+  echo "Gateway service is loaded"
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+  const profileDir = path.join(workspaceRoot, 'ops', 'medautoscience', 'profiles');
+  const profilePath = path.join(profileDir, 'dm.workspace.toml');
+  const scriptPath = path.join(hermesHome, 'scripts', 'med-autoscience', 'dm', 'watch_runtime_tick.py');
+  const jobsPath = path.join(hermesHome, 'cron', 'jobs.json');
+
+  fs.mkdirSync(profileDir, { recursive: true });
+  fs.writeFileSync(profilePath, 'workspace_name = "dm"\n');
+  fs.mkdirSync(path.dirname(scriptPath), { recursive: true });
+  fs.writeFileSync(
+    scriptPath,
+    `COMMAND = json.loads("[\\"${workspaceRoot}/ops/medautoscience/bin/watch-runtime\\", \\"--max-ticks\\", \\"1\\"]")\n`,
+  );
+  fs.mkdirSync(path.dirname(jobsPath), { recursive: true });
+  fs.writeFileSync(
+    jobsPath,
+    `${JSON.stringify({
+      jobs: [
+        {
+          id: 'cron-dm',
+          name: 'medautoscience-supervision-dm',
+          script: 'med-autoscience/dm/watch_runtime_tick.py',
+          schedule_display: 'every 5m',
+          enabled: true,
+          state: 'scheduled',
+          last_status: 'ok',
+        },
+      ],
+    }, null, 2)}\n`,
+  );
+
+  const writeStudy = (
+    studyId: string,
+    input: {
+      activeRunId: string | null;
+      healthStatus: string;
+      questStatus: string;
+      runtimeDecision: string;
+      recoveryActionMode: string;
+      currentRequiredAction: string;
+      publicationVerdict: string;
+      needsHumanIntervention?: boolean;
+    },
+  ) => {
+    const studyRoot = path.join(workspaceRoot, 'studies', studyId);
+    const runtimeDir = path.join(studyRoot, 'artifacts', 'runtime');
+    fs.mkdirSync(path.join(runtimeDir, 'runtime_supervision'), { recursive: true });
+    fs.mkdirSync(path.join(studyRoot, 'artifacts', 'controller_decisions'), { recursive: true });
+    fs.mkdirSync(path.join(studyRoot, 'artifacts', 'publication_eval'), { recursive: true });
+    fs.writeFileSync(
+      path.join(runtimeDir, 'runtime_status_summary.json'),
+      `${JSON.stringify({
+        study_id: studyId,
+        generated_at: '2026-04-29T12:00:00+00:00',
+        health_status: input.healthStatus,
+        runtime_decision: input.runtimeDecision,
+        recovery_action_mode: input.recoveryActionMode,
+        current_required_action: input.currentRequiredAction,
+        status_summary: 'Managed runtime is live.',
+        next_action_summary: 'Continue supervision.',
+        needs_human_intervention: input.needsHumanIntervention ?? false,
+        supervisor_tick_status: 'fresh',
+      }, null, 2)}\n`,
+    );
+    fs.writeFileSync(
+      path.join(runtimeDir, 'runtime_supervision', 'latest.json'),
+      `${JSON.stringify({
+        study_id: studyId,
+        recorded_at: '2026-04-29T12:00:00+00:00',
+        quest_status: input.questStatus,
+        active_run_id: input.activeRunId,
+        health_status: input.healthStatus,
+        runtime_decision: input.runtimeDecision,
+        next_action_summary: 'Continue supervision.',
+        needs_human_intervention: input.needsHumanIntervention ?? false,
+        worker_running: Boolean(input.activeRunId),
+      }, null, 2)}\n`,
+    );
+    fs.writeFileSync(
+      path.join(studyRoot, 'artifacts', 'controller_decisions', 'latest.json'),
+      `${JSON.stringify({
+        study_id: studyId,
+        emitted_at: '2026-04-29T12:00:00+00:00',
+        decision_type: 'bounded_analysis',
+        route_target: 'analysis-campaign',
+        route_key_question: 'close current evidence gaps',
+        reason: 'Continue same-line quality repair.',
+        requires_human_confirmation: false,
+      }, null, 2)}\n`,
+    );
+    fs.writeFileSync(
+      path.join(studyRoot, 'artifacts', 'publication_eval', 'latest.json'),
+      `${JSON.stringify({
+        study_id: studyId,
+        emitted_at: '2026-04-29T12:00:00+00:00',
+        verdict: {
+          overall_verdict: input.publicationVerdict,
+          summary: 'publication quality gate summary',
+        },
+        gaps: [{ summary: 'stale_submission_minimal_authority' }],
+        recommended_actions: [{ reason: 'refresh the current delivery bundle' }],
+      }, null, 2)}\n`,
+    );
+  };
+
+  writeStudy('002-dm-china-us-mortality-attribution', {
+    activeRunId: 'run-002',
+    healthStatus: 'live',
+    questStatus: 'running',
+    runtimeDecision: 'noop',
+    recoveryActionMode: 'inspect_progress',
+    currentRequiredAction: 'supervise_managed_runtime',
+    publicationVerdict: 'blocked',
+  });
+  writeStudy('003-dpcc-primary-care-phenotype-treatment-gap', {
+    activeRunId: 'run-003',
+    healthStatus: 'live',
+    questStatus: 'running',
+    runtimeDecision: 'noop',
+    recoveryActionMode: 'inspect_progress',
+    currentRequiredAction: 'supervise_managed_runtime',
+    publicationVerdict: 'pass',
+  });
+  writeStudy('004-invasive-architecture', {
+    activeRunId: null,
+    healthStatus: 'inactive',
+    questStatus: 'stopped',
+    runtimeDecision: 'blocked',
+    recoveryActionMode: 'auto_runtime_parked',
+    currentRequiredAction: 'stop_runtime',
+    publicationVerdict: 'blocked',
+  });
+  writeStudy('005-package-ready-handoff', {
+    activeRunId: null,
+    healthStatus: 'escalated',
+    questStatus: 'active',
+    runtimeDecision: 'blocked',
+    recoveryActionMode: 'auto_runtime_parked',
+    currentRequiredAction: 'continue_bundle_stage',
+    publicationVerdict: 'blocked',
+    needsHumanIntervention: true,
+  });
+
+  try {
+    const output = runCli(['runtime', 'snapshot'], {
+      OPL_STATE_DIR: stateRoot,
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_HERMES_BIN: hermesPath,
+      HERMES_HOME: hermesHome,
+    });
+    const snapshot = output.runtime_tray_snapshot;
+    const allItems = [...snapshot.attention_items, ...snapshot.running_items, ...snapshot.recent_items];
+
+    assert.equal(snapshot.runtime_health.status, 'needs_attention');
+    assert.equal(snapshot.attention_items.length, 1);
+    assert.equal(snapshot.attention_items[0].item_id, 'medautoscience:study:002-dm-china-us-mortality-attribution');
+    assert.equal(snapshot.attention_items[0].active_run_id, 'run-002');
+    assert.equal(snapshot.attention_items[0].status_label, 'Live: Analysis campaign');
+    assert.equal(snapshot.attention_items[0].blockers.includes('stale_submission_minimal_authority'), true);
+    assert.equal(snapshot.attention_items[0].recommended_commands[0].surface_kind, 'study_progress');
+    assert.equal(snapshot.running_items.length, 1);
+    assert.equal(snapshot.running_items[0].item_id, 'medautoscience:study:003-dpcc-primary-care-phenotype-treatment-gap');
+    assert.equal(allItems.some((item: { item_id: string }) => item.item_id.includes('004-invasive-architecture')), false);
+    assert.equal(snapshot.recent_items.length, 1);
+    assert.equal(snapshot.recent_items[0].item_id, 'medautoscience:study:005-package-ready-handoff');
+    assert.equal(snapshot.recent_items[0].status_label, 'Stopped: waiting review');
+    assert.deepEqual(snapshot.recent_items[0].blockers, []);
+    assert.equal(snapshot.source_refs.some((ref: { role: string }) => ref.role === 'runtime_projection'), true);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(hermesHome, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(hermesFixtureRoot, { recursive: true, force: true });
   }
