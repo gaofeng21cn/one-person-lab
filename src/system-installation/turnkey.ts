@@ -8,20 +8,20 @@ import { bootstrapLocalCodexDefaults } from '../local-codex-defaults.ts';
 import { runNativeHelperRepairAction } from '../native-helper-runtime.ts';
 import type { GatewayContracts } from '../types.ts';
 
-import { runFrontDeskEngineAction } from './engine-actions.ts';
+import { runOplEngineAction } from './engine-actions.ts';
 import { registerOplFamilyCodexPlugins } from './codex-plugin-registry.ts';
-import { buildFrontDeskEnvironment } from './environment.ts';
-import { buildFrontDeskInitialize } from './initialize.ts';
-import { runFrontDeskModuleAction } from './modules.ts';
+import { buildOplEnvironment } from './environment.ts';
+import { buildOplInitialize } from './initialize.ts';
+import { runOplModuleAction } from './modules.ts';
 import { resolveProjectRoot, runCommand } from './shared.ts';
-import type { FrontDeskModuleId, FrontDeskTurnkeyInstallInput } from './shared.ts';
+import type { OplModuleId, OplTurnkeyInstallInput } from './shared.ts';
 
-const DEFAULT_MODULES: FrontDeskModuleId[] = ['medautoscience', 'meddeepscientist', 'medautogrant', 'redcube'];
+const DEFAULT_MODULES: OplModuleId[] = ['medautoscience', 'meddeepscientist', 'medautogrant', 'redcube'];
 const DEFAULT_ENGINES = ['codex', 'hermes'] as const;
 
-function normalizeModuleId(raw: string): FrontDeskModuleId {
+function normalizeModuleId(raw: string): OplModuleId {
   const normalized = raw.trim().toLowerCase();
-  const aliases = new Map<string, FrontDeskModuleId>([
+  const aliases = new Map<string, OplModuleId>([
     ['mas', 'medautoscience'],
     ['med-autoscience', 'medautoscience'],
     ['med_autoscience', 'medautoscience'],
@@ -244,13 +244,13 @@ function installOrOpenOplGui() {
   return installOplGuiFromRelease();
 }
 
-export async function runFrontDeskTurnkeyInstall(
+export async function runOplTurnkeyInstall(
   contracts: GatewayContracts,
-  input: FrontDeskTurnkeyInstallInput = {},
+  input: OplTurnkeyInstallInput = {},
 ) {
   const codexConfigBootstrap = bootstrapLocalCodexDefaults();
   const modules = normalizeModuleSelection(input.modules);
-  const environment = (await buildFrontDeskEnvironment(contracts)).frontdesk_environment;
+  const environment = (await buildOplEnvironment(contracts)).system_environment;
   const engineActions = input.skipEngines
     ? []
     : await Promise.all(DEFAULT_ENGINES.map(async (engineId) => {
@@ -258,7 +258,7 @@ export async function runFrontDeskTurnkeyInstall(
       if (engine.health_status === 'ready') {
         return {
           version: 'g2',
-          frontdesk_engine_action: {
+          engine_action: {
             engine_id: engineId,
             action: 'install' as const,
             status: 'skipped_installed' as const,
@@ -267,19 +267,19 @@ export async function runFrontDeskTurnkeyInstall(
             note: `${engineId} is already installed; OPL install reuses the existing local runtime dependency.`,
             stdout: '',
             stderr: '',
-            frontdesk_environment: environment,
+            system_environment: environment,
           },
         };
       }
-      return runFrontDeskEngineAction(contracts, 'install', engineId);
+      return runOplEngineAction(contracts, 'install', engineId);
     }));
   const moduleActions = input.skipModules
     ? []
-    : modules.map((moduleId) => runFrontDeskModuleAction('install', moduleId));
-  const moduleRepoPaths = new Map<FrontDeskModuleId, string>(
+    : modules.map((moduleId) => runOplModuleAction('install', moduleId));
+  const moduleRepoPaths = new Map<OplModuleId, string>(
     moduleActions.map((entry) => [
-      entry.frontdesk_module_action.module.module_id,
-      entry.frontdesk_module_action.module.checkout_path,
+      entry.module_action.module.module_id,
+      entry.module_action.module.checkout_path,
     ]),
   );
   const codexPluginRegistry = registerOplFamilyCodexPlugins(modules, moduleRepoPaths);
@@ -287,24 +287,24 @@ export async function runFrontDeskTurnkeyInstall(
   const guiOpenAction = input.skipGuiOpen ? null : installOrOpenOplGui();
   const nativeHelperAction = runNativeHelperRepairAction({ skip: input.skipNativeHelperRepair });
   const companionSkillSync = syncOplCompanionSkills(undefined, { mode: 'managed', superpowersProfile: 'keep' });
-  const initialize = await buildFrontDeskInitialize(contracts);
+  const initialize = await buildOplInitialize(contracts);
 
   return {
     version: 'g2',
-    frontdesk_turnkey_install: {
+    opl_install: {
       surface_id: 'opl_install',
       status: 'completed',
       selected_engines: [...DEFAULT_ENGINES],
       selected_modules: modules,
       codex_config_bootstrap: codexConfigBootstrap,
       codex_plugin_registry: codexPluginRegistry,
-      engine_actions: engineActions.map((entry) => entry.frontdesk_engine_action),
-      module_actions: moduleActions.map((entry) => entry.frontdesk_module_action),
+      engine_actions: engineActions.map((entry) => entry.engine_action),
+      module_actions: moduleActions.map((entry) => entry.module_action),
       gui_open_action: guiOpenAction,
       gui_shell: buildOplGuiShellSurface(resolveProjectRoot()),
       native_helper_action: nativeHelperAction,
       companion_skill_sync: companionSkillSync,
-      system_initialize: initialize.frontdesk_initialize,
+      system_initialize: initialize.system_initialize,
       notes: [
         'This command is the user-facing one-shot path for OPL + Codex CLI + Hermes-Agent + family modules + recommended Codex skills + desktop GUI.',
         'Recommended skill sync is conservative: existing user-managed skill directories are preserved, Superpowers stays on the current user profile by default, and missing optional skill sources are reported for Environment Management.',

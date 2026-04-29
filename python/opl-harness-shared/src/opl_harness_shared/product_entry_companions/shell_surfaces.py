@@ -17,7 +17,7 @@ from .internal import (
     _validate_shared_handoff_builder,
 )
 
-def validate_family_frontdesk_entry_surfaces(value: object, field: str) -> dict[str, Any]:
+def validate_family_frontdoor_entry_surfaces(value: object, field: str) -> dict[str, Any]:
     payload = _require_mapping(value, field)
     normalized: dict[str, Any] = {
         key: _clone_mapping(entry, f"{field}.{key}")
@@ -32,7 +32,7 @@ def validate_family_frontdesk_entry_surfaces(value: object, field: str) -> dict[
     return normalized
 
 
-def build_family_frontdesk_entry_surfaces(
+def build_family_frontdoor_entry_surfaces(
     *,
     product_entry_shell: Mapping[str, Any],
     shell_aliases: Mapping[str, str],
@@ -58,7 +58,7 @@ def build_family_frontdesk_entry_surfaces(
                     f"shared_handoff.{key}",
                 )
 
-    return validate_family_frontdesk_entry_surfaces(payload, "entry_surfaces")
+    return validate_family_frontdoor_entry_surfaces(payload, "entry_surfaces")
 
 
 def build_product_entry_shell_surface(

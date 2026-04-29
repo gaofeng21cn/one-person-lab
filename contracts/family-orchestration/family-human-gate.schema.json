@@ -157,7 +157,7 @@
           "enum": [
             "resume_action_graph",
             "resume_checkpoint",
-            "return_to_frontdesk"
+            "return_to_frontdoor"
           ]
         },
         "target_action_graph_id": {

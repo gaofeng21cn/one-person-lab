@@ -5,9 +5,9 @@ import { resolveCodexBinary } from '../codex.ts';
 import { inspectHermesRuntime } from '../hermes.ts';
 
 import {
-  type FrontDeskEngineAction,
-  type FrontDeskEngineId,
-  type FrontDeskShellActionSpec,
+  type OplEngineAction,
+  type OplEngineId,
+  type OplShellActionSpec,
   getShellBinary,
   normalizeOutput,
   normalizeOptionalString,
@@ -168,7 +168,7 @@ export function resolveCodexVersion() {
   };
 }
 
-export function findEngineOrThrow(engineId: string): FrontDeskEngineId {
+export function findEngineOrThrow(engineId: string): OplEngineId {
   const normalized = engineId.trim().toLowerCase();
   if (normalized === 'codex' || normalized === 'hermes') {
     return normalized;
@@ -177,7 +177,7 @@ export function findEngineOrThrow(engineId: string): FrontDeskEngineId {
   throw new Error(`Unknown engine id: ${engineId}`);
 }
 
-function buildEngineActionEnvKey(engineId: FrontDeskEngineId, action: FrontDeskEngineAction) {
+function buildEngineActionEnvKey(engineId: OplEngineId, action: OplEngineAction) {
   return `OPL_${engineId.toUpperCase()}_${action.toUpperCase()}_COMMAND`;
 }
 
@@ -186,8 +186,8 @@ function resolveHermesInstallCommand() {
 }
 
 function resolveBuiltinEngineActionCommand(
-  engineId: FrontDeskEngineId,
-  action: FrontDeskEngineAction,
+  engineId: OplEngineId,
+  action: OplEngineAction,
 ) {
   if (engineId === 'codex') {
     switch (action) {
@@ -217,7 +217,7 @@ function resolveShellActionSpec(
   envOverride: string | undefined,
   builtinCommand: string | null,
   manualNote: string,
-): FrontDeskShellActionSpec {
+): OplShellActionSpec {
   const normalizedOverride = normalizeOptionalString(envOverride);
   if (normalizedOverride) {
     const executablePath = path.resolve(normalizedOverride);
@@ -256,9 +256,9 @@ function resolveShellActionSpec(
 }
 
 export function resolveEngineActionSpec(
-  engineId: FrontDeskEngineId,
-  action: FrontDeskEngineAction,
-): FrontDeskShellActionSpec {
+  engineId: OplEngineId,
+  action: OplEngineAction,
+): OplShellActionSpec {
   const envOverride = process.env[buildEngineActionEnvKey(engineId, action)];
   const builtinCommand = resolveBuiltinEngineActionCommand(engineId, action);
   const manualNote =

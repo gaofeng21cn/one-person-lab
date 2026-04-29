@@ -2,17 +2,17 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import type { FrontDeskModuleId } from './shared.ts';
+import type { OplModuleId } from './shared.ts';
 
 type CodexFamilyPluginSpec = {
-  module_id: FrontDeskModuleId;
+  module_id: OplModuleId;
   marketplace_id: string;
   plugin_id: string;
   repo_name: string;
 };
 
 export type CodexPluginRegistryItem = {
-  module_id: FrontDeskModuleId;
+  module_id: OplModuleId;
   marketplace_id: string;
   plugin_id: string;
   repo_path: string;
@@ -103,8 +103,8 @@ function registerCodexPlugin(configPath: string, spec: CodexFamilyPluginSpec, re
 }
 
 export function registerOplFamilyCodexPlugins(
-  selectedModules: FrontDeskModuleId[],
-  moduleRepoPaths: Map<FrontDeskModuleId, string>,
+  selectedModules: OplModuleId[],
+  moduleRepoPaths: Map<OplModuleId, string>,
   home = resolveHomeDir(),
 ): CodexPluginRegistryResult {
   const codexConfigPath = resolveCodexConfigPath(home);

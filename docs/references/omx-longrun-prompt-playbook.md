@@ -81,7 +81,7 @@
 
 - 当 admitted-domain 业务仓有新的 absorbed repo-tracked truth 后，作为中央 sync owner 继续收紧 `Phase 2` 顶层 federation wording 与四仓中央参考面
 - 当前 board 已预冻结的 admitted-domain absorbed delta 锚点：
-  - `RedCube AI` = `c124c5d` / `product-entry readiness companion`（并保留 upstream runtime-owner cutover、`product frontdesk`、federated product entry、session continuity 与 family manifest companions）
+  - `RedCube AI` = `c124c5d` / `product-entry readiness companion`（并保留 upstream runtime-owner cutover、`product frontdoor`、federated product entry、session continuity 与 family manifest companions）
   - `MedAutoScience` = `6c64264` / `retire omx workflow entry`（并保留 `9b5cea8` verification surface split 与 `7ee19a8` repair-priority docs）
 
 ```text
@@ -177,10 +177,10 @@ med-autoscience 当前主线不适合继续自动打开新的 runtime architectu
 - docs/phase_2_workspace_operator_quickstart_convergence.md
 
 任务目标：
-在同一个 `redcube-runtime-program` 主线内，先确认当前 main 已把 upstream runtime-owner cutover、`redcube product frontdesk`、federated product entry、session continuity、family manifest companions 与 `c124c5d` 的 `product-entry readiness` companion 一并吸收到 repo-tracked truth；随后只在存在新的、已可诚实冻结的 same-mainline concrete delta 时继续推进。
+在同一个 `redcube-runtime-program` 主线内，先确认当前 main 已把 upstream runtime-owner cutover、`redcube product frontdoor`、federated product entry、session continuity、family manifest companions 与 `c124c5d` 的 `product-entry readiness` companion 一并吸收到 repo-tracked truth；随后只在存在新的、已可诚实冻结的 same-mainline concrete delta 时继续推进。
 
 必须完成：
-1. 先确认 `contracts/runtime-program/current-program.json`、README/docs 与 reports 都把 upstream runtime-owner cutover、`Repo-Verified Product Entry And OPL Federation`、`redcube product frontdesk`、federated product entry、session continuity、family manifest companions 与 readiness companion 写成已 absorbed truth。
+1. 先确认 `contracts/runtime-program/current-program.json`、README/docs 与 reports 都把 upstream runtime-owner cutover、`Repo-Verified Product Entry And OPL Federation`、`redcube product frontdoor`、federated product entry、session continuity、family manifest companions 与 readiness companion 写成已 absorbed truth。
 2. 保持 `workspace doctor -> source intake / source research -> deliverable create -> deliverable audit -> deliverable run` 的 repo-verified quickstart route 与 `planning_ready` gate 对齐；其中 `workspace doctor` 只做诊断，brand-new workspace 的 bootstrap writer 仍是 `source intake / source research`（`run_source_intake` / `source research`），不是独立 workspace-init surface。
 3. 保持 `auditDeliverable / runtimeWatch / getReviewState / getPublicationProjection` 的同轴语义，以及 `xiaohongshu` human publication 边界。
 4. 保持 upstream runtime-owner cutover、repo-verified product-entry federation，以及此前 `e8146a1` / `762ea4c` provenance 的口径一致，不得把 `.omx/**` 再写回仓内活真相。

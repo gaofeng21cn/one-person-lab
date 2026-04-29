@@ -6,7 +6,7 @@ from .internal import (
     _clone_mapping,
     _merge_extra_payload,
     _non_empty_text,
-    _normalize_frontdesk_summary,
+    _normalize_frontdoor_summary,
     _normalize_progress_surface,
     _normalize_resume_contract,
     _normalize_start_mode,
@@ -20,11 +20,11 @@ from .internal import (
     _require_string_list,
     _validate_shared_handoff,
 )
-from .shell_surfaces import build_family_frontdesk_entry_surfaces, validate_family_frontdesk_entry_surfaces
+from .shell_surfaces import build_family_frontdoor_entry_surfaces, validate_family_frontdoor_entry_surfaces
 from .validators import (
     _validate_family_orchestration_companion,
     validate_family_product_entry_manifest,
-    validate_family_product_frontdesk,
+    validate_family_product_frontdoor,
 )
 
 def collect_family_human_gate_ids(family_orchestration: object) -> list[str]:
@@ -80,7 +80,7 @@ def build_product_entry_quickstart(
 def build_product_entry_overview(
     *,
     summary: str,
-    frontdesk_command: str,
+    frontdoor_command: str,
     recommended_command: str,
     operator_loop_command: str,
     progress_surface: Mapping[str, Any],
@@ -93,7 +93,7 @@ def build_product_entry_overview(
     return {
         "surface_kind": "product_entry_overview",
         "summary": _require_string(summary, "summary"),
-        "frontdesk_command": _require_string(frontdesk_command, "frontdesk_command"),
+        "frontdoor_command": _require_string(frontdoor_command, "frontdoor_command"),
         "recommended_command": _require_string(recommended_command, "recommended_command"),
         "operator_loop_command": _require_string(operator_loop_command, "operator_loop_command"),
         "progress_surface": _normalize_progress_surface(progress_surface, "progress_surface"),
@@ -170,14 +170,14 @@ def build_product_entry_start(
     }
 
 
-def build_product_frontdesk(
+def build_product_frontdoor(
     *,
     recommended_action: str,
     target_domain_id: str,
     workspace_locator: Mapping[str, Any],
     runtime: Mapping[str, Any],
     product_entry_status: Mapping[str, Any],
-    frontdesk_surface: Mapping[str, Any],
+    frontdoor_surface: Mapping[str, Any],
     operator_loop_surface: Mapping[str, Any],
     operator_loop_actions: Mapping[str, Any],
     product_entry_start: Mapping[str, Any],
@@ -196,13 +196,13 @@ def build_product_frontdesk(
     extra_payload: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
-        "surface_kind": "product_frontdesk",
+        "surface_kind": "product_frontdoor",
         "recommended_action": _require_string(recommended_action, "recommended_action"),
         "target_domain_id": _require_string(target_domain_id, "target_domain_id"),
         "workspace_locator": _clone_mapping(workspace_locator, "workspace_locator"),
         "runtime": _clone_mapping(runtime, "runtime"),
         "product_entry_status": _clone_mapping(product_entry_status, "product_entry_status"),
-        "frontdesk_surface": _clone_mapping(frontdesk_surface, "frontdesk_surface"),
+        "frontdoor_surface": _clone_mapping(frontdoor_surface, "frontdoor_surface"),
         "operator_loop_surface": _clone_mapping(operator_loop_surface, "operator_loop_surface"),
         "operator_loop_actions": _clone_mapping(operator_loop_actions, "operator_loop_actions"),
         "product_entry_start": _clone_mapping(product_entry_start, "product_entry_start"),
@@ -212,8 +212,8 @@ def build_product_frontdesk(
         "product_entry_quickstart": _clone_mapping(product_entry_quickstart, "product_entry_quickstart"),
         "family_orchestration": _clone_mapping(family_orchestration, "family_orchestration"),
         "product_entry_manifest": _clone_mapping(product_entry_manifest, "product_entry_manifest"),
-        "entry_surfaces": validate_family_frontdesk_entry_surfaces(entry_surfaces, "entry_surfaces"),
-        "summary": _normalize_frontdesk_summary(summary, "summary"),
+        "entry_surfaces": validate_family_frontdoor_entry_surfaces(entry_surfaces, "entry_surfaces"),
+        "summary": _normalize_frontdoor_summary(summary, "summary"),
         "notes": _require_string_list(notes, "notes"),
     }
     resolved_schema_ref = _non_empty_text(schema_ref)
@@ -226,10 +226,10 @@ def build_product_frontdesk(
             gateway_interaction_contract,
             "gateway_interaction_contract",
         )
-    return _merge_extra_payload(payload, extra_payload, surface_kind="product frontdesk")
+    return _merge_extra_payload(payload, extra_payload, surface_kind="product frontdoor")
 
 
-def build_family_product_frontdesk(
+def build_family_product_frontdoor(
     *,
     recommended_action: str,
     product_entry_manifest: Mapping[str, Any],
@@ -241,15 +241,15 @@ def build_family_product_frontdesk(
     extra_payload: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     manifest = _clone_mapping(product_entry_manifest, "product_entry_manifest")
-    frontdesk_surface = _clone_mapping(
-        manifest.get("frontdesk_surface"),
-        "product_entry_manifest.frontdesk_surface",
+    frontdoor_surface = _clone_mapping(
+        manifest.get("frontdoor_surface"),
+        "product_entry_manifest.frontdoor_surface",
     )
     operator_loop_surface = _clone_mapping(
         manifest.get("operator_loop_surface"),
         "product_entry_manifest.operator_loop_surface",
     )
-    return build_product_frontdesk(
+    return build_product_frontdoor(
         recommended_action=_require_string(recommended_action, "recommended_action"),
         target_domain_id=_require_string(
             manifest.get("target_domain_id"),
@@ -264,7 +264,7 @@ def build_family_product_frontdesk(
             manifest.get("product_entry_status"),
             "product_entry_manifest.product_entry_status",
         ),
-        frontdesk_surface=frontdesk_surface,
+        frontdoor_surface=frontdoor_surface,
         operator_loop_surface=operator_loop_surface,
         operator_loop_actions=_clone_mapping(
             manifest.get("operator_loop_actions"),
@@ -295,11 +295,11 @@ def build_family_product_frontdesk(
             "product_entry_manifest.family_orchestration",
         ),
         product_entry_manifest=manifest,
-        entry_surfaces=validate_family_frontdesk_entry_surfaces(entry_surfaces, "entry_surfaces"),
+        entry_surfaces=validate_family_frontdoor_entry_surfaces(entry_surfaces, "entry_surfaces"),
         summary={
-            "frontdesk_command": _require_string(
-                frontdesk_surface.get("command"),
-                "product_entry_manifest.frontdesk_surface.command",
+            "frontdoor_command": _require_string(
+                frontdoor_surface.get("command"),
+                "product_entry_manifest.frontdoor_surface.command",
             ),
             "recommended_command": _require_string(
                 manifest.get("recommended_command"),
@@ -333,7 +333,7 @@ def build_family_product_frontdesk(
     )
 
 
-def build_family_product_frontdesk_from_manifest(
+def build_family_product_frontdoor_from_manifest(
     *,
     recommended_action: str,
     product_entry_manifest: Mapping[str, Any],
@@ -343,10 +343,10 @@ def build_family_product_frontdesk_from_manifest(
     extra_payload: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     manifest = validate_family_product_entry_manifest(product_entry_manifest)
-    return build_family_product_frontdesk(
+    return build_family_product_frontdoor(
         recommended_action=_require_string(recommended_action, "recommended_action"),
         product_entry_manifest=manifest,
-        entry_surfaces=build_family_frontdesk_entry_surfaces(
+        entry_surfaces=build_family_frontdoor_entry_surfaces(
             product_entry_shell=_clone_mapping(
                 manifest.get("product_entry_shell"),
                 "product_entry_manifest.product_entry_shell",
@@ -377,7 +377,7 @@ def build_family_product_entry_manifest(
     managed_runtime_contract: Mapping[str, Any] | None = None,
     repo_mainline: Mapping[str, Any] | None = None,
     product_entry_status: Mapping[str, Any] | None = None,
-    frontdesk_surface: Mapping[str, Any] | None = None,
+    frontdoor_surface: Mapping[str, Any] | None = None,
     operator_loop_surface: Mapping[str, Any] | None = None,
     operator_loop_actions: Mapping[str, Any] | None = None,
     recommended_shell: str | None = None,
@@ -418,7 +418,7 @@ def build_family_product_entry_manifest(
         ("managed_runtime_contract", managed_runtime_contract),
         ("repo_mainline", repo_mainline),
         ("product_entry_status", product_entry_status),
-        ("frontdesk_surface", frontdesk_surface),
+        ("frontdoor_surface", frontdoor_surface),
         ("operator_loop_surface", operator_loop_surface),
         ("operator_loop_actions", operator_loop_actions),
         ("runtime_inventory", runtime_inventory),

@@ -1,11 +1,11 @@
-# Frontdesk Legacy Notes
+# Frontdoor Legacy Notes
 
 这组历史材料对应 `2026-04-12` 到 `2026-04-19` 期间已经退役的前台路线，包括：
 
 - `LibreChat-first` GUI 与 hosted shell 假设
 - `Paperclip` control-plane bridge
 - 过时的 desktop bootstrap 兼容层设计
-- `Initialize OPL` 与 `frontdesk` 公开语义混写阶段
+- `Initialize OPL` 与 `frontdoor` 公开语义混写阶段
 
 这些设计与计划已经退出当前主线。
 它们只保留给历史审计、迁移回顾和语义追溯使用。

@@ -4,7 +4,7 @@ from typing import Any, Mapping
 
 from .internal import (
     _clone_mapping,
-    _normalize_frontdesk_summary,
+    _normalize_frontdoor_summary,
     _normalize_progress_surface,
     _normalize_resume_contract,
     _normalize_start_mode,
@@ -24,7 +24,7 @@ from .internal import (
     _validate_optional_family_reference_ref,
     _validate_shared_handoff,
 )
-from .shell_surfaces import validate_family_frontdesk_entry_surfaces
+from .shell_surfaces import validate_family_frontdoor_entry_surfaces
 
 def _validate_surface_kind_mapping(value: object, field: str, expected_surface_kind: str) -> dict[str, Any]:
     payload = _clone_mapping(value, field)
@@ -135,7 +135,7 @@ def _validate_product_entry_overview_surface(value: object, field: str) -> dict[
         **dict(payload),
         "surface_kind": "product_entry_overview",
         "summary": _require_string(payload.get("summary"), f"{field}.summary"),
-        "frontdesk_command": _require_string(payload.get("frontdesk_command"), f"{field}.frontdesk_command"),
+        "frontdoor_command": _require_string(payload.get("frontdoor_command"), f"{field}.frontdoor_command"),
         "recommended_command": _require_string(payload.get("recommended_command"), f"{field}.recommended_command"),
         "operator_loop_command": _require_string(payload.get("operator_loop_command"), f"{field}.operator_loop_command"),
         "progress_surface": _normalize_progress_surface(payload.get("progress_surface"), f"{field}.progress_surface"),
@@ -237,7 +237,7 @@ def validate_family_product_entry_manifest(
         "managed_runtime_contract",
         "repo_mainline",
         "product_entry_status",
-        "frontdesk_surface",
+        "frontdoor_surface",
         "operator_loop_surface",
         "operator_loop_actions",
     ):
@@ -348,76 +348,76 @@ def validate_family_product_entry_manifest(
     return normalized
 
 
-def validate_family_product_frontdesk(
+def validate_family_product_frontdoor(
     value: object,
     *,
     require_contract_bundle: bool = False,
     require_runtime_companions: bool = False,
 ) -> dict[str, Any]:
-    payload = _require_mapping(value, "product_frontdesk")
+    payload = _require_mapping(value, "product_frontdoor")
     normalized: dict[str, Any] = {
         **dict(payload),
-        "surface_kind": "product_frontdesk",
-        "recommended_action": _require_string(payload.get("recommended_action"), "product_frontdesk.recommended_action"),
-        "target_domain_id": _require_string(payload.get("target_domain_id"), "product_frontdesk.target_domain_id"),
-        "workspace_locator": _clone_mapping(payload.get("workspace_locator"), "product_frontdesk.workspace_locator"),
-        "runtime": _clone_mapping(payload.get("runtime"), "product_frontdesk.runtime"),
-        "product_entry_status": _clone_mapping(payload.get("product_entry_status"), "product_frontdesk.product_entry_status"),
-        "frontdesk_surface": _clone_mapping(payload.get("frontdesk_surface"), "product_frontdesk.frontdesk_surface"),
+        "surface_kind": "product_frontdoor",
+        "recommended_action": _require_string(payload.get("recommended_action"), "product_frontdoor.recommended_action"),
+        "target_domain_id": _require_string(payload.get("target_domain_id"), "product_frontdoor.target_domain_id"),
+        "workspace_locator": _clone_mapping(payload.get("workspace_locator"), "product_frontdoor.workspace_locator"),
+        "runtime": _clone_mapping(payload.get("runtime"), "product_frontdoor.runtime"),
+        "product_entry_status": _clone_mapping(payload.get("product_entry_status"), "product_frontdoor.product_entry_status"),
+        "frontdoor_surface": _clone_mapping(payload.get("frontdoor_surface"), "product_frontdoor.frontdoor_surface"),
         "operator_loop_surface": _clone_mapping(
             payload.get("operator_loop_surface"),
-            "product_frontdesk.operator_loop_surface",
+            "product_frontdoor.operator_loop_surface",
         ),
         "operator_loop_actions": _clone_mapping(
             payload.get("operator_loop_actions"),
-            "product_frontdesk.operator_loop_actions",
+            "product_frontdoor.operator_loop_actions",
         ),
         "product_entry_start": _validate_product_entry_start_surface(
             payload.get("product_entry_start"),
-            "product_frontdesk.product_entry_start",
+            "product_frontdoor.product_entry_start",
         ),
         "product_entry_overview": _validate_product_entry_overview_surface(
             payload.get("product_entry_overview"),
-            "product_frontdesk.product_entry_overview",
+            "product_frontdoor.product_entry_overview",
         ),
         "product_entry_preflight": _validate_product_entry_preflight_surface(
             payload.get("product_entry_preflight"),
-            "product_frontdesk.product_entry_preflight",
+            "product_frontdoor.product_entry_preflight",
         ),
         "product_entry_readiness": _validate_product_entry_readiness_surface(
             payload.get("product_entry_readiness"),
-            "product_frontdesk.product_entry_readiness",
+            "product_frontdoor.product_entry_readiness",
         ),
         "product_entry_quickstart": _validate_product_entry_quickstart_surface(
             payload.get("product_entry_quickstart"),
-            "product_frontdesk.product_entry_quickstart",
+            "product_frontdoor.product_entry_quickstart",
         ),
         "family_orchestration": _validate_family_orchestration_companion(
             payload.get("family_orchestration"),
-            "product_frontdesk.family_orchestration",
+            "product_frontdoor.family_orchestration",
         ),
         "product_entry_manifest": validate_family_product_entry_manifest(
             payload.get("product_entry_manifest"),
             require_contract_bundle=require_contract_bundle,
             require_runtime_companions=require_runtime_companions,
         ),
-        "entry_surfaces": validate_family_frontdesk_entry_surfaces(
+        "entry_surfaces": validate_family_frontdoor_entry_surfaces(
             payload.get("entry_surfaces"),
-            "product_frontdesk.entry_surfaces",
+            "product_frontdoor.entry_surfaces",
         ),
-        "summary": _normalize_frontdesk_summary(payload.get("summary"), "product_frontdesk.summary"),
-        "notes": _require_string_list(payload.get("notes"), "product_frontdesk.notes"),
+        "summary": _normalize_frontdoor_summary(payload.get("summary"), "product_frontdoor.summary"),
+        "notes": _require_string_list(payload.get("notes"), "product_frontdoor.notes"),
     }
     if payload.get("schema_ref") is not None or require_contract_bundle:
-        normalized["schema_ref"] = _require_string(payload.get("schema_ref"), "product_frontdesk.schema_ref")
+        normalized["schema_ref"] = _require_string(payload.get("schema_ref"), "product_frontdoor.schema_ref")
     if payload.get("domain_entry_contract") is not None or require_contract_bundle:
         normalized["domain_entry_contract"] = _validate_domain_entry_contract_shape(
             payload.get("domain_entry_contract"),
-            "product_frontdesk.domain_entry_contract",
+            "product_frontdoor.domain_entry_contract",
         )
     if payload.get("gateway_interaction_contract") is not None or require_contract_bundle:
         normalized["gateway_interaction_contract"] = _validate_gateway_interaction_contract_shape(
             payload.get("gateway_interaction_contract"),
-            "product_frontdesk.gateway_interaction_contract",
+            "product_frontdoor.gateway_interaction_contract",
         )
     return normalized

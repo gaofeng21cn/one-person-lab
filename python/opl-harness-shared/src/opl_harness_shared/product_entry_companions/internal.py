@@ -177,10 +177,10 @@ def _clone_mapping(value: object, field: str) -> dict[str, Any]:
     return dict(_require_mapping(value, field))
 
 
-def _normalize_frontdesk_summary(value: object, field: str) -> dict[str, str]:
+def _normalize_frontdoor_summary(value: object, field: str) -> dict[str, str]:
     payload = _require_mapping(value, field)
     return {
-        "frontdesk_command": _require_string(payload.get("frontdesk_command"), f"{field}.frontdesk_command"),
+        "frontdoor_command": _require_string(payload.get("frontdoor_command"), f"{field}.frontdoor_command"),
         "recommended_command": _require_string(payload.get("recommended_command"), f"{field}.recommended_command"),
         "operator_loop_command": _require_string(
             payload.get("operator_loop_command"),

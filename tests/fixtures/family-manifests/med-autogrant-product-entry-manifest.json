@@ -25,11 +25,11 @@
     },
     "recommended_shell": "grant_user_loop",
     "recommended_command": "uv run python -m med_autogrant grant-user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
-    "frontdesk_surface": {
-      "shell_key": "product_frontdesk",
-      "command": "uv run python -m med_autogrant product-frontdesk --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
-      "surface_kind": "product_frontdesk",
-      "summary": "当前 direct grant product frontdesk 先暴露前台入口、user loop、projection 与 shared handoff。"
+    "frontdoor_surface": {
+      "shell_key": "product_frontdoor",
+      "command": "uv run python -m med_autogrant product-frontdoor --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+      "surface_kind": "product_frontdoor",
+      "summary": "当前 direct grant product frontdoor 先暴露前台入口、user loop、projection 与 shared handoff。"
     },
     "operator_loop_surface": {
       "shell_key": "grant_user_loop",
@@ -93,13 +93,13 @@
       ],
       "product_entry_kind": "med_auto_grant_product_entry",
       "supported_commands": [
-        "product-frontdesk",
+        "product-frontdoor",
         "grant-user-loop",
         "grant-direct-entry"
       ],
       "command_contracts": [
         {
-          "command": "product-frontdesk",
+          "command": "product-frontdoor",
           "required_fields": [
             "input_path"
           ],
@@ -138,7 +138,7 @@
         "codex_entry_strategy": "domain_agent_entry",
         "artifact_conventions": "grant_proposal_package",
         "progress_conventions": "grant_workloop_narration",
-        "entry_command": "product-frontdesk",
+        "entry_command": "product-frontdoor",
         "manifest_command": "product-entry-manifest"
       }
     },
@@ -214,9 +214,9 @@
       }
     },
     "product_entry_shell": {
-      "product_frontdesk": {
-        "command": "uv run python -m med_autogrant product-frontdesk --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
-        "surface_kind": "product_frontdesk"
+      "product_frontdoor": {
+        "command": "uv run python -m med_autogrant product-frontdoor --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+        "surface_kind": "product_frontdoor"
       },
       "grant_progress": {
         "command": "uv run python -m med_autogrant grant-progress --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
@@ -247,14 +247,14 @@
     },
     "product_entry_start": {
       "surface_kind": "product_entry_start",
-      "summary": "先进入 direct grant frontdesk；需要继续当前写作主线时恢复 grant user loop，需要把用户意图显式装配成入口合同时再构建 direct entry。",
-      "recommended_mode_id": "open_frontdesk",
+      "summary": "先进入 direct grant frontdoor；需要继续当前写作主线时恢复 grant user loop，需要把用户意图显式装配成入口合同时再构建 direct entry。",
+      "recommended_mode_id": "open_frontdoor",
       "modes": [
         {
-          "mode_id": "open_frontdesk",
-          "title": "Open grant frontdesk",
-          "command": "uv run python -m med_autogrant product-frontdesk --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
-          "surface_kind": "product_frontdesk",
+          "mode_id": "open_frontdoor",
+          "title": "Open grant frontdoor",
+          "command": "uv run python -m med_autogrant product-frontdoor --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+          "surface_kind": "product_frontdoor",
           "summary": "打开当前 direct grant frontdoor。",
           "requires": []
         },
@@ -291,7 +291,7 @@
     "product_entry_overview": {
       "surface_kind": "product_entry_overview",
       "summary": "把 direct grant product 面逐步收成当前用户 inbox shell，而不越界写成 mature Web UI 或 hosted runtime。",
-      "frontdesk_command": "uv run python -m med_autogrant product-frontdesk --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+      "frontdoor_command": "uv run python -m med_autogrant product-frontdoor --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
       "recommended_command": "uv run python -m med_autogrant grant-user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
       "operator_loop_command": "uv run python -m med_autogrant grant-user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
       "progress_surface": {
@@ -305,7 +305,7 @@
         "session_locator_field": "grant_run_id",
         "checkpoint_locator_field": "lifecycle_stage"
       },
-      "recommended_step_id": "open_frontdesk",
+      "recommended_step_id": "open_frontdoor",
       "next_focus": [
         "继续把 `grant-user-loop` 当作当前 direct grant user inbox shell，并保持主线 snapshot / route action / product entry truth 对齐。",
         "继续用 fresh proof 验证 critique / revision / final package / hosted contract bundle 在 Hermes substrate 上不漂移。"
@@ -317,10 +317,10 @@
     },
     "product_entry_preflight": {
       "surface_kind": "product_entry_preflight",
-      "summary": "当前 direct grant frontdoor 的前置检查已通过，可以先复核 workspace 与主线，再进入 product frontdesk。",
+      "summary": "当前 direct grant frontdoor 的前置检查已通过，可以先复核 workspace 与主线，再进入 product frontdoor。",
       "ready_to_try_now": true,
       "recommended_check_command": "uv run python -m med_autogrant validate-workspace --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
-      "recommended_start_command": "uv run python -m med_autogrant product-frontdesk --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+      "recommended_start_command": "uv run python -m med_autogrant product-frontdoor --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
       "blocking_check_ids": [],
       "checks": [
         {
@@ -344,8 +344,8 @@
           "title": "Direct Frontdoor Contract Landed",
           "status": "pass",
           "blocking": true,
-          "summary": "direct frontdoor contract 已 landed，可由 product-frontdesk / manifest 直接消费。",
-          "command": "uv run python -m med_autogrant product-frontdesk --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json"
+          "summary": "direct frontdoor contract 已 landed，可由 product-frontdoor / manifest 直接消费。",
+          "command": "uv run python -m med_autogrant product-frontdoor --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json"
         },
         {
           "check_id": "submission_ready_export_gate",
@@ -364,8 +364,8 @@
       "good_to_use_now": false,
       "fully_automatic": false,
       "summary": "当前可以作为 Agent 协同的 CLI/controller 标书写作主线使用，但还不是无需人工材料、无需判断、可直接交付的全自动国自然标书产品。",
-      "recommended_start_surface": "product_frontdesk",
-      "recommended_start_command": "uv run python -m med_autogrant product-frontdesk --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+      "recommended_start_surface": "product_frontdoor",
+      "recommended_start_command": "uv run python -m med_autogrant product-frontdoor --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
       "recommended_loop_surface": "grant_user_loop",
       "recommended_loop_command": "uv run python -m med_autogrant grant-user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
       "blocking_gaps": [
@@ -382,8 +382,8 @@
       "fully_automatic": false,
       "user_experience_level": "usable_for_agent_assisted_cli_authoring_not_yet_polished_product",
       "summary": "当前可以作为 Agent 协同的 CLI/controller 标书写作主线使用；对材料齐备的 workspace 已能导出本地 submission-ready 交付包。",
-      "recommended_start_surface": "product_frontdesk",
-      "recommended_start_command": "uv run python -m med_autogrant product-frontdesk --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+      "recommended_start_surface": "product_frontdoor",
+      "recommended_start_command": "uv run python -m med_autogrant product-frontdoor --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
       "recommended_loop_surface": "grant_user_loop",
       "recommended_loop_command": "uv run python -m med_autogrant grant-user-loop --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
       "workflow_coverage": [
@@ -685,25 +685,25 @@
       "skills": [
         {
           "surface_kind": "skill_descriptor",
-          "skill_id": "medautogrant_product_frontdesk",
-          "title": "MAG product frontdesk",
+          "skill_id": "medautogrant_product_frontdoor",
+          "title": "MAG product frontdoor",
           "owner": "med-autogrant",
           "distribution_mode": "repo_tracked",
-          "target_surface_kind": "product_frontdesk",
-          "description": "打开当前 direct grant frontdesk。",
-          "command": "uv run python -m med_autogrant product-frontdesk --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+          "target_surface_kind": "product_frontdoor",
+          "description": "打开当前 direct grant frontdoor。",
+          "command": "uv run python -m med_autogrant product-frontdoor --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
           "readiness": "landed",
           "tags": [
-            "frontdesk",
+            "frontdoor",
             "grant"
           ],
           "domain_projection": {
             "plugin_name": "med-autogrant",
             "skill_entry": "med-autogrant",
             "skill_semantics": "domain_app",
-            "entry_shell_key": "product_frontdesk",
-            "entry_command": "uv run python -m med_autogrant product-frontdesk --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
-            "recommended_shell": "product_frontdesk",
+            "entry_shell_key": "product_frontdoor",
+            "entry_command": "uv run python -m med_autogrant product-frontdoor --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+            "recommended_shell": "product_frontdoor",
             "supporting_shell_keys": [
               "grant_progress",
               "grant_cockpit",
@@ -711,7 +711,7 @@
               "grant_user_loop"
             ],
             "shell_commands": {
-              "product_frontdesk": "uv run python -m med_autogrant product-frontdesk --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
+              "product_frontdoor": "uv run python -m med_autogrant product-frontdoor --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
               "grant_progress": "uv run python -m med_autogrant grant-progress --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
               "grant_cockpit": "uv run python -m med_autogrant grant-cockpit --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --format json",
               "grant_direct_entry": "uv run python -m med_autogrant grant-direct-entry --input /fixtures/med-autogrant/nsfc_workspace_p2c_critique.json --task-intent <describe-task-intent> --format json",
@@ -751,7 +751,7 @@
         }
       ],
       "supported_commands": [
-        "product-frontdesk",
+        "product-frontdoor",
         "grant-user-loop",
         "grant-progress",
         "grant-cockpit",
@@ -759,9 +759,9 @@
       ],
       "command_contracts": [
         {
-          "command": "product-frontdesk",
+          "command": "product-frontdoor",
           "owner": "med-autogrant",
-          "surface_kind": "product_frontdesk"
+          "surface_kind": "product_frontdoor"
         },
         {
           "command": "grant-user-loop",

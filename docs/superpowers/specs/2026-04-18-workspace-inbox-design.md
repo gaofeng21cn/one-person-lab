@@ -24,7 +24,7 @@
 
 ## Technical route
 
-技术路线是 `contract-first + server-side aggregation + thin frontdesk rendering`：
+技术路线是 `contract-first + server-side aggregation + thin frontdoor rendering`：
 
 1. 历史版本曾由 `src/management.ts` 负责聚合；当前实现已退役该顶层 barrel，改为直接维护 `src/management/*` leaf surfaces。
 2. 任务 truth 优先级按：
@@ -121,4 +121,4 @@
 
 ## Conclusion
 
-这次不是在首页再堆一块状态面板，而是把 `workspace -> task -> file` 这条用户心智补完整，让 OPL frontdesk 从“只看当前论文和文件”升级成“能看懂整个 workspace 的任务分布和推进状态”。
+这次不是在首页再堆一块状态面板，而是把 `workspace -> task -> file` 这条用户心智补完整，让 OPL frontdoor 从“只看当前论文和文件”升级成“能看懂整个 workspace 的任务分布和推进状态”。

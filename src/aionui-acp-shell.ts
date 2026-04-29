@@ -5,15 +5,15 @@ export const OPL_FRONTDOOR_AGENT_LABEL = 'OPL Agent';
 export const OPL_FRONTDOOR_MCP_SERVER_KEY = 'opl_cortex';
 export const OPL_FRONTDOOR_MCP_SERVER_LABEL = 'OPL Cortex';
 
-type FrontDeskWelcomeOptions = {
+type OplWelcomeOptions = {
   publicOrigin: string;
-  frontdeskEntryUrl: string;
+  entryUrl: string;
   codexDefaults: LocalCodexDefaults;
   workspacePath?: string | null;
   activeProjectLabel?: string | null;
 };
 
-export function buildFrontDeskShellMcpWiring() {
+export function buildOplShellMcpWiring() {
   return {
     surface_kind: 'opl_hosted_shell_mcp_wiring',
     binding_context: {
@@ -43,7 +43,7 @@ export function buildFrontDeskShellMcpWiring() {
   };
 }
 
-export function inferFrontDeskWorkspaceLabel(options: {
+export function inferOplWorkspaceLabel(options: {
   workspacePath?: string | null;
   fallbackLabel?: string | null;
 }) {
@@ -58,8 +58,8 @@ export function inferFrontDeskWorkspaceLabel(options: {
   return segments.at(-1) ?? normalized;
 }
 
-export function buildFrontDeskShellWelcome(options: FrontDeskWelcomeOptions) {
-  const workspaceLabel = inferFrontDeskWorkspaceLabel({
+export function buildOplShellWelcome(options: OplWelcomeOptions) {
+  const workspaceLabel = inferOplWorkspaceLabel({
     workspacePath: options.workspacePath,
     fallbackLabel: options.activeProjectLabel,
   });
@@ -72,7 +72,7 @@ export function buildFrontDeskShellWelcome(options: FrontDeskWelcomeOptions) {
   return lines.join('\n');
 }
 
-export function buildFrontDeskTitlePrompt() {
+export function buildOplTitlePrompt() {
   return [
     `Create a short conversation title for ${OPL_FRONTDOOR_APP_TITLE}.`,
     'Prefer the concrete workspace, project, study, or paper identifier when one is present.',

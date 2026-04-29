@@ -2,8 +2,8 @@ import { GatewayContractError } from '../contracts.ts';
 import type { GatewayContracts } from '../types.ts';
 
 import { resolveEngineActionSpec } from './engine-helpers.ts';
-import { buildFrontDeskEnvironment } from './environment.ts';
-import type { FrontDeskEngineAction } from './shared.ts';
+import { buildOplEnvironment } from './environment.ts';
+import type { OplEngineAction } from './shared.ts';
 import { normalizeOutput } from './shared.ts';
 
 function findEngineOrThrow(engineId: string) {
@@ -23,9 +23,9 @@ function findEngineOrThrow(engineId: string) {
   );
 }
 
-export async function runFrontDeskEngineAction(
+export async function runOplEngineAction(
   contracts: GatewayContracts,
-  action: FrontDeskEngineAction,
+  action: OplEngineAction,
   engineId: string,
 ) {
   const resolvedEngineId = findEngineOrThrow(engineId);
@@ -34,7 +34,7 @@ export async function runFrontDeskEngineAction(
   if (!spec.executable) {
     return {
       version: 'g2',
-      frontdesk_engine_action: {
+      engine_action: {
         engine_id: resolvedEngineId,
         action,
         status: 'manual_required',
@@ -43,7 +43,7 @@ export async function runFrontDeskEngineAction(
         note: spec.note,
         stdout: '',
         stderr: '',
-        frontdesk_environment: (await buildFrontDeskEnvironment(contracts)).frontdesk_environment,
+        system_environment: (await buildOplEnvironment(contracts)).system_environment,
       },
     };
   }
@@ -52,7 +52,7 @@ export async function runFrontDeskEngineAction(
   if (result.exitCode !== 0) {
     throw new GatewayContractError(
       'build_command_failed',
-      `Failed to run ${resolvedEngineId} ${action} command for OPL frontdesk.`,
+      `Failed to run ${resolvedEngineId} ${action} command for OPL.`,
       {
         engine_id: resolvedEngineId,
         action,
@@ -65,7 +65,7 @@ export async function runFrontDeskEngineAction(
 
   return {
     version: 'g2',
-    frontdesk_engine_action: {
+    engine_action: {
       engine_id: resolvedEngineId,
       action,
       status: 'completed',
@@ -74,7 +74,7 @@ export async function runFrontDeskEngineAction(
       note: spec.note,
       stdout: normalizeOutput(result.stdout, result.stderr),
       stderr: result.stderr,
-      frontdesk_environment: (await buildFrontDeskEnvironment(contracts)).frontdesk_environment,
+      system_environment: (await buildOplEnvironment(contracts)).system_environment,
     },
   };
 }

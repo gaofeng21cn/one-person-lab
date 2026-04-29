@@ -153,11 +153,11 @@ type HostedPilotPackageCliInput = {
   sessionsLimit?: number;
 };
 
-type FrontDeskModuleCliInput = {
+type OplModuleCliInput = {
   moduleId?: string;
 };
 
-type FrontDeskEngineCliInput = {
+type OplEngineCliInput = {
   engineId?: string;
 };
 
@@ -182,8 +182,8 @@ export type {
   CommandSpec,
   DashboardCliInput,
   DomainLaunchStrategy,
-  FrontDeskEngineCliInput,
-  FrontDeskModuleCliInput,
+  OplEngineCliInput,
+  OplModuleCliInput,
   HostedPilotPackageCliInput,
   LaunchDomainCliInput,
   LogsCliInput,

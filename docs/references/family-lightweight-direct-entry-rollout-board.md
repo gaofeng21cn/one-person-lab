@@ -20,7 +20,7 @@
 四仓后续统一遵守下面三条：
 
 1. `OPL` 是 family-level 总入口，不替代业务仓自身入口。
-2. 每个业务仓都应拥有自己的 lightweight direct entry，并把 `frontdesk_surface` 与 `operator_loop_surface` 诚实区分。
+2. 每个业务仓都应拥有自己的 lightweight direct entry，并把 `frontdoor_surface` 与 `operator_loop_surface` 诚实区分。
 3. 统一的是 entry taxonomy、handoff envelope 与 runtime substrate 边界，不是把所有仓压成同一种内部执行流程。
 
 统一 taxonomy：
@@ -46,11 +46,11 @@
 
 - 本地 direct product-entry shell 已成立；
 - `opl` / `opl <request...>` / `opl start|doctor|ask|chat|web` 已成为顶层本地入口面；
-- `opl frontdesk manifest|frontdesk domain-wiring|frontdesk hosted-bundle|frontdesk hosted-package` 已把 hosted-friendly shell contract、family wiring truth、hosted pilot bundle 与 self-hostable hosted pilot package 冻结下来；
+- `opl frontdoor manifest|frontdoor domain-wiring|frontdoor hosted-bundle|frontdoor hosted-package` 已把 hosted-friendly shell contract、family wiring truth、hosted pilot bundle 与 self-hostable hosted pilot package 冻结下来；
 - `opl workspace list|bind|activate|archive` 已把 workspace registry 与 direct-entry locator 管理做成顶层控制面；当前 binding 还可额外冻结 domain-owned `manifest_command`，让 family wiring 指向诚实的 product-entry manifest；
 - `opl session ledger|contract handoff-envelope|status dashboard|web` 已把 managed session attribution、family handoff 和 browser front desk 一并落地；
-- `domain manifests / status dashboard / contract handoff-envelope / opl web` 现在会统一消费 domain manifest 里的 `frontdesk_surface`，不再只知道每个业务仓“当前 operator loop 是什么”。
-- 三个业务仓当前也都已经开始把 `frontdesk_surface` 与 `operator_loop_surface` 明确分开；`OPL` 顶层现在消费的已不再只是“哪个 loop 可跑”，而是“当前 frontdoor 是什么、底下真实 loop 是什么”。
+- `domain manifests / status dashboard / contract handoff-envelope / opl web` 现在会统一消费 domain manifest 里的 `frontdoor_surface`，不再只知道每个业务仓“当前 operator loop 是什么”。
+- 三个业务仓当前也都已经开始把 `frontdoor_surface` 与 `operator_loop_surface` 明确分开；`OPL` 顶层现在消费的已不再只是“哪个 loop 可跑”，而是“当前 frontdoor 是什么、底下真实 loop 是什么”。
 - 三个业务仓当前又统一补上了 `product_entry_quickstart` companion，用 step list / resume contract / human gate id 把“先从哪进、接着怎么续跑、看哪条进度面”冻结成同型 discovery surface。
 - 三个业务仓当前也都已经把 `family_orchestration.action_graph` 实体带进 manifest；`OPL` 顶层不再只能看到 graph ref，而是能统一消费 node / edge / gate 摘要。
 - 三个业务仓当前还统一补上了 `product_entry_overview` companion，把入口摘要、progress / resume 句柄、remaining gaps 与 human gate id 收成同型看板，方便顶层和单仓前台直接显示“现在处在什么状态”。
@@ -70,7 +70,7 @@
 - display / 配图资产化是独立支线，不混入这里；
 - 当前最诚实的下一棒不是重做 display，而是沿 real adapter cutover 推进研究主线。
 - repo-tracked research-only lightweight direct-entry shell 已经落地：`workspace-cockpit`、`submit-study-task`、`launch-study`、`build-product-entry` 现在共同承担启动、下任务、看进度与 shared handoff envelope 输出。
-- 当前又新增了一层 controller-owned `product-frontdesk`：它显式作为 `frontdesk_surface` 暴露当前 frontdoor，而把 `workspace-cockpit` 留作真实 operator loop。
+- 当前又新增了一层 controller-owned `product-frontdoor`：它显式作为 `frontdoor_surface` 暴露当前 frontdoor，而把 `workspace-cockpit` 留作真实 operator loop。
 
 下一棒：
 
@@ -84,9 +84,9 @@
 
 - 它是最适合尽快长出 lightweight direct entry 的业务仓之一；
 - 重点仍是 visual deliverable / source-readiness / family handoff 收口。
-- repo-tracked lightweight direct-entry shell 已经落地：`redcube product frontdesk` 现在作为 direct frontdesk，`redcube product manifest` 会显式导出 `frontdesk_surface`，而 `redcube product invoke|federate|session` 继续承担 direct / `OPL` handoff 共用的 shared envelope 与续跑面。
+- repo-tracked lightweight direct-entry shell 已经落地：`redcube product frontdoor` 现在作为 direct frontdoor，`redcube product manifest` 会显式导出 `frontdoor_surface`，而 `redcube product invoke|federate|session` 继续承担 direct / `OPL` handoff 共用的 shared envelope 与续跑面。
 - 三个业务仓的 repo-tracked manifest 现在开始补上 `family_orchestration` companion preview，顶层 `OPL` 的 `domain manifests / status dashboard / opl web` 也会回显 human gate / resume / checkpoint lineage 摘要。
-- 它当前也是家族里最接近“frontdesk contract 已清晰、operator loop contract 也清晰”的参考形态。
+- 它当前也是家族里最接近“frontdoor contract 已清晰、operator loop contract 也清晰”的参考形态。
 
 下一棒：
 
@@ -100,7 +100,7 @@
 
 - 它已经比多数仓更接近真实的 runtime substrate 集成；
 - `build-product-entry`、`grant-progress`、`grant-cockpit` 已经让 grant-only lightweight direct entry 走在三仓最前；
-- 当前又新增了一层 controller-owned `product-frontdesk`：它显式作为 `frontdesk_surface` 暴露当前 frontdoor，而把 `grant-user-loop` 留作真实 operator loop；
+- 当前又新增了一层 controller-owned `product-frontdoor`：它显式作为 `frontdoor_surface` 暴露当前 frontdoor，而把 `grant-user-loop` 留作真实 operator loop；
 - 下一步不再只是补文档，而是把 grant-only direct entry、local runtime、hosted-friendly 边界继续压实。
 
 下一棒：

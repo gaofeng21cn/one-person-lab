@@ -1,13 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { resolveFrontDeskStatePaths } from './runtime-state-paths.ts';
+import { resolveOplStatePaths } from './runtime-state-paths.ts';
 
 const SOURCE_OF_TRUTH_RULE =
   'OPL reads native helper indexes for fast lookup, then dereferences domain-owned durable truth before acting.';
 
 export function buildNativeIndexSummary() {
-  const stateDir = resolveFrontDeskStatePaths().state_dir;
+  const stateDir = resolveOplStatePaths().state_dir;
   const paths = nativeIndexPaths(stateDir);
   const current = readJson(paths.index_file);
   const lastSuccess = readJson(paths.last_success_file);

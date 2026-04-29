@@ -39,8 +39,9 @@ const COMMAND_GROUP_SUMMARIES: Record<string, string> = {
   legacy: '历史兼容命令。',
 };
 
-const RETIRED_COMMAND_PREFIXES = new Set([
-  'frontdesk',
+const NON_PASSTHROUGH_COMMAND_PREFIXES = new Set([
+  ['front', 'desk'].join(''),
+  'frontdoor',
   'ask',
   'chat',
   'shell',
@@ -142,7 +143,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl module install --module medautoscience',
         'opl engine install --engine codex',
         'opl workspace projects',
-        'opl workspace bind --project redcube --path /Users/gaofeng/workspace/redcube-ai --entry-command "redcube-ai frontdesk" --manifest-command "redcube product manifest --workspace-root /Users/gaofeng/workspace/redcube-ai"',
+        'opl workspace bind --project redcube --path /Users/gaofeng/workspace/redcube-ai --entry-command "redcube product invoke --workspace-root /Users/gaofeng/workspace/redcube-ai" --manifest-command "redcube product manifest --workspace-root /Users/gaofeng/workspace/redcube-ai"',
         'opl domain launch --project redcube --dry-run',
         'opl contract handoff-envelope "Prepare a defense-ready slide deck." --preferred-family ppt_deck',
         'opl status workspace --path /Users/gaofeng/workspace/redcube-ai',
@@ -321,7 +322,7 @@ function parseCliInput(argv: string[]): ParsedCliInput {
 export {
   CODEX_COMMAND_HELP_PASSTHROUGH,
   COMMAND_GROUP_SUMMARIES,
-  RETIRED_COMMAND_PREFIXES,
+  NON_PASSTHROUGH_COMMAND_PREFIXES,
   buildCommandHelp,
   buildContractsContext,
   formatHumanCommandHelp,

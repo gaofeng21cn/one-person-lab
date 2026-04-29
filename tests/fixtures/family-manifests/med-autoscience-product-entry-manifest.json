@@ -30,7 +30,7 @@
     "product_entry_kind": "med_autoscience_product_entry",
     "supported_commands": [
       "workspace-cockpit",
-      "product-frontdesk",
+      "product-frontdoor",
       "launch-study"
     ],
     "command_contracts": [
@@ -42,7 +42,7 @@
         "optional_fields": []
       },
       {
-        "command": "product-frontdesk",
+        "command": "product-frontdoor",
         "required_fields": [
           "profile_ref"
         ],
@@ -79,7 +79,7 @@
       "codex_entry_strategy": "domain_agent_entry",
       "artifact_conventions": "paper_and_submission_package",
       "progress_conventions": "study_runtime_narration",
-      "entry_command": "product-frontdesk",
+      "entry_command": "product-frontdoor",
       "manifest_command": "product-entry-manifest"
     }
   },
@@ -288,11 +288,11 @@
   },
   "recommended_shell": "workspace_cockpit",
   "recommended_command": "uv run python -m med_autoscience.cli workspace-cockpit --profile /fixtures/med-autoscience/profile.local.toml",
-  "frontdesk_surface": {
-    "shell_key": "product_frontdesk",
-    "command": "uv run python -m med_autoscience.cli product-frontdesk --profile /fixtures/med-autoscience/profile.local.toml",
-    "surface_kind": "product_frontdesk",
-    "summary": "当前 research product frontdesk，先暴露当前 frontdoor、workspace inbox 与 shared handoff 入口。"
+  "frontdoor_surface": {
+    "shell_key": "product_frontdoor",
+    "command": "uv run python -m med_autoscience.cli product-frontdoor --profile /fixtures/med-autoscience/profile.local.toml",
+    "surface_kind": "product_frontdoor",
+    "summary": "当前 research product frontdoor，先暴露当前 frontdoor、workspace inbox 与 shared handoff 入口。"
   },
   "operator_loop_surface": {
     "shell_key": "workspace_cockpit",
@@ -645,7 +645,7 @@
   "product_entry_overview": {
     "surface_kind": "product_entry_overview",
     "summary": "继续收口 blocker 并把用户入口壳压实。",
-    "frontdesk_command": "uv run python -m med_autoscience.cli product-frontdesk --profile /fixtures/med-autoscience/profile.local.toml",
+    "frontdoor_command": "uv run python -m med_autoscience.cli product-frontdoor --profile /fixtures/med-autoscience/profile.local.toml",
     "recommended_command": "uv run python -m med_autoscience.cli workspace-cockpit --profile /fixtures/med-autoscience/profile.local.toml",
     "operator_loop_command": "uv run python -m med_autoscience.cli workspace-cockpit --profile /fixtures/med-autoscience/profile.local.toml",
     "progress_surface": {
@@ -659,7 +659,7 @@
       "session_locator_field": "study_id",
       "checkpoint_locator_field": "controller_decision_path"
     },
-    "recommended_step_id": "open_frontdesk",
+    "recommended_step_id": "open_frontdoor",
     "next_focus": [
       "继续把 workspace inbox、study progress 与恢复建议收成统一产品壳。"
     ],
@@ -671,10 +671,10 @@
   },
   "product_entry_preflight": {
     "surface_kind": "product_entry_preflight",
-    "summary": "当前 product-entry 前置检查已通过，可以先复核 doctor 输出，再进入 research frontdesk。",
+    "summary": "当前 product-entry 前置检查已通过，可以先复核 doctor 输出，再进入 research frontdoor。",
     "ready_to_try_now": true,
     "recommended_check_command": "uv run python -m med_autoscience.cli doctor --profile /fixtures/med-autoscience/profile.local.toml",
-    "recommended_start_command": "uv run python -m med_autoscience.cli product-frontdesk --profile /fixtures/med-autoscience/profile.local.toml",
+    "recommended_start_command": "uv run python -m med_autoscience.cli product-frontdoor --profile /fixtures/med-autoscience/profile.local.toml",
     "blocking_check_ids": [],
     "checks": [
       {
@@ -741,9 +741,9 @@
     "usable_now": true,
     "good_to_use_now": false,
     "fully_automatic": false,
-    "summary": "当前可以作为 research frontdesk / CLI 主线使用，并通过稳定的 runtime 回路持续推进研究；但还不是成熟的独立医学产品前台。",
-    "recommended_start_surface": "product_frontdesk",
-    "recommended_start_command": "uv run python -m med_autoscience.cli product-frontdesk --profile /fixtures/med-autoscience/profile.local.toml",
+    "summary": "当前可以作为 research frontdoor / CLI 主线使用，并通过稳定的 runtime 回路持续推进研究；但还不是成熟的独立医学产品前台。",
+    "recommended_start_surface": "product_frontdoor",
+    "recommended_start_command": "uv run python -m med_autoscience.cli product-frontdoor --profile /fixtures/med-autoscience/profile.local.toml",
     "recommended_loop_surface": "workspace_cockpit",
     "recommended_loop_command": "uv run python -m med_autoscience.cli workspace-cockpit --profile /fixtures/med-autoscience/profile.local.toml",
     "blocking_gaps": [
@@ -881,15 +881,15 @@
   },
   "product_entry_start": {
     "surface_kind": "product_entry_start",
-    "summary": "先从 MAS research frontdesk 进入当前 workspace frontdoor；需要新任务时先写 durable study task intake，已有 study 时直接恢复研究运行。",
-    "recommended_mode_id": "open_frontdesk",
+    "summary": "先从 MAS research frontdoor 进入当前 workspace frontdoor；需要新任务时先写 durable study task intake，已有 study 时直接恢复研究运行。",
+    "recommended_mode_id": "open_frontdoor",
     "modes": [
       {
-        "mode_id": "open_frontdesk",
-        "title": "Open research frontdesk",
-        "command": "uv run python -m med_autoscience.cli product-frontdesk --profile /fixtures/med-autoscience/profile.local.toml",
-        "surface_kind": "product_frontdesk",
-        "summary": "当前 research product frontdesk，先暴露当前 frontdoor、workspace inbox 与 shared handoff 入口。",
+        "mode_id": "open_frontdoor",
+        "title": "Open research frontdoor",
+        "command": "uv run python -m med_autoscience.cli product-frontdoor --profile /fixtures/med-autoscience/profile.local.toml",
+        "surface_kind": "product_frontdoor",
+        "summary": "当前 research product frontdoor，先暴露当前 frontdoor、workspace inbox 与 shared handoff 入口。",
         "requires": []
       },
       {
@@ -925,9 +925,9 @@
     ]
   },
   "product_entry_shell": {
-    "product_frontdesk": {
-      "command": "uv run python -m med_autoscience.cli product-frontdesk --profile /fixtures/med-autoscience/profile.local.toml",
-      "purpose": "当前 research product frontdesk，先暴露当前 frontdoor、workspace inbox 与 shared handoff 入口。"
+    "product_frontdoor": {
+      "command": "uv run python -m med_autoscience.cli product-frontdoor --profile /fixtures/med-autoscience/profile.local.toml",
+      "purpose": "当前 research product frontdoor，先暴露当前 frontdoor、workspace inbox 与 shared handoff 入口。"
     },
     "workspace_cockpit": {
       "command": "uv run python -m med_autoscience.cli workspace-cockpit --profile /fixtures/med-autoscience/profile.local.toml",
@@ -960,16 +960,16 @@
     "skills": [
       {
         "surface_kind": "skill_descriptor",
-        "skill_id": "medautoscience_product_frontdesk",
-        "title": "MAS product frontdesk",
+        "skill_id": "medautoscience_product_frontdoor",
+        "title": "MAS product frontdoor",
         "owner": "med-autoscience",
         "distribution_mode": "repo_tracked",
-        "target_surface_kind": "product_frontdesk",
-        "description": "打开当前 research product frontdesk。",
-        "command": "uv run python -m med_autoscience.cli product-frontdesk --profile /fixtures/med-autoscience/profile.local.toml",
+        "target_surface_kind": "product_frontdoor",
+        "description": "打开当前 research product frontdoor。",
+        "command": "uv run python -m med_autoscience.cli product-frontdoor --profile /fixtures/med-autoscience/profile.local.toml",
         "readiness": "landed",
         "tags": [
-          "frontdesk",
+          "frontdoor",
           "workspace"
         ],
         "domain_projection": {
@@ -977,8 +977,8 @@
           "skill_entry": "med-autoscience",
           "recommended_shell": "workspace_cockpit",
           "skill_semantics": "domain_app",
-          "entry_shell_key": "product_frontdesk",
-          "entry_command": "uv run python -m med_autoscience.cli product-frontdesk --profile /fixtures/med-autoscience/profile.local.toml",
+          "entry_shell_key": "product_frontdoor",
+          "entry_command": "uv run python -m med_autoscience.cli product-frontdoor --profile /fixtures/med-autoscience/profile.local.toml",
           "supporting_shell_keys": [
             "workspace_cockpit",
             "submit_study_task",
@@ -986,7 +986,7 @@
             "study_progress"
           ],
           "shell_commands": {
-            "product_frontdesk": "uv run python -m med_autoscience.cli product-frontdesk --profile /fixtures/med-autoscience/profile.local.toml",
+            "product_frontdoor": "uv run python -m med_autoscience.cli product-frontdoor --profile /fixtures/med-autoscience/profile.local.toml",
             "workspace_cockpit": "uv run python -m med_autoscience.cli workspace-cockpit --profile /fixtures/med-autoscience/profile.local.toml",
             "submit_study_task": "uv run python -m med_autoscience.cli submit-study-task --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id> --task-intent '<task_intent>'",
             "launch_study": "uv run python -m med_autoscience.cli launch-study --profile /fixtures/med-autoscience/profile.local.toml --study-id <study_id>",
@@ -1026,7 +1026,7 @@
       }
     ],
     "supported_commands": [
-      "product-frontdesk",
+      "product-frontdoor",
       "workspace-cockpit",
       "submit-study-task",
       "launch-study",
@@ -1034,9 +1034,9 @@
     ],
     "command_contracts": [
       {
-        "command": "product-frontdesk",
+        "command": "product-frontdoor",
         "owner": "med-autoscience",
-        "surface_kind": "product_frontdesk"
+        "surface_kind": "product_frontdoor"
       },
       {
         "command": "workspace-cockpit",

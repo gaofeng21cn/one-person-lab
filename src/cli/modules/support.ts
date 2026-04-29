@@ -1,7 +1,7 @@
 export {
   CODEX_COMMAND_HELP_PASSTHROUGH,
   COMMAND_GROUP_SUMMARIES,
-  RETIRED_COMMAND_PREFIXES,
+  NON_PASSTHROUGH_COMMAND_PREFIXES,
   buildCommandHelp,
   buildContractsContext,
   formatHumanCommandHelp,
@@ -39,8 +39,8 @@ export {
 } from './request-parsers.ts';
 export {
   assertNoArgs,
-  parseFrontDeskEngineArgs,
-  parseFrontDeskModuleArgs,
+  parseOplEngineArgs,
+  parseOplModuleArgs,
   parseSessionRuntimeArgs,
   parseTurnkeyInstallArgs,
   parseUpdateChannelArgs,
@@ -51,8 +51,8 @@ export type {
   CommandHandler,
   CommandSpec,
   DashboardCliInput,
-  FrontDeskEngineCliInput,
-  FrontDeskModuleCliInput,
+  OplEngineCliInput,
+  OplModuleCliInput,
   LaunchDomainCliInput,
   LogsCliInput,
   ParsedCliInput,

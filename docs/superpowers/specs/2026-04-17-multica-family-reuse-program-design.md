@@ -2,7 +2,7 @@
 
 ## Context
 
-- `OPL` family 目前已经在四个仓里分别落下了 `product-entry manifest / frontdesk / family_orchestration / progress or runtime watch` 这一层能力，但实现仍然分散在 Python 与 JavaScript 两套代码里。
+- `OPL` family 目前已经在四个仓里分别落下了 `product-entry manifest / frontdoor / family_orchestration / progress or runtime watch` 这一层能力，但实现仍然分散在 Python 与 JavaScript 两套代码里。
 - `Multica` 值得吸收的核心不是整个平台依赖，而是它在 `runtime inventory`、`task lifecycle`、`shared skills`、`automation/autopilot`、`agent operations visibility` 这些产品语义上的成熟做法。
 - 当前 family 目标已经从“每仓先独立长能力”进入“把重复语义收敛成共享模块”的阶段。本轮的目标是完整推进到可复用模块状态，而不是停在最小 adoption。
 - 本轮按用户直接授权更新 `MAS` 当前 gate：允许为 family 共享模块进行跨仓收口、跨仓重构与完整复用实现。后续文档、gate 与状态表述需要同步改写到这一新前提。
@@ -13,7 +13,7 @@
 1. 把 `Multica` 中适合 OPL family 的能力吸收到中央共享层，而不是把 `Multica` 直接拉成核心运行时依赖。
 2. 在 `OPL` 建立 family-level 单一 source-of-truth，覆盖共享 schema、共享 corpus、共享 builder 规则、共享 conformance 验证。
 3. 让 `MAS / MAG / RCA` 三个 domain 仓完整接入同一套共享模块，只保留 domain-owned truth 和 domain-specific mapping。
-4. 提高多仓复用率，让今后 family companion、frontdesk companion、runtime/task/skill/automation surface 的新增变化优先改一处、同步三仓。
+4. 提高多仓复用率，让今后 family companion、frontdoor companion、runtime/task/skill/automation surface 的新增变化优先改一处、同步三仓。
 5. 保持 `MAS` 未来 monorepo 目标的内部模块边界清晰：family shared modules 只收 family boundary surface，不提前吞掉 `MAS` 自己的 monorepo internal core。
 
 ## Non-goals
@@ -50,7 +50,7 @@
 
 - `OPL` 当前中央共享层已经不是纯 contract-only 状态，现有 JS helper 与 Python 子包就是本轮 program 的统一基座。
 - `MAS`、`MAG` 与 `RCA` 当前都已经完成第一步 consumer intake，因此本轮不再重开一轮 `managed_runtime_contract` 抽取。
-- 当前第一条 value-for-effort 最高的 family shared lane，是把三仓同型的 `product_entry_quickstart / product_entry_overview / product_entry_readiness` 抽成共享 helper。它们已经是稳定的 family boundary surface，而且同时服务顶层 `OPL` discovery、单仓 frontdesk 和未来 monorepo 收口。
+- 当前第一条 value-for-effort 最高的 family shared lane，是把三仓同型的 `product_entry_quickstart / product_entry_overview / product_entry_readiness` 抽成共享 helper。它们已经是稳定的 family boundary surface，而且同时服务顶层 `OPL` discovery、单仓 frontdoor 和未来 monorepo 收口。
 - `MAS` 当前仍有一个必须同步解决的残留：旧 gate wording 还停在“external runtime gate 未清除前，不做 physical migration 或 cross-repo refactor”。这轮要把它改成“family shared modules program 已允许，domain truth migration 继续按 phase gate 推进”。
 - 本轮所有新增共享能力都继续放进同一布局：`OPL/contracts/` 持有 machine-readable truth，`OPL/src/` 持有 JS helper，`OPL/python/opl-harness-shared/` 持有 Python helper；不新开独立 shared repo。
 
@@ -108,21 +108,21 @@
 - 对齐 `Multica` 的 local skills + workspace skills 双层模型。
 - family 统一 shared skill descriptor、scope、owner、distribution mode、consumer surface、repo readiness。
 - 本机 executor 原生 skills 继续保持本地能力；family 共享层只冻结 repo-tracked shared skills catalog 与 domain adoption contract。
-- `MAG` 当前 `supported_commands / command_contracts` 已经最接近 catalog-ready 形态；`OPL` 与 `RCA` 当前的 product/frontdesk 命令面可以直接作为 catalog consumer；`MAS` 则重点提供 workspace/study/runtime 类 skill descriptor。
+- `MAG` 当前 `supported_commands / command_contracts` 已经最接近 catalog-ready 形态；`OPL` 与 `RCA` 当前的 product/frontdoor 命令面可以直接作为 catalog consumer；`MAS` 则重点提供 workspace/study/runtime 类 skill descriptor。
 
 #### e. Family automation / autopilot
 
 - 对齐 `Multica` 的 autopilot/scheduled work 产品语义。
 - family 统一 automation descriptor、trigger、target surface、resume contract、gate policy、output expectation。
-- `OPL` 提供统一 contract 与 frontdesk 可见性。
+- `OPL` 提供统一 contract 与 frontdoor 可见性。
 - 各 domain 仓接入自己的计划任务、long-run、watch、review 或 publication routine。
 - `RCA` 当前的 `phase_2_family_parity_autopilot_continuation_board`、`phase_2_family_parity_governance_surface_convergence` 与 `autopilot closeout evidence` 是这层最直接的 baseline；`MAS` 的 `phase3_clearance_lane / runtime supervision` 和 `MAG` 的 route/action contract 提供另外两条成熟输入。
 
 #### f. Family product-entry companion expansion
 
 - 在现有 `family_orchestration` 基础上扩展 runtime/task/skill/automation companion。
-- `product-entry manifest / frontdesk / cockpit / progress/runtime watch` 最终都消费同一份共享 companion 规则。
-- `OPL` 的 `domain-manifests / dashboard / handoff-envelope / web frontdesk` 统一读取扩展后的共享面。
+- `product-entry manifest / frontdoor / cockpit / progress/runtime watch` 最终都消费同一份共享 companion 规则。
+- `OPL` 的 `domain-manifests / dashboard / handoff-envelope / web frontdoor` 统一读取扩展后的共享面。
 
 ### 3. 共享模块分三层
 

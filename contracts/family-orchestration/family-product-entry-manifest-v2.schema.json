@@ -106,7 +106,7 @@
         }
       }
     },
-    "frontdesk_surface": {
+    "frontdoor_surface": {
       "$ref": "#/$defs/shellSurface"
     },
     "operator_loop_surface": {
@@ -1225,10 +1225,10 @@
       "workspace_locator": {
         "workspace_root": "/workspace/redcube-ai"
       },
-      "frontdesk_surface": {
-        "shell_key": "frontdesk",
-        "command": "redcube product frontdesk",
-        "surface_kind": "product_frontdesk"
+      "frontdoor_surface": {
+        "shell_key": "frontdoor",
+        "command": "redcube product frontdoor",
+        "surface_kind": "product_frontdoor"
       },
       "operator_loop_surface": {
         "shell_key": "direct",
@@ -1365,9 +1365,9 @@
         ]
       },
       "product_entry_shell": {
-        "frontdesk": {
-          "command": "redcube product frontdesk",
-          "surface_kind": "product_frontdesk"
+        "frontdoor": {
+          "command": "redcube product frontdoor",
+          "surface_kind": "product_frontdoor"
         },
         "direct": {
           "command": "redcube product invoke",

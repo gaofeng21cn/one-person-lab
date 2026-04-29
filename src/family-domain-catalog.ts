@@ -95,7 +95,7 @@ function buildManifestShellCommands(manifest: DomainManifestCatalogEntry['manife
     };
   };
 
-  pushShellCommand(manifest?.frontdesk_surface?.shell_key, manifest?.frontdesk_surface);
+  pushShellCommand(manifest?.frontdoor_surface?.shell_key, manifest?.frontdoor_surface);
   pushShellCommand(manifest?.operator_loop_surface?.shell_key, manifest?.operator_loop_surface);
   for (const [shellKey, descriptor] of Object.entries(manifest?.product_entry_shell ?? {})) {
     pushShellCommand(shellKey, descriptor);
@@ -169,8 +169,8 @@ function pickSkillRuntimeContinuity(manifest: DomainManifestCatalogEntry['manife
 export function pickSkillActivationProjection(manifest: DomainManifestCatalogEntry['manifest']) {
   const skills = Array.isArray(manifest?.skill_catalog?.skills) ? manifest.skill_catalog.skills : [];
   const manifestShellCommands = buildManifestShellCommands(manifest);
-  const frontdeskSurfaceKind = normalizeOptionalString(manifest?.frontdesk_surface?.surface_kind);
-  const frontdeskCommand = normalizeOptionalString(manifest?.frontdesk_surface?.command);
+  const frontdoorSurfaceKind = normalizeOptionalString(manifest?.frontdoor_surface?.surface_kind);
+  const frontdoorCommand = normalizeOptionalString(manifest?.frontdoor_surface?.command);
   const recommendedCommand = normalizeOptionalString(manifest?.recommended_command);
   let bestProjection: SkillActivationProjection | null = null;
   let bestScore = -1;
@@ -195,7 +195,7 @@ export function pickSkillActivationProjection(manifest: DomainManifestCatalogEnt
     const entryCommand = normalizeOptionalString(activationSurface?.entry_command)
       ?? normalizeOptionalString(skill.command)
       ?? (entryShellKey ? shellCommands[entryShellKey]?.command ?? null : null)
-      ?? frontdeskCommand
+      ?? frontdoorCommand
       ?? recommendedCommand;
     const supportingShellKeys = [...new Set([
       ...readStringList(activationSurface?.supporting_shell_keys),
@@ -214,8 +214,8 @@ export function pickSkillActivationProjection(manifest: DomainManifestCatalogEnt
     const score =
       (hasActivationHints ? 10 : 0)
       + (runtimeContinuity ? 5 : 0)
-      + (targetSurfaceKind === frontdeskSurfaceKind || targetSurfaceKind === 'product_frontdesk' ? 3 : 0)
-      + (entryCommand && entryCommand === frontdeskCommand ? 2 : 0)
+      + (targetSurfaceKind === frontdoorSurfaceKind || targetSurfaceKind === 'product_frontdoor' ? 3 : 0)
+      + (entryCommand && entryCommand === frontdoorCommand ? 2 : 0)
       + (entryCommand && entryCommand === recommendedCommand ? 1 : 0);
 
     if (score <= 0 || score < bestScore) {
@@ -277,9 +277,9 @@ export function buildDomainEntryParity(
     const binding = resolveActiveBinding(entry.project_id, options);
     const manifestResolved = entry.status === 'resolved' && manifest !== null;
     const directEntryLocatorReady = Boolean(binding?.direct_entry.command || binding?.direct_entry.url);
-    const frontdeskSurfaceReady = Boolean(
-      manifest?.frontdesk_surface?.surface_kind
-      && hasResolvedCommand(manifest?.frontdesk_surface?.command),
+    const frontdoorSurfaceReady = Boolean(
+      manifest?.frontdoor_surface?.surface_kind
+      && hasResolvedCommand(manifest?.frontdoor_surface?.command),
     );
     const startSurfaceReady = Boolean(
       manifest?.product_entry_start?.surface_kind
@@ -329,8 +329,8 @@ export function buildDomainEntryParity(
     if (manifestResolved && !directEntryLocatorReady) {
       gaps.push('当前 active binding 缺少 direct-entry locator（entry command 或 entry URL）。');
     }
-    if (manifestResolved && !frontdeskSurfaceReady) {
-      gaps.push('manifest 尚未暴露可直接消费的 frontdesk surface。');
+    if (manifestResolved && !frontdoorSurfaceReady) {
+      gaps.push('manifest 尚未暴露可直接消费的 frontdoor surface。');
     }
     if (manifestResolved && !startSurfaceReady) {
       gaps.push('manifest 尚未暴露可直接消费的 start surface。');
@@ -378,7 +378,7 @@ export function buildDomainEntryParity(
     let entryParityStatus: 'aligned' | 'partial' | 'blocked' = 'blocked';
     if (
       manifestResolved
-      && frontdeskSurfaceReady
+      && frontdoorSurfaceReady
       && startSurfaceReady
       && sharedHandoffReady
       && domainEntryContractReady
@@ -394,10 +394,10 @@ export function buildDomainEntryParity(
       recommendedNextActions.push('先冻结并绑定 repo-tracked product-entry manifest。');
     }
     if (manifestResolved && !directEntryLocatorReady) {
-      recommendedNextActions.push('给 active binding 补 entry_command 或 entry_url，让 OPL 可直接定位 domain frontdesk。');
+      recommendedNextActions.push('给 active binding 补 entry_command 或 entry_url，让 OPL 可直接定位 domain frontdoor。');
     }
-    if (manifestResolved && !frontdeskSurfaceReady) {
-      recommendedNextActions.push('补齐 manifest.frontdesk_surface.command，让 frontdesk locator 与 manifest 一致。');
+    if (manifestResolved && !frontdoorSurfaceReady) {
+      recommendedNextActions.push('补齐 manifest.frontdoor_surface.command，让 frontdoor locator 与 manifest 一致。');
     }
     if (manifestResolved && !startSurfaceReady) {
       recommendedNextActions.push('补齐 product_entry_start surface，保持 OPL start 与 domain start 同口径。');
@@ -450,7 +450,7 @@ export function buildDomainEntryParity(
       entry_parity_status: entryParityStatus,
       manifest_status: entry.status,
       direct_entry_locator_status: directEntryLocatorReady ? 'ready' : 'missing',
-      frontdesk_surface_status: frontdeskSurfaceReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
+      frontdoor_surface_status: frontdoorSurfaceReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
       start_surface_status: startSurfaceReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
       shared_handoff_status: sharedHandoffReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
       domain_entry_contract_status: domainEntryContractReady ? 'ready' : manifestResolved ? 'missing' : 'blocked',
@@ -470,7 +470,7 @@ export function buildDomainEntryParity(
       ready_for_domain_handoff: readyForDomainHandoff,
       product_entry_readiness_verdict: manifest?.product_entry_readiness?.verdict ?? null,
       recommended_start_command:
-        manifest?.frontdesk_surface?.command
+        manifest?.frontdoor_surface?.command
         ?? manifest?.recommended_command
         ?? manifest?.product_entry_preflight?.recommended_start_command
         ?? null,
@@ -522,7 +522,7 @@ export function buildDomainEntryParity(
     notes: [
       'Domain entry parity is a family-level derived surface, not a second manifest system.',
       'A project can be start-ready and handoff-ready before it has a direct-entry locator bound into the active workspace.',
-      'aligned means frontdesk/start/shared-handoff are resolved and the active binding already carries a direct-entry locator.',
+      'aligned means frontdoor/start/shared-handoff are resolved and the active binding already carries a direct-entry locator.',
     ],
   };
 }
@@ -545,7 +545,7 @@ export function buildRecommendedEntrySurfaces(
         project: entry.project,
         binding_id: entry.binding_id,
         manifest_target_domain_id: entry.manifest?.target_domain_id ?? null,
-        frontdesk_surface: entry.manifest?.frontdesk_surface ?? null,
+        frontdoor_surface: entry.manifest?.frontdoor_surface ?? null,
         operator_loop_shell_key: entry.manifest?.operator_loop_surface?.shell_key ?? null,
         operator_loop_command: entry.manifest?.operator_loop_surface?.command ?? null,
         operator_loop_surface_kind: entry.manifest?.operator_loop_surface?.surface_kind ?? null,

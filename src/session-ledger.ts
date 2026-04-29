@@ -3,7 +3,7 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 
 import { GatewayContractError } from './contracts.ts';
-import { ensureFrontDeskStateDir, resolveFrontDeskStatePaths } from './runtime-state-paths.ts';
+import { ensureOplStateDir, resolveOplStatePaths } from './runtime-state-paths.ts';
 import { collectHermesProcessUsage } from './runtime-observer.ts';
 
 type SessionLedgerFile = {
@@ -98,7 +98,7 @@ function recoverCorruptSessionLedger(filePath: string) {
 }
 
 function readSessionLedgerFile(): SessionLedgerFile {
-  const paths = resolveFrontDeskStatePaths();
+  const paths = resolveOplStatePaths();
   if (!fs.existsSync(paths.session_ledger_file)) {
     return {
       version: 'g2',
@@ -138,7 +138,7 @@ function readSessionLedgerFile(): SessionLedgerFile {
 }
 
 function writeSessionLedgerFile(payload: SessionLedgerFile) {
-  const paths = ensureFrontDeskStateDir();
+  const paths = ensureOplStateDir();
   fs.writeFileSync(paths.session_ledger_file, `${JSON.stringify(payload, null, 2)}\n`);
 }
 

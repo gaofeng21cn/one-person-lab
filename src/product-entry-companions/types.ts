@@ -9,7 +9,7 @@ import {
 
 export type JsonRecord = Record<string, unknown>;
 
-export type FamilyFrontdeskEntrySurfaces = Record<string, JsonRecord> & Partial<
+export type FamilyFrontdoorEntrySurfaces = Record<string, JsonRecord> & Partial<
   Pick<FamilySharedHandoffSurface, 'direct_entry_builder' | 'opl_handoff_builder'>
 >;
 
@@ -60,7 +60,7 @@ export interface BuildProductEntryQuickstartInput {
 
 export interface BuildProductEntryOverviewInput {
   summary: string;
-  frontdesk_command: string;
+  frontdoor_command: string;
   recommended_command: string;
   operator_loop_command: string;
   progress_surface: ProductEntryProgressSurfaceInput;
@@ -92,19 +92,19 @@ export interface BuildProductEntryStartInput {
   human_gate_ids: string[];
 }
 
-export interface BuildProductFrontdeskSummaryInput {
-  frontdesk_command: string;
+export interface BuildProductFrontdoorSummaryInput {
+  frontdoor_command: string;
   recommended_command: string;
   operator_loop_command: string;
 }
 
-export interface BuildProductFrontdeskInput {
+export interface BuildProductFrontdoorInput {
   recommended_action: string;
   target_domain_id: string;
   workspace_locator: JsonRecord;
   runtime: JsonRecord;
   product_entry_status: JsonRecord;
-  frontdesk_surface: JsonRecord;
+  frontdoor_surface: JsonRecord;
   operator_loop_surface: JsonRecord;
   operator_loop_actions: JsonRecord;
   product_entry_start: JsonRecord;
@@ -114,8 +114,8 @@ export interface BuildProductFrontdeskInput {
   product_entry_quickstart: JsonRecord;
   family_orchestration: JsonRecord;
   product_entry_manifest: JsonRecord;
-  entry_surfaces: FamilyFrontdeskEntrySurfaces;
-  summary: BuildProductFrontdeskSummaryInput;
+  entry_surfaces: FamilyFrontdoorEntrySurfaces;
+  summary: BuildProductFrontdoorSummaryInput;
   notes: string[];
   schema_ref?: string | null;
   domain_entry_contract?: JsonRecord | null;
@@ -123,10 +123,10 @@ export interface BuildProductFrontdeskInput {
   extra_payload?: JsonRecord;
 }
 
-export interface BuildFamilyProductFrontdeskInput {
+export interface BuildFamilyProductFrontdoorInput {
   recommended_action: string;
   product_entry_manifest: JsonRecord;
-  entry_surfaces: FamilyFrontdeskEntrySurfaces;
+  entry_surfaces: FamilyFrontdoorEntrySurfaces;
   notes: string[];
   schema_ref?: string | null;
   domain_entry_contract?: JsonRecord | null;
@@ -134,7 +134,7 @@ export interface BuildFamilyProductFrontdeskInput {
   extra_payload?: JsonRecord;
 }
 
-export interface BuildFamilyProductFrontdeskFromManifestInput {
+export interface BuildFamilyProductFrontdoorFromManifestInput {
   recommended_action: string;
   product_entry_manifest: JsonRecord;
   shell_aliases: Record<string, string>;
@@ -143,7 +143,7 @@ export interface BuildFamilyProductFrontdeskFromManifestInput {
   extra_payload?: JsonRecord;
 }
 
-export interface BuildFamilyFrontdeskEntrySurfacesInput {
+export interface BuildFamilyFrontdoorEntrySurfacesInput {
   product_entry_shell: Record<string, JsonRecord>;
   shell_aliases: Record<string, string>;
   shared_handoff?: FamilySharedHandoffSurface | JsonRecord | null;
@@ -287,7 +287,7 @@ export interface BuildFamilyProductEntryManifestInput {
   managed_runtime_contract?: JsonRecord | null;
   repo_mainline?: JsonRecord | null;
   product_entry_status?: JsonRecord | null;
-  frontdesk_surface?: JsonRecord | null;
+  frontdoor_surface?: JsonRecord | null;
   operator_loop_surface?: JsonRecord | null;
   operator_loop_actions?: JsonRecord | null;
   recommended_shell?: string | null;
@@ -362,7 +362,7 @@ export type ProductEntryStartSurface = JsonRecord & {
 export type ProductEntryOverviewSurface = JsonRecord & {
   surface_kind: 'product_entry_overview';
   summary: string;
-  frontdesk_command: string;
+  frontdoor_command: string;
   recommended_command: string;
   operator_loop_command: string;
   progress_surface: ProductEntryProgressSurfaceInput;
@@ -412,7 +412,7 @@ export type FamilyProductEntryManifestSurface = JsonRecord & {
   managed_runtime_contract?: JsonRecord;
   repo_mainline?: JsonRecord;
   product_entry_status?: JsonRecord;
-  frontdesk_surface?: JsonRecord;
+  frontdoor_surface?: JsonRecord;
   operator_loop_surface?: JsonRecord;
   operator_loop_actions?: JsonRecord;
   recommended_shell?: string;
@@ -437,14 +437,14 @@ export type FamilyProductEntryManifestSurface = JsonRecord & {
   gateway_interaction_contract?: JsonRecord;
 };
 
-export type FamilyProductFrontdeskSurface = JsonRecord & {
-  surface_kind: 'product_frontdesk';
+export type FamilyProductFrontdoorSurface = JsonRecord & {
+  surface_kind: 'product_frontdoor';
   recommended_action: string;
   target_domain_id: string;
   workspace_locator: JsonRecord;
   runtime: JsonRecord;
   product_entry_status: JsonRecord;
-  frontdesk_surface: JsonRecord;
+  frontdoor_surface: JsonRecord;
   operator_loop_surface: JsonRecord;
   operator_loop_actions: JsonRecord;
   product_entry_start: ProductEntryStartSurface;
@@ -454,8 +454,8 @@ export type FamilyProductFrontdeskSurface = JsonRecord & {
   product_entry_quickstart: ProductEntryQuickstartSurface;
   family_orchestration: FamilyOrchestrationCompanion;
   product_entry_manifest: FamilyProductEntryManifestSurface;
-  entry_surfaces: FamilyFrontdeskEntrySurfaces;
-  summary: BuildProductFrontdeskSummaryInput;
+  entry_surfaces: FamilyFrontdoorEntrySurfaces;
+  summary: BuildProductFrontdoorSummaryInput;
   notes: string[];
   schema_ref?: string;
   domain_entry_contract?: JsonRecord;

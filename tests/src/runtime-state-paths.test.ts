@@ -4,21 +4,19 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { buildFrontDeskEndpoints } from '../../src/legacy-frontdesk-paths.ts';
-import { resolveFrontDeskStatePaths } from '../../src/runtime-state-paths.ts';
+import { buildOplEndpoints } from '../../src/opl-runtime-paths.ts';
+import { resolveOplStatePaths } from '../../src/runtime-state-paths.ts';
 
-test('frontdesk endpoint catalog advertises OPL product API URLs for public resources and actions', () => {
-  const endpoints = buildFrontDeskEndpoints('/pilot/opl');
+test('OPL endpoint catalog advertises current runtime URLs for public resources and actions', () => {
+  const endpoints = buildOplEndpoints('/pilot/opl');
 
-  assert.equal(endpoints.frontdesk_environment, '/pilot/opl/api/opl/system');
-  assert.equal(endpoints.frontdesk_initialize, '/pilot/opl/api/opl/system/initialize');
-  assert.equal(endpoints.frontdesk_settings, '/pilot/opl/api/opl/system/settings');
-  assert.equal(endpoints.frontdesk_modules, '/pilot/opl/api/opl/modules');
-  assert.equal(endpoints.frontdesk_engine_action, '/pilot/opl/api/opl/engines/actions');
-  assert.equal(endpoints.frontdesk_module_action, '/pilot/opl/api/opl/modules/actions');
-  assert.equal(endpoints.frontdesk_system_action, '/pilot/opl/api/opl/system/actions');
-  assert.equal(endpoints.hosted_bundle, '/pilot/opl/api/opl/web/bundle');
-  assert.equal(endpoints.hosted_package, '/pilot/opl/api/opl/web/package');
+  assert.equal(endpoints.system_environment, '/pilot/opl/api/opl/system');
+  assert.equal(endpoints.system_initialize, '/pilot/opl/api/opl/system/initialize');
+  assert.equal(endpoints.system_settings, '/pilot/opl/api/opl/system/settings');
+  assert.equal(endpoints.modules, '/pilot/opl/api/opl/modules');
+  assert.equal(endpoints.engine_action, '/pilot/opl/api/opl/engines/actions');
+  assert.equal(endpoints.module_action, '/pilot/opl/api/opl/modules/actions');
+  assert.equal(endpoints.system_action, '/pilot/opl/api/opl/system/actions');
   assert.equal(endpoints.workspace_root, '/pilot/opl/api/opl/workspaces/root');
   assert.equal(endpoints.workspace_catalog, '/pilot/opl/api/opl/workspaces');
   assert.equal(endpoints.workspace_bind, '/pilot/opl/api/opl/workspaces/bind');
@@ -32,7 +30,7 @@ test('frontdesk endpoint catalog advertises OPL product API URLs for public reso
   assert.equal(endpoints.logs, '/pilot/opl/api/opl/sessions/logs');
 });
 
-test('frontdesk state paths default to OPL state dir and ignore retired frontdesk legacy state paths', () => {
+test('OPL state paths default to the current state dir and ignore old UI adapter state paths', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-state-paths-'));
   const previousHome = process.env.HOME;
   const previousStateDir = process.env.OPL_STATE_DIR;
@@ -43,10 +41,10 @@ test('frontdesk state paths default to OPL state dir and ignore retired frontdes
   try {
     const baseDir = path.join(homeRoot, 'Library', 'Application Support', 'OPL');
     const expectedStateDir = path.join(baseDir, 'state');
-    assert.equal(resolveFrontDeskStatePaths().state_dir, expectedStateDir);
+    assert.equal(resolveOplStatePaths().state_dir, expectedStateDir);
 
-    fs.mkdirSync(path.join(baseDir, 'frontdesk'), { recursive: true });
-    assert.equal(resolveFrontDeskStatePaths().state_dir, expectedStateDir);
+    fs.mkdirSync(path.join(baseDir, 'local-ui-adapter'), { recursive: true });
+    assert.equal(resolveOplStatePaths().state_dir, expectedStateDir);
   } finally {
     if (previousHome === undefined) {
       delete process.env.HOME;

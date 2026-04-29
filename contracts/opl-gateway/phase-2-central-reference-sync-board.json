@@ -15,7 +15,7 @@
       "kind": "activation_package",
       "goal": "refresh the central execution board, status matrix, taskboard, and prompt library against the latest absorbed admitted-domain deltas before wider wording sync",
       "current_known_delta_families": [
-        "RedCube AI latest absorbed delta pack: upstream runtime-owner cutover plus repo-verified `product frontdesk / federated product entry / session continuity / family-orchestration companion / product-entry readiness`, anchored at `c124c5d`",
+        "RedCube AI latest absorbed delta pack: upstream runtime-owner cutover plus repo-verified `product frontdoor / federated product entry / session continuity / family-orchestration companion / product-entry readiness`, anchored at `c124c5d`",
         "MedAutoScience latest absorbed repo-side hardening delta pack: verification surfaces by test layer (`9b5cea8`), runtime/workspace repair priorities (`7ee19a8`), and workflow-entry retirement off OMX (`6c64264`)"
       ]
     },

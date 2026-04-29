@@ -11,7 +11,7 @@
 - `Hermes-Agent` 是备用执行器与长期在线网关
 - `MAS`、`MAG`、`RCA` 等领域仓是可被 `Codex` 直接调用的专用智能体仓
 
-当前的主要问题已经从“界面长什么样”切换成“`OPL` 应该向 GUI 暴露什么样的产品接口”。历史 `frontdesk` 体系把多种阶段性语义揉在了一起：
+当前的主要问题已经从“界面长什么样”切换成“`OPL` 应该向 GUI 暴露什么样的产品接口”。历史 `frontdoor` 体系把多种阶段性语义揉在了一起：
 
 - GUI 启动
 - 环境安装与升级
@@ -23,10 +23,10 @@
 
 这导致当前公开路径和公开名词里出现了大量产品层冗余，例如：
 
-- `/api/opl/frontdesk/environment`
-- `/api/opl/frontdesk/initialize`
-- `/api/opl/frontdesk/modules`
-- `/api/opl/frontdesk/domain-wiring`
+- `/api/opl/frontdoor/environment`
+- `/api/opl/frontdoor/initialize`
+- `/api/opl/frontdoor/modules`
+- `/api/opl/frontdoor/domain-wiring`
 
 这些名字保留了历史阶段的实现痕迹，已经不再适合当前的 `OPL + 独立 GUI 壳` 目标形态。
 
@@ -64,7 +64,7 @@
 
 ### 3. GUI 只消费产品资源模型
 
-GUI 层不再理解 `frontdesk`、`readiness`、`entry-guide`、`domain-wiring` 这类历史概念。
+GUI 层不再理解 `frontdoor`、`readiness`、`entry-guide`、`domain-wiring` 这类历史概念。
 
 GUI 只消费下面几类资源：
 
@@ -400,11 +400,11 @@ GUI 只消费下面几类资源：
 
 这轮重做完成后，下面这些旧公开语义进入退役清单：
 
-- `frontdesk` 作为主线产品命名
-- `frontdesk readiness`
-- `frontdesk entry-guide`
-- `frontdesk domain-wiring`
-- `frontdesk dashboard`
+- `frontdoor` 作为主线产品命名
+- `frontdoor readiness`
+- `frontdoor entry-guide`
+- `frontdoor domain-wiring`
+- `frontdoor dashboard`
 - `/api/project-progress`
 - `/api/ask`
 - `/api/task-status`
@@ -431,7 +431,7 @@ GUI 只消费下面几类资源：
 3. `Codex` 继续承担默认交互与执行宿主
 4. `OPL GUI` 调用领域智能体，与用户直接在 `Codex` 里调用该智能体，工作逻辑保持一致
 5. `OPL` 与各个领域仓之间保持松耦合
-6. 历史 `frontdesk / handoff / readiness` 公共语义进入退役或内部归档
+6. 历史 `frontdoor / handoff / readiness` 公共语义进入退役或内部归档
 
 ## 本轮重构原则
 
@@ -439,19 +439,19 @@ GUI 只消费下面几类资源：
 
 - 用新的产品资源模型重命名和重组 OPL API
 - 用新的边界重写文档
-- 清理旧的 `frontdesk` 主线命名
+- 清理旧的 `frontdoor` 主线命名
 - 让 GUI 只对接新的 Product API
 
 ### 不做
 
 - 不保留面向当前产品主线的公开兼容层
-- 不继续给旧 `frontdesk` 体系增加新能力
+- 不继续给旧 `frontdoor` 体系增加新能力
 - 不再把历史阶段解释面继续暴露为 GUI 主线真相
 
 ## 验收标准
 
-1. 主线公开 API 里不再使用 `frontdesk` 作为用户面资源命名
+1. 主线公开 API 里不再使用 `frontdoor` 作为用户面资源命名
 2. `OPL` 的文档、代码与测试统一使用新的资源模型
 3. Domain Agents 的调用语义在“直接 Codex 调用”和“OPL GUI 调用”之间保持一致
 4. GUI 只消费 `system / engines / modules / agents / workspaces / sessions / progress / artifacts`
-5. 历史 `frontdesk` 公开语义全部进入退役或内部归档
+5. 历史 `frontdoor` 公开语义全部进入退役或内部归档

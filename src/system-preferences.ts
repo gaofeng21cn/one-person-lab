@@ -2,11 +2,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { GatewayContractError } from './contracts.ts';
-import { ensureFrontDeskStateDir, resolveFrontDeskStatePaths } from './runtime-state-paths.ts';
+import { ensureOplStateDir, resolveOplStatePaths } from './runtime-state-paths.ts';
 
-export type FrontDeskUpdateChannel = 'stable' | 'preview';
+export type OplUpdateChannel = 'stable' | 'preview';
 
-export type FrontDeskWorkspaceRoot = {
+export type OplWorkspaceRoot = {
   version: 'g1';
   selected_path: string | null;
   source: 'env' | 'state' | 'default_home';
@@ -16,15 +16,15 @@ export type FrontDeskWorkspaceRoot = {
   updated_at: string;
 };
 
-type FrontDeskWorkspaceRootFile = {
+type OplWorkspaceRootFile = {
   version: 'g1';
   selected_path: string | null;
   updated_at: string;
 };
 
-type FrontDeskUpdateChannelFile = {
+type OplUpdateChannelFile = {
   version: 'g1';
-  channel: FrontDeskUpdateChannel;
+  channel: OplUpdateChannel;
   updated_at: string;
 };
 
@@ -74,14 +74,14 @@ function normalizeWorkspaceRootForWrite(inputPath: string) {
   return resolved;
 }
 
-function readWorkspaceRootFile(): FrontDeskWorkspaceRootFile | null {
-  const paths = ensureFrontDeskStateDir(resolveFrontDeskStatePaths());
+function readWorkspaceRootFile(): OplWorkspaceRootFile | null {
+  const paths = ensureOplStateDir(resolveOplStatePaths());
   if (!fs.existsSync(paths.workspace_root_file)) {
     return null;
   }
 
   try {
-    const parsed = JSON.parse(fs.readFileSync(paths.workspace_root_file, 'utf8')) as Partial<FrontDeskWorkspaceRootFile>;
+    const parsed = JSON.parse(fs.readFileSync(paths.workspace_root_file, 'utf8')) as Partial<OplWorkspaceRootFile>;
     return {
       version: 'g1',
       selected_path: normalizeOptionalString(parsed.selected_path),
@@ -103,8 +103,8 @@ function readWorkspaceRootFile(): FrontDeskWorkspaceRootFile | null {
 }
 
 function writeWorkspaceRootFile(selectedPath: string | null) {
-  const paths = ensureFrontDeskStateDir(resolveFrontDeskStatePaths());
-  const payload: FrontDeskWorkspaceRootFile = {
+  const paths = ensureOplStateDir(resolveOplStatePaths());
+  const payload: OplWorkspaceRootFile = {
     version: 'g1',
     selected_path: selectedPath,
     updated_at: nowIso(),
@@ -114,12 +114,12 @@ function writeWorkspaceRootFile(selectedPath: string | null) {
   return payload;
 }
 
-export function readFrontDeskWorkspaceRoot(): FrontDeskWorkspaceRoot {
-  const paths = ensureFrontDeskStateDir(resolveFrontDeskStatePaths());
+export function readOplWorkspaceRoot(): OplWorkspaceRoot {
+  const paths = ensureOplStateDir(resolveOplStatePaths());
   const envSelectedPath = normalizeOptionalString(process.env.OPL_WORKSPACE_ROOT);
   const persisted = readWorkspaceRootFile();
   const selectedPath = envSelectedPath ?? persisted?.selected_path ?? paths.home_dir;
-  const source: FrontDeskWorkspaceRoot['source'] =
+  const source: OplWorkspaceRoot['source'] =
     envSelectedPath
       ? 'env'
       : persisted?.selected_path
@@ -127,7 +127,7 @@ export function readFrontDeskWorkspaceRoot(): FrontDeskWorkspaceRoot {
         : 'default_home';
   const exists = Boolean(selectedPath && fs.existsSync(selectedPath) && fs.statSync(selectedPath).isDirectory());
   const writable = Boolean(selectedPath && exists && canWriteDirectory(selectedPath));
-  const healthStatus: FrontDeskWorkspaceRoot['health_status'] =
+  const healthStatus: OplWorkspaceRoot['health_status'] =
     !selectedPath
       ? 'missing'
       : exists && writable
@@ -145,27 +145,27 @@ export function readFrontDeskWorkspaceRoot(): FrontDeskWorkspaceRoot {
   };
 }
 
-export function writeFrontDeskWorkspaceRoot(workspaceRoot: string) {
+export function writeOplWorkspaceRoot(workspaceRoot: string) {
   writeWorkspaceRootFile(normalizeWorkspaceRootForWrite(workspaceRoot));
-  return readFrontDeskWorkspaceRoot();
+  return readOplWorkspaceRoot();
 }
 
-export function buildFrontDeskWorkspaceRootStatus() {
-  const workspaceRoot = readFrontDeskWorkspaceRoot();
+export function buildOplWorkspaceRootStatus() {
+  const workspaceRoot = readOplWorkspaceRoot();
   return {
     version: 'g2',
     workspace_root: workspaceRoot,
   };
 }
 
-function readUpdateChannelFile(): FrontDeskUpdateChannelFile | null {
-  const paths = ensureFrontDeskStateDir(resolveFrontDeskStatePaths());
+function readUpdateChannelFile(): OplUpdateChannelFile | null {
+  const paths = ensureOplStateDir(resolveOplStatePaths());
   if (!fs.existsSync(paths.update_channel_file)) {
     return null;
   }
 
   try {
-    const parsed = JSON.parse(fs.readFileSync(paths.update_channel_file, 'utf8')) as Partial<FrontDeskUpdateChannelFile>;
+    const parsed = JSON.parse(fs.readFileSync(paths.update_channel_file, 'utf8')) as Partial<OplUpdateChannelFile>;
     return {
       version: 'g1',
       channel: parsed.channel === 'preview' ? 'preview' : 'stable',
@@ -177,7 +177,7 @@ function readUpdateChannelFile(): FrontDeskUpdateChannelFile | null {
   } catch (error) {
     throw new GatewayContractError(
       'contract_shape_invalid',
-      'Existing frontdesk update channel state is invalid JSON or has an invalid shape.',
+      'Existing OPL update channel state is invalid JSON or has an invalid shape.',
       {
         file: paths.update_channel_file,
         cause: error instanceof Error ? error.message : 'Unknown update channel parse failure.',
@@ -186,7 +186,7 @@ function readUpdateChannelFile(): FrontDeskUpdateChannelFile | null {
   }
 }
 
-export function readFrontDeskUpdateChannel(): FrontDeskUpdateChannelFile {
+export function readOplUpdateChannel(): OplUpdateChannelFile {
   const persisted = readUpdateChannelFile();
   return persisted ?? {
     version: 'g1',
@@ -195,9 +195,9 @@ export function readFrontDeskUpdateChannel(): FrontDeskUpdateChannelFile {
   };
 }
 
-export function writeFrontDeskUpdateChannel(channel: FrontDeskUpdateChannel) {
-  const paths = ensureFrontDeskStateDir(resolveFrontDeskStatePaths());
-  const payload: FrontDeskUpdateChannelFile = {
+export function writeOplUpdateChannel(channel: OplUpdateChannel) {
+  const paths = ensureOplStateDir(resolveOplStatePaths());
+  const payload: OplUpdateChannelFile = {
     version: 'g1',
     channel,
     updated_at: nowIso(),

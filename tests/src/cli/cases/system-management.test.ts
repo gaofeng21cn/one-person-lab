@@ -12,11 +12,11 @@ test('help keeps GUI lane on AionUI without Product API service commands', () =>
   assert.equal(output.help.commands.some((entry: { command: string }) => entry.command === 'web bundle'), false);
   assert.equal(output.help.commands.some((entry: { command: string }) => entry.command === 'web package'), false);
   assert.equal(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk bootstrap'),
+    output.help.commands.some((entry: { command: string }) => entry.command === 'frontdoor bootstrap'),
     false,
   );
   assert.equal(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'frontdesk manifest'),
+    output.help.commands.some((entry: { command: string }) => entry.command === 'frontdoor manifest'),
     false,
   );
 });
@@ -514,7 +514,7 @@ exit 1
           request_fields: string[];
         };
         endpoints: {
-          frontdesk_initialize: string;
+          system_initialize: string;
           workspace_root: string;
         };
       };
@@ -576,7 +576,7 @@ exit 1
     assert.ok(output.system_initialize.recommended_next_action.label.length > 0);
     assert.equal(output.system_initialize.recommended_next_action.method, 'GET');
     assert.deepEqual(output.system_initialize.recommended_next_action.request_fields, []);
-    assert.equal(output.system_initialize.endpoints.frontdesk_initialize, '/api/opl/system/initialize');
+    assert.equal(output.system_initialize.endpoints.system_initialize, '/api/opl/system/initialize');
     assert.equal(output.system_initialize.endpoints.workspace_root, '/api/opl/workspaces/root');
   } finally {
     fs.rmSync(codexConfigFixture.codexHome, { recursive: true, force: true });
@@ -714,7 +714,7 @@ test('engine action executes env-overridden install commands and returns a struc
     assert.equal(output.engine_action.action, 'install');
     assert.equal(output.engine_action.status, 'completed');
     assert.deepEqual(output.engine_action.command_preview, [installScript]);
-    assert.equal('frontdesk_environment' in output.engine_action, false);
+    assert.equal('system_environment' in output.engine_action, false);
     assert.equal(output.engine_action.system.surface_id, 'opl_system');
     assert.equal(output.engine_action.system.core_engines.codex.installed, true);
     assert.equal(fs.existsSync(markerPath), true);

@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { ensureFrontDeskStateDir, resolveFrontDeskStatePaths } from './runtime-state-paths.ts';
+import { ensureOplStateDir, resolveOplStatePaths } from './runtime-state-paths.ts';
 import {
   type NativeStateIndexPersistence,
   persistNativeStateIndex,
@@ -177,7 +177,7 @@ const RUNTIME_MANAGER_HELPER_SEQUENCE = [
     helper_id: 'opl-state-indexer',
     request_id: 'runtime-manager-state-index',
     input: () => ({
-      workspace_roots: [repoRoot(), resolveFrontDeskStatePaths().state_dir],
+      workspace_roots: [repoRoot(), resolveOplStatePaths().state_dir],
       max_depth: 4,
     }),
     index_key: 'state_index',
@@ -189,7 +189,7 @@ const RUNTIME_MANAGER_HELPER_SEQUENCE = [
       workspace_root: repoRoot(),
       artifact_roots: [
         path.join(repoRoot(), 'contracts'),
-        path.join(resolveFrontDeskStatePaths().state_dir, 'artifacts'),
+        path.join(resolveOplStatePaths().state_dir, 'artifacts'),
       ],
       artifact_extensions: ['json', 'md'],
       max_depth: 5,
@@ -200,7 +200,7 @@ const RUNTIME_MANAGER_HELPER_SEQUENCE = [
     helper_id: 'opl-runtime-watch',
     request_id: 'runtime-manager-runtime-watch',
     input: () => ({
-      watch_roots: [path.join(repoRoot(), 'contracts'), resolveFrontDeskStatePaths().state_dir],
+      watch_roots: [path.join(repoRoot(), 'contracts'), resolveOplStatePaths().state_dir],
       max_depth: 4,
     }),
     index_key: 'runtime_health',
@@ -211,7 +211,7 @@ export function buildNativeHelperProjection(
   helpers: readonly NativeHelperDefinition[],
   input: { persistIndexes?: boolean } = {},
 ): NativeHelperProjection {
-  const statePaths = ensureFrontDeskStateDir();
+  const statePaths = ensureOplStateDir();
   const lifecycle = buildNativeHelperLifecycle();
   const runtime = inspectNativeHelperRuntime(helpers);
   const persistence = input.persistIndexes === false
@@ -372,7 +372,7 @@ export function buildNativeHelperLifecycle(): NativeHelperLifecycle {
     },
     cache: {
       command: 'npm run native:cache',
-      cache_dir: nativeHelperCacheDir(resolveFrontDeskStatePaths().state_dir),
+      cache_dir: nativeHelperCacheDir(resolveOplStatePaths().state_dir),
       target_triple: nativeHelperTargetTriple(),
       crate_version: nativeHelperCrateVersion(),
     },
@@ -522,7 +522,7 @@ function resolveNativeHelper(helper: NativeHelperDefinition): HelperResolution {
   }
 
   const stateCacheCandidate = path.join(
-    nativeHelperCacheDir(resolveFrontDeskStatePaths().state_dir),
+    nativeHelperCacheDir(resolveOplStatePaths().state_dir),
     nativeHelperExecutableName(helper.binary),
   );
   if (pathExists(stateCacheCandidate)) {

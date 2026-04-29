@@ -6,20 +6,20 @@ import { fileURLToPath } from 'node:url';
 
 import type {
   FamilyProductEntryManifestSurface,
-  FamilyProductFrontdeskSurface,
+  FamilyProductFrontdoorSurface,
 } from '../../../src/product-entry-companions.ts';
 import {
   buildDeliveryIdentitySurface,
   buildEntrySessionSurface,
   buildOperatorLoopActionCatalog,
-  buildFamilyFrontdeskEntrySurfaces,
-  buildFamilyProductFrontdesk,
-  buildFamilyProductFrontdeskFromManifest,
+  buildFamilyFrontdoorEntrySurfaces,
+  buildFamilyProductFrontdoor,
+  buildFamilyProductFrontdoorFromManifest,
   buildFamilyProductEntryManifest,
   buildProductEntryContinuationSnapshot,
   buildProductEntryShellCatalog,
   buildProductEntryShellLinkedSurface,
-  buildProductFrontdesk,
+  buildProductFrontdoor,
   buildProductEntryOverview,
   buildProductEntryQuickstart,
   buildProductEntryReadiness,
@@ -28,7 +28,7 @@ import {
   buildReturnSurfaceContract,
   buildRuntimeSessionContract,
   collectFamilyHumanGateIds,
-  validateFamilyProductFrontdesk,
+  validateFamilyProductFrontdoor,
   validateFamilyProductEntryManifest,
 } from '../../../src/product-entry-companions.ts';
 
@@ -111,11 +111,11 @@ test('product entry session helpers normalize runtime, continuation, and deliver
 
 test('product entry shell scaffold helpers normalize shell surfaces and operator loop actions', () => {
   const productEntryShell = buildProductEntryShellCatalog({
-    frontdesk: {
-      command: 'redcube product frontdesk',
-      surface_kind: 'product_frontdesk',
+    frontdoor: {
+      command: 'redcube product frontdoor',
+      surface_kind: 'product_frontdoor',
       purpose: 'Open the direct frontdoor.',
-      command_template: 'redcube product frontdesk --workspace-root <workspace-root>',
+      command_template: 'redcube product frontdoor --workspace-root <workspace-root>',
     },
     session: {
       command: 'redcube product session',
@@ -124,27 +124,27 @@ test('product entry shell scaffold helpers normalize shell surfaces and operator
     },
   });
 
-  assert.equal(productEntryShell.frontdesk.command, 'redcube product frontdesk');
-  assert.equal(productEntryShell.frontdesk.purpose, 'Open the direct frontdoor.');
+  assert.equal(productEntryShell.frontdoor.command, 'redcube product frontdoor');
+  assert.equal(productEntryShell.frontdoor.purpose, 'Open the direct frontdoor.');
   assert.equal(
     productEntryShell.session.command_template,
     'redcube product session --entry-session-id <entry-session-id>',
   );
 
-  const frontdeskSurface = buildProductEntryShellLinkedSurface({
-    shell_key: 'frontdesk',
-    shell_surface: productEntryShell.frontdesk,
+  const frontdoorSurface = buildProductEntryShellLinkedSurface({
+    shell_key: 'frontdoor',
+    shell_surface: productEntryShell.frontdoor,
     summary: 'Open the direct frontdoor.',
     extra_payload: {
-      lane: 'frontdesk',
+      lane: 'frontdoor',
     },
   });
-  assert.deepEqual(frontdeskSurface, {
-    shell_key: 'frontdesk',
-    command: 'redcube product frontdesk',
-    surface_kind: 'product_frontdesk',
+  assert.deepEqual(frontdoorSurface, {
+    shell_key: 'frontdoor',
+    command: 'redcube product frontdoor',
+    surface_kind: 'product_frontdoor',
     summary: 'Open the direct frontdoor.',
-    lane: 'frontdesk',
+    lane: 'frontdoor',
   });
 
   const operatorLoopActions = buildOperatorLoopActionCatalog({

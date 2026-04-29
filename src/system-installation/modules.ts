@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { GatewayContractError } from '../contracts.ts';
-import { ensureFrontDeskStateDir, resolveFrontDeskStatePaths } from '../runtime-state-paths.ts';
+import { ensureOplStateDir, resolveOplStatePaths } from '../runtime-state-paths.ts';
 import {
   resolveFamilyWorkspaceRootFromRepoRoot,
   syncFamilySkillPackFromRepoRoot,
@@ -11,9 +11,9 @@ import {
 
 import {
   type DomainModuleSpec,
-  type FrontDeskModuleAction,
-  type FrontDeskModuleId,
-  type FrontDeskModuleInstallOrigin,
+  type OplModuleAction,
+  type OplModuleId,
+  type OplModuleInstallOrigin,
   type GitRepoSnapshot,
   type ModuleInspection,
   assertGitSuccess,
@@ -166,16 +166,16 @@ function inspectGitRepo(repoPath: string): GitRepoSnapshot {
   };
 }
 
-function buildModuleRepoUrlEnvKey(moduleId: FrontDeskModuleId) {
+function buildModuleRepoUrlEnvKey(moduleId: OplModuleId) {
   return `OPL_MODULE_REPO_URL_${moduleId.toUpperCase()}`;
 }
 
-function buildModulePathEnvKey(moduleId: FrontDeskModuleId) {
+function buildModulePathEnvKey(moduleId: OplModuleId) {
   return `OPL_MODULE_PATH_${moduleId.toUpperCase()}`;
 }
 
 function resolveManagedModulesRoot() {
-  const statePaths = ensureFrontDeskStateDir(resolveFrontDeskStatePaths());
+  const statePaths = ensureOplStateDir(resolveOplStatePaths());
   const explicitRoot = normalizeOptionalString(process.env.OPL_MODULES_ROOT);
   return path.resolve(explicitRoot ?? path.join(statePaths.state_dir, 'modules'));
 }
@@ -193,7 +193,7 @@ function inspectModule(spec: DomainModuleSpec): ModuleInspection {
   const envCheckoutPath = normalizeOptionalString(process.env[buildModulePathEnvKey(spec.module_id)]);
   const explicitModulesRoot = normalizeOptionalString(process.env.OPL_MODULES_ROOT);
   const siblingCheckoutPath = path.join(resolveSiblingWorkspaceRoot(), spec.repo_name);
-  const candidates: Array<{ path: string; origin: FrontDeskModuleInstallOrigin }> = [];
+  const candidates: Array<{ path: string; origin: OplModuleInstallOrigin }> = [];
 
   if (envCheckoutPath) {
     candidates.push({
@@ -274,7 +274,7 @@ function inspectModule(spec: DomainModuleSpec): ModuleInspection {
 
 function findModuleSpecOrThrow(moduleId: string): DomainModuleRuntimeSpec {
   const normalized = moduleId.trim().toLowerCase();
-  const aliases = new Map<string, FrontDeskModuleId>([
+  const aliases = new Map<string, OplModuleId>([
     ['med-autoscience', 'medautoscience'],
     ['med_autoscience', 'medautoscience'],
     ['mas', 'medautoscience'],
@@ -306,12 +306,12 @@ function findModuleSpecOrThrow(moduleId: string): DomainModuleRuntimeSpec {
   return spec;
 }
 
-export function buildFrontDeskModules() {
+export function buildOplModules() {
   const modules = DOMAIN_MODULE_SPECS.map((spec) => inspectModule(spec));
   return {
     version: 'g2',
-    frontdesk_modules: {
-      surface_id: 'opl_frontdesk_modules',
+    modules: {
+      surface_id: 'opl_modules',
       modules_root: resolveManagedModulesRoot(),
       summary: {
         total_modules_count: modules.length,
@@ -339,7 +339,7 @@ function cloneManagedModule(spec: DomainModuleSpec, checkoutPath: string) {
 }
 
 function readHomeDir() {
-  return process.env.HOME?.trim() || resolveFrontDeskStatePaths().home_dir;
+  return process.env.HOME?.trim() || resolveOplStatePaths().home_dir;
 }
 
 function maybeParseJsonRecord(raw: string) {
@@ -502,8 +502,8 @@ function buildSkippedWorkflow(summary: string): ModuleActionWorkflow {
   };
 }
 
-export function runFrontDeskModuleAction(
-  action: FrontDeskModuleAction,
+export function runOplModuleAction(
+  action: OplModuleAction,
   moduleId: string,
 ) {
   const spec = findModuleSpecOrThrow(moduleId);
@@ -597,7 +597,7 @@ export function runFrontDeskModuleAction(
 
   return {
     version: 'g2',
-    frontdesk_module_action: {
+    module_action: {
       action,
       status: 'completed',
       module: inspectModule(spec),

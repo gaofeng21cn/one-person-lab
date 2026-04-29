@@ -1,6 +1,6 @@
 # OPL Front Desk And Family Entry 设计
 
-> 已退役。这个设计属于 `frontdesk` 公开语义阶段，当前主线已经由 [`docs/specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md`](./2026-04-20-opl-product-api-and-domain-agent-boundary-design.md) 取代。保留本文只用于历史审计与迁移回顾。
+> 已退役。这个设计属于 `frontdoor` 公开语义阶段，当前主线已经由 [`docs/specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md`](./2026-04-20-opl-product-api-and-domain-agent-boundary-design.md) 取代。保留本文只用于历史审计与迁移回顾。
 
 ## 背景
 
@@ -163,7 +163,7 @@
 当前仍然并行存在两层：
 
 1. `Phase 1` gateway contract surface
-2. 本地 `OPL` product-entry / front-desk surface
+2. 本地 `OPL` product-entry / front-door surface
 
 前者负责顶层联邦真相；后者负责用户入口。
 

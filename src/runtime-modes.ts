@@ -1,22 +1,22 @@
 import fs from 'node:fs';
 
 import { GatewayContractError } from './contracts.ts';
-import { ensureFrontDeskStateDir, resolveFrontDeskStatePaths } from './runtime-state-paths.ts';
+import { ensureOplStateDir, resolveOplStatePaths } from './runtime-state-paths.ts';
 
-export type FrontDeskAgentMode = 'codex' | 'hermes';
+export type OplAgentMode = 'codex' | 'hermes';
 
-export type FrontDeskRuntimeModes = {
+export type OplRuntimeModes = {
   version: 'g1';
-  interaction_mode: FrontDeskAgentMode;
-  execution_mode: FrontDeskAgentMode;
+  interaction_mode: OplAgentMode;
+  execution_mode: OplAgentMode;
   updated_at: string;
 };
 
-function isFrontDeskAgentMode(value: unknown): value is FrontDeskAgentMode {
+function isOplAgentMode(value: unknown): value is OplAgentMode {
   return value === 'codex' || value === 'hermes';
 }
 
-export function buildDefaultFrontDeskRuntimeModes(): FrontDeskRuntimeModes {
+export function buildDefaultOplRuntimeModes(): OplRuntimeModes {
   return {
     version: 'g1',
     interaction_mode: 'codex',
@@ -25,21 +25,21 @@ export function buildDefaultFrontDeskRuntimeModes(): FrontDeskRuntimeModes {
   };
 }
 
-export function readFrontDeskRuntimeModes(): FrontDeskRuntimeModes {
-  const paths = ensureFrontDeskStateDir(resolveFrontDeskStatePaths());
+export function readOplRuntimeModes(): OplRuntimeModes {
+  const paths = ensureOplStateDir(resolveOplStatePaths());
   if (!fs.existsSync(paths.runtime_modes_file)) {
-    return buildDefaultFrontDeskRuntimeModes();
+    return buildDefaultOplRuntimeModes();
   }
 
   try {
-    const parsed = JSON.parse(fs.readFileSync(paths.runtime_modes_file, 'utf8')) as Partial<FrontDeskRuntimeModes>;
-    const defaults = buildDefaultFrontDeskRuntimeModes();
+    const parsed = JSON.parse(fs.readFileSync(paths.runtime_modes_file, 'utf8')) as Partial<OplRuntimeModes>;
+    const defaults = buildDefaultOplRuntimeModes();
     return {
       version: 'g1',
-      interaction_mode: isFrontDeskAgentMode(parsed.interaction_mode)
+      interaction_mode: isOplAgentMode(parsed.interaction_mode)
         ? parsed.interaction_mode
         : defaults.interaction_mode,
-      execution_mode: isFrontDeskAgentMode(parsed.execution_mode)
+      execution_mode: isOplAgentMode(parsed.execution_mode)
         ? parsed.execution_mode
         : defaults.execution_mode,
       updated_at:
@@ -48,18 +48,18 @@ export function readFrontDeskRuntimeModes(): FrontDeskRuntimeModes {
           : defaults.updated_at,
     };
   } catch {
-    return buildDefaultFrontDeskRuntimeModes();
+    return buildDefaultOplRuntimeModes();
   }
 }
 
-export function writeFrontDeskRuntimeModes(input: Partial<{
-  interaction_mode: FrontDeskAgentMode;
-  execution_mode: FrontDeskAgentMode;
-}>): FrontDeskRuntimeModes {
-  if (input.interaction_mode !== undefined && !isFrontDeskAgentMode(input.interaction_mode)) {
+export function writeOplRuntimeModes(input: Partial<{
+  interaction_mode: OplAgentMode;
+  execution_mode: OplAgentMode;
+}>): OplRuntimeModes {
+  if (input.interaction_mode !== undefined && !isOplAgentMode(input.interaction_mode)) {
     throw new GatewayContractError(
       'cli_usage_error',
-      'frontdesk interaction_mode must be codex or hermes.',
+      'OPL interaction_mode must be codex or hermes.',
       {
         interaction_mode: input.interaction_mode,
       },
@@ -67,10 +67,10 @@ export function writeFrontDeskRuntimeModes(input: Partial<{
     );
   }
 
-  if (input.execution_mode !== undefined && !isFrontDeskAgentMode(input.execution_mode)) {
+  if (input.execution_mode !== undefined && !isOplAgentMode(input.execution_mode)) {
     throw new GatewayContractError(
       'cli_usage_error',
-      'frontdesk execution_mode must be codex or hermes.',
+      'OPL execution_mode must be codex or hermes.',
       {
         execution_mode: input.execution_mode,
       },
@@ -78,15 +78,15 @@ export function writeFrontDeskRuntimeModes(input: Partial<{
     );
   }
 
-  const current = readFrontDeskRuntimeModes();
-  const next: FrontDeskRuntimeModes = {
+  const current = readOplRuntimeModes();
+  const next: OplRuntimeModes = {
     version: 'g1',
     interaction_mode: input.interaction_mode ?? current.interaction_mode,
     execution_mode: input.execution_mode ?? current.execution_mode,
     updated_at: new Date().toISOString(),
   };
 
-  const paths = ensureFrontDeskStateDir(resolveFrontDeskStatePaths());
+  const paths = ensureOplStateDir(resolveOplStatePaths());
   fs.writeFileSync(paths.runtime_modes_file, `${JSON.stringify(next, null, 2)}\n`, 'utf8');
   return next;
 }

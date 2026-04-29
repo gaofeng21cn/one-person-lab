@@ -99,7 +99,7 @@ test('buildManagedRuntimeContract materializes canonical fail-closed rules and d
     domain_owner: 'redcube_ai',
     executor_owner: 'codex_cli',
     supervision_status_surface: 'product_entry_session',
-    attention_queue_surface: 'product_frontdesk',
+    attention_queue_surface: 'product_frontdoor',
     recovery_contract_surface: 'product_entry_session',
   });
 
@@ -113,7 +113,7 @@ test('buildManagedRuntimeContract materializes canonical fail-closed rules and d
       owner: 'redcube_ai',
     },
     attention_queue_surface: {
-      surface_kind: 'product_frontdesk',
+      surface_kind: 'product_frontdoor',
       owner: 'redcube_ai',
     },
     recovery_contract_surface: {

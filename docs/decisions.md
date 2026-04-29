@@ -81,13 +81,13 @@
 
 ### 决策：8787 Product API service 模块退役
 
-原因：当前 OPL GUI/WebUI 主线由 OPL-branded AionUI shell 提供，不消费仓内 8787 Product API service。该 service 来自 frontdesk/web adapter 历史阶段，继续保留模块本体会把后台 JSON/adapter 面误导成当前产品能力。
+原因：当前 OPL GUI/WebUI 主线由 OPL-branded AionUI shell 提供，不消费仓内 8787 Product API service。该 service 来自旧本地 web adapter 历史阶段，继续保留模块本体会把后台 JSON/adapter 面误导成当前产品能力。
 
 影响：
 
 - `opl install` 不再安装、启动或打开 8787 Product API service
 - public `opl service *`、`opl system reinstall-support`、`opl web`、`web bundle` 与 `web package` 退出当前命令面
-- 仓内 `frontdesk-service`、`web-frontdesk` 与 self-hostable web package 实现删除，避免继续形成第二产品入口
+- 仓内旧本地 web adapter 与 self-hostable web package 实现删除，避免继续形成第二产品入口
 - GUI 分发由 `opl-aion-shell` 构建、`one-person-lab` GitHub Release 暴露；维护者用 `npm run gui:release` 发布 artifact
 
 ## 2026-04-23
@@ -169,7 +169,7 @@
 
 ### 历史决策：公开产品模型曾重置为 `Product API`
 
-原因：历史 `frontdesk` 体系把 GUI 启动、环境管理、工作空间、任务、进度、文件、领域接线和 hosted 试验语义揉在了一层，已经不适合当前 `OPL + 独立界面仓` 目标形态。
+原因：旧本地 UI adapter 体系把 GUI 启动、环境管理、工作空间、任务、进度、文件、领域接线和 hosted 试验语义揉在了一层，已经不适合当前 `OPL + 独立界面仓` 目标形态。
 
 影响：
 
@@ -183,7 +183,7 @@
   - `progress`
   - `artifacts`
 - `opl` shell / TUI、GUI 外壳与 CLI 共同消费这组产品资源
-- 历史 `frontdesk` 公开语义退出当前主线
+- 旧本地 UI adapter 公开语义退出当前主线
 
 ### 决策：Domain Agents 与 OPL 保持松耦合
 
@@ -195,19 +195,13 @@
 - 各个领域仓继续持有智能体入口、领域逻辑、运行规则与交付物
 - 通过 `OPL` 调用领域智能体，与直接在 `Codex` 里调用该智能体，工作逻辑保持一致
 
-### 决策：`frontdesk` 相关公开语义进入退役清单
+### 决策：旧本地 UI adapter 相关公开语义进入退役清单
 
 原因：这些语义属于上一阶段的公开设计，继续保留在主线里会污染当前开发和文档。
 
 影响：
 
-- 当前主线不再把下面这些概念作为公开产品主语：
-  - `frontdesk`
-  - `readiness`
-  - `entry-guide`
-  - `domain-wiring`
-  - `hosted-bundle`
-  - `hosted-package`
+- 当前主线不再把旧本地 UI adapter、entry-guide、domain-wiring、hosted bundle/package 作为公开产品主语。
 - 相关文档只留在参考层或历史层
 
 ## 2026-04-19

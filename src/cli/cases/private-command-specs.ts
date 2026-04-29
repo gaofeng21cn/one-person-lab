@@ -1,12 +1,12 @@
 import { GatewayContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkstreamOrThrow, validateGatewayContracts } from '../../contracts.ts';
-import { buildFrontDeskWorkspaceRootSurface, writeFrontDeskWorkspaceRootSurface } from '../../system-installation/workspace-root.ts';
+import { buildOplWorkspaceRootSurface, writeOplWorkspaceRootSurface } from '../../system-installation/workspace-root.ts';
 import { buildProductEntryHandoffEnvelope } from '../../product-entry-handoff-envelope.ts';
 import { buildProductEntryDoctor, runProductEntryLogs, runProductEntryRepairHermesGateway, runProductEntryResume, runProductEntrySessions } from '../../product-entry-runtime.ts';
 import { buildRuntimeManager, runRuntimeManagerAction } from '../../runtime-manager.ts';
 import { buildNativeIndexSummary } from '../../native-index-summary.ts';
 import { launchDomainEntry } from '../../domain-launch.ts';
 import { buildDomainManifestCatalog } from '../../domain-manifest/catalog-builder.ts';
-import { buildFrontDeskDashboard, buildFrontDeskStart, buildProjectsOverview } from '../../management/runtime-dashboard.ts';
+import { buildOplDashboard, buildOplStart, buildProjectsOverview } from '../../management/runtime-dashboard.ts';
 import { buildRuntimeStatus } from '../../management/runtime.ts';
 import { buildWorkspaceStatus } from '../../management/workspace.ts';
 import { runAcpStdioBridge } from '../../opl-acp-stdio.ts';
@@ -23,23 +23,6 @@ export function buildInternalCommandSpecs(
   parsedInput: ParsedCliInput,
   getContracts: () => GatewayContracts,
 ): Record<string, CommandSpec> {
-  const buildRetiredFrontDeskSpec = (
-    command: string,
-    replacement: string,
-    examples: string[],
-  ): CommandSpec => {
-    const spec: CommandSpec = {
-      usage: `opl ${command}`,
-      summary: 'Retired historical frontdesk compatibility command.',
-      examples,
-      group: 'legacy',
-      handler: () => {
-        throw buildRetiredCommandError(`opl ${command}`, replacement, spec);
-      },
-    };
-    return spec;
-  };
-
   const commandSpecs: Record<string, CommandSpec> = {
     help: {
       usage: 'opl help [command]',
@@ -251,7 +234,7 @@ export function buildInternalCommandSpecs(
         'opl status dashboard',
         'opl status dashboard --path /Users/gaofeng/workspace/one-person-lab --sessions-limit 5',
       ],
-      handler: (args) => buildFrontDeskDashboard(getContracts(), parseDashboardArgs(args, commandSpecs.dashboard)),
+      handler: (args) => buildOplDashboard(getContracts(), parseDashboardArgs(args, commandSpecs.dashboard)),
     },
     start: {
       usage: 'opl start --project <project_id> [--mode <mode_id>]',
@@ -270,7 +253,7 @@ export function buildInternalCommandSpecs(
           );
         }
 
-        return buildFrontDeskStart(getContracts(), {
+        return buildOplStart(getContracts(), {
           projectId: parsed.projectId,
           modeId: parsed.modeId,
         });
@@ -381,98 +364,6 @@ export function buildInternalCommandSpecs(
       handler: (args) => {
         assertNoArgs(args, commandSpecs['domain manifests']);
         return buildDomainManifestCatalog(getContracts());
-      },
-    },
-    'frontdesk environment': {
-      usage: 'opl frontdesk environment',
-      summary: 'Retired historical frontdesk compatibility command.',
-      examples: ['opl frontdesk environment'],
-      group: 'legacy',
-      handler: () => {
-        throw buildRetiredCommandError(
-          'opl frontdesk environment',
-          'Use `opl system` for the current Codex-default system surface.',
-          commandSpecs['frontdesk environment'],
-        );
-      },
-    },
-    'frontdesk initialize': {
-      usage: 'opl frontdesk initialize',
-      summary: 'Retired historical frontdesk compatibility command.',
-      examples: ['opl frontdesk initialize'],
-      group: 'legacy',
-      handler: () => {
-        throw buildRetiredCommandError(
-          'opl frontdesk initialize',
-          'Use `opl system initialize` for the current first-run setup surface.',
-          commandSpecs['frontdesk initialize'],
-        );
-      },
-    },
-    'frontdesk modules': {
-      usage: 'opl frontdesk modules',
-      summary: 'Retired historical frontdesk compatibility command.',
-      examples: ['opl frontdesk modules'],
-      group: 'legacy',
-      handler: () => {
-        throw buildRetiredCommandError(
-          'opl frontdesk modules',
-          'Use `opl modules` for the current module inventory surface.',
-          commandSpecs['frontdesk modules'],
-        );
-      },
-    },
-    'frontdesk-module-install': buildRetiredFrontDeskSpec(
-      'frontdesk module install --module <module_id>',
-      'Use `opl module install --module <module_id>` for current module installation.',
-      ['opl frontdesk module install --module medautoscience'],
-    ),
-    'frontdesk-module-update': buildRetiredFrontDeskSpec(
-      'frontdesk module update --module <module_id>',
-      'Use `opl module update --module <module_id>` for current module updates.',
-      ['opl frontdesk module update --module medautoscience'],
-    ),
-    'frontdesk-module-reinstall': buildRetiredFrontDeskSpec(
-      'frontdesk module reinstall --module <module_id>',
-      'Use `opl module reinstall --module <module_id>` for current module reinstalls.',
-      ['opl frontdesk module reinstall --module medautoscience'],
-    ),
-    'frontdesk-module-remove': buildRetiredFrontDeskSpec(
-      'frontdesk module remove --module <module_id>',
-      'Use `opl module remove --module <module_id>` for current module removal.',
-      ['opl frontdesk module remove --module medautoscience'],
-    ),
-    'frontdesk engine install': buildRetiredFrontDeskSpec(
-      'frontdesk engine install --engine <codex|hermes>',
-      'Use `opl engine install --engine <codex|hermes>` for current engine installation.',
-      ['opl frontdesk engine install --engine codex'],
-    ),
-    'frontdesk engine update': buildRetiredFrontDeskSpec(
-      'frontdesk engine update --engine <codex|hermes>',
-      'Use `opl engine update --engine <codex|hermes>` for current engine updates.',
-      ['opl frontdesk engine update --engine codex'],
-    ),
-    'frontdesk engine reinstall': buildRetiredFrontDeskSpec(
-      'frontdesk engine reinstall --engine <codex|hermes>',
-      'Use `opl engine reinstall --engine <codex|hermes>` for current engine reinstalls.',
-      ['opl frontdesk engine reinstall --engine codex'],
-    ),
-    'frontdesk engine remove': buildRetiredFrontDeskSpec(
-      'frontdesk engine remove --engine <codex|hermes>',
-      'Use `opl engine remove --engine <codex|hermes>` for current engine removal.',
-      ['opl frontdesk engine remove --engine hermes'],
-    ),
-    'frontdesk repair': {
-      usage: 'opl frontdesk repair',
-      summary: 'Retired historical frontdesk compatibility command.',
-      examples: ['opl frontdesk repair'],
-      group: 'legacy',
-      handler: () => {
-        throw buildRetiredCommandError(
-          'opl frontdesk repair',
-          'Use `opl system repair` for the current system repair surface.',
-          commandSpecs['frontdesk repair'],
-        );
       },
     },
     'mcp-stdio': {
@@ -616,7 +507,7 @@ resume: {
       examples: ['opl workspace root'],
       handler: (args) => {
         assertNoArgs(args, commandSpecs['workspace root']);
-        return buildFrontDeskWorkspaceRootSurface();
+        return buildOplWorkspaceRootSurface();
       },
     },
     'workspace root set': {
@@ -633,7 +524,7 @@ resume: {
           );
         }
 
-        return writeFrontDeskWorkspaceRootSurface(parsed.path);
+        return writeOplWorkspaceRootSurface(parsed.path);
       },
     },
     'workspace root doctor': {
@@ -642,7 +533,7 @@ resume: {
       examples: ['opl workspace root doctor'],
       handler: (args) => {
         assertNoArgs(args, commandSpecs['workspace root doctor']);
-        return buildFrontDeskWorkspaceRootSurface();
+        return buildOplWorkspaceRootSurface();
       },
     },
     'workspace-bind': {
@@ -652,7 +543,7 @@ resume: {
         'Bind and activate one workspace for an admitted project, optionally freezing or deriving its direct-entry locator.',
       examples: [
         'opl workspace bind --project redcube --path /Users/gaofeng/workspace/redcube-ai',
-        'opl workspace bind --project redcube --path /Users/gaofeng/workspace/redcube-ai --entry-command "redcube-ai frontdesk" --manifest-command "redcube product manifest --workspace-root /Users/gaofeng/workspace/redcube-ai" --entry-url http://127.0.0.1:3310/redcube',
+        'opl workspace bind --project redcube --path /Users/gaofeng/workspace/redcube-ai --entry-command "redcube product invoke --workspace-root /Users/gaofeng/workspace/redcube-ai" --manifest-command "redcube product manifest --workspace-root /Users/gaofeng/workspace/redcube-ai" --entry-url http://127.0.0.1:3310/redcube',
         'opl workspace bind --project medautoscience --path /Users/gaofeng/workspace/med-autoscience --profile /Users/gaofeng/workspace/med-autoscience/profiles/local.toml',
         'opl workspace bind --project medautogrant --path /Users/gaofeng/workspace/med-autogrant --input /Users/gaofeng/workspace/med-autogrant/examples/nsfc_workspace_p2c_critique.json',
       ],

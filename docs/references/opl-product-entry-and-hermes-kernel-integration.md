@@ -226,10 +226,10 @@
 - `opl chat`
 - `opl contract validate`
 - `opl domain manifests`
-- `opl frontdesk manifest`
-- `opl frontdesk domain-wiring`
-- `opl frontdesk hosted-bundle`
-- `opl frontdesk hosted-package`
+- `opl frontdoor manifest`
+- `opl frontdoor domain-wiring`
+- `opl frontdoor hosted-bundle`
+- `opl frontdoor hosted-package`
 - `opl workspace list`
 - `opl workspace bind|activate|archive`
 - `opl session ledger`

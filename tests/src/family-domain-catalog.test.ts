@@ -29,9 +29,9 @@ test('family domain catalog derives parity status from manifests and active bind
   const projects: DomainManifestCatalogEntry[] = [
     createResolvedProject('med-autoscience', {
       target_domain_id: 'med-autoscience',
-      frontdesk_surface: {
-        surface_kind: 'product_frontdesk',
-        command: 'medautoscience product-frontdesk',
+      frontdoor_surface: {
+        surface_kind: 'product_frontdoor',
+        command: 'medautoscience product-frontdoor',
       },
       product_entry_start: {
         surface_kind: 'product_entry_start',
@@ -50,7 +50,7 @@ test('family domain catalog derives parity status from manifests and active bind
         domain_agent_entry_spec: {
           agent_id: 'mas',
           title: 'Med Auto Science',
-          entry_command: 'product-frontdesk',
+          entry_command: 'product-frontdoor',
           manifest_command: 'product-entry-manifest',
         },
       },
@@ -69,7 +69,7 @@ test('family domain catalog derives parity status from manifests and active bind
             title: 'Med Auto Science',
             owner: 'med-autoscience',
             distribution_mode: 'repo_tracked',
-            target_surface_kind: 'product_frontdesk',
+            target_surface_kind: 'product_frontdoor',
             description: 'MAS app skill',
             readiness: 'landed',
             tags: [],
@@ -102,9 +102,9 @@ test('family domain catalog derives parity status from manifests and active bind
     }),
     createResolvedProject('med-autogrant', {
       target_domain_id: 'med-autogrant',
-      frontdesk_surface: {
-        surface_kind: 'product_frontdesk',
-        command: 'medautogrant product-frontdesk',
+      frontdoor_surface: {
+        surface_kind: 'product_frontdoor',
+        command: 'medautogrant product-frontdoor',
       },
       product_entry_start: {
         surface_kind: 'product_entry_start',
@@ -117,7 +117,7 @@ test('family domain catalog derives parity status from manifests and active bind
         domain_agent_entry_spec: {
           agent_id: 'mag',
           title: 'Med Auto Grant',
-          entry_command: 'product-frontdesk',
+          entry_command: 'product-frontdoor',
           manifest_command: 'product-entry-manifest',
         },
       },
@@ -152,7 +152,7 @@ test('family domain catalog derives parity status from manifests and active bind
           updated_at: '2026-04-22T00:00:00Z',
           archived_at: null,
           direct_entry: {
-            command: 'medautoscience product-frontdesk',
+            command: 'medautoscience product-frontdoor',
             url: null,
             manifest_command: 'medautoscience product-entry-manifest',
             workspace_locator: 'workspace_root',
@@ -193,9 +193,9 @@ test('family domain catalog derives recommended entry surfaces with active bindi
     [
       createResolvedProject('med-autoscience', {
         target_domain_id: 'med-autoscience',
-        frontdesk_surface: {
-          surface_kind: 'product_frontdesk',
-          command: 'medautoscience product-frontdesk',
+        frontdoor_surface: {
+          surface_kind: 'product_frontdoor',
+          command: 'medautoscience product-frontdoor',
         },
         operator_loop_surface: {
           shell_key: 'workspace-cockpit',
@@ -229,7 +229,7 @@ test('family domain catalog derives recommended entry surfaces with active bindi
           checks: [{ check_id: 'runtime-ready' }],
         },
         product_entry_quickstart: {
-          steps: [{ step_id: 'frontdesk' }, { step_id: 'start' }],
+          steps: [{ step_id: 'frontdoor' }, { step_id: 'start' }],
         },
         product_entry_readiness: {
           verdict: 'good_to_use_now',
@@ -255,7 +255,7 @@ test('family domain catalog derives recommended entry surfaces with active bindi
           domain_agent_entry_spec: {
             agent_id: 'mas',
             title: 'Med Auto Science',
-            entry_command: 'product-frontdesk',
+            entry_command: 'product-frontdoor',
             manifest_command: 'product-entry-manifest',
           },
         },
@@ -267,7 +267,7 @@ test('family domain catalog derives recommended entry surfaces with active bindi
           resume_contract: { surface_kind: 'family_resume' },
           action_graph_ref: { ref: 'contracts/runtime-program/current-program.json' },
           action_graph: {
-            nodes: [{ node_id: 'frontdesk' }],
+            nodes: [{ node_id: 'frontdoor' }],
             edges: [],
           },
           event_envelope_surface: { ref: 'events/latest.json' },
@@ -316,7 +316,7 @@ test('family domain catalog derives recommended entry surfaces with active bindi
               title: 'Med Auto Science',
               owner: 'med-autoscience',
               distribution_mode: 'repo_tracked',
-              target_surface_kind: 'product_frontdesk',
+              target_surface_kind: 'product_frontdoor',
               description: 'MAS app skill',
               readiness: 'landed',
               tags: [],
@@ -324,13 +324,13 @@ test('family domain catalog derives recommended entry surfaces with active bindi
                 skill_activation: {
                   plugin_name: 'med-autoscience',
                   skill_semantics: 'single_domain_app_skill',
-                  entry_shell_key: 'frontdesk',
-                  entry_command: 'medautoscience product-frontdesk',
+                  entry_shell_key: 'frontdoor',
+                  entry_command: 'medautoscience product-frontdoor',
                   supporting_shell_keys: ['workspace-cockpit'],
                   shell_commands: {
-                    frontdesk: {
-                      command: 'medautoscience product-frontdesk',
-                      target_surface_kind: 'product_frontdesk',
+                    frontdoor: {
+                      command: 'medautoscience product-frontdoor',
+                      target_surface_kind: 'product_frontdoor',
                     },
                     'workspace-cockpit': {
                       command: 'medautoscience workspace-cockpit',
@@ -372,7 +372,7 @@ test('family domain catalog derives recommended entry surfaces with active bindi
           remaining_gaps_count: 0,
         },
         recommended_shell: 'workspace-cockpit',
-        recommended_command: 'medautoscience product-frontdesk',
+        recommended_command: 'medautoscience product-frontdoor',
         schema_ref: 'contracts/schemas/v1/product-entry-manifest.schema.json',
         manifest_version: 1,
       }),
@@ -390,7 +390,7 @@ test('family domain catalog derives recommended entry surfaces with active bindi
           updated_at: '2026-04-22T00:00:00Z',
           archived_at: null,
           direct_entry: {
-            command: 'medautoscience product-frontdesk',
+            command: 'medautoscience product-frontdoor',
             url: null,
             manifest_command: 'medautoscience product-entry-manifest',
             workspace_locator: 'workspace_root',
@@ -405,11 +405,11 @@ test('family domain catalog derives recommended entry surfaces with active bindi
   assert.equal(recommended[0]?.mainline_phase_id, 'phase-2');
   assert.equal(recommended[0]?.mainline_tranche_id, 'family-reuse');
   assert.equal(recommended[0]?.active_binding_locator_status, 'ready');
-  assert.equal(recommended[0]?.active_binding_locator.command, 'medautoscience product-frontdesk');
+  assert.equal(recommended[0]?.active_binding_locator.command, 'medautoscience product-frontdoor');
   assert.equal(recommended[0]?.domain_entry_contract_status, 'ready');
   assert.equal(recommended[0]?.domain_agent_entry_id, 'mas');
   assert.equal(recommended[0]?.domain_agent_entry_title, 'Med Auto Science');
-  assert.equal(recommended[0]?.domain_agent_entry_entry_command, 'product-frontdesk');
+  assert.equal(recommended[0]?.domain_agent_entry_entry_command, 'product-frontdoor');
   assert.equal(recommended[0]?.domain_agent_entry_manifest_command, 'product-entry-manifest');
   assert.equal(recommended[0]?.domain_agent_entry_spec?.agent_id, 'mas');
   assert.equal(recommended[0]?.gateway_interaction_contract_status, 'ready');
@@ -424,12 +424,12 @@ test('family domain catalog derives recommended entry surfaces with active bindi
   assert.equal(recommended[0]?.skill_activation_skill_id, 'med-autoscience');
   assert.equal(recommended[0]?.skill_activation_plugin_name, 'med-autoscience');
   assert.equal(recommended[0]?.skill_activation_skill_semantics, 'single_domain_app_skill');
-  assert.equal(recommended[0]?.skill_activation_entry_shell_key, 'frontdesk');
-  assert.equal(recommended[0]?.skill_activation_entry_command, 'medautoscience product-frontdesk');
+  assert.equal(recommended[0]?.skill_activation_entry_shell_key, 'frontdoor');
+  assert.equal(recommended[0]?.skill_activation_entry_command, 'medautoscience product-frontdoor');
   assert.deepEqual(recommended[0]?.skill_activation_supporting_shell_keys, ['workspace-cockpit']);
   assert.equal(
-    recommended[0]?.skill_activation_shell_commands.frontdesk.command,
-    'medautoscience product-frontdesk',
+    recommended[0]?.skill_activation_shell_commands.frontdoor.command,
+    'medautoscience product-frontdoor',
   );
   assert.equal(
     recommended[0]?.skill_activation_shell_commands['workspace-cockpit'].target_surface_kind,

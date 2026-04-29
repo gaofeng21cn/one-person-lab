@@ -18,5 +18,5 @@
 
 当前归档路线：
 
-- [Frontdesk 历史资料](./frontdesk-legacy/README.md)
+- [Frontdoor 历史资料](./frontdoor-legacy/README.md)
 - [OMX 历史资料](./omx/README.zh-CN.md)

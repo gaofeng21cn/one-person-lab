@@ -17,8 +17,8 @@ function buildRetiredHostedRuntimeReadiness() {
 
 import { findDomainOrThrow, GatewayContractError } from '../contracts.ts';
 import { buildDomainEntryParity, buildRecommendedEntrySurfaces } from '../family-domain-catalog.ts';
-import { buildOplRuntimeEndpoints } from '../legacy-frontdesk-paths/current.ts';
-import { readFrontDeskRuntimeModes } from '../runtime-modes.ts';
+import { buildOplRuntimeEndpoints } from '../opl-runtime-paths/current.ts';
+import { readOplRuntimeModes } from '../runtime-modes.ts';
 import { buildWorkspaceCatalog, getActiveWorkspaceBinding } from '../workspace-registry.ts';
 import type { GatewayContracts } from '../types.ts';
 
@@ -57,7 +57,7 @@ export function buildProjectsOverview(contracts: GatewayContracts) {
   };
 }
 
-export function buildFrontDeskStart(
+export function buildOplStart(
   contracts: GatewayContracts,
   options: StartSurfaceOptions,
 ) {
@@ -139,12 +139,12 @@ export function buildFrontDeskStart(
   };
 }
 
-export function buildFrontDeskDashboard(
+export function buildOplDashboard(
   contracts: GatewayContracts,
   options: DashboardOptions = {},
 ) {
   const endpoints = buildOplRuntimeEndpoints(options.basePath);
-  const runtimeModes = readFrontDeskRuntimeModes();
+  const runtimeModes = readOplRuntimeModes();
   const projects = buildProjectsOverview(contracts).projects;
   const workspace = buildWorkspaceStatus({ workspacePath: options.workspacePath }).workspace;
   const runtimeStatus = buildRuntimeStatus({
@@ -173,8 +173,8 @@ export function buildFrontDeskDashboard(
         desktop_default_entry_status: 'release_or_installed_app',
         interaction_mode: runtimeModes.interaction_mode,
         execution_mode: runtimeModes.execution_mode,
-        hosted_friendly_surface_status: 'landed',
-        web_bundle_status: 'landed',
+        acp_runtime_surface_status: 'landed',
+        aionui_adapter_status: 'landed',
         hosted_runtime_readiness: hostedRuntimeReadiness,
         entry_guide_surface: currentSurfaceRefs.entry_guide_surface,
         readiness_surface: currentSurfaceRefs.readiness_surface,
@@ -184,10 +184,9 @@ export function buildFrontDeskDashboard(
         domain_entry_parity: domainEntryParity,
         recommended_entry_surfaces_count: recommendedEntrySurfaces.length,
         recommended_entry_surfaces: recommendedEntrySurfaces,
-        next_major_target: 'opl_hosted_runtime_hardening',
-        hosted_friendly_endpoints: endpoints,
+        next_major_target: 'opl_acp_runtime_hardening',
+        runtime_endpoints: endpoints,
         rollout_board_refs: [
-          'docs/references/opl-frontdesk-delivery-board.md',
           'docs/references/family-lightweight-direct-entry-rollout-board.md',
           'docs/references/mas-top-level-cutover-board.md',
         ],

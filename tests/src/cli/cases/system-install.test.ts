@@ -121,7 +121,7 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
     assert.equal(output.install.companion_skill_sync.surface_id, 'opl_companion_skill_sync');
     assert.equal(output.install.companion_skill_sync.mode, 'managed');
     assert.equal(output.install.companion_skill_sync.summary.total >= 6, true);
-    assert.equal(output.install.system_initialize.surface_id, 'opl_frontdesk_initialize');
+    assert.equal(output.install.system_initialize.surface_id, 'opl_system_initialize');
     assert.equal(output.install.system_initialize.recommended_skills.surface_id, 'opl_recommended_skill_bundle');
     assert.equal(output.install.system_initialize.gui_shell.shell_id, 'opl_aion_shell');
     assert.equal(
