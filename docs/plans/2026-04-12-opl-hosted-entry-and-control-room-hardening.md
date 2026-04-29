@@ -15,7 +15,7 @@
 **Files:**
 - Modify: `src/cli.ts`
 - Modify: `src/frontdesk-service.ts`
-- Modify: `src/management.ts`
+- Historical target: `src/management.ts`（已退役；当前实现使用 `src/management/*` leaf surfaces）
 - Modify: `src/web-frontdesk.ts`
 - Test: `tests/src/cli.test.ts`
 - Test: `tests/built/cli.test.mjs`
@@ -23,7 +23,7 @@
 - [ ] 为 hosted-pilot bundle、base-path 路由与 web/service 命令写失败测试
 - [ ] 跑 `NODE_NO_WARNINGS=1 node --experimental-strip-types --test tests/src/cli.test.ts`
 - [ ] 在 `src/web-frontdesk.ts` 增加 `basePath` 支持与 hosted-pilot bundle API surface
-- [ ] 在 `src/management.ts` 增加 hosted-pilot bundle 机器输出
+- [x] 历史计划曾在 `src/management.ts` 增加 hosted-pilot bundle 机器输出；当前对应能力由 `src/management/*` leaf surfaces 承载。
 - [ ] 在 `src/cli.ts` 与 `src/frontdesk-service.ts` 接出对应命令与 service config
 - [ ] 复跑源码测试并同步 built CLI 覆盖
 
@@ -33,7 +33,7 @@
 - Create: `src/frontdesk-state.ts`
 - Create: `src/workspace-registry.ts`
 - Modify: `src/cli.ts`
-- Modify: `src/management.ts`
+- Historical target: `src/management.ts`（已退役；当前实现使用 `src/management/*` leaf surfaces）
 - Modify: `src/web-frontdesk.ts`
 - Test: `tests/src/cli.test.ts`
 - Test: `tests/built/cli.test.mjs`
@@ -49,7 +49,7 @@
 **Files:**
 - Create: `src/session-ledger.ts`
 - Modify: `src/product-entry.ts`
-- Modify: `src/management.ts`
+- Historical target: `src/management.ts`（已退役；当前实现使用 `src/management/*` leaf surfaces）
 - Modify: `src/web-frontdesk.ts`
 - Test: `tests/src/cli.test.ts`
 - Test: `tests/built/cli.test.mjs`
@@ -66,7 +66,7 @@
 **Files:**
 - Modify: `src/product-entry.ts`
 - Modify: `src/cli.ts`
-- Modify: `src/management.ts`
+- Historical target: `src/management.ts`（已退役；当前实现使用 `src/management/*` leaf surfaces）
 - Modify: `src/web-frontdesk.ts`
 - Test: `tests/src/cli.test.ts`
 - Test: `tests/built/cli.test.mjs`
