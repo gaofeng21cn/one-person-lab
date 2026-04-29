@@ -27,7 +27,7 @@ import {
   normalizeCheckpointSummary,
   normalizeSurfaceRef,
   normalizeTaskSurfaceDescriptor,
-} from './surface-normalizers.ts';
+} from './surface-utils.ts';
 import type {
   NormalizedArtifactInventory,
   NormalizedDomainManifest,

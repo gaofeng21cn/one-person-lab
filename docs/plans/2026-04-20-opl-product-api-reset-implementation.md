@@ -69,7 +69,7 @@
 - Modify: `src/web-frontdesk.ts`
 - Modify: `src/frontdesk-paths.ts`
 - Modify: `src/frontdesk-installation.ts`
-- Modify: `src/management.ts`
+- Historical target: `src/management.ts`（已退役；当前实现使用 `src/management/*` leaf surfaces）
 - Modify: `src/frontdesk-mcp-stdio.ts`
 - Modify: `tests/src/cli.test.ts`
 
@@ -105,7 +105,7 @@
   - `src/session-ledger.ts`
   - `src/status-narration.ts`
 
-- [ ] 把当前 `frontdesk-installation.ts` 与 `management.ts` 中混杂的公开职责拆开。
+- [x] 把历史 `frontdesk-installation.ts` 与 `management.ts` 聚合入口中混杂的公开职责拆开；当前实现使用 `system-installation/*` 与 `management/*` leaf surfaces。
 - [ ] 明确 `OPL` 内部真正保留的 shared runtime 组成：
   - engine adapter
   - agent registry

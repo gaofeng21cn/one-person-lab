@@ -17,7 +17,7 @@ import {
 import {
   normalizeSurfaceRef,
   normalizeTaskSurfaceDescriptor,
-} from './surface-normalizers.ts';
+} from './surface-utils.ts';
 
 function normalizeArtifactFileDescriptor(
   value: unknown,

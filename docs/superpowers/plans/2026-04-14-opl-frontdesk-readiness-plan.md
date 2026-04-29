@@ -64,7 +64,7 @@ Expected: FAIL because `frontdesk-readiness` command and API do not exist yet.
 
 **Files:**
 - Modify: `src/frontdesk-paths.ts`
-- Modify: `src/management.ts`
+- Historical target: `src/management.ts`（已退役；当前实现使用 `src/management/*` leaf surfaces）
 - Modify: `src/frontdesk-service.ts`
 - Modify: `src/cli.ts`
 - Modify: `src/web-frontdesk.ts`
@@ -75,7 +75,7 @@ Expected: FAIL because `frontdesk-readiness` command and API do not exist yet.
 // src/frontdesk-paths.ts
 frontdesk_readiness: `${apiBase}/frontdesk-readiness`,
 
-// src/management.ts
+// Historical: src/management.ts. Current implementation uses src/management/* leaf surfaces.
 export async function buildFrontDeskReadiness(contracts: GatewayContracts, options: DashboardOptions = {}) {
   const endpoints = buildFrontDeskEndpoints(options.basePath);
   const service = (await getFrontDeskServiceStatus(contracts)).frontdesk_service;
@@ -146,6 +146,6 @@ Expected: no output
 - [ ] **Step 3: Commit the slice**
 
 ```bash
-git add src/frontdesk-paths.ts src/management.ts src/frontdesk-service.ts src/cli.ts src/web-frontdesk.ts tests/src/cli.test.ts tests/built/cli.test.mjs docs/status.md docs/README.md docs/README.zh-CN.md docs/references/opl-frontdesk-delivery-board.md contracts/opl-gateway/README.md contracts/opl-gateway/README.zh-CN.md docs/superpowers/plans/2026-04-14-opl-frontdesk-readiness-plan.md
+git add src/frontdesk-paths.ts src/management/* src/frontdesk-service.ts src/cli.ts src/web-frontdesk.ts tests/src/cli.test.ts tests/built/cli.test.mjs docs/status.md docs/README.md docs/README.zh-CN.md docs/references/opl-frontdesk-delivery-board.md contracts/opl-gateway/README.md contracts/opl-gateway/README.zh-CN.md docs/superpowers/plans/2026-04-14-opl-frontdesk-readiness-plan.md
 git commit -m "Add frontdesk readiness surface for operator triage"
 ```
