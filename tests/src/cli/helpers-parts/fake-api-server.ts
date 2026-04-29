@@ -87,7 +87,7 @@ export async function startFakeOplApiServer() {
       response.end(JSON.stringify({
         progress: {
           surface_id: 'opl_progress',
-          session_id: taskId ? 'sess-frontdesk-001' : 'sess-progress',
+          session_id: taskId ? 'sess-frontdoor-001' : 'sess-progress',
           workspace_path: url.searchParams.get('workspace_path'),
           project_state: 'active_study',
           current_project: {
@@ -150,7 +150,7 @@ export async function startFakeOplApiServer() {
           task_cards: {
             running: [
               {
-                task_id: 'task-frontdesk-001',
+                task_id: 'task-frontdoor-001',
                 title: '刷新投稿包',
                 status: 'running',
               },
@@ -186,7 +186,7 @@ export async function startFakeOplApiServer() {
                   stage: 'writing',
                   summary: '正在补图和整理投稿包',
                   recent_output: '主图更新完成，正在刷新审计目录',
-                  session_id: 'sess-frontdesk-001',
+                  session_id: 'sess-frontdoor-001',
                 },
               }
             : {}),
@@ -209,18 +209,18 @@ export async function startFakeOplApiServer() {
           },
           items: [
             {
-              session_id: 'sess-frontdesk-001',
+              session_id: 'sess-frontdoor-001',
               source: 'opl-product-entry',
               preview: 'Resume 004 paper progression',
               last_active: '1m ago',
             },
           ],
-          raw_output: 'sess-frontdesk-001 opl-product-entry Resume 004 paper progression',
+          raw_output: 'sess-frontdoor-001 opl-product-entry Resume 004 paper progression',
           ledger: {
             surface_id: 'opl_managed_session_ledger',
             sessions: [
               {
-                session_id: 'sess-frontdesk-001',
+                session_id: 'sess-frontdoor-001',
                 resource_totals: {
                   latest_sample_status: 'captured',
                 },
@@ -257,7 +257,7 @@ export async function startFakeOplApiServer() {
           surface_id: 'opl_session_resume',
           mode: 'resume',
           resume: {
-            session_id: String(body?.session_id ?? 'sess-frontdesk-001'),
+            session_id: String(body?.session_id ?? 'sess-frontdoor-001'),
             output: 'RUNTIME RESUME OUTPUT',
           },
         },
@@ -371,7 +371,7 @@ export async function startFakeOplApiServer() {
                 goal: String(body?.goal ?? ''),
               },
               task: {
-                task_id: 'task-frontdesk-001',
+                task_id: 'task-frontdoor-001',
                 status: 'accepted',
                 summary: '请求已提交到后台执行队列',
                 session_id: null,

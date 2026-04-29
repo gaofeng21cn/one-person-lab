@@ -24,15 +24,15 @@ test('family manifest fixtures expose domain agent entry spec v1', () => {
   const redcubeSpec = (fixtures.redcube.domain_entry_contract as Record<string, unknown>).domain_agent_entry_spec as Record<string, unknown>;
 
   assert.equal(scienceSpec.agent_id, 'mas');
-  assert.equal(scienceSpec.entry_command, 'product-frontdesk');
+  assert.equal(scienceSpec.entry_command, 'product-frontdoor');
   assert.equal(scienceSpec.manifest_command, 'product-entry-manifest');
 
   assert.equal(grantEntrySpec.agent_id, 'mag');
-  assert.equal(grantEntrySpec.entry_command, 'product-frontdesk');
+  assert.equal(grantEntrySpec.entry_command, 'product-frontdoor');
   assert.equal(grantEntrySpec.manifest_command, 'product-entry-manifest');
 
   assert.equal(redcubeSpec.agent_id, 'rca');
-  assert.equal(redcubeSpec.entry_command, 'redcube product frontdesk');
+  assert.equal(redcubeSpec.entry_command, 'redcube product frontdoor');
   assert.equal(redcubeSpec.manifest_command, 'redcube product manifest');
 });
 
@@ -100,13 +100,13 @@ export function assertRedcubeActionGraph(actionGraph: Record<string, unknown>) {
   assert.deepEqual(
     (actionGraph.nodes as Array<{ node_id: string }>).map((node) => node.node_id),
     [
-      'step:open_frontdesk',
+      'step:open_frontdoor',
       'step:continue_current_loop',
       'step:opl_bridge_handoff',
       'step:inspect_current_progress',
     ],
   );
-  assert.deepEqual(actionGraph.entry_nodes, ['step:open_frontdesk']);
+  assert.deepEqual(actionGraph.entry_nodes, ['step:open_frontdoor']);
   assert.deepEqual(actionGraph.exit_nodes, ['step:inspect_current_progress']);
   assert.deepEqual(actionGraph.human_gates, [
     {
@@ -186,7 +186,7 @@ case "$1" in
   print)
     if [ -f "$STATE_DIR/loaded" ]; then
       cat <<'EOF'
-service = ai.opl.frontdesk
+service = ai.opl.frontdoor
 state = running
 EOF
       exit 0

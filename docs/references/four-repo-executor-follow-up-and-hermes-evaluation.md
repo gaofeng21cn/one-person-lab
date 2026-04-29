@@ -88,7 +88,7 @@
 当前 repo-tracked truth 已经同时包含：
 
 - upstream `Hermes-Agent` runtime-owner cutover
-- repo-verified `redcube product frontdesk`
+- repo-verified `redcube product frontdoor`
 - direct / federated / session product-entry surfaces
 - `family_orchestration` companion preview 与 `product_entry_quickstart / overview / readiness`
 - 默认 autonomous route 把完整 service-entry envelope 直接交给 `codex exec` agent loop，而不是 repo-local 小步 chat

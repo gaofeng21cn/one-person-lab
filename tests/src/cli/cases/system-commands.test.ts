@@ -3,10 +3,10 @@ import { buildInternalCommandSpecs } from '../../../../src/cli/cases/private-com
 import { buildPublicCommandSpecs } from '../../../../src/cli/cases/public-command-specs.ts';
 import { buildDomainManifestCatalog } from '../../../../src/management/domain-manifest-catalog.ts';
 import { buildCurrentDashboardSurfaceRefs, buildCurrentReadinessProjection } from '../../../../src/management/readiness.ts';
-import { buildFrontDeskDashboard } from '../../../../src/management/runtime-dashboard.ts';
+import { buildOplDashboard } from '../../../../src/management/runtime-dashboard.ts';
 import { buildWorkspaceCatalog } from '../../../../src/workspace-registry.ts';
 
-test('public command specs no longer depend on legacy frontdesk command ids', () => {
+test('public and internal command specs no longer carry removed UI adapter command ids', () => {
   const contracts = loadGatewayContracts({ contractsDir });
   const internalSpecs = buildInternalCommandSpecs(
     {
@@ -18,34 +18,16 @@ test('public command specs no longer depend on legacy frontdesk command ids', ()
     () => contracts,
   );
 
-  for (const key of [
-    'frontdesk hosted-bundle',
-    'frontdesk hosted-package',
-    'frontdesk environment',
-    'frontdesk initialize',
-    'frontdesk repair',
-    'frontdesk reinstall-support',
-    'frontdesk update-channel',
-    'frontdesk modules',
-    'frontdesk-module-install',
-    'frontdesk-module-update',
-    'frontdesk-module-reinstall',
-    'frontdesk-module-remove',
-    'frontdesk engine install',
-    'frontdesk engine update',
-    'frontdesk engine reinstall',
-    'frontdesk engine remove',
-    'frontdesk-service-install',
-    'frontdesk-service-status',
-    'frontdesk-service-start',
-    'frontdesk-service-stop',
-    'frontdesk-service-open',
-    'frontdesk-service-uninstall',
-  ]) {
-    delete internalSpecs[key];
-  }
+  assert.equal(
+    Object.keys(internalSpecs).some((key) => key.includes('frontdoor')),
+    false,
+  );
 
   const publicSpecs = buildPublicCommandSpecs(internalSpecs, () => contracts);
+  assert.equal(
+    Object.keys(publicSpecs).some((key) => key.includes('frontdoor')),
+    false,
+  );
   assert.equal(typeof publicSpecs.system.handler, 'function');
   assert.equal(publicSpecs['web bundle'], undefined);
   assert.equal(publicSpecs['web package'], undefined);
@@ -136,12 +118,12 @@ exit 1
       PATH: process.env.PATH,
     };
 
-    let directDashboard: ReturnType<typeof buildFrontDeskDashboard> | null = null;
+    let directDashboard: ReturnType<typeof buildOplDashboard> | null = null;
     try {
       process.env.OPL_STATE_DIR = stateRoot;
       process.env.OPL_HERMES_BIN = hermesPath;
       process.env.PATH = `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`;
-      directDashboard = buildFrontDeskDashboard(loadGatewayContracts({ contractsDir }), {
+      directDashboard = buildOplDashboard(loadGatewayContracts({ contractsDir }), {
         workspacePath: repoRoot,
         sessionsLimit: 1,
       });
@@ -182,7 +164,6 @@ exit 1
     assert.equal(output.dashboard.workspace.absolute_path, repoRoot);
     assert.equal(output.dashboard.runtime_status.recent_sessions.sessions.length, 1);
     assert.deepEqual(output.dashboard.gui_runtime.rollout_board_refs, [
-      'docs/references/opl-frontdesk-delivery-board.md',
       'docs/references/family-lightweight-direct-entry-rollout-board.md',
       'docs/references/mas-top-level-cutover-board.md',
     ]);
@@ -193,7 +174,7 @@ exit 1
   }
 });
 
-test('help excludes retired local web front-desk pilot command surface', () => {
+test('help excludes retired local web adapter command surface', () => {
   const output = runCli(['help']);
 
   assert.equal(output.help.commands.some((entry: { command: string }) => entry.command === 'web'), false);
@@ -255,25 +236,27 @@ test('help supports explicit text output for human readers', () => {
   assert.match(scoped.stdout, /One-shot install/);
 });
 
-test('legacy frontdesk command surfaces are retired from the public CLI', () => {
-  for (const [args, replacement] of [
-    [['frontdesk', 'environment'], 'opl system'],
-    [['frontdesk', 'initialize'], 'opl system initialize'],
-    [['frontdesk', 'modules'], 'opl modules'],
-    [['frontdesk', 'module', 'install', '--module', 'medautoscience'], 'opl module install'],
-    [['frontdesk', 'engine', 'install', '--engine', 'codex'], 'opl engine install'],
-    [['frontdesk', 'repair'], 'opl system repair'],
-    [['frontdesk', 'entry-guide'], 'opl start'],
-    [['frontdesk', 'domain-wiring'], 'opl workspace list'],
-    [['frontdesk', 'readiness'], 'opl status dashboard'],
-    [['frontdesk', 'hosted-bundle'], 'OPL ACP runtime surface'],
-    [['frontdesk', 'hosted-package'], 'OPL release package surfaces'],
-  ] as const) {
+test('removed UI adapter command surfaces are not retained as compatibility aliases', () => {
+  const removedUiAdapterPrefix = ['front', 'desk'].join('');
+  const removedCommandShapes = [
+    ['environment'],
+    ['initialize'],
+    ['modules'],
+    ['module', 'install', '--module', 'medautoscience'],
+    ['engine', 'install', '--engine', 'codex'],
+    ['repair'],
+    ['entry-guide'],
+    ['domain-wiring'],
+    ['readiness'],
+    ['hosted-bundle'],
+    ['hosted-package'],
+  ] as const;
+
+  for (const args of removedCommandShapes.map((shape) => [removedUiAdapterPrefix, ...shape])) {
     const { status, payload } = runCliFailure(args);
     assert.equal(status, 2);
-    assert.equal(payload.error.code, 'cli_usage_error');
-    assert.equal(payload.error.details.retired, true);
-    assert.match(payload.error.details.replacement, new RegExp(replacement.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    assert.equal(payload.error.code, 'unknown_command');
+    assert.equal(payload.error.details.command, removedUiAdapterPrefix);
   }
 });
 

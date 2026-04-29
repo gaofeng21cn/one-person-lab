@@ -1,10 +1,10 @@
 # Historical OPL Hosted Entry And Control Room Hardening Plan
 
-> Historical unfinished plan. This document preserves one retired hosted-frontdesk hardening outline from `2026-04-12`. Current truth now lives in `README.md`, `docs/project.md`, `docs/status.md`, and `docs/architecture.md`.
+> Historical unfinished plan. This document preserves one retired hosted-frontdoor hardening outline from `2026-04-12`. Current truth now lives in `README.md`, `docs/project.md`, `docs/status.md`, and `docs/architecture.md`.
 
 **Historical goal:** 把 `OPL Front Desk` 从“本地 pilot + 只读控制台”推进到“hosted-pilot-ready + 可写工作区管理 + OPL-managed session ledger + 顶层到 domain 的可交接入口”。
 
-**Historical architecture:** 继续沿现有 `opl / opl web / frontdesk-service-*` 主线推进，不另起第二套前台。`OPL` 继续只持有 family-level front desk、workspace binding、session ledger 与 handoff contract；`Hermes` 继续是 external runtime substrate；domain direct entry 仍通过 handoff bundle 与可配置 binding 连接，不在本仓伪造 domain runtime。
+**Historical architecture:** 继续沿现有 `opl / opl web / frontdoor-service-*` 主线推进，不另起第二套前台。`OPL` 继续只持有 family-level front desk、workspace binding、session ledger 与 handoff contract；`Hermes` 继续是 external runtime substrate；domain direct entry 仍通过 handoff bundle 与可配置 binding 连接，不在本仓伪造 domain runtime。
 
 **Historical tech stack:** TypeScript CLI, Node.js HTTP server, file-backed local state, Hermes CLI integration, node:test
 
@@ -14,27 +14,27 @@
 
 **Files:**
 - Modify: `src/cli.ts`
-- Modify: `src/frontdesk-service.ts`
+- Modify: `src/frontdoor-service.ts`
 - Historical target: `src/management.ts`（已退役；当前实现使用 `src/management/*` leaf surfaces）
-- Modify: `src/web-frontdesk.ts`
+- Modify: `src/web-frontdoor.ts`
 - Test: `tests/src/cli.test.ts`
 - Test: `tests/built/cli.test.mjs`
 
 - [ ] 为 hosted-pilot bundle、base-path 路由与 web/service 命令写失败测试
 - [ ] 跑 `NODE_NO_WARNINGS=1 node --experimental-strip-types --test tests/src/cli.test.ts`
-- [ ] 在 `src/web-frontdesk.ts` 增加 `basePath` 支持与 hosted-pilot bundle API surface
+- [ ] 在 `src/web-frontdoor.ts` 增加 `basePath` 支持与 hosted-pilot bundle API surface
 - [x] 历史计划曾在 `src/management.ts` 增加 hosted-pilot bundle 机器输出；当前对应能力由 `src/management/*` leaf surfaces 承载。
-- [ ] 在 `src/cli.ts` 与 `src/frontdesk-service.ts` 接出对应命令与 service config
+- [ ] 在 `src/cli.ts` 与 `src/frontdoor-service.ts` 接出对应命令与 service config
 - [ ] 复跑源码测试并同步 built CLI 覆盖
 
 ### Historical Task 2: Workspace Registry And Project Write Ops
 
 **Files:**
-- Create: `src/frontdesk-state.ts`
+- Create: `src/frontdoor-state.ts`
 - Create: `src/workspace-registry.ts`
 - Modify: `src/cli.ts`
 - Historical target: `src/management.ts`（已退役；当前实现使用 `src/management/*` leaf surfaces）
-- Modify: `src/web-frontdesk.ts`
+- Modify: `src/web-frontdoor.ts`
 - Test: `tests/src/cli.test.ts`
 - Test: `tests/built/cli.test.mjs`
 
@@ -50,11 +50,11 @@
 - Create: `src/session-ledger.ts`
 - Modify: `src/product-entry.ts`
 - Historical target: `src/management.ts`（已退役；当前实现使用 `src/management/*` leaf surfaces）
-- Modify: `src/web-frontdesk.ts`
+- Modify: `src/web-frontdoor.ts`
 - Test: `tests/src/cli.test.ts`
 - Test: `tests/built/cli.test.mjs`
 
-- [ ] 为 ask/chat/frontdesk/resume 触发的 session ledger 与 runtime ledger 视图写失败测试
+- [ ] 为 ask/chat/frontdoor/resume 触发的 session ledger 与 runtime ledger 视图写失败测试
 - [ ] 跑 `NODE_NO_WARNINGS=1 node --experimental-strip-types --test tests/src/cli.test.ts`
 - [ ] 把 OPL-managed session event 记入 ledger，并附带 honest resource sample
 - [ ] 在 runtime-status / dashboard / web front desk 中暴露 ledger summary
@@ -67,7 +67,7 @@
 - Modify: `src/product-entry.ts`
 - Modify: `src/cli.ts`
 - Historical target: `src/management.ts`（已退役；当前实现使用 `src/management/*` leaf surfaces）
-- Modify: `src/web-frontdesk.ts`
+- Modify: `src/web-frontdoor.ts`
 - Test: `tests/src/cli.test.ts`
 - Test: `tests/built/cli.test.mjs`
 
@@ -90,7 +90,7 @@
 - Modify: `docs/decisions.md`
 - Modify: `docs/roadmap.md`
 - Modify: `docs/roadmap.zh-CN.md`
-- Modify: `docs/references/opl-frontdesk-delivery-board.md`
+- Modify: `docs/references/opl-frontdoor-delivery-board.md`
 - Modify: `docs/references/opl-product-entry-and-hermes-kernel-integration.md`
 - Modify: `docs/references/family-lightweight-direct-entry-rollout-board.md`
 - Test: `tests/src/opl-doc-surface-alignment.test.ts`

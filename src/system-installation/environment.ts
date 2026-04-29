@@ -1,19 +1,19 @@
-import { ensureFrontDeskStateDir, resolveFrontDeskStatePaths } from '../runtime-state-paths.ts';
+import { ensureOplStateDir, resolveOplStatePaths } from '../runtime-state-paths.ts';
 import { inspectHermesRuntime } from '../hermes.ts';
 import { readLocalCodexDefaultsIfAvailable } from '../local-codex-defaults.ts';
 import { buildNativeHelperHealthStatus } from '../native-helper-runtime.ts';
 import type { GatewayContracts } from '../types.ts';
 
 import { resolveCodexVersion } from './engine-helpers.ts';
-import { buildFrontDeskModules } from './modules.ts';
+import { buildOplModules } from './modules.ts';
 
-export async function buildFrontDeskEnvironment(contracts: GatewayContracts) {
-  const statePaths = ensureFrontDeskStateDir(resolveFrontDeskStatePaths());
+export async function buildOplEnvironment(contracts: GatewayContracts) {
+  const statePaths = ensureOplStateDir(resolveOplStatePaths());
   const codexDefaults = readLocalCodexDefaultsIfAvailable();
   const codexBinary = resolveCodexVersion();
   const hermes = inspectHermesRuntime();
   const nativeHelpers = buildNativeHelperHealthStatus();
-  const modulesPayload = buildFrontDeskModules().frontdesk_modules;
+  const modulesPayload = buildOplModules().modules;
   const moduleSummary = modulesPayload.summary;
   const codexIssues = [...codexBinary.issues];
   const codexHealthStatus =
@@ -37,8 +37,8 @@ export async function buildFrontDeskEnvironment(contracts: GatewayContracts) {
 
   return {
     version: 'g2',
-    frontdesk_environment: {
-      surface_id: 'opl_frontdesk_environment',
+    system_environment: {
+      surface_id: 'opl_system_environment',
       overall_status: overallStatus,
       core_engines: {
         codex: {

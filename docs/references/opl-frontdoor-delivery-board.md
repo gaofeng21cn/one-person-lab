@@ -1,6 +1,6 @@
 # OPL Front Desk Delivery Board
 
-> 历史收口说明：此板面记录的是 `frontdesk / overlay` 阶段的已落地 surfaces 与缺口。当前 GUI 主线已确定为基于 `AionUI` codebase 的 `opl-aion-shell`，本文不再作为当前 GUI 实施看板。
+> 历史收口说明：此板面记录的是 `frontdoor / overlay` 阶段的已落地 surfaces 与缺口。当前 GUI 主线已确定为基于 `AionUI` codebase 的 `opl-aion-shell`，本文不再作为当前 GUI 实施看板。
 
 状态锚点：`2026-04-19`
 
@@ -25,7 +25,7 @@
 
 当前产品规格锚点：
 
-- `docs/history/frontdesk-legacy/2026-04-19-opl-initialize-and-environment-manager-design.md`
+- `docs/history/frontdoor-legacy/2026-04-19-opl-initialize-and-environment-manager-design.md`
 
 ## 已落地能力
 
@@ -62,22 +62,22 @@
 - 多 workspace、多任务、多会话的管理入口已经在 `OPL` 顶层收口。
 - progress narration、task 状态和 files deliverables 已经有统一观察面。
 
-### F2. Frontdesk truth surfaces
+### F2. Frontdoor truth surfaces
 
 已完成：
 
-- `opl frontdesk manifest`
-- `opl frontdesk entry-guide`
-- `opl frontdesk readiness`
-- `opl frontdesk initialize`
-- `opl frontdesk domain-wiring`
-- `opl frontdesk hosted-bundle`
-- `opl frontdesk hosted-package`
-- `opl frontdesk environment`
-- `opl frontdesk engine install|update|reinstall|remove`
-- `opl frontdesk repair|reinstall-support|update-channel`
-- `opl frontdesk modules`
-- `opl frontdesk module install|update|reinstall|remove`
+- `opl frontdoor manifest`
+- `opl frontdoor entry-guide`
+- `opl frontdoor readiness`
+- `opl frontdoor initialize`
+- `opl frontdoor domain-wiring`
+- `opl frontdoor hosted-bundle`
+- `opl frontdoor hosted-package`
+- `opl frontdoor environment`
+- `opl frontdoor engine install|update|reinstall|remove`
+- `opl frontdoor repair|reinstall-support|update-channel`
+- `opl frontdoor modules`
+- `opl frontdoor module install|update|reinstall|remove`
 - `opl workspace root|root set|root doctor`
 
 当前含义：
@@ -90,7 +90,7 @@
 已清理：
 
 - repo-tracked desktop shell
-- `frontdesk bootstrap`
+- `frontdoor bootstrap`
 - fake GUI-shell / `OPL Atlas` 命名残留
 
 当前含义：
@@ -102,7 +102,7 @@
 
 已完成：
 
-- `opl frontdesk service install|status|start|stop|open|uninstall`
+- `opl frontdoor service install|status|start|stop|open|uninstall`
 - self-hostable hosted pilot package
 - base-path-aware hosted bundle
 
@@ -150,7 +150,7 @@
 
 方向：
 
-- 让 GUI 直接消费 `frontdesk initialize`、`frontdesk environment`、`frontdesk modules`、`workspace root` 与 `frontdesk system action`。
+- 让 GUI 直接消费 `frontdoor initialize`、`frontdoor environment`、`frontdoor modules`、`workspace root` 与 `frontdoor system action`。
 - 让模块安装、升级、重装和移除都从 settings 进入。
 - 让 workspace root、update channel、repair / reinstall-support 与 core engine actions 在同一设置面闭环。
 - `Initialize OPL` 与 settings 共用同一套环境真相，避免首启向导和长期设置长成两套口径。

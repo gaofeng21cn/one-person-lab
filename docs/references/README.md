@@ -95,12 +95,12 @@ If you need to understand what `OPL` is today, go back to:
 - `../../contracts/opl-gateway/README.md`
 - `../../contracts/opl-gateway/README.zh-CN.md`
 
-## 6. Retired Frontdesk-Era And Historical Migration References
+## 6. Retired Frontdoor-Era And Historical Migration References
 
 - `development-operating-model.md`
 - `runtime-alignment-taskboard.md`
-- `opl-frontdesk-delivery-board.md`
-- [Frontdesk legacy archive](../history/frontdesk-legacy/README.md)
+- `opl-frontdoor-delivery-board.md`
+- [Frontdoor legacy archive](../history/frontdoor-legacy/README.md)
 - [OMX historical archive](../history/omx/README.md)
 
 ## Usage Rules
@@ -110,4 +110,4 @@ If you need to understand what `OPL` is today, go back to:
 - `four-repo-doc-intake-template.md` is the reusable central intake form for documenting scope, affected repositories, verification, and cleanup across a cross-repo docs round.
 - New reference docs should be filed into the six buckets above.
 - Retired gateway/federation corpus stays here or in the paired compatibility surfaces and must not be treated as the current implementation basis.
-- Retired `frontdesk`-era material stays here for audit only and must not be treated as the current implementation basis.
+- Retired `frontdoor`-era material stays here for audit only and must not be treated as the current implementation basis.

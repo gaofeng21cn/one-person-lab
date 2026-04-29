@@ -95,12 +95,12 @@
 - `../../contracts/opl-gateway/README.md`
 - `../../contracts/opl-gateway/README.zh-CN.md`
 
-## 六、已退役 frontdesk 时代与历史迁移参考
+## 六、已退役 frontdoor 时代与历史迁移参考
 
 - `development-operating-model.md`
 - `runtime-alignment-taskboard.md`
-- `opl-frontdesk-delivery-board.md`
-- [Frontdesk 历史资料索引](../history/frontdesk-legacy/README.md)
+- `opl-frontdoor-delivery-board.md`
+- [Frontdoor 历史资料索引](../history/frontdoor-legacy/README.md)
 - [OMX 历史资料索引](../history/omx/README.zh-CN.md)
 
 ## 使用规则
@@ -110,4 +110,4 @@
 - `four-repo-doc-intake-template.md` 是可复用的中央协调表单，用来记录跨仓文档轮次的范围、受影响仓、验证结果与清理状态。
 - 新参考文档优先按上面的六类归档。
 - 已退役的 gateway / federation 语料只用于历史审计、兼容性检查和 schema 追溯，不能再作为当前实现依据。
-- 已退役的 `frontdesk` 时代材料只用于历史审计，不能再作为当前实现依据。
+- 已退役的 `frontdoor` 时代材料只用于历史审计，不能再作为当前实现依据。

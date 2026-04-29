@@ -53,7 +53,7 @@
 
 当前活跃公开模型写在 [项目概览](./project.md)、[当前状态](./status.md) 和 [架构](./architecture.md)。
 当前活跃交互模型是 runtime-first、skill-first。
-已退役的 `gateway / federation / routed-action` 语料以及 `frontdesk` 时代材料，都应放在活跃层之下理解。
+已退役的 `gateway / federation / routed-action` 语料以及 `frontdoor` 时代材料，都应放在活跃层之下理解。
 
 ## 第一层：默认公开主线
 
@@ -96,7 +96,7 @@
 - 领域对齐与增量收录记录
 - 基准与 rollout 看板
 - 已退役的 `gateway / federation / routed-action` 合同语料
-- 只为审计保留的 `frontdesk` 历史参考材料
+- 只为审计保留的 `frontdoor` 历史参考材料
 
 ## 第四层：历史规格与计划
 

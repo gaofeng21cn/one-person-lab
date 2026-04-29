@@ -22,7 +22,7 @@ test('product entry program companions normalize preflight and detailed readines
   const preflight = buildProductEntryPreflight({
     summary: 'Current preflight passed.',
     recommended_check_command: 'redcube workspace doctor --workspace-root /tmp/demo',
-    recommended_start_command: 'redcube product frontdesk --workspace-root /tmp/demo',
+    recommended_start_command: 'redcube product frontdoor --workspace-root /tmp/demo',
     checks: [
       buildProgramCheck({
         check_id: 'workspace_ready',
@@ -50,7 +50,7 @@ test('product entry program companions normalize preflight and detailed readines
   const blocked = buildProductEntryPreflight({
     summary: 'Current preflight is blocked.',
     recommended_check_command: 'redcube workspace doctor --workspace-root /tmp/demo',
-    recommended_start_command: 'redcube product frontdesk --workspace-root /tmp/demo',
+    recommended_start_command: 'redcube product frontdoor --workspace-root /tmp/demo',
     checks: [
       buildProgramCheck({
         check_id: 'workspace_ready',
@@ -73,8 +73,8 @@ test('product entry program companions normalize preflight and detailed readines
     fully_automatic: false,
     user_experience_level: 'agent_assisted_cli',
     summary: 'Current workflow is usable with operator guidance.',
-    recommended_start_surface: 'product_frontdesk',
-    recommended_start_command: 'redcube product frontdesk',
+    recommended_start_surface: 'product_frontdoor',
+    recommended_start_command: 'redcube product frontdoor',
     recommended_loop_surface: 'grant_user_loop',
     recommended_loop_command: 'redcube product invoke',
     workflow_coverage: [

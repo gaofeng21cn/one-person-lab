@@ -169,12 +169,12 @@ Python 侧新增：
 - `src/handoff-bundle.ts`
 - `src/management/*` leaf surfaces（历史计划曾指向已退役的 `src/management.ts` 聚合入口）
 - `src/product-entry.ts`
-- `src/web-frontdesk.ts`
+- `src/web-frontdoor.ts`
 
 目标：
 
 - 统一 normalize 新增的 `runtime_inventory / task_lifecycle / skill_catalog / automation` surface
-- 让 `domain-manifests / handoff-envelope / management / web frontdesk` 一起消费
+- 让 `domain-manifests / handoff-envelope / management / web frontdoor` 一起消费
 - 避免顶层继续拼 repo-local heuristic summary
 
 ### MAS

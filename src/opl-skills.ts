@@ -8,7 +8,7 @@ import {
   resolveDefaultFamilyWorkspaceRoot as resolveDefaultFamilyWorkspaceRootImpl,
   resolveFamilyWorkspaceRootFromRepoRoot as resolveFamilyWorkspaceRootFromRepoRootImpl,
 } from './family-workspace-root.ts';
-import { resolveFrontDeskStatePaths } from './runtime-state-paths.ts';
+import { resolveOplStatePaths } from './runtime-state-paths.ts';
 
 export const resolveDefaultFamilyWorkspaceRoot = resolveDefaultFamilyWorkspaceRootImpl;
 export const resolveFamilyWorkspaceRootFromRepoRoot = resolveFamilyWorkspaceRootFromRepoRootImpl;
@@ -118,7 +118,7 @@ function resolveManagedModulesRoot() {
     return path.resolve(explicitRoot);
   }
 
-  return path.join(resolveFrontDeskStatePaths().state_dir, 'modules');
+  return path.join(resolveOplStatePaths().state_dir, 'modules');
 }
 
 function normalizeOptionalString(value: string | undefined | null) {

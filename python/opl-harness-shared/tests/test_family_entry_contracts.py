@@ -107,7 +107,7 @@ def test_family_entry_contract_helpers_build_and_validate_domain_agent_entry_spe
         codex_entry_strategy="domain_agent_entry",
         artifact_conventions="paper_and_submission_package",
         progress_conventions="study_runtime_narration",
-        entry_command="product-frontdesk",
+        entry_command="product-frontdoor",
         manifest_command="product-entry-manifest",
     )
 
@@ -129,7 +129,7 @@ def test_family_entry_contract_helpers_build_and_validate_gateway_payloads() -> 
         command_surfaces_for_agent_consumption_only=True,
         shared_downstream_entry="MedAutoScienceDomainEntry",
         shared_handoff_envelope=["target_domain_id", "task_intent", "entry_mode"],
-        extra_payload={"recommended_route_surface": "product_frontdesk"},
+        extra_payload={"recommended_route_surface": "product_frontdoor"},
     )
 
     validated = validate_gateway_interaction_contract(
@@ -137,14 +137,14 @@ def test_family_entry_contract_helpers_build_and_validate_gateway_payloads() -> 
         "product_entry_manifest.gateway_interaction_contract",
     )
     assert validated["surface_kind"] == "gateway_interaction_contract"
-    assert validated["recommended_route_surface"] == "product_frontdesk"
+    assert validated["recommended_route_surface"] == "product_frontdoor"
 
 
 def test_family_entry_contract_helpers_expose_default_family_gateway_payloads() -> None:
     contract = build_family_gateway_interaction_contract(
         shared_downstream_entry="MedAutoScienceDomainEntry",
         extra_shared_handoff_envelope=["entry_session_contract"],
-        extra_payload={"recommended_route_surface": "product_frontdesk"},
+        extra_payload={"recommended_route_surface": "product_frontdoor"},
     )
 
     validated = validate_gateway_interaction_contract(
@@ -164,7 +164,7 @@ def test_family_entry_contract_helpers_expose_default_family_gateway_payloads() 
         "return_surface_contract",
         "entry_session_contract",
     ]
-    assert validated["recommended_route_surface"] == "product_frontdesk"
+    assert validated["recommended_route_surface"] == "product_frontdoor"
 
 
 def test_family_entry_contract_helpers_build_and_validate_shared_handoff_payloads() -> None:
@@ -269,7 +269,7 @@ def test_family_entry_contract_helpers_validate_nested_domain_agent_specs_inside
             "codex_entry_strategy": "domain_agent_entry",
             "artifact_conventions": "paper_and_submission_package",
             "progress_conventions": "study_runtime_narration",
-            "entry_command": "product-frontdesk",
+            "entry_command": "product-frontdoor",
             "manifest_command": "product-entry-manifest",
         },
     )

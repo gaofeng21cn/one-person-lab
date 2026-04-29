@@ -3,7 +3,7 @@ import type { Readable } from 'node:stream';
 
 import { GatewayContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeHermesFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakePsFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadGatewayContracts, once, os, path, readJsonFixture, readJsonLine, repoRoot, resolveRequestSurface, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateGatewayContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
 
-test.skip('web starts a local front-desk adapter and serves JSON root plus ask surfaces', async () => {
+test.skip('web starts a local front-door adapter and serves JSON root plus ask surfaces', async () => {
   const codexFixture = createCodexConfigFixture({
     model: 'gpt-5.4-web',
     reasoningEffort: 'xhigh',
@@ -110,11 +110,11 @@ exit 1
   const masSkillProjection = fixtures.medautoscience.skill_catalog.skills[0].domain_projection;
   masSkillProjection.plugin_name = 'med-autoscience';
   masSkillProjection.skill_semantics = 'domain_app';
-  masSkillProjection.entry_shell_key = 'product_frontdesk';
+  masSkillProjection.entry_shell_key = 'product_frontdoor';
   masSkillProjection.entry_command = fixtures.medautoscience.skill_catalog.skills[0].command;
   masSkillProjection.supporting_shell_keys = ['workspace_cockpit'];
   masSkillProjection.shell_commands = {
-    product_frontdesk: fixtures.medautoscience.skill_catalog.skills[0].command,
+    product_frontdoor: fixtures.medautoscience.skill_catalog.skills[0].command,
     workspace_cockpit: fixtures.medautoscience.operator_loop_surface.command,
   };
   const { fixtureRoot: familyContractsFixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
@@ -160,7 +160,7 @@ exit 1
       '--path',
       repoRoot,
       '--entry-command',
-      'redcube-ai frontdesk',
+      'redcube-ai frontdoor',
       '--manifest-command',
       buildManifestCommand(fixtures.redcube),
       '--entry-url',
@@ -312,12 +312,12 @@ exit 1
     assert.equal(masAgent?.requires_workspace, true);
     assert.deepEqual(masAgent?.locator_fields.required, ['cwd', 'profile_ref']);
     assert.equal(masAgent?.entry_spec.codex_entry_strategy, 'skill_activation_projection');
-    assert.equal(masAgent?.skill_id, 'medautoscience_product_frontdesk');
+    assert.equal(masAgent?.skill_id, 'medautoscience_product_frontdoor');
     assert.equal(masAgent?.plugin_name, 'med-autoscience');
-    assert.equal(masAgent?.entry_shell_key, 'product_frontdesk');
-    assert.match(masAgent?.entry_command ?? '', /product-frontdesk/);
+    assert.equal(masAgent?.entry_shell_key, 'product_frontdoor');
+    assert.match(masAgent?.entry_command ?? '', /product-frontdoor/);
     assert.deepEqual(masAgent?.supporting_shell_keys, ['workspace_cockpit']);
-    assert.match(masAgent?.shell_commands.product_frontdesk.command ?? '', /product-frontdesk/);
+    assert.match(masAgent?.shell_commands.product_frontdoor.command ?? '', /product-frontdoor/);
     assert.equal(masAgent?.runtime_continuity.session_locator_field, 'study_id');
 
     const workspacesResponse = await fetch(`${baseUrl}/api/opl/workspaces`);
@@ -399,7 +399,7 @@ exit 1
     assert.equal(engineActionPayload.engine_action.engine_id, 'codex');
     assert.equal(engineActionPayload.engine_action.action, 'install');
     assert.equal(engineActionPayload.engine_action.status, 'completed');
-    assert.equal('frontdesk_environment' in engineActionPayload.engine_action, false);
+    assert.equal('system_environment' in engineActionPayload.engine_action, false);
     assert.equal(engineActionPayload.engine_action.system.surface_id, 'opl_system');
     assert.equal(engineActionPayload.engine_action.system.core_engines.codex.installed, true);
     assert.equal(fs.existsSync(engineMarkerPath), true);
@@ -533,7 +533,7 @@ exit 1
     const askPayload = await askResponse.json();
     assert.equal(askPayload.session_create.request_mode, 'submitted');
     assert.equal(askPayload.session_create.payload.product_entry.entry_surface, 'opl_session_api');
-    assert.doesNotMatch(askPayload.session_create.payload.product_entry.entry_surface, /frontdesk/i);
+    assert.doesNotMatch(askPayload.session_create.payload.product_entry.entry_surface, /frontdoor/i);
     assert.equal(askPayload.session_create.payload.product_entry.mode, 'ask');
     assert.equal(askPayload.session_create.payload.product_entry.dry_run, false);
     assert.equal(askPayload.session_create.payload.product_entry.execution_mode, 'async_accept');
@@ -613,7 +613,7 @@ exit 1
   }
 });
 
-test.skip('web front-desk keeps a minimal machine surface while start api stays available for resolved domain manifests', async () => {
+test.skip('web front-door keeps a minimal machine surface while start api stays available for resolved domain manifests', async () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-web-start-state-'));
   const fixtures = loadFamilyManifestFixtures();
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
@@ -668,7 +668,7 @@ exit 1
       '--path',
       repoRoot,
       '--entry-command',
-      'redcube-ai frontdesk',
+      'redcube-ai frontdoor',
       '--manifest-command',
       buildManifestCommand(fixtures.redcube),
       '--entry-url',
@@ -719,9 +719,9 @@ exit 1
     const startPayload = await startResponse.json();
     assert.equal(startPayload.product_entry_start.surface_kind, 'opl_product_entry_start');
     assert.equal(startPayload.product_entry_start.project_id, 'redcube');
-    assert.equal(startPayload.product_entry_start.recommended_mode_id, 'open_frontdesk');
-    assert.equal(startPayload.product_entry_start.selected_mode_id, 'open_frontdesk');
-    assert.equal(startPayload.product_entry_start.selected_mode.command, 'redcube product frontdesk');
+    assert.equal(startPayload.product_entry_start.recommended_mode_id, 'open_frontdoor');
+    assert.equal(startPayload.product_entry_start.selected_mode_id, 'open_frontdoor');
+    assert.equal(startPayload.product_entry_start.selected_mode.command, 'redcube product frontdoor');
     assert.deepEqual(startPayload.product_entry_start.human_gate_ids, ['redcube_operator_review_gate']);
 
     const modeResponse = await fetch(`${baseUrl}/api/opl/start?project=redcube&mode=opl_bridge_handoff`);

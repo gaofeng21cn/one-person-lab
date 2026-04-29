@@ -36,7 +36,7 @@
 当前四仓共同的真相是：
 
 - 前两层已经不同程度存在；
-- 第三层现在已经在 `OPL` 顶层先落下一版本地入口壳：`opl` 作为默认 front desk、`opl <request...>` 作为 quick ask、`opl start / doctor / ask / chat / web` 作为顶层入口，而 `opl contract ... / domain ... / status ... / workspace ... / frontdesk ... / session ... / runtime repair-gateway` 作为显式分组命令面；
+- 第三层现在已经在 `OPL` 顶层先落下一版本地入口壳：`opl` 作为默认 front desk、`opl <request...>` 作为 quick ask、`opl start / doctor / ask / chat / web` 作为顶层入口，而 `opl contract ... / domain ... / status ... / workspace ... / frontdoor ... / session ... / runtime repair-gateway` 作为显式分组命令面；
 - 但全家族都还没有真正成熟。
 
 ## 3. 家族级目标结构

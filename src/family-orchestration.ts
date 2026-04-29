@@ -146,14 +146,14 @@ export interface BuildFamilyProductEntryOrchestrationInput {
   project_profile_companion?: JsonRecord | null;
 }
 
-export interface BuildFamilyFrontdeskProductEntryOrchestrationInput {
+export interface BuildFamilyFrontdoorProductEntryOrchestrationInput {
   graph_id: string;
   target_domain_id: string;
   graph_kind: string;
   graph_version: string;
-  frontdesk_node_id?: string | null;
-  frontdesk_title: string;
-  frontdesk_surface_kind: string;
+  frontdoor_node_id?: string | null;
+  frontdoor_title: string;
+  frontdoor_surface_kind: string;
   direct_node_id?: string | null;
   direct_title: string;
   direct_surface_kind: string;
@@ -620,10 +620,10 @@ export function buildFamilyProductEntryOrchestration(input: BuildFamilyProductEn
   });
 }
 
-export function buildFamilyFrontdeskProductEntryOrchestration(
-  input: BuildFamilyFrontdeskProductEntryOrchestrationInput,
+export function buildFamilyFrontdoorProductEntryOrchestration(
+  input: BuildFamilyFrontdoorProductEntryOrchestrationInput,
 ) {
-  const frontdeskNodeId = optionalString(input.frontdesk_node_id) ?? 'step:open_frontdesk';
+  const frontdoorNodeId = optionalString(input.frontdoor_node_id) ?? 'step:open_frontdoor';
   const directNodeId = optionalString(input.direct_node_id) ?? 'step:continue_current_loop';
   const federatedNodeId = optionalString(input.federated_node_id) ?? 'step:opl_bridge_handoff';
   const progressNodeId = optionalString(input.progress_node_id) ?? 'step:inspect_current_progress';
@@ -640,10 +640,10 @@ export function buildFamilyFrontdeskProductEntryOrchestration(
 
   const nodes: FamilyActionGraphNodeInput[] = [
     {
-      node_id: frontdeskNodeId,
+      node_id: frontdoorNodeId,
       node_kind: 'frontdoor',
-      title: input.frontdesk_title,
-      surface_kind: input.frontdesk_surface_kind,
+      title: input.frontdoor_title,
+      surface_kind: input.frontdoor_surface_kind,
     },
     {
       node_id: directNodeId,
@@ -655,7 +655,7 @@ export function buildFamilyFrontdeskProductEntryOrchestration(
   ];
   const edges: FamilyActionGraphEdgeInput[] = [
     {
-      from: frontdeskNodeId,
+      from: frontdoorNodeId,
       to: directNodeId,
       on: directTransitionEvent,
     },
@@ -671,7 +671,7 @@ export function buildFamilyFrontdeskProductEntryOrchestration(
       produces_checkpoint: true,
     });
     edges.push({
-      from: frontdeskNodeId,
+      from: frontdoorNodeId,
       to: federatedNodeId,
       on: federatedTransitionEvent,
     });
@@ -706,7 +706,7 @@ export function buildFamilyFrontdeskProductEntryOrchestration(
     graph_version: input.graph_version,
     nodes,
     edges,
-    entry_nodes: [frontdeskNodeId],
+    entry_nodes: [frontdoorNodeId],
     exit_nodes: [progressNodeId],
     human_gates: [
       {

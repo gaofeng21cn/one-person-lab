@@ -86,7 +86,7 @@
 - `schemas/v1/grant-direct-entry.schema.json`
 - `schemas/v1/grant-user-loop.schema.json`
 - `schemas/v1/product-entry-manifest.schema.json`
-- `schemas/v1/product-frontdesk.schema.json`
+- `schemas/v1/product-frontdoor.schema.json`
 - `docs/decisions.md`
 - `docs/status.md`
 
@@ -122,7 +122,7 @@
 - `packages/redcube-gateway/package.json`
 - `package-lock.json`
 - `packages/redcube-gateway/src/actions/get-product-entry-manifest.js`
-- focused manifest/frontdesk tests
+- focused manifest/frontdoor tests
 
 这条 lane 重点复用两层现成 truth：
 
@@ -158,12 +158,12 @@
 1. 更新 `@redcube/gateway` 里的 `opl-gateway-shared` 依赖 SHA。
 2. 把 `get-product-entry-manifest.js` 中手写的 `product_entry_quickstart / overview / readiness` 换成 shared helper。
 3. 保留 `family-orchestration-companion` 继续作为 RedCube visual-domain truth owner。
-4. 补跑 focused manifest/frontdesk tests。
+4. 补跑 focused manifest/frontdoor tests。
 
 ### 3. 完成后再进入下一轮 shared boundary modules
 
 1. 当前 tranche merge 完成后，继续按同样 pattern 扩到 `runtime inventory / task lifecycle / skill catalog / automation`。
-2. `OPL domain-manifests / dashboard / handoff-envelope / web frontdesk` 继续消费 domain 产物，不额外发明第二套 truth。
+2. `OPL domain-manifests / dashboard / handoff-envelope / web frontdoor` 继续消费 domain 产物，不额外发明第二套 truth。
 3. `MAS` future monorepo internal modules 继续留在 MAS 自己的 phase ladder，不跟这一层 family shared companion 混写。
 
 ## 并行开发与吸收顺序
@@ -217,7 +217,7 @@
 
 - `MAS` 当前有一整串 docs/tests 绑定旧 gate wording；这条 lane 必须把代码、文档、测试一起改，才会形成稳定 live truth。
 - `MAG` 与 `RCA` 已经在 live main 里吃 OPL git pin；新增 shared modules 后，依赖 pin 与 helper export 必须同步更新，避免仓间 helper version 漂移。
-- `OPL` 当前已经把 `domain-manifests / dashboard / handoff-envelope / web frontdesk` 建成统一 consumer；三仓若只接一半 companion 字段，顶层很快会长出 partial truth。
+- `OPL` 当前已经把 `domain-manifests / dashboard / handoff-envelope / web frontdoor` 建成统一 consumer；三仓若只接一半 companion 字段，顶层很快会长出 partial truth。
 - 历史 `shared-family-modules` lane 的价值现在主要已经吸收到 live main；这轮继续新开 main-based worktree，能减少和旧 lane 并行重写同一文件的冲突。
 
 ## 完成标准

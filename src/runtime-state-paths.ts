@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-export type FrontDeskStatePaths = {
+export type OplStatePaths = {
   home_dir: string;
   state_dir: string;
   workspace_registry_file: string;
@@ -19,7 +19,7 @@ function normalizeExplicitStateDir() {
   return process.env.OPL_STATE_DIR?.trim() || null;
 }
 
-export function resolveFrontDeskStatePaths(): FrontDeskStatePaths {
+export function resolveOplStatePaths(): OplStatePaths {
   const explicitStateDir = normalizeExplicitStateDir();
   const homeDir = process.env.HOME?.trim() || os.homedir();
   const stateDir = explicitStateDir
@@ -40,7 +40,7 @@ export function resolveFrontDeskStatePaths(): FrontDeskStatePaths {
   };
 }
 
-export function ensureFrontDeskStateDir(paths = resolveFrontDeskStatePaths()) {
+export function ensureOplStateDir(paths = resolveOplStatePaths()) {
   fs.mkdirSync(paths.state_dir, { recursive: true });
   return paths;
 }

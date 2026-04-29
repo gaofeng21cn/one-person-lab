@@ -4,9 +4,9 @@ from copy import deepcopy
 
 from opl_harness_shared.product_entry_companions import (
     build_operator_loop_action_catalog,
-    build_family_frontdesk_entry_surfaces,
-    build_family_product_frontdesk,
-    build_family_product_frontdesk_from_manifest,
+    build_family_frontdoor_entry_surfaces,
+    build_family_product_frontdoor,
+    build_family_product_frontdoor_from_manifest,
     build_family_product_entry_manifest,
     build_product_entry_shell_catalog,
     build_product_entry_shell_linked_surface,
@@ -15,9 +15,9 @@ from opl_harness_shared.product_entry_companions import (
     build_product_entry_quickstart,
     build_product_entry_readiness,
     build_product_entry_resume_surface,
-    build_product_frontdesk,
+    build_product_frontdoor,
     collect_family_human_gate_ids,
-    validate_family_product_frontdesk,
+    validate_family_product_frontdoor,
     validate_family_product_entry_manifest,
 )
 
@@ -26,11 +26,11 @@ from opl_harness_shared.product_entry_companions import (
 def test_product_entry_shell_scaffold_helpers_normalize_shell_surfaces_and_operator_loop_actions() -> None:
     product_entry_shell = build_product_entry_shell_catalog(
         {
-            "frontdesk": {
-                "command": "uv run python -m med_autogrant product-frontdesk",
-                "surface_kind": "product_frontdesk",
+            "frontdoor": {
+                "command": "uv run python -m med_autogrant product-frontdoor",
+                "surface_kind": "product_frontdoor",
                 "purpose": "Open the direct frontdoor.",
-                "command_template": "uv run python -m med_autogrant product-frontdesk --input <workspace>",
+                "command_template": "uv run python -m med_autogrant product-frontdoor --input <workspace>",
             },
             "session": {
                 "command": "uv run python -m med_autogrant grant-user-loop",
@@ -43,25 +43,25 @@ def test_product_entry_shell_scaffold_helpers_normalize_shell_surfaces_and_opera
         }
     )
 
-    assert product_entry_shell["frontdesk"]["command"] == "uv run python -m med_autogrant product-frontdesk"
-    assert product_entry_shell["frontdesk"]["purpose"] == "Open the direct frontdoor."
+    assert product_entry_shell["frontdoor"]["command"] == "uv run python -m med_autogrant product-frontdoor"
+    assert product_entry_shell["frontdoor"]["purpose"] == "Open the direct frontdoor."
     assert (
         product_entry_shell["session"]["command_template"]
         == "uv run python -m med_autogrant grant-user-loop --input <workspace> --task-intent <intent>"
     )
 
-    frontdesk_surface = build_product_entry_shell_linked_surface(
-        shell_key="frontdesk",
-        shell_surface=product_entry_shell["frontdesk"],
+    frontdoor_surface = build_product_entry_shell_linked_surface(
+        shell_key="frontdoor",
+        shell_surface=product_entry_shell["frontdoor"],
         summary="Open the direct frontdoor.",
-        extra_payload={"lane": "frontdesk"},
+        extra_payload={"lane": "frontdoor"},
     )
-    assert frontdesk_surface == {
-        "shell_key": "frontdesk",
-        "command": "uv run python -m med_autogrant product-frontdesk",
-        "surface_kind": "product_frontdesk",
+    assert frontdoor_surface == {
+        "shell_key": "frontdoor",
+        "command": "uv run python -m med_autogrant product-frontdoor",
+        "surface_kind": "product_frontdoor",
         "summary": "Open the direct frontdoor.",
-        "lane": "frontdesk",
+        "lane": "frontdoor",
     }
 
     operator_loop_actions = build_operator_loop_action_catalog(
@@ -109,14 +109,14 @@ def test_collect_family_human_gate_ids_and_build_helpers() -> None:
     assert resume_surface["session_locator_field"] == "workspace_id"
 
     quickstart = build_product_entry_quickstart(
-        summary="Open the frontdesk first.",
-        recommended_step_id="open_frontdesk",
+        summary="Open the frontdoor first.",
+        recommended_step_id="open_frontdoor",
         steps=[
             {
-                "step_id": "open_frontdesk",
-                "title": "Open frontdesk",
-                "command": "uv run python -m med_autogrant product-frontdesk --input /tmp/workspace.json --format json",
-                "surface_kind": "product_frontdesk",
+                "step_id": "open_frontdoor",
+                "title": "Open frontdoor",
+                "command": "uv run python -m med_autogrant product-frontdoor --input /tmp/workspace.json --format json",
+                "surface_kind": "product_frontdoor",
                 "summary": "Open the direct frontdoor.",
                 "requires": [],
             }
@@ -124,18 +124,18 @@ def test_collect_family_human_gate_ids_and_build_helpers() -> None:
         resume_contract=family_orchestration["resume_contract"],
         human_gate_ids=human_gate_ids,
     )
-    assert quickstart["recommended_step_id"] == "open_frontdesk"
+    assert quickstart["recommended_step_id"] == "open_frontdoor"
     assert quickstart["human_gate_ids"] == human_gate_ids
 
     start_without_resume_command = build_product_entry_start(
-        summary="Open the frontdesk first, then choose the durable continuation mode.",
-        recommended_mode_id="open_frontdesk",
+        summary="Open the frontdoor first, then choose the durable continuation mode.",
+        recommended_mode_id="open_frontdoor",
         modes=[
             {
-                "mode_id": "open_frontdesk",
-                "title": "Open frontdesk",
-                "command": "uv run python -m med_autogrant product-frontdesk --input /tmp/workspace.json --format json",
-                "surface_kind": "product_frontdesk",
+                "mode_id": "open_frontdoor",
+                "title": "Open frontdoor",
+                "command": "uv run python -m med_autogrant product-frontdoor --input /tmp/workspace.json --format json",
+                "surface_kind": "product_frontdoor",
                 "summary": "Open the direct frontdoor.",
                 "requires": [],
             },
@@ -157,8 +157,8 @@ def test_collect_family_human_gate_ids_and_build_helpers() -> None:
     assert "command" not in start_without_resume_command["resume_surface"]
 
     start_with_resume_command = build_product_entry_start(
-        summary="Open the frontdesk first, then resume the same loop.",
-        recommended_mode_id="open_frontdesk",
+        summary="Open the frontdoor first, then resume the same loop.",
+        recommended_mode_id="open_frontdoor",
         modes=start_without_resume_command["modes"],
         resume_surface=resume_surface,
         human_gate_ids=human_gate_ids,
@@ -170,7 +170,7 @@ def test_collect_family_human_gate_ids_and_build_helpers() -> None:
 
     overview = build_product_entry_overview(
         summary="Current grant frontdoor is usable.",
-        frontdesk_command="uv run python -m med_autogrant product-frontdesk --input /tmp/workspace.json --format json",
+        frontdoor_command="uv run python -m med_autogrant product-frontdoor --input /tmp/workspace.json --format json",
         recommended_command="uv run python -m med_autogrant grant-user-loop --input /tmp/workspace.json --task-intent <intent> --format json",
         operator_loop_command="uv run python -m med_autogrant grant-user-loop --input /tmp/workspace.json --task-intent <intent> --format json",
         progress_surface={
@@ -193,8 +193,8 @@ def test_collect_family_human_gate_ids_and_build_helpers() -> None:
         good_to_use_now=False,
         fully_automatic=False,
         summary="Usable for agent-assisted authoring.",
-        recommended_start_surface="product_frontdesk",
-        recommended_start_command="uv run python -m med_autogrant product-frontdesk --input /tmp/workspace.json --format json",
+        recommended_start_surface="product_frontdoor",
+        recommended_start_command="uv run python -m med_autogrant product-frontdoor --input /tmp/workspace.json --format json",
         recommended_loop_surface="grant_user_loop",
         recommended_loop_command="uv run python -m med_autogrant grant-user-loop --input /tmp/workspace.json --task-intent <intent> --format json",
         blocking_gaps=["Polished product UI is still pending."],
@@ -202,7 +202,7 @@ def test_collect_family_human_gate_ids_and_build_helpers() -> None:
     assert readiness["verdict"] == "agent_assisted_ready_not_product_grade"
     assert readiness["blocking_gaps"] == ["Polished product UI is still pending."]
 
-    frontdesk = build_product_frontdesk(
+    frontdoor = build_product_frontdoor(
         recommended_action="inspect_or_prepare_grant_loop",
         target_domain_id="med-autogrant",
         workspace_locator={
@@ -218,10 +218,10 @@ def test_collect_family_human_gate_ids_and_build_helpers() -> None:
             "next_focus": ["Keep the frontdoor stable."],
             "remaining_gaps_count": 1,
         },
-        frontdesk_surface={
-            "shell_key": "product_frontdesk",
-            "command": "uv run python -m med_autogrant product-frontdesk --input /tmp/workspace.json --format json",
-            "surface_kind": "product_frontdesk",
+        frontdoor_surface={
+            "shell_key": "product_frontdoor",
+            "command": "uv run python -m med_autogrant product-frontdoor --input /tmp/workspace.json --format json",
+            "surface_kind": "product_frontdoor",
             "summary": "Open the direct frontdoor.",
         },
         operator_loop_surface={
@@ -245,7 +245,7 @@ def test_collect_family_human_gate_ids_and_build_helpers() -> None:
             "summary": "Current preflight is green.",
             "ready_to_try_now": True,
             "recommended_check_command": "uv run python -m med_autogrant validate-workspace --input /tmp/workspace.json --format json",
-            "recommended_start_command": "uv run python -m med_autogrant product-frontdesk --input /tmp/workspace.json --format json",
+            "recommended_start_command": "uv run python -m med_autogrant product-frontdoor --input /tmp/workspace.json --format json",
             "blocking_check_ids": [],
             "checks": [],
         },
@@ -257,25 +257,25 @@ def test_collect_family_human_gate_ids_and_build_helpers() -> None:
             "target_domain_id": "med-autogrant",
         },
         entry_surfaces={
-            "frontdesk": {
-                "command": "uv run python -m med_autogrant product-frontdesk --input /tmp/workspace.json --format json",
+            "frontdoor": {
+                "command": "uv run python -m med_autogrant product-frontdoor --input /tmp/workspace.json --format json",
             }
         },
         summary={
-            "frontdesk_command": "uv run python -m med_autogrant product-frontdesk --input /tmp/workspace.json --format json",
+            "frontdoor_command": "uv run python -m med_autogrant product-frontdoor --input /tmp/workspace.json --format json",
             "recommended_command": "uv run python -m med_autogrant grant-user-loop --input /tmp/workspace.json --task-intent <intent> --format json",
             "operator_loop_command": "uv run python -m med_autogrant grant-user-loop --input /tmp/workspace.json --task-intent <intent> --format json",
         },
-        notes=["Shared frontdesk core is active."],
+        notes=["Shared frontdoor core is active."],
         extra_payload={
             "ok": True,
-            "command": "product-frontdesk",
+            "command": "product-frontdoor",
         },
     )
-    assert frontdesk["surface_kind"] == "product_frontdesk"
-    assert frontdesk["ok"] is True
-    assert frontdesk["command"] == "product-frontdesk"
-    assert frontdesk["product_entry_start"]["recommended_mode_id"] == "open_frontdesk"
+    assert frontdoor["surface_kind"] == "product_frontdoor"
+    assert frontdoor["ok"] is True
+    assert frontdoor["command"] == "product-frontdoor"
+    assert frontdoor["product_entry_start"]["recommended_mode_id"] == "open_frontdoor"
 
     manifest = build_family_product_entry_manifest(
         manifest_kind="med_auto_grant_product_entry_manifest",
@@ -297,10 +297,10 @@ def test_collect_family_human_gate_ids_and_build_helpers() -> None:
             "next_focus": ["Keep the frontdoor stable."],
             "remaining_gaps_count": 1,
         },
-        frontdesk_surface={
-            "shell_key": "product_frontdesk",
-            "command": "uv run python -m med_autogrant product-frontdesk --input /tmp/workspace.json --format json",
-            "surface_kind": "product_frontdesk",
+        frontdoor_surface={
+            "shell_key": "product_frontdoor",
+            "command": "uv run python -m med_autogrant product-frontdoor --input /tmp/workspace.json --format json",
+            "surface_kind": "product_frontdoor",
             "summary": "Open the direct frontdoor.",
         },
         operator_loop_surface={
@@ -320,8 +320,8 @@ def test_collect_family_human_gate_ids_and_build_helpers() -> None:
         recommended_shell="grant_user_loop",
         recommended_command="uv run python -m med_autogrant grant-user-loop --input /tmp/workspace.json --task-intent <intent> --format json",
         product_entry_shell={
-            "frontdesk": {
-                "command": "uv run python -m med_autogrant product-frontdesk --input /tmp/workspace.json --format json",
+            "frontdoor": {
+                "command": "uv run python -m med_autogrant product-frontdoor --input /tmp/workspace.json --format json",
             }
         },
         shared_handoff={
@@ -337,7 +337,7 @@ def test_collect_family_human_gate_ids_and_build_helpers() -> None:
             "summary": "Current preflight is green.",
             "ready_to_try_now": True,
             "recommended_check_command": "uv run python -m med_autogrant validate-workspace --input /tmp/workspace.json --format json",
-            "recommended_start_command": "uv run python -m med_autogrant product-frontdesk --input /tmp/workspace.json --format json",
+            "recommended_start_command": "uv run python -m med_autogrant product-frontdoor --input /tmp/workspace.json --format json",
             "blocking_check_ids": [],
             "checks": [],
         },
@@ -377,22 +377,22 @@ def test_collect_family_human_gate_ids_and_build_helpers() -> None:
     assert manifest["surface_kind"] == "product_entry_manifest"
     assert manifest["manifest_version"] == 2
     assert manifest["current_truth"]["product_entry_contract"] == "contracts/runtime-program/current-program.json"
-    assert manifest["product_entry_start"]["recommended_mode_id"] == "open_frontdesk"
+    assert manifest["product_entry_start"]["recommended_mode_id"] == "open_frontdoor"
 
-    frontdesk_from_manifest = build_family_product_frontdesk_from_manifest(
+    frontdoor_from_manifest = build_family_product_frontdoor_from_manifest(
         product_entry_manifest=manifest,
-        shell_aliases={"frontdesk": "frontdesk"},
+        shell_aliases={"frontdoor": "frontdoor"},
         recommended_action="inspect_or_prepare_grant_loop",
-        notes=["Shared frontdesk core is active."],
-        schema_ref="contracts/schemas/v1/product-frontdesk.schema.json",
+        notes=["Shared frontdoor core is active."],
+        schema_ref="contracts/schemas/v1/product-frontdoor.schema.json",
         extra_payload={"ok": True},
     )
-    assert frontdesk_from_manifest["surface_kind"] == "product_frontdesk"
-    assert frontdesk_from_manifest["schema_ref"] == "contracts/schemas/v1/product-frontdesk.schema.json"
-    assert frontdesk_from_manifest["entry_surfaces"]["frontdesk"]["command"] == (
-        "uv run python -m med_autogrant product-frontdesk --input /tmp/workspace.json --format json"
+    assert frontdoor_from_manifest["surface_kind"] == "product_frontdoor"
+    assert frontdoor_from_manifest["schema_ref"] == "contracts/schemas/v1/product-frontdoor.schema.json"
+    assert frontdoor_from_manifest["entry_surfaces"]["frontdoor"]["command"] == (
+        "uv run python -m med_autogrant product-frontdoor --input /tmp/workspace.json --format json"
     )
-    assert frontdesk_from_manifest["ok"] is True
+    assert frontdoor_from_manifest["ok"] is True
 
     try:
         build_family_product_entry_manifest(
@@ -407,8 +407,8 @@ def test_collect_family_human_gate_ids_and_build_helpers() -> None:
                 "workspace_root": "/tmp/workspace.json",
             },
             product_entry_shell={
-                "frontdesk": {
-                    "command": "uv run python -m med_autogrant product-frontdesk --input /tmp/workspace.json --format json",
+                "frontdoor": {
+                    "command": "uv run python -m med_autogrant product-frontdoor --input /tmp/workspace.json --format json",
                 }
             },
             shared_handoff={
@@ -427,7 +427,7 @@ def test_collect_family_human_gate_ids_and_build_helpers() -> None:
         raise AssertionError("expected build_family_product_entry_manifest to reject overriding core fields")
 
 
-def test_build_family_product_frontdesk_projects_manifest_core() -> None:
+def test_build_family_product_frontdoor_projects_manifest_core() -> None:
     family_orchestration = {
         "human_gates": [{"gate_id": "alpha_gate", "title": "Alpha gate"}],
         "resume_contract": {
@@ -437,14 +437,14 @@ def test_build_family_product_frontdesk_projects_manifest_core() -> None:
         },
     }
     start = build_product_entry_start(
-        summary="Open the frontdesk first.",
-        recommended_mode_id="open_frontdesk",
+        summary="Open the frontdoor first.",
+        recommended_mode_id="open_frontdoor",
         modes=[
             {
-                "mode_id": "open_frontdesk",
-                "title": "Open frontdesk",
-                "command": "uv run python -m med_autogrant product-frontdesk --input /tmp/workspace.json --format json",
-                "surface_kind": "product_frontdesk",
+                "mode_id": "open_frontdoor",
+                "title": "Open frontdoor",
+                "command": "uv run python -m med_autogrant product-frontdoor --input /tmp/workspace.json --format json",
+                "surface_kind": "product_frontdoor",
                 "summary": "Open the direct frontdoor.",
                 "requires": [],
             }
@@ -453,14 +453,14 @@ def test_build_family_product_frontdesk_projects_manifest_core() -> None:
         human_gate_ids=["alpha_gate"],
     )
     quickstart = build_product_entry_quickstart(
-        summary="Open the frontdesk first.",
-        recommended_step_id="open_frontdesk",
+        summary="Open the frontdoor first.",
+        recommended_step_id="open_frontdoor",
         steps=[
             {
-                "step_id": "open_frontdesk",
-                "title": "Open frontdesk",
-                "command": "uv run python -m med_autogrant product-frontdesk --input /tmp/workspace.json --format json",
-                "surface_kind": "product_frontdesk",
+                "step_id": "open_frontdoor",
+                "title": "Open frontdoor",
+                "command": "uv run python -m med_autogrant product-frontdoor --input /tmp/workspace.json --format json",
+                "surface_kind": "product_frontdoor",
                 "summary": "Open the direct frontdoor.",
                 "requires": [],
             }
@@ -470,7 +470,7 @@ def test_build_family_product_frontdesk_projects_manifest_core() -> None:
     )
     overview = build_product_entry_overview(
         summary="Current grant frontdoor is usable.",
-        frontdesk_command="uv run python -m med_autogrant product-frontdesk --input /tmp/workspace.json --format json",
+        frontdoor_command="uv run python -m med_autogrant product-frontdoor --input /tmp/workspace.json --format json",
         recommended_command="uv run python -m med_autogrant grant-user-loop --input /tmp/workspace.json --task-intent <intent> --format json",
         operator_loop_command="uv run python -m med_autogrant grant-user-loop --input /tmp/workspace.json --task-intent <intent> --format json",
         progress_surface={
@@ -482,7 +482,7 @@ def test_build_family_product_frontdesk_projects_manifest_core() -> None:
             "command": "uv run python -m med_autogrant grant-user-loop --input /tmp/workspace.json --task-intent <intent>",
             **family_orchestration["resume_contract"],
         },
-        recommended_step_id="open_frontdesk",
+        recommended_step_id="open_frontdoor",
         next_focus=["Keep the frontdoor stable."],
         remaining_gaps_count=1,
         human_gate_ids=["alpha_gate"],
@@ -493,8 +493,8 @@ def test_build_family_product_frontdesk_projects_manifest_core() -> None:
         good_to_use_now=False,
         fully_automatic=False,
         summary="Usable now with operator guidance.",
-        recommended_start_surface="product_frontdesk",
-        recommended_start_command="uv run python -m med_autogrant product-frontdesk --input /tmp/workspace.json --format json",
+        recommended_start_surface="product_frontdoor",
+        recommended_start_command="uv run python -m med_autogrant product-frontdoor --input /tmp/workspace.json --format json",
         recommended_loop_surface="grant_user_loop",
         recommended_loop_command="uv run python -m med_autogrant grant-user-loop --input /tmp/workspace.json --task-intent <intent> --format json",
         blocking_gaps=["Product-grade shell still pending."],
@@ -520,10 +520,10 @@ def test_build_family_product_frontdesk_projects_manifest_core() -> None:
             "next_focus": ["Keep the frontdoor stable."],
             "remaining_gaps_count": 1,
         },
-        frontdesk_surface={
-            "shell_key": "product_frontdesk",
-            "command": "uv run python -m med_autogrant product-frontdesk --input /tmp/workspace.json --format json",
-            "surface_kind": "product_frontdesk",
+        frontdoor_surface={
+            "shell_key": "product_frontdoor",
+            "command": "uv run python -m med_autogrant product-frontdoor --input /tmp/workspace.json --format json",
+            "surface_kind": "product_frontdoor",
             "summary": "Open the direct frontdoor.",
         },
         operator_loop_surface={
@@ -543,9 +543,9 @@ def test_build_family_product_frontdesk_projects_manifest_core() -> None:
         recommended_shell="grant_user_loop",
         recommended_command="uv run python -m med_autogrant grant-user-loop --input /tmp/workspace.json --task-intent <intent> --format json",
         product_entry_shell={
-            "frontdesk": {
-                "command": "uv run python -m med_autogrant product-frontdesk --input /tmp/workspace.json --format json",
-                "surface_kind": "product_frontdesk",
+            "frontdoor": {
+                "command": "uv run python -m med_autogrant product-frontdoor --input /tmp/workspace.json --format json",
+                "surface_kind": "product_frontdoor",
             },
             "grant_user_loop": {
                 "command": "uv run python -m med_autogrant grant-user-loop --input /tmp/workspace.json --task-intent <intent> --format json",
@@ -565,7 +565,7 @@ def test_build_family_product_frontdesk_projects_manifest_core() -> None:
             "summary": "Current preflight is green.",
             "ready_to_try_now": True,
             "recommended_check_command": "uv run python -m med_autogrant validate-workspace --input /tmp/workspace.json --format json",
-            "recommended_start_command": "uv run python -m med_autogrant product-frontdesk --input /tmp/workspace.json --format json",
+            "recommended_start_command": "uv run python -m med_autogrant product-frontdoor --input /tmp/workspace.json --format json",
             "blocking_check_ids": [],
             "checks": [],
         },
@@ -574,42 +574,42 @@ def test_build_family_product_frontdesk_projects_manifest_core() -> None:
         family_orchestration=family_orchestration,
     )
 
-    frontdesk = build_family_product_frontdesk(
+    frontdoor = build_family_product_frontdoor(
         recommended_action="inspect_or_prepare_grant_loop",
         product_entry_manifest=manifest,
         entry_surfaces={
-            "frontdesk": {
-                "command": "uv run python -m med_autogrant product-frontdesk --input /tmp/workspace.json --format json"
+            "frontdoor": {
+                "command": "uv run python -m med_autogrant product-frontdoor --input /tmp/workspace.json --format json"
             },
             "grant_user_loop": {
                 "command": "uv run python -m med_autogrant grant-user-loop --input /tmp/workspace.json --task-intent <intent> --format json"
             },
         },
-        notes=["Thin frontdesk adapter is active."],
-        schema_ref="contracts/schemas/v1/product-frontdesk.schema.json",
+        notes=["Thin frontdoor adapter is active."],
+        schema_ref="contracts/schemas/v1/product-frontdoor.schema.json",
         extra_payload={"ok": True},
     )
 
-    assert frontdesk["surface_kind"] == "product_frontdesk"
-    assert frontdesk["ok"] is True
-    assert frontdesk["target_domain_id"] == "med-autogrant"
-    assert frontdesk["schema_ref"] == "contracts/schemas/v1/product-frontdesk.schema.json"
+    assert frontdoor["surface_kind"] == "product_frontdoor"
+    assert frontdoor["ok"] is True
+    assert frontdoor["target_domain_id"] == "med-autogrant"
+    assert frontdoor["schema_ref"] == "contracts/schemas/v1/product-frontdoor.schema.json"
     assert (
-        frontdesk["summary"]["frontdesk_command"]
-        == "uv run python -m med_autogrant product-frontdesk --input /tmp/workspace.json --format json"
+        frontdoor["summary"]["frontdoor_command"]
+        == "uv run python -m med_autogrant product-frontdoor --input /tmp/workspace.json --format json"
     )
     assert (
-        frontdesk["summary"]["recommended_command"]
+        frontdoor["summary"]["recommended_command"]
         == "uv run python -m med_autogrant grant-user-loop --input /tmp/workspace.json --task-intent <intent> --format json"
     )
 
 
-def test_build_family_frontdesk_entry_surfaces_projects_shell_aliases_and_shared_handoff() -> None:
-    entry_surfaces = build_family_frontdesk_entry_surfaces(
+def test_build_family_frontdoor_entry_surfaces_projects_shell_aliases_and_shared_handoff() -> None:
+    entry_surfaces = build_family_frontdoor_entry_surfaces(
         product_entry_shell={
-            "product_frontdesk": {
-                "command": "uv run python -m med_autogrant product-frontdesk --input /tmp/workspace.json --format json",
-                "surface_kind": "product_frontdesk",
+            "product_frontdoor": {
+                "command": "uv run python -m med_autogrant product-frontdoor --input /tmp/workspace.json --format json",
+                "surface_kind": "product_frontdoor",
             },
             "grant_user_loop": {
                 "command": "uv run python -m med_autogrant grant-user-loop --input /tmp/workspace.json --task-intent <intent> --format json",
@@ -617,7 +617,7 @@ def test_build_family_frontdesk_entry_surfaces_projects_shell_aliases_and_shared
             },
         },
         shell_aliases={
-            "frontdesk": "product_frontdesk",
+            "frontdoor": "product_frontdoor",
             "grant_user_loop": "grant_user_loop",
         },
         shared_handoff={
@@ -633,8 +633,8 @@ def test_build_family_frontdesk_entry_surfaces_projects_shell_aliases_and_shared
     )
 
     assert (
-        entry_surfaces["frontdesk"]["command"]
-        == "uv run python -m med_autogrant product-frontdesk --input /tmp/workspace.json --format json"
+        entry_surfaces["frontdoor"]["command"]
+        == "uv run python -m med_autogrant product-frontdoor --input /tmp/workspace.json --format json"
     )
     assert entry_surfaces["grant_user_loop"]["surface_kind"] == "grant_user_loop"
     assert entry_surfaces["direct_entry_builder"]["entry_mode"] == "direct"

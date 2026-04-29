@@ -742,8 +742,8 @@ export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest
   const derivedRecommendedCommand = recommendedShell
     ? optionalString(productEntryShell[recommendedShell]?.command)
     : null;
-  const frontdeskSurface = normalizeShellSurface(manifest.frontdesk_surface, {
-    field: 'frontdesk_surface',
+  const frontdoorSurface = normalizeShellSurface(manifest.frontdoor_surface, {
+    field: 'frontdoor_surface',
     productEntryShell,
   });
   const operatorLoopSurface = normalizeShellSurface(manifest.operator_loop_surface, {
@@ -888,7 +888,7 @@ export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest
               : remainingGaps.length,
         }
       : null,
-    frontdesk_surface: frontdeskSurface,
+    frontdoor_surface: frontdoorSurface,
     operator_loop_surface: operatorLoopSurface,
     operator_loop_actions: operatorLoopActions,
     recommended_shell: recommendedShell,

@@ -2,11 +2,11 @@
 
 > Superseded by [`docs/plans/2026-04-20-opl-product-api-reset-implementation.md`](./2026-04-20-opl-product-api-reset-implementation.md) and the current product boundary in [`docs/specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md`](../specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md). Keep this file only for archive and migration review.
 
-> Historical completed plan. This document preserves one retired frontdesk-entry implementation slice from `2026-04-12`. Current truth now lives in `README.md`, `docs/project.md`, `docs/status.md`, and `docs/architecture.md`.
+> Historical completed plan. This document preserves one retired frontdoor-entry implementation slice from `2026-04-12`. Current truth now lives in `README.md`, `docs/project.md`, `docs/status.md`, and `docs/architecture.md`.
 
 **Historical goal:** 把 `opl` 升级成默认自然语言前台，同时补齐会话/运维入口、family entry 对齐文档与 MAS 顶层 cutover board。
 
-**Historical architecture:** 在不动 `Phase 1` gateway contract 的前提下，给 `OPL` 增加一个更完整的本地 front-desk surface。入口层继续复用 Hermes 作为 session/logs/gateway/profile substrate，`OPL` 只负责 family routing、handoff 和产品壳语义。
+**Historical architecture:** 在不动 `Phase 1` gateway contract 的前提下，给 `OPL` 增加一个更完整的本地 front-door surface。入口层继续复用 Hermes 作为 session/logs/gateway/profile substrate，`OPL` 只负责 family routing、handoff 和产品壳语义。
 
 **Historical tech stack:** TypeScript CLI, Node.js child_process, Hermes CLI integration, repo-tracked markdown docs, node:test
 
@@ -22,8 +22,8 @@
 
 - [ ] 为 `opl` 裸命令与 `opl <自然语言请求>` 写失败测试
 - [ ] 运行 `NODE_NO_WARNINGS=1 node --experimental-strip-types --test tests/src/cli.test.ts`
-- [ ] 在 `src/cli.ts` 中把“未知命令但看起来是自然语言请求”的路径收敛到 front-desk ask
-- [ ] 在 `src/product-entry.ts` 中新增默认 front-desk seed / interactive 入口逻辑
+- [ ] 在 `src/cli.ts` 中把“未知命令但看起来是自然语言请求”的路径收敛到 front-door ask
+- [ ] 在 `src/product-entry.ts` 中新增默认 front-door seed / interactive 入口逻辑
 - [ ] 再跑 `NODE_NO_WARNINGS=1 node --experimental-strip-types --test tests/src/cli.test.ts`
 - [ ] 补 built CLI 覆盖并跑 `npm run build && NODE_NO_WARNINGS=1 node --test tests/built/**/*.test.mjs`
 
@@ -59,7 +59,7 @@
 - Test: `tests/src/opl-public-truth-docs.test.ts`
 - Test: `tests/src/opl-doc-surface-alignment.test.ts`
 
-- [ ] 写失败测试，锁定新的 front-desk、family entry、domain handoff 口径
+- [ ] 写失败测试，锁定新的 front-door、family entry、domain handoff 口径
 - [ ] 跑 `NODE_NO_WARNINGS=1 node --experimental-strip-types --test tests/src/opl-public-truth-docs.test.ts tests/src/opl-doc-surface-alignment.test.ts`
 - [ ] 更新公开文档和 SVG，使其与新入口行为一致
 - [ ] 复跑上述测试

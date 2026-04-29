@@ -3,7 +3,7 @@ import type {
   FamilyOrchestrationGatePreview,
   FamilyOrchestrationReferenceRef,
   FamilyProductEntryManifestSurface,
-  FamilyProductFrontdeskSurface,
+  FamilyProductFrontdoorSurface,
   FamilyProductEntryValidationOptions,
   JsonRecord,
   ProductEntryOverviewSurface,
@@ -15,7 +15,7 @@ import type {
 import {
   cloneRecord,
   isRecord,
-  normalizeFrontdeskSummary,
+  normalizeFrontdoorSummary,
   normalizeProgressSurface,
   normalizeResumeContract,
   normalizeStartMode,
@@ -36,7 +36,7 @@ import {
 } from './internal.ts';
 import { validateSharedHandoff } from '../family-entry-contracts.ts';
 import { buildProductEntryResumeSurface } from './resume-surface.ts';
-import { validateFamilyFrontdeskEntrySurfaces } from './shell-surfaces.ts';
+import { validateFamilyFrontdoorEntrySurfaces } from './shell-surfaces.ts';
 
 function validateSurfaceKindRecord(
   value: unknown,
@@ -223,7 +223,7 @@ export function validateProductEntryOverviewSurface(
     ...payload,
     surface_kind: 'product_entry_overview',
     summary: requireString(payload.summary, `${field}.summary`),
-    frontdesk_command: requireString(payload.frontdesk_command, `${field}.frontdesk_command`),
+    frontdoor_command: requireString(payload.frontdoor_command, `${field}.frontdoor_command`),
     recommended_command: requireString(payload.recommended_command, `${field}.recommended_command`),
     operator_loop_command: requireString(payload.operator_loop_command, `${field}.operator_loop_command`),
     progress_surface: normalizeProgressSurface(payload.progress_surface, `${field}.progress_surface`),
@@ -324,7 +324,7 @@ export function validateFamilyProductEntryManifest(
     'managed_runtime_contract',
     'repo_mainline',
     'product_entry_status',
-    'frontdesk_surface',
+    'frontdoor_surface',
     'operator_loop_surface',
     'operator_loop_actions',
   ] as const) {
@@ -499,73 +499,73 @@ export function validateFamilyProductEntryManifest(
   return normalized;
 }
 
-export function validateFamilyProductFrontdesk(
+export function validateFamilyProductFrontdoor(
   value: unknown,
   options: FamilyProductEntryValidationOptions = {},
-): FamilyProductFrontdeskSurface {
-  const payload = requireRecord(value, 'product_frontdesk');
-  const normalized: FamilyProductFrontdeskSurface = {
+): FamilyProductFrontdoorSurface {
+  const payload = requireRecord(value, 'product_frontdoor');
+  const normalized: FamilyProductFrontdoorSurface = {
     ...payload,
-    surface_kind: 'product_frontdesk',
-    recommended_action: requireString(payload.recommended_action, 'product_frontdesk.recommended_action'),
-    target_domain_id: requireString(payload.target_domain_id, 'product_frontdesk.target_domain_id'),
-    workspace_locator: cloneRecord(payload.workspace_locator, 'product_frontdesk.workspace_locator'),
-    runtime: cloneRecord(payload.runtime, 'product_frontdesk.runtime'),
-    product_entry_status: cloneRecord(payload.product_entry_status, 'product_frontdesk.product_entry_status'),
-    frontdesk_surface: cloneRecord(payload.frontdesk_surface, 'product_frontdesk.frontdesk_surface'),
+    surface_kind: 'product_frontdoor',
+    recommended_action: requireString(payload.recommended_action, 'product_frontdoor.recommended_action'),
+    target_domain_id: requireString(payload.target_domain_id, 'product_frontdoor.target_domain_id'),
+    workspace_locator: cloneRecord(payload.workspace_locator, 'product_frontdoor.workspace_locator'),
+    runtime: cloneRecord(payload.runtime, 'product_frontdoor.runtime'),
+    product_entry_status: cloneRecord(payload.product_entry_status, 'product_frontdoor.product_entry_status'),
+    frontdoor_surface: cloneRecord(payload.frontdoor_surface, 'product_frontdoor.frontdoor_surface'),
     operator_loop_surface: cloneRecord(
       payload.operator_loop_surface,
-      'product_frontdesk.operator_loop_surface',
+      'product_frontdoor.operator_loop_surface',
     ),
     operator_loop_actions: cloneRecord(
       payload.operator_loop_actions,
-      'product_frontdesk.operator_loop_actions',
+      'product_frontdoor.operator_loop_actions',
     ),
     product_entry_start: validateProductEntryStartSurface(
       payload.product_entry_start,
-      'product_frontdesk.product_entry_start',
+      'product_frontdoor.product_entry_start',
     ),
     product_entry_overview: validateProductEntryOverviewSurface(
       payload.product_entry_overview,
-      'product_frontdesk.product_entry_overview',
+      'product_frontdoor.product_entry_overview',
     ),
     product_entry_preflight: validateProductEntryPreflightSurface(
       payload.product_entry_preflight,
-      'product_frontdesk.product_entry_preflight',
+      'product_frontdoor.product_entry_preflight',
     ),
     product_entry_readiness: validateProductEntryReadinessSurface(
       payload.product_entry_readiness,
-      'product_frontdesk.product_entry_readiness',
+      'product_frontdoor.product_entry_readiness',
     ),
     product_entry_quickstart: validateProductEntryQuickstartSurface(
       payload.product_entry_quickstart,
-      'product_frontdesk.product_entry_quickstart',
+      'product_frontdoor.product_entry_quickstart',
     ),
     family_orchestration: validateFamilyOrchestrationCompanion(
       payload.family_orchestration,
-      'product_frontdesk.family_orchestration',
+      'product_frontdoor.family_orchestration',
     ),
     product_entry_manifest: validateFamilyProductEntryManifest(payload.product_entry_manifest, options),
-    entry_surfaces: validateFamilyFrontdeskEntrySurfaces(
+    entry_surfaces: validateFamilyFrontdoorEntrySurfaces(
       payload.entry_surfaces,
-      'product_frontdesk.entry_surfaces',
+      'product_frontdoor.entry_surfaces',
     ),
-    summary: normalizeFrontdeskSummary(payload.summary, 'product_frontdesk.summary'),
-    notes: readStringList(payload.notes, 'product_frontdesk.notes'),
+    summary: normalizeFrontdoorSummary(payload.summary, 'product_frontdoor.summary'),
+    notes: readStringList(payload.notes, 'product_frontdoor.notes'),
   };
   if (payload.schema_ref !== undefined || options.requireContractBundle) {
-    normalized.schema_ref = requireString(payload.schema_ref, 'product_frontdesk.schema_ref');
+    normalized.schema_ref = requireString(payload.schema_ref, 'product_frontdoor.schema_ref');
   }
   if (payload.domain_entry_contract !== undefined || options.requireContractBundle) {
     normalized.domain_entry_contract = validateDomainEntryContractShape(
       payload.domain_entry_contract,
-      'product_frontdesk.domain_entry_contract',
+      'product_frontdoor.domain_entry_contract',
     );
   }
   if (payload.gateway_interaction_contract !== undefined || options.requireContractBundle) {
     normalized.gateway_interaction_contract = validateGatewayInteractionContractShape(
       payload.gateway_interaction_contract,
-      'product_frontdesk.gateway_interaction_contract',
+      'product_frontdoor.gateway_interaction_contract',
     );
   }
   return normalized;

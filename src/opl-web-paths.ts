@@ -1,17 +1,17 @@
 import {
-  buildFrontDeskEntryUrl,
+  buildOplEntryUrl,
   normalizeBasePath,
-  stripFrontDeskBasePath,
-} from './legacy-frontdesk-paths.ts';
+  stripOplBasePath,
+} from './opl-runtime-paths.ts';
 
 export function normalizeOplWebBasePath(basePath?: string) {
   return normalizeBasePath(basePath);
 }
 
 export function buildOplWebEntryUrl(baseUrl: string, basePath = '') {
-  return buildFrontDeskEntryUrl(baseUrl, basePath);
+  return buildOplEntryUrl(baseUrl, basePath);
 }
 
 export function stripOplWebBasePath(pathname: string, basePath = '') {
-  return stripFrontDeskBasePath(pathname, basePath);
+  return stripOplBasePath(pathname, basePath);
 }

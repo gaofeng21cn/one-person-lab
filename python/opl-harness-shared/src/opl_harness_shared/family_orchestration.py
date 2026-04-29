@@ -556,14 +556,14 @@ def build_family_product_entry_orchestration(
     )
 
 
-def build_family_frontdesk_product_entry_orchestration(
+def build_family_frontdoor_product_entry_orchestration(
     *,
     graph_id: str,
     target_domain_id: str,
     graph_kind: str,
     graph_version: str,
-    frontdesk_title: str,
-    frontdesk_surface_kind: str,
+    frontdoor_title: str,
+    frontdoor_surface_kind: str,
     direct_title: str,
     direct_surface_kind: str,
     progress_title: str,
@@ -582,7 +582,7 @@ def build_family_frontdesk_product_entry_orchestration(
     checkpoint_lineage_surface: Mapping[str, Any] | None = None,
     intake_evidence_companion: Mapping[str, Any] | None = None,
     project_profile_companion: Mapping[str, Any] | None = None,
-    frontdesk_node_id: str | None = None,
+    frontdoor_node_id: str | None = None,
     direct_node_id: str | None = None,
     federated_node_id: str | None = None,
     progress_node_id: str | None = None,
@@ -591,7 +591,7 @@ def build_family_frontdesk_product_entry_orchestration(
     direct_progress_event: str | None = None,
     federated_progress_event: str | None = None,
 ) -> dict[str, Any]:
-    resolved_frontdesk_node_id = _text(frontdesk_node_id) or "step:open_frontdesk"
+    resolved_frontdoor_node_id = _text(frontdoor_node_id) or "step:open_frontdoor"
     resolved_direct_node_id = _text(direct_node_id) or "step:continue_current_loop"
     resolved_federated_node_id = _text(federated_node_id) or "step:opl_bridge_handoff"
     resolved_progress_node_id = _text(progress_node_id) or "step:inspect_current_progress"
@@ -607,10 +607,10 @@ def build_family_frontdesk_product_entry_orchestration(
 
     nodes: list[dict[str, Any]] = [
         {
-            "node_id": resolved_frontdesk_node_id,
+            "node_id": resolved_frontdoor_node_id,
             "node_kind": "frontdoor",
-            "title": _require_string(frontdesk_title, "frontdesk_title"),
-            "surface_kind": _require_string(frontdesk_surface_kind, "frontdesk_surface_kind"),
+            "title": _require_string(frontdoor_title, "frontdoor_title"),
+            "surface_kind": _require_string(frontdoor_surface_kind, "frontdoor_surface_kind"),
         },
         {
             "node_id": resolved_direct_node_id,
@@ -622,7 +622,7 @@ def build_family_frontdesk_product_entry_orchestration(
     ]
     edges: list[dict[str, Any]] = [
         {
-            "from": resolved_frontdesk_node_id,
+            "from": resolved_frontdoor_node_id,
             "to": resolved_direct_node_id,
             "on": resolved_direct_transition_event,
         }
@@ -641,7 +641,7 @@ def build_family_frontdesk_product_entry_orchestration(
         )
         edges.append(
             {
-                "from": resolved_frontdesk_node_id,
+                "from": resolved_frontdoor_node_id,
                 "to": resolved_federated_node_id,
                 "on": resolved_federated_transition_event,
             }
@@ -690,7 +690,7 @@ def build_family_frontdesk_product_entry_orchestration(
         graph_version=graph_version,
         nodes=nodes,
         edges=edges,
-        entry_nodes=[resolved_frontdesk_node_id],
+        entry_nodes=[resolved_frontdoor_node_id],
         exit_nodes=[resolved_progress_node_id],
         human_gates=[
             {
