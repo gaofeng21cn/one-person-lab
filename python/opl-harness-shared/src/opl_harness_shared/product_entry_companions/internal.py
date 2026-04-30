@@ -189,6 +189,18 @@ def _normalize_frontdoor_summary(value: object, field: str) -> dict[str, str]:
     }
 
 
+def _normalize_frontdesk_summary(value: object, field: str) -> dict[str, str]:
+    payload = _require_mapping(value, field)
+    return {
+        "frontdesk_command": _require_string(payload.get("frontdesk_command"), f"{field}.frontdesk_command"),
+        "recommended_command": _require_string(payload.get("recommended_command"), f"{field}.recommended_command"),
+        "operator_loop_command": _require_string(
+            payload.get("operator_loop_command"),
+            f"{field}.operator_loop_command",
+        ),
+    }
+
+
 def _merge_extra_payload(base: dict[str, Any], extra_payload: object | None, *, surface_kind: str) -> dict[str, Any]:
     if extra_payload is None:
         return base
@@ -227,5 +239,4 @@ def _validate_domain_entry_contract_shape(value: object, field: str) -> dict[str
 
 def _validate_gateway_interaction_contract_shape(value: object, field: str) -> dict[str, Any]:
     return _validate_shared_gateway_interaction_contract(value, field)
-
 

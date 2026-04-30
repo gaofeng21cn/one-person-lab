@@ -4,7 +4,9 @@ from copy import deepcopy
 
 from opl_harness_shared.product_entry_companions import (
     build_operator_loop_action_catalog,
+    build_family_frontdesk_entry_surfaces,
     build_family_frontdoor_entry_surfaces,
+    build_family_product_frontdesk_from_manifest,
     build_family_product_frontdoor,
     build_family_product_frontdoor_from_manifest,
     build_family_product_entry_manifest,
@@ -17,6 +19,7 @@ from opl_harness_shared.product_entry_companions import (
     build_product_entry_resume_surface,
     build_product_frontdoor,
     collect_family_human_gate_ids,
+    validate_family_product_frontdesk,
     validate_family_product_frontdoor,
     validate_family_product_entry_manifest,
 )
@@ -641,3 +644,173 @@ def test_build_family_frontdoor_entry_surfaces_projects_shell_aliases_and_shared
     assert "opl_return_surface" not in entry_surfaces
 
 
+def test_family_product_frontdesk_compatibility_builds_domain_owned_payloads() -> None:
+    family_orchestration = {
+        "human_gates": [{"gate_id": "mag_route_gate_revision", "title": "Revision gate"}],
+        "resume_contract": {
+            "surface_kind": "grant_user_loop",
+            "session_locator_field": "workspace_id",
+        },
+    }
+    product_frontdesk_command = "uv run python -m med_autogrant product-frontdesk --input /tmp/workspace.json --format json"
+    grant_user_loop_command = (
+        "uv run python -m med_autogrant grant-user-loop --input /tmp/workspace.json --task-intent <intent> --format json"
+    )
+    product_entry_start = build_product_entry_start(
+        summary="Open the grant frontdesk first.",
+        recommended_mode_id="open_frontdesk",
+        modes=[
+            {
+                "mode_id": "open_frontdesk",
+                "title": "Open frontdesk",
+                "command": product_frontdesk_command,
+                "surface_kind": "product_frontdesk",
+                "summary": "Open the domain-owned grant frontdesk.",
+                "requires": [],
+            }
+        ],
+        resume_surface=family_orchestration["resume_contract"],
+        human_gate_ids=["mag_route_gate_revision"],
+    )
+    product_entry_quickstart = build_product_entry_quickstart(
+        summary="Open the grant frontdesk first.",
+        recommended_step_id="open_frontdesk",
+        steps=[
+            {
+                "step_id": "open_frontdesk",
+                "title": "Open frontdesk",
+                "command": product_frontdesk_command,
+                "surface_kind": "product_frontdesk",
+                "summary": "Open the domain-owned grant frontdesk.",
+                "requires": [],
+            }
+        ],
+        resume_contract=family_orchestration["resume_contract"],
+        human_gate_ids=["mag_route_gate_revision"],
+    )
+    product_entry_overview = build_product_entry_overview(
+        summary="Grant frontdesk is the current domain entry.",
+        frontdesk_command=product_frontdesk_command,
+        recommended_command=grant_user_loop_command,
+        operator_loop_command=grant_user_loop_command,
+        progress_surface={
+            "surface_kind": "grant_progress",
+            "command": "uv run python -m med_autogrant grant-progress --input /tmp/workspace.json --format json",
+        },
+        resume_surface={
+            **family_orchestration["resume_contract"],
+            "command": grant_user_loop_command,
+        },
+        recommended_step_id="open_frontdesk",
+        next_focus=["Keep grant review and submission readiness visible."],
+        remaining_gaps_count=1,
+        human_gate_ids=["mag_route_gate_revision"],
+    )
+    product_entry_readiness = build_product_entry_readiness(
+        verdict="agent_assisted_ready_not_product_grade",
+        usable_now=True,
+        good_to_use_now=False,
+        fully_automatic=False,
+        summary="Usable for grant authoring with operator supervision.",
+        recommended_start_surface="product_frontdesk",
+        recommended_start_command=product_frontdesk_command,
+        recommended_loop_surface="grant_user_loop",
+        recommended_loop_command=grant_user_loop_command,
+        blocking_gaps=["Hosted product UI is outside this helper contract."],
+    )
+    product_entry_manifest = build_family_product_entry_manifest(
+        manifest_kind="med_auto_grant_product_entry_manifest",
+        target_domain_id="med-autogrant",
+        formal_entry={
+            "default": "CLI",
+            "supported_protocols": ["MCP"],
+            "internal_surface": "MedAutoGrantDomainEntry",
+        },
+        workspace_locator={
+            "workspace_surface_kind": "nsfc_workspace",
+            "workspace_root": "/tmp/workspace.json",
+        },
+        runtime={
+            "runtime_owner": "domain_repo",
+        },
+        product_entry_status={
+            "summary": "Grant frontdesk is the current domain entry.",
+            "next_focus": ["Keep grant review and submission readiness visible."],
+            "remaining_gaps_count": 1,
+        },
+        frontdesk_surface={
+            "shell_key": "product_frontdesk",
+            "command": product_frontdesk_command,
+            "surface_kind": "product_frontdesk",
+            "summary": "Open the domain-owned grant frontdesk.",
+        },
+        operator_loop_surface={
+            "shell_key": "grant_user_loop",
+            "command": grant_user_loop_command,
+            "surface_kind": "grant_user_loop",
+            "summary": "Continue the grant authoring loop.",
+        },
+        operator_loop_actions={},
+        recommended_shell="grant_user_loop",
+        recommended_command=grant_user_loop_command,
+        product_entry_shell={
+            "product_frontdesk": {
+                "command": product_frontdesk_command,
+                "surface_kind": "product_frontdesk",
+            },
+            "grant_user_loop": {
+                "command": grant_user_loop_command,
+                "surface_kind": "grant_user_loop",
+            },
+        },
+        shared_handoff={
+            "opl_handoff_builder": {
+                "command": "uv run python -m med_autogrant build-product-entry --entry-mode opl-handoff --format json",
+                "entry_mode": "opl-handoff",
+            }
+        },
+        product_entry_start=product_entry_start,
+        product_entry_overview=product_entry_overview,
+        product_entry_preflight={
+            "surface_kind": "product_entry_preflight",
+            "summary": "Workspace checks are green enough to open the frontdesk.",
+            "ready_to_try_now": True,
+            "recommended_check_command": "uv run python -m med_autogrant validate-workspace --input /tmp/workspace.json --format json",
+            "recommended_start_command": product_frontdesk_command,
+            "blocking_check_ids": [],
+            "checks": [],
+        },
+        product_entry_readiness=product_entry_readiness,
+        product_entry_quickstart=product_entry_quickstart,
+        family_orchestration=family_orchestration,
+    )
+
+    entry_surfaces = build_family_frontdesk_entry_surfaces(
+        product_entry_shell=product_entry_manifest["product_entry_shell"],
+        shell_aliases={
+            "frontdesk": "product_frontdesk",
+            "grant_user_loop": "grant_user_loop",
+        },
+        shared_handoff=product_entry_manifest["shared_handoff"],
+    )
+    assert entry_surfaces["frontdesk"]["surface_kind"] == "product_frontdesk"
+
+    product_frontdesk = build_family_product_frontdesk_from_manifest(
+        recommended_action="inspect_or_prepare_grant_loop",
+        product_entry_manifest=product_entry_manifest,
+        shell_aliases={
+            "frontdesk": "product_frontdesk",
+            "grant_user_loop": "grant_user_loop",
+        },
+        notes=["Domain-owned product_frontdesk compatibility payload."],
+        schema_ref="contracts/schemas/v1/product-frontdesk.schema.json",
+        extra_payload={"grant_authoring_readiness": {"surface_kind": "grant_authoring_readiness"}},
+    )
+
+    assert product_frontdesk["surface_kind"] == "product_frontdesk"
+    assert product_frontdesk["frontdesk_surface"]["shell_key"] == "product_frontdesk"
+    assert product_frontdesk["summary"]["frontdesk_command"] == product_frontdesk_command
+    assert product_frontdesk["entry_surfaces"]["frontdesk"]["command"] == product_frontdesk_command
+    assert product_frontdesk["grant_authoring_readiness"]["surface_kind"] == "grant_authoring_readiness"
+    assert "frontdoor_surface" not in product_frontdesk
+    assert validate_family_product_frontdesk(product_frontdesk)["surface_kind"] == "product_frontdesk"
