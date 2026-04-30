@@ -61,6 +61,23 @@ def build_family_frontdoor_entry_surfaces(
     return validate_family_frontdoor_entry_surfaces(payload, "entry_surfaces")
 
 
+def validate_family_frontdesk_entry_surfaces(value: object, field: str) -> dict[str, Any]:
+    return validate_family_frontdoor_entry_surfaces(value, field)
+
+
+def build_family_frontdesk_entry_surfaces(
+    *,
+    product_entry_shell: Mapping[str, Any],
+    shell_aliases: Mapping[str, str],
+    shared_handoff: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    return build_family_frontdoor_entry_surfaces(
+        product_entry_shell=product_entry_shell,
+        shell_aliases=shell_aliases,
+        shared_handoff=shared_handoff,
+    )
+
+
 def build_product_entry_shell_surface(
     *,
     command: str,
@@ -176,5 +193,4 @@ def build_operator_loop_action_catalog(
             or None,
         )
     return catalog
-
 
