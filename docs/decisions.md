@@ -18,8 +18,9 @@
 
 影响：
 
-- `opl packages manifest` 成为 Packages 坐标的机器可读入口
-- 模块源码归档和 release manifest 通过 GHCR 发布，git repo 保留为 fallback
+- `opl packages manifest` 成为 Packages 坐标的机器可读入口和后续分发目标
+- 当前 `opl install`、App 首启协调和环境管理仍以 git checkout 更新到远端最新为正式路径；Packages/GHCR 接入模块安装更新前不得写成当前机制
+- 中央 release manifest / Packages workflow 可以继续维护为机器分发雏形，但各 domain repo 不需要单独恢复用户安装型 GitHub Release
 - WebUI Docker 镜像通过 GHCR 发布，服务 Docker/浏览器-only 场景
 - Native helper 预构建 archive 同步发布到 GHCR，后续 `native:repair` 可优先消费
 - `MAS/MDS/MAG/RCA` 仍不打进默认桌面 App；环境管理负责安装、更新和修复
@@ -47,7 +48,7 @@
 - 兼容版本的 `Codex CLI` 已可用时，不因缺少可读 Codex config 单独阻塞首启
 - `opl install` 默认安装/检查 domain modules，并以保守 managed 模式同步推荐 companion skills
 - App 首启先静默读取 `opl system initialize`；若命令行安装已经完成，则不再运行安装或打开首启向导
-- 只有缺少 Codex CLI、模块无法安装、版本冲突等不可自动解决事项，才进入环境管理提示
+- 只有缺少 Codex CLI、当前命中版本过旧或无法解析、模块无法安装等不可自动解决事项，才进入环境管理提示
 
 ### 决策：`MDS` 作为 `MAS` 隐藏运行依赖进入安装与环境管理面
 

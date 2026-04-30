@@ -132,6 +132,16 @@ export function buildPublicCommandSpecs(
     async () => buildPublicSystemActionPayload(await runOplSystemAction(getContracts(), 'update')),
   );
 
+  const systemReconcileModulesSpec = buildNoArgSpec(
+    {
+      usage: 'opl system reconcile-modules',
+      summary: 'Install missing modules and update clean domain modules to the latest git upstream.',
+      examples: ['opl system reconcile-modules'],
+      group: 'system',
+    },
+    async () => buildPublicSystemActionPayload(await runOplSystemAction(getContracts(), 'reconcile_modules')),
+  );
+
   const systemUpdateChannelSpec: CommandSpec = {
     usage: 'opl system update-channel [--channel <stable|preview>]',
     summary: 'Read or update the local OPL release channel.',
@@ -435,6 +445,7 @@ export function buildPublicCommandSpecs(
     'system initialize': systemInitializeSpec,
     'system repair': systemRepairSpec,
     'system update': systemUpdateSpec,
+    'system reconcile-modules': systemReconcileModulesSpec,
     'system update-channel': systemUpdateChannelSpec,
     modules: modulesSpec,
     'module install': moduleInstallSpec,

@@ -518,6 +518,24 @@ function runManagedModuleWorkflow(spec: DomainModuleRuntimeSpec, checkoutPath: s
   } satisfies ModuleActionWorkflow;
 }
 
+function runExternalModuleWorkflow(spec: DomainModuleRuntimeSpec, checkoutPath: string) {
+  const skill_sync = runModuleSkillSync(spec, checkoutPath);
+  const health_check = runModuleHealthCheck(spec, checkoutPath);
+
+  return {
+    bootstrap: {
+      status: 'skipped',
+      summary: 'External developer checkouts are not bootstrapped by OPL.',
+      command_preview: null,
+      stdout: '',
+      stderr: '',
+      result: null,
+    },
+    skill_sync,
+    health_check,
+  } satisfies ModuleActionWorkflow;
+}
+
 function buildSkippedWorkflow(summary: string): ModuleActionWorkflow {
   return {
     bootstrap: {
@@ -599,9 +617,7 @@ export function runOplModuleAction(
       if (updated.install_origin === 'managed_root') {
         workflow = runManagedModuleWorkflow(spec, updated.checkout_path);
       } else {
-        workflow = buildSkippedWorkflow(
-          'External developer checkouts are updated in place without OPL-managed turnkey steps.',
-        );
+        workflow = runExternalModuleWorkflow(spec, updated.checkout_path);
       }
       break;
     }

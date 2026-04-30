@@ -83,6 +83,8 @@ export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
     gui_version: process.env.OPL_GUI_VERSION?.trim() || null,
     release_channel: process.env.OPL_RELEASE_CHANNEL?.trim() || 'stable',
     generated_at: generatedAt,
+    module_install_update_source: 'git_checkout',
+    package_consumption_status: 'packages_defined_not_consumed_by_install_update',
     packages: {
       webui_docker_image: {
         image: `ghcr.io/${owner}/one-person-lab-webui:${version}`,
@@ -105,6 +107,8 @@ export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
             version,
             artifact_kind: 'source_archive',
             artifact: buildPackageRef(owner, spec.package_name, version),
+            package_consumption_status: 'defined_not_consumed_by_install_update',
+            current_install_update_source: 'git_checkout',
             fallback_git: {
               repo_url: spec.repo_url,
               ref: 'main',

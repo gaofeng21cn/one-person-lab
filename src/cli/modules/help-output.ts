@@ -139,6 +139,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl skill sync',
         'opl system',
         'opl system initialize',
+        'opl system reconcile-modules',
         'opl modules',
         'opl module install --module medautoscience',
         'opl engine install --engine codex',
