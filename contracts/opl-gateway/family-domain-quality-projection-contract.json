@@ -1,0 +1,58 @@
+{
+  "contract_kind": "opl_family_domain_quality_projection_contract.v1",
+  "owner": "one-person-lab",
+  "scope": "family-level quality projection vocabulary with domain-owned quality authority",
+  "opl_authority": [
+    "quality projection vocabulary",
+    "operator-facing status",
+    "source refs",
+    "freshness"
+  ],
+  "required_projection_fields": [
+    "quality_gate_status",
+    "evidence_refs",
+    "review_refs",
+    "human_gate_reason",
+    "failure_escalation",
+    "latest_eval_or_proof_pointer",
+    "assessment_owner"
+  ],
+  "quality_gate_statuses": [
+    "not_started",
+    "in_review",
+    "passed",
+    "failed",
+    "blocked",
+    "stale"
+  ],
+  "domain_mappings": {
+    "med-autoscience": [
+      "evidence ledger",
+      "review ledger",
+      "AI reviewer-backed publication_eval/latest.json"
+    ],
+    "med-autogrant": [
+      "grant review",
+      "fundability gate",
+      "authoring completion",
+      "submission readiness"
+    ],
+    "redcube-ai": [
+      "content-fit review",
+      "render proof",
+      "export proof",
+      "visual QA"
+    ]
+  },
+  "forbidden_quality_authorities": [
+    "generic persona QA",
+    "non-domain owner gate",
+    "NEXUS role approval",
+    "claim-only ready",
+    "chat summary",
+    "memory",
+    "terminal prose",
+    "OPL projection without domain-owned eval/proof refs"
+  ]
+}
+
