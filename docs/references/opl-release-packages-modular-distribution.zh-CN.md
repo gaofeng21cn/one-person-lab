@@ -38,6 +38,8 @@
 - 用户下载入口仍是 GitHub Releases 里的桌面 App 安装包。
 - `opl packages manifest` 输出 WebUI 镜像、native helper、MAS/MDS/MAG/RCA 模块包的 machine-readable 坐标。
 - `.github/workflows/packages.yml` 是 OPL 中央 package workflow 雏形；它不代表 MAS/MDS/MAG/RCA 各 repo 已经各自维护独立 GHCR/Packages 发布面。
+- `scripts/package-module-archives.mjs` 会生成 `opl-release-manifest.json`、`opl-channel-manifest.json` 与 `SHA256SUMS`，并把每个模块的 `source_git.head_sha`、源码包大小和 `sha256` 写入 manifest。
+- `scripts/package-release-discipline.mjs` 是 CI gate：检查 channel manifest、artifact build、checksum、rollback 与旧版本清理策略是否齐全。缺 checksum、缺回退策略或缺清理策略时，package workflow 应直接失败。
 - Native helper 预构建 workflow 会继续上传 CI artifact，同时把 tar.gz archive 推送到 GHCR。
 - `opl install`、App 更新后的首次启动协调、`opl system reconcile-modules` 和环境管理当前仍通过 git checkout / npm / 本地 sibling repo 做模块安装和更新。
 - App 更新后的首次启动会把缺失模块补齐，并把 clean checkout 更新到 upstream/default branch 最新 HEAD；dirty、ahead、diverged 或无 upstream 的开发 checkout 只提示人工处理。
@@ -50,9 +52,10 @@ Manifest 的本地入口：
 ```bash
 opl packages manifest
 npm run packages:manifest -- --version 26.4.27
+npm run packages:release-discipline -- --manifest dist/opl-packages/opl-release-manifest.json
 ```
 
-Manifest 会同步到 `ghcr.io/gaofeng21cn/one-person-lab-manifest:<opl_version>`，也可以作为 Release artifact 上传：
+Manifest 会同步到 `ghcr.io/gaofeng21cn/one-person-lab-manifest:<opl_version>`，并带上 channel manifest 与 `SHA256SUMS`；也可以作为 Release artifact 上传：
 
 ```json
 {
@@ -62,6 +65,40 @@ Manifest 会同步到 `ghcr.io/gaofeng21cn/one-person-lab-manifest:<opl_version>
   "generated_at": "2026-04-27T00:00:00Z",
   "module_install_update_source": "git_checkout",
   "package_consumption_status": "packages_defined_not_consumed_by_install_update",
+  "release_automation": {
+    "status": "prepared_not_consumed_by_module_install_update",
+    "channel_manifest": {
+      "manifest_kind": "opl_release_channel_manifest.v1",
+      "generated_by": "scripts/package-module-archives.mjs",
+      "outputs": {
+        "release_manifest": "opl-release-manifest.json",
+        "channel_manifest": "opl-channel-manifest.json",
+        "checksums": "SHA256SUMS"
+      },
+      "latest_source_until_packages_consumed": "git_checkout_upstream_default_branch"
+    },
+    "artifact_build": {
+      "workflow": ".github/workflows/packages.yml",
+      "command": "npm run packages:manifest -- --version <opl_version>",
+      "artifact_kind": "git_archive_source_tarball"
+    },
+    "checksum": {
+      "algorithm": "sha256",
+      "recorded_in": ["source_archive.sha256", "SHA256SUMS"],
+      "required_before_publish": true
+    },
+    "rollback": {
+      "strategy": "previous_channel_manifest_target",
+      "previous_version": "26.4.26",
+      "input": "--previous-manifest <path>",
+      "failure_behavior": "keep_current_git_checkout_or_restore_previous_manifest_target"
+    },
+    "cleanup": {
+      "strategy": "retain_latest_n_versions_and_declared_rollbacks",
+      "retain_versions": 3,
+      "applies_to": ["one-person-lab-modules/*", "one-person-lab-manifest"]
+    }
+  },
   "modules": {
     "medautoscience": {
       "channel": "stable",
@@ -73,6 +110,39 @@ Manifest 会同步到 `ghcr.io/gaofeng21cn/one-person-lab-manifest:<opl_version>
       "fallback_git": {
         "repo_url": "https://github.com/gaofeng21cn/med-autoscience.git",
         "ref": "main"
+      },
+      "source_archive": {
+        "file_name": "med-autoscience-26.4.27.tar.gz",
+        "size": 2200000,
+        "sha256": "<sha256>"
+      },
+      "source_git": {
+        "repo_url": "https://github.com/gaofeng21cn/med-autoscience.git",
+        "branch": "main",
+        "head_sha": "<module_head_sha>"
+      },
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "<sha256>",
+        "file": "SHA256SUMS"
+      },
+      "release_discipline": {
+        "module_truth_owner": "med-autoscience",
+        "package_publish_owner": "one-person-lab_central_packages_workflow",
+        "current_latest_source": "git_checkout_upstream_default_branch",
+        "future_package_latest_source": "opl_release_channel_manifest",
+        "required_gates": [
+          "upstream_default_branch_reachable",
+          "clean_checkout_or_fresh_clone",
+          "source_archive_built_from_head",
+          "sha256_recorded",
+          "channel_manifest_written",
+          "rollback_target_declared_when_previous_manifest_exists"
+        ],
+        "rollback": {
+          "version": "26.4.26",
+          "source": "previous_channel_manifest"
+        }
       },
       "install_strategy": "extract_to_managed_modules_root",
       "rollback": "26.4.26"
@@ -104,7 +174,7 @@ Manifest 会同步到 `ghcr.io/gaofeng21cn/one-person-lab-manifest:<opl_version>
 落地顺序：
 
 1. 当前正式安装更新路径是 git checkout / sibling repo。
-2. 已有中央 manifest 与 GHCR workflow 雏形，但尚未成为 `opl module install/update` 的执行来源。
+2. 已有中央 manifest、channel manifest、checksum 与 release discipline gate，但尚未成为 `opl module install/update` 的执行来源。
 3. 下一步让 `opl module install/update` 优先读 manifest，失败时回退到 git clone。
 4. 再让 `native:repair` 优先拉取匹配平台的 GHCR native helper package。
 5. 最后把环境管理的“最新版本”从 `GitHub main` 改成 manifest 中的目标版本。
@@ -115,6 +185,7 @@ Manifest 会同步到 `ghcr.io/gaofeng21cn/one-person-lab-manifest:<opl_version>
 - Packages 放 OPL CLI/core、WebUI Docker 镜像和 domain module 的机器消费制品；只有 install/update 真正消费它们之后，才把它们写成当前机制。
 - 当前环境管理通过 git upstream 判断“当前版本 / 是否可更新”；切到 Packages 后再改为通过 manifest 判断目标版本。
 - 每个制品必须有版本、来源、校验和、回滚目标和安装策略。
+- 旧版本清理不靠手工记忆：package workflow 的 manifest 必须声明 `retain_latest_n_versions_and_declared_rollbacks`，后续 GHCR retention/cleanup job 只消费这个策略，不重新解释模块状态。
 - `MDS` 在 manifest 中作为 `MAS` 依赖出现，但环境管理仍显示它的安装和更新状态。
 
 ## App 内置策略

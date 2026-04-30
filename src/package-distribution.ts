@@ -20,6 +20,8 @@ type BuildPackageManifestInput = Partial<{
   version: string;
   generatedAt: string;
   owner: string;
+  rollbackVersion: string | null;
+  retainVersions: number;
 }>;
 
 export type OplPackageManifest = ReturnType<typeof buildOplPackageManifest>;
@@ -72,10 +74,79 @@ function buildPackageRef(owner: string, name: string, version: string) {
   return `ghcr.io/${owner}/one-person-lab-modules/${name}:${version}`;
 }
 
+function normalizeRetainVersions(value?: number) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return 3;
+  }
+  return Math.max(2, Math.floor(value));
+}
+
+function buildReleaseAutomation(retainVersions: number, rollbackVersion: string | null) {
+  return {
+    status: 'prepared_not_consumed_by_module_install_update',
+    channel_manifest: {
+      manifest_kind: 'opl_release_channel_manifest.v1',
+      generated_by: 'scripts/package-module-archives.mjs',
+      outputs: {
+        release_manifest: 'opl-release-manifest.json',
+        channel_manifest: 'opl-channel-manifest.json',
+        checksums: 'SHA256SUMS',
+      },
+      latest_source_until_packages_consumed: 'git_checkout_upstream_default_branch',
+    },
+    artifact_build: {
+      workflow: '.github/workflows/packages.yml',
+      command: 'npm run packages:manifest -- --version <opl_version>',
+      artifact_kind: 'git_archive_source_tarball',
+    },
+    checksum: {
+      algorithm: 'sha256',
+      recorded_in: ['source_archive.sha256', 'SHA256SUMS'],
+      required_before_publish: true,
+    },
+    rollback: {
+      strategy: 'previous_channel_manifest_target',
+      previous_version: rollbackVersion,
+      input: '--previous-manifest <path>',
+      failure_behavior: 'keep_current_git_checkout_or_restore_previous_manifest_target',
+    },
+    cleanup: {
+      strategy: 'retain_latest_n_versions_and_declared_rollbacks',
+      retain_versions: retainVersions,
+      applies_to: ['one-person-lab-modules/*', 'one-person-lab-manifest'],
+    },
+  };
+}
+
+function buildModuleReleaseDiscipline(spec: PackageModuleSpec, rollbackVersion: string | null) {
+  return {
+    module_truth_owner: spec.repo_name,
+    package_publish_owner: 'one-person-lab_central_packages_workflow',
+    current_latest_source: 'git_checkout_upstream_default_branch',
+    future_package_latest_source: 'opl_release_channel_manifest',
+    required_gates: [
+      'upstream_default_branch_reachable',
+      'clean_checkout_or_fresh_clone',
+      'source_archive_built_from_head',
+      'sha256_recorded',
+      'channel_manifest_written',
+      'rollback_target_declared_when_previous_manifest_exists',
+    ],
+    rollback: rollbackVersion
+      ? {
+          version: rollbackVersion,
+          source: 'previous_channel_manifest',
+        }
+      : null,
+  };
+}
+
 export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
   const version = input.version?.trim() || getOplReleaseVersion();
   const owner = resolveOwner(input.owner);
   const generatedAt = input.generatedAt ?? new Date().toISOString();
+  const retainVersions = normalizeRetainVersions(input.retainVersions);
+  const rollbackVersion = input.rollbackVersion === undefined ? null : input.rollbackVersion;
 
   return {
     manifest_version: 1,
@@ -85,6 +156,7 @@ export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
     generated_at: generatedAt,
     module_install_update_source: 'git_checkout',
     package_consumption_status: 'packages_defined_not_consumed_by_install_update',
+    release_automation: buildReleaseAutomation(retainVersions, rollbackVersion),
     packages: {
       webui_docker_image: {
         image: `ghcr.io/${owner}/one-person-lab-webui:${version}`,
@@ -113,6 +185,7 @@ export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
               repo_url: spec.repo_url,
               ref: 'main',
             },
+            release_discipline: buildModuleReleaseDiscipline(spec, rollbackVersion),
             install_strategy: 'extract_to_managed_modules_root',
             dependency_of: spec.dependency_of ?? [],
           },

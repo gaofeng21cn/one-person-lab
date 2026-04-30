@@ -19,6 +19,8 @@ function parseArgs(argv) {
     outDir: path.join(repoRoot, 'dist', 'packages'),
     cloneRoot: path.join(repoRoot, 'dist', 'package-sources'),
     owner: process.env.OPL_PACKAGES_OWNER || undefined,
+    previousManifest: process.env.OPL_PREVIOUS_PACKAGE_MANIFEST || undefined,
+    retainVersions: process.env.OPL_PACKAGE_RETAIN_VERSIONS || undefined,
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -44,6 +46,16 @@ function parseArgs(argv) {
     }
     if (token === '--owner') {
       parsed.owner = value;
+      index += 1;
+      continue;
+    }
+    if (token === '--previous-manifest') {
+      parsed.previousManifest = path.resolve(value);
+      index += 1;
+      continue;
+    }
+    if (token === '--retain-versions') {
+      parsed.retainVersions = value;
       index += 1;
       continue;
     }
@@ -76,6 +88,29 @@ function modulePathEnvKey(moduleId) {
   return `OPL_MODULE_PATH_${moduleId.toUpperCase()}`;
 }
 
+function readPreviousManifestVersion(manifestPath) {
+  if (!manifestPath) {
+    return null;
+  }
+  const parsed = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const version = typeof parsed.opl_version === 'string' ? parsed.opl_version.trim() : '';
+  if (!version) {
+    throw new Error(`Previous manifest has no opl_version: ${manifestPath}`);
+  }
+  return version;
+}
+
+function normalizeRetainVersions(raw) {
+  if (!raw) {
+    return undefined;
+  }
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed < 2) {
+    throw new Error(`--retain-versions must be a number >= 2, got: ${raw}`);
+  }
+  return Math.floor(parsed);
+}
+
 function resolveModuleRepo(spec, cloneRoot) {
   const explicit = process.env[modulePathEnvKey(spec.module_id)]?.trim();
   if (explicit) {
@@ -89,6 +124,10 @@ function resolveModuleRepo(spec, cloneRoot) {
     run('git', ['clone', '--depth', '1', spec.repo_url, checkoutPath]);
   }
   return checkoutPath;
+}
+
+function readGitValue(repoPath, args) {
+  return run('git', args, { cwd: repoPath, capture: true }).stdout.trim();
 }
 
 function archiveModule(spec, repoPath, modulesOutDir, version) {
@@ -105,37 +144,69 @@ function archiveModule(spec, repoPath, modulesOutDir, version) {
     path: archivePath,
     size: stat.size,
     sha256: sha256File(archivePath),
+    head_sha: readGitValue(repoPath, ['rev-parse', 'HEAD']),
+    branch: readGitValue(repoPath, ['branch', '--show-current']) || null,
   };
+}
+
+function writeChecksumFile(outDir, archives) {
+  const checksumPath = path.join(outDir, 'SHA256SUMS');
+  const lines = archives
+    .map((archive) => `${archive.sha256}  modules/${archive.file_name}`)
+    .sort();
+  fs.writeFileSync(checksumPath, `${lines.join('\n')}\n`, 'utf8');
+  return checksumPath;
 }
 
 function main() {
   const options = parseArgs(process.argv.slice(2));
+  const rollbackVersion = readPreviousManifestVersion(options.previousManifest);
+  const retainVersions = normalizeRetainVersions(options.retainVersions);
   const manifest = buildOplPackageManifest({
     version: options.version,
     owner: options.owner,
+    rollbackVersion,
+    retainVersions,
   });
   const version = manifest.opl_version;
   const modulesOutDir = path.join(options.outDir, 'modules');
+  const archives = [];
 
   for (const spec of getOplPackageModuleSpecs()) {
     const repoPath = resolveModuleRepo(spec, options.cloneRoot);
     const archive = archiveModule(spec, repoPath, modulesOutDir, version);
+    archives.push(archive);
     manifest.packages.modules[spec.module_id].source_archive = {
       file_name: archive.file_name,
       size: archive.size,
       sha256: archive.sha256,
     };
+    manifest.packages.modules[spec.module_id].checksum = {
+      algorithm: 'sha256',
+      value: archive.sha256,
+      file: 'SHA256SUMS',
+    };
+    manifest.packages.modules[spec.module_id].source_git = {
+      repo_url: spec.repo_url,
+      branch: archive.branch,
+      head_sha: archive.head_sha,
+    };
   }
 
+  const checksumPath = writeChecksumFile(options.outDir, archives);
   const manifestPath = writeOplPackageManifest(path.join(options.outDir, 'opl-release-manifest.json'), manifest);
+  const channelManifestPath = writeOplPackageManifest(path.join(options.outDir, 'opl-channel-manifest.json'), manifest);
   console.log(JSON.stringify({
     status: 'completed',
     manifest: manifestPath,
+    channel_manifest: channelManifestPath,
+    checksums: checksumPath,
     modules_dir: modulesOutDir,
     modules: Object.values(manifest.packages.modules).map((entry) => ({
       module_id: entry.module_id,
       artifact: entry.artifact,
       source_archive: entry.source_archive,
+      source_git: entry.source_git,
     })),
   }, null, 2));
 }
