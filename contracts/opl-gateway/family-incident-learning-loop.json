@@ -1,0 +1,42 @@
+{
+  "contract_kind": "opl_family_incident_learning_loop.v1",
+  "owner": "one-person-lab",
+  "scope": "family-level incident taxonomy and durable follow-up requirements",
+  "incident_kinds": [
+    "stalled_run",
+    "status_drift",
+    "missing_projection",
+    "quality_reopen",
+    "install_sync_drift",
+    "runtime_owner_mismatch",
+    "artifact_proof_missing",
+    "human_gate_blocked"
+  ],
+  "required_record_fields": [
+    "incident_id",
+    "domain_id",
+    "incident_kind",
+    "detected_at",
+    "source_refs",
+    "owner_repo",
+    "impact",
+    "follow_up_asset",
+    "closure_ref"
+  ],
+  "allowed_follow_up_assets": [
+    "guard",
+    "test",
+    "contract",
+    "runbook",
+    "taxonomy_update",
+    "operator_projection"
+  ],
+  "closure_rules": [
+    "source_refs_required",
+    "chat_memory_terminal_prose_not_sufficient",
+    "follow_up_asset_required",
+    "domain_specific_failure_requires_domain_owned_closure_ref"
+  ],
+  "opl_projection_role": "surface incident status, freshness, source refs, owner split, and next gate without replacing domain runtime or quality authority"
+}
+
