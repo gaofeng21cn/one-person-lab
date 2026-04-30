@@ -136,6 +136,7 @@ export function resolveCodexVersion() {
       binary_source: null,
       candidates: [],
       issues: ['codex_cli_missing'],
+      diagnostics: [],
     };
   }
 
@@ -149,10 +150,12 @@ export function resolveCodexVersion() {
       .map((candidate) => candidate.parsed_version)
       .filter(Boolean),
   );
-  const issues = [
+  const blockingIssues = [
     ...(policy.version_status === 'outdated' ? ['codex_cli_version_outdated'] : []),
     ...(policy.version_status === 'unknown' ? ['codex_cli_version_unknown'] : []),
-    ...(candidateVersions.size > 1 ? ['codex_cli_path_version_conflict'] : []),
+  ];
+  const diagnostics = [
+    ...(candidateVersions.size > 1 ? ['codex_cli_path_version_conflict_nonblocking'] : []),
   ];
 
   return {
@@ -164,7 +167,8 @@ export function resolveCodexVersion() {
     binary_path: binary.path,
     binary_source: binary.source,
     candidates,
-    issues,
+    issues: blockingIssues,
+    diagnostics,
   };
 }
 

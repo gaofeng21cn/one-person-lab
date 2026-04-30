@@ -102,7 +102,7 @@ opl help --text         # 人类可读帮助；机器读取使用 opl help --jso
 ### 运行说明
 
 - 默认前门是 `opl`、`opl exec` 和 `opl resume`。除非显式切换 runtime 或显式激活 domain agent，这几个入口都继承 Codex-default 语义。
-- OPL 会把 `Codex CLI` 作为受管运行依赖检查：`opl system` 会报告实际命中的 binary、版本、最低版本策略和 PATH 候选冲突；低于最低版本或候选版本冲突时会进入 `attention_needed`。
+- OPL 会把 `Codex CLI` 作为受管运行依赖检查：`opl system` 会报告实际选中的 binary、版本、最低版本策略和 PATH 诊断。健康状态以选中 binary 为准；非选中的 PATH 候选只作为诊断信息，不阻塞兼容的 Codex CLI。
 - 如果某个 admitted domain repo 还没落地到本机，运行 `opl module install --module <module_id>`。
 - 默认本地状态目录是 `~/Library/Application Support/OPL/state`。如果需要改到其他本地状态根目录，直接设置 `OPL_STATE_DIR`。
 - 当前 active domain agents 是 [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience)、[`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) 和 [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai)。

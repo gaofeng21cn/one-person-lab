@@ -150,20 +150,61 @@ function isGitRepo(repoPath: string) {
   return result.exitCode === 0 && result.stdout.trim() === 'true';
 }
 
-function inspectGitRepo(repoPath: string): GitRepoSnapshot {
+function inspectGitRepo(repoPath: string, refreshRemote = false): GitRepoSnapshot {
   const branch = normalizeOptionalString(runGit(['branch', '--show-current'], repoPath).stdout);
   const headSha = normalizeOptionalString(runGit(['rev-parse', 'HEAD'], repoPath).stdout);
   const shortSha = normalizeOptionalString(runGit(['rev-parse', '--short', 'HEAD'], repoPath).stdout);
   const originResult = runGit(['remote', 'get-url', 'origin'], repoPath);
   const statusPorcelain = runGit(['status', '--porcelain'], repoPath);
+  const upstreamResult = runGit(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'], repoPath);
+  const upstreamRef = upstreamResult.exitCode === 0 ? normalizeOptionalString(upstreamResult.stdout) : null;
+  if (refreshRemote && originResult.exitCode === 0 && branch && upstreamRef) {
+    runGit(['fetch', '--quiet', '--prune', 'origin'], repoPath);
+  }
+
+  const upstreamHeadResult = upstreamRef ? runGit(['rev-parse', '@{u}'], repoPath) : null;
+  const upstreamHeadSha =
+    upstreamHeadResult?.exitCode === 0 ? normalizeOptionalString(upstreamHeadResult.stdout) : null;
+  const aheadBehindResult = upstreamRef ? runGit(['rev-list', '--left-right', '--count', 'HEAD...@{u}'], repoPath) : null;
+  let aheadCount: number | null = null;
+  let behindCount: number | null = null;
+  let syncStatus: GitRepoSnapshot['sync_status'] = upstreamRef ? 'unknown' : 'no_upstream';
+
+  if (aheadBehindResult?.exitCode === 0) {
+    const [aheadRaw, behindRaw] = aheadBehindResult.stdout.trim().split(/\s+/);
+    const ahead = Number(aheadRaw);
+    const behind = Number(behindRaw);
+    if (Number.isSafeInteger(ahead) && Number.isSafeInteger(behind)) {
+      aheadCount = ahead;
+      behindCount = behind;
+      if (ahead === 0 && behind === 0) {
+        syncStatus = 'synced';
+      } else if (ahead > 0 && behind === 0) {
+        syncStatus = 'ahead';
+      } else if (ahead === 0 && behind > 0) {
+        syncStatus = 'behind';
+      } else {
+        syncStatus = 'diverged';
+      }
+    }
+  }
 
   return {
     branch,
     head_sha: headSha,
     short_sha: shortSha,
     origin_url: originResult.exitCode === 0 ? normalizeOptionalString(originResult.stdout) : null,
+    upstream_ref: upstreamRef,
+    upstream_head_sha: upstreamHeadSha,
+    ahead_count: aheadCount,
+    behind_count: behindCount,
+    sync_status: syncStatus,
     dirty: statusPorcelain.stdout.trim().length > 0,
   };
+}
+
+function isModuleUpdateAvailable(git: GitRepoSnapshot) {
+  return !git.dirty && git.sync_status === 'behind';
 }
 
 function buildModuleRepoUrlEnvKey(moduleId: OplModuleId) {
@@ -235,7 +276,14 @@ function inspectModule(spec: DomainModuleSpec): ModuleInspection {
       };
     }
 
-    const git = inspectGitRepo(candidate.path);
+    const git = inspectGitRepo(candidate.path, candidate.origin === 'managed_root');
+    const updateAvailable = isModuleUpdateAvailable(git);
+    const availableActions: OplModuleAction[] =
+      candidate.origin === 'managed_root'
+        ? [...(updateAvailable ? (['update'] as const) : []), 'reinstall', 'remove']
+        : updateAvailable
+          ? ['update']
+          : [];
     return {
       module_id: spec.module_id,
       label: spec.label,
@@ -248,10 +296,8 @@ function inspectModule(spec: DomainModuleSpec): ModuleInspection {
       managed_checkout_path: managedCheckoutPath,
       health_status: git.dirty ? 'dirty' : 'ready',
       git,
-      available_actions: candidate.origin === 'managed_root'
-        ? ['update', 'reinstall', 'remove']
-        : ['update'],
-      recommended_action: git.dirty ? null : 'update',
+      available_actions: availableActions,
+      recommended_action: updateAvailable ? 'update' : null,
     };
   }
 

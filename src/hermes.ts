@@ -19,6 +19,7 @@ export interface HermesGatewayServiceStatus {
 export interface HermesRuntimeInspection {
   binary: HermesBinaryInfo | null;
   version: string | null;
+  version_raw_output: string | null;
   update_available: boolean;
   update_summary: string | null;
   gateway_service: HermesGatewayServiceStatus;
@@ -143,6 +144,14 @@ function parseHermesUpdateSummary(versionOutput: string | null): string | null {
   return updateLine || null;
 }
 
+function parseHermesVersionLine(versionOutput: string | null): string | null {
+  const versionLine = versionOutput
+    ?.split(/\r?\n/)
+    .map((line) => line.trim())
+    .find((line) => line.length > 0 && !/^Update available:/i.test(line));
+  return versionLine || null;
+}
+
 export function inspectHermesRuntime(): HermesRuntimeInspection {
   const binary = resolveHermesBinary();
 
@@ -150,6 +159,7 @@ export function inspectHermesRuntime(): HermesRuntimeInspection {
     return {
       binary: null,
       version: null,
+      version_raw_output: null,
       update_available: false,
       update_summary: null,
       gateway_service: {
@@ -165,8 +175,9 @@ export function inspectHermesRuntime(): HermesRuntimeInspection {
   const issues: string[] = [];
 
   const versionResult = runBinary(binary, ['version']);
-  const version = versionResult.exitCode === 0 ? versionResult.stdout.trim() : null;
-  const updateSummary = parseHermesUpdateSummary(version);
+  const versionRawOutput = versionResult.exitCode === 0 ? versionResult.stdout.trim() : null;
+  const version = parseHermesVersionLine(versionRawOutput);
+  const updateSummary = parseHermesUpdateSummary(versionRawOutput);
   if (!version) {
     issues.push('Hermes version command did not return a usable version string.');
   }
@@ -189,6 +200,7 @@ export function inspectHermesRuntime(): HermesRuntimeInspection {
   return {
     binary,
     version,
+    version_raw_output: versionRawOutput,
     update_available: Boolean(updateSummary),
     update_summary: updateSummary,
     gateway_service: {
