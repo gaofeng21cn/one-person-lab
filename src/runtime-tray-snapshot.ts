@@ -5,6 +5,7 @@ import { inspectHermesRuntime } from './hermes.ts';
 import { buildDomainManifestCatalog } from './management/domain-manifest-catalog.ts';
 import type { DomainManifestCatalogEntry, NormalizedDomainManifest, NormalizedSurfaceRef } from './domain-manifest/types.ts';
 import type { GatewayContracts } from './types.ts';
+import { actionContext, actionCountsForItems, hasUserOrInfrastructureAction, noActionContext, runningActionContext, type RuntimeTrayActionKind, type RuntimeTrayActionOwner } from './runtime-tray-action.ts';
 
 type RuntimeTrayHealthStatus = 'offline' | 'needs_attention' | 'running' | 'idle';
 type RuntimeTrayLane = 'running' | 'attention' | 'recent';
@@ -31,6 +32,10 @@ type RuntimeTrayItem = {
   runtime_owner: 'upstream_hermes_agent';
   domain_owner: string;
   source_refs: RuntimeTraySourceRef[];
+  action_owner: RuntimeTrayActionOwner;
+  requires_user_action: boolean;
+  action_kind: RuntimeTrayActionKind | null;
+  action_summary: string;
   study_id?: string | null;
   workspace_label?: string | null;
   detail_summary?: string | null;
@@ -61,6 +66,8 @@ type HermesCronProjection = {
   items: RuntimeTrayItem[];
   source_refs: RuntimeTraySourceRef[];
 };
+
+type HermesCronOutputIssue = 'script_error' | 'timed_out' | null;
 
 type RuntimeTrayCommand = {
   step_id: string;
@@ -306,6 +313,7 @@ function buildResolvedItem(entry: DomainManifestCatalogEntry): RuntimeTrayItem |
 
   const lane = classifyManifest(manifest);
   const statusCodes = collectStatusCodes(manifest);
+  const humanGateIds = collectHumanGateIds(manifest);
   const task = manifest.task_lifecycle;
   const progress = manifest.progress_projection;
   const session = manifest.session_continuity;
@@ -335,6 +343,23 @@ function buildResolvedItem(entry: DomainManifestCatalogEntry): RuntimeTrayItem |
       manifest.product_entry_status?.summary,
       manifest.product_entry_overview?.summary,
     );
+  const progressAttentionItems = progress?.attention_items ?? [];
+  const action = lane === 'running'
+    ? runningActionContext(summary ?? 'The domain runtime is actively processing.')
+    : lane === 'attention' && humanGateIds.length > 0
+      ? actionContext(
+        'user',
+        'human_gate',
+        `This item is waiting for user input at ${humanGateIds.slice(0, 3).join(', ')}.`,
+      )
+      : lane === 'attention'
+        ? actionContext(
+          'opl',
+          'quality_gate',
+          firstString(progressAttentionItems[0], summary)
+            ?? 'OPL needs to close the domain progress checks before this item can finish.',
+        )
+        : noActionContext(summary ?? 'The domain projection is available for review.');
   const sourceRefs = uniqueByRef([
     sourceRef('/product_entry_manifest', 'domain_manifest', entry.project),
     ...(progress ? [sourceRef('/progress_projection', 'progress_projection')] : []),
@@ -363,6 +388,7 @@ function buildResolvedItem(entry: DomainManifestCatalogEntry): RuntimeTrayItem |
     runtime_owner: 'upstream_hermes_agent',
     domain_owner: manifest.runtime_inventory?.domain_owner ?? entry.project,
     source_refs: sourceRefs,
+    ...action,
   };
 }
 
@@ -386,6 +412,11 @@ function buildAttentionItemForUnresolved(entry: DomainManifestCatalogEntry): Run
     runtime_owner: 'upstream_hermes_agent',
     domain_owner: entry.project,
     source_refs: [sourceRef('/domain_manifests/projects', 'domain_manifest_catalog', entry.project)],
+    ...actionContext(
+      'infrastructure',
+      'infrastructure_recovery',
+      'OPL cannot read the bound domain manifest projection; the binding or product-entry surface needs recovery.',
+    ),
   };
 }
 
@@ -418,16 +449,22 @@ function latestHermesCronOutputPath(hermesHome: string, jobId: string) {
   }
 }
 
-function latestHermesCronOutputHasScriptError(outputPath: string | null) {
+function latestHermesCronOutputIssue(outputPath: string | null): HermesCronOutputIssue {
   if (!outputPath) {
-    return false;
+    return null;
   }
 
   try {
     const content = fs.readFileSync(outputPath, 'utf8');
-    return content.includes('## Script Error') || content.includes('The data-collection script failed');
+    if (/script timed out after\s+\d+s/i.test(content) || /timed out/i.test(content)) {
+      return 'timed_out';
+    }
+    if (content.includes('## Script Error') || content.includes('The data-collection script failed')) {
+      return 'script_error';
+    }
+    return null;
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -719,6 +756,27 @@ function buildMasStudyItem(workspace: MasWorkspaceProjectionRef, studyRoot: stri
     : firstString(controllerDecision?.reason, statusSummary?.next_action_summary, supervision?.next_action_summary)
       ?? recommendedActionSummaries[0]
       ?? null;
+  const action = parkedHandoff
+    ? actionContext(
+      'user',
+      'handoff_review',
+      nextActionSummary ?? 'This paper line is stopped at a review or delivery handoff and needs user direction.',
+    )
+    : needsHumanIntervention
+      ? actionContext(
+        'user',
+        'human_gate',
+        nextActionSummary ?? 'This study is waiting for user confirmation before OPL continues.',
+      )
+      : publicationBlocked
+        ? actionContext(
+          'opl',
+          'publication_gate',
+          publicationSummary
+            ?? nextActionSummary
+            ?? 'OPL/MAS is closing publication and quality gates while the active run continues.',
+        )
+        : runningActionContext(statusText ?? 'OPL/MAS runtime is actively supervising this study.');
 
   return {
     item_id: `medautoscience:study:${studyId}`,
@@ -735,6 +793,7 @@ function buildMasStudyItem(workspace: MasWorkspaceProjectionRef, studyRoot: stri
     runtime_owner: 'upstream_hermes_agent',
     domain_owner: 'med-autoscience',
     source_refs: sourceRefs,
+    ...action,
     study_id: studyId,
     workspace_label: workspace.profile_name,
     detail_summary: statusText,
@@ -796,11 +855,11 @@ function buildHermesCronProjection(): HermesCronProjection {
       const enabled = job.enabled !== false;
       const state = optionalString(job.state) ?? (enabled ? 'scheduled' : 'paused');
       const latestOutputPath = latestHermesCronOutputPath(hermesHome, jobId);
-      const scriptErrored = latestHermesCronOutputHasScriptError(latestOutputPath);
+      const outputIssue = latestHermesCronOutputIssue(latestOutputPath);
       const hasRecordedError =
         Boolean(optionalString(job.last_error) || optionalString(job.last_delivery_error))
         || optionalString(job.last_status) === 'error'
-        || scriptErrored;
+        || Boolean(outputIssue);
       if (!hasRecordedError && enabled) {
         return null;
       }
@@ -819,6 +878,13 @@ function buildHermesCronProjection(): HermesCronProjection {
         fileSourceRef(jobsPath, 'hermes_cron_jobs', 'Hermes cron jobs'),
         latestOutputPath ? fileSourceRef(latestOutputPath, 'hermes_cron_output', 'latest cron output') : null,
       ].filter((ref): ref is RuntimeTraySourceRef => Boolean(ref)));
+      const action = actionContext(
+        'infrastructure',
+        outputIssue === 'timed_out' ? 'infrastructure_timeout' : 'infrastructure_recovery',
+        outputIssue === 'timed_out'
+          ? 'Hermes cron pre-run script timed out; background runtime supervision needs system-side recovery.'
+          : 'Hermes cron reported a supervision failure; background runtime supervision needs system-side recovery.',
+      );
 
       return {
         item_id: `medautoscience:hermes-cron:${jobId}`,
@@ -827,7 +893,9 @@ function buildHermesCronProjection(): HermesCronProjection {
         lane,
         title: `Workspace supervision job: ${titleFromHermesCronJob(job)}`,
         status,
-        status_label: hasRecordedError ? 'Infrastructure attention' : 'Paused',
+        status_label: hasRecordedError
+          ? outputIssue === 'timed_out' ? 'Background supervision timeout' : 'Infrastructure recovery needed'
+          : 'Paused',
         summary: summaryParts.length > 0 ? summaryParts.join('; ') : null,
         updated_at: lastRun,
         command: `hermes cron run ${jobId}`,
@@ -835,6 +903,9 @@ function buildHermesCronProjection(): HermesCronProjection {
         runtime_owner: 'upstream_hermes_agent' as const,
         domain_owner: 'med-autoscience',
         source_refs: sourceRefs,
+        ...action,
+        next_action_summary:
+          'Restore the Hermes cron supervision tick and confirm the next watch-runtime run completes without timeout.',
       };
     })
     .filter((item): item is RuntimeTrayItem => Boolean(item));
@@ -863,12 +934,13 @@ export function buildRuntimeTraySnapshot(contracts: GatewayContracts) {
   const runningItems = items.filter((entry) => entry.lane === 'running').sort(sortItems);
   const attentionItems = items.filter((entry) => entry.lane === 'attention').sort(sortItems);
   const recentItems = items.filter((entry) => entry.lane === 'recent').sort(sortItems);
+  const actionCounts = actionCountsForItems(items);
   const healthStatus: RuntimeTrayHealthStatus =
     !hermesReady
       ? 'offline'
-      : attentionItems.length > 0
+      : hasUserOrInfrastructureAction(actionCounts)
         ? 'needs_attention'
-        : runningItems.length > 0
+        : runningItems.length > 0 || actionCounts.opl > 0
           ? 'running'
           : 'idle';
   const healthLabels: Record<RuntimeTrayHealthStatus, string> = {
@@ -889,7 +961,7 @@ export function buildRuntimeTraySnapshot(contracts: GatewayContracts) {
         summary:
           healthStatus === 'offline'
             ? 'Hermes-Agent runtime substrate is not ready; OPL did not start a replacement daemon.'
-            : `${runningItems.length} running, ${attentionItems.length} attention, ${recentItems.length} recent domain item(s).`,
+            : `${runningItems.length} running, ${actionCounts.opl} OPL action, ${actionCounts.infrastructure} infrastructure recovery, ${actionCounts.user} user action, ${recentItems.length} recent domain item(s).`,
         hermes_ready: hermesReady,
         hermes_runtime: {
           binary: hermes.binary,
@@ -902,6 +974,7 @@ export function buildRuntimeTraySnapshot(contracts: GatewayContracts) {
       running_items: runningItems,
       attention_items: attentionItems,
       recent_items: recentItems,
+      action_counts: actionCounts,
       source_refs: uniqueByRef([
         sourceRef('/domain_manifests', 'domain_manifest_catalog'),
         sourceRef('/runtime_manager/owner_split', 'runtime_owner_split'),
