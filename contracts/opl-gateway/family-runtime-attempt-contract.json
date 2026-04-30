@@ -1,0 +1,57 @@
+{
+  "contract_kind": "opl_family_runtime_attempt_contract.v1",
+  "owner": "one-person-lab",
+  "scope": "family-level projection vocabulary for domain-owned runtime attempts",
+  "observability_only": true,
+  "opl_runtime_manager_role": [
+    "read domain-owned durable surfaces",
+    "index attempt freshness",
+    "project operator status",
+    "report reconciliation gaps"
+  ],
+  "opl_runtime_manager_non_goals": [
+    "scheduler kernel owner",
+    "session kernel owner",
+    "memory kernel owner",
+    "domain runtime truth owner",
+    "domain quality judgment owner"
+  ],
+  "attempt_states": [
+    "unclaimed",
+    "claimed",
+    "running",
+    "retry_queued",
+    "released",
+    "succeeded",
+    "failed",
+    "blocked"
+  ],
+  "required_projection_fields": [
+    "attempt_state",
+    "attempt_count",
+    "retry_policy",
+    "workspace_boundary",
+    "owner_repo",
+    "failure_reason",
+    "reconciliation_status",
+    "last_observed_projection"
+  ],
+  "reconciliation_statuses": [
+    "fresh",
+    "stale",
+    "conflict",
+    "needs_domain_refresh"
+  ],
+  "unsupported_required_entries": [
+    "Linear",
+    "Symphony scheduler",
+    "external issue tracker",
+    "generic persona router"
+  ],
+  "domain_truth_owners": [
+    "med-autoscience",
+    "med-autogrant",
+    "redcube-ai"
+  ]
+}
+
