@@ -51,6 +51,9 @@ jobs:
       - name: Build module archives and release manifest
         run: npm run packages:manifest -- --version "$OPL_RELEASE_VERSION" --owner "$OPL_PACKAGES_OWNER" --out-dir dist/opl-packages
 
+      - name: Check package release discipline
+        run: npm run packages:release-discipline -- --manifest dist/opl-packages/opl-release-manifest.json
+
       - name: Upload package manifest artifact
         uses: actions/upload-artifact@v4
         with:
@@ -85,6 +88,8 @@ jobs:
           oras push \
             "ghcr.io/${OPL_PACKAGES_OWNER}/one-person-lab-manifest:${OPL_RELEASE_VERSION}" \
             "dist/opl-packages/opl-release-manifest.json:application/vnd.onepersonlab.release.manifest.v1+json" \
+            "dist/opl-packages/opl-channel-manifest.json:application/vnd.onepersonlab.release.channel-manifest.v1+json" \
+            "dist/opl-packages/SHA256SUMS:text/plain" \
             --annotation "org.opencontainers.image.title=one-person-lab-manifest" \
             --annotation "org.opencontainers.image.version=${OPL_RELEASE_VERSION}" \
             --annotation "org.opencontainers.image.source=https://github.com/${{ github.repository }}"
