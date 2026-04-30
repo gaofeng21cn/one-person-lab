@@ -122,6 +122,16 @@ export function buildPublicCommandSpecs(
     async () => buildPublicSystemActionPayload(await runOplSystemAction(getContracts(), 'repair')),
   );
 
+  const systemUpdateSpec = buildNoArgSpec(
+    {
+      usage: 'opl system update',
+      summary: 'Update OPL engines and domain modules that report an available update.',
+      examples: ['opl system update'],
+      group: 'system',
+    },
+    async () => buildPublicSystemActionPayload(await runOplSystemAction(getContracts(), 'update')),
+  );
+
   const systemUpdateChannelSpec: CommandSpec = {
     usage: 'opl system update-channel [--channel <stable|preview>]',
     summary: 'Read or update the local OPL release channel.',
@@ -424,6 +434,7 @@ export function buildPublicCommandSpecs(
     system: systemSpec,
     'system initialize': systemInitializeSpec,
     'system repair': systemRepairSpec,
+    'system update': systemUpdateSpec,
     'system update-channel': systemUpdateChannelSpec,
     modules: modulesSpec,
     'module install': moduleInstallSpec,

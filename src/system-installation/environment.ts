@@ -16,6 +16,7 @@ export async function buildOplEnvironment(contracts: GatewayContracts) {
   const modulesPayload = buildOplModules().modules;
   const moduleSummary = modulesPayload.summary;
   const codexIssues = [...codexBinary.issues];
+  const codexDiagnostics = [...codexBinary.diagnostics];
   const codexHealthStatus =
     codexBinary.installed
       && codexBinary.version_status === 'compatible'
@@ -50,6 +51,7 @@ export async function buildOplEnvironment(contracts: GatewayContracts) {
           binary_path: codexBinary.binary_path,
           binary_source: codexBinary.binary_source,
           candidates: codexBinary.candidates,
+          diagnostics: codexDiagnostics,
           config_path: codexDefaults?.config_path ?? null,
           default_model: codexDefaults?.model ?? null,
           default_reasoning_effort: codexDefaults?.reasoning_effort ?? null,
@@ -61,6 +63,7 @@ export async function buildOplEnvironment(contracts: GatewayContracts) {
         hermes: {
           installed: Boolean(hermes.binary),
           version: hermes.version,
+          version_raw_output: hermes.version_raw_output,
           update_available: hermes.update_available,
           update_summary: hermes.update_summary,
           binary_path: hermes.binary?.path ?? null,

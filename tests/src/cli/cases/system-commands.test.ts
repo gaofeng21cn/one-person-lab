@@ -208,6 +208,7 @@ test('help advertises initialize and environment management command surfaces', (
   assert.equal(commands.includes('engine install'), true);
   assert.equal(commands.includes('system repair'), true);
   assert.equal(commands.includes('system reinstall-support'), false);
+  assert.equal(commands.includes('system update'), true);
   assert.equal(commands.includes('system update-channel'), true);
   assert.equal(commands.includes('modules'), true);
   assert.equal(commands.includes('module install'), true);

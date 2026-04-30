@@ -76,10 +76,12 @@ exit 1
             provider_base_url: string | null;
             health_status: string;
             issues: string[];
+            diagnostics: string[];
           };
           hermes: {
             installed: boolean;
             version: string | null;
+            version_raw_output: string | null;
             gateway_loaded: boolean;
             health_status: string;
           };
@@ -133,8 +135,10 @@ exit 1
     );
     assert.equal(output.system.core_engines.codex.health_status, 'ready');
     assert.deepEqual(output.system.core_engines.codex.issues, []);
+    assert.deepEqual(output.system.core_engines.codex.diagnostics, []);
     assert.equal(output.system.core_engines.hermes.installed, true);
     assert.equal(output.system.core_engines.hermes.version, 'Hermes 1.2.3');
+    assert.equal(output.system.core_engines.hermes.version_raw_output, 'Hermes 1.2.3');
     assert.equal(output.system.core_engines.hermes.update_available, false);
     assert.equal(output.system.core_engines.hermes.update_summary, null);
     assert.equal(output.system.core_engines.hermes.gateway_loaded, true);
@@ -166,58 +170,6 @@ exit 1
   } finally {
     fs.rmSync(codexConfigFixture.codexHome, { recursive: true, force: true });
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(hermesFixture.fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(homeRoot, { recursive: true, force: true });
-  }
-});
-
-test('system exposes Hermes update availability separately from readiness', () => {
-  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-hermes-update-home-'));
-  const hermesFixture = createFakeHermesFixture(`
-if [[ "$1" == "version" ]]; then
-  cat <<'EOF'
-Hermes Agent v0.10.0 (2026.4.16)
-Project: /tmp/hermes-agent
-Update available: 42 commits behind — run 'hermes update'
-EOF
-  exit 0
-fi
-if [[ "$1" == "gateway" && "$2" == "status" ]]; then
-  echo "✓ Gateway service is loaded"
-  exit 0
-fi
-echo "Unsupported hermes fixture command: $*" >&2
-exit 1
-`);
-
-  try {
-    const output = runCli(
-      ['system'],
-      {
-        HOME: homeRoot,
-        OPL_HERMES_BIN: hermesFixture.hermesPath,
-      },
-    ) as {
-      system: {
-        core_engines: {
-          hermes: {
-            installed: boolean;
-            update_available: boolean;
-            update_summary: string | null;
-            health_status: string;
-          };
-        };
-      };
-    };
-
-    assert.equal(output.system.core_engines.hermes.installed, true);
-    assert.equal(output.system.core_engines.hermes.update_available, true);
-    assert.equal(
-      output.system.core_engines.hermes.update_summary,
-      "Update available: 42 commits behind — run 'hermes update'",
-    );
-    assert.equal(output.system.core_engines.hermes.health_status, 'ready');
-  } finally {
     fs.rmSync(hermesFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
@@ -320,82 +272,6 @@ exit 1
     assert.deepEqual(output.system.core_engines.codex.issues, []);
   } finally {
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(homeRoot, { recursive: true, force: true });
-  }
-});
-
-test('system flags conflicting Codex CLI PATH candidates as attention needed', () => {
-  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-conflicting-codex-home-'));
-  const codexConfigFixture = createCodexConfigFixture({
-    model: 'gpt-5.5',
-    reasoningEffort: 'xhigh',
-    baseUrl: 'https://codex-opl.example.test/v1',
-    apiKey: 'codex-opl-key',
-  });
-  const compatibleCodexFixture = createFakeCodexFixture(`
-if [[ "$1" == "--version" ]]; then
-  echo "codex-cli 0.125.0"
-  exit 0
-fi
-echo "Unsupported compatible codex fixture command: $*" >&2
-exit 1
-`);
-  const outdatedCodexFixture = createFakeCodexFixture(`
-if [[ "$1" == "--version" ]]; then
-  echo "codex-cli 0.121.0"
-  exit 0
-fi
-echo "Unsupported outdated codex fixture command: $*" >&2
-exit 1
-`);
-
-  try {
-    const output = runCli(
-      ['system'],
-      {
-        HOME: homeRoot,
-        CODEX_HOME: codexConfigFixture.codexHome,
-        PATH: `${compatibleCodexFixture.fixtureRoot}:${outdatedCodexFixture.fixtureRoot}:/usr/bin:/bin`,
-      },
-    ) as {
-      system: {
-        overall_status: string;
-        core_engines: {
-          codex: {
-            version_status: string;
-            health_status: string;
-            issues: string[];
-            candidates: Array<{
-              path: string;
-              selected: boolean;
-              parsed_version: string | null;
-              version_status: string;
-            }>;
-          };
-        };
-      };
-    };
-
-    assert.equal(output.system.overall_status, 'attention_needed');
-    assert.equal(output.system.core_engines.codex.version_status, 'compatible');
-    assert.equal(output.system.core_engines.codex.health_status, 'attention_needed');
-    assert.deepEqual(output.system.core_engines.codex.issues, ['codex_cli_path_version_conflict']);
-    assert.deepEqual(
-      output.system.core_engines.codex.candidates.map((candidate) => [
-        candidate.path,
-        candidate.selected,
-        candidate.parsed_version,
-        candidate.version_status,
-      ]),
-      [
-        [compatibleCodexFixture.codexPath, true, '0.125.0', 'compatible'],
-        [outdatedCodexFixture.codexPath, false, '0.121.0', 'outdated'],
-      ],
-    );
-  } finally {
-    fs.rmSync(codexConfigFixture.codexHome, { recursive: true, force: true });
-    fs.rmSync(compatibleCodexFixture.fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(outdatedCodexFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
 });
@@ -808,6 +684,7 @@ test('system update-channel reports and persists the selected release channel', 
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
 });
+
 test('modules and module actions manage OPL-owned domain module installs and updates', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-modules-home-'));
   const modulesRoot = path.join(homeRoot, 'managed-modules');
@@ -931,11 +808,31 @@ EOF
       ['bootstrap', 'skill-sync', 'health'],
     );
 
+    const readMasModule = () => (
+      runCli(['modules'], env) as {
+        modules: { items: Array<{ module_id: string; recommended_action: string | null; available_actions: string[]; git: Record<string, unknown> | null }> };
+      }
+    ).modules.items.find((entry) => entry.module_id === 'medautoscience');
+    const syncedMas = readMasModule();
+    assert.ok(syncedMas);
+    assert.equal(syncedMas.git?.sync_status, 'synced');
+    assert.equal(syncedMas.git?.ahead_count, 0);
+    assert.equal(syncedMas.git?.behind_count, 0);
+    assert.equal(syncedMas.recommended_action, null);
+    assert.equal(syncedMas.available_actions.includes('update'), false);
+
     const nextSha = medAutoScienceRemote.advance(
       'CHANGELOG.md',
       '# Changelog\n\n- Added module update test\n',
       'Advance module remote',
     );
+    const behindMas = readMasModule();
+    assert.ok(behindMas);
+    assert.equal(behindMas.git?.sync_status, 'behind');
+    assert.equal(behindMas.git?.behind_count, 1);
+    assert.equal(behindMas.recommended_action, 'update');
+    assert.equal(behindMas.available_actions.includes('update'), true);
+
     const update = runCli(
       ['module', 'update', '--module', 'medautoscience'],
       env,

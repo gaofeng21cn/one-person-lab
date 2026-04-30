@@ -28,6 +28,7 @@ export type OplEngineAction =
 export type OplSystemAction =
   | 'repair'
   | 'reinstall_support'
+  | 'update'
   | 'update_channel'
   | 'repair_native_helpers';
 
@@ -98,6 +99,11 @@ export type GitRepoSnapshot = {
   head_sha: string | null;
   short_sha: string | null;
   origin_url: string | null;
+  upstream_ref: string | null;
+  upstream_head_sha: string | null;
+  ahead_count: number | null;
+  behind_count: number | null;
+  sync_status: 'synced' | 'ahead' | 'behind' | 'diverged' | 'no_upstream' | 'unknown';
   dirty: boolean;
 };
 

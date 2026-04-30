@@ -102,7 +102,7 @@ The desktop GUI source is maintained in [`opl-aion-shell`](https://github.com/ga
 ### Runtime notes
 
 - Default front doors are `opl`, `opl exec`, and `opl resume`. Unless a runtime or domain agent is explicitly selected, these paths keep Codex-default semantics.
-- OPL treats `Codex CLI` as a managed runtime dependency: `opl system` reports the selected binary, version, minimum-version policy, and conflicting PATH candidates; versions below the minimum or conflicting candidate versions are marked `attention_needed`. If a compatible Codex CLI is already usable, OPL does not force a separate Codex configuration step on first launch.
+- OPL treats `Codex CLI` as a managed runtime dependency: `opl system` reports the selected binary, version, minimum-version policy, and PATH diagnostics. Health is based on the selected binary; non-selected PATH candidates are reported as diagnostics instead of blocking a compatible Codex CLI.
 - If an admitted domain repo is missing locally, run `opl module install --module <module_id>`.
 - The default workspace root is your home directory. The default local state directory is `~/Library/Application Support/OPL/state`. Set `OPL_STATE_DIR` to use another local state root.
 - Active domain agents are [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience), [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant), and [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai).
