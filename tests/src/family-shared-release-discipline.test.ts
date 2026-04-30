@@ -105,7 +105,10 @@ test('default family root resolves from the canonical repo root in both main che
   assert.equal(defaultFamilyRoot, path.resolve(canonicalRepoRoot, '..'));
 
   const repoParent = path.resolve(repoRoot, '..');
-  if (repoRoot.includes(`${path.sep}.worktrees${path.sep}`)) {
+  if (
+    repoRoot.includes(`${path.sep}.worktrees${path.sep}`)
+    || repoRoot.includes(`${path.sep}worktrees${path.sep}`)
+  ) {
     assert.notEqual(defaultFamilyRoot, repoParent);
   } else {
     assert.equal(defaultFamilyRoot, repoParent);
