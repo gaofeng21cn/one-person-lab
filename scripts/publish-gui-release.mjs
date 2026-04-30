@@ -7,11 +7,16 @@ import { fileURLToPath } from 'node:url';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const defaultShellRoot = path.resolve(repoRoot, '..', 'opl-aion-shell');
 
+function defaultReleaseVersion() {
+  const now = new Date();
+  return `${String(now.getFullYear()).slice(-2)}.${now.getMonth() + 1}.${now.getDate()}`;
+}
+
 function parseArgs(argv) {
   const parsed = {
     shellRoot: process.env.OPL_AION_SHELL_ROOT || defaultShellRoot,
     releaseRepo: process.env.OPL_RELEASE_REPO || 'gaofeng21cn/one-person-lab',
-    version: process.env.OPL_RELEASE_VERSION || '26.4.27',
+    version: process.env.OPL_RELEASE_VERSION || defaultReleaseVersion(),
     build: true,
     dryRun: false,
   };

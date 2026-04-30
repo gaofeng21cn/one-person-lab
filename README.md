@@ -30,7 +30,7 @@
 
 For macOS desktop users, download the App directly:
 
-[Download One Person Lab for macOS](https://github.com/gaofeng21cn/one-person-lab/releases/download/v26.4.27/One.Person.Lab-26.4.27-mac-arm64.dmg)
+[Download One Person Lab for macOS](https://github.com/gaofeng21cn/one-person-lab/releases/latest)
 
 Open `One Person Lab.app`; on first launch it quietly checks the local environment, uses your home directory as the default workspace root, and installs missing OPL modules and recommended skills when it can do so safely.
 

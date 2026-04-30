@@ -30,7 +30,7 @@
 
 macOS 桌面用户可以直接下载 App：
 
-[下载 One Person Lab for macOS](https://github.com/gaofeng21cn/one-person-lab/releases/download/v26.4.25/One.Person.Lab-26.4.25-mac-arm64.dmg)
+[下载 One Person Lab for macOS](https://github.com/gaofeng21cn/one-person-lab/releases/latest)
 
 打开 `One Person Lab.app` 后，首次启动会准备本机环境，并帮助配置 Codex、模块、skills 和桌面工作台，不额外打开服务窗口。
 
