@@ -11,11 +11,11 @@
 | 分发对象 | 推荐渠道 | 是否打入桌面 App | 理由 |
 | --- | --- | --- | --- |
 | One Person Lab 桌面 App | GitHub Releases | 是 | 用户直接下载和安装 |
-| OPL CLI / shared contracts / native helper | npm 或 GitHub Packages | 随一键安装获取 | App 不变时也需要独立修复和更新 |
-| MAS | GitHub Packages / GHCR 模块包 | 否 | domain agent 独立演进，按环境管理安装/更新 |
-| MDS | GitHub Packages / GHCR 模块包 | 否 | MAS 隐藏运行依赖，在环境管理中维护 |
-| MAG | GitHub Packages / GHCR 模块包 | 否 | domain agent 独立演进，按环境管理安装/更新 |
-| RCA | GitHub Packages / GHCR 模块包 | 否 | 交付物链路可能较大，不应拖慢 App 更新 |
+| OPL CLI / shared contracts / native helper | npm / 当前安装脚本；GitHub Packages 是后续机器通道 | 随一键安装获取 | App 不变时也需要独立修复和更新 |
+| MAS | 当前 git checkout / sibling repo；GHCR 模块包是后续机器通道 | 否 | domain agent 独立演进，按环境管理安装/更新 |
+| MDS | 当前 git checkout / sibling repo；GHCR 模块包是后续机器通道 | 否 | MAS 隐藏运行依赖，在环境管理中维护 |
+| MAG | 当前 git checkout / sibling repo；GHCR 模块包是后续机器通道 | 否 | domain agent 独立演进，按环境管理安装/更新 |
+| RCA | 当前 git checkout / sibling repo；GHCR 模块包是后续机器通道 | 否 | 交付物链路可能较大，不应拖慢 App 更新 |
 | WebUI Docker 镜像 | GitHub Packages container registry | 否 | 服务器/Docker 场景由镜像直接启动浏览器入口 |
 
 ## 模块体积基线
@@ -33,15 +33,17 @@
 
 ## Packages 适用方式
 
-当前已经开始把 GitHub Packages 接成机器消费通道。现状是：
+当前已经开始设计 GitHub Packages 机器消费通道，但模块安装/更新尚未切到 Packages。现状是：
 
 - 用户下载入口仍是 GitHub Releases 里的桌面 App 安装包。
 - `opl packages manifest` 输出 WebUI 镜像、native helper、MAS/MDS/MAG/RCA 模块包的 machine-readable 坐标。
-- `.github/workflows/packages.yml` 会把模块源码归档和 release manifest 推送到 GHCR，并从 `opl-aion-shell` 构建 WebUI Docker 镜像。
+- `.github/workflows/packages.yml` 是 OPL 中央 package workflow 雏形；它不代表 MAS/MDS/MAG/RCA 各 repo 已经各自维护独立 GHCR/Packages 发布面。
 - Native helper 预构建 workflow 会继续上传 CI artifact，同时把 tar.gz archive 推送到 GHCR。
-- `opl install` 和环境管理当前仍通过 git checkout / npm / 本地 sibling repo 做模块安装和更新；下一步才会让 `opl module install/update` 优先消费 manifest，失败时回退 git。
+- `opl install`、App 更新后的首次启动协调、`opl system reconcile-modules` 和环境管理当前仍通过 git checkout / npm / 本地 sibling repo 做模块安装和更新。
+- App 更新后的首次启动会把缺失模块补齐，并把 clean checkout 更新到 upstream/default branch 最新 HEAD；dirty、ahead、diverged 或无 upstream 的开发 checkout 只提示人工处理。
+- 下一步如果 Packages/GHCR 真正接入 `opl module install/update`，再把最新来源切到 channel manifest；在那之前，文档不得把 Packages 写成当前模块安装更新机制。
 
-你的理解是对的：`Packages` 适合作为 App 不变时的机器更新通道，但它不替代 `Releases` 的用户下载入口。新手用户仍从 `one-person-lab` 的 `Releases` 下载桌面安装包；`opl install`、环境管理和 Docker 启动脚本再从 `Packages` / GHCR 拉取可独立更新的内核与模块。MAS/MDS/MAG/RCA 等 domain repo 不再提供用户安装型 GitHub Release。
+`Packages` 适合作为 App 不变时的机器更新通道，但它不替代 `Releases` 的用户下载入口。新手用户仍从 `one-person-lab` 的 `Releases` 下载桌面安装包；当前 `opl install` 与环境管理先通过 git checkout 更新模块，未来再切到 Packages/GHCR 制品。MAS/MDS/MAG/RCA 等 domain repo 不再提供用户安装型 GitHub Release。
 
 Manifest 的本地入口：
 
@@ -58,12 +60,16 @@ Manifest 会同步到 `ghcr.io/gaofeng21cn/one-person-lab-manifest:<opl_version>
   "gui_version": "1.9.21",
   "release_channel": "stable",
   "generated_at": "2026-04-27T00:00:00Z",
+  "module_install_update_source": "git_checkout",
+  "package_consumption_status": "packages_defined_not_consumed_by_install_update",
   "modules": {
     "medautoscience": {
       "channel": "stable",
       "version": "26.4.27",
       "artifact_kind": "source_archive",
       "artifact": "ghcr.io/gaofeng21cn/one-person-lab-modules/med-autoscience:26.4.27",
+      "package_consumption_status": "defined_not_consumed_by_install_update",
+      "current_install_update_source": "git_checkout",
       "fallback_git": {
         "repo_url": "https://github.com/gaofeng21cn/med-autoscience.git",
         "ref": "main"
@@ -76,6 +82,8 @@ Manifest 会同步到 `ghcr.io/gaofeng21cn/one-person-lab-manifest:<opl_version>
       "version": "26.4.27",
       "artifact_kind": "source_archive",
       "artifact": "ghcr.io/gaofeng21cn/one-person-lab-modules/med-deepscientist:26.4.27",
+      "package_consumption_status": "defined_not_consumed_by_install_update",
+      "current_install_update_source": "git_checkout",
       "install_strategy": "extract_to_managed_modules_root",
       "dependency_of": ["medautoscience"]
     }
@@ -88,23 +96,24 @@ Manifest 会同步到 `ghcr.io/gaofeng21cn/one-person-lab-manifest:<opl_version>
 | 发布物 | 推荐 Packages 名称 | 内容 | 触发方 |
 | --- | --- | --- | --- |
 | Docker/WebUI 镜像 | `ghcr.io/gaofeng21cn/one-person-lab-webui:<opl_version>` | OPL WebUI runtime、Codex/Hermes 初始化脚本、浏览器入口 | Docker 用户直接 `docker run` |
-| 模块源码包 | `ghcr.io/gaofeng21cn/one-person-lab-modules/<module>:<version>` | 不含 `.git`、缓存、venv、node_modules 的模块源码归档 | `opl install` 与 App 环境管理 |
+| 模块源码包 | `ghcr.io/gaofeng21cn/one-person-lab-modules/<module>:<version>` | 不含 `.git`、缓存、venv、node_modules 的模块源码归档 | 后续 `opl module install/update` 接入 manifest 后消费；当前不作为正式安装更新来源 |
 | Native helper prebuild | `ghcr.io/gaofeng21cn/one-person-lab-native-helper:<target>-<version>` | Rust helper 二进制、manifest、checksum | `opl native:repair` / `opl install` |
 | OPL core npm 包 | `@gaofeng21cn/one-person-lab` 或 npm public package | CLI、contracts、shared helpers、安装脚本 | npm / 一键安装脚本 |
 | Release manifest | Release artifact 或 `one-person-lab-manifest:<opl_version>` | 所有制品版本、URL、sha256、回滚目标 | App 环境管理与 CLI |
 
 落地顺序：
 
-1. 已落地 manifest 与 GHCR 发布 workflow。
-2. 下一步让 `opl module install/update` 优先读 manifest，失败时回退到 git clone。
-3. 再让 `native:repair` 优先拉取匹配平台的 GHCR native helper package。
-4. 最后把环境管理的“最新版本”从 `GitHub main` 改成 manifest 中的目标版本。
+1. 当前正式安装更新路径是 git checkout / sibling repo。
+2. 已有中央 manifest 与 GHCR workflow 雏形，但尚未成为 `opl module install/update` 的执行来源。
+3. 下一步让 `opl module install/update` 优先读 manifest，失败时回退到 git clone。
+4. 再让 `native:repair` 优先拉取匹配平台的 GHCR native helper package。
+5. 最后把环境管理的“最新版本”从 `GitHub main` 改成 manifest 中的目标版本。
 
 最小可行规则保持不变：
 
 - Release 继续放 DMG/ZIP/DEB 等用户安装包。
-- Packages 放 OPL CLI/core、WebUI Docker 镜像和 domain module 的机器消费制品。
-- 环境管理只通过 manifest 判断“当前版本 / 目标版本 / 是否可更新”，不直接猜 GitHub 最新状态。
+- Packages 放 OPL CLI/core、WebUI Docker 镜像和 domain module 的机器消费制品；只有 install/update 真正消费它们之后，才把它们写成当前机制。
+- 当前环境管理通过 git upstream 判断“当前版本 / 是否可更新”；切到 Packages 后再改为通过 manifest 判断目标版本。
 - 每个制品必须有版本、来源、校验和、回滚目标和安装策略。
 - `MDS` 在 manifest 中作为 `MAS` 依赖出现，但环境管理仍显示它的安装和更新状态。
 

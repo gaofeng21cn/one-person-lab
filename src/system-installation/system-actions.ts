@@ -126,6 +126,65 @@ function maybeUpdateModule(module: OplModuleStatus): SystemUpdateTargetResult {
   };
 }
 
+function maybeReconcileModule(module: OplModuleStatus): SystemUpdateTargetResult {
+  if (!module.installed || module.install_origin === 'missing') {
+    const result = runOplModuleAction('install', module.module_id);
+    return {
+      target_type: 'module',
+      target_id: module.module_id,
+      status: 'completed',
+      reason: 'module_missing',
+      result: result.module_action,
+    };
+  }
+
+  if (module.install_origin === 'invalid_checkout') {
+    return buildSkippedUpdate('module', module.module_id, 'invalid_checkout');
+  }
+
+  if (module.health_status === 'dirty' || module.git?.dirty) {
+    return {
+      target_type: 'module',
+      target_id: module.module_id,
+      status: 'manual_required',
+      reason: 'dirty_checkout',
+      result: null,
+    };
+  }
+
+  if (module.git?.sync_status === 'diverged' || module.git?.sync_status === 'ahead' || module.git?.sync_status === 'no_upstream') {
+    return {
+      target_type: 'module',
+      target_id: module.module_id,
+      status: 'manual_required',
+      reason: resolveModuleUpdateSkipReason(module),
+      result: null,
+    };
+  }
+
+  const result = runOplModuleAction('update', module.module_id);
+  return {
+    target_type: 'module',
+    target_id: module.module_id,
+    status: 'completed',
+    reason: module.git?.sync_status === 'behind' ? 'module_update_available' : 'module_reconcile_refresh',
+    result: result.module_action,
+  };
+}
+
+function summarizeTargets(targets: SystemUpdateTargetResult[]) {
+  const completedCount = targets.filter((entry) => entry.status === 'completed').length;
+  const skippedCount = targets.filter((entry) => entry.status === 'skipped').length;
+  const manualRequiredCount = targets.filter((entry) => entry.status === 'manual_required').length;
+
+  return {
+    total_targets_count: targets.length,
+    completed_targets_count: completedCount,
+    skipped_targets_count: skippedCount,
+    manual_required_targets_count: manualRequiredCount,
+  };
+}
+
 async function runOplSystemUpdate(contracts: GatewayContracts) {
   const initialEnvironment = (await buildOplEnvironment(contracts)).system_environment;
   const initialModules = buildOplModules().modules.modules;
@@ -135,24 +194,40 @@ async function runOplSystemUpdate(contracts: GatewayContracts) {
     ...initialModules.map((module) => maybeUpdateModule(module)),
   ];
   const refreshedEnvironment = (await buildOplEnvironment(contracts)).system_environment;
-  const completedCount = targets.filter((entry) => entry.status === 'completed').length;
-  const skippedCount = targets.filter((entry) => entry.status === 'skipped').length;
-  const manualRequiredCount = targets.filter((entry) => entry.status === 'manual_required').length;
+  const summary = summarizeTargets(targets);
 
   return {
     version: 'g2',
     system_action: {
       action: 'update' as const,
-      status: manualRequiredCount > 0 ? 'manual_required' : 'completed',
+      status: summary.manual_required_targets_count > 0 ? 'manual_required' : 'completed',
       update_channel: readOplUpdateChannel().channel,
       workspace_root: readOplWorkspaceRoot(),
       details: {
-        summary: {
-          total_targets_count: targets.length,
-          completed_targets_count: completedCount,
-          skipped_targets_count: skippedCount,
-          manual_required_targets_count: manualRequiredCount,
-        },
+        summary,
+        targets,
+        system_environment: refreshedEnvironment,
+      },
+    },
+  };
+}
+
+async function runOplSystemModuleReconcile(contracts: GatewayContracts) {
+  const initialModules = buildOplModules().modules.modules;
+  const targets = initialModules.map((module) => maybeReconcileModule(module));
+  const refreshedEnvironment = (await buildOplEnvironment(contracts)).system_environment;
+  const summary = summarizeTargets(targets);
+
+  return {
+    version: 'g2',
+    system_action: {
+      action: 'reconcile_modules' as const,
+      status: summary.manual_required_targets_count > 0 ? 'manual_required' : 'completed',
+      update_channel: readOplUpdateChannel().channel,
+      workspace_root: readOplWorkspaceRoot(),
+      details: {
+        latest_source: 'git_upstream',
+        summary,
         targets,
         system_environment: refreshedEnvironment,
       },
@@ -197,6 +272,10 @@ export async function runOplSystemAction(
 
   if (action === 'update') {
     return runOplSystemUpdate(contracts);
+  }
+
+  if (action === 'reconcile_modules') {
+    return runOplSystemModuleReconcile(contracts);
   }
 
   if (!input.channel) {

@@ -29,6 +29,7 @@ export type OplSystemAction =
   | 'repair'
   | 'reinstall_support'
   | 'update'
+  | 'reconcile_modules'
   | 'update_channel'
   | 'repair_native_helpers';
 

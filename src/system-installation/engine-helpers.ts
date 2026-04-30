@@ -22,6 +22,16 @@ type ParsedCliVersion = {
   parts: [number, number, number];
 };
 
+type CodexCandidateSnapshot = {
+  path: string;
+  real_path: string | null;
+  selected: boolean;
+  version: string | null;
+  parsed_version: string | null;
+  version_status: 'compatible' | 'outdated' | 'unknown';
+  aliases?: string[];
+};
+
 function resolveMinimumCodexCliVersion() {
   return normalizeOptionalString(process.env.OPL_MIN_CODEX_CLI_VERSION)
     ?? DEFAULT_MINIMUM_CODEX_CLI_VERSION;
@@ -74,11 +84,20 @@ function inspectCodexCandidate(candidatePath: string, selectedPath: string | nul
   const policy = resolveVersionStatus(version, minimumVersion);
   return {
     path: candidatePath,
+    real_path: resolveRealPath(candidatePath),
     selected: selectedPath === candidatePath,
     version,
     parsed_version: policy.parsed_version,
     version_status: policy.version_status,
-  };
+  } satisfies CodexCandidateSnapshot;
+}
+
+function resolveRealPath(candidatePath: string) {
+  try {
+    return fs.realpathSync(candidatePath);
+  } catch {
+    return null;
+  }
 }
 
 function enumeratePathCodexCandidates() {
@@ -92,6 +111,9 @@ function enumeratePathCodexCandidates() {
     }
 
     const candidate = path.join(normalized, 'codex');
+    if (isAppBundledCodexResource(candidate)) {
+      continue;
+    }
     if (!fs.existsSync(candidate) || !fs.statSync(candidate).isFile()) {
       continue;
     }
@@ -107,6 +129,10 @@ function enumeratePathCodexCandidates() {
   return candidates;
 }
 
+function isAppBundledCodexResource(candidatePath: string) {
+  return candidatePath.includes(`${path.sep}Codex.app${path.sep}Contents${path.sep}Resources${path.sep}codex`);
+}
+
 function enumerateCodexCandidates(selectedPath: string) {
   const candidates: string[] = [];
   const seen = new Set<string>();
@@ -120,6 +146,50 @@ function enumerateCodexCandidates(selectedPath: string) {
   }
 
   return candidates;
+}
+
+function candidateMatchesSelected(candidate: CodexCandidateSnapshot, selected: CodexCandidateSnapshot) {
+  if (candidate.real_path && selected.real_path && candidate.real_path === selected.real_path) {
+    return true;
+  }
+
+  return Boolean(
+    candidate.parsed_version
+      && selected.parsed_version
+      && candidate.parsed_version === selected.parsed_version
+      && candidate.version_status === 'compatible'
+      && selected.version_status === 'compatible',
+  );
+}
+
+function normalizeCodexCandidates(candidates: CodexCandidateSnapshot[]) {
+  const selected = candidates.find((candidate) => candidate.selected) ?? candidates[0];
+  if (!selected) {
+    return [];
+  }
+
+  const normalizedSelected: CodexCandidateSnapshot = { ...selected };
+  const aliases: string[] = [];
+  const visible: CodexCandidateSnapshot[] = [];
+
+  for (const candidate of candidates) {
+    if (candidate.path === selected.path) {
+      continue;
+    }
+
+    if (candidateMatchesSelected(candidate, selected)) {
+      aliases.push(candidate.path);
+      continue;
+    }
+
+    visible.push(candidate);
+  }
+
+  if (aliases.length > 0) {
+    normalizedSelected.aliases = aliases;
+  }
+
+  return [normalizedSelected, ...visible];
 }
 
 export function resolveCodexVersion() {
@@ -143,8 +213,9 @@ export function resolveCodexVersion() {
   const versionResult = runCommand(binary.path, ['--version']);
   const version = normalizeOptionalString(normalizeOutput(versionResult.stdout, versionResult.stderr));
   const policy = resolveVersionStatus(version, minimumVersion);
-  const candidates = enumerateCodexCandidates(binary.path)
+  const rawCandidates = enumerateCodexCandidates(binary.path)
     .map((candidate) => inspectCodexCandidate(candidate, binary.path, minimumVersion));
+  const candidates = normalizeCodexCandidates(rawCandidates);
   const candidateVersions = new Set(
     candidates
       .map((candidate) => candidate.parsed_version)
