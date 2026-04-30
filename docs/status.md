@@ -6,6 +6,7 @@
 - 当前公开认知保持三层：`产品运行时 -> 产品家族 -> 当前实现 / 模块`。
 - `OPL` 持有 Codex-default session/runtime、智能体注册表、工作空间 / 会话 / 进度 / 交付物接口面，以及机器可读合同。
 - `OPL` 继续持有 family-level shared modules、shared contracts 与 shared indexes 的顶层语义与注册面。
+- `Family External Orchestration Learning Board` 已成为外部 agent / orchestration 学习的默认入口：`docs/references/family-external-orchestration-learning-board-2026-04-30.md`。新 source 只允许归入 `adopt_family_contract`、`adopt_domain_template`、`watch_only`、`reject` 或 `saturated`，不能把学习结果只留在对话里。
 - `OPL Runtime Manager` 已冻结为 thin product-managed adapter：它管理外部 `Hermes-Agent` 的 provision、profile、task registration、诊断、恢复入口、Rust native helper catalog 与高频状态索引，但不承担 scheduler/session/memory kernel。
 - `Codex` 是唯一默认交互与执行宿主；`Hermes-Agent` 只在显式切换时作为备选 runtime。
 - 当前活跃实现是三个独立 `domain agent` 仓：`MAS`、`MAG`、`RCA`；thesis 与 review 模块保持定义阶段。
