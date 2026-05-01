@@ -17,6 +17,7 @@ const GUI_FIRST_RUN_ACCESSIBILITY_LABELS = {
   environmentButton: 'opl-first-run-open-environment-button',
   modulesButton: 'opl-first-run-open-modules-button',
   readyEntry: 'opl-first-run-ready-entry',
+  guidEntry: 'opl-guid-entry',
   settingsEnvironment: 'opl-settings-environment',
 } as const;
 
