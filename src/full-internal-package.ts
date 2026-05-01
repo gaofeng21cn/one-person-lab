@@ -1,6 +1,7 @@
 import path from 'node:path';
 
 export const FULL_INTERNAL_OUTPUT_DIR = '/Users/gaofeng/Downloads/One-Person-Lab-Full-Internal';
+export const FULL_RELEASE_OUTPUT_DIR = 'dist/opl-full-release';
 export const FULL_RUNTIME_RESOURCE_DIR = 'opl-full-runtime';
 export const PACKAGED_MODULE_MARKER_FILE = 'opl-runtime-module.json';
 
@@ -30,16 +31,18 @@ function normalizeComponent(input: ComponentSnapshot | undefined) {
   };
 }
 
-export function buildInternalArtifactNames(versionInput: string) {
+export function buildFullPackageArtifactNames(versionInput: string) {
   const version = normalizeVersion(versionInput);
   return {
     dmg: `One-Person-Lab-Full-${version}-mac-arm64.dmg`,
     runtimeTar: `opl-runtime-full-${version}-macos-arm64.tar.zst`,
     checksums: 'SHA256SUMS.txt',
-    readme: 'README-内测安装说明.txt',
+    readme: 'README-首次安装说明.txt',
     manifest: 'full-package-manifest.json',
   };
 }
+
+export const buildInternalArtifactNames = buildFullPackageArtifactNames;
 
 export function buildFullPackageManifest(input: FullPackageManifestInput = {}) {
   const version = normalizeVersion(input.version);
@@ -47,7 +50,7 @@ export function buildFullPackageManifest(input: FullPackageManifestInput = {}) {
 
   return {
     manifest_version: 1,
-    package_kind: 'opl_full_internal_macos_arm64',
+    package_kind: 'opl_full_first_install_macos_arm64',
     version,
     arch: 'macos-arm64',
     generated_at: input.generatedAt ?? new Date().toISOString(),
@@ -60,12 +63,22 @@ export function buildFullPackageManifest(input: FullPackageManifestInput = {}) {
       state_policy: 'user_state_stays_outside_runtime_payload',
     },
     distribution: {
-      channel: 'internal_manual',
-      manual_upload_target: 'Quark Drive manual internal testing share',
-      github_release_upload: false,
+      channel: 'github_release_first_install',
+      release_asset_role: 'first_install_recommended',
+      github_release_upload: true,
+      updater_metadata_allowed: false,
       channel_manifest: false,
       runtime_auto_update: false,
-      app_auto_update: 'unchanged_github_release_channel',
+      app_auto_update: 'standard_github_release_metadata_only',
+      standard_update_assets: [
+        `One-Person-Lab-${version}-mac-arm64.dmg`,
+        `One-Person-Lab-${version}-mac-arm64.zip`,
+        'latest-arm64-mac.yml',
+      ],
+      signing_policy: {
+        release_requires_developer_id: true,
+        release_requires_notarization: true,
+      },
     },
     components: {
       opl: {
@@ -229,10 +242,11 @@ export function buildInternalPackageReadme(input: {
 }) {
   const installPath = `~/Library/Application Support/OPL/runtime/${normalizeVersion(input.version)}`;
   return [
-    `One Person Lab Full 内测包 ${normalizeVersion(input.version)}`,
+    `One Person Lab Full 首次安装包 ${normalizeVersion(input.version)}`,
     '',
-    '分发方式：本包用于夸克网盘人工内测分发，不上传 GitHub Release，不接 OPL channel manifest，也不启用 runtime 自动更新。',
-    'App 内已有的自动更新机制保持原样，仍只读取 GitHub Release 通道。',
+    '分发方式：本包作为 GitHub Release 的首次安装推荐资产发布，不写入 latest*.yml，也不作为 App 自动更新目标。',
+    'App 内已有的自动更新机制保持原样，仍只读取标准 One Person Lab App 的 GitHub Release metadata。',
+    '已安装用户继续使用 App 内更新或标准安装包；新用户需要更快开始 MAS 工作时优先下载本 Full 包。',
     '',
     '安装步骤：',
     `1. 打开 ${input.dmgName}，把 One Person Lab 拖到 Applications。`,
@@ -246,8 +260,8 @@ export function buildInternalPackageReadme(input: {
       : '补充 runtime 包：当前版本使用单 DMG 分发，未拆出独立 runtime tar.zst。',
     '',
     input.notarized
-      ? '签名/公证：此包已按本机配置签名并通过公证检查。'
-      : '签名/公证：此包是内测构建，可能未公证；Gatekeeper 如提示无法打开，请在系统设置里手动允许或用右键打开。',
+      ? '签名/公证：此包已完成 Developer ID 签名并通过 Apple 公证检查。'
+      : '签名/公证：此文件来自本地构建，可能未公证；正式 GitHub Release 资产必须通过 Developer ID 签名和 Apple 公证。',
     '',
     '校验：下载后可用 shasum -a 256 对照 SHA256SUMS.txt。',
     '',

@@ -91,7 +91,7 @@ This repository tracks the shared OPL workbench layer, not the specialized domai
 - Workspace, session, progress, and artifact discovery surfaces.
 - Shared contracts that let Research, Grant, and Presentation Foundries stay visible from one workbench.
 
-The desktop GUI source is maintained in [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) as an internal OPL-branded app-shell build input. Users download One Person Lab App packages from this repository’s GitHub Releases, and this repository provides the shared workbench contracts and product surfaces consumed by the app and Codex.
+The desktop GUI source is maintained in [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) as an internal OPL-branded app-shell build input. Users download One Person Lab App packages from this repository’s GitHub Releases; first-time macOS arm64 users can choose the `One-Person-Lab-Full-<version>-mac-arm64.dmg` asset with MAS/Hermes/MDS runtime payloads, while in-app updates continue to use the standard App assets and `latest*.yml` metadata. This repository provides the shared workbench contracts and product surfaces consumed by the app and Codex.
 
 ### How to read this repository
 

@@ -211,6 +211,23 @@ test('package.json exposes the fresh-install smoke lane', () => {
   );
 });
 
+test('Full first-install release workflow signs, verifies, and keeps updater metadata standard-only', () => {
+  const workflow = read('.github/workflows/full-first-install-release.yml');
+
+  assert.equal(
+    packageJson.scripts?.['packages:full-release'],
+    'node --experimental-strip-types ./scripts/build-full-internal-package.mjs --out-dir dist/opl-full-release',
+  );
+  assert.match(workflow, /BUILD_CERTIFICATE_BASE64/);
+  assert.match(workflow, /appleIdPassword/);
+  assert.match(workflow, /codesign --verify --deep --strict/);
+  assert.match(workflow, /spctl --assess --type execute/);
+  assert.match(workflow, /hdiutil verify/);
+  assert.match(workflow, /shasum -a 256 -c SHA256SUMS\.txt/);
+  assert.match(workflow, /grep -R "One-Person-Lab-Full" release\/latest\*\.yml/);
+  assert.match(workflow, /--include-full-package/);
+});
+
 test('GUI release publisher defaults to current arm64 artifacts only', () => {
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-gui-release-test-'));
   const shellRoot = path.join(tmpRoot, 'opl-aion-shell');
@@ -227,6 +244,7 @@ test('GUI release publisher defaults to current arm64 artifacts only', () => {
     `One-Person-Lab-${version}-mac-arm64.dmg.blockmap`,
     `One-Person-Lab-${version}-mac-arm64.zip`,
     `One-Person-Lab-${version}-mac-arm64.zip.blockmap`,
+    `One-Person-Lab-Full-${version}-mac-arm64.dmg`,
     `One-Person-Lab-${version}-a-mac-arm64.dmg`,
     `One-Person-Lab-${version}-a-mac-arm64.dmg.blockmap`,
     `One-Person-Lab-${version}-a-mac-arm64.zip`,
@@ -318,7 +336,130 @@ test('GUI release publisher defaults to current arm64 artifacts only', () => {
     payload.artifacts.some((artifact) => artifact.includes(`${version}-a-mac-arm64`)),
     false,
   );
+  assert.equal(
+    payload.artifacts.some((artifact) => artifact.includes('One-Person-Lab-Full')),
+    false,
+  );
   assert.equal(fs.readFileSync(path.join(outDir, 'latest-mac.yml'), 'utf8'), metadata);
+});
+
+test('GUI release publisher uploads Full first-install assets only when explicitly requested', () => {
+  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-gui-release-full-test-'));
+  const shellRoot = path.join(tmpRoot, 'opl-aion-shell');
+  const outDir = path.join(shellRoot, 'out');
+  const fullDir = path.join(tmpRoot, 'full');
+  const fakeBin = path.join(tmpRoot, 'bin');
+  const version = '26.5.2';
+
+  fs.mkdirSync(outDir, { recursive: true });
+  fs.mkdirSync(fullDir, { recursive: true });
+  fs.mkdirSync(fakeBin, { recursive: true });
+  fs.writeFileSync(path.join(fakeBin, 'gh'), '#!/usr/bin/env bash\nexit 1\n', { mode: 0o755 });
+
+  fs.writeFileSync(path.join(outDir, `One-Person-Lab-${version}-mac-arm64.dmg`), 'standard dmg');
+  fs.writeFileSync(path.join(outDir, `One-Person-Lab-${version}-mac-arm64.zip`), 'standard zip');
+  fs.writeFileSync(
+    path.join(outDir, 'latest-mac.yml'),
+    [
+      `version: ${version}`,
+      'files:',
+      `  - url: One-Person-Lab-${version}-mac-arm64.zip`,
+      `  - url: One-Person-Lab-${version}-mac-arm64.dmg`,
+      `path: One-Person-Lab-${version}-mac-arm64.zip`,
+      '',
+    ].join('\n'),
+  );
+
+  fs.writeFileSync(path.join(fullDir, `One-Person-Lab-Full-${version}-mac-arm64.dmg`), 'full dmg');
+  fs.writeFileSync(path.join(fullDir, 'full-package-manifest.json'), '{"distribution":{"updater_metadata_allowed":false}}\n');
+  fs.writeFileSync(path.join(fullDir, 'SHA256SUMS.txt'), 'abc  file\n');
+  fs.writeFileSync(path.join(fullDir, 'README-首次安装说明.txt'), 'readme\n');
+
+  const result = spawnSync(
+    process.execPath,
+    [
+      path.join(repoRoot, 'scripts/publish-gui-release.mjs'),
+      '--no-build',
+      '--dry-run',
+      '--shell-root',
+      shellRoot,
+      '--version',
+      version,
+      '--repo',
+      'example/one-person-lab',
+      '--full-package-dir',
+      fullDir,
+    ],
+    {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        PATH: `${fakeBin}${path.delimiter}${process.env.PATH ?? ''}`,
+      },
+    },
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  const payload = JSON.parse(result.stdout) as {
+    artifacts: string[];
+    standard_artifacts: string[];
+    full_package_artifacts: string[];
+  };
+  assert.ok(payload.standard_artifacts.some((artifact) => artifact.endsWith('latest-arm64-mac.yml')));
+  assert.ok(payload.full_package_artifacts.some((artifact) => artifact.endsWith(`One-Person-Lab-Full-${version}-mac-arm64.dmg`)));
+  assert.ok(payload.artifacts.some((artifact) => artifact.endsWith('README-首次安装说明.txt')));
+  const generatedArm64Metadata = fs.readFileSync(path.join(outDir, 'latest-arm64-mac.yml'), 'utf8');
+  assert.doesNotMatch(generatedArm64Metadata, /Full/);
+});
+
+test('GUI release publisher rejects updater metadata that points at Full assets', () => {
+  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-gui-release-full-guard-test-'));
+  const shellRoot = path.join(tmpRoot, 'opl-aion-shell');
+  const outDir = path.join(shellRoot, 'out');
+  const fakeBin = path.join(tmpRoot, 'bin');
+  const version = '26.5.2';
+
+  fs.mkdirSync(outDir, { recursive: true });
+  fs.mkdirSync(fakeBin, { recursive: true });
+  fs.writeFileSync(path.join(fakeBin, 'gh'), '#!/usr/bin/env bash\nexit 1\n', { mode: 0o755 });
+  fs.writeFileSync(path.join(outDir, `One-Person-Lab-${version}-mac-arm64.dmg`), 'standard dmg');
+  fs.writeFileSync(
+    path.join(outDir, 'latest-mac.yml'),
+    [
+      `version: ${version}`,
+      'files:',
+      `  - url: One-Person-Lab-Full-${version}-mac-arm64.dmg`,
+      `path: One-Person-Lab-Full-${version}-mac-arm64.dmg`,
+      '',
+    ].join('\n'),
+  );
+
+  const result = spawnSync(
+    process.execPath,
+    [
+      path.join(repoRoot, 'scripts/publish-gui-release.mjs'),
+      '--no-build',
+      '--dry-run',
+      '--shell-root',
+      shellRoot,
+      '--version',
+      version,
+      '--repo',
+      'example/one-person-lab',
+    ],
+    {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        PATH: `${fakeBin}${path.delimiter}${process.env.PATH ?? ''}`,
+      },
+    },
+  );
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /must not reference One Person Lab Full assets/);
 });
 
 test('GUI release publisher can explicitly target universal artifacts', () => {

@@ -28,7 +28,7 @@ test('full internal manifest declares MAS required, MDS backend hidden, and Herm
     },
   });
 
-  assert.equal(manifest.package_kind, 'opl_full_internal_macos_arm64');
+  assert.equal(manifest.package_kind, 'opl_full_first_install_macos_arm64');
   assert.equal(manifest.runtime.install_root_template, '~/Library/Application Support/OPL/runtime/<version>');
   assert.equal(manifest.components.mas.required, true);
   assert.equal(manifest.components.mas.role, 'primary_domain_module');
@@ -36,17 +36,20 @@ test('full internal manifest declares MAS required, MDS backend hidden, and Herm
   assert.equal(manifest.components.mds.visible_in_first_run_ui, false);
   assert.equal(manifest.components.hermes.profile, 'lean');
   assert.ok(manifest.components.hermes.excluded_capabilities.includes('web_ui'));
-  assert.equal(manifest.distribution.github_release_upload, false);
+  assert.equal(manifest.distribution.github_release_upload, true);
+  assert.equal(manifest.distribution.updater_metadata_allowed, false);
   assert.equal(manifest.distribution.runtime_auto_update, false);
-  assert.ok(manifest.distribution.manual_upload_target.includes('Quark'));
+  assert.equal(manifest.distribution.app_auto_update, 'standard_github_release_metadata_only');
+  assert.ok(manifest.distribution.standard_update_assets.includes('latest-arm64-mac.yml'));
+  assert.equal(manifest.distribution.signing_policy.release_requires_notarization, true);
 });
 
-test('full internal artifact names use fixed beta naming', () => {
+test('full first-install artifact names use release-safe naming', () => {
   assert.deepEqual(buildInternalArtifactNames('26.5.1'), {
     dmg: 'One-Person-Lab-Full-26.5.1-mac-arm64.dmg',
     runtimeTar: 'opl-runtime-full-26.5.1-macos-arm64.tar.zst',
     checksums: 'SHA256SUMS.txt',
-    readme: 'README-内测安装说明.txt',
+    readme: 'README-首次安装说明.txt',
     manifest: 'full-package-manifest.json',
   });
 });
@@ -74,7 +77,7 @@ test('runtime staging excludes dev/runtime-heavy paths while preserving core ent
   assert.equal(shouldExcludeRuntimePath('modules/mds/src/med_deepscientist/__init__.py'), false);
 });
 
-test('readme documents manual internal distribution and app first-run runtime install', () => {
+test('readme documents GitHub Release first-install distribution and app update boundary', () => {
   const text = buildInternalPackageReadme({
     version: '26.5.1',
     dmgName: 'One-Person-Lab-Full-26.5.1-mac-arm64.dmg',
@@ -82,11 +85,12 @@ test('readme documents manual internal distribution and app first-run runtime in
     notarized: false,
   });
 
-  assert.match(text, /夸克网盘/);
   assert.match(text, /GitHub Release/);
+  assert.match(text, /latest\*\.yml/);
+  assert.match(text, /自动更新目标/);
   assert.match(text, /Application Support\/OPL\/runtime\/26\.5\.1/);
   assert.match(text, /API key/);
-  assert.match(text, /未公证/);
+  assert.match(text, /正式 GitHub Release 资产必须通过 Developer ID 签名和 Apple 公证/);
 });
 
 test('packaged module marker lets git-stripped MAS runtime count as installed', async () => {

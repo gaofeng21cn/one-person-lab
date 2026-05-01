@@ -6,11 +6,12 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 import {
+  FULL_RELEASE_OUTPUT_DIR,
   FULL_INTERNAL_OUTPUT_DIR,
   FULL_RUNTIME_RESOURCE_DIR,
   PACKAGED_MODULE_MARKER_FILE,
   buildFullPackageManifest,
-  buildInternalArtifactNames,
+  buildFullPackageArtifactNames,
   buildInternalPackageReadme,
   buildPackagedModuleMarker,
   shouldExcludeRuntimePath,
@@ -22,7 +23,9 @@ const workspaceRoot = path.dirname(repoRoot);
 function parseArgs(argv) {
   const parsed = {
     version: process.env.OPL_RELEASE_VERSION || '26.5.1',
-    outDir: FULL_INTERNAL_OUTPUT_DIR,
+    outDir: process.env.CI === 'true'
+      ? path.join(repoRoot, FULL_RELEASE_OUTPUT_DIR)
+      : FULL_INTERNAL_OUTPUT_DIR,
     guiRoot: path.join(workspaceRoot, 'opl-aion-shell'),
     hermesRoot: process.env.OPL_FULL_HERMES_ROOT || path.join(workspaceRoot, '_external', 'hermes-agent'),
     masRoot: process.env.OPL_FULL_MAS_ROOT || path.join(workspaceRoot, 'med-autoscience'),
@@ -408,6 +411,29 @@ function findBuiltDmg(guiRoot, version) {
   return found;
 }
 
+function removeStandardGuiArtifacts(guiRoot, version) {
+  const outDir = path.join(guiRoot, 'out');
+  if (!fs.existsSync(outDir)) {
+    return;
+  }
+  for (const entry of fs.readdirSync(outDir)) {
+    if (
+      entry === `One-Person-Lab-${version}-mac-arm64.dmg`
+      || entry === `One Person Lab-${version}-mac-arm64.dmg`
+      || entry === `One-Person-Lab-${version}-mac-arm64.zip`
+      || entry === `One Person Lab-${version}-mac-arm64.zip`
+      || entry === `One-Person-Lab-${version}-mac-arm64.dmg.blockmap`
+      || entry === `One Person Lab-${version}-mac-arm64.dmg.blockmap`
+      || entry === `One-Person-Lab-${version}-mac-arm64.zip.blockmap`
+      || entry === `One Person Lab-${version}-mac-arm64.zip.blockmap`
+      || entry === 'latest-mac.yml'
+      || entry === 'latest-arm64-mac.yml'
+    ) {
+      fs.rmSync(path.join(outDir, entry), { force: true });
+    }
+  }
+}
+
 function writeChecksums(outDir, files) {
   const lines = files.map((filePath) => {
     const result = run('shasum', ['-a', '256', filePath], { capture: true });
@@ -431,7 +457,7 @@ function maybeCreateRuntimeTar(options, runtimeRoot, artifactNames) {
 
 function main() {
   const options = parseArgs(process.argv.slice(2));
-  const artifactNames = buildInternalArtifactNames(options.version);
+  const artifactNames = buildFullPackageArtifactNames(options.version);
   fs.mkdirSync(options.outDir, { recursive: true });
 
   for (const [label, source] of [
@@ -459,6 +485,7 @@ function main() {
   const sourceDmg = findBuiltDmg(options.guiRoot, options.version);
   const targetDmg = path.join(options.outDir, artifactNames.dmg);
   fs.copyFileSync(sourceDmg, targetDmg);
+  removeStandardGuiArtifacts(options.guiRoot, options.version);
   const runtimeTar = maybeCreateRuntimeTar(options, prepared.runtimeRoot, artifactNames);
 
   const manifestPath = path.join(options.outDir, artifactNames.manifest);
@@ -468,7 +495,7 @@ function main() {
     version: options.version,
     dmgName: artifactNames.dmg,
     runtimeTarName: runtimeTar ? artifactNames.runtimeTar : null,
-    notarized: false,
+    notarized: process.env.CI === 'true',
   }), 'utf8');
   const checksumPath = writeChecksums(options.outDir, [targetDmg, manifestPath, readmePath, ...(runtimeTar ? [runtimeTar] : [])]);
 

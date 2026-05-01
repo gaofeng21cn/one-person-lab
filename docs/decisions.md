@@ -23,7 +23,7 @@
 - 中央 release manifest / Packages workflow 可以继续维护为机器分发雏形，但各 domain repo 不需要单独恢复用户安装型 GitHub Release
 - WebUI Docker 镜像通过 GHCR 发布，服务 Docker/浏览器-only 场景
 - Native helper 预构建 archive 同步发布到 GHCR，后续 `native:repair` 可优先消费
-- `MAS/MDS/MAG/RCA` 仍不打进默认桌面 App；环境管理负责安装、更新和修复
+- 标准桌面 App 与自动更新包仍不打入 `MAS/MDS/MAG/RCA`；macOS arm64 可额外发布 Full 首次安装资产，随包带 `MAS/Hermes/MDS` runtime payload，但不得写入 `latest*.yml` 或改变 App 自动更新通道
 
 ### 决策：One Person Lab App 只做 CLI-backed GUI，不复制安装与环境管理逻辑
 

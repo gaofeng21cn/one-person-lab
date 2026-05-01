@@ -52,6 +52,7 @@
     "family:shared-release": "node ./scripts/family-shared-release.mjs",
     "packages:manifest": "node --experimental-strip-types ./scripts/package-module-archives.mjs",
     "packages:full-internal": "node --experimental-strip-types ./scripts/build-full-internal-package.mjs",
+    "packages:full-release": "node --experimental-strip-types ./scripts/build-full-internal-package.mjs --out-dir dist/opl-full-release",
     "packages:release-discipline": "node ./scripts/package-release-discipline.mjs",
     "codex:export-default-profile": "node --experimental-strip-types ./scripts/export-codex-default-profile.mjs",
     "lint": "node ./scripts/lint.mjs && node ./scripts/line-budget.mjs",

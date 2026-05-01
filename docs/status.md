@@ -48,7 +48,7 @@
 - Domain app 通过各自仓库提供的本地 CLI / 程序 / 脚本 / contract 与 skill pack 接入；`OPL` 负责统一同步与发现。
 - GUI / Web 主线保持 `AionUI / opl-aion-shell -> ACP-compatible OPL session runtime`。
 - 当前 GUI 交付物是 `opl-aion-shell` 维护的 OPL 品牌桌面壳，它基于开源 AionUI codebase 做 OPL 裁剪与品牌化，并通过 ACP-compatible runtime surface 消费 OPL 的 Codex-default session/runtime truth；原版 AionUI app 不算 OPL GUI，`opl-aion-shell` 也不是 OPL runtime owner。OPL 一键安装负责打开已安装 GUI，macOS 上缺失时自动消费 one-person-lab GitHub Release 里的 OPL 品牌预编译 DMG；只有缺少匹配平台 / 架构 artifact 时才回退源码构建。
-- `OPL GUI` 预编译包指 Electron-builder 产出的 OPL 品牌 `.dmg` / `.exe` / `.deb` 分发文件及 `latest*.yml` updater metadata；这些 release artifact 由 `opl-aion-shell` 构建，再通过 `npm run gui:release` 上传到 `one-person-lab` GitHub Release。
+- `OPL GUI` 预编译包指 Electron-builder 产出的 OPL 品牌 `.dmg` / `.exe` / `.deb` 分发文件及 `latest*.yml` updater metadata；这些 release artifact 由 `opl-aion-shell` 构建，再通过 `npm run gui:release` 上传到 `one-person-lab` GitHub Release。macOS arm64 另有 `One-Person-Lab-Full-<version>-mac-arm64.dmg` 首次安装资产，随包带 MAS/Hermes/MDS runtime payload，但不得写入 `latest*.yml` 或成为 App 自动更新目标。
 - App 内自动更新按 OPL 日期版本判断；GUI/AionUI 基线版本只作为关于页和维护诊断信息展示。
 - 本地 8787 `Product API` / `opl web` 模块已退役；WebUI 路径由 OPL-branded AionUI shell 提供。
 
