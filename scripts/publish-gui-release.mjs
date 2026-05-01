@@ -17,6 +17,7 @@ function parseArgs(argv) {
     shellRoot: process.env.OPL_AION_SHELL_ROOT || defaultShellRoot,
     releaseRepo: process.env.OPL_RELEASE_REPO || 'gaofeng21cn/one-person-lab',
     version: process.env.OPL_RELEASE_VERSION || defaultReleaseVersion(),
+    macArch: process.env.OPL_RELEASE_MAC_ARCH || 'arm64',
     build: true,
     dryRun: false,
   };
@@ -50,7 +51,15 @@ function parseArgs(argv) {
       index += 1;
       continue;
     }
+    if (token === '--mac-arch') {
+      parsed.macArch = value;
+      index += 1;
+      continue;
+    }
     throw new Error(`Unknown argument: ${token}`);
+  }
+  if (!['arm64', 'x64', 'universal'].includes(parsed.macArch)) {
+    throw new Error(`Unsupported macOS release architecture: ${parsed.macArch}`);
   }
   return parsed;
 }
@@ -75,22 +84,32 @@ function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function isGuiArtifact(name, version, extension) {
-  return guiArtifactPrefixes.some((prefix) => name.startsWith(prefix))
-    && name.includes(version)
-    && name.endsWith(extension);
+function artifactMatchesMacArch(name, macArch) {
+  return name.includes(`-mac-${macArch}`);
 }
 
-function isLatestMetadataForVersion(releaseDir, name, version) {
+function metadataMatchesMacArch(metadata, macArch) {
+  return metadata.includes(`-mac-${macArch}.`);
+}
+
+function isGuiArtifact(name, version, extension, macArch) {
+  return guiArtifactPrefixes.some((prefix) => name.startsWith(prefix))
+    && name.includes(version)
+    && name.endsWith(extension)
+    && artifactMatchesMacArch(name, macArch);
+}
+
+function isLatestMetadataForVersion(releaseDir, name, version, macArch) {
   if (!/^latest.*\.yml$/.test(name)) {
     return false;
   }
   const source = path.join(releaseDir, name);
   const metadata = fs.readFileSync(source, 'utf8');
-  return new RegExp(`^version:\\s*['"]?${escapeRegExp(version)}['"]?\\s*$`, 'm').test(metadata);
+  return new RegExp(`^version:\\s*['"]?${escapeRegExp(version)}['"]?\\s*$`, 'm').test(metadata)
+    && metadataMatchesMacArch(metadata, macArch);
 }
 
-function findArtifacts(shellRoot, version) {
+function findArtifacts(shellRoot, version, macArch) {
   const releaseDir = ['release', 'out']
     .map((entry) => path.join(shellRoot, entry))
     .find((candidate) => fs.existsSync(candidate));
@@ -98,21 +117,21 @@ function findArtifacts(shellRoot, version) {
     throw new Error(`Missing GUI artifact directory: expected ${path.join(shellRoot, 'release')} or ${path.join(shellRoot, 'out')}`);
   }
   const files = fs.readdirSync(releaseDir).filter((name) => {
-    if (isGuiArtifact(name, version, '.dmg')) {
+    if (isGuiArtifact(name, version, '.dmg', macArch)) {
       return true;
     }
-    if (isGuiArtifact(name, version, '.zip')) {
+    if (isGuiArtifact(name, version, '.zip', macArch)) {
       return true;
     }
-    if (isGuiArtifact(name, version, '.blockmap')) {
+    if (isGuiArtifact(name, version, '.blockmap', macArch)) {
       return true;
     }
-    return isLatestMetadataForVersion(releaseDir, name, version);
+    return isLatestMetadataForVersion(releaseDir, name, version, macArch);
   });
   if (!files.some((name) => name.endsWith('.dmg'))) {
-    throw new Error(`No One Person Lab ${version} DMG found under ${releaseDir}`);
+    throw new Error(`No One Person Lab ${version} ${macArch} DMG found under ${releaseDir}`);
   }
-  if (files.some((name) => name.includes('-mac-arm64.')) && files.includes('latest-mac.yml')) {
+  if (macArch === 'arm64' && files.some((name) => name.includes('-mac-arm64.')) && files.includes('latest-mac.yml')) {
     const arm64MetadataName = 'latest-arm64-mac.yml';
     fs.copyFileSync(path.join(releaseDir, 'latest-mac.yml'), path.join(releaseDir, arm64MetadataName));
     files.push(arm64MetadataName);
@@ -154,10 +173,10 @@ function main() {
   }
 
   if (options.build) {
-    run('bun', ['run', 'build-mac:arm64'], { cwd: options.shellRoot });
+    run('bun', ['run', `build-mac:${options.macArch}`], { cwd: options.shellRoot });
   }
 
-  const artifacts = findArtifacts(options.shellRoot, options.version);
+  const artifacts = findArtifacts(options.shellRoot, options.version, options.macArch);
   const uploadArgs = ['release', 'upload', tag, ...artifacts, '--repo', options.releaseRepo, '--clobber'];
 
   if (options.dryRun) {
@@ -165,6 +184,7 @@ function main() {
       release_repo: options.releaseRepo,
       tag,
       shell_root: options.shellRoot,
+      mac_arch: options.macArch,
       build: options.build,
       artifacts,
       create_release: !releaseExists(options.releaseRepo, tag),
