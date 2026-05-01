@@ -16,6 +16,19 @@ function read(relativePath: string) {
   return fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
 }
 
+test('repo hygiene blocks generated tmp artifacts from git', () => {
+  const gitignore = read('.gitignore');
+  assert.match(gitignore, /^tmp\/$/m);
+
+  const result = spawnSync('git', ['ls-files', 'tmp'], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout.trim(), '');
+});
+
 test('repo-tracked verification command surfaces reference valid npm scripts and local test files', () => {
   const files = [
     'AGENTS.md',
