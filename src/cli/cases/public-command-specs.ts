@@ -80,7 +80,7 @@ export function buildPublicCommandSpecs(
   const installSpec: CommandSpec = {
     usage:
       'opl install [--modules <mas,mag,rca>] [--module <module_id>] [--skip-modules] [--skip-engines] [--skip-native-helper-repair] [--skip-gui-open]',
-    summary: 'One-shot install for OPL dependencies, family modules, Codex skills, and the OPL GUI app.',
+    summary: 'One-shot install for the default Codex engine, family modules, Codex skills, and the OPL GUI app.',
     examples: [
       'opl install',
       'opl install --modules mas,mag,rca',
