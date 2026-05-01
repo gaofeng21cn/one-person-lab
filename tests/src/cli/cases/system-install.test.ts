@@ -95,6 +95,16 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
           mode: string;
           summary: { total: number };
         };
+        first_run_log: {
+          surface_id: string;
+          log_path: string;
+          event_schema_version: string;
+        };
+        first_run_log_events: Array<{
+          status: string;
+          event_type: string;
+          log_path: string;
+        }>;
         system_initialize: {
           surface_id: string;
           recommended_skills: { surface_id: string };
@@ -121,6 +131,23 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
     assert.equal(output.install.companion_skill_sync.surface_id, 'opl_companion_skill_sync');
     assert.equal(output.install.companion_skill_sync.mode, 'managed');
     assert.equal(output.install.companion_skill_sync.summary.total >= 6, true);
+    assert.equal(output.install.first_run_log.surface_id, 'opl_first_run_log');
+    assert.equal(output.install.first_run_log.event_schema_version, 'opl_first_run_event.v1');
+    assert.equal(output.install.first_run_log.log_path, path.join(homeRoot, 'Library', 'Logs', 'One Person Lab', 'first-run.jsonl'));
+    assert.deepEqual(
+      output.install.first_run_log_events.map((entry) => [entry.event_type, entry.status, entry.log_path]),
+      [
+        ['install_started', 'written', output.install.first_run_log.log_path],
+        ['install_completed', 'written', output.install.first_run_log.log_path],
+      ],
+    );
+    const firstRunEvents = fs.readFileSync(output.install.first_run_log.log_path, 'utf8')
+      .trim()
+      .split('\n')
+      .map((line) => JSON.parse(line) as { event_type: string; payload: Record<string, unknown> });
+    assert.deepEqual(firstRunEvents.map((entry) => entry.event_type), ['install_started', 'install_completed']);
+    assert.equal(firstRunEvents[0].payload.skip_gui_open, true);
+    assert.equal(firstRunEvents[1].payload.status, 'completed');
     assert.equal(output.install.system_initialize.surface_id, 'opl_system_initialize');
     assert.equal(output.install.system_initialize.recommended_skills.surface_id, 'opl_recommended_skill_bundle');
     assert.equal(output.install.system_initialize.gui_shell.shell_id, 'opl_aion_shell');

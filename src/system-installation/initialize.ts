@@ -16,6 +16,10 @@ import type {
   OplInitializeSectionId,
 } from './shared.ts';
 import { resolveProjectRoot } from './shared.ts';
+import {
+  buildOplFirstRunLogSurface,
+  buildOplGuiFirstRunAutomationContract,
+} from './first-run-contract.ts';
 
 function buildInitializeActionDescriptor(input: {
   action_id: string;
@@ -320,6 +324,8 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
           },
         ],
       },
+      first_run_log: buildOplFirstRunLogSurface(),
+      gui_first_run_automation: buildOplGuiFirstRunAutomationContract(),
       endpoints: {
         system_initialize: endpoints.system_initialize,
         system_environment: endpoints.system_environment,

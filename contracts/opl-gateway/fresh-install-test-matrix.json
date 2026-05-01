@@ -1,0 +1,98 @@
+{
+  "surface_id": "opl_fresh_install_test_matrix",
+  "version": "g1",
+  "owner": "one-person-lab",
+  "purpose": "Freeze the OPL fresh-install and GUI first-launch verification contract without moving GUI implementation into this repository.",
+  "local_smoke_command": "npm run test:fresh-install",
+  "vm_smoke_command": "npm run fresh-install:smoke -- --vm-artifacts-only",
+  "cli_first_run_commands": [
+    "opl system initialize",
+    "opl install --skip-gui-open",
+    "opl modules"
+  ],
+  "first_run_log": {
+    "surface_id": "opl_first_run_log",
+    "format": "jsonl",
+    "default_path": "~/Library/Logs/One Person Lab/first-run.jsonl",
+    "override_env": "OPL_FIRST_RUN_LOG_PATH",
+    "event_schema_version": "opl_first_run_event.v1",
+    "required_event_fields": [
+      "timestamp",
+      "event_type",
+      "schema_version",
+      "surface_id",
+      "payload"
+    ]
+  },
+  "gui_accessibility_labels": {
+    "window": "opl-first-run-window",
+    "progress": "opl-first-run-progress",
+    "blockers_list": "opl-first-run-blockers-list",
+    "install_button": "opl-first-run-install-button",
+    "environment_button": "opl-first-run-open-environment-button",
+    "modules_button": "opl-first-run-open-modules-button",
+    "ready_entry": "opl-first-run-ready-entry",
+    "settings_environment": "opl-settings-environment"
+  },
+  "scenarios": [
+    {
+      "scenario_id": "clean_user_missing_codex",
+      "layer": "local_cli",
+      "setup": "temporary HOME and OPL_STATE_DIR, no codex on PATH, empty managed modules root",
+      "expected_phase": "environment",
+      "expected_blockers": [
+        "codex",
+        "domain_modules"
+      ]
+    },
+    {
+      "scenario_id": "compatible_codex_missing_modules",
+      "layer": "local_cli",
+      "setup": "temporary HOME and OPL_STATE_DIR, fake compatible codex on PATH, empty managed modules root",
+      "expected_phase": "modules",
+      "expected_blockers": [
+        "domain_modules"
+      ]
+    },
+    {
+      "scenario_id": "outdated_codex",
+      "layer": "local_cli",
+      "setup": "temporary HOME and OPL_STATE_DIR, fake outdated codex on PATH",
+      "expected_phase": "environment",
+      "expected_blockers": [
+        "codex",
+        "domain_modules"
+      ]
+    },
+    {
+      "scenario_id": "ready_baseline",
+      "layer": "local_cli",
+      "setup": "temporary HOME and OPL_STATE_DIR, fake compatible codex, and git-backed managed module fixtures",
+      "expected_phase": "review",
+      "expected_blockers": []
+    },
+    {
+      "scenario_id": "offline_module_install_blocker",
+      "layer": "local_cli",
+      "setup": "temporary HOME and invalid module repo URL without network access",
+      "expected_failure_code": "build_command_failed"
+    },
+    {
+      "scenario_id": "clean_vm_release_first_launch",
+      "layer": "macos_vm_gui",
+      "setup": "clean macOS VM snapshot, downloaded One Person Lab release DMG, no existing OPL state",
+      "expected_artifacts": [
+        "first-run JSONL log",
+        "system initialize JSON",
+        "modules JSON",
+        "launch screenshot",
+        "macOS unified log excerpt for One Person Lab"
+      ]
+    }
+  ],
+  "ci_policy": {
+    "github_actions": "Run local CLI fresh-install smoke and package checks only.",
+    "self_hosted_macos": "Run clean VM GUI first-launch tests from a reset snapshot.",
+    "docker": "Do not use Docker as proof for macOS desktop first-launch behavior."
+  }
+}

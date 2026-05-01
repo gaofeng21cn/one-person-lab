@@ -21,6 +21,9 @@ case "$lane" in
   meta)
     npm run test:meta
     ;;
+  fresh-install)
+    npm run test:fresh-install
+    ;;
   artifact)
     npm run test:artifact
     ;;
@@ -47,7 +50,7 @@ case "$lane" in
     ;;
   *)
     echo "Unknown lane: $lane" >&2
-    echo "Usage: scripts/verify.sh [smoke|fast|family|meta|artifact|native|full|lint|line-budget|typecheck]" >&2
+    echo "Usage: scripts/verify.sh [smoke|fast|family|meta|fresh-install|artifact|native|full|lint|line-budget|typecheck]" >&2
     exit 1
     ;;
 esac

@@ -44,6 +44,7 @@ Unless a newer core document explicitly promotes a file back into the active mai
 - `family-executor-adapter-defaults.json`
 - `managed-runtime-three-layer-contract.json`
 - `runtime-manager-contract.json`
+- `fresh-install-test-matrix.json`
 - `governance-audit.schema.json`
 - `publish-promotion.schema.json`
 - `acceptance-matrix.json`

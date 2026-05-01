@@ -11,6 +11,10 @@ import type { GatewayContracts } from '../types.ts';
 import { runOplEngineAction } from './engine-actions.ts';
 import { registerOplFamilyCodexPlugins } from './codex-plugin-registry.ts';
 import { buildOplEnvironment } from './environment.ts';
+import {
+  appendOplFirstRunLogEvent,
+  buildOplFirstRunLogSurface,
+} from './first-run-contract.ts';
 import { buildOplInitialize } from './initialize.ts';
 import { runOplModuleAction } from './modules.ts';
 import { resolveProjectRoot, runCommand } from './shared.ts';
@@ -248,68 +252,103 @@ export async function runOplTurnkeyInstall(
   contracts: GatewayContracts,
   input: OplTurnkeyInstallInput = {},
 ) {
-  const codexConfigBootstrap = bootstrapLocalCodexDefaults();
   const modules = normalizeModuleSelection(input.modules);
-  const environment = (await buildOplEnvironment(contracts)).system_environment;
-  const engineActions = input.skipEngines
-    ? []
-    : await Promise.all(DEFAULT_ENGINES.map(async (engineId) => {
-      const engine = environment.core_engines[engineId];
-      if (engine.health_status === 'ready') {
-        return {
-          version: 'g2',
-          engine_action: {
-            engine_id: engineId,
-            action: 'install' as const,
-            status: 'skipped_installed' as const,
-            strategy: 'already_installed',
-            command_preview: [],
-            note: `${engineId} is already installed; OPL install reuses the existing local runtime dependency.`,
-            stdout: '',
-            stderr: '',
-            system_environment: environment,
-          },
-        };
-      }
-      return runOplEngineAction(contracts, 'install', engineId);
-    }));
-  const moduleActions = input.skipModules
-    ? []
-    : modules.map((moduleId) => runOplModuleAction('install', moduleId));
-  const moduleRepoPaths = new Map<OplModuleId, string>(
-    moduleActions.map((entry) => [
-      entry.module_action.module.module_id,
-      entry.module_action.module.checkout_path,
-    ]),
-  );
-  const codexPluginRegistry = registerOplFamilyCodexPlugins(modules, moduleRepoPaths);
-  const serviceAction: null = null;
-  const guiOpenAction = input.skipGuiOpen ? null : installOrOpenOplGui();
-  const nativeHelperAction = runNativeHelperRepairAction({ skip: input.skipNativeHelperRepair });
-  const companionSkillSync = syncOplCompanionSkills(undefined, { mode: 'managed', superpowersProfile: 'keep' });
-  const initialize = await buildOplInitialize(contracts);
+  const firstRunLog = buildOplFirstRunLogSurface();
+  const firstRunLogEvents = [
+    appendOplFirstRunLogEvent('install_started', {
+      selected_modules: input.skipModules ? [] : modules,
+      selected_engines: input.skipEngines ? [] : [...DEFAULT_ENGINES],
+      skip_gui_open: Boolean(input.skipGuiOpen),
+      skip_native_helper_repair: Boolean(input.skipNativeHelperRepair),
+    }),
+  ];
 
-  return {
-    version: 'g2',
-    opl_install: {
-      surface_id: 'opl_install',
-      status: 'completed',
-      selected_engines: [...DEFAULT_ENGINES],
-      selected_modules: modules,
-      codex_config_bootstrap: codexConfigBootstrap,
-      codex_plugin_registry: codexPluginRegistry,
-      engine_actions: engineActions.map((entry) => entry.engine_action),
-      module_actions: moduleActions.map((entry) => entry.module_action),
-      gui_open_action: guiOpenAction,
-      gui_shell: buildOplGuiShellSurface(resolveProjectRoot()),
-      native_helper_action: nativeHelperAction,
-      companion_skill_sync: companionSkillSync,
-      system_initialize: initialize.system_initialize,
-      notes: [
-        'This command is the user-facing one-shot path for OPL + Codex CLI + Hermes-Agent + family modules + recommended Codex skills + desktop GUI.',
-        'Recommended skill sync is conservative: existing user-managed skill directories are preserved, Superpowers stays on the current user profile by default, and missing optional skill sources are reported for Environment Management.',
-        'GUI startup opens the installed One Person Lab app when present; otherwise it downloads and installs the matching one-person-lab release asset before opening the app. opl-aion-shell remains an internal GUI source/build input.',
-      ],
-    },
-  };
+  try {
+    const codexConfigBootstrap = bootstrapLocalCodexDefaults();
+    const environment = (await buildOplEnvironment(contracts)).system_environment;
+    const engineActions = input.skipEngines
+      ? []
+      : await Promise.all(DEFAULT_ENGINES.map(async (engineId) => {
+        const engine = environment.core_engines[engineId];
+        if (engine.health_status === 'ready') {
+          return {
+            version: 'g2',
+            engine_action: {
+              engine_id: engineId,
+              action: 'install' as const,
+              status: 'skipped_installed' as const,
+              strategy: 'already_installed',
+              command_preview: [],
+              note: `${engineId} is already installed; OPL install reuses the existing local runtime dependency.`,
+              stdout: '',
+              stderr: '',
+              system_environment: environment,
+            },
+          };
+        }
+        return runOplEngineAction(contracts, 'install', engineId);
+      }));
+    const moduleActions = input.skipModules
+      ? []
+      : modules.map((moduleId) => runOplModuleAction('install', moduleId));
+    const moduleRepoPaths = new Map<OplModuleId, string>(
+      moduleActions.map((entry) => [
+        entry.module_action.module.module_id,
+        entry.module_action.module.checkout_path,
+      ]),
+    );
+    const codexPluginRegistry = registerOplFamilyCodexPlugins(modules, moduleRepoPaths);
+    const serviceAction: null = null;
+    const guiOpenAction = input.skipGuiOpen ? null : installOrOpenOplGui();
+    const nativeHelperAction = runNativeHelperRepairAction({ skip: input.skipNativeHelperRepair });
+    const companionSkillSync = syncOplCompanionSkills(undefined, { mode: 'managed', superpowersProfile: 'keep' });
+    const initialize = await buildOplInitialize(contracts);
+    firstRunLogEvents.push(
+      appendOplFirstRunLogEvent('install_completed', {
+        status: 'completed',
+        selected_modules: modules,
+        engine_actions_count: engineActions.length,
+        module_actions_count: moduleActions.length,
+        gui_open_status: guiOpenAction?.status ?? 'skipped',
+        setup_phase: initialize.system_initialize.setup_flow.phase,
+        blocking_items: initialize.system_initialize.setup_flow.blocking_items,
+      }),
+    );
+
+    return {
+      version: 'g2',
+      opl_install: {
+        surface_id: 'opl_install',
+        status: 'completed',
+        selected_engines: [...DEFAULT_ENGINES],
+        selected_modules: modules,
+        codex_config_bootstrap: codexConfigBootstrap,
+        codex_plugin_registry: codexPluginRegistry,
+        engine_actions: engineActions.map((entry) => entry.engine_action),
+        module_actions: moduleActions.map((entry) => entry.module_action),
+        service_action: serviceAction,
+        gui_open_action: guiOpenAction,
+        gui_shell: buildOplGuiShellSurface(resolveProjectRoot()),
+        native_helper_action: nativeHelperAction,
+        companion_skill_sync: companionSkillSync,
+        system_initialize: initialize.system_initialize,
+        first_run_log: firstRunLog,
+        first_run_log_events: firstRunLogEvents,
+        notes: [
+          'This command is the user-facing one-shot path for OPL + Codex CLI + Hermes-Agent + family modules + recommended Codex skills + desktop GUI.',
+          'Recommended skill sync is conservative: existing user-managed skill directories are preserved, Superpowers stays on the current user profile by default, and missing optional skill sources are reported for Environment Management.',
+          'GUI startup opens the installed One Person Lab app when present; otherwise it downloads and installs the matching one-person-lab release asset before opening the app. opl-aion-shell remains an internal GUI source/build input.',
+        ],
+      },
+    };
+  } catch (error) {
+    firstRunLogEvents.push(
+      appendOplFirstRunLogEvent('install_failed', {
+        status: 'failed',
+        selected_modules: modules,
+        message: error instanceof Error ? error.message : String(error),
+      }),
+    );
+    throw error;
+  }
 }
