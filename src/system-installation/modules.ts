@@ -17,6 +17,7 @@ import {
   type GitRepoSnapshot,
   type ModuleInspection,
   assertGitSuccess,
+  getShellBinary,
   normalizeOptionalString,
   runCommand,
   runGit,
@@ -56,10 +57,7 @@ const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
       resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-bootstrap.sh'))
       ?? buildPythonEditableBootstrapCommand(checkoutPath, '3.12')
     ),
-    health_check_command: (checkoutPath) => (
-      resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-healthcheck.sh'))
-      ?? { command: 'bash', args: [path.join('scripts', 'verify.sh'), 'fast'] }
-    ),
+    health_check_command: (checkoutPath) => buildHealthCheckCommand(checkoutPath),
     skill_sync_domain: 'medautoscience',
   },
   {
@@ -73,10 +71,7 @@ const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
       resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-bootstrap.sh'))
       ?? buildPythonEditableBootstrapCommand(checkoutPath, '3.11')
     ),
-    health_check_command: (checkoutPath) => (
-      resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-healthcheck.sh'))
-      ?? { command: 'bash', args: [path.join('scripts', 'verify.sh'), 'fast'] }
-    ),
+    health_check_command: (checkoutPath) => buildHealthCheckCommand(checkoutPath),
   },
   {
     module_id: 'medautogrant',
@@ -89,10 +84,7 @@ const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
       resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-bootstrap.sh'))
       ?? buildPythonEditableBootstrapCommand(checkoutPath, '3.12')
     ),
-    health_check_command: (checkoutPath) => (
-      resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-healthcheck.sh'))
-      ?? { command: 'bash', args: [path.join('scripts', 'verify.sh'), 'fast'] }
-    ),
+    health_check_command: (checkoutPath) => buildHealthCheckCommand(checkoutPath),
     skill_sync_domain: 'medautogrant',
   },
   {
@@ -106,10 +98,7 @@ const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
       resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-bootstrap.sh'))
       ?? { command: 'npm', args: ['install'] }
     ),
-    health_check_command: (checkoutPath) => (
-      resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-healthcheck.sh'))
-      ?? { command: 'bash', args: [path.join('scripts', 'verify.sh'), 'fast'] }
-    ),
+    health_check_command: (checkoutPath) => buildHealthCheckCommand(checkoutPath),
     skill_sync_domain: 'redcube',
   },
 ];
@@ -134,11 +123,50 @@ function resolveRepoOwnedScriptCommand(checkoutPath: string, relativePath: strin
   };
 }
 
+function shellQuote(value: string): string {
+  return "'" + value.replace(/'/g, "'\\''") + "'";
+}
+
+function buildPythonCommandShim() {
+  return [
+    'OPL_PYTHON_SHIM_DIR="$(mktemp -d "${TMPDIR:-/tmp}/opl-python-shim.XXXXXX")"',
+    'trap \'rm -rf "$OPL_PYTHON_SHIM_DIR"\' EXIT',
+    'if ! command -v python >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1; then',
+    '  ln -s "$(command -v python3)" "$OPL_PYTHON_SHIM_DIR/python"',
+    '  export PATH="$OPL_PYTHON_SHIM_DIR:$PATH"',
+    'fi',
+  ].join('\n');
+}
+
 function buildPythonEditableBootstrapCommand(checkoutPath: string, pythonVersion: string) {
+  const uvArgs = ['uv', 'tool', 'install', '--managed-python', '--python', pythonVersion, '--force', '--editable', checkoutPath];
   return {
-    command: 'uv',
-    args: ['tool', 'install', '--managed-python', '--python', pythonVersion, '--force', '--editable', checkoutPath],
+    command: getShellBinary(),
+    args: ['-lc', [
+      'set -euo pipefail',
+      buildPythonCommandShim(),
+      'if ! command -v uv >/dev/null 2>&1; then',
+      '  command -v curl >/dev/null 2>&1 || { echo "Missing uv and curl; cannot bootstrap Python module tooling." >&2; exit 127; }',
+      '  curl -LsSf https://astral.sh/uv/install.sh | sh',
+      '  export PATH="$HOME/.local/bin:$PATH"',
+      'fi',
+      'command -v uv >/dev/null 2>&1',
+      uvArgs.map(shellQuote).join(' '),
+    ].join('\n')],
   };
+}
+
+function buildHealthCheckCommand(checkoutPath: string) {
+  const verifyScript = path.join('scripts', 'verify.sh');
+  return resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-healthcheck.sh'))
+    ?? {
+      command: getShellBinary(),
+      args: ['-lc', [
+        'set -euo pipefail',
+        buildPythonCommandShim(),
+        ['bash', verifyScript, 'fast'].map(shellQuote).join(' '),
+      ].join('\n')],
+    };
 }
 
 function isGitRepo(repoPath: string) {
