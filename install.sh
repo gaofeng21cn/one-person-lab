@@ -72,8 +72,16 @@ else
     printf 'Move it away or set OPL_INSTALL_DIR to another path.\n' >&2
     exit 1
   fi
+  CLONE_TMP="${INSTALL_DIR}.tmp.$$"
+  rm -rf "$CLONE_TMP"
+  cleanup_clone_tmp() {
+    rm -rf "$CLONE_TMP"
+  }
+  trap cleanup_clone_tmp EXIT
   log "Cloning One Person Lab into $INSTALL_DIR"
-  git clone --branch "$BRANCH" "$REPO_URL" "$INSTALL_DIR"
+  git clone --branch "$BRANCH" "$REPO_URL" "$CLONE_TMP"
+  mv "$CLONE_TMP" "$INSTALL_DIR"
+  trap - EXIT
 fi
 
 cd "$INSTALL_DIR"
