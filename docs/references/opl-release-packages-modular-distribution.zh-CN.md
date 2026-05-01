@@ -11,6 +11,7 @@
 | 分发对象 | 推荐渠道 | 是否打入桌面 App | 理由 |
 | --- | --- | --- | --- |
 | One Person Lab 桌面 App | GitHub Releases | 是 | 用户直接下载和安装 |
+| One Person Lab Full 首次安装包 | GitHub Releases 额外 asset | 只打入 Full 包，不进入标准更新包 | 新用户首次安装时减少 MAS/Hermes/MDS 配置等待；App 自动更新继续走标准包 |
 | OPL CLI / shared contracts / native helper | npm / 当前安装脚本；GitHub Packages 是后续机器通道 | 随一键安装获取 | App 不变时也需要独立修复和更新 |
 | MAS | 当前 git checkout / sibling repo；GHCR 模块包是后续机器通道 | 否 | domain agent 独立演进，按环境管理安装/更新 |
 | MDS | 当前 git checkout / sibling repo；GHCR 模块包是后续机器通道 | 否 | MAS 隐藏运行依赖，在环境管理中维护 |
@@ -45,7 +46,7 @@
 - App 更新后的首次启动会把缺失模块补齐，并把 clean checkout 更新到 upstream/default branch 最新 HEAD；dirty、ahead、diverged 或无 upstream 的开发 checkout 只提示人工处理。
 - 下一步如果 Packages/GHCR 真正接入 `opl module install/update`，再把最新来源切到 channel manifest；在那之前，文档不得把 Packages 写成当前模块安装更新机制。
 
-`Packages` 适合作为 App 不变时的机器更新通道，但它不替代 `Releases` 的用户下载入口。新手用户仍从 `one-person-lab` 的 `Releases` 下载桌面安装包；当前 `opl install` 与环境管理先通过 git checkout 更新模块，未来再切到 Packages/GHCR 制品。MAS/MDS/MAG/RCA 等 domain repo 不再提供用户安装型 GitHub Release。
+`Packages` 适合作为 App 不变时的机器更新通道，但它不替代 `Releases` 的用户下载入口。新手用户仍从 `one-person-lab` 的 `Releases` 下载桌面安装包；macOS arm64 可选择 `One-Person-Lab-Full-<version>-mac-arm64.dmg` 首次安装资产来预置 MAS/Hermes/MDS runtime payload。当前 `opl install` 与环境管理先通过 git checkout 更新模块，未来再切到 Packages/GHCR 制品。MAS/MDS/MAG/RCA 等 domain repo 不再提供用户安装型 GitHub Release。
 
 Manifest 的本地入口：
 
@@ -190,11 +191,16 @@ Manifest 会同步到 `ghcr.io/gaofeng21cn/one-person-lab-manifest:<opl_version>
 
 ## App 内置策略
 
-默认不把 `MAS/MDS/MAG/RCA` 打进桌面 App：
+标准 App 和自动更新包默认不把 `MAS/MDS/MAG/RCA` 打进桌面 App：
 
 - App 更新频率应由 GUI 与 OPL release 节奏决定。
 - domain modules 的修复、回滚和验证应独立于 App 发版。
 - Docker/服务器用户更适合直接拉 WebUI 镜像和模块制品。
 - 专业用户可能已有本地 sibling checkout，OPL 应优先识别并复用，不强行覆盖。
 
-只有在面向离线安装包时，才考虑提供“App + 模块缓存”的扩展安装包；该包应与普通 App release 分开命名和发布。
+Full 首次安装包是标准 App 之外的额外 GitHub Release asset，用于减少新用户从安装到开始 MAS 工作的等待。它必须满足：
+
+- 文件名使用 `One-Person-Lab-Full-<version>-mac-arm64.dmg`，与标准更新包分开。
+- 随包 runtime 首启安装到 `~/Library/Application Support/OPL/runtime/<version>`，App 后续从该路径引用 runtime。
+- `latest*.yml` 只引用标准 `One-Person-Lab-<version>-mac-arm64.*` 资产，不引用 Full DMG。
+- Full 包必须走正式 Developer ID 签名和 Apple 公证后才能作为正式 Release asset 发布。

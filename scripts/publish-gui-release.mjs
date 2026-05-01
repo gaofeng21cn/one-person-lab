@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const defaultShellRoot = path.resolve(repoRoot, '..', 'opl-aion-shell');
+const defaultFullPackageDir = path.resolve(repoRoot, 'dist', 'opl-full-release');
 
 function defaultReleaseVersion() {
   const now = new Date();
@@ -18,7 +19,9 @@ function parseArgs(argv) {
     releaseRepo: process.env.OPL_RELEASE_REPO || 'gaofeng21cn/one-person-lab',
     version: process.env.OPL_RELEASE_VERSION || defaultReleaseVersion(),
     macArch: process.env.OPL_RELEASE_MAC_ARCH || 'arm64',
+    fullPackageDir: process.env.OPL_FULL_PACKAGE_DIR || '',
     build: true,
+    includeFullPackage: false,
     dryRun: false,
   };
 
@@ -30,6 +33,13 @@ function parseArgs(argv) {
     }
     if (token === '--dry-run') {
       parsed.dryRun = true;
+      continue;
+    }
+    if (token === '--include-full-package') {
+      parsed.includeFullPackage = true;
+      if (!parsed.fullPackageDir) {
+        parsed.fullPackageDir = defaultFullPackageDir;
+      }
       continue;
     }
     const value = argv[index + 1];
@@ -53,6 +63,12 @@ function parseArgs(argv) {
     }
     if (token === '--mac-arch') {
       parsed.macArch = value;
+      index += 1;
+      continue;
+    }
+    if (token === '--full-package-dir') {
+      parsed.fullPackageDir = path.resolve(value);
+      parsed.includeFullPackage = true;
       index += 1;
       continue;
     }
@@ -90,6 +106,18 @@ function artifactMatchesMacArch(name, macArch) {
 
 function metadataMatchesMacArch(metadata, macArch) {
   return metadata.includes(`-mac-${macArch}.`);
+}
+
+function assertUpdaterMetadataDoesNotReferenceFullPackage(releaseDir, files) {
+  for (const name of files) {
+    if (!/^latest.*\.yml$/.test(name)) {
+      continue;
+    }
+    const metadata = fs.readFileSync(path.join(releaseDir, name), 'utf8');
+    if (/One[ .-]Person[ .-]Lab[ .-]Full-|One-Person-Lab-Full-/.test(metadata)) {
+      throw new Error(`${name} must not reference One Person Lab Full assets; Full packages are first-install downloads only.`);
+    }
+  }
 }
 
 function isGuiArtifact(name, version, extension, macArch) {
@@ -135,6 +163,7 @@ function findArtifacts(shellRoot, version, macArch) {
   if (!files.some((name) => name.endsWith('.dmg'))) {
     throw new Error(`No One Person Lab ${version} ${macArch} DMG found under ${releaseDir}`);
   }
+  assertUpdaterMetadataDoesNotReferenceFullPackage(releaseDir, files);
   if (macArch === 'arm64' && files.some((name) => name.includes('-mac-arm64.')) && files.includes('latest-mac.yml')) {
     const arm64MetadataName = 'latest-arm64-mac.yml';
     fs.copyFileSync(path.join(releaseDir, 'latest-mac.yml'), path.join(releaseDir, arm64MetadataName));
@@ -160,12 +189,82 @@ function findArtifacts(shellRoot, version, macArch) {
   return [...new Set(artifacts)];
 }
 
+function findFullPackageArtifacts(fullPackageDir, version, macArch) {
+  if (macArch !== 'arm64') {
+    throw new Error(`Full first-install package is only supported for macOS arm64, not ${macArch}`);
+  }
+  if (!fullPackageDir || !fs.existsSync(fullPackageDir)) {
+    throw new Error(`Missing Full package directory: ${fullPackageDir || '(empty)'}`);
+  }
+
+  const required = [
+    `One-Person-Lab-Full-${version}-mac-arm64.dmg`,
+    'full-package-manifest.json',
+    'SHA256SUMS.txt',
+    'README-首次安装说明.txt',
+  ];
+  const optional = [
+    `opl-runtime-full-${version}-macos-arm64.tar.zst`,
+  ];
+
+  const files = fs.readdirSync(fullPackageDir);
+  for (const name of required) {
+    if (!files.includes(name)) {
+      throw new Error(`Missing Full package release asset: ${path.join(fullPackageDir, name)}`);
+    }
+  }
+
+  const manifest = JSON.parse(fs.readFileSync(path.join(fullPackageDir, 'full-package-manifest.json'), 'utf8'));
+  if (manifest?.distribution?.updater_metadata_allowed !== false) {
+    throw new Error('Full package manifest must declare distribution.updater_metadata_allowed=false.');
+  }
+
+  return [...required, ...optional.filter((name) => files.includes(name))]
+    .map((name) => path.join(fullPackageDir, name));
+}
+
 function releaseExists(repo, tag) {
   const result = spawnSync('gh', ['release', 'view', tag, '--repo', repo, '--json', 'tagName'], {
     encoding: 'utf8',
     stdio: 'pipe',
   });
   return result.status === 0;
+}
+
+function buildReleaseNotes(version, includeFullPackage) {
+  const notes = [`One Person Lab desktop GUI release ${version}`];
+  if (includeFullPackage) {
+    notes.push(
+      '',
+      'First-time macOS arm64 users should download the Full first-install DMG:',
+      `- One-Person-Lab-Full-${version}-mac-arm64.dmg includes the MAS/Hermes/MDS runtime payload for faster first task startup.`,
+      `- Installed users should keep using in-app updates or the standard One-Person-Lab-${version}-mac-arm64.dmg package.`,
+      '- Full assets are not referenced by latest*.yml and are not used by the auto-updater.',
+    );
+  }
+  return notes.join('\n');
+}
+
+function ensureFullPackageReleaseNotes(repo, tag, version) {
+  const current = spawnSync('gh', ['release', 'view', tag, '--repo', repo, '--json', 'body', '--jq', '.body'], {
+    encoding: 'utf8',
+    stdio: 'pipe',
+  });
+  if (current.status !== 0) {
+    throw new Error(`Command failed: gh release view ${tag} --repo ${repo}\nstderr=${current.stderr || ''}`);
+  }
+
+  const assetName = `One-Person-Lab-Full-${version}-mac-arm64.dmg`;
+  if (current.stdout.includes(assetName)) {
+    return;
+  }
+
+  const nextNotes = [
+    current.stdout.trimEnd(),
+    '',
+    ...buildReleaseNotes(version, true).split('\n').slice(1),
+  ].join('\n');
+  run('gh', ['release', 'edit', tag, '--repo', repo, '--notes', nextNotes]);
 }
 
 function main() {
@@ -181,7 +280,11 @@ function main() {
   }
 
   const artifacts = findArtifacts(options.shellRoot, options.version, options.macArch);
-  const uploadArgs = ['release', 'upload', tag, ...artifacts, '--repo', options.releaseRepo, '--clobber'];
+  const fullPackageArtifacts = options.includeFullPackage
+    ? findFullPackageArtifacts(options.fullPackageDir, options.version, options.macArch)
+    : [];
+  const allArtifacts = [...artifacts, ...fullPackageArtifacts];
+  const uploadArgs = ['release', 'upload', tag, ...allArtifacts, '--repo', options.releaseRepo, '--clobber'];
 
   if (options.dryRun) {
     console.log(JSON.stringify({
@@ -190,7 +293,9 @@ function main() {
       shell_root: options.shellRoot,
       mac_arch: options.macArch,
       build: options.build,
-      artifacts,
+      artifacts: allArtifacts,
+      standard_artifacts: artifacts,
+      full_package_artifacts: fullPackageArtifacts,
       create_release: !releaseExists(options.releaseRepo, tag),
       upload_command: ['gh', ...uploadArgs],
     }, null, 2));
@@ -198,7 +303,19 @@ function main() {
   }
 
   if (!releaseExists(options.releaseRepo, tag)) {
-    run('gh', ['release', 'create', tag, '--repo', options.releaseRepo, '--title', `One Person Lab ${options.version}`, '--notes', `One Person Lab desktop GUI release ${options.version}`]);
+    run('gh', [
+      'release',
+      'create',
+      tag,
+      '--repo',
+      options.releaseRepo,
+      '--title',
+      `One Person Lab ${options.version}`,
+      '--notes',
+      buildReleaseNotes(options.version, options.includeFullPackage),
+    ]);
+  } else if (options.includeFullPackage) {
+    ensureFullPackageReleaseNotes(options.releaseRepo, tag, options.version);
   }
   run('gh', uploadArgs);
 }
