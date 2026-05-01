@@ -412,10 +412,14 @@ test('project-progress promotes current MAS study into a paper-facing summary in
     assert.equal(payload.project_progress.workspace_inbox.summary.delivered_count, 1);
     assert.equal(payload.project_progress.workspace_inbox.summary.active_task_id, studyId);
     assert.equal(payload.project_progress.workspace_inbox.sections.running[0].task_id, studyId);
-    assert.equal(payload.project_progress.runtime_continuity.control.surface_kind, 'runtime_control');
-    assert.equal(payload.project_progress.runtime_continuity.control.restore_point, 'phase_2_user_product_loop');
+    const runtimeControl = payload.project_progress.runtime_continuity.control;
+    assert.ok(runtimeControl);
+    assert.equal(runtimeControl.surface_kind, 'runtime_control');
+    assert.equal(runtimeControl.restore_point, 'phase_2_user_product_loop');
+    const resumeSurface = runtimeControl.control_surfaces.resume;
+    assert.ok(resumeSurface);
     assert.equal(
-      payload.project_progress.runtime_continuity.control.control_surfaces.resume.surface_kind,
+      resumeSurface.surface_kind,
       'launch_study',
     );
     assert.equal(
@@ -464,4 +468,3 @@ test('project-progress promotes current MAS study into a paper-facing summary in
     fs.rmSync(masWorkspace.fixtureRoot, { recursive: true, force: true });
   }
 });
-

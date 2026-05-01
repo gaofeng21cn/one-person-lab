@@ -402,15 +402,26 @@ test('family shared release refuses unpublished owner commits before rewriting c
     `{"packages":{"packages/redcube-gateway":{"dependencies":{"opl-gateway-shared":"git+${publishedRemote.remoteUrl}#${publishedRemote.publishedCommit}"}}}}\n`,
   );
 
+  const collectRemotes = collectSharedOwnerReleaseRemotes as (input: {
+    contract: ReturnType<typeof loadSharedOwnerReleaseContract>;
+    ownerCommit?: string;
+  }) => string[];
+  const releasePins = releaseFamilySharedPins as unknown as (input: {
+    repoRoot: string;
+    familyRoot: string;
+    repoOverrides: string[];
+    ownerCommit: string;
+  }) => unknown;
+
   assert.deepEqual(
-    collectSharedOwnerReleaseRemotes({
+    collectRemotes({
       contract: loadSharedOwnerReleaseContract({ repoRoot: ownerRepoRoot }),
       ownerCommit: publishedRemote.publishedCommit,
     }),
     [publishedRemote.remoteUrl],
   );
   assert.throws(
-    () => releaseFamilySharedPins({
+    () => releasePins({
       repoRoot: ownerRepoRoot,
       familyRoot,
       repoOverrides: [

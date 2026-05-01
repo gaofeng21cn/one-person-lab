@@ -12,6 +12,15 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 const cliPath = path.join(repoRoot, 'src', 'cli.ts');
 
+type JsonRpcTestResponse = {
+  id?: string | number | null;
+  result?: Record<string, unknown>;
+  error?: {
+    code: number;
+    message: string;
+  };
+};
+
 function createFakeCodexFixture(handlerBody: string) {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-fixture-'));
   const codexPath = path.join(fixtureRoot, 'codex');
@@ -46,7 +55,7 @@ function createJsonLineReader(stream: Readable) {
       if (!line) {
         throw new Error('Received empty JSON line from ACP bridge.');
       }
-      return JSON.parse(line) as Record<string, unknown>;
+      return JSON.parse(line) as JsonRpcTestResponse;
     },
     close() {
       lines.close();
@@ -151,7 +160,7 @@ exit 1
       notifications.push(message);
     }
 
-    assert.equal(promptResponse.result?.stopReason, 'end_turn');
+    assert.equal((promptResponse.result as { stopReason: string }).stopReason, 'end_turn');
     assert.equal(
       notifications.some(
         (entry) =>
@@ -283,7 +292,7 @@ exit 1
       resumedNotifications.push(message);
     }
 
-    assert.equal(resumedPrompt.result?.stopReason, 'end_turn');
+    assert.equal((resumedPrompt.result as { stopReason: string }).stopReason, 'end_turn');
     assert.equal(
       resumedNotifications.some((entry) => JSON.stringify(entry).includes('ACP RESUME TURN')),
       true,
