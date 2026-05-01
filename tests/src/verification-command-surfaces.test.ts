@@ -227,6 +227,10 @@ test('GUI release publisher defaults to current arm64 artifacts only', () => {
     `One-Person-Lab-${version}-mac-arm64.dmg.blockmap`,
     `One-Person-Lab-${version}-mac-arm64.zip`,
     `One-Person-Lab-${version}-mac-arm64.zip.blockmap`,
+    `One-Person-Lab-${version}-a-mac-arm64.dmg`,
+    `One-Person-Lab-${version}-a-mac-arm64.dmg.blockmap`,
+    `One-Person-Lab-${version}-a-mac-arm64.zip`,
+    `One-Person-Lab-${version}-a-mac-arm64.zip.blockmap`,
     `One-Person-Lab-${version}-mac-universal.dmg`,
     `One-Person-Lab-${version}-mac-universal.dmg.blockmap`,
     `One-Person-Lab-${version}-mac-universal.zip`,
@@ -308,6 +312,10 @@ test('GUI release publisher defaults to current arm64 artifacts only', () => {
   );
   assert.equal(
     payload.artifacts.some((artifact) => artifact.includes('-mac-x64.')),
+    false,
+  );
+  assert.equal(
+    payload.artifacts.some((artifact) => artifact.includes(`${version}-a-mac-arm64`)),
     false,
   );
   assert.equal(fs.readFileSync(path.join(outDir, 'latest-mac.yml'), 'utf8'), metadata);

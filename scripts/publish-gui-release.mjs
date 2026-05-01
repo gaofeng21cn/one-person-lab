@@ -93,10 +93,14 @@ function metadataMatchesMacArch(metadata, macArch) {
 }
 
 function isGuiArtifact(name, version, extension, macArch) {
-  return guiArtifactPrefixes.some((prefix) => name.startsWith(prefix))
-    && name.includes(version)
-    && name.endsWith(extension)
-    && artifactMatchesMacArch(name, macArch);
+  const baseNames = guiArtifactPrefixes.map((prefix) => `${prefix}${version}-mac-${macArch}`);
+  if (extension === '.blockmap') {
+    return baseNames.some((baseName) => (
+      name === `${baseName}.dmg.blockmap`
+      || name === `${baseName}.zip.blockmap`
+    ));
+  }
+  return baseNames.some((baseName) => name === `${baseName}${extension}`);
 }
 
 function isLatestMetadataForVersion(releaseDir, name, version, macArch) {
