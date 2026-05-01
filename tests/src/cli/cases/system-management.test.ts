@@ -2,6 +2,7 @@ import { GatewayContractError, PassThrough, assert, buildManifestCommand, buildP
 import { spawnSync } from 'node:child_process';
 import { buildInternalCommandSpecs } from '../../../../src/cli/cases/private-command-specs.ts';
 import { buildPublicCommandSpecs } from '../../../../src/cli/cases/public-command-specs.ts';
+import { resolveEngineActionSpec } from '../../../../src/system-installation/engine-helpers.ts';
 
 test('help keeps GUI lane on AionUI without Product API service commands', () => {
   const output = runCli(['help']);
@@ -630,6 +631,18 @@ test('engine action executes env-overridden install commands and returns a struc
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
+});
+
+test('builtin Codex install command bounds npm registry fetches', () => {
+  const install = resolveEngineActionSpec('codex', 'install');
+  const command = install.command_preview.join(' ');
+
+  assert.equal(install.strategy, 'builtin');
+  assert.match(command, /npm install -g @openai\/codex@latest/);
+  assert.match(command, /--fetch-retries=3/);
+  assert.match(command, /--fetch-retry-mintimeout=2000/);
+  assert.match(command, /--fetch-retry-maxtimeout=20000/);
+  assert.match(command, /--fetch-timeout=60000/);
 });
 
 test('workspace root set persists the selected root and workspace root reads it back', () => {
