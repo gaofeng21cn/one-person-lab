@@ -1,6 +1,6 @@
 # OPL GUI Shell Adapter 边界说明
 
-状态锚点：`2026-04-27`
+状态锚点：`2026-05-01`
 
 ## 结论
 
@@ -25,6 +25,7 @@
 - 持有当前桌面 App / WebUI 的实际 GUI codebase。
 - 基于 AionUI codebase 做 OPL 品牌化、界面裁剪、主题、图标、设置页、环境管理、工作空间面板与对话体验。
 - 负责跟随 AionUI upstream，解决 GUI 源码冲突，并保留必要的 OPL adapter 改动。
+- 每次吸收 AionUI upstream 都应同时做本地补丁退役审计：upstream 已覆盖的深补丁应删除或收缩为薄 adapter，避免长期 fork delta 膨胀。
 - 负责 Electron builder packaging policy，包括依赖裁剪、artifact 命名、updater metadata、packaged runtime 校验。
 - 构建出的 `.dmg` / `.exe` / `.deb` / updater metadata 通过 OPL 发布流程上传到 `one-person-lab` release。
 
@@ -33,6 +34,8 @@
 当前裁剪主要是打包阶段的 policy：Electron builder 选择哪些运行时文件进入 App 包，哪些 renderer-only、测试、文档、fixtures、上游无关 runtime 或平台无关二进制不进入包。
 
 这类裁剪不改 upstream 源码本体，因此不会天然阻断后续同步 AionUI upstream。同步后需要重新跑 packaged runtime validation 和真实启动 smoke，确认没有把新的运行时依赖裁掉。
+
+GUI fork 更新不是机械 rebase。标准 intake 目标是“吸收 upstream + 收缩本地 delta + 保留 OPL runtime 边界”：先比较 upstream delta、OPL overlay delta 和当前本地 dirty delta，再把 OPL 补丁分类为保留、upstream 已覆盖可退役、适配到新 upstream 结构或继续观察。
 
 当前 GUI 仓的裁剪规则集中在 `opl-aion-shell/electron-builder.yml`，校验规则集中在 `opl-aion-shell/scripts/validate-packaged-runtime.js`。GUI 打包脚本应在生成 fresh `app.asar` 后自动执行 `--scan-all` 级别的 packaged runtime validation；发布前仍需真实启动一次 One Person Lab App。
 
@@ -65,5 +68,6 @@
 - `opl-aion-shell` 是当前 GUI 交付仓，不是用户主入口；用户主入口仍是 `one-person-lab` release、`opl install` 和 One Person Lab App。
 - GUI 新能力优先要求 OPL CLI 提供机器可读输出，再由 GUI 消费。
 - Upstream AionUI 同步后，先解决源码冲突，再验证 OPL branding、Codex-default runtime、environment management、skill list、workspace panel、packaging trim 和 updater metadata。
+- 如果用户只说“跟随 / 吸收 AionUI 最新版本”，默认按 `opl-aion-shell` 的标准 upstream-intake 流程执行，包括 live upstream 核对、patch matrix、本地补丁退役审计、验证、吸收到 `gaofeng/main` 和清理临时 worktree/branch。
 - GUI upstream 同步的固定验证顺序是：同步 upstream、解决源码冲突、`dev/build`、打包、packaged runtime validation、真实 App startup smoke。
 - 如果未来更换 GUI，新增一份迁移记录即可；核心 contract 和 domain module 不应因 GUI 更换而重写。
