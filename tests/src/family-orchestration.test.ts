@@ -565,7 +565,7 @@ test('buildFamilyProductEntryOrchestration passes through project_profile_compan
     session_locator_field: 'grant_run_id',
     checkpoint_locator_field: 'checkpoint_id',
     project_profile_companion: projectProfileCompanion,
-  }) as {
+  }) as unknown as {
     project_profile_companion: { version: string; target_domain_id: string };
   };
 

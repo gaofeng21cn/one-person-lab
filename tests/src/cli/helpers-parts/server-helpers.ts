@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn, type ChildProcessByStdio } from 'node:child_process';
 import { type Server } from 'node:http';
-import { type Readable } from 'node:stream';
+import { type Readable, type Writable } from 'node:stream';
 
 import { cliPath, contractsDir, repoRoot } from './constants.ts';
 
@@ -82,7 +82,7 @@ export function writeJsonLine(stream: NodeJS.WritableStream, payload: Record<str
 }
 
 export async function stopCliPipeChild(
-  child: ChildProcessByStdio<NodeJS.WritableStream, Readable, Readable>,
+  child: ChildProcessByStdio<Writable, Readable, Readable>,
 ) {
   if (child.exitCode !== null || child.signalCode !== null) {
     return;
@@ -222,4 +222,3 @@ export function assertNoContractsProvenance(payload: {
   assert.equal(payload.error?.details?.contracts_dir, undefined);
   assert.equal(payload.error?.details?.contracts_root_source, undefined);
 }
-

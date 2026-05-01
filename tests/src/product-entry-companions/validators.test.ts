@@ -417,7 +417,7 @@ test('product entry companion validators fail closed on missing required shared 
   );
 
   const missingRuntimeControlReference = structuredClone(manifest);
-  delete missingRuntimeControlReference.runtime_control;
+  delete (missingRuntimeControlReference as { runtime_control?: unknown }).runtime_control;
   assert.throws(
     () => validateFamilyProductEntryManifest(missingRuntimeControlReference, { requireRuntimeContinuity: true }),
     /runtime continuity control reference/,

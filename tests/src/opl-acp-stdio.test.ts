@@ -9,6 +9,14 @@ import {
   handleAcpStdioRequest,
 } from '../../src/opl-acp-stdio.ts';
 
+type SessionCreateResult = {
+  surface_id: string;
+  session_id: string;
+  task_acceptance?: {
+    task_id: string;
+  };
+};
+
 function createFakeCodexFixture(handlerBody: string) {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-acp-stdio-codex-'));
   const codexPath = path.join(fixtureRoot, 'codex');
@@ -96,9 +104,10 @@ test('acp stdio session_create 请求返回 translator 视图', async () => {
   assert.equal(response.command, 'session_create');
   assert.equal(response.ok, true);
   assert.equal(response.error, undefined);
-  assert.equal(response.result?.surface_id, 'opl_session_create');
-  assert.equal(response.result?.session_id, 'sess-stdio-1');
-  assert.equal(response.result?.task_acceptance?.task_id, 'task-stdio-1');
+  const result = response.result as SessionCreateResult | undefined;
+  assert.equal(result?.surface_id, 'opl_session_create');
+  assert.equal(result?.session_id, 'sess-stdio-1');
+  assert.equal(result?.task_acceptance?.task_id, 'task-stdio-1');
 });
 
 test('acp stdio invalid command fail-closed', async () => {

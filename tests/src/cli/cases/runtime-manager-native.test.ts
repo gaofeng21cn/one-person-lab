@@ -218,12 +218,23 @@ exit 1
       result_surface_changed_count: 1,
       status_changed_count: 1,
     });
-    const detailByKey = new Map(
-      persistence.diff.details.map((detail: { index_key: string }) => [detail.index_key, detail]),
+    type RuntimeManagerDiffDetail = {
+      index_key: string;
+      change?: string;
+      changed_fields?: string[];
+    };
+    const detailByKey = new Map<string, RuntimeManagerDiffDetail>(
+      persistence.diff.details.map((detail: RuntimeManagerDiffDetail) => [detail.index_key, detail]),
     );
-    assert.deepEqual(detailByKey.get('state_index').change, 'added');
-    assert.deepEqual(detailByKey.get('legacy_index').change, 'removed');
-    assert.deepEqual(detailByKey.get('artifact_manifest').changed_fields, ['result_surface_kind', 'status']);
+    const stateIndexDetail = detailByKey.get('state_index');
+    const legacyIndexDetail = detailByKey.get('legacy_index');
+    const artifactManifestDetail = detailByKey.get('artifact_manifest');
+    assert.ok(stateIndexDetail);
+    assert.ok(legacyIndexDetail);
+    assert.ok(artifactManifestDetail);
+    assert.deepEqual(stateIndexDetail.change, 'added');
+    assert.deepEqual(legacyIndexDetail.change, 'removed');
+    assert.deepEqual(artifactManifestDetail.changed_fields, ['result_surface_kind', 'status']);
     assert.equal(persistence.gc.retained_history_count, 50);
     assert.equal(persistence.gc.max_history_entries, 50);
     assert.equal(persistence.gc.preserved_count, 50);

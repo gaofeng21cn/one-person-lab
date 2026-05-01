@@ -82,6 +82,8 @@ exit 1
             installed: boolean;
             version: string | null;
             version_raw_output: string | null;
+            update_available: boolean;
+            update_summary: string | null;
             gateway_loaded: boolean;
             health_status: string;
           };

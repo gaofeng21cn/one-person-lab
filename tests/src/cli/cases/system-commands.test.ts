@@ -11,6 +11,8 @@ test('public and internal command specs no longer carry removed UI adapter comma
   const internalSpecs = buildInternalCommandSpecs(
     {
       helpRequested: false,
+      jsonOutput: true,
+      textOutput: false,
       command: null,
       args: [],
       loadOptions: { contractsDir },

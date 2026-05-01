@@ -436,7 +436,7 @@ exit 1
       notifications.push(message);
     }
 
-    assert.equal(promptResponse.result.stopReason, 'end_turn');
+    assert.equal((promptResponse.result as { stopReason: string }).stopReason, 'end_turn');
     assert.equal(
       notifications.some((entry) => entry.method === 'session/update'),
       true,
@@ -620,7 +620,7 @@ exit 1
       resumedNotifications.push(message);
     }
 
-    assert.equal(resumedPrompt.result.stopReason, 'end_turn');
+    assert.equal((resumedPrompt.result as { stopReason: string }).stopReason, 'end_turn');
     assert.equal(
       resumedNotifications.some((entry) =>
         JSON.stringify(entry).includes('ACP RESUME TURN')
@@ -715,4 +715,3 @@ test('mcp-stdio defaults to the current shell protocol version when the client d
     await stopHttpServer(fakeApi.server);
   }
 });
-

@@ -174,8 +174,12 @@ test('product-entry handoff envelope leaf builds the current family handoff payl
     assert.equal(envelope.handoff_bundle.target_domain_id, 'redcube');
     assert.equal(envelope.handoff_bundle.entry_mode, 'product_entry_handoff');
     assert.equal(envelope.handoff_bundle.workspace_locator.absolute_path, repoRoot);
-    assert.equal(envelope.handoff_bundle.domain_context?.project, 'redcube-ai');
-    assert.equal(envelope.handoff_bundle.return_surface_contract.opl.dashboard_command, 'opl status dashboard');
+    const domainContext = envelope.handoff_bundle.domain_context as { project: string } | null;
+    const returnSurfaceContract = envelope.handoff_bundle.return_surface_contract as {
+      opl: { dashboard_command: string };
+    };
+    assert.equal(domainContext?.project, 'redcube-ai');
+    assert.equal(returnSurfaceContract.opl.dashboard_command, 'opl status dashboard');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
