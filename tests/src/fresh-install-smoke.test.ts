@@ -2,12 +2,53 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const smokeScript = path.join(repoRoot, 'scripts', 'fresh-install-smoke.mjs');
 const matrixContractPath = path.join(repoRoot, 'contracts', 'opl-gateway', 'fresh-install-test-matrix.json');
+const installScript = path.join(repoRoot, 'install.sh');
+
+test('install bootstrap-only handles no forwarded args under nounset bash', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-bash-compat-'));
+  const fakeBin = path.join(homeRoot, 'bin');
+  const installDir = path.join(homeRoot, '.opl', 'one-person-lab');
+  fs.mkdirSync(fakeBin, { recursive: true });
+
+  fs.writeFileSync(
+    path.join(fakeBin, 'git'),
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      'if [ "${1:-}" = "clone" ]; then',
+      '  target=""',
+      '  for arg in "$@"; do target="$arg"; done',
+      '  mkdir -p "$target/.git"',
+      'fi',
+    ].join('\n'),
+  );
+  fs.writeFileSync(path.join(fakeBin, 'node'), '#!/usr/bin/env bash\nexit 0\n');
+  fs.writeFileSync(path.join(fakeBin, 'npm'), '#!/usr/bin/env bash\nexit 0\n');
+  for (const command of ['git', 'node', 'npm']) {
+    fs.chmodSync(path.join(fakeBin, command), 0o755);
+  }
+
+  const result = spawnSync('/bin/bash', [installScript, '--bootstrap-only'], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+    env: {
+      HOME: homeRoot,
+      OPL_INSTALL_DIR: installDir,
+      OPL_REPO_URL: 'https://example.invalid/one-person-lab.git',
+      PATH: `${fakeBin}:/usr/bin:/bin`,
+    },
+  });
+
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /OPL CLI is ready/);
+});
 
 test('fresh-install smoke runner validates local clean-room scenarios', () => {
   const result = spawnSync(process.execPath, [smokeScript], {
