@@ -17,7 +17,11 @@ for arg in "$@"; do
       ;;
   esac
 done
-set -- "${INSTALL_ARGS[@]}"
+if [ "${#INSTALL_ARGS[@]}" -gt 0 ]; then
+  set -- "${INSTALL_ARGS[@]}"
+else
+  set --
+fi
 
 log() {
   printf '==> %s\n' "$1"
