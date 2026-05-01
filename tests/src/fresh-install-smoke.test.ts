@@ -50,6 +50,58 @@ test('install bootstrap-only handles no forwarded args under nounset bash', () =
   assert.match(result.stdout, /OPL CLI is ready/);
 });
 
+test('install bootstrap-only removes partial clone directories after clone failure', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-clone-failure-'));
+  const fakeBin = path.join(homeRoot, 'bin');
+  const installDir = path.join(homeRoot, '.opl', 'one-person-lab');
+  fs.mkdirSync(fakeBin, { recursive: true });
+
+  fs.writeFileSync(
+    path.join(fakeBin, 'git'),
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      'if [ "${1:-}" = "clone" ]; then',
+      '  target=""',
+      '  for arg in "$@"; do target="$arg"; done',
+      '  mkdir -p "$target/.git"',
+      '  echo "simulated clone failure" >&2',
+      '  exit 128',
+      'fi',
+      'echo "unexpected git args: $*" >&2',
+      'exit 1',
+    ].join('\n'),
+  );
+  fs.writeFileSync(path.join(fakeBin, 'node'), '#!/usr/bin/env bash\nexit 0\n');
+  fs.writeFileSync(path.join(fakeBin, 'npm'), '#!/usr/bin/env bash\nexit 0\n');
+  for (const command of ['git', 'node', 'npm']) {
+    fs.chmodSync(path.join(fakeBin, command), 0o755);
+  }
+
+  try {
+    const result = spawnSync('/bin/bash', [installScript, '--bootstrap-only'], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        HOME: homeRoot,
+        OPL_INSTALL_DIR: installDir,
+        OPL_REPO_URL: 'https://example.invalid/one-person-lab.git',
+        PATH: `${fakeBin}:/usr/bin:/bin`,
+      },
+    });
+
+    assert.equal(result.status, 128);
+    assert.match(result.stderr, /simulated clone failure/);
+    assert.equal(fs.existsSync(installDir), false);
+    assert.deepEqual(
+      fs.readdirSync(path.dirname(installDir)).filter((entry) => entry.startsWith(`${path.basename(installDir)}.tmp.`)),
+      [],
+    );
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
 test('fresh-install smoke runner validates local clean-room scenarios', () => {
   const result = spawnSync(process.execPath, [smokeScript], {
     cwd: repoRoot,
