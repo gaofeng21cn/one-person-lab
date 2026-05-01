@@ -178,6 +178,64 @@ function isGitRepo(repoPath: string) {
   return result.exitCode === 0 && result.stdout.trim() === 'true';
 }
 
+function normalizePositiveInteger(value: string | undefined, fallback: number) {
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function resolveRemoteGitRetryAttempts() {
+  return normalizePositiveInteger(process.env.OPL_GIT_RETRY_ATTEMPTS, 3);
+}
+
+function resolveRemoteGitRetryDelayMs() {
+  return normalizePositiveInteger(process.env.OPL_GIT_RETRY_DELAY_MS, 2_000);
+}
+
+function sleepSync(ms: number) {
+  if (ms <= 0) {
+    return;
+  }
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+function appendGitRetryHistory(result: ReturnType<typeof runGit>, args: string[], attempts: ReturnType<typeof runGit>[]) {
+  if (attempts.length <= 1) {
+    return result;
+  }
+
+  const history = attempts.map((attempt, index) => {
+    return [
+      `git attempt ${index + 1}/${attempts.length} exited with ${attempt.exitCode}: git ${args.join(' ')}`,
+      attempt.stdout.trim() ? `stdout:\n${attempt.stdout.trim()}` : '',
+      attempt.stderr.trim() ? `stderr:\n${attempt.stderr.trim()}` : '',
+    ].filter(Boolean).join('\n');
+  });
+
+  return {
+    ...result,
+    stderr: [result.stderr.trim(), ...history].filter(Boolean).join('\n\n'),
+  };
+}
+
+function runRemoteGitWithRetry(args: string[], cwd?: string) {
+  const maxAttempts = resolveRemoteGitRetryAttempts();
+  const delayMs = resolveRemoteGitRetryDelayMs();
+  const attempts: ReturnType<typeof runGit>[] = [];
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const result = runGit(args, cwd);
+    attempts.push(result);
+    if (result.exitCode === 0) {
+      return result;
+    }
+    if (attempt < maxAttempts) {
+      sleepSync(delayMs);
+    }
+  }
+
+  return appendGitRetryHistory(attempts[attempts.length - 1], args, attempts);
+}
+
 function inspectGitRepo(repoPath: string, refreshRemote = false): GitRepoSnapshot {
   const branch = normalizeOptionalString(runGit(['branch', '--show-current'], repoPath).stdout);
   const headSha = normalizeOptionalString(runGit(['rev-parse', 'HEAD'], repoPath).stdout);
@@ -187,7 +245,7 @@ function inspectGitRepo(repoPath: string, refreshRemote = false): GitRepoSnapsho
   const upstreamResult = runGit(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'], repoPath);
   const upstreamRef = upstreamResult.exitCode === 0 ? normalizeOptionalString(upstreamResult.stdout) : null;
   if (refreshRemote && originResult.exitCode === 0 && branch && upstreamRef) {
-    runGit(['fetch', '--quiet', '--prune', 'origin'], repoPath);
+    runRemoteGitWithRetry(['fetch', '--quiet', '--prune', 'origin'], repoPath);
   }
 
   const upstreamHeadResult = upstreamRef ? runGit(['rev-parse', '@{u}'], repoPath) : null;
@@ -404,11 +462,12 @@ export function buildOplModules() {
 
 function cloneManagedModule(spec: DomainModuleSpec, checkoutPath: string) {
   fs.mkdirSync(path.dirname(checkoutPath), { recursive: true });
-  const cloneResult = runGit(['clone', resolveModuleRepoUrl(spec), checkoutPath]);
+  const cloneResult = runRemoteGitWithRetry(['clone', resolveModuleRepoUrl(spec), checkoutPath]);
   assertGitSuccess(cloneResult, 'Failed to clone the requested OPL module.', {
     module_id: spec.module_id,
     repo_url: resolveModuleRepoUrl(spec),
     checkout_path: checkoutPath,
+    git_attempts: resolveRemoteGitRetryAttempts(),
   });
 }
 
@@ -636,10 +695,11 @@ export function runOplModuleAction(
           2,
         );
       }
-      const pullResult = runGit(['pull', '--ff-only'], current.checkout_path);
+      const pullResult = runRemoteGitWithRetry(['pull', '--ff-only'], current.checkout_path);
       assertGitSuccess(pullResult, 'Failed to update the requested OPL module.', {
         module_id: spec.module_id,
         checkout_path: current.checkout_path,
+        git_attempts: resolveRemoteGitRetryAttempts(),
       });
       const updated = inspectModule(spec);
       if (updated.install_origin === 'managed_root') {
