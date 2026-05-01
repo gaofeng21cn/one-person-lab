@@ -55,8 +55,16 @@ test('fresh-install matrix freezes GUI labels and first-run log contract', () =>
       event_schema_version: string;
     };
     gui_accessibility_labels: Record<string, string>;
+    gui_vm_implementation: {
+      repo: string;
+      packaged_guest_smoke_command: string;
+      tart_host_smoke_command: string;
+      nightly_workflow: string;
+      default_self_hosted_runner_labels: string[];
+    };
     scenarios: Array<{ scenario_id: string }>;
     ci_policy: {
+      self_hosted_macos: string;
       docker: string;
     };
   };
@@ -67,6 +75,16 @@ test('fresh-install matrix freezes GUI labels and first-run log contract', () =>
   assert.equal(matrix.first_run_log.event_schema_version, 'opl_first_run_event.v1');
   assert.equal(matrix.gui_accessibility_labels.window, 'opl-first-run-window');
   assert.equal(matrix.gui_accessibility_labels.install_button, 'opl-first-run-install-button');
+  assert.equal(matrix.gui_vm_implementation.repo, 'gaofeng21cn/opl-aion-shell');
+  assert.match(matrix.gui_vm_implementation.packaged_guest_smoke_command, /test:opl-first-run-vm/);
+  assert.match(matrix.gui_vm_implementation.tart_host_smoke_command, /test:opl-first-run-vm:tart/);
+  assert.equal(matrix.gui_vm_implementation.nightly_workflow, '.github/workflows/opl-first-run-vm.yml');
+  assert.deepEqual(matrix.gui_vm_implementation.default_self_hosted_runner_labels, [
+    'self-hosted',
+    'macOS',
+    'opl-gui-vm',
+  ]);
   assert.equal(matrix.scenarios.some((entry) => entry.scenario_id === 'clean_vm_release_first_launch'), true);
+  assert.match(matrix.ci_policy.self_hosted_macos, /opl-first-run-vm\.yml/);
   assert.match(matrix.ci_policy.docker, /Do not use Docker/);
 });

@@ -65,6 +65,21 @@ export function buildOplGuiFirstRunAutomationContract() {
       'launch screenshot',
       'macOS unified log excerpt for One Person Lab',
     ],
+    vm_implementation: {
+      repo: 'gaofeng21cn/opl-aion-shell',
+      packaged_guest_smoke_command: 'bun run test:opl-first-run-vm -- --dmg <release.dmg> --assert-clean',
+      tart_host_smoke_command:
+        'bun run test:opl-first-run-vm:tart -- --source-vm <clean-tart-vm> --dmg <release.dmg>',
+      nightly_workflow: '.github/workflows/opl-first-run-vm.yml',
+      default_self_hosted_runner_labels: ['self-hosted', 'macOS', 'opl-gui-vm'],
+      required_guest_capabilities: [
+        'clean macOS user state',
+        'SSH access from the host runner',
+        'Node.js for the guest smoke harness',
+        'logged-in GUI session',
+        'Accessibility permission for osascript/System Events',
+      ],
+    },
     owner_split: {
       opl_cli: 'installs dependencies, reports machine-readable state, and writes first-run JSONL events',
       opl_aion_shell: 'renders first-run state, exposes stable accessibility labels, and shows blockers',
@@ -119,12 +134,14 @@ export function buildOplFreshInstallTestMatrix() {
       {
         scenario_id: 'clean_vm_release_first_launch',
         layer: 'macos_vm_gui',
-        setup: 'clean macOS VM snapshot, downloaded One Person Lab release DMG, no existing OPL state',
+        setup:
+          'clean macOS VM snapshot through gaofeng21cn/opl-aion-shell .github/workflows/opl-first-run-vm.yml, downloaded One Person Lab release DMG, no existing OPL state',
         expected_artifacts: [
           'first-run JSONL log',
           'system initialize JSON',
           'modules JSON',
           'launch screenshot',
+          'macOS unified log excerpt for One Person Lab',
         ],
       },
     ],
