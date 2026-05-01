@@ -2,6 +2,7 @@
 # legacy OMX local state (kept ignored after offboarding)
 .omx/
 .worktrees/
+tmp/
 dist/
 node_modules/
 target/
