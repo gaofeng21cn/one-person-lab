@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import { GatewayContractError } from '../contracts.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from '../runtime-state-paths.ts';
+import { PACKAGED_MODULE_MARKER_FILE } from '../full-internal-package.ts';
 import {
   resolveFamilyWorkspaceRootFromRepoRoot,
   syncFamilySkillPackFromRepoRoot,
@@ -289,6 +290,43 @@ function inspectGitRepo(repoPath: string, refreshRemote = false): GitRepoSnapsho
   };
 }
 
+function readPackagedModuleGitSnapshot(repoPath: string, spec: DomainModuleSpec): GitRepoSnapshot | null {
+  const markerPath = path.join(repoPath, PACKAGED_MODULE_MARKER_FILE);
+  if (!fs.existsSync(markerPath) || !fs.statSync(markerPath).isFile()) {
+    return null;
+  }
+
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(fs.readFileSync(markerPath, 'utf8')) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+
+  if (parsed.packaged_runtime !== true || parsed.module_id !== spec.module_id || parsed.repo_name !== spec.repo_name) {
+    return null;
+  }
+
+  const sourceGit =
+    typeof parsed.source_git === 'object' && parsed.source_git !== null
+      ? parsed.source_git as Record<string, unknown>
+      : {};
+  const headSha = normalizeOptionalString(typeof sourceGit.head_sha === 'string' ? sourceGit.head_sha : null);
+
+  return {
+    branch: null,
+    head_sha: headSha,
+    short_sha: headSha ? headSha.slice(0, 12) : null,
+    origin_url: spec.repo_url,
+    upstream_ref: null,
+    upstream_head_sha: null,
+    ahead_count: null,
+    behind_count: null,
+    sync_status: 'no_upstream',
+    dirty: false,
+  };
+}
+
 function isModuleUpdateAvailable(git: GitRepoSnapshot) {
   return !git.dirty && git.sync_status === 'behind';
 }
@@ -342,6 +380,25 @@ function inspectModule(spec: DomainModuleSpec): ModuleInspection {
   for (const candidate of candidates) {
     if (!fs.existsSync(candidate.path)) {
       continue;
+    }
+
+    const packagedGit = readPackagedModuleGitSnapshot(candidate.path, spec);
+    if (packagedGit) {
+      return {
+        module_id: spec.module_id,
+        label: spec.label,
+        scope: spec.scope,
+        description: spec.description,
+        repo_url: resolveModuleRepoUrl(spec),
+        installed: true,
+        install_origin: candidate.origin,
+        checkout_path: candidate.path,
+        managed_checkout_path: managedCheckoutPath,
+        health_status: 'ready',
+        git: packagedGit,
+        available_actions: [],
+        recommended_action: null,
+      };
     }
 
     if (!isGitRepo(candidate.path)) {
