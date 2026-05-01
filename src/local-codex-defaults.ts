@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { GatewayContractError } from './contracts.ts';
 
@@ -21,7 +22,21 @@ export type BootstrapLocalCodexDefaultsInput = Partial<{
   provider_name: string;
   provider_base_url: string;
   provider_api_key: string;
+  overwrite_existing: boolean;
 }>;
+
+export type CodexDefaultProfile = {
+  surface_id: 'opl_codex_default_profile';
+  version: string;
+  model_provider: string;
+  model: string;
+  model_reasoning_effort: string | null;
+  provider_name: string;
+  base_url: string;
+  base_url_role: string;
+  model_profile_role: string;
+  profile_generated_at: string;
+};
 
 function normalizeOptionalString(value: string | null | undefined) {
   const trimmed = value?.trim();
@@ -93,6 +108,109 @@ function quoteTomlString(value: string) {
   return JSON.stringify(value);
 }
 
+export function resolveBundledCodexDefaultProfilePath() {
+  return path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    '..',
+    'contracts',
+    'opl-gateway',
+    'codex-default-profile.json',
+  );
+}
+
+function readRequiredProfileString(
+  profile: Record<string, unknown>,
+  key: keyof CodexDefaultProfile,
+): string {
+  const value = normalizeOptionalString(typeof profile[key] === 'string' ? profile[key] : undefined);
+  if (!value) {
+    throw new GatewayContractError(
+      'contract_shape_invalid',
+      `Bundled Codex default profile is missing ${key}.`,
+      {
+        profile_path: resolveBundledCodexDefaultProfilePath(),
+        key,
+      },
+    );
+  }
+  return value;
+}
+
+export function readBundledCodexDefaultProfile(): CodexDefaultProfile {
+  const profilePath = resolveBundledCodexDefaultProfilePath();
+  const raw = fs.readFileSync(profilePath, 'utf8');
+  const parsed = JSON.parse(raw) as Record<string, unknown>;
+  const serialized = JSON.stringify(parsed);
+  if (serialized.includes('experimental_bearer_token')) {
+    throw new GatewayContractError(
+      'contract_shape_invalid',
+      'Bundled Codex default profile must not contain bearer tokens.',
+      {
+        profile_path: profilePath,
+      },
+    );
+  }
+
+  return {
+    surface_id: 'opl_codex_default_profile',
+    version: readRequiredProfileString(parsed, 'version'),
+    model_provider: readRequiredProfileString(parsed, 'model_provider'),
+    model: readRequiredProfileString(parsed, 'model'),
+    model_reasoning_effort: normalizeOptionalString(
+      typeof parsed.model_reasoning_effort === 'string' ? parsed.model_reasoning_effort : undefined,
+    ),
+    provider_name: readRequiredProfileString(parsed, 'provider_name'),
+    base_url: readRequiredProfileString(parsed, 'base_url'),
+    base_url_role: readRequiredProfileString(parsed, 'base_url_role'),
+    model_profile_role: readRequiredProfileString(parsed, 'model_profile_role'),
+    profile_generated_at: readRequiredProfileString(parsed, 'profile_generated_at'),
+  };
+}
+
+function buildBootstrapInputFromProfile(profile: CodexDefaultProfile): BootstrapLocalCodexDefaultsInput {
+  return {
+    model_provider: profile.model_provider,
+    model: profile.model,
+    reasoning_effort: profile.model_reasoning_effort ?? undefined,
+    provider_name: profile.provider_name,
+    provider_base_url: profile.base_url,
+  };
+}
+
+function compactBootstrapInput(input: BootstrapLocalCodexDefaultsInput): BootstrapLocalCodexDefaultsInput {
+  return Object.fromEntries(
+    Object.entries(input).filter(([, value]) => value !== undefined && value !== null),
+  ) as BootstrapLocalCodexDefaultsInput;
+}
+
+export function buildCodexDefaultProfileFromLocalConfig(
+  generatedAt = new Date().toISOString(),
+): CodexDefaultProfile {
+  const defaults = readLocalCodexDefaults();
+  if (!defaults.model_provider || !defaults.provider_base_url) {
+    throw new GatewayContractError(
+      'contract_shape_invalid',
+      'Local Codex config cannot be exported as an OPL default profile without model_provider and base_url.',
+      {
+        config_path: defaults.config_path,
+      },
+    );
+  }
+
+  return {
+    surface_id: 'opl_codex_default_profile',
+    version: 'g1',
+    model_provider: defaults.model_provider,
+    model: defaults.model,
+    model_reasoning_effort: defaults.reasoning_effort,
+    provider_name: defaults.provider_name ?? defaults.model_provider,
+    base_url: defaults.provider_base_url,
+    base_url_role: 'product_default_provider_endpoint',
+    model_profile_role: 'maintainer_current_initial_profile',
+    profile_generated_at: generatedAt,
+  };
+}
+
 function readBootstrapInputFromEnv(): BootstrapLocalCodexDefaultsInput {
   return {
     model_provider: normalizeOptionalString(process.env.OPL_CODEX_MODEL_PROVIDER)
@@ -119,32 +237,22 @@ function readBootstrapInputFromEnv(): BootstrapLocalCodexDefaultsInput {
 }
 
 export function bootstrapLocalCodexDefaults(input: BootstrapLocalCodexDefaultsInput = {}) {
+  const defaultProfile = readBundledCodexDefaultProfile();
   const merged = {
-    ...readBootstrapInputFromEnv(),
-    ...input,
+    ...buildBootstrapInputFromProfile(defaultProfile),
+    ...compactBootstrapInput(readBootstrapInputFromEnv()),
+    ...compactBootstrapInput(input),
   };
 
   const model = normalizeOptionalString(merged.model);
   const providerBaseUrl = normalizeOptionalString(merged.provider_base_url);
   const providerApiKey = normalizeOptionalString(merged.provider_api_key);
-
-  if (!model || !providerBaseUrl || !providerApiKey) {
-    return {
-      status: 'skipped_missing_input' as const,
-      config_path: resolveLocalCodexConfigPath(),
-      required_env: ['OPL_CODEX_MODEL', 'OPL_CODEX_BASE_URL', 'OPL_CODEX_API_KEY'],
-      optional_env: ['OPL_CODEX_MODEL_PROVIDER', 'OPL_CODEX_REASONING_EFFORT', 'OPL_CODEX_PROVIDER_NAME'],
-      wrote_config: false,
-      provider_base_url: providerBaseUrl,
-      model,
-      reasoning_effort: normalizeOptionalString(merged.reasoning_effort),
-      api_key_present: Boolean(providerApiKey),
-    };
-  }
-
   const configPath = resolveLocalCodexConfigPath();
-  if (fs.existsSync(configPath) && fs.statSync(configPath).isFile()) {
-    const existing = readLocalCodexDefaults();
+  const existing = fs.existsSync(configPath) && fs.statSync(configPath).isFile()
+    ? readLocalCodexDefaults()
+    : null;
+
+  if (existing?.provider_api_key && !merged.overwrite_existing) {
     return {
       status: 'skipped_existing_config' as const,
       config_path: configPath,
@@ -152,12 +260,28 @@ export function bootstrapLocalCodexDefaults(input: BootstrapLocalCodexDefaultsIn
       provider_base_url: existing.provider_base_url,
       model: existing.model,
       reasoning_effort: existing.reasoning_effort,
-      api_key_present: Boolean(existing.provider_api_key),
+      api_key_present: true,
+      default_profile: defaultProfile,
     };
   }
 
-  const providerId = normalizeOptionalString(merged.model_provider) ?? 'opl';
-  const providerName = normalizeOptionalString(merged.provider_name) ?? 'OPL configured provider';
+  if (!model || !providerBaseUrl || !providerApiKey) {
+    return {
+      status: 'skipped_missing_input' as const,
+      config_path: configPath,
+      required_env: ['OPL_CODEX_API_KEY'],
+      optional_env: ['OPL_CODEX_MODEL_PROVIDER', 'OPL_CODEX_REASONING_EFFORT', 'OPL_CODEX_PROVIDER_NAME'],
+      wrote_config: false,
+      provider_base_url: providerBaseUrl,
+      model,
+      reasoning_effort: normalizeOptionalString(merged.reasoning_effort),
+      api_key_present: Boolean(providerApiKey),
+      default_profile: defaultProfile,
+    };
+  }
+
+  const providerId = normalizeOptionalString(merged.model_provider) ?? defaultProfile.model_provider;
+  const providerName = normalizeOptionalString(merged.provider_name) ?? defaultProfile.provider_name;
   const reasoningEffort = normalizeOptionalString(merged.reasoning_effort);
   const configDir = path.dirname(configPath);
   fs.mkdirSync(configDir, { recursive: true });
@@ -185,6 +309,7 @@ export function bootstrapLocalCodexDefaults(input: BootstrapLocalCodexDefaultsIn
     model,
     reasoning_effort: reasoningEffort,
     api_key_present: true,
+    default_profile: defaultProfile,
   };
 }
 

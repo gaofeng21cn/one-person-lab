@@ -2,6 +2,7 @@ import type {
   CommandSpec,
   OplEngineCliInput,
   OplModuleCliInput,
+  SystemConfigureCodexCliInput,
   SessionRuntimeCliInput,
   TurnkeyInstallCliInput,
   UpdateChannelCliInput,
@@ -307,6 +308,32 @@ function parseUpdateChannelArgs(
   return parsed;
 }
 
+function parseSystemConfigureCodexArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): SystemConfigureCodexCliInput {
+  const parsed: SystemConfigureCodexCliInput = {};
+
+  for (const token of args) {
+    if (token === '--api-key-stdin') {
+      parsed.apiKeyStdin = true;
+      continue;
+    }
+
+    throw buildUsageError(`Unknown option for system configure-codex command: ${token}.`, spec, {
+      option: token,
+    });
+  }
+
+  if (!parsed.apiKeyStdin) {
+    throw buildUsageError('system configure-codex requires --api-key-stdin.', spec, {
+      required: ['--api-key-stdin'],
+    });
+  }
+
+  return parsed;
+}
+
 function assertNoArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
@@ -325,6 +352,7 @@ export {
   parseOplEngineArgs,
   parseOplModuleArgs,
   parseSessionRuntimeArgs,
+  parseSystemConfigureCodexArgs,
   parseTurnkeyInstallArgs,
   parseUpdateChannelArgs,
   parseWorkspaceRegistryArgs,

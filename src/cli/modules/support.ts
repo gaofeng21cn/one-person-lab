@@ -42,6 +42,7 @@ export {
   parseOplEngineArgs,
   parseOplModuleArgs,
   parseSessionRuntimeArgs,
+  parseSystemConfigureCodexArgs,
   parseTurnkeyInstallArgs,
   parseUpdateChannelArgs,
   parseWorkspaceRegistryArgs,

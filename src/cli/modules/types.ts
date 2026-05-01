@@ -169,6 +169,10 @@ type UpdateChannelCliInput = {
   channel?: 'stable' | 'preview';
 };
 
+type SystemConfigureCodexCliInput = {
+  apiKeyStdin?: boolean;
+};
+
 type SkillPacksCliInput = {
   domains: string[];
   home?: string;
@@ -198,6 +202,7 @@ export type {
   SessionsCliInput,
   StartCliInput,
   SkillPacksCliInput,
+  SystemConfigureCodexCliInput,
   TurnkeyInstallCliInput,
   UpdateChannelCliInput,
   WebCliInput,

@@ -27,6 +27,7 @@ type OplInitializeProjection = {
   module_summary: unknown;
   checklist: unknown;
   core_engines: unknown;
+  codex_default_profile: unknown;
   native_helpers: unknown;
   domain_modules: OplModulesProjection;
   recommended_skills: unknown;
@@ -82,6 +83,7 @@ function buildPublicSystemInitializePayload(
       module_summary: payload.system_initialize.module_summary,
       checklist: payload.system_initialize.checklist,
       core_engines: payload.system_initialize.core_engines,
+      codex_default_profile: payload.system_initialize.codex_default_profile,
       native_helpers: payload.system_initialize.native_helpers,
       domain_modules: {
         surface_id: 'opl_modules',
