@@ -269,7 +269,13 @@ function resolveBuiltinEngineActionCommand(
       case 'install':
       case 'update':
       case 'reinstall':
-        return 'npm install -g @openai/codex@latest';
+        return [
+          'npm install -g @openai/codex@latest',
+          '--fetch-retries=3',
+          '--fetch-retry-mintimeout=2000',
+          '--fetch-retry-maxtimeout=20000',
+          '--fetch-timeout=60000',
+        ].join(' ');
       case 'remove':
         return 'npm uninstall -g @openai/codex';
     }
