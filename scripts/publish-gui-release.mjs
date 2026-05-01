@@ -69,6 +69,27 @@ function run(command, args, options = {}) {
   return result;
 }
 
+const guiArtifactPrefixes = ['One Person Lab-', 'One.Person.Lab-', 'One-Person-Lab-'];
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function isGuiArtifact(name, version, extension) {
+  return guiArtifactPrefixes.some((prefix) => name.startsWith(prefix))
+    && name.includes(version)
+    && name.endsWith(extension);
+}
+
+function isLatestMetadataForVersion(releaseDir, name, version) {
+  if (!/^latest.*\.yml$/.test(name)) {
+    return false;
+  }
+  const source = path.join(releaseDir, name);
+  const metadata = fs.readFileSync(source, 'utf8');
+  return new RegExp(`^version:\\s*['"]?${escapeRegExp(version)}['"]?\\s*$`, 'm').test(metadata);
+}
+
 function findArtifacts(shellRoot, version) {
   const releaseDir = ['release', 'out']
     .map((entry) => path.join(shellRoot, entry))
@@ -77,16 +98,16 @@ function findArtifacts(shellRoot, version) {
     throw new Error(`Missing GUI artifact directory: expected ${path.join(shellRoot, 'release')} or ${path.join(shellRoot, 'out')}`);
   }
   const files = fs.readdirSync(releaseDir).filter((name) => {
-    if ((name.startsWith('One Person Lab-') || name.startsWith('One.Person.Lab-')) && name.includes(version) && name.endsWith('.dmg')) {
+    if (isGuiArtifact(name, version, '.dmg')) {
       return true;
     }
-    if ((name.startsWith('One Person Lab-') || name.startsWith('One.Person.Lab-')) && name.includes(version) && name.endsWith('.zip')) {
+    if (isGuiArtifact(name, version, '.zip')) {
       return true;
     }
-    if ((name.startsWith('One Person Lab-') || name.startsWith('One.Person.Lab-')) && name.includes(version) && name.endsWith('.blockmap')) {
+    if (isGuiArtifact(name, version, '.blockmap')) {
       return true;
     }
-    return /^latest.*\.yml$/.test(name);
+    return isLatestMetadataForVersion(releaseDir, name, version);
   });
   if (!files.some((name) => name.endsWith('.dmg'))) {
     throw new Error(`No One Person Lab ${version} DMG found under ${releaseDir}`);
@@ -100,7 +121,6 @@ function findArtifacts(shellRoot, version) {
     const source = path.join(releaseDir, name);
     if (/^latest.*\.yml$/.test(name)) {
       const patched = fs.readFileSync(source, 'utf8')
-        .replaceAll('One-Person-Lab-', 'One.Person.Lab-')
         .replaceAll('One Person Lab-', 'One.Person.Lab-');
       const uploadPath = path.join(releaseDir, name);
       fs.writeFileSync(uploadPath, patched);

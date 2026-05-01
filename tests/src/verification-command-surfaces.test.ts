@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -173,6 +175,90 @@ test('package.json exposes the fresh-install smoke lane', () => {
     fs.existsSync(path.join(repoRoot, 'contracts/opl-gateway/fresh-install-test-matrix.json')),
     true,
   );
+});
+
+test('GUI release publisher accepts hyphenated universal artifacts without rewriting metadata names', () => {
+  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-gui-release-test-'));
+  const shellRoot = path.join(tmpRoot, 'opl-aion-shell');
+  const outDir = path.join(shellRoot, 'out');
+  const fakeBin = path.join(tmpRoot, 'bin');
+  const version = '26.5.1';
+
+  fs.mkdirSync(outDir, { recursive: true });
+  fs.mkdirSync(fakeBin, { recursive: true });
+  fs.writeFileSync(path.join(fakeBin, 'gh'), '#!/usr/bin/env bash\nexit 1\n', { mode: 0o755 });
+
+  for (const name of [
+    `One-Person-Lab-${version}-mac-universal.dmg`,
+    `One-Person-Lab-${version}-mac-universal.dmg.blockmap`,
+    `One-Person-Lab-${version}-mac-universal.zip`,
+    `One-Person-Lab-${version}-mac-universal.zip.blockmap`,
+  ]) {
+    fs.writeFileSync(path.join(outDir, name), 'artifact');
+  }
+
+  const metadata = [
+    `version: ${version}`,
+    'files:',
+    `  - url: One-Person-Lab-${version}-mac-universal.zip`,
+    '    sha512: test',
+    '    size: 1',
+    `  - url: One-Person-Lab-${version}-mac-universal.dmg`,
+    '    sha512: test',
+    '    size: 1',
+    `path: One-Person-Lab-${version}-mac-universal.zip`,
+    'sha512: test',
+    "releaseDate: '2026-05-01T00:00:00.000Z'",
+    '',
+  ].join('\n');
+  fs.writeFileSync(path.join(outDir, 'latest-mac.yml'), metadata);
+  fs.writeFileSync(
+    path.join(outDir, 'latest-arm64-mac.yml'),
+    [
+      'version: 26.4.27',
+      'files:',
+      '  - url: One.Person.Lab-26.4.27-mac-arm64.zip',
+      'path: One.Person.Lab-26.4.27-mac-arm64.zip',
+      '',
+    ].join('\n'),
+  );
+
+  const result = spawnSync(
+    process.execPath,
+    [
+      path.join(repoRoot, 'scripts/publish-gui-release.mjs'),
+      '--no-build',
+      '--dry-run',
+      '--shell-root',
+      shellRoot,
+      '--version',
+      version,
+      '--repo',
+      'example/one-person-lab',
+    ],
+    {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        PATH: `${fakeBin}${path.delimiter}${process.env.PATH ?? ''}`,
+      },
+    },
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  const payload = JSON.parse(result.stdout) as { artifacts: string[] };
+  assert.ok(
+    payload.artifacts.some((artifact) => artifact.endsWith(`One-Person-Lab-${version}-mac-universal.dmg`)),
+  );
+  assert.ok(
+    payload.artifacts.some((artifact) => artifact.endsWith(`One-Person-Lab-${version}-mac-universal.zip`)),
+  );
+  assert.equal(
+    payload.artifacts.some((artifact) => artifact.endsWith('latest-arm64-mac.yml')),
+    false,
+  );
+  assert.equal(fs.readFileSync(path.join(outDir, 'latest-mac.yml'), 'utf8'), metadata);
 });
 
 test('package.json exposes the native MAS/MAG family indexing smoke command', () => {
