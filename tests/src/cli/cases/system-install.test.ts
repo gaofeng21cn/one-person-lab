@@ -1,6 +1,28 @@
-import { assert, contractsDir, createCodexConfigFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createGitModuleRemoteFixture, fs, loadGatewayContracts, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { spawnSync } from 'node:child_process';
+
+import { assert, cliPath, contractsDir, createCodexConfigFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createGitModuleRemoteFixture, fs, loadGatewayContracts, os, path, repoRoot, runCli, test } from '../helpers.ts';
 import { buildInternalCommandSpecs } from '../../../../src/cli/cases/private-command-specs.ts';
 import { buildPublicCommandSpecs } from '../../../../src/cli/cases/public-command-specs.ts';
+
+function runCliWithStdin(args: string[], stdin: string, envOverrides: Record<string, string>) {
+  const result = spawnSync(
+    process.execPath,
+    ['--experimental-strip-types', cliPath, ...args],
+    {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      input: stdin,
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: '1',
+        ...envOverrides,
+      },
+    },
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  return JSON.parse(result.stdout);
+}
 
 test('public command specs expose the one-shot install command', () => {
   const contracts = loadGatewayContracts({ contractsDir });
@@ -281,6 +303,141 @@ test('install command can bootstrap Codex defaults from environment without leak
     assert.match(config, /experimental_bearer_token = "secret-test-key"/);
   } finally {
     fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('system configure-codex writes the product endpoint default and current initial model profile without leaking the API key', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-configure-codex-home-'));
+  const apiKey = 'secret-stdin-key';
+
+  try {
+    const output = runCliWithStdin(
+      ['system', 'configure-codex', '--api-key-stdin'],
+      `${apiKey}\n`,
+      {
+        HOME: homeRoot,
+        CODEX_HOME: path.join(homeRoot, 'codex-home'),
+        OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      },
+    ) as {
+      codex_config: {
+        status: string;
+        config_path: string;
+        default_profile: {
+          model_provider: string;
+          model: string;
+          model_reasoning_effort: string;
+          base_url: string;
+          base_url_role: string;
+          model_profile_role: string;
+        };
+        bootstrap: {
+          model: string;
+          reasoning_effort: string;
+          provider_base_url: string;
+          api_key_present: boolean;
+        };
+      };
+    };
+
+    assert.equal(output.codex_config.status, 'completed');
+    assert.equal(output.codex_config.default_profile.model_provider, 'gflab');
+    assert.equal(output.codex_config.default_profile.model, 'gpt-5.5');
+    assert.equal(output.codex_config.default_profile.model_reasoning_effort, 'xhigh');
+    assert.equal(output.codex_config.default_profile.base_url, 'https://gflabtoken.cn/v1');
+    assert.equal(output.codex_config.default_profile.base_url_role, 'product_default_provider_endpoint');
+    assert.equal(output.codex_config.default_profile.model_profile_role, 'maintainer_current_initial_profile');
+    assert.equal(output.codex_config.bootstrap.api_key_present, true);
+    assert.equal(JSON.stringify(output).includes(apiKey), false);
+
+    const config = fs.readFileSync(output.codex_config.config_path, 'utf8');
+    assert.match(config, /model_provider = "gflab"/);
+    assert.match(config, /model = "gpt-5\.5"/);
+    assert.match(config, /model_reasoning_effort = "xhigh"/);
+    assert.match(config, /base_url = "https:\/\/gflabtoken\.cn\/v1"/);
+    assert.match(config, /experimental_bearer_token = "secret-stdin-key"/);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('system configure-codex keeps environment overrides over bundled model profile', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-configure-codex-override-home-'));
+
+  try {
+    const output = runCliWithStdin(
+      ['system', 'configure-codex', '--api-key-stdin'],
+      'override-key\n',
+      {
+        HOME: homeRoot,
+        CODEX_HOME: path.join(homeRoot, 'codex-home'),
+        OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+        OPL_CODEX_MODEL: 'gpt-5.6',
+        OPL_CODEX_REASONING_EFFORT: 'high',
+      },
+    ) as {
+      codex_config: {
+        config_path: string;
+        bootstrap: {
+          model: string;
+          reasoning_effort: string;
+          provider_base_url: string;
+        };
+      };
+    };
+
+    assert.equal(output.codex_config.bootstrap.model, 'gpt-5.6');
+    assert.equal(output.codex_config.bootstrap.reasoning_effort, 'high');
+    assert.equal(output.codex_config.bootstrap.provider_base_url, 'https://gflabtoken.cn/v1');
+
+    const config = fs.readFileSync(output.codex_config.config_path, 'utf8');
+    assert.match(config, /model = "gpt-5\.6"/);
+    assert.match(config, /model_reasoning_effort = "high"/);
+    assert.match(config, /base_url = "https:\/\/gflabtoken\.cn\/v1"/);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('system initialize blocks launch when compatible Codex CLI lacks configured API key', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-initialize-codex-config-home-'));
+  const codexFixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-initialize-codex-config-bin-'));
+  const codexPath = path.join(codexFixtureRoot, 'codex');
+  fs.writeFileSync(codexPath, '#!/usr/bin/env bash\necho "codex-cli 0.125.0"\n', { mode: 0o755 });
+
+  try {
+    const output = runCli(['system', 'initialize'], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      PATH: `${codexFixtureRoot}:/usr/bin:/bin`,
+    }) as {
+      system_initialize: {
+        setup_flow: {
+          phase: string;
+          ready_to_launch: boolean;
+          blocking_items: string[];
+        };
+        checklist: Array<{ item_id: string; blocking: boolean }>;
+        core_engines: {
+          codex: {
+            config_status: string;
+            api_key_present: boolean;
+          };
+        };
+      };
+    };
+
+    assert.equal(output.system_initialize.setup_flow.phase, 'environment');
+    assert.equal(output.system_initialize.setup_flow.ready_to_launch, false);
+    assert.equal(output.system_initialize.setup_flow.blocking_items.includes('codex_config'), true);
+    const codexConfigItem = output.system_initialize.checklist.find((entry) => entry.item_id === 'codex_config');
+    assert.equal(codexConfigItem?.blocking, true);
+    assert.equal(output.system_initialize.core_engines.codex.config_status, 'not_detected');
+    assert.equal(output.system_initialize.core_engines.codex.api_key_present, false);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(codexFixtureRoot, { recursive: true, force: true });
   }
 });
 

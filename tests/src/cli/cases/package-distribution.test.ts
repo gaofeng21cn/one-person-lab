@@ -24,6 +24,14 @@ test('packages manifest exposes package coordinates while marking module install
         cleanup: { strategy: string; retain_versions: number };
       };
       packages: {
+        codex_default_profile: {
+          model_provider: string;
+          model: string;
+          model_reasoning_effort: string;
+          base_url: string;
+          base_url_role: string;
+          model_profile_role: string;
+        };
         webui_docker_image: { image: string; aliases: string[] };
         native_helper: { image: string; target_tag_template: string };
         modules: Record<string, {
@@ -65,6 +73,18 @@ test('packages manifest exposes package coordinates while marking module install
   assert.equal(
     output.packages_manifest.packages.native_helper.target_tag_template,
     'ghcr.io/gaofeng21cn/one-person-lab-native-helper:<target>-<native_helper_version>',
+  );
+  assert.equal(output.packages_manifest.packages.codex_default_profile.model_provider, 'gflab');
+  assert.equal(output.packages_manifest.packages.codex_default_profile.model, 'gpt-5.5');
+  assert.equal(output.packages_manifest.packages.codex_default_profile.model_reasoning_effort, 'xhigh');
+  assert.equal(output.packages_manifest.packages.codex_default_profile.base_url, 'https://gflabtoken.cn/v1');
+  assert.equal(
+    output.packages_manifest.packages.codex_default_profile.base_url_role,
+    'product_default_provider_endpoint',
+  );
+  assert.equal(
+    output.packages_manifest.packages.codex_default_profile.model_profile_role,
+    'maintainer_current_initial_profile',
   );
   assert.equal(
     output.packages_manifest.packages.modules.medautoscience.artifact,
@@ -148,6 +168,11 @@ test('package archive builder writes channel manifest checksums git source and r
   const checksums = fs.readFileSync(checksumsPath, 'utf8');
 
   assert.equal(channelManifest.opl_version, manifest.opl_version);
+  assert.equal(channelManifest.packages.codex_default_profile.model_provider, 'gflab');
+  assert.equal(channelManifest.packages.codex_default_profile.base_url, 'https://gflabtoken.cn/v1');
+  assert.equal(channelManifest.packages.codex_default_profile.base_url_role, 'product_default_provider_endpoint');
+  assert.equal(channelManifest.packages.codex_default_profile.model_profile_role, 'maintainer_current_initial_profile');
+  assert.equal(JSON.stringify(channelManifest.packages.codex_default_profile).includes('experimental_bearer_token'), false);
   assert.equal(manifest.release_automation.rollback.previous_version, '26.4.30');
   assert.equal(manifest.release_automation.cleanup.retain_versions, 4);
   assert.equal(

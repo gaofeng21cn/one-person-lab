@@ -62,6 +62,9 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
   const moduleSummary = modulesPayload.modules.summary;
   const recommendedSkills = buildOplRecommendedSkills();
   const guiShell = buildOplGuiShellSurface(resolveProjectRoot());
+  const codex = environment.core_engines.codex;
+  const codexCliReady = codex.health_status === 'ready';
+  const codexConfigReady = codex.config_status === 'detected' && codex.api_key_present === true;
 
   const setWorkspaceRootAction = buildInitializeActionDescriptor({
     action_id: 'set_workspace_root',
@@ -82,6 +85,19 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
     payload_template: {
       engine_id: 'codex',
       action: 'install',
+    },
+  });
+  const configureCodexAction = buildInitializeActionDescriptor({
+    action_id: 'configure_codex_api_key',
+    label: 'Configure Codex API key',
+    description: 'Write the local Codex provider config from the product default endpoint, current initial model profile, and the user-provided API key.',
+    section_id: 'environment',
+    endpoint: endpoints.system_action,
+    method: 'POST',
+    request_fields: ['api_key'],
+    payload_template: {
+      action: 'configure_codex',
+      secret_input: 'api_key',
     },
   });
   const openEnvironmentAction = buildInitializeActionDescriptor({
@@ -142,18 +158,32 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
     {
       item_id: 'codex',
       label: 'Codex CLI',
-      status: environment.core_engines.codex.health_status,
+      status: codex.health_status,
       required: true,
-      blocking: environment.core_engines.codex.health_status !== 'ready',
+      blocking: !codexCliReady,
       section_id: 'environment',
-      detail_summary: environment.core_engines.codex.installed
-        ? `Installed at ${environment.core_engines.codex.binary_path ?? 'unknown path'}`
+      detail_summary: codex.installed
+        ? `Installed at ${codex.binary_path ?? 'unknown path'}`
         : 'Install Codex CLI and confirm the local Codex config that OPL should reuse.',
       endpoint: endpoints.system_environment,
       action_endpoint: endpoints.engine_action,
-      action: environment.core_engines.codex.health_status === 'ready'
+      action: codexCliReady
         ? openEnvironmentAction
         : installCodexAction,
+    },
+    {
+      item_id: 'codex_config',
+      label: 'Codex API Configuration',
+      status: codexConfigReady ? 'ready' : codex.config_status,
+      required: true,
+      blocking: !codexConfigReady,
+      section_id: 'environment',
+      detail_summary: codexConfigReady
+        ? `Codex provider is configured for ${codex.default_model ?? 'the local default model'}.`
+        : 'Enter your Codex API key; OPL will use the product default provider endpoint and the current maintainer initial model profile.',
+      endpoint: endpoints.system_environment,
+      action_endpoint: endpoints.system_action,
+      action: codexConfigReady ? openEnvironmentAction : configureCodexAction,
     },
     {
       item_id: 'hermes',
@@ -230,7 +260,8 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
     .map((item) => item.item_id);
 
   const overallState =
-    environment.core_engines.codex.health_status === 'ready'
+    codexCliReady
+    && codexConfigReady
     && workspaceRoot.health_status === 'ready'
       && moduleSummary.installed_modules_count === moduleSummary.total_modules_count
       ? 'ready_to_finalize'
@@ -238,7 +269,7 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
   const setupPhase: OplInitializePhase =
     workspaceRoot.health_status !== 'ready'
       ? 'workspace_root'
-      : environment.core_engines.codex.health_status !== 'ready'
+      : (!codexCliReady || !codexConfigReady)
         ? 'environment'
         : moduleSummary.installed_modules_count < moduleSummary.total_modules_count
           ? 'modules'
@@ -247,7 +278,7 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
     setupPhase === 'workspace_root'
       ? setWorkspaceRootAction
       : setupPhase === 'environment'
-        ? installCodexAction
+        ? (codexCliReady ? configureCodexAction : installCodexAction)
         : setupPhase === 'modules'
           ? reviewModulesAction
           : reviewInitializeAction;
@@ -278,6 +309,7 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
       },
       checklist,
       core_engines: environment.core_engines,
+      codex_default_profile: codex.default_profile,
       native_helpers: environment.native_helpers,
       module_summary: moduleSummary,
       domain_modules: modulesPayload.modules,

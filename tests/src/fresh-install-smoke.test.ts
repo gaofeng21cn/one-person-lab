@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const smokeScript = path.join(repoRoot, 'scripts', 'fresh-install-smoke.mjs');
 const matrixContractPath = path.join(repoRoot, 'contracts', 'opl-gateway', 'fresh-install-test-matrix.json');
+const codexDefaultProfilePath = path.join(repoRoot, 'contracts', 'opl-gateway', 'codex-default-profile.json');
 const installScript = path.join(repoRoot, 'install.sh');
 
 test('install bootstrap-only handles no forwarded args under nounset bash', () => {
@@ -168,6 +169,9 @@ test('fresh-install matrix freezes GUI labels and first-run log contract', () =>
   assert.equal(matrix.first_run_log.event_schema_version, 'opl_first_run_event.v1');
   assert.equal(matrix.gui_accessibility_labels.window, 'opl-first-run-window');
   assert.equal(matrix.gui_accessibility_labels.install_button, 'opl-first-run-install-button');
+  assert.equal(matrix.gui_accessibility_labels.codex_api_key_input, 'opl-first-run-codex-api-key-input');
+  assert.equal(matrix.gui_accessibility_labels.codex_configure_button, 'opl-first-run-configure-codex-button');
+  assert.equal(matrix.gui_accessibility_labels.retry_button, 'opl-first-run-retry-button');
   assert.equal(matrix.gui_vm_implementation.repo, 'gaofeng21cn/opl-aion-shell');
   assert.match(matrix.gui_vm_implementation.packaged_guest_smoke_command, /test:opl-first-run-vm/);
   assert.match(matrix.gui_vm_implementation.tart_host_smoke_command, /test:opl-first-run-vm:tart/);
@@ -180,4 +184,31 @@ test('fresh-install matrix freezes GUI labels and first-run log contract', () =>
   assert.equal(matrix.scenarios.some((entry) => entry.scenario_id === 'clean_vm_release_first_launch'), true);
   assert.match(matrix.ci_policy.self_hosted_macos, /opl-first-run-vm\.yml/);
   assert.match(matrix.ci_policy.docker, /Do not use Docker/);
+});
+
+test('bundled Codex profile separates the product endpoint default from the maintainer initial model profile', () => {
+  const profile = JSON.parse(fs.readFileSync(codexDefaultProfilePath, 'utf8')) as {
+    surface_id: string;
+    model_provider: string;
+    model: string;
+    model_reasoning_effort: string;
+    base_url: string;
+    base_url_role: string;
+    model_profile_role: string;
+    provider_name: string;
+    profile_generated_at: string;
+  };
+  const serialized = JSON.stringify(profile);
+
+  assert.equal(profile.surface_id, 'opl_codex_default_profile');
+  assert.equal(profile.model_provider, 'gflab');
+  assert.equal(profile.model, 'gpt-5.5');
+  assert.equal(profile.model_reasoning_effort, 'xhigh');
+  assert.equal(profile.base_url, 'https://gflabtoken.cn/v1');
+  assert.equal(profile.base_url_role, 'product_default_provider_endpoint');
+  assert.equal(profile.model_profile_role, 'maintainer_current_initial_profile');
+  assert.equal(profile.provider_name.length > 0, true);
+  assert.equal(Number.isNaN(Date.parse(profile.profile_generated_at)), false);
+  assert.equal(serialized.includes('experimental_bearer_token'), false);
+  assert.equal(serialized.toLowerCase().includes('api_key'), false);
 });

@@ -82,6 +82,26 @@ function createFakeCodex(root, version) {
   return binDir;
 }
 
+function createCodexConfig(homeDir) {
+  const codexHome = path.join(homeDir, '.codex');
+  fs.mkdirSync(codexHome, { recursive: true });
+  fs.writeFileSync(
+    path.join(codexHome, 'config.toml'),
+    [
+      'model_provider = "gflab"',
+      'model = "gpt-5.5"',
+      'model_reasoning_effort = "xhigh"',
+      '',
+      '[model_providers.gflab]',
+      'name = "gflab"',
+      'base_url = "https://gflabtoken.cn/v1"',
+      'experimental_bearer_token = "test-fresh-install-key"',
+      '',
+    ].join('\n'),
+    'utf8',
+  );
+}
+
 function createGitModuleFixtures(modulesRoot) {
   const repoNames = [
     'med-autoscience',
@@ -146,7 +166,7 @@ function cleanUserMissingCodex(root) {
   const output = runOpl(['system', 'initialize'], env);
   assertInitializeState(output, {
     phase: 'environment',
-    blocking: ['codex', 'domain_modules'],
+    blocking: ['codex', 'codex_config', 'domain_modules'],
   });
   return { observations: { overall_state: output.system_initialize.overall_state } };
 }
@@ -156,8 +176,8 @@ function compatibleCodexMissingModules(root) {
   const env = baseEnv(root, { PATH: `${tools}:/usr/bin:/bin` });
   const output = runOpl(['system', 'initialize'], env);
   assertInitializeState(output, {
-    phase: 'modules',
-    blocking: ['domain_modules'],
+    phase: 'environment',
+    blocking: ['codex_config', 'domain_modules'],
   });
   return { observations: { codex_version: output.system_initialize.core_engines.codex.parsed_version } };
 }
@@ -168,7 +188,7 @@ function outdatedCodex(root) {
   const output = runOpl(['system', 'initialize'], env);
   assertInitializeState(output, {
     phase: 'environment',
-    blocking: ['codex', 'domain_modules'],
+    blocking: ['codex', 'codex_config', 'domain_modules'],
   });
   assert.equal(output.system_initialize.core_engines.codex.version_status, 'outdated');
   return { observations: { codex_issue: output.system_initialize.core_engines.codex.issues[0] } };
@@ -177,6 +197,7 @@ function outdatedCodex(root) {
 function readyBaseline(root) {
   const tools = createFakeCodex(root, '0.125.0');
   const env = baseEnv(root, { PATH: `${tools}:/usr/bin:/bin` });
+  createCodexConfig(env.HOME);
   createGitModuleFixtures(env.OPL_MODULES_ROOT);
   const output = runOpl(['system', 'initialize'], env);
   assertInitializeState(output, {

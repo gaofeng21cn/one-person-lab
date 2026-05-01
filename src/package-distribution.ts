@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { getOplReleaseRepo, getOplReleaseVersion } from './opl-release.ts';
+import { readBundledCodexDefaultProfile } from './local-codex-defaults.ts';
 
 type PackageModuleId = 'medautoscience' | 'meddeepscientist' | 'medautogrant' | 'redcube';
 
@@ -158,6 +159,7 @@ export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
     package_consumption_status: 'packages_defined_not_consumed_by_install_update',
     release_automation: buildReleaseAutomation(retainVersions, rollbackVersion),
     packages: {
+      codex_default_profile: readBundledCodexDefaultProfile(),
       webui_docker_image: {
         image: `ghcr.io/${owner}/one-person-lab-webui:${version}`,
         aliases: [`ghcr.io/${owner}/one-person-lab-webui:latest`],

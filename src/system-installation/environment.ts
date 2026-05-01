@@ -1,6 +1,6 @@
 import { ensureOplStateDir, resolveOplStatePaths } from '../runtime-state-paths.ts';
 import { inspectHermesRuntime } from '../hermes.ts';
-import { readLocalCodexDefaultsIfAvailable } from '../local-codex-defaults.ts';
+import { readBundledCodexDefaultProfile, readLocalCodexDefaultsIfAvailable } from '../local-codex-defaults.ts';
 import { buildNativeHelperHealthStatus } from '../native-helper-runtime.ts';
 import type { GatewayContracts } from '../types.ts';
 
@@ -10,6 +10,7 @@ import { buildOplModules } from './modules.ts';
 export async function buildOplEnvironment(contracts: GatewayContracts) {
   const statePaths = ensureOplStateDir(resolveOplStatePaths());
   const codexDefaults = readLocalCodexDefaultsIfAvailable();
+  const codexDefaultProfile = readBundledCodexDefaultProfile();
   const codexBinary = resolveCodexVersion();
   const hermes = inspectHermesRuntime();
   const nativeHelpers = buildNativeHelperHealthStatus();
@@ -17,6 +18,11 @@ export async function buildOplEnvironment(contracts: GatewayContracts) {
   const moduleSummary = modulesPayload.summary;
   const codexIssues = [...codexBinary.issues];
   const codexDiagnostics = [...codexBinary.diagnostics];
+  const codexConfigStatus = codexDefaults
+    ? codexDefaults.provider_api_key
+      ? 'detected'
+      : 'api_key_missing'
+    : 'not_detected';
   const codexHealthStatus =
     codexBinary.installed
       && codexBinary.version_status === 'compatible'
@@ -56,8 +62,10 @@ export async function buildOplEnvironment(contracts: GatewayContracts) {
           default_model: codexDefaults?.model ?? null,
           default_reasoning_effort: codexDefaults?.reasoning_effort ?? null,
           provider_base_url: codexDefaults?.provider_base_url ?? null,
+          default_profile: codexDefaultProfile,
           health_status: codexHealthStatus,
-          config_status: codexDefaults ? 'detected' : 'not_detected',
+          config_status: codexConfigStatus,
+          api_key_present: Boolean(codexDefaults?.provider_api_key),
           issues: codexIssues,
         },
         hermes: {
@@ -92,7 +100,7 @@ export async function buildOplEnvironment(contracts: GatewayContracts) {
       },
       notes: [
         'OPL owns the user-facing initialization surface and reports whether the local Codex and Hermes engines are ready to be reused.',
-        'Codex config is inherited when present; a missing readable config is not a first-run blocker when the Codex CLI itself is available and compatible.',
+        'Codex CLI readiness and Codex API configuration are reported separately so first-run can guide missing API keys without copying secrets into logs.',
         'OPL reports native helper lifecycle readiness here; opl install can run the native repair path when helper binaries are missing.',
         'AionUI provides the GUI/WebUI shell; OPL no longer hosts a local Product API service on port 8787.',
         'Domain modules are tracked separately so the GUI can manage install and upgrade actions from one settings area.',

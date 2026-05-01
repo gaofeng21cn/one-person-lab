@@ -47,6 +47,9 @@
     "progress": "opl-first-run-progress",
     "blockers_list": "opl-first-run-blockers-list",
     "install_button": "opl-first-run-install-button",
+    "codex_api_key_input": "opl-first-run-codex-api-key-input",
+    "codex_configure_button": "opl-first-run-configure-codex-button",
+    "retry_button": "opl-first-run-retry-button",
     "environment_button": "opl-first-run-open-environment-button",
     "modules_button": "opl-first-run-open-modules-button",
     "ready_entry": "opl-first-run-ready-entry",
@@ -60,6 +63,7 @@
       "expected_phase": "environment",
       "expected_blockers": [
         "codex",
+        "codex_config",
         "domain_modules"
       ]
     },
@@ -67,8 +71,9 @@
       "scenario_id": "compatible_codex_missing_modules",
       "layer": "local_cli",
       "setup": "temporary HOME and OPL_STATE_DIR, fake compatible codex on PATH, empty managed modules root",
-      "expected_phase": "modules",
+      "expected_phase": "environment",
       "expected_blockers": [
+        "codex_config",
         "domain_modules"
       ]
     },
@@ -79,6 +84,7 @@
       "expected_phase": "environment",
       "expected_blockers": [
         "codex",
+        "codex_config",
         "domain_modules"
       ]
     },
@@ -99,6 +105,7 @@
       "scenario_id": "clean_vm_release_first_launch",
       "layer": "macos_vm_gui",
       "setup": "clean macOS VM snapshot, downloaded One Person Lab release DMG, no existing OPL state",
+      "expected_first_visible_step": "codex_config",
       "expected_artifacts": [
         "first-run JSONL log",
         "system initialize JSON",
