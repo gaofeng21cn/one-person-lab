@@ -21,7 +21,7 @@ import { resolveProjectRoot, runCommand } from './shared.ts';
 import type { OplModuleId, OplTurnkeyInstallInput } from './shared.ts';
 
 const DEFAULT_MODULES: OplModuleId[] = ['medautoscience', 'meddeepscientist', 'medautogrant', 'redcube'];
-const DEFAULT_ENGINES = ['codex', 'hermes'] as const;
+const DEFAULT_ENGINES = ['codex'] as const;
 
 function normalizeModuleId(raw: string): OplModuleId {
   const normalized = raw.trim().toLowerCase();
@@ -335,7 +335,7 @@ export async function runOplTurnkeyInstall(
         first_run_log: firstRunLog,
         first_run_log_events: firstRunLogEvents,
         notes: [
-          'This command is the user-facing one-shot path for OPL + Codex CLI + Hermes-Agent + family modules + recommended Codex skills + desktop GUI.',
+          'This command is the user-facing one-shot path for OPL + Codex CLI + family modules + recommended Codex skills + desktop GUI. Hermes-Agent remains an explicit engine install via `opl engine install --engine hermes`.',
           'Recommended skill sync is conservative: existing user-managed skill directories are preserved, Superpowers stays on the current user profile by default, and missing optional skill sources are reported for Environment Management.',
           'GUI startup opens the installed One Person Lab app when present; otherwise it downloads and installs the matching one-person-lab release asset before opening the app. opl-aion-shell remains an internal GUI source/build input.',
         ],

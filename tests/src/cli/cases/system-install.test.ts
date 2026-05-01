@@ -115,7 +115,7 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
 
     assert.equal(output.install.surface_id, 'opl_install');
     assert.equal(output.install.status, 'completed');
-    assert.deepEqual(output.install.selected_engines, ['codex', 'hermes']);
+    assert.deepEqual(output.install.selected_engines, ['codex']);
     assert.deepEqual(output.install.engine_actions, []);
     assert.deepEqual(output.install.selected_modules, ['medautoscience']);
     assert.equal(output.install.codex_plugin_registry.surface_id, 'opl_codex_plugin_registry');
@@ -301,27 +301,13 @@ test('install command points WebUI users to the AionUI shell instead of a local 
 });
 
 
-test('install command reuses already installed runtime dependencies', () => {
+test('install command reuses the already installed default runtime dependency', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-engines-home-'));
   const codexFixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-codex-'));
-  const hermesFixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-hermes-'));
   const codexConfigFixture = createCodexConfigFixture();
   const codexPath = path.join(codexFixtureRoot, 'codex');
-  const hermesPath = path.join(hermesFixtureRoot, 'hermes');
 
   fs.writeFileSync(codexPath, '#!/usr/bin/env bash\necho "codex-cli 0.125.0"\n', { mode: 0o755 });
-  fs.writeFileSync(
-    hermesPath,
-    [
-      '#!/usr/bin/env bash',
-      'if [ "$1" = "version" ]; then echo "Hermes 2.3.4"; exit 0; fi',
-      'if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then echo "Gateway service is loaded"; exit 0; fi',
-      'echo "unexpected hermes args: $*" >&2',
-      'exit 1',
-      '',
-    ].join('\n'),
-    { mode: 0o755 },
-  );
 
   try {
     const output = runCli(
@@ -330,8 +316,7 @@ test('install command reuses already installed runtime dependencies', () => {
         HOME: homeRoot,
         CODEX_HOME: codexConfigFixture.codexHome,
         OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
-        OPL_HERMES_BIN: hermesPath,
-        PATH: `${codexFixtureRoot}:${hermesFixtureRoot}:/usr/bin:/bin`,
+        PATH: `${codexFixtureRoot}:/usr/bin:/bin`,
       },
     ) as {
       install: {
@@ -343,14 +328,12 @@ test('install command reuses already installed runtime dependencies', () => {
       output.install.engine_actions.map((entry) => [entry.engine_id, entry.status, entry.strategy]),
       [
         ['codex', 'skipped_installed', 'already_installed'],
-        ['hermes', 'skipped_installed', 'already_installed'],
       ],
     );
   } finally {
     fs.rmSync(codexConfigFixture.codexHome, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(codexFixtureRoot, { recursive: true, force: true });
-    fs.rmSync(hermesFixtureRoot, { recursive: true, force: true });
   }
 });
 
