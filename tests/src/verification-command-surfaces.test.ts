@@ -29,6 +29,27 @@ test('repo hygiene blocks generated tmp artifacts from git', () => {
   assert.equal(result.stdout.trim(), '');
 });
 
+test('tracked files do not contain Google API key literals', () => {
+  const googleApiKeyPattern = ['AI', 'za', '[0-9A-Za-z_-]{35}'].join('');
+  const result = spawnSync(
+    'git',
+    ['grep', '-l', '-I', '-E', googleApiKeyPattern, '--', '.'],
+    {
+      cwd: repoRoot,
+      encoding: 'utf8',
+    },
+  );
+
+  assert.notEqual(result.status, null, result.stderr);
+  assert.equal(
+    result.status,
+    1,
+    result.status === 0
+      ? `tracked Google API key-like literal found in:\n${result.stdout}`
+      : result.stderr,
+  );
+});
+
 test('repo-tracked verification command surfaces reference valid npm scripts and local test files', () => {
   const files = [
     'AGENTS.md',
