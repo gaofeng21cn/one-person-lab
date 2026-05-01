@@ -368,6 +368,7 @@ exit 1
 
     assert.equal(snapshot.schema_version, 'runtime_tray_snapshot.v1');
     assert.equal(snapshot.runtime_health.status, 'needs_attention');
+    assert.equal(snapshot.runtime_health.label, '需用户处理');
     assert.equal(snapshot.running_items.length, 1);
     assert.equal(snapshot.running_items[0].project_id, 'medautoscience');
     assert.equal(snapshot.running_items[0].runtime_owner, 'upstream_hermes_agent');
@@ -473,17 +474,19 @@ exit 1
     });
     const snapshot = output.runtime_tray_snapshot;
 
-    assert.equal(snapshot.runtime_health.status, 'needs_attention');
+    assert.equal(snapshot.runtime_health.status, 'running');
+    assert.equal(snapshot.runtime_health.label, '运行中');
     assert.equal(snapshot.running_items.length, 0);
     assert.equal(snapshot.attention_items.length, 1);
     assert.equal(snapshot.attention_items[0].item_id, 'medautoscience:hermes-cron:cron-attention');
-    assert.equal(snapshot.attention_items[0].project_label, 'MAS infra');
-    assert.equal(snapshot.attention_items[0].status_label, 'Background supervision timeout');
+    assert.equal(snapshot.attention_items[0].project_label, 'MAS 基础设施');
+    assert.equal(snapshot.attention_items[0].title, '工作区监督任务：dm-cvd-mortality-risk-b8331468');
+    assert.equal(snapshot.attention_items[0].status_label, '后台监督超时');
     assert.equal(snapshot.attention_items[0].action_owner, 'infrastructure');
     assert.equal(snapshot.attention_items[0].requires_user_action, false);
     assert.equal(snapshot.attention_items[0].action_kind, 'infrastructure_timeout');
-    assert.match(snapshot.attention_items[0].action_summary, /timed out/);
-    assert.match(snapshot.attention_items[0].next_action_summary, /watch-runtime run completes/);
+    assert.equal(snapshot.attention_items[0].action_summary, '后台监督脚本执行超时，需要系统侧恢复。');
+    assert.equal(snapshot.attention_items[0].next_action_summary, '恢复后台监督定时任务，并确认下一次运行不再超时。');
     assert.equal(snapshot.attention_items[0].source_refs.some((ref: { role: string }) => ref.role === 'hermes_cron_output'), true);
     assert.equal(snapshot.recent_items.length, 0);
     assert.deepEqual(snapshot.action_counts, { user: 0, opl: 0, infrastructure: 1 });
@@ -666,14 +669,17 @@ exit 1
     const allItems = [...snapshot.attention_items, ...snapshot.running_items, ...snapshot.recent_items];
 
     assert.equal(snapshot.runtime_health.status, 'needs_attention');
+    assert.equal(snapshot.runtime_health.label, '需用户处理');
     assert.equal(snapshot.attention_items.length, 1);
     assert.equal(snapshot.attention_items[0].item_id, 'medautoscience:study:002-dm-china-us-mortality-attribution');
     assert.equal(snapshot.attention_items[0].active_run_id, 'run-002');
-    assert.equal(snapshot.attention_items[0].status_label, 'Live: Analysis campaign');
+    assert.equal(snapshot.attention_items[0].status_label, '运行中：分析补充');
     assert.equal(snapshot.attention_items[0].action_owner, 'opl');
     assert.equal(snapshot.attention_items[0].requires_user_action, false);
     assert.equal(snapshot.attention_items[0].action_kind, 'publication_gate');
-    assert.equal(snapshot.attention_items[0].blockers.includes('stale_submission_minimal_authority'), true);
+    assert.equal(snapshot.attention_items[0].action_summary, '论文质量或交付检查未关闭；当前阶段：分析补充。');
+    assert.equal(snapshot.attention_items[0].next_action_summary, '建议阶段：分析补充；目标：补齐证据一致性。');
+    assert.equal(snapshot.attention_items[0].blockers.includes('投稿包投影需要刷新。'), true);
     assert.equal(snapshot.attention_items[0].recommended_commands[0].surface_kind, 'study_progress');
     assert.equal(snapshot.running_items.length, 1);
     assert.equal(snapshot.running_items[0].item_id, 'medautoscience:study:003-dpcc-primary-care-phenotype-treatment-gap');
@@ -682,7 +688,7 @@ exit 1
     assert.equal(allItems.some((item: { item_id: string }) => item.item_id.includes('004-invasive-architecture')), false);
     assert.equal(snapshot.recent_items.length, 1);
     assert.equal(snapshot.recent_items[0].item_id, 'medautoscience:study:005-package-ready-handoff');
-    assert.equal(snapshot.recent_items[0].status_label, 'Stopped: waiting review');
+    assert.equal(snapshot.recent_items[0].status_label, '已暂停：等待确认');
     assert.equal(snapshot.recent_items[0].action_owner, 'user');
     assert.equal(snapshot.recent_items[0].requires_user_action, true);
     assert.equal(snapshot.recent_items[0].action_kind, 'handoff_review');

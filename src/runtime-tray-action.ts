@@ -31,11 +31,11 @@ export function actionContext(
   };
 }
 
-export function runningActionContext(actionSummary = 'The runtime is running; no user action is required.') {
+export function runningActionContext(actionSummary = '运行中，无需用户操作。') {
   return actionContext('none', 'running', actionSummary);
 }
 
-export function noActionContext(actionSummary = 'No active user or OPL action is required.') {
+export function noActionContext(actionSummary = '当前无待处理事项。') {
   return actionContext('none', null, actionSummary);
 }
 

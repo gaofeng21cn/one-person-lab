@@ -8,7 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 const packageJson = JSON.parse(
   fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'),
-) as { scripts?: Record<string, string> };
+) as { scripts?: Record<string, string>; exports?: Record<string, string> };
 
 function read(relativePath: string) {
   return fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
@@ -63,6 +63,7 @@ test('scripts/verify.sh provides the canonical verification wrapper', () => {
   assert.match(verifyScript, /python\/opl-harness-shared\/tests\/test_editable_consumer_bootstrap\.py/);
   assert.match(verifyScript, /python\/opl-harness-shared\/tests\/test_editable_consumer_launcher\.py/);
   assert.match(verifyScript, /npm run test:meta/);
+  assert.match(verifyScript, /npm run test:fresh-install/);
   assert.match(verifyScript, /npm run test:artifact/);
   assert.match(verifyScript, /npm run test:full/);
   assert.match(verifyScript, /npm run native:doctor/);
@@ -72,7 +73,7 @@ test('scripts/verify.sh provides the canonical verification wrapper', () => {
   assert.match(verifyScript, /npm run native:build/);
   assert.match(verifyScript, /npm run native:cache/);
   assert.match(verifyScript, /npm run native:family-smoke/);
-  assert.match(verifyScript, /smoke\|fast\|family\|meta\|artifact\|native\|full\|lint\|line-budget\|typecheck/);
+  assert.match(verifyScript, /smoke\|fast\|family\|meta\|fresh-install\|artifact\|native\|full\|lint\|line-budget\|typecheck/);
 });
 
 test('GitHub verification workflow runs the native helper production gates', () => {
@@ -153,6 +154,25 @@ test('package.json exposes native helper gate scripts and package dry-run check'
   assert.equal(packageJson.scripts?.['native:test'], 'cargo test --workspace');
   assert.equal(fs.existsSync(path.join(repoRoot, 'scripts/native-helper-prebuild.mjs')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, 'scripts/native-helper-pack-check.mjs')), true);
+});
+
+test('package.json exposes the fresh-install smoke lane', () => {
+  assert.equal(
+    packageJson.scripts?.['fresh-install:smoke'],
+    'node ./scripts/fresh-install-smoke.mjs',
+  );
+  assert.equal(
+    packageJson.scripts?.['test:fresh-install'],
+    'NODE_NO_WARNINGS=1 node --experimental-strip-types --test tests/src/fresh-install-smoke.test.ts',
+  );
+  assert.equal(
+    fs.existsSync(path.join(repoRoot, 'scripts/fresh-install-smoke.mjs')),
+    true,
+  );
+  assert.equal(
+    fs.existsSync(path.join(repoRoot, 'contracts/opl-gateway/fresh-install-test-matrix.json')),
+    true,
+  );
 });
 
 test('package.json exposes the native MAS/MAG family indexing smoke command', () => {

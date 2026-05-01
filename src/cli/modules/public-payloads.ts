@@ -38,6 +38,8 @@ type OplInitializeProjection = {
     gui_shell: unknown;
     actions: UnknownRecord[];
   };
+  first_run_log: unknown;
+  gui_first_run_automation: unknown;
   recommended_next_action: unknown;
   endpoints: unknown;
   notes: unknown;
@@ -103,6 +105,8 @@ function buildPublicSystemInitializePayload(
           ...entry,
         })),
       },
+      first_run_log: payload.system_initialize.first_run_log,
+      gui_first_run_automation: payload.system_initialize.gui_first_run_automation,
       recommended_next_action: payload.system_initialize.recommended_next_action,
       endpoints: payload.system_initialize.endpoints,
       notes: payload.system_initialize.notes,

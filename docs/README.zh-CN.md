@@ -89,6 +89,7 @@
 - [OPL Runtime Manager 目标形态](./references/opl-runtime-manager-target.md)
 - [Docker WebUI 部署参考](./references/opl-docker-webui-deployment.zh-CN.md)
 - [OPL GUI Shell Adapter 边界说明](./references/opl-gui-shell-adapter-boundary.zh-CN.md)
+- [OPL Fresh Install 与 GUI 首启测试参考](./references/opl-fresh-install-and-gui-first-launch-testing.zh-CN.md)
 - [OPL 默认 Skill 生态参考](./references/opl-default-skill-ecosystem.zh-CN.md)
 - [OPL Release 与 Packages 模块化分发参考](./references/opl-release-packages-modular-distribution.zh-CN.md)
 - 产品运行时与执行器参考说明

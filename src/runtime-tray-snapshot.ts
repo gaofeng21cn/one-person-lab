@@ -5,7 +5,8 @@ import { inspectHermesRuntime } from './hermes.ts';
 import { buildDomainManifestCatalog } from './management/domain-manifest-catalog.ts';
 import type { DomainManifestCatalogEntry, NormalizedDomainManifest, NormalizedSurfaceRef } from './domain-manifest/types.ts';
 import type { GatewayContracts } from './types.ts';
-import { actionContext, actionCountsForItems, hasUserOrInfrastructureAction, noActionContext, runningActionContext, type RuntimeTrayActionKind, type RuntimeTrayActionOwner } from './runtime-tray-action.ts';
+import { actionContext, actionCountsForItems, noActionContext, runningActionContext, type RuntimeTrayActionKind, type RuntimeTrayActionOwner } from './runtime-tray-action.ts';
+import { humanizeStatusLabel, liveRouteStatusLabel, localizeRuntimeDisplayList, localizeRuntimeDisplayText, masPublicationActionSummary, masPublicationNextActionSummary, titleFromHermesCronJob } from './runtime-tray-display.ts';
 
 type RuntimeTrayHealthStatus = 'offline' | 'needs_attention' | 'running' | 'idle';
 type RuntimeTrayLane = 'running' | 'attention' | 'recent';
@@ -174,19 +175,6 @@ function normalizeStatusCode(status: string) {
   return status.trim().toLowerCase();
 }
 
-function humanizeStatusLabel(status: string | null) {
-  if (!status) {
-    return 'Available';
-  }
-
-  const normalized = status.replace(/[-_]+/g, ' ').trim();
-  if (!normalized) {
-    return 'Available';
-  }
-
-  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
-}
-
 function uniqueByRef(refs: RuntimeTraySourceRef[]) {
   const seen = new Set<string>();
   return refs.filter((ref) => {
@@ -343,23 +331,24 @@ function buildResolvedItem(entry: DomainManifestCatalogEntry): RuntimeTrayItem |
       manifest.product_entry_status?.summary,
       manifest.product_entry_overview?.summary,
     );
-  const progressAttentionItems = progress?.attention_items ?? [];
+  const localizedSummary = localizeRuntimeDisplayText(summary);
+  const progressAttentionItems = localizeRuntimeDisplayList(progress?.attention_items ?? []);
   const action = lane === 'running'
-    ? runningActionContext(summary ?? 'The domain runtime is actively processing.')
+    ? runningActionContext(localizedSummary ?? '运行中，无需用户操作。')
     : lane === 'attention' && humanGateIds.length > 0
       ? actionContext(
         'user',
         'human_gate',
-        `This item is waiting for user input at ${humanGateIds.slice(0, 3).join(', ')}.`,
+        `需用户确认：${humanGateIds.slice(0, 3).join('、')}。`,
       )
       : lane === 'attention'
         ? actionContext(
           'opl',
           'quality_gate',
-          firstString(progressAttentionItems[0], summary)
-            ?? 'OPL needs to close the domain progress checks before this item can finish.',
+          firstString(progressAttentionItems[0], localizedSummary)
+            ?? '领域进度检查未关闭。',
         )
-        : noActionContext(summary ?? 'The domain projection is available for review.');
+        : noActionContext(localizedSummary ?? '当前无待处理事项。');
   const sourceRefs = uniqueByRef([
     sourceRef('/product_entry_manifest', 'domain_manifest', entry.project),
     ...(progress ? [sourceRef('/progress_projection', 'progress_projection')] : []),
@@ -381,7 +370,7 @@ function buildResolvedItem(entry: DomainManifestCatalogEntry): RuntimeTrayItem |
     title,
     status,
     status_label: humanizeStatusLabel(status),
-    summary,
+    summary: localizedSummary,
     updated_at: updatedAt,
     command,
     workspace_path: entry.workspace_path,
@@ -402,10 +391,10 @@ function buildAttentionItemForUnresolved(entry: DomainManifestCatalogEntry): Run
     project_id: entry.project_id,
     project_label: projectLabel(entry),
     lane: 'attention',
-    title: 'Manifest projection unavailable',
+    title: '清单投影不可用',
     status: entry.status,
     status_label: humanizeStatusLabel(entry.status),
-    summary: entry.error?.message ?? 'Active workspace binding does not expose a resolved domain manifest.',
+    summary: localizeRuntimeDisplayText(entry.error?.message) ?? '当前工作区绑定没有提供可读取的领域清单投影。',
     updated_at: null,
     command: entry.manifest_command,
     workspace_path: entry.workspace_path,
@@ -415,7 +404,7 @@ function buildAttentionItemForUnresolved(entry: DomainManifestCatalogEntry): Run
     ...actionContext(
       'infrastructure',
       'infrastructure_recovery',
-      'OPL cannot read the bound domain manifest projection; the binding or product-entry surface needs recovery.',
+      'OPL 无法读取已绑定的领域清单投影，需要恢复绑定或 product-entry 入口。',
     ),
   };
 }
@@ -488,21 +477,6 @@ function isMasHermesCronJob(job: HermesCronJob) {
   const name = optionalString(job.name)?.toLowerCase() ?? '';
   const script = optionalString(job.script)?.toLowerCase() ?? '';
   return name.startsWith('medautoscience-') || script.includes('med-autoscience/');
-}
-
-function titleFromHermesCronJob(job: HermesCronJob) {
-  const script = optionalString(job.script);
-  const scriptMatch = script?.match(/med-autoscience\/([^/]+)\//);
-  if (scriptMatch?.[1]) {
-    return `${scriptMatch[1]} supervision`;
-  }
-
-  const name = optionalString(job.name);
-  if (!name) {
-    return 'MAS supervision';
-  }
-
-  return name.replace(/^medautoscience-/, '').replace(/[-_]+/g, ' ').trim() || 'MAS supervision';
 }
 
 function scriptPathForHermesCronJob(hermesHome: string, job: HermesCronJob) {
@@ -589,8 +563,8 @@ function masWorkspaceRefsFromHermesCronJobs() {
         profile_ref: profileRef,
         profile_name: profileRef ? path.basename(profileRef).replace(/\.workspace\.toml$/, '') : path.basename(workspaceRoot),
         source_refs: uniqueByRef([
-          fileSourceRef(jobsPath, 'hermes_cron_jobs', 'Hermes cron jobs'),
-          scriptPath ? fileSourceRef(scriptPath, 'hermes_cron_script', 'Hermes cron script') : null,
+          fileSourceRef(jobsPath, 'hermes_cron_jobs', 'Hermes 定时任务'),
+          scriptPath ? fileSourceRef(scriptPath, 'hermes_cron_script', 'Hermes 脚本') : null,
         ].filter((ref): ref is RuntimeTraySourceRef => Boolean(ref))),
       };
     })
@@ -695,6 +669,7 @@ function buildMasStudyItem(workspace: MasWorkspaceProjectionRef, studyRoot: stri
   const publicationVerdict = nestedRecord(publicationEval, 'verdict');
   const publicationGaps = stringListFromRecords(publicationEval?.gaps, 'summary');
   const recommendedActionSummaries = stringListFromRecords(publicationEval?.recommended_actions, 'reason', 3);
+  const localizedRecommendedActionSummaries = localizeRuntimeDisplayList(recommendedActionSummaries);
   const activeRunId = firstString(supervision?.active_run_id);
   const healthStatus = firstString(supervision?.health_status, statusSummary?.health_status);
   const questStatus = firstString(supervision?.quest_status);
@@ -708,11 +683,11 @@ function buildMasStudyItem(workspace: MasWorkspaceProjectionRef, studyRoot: stri
   const routeTarget = firstString(controllerDecision?.route_target);
   const routeKeyQuestion = firstString(controllerDecision?.route_key_question);
   const statusLabel = parkedHandoff
-    ? 'Stopped: waiting review'
+    ? '已暂停：等待确认'
     : needsHumanIntervention
-    ? 'Waiting for user'
+    ? '需用户确认'
     : publicationBlocked
-      ? `Live: ${humanizeStatusLabel(routeTarget ?? 'needs_attention')}`
+      ? liveRouteStatusLabel(routeTarget)
       : humanizeStatusLabel(healthStatus ?? questStatus ?? 'running');
   const progressCommand = commandForMasStudy(workspace.profile_ref, studyId, 'study-progress');
   const runtimeStatusCommand = commandForMasStudy(workspace.profile_ref, studyId, 'study-runtime-status');
@@ -720,7 +695,7 @@ function buildMasStudyItem(workspace: MasWorkspaceProjectionRef, studyRoot: stri
     progressCommand
       ? {
         step_id: 'inspect_study_progress',
-        title: 'Inspect study progress',
+        title: '查看任务进度',
         surface_kind: 'study_progress',
         command: progressCommand,
       }
@@ -728,7 +703,7 @@ function buildMasStudyItem(workspace: MasWorkspaceProjectionRef, studyRoot: stri
     runtimeStatusCommand
       ? {
         step_id: 'inspect_runtime_status',
-        title: 'Inspect runtime status',
+        title: '查看运行状态',
         surface_kind: 'study_runtime_status',
         command: runtimeStatusCommand,
       }
@@ -751,32 +726,40 @@ function buildMasStudyItem(workspace: MasWorkspaceProjectionRef, studyRoot: stri
   ].filter((ref): ref is RuntimeTraySourceRef => Boolean(ref)));
   const statusText = firstString(statusSummary?.status_summary, supervision?.summary);
   const publicationSummary = firstString(publicationVerdict?.summary, publicationEval?.summary);
+  const localizedStatusText = localizeRuntimeDisplayText(statusText);
+  const localizedPublicationSummary = publicationBlocked
+    ? masPublicationActionSummary(routeTarget)
+    : localizeRuntimeDisplayText(publicationSummary);
   const nextActionSummary = parkedHandoff
-    ? firstString(statusSummary?.next_action_summary, controllerDecision?.reason, supervision?.next_action_summary)
-    : firstString(controllerDecision?.reason, statusSummary?.next_action_summary, supervision?.next_action_summary)
-      ?? recommendedActionSummaries[0]
-      ?? null;
+    ? localizeRuntimeDisplayText(firstString(statusSummary?.next_action_summary, controllerDecision?.reason, supervision?.next_action_summary))
+    : publicationBlocked
+      ? masPublicationNextActionSummary(routeTarget)
+      : (
+        localizeRuntimeDisplayText(firstString(controllerDecision?.reason, statusSummary?.next_action_summary, supervision?.next_action_summary))
+        ?? localizedRecommendedActionSummaries[0]
+        ?? null
+      );
   const action = parkedHandoff
     ? actionContext(
       'user',
       'handoff_review',
-      nextActionSummary ?? 'This paper line is stopped at a review or delivery handoff and needs user direction.',
+      nextActionSummary ?? '论文线已暂停在复核或交付节点；需用户确认下一步。',
     )
     : needsHumanIntervention
       ? actionContext(
         'user',
         'human_gate',
-        nextActionSummary ?? 'This study is waiting for user confirmation before OPL continues.',
+        nextActionSummary ?? '任务等待用户确认。',
       )
       : publicationBlocked
         ? actionContext(
           'opl',
           'publication_gate',
-          publicationSummary
+          localizedPublicationSummary
             ?? nextActionSummary
-            ?? 'OPL/MAS is closing publication and quality gates while the active run continues.',
+            ?? '论文质量或交付检查未关闭。',
         )
-        : runningActionContext(statusText ?? 'OPL/MAS runtime is actively supervising this study.');
+        : runningActionContext(localizedStatusText ?? '运行中，无需用户操作。');
 
   return {
     item_id: `medautoscience:study:${studyId}`,
@@ -786,7 +769,7 @@ function buildMasStudyItem(workspace: MasWorkspaceProjectionRef, studyRoot: stri
     title: studyId,
     status: parkedHandoff ? 'auto_runtime_parked' : firstString(questStatus, healthStatus, routeTarget),
     status_label: statusLabel,
-    summary: parkedHandoff ? statusText : publicationBlocked ? publicationSummary ?? statusText : statusText,
+    summary: parkedHandoff ? localizedStatusText : publicationBlocked ? localizedPublicationSummary ?? localizedStatusText : localizedStatusText,
     updated_at: firstString(statusSummary?.generated_at, supervision?.recorded_at, controllerDecision?.emitted_at),
     command: primaryCommand,
     workspace_path: workspace.workspace_root,
@@ -796,13 +779,13 @@ function buildMasStudyItem(workspace: MasWorkspaceProjectionRef, studyRoot: stri
     ...action,
     study_id: studyId,
     workspace_label: workspace.profile_name,
-    detail_summary: statusText,
+    detail_summary: localizedStatusText,
     next_action_summary: nextActionSummary,
     active_run_id: activeRunId,
     browser_url: null,
     quest_session_api_url: null,
     health_status: healthStatus,
-    blockers,
+    blockers: localizeRuntimeDisplayList(blockers),
     recommended_commands: recommendedCommands,
   };
 }
@@ -870,33 +853,33 @@ function buildHermesCronProjection(): HermesCronProjection {
       const lastRun = optionalString(job.last_run_at);
       const nextRun = optionalString(job.next_run_at);
       const summaryParts = [
-        schedule ? `schedule ${schedule}` : null,
-        lastRun ? `last run ${lastRun}` : null,
-        nextRun ? `next run ${nextRun}` : null,
+        schedule ? `排程：${schedule}` : null,
+        lastRun ? `上次运行：${lastRun}` : null,
+        nextRun ? `下次运行：${nextRun}` : null,
       ].filter((value): value is string => Boolean(value));
       const sourceRefs = uniqueByRef([
-        fileSourceRef(jobsPath, 'hermes_cron_jobs', 'Hermes cron jobs'),
-        latestOutputPath ? fileSourceRef(latestOutputPath, 'hermes_cron_output', 'latest cron output') : null,
+        fileSourceRef(jobsPath, 'hermes_cron_jobs', 'Hermes 定时任务'),
+        latestOutputPath ? fileSourceRef(latestOutputPath, 'hermes_cron_output', '最新定时任务输出') : null,
       ].filter((ref): ref is RuntimeTraySourceRef => Boolean(ref)));
       const action = actionContext(
         'infrastructure',
         outputIssue === 'timed_out' ? 'infrastructure_timeout' : 'infrastructure_recovery',
         outputIssue === 'timed_out'
-          ? 'Hermes cron pre-run script timed out; background runtime supervision needs system-side recovery.'
-          : 'Hermes cron reported a supervision failure; background runtime supervision needs system-side recovery.',
+          ? '后台监督脚本执行超时，需要系统侧恢复。'
+          : '后台监督任务报告异常，需要系统侧恢复。',
       );
 
       return {
         item_id: `medautoscience:hermes-cron:${jobId}`,
         project_id: 'medautoscience',
-        project_label: `${PROJECT_LABELS.medautoscience} infra`,
+        project_label: `${PROJECT_LABELS.medautoscience} 基础设施`,
         lane,
-        title: `Workspace supervision job: ${titleFromHermesCronJob(job)}`,
+        title: `工作区监督任务：${titleFromHermesCronJob(job)}`,
         status,
         status_label: hasRecordedError
-          ? outputIssue === 'timed_out' ? 'Background supervision timeout' : 'Infrastructure recovery needed'
-          : 'Paused',
-        summary: summaryParts.length > 0 ? summaryParts.join('; ') : null,
+          ? outputIssue === 'timed_out' ? '后台监督超时' : '系统侧需恢复'
+          : '已暂停',
+        summary: summaryParts.length > 0 ? summaryParts.join('；') : null,
         updated_at: lastRun,
         command: `hermes cron run ${jobId}`,
         workspace_path: null,
@@ -905,7 +888,7 @@ function buildHermesCronProjection(): HermesCronProjection {
         source_refs: sourceRefs,
         ...action,
         next_action_summary:
-          'Restore the Hermes cron supervision tick and confirm the next watch-runtime run completes without timeout.',
+          '恢复后台监督定时任务，并确认下一次运行不再超时。',
       };
     })
     .filter((item): item is RuntimeTrayItem => Boolean(item));
@@ -914,7 +897,7 @@ function buildHermesCronProjection(): HermesCronProjection {
     items,
     source_refs: items.length > 0
       ? [
-        fileSourceRef(jobsPath, 'hermes_cron_projection', 'Hermes cron jobs'),
+        fileSourceRef(jobsPath, 'hermes_cron_projection', 'Hermes 定时任务'),
         sourceRef('/runtime_tray_snapshot/hermes_cron_items', 'runtime_projection'),
       ]
       : [],
@@ -938,16 +921,16 @@ export function buildRuntimeTraySnapshot(contracts: GatewayContracts) {
   const healthStatus: RuntimeTrayHealthStatus =
     !hermesReady
       ? 'offline'
-      : hasUserOrInfrastructureAction(actionCounts)
+      : actionCounts.user > 0
         ? 'needs_attention'
-        : runningItems.length > 0 || actionCounts.opl > 0
+        : runningItems.length > 0 || actionCounts.opl > 0 || actionCounts.infrastructure > 0
           ? 'running'
           : 'idle';
   const healthLabels: Record<RuntimeTrayHealthStatus, string> = {
-    offline: 'Offline',
-    needs_attention: 'Needs attention',
-    running: 'Running',
-    idle: 'Idle',
+    offline: '未连接',
+    needs_attention: '需用户处理',
+    running: '运行中',
+    idle: '空闲',
   };
 
   return {
@@ -960,8 +943,8 @@ export function buildRuntimeTraySnapshot(contracts: GatewayContracts) {
         label: healthLabels[healthStatus],
         summary:
           healthStatus === 'offline'
-            ? 'Hermes-Agent runtime substrate is not ready; OPL did not start a replacement daemon.'
-            : `${runningItems.length} running, ${actionCounts.opl} OPL action, ${actionCounts.infrastructure} infrastructure recovery, ${actionCounts.user} user action, ${recentItems.length} recent domain item(s).`,
+            ? 'Hermes-Agent 运行底座未就绪；OPL 没有启动替代守护进程。'
+            : `${runningItems.length} 个运行中，${actionCounts.opl} 个处理中项目，${actionCounts.infrastructure} 个后台恢复项，${actionCounts.user} 个用户处理项，${recentItems.length} 个近期项目。`,
         hermes_ready: hermesReady,
         hermes_runtime: {
           binary: hermes.binary,

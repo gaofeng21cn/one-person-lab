@@ -90,6 +90,7 @@ It is repo-tracked supporting material, not the default implementation basis.
 - [OPL Runtime Manager target](./references/opl-runtime-manager-target.md)
 - [Docker WebUI deployment reference](./references/opl-docker-webui-deployment.md)
 - [OPL GUI shell adapter boundary](./references/opl-gui-shell-adapter-boundary.zh-CN.md)
+- [OPL fresh install and GUI first-launch testing](./references/opl-fresh-install-and-gui-first-launch-testing.zh-CN.md)
 - [OPL default skill ecosystem reference](./references/opl-default-skill-ecosystem.md)
 - [OPL release and Packages modular distribution reference](./references/opl-release-packages-modular-distribution.zh-CN.md)
 - product-runtime and executor reference notes

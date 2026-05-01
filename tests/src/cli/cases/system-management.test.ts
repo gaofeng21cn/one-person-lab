@@ -382,6 +382,19 @@ exit 1
           update_channel: string;
           gui_shell: { local_product_api_retired: boolean };
         };
+        first_run_log: {
+          surface_id: string;
+          log_path: string;
+          event_schema_version: string;
+        };
+        gui_first_run_automation: {
+          surface_id: string;
+          command_flow: string[];
+          accessibility_labels: {
+            window: string;
+            installButton: string;
+          };
+        };
 
         recommended_next_action: {
           action_id: string;
@@ -448,6 +461,23 @@ exit 1
     assert.equal(output.system_initialize.workspace_root.health_status, 'ready');
     assert.equal(output.system_initialize.system.update_channel, 'stable');
     assert.equal(output.system_initialize.system.gui_shell.local_product_api_retired, true);
+    assert.equal(output.system_initialize.first_run_log.surface_id, 'opl_first_run_log');
+    assert.equal(output.system_initialize.first_run_log.event_schema_version, 'opl_first_run_event.v1');
+    assert.match(output.system_initialize.first_run_log.log_path, /Library\/Logs\/One Person Lab\/first-run\.jsonl$/);
+    assert.equal(output.system_initialize.gui_first_run_automation.surface_id, 'opl_gui_first_run_automation');
+    assert.deepEqual(output.system_initialize.gui_first_run_automation.command_flow, [
+      'opl system initialize',
+      'opl install --skip-gui-open',
+      'opl modules',
+    ]);
+    assert.equal(
+      output.system_initialize.gui_first_run_automation.accessibility_labels.window,
+      'opl-first-run-window',
+    );
+    assert.equal(
+      output.system_initialize.gui_first_run_automation.accessibility_labels.installButton,
+      'opl-first-run-install-button',
+    );
     assert.ok(output.system_initialize.recommended_next_action.action_id.length > 0);
     assert.ok(output.system_initialize.recommended_next_action.label.length > 0);
     assert.equal(output.system_initialize.recommended_next_action.method, 'GET');
