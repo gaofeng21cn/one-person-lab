@@ -43,6 +43,9 @@ jobs:
       - name: Verify metadata and contracts
         run: npm run test:meta
 
+      - name: Verify fresh-install clean-room matrix
+        run: npm run test:fresh-install
+
       - name: Verify native helper lifecycle
         run: ./scripts/verify.sh native
 

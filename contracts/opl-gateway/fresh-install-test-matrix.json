@@ -5,6 +5,24 @@
   "purpose": "Freeze the OPL fresh-install and GUI first-launch verification contract without moving GUI implementation into this repository.",
   "local_smoke_command": "npm run test:fresh-install",
   "vm_smoke_command": "npm run fresh-install:smoke -- --vm-artifacts-only",
+  "gui_vm_implementation": {
+    "repo": "gaofeng21cn/opl-aion-shell",
+    "packaged_guest_smoke_command": "bun run test:opl-first-run-vm -- --dmg <release.dmg> --assert-clean",
+    "tart_host_smoke_command": "bun run test:opl-first-run-vm:tart -- --source-vm <clean-tart-vm> --dmg <release.dmg>",
+    "nightly_workflow": ".github/workflows/opl-first-run-vm.yml",
+    "default_self_hosted_runner_labels": [
+      "self-hosted",
+      "macOS",
+      "opl-gui-vm"
+    ],
+    "required_guest_capabilities": [
+      "clean macOS user state",
+      "SSH access from the host runner",
+      "Node.js for the guest smoke harness",
+      "logged-in GUI session",
+      "Accessibility permission for osascript/System Events"
+    ]
+  },
   "cli_first_run_commands": [
     "opl system initialize",
     "opl install --skip-gui-open",
@@ -91,8 +109,8 @@
     }
   ],
   "ci_policy": {
-    "github_actions": "Run local CLI fresh-install smoke and package checks only.",
-    "self_hosted_macos": "Run clean VM GUI first-launch tests from a reset snapshot.",
+    "github_actions": "Run local CLI fresh-install smoke, package checks, codesign/notarization, and non-GUI assertions only.",
+    "self_hosted_macos": "Run gaofeng21cn/opl-aion-shell .github/workflows/opl-first-run-vm.yml on a reset Tart clean macOS snapshot.",
     "docker": "Do not use Docker as proof for macOS desktop first-launch behavior."
   }
 }
