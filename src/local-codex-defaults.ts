@@ -183,6 +183,109 @@ function compactBootstrapInput(input: BootstrapLocalCodexDefaultsInput): Bootstr
   ) as BootstrapLocalCodexDefaultsInput;
 }
 
+function readCompleteExistingCodexDefaultsForBootstrap(configPath: string): LocalCodexDefaults | null {
+  if (!fs.existsSync(configPath) || !fs.statSync(configPath).isFile()) {
+    return null;
+  }
+
+  try {
+    return readLocalCodexDefaults();
+  } catch (error) {
+    if (
+      error instanceof GatewayContractError
+      && error.code === 'contract_shape_invalid'
+      && error.message === 'Local Codex config is missing the default model entry.'
+    ) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+function removeRootTomlKeys(text: string, keys: Set<string>) {
+  const kept: string[] = [];
+  let currentSection: string[] = [];
+
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = stripTomlInlineComment(rawLine);
+    const sectionMatch = line.match(/^\[([^\]]+)\]$/);
+    if (sectionMatch) {
+      currentSection = sectionMatch[1]
+        .split('.')
+        .map((entry) => entry.trim())
+        .filter(Boolean);
+      kept.push(rawLine);
+      continue;
+    }
+
+    const separatorIndex = line.indexOf('=');
+    const key = separatorIndex > 0 ? line.slice(0, separatorIndex).trim() : null;
+    if (currentSection.length === 0 && key && keys.has(key)) {
+      continue;
+    }
+
+    kept.push(rawLine);
+  }
+
+  return kept.join('\n').trim();
+}
+
+function removeTomlTable(text: string, tableHeader: string) {
+  const kept: string[] = [];
+  let skipping = false;
+
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = stripTomlInlineComment(rawLine);
+    if (/^\[[^\]]+\]$/.test(line)) {
+      skipping = line === tableHeader;
+    }
+    if (!skipping) {
+      kept.push(rawLine);
+    }
+  }
+
+  return kept.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+function buildCodexConfigText(
+  existingText: string,
+  input: {
+    providerId: string;
+    providerName: string;
+    providerBaseUrl: string;
+    model: string;
+    reasoningEffort: string | null;
+    providerApiKey: string;
+  },
+) {
+  const rootLines = [
+    `model_provider = ${quoteTomlString(input.providerId)}`,
+    `model = ${quoteTomlString(input.model)}`,
+    ...(input.reasoningEffort ? [`model_reasoning_effort = ${quoteTomlString(input.reasoningEffort)}`] : []),
+  ];
+  const providerHeader = `[model_providers.${input.providerId}]`;
+  const providerLines = [
+    providerHeader,
+    `name = ${quoteTomlString(input.providerName)}`,
+    `base_url = ${quoteTomlString(input.providerBaseUrl)}`,
+    `experimental_bearer_token = ${quoteTomlString(input.providerApiKey)}`,
+  ];
+  const preserved = removeTomlTable(
+    removeRootTomlKeys(
+      existingText,
+      new Set(['model_provider', 'model', 'model_reasoning_effort']),
+    ),
+    providerHeader,
+  );
+
+  return [
+    rootLines.join('\n'),
+    preserved,
+    providerLines.join('\n'),
+    '',
+  ].filter((block) => block.length > 0).join('\n\n');
+}
+
 export function buildCodexDefaultProfileFromLocalConfig(
   generatedAt = new Date().toISOString(),
 ): CodexDefaultProfile {
@@ -248,9 +351,7 @@ export function bootstrapLocalCodexDefaults(input: BootstrapLocalCodexDefaultsIn
   const providerBaseUrl = normalizeOptionalString(merged.provider_base_url);
   const providerApiKey = normalizeOptionalString(merged.provider_api_key);
   const configPath = resolveLocalCodexConfigPath();
-  const existing = fs.existsSync(configPath) && fs.statSync(configPath).isFile()
-    ? readLocalCodexDefaults()
-    : null;
+  const existing = readCompleteExistingCodexDefaultsForBootstrap(configPath);
 
   if (existing?.provider_api_key && !merged.overwrite_existing) {
     return {
@@ -285,21 +386,22 @@ export function bootstrapLocalCodexDefaults(input: BootstrapLocalCodexDefaultsIn
   const reasoningEffort = normalizeOptionalString(merged.reasoning_effort);
   const configDir = path.dirname(configPath);
   fs.mkdirSync(configDir, { recursive: true });
+  const existingText = fs.existsSync(configPath) && fs.statSync(configPath).isFile()
+    ? fs.readFileSync(configPath, 'utf8')
+    : '';
   fs.writeFileSync(
     configPath,
-    [
-      `model_provider = ${quoteTomlString(providerId)}`,
-      `model = ${quoteTomlString(model)}`,
-      ...(reasoningEffort ? [`model_reasoning_effort = ${quoteTomlString(reasoningEffort)}`] : []),
-      '',
-      `[model_providers.${providerId}]`,
-      `name = ${quoteTomlString(providerName)}`,
-      `base_url = ${quoteTomlString(providerBaseUrl)}`,
-      `experimental_bearer_token = ${quoteTomlString(providerApiKey)}`,
-      '',
-    ].join('\n'),
+    buildCodexConfigText(existingText, {
+      providerId,
+      providerName,
+      providerBaseUrl,
+      model,
+      reasoningEffort,
+      providerApiKey,
+    }),
     { mode: 0o600 },
   );
+  fs.chmodSync(configPath, 0o600);
 
   return {
     status: 'completed' as const,

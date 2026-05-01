@@ -399,6 +399,68 @@ test('system configure-codex keeps environment overrides over bundled model prof
   }
 });
 
+test('system configure-codex completes a plugin-only Codex config created during first-run install', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-configure-codex-plugin-home-'));
+  const codexHome = path.join(homeRoot, 'codex-home');
+  const configPath = path.join(codexHome, 'config.toml');
+  const apiKey = 'secret-plugin-key';
+
+  try {
+    fs.mkdirSync(codexHome, { recursive: true });
+    fs.writeFileSync(
+      configPath,
+      [
+        '[marketplaces.mas-local]',
+        'source_type = "local"',
+        'source = "/Users/test/med-autoscience"',
+        '',
+        '[plugins."mas@mas-local"]',
+        'enabled = true',
+        '',
+      ].join('\n'),
+      'utf8',
+    );
+
+    const output = runCliWithStdin(
+      ['system', 'configure-codex', '--api-key-stdin'],
+      `${apiKey}\n`,
+      {
+        HOME: homeRoot,
+        CODEX_HOME: codexHome,
+        OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      },
+    ) as {
+      codex_config: {
+        status: string;
+        bootstrap: {
+          model: string;
+          reasoning_effort: string;
+          provider_base_url: string;
+          api_key_present: boolean;
+        };
+      };
+    };
+
+    assert.equal(output.codex_config.status, 'completed');
+    assert.equal(output.codex_config.bootstrap.model, 'gpt-5.5');
+    assert.equal(output.codex_config.bootstrap.reasoning_effort, 'xhigh');
+    assert.equal(output.codex_config.bootstrap.provider_base_url, 'https://gflabtoken.cn/v1');
+    assert.equal(output.codex_config.bootstrap.api_key_present, true);
+    assert.equal(JSON.stringify(output).includes(apiKey), false);
+
+    const config = fs.readFileSync(configPath, 'utf8');
+    assert.match(config, /model_provider = "gflab"/);
+    assert.match(config, /model = "gpt-5\.5"/);
+    assert.match(config, /model_reasoning_effort = "xhigh"/);
+    assert.match(config, /base_url = "https:\/\/gflabtoken\.cn\/v1"/);
+    assert.match(config, /experimental_bearer_token = "secret-plugin-key"/);
+    assert.match(config, /\[marketplaces\.mas-local\]/);
+    assert.match(config, /\[plugins\."mas@mas-local"\]/);
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
 test('system initialize blocks launch when compatible Codex CLI lacks configured API key', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-initialize-codex-config-home-'));
   const codexFixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-initialize-codex-config-bin-'));

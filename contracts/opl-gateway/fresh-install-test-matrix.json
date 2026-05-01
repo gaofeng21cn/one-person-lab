@@ -53,6 +53,7 @@
     "environment_button": "opl-first-run-open-environment-button",
     "modules_button": "opl-first-run-open-modules-button",
     "ready_entry": "opl-first-run-ready-entry",
+    "guid_entry": "opl-guid-entry",
     "settings_environment": "opl-settings-environment"
   },
   "scenarios": [
