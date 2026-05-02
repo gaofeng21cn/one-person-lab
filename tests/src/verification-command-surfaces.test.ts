@@ -446,6 +446,80 @@ test('GUI release publisher uploads Full first-install assets only when explicit
   assert.doesNotMatch(generatedArm64Metadata, /Full/);
 });
 
+test('GUI release publisher writes standard release notes with update guidance', () => {
+  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-gui-release-notes-test-'));
+  const shellRoot = path.join(tmpRoot, 'opl-aion-shell');
+  const outDir = path.join(shellRoot, 'out');
+  const fakeBin = path.join(tmpRoot, 'bin');
+  const ghLog = path.join(tmpRoot, 'gh.jsonl');
+  const version = '26.5.2';
+
+  fs.mkdirSync(outDir, { recursive: true });
+  fs.mkdirSync(fakeBin, { recursive: true });
+  fs.writeFileSync(
+    path.join(fakeBin, 'gh'),
+    [
+      '#!/usr/bin/env node',
+      "const fs = require('fs');",
+      `const log = ${JSON.stringify(ghLog)};`,
+      'const args = process.argv.slice(2);',
+      "fs.appendFileSync(log, JSON.stringify(args) + '\\n');",
+      "if (args[0] === 'release' && args[1] === 'view') process.exit(1);",
+      "if (args[0] === 'release' && (args[1] === 'create' || args[1] === 'upload')) process.exit(0);",
+      'process.exit(1);',
+      '',
+    ].join('\n'),
+    { mode: 0o755 },
+  );
+
+  fs.writeFileSync(path.join(outDir, `One-Person-Lab-${version}-mac-arm64.dmg`), 'standard dmg');
+  fs.writeFileSync(path.join(outDir, `One-Person-Lab-${version}-mac-arm64.zip`), 'standard zip');
+  fs.writeFileSync(
+    path.join(outDir, 'latest-mac.yml'),
+    [
+      `version: ${version}`,
+      'files:',
+      `  - url: One-Person-Lab-${version}-mac-arm64.zip`,
+      `  - url: One-Person-Lab-${version}-mac-arm64.dmg`,
+      `path: One-Person-Lab-${version}-mac-arm64.zip`,
+      '',
+    ].join('\n'),
+  );
+
+  const result = spawnSync(
+    process.execPath,
+    [
+      path.join(repoRoot, 'scripts/publish-gui-release.mjs'),
+      '--no-build',
+      '--shell-root',
+      shellRoot,
+      '--version',
+      version,
+      '--repo',
+      'example/one-person-lab',
+    ],
+    {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        PATH: `${fakeBin}${path.delimiter}${process.env.PATH ?? ''}`,
+      },
+    },
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  const calls = fs.readFileSync(ghLog, 'utf8').trim().split('\n').map((line) => JSON.parse(line) as string[]);
+  const createCall = calls.find((args) => args[0] === 'release' && args[1] === 'create');
+  assert.ok(createCall, 'expected gh release create to be called');
+  const notes = createCall[createCall.indexOf('--notes') + 1];
+  assert.match(notes, /Update guidance:/);
+  assert.match(notes, /Existing users should update from inside the app/);
+  assert.match(notes, /standard DMG\/ZIP assets and latest\*\.yml metadata remain the only auto-updater source/);
+  assert.doesNotMatch(notes, /Full first-install package:/);
+  assert.doesNotMatch(notes, /One-Person-Lab-Full/);
+});
+
 test('GUI release publisher can upload only Full first-install assets for an existing standard release', () => {
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-gui-release-full-only-test-'));
   const shellRoot = path.join(tmpRoot, 'opl-aion-shell');
@@ -509,6 +583,80 @@ test('GUI release publisher can upload only Full first-install assets for an exi
   assert.deepEqual(payload.standard_artifacts, []);
   assert.ok(payload.full_package_artifacts.some((artifact) => artifact.endsWith(`One-Person-Lab-Full-${version}-mac-arm64.dmg`)));
   assert.equal(payload.artifacts.every((artifact) => artifact.includes('Full') || artifact.endsWith('full-package-manifest.json') || artifact.endsWith('SHA256SUMS.txt') || artifact.endsWith('README-Full-First-Install.txt')), true);
+});
+
+test('GUI release publisher appends Full purpose notes to an existing standard release', () => {
+  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-gui-release-full-notes-test-'));
+  const shellRoot = path.join(tmpRoot, 'opl-aion-shell');
+  const fullDir = path.join(tmpRoot, 'full');
+  const fakeBin = path.join(tmpRoot, 'bin');
+  const ghLog = path.join(tmpRoot, 'gh.jsonl');
+  const version = '26.5.2';
+
+  fs.mkdirSync(shellRoot, { recursive: true });
+  fs.mkdirSync(fullDir, { recursive: true });
+  fs.mkdirSync(fakeBin, { recursive: true });
+  fs.writeFileSync(
+    path.join(fakeBin, 'gh'),
+    [
+      '#!/usr/bin/env node',
+      "const fs = require('fs');",
+      `const log = ${JSON.stringify(ghLog)};`,
+      'const args = process.argv.slice(2);',
+      "fs.appendFileSync(log, JSON.stringify(args) + '\\n');",
+      "if (args[0] === 'release' && args[1] === 'view' && args.includes('body')) {",
+      "  process.stdout.write('One Person Lab desktop GUI release 26.5.2\\n');",
+      '  process.exit(0);',
+      '}',
+      "if (args[0] === 'release' && args[1] === 'view') process.exit(0);",
+      "if (args[0] === 'release' && (args[1] === 'edit' || args[1] === 'upload')) process.exit(0);",
+      'process.exit(1);',
+      '',
+    ].join('\n'),
+    { mode: 0o755 },
+  );
+
+  fs.writeFileSync(path.join(fullDir, `One-Person-Lab-Full-${version}-mac-arm64.dmg`), 'full dmg');
+  fs.writeFileSync(path.join(fullDir, 'full-package-manifest.json'), '{"distribution":{"updater_metadata_allowed":false}}\n');
+  fs.writeFileSync(path.join(fullDir, 'SHA256SUMS.txt'), 'abc  file\n');
+  fs.writeFileSync(path.join(fullDir, 'README-Full-First-Install.txt'), 'readme\n');
+
+  const result = spawnSync(
+    process.execPath,
+    [
+      path.join(repoRoot, 'scripts/publish-gui-release.mjs'),
+      '--shell-root',
+      shellRoot,
+      '--version',
+      version,
+      '--repo',
+      'example/one-person-lab',
+      '--full-package-only',
+      '--full-package-dir',
+      fullDir,
+    ],
+    {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        PATH: `${fakeBin}${path.delimiter}${process.env.PATH ?? ''}`,
+      },
+    },
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  const calls = fs.readFileSync(ghLog, 'utf8').trim().split('\n').map((line) => JSON.parse(line) as string[]);
+  const editCall = calls.find((args) => args[0] === 'release' && args[1] === 'edit');
+  assert.ok(editCall, 'expected gh release edit to be called');
+  const notes = editCall[editCall.indexOf('--notes') + 1];
+  assert.match(notes, /Update guidance:/);
+  assert.match(notes, /Full first-install package:/);
+  assert.match(notes, new RegExp(`One-Person-Lab-Full-${version}-mac-arm64\\.dmg`));
+  assert.match(notes, /reduce the time from first launch to the first MAS task/);
+  assert.match(notes, /users still configure their API key normally/);
+  assert.match(notes, /not referenced by latest\*\.yml/);
+  assert.match(notes, /not used by the auto-updater/);
 });
 
 test('GUI release publisher rejects updater metadata that points at Full assets', () => {
