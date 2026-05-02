@@ -240,15 +240,33 @@ function releaseExists(repo, tag) {
   return result.status === 0;
 }
 
+function buildUpdateGuidanceNotes(version) {
+  return [
+    'Update guidance:',
+    `- Existing users should update from inside the app, or install the standard One-Person-Lab-${version}-mac-arm64.dmg package if they need a manual reinstall.`,
+    '- The standard DMG/ZIP assets and latest*.yml metadata remain the only auto-updater source.',
+  ];
+}
+
+function buildFullPackageReleaseNotesSection(version) {
+  return [
+    'Full first-install package:',
+    `- New macOS arm64 users can download One-Person-Lab-Full-${version}-mac-arm64.dmg to reduce the time from first launch to the first MAS task.`,
+    '- The Full package bundles the MAS/Hermes/MDS runtime payload used during first setup; users still configure their API key normally.',
+    '- Full assets are first-install downloads only. They are not referenced by latest*.yml and are not used by the auto-updater.',
+  ];
+}
+
 function buildReleaseNotes(version, includeFullPackage) {
-  const notes = [`One Person Lab desktop GUI release ${version}`];
+  const notes = [
+    `One Person Lab desktop GUI release ${version}`,
+    '',
+    ...buildUpdateGuidanceNotes(version),
+  ];
   if (includeFullPackage) {
     notes.push(
       '',
-      'First-time macOS arm64 users should download the Full first-install DMG:',
-      `- One-Person-Lab-Full-${version}-mac-arm64.dmg includes the MAS/Hermes/MDS runtime payload for faster first task startup.`,
-      `- Installed users should keep using in-app updates or the standard One-Person-Lab-${version}-mac-arm64.dmg package.`,
-      '- Full assets are not referenced by latest*.yml and are not used by the auto-updater.',
+      ...buildFullPackageReleaseNotesSection(version),
     );
   }
   return notes.join('\n');
@@ -263,15 +281,27 @@ function ensureFullPackageReleaseNotes(repo, tag, version) {
     throw new Error(`Command failed: gh release view ${tag} --repo ${repo}\nstderr=${current.stderr || ''}`);
   }
 
+  const currentNotes = current.stdout.trimEnd();
   const assetName = `One-Person-Lab-Full-${version}-mac-arm64.dmg`;
-  if (current.stdout.includes(assetName)) {
+  const missingUpdateGuidance = !current.stdout.includes('Update guidance:');
+  const missingFullSection = !current.stdout.includes(assetName) && !current.stdout.includes('Full first-install package:');
+  if (!missingUpdateGuidance && !missingFullSection) {
     return;
   }
 
+  const appendedSections = [];
+  if (missingUpdateGuidance) {
+    appendedSections.push(...buildUpdateGuidanceNotes(version));
+  }
+  if (missingUpdateGuidance && missingFullSection) {
+    appendedSections.push('');
+  }
+  if (missingFullSection) {
+    appendedSections.push(...buildFullPackageReleaseNotesSection(version));
+  }
   const nextNotes = [
-    current.stdout.trimEnd(),
-    '',
-    ...buildReleaseNotes(version, true).split('\n').slice(1),
+    ...(currentNotes ? [currentNotes, ''] : []),
+    ...appendedSections,
   ].join('\n');
   run('gh', ['release', 'edit', tag, '--repo', repo, '--notes', nextNotes]);
 }
