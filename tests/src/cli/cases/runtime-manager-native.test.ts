@@ -882,3 +882,68 @@ exit 1
     fs.rmSync(hermesFixtureRoot, { recursive: true, force: true });
   }
 });
+
+test('runtime manager action marks Hermes gateway repair as non-blocking online management repair', () => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-online-action-'));
+  const gatewayState = path.join(fixtureRoot, 'gateway-ready');
+  const { fixtureRoot: hermesFixtureRoot, hermesPath } = createFakeHermesFixture(`
+if [ "$1" = "version" ]; then
+  echo "Hermes Agent v9.9.9-test"
+  exit 0
+fi
+if [ "$1" = "gateway" ] && [ "$2" = "install" ]; then
+  touch "${gatewayState}"
+  echo "gateway repair completed"
+  exit 0
+fi
+if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
+  if [ -f "${gatewayState}" ]; then
+    echo "Gateway service is loaded"
+  else
+    echo "Gateway service is not loaded"
+  fi
+  exit 0
+fi
+echo "unexpected fake-hermes args: $*" >&2
+exit 1
+`);
+  const stateRoot = path.join(fixtureRoot, 'state');
+
+  try {
+    const output = runCli(['runtime', 'manager', 'action', '--apply'], {
+      OPL_HERMES_BIN: hermesPath,
+      OPL_STATE_DIR: stateRoot,
+      OPL_NATIVE_HELPER_BIN_DIR: path.join(fixtureRoot, 'missing-native-bin'),
+    });
+    const action = output.runtime_manager_action;
+
+    const plannedHermesRepair = action.planned_actions.find(
+      (entry: { action_id: string }) => entry.action_id === 'repair_hermes_gateway',
+    );
+    const executedHermesRepair = action.executed_actions.find(
+      (entry: { action_id: string }) => entry.action_id === 'repair_hermes_gateway',
+    );
+
+    assert.ok(plannedHermesRepair);
+    assert.equal(plannedHermesRepair.blocking, false);
+    assert.equal(plannedHermesRepair.action_lane, 'online_management');
+    assert.equal(plannedHermesRepair.capability, 'online_task_management');
+    assert.ok(executedHermesRepair);
+    assert.equal(executedHermesRepair.status, 'completed');
+    assert.equal(executedHermesRepair.blocking, false);
+    assert.equal(executedHermesRepair.action_lane, 'online_management');
+    assert.equal(executedHermesRepair.capability, 'online_task_management');
+    assert.equal(
+      action.non_blocking_actions.some((entry: { action_id: string }) => entry.action_id === 'repair_hermes_gateway'),
+      true,
+    );
+    assert.deepEqual(
+      action.background_actions.map((entry: { action_id: string }) => entry.action_id),
+      action.non_blocking_actions.map((entry: { action_id: string }) => entry.action_id),
+    );
+    assert.equal(fs.existsSync(gatewayState), true);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(hermesFixtureRoot, { recursive: true, force: true });
+  }
+});

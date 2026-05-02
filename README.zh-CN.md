@@ -32,7 +32,7 @@ macOS 桌面用户可以直接下载 App：
 
 [下载 One Person Lab for macOS](https://github.com/gaofeng21cn/one-person-lab/releases/latest)
 
-打开 `One Person Lab.app` 后，首次启动会准备本机环境，并帮助配置 Codex、模块、skills 和桌面工作台，不额外打开服务窗口。
+打开 `One Person Lab.app` 后，首次启动会准备本机环境，并帮助配置 Codex、模块、skills、桌面工作台和受支持的 Hermes 外部运行基座，不额外打开服务窗口。只要 Codex 与已准入 domain 模块已经就绪，核心工作和 domain 工作就应先可用；Hermes online-management gateway 可以继续渐进就绪。
 
 如果你更习惯从终端安装：
 
@@ -40,7 +40,7 @@ macOS 桌面用户可以直接下载 App：
 curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/install.sh | bash
 ```
 
-安装后打开 `One Person Lab.app`，选择工作目录，就可以在同一个界面里开始通用工作、医学研究、基金写作或汇报/PPT 工作。
+安装后打开 `One Person Lab.app`，选择工作目录，就可以在同一个界面里开始通用工作、医学研究、基金写作或汇报/PPT 工作。App 会复用 `opl install` 已完成的设置，包括本机已有的受支持 Hermes runtime；只有核心依赖无法自动安装或识别时才提示用户处理。
 
 需要 Docker、Linux 或服务器部署时，跳转到 [Docker 与浏览器部署参考](./docs/references/opl-docker-webui-deployment.md)。
 
@@ -62,7 +62,7 @@ curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/ins
 - 基于目录的工作：需要真实文件目录和持续上下文的任务。
 - 专业产品家族：面向特定领域的专门工作流。
 - 进度与文件视图：持续挂在任务旁边，方便恢复和交付。
-- 环境与模块管理：统一查看安装状态、版本和健康情况。
+- 环境与模块管理：统一查看安装状态、版本、Hermes online-management gateway 和健康情况。
 
 ## 给 Agent 和技术操作者的快速入口
 
@@ -71,12 +71,12 @@ curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/ins
 
 ### 交给 Codex Agent 的一句话
 
-> 安装并配置这个 OPL 仓库：clone 仓库、安装 OPL CLI、运行 `opl install`，并确保 Codex CLI、Hermes-Agent、MAS/MDS/MAG/RCA、推荐 skills、One Person Lab App 和浏览器入口都可用；如果缺任何东西，直接修复或报告精确阻塞点。
+> 安装并配置这个 OPL 仓库：clone 仓库、安装 OPL CLI、运行 `opl install`，并确保 Codex CLI、受管 Hermes runtime/gateway 状态、MAS/MDS/MAG/RCA、推荐 skills、One Person Lab App 和浏览器入口都可用；如果缺任何东西，直接修复或报告精确阻塞点。不要仅因 Hermes online-management gateway 尚未完成加载，就把首屏核心工作或 domain 工作写成不可用。
 
 ### 安装后常用命令
 
 ```bash
-opl system initialize   # 检查 Codex 版本策略、Hermes-Agent、模块、skills、GUI 和工作目录状态
+opl system initialize   # 检查 Codex 版本策略、受管 Hermes runtime/gateway 状态、模块、skills、GUI 和工作目录状态
 opl modules             # 查看 MAS/MDS/MAG/RCA 模块安装和健康情况
 opl skill sync          # 把 OPL 家族 skills 同步到 Codex 可见路径
 opl help --text         # 人类可读帮助；机器读取使用 opl help --json
@@ -103,6 +103,8 @@ opl help --text         # 人类可读帮助；机器读取使用 opl help --jso
 
 - 默认前门是 `opl`、`opl exec` 和 `opl resume`。除非显式切换 runtime 或显式激活 domain agent，这几个入口都继承 Codex-default 语义。
 - OPL 会把 `Codex CLI` 作为受管运行依赖检查：`opl system` 会报告实际选中的 binary、版本、最低版本策略和 PATH 诊断。健康状态以选中 binary 为准；非选中的 PATH 候选只作为诊断信息，不阻塞兼容的 Codex CLI。
+- `opl install` 会安装或复用受支持的外部 Hermes runtime substrate。Hermes online-management gateway 是由 Hermes installer/gateway command 管理的系统服务；OPL 负责触发安装、检查就绪并报告状态，不接管这项服务的生命周期实现。
+- 首次启动把核心/domain 就绪与 online-management 就绪分开判断。Codex 和已准入 domain 模块就绪时，用户可以先开始工作；Hermes gateway 仍在 pending 或 starting 状态时，只作为在线管理能力渐进就绪来展示。
 - 如果某个 admitted domain repo 还没落地到本机，运行 `opl module install --module <module_id>`。
 - 默认本地状态目录是 `~/Library/Application Support/OPL/state`。如果需要改到其他本地状态根目录，直接设置 `OPL_STATE_DIR`。
 - 当前 active domain agents 是 [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience)、[`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) 和 [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai)。

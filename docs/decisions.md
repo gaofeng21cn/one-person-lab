@@ -1,5 +1,19 @@
 # OPL 关键决策
 
+## 2026-05-02
+
+### 决策：首启 readiness 拆分为 core/domain 可用与 Hermes online-management 渐进就绪
+
+原因：新用户首屏应该尽快进入 `OPL` 的核心工作与已准入 domain 工作。Hermes 仍然是外部 runtime substrate 与 online-management gateway，但 gateway system service 的加载状态不应被写成底层 Hermes runtime 未就绪式首屏 blocker。
+
+影响：
+
+- `opl install` 默认安装或复用受支持的外部 Hermes runtime substrate。
+- Hermes online-management gateway 是由 Hermes installer/gateway command 管理的系统服务；OPL 负责触发安装/启动、检查 readiness 并报告状态，不接管 gateway service lifecycle 实现。
+- `opl system initialize`、App 首启与公开 README 文案必须区分 core/domain readiness 与 online-management readiness。
+- 当 Codex CLI 与已准入 domain modules ready 时，首屏可以进入通用工作、医学研究、基金写作或汇报/PPT 工作；Hermes gateway 未 loaded 只展示为 online-management pending / starting / needs attention。
+- 只有 Codex CLI 不可用、当前命中版本不兼容、必需 domain 模块无法安装/检测，或其他核心依赖无法自动修复时，才写成首屏 blocker。
+
 ## 2026-04-27
 
 ### 决策：App 更新按 OPL 日期版本判断，GUI 基线版本只作为内部兼容信息
@@ -47,6 +61,7 @@
 - 未显式配置 workspace root 时，`opl system initialize` 默认使用用户 Home 目录
 - 兼容版本的 `Codex CLI` 已可用时，不因缺少可读 Codex config 单独阻塞首启
 - `opl install` 默认安装/检查 domain modules，并以保守 managed 模式同步推荐 companion skills
+- `opl install` 默认安装或复用受支持的 Hermes runtime substrate；Hermes online-management gateway readiness 渐进展示，不阻塞已经 ready 的 core/domain 入口
 - App 首启先静默读取 `opl system initialize`；若命令行安装已经完成，则不再运行安装或打开首启向导
 - 只有缺少 Codex CLI、当前命中版本过旧或无法解析、模块无法安装等不可自动解决事项，才进入环境管理提示
 
@@ -76,6 +91,7 @@
 - native state index 的 lifecycle 必须输出 TTL、history、failure、last-success、freshness、结构化 diff 与 history GC preserved/removed reporting，避免 helper 短暂不可用或 history 被裁剪时丢失可审计状态
 - `opl runtime snapshot` 可以为桌面托盘投影 `attention_items`、`running_items`、`recent_items`，但只读取 domain-owned durable surfaces；为了托盘状态显示不新增本地 daemon
 - `Hermes-Agent` 继续是外部 runtime kernel owner；`OPL Runtime Manager` 只做产品管理和投影
+- Hermes online-management gateway 的 system service lifecycle 由 Hermes installer/gateway command 管理；OPL 只触发、检查和报告 readiness
 - `MAS`、`MAG`、`RCA` 继续持有 domain truth 与 route-selected executor 语义
 - 未来如需迁移到 OPL 自有完整 sidecar，必须先证明 `Hermes-Agent` 无法表达必要的 task、wakeup、approval、audit 或产品隔离合同
 
@@ -240,7 +256,7 @@
 
 影响：
 
-- `Hermes Kernel` 统一负责 session、memory、scheduler、interrupt / resume、gateway 等 substrate 能力
+- `Hermes Kernel` 统一负责 session、memory、scheduler、interrupt / resume、online-management gateway 等 substrate 能力
 - `OPL` 与各领域仓继续负责 gateway、authority、object contract、audit truth
 - 具体任务执行继续通过领域内部的执行路径完成
 

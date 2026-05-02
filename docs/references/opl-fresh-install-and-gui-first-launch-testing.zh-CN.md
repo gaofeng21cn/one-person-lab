@@ -2,6 +2,17 @@
 
 当前 OPL App 是 CLI-backed GUI。真实安装、初始化、模块管理和 skill 同步由 OPL CLI 持有；GUI 触发命令、展示状态、呈现阻塞项，并暴露稳定 accessibility label 供自动化测试使用。
 
+## 首启 readiness 模型
+
+首启展示需要把两类状态分开：
+
+- core/domain readiness：Codex CLI、workspace root、已准入 domain modules、推荐 skills 与 GUI shell 的可用性。
+- online-management readiness：外部 Hermes runtime substrate 与 Hermes online-management gateway 的 readiness。
+
+`opl install` 默认安装或复用受支持的 Hermes runtime substrate。Hermes online-management gateway 是由 Hermes installer/gateway command 管理的系统服务；OPL 只负责触发安装/启动、检查 readiness、记录日志并向 GUI 报告状态。
+
+当 core/domain readiness 已经 ready 时，GUI 首屏应允许用户进入通用工作、医学研究、基金写作或汇报/PPT 工作。Hermes gateway 尚未 loaded、仍在 starting，或需要稍后复查时，应展示为 online-management 渐进就绪状态，不应写成底层 Hermes runtime 未就绪并阻塞首屏。
+
 ## 本机 clean-room 层
 
 本机层用于快速验证 CLI truth surface。它使用临时 `HOME`、`OPL_STATE_DIR` 和 `OPL_MODULES_ROOT`，避免污染当前开发机状态。
@@ -23,6 +34,7 @@ npm run fresh-install:smoke
 - offline module install blocker
 
 这些场景断言 `opl system initialize` 的 `setup_flow.phase`、`blocking_items`、Codex 版本状态、模块安装计数，以及 GUI 可消费的首启合同字段。
+首启 blocker 文案应保留给 core/domain 无法自动修复的事项；Hermes gateway 未 loaded 只应进入 online-management readiness 或 attention 提示。
 
 ## GUI / VM 层
 

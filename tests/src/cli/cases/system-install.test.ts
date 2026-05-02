@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 
-import { assert, cliPath, contractsDir, createCodexConfigFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createGitModuleRemoteFixture, fs, loadGatewayContracts, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, cliPath, contractsDir, createCodexConfigFixture, createFakeHermesFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createGitModuleRemoteFixture, fs, loadGatewayContracts, os, path, repoRoot, runCli, test } from '../helpers.ts';
 import { buildInternalCommandSpecs } from '../../../../src/cli/cases/private-command-specs.ts';
 import { buildPublicCommandSpecs } from '../../../../src/cli/cases/public-command-specs.ts';
 
@@ -137,7 +137,7 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
 
     assert.equal(output.install.surface_id, 'opl_install');
     assert.equal(output.install.status, 'completed');
-    assert.deepEqual(output.install.selected_engines, ['codex']);
+    assert.deepEqual(output.install.selected_engines, ['codex', 'hermes']);
     assert.deepEqual(output.install.engine_actions, []);
     assert.deepEqual(output.install.selected_modules, ['medautoscience']);
     assert.equal(output.install.codex_plugin_registry.surface_id, 'opl_codex_plugin_registry');
@@ -160,6 +160,10 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
       output.install.first_run_log_events.map((entry) => [entry.event_type, entry.status, entry.log_path]),
       [
         ['install_started', 'written', output.install.first_run_log.log_path],
+        ['runtime_manager_repair_started', 'written', output.install.first_run_log.log_path],
+        ['online_management_repair_started', 'written', output.install.first_run_log.log_path],
+        ['runtime_manager_repair_completed', 'written', output.install.first_run_log.log_path],
+        ['online_management_repair_completed', 'written', output.install.first_run_log.log_path],
         ['install_completed', 'written', output.install.first_run_log.log_path],
       ],
     );
@@ -167,9 +171,17 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
       .trim()
       .split('\n')
       .map((line) => JSON.parse(line) as { event_type: string; payload: Record<string, unknown> });
-    assert.deepEqual(firstRunEvents.map((entry) => entry.event_type), ['install_started', 'install_completed']);
+    assert.deepEqual(firstRunEvents.map((entry) => entry.event_type), [
+      'install_started',
+      'runtime_manager_repair_started',
+      'online_management_repair_started',
+      'runtime_manager_repair_completed',
+      'online_management_repair_completed',
+      'install_completed',
+    ]);
     assert.equal(firstRunEvents[0].payload.skip_gui_open, true);
-    assert.equal(firstRunEvents[1].payload.status, 'completed');
+    assert.equal(firstRunEvents[2].payload.blocking, false);
+    assert.equal(firstRunEvents[5].payload.status, 'completed');
     assert.equal(output.install.system_initialize.surface_id, 'opl_system_initialize');
     assert.equal(output.install.system_initialize.recommended_skills.surface_id, 'opl_recommended_skill_bundle');
     assert.equal(output.install.system_initialize.gui_shell.shell_id, 'opl_aion_shell');
@@ -525,6 +537,18 @@ test('install command reuses the already installed default runtime dependency', 
   const codexFixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-codex-'));
   const codexConfigFixture = createCodexConfigFixture();
   const codexPath = path.join(codexFixtureRoot, 'codex');
+  const hermesFixture = createFakeHermesFixture(`
+if [[ "$1" == "version" ]]; then
+  echo "Hermes Agent v9.9.9-test"
+  exit 0
+fi
+if [[ "$1" == "gateway" && "$2" == "status" ]]; then
+  echo "Gateway service is not loaded"
+  exit 0
+fi
+echo "Unsupported hermes fixture command: $*" >&2
+exit 1
+`);
 
   fs.writeFileSync(codexPath, '#!/usr/bin/env bash\necho "codex-cli 0.125.0"\n', { mode: 0o755 });
 
@@ -534,8 +558,9 @@ test('install command reuses the already installed default runtime dependency', 
       {
         HOME: homeRoot,
         CODEX_HOME: codexConfigFixture.codexHome,
+        OPL_HERMES_BIN: hermesFixture.hermesPath,
         OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
-        PATH: `${codexFixtureRoot}:/usr/bin:/bin`,
+        PATH: `${codexFixtureRoot}:${hermesFixture.fixtureRoot}:/usr/bin:/bin`,
       },
     ) as {
       install: {
@@ -547,12 +572,14 @@ test('install command reuses the already installed default runtime dependency', 
       output.install.engine_actions.map((entry) => [entry.engine_id, entry.status, entry.strategy]),
       [
         ['codex', 'skipped_installed', 'already_installed'],
+        ['hermes', 'skipped_installed', 'already_installed'],
       ],
     );
   } finally {
     fs.rmSync(codexConfigFixture.codexHome, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
     fs.rmSync(codexFixtureRoot, { recursive: true, force: true });
+    fs.rmSync(hermesFixture.fixtureRoot, { recursive: true, force: true });
   }
 });
 
