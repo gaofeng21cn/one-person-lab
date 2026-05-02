@@ -376,7 +376,7 @@ test('GUI release publisher uploads Full first-install assets only when explicit
   fs.writeFileSync(path.join(fullDir, `One-Person-Lab-Full-${version}-mac-arm64.dmg`), 'full dmg');
   fs.writeFileSync(path.join(fullDir, 'full-package-manifest.json'), '{"distribution":{"updater_metadata_allowed":false}}\n');
   fs.writeFileSync(path.join(fullDir, 'SHA256SUMS.txt'), 'abc  file\n');
-  fs.writeFileSync(path.join(fullDir, 'README-首次安装说明.txt'), 'readme\n');
+  fs.writeFileSync(path.join(fullDir, 'README-Full-First-Install.txt'), 'readme\n');
 
   const result = spawnSync(
     process.execPath,
@@ -411,7 +411,7 @@ test('GUI release publisher uploads Full first-install assets only when explicit
   };
   assert.ok(payload.standard_artifacts.some((artifact) => artifact.endsWith('latest-arm64-mac.yml')));
   assert.ok(payload.full_package_artifacts.some((artifact) => artifact.endsWith(`One-Person-Lab-Full-${version}-mac-arm64.dmg`)));
-  assert.ok(payload.artifacts.some((artifact) => artifact.endsWith('README-首次安装说明.txt')));
+  assert.ok(payload.artifacts.some((artifact) => artifact.endsWith('README-Full-First-Install.txt')));
   const generatedArm64Metadata = fs.readFileSync(path.join(outDir, 'latest-arm64-mac.yml'), 'utf8');
   assert.doesNotMatch(generatedArm64Metadata, /Full/);
 });

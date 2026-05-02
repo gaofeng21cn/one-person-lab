@@ -201,7 +201,7 @@ function findFullPackageArtifacts(fullPackageDir, version, macArch) {
     `One-Person-Lab-Full-${version}-mac-arm64.dmg`,
     'full-package-manifest.json',
     'SHA256SUMS.txt',
-    'README-首次安装说明.txt',
+    'README-Full-First-Install.txt',
   ];
   const optional = [
     `opl-runtime-full-${version}-macos-arm64.tar.zst`,

@@ -51,7 +51,7 @@ test('full first-install artifact names use release-safe naming', () => {
     dmg: 'One-Person-Lab-Full-26.5.1-mac-arm64.dmg',
     runtimeTar: 'opl-runtime-full-26.5.1-macos-arm64.tar.zst',
     checksums: 'SHA256SUMS.txt',
-    readme: 'README-首次安装说明.txt',
+    readme: 'README-Full-First-Install.txt',
     manifest: 'full-package-manifest.json',
   });
 });
