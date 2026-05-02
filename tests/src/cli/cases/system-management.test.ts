@@ -496,6 +496,113 @@ exit 1
   }
 });
 
+test('opl install provisions Hermes gateway before reporting first-run completion', async () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-hermes-home-'));
+  const stateDir = path.join(homeRoot, 'opl-state');
+  const codexConfigFixture = createCodexConfigFixture({
+    apiKey: 'codex-opl-key',
+  });
+  const gatewayState = path.join(homeRoot, 'hermes-gateway-ready');
+  const hermesFixture = createFakeHermesFixture(`
+if [[ "$1" == "version" ]]; then
+  echo "Hermes Agent v9.9.9-test"
+  exit 0
+fi
+if [[ "$1" == "gateway" && "$2" == "install" ]]; then
+  touch ${shellSingleQuote(gatewayState)}
+  echo "Gateway service is loaded"
+  exit 0
+fi
+if [[ "$1" == "gateway" && "$2" == "status" ]]; then
+  if [[ -f ${shellSingleQuote(gatewayState)} ]]; then
+    echo "Gateway service is loaded"
+  else
+    echo "Gateway service is not loaded"
+  fi
+  exit 0
+fi
+echo "Unsupported hermes fixture command: $*" >&2
+exit 1
+`);
+  const codexFixture = createFakeCodexFixture(`
+if [[ "$1" == "--version" ]]; then
+  echo "codex-cli 0.125.0"
+  exit 0
+fi
+echo "Unsupported codex fixture command: $*" >&2
+exit 1
+`);
+
+  try {
+    const output = await runCliAsync(
+      ['install', '--skip-gui-open', '--skip-modules', '--skip-native-helper-repair'],
+      {
+        HOME: homeRoot,
+        CODEX_HOME: codexConfigFixture.codexHome,
+        OPL_HERMES_BIN: hermesFixture.hermesPath,
+        OPL_STATE_DIR: stateDir,
+        OPL_MODULES_ROOT: path.join(homeRoot, 'modules'),
+        OPL_WORKSPACE_ROOT: homeRoot,
+        PATH: `${codexFixture.fixtureRoot}:${hermesFixture.fixtureRoot}:/usr/bin:/bin`,
+      },
+    ) as {
+      opl_install: {
+        runtime_manager_action: {
+          status: string;
+          executed_actions: Array<{ action_id: string; status: string }>;
+          after: {
+            reconcile: {
+              checked_surfaces: {
+                hermes_runtime: string;
+              };
+            };
+          };
+        };
+        system_initialize: {
+          core_engines: {
+            hermes: {
+              health_status: string;
+              gateway_loaded: boolean;
+            };
+          };
+        };
+        first_run_log_events: Array<{
+          event_type: string;
+          payload: Record<string, unknown>;
+        }>;
+      };
+    };
+
+    assert.equal(fs.existsSync(gatewayState), true);
+    assert.equal(output.opl_install.runtime_manager_action.status, 'completed');
+    assert.deepEqual(
+      output.opl_install.runtime_manager_action.executed_actions.map((entry) => [
+        entry.action_id,
+        entry.status,
+      ]),
+      [['repair_hermes_gateway', 'completed']],
+    );
+    assert.equal(
+      output.opl_install.runtime_manager_action.after.reconcile.checked_surfaces.hermes_runtime,
+      'ready',
+    );
+    assert.equal(output.opl_install.system_initialize.core_engines.hermes.health_status, 'ready');
+    assert.equal(output.opl_install.system_initialize.core_engines.hermes.gateway_loaded, true);
+    assert.equal(
+      output.opl_install.first_run_log_events.some((entry) =>
+        entry.event_type === 'runtime_manager_repair_completed'
+        && entry.payload.status === 'completed'
+      ),
+      true,
+    );
+  } finally {
+    fs.rmSync(hermesFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(codexConfigFixture.codexHome, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
 test('system initialize exposes first-run blocker metadata and actionable payload hints', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-initialize-first-run-home-'));
   const stateDir = path.join(homeRoot, 'opl-state');

@@ -179,7 +179,23 @@ const STATE_INDEX_CATALOG = {
 type RuntimeManagerActionMode = 'dry_run' | 'apply';
 type RuntimeManagerActionInput = {
   mode: RuntimeManagerActionMode;
+  skipNativeHelpers?: boolean;
 };
+
+function isNativeHelperAction(actionId: string) {
+  return actionId === 'repair_native_helpers' || actionId === 'refresh_native_indexes';
+}
+
+function filterActionableRuntimeManagerActions(
+  actions: ReturnType<typeof buildRuntimeManager>['runtime_manager']['reconcile']['recommended_actions'],
+  input: RuntimeManagerActionInput,
+) {
+  if (!input.skipNativeHelpers) {
+    return actions;
+  }
+
+  return actions.filter((action) => !isNativeHelperAction(action.action_id));
+}
 
 export function buildRuntimeManager(input: { persistNativeIndexes?: boolean } = {}) {
   const hermes = inspectHermesRuntime();
@@ -291,11 +307,14 @@ export function buildRuntimeManager(input: { persistNativeIndexes?: boolean } = 
 export function runRuntimeManagerAction(input: RuntimeManagerActionInput) {
   const before = buildRuntimeManager({ persistNativeIndexes: false });
   const recommendedActions = before.runtime_manager.reconcile.recommended_actions;
-  const plannedActions = recommendedActions.map((action) => ({
+  const actionableActions = filterActionableRuntimeManagerActions(recommendedActions, input);
+  const plannedActions = actionableActions.map((action) => ({
     ...action,
     execution_status: 'not_executed',
     dry_run_note:
-      'Dry run did not run native helper repair, did not write refreshed native indexes, and did not reinstall the Hermes gateway service.',
+      input.skipNativeHelpers
+        ? 'Dry run did not run native helper repair, did not write refreshed native indexes, and did not reinstall the Hermes gateway service. Native-helper recommendations were omitted by request.'
+        : 'Dry run did not run native helper repair, did not write refreshed native indexes, and did not reinstall the Hermes gateway service.',
   }));
 
   if (input.mode === 'dry_run') {
@@ -325,7 +344,7 @@ export function runRuntimeManagerAction(input: RuntimeManagerActionInput) {
   const executedActions = [];
   let after: ReturnType<typeof buildRuntimeManager> | null = null;
 
-  for (const action of recommendedActions) {
+  for (const action of actionableActions) {
     if (action.action_id === 'repair_hermes_gateway') {
       executedActions.push(runHermesGatewayAction());
       continue;
@@ -371,9 +390,13 @@ export function runRuntimeManagerAction(input: RuntimeManagerActionInput) {
   const afterSummary = summarizeRuntimeManagerForAction(after);
   const hasFailure = executedActions.some((action) => action.status === 'failed');
   const hasSkipped = executedActions.some((action) => action.status === 'skipped_unavailable');
+  const remainingActionableRecommendations = filterActionableRuntimeManagerActions(
+    afterSummary.reconcile.recommended_actions,
+    input,
+  );
   const status = hasFailure
     ? 'failed'
-    : hasSkipped || afterSummary.reconcile.recommended_actions.length > 0
+    : hasSkipped || remainingActionableRecommendations.length > 0
       ? 'completed_with_attention'
       : 'completed';
 

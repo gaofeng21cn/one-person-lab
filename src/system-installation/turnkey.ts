@@ -6,6 +6,7 @@ import { buildOplGuiArtifactName, buildOplReleaseTag, getOplReleaseRepo, getOplR
 import { buildOplGuiShellSurface, syncOplCompanionSkills } from '../install-companions.ts';
 import { bootstrapLocalCodexDefaults } from '../local-codex-defaults.ts';
 import { runNativeHelperRepairAction } from '../native-helper-runtime.ts';
+import { runRuntimeManagerAction } from '../runtime-manager.ts';
 import type { GatewayContracts } from '../types.ts';
 
 import { runOplEngineAction } from './engine-actions.ts';
@@ -21,7 +22,7 @@ import { resolveProjectRoot, runCommand } from './shared.ts';
 import type { OplModuleId, OplTurnkeyInstallInput } from './shared.ts';
 
 const DEFAULT_MODULES: OplModuleId[] = ['medautoscience', 'meddeepscientist', 'medautogrant', 'redcube'];
-const DEFAULT_ENGINES = ['codex'] as const;
+const DEFAULT_ENGINES = ['codex', 'hermes'] as const;
 
 function normalizeModuleId(raw: string): OplModuleId {
   const normalized = raw.trim().toLowerCase();
@@ -270,7 +271,10 @@ export async function runOplTurnkeyInstall(
       ? []
       : await Promise.all(DEFAULT_ENGINES.map(async (engineId) => {
         const engine = environment.core_engines[engineId];
-        if (engine.health_status === 'ready') {
+        const shouldReuseExisting =
+          engine.health_status === 'ready'
+          || (engineId === 'hermes' && engine.installed);
+        if (shouldReuseExisting) {
           return {
             version: 'g2',
             engine_action: {
@@ -301,6 +305,25 @@ export async function runOplTurnkeyInstall(
     const serviceAction: null = null;
     const guiOpenAction = input.skipGuiOpen ? null : installOrOpenOplGui();
     const nativeHelperAction = runNativeHelperRepairAction({ skip: input.skipNativeHelperRepair });
+    firstRunLogEvents.push(
+      appendOplFirstRunLogEvent('runtime_manager_repair_started', {
+        status: 'started',
+        skip_native_helper_repair: Boolean(input.skipNativeHelperRepair),
+      }),
+    );
+    const runtimeManagerAction = runRuntimeManagerAction({
+      mode: 'apply',
+      skipNativeHelpers: Boolean(input.skipNativeHelperRepair),
+    });
+    firstRunLogEvents.push(
+      appendOplFirstRunLogEvent('runtime_manager_repair_completed', {
+        status: runtimeManagerAction.runtime_manager_action.status,
+        executed_actions: runtimeManagerAction.runtime_manager_action.executed_actions.map((action) => ({
+          action_id: action.action_id,
+          status: action.status,
+        })),
+      }),
+    );
     const companionSkillSync = syncOplCompanionSkills(undefined, { mode: 'managed', superpowersProfile: 'keep' });
     const initialize = await buildOplInitialize(contracts);
     firstRunLogEvents.push(
@@ -327,6 +350,7 @@ export async function runOplTurnkeyInstall(
         engine_actions: engineActions.map((entry) => entry.engine_action),
         module_actions: moduleActions.map((entry) => entry.module_action),
         service_action: serviceAction,
+        runtime_manager_action: runtimeManagerAction.runtime_manager_action,
         gui_open_action: guiOpenAction,
         gui_shell: buildOplGuiShellSurface(resolveProjectRoot()),
         native_helper_action: nativeHelperAction,
