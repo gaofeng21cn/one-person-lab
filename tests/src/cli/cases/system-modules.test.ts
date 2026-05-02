@@ -240,7 +240,8 @@ process.stdout.write(JSON.stringify({ repo: 'redcube-ai', sync: 'ok' }) + '\\n')
     path.join(rcaRoot, 'scripts', 'opl-module-healthcheck.sh'),
     `#!/usr/bin/env bash
 set -euo pipefail
-printf 'health\\n' >> ${JSON.stringify(turnkeyLogPath)}
+printf 'health-should-not-run\\n' >> ${JSON.stringify(turnkeyLogPath)}
+git ls-files >/dev/null
 `,
     { mode: 0o755 },
   );
@@ -284,7 +285,8 @@ printf 'health\\n' >> ${JSON.stringify(turnkeyLogPath)}
     assert.equal(install.module_action.turnkey.skill_sync.status, 'completed');
     assert.equal(install.module_action.turnkey.skill_sync.domain_id, 'redcube');
     assert.equal(install.module_action.turnkey.health_check.status, 'completed');
-    assert.deepEqual(fs.readFileSync(turnkeyLogPath, 'utf8').trim().split('\n'), ['skill-sync', 'health']);
+    assert.equal(install.module_action.turnkey.health_check.result.packaged_runtime, true);
+    assert.deepEqual(fs.readFileSync(turnkeyLogPath, 'utf8').trim().split('\n'), ['skill-sync']);
     assert.equal(fs.existsSync(path.join(homeRoot, '.codex', 'skills', 'rca', 'SKILL.md')), true);
     assert.equal(fs.existsSync(path.join(managedRcaRoot, 'opl-runtime-module.json')), true);
     assert.equal(fs.existsSync(path.join(managedRcaRoot, 'plugins', 'rca', 'skills', 'rca', 'SKILL.md')), true);

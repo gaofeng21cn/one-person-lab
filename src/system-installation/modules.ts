@@ -717,13 +717,20 @@ function runModuleHealthCheck(spec: DomainModuleRuntimeSpec, checkoutPath: strin
 }
 
 function runPackagedModuleHealthCheck(spec: DomainModuleRuntimeSpec, checkoutPath: string) {
-  return runModuleStep(
-    spec,
-    'health_check',
-    resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-healthcheck.sh')),
-    checkoutPath,
-    'Packaged Full runtime marker is present; no repo-owned OPL health check is declared.',
-  );
+  const packagedGit = readPackagedModuleGitSnapshot(checkoutPath, spec);
+  return {
+    status: 'completed',
+    summary: 'Packaged Full runtime marker is present and matches this module.',
+    command_preview: null,
+    stdout: '',
+    stderr: '',
+    result: {
+      packaged_runtime: true,
+      module_id: spec.module_id,
+      repo_name: spec.repo_name,
+      source_git: packagedGit,
+    },
+  } satisfies ModuleActionStepResult;
 }
 
 function runManagedModuleWorkflow(spec: DomainModuleRuntimeSpec, checkoutPath: string) {
