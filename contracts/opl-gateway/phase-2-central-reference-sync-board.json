@@ -1,22 +1,22 @@
 {
   "board_id": "opl_phase_2_central_reference_sync_board",
-  "date_anchor": "2026-04-13",
-  "status": "prefrozen_follow_on_board",
+  "date_anchor": "2026-05-02",
+  "status": "historical_reference_sync_record",
   "parent_package_id": "opl_minimal_admitted_domain_federation_activation_package",
   "board_goal": "freeze a multi-slice central reference-sync owner line so Codex can keep OPL aligned with already absorbed domain truth without promoting OPL into a runtime owner",
   "entry_conditions": [
     "an admitted-domain repository lands a new absorbed repo-tracked delta",
     "central OPL reference surfaces drift from already absorbed admitted-domain truth",
-    "top-level gateway wording, acceptance surfaces, or legacy OMX prompt templates drift from the current admitted-domain evidence boundary"
+    "top-level gateway wording, acceptance surfaces, or historical migration references drift from the current admitted-domain evidence boundary"
   ],
   "ordered_tranches": [
     {
       "tranche_id": "phase_2_admitted_domain_delta_intake_refresh",
       "kind": "activation_package",
-      "goal": "refresh the central execution board, status matrix, taskboard, and prompt library against the latest absorbed admitted-domain deltas before wider wording sync",
+      "goal": "refresh the central execution board, status matrix, and taskboard against the latest absorbed admitted-domain deltas before wider wording sync",
       "current_known_delta_families": [
         "RedCube AI latest absorbed delta pack: upstream runtime-owner cutover plus repo-verified `product frontdoor / federated product entry / session continuity / family-orchestration companion / product-entry readiness`, anchored at `c124c5d`",
-        "MedAutoScience latest absorbed repo-side hardening delta pack: verification surfaces by test layer (`9b5cea8`), runtime/workspace repair priorities (`7ee19a8`), and workflow-entry retirement off OMX (`6c64264`)"
+        "MedAutoScience latest absorbed repo-side hardening delta pack: verification surfaces by test layer (`9b5cea8`), runtime/workspace repair priorities (`7ee19a8`), and workflow-entry migration back to repo-tracked truth (`6c64264`)"
       ]
     },
     {
@@ -25,9 +25,9 @@
       "goal": "sync the minimum necessary OPL gateway wording, contract hub wording, and acceptance references to the refreshed admitted-domain truth without widening authority"
     },
     {
-      "tranche_id": "phase_2_omx_prompt_and_worktree_handbook_sync",
+      "tranche_id": "phase_2_historical_reference_cleanup",
       "kind": "same_mainline_hardening",
-      "goal": "keep legacy OMX templates, worktree rules, and longrun-operating references aligned with the same central-sync truth as historical migration context"
+      "goal": "keep retired historical migration references clearly non-executable and aligned with current Codex-only entrypoints"
     },
     {
       "tranche_id": "phase_2_reference_regression_refresh",

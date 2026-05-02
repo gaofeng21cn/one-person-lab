@@ -1,8 +1,8 @@
 # OPL Phase 2 Admitted-Domain Delta Intake Refresh
 
-> 历史说明（2026-04-11 OMX offboarding）：本文件保留为参考级 tranche 记录；当前这轮同步已更新到 `2026-04-13` 的 admitted-domain truth。
+> 历史说明：本文件保留为参考级 tranche 记录。OMX 已退出当前 OPL 开发环境；本文件不得再作为提示词、长跑手册或 worktree 入口使用。
 
-状态锚点：`2026-04-13`
+状态锚点：`2026-05-02`
 
 ## 这是什么
 
@@ -12,7 +12,7 @@
 它只负责一件事：
 
 - 把最新 absorbed admitted-domain delta 先同步进中央 reference surfaces，
-- 让后续 wording sync、OMX handbook sync 与 regression refresh 有同一个最新起点。
+- 让后续 wording sync、历史迁移参考清理与 regression refresh 有同一个最新起点。
 
 ## 当前要 intake 的 absorbed delta
 
@@ -30,7 +30,7 @@
 - 当前 repo-side 仍停在 `EXTERNAL_RUNTIME_DEPENDENCY_BLOCKED_AFTER_ABSORB`
 - 中央 sync 最小要求：
   - 不再把 `5366d18` 单独写成 repo-side hardening 的最新 absorbed edge
-  - 要把 `9b5cea8` 的 verification surface 分层、`7ee19a8` 的 runtime/workspace repair priorities，以及 `6c64264` 的 repo entry off OMX 迁移，一并写回中央参考面
+  - 要把 `9b5cea8` 的 verification surface 分层、`7ee19a8` 的 runtime/workspace repair priorities，以及 `6c64264` 的 workflow entry migration back to repo-tracked truth，一并写回中央参考面
   - 同时继续保持 external runtime / workspace gate 未清除的停车结论
 
 ## 当前只允许修改的中央文件
@@ -38,7 +38,6 @@
 - `docs/references/contract-convergence-v1-execution-board.md`
 - `docs/references/ecosystem-status-matrix.md`
 - `docs/references/runtime-alignment-taskboard.md`
-- `docs/references/omx-longrun-prompt-playbook.md`
 - `docs/references/opl-phase2-ecosystem-sync-owner-line.md`
 
 ## 不允许做的事
@@ -50,6 +49,6 @@
 
 ## 成功标准
 
-- 中央执行板、状态矩阵、任务板、提示词模板都能准确指向 `RedCube AI` 与 `MedAutoScience` 的当前 absorbed truth
+- 中央执行板、状态矩阵、任务板都能准确指向 `RedCube AI` 与 `MedAutoScience` 的当前 absorbed truth
 - `Grant Foundry -> Med Auto Grant` 继续保持 signal-only / non-admitted wording
 - closeout 后可以继续顺着 board 进入下一条 wording sync tranche；如果没有后续漂移，也可以直接 honest stop

@@ -1,17 +1,18 @@
 # Historical OPL Phase 2 生态同步 Owner Line Brief
 
 > 历史 owner-line 简报，冻结于 `2026-04-13`。它保留当时的跨仓同步判断，供审计与回溯使用。当前有效真相以 `docs/project.md`、`docs/status.md`、`docs/references/ecosystem-status-matrix.md` 和 `contracts/opl-gateway/*.json` 为准。
+> 2026-05-02 退役更新：OMX 已退出当前 OPL 开发环境；本文件不得作为 OMX continuation、prompt 模板或 worktree 长跑入口使用。
 
-状态锚点：`2026-04-13`
+状态锚点：`2026-05-02`
 
 ## 文档目的
 
-这份文档冻结 `one-person-lab` 当前最适合交给 `OMX` 新开的 owner line。
+这份文档记录 `one-person-lab` 当时曾冻结过的跨仓同步 owner line。
 
 它解决的是：
 
 - 在 `Phase 2 / Minimal admitted-domain federation activation package` 已吸收到 `main` 之后，`OPL` 还能诚实推进什么；
-- 哪些动作适合由 `OMX` 在独立 owner `worktree` 中长跑执行；
+- 当时哪些动作曾被设想为长线执行；
 - 什么时候应该继续同步，什么时候应该诚实停车。
 
 它不是：
@@ -29,7 +30,7 @@
 
 ## 当时结论
 
-`OPL` 当前最适合由 `OMX` 承接的新线，不是继续虚构更大的平台故事，而是：
+`OPL` 当时最适合承接的新线，不是继续虚构更大的平台故事，而是：
 
 - 作为四仓中央 sync owner，
 - 在已有 admitted-domain 证据边界内，
@@ -42,7 +43,7 @@
 - `RedCube AI` 当前 truthful next gap 已不再是“有没有默认执行器实现”，而是 mature end-user shell 与 managed web productization 仍未落地；中央 sync 需要把这个 gap 写回顶层参考面，而不是继续停留在旧 continuation-board 语义；
 - `MedAutoScience` 当前 latest absorbed repo-side delta pack 已推进到 `9b5cea8`、`7ee19a8` 与 `6c64264`，不能再只停留在 `5366d18`；
 - `MedAutoScience` 已冻结的 `manual stabilization checklist`、verification-surface layering 与 runtime/workspace repair priorities 仍属于中央 sync 时必须保留的 repo-side truth；
-- `Med Auto Grant` 仍允许作为中央状态矩阵里的 signal-only / non-admitted status reference，但不参与 admitted-domain activation；若中央说明引用其本地 runtime baseline，应同步到 post-`R5.A` local runtime hardening 与 `98df81f` 的 control-plane state off OMX，而不是 admission 事实。
+- `Med Auto Grant` 仍允许作为中央状态矩阵里的 signal-only / non-admitted status reference，但不参与 admitted-domain activation；若中央说明引用其本地 runtime baseline，应同步到 post-`R5.A` local runtime hardening 与 `98df81f` 的 repo-tracked control-plane migration，而不是 admission 事实。
 
 换句话说，`OPL` 现在适合开的不是“更大平台实现线”，而是：
 
@@ -50,18 +51,17 @@
 - 而且这条 owner line 不再只是一句 owner note，而是有一块已预冻结的 tranche board：
   1. `phase_2_admitted_domain_delta_intake_refresh`
   2. `phase_2_gateway_surface_wording_sync`
-  3. `phase_2_omx_prompt_and_worktree_handbook_sync`
+  3. `phase_2_historical_reference_cleanup`
   4. `phase_2_reference_regression_refresh`
 
 ## 当时什么时候值得开这条线
 
-只有满足下面任一条件时，这条线才值得由 `OMX` 打开：
+只有满足下面任一条件时，这条线才值得打开：
 
 1. 已 admitted 的业务仓出现新的 absorbed repo-tracked truth，导致：
    - `docs/references/ecosystem-status-matrix.md`
    - `docs/references/contract-convergence-v1-execution-board.md`
    - `docs/references/runtime-alignment-taskboard.md`
-   - `docs/references/omx-longrun-prompt-playbook.md`
    需要同步更新；
 2. 当前顶层 `README*`、`docs/roadmap*`、`contracts/opl-gateway/README*`、acceptance/reference surfaces 与 admitted-domain 最新真相出现漂移；
 3. 当前 `OPL` 顶层关于 formal entry、no-bypass、candidate-domain blocked truth、federation wording 的 repo-tracked surfaces 之间出现不一致。
@@ -74,7 +74,7 @@
 
 1. 保持 `OPL` 作为顶层 `Gateway / Federation / control language / public system surface` 的诚实表述；
 2. 把 admitted-domain 最新已吸收证据同步回中央参考面；
-3. 把四仓统一 program 的阶段、完成标准、下一棒与 OMX 提示词模板保持最新；
+3. 把四仓统一 program 的阶段、完成标准与下一棒保持最新；
 4. 每个 same-mainline slice 先更新 machine-readable / repo-tracked truth，再更新 README / docs / tests；
 5. 继续守住：
    - `CLI-first / read-only` formal entry
@@ -86,14 +86,13 @@
 
 - `phase_2_admitted_domain_delta_intake_refresh`
 
-也就是先把 latest absorbed admitted-domain delta 收进中央执行板、状态矩阵、任务板与 OMX 提示词模板，再决定是否继续下一条 wording / handbook / regression sync tranche。
+也就是先把 latest absorbed admitted-domain delta 收进中央执行板、状态矩阵与任务板，再决定是否继续下一条 wording / historical-reference / regression sync tranche。
 
 ## In Scope
 
 - `docs/references/ecosystem-status-matrix.md`
 - `docs/references/contract-convergence-v1-execution-board.md`
 - `docs/references/runtime-alignment-taskboard.md`
-- `docs/references/omx-longrun-prompt-playbook.md`
 - `docs/references/opl-phase-2-central-reference-sync-board.md`
 - `docs/references/opl-phase-2-admitted-domain-delta-intake-refresh.md`
 - admitted-domain 最新真相落地后，必要的：
