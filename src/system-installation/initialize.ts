@@ -63,8 +63,10 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
   const recommendedSkills = buildOplRecommendedSkills();
   const guiShell = buildOplGuiShellSurface(resolveProjectRoot());
   const codex = environment.core_engines.codex;
+  const hermes = environment.core_engines.hermes;
   const codexCliReady = codex.health_status === 'ready';
   const codexConfigReady = codex.config_status === 'detected' && codex.api_key_present === true;
+  const hermesReady = hermes.health_status === 'ready' && hermes.gateway_loaded === true;
 
   const setWorkspaceRootAction = buildInitializeActionDescriptor({
     action_id: 'set_workspace_root',
@@ -106,6 +108,29 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
     description: 'Inspect Codex, Hermes, and managed paths before continuing.',
     section_id: 'environment',
     endpoint: endpoints.system_environment,
+  });
+  const installHermesAction = buildInitializeActionDescriptor({
+    action_id: 'install_or_configure_hermes',
+    label: 'Install Hermes-Agent',
+    description: 'Install Hermes-Agent so OPL can provision the long-running gateway.',
+    section_id: 'environment',
+    endpoint: endpoints.engine_action,
+    method: 'POST',
+    payload_template: {
+      engine_id: 'hermes',
+      action: 'install',
+    },
+  });
+  const repairHermesGatewayAction = buildInitializeActionDescriptor({
+    action_id: 'repair_hermes_gateway',
+    label: 'Repair Hermes gateway',
+    description: 'Install or reload the Hermes gateway service and verify that it is loaded.',
+    section_id: 'environment',
+    endpoint: endpoints.system_action,
+    method: 'POST',
+    payload_template: {
+      action: 'repair',
+    },
   });
   const repairNativeHelpersAction = buildInitializeActionDescriptor({
     action_id: 'repair_native_helpers',
@@ -188,16 +213,22 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
     {
       item_id: 'hermes',
       label: 'Hermes-Agent',
-      status: environment.core_engines.hermes.health_status,
-      required: false,
-      blocking: false,
+      status: hermes.health_status,
+      required: true,
+      blocking: !hermesReady,
       section_id: 'environment',
-      detail_summary: environment.core_engines.hermes.installed
-        ? `Installed at ${environment.core_engines.hermes.binary_path ?? 'unknown path'}`
-        : 'Optional backup engine and long-running gateway.',
+      detail_summary: hermesReady
+        ? `Gateway loaded from ${hermes.binary_path ?? 'unknown path'}`
+        : hermes.installed
+          ? `Installed at ${hermes.binary_path ?? 'unknown path'}; gateway service must be installed and loaded.`
+          : 'Install Hermes-Agent and load its gateway service for long-running OPL automation.',
       endpoint: endpoints.system_environment,
-      action_endpoint: endpoints.engine_action,
-      action: openEnvironmentAction,
+      action_endpoint: hermes.installed ? endpoints.system_action : endpoints.engine_action,
+      action: hermesReady
+        ? openEnvironmentAction
+        : hermes.installed
+          ? repairHermesGatewayAction
+          : installHermesAction,
     },
     {
       item_id: 'native_helpers',
@@ -262,6 +293,7 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
   const overallState =
     codexCliReady
     && codexConfigReady
+    && hermesReady
     && workspaceRoot.health_status === 'ready'
       && moduleSummary.installed_modules_count === moduleSummary.total_modules_count
       ? 'ready_to_finalize'
@@ -269,7 +301,7 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
   const setupPhase: OplInitializePhase =
     workspaceRoot.health_status !== 'ready'
       ? 'workspace_root'
-      : (!codexCliReady || !codexConfigReady)
+      : (!codexCliReady || !codexConfigReady || !hermesReady)
         ? 'environment'
         : moduleSummary.installed_modules_count < moduleSummary.total_modules_count
           ? 'modules'
@@ -278,7 +310,13 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
     setupPhase === 'workspace_root'
       ? setWorkspaceRootAction
       : setupPhase === 'environment'
-        ? (codexCliReady ? configureCodexAction : installCodexAction)
+        ? (!codexCliReady
+          ? installCodexAction
+          : !codexConfigReady
+            ? configureCodexAction
+            : hermes.installed
+              ? repairHermesGatewayAction
+              : installHermesAction)
         : setupPhase === 'modules'
           ? reviewModulesAction
           : reviewInitializeAction;
