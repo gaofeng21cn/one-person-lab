@@ -221,6 +221,7 @@ test('Full first-install release workflow builds without signing secrets and kee
   assert.match(workflow, /BUILD_CERTIFICATE_BASE64/);
   assert.match(workflow, /same unsigned packaging mode as the current standard GitHub release/);
   assert.match(workflow, /OPL_MAC_STRICT_SIGNING_CHECKS=false/);
+  assert.match(workflow, /ulimit -n 65536/);
   assert.match(workflow, /appleIdPassword/);
   assert.match(workflow, /codesign --verify --deep --strict/);
   assert.match(workflow, /spctl --assess --type execute/);
