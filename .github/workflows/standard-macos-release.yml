@@ -1,0 +1,143 @@
+name: OPL Standard macOS Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      opl_version:
+        description: OPL version to publish, for example 26.5.1
+        required: true
+        type: string
+      publish_to_release:
+        description: Upload standard macOS arm64 assets to the GitHub Release
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  standard-macos:
+    name: Build standard macOS arm64 package
+    runs-on: macos-14
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout OPL
+        uses: actions/checkout@v4
+        with:
+          path: one-person-lab
+
+      - name: Checkout OPL GUI shell
+        uses: actions/checkout@v4
+        with:
+          repository: gaofeng21cn/opl-aion-shell
+          ref: main
+          path: opl-aion-shell
+
+      - name: Resolve release version
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "OPL_RELEASE_VERSION=${{ inputs.opl_version }}" >> "$GITHUB_ENV"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: one-person-lab/package-lock.json
+
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache Electron artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ runner.temp }}/.cache/electron
+            ${{ runner.temp }}/.cache/electron-builder
+            ~/.cache/electron
+            ~/.cache/electron-builder
+          key: opl-standard-electron-arm64-${{ hashFiles('opl-aion-shell/package.json', 'opl-aion-shell/bun.lock') }}
+          restore-keys: |
+            opl-standard-electron-arm64-
+
+      - name: Install OPL dependencies
+        working-directory: one-person-lab
+        run: npm ci
+
+      - name: Install GUI dependencies
+        working-directory: opl-aion-shell
+        shell: bash
+        run: |
+          set -euo pipefail
+          bun install --frozen-lockfile
+          bun run postinstall || true
+          bunx electron-builder install-app-deps
+
+      - name: Build standard macOS arm64 assets
+        working-directory: opl-aion-shell
+        shell: bash
+        env:
+          OPL_RELEASE_VERSION: ${{ env.OPL_RELEASE_VERSION }}
+          APP_ID: ${{ secrets.APP_ID }}
+          appleId: ${{ secrets.APPLE_ID }}
+          appleIdPassword: ${{ secrets.APPLE_ID_PASSWORD }}
+          teamId: ${{ secrets.TEAM_ID }}
+          identity: ${{ secrets.IDENTITY }}
+          CSC_NAME: ${{ secrets.IDENTITY }}
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+          CI: true
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ELECTRON_CACHE: ${{ runner.temp }}/.cache/electron
+          ELECTRON_BUILDER_CACHE: ${{ runner.temp }}/.cache/electron-builder
+        run: |
+          set -euo pipefail
+          ulimit -n 65536 || true
+          npm run build-mac:arm64
+          rm -rf release
+          mkdir -p release
+          cp out/One-Person-Lab-${OPL_RELEASE_VERSION}-mac-arm64.* release/
+          cp out/latest*.yml release/
+          if grep -R "One-Person-Lab-Full" release/latest*.yml; then
+            echo "::error::standard updater metadata must not reference Full assets"
+            exit 1
+          fi
+
+      - name: Verify standard release upload plan
+        working-directory: one-person-lab
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npm run gui:release -- \
+            --no-build \
+            --dry-run \
+            --shell-root "$GITHUB_WORKSPACE/opl-aion-shell" \
+            --version "$OPL_RELEASE_VERSION" \
+            --repo "$GITHUB_REPOSITORY"
+
+      - name: Upload standard package workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: opl-standard-${{ env.OPL_RELEASE_VERSION }}-mac-arm64
+          path: opl-aion-shell/release
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish GitHub Release assets
+        if: ${{ inputs.publish_to_release }}
+        working-directory: one-person-lab
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npm run gui:release -- \
+            --no-build \
+            --shell-root "$GITHUB_WORKSPACE/opl-aion-shell" \
+            --version "$OPL_RELEASE_VERSION" \
+            --repo "$GITHUB_REPOSITORY"

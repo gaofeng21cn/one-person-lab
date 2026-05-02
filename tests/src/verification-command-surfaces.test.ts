@@ -222,13 +222,42 @@ test('Full first-install release workflow builds without signing secrets and kee
   assert.match(workflow, /same unsigned packaging mode as the current standard GitHub release/);
   assert.match(workflow, /OPL_MAC_STRICT_SIGNING_CHECKS=false/);
   assert.match(workflow, /ulimit -n 65536/);
+  assert.match(workflow, /force_rebuild_runtime_cache/);
+  assert.match(workflow, /actions\/cache\/restore@v4/);
+  assert.match(workflow, /actions\/cache\/save@v4/);
+  assert.match(workflow, /Reset Full runtime layer cache when forced/);
+  assert.match(workflow, /npm --silent run packages:full-release/);
+  assert.match(workflow, /--print-runtime-cache-keys/);
+  assert.match(workflow, /--runtime-cache-dir/);
+  assert.match(workflow, /--runtime-cache-mode readwrite/);
   assert.match(workflow, /appleIdPassword/);
   assert.match(workflow, /codesign --verify --deep --strict/);
   assert.match(workflow, /spctl --assess --type execute/);
   assert.match(workflow, /hdiutil verify/);
   assert.match(workflow, /shasum -a 256 -c SHA256SUMS\.txt/);
-  assert.match(workflow, /grep -R "One-Person-Lab-Full" release\/latest\*\.yml/);
+  assert.match(workflow, /gh release view "v\$\{OPL_RELEASE_VERSION\}"/);
+  assert.match(workflow, /gh release download "v\$\{OPL_RELEASE_VERSION\}"/);
+  assert.match(workflow, /--full-package-only/);
   assert.match(workflow, /--include-full-package/);
+  assert.doesNotMatch(workflow, /Build standard macOS arm64 assets/);
+  assert.doesNotMatch(workflow, /cp out\/One-Person-Lab-\$\{OPL_RELEASE_VERSION\}-mac-arm64\.\*/);
+});
+
+test('standard macOS release workflow publishes only updater-owned standard assets', () => {
+  const workflow = read('.github/workflows/standard-macos-release.yml');
+
+  assert.match(workflow, /OPL Standard macOS Release/);
+  assert.match(workflow, /Build standard macOS arm64 assets/);
+  assert.match(workflow, /npm run build-mac:arm64/);
+  assert.match(workflow, /grep -R "One-Person-Lab-Full" release\/latest\*\.yml/);
+  assert.match(workflow, /npm run gui:release/);
+  assert.doesNotMatch(workflow, /Checkout Hermes-Agent/);
+  assert.doesNotMatch(workflow, /Checkout MAS/);
+  assert.doesNotMatch(workflow, /Checkout MDS/);
+  assert.doesNotMatch(workflow, /uv sync/);
+  assert.doesNotMatch(workflow, /packages:full-release/);
+  assert.doesNotMatch(workflow, /--include-full-package/);
+  assert.doesNotMatch(workflow, /--full-package-only/);
 });
 
 test('GUI release publisher defaults to current arm64 artifacts only', () => {
@@ -412,8 +441,74 @@ test('GUI release publisher uploads Full first-install assets only when explicit
   assert.ok(payload.standard_artifacts.some((artifact) => artifact.endsWith('latest-arm64-mac.yml')));
   assert.ok(payload.full_package_artifacts.some((artifact) => artifact.endsWith(`One-Person-Lab-Full-${version}-mac-arm64.dmg`)));
   assert.ok(payload.artifacts.some((artifact) => artifact.endsWith('README-Full-First-Install.txt')));
+  assert.equal(payload.full_package_artifacts.some((artifact) => artifact.endsWith('.tar.zst')), false);
   const generatedArm64Metadata = fs.readFileSync(path.join(outDir, 'latest-arm64-mac.yml'), 'utf8');
   assert.doesNotMatch(generatedArm64Metadata, /Full/);
+});
+
+test('GUI release publisher can upload only Full first-install assets for an existing standard release', () => {
+  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-gui-release-full-only-test-'));
+  const shellRoot = path.join(tmpRoot, 'opl-aion-shell');
+  const fullDir = path.join(tmpRoot, 'full');
+  const fakeBin = path.join(tmpRoot, 'bin');
+  const version = '26.5.2';
+
+  fs.mkdirSync(shellRoot, { recursive: true });
+  fs.mkdirSync(fullDir, { recursive: true });
+  fs.mkdirSync(fakeBin, { recursive: true });
+  fs.writeFileSync(
+    path.join(fakeBin, 'gh'),
+    '#!/usr/bin/env bash\nif [[ "$1 $2" == "release view" ]]; then exit 0; fi\nexit 1\n',
+    { mode: 0o755 },
+  );
+
+  fs.writeFileSync(path.join(fullDir, `One-Person-Lab-Full-${version}-mac-arm64.dmg`), 'full dmg');
+  fs.writeFileSync(path.join(fullDir, 'full-package-manifest.json'), '{"distribution":{"updater_metadata_allowed":false}}\n');
+  fs.writeFileSync(path.join(fullDir, 'SHA256SUMS.txt'), 'abc  file\n');
+  fs.writeFileSync(path.join(fullDir, 'README-Full-First-Install.txt'), 'readme\n');
+
+  const result = spawnSync(
+    process.execPath,
+    [
+      path.join(repoRoot, 'scripts/publish-gui-release.mjs'),
+      '--dry-run',
+      '--shell-root',
+      shellRoot,
+      '--version',
+      version,
+      '--repo',
+      'example/one-person-lab',
+      '--full-package-only',
+      '--full-package-dir',
+      fullDir,
+    ],
+    {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        PATH: `${fakeBin}${path.delimiter}${process.env.PATH ?? ''}`,
+      },
+    },
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  const payload = JSON.parse(result.stdout) as {
+    build: boolean;
+    full_package_only: boolean;
+    artifacts: string[];
+    standard_artifacts: string[];
+    full_package_artifacts: string[];
+    create_release: boolean;
+    release_exists: boolean;
+  };
+  assert.equal(payload.build, false);
+  assert.equal(payload.full_package_only, true);
+  assert.equal(payload.release_exists, true);
+  assert.equal(payload.create_release, false);
+  assert.deepEqual(payload.standard_artifacts, []);
+  assert.ok(payload.full_package_artifacts.some((artifact) => artifact.endsWith(`One-Person-Lab-Full-${version}-mac-arm64.dmg`)));
+  assert.equal(payload.artifacts.every((artifact) => artifact.includes('Full') || artifact.endsWith('full-package-manifest.json') || artifact.endsWith('SHA256SUMS.txt') || artifact.endsWith('README-Full-First-Install.txt')), true);
 });
 
 test('GUI release publisher rejects updater metadata that points at Full assets', () => {

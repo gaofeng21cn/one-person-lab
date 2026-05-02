@@ -8,7 +8,12 @@ on:
         required: true
         type: string
       publish_to_release:
-        description: Upload standard macOS arm64 assets plus Full first-install assets to the GitHub Release
+        description: Upload Full first-install assets to an existing GitHub Release
+        required: false
+        default: false
+        type: boolean
+      force_rebuild_runtime_cache:
+        description: Ignore restored Full runtime layer cache and rebuild all layers
         required: false
         default: false
         type: boolean
@@ -69,6 +74,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: npm
+          cache-dependency-path: one-person-lab/package-lock.json
 
       - name: Setup bun
         uses: oven-sh/setup-bun@v2
@@ -84,11 +91,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          brew install zstd || true
           python -m pip install --upgrade pip uv
           uv python install 3.12
           npm install -g @openai/codex
           codex --version
           uv --version
+          zstd --version
 
       - name: Install OPL dependencies
         working-directory: one-person-lab
@@ -114,6 +123,48 @@ jobs:
           uv sync --project _external/hermes-agent --extra cron --extra cli --extra pty --extra mcp --extra honcho --extra acp --no-dev
           uv sync --project med-autoscience --no-dev
           uv sync --project med-deepscientist --no-dev
+
+      - name: Resolve Full runtime cache keys
+        id: runtime-cache-keys
+        working-directory: one-person-lab
+        shell: bash
+        run: |
+          set -euo pipefail
+          cache_dir="$GITHUB_WORKSPACE/.opl-full-runtime-cache"
+          export OPL_FULL_CODEX_ROOT="$(npm root -g)/@openai/codex"
+          export OPL_FULL_UV_BIN="$(command -v uv)"
+          export OPL_FULL_HERMES_ROOT="$GITHUB_WORKSPACE/_external/hermes-agent"
+          export OPL_FULL_MAS_ROOT="$GITHUB_WORKSPACE/med-autoscience"
+          export OPL_FULL_MDS_ROOT="$GITHUB_WORKSPACE/med-deepscientist"
+          npm --silent run packages:full-release -- \
+            --version "$OPL_RELEASE_VERSION" \
+            --runtime-cache-dir "$cache_dir" \
+            --runtime-cache-mode readwrite \
+            --print-runtime-cache-keys > "$RUNNER_TEMP/opl-full-runtime-cache-keys.json"
+          cat "$RUNNER_TEMP/opl-full-runtime-cache-keys.json"
+          digest="$(shasum -a 256 "$RUNNER_TEMP/opl-full-runtime-cache-keys.json" | awk '{print $1}')"
+          cache_key="opl-full-runtime-layers-${RUNNER_OS}-${RUNNER_ARCH}-${digest}"
+          echo "cache_dir=$cache_dir" >> "$GITHUB_OUTPUT"
+          echo "cache_digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "cache_key=$cache_key" >> "$GITHUB_OUTPUT"
+
+      - name: Restore Full runtime layer cache
+        if: ${{ !inputs.force_rebuild_runtime_cache }}
+        id: restore-runtime-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ steps.runtime-cache-keys.outputs.cache_dir }}
+          key: ${{ steps.runtime-cache-keys.outputs.cache_key }}
+          restore-keys: |
+            opl-full-runtime-layers-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Reset Full runtime layer cache when forced
+        if: ${{ inputs.force_rebuild_runtime_cache }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "${{ steps.runtime-cache-keys.outputs.cache_dir }}"
+          mkdir -p "${{ steps.runtime-cache-keys.outputs.cache_dir }}"
 
       - name: Prepare optional macOS code signing
         shell: bash
@@ -150,34 +201,6 @@ jobs:
             echo "::notice::Developer ID certificate is available, but notarization identity secrets are incomplete; strict Gatekeeper verification will be skipped."
           fi
 
-      - name: Build standard macOS arm64 assets
-        working-directory: opl-aion-shell
-        shell: bash
-        env:
-          OPL_RELEASE_VERSION: ${{ env.OPL_RELEASE_VERSION }}
-          APP_ID: ${{ secrets.APP_ID }}
-          appleId: ${{ secrets.APPLE_ID }}
-          appleIdPassword: ${{ secrets.APPLE_ID_PASSWORD }}
-          teamId: ${{ secrets.TEAM_ID }}
-          identity: ${{ secrets.IDENTITY }}
-          CSC_NAME: ${{ secrets.IDENTITY }}
-          CSC_IDENTITY_AUTO_DISCOVERY: false
-          OPL_FULL_PACKAGE_NOTARIZED: ${{ env.OPL_FULL_PACKAGE_NOTARIZED }}
-          CI: true
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          ulimit -n 65536 || true
-          npm run build-mac:arm64
-          rm -rf release
-          mkdir -p release
-          cp out/One-Person-Lab-${OPL_RELEASE_VERSION}-mac-arm64.* release/
-          cp out/latest*.yml release/
-          if grep -R "One-Person-Lab-Full" release/latest*.yml; then
-            echo "::error::standard updater metadata must not reference Full assets"
-            exit 1
-          fi
-
       - name: Build Full first-install package
         working-directory: one-person-lab
         shell: bash
@@ -200,7 +223,10 @@ jobs:
           export OPL_FULL_HERMES_ROOT="$GITHUB_WORKSPACE/_external/hermes-agent"
           export OPL_FULL_MAS_ROOT="$GITHUB_WORKSPACE/med-autoscience"
           export OPL_FULL_MDS_ROOT="$GITHUB_WORKSPACE/med-deepscientist"
-          npm run packages:full-release -- --version "$OPL_RELEASE_VERSION"
+          npm run packages:full-release -- \
+            --version "$OPL_RELEASE_VERSION" \
+            --runtime-cache-dir "${{ steps.runtime-cache-keys.outputs.cache_dir }}" \
+            --runtime-cache-mode readwrite
 
       - name: Verify Full package checksums and optional signing
         shell: bash
@@ -219,6 +245,14 @@ jobs:
           hdiutil verify "$dmg_path"
           (cd "$GITHUB_WORKSPACE/one-person-lab/dist/opl-full-release" && shasum -a 256 -c SHA256SUMS.txt)
 
+      - name: Save Full runtime layer cache
+        if: ${{ inputs.force_rebuild_runtime_cache || steps.restore-runtime-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4
+        continue-on-error: true
+        with:
+          path: ${{ steps.runtime-cache-keys.outputs.cache_dir }}
+          key: ${{ steps.runtime-cache-keys.outputs.cache_key }}
+
       - name: Verify release upload plan
         working-directory: one-person-lab
         env:
@@ -230,7 +264,26 @@ jobs:
             --shell-root "$GITHUB_WORKSPACE/opl-aion-shell" \
             --version "$OPL_RELEASE_VERSION" \
             --repo "$GITHUB_REPOSITORY" \
+            --full-package-only \
             --include-full-package
+
+      - name: Verify existing standard updater metadata
+        if: ${{ inputs.publish_to_release }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmpdir="$(mktemp -d)"
+          gh release view "v${OPL_RELEASE_VERSION}" --repo "$GITHUB_REPOSITORY" --json tagName >/dev/null
+          gh release download "v${OPL_RELEASE_VERSION}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern 'latest*.yml' \
+            --dir "$tmpdir"
+          if grep -R "One-Person-Lab-Full" "$tmpdir"/latest*.yml; then
+            echo "::error::existing updater metadata must not reference Full assets"
+            exit 1
+          fi
 
       - name: Upload Full package workflow artifact
         uses: actions/upload-artifact@v4
@@ -251,6 +304,7 @@ jobs:
             --shell-root "$GITHUB_WORKSPACE/opl-aion-shell" \
             --version "$OPL_RELEASE_VERSION" \
             --repo "$GITHUB_REPOSITORY" \
+            --full-package-only \
             --include-full-package
 
       - name: Clean up keychain

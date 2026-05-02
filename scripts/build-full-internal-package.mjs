@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -9,9 +10,12 @@ import {
   FULL_RELEASE_OUTPUT_DIR,
   FULL_INTERNAL_OUTPUT_DIR,
   FULL_RUNTIME_RESOURCE_DIR,
+  FULL_RUNTIME_CACHE_LAYER_IDS,
   PACKAGED_MODULE_MARKER_FILE,
   buildFullPackageManifest,
   buildFullPackageArtifactNames,
+  buildFullRuntimeCacheArchiveName,
+  buildFullRuntimeCacheKey,
   buildInternalPackageReadme,
   buildPackagedModuleMarker,
   shouldExcludeRuntimePath,
@@ -36,6 +40,9 @@ function parseArgs(argv) {
     pythonRoot: process.env.OPL_FULL_PYTHON_ROOT || '',
     skipGuiBuild: false,
     splitRuntime: process.env.OPL_FULL_SPLIT_RUNTIME === '1',
+    runtimeCacheDir: process.env.OPL_FULL_RUNTIME_CACHE_DIR || '',
+    runtimeCacheMode: process.env.OPL_FULL_RUNTIME_CACHE_MODE || (process.env.CI === 'true' ? 'readwrite' : 'off'),
+    printRuntimeCacheKeys: false,
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -46,6 +53,10 @@ function parseArgs(argv) {
     }
     if (token === '--split-runtime') {
       parsed.splitRuntime = true;
+      continue;
+    }
+    if (token === '--print-runtime-cache-keys') {
+      parsed.printRuntimeCacheKeys = true;
       continue;
     }
 
@@ -64,7 +75,13 @@ function parseArgs(argv) {
     else if (token === '--node-bin') parsed.nodeBin = path.resolve(value);
     else if (token === '--uv-bin') parsed.uvBin = path.resolve(value);
     else if (token === '--python-root') parsed.pythonRoot = path.resolve(value);
+    else if (token === '--runtime-cache-dir') parsed.runtimeCacheDir = path.resolve(value);
+    else if (token === '--runtime-cache-mode') parsed.runtimeCacheMode = value;
     else throw new Error(`Unknown argument: ${token}`);
+  }
+
+  if (!['readwrite', 'readonly', 'off'].includes(parsed.runtimeCacheMode)) {
+    throw new Error(`Unsupported runtime cache mode: ${parsed.runtimeCacheMode}`);
   }
 
   return parsed;
@@ -112,6 +129,61 @@ function commandOutput(command, args) {
     return null;
   }
   return [result.stdout, result.stderr].filter(Boolean).join('\n').trim() || null;
+}
+
+function findExecutable(name) {
+  const result = spawnSync('which', [name], { encoding: 'utf8', stdio: 'pipe' });
+  return result.status === 0 ? result.stdout.trim() || null : null;
+}
+
+function fileSha256(filePath) {
+  if (!filePath || !fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+    return null;
+  }
+  return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+}
+
+function stringSha256(value) {
+  return crypto.createHash('sha256').update(value).digest('hex');
+}
+
+function hashFiles(relativePaths) {
+  const entries = {};
+  for (const relativePath of relativePaths) {
+    const filePath = path.join(repoRoot, relativePath);
+    entries[relativePath] = fs.existsSync(filePath) ? fileSha256(filePath) : null;
+  }
+  return entries;
+}
+
+function directoryFingerprint(root, runtimePrefix) {
+  if (!fs.existsSync(root)) {
+    return null;
+  }
+  const hash = crypto.createHash('sha256');
+  const stack = [['', root]];
+  while (stack.length > 0) {
+    const [relative, current] = stack.pop();
+    const runtimeRelative = relative
+      ? path.posix.join(runtimePrefix, relative.split(path.sep).join('/'))
+      : runtimePrefix;
+    if (relative && shouldExcludeRuntimePath(runtimeRelative)) {
+      continue;
+    }
+    const stat = fs.lstatSync(current);
+    hash.update(relative);
+    hash.update(stat.isDirectory() ? 'dir' : stat.isSymbolicLink() ? 'symlink' : 'file');
+    if (stat.isDirectory()) {
+      for (const entry of fs.readdirSync(current).sort().reverse()) {
+        stack.push([path.join(relative, entry), path.join(current, entry)]);
+      }
+    } else if (stat.isSymbolicLink()) {
+      hash.update(fs.readlinkSync(current));
+    } else if (stat.isFile()) {
+      hash.update(fs.readFileSync(current));
+    }
+  }
+  return hash.digest('hex');
 }
 
 function directorySizeBytes(root) {
@@ -256,6 +328,49 @@ function copySingleFile(sourcePath, targetPath) {
   fs.chmodSync(targetPath, fs.statSync(sourcePath).mode);
 }
 
+function copyPathContents(sourceRoot, targetRoot) {
+  fs.mkdirSync(targetRoot, { recursive: true });
+  if (!fs.existsSync(sourceRoot)) {
+    return;
+  }
+  for (const entry of fs.readdirSync(sourceRoot)) {
+    fs.cpSync(path.join(sourceRoot, entry), path.join(targetRoot, entry), {
+      recursive: true,
+      dereference: true,
+      preserveTimestamps: true,
+    });
+  }
+}
+
+function createTarZst(archivePath, cwd, entries = ['.']) {
+  requirePath(findExecutable('zstd'), 'zstd');
+  fs.mkdirSync(path.dirname(archivePath), { recursive: true });
+  fs.rmSync(archivePath, { force: true });
+  const tarPath = `${archivePath}.tar`;
+  fs.rmSync(tarPath, { force: true });
+  try {
+    run('tar', ['-cf', tarPath, '-C', cwd, ...entries]);
+    run('zstd', ['-q', '-T0', '-f', tarPath, '-o', archivePath]);
+  } finally {
+    fs.rmSync(tarPath, { force: true });
+  }
+}
+
+function archiveLayer(sourceRoot, archivePath) {
+  createTarZst(archivePath, sourceRoot, ['.']);
+}
+
+function extractLayer(archivePath, targetRoot) {
+  fs.mkdirSync(targetRoot, { recursive: true });
+  const tarPath = path.join(os.tmpdir(), `opl-full-layer-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}.tar`);
+  try {
+    run('zstd', ['-q', '-d', '-f', archivePath, '-o', tarPath]);
+    run('tar', ['-xf', tarPath, '-C', targetRoot]);
+  } finally {
+    fs.rmSync(tarPath, { force: true });
+  }
+}
+
 function writeRuntimeWrappers(runtimeRoot) {
   writeExecutable(path.join(runtimeRoot, 'bin', 'opl'), `#!/usr/bin/env bash
 set -euo pipefail
@@ -313,31 +428,162 @@ function copyRecommendedSkills(targetRoot) {
   }
 }
 
-function prepareRuntime(options) {
-  const stagingRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-full-runtime-'));
-  const runtimeRoot = path.join(stagingRoot, options.version);
-  fs.mkdirSync(path.join(runtimeRoot, 'bin'), { recursive: true });
-
+function resolveRuntimeSources(options) {
   const codexRoot = findCodexRoot(options.codexRoot);
   const codexBinaries = findCodexBinary(codexRoot);
   const nodeBin = findNodeBinary(options.nodeBin);
   const pythonRoot = findPythonRoot(options.pythonRoot);
   const uvBin = requirePath(options.uvBin, 'uv binary');
 
-  copyTreeFiltered(repoRoot, path.join(runtimeRoot, 'opl'), 'opl');
-  copyTreeFiltered(options.hermesRoot, path.join(runtimeRoot, 'hermes'), 'hermes');
-  copyTreeFiltered(options.masRoot, path.join(runtimeRoot, 'modules', 'mas'), 'modules/mas');
-  copyTreeFiltered(options.mdsRoot, path.join(runtimeRoot, 'modules', 'mds'), 'modules/mds');
-  copyRecommendedSkills(path.join(runtimeRoot, 'skills'));
+  return {
+    codexRoot,
+    codexBinaries,
+    nodeBin,
+    pythonRoot,
+    uvBin,
+  };
+}
 
-  copySingleFile(codexBinaries.codex, path.join(runtimeRoot, 'bin', 'codex'));
-  copySingleFile(codexBinaries.rg, path.join(runtimeRoot, 'bin', 'rg'));
-  copySingleFile(nodeBin, path.join(runtimeRoot, 'node', 'bin', 'node'));
-  copySingleFile(uvBin, path.join(runtimeRoot, 'uv', 'bin', 'uv'));
-  copyTreeFiltered(pythonRoot, path.join(runtimeRoot, 'python', path.basename(pythonRoot)), `python/${path.basename(pythonRoot)}`);
-  writeRuntimeWrappers(runtimeRoot);
+function packageJsonVersion(packagePath) {
+  if (!fs.existsSync(packagePath)) {
+    return null;
+  }
+  try {
+    return JSON.parse(fs.readFileSync(packagePath, 'utf8')).version ?? null;
+  } catch {
+    return null;
+  }
+}
 
-  const packagedAt = new Date().toISOString();
+function buildRuntimeCacheKeys(options, sources) {
+  const packagerInputs = hashFiles([
+    'scripts/build-full-internal-package.mjs',
+    'src/full-internal-package.ts',
+  ]);
+  const excludePolicyHash = stringSha256(shouldExcludeRuntimePath.toString());
+  const skillsRoot = path.join(os.homedir(), '.codex', 'skills');
+
+  return {
+    toolchain: buildFullRuntimeCacheKey({
+      layerId: 'toolchain',
+      parts: {
+        codex_package_version: packageJsonVersion(path.join(sources.codexRoot, 'package.json')),
+        codex_binary_sha256: fileSha256(sources.codexBinaries.codex),
+        rg_sha256: fileSha256(sources.codexBinaries.rg),
+        node_sha256: fileSha256(sources.nodeBin),
+        uv_sha256: fileSha256(sources.uvBin),
+        python_root_name: path.basename(sources.pythonRoot),
+        python_version: commandOutput(path.join(sources.pythonRoot, 'bin', 'python3'), ['--version']),
+        packager_inputs: packagerInputs,
+        exclude_policy_hash: excludePolicyHash,
+      },
+    }),
+    'domain-runtime': buildFullRuntimeCacheKey({
+      layerId: 'domain-runtime',
+      parts: {
+        hermes_commit: readGitHead(options.hermesRoot),
+        mas_commit: readGitHead(options.masRoot),
+        mds_commit: readGitHead(options.mdsRoot),
+        packager_inputs: packagerInputs,
+        exclude_policy_hash: excludePolicyHash,
+      },
+    }),
+    'opl-runtime': buildFullRuntimeCacheKey({
+      layerId: 'opl-runtime',
+      parts: {
+        opl_commit: readGitHead(repoRoot),
+        package_json_sha256: fileSha256(path.join(repoRoot, 'package.json')),
+        package_lock_sha256: fileSha256(path.join(repoRoot, 'package-lock.json')),
+        tsconfig_sha256: fileSha256(path.join(repoRoot, 'tsconfig.json')),
+        packager_inputs: packagerInputs,
+        exclude_policy_hash: excludePolicyHash,
+      },
+    }),
+    skills: buildFullRuntimeCacheKey({
+      layerId: 'skills',
+      parts: {
+        skills_root_exists: fs.existsSync(skillsRoot),
+        mas_skill_fingerprint: directoryFingerprint(path.join(skillsRoot, 'mas'), 'skills/mas'),
+        mag_skill_fingerprint: directoryFingerprint(path.join(skillsRoot, 'mag'), 'skills/mag'),
+        rca_skill_fingerprint: directoryFingerprint(path.join(skillsRoot, 'rca'), 'skills/rca'),
+        mas_skill_git: readGitHead(path.join(skillsRoot, 'mas')),
+        mag_skill_git: readGitHead(path.join(skillsRoot, 'mag')),
+        rca_skill_git: readGitHead(path.join(skillsRoot, 'rca')),
+        packager_inputs: packagerInputs,
+        exclude_policy_hash: excludePolicyHash,
+      },
+    }),
+  };
+}
+
+function cacheLayerArchivePath(options, layerId, key) {
+  return path.join(
+    options.runtimeCacheDir || path.join(os.tmpdir(), 'opl-full-runtime-cache'),
+    layerId,
+    buildFullRuntimeCacheArchiveName({ layerId, key }),
+  );
+}
+
+function layerCacheEnabled(options) {
+  return options.runtimeCacheMode !== 'off' && Boolean(options.runtimeCacheDir);
+}
+
+function runCachedLayer(options, layerId, key, targetRoot, builder) {
+  const archivePath = cacheLayerArchivePath(options, layerId, key);
+  if (layerCacheEnabled(options) && fs.existsSync(archivePath)) {
+    extractLayer(archivePath, targetRoot);
+    return {
+      layer_id: layerId,
+      key,
+      status: 'hit',
+      archive_path: archivePath,
+    };
+  }
+
+  const tempLayerRoot = fs.mkdtempSync(path.join(os.tmpdir(), `opl-full-${layerId}-`));
+  try {
+    builder(tempLayerRoot);
+    copyPathContents(tempLayerRoot, targetRoot);
+    if (layerCacheEnabled(options) && options.runtimeCacheMode === 'readwrite') {
+      archiveLayer(tempLayerRoot, archivePath);
+      return {
+        layer_id: layerId,
+        key,
+        status: 'miss_written',
+        archive_path: archivePath,
+      };
+    }
+    return {
+      layer_id: layerId,
+      key,
+      status: layerCacheEnabled(options) ? 'miss_readonly' : 'disabled',
+      archive_path: layerCacheEnabled(options) ? archivePath : null,
+    };
+  } finally {
+    fs.rmSync(tempLayerRoot, { recursive: true, force: true });
+  }
+}
+
+function buildToolchainLayer(layerRoot, sources) {
+  copySingleFile(sources.codexBinaries.codex, path.join(layerRoot, 'bin', 'codex'));
+  copySingleFile(sources.codexBinaries.rg, path.join(layerRoot, 'bin', 'rg'));
+  copySingleFile(sources.nodeBin, path.join(layerRoot, 'node', 'bin', 'node'));
+  copySingleFile(sources.uvBin, path.join(layerRoot, 'uv', 'bin', 'uv'));
+  copyTreeFiltered(
+    sources.pythonRoot,
+    path.join(layerRoot, 'python', path.basename(sources.pythonRoot)),
+    `python/${path.basename(sources.pythonRoot)}`,
+  );
+  writeRuntimeWrappers(layerRoot);
+}
+
+function buildDomainLayer(layerRoot, options) {
+  copyTreeFiltered(options.hermesRoot, path.join(layerRoot, 'hermes'), 'hermes');
+  copyTreeFiltered(options.masRoot, path.join(layerRoot, 'modules', 'mas'), 'modules/mas');
+  copyTreeFiltered(options.mdsRoot, path.join(layerRoot, 'modules', 'mds'), 'modules/mds');
+}
+
+function writeDomainMarkers(runtimeRoot, options, packagedAt) {
   writePackagedModuleMarker(path.join(runtimeRoot, 'modules', 'mas'), buildPackagedModuleMarker({
     moduleId: 'medautoscience',
     repoName: 'med-autoscience',
@@ -352,16 +598,48 @@ function prepareRuntime(options) {
     headSha: readGitHead(options.mdsRoot),
     packagedAt,
   }));
+}
+
+function buildOplLayer(layerRoot) {
+  copyTreeFiltered(repoRoot, path.join(layerRoot, 'opl'), 'opl');
+}
+
+function buildSkillsLayer(layerRoot) {
+  copyRecommendedSkills(path.join(layerRoot, 'skills'));
+}
+
+function prepareRuntime(options, sources) {
+  const stagingRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-full-runtime-'));
+  const runtimeRoot = path.join(stagingRoot, options.version);
+  fs.mkdirSync(path.join(runtimeRoot, 'bin'), { recursive: true });
+
+  const packagedAt = new Date().toISOString();
+  const cacheKeys = buildRuntimeCacheKeys(options, sources);
+  const cacheEvents = [
+    runCachedLayer(options, 'toolchain', cacheKeys.toolchain, runtimeRoot, (layerRoot) => {
+      buildToolchainLayer(layerRoot, sources);
+    }),
+    runCachedLayer(options, 'domain-runtime', cacheKeys['domain-runtime'], runtimeRoot, (layerRoot) => {
+      buildDomainLayer(layerRoot, options);
+    }),
+    runCachedLayer(options, 'opl-runtime', cacheKeys['opl-runtime'], runtimeRoot, (layerRoot) => {
+      buildOplLayer(layerRoot);
+    }),
+    runCachedLayer(options, 'skills', cacheKeys.skills, runtimeRoot, (layerRoot) => {
+      buildSkillsLayer(layerRoot);
+    }),
+  ];
+  writeDomainMarkers(runtimeRoot, options, packagedAt);
 
   const components = {
     opl: { source_path: repoRoot, git_commit: readGitHead(repoRoot), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'opl')) },
-    codex: { source_path: codexRoot, version: commandOutput(path.join(runtimeRoot, 'bin', 'codex'), ['--version']), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'bin')) },
+    codex: { source_path: sources.codexRoot, version: commandOutput(path.join(runtimeRoot, 'bin', 'codex'), ['--version']), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'bin')) },
     hermes: { source_path: options.hermesRoot, version: commandOutput(path.join(runtimeRoot, 'bin', 'hermes'), ['version']), git_commit: readGitHead(options.hermesRoot), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'hermes')) },
     mas: { source_path: options.masRoot, git_commit: readGitHead(options.masRoot), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'modules', 'mas')) },
     mds: { source_path: options.mdsRoot, git_commit: readGitHead(options.mdsRoot), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'modules', 'mds')) },
-    node: { source_path: nodeBin, version: commandOutput(path.join(runtimeRoot, 'node', 'bin', 'node'), ['--version']), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'node')) },
-    python: { source_path: pythonRoot, version: commandOutput(path.join(runtimeRoot, 'python', path.basename(pythonRoot), 'bin', 'python3'), ['--version']), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'python')) },
-    uv: { source_path: uvBin, version: commandOutput(path.join(runtimeRoot, 'uv', 'bin', 'uv'), ['--version']), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'uv')) },
+    node: { source_path: sources.nodeBin, version: commandOutput(path.join(runtimeRoot, 'node', 'bin', 'node'), ['--version']), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'node')) },
+    python: { source_path: sources.pythonRoot, version: commandOutput(path.join(runtimeRoot, 'python', path.basename(sources.pythonRoot), 'bin', 'python3'), ['--version']), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'python')) },
+    uv: { source_path: sources.uvBin, version: commandOutput(path.join(runtimeRoot, 'uv', 'bin', 'uv'), ['--version']), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'uv')) },
     skills: { source_path: path.join(os.homedir(), '.codex', 'skills'), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'skills')) },
   };
 
@@ -377,6 +655,12 @@ function prepareRuntime(options) {
     stagingRoot,
     runtimeRoot,
     manifest,
+    runtime_cache: {
+      mode: options.runtimeCacheMode,
+      dir: options.runtimeCacheDir || null,
+      keys: cacheKeys,
+      events: cacheEvents,
+    },
   };
 }
 
@@ -450,8 +734,7 @@ function maybeCreateRuntimeTar(options, runtimeRoot, artifactNames) {
     return null;
   }
   const target = path.join(options.outDir, artifactNames.runtimeTar);
-  fs.rmSync(target, { force: true });
-  run('tar', ['--zstd', '-cf', target, '-C', path.dirname(runtimeRoot), path.basename(runtimeRoot)]);
+  createTarZst(target, path.dirname(runtimeRoot), [path.basename(runtimeRoot)]);
   return target;
 }
 
@@ -469,7 +752,20 @@ function main() {
     requirePath(source, label);
   }
 
-  const prepared = prepareRuntime(options);
+  const sources = resolveRuntimeSources(options);
+  if (options.printRuntimeCacheKeys) {
+    console.log(JSON.stringify({
+      status: 'runtime_cache_keys',
+      version: options.version,
+      runtime_cache_mode: options.runtimeCacheMode,
+      runtime_cache_dir: options.runtimeCacheDir || null,
+      layers: buildRuntimeCacheKeys(options, sources),
+      layer_ids: FULL_RUNTIME_CACHE_LAYER_IDS,
+    }, null, 2));
+    return;
+  }
+
+  const prepared = prepareRuntime(options, sources);
   syncRuntimePayloadToGui(options.guiRoot, options.version, prepared.runtimeRoot, prepared.manifest);
 
   if (!options.skipGuiBuild) {
@@ -509,6 +805,7 @@ function main() {
     readme: readmePath,
     checksums: checksumPath,
     staging_root: prepared.stagingRoot,
+    runtime_cache: prepared.runtime_cache,
   }, null, 2));
 }
 

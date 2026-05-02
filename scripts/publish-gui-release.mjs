@@ -22,6 +22,7 @@ function parseArgs(argv) {
     fullPackageDir: process.env.OPL_FULL_PACKAGE_DIR || '',
     build: true,
     includeFullPackage: false,
+    fullPackageOnly: false,
     dryRun: false,
   };
 
@@ -37,6 +38,15 @@ function parseArgs(argv) {
     }
     if (token === '--include-full-package') {
       parsed.includeFullPackage = true;
+      if (!parsed.fullPackageDir) {
+        parsed.fullPackageDir = defaultFullPackageDir;
+      }
+      continue;
+    }
+    if (token === '--full-package-only') {
+      parsed.fullPackageOnly = true;
+      parsed.includeFullPackage = true;
+      parsed.build = false;
       if (!parsed.fullPackageDir) {
         parsed.fullPackageDir = defaultFullPackageDir;
       }
@@ -76,6 +86,9 @@ function parseArgs(argv) {
   }
   if (!['arm64', 'x64', 'universal'].includes(parsed.macArch)) {
     throw new Error(`Unsupported macOS release architecture: ${parsed.macArch}`);
+  }
+  if (parsed.fullPackageOnly && !parsed.includeFullPackage) {
+    throw new Error('--full-package-only requires --include-full-package or --full-package-dir.');
   }
   return parsed;
 }
@@ -203,9 +216,6 @@ function findFullPackageArtifacts(fullPackageDir, version, macArch) {
     'SHA256SUMS.txt',
     'README-Full-First-Install.txt',
   ];
-  const optional = [
-    `opl-runtime-full-${version}-macos-arm64.tar.zst`,
-  ];
 
   const files = fs.readdirSync(fullPackageDir);
   for (const name of required) {
@@ -219,8 +229,7 @@ function findFullPackageArtifacts(fullPackageDir, version, macArch) {
     throw new Error('Full package manifest must declare distribution.updater_metadata_allowed=false.');
   }
 
-  return [...required, ...optional.filter((name) => files.includes(name))]
-    .map((name) => path.join(fullPackageDir, name));
+  return required.map((name) => path.join(fullPackageDir, name));
 }
 
 function releaseExists(repo, tag) {
@@ -271,20 +280,21 @@ function main() {
   const options = parseArgs(process.argv.slice(2));
   const tag = `v${options.version}`;
 
-  if (!fs.existsSync(options.shellRoot)) {
+  if (!options.fullPackageOnly && !fs.existsSync(options.shellRoot)) {
     throw new Error(`Missing opl-aion-shell checkout: ${options.shellRoot}`);
   }
 
-  if (options.build) {
+  if (options.build && !options.fullPackageOnly) {
     run('bun', ['run', `build-mac:${options.macArch}`], { cwd: options.shellRoot });
   }
 
-  const artifacts = findArtifacts(options.shellRoot, options.version, options.macArch);
+  const artifacts = options.fullPackageOnly ? [] : findArtifacts(options.shellRoot, options.version, options.macArch);
   const fullPackageArtifacts = options.includeFullPackage
     ? findFullPackageArtifacts(options.fullPackageDir, options.version, options.macArch)
     : [];
   const allArtifacts = [...artifacts, ...fullPackageArtifacts];
   const uploadArgs = ['release', 'upload', tag, ...allArtifacts, '--repo', options.releaseRepo, '--clobber'];
+  const existingRelease = releaseExists(options.releaseRepo, tag);
 
   if (options.dryRun) {
     console.log(JSON.stringify({
@@ -293,16 +303,22 @@ function main() {
       shell_root: options.shellRoot,
       mac_arch: options.macArch,
       build: options.build,
+      full_package_only: options.fullPackageOnly,
       artifacts: allArtifacts,
       standard_artifacts: artifacts,
       full_package_artifacts: fullPackageArtifacts,
-      create_release: !releaseExists(options.releaseRepo, tag),
+      release_exists: existingRelease,
+      create_release: !options.fullPackageOnly && !existingRelease,
       upload_command: ['gh', ...uploadArgs],
     }, null, 2));
     return;
   }
 
-  if (!releaseExists(options.releaseRepo, tag)) {
+  if (options.fullPackageOnly && !existingRelease) {
+    throw new Error(`Release ${tag} does not exist in ${options.releaseRepo}; publish the standard release before uploading Full first-install assets.`);
+  }
+
+  if (!existingRelease) {
     run('gh', [
       'release',
       'create',

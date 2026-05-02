@@ -3,13 +3,26 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 import {
+  buildFullRuntimeCacheArchiveName,
+  buildFullRuntimeCacheKey,
   buildFullPackageManifest,
   buildInternalArtifactNames,
   buildInternalPackageReadme,
   shouldExcludeRuntimePath,
 } from '../../src/full-internal-package.ts';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(__dirname, '..', '..');
+
+function writeExecutable(filePath: string, content: string) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, content, 'utf8');
+  fs.chmodSync(filePath, 0o755);
+}
 
 test('full internal manifest declares MAS required, MDS backend hidden, and Hermes lean runtime', () => {
   const manifest = buildFullPackageManifest({
@@ -54,6 +67,29 @@ test('full first-install artifact names use release-safe naming', () => {
     readme: 'README-Full-First-Install.txt',
     manifest: 'full-package-manifest.json',
   });
+});
+
+test('full runtime cache keys are stable per layer and archive-safe', () => {
+  const first = buildFullRuntimeCacheKey({
+    layerId: 'toolchain',
+    parts: { codex: '0.1.0', node: 'v22.0.0' },
+  });
+  const second = buildFullRuntimeCacheKey({
+    layerId: 'toolchain',
+    parts: { codex: '0.1.0', node: 'v22.0.0' },
+  });
+  const third = buildFullRuntimeCacheKey({
+    layerId: 'toolchain',
+    parts: { codex: '0.1.1', node: 'v22.0.0' },
+  });
+
+  assert.equal(first, second);
+  assert.notEqual(first, third);
+  assert.match(first, /^full-runtime-v1-toolchain-[0-9a-f]{24}$/);
+  assert.equal(
+    buildFullRuntimeCacheArchiveName({ layerId: 'toolchain', key: first }),
+    `${first}.tar.zst`,
+  );
 });
 
 test('runtime staging excludes dev/runtime-heavy paths while preserving core entries', () => {
@@ -137,5 +173,113 @@ test('packaged module marker lets git-stripped MAS runtime count as installed', 
       process.env.OPL_MODULES_ROOT = originalModulesRoot;
     }
     fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('full runtime layer cache records miss then hit when zstd is available', () => {
+  if (spawnSync('which', ['zstd'], { encoding: 'utf8' }).status !== 0) {
+    assert.ok(true, 'zstd is not available in this environment; CI workflow installs it for Full runtime cache packaging.');
+    return;
+  }
+
+  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-full-cache-test-'));
+  try {
+    const guiRoot = path.join(tmpRoot, 'opl-aion-shell');
+    const outDir = path.join(guiRoot, 'out');
+    const cacheDir = path.join(tmpRoot, 'cache');
+    const outputDir = path.join(tmpRoot, 'out');
+    const version = '26.5.99';
+    fs.mkdirSync(outDir, { recursive: true });
+
+    const codexRoot = path.join(tmpRoot, 'codex');
+    const codexVendor = path.join(
+      codexRoot,
+      'node_modules',
+      '@openai',
+      'codex-darwin-arm64',
+      'vendor',
+      'aarch64-apple-darwin',
+    );
+    fs.mkdirSync(codexRoot, { recursive: true });
+    fs.writeFileSync(path.join(codexRoot, 'package.json'), '{"version":"0.1.0"}\n');
+    writeExecutable(path.join(codexVendor, 'codex', 'codex'), '#!/usr/bin/env bash\necho codex 0.1.0\n');
+    writeExecutable(path.join(codexVendor, 'path', 'rg'), '#!/usr/bin/env bash\necho rg\n');
+
+    const pythonRoot = path.join(tmpRoot, 'python', 'cpython-3.12.0-macos-aarch64-none');
+    writeExecutable(path.join(pythonRoot, 'bin', 'python3'), '#!/usr/bin/env bash\necho Python 3.12.0\n');
+    const uvBin = path.join(tmpRoot, 'bin', 'uv');
+    writeExecutable(uvBin, '#!/usr/bin/env bash\necho uv 0.1.0\n');
+
+    for (const [name, executable] of [
+      ['hermes-agent', 'hermes'],
+      ['med-autoscience', 'mas'],
+      ['med-deepscientist', 'mds'],
+    ]) {
+      const root = path.join(tmpRoot, name);
+      fs.mkdirSync(root, { recursive: true });
+      fs.writeFileSync(path.join(root, 'README.md'), `${name}\n`);
+      if (executable === 'hermes') {
+        writeExecutable(path.join(root, 'hermes'), '#!/usr/bin/env python3\nprint("hermes")\n');
+      }
+    }
+
+    const runPackage = () => {
+      fs.writeFileSync(path.join(outDir, `One-Person-Lab-${version}-mac-arm64.dmg`), 'fake dmg');
+      return spawnSync(
+        process.execPath,
+        [
+          '--experimental-strip-types',
+          path.join(repoRoot, 'scripts/build-full-internal-package.mjs'),
+          '--version',
+          version,
+          '--out-dir',
+          outputDir,
+          '--gui-root',
+          guiRoot,
+          '--hermes-root',
+          path.join(tmpRoot, 'hermes-agent'),
+          '--mas-root',
+          path.join(tmpRoot, 'med-autoscience'),
+          '--mds-root',
+          path.join(tmpRoot, 'med-deepscientist'),
+          '--codex-root',
+          codexRoot,
+          '--node-bin',
+          process.execPath,
+          '--uv-bin',
+          uvBin,
+          '--python-root',
+          pythonRoot,
+          '--runtime-cache-dir',
+          cacheDir,
+          '--runtime-cache-mode',
+          'readwrite',
+          '--skip-gui-build',
+        ],
+        {
+          cwd: repoRoot,
+          encoding: 'utf8',
+        },
+      );
+    };
+
+    const first = runPackage();
+    assert.equal(first.status, 0, first.stderr);
+    const firstPayload = JSON.parse(first.stdout) as { runtime_cache: { events: Array<{ status: string }> } };
+    assert.deepEqual(
+      firstPayload.runtime_cache.events.map((event) => event.status),
+      ['miss_written', 'miss_written', 'miss_written', 'miss_written'],
+    );
+
+    const second = runPackage();
+    assert.equal(second.status, 0, second.stderr);
+    const secondPayload = JSON.parse(second.stdout) as { runtime_cache: { events: Array<{ status: string }> } };
+    assert.deepEqual(
+      secondPayload.runtime_cache.events.map((event) => event.status),
+      ['hit', 'hit', 'hit', 'hit'],
+    );
+    assert.ok(fs.existsSync(path.join(outputDir, `One-Person-Lab-Full-${version}-mac-arm64.dmg`)));
+  } finally {
+    fs.rmSync(tmpRoot, { recursive: true, force: true });
   }
 });
