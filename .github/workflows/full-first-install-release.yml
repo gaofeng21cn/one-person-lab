@@ -21,7 +21,7 @@ env:
 
 jobs:
   full-first-install:
-    name: Build signed Full first-install package
+    name: Build Full first-install package
     runs-on: macos-14
     timeout-minutes: 150
 
@@ -115,7 +115,7 @@ jobs:
           uv sync --project med-autoscience --no-dev
           uv sync --project med-deepscientist --no-dev
 
-      - name: Setup macOS code signing
+      - name: Prepare optional macOS code signing
         shell: bash
         env:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
@@ -127,12 +127,14 @@ jobs:
           IDENTITY: ${{ secrets.IDENTITY }}
         run: |
           set -euo pipefail
-          for required in BUILD_CERTIFICATE_BASE64 P12_PASSWORD APPLE_ID APPLE_ID_PASSWORD TEAM_ID IDENTITY; do
-            if [ -z "${!required:-}" ]; then
-              echo "::error::Missing required signing/notarization secret: $required"
-              exit 1
-            fi
-          done
+          echo "OPL_MAC_STRICT_SIGNING_CHECKS=false" >> "$GITHUB_ENV"
+          echo "OPL_FULL_PACKAGE_NOTARIZED=false" >> "$GITHUB_ENV"
+
+          if [ -z "${BUILD_CERTIFICATE_BASE64:-}" ] || [ -z "${P12_PASSWORD:-}" ]; then
+            echo "::notice::No Developer ID certificate secrets configured; building the Full DMG with the same unsigned packaging mode as the current standard GitHub release."
+            exit 0
+          fi
+
           echo "$BUILD_CERTIFICATE_BASE64" | base64 --decode > certificate.p12
           security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
           security default-keychain -s build.keychain
@@ -140,6 +142,13 @@ jobs:
           security import certificate.p12 -k build.keychain -P "$P12_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
           rm certificate.p12
+
+          if [ -n "${APPLE_ID:-}" ] && [ -n "${APPLE_ID_PASSWORD:-}" ] && [ -n "${TEAM_ID:-}" ] && [ -n "${IDENTITY:-}" ]; then
+            echo "OPL_MAC_STRICT_SIGNING_CHECKS=true" >> "$GITHUB_ENV"
+            echo "OPL_FULL_PACKAGE_NOTARIZED=true" >> "$GITHUB_ENV"
+          else
+            echo "::notice::Developer ID certificate is available, but notarization identity secrets are incomplete; strict Gatekeeper verification will be skipped."
+          fi
 
       - name: Build standard macOS arm64 assets
         working-directory: opl-aion-shell
@@ -153,6 +162,7 @@ jobs:
           identity: ${{ secrets.IDENTITY }}
           CSC_NAME: ${{ secrets.IDENTITY }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
+          OPL_FULL_PACKAGE_NOTARIZED: ${{ env.OPL_FULL_PACKAGE_NOTARIZED }}
           CI: true
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -190,14 +200,20 @@ jobs:
           export OPL_FULL_MDS_ROOT="$GITHUB_WORKSPACE/med-deepscientist"
           npm run packages:full-release -- --version "$OPL_RELEASE_VERSION"
 
-      - name: Verify Full package signing and checksums
+      - name: Verify Full package checksums and optional signing
         shell: bash
         run: |
           set -euo pipefail
           app_path="$GITHUB_WORKSPACE/opl-aion-shell/out/mac-arm64/One Person Lab.app"
           dmg_path="$GITHUB_WORKSPACE/one-person-lab/dist/opl-full-release/One-Person-Lab-Full-${OPL_RELEASE_VERSION}-mac-arm64.dmg"
-          codesign --verify --deep --strict --verbose=2 "$app_path"
-          spctl --assess --type execute --verbose=4 "$app_path"
+          if [ "${OPL_MAC_STRICT_SIGNING_CHECKS:-false}" = "true" ]; then
+            codesign --verify --deep --strict --verbose=2 "$app_path"
+            spctl --assess --type execute --verbose=4 "$app_path"
+          else
+            echo "::notice::Skipping strict codesign/spctl checks because this run is matching the current unsigned standard release mode."
+            codesign --verify --deep --strict --verbose=2 "$app_path" || true
+            spctl --assess --type execute --verbose=4 "$app_path" || true
+          fi
           hdiutil verify "$dmg_path"
           (cd "$GITHUB_WORKSPACE/one-person-lab/dist/opl-full-release" && shasum -a 256 -c SHA256SUMS.txt)
 

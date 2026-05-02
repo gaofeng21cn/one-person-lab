@@ -41,7 +41,9 @@ test('full internal manifest declares MAS required, MDS backend hidden, and Herm
   assert.equal(manifest.distribution.runtime_auto_update, false);
   assert.equal(manifest.distribution.app_auto_update, 'standard_github_release_metadata_only');
   assert.ok(manifest.distribution.standard_update_assets.includes('latest-arm64-mac.yml'));
-  assert.equal(manifest.distribution.signing_policy.release_requires_notarization, true);
+  assert.equal(manifest.distribution.signing_policy.matches_standard_release_mode, true);
+  assert.equal(manifest.distribution.signing_policy.developer_id_when_configured, true);
+  assert.equal(manifest.distribution.signing_policy.notarization_when_configured, true);
 });
 
 test('full first-install artifact names use release-safe naming', () => {
@@ -90,7 +92,8 @@ test('readme documents GitHub Release first-install distribution and app update 
   assert.match(text, /自动更新目标/);
   assert.match(text, /Application Support\/OPL\/runtime\/26\.5\.1/);
   assert.match(text, /API key/);
-  assert.match(text, /正式 GitHub Release 资产必须通过 Developer ID 签名和 Apple 公证/);
+  assert.match(text, /当前标准 GitHub DMG 的同等发布模式/);
+  assert.match(text, /右键打开/);
 });
 
 test('packaged module marker lets git-stripped MAS runtime count as installed', async () => {

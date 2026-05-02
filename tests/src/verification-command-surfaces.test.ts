@@ -211,7 +211,7 @@ test('package.json exposes the fresh-install smoke lane', () => {
   );
 });
 
-test('Full first-install release workflow signs, verifies, and keeps updater metadata standard-only', () => {
+test('Full first-install release workflow builds without signing secrets and keeps updater metadata standard-only', () => {
   const workflow = read('.github/workflows/full-first-install-release.yml');
 
   assert.equal(
@@ -219,6 +219,8 @@ test('Full first-install release workflow signs, verifies, and keeps updater met
     'node --experimental-strip-types ./scripts/build-full-internal-package.mjs --out-dir dist/opl-full-release',
   );
   assert.match(workflow, /BUILD_CERTIFICATE_BASE64/);
+  assert.match(workflow, /same unsigned packaging mode as the current standard GitHub release/);
+  assert.match(workflow, /OPL_MAC_STRICT_SIGNING_CHECKS=false/);
   assert.match(workflow, /appleIdPassword/);
   assert.match(workflow, /codesign --verify --deep --strict/);
   assert.match(workflow, /spctl --assess --type execute/);

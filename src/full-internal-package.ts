@@ -76,8 +76,9 @@ export function buildFullPackageManifest(input: FullPackageManifestInput = {}) {
         'latest-arm64-mac.yml',
       ],
       signing_policy: {
-        release_requires_developer_id: true,
-        release_requires_notarization: true,
+        matches_standard_release_mode: true,
+        developer_id_when_configured: true,
+        notarization_when_configured: true,
       },
     },
     components: {
@@ -261,7 +262,7 @@ export function buildInternalPackageReadme(input: {
     '',
     input.notarized
       ? '签名/公证：此包已完成 Developer ID 签名并通过 Apple 公证检查。'
-      : '签名/公证：此文件来自本地构建，可能未公证；正式 GitHub Release 资产必须通过 Developer ID 签名和 Apple 公证。',
+      : '签名/公证：此包按当前标准 GitHub DMG 的同等发布模式构建；如 CI 未配置 Developer ID signing secrets，macOS 可能仍需要右键打开或在系统设置中允许。',
     '',
     '校验：下载后可用 shasum -a 256 对照 SHA256SUMS.txt。',
     '',
