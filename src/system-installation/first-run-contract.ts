@@ -24,7 +24,13 @@ const GUI_FIRST_RUN_ACCESSIBILITY_LABELS = {
 type FirstRunLogEventType =
   | 'install_started'
   | 'install_completed'
-  | 'install_failed';
+  | 'install_failed'
+  | 'runtime_manager_repair_started'
+  | 'runtime_manager_repair_completed'
+  | 'runtime_manager_repair_failed'
+  | 'online_management_repair_started'
+  | 'online_management_repair_completed'
+  | 'online_management_repair_failed';
 
 function resolveHomeDir() {
   return process.env.HOME?.trim() || os.homedir();
@@ -47,6 +53,11 @@ export function buildOplFirstRunLogSurface() {
     log_path: resolveOplFirstRunLogPath(),
     override_env: 'OPL_FIRST_RUN_LOG_PATH',
     required_event_fields: ['timestamp', 'event_type', 'schema_version', 'surface_id', 'payload'],
+    online_management_event_types: [
+      'online_management_repair_started',
+      'online_management_repair_completed',
+      'online_management_repair_failed',
+    ],
     writer_owner: 'OPL CLI',
     consumer_owner: 'One Person Lab GUI',
   };
@@ -107,6 +118,10 @@ export function buildOplFreshInstallTestMatrix() {
         setup: 'temporary HOME and OPL_STATE_DIR, no codex on PATH, empty managed modules root',
         expected_phase: 'environment',
         expected_blockers: ['codex', 'codex_config', 'domain_modules'],
+        expected_online_management: {
+          status: 'needs_attention',
+          blocking: false,
+        },
       },
       {
         scenario_id: 'compatible_codex_missing_modules',
@@ -114,6 +129,10 @@ export function buildOplFreshInstallTestMatrix() {
         setup: 'temporary HOME and OPL_STATE_DIR, fake compatible codex on PATH, empty managed modules root',
         expected_phase: 'environment',
         expected_blockers: ['codex_config', 'domain_modules'],
+        expected_online_management: {
+          status: 'needs_attention',
+          blocking: false,
+        },
       },
       {
         scenario_id: 'outdated_codex',
@@ -121,6 +140,10 @@ export function buildOplFreshInstallTestMatrix() {
         setup: 'temporary HOME and OPL_STATE_DIR, fake outdated codex on PATH',
         expected_phase: 'environment',
         expected_blockers: ['codex', 'codex_config', 'domain_modules'],
+        expected_online_management: {
+          status: 'needs_attention',
+          blocking: false,
+        },
       },
       {
         scenario_id: 'ready_baseline',
@@ -128,6 +151,10 @@ export function buildOplFreshInstallTestMatrix() {
         setup: 'temporary HOME and OPL_STATE_DIR, fake compatible codex, and git-backed managed module fixtures',
         expected_phase: 'review',
         expected_blockers: [],
+        expected_online_management: {
+          status: 'needs_attention',
+          blocking: false,
+        },
       },
       {
         scenario_id: 'offline_module_install_blocker',
@@ -174,12 +201,14 @@ export function appendOplFirstRunLogEvent(
       status: 'written' as const,
       event_type: eventType,
       log_path: surface.log_path,
+      payload,
     };
   } catch (error) {
     return {
       status: 'failed' as const,
       event_type: eventType,
       log_path: surface.log_path,
+      payload,
       error: error instanceof Error ? error.message : String(error),
     };
   }

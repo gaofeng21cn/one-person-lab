@@ -310,11 +310,24 @@ export async function runOplTurnkeyInstall(
         status: 'started',
         skip_native_helper_repair: Boolean(input.skipNativeHelperRepair),
       }),
+      appendOplFirstRunLogEvent('online_management_repair_started', {
+        status: 'started',
+        blocking: false,
+        repair_action: 'repair_hermes_gateway',
+        skip_native_helper_repair: Boolean(input.skipNativeHelperRepair),
+      }),
     );
     const runtimeManagerAction = runRuntimeManagerAction({
       mode: 'apply',
       skipNativeHelpers: Boolean(input.skipNativeHelperRepair),
     });
+    const onlineManagementRepair = runtimeManagerAction.runtime_manager_action.executed_actions.find(
+      (action) => action.action_id === 'repair_hermes_gateway',
+    );
+    const onlineManagementRepairEventType =
+      onlineManagementRepair?.status === 'failed'
+        ? 'online_management_repair_failed'
+        : 'online_management_repair_completed';
     firstRunLogEvents.push(
       appendOplFirstRunLogEvent('runtime_manager_repair_completed', {
         status: runtimeManagerAction.runtime_manager_action.status,
@@ -322,6 +335,19 @@ export async function runOplTurnkeyInstall(
           action_id: action.action_id,
           status: action.status,
         })),
+      }),
+      appendOplFirstRunLogEvent(onlineManagementRepairEventType, {
+        status: onlineManagementRepair?.status ?? 'skipped',
+        blocking: false,
+        executed_actions: runtimeManagerAction.runtime_manager_action.executed_actions
+          .filter((action) => action.action_id === 'repair_hermes_gateway')
+          .map((action) => ({
+            action_id: action.action_id,
+            status: action.status,
+            blocking: action.blocking ?? false,
+            action_lane: action.action_lane ?? 'online_management',
+            capability: action.capability ?? 'online_task_management',
+          })),
       }),
     );
     const companionSkillSync = syncOplCompanionSkills(undefined, { mode: 'managed', superpowersProfile: 'keep' });
@@ -351,6 +377,8 @@ export async function runOplTurnkeyInstall(
         module_actions: moduleActions.map((entry) => entry.module_action),
         service_action: serviceAction,
         runtime_manager_action: runtimeManagerAction.runtime_manager_action,
+        background_actions: runtimeManagerAction.runtime_manager_action.background_actions,
+        non_blocking_actions: runtimeManagerAction.runtime_manager_action.non_blocking_actions,
         gui_open_action: guiOpenAction,
         gui_shell: buildOplGuiShellSurface(resolveProjectRoot()),
         native_helper_action: nativeHelperAction,
@@ -359,7 +387,8 @@ export async function runOplTurnkeyInstall(
         first_run_log: firstRunLog,
         first_run_log_events: firstRunLogEvents,
         notes: [
-          'This command is the user-facing one-shot path for OPL + Codex CLI + family modules + recommended Codex skills + desktop GUI. Hermes-Agent remains an explicit engine install via `opl engine install --engine hermes`.',
+          'This command is the user-facing one-shot path for OPL + Codex CLI + Hermes online management + family modules + recommended Codex skills + desktop GUI. Hermes-Agent remains the external online-management runtime substrate and is installed or reused by default.',
+          'Hermes gateway repair is reported as a non-blocking online-management background action; local Codex and core OPL entry can continue while that service becomes ready.',
           'Recommended skill sync is conservative: existing user-managed skill directories are preserved, Superpowers stays on the current user profile by default, and missing optional skill sources are reported for Environment Management.',
           'GUI startup opens the installed One Person Lab app when present; otherwise it downloads and installs the matching one-person-lab release asset before opening the app. opl-aion-shell remains an internal GUI source/build input.',
         ],

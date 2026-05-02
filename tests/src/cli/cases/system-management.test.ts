@@ -1,7 +1,22 @@
+import { spawnSync } from 'node:child_process';
+
 import { GatewayContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeHermesFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakePsFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadGatewayContracts, once, os, path, readJsonFixture, readJsonLine, repoRoot, resolveRequestSurface, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateGatewayContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
 import { buildInternalCommandSpecs } from '../../../../src/cli/cases/private-command-specs.ts';
 import { buildPublicCommandSpecs } from '../../../../src/cli/cases/public-command-specs.ts';
 import { resolveEngineActionSpec } from '../../../../src/system-installation/engine-helpers.ts';
+
+function createManagedDomainModuleFixtures(modulesRoot: string) {
+  for (const repoName of ['med-autoscience', 'med-deepscientist', 'med-autogrant', 'redcube-ai']) {
+    const repoPath = path.join(modulesRoot, repoName);
+    fs.mkdirSync(repoPath, { recursive: true });
+    const result = spawnSync('git', ['init', '-q'], {
+      cwd: repoPath,
+      encoding: 'utf8',
+      env: { ...process.env, HOME: modulesRoot },
+    });
+    assert.equal(result.status, 0, result.stderr);
+  }
+}
 
 test('help keeps GUI lane on AionUI without Product API service commands', () => {
   const output = runCli(['help']);
@@ -496,6 +511,136 @@ exit 1
   }
 });
 
+test('system initialize reports online management as non-blocking when Hermes gateway is unloaded', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-initialize-online-management-home-'));
+  const stateDir = path.join(homeRoot, 'opl-state');
+  const modulesRoot = path.join(homeRoot, 'modules');
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-online-management-workspace-'));
+  const codexConfigFixture = createCodexConfigFixture({
+    model: 'gpt-5.4-opl',
+    reasoningEffort: 'high',
+    baseUrl: 'https://codex-opl.example.test/v1',
+    apiKey: 'codex-opl-key',
+  });
+  const hermesFixture = createFakeHermesFixture(`
+if [[ "$1" == "version" ]]; then
+  echo "Hermes Agent v9.9.9-test"
+  exit 0
+fi
+if [[ "$1" == "gateway" && "$2" == "status" ]]; then
+  echo "Gateway service is not loaded"
+  exit 0
+fi
+echo "Unsupported hermes fixture command: $*" >&2
+exit 1
+`);
+  const codexFixture = createFakeCodexFixture(`
+if [[ "$1" == "--version" ]]; then
+  echo "codex-cli 0.125.0"
+  exit 0
+fi
+echo "Unsupported codex fixture command: $*" >&2
+exit 1
+`);
+  createManagedDomainModuleFixtures(modulesRoot);
+
+  try {
+    const output = runCli(
+      ['system', 'initialize'],
+      {
+        HOME: homeRoot,
+        CODEX_HOME: codexConfigFixture.codexHome,
+        OPL_HERMES_BIN: hermesFixture.hermesPath,
+        OPL_STATE_DIR: stateDir,
+        OPL_MODULES_ROOT: modulesRoot,
+        OPL_WORKSPACE_ROOT: workspaceRoot,
+        PATH: `${codexFixture.fixtureRoot}:${hermesFixture.fixtureRoot}:/usr/bin:/bin`,
+      },
+    ) as {
+      system_initialize: {
+        overall_state: string;
+        readiness: {
+          core_ready: boolean;
+          domain_ready: boolean;
+          online_management_ready: boolean;
+        };
+        setup_flow: {
+          phase: string;
+          ready_to_launch: boolean;
+          blocking_items: string[];
+        };
+        online_management: {
+          surface_id: string;
+          status: string;
+          blocking: boolean;
+          ready: boolean;
+          capability_summary: string;
+          repair_action: {
+            action_id: string;
+            payload_template: Record<string, string> | null;
+          };
+          service_status: {
+            engine_id: string;
+            installed: boolean;
+            gateway_loaded: boolean;
+            health_status: string;
+          };
+          last_repair_result: unknown | null;
+        };
+        checklist: Array<{
+          item_id: string;
+          label: string;
+          required: boolean;
+          blocking: boolean;
+          detail_summary: string;
+        }>;
+        recommended_next_action: {
+          action_id: string;
+        };
+      };
+    };
+
+    assert.equal(output.system_initialize.overall_state, 'ready_to_finalize');
+    assert.deepEqual(output.system_initialize.readiness, {
+      core_ready: true,
+      domain_ready: true,
+      online_management_ready: false,
+    });
+    assert.equal(output.system_initialize.setup_flow.phase, 'review');
+    assert.equal(output.system_initialize.setup_flow.ready_to_launch, true);
+    assert.deepEqual(output.system_initialize.setup_flow.blocking_items, []);
+    assert.equal(output.system_initialize.online_management.surface_id, 'opl_online_management');
+    assert.equal(output.system_initialize.online_management.status, 'initializing');
+    assert.equal(output.system_initialize.online_management.blocking, false);
+    assert.equal(output.system_initialize.online_management.ready, false);
+    assert.match(
+      output.system_initialize.online_management.capability_summary,
+      /Local Codex and core OPL features can continue/i,
+    );
+    assert.equal(output.system_initialize.online_management.repair_action.action_id, 'repair_hermes_gateway');
+    assert.deepEqual(output.system_initialize.online_management.repair_action.payload_template, { action: 'repair' });
+    assert.equal(output.system_initialize.online_management.service_status.engine_id, 'hermes');
+    assert.equal(output.system_initialize.online_management.service_status.installed, true);
+    assert.equal(output.system_initialize.online_management.service_status.gateway_loaded, false);
+    assert.equal(output.system_initialize.online_management.service_status.health_status, 'attention_needed');
+    assert.equal(output.system_initialize.online_management.last_repair_result, null);
+
+    const onlineManagementItem = output.system_initialize.checklist.find((entry) => entry.item_id === 'hermes');
+    assert.ok(onlineManagementItem);
+    assert.equal(onlineManagementItem.label, 'Online Task Management');
+    assert.equal(onlineManagementItem.required, false);
+    assert.equal(onlineManagementItem.blocking, false);
+    assert.match(onlineManagementItem.detail_summary, /local Codex and OPL core features are available/i);
+    assert.equal(output.system_initialize.recommended_next_action.action_id, 'review_initialize');
+  } finally {
+    fs.rmSync(codexConfigFixture.codexHome, { recursive: true, force: true });
+    fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(hermesFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
 test('opl install provisions Hermes gateway before reporting first-run completion', async () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-hermes-home-'));
   const stateDir = path.join(homeRoot, 'opl-state');
@@ -546,10 +691,18 @@ exit 1
         PATH: `${codexFixture.fixtureRoot}:${hermesFixture.fixtureRoot}:/usr/bin:/bin`,
       },
     ) as {
-      opl_install: {
+      install: {
         runtime_manager_action: {
           status: string;
-          executed_actions: Array<{ action_id: string; status: string }>;
+          non_blocking_actions: Array<{ action_id: string; status: string }>;
+          background_actions: Array<{ action_id: string; status: string }>;
+          executed_actions: Array<{
+            action_id: string;
+            status: string;
+            blocking: boolean;
+            action_lane: string;
+            capability: string;
+          }>;
           after: {
             reconcile: {
               checked_surfaces: {
@@ -559,6 +712,11 @@ exit 1
           };
         };
         system_initialize: {
+          online_management: {
+            status: string;
+            blocking: boolean;
+            ready: boolean;
+          };
           core_engines: {
             hermes: {
               health_status: string;
@@ -566,6 +724,8 @@ exit 1
             };
           };
         };
+        background_actions: Array<{ action_id: string; status: string }>;
+        non_blocking_actions: Array<{ action_id: string; status: string }>;
         first_run_log_events: Array<{
           event_type: string;
           payload: Record<string, unknown>;
@@ -574,22 +734,60 @@ exit 1
     };
 
     assert.equal(fs.existsSync(gatewayState), true);
-    assert.equal(output.opl_install.runtime_manager_action.status, 'completed');
+    assert.equal(output.install.runtime_manager_action.status, 'completed');
     assert.deepEqual(
-      output.opl_install.runtime_manager_action.executed_actions.map((entry) => [
+      output.install.runtime_manager_action.executed_actions.map((entry) => [
         entry.action_id,
         entry.status,
       ]),
       [['repair_hermes_gateway', 'completed']],
     );
+    const hermesRepair = output.install.runtime_manager_action.executed_actions[0];
+    assert.equal(hermesRepair.blocking, false);
+    assert.equal(hermesRepair.action_lane, 'online_management');
+    assert.equal(hermesRepair.capability, 'online_task_management');
+    assert.deepEqual(
+      output.install.runtime_manager_action.non_blocking_actions.map((entry) => entry.action_id),
+      ['repair_hermes_gateway'],
+    );
+    assert.deepEqual(
+      output.install.runtime_manager_action.background_actions.map((entry) => entry.action_id),
+      ['repair_hermes_gateway'],
+    );
+    assert.deepEqual(
+      output.install.non_blocking_actions.map((entry) => entry.action_id),
+      ['repair_hermes_gateway'],
+    );
+    assert.deepEqual(
+      output.install.background_actions.map((entry) => entry.action_id),
+      ['repair_hermes_gateway'],
+    );
     assert.equal(
-      output.opl_install.runtime_manager_action.after.reconcile.checked_surfaces.hermes_runtime,
+      output.install.runtime_manager_action.after.reconcile.checked_surfaces.hermes_runtime,
       'ready',
     );
-    assert.equal(output.opl_install.system_initialize.core_engines.hermes.health_status, 'ready');
-    assert.equal(output.opl_install.system_initialize.core_engines.hermes.gateway_loaded, true);
+    assert.equal(output.install.system_initialize.core_engines.hermes.health_status, 'ready');
+    assert.equal(output.install.system_initialize.core_engines.hermes.gateway_loaded, true);
+    assert.equal(output.install.system_initialize.online_management.status, 'ready');
+    assert.equal(output.install.system_initialize.online_management.blocking, false);
+    assert.equal(output.install.system_initialize.online_management.ready, true);
     assert.equal(
-      output.opl_install.first_run_log_events.some((entry) =>
+      output.install.first_run_log_events.some((entry) =>
+        entry.event_type === 'online_management_repair_started'
+        && entry.payload.status === 'started'
+      ),
+      true,
+    );
+    assert.equal(
+      output.install.first_run_log_events.some((entry) =>
+        entry.event_type === 'online_management_repair_completed'
+        && entry.payload.status === 'completed'
+        && Array.isArray(entry.payload.executed_actions)
+      ),
+      true,
+    );
+    assert.equal(
+      output.install.first_run_log_events.some((entry) =>
         entry.event_type === 'runtime_manager_repair_completed'
         && entry.payload.status === 'completed'
       ),

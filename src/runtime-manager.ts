@@ -316,6 +316,7 @@ export function runRuntimeManagerAction(input: RuntimeManagerActionInput) {
         ? 'Dry run did not run native helper repair, did not write refreshed native indexes, and did not reinstall the Hermes gateway service. Native-helper recommendations were omitted by request.'
         : 'Dry run did not run native helper repair, did not write refreshed native indexes, and did not reinstall the Hermes gateway service.',
   }));
+  const plannedNonBlockingActions = plannedActions.filter((action) => action.blocking === false);
 
   if (input.mode === 'dry_run') {
     return {
@@ -331,6 +332,8 @@ export function runRuntimeManagerAction(input: RuntimeManagerActionInput) {
         after: null,
         planned_actions: plannedActions,
         executed_actions: [],
+        non_blocking_actions: plannedNonBlockingActions,
+        background_actions: plannedNonBlockingActions,
         non_goals: [
           'does_not_schedule_tasks',
           'does_not_store_session_memory',
@@ -355,6 +358,9 @@ export function runRuntimeManagerAction(input: RuntimeManagerActionInput) {
       executedActions.push({
         action_id: action.action_id,
         status: repair.status === 'completed' || repair.status === 'skipped_ready' ? 'completed' : repair.status,
+        blocking: action.blocking,
+        action_lane: 'native_helpers',
+        capability: 'native_helper_runtime',
         command_preview: repair.command_preview,
         details: repair,
       });
@@ -367,6 +373,9 @@ export function runRuntimeManagerAction(input: RuntimeManagerActionInput) {
       executedActions.push({
         action_id: action.action_id,
         status: persistence.status === 'written' ? 'completed' : 'failed',
+        blocking: action.blocking,
+        action_lane: 'native_indexes',
+        capability: 'state_index_projection',
         command_preview: ['opl', 'runtime', 'manager'],
         details: {
           persistence_status: persistence.status,
@@ -381,6 +390,9 @@ export function runRuntimeManagerAction(input: RuntimeManagerActionInput) {
     executedActions.push({
       action_id: action.action_id,
       status: 'skipped_unavailable',
+      blocking: action.blocking,
+      action_lane: 'runtime_manager',
+      capability: 'runtime_manager_reconcile',
       command_preview: action.command ? action.command.split(' ') : [],
       note: 'No Runtime Manager apply implementation exists for this recommendation.',
     });
@@ -388,6 +400,7 @@ export function runRuntimeManagerAction(input: RuntimeManagerActionInput) {
 
   after ??= buildRuntimeManager({ persistNativeIndexes: false });
   const afterSummary = summarizeRuntimeManagerForAction(after);
+  const executedNonBlockingActions = executedActions.filter((action) => action.blocking === false);
   const hasFailure = executedActions.some((action) => action.status === 'failed');
   const hasSkipped = executedActions.some((action) => action.status === 'skipped_unavailable');
   const remainingActionableRecommendations = filterActionableRuntimeManagerActions(
@@ -413,6 +426,8 @@ export function runRuntimeManagerAction(input: RuntimeManagerActionInput) {
       after: afterSummary,
       planned_actions: plannedActions,
       executed_actions: executedActions,
+      non_blocking_actions: executedNonBlockingActions,
+      background_actions: executedNonBlockingActions,
       non_goals: [
         'does_not_schedule_tasks',
         'does_not_store_session_memory',
@@ -452,14 +467,24 @@ function runHermesGatewayAction() {
     return {
       action_id: 'repair_hermes_gateway',
       status: repair.product_entry.gateway_service.loaded ? 'completed' : 'failed',
+      blocking: false,
+      action_lane: 'online_management',
+      capability: 'online_task_management',
       command_preview: repair.product_entry.install_command_preview,
+      note:
+        'Non-blocking online-management repair: local Codex and core OPL entry remain usable while Hermes gateway readiness is repaired.',
       details: repair.product_entry,
     };
   } catch (error) {
     return {
       action_id: 'repair_hermes_gateway',
       status: 'failed',
+      blocking: false,
+      action_lane: 'online_management',
+      capability: 'online_task_management',
       command_preview: ['hermes', 'gateway', 'install'],
+      note:
+        'Non-blocking online-management repair failed; local Codex and core OPL entry remain usable.',
       details: {
         error: error instanceof Error ? error.message : String(error),
       },
@@ -488,10 +513,13 @@ function buildRuntimeManagerReconcile(
   } else if (!hermes.gateway_service.loaded) {
     recommendedActions.push({
       action_id: 'repair_hermes_gateway',
-      priority: 'p0_runtime_substrate',
-      blocking: true,
+      priority: 'p1_online_management',
+      blocking: false,
+      action_lane: 'online_management',
+      capability: 'online_task_management',
       command: 'opl runtime repair-gateway',
-      reason: 'Hermes-Agent is installed, but the external gateway service is not loaded.',
+      reason:
+        'Online task management is initializing: Hermes-Agent is installed, but the external gateway service is not loaded. This does not block local Codex or core OPL readiness.',
     });
   }
 

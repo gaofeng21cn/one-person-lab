@@ -24,6 +24,8 @@ type OplModulesProjection = {
 type OplInitializeProjection = {
   overall_state: unknown;
   setup_flow: unknown;
+  readiness: unknown;
+  online_management: unknown;
   module_summary: unknown;
   checklist: unknown;
   core_engines: unknown;
@@ -80,6 +82,8 @@ function buildPublicSystemInitializePayload(
       surface_id: 'opl_system_initialize',
       overall_state: payload.system_initialize.overall_state,
       setup_flow: payload.system_initialize.setup_flow,
+      readiness: payload.system_initialize.readiness,
+      online_management: payload.system_initialize.online_management,
       module_summary: payload.system_initialize.module_summary,
       checklist: payload.system_initialize.checklist,
       core_engines: payload.system_initialize.core_engines,

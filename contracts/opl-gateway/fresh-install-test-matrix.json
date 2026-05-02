@@ -40,6 +40,11 @@
       "schema_version",
       "surface_id",
       "payload"
+    ],
+    "online_management_event_types": [
+      "online_management_repair_started",
+      "online_management_repair_completed",
+      "online_management_repair_failed"
     ]
   },
   "gui_accessibility_labels": {
@@ -66,7 +71,11 @@
         "codex",
         "codex_config",
         "domain_modules"
-      ]
+      ],
+      "expected_online_management": {
+        "status": "needs_attention",
+        "blocking": false
+      }
     },
     {
       "scenario_id": "compatible_codex_missing_modules",
@@ -76,7 +85,11 @@
       "expected_blockers": [
         "codex_config",
         "domain_modules"
-      ]
+      ],
+      "expected_online_management": {
+        "status": "needs_attention",
+        "blocking": false
+      }
     },
     {
       "scenario_id": "outdated_codex",
@@ -87,14 +100,22 @@
         "codex",
         "codex_config",
         "domain_modules"
-      ]
+      ],
+      "expected_online_management": {
+        "status": "needs_attention",
+        "blocking": false
+      }
     },
     {
       "scenario_id": "ready_baseline",
       "layer": "local_cli",
       "setup": "temporary HOME and OPL_STATE_DIR, fake compatible codex, and git-backed managed module fixtures",
       "expected_phase": "review",
-      "expected_blockers": []
+      "expected_blockers": [],
+      "expected_online_management": {
+        "status": "needs_attention",
+        "blocking": false
+      }
     },
     {
       "scenario_id": "offline_module_install_blocker",
