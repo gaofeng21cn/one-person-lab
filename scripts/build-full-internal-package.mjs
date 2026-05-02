@@ -791,7 +791,7 @@ function main() {
     version: options.version,
     dmgName: artifactNames.dmg,
     runtimeTarName: runtimeTar ? artifactNames.runtimeTar : null,
-    notarized: process.env.CI === 'true',
+    notarized: process.env.OPL_FULL_PACKAGE_NOTARIZED === 'true',
   }), 'utf8');
   const checksumPath = writeChecksums(options.outDir, [targetDmg, manifestPath, readmePath, ...(runtimeTar ? [runtimeTar] : [])]);
 
