@@ -1,7 +1,7 @@
 {
   "package_id": "opl_phase_2_admitted_domain_delta_intake_refresh",
-  "date_anchor": "2026-04-13",
-  "status": "truth_frozen_pending_implementation",
+  "date_anchor": "2026-05-02",
+  "status": "historical_reference_sync_record",
   "parent_board_id": "opl_phase_2_central_reference_sync_board",
   "parent_package_id": "opl_minimal_admitted_domain_federation_activation_package",
   "goal": "freeze the first follow-on central-sync slice so OPL can ingest the latest absorbed admitted-domain deltas into central references without widening top-level authority",
@@ -15,7 +15,7 @@
     {
       "domain_id": "medautoscience",
       "latest_absorbed_commit": "6c64264",
-      "delta_label": "verification-surface split plus runtime/workspace repair priorities and workflow-entry retirement off omx",
+      "delta_label": "verification-surface split plus runtime/workspace repair priorities and workflow-entry migration back to repo-tracked truth",
       "required_central_effect": "central references must stop describing 5366d18 alone as the latest MedAutoScience hardening edge, and instead carry the 9b5cea8 / 7ee19a8 / 6c64264 repo-side evidence pack while preserving the external-runtime blocker"
     }
   ],
@@ -23,7 +23,6 @@
     "docs/references/contract-convergence-v1-execution-board.md",
     "docs/references/ecosystem-status-matrix.md",
     "docs/references/runtime-alignment-taskboard.md",
-    "docs/references/omx-longrun-prompt-playbook.md",
     "docs/references/opl-phase2-ecosystem-sync-owner-line.md"
   ],
   "out_of_scope": [

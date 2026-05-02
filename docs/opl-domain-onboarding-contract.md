@@ -46,9 +46,9 @@ When a reviewer checks whether an onboarding package really aligns with the curr
 
 If historical migration context is still needed during review, use these historical references separately:
 
-- [Development Operating Model](./references/development-operating-model.md) — Chinese-only internal reference for historical `Codex Host` / `OMX` migration discipline and compatible longrun worktree rules
+- [Development Operating Model](./references/development-operating-model.md) — Chinese-only internal reference for historical `Codex Host` / `OMX` migration discipline; not a current execution guide
 - [Runtime Alignment Taskboard](./references/runtime-alignment-taskboard.md) — Chinese-only historical reference for the retired four-repo convergence checklist
-- [OMX historical archive](./history/omx/README.md) — Chinese-only historical archive entry for compatible long-running execution references
+- [OMX historical archive](./history/omx/README.md) — Chinese-only tombstone for retired OMX-era workflow material
 
 The active execution path remains Codex-only; these companions help reviewers keep current execution-model wording separate from retained historical migration boundaries during onboarding.
 They do **not** turn `OPL` into the runtime owner of a candidate domain.

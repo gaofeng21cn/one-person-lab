@@ -170,7 +170,7 @@
 当前判断：
 
 - runtime ontology 与 host-agent 口径已很清楚
-- 当前 repo-tracked absorbed tranche 已推进到 `Phase 2 / runtime watch locator integrity hardening`，并额外吸收了 `e8146a1` verification surface 分层与 `762ea4c` repo-local control-plane migration off OMX
+- 当前 repo-tracked absorbed tranche 已推进到 `Phase 2 / runtime watch locator integrity hardening`，并额外吸收了 `e8146a1` verification surface 分层与 `762ea4c` repo-local control-plane migration back to repo-tracked truth
 - 但 `R5 / hosted-friendly contract extraction` 仍缺一份明确的 hostedization-prep contract slice
 
 当前已经具备：

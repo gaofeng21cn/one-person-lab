@@ -112,3 +112,4 @@ If you need to understand what `OPL` is today, go back to:
 - New reference docs should be filed into the six buckets above.
 - Retired gateway/federation corpus stays here or in the paired compatibility surfaces and must not be treated as the current implementation basis.
 - Retired `frontdoor`-era material stays here for audit only and must not be treated as the current implementation basis.
+- Retired OMX-era prompt, longrun, and worktree material has been removed from active references; use the historical archive only as a tombstone, not as an execution guide.

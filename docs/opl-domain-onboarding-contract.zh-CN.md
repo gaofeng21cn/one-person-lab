@@ -46,9 +46,9 @@ Candidate-domain backlog 则是位于它上游的 blocker surface，用来记录
 
 如果审查时仍需要追溯历史迁移上下文，再单独参考下面这些历史材料：
 
-- [四仓统一开发运行合同](./references/development-operating-model.md) — 历史 `Codex Host` / `OMX` 迁移纪律与兼容长跑 `worktree` 规则（中文内部参考）
+- [四仓统一开发运行合同](./references/development-operating-model.md) — 历史 `Codex Host` / `OMX` 迁移纪律；不是当前执行手册（中文内部参考）
 - [四仓统一对齐检查表与任务板](./references/runtime-alignment-taskboard.md) — 已退役四仓收口清单的历史参考
-- [OMX 历史资料索引](./history/omx/README.zh-CN.md) — 兼容性长跑规则与迁移资料入口（中文历史参考）
+- [OMX 历史资料索引](./history/omx/README.zh-CN.md) — 已退役 OMX 时代工作流材料的墓碑页（中文历史参考）
 
 当前活跃执行入口仍是 Codex-only；这些配套文档只用于帮助审查当前 execution-model wording，并把它与保留下来的历史迁移边界分开。
 它们**不会**把 `OPL` 变成候选 domain 的 runtime owner。

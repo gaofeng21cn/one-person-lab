@@ -83,7 +83,7 @@
   - 主线不重开新的架构 tranche
   - 以手工测试驱动稳定化，并保持 external runtime gate 的 truth 不漂移
   - manual stabilization checklist 已冻结成 repo-tracked reference（`dd865e0`）；`runtime_watch` heartbeat / auto-recovery（`40e343c`、`d17959e`）、closure handoff-ready bundle 识别（`ee1c0b2`）与 publication gate 未 clear 时的 premature completion fail-closed（`7444000`）都已 absorbed 到当前 repo-side behavior hardening
-  - `9b5cea8` 已把 verification surfaces 按 `test-fast / test-meta / test-display / test-full` 分层，`7ee19a8` 已冻结 runtime/workspace repair priorities，`6c64264` 已把 repo entry 从 OMX 路径迁回当前 repo-tracked truth
+  - `9b5cea8` 已把 verification surfaces 按 `test-fast / test-meta / test-display / test-full` 分层，`7ee19a8` 已冻结 runtime/workspace repair priorities，`6c64264` 已把 repo entry 迁回当前 repo-tracked truth
   - `monorepo / runtime core ingest / controlled cutover` 仍是明确长线，但在 external runtime gate 清除前，不提前进入 physical migration、cross-repo refactor 或 scaffold cutover
 
 本阶段的重点不是再补一轮命名，而是把统一合同继续变成 repo-verified behavior。
