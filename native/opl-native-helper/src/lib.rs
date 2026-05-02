@@ -641,6 +641,9 @@ fn path_to_string(path: impl AsRef<Path>) -> String {
 mod tests {
     use super::*;
     use std::fs;
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    static TEMP_ROOT_COUNTER: AtomicU64 = AtomicU64::new(0);
 
     #[test]
     fn artifact_indexer_reports_only_configured_artifact_files() {
@@ -771,9 +774,11 @@ mod tests {
 
     fn unique_temp_root() -> PathBuf {
         let mut path = env::temp_dir();
+        let sequence = TEMP_ROOT_COUNTER.fetch_add(1, Ordering::Relaxed);
         path.push(format!(
-            "opl-native-helper-test-{}-{}",
+            "opl-native-helper-test-{}-{}-{}",
             std::process::id(),
+            sequence,
             std::time::SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
