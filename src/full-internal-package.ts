@@ -37,7 +37,7 @@ export function buildFullPackageArtifactNames(versionInput: string) {
     dmg: `One-Person-Lab-Full-${version}-mac-arm64.dmg`,
     runtimeTar: `opl-runtime-full-${version}-macos-arm64.tar.zst`,
     checksums: 'SHA256SUMS.txt',
-    readme: 'README-首次安装说明.txt',
+    readme: 'README-Full-First-Install.txt',
     manifest: 'full-package-manifest.json',
   };
 }
