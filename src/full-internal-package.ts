@@ -84,9 +84,12 @@ export function buildFullPackageManifest(input: FullPackageManifestInput = {}) {
     runtime: {
       layout_version: 1,
       payload_resource_dir: FULL_RUNTIME_RESOURCE_DIR,
-      install_root_template: '~/Library/Application Support/OPL/runtime/<version>',
-      installed_runtime_path: `~/Library/Application Support/OPL/runtime/${version}`,
+      install_root_template: '~/Library/Application Support/OPL/runtime/current',
+      installed_runtime_path: '~/Library/Application Support/OPL/runtime/current',
+      active_pointer_path: '~/Library/Application Support/OPL/runtime/current.json',
+      version_metadata_path: '~/Library/Application Support/OPL/runtime/current/.opl-full-runtime-installed.json',
       app_uses_installed_runtime_after_first_launch: true,
+      runtime_version_stored_in_metadata_only: true,
       state_policy: 'user_state_stays_outside_runtime_payload',
     },
     distribution: {
@@ -268,7 +271,7 @@ export function buildInternalPackageReadme(input: {
   runtimeTarName: string | null;
   notarized: boolean;
 }) {
-  const installPath = `~/Library/Application Support/OPL/runtime/${normalizeVersion(input.version)}`;
+  const installPath = '~/Library/Application Support/OPL/runtime/current';
   return [
     `One Person Lab Full 首次安装包 ${normalizeVersion(input.version)}`,
     '',
@@ -278,10 +281,11 @@ export function buildInternalPackageReadme(input: {
     '',
     '安装步骤：',
     `1. 打开 ${input.dmgName}，把 One Person Lab 拖到 Applications。`,
-    '2. 首次启动 App 后，随包 runtime 会安装到：',
+    '2. 首次启动 App 后，随包 runtime 会安装到稳定路径，后续 Full 包刷新会覆盖同一路径：',
     `   ${installPath}`,
-    '3. 在 App 里配置 Codex API key 后，进入 OPL 初始化页确认 Codex、Hermes-Agent、MAS、MDS backend 状态。',
-    '4. 推荐先跑一次 MAS 最小 smoke：进入 Research Foundry，创建或读取一个 workspace 状态。',
+    '3. runtime 版本只记录在 current.json 和 current/.opl-full-runtime-installed.json，不进入安装目录名。',
+    '4. 在 App 里配置 Codex API key 后，进入 OPL 初始化页确认 Codex、Hermes-Agent、MAS、MDS backend 状态。',
+    '5. 推荐先跑一次 MAS 最小 smoke：进入 Research Foundry，创建或读取一个 workspace 状态。',
     '',
     input.runtimeTarName
       ? `补充 runtime 包：如 DMG 内 runtime 安装失败，可保留 ${input.runtimeTarName} 作为人工诊断包。`
