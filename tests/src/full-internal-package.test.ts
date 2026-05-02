@@ -42,7 +42,14 @@ test('full internal manifest declares MAS required, MDS backend hidden, and Herm
   });
 
   assert.equal(manifest.package_kind, 'opl_full_first_install_macos_arm64');
-  assert.equal(manifest.runtime.install_root_template, '~/Library/Application Support/OPL/runtime/<version>');
+  assert.equal(manifest.runtime.install_root_template, '~/Library/Application Support/OPL/runtime/current');
+  assert.equal(manifest.runtime.installed_runtime_path, '~/Library/Application Support/OPL/runtime/current');
+  assert.equal(manifest.runtime.active_pointer_path, '~/Library/Application Support/OPL/runtime/current.json');
+  assert.equal(
+    manifest.runtime.version_metadata_path,
+    '~/Library/Application Support/OPL/runtime/current/.opl-full-runtime-installed.json',
+  );
+  assert.equal(manifest.runtime.runtime_version_stored_in_metadata_only, true);
   assert.equal(manifest.components.mas.required, true);
   assert.equal(manifest.components.mas.role, 'primary_domain_module');
   assert.equal(manifest.components.mds.required, true);
@@ -126,7 +133,10 @@ test('readme documents GitHub Release first-install distribution and app update 
   assert.match(text, /GitHub Release/);
   assert.match(text, /latest\*\.yml/);
   assert.match(text, /自动更新目标/);
-  assert.match(text, /Application Support\/OPL\/runtime\/26\.5\.1/);
+  assert.match(text, /Application Support\/OPL\/runtime\/current/);
+  assert.match(text, /current\.json/);
+  assert.match(text, /\.opl-full-runtime-installed\.json/);
+  assert.doesNotMatch(text, /Application Support\/OPL\/runtime\/26\.5\.1/);
   assert.match(text, /API key/);
   assert.match(text, /当前标准 GitHub DMG 的同等发布模式/);
   assert.match(text, /右键打开/);

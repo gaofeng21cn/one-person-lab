@@ -610,7 +610,7 @@ function buildSkillsLayer(layerRoot) {
 
 function prepareRuntime(options, sources) {
   const stagingRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-full-runtime-'));
-  const runtimeRoot = path.join(stagingRoot, options.version);
+  const runtimeRoot = path.join(stagingRoot, 'current');
   fs.mkdirSync(path.join(runtimeRoot, 'bin'), { recursive: true });
 
   const packagedAt = new Date().toISOString();
@@ -664,12 +664,12 @@ function prepareRuntime(options, sources) {
   };
 }
 
-function syncRuntimePayloadToGui(guiRoot, version, runtimeRoot, manifest) {
+function syncRuntimePayloadToGui(guiRoot, runtimeRoot, manifest) {
   const payloadRoot = path.join(guiRoot, 'packaged-runtimes', FULL_RUNTIME_RESOURCE_DIR);
   fs.rmSync(path.join(payloadRoot, 'runtime'), { recursive: true, force: true });
   fs.rmSync(path.join(payloadRoot, 'manifest'), { recursive: true, force: true });
   fs.mkdirSync(path.join(payloadRoot, 'runtime'), { recursive: true });
-  fs.cpSync(runtimeRoot, path.join(payloadRoot, 'runtime', version), {
+  fs.cpSync(runtimeRoot, path.join(payloadRoot, 'runtime', 'current'), {
     recursive: true,
     dereference: true,
     preserveTimestamps: true,
@@ -766,7 +766,7 @@ function main() {
   }
 
   const prepared = prepareRuntime(options, sources);
-  syncRuntimePayloadToGui(options.guiRoot, options.version, prepared.runtimeRoot, prepared.manifest);
+  syncRuntimePayloadToGui(options.guiRoot, prepared.runtimeRoot, prepared.manifest);
 
   if (!options.skipGuiBuild) {
     run('npm', ['run', 'build-mac:arm64'], {

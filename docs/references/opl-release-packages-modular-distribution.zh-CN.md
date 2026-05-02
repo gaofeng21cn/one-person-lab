@@ -201,6 +201,7 @@ Manifest 会同步到 `ghcr.io/gaofeng21cn/one-person-lab-manifest:<opl_version>
 Full 首次安装包是标准 App 之外的额外 GitHub Release asset，用于减少新用户从安装到开始 MAS 工作的等待。它必须满足：
 
 - 文件名使用 `One-Person-Lab-Full-<version>-mac-arm64.dmg`，与标准更新包分开。
-- 随包 runtime 首启安装到 `~/Library/Application Support/OPL/runtime/<version>`，App 后续从该路径引用 runtime。
+- 随包 runtime 首启安装到稳定路径 `~/Library/Application Support/OPL/runtime/current`，App 后续从该路径引用 runtime。
+- runtime 版本只写入 `~/Library/Application Support/OPL/runtime/current.json` 和 `runtime/current/.opl-full-runtime-installed.json`，不进入安装目录名，后续 Full 包刷新同一路径。
 - `latest*.yml` 只引用标准 `One-Person-Lab-<version>-mac-arm64.*` 资产，不引用 Full DMG。
 - Full 包的签名/公证模式与当前标准 GitHub DMG 保持一致：CI 配置 Developer ID secrets 时走签名/公证校验；未配置时仍可产出同等未签名 Release asset，不阻断首次安装包验证和上传。
