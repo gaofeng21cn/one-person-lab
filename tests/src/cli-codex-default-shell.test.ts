@@ -190,7 +190,7 @@ EOF
       project: 'redcube-ai',
       plugin: 'redcube-ai',
       canonicalPlugin: 'rca',
-      installer: path.join('scripts', 'install-codex-plugin.mjs'),
+      installer: path.join('scripts', 'install-codex-plugin.ts'),
       scriptBody: `import fs from 'node:fs';
 fs.appendFileSync(${JSON.stringify(path.join(captureDir, 'sync.log'))}, 'redcube-ai\\n');
 process.stdout.write(JSON.stringify({ repo: 'redcube-ai', sync: 'ok' }) + '\\n');
@@ -451,6 +451,43 @@ test('opl skill list discovers OPL-managed module installs without OPL_FAMILY_WO
     assert.equal(
       medAutoScience.repo_root,
       path.join(managedModulesRoot, 'med-autoscience'),
+    );
+  } finally {
+    fs.rmSync(captureDir, { recursive: true, force: true });
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('opl skill list prefers managed roots over Full runtime module path overrides', () => {
+  const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-skill-list-full-runtime-'));
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-skill-full-home-'));
+  const stateDir = path.join(homeRoot, 'opl-state');
+  const managedModulesRoot = path.join(stateDir, 'modules');
+  const { workspaceRoot } = createFakeFamilySkillWorkspace(captureDir);
+
+  try {
+    fs.mkdirSync(managedModulesRoot, { recursive: true });
+    fs.renameSync(
+      path.join(workspaceRoot, 'redcube-ai'),
+      path.join(managedModulesRoot, 'redcube-ai'),
+    );
+    const packagedRcaRoot = path.join(homeRoot, 'runtime', 'current', 'modules', 'rca');
+    fs.mkdirSync(packagedRcaRoot, { recursive: true });
+
+    const output = runCli(['skill', 'list', '--domain', 'rca'], {
+      HOME: homeRoot,
+      OPL_STATE_DIR: stateDir,
+      OPL_MODULE_PATH_REDCUBE: packagedRcaRoot,
+    });
+
+    assert.equal(output.skill_catalog.summary.repo_found, 1);
+    assert.equal(output.skill_catalog.summary.ready_to_sync, 1);
+    assert.equal(output.skill_catalog.packs[0].domain_id, 'redcube');
+    assert.equal(output.skill_catalog.packs[0].repo_root, path.join(managedModulesRoot, 'redcube-ai'));
+    assert.match(
+      output.skill_catalog.packs[0].command_preview.join(' '),
+      /node --experimental-strip-types .*scripts\/install-codex-plugin\.ts/,
     );
   } finally {
     fs.rmSync(captureDir, { recursive: true, force: true });

@@ -339,6 +339,18 @@ function buildModulePathEnvKey(moduleId: OplModuleId) {
   return `OPL_MODULE_PATH_${moduleId.toUpperCase()}`;
 }
 
+function pathsReferToSameLocation(left: string, right: string) {
+  const resolveExisting = (value: string) => {
+    try {
+      return fs.realpathSync(value);
+    } catch {
+      return path.resolve(value);
+    }
+  };
+
+  return resolveExisting(left) === resolveExisting(right);
+}
+
 function resolveManagedModulesRoot() {
   const statePaths = ensureOplStateDir(resolveOplStatePaths());
   const explicitRoot = normalizeOptionalString(process.env.OPL_MODULES_ROOT);
@@ -353,6 +365,16 @@ function resolveManagedModulePath(spec: DomainModuleSpec) {
   return path.join(resolveManagedModulesRoot(), spec.repo_name);
 }
 
+function resolvePackagedModuleSourcePath(spec: DomainModuleSpec) {
+  const envCheckoutPath = normalizeOptionalString(process.env[buildModulePathEnvKey(spec.module_id)]);
+  if (!envCheckoutPath) {
+    return null;
+  }
+
+  const sourcePath = path.resolve(envCheckoutPath);
+  return readPackagedModuleGitSnapshot(sourcePath, spec) ? sourcePath : null;
+}
+
 function inspectModule(spec: DomainModuleSpec): ModuleInspection {
   const managedCheckoutPath = resolveManagedModulePath(spec);
   const envCheckoutPath = normalizeOptionalString(process.env[buildModulePathEnvKey(spec.module_id)]);
@@ -360,16 +382,16 @@ function inspectModule(spec: DomainModuleSpec): ModuleInspection {
   const siblingCheckoutPath = path.join(resolveSiblingWorkspaceRoot(), spec.repo_name);
   const candidates: Array<{ path: string; origin: OplModuleInstallOrigin }> = [];
 
+  candidates.push({
+    path: managedCheckoutPath,
+    origin: 'managed_root',
+  });
   if (envCheckoutPath) {
     candidates.push({
       path: path.resolve(envCheckoutPath),
       origin: 'env_override',
     });
   }
-  candidates.push({
-    path: managedCheckoutPath,
-    origin: 'managed_root',
-  });
   if (!explicitModulesRoot && !envCheckoutPath) {
     candidates.push({
       path: siblingCheckoutPath,
@@ -384,6 +406,13 @@ function inspectModule(spec: DomainModuleSpec): ModuleInspection {
 
     const packagedGit = readPackagedModuleGitSnapshot(candidate.path, spec);
     if (packagedGit) {
+      if (
+        candidate.origin === 'env_override'
+        && !pathsReferToSameLocation(candidate.path, managedCheckoutPath)
+      ) {
+        continue;
+      }
+
       return {
         module_id: spec.module_id,
         label: spec.label,
@@ -396,7 +425,7 @@ function inspectModule(spec: DomainModuleSpec): ModuleInspection {
         managed_checkout_path: managedCheckoutPath,
         health_status: 'ready',
         git: packagedGit,
-        available_actions: [],
+        available_actions: candidate.origin === 'managed_root' ? ['reinstall', 'remove'] : [],
         recommended_action: null,
       };
     }
@@ -528,6 +557,43 @@ function cloneManagedModule(spec: DomainModuleSpec, checkoutPath: string) {
   });
 }
 
+function installManagedModule(spec: DomainModuleSpec, checkoutPath: string) {
+  const packagedSourcePath = resolvePackagedModuleSourcePath(spec);
+  if (packagedSourcePath) {
+    copyManagedModuleFromPackagedRuntime(spec, packagedSourcePath, checkoutPath);
+    return;
+  }
+
+  cloneManagedModule(spec, checkoutPath);
+}
+
+function copyManagedModuleFromPackagedRuntime(spec: DomainModuleSpec, sourcePath: string, checkoutPath: string) {
+  const packagedGit = readPackagedModuleGitSnapshot(sourcePath, spec);
+  if (!packagedGit) {
+    throw new GatewayContractError(
+      'cli_usage_error',
+      'Packaged module source is not a valid OPL Full runtime module.',
+      {
+        module_id: spec.module_id,
+        source_path: sourcePath,
+        expected_marker: PACKAGED_MODULE_MARKER_FILE,
+      },
+      2,
+    );
+  }
+
+  fs.mkdirSync(path.dirname(checkoutPath), { recursive: true });
+  const tempTarget = `${checkoutPath}.tmp-${process.pid}`;
+  fs.rmSync(tempTarget, { recursive: true, force: true });
+  fs.cpSync(sourcePath, tempTarget, {
+    recursive: true,
+    dereference: false,
+    preserveTimestamps: true,
+  });
+  fs.rmSync(checkoutPath, { recursive: true, force: true });
+  fs.renameSync(tempTarget, checkoutPath);
+}
+
 function readHomeDir() {
   return process.env.HOME?.trim() || resolveOplStatePaths().home_dir;
 }
@@ -650,10 +716,32 @@ function runModuleHealthCheck(spec: DomainModuleRuntimeSpec, checkoutPath: strin
   );
 }
 
+function runPackagedModuleHealthCheck(spec: DomainModuleRuntimeSpec, checkoutPath: string) {
+  return runModuleStep(
+    spec,
+    'health_check',
+    resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-healthcheck.sh')),
+    checkoutPath,
+    'Packaged Full runtime marker is present; no repo-owned OPL health check is declared.',
+  );
+}
+
 function runManagedModuleWorkflow(spec: DomainModuleRuntimeSpec, checkoutPath: string) {
-  const bootstrap = runModuleBootstrap(spec, checkoutPath);
+  const packagedModule = Boolean(readPackagedModuleGitSnapshot(checkoutPath, spec));
+  const bootstrap = packagedModule
+    ? {
+      status: 'skipped',
+      summary: 'Packaged Full runtime modules are already staged; bootstrap is not required.',
+      command_preview: null,
+      stdout: '',
+      stderr: '',
+      result: null,
+    } satisfies ModuleActionStepResult
+    : runModuleBootstrap(spec, checkoutPath);
   const skill_sync = runModuleSkillSync(spec, checkoutPath);
-  const health_check = runModuleHealthCheck(spec, checkoutPath);
+  const health_check = packagedModule
+    ? runPackagedModuleHealthCheck(spec, checkoutPath)
+    : runModuleHealthCheck(spec, checkoutPath);
 
   return {
     bootstrap,
@@ -721,11 +809,13 @@ export function runOplModuleAction(
   switch (action) {
     case 'install': {
       if (!current.installed) {
-        cloneManagedModule(spec, current.managed_checkout_path);
+        installManagedModule(spec, current.managed_checkout_path);
       }
       const installed = inspectModule(spec);
       if (installed.install_origin === 'managed_root') {
         workflow = runManagedModuleWorkflow(spec, installed.checkout_path);
+      } else if (installed.installed && installed.install_origin !== 'missing' && installed.install_origin !== 'invalid_checkout') {
+        workflow = runExternalModuleWorkflow(spec, installed.checkout_path);
       }
       break;
     }
@@ -780,7 +870,7 @@ export function runOplModuleAction(
         );
       }
       fs.rmSync(current.managed_checkout_path, { recursive: true, force: true });
-      cloneManagedModule(spec, current.managed_checkout_path);
+      installManagedModule(spec, current.managed_checkout_path);
       workflow = runManagedModuleWorkflow(spec, current.managed_checkout_path);
       break;
     }

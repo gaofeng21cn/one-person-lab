@@ -24,7 +24,7 @@ function writeExecutable(filePath: string, content: string) {
   fs.chmodSync(filePath, 0o755);
 }
 
-test('full internal manifest declares MAS required, MDS backend hidden, and Hermes lean runtime', () => {
+test('full internal manifest declares all first-run domain modules and Hermes lean runtime', () => {
   const manifest = buildFullPackageManifest({
     version: '26.5.1',
     generatedAt: '2026-05-01T00:00:00.000Z',
@@ -34,6 +34,8 @@ test('full internal manifest declares MAS required, MDS backend hidden, and Herm
       hermes: { source_path: '/hermes', version: '0.8.0', git_commit: 'hermessha', size_bytes: 3 },
       mas: { source_path: '/mas', git_commit: 'massha', size_bytes: 4 },
       mds: { source_path: '/mds', git_commit: 'mdssha', size_bytes: 5 },
+      mag: { source_path: '/mag', git_commit: 'magsha', size_bytes: 6 },
+      rca: { source_path: '/rca', git_commit: 'rcasha', size_bytes: 7 },
       node: { source_path: '/node', version: '22.16.0', size_bytes: 6 },
       python: { source_path: '/python', version: '3.12.12', size_bytes: 7 },
       uv: { source_path: '/uv', version: '0.9.5', size_bytes: 8 },
@@ -50,10 +52,21 @@ test('full internal manifest declares MAS required, MDS backend hidden, and Herm
     '~/Library/Application Support/OPL/runtime/current/.opl-full-runtime-installed.json',
   );
   assert.equal(manifest.runtime.runtime_version_stored_in_metadata_only, true);
+  assert.equal(
+    manifest.runtime.domain_module_payload_policy,
+    'packaged_runtime_modules_are_materialized_to_standard_state_modules_on_install',
+  );
+  assert.equal(manifest.runtime.managed_modules_root_template, '~/Library/Application Support/OPL/state/modules');
   assert.equal(manifest.components.mas.required, true);
   assert.equal(manifest.components.mas.role, 'primary_domain_module');
   assert.equal(manifest.components.mds.required, true);
   assert.equal(manifest.components.mds.visible_in_first_run_ui, false);
+  assert.equal(manifest.components.mag.required, true);
+  assert.equal(manifest.components.mag.role, 'grant_domain_module');
+  assert.equal(manifest.components.mag.visible_in_first_run_ui, true);
+  assert.equal(manifest.components.rca.required, true);
+  assert.equal(manifest.components.rca.role, 'visual_deliverable_domain_module');
+  assert.equal(manifest.components.rca.visible_in_first_run_ui, true);
   assert.equal(manifest.components.hermes.profile, 'lean');
   assert.ok(manifest.components.hermes.excluded_capabilities.includes('web_ui'));
   assert.equal(manifest.distribution.github_release_upload, true);
@@ -115,11 +128,15 @@ test('runtime staging excludes dev/runtime-heavy paths while preserving core ent
   assert.equal(shouldExcludeRuntimePath('modules/mas/.venv/lib/python3.12/site-packages/pip/__pycache__/x.pyc'), true);
   assert.equal(shouldExcludeRuntimePath('opl/node_modules/typescript/package.json'), true);
   assert.equal(shouldExcludeRuntimePath('opl/python/opl-harness-shared/.venv/bin/python3'), true);
+  assert.equal(shouldExcludeRuntimePath('opl/dist/cli.js'), true);
 
   assert.equal(shouldExcludeRuntimePath('hermes/hermes_cli/gateway.py'), false);
   assert.equal(shouldExcludeRuntimePath('hermes/hermes_cli/cron.py'), false);
   assert.equal(shouldExcludeRuntimePath('modules/mas/src/medautosci/__init__.py'), false);
   assert.equal(shouldExcludeRuntimePath('modules/mds/src/med_deepscientist/__init__.py'), false);
+  assert.equal(shouldExcludeRuntimePath('modules/mag/src/med_autogrant/__init__.py'), false);
+  assert.equal(shouldExcludeRuntimePath('modules/rca/apps/redcube-cli/dist/cli.js'), false);
+  assert.equal(shouldExcludeRuntimePath('modules/rca/packages/redcube-gateway/dist/index.js'), false);
 });
 
 test('readme documents GitHub Release first-install distribution and app update boundary', () => {
@@ -134,43 +151,83 @@ test('readme documents GitHub Release first-install distribution and app update 
   assert.match(text, /latest\*\.yml/);
   assert.match(text, /自动更新目标/);
   assert.match(text, /Application Support\/OPL\/runtime\/current/);
+  assert.match(text, /Application Support\/OPL\/state\/modules\/<repo-name>/);
   assert.match(text, /current\.json/);
   assert.match(text, /\.opl-full-runtime-installed\.json/);
   assert.doesNotMatch(text, /Application Support\/OPL\/runtime\/26\.5\.1/);
   assert.match(text, /API key/);
+  assert.match(text, /确认 Codex、Hermes-Agent、MAS、MDS backend、MAG、RCA 状态/);
   assert.match(text, /当前标准 GitHub DMG 的同等发布模式/);
   assert.match(text, /右键打开/);
 });
 
-test('packaged module marker lets git-stripped MAS runtime count as installed', async () => {
+test('packaged module markers are staging sources until materialized into managed module roots', async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-full-marker-'));
   const originalStateDir = process.env.OPL_STATE_DIR;
   const originalModulesRoot = process.env.OPL_MODULES_ROOT;
+  const originalModulePaths = new Map(
+    ['MEDAUTOSCIENCE', 'MEDDEEPSCIENTIST', 'MEDAUTOGRANT', 'REDCUBE'].map((suffix) => {
+      const key = `OPL_MODULE_PATH_${suffix}`;
+      return [key, process.env[key]] as const;
+    }),
+  );
   try {
-    const modulesRoot = path.join(tempRoot, 'modules');
-    const masRoot = path.join(modulesRoot, 'med-autoscience');
-    fs.mkdirSync(masRoot, { recursive: true });
-    fs.writeFileSync(
-      path.join(masRoot, 'opl-runtime-module.json'),
-      JSON.stringify({
-        module_id: 'medautoscience',
-        repo_name: 'med-autoscience',
-        source_git: { head_sha: 'abc123' },
-        packaged_runtime: true,
-      }),
-      'utf8',
-    );
+    const runtimeModulesRoot = path.join(tempRoot, 'runtime', 'current', 'modules');
+    const moduleSpecs = [
+      ['medautoscience', 'med-autoscience', 'mas', 'abc123'],
+      ['meddeepscientist', 'med-deepscientist', 'mds', 'def456'],
+      ['medautogrant', 'med-autogrant', 'mag', 'fed789'],
+      ['redcube', 'redcube-ai', 'rca', 'cba987'],
+    ] as const;
+    for (const [moduleId, repoName, runtimeDir, headSha] of moduleSpecs) {
+      const moduleRoot = path.join(runtimeModulesRoot, runtimeDir);
+      fs.mkdirSync(path.join(moduleRoot, 'scripts'), { recursive: true });
+      fs.writeFileSync(
+        path.join(moduleRoot, 'opl-runtime-module.json'),
+        JSON.stringify({
+          module_id: moduleId,
+          repo_name: repoName,
+          source_git: { head_sha: headSha },
+          packaged_runtime: true,
+        }),
+        'utf8',
+      );
+      fs.writeFileSync(
+        path.join(moduleRoot, 'scripts', 'opl-module-healthcheck.sh'),
+        '#!/usr/bin/env bash\nset -euo pipefail\n',
+        { mode: 0o755 },
+      );
+    }
     process.env.OPL_STATE_DIR = path.join(tempRoot, 'state');
-    process.env.OPL_MODULES_ROOT = modulesRoot;
+    process.env.OPL_MODULES_ROOT = path.join(tempRoot, 'managed-modules');
+    process.env.OPL_MODULE_PATH_MEDAUTOSCIENCE = path.join(runtimeModulesRoot, 'mas');
+    process.env.OPL_MODULE_PATH_MEDDEEPSCIENTIST = path.join(runtimeModulesRoot, 'mds');
+    process.env.OPL_MODULE_PATH_MEDAUTOGRANT = path.join(runtimeModulesRoot, 'mag');
+    process.env.OPL_MODULE_PATH_REDCUBE = path.join(runtimeModulesRoot, 'rca');
 
-    const { buildOplModules } = await import('../../src/system-installation/modules.ts');
+    const { buildOplModules, runOplModuleAction } = await import('../../src/system-installation/modules.ts');
     const surface = buildOplModules().modules;
-    const mas = surface.modules.find((entry) => entry.module_id === 'medautoscience');
+    const byId = new Map(surface.modules.map((entry) => [entry.module_id, entry]));
 
-    assert.equal(mas?.installed, true);
-    assert.equal(mas?.install_origin, 'managed_root');
-    assert.equal(mas?.health_status, 'ready');
-    assert.equal(mas?.git?.head_sha, 'abc123');
+    for (const [moduleId] of moduleSpecs) {
+      const module = byId.get(moduleId);
+      assert.equal(module?.installed, false);
+      assert.equal(module?.install_origin, 'missing');
+      assert.equal(module?.recommended_action, 'install');
+    }
+
+    const installed = runOplModuleAction('install', 'redcube').module_action.module;
+    assert.equal(installed.installed, true);
+    assert.equal(installed.install_origin, 'managed_root');
+    assert.equal(installed.checkout_path, path.join(tempRoot, 'managed-modules', 'redcube-ai'));
+    assert.equal(installed.git?.head_sha, 'cba987');
+    assert.equal(fs.existsSync(path.join(installed.checkout_path, 'opl-runtime-module.json')), true);
+
+    const refreshed = buildOplModules().modules.modules.find((entry) => entry.module_id === 'redcube');
+    assert.equal(refreshed?.install_origin, 'managed_root');
+    assert.equal(refreshed?.checkout_path, path.join(tempRoot, 'managed-modules', 'redcube-ai'));
+    assert.equal(refreshed?.git?.head_sha, 'cba987');
+    assert.equal(refreshed?.available_actions.includes('remove'), true);
   } finally {
     if (originalStateDir === undefined) {
       delete process.env.OPL_STATE_DIR;
@@ -181,6 +238,13 @@ test('packaged module marker lets git-stripped MAS runtime count as installed', 
       delete process.env.OPL_MODULES_ROOT;
     } else {
       process.env.OPL_MODULES_ROOT = originalModulesRoot;
+    }
+    for (const [key, value] of originalModulePaths) {
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
     }
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
@@ -224,6 +288,8 @@ test('full runtime layer cache records miss then hit when zstd is available', ()
       ['hermes-agent', 'hermes'],
       ['med-autoscience', 'mas'],
       ['med-deepscientist', 'mds'],
+      ['med-autogrant', 'mag'],
+      ['redcube-ai', 'rca'],
     ]) {
       const root = path.join(tmpRoot, name);
       fs.mkdirSync(root, { recursive: true });
@@ -252,6 +318,10 @@ test('full runtime layer cache records miss then hit when zstd is available', ()
           path.join(tmpRoot, 'med-autoscience'),
           '--mds-root',
           path.join(tmpRoot, 'med-deepscientist'),
+          '--mag-root',
+          path.join(tmpRoot, 'med-autogrant'),
+          '--rca-root',
+          path.join(tmpRoot, 'redcube-ai'),
           '--codex-root',
           codexRoot,
           '--node-bin',
@@ -289,6 +359,30 @@ test('full runtime layer cache records miss then hit when zstd is available', ()
       ['hit', 'hit', 'hit', 'hit'],
     );
     assert.ok(fs.existsSync(path.join(outputDir, `One-Person-Lab-Full-${version}-mac-arm64.dmg`)));
+    for (const [moduleDir, moduleId] of [
+      ['mas', 'medautoscience'],
+      ['mds', 'meddeepscientist'],
+      ['mag', 'medautogrant'],
+      ['rca', 'redcube'],
+    ]) {
+      const marker = JSON.parse(
+        fs.readFileSync(
+          path.join(
+            guiRoot,
+            'packaged-runtimes',
+            'opl-full-runtime',
+            'runtime',
+            'current',
+            'modules',
+            moduleDir,
+            'opl-runtime-module.json',
+          ),
+          'utf8',
+        ),
+      ) as { module_id: string; packaged_runtime: boolean };
+      assert.equal(marker.module_id, moduleId);
+      assert.equal(marker.packaged_runtime, true);
+    }
   } finally {
     fs.rmSync(tmpRoot, { recursive: true, force: true });
   }

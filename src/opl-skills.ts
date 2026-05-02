@@ -17,12 +17,13 @@ type SkillPackInstallerKind = 'bash' | 'node';
 
 type SkillPackSpec = {
   domain_id: 'medautoscience' | 'medautogrant' | 'redcube';
+  module_id: 'MEDAUTOSCIENCE' | 'MEDAUTOGRANT' | 'REDCUBE';
   project: string;
   label: string;
   plugin_name: string;
   canonical_plugin_name: 'mas' | 'mag' | 'rca';
   installer_kind: SkillPackInstallerKind;
-  installer_relative_path: string;
+  installer_relative_paths: string[];
 };
 
 type InspectFamilySkillPack = {
@@ -66,30 +67,36 @@ type SyncFamilySkillPacksOptions = ReadFamilySkillPacksOptions & {
 const FAMILY_SKILL_PACK_SPECS: SkillPackSpec[] = [
   {
     domain_id: 'medautoscience',
+    module_id: 'MEDAUTOSCIENCE',
     project: 'med-autoscience',
     label: 'Med Auto Science',
     plugin_name: 'med-autoscience',
     canonical_plugin_name: 'mas',
     installer_kind: 'bash',
-    installer_relative_path: path.join('scripts', 'install-codex-plugin.sh'),
+    installer_relative_paths: [path.join('scripts', 'install-codex-plugin.sh')],
   },
   {
     domain_id: 'medautogrant',
+    module_id: 'MEDAUTOGRANT',
     project: 'med-autogrant',
     label: 'Med Auto Grant',
     plugin_name: 'med-autogrant',
     canonical_plugin_name: 'mag',
     installer_kind: 'bash',
-    installer_relative_path: path.join('scripts', 'install-codex-plugin.sh'),
+    installer_relative_paths: [path.join('scripts', 'install-codex-plugin.sh')],
   },
   {
     domain_id: 'redcube',
+    module_id: 'REDCUBE',
     project: 'redcube-ai',
     label: 'RedCube AI',
     plugin_name: 'redcube-ai',
     canonical_plugin_name: 'rca',
     installer_kind: 'node',
-    installer_relative_path: path.join('scripts', 'install-codex-plugin.mjs'),
+    installer_relative_paths: [
+      path.join('scripts', 'install-codex-plugin.ts'),
+      path.join('scripts', 'install-codex-plugin.mjs'),
+    ],
   },
 ];
 
@@ -163,6 +170,11 @@ function resolveRepoRoot(spec: SkillPackSpec) {
     return managedRepoRoot;
   }
 
+  const modulePathValue = normalizeOptionalString(process.env[`OPL_MODULE_PATH_${spec.module_id}`]);
+  if (modulePathValue) {
+    return path.resolve(modulePathValue);
+  }
+
   const siblingRepoRoot = path.join(resolveDefaultFamilyWorkspaceRoot(), spec.project);
   if (isDirectory(siblingRepoRoot)) {
     return siblingRepoRoot;
@@ -186,7 +198,7 @@ function buildSkillEntryPath(spec: SkillPackSpec, repoRoot: string) {
 }
 
 function buildInstallerPath(spec: SkillPackSpec, repoRoot: string) {
-  return path.join(repoRoot, spec.installer_relative_path);
+  return resolveFirstExistingPath(spec.installer_relative_paths.map((relativePath) => path.join(repoRoot, relativePath)));
 }
 
 function resolveFirstExistingPath(candidates: string[]) {
@@ -208,7 +220,9 @@ function buildInstallerCommandPreview(
     return ['bash', installerPath, ...sharedArgs, '--skip-tools'];
   }
 
-  return ['node', installerPath, ...sharedArgs];
+  return installerPath.endsWith('.ts')
+    ? ['node', '--experimental-strip-types', installerPath, ...sharedArgs]
+    : ['node', installerPath, ...sharedArgs];
 }
 
 function maybeParseJsonRecord(raw: string) {

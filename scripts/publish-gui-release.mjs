@@ -324,8 +324,8 @@ function buildUpdateGuidanceNotes(version) {
 function buildFullPackageReleaseNotesSection(version) {
   return [
     'Full first-install package:',
-    `- New macOS arm64 users can download One-Person-Lab-Full-${version}-mac-arm64.dmg to reduce the time from first launch to the first MAS task.`,
-    '- The Full package bundles the MAS/Hermes/MDS runtime payload used during first setup; users still configure their API key normally.',
+    `- New macOS arm64 users can download One-Person-Lab-Full-${version}-mac-arm64.dmg to reduce the time from first launch to the first MAS, MAG, or RCA task.`,
+    '- The Full package bundles the MAS/MDS/MAG/RCA domain modules plus Hermes runtime payload used during first setup; users still configure their API key normally.',
     '- Full assets are first-install downloads only. They are not referenced by latest*.yml and are not used by the auto-updater.',
   ];
 }
