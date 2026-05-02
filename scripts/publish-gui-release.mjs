@@ -9,7 +9,12 @@ const defaultShellRoot = path.resolve(repoRoot, '..', 'opl-aion-shell');
 const defaultFullPackageDir = path.resolve(repoRoot, 'dist', 'opl-full-release');
 
 function defaultReleaseVersion() {
-  const now = new Date();
+  const now = process.env.OPL_RELEASE_DATE
+    ? new Date(`${process.env.OPL_RELEASE_DATE}T00:00:00Z`)
+    : new Date();
+  if (Number.isNaN(now.getTime())) {
+    throw new Error(`Invalid OPL_RELEASE_DATE: ${process.env.OPL_RELEASE_DATE}`);
+  }
   return `${String(now.getFullYear()).slice(-2)}.${now.getMonth() + 1}.${now.getDate()}`;
 }
 
@@ -17,7 +22,8 @@ function parseArgs(argv) {
   const parsed = {
     shellRoot: process.env.OPL_AION_SHELL_ROOT || defaultShellRoot,
     releaseRepo: process.env.OPL_RELEASE_REPO || 'gaofeng21cn/one-person-lab',
-    version: process.env.OPL_RELEASE_VERSION || defaultReleaseVersion(),
+    version: process.env.OPL_RELEASE_VERSION || '',
+    versionExplicit: Boolean(process.env.OPL_RELEASE_VERSION),
     macArch: process.env.OPL_RELEASE_MAC_ARCH || 'arm64',
     fullPackageDir: process.env.OPL_FULL_PACKAGE_DIR || '',
     build: true,
@@ -68,6 +74,7 @@ function parseArgs(argv) {
     }
     if (token === '--version') {
       parsed.version = value;
+      parsed.versionExplicit = true;
       index += 1;
       continue;
     }
@@ -89,6 +96,9 @@ function parseArgs(argv) {
   }
   if (parsed.fullPackageOnly && !parsed.includeFullPackage) {
     throw new Error('--full-package-only requires --include-full-package or --full-package-dir.');
+  }
+  if (!parsed.version) {
+    parsed.version = defaultReleaseVersion();
   }
   return parsed;
 }
@@ -240,6 +250,20 @@ function releaseExists(repo, tag) {
   return result.status === 0;
 }
 
+function suggestDefaultReleaseVersion(repo, dateVersion) {
+  if (!releaseExists(repo, `v${dateVersion}`)) {
+    return dateVersion;
+  }
+  for (let code = 97; code <= 122; code += 1) {
+    const suffix = String.fromCharCode(code);
+    const candidate = `${dateVersion}-${suffix}`;
+    if (!releaseExists(repo, `v${candidate}`)) {
+      return candidate;
+    }
+  }
+  throw new Error(`No available same-day suffix for GUI release date version ${dateVersion}.`);
+}
+
 function commandOutput(command, args, options = {}) {
   const result = spawnSync(command, args, {
     cwd: options.cwd,
@@ -360,6 +384,9 @@ function ensureFullPackageReleaseNotes(repo, tag, version) {
 
 function main() {
   const options = parseArgs(process.argv.slice(2));
+  if (!options.versionExplicit) {
+    options.version = suggestDefaultReleaseVersion(options.releaseRepo, options.version);
+  }
   const tag = `v${options.version}`;
 
   if (!options.fullPackageOnly && !fs.existsSync(options.shellRoot)) {
