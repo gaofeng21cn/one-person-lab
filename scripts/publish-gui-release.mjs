@@ -240,6 +240,55 @@ function releaseExists(repo, tag) {
   return result.status === 0;
 }
 
+function commandOutput(command, args, options = {}) {
+  const result = spawnSync(command, args, {
+    cwd: options.cwd,
+    encoding: 'utf8',
+    stdio: 'pipe',
+    env: process.env,
+  });
+  if (result.status !== 0) {
+    return '';
+  }
+  return result.stdout.trim();
+}
+
+function humanizeCommitSubject(subject) {
+  const match = subject.match(/^(?<type>[a-z]+)(?:\((?<scope>[^)]+)\))?!?:\s*(?<body>.+)$/i);
+  if (!match?.groups) {
+    return subject.replace(/^[a-z]/, (value) => value.toUpperCase());
+  }
+  const scope = match.groups.scope
+    ? match.groups.scope
+        .split(/[-_/]+/)
+        .filter(Boolean)
+        .map((part) => part.replace(/^[a-z]/, (value) => value.toUpperCase()))
+        .join(' ')
+    : match.groups.type.replace(/^[a-z]/, (value) => value.toUpperCase());
+  const body = match.groups.body.replace(/^[a-z]/, (value) => value.toUpperCase());
+  return `${scope}: ${body}`;
+}
+
+function buildChangeList(shellRoot, maxItems = 12) {
+  if (!fs.existsSync(path.join(shellRoot, '.git'))) {
+    return ['GUI package refresh from the current OPL shell main branch.'];
+  }
+
+  const lastTag = commandOutput('git', ['describe', '--tags', '--abbrev=0', 'HEAD'], { cwd: shellRoot });
+  const rangeArgs = lastTag ? [`${lastTag}..HEAD`] : ['HEAD'];
+  const rawSubjects = commandOutput(
+    'git',
+    ['log', '--no-merges', '--pretty=%s', ...rangeArgs, `--max-count=${maxItems}`],
+    { cwd: shellRoot },
+  );
+  const subjects = rawSubjects
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map(humanizeCommitSubject);
+  return subjects.length > 0 ? subjects : ['GUI package refresh from the current OPL shell main branch.'];
+}
+
 function buildUpdateGuidanceNotes(version) {
   return [
     'Update guidance:',
@@ -257,9 +306,12 @@ function buildFullPackageReleaseNotesSection(version) {
   ];
 }
 
-function buildReleaseNotes(version, includeFullPackage) {
+function buildReleaseNotes(version, includeFullPackage, changeList) {
   const notes = [
     `One Person Lab desktop GUI release ${version}`,
+    '',
+    'Changes in this release:',
+    ...changeList.map((change) => `- ${change}`),
     '',
     ...buildUpdateGuidanceNotes(version),
   ];
@@ -325,6 +377,11 @@ function main() {
   const allArtifacts = [...artifacts, ...fullPackageArtifacts];
   const uploadArgs = ['release', 'upload', tag, ...allArtifacts, '--repo', options.releaseRepo, '--clobber'];
   const existingRelease = releaseExists(options.releaseRepo, tag);
+  const releaseNotes = buildReleaseNotes(
+    options.version,
+    options.includeFullPackage,
+    options.fullPackageOnly ? ['Full first-install package assets for the existing standard release.'] : buildChangeList(options.shellRoot),
+  );
 
   if (options.dryRun) {
     console.log(JSON.stringify({
@@ -339,6 +396,7 @@ function main() {
       full_package_artifacts: fullPackageArtifacts,
       release_exists: existingRelease,
       create_release: !options.fullPackageOnly && !existingRelease,
+      release_notes: releaseNotes,
       upload_command: ['gh', ...uploadArgs],
     }, null, 2));
     return;
@@ -358,7 +416,7 @@ function main() {
       '--title',
       `One Person Lab ${options.version}`,
       '--notes',
-      buildReleaseNotes(options.version, options.includeFullPackage),
+      releaseNotes,
     ]);
   } else if (options.includeFullPackage) {
     ensureFullPackageReleaseNotes(options.releaseRepo, tag, options.version);

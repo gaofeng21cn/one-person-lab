@@ -450,12 +450,26 @@ test('GUI release publisher writes standard release notes with update guidance',
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-gui-release-notes-test-'));
   const shellRoot = path.join(tmpRoot, 'opl-aion-shell');
   const outDir = path.join(shellRoot, 'out');
+  const originalCwd = process.cwd();
   const fakeBin = path.join(tmpRoot, 'bin');
   const ghLog = path.join(tmpRoot, 'gh.jsonl');
   const version = '26.5.2';
 
   fs.mkdirSync(outDir, { recursive: true });
   fs.mkdirSync(fakeBin, { recursive: true });
+  spawnSync('git', ['init'], { cwd: shellRoot, stdio: 'ignore' });
+  spawnSync('git', ['config', 'user.email', 'release@example.local'], { cwd: shellRoot, stdio: 'ignore' });
+  spawnSync('git', ['config', 'user.name', 'Release Test'], { cwd: shellRoot, stdio: 'ignore' });
+  fs.writeFileSync(path.join(shellRoot, 'baseline.txt'), 'baseline\n');
+  spawnSync('git', ['add', 'baseline.txt'], { cwd: shellRoot, stdio: 'ignore' });
+  spawnSync('git', ['commit', '-m', 'baseline'], { cwd: shellRoot, stdio: 'ignore' });
+  spawnSync('git', ['tag', 'v1.9.23'], { cwd: shellRoot, stdio: 'ignore' });
+  fs.writeFileSync(path.join(shellRoot, 'settings.txt'), 'settings\n');
+  spawnSync('git', ['add', 'settings.txt'], { cwd: shellRoot, stdio: 'ignore' });
+  spawnSync('git', ['commit', '-m', 'fix(settings): align overview module health'], { cwd: shellRoot, stdio: 'ignore' });
+  fs.writeFileSync(path.join(shellRoot, 'runtime.txt'), 'runtime\n');
+  spawnSync('git', ['add', 'runtime.txt'], { cwd: shellRoot, stdio: 'ignore' });
+  spawnSync('git', ['commit', '-m', 'fix(settings): streamline runtime personalization'], { cwd: shellRoot, stdio: 'ignore' });
   fs.writeFileSync(
     path.join(fakeBin, 'gh'),
     [
@@ -514,10 +528,40 @@ test('GUI release publisher writes standard release notes with update guidance',
   assert.ok(createCall, 'expected gh release create to be called');
   const notes = createCall[createCall.indexOf('--notes') + 1];
   assert.match(notes, /Update guidance:/);
+  assert.match(notes, /Changes in this release:/);
+  assert.match(notes, /Settings: Align overview module health/);
+  assert.match(notes, /Settings: Streamline runtime personalization/);
   assert.match(notes, /Existing users should update from inside the app/);
   assert.match(notes, /standard DMG\/ZIP assets and latest\*\.yml metadata remain the only auto-updater source/);
   assert.doesNotMatch(notes, /Full first-install package:/);
   assert.doesNotMatch(notes, /One-Person-Lab-Full/);
+
+  const dryRun = spawnSync(
+    process.execPath,
+    [
+      path.join(repoRoot, 'scripts/publish-gui-release.mjs'),
+      '--no-build',
+      '--dry-run',
+      '--shell-root',
+      shellRoot,
+      '--version',
+      version,
+      '--repo',
+      'example/one-person-lab',
+    ],
+    {
+      cwd: originalCwd,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        PATH: `${fakeBin}${path.delimiter}${process.env.PATH ?? ''}`,
+      },
+    },
+  );
+  assert.equal(dryRun.status, 0, dryRun.stderr);
+  const payload = JSON.parse(dryRun.stdout) as { release_notes: string };
+  assert.match(payload.release_notes, /Changes in this release:/);
+  assert.match(payload.release_notes, /Settings: Align overview module health/);
 });
 
 test('GUI release publisher can upload only Full first-install assets for an existing standard release', () => {
