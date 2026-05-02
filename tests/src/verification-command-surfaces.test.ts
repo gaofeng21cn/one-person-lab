@@ -564,6 +564,73 @@ test('GUI release publisher writes standard release notes with update guidance',
   assert.match(payload.release_notes, /Settings: Align overview module health/);
 });
 
+test('GUI release publisher suggests same-day suffixes instead of incrementing the date version', () => {
+  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-gui-release-date-version-test-'));
+  const shellRoot = path.join(tmpRoot, 'opl-aion-shell');
+  const outDir = path.join(shellRoot, 'out');
+  const fakeBin = path.join(tmpRoot, 'bin');
+  const dateVersion = '26.5.2';
+
+  fs.mkdirSync(outDir, { recursive: true });
+  fs.mkdirSync(fakeBin, { recursive: true });
+  fs.writeFileSync(
+    path.join(fakeBin, 'gh'),
+    [
+      '#!/usr/bin/env bash',
+      'if [[ "$1 $2 $3" == "release view v26.5.2" ]]; then exit 0; fi',
+      'if [[ "$1 $2 $3" == "release view v26.5.2-a" ]]; then exit 1; fi',
+      'exit 1',
+      '',
+    ].join('\n'),
+    { mode: 0o755 },
+  );
+  fs.writeFileSync(path.join(outDir, `One-Person-Lab-${dateVersion}-a-mac-arm64.dmg`), 'standard dmg');
+  fs.writeFileSync(path.join(outDir, `One-Person-Lab-${dateVersion}-a-mac-arm64.zip`), 'standard zip');
+  fs.writeFileSync(
+    path.join(outDir, 'latest-mac.yml'),
+    [
+      `version: ${dateVersion}-a`,
+      'files:',
+      `  - url: One-Person-Lab-${dateVersion}-a-mac-arm64.dmg`,
+      '',
+    ].join('\n'),
+  );
+
+  const result = spawnSync(
+    process.execPath,
+    [
+      path.join(repoRoot, 'scripts/publish-gui-release.mjs'),
+      '--no-build',
+      '--dry-run',
+      '--shell-root',
+      shellRoot,
+      '--repo',
+      'example/one-person-lab',
+    ],
+    {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        OPL_RELEASE_DATE: '2026-05-02',
+        PATH: `${fakeBin}${path.delimiter}${process.env.PATH ?? ''}`,
+      },
+    },
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  const payload = JSON.parse(result.stdout) as {
+    tag: string;
+    release_exists: boolean;
+    create_release: boolean;
+    standard_artifacts: string[];
+  };
+  assert.equal(payload.tag, `v${dateVersion}-a`);
+  assert.equal(payload.release_exists, false);
+  assert.equal(payload.create_release, true);
+  assert.ok(payload.standard_artifacts.some((artifact) => artifact.endsWith(`One-Person-Lab-${dateVersion}-a-mac-arm64.dmg`)));
+});
+
 test('GUI release publisher can upload only Full first-install assets for an existing standard release', () => {
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-gui-release-full-only-test-'));
   const shellRoot = path.join(tmpRoot, 'opl-aion-shell');
