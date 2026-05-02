@@ -167,6 +167,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
+          ulimit -n 65536 || true
           npm run build-mac:arm64
           rm -rf release
           mkdir -p release
@@ -193,6 +194,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
+          ulimit -n 65536 || true
           export OPL_FULL_CODEX_ROOT="$(npm root -g)/@openai/codex"
           export OPL_FULL_UV_BIN="$(command -v uv)"
           export OPL_FULL_HERMES_ROOT="$GITHUB_WORKSPACE/_external/hermes-agent"
