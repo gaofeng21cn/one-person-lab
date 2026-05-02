@@ -1,9 +1,14 @@
+import crypto from 'node:crypto';
 import path from 'node:path';
 
 export const FULL_INTERNAL_OUTPUT_DIR = '/Users/gaofeng/Downloads/One-Person-Lab-Full-Internal';
 export const FULL_RELEASE_OUTPUT_DIR = 'dist/opl-full-release';
 export const FULL_RUNTIME_RESOURCE_DIR = 'opl-full-runtime';
 export const PACKAGED_MODULE_MARKER_FILE = 'opl-runtime-module.json';
+export const FULL_RUNTIME_CACHE_LAYOUT_VERSION = 1;
+export const FULL_RUNTIME_CACHE_LAYER_IDS = ['toolchain', 'domain-runtime', 'opl-runtime', 'skills'] as const;
+
+export type FullRuntimeCacheLayerId = typeof FULL_RUNTIME_CACHE_LAYER_IDS[number];
 
 type ComponentSnapshot = Partial<{
   source_path: string;
@@ -43,6 +48,28 @@ export function buildFullPackageArtifactNames(versionInput: string) {
 }
 
 export const buildInternalArtifactNames = buildFullPackageArtifactNames;
+
+export function buildFullRuntimeCacheKey(input: {
+  layerId: FullRuntimeCacheLayerId;
+  parts: Record<string, unknown>;
+}) {
+  const digest = crypto.createHash('sha256')
+    .update(JSON.stringify({
+      layout_version: FULL_RUNTIME_CACHE_LAYOUT_VERSION,
+      layer_id: input.layerId,
+      parts: input.parts,
+    }))
+    .digest('hex')
+    .slice(0, 24);
+  return `full-runtime-v${FULL_RUNTIME_CACHE_LAYOUT_VERSION}-${input.layerId}-${digest}`;
+}
+
+export function buildFullRuntimeCacheArchiveName(input: {
+  layerId: FullRuntimeCacheLayerId;
+  key: string;
+}) {
+  return `${input.key}.tar.zst`;
+}
 
 export function buildFullPackageManifest(input: FullPackageManifestInput = {}) {
   const version = normalizeVersion(input.version);
