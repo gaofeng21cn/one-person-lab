@@ -64,6 +64,20 @@ jobs:
           ref: main
           path: med-deepscientist
 
+      - name: Checkout MAG
+        uses: actions/checkout@v4
+        with:
+          repository: gaofeng21cn/med-autogrant
+          ref: main
+          path: med-autogrant
+
+      - name: Checkout RCA
+        uses: actions/checkout@v4
+        with:
+          repository: gaofeng21cn/redcube-ai
+          ref: main
+          path: redcube-ai
+
       - name: Resolve release version
         shell: bash
         run: |
@@ -123,6 +137,9 @@ jobs:
           uv sync --project _external/hermes-agent --extra cron --extra cli --extra pty --extra mcp --extra honcho --extra acp --no-dev
           uv sync --project med-autoscience --no-dev
           uv sync --project med-deepscientist --no-dev
+          uv sync --project med-autogrant --no-dev
+          npm ci --prefix redcube-ai
+          npm run --prefix redcube-ai build
 
       - name: Resolve Full runtime cache keys
         id: runtime-cache-keys
@@ -136,6 +153,8 @@ jobs:
           export OPL_FULL_HERMES_ROOT="$GITHUB_WORKSPACE/_external/hermes-agent"
           export OPL_FULL_MAS_ROOT="$GITHUB_WORKSPACE/med-autoscience"
           export OPL_FULL_MDS_ROOT="$GITHUB_WORKSPACE/med-deepscientist"
+          export OPL_FULL_MAG_ROOT="$GITHUB_WORKSPACE/med-autogrant"
+          export OPL_FULL_RCA_ROOT="$GITHUB_WORKSPACE/redcube-ai"
           npm --silent run packages:full-release -- \
             --version "$OPL_RELEASE_VERSION" \
             --runtime-cache-dir "$cache_dir" \
@@ -223,6 +242,8 @@ jobs:
           export OPL_FULL_HERMES_ROOT="$GITHUB_WORKSPACE/_external/hermes-agent"
           export OPL_FULL_MAS_ROOT="$GITHUB_WORKSPACE/med-autoscience"
           export OPL_FULL_MDS_ROOT="$GITHUB_WORKSPACE/med-deepscientist"
+          export OPL_FULL_MAG_ROOT="$GITHUB_WORKSPACE/med-autogrant"
+          export OPL_FULL_RCA_ROOT="$GITHUB_WORKSPACE/redcube-ai"
           npm run packages:full-release -- \
             --version "$OPL_RELEASE_VERSION" \
             --runtime-cache-dir "${{ steps.runtime-cache-keys.outputs.cache_dir }}" \

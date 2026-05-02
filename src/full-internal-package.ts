@@ -91,6 +91,8 @@ export function buildFullPackageManifest(input: FullPackageManifestInput = {}) {
       app_uses_installed_runtime_after_first_launch: true,
       runtime_version_stored_in_metadata_only: true,
       state_policy: 'user_state_stays_outside_runtime_payload',
+      domain_module_payload_policy: 'packaged_runtime_modules_are_materialized_to_standard_state_modules_on_install',
+      managed_modules_root_template: '~/Library/Application Support/OPL/state/modules',
     },
     distribution: {
       channel: 'github_release_first_install',
@@ -142,6 +144,18 @@ export function buildFullPackageManifest(input: FullPackageManifestInput = {}) {
         required: true,
         visible_in_first_run_ui: false,
         excluded_subtrees: ['src/ui'],
+      },
+      mag: {
+        ...normalizeComponent(components.mag),
+        role: 'grant_domain_module',
+        required: true,
+        visible_in_first_run_ui: true,
+      },
+      rca: {
+        ...normalizeComponent(components.rca),
+        role: 'visual_deliverable_domain_module',
+        required: true,
+        visible_in_first_run_ui: true,
       },
       node: {
         ...normalizeComponent(components.node),
@@ -195,7 +209,6 @@ export function shouldExcludeRuntimePath(relativePathInput: string) {
     || hasPathSegment(relativePath, '.tox')
     || hasPathSegment(relativePath, '__pycache__')
     || hasPathSegment(relativePath, 'coverage')
-    || hasPathSegment(relativePath, 'dist')
     || hasPathSegment(relativePath, 'target')
     || hasPathSegment(relativePath, '.DS_Store')
   ) {
@@ -241,6 +254,9 @@ export function shouldExcludeRuntimePath(relativePathInput: string) {
   if (/^opl\/node_modules(?:\/|$)/.test(lower) || /^opl\/.*\/\.venv(?:\/|$)/.test(lower)) {
     return true;
   }
+  if (/^opl\/dist(?:\/|$)/.test(lower)) {
+    return true;
+  }
 
   return false;
 }
@@ -284,8 +300,10 @@ export function buildInternalPackageReadme(input: {
     '2. 首次启动 App 后，随包 runtime 会安装到稳定路径，后续 Full 包刷新会覆盖同一路径：',
     `   ${installPath}`,
     '3. runtime 版本只记录在 current.json 和 current/.opl-full-runtime-installed.json，不进入安装目录名。',
-    '4. 在 App 里配置 Codex API key 后，进入 OPL 初始化页确认 Codex、Hermes-Agent、MAS、MDS backend 状态。',
-    '5. 推荐先跑一次 MAS 最小 smoke：进入 Research Foundry，创建或读取一个 workspace 状态。',
+    '4. MAS/MDS/MAG/RCA 随包内容只作为首启安装源；初始化后会进入标准模块目录：',
+    '   ~/Library/Application Support/OPL/state/modules/<repo-name>',
+    '5. 在 App 里配置 Codex API key 后，进入 OPL 初始化页确认 Codex、Hermes-Agent、MAS、MDS backend、MAG、RCA 状态。',
+    '6. 推荐先跑一次 MAS 最小 smoke：进入 Research Foundry，创建或读取一个 workspace 状态。',
     '',
     input.runtimeTarName
       ? `补充 runtime 包：如 DMG 内 runtime 安装失败，可保留 ${input.runtimeTarName} 作为人工诊断包。`

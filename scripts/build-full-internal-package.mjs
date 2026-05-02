@@ -34,6 +34,8 @@ function parseArgs(argv) {
     hermesRoot: process.env.OPL_FULL_HERMES_ROOT || path.join(workspaceRoot, '_external', 'hermes-agent'),
     masRoot: process.env.OPL_FULL_MAS_ROOT || path.join(workspaceRoot, 'med-autoscience'),
     mdsRoot: process.env.OPL_FULL_MDS_ROOT || path.join(workspaceRoot, 'med-deepscientist'),
+    magRoot: process.env.OPL_FULL_MAG_ROOT || path.join(workspaceRoot, 'med-autogrant'),
+    rcaRoot: process.env.OPL_FULL_RCA_ROOT || path.join(workspaceRoot, 'redcube-ai'),
     codexRoot: process.env.OPL_FULL_CODEX_ROOT || '',
     nodeBin: process.env.OPL_FULL_NODE_BIN || '',
     uvBin: process.env.OPL_FULL_UV_BIN || path.join(os.homedir(), '.local', 'bin', 'uv'),
@@ -71,6 +73,8 @@ function parseArgs(argv) {
     else if (token === '--hermes-root') parsed.hermesRoot = path.resolve(value);
     else if (token === '--mas-root') parsed.masRoot = path.resolve(value);
     else if (token === '--mds-root') parsed.mdsRoot = path.resolve(value);
+    else if (token === '--mag-root') parsed.magRoot = path.resolve(value);
+    else if (token === '--rca-root') parsed.rcaRoot = path.resolve(value);
     else if (token === '--codex-root') parsed.codexRoot = path.resolve(value);
     else if (token === '--node-bin') parsed.nodeBin = path.resolve(value);
     else if (token === '--uv-bin') parsed.uvBin = path.resolve(value);
@@ -379,9 +383,10 @@ PYTHON_BIN="$(find "$RUNTIME_HOME/python" -maxdepth 2 -path '*/bin' -type d 2>/d
 export OPL_FULL_RUNTIME_HOME="$RUNTIME_HOME"
 export OPL_CODEX_BIN="$RUNTIME_HOME/bin/codex"
 export OPL_HERMES_BIN="$RUNTIME_HOME/bin/hermes"
-export OPL_MODULES_ROOT="$RUNTIME_HOME/modules"
 export OPL_MODULE_PATH_MEDAUTOSCIENCE="$RUNTIME_HOME/modules/mas"
 export OPL_MODULE_PATH_MEDDEEPSCIENTIST="$RUNTIME_HOME/modules/mds"
+export OPL_MODULE_PATH_MEDAUTOGRANT="$RUNTIME_HOME/modules/mag"
+export OPL_MODULE_PATH_REDCUBE="$RUNTIME_HOME/modules/rca"
 if [[ -n "$PYTHON_BIN" ]]; then
   export PATH="$RUNTIME_HOME/bin:$RUNTIME_HOME/node/bin:$RUNTIME_HOME/uv/bin:$PYTHON_BIN:$PATH"
 else
@@ -484,6 +489,8 @@ function buildRuntimeCacheKeys(options, sources) {
         hermes_commit: readGitHead(options.hermesRoot),
         mas_commit: readGitHead(options.masRoot),
         mds_commit: readGitHead(options.mdsRoot),
+        mag_commit: readGitHead(options.magRoot),
+        rca_commit: readGitHead(options.rcaRoot),
         packager_inputs: packagerInputs,
         exclude_policy_hash: excludePolicyHash,
       },
@@ -581,6 +588,8 @@ function buildDomainLayer(layerRoot, options) {
   copyTreeFiltered(options.hermesRoot, path.join(layerRoot, 'hermes'), 'hermes');
   copyTreeFiltered(options.masRoot, path.join(layerRoot, 'modules', 'mas'), 'modules/mas');
   copyTreeFiltered(options.mdsRoot, path.join(layerRoot, 'modules', 'mds'), 'modules/mds');
+  copyTreeFiltered(options.magRoot, path.join(layerRoot, 'modules', 'mag'), 'modules/mag');
+  copyTreeFiltered(options.rcaRoot, path.join(layerRoot, 'modules', 'rca'), 'modules/rca');
 }
 
 function writeDomainMarkers(runtimeRoot, options, packagedAt) {
@@ -596,6 +605,20 @@ function writeDomainMarkers(runtimeRoot, options, packagedAt) {
     repoName: 'med-deepscientist',
     sourcePath: options.mdsRoot,
     headSha: readGitHead(options.mdsRoot),
+    packagedAt,
+  }));
+  writePackagedModuleMarker(path.join(runtimeRoot, 'modules', 'mag'), buildPackagedModuleMarker({
+    moduleId: 'medautogrant',
+    repoName: 'med-autogrant',
+    sourcePath: options.magRoot,
+    headSha: readGitHead(options.magRoot),
+    packagedAt,
+  }));
+  writePackagedModuleMarker(path.join(runtimeRoot, 'modules', 'rca'), buildPackagedModuleMarker({
+    moduleId: 'redcube',
+    repoName: 'redcube-ai',
+    sourcePath: options.rcaRoot,
+    headSha: readGitHead(options.rcaRoot),
     packagedAt,
   }));
 }
@@ -637,6 +660,8 @@ function prepareRuntime(options, sources) {
     hermes: { source_path: options.hermesRoot, version: commandOutput(path.join(runtimeRoot, 'bin', 'hermes'), ['version']), git_commit: readGitHead(options.hermesRoot), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'hermes')) },
     mas: { source_path: options.masRoot, git_commit: readGitHead(options.masRoot), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'modules', 'mas')) },
     mds: { source_path: options.mdsRoot, git_commit: readGitHead(options.mdsRoot), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'modules', 'mds')) },
+    mag: { source_path: options.magRoot, git_commit: readGitHead(options.magRoot), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'modules', 'mag')) },
+    rca: { source_path: options.rcaRoot, git_commit: readGitHead(options.rcaRoot), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'modules', 'rca')) },
     node: { source_path: sources.nodeBin, version: commandOutput(path.join(runtimeRoot, 'node', 'bin', 'node'), ['--version']), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'node')) },
     python: { source_path: sources.pythonRoot, version: commandOutput(path.join(runtimeRoot, 'python', path.basename(sources.pythonRoot), 'bin', 'python3'), ['--version']), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'python')) },
     uv: { source_path: sources.uvBin, version: commandOutput(path.join(runtimeRoot, 'uv', 'bin', 'uv'), ['--version']), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'uv')) },
@@ -748,6 +773,8 @@ function main() {
     ['Hermes root', options.hermesRoot],
     ['MAS root', options.masRoot],
     ['MDS root', options.mdsRoot],
+    ['MAG root', options.magRoot],
+    ['RCA root', options.rcaRoot],
   ]) {
     requirePath(source, label);
   }

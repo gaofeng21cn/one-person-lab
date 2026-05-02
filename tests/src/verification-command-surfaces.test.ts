@@ -226,6 +226,15 @@ test('Full first-install release workflow builds without signing secrets and kee
   assert.match(workflow, /actions\/cache\/restore@v4/);
   assert.match(workflow, /actions\/cache\/save@v4/);
   assert.match(workflow, /Reset Full runtime layer cache when forced/);
+  assert.match(workflow, /Checkout MAG/);
+  assert.match(workflow, /Checkout RCA/);
+  assert.match(workflow, /gaofeng21cn\/med-autogrant/);
+  assert.match(workflow, /gaofeng21cn\/redcube-ai/);
+  assert.match(workflow, /uv sync --project med-autogrant --no-dev/);
+  assert.match(workflow, /npm ci --prefix redcube-ai/);
+  assert.match(workflow, /npm run --prefix redcube-ai build/);
+  assert.match(workflow, /OPL_FULL_MAG_ROOT/);
+  assert.match(workflow, /OPL_FULL_RCA_ROOT/);
   assert.match(workflow, /npm --silent run packages:full-release/);
   assert.match(workflow, /--print-runtime-cache-keys/);
   assert.match(workflow, /--runtime-cache-dir/);
@@ -254,6 +263,10 @@ test('standard macOS release workflow publishes only updater-owned standard asse
   assert.doesNotMatch(workflow, /Checkout Hermes-Agent/);
   assert.doesNotMatch(workflow, /Checkout MAS/);
   assert.doesNotMatch(workflow, /Checkout MDS/);
+  assert.doesNotMatch(workflow, /Checkout MAG/);
+  assert.doesNotMatch(workflow, /Checkout RCA/);
+  assert.doesNotMatch(workflow, /med-autogrant/);
+  assert.doesNotMatch(workflow, /redcube-ai/);
   assert.doesNotMatch(workflow, /uv sync/);
   assert.doesNotMatch(workflow, /packages:full-release/);
   assert.doesNotMatch(workflow, /--include-full-package/);
@@ -764,7 +777,8 @@ test('GUI release publisher appends Full purpose notes to an existing standard r
   assert.match(notes, /Update guidance:/);
   assert.match(notes, /Full first-install package:/);
   assert.match(notes, new RegExp(`One-Person-Lab-Full-${version}-mac-arm64\\.dmg`));
-  assert.match(notes, /reduce the time from first launch to the first MAS task/);
+  assert.match(notes, /reduce the time from first launch to the first MAS, MAG, or RCA task/);
+  assert.match(notes, /bundles the MAS\/MDS\/MAG\/RCA domain modules plus Hermes runtime payload/);
   assert.match(notes, /users still configure their API key normally/);
   assert.match(notes, /not referenced by latest\*\.yml/);
   assert.match(notes, /not used by the auto-updater/);

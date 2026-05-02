@@ -419,7 +419,7 @@ EOF
         '# Test Skill',
         '',
       ].join('\n');
-      files['scripts/install-codex-plugin.mjs'] = `#!/usr/bin/env node
+      files['scripts/install-codex-plugin.ts'] = `#!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
 fs.appendFileSync(${JSON.stringify(turnkeyLogPath)}, 'skill:' + path.basename(process.cwd()) + '\\n');
