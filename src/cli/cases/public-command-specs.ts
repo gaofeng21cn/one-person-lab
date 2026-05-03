@@ -1,6 +1,7 @@
 import { GatewayContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkstreamOrThrow } from '../../contracts.ts';
 import { bootstrapLocalCodexDefaults, readBundledCodexDefaultProfile } from '../../local-codex-defaults.ts';
 import { buildOplPackageManifest } from '../../package-distribution.ts';
+import { buildQualityDetails, parseQualityDetailsArgs, renderQualityDetailsMarkdown } from '../../quality-details/index.ts';
 import { runOplEngineAction } from '../../system-installation/engine-actions.ts';
 import { buildOplEnvironment } from '../../system-installation/environment.ts';
 import { buildOplInitialize } from '../../system-installation/initialize.ts';
@@ -290,6 +291,33 @@ export function buildPublicCommandSpecs(
     'packages manifest': packagesManifestSpec,
     doctor: cloneCommandSpec(commandSpecs.doctor, { group: 'top_level' }),
     start: cloneCommandSpec(commandSpecs.start, { group: 'top_level' }),
+    'quality details': {
+      usage:
+        'opl quality details --root <repo_path> [--format <json|markdown>] [--limit <n>] [--focus <auto|depth|equality|modularity|redundancy|test_gaps|rules>]',
+      summary: 'Emit deterministic code-quality details for agent triage beside Sentrux Free summaries.',
+      examples: [
+        'opl quality details --root /Users/gaofeng/workspace/one-person-lab --format json',
+        'opl quality details --root . --format markdown --limit 20 --focus auto',
+      ],
+      group: 'quality',
+      handler: async (args) => {
+        const parsed = parseQualityDetailsArgs(args);
+        if (!parsed.ok) {
+          throw buildUsageError(parsed.message, publicCommandSpecs['quality details'], parsed.details);
+        }
+
+        const report = await buildQualityDetails(parsed.options);
+        if (parsed.options.format === 'markdown') {
+          process.stdout.write(`${renderQualityDetailsMarkdown(report)}\n`);
+          return { __handled: true as const };
+        }
+
+        return {
+          version: 'g2',
+          quality_details: report,
+        };
+      },
+    },
     'skill list': cloneCommandSpec(commandSpecs['skill-list'], {
       usage: 'opl skill list [--domain <domain_id>]',
       group: 'skill',

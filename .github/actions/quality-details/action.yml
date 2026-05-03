@@ -1,0 +1,51 @@
+name: OPL Quality Details
+description: Emit OPL quality details markdown and JSON sidecar for repo-family advisory workflows.
+
+inputs:
+  root:
+    description: Repository root to inspect.
+    required: false
+    default: .
+  limit:
+    description: Markdown finding limit.
+    required: false
+    default: '20'
+  json-limit:
+    description: JSON finding limit.
+    required: false
+    default: '50'
+  focus:
+    description: Quality details focus.
+    required: false
+    default: auto
+  output-dir:
+    description: Directory for quality-details.json.
+    required: false
+    default: artifacts/opl-quality-details
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+
+    - name: Install OPL dependencies
+      shell: bash
+      run: npm ci --prefix "$GITHUB_ACTION_PATH/../../.."
+
+    - name: Emit OPL quality details
+      shell: bash
+      env:
+        OPL_QUALITY_DETAILS_ROOT: ${{ inputs.root }}
+        OPL_QUALITY_DETAILS_LIMIT: ${{ inputs.limit }}
+        OPL_QUALITY_DETAILS_JSON_LIMIT: ${{ inputs.json-limit }}
+        OPL_QUALITY_DETAILS_FOCUS: ${{ inputs.focus }}
+        OPL_QUALITY_DETAILS_OUTPUT_DIR: ${{ inputs.output-dir }}
+      run: |
+        set -euo pipefail
+        opl_root="$GITHUB_ACTION_PATH/../../.."
+        mkdir -p "$OPL_QUALITY_DETAILS_OUTPUT_DIR"
+        "$opl_root/bin/opl" quality details --root "$OPL_QUALITY_DETAILS_ROOT" --format markdown --limit "$OPL_QUALITY_DETAILS_LIMIT" --focus "$OPL_QUALITY_DETAILS_FOCUS" >> "$GITHUB_STEP_SUMMARY"
+        "$opl_root/bin/opl" quality details --root "$OPL_QUALITY_DETAILS_ROOT" --format json --limit "$OPL_QUALITY_DETAILS_JSON_LIMIT" --focus "$OPL_QUALITY_DETAILS_FOCUS" > "$OPL_QUALITY_DETAILS_OUTPUT_DIR/quality-details.json"

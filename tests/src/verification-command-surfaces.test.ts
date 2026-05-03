@@ -125,6 +125,24 @@ test('GitHub verification workflow runs the native helper production gates', () 
   assert.match(workflow, /FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'/);
 });
 
+test('Sentrux advisory workflow publishes OPL quality details sidecar', () => {
+  const workflow = read('.github/workflows/sentrux-advisory.yml');
+  const action = read('.github/actions/quality-details/action.yml');
+
+  assert.match(workflow, /sentrux gate \./);
+  assert.match(workflow, /sentrux check \./);
+  assert.match(workflow, /uses: \.\/\.github\/actions\/quality-details/);
+  assert.match(workflow, /json-limit: '50'/);
+  assert.match(workflow, /path: artifacts\/opl-quality-details\/quality-details\.json/);
+  assert.match(workflow, /actions\/upload-artifact@v4/);
+  assert.match(workflow, /name: opl-quality-details/);
+  assert.match(action, /actions\/setup-node@v4/);
+  assert.match(action, /node-version: '24'/);
+  assert.match(action, /npm ci --prefix "\$GITHUB_ACTION_PATH\/\.\.\/\.\.\/\.\."/);
+  assert.match(action, /quality details --root "\$OPL_QUALITY_DETAILS_ROOT" --format markdown/);
+  assert.match(action, /quality details --root "\$OPL_QUALITY_DETAILS_ROOT" --format json/);
+});
+
 test('GitHub native helper prebuild workflow packs release artifacts across supported platforms', () => {
   const workflow = read('.github/workflows/native-helper-prebuilds.yml');
 

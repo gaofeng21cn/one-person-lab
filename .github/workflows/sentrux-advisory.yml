@@ -46,3 +46,18 @@ jobs:
           else
             echo "::notice::No .sentrux/rules.toml found; skipping rules check."
           fi
+
+      - name: Run OPL quality details
+        uses: ./.github/actions/quality-details
+        with:
+          root: .
+          limit: '20'
+          json-limit: '50'
+          output-dir: artifacts/opl-quality-details
+
+      - name: Upload OPL quality details
+        uses: actions/upload-artifact@v4
+        with:
+          name: opl-quality-details
+          path: artifacts/opl-quality-details/quality-details.json
+          if-no-files-found: warn
