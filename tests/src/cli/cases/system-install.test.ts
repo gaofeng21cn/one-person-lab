@@ -377,6 +377,65 @@ test('recommended Office skills require both skill payloads and the officecli bi
   }
 });
 
+test('recommended system companion skills exclude MAS/MDS project-local stage skills', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-mds-stage-skills-home-'));
+
+  try {
+    const output = runCli(['system', 'initialize'], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      PATH: '/usr/bin:/bin',
+    }) as {
+      system_initialize: {
+        recommended_skills: {
+          skills: Array<{ skill_id: string }>;
+        };
+      };
+    };
+
+    const skillIds = output.system_initialize.recommended_skills.skills.map((skill) => skill.skill_id);
+    for (const stageSkillId of ['deepscientist', 'scout', 'finalize', 'write', 'review', 'baseline']) {
+      assert.equal(skillIds.includes(stageSkillId), false);
+    }
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('managed companion sync does not mirror MAS/MDS project-local stage skills into user Codex home', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-companion-mds-stage-skills-home-'));
+
+  try {
+    const output = runCli([
+      'skill',
+      'companion',
+      'apply',
+      '--mode',
+      'managed',
+      '--superpowers',
+      'keep',
+    ], {
+      HOME: homeRoot,
+      CODEX_HOME: path.join(homeRoot, 'codex-home'),
+      OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      ...disableRemoteCompanionInstall(),
+    }) as {
+      companion_skills: {
+        items: Array<{ skill_id: string }>;
+      };
+    };
+
+    const skillIds = output.companion_skills.items.map((item) => item.skill_id);
+    for (const stageSkillId of ['deepscientist', 'scout', 'finalize', 'write', 'review', 'baseline']) {
+      assert.equal(skillIds.includes(stageSkillId), false);
+      assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', stageSkillId, 'SKILL.md')), false);
+    }
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
 test('install command repairs native helpers and returns the refreshed lifecycle report', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-native-home-'));
   const helperBinDir = path.join(homeRoot, 'native-bin');
