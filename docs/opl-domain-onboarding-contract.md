@@ -2,6 +2,8 @@
 
 # OPL Domain Onboarding Contract
 
+> Current-status note (`2026-05-03`): this document is retained for future or candidate-domain onboarding review. The active admitted-domain path is `Codex-default session/runtime -> explicit OPL activation -> selected domain agent entry`, with `MAS`, `MAG`, and `RCA` exposed as independent domain agents. Gateway / harness wording below is compatibility vocabulary for boundary review, not the current public first subject.
+
 ## Purpose
 
 This document freezes the domain-onboarding contract for the `OPL Gateway`.

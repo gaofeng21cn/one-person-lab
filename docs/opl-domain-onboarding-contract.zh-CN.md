@@ -2,6 +2,8 @@
 
 # OPL Domain Onboarding Contract
 
+> 当前状态说明（`2026-05-03`）：本文保留给未来或候选 domain onboarding 审查使用。当前已收录 domain 的活跃路径是 `Codex-default session/runtime -> explicit OPL activation -> selected domain agent entry`，`MAS`、`MAG`、`RCA` 对外仍是独立 domain agent。下文 gateway / harness 词汇只作为边界审查兼容语言，不是当前公开第一主语。
+
 ## 目的
 
 这份文档冻结 `OPL Gateway` 的 domain onboarding 合同。

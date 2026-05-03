@@ -6,6 +6,8 @@
 - 默认人类/AI 入口看 `README*` 与 `docs/README*`
 - 历史 gateway/federation 兼容合同入口看 `contracts/opl-gateway/README.md`
 - 当前公开默认主路径是 `external shell or CLI -> OPL session runtime -> selected domain agent entry`；`Hermes-Agent` 只保留显式备用模式与 online gateway
+- 当前 active domain agent 集合是 `MAS`、`MAG`、`RCA`；`MDS` 只作为 `MAS` 下的受控 runtime/backend companion 进入安装、环境管理和运行依赖投影，不作为顶层 domain-agent entry。
+- 已退役的旧入口词族不是 OPL 当前合同面；若只在历史 gateway 语料或 domain 仓内部 command/schema contract 中出现，必须按对应层级阅读。
 
 当前保留的 repo-tracked machine-readable truth：
 
