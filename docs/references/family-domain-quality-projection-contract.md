@@ -7,7 +7,7 @@
 ## Owner Split
 
 - `OPL` owns：quality projection vocabulary、operator-facing status、source refs、freshness。
-- `MAS` owns：medical evidence ledger、review ledger、AI reviewer-backed `publication_eval/latest.json`、publication judgment。
+- `MAS` owns：`study_charter`、`evidence_ledger`、`review_ledger`、AI reviewer-backed `publication_eval/latest.json`、AI reviewer artifacts、`StudyTruthKernel` / `RuntimeHealthKernel` 或 truth health reducers / runtime health reducers、publication judgment。
 - `MAG` owns：grant review、fundability gate、authoring completion、submission readiness。
 - `RCA` owns：content-fit review、render proof、export proof、visual QA、deliverable judgment。
 
@@ -27,8 +27,9 @@
 
 ### MAS
 
-- `quality_gate_status` maps to evidence ledger、review ledger、AI reviewer-backed `publication_eval/latest.json`。
+- `quality_gate_status` maps to `study_charter`、`evidence_ledger`、`review_ledger`、AI reviewer-backed `publication_eval/latest.json`、AI reviewer artifacts、`StudyTruthKernel` / `RuntimeHealthKernel` 或 truth health reducers / runtime health reducers。
 - `claim-only ready` is forbidden。
+- `OPL` only consumes MAS quality projections; it does not issue MAS ready verdicts and does not hold publication judgment。
 - `publication_eval` remains MAS-owned medical paper quality authority。
 
 ### MAG
@@ -53,8 +54,10 @@ The following are not family quality owners:
 - claim-only ready。
 - chat summary / memory / terminal prose。
 - OPL projection without domain-owned eval/proof refs。
+- OPL-only quality verdict。
+- OPL MAS ready verdict。
+- OPL-held publication judgment。
 
 ## Failure Semantics
 
 `failed` and `blocked` must include a route back to the owning domain. `OPL` may show the failure, source refs and next human gate, but the domain repo decides repair scope, retry and final closure。
-

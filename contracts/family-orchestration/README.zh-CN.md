@@ -68,6 +68,8 @@
 
 这样一来，`OPL` 可以继续只消费统一的 session / progress / artifact / restore-point continuity 合同，而底层 runtime truth 与 repo-specific projection 字段仍由各 domain 仓自己持有。
 
+对 `MAS` v2，可消费 projection 锚点是 domain-owned `study_charter`、`evidence_ledger`、`review_ledger`、`publication_eval/latest.json`、AI reviewer artifacts、`StudyTruthKernel` / `RuntimeHealthKernel` 或 truth health reducers / runtime health reducers。OPL only consumes projections, does not issue MAS ready verdicts, and does not hold publication judgment。
+
 ## 这个目录不冻结什么
 
 这个目录不负责：
