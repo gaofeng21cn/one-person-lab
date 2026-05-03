@@ -139,6 +139,8 @@ test('Sentrux advisory workflow publishes OPL quality details sidecar', () => {
   assert.match(action, /actions\/setup-node@v4/);
   assert.match(action, /node-version: '24'/);
   assert.match(action, /npm ci --prefix "\$GITHUB_ACTION_PATH\/\.\.\/\.\.\/\.\."/);
+  assert.match(action, /OPL_QUALITY_DETAILS_COMPARE_REF/);
+  assert.match(action, /--compare-ref "\$OPL_QUALITY_DETAILS_COMPARE_REF"/);
   assert.match(action, /quality details --root "\$OPL_QUALITY_DETAILS_ROOT" --format markdown/);
   assert.match(action, /quality details --root "\$OPL_QUALITY_DETAILS_ROOT" --format json/);
 });

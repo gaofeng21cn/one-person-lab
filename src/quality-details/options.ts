@@ -38,6 +38,7 @@ function parseQualityDetailsArgs(args: string[]): ParseQualityDetailsArgsResult 
   let format: QualityDetailsFormat = 'json';
   let limit = 20;
   let focus: QualityDetailsFocus = 'auto';
+  let compareRef: string | undefined;
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
@@ -104,6 +105,16 @@ function parseQualityDetailsArgs(args: string[]): ParseQualityDetailsArgsResult 
       continue;
     }
 
+    if (arg === '--compare-ref') {
+      const value = args[index + 1];
+      if (!value) {
+        return missingValue(arg);
+      }
+      compareRef = value;
+      index += 1;
+      continue;
+    }
+
     return {
       ok: false,
       message: `Unknown quality details argument: ${arg}.`,
@@ -126,6 +137,7 @@ function parseQualityDetailsArgs(args: string[]): ParseQualityDetailsArgsResult 
       format,
       limit,
       focus,
+      compareRef,
     },
   };
 }
