@@ -1,7 +1,6 @@
 import { GatewayContractError, findDomainOrThrow, findSurfaceOrThrow, findWorkstreamOrThrow } from '../../contracts.ts';
 import { bootstrapLocalCodexDefaults, readBundledCodexDefaultProfile } from '../../local-codex-defaults.ts';
 import { buildOplPackageManifest } from '../../package-distribution.ts';
-import { buildQualityDetails, parseQualityDetailsArgs, renderQualityDetailsMarkdown } from '../../quality-details/index.ts';
 import { runOplEngineAction } from '../../system-installation/engine-actions.ts';
 import { buildOplEnvironment } from '../../system-installation/environment.ts';
 import { buildOplInitialize } from '../../system-installation/initialize.ts';
@@ -302,6 +301,7 @@ export function buildPublicCommandSpecs(
       ],
       group: 'quality',
       handler: async (args) => {
+        const { buildQualityDetails, parseQualityDetailsArgs, renderQualityDetailsMarkdown } = await import('../../quality-details/index.ts');
         const parsed = parseQualityDetailsArgs(args);
         if (!parsed.ok) {
           throw buildUsageError(parsed.message, publicCommandSpecs['quality details'], parsed.details);
