@@ -92,8 +92,10 @@ export function buildPromptHeader(
   if (domain) {
     lines.push(`- resolved_domain_id: ${domain.domain_id}`);
     lines.push(`- resolved_domain_project: ${domain.project}`);
-    lines.push(`- domain_gateway_surface: ${domain.gateway_surface}`);
-    lines.push(`- domain_harness_surface: ${domain.harness_surface}`);
+    lines.push(`- independent_domain_agent: ${domain.independent_domain_agent.agent_id}`);
+    lines.push(`- single_app_skill: ${domain.single_app_skill.skill_id}`);
+    lines.push(`- domain_truth_owner: ${domain.domain_truth_owner.join(', ')}`);
+    lines.push(`- opl_projection_role: ${domain.opl_projection_role.join(', ')}`);
   }
 
   if ('recommended_family' in resolution && resolution.recommended_family) {
@@ -152,7 +154,7 @@ export function buildChatSeedArgs(
 export function buildProductEntryFrontdoorPrompt(contracts: GatewayContracts) {
   const domainLines = contracts.domains.domains.map((domain) => {
     const workstreams = domain.owned_workstreams.join(', ');
-    return `- ${domain.domain_id}: ${domain.gateway_surface} -> workstreams: ${workstreams}`;
+    return `- ${domain.domain_id}: ${domain.independent_domain_agent.agent_id} app skill ${domain.single_app_skill.skill_id} -> workstreams: ${workstreams}`;
   });
   const workstreamLines = contracts.workstreams.workstreams.map((workstream) => {
     const families = workstream.primary_families.join(', ');

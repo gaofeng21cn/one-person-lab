@@ -7,7 +7,7 @@ test('loadGatewayContracts returns the frozen gateway registries', () => {
 
   assert.equal(contracts.contractsRootSource, 'api');
   assert.equal(contracts.workstreams.version, 'g1');
-  assert.equal(contracts.domains.version, 'g1');
+  assert.equal(contracts.domains.version, 'g2');
   assert.equal(contracts.routingVocabulary.version, 'g1');
   assert.equal(contracts.taskTopology.scope, 'opl_task_topology');
   assert.equal(
@@ -170,7 +170,7 @@ test('validateGatewayContracts returns a stable summary for the required contrac
       {
         contract_id: 'domains',
         file: path.join(contractsDir, 'domains.json'),
-        schema_version: 'g1',
+        schema_version: 'g2',
         status: 'valid',
       },
       {
@@ -215,7 +215,7 @@ test('contract validate returns a stable machine-readable contract summary', () 
         {
           contract_id: 'domains',
           file: path.join(contractsDir, 'domains.json'),
-          schema_version: 'g1',
+          schema_version: 'g2',
           status: 'valid',
         },
         {

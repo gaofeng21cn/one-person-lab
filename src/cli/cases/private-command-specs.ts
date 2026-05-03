@@ -91,14 +91,17 @@ export function buildInternalCommandSpecs(
     },
     'list-domains': {
       usage: 'opl list-domains',
-      summary: 'List admitted domain-agent summaries from the legacy gateway contract registry.',
+      summary: 'List admitted domain-agent summaries from the domain definition contract registry.',
       examples: ['opl list-domains'],
       handler: () => {
         const contracts = getContracts();
         return withContractsContext(contracts, {
           domains: contracts.domains.domains.map((domain) => ({
             domain_id: domain.domain_id,
-            gateway_surface: domain.gateway_surface,
+            independent_domain_agent: domain.independent_domain_agent.agent_id,
+            single_app_skill: domain.single_app_skill.skill_id,
+            domain_truth_owner: domain.domain_truth_owner,
+            opl_projection_role: domain.opl_projection_role,
             owned_workstreams: domain.owned_workstreams,
           })),
         });
