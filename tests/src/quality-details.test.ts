@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
-import { cliPath, repoRoot, runCli, runCliRaw } from './cli/helpers.ts';
+import { cliPath, repoRoot, runCli, runCliInCwd, runCliRaw, runCliRawInCwd } from './cli/helpers.ts';
 
 function makeQualityFixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-quality-details-'));
@@ -158,6 +158,201 @@ test('quality details markdown format is raw markdown for GitHub step summaries'
     assert.match(result.stdout, /Function Findings/);
     assert.match(result.stdout, /Rules Findings/);
     assert.equal(result.stderr, '');
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+function makeQualityGitFixture() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-quality-details-git-'));
+  fs.mkdirSync(path.join(root, 'src'), { recursive: true });
+  fs.writeFileSync(
+    path.join(root, 'src', 'risk.py'),
+    [
+      'def reviewer(value):',
+      '    if value > 0:',
+      '        return value',
+      '    return 0',
+      '',
+    ].join('\n'),
+  );
+  spawnSync('git', ['init'], { cwd: root, encoding: 'utf8' });
+  spawnSync('git', ['config', 'user.email', 'codex@example.invalid'], { cwd: root, encoding: 'utf8' });
+  spawnSync('git', ['config', 'user.name', 'Codex Test'], { cwd: root, encoding: 'utf8' });
+  spawnSync('git', ['add', '.'], { cwd: root, encoding: 'utf8' });
+  spawnSync('git', ['commit', '-m', 'baseline'], { cwd: root, encoding: 'utf8' });
+  fs.writeFileSync(
+    path.join(root, 'src', 'risk.py'),
+    [
+      'def reviewer(value):',
+      '    if value > 0:',
+      '        value += 1',
+      '    if value > 1:',
+      '        value += 1',
+      '    if value > 2:',
+      '        value += 1',
+      '    if value > 3:',
+      '        value += 1',
+      '    if value > 4:',
+      '        value += 1',
+      '    if value > 5:',
+      '        value += 1',
+      '    if value > 6:',
+      '        value += 1',
+      '    if value > 7:',
+      '        value += 1',
+      '    if value > 8:',
+      '        value += 1',
+      '    if value > 9:',
+      '        value += 1',
+      '    if value > 10:',
+      '        value += 1',
+      '    if value > 11:',
+      '        value += 1',
+      '    if value > 12:',
+      '        value += 1',
+      '    if value > 13:',
+      '        value += 1',
+      '    if value > 14:',
+      '        value += 1',
+      '    if value > 15:',
+      '        value += 1',
+      '    return value',
+      '',
+    ].join('\n'),
+  );
+  return root;
+}
+
+function makeQualifiedNameGitFixture() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-quality-details-qualified-'));
+  fs.mkdirSync(path.join(root, 'src'), { recursive: true });
+  fs.writeFileSync(
+    path.join(root, 'src', 'models.py'),
+    [
+      'class StablePayload:',
+      '    @classmethod',
+      '    def from_payload(cls, payload):',
+      '        if payload.get("enabled"):',
+      '            return cls()',
+      '        return cls()',
+      '',
+      'class ChangedPayload:',
+      '    @classmethod',
+      '    def from_payload(cls, payload):',
+      '        return cls()',
+      '',
+    ].join('\n'),
+  );
+  spawnSync('git', ['init'], { cwd: root, encoding: 'utf8' });
+  spawnSync('git', ['config', 'user.email', 'codex@example.invalid'], { cwd: root, encoding: 'utf8' });
+  spawnSync('git', ['config', 'user.name', 'Codex Test'], { cwd: root, encoding: 'utf8' });
+  spawnSync('git', ['add', '.'], { cwd: root, encoding: 'utf8' });
+  spawnSync('git', ['commit', '-m', 'baseline'], { cwd: root, encoding: 'utf8' });
+  fs.writeFileSync(
+    path.join(root, 'src', 'models.py'),
+    [
+      'class StablePayload:',
+      '    @classmethod',
+      '    def from_payload(cls, payload):',
+      '        if payload.get("enabled"):',
+      '            return cls()',
+      '        return cls()',
+      '',
+      'class ChangedPayload:',
+      '    @classmethod',
+      '    def from_payload(cls, payload):',
+      '        if payload.get("a"):',
+      '            payload["a"] = True',
+      '        if payload.get("b"):',
+      '            payload["b"] = True',
+      '        if payload.get("c"):',
+      '            payload["c"] = True',
+      '        if payload.get("d"):',
+      '            payload["d"] = True',
+      '        if payload.get("e"):',
+      '            payload["e"] = True',
+      '        if payload.get("f"):',
+      '            payload["f"] = True',
+      '        if payload.get("g"):',
+      '            payload["g"] = True',
+      '        if payload.get("h"):',
+      '            payload["h"] = True',
+      '        if payload.get("i"):',
+      '            payload["i"] = True',
+      '        if payload.get("j"):',
+      '            payload["j"] = True',
+      '        if payload.get("k"):',
+      '            payload["k"] = True',
+      '        if payload.get("l"):',
+      '            payload["l"] = True',
+      '        if payload.get("m"):',
+      '            payload["m"] = True',
+      '        if payload.get("n"):',
+      '            payload["n"] = True',
+      '        if payload.get("o"):',
+      '            payload["o"] = True',
+      '        return cls()',
+      '',
+    ].join('\n'),
+  );
+  return root;
+}
+
+test('quality details compare-ref reports functions crossing the complex threshold', () => {
+  const fixtureRoot = makeQualityGitFixture();
+  try {
+    const output = runCliInCwd(
+      ['quality', 'details', '--root', fixtureRoot, '--format', 'json', '--compare-ref', 'HEAD', '--limit', '10'],
+      fixtureRoot,
+    );
+
+    assert.equal(output.quality_details.baseline_diff.compare_ref, 'HEAD');
+    assert.equal(output.quality_details.baseline_diff.complex_function_threshold, 15);
+    assert.equal(output.quality_details.baseline_diff.new_complex_functions, 1);
+    assert.ok(
+      output.quality_details.function_change_findings.some(
+        (finding: { file: string; function_name: string; cyclomatic_complexity: number }) =>
+          finding.file === 'src/risk.py'
+          && finding.function_name === 'reviewer'
+          && finding.cyclomatic_complexity > 15,
+      ),
+    );
+
+    const markdown = runCliRawInCwd(
+      ['quality', 'details', '--root', fixtureRoot, '--format', 'markdown', '--compare-ref', 'HEAD', '--limit', '10'],
+      fixtureRoot,
+    );
+    assert.match(markdown.stdout, /Baseline Diff/);
+    assert.match(markdown.stdout, /src\/risk.py/);
+    assert.match(markdown.stdout, /new_complex_function/);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('quality details compare-ref uses qualified names for same-name class methods', () => {
+  const fixtureRoot = makeQualifiedNameGitFixture();
+  try {
+    const output = runCliInCwd(
+      ['quality', 'details', '--root', fixtureRoot, '--format', 'json', '--compare-ref', 'HEAD', '--limit', '10'],
+      fixtureRoot,
+    );
+
+    assert.equal(output.quality_details.baseline_diff.new_complex_functions, 1);
+    assert.deepEqual(
+      output.quality_details.function_change_findings.map(
+        (finding: { qualified_name: string }) => finding.qualified_name,
+      ),
+      ['ChangedPayload.from_payload'],
+    );
+    assert.ok(
+      output.quality_details.function_findings.some(
+        (finding: { function_name: string; qualified_name: string }) =>
+          finding.function_name === 'from_payload'
+          && finding.qualified_name === 'ChangedPayload.from_payload',
+      ),
+    );
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }

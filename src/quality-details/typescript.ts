@@ -35,6 +35,46 @@ function nameOf(node: ts.FunctionLikeDeclarationBase) {
   return '<anonymous>';
 }
 
+function parentName(node: ts.Node) {
+  if (ts.isClassDeclaration(node) || ts.isInterfaceDeclaration(node) || ts.isEnumDeclaration(node) || ts.isModuleDeclaration(node)) {
+    return node.name?.text;
+  }
+  if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
+    return node.name.text;
+  }
+  if (ts.isPropertyAssignment(node)) {
+    if (ts.isIdentifier(node.name) || ts.isStringLiteral(node.name) || ts.isNumericLiteral(node.name)) {
+      return node.name.text;
+    }
+  }
+  if (ts.isObjectLiteralExpression(node)) {
+    const parent = node.parent;
+    if (ts.isVariableDeclaration(parent) && ts.isIdentifier(parent.name)) {
+      return parent.name.text;
+    }
+    if (ts.isPropertyAssignment(parent)) {
+      if (ts.isIdentifier(parent.name) || ts.isStringLiteral(parent.name) || ts.isNumericLiteral(parent.name)) {
+        return parent.name.text;
+      }
+    }
+  }
+  if (ts.isFunctionDeclaration(node) || ts.isFunctionExpression(node) || ts.isArrowFunction(node) || ts.isMethodDeclaration(node)) {
+    return nameOf(node);
+  }
+  return undefined;
+}
+
+function qualifiedNameOf(node: ts.FunctionLikeDeclarationBase) {
+  const names: string[] = [];
+  for (let current: ts.Node | undefined = node.parent; current; current = current.parent) {
+    const name = parentName(current);
+    if (name && name !== '<anonymous>') {
+      names.push(name);
+    }
+  }
+  return [...names.reverse(), nameOf(node)].join('.');
+}
+
 function complexityOf(root: ts.FunctionLikeDeclarationBase) {
   let complexity = 1;
 
@@ -141,6 +181,7 @@ function analyzeTypescriptFiles(files: SourceFileInfo[]) {
           kind: 'function_metric',
           file: file.relativePath,
           function_name: nameOf(node),
+          qualified_name: qualifiedNameOf(node),
           start_line: startLine,
           end_line: endLine,
           lines,

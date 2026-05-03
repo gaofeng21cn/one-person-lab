@@ -13,6 +13,7 @@ type QualityDetailsOptions = {
   format: QualityDetailsFormat;
   limit: number;
   focus: QualityDetailsFocus;
+  compareRef?: string;
 };
 
 type SourceLanguage = 'typescript' | 'javascript' | 'python';
@@ -31,6 +32,7 @@ type FunctionFinding = {
   kind: 'function_metric';
   file: string;
   function_name: string;
+  qualified_name: string;
   start_line: number;
   end_line: number;
   lines: number;
@@ -38,6 +40,36 @@ type FunctionFinding = {
   cyclomatic_complexity: number;
   score: number;
   reasons: string[];
+};
+
+type FunctionChangeFinding = {
+  kind: 'new_complex_function' | 'worsened_complex_function';
+  file: string;
+  function_name: string;
+  qualified_name: string;
+  start_line: number;
+  end_line: number;
+  lines: number;
+  parameters: number;
+  baseline_start_line?: number;
+  baseline_end_line?: number;
+  baseline_lines?: number;
+  baseline_parameters?: number;
+  baseline_cyclomatic_complexity?: number;
+  cyclomatic_complexity: number;
+  delta_complexity: number;
+  complex_function_threshold: number;
+  score: number;
+  reason: string;
+};
+
+type BaselineDiffSummary = {
+  compare_ref: string;
+  complex_function_threshold: number;
+  baseline_complex_functions: number;
+  current_complex_functions: number;
+  new_complex_functions: number;
+  worsened_functions: number;
 };
 
 type FileFinding = {
@@ -96,6 +128,7 @@ type AgentTriageTarget = {
   target_kind: 'function' | 'file' | 'dependency' | 'test_gap' | 'rules';
   file?: string;
   function_name?: string;
+  qualified_name?: string;
   reason: string;
   score: number;
 };
@@ -116,6 +149,8 @@ type QualityDetailsReport = {
     untested_source_files: number;
     rules_findings: number;
   };
+  baseline_diff?: BaselineDiffSummary;
+  function_change_findings: FunctionChangeFinding[];
   function_findings: FunctionFinding[];
   file_findings: FileFinding[];
   dependency_findings: DependencyFinding[];
@@ -128,6 +163,8 @@ export type {
   AgentTriageTarget,
   DependencyFinding,
   FileFinding,
+  BaselineDiffSummary,
+  FunctionChangeFinding,
   FunctionFinding,
   QualityDetailsFocus,
   QualityDetailsFormat,
@@ -138,4 +175,3 @@ export type {
   SourceLanguage,
   TestGapFinding,
 };
-
