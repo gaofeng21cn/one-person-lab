@@ -137,8 +137,12 @@ export function buildHandoffBundle(
       domain_context: domain
         ? {
             project: domain.project,
-            gateway_surface: domain.gateway_surface,
-            harness_surface: domain.harness_surface,
+            independent_domain_agent: domain.independent_domain_agent,
+            single_app_skill: domain.single_app_skill,
+            domain_truth_owner: domain.domain_truth_owner,
+            opl_projection_role: domain.opl_projection_role,
+            runtime_dependency_boundary: domain.runtime_dependency_boundary,
+            legacy_boundary_terms: domain.legacy_boundary_terms,
           }
         : null,
       notes: [
