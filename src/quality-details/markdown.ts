@@ -20,6 +20,27 @@ function renderQualityDetailsMarkdown(report: QualityDetailsReport) {
     `Focus: \`${report.focus}\``,
     `Files: ${summary.source_files} source / ${summary.test_files} test; functions: ${summary.functions}; import edges: ${summary.import_edges}; max depth: ${summary.max_depth}; untested sources: ${summary.untested_source_files}; rules findings: ${summary.rules_findings}.`,
     '',
+    '## Baseline Diff',
+    '',
+    report.baseline_diff
+      ? [
+          `Compare ref: \`${report.baseline_diff.compare_ref}\``,
+          `Complex function threshold: > ${report.baseline_diff.complex_function_threshold}`,
+          `Complex functions: ${report.baseline_diff.baseline_complex_functions} -> ${report.baseline_diff.current_complex_functions}`,
+          `New complex functions: ${report.baseline_diff.new_complex_functions}; worsened functions: ${report.baseline_diff.worsened_functions}.`,
+        ].join('\n') + '\n'
+      : '_No compare ref supplied._\n',
+    table(
+      ['Kind', 'File', 'Function', 'Complexity', 'Line', 'Reason'],
+      report.function_change_findings.map((finding) => [
+        finding.kind,
+        finding.file,
+        finding.qualified_name,
+        `${finding.baseline_cyclomatic_complexity ?? 'new'} -> ${finding.cyclomatic_complexity}`,
+        String(finding.start_line),
+        finding.reason,
+      ]),
+    ),
     '## Agent Triage Targets',
     '',
     table(
@@ -27,7 +48,7 @@ function renderQualityDetailsMarkdown(report: QualityDetailsReport) {
       report.agent_triage_targets.map((target) => [
         String(target.priority),
         target.target_kind,
-        [target.file, target.function_name].filter(Boolean).join(' :: '),
+        [target.file, target.qualified_name ?? target.function_name].filter(Boolean).join(' :: '),
         target.reason,
         String(Math.round(target.score)),
       ]),
@@ -38,7 +59,7 @@ function renderQualityDetailsMarkdown(report: QualityDetailsReport) {
       ['File', 'Function', 'Lines', 'Params', 'Complexity', 'Reasons'],
       report.function_findings.map((finding) => [
         `${finding.file}:${finding.start_line}`,
-        finding.function_name,
+        finding.qualified_name,
         String(finding.lines),
         String(finding.parameters),
         String(finding.cyclomatic_complexity),

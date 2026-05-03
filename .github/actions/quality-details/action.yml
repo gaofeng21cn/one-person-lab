@@ -18,6 +18,10 @@ inputs:
     description: Quality details focus.
     required: false
     default: auto
+  compare-ref:
+    description: Optional Git ref to compare against for changed function diagnostics.
+    required: false
+    default: ''
   output-dir:
     description: Directory for quality-details.json.
     required: false
@@ -42,10 +46,15 @@ runs:
         OPL_QUALITY_DETAILS_LIMIT: ${{ inputs.limit }}
         OPL_QUALITY_DETAILS_JSON_LIMIT: ${{ inputs.json-limit }}
         OPL_QUALITY_DETAILS_FOCUS: ${{ inputs.focus }}
+        OPL_QUALITY_DETAILS_COMPARE_REF: ${{ inputs.compare-ref }}
         OPL_QUALITY_DETAILS_OUTPUT_DIR: ${{ inputs.output-dir }}
       run: |
         set -euo pipefail
         opl_root="$GITHUB_ACTION_PATH/../../.."
         mkdir -p "$OPL_QUALITY_DETAILS_OUTPUT_DIR"
-        "$opl_root/bin/opl" quality details --root "$OPL_QUALITY_DETAILS_ROOT" --format markdown --limit "$OPL_QUALITY_DETAILS_LIMIT" --focus "$OPL_QUALITY_DETAILS_FOCUS" >> "$GITHUB_STEP_SUMMARY"
-        "$opl_root/bin/opl" quality details --root "$OPL_QUALITY_DETAILS_ROOT" --format json --limit "$OPL_QUALITY_DETAILS_JSON_LIMIT" --focus "$OPL_QUALITY_DETAILS_FOCUS" > "$OPL_QUALITY_DETAILS_OUTPUT_DIR/quality-details.json"
+        compare_args=()
+        if [ -n "$OPL_QUALITY_DETAILS_COMPARE_REF" ]; then
+          compare_args=(--compare-ref "$OPL_QUALITY_DETAILS_COMPARE_REF")
+        fi
+        "$opl_root/bin/opl" quality details --root "$OPL_QUALITY_DETAILS_ROOT" --format markdown --limit "$OPL_QUALITY_DETAILS_LIMIT" --focus "$OPL_QUALITY_DETAILS_FOCUS" "${compare_args[@]}" >> "$GITHUB_STEP_SUMMARY"
+        "$opl_root/bin/opl" quality details --root "$OPL_QUALITY_DETAILS_ROOT" --format json --limit "$OPL_QUALITY_DETAILS_JSON_LIMIT" --focus "$OPL_QUALITY_DETAILS_FOCUS" "${compare_args[@]}" > "$OPL_QUALITY_DETAILS_OUTPUT_DIR/quality-details.json"

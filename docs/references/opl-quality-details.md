@@ -10,13 +10,16 @@ The command does not fork Sentrux, bypass Sentrux licensing, depend on Sentrux P
 opl quality details --root <repo_path> \
   [--format <json|markdown>] \
   [--limit <n>] \
-  [--focus <auto|depth|equality|modularity|redundancy|test_gaps|rules>]
+  [--focus <auto|depth|equality|modularity|redundancy|test_gaps|rules>] \
+  [--compare-ref <git_ref>]
 ```
 
 JSON output is the machine surface:
 
 - `surface_kind`: `opl_code_quality_details.v1`
 - `repo_summary`: source/test/function/import/depth/test-gap/rules counts
+- `baseline_diff`: optional compare-ref summary for complex-function changes
+- `function_change_findings`: functions that crossed or worsened past the complex-function threshold
 - `function_findings`: function name, file, line span, length, parameter count, complexity, and reasons
 - `file_findings`: file length, local fan-in/fan-out, function count, and reasons
 - `dependency_findings`: deep local dependency paths and high fan-in/fan-out targets
@@ -25,6 +28,8 @@ JSON output is the machine surface:
 - `agent_triage_targets`: ranked targets for the next agent action
 
 Markdown output is intentionally compact for GitHub step summaries.
+
+`--compare-ref` creates a temporary detached Git worktree for the supplied ref, compares it with the current target tree, and reports function-level changes. It is meant for Sentrux gate failures such as `Complex functions increased`; the Markdown table lists `file`, `function`, line, and old/new complexity.
 
 ## Language Coverage
 
@@ -42,5 +47,6 @@ GitHub workflows can use the OPL-owned action after this repository's main branc
 - uses: gaofeng21cn/one-person-lab/.github/actions/quality-details@main
   with:
     root: .
+    compare-ref: origin/main
     output-dir: artifacts/opl-quality-details
 ```
