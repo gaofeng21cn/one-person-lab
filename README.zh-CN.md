@@ -91,6 +91,8 @@ opl help --text         # 人类可读帮助；机器读取使用 opl help --jso
 - 提供工作空间、会话、进度与交付物的发现和组织能力。
 - 提供共享合同，让 Research、Grant 和 Presentation Foundry 能在同一个工作台里被看见。
 
+在 MAS v2 alignment 下，`Med Auto Science` 继续是独立医学科研 domain agent，并通过单一 domain app skill 被 Codex 与 OPL 消费。OPL 持有统一定义、shared contract/index 注册、模块发现和 projection 消费层；它不变成 MAS runtime kernel，不恢复 MAS standalone release / install 通道，也不把 MAS projection 写成 OPL 自己持有的 ready verdict 或投稿/发表裁决。
+
 桌面 GUI 由 [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) 作为 OPL 品牌 App 外壳维护。用户从这个仓库的 GitHub Releases 获取 One Person Lab App 包；macOS arm64 新用户可选择带 MAS/MDS/MAG/RCA、Hermes、`officecli` 以及推荐 companion skill payload 的 `One-Person-Lab-Full-<version>-mac-arm64.dmg` 首次安装资产，App 内更新继续只使用标准 App 资产和 `latest*.yml` metadata。这个仓库提供 App 和 Codex 共同消费的共享合同与产品表面。
 
 ### 这个仓库怎么读
@@ -108,6 +110,7 @@ opl help --text         # 人类可读帮助；机器读取使用 opl help --jso
 - 如果某个 admitted domain repo 还没落地到本机，运行 `opl module install --module <module_id>`。
 - 默认本地状态目录是 `~/Library/Application Support/OPL/state`。如果需要改到其他本地状态根目录，直接设置 `OPL_STATE_DIR`。
 - 当前 active domain agents 是 [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience)、[`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) 和 [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai)。
+- `Med Auto Science` 对 OPL/Codex 只暴露一个 MAS domain app skill。OPL 同步并消费这个 skill 以及 MAS-owned projection 作为共享工作台 surface；医学科研 runtime、controller truth、质量 authority 和 publication gate 继续由 MAS 持有。
 - [`Med Deep Scientist`](https://github.com/gaofeng21cn/med-deepscientist) 继续作为 `Med Auto Science` 之下的受控 runtime/backend companion 存在；OPL 安装与环境管理会把它作为 MAS 依赖维护，但它不作为 OPL 顶层 domain agent。
 - 当任务需要顶层 session/runtime 路径、共享 `workspaces / sessions / progress / artifacts` surface 或显式 domain activation 时，从 `OPL` 进入；当任务已经明确落在某个 domain 上时，继续进入对应仓库首页和 `docs/README*`，按该仓自己的 CLI/脚本/contract 边界执行。
 
