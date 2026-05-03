@@ -22,6 +22,8 @@ import ast
 import json
 import sys
 
+MATCH_NODE = getattr(ast, "Match", ())
+
 def complexity(node):
     value = 1
     for child in ast.walk(node):
@@ -33,7 +35,7 @@ def complexity(node):
             value += max(1, len(child.values) - 1)
         elif isinstance(child, ast.comprehension):
             value += 1
-        elif isinstance(child, ast.Match):
+        elif MATCH_NODE and isinstance(child, MATCH_NODE):
             value += max(1, len(child.cases))
     return value
 
@@ -84,6 +86,49 @@ for item in payload:
 print(json.dumps(result))
 `;
 
+function unique(values: string[]) {
+  return [...new Set(values.filter(Boolean))];
+}
+
+function executableCandidates() {
+  const which = spawnSync('which', ['-a', 'python3'], {
+    encoding: 'utf8',
+  });
+  const pathCandidates = which.status === 0
+    ? which.stdout.split(/\r?\n/).map((entry) => entry.trim())
+    : [];
+  const uv = spawnSync('uv', ['python', 'find'], {
+    encoding: 'utf8',
+  });
+  const uvCandidate = uv.status === 0 ? uv.stdout.trim() : '';
+
+  return unique([
+    process.env.OPL_QUALITY_DETAILS_PYTHON ?? '',
+    uvCandidate,
+    ...pathCandidates,
+    '/opt/homebrew/bin/python3',
+    '/usr/bin/python3',
+  ]);
+}
+
+function canRunAnalyzer(executable: string) {
+  const probe = spawnSync(executable, ['-c', 'import ast, json; print("ok")'], {
+    encoding: 'utf8',
+  });
+  return probe.status === 0;
+}
+
+function resolvePythonExecutable() {
+  const candidates = executableCandidates();
+  for (const candidate of candidates) {
+    if (canRunAnalyzer(candidate)) {
+      return candidate;
+    }
+  }
+
+  throw new Error(`Python AST analyzer could not find a usable python3 executable. Checked: ${candidates.join(', ')}`);
+}
+
 function scoreFunction(lines: number, parameters: number, complexity: number) {
   return (complexity * 6) + (parameters * 3) + Math.min(lines, 200);
 }
@@ -110,7 +155,8 @@ function analyzePythonFiles(files: SourceFileInfo[]) {
     return { files, functions: [] as FunctionFinding[] };
   }
 
-  const result = spawnSync('python3', ['-c', PYTHON_ANALYZER], {
+  const pythonExecutable = resolvePythonExecutable();
+  const result = spawnSync(pythonExecutable, ['-c', PYTHON_ANALYZER], {
     input: JSON.stringify(files.map((file) => ({
       absolutePath: file.absolutePath,
       relativePath: file.relativePath,
@@ -120,7 +166,7 @@ function analyzePythonFiles(files: SourceFileInfo[]) {
   });
 
   if (result.status !== 0) {
-    throw new Error(`Python AST analyzer failed: ${result.stderr || result.stdout}`);
+    throw new Error(`Python AST analyzer failed with ${pythonExecutable}: ${result.stderr || result.stdout}`);
   }
 
   const parsed = JSON.parse(result.stdout) as PythonFileMetric[];
