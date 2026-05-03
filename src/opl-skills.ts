@@ -133,6 +133,10 @@ function normalizeOptionalString(value: string | undefined | null) {
   return trimmed ? trimmed : null;
 }
 
+function resolveCodexHome(home: string) {
+  return normalizeOptionalString(process.env.CODEX_HOME) ?? path.join(home, '.codex');
+}
+
 function normalizeDomainSelection(domains: string[] | undefined) {
   if (!domains || domains.length === 0) {
     return null;
@@ -309,7 +313,7 @@ function syncCodexSkillMirror(inspected: InspectFamilySkillPack, home?: string) 
     return null;
   }
 
-  const codexSkillDir = path.join(resolvedHome, '.codex', 'skills', inspected.canonical_plugin_name);
+  const codexSkillDir = path.join(resolveCodexHome(resolvedHome), 'skills', inspected.canonical_plugin_name);
   fs.rmSync(codexSkillDir, { recursive: true, force: true });
   fs.cpSync(path.dirname(inspected.skill_entry_path), codexSkillDir, { recursive: true });
 
