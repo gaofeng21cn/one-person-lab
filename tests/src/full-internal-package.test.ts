@@ -143,6 +143,19 @@ test('runtime staging excludes dev/runtime-heavy paths while preserving core ent
   assert.equal(shouldExcludeRuntimePath('modules/rca/packages/redcube-gateway/dist/index.js'), false);
 });
 
+test('packaged first-run CLI path does not eagerly load quality-details dev dependencies', () => {
+  const source = fs.readFileSync(path.join(repoRoot, 'src/cli/cases/public-command-specs.ts'), 'utf8');
+
+  assert.doesNotMatch(
+    source,
+    /import\s+\{[^}]*buildQualityDetails[^}]*\}\s+from\s+['"]\.\.\/\.\.\/quality-details\/index\.ts['"]/,
+  );
+  assert.match(
+    source,
+    /await import\(['"]\.\.\/\.\.\/quality-details\/index\.ts['"]\)/,
+  );
+});
+
 test('readme documents GitHub Release first-install distribution and app update boundary', () => {
   const text = buildInternalPackageReadme({
     version: '26.5.1',
