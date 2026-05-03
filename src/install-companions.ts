@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 
 import { buildOplGuiArtifactName, buildOplReleaseTag, getOplReleaseRepo, getOplReleaseVersion } from './opl-release.ts';
 import { resolveFamilyWorkspaceRootFromRepoRoot } from './family-workspace-root.ts';
@@ -15,6 +16,7 @@ type OplCompanionSkillSourceCandidate = {
 export type OplCompanionSkillActionStatus = 'planned' | 'ready' | 'missing_source' | 'synced' | 'available' | 'installed' | 'failed';
 export type OplCompanionSkillApplyMode = 'observe' | 'ask_to_apply' | 'managed';
 export type OplSuperpowersProfile = 'keep' | 'lite' | 'full';
+export type OplCompanionToolActionStatus = 'ready' | 'installed' | 'missing' | 'failed';
 
 export type OplCompanionSkillSyncItem = {
   skill_id: string;
@@ -25,6 +27,15 @@ export type OplCompanionSkillSyncItem = {
   note: string | null;
 };
 
+export type OplCompanionToolSyncItem = {
+  tool_id: 'officecli';
+  binary_path: string | null;
+  version: string | null;
+  status: OplCompanionToolActionStatus;
+  action: 'none' | 'install';
+  note: string | null;
+};
+
 export type OplCompanionSkillSyncResult = {
   surface_id: 'opl_companion_skill_sync';
   mode: OplCompanionSkillApplyMode;
@@ -32,12 +43,15 @@ export type OplCompanionSkillSyncResult = {
   codex_skills_dir: string;
   agents_skills_dir: string;
   items: OplCompanionSkillSyncItem[];
+  tools: OplCompanionToolSyncItem[];
   summary: {
     total: number;
     ready: number;
     synced: number;
     missing_source: number;
     failed: number;
+    tools_ready: number;
+    tools_total: number;
   };
 };
 
@@ -47,7 +61,9 @@ export type OplRecommendedSkill = {
   required: boolean;
   source: 'superpowers' | 'skills_manager' | 'codex_builtin' | 'github';
   expected_paths: string[];
+  install_source_paths?: string[];
   status: OplCompanionSkillStatus;
+  required_tools?: string[];
   install_hint: string;
   update_hint?: string;
   supports: string[];
@@ -110,8 +126,154 @@ function resolveSuperpowersRepoDir(home: string) {
   return process.env.OPL_SUPERPOWERS_DIR?.trim() || path.join(resolveCodexHome(home), 'superpowers');
 }
 
+function resolveCompanionSourcesRoot(home: string) {
+  return process.env.OPL_COMPANION_SOURCES_ROOT?.trim() || path.join(resolveCodexHome(home), 'opl-companion-sources');
+}
+
+function resolvePackagedSkillsRoot() {
+  const explicit = process.env.OPL_PACKAGED_SKILLS_ROOT?.trim();
+  if (explicit) {
+    return explicit;
+  }
+  const runtimeHome = process.env.OPL_FULL_RUNTIME_HOME?.trim();
+  return runtimeHome ? path.join(runtimeHome, 'skills') : null;
+}
+
 function getSuperpowersRepoUrl() {
   return process.env.OPL_SUPERPOWERS_REPO_URL?.trim() || 'https://github.com/obra/superpowers.git';
+}
+
+function getOfficeCliRepoUrl() {
+  return process.env.OPL_OFFICECLI_REPO_URL?.trim() || 'https://github.com/iOfficeAI/OfficeCLI.git';
+}
+
+function getUiUxProMaxRepoUrl() {
+  return process.env.OPL_UI_UX_PRO_MAX_REPO_URL?.trim() || 'https://github.com/nextlevelbuilder/ui-ux-pro-max-skill.git';
+}
+
+function remoteCompanionInstallDisabled() {
+  return process.env.OPL_COMPANION_DISABLE_REMOTE_INSTALL === '1';
+}
+
+function ensurePathEntry(entry: string) {
+  const current = process.env.PATH ?? '';
+  if (!entry || current.split(path.delimiter).includes(entry)) {
+    return;
+  }
+  process.env.PATH = `${entry}${path.delimiter}${current}`;
+}
+
+function findExecutableInPath(command: string) {
+  const pathEntries = (process.env.PATH ?? '').split(path.delimiter);
+  const names = process.platform === 'win32' ? [command, `${command}.exe`] : [command];
+  for (const entry of pathEntries) {
+    for (const name of names) {
+      const candidate = path.join(entry, name);
+      if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+        return candidate;
+      }
+    }
+  }
+  return null;
+}
+
+function runCommandForOutput(command: string, args: string[]) {
+  const result = spawnSync(command, args, {
+    encoding: 'utf8',
+    env: process.env,
+    stdio: 'pipe',
+  });
+  if (result.status !== 0) {
+    return null;
+  }
+  return [result.stdout, result.stderr].filter(Boolean).join('\n').trim() || null;
+}
+
+function inspectOfficeCliBinary(binaryPath: string | null): OplCompanionToolSyncItem | null {
+  if (!binaryPath || !fs.existsSync(binaryPath) || !fs.statSync(binaryPath).isFile()) {
+    return null;
+  }
+  const version = runCommandForOutput(binaryPath, ['--version']);
+  if (!version) {
+    return null;
+  }
+  return {
+    tool_id: 'officecli',
+    binary_path: binaryPath,
+    version,
+    status: 'ready',
+    action: 'none',
+    note: null,
+  };
+}
+
+function resolveOfficeCliTool(home: string): OplCompanionToolSyncItem | null {
+  const runtimeHome = process.env.OPL_FULL_RUNTIME_HOME?.trim();
+  const candidates = [
+    process.env.OPL_OFFICECLI_BIN?.trim() || null,
+    runtimeHome ? path.join(runtimeHome, 'bin', 'officecli') : null,
+    findExecutableInPath('officecli'),
+    path.join(home, '.local', 'bin', 'officecli'),
+  ];
+  for (const candidate of candidates) {
+    const inspected = inspectOfficeCliBinary(candidate);
+    if (inspected) {
+      return inspected;
+    }
+  }
+  return null;
+}
+
+function buildOfficeCliInstallCommand() {
+  return process.env.OPL_OFFICECLI_INSTALL_COMMAND?.trim()
+    || 'curl -fsSL https://raw.githubusercontent.com/iOfficeAI/OfficeCLI/main/install.sh | bash';
+}
+
+function ensureOfficeCliTool(home: string): OplCompanionToolSyncItem {
+  const existing = resolveOfficeCliTool(home);
+  if (existing) {
+    return existing;
+  }
+  if (remoteCompanionInstallDisabled()) {
+    return {
+      tool_id: 'officecli',
+      binary_path: null,
+      version: null,
+      status: 'missing',
+      action: 'none',
+      note: 'Remote companion install is disabled; officecli binary was not installed.',
+    };
+  }
+
+  const localBin = path.join(home, '.local', 'bin');
+  fs.mkdirSync(localBin, { recursive: true });
+  ensurePathEntry(localBin);
+  const installCommand = buildOfficeCliInstallCommand();
+  const result = spawnSync(process.env.SHELL?.trim() || '/bin/bash', ['-lc', installCommand], {
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      HOME: home,
+      PATH: process.env.PATH,
+    },
+    stdio: 'pipe',
+  });
+  const installed = resolveOfficeCliTool(home);
+  if (result.status === 0 && installed) {
+    return {
+      ...installed,
+      status: 'installed',
+      action: 'install',
+    };
+  }
+  return {
+    tool_id: 'officecli',
+    binary_path: null,
+    version: null,
+    status: 'failed',
+    action: 'install',
+    note: [result.stderr, result.stdout].filter(Boolean).join('\n').trim() || 'officecli install did not produce a runnable binary.',
+  };
 }
 
 function forceSymlinkDirectory(sourcePath: string, targetPath: string) {
@@ -221,6 +383,113 @@ function pickFirstExistingSkillSource(paths: string[]) {
   return null;
 }
 
+function materializeSkillDir(sourceRoot: string, targetRoot: string) {
+  fs.rmSync(targetRoot, { recursive: true, force: true });
+  fs.mkdirSync(targetRoot, { recursive: true });
+  fs.cpSync(sourceRoot, targetRoot, {
+    recursive: true,
+    dereference: true,
+    preserveTimestamps: true,
+  });
+}
+
+function materializeSkillFile(sourceFile: string, targetRoot: string) {
+  fs.rmSync(targetRoot, { recursive: true, force: true });
+  fs.mkdirSync(targetRoot, { recursive: true });
+  fs.copyFileSync(sourceFile, path.join(targetRoot, 'SKILL.md'));
+}
+
+function cloneOrUpdateRepo(repoUrl: string, repoDir: string) {
+  if (fs.existsSync(path.join(repoDir, '.git'))) {
+    const pullResult = runGit(['pull', '--ff-only'], repoDir);
+    return {
+      ok: pullResult.exitCode === 0,
+      note: pullResult.exitCode === 0 ? null : pullResult.stderr || pullResult.stdout || `git pull failed for ${repoDir}`,
+    };
+  }
+  if (fs.existsSync(repoDir)) {
+    return {
+      ok: false,
+      note: `Companion source path exists but is not a git checkout: ${repoDir}`,
+    };
+  }
+  fs.mkdirSync(path.dirname(repoDir), { recursive: true });
+  const cloneResult = runGit(['clone', '--depth', '1', repoUrl, repoDir]);
+  return {
+    ok: cloneResult.exitCode === 0,
+    note: cloneResult.exitCode === 0 ? null : cloneResult.stderr || cloneResult.stdout || `git clone failed for ${repoUrl}`,
+  };
+}
+
+function resolveOfficeCliSourceRoot(home: string) {
+  return process.env.OPL_OFFICECLI_SOURCE_ROOT?.trim() || path.join(resolveCompanionSourcesRoot(home), 'OfficeCLI');
+}
+
+function resolveUiUxProMaxSourceRoot(home: string) {
+  return process.env.OPL_UI_UX_PRO_MAX_SOURCE_ROOT?.trim() || path.join(resolveCompanionSourcesRoot(home), 'ui-ux-pro-max-skill');
+}
+
+function materializeOfficeCliSkillSource(home: string, skillId: string) {
+  const repoDir = resolveOfficeCliSourceRoot(home);
+  if (!fs.existsSync(repoDir) && !remoteCompanionInstallDisabled()) {
+    cloneOrUpdateRepo(getOfficeCliRepoUrl(), repoDir);
+  }
+  const materializedRoot = path.join(resolveCompanionSourcesRoot(home), 'materialized', skillId);
+  const sourceRoot = skillId === 'officecli'
+    ? repoDir
+    : path.join(repoDir, 'skills', skillId);
+  if (!fs.existsSync(repoDir) || !fs.existsSync(path.join(sourceRoot, 'SKILL.md'))) {
+    return null;
+  }
+  if (skillId === 'officecli') {
+    materializeSkillFile(path.join(sourceRoot, 'SKILL.md'), materializedRoot);
+  } else {
+    materializeSkillDir(sourceRoot, materializedRoot);
+  }
+  return resolveSkillSourceCandidate(materializedRoot);
+}
+
+function materializeUiUxProMaxSkillSource(home: string) {
+  const repoDir = resolveUiUxProMaxSourceRoot(home);
+  if (!fs.existsSync(repoDir) && !remoteCompanionInstallDisabled()) {
+    cloneOrUpdateRepo(getUiUxProMaxRepoUrl(), repoDir);
+  }
+  const skillFile = path.join(repoDir, '.claude', 'skills', 'ui-ux-pro-max', 'SKILL.md');
+  const sourceRoot = path.join(repoDir, 'src', 'ui-ux-pro-max');
+  if (!fs.existsSync(skillFile) || !fs.existsSync(sourceRoot)) {
+    return null;
+  }
+  const materializedRoot = path.join(resolveCompanionSourcesRoot(home), 'materialized', 'ui-ux-pro-max');
+  fs.rmSync(materializedRoot, { recursive: true, force: true });
+  fs.mkdirSync(materializedRoot, { recursive: true });
+  fs.copyFileSync(skillFile, path.join(materializedRoot, 'SKILL.md'));
+  for (const entry of ['data', 'scripts', 'templates']) {
+    const source = path.join(sourceRoot, entry);
+    if (fs.existsSync(source)) {
+      fs.cpSync(source, path.join(materializedRoot, entry), {
+        recursive: true,
+        dereference: true,
+        preserveTimestamps: true,
+      });
+    }
+  }
+  return resolveSkillSourceCandidate(materializedRoot);
+}
+
+function ensureRecommendedSkillSource(home: string, skill: OplRecommendedSkill) {
+  const existing = pickFirstExistingSkillSource(skill.install_source_paths ?? skill.expected_paths);
+  if (existing) {
+    return existing;
+  }
+  if (skill.skill_id === 'ui-ux-pro-max') {
+    return materializeUiUxProMaxSkillSource(home);
+  }
+  if (skill.skill_id === 'officecli' || skill.skill_id.startsWith('officecli-')) {
+    return materializeOfficeCliSkillSource(home, skill.skill_id);
+  }
+  return null;
+}
+
 function resolveSuperpowersLiteSource(home: string): OplCompanionSkillSourceCandidate | null {
   const liteSkillPath = path.join(home, '.skills-manager', 'skills', 'superpowers-lite');
   return resolveSkillSourceCandidate(liteSkillPath);
@@ -273,6 +542,14 @@ function buildCompanionResult(
   mode: OplCompanionSkillApplyMode,
   superpowersProfile: OplSuperpowersProfile,
   items: OplCompanionSkillSyncItem[],
+  tools: OplCompanionToolSyncItem[] = [resolveOfficeCliTool(home) ?? {
+    tool_id: 'officecli',
+    binary_path: null,
+    version: null,
+    status: 'missing',
+    action: 'none',
+    note: 'officecli binary is not available.',
+  }],
 ): OplCompanionSkillSyncResult {
   return {
     surface_id: 'opl_companion_skill_sync',
@@ -281,12 +558,15 @@ function buildCompanionResult(
     codex_skills_dir: resolveCodexSkillsDir(home),
     agents_skills_dir: resolveAgentsSkillsDir(home),
     items,
+    tools,
     summary: {
       total: items.length,
       ready: items.filter((entry) => entry.status === 'ready' || entry.status === 'available').length,
       synced: items.filter((entry) => entry.status === 'synced' || entry.status === 'installed' || entry.status === 'available').length,
       missing_source: items.filter((entry) => entry.status === 'missing_source').length,
       failed: items.filter((entry) => entry.status === 'failed').length,
+      tools_ready: tools.filter((entry) => entry.status === 'ready' || entry.status === 'installed').length,
+      tools_total: tools.length,
     },
   };
 }
@@ -305,9 +585,9 @@ export function syncOplCompanionSkills(
   }
 
   const codexSkillsDir = resolveCodexSkillsDir(home);
-  const agentsSkillsDir = resolveAgentsSkillsDir(home);
   const recommendedSkills = buildOplRecommendedSkills(home);
   const items: OplCompanionSkillSyncItem[] = [];
+  const tools = [ensureOfficeCliTool(home)];
 
   for (const skill of recommendedSkills) {
     if (skill.source === 'superpowers') {
@@ -389,7 +669,7 @@ export function syncOplCompanionSkills(
       continue;
     }
 
-    const source = pickFirstExistingSkillSource(skill.expected_paths);
+    const source = ensureRecommendedSkillSource(home, skill);
     const targetPath = path.join(codexSkillsDir, skill.skill_id);
     if (!source) {
       if (resolveSkillSourceCandidate(targetPath)) {
@@ -467,7 +747,7 @@ export function syncOplCompanionSkills(
     }
   }
 
-  return buildCompanionResult(home, mode, superpowersProfile, items);
+  return buildCompanionResult(home, mode, superpowersProfile, items, tools);
 }
 
 export function buildOplRecommendedSkills(home = resolveHomeDir()): OplRecommendedSkill[] {
@@ -475,6 +755,8 @@ export function buildOplRecommendedSkills(home = resolveHomeDir()): OplRecommend
   const superpowersRepoDir = resolveSuperpowersRepoDir(home);
   const agentsSuperpowersDir = path.join(resolveAgentsSkillsDir(home), 'superpowers');
   const skillsManagerHome = path.join(home, '.skills-manager');
+  const packagedSkillsRoot = resolvePackagedSkillsRoot();
+  const officeCliToolReady = Boolean(resolveOfficeCliTool(home));
 
   const specs: Array<Omit<OplRecommendedSkill, 'status'>> = [
     {
@@ -497,6 +779,7 @@ export function buildOplRecommendedSkills(home = resolveHomeDir()): OplRecommend
       required: false,
       source: 'skills_manager',
       expected_paths: [path.join(skillsManagerHome, 'skills', 'officecli', 'SKILL.md')],
+      required_tools: ['officecli'],
       install_hint: 'Install the officecli skill and binary so MAS/MAG/RCA can handle Office deliverables.',
       supports: ['docx', 'pptx', 'xlsx'],
     },
@@ -515,6 +798,7 @@ export function buildOplRecommendedSkills(home = resolveHomeDir()): OplRecommend
       required: false,
       source: 'skills_manager',
       expected_paths: [path.join(skillsManagerHome, 'skills', 'officecli-docx', 'SKILL.md')],
+      required_tools: ['officecli'],
       install_hint: 'Install officecli-docx for Word document creation and editing.',
       supports: ['docx', 'academic_paper'],
     },
@@ -524,6 +808,7 @@ export function buildOplRecommendedSkills(home = resolveHomeDir()): OplRecommend
       required: false,
       source: 'skills_manager',
       expected_paths: [path.join(skillsManagerHome, 'skills', 'officecli-pptx', 'SKILL.md')],
+      required_tools: ['officecli'],
       install_hint: 'Install officecli-pptx for presentation creation and editing.',
       supports: ['pptx', 'pitch_deck'],
     },
@@ -533,6 +818,7 @@ export function buildOplRecommendedSkills(home = resolveHomeDir()): OplRecommend
       required: false,
       source: 'skills_manager',
       expected_paths: [path.join(skillsManagerHome, 'skills', 'officecli-xlsx', 'SKILL.md')],
+      required_tools: ['officecli'],
       install_hint: 'Install officecli-xlsx for spreadsheet and dashboard work.',
       supports: ['xlsx', 'dashboard'],
     },
@@ -558,10 +844,19 @@ export function buildOplRecommendedSkills(home = resolveHomeDir()): OplRecommend
         ...spec.expected_paths,
         path.join(codexHome, 'skills', spec.skill_id, 'SKILL.md'),
       ];
+    const installSourcePaths = spec.source === 'codex_builtin' || spec.source === 'superpowers'
+      ? spec.expected_paths
+      : [
+        ...expectedPaths,
+        ...(packagedSkillsRoot ? [path.join(packagedSkillsRoot, spec.skill_id, 'SKILL.md')] : []),
+      ];
+    const skillStatus = buildSkillStatus(expectedPaths);
+    const toolStatus = spec.required_tools?.includes('officecli') ? officeCliToolReady : true;
     return {
       ...spec,
       expected_paths: expectedPaths,
-      status: buildSkillStatus(expectedPaths),
+      install_source_paths: installSourcePaths,
+      status: skillStatus === 'ready' && toolStatus ? 'ready' : 'missing',
     };
   });
 }

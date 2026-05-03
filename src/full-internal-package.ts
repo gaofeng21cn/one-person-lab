@@ -172,9 +172,14 @@ export function buildFullPackageManifest(input: FullPackageManifestInput = {}) {
         role: 'python_environment_manager',
         required: true,
       },
+      officecli: {
+        ...normalizeComponent(components.officecli),
+        role: 'office_document_cli_binary',
+        required: true,
+      },
       skills: {
         ...normalizeComponent(components.skills),
-        role: 'recommended_codex_skills',
+        role: 'recommended_codex_skills_including_officecli_ui_ux',
         required: true,
       },
     },
@@ -302,8 +307,9 @@ export function buildInternalPackageReadme(input: {
     '3. runtime 版本只记录在 current.json 和 current/.opl-full-runtime-installed.json，不进入安装目录名。',
     '4. MAS/MDS/MAG/RCA 随包内容只作为首启安装源；初始化后会进入标准模块目录：',
     '   ~/Library/Application Support/OPL/state/modules/<repo-name>',
-    '5. 在 App 里配置 Codex API key 后，进入 OPL 初始化页确认 Codex、Hermes-Agent、MAS、MDS backend、MAG、RCA 状态。',
-    '6. 推荐先跑一次 MAS 最小 smoke：进入 Research Foundry，创建或读取一个 workspace 状态。',
+    '5. Full runtime 内置 officecli CLI binary 与 MAS/MAG/RCA、officecli、officecli-docx/pptx/xlsx、ui-ux-pro-max 等推荐 companion skills；App 初始化会把它们同步到 Codex 可见路径。',
+    '6. 在 App 里配置 Codex API key 后，进入 OPL 初始化页确认 Codex、Hermes-Agent、MAS、MDS backend、MAG、RCA、officecli CLI 与推荐 skills 状态。',
+    '7. 推荐先跑一次 MAS 最小 smoke：进入 Research Foundry，创建或读取一个 workspace 状态。',
     '',
     input.runtimeTarName
       ? `补充 runtime 包：如 DMG 内 runtime 安装失败，可保留 ${input.runtimeTarName} 作为人工诊断包。`

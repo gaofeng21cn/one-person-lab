@@ -30,7 +30,7 @@
 ## 当前默认入口
 
 - 默认前门是 `opl`；`opl exec` 负责一次性请求，`opl resume` 负责续接会话。
-- `opl install` 是当前最短一键安装入口：默认安装或复用 `Codex CLI` 与受支持的外部 `Hermes-Agent` runtime substrate，安装 `MAS`、`MDS`、`MAG`、`RCA`，同步短名 Codex skills，并以保守 managed 模式同步推荐 companion skills；其中 `MDS` 是 `MAS` 的隐藏运行依赖，不进入首页 domain-agent 入口。Hermes online-management gateway 是由 Hermes installer/gateway command 管理的系统服务，OPL 只触发安装/启动、检查 readiness 并报告状态，不把 gateway service lifecycle 变成 OPL 自有实现。若 OPL 品牌 GUI 已安装则尝试打开，macOS 上未安装时会自动下载并安装匹配当前平台的 release DMG 后再打开；历史 8787 Product API service 模块已退役。
+- `opl install` 是当前最短一键安装入口：默认安装或复用 `Codex CLI` 与受支持的外部 `Hermes-Agent` runtime substrate，安装 `MAS`、`MDS`、`MAG`、`RCA`，同步短名 Codex skills，并以保守 managed 模式同步推荐 companion skills 和 `officecli` CLI 工具；其中 `MDS` 是 `MAS` 的隐藏运行依赖，不进入首页 domain-agent 入口。Hermes online-management gateway 是由 Hermes installer/gateway command 管理的系统服务，OPL 只触发安装/启动、检查 readiness 并报告状态，不把 gateway service lifecycle 变成 OPL 自有实现。若 OPL 品牌 GUI 已安装则尝试打开，macOS 上未安装时会自动下载并安装匹配当前平台的 release DMG 后再打开；历史 8787 Product API service 模块已退役。
 - `opl system` / `opl system initialize` 现在把 `Codex CLI` 当作受管 runtime dependency：报告实际命中的 binary path、raw version、parsed version、最低版本策略、版本状态与必要诊断。同版本兼容 wrapper / alias 会归并到当前有效入口，不再作为普通用户诊断；低于最低版本或无法解析当前命中版本时不会报告为 ready。当前默认最低版本是 `0.125.0`，可用 `OPL_MIN_CODEX_CLI_VERSION` 覆盖。
 - 这几个入口默认继承 `Codex` 语义；只有显式 runtime switch 或显式 domain activation 才进入不同语义。
 - `opl skill sync` 负责把家族 domain app skill pack 同步到 Codex 环境，供默认 `opl` / `opl exec` / `opl resume` 直接使用；默认 sibling repo 发现已经按 workspace/worktree 布局自动解析，不再依赖 `OPL_FAMILY_WORKSPACE_ROOT`。
@@ -42,13 +42,13 @@
 - `opl runtime snapshot` 是 OPL 品牌桌面托盘的轻量投影面：它把 active domain manifest / progress projection 归入 `attention_items`、`running_items`、`recent_items`，同时保留 `source_refs` 与 `daemon_policy.local_daemon_added=false`；该入口只读 domain-owned truth，不新增 LaunchAgent / LaunchDaemon / SMAppService helper，也不让 OPL 接管调度内核。
 - `Family Product Operator Projection` 已冻结为 OPL family 监督面：它消费 runtime attempt、domain quality projection 与 incident learning loop 合同，展示 `source_refs`、`freshness`、`owner_split`、`next_surface_ref` 与 `human_gate_reason`，但不接管 domain runtime truth 或 domain quality authority。
 - Rust native helper 的生产化门禁已经进入仓库验证面：`native:doctor`、prebuild check、`npm pack --dry-run`、Rust tests/build、state cache 与 MAS/MAG family smoke 共同构成 native lane；CI 使用 fixture family smoke 验证 MAS/MAG 已声明的 `opl_runtime_manager_registration` 与 `native_helper_consumption.proof_surface` 投影，本地集成机继续可以对真实 MAS/MAG sibling workspace 做只读 indexing / registration / proof smoke。
-- 推荐 companion skills 当前包括 `superpowers`、`officecli`、`ui-ux-pro-max` 和 Codex native Office skill 组；它们不改变 OPL runtime 语义，只作为 MAS / MAG / RCA 工作流的增强能力。
+- 推荐 companion 能力当前包括 `superpowers`、`ui-ux-pro-max`、`officecli` skill 组和 `officecli` CLI binary；Office 类 skill 只有 skill payload 与 `officecli --version` 同时可用时才报告 ready。它们不改变 OPL runtime 语义，只作为 MAS / MAG / RCA 工作流的增强能力。
 - 默认本地状态目录是 `~/Library/Application Support/OPL/state`；如需切换到其他本地状态根目录，使用 `OPL_STATE_DIR`。
 - `Codex` 中显式调用 `OPL` 与其 domain agents 是并列的一等使用方式。
 - Domain app 通过各自仓库提供的本地 CLI / 程序 / 脚本 / contract 与 skill pack 接入；`OPL` 负责统一同步与发现。
 - GUI / Web 主线保持 `AionUI / opl-aion-shell -> ACP-compatible OPL session runtime`。
 - 当前 GUI 交付物是 `opl-aion-shell` 维护的 OPL 品牌桌面壳，它基于开源 AionUI codebase 做 OPL 裁剪与品牌化，并通过 ACP-compatible runtime surface 消费 OPL 的 Codex-default session/runtime truth；原版 AionUI app 不算 OPL GUI，`opl-aion-shell` 也不是 OPL runtime owner。OPL 一键安装负责打开已安装 GUI，macOS 上缺失时自动消费 one-person-lab GitHub Release 里的 OPL 品牌预编译 DMG；只有缺少匹配平台 / 架构 artifact 时才回退源码构建。
-- `OPL GUI` 预编译包指 Electron-builder 产出的 OPL 品牌 `.dmg` / `.exe` / `.deb` 分发文件及 `latest*.yml` updater metadata；这些 release artifact 由 `opl-aion-shell` 构建，再通过 `npm run gui:release` 上传到 `one-person-lab` GitHub Release。macOS arm64 另有 `One-Person-Lab-Full-<version>-mac-arm64.dmg` 首次安装资产，随包带 MAS/Hermes/MDS runtime payload，但不得写入 `latest*.yml` 或成为 App 自动更新目标。
+- `OPL GUI` 预编译包指 Electron-builder 产出的 OPL 品牌 `.dmg` / `.exe` / `.deb` 分发文件及 `latest*.yml` updater metadata；这些 release artifact 由 `opl-aion-shell` 构建，再通过 `npm run gui:release` 上传到 `one-person-lab` GitHub Release。macOS arm64 另有 `One-Person-Lab-Full-<version>-mac-arm64.dmg` 首次安装资产，随包带 MAS/MDS/MAG/RCA、Hermes、`officecli` CLI binary 和推荐 companion skill payload，但不得写入 `latest*.yml` 或成为 App 自动更新目标。
 - App 内自动更新按 OPL 日期版本判断；GUI/AionUI 基线版本只作为关于页和维护诊断信息展示。
 - 本地 8787 `Product API` / `opl web` 模块已退役；WebUI 路径由 OPL-branded AionUI shell 提供。
 

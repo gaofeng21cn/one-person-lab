@@ -32,7 +32,7 @@ macOS 桌面用户可以直接下载 App：
 
 [下载 One Person Lab for macOS](https://github.com/gaofeng21cn/one-person-lab/releases/latest)
 
-打开 `One Person Lab.app` 后，首次启动会准备本机环境，并帮助配置 Codex、模块、skills、桌面工作台和受支持的 Hermes 外部运行基座，不额外打开服务窗口。只要 Codex 与已准入 domain 模块已经就绪，核心工作和 domain 工作就应先可用；Hermes online-management gateway 可以继续渐进就绪。
+打开 `One Person Lab.app` 后，首次启动会准备本机环境，并帮助配置 Codex、模块、skills、`officecli` 这类 companion CLI 工具、桌面工作台和受支持的 Hermes 外部运行基座，不额外打开服务窗口。只要 Codex 与已准入 domain 模块已经就绪，核心工作和 domain 工作就应先可用；Hermes online-management gateway 可以继续渐进就绪。
 
 如果你更习惯从终端安装：
 
@@ -71,7 +71,7 @@ curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/ins
 
 ### 交给 Codex Agent 的一句话
 
-> 安装并配置这个 OPL 仓库：clone 仓库、安装 OPL CLI、运行 `opl install`，并确保 Codex CLI、受管 Hermes runtime/gateway 状态、MAS/MDS/MAG/RCA、推荐 skills、One Person Lab App 和浏览器入口都可用；如果缺任何东西，直接修复或报告精确阻塞点。不要仅因 Hermes online-management gateway 尚未完成加载，就把首屏核心工作或 domain 工作写成不可用。
+> 安装并配置这个 OPL 仓库：clone 仓库、安装 OPL CLI、运行 `opl install`，并确保 Codex CLI、受管 Hermes runtime/gateway 状态、MAS/MDS/MAG/RCA、推荐 skills、`officecli` 这类必要 companion CLI 工具、One Person Lab App 和浏览器入口都可用；如果缺任何东西，直接修复或报告精确阻塞点。不要仅因 Hermes online-management gateway 尚未完成加载，就把首屏核心工作或 domain 工作写成不可用。
 
 ### 安装后常用命令
 
@@ -91,7 +91,7 @@ opl help --text         # 人类可读帮助；机器读取使用 opl help --jso
 - 提供工作空间、会话、进度与交付物的发现和组织能力。
 - 提供共享合同，让 Research、Grant 和 Presentation Foundry 能在同一个工作台里被看见。
 
-桌面 GUI 由 [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) 作为 OPL 品牌 App 外壳维护。用户从这个仓库的 GitHub Releases 获取 One Person Lab App 包；macOS arm64 新用户可选择带 MAS/Hermes/MDS runtime payload 的 `One-Person-Lab-Full-<version>-mac-arm64.dmg` 首次安装资产，App 内更新继续只使用标准 App 资产和 `latest*.yml` metadata。这个仓库提供 App 和 Codex 共同消费的共享合同与产品表面。
+桌面 GUI 由 [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) 作为 OPL 品牌 App 外壳维护。用户从这个仓库的 GitHub Releases 获取 One Person Lab App 包；macOS arm64 新用户可选择带 MAS/MDS/MAG/RCA、Hermes、`officecli` 以及推荐 companion skill payload 的 `One-Person-Lab-Full-<version>-mac-arm64.dmg` 首次安装资产，App 内更新继续只使用标准 App 资产和 `latest*.yml` metadata。这个仓库提供 App 和 Codex 共同消费的共享合同与产品表面。
 
 ### 这个仓库怎么读
 

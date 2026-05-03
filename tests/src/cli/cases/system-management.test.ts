@@ -689,6 +689,7 @@ exit 1
         OPL_MODULES_ROOT: path.join(homeRoot, 'modules'),
         OPL_WORKSPACE_ROOT: homeRoot,
         PATH: `${codexFixture.fixtureRoot}:${hermesFixture.fixtureRoot}:/usr/bin:/bin`,
+        OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
       },
     ) as {
       install: {

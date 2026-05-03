@@ -9,7 +9,7 @@ This document defines which skills One Person Lab App and `opl install` should m
 | Layer | Examples | Default install / sync path | Ownership rule |
 | --- | --- | --- | --- |
 | OPL family domain skills | MAS, MAG, RCA | Codex plugin / family skill sync | Owned by each active domain-agent repo; OPL registers and syncs them |
-| OPL companion skills | Superpowers, officecli, officecli-docx/pptx/xlsx, ui-ux-pro-max | User-level Codex / agent skill discovery paths | OPL detects, plans, and applies only through explicit user or managed-profile action |
+| OPL companion capabilities | Superpowers, ui-ux-pro-max, officecli skills, officecli CLI binary | User-level Codex / agent skill discovery paths plus managed tool PATH | OPL detects them in status mode and applies them through `opl install`, OPL App first launch, Docker managed homes, Full packaged runtime, or explicit managed-profile action |
 | Codex bundled skills | Documents, Presentations, Spreadsheets | Codex plugin cache | OPL detects availability and does not copy them into `~/.codex/skills` |
 
 MDS internal skills such as `scout`, `review`, `baseline`, `experiment`, and `write` are not part of the OPL default global ecosystem. They should stay MAS-controlled, project-local, or domain-runtime-local instead of becoming OPL default family skills.
@@ -42,16 +42,16 @@ OPL applies Superpowers with this model only in explicit managed mode:
 
 ## officecli And Office Skills
 
-OPL treats officecli skills as companion skills because MAS/MAG/RCA may need Word, PowerPoint, Excel, or dashboard capability.
+OPL treats officecli as a two-part companion capability because MAS/MAG/RCA may need Word, PowerPoint, Excel, or dashboard capability. The skill payloads describe how to work; the `officecli` CLI binary performs the actual document operations. Office-related skills are ready only when both the skill payload and `officecli --version` are available.
 
 Default checks cover:
 
-- `officecli`
-- `officecli-docx`
-- `officecli-pptx`
-- `officecli-xlsx`
+- `officecli` skill payload plus `officecli` CLI binary
+- `officecli-docx` plus `officecli` CLI binary
+- `officecli-pptx` plus `officecli` CLI binary
+- `officecli-xlsx` plus `officecli` CLI binary
 
-These skills are usually managed by Skills Manager under `~/.skills-manager/skills/*`. OPL only inspects them in status mode. It symlinks them into the Codex-visible skill directory only after an explicit apply or inside an OPL-managed profile.
+These skills can come from Skills Manager under `~/.skills-manager/skills/*`, from the OfficeCLI source repo, or from a packaged runtime/managed image exposed through `OPL_PACKAGED_SKILLS_ROOT`. `opl install` and OPL App first launch run the managed profile, install or reuse the `officecli` binary, and symlink the skill payloads into the Codex-visible skill directory. Full DMG exposes the binary at `runtime/current/bin/officecli`; Docker images expose packaged skill payloads at `/opt/opl/skills`.
 
 ## How OPL App Should Use This Ecosystem
 
@@ -59,11 +59,12 @@ One Person Lab App should reuse Codex user-level skill discovery paths when appr
 
 Recommended order:
 
-1. `observe`: inspect only and do not modify the user skill ecosystem.
+1. `observe`: inspect only and do not modify the user skill or tool ecosystem.
 2. `ask_to_apply`: build a plan and wait for user confirmation.
-3. `managed`: apply the recommended profile for OPL App / Docker / OPL-owned `CODEX_HOME`.
-4. Detect Codex bundled skills without copying them.
-5. Keep MDS and other MAS-internal project-local skills out of the global system list.
+3. `managed`: apply the recommended profile for `opl install`, OPL App first launch, Docker, and OPL-owned `CODEX_HOME`.
+4. Use `OPL_PACKAGED_SKILLS_ROOT` / `OPL_FULL_RUNTIME_HOME/skills` as first-install skill sources when present.
+5. Detect Codex bundled skills without copying them.
+6. Keep MDS and other MAS-internal project-local skills out of the global system list.
 
 ## Verification
 

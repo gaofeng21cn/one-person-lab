@@ -37,7 +37,7 @@
 - 中央 release manifest / Packages workflow 可以继续维护为机器分发雏形，但各 domain repo 不需要单独恢复用户安装型 GitHub Release
 - WebUI Docker 镜像通过 GHCR 发布，服务 Docker/浏览器-only 场景
 - Native helper 预构建 archive 同步发布到 GHCR，后续 `native:repair` 可优先消费
-- 标准桌面 App 与自动更新包仍不打入 `MAS/MDS/MAG/RCA`；macOS arm64 可额外发布 Full 首次安装资产，随包带 `MAS/Hermes/MDS` runtime payload，但不得写入 `latest*.yml` 或改变 App 自动更新通道
+- 标准桌面 App 与自动更新包仍不打入 `MAS/MDS/MAG/RCA` runtime payload；macOS arm64 可额外发布 Full 首次安装资产，随包带 `MAS/MDS/MAG/RCA`、Hermes、`officecli` CLI binary 与推荐 companion skill payload，但不得写入 `latest*.yml` 或改变 App 自动更新通道
 
 ### 决策：One Person Lab App 只做 CLI-backed GUI，不复制安装与环境管理逻辑
 
@@ -60,7 +60,7 @@
 
 - 未显式配置 workspace root 时，`opl system initialize` 默认使用用户 Home 目录
 - 兼容版本的 `Codex CLI` 已可用时，不因缺少可读 Codex config 单独阻塞首启
-- `opl install` 默认安装/检查 domain modules，并以保守 managed 模式同步推荐 companion skills
+- `opl install` 默认安装/检查 domain modules，并以保守 managed 模式同步推荐 companion skills 和 `officecli` CLI 工具
 - `opl install` 默认安装或复用受支持的 Hermes runtime substrate；Hermes online-management gateway readiness 渐进展示，不阻塞已经 ready 的 core/domain 入口
 - App 首启先静默读取 `opl system initialize`；若命令行安装已经完成，则不再运行安装或打开首启向导
 - 只有缺少 Codex CLI、当前命中版本过旧或无法解析、模块无法安装等不可自动解决事项，才进入环境管理提示

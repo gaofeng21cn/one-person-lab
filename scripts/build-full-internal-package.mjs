@@ -40,6 +40,9 @@ function parseArgs(argv) {
     nodeBin: process.env.OPL_FULL_NODE_BIN || '',
     uvBin: process.env.OPL_FULL_UV_BIN || path.join(os.homedir(), '.local', 'bin', 'uv'),
     pythonRoot: process.env.OPL_FULL_PYTHON_ROOT || '',
+    officeCliBin: process.env.OPL_FULL_OFFICECLI_BIN || '',
+    officeCliRoot: process.env.OPL_FULL_OFFICECLI_ROOT || path.join(workspaceRoot, 'OfficeCLI'),
+    uiUxProMaxRoot: process.env.OPL_FULL_UI_UX_PRO_MAX_ROOT || path.join(workspaceRoot, 'ui-ux-pro-max-skill'),
     skipGuiBuild: false,
     splitRuntime: process.env.OPL_FULL_SPLIT_RUNTIME === '1',
     runtimeCacheDir: process.env.OPL_FULL_RUNTIME_CACHE_DIR || '',
@@ -79,6 +82,9 @@ function parseArgs(argv) {
     else if (token === '--node-bin') parsed.nodeBin = path.resolve(value);
     else if (token === '--uv-bin') parsed.uvBin = path.resolve(value);
     else if (token === '--python-root') parsed.pythonRoot = path.resolve(value);
+    else if (token === '--officecli-bin') parsed.officeCliBin = path.resolve(value);
+    else if (token === '--officecli-root') parsed.officeCliRoot = path.resolve(value);
+    else if (token === '--ui-ux-pro-max-root') parsed.uiUxProMaxRoot = path.resolve(value);
     else if (token === '--runtime-cache-dir') parsed.runtimeCacheDir = path.resolve(value);
     else if (token === '--runtime-cache-mode') parsed.runtimeCacheMode = value;
     else throw new Error(`Unknown argument: ${token}`);
@@ -140,6 +146,20 @@ function findExecutable(name) {
   return result.status === 0 ? result.stdout.trim() || null : null;
 }
 
+function findOfficeCliBinary(explicitBin) {
+  const candidates = [
+    explicitBin,
+    process.env.OPL_OFFICECLI_BIN || '',
+    findExecutable('officecli') || '',
+    path.join(os.homedir(), '.local', 'bin', 'officecli'),
+  ].filter(Boolean);
+  const found = candidates.find((candidate) => fs.existsSync(candidate) && fs.statSync(candidate).isFile());
+  if (!found) {
+    throw new Error('officecli binary not found. Install officecli or pass --officecli-bin / set OPL_FULL_OFFICECLI_BIN.');
+  }
+  return found;
+}
+
 function fileSha256(filePath) {
   if (!filePath || !fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
     return null;
@@ -194,6 +214,9 @@ function directorySizeBytes(root) {
   let total = 0;
   if (!fs.existsSync(root)) {
     return 0;
+  }
+  if (fs.statSync(root).isFile()) {
+    return fs.statSync(root).size;
   }
   const stack = [root];
   while (stack.length > 0) {
@@ -346,6 +369,58 @@ function copyPathContents(sourceRoot, targetRoot) {
   }
 }
 
+function copySkillDirectory(sourceRoot, targetRoot, skillName) {
+  if (!fs.existsSync(path.join(sourceRoot, 'SKILL.md'))) {
+    throw new Error(`Skill source missing SKILL.md for ${skillName}: ${sourceRoot}`);
+  }
+  copyTreeFiltered(sourceRoot, targetRoot, `skills/${skillName}`);
+}
+
+function copyFirstSkillSource(skillName, targetRoot, candidates) {
+  const source = candidates.find((candidate) => candidate && fs.existsSync(path.join(candidate, 'SKILL.md')));
+  if (!source) {
+    throw new Error(`Required Full companion skill source not found: ${skillName}`);
+  }
+  copySkillDirectory(source, path.join(targetRoot, skillName), skillName);
+  return source;
+}
+
+function copyOfficeCliCoreSkill(targetRoot, options) {
+  const target = path.join(targetRoot, 'officecli');
+  if (fs.existsSync(path.join(options.officeCliRoot, 'SKILL.md'))) {
+    fs.rmSync(target, { recursive: true, force: true });
+    fs.mkdirSync(target, { recursive: true });
+    fs.copyFileSync(path.join(options.officeCliRoot, 'SKILL.md'), path.join(target, 'SKILL.md'));
+    return options.officeCliRoot;
+  }
+  return copyFirstSkillSource('officecli', targetRoot, [
+    path.join(os.homedir(), '.skills-manager', 'skills', 'officecli'),
+    path.join(os.homedir(), '.codex', 'skills', 'officecli'),
+  ]);
+}
+
+function copyUiUxProMaxSkill(targetRoot, options) {
+  const target = path.join(targetRoot, 'ui-ux-pro-max');
+  const packagedSkill = path.join(options.uiUxProMaxRoot, '.claude', 'skills', 'ui-ux-pro-max', 'SKILL.md');
+  const packagedPayload = path.join(options.uiUxProMaxRoot, 'src', 'ui-ux-pro-max');
+  if (fs.existsSync(packagedSkill) && fs.existsSync(packagedPayload)) {
+    fs.rmSync(target, { recursive: true, force: true });
+    fs.mkdirSync(target, { recursive: true });
+    fs.copyFileSync(packagedSkill, path.join(target, 'SKILL.md'));
+    for (const entry of ['data', 'scripts', 'templates']) {
+      const source = path.join(packagedPayload, entry);
+      if (fs.existsSync(source)) {
+        copyTreeFiltered(source, path.join(target, entry), `skills/ui-ux-pro-max/${entry}`);
+      }
+    }
+    return options.uiUxProMaxRoot;
+  }
+  return copyFirstSkillSource('ui-ux-pro-max', targetRoot, [
+    path.join(os.homedir(), '.skills-manager', 'skills', 'ui-ux-pro-max'),
+    path.join(os.homedir(), '.codex', 'skills', 'ui-ux-pro-max'),
+  ]);
+}
+
 function createTarZst(archivePath, cwd, entries = ['.']) {
   requirePath(findExecutable('zstd'), 'zstd');
   fs.mkdirSync(path.dirname(archivePath), { recursive: true });
@@ -381,6 +456,7 @@ set -euo pipefail
 RUNTIME_HOME="$(cd "$(dirname "\${BASH_SOURCE[0]}")/.." && pwd)"
 PYTHON_BIN="$(find "$RUNTIME_HOME/python" -maxdepth 2 -path '*/bin' -type d 2>/dev/null | sort -r | head -n 1 || true)"
 export OPL_FULL_RUNTIME_HOME="$RUNTIME_HOME"
+export OPL_PACKAGED_SKILLS_ROOT="$RUNTIME_HOME/skills"
 export OPL_CODEX_BIN="$RUNTIME_HOME/bin/codex"
 export OPL_HERMES_BIN="$RUNTIME_HOME/bin/hermes"
 export OPL_MODULE_PATH_MEDAUTOSCIENCE="$RUNTIME_HOME/modules/mas"
@@ -418,19 +494,38 @@ function writePackagedModuleMarker(moduleRoot, marker) {
   fs.writeFileSync(path.join(moduleRoot, PACKAGED_MODULE_MARKER_FILE), `${JSON.stringify(marker, null, 2)}\n`, 'utf8');
 }
 
-function copyRecommendedSkills(targetRoot) {
+function copyRecommendedSkills(targetRoot, options) {
   fs.rmSync(targetRoot, { recursive: true, force: true });
   fs.mkdirSync(targetRoot, { recursive: true });
-  const sources = [
-    ['mas', path.join(os.homedir(), '.codex', 'skills', 'mas')],
-    ['mag', path.join(os.homedir(), '.codex', 'skills', 'mag')],
-    ['rca', path.join(os.homedir(), '.codex', 'skills', 'rca')],
-  ];
-  for (const [name, source] of sources) {
-    if (fs.existsSync(source)) {
-      copyTreeFiltered(source, path.join(targetRoot, name), `skills/${name}`);
-    }
-  }
+  copyFirstSkillSource('mas', targetRoot, [
+    path.join(os.homedir(), '.codex', 'skills', 'mas'),
+    path.join(options.masRoot, 'plugins', 'mas', 'skills', 'mas'),
+  ]);
+  copyFirstSkillSource('mag', targetRoot, [
+    path.join(os.homedir(), '.codex', 'skills', 'mag'),
+    path.join(options.magRoot, 'plugins', 'mag', 'skills', 'mag'),
+  ]);
+  copyFirstSkillSource('rca', targetRoot, [
+    path.join(os.homedir(), '.codex', 'skills', 'rca'),
+    path.join(options.rcaRoot, 'plugins', 'rca', 'skills', 'rca'),
+  ]);
+  copyOfficeCliCoreSkill(targetRoot, options);
+  copyFirstSkillSource('officecli-docx', targetRoot, [
+    path.join(options.officeCliRoot, 'skills', 'officecli-docx'),
+    path.join(os.homedir(), '.skills-manager', 'skills', 'officecli-docx'),
+    path.join(os.homedir(), '.codex', 'skills', 'officecli-docx'),
+  ]);
+  copyFirstSkillSource('officecli-pptx', targetRoot, [
+    path.join(options.officeCliRoot, 'skills', 'officecli-pptx'),
+    path.join(os.homedir(), '.skills-manager', 'skills', 'officecli-pptx'),
+    path.join(os.homedir(), '.codex', 'skills', 'officecli-pptx'),
+  ]);
+  copyFirstSkillSource('officecli-xlsx', targetRoot, [
+    path.join(options.officeCliRoot, 'skills', 'officecli-xlsx'),
+    path.join(os.homedir(), '.skills-manager', 'skills', 'officecli-xlsx'),
+    path.join(os.homedir(), '.codex', 'skills', 'officecli-xlsx'),
+  ]);
+  copyUiUxProMaxSkill(targetRoot, options);
 }
 
 function resolveRuntimeSources(options) {
@@ -439,6 +534,7 @@ function resolveRuntimeSources(options) {
   const nodeBin = findNodeBinary(options.nodeBin);
   const pythonRoot = findPythonRoot(options.pythonRoot);
   const uvBin = requirePath(options.uvBin, 'uv binary');
+  const officeCliBin = findOfficeCliBinary(options.officeCliBin);
 
   return {
     codexRoot,
@@ -446,6 +542,7 @@ function resolveRuntimeSources(options) {
     nodeBin,
     pythonRoot,
     uvBin,
+    officeCliBin,
   };
 }
 
@@ -467,6 +564,7 @@ function buildRuntimeCacheKeys(options, sources) {
   ]);
   const excludePolicyHash = stringSha256(shouldExcludeRuntimePath.toString());
   const skillsRoot = path.join(os.homedir(), '.codex', 'skills');
+  const skillsManagerRoot = path.join(os.homedir(), '.skills-manager', 'skills');
 
   return {
     toolchain: buildFullRuntimeCacheKey({
@@ -477,6 +575,8 @@ function buildRuntimeCacheKeys(options, sources) {
         rg_sha256: fileSha256(sources.codexBinaries.rg),
         node_sha256: fileSha256(sources.nodeBin),
         uv_sha256: fileSha256(sources.uvBin),
+        officecli_sha256: fileSha256(sources.officeCliBin),
+        officecli_version: commandOutput(sources.officeCliBin, ['--version']),
         python_root_name: path.basename(sources.pythonRoot),
         python_version: commandOutput(path.join(sources.pythonRoot, 'bin', 'python3'), ['--version']),
         packager_inputs: packagerInputs,
@@ -513,6 +613,16 @@ function buildRuntimeCacheKeys(options, sources) {
         mas_skill_fingerprint: directoryFingerprint(path.join(skillsRoot, 'mas'), 'skills/mas'),
         mag_skill_fingerprint: directoryFingerprint(path.join(skillsRoot, 'mag'), 'skills/mag'),
         rca_skill_fingerprint: directoryFingerprint(path.join(skillsRoot, 'rca'), 'skills/rca'),
+        mas_repo_skill_fingerprint: directoryFingerprint(path.join(options.masRoot, 'plugins', 'mas', 'skills', 'mas'), 'skills/mas'),
+        mag_repo_skill_fingerprint: directoryFingerprint(path.join(options.magRoot, 'plugins', 'mag', 'skills', 'mag'), 'skills/mag'),
+        rca_repo_skill_fingerprint: directoryFingerprint(path.join(options.rcaRoot, 'plugins', 'rca', 'skills', 'rca'), 'skills/rca'),
+        officecli_root_commit: readGitHead(options.officeCliRoot),
+        officecli_core_fingerprint: directoryFingerprint(path.join(skillsManagerRoot, 'officecli'), 'skills/officecli'),
+        officecli_docx_fingerprint: directoryFingerprint(path.join(options.officeCliRoot, 'skills', 'officecli-docx'), 'skills/officecli-docx'),
+        officecli_pptx_fingerprint: directoryFingerprint(path.join(options.officeCliRoot, 'skills', 'officecli-pptx'), 'skills/officecli-pptx'),
+        officecli_xlsx_fingerprint: directoryFingerprint(path.join(options.officeCliRoot, 'skills', 'officecli-xlsx'), 'skills/officecli-xlsx'),
+        ui_ux_pro_max_root_commit: readGitHead(options.uiUxProMaxRoot),
+        ui_ux_pro_max_fingerprint: directoryFingerprint(options.uiUxProMaxRoot, 'skills/ui-ux-pro-max'),
         mas_skill_git: readGitHead(path.join(skillsRoot, 'mas')),
         mag_skill_git: readGitHead(path.join(skillsRoot, 'mag')),
         rca_skill_git: readGitHead(path.join(skillsRoot, 'rca')),
@@ -574,6 +684,7 @@ function runCachedLayer(options, layerId, key, targetRoot, builder) {
 function buildToolchainLayer(layerRoot, sources) {
   copySingleFile(sources.codexBinaries.codex, path.join(layerRoot, 'bin', 'codex'));
   copySingleFile(sources.codexBinaries.rg, path.join(layerRoot, 'bin', 'rg'));
+  copySingleFile(sources.officeCliBin, path.join(layerRoot, 'bin', 'officecli'));
   copySingleFile(sources.nodeBin, path.join(layerRoot, 'node', 'bin', 'node'));
   copySingleFile(sources.uvBin, path.join(layerRoot, 'uv', 'bin', 'uv'));
   copyTreeFiltered(
@@ -627,8 +738,8 @@ function buildOplLayer(layerRoot) {
   copyTreeFiltered(repoRoot, path.join(layerRoot, 'opl'), 'opl');
 }
 
-function buildSkillsLayer(layerRoot) {
-  copyRecommendedSkills(path.join(layerRoot, 'skills'));
+function buildSkillsLayer(layerRoot, options) {
+  copyRecommendedSkills(path.join(layerRoot, 'skills'), options);
 }
 
 function prepareRuntime(options, sources) {
@@ -649,7 +760,7 @@ function prepareRuntime(options, sources) {
       buildOplLayer(layerRoot);
     }),
     runCachedLayer(options, 'skills', cacheKeys.skills, runtimeRoot, (layerRoot) => {
-      buildSkillsLayer(layerRoot);
+      buildSkillsLayer(layerRoot, options);
     }),
   ];
   writeDomainMarkers(runtimeRoot, options, packagedAt);
@@ -665,6 +776,7 @@ function prepareRuntime(options, sources) {
     node: { source_path: sources.nodeBin, version: commandOutput(path.join(runtimeRoot, 'node', 'bin', 'node'), ['--version']), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'node')) },
     python: { source_path: sources.pythonRoot, version: commandOutput(path.join(runtimeRoot, 'python', path.basename(sources.pythonRoot), 'bin', 'python3'), ['--version']), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'python')) },
     uv: { source_path: sources.uvBin, version: commandOutput(path.join(runtimeRoot, 'uv', 'bin', 'uv'), ['--version']), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'uv')) },
+    officecli: { source_path: sources.officeCliBin, version: commandOutput(path.join(runtimeRoot, 'bin', 'officecli'), ['--version']), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'bin', 'officecli')) },
     skills: { source_path: path.join(os.homedir(), '.codex', 'skills'), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'skills')) },
   };
 
