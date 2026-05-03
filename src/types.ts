@@ -14,13 +14,40 @@ export interface DomainContract {
   domain_id: string;
   label: string;
   project: string;
-  role: string;
-  gateway_surface: string;
-  harness_surface: string;
+  independent_domain_agent: {
+    agent_id: string;
+    status: string;
+    authority_scope: string;
+    opl_top_level_domain_agent: boolean;
+  };
+  single_app_skill: {
+    skill_id: string;
+    plugin_name: string;
+    activation_kind: string;
+    entry_command: string;
+    manifest_command: string;
+  };
+  domain_truth_owner: string[];
+  opl_projection_role: string[];
+  runtime_dependency_boundary: {
+    domain_runtime_owner: string;
+    opl_dependency: string;
+    opl_truth_write_policy: string;
+    backend_companions: Array<{
+      project: string;
+      role: string;
+      controlled_by: string;
+      opl_top_level_domain_agent: boolean;
+    }>;
+  };
   standalone_allowed: boolean;
   owned_workstreams: string[];
   non_opl_families: string[];
-  canonical_truth_owner: string[];
+  legacy_boundary_terms: {
+    role: string;
+    gateway_surface: string;
+    harness_surface: string;
+  };
 }
 
 export interface RoutingSpecialCase {

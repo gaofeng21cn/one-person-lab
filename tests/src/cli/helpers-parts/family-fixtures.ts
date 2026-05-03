@@ -138,17 +138,46 @@ export function createFamilyContractsFixtureRoot() {
         domain_id: 'medautogrant',
         label: 'MedAutoGrant',
         project: 'med-autogrant',
-        role: 'grant_ops_gateway',
-        gateway_surface: 'Grant Ops Gateway',
-        harness_surface: 'Grant Writing Domain Harness OS',
+        independent_domain_agent: {
+          agent_id: 'mag',
+          status: 'active',
+          authority_scope: 'grant_authoring_domain_agent',
+          opl_top_level_domain_agent: true,
+        },
+        single_app_skill: {
+          skill_id: 'mag',
+          plugin_name: 'Med Auto Grant',
+          activation_kind: 'explicit_app_skill',
+          entry_command: 'medautogrant product-frontdoor',
+          manifest_command: 'medautogrant product-entry-manifest',
+        },
+        domain_truth_owner: [
+          'grant_run_truth',
+          'grant_workspace_state',
+          'grant_submission_artifacts',
+          'grant_review_judgment',
+          'grant_user_visible_progress',
+        ],
+        opl_projection_role: [
+          'consume_session_projections',
+          'consume_progress_projections',
+          'consume_artifact_projections',
+          'consume_runtime_projections',
+        ],
+        runtime_dependency_boundary: {
+          domain_runtime_owner: 'med-autogrant',
+          opl_dependency: 'projection_consumer_only',
+          opl_truth_write_policy: 'no_domain_truth_writes',
+          backend_companions: [],
+        },
         standalone_allowed: true,
         owned_workstreams: ['grant_ops'],
         non_opl_families: [],
-        canonical_truth_owner: [
-          'grant_runs',
-          'workspace_state',
-          'submission_artifacts',
-        ],
+        legacy_boundary_terms: {
+          role: 'grant_ops_gateway',
+          gateway_surface: 'Grant Ops Gateway',
+          harness_surface: 'Grant Writing Domain Harness OS',
+        },
       });
     }
 
@@ -385,4 +414,3 @@ exit 1
     redcubePath,
   };
 }
-
