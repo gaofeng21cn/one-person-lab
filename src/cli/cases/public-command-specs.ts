@@ -293,11 +293,12 @@ export function buildPublicCommandSpecs(
     start: cloneCommandSpec(commandSpecs.start, { group: 'top_level' }),
     'quality details': {
       usage:
-        'opl quality details --root <repo_path> [--format <json|markdown>] [--limit <n>] [--focus <auto|depth|equality|modularity|redundancy|test_gaps|rules>]',
+        'opl quality details --root <repo_path> [--format <json|markdown>] [--limit <n>] [--focus <auto|depth|equality|modularity|redundancy|test_gaps|rules>] [--compare-ref <git_ref>]',
       summary: 'Emit deterministic code-quality details for agent triage beside Sentrux Free summaries.',
       examples: [
         'opl quality details --root /Users/gaofeng/workspace/one-person-lab --format json',
         'opl quality details --root . --format markdown --limit 20 --focus auto',
+        'opl quality details --root . --format markdown --compare-ref origin/main',
       ],
       group: 'quality',
       handler: async (args) => {
