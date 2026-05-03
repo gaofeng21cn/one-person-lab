@@ -28,6 +28,7 @@
 - `opl module install` 负责把缺失 domain repo 拉进 OPL-managed modules root，并串起 repo bootstrap、skill sync 与 health check 这条闭环安装线
 - `Hermes-Agent` 保留为 OPL-managed 外部 runtime substrate；执行语义仅在显式 opt-in 或长跑托管语境中进入
 - `MAS`、`MAG`、`RCA` 等领域智能体继续保持独立，并通过 CLI / 本地程序 / 脚本 / contract 暴露 capability surface
+- MAS v2 alignment 下，`MAS` 作为独立 domain agent 通过单一 MAS domain app skill 接入；`OPL` 只消费 MAS-owned entry/projection truth，不新增 MAS runtime kernel、standalone product release 或 OPL-owned readiness verdict
 
 ## 当前主线资源
 
@@ -123,6 +124,8 @@
 - `direct entry / product entry` 是各个 domain agent 自己的轻量独立前门
 - `domain gateway / domain harness` 继续保留为仓内边界层与执行层语言，不再作为仓库对外第一身份
 - `OPL` 当前通过 repo-owned `domain agent entry spec` 消费各 domain agent 的基础入口真相，而不再只依赖顶层硬编码蓝图
+- `MAS` 的当前接入单元是单一 domain app skill 加 repo-owned projection surfaces；`OPL` 消费这些 surface 做统一发现、显示和路由，不替代 MAS 的 runtime/controller/publication authority
+- `MDS` 位于 `MAS` 下方的 runtime/backend companion 层，只作为 MAS 依赖参与安装、环境管理和健康检查，不作为这一层的 OPL 顶层 domain agent
 
 ### 5. Shell Projection Layer
 
@@ -142,6 +145,7 @@
 - `OPL` 负责 Codex-default session/runtime、activation layer、shared modules/contracts/indexes、统一入口与 projection surface
 - `MAS`、`MAG`、`RCA` 作为独立 `domain agent`，可以通过 `OPL` activation 调用，也可以被 `Codex` 直接调用
 - 两条入口的工作逻辑保持一致
+- 对 `MAS` 来说，OPL projection 只携带 evidence、provenance、状态和路由信号；ready、submission、publication、quality 等最终判断仍回到 MAS-owned durable surfaces
 
 ## 默认执行策略
 

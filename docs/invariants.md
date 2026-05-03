@@ -10,6 +10,8 @@
 - `Hermes-Agent` 继续是外部 runtime substrate owner；OPL 可以管理、pin、诊断和投影它，但不得 fork/vendor 成 OPL 私有 runtime kernel。
 - `OPL native helper` 与高频状态索引只能加速系统探测、artifact discovery、session/progress/artifact projection，不得替代 admitted domain 仓自己的 durable truth。
 - `OPL` 的 shared contract、graph、gate、index、scorecard 与 projection 只能携带证据、provenance、状态和路由信号；不得替 MAS/MAG/RCA 或未来 domain 持有 AI-first 作者判断、审稿判断、质量裁决或 ready verdict。
+- MAS v2 wording 必须保持 `MAS` 为独立 `domain agent` 与单一 domain app skill owner；`OPL` 只能消费 MAS-owned entry/projection truth，不得把 MAS runtime、controller truth、quality authority 或 publication gate 收归 OPL。
+- `MDS` 只能作为 `MAS` 的隐藏 runtime/backend companion 被安装、检查和修复；不得进入 OPL 顶层 domain-agent 入口，也不得被写成独立 OPL-managed domain agent。
 - `OPL` 不持有领域运行时所有权。
 - `OPL` 不替代各个领域仓的智能体逻辑。
 
@@ -46,6 +48,7 @@
 - 一旦系列项目的目标形态已经明确，新增投入默认服务该目标形态。
 - 旧执行形态只能作为迁移桥、兼容层、回归基线或历史记录存在。
 - 当前主线禁止重新把旧本地 Product API / UI-adapter 公开语义拉回产品入口。
+- 当前主线禁止恢复 `MAS` 用户安装型 standalone GitHub Release / standalone product release 叙事；MAS/MDS 的分发与安装表述必须继续落在 OPL module / Packages / git checkout / sibling repo 更新路径上。
 
 ## GUI 主线约束
 
