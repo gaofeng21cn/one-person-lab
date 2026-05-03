@@ -732,3 +732,33 @@ test('family manifest schema requires repo-owned runtime continuity discovery su
   const runtimeControl = properties.runtime_control as Json;
   assert.equal(runtimeControl.$ref, '#/$defs/runtimeControlSurface');
 });
+
+test('family orchestration runtime continuity docs pin MAS v2 projection anchors without OPL publication judgment', () => {
+  const englishDoc = fs.readFileSync(
+    path.join(repoRoot, 'contracts/family-orchestration/README.md'),
+    'utf8',
+  );
+  const chineseDoc = fs.readFileSync(
+    path.join(repoRoot, 'contracts/family-orchestration/README.zh-CN.md'),
+    'utf8',
+  );
+
+  for (const doc of [englishDoc, chineseDoc]) {
+    for (const required of [
+      'study_charter',
+      'evidence_ledger',
+      'review_ledger',
+      'publication_eval/latest.json',
+      'AI reviewer artifacts',
+      'StudyTruthKernel',
+      'RuntimeHealthKernel',
+      'truth health reducers',
+      'runtime health reducers',
+      'OPL only consumes projections',
+      'does not issue MAS ready verdicts',
+      'does not hold publication judgment',
+    ]) {
+      assert.match(doc, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    }
+  }
+});

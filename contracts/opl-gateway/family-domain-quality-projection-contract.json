@@ -27,9 +27,15 @@
   ],
   "domain_mappings": {
     "med-autoscience": [
-      "evidence ledger",
-      "review ledger",
-      "AI reviewer-backed publication_eval/latest.json"
+      "study_charter",
+      "evidence_ledger",
+      "review_ledger",
+      "AI reviewer-backed publication_eval/latest.json",
+      "AI reviewer artifacts",
+      "StudyTruthKernel",
+      "RuntimeHealthKernel",
+      "truth health reducers",
+      "runtime health reducers"
     ],
     "med-autogrant": [
       "grant review",
@@ -52,7 +58,9 @@
     "chat summary",
     "memory",
     "terminal prose",
-    "OPL projection without domain-owned eval/proof refs"
+    "OPL projection without domain-owned eval/proof refs",
+    "OPL-only quality verdict",
+    "OPL MAS ready verdict",
+    "OPL-held publication judgment"
   ]
 }
-
