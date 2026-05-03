@@ -28,6 +28,8 @@ docker build \
   -t one-person-lab-webui .
 ```
 
+runtime 镜像同时安装 `officecli` CLI binary，并通过 `OPL_PACKAGED_SKILLS_ROOT=/opt/opl/skills` 暴露随镜像打入的 companion skill payload。`opl install` 或 OPL 托管首启会把这些 payload 同步到容器内 `CODEX_HOME`，让 `officecli`、`officecli-docx/pptx/xlsx` 和 `ui-ux-pro-max` 不需要等到任务执行时再完全依赖远程 clone。
+
 ## 标准浏览器访问
 
 用持久化数据目录和远程浏览器访问启动 WebUI：
@@ -165,5 +167,6 @@ curl -fsS http://127.0.0.1:3000/api/auth/user
 
 - 持久化 `/data`，让 workspace、Codex 配置、缓存和 WebUI 状态在容器重启后保留。
 - 容器内建议使用 `CODEX_HOME=/data/codex`，让 Codex 默认配置跟随 OPL 状态一起保存。
+- 保留 `OPL_PACKAGED_SKILLS_ROOT=/opt/opl/skills`，除非明确要替换随镜像打入的 companion skill 集合。
 - provider API key 使用部署 secrets 管理。
 - OPL 主仓继续作为安装入口和合同来源；`opl-aion-shell` 作为 WebUI 实现和构建来源。

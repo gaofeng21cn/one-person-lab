@@ -24,6 +24,81 @@ function runCliWithStdin(args: string[], stdin: string, envOverrides: Record<str
   return JSON.parse(result.stdout);
 }
 
+function createFakeOfficeCliSource(root: string) {
+  fs.mkdirSync(root, { recursive: true });
+  fs.writeFileSync(
+    path.join(root, 'SKILL.md'),
+    '---\nname: officecli\ndescription: Test OfficeCLI core skill.\n---\n\n# officecli\n',
+    'utf8',
+  );
+  for (const skillName of ['officecli-docx', 'officecli-pptx', 'officecli-xlsx']) {
+    const skillRoot = path.join(root, 'skills', skillName);
+    fs.mkdirSync(skillRoot, { recursive: true });
+    fs.writeFileSync(
+      path.join(skillRoot, 'SKILL.md'),
+      `---\nname: ${skillName}\ndescription: Test ${skillName} skill.\n---\n\n# ${skillName}\n`,
+      'utf8',
+    );
+  }
+}
+
+function createFakeUiUxProMaxSource(root: string) {
+  fs.mkdirSync(path.join(root, '.claude', 'skills', 'ui-ux-pro-max'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'src', 'ui-ux-pro-max', 'data'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'src', 'ui-ux-pro-max', 'scripts'), { recursive: true });
+  fs.writeFileSync(
+    path.join(root, '.claude', 'skills', 'ui-ux-pro-max', 'SKILL.md'),
+    '---\nname: ui-ux-pro-max\ndescription: Test UI UX Pro Max skill.\n---\n\n# ui-ux-pro-max\n',
+    'utf8',
+  );
+  fs.writeFileSync(path.join(root, 'src', 'ui-ux-pro-max', 'data', 'palettes.json'), '{}\n', 'utf8');
+  fs.writeFileSync(path.join(root, 'src', 'ui-ux-pro-max', 'scripts', 'search.js'), 'export {};\n', 'utf8');
+}
+
+function createFakeOfficeCliInstaller(root: string) {
+  const installerPath = path.join(root, 'install-officecli.sh');
+  fs.writeFileSync(
+    installerPath,
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      'mkdir -p "$HOME/.local/bin"',
+      'cat > "$HOME/.local/bin/officecli" <<\'EOS\'',
+      '#!/usr/bin/env bash',
+      'if [ "${1:-}" = "--version" ]; then',
+      '  echo "1.0.70-test"',
+      '  exit 0',
+      'fi',
+      'echo "officecli test fixture"',
+      'EOS',
+      'chmod +x "$HOME/.local/bin/officecli"',
+      '',
+    ].join('\n'),
+    { mode: 0o755 },
+  );
+  return installerPath;
+}
+
+function createFakeCompanionInstallEnv(homeRoot: string) {
+  const sourceRoot = path.join(homeRoot, 'companion-sources');
+  const officeCliRoot = path.join(sourceRoot, 'OfficeCLI');
+  const uiUxRoot = path.join(sourceRoot, 'ui-ux-pro-max-skill');
+  createFakeOfficeCliSource(officeCliRoot);
+  createFakeUiUxProMaxSource(uiUxRoot);
+  return {
+    OPL_COMPANION_SOURCES_ROOT: sourceRoot,
+    OPL_OFFICECLI_SOURCE_ROOT: officeCliRoot,
+    OPL_UI_UX_PRO_MAX_SOURCE_ROOT: uiUxRoot,
+    OPL_OFFICECLI_INSTALL_COMMAND: createFakeOfficeCliInstaller(sourceRoot),
+  };
+}
+
+function disableRemoteCompanionInstall() {
+  return {
+    OPL_COMPANION_DISABLE_REMOTE_INSTALL: '1',
+  };
+}
+
 test('public command specs expose the one-shot install command', () => {
   const contracts = loadGatewayContracts({ contractsDir });
   const internalSpecs = buildInternalCommandSpecs(
@@ -92,6 +167,8 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
     OPL_MODULES_ROOT: modulesRoot,
     OPL_MODULE_REPO_URL_MEDAUTOSCIENCE: medAutoScienceRemote.remoteRoot,
     OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+    PATH: '/usr/bin:/bin',
+    ...createFakeCompanionInstallEnv(homeRoot),
   };
 
   try {
@@ -127,7 +204,9 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
         companion_skill_sync: {
           surface_id: string;
           mode: string;
-          summary: { total: number };
+          tools: Array<{ tool_id: string; status: string; action: string; version: string | null }>;
+          items: Array<{ skill_id: string; status: string; action: string }>;
+          summary: { total: number; tools_ready: number; tools_total: number };
         };
         first_run_log: {
           surface_id: string;
@@ -171,6 +250,19 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
     assert.equal(output.install.companion_skill_sync.surface_id, 'opl_companion_skill_sync');
     assert.equal(output.install.companion_skill_sync.mode, 'managed');
     assert.equal(output.install.companion_skill_sync.summary.total >= 6, true);
+    assert.deepEqual(
+      output.install.companion_skill_sync.tools.map((entry) => [entry.tool_id, entry.status, entry.action, entry.version]),
+      [['officecli', 'installed', 'install', '1.0.70-test']],
+    );
+    assert.equal(output.install.companion_skill_sync.summary.tools_ready, 1);
+    assert.equal(output.install.companion_skill_sync.summary.tools_total, 1);
+    for (const skillName of ['officecli', 'officecli-docx', 'officecli-pptx', 'officecli-xlsx', 'ui-ux-pro-max']) {
+      const item = output.install.companion_skill_sync.items.find((entry) => entry.skill_id === skillName);
+      assert.equal(item?.status, 'synced');
+      assert.equal(item?.action, 'symlink');
+      assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', skillName, 'SKILL.md')), true);
+    }
+    assert.equal(fs.existsSync(path.join(homeRoot, '.local', 'bin', 'officecli')), true);
     assert.equal(output.install.first_run_log.surface_id, 'opl_first_run_log');
     assert.equal(output.install.first_run_log.event_schema_version, 'opl_first_run_event.v1');
     assert.equal(output.install.first_run_log.log_path, path.join(homeRoot, 'Library', 'Logs', 'One Person Lab', 'first-run.jsonl'));
@@ -222,6 +314,69 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
   }
 });
 
+test('recommended Office skills require both skill payloads and the officecli binary', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-officecli-status-home-'));
+  const codexHome = path.join(homeRoot, 'codex-home');
+  const skillsRoot = path.join(codexHome, 'skills');
+  for (const skillName of ['officecli', 'officecli-docx', 'officecli-pptx', 'officecli-xlsx']) {
+    fs.mkdirSync(path.join(skillsRoot, skillName), { recursive: true });
+    fs.writeFileSync(
+      path.join(skillsRoot, skillName, 'SKILL.md'),
+      `---\nname: ${skillName}\ndescription: ${skillName} fixture.\n---\n\n# ${skillName}\n`,
+      'utf8',
+    );
+  }
+
+  try {
+    const missingTool = runCli(['system', 'initialize'], {
+      HOME: homeRoot,
+      CODEX_HOME: codexHome,
+      PATH: '/usr/bin:/bin',
+    }) as {
+      system_initialize: {
+        recommended_skills: {
+          skills: Array<{ skill_id: string; status: string }>;
+        };
+      };
+    };
+    const missingById = new Map(
+      missingTool.system_initialize.recommended_skills.skills.map((skill) => [skill.skill_id, skill.status]),
+    );
+    for (const skillName of ['officecli', 'officecli-docx', 'officecli-pptx', 'officecli-xlsx']) {
+      assert.equal(missingById.get(skillName), 'missing');
+    }
+
+    const toolBin = path.join(homeRoot, '.local', 'bin');
+    fs.mkdirSync(toolBin, { recursive: true });
+    const officeCliPath = path.join(toolBin, 'officecli');
+    fs.writeFileSync(
+      officeCliPath,
+      '#!/usr/bin/env bash\nif [ "${1:-}" = "--version" ]; then echo "1.0.70-test"; else echo officecli; fi\n',
+      { mode: 0o755 },
+    );
+
+    const readyTool = runCli(['system', 'initialize'], {
+      HOME: homeRoot,
+      CODEX_HOME: codexHome,
+      PATH: `${toolBin}:/usr/bin:/bin`,
+    }) as {
+      system_initialize: {
+        recommended_skills: {
+          skills: Array<{ skill_id: string; status: string }>;
+        };
+      };
+    };
+    const readyById = new Map(
+      readyTool.system_initialize.recommended_skills.skills.map((skill) => [skill.skill_id, skill.status]),
+    );
+    for (const skillName of ['officecli', 'officecli-docx', 'officecli-pptx', 'officecli-xlsx']) {
+      assert.equal(readyById.get(skillName), 'ready');
+    }
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
 test('install command repairs native helpers and returns the refreshed lifecycle report', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-native-home-'));
   const helperBinDir = path.join(homeRoot, 'native-bin');
@@ -263,6 +418,7 @@ printf 'native repair completed\\n'
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
       OPL_NATIVE_HELPER_BIN_DIR: helperBinDir,
       OPL_NATIVE_HELPER_REPAIR_COMMAND: repairScript,
+      ...disableRemoteCompanionInstall(),
     }) as {
       install: {
         native_helper_action: {
@@ -305,6 +461,7 @@ test('install command can bootstrap Codex defaults from environment without leak
       OPL_CODEX_REASONING_EFFORT: 'xhigh',
       OPL_CODEX_BASE_URL: 'https://codex-provider.example.test/v1',
       OPL_CODEX_API_KEY: 'secret-test-key',
+      ...disableRemoteCompanionInstall(),
     }) as {
       install: {
         codex_config_bootstrap: {
@@ -540,6 +697,7 @@ test('install command points WebUI users to the AionUI shell instead of a local 
     const output = runCli(['install', '--skip-modules', '--skip-engines', '--skip-gui-open', '--skip-native-helper-repair'], {
       HOME: homeRoot,
       OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+      ...disableRemoteCompanionInstall(),
     }) as { install: { notes: string[] } };
 
     assert.doesNotMatch(output.install.notes.join('\n'), /serve-web|8787|Product API service/);
@@ -579,6 +737,7 @@ exit 1
         OPL_HERMES_BIN: hermesFixture.hermesPath,
         OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
         PATH: `${codexFixtureRoot}:${hermesFixture.fixtureRoot}:/usr/bin:/bin`,
+        ...disableRemoteCompanionInstall(),
       },
     ) as {
       install: {
@@ -672,6 +831,7 @@ exit 1
       OPL_HDIUTIL_BIN: hdiutilPath,
       OPL_OPEN_BIN: openFixture.openPath,
       OPL_RELEASE_VERSION: '26.4.25',
+      ...disableRemoteCompanionInstall(),
     }) as {
       install: {
         gui_open_action: {

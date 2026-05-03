@@ -39,6 +39,7 @@ test('full internal manifest declares all first-run domain modules and Hermes le
       node: { source_path: '/node', version: '22.16.0', size_bytes: 6 },
       python: { source_path: '/python', version: '3.12.12', size_bytes: 7 },
       uv: { source_path: '/uv', version: '0.9.5', size_bytes: 8 },
+      officecli: { source_path: '/officecli', version: '1.0.70', size_bytes: 10 },
       skills: { source_path: '/skills', size_bytes: 9 },
     },
   });
@@ -67,6 +68,9 @@ test('full internal manifest declares all first-run domain modules and Hermes le
   assert.equal(manifest.components.rca.required, true);
   assert.equal(manifest.components.rca.role, 'visual_deliverable_domain_module');
   assert.equal(manifest.components.rca.visible_in_first_run_ui, true);
+  assert.equal(manifest.components.officecli.required, true);
+  assert.equal(manifest.components.officecli.role, 'office_document_cli_binary');
+  assert.equal(manifest.components.skills.role, 'recommended_codex_skills_including_officecli_ui_ux');
   assert.equal(manifest.components.hermes.profile, 'lean');
   assert.ok(manifest.components.hermes.excluded_capabilities.includes('web_ui'));
   assert.equal(manifest.distribution.github_release_upload, true);
@@ -154,9 +158,12 @@ test('readme documents GitHub Release first-install distribution and app update 
   assert.match(text, /Application Support\/OPL\/state\/modules\/<repo-name>/);
   assert.match(text, /current\.json/);
   assert.match(text, /\.opl-full-runtime-installed\.json/);
+  assert.match(text, /officecli CLI binary/);
+  assert.match(text, /officecli-docx\/pptx\/xlsx/);
+  assert.match(text, /ui-ux-pro-max/);
   assert.doesNotMatch(text, /Application Support\/OPL\/runtime\/26\.5\.1/);
   assert.match(text, /API key/);
-  assert.match(text, /确认 Codex、Hermes-Agent、MAS、MDS backend、MAG、RCA 状态/);
+  assert.match(text, /确认 Codex、Hermes-Agent、MAS、MDS backend、MAG、RCA、officecli CLI 与推荐 skills 状态/);
   assert.match(text, /当前标准 GitHub DMG 的同等发布模式/);
   assert.match(text, /右键打开/);
 });
@@ -283,6 +290,8 @@ test('full runtime layer cache records miss then hit when zstd is available', ()
     writeExecutable(path.join(pythonRoot, 'bin', 'python3'), '#!/usr/bin/env bash\necho Python 3.12.0\n');
     const uvBin = path.join(tmpRoot, 'bin', 'uv');
     writeExecutable(uvBin, '#!/usr/bin/env bash\necho uv 0.1.0\n');
+    const officeCliBin = path.join(tmpRoot, 'bin', 'officecli');
+    writeExecutable(officeCliBin, '#!/usr/bin/env bash\necho 1.0.70-test\n');
 
     for (const [name, executable] of [
       ['hermes-agent', 'hermes'],
@@ -297,7 +306,39 @@ test('full runtime layer cache records miss then hit when zstd is available', ()
       if (executable === 'hermes') {
         writeExecutable(path.join(root, 'hermes'), '#!/usr/bin/env python3\nprint("hermes")\n');
       }
+      if (executable !== 'hermes' && ['mas', 'mag', 'rca'].includes(executable)) {
+        fs.mkdirSync(path.join(root, 'plugins', executable, 'skills', executable), { recursive: true });
+        fs.writeFileSync(
+          path.join(root, 'plugins', executable, 'skills', executable, 'SKILL.md'),
+          `---\nname: ${executable}\ndescription: ${executable} app skill\n---\n\n# ${executable}\n`,
+          'utf8',
+        );
+      }
     }
+    const officeCliRoot = path.join(tmpRoot, 'OfficeCLI');
+    fs.mkdirSync(officeCliRoot, { recursive: true });
+    fs.writeFileSync(
+      path.join(officeCliRoot, 'SKILL.md'),
+      '---\nname: officecli\ndescription: OfficeCLI core skill\n---\n\n# officecli\n',
+      'utf8',
+    );
+    for (const skillName of ['officecli-docx', 'officecli-pptx', 'officecli-xlsx']) {
+      fs.mkdirSync(path.join(officeCliRoot, 'skills', skillName), { recursive: true });
+      fs.writeFileSync(
+        path.join(officeCliRoot, 'skills', skillName, 'SKILL.md'),
+        `---\nname: ${skillName}\ndescription: ${skillName} skill\n---\n\n# ${skillName}\n`,
+        'utf8',
+      );
+    }
+    const uiUxRoot = path.join(tmpRoot, 'ui-ux-pro-max-skill');
+    fs.mkdirSync(path.join(uiUxRoot, '.claude', 'skills', 'ui-ux-pro-max'), { recursive: true });
+    fs.mkdirSync(path.join(uiUxRoot, 'src', 'ui-ux-pro-max', 'data'), { recursive: true });
+    fs.writeFileSync(
+      path.join(uiUxRoot, '.claude', 'skills', 'ui-ux-pro-max', 'SKILL.md'),
+      '---\nname: ui-ux-pro-max\ndescription: UI UX skill\n---\n\n# ui-ux-pro-max\n',
+      'utf8',
+    );
+    fs.writeFileSync(path.join(uiUxRoot, 'src', 'ui-ux-pro-max', 'data', 'palettes.json'), '{}\n', 'utf8');
 
     const runPackage = () => {
       fs.writeFileSync(path.join(outDir, `One-Person-Lab-${version}-mac-arm64.dmg`), 'fake dmg');
@@ -330,6 +371,12 @@ test('full runtime layer cache records miss then hit when zstd is available', ()
           uvBin,
           '--python-root',
           pythonRoot,
+          '--officecli-bin',
+          officeCliBin,
+          '--officecli-root',
+          officeCliRoot,
+          '--ui-ux-pro-max-root',
+          uiUxRoot,
           '--runtime-cache-dir',
           cacheDir,
           '--runtime-cache-mode',
@@ -359,6 +406,16 @@ test('full runtime layer cache records miss then hit when zstd is available', ()
       ['hit', 'hit', 'hit', 'hit'],
     );
     assert.ok(fs.existsSync(path.join(outputDir, `One-Person-Lab-Full-${version}-mac-arm64.dmg`)));
+    const runtimeRoot = path.join(guiRoot, 'packaged-runtimes', 'opl-full-runtime', 'runtime', 'current');
+    assert.ok(fs.existsSync(path.join(runtimeRoot, 'bin', 'officecli')));
+    for (const skillName of ['mas', 'mag', 'rca', 'officecli', 'officecli-docx', 'officecli-pptx', 'officecli-xlsx', 'ui-ux-pro-max']) {
+      assert.equal(
+        fs.existsSync(path.join(runtimeRoot, 'skills', skillName, 'SKILL.md')),
+        true,
+        `${skillName} should be staged in the Full runtime skills layer`,
+      );
+    }
+    assert.equal(fs.existsSync(path.join(runtimeRoot, 'skills', 'ui-ux-pro-max', 'data', 'palettes.json')), true);
     for (const [moduleDir, moduleId] of [
       ['mas', 'medautoscience'],
       ['mds', 'meddeepscientist'],

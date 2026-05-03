@@ -28,6 +28,8 @@ docker build \
   -t one-person-lab-webui .
 ```
 
+The runtime image also installs the `officecli` CLI binary and exposes packaged companion skill payloads at `/opt/opl/skills` through `OPL_PACKAGED_SKILLS_ROOT`. During `opl install` or OPL-managed first launch, those payloads are synced into the container `CODEX_HOME` so `officecli`, `officecli-docx/pptx/xlsx`, and `ui-ux-pro-max` are available without relying only on a remote skill clone at task time.
+
 ## Standard Browser Access
 
 Run the WebUI with a persistent data directory and remote browser access enabled:
@@ -165,5 +167,6 @@ Expected shape:
 
 - Persist `/data` so workspaces, Codex configuration, cache, and WebUI state survive container restarts.
 - Use `CODEX_HOME=/data/codex` when the container should keep Codex defaults with the rest of the OPL state.
+- Keep `OPL_PACKAGED_SKILLS_ROOT=/opt/opl/skills` unless replacing the packaged companion skill set intentionally.
 - Use deployment secrets for provider API keys.
 - Keep the OPL main repository as the documented installer and contract source; keep `opl-aion-shell` as the WebUI implementation and build source.

@@ -32,7 +32,7 @@ For macOS desktop users, download the App directly:
 
 [Download One Person Lab for macOS](https://github.com/gaofeng21cn/one-person-lab/releases/latest)
 
-Open `One Person Lab.app`; on first launch it quietly checks the local environment, uses your home directory as the default workspace root, and installs or reuses missing OPL modules, recommended skills, and the supported Hermes runtime substrate when it can do so safely. Core OPL and admitted domain work are available once Codex and the domain modules are ready; the Hermes online-management gateway can finish reaching ready state in the background.
+Open `One Person Lab.app`; on first launch it quietly checks the local environment, uses your home directory as the default workspace root, and installs or reuses missing OPL modules, recommended skills, companion tools such as the `officecli` binary, and the supported Hermes runtime substrate when it can do so safely. Core OPL and admitted domain work are available once Codex and the domain modules are ready; the Hermes online-management gateway can finish reaching ready state in the background.
 
 If you prefer Terminal installation:
 
@@ -71,7 +71,7 @@ Need Docker, Linux, or server deployment? See the [Docker and browser deployment
 
 ### One instruction for a Codex Agent
 
-> Install and configure this OPL repo: clone it, install the OPL CLI, run `opl install`, and ensure Codex CLI, the managed Hermes runtime/gateway status, MAS/MDS/MAG/RCA, recommended skills, the One Person Lab App, and the browser entry are ready; if anything is missing, fix it or report the exact blocker. Do not treat first-screen core/domain access as blocked solely because the Hermes online-management gateway has not finished loading.
+> Install and configure this OPL repo: clone it, install the OPL CLI, run `opl install`, and ensure Codex CLI, the managed Hermes runtime/gateway status, MAS/MDS/MAG/RCA, recommended skills, required companion tools such as the `officecli` binary, the One Person Lab App, and the browser entry are ready; if anything is missing, fix it or report the exact blocker. Do not treat first-screen core/domain access as blocked solely because the Hermes online-management gateway has not finished loading.
 
 ### Common commands after installation
 
@@ -91,7 +91,7 @@ This repository tracks the shared OPL workbench layer, not the specialized domai
 - Workspace, session, progress, and artifact discovery surfaces.
 - Shared contracts that let Research, Grant, and Presentation Foundries stay visible from one workbench.
 
-The desktop GUI source is maintained in [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) as an internal OPL-branded app-shell build input. Users download One Person Lab App packages from this repository’s GitHub Releases; first-time macOS arm64 users can choose the `One-Person-Lab-Full-<version>-mac-arm64.dmg` asset with MAS/Hermes/MDS runtime payloads, while in-app updates continue to use the standard App assets and `latest*.yml` metadata. This repository provides the shared workbench contracts and product surfaces consumed by the app and Codex.
+The desktop GUI source is maintained in [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) as an internal OPL-branded app-shell build input. Users download One Person Lab App packages from this repository’s GitHub Releases; first-time macOS arm64 users can choose the `One-Person-Lab-Full-<version>-mac-arm64.dmg` asset with MAS/MDS/MAG/RCA, Hermes, `officecli`, and recommended companion skill payloads, while in-app updates continue to use the standard App assets and `latest*.yml` metadata. This repository provides the shared workbench contracts and product surfaces consumed by the app and Codex.
 
 ### How to read this repository
 

@@ -78,6 +78,20 @@ jobs:
           ref: main
           path: redcube-ai
 
+      - name: Checkout OfficeCLI
+        uses: actions/checkout@v4
+        with:
+          repository: iOfficeAI/OfficeCLI
+          ref: main
+          path: OfficeCLI
+
+      - name: Checkout UI UX Pro Max skill
+        uses: actions/checkout@v4
+        with:
+          repository: nextlevelbuilder/ui-ux-pro-max-skill
+          ref: main
+          path: ui-ux-pro-max-skill
+
       - name: Resolve release version
         shell: bash
         run: |
@@ -109,7 +123,11 @@ jobs:
           python -m pip install --upgrade pip uv
           uv python install 3.12
           npm install -g @openai/codex
+          curl -fsSL https://raw.githubusercontent.com/iOfficeAI/OfficeCLI/main/install.sh | bash
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.local/bin:$PATH"
           codex --version
+          officecli --version
           uv --version
           zstd --version
 
@@ -155,6 +173,8 @@ jobs:
           export OPL_FULL_MDS_ROOT="$GITHUB_WORKSPACE/med-deepscientist"
           export OPL_FULL_MAG_ROOT="$GITHUB_WORKSPACE/med-autogrant"
           export OPL_FULL_RCA_ROOT="$GITHUB_WORKSPACE/redcube-ai"
+          export OPL_FULL_OFFICECLI_ROOT="$GITHUB_WORKSPACE/OfficeCLI"
+          export OPL_FULL_UI_UX_PRO_MAX_ROOT="$GITHUB_WORKSPACE/ui-ux-pro-max-skill"
           npm --silent run packages:full-release -- \
             --version "$OPL_RELEASE_VERSION" \
             --runtime-cache-dir "$cache_dir" \
@@ -244,6 +264,8 @@ jobs:
           export OPL_FULL_MDS_ROOT="$GITHUB_WORKSPACE/med-deepscientist"
           export OPL_FULL_MAG_ROOT="$GITHUB_WORKSPACE/med-autogrant"
           export OPL_FULL_RCA_ROOT="$GITHUB_WORKSPACE/redcube-ai"
+          export OPL_FULL_OFFICECLI_ROOT="$GITHUB_WORKSPACE/OfficeCLI"
+          export OPL_FULL_UI_UX_PRO_MAX_ROOT="$GITHUB_WORKSPACE/ui-ux-pro-max-skill"
           npm run packages:full-release -- \
             --version "$OPL_RELEASE_VERSION" \
             --runtime-cache-dir "${{ steps.runtime-cache-keys.outputs.cache_dir }}" \
