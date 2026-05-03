@@ -1,5 +1,21 @@
 # OPL 关键决策
 
+## 2026-05-04
+
+### 决策：MAS v2 以独立 domain agent 和单一 app skill 对接 OPL
+
+原因：`MAS` 的 v2 alignment 需要同时保持两件事：医学科研 domain agent 继续独立演进，OPL 又能以统一定义、shared contract/index 与 projection 消费方式把它纳入同一工作台。把 MAS 写成 OPL runtime kernel 的一部分、恢复 MAS standalone release 通道，或把 OPL projection 写成 MAS ready / publication verdict，都会制造第二真相源。
+
+影响：
+
+- `MAS` 继续作为独立医学科研 `domain agent`；`MAG`、`RCA` 的独立 domain-agent 表述不受影响。
+- `MAS` 对 `Codex` / `OPL` 暴露一个 MAS domain app skill；OPL 负责发现、同步和消费该 skill，不新增 OPL-only MAS skill family。
+- `OPL` 持有 unified definitions、shared module/contract/index registration、module discovery 与 projection consumption surface；医学科研 runtime、controller truth、quality authority、publication gates 与 deliverable truth 继续由 `MAS` 持有。
+- `MDS` 继续作为 `MAS` 的隐藏 runtime/backend companion 被安装、检查和修复；它不进入 OPL 顶层 domain-agent 入口，也不成为独立 OPL-managed domain agent。
+- 公开文档与技术入口不得恢复 MAS 用户安装型 standalone GitHub Release / standalone product release 叙事；MAS/MDS 仍按 OPL Packages/GHCR-backed module 坐标与 git checkout / sibling repo 更新路径表达。
+- OPL 对 MAS progress、publication、quality、runtime control 等 projection 只做证据、provenance、状态和路由展示；不得把 projection 文案写成 OPL 持有的 ready verdict、submission-ready verdict、publication verdict 或质量裁决。
+- 本决策不修改 `contracts/` 与 projection contract；它只同步公开文档和核心 docs 的 MAS v2 wording。
+
 ## 2026-05-02
 
 ### 决策：首启 readiness 拆分为 core/domain 可用与 Hermes online-management 渐进就绪
