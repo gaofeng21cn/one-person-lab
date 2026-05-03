@@ -3,6 +3,7 @@
 # OPL Routed Action Gateway
 
 > Historical note (`2026-04-24`): this document is retained as the planning-only routed-action freeze from the gateway-first phase. Current `OPL` does not use this file as its default runtime/activation contract.
+> Current entry truth: active work enters through `Codex-default session/runtime -> explicit OPL activation -> selected domain agent entry`. Mentions of `OPL Gateway`, `domain_gateway`, or `domain harness` below are legacy compatibility vocabulary, not the current public first subject for `MAS`, `MAG`, or `RCA`.
 
 ## Purpose
 
