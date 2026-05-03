@@ -23,6 +23,7 @@ If you need to understand what `OPL` is today, go back to:
 - [Docker WebUI deployment reference](./opl-docker-webui-deployment.md)
 - [OPL default skill ecosystem reference](./opl-default-skill-ecosystem.md)
 - [OPL release and Packages modular distribution reference](./opl-release-packages-modular-distribution.zh-CN.md)
+- [OPL quality details reference](./opl-quality-details.md)
 - `series-doc-governance-checklist.md`
 - `four-repo-doc-series-sync-summary-2026-04-14.md`
 - `four-repo-doc-intake-template.md`
