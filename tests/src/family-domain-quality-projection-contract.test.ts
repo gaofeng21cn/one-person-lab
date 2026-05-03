@@ -38,7 +38,15 @@ test('family domain quality projection contract maps quality authority to MAS, M
   const mappings = readJson('contracts/opl-gateway/family-domain-quality-projection-contract.json').domain_mappings as Record<string, string[]>;
 
   for (const required of [
+    'study_charter',
+    'evidence_ledger',
+    'review_ledger',
     'AI reviewer-backed `publication_eval/latest.json`',
+    'AI reviewer artifacts',
+    'StudyTruthKernel',
+    'RuntimeHealthKernel',
+    'truth health reducers',
+    'runtime health reducers',
     'grant review',
     'fundability gate',
     'submission readiness',
@@ -49,7 +57,15 @@ test('family domain quality projection contract maps quality authority to MAS, M
   ]) {
     assert.match(doc, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
+  assert.ok(mappings['med-autoscience'].includes('study_charter'));
+  assert.ok(mappings['med-autoscience'].includes('evidence_ledger'));
+  assert.ok(mappings['med-autoscience'].includes('review_ledger'));
   assert.ok(mappings['med-autoscience'].includes('AI reviewer-backed publication_eval/latest.json'));
+  assert.ok(mappings['med-autoscience'].includes('AI reviewer artifacts'));
+  assert.ok(mappings['med-autoscience'].includes('StudyTruthKernel'));
+  assert.ok(mappings['med-autoscience'].includes('RuntimeHealthKernel'));
+  assert.ok(mappings['med-autoscience'].includes('truth health reducers'));
+  assert.ok(mappings['med-autoscience'].includes('runtime health reducers'));
   assert.ok(mappings['med-autogrant'].includes('fundability gate'));
   assert.ok(mappings['redcube-ai'].includes('export proof'));
 });
@@ -65,11 +81,16 @@ test('family domain quality projection contract forbids generic or claim-only qu
     'claim-only ready',
     'chat summary / memory / terminal prose',
     'OPL projection without domain-owned eval/proof refs',
+    'OPL-only quality verdict',
+    'OPL MAS ready verdict',
+    'OPL-held publication judgment',
   ]) {
     assert.match(doc, new RegExp(source.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
   assert.ok(forbidden.includes('generic persona QA'));
   assert.ok(forbidden.includes('claim-only ready'));
   assert.ok(forbidden.includes('OPL projection without domain-owned eval/proof refs'));
+  assert.ok(forbidden.includes('OPL-only quality verdict'));
+  assert.ok(forbidden.includes('OPL MAS ready verdict'));
+  assert.ok(forbidden.includes('OPL-held publication judgment'));
 });
-
