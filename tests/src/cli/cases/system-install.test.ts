@@ -88,6 +88,7 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
   });
   const env = {
     HOME: homeRoot,
+    CODEX_HOME: path.join(homeRoot, 'codex-home'),
     OPL_MODULES_ROOT: modulesRoot,
     OPL_MODULE_REPO_URL_MEDAUTOSCIENCE: medAutoScienceRemote.remoteRoot,
     OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
@@ -108,7 +109,18 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
         module_actions: Array<{
           action: string;
           module: { module_id: string; installed: boolean };
-          turnkey: { skill_sync: { status: string } };
+          turnkey: {
+            skill_sync: {
+              status: string;
+              result: {
+                installer_result: {
+                  codex_skill_mirror: {
+                    skill_root: string;
+                  };
+                };
+              };
+            };
+          };
         }>;
         gui_open_action: unknown | null;
         codex_config_bootstrap: { status: string; api_key_present: boolean };
@@ -147,6 +159,12 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
     assert.equal(output.install.module_actions[0].module.module_id, 'medautoscience');
     assert.equal(output.install.module_actions[0].module.installed, true);
     assert.equal(output.install.module_actions[0].turnkey.skill_sync.status, 'completed');
+    assert.equal(
+      output.install.module_actions[0].turnkey.skill_sync.result.installer_result.codex_skill_mirror.skill_root,
+      path.join(homeRoot, 'codex-home', 'skills', 'mas'),
+    );
+    assert.equal(fs.existsSync(path.join(homeRoot, 'codex-home', 'skills', 'mas', 'SKILL.md')), true);
+    assert.equal(fs.existsSync(path.join(homeRoot, '.codex', 'skills', 'mas', 'SKILL.md')), false);
     assert.equal(output.install.gui_open_action, null);
     assert.equal(output.install.codex_config_bootstrap.status, 'skipped_missing_input');
     assert.equal(output.install.codex_config_bootstrap.api_key_present, false);
@@ -186,13 +204,13 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
     assert.equal(output.install.system_initialize.recommended_skills.surface_id, 'opl_recommended_skill_bundle');
     assert.equal(output.install.system_initialize.gui_shell.shell_id, 'opl_aion_shell');
     assert.equal(
-      fs.readFileSync(path.join(homeRoot, '.codex', 'config.toml'), 'utf8').includes(
+      fs.readFileSync(path.join(homeRoot, 'codex-home', 'config.toml'), 'utf8').includes(
         `[marketplaces.mas-local]\nsource_type = "local"\nsource = "${path.join(modulesRoot, 'med-autoscience')}"`,
       ),
       true,
     );
     assert.equal(
-      fs.readFileSync(path.join(homeRoot, '.codex', 'config.toml'), 'utf8').includes(
+      fs.readFileSync(path.join(homeRoot, 'codex-home', 'config.toml'), 'utf8').includes(
         '[plugins."mas@mas-local"]\nenabled = true',
       ),
       true,
