@@ -9,6 +9,9 @@ case "$lane" in
   smoke|fast)
     npm test
     ;;
+  structure)
+    ./scripts/run-structural-quality-gate.sh
+    ;;
   family)
     npm run family:shared-release -- check
     PYTHONPATH=python/opl-harness-shared/src \
@@ -50,7 +53,7 @@ case "$lane" in
     ;;
   *)
     echo "Unknown lane: $lane" >&2
-    echo "Usage: scripts/verify.sh [smoke|fast|family|meta|fresh-install|artifact|native|full|lint|line-budget|typecheck]" >&2
+    echo "Usage: scripts/verify.sh [smoke|fast|structure|family|meta|fresh-install|artifact|native|full|lint|line-budget|typecheck]" >&2
     exit 1
     ;;
 esac

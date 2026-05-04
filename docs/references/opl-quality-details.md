@@ -41,6 +41,14 @@ The v1 rules reader covers the family `.sentrux/rules.toml` shape: `[constraints
 
 Domain repositories should consume this as advisory output before or beside their Sentrux lane. MAS, MAG, and RCA retain domain-owned truth and product/runtime semantics; OPL owns only the shared diagnostic tool.
 
+Local structure lanes should run their existing Sentrux gate/check first. If Sentrux exits nonzero, the lane should emit:
+
+```bash
+opl quality details --root . --format markdown --limit 30 --focus auto --compare-ref "${OPL_QUALITY_DETAILS_COMPARE_REF:-origin/main}"
+```
+
+and then return the original Sentrux status. This keeps Sentrux as the blocking wall while making function-level regressions visible during development.
+
 GitHub workflows can use the OPL-owned action after this repository's main branch contains the action:
 
 ```yaml
