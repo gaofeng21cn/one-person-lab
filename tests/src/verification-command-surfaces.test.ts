@@ -109,7 +109,19 @@ test('scripts/verify.sh provides the canonical verification wrapper', () => {
   assert.match(verifyScript, /npm run native:build/);
   assert.match(verifyScript, /npm run native:cache/);
   assert.match(verifyScript, /npm run native:family-smoke/);
-  assert.match(verifyScript, /smoke\|fast\|family\|meta\|fresh-install\|artifact\|native\|full\|lint\|line-budget\|typecheck/);
+  assert.match(verifyScript, /\.\/scripts\/run-structural-quality-gate\.sh/);
+  assert.match(verifyScript, /smoke\|fast\|structure\|family\|meta\|fresh-install\|artifact\|native\|full\|lint\|line-budget\|typecheck/);
+});
+
+test('local structural quality gate emits compare-ref quality details on Sentrux failures', () => {
+  const script = read('scripts/run-structural-quality-gate.sh');
+
+  assert.match(script, /OPL_QUALITY_DETAILS_COMPARE_REF/);
+  assert.match(script, /compare_ref="\$\{OPL_QUALITY_DETAILS_COMPARE_REF:-origin\/main\}"/);
+  assert.match(script, /sentrux gate \./);
+  assert.match(script, /sentrux check \./);
+  assert.match(script, /quality details --root \./);
+  assert.match(script, /--compare-ref "\$compare_ref"/);
 });
 
 test('GitHub verification workflow runs the native helper production gates', () => {
@@ -129,9 +141,12 @@ test('Sentrux advisory workflow publishes OPL quality details sidecar', () => {
   const workflow = read('.github/workflows/sentrux-advisory.yml');
   const action = read('.github/actions/quality-details/action.yml');
 
+  assert.match(workflow, /fetch-depth: 0/);
+  assert.match(workflow, /git fetch --no-tags --prune origin main:refs\/remotes\/origin\/main/);
   assert.match(workflow, /sentrux gate \./);
   assert.match(workflow, /sentrux check \./);
   assert.match(workflow, /uses: \.\/\.github\/actions\/quality-details/);
+  assert.match(workflow, /compare-ref: origin\/main/);
   assert.match(workflow, /json-limit: '50'/);
   assert.match(workflow, /path: artifacts\/opl-quality-details\/quality-details\.json/);
   assert.match(workflow, /actions\/upload-artifact@v4/);

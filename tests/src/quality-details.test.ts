@@ -299,6 +299,49 @@ function makeQualifiedNameGitFixture() {
   return root;
 }
 
+function makeDuplicateAnonymousCallbackGitFixture() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-quality-details-duplicate-anon-'));
+  fs.mkdirSync(path.join(root, 'src'), { recursive: true });
+  fs.writeFileSync(
+    path.join(root, 'src', 'callbacks.ts'),
+    [
+      'const values: Array<Record<string, number>> = [];',
+      '',
+      'export function build() {',
+      '  const items = values',
+      '    .map((value) => {',
+      '    if (value.a) value.out += 1;',
+      '    if (value.b) value.out += 1;',
+      '    if (value.c) value.out += 1;',
+      '    if (value.d) value.out += 1;',
+      '    if (value.e) value.out += 1;',
+      '    if (value.f) value.out += 1;',
+      '    if (value.g) value.out += 1;',
+      '    if (value.h) value.out += 1;',
+      '    if (value.i) value.out += 1;',
+      '    if (value.j) value.out += 1;',
+      '    if (value.k) value.out += 1;',
+      '    if (value.l) value.out += 1;',
+      '    if (value.m) value.out += 1;',
+      '    if (value.n) value.out += 1;',
+      '    if (value.o) value.out += 1;',
+      '    if (value.p) value.out += 1;',
+      '    return value;',
+      '    })',
+      '    .filter((value) => Boolean(value.enabled));',
+      '  return items.map((value) => value.out);',
+      '}',
+      '',
+    ].join('\n'),
+  );
+  spawnSync('git', ['init'], { cwd: root, encoding: 'utf8' });
+  spawnSync('git', ['config', 'user.email', 'codex@example.invalid'], { cwd: root, encoding: 'utf8' });
+  spawnSync('git', ['config', 'user.name', 'Codex Test'], { cwd: root, encoding: 'utf8' });
+  spawnSync('git', ['add', '.'], { cwd: root, encoding: 'utf8' });
+  spawnSync('git', ['commit', '-m', 'baseline'], { cwd: root, encoding: 'utf8' });
+  return root;
+}
+
 test('quality details compare-ref reports functions crossing the complex threshold', () => {
   const fixtureRoot = makeQualityGitFixture();
   try {
@@ -326,6 +369,22 @@ test('quality details compare-ref reports functions crossing the complex thresho
     assert.match(markdown.stdout, /Baseline Diff/);
     assert.match(markdown.stdout, /src\/risk.py/);
     assert.match(markdown.stdout, /new_complex_function/);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('quality details compare-ref does not report unchanged duplicate anonymous callbacks', () => {
+  const fixtureRoot = makeDuplicateAnonymousCallbackGitFixture();
+  try {
+    const output = runCliInCwd(
+      ['quality', 'details', '--root', fixtureRoot, '--format', 'json', '--compare-ref', 'HEAD', '--limit', '10'],
+      fixtureRoot,
+    );
+
+    assert.equal(output.quality_details.baseline_diff.new_complex_functions, 0);
+    assert.equal(output.quality_details.baseline_diff.worsened_functions, 0);
+    assert.deepEqual(output.quality_details.function_change_findings, []);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }

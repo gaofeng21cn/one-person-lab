@@ -113,6 +113,34 @@ function functionKey(finding: FunctionFinding) {
   return `${finding.file}\0${finding.qualified_name}`;
 }
 
+function nearestBaselineFunction(
+  current: FunctionFinding,
+  candidates: FunctionFinding[] | undefined,
+  usedBaselineFunctions: Set<FunctionFinding>,
+) {
+  if (!candidates) {
+    return undefined;
+  }
+
+  let nearest: FunctionFinding | undefined;
+  let nearestDistance = Number.POSITIVE_INFINITY;
+  for (const candidate of candidates) {
+    if (usedBaselineFunctions.has(candidate)) {
+      continue;
+    }
+    const distance = Math.abs(candidate.start_line - current.start_line)
+      + Math.abs(candidate.end_line - current.end_line);
+    if (distance < nearestDistance) {
+      nearest = candidate;
+      nearestDistance = distance;
+    }
+  }
+  if (nearest) {
+    usedBaselineFunctions.add(nearest);
+  }
+  return nearest;
+}
+
 function buildFunctionChangeFindings({
   baselineFunctions,
   currentFunctions,
@@ -122,14 +150,18 @@ function buildFunctionChangeFindings({
   currentFunctions: FunctionFinding[];
   limit: number;
 }) {
-  const baselineByKey = new Map<string, FunctionFinding>();
+  const baselineByKey = new Map<string, FunctionFinding[]>();
   for (const finding of baselineFunctions) {
-    baselineByKey.set(functionKey(finding), finding);
+    const key = functionKey(finding);
+    const items = baselineByKey.get(key) ?? [];
+    items.push(finding);
+    baselineByKey.set(key, items);
   }
+  const usedBaselineFunctions = new Set<FunctionFinding>();
 
   const changes: FunctionChangeFinding[] = [];
   for (const current of currentFunctions) {
-    const baseline = baselineByKey.get(functionKey(current));
+    const baseline = nearestBaselineFunction(current, baselineByKey.get(functionKey(current)), usedBaselineFunctions);
     const baselineComplexity = baseline?.cyclomatic_complexity ?? 0;
     if (current.cyclomatic_complexity <= SENTRUX_COMPLEX_FUNCTION_THRESHOLD) {
       continue;
