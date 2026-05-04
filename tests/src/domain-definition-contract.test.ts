@@ -16,6 +16,8 @@ type DomainDefinition = {
   };
   single_app_skill?: {
     skill_id?: string;
+    entry_command?: string;
+    manifest_command?: string;
   };
   domain_truth_owner?: string[];
   opl_projection_role?: string[];
@@ -34,6 +36,14 @@ function readDomainsContract() {
   return JSON.parse(fs.readFileSync(domainsPath, 'utf8')) as {
     version: string;
     domains: DomainDefinition[];
+  };
+}
+
+function pickSkillCommands(domain: DomainDefinition | undefined) {
+  return {
+    skill_id: domain?.single_app_skill?.skill_id,
+    entry_command: domain?.single_app_skill?.entry_command,
+    manifest_command: domain?.single_app_skill?.manifest_command,
   };
 }
 
@@ -88,4 +98,25 @@ test('MedAutoScience g2 definition owns research truth while MDS remains a MAS b
       opl_top_level_domain_agent: false,
     },
   ]);
+});
+
+test('domains.json g2 publishes current single app skill entry commands', () => {
+  const payload = readDomainsContract();
+  const domainById = new Map(payload.domains.map((domain) => [domain.domain_id, domain]));
+
+  assert.deepEqual(pickSkillCommands(domainById.get('medautogrant')), {
+    skill_id: 'mag',
+    entry_command: 'medautogrant product frontdesk',
+    manifest_command: 'medautogrant product manifest',
+  });
+  assert.deepEqual(pickSkillCommands(domainById.get('medautoscience')), {
+    skill_id: 'mas',
+    entry_command: 'medautosci product frontdesk',
+    manifest_command: 'medautosci product manifest',
+  });
+  assert.deepEqual(pickSkillCommands(domainById.get('redcube')), {
+    skill_id: 'rca',
+    entry_command: 'redcube product frontdesk',
+    manifest_command: 'redcube product manifest',
+  });
 });
