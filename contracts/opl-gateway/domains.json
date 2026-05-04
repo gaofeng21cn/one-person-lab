@@ -15,8 +15,8 @@
         "skill_id": "mag",
         "plugin_name": "Med Auto Grant",
         "activation_kind": "explicit_app_skill",
-        "entry_command": "medautogrant product-frontdoor",
-        "manifest_command": "medautogrant product-entry-manifest"
+        "entry_command": "medautogrant product frontdesk",
+        "manifest_command": "medautogrant product manifest"
       },
       "domain_truth_owner": [
         "grant_run_truth",
@@ -62,8 +62,8 @@
         "skill_id": "mas",
         "plugin_name": "Med Auto Science",
         "activation_kind": "explicit_app_skill",
-        "entry_command": "medautoscience product-frontdoor",
-        "manifest_command": "medautoscience product-entry-manifest"
+        "entry_command": "medautosci product frontdesk",
+        "manifest_command": "medautosci product manifest"
       },
       "domain_truth_owner": [
         "study_truth",
@@ -117,8 +117,8 @@
         "skill_id": "rca",
         "plugin_name": "RedCube AI",
         "activation_kind": "explicit_app_skill",
-        "entry_command": "redcube product-frontdoor",
-        "manifest_command": "redcube product-entry-manifest"
+        "entry_command": "redcube product frontdesk",
+        "manifest_command": "redcube product manifest"
       },
       "domain_truth_owner": [
         "deliverable_run_truth",
