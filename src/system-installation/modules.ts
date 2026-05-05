@@ -327,6 +327,10 @@ function readPackagedModuleGitSnapshot(repoPath: string, spec: DomainModuleSpec)
   };
 }
 
+function isPackagedModuleCheckout(repoPath: string, spec: DomainModuleSpec) {
+  return Boolean(readPackagedModuleGitSnapshot(repoPath, spec));
+}
+
 function isModuleUpdateAvailable(git: GitRepoSnapshot) {
   return !git.dirty && git.sync_status === 'behind';
 }
@@ -425,8 +429,8 @@ function inspectModule(spec: DomainModuleSpec): ModuleInspection {
         managed_checkout_path: managedCheckoutPath,
         health_status: 'ready',
         git: packagedGit,
-        available_actions: candidate.origin === 'managed_root' ? ['reinstall', 'remove'] : [],
-        recommended_action: null,
+        available_actions: candidate.origin === 'managed_root' ? ['update', 'reinstall', 'remove'] : [],
+        recommended_action: candidate.origin === 'managed_root' ? 'update' : null,
       };
     }
 
@@ -555,6 +559,19 @@ function cloneManagedModule(spec: DomainModuleSpec, checkoutPath: string) {
     checkout_path: checkoutPath,
     git_attempts: resolveRemoteGitRetryAttempts(),
   });
+}
+
+function replaceManagedModuleWithFreshClone(spec: DomainModuleSpec, checkoutPath: string) {
+  const tempTarget = `${checkoutPath}.upstream-${process.pid}`;
+  fs.rmSync(tempTarget, { recursive: true, force: true });
+  try {
+    cloneManagedModule(spec, tempTarget);
+    fs.rmSync(checkoutPath, { recursive: true, force: true });
+    fs.renameSync(tempTarget, checkoutPath);
+  } catch (error) {
+    fs.rmSync(tempTarget, { recursive: true, force: true });
+    throw error;
+  }
 }
 
 function installManagedModule(spec: DomainModuleSpec, checkoutPath: string) {
@@ -837,6 +854,15 @@ export function runOplModuleAction(
           },
           2,
         );
+      }
+      if (
+        current.install_origin === 'managed_root'
+        && isPackagedModuleCheckout(current.checkout_path, spec)
+      ) {
+        replaceManagedModuleWithFreshClone(spec, current.checkout_path);
+        const updated = inspectModule(spec);
+        workflow = runManagedModuleWorkflow(spec, updated.checkout_path);
+        break;
       }
       if (current.git?.dirty) {
         throw new GatewayContractError(

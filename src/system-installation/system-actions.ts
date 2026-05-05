@@ -152,6 +152,17 @@ function maybeReconcileModule(module: OplModuleStatus): SystemUpdateTargetResult
     };
   }
 
+  if (module.recommended_action === 'update' && module.available_actions.includes('update')) {
+    const result = runOplModuleAction('update', module.module_id);
+    return {
+      target_type: 'module',
+      target_id: module.module_id,
+      status: 'completed',
+      reason: 'module_update_available',
+      result: result.module_action,
+    };
+  }
+
   if (module.git?.sync_status === 'diverged' || module.git?.sync_status === 'ahead' || module.git?.sync_status === 'no_upstream') {
     return {
       target_type: 'module',
