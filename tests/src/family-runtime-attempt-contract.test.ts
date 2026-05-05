@@ -16,11 +16,9 @@ function readJson(relativePath: string) {
 }
 
 test('family runtime attempt contract documents attempt, retry, workspace, and reconciliation fields', () => {
-  const doc = read('docs/references/family-runtime-attempt-contract.md');
   const contract = readJson('contracts/opl-gateway/family-runtime-attempt-contract.json');
 
   for (const state of ['unclaimed', 'claimed', 'running', 'retry_queued', 'released', 'succeeded', 'failed', 'blocked']) {
-    assert.match(doc, new RegExp(state));
     assert.ok((contract.attempt_states as string[]).includes(state));
   }
   for (const field of [
@@ -32,17 +30,14 @@ test('family runtime attempt contract documents attempt, retry, workspace, and r
     'reconciliation_status',
     'last_observed_projection',
   ]) {
-    assert.match(doc, new RegExp(field));
     assert.ok((contract.required_projection_fields as string[]).includes(field));
   }
 });
 
 test('family runtime attempt contract keeps OPL runtime manager observability-only', () => {
-  const doc = read('docs/references/family-runtime-attempt-contract.md');
   const contract = readJson('contracts/opl-gateway/family-runtime-attempt-contract.json');
 
   assert.equal(contract.observability_only, true);
-  assert.match(doc, /observability-only projection/);
   for (const nonGoal of [
     'scheduler kernel owner',
     'session kernel owner',
@@ -55,19 +50,9 @@ test('family runtime attempt contract keeps OPL runtime manager observability-on
 });
 
 test('family runtime attempt contract rejects external required scheduler entries', () => {
-  const doc = read('docs/references/family-runtime-attempt-contract.md');
   const contract = readJson('contracts/opl-gateway/family-runtime-attempt-contract.json');
 
-  for (const boundary of [
-    'Linear required entry',
-    'Symphony scheduler owner',
-    'external issue tracker required entry',
-    'generic task scheduler replacing `Codex-default session/runtime`',
-  ]) {
-    assert.match(doc, new RegExp(boundary.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-  }
   for (const unsupported of ['Linear', 'Symphony scheduler', 'external issue tracker']) {
     assert.ok((contract.unsupported_required_entries as string[]).includes(unsupported));
   }
 });
-

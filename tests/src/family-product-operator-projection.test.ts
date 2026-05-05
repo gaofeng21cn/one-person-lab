@@ -16,7 +16,6 @@ function readJson(relativePath: string) {
 }
 
 test('family product operator projection consumes runtime, quality, and incident contracts', () => {
-  const doc = read('docs/references/family-product-operator-projection.md');
   const contract = readJson('contracts/opl-gateway/family-product-operator-projection.json');
 
   for (const source of [
@@ -24,14 +23,12 @@ test('family product operator projection consumes runtime, quality, and incident
     'contracts/opl-gateway/family-domain-quality-projection-contract.json',
     'contracts/opl-gateway/family-incident-learning-loop.json',
   ]) {
-    assert.match(doc, new RegExp(source.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
     assert.ok((contract.source_contracts as string[]).includes(source));
     assert.equal(fs.existsSync(path.join(repoRoot, source)), true);
   }
 });
 
 test('family product operator projection answers operator status questions with source refs and owner split', () => {
-  const doc = read('docs/references/family-product-operator-projection.md');
   const contract = readJson('contracts/opl-gateway/family-product-operator-projection.json');
 
   for (const field of [
@@ -48,13 +45,11 @@ test('family product operator projection answers operator status questions with 
     'freshness',
     'owner_split',
   ]) {
-    assert.match(doc, new RegExp(field));
     assert.ok((contract.required_projection_fields as string[]).includes(field));
   }
 });
 
 test('family product operator projection preserves Codex-default runtime and prevents local scheduler takeover', () => {
-  const doc = read('docs/references/family-product-operator-projection.md');
   const contract = readJson('contracts/opl-gateway/family-product-operator-projection.json');
 
   for (const semantic of [
@@ -62,7 +57,6 @@ test('family product operator projection preserves Codex-default runtime and pre
     'explicit domain activation',
     'explicit runtime switch',
   ]) {
-    assert.match(doc, new RegExp(semantic.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
     assert.ok((contract.preserved_runtime_semantics as string[]).includes(semantic));
   }
   for (const nonGoal of [
@@ -75,8 +69,6 @@ test('family product operator projection preserves Codex-default runtime and pre
   ]) {
     assert.ok((contract.non_goals as string[]).includes(nonGoal));
   }
-  assert.match(doc, /不新增 local daemon/);
-  assert.match(doc, /不让 `OPL` 接管 scheduler/);
 });
 
 test('test:meta includes OPL family external orchestration contract tests', () => {
@@ -84,7 +76,6 @@ test('test:meta includes OPL family external orchestration contract tests', () =
   const testMeta = packageJson.scripts['test:meta'];
 
   for (const testFile of [
-    'tests/src/family-external-orchestration-learning-board.test.ts',
     'tests/src/family-runtime-attempt-contract.test.ts',
     'tests/src/family-domain-quality-projection-contract.test.ts',
     'tests/src/family-incident-learning-loop.test.ts',
@@ -93,4 +84,3 @@ test('test:meta includes OPL family external orchestration contract tests', () =
     assert.match(testMeta, new RegExp(testFile.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
 });
-

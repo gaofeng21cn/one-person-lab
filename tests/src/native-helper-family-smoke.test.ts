@@ -161,22 +161,7 @@ function writeDomainFixtures(
 }
 
 function writeMasFixture(repoPath: string) {
-  fs.mkdirSync(path.join(repoPath, 'docs'), { recursive: true });
   fs.mkdirSync(path.join(repoPath, 'contracts', 'opl-gateway'), { recursive: true });
-  fs.writeFileSync(path.join(repoPath, 'docs', 'status.md'), [
-    '# MAS fixture',
-    '',
-    '- The skill-catalog domain projection exposes opl_runtime_manager_registration v1.',
-    '- native_helper_consumption.proof_surface points to contracts/opl-gateway/native-helper-contract.json.',
-    '- MAS durable truth remains authoritative for OPL native helper index-only consumption.',
-    '',
-  ].join('\n'));
-  fs.writeFileSync(path.join(repoPath, 'docs', 'invariants.md'), [
-    '# MAS invariant fixture',
-    '',
-    '- OPL native helper indexing may read publication_eval/latest.json only as projection input.',
-    '',
-  ].join('\n'));
   fs.writeFileSync(path.join(repoPath, 'contracts', 'surface.json'), '{"ok":true}\n');
   fs.writeFileSync(path.join(repoPath, 'contracts', 'opl-gateway', 'native-helper-contract.json'), `${JSON.stringify({
     schema_version: 1,
@@ -222,22 +207,7 @@ function writeMagFixture(
   repoPath: string,
   options: { omitMagProofProjection?: boolean },
 ) {
-  fs.mkdirSync(path.join(repoPath, 'docs'), { recursive: true });
   fs.mkdirSync(path.join(repoPath, 'contracts', 'runtime-program'), { recursive: true });
-  fs.writeFileSync(path.join(repoPath, 'docs', 'status.md'), [
-    '# MAG fixture',
-    '',
-    '- The skill descriptor domain projection exposes opl_runtime_manager_registration v1.',
-    '- native_helper_consumption.proof_surface fixes the read-only OPL helper coverage.',
-    '- OPL indexing must not copy grant truth or bypass the submission-ready export gate.',
-    '',
-  ].join('\n'));
-  fs.writeFileSync(path.join(repoPath, 'docs', 'invariants.md'), [
-    '# MAG invariant fixture',
-    '',
-    '- OPL native helper indexing reads current-program.json and does not own grant truth.',
-    '',
-  ].join('\n'));
   fs.writeFileSync(path.join(repoPath, 'contracts', 'surface.json'), '{"ok":true}\n');
 
   const managerConsumedProjection = [

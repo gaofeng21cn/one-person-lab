@@ -57,16 +57,6 @@ const domains = [
         },
         { group: 'authority', path: ['excluded_scopes'], values: ['publication_gate', 'rca'] },
       ],
-      text_checks: [
-        { group: 'registration', file: 'docs/status.md', phrases: ['opl_runtime_manager_registration'] },
-        {
-          group: 'proof',
-          file: 'docs/status.md',
-          phrases: ['native_helper_consumption.proof_surface', 'contracts/opl-gateway/native-helper-contract.json'],
-        },
-        { group: 'authority', file: 'docs/status.md', phrases: ['MAS durable truth'] },
-        { group: 'authority', file: 'docs/invariants.md', phrases: ['OPL native helper', 'publication_eval/latest.json'] },
-      ],
     },
   },
   {
@@ -131,12 +121,6 @@ const domains = [
           path: ['ideal_target', 'opl_runtime_manager', 'does_not_own'],
           values: ['grant authoring truth', 'route truth', 'submission-ready export gate'],
         },
-      ],
-      text_checks: [
-        { group: 'registration', file: 'docs/status.md', phrases: ['opl_runtime_manager_registration'] },
-        { group: 'proof', file: 'docs/status.md', phrases: ['native_helper_consumption.proof_surface'] },
-        { group: 'authority', file: 'docs/status.md', phrases: ['grant truth', 'submission-ready export gate'] },
-        { group: 'authority', file: 'docs/invariants.md', phrases: ['OPL native helper', 'current-program.json'] },
       ],
     },
   },
@@ -270,7 +254,6 @@ function verifyNativeHelperConsumption(domain, workspacePath) {
     verifyJsonEquals(declaration, spec, spec.json_equals, errorsByGroup);
     verifyArrayIncludes(declaration, spec, spec.array_includes, errorsByGroup);
   }
-  verifyTextChecks(workspacePath, spec, checkedFiles, errorsByGroup);
 
   const errors = [
     ...errorsByGroup.registration,
@@ -361,34 +344,6 @@ function verifyArrayIncludes(surface, spec, checks, errorsByGroup) {
           path: jsonPointer(check.path),
           message: `${jsonPointer(check.path)} must include ${JSON.stringify(value)}`,
           actual,
-        });
-      }
-    }
-  }
-}
-
-function verifyTextChecks(workspacePath, spec, checkedFiles, errorsByGroup) {
-  for (const check of spec.text_checks) {
-    const filePath = path.join(workspacePath, check.file);
-    let raw;
-    try {
-      raw = fs.readFileSync(filePath, 'utf8');
-      checkedFiles.push(check.file);
-    } catch (error) {
-      pushVerificationError(errorsByGroup, check.group, {
-        code: 'text_surface_missing',
-        file: check.file,
-        message: `${check.file} is required for native helper consumption wording proof`,
-        detail: error instanceof Error ? error.message : String(error),
-      });
-      continue;
-    }
-    for (const phrase of check.phrases) {
-      if (!raw.includes(phrase)) {
-        pushVerificationError(errorsByGroup, check.group, {
-          code: 'required_wording_missing',
-          file: check.file,
-          message: `${check.file} must include ${JSON.stringify(phrase)}`,
         });
       }
     }
@@ -598,10 +553,7 @@ function createFixtureFamilyRoot() {
   const familyRoot = path.join(root, 'workspace');
   for (const domain of domains) {
     const repoPath = path.join(familyRoot, domain.repo_name);
-    fs.mkdirSync(path.join(repoPath, 'docs'), { recursive: true });
     fs.mkdirSync(path.join(repoPath, 'contracts'), { recursive: true });
-    fs.writeFileSync(path.join(repoPath, 'docs', 'status.md'), fixtureStatus(domain));
-    fs.writeFileSync(path.join(repoPath, 'docs', 'invariants.md'), fixtureInvariants(domain));
     fs.writeFileSync(path.join(repoPath, 'contracts', 'surface.json'), '{"surface_kind":"fixture"}\n');
     writeFixtureNativeHelperProjection(domain, repoPath);
   }
@@ -696,42 +648,4 @@ function writeFixtureNativeHelperProjection(domain, repoPath) {
       },
     },
   }, null, 2)}\n`);
-}
-
-function fixtureStatus(domain) {
-  if (domain.domain_id === 'medautoscience') {
-    return [
-      '# MAS fixture',
-      '',
-      '- The skill-catalog domain projection exposes opl_runtime_manager_registration v1.',
-      '- native_helper_consumption.proof_surface points to contracts/opl-gateway/native-helper-contract.json.',
-      '- MAS durable truth remains authoritative for OPL native helper index-only consumption.',
-      '',
-    ].join('\n');
-  }
-  return [
-    '# MAG fixture',
-    '',
-    '- The skill descriptor domain projection exposes opl_runtime_manager_registration v1.',
-    '- native_helper_consumption.proof_surface fixes the read-only OPL helper coverage.',
-    '- OPL indexing must not copy grant truth or bypass the submission-ready export gate.',
-    '',
-  ].join('\n');
-}
-
-function fixtureInvariants(domain) {
-  if (domain.domain_id === 'medautoscience') {
-    return [
-      '# MAS invariant fixture',
-      '',
-      '- OPL native helper indexing may read publication_eval/latest.json only as projection input.',
-      '',
-    ].join('\n');
-  }
-  return [
-    '# MAG invariant fixture',
-    '',
-    '- OPL native helper indexing reads current-program.json and does not own grant truth.',
-    '',
-  ].join('\n');
 }

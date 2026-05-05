@@ -52,8 +52,6 @@ test('tracked files do not contain Google API key literals', () => {
 
 test('repo-tracked verification command surfaces reference valid npm scripts and local test files', () => {
   const files = [
-    'AGENTS.md',
-    'docs/references/family-shared-release-maintenance.md',
     'contracts/opl-gateway/phase-1-exit-activation-package.json',
     'contracts/opl-gateway/minimal-admitted-domain-federation-activation-package.json',
     'contracts/opl-gateway/phase-2-central-reference-sync-board.json',

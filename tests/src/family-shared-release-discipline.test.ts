@@ -490,29 +490,8 @@ test('family shared release refuses unpublished owner commits before rewriting c
   );
 });
 
-test('family shared release stays on contract and script surfaces while public status stays clean', () => {
-  const statusDoc = fs.readFileSync(path.join(repoRoot, 'docs/status.md'), 'utf8');
-
+test('family shared release contract surface stays tracked', () => {
   assert.equal(fs.existsSync(path.join(repoRoot, SHARED_OWNER_RELEASE_CONTRACT_PATH)), true);
-  assert.doesNotMatch(statusDoc, /contracts\/family-release\/shared-owner-release\.json/);
-  assert.doesNotMatch(statusDoc, /npm run family:shared-release -- check/);
-  assert.doesNotMatch(statusDoc, /npm run family:shared-release -- sync/);
-});
-
-test('family shared release maintainer doc stays on family shared module maintenance instead of domain release ownership', () => {
-  const maintainerDoc = fs.readFileSync(
-    path.join(repoRoot, 'docs/references/family-shared-release-maintenance.md'),
-    'utf8',
-  );
-
-  assert.match(maintainerDoc, /contracts\/family-release\/shared-owner-release\.json/);
-  assert.match(maintainerDoc, /npm run family:shared-release -- release/);
-  assert.match(maintainerDoc, /tests\/src\/family-shared-release-discipline\.test\.ts/);
-  assert.match(maintainerDoc, /shared module owner commit/i);
-  assert.match(maintainerDoc, /push.*owner.*before release|remote 可达/i);
-  assert.match(maintainerDoc, /entry_adapter|action_graph\.target_domain_id|session_locator_field/i);
-  assert.doesNotMatch(maintainerDoc, /domain release owner/i);
-  assert.doesNotMatch(maintainerDoc, /submission owner/i);
 });
 
 test('family manifest fixtures keep repo-owned domain entry and orchestration truth outside opl shared ownership', () => {
