@@ -16,7 +16,6 @@ function readJson(relativePath: string) {
 }
 
 test('family domain quality projection contract requires evidence, review, gate, and proof fields', () => {
-  const doc = read('docs/references/family-domain-quality-projection-contract.md');
   const contract = readJson('contracts/opl-gateway/family-domain-quality-projection-contract.json');
 
   for (const field of [
@@ -28,35 +27,13 @@ test('family domain quality projection contract requires evidence, review, gate,
     'latest_eval_or_proof_pointer',
     'assessment_owner',
   ]) {
-    assert.match(doc, new RegExp(field));
     assert.ok((contract.required_projection_fields as string[]).includes(field));
   }
 });
 
 test('family domain quality projection contract maps quality authority to MAS, MAG, and RCA surfaces', () => {
-  const doc = read('docs/references/family-domain-quality-projection-contract.md');
   const mappings = readJson('contracts/opl-gateway/family-domain-quality-projection-contract.json').domain_mappings as Record<string, string[]>;
 
-  for (const required of [
-    'study_charter',
-    'evidence_ledger',
-    'review_ledger',
-    'AI reviewer-backed `publication_eval/latest.json`',
-    'AI reviewer artifacts',
-    'StudyTruthKernel',
-    'RuntimeHealthKernel',
-    'truth health reducers',
-    'runtime health reducers',
-    'grant review',
-    'fundability gate',
-    'submission readiness',
-    'content-fit review',
-    'render proof',
-    'export proof',
-    'visual QA',
-  ]) {
-    assert.match(doc, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-  }
   assert.ok(mappings['med-autoscience'].includes('study_charter'));
   assert.ok(mappings['med-autoscience'].includes('evidence_ledger'));
   assert.ok(mappings['med-autoscience'].includes('review_ledger'));
@@ -71,22 +48,8 @@ test('family domain quality projection contract maps quality authority to MAS, M
 });
 
 test('family domain quality projection contract forbids generic or claim-only quality authority', () => {
-  const doc = read('docs/references/family-domain-quality-projection-contract.md');
   const forbidden = readJson('contracts/opl-gateway/family-domain-quality-projection-contract.json').forbidden_quality_authorities as string[];
 
-  for (const source of [
-    'generic persona QA',
-    'non-domain owner gate',
-    'NEXUS role approval',
-    'claim-only ready',
-    'chat summary / memory / terminal prose',
-    'OPL projection without domain-owned eval/proof refs',
-    'OPL-only quality verdict',
-    'OPL MAS ready verdict',
-    'OPL-held publication judgment',
-  ]) {
-    assert.match(doc, new RegExp(source.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-  }
   assert.ok(forbidden.includes('generic persona QA'));
   assert.ok(forbidden.includes('claim-only ready'));
   assert.ok(forbidden.includes('OPL projection without domain-owned eval/proof refs'));

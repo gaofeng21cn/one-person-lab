@@ -48,6 +48,7 @@
 - 能删就别加；能复用现有模式就别新起抽象。
 - 没有明确必要不要新增依赖。
 - 修改 machine-readable contracts、公开边界、默认 docs 入口、文档骨架或 active domain-agent wording 时，必须同步更新文档、contracts 与相关测试。
+- 叙述性 `README*`、`docs/**` 和参考文档不作为脚本/测试的断言对象；可以测试 machine-readable contract、schema、CLI/API 行为、生成产物结构与路径，但不要用测试固定文档措辞、章节或状态文案。
 - 默认最小验证入口是 `scripts/verify.sh`。
 - 默认 smoke 是 `npm test` / `npm run test:fast`。
 - `npm run test:meta` 与 `npm run test:artifact` 是显式 lane。
