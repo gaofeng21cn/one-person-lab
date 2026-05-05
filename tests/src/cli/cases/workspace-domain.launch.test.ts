@@ -63,7 +63,7 @@ test('workspace-bind derives family direct-entry locators from structured projec
 
     assert.equal(
       magBind.workspace_catalog.binding.direct_entry.command,
-      `uv run python -m med_autogrant product frontdoor --input ${path.resolve(magInputPath)}`,
+      `uv run python -m med_autogrant product frontdesk --input ${path.resolve(magInputPath)}`,
     );
     assert.equal(
       magBind.workspace_catalog.binding.direct_entry.manifest_command,
@@ -78,7 +78,7 @@ test('workspace-bind derives family direct-entry locators from structured projec
 
     assert.equal(
       masBind.workspace_catalog.binding.direct_entry.command,
-      `uv run python -m med_autoscience.cli product frontdoor --profile ${path.resolve(masProfilePath)}`,
+      `uv run python -m med_autoscience.cli product frontdesk --profile ${path.resolve(masProfilePath)}`,
     );
     assert.equal(
       masBind.workspace_catalog.binding.direct_entry.manifest_command,
@@ -93,7 +93,7 @@ test('workspace-bind derives family direct-entry locators from structured projec
 
     assert.equal(
       redcubeBind.workspace_catalog.binding.direct_entry.command,
-      `redcube product frontdoor --workspace-root ${path.resolve(redcubeWorkspacePath)}`,
+      `redcube product frontdesk --workspace-root ${path.resolve(redcubeWorkspacePath)}`,
     );
     assert.equal(
       redcubeBind.workspace_catalog.binding.direct_entry.manifest_command,
@@ -125,12 +125,16 @@ test('workspace-bind derives family direct-entry locators from structured projec
     );
     assert.equal(
       magProject.binding_contract.derived_entry_command_template,
-      'uv run python -m med_autogrant product frontdoor --input <input_path>',
+      'uv run python -m med_autogrant product frontdesk --input <input_path>',
     );
     assert.deepEqual(masProject.binding_contract.required_locator_fields, ['profile_ref']);
     assert.equal(
       masProject.binding_contract.workspace_locator_surface_kind,
       'med_autoscience_workspace_profile',
+    );
+    assert.equal(
+      masProject.binding_contract.derived_entry_command_template,
+      'uv run python -m med_autoscience.cli product frontdesk --profile <profile_ref>',
     );
     assert.equal(
       masProject.binding_contract.derived_manifest_command_template,

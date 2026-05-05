@@ -212,6 +212,49 @@ test('family shared release CLI can sync explicit repo overrides and report alig
   assert.match(result.stdout, new RegExp(RELEASED_OWNER_COMMIT));
 });
 
+test('family shared release CLI check refuses owner commits that are not reachable from package remotes', () => {
+  const familyRoot = createConsumerFixtureRoot();
+  const ownerRepoRoot = path.join(familyRoot, 'one-person-lab');
+  const publishedRemote = createPublishedOwnerRemoteFixture();
+
+  write(
+    path.join(ownerRepoRoot, SHARED_OWNER_RELEASE_CONTRACT_PATH),
+    JSON.stringify({
+      contract_kind: 'family_shared_owner_release.v1',
+      owner_repo: 'one-person-lab',
+      owner_commit: publishedRemote.unpublishedCommit,
+      packages: {
+        python: {
+          package_name: 'opl-harness-shared',
+          git_locator: `git+${publishedRemote.remoteUrl}@${publishedRemote.unpublishedCommit}#subdirectory=python/opl-harness-shared`,
+        },
+        js: {
+          package_name: 'opl-gateway-shared',
+          git_locator: `git+${publishedRemote.remoteUrl}#${publishedRemote.unpublishedCommit}`,
+        },
+      },
+      consumers: [
+        {
+          repo_id: 'medautoscience',
+          repo_dir: 'med-autoscience',
+          verify_command: 'scripts/verify.sh family',
+          targets: [
+            { file: 'pyproject.toml', kind: 'python_dependency' },
+            { file: 'uv.lock', kind: 'python_lock' },
+          ],
+        },
+      ],
+    }),
+  );
+
+  assert.throws(
+    () => runFamilySharedReleaseCli(['check', '--family-root', familyRoot], {
+      repoRoot: ownerRepoRoot,
+    }),
+    /push the owner repo first before release/i,
+  );
+});
+
 test('family shared release CLI can rewrite the owner contract and propagate a new owner commit in one step', () => {
   const familyRoot = createConsumerFixtureRoot();
   const ownerRepoRoot = path.join(familyRoot, 'one-person-lab');

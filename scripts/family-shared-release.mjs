@@ -552,6 +552,10 @@ export function runFamilySharedReleaseCli(
   const parsed = parseArgs(argv, { repoRoot });
   const contract = loadSharedOwnerReleaseContract({ repoRoot });
   if (parsed.command === 'check') {
+    validatePublishedOwnerCommit({
+      contract,
+      ownerCommit: contract.owner_commit,
+    });
     const summary = inspectFamilySharedPins({
       contract,
       familyRoot: parsed.familyRoot,

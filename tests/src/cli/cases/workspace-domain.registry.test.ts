@@ -57,7 +57,7 @@ test('workspace registry commands bind activate and archive project workspaces w
     );
     assert.equal(
       catalogOutput.workspace_catalog.projects[3].binding_contract.derived_entry_command_template,
-      'redcube product frontdoor --workspace-root <workspace_root>',
+      'redcube product frontdesk --workspace-root <workspace_root>',
     );
     assert.equal(
       catalogOutput.workspace_catalog.projects[3].binding_contract.derived_manifest_command_template,

@@ -272,7 +272,7 @@ git ls-files >/dev/null
         turnkey: {
           bootstrap: { status: string };
           skill_sync: { status: string; domain_id: string | null };
-          health_check: { status: string };
+          health_check: { status: string; result: { packaged_runtime?: boolean } };
         };
       };
     };

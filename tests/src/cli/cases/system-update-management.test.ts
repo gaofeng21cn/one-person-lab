@@ -526,3 +526,149 @@ console.log(JSON.stringify({ sync: 'ok' }));
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
 });
+
+test('system reconcile-modules promotes Full packaged module seeds to latest managed checkouts', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-system-reconcile-full-seed-home-'));
+  const modulesRoot = path.join(homeRoot, 'managed-modules');
+  const buildFullSeedModule = (
+    moduleId: 'medautoscience' | 'meddeepscientist' | 'medautogrant' | 'redcube',
+    repoName: 'med-autoscience' | 'med-deepscientist' | 'med-autogrant' | 'redcube-ai',
+    packageName: 'mas' | 'mds' | 'mag' | 'rca',
+    extraFiles: Record<string, string> = {},
+  ) => {
+    const remote = createGitModuleRemoteFixture(repoName, {
+      extraFiles: {
+        'scripts/opl-module-bootstrap.sh': '#!/usr/bin/env bash\nset -euo pipefail\n',
+        'scripts/opl-module-healthcheck.sh': '#!/usr/bin/env bash\nset -euo pipefail\n',
+        ...extraFiles,
+      },
+    });
+    const packagedRoot = path.join(homeRoot, 'runtime', 'current', 'modules', packageName);
+    const packagedSha = remote.getHeadSha();
+    const latestSha = remote.advance(
+      'CHANGELOG.md',
+      `# Changelog\n\n- Newer online ${repoName} version\n`,
+      `Advance ${repoName} after Full package build`,
+    );
+    fs.cpSync(remote.sourceRoot, packagedRoot, {
+      recursive: true,
+      dereference: false,
+    });
+    fs.rmSync(path.join(packagedRoot, '.git'), { recursive: true, force: true });
+    fs.writeFileSync(
+      path.join(packagedRoot, 'opl-runtime-module.json'),
+      JSON.stringify({
+        marker_version: 1,
+        module_id: moduleId,
+        repo_name: repoName,
+        packaged_runtime: true,
+        source_git: { head_sha: packagedSha },
+      }, null, 2),
+    );
+    return {
+      moduleId,
+      repoName,
+      remote,
+      packagedRoot,
+      packagedSha,
+      latestSha,
+    };
+  };
+  const packagedModules = {
+    medautoscience: buildFullSeedModule('medautoscience', 'med-autoscience', 'mas', {
+      'plugins/mas/.codex-plugin/plugin.json': JSON.stringify({ name: 'mas', skills: './skills/' }, null, 2),
+      'plugins/mas/skills/mas/SKILL.md': '---\nname: mas\ndescription: MAS fixture.\n---\n\n# MAS\n',
+      'scripts/install-codex-plugin.sh': '#!/usr/bin/env bash\nset -euo pipefail\nprintf \'{"sync":"ok"}\\n\'\n',
+    }),
+    meddeepscientist: buildFullSeedModule('meddeepscientist', 'med-deepscientist', 'mds'),
+    medautogrant: buildFullSeedModule('medautogrant', 'med-autogrant', 'mag', {
+      'plugins/mag/.codex-plugin/plugin.json': JSON.stringify({ name: 'mag', skills: './skills/' }, null, 2),
+      'plugins/mag/skills/mag/SKILL.md': '---\nname: mag\ndescription: MAG fixture.\n---\n\n# MAG\n',
+      'scripts/install-codex-plugin.sh': '#!/usr/bin/env bash\nset -euo pipefail\nprintf \'{"sync":"ok"}\\n\'\n',
+    }),
+    redcube: buildFullSeedModule('redcube', 'redcube-ai', 'rca', {
+      'plugins/rca/.codex-plugin/plugin.json': JSON.stringify({ name: 'rca', skills: './skills/' }, null, 2),
+      'plugins/rca/skills/rca/SKILL.md': '---\nname: rca\ndescription: RCA fixture.\n---\n\n# RCA\n',
+      'scripts/install-codex-plugin.ts': [
+        '#!/usr/bin/env node',
+        'console.log(JSON.stringify({ sync: "ok" }));',
+        '',
+      ].join('\n'),
+    }),
+  };
+  const env = {
+    HOME: homeRoot,
+    OPL_MODULES_ROOT: modulesRoot,
+    OPL_MODULE_PATH_MEDAUTOSCIENCE: packagedModules.medautoscience.packagedRoot,
+    OPL_MODULE_PATH_MEDDEEPSCIENTIST: packagedModules.meddeepscientist.packagedRoot,
+    OPL_MODULE_PATH_MEDAUTOGRANT: packagedModules.medautogrant.packagedRoot,
+    OPL_MODULE_PATH_REDCUBE: packagedModules.redcube.packagedRoot,
+    OPL_MODULE_REPO_URL_MEDAUTOSCIENCE: packagedModules.medautoscience.remote.remoteRoot,
+    OPL_MODULE_REPO_URL_MEDDEEPSCIENTIST: packagedModules.meddeepscientist.remote.remoteRoot,
+    OPL_MODULE_REPO_URL_MEDAUTOGRANT: packagedModules.medautogrant.remote.remoteRoot,
+    OPL_MODULE_REPO_URL_REDCUBE: packagedModules.redcube.remote.remoteRoot,
+    OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+  };
+
+  try {
+    for (const moduleId of Object.keys(packagedModules)) {
+      const install = runCli(['module', 'install', '--module', moduleId], env) as {
+        module_action: {
+          module: {
+            checkout_path: string;
+            git: { head_sha: string | null; sync_status: string };
+            recommended_action: string | null;
+            available_actions: string[];
+          };
+        };
+      };
+      const packaged = packagedModules[moduleId as keyof typeof packagedModules];
+      assert.equal(install.module_action.module.git.head_sha, packaged.packagedSha);
+      assert.equal(install.module_action.module.git.sync_status, 'no_upstream');
+      assert.equal(install.module_action.module.recommended_action, 'update');
+      assert.equal(install.module_action.module.available_actions.includes('update'), true);
+      assert.equal(fs.existsSync(path.join(install.module_action.module.checkout_path, 'opl-runtime-module.json')), true);
+    }
+
+    const output = runCli(['system', 'reconcile-modules'], env) as {
+      system_action: {
+        status: string;
+        details: {
+          targets: Array<{ target_id: string; status: string; reason: string }>;
+        };
+      };
+    };
+    assert.equal(output.system_action.status, 'completed');
+    const targets = new Map(output.system_action.details.targets.map((entry) => [entry.target_id, entry]));
+    for (const moduleId of Object.keys(packagedModules)) {
+      assert.equal(targets.get(moduleId)?.status, 'completed');
+      assert.equal(targets.get(moduleId)?.reason, 'module_update_available');
+    }
+
+    const modules = runCli(['modules'], env) as {
+      modules: {
+        items: Array<{
+          module_id: string;
+          install_origin: string;
+          git: { head_sha: string | null; sync_status: string; upstream_ref: string | null } | null;
+          recommended_action: string | null;
+        }>;
+      };
+    };
+    const modulesById = new Map(modules.modules.items.map((entry) => [entry.module_id, entry]));
+    for (const [moduleId, packaged] of Object.entries(packagedModules)) {
+      const module = modulesById.get(moduleId);
+      assert.equal(module?.install_origin, 'managed_root');
+      assert.equal(module?.git?.head_sha, packaged.latestSha);
+      assert.equal(module?.git?.sync_status, 'synced');
+      assert.equal(module?.git?.upstream_ref, 'origin/main');
+      assert.equal(module?.recommended_action, null);
+      assert.equal(fs.existsSync(path.join(modulesRoot, packaged.repoName, 'opl-runtime-module.json')), false);
+    }
+  } finally {
+    for (const packaged of Object.values(packagedModules)) {
+      fs.rmSync(packaged.remote.fixtureRoot, { recursive: true, force: true });
+    }
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
