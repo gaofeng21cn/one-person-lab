@@ -99,7 +99,7 @@ opl help --text         # 人类可读帮助；机器读取使用 opl help --jso
 
 1. 用户先读当前首页和上面的 App / `opl install` 路径。
 2. 技术规划、架构判断和方向同步，继续读 [文档索引](./docs/README.zh-CN.md)，再读 [项目概览](./docs/project.md)、[当前状态](./docs/status.md)、[架构](./docs/architecture.md)、[硬约束](./docs/invariants.md)、[关键决策](./docs/decisions.md)。
-3. 开发者和维护者，继续读 [合同目录说明](./contracts/README.md)、[参考级索引](./docs/references/README.zh-CN.md)，以及 `docs/specs/`、`docs/plans/` 和 [历史归档索引](./docs/history/README.zh-CN.md) 下的跟踪材料。
+3. 开发者和维护者，继续读 [合同目录说明](./contracts/README.md)、[参考级索引](./docs/references/README.zh-CN.md)、`docs/specs/` 下的当前规格，以及 [历史归档索引](./docs/history/README.zh-CN.md) 下的过程归档材料。
 
 ### 运行说明
 

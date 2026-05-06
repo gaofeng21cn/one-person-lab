@@ -100,7 +100,7 @@ The desktop GUI source is maintained in [`opl-aion-shell`](https://github.com/ga
 
 1. Users should start with this README and the App / `opl install` path above.
 2. Technical planning, architecture decisions, and direction sync continue through the [documentation index](./docs/README.md), then [project overview](./docs/project.md), [current status](./docs/status.md), [architecture](./docs/architecture.md), [invariants](./docs/invariants.md), and [decisions](./docs/decisions.md).
-3. Developers and maintainers should continue with the [contracts directory guide](./contracts/README.md), [reference index](./docs/references/README.md), and tracked materials under `docs/specs/`, `docs/plans/`, and the [history index](./docs/history/README.md).
+3. Developers and maintainers should continue with the [contracts directory guide](./contracts/README.md), [reference index](./docs/references/README.md), current specs under `docs/specs/`, and archived process material through the [history index](./docs/history/README.md).
 
 ### Runtime notes
 

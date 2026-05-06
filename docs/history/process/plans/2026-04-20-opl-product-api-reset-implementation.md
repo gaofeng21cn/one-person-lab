@@ -36,9 +36,9 @@
 - Modify: `docs/history/README.md`
 - Modify: `docs/history/frontdoor-legacy/README.md`
 - Modify: `docs/references/README.md`
-- Modify: `docs/specs/2026-04-12-opl-frontdoor-and-family-entry-design.md`
+- Modify: `docs/history/process/specs/2026-04-12-opl-frontdoor-and-family-entry-design.md`
 - Modify: `docs/history/frontdoor-legacy/2026-04-19-opl-initialize-and-environment-manager-design.md`
-- Modify: `docs/plans/2026-04-12-opl-frontdoor-and-family-entry-implementation.md`
+- Modify: `docs/history/process/plans/2026-04-12-opl-frontdoor-and-family-entry-implementation.md`
 
 - [ ] 给仍然保留的历史 `frontdoor` 设计和计划文档加上“已退役 / superseded”标识。
 - [ ] 更新历史索引和参考索引，明确这些文档只作历史审计，不再作为当前实现依据。

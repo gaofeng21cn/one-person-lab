@@ -146,6 +146,6 @@ Expected: no output
 - [ ] **Step 3: Commit the slice**
 
 ```bash
-git add src/frontdoor-paths.ts src/management/* src/frontdoor-service.ts src/cli.ts src/web-frontdoor.ts tests/src/cli.test.ts tests/built/cli.test.mjs docs/status.md docs/README.md docs/README.zh-CN.md docs/references/opl-frontdoor-delivery-board.md contracts/opl-gateway/README.md contracts/opl-gateway/README.zh-CN.md docs/superpowers/plans/2026-04-14-opl-frontdoor-readiness-plan.md
+git add src/frontdoor-paths.ts src/management/* src/frontdoor-service.ts src/cli.ts src/web-frontdoor.ts tests/src/cli.test.ts tests/built/cli.test.mjs docs/status.md docs/README.md docs/README.zh-CN.md docs/references/opl-frontdoor-delivery-board.md contracts/opl-gateway/README.md contracts/opl-gateway/README.zh-CN.md docs/history/process/superpowers/plans/2026-04-14-opl-frontdoor-readiness-plan.md
 git commit -m "Add frontdoor readiness surface for operator triage"
 ```

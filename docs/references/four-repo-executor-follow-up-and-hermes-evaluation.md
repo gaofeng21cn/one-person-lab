@@ -145,7 +145,7 @@
   - `docs/references/four-repo-executor-follow-up-and-hermes-evaluation.md`
   - `contracts/opl-gateway/family-executor-adapter-defaults.json`
   - `contracts/opl-gateway/README*.md`
-  - `docs/plans/2026-04-13-family-executor-adapter-next-phase.md`
+  - `docs/history/process/plans/2026-04-13-family-executor-adapter-next-phase.md`
 - `Med Auto Science`
   - 根级 `status / architecture / runtime interface` 已与真实执行链对齐
 - `MedDeepScientist`

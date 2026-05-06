@@ -28,7 +28,7 @@
 | --- | --- | --- |
 | 用户 | [仓库首页](../README.zh-CN.md) | 安装 OPL、启动 GUI 或网页入口，并按任务选择 Codex 或 domain agent |
 | 技术规划者、架构读者、方向同步读者 | [项目概览](./project.md)、[当前状态](./status.md)、[架构](./architecture.md)、[硬约束](./invariants.md)、[关键决策](./decisions.md)、[合同目录说明](../contracts/README.md) | 恢复当前边界、运行时模型和 admitted-domain split |
-| 开发者与维护者 | [参考级索引](./references/README.zh-CN.md)、`docs/specs/`、`docs/plans/`、[历史归档索引](./history/README.zh-CN.md) | 查看配套材料、兼容说明和退役路线 |
+| 开发者与维护者 | [参考级索引](./references/README.zh-CN.md)、`docs/specs/` 下的当前规格、[过程历史归档](./history/process/README.zh-CN.md)、[历史归档索引](./history/README.zh-CN.md) | 查看活跃规格、配套材料、兼容说明和退役路线 |
 
 ## 技术工作集
 
@@ -104,8 +104,7 @@
 第四层是仓库跟踪的工作历史。
 它解释某次冻结和实现的来龙去脉；[当前状态](./status.md) 是当前基线面。
 
-- `docs/specs/`
-- `docs/plans/`
+- [过程历史归档](./history/process/README.zh-CN.md)
 - [历史归档索引](./history/README.zh-CN.md)
 
 ## 当前真相分别去哪看
@@ -115,7 +114,7 @@
 - 已收录 domain 的 capability surface：各 domain 仓自己的 repo-owned surface 与 `opl skill sync`
 - 历史 gateway/federation 兼容语料：`contracts/opl-gateway/*.json` 与配套 gateway 文档
 - 参考级配套材料： [参考级索引](./references/README.zh-CN.md)
-- 历史与退役路线： [历史归档索引](./history/README.zh-CN.md)
+- 历史与退役路线： [历史归档索引](./history/README.zh-CN.md) 与 [过程历史归档](./history/process/README.zh-CN.md)
 
 ## 文档规则
 

@@ -27,7 +27,7 @@
 - 第一层与第二层公开文档保持双语，同步表达 `OPL` 的 public mainline、gateway contract 与 shared-foundation boundary。
 - `contracts/` 只保留 machine-readable contract surface，不承载 narrative 规则。
 - `docs/references/` 承担 reference-grade sync、审计、样例与 supporting-surface 文档；内部维护默认中文，只有已公开 companion 才维持双语。
-- `docs/specs/`、`docs/plans/` 与 `docs/history/` 继续严格分层，不能重新混回默认公开入口。
+- `docs/specs/`、`docs/history/process/` 与 `docs/history/` 继续严格分层，不能重新混回默认公开入口。
 - 长期规则应冻结到核心文档、reference surface 或 contract surface；不要把 `AGENTS.md` 继续当第二真相源。
 
 ## 四、系列一致性检查

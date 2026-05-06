@@ -33,8 +33,8 @@
 - `docs/README*` 继续维护 `OPL` 的四层公开文档体系，但 AI/维护者应先读核心五件套。
 - `contracts/` 只保留 machine-readable contract surface；不再承载 narrative 规则。
 - `docs/references/`：参考级配套文档。
-- `docs/specs/` 与 `docs/plans/`：历史设计与计划记录。
-- `docs/history/`：历史归档入口，不再承担活跃 workflow。
+- `docs/specs/`：当前仍生效的 runtime / product-boundary 规格。
+- `docs/history/`：历史归档入口，包含已完成 plans、退役 specs 与 repo-tracked process drafts，不再承担活跃 workflow。
 
 ## 文档规则
 
