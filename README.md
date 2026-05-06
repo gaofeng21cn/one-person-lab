@@ -78,6 +78,7 @@ Need Docker, Linux, or server deployment? See the [Docker and browser deployment
 ```bash
 opl system initialize   # Inspect the Codex version policy, managed Hermes runtime/gateway status, modules, skills, GUI, and workspace-root state
 opl modules             # Check MAS/MDS/MAG/RCA module installation and health
+opl module exec --module medautoscience -- doctor entry-modes
 opl skill sync          # Sync OPL family skills into the Codex-visible skill path
 opl help --text         # Human-readable help; use opl help --json for machine-readable output
 ```
@@ -108,6 +109,7 @@ The desktop GUI source is maintained in [`opl-aion-shell`](https://github.com/ga
 - `opl install` installs or reuses a supported external Hermes runtime substrate. The Hermes online-management gateway is a system service managed by the Hermes installer/gateway command; OPL triggers setup, checks readiness, and reports status without owning that service lifecycle.
 - First launch separates core/domain readiness from online-management readiness. If Codex and admitted domain modules are ready, users can start work while Hermes gateway readiness is still pending or starting.
 - If an admitted domain repo is missing locally, run `opl module install --module <module_id>`.
+- When automation needs a domain CLI, run it through `opl module exec --module <module_id> -- <domain_cli_args...>` so the command is launched from the current OPL-managed module checkout instead of a stale global PATH tool.
 - The default workspace root is your home directory. The default local state directory is `~/Library/Application Support/OPL/state`. Set `OPL_STATE_DIR` to use another local state root.
 - Active domain agents are [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience), [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant), and [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai).
 - `Med Auto Science` exposes one MAS domain app skill for OPL/Codex activation. OPL syncs and consumes that skill plus MAS-owned projections as shared workbench surfaces; MAS keeps the medical research runtime, controller truth, quality authority, and publication gates.

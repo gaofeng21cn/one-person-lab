@@ -124,6 +124,18 @@ export type ModuleInspection = {
   recommended_action: OplModuleAction | null;
 };
 
+export type ModuleExecResult = {
+  module_id: OplModuleId;
+  status: 'completed';
+  module: ModuleInspection;
+  working_directory: string;
+  command_preview: string[];
+  exit_code: number;
+  stdout: string;
+  stderr: string;
+  result: Record<string, unknown> | null;
+};
+
 export type OplSystemActionInput = Partial<{
   channel: OplUpdateChannel;
   host: string;

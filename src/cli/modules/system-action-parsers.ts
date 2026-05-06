@@ -1,6 +1,7 @@
 import type {
   CommandSpec,
   OplEngineCliInput,
+  OplModuleExecCliInput,
   OplModuleCliInput,
   SystemConfigureCodexCliInput,
   SessionRuntimeCliInput,
@@ -170,6 +171,35 @@ function parseOplModuleArgs(
   }
 
   return parsed;
+}
+
+function parseOplModuleExecArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): OplModuleExecCliInput {
+  const separatorIndex = args.indexOf('--');
+  if (separatorIndex < 0) {
+    throw buildUsageError(
+      'module exec requires `--` before the domain CLI arguments.',
+      spec,
+      { required: ['--module', '--'] },
+    );
+  }
+
+  const moduleInput = parseOplModuleArgs(args.slice(0, separatorIndex), spec);
+  const domainArgs = args.slice(separatorIndex + 1);
+  if (domainArgs.length === 0) {
+    throw buildUsageError(
+      'module exec requires at least one domain CLI argument after `--`.',
+      spec,
+      { required: ['domain_cli_args'] },
+    );
+  }
+
+  return {
+    moduleId: moduleInput.moduleId!,
+    args: domainArgs,
+  };
 }
 
 function parseOplEngineArgs(
@@ -350,6 +380,7 @@ function assertNoArgs(
 export {
   assertNoArgs,
   parseOplEngineArgs,
+  parseOplModuleExecArgs,
   parseOplModuleArgs,
   parseSessionRuntimeArgs,
   parseSystemConfigureCodexArgs,

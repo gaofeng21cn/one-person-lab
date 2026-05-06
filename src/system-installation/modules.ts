@@ -16,6 +16,7 @@ import {
   type OplModuleId,
   type OplModuleInstallOrigin,
   type GitRepoSnapshot,
+  type ModuleExecResult,
   type ModuleInspection,
   assertGitSuccess,
   getShellBinary,
@@ -27,6 +28,7 @@ import {
 type DomainModuleRuntimeSpec = DomainModuleSpec & {
   bootstrap_command?: (checkoutPath: string) => { command: string; args: string[] } | null;
   health_check_command?: (checkoutPath: string) => { command: string; args: string[] } | null;
+  exec_command?: (checkoutPath: string, args: string[]) => { command: string; args: string[] } | null;
   skill_sync_domain?: 'medautoscience' | 'medautogrant' | 'redcube';
 };
 
@@ -59,6 +61,10 @@ const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
       ?? buildPythonEditableBootstrapCommand(checkoutPath, '3.12')
     ),
     health_check_command: (checkoutPath) => buildHealthCheckCommand(checkoutPath),
+    exec_command: (checkoutPath, args) => ({
+      command: 'uv',
+      args: ['run', '--directory', checkoutPath, '--extra', 'analysis', 'medautosci', ...args],
+    }),
     skill_sync_domain: 'medautoscience',
   },
   {
@@ -86,6 +92,10 @@ const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
       ?? buildPythonEditableBootstrapCommand(checkoutPath, '3.12')
     ),
     health_check_command: (checkoutPath) => buildHealthCheckCommand(checkoutPath),
+    exec_command: (checkoutPath, args) => ({
+      command: 'uv',
+      args: ['run', '--directory', checkoutPath, 'medautogrant', ...args],
+    }),
     skill_sync_domain: 'medautogrant',
   },
   {
@@ -100,6 +110,10 @@ const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
       ?? { command: 'npm', args: ['install'] }
     ),
     health_check_command: (checkoutPath) => buildHealthCheckCommand(checkoutPath),
+    exec_command: (_checkoutPath, args) => ({
+      command: 'npm',
+      args: ['run', '--silent', 'redcube', '--', ...args],
+    }),
     skill_sync_domain: 'redcube',
   },
 ];
@@ -933,5 +947,87 @@ export function runOplModuleAction(
       module: inspectModule(spec),
       turnkey: workflow,
     },
+  };
+}
+
+export function runOplModuleExec(
+  moduleId: string,
+  args: string[],
+) {
+  const spec = findModuleSpecOrThrow(moduleId);
+  const current = inspectModule(spec);
+  if (!current.installed || current.health_status === 'missing') {
+    throw new GatewayContractError(
+      'cli_usage_error',
+      'Module exec requires an installed checkout.',
+      {
+        module_id: spec.module_id,
+        checkout_path: current.checkout_path,
+        recommended_action: current.recommended_action,
+      },
+      2,
+    );
+  }
+  if (current.health_status === 'invalid_checkout') {
+    throw new GatewayContractError(
+      'cli_usage_error',
+      'Module exec requires a valid git or packaged module checkout.',
+      {
+        module_id: spec.module_id,
+        checkout_path: current.checkout_path,
+        install_origin: current.install_origin,
+      },
+      2,
+    );
+  }
+  if (spec.scope !== 'domain_module' || !spec.exec_command) {
+    throw new GatewayContractError(
+      'cli_usage_error',
+      'This module does not expose an OPL module exec entry.',
+      {
+        module_id: spec.module_id,
+        scope: spec.scope,
+      },
+      2,
+    );
+  }
+
+  const commandPreview = spec.exec_command(current.checkout_path, args);
+  if (!commandPreview) {
+    throw new GatewayContractError(
+      'cli_usage_error',
+      'This module does not expose an OPL module exec command.',
+      {
+        module_id: spec.module_id,
+      },
+      2,
+    );
+  }
+
+  const result = runCommand(commandPreview.command, commandPreview.args, current.checkout_path);
+  const execResult: ModuleExecResult = {
+    module_id: spec.module_id,
+    status: 'completed',
+    module: current,
+    working_directory: current.checkout_path,
+    command_preview: [commandPreview.command, ...commandPreview.args],
+    exit_code: result.exitCode,
+    stdout: result.stdout,
+    stderr: result.stderr,
+    result: maybeParseJsonRecord(result.stdout),
+  };
+
+  if (result.exitCode !== 0) {
+    throw new GatewayContractError(
+      'build_command_failed',
+      'OPL module exec command failed.',
+      execResult,
+      result.exitCode,
+    );
+  }
+
+  return {
+    version: 'g2',
+    module_exec: execResult,
   };
 }

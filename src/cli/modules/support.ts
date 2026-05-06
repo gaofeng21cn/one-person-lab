@@ -40,6 +40,7 @@ export {
 export {
   assertNoArgs,
   parseOplEngineArgs,
+  parseOplModuleExecArgs,
   parseOplModuleArgs,
   parseSessionRuntimeArgs,
   parseSystemConfigureCodexArgs,
@@ -53,6 +54,7 @@ export type {
   CommandSpec,
   DashboardCliInput,
   OplEngineCliInput,
+  OplModuleExecCliInput,
   OplModuleCliInput,
   LaunchDomainCliInput,
   LogsCliInput,
