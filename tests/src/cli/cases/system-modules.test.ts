@@ -122,6 +122,9 @@ EOF
       fs.readFileSync(turnkeyLogPath, 'utf8').trim().split('\n'),
       ['bootstrap', 'skill-sync', 'health'],
     );
+    const globalMasSkillPath = path.join(homeRoot, '.codex', 'skills', 'mas', 'SKILL.md');
+    assert.equal(fs.existsSync(globalMasSkillPath), true);
+    assert.match(fs.readFileSync(globalMasSkillPath, 'utf8'), /canonical MAS family app skill entry/);
 
     const readMasModule = () => (
       runCli(['modules'], env) as {
@@ -137,8 +140,18 @@ EOF
     assert.equal(syncedMas.available_actions.includes('update'), false);
 
     const nextSha = medAutoScienceRemote.advance(
-      'CHANGELOG.md',
-      '# Changelog\n\n- Added module update test\n',
+      'plugins/mas/skills/mas/SKILL.md',
+      [
+        '---',
+        'name: mas',
+        'description: Use when Codex should operate MedAutoScience through the updated global skill mirror.',
+        '---',
+        '',
+        '# MAS App Skill',
+        '',
+        'Use this updated fixture after module update.',
+        '',
+      ].join('\n'),
       'Advance module remote',
     );
     const behindMas = readMasModule();
@@ -169,6 +182,8 @@ EOF
       fs.readFileSync(turnkeyLogPath, 'utf8').trim().split('\n'),
       ['bootstrap', 'skill-sync', 'health', 'bootstrap', 'skill-sync', 'health'],
     );
+    assert.match(fs.readFileSync(globalMasSkillPath, 'utf8'), /updated global skill mirror/);
+    assert.doesNotMatch(fs.readFileSync(globalMasSkillPath, 'utf8'), /canonical MAS family app skill entry/);
 
     const remove = runCli(
       ['module', 'remove', '--module', 'medautoscience'],
