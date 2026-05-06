@@ -77,8 +77,6 @@ They define the current `OPL` mainline: `Codex-default session/runtime + explici
 - [Invariants](./invariants.md)
 - [Decisions](./decisions.md)
 - [Contracts Overview](../contracts/README.md)
-- [Shared Foundation](./shared-foundation.md)
-- [Shared Foundation Ownership](./shared-foundation-ownership.md)
 - [OPL Public Surface Index](./opl-public-surface-index.md)
 
 ## Layer 3. Reference / Compatibility Docs
@@ -93,6 +91,7 @@ It is repo-tracked supporting material, not the default implementation basis.
 - [OPL fresh install and GUI first-launch testing](./references/opl-fresh-install-and-gui-first-launch-testing.zh-CN.md)
 - [OPL default skill ecosystem reference](./references/opl-default-skill-ecosystem.md)
 - [OPL release and Packages modular distribution reference](./references/opl-release-packages-modular-distribution.zh-CN.md)
+- [Shared Foundation](./shared-foundation.md) and [Shared Foundation Ownership](./shared-foundation-ownership.md) are retained as shared-boundary references; they support the current model but are not the fastest active implementation basis.
 - product-runtime and executor reference notes
 - [Shared Runtime Contract](./shared-runtime-contract.md), [Shared Domain Contract](./shared-domain-contract.md), and [OPL Runtime Naming And Boundary Contract](./opl-runtime-naming-and-boundary-contract.md) are retained as shared-boundary reference documents; their `gateway / harness` wording is compatibility language under the current domain-agent model.
 - domain alignment and delta-intake records

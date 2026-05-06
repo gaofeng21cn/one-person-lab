@@ -71,13 +71,13 @@ Need Docker, Linux, or server deployment? See the [Docker and browser deployment
 
 ### One instruction for a Codex Agent
 
-> Install and configure this OPL repo: clone it, install the OPL CLI, run `opl install`, and ensure Codex CLI, the managed Hermes runtime/gateway status, MAS/MDS/MAG/RCA, recommended skills, required companion tools such as the `officecli` binary, the One Person Lab App, and the browser entry are ready; if anything is missing, fix it or report the exact blocker. Do not treat first-screen core/domain access as blocked solely because the Hermes online-management gateway has not finished loading.
+> Install and configure this OPL repo: clone it, install the OPL CLI, run `opl install`, and ensure Codex CLI, the managed Hermes runtime/gateway status, MAS/MAG/RCA plus MDS as the MAS dependency, recommended skills, required companion tools such as the `officecli` binary, the One Person Lab App, and the browser entry are ready; if anything is missing, fix it or report the exact blocker. Do not treat first-screen core/domain access as blocked solely because the Hermes online-management gateway has not finished loading.
 
 ### Common commands after installation
 
 ```bash
 opl system initialize   # Inspect the Codex version policy, managed Hermes runtime/gateway status, modules, skills, GUI, and workspace-root state
-opl modules             # Check MAS/MDS/MAG/RCA module installation and health
+opl modules             # Check MAS/MAG/RCA modules plus MDS as the MAS dependency
 opl module exec --module medautoscience -- doctor entry-modes
 opl skill sync          # Sync OPL family skills into the Codex-visible skill path
 opl help --text         # Human-readable help; use opl help --json for machine-readable output

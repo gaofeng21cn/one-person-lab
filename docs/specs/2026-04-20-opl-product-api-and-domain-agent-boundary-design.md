@@ -1,5 +1,7 @@
 # OPL Product API 与 Domain Agent 边界设计
 
+> 当前状态说明（2026-05-06）：本文标题中的 `Product API` 是 2026-04-20 资源模型冻结时的历史命名。当前公开主线已经收口为 `Codex-default session/runtime + explicit activation layer + domain agent entry`；本规格仍可作为 `system / engines / modules / agents / workspaces / sessions / progress / artifacts` 产品资源边界的背景材料阅读，但不得被解释为恢复本地 8787 Product API service 或 `opl web` 用户入口。
+
 ## 背景
 
 截至 `2026-04-21`，`OPL` 的产品形态已经明确：

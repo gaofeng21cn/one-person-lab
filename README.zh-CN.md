@@ -71,13 +71,13 @@ curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/ins
 
 ### 交给 Codex Agent 的一句话
 
-> 安装并配置这个 OPL 仓库：clone 仓库、安装 OPL CLI、运行 `opl install`，并确保 Codex CLI、受管 Hermes runtime/gateway 状态、MAS/MDS/MAG/RCA、推荐 skills、`officecli` 这类必要 companion CLI 工具、One Person Lab App 和浏览器入口都可用；如果缺任何东西，直接修复或报告精确阻塞点。不要仅因 Hermes online-management gateway 尚未完成加载，就把首屏核心工作或 domain 工作写成不可用。
+> 安装并配置这个 OPL 仓库：clone 仓库、安装 OPL CLI、运行 `opl install`，并确保 Codex CLI、受管 Hermes runtime/gateway 状态、MAS/MAG/RCA 以及作为 MAS 依赖的 MDS、推荐 skills、`officecli` 这类必要 companion CLI 工具、One Person Lab App 和浏览器入口都可用；如果缺任何东西，直接修复或报告精确阻塞点。不要仅因 Hermes online-management gateway 尚未完成加载，就把首屏核心工作或 domain 工作写成不可用。
 
 ### 安装后常用命令
 
 ```bash
 opl system initialize   # 检查 Codex 版本策略、受管 Hermes runtime/gateway 状态、模块、skills、GUI 和工作目录状态
-opl modules             # 查看 MAS/MDS/MAG/RCA 模块安装和健康情况
+opl modules             # 查看 MAS/MAG/RCA 模块，以及作为 MAS 依赖的 MDS 安装和健康情况
 opl skill sync          # 把 OPL 家族 skills 同步到 Codex 可见路径
 opl help --text         # 人类可读帮助；机器读取使用 opl help --json
 ```

@@ -13,7 +13,7 @@
 - [architecture.md](../architecture.md)
 - [invariants.md](../invariants.md)
 - [decisions.md](../decisions.md)
-- [2026-04-20 产品接口边界设计](../specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md)
+- [`docs/specs/`](../specs/) 下当前仍生效的 runtime / product-boundary 规格
 
 ## 一、统一收敛与状态对齐
 
@@ -92,10 +92,14 @@
 - `../gateway-federation.zh-CN.md`
 - `../opl-federation-contract.md`
 - `../opl-federation-contract.zh-CN.md`
+- `../opl-read-only-discovery-gateway.md`
+- `../opl-read-only-discovery-gateway.zh-CN.md`
 - `../opl-routed-action-gateway.md`
 - `../opl-routed-action-gateway.zh-CN.md`
 - `../../contracts/opl-gateway/README.md`
 - `../../contracts/opl-gateway/README.zh-CN.md`
+
+这些叙述文件仍留在 `docs/`，是因为仓库跟踪的机器可读兼容矩阵仍引用这些路径。它们的位置只表示路径兼容约束，不表示重新提升到活跃层。
 
 ## 六、已退役 frontdoor 时代与历史迁移参考
 

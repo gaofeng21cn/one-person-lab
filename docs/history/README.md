@@ -14,7 +14,7 @@ Current product truth, shared runtime boundaries, and maintainer workflow belong
 - [Architecture](../architecture.md)
 - [Invariants](../invariants.md)
 - [Decisions](../decisions.md)
-- [OPL Product API And Domain Agent Boundary Design](../specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md)
+- current runtime / product-boundary specs under [`docs/specs/`](../specs/)
 
 Archived lanes:
 
