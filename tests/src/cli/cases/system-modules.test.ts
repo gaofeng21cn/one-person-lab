@@ -1,4 +1,4 @@
-import { assert, createGitModuleRemoteFixture, fs, os, path, runCli, test } from '../helpers.ts';
+import { assert, createGitModuleRemoteFixture, fs, os, path, runCli, runCliFailure, test } from '../helpers.ts';
 
 test('modules and module actions manage OPL-owned domain module installs and updates', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-modules-home-'));
@@ -306,6 +306,155 @@ git ls-files >/dev/null
     assert.equal(fs.existsSync(path.join(managedRcaRoot, 'opl-runtime-module.json')), true);
     assert.equal(fs.existsSync(path.join(managedRcaRoot, 'plugins', 'rca', 'skills', 'rca', 'SKILL.md')), true);
   } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test('module exec runs domain CLIs from the current module checkout instead of PATH tools', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-module-exec-home-'));
+  const fakeBinRoot = path.join(homeRoot, 'fake-bin');
+  const uvArgvPath = path.join(homeRoot, 'uv.argv');
+  const uvCwdPath = path.join(homeRoot, 'uv.cwd');
+  const npmArgvPath = path.join(homeRoot, 'npm.argv');
+  const npmCwdPath = path.join(homeRoot, 'npm.cwd');
+  fs.mkdirSync(fakeBinRoot, { recursive: true });
+  fs.writeFileSync(
+    path.join(fakeBinRoot, 'uv'),
+    `#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\\n' "$PWD" > ${JSON.stringify(uvCwdPath)}
+: > ${JSON.stringify(uvArgvPath)}
+for arg in "$@"; do
+  printf '%s\\n' "$arg" >> ${JSON.stringify(uvArgvPath)}
+done
+printf '{"ok":true,"runner":"uv"}\\n'
+`,
+    { mode: 0o755 },
+  );
+  fs.writeFileSync(
+    path.join(fakeBinRoot, 'npm'),
+    `#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\\n' "$PWD" > ${JSON.stringify(npmCwdPath)}
+: > ${JSON.stringify(npmArgvPath)}
+for arg in "$@"; do
+  printf '%s\\n' "$arg" >> ${JSON.stringify(npmArgvPath)}
+done
+printf '{"ok":true,"runner":"npm"}\\n'
+`,
+    { mode: 0o755 },
+  );
+  const masFixture = createGitModuleRemoteFixture('med-autoscience');
+  const magFixture = createGitModuleRemoteFixture('med-autogrant');
+  const rcaFixture = createGitModuleRemoteFixture('redcube-ai');
+  const mdsFixture = createGitModuleRemoteFixture('med-deepscientist');
+  const env = {
+    HOME: homeRoot,
+    PATH: `${fakeBinRoot}:${process.env.PATH ?? ''}`,
+    OPL_MODULES_ROOT: path.join(homeRoot, 'managed-modules'),
+    OPL_MODULE_PATH_MEDAUTOSCIENCE: masFixture.sourceRoot,
+    OPL_MODULE_PATH_MEDAUTOGRANT: magFixture.sourceRoot,
+    OPL_MODULE_PATH_REDCUBE: rcaFixture.sourceRoot,
+    OPL_MODULE_PATH_MEDDEEPSCIENTIST: mdsFixture.sourceRoot,
+    OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
+  };
+  const readLines = (filePath: string) => fs.readFileSync(filePath, 'utf8').trim().split('\n');
+  const realpath = (filePath: string) => fs.realpathSync(filePath);
+
+  try {
+    const masExec = runCli(
+      ['module', 'exec', '--module', 'medautoscience', '--', 'doctor', 'entry-modes', '--json'],
+      env,
+    ) as {
+      module_exec: {
+        module_id: string;
+        command_preview: string[];
+        working_directory: string;
+        exit_code: number;
+        result: { ok?: boolean; runner?: string } | null;
+      };
+    };
+    assert.equal(masExec.module_exec.module_id, 'medautoscience');
+    assert.equal(masExec.module_exec.working_directory, masFixture.sourceRoot);
+    assert.equal(masExec.module_exec.exit_code, 0);
+    assert.deepEqual(masExec.module_exec.result, { ok: true, runner: 'uv' });
+    assert.deepEqual(masExec.module_exec.command_preview, [
+      'uv',
+      'run',
+      '--directory',
+      masFixture.sourceRoot,
+      '--extra',
+      'analysis',
+      'medautosci',
+      'doctor',
+      'entry-modes',
+      '--json',
+    ]);
+    assert.equal(realpath(fs.readFileSync(uvCwdPath, 'utf8').trim()), realpath(masFixture.sourceRoot));
+    assert.deepEqual(readLines(uvArgvPath), masExec.module_exec.command_preview.slice(1));
+
+    const magExec = runCli(
+      ['module', 'exec', '--module', 'mag', '--', '--help'],
+      env,
+    ) as {
+      module_exec: {
+        module_id: string;
+        command_preview: string[];
+        working_directory: string;
+        result: { ok?: boolean; runner?: string } | null;
+      };
+    };
+    assert.equal(magExec.module_exec.module_id, 'medautogrant');
+    assert.equal(magExec.module_exec.working_directory, magFixture.sourceRoot);
+    assert.deepEqual(magExec.module_exec.result, { ok: true, runner: 'uv' });
+    assert.deepEqual(readLines(uvArgvPath), [
+      'run',
+      '--directory',
+      magFixture.sourceRoot,
+      'medautogrant',
+      '--help',
+    ]);
+
+    const rcaExec = runCli(
+      ['module', 'exec', '--module', 'redcube', '--', 'product', 'manifest', '--workspace-root', '/tmp/demo'],
+      env,
+    ) as {
+      module_exec: {
+        module_id: string;
+        command_preview: string[];
+        working_directory: string;
+        result: { ok?: boolean; runner?: string } | null;
+      };
+    };
+    assert.equal(rcaExec.module_exec.module_id, 'redcube');
+    assert.equal(rcaExec.module_exec.working_directory, rcaFixture.sourceRoot);
+    assert.deepEqual(rcaExec.module_exec.result, { ok: true, runner: 'npm' });
+    assert.equal(realpath(fs.readFileSync(npmCwdPath, 'utf8').trim()), realpath(rcaFixture.sourceRoot));
+    assert.deepEqual(rcaExec.module_exec.command_preview, [
+      'npm',
+      'run',
+      '--silent',
+      'redcube',
+      '--',
+      'product',
+      'manifest',
+      '--workspace-root',
+      '/tmp/demo',
+    ]);
+    assert.deepEqual(readLines(npmArgvPath), rcaExec.module_exec.command_preview.slice(1));
+
+    const mdsFailure = runCliFailure(
+      ['module', 'exec', '--module', 'mds', '--', '--help'],
+      env,
+    );
+    assert.equal(mdsFailure.status, 2);
+    assert.equal(mdsFailure.payload.error.code, 'cli_usage_error');
+    assert.match(mdsFailure.payload.error.message, /does not expose an OPL module exec entry/);
+  } finally {
+    fs.rmSync(masFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(magFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(rcaFixture.fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(mdsFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
 });

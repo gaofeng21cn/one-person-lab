@@ -144,6 +144,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl system reconcile-modules',
         'opl modules',
         'opl module install --module medautoscience',
+        'opl module exec --module medautoscience -- doctor entry-modes',
         'opl engine install --engine codex',
         'opl workspace projects',
         'opl workspace bind --project redcube --path /Users/gaofeng/workspace/redcube-ai --entry-command "redcube product invoke --workspace-root /Users/gaofeng/workspace/redcube-ai" --manifest-command "redcube product manifest --workspace-root /Users/gaofeng/workspace/redcube-ai"',
@@ -253,13 +254,21 @@ function parseCliInput(argv: string[]): ParsedCliInput {
   let jsonOutput = false;
   let textOutput = false;
 
-  const jsonIndex = args.indexOf('--json');
+  const findGlobalOptionIndex = (option: string) => {
+    const passthroughIndex = args.indexOf('--');
+    return args.findIndex((token, index) => (
+      token === option
+      && (passthroughIndex < 0 || index < passthroughIndex)
+    ));
+  };
+
+  const jsonIndex = findGlobalOptionIndex('--json');
   if (jsonIndex >= 0) {
     jsonOutput = true;
     args.splice(jsonIndex, 1);
   }
 
-  const textIndex = args.indexOf('--text');
+  const textIndex = findGlobalOptionIndex('--text');
   if (textIndex >= 0) {
     textOutput = true;
     args.splice(textIndex, 1);

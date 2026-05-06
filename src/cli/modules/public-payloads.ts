@@ -152,6 +152,16 @@ function buildPublicModuleActionPayload(payload: VersionedPayload & { module_act
   };
 }
 
+function buildPublicModuleExecPayload(payload: VersionedPayload & { module_exec: UnknownRecord }) {
+  return {
+    version: payload.version,
+    module_exec: {
+      surface_id: 'opl_module_exec',
+      ...payload.module_exec,
+    },
+  };
+}
+
 function buildPublicEngineActionPayload(
   payload: VersionedPayload & { engine_action: OplEngineActionProjection },
 ) {
@@ -180,6 +190,7 @@ function buildPublicSystemActionPayload(payload: VersionedPayload & { system_act
 export {
   buildPublicEngineActionPayload,
   buildPublicModuleActionPayload,
+  buildPublicModuleExecPayload,
   buildPublicModulesPayload,
   buildPublicSystemActionPayload,
   buildPublicSystemInitializePayload,

@@ -157,6 +157,11 @@ type OplModuleCliInput = {
   moduleId?: string;
 };
 
+type OplModuleExecCliInput = {
+  moduleId: string;
+  args: string[];
+};
+
 type OplEngineCliInput = {
   engineId?: string;
 };
@@ -187,6 +192,7 @@ export type {
   DashboardCliInput,
   DomainLaunchStrategy,
   OplEngineCliInput,
+  OplModuleExecCliInput,
   OplModuleCliInput,
   HostedPilotPackageCliInput,
   LaunchDomainCliInput,

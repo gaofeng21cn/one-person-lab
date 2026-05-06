@@ -4,20 +4,21 @@ import { buildOplPackageManifest } from '../../package-distribution.ts';
 import { runOplEngineAction } from '../../system-installation/engine-actions.ts';
 import { buildOplEnvironment } from '../../system-installation/environment.ts';
 import { buildOplInitialize } from '../../system-installation/initialize.ts';
-import { buildOplModules, runOplModuleAction } from '../../system-installation/modules.ts';
+import { buildOplModules, runOplModuleAction, runOplModuleExec } from '../../system-installation/modules.ts';
 import { runOplSystemAction } from '../../system-installation/system-actions.ts';
 import { runOplTurnkeyInstall } from '../../system-installation/turnkey.ts';
 import type { GatewayContracts } from '../../types.ts';
 import {
   buildPublicEngineActionPayload,
   buildPublicModuleActionPayload,
+  buildPublicModuleExecPayload,
   buildPublicModulesPayload,
   buildPublicSystemActionPayload,
   buildPublicSystemInitializePayload,
   buildPublicSystemPayload,
   buildPublicTurnkeyInstallPayload,
 } from '../modules/public-payloads.ts';
-import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, cloneCommandSpec, parseOplEngineArgs, parseOplModuleArgs, parseSystemConfigureCodexArgs, parseTurnkeyInstallArgs, parseUpdateChannelArgs, printJson, withContractsContext } from '../modules/support.ts';
+import { assertNoArgs, buildCommandHelp, buildRootHelp, buildUsageError, cloneCommandSpec, parseOplEngineArgs, parseOplModuleExecArgs, parseOplModuleArgs, parseSystemConfigureCodexArgs, parseTurnkeyInstallArgs, parseUpdateChannelArgs, printJson, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
 
 async function readStdinText() {
@@ -240,6 +241,22 @@ export function buildPublicCommandSpecs(
     'opl module remove --module <module_id>',
     'opl module remove --module medautoscience',
   );
+  const moduleExecSpec: CommandSpec = {
+    usage: 'opl module exec --module <module_id> -- <domain_cli_args...>',
+    summary: 'Run a domain module CLI through the OPL-managed module checkout instead of a global PATH tool.',
+    examples: [
+      'opl module exec --module medautoscience -- doctor entry-modes',
+      'opl module exec --module medautogrant -- --help',
+      'opl module exec --module redcube -- product manifest --workspace-root /tmp/demo',
+    ],
+    group: 'module',
+    handler: (args) => {
+      const parsed = parseOplModuleExecArgs(args, moduleExecSpec);
+      return buildPublicModuleExecPayload(
+        runOplModuleExec(parsed.moduleId, parsed.args),
+      );
+    },
+  };
 
   const engineInstallSpec = buildEngineActionSpec(
     'install',
@@ -524,6 +541,7 @@ export function buildPublicCommandSpecs(
     'module update': moduleUpdateSpec,
     'module reinstall': moduleReinstallSpec,
     'module remove': moduleRemoveSpec,
+    'module exec': moduleExecSpec,
     'engine install': engineInstallSpec,
     'engine update': engineUpdateSpec,
     'engine reinstall': engineReinstallSpec,
