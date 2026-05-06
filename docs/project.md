@@ -73,6 +73,7 @@
 
 ## 核心公开面
 
-- 顶层叙事：`docs/roadmap*`、`docs/task-map*`、`docs/gateway-federation*`、`docs/operating-model*`
-- 公开合同：`contracts/opl-gateway/*.json` 与配套 README
-- 参考与历史：`docs/references/`、`docs/specs/` 下的当前规格、`docs/history/`
+- 顶层叙事：`README*`、`docs/README*`、`docs/roadmap*`、`docs/task-map*`、`docs/operating-model*`
+- 当前接口与合同入口：`contracts/README.md`、`docs/opl-public-surface-index*`、`docs/specs/` 下仍生效的 runtime / product-boundary 规格
+- 旧 gateway-first 语料：`docs/gateway-federation*`、`docs/opl-federation-contract*`、`docs/opl-read-only-discovery-gateway*`、`docs/opl-routed-action-gateway*` 与 `contracts/opl-gateway/*` 继续作为 reference / compatibility surface 保留；因为机器合同仍引用这些固定路径，本轮只修正入口定位，不移动合同引用路径
+- 参考与历史：`docs/references/`、`docs/history/`

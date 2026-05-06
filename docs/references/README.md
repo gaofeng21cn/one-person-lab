@@ -13,7 +13,7 @@ If you need to understand what `OPL` is today, go back to:
 - [architecture.md](../architecture.md)
 - [invariants.md](../invariants.md)
 - [decisions.md](../decisions.md)
-- [2026-04-20 product API boundary design](../specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md)
+- current runtime / product-boundary specs under [`docs/specs/`](../specs/)
 
 ## 1. Convergence And Status Alignment
 
@@ -92,10 +92,14 @@ If you need to understand what `OPL` is today, go back to:
 - `../gateway-federation.zh-CN.md`
 - `../opl-federation-contract.md`
 - `../opl-federation-contract.zh-CN.md`
+- `../opl-read-only-discovery-gateway.md`
+- `../opl-read-only-discovery-gateway.zh-CN.md`
 - `../opl-routed-action-gateway.md`
 - `../opl-routed-action-gateway.zh-CN.md`
 - `../../contracts/opl-gateway/README.md`
 - `../../contracts/opl-gateway/README.zh-CN.md`
+
+These prose files remain in `docs/` because tracked machine-readable compatibility matrices still name those paths. Treat their location as a path-compatibility constraint, not as active-layer promotion.
 
 ## 6. Retired Frontdoor-Era And Historical Migration References
 

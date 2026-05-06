@@ -14,7 +14,7 @@
 - [架构](../architecture.md)
 - [硬约束](../invariants.md)
 - [关键决策](../decisions.md)
-- [OPL Product API 与 Domain Agent 边界设计](../specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md)
+- [`docs/specs/`](../specs/) 下当前仍生效的 runtime / product-boundary 规格
 
 当前归档路线：
 
