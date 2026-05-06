@@ -9,7 +9,7 @@
 - `Family External Orchestration Learning Board` 已成为外部 agent / orchestration 学习的默认入口：`docs/references/family-external-orchestration-learning-board-2026-04-30.md`。新 source 只允许归入 `adopt_family_contract`、`adopt_domain_template`、`watch_only`、`reject` 或 `saturated`，不能把学习结果只留在对话里。
 - `OPL Runtime Manager` 已冻结为 thin product-managed adapter：它管理外部 `Hermes-Agent` runtime substrate / online-management gateway 的 provision、profile、task registration、诊断、恢复入口、Rust native helper catalog 与高频状态索引，但不承担 scheduler/session/memory kernel。
 - `Codex` 是唯一默认交互与执行宿主；`Hermes-Agent` 保留为外部 runtime substrate 与 online-management gateway，只在显式切换或长跑托管语境中参与执行。
-- 当前活跃实现是三个独立 `domain agent` 仓：`MAS`、`MAG`、`RCA`；其中 `MAS` 在 v2 alignment 下继续作为独立医学科研 domain agent，并以单一 MAS domain app skill 接入 `Codex` / `OPL`。thesis 与 review 模块保持定义阶段。
+- 当前活跃实现是三个独立 `domain agent` 仓：`MAS`、`MAG`、`RCA`；其中 `MAS` 在 v2 alignment 下继续作为独立医学科研 domain agent，并以单一 MAS domain app skill 接入 `Codex` / `OPL`。IP、Award、Thesis 与 Review Foundry 均保持定义阶段。
 - `OPL` 在 MAS v2 alignment 中只持有统一定义、shared module/contract/index 注册、模块发现和 MAS-owned projection 的消费面；`MAS` 继续持有医学科研 runtime、controller truth、quality authority、publication gate 与研究交付真相。
 - `MDS` 继续是 `MAS` 的隐藏 runtime/backend companion；它可以被安装、检查和修复为 MAS 依赖，但不进入 OPL 顶层 agent 列表，也不升级为单独 OPL-managed domain agent。
 
@@ -70,6 +70,8 @@
 | `Research Foundry` | `MAS / Med Auto Science` | 医学科研、证据整理、稿件交付 | 活跃 |
 | `Grant Foundry` | `MAG / Med Auto Grant` | 基金方向判断、申请书写作、修订工作 | 活跃 |
 | `Presentation Foundry` | `RCA / RedCube AI` | 汇报、讲课、幻灯片与视觉交付 | 活跃 |
+| `IP Foundry` | `Med Auto Patent` planned | 专利申请、技术交底、权利要求、实施例整理 | 定义阶段 |
+| `Award Foundry` | `Med Auto Award` planned | 科技进步奖、自然科学奖、成果奖和荣誉材料 | 定义阶段 |
 | `Thesis Foundry` | Planned | 学位论文装配与答辩准备 | 定义阶段 |
 | `Review Foundry` | Planned | 审稿、回复与修回 | 定义阶段 |
 
