@@ -81,7 +81,7 @@
 - AI / 维护者核心工作集保持在 `project / architecture / invariants / decisions / status`。
 - 默认公开文档保持在 `README*` 与 `docs/README*`。
 - `contracts/` 只保留机器可读合同面。
-- `docs/references/` 承接参考级配套文档；`docs/specs/` 与 `docs/plans/` 承接设计与计划记录；`docs/history/` 承接历史归档。
+- `docs/references/` 承接参考级配套文档；`docs/specs/` 只保留当前 active runtime / product-boundary 规格；`docs/history/` 承接历史归档与过程计划记录。
 - 历史 `gateway / federation / routed-action` 语料已经退到 reference / compatibility 层，不再作为默认实现依据。
 - 旧本地 Product API / UI-adapter 公开语义已经退出当前主线，只保留在参考或历史层。
 - 本地 Product API projection 已退役，避免把历史 adapter 面误导成当前产品主线。

@@ -104,6 +104,7 @@ If you need to understand what `OPL` is today, go back to:
 - `opl-frontdoor-delivery-board.md`
 - [Frontdoor legacy archive](../history/frontdoor-legacy/README.md)
 - [OMX historical archive](../history/omx/README.md)
+- [Process history archive](../history/process/README.md)
 
 ## Usage Rules
 
@@ -111,6 +112,7 @@ If you need to understand what `OPL` is today, go back to:
 - `series-doc-governance-checklist.md` is the repo-scoped governance checklist for keeping this repository aligned with the four-repo series; the dated sync summary records one concrete cross-repo intake round.
 - `four-repo-doc-intake-template.md` is the reusable central intake form for documenting scope, affected repositories, verification, and cleanup across a cross-repo docs round.
 - New reference docs should be filed into the six buckets above.
+- Completed one-off plans, generated process specs, and superseded design drafts should move to [Process history](../history/process/README.md), not stay in active reference or specs layers.
 - Retired gateway/federation corpus stays here or in the paired compatibility surfaces and must not be treated as the current implementation basis.
 - Retired `frontdoor`-era material stays here for audit only and must not be treated as the current implementation basis.
 - Retired OMX-era prompt, longrun, and worktree material has been removed from active references; use the historical archive only as a tombstone, not as an execution guide.

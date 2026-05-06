@@ -156,13 +156,13 @@ The current reference implementation grows out of a medical research lab, but OP
 每份中文镜像文档顶部都必须加：
 
 ```md
-[English](./<english-file>.md) | **中文**
+`English` | **中文**
 ```
 
 每份英文文档顶部都必须加：
 
 ```md
-**English** | [中文](./<file>.zh-CN.md)
+**English** | `中文`
 ```
 
 - [ ] **Step 2: 保持中文镜像结构与英文版等价**

@@ -32,7 +32,7 @@
 - 修改：`docs/roadmap.md`
 - 修改：`docs/roadmap.zh-CN.md`
 - 新增：`docs/specs/2026-04-21-opl-acp-native-runtime-and-shell-projection-design.md`
-- 新增：`docs/plans/2026-04-21-opl-acp-native-runtime-first-implementation.md`
+- 归档：`docs/history/process/plans/2026-04-21-opl-acp-native-runtime-first-implementation.md`
 
 验收：
 
@@ -139,4 +139,3 @@
 - 不先追求与 `Codex App` 完全等像素
 - 不让 `AionUI` 重新定义 `OPL` 的 canonical runtime
 - 不再维护旧 GUI 备线路线
-

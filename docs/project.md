@@ -75,4 +75,4 @@
 
 - 顶层叙事：`docs/roadmap*`、`docs/task-map*`、`docs/gateway-federation*`、`docs/operating-model*`
 - 公开合同：`contracts/opl-gateway/*.json` 与配套 README
-- 参考与历史：`docs/references/`、`docs/specs/`、`docs/plans/`、`docs/history/`
+- 参考与历史：`docs/references/`、`docs/specs/` 下的当前规格、`docs/history/`

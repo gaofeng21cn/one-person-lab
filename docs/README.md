@@ -28,7 +28,7 @@ Admitted domain repositories keep their own agent logic, runtime rules, progress
 | --- | --- | --- |
 | Users | [Repository Home](../README.md) | Install OPL, start the GUI or web entry, and choose Codex or a domain agent for work |
 | Technical readers and planners | [Project](./project.md), [Status](./status.md), [Architecture](./architecture.md), [Invariants](./invariants.md), [Decisions](./decisions.md), [Contracts Overview](../contracts/README.md) | Recover the active boundary, the runtime model, and the admitted-domain split |
-| Developers and maintainers | [Reference Index](./references/README.md), `docs/specs/`, `docs/plans/`, [History Archive](./history/README.md) | Inspect supporting material, compatibility notes, and retired lanes |
+| Developers and maintainers | [Reference Index](./references/README.md), current specs under `docs/specs/`, [Process History](./history/process/README.md), [History Archive](./history/README.md) | Inspect active specs, supporting material, compatibility notes, and retired lanes |
 
 ## Fast Technical Working Set
 
@@ -105,8 +105,7 @@ It is repo-tracked supporting material, not the default implementation basis.
 Layer 4 is tracked working history.
 It explains how or why a freeze happened, while [Status](./status.md) remains the active baseline surface.
 
-- `docs/specs/`
-- `docs/plans/`
+- [Process History](./history/process/README.md)
 - [History Archive](./history/README.md)
 
 ## Where Current Truth Lives
@@ -116,7 +115,7 @@ It explains how or why a freeze happened, while [Status](./status.md) remains th
 - Linked domain capability surfaces: the admitted domain repositories plus `opl skill sync`
 - Legacy gateway/federation compatibility corpus: `contracts/opl-gateway/*.json` and the paired gateway docs
 - Reference-grade supporting material: [Reference Index](./references/README.md)
-- Historical and retired lanes: [History Archive](./history/README.md)
+- Historical and retired lanes: [History Archive](./history/README.md) and [Process History](./history/process/README.md)
 
 ## Documentation Rules
 

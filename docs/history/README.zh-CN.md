@@ -18,5 +18,6 @@
 
 当前归档路线：
 
+- [过程历史归档](./process/README.zh-CN.md)
 - [Frontdoor 历史资料](./frontdoor-legacy/README.md)
 - [OMX 历史资料](./omx/README.zh-CN.md)
