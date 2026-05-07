@@ -99,6 +99,7 @@ Do not add new loose Markdown files under `docs/references/` unless they are REA
 - [Family domain quality projection contract](./operating-governance/family-domain-quality-projection-contract.md)
 - [Family incident learning loop](./operating-governance/family-incident-learning-loop.md)
 - [Family product operator projection](./operating-governance/family-product-operator-projection.md)
+- [OPL family directory governance](./operating-governance/opl-family-directory-governance.zh-CN.md)
 - [OPL governance audit operating surface](./operating-governance/opl-governance-audit-operating-surface.md)
 - [OPL publish promotion operating surface](./operating-governance/opl-publish-promotion-operating-surface.md)
 - [OPL surface authority matrix](./operating-governance/opl-surface-authority-matrix.md)
