@@ -384,13 +384,17 @@ export function buildInternalCommandSpecs(
       usage: 'opl mcp-stdio',
       summary: 'Retired Product API MCP bridge command.',
       examples: ['opl mcp-stdio'],
-      handler: () => buildRetiredCommandError('mcp-stdio', 'Product API MCP bridge is retired; use the OPL GUI / AionUI WebUI path instead.'),
+      handler: () => {
+        throw buildRetiredCommandError('mcp-stdio', 'Product API MCP bridge is retired; use the OPL GUI / AionUI WebUI path instead.');
+      },
     },
     web: {
       usage: 'opl web',
       summary: 'Retired local Product API web server command.',
       examples: ['opl web'],
-      handler: () => buildRetiredCommandError('web', 'Local Product API web server is retired; use the OPL GUI / AionUI WebUI path instead.'),
+      handler: () => {
+        throw buildRetiredCommandError('web', 'Local Product API web server is retired; use the OPL GUI / AionUI WebUI path instead.');
+      },
     },
     'session runtime': {
       usage: 'opl session runtime --acp',

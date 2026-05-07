@@ -157,6 +157,49 @@ const fakeFamilySkillDescriptions: Record<string, string> = {
   rca: 'Operate RedCube AI as the formal RCA visual-deliverable domain app through product-entry, recoverable deliverable runtime, and same-session continuation contracts.',
 };
 
+const retiredCliCommandMatrix = [
+  {
+    args: ['ask', 'Plan the next paper submission steps.'],
+    command: 'opl ask',
+    replacements: [/opl exec/, /opl skill sync/],
+  },
+  {
+    args: ['chat', 'Plan the next paper submission steps.'],
+    command: 'opl chat',
+    replacements: [/opl skill sync/],
+  },
+  {
+    args: ['shell'],
+    command: 'opl shell',
+    replacements: [/opl skill sync/],
+  },
+  {
+    args: ['@mas', 'tighten the manuscript argument around invasive phenotype findings'],
+    command: 'opl @mas',
+    replacements: [/opl skill sync/],
+  },
+  {
+    args: ['@mag', 'Draft a grant revision response pack.', '--dry-run'],
+    command: 'opl @mag',
+    replacements: [/opl skill sync/],
+  },
+  {
+    args: ['@rca', 'Prepare a defense-ready slide deck.', '--dry-run'],
+    command: 'opl @rca',
+    replacements: [/opl skill sync/],
+  },
+  {
+    args: ['web'],
+    command: 'web',
+    replacements: [/OPL GUI \/ AionUI WebUI path/],
+  },
+  {
+    args: ['mcp-stdio'],
+    command: 'mcp-stdio',
+    replacements: [/OPL GUI \/ AionUI WebUI path/],
+  },
+];
+
 function createFakeFamilySkillWorkspace(captureDir: string) {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-skills-'));
   const specs = [
@@ -340,7 +383,7 @@ exit 0
   }
 });
 
-test('installed opl launcher routes retired ask chat and shell commands into CLI usage errors', () => {
+test('installed opl launcher routes retired commands into CLI usage errors without Codex passthrough', () => {
   const capturePath = path.join(os.tmpdir(), `opl-launcher-retired-capture-${process.pid}.txt`);
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
 printf '%s\\n' "$@" > ${JSON.stringify(capturePath)}
@@ -349,26 +392,15 @@ exit 0
 `);
 
   try {
-    const ask = runEntryPathFailure(binPath, ['ask', 'Plan the next paper submission steps.'], {
-      OPL_CODEX_BIN: codexPath,
-    });
-    assert.equal(ask.status, 2);
-    assert.match(ask.payload.error.message, /Command "opl ask" has been retired/);
-    assert.equal(fs.existsSync(capturePath), false);
-
-    const chat = runEntryPathFailure(binPath, ['chat', 'Plan the next paper submission steps.'], {
-      OPL_CODEX_BIN: codexPath,
-    });
-    assert.equal(chat.status, 2);
-    assert.match(chat.payload.error.message, /Command "opl chat" has been retired/);
-    assert.equal(fs.existsSync(capturePath), false);
-
-    const shell = runEntryPathFailure(binPath, ['shell'], {
-      OPL_CODEX_BIN: codexPath,
-    });
-    assert.equal(shell.status, 2);
-    assert.match(shell.payload.error.message, /Command "opl shell" has been retired/);
-    assert.equal(fs.existsSync(capturePath), false);
+    for (const retired of retiredCliCommandMatrix) {
+      const failure = runEntryPathFailure(binPath, retired.args, {
+        OPL_CODEX_BIN: codexPath,
+      });
+      assert.equal(failure.status, 2);
+      assert.equal(failure.payload.error.code, 'cli_usage_error');
+      assert.match(failure.payload.error.message, new RegExp(`Command "${retired.command}" has been retired`));
+      assert.equal(fs.existsSync(capturePath), false);
+    }
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(capturePath, { force: true });
@@ -678,33 +710,16 @@ exit 1
   }
 });
 
-test('ask chat and shell are retired in favor of opl, opl exec, and opl skill sync', () => {
-  const ask = runCliFailure(['ask', 'Plan the next paper submission steps.']);
-  assert.equal(ask.status, 2);
-  assert.equal(ask.payload.error.code, 'cli_usage_error');
-  assert.match(ask.payload.error.message, /Command "opl ask" has been retired/);
-  assert.match(ask.payload.error.message, /opl exec/);
-  assert.match(ask.payload.error.message, /opl skill sync/);
-
-  const chat = runCliFailure(['chat', 'Plan the next paper submission steps.']);
-  assert.equal(chat.status, 2);
-  assert.equal(chat.payload.error.code, 'cli_usage_error');
-  assert.match(chat.payload.error.message, /Command "opl chat" has been retired/);
-  assert.match(chat.payload.error.message, /opl skill sync/);
-
-  const shell = runCliFailure(['shell']);
-  assert.equal(shell.status, 2);
-  assert.equal(shell.payload.error.code, 'cli_usage_error');
-  assert.match(shell.payload.error.message, /Command "opl shell" has been retired/);
-  assert.match(shell.payload.error.message, /opl skill sync/);
-});
-
-test('top-level @agent aliases are retired in favor of skill sync plus plain Codex entry', () => {
-  const retired = runCliFailure(['@mas', 'tighten the manuscript argument around invasive phenotype findings']);
-  assert.equal(retired.status, 2);
-  assert.equal(retired.payload.error.code, 'cli_usage_error');
-  assert.match(retired.payload.error.message, /Command "opl @mas" has been retired/);
-  assert.match(retired.payload.error.message, /opl skill sync/);
+test('retired command aliases fail closed in favor of Codex-default shell and skill sync', () => {
+  for (const retired of retiredCliCommandMatrix) {
+    const failure = runCliFailure(retired.args);
+    assert.equal(failure.status, 2);
+    assert.equal(failure.payload.error.code, 'cli_usage_error');
+    assert.match(failure.payload.error.message, new RegExp(`Command "${retired.command}" has been retired`));
+    for (const replacement of retired.replacements) {
+      assert.match(failure.payload.error.message, replacement);
+    }
+  }
 });
 
 test('help text advertises Codex as the default entry and lists opl exec without retired aliases', () => {
