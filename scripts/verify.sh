@@ -6,8 +6,17 @@ lane="${1:-smoke}"
 node scripts/line-budget.mjs
 
 case "$lane" in
-  smoke|fast)
-    npm test
+  smoke)
+    npm run test:smoke
+    ;;
+  fast|meta)
+    npm run test:fast
+    ;;
+  regression)
+    npm run test:regression
+    ;;
+  integration)
+    npm run test:integration
     ;;
   structure)
     ./scripts/run-structural-quality-gate.sh
@@ -20,9 +29,6 @@ case "$lane" in
       python/opl-harness-shared/tests/test_editable_dependency_bootstrap.py \
       python/opl-harness-shared/tests/test_editable_consumer_bootstrap.py \
       python/opl-harness-shared/tests/test_editable_consumer_launcher.py
-    ;;
-  meta)
-    npm run test:meta
     ;;
   fresh-install)
     npm run test:fresh-install
@@ -53,7 +59,7 @@ case "$lane" in
     ;;
   *)
     echo "Unknown lane: $lane" >&2
-    echo "Usage: scripts/verify.sh [smoke|fast|structure|family|meta|fresh-install|artifact|native|full|lint|line-budget|typecheck]" >&2
+    echo "Usage: scripts/verify.sh [smoke|fast|regression|integration|structure|family|meta|fresh-install|artifact|native|full|lint|line-budget|typecheck]" >&2
     exit 1
     ;;
 esac
