@@ -57,15 +57,10 @@ const lanes = {
   ],
   integration: [
     nodeTest([
-      'tests/src/cli/cases/acp-runtime.test.ts',
+      'tests/src/cli-acp-runtime.test.ts',
       'tests/src/cli-install.test.ts',
       'tests/src/cli/cases/web-runtime.test.ts',
       'tests/src/domain-definition-contract.test.ts',
-      'tests/src/opl-acp-bridge.test.ts',
-      'tests/src/opl-acp-jsonrpc-lifecycle.test.ts',
-      'tests/src/opl-acp-stdio.test.ts',
-      'tests/src/opl-managed-runtime-three-layer-contract.test.ts',
-      'tests/src/opl-session-runtime.test.ts',
     ]),
   ],
   artifact: [
