@@ -23,10 +23,10 @@
       "two_admitted_domain_surfaces_stable_enough_for_stronger_federation": {
         "status": "met",
         "repo_evidence": [
-          "docs/references/ecosystem-status-matrix.md",
-          "docs/references/runtime-alignment-taskboard.md",
-          "docs/roadmap.md",
-          "contracts/opl-gateway/README.md"
+          "human_doc:ecosystem_status_matrix",
+          "human_doc:runtime_alignment_taskboard",
+          "human_doc:roadmap",
+          "human_doc:opl_gateway_contracts_overview"
         ],
         "basis_summary": [
           "MedAutoScience remains the admitted Research Foundry domain gateway and has absorbed its integration harness activation baseline on main.",
@@ -43,8 +43,8 @@
       "activation_role": "admitted_stable_domain_surface",
       "stability_basis": "repo-side activation baseline absorbed; remaining blockers sit outside OPL truth ownership",
       "repo_evidence": [
-        "docs/references/ecosystem-status-matrix.md",
-        "docs/references/runtime-alignment-taskboard.md"
+        "human_doc:ecosystem_status_matrix",
+        "human_doc:runtime_alignment_taskboard"
       ]
     },
     {
@@ -53,8 +53,8 @@
       "activation_role": "admitted_stable_domain_surface",
       "stability_basis": "repo-side source-intake plus shared-source-truth baseline absorbed; formal entry stays stable at MCP/CLI",
       "repo_evidence": [
-        "docs/references/ecosystem-status-matrix.md",
-        "docs/references/runtime-alignment-taskboard.md"
+        "human_doc:ecosystem_status_matrix",
+        "human_doc:runtime_alignment_taskboard"
       ]
     }
   ],

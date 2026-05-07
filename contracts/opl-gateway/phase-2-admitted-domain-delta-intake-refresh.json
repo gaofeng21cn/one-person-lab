@@ -20,10 +20,10 @@
     }
   ],
   "in_scope": [
-    "docs/references/contract-convergence-v1-execution-board.md",
-    "docs/references/ecosystem-status-matrix.md",
-    "docs/references/runtime-alignment-taskboard.md",
-    "docs/references/opl-phase2-ecosystem-sync-owner-line.md"
+    "human_doc:contract_convergence_v1_execution_board",
+    "human_doc:ecosystem_status_matrix",
+    "human_doc:runtime_alignment_taskboard",
+    "human_doc:opl_phase2_ecosystem_sync_owner_line"
   ],
   "out_of_scope": [
     "public OPL runtime-owner promotion",

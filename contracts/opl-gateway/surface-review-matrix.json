@@ -62,10 +62,10 @@
       "cross_domain_wording_check": "shared_gate_required",
       "publishability_stage": "top_level_positioning_aligned",
       "governing_refs": [
-        "README.md",
-        "README.zh-CN.md",
-        "docs/gateway-federation.md",
-        "docs/gateway-federation.zh-CN.md"
+        "human_doc:repository_home",
+        "human_doc:repository_home_zh_cn",
+        "human_doc:gateway_federation",
+        "human_doc:gateway_federation_zh_cn"
       ]
     },
     {
@@ -84,10 +84,10 @@
       "cross_domain_wording_check": "shared_gate_required",
       "publishability_stage": "top_level_positioning_aligned",
       "governing_refs": [
-        "docs/roadmap.md",
-        "docs/roadmap.zh-CN.md",
-        "docs/references/opl-gateway-rollout.md",
-        "docs/references/opl-gateway-rollout.zh-CN.md"
+        "human_doc:roadmap",
+        "human_doc:roadmap_zh_cn",
+        "human_doc:opl_gateway_rollout",
+        "human_doc:opl_gateway_rollout_zh_cn"
       ]
     },
     {
@@ -107,12 +107,12 @@
       "cross_domain_wording_check": "shared_gate_required",
       "publishability_stage": "top_level_positioning_aligned",
       "governing_refs": [
-        "docs/references/opl-gateway-rollout.md",
-        "docs/references/opl-gateway-rollout.zh-CN.md",
-        "docs/opl-read-only-discovery-gateway.md",
-        "docs/opl-read-only-discovery-gateway.zh-CN.md",
-        "docs/opl-routed-action-gateway.md",
-        "docs/opl-routed-action-gateway.zh-CN.md"
+        "human_doc:opl_gateway_rollout",
+        "human_doc:opl_gateway_rollout_zh_cn",
+        "human_doc:opl_read_only_discovery_gateway",
+        "human_doc:opl_read_only_discovery_gateway_zh_cn",
+        "human_doc:opl_routed_action_gateway",
+        "human_doc:opl_routed_action_gateway_zh_cn"
       ]
     },
     {
@@ -134,8 +134,8 @@
       "cross_domain_wording_check": "shared_gate_required",
       "publishability_stage": "top_level_positioning_aligned",
       "governing_refs": [
-        "docs/task-map.md",
-        "docs/task-map.zh-CN.md",
+        "human_doc:task_map",
+        "human_doc:task_map_zh_cn",
         "contracts/opl-gateway/task-topology.json"
       ]
     },
@@ -156,8 +156,8 @@
       "cross_domain_wording_check": "shared_gate_required",
       "publishability_stage": "top_level_positioning_aligned",
       "governing_refs": [
-        "docs/operating-model.md",
-        "docs/operating-model.zh-CN.md"
+        "human_doc:operating_model",
+        "human_doc:operating_model_zh_cn"
       ]
     },
     {
@@ -177,8 +177,8 @@
       "cross_domain_wording_check": "shared_gate_required",
       "publishability_stage": "top_level_positioning_aligned",
       "governing_refs": [
-        "docs/shared-foundation.md",
-        "docs/shared-foundation.zh-CN.md"
+        "human_doc:shared_foundation",
+        "human_doc:shared_foundation_zh_cn"
       ]
     },
     {
@@ -199,8 +199,8 @@
       "cross_domain_wording_check": "shared_gate_required",
       "publishability_stage": "contract_boundary_aligned",
       "governing_refs": [
-        "docs/shared-foundation-ownership.md",
-        "docs/shared-foundation-ownership.zh-CN.md"
+        "human_doc:shared_foundation_ownership",
+        "human_doc:shared_foundation_ownership_zh_cn"
       ]
     },
     {
@@ -218,8 +218,8 @@
       "cross_domain_wording_check": "local_review_required",
       "publishability_stage": "contract_boundary_aligned",
       "governing_refs": [
-        "docs/opl-federation-contract.md",
-        "docs/opl-federation-contract.zh-CN.md",
+        "human_doc:opl_federation_contract",
+        "human_doc:opl_federation_contract_zh_cn",
         "contracts/opl-gateway/workstreams.json",
         "contracts/opl-gateway/domains.json",
         "contracts/opl-gateway/routing-vocabulary.json"
@@ -260,8 +260,8 @@
       "cross_domain_wording_check": "shared_gate_required",
       "publishability_stage": "contract_boundary_aligned",
       "governing_refs": [
-        "contracts/opl-gateway/README.md",
-        "contracts/opl-gateway/README.zh-CN.md",
+        "human_doc:opl_gateway_contracts_overview",
+        "human_doc:opl_gateway_contracts_overview_zh_cn",
         "contracts/opl-gateway/acceptance-matrix.json",
         "contracts/opl-gateway/public-surface-index.json"
       ]
@@ -282,8 +282,8 @@
       "cross_domain_wording_check": "local_review_required",
       "publishability_stage": "contract_boundary_aligned",
       "governing_refs": [
-        "docs/opl-read-only-discovery-gateway.md",
-        "docs/opl-read-only-discovery-gateway.zh-CN.md",
+        "human_doc:opl_read_only_discovery_gateway",
+        "human_doc:opl_read_only_discovery_gateway_zh_cn",
         "contracts/opl-gateway/workstreams.json",
         "contracts/opl-gateway/domains.json",
         "contracts/opl-gateway/routing-vocabulary.json"
@@ -306,8 +306,8 @@
       "cross_domain_wording_check": "local_review_required",
       "publishability_stage": "contract_boundary_aligned",
       "governing_refs": [
-        "docs/opl-routed-action-gateway.md",
-        "docs/opl-routed-action-gateway.zh-CN.md",
+        "human_doc:opl_routed_action_gateway",
+        "human_doc:opl_routed_action_gateway_zh_cn",
         "contracts/opl-gateway/routed-actions.schema.json",
         "contracts/opl-gateway/handoff.schema.json"
       ]
@@ -329,8 +329,8 @@
       "cross_domain_wording_check": "local_review_required",
       "publishability_stage": "contract_boundary_aligned",
       "governing_refs": [
-        "docs/opl-domain-onboarding-contract.md",
-        "docs/opl-domain-onboarding-contract.zh-CN.md",
+        "human_doc:opl_domain_onboarding_contract",
+        "human_doc:opl_domain_onboarding_contract_zh_cn",
         "contracts/opl-gateway/domain-onboarding-readiness.schema.json"
       ]
     },
@@ -353,12 +353,12 @@
       "cross_domain_wording_check": "shared_gate_required",
       "publishability_stage": "supporting_reference_aligned",
       "governing_refs": [
-        "docs/references/opl-candidate-domain-backlog.md",
-        "docs/references/opl-candidate-domain-backlog.zh-CN.md",
+        "human_doc:opl_candidate_domain_backlog",
+        "human_doc:opl_candidate_domain_backlog_zh_cn",
         "contracts/opl-gateway/candidate-domain-backlog.json",
         "contracts/opl-gateway/task-topology.json",
-        "docs/opl-domain-onboarding-contract.md",
-        "docs/opl-domain-onboarding-contract.zh-CN.md"
+        "human_doc:opl_domain_onboarding_contract",
+        "human_doc:opl_domain_onboarding_contract_zh_cn"
       ]
     },
     {
@@ -380,8 +380,8 @@
       "cross_domain_wording_check": "shared_gate_required",
       "publishability_stage": "supporting_reference_aligned",
       "governing_refs": [
-        "docs/references/opl-phase-1-exit-activation-package.md",
-        "docs/references/opl-phase-1-exit-activation-package.zh-CN.md",
+        "human_doc:opl_phase_1_exit_activation_package",
+        "human_doc:opl_phase_1_exit_activation_package_zh_cn",
         "contracts/opl-gateway/phase-1-exit-activation-package.json"
       ]
     },
@@ -402,8 +402,8 @@
       "cross_domain_wording_check": "local_review_required",
       "publishability_stage": "contract_boundary_aligned",
       "governing_refs": [
-        "docs/references/opl-governance-audit-operating-surface.md",
-        "docs/references/opl-governance-audit-operating-surface.zh-CN.md",
+        "human_doc:opl_governance_audit_operating_surface",
+        "human_doc:opl_governance_audit_operating_surface_zh_cn",
         "contracts/opl-gateway/governance-audit.schema.json"
       ]
     },
@@ -425,8 +425,8 @@
       "cross_domain_wording_check": "shared_gate_required",
       "publishability_stage": "supporting_reference_aligned",
       "governing_refs": [
-        "docs/references/opl-minimal-admitted-domain-federation-activation-package.md",
-        "docs/references/opl-minimal-admitted-domain-federation-activation-package.zh-CN.md",
+        "human_doc:opl_minimal_admitted_domain_federation_activation_package",
+        "human_doc:opl_minimal_admitted_domain_federation_activation_package_zh_cn",
         "contracts/opl-gateway/minimal-admitted-domain-federation-activation-package.json"
       ]
     },
@@ -447,8 +447,8 @@
       "cross_domain_wording_check": "local_review_required",
       "publishability_stage": "contract_boundary_aligned",
       "governing_refs": [
-        "docs/references/opl-publish-promotion-operating-surface.md",
-        "docs/references/opl-publish-promotion-operating-surface.zh-CN.md",
+        "human_doc:opl_publish_promotion_operating_surface",
+        "human_doc:opl_publish_promotion_operating_surface_zh_cn",
         "contracts/opl-gateway/publish-promotion.schema.json"
       ]
     },
@@ -470,8 +470,8 @@
       "cross_domain_wording_check": "shared_gate_required",
       "publishability_stage": "supporting_reference_aligned",
       "governing_refs": [
-        "docs/references/opl-gateway-example-corpus.md",
-        "docs/references/opl-gateway-example-corpus.zh-CN.md",
+        "human_doc:opl_gateway_example_corpus",
+        "human_doc:opl_gateway_example_corpus_zh_cn",
         "examples/opl-gateway/research-ops-submission.json",
         "examples/opl-gateway/presentation-ops-publish.json"
       ]
@@ -492,8 +492,8 @@
       "cross_domain_wording_check": "shared_gate_required",
       "publishability_stage": "supporting_reference_aligned",
       "governing_refs": [
-        "docs/references/opl-routed-safety-example-corpus.md",
-        "docs/references/opl-routed-safety-example-corpus.zh-CN.md",
+        "human_doc:opl_routed_safety_example_corpus",
+        "human_doc:opl_routed_safety_example_corpus_zh_cn",
         "examples/opl-gateway/ambiguous-task-routing.json",
         "examples/opl-gateway/unknown-domain-routing.json",
         "examples/opl-gateway/refusal-routing.json"
@@ -517,8 +517,8 @@
       "cross_domain_wording_check": "shared_gate_required",
       "publishability_stage": "supporting_reference_aligned",
       "governing_refs": [
-        "docs/references/opl-operating-example-corpus.md",
-        "docs/references/opl-operating-example-corpus.zh-CN.md",
+        "human_doc:opl_operating_example_corpus",
+        "human_doc:opl_operating_example_corpus_zh_cn",
         "examples/opl-gateway/governance-decision-record.json",
         "examples/opl-gateway/cross-domain-review-index.json",
         "examples/opl-gateway/publish-readiness-signal.json",
@@ -546,8 +546,8 @@
       "cross_domain_wording_check": "shared_gate_required",
       "publishability_stage": "supporting_reference_aligned",
       "governing_refs": [
-        "docs/references/opl-operating-record-catalog.md",
-        "docs/references/opl-operating-record-catalog.zh-CN.md",
+        "human_doc:opl_operating_record_catalog",
+        "human_doc:opl_operating_record_catalog_zh_cn",
         "contracts/opl-gateway/operating-record-catalog.json"
       ]
     },
@@ -570,8 +570,8 @@
       "cross_domain_wording_check": "shared_gate_required",
       "publishability_stage": "supporting_reference_aligned",
       "governing_refs": [
-        "docs/references/opl-surface-lifecycle-map.md",
-        "docs/references/opl-surface-lifecycle-map.zh-CN.md",
+        "human_doc:opl_surface_lifecycle_map",
+        "human_doc:opl_surface_lifecycle_map_zh_cn",
         "contracts/opl-gateway/surface-lifecycle-map.json"
       ]
     },
@@ -594,8 +594,8 @@
       "cross_domain_wording_check": "shared_gate_required",
       "publishability_stage": "supporting_reference_aligned",
       "governing_refs": [
-        "docs/references/opl-surface-authority-matrix.md",
-        "docs/references/opl-surface-authority-matrix.zh-CN.md",
+        "human_doc:opl_surface_authority_matrix",
+        "human_doc:opl_surface_authority_matrix_zh_cn",
         "contracts/opl-gateway/surface-authority-matrix.json"
       ]
     },
@@ -621,8 +621,8 @@
       "cross_domain_wording_check": "shared_gate_required",
       "publishability_stage": "supporting_reference_aligned",
       "governing_refs": [
-        "docs/opl-public-surface-index.md",
-        "docs/opl-public-surface-index.zh-CN.md",
+        "human_doc:opl_public_surface_index",
+        "human_doc:opl_public_surface_index_zh_cn",
         "contracts/opl-gateway/public-surface-index.json"
       ]
     },
@@ -660,8 +660,8 @@
       "cross_domain_wording_check": "local_review_required",
       "publishability_stage": "acceptance_reference_aligned",
       "governing_refs": [
-        "docs/references/opl-gateway-acceptance-test-spec.md",
-        "docs/references/opl-gateway-acceptance-test-spec.zh-CN.md",
+        "human_doc:opl_gateway_acceptance_test_spec",
+        "human_doc:opl_gateway_acceptance_test_spec_zh_cn",
         "contracts/opl-gateway/acceptance-matrix.json"
       ]
     }

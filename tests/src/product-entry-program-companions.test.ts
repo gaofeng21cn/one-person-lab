@@ -165,7 +165,7 @@ test('product entry program companions normalize preflight and detailed readines
       { executor_kind: 'hermes_native_proof', readiness: 'pending' },
     ],
     promotion_rules: ['no backend retirement claim without proof'],
-    deconstruction_map_doc: 'docs/program/med_deepscientist_deconstruction_map.md',
+    deconstruction_map_doc: 'human_doc:med_deepscientist_deconstruction_map',
     recommended_phase_command: 'uv run python -m med_autoscience.cli mainline-phase --phase phase_4_backend_deconstruction',
   });
   assert.equal(backendLane.surface_kind, 'phase4_backend_deconstruction_lane');

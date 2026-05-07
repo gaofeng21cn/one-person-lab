@@ -42,7 +42,7 @@ curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/ins
 
 After installation, open `One Person Lab.app` and start general work, medical research, grant writing, or presentation/PPT work from the same interface. The App reuses the setup done by `opl install`, including any supported Hermes runtime already installed locally; it only asks for configuration when a required core dependency cannot be installed or detected automatically.
 
-Need Docker, Linux, or server deployment? See the [Docker and browser deployment reference](./docs/references/opl-docker-webui-deployment.md).
+Need Docker, Linux, or server deployment? See the [Docker and browser deployment reference](./docs/references/current-support/opl-docker-webui-deployment.md).
 
 ## Current Product Families
 

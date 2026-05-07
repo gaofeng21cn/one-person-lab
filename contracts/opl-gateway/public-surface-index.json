@@ -54,13 +54,13 @@
       ],
       "refs": [
         {
-          "ref_kind": "repo_path",
-          "ref": "README.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:repository_home",
           "language": "en"
         },
         {
-          "ref_kind": "repo_path",
-          "ref": "README.zh-CN.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:repository_home_zh_cn",
           "language": "zh-CN"
         }
       ],
@@ -114,13 +114,13 @@
       ],
       "refs": [
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/roadmap.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:roadmap",
           "language": "en"
         },
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/roadmap.zh-CN.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:roadmap_zh_cn",
           "language": "zh-CN"
         }
       ],
@@ -151,13 +151,13 @@
       ],
       "refs": [
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/references/opl-gateway-rollout.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_gateway_rollout",
           "language": "en"
         },
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/references/opl-gateway-rollout.zh-CN.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_gateway_rollout_zh_cn",
           "language": "zh-CN"
         }
       ],
@@ -191,13 +191,13 @@
       ],
       "refs": [
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/task-map.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:task_map",
           "language": "en"
         },
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/task-map.zh-CN.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:task_map_zh_cn",
           "language": "zh-CN"
         },
         {
@@ -240,13 +240,13 @@
       ],
       "refs": [
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/gateway-federation.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:gateway_federation",
           "language": "en"
         },
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/gateway-federation.zh-CN.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:gateway_federation_zh_cn",
           "language": "zh-CN"
         }
       ],
@@ -284,13 +284,13 @@
       ],
       "refs": [
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/operating-model.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:operating_model",
           "language": "en"
         },
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/operating-model.zh-CN.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:operating_model_zh_cn",
           "language": "zh-CN"
         }
       ],
@@ -326,13 +326,13 @@
       ],
       "refs": [
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/shared-foundation.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:shared_foundation",
           "language": "en"
         },
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/shared-foundation.zh-CN.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:shared_foundation_zh_cn",
           "language": "zh-CN"
         }
       ],
@@ -369,13 +369,13 @@
       ],
       "refs": [
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/shared-foundation-ownership.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:shared_foundation_ownership",
           "language": "en"
         },
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/shared-foundation-ownership.zh-CN.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:shared_foundation_ownership_zh_cn",
           "language": "zh-CN"
         }
       ],
@@ -408,13 +408,13 @@
       ],
       "refs": [
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/opl-federation-contract.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_federation_contract",
           "language": "en"
         },
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/opl-federation-contract.zh-CN.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_federation_contract_zh_cn",
           "language": "zh-CN"
         }
       ],
@@ -450,13 +450,13 @@
       ],
       "refs": [
         {
-          "ref_kind": "repo_path",
-          "ref": "contracts/opl-gateway/README.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_gateway_contracts_overview",
           "language": "en"
         },
         {
-          "ref_kind": "repo_path",
-          "ref": "contracts/opl-gateway/README.zh-CN.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_gateway_contracts_overview_zh_cn",
           "language": "zh-CN"
         },
         {
@@ -584,13 +584,13 @@
       ],
       "refs": [
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/opl-read-only-discovery-gateway.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_read_only_discovery_gateway",
           "language": "en"
         },
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/opl-read-only-discovery-gateway.zh-CN.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_read_only_discovery_gateway_zh_cn",
           "language": "zh-CN"
         }
       ],
@@ -620,13 +620,13 @@
       ],
       "refs": [
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/opl-routed-action-gateway.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_routed_action_gateway",
           "language": "en"
         },
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/opl-routed-action-gateway.zh-CN.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_routed_action_gateway_zh_cn",
           "language": "zh-CN"
         }
       ],
@@ -651,13 +651,13 @@
       "domain_ids": [],
       "refs": [
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/opl-domain-onboarding-contract.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_domain_onboarding_contract",
           "language": "en"
         },
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/opl-domain-onboarding-contract.zh-CN.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_domain_onboarding_contract_zh_cn",
           "language": "zh-CN"
         },
         {
@@ -690,13 +690,13 @@
       "domain_ids": [],
       "refs": [
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/references/opl-candidate-domain-backlog.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_candidate_domain_backlog",
           "language": "en"
         },
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/references/opl-candidate-domain-backlog.zh-CN.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_candidate_domain_backlog_zh_cn",
           "language": "zh-CN"
         },
         {
@@ -737,13 +737,13 @@
       ],
       "refs": [
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/references/opl-phase-1-exit-activation-package.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_phase_1_exit_activation_package",
           "language": "en"
         },
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/references/opl-phase-1-exit-activation-package.zh-CN.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_phase_1_exit_activation_package_zh_cn",
           "language": "zh-CN"
         },
         {
@@ -780,13 +780,13 @@
       ],
       "refs": [
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/references/opl-minimal-admitted-domain-federation-activation-package.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_minimal_admitted_domain_federation_activation_package",
           "language": "en"
         },
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/references/opl-minimal-admitted-domain-federation-activation-package.zh-CN.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_minimal_admitted_domain_federation_activation_package_zh_cn",
           "language": "zh-CN"
         },
         {
@@ -822,13 +822,13 @@
       ],
       "refs": [
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/references/opl-governance-audit-operating-surface.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_governance_audit_operating_surface",
           "language": "en"
         },
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/references/opl-governance-audit-operating-surface.zh-CN.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_governance_audit_operating_surface_zh_cn",
           "language": "zh-CN"
         }
       ],
@@ -860,13 +860,13 @@
       ],
       "refs": [
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/references/opl-publish-promotion-operating-surface.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_publish_promotion_operating_surface",
           "language": "en"
         },
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/references/opl-publish-promotion-operating-surface.zh-CN.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_publish_promotion_operating_surface_zh_cn",
           "language": "zh-CN"
         }
       ],
@@ -898,13 +898,13 @@
       ],
       "refs": [
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/references/opl-gateway-acceptance-test-spec.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_gateway_acceptance_test_spec",
           "language": "en"
         },
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/references/opl-gateway-acceptance-test-spec.zh-CN.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_gateway_acceptance_test_spec_zh_cn",
           "language": "zh-CN"
         }
       ],
@@ -941,13 +941,13 @@
       ],
       "refs": [
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/references/opl-gateway-example-corpus.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_gateway_example_corpus",
           "language": "en"
         },
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/references/opl-gateway-example-corpus.zh-CN.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_gateway_example_corpus_zh_cn",
           "language": "zh-CN"
         },
         {
@@ -980,13 +980,13 @@
       "domain_ids": [],
       "refs": [
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/references/opl-routed-safety-example-corpus.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_routed_safety_example_corpus",
           "language": "en"
         },
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/references/opl-routed-safety-example-corpus.zh-CN.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_routed_safety_example_corpus_zh_cn",
           "language": "zh-CN"
         },
         {
@@ -1024,13 +1024,13 @@
       ],
       "refs": [
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/references/opl-operating-example-corpus.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_operating_example_corpus",
           "language": "en"
         },
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/references/opl-operating-example-corpus.zh-CN.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_operating_example_corpus_zh_cn",
           "language": "zh-CN"
         },
         {
@@ -1088,13 +1088,13 @@
       ],
       "refs": [
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/references/opl-operating-record-catalog.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_operating_record_catalog",
           "language": "en"
         },
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/references/opl-operating-record-catalog.zh-CN.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_operating_record_catalog_zh_cn",
           "language": "zh-CN"
         },
         {
@@ -1130,13 +1130,13 @@
       ],
       "refs": [
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/references/opl-surface-lifecycle-map.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_surface_lifecycle_map",
           "language": "en"
         },
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/references/opl-surface-lifecycle-map.zh-CN.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_surface_lifecycle_map_zh_cn",
           "language": "zh-CN"
         },
         {
@@ -1182,13 +1182,13 @@
       ],
       "refs": [
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/references/opl-surface-authority-matrix.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_surface_authority_matrix",
           "language": "en"
         },
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/references/opl-surface-authority-matrix.zh-CN.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_surface_authority_matrix_zh_cn",
           "language": "zh-CN"
         },
         {
@@ -1237,13 +1237,13 @@
       ],
       "refs": [
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/references/opl-surface-review-matrix.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_surface_review_matrix",
           "language": "en"
         },
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/references/opl-surface-review-matrix.zh-CN.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_surface_review_matrix_zh_cn",
           "language": "zh-CN"
         },
         {
@@ -1280,13 +1280,13 @@
       ],
       "refs": [
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/opl-public-surface-index.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_public_surface_index",
           "language": "en"
         },
         {
-          "ref_kind": "repo_path",
-          "ref": "docs/opl-public-surface-index.zh-CN.md",
+          "ref_kind": "human_doc_surface",
+          "ref": "human_doc:opl_public_surface_index_zh_cn",
           "language": "zh-CN"
         }
       ],

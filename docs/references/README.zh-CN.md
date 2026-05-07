@@ -17,19 +17,22 @@
 
 ## 一、统一收敛与状态对齐
 
-- [GUI 主线切换到 AionUI](./2026-04-21-gui-mainline-pivot-to-aionui.md)
-- [OPL GUI Shell Adapter 边界说明](./opl-gui-shell-adapter-boundary.zh-CN.md)
-- [OPL Fresh Install 与 GUI 首启测试参考](./opl-fresh-install-and-gui-first-launch-testing.zh-CN.md)
-- [Docker WebUI 部署参考](./opl-docker-webui-deployment.zh-CN.md)
-- [OPL 默认 Skill 生态参考](./opl-default-skill-ecosystem.zh-CN.md)
-- [OPL Release 与 Packages 模块化分发参考](./opl-release-packages-modular-distribution.zh-CN.md)
-- [OPL quality details 参考](./opl-quality-details.md)
+- [GUI 主线切换到 AionUI](./convergence-governance/2026-04-21-gui-mainline-pivot-to-aionui.md)
+- [Contract convergence v1 决策记录](./convergence-governance/contract-convergence-v1-decision-note.md)
+- [Family shared release 维护参考](./convergence-governance/family-shared-release-maintenance.md)
+- [Family 用户侧成熟度路线图](./convergence-governance/family-user-facing-maturity-roadmap.md)
+- [四仓文档同步摘要，2026-04-14](./convergence-governance/four-repo-doc-series-sync-summary-2026-04-14.md)
+- [OPL 定位演化与收敛经验参考](./convergence-governance/opl-positioning-convergence-lessons.zh-CN.md)
+- [OPL GUI Shell Adapter 边界说明](./current-support/opl-gui-shell-adapter-boundary.zh-CN.md)
+- [OPL Fresh Install 与 GUI 首启测试参考](./current-support/opl-fresh-install-and-gui-first-launch-testing.zh-CN.md)
+- [Docker WebUI 部署参考](./current-support/opl-docker-webui-deployment.zh-CN.md)
+- [OPL 默认 Skill 生态参考](./current-support/opl-default-skill-ecosystem.zh-CN.md)
+- [OPL Release 与 Packages 模块化分发参考](./current-support/opl-release-packages-modular-distribution.zh-CN.md)
+- [OPL quality details 参考](./current-support/opl-quality-details.md)
 - `series-doc-governance-checklist.md`
-- `four-repo-doc-series-sync-summary-2026-04-14.md`
 - `four-repo-doc-intake-template.md`
 - `contract-convergence-v1-execution-board.md`
 - `ecosystem-status-matrix.md`
-- `family-user-facing-maturity-roadmap.md`
 - `four-repo-executor-follow-up-and-hermes-evaluation.md`
 - [中央 federation 参考面对齐看板](./opl-phase-2-central-reference-sync-board.md)
 - [已收录 domain 增量 intake 刷新记录](./opl-phase-2-admitted-domain-delta-intake-refresh.md)
@@ -37,10 +40,11 @@
 
 ## 二、运行时 / 底座 / 迁移参考
 
-- `family-shared-release-maintenance.md`
 - `host-agent-runtime-contract.md`
-- `managed-runtime-migration-readiness-checklist.md`
-- [OPL Runtime Manager 目标形态](./opl-runtime-manager-target.md)
+- [Hermes-Agent truth reset 与目标状态](./runtime-substrate/hermes-agent-truth-reset-and-target-state.md)
+- [Managed runtime migration readiness checklist](./runtime-substrate/managed-runtime-migration-readiness-checklist.md)
+- [OPL managed runtime 三层合同](./runtime-substrate/opl-managed-runtime-three-layer-contract.zh-CN.md)
+- [OPL Runtime Manager 目标形态](./runtime-substrate/opl-runtime-manager-target.md)
 - `hermes-agent-runtime-substrate-benchmark.md`
 - `family-executor-adapter-defaults.md`
 - `hermes-agent-executor-evaluation.md`
@@ -50,7 +54,6 @@
 - `mas-top-level-cutover-board.md`
 - `opl-product-entry-and-hermes-kernel-integration.md`
 - `opl-vertical-online-agent-platform-roadmap.md`
-- `contract-convergence-v1-decision-note.md`
 
 ## 三、网关 / 收录 / 接口审计参考
 
@@ -99,7 +102,7 @@
 - `../../contracts/opl-gateway/README.md`
 - `../../contracts/opl-gateway/README.zh-CN.md`
 
-这些叙述文件仍留在 `docs/`，是因为仓库跟踪的机器可读兼容矩阵仍引用这些路径。它们的位置只表示路径兼容约束，不表示重新提升到活跃层。
+这些叙述文件仍留在 `docs/`，用于审计和历史兼容。机器可读合同、测试、脚本和 runtime dashboard 应引用 contract/schema/source surface 或语义化 `human_doc:*` 标识，不应把这些叙述文档路径钉成稳定机读接口。
 
 ## 六、已退役 frontdoor 时代与历史迁移参考
 
@@ -116,6 +119,7 @@
 - `series-doc-governance-checklist.md` 是当前仓与四仓系列项目保持一致时使用的仓级治理清单；带日期的同步摘要负责记录某一次具体跨仓梳理与对齐结果。
 - `four-repo-doc-intake-template.md` 是可复用的中央协调表单，用来记录跨仓文档轮次的范围、受影响仓、验证结果与清理状态。
 - 新参考文档优先按上面的六类归档。
+- `docs/**` 与 `README*` 默认是人读材料。不要让脚本、合同、测试或 runtime dashboard 依赖它们的具体路径；需要跨层引用时使用稳定合同文件或语义 surface id。
 - 已完成的一次性计划、生成型过程 specs 和被取代的设计草稿应迁入 [过程历史归档](../history/process/README.zh-CN.md)，不要继续留在 active reference 或 specs 层。
 - 已退役的 gateway / federation 语料只用于历史审计、兼容性检查和 schema 追溯，不能再作为当前实现依据。
 - 已退役的 `frontdoor` 时代材料只用于历史审计，不能再作为当前实现依据。
