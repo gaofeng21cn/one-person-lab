@@ -358,6 +358,7 @@ export function buildPublicCommandSpecs(
     chat: cloneCommandSpec(commandSpecs.chat, { group: 'legacy' }),
     shell: cloneCommandSpec(commandSpecs.shell, { group: 'legacy' }),
     web: cloneCommandSpec(commandSpecs.web, { group: 'legacy' }),
+    'mcp-stdio': cloneCommandSpec(commandSpecs['mcp-stdio'], { group: 'legacy' }),
     'status workspace': cloneCommandSpec(commandSpecs['status workspace'], {
       usage: 'opl status workspace [--path <workspace_path>]',
       examples: ['opl status workspace', 'opl status workspace --path /Users/gaofeng/workspace/redcube-ai'],
