@@ -42,7 +42,7 @@ curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/ins
 
 安装后打开 `One Person Lab.app`，选择工作目录，就可以在同一个界面里开始通用工作、医学研究、基金写作或汇报/PPT 工作。App 会复用 `opl install` 已完成的设置，包括本机已有的受支持 Hermes runtime；只有核心依赖无法自动安装或识别时才提示用户处理。
 
-需要 Docker、Linux 或服务器部署时，跳转到 [Docker 与浏览器部署参考](./docs/references/opl-docker-webui-deployment.md)。
+需要 Docker、Linux 或服务器部署时，跳转到 [Docker 与浏览器部署参考](./docs/references/current-support/opl-docker-webui-deployment.md)。
 
 ## 当前产品家族
 

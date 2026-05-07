@@ -40,7 +40,7 @@ These files give the fastest read on the current repo-tracked truth before you c
 - [Invariants](./invariants.md)
 - [Decisions](./decisions.md)
 - [Contracts Overview](../contracts/README.md)
-- [OPL Runtime Manager Target](./references/opl-runtime-manager-target.md)
+- [OPL Runtime Manager Target](./references/runtime-substrate/opl-runtime-manager-target.md)
 
 ## The Four-Layer Docs System
 
@@ -85,12 +85,12 @@ Layer 3 holds review, audit, rollout, benchmark, migration, and retired contract
 It is repo-tracked supporting material, not the default implementation basis.
 
 - [Reference Index](./references/README.md)
-- [OPL Runtime Manager target](./references/opl-runtime-manager-target.md)
-- [Docker WebUI deployment reference](./references/opl-docker-webui-deployment.md)
-- [OPL GUI shell adapter boundary](./references/opl-gui-shell-adapter-boundary.zh-CN.md)
-- [OPL fresh install and GUI first-launch testing](./references/opl-fresh-install-and-gui-first-launch-testing.zh-CN.md)
-- [OPL default skill ecosystem reference](./references/opl-default-skill-ecosystem.md)
-- [OPL release and Packages modular distribution reference](./references/opl-release-packages-modular-distribution.zh-CN.md)
+- [OPL Runtime Manager target](./references/runtime-substrate/opl-runtime-manager-target.md)
+- [Docker WebUI deployment reference](./references/current-support/opl-docker-webui-deployment.md)
+- [OPL GUI shell adapter boundary](./references/current-support/opl-gui-shell-adapter-boundary.zh-CN.md)
+- [OPL fresh install and GUI first-launch testing](./references/current-support/opl-fresh-install-and-gui-first-launch-testing.zh-CN.md)
+- [OPL default skill ecosystem reference](./references/current-support/opl-default-skill-ecosystem.md)
+- [OPL release and Packages modular distribution reference](./references/current-support/opl-release-packages-modular-distribution.zh-CN.md)
 - [Shared Foundation](./shared-foundation.md) and [Shared Foundation Ownership](./shared-foundation-ownership.md) are retained as shared-boundary references; they support the current model but are not the fastest active implementation basis.
 - product-runtime and executor reference notes
 - [Shared Runtime Contract](./shared-runtime-contract.md), [Shared Domain Contract](./shared-domain-contract.md), and [OPL Runtime Naming And Boundary Contract](./opl-runtime-naming-and-boundary-contract.md) are retained as shared-boundary reference documents; their `gateway / harness` wording is compatibility language under the current domain-agent model.
@@ -122,4 +122,5 @@ It explains how or why a freeze happened, while [Status](./status.md) remains th
 - Keep active public docs bilingual.
 - Keep Layer 3 reference-grade and explicit about compatibility vs current truth.
 - Keep Layer 4 as tracked working history.
+- Treat `docs/**` and `README*` as human-readable surfaces: scripts, contracts, tests, and runtime dashboards should use contract files, schema files, source files, CLI/API behavior, or semantic `human_doc:*` ids instead of pinning prose document paths.
 - When a change affects public wording, contracts, or admitted-domain state, update docs, contracts, and related verification together.

@@ -14,7 +14,7 @@
     "thesis_ops, review_ops, ip_ops, and award_ops remain under definition until explicit domain boundaries are frozen and admitted through the onboarding gate",
     "under-definition workstreams may list delivery objects and reusable assets without becoming admitted domains, discovery targets, or handoff-ready routed-action targets; at most they may surface as unknown_domain outcomes when top-level semantics are clear, and any future successful handoff remains domain_gateway-only with the no-bypass rule intact",
     "future admission or alignment requires a declared stable agent runtime surface plus a shared-base Auto/Human-in-the-loop convergence path; otherwise the workstream remains under definition / deferred",
-    "task topology complements docs/task-map.md, workstreams.json, and the onboarding contract; it does not replace them"
+    "task topology complements human_doc:task_map, workstreams.json, and the onboarding contract; it does not replace them"
   ],
   "shared_foundation_reuse": [
     "datasets_and_figures",

@@ -165,9 +165,18 @@ exit 1
     assert.equal(output.dashboard.domain_manifests.summary.resolved_count, 0);
     assert.equal(output.dashboard.workspace.absolute_path, repoRoot);
     assert.equal(output.dashboard.runtime_status.recent_sessions.sessions.length, 1);
-    assert.deepEqual(output.dashboard.gui_runtime.rollout_board_refs, [
-      'docs/references/family-lightweight-direct-entry-rollout-board.md',
-      'docs/references/mas-top-level-cutover-board.md',
+    assert.equal('rollout_board_refs' in output.dashboard.gui_runtime, false);
+    assert.deepEqual(output.dashboard.gui_runtime.rollout_board_surfaces, [
+      {
+        surface_id: 'family_lightweight_direct_entry_rollout_board',
+        ref_kind: 'human_doc_surface',
+        lifecycle: 'reference',
+      },
+      {
+        surface_id: 'mas_top_level_cutover_board',
+        ref_kind: 'human_doc_surface',
+        lifecycle: 'reference',
+      },
     ]);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });

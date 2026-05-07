@@ -189,9 +189,17 @@ export function buildOplDashboard(
         recommended_entry_surfaces: recommendedEntrySurfaces,
         next_major_target: 'opl_acp_runtime_hardening',
         runtime_endpoints: endpoints,
-        rollout_board_refs: [
-          'docs/references/family-lightweight-direct-entry-rollout-board.md',
-          'docs/references/mas-top-level-cutover-board.md',
+        rollout_board_surfaces: [
+          {
+            surface_id: 'family_lightweight_direct_entry_rollout_board',
+            ref_kind: 'human_doc_surface',
+            lifecycle: 'reference',
+          },
+          {
+            surface_id: 'mas_top_level_cutover_board',
+            ref_kind: 'human_doc_surface',
+            lifecycle: 'reference',
+          },
         ],
         notes: [
           'OPL no longer ships a local 8787 Product API service; GUI/WebUI integration belongs to the OPL-branded AionUI shell path.',

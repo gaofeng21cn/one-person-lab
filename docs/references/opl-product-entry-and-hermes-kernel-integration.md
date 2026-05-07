@@ -253,7 +253,7 @@
 
 对应的当前 GUI 实施依据见：
 
-- `docs/references/2026-04-21-gui-mainline-pivot-to-aionui.md`
+- `docs/references/convergence-governance/2026-04-21-gui-mainline-pivot-to-aionui.md`
 - sibling repo `opl-aion-shell`
 
 ## 9. 一句话结论

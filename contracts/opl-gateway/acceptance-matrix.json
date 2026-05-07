@@ -26,10 +26,7 @@
     {
       "gate_id": "g2_discovery_correctness",
       "layer": "g2",
-      "required_files": [
-        "docs/opl-read-only-discovery-gateway.md",
-        "docs/opl-read-only-discovery-gateway.zh-CN.md"
-      ],
+      "required_files": [],
       "contract_assertions": [
         "discovery is read-only",
         "list_surfaces/get_surface are defined",
@@ -47,8 +44,6 @@
       "gate_id": "g3_routing_safety",
       "layer": "g3",
       "required_files": [
-        "docs/opl-routed-action-gateway.md",
-        "docs/opl-routed-action-gateway.zh-CN.md",
         "contracts/opl-gateway/routed-actions.schema.json"
       ],
       "contract_assertions": [
@@ -66,8 +61,6 @@
       "gate_id": "domain_onboarding_gate",
       "layer": "onboarding",
       "required_files": [
-        "docs/opl-domain-onboarding-contract.md",
-        "docs/opl-domain-onboarding-contract.zh-CN.md",
         "contracts/opl-gateway/domain-onboarding-readiness.schema.json",
         "examples/opl-gateway/domain-onboarding-readiness.json"
       ],
@@ -90,8 +83,6 @@
       "gate_id": "p5_m1_governance_audit_integrity",
       "layer": "p5.m1",
       "required_files": [
-        "docs/references/opl-governance-audit-operating-surface.md",
-        "docs/references/opl-governance-audit-operating-surface.zh-CN.md",
         "contracts/opl-gateway/governance-audit.schema.json"
       ],
       "contract_assertions": [
@@ -109,8 +100,6 @@
       "gate_id": "p5_m2_publish_promotion_integrity",
       "layer": "p5.m2",
       "required_files": [
-        "docs/references/opl-publish-promotion-operating-surface.md",
-        "docs/references/opl-publish-promotion-operating-surface.zh-CN.md",
         "contracts/opl-gateway/publish-promotion.schema.json"
       ],
       "contract_assertions": [
@@ -128,8 +117,6 @@
       "gate_id": "p7_example_corpus_integrity",
       "layer": "p7",
       "required_files": [
-        "docs/references/opl-gateway-example-corpus.md",
-        "docs/references/opl-gateway-example-corpus.zh-CN.md",
         "examples/opl-gateway/research-ops-submission.json",
         "examples/opl-gateway/presentation-ops-publish.json"
       ],
@@ -151,23 +138,9 @@
       "layer": "p8",
       "required_files": [
         "contracts/opl-gateway/public-surface-index.json",
-        "docs/opl-public-surface-index.md",
-        "docs/opl-public-surface-index.zh-CN.md",
         "contracts/opl-gateway/candidate-domain-backlog.json",
-        "docs/references/opl-candidate-domain-backlog.md",
-        "docs/references/opl-candidate-domain-backlog.zh-CN.md",
-        "docs/operating-model.md",
-        "docs/operating-model.zh-CN.md",
-        "docs/shared-foundation.md",
-        "docs/shared-foundation.zh-CN.md",
-        "docs/shared-foundation-ownership.md",
-        "docs/shared-foundation-ownership.zh-CN.md",
         "contracts/opl-gateway/phase-1-exit-activation-package.json",
-        "docs/references/opl-phase-1-exit-activation-package.md",
-        "docs/references/opl-phase-1-exit-activation-package.zh-CN.md",
-        "contracts/opl-gateway/minimal-admitted-domain-federation-activation-package.json",
-        "docs/references/opl-minimal-admitted-domain-federation-activation-package.md",
-        "docs/references/opl-minimal-admitted-domain-federation-activation-package.zh-CN.md"
+        "contracts/opl-gateway/minimal-admitted-domain-federation-activation-package.json"
       ],
       "contract_assertions": [
         "public-surface index remains machine-readable and non-executing",
@@ -195,8 +168,6 @@
       "gate_id": "p10_routed_safety_example_integrity",
       "layer": "p10",
       "required_files": [
-        "docs/references/opl-routed-safety-example-corpus.md",
-        "docs/references/opl-routed-safety-example-corpus.zh-CN.md",
         "examples/opl-gateway/ambiguous-task-routing.json",
         "examples/opl-gateway/unknown-domain-routing.json",
         "examples/opl-gateway/refusal-routing.json"
@@ -218,21 +189,13 @@
       "gate_id": "p12_operating_example_integrity",
       "layer": "p12",
       "required_files": [
-        "docs/references/opl-operating-example-corpus.md",
-        "docs/references/opl-operating-example-corpus.zh-CN.md",
         "examples/opl-gateway/governance-decision-record.json",
         "examples/opl-gateway/cross-domain-review-index.json",
         "examples/opl-gateway/publish-readiness-signal.json",
         "examples/opl-gateway/publish-outcome-index.json",
         "examples/opl-gateway/promotion-candidate-signal.json",
         "examples/opl-gateway/promotion-surface-index.json",
-        "contracts/opl-gateway/public-surface-index.json",
-        "docs/opl-public-surface-index.md",
-        "docs/opl-public-surface-index.zh-CN.md",
-        "docs/references/opl-gateway-acceptance-test-spec.md",
-        "docs/references/opl-gateway-acceptance-test-spec.zh-CN.md",
-        "contracts/opl-gateway/README.md",
-        "contracts/opl-gateway/README.zh-CN.md"
+        "contracts/opl-gateway/public-surface-index.json"
       ],
       "contract_assertions": [
         "operating-example corpus remains illustrative, non-governing, and non-executing",
@@ -253,15 +216,7 @@
       "layer": "p13",
       "required_files": [
         "contracts/opl-gateway/operating-record-catalog.json",
-        "docs/references/opl-operating-record-catalog.md",
-        "docs/references/opl-operating-record-catalog.zh-CN.md",
-        "contracts/opl-gateway/public-surface-index.json",
-        "docs/opl-public-surface-index.md",
-        "docs/opl-public-surface-index.zh-CN.md",
-        "docs/references/opl-gateway-acceptance-test-spec.md",
-        "docs/references/opl-gateway-acceptance-test-spec.zh-CN.md",
-        "contracts/opl-gateway/README.md",
-        "contracts/opl-gateway/README.zh-CN.md"
+        "contracts/opl-gateway/public-surface-index.json"
       ],
       "contract_assertions": [
         "operating-record catalog covers all frozen P5.M1/P5.M2 record kinds",
@@ -281,33 +236,11 @@
       "layer": "p14",
       "required_files": [
         "contracts/opl-gateway/surface-lifecycle-map.json",
-        "docs/references/opl-surface-lifecycle-map.md",
-        "docs/references/opl-surface-lifecycle-map.zh-CN.md",
         "contracts/opl-gateway/public-surface-index.json",
-        "docs/opl-public-surface-index.md",
-        "docs/opl-public-surface-index.zh-CN.md",
-        "docs/references/opl-gateway-acceptance-test-spec.md",
-        "docs/references/opl-gateway-acceptance-test-spec.zh-CN.md",
-        "contracts/opl-gateway/README.md",
-        "contracts/opl-gateway/README.zh-CN.md",
         "contracts/opl-gateway/operating-record-catalog.json",
-        "docs/references/opl-operating-record-catalog.md",
-        "docs/references/opl-operating-record-catalog.zh-CN.md",
         "contracts/opl-gateway/candidate-domain-backlog.json",
-        "docs/references/opl-candidate-domain-backlog.md",
-        "docs/references/opl-candidate-domain-backlog.zh-CN.md",
-        "docs/operating-model.md",
-        "docs/operating-model.zh-CN.md",
-        "docs/shared-foundation.md",
-        "docs/shared-foundation.zh-CN.md",
-        "docs/shared-foundation-ownership.md",
-        "docs/shared-foundation-ownership.zh-CN.md",
         "contracts/opl-gateway/phase-1-exit-activation-package.json",
-        "docs/references/opl-phase-1-exit-activation-package.md",
-        "docs/references/opl-phase-1-exit-activation-package.zh-CN.md",
-        "contracts/opl-gateway/minimal-admitted-domain-federation-activation-package.json",
-        "docs/references/opl-minimal-admitted-domain-federation-activation-package.md",
-        "docs/references/opl-minimal-admitted-domain-federation-activation-package.zh-CN.md"
+        "contracts/opl-gateway/minimal-admitted-domain-federation-activation-package.json"
       ],
       "contract_assertions": [
         "surface lifecycle map covers the frozen gateway, operating, and supporting surfaces needed for current top-level traversal",
@@ -333,32 +266,10 @@
         "contracts/opl-gateway/surface-authority-matrix.json",
         "contracts/opl-gateway/surface-lifecycle-map.json",
         "contracts/opl-gateway/domains.json",
-        "docs/references/opl-surface-authority-matrix.md",
-        "docs/references/opl-surface-authority-matrix.zh-CN.md",
         "contracts/opl-gateway/public-surface-index.json",
-        "docs/opl-public-surface-index.md",
-        "docs/opl-public-surface-index.zh-CN.md",
-        "docs/references/opl-surface-lifecycle-map.md",
-        "docs/references/opl-surface-lifecycle-map.zh-CN.md",
-        "docs/references/opl-gateway-acceptance-test-spec.md",
-        "docs/references/opl-gateway-acceptance-test-spec.zh-CN.md",
-        "contracts/opl-gateway/README.md",
-        "contracts/opl-gateway/README.zh-CN.md",
         "contracts/opl-gateway/candidate-domain-backlog.json",
-        "docs/references/opl-candidate-domain-backlog.md",
-        "docs/references/opl-candidate-domain-backlog.zh-CN.md",
-        "docs/operating-model.md",
-        "docs/operating-model.zh-CN.md",
-        "docs/shared-foundation.md",
-        "docs/shared-foundation.zh-CN.md",
-        "docs/shared-foundation-ownership.md",
-        "docs/shared-foundation-ownership.zh-CN.md",
         "contracts/opl-gateway/phase-1-exit-activation-package.json",
-        "docs/references/opl-phase-1-exit-activation-package.md",
-        "docs/references/opl-phase-1-exit-activation-package.zh-CN.md",
-        "contracts/opl-gateway/minimal-admitted-domain-federation-activation-package.json",
-        "docs/references/opl-minimal-admitted-domain-federation-activation-package.md",
-        "docs/references/opl-minimal-admitted-domain-federation-activation-package.zh-CN.md"
+        "contracts/opl-gateway/minimal-admitted-domain-federation-activation-package.json"
       ],
       "contract_assertions": [
         "authority matrix covers the frozen OPL surfaces plus linked domain public-entry surfaces needed for current authority review",
@@ -382,34 +293,10 @@
       "layer": "p16",
       "required_files": [
         "contracts/opl-gateway/surface-review-matrix.json",
-        "docs/references/opl-surface-review-matrix.md",
-        "docs/references/opl-surface-review-matrix.zh-CN.md",
         "contracts/opl-gateway/public-surface-index.json",
-        "docs/opl-public-surface-index.md",
-        "docs/opl-public-surface-index.zh-CN.md",
-        "docs/references/opl-surface-lifecycle-map.md",
-        "docs/references/opl-surface-lifecycle-map.zh-CN.md",
-        "docs/references/opl-surface-authority-matrix.md",
-        "docs/references/opl-surface-authority-matrix.zh-CN.md",
-        "docs/references/opl-gateway-acceptance-test-spec.md",
-        "docs/references/opl-gateway-acceptance-test-spec.zh-CN.md",
-        "contracts/opl-gateway/README.md",
-        "contracts/opl-gateway/README.zh-CN.md",
         "contracts/opl-gateway/candidate-domain-backlog.json",
-        "docs/references/opl-candidate-domain-backlog.md",
-        "docs/references/opl-candidate-domain-backlog.zh-CN.md",
-        "docs/operating-model.md",
-        "docs/operating-model.zh-CN.md",
-        "docs/shared-foundation.md",
-        "docs/shared-foundation.zh-CN.md",
-        "docs/shared-foundation-ownership.md",
-        "docs/shared-foundation-ownership.zh-CN.md",
         "contracts/opl-gateway/phase-1-exit-activation-package.json",
-        "docs/references/opl-phase-1-exit-activation-package.md",
-        "docs/references/opl-phase-1-exit-activation-package.zh-CN.md",
-        "contracts/opl-gateway/minimal-admitted-domain-federation-activation-package.json",
-        "docs/references/opl-minimal-admitted-domain-federation-activation-package.md",
-        "docs/references/opl-minimal-admitted-domain-federation-activation-package.zh-CN.md"
+        "contracts/opl-gateway/minimal-admitted-domain-federation-activation-package.json"
       ],
       "contract_assertions": [
         "surface review matrix covers the frozen OPL public, contract, and supporting surfaces needed for current human-review and publishability inspection",
@@ -438,21 +325,7 @@
         "contracts/opl-gateway/domains.json",
         "contracts/opl-gateway/public-surface-index.json",
         "contracts/opl-gateway/surface-review-matrix.json",
-        "contracts/opl-gateway/README.md",
-        "contracts/opl-gateway/README.zh-CN.md",
-        "docs/task-map.md",
-        "docs/task-map.zh-CN.md",
-        "docs/opl-public-surface-index.md",
-        "docs/opl-public-surface-index.zh-CN.md",
-        "docs/references/opl-surface-review-matrix.md",
-        "docs/references/opl-surface-review-matrix.zh-CN.md",
-        "docs/references/opl-gateway-acceptance-test-spec.md",
-        "docs/references/opl-gateway-acceptance-test-spec.zh-CN.md",
-        "contracts/opl-gateway/candidate-domain-backlog.json",
-        "docs/references/opl-candidate-domain-backlog.md",
-        "docs/references/opl-candidate-domain-backlog.zh-CN.md",
-        "docs/opl-domain-onboarding-contract.md",
-        "docs/opl-domain-onboarding-contract.zh-CN.md"
+        "contracts/opl-gateway/candidate-domain-backlog.json"
       ],
       "contract_assertions": [
         "task topology covers research_ops, grant_ops, ip_ops, award_ops, thesis_ops, review_ops, and presentation_ops with explicit boundary, registry, and routing states",
@@ -478,26 +351,8 @@
         "contracts/opl-gateway/public-surface-index.json",
         "contracts/opl-gateway/surface-review-matrix.json",
         "contracts/opl-gateway/acceptance-matrix.json",
-        "contracts/opl-gateway/README.md",
-        "contracts/opl-gateway/README.zh-CN.md",
-        "docs/references/opl-candidate-domain-backlog.md",
-        "docs/references/opl-candidate-domain-backlog.zh-CN.md",
-        "docs/task-map.md",
-        "docs/task-map.zh-CN.md",
-        "docs/opl-domain-onboarding-contract.md",
-        "docs/opl-domain-onboarding-contract.zh-CN.md",
-        "docs/opl-public-surface-index.md",
-        "docs/opl-public-surface-index.zh-CN.md",
-        "docs/references/opl-surface-review-matrix.md",
-        "docs/references/opl-surface-review-matrix.zh-CN.md",
-        "docs/references/opl-gateway-acceptance-test-spec.md",
-        "docs/references/opl-gateway-acceptance-test-spec.zh-CN.md",
         "contracts/opl-gateway/surface-lifecycle-map.json",
-        "contracts/opl-gateway/surface-authority-matrix.json",
-        "docs/references/opl-surface-lifecycle-map.md",
-        "docs/references/opl-surface-lifecycle-map.zh-CN.md",
-        "docs/references/opl-surface-authority-matrix.md",
-        "docs/references/opl-surface-authority-matrix.zh-CN.md"
+        "contracts/opl-gateway/surface-authority-matrix.json"
       ],
       "contract_assertions": [
         "candidate-domain backlog covers exactly ip_ops, award_ops, thesis_ops, and review_ops as under-definition workstreams that still require formal domain admission material",
@@ -531,10 +386,6 @@
       "gate_id": "p23_m4_g4_candidate_index_boundary_integrity",
       "layer": "p23.m4/g4",
       "required_files": [
-        "docs/references/opl-gateway-rollout.md",
-        "docs/references/opl-gateway-rollout.zh-CN.md",
-        "docs/references/opl-gateway-acceptance-test-spec.md",
-        "docs/references/opl-gateway-acceptance-test-spec.zh-CN.md",
         "contracts/opl-gateway/acceptance-matrix.json"
       ],
       "contract_assertions": [
@@ -554,51 +405,7 @@
     {
       "gate_id": "cross_domain_wording_consistency",
       "layer": "cross_domain",
-      "required_files": [
-        "README.md",
-        "README.zh-CN.md",
-        "docs/gateway-federation.md",
-        "docs/gateway-federation.zh-CN.md",
-        "docs/roadmap.md",
-        "docs/roadmap.zh-CN.md",
-        "docs/references/opl-gateway-rollout.md",
-        "docs/references/opl-gateway-rollout.zh-CN.md",
-        "docs/references/opl-gateway-example-corpus.md",
-        "docs/references/opl-gateway-example-corpus.zh-CN.md",
-        "docs/references/opl-routed-safety-example-corpus.md",
-        "docs/references/opl-routed-safety-example-corpus.zh-CN.md",
-        "docs/opl-public-surface-index.md",
-        "docs/opl-public-surface-index.zh-CN.md",
-        "contracts/opl-gateway/README.md",
-        "contracts/opl-gateway/README.zh-CN.md",
-        "docs/references/opl-operating-example-corpus.md",
-        "docs/references/opl-operating-example-corpus.zh-CN.md",
-        "docs/references/opl-operating-record-catalog.md",
-        "docs/references/opl-operating-record-catalog.zh-CN.md",
-        "docs/references/ecosystem-status-matrix.md",
-        "docs/references/contract-convergence-v1-execution-board.md",
-        "docs/references/runtime-alignment-taskboard.md",
-        "docs/references/opl-surface-lifecycle-map.md",
-        "docs/references/opl-surface-lifecycle-map.zh-CN.md",
-        "docs/references/opl-surface-authority-matrix.md",
-        "docs/references/opl-surface-authority-matrix.zh-CN.md",
-        "docs/references/opl-surface-review-matrix.md",
-        "docs/references/opl-surface-review-matrix.zh-CN.md",
-        "docs/references/opl-candidate-domain-backlog.md",
-        "docs/references/opl-candidate-domain-backlog.zh-CN.md",
-        "docs/task-map.md",
-        "docs/task-map.zh-CN.md",
-        "docs/operating-model.md",
-        "docs/operating-model.zh-CN.md",
-        "docs/shared-foundation.md",
-        "docs/shared-foundation.zh-CN.md",
-        "docs/shared-foundation-ownership.md",
-        "docs/shared-foundation-ownership.zh-CN.md",
-        "docs/references/opl-phase-1-exit-activation-package.md",
-        "docs/references/opl-phase-1-exit-activation-package.zh-CN.md",
-        "docs/references/opl-minimal-admitted-domain-federation-activation-package.md",
-        "docs/references/opl-minimal-admitted-domain-federation-activation-package.zh-CN.md"
-      ],
+      "required_files": [],
       "contract_assertions": [
         "OPL remains the top-level gateway/federation surface",
         "MedAutoScience remains Research Ops domain gateway/harness",

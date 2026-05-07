@@ -152,7 +152,7 @@
   ],
   "verification_refs": [
     "contracts/opl-gateway/domain-onboarding-readiness.schema.json",
-    "docs/references/family-executor-adapter-defaults.md",
-    "docs/references/four-repo-executor-follow-up-and-hermes-evaluation.md"
+    "human_doc:family_executor_adapter_defaults",
+    "human_doc:four_repo_executor_follow_up_and_hermes_evaluation"
   ]
 }

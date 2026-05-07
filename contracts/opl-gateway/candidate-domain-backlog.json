@@ -53,8 +53,8 @@
       },
       "top_level_signal_refs": [
         "contracts/opl-gateway/task-topology.json#workstreams/thesis_ops",
-        "docs/task-map.md#thesis-ops",
-        "docs/task-map.zh-CN.md#thesis-ops"
+        "human_doc:task_map#thesis_ops",
+        "human_doc:task_map_zh_cn#thesis_ops"
       ],
       "admission_status": "blocked",
       "readiness_flags": {
@@ -338,8 +338,8 @@
       },
       "top_level_signal_refs": [
         "contracts/opl-gateway/task-topology.json#workstreams/review_ops",
-        "docs/task-map.md#review-ops",
-        "docs/task-map.zh-CN.md#review-ops"
+        "human_doc:task_map#review_ops",
+        "human_doc:task_map_zh_cn#review_ops"
       ],
       "admission_status": "blocked",
       "readiness_flags": {
@@ -623,8 +623,8 @@
       },
       "top_level_signal_refs": [
         "contracts/opl-gateway/task-topology.json#workstreams/ip_ops",
-        "docs/task-map.md#ip-ops",
-        "docs/task-map.zh-CN.md#ip-ops"
+        "human_doc:task_map#ip_ops",
+        "human_doc:task_map_zh_cn#ip_ops"
       ],
       "admission_status": "blocked",
       "readiness_flags": {
@@ -908,8 +908,8 @@
       },
       "top_level_signal_refs": [
         "contracts/opl-gateway/task-topology.json#workstreams/award_ops",
-        "docs/task-map.md#award-ops",
-        "docs/task-map.zh-CN.md#award-ops"
+        "human_doc:task_map#award_ops",
+        "human_doc:task_map_zh_cn#award_ops"
       ],
       "admission_status": "blocked",
       "readiness_flags": {

@@ -159,8 +159,8 @@ test('buildFamilyProjectProfileCompanion normalizes family-level project profile
       selection_mode: 'preset',
       summary: '  NSFC preset selected for grant planning and authoring ',
       summary_ref: {
-        ref_kind: 'repo_path',
-        ref: 'docs/presets/nsfc-blueprint.md',
+        ref_kind: 'human_doc_surface',
+        ref: 'human_doc:nsfc_blueprint',
         label: 'NSFC template brief',
       },
     },
@@ -170,8 +170,8 @@ test('buildFamilyProjectProfileCompanion normalizes family-level project profile
     ],
     grounding_refs: [
       {
-        ref_kind: 'repo_path',
-        ref: 'docs/project-profile/selection-context.md',
+        ref_kind: 'human_doc_surface',
+        ref: 'human_doc:project_profile_selection_context',
         label: 'selection context',
       },
     ],
@@ -187,12 +187,12 @@ test('buildFamilyProjectProfileCompanion normalizes family-level project profile
   assert.equal(companion.target_domain_id, 'med-autogrant');
   assert.equal(companion.project_profile.profile_id, 'grant_nsfc_project_profile_v1');
   assert.equal(companion.project_profile.summary, 'NSFC preset selected for grant planning and authoring');
-  assert.equal(companion.project_profile.summary_ref.ref, 'docs/presets/nsfc-blueprint.md');
+  assert.equal(companion.project_profile.summary_ref.ref, 'human_doc:nsfc_blueprint');
   assert.deepEqual(companion.preference_signals, [
     'favor_explicit_scope_freeze',
     'prefer_structured_review_rhythm',
   ]);
-  assert.equal(companion.grounding_refs[0]?.ref, 'docs/project-profile/selection-context.md');
+  assert.equal(companion.grounding_refs[0]?.ref, 'human_doc:project_profile_selection_context');
 });
 
 test('buildFamilyOrchestrationCompanion materializes event envelope and checkpoint lineage', () => {
@@ -541,8 +541,8 @@ test('buildFamilyProductEntryOrchestration passes through project_profile_compan
     preference_signals: ['favor_explicit_scope_freeze'],
     grounding_refs: [
       {
-        ref_kind: 'repo_path',
-        ref: 'docs/project-profile/selection-context.md',
+        ref_kind: 'human_doc_surface',
+        ref: 'human_doc:project_profile_selection_context',
       },
     ],
   });

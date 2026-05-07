@@ -16,6 +16,17 @@ function read(relativePath: string) {
   return fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
 }
 
+function listJsonFiles(relativeDir: string): string[] {
+  const absoluteDir = path.join(repoRoot, relativeDir);
+  return fs.readdirSync(absoluteDir, { withFileTypes: true }).flatMap((entry) => {
+    const relativePath = path.join(relativeDir, entry.name);
+    if (entry.isDirectory()) {
+      return listJsonFiles(relativePath);
+    }
+    return entry.isFile() && entry.name.endsWith('.json') ? [relativePath] : [];
+  });
+}
+
 test('repo hygiene blocks generated tmp artifacts from git', () => {
   const gitignore = read('.gitignore');
   assert.match(gitignore, /^tmp\/$/m);
@@ -79,6 +90,22 @@ test('repo-tracked verification command surfaces reference valid npm scripts and
         `${relativePath} references missing test file: ${filePath}`,
       );
     }
+  }
+});
+
+test('machine-readable gateway contracts do not pin human docs paths', () => {
+  const pinnedHumanDocPathPattern =
+    /\b(?:README(?:\.zh-CN)?\.md|AGENTS\.md|docs\/[A-Za-z0-9_./-]+\.md(?:#[A-Za-z0-9_-]+)?|contracts\/[A-Za-z0-9_./-]+\.md)\b/g;
+
+  for (const relativePath of listJsonFiles('contracts/opl-gateway')) {
+    const content = read(relativePath);
+    const pinnedPaths = content.match(pinnedHumanDocPathPattern) ?? [];
+
+    assert.deepEqual(
+      pinnedPaths,
+      [],
+      `${relativePath} must use machine contract refs or human_doc:* semantic ids instead of pinning prose document paths`,
+    );
   }
 });
 

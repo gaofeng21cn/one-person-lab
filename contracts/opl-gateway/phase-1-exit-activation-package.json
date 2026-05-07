@@ -57,9 +57,9 @@
       "status": "met",
       "depends_on_external_domain_readiness": false,
       "repo_evidence": [
-        "README.md",
-        "docs/roadmap.md",
-        "contracts/opl-gateway/README.md",
+        "human_doc:repository_home",
+        "human_doc:roadmap",
+        "human_doc:opl_gateway_contracts_overview",
         "tests/src/verification-command-surfaces.test.ts"
       ]
     },
@@ -70,9 +70,9 @@
       "repo_evidence": [
         "contracts/opl-gateway/task-topology.json",
         "contracts/opl-gateway/candidate-domain-backlog.json",
-        "docs/task-map.md",
-        "docs/references/opl-candidate-domain-backlog.md",
-        "docs/opl-domain-onboarding-contract.md"
+        "human_doc:task_map",
+        "human_doc:opl_candidate_domain_backlog",
+        "human_doc:opl_domain_onboarding_contract"
       ]
     },
     {
@@ -81,8 +81,8 @@
       "depends_on_external_domain_readiness": false,
       "repo_evidence": [
         "contracts/opl-gateway/phase-1-exit-activation-package.json",
-        "docs/references/opl-phase-1-exit-activation-package.md",
-        "docs/references/opl-phase-1-exit-activation-package.zh-CN.md"
+        "human_doc:opl_phase_1_exit_activation_package",
+        "human_doc:opl_phase_1_exit_activation_package_zh_cn"
       ]
     },
     {
@@ -90,8 +90,8 @@
       "status": "blocked_external",
       "depends_on_external_domain_readiness": true,
       "repo_evidence": [
-        "docs/references/ecosystem-status-matrix.md",
-        "docs/references/runtime-alignment-taskboard.md"
+        "human_doc:ecosystem_status_matrix",
+        "human_doc:runtime_alignment_taskboard"
       ]
     },
     {
@@ -99,10 +99,10 @@
       "status": "met",
       "depends_on_external_domain_readiness": false,
       "repo_evidence": [
-        "AGENTS.md",
-        "README.md",
-        "contracts/opl-gateway/README.md",
-        "docs/references/opl-phase-1-exit-activation-package.md"
+        "human_doc:repo_agent_instructions",
+        "human_doc:repository_home",
+        "human_doc:opl_gateway_contracts_overview",
+        "human_doc:opl_phase_1_exit_activation_package"
       ]
     }
   ],
@@ -146,8 +146,8 @@
         "kind": "external_domain_readiness",
         "detail": "The current repo-tracked four-repo sync still shows `redcube-ai` in `P0 credible green baseline repair`, with active-mainline truth and formal-entry closeout still in progress, so OPL cannot honestly claim that two admitted domain surfaces are already stable enough for a stronger federation tranche.",
         "repo_evidence": [
-          "docs/references/ecosystem-status-matrix.md",
-          "docs/references/runtime-alignment-taskboard.md"
+          "human_doc:ecosystem_status_matrix",
+          "human_doc:runtime_alignment_taskboard"
         ]
       }
     ]

@@ -40,7 +40,7 @@
 - [硬约束](./invariants.md)
 - [关键决策](./decisions.md)
 - [合同目录说明](../contracts/README.md)
-- [OPL Runtime Manager 目标形态](./references/opl-runtime-manager-target.md)
+- [OPL Runtime Manager 目标形态](./references/runtime-substrate/opl-runtime-manager-target.md)
 
 ## 四层文档体系怎么用
 
@@ -84,12 +84,12 @@
 它们继续被仓库跟踪，但不是当前默认实现依据。
 
 - [参考级索引](./references/README.zh-CN.md)
-- [OPL Runtime Manager 目标形态](./references/opl-runtime-manager-target.md)
-- [Docker WebUI 部署参考](./references/opl-docker-webui-deployment.zh-CN.md)
-- [OPL GUI Shell Adapter 边界说明](./references/opl-gui-shell-adapter-boundary.zh-CN.md)
-- [OPL Fresh Install 与 GUI 首启测试参考](./references/opl-fresh-install-and-gui-first-launch-testing.zh-CN.md)
-- [OPL 默认 Skill 生态参考](./references/opl-default-skill-ecosystem.zh-CN.md)
-- [OPL Release 与 Packages 模块化分发参考](./references/opl-release-packages-modular-distribution.zh-CN.md)
+- [OPL Runtime Manager 目标形态](./references/runtime-substrate/opl-runtime-manager-target.md)
+- [Docker WebUI 部署参考](./references/current-support/opl-docker-webui-deployment.zh-CN.md)
+- [OPL GUI Shell Adapter 边界说明](./references/current-support/opl-gui-shell-adapter-boundary.zh-CN.md)
+- [OPL Fresh Install 与 GUI 首启测试参考](./references/current-support/opl-fresh-install-and-gui-first-launch-testing.zh-CN.md)
+- [OPL 默认 Skill 生态参考](./references/current-support/opl-default-skill-ecosystem.zh-CN.md)
+- [OPL Release 与 Packages 模块化分发参考](./references/current-support/opl-release-packages-modular-distribution.zh-CN.md)
 - [共享基础结构](./shared-foundation.zh-CN.md) 与 [共享基础结构归属](./shared-foundation-ownership.zh-CN.md) 作为 shared-boundary reference 保留；它们支持当前模型，但不是最快的活跃实现依据。
 - 产品运行时与执行器参考说明
 - [共享运行时合同](./shared-runtime-contract.zh-CN.md)、[共享领域合同](./shared-domain-contract.zh-CN.md) 与 [OPL 运行时命名与边界合同](./opl-runtime-naming-and-boundary-contract.zh-CN.md) 作为共享边界参考保留；其中的 `gateway / harness` 词汇按当前 domain-agent 模型下的兼容语言理解。
@@ -121,4 +121,5 @@
 - 活跃公开文档继续保持双语。
 - 第三层必须把 compatibility surface 和 current truth 区分清楚。
 - 第四层继续作为仓库跟踪历史。
+- `docs/**` 与 `README*` 默认是人读材料：脚本、合同、测试和 runtime dashboard 应使用 contract file、schema file、source file、CLI/API 行为或语义化 `human_doc:*` 标识，不应把叙述文档路径钉成机读约束。
 - 任何影响公开表述、合同或已收录领域状态的变更，都必须同步更新文档、合同与相关验证。
