@@ -91,11 +91,11 @@ This directory does not:
 
 ## Related Docs
 
-- [Shared Runtime Contract](../../docs/shared-runtime-contract.md)
-- [Shared Runtime Contract（中文）](../../docs/shared-runtime-contract.zh-CN.md)
-- [Shared Domain Contract](../../docs/shared-domain-contract.md)
-- [Shared Domain Contract（中文）](../../docs/shared-domain-contract.zh-CN.md)
-- [CrewAI absorb note](../../docs/references/family-orchestration-contract-absorb-crewai.md)
+- [Shared Runtime Contract](../../docs/active/shared-runtime-contract.md)
+- [Shared Runtime Contract（中文）](../../docs/active/shared-runtime-contract.zh-CN.md)
+- [Shared Domain Contract](../../docs/active/shared-domain-contract.md)
+- [Shared Domain Contract（中文）](../../docs/active/shared-domain-contract.zh-CN.md)
+- [CrewAI absorb note](../../docs/references/runtime-substrate/family-orchestration-contract-absorb-crewai.md)
 
 ## Files
 

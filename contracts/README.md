@@ -21,8 +21,8 @@
 
 围绕这些 machine-readable contract 的上位共享合同，当前统一在 `docs/` 层维护：
 
-- `docs/shared-runtime-contract*.md`：跨 domain 共享的长期在线运行合同
-- `docs/shared-domain-contract*.md`：跨 domain 共享的正式行为合同
+- `docs/active/shared-runtime-contract*.md`：跨 domain 共享的长期在线运行合同人读支撑
+- `docs/active/shared-domain-contract*.md`：跨 domain 共享的正式行为合同人读支撑
 
 其中：
 

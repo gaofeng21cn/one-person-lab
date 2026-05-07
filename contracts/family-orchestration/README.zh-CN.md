@@ -93,9 +93,9 @@
 
 ## 相关文档
 
-- [Shared Runtime Contract](../../docs/shared-runtime-contract.zh-CN.md)
-- [Shared Domain Contract](../../docs/shared-domain-contract.zh-CN.md)
-- [吸收 CrewAI 的收编说明](../../docs/references/family-orchestration-contract-absorb-crewai.md)
+- [Shared Runtime Contract](../../docs/active/shared-runtime-contract.zh-CN.md)
+- [Shared Domain Contract](../../docs/active/shared-domain-contract.zh-CN.md)
+- [吸收 CrewAI 的收编说明](../../docs/references/runtime-substrate/family-orchestration-contract-absorb-crewai.md)
 
 ## 文件
 

@@ -73,7 +73,7 @@
 
 ## 核心公开面
 
-- 顶层叙事：`README*`、`docs/README*`、`docs/roadmap*`、`docs/task-map*`、`docs/operating-model*`
-- 当前接口与合同入口：`contracts/README.md`、`docs/opl-public-surface-index*`、`docs/specs/` 下仍生效的 runtime / product-boundary 规格
-- 旧 gateway-first 语料：`docs/gateway-federation*`、`docs/opl-federation-contract*`、`docs/opl-read-only-discovery-gateway*`、`docs/opl-routed-action-gateway*` 与 `contracts/opl-gateway/*` 继续作为 reference / compatibility surface 保留；因为机器合同仍引用这些固定路径，本轮只修正入口定位，不移动合同引用路径
-- 参考与历史：`docs/references/`、`docs/history/`
+- 顶层叙事：`README*`、`docs/README*` 与 `docs/public/`
+- 当前接口与合同入口：`contracts/README.md`、`docs/active/opl-public-surface-index*`、`docs/active/` 与 `docs/specs/` 下仍生效的 runtime / product-boundary 规格
+- 旧 gateway-first 语料：人读材料已经进入 `docs/history/compatibility/gateway-federation/`；机器可读兼容合同继续在 `contracts/opl-gateway/*`
+- 参考与历史：`docs/references/`、`docs/history/` 与 `docs/docs_portfolio_consolidation.md`
