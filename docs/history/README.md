@@ -18,6 +18,7 @@ Current product truth, shared runtime boundaries, and maintainer workflow belong
 
 Archived lanes:
 
+- [Compatibility archive](./compatibility/README.md)
 - [Process history archive](./process/README.md)
 - [Frontdoor legacy notes](./frontdoor-legacy/README.md)
 - [OMX historical archive](./omx/README.md)

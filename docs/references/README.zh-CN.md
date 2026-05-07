@@ -2,7 +2,7 @@
 
 # OPL 参考级文档索引
 
-这个索引只管理 `docs/references/` 下的第三层参考文档。
+这个索引管理 `docs/references/` 下的支撑参考文档。
 这些文档用于审计、验收、对齐、样例、迁移与历史追踪，不是 `OPL` 当前公开主线的默认阅读面。
 
 如果你要理解“`OPL` 现在是什么”，先回到：
@@ -13,112 +13,113 @@
 - [architecture.md](../architecture.md)
 - [invariants.md](../invariants.md)
 - [decisions.md](../decisions.md)
+- [docs_portfolio_consolidation.md](../docs_portfolio_consolidation.md)
 - [`docs/specs/`](../specs/) 下当前仍生效的 runtime / product-boundary 规格
+
+## 目录分区
+
+| 目录 | 角色 |
+| --- | --- |
+| `current-support/` | 当前操作支撑参考。 |
+| `runtime-substrate/` | Runtime substrate、product-entry、Hermes 与 Runtime Manager 参考。 |
+| `convergence-governance/` | Family 收敛、文档生命周期、intake 模板与状态对齐。 |
+| `domain-admission/` | 候选 / 已收录 domain backlog 与 tranche records。 |
+| `examples-corpora/` | 样例语料与操作记录。 |
+| `operating-governance/` | 质量、operator projection、surface governance、review 与 publish 参考。 |
+
+除 README 或经 [文档组合治理](../docs_portfolio_consolidation.md) 明确承认的新顶层生命周期索引外，不再在 `docs/references/` 根目录新增 loose Markdown。
 
 ## 一、统一收敛与状态对齐
 
 - [GUI 主线切换到 AionUI](./convergence-governance/2026-04-21-gui-mainline-pivot-to-aionui.md)
 - [Contract convergence v1 决策记录](./convergence-governance/contract-convergence-v1-decision-note.md)
+- [文档分层与生命周期管理 Playbook](./convergence-governance/docs-lifecycle-management-playbook.zh-CN.md)
+- [系列项目文档治理清单](./convergence-governance/series-doc-governance-checklist.md)
+- [四仓文档 intake 模板](./convergence-governance/four-repo-doc-intake-template.md)
+- [Contract convergence v1 执行看板](./convergence-governance/contract-convergence-v1-execution-board.md)
+- [生态状态矩阵](./convergence-governance/ecosystem-status-matrix.md)
+- [四仓 executor follow-up 与 Hermes 评估](./convergence-governance/four-repo-executor-follow-up-and-hermes-evaluation.md)
 - [Family shared release 维护参考](./convergence-governance/family-shared-release-maintenance.md)
 - [Family 用户侧成熟度路线图](./convergence-governance/family-user-facing-maturity-roadmap.md)
 - [四仓文档同步摘要，2026-04-14](./convergence-governance/four-repo-doc-series-sync-summary-2026-04-14.md)
 - [OPL 定位演化与收敛经验参考](./convergence-governance/opl-positioning-convergence-lessons.zh-CN.md)
+- [Family external orchestration learning board，2026-04-30](./convergence-governance/family-external-orchestration-learning-board-2026-04-30.md)
+
+## 二、当前支撑参考
+
 - [OPL GUI Shell Adapter 边界说明](./current-support/opl-gui-shell-adapter-boundary.zh-CN.md)
 - [OPL Fresh Install 与 GUI 首启测试参考](./current-support/opl-fresh-install-and-gui-first-launch-testing.zh-CN.md)
 - [Docker WebUI 部署参考](./current-support/opl-docker-webui-deployment.zh-CN.md)
 - [OPL 默认 Skill 生态参考](./current-support/opl-default-skill-ecosystem.zh-CN.md)
 - [OPL Release 与 Packages 模块化分发参考](./current-support/opl-release-packages-modular-distribution.zh-CN.md)
 - [OPL quality details 参考](./current-support/opl-quality-details.md)
-- `series-doc-governance-checklist.md`
-- `four-repo-doc-intake-template.md`
-- `contract-convergence-v1-execution-board.md`
-- `ecosystem-status-matrix.md`
-- `four-repo-executor-follow-up-and-hermes-evaluation.md`
-- [中央 federation 参考面对齐看板](./opl-phase-2-central-reference-sync-board.md)
-- [已收录 domain 增量 intake 刷新记录](./opl-phase-2-admitted-domain-delta-intake-refresh.md)
-- [生态同步 owner line 记录](./opl-phase2-ecosystem-sync-owner-line.md)
 
-## 二、运行时 / 底座 / 迁移参考
+## 三、运行时 / 底座 / 迁移参考
 
-- `host-agent-runtime-contract.md`
+- [Codex-default Host-Agent Runtime Contract](./runtime-substrate/host-agent-runtime-contract.md)
 - [Hermes-Agent truth reset 与目标状态](./runtime-substrate/hermes-agent-truth-reset-and-target-state.md)
 - [Managed runtime migration readiness checklist](./runtime-substrate/managed-runtime-migration-readiness-checklist.md)
 - [OPL managed runtime 三层合同](./runtime-substrate/opl-managed-runtime-three-layer-contract.zh-CN.md)
 - [OPL Runtime Manager 目标形态](./runtime-substrate/opl-runtime-manager-target.md)
-- `hermes-agent-runtime-substrate-benchmark.md`
-- `family-executor-adapter-defaults.md`
-- `hermes-agent-executor-evaluation.md`
-- `family-orchestration-contract-absorb-crewai.md`
-- `family-product-entry-and-domain-handoff-architecture.md`
-- `family-lightweight-direct-entry-rollout-board.md`
-- `mas-top-level-cutover-board.md`
-- `opl-product-entry-and-hermes-kernel-integration.md`
-- `opl-vertical-online-agent-platform-roadmap.md`
+- [Hermes-Agent runtime substrate benchmark](./runtime-substrate/hermes-agent-runtime-substrate-benchmark.md)
+- [Family executor adapter defaults](./runtime-substrate/family-executor-adapter-defaults.md)
+- [Hermes-Agent executor evaluation](./runtime-substrate/hermes-agent-executor-evaluation.md)
+- [CrewAI 吸收说明](./runtime-substrate/family-orchestration-contract-absorb-crewai.md)
+- [Family product-entry and domain handoff architecture](./runtime-substrate/family-product-entry-and-domain-handoff-architecture.md)
+- [Family lightweight direct-entry rollout board](./runtime-substrate/family-lightweight-direct-entry-rollout-board.md)
+- [MAS top-level cutover board](./runtime-substrate/mas-top-level-cutover-board.md)
+- [OPL product-entry and Hermes kernel integration](./runtime-substrate/opl-product-entry-and-hermes-kernel-integration.md)
+- [OPL vertical online-agent platform roadmap](./runtime-substrate/opl-vertical-online-agent-platform-roadmap.md)
 
-## 三、网关 / 收录 / 接口审计参考
+## 四、Domain admission 参考
 
-- `opl-gateway-rollout.md`
-- `opl-gateway-rollout.zh-CN.md`
-- `opl-gateway-acceptance-test-spec.md`
-- `opl-gateway-acceptance-test-spec.zh-CN.md`
-- `opl-candidate-domain-backlog.md`
-- `opl-candidate-domain-backlog.zh-CN.md`
-- `opl-candidate-workstream-tranche-closeout.md`
-- `opl-candidate-workstream-tranche-closeout.zh-CN.md`
-- `opl-surface-lifecycle-map.md`
-- `opl-surface-lifecycle-map.zh-CN.md`
-- `opl-surface-authority-matrix.md`
-- `opl-surface-authority-matrix.zh-CN.md`
-- `opl-surface-review-matrix.md`
-- `opl-surface-review-matrix.zh-CN.md`
-- `opl-governance-audit-operating-surface.md`
-- `opl-governance-audit-operating-surface.zh-CN.md`
-- `opl-publish-promotion-operating-surface.md`
-- `opl-publish-promotion-operating-surface.zh-CN.md`
-- `opl-minimal-admitted-domain-federation-activation-package.md`
-- `opl-minimal-admitted-domain-federation-activation-package.zh-CN.md`
+- [OPL candidate domain backlog](./domain-admission/opl-candidate-domain-backlog.md)
+- [OPL candidate domain backlog 中文](./domain-admission/opl-candidate-domain-backlog.zh-CN.md)
+- [Candidate workstream tranche closeout](./domain-admission/opl-candidate-workstream-tranche-closeout.md)
+- [Candidate workstream tranche closeout 中文](./domain-admission/opl-candidate-workstream-tranche-closeout.zh-CN.md)
+- [Phase 1 exit activation package](./domain-admission/opl-phase-1-exit-activation-package.md)
+- [Phase 1 exit activation package 中文](./domain-admission/opl-phase-1-exit-activation-package.zh-CN.md)
+- [中央 federation 参考面对齐看板](./domain-admission/opl-phase-2-central-reference-sync-board.md)
+- [已收录 domain 增量 intake 刷新记录](./domain-admission/opl-phase-2-admitted-domain-delta-intake-refresh.md)
+- [生态同步 owner line 记录](./domain-admission/opl-phase2-ecosystem-sync-owner-line.md)
 
-## 四、样例、语料与操作记录
+## 五、样例、语料与操作记录
 
-- `opl-gateway-example-corpus.md`
-- `opl-gateway-example-corpus.zh-CN.md`
-- `opl-routed-safety-example-corpus.md`
-- `opl-routed-safety-example-corpus.zh-CN.md`
-- `opl-operating-example-corpus.md`
-- `opl-operating-example-corpus.zh-CN.md`
-- `opl-operating-record-catalog.md`
-- `opl-operating-record-catalog.zh-CN.md`
+- [OPL gateway example corpus](./examples-corpora/opl-gateway-example-corpus.md)
+- [OPL gateway example corpus 中文](./examples-corpora/opl-gateway-example-corpus.zh-CN.md)
+- [OPL routed-safety example corpus](./examples-corpora/opl-routed-safety-example-corpus.md)
+- [OPL routed-safety example corpus 中文](./examples-corpora/opl-routed-safety-example-corpus.zh-CN.md)
+- [OPL operating example corpus](./examples-corpora/opl-operating-example-corpus.md)
+- [OPL operating example corpus 中文](./examples-corpora/opl-operating-example-corpus.zh-CN.md)
+- [OPL operating record catalog](./examples-corpora/opl-operating-record-catalog.md)
+- [OPL operating record catalog 中文](./examples-corpora/opl-operating-record-catalog.zh-CN.md)
 
-## 五、已退役 gateway / federation 兼容语料
+## 六、Operating governance 参考
 
-- `../gateway-federation.md`
-- `../gateway-federation.zh-CN.md`
-- `../opl-federation-contract.md`
-- `../opl-federation-contract.zh-CN.md`
-- `../opl-read-only-discovery-gateway.md`
-- `../opl-read-only-discovery-gateway.zh-CN.md`
-- `../opl-routed-action-gateway.md`
-- `../opl-routed-action-gateway.zh-CN.md`
-- `../../contracts/opl-gateway/README.md`
-- `../../contracts/opl-gateway/README.zh-CN.md`
+- [Family domain quality projection contract](./operating-governance/family-domain-quality-projection-contract.md)
+- [Family incident learning loop](./operating-governance/family-incident-learning-loop.md)
+- [Family product operator projection](./operating-governance/family-product-operator-projection.md)
+- [OPL governance audit operating surface](./operating-governance/opl-governance-audit-operating-surface.md)
+- [OPL publish promotion operating surface](./operating-governance/opl-publish-promotion-operating-surface.md)
+- [OPL surface authority matrix](./operating-governance/opl-surface-authority-matrix.md)
+- [OPL surface lifecycle map](./operating-governance/opl-surface-lifecycle-map.md)
+- [OPL surface review matrix](./operating-governance/opl-surface-review-matrix.md)
 
-这些叙述文件仍留在 `docs/`，用于审计和历史兼容。机器可读合同、测试、脚本和 runtime dashboard 应引用 contract/schema/source surface 或语义化 `human_doc:*` 标识，不应把这些叙述文档路径钉成稳定机读接口。
+## 七、退役兼容与 frontdoor 参考
 
-## 六、已退役 frontdoor 时代与历史迁移参考
-
-- `development-operating-model.md`
-- `runtime-alignment-taskboard.md`
-- `opl-frontdoor-delivery-board.md`
+- [Gateway / federation 兼容语料归档](../history/compatibility/gateway-federation/README.zh-CN.md)
 - [Frontdoor 历史资料索引](../history/frontdoor-legacy/README.md)
 - [OMX 历史资料索引](../history/omx/README.zh-CN.md)
 - [过程历史归档](../history/process/README.zh-CN.md)
+
+已退役叙述文件进入 `docs/history/`。机器可读合同、测试、脚本和 runtime dashboard 应引用 contract/schema/source surface 或语义化 `human_doc:*` 标识，不应把这些叙述文档路径钉成稳定机读接口。
 
 ## 使用规则
 
 - 这些文档可以解释“为什么会这样冻结”，但不能反过来改写 `README*`、`docs/README*` 与核心五件套。
 - `series-doc-governance-checklist.md` 是当前仓与四仓系列项目保持一致时使用的仓级治理清单；带日期的同步摘要负责记录某一次具体跨仓梳理与对齐结果。
 - `four-repo-doc-intake-template.md` 是可复用的中央协调表单，用来记录跨仓文档轮次的范围、受影响仓、验证结果与清理状态。
-- 新参考文档优先按上面的六类归档。
+- 新参考文档优先按上面的目录分区归档。
 - `docs/**` 与 `README*` 默认是人读材料。不要让脚本、合同、测试或 runtime dashboard 依赖它们的具体路径；需要跨层引用时使用稳定合同文件或语义 surface id。
 - 已完成的一次性计划、生成型过程 specs 和被取代的设计草稿应迁入 [过程历史归档](../history/process/README.zh-CN.md)，不要继续留在 active reference 或 specs 层。
 - 已退役的 gateway / federation 语料只用于历史审计、兼容性检查和 schema 追溯，不能再作为当前实现依据。
