@@ -22,7 +22,7 @@
 - 一旦 target topology 已明确，新增投入默认服务目标形态；旧路线只允许作为迁移桥、兼容层或回归对照存在，不继续深磨。
 - 不做降级处理、兜底补丁、启发式修补或“先糊住再说”式实现。
 
-## 文档体系
+## 文档分层与生命周期治理
 
 - `README*` 与 `docs/README*` 是默认公开入口。
 - `docs/project.md`：项目概览与当前公开角色。
@@ -30,16 +30,21 @@
 - `docs/invariants.md`：硬约束与不能破坏的边界。
 - `docs/decisions.md`：仍有效的关键决策与取舍。
 - `docs/status.md`：当前 admitted domains、活跃主线、下一步和验证口径。
-- `docs/README*` 继续维护 `OPL` 的四层公开文档体系，但 AI/维护者应先读核心五件套。
+- `docs/docs_portfolio_consolidation.md` 是当前文档组合治理入口；维护者应先读核心五件套，再按该文件判断新增、更新、归档或 tombstone。
+- 每份长期文档都必须能说明 `owner`、`purpose`、`state`、`machine boundary`；缺少任一信号时，先补入口或归位，再继续扩写。
+- `docs/active/`：当前 runtime、activation、shared-boundary 与 onboarding 支持文档。
+- `docs/public/`：当前公开叙事、roadmap、task map 与 operating model。
+- `docs/specs/`：当前仍生效的 runtime / product-boundary 规格。
 - `contracts/` 只保留 machine-readable contract surface；不再承载 narrative 规则。
 - `docs/references/`：参考级配套文档。
-- `docs/specs/`：当前仍生效的 runtime / product-boundary 规格。
-- `docs/history/`：历史归档入口，包含已完成 plans、退役 specs 与 repo-tracked process drafts，不再承担活跃 workflow。
+- `docs/history/`：历史归档入口，包含已完成 plans、退役 specs、frontdoor / gateway / federation / routed-action 旧定位与 repo-tracked process drafts，不再承担活跃 workflow。
 
 ## 文档规则
 
 - 第一层和第二层公开文档保持双语；内部参考、历史、维护与技术文档默认中文。
 - 新文档先判断角色，再决定落点；不要把公开主线、合同配套、参考材料和历史记录混在同一层。
+- `README*`、`docs/**` 与参考文档是人读面。代码、测试、contracts、dashboard 或 runtime 不得把 prose path、Markdown 章节或文案当成稳定机器接口；确需关联人读材料时，使用 contract/schema/source 路径或 `human_doc:*` 语义 ID。
+- 退役定位只能放在 `docs/history/**` 的 archive / tombstone 语境中；active docs 提到 gateway、federation、frontdoor 等旧路线时，必须同时指向当前 truth owner。
 - 如果某条规则需要长期冻结，应写入 `docs/invariants.md` 或相关 contract/doc surface，而不是继续堆在 `AGENTS.md`。
 
 ## 变更与验证
