@@ -8,8 +8,14 @@ fi
 
 lanes=(
   "test:fast"
-  "test:meta"
+  "test:regression"
+  "test:integration"
   "test:artifact"
+  "test:fresh-install"
+  "test:native"
+  "test:structure"
+  "typecheck"
+  "lint"
 )
 
 log_root="$(mktemp -d "${TMPDIR:-/tmp}/opl-test-full.XXXXXX")"
