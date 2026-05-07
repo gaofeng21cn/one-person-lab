@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -72,8 +73,11 @@ test('family product operator projection preserves Codex-default runtime and pre
 });
 
 test('test:meta includes OPL family external orchestration contract tests', () => {
-  const packageJson = JSON.parse(read('package.json')) as { scripts: Record<string, string> };
-  const testMeta = packageJson.scripts['test:meta'];
+  const lanes = spawnSync(process.execPath, ['scripts/test-lanes.mjs', 'list'], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+  });
+  assert.equal(lanes.status, 0, lanes.stderr);
 
   for (const testFile of [
     'tests/src/family-runtime-attempt-contract.test.ts',
@@ -81,6 +85,6 @@ test('test:meta includes OPL family external orchestration contract tests', () =
     'tests/src/family-incident-learning-loop.test.ts',
     'tests/src/family-product-operator-projection.test.ts',
   ]) {
-    assert.match(testMeta, new RegExp(testFile.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    assert.match(lanes.stdout, new RegExp(testFile.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
 });

@@ -117,13 +117,15 @@ test('scripts/verify.sh provides the canonical verification wrapper', () => {
     (verifyScript.match(/node scripts\/line-budget\.mjs/g) ?? []).length,
     1,
   );
-  assert.match(verifyScript, /npm test/);
+  assert.match(verifyScript, /npm run test:smoke/);
+  assert.match(verifyScript, /npm run test:fast/);
+  assert.match(verifyScript, /npm run test:regression/);
+  assert.match(verifyScript, /npm run test:integration/);
   assert.match(verifyScript, /npm run family:shared-release -- check/);
   assert.match(verifyScript, /python\/opl-harness-shared\/tests\/test_family_shared_release\.py/);
   assert.match(verifyScript, /python\/opl-harness-shared\/tests\/test_editable_dependency_bootstrap\.py/);
   assert.match(verifyScript, /python\/opl-harness-shared\/tests\/test_editable_consumer_bootstrap\.py/);
   assert.match(verifyScript, /python\/opl-harness-shared\/tests\/test_editable_consumer_launcher\.py/);
-  assert.match(verifyScript, /npm run test:meta/);
   assert.match(verifyScript, /npm run test:fresh-install/);
   assert.match(verifyScript, /npm run test:artifact/);
   assert.match(verifyScript, /npm run test:full/);
@@ -135,7 +137,7 @@ test('scripts/verify.sh provides the canonical verification wrapper', () => {
   assert.match(verifyScript, /npm run native:cache/);
   assert.match(verifyScript, /npm run native:family-smoke/);
   assert.match(verifyScript, /\.\/scripts\/run-structural-quality-gate\.sh/);
-  assert.match(verifyScript, /smoke\|fast\|structure\|family\|meta\|fresh-install\|artifact\|native\|full\|lint\|line-budget\|typecheck/);
+  assert.match(verifyScript, /smoke\|fast\|regression\|integration\|structure\|family\|meta\|fresh-install\|artifact\|native\|full\|lint\|line-budget\|typecheck/);
 });
 
 test('local structural quality gate emits compare-ref quality details on Sentrux failures', () => {
@@ -216,14 +218,47 @@ test('lint includes the tracked code line-budget guard', () => {
   assert.equal(fs.existsSync(path.join(repoRoot, 'scripts/line-budget.mjs')), true);
 });
 
+test('package.json exposes a single test lane registry for active test ownership', () => {
+  const registryPath = path.join(repoRoot, 'scripts/test-lanes.mjs');
+  assert.equal(fs.existsSync(registryPath), true);
+
+  assert.equal(packageJson.scripts?.['test:smoke'], 'node ./scripts/test-lanes.mjs run smoke');
+  assert.equal(packageJson.scripts?.['test:fast'], 'node ./scripts/test-lanes.mjs run fast');
+  assert.equal(packageJson.scripts?.['test:meta'], 'node ./scripts/test-lanes.mjs run fast');
+  assert.equal(packageJson.scripts?.['test:regression'], 'node ./scripts/test-lanes.mjs run regression');
+  assert.equal(packageJson.scripts?.['test:integration'], 'node ./scripts/test-lanes.mjs run integration');
+  assert.equal(packageJson.scripts?.['test:artifact'], 'node ./scripts/test-lanes.mjs run artifact');
+  assert.equal(packageJson.scripts?.['test:fresh-install'], 'node ./scripts/test-lanes.mjs run fresh-install');
+  assert.equal(packageJson.scripts?.['test:native'], './scripts/verify.sh native');
+  assert.equal(packageJson.scripts?.['test:structure'], './scripts/verify.sh structure');
+  assert.equal(packageJson.scripts?.test, 'npm run test:fast');
+
+  const coverage = spawnSync(process.execPath, [registryPath, 'assert-coverage'], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      NODE_NO_WARNINGS: '1',
+    },
+  });
+
+  assert.equal(coverage.status, 0, coverage.stderr);
+});
+
 test('test:full delegates to the parallel test lane wrapper', () => {
   const script = read('scripts/run-parallel-test-lanes.sh');
 
   assert.equal(packageJson.scripts?.['test:full'], './scripts/run-parallel-test-lanes.sh full');
   assert.match(script, /Usage: \$0 full/);
   assert.match(script, /"test:fast"/);
-  assert.match(script, /"test:meta"/);
+  assert.match(script, /"test:regression"/);
+  assert.match(script, /"test:integration"/);
   assert.match(script, /"test:artifact"/);
+  assert.match(script, /"test:fresh-install"/);
+  assert.match(script, /"test:native"/);
+  assert.match(script, /"test:structure"/);
+  assert.match(script, /"typecheck"/);
+  assert.match(script, /"lint"/);
   assert.match(script, /npm run "\$\{lane\}"/);
 });
 
@@ -259,7 +294,7 @@ test('package.json exposes the fresh-install smoke lane', () => {
   );
   assert.equal(
     packageJson.scripts?.['test:fresh-install'],
-    'NODE_NO_WARNINGS=1 node --experimental-strip-types --test tests/src/fresh-install-smoke.test.ts',
+    'node ./scripts/test-lanes.mjs run fresh-install',
   );
   assert.equal(
     fs.existsSync(path.join(repoRoot, 'scripts/fresh-install-smoke.mjs')),
