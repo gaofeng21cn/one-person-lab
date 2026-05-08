@@ -10,8 +10,116 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
-  opl-native-and-contracts:
-    name: OPL native helper and contract gates
+  build-and-typecheck:
+    name: Build and typecheck
+    runs-on: macos-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build TypeScript
+        run: npm run build
+
+      - name: Typecheck
+        run: npm run typecheck
+
+  fast:
+    name: Fast lane
+    runs-on: macos-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify fast lane
+        run: npm run test:fast
+
+  regression:
+    name: Regression lane
+    runs-on: macos-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify regression lane
+        run: npm run test:regression
+
+  integration:
+    name: Integration lane
+    runs-on: macos-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify integration lane
+        run: npm run test:integration
+
+  fresh-install:
+    name: Fresh-install lane
+    runs-on: macos-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify fresh-install clean-room matrix
+        run: npm run test:fresh-install
+
+  native:
+    name: Native helper lane
     runs-on: macos-latest
     timeout-minutes: 30
 
@@ -37,20 +145,41 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build TypeScript
-        run: npm run build
-
-      - name: Verify metadata and contracts
-        run: npm run test:meta
-
-      - name: Verify fresh-install clean-room matrix
-        run: npm run test:fresh-install
-
       - name: Verify native helper lifecycle
         run: ./scripts/verify.sh native
 
       - name: Verify native helper fixture family smoke
         run: npm run native:family-smoke -- --fixture --require-real-workspaces
 
+  lint-and-structure:
+    name: Lint and local structure gate
+    runs-on: macos-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure origin/main compare ref
+        shell: bash
+        run: git fetch --no-tags --prune origin main:refs/remotes/origin/main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install Sentrux
+        run: curl -fsSL https://sentrux.dev/install.sh | sh
+
+      - name: Install dependencies
+        run: npm ci
+
       - name: Lint and line budget
         run: ./scripts/verify.sh lint
+
+      - name: Verify local structural quality gate
+        run: ./scripts/verify.sh structure

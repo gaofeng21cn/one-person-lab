@@ -71,6 +71,12 @@ v1 registry 只登记 MAS、MAG、RCA 已声明的 projection surface：
 - `npm run native:repair`：优先恢复 prebuild cache，失败或缺失时重建 helper binaries 后再次运行 doctor
 - `npm run native:test`：运行 Rust helper workspace 测试
 
+相关验证入口：
+
+- `npm run test:integration` 覆盖 ACP/session runtime、install/configure 以及 retired Product API fail-closed 守护
+- `./scripts/verify.sh native` 覆盖 native helper lifecycle
+- `./scripts/verify.sh structure` 是本地 blocking Sentrux gate；GitHub Sentrux Advisory workflow 只提供非阻断结构信号
+
 ## 高频文件与状态索引
 
 候选索引：

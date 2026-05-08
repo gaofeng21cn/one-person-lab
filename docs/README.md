@@ -95,6 +95,7 @@ They are repo-tracked support, not the default implementation basis.
 - [OPL fresh install and GUI first-launch testing](./references/current-support/opl-fresh-install-and-gui-first-launch-testing.zh-CN.md)
 - [OPL default skill ecosystem reference](./references/current-support/opl-default-skill-ecosystem.md)
 - [OPL release and Packages modular distribution reference](./references/current-support/opl-release-packages-modular-distribution.zh-CN.md)
+- [OPL test lane governance reference](./references/current-support/opl-test-lane-governance.zh-CN.md)
 - [Shared Foundation](./active/shared-foundation.md), [Shared Foundation Ownership](./active/shared-foundation-ownership.md), [Shared Runtime Contract](./active/shared-runtime-contract.md), [Shared Domain Contract](./active/shared-domain-contract.md), and [OPL Runtime Naming And Boundary Contract](./active/opl-runtime-naming-and-boundary-contract.md) are active support docs.
 - Retired `gateway / federation / routed-action` material lives in [Gateway / Federation Compatibility Archive](./history/compatibility/gateway-federation/README.md).
 - Retired frontdoor-era material lives in [Frontdoor Legacy Notes](./history/frontdoor-legacy/README.md).
