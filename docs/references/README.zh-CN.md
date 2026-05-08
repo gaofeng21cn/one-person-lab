@@ -53,6 +53,7 @@
 - [OPL 默认 Skill 生态参考](./current-support/opl-default-skill-ecosystem.zh-CN.md)
 - [OPL Release 与 Packages 模块化分发参考](./current-support/opl-release-packages-modular-distribution.zh-CN.md)
 - [OPL quality details 参考](./current-support/opl-quality-details.md)
+- [OPL 测试 Lane 治理参考](./current-support/opl-test-lane-governance.zh-CN.md)
 
 ## 三、运行时 / 底座 / 迁移参考
 

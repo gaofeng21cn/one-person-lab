@@ -40,6 +40,8 @@
 
 ## 五、默认验证
 
-- 默认 docs 审计入口：`scripts/verify.sh meta`
-- 默认 smoke：`scripts/verify.sh`
-- 若验证命令、docs index 或 contract/document surface 有变化，继续同步 `package.json`、`scripts/verify.sh` 与 `tests/src/*`
+- 默认快速入口：`npm test` / `npm run test:fast`
+- 秒级核心入口：`npm run test:smoke`
+- 宽回归入口：`npm run test:regression`
+- runtime、install 与 retired surface 守护入口：`npm run test:integration`
+- 若验证命令、docs index 或 contract/document surface 有变化，继续同步 `package.json`、`scripts/verify.sh`、`scripts/test-lanes.mjs` 与 `tests/src/*`
