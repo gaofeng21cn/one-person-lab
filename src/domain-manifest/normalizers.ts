@@ -3,7 +3,7 @@ import {
   validateUserInteractionContract,
   validateSharedHandoff,
 } from '../family-entry-contracts.ts';
-import { normalizeFamilyActionCatalog } from '../family-action-catalog.ts';
+import { normalizeFamilyActionCatalog } from '../family-action-catalog-contract.ts';
 import { normalizeManagedRuntimeContract } from '../managed-runtime-contract.ts';
 import {
   normalizeArtifactInventory,

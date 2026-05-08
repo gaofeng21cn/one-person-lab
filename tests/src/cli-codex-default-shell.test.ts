@@ -194,7 +194,8 @@ const retiredCliCommandMatrix = [
   {
     args: ['web'],
     command: 'web',
-    errorCode: 'unknown_command',
+    errorCode: 'cli_usage_error',
+    replacements: [/AionUI shell/],
   },
   {
     args: [['mcp', 'stdio'].join('-')],
