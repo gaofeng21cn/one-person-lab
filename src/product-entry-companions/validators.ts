@@ -360,6 +360,27 @@ export function validateFamilyProductEntryManifest(
       'product_entry_manifest.task_lifecycle',
     );
   }
+  if (payload.persistence_policy !== undefined) {
+    normalized.persistence_policy = validateSurfaceKindRecord(
+      payload.persistence_policy,
+      'product_entry_manifest.persistence_policy',
+      'family_persistence_policy',
+    );
+  }
+  if (payload.lifecycle_ledger !== undefined) {
+    normalized.lifecycle_ledger = validateSurfaceKindRecord(
+      payload.lifecycle_ledger,
+      'product_entry_manifest.lifecycle_ledger',
+      'family_lifecycle_ledger',
+    );
+  }
+  if (payload.owner_route !== undefined) {
+    normalized.owner_route = validateSurfaceKindRecord(
+      payload.owner_route,
+      'product_entry_manifest.owner_route',
+      'family_owner_route',
+    );
+  }
   if (payload.runtime_control !== undefined) {
     normalized.runtime_control = validateSurfaceKindRecord(
       payload.runtime_control,
@@ -461,6 +482,21 @@ export function validateFamilyProductEntryManifest(
       payload.task_lifecycle,
       'product_entry_manifest.task_lifecycle',
       'task_lifecycle',
+    );
+    normalized.persistence_policy = validateSurfaceKindRecord(
+      payload.persistence_policy,
+      'product_entry_manifest.persistence_policy',
+      'family_persistence_policy',
+    );
+    normalized.lifecycle_ledger = validateSurfaceKindRecord(
+      payload.lifecycle_ledger,
+      'product_entry_manifest.lifecycle_ledger',
+      'family_lifecycle_ledger',
+    );
+    normalized.owner_route = validateSurfaceKindRecord(
+      payload.owner_route,
+      'product_entry_manifest.owner_route',
+      'family_owner_route',
     );
     normalized.skill_catalog = validateSurfaceKindRecord(
       payload.skill_catalog,

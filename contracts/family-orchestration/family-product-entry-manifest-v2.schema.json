@@ -132,6 +132,15 @@
     "task_lifecycle": {
       "$ref": "#/$defs/taskLifecycleSurface"
     },
+    "persistence_policy": {
+      "$ref": "#/$defs/persistencePolicySurface"
+    },
+    "lifecycle_ledger": {
+      "$ref": "#/$defs/lifecycleLedgerSurface"
+    },
+    "owner_route": {
+      "$ref": "#/$defs/ownerRouteSurface"
+    },
     "runtime_control": {
       "$ref": "#/$defs/runtimeControlSurface"
     },
@@ -444,6 +453,42 @@
       "properties": {
         "surface_kind": {
           "const": "task_lifecycle"
+        }
+      }
+    },
+    "persistencePolicySurface": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "surface_kind"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "family_persistence_policy"
+        }
+      }
+    },
+    "lifecycleLedgerSurface": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "surface_kind"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "family_lifecycle_ledger"
+        }
+      }
+    },
+    "ownerRouteSurface": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "surface_kind"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "family_owner_route"
         }
       }
     },
@@ -1261,6 +1306,119 @@
           "surface_kind": "product_entry_session",
           "command": "redcube product session --entry-session-id <entry-session-id>"
         }
+      },
+      "persistence_policy": {
+        "surface_kind": "family_persistence_policy",
+        "version": "family-persistence-policy.v1",
+        "target_domain_id": "redcube_ai",
+        "policy_id": "redcube_managed_run_persistence_policy",
+        "summary": "Managed run files remain the authority while shared manifests expose family-level persistence discovery.",
+        "authority_surfaces": [
+          {
+            "surface_id": "managed_run_session_store",
+            "surface_role": "managed_run_authority",
+            "storage_role": "file_authority",
+            "owner": "redcube_ai",
+            "ref": {
+              "ref_kind": "repo_path",
+              "ref": "runtime-state/managed-runs/<run-id>/session.json",
+              "label": "managed run session authority"
+            },
+            "rebuild_from_refs": []
+          }
+        ],
+        "sidecar_indexes": [],
+        "projection_caches": [
+          {
+            "surface_id": "product_entry_progress_projection",
+            "surface_role": "operator_progress_read_model",
+            "storage_role": "projection_cache",
+            "owner": "redcube_ai",
+            "ref": {
+              "ref_kind": "json_pointer",
+              "ref": "/progress_projection",
+              "label": "progress projection"
+            },
+            "rebuild_from_refs": [
+              {
+                "ref_kind": "json_pointer",
+                "ref": "/session_continuity",
+                "label": "session continuity"
+              }
+            ]
+          }
+        ],
+        "legacy_diagnostics": []
+      },
+      "lifecycle_ledger": {
+        "surface_kind": "family_lifecycle_ledger",
+        "version": "family-lifecycle-ledger.v1",
+        "target_domain_id": "redcube_ai",
+        "ledger_id": "redcube_managed_run_lifecycle_ledger",
+        "phase": "verify",
+        "status": "verified",
+        "summary": "Lifecycle receipts keep manifest, checksum, and restore proof references for managed-run retention actions.",
+        "actions": [
+          {
+            "action_id": "verify_managed_run_restore_point",
+            "action_kind": "verify_restore",
+            "target_ref": {
+              "ref_kind": "json_pointer",
+              "ref": "/session_continuity/restore_point_surface_ref",
+              "label": "restore point"
+            },
+            "authority_owner": "redcube_ai",
+            "safety_gate": "restore_proof_required",
+            "result": "verified",
+            "manifest_ref": {
+              "ref_kind": "repo_path",
+              "ref": "runtime-state/managed-runs/<run-id>/manifest.json",
+              "label": "managed run manifest"
+            },
+            "sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+            "restore_ref": {
+              "ref_kind": "json_pointer",
+              "ref": "/runtime_loop_closure/resume_point",
+              "label": "runtime loop restore proof"
+            }
+          }
+        ]
+      },
+      "owner_route": {
+        "surface_kind": "family_owner_route",
+        "version": "family-owner-route.v1",
+        "target_domain_id": "redcube_ai",
+        "route_id": "redcube_product_entry_owner_route",
+        "route_epoch": "2026-05-08T00:00:00Z",
+        "source_fingerprint": "manifest:redcube_product_entry_manifest:v2",
+        "next_owner": "redcube_ai",
+        "allowed_actions": [
+          "continue_session",
+          "inspect_progress",
+          "handoff_to_opl_bridge"
+        ],
+        "idempotency_key": "redcube_ai:redcube_product_entry_owner_route:2026-05-08",
+        "status": "active",
+        "summary": "OPL can discover the next owner and allowed route actions without owning RedCube deliverable truth.",
+        "handoff_refs": [
+          {
+            "ref_kind": "json_pointer",
+            "ref": "/shared_handoff/opl_return_surface",
+            "label": "OPL return surface"
+          }
+        ],
+        "projection_refs": [
+          {
+            "ref_kind": "json_pointer",
+            "ref": "/progress_projection",
+            "label": "progress projection"
+          },
+          {
+            "ref_kind": "json_pointer",
+            "ref": "/artifact_inventory",
+            "label": "artifact inventory"
+          }
+        ]
       },
       "session_continuity": {
         "surface_kind": "session_continuity",

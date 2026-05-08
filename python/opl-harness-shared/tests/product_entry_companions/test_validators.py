@@ -107,6 +107,15 @@ def test_product_entry_companion_validators_normalize_shared_family_payloads() -
         "task_lifecycle": {
             "surface_kind": "task_lifecycle",
         },
+        "persistence_policy": {
+            "surface_kind": "family_persistence_policy",
+        },
+        "lifecycle_ledger": {
+            "surface_kind": "family_lifecycle_ledger",
+        },
+        "owner_route": {
+            "surface_kind": "family_owner_route",
+        },
         "session_continuity": {
             "surface_kind": "session_continuity",
         },
@@ -195,6 +204,9 @@ def test_product_entry_companion_validators_normalize_shared_family_payloads() -
     assert validated_manifest["product_entry_start"]["resume_surface"]["surface_kind"] == "grant_user_loop"
     assert validated_manifest["domain_entry_contract"]["entry_adapter"] == "MedAutoGrantDomainEntry"
     assert validated_manifest["runtime_inventory"]["surface_kind"] == "runtime_inventory"
+    assert validated_manifest["persistence_policy"]["surface_kind"] == "family_persistence_policy"
+    assert validated_manifest["lifecycle_ledger"]["surface_kind"] == "family_lifecycle_ledger"
+    assert validated_manifest["owner_route"]["surface_kind"] == "family_owner_route"
     assert validated_manifest["session_continuity"]["surface_kind"] == "session_continuity"
     assert validated_manifest["progress_projection"]["surface_kind"] == "progress_projection"
     assert validated_manifest["artifact_inventory"]["surface_kind"] == "artifact_inventory"
@@ -336,6 +348,15 @@ def test_product_entry_companion_validators_fail_closed_on_missing_required_shar
         "task_lifecycle": {
             "surface_kind": "task_lifecycle",
         },
+        "persistence_policy": {
+            "surface_kind": "family_persistence_policy",
+        },
+        "lifecycle_ledger": {
+            "surface_kind": "family_lifecycle_ledger",
+        },
+        "owner_route": {
+            "surface_kind": "family_owner_route",
+        },
         "session_continuity": {
             "surface_kind": "session_continuity",
         },
@@ -388,6 +409,15 @@ def test_product_entry_companion_validators_fail_closed_on_missing_required_shar
         assert "session_continuity.surface_kind" in str(exc)
     else:
         raise AssertionError("expected wrong session_continuity surface kind to fail closed")
+
+    wrong_owner_route = deepcopy(manifest)
+    wrong_owner_route["owner_route"]["surface_kind"] = "owner_route_preview"
+    try:
+        validate_family_product_entry_manifest(wrong_owner_route)
+    except ValueError as exc:
+        assert "owner_route.surface_kind" in str(exc)
+    else:
+        raise AssertionError("expected wrong owner_route surface kind to fail closed")
 
     frontdoor = {
         "surface_kind": "product_frontdoor",

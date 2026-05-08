@@ -34,8 +34,11 @@
 - `family action graph`
 - `family human gate`
 - `family product-entry manifest v2`
+- `family persistence policy`
+- `family lifecycle ledger`
+- `family owner route`
 
-属于 domain-oriented 的 companion contract。
+属于 domain-oriented / control-plane-oriented 的 companion contract。
 
 这些 schema 只冻结跨仓 orchestration 语义，不引入某个特定 orchestration framework 作为 family runtime dependency，也不改写 `Hermes-Agent` / `Codex CLI` / `domain-owned truth` 的 owner 边界。
 

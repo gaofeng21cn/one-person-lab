@@ -2,6 +2,13 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
+_PERSISTENCE_STORAGE_ROLES = {
+    "file_authority",
+    "sqlite_sidecar_index",
+    "projection_cache",
+    "legacy_diagnostic_only",
+}
+
 
 def _non_empty_text(value: object) -> str | None:
     text = str(value or "").strip()
@@ -35,6 +42,176 @@ def _normalize_ref(value: object, field: str) -> dict[str, str] | None:
     if label is not None:
         payload["label"] = label
     return payload
+
+
+def _require_ref(value: object, field: str) -> dict[str, str]:
+    normalized = _normalize_ref(value, field)
+    if normalized is None:
+        raise ValueError(f"runtime/task companion 缺少 reference 字段: {field}")
+    return normalized
+
+
+def _normalize_refs(values: object, field: str) -> list[dict[str, str]]:
+    if not isinstance(values, list):
+        return []
+    return [_require_ref(entry, f"{field}[{index}]") for index, entry in enumerate(values)]
+
+
+def _require_sha256(value: object, field: str) -> str:
+    text = _require_string(value, field).lower()
+    if len(text) != 64 or any(char not in "0123456789abcdef" for char in text):
+        raise ValueError(f"runtime/task companion {field} 必须是 64 位 sha256")
+    return text
+
+
+def _build_family_persistence_surface(
+    entry: Mapping[str, Any],
+    *,
+    expected_storage_role: str,
+    field: str,
+) -> dict[str, Any]:
+    storage_role = _require_string(entry.get("storage_role"), f"{field}.storage_role")
+    if storage_role != expected_storage_role:
+        raise ValueError(f"runtime/task companion {field}.storage_role 必须是 {expected_storage_role}")
+    if storage_role not in _PERSISTENCE_STORAGE_ROLES:
+        raise ValueError(f"runtime/task companion {field}.storage_role 不受支持: {storage_role}")
+    return {
+        "surface_id": _require_string(entry.get("surface_id"), f"{field}.surface_id"),
+        "surface_role": _require_string(entry.get("surface_role"), f"{field}.surface_role"),
+        "storage_role": storage_role,
+        "owner": _require_string(entry.get("owner"), f"{field}.owner"),
+        "ref": _require_ref(entry.get("ref"), f"{field}.ref"),
+        "rebuild_from_refs": _normalize_refs(entry.get("rebuild_from_refs"), f"{field}.rebuild_from_refs"),
+    }
+
+
+def build_family_persistence_policy(
+    *,
+    target_domain_id: str,
+    policy_id: str,
+    summary: str,
+    authority_surfaces: list[Mapping[str, Any]],
+    sidecar_indexes: list[Mapping[str, Any]] | None = None,
+    projection_caches: list[Mapping[str, Any]] | None = None,
+    legacy_diagnostics: list[Mapping[str, Any]] | None = None,
+) -> dict[str, Any]:
+    normalized_authority_surfaces = [
+        _build_family_persistence_surface(
+            entry,
+            expected_storage_role="file_authority",
+            field=f"authority_surfaces[{index}]",
+        )
+        for index, entry in enumerate(authority_surfaces)
+    ]
+    if not normalized_authority_surfaces:
+        raise ValueError("runtime/task companion family_persistence_policy 至少需要一个 file_authority surface")
+    return {
+        "surface_kind": "family_persistence_policy",
+        "version": "family-persistence-policy.v1",
+        "target_domain_id": _require_string(target_domain_id, "target_domain_id"),
+        "policy_id": _require_string(policy_id, "policy_id"),
+        "summary": _require_string(summary, "summary"),
+        "authority_surfaces": normalized_authority_surfaces,
+        "sidecar_indexes": [
+            _build_family_persistence_surface(
+                entry,
+                expected_storage_role="sqlite_sidecar_index",
+                field=f"sidecar_indexes[{index}]",
+            )
+            for index, entry in enumerate(sidecar_indexes or [])
+        ],
+        "projection_caches": [
+            _build_family_persistence_surface(
+                entry,
+                expected_storage_role="projection_cache",
+                field=f"projection_caches[{index}]",
+            )
+            for index, entry in enumerate(projection_caches or [])
+        ],
+        "legacy_diagnostics": [
+            _build_family_persistence_surface(
+                entry,
+                expected_storage_role="legacy_diagnostic_only",
+                field=f"legacy_diagnostics[{index}]",
+            )
+            for index, entry in enumerate(legacy_diagnostics or [])
+        ],
+    }
+
+
+def _build_family_lifecycle_action(entry: Mapping[str, Any], field: str) -> dict[str, Any]:
+    return {
+        "action_id": _require_string(entry.get("action_id"), f"{field}.action_id"),
+        "action_kind": _require_string(entry.get("action_kind"), f"{field}.action_kind"),
+        "target_ref": _require_ref(entry.get("target_ref"), f"{field}.target_ref"),
+        "authority_owner": _require_string(entry.get("authority_owner"), f"{field}.authority_owner"),
+        "safety_gate": _require_string(entry.get("safety_gate"), f"{field}.safety_gate"),
+        "result": _require_string(entry.get("result"), f"{field}.result"),
+        "manifest_ref": _require_ref(entry.get("manifest_ref"), f"{field}.manifest_ref"),
+        "sha256": _require_sha256(entry.get("sha256"), f"{field}.sha256"),
+        "restore_ref": _require_ref(entry.get("restore_ref"), f"{field}.restore_ref"),
+    }
+
+
+def build_family_lifecycle_ledger(
+    *,
+    target_domain_id: str,
+    ledger_id: str,
+    phase: str,
+    status: str,
+    summary: str,
+    actions: list[Mapping[str, Any]],
+) -> dict[str, Any]:
+    normalized_actions = [
+        _build_family_lifecycle_action(entry, f"actions[{index}]")
+        for index, entry in enumerate(actions)
+    ]
+    if not normalized_actions:
+        raise ValueError("runtime/task companion family_lifecycle_ledger 至少需要一个 action")
+    return {
+        "surface_kind": "family_lifecycle_ledger",
+        "version": "family-lifecycle-ledger.v1",
+        "target_domain_id": _require_string(target_domain_id, "target_domain_id"),
+        "ledger_id": _require_string(ledger_id, "ledger_id"),
+        "phase": _require_string(phase, "phase"),
+        "status": _require_string(status, "status"),
+        "summary": _require_string(summary, "summary"),
+        "actions": normalized_actions,
+    }
+
+
+def build_family_owner_route(
+    *,
+    target_domain_id: str,
+    route_id: str,
+    route_epoch: str,
+    source_fingerprint: str,
+    next_owner: str,
+    allowed_actions: list[str],
+    idempotency_key: str,
+    status: str,
+    summary: str,
+    handoff_refs: list[Mapping[str, Any]] | None = None,
+    projection_refs: list[Mapping[str, Any]] | None = None,
+) -> dict[str, Any]:
+    normalized_allowed_actions = _require_string_list(allowed_actions, "allowed_actions")
+    if not normalized_allowed_actions:
+        raise ValueError("runtime/task companion family_owner_route 至少需要一个 allowed action")
+    return {
+        "surface_kind": "family_owner_route",
+        "version": "family-owner-route.v1",
+        "target_domain_id": _require_string(target_domain_id, "target_domain_id"),
+        "route_id": _require_string(route_id, "route_id"),
+        "route_epoch": _require_string(route_epoch, "route_epoch"),
+        "source_fingerprint": _require_string(source_fingerprint, "source_fingerprint"),
+        "next_owner": _require_string(next_owner, "next_owner"),
+        "allowed_actions": normalized_allowed_actions,
+        "idempotency_key": _require_string(idempotency_key, "idempotency_key"),
+        "status": _require_string(status, "status"),
+        "summary": _require_string(summary, "summary"),
+        "handoff_refs": _normalize_refs(handoff_refs, "handoff_refs"),
+        "projection_refs": _normalize_refs(projection_refs, "projection_refs"),
+    }
 
 
 def build_task_surface_descriptor(
