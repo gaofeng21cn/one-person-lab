@@ -126,7 +126,7 @@
 - `domain gateway / domain harness` 继续保留为仓内边界层与执行层语言，不再作为仓库对外第一身份
 - `OPL` 当前通过 repo-owned `domain agent entry spec` 消费各 domain agent 的基础入口真相，而不再只依赖顶层硬编码蓝图
 - `MAS` 的当前接入单元是单一 domain app skill 加 repo-owned projection surfaces；`OPL` 消费这些 surface 做统一发现、显示和路由，不替代 MAS 的 runtime/controller/publication authority
-- `MDS` 位于 `MAS` 下方的 runtime/backend companion 层，只作为 MAS 依赖参与安装、环境管理和健康检查，不作为这一层的 OPL 顶层 domain agent
+- `MDS` 不再作为 MAS 默认运行依赖参与 OPL 安装；MAS 只可把它显式暴露为 backend audit、legacy restore/import diagnostic、upstream intake 或 parity oracle companion，不作为这一层的 OPL 顶层 domain agent
 
 ### 5. Shell Projection Layer
 

@@ -2,7 +2,7 @@
 
 # Shared Runtime Contract
 
-> 当前状态说明（`2026-04-25`）：本文作为共享边界参考保留。当前 `OPL` 公开主线是 `Codex-default session/runtime + explicit activation layer + MAS/MAG/RCA domain agents`；`MedDeepScientist` 是 MAS 之下的受控 backend companion，不是 OPL 顶层 domain agent。下文旧的 `gateway / harness` 词汇按内部边界兼容语言理解，不作为当前默认公开产品模型。
+> 当前状态说明（`2026-05-08`）：本文作为共享边界参考保留。当前 `OPL` 公开主线是 `Codex-default session/runtime + explicit activation layer + MAS/MAG/RCA domain agents`；`MedDeepScientist` 不再是 OPL 默认安装的 MAS 运行依赖，只通过 MAS 声明的可选 backend audit / legacy diagnostic / upstream intake / parity oracle 引用出现。下文旧的 `gateway / harness` 词汇按内部边界兼容语言理解，不作为当前默认公开产品模型。
 
 ## 目的
 
@@ -139,7 +139,7 @@ persistence / lifecycle / owner-route surface 只属于控制面 discovery contr
 - `MCP` 与其他 protocol surface 保持为 supporting 或 domain-owned 层
 - `Shared Runtime Contract` 是当前共享边界下的参考合同，不是默认产品入口
 - runtime-oriented 的 family orchestration companion schemas 已经落在 `contracts/family-orchestration/`，先冻结共享 `event envelope + checkpoint lineage + product-entry runtime continuity discovery + persistence / lifecycle / owner-route discovery` 语义，而不是把它们误写成某个统一 runtime owner
-- 当前活跃四仓公开线是 `one-person-lab + MAS + MAG + RCA`；`MDS` 保持在 MAS 之下作为受控 runtime/backend companion
+- 当前活跃四仓公开线是 `one-person-lab + MAS + MAG + RCA`；`MDS` 只保留为 MAS 声明的可选 companion diagnostic、intake 与 parity oracle 引用
 - 上游 `Hermes-Agent` 运行底座仍是这份合同的显式可选或未来实现方向，而不是默认 OPL 公开事实
 
 ## 实现边界
