@@ -62,9 +62,9 @@ test('family manifest fixtures consume the shared managed runtime three-layer co
 
   const expectations = {
     medautoscience: {
-      runtime_owner: 'upstream_hermes_agent',
+      runtime_owner: 'mas_runtime_core',
       domain_owner: 'med-autoscience',
-      executor_owner: 'med_deepscientist',
+      executor_owner: 'codex_cli',
     },
     redcube: {
       runtime_owner: 'upstream_hermes_agent',

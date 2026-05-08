@@ -35,7 +35,7 @@ test('runtime task companion helpers normalize MAS, MAG, and RCA style payloads'
     },
   });
   assert.equal(runtimeInventory.surface_kind, 'runtime_inventory');
-  assert.equal(runtimeInventory.runtime_owner, 'upstream_hermes_agent');
+  assert.equal(runtimeInventory.runtime_owner, 'mas_runtime_core');
 
   const checkpointSummary = buildCheckpointSummary({
     status: 'freeze_ready',

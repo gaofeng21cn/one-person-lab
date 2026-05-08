@@ -27,7 +27,7 @@ jobs:
         run: git fetch --no-tags --prune origin main:refs/remotes/origin/main
 
       - name: Install Sentrux
-        run: curl -fsSL https://sentrux.dev/install.sh | sh
+        run: ./scripts/install-sentrux-ci.sh
 
       - name: Run structural gate
         shell: bash

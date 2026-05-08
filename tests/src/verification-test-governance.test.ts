@@ -37,7 +37,7 @@ const verifyWorkflowNativeAndStructurePatterns = [
   /\.\/scripts\/verify\.sh structure/,
   /npm run native:family-smoke -- --fixture --require-real-workspaces/,
   /rust-toolchain/,
-  /sentrux\.dev\/install\.sh/,
+  /\.\/scripts\/install-sentrux-ci\.sh/,
   /fetch-depth: 0/,
   /git fetch --no-tags --prune origin main:refs\/remotes\/origin\/main/,
 ];
@@ -47,6 +47,7 @@ const sentruxAdvisoryWorkflowPatterns = [
   /git fetch --no-tags --prune origin main:refs\/remotes\/origin\/main/,
   /sentrux gate \./,
   /sentrux check \./,
+  /\.\/scripts\/install-sentrux-ci\.sh/,
   /uses: \.\/\.github\/actions\/quality-details/,
   /compare-ref: origin\/main/,
   /json-limit: '50'/,

@@ -226,12 +226,13 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(medautoscience.manifest.product_entry_guardrails.surface_kind, 'product_entry_guardrails');
     assert.equal(medautoscience.manifest.product_entry_guardrails.guardrail_classes[0].guardrail_id, 'workspace_supervision_gap');
     assert.equal(medautoscience.manifest.phase3_clearance_lane.surface_kind, 'phase3_host_clearance_lane');
-    assert.equal(medautoscience.manifest.phase4_backend_deconstruction.surface_kind, 'phase4_backend_deconstruction_lane');
+    assert.equal(medautoscience.manifest.operator_loop_actions.inspect_progress.surface_kind, 'study_progress');
+    assert.equal(medautoscience.manifest.skill_catalog.command_contracts[3].surface_kind, 'launch_study');
     assert.equal(medautoscience.manifest.phase5_platform_target.surface_kind, 'phase5_platform_target');
     assert.equal(medautoscience.manifest.product_entry_preflight.surface_kind, 'product_entry_preflight');
     assert.equal(medautoscience.manifest.product_entry_preflight.ready_to_try_now, true);
     assert.equal(medautoscience.manifest.runtime_inventory.surface_kind, 'runtime_inventory');
-    assert.equal(medautoscience.manifest.runtime_inventory.executor_owner, 'med_deepscientist');
+    assert.equal(medautoscience.manifest.runtime_inventory.executor_owner, 'codex_cli');
     assert.equal(medautoscience.manifest.task_lifecycle.surface_kind, 'task_lifecycle');
     assert.equal(medautoscience.manifest.task_lifecycle.resume_surface.surface_kind, 'launch_study');
     assert.equal(medautoscience.manifest.task_lifecycle.human_gate_ids.length, 2);
@@ -477,7 +478,7 @@ test('domain manifests resolves real family manifest fixtures while workspace li
     assert.equal(scienceEntry.product_entry_overview.progress_surface.surface_kind, 'study_progress');
     assert.equal(scienceEntry.product_entry_overview.resume_surface.surface_kind, 'launch_study');
     assert.equal(scienceEntry.runtime_inventory.surface_kind, 'runtime_inventory');
-    assert.equal(scienceEntry.runtime_inventory_runtime_owner, 'upstream_hermes_agent');
+    assert.equal(scienceEntry.runtime_inventory_runtime_owner, 'mas_runtime_core');
     assert.equal(scienceEntry.task_lifecycle.surface_kind, 'task_lifecycle');
     assert.equal(scienceEntry.task_lifecycle_resume_surface_kind, 'launch_study');
     assert.deepEqual(

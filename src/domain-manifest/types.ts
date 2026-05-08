@@ -3,7 +3,7 @@ import type {
   FamilySharedHandoffSurface,
   UserInteractionContractSurface,
 } from '../family-entry-contracts.ts';
-import type { FamilyActionCatalog } from '../family-action-catalog.ts';
+import type { FamilyActionCatalog } from '../family-action-catalog-contract.ts';
 
 type JsonRecord = Record<string, unknown>;
 

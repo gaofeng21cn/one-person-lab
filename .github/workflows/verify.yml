@@ -173,7 +173,7 @@ jobs:
           cache: npm
 
       - name: Install Sentrux
-        run: curl -fsSL https://sentrux.dev/install.sh | sh
+        run: ./scripts/install-sentrux-ci.sh
 
       - name: Install dependencies
         run: npm ci
