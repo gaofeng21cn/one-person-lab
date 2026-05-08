@@ -194,76 +194,63 @@ function hasPathSegment(relativePath: string, segment: string) {
   return relativePath.split('/').includes(segment);
 }
 
+const EXCLUDED_RUNTIME_PATH_SEGMENTS: readonly string[] = [
+  '.git',
+  '.codex',
+  '.omx',
+  '.worktrees',
+  '.mypy_cache',
+  '.pytest_cache',
+  '.ruff_cache',
+  '.tox',
+  '__pycache__',
+  'coverage',
+  'target',
+  '.DS_Store',
+] as const;
+
+const EXCLUDED_RUNTIME_BASENAMES: readonly string[] = ['.DS_Store', 'state.db'];
+const EXCLUDED_RUNTIME_BASENAME_SUFFIXES: readonly string[] = ['.pyc', '.pyo', '.tsbuildinfo'];
+
+const EXCLUDED_RUNTIME_PATH_PATTERNS = [
+  /^hermes\/(?:web|ui|frontend)(?:\/|$)/,
+  /^hermes\/\.venv\/bin(?:\/|$)/,
+  /^hermes\/tests?(?:\/|$)/,
+  /^hermes\/.*(?:voice|tts|telegram|discord|slack|matrix|dingtalk|feishu)/,
+  /^modules\/mds\/src\/ui(?:\/|$)/,
+  /^modules\/[^/]+\/\.venv\/bin(?:\/|$)/,
+  /^modules\/[^/]+\/tests?(?:\/|$)/,
+  /^modules\/[^/]+\/(?:htmlcov|docs\/_build|notebooks|runtime|runs|sessions|\.ds)(?:\/|$)/,
+  /^opl\/node_modules(?:\/|$)/,
+  /^opl\/.*\/\.venv(?:\/|$)/,
+  /^opl\/dist(?:\/|$)/,
+] as const;
+
+function hasExcludedRuntimePathSegment(relativePath: string) {
+  return EXCLUDED_RUNTIME_PATH_SEGMENTS.some((segment) => hasPathSegment(relativePath, segment));
+}
+
+function isExcludedRuntimeBaseName(baseName: string) {
+  return EXCLUDED_RUNTIME_BASENAMES.includes(baseName)
+    || EXCLUDED_RUNTIME_BASENAME_SUFFIXES.some((suffix) => baseName.endsWith(suffix));
+}
+
+function matchesExcludedRuntimePathPattern(relativePath: string) {
+  return EXCLUDED_RUNTIME_PATH_PATTERNS.some((pattern) => pattern.test(relativePath));
+}
+
 export function shouldExcludeRuntimePath(relativePathInput: string) {
   const relativePath = normalizeRuntimeRelativePath(relativePathInput);
-  const lower = relativePath.toLowerCase();
-  const baseName = path.posix.basename(relativePath);
 
   if (!relativePath || relativePath === '.') {
     return false;
   }
 
-  if (
-    hasPathSegment(relativePath, '.git')
-    || hasPathSegment(relativePath, '.codex')
-    || hasPathSegment(relativePath, '.omx')
-    || hasPathSegment(relativePath, '.worktrees')
-    || hasPathSegment(relativePath, '.mypy_cache')
-    || hasPathSegment(relativePath, '.pytest_cache')
-    || hasPathSegment(relativePath, '.ruff_cache')
-    || hasPathSegment(relativePath, '.tox')
-    || hasPathSegment(relativePath, '__pycache__')
-    || hasPathSegment(relativePath, 'coverage')
-    || hasPathSegment(relativePath, 'target')
-    || hasPathSegment(relativePath, '.DS_Store')
-  ) {
-    return true;
-  }
-
-  if (
-    baseName === '.DS_Store'
-    || baseName.endsWith('.pyc')
-    || baseName.endsWith('.pyo')
-    || baseName.endsWith('.tsbuildinfo')
-    || baseName === 'state.db'
-  ) {
-    return true;
-  }
-
-  if (/^hermes\/(?:web|ui|frontend)(?:\/|$)/.test(lower)) {
-    return true;
-  }
-  if (/^hermes\/\.venv\/bin(?:\/|$)/.test(lower)) {
-    return true;
-  }
-  if (/^hermes\/tests?(?:\/|$)/.test(lower)) {
-    return true;
-  }
-  if (/^hermes\/.*(?:voice|tts|telegram|discord|slack|matrix|dingtalk|feishu)/.test(lower)) {
-    return true;
-  }
-
-  if (/^modules\/mds\/src\/ui(?:\/|$)/.test(lower)) {
-    return true;
-  }
-  if (/^modules\/[^/]+\/\.venv\/bin(?:\/|$)/.test(lower)) {
-    return true;
-  }
-  if (/^modules\/[^/]+\/tests?(?:\/|$)/.test(lower)) {
-    return true;
-  }
-  if (/^modules\/[^/]+\/(?:htmlcov|docs\/_build|notebooks|runtime|runs|sessions|\.ds)(?:\/|$)/.test(lower)) {
-    return true;
-  }
-
-  if (/^opl\/node_modules(?:\/|$)/.test(lower) || /^opl\/.*\/\.venv(?:\/|$)/.test(lower)) {
-    return true;
-  }
-  if (/^opl\/dist(?:\/|$)/.test(lower)) {
-    return true;
-  }
-
-  return false;
+  const lower = relativePath.toLowerCase();
+  const baseName = path.posix.basename(relativePath);
+  return hasExcludedRuntimePathSegment(relativePath)
+    || isExcludedRuntimeBaseName(baseName)
+    || matchesExcludedRuntimePathPattern(lower);
 }
 
 export function buildPackagedModuleMarker(input: {

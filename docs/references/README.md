@@ -53,6 +53,7 @@ Do not add new loose Markdown files under `docs/references/` unless they are REA
 - [OPL default skill ecosystem reference](./current-support/opl-default-skill-ecosystem.md)
 - [OPL release and Packages modular distribution reference](./current-support/opl-release-packages-modular-distribution.zh-CN.md)
 - [OPL quality details reference](./current-support/opl-quality-details.md)
+- [OPL test lane governance reference](./current-support/opl-test-lane-governance.zh-CN.md)
 
 ## 3. Runtime / Substrate / Migration References
 
