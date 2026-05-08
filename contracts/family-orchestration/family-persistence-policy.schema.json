@@ -1,0 +1,187 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opl.onepersonlab/contracts/family-orchestration/family-persistence-policy.schema.json",
+  "title": "OPL Family Persistence Policy",
+  "description": "Shared persistence policy for separating domain-owned file authority from SQLite sidecar indexes, projection caches, and legacy diagnostics.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "surface_kind",
+    "version",
+    "target_domain_id",
+    "policy_id",
+    "summary",
+    "authority_surfaces",
+    "sidecar_indexes",
+    "projection_caches",
+    "legacy_diagnostics"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "family_persistence_policy"
+    },
+    "version": {
+      "const": "family-persistence-policy.v1"
+    },
+    "target_domain_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "policy_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "authority_surfaces": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/fileAuthoritySurface"
+      }
+    },
+    "sidecar_indexes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/sqliteSidecarSurface"
+      }
+    },
+    "projection_caches": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/projectionCacheSurface"
+      }
+    },
+    "legacy_diagnostics": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/legacyDiagnosticSurface"
+      }
+    }
+  },
+  "$defs": {
+    "referenceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ref_kind",
+        "ref"
+      ],
+      "properties": {
+        "ref_kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "persistenceSurfaceBase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface_id",
+        "surface_role",
+        "storage_role",
+        "owner",
+        "ref",
+        "rebuild_from_refs"
+      ],
+      "properties": {
+        "surface_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "surface_role": {
+          "type": "string",
+          "minLength": 1
+        },
+        "storage_role": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ref": {
+          "$ref": "#/$defs/referenceRef"
+        },
+        "rebuild_from_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/referenceRef"
+          }
+        }
+      }
+    },
+    "fileAuthoritySurface": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/persistenceSurfaceBase"
+        },
+        {
+          "properties": {
+            "storage_role": {
+              "const": "file_authority"
+            }
+          }
+        }
+      ]
+    },
+    "sqliteSidecarSurface": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/persistenceSurfaceBase"
+        },
+        {
+          "properties": {
+            "storage_role": {
+              "const": "sqlite_sidecar_index"
+            }
+          }
+        }
+      ]
+    },
+    "projectionCacheSurface": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/persistenceSurfaceBase"
+        },
+        {
+          "properties": {
+            "storage_role": {
+              "const": "projection_cache"
+            }
+          }
+        }
+      ]
+    },
+    "legacyDiagnosticSurface": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/persistenceSurfaceBase"
+        },
+        {
+          "properties": {
+            "storage_role": {
+              "const": "legacy_diagnostic_only"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

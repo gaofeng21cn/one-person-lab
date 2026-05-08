@@ -4,6 +4,9 @@ from opl_harness_shared.runtime_task_companions import (
     build_artifact_file_descriptor,
     build_artifact_inventory,
     build_checkpoint_summary,
+    build_family_lifecycle_ledger,
+    build_family_owner_route,
+    build_family_persistence_policy,
     build_progress_projection,
     build_runtime_inventory,
     build_session_continuity,
@@ -160,3 +163,136 @@ def test_runtime_task_companion_helpers_normalize_mas_mag_and_rca_payloads() -> 
     assert artifact_inventory["surface_kind"] == "artifact_inventory"
     assert artifact_inventory["summary"]["total_files_count"] == 2
     assert artifact_inventory["supporting_files"][0]["kind"] == "supporting"
+
+
+def test_family_persistence_policy_separates_file_authority_from_sidecar_indexes() -> None:
+    policy = build_family_persistence_policy(
+        target_domain_id="medautoscience",
+        policy_id="mas_runtime_lifecycle_policy",
+        summary="Runtime history is indexed in SQLite while study truth stays file-owned.",
+        authority_surfaces=[
+            {
+                "surface_id": "publication_eval_latest",
+                "surface_role": "publication_quality_authority",
+                "storage_role": "file_authority",
+                "owner": "medautoscience",
+                "ref": {
+                    "ref_kind": "repo_path",
+                    "ref": "artifacts/publication_eval/latest.json",
+                },
+            }
+        ],
+        sidecar_indexes=[
+            {
+                "surface_id": "runtime_lifecycle_sqlite",
+                "surface_role": "runtime_history_index",
+                "storage_role": "sqlite_sidecar_index",
+                "owner": "medautoscience",
+                "ref": {
+                    "ref_kind": "repo_path",
+                    "ref": "artifacts/runtime/runtime_lifecycle.sqlite",
+                },
+                "rebuild_from_refs": [
+                    {
+                        "ref_kind": "repo_path",
+                        "ref": "artifacts/runtime/lifecycle_migration/latest.json",
+                    }
+                ],
+            }
+        ],
+        projection_caches=[
+            {
+                "surface_id": "study_progress_shadow",
+                "surface_role": "read_model_cache",
+                "storage_role": "projection_cache",
+                "owner": "medautoscience",
+                "ref": {
+                    "ref_kind": "json_pointer",
+                    "ref": "/progress_projection/domain_projection",
+                },
+            }
+        ],
+        legacy_diagnostics=[
+            {
+                "surface_id": "quest_git_restore_import",
+                "surface_role": "legacy_restore_diagnostic",
+                "storage_role": "legacy_diagnostic_only",
+                "owner": "medautoscience",
+                "ref": {
+                    "ref_kind": "cli",
+                    "ref": "runtime lifecycle-quest-git-inventory",
+                },
+            }
+        ],
+    )
+
+    assert policy["surface_kind"] == "family_persistence_policy"
+    assert policy["authority_surfaces"][0]["storage_role"] == "file_authority"
+    assert policy["sidecar_indexes"][0]["storage_role"] == "sqlite_sidecar_index"
+    assert policy["sidecar_indexes"][0]["rebuild_from_refs"][0]["ref"] == "artifacts/runtime/lifecycle_migration/latest.json"
+
+
+def test_family_lifecycle_ledger_requires_checksum_and_restore_proof_for_retention_actions() -> None:
+    ledger = build_family_lifecycle_ledger(
+        target_domain_id="redcube_ai",
+        ledger_id="redcube_managed_run_retention_20260508",
+        phase="dry_run",
+        status="planned",
+        summary="Managed run retention candidate is planned with restore proof.",
+        actions=[
+            {
+                "action_id": "archive_old_managed_run",
+                "action_kind": "archive",
+                "target_ref": {
+                    "ref_kind": "repo_path",
+                    "ref": "runtime-state/managed-runs/run-1",
+                },
+                "authority_owner": "redcube_ai",
+                "safety_gate": "restore_proof_required",
+                "result": "planned",
+                "manifest_ref": {
+                    "ref_kind": "repo_path",
+                    "ref": "runtime-state/managed-runs/run-1.manifest.json",
+                },
+                "sha256": "f" * 64,
+                "restore_ref": {
+                    "ref_kind": "repo_path",
+                    "ref": "runtime-state/restore/run-1.restore.json",
+                },
+            }
+        ],
+    )
+
+    assert ledger["surface_kind"] == "family_lifecycle_ledger"
+    assert ledger["actions"][0]["sha256"] == "f" * 64
+    assert ledger["actions"][0]["restore_ref"]["ref"] == "runtime-state/restore/run-1.restore.json"
+
+
+def test_family_owner_route_carries_epoch_source_fingerprint_and_idempotency_token() -> None:
+    route = build_family_owner_route(
+        target_domain_id="med-autogrant",
+        route_id="mag_grant_authoring_route",
+        route_epoch="2026-05-08T00:00:00Z#1",
+        source_fingerprint="grant-progress:abc123",
+        next_owner="med-autogrant",
+        allowed_actions=["resume_grant_user_loop"],
+        idempotency_key="resume_grant_user_loop:abc123",
+        status="ready_for_owner",
+        summary="Grant progress can resume through the grant user loop.",
+        handoff_refs=[
+            {
+                "ref_kind": "cli",
+                "ref": "uv run python -m med_autogrant grant-user-loop --input <workspace> --task-intent <intent>",
+            }
+        ],
+        projection_refs=[
+            {
+                "ref_kind": "repo_path",
+                "ref": "contracts/runtime-program/current-program.json",
+            }
+        ],
+    )
+
+    assert route["surface_kind"] == "family_owner_route"
+    assert route["allowed_actions"] == ["resume_grant_user_loop"]
+    assert route["idempotency_key"] == "resume_grant_user_loop:abc123"

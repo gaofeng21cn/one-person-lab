@@ -23,7 +23,10 @@
 - `approval / interrupt / resume`
 - `family event envelope`
 - `family checkpoint lineage`
- - `product-entry runtime continuity discovery`
+- `product-entry runtime continuity discovery`
+- `family persistence policy`
+- `family lifecycle ledger`
+- `family owner route`
 
 这些对象是跨 domain 共享的运行底座要求。
 它们描述的是 runtime 应具备怎样的结构化能力，而不是某个 domain 自己的对象、评审标准或交付真相。
@@ -92,9 +95,17 @@
    - 统一 checkpoint ancestry、resume、state reference 的 envelope
 3. `product-entry runtime continuity discovery`
    - 统一 `runtime inventory + task lifecycle + session continuity + progress projection + artifact inventory` 的发现面，并把 `runtime_control` / `runtime_loop_closure` 作为共享 control reference；repo-owned runtime-control projection 继续由各 domain 仓自己持有
+4. `family persistence policy`
+   - 统一区分 domain-owned file authority、SQLite sidecar index、projection cache 与 legacy diagnostic 的控制面 surface
+5. `family lifecycle ledger`
+   - 统一 dry-run / apply / verify lifecycle action、manifest ref、checksum 与 restore proof 的 receipt surface
+6. `family owner route`
+   - 统一 route epoch、source fingerprint、next owner、allowed actions、idempotency key 与 handoff / projection refs 的 owner-route surface
 
 这些 schema 位于 `contracts/family-orchestration/`。
 它们冻结的是多个 domain runtime 都能吸收的互操作语义，同时继续把 runtime ownership 与 durable truth 留在各自 domain 仓。
+
+persistence / lifecycle / owner-route surface 只属于控制面 discovery contract。它们不会把 `OPL` 改成 domain runtime owner、memory store、scheduler、publication-quality judge 或 artifact authority。
 
 ## 与 CrewAI 的关系
 
@@ -127,7 +138,7 @@
 - 显式 activation 只路由到已收录 domain agents：`MAS`、`MAG`、`RCA`
 - `MCP` 与其他 protocol surface 保持为 supporting 或 domain-owned 层
 - `Shared Runtime Contract` 是当前共享边界下的参考合同，不是默认产品入口
-- runtime-oriented 的 family orchestration companion schemas 已经落在 `contracts/family-orchestration/`，先冻结共享 `event envelope + checkpoint lineage + product-entry runtime continuity discovery` 语义，而不是把它们误写成某个统一 runtime owner
+- runtime-oriented 的 family orchestration companion schemas 已经落在 `contracts/family-orchestration/`，先冻结共享 `event envelope + checkpoint lineage + product-entry runtime continuity discovery + persistence / lifecycle / owner-route discovery` 语义，而不是把它们误写成某个统一 runtime owner
 - 当前活跃四仓公开线是 `one-person-lab + MAS + MAG + RCA`；`MDS` 保持在 MAS 之下作为受控 runtime/backend companion
 - 上游 `Hermes-Agent` 运行底座仍是这份合同的显式可选或未来实现方向，而不是默认 OPL 公开事实
 
