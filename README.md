@@ -77,7 +77,7 @@ Need Docker, Linux, or server deployment? See the [Docker and browser deployment
 
 ```bash
 opl system initialize   # Inspect the Codex version policy, managed Hermes runtime/gateway status, modules, skills, GUI, and workspace-root state
-opl modules             # Check MAS/MAG/RCA modules and any MAS-declared optional companion diagnostics
+opl modules             # Check MAS/MAG/RCA modules and any MAS-declared optional companion provenance/audit refs
 opl module exec --module medautoscience -- doctor entry-modes
 opl skill sync          # Sync OPL family skills into the Codex-visible skill path
 opl help --text         # Human-readable help; use opl help --json for machine-readable output
@@ -113,7 +113,7 @@ The desktop GUI source is maintained in [`opl-aion-shell`](https://github.com/ga
 - The default workspace root is your home directory. The default local state directory is `~/Library/Application Support/OPL/state`. Set `OPL_STATE_DIR` to use another local state root.
 - Active domain agents are [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience), [`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant), and [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai).
 - `Med Auto Science` exposes one MAS domain app skill for OPL/Codex activation. OPL syncs and consumes that skill plus MAS-owned projections as shared workbench surfaces; MAS keeps the medical research runtime, controller truth, quality authority, and publication gates.
-- [`Med Deep Scientist`](https://github.com/gaofeng21cn/med-deepscientist) is no longer an OPL-installed default MAS runtime dependency. `Med Auto Science` may still expose explicit optional backend-audit, legacy restore/import diagnostic, upstream intake, and parity-oracle references; OPL consumes those only as MAS-declared companion diagnostics, not as a top-level domain agent or default module.
+- [`Med Deep Scientist`](https://github.com/gaofeng21cn/med-deepscientist) is no longer an OPL-installed default MAS runtime dependency. `Med Auto Science` may still expose explicit optional backend-audit, source-provenance, historical-fixture, explicit archive-import, upstream-intake, and parity-oracle references; OPL consumes those only as MAS-declared companion provenance/audit refs, not as a top-level domain agent or default module.
 - When a task needs top-level session/runtime paths, shared `workspaces / sessions / progress / artifacts` surfaces, or explicit domain activation, enter through `OPL`. When a task is already clearly inside one domain, continue through that repo’s README and `docs/README*`.
 
 </details>

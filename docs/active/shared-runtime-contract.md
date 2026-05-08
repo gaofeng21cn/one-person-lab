@@ -2,7 +2,7 @@
 
 # Shared Runtime Contract
 
-> Current-status note (`2026-05-08`): this document is retained as a shared-boundary reference. The current public OPL mainline is `Codex-default session/runtime + explicit activation layer + MAS/MAG/RCA domain agents`; `MedDeepScientist` is no longer a default OPL-installed MAS runtime dependency and appears only through MAS-declared optional backend-audit / legacy-diagnostic / upstream-intake / parity-oracle refs. Older `gateway / harness` wording below should be read as compatibility language for internal boundaries, not as the default public product model.
+> Current-status note (`2026-05-08`): this document is retained as a shared-boundary reference. The current public OPL mainline is `Codex-default session/runtime + explicit activation layer + MAS/MAG/RCA domain agents`; `MedDeepScientist` is no longer a default OPL-installed MAS runtime dependency and appears only through MAS-declared optional backend-audit / source-provenance / historical-fixture / explicit archive-import / upstream-intake / parity-oracle refs. Older `gateway / harness` wording below should be read as compatibility language for internal boundaries, not as the default public product model.
 
 ## Purpose
 
@@ -96,7 +96,7 @@ To avoid coupling the family runtime layer to one orchestration framework, the m
 3. `product-entry runtime continuity discovery`
    - shared `runtime inventory + task lifecycle + session continuity + progress projection + artifact inventory` discovery surface, with `runtime_control` / `runtime_loop_closure` as control references and repo-owned runtime-control projections still owned by domain repositories
 4. `family persistence policy`
-   - shared control surface that separates domain-owned file authority from SQLite sidecar indexes, projection caches, and legacy diagnostics
+   - shared control surface that separates domain-owned file authority from SQLite sidecar indexes, projection caches, and historical/provenance references
 5. `family lifecycle ledger`
    - shared receipt surface for dry-run / apply / verify lifecycle actions, manifest refs, checksums, and restore proof
 6. `family owner route`
@@ -139,7 +139,7 @@ As of the current public mainline, the true state remains:
 - `MCP` and other protocol surfaces remain supporting or domain-owned layers
 - the `Shared Runtime Contract` is a reference contract under the current shared-boundary layer, not the default product entry
 - the runtime-oriented family orchestration companion schemas now live in `contracts/family-orchestration/` and freeze the shared `event envelope + checkpoint lineage + product-entry runtime continuity discovery + persistence / lifecycle / owner-route discovery` semantics without turning them into one runtime owner
-- the active four-repository public line is `one-person-lab + MAS + MAG + RCA`; `MDS` is retained only as MAS-declared optional companion diagnostics, intake, and parity-oracle refs
+- the active four-repository public line is `one-person-lab + MAS + MAG + RCA`; `MDS` is retained only as MAS-declared optional companion provenance/audit, explicit archive-import, intake, and parity-oracle refs
 - an upstream `Hermes-Agent` runtime substrate remains an opt-in or future implementation direction for this contract, not the default OPL public fact
 
 ## Implementation Boundary

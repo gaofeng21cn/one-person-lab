@@ -2,7 +2,7 @@
 
 # Shared Runtime Contract
 
-> 当前状态说明（`2026-05-08`）：本文作为共享边界参考保留。当前 `OPL` 公开主线是 `Codex-default session/runtime + explicit activation layer + MAS/MAG/RCA domain agents`；`MedDeepScientist` 不再是 OPL 默认安装的 MAS 运行依赖，只通过 MAS 声明的可选 backend audit / legacy diagnostic / upstream intake / parity oracle 引用出现。下文旧的 `gateway / harness` 词汇按内部边界兼容语言理解，不作为当前默认公开产品模型。
+> 当前状态说明（`2026-05-08`）：本文作为共享边界参考保留。当前 `OPL` 公开主线是 `Codex-default session/runtime + explicit activation layer + MAS/MAG/RCA domain agents`；`MedDeepScientist` 不再是 OPL 默认安装的 MAS 运行依赖，只通过 MAS 声明的可选 backend audit / source provenance / historical fixture / explicit archive import / upstream intake / parity oracle 引用出现。下文旧的 `gateway / harness` 词汇按内部边界兼容语言理解，不作为当前默认公开产品模型。
 
 ## 目的
 
@@ -96,7 +96,7 @@
 3. `product-entry runtime continuity discovery`
    - 统一 `runtime inventory + task lifecycle + session continuity + progress projection + artifact inventory` 的发现面，并把 `runtime_control` / `runtime_loop_closure` 作为共享 control reference；repo-owned runtime-control projection 继续由各 domain 仓自己持有
 4. `family persistence policy`
-   - 统一区分 domain-owned file authority、SQLite sidecar index、projection cache 与 legacy diagnostic 的控制面 surface
+   - 统一区分 domain-owned file authority、SQLite sidecar index、projection cache 与 historical/provenance reference 的控制面 surface
 5. `family lifecycle ledger`
    - 统一 dry-run / apply / verify lifecycle action、manifest ref、checksum 与 restore proof 的 receipt surface
 6. `family owner route`

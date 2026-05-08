@@ -11,7 +11,7 @@
 - `Codex` 是唯一默认交互与执行宿主；`Hermes-Agent` 保留为外部 runtime substrate 与 online-management gateway，只在显式切换或长跑托管语境中参与执行。
 - 当前活跃实现是三个独立 `domain agent` 仓：`MAS`、`MAG`、`RCA`；其中 `MAS` 在 v2 alignment 下继续作为独立医学科研 domain agent，并以单一 MAS domain app skill 接入 `Codex` / `OPL`。IP、Award、Thesis 与 Review Foundry 均保持定义阶段。
 - `OPL` 在 MAS v2 alignment 中只持有统一定义、shared module/contract/index 注册、模块发现和 MAS-owned projection 的消费面；`MAS` 继续持有医学科研 runtime、controller truth、quality authority、publication gate 与研究交付真相。
-- `MAS` 近期已完成 monolith / no-history physical absorb closeout；外部 `MDS` checkout 不再是 MAS 默认 study/status/progress/cockpit operation 的运行必需依赖，只保留 MAS 显式声明的 backend audit、legacy restore/import diagnostic、upstream intake 和 parity oracle 引用。`MDS` 不进入 OPL 顶层 agent 列表，也不升级为单独 OPL-managed domain agent。
+- `MAS` 近期已完成 monolith / no-history physical absorb closeout；外部 `MDS` checkout 不再是 MAS 默认 study/status/progress/cockpit operation 的运行必需依赖，只保留 MAS 显式声明的 backend audit、source provenance、historical fixture、explicit archive import、upstream intake 和 parity oracle 引用。`MDS` 不进入 OPL 顶层 agent 列表，也不升级为单独 OPL-managed domain agent。
 
 ## 当前主线产品模型
 
@@ -91,7 +91,7 @@
 - 本地 Product API projection 已退役，避免把历史 adapter 面误导成当前产品主线。
 - 自有完整长期常驻 runtime sidecar 不是当前 active work；当前只通过 Runtime Manager 冻结可迁移边界。只有外部 `Hermes-Agent` 不能表达 OPL 必需的 task/wakeup/approval/audit/product isolation contract 时，才评估 promotion。
 - 各 domain 仓的 `gateway / harness` 继续作为内部分层语言存在；对外公开主语优先写成独立 `domain agent` 与其 `agent entry / direct entry`。
-- MAS v2 公开 wording 必须保持：`MAS = independent domain agent + single domain app skill + MAS-owned monolith boundary`，`OPL = unified definitions and projection/shared-contract consumer`，`MDS = optional MAS-declared backend audit / legacy diagnostic / upstream intake / parity oracle companion`。不得写成新增 OPL runtime kernel、恢复 MAS standalone release、恢复 MDS 默认运行依赖，或由 OPL 对 MAS projection 给出 ready verdict。
+- MAS v2 公开 wording 必须保持：`MAS = independent domain agent + single domain app skill + MAS-owned monolith boundary`，`OPL = unified definitions and projection/shared-contract consumer`，`MDS = optional MAS-declared backend audit / source provenance / historical fixture / explicit archive import / upstream intake / parity oracle companion`。不得写成新增 OPL runtime kernel、恢复 MAS standalone release、恢复 MDS 默认运行依赖，或由 OPL 对 MAS projection 给出 ready verdict。
 
 ## 参考入口
 
