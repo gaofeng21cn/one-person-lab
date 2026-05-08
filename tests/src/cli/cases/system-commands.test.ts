@@ -288,13 +288,14 @@ test('public service commands are retired from the default CLI surface', () => {
   }
 });
 test('web bundle and web package commands are retired from the public CLI', () => {
-  const bundle = runCli(['web', 'bundle']) as { error: { code: string; details: { command: string; retired: boolean } } };
-  assert.equal(bundle.error.code, 'cli_usage_error');
-  assert.equal(bundle.error.details.command, 'web');
-  assert.equal(bundle.error.details.retired, true);
-
-  const pack = runCli(['web', 'package']) as { error: { code: string; details: { command: string; retired: boolean } } };
-  assert.equal(pack.error.code, 'cli_usage_error');
-  assert.equal(pack.error.details.command, 'web');
-  assert.equal(pack.error.details.retired, true);
+  for (const args of [
+    ['web', 'bundle'],
+    ['web', 'package'],
+  ]) {
+    const { status, payload } = runCliFailure(args);
+    assert.equal(status, 2);
+    assert.equal(payload.error.code, 'cli_usage_error');
+    assert.equal(payload.error.details.command, 'web');
+    assert.equal(payload.error.details.retired, true);
+  }
 });
