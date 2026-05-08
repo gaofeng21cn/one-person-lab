@@ -24,7 +24,7 @@ def test_build_product_entry_preflight_derives_ready_truth_from_checks() -> None
     preflight = build_product_entry_preflight(
         summary="Current preflight is green.",
         recommended_check_command="uv run python -m domain doctor",
-        recommended_start_command="uv run python -m domain product-frontdoor",
+        recommended_start_command="uv run python -m domain product-entry-status",
         checks=[
             build_program_check(
                 check_id="workspace_ready",
@@ -49,7 +49,7 @@ def test_build_product_entry_preflight_derives_ready_truth_from_checks() -> None
         "summary": "Current preflight is green.",
         "ready_to_try_now": True,
         "recommended_check_command": "uv run python -m domain doctor",
-        "recommended_start_command": "uv run python -m domain product-frontdoor",
+        "recommended_start_command": "uv run python -m domain product-entry-status",
         "blocking_check_ids": [],
         "checks": [
             {
@@ -74,7 +74,7 @@ def test_build_product_entry_preflight_derives_ready_truth_from_checks() -> None
     blocked = build_product_entry_preflight(
         summary="Current preflight is blocked.",
         recommended_check_command="uv run python -m domain doctor",
-        recommended_start_command="uv run python -m domain product-frontdoor",
+        recommended_start_command="uv run python -m domain product-entry-status",
         checks=[
             build_program_check(
                 check_id="workspace_ready",
@@ -99,8 +99,8 @@ def test_build_detailed_readiness_and_lane_companions() -> None:
         fully_automatic=False,
         user_experience_level="agent_assisted_cli",
         summary="Current workflow is usable with operator guidance.",
-        recommended_start_surface="product_frontdoor",
-        recommended_start_command="uv run python -m domain product-frontdoor",
+        recommended_start_surface="product_entry_surface",
+        recommended_start_command="uv run python -m domain product-entry-status",
         recommended_loop_surface="grant_user_loop",
         recommended_loop_command="uv run python -m domain grant-user-loop",
         workflow_coverage=[
@@ -183,7 +183,7 @@ def test_build_detailed_readiness_and_lane_companions() -> None:
         ],
         backend_retained_now=["domain-specific executor"],
         current_backend_chain=["controller -> executor"],
-        optional_executor_proofs=[{"executor_kind": "hermes_native_proof"}],
+        optional_executor_proofs=[{"executor_kind": "hermes_agent"}],
         promotion_rules=["proof-backed promotion only"],
         deconstruction_map_doc="docs/program/deconstruction_map.md",
         recommended_phase_command="uv run python -m domain mainline-phase --phase phase_4",

@@ -4,12 +4,12 @@ from typing import Any, Mapping
 
 from ..family_entry_contracts import (
     validate_family_domain_entry_contract as _validate_shared_family_domain_entry_contract,
-    validate_gateway_interaction_contract as _validate_shared_gateway_interaction_contract,
+    validate_user_interaction_contract as _validate_shared_user_interaction_contract,
     validate_shared_handoff as _validate_shared_handoff,
     validate_shared_handoff_builder as _validate_shared_handoff_builder,
 )
 
-_FRONTDESK_SHARED_HANDOFF_KEYS = ("direct_entry_builder", "opl_handoff_builder")
+_PRODUCT_ENTRY_SHARED_HANDOFF_KEYS = ("direct_entry_builder", "opl_handoff_builder")
 
 
 def _non_empty_text(value: object) -> str | None:
@@ -177,22 +177,10 @@ def _clone_mapping(value: object, field: str) -> dict[str, Any]:
     return dict(_require_mapping(value, field))
 
 
-def _normalize_frontdoor_summary(value: object, field: str) -> dict[str, str]:
+def _normalize_product_entry_surface_summary(value: object, field: str) -> dict[str, str]:
     payload = _require_mapping(value, field)
     return {
-        "frontdoor_command": _require_string(payload.get("frontdoor_command"), f"{field}.frontdoor_command"),
-        "recommended_command": _require_string(payload.get("recommended_command"), f"{field}.recommended_command"),
-        "operator_loop_command": _require_string(
-            payload.get("operator_loop_command"),
-            f"{field}.operator_loop_command",
-        ),
-    }
-
-
-def _normalize_frontdesk_summary(value: object, field: str) -> dict[str, str]:
-    payload = _require_mapping(value, field)
-    return {
-        "frontdesk_command": _require_string(payload.get("frontdesk_command"), f"{field}.frontdesk_command"),
+        "product_entry_command": _require_string(payload.get("product_entry_command"), f"{field}.product_entry_command"),
         "recommended_command": _require_string(payload.get("recommended_command"), f"{field}.recommended_command"),
         "operator_loop_command": _require_string(
             payload.get("operator_loop_command"),
@@ -237,6 +225,5 @@ def _validate_domain_entry_contract_shape(value: object, field: str) -> dict[str
     return _validate_shared_family_domain_entry_contract(value, field)
 
 
-def _validate_gateway_interaction_contract_shape(value: object, field: str) -> dict[str, Any]:
-    return _validate_shared_gateway_interaction_contract(value, field)
-
+def _validate_user_interaction_contract_shape(value: object, field: str) -> dict[str, Any]:
+    return _validate_shared_user_interaction_contract(value, field)

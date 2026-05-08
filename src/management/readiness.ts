@@ -74,8 +74,8 @@ function buildCurrentReadinessProjects(
       ready_for_domain_handoff: entryParity?.ready_for_domain_handoff ?? false,
       verdict: readiness?.verdict ?? null,
       summary: readiness?.summary ?? manifest?.product_entry_status?.summary ?? null,
-      frontdoor_command:
-        manifest?.frontdoor_surface?.command
+      product_entry_command:
+        manifest?.product_entry_surface?.command
         ?? manifest?.recommended_command
         ?? null,
       recommended_start_command:

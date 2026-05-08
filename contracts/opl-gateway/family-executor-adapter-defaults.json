@@ -22,9 +22,6 @@
     "codex_cli",
     "hermes_agent"
   ],
-  "compatibility_aliases": {
-    "host_agent": "codex_cli"
-  },
   "execution_shapes": {
     "structured_call": {
       "summary": "single structured input/output call under a domain-owned schema",
@@ -43,7 +40,7 @@
   },
   "layered_executor_semantics": {
     "user_interaction_shell": {
-      "owner": "opl_or_domain_frontdoor",
+      "owner": "opl_or_domain_product_entry",
       "scope": "user-facing natural-language or session shell",
       "selects_effective_default_executor": false,
       "holds_domain_truth": false
