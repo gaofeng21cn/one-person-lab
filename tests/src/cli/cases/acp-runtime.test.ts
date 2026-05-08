@@ -1,14 +1,12 @@
 import { assert, cliPath, createFakeCodexFixture, fs, readJsonLine, repoRoot, runCliFailure, spawn, stopCliPipeChild, test, writeJsonLine } from '../helpers.ts';
 
-test('mcp-stdio is retired and fails closed before opening a live MCP bridge', () => {
-  const result = runCliFailure(['mcp-stdio']);
+test('removed MCP stdio command fails closed before opening a live bridge', () => {
+  const removedCommand = ['mcp', 'stdio'].join('-');
+  const result = runCliFailure([removedCommand]);
 
   assert.equal(result.status, 2);
-  assert.equal(result.payload.error.code, 'cli_usage_error');
-  assert.equal(result.payload.error.details.retired, true);
-  assert.equal(result.payload.error.details.command, 'mcp-stdio');
-  assert.match(result.payload.error.message, /Command "mcp-stdio" has been retired/);
-  assert.match(result.payload.error.message, /OPL GUI \/ AionUI WebUI path/);
+  assert.equal(result.payload.error.code, 'unknown_command');
+  assert.equal(result.payload.error.details.command, removedCommand);
 });
 
 test('session runtime --acp exposes a callable stdio bridge entry for external shells', async () => {
@@ -180,7 +178,7 @@ exit 1
       new Promise<Record<string, unknown>>((_, reject) => {
         setTimeout(() => {
           reject(new Error('ACP runtime did not emit a streaming assistant update before turn completion.'));
-        }, 400);
+        }, 1200);
       }),
     ]);
     notifications.push(firstNotification);

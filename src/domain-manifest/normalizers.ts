@@ -1,6 +1,6 @@
 import {
   validateFamilyDomainEntryContract,
-  validateGatewayInteractionContract,
+  validateUserInteractionContract,
   validateSharedHandoff,
 } from '../family-entry-contracts.ts';
 import { normalizeManagedRuntimeContract } from '../managed-runtime-contract.ts';
@@ -742,8 +742,8 @@ export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest
   const derivedRecommendedCommand = recommendedShell
     ? optionalString(productEntryShell[recommendedShell]?.command)
     : null;
-  const frontdoorSurface = normalizeShellSurface(manifest.frontdoor_surface, {
-    field: 'frontdoor_surface',
+  const productEntrySurface = normalizeShellSurface(manifest.product_entry_surface, {
+    field: 'product_entry_surface',
     productEntryShell,
   });
   const operatorLoopSurface = normalizeShellSurface(manifest.operator_loop_surface, {
@@ -777,11 +777,11 @@ export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest
   const domainEntryContract = manifest.domain_entry_contract === undefined
     ? null
     : validateFamilyDomainEntryContract(manifest.domain_entry_contract, 'domain_entry_contract');
-  const gatewayInteractionContract = manifest.gateway_interaction_contract === undefined
+  const userInteractionContract = manifest.user_interaction_contract === undefined
     ? null
-    : validateGatewayInteractionContract(
-      manifest.gateway_interaction_contract,
-      'gateway_interaction_contract',
+    : validateUserInteractionContract(
+      manifest.user_interaction_contract,
+      'user_interaction_contract',
     );
   const rawFamilyOrchestration = isRecord(manifest.family_orchestration)
     ? manifest.family_orchestration
@@ -888,14 +888,14 @@ export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest
               : remainingGaps.length,
         }
       : null,
-    frontdoor_surface: frontdoorSurface,
+    product_entry_surface: productEntrySurface,
     operator_loop_surface: operatorLoopSurface,
     operator_loop_actions: operatorLoopActions,
     recommended_shell: recommendedShell,
     recommended_command: explicitRecommendedCommand ?? derivedRecommendedCommand,
     schema_ref: schemaRef,
     domain_entry_contract: domainEntryContract,
-    gateway_interaction_contract: gatewayInteractionContract,
+    user_interaction_contract: userInteractionContract,
     product_entry_shell: productEntryShell,
     shared_handoff: sharedHandoff,
     product_entry_overview: productEntryOverview,

@@ -21,13 +21,13 @@ test('public and internal command specs no longer carry removed UI adapter comma
   );
 
   assert.equal(
-    Object.keys(internalSpecs).some((key) => key.includes('frontdoor')),
+    Object.keys(internalSpecs).some((key) => key.includes('product entry')),
     false,
   );
 
   const publicSpecs = buildPublicCommandSpecs(internalSpecs, () => contracts);
   assert.equal(
-    Object.keys(publicSpecs).some((key) => key.includes('frontdoor')),
+    Object.keys(publicSpecs).some((key) => key.includes('product entry')),
     false,
   );
   assert.equal(typeof publicSpecs.system.handler, 'function');

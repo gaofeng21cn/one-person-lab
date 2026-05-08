@@ -14,7 +14,7 @@ import {
   buildFamilyHumanGatePreview,
   buildFamilyActionGraphNode,
   buildFamilyHumanGate,
-  buildFamilyFrontdoorProductEntryOrchestration,
+  buildFamilyProductEntryPresetOrchestration,
   buildFamilyProductEntryOrchestration,
   buildFamilyOrchestrationCompanion,
   buildFamilyOrchestrationTemplate,
@@ -253,12 +253,12 @@ test('buildFamilyOrchestrationTemplate normalizes shared preview surfaces', () =
       target_domain_id: 'med-autoscience',
       graph_kind: 'study_runtime_orchestration',
       graph_version: '2026-04-18',
-      nodes: [{ node_id: 'step:open_frontdoor' }],
+      nodes: [{ node_id: 'step:open_product_entry' }],
       edges: [],
-      entry_nodes: ['step:open_frontdoor'],
-      exit_nodes: ['step:open_frontdoor'],
-      human_gates: [{ gate_id: 'gate-1', trigger_nodes: ['step:open_frontdoor'], blocking: true }],
-      checkpoint_policy: { mode: 'explicit_nodes', checkpoint_nodes: ['step:open_frontdoor'] },
+      entry_nodes: ['step:open_product_entry'],
+      exit_nodes: ['step:open_product_entry'],
+      human_gates: [{ gate_id: 'gate-1', trigger_nodes: ['step:open_product_entry'], blocking: true }],
+      checkpoint_policy: { mode: 'explicit_nodes', checkpoint_nodes: ['step:open_product_entry'] },
     },
     human_gates: [{ gate_id: 'gate-1', title: 'Gate 1', status: 'requested' }],
     resume_surface_kind: 'launch_study',
@@ -320,16 +320,16 @@ test('buildFamilyOrchestrationTemplate passes through project_profile_companion'
 
 test('buildFamilyActionGraph validates canonical family graph payloads', () => {
   const graph = buildFamilyActionGraph({
-    graph_id: 'redcube_frontdoor_product_entry_graph',
+    graph_id: 'redcube_product_entry_product_entry_graph',
     target_domain_id: 'redcube_ai',
     graph_kind: 'visual_deliverable_orchestration',
     graph_version: '2026-04-18',
     nodes: [
       buildFamilyActionGraphNode({
-        node_id: 'step:open_frontdoor',
-        node_kind: 'frontdoor',
-        title: 'Open RedCube frontdoor',
-        surface_kind: 'product_frontdoor',
+        node_id: 'step:open_product_entry',
+        node_kind: 'product_entry',
+        title: 'Open RedCube product_entry',
+        surface_kind: 'product_entry_surface',
       }),
       buildFamilyActionGraphNode({
         node_id: 'step:continue_current_loop',
@@ -341,12 +341,12 @@ test('buildFamilyActionGraph validates canonical family graph payloads', () => {
     ],
     edges: [
       buildFamilyActionGraphEdge({
-        from: 'step:open_frontdoor',
+        from: 'step:open_product_entry',
         to: 'step:continue_current_loop',
         on: 'start_direct',
       }),
     ],
-    entry_nodes: ['step:open_frontdoor'],
+    entry_nodes: ['step:open_product_entry'],
     exit_nodes: ['step:continue_current_loop'],
     human_gates: [
       buildFamilyActionGraphHumanGate({
@@ -420,16 +420,16 @@ test('buildFamilyProductEntryOrchestration materializes action graph and gate pr
     },
   });
   const orchestration = buildFamilyProductEntryOrchestration({
-    graph_id: 'redcube_frontdoor_product_entry_graph',
+    graph_id: 'redcube_product_entry_product_entry_graph',
     target_domain_id: 'redcube_ai',
     graph_kind: 'visual_deliverable_orchestration',
     graph_version: '2026-04-18',
     nodes: [
       {
-        node_id: 'step:open_frontdoor',
-        node_kind: 'frontdoor',
-        title: 'Open RedCube frontdoor',
-        surface_kind: 'product_frontdoor',
+        node_id: 'step:open_product_entry',
+        node_kind: 'product_entry',
+        title: 'Open RedCube product_entry',
+        surface_kind: 'product_entry_surface',
       },
       {
         node_id: 'step:continue_current_loop',
@@ -448,7 +448,7 @@ test('buildFamilyProductEntryOrchestration materializes action graph and gate pr
     ],
     edges: [
       {
-        from: 'step:open_frontdoor',
+        from: 'step:open_product_entry',
         to: 'step:continue_current_loop',
         on: 'start_direct',
       },
@@ -458,7 +458,7 @@ test('buildFamilyProductEntryOrchestration materializes action graph and gate pr
         on: 'session_started',
       },
     ],
-    entry_nodes: ['step:open_frontdoor'],
+    entry_nodes: ['step:open_product_entry'],
     exit_nodes: ['step:inspect_current_progress'],
     human_gates: [
       {
@@ -505,7 +505,7 @@ test('buildFamilyProductEntryOrchestration materializes action graph and gate pr
 
   assert.equal(orchestration.action_graph_ref.ref, '/family_orchestration/action_graph');
   assert.equal(orchestration.action_graph_ref.label, 'redcube family action graph');
-  assert.equal(orchestration.action_graph.graph_id, 'redcube_frontdoor_product_entry_graph');
+  assert.equal(orchestration.action_graph.graph_id, 'redcube_product_entry_product_entry_graph');
   assert.deepEqual(orchestration.action_graph.checkpoint_policy, {
     mode: 'explicit_nodes',
     checkpoint_nodes: ['step:continue_current_loop', 'step:inspect_current_progress'],
@@ -553,14 +553,14 @@ test('buildFamilyProductEntryOrchestration passes through project_profile_compan
     graph_version: '2026-04-21',
     nodes: [
       {
-        node_id: 'step:open_frontdoor',
-        node_kind: 'frontdoor',
-        title: 'Open frontdoor',
+        node_id: 'step:open_product_entry',
+        node_kind: 'product_entry',
+        title: 'Open product_entry',
       },
     ],
     edges: [],
-    entry_nodes: ['step:open_frontdoor'],
-    exit_nodes: ['step:open_frontdoor'],
+    entry_nodes: ['step:open_product_entry'],
+    exit_nodes: ['step:open_product_entry'],
     resume_surface_kind: 'grant_entry',
     session_locator_field: 'grant_run_id',
     checkpoint_locator_field: 'checkpoint_id',
@@ -579,14 +579,14 @@ test('buildFamilyProductEntryOrchestration passes through project_profile_compan
   );
 });
 
-test('buildFamilyFrontdoorProductEntryOrchestration materializes the canonical frontdoor-direct-federated-progress graph preset', () => {
-  const orchestration = buildFamilyFrontdoorProductEntryOrchestration({
-    graph_id: 'redcube_frontdoor_product_entry_graph',
+test('buildFamilyProductEntryPresetOrchestration materializes the canonical product_entry-direct-federated-progress graph preset', () => {
+  const orchestration = buildFamilyProductEntryPresetOrchestration({
+    graph_id: 'redcube_product_entry_product_entry_graph',
     target_domain_id: 'redcube_ai',
     graph_kind: 'visual_deliverable_orchestration',
     graph_version: '2026-04-20',
-    frontdoor_title: 'Open RedCube frontdoor',
-    frontdoor_surface_kind: 'product_frontdoor',
+    product_entry_title: 'Open RedCube product_entry',
+    product_entry_surface_kind: 'product_entry_surface',
     direct_title: 'Start or continue the direct product loop',
     direct_surface_kind: 'product_entry',
     federated_title: 'Enter the same loop through internal OPL bridge',
@@ -622,7 +622,7 @@ test('buildFamilyFrontdoorProductEntryOrchestration materializes the canonical f
   assert.deepEqual(
     orchestration.action_graph.nodes.map((node) => node.node_id),
     [
-      'step:open_frontdoor',
+      'step:open_product_entry',
       'step:continue_current_loop',
       'step:opl_bridge_handoff',
       'step:inspect_current_progress',

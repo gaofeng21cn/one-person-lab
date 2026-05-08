@@ -151,7 +151,7 @@ export function buildChatSeedArgs(
   return appendHermesOptions(['chat', '--query', prompt, '--quiet'], input);
 }
 
-export function buildProductEntryFrontdoorPrompt(contracts: GatewayContracts) {
+export function buildProductEntrySessionPrompt(contracts: GatewayContracts) {
   const domainLines = contracts.domains.domains.map((domain) => {
     const workstreams = domain.owned_workstreams.join(', ');
     return `- ${domain.domain_id}: ${domain.independent_domain_agent.agent_id} app skill ${domain.single_app_skill.skill_id} -> workstreams: ${workstreams}`;

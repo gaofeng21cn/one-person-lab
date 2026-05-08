@@ -1,9 +1,9 @@
 import type { LocalCodexDefaults } from './local-codex-defaults.ts';
 
-export const OPL_FRONTDOOR_APP_TITLE = 'OPL';
-export const OPL_FRONTDOOR_AGENT_LABEL = 'OPL Agent';
-export const OPL_FRONTDOOR_MCP_SERVER_KEY = 'opl_cortex';
-export const OPL_FRONTDOOR_MCP_SERVER_LABEL = 'OPL Cortex';
+export const OPL_ENTRY_APP_TITLE = 'OPL';
+export const OPL_ENTRY_AGENT_LABEL = 'OPL Agent';
+export const OPL_ENTRY_MCP_SERVER_KEY = 'opl_cortex';
+export const OPL_ENTRY_MCP_SERVER_LABEL = 'OPL Cortex';
 
 type OplWelcomeOptions = {
   publicOrigin: string;
@@ -74,7 +74,7 @@ export function buildOplShellWelcome(options: OplWelcomeOptions) {
 
 export function buildOplTitlePrompt() {
   return [
-    `Create a short conversation title for ${OPL_FRONTDOOR_APP_TITLE}.`,
+    `Create a short conversation title for ${OPL_ENTRY_APP_TITLE}.`,
     'Prefer the concrete workspace, project, study, or paper identifier when one is present.',
     'If a study identifier such as 004-invasive-architecture appears, start with it.',
     'Prefer titles like 004 invasive architecture over generic summaries.',

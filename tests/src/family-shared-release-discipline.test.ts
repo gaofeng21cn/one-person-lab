@@ -504,15 +504,15 @@ test('family manifest fixtures keep repo-owned domain entry and orchestration tr
   assert.equal(redcube.domain_entry_contract.entry_adapter, 'RedCubeDomainEntry');
 
   assert.equal(
-    science.gateway_interaction_contract.shared_downstream_entry,
+    science.user_interaction_contract.shared_downstream_entry,
     science.domain_entry_contract.entry_adapter,
   );
   assert.equal(
-    grant.gateway_interaction_contract.shared_downstream_entry,
+    grant.user_interaction_contract.shared_downstream_entry,
     grant.domain_entry_contract.entry_adapter,
   );
   assert.equal(
-    redcube.gateway_interaction_contract.shared_downstream_entry,
+    redcube.user_interaction_contract.shared_downstream_entry,
     redcube.domain_entry_contract.entry_adapter,
   );
 

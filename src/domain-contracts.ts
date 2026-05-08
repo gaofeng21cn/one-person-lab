@@ -44,7 +44,6 @@ export function validateDomainsRegistry(
       const independentDomainAgent = entry.independent_domain_agent;
       const singleAppSkill = entry.single_app_skill;
       const runtimeDependencyBoundary = entry.runtime_dependency_boundary;
-      const legacyBoundaryTerms = entry.legacy_boundary_terms;
 
       if (!isRecord(independentDomainAgent)) {
         throw new GatewayContractError(
@@ -67,14 +66,6 @@ export function validateDomainsRegistry(
           { file: filePath, field: 'runtime_dependency_boundary' },
         );
       }
-      if (!isRecord(legacyBoundaryTerms)) {
-        throw new GatewayContractError(
-          'contract_shape_invalid',
-          'Domain field "legacy_boundary_terms" must be an object.',
-          { file: filePath, field: 'legacy_boundary_terms' },
-        );
-      }
-
       const backendCompanions = runtimeDependencyBoundary.backend_companions;
       if (!Array.isArray(backendCompanions)) {
         throw new GatewayContractError(
@@ -217,23 +208,6 @@ export function validateDomainsRegistry(
           'non_opl_families',
           filePath,
         ),
-        legacy_boundary_terms: {
-          role: expectString(
-            legacyBoundaryTerms.role,
-            'legacy_boundary_terms.role',
-            filePath,
-          ),
-          gateway_surface: expectString(
-            legacyBoundaryTerms.gateway_surface,
-            'legacy_boundary_terms.gateway_surface',
-            filePath,
-          ),
-          harness_surface: expectString(
-            legacyBoundaryTerms.harness_surface,
-            'legacy_boundary_terms.harness_surface',
-            filePath,
-          ),
-        },
       };
     }),
   };

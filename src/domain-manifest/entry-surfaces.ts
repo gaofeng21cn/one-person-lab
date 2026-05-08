@@ -105,7 +105,7 @@ export function normalizeProductEntryOverview(value: unknown) {
   return {
     surface_kind: optionalString(value.surface_kind) ?? 'product_entry_overview',
     summary: optionalString(value.summary),
-    frontdoor_command: optionalString(value.frontdoor_command),
+    product_entry_command: optionalString(value.product_entry_command),
     recommended_command: optionalString(value.recommended_command),
     operator_loop_command: optionalString(value.operator_loop_command),
     progress_surface: progressSurface,

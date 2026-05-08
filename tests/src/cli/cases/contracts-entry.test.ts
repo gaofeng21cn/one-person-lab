@@ -345,11 +345,11 @@ test('status workspace reports git and worktree visibility for one workspace pat
   assert.equal(typeof output.workspace.git.is_clean, 'boolean');
 });
 
-test('bare opl command keeps raw Codex frontdoor behavior even when the session ledger file is corrupted', () => {
+test('bare opl command keeps raw Codex product entry behavior even when the session ledger file is corrupted', () => {
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
 if [ "$#" -eq 0 ]; then
   cat <<'EOF'
-CODEX FRONTDOOR
+CODEX ENTRY
 EOF
   exit 0
 fi
@@ -367,7 +367,7 @@ exit 1
       OPL_STATE_DIR: stateRoot,
     });
 
-    assert.equal(result.stdout, 'CODEX FRONTDOOR\n');
+    assert.equal(result.stdout, 'CODEX ENTRY\n');
     assert.equal(result.stderr, '');
     assert.equal(fs.readFileSync(ledgerPath, 'utf8'), corruptedLedgerContent);
   } finally {

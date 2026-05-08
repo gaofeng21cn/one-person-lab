@@ -24,15 +24,15 @@ test('family manifest fixtures expose domain agent entry spec v1', () => {
   const redcubeSpec = (fixtures.redcube.domain_entry_contract as Record<string, unknown>).domain_agent_entry_spec as Record<string, unknown>;
 
   assert.equal(scienceSpec.agent_id, 'mas');
-  assert.equal(scienceSpec.entry_command, 'product-frontdoor');
+  assert.equal(scienceSpec.entry_command, 'product-status');
   assert.equal(scienceSpec.manifest_command, 'product-entry-manifest');
 
   assert.equal(grantEntrySpec.agent_id, 'mag');
-  assert.equal(grantEntrySpec.entry_command, 'product-frontdoor');
+  assert.equal(grantEntrySpec.entry_command, 'product-status');
   assert.equal(grantEntrySpec.manifest_command, 'product-entry-manifest');
 
   assert.equal(redcubeSpec.agent_id, 'rca');
-  assert.equal(redcubeSpec.entry_command, 'redcube product frontdoor');
+  assert.equal(redcubeSpec.entry_command, 'redcube product status');
   assert.equal(redcubeSpec.manifest_command, 'redcube product manifest');
 });
 
@@ -59,18 +59,18 @@ export function assertMagActionGraph(actionGraph: Record<string, unknown>) {
 }
 
 export function assertMasActionGraph(actionGraph: Record<string, unknown>) {
-  assert.equal(actionGraph.graph_id, 'mas_workspace_frontdoor_study_runtime_graph');
+  assert.equal(actionGraph.graph_id, 'mas_workspace_product_entry_study_runtime_graph');
   assert.equal(actionGraph.target_domain_id, 'med-autoscience');
   assert.deepEqual(
     (actionGraph.nodes as Array<{ node_id: string }>).map((node) => node.node_id),
     [
-      'frontdoor:open_workspace',
+      'product_entry:open_workspace',
       'study:submit_task',
       'study:launch_or_resume',
       'study:inspect_progress',
     ],
   );
-  assert.deepEqual(actionGraph.entry_nodes, ['frontdoor:open_workspace']);
+  assert.deepEqual(actionGraph.entry_nodes, ['product_entry:open_workspace']);
   assert.deepEqual(actionGraph.exit_nodes, ['study:inspect_progress']);
   assert.deepEqual(actionGraph.human_gates, [
     {
@@ -95,18 +95,18 @@ export function assertMasActionGraph(actionGraph: Record<string, unknown>) {
 }
 
 export function assertRedcubeActionGraph(actionGraph: Record<string, unknown>) {
-  assert.equal(actionGraph.graph_id, 'redcube_frontdoor_product_entry_graph');
+  assert.equal(actionGraph.graph_id, 'redcube_product_entry_product_entry_graph');
   assert.equal(actionGraph.target_domain_id, 'redcube_ai');
   assert.deepEqual(
     (actionGraph.nodes as Array<{ node_id: string }>).map((node) => node.node_id),
     [
-      'step:open_frontdoor',
+      'step:open_product_entry',
       'step:continue_current_loop',
       'step:opl_bridge_handoff',
       'step:inspect_current_progress',
     ],
   );
-  assert.deepEqual(actionGraph.entry_nodes, ['step:open_frontdoor']);
+  assert.deepEqual(actionGraph.entry_nodes, ['step:open_product_entry']);
   assert.deepEqual(actionGraph.exit_nodes, ['step:inspect_current_progress']);
   assert.deepEqual(actionGraph.human_gates, [
     {
@@ -148,7 +148,7 @@ export function createFamilyContractsFixtureRoot() {
           skill_id: 'mag',
           plugin_name: 'Med Auto Grant',
           activation_kind: 'explicit_app_skill',
-          entry_command: 'medautogrant product-frontdoor',
+          entry_command: 'medautogrant product status',
           manifest_command: 'medautogrant product-entry-manifest',
         },
         domain_truth_owner: [
@@ -173,11 +173,6 @@ export function createFamilyContractsFixtureRoot() {
         standalone_allowed: true,
         owned_workstreams: ['grant_ops'],
         non_opl_families: [],
-        legacy_boundary_terms: {
-          role: 'grant_ops_gateway',
-          gateway_surface: 'Grant Ops Gateway',
-          harness_surface: 'Grant Writing Domain Harness OS',
-        },
       });
     }
 
@@ -215,7 +210,7 @@ case "$1" in
   print)
     if [ -f "$STATE_DIR/loaded" ]; then
       cat <<'EOF'
-service = ai.opl.frontdoor
+service = ai.opl.product entry
 state = running
 EOF
       exit 0
