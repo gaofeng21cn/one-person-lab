@@ -11,7 +11,7 @@
 
 ## Current Release
 
-- current owner commit：`b427ced5e57f24f7ceb3d3868fb49934ff4ad8c3`
+- current owner commit：`2b08c7efd8acd80355e870087d4ce5be7b45d4d1`
 - consumers aligned：`med-autoscience`、`med-autogrant`、`redcube-ai`
 - closeout date：`2026-05-08`
 - scope：family shared modules / contracts / indexes only；domain truth remains in MAS、MAG、RCA
