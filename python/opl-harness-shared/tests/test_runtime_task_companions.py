@@ -35,7 +35,7 @@ def test_runtime_task_companion_helpers_normalize_mas_mag_and_rca_payloads() -> 
         },
     )
     assert runtime_inventory["surface_kind"] == "runtime_inventory"
-    assert runtime_inventory["runtime_owner"] == "upstream_hermes_agent"
+    assert runtime_inventory["runtime_owner"] == "mas_runtime_core"
 
     checkpoint_summary = build_checkpoint_summary(
         status="freeze_ready",

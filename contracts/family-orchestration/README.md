@@ -10,6 +10,8 @@ These contracts absorb useful orchestration ideas from tools such as `CrewAI` in
 - `Codex CLI` remains the default family executor name and `autonomous` remains the default route mode
 - domain repositories remain the owners of durable truth, audit truth, and review truth
 
+They also absorb the useful `Ageniti` idea of deriving CLI, MCP, Skill, OpenAI, AI SDK, and product-entry descriptors from one app-action definition. OPL adopts that pattern as a family contract, not as a `@ageniti/core` runtime dependency.
+
 ## Ownership Boundary
 
 `one-person-lab` owns:
@@ -41,10 +43,12 @@ These schemas therefore freeze interoperability surfaces, not a monolithic runti
 
 - `family-action-graph.schema.json`
   - shared action-graph topology, node, edge, human-gate, and checkpoint-policy surface
+- `family-action-catalog.schema.json`
+  - shared callable-action catalog for action id, owner, effect, input/output schema refs, source command, supported surfaces, human gates, workspace locator fields, and authority boundary
 - `family-human-gate.schema.json`
   - shared human-review gate request / decision / resume surface
 - `family-product-entry-manifest-v2.schema.json`
-  - shared product-entry discovery surface that can point at graphs, gates, resume contracts, runtime continuity companions, repo-owned runtime control projections, and family persistence / lifecycle / owner-route refs
+  - shared product-entry discovery surface that can point at graphs, action catalogs, gates, resume contracts, runtime continuity companions, repo-owned runtime control projections, and family persistence / lifecycle / owner-route refs
 
 ### Control-plane-oriented
 
@@ -92,6 +96,26 @@ The shared control surfaces are:
 
 `family-product-entry-manifest-v2.schema.json` only adds optional discovery refs for these surfaces. It does not require `MAG` or `RCA` to migrate runtime state into SQLite, and it does not move `MAS` publication evaluation, AI review, paper package, or readiness authority out of `MAS`.
 
+## Action Catalog Freeze
+
+`family-action-catalog.schema.json` is the family callable-action metadata contract. It is intentionally separate from `family-action-graph.schema.json`:
+
+- `family-action-graph` describes workflow topology, gates, and checkpoint policy.
+- `family-action-catalog` describes callable actions and the descriptors that can be derived from those actions.
+
+The catalog can project one domain-owned action into:
+
+- CLI command descriptor
+- MCP tool catalog descriptor
+- Skill command contract descriptor
+- product-entry operator-loop action descriptor
+- OpenAI function tool descriptor
+- AI SDK tool descriptor
+
+OPL owns the schema, TypeScript and Python mirror helpers, manifest discovery, parity checks, and read-only `opl actions list|inspect|export` commands. Domain repositories own the actual handlers, runtime truth, review truth, quality authority, publication or deliverable gates, and any write effects.
+
+`MAG` may expose an MCP-compatible descriptor with `descriptor_only=true` and `public_runtime=false` until a verified public MCP runtime entry exists.
+
 ## What This Directory Does Not Freeze
 
 This directory does not:
@@ -107,11 +131,11 @@ This directory does not:
 - `one-person-lab`
   - publishes the contract language, schemas, and reference wording
 - `med-autoscience`
-  - adopts `family event envelope`, `family checkpoint lineage`, `family human gate`, and the full persistence / lifecycle / owner-route reference adapter
+  - adopts `family event envelope`, `family checkpoint lineage`, `family human gate`, the full persistence / lifecycle / owner-route reference adapter, and the full action-catalog reference adapter
 - `med-autogrant`
-  - adopts `family action graph`, `family human gate`, `family product-entry manifest v2`, and a light persistence / lifecycle / owner-route adapter over existing runtime-control and grant-progress surfaces
+  - adopts `family action graph`, `family action catalog`, `family human gate`, `family product-entry manifest v2`, and a light persistence / lifecycle / owner-route adapter over existing runtime-control and grant-progress surfaces
 - `redcube-ai`
-  - adopts `family product-entry manifest v2` plus the aligned action-graph / gate semantics and a managed-run/session/review projection adapter around operator-loop continuity
+  - adopts `family product-entry manifest v2` plus the aligned action-catalog / action-graph / gate semantics and a managed-run/session/review projection adapter around operator-loop continuity
 
 ## Related Docs
 
@@ -126,6 +150,7 @@ This directory does not:
 - [`family-event-envelope.schema.json`](./family-event-envelope.schema.json)
 - [`family-checkpoint-lineage.schema.json`](./family-checkpoint-lineage.schema.json)
 - [`family-action-graph.schema.json`](./family-action-graph.schema.json)
+- [`family-action-catalog.schema.json`](./family-action-catalog.schema.json)
 - [`family-human-gate.schema.json`](./family-human-gate.schema.json)
 - [`family-persistence-policy.schema.json`](./family-persistence-policy.schema.json)
 - [`family-lifecycle-ledger.schema.json`](./family-lifecycle-ledger.schema.json)

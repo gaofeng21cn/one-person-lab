@@ -7,6 +7,7 @@ export type ErrorCode =
   | 'workstream_not_found'
   | 'domain_not_found'
   | 'surface_not_found'
+  | 'missing_family_action_catalog'
   | 'cli_usage_error'
   | 'unknown_command'
   | 'hermes_binary_not_found'
@@ -28,6 +29,7 @@ export function defaultExitCode(code: ErrorCode): number {
     case 'workstream_not_found':
     case 'domain_not_found':
     case 'surface_not_found':
+    case 'missing_family_action_catalog':
     case 'hermes_binary_not_found':
     case 'hermes_command_failed':
     case 'hermes_output_parse_failed':

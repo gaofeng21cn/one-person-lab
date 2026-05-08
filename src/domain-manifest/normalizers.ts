@@ -3,6 +3,7 @@ import {
   validateUserInteractionContract,
   validateSharedHandoff,
 } from '../family-entry-contracts.ts';
+import { normalizeFamilyActionCatalog } from '../family-action-catalog.ts';
 import { normalizeManagedRuntimeContract } from '../managed-runtime-contract.ts';
 import {
   normalizeArtifactInventory,
@@ -784,6 +785,7 @@ export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest
   const rawFamilyOrchestration = isRecord(manifest.family_orchestration)
     ? manifest.family_orchestration
     : null;
+  const familyActionCatalog = normalizeFamilyActionCatalog(manifest.family_action_catalog);
   const remainingGaps = readStringList(manifest.remaining_gaps);
   const rawProductEntryStatus = isRecord(manifest.product_entry_status) ? manifest.product_entry_status : null;
   const sessionContinuity = normalizeSessionContinuity(manifest.session_continuity, {
@@ -926,6 +928,7 @@ export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest
             : null,
         }
       : null,
+    family_action_catalog: familyActionCatalog,
     runtime_inventory: runtimeInventory,
     task_lifecycle: taskLifecycle,
     runtime_control: runtimeControl,
