@@ -281,6 +281,66 @@ export function projectFamilyAction(action: FamilyActionCatalogAction) {
   };
 }
 
+function projectionMatchesAction(value: unknown, action: FamilyActionCatalogAction, command: string) {
+  if (!isRecord(value)) {
+    return false;
+  }
+  return optionalString(value.action_id) === action.action_id
+    || optionalString(value.command_contract_id) === action.action_id
+    || optionalString(value.command_contract_id) === optionalString(action.supported_surfaces.skill?.command_contract_id)
+    || optionalString(value.command) === command;
+}
+
+function collectSkillProjectionEntries(value: unknown): JsonRecord[] {
+  if (Array.isArray(value)) {
+    return value.flatMap((entry) => collectSkillProjectionEntries(entry));
+  }
+  if (!isRecord(value)) {
+    return [];
+  }
+
+  const entries: JsonRecord[] = [];
+  if (
+    optionalString(value.action_id)
+    || optionalString(value.command_contract_id)
+    || optionalString(value.command)
+  ) {
+    entries.push(value);
+  }
+
+  const directProjection = value.action_catalog_projection;
+  entries.push(...collectSkillProjectionEntries(directProjection));
+
+  const groupedProjection = value.action_catalog_projections;
+  if (isRecord(groupedProjection)) {
+    entries.push(...collectSkillProjectionEntries(groupedProjection.skill));
+  }
+
+  return entries;
+}
+
+function hasSkillProjectionContract(
+  manifest: Pick<NormalizedDomainManifest, 'skill_catalog'> | null,
+  action: FamilyActionCatalogAction,
+  command: string,
+) {
+  const skillCatalog = manifest?.skill_catalog;
+  if (!skillCatalog) {
+    return true;
+  }
+
+  const contracts = skillCatalog.command_contracts ?? [];
+  if (contracts.some((entry) => projectionMatchesAction(entry, action, command))) {
+    return true;
+  }
+
+  return skillCatalog.skills.some((skill) =>
+    collectSkillProjectionEntries(skill.domain_projection).some((entry) =>
+      projectionMatchesAction(entry, action, command)
+    )
+  );
+}
+
 export function buildFamilyActionCatalogParity(
   catalog: FamilyActionCatalog,
   manifest: Pick<NormalizedDomainManifest, 'operator_loop_actions' | 'skill_catalog'> | null = null,
@@ -298,21 +358,14 @@ export function buildFamilyActionCatalogParity(
       }
     }
 
-    const manifestAction = manifest?.operator_loop_actions?.[action.action_id];
+    const manifestAction =
+      manifest?.operator_loop_actions?.[action.action_id]
+      ?? manifest?.operator_loop_actions?.[projections.product_entry.action_key];
     if (manifestAction && optionalString(manifestAction.command) !== projections.product_entry.command) {
       issues.push(`${action.action_id}: operator_loop_actions command diverges from action catalog`);
     }
 
-    const commandContracts = manifest?.skill_catalog?.command_contracts ?? [];
-    const hasSkillContract = commandContracts.length === 0 || commandContracts.some((entry) => {
-      if (!isRecord(entry)) {
-        return false;
-      }
-      return optionalString(entry.action_id) === action.action_id
-        || optionalString(entry.command_contract_id) === projections.skill.command_contract_id
-        || optionalString(entry.command) === projections.skill.command;
-    });
-    if (!hasSkillContract) {
+    if (action.supported_surfaces.skill && !hasSkillProjectionContract(manifest, action, projections.skill.command)) {
       issues.push(`${action.action_id}: skill command contract missing`);
     }
   }

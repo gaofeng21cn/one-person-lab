@@ -100,6 +100,62 @@ function withFamilyActionCatalog(payload: JsonRecord, catalog: JsonRecord) {
   return attachCatalog(payload);
 }
 
+function withSkillDomainProjectionOnly(payload: JsonRecord, catalog: JsonRecord) {
+  const attachCatalog = (manifest: JsonRecord) => ({
+    ...manifest,
+    family_action_catalog: catalog,
+    operator_loop_actions: {
+      ...((manifest.operator_loop_actions as JsonRecord | undefined) ?? {}),
+      start_deliverable: {
+        command: 'redcube product invoke',
+        surface_kind: 'product_entry',
+        requires: ['workspace_root'],
+      },
+    },
+    skill_catalog: {
+      ...((manifest.skill_catalog as JsonRecord | undefined) ?? {}),
+      surface_kind: ((manifest.skill_catalog as JsonRecord | undefined)?.surface_kind as string | undefined) ?? 'skill_catalog',
+      summary: ((manifest.skill_catalog as JsonRecord | undefined)?.summary as string | undefined) ?? 'Fixture skill catalog',
+      skills: [
+        ...(((manifest.skill_catalog as JsonRecord | undefined)?.skills as unknown[] | undefined) ?? []),
+        {
+          surface_kind: 'skill_descriptor',
+          skill_id: 'redcube',
+          title: 'RedCube AI',
+          owner: 'redcube_ai',
+          distribution_mode: 'codex_plugin',
+          target_surface_kind: 'product_entry',
+          description: 'Fixture RedCube skill descriptor.',
+          command: 'redcube product status',
+          readiness: 'ready',
+          tags: ['fixture'],
+          domain_projection: {
+            action_catalog_ref: '/family_action_catalog',
+            action_catalog_projection: [
+              {
+                action_id: 'start_deliverable',
+                command_contract_id: 'start_deliverable',
+                command: 'redcube product invoke',
+              },
+            ],
+          },
+        },
+      ],
+      supported_commands: ((manifest.skill_catalog as JsonRecord | undefined)?.supported_commands as unknown[] | undefined) ?? [],
+      command_contracts: [],
+    },
+  });
+
+  if (payload.product_entry_manifest && typeof payload.product_entry_manifest === 'object') {
+    return {
+      ...payload,
+      product_entry_manifest: attachCatalog(payload.product_entry_manifest as JsonRecord),
+    };
+  }
+
+  return attachCatalog(payload);
+}
+
 test('family action catalog is resolved from domain manifests and exported as derived tool surfaces', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-actions-state-'));
   const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
@@ -224,6 +280,50 @@ test('family action catalog is resolved from domain manifests and exported as de
     });
     assert.equal(openaiExport.family_action_export.descriptors[0].type, 'function');
     assert.equal(openaiExport.family_action_export.descriptors[0].function.name, 'start_deliverable');
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family action parity accepts skill domain projection and product-entry action keys', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-actions-projection-state-'));
+  const { fixtureRoot, fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const fixtures = loadFamilyManifestFixtures();
+  const redcubeManifest = withSkillDomainProjectionOnly(
+    fixtures.redcube,
+    buildActionCatalog(
+      'redcube_ai',
+      'start_deliverable',
+      'redcube product invoke',
+      {
+        owner: 'redcube_ai',
+        title: 'Start RedCube deliverable',
+        surfaceKind: 'product_entry',
+        effect: 'mutating',
+      },
+    ),
+  );
+
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'redcube',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildManifestCommand(redcubeManifest),
+    ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
+
+    const inspect = runCli(['actions', 'inspect', '--domain', 'redcube', '--action', 'start_deliverable'], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_STATE_DIR: stateRoot,
+    });
+
+    assert.equal(inspect.family_action.parity.status, 'aligned');
+    assert.deepEqual(inspect.family_action.parity.issues, []);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(stateRoot, { recursive: true, force: true });
