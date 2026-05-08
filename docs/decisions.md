@@ -2,6 +2,17 @@
 
 ## 2026-05-08
 
+### 决策：MAS monolith / MDS 默认依赖退役上升为 family companion-retirement 原则
+
+原因：MAS 已完成 no-history physical absorb 与 monolith closeout，外部 `med-deepscientist` checkout 不再是 MAS 默认 study/status/progress/cockpit operation 的运行必需依赖。这一经验值得上升到 OPL family 层，但上收对象是通用 companion lifecycle 原则，不是 MAS 的医学论文 truth 或研究执行细节。
+
+影响：
+
+- admitted domain 可以吸收外部 companion 的可保留能力，但吸收后默认只暴露 domain-owned capability surface。
+- 被降级的外部 companion 只能作为显式 backend audit、legacy restore/import diagnostic、upstream intake 或 parity oracle 引用出现，不得回到 OPL 默认安装依赖、顶层 domain agent 或独立 OPL-managed module。
+- 未来类似 no-history absorb 必须记录 source ref/hash、snapshot checksum、license refs、capability classification、domain owner、authority boundary、parity proof 和 contributor audit。
+- `OPL` 只消费 domain-owned projections 与可发现 refs；不接管 domain runtime、scheduler、memory store、quality verdict、publication gate 或 artifact authority。
+
 ### 决策：MAS 验证过的 persistence / lifecycle / owner-route 原则上升为 family control-plane contract
 
 原因：MAS 近期把 runtime 小文件压力收敛到 SQLite sidecar index，并把持久化层、记忆层、论文真相与 lifecycle cleanup 分开管理。这一类经验值得在 `OPL` family 层复用，但可上收的只有共享控制面：持久化角色、lifecycle receipt、owner-route 与 discovery refs。医学论文质量、publication readiness、AI reviewer、paper package 与 current package authority 仍属于 MAS domain truth。
@@ -25,8 +36,8 @@
 - `MAS` 继续作为独立医学科研 `domain agent`；`MAG`、`RCA` 的独立 domain-agent 表述不受影响。
 - `MAS` 对 `Codex` / `OPL` 暴露一个 MAS domain app skill；OPL 负责发现、同步和消费该 skill，不新增 OPL-only MAS skill family。
 - `OPL` 持有 unified definitions、shared module/contract/index registration、module discovery 与 projection consumption surface；医学科研 runtime、controller truth、quality authority、publication gates 与 deliverable truth 继续由 `MAS` 持有。
-- `MDS` 继续作为 `MAS` 的隐藏 runtime/backend companion 被安装、检查和修复；它不进入 OPL 顶层 domain-agent 入口，也不成为独立 OPL-managed domain agent。
-- 公开文档与技术入口不得恢复 MAS 用户安装型 standalone GitHub Release / standalone product release 叙事；MAS/MDS 仍按 OPL Packages/GHCR-backed module 坐标与 git checkout / sibling repo 更新路径表达。
+- `MDS` 不再作为 OPL 默认安装的 MAS 运行依赖；MAS 只可把它显式声明为 backend audit、legacy restore/import diagnostic、upstream intake 或 parity oracle companion。
+- 公开文档与技术入口不得恢复 MAS 用户安装型 standalone GitHub Release / standalone product release 叙事；MAS 仍按 OPL Packages/GHCR-backed module 坐标与 git checkout / sibling repo 更新路径表达，MDS 只保留 MAS-declared optional companion 引用。
 - OPL 对 MAS progress、publication、quality、runtime control 等 projection 只做证据、provenance、状态和路由展示；不得把 projection 文案写成 OPL 持有的 ready verdict、submission-ready verdict、publication verdict 或质量裁决。
 - 本决策不修改 `contracts/` 与 projection contract；它只同步公开文档和核心 docs 的 MAS v2 wording。
 
@@ -67,7 +78,7 @@
 - 中央 release manifest / Packages workflow 可以继续维护为机器分发雏形，但各 domain repo 不需要单独恢复用户安装型 GitHub Release
 - WebUI Docker 镜像通过 GHCR 发布，服务 Docker/浏览器-only 场景
 - Native helper 预构建 archive 同步发布到 GHCR，后续 `native:repair` 可优先消费
-- 标准桌面 App 与自动更新包仍不打入 `MAS/MDS/MAG/RCA` runtime payload；macOS arm64 可额外发布 Full 首次安装资产，随包带 `MAS/MDS/MAG/RCA`、Hermes、`officecli` CLI binary 与推荐 companion skill payload，但不得写入 `latest*.yml` 或改变 App 自动更新通道
+- 标准桌面 App 与自动更新包仍不打入 `MAS/MAG/RCA` runtime payload；macOS arm64 可额外发布 Full 首次安装资产，随包带 `MAS/MAG/RCA`、Hermes、`officecli` CLI binary 与推荐 companion skill payload，但不得写入 `latest*.yml` 或改变 App 自动更新通道
 
 ### 决策：One Person Lab App 只做 CLI-backed GUI，不复制安装与环境管理逻辑
 
@@ -95,16 +106,16 @@
 - App 首启先静默读取 `opl system initialize`；若命令行安装已经完成，则不再运行安装或打开首启向导
 - 只有缺少 Codex CLI、当前命中版本过旧或无法解析、模块无法安装等不可自动解决事项，才进入环境管理提示
 
-### 决策：`MDS` 作为 `MAS` 隐藏运行依赖进入安装与环境管理面
+### 历史决策：`MDS` 默认安装依赖面已被 MAS monolith closeout 取代
 
-原因：`MAS` 的深度研究运行链路依赖 `Med Deep Scientist`，新手用户用 `One Person Lab App` 或 `opl install` 初始化时，不应再手工发现和安装这条依赖。同时，`MDS` 仍然不是面向用户选择的顶层 domain agent，不能和 `MAS`、`MAG`、`RCA` 并列进入首页产品入口。
+原因：2026-04-26 的安装面决策服务于迁移期，当时 MAS 仍需外部 `Med Deep Scientist` 作为隐藏运行依赖。MAS 现已完成 no-history physical absorb、retained capability absorb、default-runtime-retirement 与 docs closeout；外部 `med-deepscientist` checkout 不再是 MAS 默认 operation 的运行必需依赖。
 
 影响：
 
-- `opl install` 默认安装/检查 `meddeepscientist`
-- `opl modules` 与 App 设置里的环境管理显示 `MDS`，并提供安装、更新、修复状态入口
-- 首页和 domain-agent 入口继续只露出 `MAS`、`MAG`、`RCA`
-- `MDS` 的项目专用 skills 继续由 `MAS/MDS` 项目目录或运行时内部管理，不升级成 OPL 默认系统级 skill
+- `opl install` 默认安装/检查 `MAS`、`MAG`、`RCA`，不再把 `meddeepscientist` 写成 MAS 默认运行依赖。
+- `opl modules` 与 App 设置里的环境管理可以显示 MAS 声明的可选 companion diagnostic / oracle / intake 状态，但不得把它写成独立 OPL module。
+- 首页和 domain-agent 入口继续只露出 `MAS`、`MAG`、`RCA`。
+- 若 MAS 未来继续学习 MDS / DeepScientist 能力，只能按 snapshot provenance、capability classification、owner boundary、parity proof 与 no-history contributor audit 进入 MAS-owned surface 或显式 oracle / intake / diagnostic 引用。
 
 ### 决策：冻结 `OPL Runtime Manager` 为薄产品管理层，而不是自有完整 runtime sidecar
 
