@@ -94,6 +94,7 @@
 - [OPL Fresh Install 与 GUI 首启测试参考](./references/current-support/opl-fresh-install-and-gui-first-launch-testing.zh-CN.md)
 - [OPL 默认 Skill 生态参考](./references/current-support/opl-default-skill-ecosystem.zh-CN.md)
 - [OPL Release 与 Packages 模块化分发参考](./references/current-support/opl-release-packages-modular-distribution.zh-CN.md)
+- [OPL 测试 Lane 治理参考](./references/current-support/opl-test-lane-governance.zh-CN.md)
 - [共享基础结构](./active/shared-foundation.zh-CN.md)、[共享基础结构归属](./active/shared-foundation-ownership.zh-CN.md)、[共享运行时合同](./active/shared-runtime-contract.zh-CN.md)、[共享领域合同](./active/shared-domain-contract.zh-CN.md) 与 [OPL 运行时命名与边界合同](./active/opl-runtime-naming-and-boundary-contract.zh-CN.md) 是活跃支撑文档。
 - 已退役的 `gateway / federation / routed-action` 语料进入 [Gateway / Federation 兼容语料归档](./history/compatibility/gateway-federation/README.zh-CN.md)。
 - 已退役的 `frontdoor` 时代材料进入 [Frontdoor 历史资料](./history/frontdoor-legacy/README.md)。

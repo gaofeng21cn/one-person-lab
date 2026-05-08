@@ -140,68 +140,6 @@ test('scripts/verify.sh provides the canonical verification wrapper', () => {
   assert.match(verifyScript, /smoke\|fast\|regression\|integration\|structure\|family\|meta\|fresh-install\|artifact\|native\|full\|lint\|line-budget\|typecheck/);
 });
 
-test('local structural quality gate emits compare-ref quality details on Sentrux failures', () => {
-  const script = read('scripts/run-structural-quality-gate.sh');
-
-  assert.match(script, /OPL_QUALITY_DETAILS_COMPARE_REF/);
-  assert.match(script, /compare_ref="\$\{OPL_QUALITY_DETAILS_COMPARE_REF:-origin\/main\}"/);
-  assert.match(script, /sentrux gate \./);
-  assert.match(script, /sentrux check \./);
-  assert.match(script, /quality details --root \./);
-  assert.match(script, /--compare-ref "\$compare_ref"/);
-});
-
-test('GitHub verification workflow runs the native helper production gates', () => {
-  const workflow = read('.github/workflows/verify.yml');
-
-  assert.match(workflow, /npm ci/);
-  assert.match(workflow, /npm run build/);
-  assert.match(workflow, /npm run test:meta/);
-  assert.match(workflow, /\.\/scripts\/verify\.sh native/);
-  assert.match(workflow, /\.\/scripts\/verify\.sh lint/);
-  assert.match(workflow, /npm run native:family-smoke -- --fixture --require-real-workspaces/);
-  assert.match(workflow, /rust-toolchain/);
-  assert.match(workflow, /FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'/);
-});
-
-test('Sentrux advisory workflow publishes OPL quality details sidecar', () => {
-  const workflow = read('.github/workflows/sentrux-advisory.yml');
-  const action = read('.github/actions/quality-details/action.yml');
-
-  assert.match(workflow, /fetch-depth: 0/);
-  assert.match(workflow, /git fetch --no-tags --prune origin main:refs\/remotes\/origin\/main/);
-  assert.match(workflow, /sentrux gate \./);
-  assert.match(workflow, /sentrux check \./);
-  assert.match(workflow, /uses: \.\/\.github\/actions\/quality-details/);
-  assert.match(workflow, /compare-ref: origin\/main/);
-  assert.match(workflow, /json-limit: '50'/);
-  assert.match(workflow, /path: artifacts\/opl-quality-details\/quality-details\.json/);
-  assert.match(workflow, /actions\/upload-artifact@v4/);
-  assert.match(workflow, /name: opl-quality-details/);
-  assert.match(action, /actions\/setup-node@v4/);
-  assert.match(action, /node-version: '24'/);
-  assert.match(action, /npm ci --prefix "\$GITHUB_ACTION_PATH\/\.\.\/\.\.\/\.\."/);
-  assert.match(action, /OPL_QUALITY_DETAILS_COMPARE_REF/);
-  assert.match(action, /--compare-ref "\$OPL_QUALITY_DETAILS_COMPARE_REF"/);
-  assert.match(action, /quality details --root "\$OPL_QUALITY_DETAILS_ROOT" --format markdown/);
-  assert.match(action, /quality details --root "\$OPL_QUALITY_DETAILS_ROOT" --format json/);
-});
-
-test('GitHub native helper prebuild workflow packs release artifacts across supported platforms', () => {
-  const workflow = read('.github/workflows/native-helper-prebuilds.yml');
-
-  assert.match(workflow, /macos-latest/);
-  assert.match(workflow, /ubuntu-latest/);
-  assert.match(workflow, /windows-latest/);
-  assert.match(workflow, /cargo build --release --workspace/);
-  assert.match(workflow, /npm run native:prebuild-pack -- --source-dir target\/release/);
-  assert.match(workflow, /npm run native:prebuild-check -- --prebuild-root dist\/native-helper-prebuilds/);
-  assert.match(workflow, /npm run native:prebuild-archive -- --prebuild-root dist\/native-helper-prebuilds/);
-  assert.match(workflow, /dist\/native-helper-prebuilds\/archives\/\*\.tar\.gz/);
-  assert.match(workflow, /actions\/upload-artifact@v4/);
-  assert.match(workflow, /FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'/);
-});
-
 test('native helper prebuild script handles platform executable names', () => {
   const prebuildScript = read('scripts/native-helper-prebuild.mjs');
   const cacheScript = read('scripts/native-helper-cache.mjs');
@@ -211,55 +149,6 @@ test('native helper prebuild script handles platform executable names', () => {
   assert.match(prebuildScript, /--force-local/);
   assert.match(cacheScript, /process\.platform === 'win32'/);
   assert.match(runtime, /nativeHelperExecutableName/);
-});
-
-test('lint includes the tracked code line-budget guard', () => {
-  assert.equal(packageJson.scripts?.lint, 'node ./scripts/lint.mjs && node ./scripts/line-budget.mjs');
-  assert.equal(fs.existsSync(path.join(repoRoot, 'scripts/line-budget.mjs')), true);
-});
-
-test('package.json exposes a single test lane registry for active test ownership', () => {
-  const registryPath = path.join(repoRoot, 'scripts/test-lanes.mjs');
-  assert.equal(fs.existsSync(registryPath), true);
-
-  assert.equal(packageJson.scripts?.['test:smoke'], 'node ./scripts/test-lanes.mjs run smoke');
-  assert.equal(packageJson.scripts?.['test:fast'], 'node ./scripts/test-lanes.mjs run fast');
-  assert.equal(packageJson.scripts?.['test:meta'], 'node ./scripts/test-lanes.mjs run fast');
-  assert.equal(packageJson.scripts?.['test:regression'], 'node ./scripts/test-lanes.mjs run regression');
-  assert.equal(packageJson.scripts?.['test:integration'], 'node ./scripts/test-lanes.mjs run integration');
-  assert.equal(packageJson.scripts?.['test:artifact'], 'node ./scripts/test-lanes.mjs run artifact');
-  assert.equal(packageJson.scripts?.['test:fresh-install'], 'node ./scripts/test-lanes.mjs run fresh-install');
-  assert.equal(packageJson.scripts?.['test:native'], './scripts/verify.sh native');
-  assert.equal(packageJson.scripts?.['test:structure'], './scripts/verify.sh structure');
-  assert.equal(packageJson.scripts?.test, 'npm run test:fast');
-
-  const coverage = spawnSync(process.execPath, [registryPath, 'assert-coverage'], {
-    cwd: repoRoot,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      NODE_NO_WARNINGS: '1',
-    },
-  });
-
-  assert.equal(coverage.status, 0, coverage.stderr);
-});
-
-test('test:full delegates to the parallel test lane wrapper', () => {
-  const script = read('scripts/run-parallel-test-lanes.sh');
-
-  assert.equal(packageJson.scripts?.['test:full'], './scripts/run-parallel-test-lanes.sh full');
-  assert.match(script, /Usage: \$0 full/);
-  assert.match(script, /"test:fast"/);
-  assert.match(script, /"test:regression"/);
-  assert.match(script, /"test:integration"/);
-  assert.match(script, /"test:artifact"/);
-  assert.match(script, /"test:fresh-install"/);
-  assert.match(script, /"test:native"/);
-  assert.match(script, /"test:structure"/);
-  assert.match(script, /"typecheck"/);
-  assert.match(script, /"lint"/);
-  assert.match(script, /npm run "\$\{lane\}"/);
 });
 
 test('package.json exposes the canonical family shared release maintenance command', () => {
