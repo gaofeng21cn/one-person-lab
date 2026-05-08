@@ -227,25 +227,41 @@ export function normalizeClearanceLane(value: unknown, fallbackSurfaceKind: stri
   };
 }
 
-export function normalizeBackendDeconstructionLane(value: unknown) {
+function normalizeProgramSurface(value: unknown, field: string) {
+  if (!isRecord(value)) {
+    return null;
+  }
+  const command = optionalString(value.command);
+  const ref = optionalString(value.ref);
+  if (!command && !ref) {
+    throw new Error(`${field} must declare command or ref.`);
+  }
+
+  return {
+    surface_kind: requireString(value.surface_kind, `${field}.surface_kind`),
+    ...(command ? { command } : {}),
+    ...(ref ? { ref } : {}),
+  };
+}
+
+export function normalizeSourceProvenanceSurface(value: unknown) {
   if (!isRecord(value)) {
     return null;
   }
 
   return {
-    surface_kind: optionalString(value.surface_kind) ?? 'phase4_backend_deconstruction_lane',
+    surface_kind: optionalString(value.surface_kind) ?? 'source_provenance',
     summary: optionalString(value.summary),
-    substrate_targets: normalizeRecordList(value.substrate_targets, 'phase4_backend_deconstruction_lane.substrate_targets').map((entry, index) => ({
-      capability_id: requireString(entry.capability_id, `phase4_backend_deconstruction_lane.substrate_targets[${index}].capability_id`),
-      owner: optionalString(entry.owner),
-      summary: optionalString(entry.summary),
-    })),
-    backend_retained_now: readStringList(value.backend_retained_now),
-    current_backend_chain: readStringList(value.current_backend_chain),
-    optional_executor_proofs: normalizeRecordList(value.optional_executor_proofs, 'phase4_backend_deconstruction_lane.optional_executor_proofs'),
-    promotion_rules: readStringList(value.promotion_rules),
-    deconstruction_map_doc: optionalString(value.deconstruction_map_doc),
-    recommended_phase_command: optionalString(value.recommended_phase_command),
+    source_provenance_ref: normalizeProgramSurface(value.source_provenance_ref, 'source_provenance.source_provenance_ref'),
+    historical_fixture_ref: normalizeProgramSurface(value.historical_fixture_ref, 'source_provenance.historical_fixture_ref'),
+    explicit_archive_import_ref: normalizeProgramSurface(
+      value.explicit_archive_import_ref,
+      'source_provenance.explicit_archive_import_ref',
+    ),
+    parity_oracle_ref: normalizeProgramSurface(value.parity_oracle_ref, 'source_provenance.parity_oracle_ref'),
+    authority_boundary: readStringList(value.authority_boundary),
+    capability_classification: optionalString(value.capability_classification),
+    recommended_audit_command: optionalString(value.recommended_audit_command),
   };
 }
 

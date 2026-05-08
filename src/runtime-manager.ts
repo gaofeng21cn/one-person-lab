@@ -6,12 +6,12 @@ const ADMITTED_DOMAIN_OWNERS = [
   {
     domain_id: 'medautoscience',
     domain_owner: 'med-autoscience',
-    executor_owner: 'med_deepscientist_or_route_selected_executor',
+    executor_owner: 'codex_cli_or_route_selected_executor',
   },
   {
     domain_id: 'medautogrant',
     domain_owner: 'med-autogrant',
-    executor_owner: 'med-autogrant_or_route_selected_executor',
+    executor_owner: 'codex_cli_or_route_selected_executor',
   },
   {
     domain_id: 'redcube',

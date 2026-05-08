@@ -3,7 +3,6 @@ from __future__ import annotations
 import pytest
 
 from opl_harness_shared.product_entry_program_companions import (
-    build_backend_deconstruction_lane,
     build_clearance_lane,
     build_clearance_target,
     build_detailed_readiness,
@@ -16,6 +15,7 @@ from opl_harness_shared.product_entry_program_companions import (
     build_program_capability,
     build_program_check,
     build_program_sequence_step,
+    build_source_provenance_surface,
     build_workflow_coverage_item,
 )
 
@@ -172,24 +172,30 @@ def test_build_detailed_readiness_and_lane_companions() -> None:
     assert clearance_lane["surface_kind"] == "phase3_host_clearance_lane"
     assert clearance_lane["proof_surfaces"][0]["ref"] == "studies/<study_id>/artifacts/runtime_watch/latest.json"
 
-    backend_lane = build_backend_deconstruction_lane(
-        summary="Move generic runtime capability outward.",
-        substrate_targets=[
-            build_program_capability(
-                capability_id="session_run_watch_recovery",
-                owner="upstream Hermes-Agent",
-                summary="Move run/watch/recovery outward.",
-            )
-        ],
-        backend_retained_now=["domain-specific executor"],
-        current_backend_chain=["controller -> executor"],
-        optional_executor_proofs=[{"executor_kind": "hermes_agent"}],
-        promotion_rules=["proof-backed promotion only"],
-        deconstruction_map_doc="docs/program/deconstruction_map.md",
-        recommended_phase_command="uv run python -m domain mainline-phase --phase phase_4",
+    source_provenance = build_source_provenance_surface(
+        summary="MAS monolith keeps external source only as provenance.",
+        source_provenance_ref={
+            "surface_kind": "source_provenance",
+            "ref": "docs/references/source-map.md",
+        },
+        historical_fixture_ref={
+            "surface_kind": "historical_fixture_ref",
+            "ref": "fixtures/source-parity/",
+        },
+        explicit_archive_import_ref={
+            "surface_kind": "explicit_archive_import_ref",
+            "command": "uv run python -m domain backend-audit --mode archive-import",
+        },
+        parity_oracle_ref={
+            "surface_kind": "parity_oracle_ref",
+            "ref": "docs/references/parity-oracle.md",
+        },
+        authority_boundary=["domain_runtime_core_is_default_owner"],
+        capability_classification="source_provenance_only",
+        recommended_audit_command="uv run python -m domain backend-audit",
     )
-    assert backend_lane["surface_kind"] == "phase4_backend_deconstruction_lane"
-    assert backend_lane["substrate_targets"][0]["capability_id"] == "session_run_watch_recovery"
+    assert source_provenance["surface_kind"] == "source_provenance"
+    assert source_provenance["historical_fixture_ref"]["surface_kind"] == "historical_fixture_ref"
 
     platform_target = build_platform_target(
         summary="Converge to monorepo-ready topology.",
@@ -198,8 +204,8 @@ def test_build_detailed_readiness_and_lane_companions() -> None:
         current_readiness_summary="gateway/runtime truth is frozen",
         north_star_topology={
             "domain_gateway": "Example Domain",
-            "outer_runtime_substrate_owner": "upstream Hermes-Agent",
-            "controlled_backend": "Example Backend",
+            "default_runtime_owner": "domain_runtime_core",
+            "source_provenance_role": "explicit_archive_import_reference",
             "monorepo_status": "post_gate_target",
         },
         target_internal_modules=["controller_charter", "runtime"],

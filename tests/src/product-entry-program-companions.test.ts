@@ -2,7 +2,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-  buildBackendDeconstructionLane,
   buildClearanceLane,
   buildClearanceTarget,
   buildDetailedReadiness,
@@ -15,6 +14,7 @@ import {
   buildProgramSequenceStep,
   buildProgramStep,
   buildProgramSurface,
+  buildSourceProvenanceSurface,
   buildWorkflowCoverageItem,
 } from '../../src/product-entry-program-companions.ts';
 
@@ -150,27 +150,34 @@ test('product entry program companions normalize preflight and detailed readines
   assert.equal(clearanceLane.clearance_targets[0].target_id, 'external_runtime_contract');
   assert.equal(clearanceLane.proof_surfaces[0].ref, 'studies/<study_id>/artifacts/runtime_watch/latest.json');
 
-  const backendLane = buildBackendDeconstructionLane({
-    summary: 'Move generic runtime capabilities upward while keeping the current backend honest.',
-    substrate_targets: [
-      buildProgramCapability({
-        capability_id: 'session_run_watch_recovery',
-        owner: 'upstream Hermes-Agent',
-        summary: 'Move session/run/watch/recovery upward.',
-      }),
+  const sourceProvenance = buildSourceProvenanceSurface({
+    summary: 'MAS monolith keeps MDS only as provenance, historical fixture, and explicit archive import reference.',
+    source_provenance_ref: buildProgramSurface({
+      surface_kind: 'source_provenance',
+      ref: 'docs/references/med-deepscientist/med_deepscientist_deconstruction_map.md',
+    }),
+    historical_fixture_ref: buildProgramSurface({
+      surface_kind: 'historical_fixture_ref',
+      ref: 'fixtures/med-deepscientist/parity/',
+    }),
+    explicit_archive_import_ref: buildProgramSurface({
+      surface_kind: 'explicit_archive_import_ref',
+      command: 'uv run python -m med_autoscience.cli backend-audit --mode archive-import --profile <profile>',
+    }),
+    parity_oracle_ref: buildProgramSurface({
+      surface_kind: 'parity_oracle_ref',
+      ref: 'docs/references/med-deepscientist/med_deepscientist_continuous_learning_plan.md',
+    }),
+    authority_boundary: [
+      'mas_runtime_core_is_default_owner',
+      'source_refs_do_not_define_runtime_dependency',
     ],
-    backend_retained_now: ['MedDeepScientist CodexRunner autonomous executor chain'],
-    current_backend_chain: ['med_autoscience.runtime_transport.hermes -> med_autoscience.runtime_transport.med_deepscientist'],
-    optional_executor_proofs: [
-      { executor_kind: 'hermes_agent', readiness: 'pending' },
-    ],
-    promotion_rules: ['no backend retirement claim without proof'],
-    deconstruction_map_doc: 'human_doc:med_deepscientist_deconstruction_map',
-    recommended_phase_command: 'uv run python -m med_autoscience.cli mainline-phase --phase phase_4_backend_deconstruction',
+    capability_classification: 'source_provenance_only',
+    recommended_audit_command: 'uv run python -m med_autoscience.cli backend-audit --profile <profile>',
   });
-  assert.equal(backendLane.surface_kind, 'phase4_backend_deconstruction_lane');
-  assert.equal(backendLane.substrate_targets[0].capability_id, 'session_run_watch_recovery');
-  assert.equal(backendLane.current_backend_chain[0], 'med_autoscience.runtime_transport.hermes -> med_autoscience.runtime_transport.med_deepscientist');
+  assert.equal(sourceProvenance.surface_kind, 'source_provenance');
+  assert.equal(sourceProvenance.historical_fixture_ref.surface_kind, 'historical_fixture_ref');
+  assert.equal(sourceProvenance.explicit_archive_import_ref.surface_kind, 'explicit_archive_import_ref');
 
   const platformTarget = buildPlatformTarget({
     summary: 'Land on the monorepo-ready target after the gates clear.',
@@ -179,8 +186,8 @@ test('product entry program companions normalize preflight and detailed readines
     current_readiness_summary: 'Current product loop still needs more proof.',
     north_star_topology: {
       domain_gateway: 'Med Auto Science',
-      outer_runtime_substrate_owner: 'upstream Hermes-Agent',
-      controlled_research_backend: 'MedDeepScientist',
+      default_runtime_owner: 'mas_runtime_core',
+      source_provenance_role: 'explicit_archive_import_reference',
     },
     target_internal_modules: ['controller_charter', 'runtime'],
     landing_sequence: [

@@ -49,7 +49,7 @@ These schemas therefore freeze interoperability surfaces, not a monolithic runti
 ### Control-plane-oriented
 
 - `family-persistence-policy.schema.json`
-  - shared policy that separates `file_authority`, `sqlite_sidecar_index`, `projection_cache`, and `legacy_diagnostic_only`
+  - shared policy that separates `file_authority`, `sqlite_sidecar_index`, `projection_cache`, and `source_provenance_only`
 - `family-lifecycle-ledger.schema.json`
   - shared lifecycle receipt surface for dry-run / apply / verify actions, manifest refs, checksums, and restore proof
 - `family-owner-route.schema.json`

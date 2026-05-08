@@ -186,8 +186,8 @@
     "phase3_clearance_lane": {
       "$ref": "#/$defs/phase3ClearanceLane"
     },
-    "phase4_backend_deconstruction": {
-      "$ref": "#/$defs/phase4BackendDeconstructionLane"
+    "source_provenance": {
+      "$ref": "#/$defs/sourceProvenanceSurface"
     },
     "phase5_platform_target": {
       "$ref": "#/$defs/phase5PlatformTarget"
@@ -1074,63 +1074,51 @@
         }
       }
     },
-    "phase4BackendDeconstructionLane": {
+    "sourceProvenanceSurface": {
       "type": "object",
       "additionalProperties": false,
       "required": [
         "surface_kind",
-        "substrate_targets",
-        "backend_retained_now",
-        "current_backend_chain",
-        "optional_executor_proofs",
-        "promotion_rules"
+        "summary",
+        "source_provenance_ref",
+        "historical_fixture_ref",
+        "explicit_archive_import_ref",
+        "authority_boundary",
+        "capability_classification",
+        "recommended_audit_command"
       ],
       "properties": {
         "surface_kind": {
-          "const": "phase4_backend_deconstruction_lane"
+          "const": "source_provenance"
         },
         "summary": {
           "type": "string",
           "minLength": 1
         },
-        "substrate_targets": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/programCapability"
-          }
+        "source_provenance_ref": {
+          "$ref": "#/$defs/programSurface"
         },
-        "backend_retained_now": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
+        "historical_fixture_ref": {
+          "$ref": "#/$defs/programSurface"
         },
-        "current_backend_chain": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
+        "explicit_archive_import_ref": {
+          "$ref": "#/$defs/programSurface"
         },
-        "optional_executor_proofs": {
-          "type": "array",
-          "items": {
-            "type": "object"
-          }
+        "parity_oracle_ref": {
+          "$ref": "#/$defs/programSurface"
         },
-        "promotion_rules": {
+        "authority_boundary": {
           "type": "array",
           "items": {
             "type": "string",
             "minLength": 1
           }
         },
-        "deconstruction_map_doc": {
+        "capability_classification": {
           "type": "string",
           "minLength": 1
         },
-        "recommended_phase_command": {
+        "recommended_audit_command": {
           "type": "string",
           "minLength": 1
         }
@@ -1348,7 +1336,7 @@
             ]
           }
         ],
-        "legacy_diagnostics": []
+        "source_provenance": []
       },
       "lifecycle_ledger": {
         "surface_kind": "family_lifecycle_ledger",

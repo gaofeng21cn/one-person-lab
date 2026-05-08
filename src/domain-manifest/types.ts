@@ -381,20 +381,16 @@ export interface NormalizedDomainManifest {
     }>;
     recommended_phase_command: string | null;
   } | null;
-  phase4_backend_deconstruction: {
+  source_provenance: {
     surface_kind: string;
     summary: string | null;
-    substrate_targets: Array<{
-      capability_id: string;
-      owner: string | null;
-      summary: string | null;
-    }>;
-    backend_retained_now: string[];
-    current_backend_chain: string[];
-    optional_executor_proofs: JsonRecord[];
-    promotion_rules: string[];
-    deconstruction_map_doc: string | null;
-    recommended_phase_command: string | null;
+    source_provenance_ref: JsonRecord | null;
+    historical_fixture_ref: JsonRecord | null;
+    explicit_archive_import_ref: JsonRecord | null;
+    parity_oracle_ref: JsonRecord | null;
+    authority_boundary: string[];
+    capability_classification: string | null;
+    recommended_audit_command: string | null;
   } | null;
   phase5_platform_target: {
     surface_kind: string;

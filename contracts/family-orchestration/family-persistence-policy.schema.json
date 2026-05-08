@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://opl.onepersonlab/contracts/family-orchestration/family-persistence-policy.schema.json",
   "title": "OPL Family Persistence Policy",
-  "description": "Shared persistence policy for separating domain-owned file authority from SQLite sidecar indexes, projection caches, and legacy diagnostics.",
+  "description": "Shared persistence policy for separating domain-owned file authority from SQLite sidecar indexes, projection caches, and source provenance references.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -14,7 +14,7 @@
     "authority_surfaces",
     "sidecar_indexes",
     "projection_caches",
-    "legacy_diagnostics"
+    "source_provenance"
   ],
   "properties": {
     "surface_kind": {
@@ -54,10 +54,10 @@
         "$ref": "#/$defs/projectionCacheSurface"
       }
     },
-    "legacy_diagnostics": {
+    "source_provenance": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/legacyDiagnosticSurface"
+        "$ref": "#/$defs/sourceProvenanceSurface"
       }
     }
   },
@@ -169,7 +169,7 @@
         }
       ]
     },
-    "legacyDiagnosticSurface": {
+    "sourceProvenanceSurface": {
       "allOf": [
         {
           "$ref": "#/$defs/persistenceSurfaceBase"
@@ -177,7 +177,7 @@
         {
           "properties": {
             "storage_role": {
-              "const": "legacy_diagnostic_only"
+              "const": "source_provenance_only"
             }
           }
         }

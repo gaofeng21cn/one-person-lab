@@ -11,7 +11,7 @@ type FamilyPersistenceStorageRole =
   | 'file_authority'
   | 'sqlite_sidecar_index'
   | 'projection_cache'
-  | 'legacy_diagnostic_only';
+  | 'source_provenance_only';
 
 interface BuildFamilyPersistenceSurfaceInput {
   surface_id: string;
@@ -29,7 +29,7 @@ interface BuildFamilyPersistencePolicyInput {
   authority_surfaces: BuildFamilyPersistenceSurfaceInput[];
   sidecar_indexes?: BuildFamilyPersistenceSurfaceInput[];
   projection_caches?: BuildFamilyPersistenceSurfaceInput[];
-  legacy_diagnostics?: BuildFamilyPersistenceSurfaceInput[];
+  source_provenance?: BuildFamilyPersistenceSurfaceInput[];
 }
 
 type FamilyLifecyclePhase = 'inventory' | 'dry_run' | 'apply' | 'verify';
@@ -270,8 +270,8 @@ export function buildFamilyPersistencePolicy(input: BuildFamilyPersistencePolicy
     projection_caches: (input.projection_caches ?? []).map((entry, index) =>
       buildFamilyPersistenceSurface(entry, 'projection_cache', `projection_caches[${index}]`)
     ),
-    legacy_diagnostics: (input.legacy_diagnostics ?? []).map((entry, index) =>
-      buildFamilyPersistenceSurface(entry, 'legacy_diagnostic_only', `legacy_diagnostics[${index}]`)
+    source_provenance: (input.source_provenance ?? []).map((entry, index) =>
+      buildFamilyPersistenceSurface(entry, 'source_provenance_only', `source_provenance[${index}]`)
     ),
   };
 }
