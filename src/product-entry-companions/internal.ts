@@ -11,7 +11,7 @@ import type {
 } from './types.ts';
 import {
   validateFamilyDomainEntryContract as validateSharedFamilyDomainEntryContract,
-  validateGatewayInteractionContract as validateSharedGatewayInteractionContract,
+  validateUserInteractionContract as validateSharedUserInteractionContract,
 } from '../family-entry-contracts.ts';
 
 export function isRecord(value: unknown): value is JsonRecord {
@@ -191,15 +191,15 @@ export function cloneRecord(value: unknown, field: string): JsonRecord {
   return { ...requireRecord(value, field) };
 }
 
-export const FRONTDESK_SHARED_HANDOFF_KEYS = [
+export const PRODUCT_ENTRY_SHARED_HANDOFF_KEYS = [
   'direct_entry_builder',
   'opl_handoff_builder',
 ] as const;
 
-export function normalizeFrontdoorSummary(value: unknown, field: string) {
+export function normalizeProductEntrySurfaceSummary(value: unknown, field: string) {
   const payload = requireRecord(value, field);
   return {
-    frontdoor_command: requireString(payload.frontdoor_command, `${field}.frontdoor_command`),
+    product_entry_command: requireString(payload.product_entry_command, `${field}.product_entry_command`),
     recommended_command: requireString(payload.recommended_command, `${field}.recommended_command`),
     operator_loop_command: requireString(payload.operator_loop_command, `${field}.operator_loop_command`),
   };
@@ -246,7 +246,6 @@ export function validateDomainEntryContractShape(value: unknown, field: string) 
   return validateSharedFamilyDomainEntryContract(value, field);
 }
 
-export function validateGatewayInteractionContractShape(value: unknown, field: string) {
-  return validateSharedGatewayInteractionContract(value, field);
+export function validateUserInteractionContractShape(value: unknown, field: string) {
+  return validateSharedUserInteractionContract(value, field);
 }
-

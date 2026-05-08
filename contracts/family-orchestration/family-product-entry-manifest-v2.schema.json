@@ -106,7 +106,7 @@
         }
       }
     },
-    "frontdoor_surface": {
+    "product_entry_surface": {
       "$ref": "#/$defs/shellSurface"
     },
     "operator_loop_surface": {
@@ -213,7 +213,7 @@
     "domain_entry_contract": {
       "type": "object"
     },
-    "gateway_interaction_contract": {
+    "user_interaction_contract": {
       "type": "object"
     },
     "family_orchestration": {
@@ -1270,10 +1270,10 @@
       "workspace_locator": {
         "workspace_root": "/workspace/redcube-ai"
       },
-      "frontdoor_surface": {
-        "shell_key": "frontdoor",
-        "command": "redcube product frontdoor",
-        "surface_kind": "product_frontdoor"
+      "product_entry_surface": {
+        "shell_key": "status",
+        "command": "redcube product status",
+        "surface_kind": "product_entry_surface"
       },
       "operator_loop_surface": {
         "shell_key": "direct",
@@ -1523,9 +1523,9 @@
         ]
       },
       "product_entry_shell": {
-        "frontdoor": {
-          "command": "redcube product frontdoor",
-          "surface_kind": "product_frontdoor"
+        "status": {
+          "command": "redcube product status",
+          "surface_kind": "product_entry_surface"
         },
         "direct": {
           "command": "redcube product invoke",

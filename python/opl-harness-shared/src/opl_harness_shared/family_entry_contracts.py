@@ -308,12 +308,12 @@ def build_family_domain_entry_contract(
     )
 
 
-def validate_gateway_interaction_contract(value: object, field: str) -> dict[str, Any]:
+def validate_user_interaction_contract(value: object, field: str) -> dict[str, Any]:
     payload = _require_mapping(value, field)
     return {
         **dict(payload),
         "surface_kind": _require_string(payload.get("surface_kind"), f"{field}.surface_kind"),
-        "frontdoor_owner": _require_string(payload.get("frontdoor_owner"), f"{field}.frontdoor_owner"),
+        "entry_owner": _require_string(payload.get("entry_owner"), f"{field}.entry_owner"),
         "user_interaction_mode": _require_string(
             payload.get("user_interaction_mode"),
             f"{field}.user_interaction_mode",
@@ -337,22 +337,22 @@ def validate_gateway_interaction_contract(value: object, field: str) -> dict[str
     }
 
 
-def build_gateway_interaction_contract(
+def build_user_interaction_contract(
     *,
-    frontdoor_owner: str,
+    entry_owner: str,
     user_interaction_mode: str,
     user_commands_required: bool,
     command_surfaces_for_agent_consumption_only: bool,
     shared_downstream_entry: str,
     shared_handoff_envelope: list[str],
-    surface_kind: str = "gateway_interaction_contract",
+    surface_kind: str = "user_interaction_contract",
     extra_payload: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    return validate_gateway_interaction_contract(
+    return validate_user_interaction_contract(
         _merge_extra_payload(
             {
                 "surface_kind": _require_string(surface_kind, "surface_kind"),
-                "frontdoor_owner": _require_string(frontdoor_owner, "frontdoor_owner"),
+                "entry_owner": _require_string(entry_owner, "entry_owner"),
                 "user_interaction_mode": _require_string(
                     user_interaction_mode,
                     "user_interaction_mode",
@@ -375,21 +375,21 @@ def build_gateway_interaction_contract(
                 ),
             },
             extra_payload,
-            field="gateway_interaction_contract",
+            field="user_interaction_contract",
         ),
-        "gateway_interaction_contract",
+        "user_interaction_contract",
     )
 
 
-def build_family_gateway_interaction_contract(
+def build_family_user_interaction_contract(
     *,
     shared_downstream_entry: str,
     extra_shared_handoff_envelope: list[str] | None = None,
-    frontdoor_owner: str | None = None,
+    entry_owner: str | None = None,
     user_interaction_mode: str | None = None,
     user_commands_required: bool | None = None,
     command_surfaces_for_agent_consumption_only: bool | None = None,
-    surface_kind: str = "gateway_interaction_contract",
+    surface_kind: str = "user_interaction_contract",
     extra_payload: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     extra_envelope = _read_optional_string_list(
@@ -400,9 +400,9 @@ def build_family_gateway_interaction_contract(
     for field in (*DEFAULT_FAMILY_GATEWAY_SHARED_HANDOFF_ENVELOPE, *extra_envelope):
         if field not in shared_handoff_envelope:
             shared_handoff_envelope.append(field)
-    return build_gateway_interaction_contract(
-        frontdoor_owner=_non_empty_text(frontdoor_owner) or "opl_gateway_or_domain_gui",
-        user_interaction_mode=_non_empty_text(user_interaction_mode) or "natural_language_frontdoor",
+    return build_user_interaction_contract(
+        entry_owner=_non_empty_text(entry_owner) or "opl_gateway_or_domain_gui",
+        user_interaction_mode=_non_empty_text(user_interaction_mode) or "natural_language_entry",
         user_commands_required=False if user_commands_required is None else _require_bool(
             user_commands_required,
             "user_commands_required",

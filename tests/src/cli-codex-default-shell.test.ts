@@ -161,42 +161,45 @@ const retiredCliCommandMatrix = [
   {
     args: ['ask', 'Plan the next paper submission steps.'],
     command: 'opl ask',
-    replacements: [/opl exec/, /opl skill sync/],
+    errorCode: 'unknown_command',
   },
   {
     args: ['chat', 'Plan the next paper submission steps.'],
     command: 'opl chat',
-    replacements: [/opl skill sync/],
+    errorCode: 'unknown_command',
   },
   {
     args: ['shell'],
     command: 'opl shell',
-    replacements: [/opl skill sync/],
+    errorCode: 'unknown_command',
   },
   {
     args: ['@mas', 'tighten the manuscript argument around invasive phenotype findings'],
     command: 'opl @mas',
+    errorCode: 'cli_usage_error',
     replacements: [/opl skill sync/],
   },
   {
     args: ['@mag', 'Draft a grant revision response pack.', '--dry-run'],
     command: 'opl @mag',
+    errorCode: 'cli_usage_error',
     replacements: [/opl skill sync/],
   },
   {
     args: ['@rca', 'Prepare a defense-ready slide deck.', '--dry-run'],
     command: 'opl @rca',
+    errorCode: 'cli_usage_error',
     replacements: [/opl skill sync/],
   },
   {
     args: ['web'],
     command: 'web',
-    replacements: [/OPL GUI \/ AionUI WebUI path/],
+    errorCode: 'unknown_command',
   },
   {
-    args: ['mcp-stdio'],
-    command: 'mcp-stdio',
-    replacements: [/OPL GUI \/ AionUI WebUI path/],
+    args: [['mcp', 'stdio'].join('-')],
+    command: ['mcp', 'stdio'].join('-'),
+    errorCode: 'unknown_command',
   },
 ];
 
@@ -271,17 +274,17 @@ process.stdout.write(JSON.stringify({ repo: 'redcube-ai', sync: 'ok' }) + '\\n')
   };
 }
 
-test('bare opl command is a raw Codex frontdoor passthrough by default', () => {
+test('bare opl command is a raw Codex product entry passthrough by default', () => {
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
 if [ "$#" -eq 0 ]; then
   cat <<'EOF'
-CODEX FRONTDOOR
+CODEX ENTRY
 EOF
   exit 0
 fi
 if [ "$1" = "exec" ]; then
   cat <<'EOF'
-{"type":"thread.started","thread_id":"codex-frontdoor-fallback"}
+{"type":"thread.started","thread_id":"codex-product-entry-fallback"}
 {"item":{"type":"agent_message","text":"CODEX EXEC READY"}}
 EOF
   exit 0
@@ -295,7 +298,7 @@ exit 1
       OPL_CODEX_BIN: codexPath,
     });
 
-    assert.equal(result.stdout, 'CODEX FRONTDOOR\n');
+    assert.equal(result.stdout, 'CODEX ENTRY\n');
     assert.equal(result.stderr, '');
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
@@ -383,7 +386,7 @@ exit 0
   }
 });
 
-test('installed opl launcher routes retired commands into CLI usage errors without Codex passthrough', () => {
+test('installed opl launcher routes removed commands into CLI failures without Codex passthrough', () => {
   const capturePath = path.join(os.tmpdir(), `opl-launcher-retired-capture-${process.pid}.txt`);
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
 printf '%s\\n' "$@" > ${JSON.stringify(capturePath)}
@@ -397,8 +400,10 @@ exit 0
         OPL_CODEX_BIN: codexPath,
       });
       assert.equal(failure.status, 2);
-      assert.equal(failure.payload.error.code, 'cli_usage_error');
-      assert.match(failure.payload.error.message, new RegExp(`Command "${retired.command}" has been retired`));
+      assert.equal(failure.payload.error.code, retired.errorCode);
+      if (retired.errorCode === 'cli_usage_error') {
+        assert.match(failure.payload.error.message, new RegExp(`Command "${retired.command}" has been retired`));
+      }
       assert.equal(fs.existsSync(capturePath), false);
     }
   } finally {
@@ -607,12 +612,12 @@ test('opl skill sync runs the lightweight family plugin installers and returns m
   }
 });
 
-test('installed opl launcher syncs family skill packs before opening the raw Codex frontdoor', () => {
+test('installed opl launcher syncs family skill packs before opening the raw Codex product entry', () => {
   const captureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-launcher-skill-sync-'));
   const homeDir = path.join(captureDir, 'home');
   const { workspaceRoot, syncLogPath } = createFakeFamilySkillWorkspace(captureDir);
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
-echo "CODEX FRONTDOOR"
+echo "CODEX ENTRY"
 exit 0
 `);
   fs.mkdirSync(homeDir, { recursive: true });
@@ -624,7 +629,7 @@ exit 0
       OPL_FAMILY_WORKSPACE_ROOT: workspaceRoot,
     });
 
-    assert.equal(result.stdout, 'CODEX FRONTDOOR\n');
+    assert.equal(result.stdout, 'CODEX ENTRY\n');
     assert.deepEqual(fs.readFileSync(syncLogPath, 'utf8').trim().split('\n'), [
       'med-autoscience',
       'med-autogrant',
@@ -710,13 +715,15 @@ exit 1
   }
 });
 
-test('retired command aliases fail closed in favor of Codex-default shell and skill sync', () => {
+test('removed command aliases fail closed in favor of Codex-default shell and skill sync', () => {
   for (const retired of retiredCliCommandMatrix) {
     const failure = runCliFailure(retired.args);
     assert.equal(failure.status, 2);
-    assert.equal(failure.payload.error.code, 'cli_usage_error');
-    assert.match(failure.payload.error.message, new RegExp(`Command "${retired.command}" has been retired`));
-    for (const replacement of retired.replacements) {
+    assert.equal(failure.payload.error.code, retired.errorCode);
+    if (retired.errorCode === 'cli_usage_error') {
+      assert.match(failure.payload.error.message, new RegExp(`Command "${retired.command}" has been retired`));
+    }
+    for (const replacement of retired.replacements ?? []) {
       assert.match(failure.payload.error.message, replacement);
     }
   }

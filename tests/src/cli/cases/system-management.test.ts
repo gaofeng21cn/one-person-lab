@@ -28,11 +28,11 @@ test('help keeps GUI lane on AionUI without Product API service commands', () =>
   assert.equal(output.help.commands.some((entry: { command: string }) => entry.command === 'web bundle'), false);
   assert.equal(output.help.commands.some((entry: { command: string }) => entry.command === 'web package'), false);
   assert.equal(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'frontdoor bootstrap'),
+    output.help.commands.some((entry: { command: string }) => entry.command === 'product entry bootstrap'),
     false,
   );
   assert.equal(
-    output.help.commands.some((entry: { command: string }) => entry.command === 'frontdoor manifest'),
+    output.help.commands.some((entry: { command: string }) => entry.command === 'product entry manifest'),
     false,
   );
 });

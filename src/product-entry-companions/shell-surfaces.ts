@@ -1,6 +1,6 @@
 import { validateSharedHandoff, validateSharedHandoffBuilder } from '../family-entry-contracts.ts';
 import type {
-  BuildFamilyFrontdoorEntrySurfacesInput,
+  BuildFamilyProductEntrySurfacesInput,
   BuildOperatorLoopActionInput,
   BuildProductEntryShellLinkedSurfaceInput,
   BuildProductEntryShellSurfaceInput,
@@ -10,7 +10,7 @@ import type {
   BuildEntrySessionSurfaceInput,
   BuildDeliveryIdentitySurfaceInput,
   EntrySessionSurface,
-  FamilyFrontdoorEntrySurfaces,
+  FamilyProductEntrySurfaces,
   JsonRecord,
   OperatorLoopActionSurface,
   ProductEntryContinuationSnapshotSurface,
@@ -21,7 +21,7 @@ import type {
   DeliveryIdentitySurface,
 } from './types.ts';
 import {
-  FRONTDESK_SHARED_HANDOFF_KEYS,
+  PRODUCT_ENTRY_SHARED_HANDOFF_KEYS,
   requireBoolean,
   requireRecord,
   cloneRecord,
@@ -34,17 +34,17 @@ import {
   requireString,
 } from './internal.ts';
 
-export function validateFamilyFrontdoorEntrySurfaces(
+export function validateFamilyProductEntrySurfaces(
   value: unknown,
   field: string,
-): FamilyFrontdoorEntrySurfaces {
+): FamilyProductEntrySurfaces {
   const payload = requireRecord(value, field);
-  const normalized = {} as FamilyFrontdoorEntrySurfaces;
+  const normalized = {} as FamilyProductEntrySurfaces;
 
   for (const [key, entry] of Object.entries(payload)) {
     normalized[key] = cloneRecord(entry, `${field}.${key}`);
   }
-  for (const key of FRONTDESK_SHARED_HANDOFF_KEYS) {
+  for (const key of PRODUCT_ENTRY_SHARED_HANDOFF_KEYS) {
     if (payload[key] !== undefined) {
       normalized[key] = validateSharedHandoffBuilder(payload[key], `${field}.${key}`);
     }
@@ -53,9 +53,9 @@ export function validateFamilyFrontdoorEntrySurfaces(
   return normalized;
 }
 
-export function buildFamilyFrontdoorEntrySurfaces(
-  input: BuildFamilyFrontdoorEntrySurfacesInput,
-): FamilyFrontdoorEntrySurfaces {
+export function buildFamilyProductEntrySurfaces(
+  input: BuildFamilyProductEntrySurfacesInput,
+): FamilyProductEntrySurfaces {
   const productEntryShell = cloneRecord(input.product_entry_shell, 'product_entry_shell');
   const shellAliases = cloneRecord(input.shell_aliases, 'shell_aliases');
   const payload: JsonRecord = {};
@@ -70,14 +70,14 @@ export function buildFamilyFrontdoorEntrySurfaces(
 
   if (input.shared_handoff !== undefined && input.shared_handoff !== null) {
     const sharedHandoff = validateSharedHandoff(input.shared_handoff, 'shared_handoff');
-    for (const key of FRONTDESK_SHARED_HANDOFF_KEYS) {
+    for (const key of PRODUCT_ENTRY_SHARED_HANDOFF_KEYS) {
       if (sharedHandoff[key] !== undefined) {
         payload[key] = sharedHandoff[key];
       }
     }
   }
 
-  return validateFamilyFrontdoorEntrySurfaces(payload, 'entry_surfaces');
+  return validateFamilyProductEntrySurfaces(payload, 'entry_surfaces');
 }
 
 export function buildProductEntryShellSurface(

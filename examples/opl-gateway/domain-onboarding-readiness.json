@@ -5,9 +5,9 @@
     "domain_id": "example_domain",
     "label": "Example Domain",
     "project": "example-domain",
-    "role": "example_gateway",
-    "gateway_surface": "Example Domain Gateway",
-    "harness_surface": "Example Harness OS",
+    "domain_role": "example_product_entry",
+    "product_entry_surface": "Example Domain Product Entry",
+    "boundary_surface": "Example Domain Boundary",
     "standalone_allowed": true,
     "owned_workstreams": [
       "example_ops"
@@ -27,7 +27,7 @@
       "status": "proposed",
       "description": "Example workstream used only to demonstrate the onboarding-readiness contract shape.",
       "domain_id": "example_domain",
-      "entry_mode": "domain_gateway",
+      "entry_mode": "domain_product_entry",
       "primary_families": [
         "example_family"
       ],
@@ -51,14 +51,14 @@
     "added_other_vocabulary": []
   },
   "public_documentation": {
-    "gateway_entry_refs": [
+    "product_entry_refs": [
       {
         "ref_kind": "external_url",
         "ref": "https://example.com/example-domain",
         "label": "Example Domain README"
       }
     ],
-    "states_domain_gateway_above_harness": true,
+    "states_domain_entry_boundary": true,
     "states_independently_usable": true,
     "workstream_semantics_explicit": true,
     "review_semantics_explicit": true,
@@ -111,9 +111,6 @@
       "codex_cli",
       "hermes_agent"
     ],
-    "compatibility_aliases": {
-      "host_agent": "codex_cli"
-    },
     "execution_shapes": {
       "structured_call": {
         "summary": "single structured input/output call under a domain-owned schema",
@@ -132,7 +129,7 @@
     },
     "layered_executor_semantics": {
       "user_interaction_shell": {
-        "owner": "opl_or_domain_frontdoor",
+        "owner": "opl_or_domain_product_entry",
         "scope": "user-facing natural-language or session shell",
         "selects_effective_default_executor": false,
         "holds_domain_truth": false

@@ -15,7 +15,7 @@
         "skill_id": "mag",
         "plugin_name": "Med Auto Grant",
         "activation_kind": "explicit_app_skill",
-        "entry_command": "medautogrant product frontdesk",
+        "entry_command": "medautogrant product status",
         "manifest_command": "medautogrant product manifest"
       },
       "domain_truth_owner": [
@@ -41,12 +41,7 @@
       "owned_workstreams": [
         "grant_ops"
       ],
-      "non_opl_families": [],
-      "legacy_boundary_terms": {
-        "role": "grant_ops_gateway",
-        "gateway_surface": "Grant Ops Gateway",
-        "harness_surface": "Grant Writing Domain Harness OS"
-      }
+      "non_opl_families": []
     },
     {
       "domain_id": "medautoscience",
@@ -62,8 +57,8 @@
         "skill_id": "mas",
         "plugin_name": "Med Auto Science",
         "activation_kind": "explicit_app_skill",
-        "entry_command": "medautosci product frontdesk",
-        "manifest_command": "medautosci product manifest"
+        "entry_command": "medautosci product-entry-status",
+        "manifest_command": "medautosci product-entry-manifest"
       },
       "domain_truth_owner": [
         "study_truth",
@@ -96,12 +91,7 @@
       "owned_workstreams": [
         "research_ops"
       ],
-      "non_opl_families": [],
-      "legacy_boundary_terms": {
-        "role": "research_ops_gateway",
-        "gateway_surface": "Research Foundry Gateway",
-        "harness_surface": "Medical Research Domain Harness OS"
-      }
+      "non_opl_families": []
     },
     {
       "domain_id": "redcube",
@@ -117,7 +107,7 @@
         "skill_id": "rca",
         "plugin_name": "RedCube AI",
         "activation_kind": "explicit_app_skill",
-        "entry_command": "redcube product frontdesk",
+        "entry_command": "redcube product status",
         "manifest_command": "redcube product manifest"
       },
       "domain_truth_owner": [
@@ -145,12 +135,7 @@
       ],
       "non_opl_families": [
         "xiaohongshu"
-      ],
-      "legacy_boundary_terms": {
-        "role": "visual_deliverable_gateway",
-        "gateway_surface": "Visual Deliverable Gateway",
-        "harness_surface": "Visual Deliverable Domain Harness OS"
-      }
+      ]
     }
   ]
 }

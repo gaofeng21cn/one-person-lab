@@ -6,7 +6,7 @@ import type {
 } from '../types.ts';
 
 export type ProductEntryMode =
-  | 'frontdoor'
+  | 'product_entry'
   | 'ask'
   | 'exec'
   | 'chat'

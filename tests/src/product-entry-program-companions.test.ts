@@ -22,7 +22,7 @@ test('product entry program companions normalize preflight and detailed readines
   const preflight = buildProductEntryPreflight({
     summary: 'Current preflight passed.',
     recommended_check_command: 'redcube workspace doctor --workspace-root /tmp/demo',
-    recommended_start_command: 'redcube product frontdoor --workspace-root /tmp/demo',
+    recommended_start_command: 'redcube product status --workspace-root /tmp/demo',
     checks: [
       buildProgramCheck({
         check_id: 'workspace_ready',
@@ -50,7 +50,7 @@ test('product entry program companions normalize preflight and detailed readines
   const blocked = buildProductEntryPreflight({
     summary: 'Current preflight is blocked.',
     recommended_check_command: 'redcube workspace doctor --workspace-root /tmp/demo',
-    recommended_start_command: 'redcube product frontdoor --workspace-root /tmp/demo',
+    recommended_start_command: 'redcube product status --workspace-root /tmp/demo',
     checks: [
       buildProgramCheck({
         check_id: 'workspace_ready',
@@ -73,8 +73,8 @@ test('product entry program companions normalize preflight and detailed readines
     fully_automatic: false,
     user_experience_level: 'agent_assisted_cli',
     summary: 'Current workflow is usable with operator guidance.',
-    recommended_start_surface: 'product_frontdoor',
-    recommended_start_command: 'redcube product frontdoor',
+    recommended_start_surface: 'product_entry_surface',
+    recommended_start_command: 'redcube product status',
     recommended_loop_surface: 'grant_user_loop',
     recommended_loop_command: 'redcube product invoke',
     workflow_coverage: [
@@ -162,7 +162,7 @@ test('product entry program companions normalize preflight and detailed readines
     backend_retained_now: ['MedDeepScientist CodexRunner autonomous executor chain'],
     current_backend_chain: ['med_autoscience.runtime_transport.hermes -> med_autoscience.runtime_transport.med_deepscientist'],
     optional_executor_proofs: [
-      { executor_kind: 'hermes_native_proof', readiness: 'pending' },
+      { executor_kind: 'hermes_agent', readiness: 'pending' },
     ],
     promotion_rules: ['no backend retirement claim without proof'],
     deconstruction_map_doc: 'human_doc:med_deepscientist_deconstruction_map',

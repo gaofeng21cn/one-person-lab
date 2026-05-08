@@ -37,9 +37,9 @@ export type FamilyDomainEntryContractSurface = JsonRecord & {
   domain_agent_entry_spec?: DomainAgentEntrySpecSurface;
 };
 
-export type GatewayInteractionContractSurface = JsonRecord & {
+export type UserInteractionContractSurface = JsonRecord & {
   surface_kind: string;
-  frontdoor_owner: string;
+  entry_owner: string;
   user_interaction_mode: string;
   user_commands_required: boolean;
   command_surfaces_for_agent_consumption_only: boolean;
@@ -104,8 +104,8 @@ export interface BuildDomainAgentEntrySpecInput {
   extra_payload?: JsonRecord;
 }
 
-export interface BuildGatewayInteractionContractInput {
-  frontdoor_owner: string;
+export interface BuildUserInteractionContractInput {
+  entry_owner: string;
   user_interaction_mode: string;
   user_commands_required: boolean;
   command_surfaces_for_agent_consumption_only: boolean;
@@ -115,10 +115,10 @@ export interface BuildGatewayInteractionContractInput {
   extra_payload?: JsonRecord;
 }
 
-export interface BuildFamilyGatewayInteractionContractInput {
+export interface BuildFamilyUserInteractionContractInput {
   shared_downstream_entry: string;
   extra_shared_handoff_envelope?: string[] | null;
-  frontdoor_owner?: string | null;
+  entry_owner?: string | null;
   user_interaction_mode?: string | null;
   user_commands_required?: boolean | null;
   command_surfaces_for_agent_consumption_only?: boolean | null;
@@ -455,15 +455,15 @@ export function buildFamilyDomainEntryContract(
   );
 }
 
-export function validateGatewayInteractionContract(
+export function validateUserInteractionContract(
   value: unknown,
   field: string,
-): GatewayInteractionContractSurface {
+): UserInteractionContractSurface {
   const payload = requireRecord(value, field);
   return {
     ...payload,
     surface_kind: requireString(payload.surface_kind, `${field}.surface_kind`),
-    frontdoor_owner: requireString(payload.frontdoor_owner, `${field}.frontdoor_owner`),
+    entry_owner: requireString(payload.entry_owner, `${field}.entry_owner`),
     user_interaction_mode: requireString(
       payload.user_interaction_mode,
       `${field}.user_interaction_mode`,
@@ -487,14 +487,14 @@ export function validateGatewayInteractionContract(
   };
 }
 
-export function buildGatewayInteractionContract(
-  input: BuildGatewayInteractionContractInput,
-): GatewayInteractionContractSurface {
-  return validateGatewayInteractionContract(
+export function buildUserInteractionContract(
+  input: BuildUserInteractionContractInput,
+): UserInteractionContractSurface {
+  return validateUserInteractionContract(
     mergeExtraPayload(
       {
-        surface_kind: optionalString(input.surface_kind) ?? 'gateway_interaction_contract',
-        frontdoor_owner: requireString(input.frontdoor_owner, 'frontdoor_owner'),
+        surface_kind: optionalString(input.surface_kind) ?? 'user_interaction_contract',
+        entry_owner: requireString(input.entry_owner, 'entry_owner'),
         user_interaction_mode: requireString(input.user_interaction_mode, 'user_interaction_mode'),
         user_commands_required: requireBoolean(
           input.user_commands_required,
@@ -514,15 +514,15 @@ export function buildGatewayInteractionContract(
         ),
       },
       input.extra_payload,
-      'gateway_interaction_contract',
+      'user_interaction_contract',
     ),
-    'gateway_interaction_contract',
+    'user_interaction_contract',
   );
 }
 
-export function buildFamilyGatewayInteractionContract(
-  input: BuildFamilyGatewayInteractionContractInput,
-): GatewayInteractionContractSurface {
+export function buildFamilyUserInteractionContract(
+  input: BuildFamilyUserInteractionContractInput,
+): UserInteractionContractSurface {
   const extraEnvelope = readOptionalStringList(
     input.extra_shared_handoff_envelope,
     'extra_shared_handoff_envelope',
@@ -533,9 +533,9 @@ export function buildFamilyGatewayInteractionContract(
       ...extraEnvelope,
     ]),
   );
-  return buildGatewayInteractionContract({
-    frontdoor_owner: optionalString(input.frontdoor_owner) ?? 'opl_gateway_or_domain_gui',
-    user_interaction_mode: optionalString(input.user_interaction_mode) ?? 'natural_language_frontdoor',
+  return buildUserInteractionContract({
+    entry_owner: optionalString(input.entry_owner) ?? 'opl_gateway_or_domain_gui',
+    user_interaction_mode: optionalString(input.user_interaction_mode) ?? 'natural_language_entry',
     user_commands_required: input.user_commands_required ?? false,
     command_surfaces_for_agent_consumption_only:
       input.command_surfaces_for_agent_consumption_only ?? true,

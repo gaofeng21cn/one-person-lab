@@ -676,15 +676,11 @@ export async function handleAcpStdioRequest(
       }
       case 'session_resume': {
         requireInitialized(state, request);
-        const payload = toRecord(request.payload);
-        const legacyEnvelope = payload && 'session_resume' in payload;
         return {
           id: typeof request.id === 'string' ? request.id : null,
           command,
           ok: true,
-          result: legacyEnvelope
-            ? toRecord(translateSessionResumePayload(request.payload ?? {})) ?? {}
-            : buildBridgeSessionResume(state, request.payload),
+          result: buildBridgeSessionResume(state, request.payload),
         };
       }
       case 'session_logs':

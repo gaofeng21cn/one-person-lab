@@ -102,7 +102,7 @@ export function buildHandoffBundle(
             binding_id: domainManifestEntry.binding_id,
             workspace_path: domainManifestEntry.workspace_path,
             manifest_target_domain_id: domainManifestEntry.manifest?.target_domain_id ?? null,
-            frontdoor_surface: domainManifestEntry.manifest?.frontdoor_surface ?? null,
+            product_entry_surface: domainManifestEntry.manifest?.product_entry_surface ?? null,
             operator_loop_surface: domainManifestEntry.manifest?.operator_loop_surface ?? null,
             operator_loop_actions: domainManifestEntry.manifest?.operator_loop_actions ?? {},
             recommended_shell: domainManifestEntry.manifest?.recommended_shell ?? null,
@@ -142,7 +142,6 @@ export function buildHandoffBundle(
             domain_truth_owner: domain.domain_truth_owner,
             opl_projection_role: domain.opl_projection_role,
             runtime_dependency_boundary: domain.runtime_dependency_boundary,
-            legacy_boundary_terms: domain.legacy_boundary_terms,
           }
         : null,
       notes: [

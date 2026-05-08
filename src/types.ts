@@ -43,11 +43,6 @@ export interface DomainContract {
   standalone_allowed: boolean;
   owned_workstreams: string[];
   non_opl_families: string[];
-  legacy_boundary_terms: {
-    role: string;
-    gateway_surface: string;
-    harness_surface: string;
-  };
 }
 
 export interface RoutingSpecialCase {

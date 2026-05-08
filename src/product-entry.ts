@@ -25,7 +25,7 @@ import {
   buildAskArgs,
   buildChatSeedArgs,
   buildContractsContext,
-  buildProductEntryFrontdoorPrompt,
+  buildProductEntrySessionPrompt,
   buildProductEntryHandoffBundle,
   buildPromptHeader,
   buildResolveRequestInput,
@@ -365,17 +365,17 @@ export function runProductEntryExec(input: ProductEntryExecInput) {
   };
 }
 
-export function runProductEntryFrontdoor(
+export function runProductEntrySession(
   contracts: GatewayContracts,
 ) {
   if (isInteractiveShell()) {
-    const frontDoorResult = runCodexCommand([], {
+    const productEntryResult = runCodexCommand([], {
       inheritStdio: true,
     });
 
     assertCodexSuccess(
-      frontDoorResult.exitCode,
-      'Codex frontdoor failed inside OPL Product Entry.',
+      productEntryResult.exitCode,
+      'Codex entry session failed inside OPL Product Entry.',
       {},
     );
 
@@ -389,10 +389,10 @@ export function runProductEntryFrontdoor(
     contracts_context: buildContractsContext(contracts),
     product_entry: {
       entry_surface: 'opl_local_product_entry_shell',
-      mode: 'frontdoor',
+      mode: 'product_entry',
       interactive: false,
       executor_backend: 'codex',
-      handoff_prompt_preview: buildProductEntryFrontdoorPrompt(contracts),
+      handoff_prompt_preview: buildProductEntrySessionPrompt(contracts),
       codex: {
         command_preview: ['codex'],
         resume_command_preview: ['codex', 'resume', '<thread_id>'],
@@ -425,12 +425,12 @@ export function runProductEntryChat(
     );
 
     if (isInteractiveShell()) {
-      const frontDoorResult = runCodexCommand([handoffPrompt], {
+      const productEntryResult = runCodexCommand([handoffPrompt], {
         inheritStdio: true,
       });
       assertCodexSuccess(
-        frontDoorResult.exitCode,
-        'Codex frontdoor failed after OPL Product Entry chat routing.',
+        productEntryResult.exitCode,
+        'Codex entry session failed after OPL Product Entry chat routing.',
         {
           routing_status: routing.status,
         },

@@ -1,7 +1,7 @@
 import type {
   FamilyDomainEntryContractSurface,
   FamilySharedHandoffSurface,
-  GatewayInteractionContractSurface,
+  UserInteractionContractSurface,
 } from '../family-entry-contracts.ts';
 
 type JsonRecord = Record<string, unknown>;
@@ -238,7 +238,7 @@ export interface NormalizedDomainManifest {
     next_focus: string[];
     remaining_gaps_count: number | null;
   } | null;
-  frontdoor_surface: {
+  product_entry_surface: {
     shell_key: string;
     command: string | null;
     surface_kind: string | null;
@@ -259,13 +259,13 @@ export interface NormalizedDomainManifest {
   recommended_command: string | null;
   schema_ref: string | null;
   domain_entry_contract: FamilyDomainEntryContractSurface | null;
-  gateway_interaction_contract: GatewayInteractionContractSurface | null;
+  user_interaction_contract: UserInteractionContractSurface | null;
   product_entry_shell: Record<string, JsonRecord>;
   shared_handoff: FamilySharedHandoffSurface;
   product_entry_overview: {
     surface_kind: string;
     summary: string | null;
-    frontdoor_command: string | null;
+    product_entry_command: string | null;
     recommended_command: string | null;
     operator_loop_command: string | null;
     progress_surface: {

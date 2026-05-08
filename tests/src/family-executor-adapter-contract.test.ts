@@ -8,6 +8,7 @@ type JsonObject = Record<string, unknown>;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
+const retiredAliasField = ['compatibility', 'aliases'].join('_');
 
 function readJson(relativePath: string): JsonObject {
   return JSON.parse(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as JsonObject;
@@ -24,7 +25,7 @@ function assertLayeredExecutorPolicy(surface: JsonObject) {
   const runtimeProfileCatalog = surface.runtime_profile_catalog_boundary as JsonObject;
   const configurationExamples = surface.configuration_examples as JsonObject;
 
-  assert.equal(userShell.owner, 'opl_or_domain_frontdoor');
+  assert.equal(userShell.owner, 'opl_or_domain_product_entry');
   assert.equal(userShell.selects_effective_default_executor, false);
   assert.equal(userShell.holds_domain_truth, false);
   assert.equal(effectiveDefault.owner, 'opl_family_runtime_config');
@@ -79,7 +80,6 @@ test('family executor defaults split canonical name, route status, and guardrail
   const defaults = contract.defaults as JsonObject;
   const executorLabels = contract.executor_labels as JsonObject;
   const executorStatuses = contract.executor_statuses as JsonObject;
-  const compatibilityAliases = contract.compatibility_aliases as JsonObject;
   const executionShapes = contract.execution_shapes as JsonObject;
   const guardrails = contract.guardrails as JsonObject;
 
@@ -88,7 +88,7 @@ test('family executor defaults split canonical name, route status, and guardrail
   assert.equal(defaults.default_model, 'inherit_local_codex_default');
   assert.equal(defaults.default_reasoning_effort, 'inherit_local_codex_default');
   assert.deepEqual(contract.canonical_executor_backends, ['codex_cli', 'hermes_agent']);
-  assert.deepEqual(compatibilityAliases, { host_agent: 'codex_cli' });
+  assert.ok(!(retiredAliasField in contract));
   assert.deepEqual((executionShapes.structured_call as JsonObject).allowed_backends, ['codex_cli', 'hermes_agent']);
   assert.deepEqual((executionShapes.agent_loop as JsonObject).allowed_backends, ['codex_cli', 'hermes_agent']);
   assert.equal(executorLabels.codex_cli, 'Codex CLI');
@@ -122,7 +122,6 @@ test('domain onboarding schema example aligns execution model with split executo
   assert.ok(requiredFields.includes('default_executor_name'));
   assert.ok(requiredFields.includes('default_executor_mode'));
   assert.ok(requiredFields.includes('canonical_executor_backends'));
-  assert.ok(requiredFields.includes('compatibility_aliases'));
   assert.ok(requiredFields.includes('execution_shapes'));
   assert.ok(requiredFields.includes('layered_executor_semantics'));
   assert.ok(requiredFields.includes('effective_default_executor_resolution'));
@@ -141,7 +140,7 @@ test('domain onboarding schema example aligns execution model with split executo
   assert.deepEqual(properties.default_executor_name, { const: 'codex_cli' });
   assert.deepEqual(properties.default_executor_mode, { const: 'autonomous' });
   assert.equal((properties.canonical_executor_backends as JsonObject).type, 'array');
-  assert.equal((properties.compatibility_aliases as JsonObject).type, 'object');
+  assert.equal(Object.prototype.hasOwnProperty.call(properties, retiredAliasField), false);
   assert.equal((properties.execution_shapes as JsonObject).type, 'object');
   assert.equal((properties.executor_labels as JsonObject).type, 'object');
   assert.equal((properties.executor_statuses as JsonObject).type, 'object');
@@ -162,7 +161,7 @@ test('domain onboarding schema example aligns execution model with split executo
   assert.equal(executionModel.default_executor_name, 'codex_cli');
   assert.equal(executionModel.default_executor_mode, 'autonomous');
   assert.deepEqual(executionModel.canonical_executor_backends, ['codex_cli', 'hermes_agent']);
-  assert.deepEqual(executionModel.compatibility_aliases, { host_agent: 'codex_cli' });
+  assert.equal(Object.prototype.hasOwnProperty.call(executionModel, retiredAliasField), false);
   assert.deepEqual(((executionModel.execution_shapes as JsonObject).structured_call as JsonObject).allowed_backends, [
     'codex_cli',
     'hermes_agent',
@@ -213,7 +212,7 @@ test('family manifests use the same split executor declaration', () => {
   assert.equal(exampleExecutionModel.default_executor_name, 'codex_cli');
   assert.equal(exampleExecutionModel.default_executor_mode, 'autonomous');
   assert.deepEqual(exampleExecutionModel.canonical_executor_backends, ['codex_cli', 'hermes_agent']);
-  assert.deepEqual(exampleExecutionModel.compatibility_aliases, { host_agent: 'codex_cli' });
+  assert.equal(Object.prototype.hasOwnProperty.call(exampleExecutionModel, retiredAliasField), false);
   assert.deepEqual(((exampleExecutionModel.execution_shapes as JsonObject).structured_call as JsonObject).allowed_backends, [
     'codex_cli',
     'hermes_agent',
@@ -239,7 +238,7 @@ test('family manifests use the same split executor declaration', () => {
   assert.equal(executorDefaults.default_executor_name, 'codex_cli');
   assert.equal(executorDefaults.default_executor_mode, 'autonomous');
   assert.deepEqual(executorDefaults.canonical_executor_backends, ['codex_cli', 'hermes_agent']);
-  assert.deepEqual(executorDefaults.compatibility_aliases, { host_agent: 'codex_cli' });
+  assert.equal(Object.prototype.hasOwnProperty.call(executorDefaults, retiredAliasField), false);
   assert.deepEqual(((executorDefaults.execution_shapes as JsonObject).structured_call as JsonObject).allowed_backends, [
     'codex_cli',
     'hermes_agent',
