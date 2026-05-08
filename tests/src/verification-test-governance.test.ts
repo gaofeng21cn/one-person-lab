@@ -93,6 +93,8 @@ const expectedTestScripts = {
 
 const fullLanePatterns = [
   /Usage: \$0 full/,
+  /parallel_lanes=\(/,
+  /serial_lanes=\(/,
   /"test:fast"/,
   /"test:regression"/,
   /"test:integration"/,
@@ -102,6 +104,8 @@ const fullLanePatterns = [
   /"test:structure"/,
   /"typecheck"/,
   /"lint"/,
+  /for lane in "\$\{parallel_lanes\[@\]\}"/,
+  /for lane in "\$\{serial_lanes\[@\]\}"/,
   /npm run "\$\{lane\}"/,
 ];
 

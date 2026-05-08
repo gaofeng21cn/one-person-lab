@@ -6,16 +6,19 @@ if [[ "${1:-}" != "full" ]]; then
   exit 2
 fi
 
-lanes=(
+parallel_lanes=(
   "test:fast"
   "test:regression"
   "test:integration"
-  "test:artifact"
   "test:fresh-install"
-  "test:native"
   "test:structure"
   "typecheck"
   "lint"
+)
+
+serial_lanes=(
+  "test:artifact"
+  "test:native"
 )
 
 log_root="$(mktemp -d "${TMPDIR:-/tmp}/opl-test-full.XXXXXX")"
@@ -23,7 +26,7 @@ trap 'rm -rf "${log_root}"' EXIT
 
 declare -a lane_statuses=()
 
-for lane in "${lanes[@]}"; do
+for lane in "${parallel_lanes[@]}"; do
   (
     echo "[${lane}] start"
     npm run "${lane}"
@@ -38,6 +41,14 @@ for lane_status in "${lane_statuses[@]}"; do
   if ! wait "${pid}"; then
     exit_code=1
   fi
+  sed "s/^/[${lane}] /" "${log_root}/${lane//:/_}.log"
+done
+
+for lane in "${serial_lanes[@]}"; do
+  (
+    echo "[${lane}] start"
+    npm run "${lane}"
+  ) >"${log_root}/${lane//:/_}.log" 2>&1 || exit_code=1
   sed "s/^/[${lane}] /" "${log_root}/${lane//:/_}.log"
 done
 
