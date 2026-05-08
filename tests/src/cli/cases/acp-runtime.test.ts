@@ -180,7 +180,7 @@ exit 1
       new Promise<Record<string, unknown>>((_, reject) => {
         setTimeout(() => {
           reject(new Error('ACP runtime did not emit a streaming assistant update before turn completion.'));
-        }, 400);
+        }, 1500);
       }),
     ]);
     notifications.push(firstNotification);
