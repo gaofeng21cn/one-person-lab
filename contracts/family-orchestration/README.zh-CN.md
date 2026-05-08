@@ -44,7 +44,16 @@
 - `family-human-gate.schema.json`
   - 冻结共享的 human-review gate request / decision / resume surface
 - `family-product-entry-manifest-v2.schema.json`
-  - 冻结共享的 product-entry discovery surface，可指向 graph、gate、resume contract、runtime continuity companion，以及 repo-owned runtime control projection
+  - 冻结共享的 product-entry discovery surface，可指向 graph、gate、resume contract、runtime continuity companion、repo-owned runtime control projection，以及 family persistence / lifecycle / owner-route refs
+
+### control-plane-oriented
+
+- `family-persistence-policy.schema.json`
+  - 冻结共享策略，用来区分 `file_authority`、`sqlite_sidecar_index`、`projection_cache` 与 `legacy_diagnostic_only`
+- `family-lifecycle-ledger.schema.json`
+  - 冻结 lifecycle receipt surface，覆盖 dry-run / apply / verify action、manifest ref、checksum 与 restore proof
+- `family-owner-route.schema.json`
+  - 冻结 owner-route envelope，覆盖 `route_epoch`、`source_fingerprint`、next owner、allowed actions、idempotency key，以及 handoff / projection refs
 
 ## Runtime Continuity Freeze
 
@@ -70,6 +79,21 @@
 
 对 `MAS` v2，可消费 projection 锚点是 domain-owned `study_charter`、`evidence_ledger`、`review_ledger`、`publication_eval/latest.json`、AI reviewer artifacts、`StudyTruthKernel` / `RuntimeHealthKernel` 或 truth health reducers / runtime health reducers。OPL only consumes projections, does not issue MAS ready verdicts, and does not hold publication judgment。
 
+## Persistence / Lifecycle / Owner-Route Freeze
+
+family-level persistence 与 lifecycle surface 只属于共享控制面合同。它们让 domain 仓能用同一形状暴露 durable state role、lifecycle receipt 与 next-owner routing，但不把 domain truth 迁入 `OPL`。
+
+共享控制面包括：
+
+- `family_persistence_policy`
+  - 标记哪些 surface 是 file authority、SQLite sidecar index、projection cache 或 legacy diagnostic
+- `family_lifecycle_ledger`
+  - 记录 dry-run / apply / verify lifecycle receipt，并携带 manifest、checksum 与 restore-proof refs
+- `family_owner_route`
+  - 记录 route epoch、source fingerprint、next owner、allowed actions、idempotency key 与 handoff / projection refs
+
+`family-product-entry-manifest-v2.schema.json` 只增加这些 surface 的可选 discovery refs。它不要求 `MAG` 或 `RCA` 第一轮把运行状态迁移到 SQLite，也不把 `MAS` 的 publication evaluation、AI review、paper package 或 readiness authority 移出 `MAS`。
+
 ## 这个目录不冻结什么
 
 这个目录不负责：
@@ -85,11 +109,11 @@
 - `one-person-lab`
   - 负责发布 contract 语言、schema 与 reference wording
 - `med-autoscience`
-  - 优先吸收 `family event envelope`、`family checkpoint lineage`、`family human gate`
+  - 优先吸收 `family event envelope`、`family checkpoint lineage`、`family human gate`，并作为 persistence / lifecycle / owner-route 的完整参考 adapter
 - `med-autogrant`
-  - 优先吸收 `family action graph`、`family human gate`、`family product-entry manifest v2`
+  - 优先吸收 `family action graph`、`family human gate`、`family product-entry manifest v2`，并在现有 runtime-control 与 grant-progress surfaces 上提供轻 adapter
 - `redcube-ai`
-  - 优先吸收 `family product-entry manifest v2`，以及围绕 operator loop continuity 的 action-graph / gate 语义
+  - 优先吸收 `family product-entry manifest v2`，以及围绕 operator loop continuity 的 action-graph / gate 语义，并提供 managed-run/session/review projection 的厚 adapter
 
 ## 相关文档
 
@@ -103,4 +127,7 @@
 - [`family-checkpoint-lineage.schema.json`](./family-checkpoint-lineage.schema.json)
 - [`family-action-graph.schema.json`](./family-action-graph.schema.json)
 - [`family-human-gate.schema.json`](./family-human-gate.schema.json)
+- [`family-persistence-policy.schema.json`](./family-persistence-policy.schema.json)
+- [`family-lifecycle-ledger.schema.json`](./family-lifecycle-ledger.schema.json)
+- [`family-owner-route.schema.json`](./family-owner-route.schema.json)
 - [`family-product-entry-manifest-v2.schema.json`](./family-product-entry-manifest-v2.schema.json)
