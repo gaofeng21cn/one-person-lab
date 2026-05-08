@@ -44,7 +44,16 @@ These schemas therefore freeze interoperability surfaces, not a monolithic runti
 - `family-human-gate.schema.json`
   - shared human-review gate request / decision / resume surface
 - `family-product-entry-manifest-v2.schema.json`
-  - shared product-entry discovery surface that can point at graphs, gates, resume contracts, runtime continuity companions, and repo-owned runtime control projections
+  - shared product-entry discovery surface that can point at graphs, gates, resume contracts, runtime continuity companions, repo-owned runtime control projections, and family persistence / lifecycle / owner-route refs
+
+### Control-plane-oriented
+
+- `family-persistence-policy.schema.json`
+  - shared policy that separates `file_authority`, `sqlite_sidecar_index`, `projection_cache`, and `legacy_diagnostic_only`
+- `family-lifecycle-ledger.schema.json`
+  - shared lifecycle receipt surface for dry-run / apply / verify actions, manifest refs, checksums, and restore proof
+- `family-owner-route.schema.json`
+  - shared owner-route envelope for `route_epoch`, `source_fingerprint`, next owner, allowed actions, idempotency key, and handoff / projection refs
 
 ## Runtime Continuity Freeze
 
@@ -68,6 +77,21 @@ This means `OPL` can keep consuming one family contract for session / progress /
 
 For `MAS` v2, the consumable projection anchors are domain-owned `study_charter`, `evidence_ledger`, `review_ledger`, `publication_eval/latest.json`, AI reviewer artifacts, and `StudyTruthKernel` / `RuntimeHealthKernel` or truth health reducers / runtime health reducers. OPL only consumes projections, does not issue MAS ready verdicts, and does not hold publication judgment.
 
+## Persistence / Lifecycle / Owner-Route Freeze
+
+The family-level persistence and lifecycle surfaces are shared control-plane contracts only. They let domain repositories expose durable state roles, lifecycle receipts, and next-owner routing in one shape without moving domain truth into `OPL`.
+
+The shared control surfaces are:
+
+- `family_persistence_policy`
+  - marks which surfaces are file authorities, SQLite sidecar indexes, projection caches, or legacy diagnostics
+- `family_lifecycle_ledger`
+  - records dry-run / apply / verify lifecycle receipts with manifest, checksum, and restore-proof references
+- `family_owner_route`
+  - records route epoch, source fingerprint, next owner, allowed actions, idempotency key, and handoff / projection refs
+
+`family-product-entry-manifest-v2.schema.json` only adds optional discovery refs for these surfaces. It does not require `MAG` or `RCA` to migrate runtime state into SQLite, and it does not move `MAS` publication evaluation, AI review, paper package, or readiness authority out of `MAS`.
+
 ## What This Directory Does Not Freeze
 
 This directory does not:
@@ -83,11 +107,11 @@ This directory does not:
 - `one-person-lab`
   - publishes the contract language, schemas, and reference wording
 - `med-autoscience`
-  - adopts `family event envelope`, `family checkpoint lineage`, and `family human gate`
+  - adopts `family event envelope`, `family checkpoint lineage`, `family human gate`, and the full persistence / lifecycle / owner-route reference adapter
 - `med-autogrant`
-  - adopts `family action graph`, `family human gate`, and `family product-entry manifest v2`
+  - adopts `family action graph`, `family human gate`, `family product-entry manifest v2`, and a light persistence / lifecycle / owner-route adapter over existing runtime-control and grant-progress surfaces
 - `redcube-ai`
-  - adopts `family product-entry manifest v2` plus the aligned action-graph / gate semantics around operator-loop continuity
+  - adopts `family product-entry manifest v2` plus the aligned action-graph / gate semantics and a managed-run/session/review projection adapter around operator-loop continuity
 
 ## Related Docs
 
@@ -103,4 +127,7 @@ This directory does not:
 - [`family-checkpoint-lineage.schema.json`](./family-checkpoint-lineage.schema.json)
 - [`family-action-graph.schema.json`](./family-action-graph.schema.json)
 - [`family-human-gate.schema.json`](./family-human-gate.schema.json)
+- [`family-persistence-policy.schema.json`](./family-persistence-policy.schema.json)
+- [`family-lifecycle-ledger.schema.json`](./family-lifecycle-ledger.schema.json)
+- [`family-owner-route.schema.json`](./family-owner-route.schema.json)
 - [`family-product-entry-manifest-v2.schema.json`](./family-product-entry-manifest-v2.schema.json)

@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opl.onepersonlab/contracts/family-orchestration/family-lifecycle-ledger.schema.json",
+  "title": "OPL Family Lifecycle Ledger",
+  "description": "Shared lifecycle ledger for dry-run, apply, verify, retention, archive, checksum, and restore-proof receipts.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "surface_kind",
+    "version",
+    "target_domain_id",
+    "ledger_id",
+    "phase",
+    "status",
+    "summary",
+    "actions"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "family_lifecycle_ledger"
+    },
+    "version": {
+      "const": "family-lifecycle-ledger.v1"
+    },
+    "target_domain_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "ledger_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "phase": {
+      "type": "string",
+      "enum": [
+        "inventory",
+        "dry_run",
+        "apply",
+        "verify"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "minLength": 1
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "actions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/lifecycleAction"
+      }
+    }
+  },
+  "$defs": {
+    "referenceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ref_kind",
+        "ref"
+      ],
+      "properties": {
+        "ref_kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "lifecycleAction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "action_id",
+        "action_kind",
+        "target_ref",
+        "authority_owner",
+        "safety_gate",
+        "result",
+        "manifest_ref",
+        "sha256",
+        "restore_ref"
+      ],
+      "properties": {
+        "action_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "action_kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "target_ref": {
+          "$ref": "#/$defs/referenceRef"
+        },
+        "authority_owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "safety_gate": {
+          "type": "string",
+          "minLength": 1
+        },
+        "result": {
+          "type": "string",
+          "minLength": 1
+        },
+        "manifest_ref": {
+          "$ref": "#/$defs/referenceRef"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[A-Fa-f0-9]{64}$"
+        },
+        "restore_ref": {
+          "$ref": "#/$defs/referenceRef"
+        }
+      }
+    }
+  }
+}

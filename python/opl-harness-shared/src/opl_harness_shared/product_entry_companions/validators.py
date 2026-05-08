@@ -270,6 +270,9 @@ def validate_family_product_entry_manifest(
     for field in (
         "runtime_inventory",
         "task_lifecycle",
+        "persistence_policy",
+        "lifecycle_ledger",
+        "owner_route",
         "session_continuity",
         "progress_projection",
         "artifact_inventory",
@@ -298,6 +301,17 @@ def validate_family_product_entry_manifest(
             payload.get("product_entry_quickstart"),
             "product_entry_manifest.product_entry_quickstart",
         )
+    for field, expected_surface_kind in (
+        ("persistence_policy", "family_persistence_policy"),
+        ("lifecycle_ledger", "family_lifecycle_ledger"),
+        ("owner_route", "family_owner_route"),
+    ):
+        if payload.get(field) is not None:
+            normalized[field] = _validate_surface_kind_mapping(
+                payload.get(field),
+                f"product_entry_manifest.{field}",
+                expected_surface_kind,
+            )
     remaining_gaps = _optional_string_list(payload.get("remaining_gaps"), "product_entry_manifest.remaining_gaps")
     if remaining_gaps is not None:
         normalized["remaining_gaps"] = remaining_gaps
@@ -326,6 +340,21 @@ def validate_family_product_entry_manifest(
             payload.get("task_lifecycle"),
             "product_entry_manifest.task_lifecycle",
             "task_lifecycle",
+        )
+        normalized["persistence_policy"] = _validate_surface_kind_mapping(
+            payload.get("persistence_policy"),
+            "product_entry_manifest.persistence_policy",
+            "family_persistence_policy",
+        )
+        normalized["lifecycle_ledger"] = _validate_surface_kind_mapping(
+            payload.get("lifecycle_ledger"),
+            "product_entry_manifest.lifecycle_ledger",
+            "family_lifecycle_ledger",
+        )
+        normalized["owner_route"] = _validate_surface_kind_mapping(
+            payload.get("owner_route"),
+            "product_entry_manifest.owner_route",
+            "family_owner_route",
         )
         if payload.get("session_continuity") is not None:
             normalized["session_continuity"] = _validate_surface_kind_mapping(

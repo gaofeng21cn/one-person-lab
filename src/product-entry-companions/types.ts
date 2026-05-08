@@ -294,6 +294,9 @@ export interface BuildFamilyProductEntryManifestInput {
   recommended_command?: string | null;
   runtime_inventory?: JsonRecord | null;
   task_lifecycle?: JsonRecord | null;
+  persistence_policy?: JsonRecord | null;
+  lifecycle_ledger?: JsonRecord | null;
+  owner_route?: JsonRecord | null;
   runtime_control?: JsonRecord | null;
   runtime_loop_closure?: JsonRecord | null;
   session_continuity?: JsonRecord | null;
@@ -419,6 +422,9 @@ export type FamilyProductEntryManifestSurface = JsonRecord & {
   recommended_command?: string;
   runtime_inventory?: JsonRecord;
   task_lifecycle?: JsonRecord;
+  persistence_policy?: JsonRecord;
+  lifecycle_ledger?: JsonRecord;
+  owner_route?: JsonRecord;
   runtime_control?: JsonRecord;
   runtime_loop_closure?: JsonRecord;
   session_continuity?: JsonRecord;
@@ -461,4 +467,3 @@ export type FamilyProductFrontdoorSurface = JsonRecord & {
   domain_entry_contract?: JsonRecord;
   gateway_interaction_contract?: JsonRecord;
 };
-

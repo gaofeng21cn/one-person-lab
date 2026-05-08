@@ -23,7 +23,10 @@ The `Shared Runtime Contract` owns the shared runtime objects and behavior surfa
 - `approval / interrupt / resume`
 - `family event envelope`
 - `family checkpoint lineage`
- - `product-entry runtime continuity discovery`
+- `product-entry runtime continuity discovery`
+- `family persistence policy`
+- `family lifecycle ledger`
+- `family owner route`
 
 These are cross-domain runtime requirements.
 They define what the runtime layer must expose structurally, not what any one domain decides about artifacts, review, or delivery truth.
@@ -92,9 +95,17 @@ To avoid coupling the family runtime layer to one orchestration framework, the m
    - shared checkpoint ancestry, resume, and state-reference envelope
 3. `product-entry runtime continuity discovery`
    - shared `runtime inventory + task lifecycle + session continuity + progress projection + artifact inventory` discovery surface, with `runtime_control` / `runtime_loop_closure` as control references and repo-owned runtime-control projections still owned by domain repositories
+4. `family persistence policy`
+   - shared control surface that separates domain-owned file authority from SQLite sidecar indexes, projection caches, and legacy diagnostics
+5. `family lifecycle ledger`
+   - shared receipt surface for dry-run / apply / verify lifecycle actions, manifest refs, checksums, and restore proof
+6. `family owner route`
+   - shared owner-route surface for route epochs, source fingerprints, next owner, allowed actions, idempotency keys, and handoff / projection refs
 
 These schemas live in `contracts/family-orchestration/`.
 They freeze interoperability surfaces that multiple domain runtimes can adopt while still keeping runtime ownership and durable truth local to each domain repository.
+
+The persistence / lifecycle / owner-route surfaces are control-plane discovery contracts. They do not make `OPL` a domain runtime owner, memory store, scheduler, publication-quality judge, or artifact authority.
 
 ## Relationship To CrewAI
 
@@ -127,7 +138,7 @@ As of the current public mainline, the true state remains:
 - explicit activation routes only into admitted domain agents: `MAS`, `MAG`, and `RCA`
 - `MCP` and other protocol surfaces remain supporting or domain-owned layers
 - the `Shared Runtime Contract` is a reference contract under the current shared-boundary layer, not the default product entry
-- the runtime-oriented family orchestration companion schemas now live in `contracts/family-orchestration/` and freeze the shared `event envelope + checkpoint lineage + product-entry runtime continuity discovery` semantics without turning them into one runtime owner
+- the runtime-oriented family orchestration companion schemas now live in `contracts/family-orchestration/` and freeze the shared `event envelope + checkpoint lineage + product-entry runtime continuity discovery + persistence / lifecycle / owner-route discovery` semantics without turning them into one runtime owner
 - the active four-repository public line is `one-person-lab + MAS + MAG + RCA`; `MDS` remains below MAS as a controlled runtime/backend companion
 - an upstream `Hermes-Agent` runtime substrate remains an opt-in or future implementation direction for this contract, not the default OPL public fact
 
