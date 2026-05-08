@@ -100,7 +100,6 @@ from .product_entry_companions import (
     validate_family_product_entry_surfaces,
 )
 from .product_entry_program_companions import (
-    build_backend_deconstruction_lane,
     build_clearance_lane,
     build_clearance_target,
     build_detailed_readiness,
@@ -113,6 +112,7 @@ from .product_entry_program_companions import (
     build_program_capability,
     build_program_check,
     build_program_sequence_step,
+    build_source_provenance_surface,
     build_workflow_coverage_item,
 )
 from .runtime_task_companions import (
@@ -216,9 +216,9 @@ __all__ = [
     "build_clearance_target",
     "build_clearance_lane",
     "build_program_capability",
-    "build_backend_deconstruction_lane",
     "build_program_check",
     "build_program_sequence_step",
+    "build_source_provenance_surface",
     "build_platform_target",
     "build_workflow_coverage_item",
     "build_artifact_file_descriptor",

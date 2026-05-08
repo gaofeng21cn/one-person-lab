@@ -97,15 +97,15 @@ export interface ClearanceLaneInput {
   recommended_phase_command: string;
 }
 
-export interface BackendDeconstructionLaneInput {
+export interface SourceProvenanceSurfaceInput {
   summary: string;
-  substrate_targets: ProgramCapabilityInput[];
-  backend_retained_now: string[];
-  current_backend_chain: string[];
-  optional_executor_proofs: JsonRecord[];
-  promotion_rules: string[];
-  deconstruction_map_doc: string;
-  recommended_phase_command: string;
+  source_provenance_ref: ProgramSurfaceInput;
+  historical_fixture_ref: ProgramSurfaceInput;
+  explicit_archive_import_ref: ProgramSurfaceInput;
+  parity_oracle_ref?: ProgramSurfaceInput;
+  authority_boundary: string[];
+  capability_classification: string;
+  recommended_audit_command: string;
   surface_kind?: string;
 }
 
@@ -337,21 +337,22 @@ export function buildClearanceLane(input: ClearanceLaneInput) {
   };
 }
 
-export function buildBackendDeconstructionLane(input: BackendDeconstructionLaneInput) {
+export function buildSourceProvenanceSurface(input: SourceProvenanceSurfaceInput) {
   return {
-    surface_kind: requireString(input.surface_kind ?? 'phase4_backend_deconstruction_lane', 'surface_kind'),
+    surface_kind: requireString(input.surface_kind ?? 'source_provenance', 'surface_kind'),
     summary: requireString(input.summary, 'summary'),
-    substrate_targets: input.substrate_targets.map((entry, index) => (
-      normalizeProgramCapability(entry, `substrate_targets[${index}]`)
-    )),
-    backend_retained_now: readStringList(input.backend_retained_now, 'backend_retained_now'),
-    current_backend_chain: readStringList(input.current_backend_chain, 'current_backend_chain'),
-    optional_executor_proofs: input.optional_executor_proofs.map((entry, index) => (
-      { ...requireRecord(entry, `optional_executor_proofs[${index}]`) }
-    )),
-    promotion_rules: readStringList(input.promotion_rules, 'promotion_rules'),
-    deconstruction_map_doc: requireString(input.deconstruction_map_doc, 'deconstruction_map_doc'),
-    recommended_phase_command: requireString(input.recommended_phase_command, 'recommended_phase_command'),
+    source_provenance_ref: normalizeProgramSurface(input.source_provenance_ref, 'source_provenance_ref'),
+    historical_fixture_ref: normalizeProgramSurface(input.historical_fixture_ref, 'historical_fixture_ref'),
+    explicit_archive_import_ref: normalizeProgramSurface(
+      input.explicit_archive_import_ref,
+      'explicit_archive_import_ref',
+    ),
+    ...(input.parity_oracle_ref
+      ? { parity_oracle_ref: normalizeProgramSurface(input.parity_oracle_ref, 'parity_oracle_ref') }
+      : {}),
+    authority_boundary: readStringList(input.authority_boundary, 'authority_boundary'),
+    capability_classification: requireString(input.capability_classification, 'capability_classification'),
+    recommended_audit_command: requireString(input.recommended_audit_command, 'recommended_audit_command'),
   };
 }
 

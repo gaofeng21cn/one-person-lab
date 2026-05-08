@@ -49,7 +49,7 @@
 ### control-plane-oriented
 
 - `family-persistence-policy.schema.json`
-  - 冻结共享策略，用来区分 `file_authority`、`sqlite_sidecar_index`、`projection_cache` 与 `legacy_diagnostic_only`
+  - 冻结共享策略，用来区分 `file_authority`、`sqlite_sidecar_index`、`projection_cache` 与 `source_provenance_only`
 - `family-lifecycle-ledger.schema.json`
   - 冻结 lifecycle receipt surface，覆盖 dry-run / apply / verify action、manifest ref、checksum 与 restore proof
 - `family-owner-route.schema.json`

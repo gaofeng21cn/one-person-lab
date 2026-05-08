@@ -395,47 +395,46 @@ def build_program_capability(
     )
 
 
-def build_backend_deconstruction_lane(
+def build_source_provenance_surface(
     *,
     summary: str,
-    substrate_targets: Sequence[Mapping[str, Any]],
-    backend_retained_now: list[str],
-    current_backend_chain: list[str],
-    optional_executor_proofs: Sequence[Mapping[str, Any]],
-    promotion_rules: list[str],
-    deconstruction_map_doc: str,
-    recommended_phase_command: str,
-    surface_kind: str = "phase4_backend_deconstruction_lane",
+    source_provenance_ref: Mapping[str, Any],
+    historical_fixture_ref: Mapping[str, Any],
+    explicit_archive_import_ref: Mapping[str, Any],
+    authority_boundary: list[str],
+    capability_classification: str,
+    recommended_audit_command: str,
+    parity_oracle_ref: Mapping[str, Any] | None = None,
+    surface_kind: str = "source_provenance",
 ) -> dict[str, Any]:
-    return {
+    payload = {
         "surface_kind": _require_string(surface_kind, "surface_kind"),
         "summary": _require_string(summary, "summary"),
-        "substrate_targets": [
-            _normalize_capability(item, f"substrate_targets[{index}]")
-            for index, item in enumerate(substrate_targets)
-        ],
-        "backend_retained_now": _require_string_list(
-            backend_retained_now,
-            "backend_retained_now",
+        "source_provenance_ref": _normalize_program_surface(
+            source_provenance_ref,
+            "source_provenance_ref",
         ),
-        "current_backend_chain": _require_string_list(
-            current_backend_chain,
-            "current_backend_chain",
+        "historical_fixture_ref": _normalize_program_surface(
+            historical_fixture_ref,
+            "historical_fixture_ref",
         ),
-        "optional_executor_proofs": [
-            dict(_require_mapping(item, f"optional_executor_proofs[{index}]"))
-            for index, item in enumerate(optional_executor_proofs)
-        ],
-        "promotion_rules": _require_string_list(promotion_rules, "promotion_rules"),
-        "deconstruction_map_doc": _require_string(
-            deconstruction_map_doc,
-            "deconstruction_map_doc",
+        "explicit_archive_import_ref": _normalize_program_surface(
+            explicit_archive_import_ref,
+            "explicit_archive_import_ref",
         ),
-        "recommended_phase_command": _require_string(
-            recommended_phase_command,
-            "recommended_phase_command",
+        "authority_boundary": _require_string_list(
+            authority_boundary,
+            "authority_boundary",
         ),
+        "capability_classification": _require_string(
+            capability_classification,
+            "capability_classification",
+        ),
+        "recommended_audit_command": _require_string(recommended_audit_command, "recommended_audit_command"),
     }
+    if parity_oracle_ref is not None:
+        payload["parity_oracle_ref"] = _normalize_program_surface(parity_oracle_ref, "parity_oracle_ref")
+    return payload
 
 
 def build_program_sequence_step(

@@ -10,7 +10,6 @@ import {
   normalizeSkillCatalog,
 } from './artifact-skill-normalizers.ts';
 import {
-  normalizeBackendDeconstructionLane,
   normalizeClearanceLane,
   normalizeDetailedReadinessSurface,
   normalizePlatformTarget,
@@ -20,6 +19,7 @@ import {
   normalizeProductEntryQuickstart,
   normalizeProductEntryReadiness,
   normalizeProductEntryStart,
+  normalizeSourceProvenanceSurface,
   normalizeShellSurface,
   unwrapManifestPayload,
 } from './entry-surfaces.ts';
@@ -765,9 +765,7 @@ export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest
     manifest.phase3_clearance_lane,
     'phase3_host_clearance_lane',
   );
-  const phase4BackendDeconstruction = normalizeBackendDeconstructionLane(
-    manifest.phase4_backend_deconstruction,
-  );
+  const sourceProvenance = normalizeSourceProvenanceSurface(manifest.source_provenance);
   const phase5PlatformTarget = normalizePlatformTarget(manifest.phase5_platform_target);
   const productEntryStart = normalizeProductEntryStart(manifest.product_entry_start);
   const productEntryQuickstart = normalizeProductEntryQuickstart(manifest.product_entry_quickstart);
@@ -904,7 +902,7 @@ export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest
     grant_authoring_readiness: grantAuthoringReadiness,
     product_entry_guardrails: productEntryGuardrails,
     phase3_clearance_lane: phase3ClearanceLane,
-    phase4_backend_deconstruction: phase4BackendDeconstruction,
+    source_provenance: sourceProvenance,
     phase5_platform_target: phase5PlatformTarget,
     product_entry_start: productEntryStart,
     product_entry_quickstart: productEntryQuickstart,

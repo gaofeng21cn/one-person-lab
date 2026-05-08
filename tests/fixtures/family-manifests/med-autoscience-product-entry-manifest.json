@@ -12,11 +12,10 @@
     "internal_surface": "controller"
   },
   "runtime": {
-    "runtime_owner": "upstream_hermes_agent",
-    "runtime_substrate": "external_hermes_agent_target",
-    "managed_runtime_backend_id": "med-deepscientist",
+    "runtime_owner": "mas_runtime_core",
+    "runtime_substrate": "mas_monolith_runtime",
     "runtime_root": "/fixtures/med-autoscience/runtime",
-    "hermes_home_root": "/fixtures/med-autoscience/hermes-home"
+    "source_provenance_ref": "docs/references/med-deepscientist/med_deepscientist_deconstruction_map.md"
   },
   "schema_ref": "contracts/schemas/v1/product-entry-manifest.schema.json",
   "domain_entry_contract": {
@@ -101,9 +100,9 @@
   },
   "managed_runtime_contract": {
     "shared_contract_ref": "contracts/opl-gateway/managed-runtime-three-layer-contract.json",
-    "runtime_owner": "upstream_hermes_agent",
+    "runtime_owner": "mas_runtime_core",
     "domain_owner": "med-autoscience",
-    "executor_owner": "med_deepscientist",
+    "executor_owner": "codex_cli",
     "supervision_status_surface": {
       "surface_kind": "study_progress",
       "owner": "med-autoscience"
@@ -124,11 +123,11 @@
   },
   "runtime_inventory": {
     "surface_kind": "runtime_inventory",
-    "summary": "MAS 当前通过 Hermes-hosted runtime 与 med-deepscientist backend 持续驱动 study 运行。",
-    "runtime_owner": "upstream_hermes_agent",
+    "summary": "MAS 当前通过 monolith runtime core 持续驱动 study 运行；MDS 只作为 source provenance / historical fixture / explicit archive import reference。",
+    "runtime_owner": "mas_runtime_core",
     "domain_owner": "med-autoscience",
-    "executor_owner": "med_deepscientist",
-    "substrate": "external_hermes_agent_target",
+    "executor_owner": "codex_cli",
+    "substrate": "mas_monolith_runtime",
     "availability": "ready",
     "health_status": "healthy",
     "status_surface": {
@@ -152,7 +151,10 @@
     },
     "domain_projection": {
       "default_study_id": "<study_id>",
-      "phase_id": "phase_2_user_product_loop"
+      "phase_id": "phase_2_user_product_loop",
+      "source_provenance_ref": "docs/references/med-deepscientist/med_deepscientist_deconstruction_map.md",
+      "historical_fixture_ref": "fixtures/med-deepscientist/parity/",
+      "explicit_archive_import_ref": "medautoscience backend-audit --mode archive-import"
     }
   },
   "executor_defaults": {
@@ -272,10 +274,11 @@
     "simple_llm_backend_forbidden": true,
     "openai_compatible_gateway_backend_forbidden": true,
     "domain_repo_provider_catalog_forbidden": true,
-    "current_backend_chain": [
-      "med_autoscience.runtime_transport.hermes -> med_autoscience.runtime_transport.med_deepscientist",
-      "med_deepscientist CodexRunner -> codex exec autonomous agent loop"
-    ]
+    "source_provenance": {
+      "source_provenance_ref": "docs/references/med-deepscientist/med_deepscientist_deconstruction_map.md",
+      "historical_fixture_ref": "fixtures/med-deepscientist/parity/",
+      "explicit_archive_import_ref": "medautoscience backend-audit --mode archive-import"
+    }
   },
   "workspace_locator": {
     "workspace_surface_kind": "med_autoscience_workspace_profile",
@@ -398,9 +401,9 @@
     "surface_kind": "session_continuity",
     "summary": "MAS session continuity 指针已就绪；恢复入口与进度/工件真相仍以 study-local durable surfaces 为 authority。",
     "domain_agent_id": "mas",
-    "runtime_owner": "upstream_hermes_agent",
+    "runtime_owner": "mas_runtime_core",
     "domain_owner": "med-autoscience",
-    "executor_owner": "med_deepscientist",
+    "executor_owner": "codex_cli",
     "status": "ready",
     "progress_surface": {
       "surface_kind": "study_progress",
@@ -501,9 +504,9 @@
       "research_runtime_control_projection": {
         "surface_kind": "research_runtime_control_projection",
         "study_session_owner": {
-          "runtime_owner": "upstream_hermes_agent",
+          "runtime_owner": "mas_runtime_core",
           "study_owner": "med-autoscience",
-          "executor_owner": "med_deepscientist"
+          "executor_owner": "codex_cli"
         },
         "restore_point_surface": {
           "surface_kind": "study_progress",
@@ -606,9 +609,9 @@
     "research_runtime_control_projection_contract": {
       "surface_kind": "research_runtime_control_projection_contract",
       "study_session_owner": {
-        "runtime_owner": "upstream_hermes_agent",
+        "runtime_owner": "mas_runtime_core",
         "study_owner": "med-autoscience",
-        "executor_owner": "med_deepscientist"
+        "executor_owner": "codex_cli"
       },
       "restore_point_surface": {
         "surface_kind": "study_progress",
@@ -803,33 +806,32 @@
     ],
     "recommended_phase_command": "uv run python -m med_autoscience.cli mainline-phase --phase phase_3_multi_workspace_host_clearance"
   },
-  "phase4_backend_deconstruction": {
-    "surface_kind": "phase4_backend_deconstruction_lane",
-    "summary": "Phase 4 把可迁出的通用 runtime 能力继续迁向 substrate，同时诚实保留 controlled backend executor。",
-    "substrate_targets": [
-      {
-        "capability_id": "session_run_watch_recovery",
-        "owner": "upstream Hermes-Agent",
-        "summary": "session / run / watch / recovery / scheduling / interruption 继续收归 outer runtime substrate。"
-      }
+  "source_provenance": {
+    "surface_kind": "source_provenance",
+    "summary": "MAS monolith runtime core 是默认运行所有者；MDS 只保留为 source provenance、historical fixture 与 explicit archive import reference。",
+    "source_provenance_ref": {
+      "surface_kind": "source_provenance",
+      "ref": "docs/references/med-deepscientist/med_deepscientist_deconstruction_map.md"
+    },
+    "historical_fixture_ref": {
+      "surface_kind": "historical_fixture_ref",
+      "ref": "fixtures/med-deepscientist/parity/"
+    },
+    "explicit_archive_import_ref": {
+      "surface_kind": "explicit_archive_import_ref",
+      "command": "uv run python -m med_autoscience.cli backend-audit --profile /fixtures/med-autoscience/profile.local.toml --mode archive-import"
+    },
+    "parity_oracle_ref": {
+      "surface_kind": "parity_oracle_ref",
+      "ref": "docs/references/med-deepscientist/med_deepscientist_continuous_learning_plan.md"
+    },
+    "authority_boundary": [
+      "mas_runtime_core_is_default_runtime_owner",
+      "source_refs_do_not_define_runtime_dependency",
+      "archive_import_is_explicit_one_way_provenance"
     ],
-    "backend_retained_now": [
-      "MedDeepScientist CodexRunner autonomous executor chain"
-    ],
-    "current_backend_chain": [
-      "med_autoscience.runtime_transport.hermes -> med_autoscience.runtime_transport.med_deepscientist"
-    ],
-    "optional_executor_proofs": [
-      {
-        "executor_kind": "hermes_agent",
-        "readiness": "pending"
-      }
-    ],
-    "promotion_rules": [
-      "no claim of backend retirement without owner + contract + tests + proof"
-    ],
-    "deconstruction_map_doc": "human_doc:med_deepscientist_deconstruction_map",
-    "recommended_phase_command": "uv run python -m med_autoscience.cli mainline-phase --phase phase_4_backend_deconstruction"
+    "capability_classification": "source_provenance_only",
+    "recommended_audit_command": "uv run python -m med_autoscience.cli backend-audit --profile /fixtures/med-autoscience/profile.local.toml"
   },
   "phase5_platform_target": {
     "surface_kind": "phase5_platform_target",
@@ -991,9 +993,9 @@
           },
           "runtime_continuity": {
             "surface_kind": "skill_runtime_continuity",
-            "runtime_owner": "upstream_hermes_agent",
+            "runtime_owner": "mas_runtime_core",
             "domain_owner": "med-autoscience",
-            "executor_owner": "med_deepscientist",
+            "executor_owner": "codex_cli",
             "session_locator_field": "study_id",
             "session_surface_ref": "/session_continuity",
             "progress_surface_ref": "/progress_projection",

@@ -17,11 +17,11 @@ import {
 
 test('runtime task companion helpers normalize MAS, MAG, and RCA style payloads', () => {
   const runtimeInventory = buildRuntimeInventory({
-    summary: 'Hermes-managed study runtime is ready.',
-    runtime_owner: 'upstream_hermes_agent',
+    summary: 'MAS monolith study runtime is ready.',
+    runtime_owner: 'mas_runtime_core',
     domain_owner: 'medautoscience',
-    executor_owner: 'med_deepscientist',
-    substrate: 'external_hermes_agent_target',
+    executor_owner: 'codex_cli',
+    substrate: 'mas_monolith_runtime',
     availability: 'ready',
     health_status: 'healthy',
     status_surface: {
@@ -212,11 +212,11 @@ test('family persistence policy separates file authority from sidecar indexes', 
         },
       },
     ],
-    legacy_diagnostics: [
+    source_provenance: [
       {
-        surface_id: 'quest_git_restore_import',
-        surface_role: 'legacy_restore_diagnostic',
-        storage_role: 'legacy_diagnostic_only',
+        surface_id: 'historical_quest_archive_import',
+        surface_role: 'explicit_archive_import_ref',
+        storage_role: 'source_provenance_only',
         owner: 'medautoscience',
         ref: {
           ref_kind: 'cli',

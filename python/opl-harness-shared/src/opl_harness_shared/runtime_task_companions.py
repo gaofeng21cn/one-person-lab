@@ -6,7 +6,7 @@ _PERSISTENCE_STORAGE_ROLES = {
     "file_authority",
     "sqlite_sidecar_index",
     "projection_cache",
-    "legacy_diagnostic_only",
+    "source_provenance_only",
 }
 
 
@@ -93,7 +93,7 @@ def build_family_persistence_policy(
     authority_surfaces: list[Mapping[str, Any]],
     sidecar_indexes: list[Mapping[str, Any]] | None = None,
     projection_caches: list[Mapping[str, Any]] | None = None,
-    legacy_diagnostics: list[Mapping[str, Any]] | None = None,
+    source_provenance: list[Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     normalized_authority_surfaces = [
         _build_family_persistence_surface(
@@ -128,13 +128,13 @@ def build_family_persistence_policy(
             )
             for index, entry in enumerate(projection_caches or [])
         ],
-        "legacy_diagnostics": [
+        "source_provenance": [
             _build_family_persistence_surface(
                 entry,
-                expected_storage_role="legacy_diagnostic_only",
-                field=f"legacy_diagnostics[{index}]",
+                expected_storage_role="source_provenance_only",
+                field=f"source_provenance[{index}]",
             )
-            for index, entry in enumerate(legacy_diagnostics or [])
+            for index, entry in enumerate(source_provenance or [])
         ],
     }
 

@@ -226,7 +226,7 @@
       },
       "session": {
         "session_id": "sess_mas_001",
-        "source_surface": "codex_cli_autonomous",
+        "source_surface": "codex_cli",
         "active_run_id": "run_mas_001",
         "program_id": "mas_runtime_program",
         "study_id": "study_heart_failure_01"

@@ -206,7 +206,7 @@
           "node_id": "grant_progress_intake",
           "node_kind": "intake",
           "title": "Grant progress intake",
-          "executor_hint": "codex_cli_autonomous",
+          "executor_hint": "codex_cli",
           "produces_checkpoint": true
         },
         {
