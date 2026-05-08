@@ -386,6 +386,33 @@ exit 0
   }
 });
 
+test('installed opl launcher routes actions discovery to OPL instead of Codex passthrough', () => {
+  const capturePath = path.join(os.tmpdir(), `opl-launcher-actions-capture-${process.pid}.txt`);
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-launcher-actions-state-'));
+  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
+printf '%s\\n' "$@" > ${JSON.stringify(capturePath)}
+echo "SHOULD NOT RUN CODEX"
+exit 0
+`);
+
+  try {
+    const result = runEntryPathRaw(binPath, ['actions', 'list'], {
+      OPL_CODEX_BIN: codexPath,
+      OPL_SKIP_SKILL_SYNC: '1',
+      OPL_STATE_DIR: stateDir,
+    });
+
+    const payload = JSON.parse(result.stdout);
+    assert.equal(payload.family_actions.surface_kind, 'opl_family_action_catalog_index');
+    assert.equal(result.stderr, '');
+    assert.equal(fs.existsSync(capturePath), false);
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    fs.rmSync(capturePath, { force: true });
+    fs.rmSync(stateDir, { recursive: true, force: true });
+  }
+});
+
 test('installed opl launcher routes removed commands into CLI failures without Codex passthrough', () => {
   const capturePath = path.join(os.tmpdir(), `opl-launcher-retired-capture-${process.pid}.txt`);
   const { fixtureRoot, codexPath } = createFakeCodexFixture(`
