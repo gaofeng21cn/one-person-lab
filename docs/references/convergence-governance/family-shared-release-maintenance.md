@@ -9,6 +9,13 @@
 - JS shared package：`opl-gateway-shared`
 - evidence tests：`tests/src/family-shared-release-discipline.test.ts`
 
+## Current Release
+
+- current owner commit：`b427ced5e57f24f7ceb3d3868fb49934ff4ad8c3`
+- consumers aligned：`med-autoscience`、`med-autogrant`、`redcube-ai`
+- closeout date：`2026-05-08`
+- scope：family shared modules / contracts / indexes only；domain truth remains in MAS、MAG、RCA
+
 ## Maintainer Flow
 
 1. 在 owner repo 完成 shared module 变更，并先跑本仓验证：
