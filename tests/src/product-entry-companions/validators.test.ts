@@ -129,6 +129,18 @@ test('product entry companion validators normalize shared family payloads', () =
     runtime_loop_closure: {
       surface_kind: 'runtime_loop_closure',
     },
+    persistence_policy: {
+      surface_kind: 'family_persistence_policy',
+      version: 'family-persistence-policy.v1',
+    },
+    lifecycle_ledger: {
+      surface_kind: 'family_lifecycle_ledger',
+      version: 'family-lifecycle-ledger.v1',
+    },
+    owner_route: {
+      surface_kind: 'family_owner_route',
+      version: 'family-owner-route.v1',
+    },
     session_continuity: {
       surface_kind: 'session_continuity',
     },
@@ -218,6 +230,9 @@ test('product entry companion validators normalize shared family payloads', () =
   assert.equal(validatedManifest.domain_entry_contract?.entry_adapter, 'RedCubeDomainEntry');
   assert.equal(validatedManifest.runtime_inventory?.surface_kind, 'runtime_inventory');
   assert.equal(validatedManifest.runtime_loop_closure?.surface_kind, 'runtime_loop_closure');
+  assert.equal(validatedManifest.persistence_policy?.surface_kind, 'family_persistence_policy');
+  assert.equal(validatedManifest.lifecycle_ledger?.surface_kind, 'family_lifecycle_ledger');
+  assert.equal(validatedManifest.owner_route?.surface_kind, 'family_owner_route');
   assert.equal(validatedManifest.session_continuity?.surface_kind, 'session_continuity');
   assert.equal(validatedManifest.progress_projection?.surface_kind, 'progress_projection');
   assert.equal(validatedManifest.artifact_inventory?.surface_kind, 'artifact_inventory');
@@ -378,6 +393,15 @@ test('product entry companion validators fail closed on missing required shared 
     runtime_control: {
       surface_kind: 'runtime_control',
     },
+    persistence_policy: {
+      surface_kind: 'family_persistence_policy',
+    },
+    lifecycle_ledger: {
+      surface_kind: 'family_lifecycle_ledger',
+    },
+    owner_route: {
+      surface_kind: 'family_owner_route',
+    },
     session_continuity: {
       surface_kind: 'session_continuity',
     },
@@ -421,6 +445,13 @@ test('product entry companion validators fail closed on missing required shared 
   assert.throws(
     () => validateFamilyProductEntryManifest(missingRuntimeControlReference, { requireRuntimeContinuity: true }),
     /runtime continuity control reference/,
+  );
+
+  const wrongOwnerRoute = structuredClone(manifest);
+  wrongOwnerRoute.owner_route.surface_kind = 'owner_route_preview';
+  assert.throws(
+    () => validateFamilyProductEntryManifest(wrongOwnerRoute),
+    /owner_route\.surface_kind/,
   );
 
   const frontdoor = {

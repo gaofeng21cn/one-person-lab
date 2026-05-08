@@ -355,6 +355,18 @@ def test_collect_family_human_gate_ids_and_build_helpers() -> None:
             "surface_kind": "task_lifecycle",
             "summary": "Task lifecycle is shared.",
         },
+        persistence_policy={
+            "surface_kind": "family_persistence_policy",
+            "version": "family-persistence-policy.v1",
+        },
+        lifecycle_ledger={
+            "surface_kind": "family_lifecycle_ledger",
+            "version": "family-lifecycle-ledger.v1",
+        },
+        owner_route={
+            "surface_kind": "family_owner_route",
+            "version": "family-owner-route.v1",
+        },
         skill_catalog={
             "surface_kind": "skill_catalog",
             "summary": "Skill catalog is shared.",
@@ -381,6 +393,9 @@ def test_collect_family_human_gate_ids_and_build_helpers() -> None:
     assert manifest["manifest_version"] == 2
     assert manifest["current_truth"]["product_entry_contract"] == "contracts/runtime-program/current-program.json"
     assert manifest["product_entry_start"]["recommended_mode_id"] == "open_frontdoor"
+    assert manifest["persistence_policy"]["surface_kind"] == "family_persistence_policy"
+    assert manifest["lifecycle_ledger"]["surface_kind"] == "family_lifecycle_ledger"
+    assert manifest["owner_route"]["surface_kind"] == "family_owner_route"
 
     frontdoor_from_manifest = build_family_product_frontdoor_from_manifest(
         product_entry_manifest=manifest,

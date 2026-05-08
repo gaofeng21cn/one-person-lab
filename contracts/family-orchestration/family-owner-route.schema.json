@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opl.onepersonlab/contracts/family-orchestration/family-owner-route.schema.json",
+  "title": "OPL Family Owner Route",
+  "description": "Shared owner-route envelope for current-truth routing, allowed actions, idempotency keys, and handoff/projection references.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "surface_kind",
+    "version",
+    "target_domain_id",
+    "route_id",
+    "route_epoch",
+    "source_fingerprint",
+    "next_owner",
+    "allowed_actions",
+    "idempotency_key",
+    "status",
+    "summary",
+    "handoff_refs",
+    "projection_refs"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "family_owner_route"
+    },
+    "version": {
+      "const": "family-owner-route.v1"
+    },
+    "target_domain_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "route_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "route_epoch": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_fingerprint": {
+      "type": "string",
+      "minLength": 1
+    },
+    "next_owner": {
+      "type": "string",
+      "minLength": 1
+    },
+    "allowed_actions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "idempotency_key": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "type": "string",
+      "minLength": 1
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "handoff_refs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/referenceRef"
+      }
+    },
+    "projection_refs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/referenceRef"
+      }
+    }
+  },
+  "$defs": {
+    "referenceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ref_kind",
+        "ref"
+      ],
+      "properties": {
+        "ref_kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

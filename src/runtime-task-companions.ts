@@ -7,6 +7,68 @@ interface FamilyReference {
   label?: string;
 }
 
+type FamilyPersistenceStorageRole =
+  | 'file_authority'
+  | 'sqlite_sidecar_index'
+  | 'projection_cache'
+  | 'legacy_diagnostic_only';
+
+interface BuildFamilyPersistenceSurfaceInput {
+  surface_id: string;
+  surface_role: string;
+  storage_role: FamilyPersistenceStorageRole;
+  owner: string;
+  ref: FamilyReference;
+  rebuild_from_refs?: FamilyReference[];
+}
+
+interface BuildFamilyPersistencePolicyInput {
+  target_domain_id: string;
+  policy_id: string;
+  summary: string;
+  authority_surfaces: BuildFamilyPersistenceSurfaceInput[];
+  sidecar_indexes?: BuildFamilyPersistenceSurfaceInput[];
+  projection_caches?: BuildFamilyPersistenceSurfaceInput[];
+  legacy_diagnostics?: BuildFamilyPersistenceSurfaceInput[];
+}
+
+type FamilyLifecyclePhase = 'inventory' | 'dry_run' | 'apply' | 'verify';
+
+interface BuildFamilyLifecycleActionInput {
+  action_id: string;
+  action_kind: string;
+  target_ref: FamilyReference;
+  authority_owner: string;
+  safety_gate: string;
+  result: string;
+  manifest_ref: FamilyReference;
+  sha256: string;
+  restore_ref: FamilyReference;
+}
+
+interface BuildFamilyLifecycleLedgerInput {
+  target_domain_id: string;
+  ledger_id: string;
+  phase: FamilyLifecyclePhase;
+  status: string;
+  summary: string;
+  actions: BuildFamilyLifecycleActionInput[];
+}
+
+interface BuildFamilyOwnerRouteInput {
+  target_domain_id: string;
+  route_id: string;
+  route_epoch: string;
+  source_fingerprint: string;
+  next_owner: string;
+  allowed_actions: string[];
+  idempotency_key: string;
+  status: string;
+  summary: string;
+  handoff_refs?: FamilyReference[];
+  projection_refs?: FamilyReference[];
+}
+
 interface BuildTaskSurfaceDescriptorInput {
   surface_kind: string;
   summary: string;
@@ -142,6 +204,128 @@ function normalizeRef(value: unknown, field: string) {
     ref: requireString(value.ref, `${field}.ref`),
     ...(optionalString(value.role) ? { role: optionalString(value.role)! } : {}),
     ...(optionalString(value.label) ? { label: optionalString(value.label)! } : {}),
+  };
+}
+
+function requireRef(value: unknown, field: string) {
+  const ref = normalizeRef(value, field);
+  if (!ref) {
+    throw new Error(`runtime/task companion 缺少 reference 字段: ${field}`);
+  }
+  return ref;
+}
+
+function normalizeRefs(values: unknown, field: string) {
+  if (!Array.isArray(values)) {
+    return [] as ReturnType<typeof requireRef>[];
+  }
+  return values.map((entry, index) => requireRef(entry, `${field}[${index}]`));
+}
+
+function requireSha256(value: unknown, field: string) {
+  const text = requireString(value, field);
+  if (!/^[a-fA-F0-9]{64}$/.test(text)) {
+    throw new Error(`runtime/task companion ${field} 必须是 64 位 sha256`);
+  }
+  return text.toLowerCase();
+}
+
+function buildFamilyPersistenceSurface(
+  input: BuildFamilyPersistenceSurfaceInput,
+  expectedStorageRole: FamilyPersistenceStorageRole,
+  field: string,
+) {
+  const storageRole = requireString(input.storage_role, `${field}.storage_role`) as FamilyPersistenceStorageRole;
+  if (storageRole !== expectedStorageRole) {
+    throw new Error(`runtime/task companion ${field}.storage_role 必须是 ${expectedStorageRole}`);
+  }
+  return {
+    surface_id: requireString(input.surface_id, `${field}.surface_id`),
+    surface_role: requireString(input.surface_role, `${field}.surface_role`),
+    storage_role: storageRole,
+    owner: requireString(input.owner, `${field}.owner`),
+    ref: requireRef(input.ref, `${field}.ref`),
+    rebuild_from_refs: normalizeRefs(input.rebuild_from_refs, `${field}.rebuild_from_refs`),
+  };
+}
+
+export function buildFamilyPersistencePolicy(input: BuildFamilyPersistencePolicyInput) {
+  const authoritySurfaces = input.authority_surfaces.map((entry, index) =>
+    buildFamilyPersistenceSurface(entry, 'file_authority', `authority_surfaces[${index}]`)
+  );
+  if (authoritySurfaces.length === 0) {
+    throw new Error('runtime/task companion family_persistence_policy 至少需要一个 file_authority surface');
+  }
+
+  return {
+    surface_kind: 'family_persistence_policy',
+    version: 'family-persistence-policy.v1',
+    target_domain_id: requireString(input.target_domain_id, 'target_domain_id'),
+    policy_id: requireString(input.policy_id, 'policy_id'),
+    summary: requireString(input.summary, 'summary'),
+    authority_surfaces: authoritySurfaces,
+    sidecar_indexes: (input.sidecar_indexes ?? []).map((entry, index) =>
+      buildFamilyPersistenceSurface(entry, 'sqlite_sidecar_index', `sidecar_indexes[${index}]`)
+    ),
+    projection_caches: (input.projection_caches ?? []).map((entry, index) =>
+      buildFamilyPersistenceSurface(entry, 'projection_cache', `projection_caches[${index}]`)
+    ),
+    legacy_diagnostics: (input.legacy_diagnostics ?? []).map((entry, index) =>
+      buildFamilyPersistenceSurface(entry, 'legacy_diagnostic_only', `legacy_diagnostics[${index}]`)
+    ),
+  };
+}
+
+function buildFamilyLifecycleAction(input: BuildFamilyLifecycleActionInput, field: string) {
+  return {
+    action_id: requireString(input.action_id, `${field}.action_id`),
+    action_kind: requireString(input.action_kind, `${field}.action_kind`),
+    target_ref: requireRef(input.target_ref, `${field}.target_ref`),
+    authority_owner: requireString(input.authority_owner, `${field}.authority_owner`),
+    safety_gate: requireString(input.safety_gate, `${field}.safety_gate`),
+    result: requireString(input.result, `${field}.result`),
+    manifest_ref: requireRef(input.manifest_ref, `${field}.manifest_ref`),
+    sha256: requireSha256(input.sha256, `${field}.sha256`),
+    restore_ref: requireRef(input.restore_ref, `${field}.restore_ref`),
+  };
+}
+
+export function buildFamilyLifecycleLedger(input: BuildFamilyLifecycleLedgerInput) {
+  const actions = input.actions.map((entry, index) => buildFamilyLifecycleAction(entry, `actions[${index}]`));
+  if (actions.length === 0) {
+    throw new Error('runtime/task companion family_lifecycle_ledger 至少需要一个 action');
+  }
+  return {
+    surface_kind: 'family_lifecycle_ledger',
+    version: 'family-lifecycle-ledger.v1',
+    target_domain_id: requireString(input.target_domain_id, 'target_domain_id'),
+    ledger_id: requireString(input.ledger_id, 'ledger_id'),
+    phase: requireString(input.phase, 'phase') as FamilyLifecyclePhase,
+    status: requireString(input.status, 'status'),
+    summary: requireString(input.summary, 'summary'),
+    actions,
+  };
+}
+
+export function buildFamilyOwnerRoute(input: BuildFamilyOwnerRouteInput) {
+  const allowedActions = readStringList(input.allowed_actions, 'allowed_actions');
+  if (allowedActions.length === 0) {
+    throw new Error('runtime/task companion family_owner_route 至少需要一个 allowed action');
+  }
+  return {
+    surface_kind: 'family_owner_route',
+    version: 'family-owner-route.v1',
+    target_domain_id: requireString(input.target_domain_id, 'target_domain_id'),
+    route_id: requireString(input.route_id, 'route_id'),
+    route_epoch: requireString(input.route_epoch, 'route_epoch'),
+    source_fingerprint: requireString(input.source_fingerprint, 'source_fingerprint'),
+    next_owner: requireString(input.next_owner, 'next_owner'),
+    allowed_actions: allowedActions,
+    idempotency_key: requireString(input.idempotency_key, 'idempotency_key'),
+    status: requireString(input.status, 'status'),
+    summary: requireString(input.summary, 'summary'),
+    handoff_refs: normalizeRefs(input.handoff_refs, 'handoff_refs'),
+    projection_refs: normalizeRefs(input.projection_refs, 'projection_refs'),
   };
 }
 
