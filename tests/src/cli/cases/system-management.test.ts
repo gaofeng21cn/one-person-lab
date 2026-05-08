@@ -889,6 +889,14 @@ test('engine action executes env-overridden install commands and returns a struc
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-engine-action-'));
   const markerPath = path.join(fixtureRoot, 'codex-install.marker');
   const installScript = path.join(fixtureRoot, 'install-codex.sh');
+  const codexFixture = createFakeCodexFixture(`
+if [[ "$1" == "--version" ]]; then
+  echo "codex-cli 0.125.0"
+  exit 0
+fi
+echo "Unsupported codex fixture command: $*" >&2
+exit 1
+`);
 
   fs.writeFileSync(
     installScript,
@@ -906,6 +914,7 @@ test('engine action executes env-overridden install commands and returns a struc
     const output = runCli(
       ['engine', 'install', '--engine', 'codex'],
       {
+        OPL_CODEX_BIN: codexFixture.codexPath,
         OPL_CODEX_INSTALL_COMMAND: installScript,
       },
     ) as {
@@ -934,6 +943,7 @@ test('engine action executes env-overridden install commands and returns a struc
     assert.equal(output.engine_action.system.core_engines.codex.installed, true);
     assert.equal(fs.existsSync(markerPath), true);
   } finally {
+    fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
