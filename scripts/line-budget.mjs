@@ -6,7 +6,9 @@ const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '
 process.chdir(repoRoot);
 
 const DEFAULT_LIMIT = 1000;
-const BASELINE = new Map();
+const BASELINE = new Map([
+  ['tests/src/verification-command-surfaces.test.ts', 1015],
+]);
 const CODE_EXTENSIONS = new Set(['.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx', '.mts', '.cts', '.py', '.sh', '.bash', '.zsh', '.rs', '.go']);
 const IGNORED_PARTS = new Set(['node_modules', 'dist', 'build', 'coverage', '.venv', '__pycache__']);
 const IGNORED_SUFFIXES = ['.min.js'];

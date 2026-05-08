@@ -8,14 +8,14 @@ from opl_harness_shared.family_entry_contracts import (
     build_domain_entry_command_catalog,
     build_family_direct_opl_shared_handoff,
     build_family_domain_entry_contract,
-    build_family_gateway_interaction_contract,
-    build_gateway_interaction_contract,
+    build_family_user_interaction_contract,
+    build_user_interaction_contract,
     build_shared_handoff,
     build_shared_handoff_builder,
     build_shared_handoff_return_surface,
     validate_family_domain_entry_contract,
     validate_domain_agent_entry_spec,
-    validate_gateway_interaction_contract,
+    validate_user_interaction_contract,
     validate_shared_handoff,
     validate_shared_handoff_builder,
     validate_shared_handoff_return_surface,
@@ -107,7 +107,7 @@ def test_family_entry_contract_helpers_build_and_validate_domain_agent_entry_spe
         codex_entry_strategy="domain_agent_entry",
         artifact_conventions="paper_and_submission_package",
         progress_conventions="study_runtime_narration",
-        entry_command="product-frontdoor",
+        entry_command="product-status",
         manifest_command="product-entry-manifest",
     )
 
@@ -122,37 +122,37 @@ def test_family_entry_contract_helpers_build_and_validate_domain_agent_entry_spe
 
 
 def test_family_entry_contract_helpers_build_and_validate_gateway_payloads() -> None:
-    contract = build_gateway_interaction_contract(
-        frontdoor_owner="opl_gateway_or_domain_gui",
-        user_interaction_mode="natural_language_frontdoor",
+    contract = build_user_interaction_contract(
+        entry_owner="opl_gateway_or_domain_gui",
+        user_interaction_mode="natural_language_entry",
         user_commands_required=False,
         command_surfaces_for_agent_consumption_only=True,
         shared_downstream_entry="MedAutoScienceDomainEntry",
         shared_handoff_envelope=["target_domain_id", "task_intent", "entry_mode"],
-        extra_payload={"recommended_route_surface": "product_frontdoor"},
+        extra_payload={"recommended_route_surface": "product_entry_surface"},
     )
 
-    validated = validate_gateway_interaction_contract(
+    validated = validate_user_interaction_contract(
         contract,
-        "product_entry_manifest.gateway_interaction_contract",
+        "product_entry_manifest.user_interaction_contract",
     )
-    assert validated["surface_kind"] == "gateway_interaction_contract"
-    assert validated["recommended_route_surface"] == "product_frontdoor"
+    assert validated["surface_kind"] == "user_interaction_contract"
+    assert validated["recommended_route_surface"] == "product_entry_surface"
 
 
 def test_family_entry_contract_helpers_expose_default_family_gateway_payloads() -> None:
-    contract = build_family_gateway_interaction_contract(
+    contract = build_family_user_interaction_contract(
         shared_downstream_entry="MedAutoScienceDomainEntry",
         extra_shared_handoff_envelope=["entry_session_contract"],
-        extra_payload={"recommended_route_surface": "product_frontdoor"},
+        extra_payload={"recommended_route_surface": "product_entry_surface"},
     )
 
-    validated = validate_gateway_interaction_contract(
+    validated = validate_user_interaction_contract(
         contract,
-        "product_entry_manifest.gateway_interaction_contract",
+        "product_entry_manifest.user_interaction_contract",
     )
-    assert validated["frontdoor_owner"] == "opl_gateway_or_domain_gui"
-    assert validated["user_interaction_mode"] == "natural_language_frontdoor"
+    assert validated["entry_owner"] == "opl_gateway_or_domain_gui"
+    assert validated["user_interaction_mode"] == "natural_language_entry"
     assert validated["user_commands_required"] is False
     assert validated["command_surfaces_for_agent_consumption_only"] is True
     assert validated["shared_handoff_envelope"] == [
@@ -164,7 +164,7 @@ def test_family_entry_contract_helpers_expose_default_family_gateway_payloads() 
         "return_surface_contract",
         "entry_session_contract",
     ]
-    assert validated["recommended_route_surface"] == "product_frontdoor"
+    assert validated["recommended_route_surface"] == "product_entry_surface"
 
 
 def test_family_entry_contract_helpers_build_and_validate_shared_handoff_payloads() -> None:
@@ -269,7 +269,7 @@ def test_family_entry_contract_helpers_validate_nested_domain_agent_specs_inside
             "codex_entry_strategy": "domain_agent_entry",
             "artifact_conventions": "paper_and_submission_package",
             "progress_conventions": "study_runtime_narration",
-            "entry_command": "product-frontdoor",
+            "entry_command": "product-status",
             "manifest_command": "product-entry-manifest",
         },
     )

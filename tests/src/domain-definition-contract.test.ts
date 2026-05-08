@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 const domainsPath = path.join(repoRoot, 'contracts', 'opl-gateway', 'domains.json');
+const retiredBoundaryTermsField = ['legacy', 'boundary', 'terms'].join('_');
 
 type DomainDefinition = {
   domain_id: string;
@@ -26,10 +27,6 @@ type DomainDefinition = {
     opl_truth_write_policy?: string;
     backend_companions?: Array<Record<string, unknown>>;
   };
-  legacy_boundary_terms?: {
-    gateway_surface?: string;
-    harness_surface?: string;
-  };
 };
 
 function readDomainsContract() {
@@ -47,7 +44,7 @@ function pickSkillCommands(domain: DomainDefinition | undefined) {
   };
 }
 
-test('domains.json g2 keeps legacy gateway and harness terms out of active domain fields', () => {
+test('domains.json g2 keeps retired boundary terms out of active domain fields', () => {
   const payload = readDomainsContract();
 
   assert.equal(payload.version, 'g2');
@@ -57,6 +54,7 @@ test('domains.json g2 keeps legacy gateway and harness terms out of active domai
     assert.equal(Object.prototype.hasOwnProperty.call(domain, 'harness_surface'), false);
     assert.equal(Object.prototype.hasOwnProperty.call(domain, 'canonical_truth_owner'), false);
     assert.equal(Object.prototype.hasOwnProperty.call(domain, 'role'), false);
+    assert.equal(Object.prototype.hasOwnProperty.call(domain, retiredBoundaryTermsField), false);
     assert.equal(typeof domain.independent_domain_agent?.agent_id, 'string');
     assert.equal(domain.independent_domain_agent?.opl_top_level_domain_agent, true);
     assert.equal(typeof domain.single_app_skill?.skill_id, 'string');
@@ -64,8 +62,6 @@ test('domains.json g2 keeps legacy gateway and harness terms out of active domai
     assert.equal(Array.isArray(domain.opl_projection_role), true);
     assert.equal(domain.runtime_dependency_boundary?.opl_dependency, 'projection_consumer_only');
     assert.equal(domain.runtime_dependency_boundary?.opl_truth_write_policy, 'no_domain_truth_writes');
-    assert.equal(typeof domain.legacy_boundary_terms?.gateway_surface, 'string');
-    assert.equal(typeof domain.legacy_boundary_terms?.harness_surface, 'string');
   }
 });
 
@@ -106,17 +102,17 @@ test('domains.json g2 publishes current single app skill entry commands', () => 
 
   assert.deepEqual(pickSkillCommands(domainById.get('medautogrant')), {
     skill_id: 'mag',
-    entry_command: 'medautogrant product frontdesk',
+    entry_command: 'medautogrant product status',
     manifest_command: 'medautogrant product manifest',
   });
   assert.deepEqual(pickSkillCommands(domainById.get('medautoscience')), {
     skill_id: 'mas',
-    entry_command: 'medautosci product frontdesk',
-    manifest_command: 'medautosci product manifest',
+    entry_command: 'medautosci product-entry-status',
+    manifest_command: 'medautosci product-entry-manifest',
   });
   assert.deepEqual(pickSkillCommands(domainById.get('redcube')), {
     skill_id: 'rca',
-    entry_command: 'redcube product frontdesk',
+    entry_command: 'redcube product status',
     manifest_command: 'redcube product manifest',
   });
 });

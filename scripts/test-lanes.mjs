@@ -24,6 +24,7 @@ const lanes = {
     { kind: 'command', command: 'scripts/repo-hygiene.sh', args: [] },
     nodeTest([
       'tests/src/verification-command-surfaces.test.ts',
+      'tests/src/stale-compat-retirement-guard.test.ts',
       'tests/src/family-structure-advisory.test.ts',
       'tests/src/family-shared-release-discipline.test.ts',
       'tests/src/family-shared-release.test.ts',

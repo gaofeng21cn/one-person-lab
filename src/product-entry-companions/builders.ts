@@ -1,21 +1,21 @@
 import type {
-  BuildFamilyProductFrontdoorFromManifestInput,
-  BuildFamilyProductFrontdoorInput,
+  BuildFamilyProductEntrySurfaceFromManifestInput,
+  BuildFamilyProductEntrySurfaceInput,
   BuildFamilyProductEntryManifestInput,
   BuildProductEntryOverviewInput,
   BuildProductEntryQuickstartInput,
   BuildProductEntryReadinessInput,
   BuildProductEntryStartInput,
-  BuildProductFrontdoorInput,
+  BuildProductEntrySurfaceInput,
   FamilyProductEntryManifestSurface,
-  FamilyProductFrontdoorSurface,
+  FamilyProductEntrySurface,
   JsonRecord,
 } from './types.ts';
 import {
   cloneRecord,
   isRecord,
   mergeExtraPayload,
-  normalizeFrontdoorSummary,
+  normalizeProductEntrySurfaceSummary,
   normalizeProgressSurface,
   normalizeResumeContract,
   normalizeStartMode,
@@ -31,13 +31,13 @@ import {
 } from './internal.ts';
 import { validateSharedHandoff } from '../family-entry-contracts.ts';
 import {
-  buildFamilyFrontdoorEntrySurfaces,
-  validateFamilyFrontdoorEntrySurfaces,
+  buildFamilyProductEntrySurfaces,
+  validateFamilyProductEntrySurfaces,
 } from './shell-surfaces.ts';
 import {
   validateFamilyOrchestrationCompanion,
   validateFamilyProductEntryManifest,
-  validateFamilyProductFrontdoor,
+  validateFamilyProductEntrySurface,
 } from './validators.ts';
 import { buildProductEntryResumeSurface as buildProductEntryResumeSurfaceImpl } from './resume-surface.ts';
 
@@ -73,7 +73,7 @@ export function buildProductEntryOverview(input: BuildProductEntryOverviewInput)
   return {
     surface_kind: 'product_entry_overview',
     summary: requireString(input.summary, 'summary'),
-    frontdoor_command: requireString(input.frontdoor_command, 'frontdoor_command'),
+    product_entry_command: requireString(input.product_entry_command, 'product_entry_command'),
     recommended_command: requireString(input.recommended_command, 'recommended_command'),
     operator_loop_command: requireString(input.operator_loop_command, 'operator_loop_command'),
     progress_surface: normalizeProgressSurface(input.progress_surface, 'progress_surface'),
@@ -117,15 +117,15 @@ export function buildProductEntryStart(input: BuildProductEntryStartInput) {
   };
 }
 
-export function buildProductFrontdoor(input: BuildProductFrontdoorInput): FamilyProductFrontdoorSurface {
+export function buildProductEntrySurface(input: BuildProductEntrySurfaceInput): FamilyProductEntrySurface {
   const payload: JsonRecord = {
-    surface_kind: 'product_frontdoor',
+    surface_kind: 'product_entry_surface',
     recommended_action: requireString(input.recommended_action, 'recommended_action'),
     target_domain_id: requireString(input.target_domain_id, 'target_domain_id'),
     workspace_locator: cloneRecord(input.workspace_locator, 'workspace_locator'),
     runtime: cloneRecord(input.runtime, 'runtime'),
     product_entry_status: cloneRecord(input.product_entry_status, 'product_entry_status'),
-    frontdoor_surface: cloneRecord(input.frontdoor_surface, 'frontdoor_surface'),
+    product_entry_surface: cloneRecord(input.product_entry_surface, 'product_entry_surface'),
     operator_loop_surface: cloneRecord(input.operator_loop_surface, 'operator_loop_surface'),
     operator_loop_actions: cloneRecord(input.operator_loop_actions, 'operator_loop_actions'),
     product_entry_start: cloneRecord(input.product_entry_start, 'product_entry_start'),
@@ -135,8 +135,8 @@ export function buildProductFrontdoor(input: BuildProductFrontdoorInput): Family
     product_entry_quickstart: cloneRecord(input.product_entry_quickstart, 'product_entry_quickstart'),
     family_orchestration: cloneRecord(input.family_orchestration, 'family_orchestration'),
     product_entry_manifest: cloneRecord(input.product_entry_manifest, 'product_entry_manifest'),
-    entry_surfaces: validateFamilyFrontdoorEntrySurfaces(input.entry_surfaces, 'entry_surfaces'),
-    summary: normalizeFrontdoorSummary(input.summary, 'summary'),
+    entry_surfaces: validateFamilyProductEntrySurfaces(input.entry_surfaces, 'entry_surfaces'),
+    summary: normalizeProductEntrySurfaceSummary(input.summary, 'summary'),
     notes: readStringList(input.notes, 'notes'),
   };
   const schemaRef = optionalString(input.schema_ref);
@@ -146,26 +146,26 @@ export function buildProductFrontdoor(input: BuildProductFrontdoorInput): Family
   if (input.domain_entry_contract !== undefined && input.domain_entry_contract !== null) {
     payload.domain_entry_contract = cloneRecord(input.domain_entry_contract, 'domain_entry_contract');
   }
-  if (input.gateway_interaction_contract !== undefined && input.gateway_interaction_contract !== null) {
-    payload.gateway_interaction_contract = cloneRecord(
-      input.gateway_interaction_contract,
-      'gateway_interaction_contract',
+  if (input.user_interaction_contract !== undefined && input.user_interaction_contract !== null) {
+    payload.user_interaction_contract = cloneRecord(
+      input.user_interaction_contract,
+      'user_interaction_contract',
     );
   }
-  return mergeExtraPayload(payload, input.extra_payload, 'product frontdoor') as FamilyProductFrontdoorSurface;
+  return mergeExtraPayload(payload, input.extra_payload, 'product entry surface') as FamilyProductEntrySurface;
 }
 
-export function buildFamilyProductFrontdoor(input: BuildFamilyProductFrontdoorInput): FamilyProductFrontdoorSurface {
+export function buildFamilyProductEntrySurface(input: BuildFamilyProductEntrySurfaceInput): FamilyProductEntrySurface {
   const manifest = cloneRecord(input.product_entry_manifest, 'product_entry_manifest');
-  const frontdoorSurface = cloneRecord(
-    manifest.frontdoor_surface,
-    'product_entry_manifest.frontdoor_surface',
+  const productEntrySurface = cloneRecord(
+    manifest.product_entry_surface,
+    'product_entry_manifest.product_entry_surface',
   );
   const operatorLoopSurface = cloneRecord(
     manifest.operator_loop_surface,
     'product_entry_manifest.operator_loop_surface',
   );
-  return buildProductFrontdoor({
+  return buildProductEntrySurface({
     recommended_action: requireString(input.recommended_action, 'recommended_action'),
     target_domain_id: requireString(
       manifest.target_domain_id,
@@ -180,7 +180,7 @@ export function buildFamilyProductFrontdoor(input: BuildFamilyProductFrontdoorIn
       manifest.product_entry_status,
       'product_entry_manifest.product_entry_status',
     ),
-    frontdoor_surface: frontdoorSurface,
+    product_entry_surface: productEntrySurface,
     operator_loop_surface: operatorLoopSurface,
     operator_loop_actions: cloneRecord(
       manifest.operator_loop_actions,
@@ -211,11 +211,11 @@ export function buildFamilyProductFrontdoor(input: BuildFamilyProductFrontdoorIn
       'product_entry_manifest.family_orchestration',
     ),
     product_entry_manifest: manifest,
-    entry_surfaces: validateFamilyFrontdoorEntrySurfaces(input.entry_surfaces, 'entry_surfaces'),
+    entry_surfaces: validateFamilyProductEntrySurfaces(input.entry_surfaces, 'entry_surfaces'),
     summary: {
-      frontdoor_command: requireString(
-        frontdoorSurface.command,
-        'product_entry_manifest.frontdoor_surface.command',
+      product_entry_command: requireString(
+        productEntrySurface.command,
+        'product_entry_manifest.product_entry_surface.command',
       ),
       recommended_command: requireString(
         manifest.recommended_command,
@@ -233,23 +233,23 @@ export function buildFamilyProductFrontdoor(input: BuildFamilyProductFrontdoorIn
       : isRecord(manifest.domain_entry_contract)
       ? manifest.domain_entry_contract
       : null,
-    gateway_interaction_contract: isRecord(input.gateway_interaction_contract)
-      ? input.gateway_interaction_contract
-      : isRecord(manifest.gateway_interaction_contract)
-      ? manifest.gateway_interaction_contract
+    user_interaction_contract: isRecord(input.user_interaction_contract)
+      ? input.user_interaction_contract
+      : isRecord(manifest.user_interaction_contract)
+      ? manifest.user_interaction_contract
       : null,
     extra_payload: input.extra_payload,
   });
 }
 
-export function buildFamilyProductFrontdoorFromManifest(
-  input: BuildFamilyProductFrontdoorFromManifestInput,
-): FamilyProductFrontdoorSurface {
+export function buildFamilyProductEntrySurfaceFromManifest(
+  input: BuildFamilyProductEntrySurfaceFromManifestInput,
+): FamilyProductEntrySurface {
   const manifest = validateFamilyProductEntryManifest(input.product_entry_manifest);
-  return buildFamilyProductFrontdoor({
+  return buildFamilyProductEntrySurface({
     recommended_action: requireString(input.recommended_action, 'recommended_action'),
     product_entry_manifest: manifest,
-    entry_surfaces: buildFamilyFrontdoorEntrySurfaces({
+    entry_surfaces: buildFamilyProductEntrySurfaces({
       product_entry_shell: manifest.product_entry_shell as Record<string, JsonRecord>,
       shell_aliases: input.shell_aliases,
       shared_handoff: manifest.shared_handoff,
@@ -281,7 +281,7 @@ export function buildFamilyProductEntryManifest(
     ['managed_runtime_contract', input.managed_runtime_contract],
     ['repo_mainline', input.repo_mainline],
     ['product_entry_status', input.product_entry_status],
-    ['frontdoor_surface', input.frontdoor_surface],
+    ['product_entry_surface', input.product_entry_surface],
     ['operator_loop_surface', input.operator_loop_surface],
     ['operator_loop_actions', input.operator_loop_actions],
     ['runtime_inventory', input.runtime_inventory],
@@ -328,10 +328,10 @@ export function buildFamilyProductEntryManifest(
   if (input.domain_entry_contract !== undefined && input.domain_entry_contract !== null) {
     payload.domain_entry_contract = cloneRecord(input.domain_entry_contract, 'domain_entry_contract');
   }
-  if (input.gateway_interaction_contract !== undefined && input.gateway_interaction_contract !== null) {
-    payload.gateway_interaction_contract = cloneRecord(
-      input.gateway_interaction_contract,
-      'gateway_interaction_contract',
+  if (input.user_interaction_contract !== undefined && input.user_interaction_contract !== null) {
+    payload.user_interaction_contract = cloneRecord(
+      input.user_interaction_contract,
+      'user_interaction_contract',
     );
   }
 

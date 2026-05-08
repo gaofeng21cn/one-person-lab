@@ -146,14 +146,14 @@ export interface BuildFamilyProductEntryOrchestrationInput {
   project_profile_companion?: JsonRecord | null;
 }
 
-export interface BuildFamilyFrontdoorProductEntryOrchestrationInput {
+export interface BuildFamilyProductEntryPresetOrchestrationInput {
   graph_id: string;
   target_domain_id: string;
   graph_kind: string;
   graph_version: string;
-  frontdoor_node_id?: string | null;
-  frontdoor_title: string;
-  frontdoor_surface_kind: string;
+  product_entry_node_id?: string | null;
+  product_entry_title: string;
+  product_entry_surface_kind: string;
   direct_node_id?: string | null;
   direct_title: string;
   direct_surface_kind: string;
@@ -179,6 +179,29 @@ export interface BuildFamilyFrontdoorProductEntryOrchestrationInput {
   checkpoint_lineage_surface?: FamilyReference | null;
   intake_evidence_companion?: JsonRecord | null;
   project_profile_companion?: JsonRecord | null;
+}
+
+interface ResolvedFamilyProductEntryPreset {
+  productEntryNodeId: string;
+  directNodeId: string;
+  federatedNodeId: string;
+  progressNodeId: string;
+  directTransitionEvent: string;
+  federatedTransitionEvent: string;
+  directProgressEvent: string;
+  federatedProgressEvent: string;
+  federatedTitle: string | null;
+  federatedSurfaceKind: string | null;
+}
+
+interface FamilyProductEntryPresetGraphParts {
+  nodes: FamilyActionGraphNodeInput[];
+  edges: FamilyActionGraphEdgeInput[];
+  entryNodes: string[];
+  exitNodes: string[];
+  humanGates: FamilyActionGraphHumanGateInput[];
+  checkpointNodes: string[];
+  humanGatePreviews: BuildFamilyHumanGatePreviewInput[];
 }
 
 export interface BuildFamilyIntakeAuditInput {
@@ -620,17 +643,9 @@ export function buildFamilyProductEntryOrchestration(input: BuildFamilyProductEn
   });
 }
 
-export function buildFamilyFrontdoorProductEntryOrchestration(
-  input: BuildFamilyFrontdoorProductEntryOrchestrationInput,
-) {
-  const frontdoorNodeId = optionalString(input.frontdoor_node_id) ?? 'step:open_frontdoor';
-  const directNodeId = optionalString(input.direct_node_id) ?? 'step:continue_current_loop';
-  const federatedNodeId = optionalString(input.federated_node_id) ?? 'step:opl_bridge_handoff';
-  const progressNodeId = optionalString(input.progress_node_id) ?? 'step:inspect_current_progress';
-  const directTransitionEvent = optionalString(input.direct_transition_event) ?? 'start_direct';
-  const federatedTransitionEvent = optionalString(input.federated_transition_event) ?? 'enter_via_opl_bridge';
-  const directProgressEvent = optionalString(input.direct_progress_event) ?? 'session_started';
-  const federatedProgressEvent = optionalString(input.federated_progress_event) ?? 'handoff_completed';
+function resolveFamilyProductEntryPreset(
+  input: BuildFamilyProductEntryPresetOrchestrationInput,
+): ResolvedFamilyProductEntryPreset {
   const federatedTitle = optionalString(input.federated_title);
   const federatedSurfaceKind = optionalString(input.federated_surface_kind);
 
@@ -638,15 +653,45 @@ export function buildFamilyFrontdoorProductEntryOrchestration(
     throw new Error('family orchestration federated step requires both title and surface_kind');
   }
 
+  return {
+    productEntryNodeId: optionalString(input.product_entry_node_id) ?? 'step:open_product_entry',
+    directNodeId: optionalString(input.direct_node_id) ?? 'step:continue_current_loop',
+    federatedNodeId: optionalString(input.federated_node_id) ?? 'step:opl_bridge_handoff',
+    progressNodeId: optionalString(input.progress_node_id) ?? 'step:inspect_current_progress',
+    directTransitionEvent: optionalString(input.direct_transition_event) ?? 'start_direct',
+    federatedTransitionEvent: optionalString(input.federated_transition_event) ?? 'enter_via_opl_bridge',
+    directProgressEvent: optionalString(input.direct_progress_event) ?? 'session_started',
+    federatedProgressEvent: optionalString(input.federated_progress_event) ?? 'handoff_completed',
+    federatedTitle,
+    federatedSurfaceKind,
+  };
+}
+
+function buildFamilyProductEntryPresetHumanGatePreview(
+  input: BuildFamilyProductEntryPresetOrchestrationInput,
+): BuildFamilyHumanGatePreviewInput {
+  const reviewGateTitle = optionalString(input.review_gate_title);
+  return {
+    gate_id: input.review_gate_id,
+    ...(reviewGateTitle ? { title: reviewGateTitle } : {}),
+    status: optionalString(input.review_gate_status) ?? 'requested',
+    ...(input.review_surface ? { review_surface: input.review_surface } : {}),
+  };
+}
+
+function buildFamilyProductEntryPresetGraphParts(
+  input: BuildFamilyProductEntryPresetOrchestrationInput,
+  resolved: ResolvedFamilyProductEntryPreset,
+): FamilyProductEntryPresetGraphParts {
   const nodes: FamilyActionGraphNodeInput[] = [
     {
-      node_id: frontdoorNodeId,
-      node_kind: 'frontdoor',
-      title: input.frontdoor_title,
-      surface_kind: input.frontdoor_surface_kind,
+      node_id: resolved.productEntryNodeId,
+      node_kind: 'product_entry',
+      title: input.product_entry_title,
+      surface_kind: input.product_entry_surface_kind,
     },
     {
-      node_id: directNodeId,
+      node_id: resolved.directNodeId,
       node_kind: 'direct_entry',
       title: input.direct_title,
       surface_kind: input.direct_surface_kind,
@@ -655,75 +700,86 @@ export function buildFamilyFrontdoorProductEntryOrchestration(
   ];
   const edges: FamilyActionGraphEdgeInput[] = [
     {
-      from: frontdoorNodeId,
-      to: directNodeId,
-      on: directTransitionEvent,
+      from: resolved.productEntryNodeId,
+      to: resolved.directNodeId,
+      on: resolved.directTransitionEvent,
     },
   ];
-  const checkpointNodes = [directNodeId];
+  const checkpointNodes = [resolved.directNodeId];
+  const hasFederatedEntry = Boolean(resolved.federatedTitle && resolved.federatedSurfaceKind);
 
-  if (federatedTitle && federatedSurfaceKind) {
+  if (hasFederatedEntry) {
     nodes.push({
-      node_id: federatedNodeId,
+      node_id: resolved.federatedNodeId,
       node_kind: 'federated_entry',
-      title: federatedTitle,
-      surface_kind: federatedSurfaceKind,
+      title: resolved.federatedTitle!,
+      surface_kind: resolved.federatedSurfaceKind!,
       produces_checkpoint: true,
     });
     edges.push({
-      from: frontdoorNodeId,
-      to: federatedNodeId,
-      on: federatedTransitionEvent,
+      from: resolved.productEntryNodeId,
+      to: resolved.federatedNodeId,
+      on: resolved.federatedTransitionEvent,
     });
-    checkpointNodes.push(federatedNodeId);
+    checkpointNodes.push(resolved.federatedNodeId);
   }
 
   nodes.push({
-    node_id: progressNodeId,
+    node_id: resolved.progressNodeId,
     node_kind: 'progress_read',
     title: input.progress_title,
     surface_kind: input.progress_surface_kind,
     produces_checkpoint: true,
   });
   edges.push({
-    from: directNodeId,
-    to: progressNodeId,
-    on: directProgressEvent,
+    from: resolved.directNodeId,
+    to: resolved.progressNodeId,
+    on: resolved.directProgressEvent,
   });
-  if (federatedTitle && federatedSurfaceKind) {
+  if (hasFederatedEntry) {
     edges.push({
-      from: federatedNodeId,
-      to: progressNodeId,
-      on: federatedProgressEvent,
+      from: resolved.federatedNodeId,
+      to: resolved.progressNodeId,
+      on: resolved.federatedProgressEvent,
     });
   }
-  checkpointNodes.push(progressNodeId);
+  checkpointNodes.push(resolved.progressNodeId);
+
+  return {
+    nodes,
+    edges,
+    entryNodes: [resolved.productEntryNodeId],
+    exitNodes: [resolved.progressNodeId],
+    humanGates: [
+      {
+        gate_id: input.review_gate_id,
+        trigger_nodes: [resolved.progressNodeId],
+        blocking: true,
+      },
+    ],
+    checkpointNodes,
+    humanGatePreviews: [buildFamilyProductEntryPresetHumanGatePreview(input)],
+  };
+}
+
+export function buildFamilyProductEntryPresetOrchestration(
+  input: BuildFamilyProductEntryPresetOrchestrationInput,
+) {
+  const resolved = resolveFamilyProductEntryPreset(input);
+  const graphParts = buildFamilyProductEntryPresetGraphParts(input, resolved);
 
   return buildFamilyProductEntryOrchestration({
     graph_id: input.graph_id,
     target_domain_id: input.target_domain_id,
     graph_kind: input.graph_kind,
     graph_version: input.graph_version,
-    nodes,
-    edges,
-    entry_nodes: [frontdoorNodeId],
-    exit_nodes: [progressNodeId],
-    human_gates: [
-      {
-        gate_id: input.review_gate_id,
-        trigger_nodes: [progressNodeId],
-        blocking: true,
-      },
-    ],
-    checkpoint_nodes: checkpointNodes,
-    human_gate_previews: [
-      {
-        gate_id: input.review_gate_id,
-        ...(optionalString(input.review_gate_title) ? { title: optionalString(input.review_gate_title)! } : {}),
-        status: optionalString(input.review_gate_status) ?? 'requested',
-        ...(input.review_surface ? { review_surface: input.review_surface } : {}),
-      },
-    ],
+    nodes: graphParts.nodes,
+    edges: graphParts.edges,
+    entry_nodes: graphParts.entryNodes,
+    exit_nodes: graphParts.exitNodes,
+    human_gates: graphParts.humanGates,
+    checkpoint_nodes: graphParts.checkpointNodes,
+    human_gate_previews: graphParts.humanGatePreviews,
     resume_surface_kind: input.resume_surface_kind,
     session_locator_field: input.session_locator_field,
     checkpoint_locator_field: input.checkpoint_locator_field,

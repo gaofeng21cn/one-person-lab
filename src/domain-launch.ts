@@ -202,7 +202,7 @@ export async function launchDomainEntry(
               status: manifestEntry.status,
               domain_agent_entry_spec:
                 manifestEntry.manifest?.domain_entry_contract?.domain_agent_entry_spec ?? null,
-              frontdoor_surface: manifestEntry.manifest?.frontdoor_surface ?? null,
+              product_entry_surface: manifestEntry.manifest?.product_entry_surface ?? null,
               recommended_command: manifestEntry.manifest?.recommended_command ?? null,
               product_entry_readiness: manifestEntry.manifest?.product_entry_readiness ?? null,
               session_continuity: manifestEntry.manifest?.session_continuity ?? null,
@@ -252,7 +252,7 @@ export async function launchDomainEntry(
             status: manifestEntry.status,
             domain_agent_entry_spec:
               manifestEntry.manifest?.domain_entry_contract?.domain_agent_entry_spec ?? null,
-            frontdoor_surface: manifestEntry.manifest?.frontdoor_surface ?? null,
+            product_entry_surface: manifestEntry.manifest?.product_entry_surface ?? null,
             recommended_command: manifestEntry.manifest?.recommended_command ?? null,
             product_entry_readiness: manifestEntry.manifest?.product_entry_readiness ?? null,
             session_continuity: manifestEntry.manifest?.session_continuity ?? null,

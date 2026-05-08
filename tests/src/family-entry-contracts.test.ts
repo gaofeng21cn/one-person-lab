@@ -7,14 +7,14 @@ import {
   buildDomainEntryCommandCatalog,
   buildFamilyDirectOplSharedHandoff,
   buildFamilyDomainEntryContract,
-  buildFamilyGatewayInteractionContract,
-  buildGatewayInteractionContract,
+  buildFamilyUserInteractionContract,
+  buildUserInteractionContract,
   buildSharedHandoff,
   buildSharedHandoffBuilder,
   buildSharedHandoffReturnSurface,
   validateFamilyDomainEntryContract,
   validateDomainAgentEntrySpec,
-  validateGatewayInteractionContract,
+  validateUserInteractionContract,
   validateSharedHandoff,
   validateSharedHandoffBuilder,
   validateSharedHandoffReturnSurface,
@@ -102,7 +102,7 @@ test('family entry contract helpers build and validate domain agent entry specs'
     codex_entry_strategy: 'domain_agent_entry',
     artifact_conventions: 'paper_and_submission_package',
     progress_conventions: 'study_runtime_narration',
-    entry_command: 'product-frontdoor',
+    entry_command: 'product-status',
     manifest_command: 'product-entry-manifest',
   });
 
@@ -114,9 +114,9 @@ test('family entry contract helpers build and validate domain agent entry specs'
 });
 
 test('family entry contract helpers build and validate gateway interaction payloads', () => {
-  const contract = buildGatewayInteractionContract({
-    frontdoor_owner: 'opl_gateway_or_domain_gui',
-    user_interaction_mode: 'natural_language_frontdoor',
+  const contract = buildUserInteractionContract({
+    entry_owner: 'opl_gateway_or_domain_gui',
+    user_interaction_mode: 'natural_language_entry',
     user_commands_required: false,
     command_surfaces_for_agent_consumption_only: true,
     shared_downstream_entry: 'MedAutoScienceDomainEntry',
@@ -125,30 +125,30 @@ test('family entry contract helpers build and validate gateway interaction paylo
       'task_intent',
       'entry_mode',
     ],
-    extra_payload: { recommended_route_surface: 'product_frontdoor' },
+    extra_payload: { recommended_route_surface: 'product_entry_surface' },
   });
 
-  const validated = validateGatewayInteractionContract(
+  const validated = validateUserInteractionContract(
     contract,
-    'product_entry_manifest.gateway_interaction_contract',
+    'product_entry_manifest.user_interaction_contract',
   );
-  assert.equal(validated.surface_kind, 'gateway_interaction_contract');
-  assert.equal(validated.recommended_route_surface, 'product_frontdoor');
+  assert.equal(validated.surface_kind, 'user_interaction_contract');
+  assert.equal(validated.recommended_route_surface, 'product_entry_surface');
 });
 
 test('family entry contract helpers expose the default family gateway contract with extendable envelope fields', () => {
-  const contract = buildFamilyGatewayInteractionContract({
+  const contract = buildFamilyUserInteractionContract({
     shared_downstream_entry: 'MedAutoScienceDomainEntry',
     extra_shared_handoff_envelope: ['entry_session_contract'],
-    extra_payload: { recommended_route_surface: 'product_frontdoor' },
+    extra_payload: { recommended_route_surface: 'product_entry_surface' },
   });
 
-  const validated = validateGatewayInteractionContract(
+  const validated = validateUserInteractionContract(
     contract,
-    'product_entry_manifest.gateway_interaction_contract',
+    'product_entry_manifest.user_interaction_contract',
   );
-  assert.equal(validated.frontdoor_owner, 'opl_gateway_or_domain_gui');
-  assert.equal(validated.user_interaction_mode, 'natural_language_frontdoor');
+  assert.equal(validated.entry_owner, 'opl_gateway_or_domain_gui');
+  assert.equal(validated.user_interaction_mode, 'natural_language_entry');
   assert.equal(validated.user_commands_required, false);
   assert.equal(validated.command_surfaces_for_agent_consumption_only, true);
   assert.deepEqual(validated.shared_handoff_envelope, [
@@ -160,7 +160,7 @@ test('family entry contract helpers expose the default family gateway contract w
     'return_surface_contract',
     'entry_session_contract',
   ]);
-  assert.equal(validated.recommended_route_surface, 'product_frontdoor');
+  assert.equal(validated.recommended_route_surface, 'product_entry_surface');
 });
 
 test('family entry contract helpers build and validate shared handoff payloads', () => {
@@ -272,7 +272,7 @@ test('family entry contract helpers validate nested domain agent entry specs ins
       codex_entry_strategy: 'domain_agent_entry',
       artifact_conventions: 'paper_and_submission_package',
       progress_conventions: 'study_runtime_narration',
-      entry_command: 'product-frontdoor',
+      entry_command: 'product-status',
       manifest_command: 'product-entry-manifest',
     },
   });

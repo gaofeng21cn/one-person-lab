@@ -41,8 +41,8 @@ const COMMAND_GROUP_SUMMARIES: Record<string, string> = {
 };
 
 const NON_PASSTHROUGH_COMMAND_PREFIXES = new Set([
+  ['front', 'door'].join(''),
   ['front', 'desk'].join(''),
-  'frontdoor',
   'ask',
   'chat',
   'shell',

@@ -6,20 +6,20 @@ import { fileURLToPath } from 'node:url';
 
 import type {
   FamilyProductEntryManifestSurface,
-  FamilyProductFrontdoorSurface,
+  FamilyProductEntrySurface,
 } from '../../../src/product-entry-companions.ts';
 import {
   buildDeliveryIdentitySurface,
   buildEntrySessionSurface,
   buildOperatorLoopActionCatalog,
-  buildFamilyFrontdoorEntrySurfaces,
-  buildFamilyProductFrontdoor,
-  buildFamilyProductFrontdoorFromManifest,
+  buildFamilyProductEntrySurfaces,
+  buildFamilyProductEntrySurface,
+  buildFamilyProductEntrySurfaceFromManifest,
   buildFamilyProductEntryManifest,
   buildProductEntryContinuationSnapshot,
   buildProductEntryShellCatalog,
   buildProductEntryShellLinkedSurface,
-  buildProductFrontdoor,
+  buildProductEntrySurface,
   buildProductEntryOverview,
   buildProductEntryQuickstart,
   buildProductEntryReadiness,
@@ -28,7 +28,7 @@ import {
   buildReturnSurfaceContract,
   buildRuntimeSessionContract,
   collectFamilyHumanGateIds,
-  validateFamilyProductFrontdoor,
+  validateFamilyProductEntrySurface,
   validateFamilyProductEntryManifest,
 } from '../../../src/product-entry-companions.ts';
 
@@ -66,15 +66,15 @@ test('product entry companion helpers build canonical shared payloads', () => {
   assert.equal(resumeSurface.checkpoint_locator_field, 'continuation_snapshot.latest_managed_run_id');
 
   const quickstart = buildProductEntryQuickstart({
-    summary: 'Open the frontdoor first.',
-    recommended_step_id: 'open_frontdoor',
+    summary: 'Open the product_entry first.',
+    recommended_step_id: 'open_product_entry',
     steps: [
       {
-        step_id: 'open_frontdoor',
-        title: 'Open frontdoor',
-        command: 'redcube product frontdoor',
-        surface_kind: 'product_frontdoor',
-        summary: 'Open the direct frontdoor.',
+        step_id: 'open_product_entry',
+        title: 'Open product_entry',
+        command: 'redcube product status',
+        surface_kind: 'product_entry_surface',
+        summary: 'Open the direct product_entry.',
         requires: [],
       },
     ],
@@ -85,15 +85,15 @@ test('product entry companion helpers build canonical shared payloads', () => {
   assert.deepEqual(quickstart.human_gate_ids, ['alpha_gate', 'beta_gate']);
 
   const startWithoutResumeCommand = buildProductEntryStart({
-    summary: 'Open the frontdoor first, then choose the durable continuation mode.',
-    recommended_mode_id: 'open_frontdoor',
+    summary: 'Open the product_entry first, then choose the durable continuation mode.',
+    recommended_mode_id: 'open_product_entry',
     modes: [
       {
-        mode_id: 'open_frontdoor',
-        title: 'Open frontdoor',
-        command: 'redcube product frontdoor',
-        surface_kind: 'product_frontdoor',
-        summary: 'Open the direct frontdoor.',
+        mode_id: 'open_product_entry',
+        title: 'Open product_entry',
+        command: 'redcube product status',
+        surface_kind: 'product_entry_surface',
+        summary: 'Open the direct product_entry.',
         requires: [],
       },
       {
@@ -114,8 +114,8 @@ test('product entry companion helpers build canonical shared payloads', () => {
   assert.equal('command' in startWithoutResumeCommand.resume_surface, false);
 
   const startWithResumeCommand = buildProductEntryStart({
-    summary: 'Open the frontdoor first, then resume the same session.',
-    recommended_mode_id: 'open_frontdoor',
+    summary: 'Open the product_entry first, then resume the same session.',
+    recommended_mode_id: 'open_product_entry',
     modes: startWithoutResumeCommand.modes,
     resume_surface: resumeSurface,
     human_gate_ids: humanGateIds,
@@ -125,7 +125,7 @@ test('product entry companion helpers build canonical shared payloads', () => {
 
   const overview = buildProductEntryOverview({
     summary: 'Current product-entry surface is usable.',
-    frontdoor_command: 'redcube product frontdoor',
+    product_entry_command: 'redcube product status',
     recommended_command: 'redcube product invoke',
     operator_loop_command: 'redcube product invoke',
     progress_surface: {
@@ -148,8 +148,8 @@ test('product entry companion helpers build canonical shared payloads', () => {
     good_to_use_now: false,
     fully_automatic: false,
     summary: 'Usable now with operator guidance.',
-    recommended_start_surface: 'product_frontdoor',
-    recommended_start_command: 'redcube product frontdoor',
+    recommended_start_surface: 'product_entry_surface',
+    recommended_start_command: 'redcube product status',
     recommended_loop_surface: 'product_entry',
     recommended_loop_command: 'redcube product invoke',
     blocking_gaps: ['Managed web shell is still pending.'],
@@ -157,7 +157,7 @@ test('product entry companion helpers build canonical shared payloads', () => {
   assert.equal(readiness.verdict, 'service_surface_ready_not_managed_product');
   assert.deepEqual(readiness.blocking_gaps, ['Managed web shell is still pending.']);
 
-  const frontdoor = buildProductFrontdoor({
+  const product_entry = buildProductEntrySurface({
     recommended_action: 'inspect_or_start_product_entry',
     target_domain_id: 'redcube_ai',
     workspace_locator: {
@@ -173,11 +173,11 @@ test('product entry companion helpers build canonical shared payloads', () => {
       next_focus: ['Keep the same session contract stable.'],
       remaining_gaps_count: 1,
     },
-    frontdoor_surface: {
-      shell_key: 'frontdoor',
-      command: 'redcube product frontdoor',
-      surface_kind: 'product_frontdoor',
-      summary: 'Open the direct frontdoor.',
+    product_entry_surface: {
+      shell_key: 'product_entry',
+      command: 'redcube product status',
+      surface_kind: 'product_entry_surface',
+      summary: 'Open the direct product_entry.',
     },
     operator_loop_surface: {
       shell_key: 'direct',
@@ -200,7 +200,7 @@ test('product entry companion helpers build canonical shared payloads', () => {
       summary: 'Current preflight is green.',
       ready_to_try_now: true,
       recommended_check_command: 'redcube product preflight',
-      recommended_start_command: 'redcube product frontdoor',
+      recommended_start_command: 'redcube product status',
       blocking_check_ids: [],
       checks: [],
     },
@@ -212,32 +212,32 @@ test('product entry companion helpers build canonical shared payloads', () => {
       target_domain_id: 'redcube_ai',
     },
     entry_surfaces: {
-      frontdoor: {
-        command: 'redcube product frontdoor',
+      product_entry: {
+        command: 'redcube product status',
       },
       session: {
         command: 'redcube product session --entry-session-id <entry-session-id>',
       },
     },
     summary: {
-      frontdoor_command: 'redcube product frontdoor',
+      product_entry_command: 'redcube product status',
       recommended_command: 'redcube product invoke',
       operator_loop_command: 'redcube product invoke',
     },
-    notes: ['Shared frontdoor core is active.'],
+    notes: ['Shared product_entry core is active.'],
     extra_payload: {
       ok: true,
-      schema_ref: 'contracts/schemas/v1/product-frontdoor.schema.json',
+      schema_ref: 'contracts/schemas/v1/product-status.schema.json',
     },
-  }) as FamilyProductFrontdoorSurface & {
+  }) as FamilyProductEntrySurface & {
     ok: boolean;
     schema_ref: string;
   };
-  assert.equal(frontdoor.surface_kind, 'product_frontdoor');
-  assert.equal(frontdoor.ok, true);
-  assert.equal(frontdoor.schema_ref, 'contracts/schemas/v1/product-frontdoor.schema.json');
-  const productEntryStart = frontdoor.product_entry_start as { recommended_mode_id: string };
-  assert.equal(productEntryStart.recommended_mode_id, 'open_frontdoor');
+  assert.equal(product_entry.surface_kind, 'product_entry_surface');
+  assert.equal(product_entry.ok, true);
+  assert.equal(product_entry.schema_ref, 'contracts/schemas/v1/product-status.schema.json');
+  const productEntryStart = product_entry.product_entry_start as { recommended_mode_id: string };
+  assert.equal(productEntryStart.recommended_mode_id, 'open_product_entry');
 
   const manifest = buildFamilyProductEntryManifest({
     manifest_kind: 'redcube_product_entry_manifest',
@@ -259,11 +259,11 @@ test('product entry companion helpers build canonical shared payloads', () => {
       next_focus: ['Keep the same session contract stable.'],
       remaining_gaps_count: 1,
     },
-    frontdoor_surface: {
-      shell_key: 'frontdoor',
-      command: 'redcube product frontdoor',
-      surface_kind: 'product_frontdoor',
-      summary: 'Open the direct frontdoor.',
+    product_entry_surface: {
+      shell_key: 'product_entry',
+      command: 'redcube product status',
+      surface_kind: 'product_entry_surface',
+      summary: 'Open the direct product_entry.',
     },
     operator_loop_surface: {
       shell_key: 'direct',
@@ -282,9 +282,9 @@ test('product entry companion helpers build canonical shared payloads', () => {
     recommended_shell: 'direct',
     recommended_command: 'redcube product invoke',
     product_entry_shell: {
-      frontdoor: {
-        command: 'redcube product frontdoor',
-        surface_kind: 'product_frontdoor',
+      product_entry: {
+        command: 'redcube product status',
+        surface_kind: 'product_entry_surface',
       },
     },
     shared_handoff: {
@@ -300,7 +300,7 @@ test('product entry companion helpers build canonical shared payloads', () => {
       summary: 'Current preflight is green.',
       ready_to_try_now: true,
       recommended_check_command: 'redcube product preflight',
-      recommended_start_command: 'redcube product frontdoor',
+      recommended_start_command: 'redcube product status',
       blocking_check_ids: [],
       checks: [],
     },
@@ -343,7 +343,7 @@ test('product entry companion helpers build canonical shared payloads', () => {
   assert.equal(manifest.surface_kind, 'product_entry_manifest');
   assert.equal(manifest.manifest_version, 2);
   assert.equal(manifest.recommended_action, 'invoke_product_entry');
-  assert.equal(manifest.product_entry_start.recommended_mode_id, 'open_frontdoor');
+  assert.equal(manifest.product_entry_start.recommended_mode_id, 'open_product_entry');
 
   assert.throws(
     () =>
@@ -359,8 +359,8 @@ test('product entry companion helpers build canonical shared payloads', () => {
           workspace_root: '/tmp/redcube-workspace',
         },
         product_entry_shell: {
-          frontdoor: {
-            command: 'redcube product frontdoor',
+          product_entry: {
+            command: 'redcube product status',
           },
         },
         shared_handoff: {
@@ -379,7 +379,7 @@ test('product entry companion helpers build canonical shared payloads', () => {
   );
 });
 
-test('family product frontdoor builder projects manifest core into canonical frontdoor payload', () => {
+test('family product status builder projects manifest core into canonical product_entry payload', () => {
   const familyOrchestration = {
     human_gates: [{ gate_id: 'alpha_gate', title: 'Alpha gate' }],
     resume_contract: {
@@ -390,15 +390,15 @@ test('family product frontdoor builder projects manifest core into canonical fro
   };
 
   const start = buildProductEntryStart({
-    summary: 'Open the frontdoor first.',
-    recommended_mode_id: 'open_frontdoor',
+    summary: 'Open the product_entry first.',
+    recommended_mode_id: 'open_product_entry',
     modes: [
       {
-        mode_id: 'open_frontdoor',
-        title: 'Open frontdoor',
-        command: 'redcube product frontdoor',
-        surface_kind: 'product_frontdoor',
-        summary: 'Open the direct frontdoor.',
+        mode_id: 'open_product_entry',
+        title: 'Open product_entry',
+        command: 'redcube product status',
+        surface_kind: 'product_entry_surface',
+        summary: 'Open the direct product_entry.',
         requires: [],
       },
     ],
@@ -406,15 +406,15 @@ test('family product frontdoor builder projects manifest core into canonical fro
     human_gate_ids: ['alpha_gate'],
   });
   const quickstart = buildProductEntryQuickstart({
-    summary: 'Open the frontdoor first.',
-    recommended_step_id: 'open_frontdoor',
+    summary: 'Open the product_entry first.',
+    recommended_step_id: 'open_product_entry',
     steps: [
       {
-        step_id: 'open_frontdoor',
-        title: 'Open frontdoor',
-        command: 'redcube product frontdoor',
-        surface_kind: 'product_frontdoor',
-        summary: 'Open the direct frontdoor.',
+        step_id: 'open_product_entry',
+        title: 'Open product_entry',
+        command: 'redcube product status',
+        surface_kind: 'product_entry_surface',
+        summary: 'Open the direct product_entry.',
         requires: [],
       },
     ],
@@ -423,7 +423,7 @@ test('family product frontdoor builder projects manifest core into canonical fro
   });
   const overview = buildProductEntryOverview({
     summary: 'Current product-entry surface is usable.',
-    frontdoor_command: 'redcube product frontdoor',
+    product_entry_command: 'redcube product status',
     recommended_command: 'redcube product invoke',
     operator_loop_command: 'redcube product invoke',
     progress_surface: {
@@ -435,7 +435,7 @@ test('family product frontdoor builder projects manifest core into canonical fro
       command: 'redcube product session --entry-session-id <entry-session-id>',
       ...familyOrchestration.resume_contract,
     },
-    recommended_step_id: 'open_frontdoor',
+    recommended_step_id: 'open_product_entry',
     next_focus: ['Keep the same operator loop stable.'],
     remaining_gaps_count: 1,
     human_gate_ids: ['alpha_gate'],
@@ -446,8 +446,8 @@ test('family product frontdoor builder projects manifest core into canonical fro
     good_to_use_now: false,
     fully_automatic: false,
     summary: 'Usable now with operator guidance.',
-    recommended_start_surface: 'product_frontdoor',
-    recommended_start_command: 'redcube product frontdoor',
+    recommended_start_surface: 'product_entry_surface',
+    recommended_start_command: 'redcube product status',
     recommended_loop_surface: 'product_entry',
     recommended_loop_command: 'redcube product invoke',
     blocking_gaps: ['Managed product shell still pending.'],
@@ -473,11 +473,11 @@ test('family product frontdoor builder projects manifest core into canonical fro
       next_focus: ['Keep the same session contract stable.'],
       remaining_gaps_count: 1,
     },
-    frontdoor_surface: {
-      shell_key: 'frontdoor',
-      command: 'redcube product frontdoor',
-      surface_kind: 'product_frontdoor',
-      summary: 'Open the direct frontdoor.',
+    product_entry_surface: {
+      shell_key: 'product_entry',
+      command: 'redcube product status',
+      surface_kind: 'product_entry_surface',
+      summary: 'Open the direct product_entry.',
     },
     operator_loop_surface: {
       shell_key: 'direct',
@@ -496,9 +496,9 @@ test('family product frontdoor builder projects manifest core into canonical fro
     recommended_shell: 'direct',
     recommended_command: 'redcube product invoke',
     product_entry_shell: {
-      frontdoor: {
-        command: 'redcube product frontdoor',
-        surface_kind: 'product_frontdoor',
+      product_entry: {
+        command: 'redcube product status',
+        surface_kind: 'product_entry_surface',
       },
       direct: {
         command: 'redcube product invoke',
@@ -522,7 +522,7 @@ test('family product frontdoor builder projects manifest core into canonical fro
       summary: 'Current preflight is green.',
       ready_to_try_now: true,
       recommended_check_command: 'redcube product preflight',
-      recommended_start_command: 'redcube product frontdoor',
+      recommended_start_command: 'redcube product status',
       blocking_check_ids: [],
       checks: [],
     },
@@ -534,10 +534,10 @@ test('family product frontdoor builder projects manifest core into canonical fro
       entry_adapter: 'RedCubeDomainEntry',
       service_safe_surface_kind: 'redcube_service_safe_domain_entry',
       product_entry_builder_command: 'redcube product invoke',
-      supported_commands: ['redcube product frontdoor', 'redcube product invoke'],
+      supported_commands: ['redcube product status', 'redcube product invoke'],
       command_contracts: [
         {
-          command: 'redcube product frontdoor',
+          command: 'redcube product status',
           required_fields: [],
           optional_fields: [],
         },
@@ -548,10 +548,10 @@ test('family product frontdoor builder projects manifest core into canonical fro
         },
       ],
     },
-    gateway_interaction_contract: {
-      surface_kind: 'gateway_interaction_contract',
-      frontdoor_owner: 'opl_gateway_or_domain_gui',
-      user_interaction_mode: 'natural_language_frontdoor',
+    user_interaction_contract: {
+      surface_kind: 'user_interaction_contract',
+      entry_owner: 'opl_gateway_or_domain_gui',
+      user_interaction_mode: 'natural_language_entry',
       user_commands_required: false,
       command_surfaces_for_agent_consumption_only: true,
       shared_downstream_entry: 'RedCubeDomainEntry',
@@ -566,42 +566,42 @@ test('family product frontdoor builder projects manifest core into canonical fro
     };
   };
 
-  const frontdoor = buildFamilyProductFrontdoor({
+  const product_entry = buildFamilyProductEntrySurface({
     recommended_action: 'inspect_or_start_product_entry',
     product_entry_manifest: manifestPayload,
     entry_surfaces: {
       direct: manifestPayload.product_entry_shell.direct,
       session: manifestPayload.product_entry_shell.session,
     },
-    notes: ['Thin frontdoor adapter is active.'],
-    schema_ref: 'contracts/schemas/v1/product-frontdoor.schema.json',
+    notes: ['Thin product_entry adapter is active.'],
+    schema_ref: 'contracts/schemas/v1/product-status.schema.json',
     extra_payload: {
       ok: true,
     },
-  }) as FamilyProductFrontdoorSurface & {
+  }) as FamilyProductEntrySurface & {
     ok: boolean;
   };
 
-  assert.equal(frontdoor.surface_kind, 'product_frontdoor');
-  assert.equal(frontdoor.ok, true);
-  assert.equal(frontdoor.target_domain_id, 'redcube_ai');
-  assert.equal(frontdoor.summary.frontdoor_command, 'redcube product frontdoor');
-  assert.equal(frontdoor.summary.recommended_command, 'redcube product invoke');
-  assert.equal(frontdoor.summary.operator_loop_command, 'redcube product invoke');
+  assert.equal(product_entry.surface_kind, 'product_entry_surface');
+  assert.equal(product_entry.ok, true);
+  assert.equal(product_entry.target_domain_id, 'redcube_ai');
+  assert.equal(product_entry.summary.product_entry_command, 'redcube product status');
+  assert.equal(product_entry.summary.recommended_command, 'redcube product invoke');
+  assert.equal(product_entry.summary.operator_loop_command, 'redcube product invoke');
   assert.equal(manifest.schema_ref, 'contracts/schemas/v1/product-entry-manifest.schema.json');
   assert.equal(manifest.domain_entry_contract?.entry_adapter, 'RedCubeDomainEntry');
-  assert.equal(manifest.gateway_interaction_contract?.frontdoor_owner, 'opl_gateway_or_domain_gui');
-  assert.equal(frontdoor.schema_ref, 'contracts/schemas/v1/product-frontdoor.schema.json');
-  assert.equal(frontdoor.domain_entry_contract?.entry_adapter, 'RedCubeDomainEntry');
-  assert.equal(frontdoor.gateway_interaction_contract?.shared_downstream_entry, 'RedCubeDomainEntry');
+  assert.equal(manifest.user_interaction_contract?.entry_owner, 'opl_gateway_or_domain_gui');
+  assert.equal(product_entry.schema_ref, 'contracts/schemas/v1/product-status.schema.json');
+  assert.equal(product_entry.domain_entry_contract?.entry_adapter, 'RedCubeDomainEntry');
+  assert.equal(product_entry.user_interaction_contract?.shared_downstream_entry, 'RedCubeDomainEntry');
 });
 
-test('product entry companion helpers build family frontdoor entry surfaces from manifest shells', () => {
-  const entrySurfaces = buildFamilyFrontdoorEntrySurfaces({
+test('product entry companion helpers build family product_entry entry surfaces from manifest shells', () => {
+  const entrySurfaces = buildFamilyProductEntrySurfaces({
     product_entry_shell: {
-      product_frontdoor: {
-        command: 'redcube product frontdoor',
-        surface_kind: 'product_frontdoor',
+      product_entry_surface: {
+        command: 'redcube product status',
+        surface_kind: 'product_entry_surface',
       },
       session: {
         command: 'redcube product session --entry-session-id <entry-session-id>',
@@ -609,7 +609,7 @@ test('product entry companion helpers build family frontdoor entry surfaces from
       },
     },
     shell_aliases: {
-      frontdoor: 'product_frontdoor',
+      product_entry: 'product_entry_surface',
       session: 'session',
     },
     shared_handoff: {
@@ -624,7 +624,7 @@ test('product entry companion helpers build family frontdoor entry surfaces from
     },
   });
 
-  assert.equal(entrySurfaces.frontdoor.command, 'redcube product frontdoor');
+  assert.equal(entrySurfaces.product_entry.command, 'redcube product status');
   assert.equal(
     entrySurfaces.session.command,
     'redcube product session --entry-session-id <entry-session-id>',
@@ -633,7 +633,7 @@ test('product entry companion helpers build family frontdoor entry surfaces from
   assert.equal('opl_return_surface' in entrySurfaces, false);
 });
 
-test('product entry companion helpers build family frontdoor directly from the manifest shell projection', () => {
+test('product entry companion helpers build family product_entry directly from the manifest shell projection', () => {
   const manifest = buildFamilyProductEntryManifest({
     manifest_kind: 'redcube_product_entry_manifest',
     target_domain_id: 'redcube_ai',
@@ -647,9 +647,9 @@ test('product entry companion helpers build family frontdoor directly from the m
       workspace_root: '/tmp/redcube-workspace',
     },
     product_entry_shell: {
-      product_frontdoor: {
-        command: 'redcube product frontdoor',
-        surface_kind: 'product_frontdoor',
+      product_entry_surface: {
+        command: 'redcube product status',
+        surface_kind: 'product_entry_surface',
       },
       direct: {
         command: 'redcube product invoke',
@@ -676,15 +676,15 @@ test('product entry companion helpers build family frontdoor directly from the m
     },
     product_entry_start: {
       surface_kind: 'product_entry_start',
-      summary: 'Open the frontdoor first.',
-      recommended_mode_id: 'open_frontdoor',
+      summary: 'Open the product_entry first.',
+      recommended_mode_id: 'open_product_entry',
       modes: [
         {
-          mode_id: 'open_frontdoor',
-          title: 'Open frontdoor',
-          command: 'redcube product frontdoor',
-          surface_kind: 'product_frontdoor',
-          summary: 'Open the direct frontdoor.',
+          mode_id: 'open_product_entry',
+          title: 'Open product_entry',
+          command: 'redcube product status',
+          surface_kind: 'product_entry_surface',
+          summary: 'Open the direct product_entry.',
           requires: [],
         },
       ],
@@ -712,10 +712,10 @@ test('product entry companion helpers build family frontdoor directly from the m
         next_focus: ['Keep the same session contract stable.'],
         remaining_gaps_count: 1,
       },
-      frontdoor_surface: {
-        shell_key: 'product_frontdoor',
-        command: 'redcube product frontdoor',
-        surface_kind: 'product_frontdoor',
+      product_entry_surface: {
+        shell_key: 'product_entry_surface',
+        command: 'redcube product status',
+        surface_kind: 'product_entry_surface',
       },
       operator_loop_surface: {
         shell_key: 'direct',
@@ -726,7 +726,7 @@ test('product entry companion helpers build family frontdoor directly from the m
       product_entry_overview: {
         surface_kind: 'product_entry_overview',
         summary: 'Current product-entry surface is usable.',
-        frontdoor_command: 'redcube product frontdoor',
+        product_entry_command: 'redcube product status',
         recommended_command: 'redcube product invoke',
         operator_loop_command: 'redcube product invoke',
         progress_surface: {
@@ -738,7 +738,7 @@ test('product entry companion helpers build family frontdoor directly from the m
           command: 'redcube product session --entry-session-id <entry-session-id>',
           session_locator_field: 'entry_session_contract.entry_session_id',
         },
-        recommended_step_id: 'open_frontdoor',
+        recommended_step_id: 'open_product_entry',
         next_focus: ['Keep the direct loop stable.'],
         remaining_gaps_count: 1,
         human_gate_ids: [],
@@ -748,7 +748,7 @@ test('product entry companion helpers build family frontdoor directly from the m
         summary: 'Current preflight is green.',
         ready_to_try_now: true,
         recommended_check_command: 'redcube product preflight',
-        recommended_start_command: 'redcube product frontdoor',
+        recommended_start_command: 'redcube product status',
         blocking_check_ids: [],
         checks: [],
       },
@@ -759,23 +759,23 @@ test('product entry companion helpers build family frontdoor directly from the m
         good_to_use_now: false,
         fully_automatic: false,
         summary: 'Usable now with operator guidance.',
-        recommended_start_surface: 'product_frontdoor',
-        recommended_start_command: 'redcube product frontdoor',
+        recommended_start_surface: 'product_entry_surface',
+        recommended_start_command: 'redcube product status',
         recommended_loop_surface: 'product_entry',
         recommended_loop_command: 'redcube product invoke',
         blocking_gaps: ['Managed product shell still pending.'],
       },
       product_entry_quickstart: {
         surface_kind: 'product_entry_quickstart',
-        recommended_step_id: 'open_frontdoor',
-        summary: 'Open the frontdoor first.',
+        recommended_step_id: 'open_product_entry',
+        summary: 'Open the product_entry first.',
         steps: [
           {
-            step_id: 'open_frontdoor',
-            title: 'Open frontdoor',
-            command: 'redcube product frontdoor',
-            surface_kind: 'product_frontdoor',
-            summary: 'Open the direct frontdoor.',
+            step_id: 'open_product_entry',
+            title: 'Open product_entry',
+            command: 'redcube product status',
+            surface_kind: 'product_entry_surface',
+            summary: 'Open the direct product_entry.',
             requires: [],
           },
         ],
@@ -788,29 +788,29 @@ test('product entry companion helpers build family frontdoor directly from the m
     },
   }) as FamilyProductEntryManifestSurface;
 
-  const frontdoor = buildFamilyProductFrontdoorFromManifest({
+  const product_entry = buildFamilyProductEntrySurfaceFromManifest({
     product_entry_manifest: manifest,
     shell_aliases: {
-      frontdoor: 'product_frontdoor',
+      product_entry: 'product_entry_surface',
       direct: 'direct',
       session: 'session',
     },
     recommended_action: 'inspect_or_start_product_entry',
-    schema_ref: 'contracts/schemas/v1/product-frontdoor.schema.json',
-    notes: ['Thin frontdoor adapter is active.'],
+    schema_ref: 'contracts/schemas/v1/product-status.schema.json',
+    notes: ['Thin product_entry adapter is active.'],
     extra_payload: {
       ok: true,
     },
-  }) as FamilyProductFrontdoorSurface & { ok: boolean };
+  }) as FamilyProductEntrySurface & { ok: boolean };
 
-  assert.equal(frontdoor.ok, true);
-  assert.equal(frontdoor.entry_surfaces.frontdoor.command, 'redcube product frontdoor');
-  assert.equal(frontdoor.entry_surfaces.direct.command, 'redcube product invoke');
+  assert.equal(product_entry.ok, true);
+  assert.equal(product_entry.entry_surfaces.product_entry.command, 'redcube product status');
+  assert.equal(product_entry.entry_surfaces.direct.command, 'redcube product invoke');
   assert.equal(
-    frontdoor.entry_surfaces.session.command,
+    product_entry.entry_surfaces.session.command,
     'redcube product session --entry-session-id <entry-session-id>',
   );
-  assert.equal(frontdoor.entry_surfaces.opl_handoff_builder?.entry_mode, 'opl_gateway');
-  assert.equal(frontdoor.schema_ref, 'contracts/schemas/v1/product-frontdoor.schema.json');
+  assert.equal(product_entry.entry_surfaces.opl_handoff_builder?.entry_mode, 'opl_gateway');
+  assert.equal(product_entry.schema_ref, 'contracts/schemas/v1/product-status.schema.json');
 });
 

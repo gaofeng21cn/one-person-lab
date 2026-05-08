@@ -3,7 +3,7 @@ import type {
   FamilyOrchestrationGatePreview,
   FamilyOrchestrationReferenceRef,
   FamilyProductEntryManifestSurface,
-  FamilyProductFrontdoorSurface,
+  FamilyProductEntrySurface,
   FamilyProductEntryValidationOptions,
   JsonRecord,
   ProductEntryOverviewSurface,
@@ -15,7 +15,7 @@ import type {
 import {
   cloneRecord,
   isRecord,
-  normalizeFrontdoorSummary,
+  normalizeProductEntrySurfaceSummary,
   normalizeProgressSurface,
   normalizeResumeContract,
   normalizeStartMode,
@@ -31,12 +31,12 @@ import {
   requireString,
   validateDomainEntryContractShape,
   validateFamilyReferenceRef,
-  validateGatewayInteractionContractShape,
+  validateUserInteractionContractShape,
   validateOptionalFamilyReferenceRef,
 } from './internal.ts';
 import { validateSharedHandoff } from '../family-entry-contracts.ts';
 import { buildProductEntryResumeSurface } from './resume-surface.ts';
-import { validateFamilyFrontdoorEntrySurfaces } from './shell-surfaces.ts';
+import { validateFamilyProductEntrySurfaces } from './shell-surfaces.ts';
 
 function validateSurfaceKindRecord(
   value: unknown,
@@ -223,7 +223,7 @@ export function validateProductEntryOverviewSurface(
     ...payload,
     surface_kind: 'product_entry_overview',
     summary: requireString(payload.summary, `${field}.summary`),
-    frontdoor_command: requireString(payload.frontdoor_command, `${field}.frontdoor_command`),
+    product_entry_command: requireString(payload.product_entry_command, `${field}.product_entry_command`),
     recommended_command: requireString(payload.recommended_command, `${field}.recommended_command`),
     operator_loop_command: requireString(payload.operator_loop_command, `${field}.operator_loop_command`),
     progress_surface: normalizeProgressSurface(payload.progress_surface, `${field}.progress_surface`),
@@ -324,7 +324,7 @@ export function validateFamilyProductEntryManifest(
     'managed_runtime_contract',
     'repo_mainline',
     'product_entry_status',
-    'frontdoor_surface',
+    'product_entry_surface',
     'operator_loop_surface',
     'operator_loop_actions',
   ] as const) {
@@ -445,10 +445,10 @@ export function validateFamilyProductEntryManifest(
       'product_entry_manifest.domain_entry_contract',
     );
   }
-  if (payload.gateway_interaction_contract !== undefined || options.requireContractBundle) {
-    normalized.gateway_interaction_contract = validateGatewayInteractionContractShape(
-      payload.gateway_interaction_contract,
-      'product_entry_manifest.gateway_interaction_contract',
+  if (payload.user_interaction_contract !== undefined || options.requireContractBundle) {
+    normalized.user_interaction_contract = validateUserInteractionContractShape(
+      payload.user_interaction_contract,
+      'product_entry_manifest.user_interaction_contract',
     );
   }
   if (options.requireRuntimeCompanions) {
@@ -499,73 +499,73 @@ export function validateFamilyProductEntryManifest(
   return normalized;
 }
 
-export function validateFamilyProductFrontdoor(
+export function validateFamilyProductEntrySurface(
   value: unknown,
   options: FamilyProductEntryValidationOptions = {},
-): FamilyProductFrontdoorSurface {
-  const payload = requireRecord(value, 'product_frontdoor');
-  const normalized: FamilyProductFrontdoorSurface = {
+): FamilyProductEntrySurface {
+  const payload = requireRecord(value, 'product_entry_surface');
+  const normalized: FamilyProductEntrySurface = {
     ...payload,
-    surface_kind: 'product_frontdoor',
-    recommended_action: requireString(payload.recommended_action, 'product_frontdoor.recommended_action'),
-    target_domain_id: requireString(payload.target_domain_id, 'product_frontdoor.target_domain_id'),
-    workspace_locator: cloneRecord(payload.workspace_locator, 'product_frontdoor.workspace_locator'),
-    runtime: cloneRecord(payload.runtime, 'product_frontdoor.runtime'),
-    product_entry_status: cloneRecord(payload.product_entry_status, 'product_frontdoor.product_entry_status'),
-    frontdoor_surface: cloneRecord(payload.frontdoor_surface, 'product_frontdoor.frontdoor_surface'),
+    surface_kind: 'product_entry_surface',
+    recommended_action: requireString(payload.recommended_action, 'product_entry_surface.recommended_action'),
+    target_domain_id: requireString(payload.target_domain_id, 'product_entry_surface.target_domain_id'),
+    workspace_locator: cloneRecord(payload.workspace_locator, 'product_entry_surface.workspace_locator'),
+    runtime: cloneRecord(payload.runtime, 'product_entry_surface.runtime'),
+    product_entry_status: cloneRecord(payload.product_entry_status, 'product_entry_surface.product_entry_status'),
+    product_entry_surface: cloneRecord(payload.product_entry_surface, 'product_entry_surface.product_entry_surface'),
     operator_loop_surface: cloneRecord(
       payload.operator_loop_surface,
-      'product_frontdoor.operator_loop_surface',
+      'product_entry_surface.operator_loop_surface',
     ),
     operator_loop_actions: cloneRecord(
       payload.operator_loop_actions,
-      'product_frontdoor.operator_loop_actions',
+      'product_entry_surface.operator_loop_actions',
     ),
     product_entry_start: validateProductEntryStartSurface(
       payload.product_entry_start,
-      'product_frontdoor.product_entry_start',
+      'product_entry_surface.product_entry_start',
     ),
     product_entry_overview: validateProductEntryOverviewSurface(
       payload.product_entry_overview,
-      'product_frontdoor.product_entry_overview',
+      'product_entry_surface.product_entry_overview',
     ),
     product_entry_preflight: validateProductEntryPreflightSurface(
       payload.product_entry_preflight,
-      'product_frontdoor.product_entry_preflight',
+      'product_entry_surface.product_entry_preflight',
     ),
     product_entry_readiness: validateProductEntryReadinessSurface(
       payload.product_entry_readiness,
-      'product_frontdoor.product_entry_readiness',
+      'product_entry_surface.product_entry_readiness',
     ),
     product_entry_quickstart: validateProductEntryQuickstartSurface(
       payload.product_entry_quickstart,
-      'product_frontdoor.product_entry_quickstart',
+      'product_entry_surface.product_entry_quickstart',
     ),
     family_orchestration: validateFamilyOrchestrationCompanion(
       payload.family_orchestration,
-      'product_frontdoor.family_orchestration',
+      'product_entry_surface.family_orchestration',
     ),
     product_entry_manifest: validateFamilyProductEntryManifest(payload.product_entry_manifest, options),
-    entry_surfaces: validateFamilyFrontdoorEntrySurfaces(
+    entry_surfaces: validateFamilyProductEntrySurfaces(
       payload.entry_surfaces,
-      'product_frontdoor.entry_surfaces',
+      'product_entry_surface.entry_surfaces',
     ),
-    summary: normalizeFrontdoorSummary(payload.summary, 'product_frontdoor.summary'),
-    notes: readStringList(payload.notes, 'product_frontdoor.notes'),
+    summary: normalizeProductEntrySurfaceSummary(payload.summary, 'product_entry_surface.summary'),
+    notes: readStringList(payload.notes, 'product_entry_surface.notes'),
   };
   if (payload.schema_ref !== undefined || options.requireContractBundle) {
-    normalized.schema_ref = requireString(payload.schema_ref, 'product_frontdoor.schema_ref');
+    normalized.schema_ref = requireString(payload.schema_ref, 'product_entry_surface.schema_ref');
   }
   if (payload.domain_entry_contract !== undefined || options.requireContractBundle) {
     normalized.domain_entry_contract = validateDomainEntryContractShape(
       payload.domain_entry_contract,
-      'product_frontdoor.domain_entry_contract',
+      'product_entry_surface.domain_entry_contract',
     );
   }
-  if (payload.gateway_interaction_contract !== undefined || options.requireContractBundle) {
-    normalized.gateway_interaction_contract = validateGatewayInteractionContractShape(
-      payload.gateway_interaction_contract,
-      'product_frontdoor.gateway_interaction_contract',
+  if (payload.user_interaction_contract !== undefined || options.requireContractBundle) {
+    normalized.user_interaction_contract = validateUserInteractionContractShape(
+      payload.user_interaction_contract,
+      'product_entry_surface.user_interaction_contract',
     );
   }
   return normalized;
