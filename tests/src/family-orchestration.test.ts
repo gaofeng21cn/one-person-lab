@@ -705,6 +705,30 @@ test('family orchestration schema examples stay aligned with canonical family ma
     ((redcubeManifest.runtime_loop_closure as Json).surface_kind),
   );
   assert.equal(
+    ((redcubeExample.persistence_policy as Json).surface_kind),
+    'family_persistence_policy',
+  );
+  assert.deepEqual(
+    (((redcubeExample.persistence_policy as Json).authority_surfaces as Json[])[0] as Json).storage_role,
+    'file_authority',
+  );
+  assert.equal(
+    ((redcubeExample.lifecycle_ledger as Json).surface_kind),
+    'family_lifecycle_ledger',
+  );
+  assert.equal(
+    (((((redcubeExample.lifecycle_ledger as Json).actions as Json[])[0] as Json).manifest_ref as Json).ref_kind),
+    'repo_path',
+  );
+  assert.equal(
+    ((redcubeExample.owner_route as Json).surface_kind),
+    'family_owner_route',
+  );
+  assert.equal(
+    ((redcubeExample.owner_route as Json).next_owner),
+    redcubeManifest.target_domain_id,
+  );
+  assert.equal(
     (((redcubeExample.runtime_loop_closure as Json).source_linkage) as Json).entry_mode,
     (((redcubeManifest.runtime_loop_closure as Json).source_linkage) as Json).entry_mode,
   );
@@ -731,4 +755,37 @@ test('family manifest schema requires repo-owned runtime continuity discovery su
   const properties = schema.properties as Json;
   const runtimeControl = properties.runtime_control as Json;
   assert.equal(runtimeControl.$ref, '#/$defs/runtimeControlSurface');
+  assert.equal((properties.persistence_policy as Json).$ref, '#/$defs/persistencePolicySurface');
+  assert.equal((properties.lifecycle_ledger as Json).$ref, '#/$defs/lifecycleLedgerSurface');
+  assert.equal((properties.owner_route as Json).$ref, '#/$defs/ownerRouteSurface');
+});
+
+test('family persistence lifecycle and owner-route schemas freeze shared control surfaces', () => {
+  const persistenceSchema = readJson('contracts/family-orchestration/family-persistence-policy.schema.json');
+  const lifecycleSchema = readJson('contracts/family-orchestration/family-lifecycle-ledger.schema.json');
+  const ownerRouteSchema = readJson('contracts/family-orchestration/family-owner-route.schema.json');
+
+  assert.deepEqual(
+    (persistenceSchema.properties as Json).surface_kind,
+    { const: 'family_persistence_policy' },
+  );
+  assert.deepEqual(
+    (((persistenceSchema.$defs as Json).fileAuthoritySurface as Json).allOf as Json[])[1],
+    { properties: { storage_role: { const: 'file_authority' } } },
+  );
+  assert.deepEqual(
+    (((persistenceSchema.$defs as Json).sqliteSidecarSurface as Json).allOf as Json[])[1],
+    { properties: { storage_role: { const: 'sqlite_sidecar_index' } } },
+  );
+
+  const lifecycleAction = (lifecycleSchema.$defs as Json).lifecycleAction as Json;
+  assert.ok((lifecycleAction.required as string[]).includes('manifest_ref'));
+  assert.ok((lifecycleAction.required as string[]).includes('sha256'));
+  assert.ok((lifecycleAction.required as string[]).includes('restore_ref'));
+  assert.equal((((lifecycleAction.properties as Json).sha256 as Json).pattern), '^[A-Fa-f0-9]{64}$');
+
+  const ownerRouteRequired = ownerRouteSchema.required as string[];
+  assert.ok(ownerRouteRequired.includes('route_epoch'));
+  assert.ok(ownerRouteRequired.includes('source_fingerprint'));
+  assert.ok(ownerRouteRequired.includes('idempotency_key'));
 });
