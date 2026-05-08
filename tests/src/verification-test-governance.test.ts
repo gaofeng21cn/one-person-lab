@@ -61,9 +61,12 @@ const qualityDetailsActionPatterns = [
   /node-version: '24'/,
   /npm ci --prefix "\$GITHUB_ACTION_PATH\/\.\.\/\.\.\/\.\."/,
   /OPL_QUALITY_DETAILS_COMPARE_REF/,
+  /quality_root="\$\(cd "\$OPL_QUALITY_DETAILS_ROOT" && pwd\)"/,
+  /git -C "\$quality_root" fetch --no-tags --prune origin "\$\{compare_branch\}:refs\/remotes\/origin\/\$\{compare_branch\}"/,
+  /git -C "\$quality_root" rev-parse --verify "\$OPL_QUALITY_DETAILS_COMPARE_REF\^\{commit\}"/,
   /--compare-ref "\$OPL_QUALITY_DETAILS_COMPARE_REF"/,
-  /quality details --root "\$OPL_QUALITY_DETAILS_ROOT" --format markdown/,
-  /quality details --root "\$OPL_QUALITY_DETAILS_ROOT" --format json/,
+  /quality details --root "\$quality_root" --format markdown/,
+  /quality details --root "\$quality_root" --format json/,
 ];
 
 const nativeHelperPrebuildWorkflowPatterns = [

@@ -309,6 +309,7 @@ export function createGitModuleRemoteFixture(
   runGitFixtureCommand(fixtureRoot, ['init', '--bare', remoteRoot]);
   runGitFixtureCommand(sourceRoot, ['remote', 'add', 'origin', remoteRoot]);
   runGitFixtureCommand(sourceRoot, ['push', '-u', 'origin', 'main']);
+  runGitFixtureCommand(remoteRoot, ['symbolic-ref', 'HEAD', 'refs/heads/main']);
 
   return {
     fixtureRoot,

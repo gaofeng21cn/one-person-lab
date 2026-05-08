@@ -51,10 +51,16 @@ runs:
       run: |
         set -euo pipefail
         opl_root="$GITHUB_ACTION_PATH/../../.."
+        quality_root="$(cd "$OPL_QUALITY_DETAILS_ROOT" && pwd)"
         mkdir -p "$OPL_QUALITY_DETAILS_OUTPUT_DIR"
         compare_args=()
         if [ -n "$OPL_QUALITY_DETAILS_COMPARE_REF" ]; then
+          if [[ "$OPL_QUALITY_DETAILS_COMPARE_REF" == origin/* ]]; then
+            compare_branch="${OPL_QUALITY_DETAILS_COMPARE_REF#origin/}"
+            git -C "$quality_root" fetch --no-tags --prune origin "${compare_branch}:refs/remotes/origin/${compare_branch}"
+          fi
+          git -C "$quality_root" rev-parse --verify "$OPL_QUALITY_DETAILS_COMPARE_REF^{commit}" >/dev/null
           compare_args=(--compare-ref "$OPL_QUALITY_DETAILS_COMPARE_REF")
         fi
-        "$opl_root/bin/opl" quality details --root "$OPL_QUALITY_DETAILS_ROOT" --format markdown --limit "$OPL_QUALITY_DETAILS_LIMIT" --focus "$OPL_QUALITY_DETAILS_FOCUS" "${compare_args[@]}" >> "$GITHUB_STEP_SUMMARY"
-        "$opl_root/bin/opl" quality details --root "$OPL_QUALITY_DETAILS_ROOT" --format json --limit "$OPL_QUALITY_DETAILS_JSON_LIMIT" --focus "$OPL_QUALITY_DETAILS_FOCUS" "${compare_args[@]}" > "$OPL_QUALITY_DETAILS_OUTPUT_DIR/quality-details.json"
+        "$opl_root/bin/opl" quality details --root "$quality_root" --format markdown --limit "$OPL_QUALITY_DETAILS_LIMIT" --focus "$OPL_QUALITY_DETAILS_FOCUS" "${compare_args[@]}" >> "$GITHUB_STEP_SUMMARY"
+        "$opl_root/bin/opl" quality details --root "$quality_root" --format json --limit "$OPL_QUALITY_DETAILS_JSON_LIMIT" --focus "$OPL_QUALITY_DETAILS_FOCUS" "${compare_args[@]}" > "$OPL_QUALITY_DETAILS_OUTPUT_DIR/quality-details.json"
