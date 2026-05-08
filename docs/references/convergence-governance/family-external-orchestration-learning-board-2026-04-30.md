@@ -31,6 +31,12 @@
 - `reject`：不吸收，例如 Linear 必需入口、Symphony scheduler owner、NEXUS/generic persona library、marketing lifecycle。
 - `saturated`：已有 `OPL` / `MAS` / `MAG` / `RCA` 等价合同，后续只追加 provenance，不再重复实现。
 
+## Current Source Classifications
+
+| Source | Classification | OPL family use | Boundary |
+| --- | --- | --- | --- |
+| `Ageniti/Ageniti@db92c0a` | `adopt_family_contract` | 借鉴 action contract 到 CLI / HTTP / MCP / OpenAI / React 多 surface 派生、side-effect / idempotency / confirmation / visibility 元数据、统一 envelope 与 streaming event 语义，用于补强 OPL family 对 domain capability surface 的 machine-readable 描述。 | 不把 Ageniti 作为默认 runtime、scheduler、memory、hosted execution 或 domain authority；`@ageniti/core` 仍处 `0.x` 早期阶段，只允许作为 optional prototype / domain template 观察，不进入 OPL core dependency。 |
+
 ## Adopted Family Defaults
 
 - `OPL` 持有 family-level shared modules、contracts、indexes、activation、projection。
