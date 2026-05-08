@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     "./automation-companions": "./dist/automation-companions.js",
+    "./family-action-catalog": "./dist/family-action-catalog.js",
     "./family-shared-release": "./dist/family-shared-release.js",
     "./family-domain-catalog": "./dist/family-domain-catalog.js",
     "./family-entry-contracts": "./dist/family-entry-contracts.js",

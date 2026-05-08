@@ -3,6 +3,7 @@ import type {
   FamilySharedHandoffSurface,
   UserInteractionContractSurface,
 } from '../family-entry-contracts.ts';
+import type { FamilyActionCatalog } from '../family-action-catalog.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -457,6 +458,7 @@ export interface NormalizedDomainManifest {
     event_envelope_surface: JsonRecord | null;
     checkpoint_lineage_surface: JsonRecord | null;
   } | null;
+  family_action_catalog: FamilyActionCatalog | null;
   runtime_inventory: NormalizedRuntimeInventory | null;
   task_lifecycle: NormalizedTaskLifecycle | null;
   runtime_control: NormalizedRuntimeControl | null;

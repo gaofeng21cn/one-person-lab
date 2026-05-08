@@ -262,6 +262,9 @@
         }
       }
     },
+    "family_action_catalog": {
+      "$ref": "family-action-catalog.schema.json"
+    },
     "remaining_gaps": {
       "type": "array",
       "items": {
