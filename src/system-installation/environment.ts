@@ -99,6 +99,7 @@ export async function buildOplEnvironment(contracts: GatewayContracts) {
         session_ledger_file: statePaths.session_ledger_file,
         runtime_modes_file: statePaths.runtime_modes_file,
         update_channel_file: statePaths.update_channel_file,
+        developer_supervisor_config_file: statePaths.developer_supervisor_config_file,
       },
       notes: [
         'OPL owns the user-facing initialization surface and reports Codex readiness separately from optional Hermes online-management readiness.',

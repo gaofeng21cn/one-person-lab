@@ -23,7 +23,7 @@ import {
   buildPublicSystemPayload,
   buildPublicTurnkeyInstallPayload,
 } from '../modules/public-payloads.ts';
-import { assertNoArgs, buildCommandHelp, buildRetiredCommandError, buildRootHelp, buildUsageError, cloneCommandSpec, parseOplEngineArgs, parseOplModuleExecArgs, parseOplModuleArgs, parseSystemConfigureCodexArgs, parseTurnkeyInstallArgs, parseUpdateChannelArgs, printJson, withContractsContext } from '../modules/support.ts';
+import { assertNoArgs, buildCommandHelp, buildRetiredCommandError, buildRootHelp, buildUsageError, cloneCommandSpec, parseDeveloperSupervisorArgs, parseOplEngineArgs, parseOplModuleExecArgs, parseOplModuleArgs, parseSystemConfigureCodexArgs, parseTurnkeyInstallArgs, parseUpdateChannelArgs, printJson, withContractsContext } from '../modules/support.ts';
 import type { CommandSpec } from '../modules/support.ts';
 
 async function readStdinText() {
@@ -181,6 +181,23 @@ export function buildPublicCommandSpecs(
       const parsed = parseUpdateChannelArgs(args, systemUpdateChannelSpec);
       return buildPublicSystemActionPayload(
         await runOplSystemAction(getContracts(), 'update_channel', parsed),
+      );
+    },
+  };
+
+  const systemDeveloperSupervisorSpec: CommandSpec = {
+    usage:
+      'opl system developer-supervisor [--enabled <auto|on|off>] [--mode <external_observe|developer_apply_safe>] [--auto-enable-github-login <login>]',
+    summary: 'Read or update the local OPL family developer supervisor config.',
+    examples: [
+      'opl system developer-supervisor',
+      'opl system developer-supervisor --enabled on --mode developer_apply_safe',
+    ],
+    group: 'system',
+    handler: async (args) => {
+      const parsed = parseDeveloperSupervisorArgs(args, systemDeveloperSupervisorSpec);
+      return buildPublicSystemActionPayload(
+        await runOplSystemAction(getContracts(), 'developer_supervisor', parsed),
       );
     },
   };
@@ -579,6 +596,7 @@ export function buildPublicCommandSpecs(
     'system update': systemUpdateSpec,
     'system reconcile-modules': systemReconcileModulesSpec,
     'system update-channel': systemUpdateChannelSpec,
+    'system developer-supervisor': systemDeveloperSupervisorSpec,
     modules: modulesSpec,
     'module install': moduleInstallSpec,
     'module update': moduleUpdateSpec,

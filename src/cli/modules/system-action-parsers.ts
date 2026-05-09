@@ -1,5 +1,6 @@
 import type {
   CommandSpec,
+  DeveloperSupervisorCliInput,
   OplEngineCliInput,
   OplModuleExecCliInput,
   OplModuleCliInput,
@@ -338,6 +339,63 @@ function parseUpdateChannelArgs(
   return parsed;
 }
 
+function parseDeveloperSupervisorArgs(
+  args: string[],
+  spec: Pick<CommandSpec, 'usage' | 'examples'>,
+): DeveloperSupervisorCliInput {
+  const parsed: DeveloperSupervisorCliInput = {};
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+
+    if (!token.startsWith('--')) {
+      throw buildUsageError(`Unexpected positional argument: ${token}.`, spec, {
+        token,
+      });
+    }
+
+    const value = args[index + 1];
+    if (!value || value.startsWith('--')) {
+      throw buildUsageError(`Missing value for option: ${token}.`, spec, {
+        option: token,
+      });
+    }
+
+    switch (token) {
+      case '--enabled':
+        if (value !== 'auto' && value !== 'on' && value !== 'off') {
+          throw buildUsageError('system developer-supervisor requires auto, on, or off for --enabled.', spec, {
+            option: token,
+            value,
+          });
+        }
+        parsed.developerSupervisorEnabled = value;
+        break;
+      case '--mode':
+        if (value !== 'external_observe' && value !== 'developer_apply_safe') {
+          throw buildUsageError(
+            'system developer-supervisor requires external_observe or developer_apply_safe for --mode.',
+            spec,
+            { option: token, value },
+          );
+        }
+        parsed.developerSupervisorMode = value;
+        break;
+      case '--auto-enable-github-login':
+        parsed.developerSupervisorAutoEnableGithubLogin = value;
+        break;
+      default:
+        throw buildUsageError(`Unknown option for system developer-supervisor command: ${token}.`, spec, {
+          option: token,
+        });
+    }
+
+    index += 1;
+  }
+
+  return parsed;
+}
+
 function parseSystemConfigureCodexArgs(
   args: string[],
   spec: Pick<CommandSpec, 'usage' | 'examples'>,
@@ -379,6 +437,7 @@ function assertNoArgs(
 
 export {
   assertNoArgs,
+  parseDeveloperSupervisorArgs,
   parseOplEngineArgs,
   parseOplModuleExecArgs,
   parseOplModuleArgs,

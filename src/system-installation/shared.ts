@@ -31,6 +31,7 @@ export type OplSystemAction =
   | 'update'
   | 'reconcile_modules'
   | 'update_channel'
+  | 'developer_supervisor'
   | 'repair_native_helpers';
 
 export type OplModuleInstallOrigin =
@@ -140,6 +141,9 @@ export type ModuleExecResult = {
 
 export type OplSystemActionInput = Partial<{
   channel: OplUpdateChannel;
+  developerSupervisorEnabled: 'auto' | 'on' | 'off';
+  developerSupervisorMode: 'external_observe' | 'developer_apply_safe';
+  developerSupervisorAutoEnableGithubLogin: string;
   host: string;
   port: number;
   workspacePath: string;

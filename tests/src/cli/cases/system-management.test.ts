@@ -399,6 +399,7 @@ exit 1
         system: {
           update_channel: string;
           gui_shell: { local_product_api_retired: boolean };
+          actions: { action_id: string }[];
         };
         first_run_log: {
           surface_id: string;
@@ -478,6 +479,10 @@ exit 1
     assert.equal(output.system_initialize.workspace_root.selected_path, workspaceRoot);
     assert.equal(output.system_initialize.workspace_root.health_status, 'ready');
     assert.equal(output.system_initialize.system.update_channel, 'stable');
+    assert.equal(
+      output.system_initialize.system.actions.some((entry) => entry.action_id === 'developer_supervisor'),
+      true,
+    );
     assert.equal(output.system_initialize.system.gui_shell.local_product_api_retired, true);
     assert.equal(output.system_initialize.first_run_log.surface_id, 'opl_first_run_log');
     assert.equal(output.system_initialize.first_run_log.event_schema_version, 'opl_first_run_event.v1');

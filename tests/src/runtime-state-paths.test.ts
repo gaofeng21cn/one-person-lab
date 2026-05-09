@@ -41,7 +41,9 @@ test('OPL state paths default to the current state dir and ignore old UI adapter
   try {
     const baseDir = path.join(homeRoot, 'Library', 'Application Support', 'OPL');
     const expectedStateDir = path.join(baseDir, 'state');
-    assert.equal(resolveOplStatePaths().state_dir, expectedStateDir);
+    const paths = resolveOplStatePaths();
+    assert.equal(paths.state_dir, expectedStateDir);
+    assert.equal(paths.developer_supervisor_config_file, path.join(expectedStateDir, 'developer-supervisor.json'));
 
     fs.mkdirSync(path.join(baseDir, 'local-ui-adapter'), { recursive: true });
     assert.equal(resolveOplStatePaths().state_dir, expectedStateDir);

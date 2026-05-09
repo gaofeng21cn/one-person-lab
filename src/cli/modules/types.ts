@@ -174,6 +174,12 @@ type UpdateChannelCliInput = {
   channel?: 'stable' | 'preview';
 };
 
+type DeveloperSupervisorCliInput = {
+  developerSupervisorEnabled?: 'auto' | 'on' | 'off';
+  developerSupervisorMode?: 'external_observe' | 'developer_apply_safe';
+  developerSupervisorAutoEnableGithubLogin?: string;
+};
+
 type SystemConfigureCodexCliInput = {
   apiKeyStdin?: boolean;
 };
@@ -190,6 +196,7 @@ export type {
   CommandHandler,
   CommandSpec,
   DashboardCliInput,
+  DeveloperSupervisorCliInput,
   DomainLaunchStrategy,
   OplEngineCliInput,
   OplModuleExecCliInput,

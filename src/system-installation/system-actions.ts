@@ -1,6 +1,8 @@
 import {
+  readOplDeveloperSupervisorConfig,
   readOplUpdateChannel,
   readOplWorkspaceRoot,
+  writeOplDeveloperSupervisorConfig,
   writeOplUpdateChannel,
 } from '../system-preferences.ts';
 import { runProductEntryRepairHermesGateway } from '../product-entry-runtime.ts';
@@ -291,6 +293,31 @@ export async function runOplSystemAction(
 
   if (action === 'reconcile_modules') {
     return runOplSystemModuleReconcile(contracts);
+  }
+
+  if (action === 'developer_supervisor') {
+    const hasUpdate =
+      input.developerSupervisorEnabled !== undefined
+      || input.developerSupervisorMode !== undefined
+      || input.developerSupervisorAutoEnableGithubLogin !== undefined;
+    const payload = hasUpdate
+      ? writeOplDeveloperSupervisorConfig({
+        enabled: input.developerSupervisorEnabled,
+        mode: input.developerSupervisorMode,
+        auto_enable_github_login: input.developerSupervisorAutoEnableGithubLogin,
+      })
+      : readOplDeveloperSupervisorConfig();
+    return {
+      version: 'g2',
+      system_action: {
+        action,
+        status: hasUpdate ? 'completed' : 'ready',
+        update_channel: readOplUpdateChannel().channel,
+        workspace_root: readOplWorkspaceRoot(),
+        developer_supervisor: payload,
+        details: payload,
+      },
+    };
   }
 
   if (!input.channel) {
