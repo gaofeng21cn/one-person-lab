@@ -34,6 +34,7 @@ Do not add new loose Markdown files under `docs/references/` unless they are REA
 - [GUI mainline pivot to AionUI](./convergence-governance/2026-04-21-gui-mainline-pivot-to-aionui.md)
 - [Contract convergence v1 decision note](./convergence-governance/contract-convergence-v1-decision-note.md)
 - [Docs lifecycle management playbook](./convergence-governance/docs-lifecycle-management-playbook.zh-CN.md)
+- [Family docs lifecycle governance rollout, 2026-05-09](./convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.zh-CN.md)
 - [Series docs governance checklist](./convergence-governance/series-doc-governance-checklist.md)
 - [Four-repo doc intake template](./convergence-governance/four-repo-doc-intake-template.md)
 - [Contract convergence v1 execution board](./convergence-governance/contract-convergence-v1-execution-board.md)

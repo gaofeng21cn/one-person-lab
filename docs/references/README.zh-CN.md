@@ -34,6 +34,7 @@
 - [GUI 主线切换到 AionUI](./convergence-governance/2026-04-21-gui-mainline-pivot-to-aionui.md)
 - [Contract convergence v1 决策记录](./convergence-governance/contract-convergence-v1-decision-note.md)
 - [文档分层与生命周期管理 Playbook](./convergence-governance/docs-lifecycle-management-playbook.zh-CN.md)
+- [Family Docs 生命周期治理落地记录，2026-05-09](./convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.zh-CN.md)
 - [系列项目文档治理清单](./convergence-governance/series-doc-governance-checklist.md)
 - [四仓文档 intake 模板](./convergence-governance/four-repo-doc-intake-template.md)
 - [Contract convergence v1 执行看板](./convergence-governance/contract-convergence-v1-execution-board.md)

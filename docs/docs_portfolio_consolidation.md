@@ -1,7 +1,7 @@
 # OPL Documentation Portfolio Consolidation
 
 Status: `active docs governance`
-Date: `2026-05-07`
+Date: `2026-05-09`
 Owner: `One Person Lab`
 
 ## Summary
@@ -15,6 +15,8 @@ Every long-lived document must have four explicit signals:
 4. `machine boundary`: whether code, tests, contracts, or runtime surfaces may consume it.
 
 `README*` and `docs/**` are human-readable surfaces. Machine-readable behavior must use `contracts/`, schemas, source files, generated artifacts, CLI/API behavior, or semantic ids such as `human_doc:*`; it must not pin prose docs paths as stable interfaces.
+
+The family-level rollout rule is recorded in [OPL Family Docs Lifecycle Governance Rollout 2026-05-09](./references/convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.zh-CN.md). That rollout turns the MAS full-docs restructuring into an OPL-family standard: repositories must be role-equivalent in lifecycle governance, but they do not need identical directory names.
 
 ## Reading Order
 
@@ -87,9 +89,23 @@ All other long-lived docs must live in `active/`, `public/`, `specs/`, `referenc
 | Source | Practice adopted here |
 | --- | --- |
 | [Diataxis](https://diataxis.fr/) | Separate explanation, how-to, reference, and learning material by reader intent. |
+| [GitLab documentation topic types](https://docs.gitlab.com/development/documentation/topic_types/troubleshooting/) | Keep troubleshooting, task, and reference material in explicit topic boundaries instead of mixing them into default entry pages. |
+| [Microsoft Learn style guide](https://learn.microsoft.com/en-us/style-guide/word-choice/use-simple-words-concise-sentences) | Keep entry pages concise, scannable, and terminology-consistent. |
+| [Write the Docs: Docs as Code](https://www.writethedocs.org/guide/docs-as-code.html) | Treat documentation changes as reviewed, diffable, verifiable repo work with owners and lifecycle state. |
 | [The Good Docs Project IA guide](https://www.thegooddocsproject.dev/tactic/ia-guide) | Design information architecture from reader goals and maintain a clear navigation path. |
 | [Red Hat modular docs](https://redhat-documentation.github.io/modular-docs/) | Keep modules independently meaningful and assemble them by user story instead of flat adjacency. |
 | [Google developer docs style guide](https://developers.google.cn/style/highlights) | Keep headings, links, dates, and wording scannable and consistent. |
+
+## Family Rollout Rule
+
+Cross-repo docs治理 must follow role-equivalent lifecycle architecture:
+
+- `OPL` owns family documentation language, cross-repo intake templates, shared governance references, and audit checklists.
+- `MAS` owns medical research runtime/program/capability truth and remains the reference implementation for deep docs lifecycle restructuring.
+- `MAG` owns grant truth; older path-stable specs may remain under `docs/specs/` while README/index layers separate active and historical records.
+- `RCA` owns visual-deliverable truth; product, runtime, delivery, source, references, program, policies, and history should be separate reader layers.
+
+When a domain repo cannot safely move historical docs because current-program, audit, or old absolute-path evidence still points at them, the correct move is index-level lifecycle separation first, physical migration later.
 
 ## Archive Rule
 
