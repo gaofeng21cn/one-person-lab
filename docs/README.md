@@ -41,6 +41,7 @@ These files give the fastest read on the current repo-tracked truth before you c
 - [Decisions](./decisions.md)
 - [Contracts Overview](../contracts/README.md)
 - [Documentation Portfolio](./docs_portfolio_consolidation.md)
+- [Family Docs Lifecycle Governance Rollout](./references/convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.zh-CN.md)
 - [OPL Runtime Manager Target](./references/runtime-substrate/opl-runtime-manager-target.md)
 
 ## Lifecycle Portfolio
@@ -124,4 +125,5 @@ History explains how or why a freeze happened, while [Status](./status.md) remai
 - Keep history as tracked provenance and tombstone material.
 - Treat `docs/**` and `README*` as human-readable surfaces: scripts, contracts, tests, and runtime dashboards should use contract files, schema files, source files, CLI/API behavior, or semantic `human_doc:*` ids instead of pinning prose document paths.
 - New or moved documents must follow [Documentation Portfolio](./docs_portfolio_consolidation.md) before they become long-lived surfaces.
+- Cross-repo docs governance follows the [Family Docs Lifecycle Governance Rollout](./references/convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.zh-CN.md): keep lifecycle roles equivalent across OPL, MAS, MAG, and RCA without forcing identical directory names.
 - When a change affects public wording, contracts, or admitted-domain state, update docs, contracts, and related verification together.
