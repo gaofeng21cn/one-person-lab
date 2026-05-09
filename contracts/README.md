@@ -5,15 +5,15 @@
 - narrative 协作规则看仓库根 `AGENTS.md`
 - 默认人类/AI 入口看 `README*` 与 `docs/README*`
 - 历史 gateway/federation 兼容合同入口看 `contracts/opl-gateway/README.md`
-- 当前公开默认主路径是 `external shell or CLI -> OPL session runtime -> selected domain agent entry`；`Hermes-Agent` 只保留显式备用模式与 online gateway
-- 当前 active domain agent 集合是 `MAS`、`MAG`、`RCA`；`MDS` 只作为 `MAS` 下的受控 runtime/backend companion 进入安装、环境管理和运行依赖投影，不作为顶层 domain-agent entry。
+- 当前公开默认主路径是 `external shell or CLI -> Codex-default OPL session runtime -> selected domain agent entry`；`Hermes-Agent` 只保留为显式 optional hosted/runtime/provider adapter 与 online gateway
+- 当前 active domain agent 集合是 `MAS`、`MAG`、`RCA`；`MDS` 只作为 `MAS` 下的显式可选 backend/audit/oracle companion 进入环境管理和投影，不作为默认安装依赖或顶层 domain-agent entry。
 - 已退役的旧入口词族不是 OPL 当前合同面；若只在历史 gateway 语料或 domain 仓内部 command/schema contract 中出现，必须按对应层级阅读。
 
 当前保留的 repo-tracked machine-readable truth：
 
 - `contracts/opl-gateway/*.json`：历史 gateway-first 阶段冻结的 gateway、admission、acceptance 与 supporting-surface compatibility contract
 - `contracts/opl-gateway/README.md`：这些 JSON contract 的人类可读说明
-- `contracts/opl-gateway/runtime-manager-contract.json`：当前 OPL Runtime Manager 薄管理层合同；它冻结 OPL 如何管理外部 `Hermes-Agent` runtime substrate、可选 native helper lifecycle、高频状态索引、prebuild/cache 策略与 freshness 口径，同时明确不复制 runtime kernel
+- `contracts/opl-gateway/runtime-manager-contract.json`：当前 OPL Runtime Manager 薄管理层合同；它冻结 OPL 如何在显式启用时管理外部 `Hermes-Agent` provider adapter、可选 native helper lifecycle、高频状态索引、prebuild/cache 策略与 freshness 口径，同时明确不复制 runtime kernel，也不把 Hermes 写成默认 runtime
 - `contracts/opl-gateway/native-helper-contract.json`：OPL Rust native helper 的 JSON stdio 合同；它冻结 `opl-sysprobe`、`opl-doctor-native`、`opl-runtime-watch`、`opl-artifact-indexer` 与 `opl-state-indexer` 的输入输出边界，以及 helper 的 build / doctor / repair / prebuild / package 分发面
 - `contracts/opl-gateway/fresh-install-test-matrix.json`：OPL fresh install 与 GUI 首启验证矩阵；它冻结 CLI clean-room 场景、首启 JSONL 日志、GUI accessibility labels 与 VM 工件要求
 - `contracts/family-orchestration/*.schema.json`：跨 active 四仓线（`one-person-lab` + `MAS` + `MAG` + `RCA`）统一的 family orchestration companion schemas

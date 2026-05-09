@@ -641,7 +641,7 @@ exit 1
   }
 });
 
-test('opl install provisions Hermes gateway before reporting first-run completion', async () => {
+test('opl install does not provision optional Hermes gateway by default', async () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-hermes-home-'));
   const stateDir = path.join(homeRoot, 'opl-state');
   const codexConfigFixture = createCodexConfigFixture({
@@ -734,58 +734,33 @@ exit 1
       };
     };
 
-    assert.equal(fs.existsSync(gatewayState), true);
+    assert.equal(fs.existsSync(gatewayState), false);
     assert.equal(output.install.runtime_manager_action.status, 'completed');
-    assert.deepEqual(
-      output.install.runtime_manager_action.executed_actions.map((entry) => [
-        entry.action_id,
-        entry.status,
-      ]),
-      [['repair_hermes_gateway', 'completed']],
-    );
-    const hermesRepair = output.install.runtime_manager_action.executed_actions[0];
-    assert.equal(hermesRepair.blocking, false);
-    assert.equal(hermesRepair.action_lane, 'online_management');
-    assert.equal(hermesRepair.capability, 'online_task_management');
-    assert.deepEqual(
-      output.install.runtime_manager_action.non_blocking_actions.map((entry) => entry.action_id),
-      ['repair_hermes_gateway'],
-    );
-    assert.deepEqual(
-      output.install.runtime_manager_action.background_actions.map((entry) => entry.action_id),
-      ['repair_hermes_gateway'],
-    );
-    assert.deepEqual(
-      output.install.non_blocking_actions.map((entry) => entry.action_id),
-      ['repair_hermes_gateway'],
-    );
-    assert.deepEqual(
-      output.install.background_actions.map((entry) => entry.action_id),
-      ['repair_hermes_gateway'],
-    );
+    assert.deepEqual(output.install.runtime_manager_action.executed_actions, []);
+    assert.deepEqual(output.install.runtime_manager_action.non_blocking_actions, []);
+    assert.deepEqual(output.install.runtime_manager_action.background_actions, []);
+    assert.deepEqual(output.install.non_blocking_actions, []);
+    assert.deepEqual(output.install.background_actions, []);
     assert.equal(
       output.install.runtime_manager_action.after.reconcile.checked_surfaces.hermes_runtime,
-      'ready',
+      'optional_provider_attention',
     );
-    assert.equal(output.install.system_initialize.core_engines.hermes.health_status, 'ready');
-    assert.equal(output.install.system_initialize.core_engines.hermes.gateway_loaded, true);
-    assert.equal(output.install.system_initialize.online_management.status, 'ready');
+    assert.equal(output.install.system_initialize.core_engines.hermes.health_status, 'attention_needed');
+    assert.equal(output.install.system_initialize.core_engines.hermes.gateway_loaded, false);
+    assert.equal(output.install.system_initialize.online_management.status, 'initializing');
     assert.equal(output.install.system_initialize.online_management.blocking, false);
-    assert.equal(output.install.system_initialize.online_management.ready, true);
+    assert.equal(output.install.system_initialize.online_management.ready, false);
     assert.equal(
       output.install.first_run_log_events.some((entry) =>
         entry.event_type === 'online_management_repair_started'
-        && entry.payload.status === 'started'
       ),
-      true,
+      false,
     );
     assert.equal(
       output.install.first_run_log_events.some((entry) =>
         entry.event_type === 'online_management_repair_completed'
-        && entry.payload.status === 'completed'
-        && Array.isArray(entry.payload.executed_actions)
       ),
-      true,
+      false,
     );
     assert.equal(
       output.install.first_run_log_events.some((entry) =>

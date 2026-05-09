@@ -125,7 +125,7 @@ export function buildPublicCommandSpecs(
   const systemSpec = buildNoArgSpec(
     {
       usage: 'opl system',
-      summary: 'Show the user-facing OPL system surface: core engines, GUI install state, and managed paths.',
+      summary: 'Show the user-facing OPL system surface: Codex default readiness, optional engines, GUI install state, and managed paths.',
       examples: ['opl system'],
       group: 'system',
     },

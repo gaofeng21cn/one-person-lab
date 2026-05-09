@@ -2,6 +2,17 @@
 
 ## 2026-05-08
 
+### 决策：Hermes 从默认安装依赖降为显式可选 hosted/runtime provider adapter
+
+原因：`OPL` 的默认运行时、会话语义和 domain readiness 已明确收敛到 `Codex-default + MAS/MAG/RCA domain entries`。继续把 Hermes 写进 `opl install` 默认路径、首启 baseline 或 mandatory runtime substrate，会把可选 hosted/online-management 能力误读成 OPL 默认依赖。
+
+影响：
+
+- `opl install` 默认只安装/复用 `Codex CLI`、默认 domain modules、推荐 skills、`officecli` CLI 与 GUI；不再默认安装 Hermes。
+- `Hermes-Agent` 只作为显式 optional hosted/runtime/provider adapter 保留；需要时通过 `opl engine install --engine hermes`、`opl runtime repair-gateway` 或 route/provider config 启用。
+- `opl system initialize`、App 首启与 README 继续区分 core/domain readiness 与 optional online-management readiness；Hermes 缺失不得成为首屏 blocker。
+- Full 首次安装包可以携带 Hermes provider-adapter payload，但 machine-readable manifest 必须标为 optional / non-default / explicit activation required。
+
 ### 决策：引入 Family Action Catalog 作为 action metadata 单一声明面
 
 原因：`MAS`、`MAG`、`RCA` 已经分别暴露 CLI、MCP、Skill、product-entry 等多种调用面。如果每个 surface 单独维护 action metadata，命令、schema、effect、human gate 与 authority boundary 容易漂移。`Ageniti` 值得学习的是“单一 app action 定义派生多种 tool surface”的思路；但它当前不应成为 OPL family runtime dependency。
@@ -56,13 +67,13 @@
 
 ## 2026-05-02
 
-### 决策：首启 readiness 拆分为 core/domain 可用与 Hermes online-management 渐进就绪
+### 历史决策：首启 readiness 拆分为 core/domain 可用与 Hermes online-management 渐进就绪
 
 原因：新用户首屏应该尽快进入 `OPL` 的核心工作与已准入 domain 工作。Hermes 仍然是外部 runtime substrate 与 online-management gateway，但 gateway system service 的加载状态不应被写成底层 Hermes runtime 未就绪式首屏 blocker。
 
 影响：
 
-- `opl install` 默认安装或复用受支持的外部 Hermes runtime substrate。
+- `opl install` 不再默认安装 Hermes；显式 Hermes provider adapter 可被安装或复用。
 - Hermes online-management gateway 是由 Hermes installer/gateway command 管理的系统服务；OPL 负责触发安装/启动、检查 readiness 并报告状态，不接管 gateway service lifecycle 实现。
 - `opl system initialize`、App 首启与公开 README 文案必须区分 core/domain readiness 与 online-management readiness。
 - 当 Codex CLI 与已准入 domain modules ready 时，首屏可以进入通用工作、医学研究、基金写作或汇报/PPT 工作；Hermes gateway 未 loaded 只展示为 online-management pending / starting / needs attention。
@@ -115,7 +126,7 @@
 - 未显式配置 workspace root 时，`opl system initialize` 默认使用用户 Home 目录
 - 兼容版本的 `Codex CLI` 已可用时，不因缺少可读 Codex config 单独阻塞首启
 - `opl install` 默认安装/检查 domain modules，并以保守 managed 模式同步推荐 companion skills 和 `officecli` CLI 工具
-- `opl install` 默认安装或复用受支持的 Hermes runtime substrate；Hermes online-management gateway readiness 渐进展示，不阻塞已经 ready 的 core/domain 入口
+- `opl install` 默认不安装 Hermes；Hermes online-management gateway readiness 只在显式启用或已安装时渐进展示，不阻塞已经 ready 的 core/domain 入口
 - App 首启先静默读取 `opl system initialize`；若命令行安装已经完成，则不再运行安装或打开首启向导
 - 只有缺少 Codex CLI、当前命中版本过旧或无法解析、模块无法安装等不可自动解决事项，才进入环境管理提示
 
@@ -132,7 +143,7 @@
 
 ### 决策：冻结 `OPL Runtime Manager` 为薄产品管理层，而不是自有完整 runtime sidecar
 
-原因：当前长跑任务目标已经确定为把任务注册到外部 `Hermes-Agent` runtime substrate，由它负责 session、scheduler、wakeup、interrupt/resume、memory 与 delivery/cron。OPL 需要的是产品级 provision、version pin、profile wiring、domain task registration hydration、诊断、恢复入口、native helper catalog 与高频状态索引，而不是复制一套 runtime kernel。
+原因：当前长跑托管任务可以显式注册到外部 `Hermes-Agent` hosted/runtime provider adapter，由它负责 session、scheduler、wakeup、interrupt/resume、memory 与 delivery/cron。OPL 需要的是产品级 provision、version pin、profile wiring、domain task registration hydration、诊断、恢复入口、native helper catalog 与高频状态索引，而不是复制一套 runtime kernel，也不是把 Hermes 升成默认运行依赖。
 
 影响：
 

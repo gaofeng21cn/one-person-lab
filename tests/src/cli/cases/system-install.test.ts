@@ -228,7 +228,7 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
 
     assert.equal(output.install.surface_id, 'opl_install');
     assert.equal(output.install.status, 'completed');
-    assert.deepEqual(output.install.selected_engines, ['codex', 'hermes']);
+    assert.deepEqual(output.install.selected_engines, ['codex']);
     assert.deepEqual(output.install.engine_actions, []);
     assert.deepEqual(output.install.selected_modules, ['medautoscience']);
     assert.equal(output.install.codex_plugin_registry.surface_id, 'opl_codex_plugin_registry');
@@ -271,9 +271,7 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
       [
         ['install_started', 'written', output.install.first_run_log.log_path],
         ['runtime_manager_repair_started', 'written', output.install.first_run_log.log_path],
-        ['online_management_repair_started', 'written', output.install.first_run_log.log_path],
         ['runtime_manager_repair_completed', 'written', output.install.first_run_log.log_path],
-        ['online_management_repair_completed', 'written', output.install.first_run_log.log_path],
         ['install_completed', 'written', output.install.first_run_log.log_path],
       ],
     );
@@ -284,14 +282,11 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
     assert.deepEqual(firstRunEvents.map((entry) => entry.event_type), [
       'install_started',
       'runtime_manager_repair_started',
-      'online_management_repair_started',
       'runtime_manager_repair_completed',
-      'online_management_repair_completed',
       'install_completed',
     ]);
     assert.equal(firstRunEvents[0].payload.skip_gui_open, true);
-    assert.equal(firstRunEvents[2].payload.blocking, false);
-    assert.equal(firstRunEvents[5].payload.status, 'completed');
+    assert.equal(firstRunEvents[3].payload.status, 'completed');
     assert.equal(output.install.system_initialize.surface_id, 'opl_system_initialize');
     assert.equal(output.install.system_initialize.recommended_skills.surface_id, 'opl_recommended_skill_bundle');
     assert.equal(output.install.system_initialize.gui_shell.shell_id, 'opl_aion_shell');
@@ -766,8 +761,7 @@ test('install command points WebUI users to the AionUI shell instead of a local 
   }
 });
 
-
-test('install command reuses the already installed default runtime dependency', () => {
+test('install command reuses only the default Codex runtime dependency', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-engines-home-'));
   const codexFixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-codex-'));
   const codexConfigFixture = createCodexConfigFixture();
@@ -801,15 +795,23 @@ exit 1
     ) as {
       install: {
         engine_actions: Array<{ engine_id: string; status: string; strategy: string }>;
+        selected_engines: string[];
+        runtime_manager_action: {
+          executed_actions: Array<{ action_id: string }>;
+        };
       };
     };
 
+    assert.deepEqual(output.install.selected_engines, ['codex']);
     assert.deepEqual(
       output.install.engine_actions.map((entry) => [entry.engine_id, entry.status, entry.strategy]),
       [
         ['codex', 'skipped_installed', 'already_installed'],
-        ['hermes', 'skipped_installed', 'already_installed'],
       ],
+    );
+    assert.deepEqual(
+      output.install.runtime_manager_action.executed_actions.map((entry) => entry.action_id),
+      [],
     );
   } finally {
     fs.rmSync(codexConfigFixture.codexHome, { recursive: true, force: true });

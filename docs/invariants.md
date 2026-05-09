@@ -7,7 +7,7 @@
 - `Codex CLI` 是 OPL 的受管 runtime dependency：OPL 必须检测实际命中的 binary、版本、最低版本策略和 PATH 候选；同版本兼容 wrapper / alias 归并到当前有效入口，低于当前最低版本或当前命中版本无法解析的 Codex CLI 只能进入 `attention_needed`，不得被报告为 ready。
 - 只有显式 domain activation 或显式 runtime switch，才允许离开 Codex-default 语义。
 - `OPL Runtime Manager` 只能是产品级薄管理/投影层，不得被写成 scheduler、session store、memory store、domain truth owner 或 concrete executor。
-- `Hermes-Agent` 继续是外部 runtime substrate owner；OPL 可以管理、pin、诊断和投影它，但不得 fork/vendor 成 OPL 私有 runtime kernel。
+- `Hermes-Agent` 只能是显式可选 hosted/runtime provider adapter；OPL 可以在显式启用时管理、pin、诊断和投影它，但不得把它写成默认 runtime、默认 session/domain readiness 依赖，或 fork/vendor 成 OPL 私有 runtime kernel。
 - `OPL native helper` 与高频状态索引只能加速系统探测、artifact discovery、session/progress/artifact projection，不得替代 admitted domain 仓自己的 durable truth。
 - `OPL` 的 shared contract、graph、gate、index、scorecard 与 projection 只能携带证据、provenance、状态和路由信号；不得替 MAS/MAG/RCA 或未来 domain 持有 AI-first 作者判断、审稿判断、质量裁决或 ready verdict。
 - MAS v2 wording 必须保持 `MAS` 为独立 `domain agent` 与单一 domain app skill owner；`OPL` 只能消费 MAS-owned entry/projection truth，不得把 MAS runtime、controller truth、quality authority 或 publication gate 收归 OPL。

@@ -71,7 +71,7 @@ The roadmap is healthy when readers can immediately understand:
 
 - `OPL` is the Codex-default session/runtime layer, explicit activation layer, and shared modules/contracts/indexes owner for the family
 - admitted domains keep their own authority under that shell
-- the default executor remains `Codex CLI`, while `OPL Runtime Manager` is only a thin product-managed adapter over external `Hermes-Agent`
+- the default executor remains `Codex CLI`, while `OPL Runtime Manager` is only a thin product-managed adapter over explicit optional `Hermes-Agent`
 - legacy `OPL Gateway`, `opl web`, `Product API`, and AionUI-first-shell material is read as compatibility or reference context unless a current core document promotes it
 - future hosted and desktop work continues the same runtime/activation truth surfaces
 - new workstreams are entering as explicit domain surfaces with clear boundaries

@@ -3,7 +3,7 @@
   "contract_ref": "contracts/opl-gateway/managed-runtime-three-layer-contract.json",
   "contract_id": "opl_managed_runtime_three_layer_contract",
   "scope": "admitted_domain_managed_runtime_supervision_and_executor_boundary",
-  "description": "Machine-readable freeze for the shared OPL managed-runtime three-layer owner envelope across admitted domains. It fixes the boundary between hosted runtime ownership, domain supervision ownership, and concrete executor ownership without becoming a runtime control plane.",
+  "description": "Machine-readable freeze for the shared OPL managed-runtime three-layer owner envelope across admitted domains. It fixes the boundary between optional hosted runtime/provider ownership, domain supervision ownership, and concrete executor ownership without making Hermes a default runtime or becoming a runtime control plane.",
   "required_owner_fields": [
     "runtime_owner",
     "domain_owner",
@@ -15,7 +15,7 @@
     "recovery_contract_surface"
   ],
   "owner_semantics": {
-    "runtime_owner": "Hosted runtime substrate owner responsible for session/run/watch/resume lifecycle.",
+    "runtime_owner": "Explicit optional hosted runtime/provider owner responsible for session/run/watch/resume lifecycle only when selected by contract.",
     "domain_owner": "Domain supervision owner responsible for progress truth, quality gates, and recovery judgment.",
     "executor_owner": "Concrete executor owner responsible for domain work output and local side effects."
   },

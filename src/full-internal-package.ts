@@ -126,8 +126,11 @@ export function buildFullPackageManifest(input: FullPackageManifestInput = {}) {
       },
       hermes: {
         ...normalizeComponent(components.hermes),
-        role: 'system_daemon_runtime',
-        required: true,
+        role: 'optional_hosted_runtime_provider_adapter',
+        required: false,
+        optional: true,
+        default_runtime: false,
+        explicit_activation_required: true,
         profile: 'lean',
         retained_capabilities: ['gateway', 'cron', 'session', 'launchd_service', 'profile', 'status'],
         excluded_capabilities: ['web_ui', 'voice', 'dev_tests', 'dev_extras', 'runtime_state', 'optional_messaging_providers'],
@@ -288,8 +291,9 @@ export function buildInternalPackageReadme(input: {
     '4. MAS/MAG/RCA 随包内容只作为首启安装源；初始化后会进入标准模块目录：',
     '   ~/Library/Application Support/OPL/state/modules/<repo-name>',
     '5. Full runtime 内置 officecli CLI binary 与 MAS/MAG/RCA、officecli、officecli-docx/pptx/xlsx、ui-ux-pro-max 等推荐 companion skills；App 初始化会把它们同步到 Codex 可见路径。',
-    '6. 在 App 里配置 Codex API key 后，进入 OPL 初始化页确认 Codex、Hermes-Agent、MAS、MAG、RCA、officecli CLI 与推荐 skills 状态。',
-    '7. 推荐先跑一次 MAS 最小 smoke：进入 Research Foundry，创建或读取一个 workspace 状态。',
+    '6. Hermes-Agent 只作为可选 hosted/runtime provider adapter 随包提供；默认 runtime/session/domain readiness 仍走 Codex + MAS local scheduler/domain entries。',
+    '7. 在 App 里配置 Codex API key 后，进入 OPL 初始化页确认 Codex、MAS、MAG、RCA、officecli CLI 与推荐 skills 状态；只有显式启用在线托管任务时才检查 Hermes-Agent。',
+    '8. 推荐先跑一次 MAS 最小 smoke：进入 Research Foundry，创建或读取一个 workspace 状态。',
     '',
     input.runtimeTarName
       ? `补充 runtime 包：如 DMG 内 runtime 安装失败，可保留 ${input.runtimeTarName} 作为人工诊断包。`
