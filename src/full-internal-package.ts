@@ -124,17 +124,6 @@ export function buildFullPackageManifest(input: FullPackageManifestInput = {}) {
         role: 'default_agent_cli',
         required: true,
       },
-      hermes: {
-        ...normalizeComponent(components.hermes),
-        role: 'optional_hosted_runtime_provider_adapter',
-        required: false,
-        optional: true,
-        default_runtime: false,
-        explicit_activation_required: true,
-        profile: 'lean',
-        retained_capabilities: ['gateway', 'cron', 'session', 'launchd_service', 'profile', 'status'],
-        excluded_capabilities: ['web_ui', 'voice', 'dev_tests', 'dev_extras', 'runtime_state', 'optional_messaging_providers'],
-      },
       mas: {
         ...normalizeComponent(components.mas),
         role: 'primary_domain_module',
@@ -291,8 +280,8 @@ export function buildInternalPackageReadme(input: {
     '4. MAS/MAG/RCA 随包内容只作为首启安装源；初始化后会进入标准模块目录：',
     '   ~/Library/Application Support/OPL/state/modules/<repo-name>',
     '5. Full runtime 内置 officecli CLI binary 与 MAS/MAG/RCA、officecli、officecli-docx/pptx/xlsx、ui-ux-pro-max 等推荐 companion skills；App 初始化会把它们同步到 Codex 可见路径。',
-    '6. Hermes-Agent 只作为可选 hosted/runtime provider adapter 随包提供；默认 runtime/session/domain readiness 仍走 Codex + MAS local scheduler/domain entries。',
-    '7. 在 App 里配置 Codex API key 后，进入 OPL 初始化页确认 Codex、MAS、MAG、RCA、officecli CLI 与推荐 skills 状态；只有显式启用在线托管任务时才检查 Hermes-Agent。',
+    '6. Hermes-Agent 不再作为默认 Full payload 随包安装；需要 hosted/runtime provider adapter 时，请在 App 内或 CLI 中显式安装 Hermes。',
+    '7. 在 App 里配置 Codex API key 后，进入 OPL 初始化页确认 Codex、MAS、MAG、RCA、officecli CLI 与推荐 skills 状态；Hermes-Agent 缺失不影响默认初始化完成。',
     '8. 推荐先跑一次 MAS 最小 smoke：进入 Research Foundry，创建或读取一个 workspace 状态。',
     '',
     input.runtimeTarName

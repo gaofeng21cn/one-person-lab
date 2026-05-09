@@ -11,7 +11,7 @@
 - `opl install` 默认只安装/复用 `Codex CLI`、默认 domain modules、推荐 skills、`officecli` CLI 与 GUI；不再默认安装 Hermes。
 - `Hermes-Agent` 只作为显式 optional hosted/runtime/provider adapter 保留；需要时通过 `opl engine install --engine hermes`、`opl runtime repair-gateway` 或 route/provider config 启用。
 - `opl system initialize`、App 首启与 README 继续区分 core/domain readiness 与 optional online-management readiness；Hermes 缺失不得成为首屏 blocker。
-- Full 首次安装包可以携带 Hermes provider-adapter payload，但 machine-readable manifest 必须标为 optional / non-default / explicit activation required。
+- Full 首次安装包默认不携带 Hermes provider-adapter payload；需要 hosted/online task management 时，由用户通过显式可选安装进入。
 
 ### 决策：引入 Family Action Catalog 作为 action metadata 单一声明面
 
@@ -102,7 +102,7 @@
 - 中央 release manifest / Packages workflow 可以继续维护为机器分发雏形，但各 domain repo 不需要单独恢复用户安装型 GitHub Release
 - WebUI Docker 镜像通过 GHCR 发布，服务 Docker/浏览器-only 场景
 - Native helper 预构建 archive 同步发布到 GHCR，后续 `native:repair` 可优先消费
-- 标准桌面 App 与自动更新包仍不打入 `MAS/MAG/RCA` runtime payload；macOS arm64 可额外发布 Full 首次安装资产，随包带 `MAS/MAG/RCA`、Hermes、`officecli` CLI binary 与推荐 companion skill payload，但不得写入 `latest*.yml` 或改变 App 自动更新通道
+- 标准桌面 App 与自动更新包仍不打入 `MAS/MAG/RCA` runtime payload；macOS arm64 可额外发布 Full 首次安装资产，随包带 `MAS/MAG/RCA`、`officecli` CLI binary 与推荐 companion skill payload，但不得写入 `latest*.yml` 或改变 App 自动更新通道
 
 ### 决策：One Person Lab App 只做 CLI-backed GUI，不复制安装与环境管理逻辑
 

@@ -93,7 +93,7 @@ opl help --text         # 人类可读帮助；机器读取使用 opl help --jso
 
 在 MAS v2 alignment 下，`Med Auto Science` 继续是独立医学科研 domain agent，并通过单一 domain app skill 被 Codex 与 OPL 消费。OPL 持有统一定义、shared contract/index 注册、模块发现和 projection 消费层；它不变成 MAS runtime kernel，不恢复 MAS standalone release / install 通道，也不把 MAS projection 写成 OPL 自己持有的 ready verdict 或投稿/发表裁决。
 
-桌面 GUI 由 [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) 作为 OPL 品牌 App 外壳维护。用户从这个仓库的 GitHub Releases 获取 One Person Lab App 包；macOS arm64 新用户可选择带 MAS/MAG/RCA、可选 Hermes provider-adapter payload、`officecli` 以及推荐 companion skill payload 的 `One-Person-Lab-Full-<version>-mac-arm64.dmg` 首次安装资产，App 内更新继续只使用标准 App 资产和 `latest*.yml` metadata。这个仓库提供 App 和 Codex 共同消费的共享合同与产品表面。
+桌面 GUI 由 [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) 作为 OPL 品牌 App 外壳维护。用户从这个仓库的 GitHub Releases 获取 One Person Lab App 包；macOS arm64 新用户可选择带 MAS/MAG/RCA、`officecli` 以及推荐 companion skill payload 的 `One-Person-Lab-Full-<version>-mac-arm64.dmg` 首次安装资产，App 内更新继续只使用标准 App 资产和 `latest*.yml` metadata。Hermes 只在需要 hosted/online task management 时通过显式可选安装进入。这个仓库提供 App 和 Codex 共同消费的共享合同与产品表面。
 
 ### 这个仓库怎么读
 
