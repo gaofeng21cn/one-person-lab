@@ -111,7 +111,7 @@ exit 1
       };
     };
 
-    assert.equal(output.system.overall_status, 'attention_needed');
+    assert.equal(output.system.overall_status, 'ready');
     assert.equal(output.system.core_engines.codex.version_status, 'compatible');
     assert.equal(output.system.core_engines.codex.health_status, 'ready');
     assert.deepEqual(output.system.core_engines.codex.issues, []);

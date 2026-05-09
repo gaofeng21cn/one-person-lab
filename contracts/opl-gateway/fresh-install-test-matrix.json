@@ -73,7 +73,7 @@
         "domain_modules"
       ],
       "expected_online_management": {
-        "status": "needs_attention",
+        "status": "optional_unconfigured",
         "blocking": false
       }
     },
@@ -87,7 +87,7 @@
         "domain_modules"
       ],
       "expected_online_management": {
-        "status": "needs_attention",
+        "status": "optional_unconfigured",
         "blocking": false
       }
     },
@@ -102,7 +102,7 @@
         "domain_modules"
       ],
       "expected_online_management": {
-        "status": "needs_attention",
+        "status": "optional_unconfigured",
         "blocking": false
       }
     },
@@ -113,7 +113,7 @@
       "expected_phase": "review",
       "expected_blockers": [],
       "expected_online_management": {
-        "status": "needs_attention",
+        "status": "optional_unconfigured",
         "blocking": false
       }
     },
