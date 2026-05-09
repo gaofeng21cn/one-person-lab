@@ -21,6 +21,7 @@
 - `OPL` 当前主线以 `Codex-default session/runtime + explicit activation layer` 为 canonical truth
 - 本地 `opl`、直接 `Codex` 使用、ACP-compatible 外部壳与基于开源 AionUI 定制的 `opl-aion-shell` 都消费同一套 runtime truth
 - `OPL Runtime Manager` 是 OPL 产品级管理/诊断/投影层；它只在显式启用时管理受支持的外部 `Hermes-Agent` provider adapter 与 online-management gateway readiness，但不复制 runtime kernel
+- family-level runtime supervision 只作为 domain-owned wakeup / supervision surface 的 discovery、export、parity 与 read-only projection；`OPL` 不新增 daemon，也不接管 domain scheduler、session、memory、quality 或 artifact authority
 - `opl`、`opl exec`、`opl resume` 默认继承 `Codex CLI` 语义
 - `opl install` 默认安装或复用 Codex、MAS/MAG/RCA domain modules 与推荐 companion tools；Hermes 只能通过 `opl engine install --engine hermes`、`opl runtime repair-gateway` 或显式 provider adapter 配置进入
 - 首启 readiness 分为 core/domain readiness 与可选 online-management readiness；Codex 与已准入 domain 模块 ready 时，Hermes 缺失或 gateway 尚未 loaded 不阻塞核心入口
@@ -80,6 +81,7 @@
 - 显式可选 `Hermes-Agent` provider adapter 的 provision / version pin / profile wiring
 - Hermes online-management gateway readiness 的触发、检查与状态报告
 - domain task registration contract 的 hydration
+- family runtime supervision contract 的只读发现、导出、一致性检查与产品投影；其中 adapter_id、cadence、last_success / last_tick、lease_freshness、SLO state、repair command、safe reconcile hint 与 source refs 均来自 domain-owned surface
 - runtime status、session、progress、artifact、attention queue 的 OPL 产品级投影
 - `opl runtime manager`、doctor、repair、resume 等诊断和恢复入口
 - 可选 Rust `OPL native helper` 的 registry，例如 system probe、native doctor、runtime watch、artifact indexer、state indexer
@@ -95,6 +97,7 @@
 - session / memory store
 - domain truth
 - concrete executor
+- domain wakeup / supervision scheduler
 - Hermes gateway system service lifecycle implementation
 - 私有 fork / vendor 一份 `Hermes-Agent`
 

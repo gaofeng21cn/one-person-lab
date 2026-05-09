@@ -1,0 +1,271 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opl.onepersonlab/contracts/family-orchestration/family-runtime-supervision.schema.json",
+  "title": "OPL Family Runtime Supervision",
+  "description": "Shared read-only runtime wakeup and supervision projection for domain-owned supervision surfaces.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "surface_kind",
+    "version",
+    "target_domain_id",
+    "supervision_id",
+    "adapter_id",
+    "cadence",
+    "last_success",
+    "last_tick",
+    "lease_freshness",
+    "slo_state",
+    "repair_command",
+    "safe_reconcile_hint",
+    "domain_owned_source_refs",
+    "read_only_authority_boundary"
+  ],
+  "properties": {
+    "surface_kind": {
+      "const": "family_runtime_supervision"
+    },
+    "version": {
+      "const": "family-runtime-supervision.v1"
+    },
+    "target_domain_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "supervision_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "adapter_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "cadence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "interval_seconds"
+      ],
+      "properties": {
+        "interval_seconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "jitter_seconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "schedule_ref": {
+          "$ref": "#/$defs/referenceRef"
+        }
+      }
+    },
+    "last_success": {
+      "type": "string",
+      "minLength": 1
+    },
+    "last_tick": {
+      "type": "string",
+      "minLength": 1
+    },
+    "lease_freshness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "observed_at",
+        "max_age_seconds"
+      ],
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "fresh",
+            "stale",
+            "expired",
+            "unknown"
+          ]
+        },
+        "observed_at": {
+          "type": "string",
+          "minLength": 1
+        },
+        "max_age_seconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "lease_ref": {
+          "$ref": "#/$defs/referenceRef"
+        }
+      }
+    },
+    "slo_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "summary",
+        "breached_slo_ids"
+      ],
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "met",
+            "at_risk",
+            "breached",
+            "unknown"
+          ]
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "breached_slo_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "slo_ref": {
+          "$ref": "#/$defs/referenceRef"
+        }
+      }
+    },
+    "repair_command": {
+      "type": "string",
+      "minLength": 1
+    },
+    "safe_reconcile_hint": {
+      "type": "string",
+      "minLength": 1
+    },
+    "domain_owned_source_refs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/referenceRef"
+      }
+    },
+    "read_only_authority_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "projection_owner",
+        "runtime_owner",
+        "scheduler_owner",
+        "authority",
+        "forbidden_authorities"
+      ],
+      "properties": {
+        "projection_owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "runtime_owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scheduler_owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "authority": {
+          "const": "read_only_projection"
+        },
+        "forbidden_authorities": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "enum": [
+              "daemon_owner",
+              "scheduler_owner",
+              "session_store_owner",
+              "memory_store_owner",
+              "quality_verdict_owner",
+              "artifact_authority",
+              "domain_truth_owner"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "referenceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ref_kind",
+        "ref"
+      ],
+      "properties": {
+        "ref_kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "surface_kind": "family_runtime_supervision",
+      "version": "family-runtime-supervision.v1",
+      "target_domain_id": "medautoscience",
+      "supervision_id": "mas_workspace_runtime_supervision",
+      "adapter_id": "local_launchd",
+      "cadence": {
+        "interval_seconds": 60,
+        "jitter_seconds": 5
+      },
+      "last_success": "2026-05-10T00:00:05Z",
+      "last_tick": "2026-05-10T00:00:00Z",
+      "lease_freshness": {
+        "state": "fresh",
+        "observed_at": "2026-05-10T00:00:08Z",
+        "max_age_seconds": 180
+      },
+      "slo_state": {
+        "state": "met",
+        "summary": "supervision tick is inside the domain-owned freshness SLO",
+        "breached_slo_ids": []
+      },
+      "repair_command": "medautoscience runtime-ensure-supervision --profile <profile>",
+      "safe_reconcile_hint": "Run the domain-owned repair command and re-read the domain-owned supervision source; OPL must not write runtime truth.",
+      "domain_owned_source_refs": [
+        {
+          "ref_kind": "repo_path",
+          "ref": "studies/<study_id>/artifacts/runtime/runtime_supervision/latest.json",
+          "role": "runtime_supervision_truth"
+        }
+      ],
+      "read_only_authority_boundary": {
+        "projection_owner": "one-person-lab",
+        "runtime_owner": "medautoscience",
+        "scheduler_owner": "medautoscience",
+        "authority": "read_only_projection",
+        "forbidden_authorities": [
+          "scheduler_owner",
+          "session_store_owner",
+          "memory_store_owner",
+          "quality_verdict_owner",
+          "artifact_authority"
+        ]
+      }
+    }
+  ]
+}
