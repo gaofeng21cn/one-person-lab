@@ -5,49 +5,11 @@ import { inspectHermesRuntime } from './hermes.ts';
 import { buildDomainManifestCatalog } from './management/domain-manifest-catalog.ts';
 import type { DomainManifestCatalogEntry, NormalizedDomainManifest, NormalizedSurfaceRef } from './domain-manifest/types.ts';
 import type { GatewayContracts } from './types.ts';
-import { actionContext, actionCountsForItems, noActionContext, runningActionContext, type RuntimeTrayActionKind, type RuntimeTrayActionOwner } from './runtime-tray-action.ts';
+import { actionContext, actionCountsForItems, noActionContext, runningActionContext } from './runtime-tray-action.ts';
 import { humanizeStatusLabel, liveRouteStatusLabel, localizeRuntimeDisplayList, localizeRuntimeDisplayText, masPublicationActionSummary, masPublicationNextActionSummary, titleFromHermesCronJob } from './runtime-tray-display.ts';
-
-type RuntimeTrayHealthStatus = 'offline' | 'needs_attention' | 'running' | 'idle';
-type RuntimeTrayLane = 'running' | 'attention' | 'recent';
-
-type RuntimeTraySourceRef = {
-  ref_kind: string;
-  ref: string;
-  role: string;
-  label?: string;
-};
-
-type RuntimeTrayItem = {
-  item_id: string;
-  project_id: string;
-  project_label: string;
-  lane: RuntimeTrayLane;
-  title: string;
-  status: string | null;
-  status_label: string;
-  summary: string | null;
-  updated_at: string | null;
-  command: string | null;
-  workspace_path: string | null;
-  runtime_owner: 'upstream_hermes_agent';
-  domain_owner: string;
-  source_refs: RuntimeTraySourceRef[];
-  action_owner: RuntimeTrayActionOwner;
-  requires_user_action: boolean;
-  action_kind: RuntimeTrayActionKind | null;
-  action_summary: string;
-  study_id?: string | null;
-  workspace_label?: string | null;
-  detail_summary?: string | null;
-  next_action_summary?: string | null;
-  active_run_id?: string | null;
-  browser_url?: string | null;
-  quest_session_api_url?: string | null;
-  health_status?: string | null;
-  blockers?: string[];
-  recommended_commands?: RuntimeTrayCommand[];
-};
+import { buildMasPortalItems } from './runtime-tray-mas-portal.ts';
+import type { JsonRecord, MasWorkspaceProjectionRef, RuntimeTrayCommand, RuntimeTrayHealthStatus, RuntimeTrayItem, RuntimeTrayLane, RuntimeTraySourceRef } from './runtime-tray-snapshot-types.ts';
+import { fileSourceRef, firstString, firstStringFromList, nestedRecord, normalizeStatusCode, optionalBoolean, optionalString, readJsonRecord, shellArgument, sourceRef, stringListFromRecords, uniqueByRef, uniqueStrings } from './runtime-tray-snapshot-utils.ts';
 
 type HermesCronJob = {
   id?: unknown;
@@ -69,22 +31,6 @@ type HermesCronProjection = {
 };
 
 type HermesCronOutputIssue = 'script_error' | 'timed_out' | null;
-
-type RuntimeTrayCommand = {
-  step_id: string;
-  title: string;
-  surface_kind: string;
-  command: string;
-};
-
-type JsonRecord = Record<string, unknown>;
-
-type MasWorkspaceProjectionRef = {
-  workspace_root: string;
-  profile_ref: string | null;
-  profile_name: string | null;
-  source_refs: RuntimeTraySourceRef[];
-};
 
 const PROJECT_LABELS: Record<string, string> = {
   medautoscience: 'MAS',
@@ -122,71 +68,6 @@ const ATTENTION_STATUS_MARKERS = [
   'stale',
 ];
 
-function optionalString(value: unknown) {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function optionalBoolean(value: unknown) {
-  return typeof value === 'boolean' ? value : null;
-}
-
-function firstString(...values: unknown[]) {
-  for (const value of values) {
-    const normalized = optionalString(value);
-    if (normalized) {
-      return normalized;
-    }
-  }
-  return null;
-}
-
-function readJsonRecord(filePath: string): JsonRecord | null {
-  try {
-    const value = JSON.parse(fs.readFileSync(filePath, 'utf8')) as unknown;
-    return value && typeof value === 'object' && !Array.isArray(value) ? value as JsonRecord : null;
-  } catch {
-    return null;
-  }
-}
-
-function nestedRecord(record: JsonRecord | null | undefined, key: string): JsonRecord | null {
-  const value = record?.[key];
-  return value && typeof value === 'object' && !Array.isArray(value) ? value as JsonRecord : null;
-}
-
-function stringListFromRecords(value: unknown, key: string, limit = 5) {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value
-    .map((entry) => entry && typeof entry === 'object' && !Array.isArray(entry)
-      ? optionalString((entry as JsonRecord)[key])
-      : optionalString(entry))
-    .filter((entry): entry is string => Boolean(entry))
-    .slice(0, limit);
-}
-
-function firstStringFromList(values: string[]) {
-  return values.find((value) => value.trim().length > 0) ?? null;
-}
-
-function normalizeStatusCode(status: string) {
-  return status.trim().toLowerCase();
-}
-
-function uniqueByRef(refs: RuntimeTraySourceRef[]) {
-  const seen = new Set<string>();
-  return refs.filter((ref) => {
-    const key = `${ref.ref_kind}:${ref.ref}:${ref.role}`;
-    if (seen.has(key)) {
-      return false;
-    }
-    seen.add(key);
-    return true;
-  });
-}
-
 function normalizeSourceRef(
   ref: NormalizedSurfaceRef | null | undefined,
   role: string,
@@ -203,24 +84,6 @@ function normalizeSourceRef(
   };
 }
 
-function sourceRef(ref: string, role: string, label?: string): RuntimeTraySourceRef {
-  return {
-    ref_kind: 'json_pointer',
-    ref,
-    role,
-    label,
-  };
-}
-
-function fileSourceRef(ref: string, role: string, label?: string): RuntimeTraySourceRef {
-  return {
-    ref_kind: 'file',
-    ref,
-    role,
-    label,
-  };
-}
-
 function commandForMasStudy(profileRef: string | null, studyId: string, command: 'study-progress' | 'study-runtime-status') {
   if (!profileRef) {
     return null;
@@ -234,10 +97,6 @@ function commandForMasStudy(profileRef: string | null, studyId: string, command:
     shellArgument(studyId),
     ...(command === 'study-progress' ? ['--format', 'json'] : []),
   ].join(' ');
-}
-
-function shellArgument(value: string) {
-  return value.includes(' ') || value.includes("'") ? `'${value.replace(/'/g, `'\\''`)}'` : value;
 }
 
 function projectLabel(entry: DomainManifestCatalogEntry) {
@@ -790,34 +649,29 @@ function buildMasStudyItem(workspace: MasWorkspaceProjectionRef, studyRoot: stri
   };
 }
 
-function uniqueStrings(values: string[]) {
-  const seen = new Set<string>();
-  return values.filter((value) => {
-    const normalized = value.trim();
-    if (!normalized || seen.has(normalized)) {
-      return false;
-    }
-    seen.add(normalized);
-    return true;
-  });
-}
-
 function buildMasStudyProjection(domainManifests: { projects: DomainManifestCatalogEntry[] }) {
   const workspaces = uniqueMasWorkspaces([
     ...masWorkspaceRefsFromDomainManifests(domainManifests.projects),
     ...masWorkspaceRefsFromHermesCronJobs(),
   ]);
-  const items = workspaces.flatMap((workspace) =>
-    immediateStudyRoots(workspace.workspace_root)
-      .map((studyRoot) => buildMasStudyItem(workspace, studyRoot))
-      .filter((entry): entry is RuntimeTrayItem => Boolean(entry))
-  );
+  const portalProjections = workspaces.map((workspace) => buildMasPortalItems(workspace));
+  const portalWorkspaceRoots = new Set(portalProjections.flatMap((projection) => [...projection.portal_workspace_roots]));
+  const portalItems = portalProjections.flatMap((projection) => projection.items);
+  const fallbackItems = workspaces
+    .filter((workspace) => !portalWorkspaceRoots.has(path.resolve(workspace.workspace_root)))
+    .flatMap((workspace) =>
+      immediateStudyRoots(workspace.workspace_root)
+        .map((studyRoot) => buildMasStudyItem(workspace, studyRoot))
+        .filter((entry): entry is RuntimeTrayItem => Boolean(entry))
+    );
+  const items = [...portalItems, ...fallbackItems];
 
   return {
     items,
     source_refs: workspaces.length > 0
       ? [
         sourceRef('/runtime_tray_snapshot/mas_study_items', 'runtime_projection'),
+        ...portalProjections.flatMap((projection) => projection.source_refs),
         ...workspaces.flatMap((workspace) => workspace.source_refs),
       ]
       : [],
