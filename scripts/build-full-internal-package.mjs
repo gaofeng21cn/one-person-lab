@@ -31,7 +31,6 @@ function parseArgs(argv) {
       ? path.join(repoRoot, FULL_RELEASE_OUTPUT_DIR)
       : FULL_INTERNAL_OUTPUT_DIR,
     guiRoot: path.join(workspaceRoot, 'opl-aion-shell'),
-    hermesRoot: process.env.OPL_FULL_HERMES_ROOT || path.join(workspaceRoot, '_external', 'hermes-agent'),
     masRoot: process.env.OPL_FULL_MAS_ROOT || path.join(workspaceRoot, 'med-autoscience'),
     magRoot: process.env.OPL_FULL_MAG_ROOT || path.join(workspaceRoot, 'med-autogrant'),
     rcaRoot: process.env.OPL_FULL_RCA_ROOT || path.join(workspaceRoot, 'redcube-ai'),
@@ -72,7 +71,9 @@ function parseArgs(argv) {
     if (token === '--version') parsed.version = value;
     else if (token === '--out-dir') parsed.outDir = path.resolve(value);
     else if (token === '--gui-root') parsed.guiRoot = path.resolve(value);
-    else if (token === '--hermes-root') parsed.hermesRoot = path.resolve(value);
+    else if (token === '--hermes-root') {
+      // Retained as a no-op for old local invocations; Full no longer bundles Hermes by default.
+    }
     else if (token === '--mas-root') parsed.masRoot = path.resolve(value);
     else if (token === '--mag-root') parsed.magRoot = path.resolve(value);
     else if (token === '--rca-root') parsed.rcaRoot = path.resolve(value);
@@ -456,7 +457,6 @@ PYTHON_BIN="$(find "$RUNTIME_HOME/python" -maxdepth 2 -path '*/bin' -type d 2>/d
 export OPL_FULL_RUNTIME_HOME="$RUNTIME_HOME"
 export OPL_PACKAGED_SKILLS_ROOT="$RUNTIME_HOME/skills"
 export OPL_CODEX_BIN="$RUNTIME_HOME/bin/codex"
-export OPL_HERMES_BIN="$RUNTIME_HOME/bin/hermes"
 export OPL_MODULE_PATH_MEDAUTOSCIENCE="$RUNTIME_HOME/modules/mas"
 export OPL_MODULE_PATH_MEDAUTOGRANT="$RUNTIME_HOME/modules/mag"
 export OPL_MODULE_PATH_REDCUBE="$RUNTIME_HOME/modules/rca"
@@ -468,23 +468,6 @@ fi
 exec "$RUNTIME_HOME/opl/bin/opl" "$@"
 `);
 
-  writeExecutable(path.join(runtimeRoot, 'bin', 'hermes'), `#!/usr/bin/env bash
-set -euo pipefail
-RUNTIME_HOME="$(cd "$(dirname "\${BASH_SOURCE[0]}")/.." && pwd)"
-PYTHON_BIN="$(find "$RUNTIME_HOME/python" -maxdepth 2 -path '*/bin' -type d 2>/dev/null | sort -r | head -n 1 || true)"
-SITE_PACKAGES="$(find "$RUNTIME_HOME/hermes/.venv/lib" -maxdepth 2 -name site-packages -type d 2>/dev/null | sort -r | head -n 1 || true)"
-if [[ -z "$PYTHON_BIN" ]]; then
-  echo "Packaged Python runtime not found under $RUNTIME_HOME/python" >&2
-  exit 127
-fi
-export PATH="$RUNTIME_HOME/bin:$PYTHON_BIN:$PATH"
-if [[ -n "$SITE_PACKAGES" ]]; then
-  export PYTHONPATH="$RUNTIME_HOME/hermes:$SITE_PACKAGES:\${PYTHONPATH:-}"
-else
-  export PYTHONPATH="$RUNTIME_HOME/hermes:\${PYTHONPATH:-}"
-fi
-exec "$PYTHON_BIN/python3" "$RUNTIME_HOME/hermes/hermes" "$@"
-`);
 }
 
 function writePackagedModuleMarker(moduleRoot, marker) {
@@ -583,7 +566,6 @@ function buildRuntimeCacheKeys(options, sources) {
     'domain-runtime': buildFullRuntimeCacheKey({
       layerId: 'domain-runtime',
       parts: {
-        hermes_commit: readGitHead(options.hermesRoot),
         mas_commit: readGitHead(options.masRoot),
         mag_commit: readGitHead(options.magRoot),
         rca_commit: readGitHead(options.rcaRoot),
@@ -692,7 +674,6 @@ function buildToolchainLayer(layerRoot, sources) {
 }
 
 function buildDomainLayer(layerRoot, options) {
-  copyTreeFiltered(options.hermesRoot, path.join(layerRoot, 'hermes'), 'hermes');
   copyTreeFiltered(options.masRoot, path.join(layerRoot, 'modules', 'mas'), 'modules/mas');
   copyTreeFiltered(options.magRoot, path.join(layerRoot, 'modules', 'mag'), 'modules/mag');
   copyTreeFiltered(options.rcaRoot, path.join(layerRoot, 'modules', 'rca'), 'modules/rca');
@@ -756,7 +737,6 @@ function prepareRuntime(options, sources) {
   const components = {
     opl: { source_path: repoRoot, git_commit: readGitHead(repoRoot), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'opl')) },
     codex: { source_path: sources.codexRoot, version: commandOutput(path.join(runtimeRoot, 'bin', 'codex'), ['--version']), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'bin')) },
-    hermes: { source_path: options.hermesRoot, version: commandOutput(path.join(runtimeRoot, 'bin', 'hermes'), ['version']), git_commit: readGitHead(options.hermesRoot), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'hermes')) },
     mas: { source_path: options.masRoot, git_commit: readGitHead(options.masRoot), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'modules', 'mas')) },
     mag: { source_path: options.magRoot, git_commit: readGitHead(options.magRoot), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'modules', 'mag')) },
     rca: { source_path: options.rcaRoot, git_commit: readGitHead(options.rcaRoot), size_bytes: directorySizeBytes(path.join(runtimeRoot, 'modules', 'rca')) },
@@ -869,7 +849,6 @@ function main() {
 
   for (const [label, source] of [
     ['GUI root', options.guiRoot],
-    ['Hermes root', options.hermesRoot],
     ['MAS root', options.masRoot],
     ['MAG root', options.magRoot],
     ['RCA root', options.rcaRoot],

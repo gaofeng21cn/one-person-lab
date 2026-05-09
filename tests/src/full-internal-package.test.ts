@@ -24,14 +24,13 @@ function writeExecutable(filePath: string, content: string) {
   fs.chmodSync(filePath, 0o755);
 }
 
-test('full internal manifest declares default domain modules and optional Hermes provider adapter', () => {
+test('full internal manifest declares default domain modules without Hermes payload', () => {
   const manifest = buildFullPackageManifest({
     version: '26.5.1',
     generatedAt: '2026-05-01T00:00:00.000Z',
     components: {
       opl: { source_path: '/repo/opl', git_commit: 'oplsha', size_bytes: 1 },
       codex: { source_path: '/codex', version: '0.125.0', size_bytes: 2 },
-      hermes: { source_path: '/hermes', version: '0.8.0', git_commit: 'hermessha', size_bytes: 3 },
       mas: { source_path: '/mas', git_commit: 'massha', size_bytes: 4 },
       mag: { source_path: '/mag', git_commit: 'magsha', size_bytes: 6 },
       rca: { source_path: '/rca', git_commit: 'rcasha', size_bytes: 7 },
@@ -61,6 +60,7 @@ test('full internal manifest declares default domain modules and optional Hermes
   assert.equal(manifest.components.mas.role, 'primary_domain_module');
   assert.equal(manifest.components.mas.monolith_runtime, true);
   assert.equal(Object.hasOwn(manifest.components, 'mds'), false);
+  assert.equal(Object.hasOwn(manifest.components, 'hermes'), false);
   assert.equal(manifest.components.mag.required, true);
   assert.equal(manifest.components.mag.role, 'grant_domain_module');
   assert.equal(manifest.components.mag.visible_in_first_run_ui, true);
@@ -70,13 +70,6 @@ test('full internal manifest declares default domain modules and optional Hermes
   assert.equal(manifest.components.officecli.required, true);
   assert.equal(manifest.components.officecli.role, 'office_document_cli_binary');
   assert.equal(manifest.components.skills.role, 'recommended_codex_skills_including_officecli_ui_ux');
-  assert.equal(manifest.components.hermes.required, false);
-  assert.equal(manifest.components.hermes.optional, true);
-  assert.equal(manifest.components.hermes.default_runtime, false);
-  assert.equal(manifest.components.hermes.explicit_activation_required, true);
-  assert.equal(manifest.components.hermes.role, 'optional_hosted_runtime_provider_adapter');
-  assert.equal(manifest.components.hermes.profile, 'lean');
-  assert.ok(manifest.components.hermes.excluded_capabilities.includes('web_ui'));
   assert.equal(manifest.distribution.github_release_upload, true);
   assert.equal(manifest.distribution.updater_metadata_allowed, false);
   assert.equal(manifest.distribution.runtime_auto_update, false);
@@ -178,9 +171,9 @@ test('readme documents GitHub Release first-install distribution and app update 
   assert.match(text, /ui-ux-pro-max/);
   assert.doesNotMatch(text, /Application Support\/OPL\/runtime\/26\.5\.1/);
   assert.match(text, /API key/);
-  assert.match(text, /默认 runtime\/session\/domain readiness 仍走 Codex \+ MAS local scheduler\/domain entries/);
+  assert.match(text, /Hermes-Agent 不再作为默认 Full payload 随包安装/);
   assert.match(text, /确认 Codex、MAS、MAG、RCA、officecli CLI 与推荐 skills 状态/);
-  assert.match(text, /只有显式启用在线托管任务时才检查 Hermes-Agent/);
+  assert.match(text, /Hermes-Agent 缺失不影响默认初始化完成/);
   assert.doesNotMatch(text, /MDS backend/);
   assert.match(text, /当前标准 GitHub DMG 的同等发布模式/);
   assert.match(text, /右键打开/);
@@ -310,7 +303,6 @@ test('full runtime layer cache records miss then hit when zstd is available', ()
     writeExecutable(officeCliBin, '#!/usr/bin/env bash\necho 1.0.70-test\n');
 
     for (const [name, executable] of [
-      ['hermes-agent', 'hermes'],
       ['med-autoscience', 'mas'],
       ['med-autogrant', 'mag'],
       ['redcube-ai', 'rca'],
@@ -318,10 +310,7 @@ test('full runtime layer cache records miss then hit when zstd is available', ()
       const root = path.join(tmpRoot, name);
       fs.mkdirSync(root, { recursive: true });
       fs.writeFileSync(path.join(root, 'README.md'), `${name}\n`);
-      if (executable === 'hermes') {
-        writeExecutable(path.join(root, 'hermes'), '#!/usr/bin/env python3\nprint("hermes")\n');
-      }
-      if (executable !== 'hermes' && ['mas', 'mag', 'rca'].includes(executable)) {
+      if (['mas', 'mag', 'rca'].includes(executable)) {
         fs.mkdirSync(path.join(root, 'plugins', executable, 'skills', executable), { recursive: true });
         fs.writeFileSync(
           path.join(root, 'plugins', executable, 'skills', executable, 'SKILL.md'),
@@ -368,8 +357,6 @@ test('full runtime layer cache records miss then hit when zstd is available', ()
           outputDir,
           '--gui-root',
           guiRoot,
-          '--hermes-root',
-          path.join(tmpRoot, 'hermes-agent'),
           '--mas-root',
           path.join(tmpRoot, 'med-autoscience'),
           '--mag-root',
@@ -421,6 +408,15 @@ test('full runtime layer cache records miss then hit when zstd is available', ()
     assert.ok(fs.existsSync(path.join(outputDir, `One-Person-Lab-Full-${version}-mac-arm64.dmg`)));
     const runtimeRoot = path.join(guiRoot, 'packaged-runtimes', 'opl-full-runtime', 'runtime', 'current');
     assert.ok(fs.existsSync(path.join(runtimeRoot, 'bin', 'officecli')));
+    assert.equal(fs.existsSync(path.join(runtimeRoot, 'bin', 'hermes')), false);
+    assert.equal(fs.existsSync(path.join(runtimeRoot, 'hermes')), false);
+    const manifest = JSON.parse(
+      fs.readFileSync(
+        path.join(guiRoot, 'packaged-runtimes', 'opl-full-runtime', 'manifest', 'full-package-manifest.json'),
+        'utf8',
+      ),
+    ) as { components: Record<string, unknown> };
+    assert.equal(Object.hasOwn(manifest.components, 'hermes'), false);
     for (const skillName of ['mas', 'mag', 'rca', 'officecli', 'officecli-docx', 'officecli-pptx', 'officecli-xlsx', 'ui-ux-pro-max']) {
       assert.equal(
         fs.existsSync(path.join(runtimeRoot, 'skills', skillName, 'SKILL.md')),
