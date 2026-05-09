@@ -170,7 +170,7 @@ function cleanUserMissingCodex(root) {
   assertInitializeState(output, {
     phase: 'environment',
     blocking: ['codex', 'codex_config', 'domain_modules'],
-    onlineManagementStatus: 'needs_attention',
+    onlineManagementStatus: 'optional_unconfigured',
   });
   return { observations: { overall_state: output.system_initialize.overall_state } };
 }
@@ -182,7 +182,7 @@ function compatibleCodexMissingModules(root) {
   assertInitializeState(output, {
     phase: 'environment',
     blocking: ['codex_config', 'domain_modules'],
-    onlineManagementStatus: 'needs_attention',
+    onlineManagementStatus: 'optional_unconfigured',
   });
   return { observations: { codex_version: output.system_initialize.core_engines.codex.parsed_version } };
 }
@@ -194,7 +194,7 @@ function outdatedCodex(root) {
   assertInitializeState(output, {
     phase: 'environment',
     blocking: ['codex', 'codex_config', 'domain_modules'],
-    onlineManagementStatus: 'needs_attention',
+    onlineManagementStatus: 'optional_unconfigured',
   });
   assert.equal(output.system_initialize.core_engines.codex.version_status, 'outdated');
   return { observations: { codex_issue: output.system_initialize.core_engines.codex.issues[0] } };
@@ -209,7 +209,7 @@ function readyBaseline(root) {
   assertInitializeState(output, {
     phase: 'review',
     blocking: [],
-    onlineManagementStatus: 'needs_attention',
+    onlineManagementStatus: 'optional_unconfigured',
   });
   assert.equal(output.system_initialize.setup_flow.ready_to_launch, true);
   return { observations: { installed_modules_count: output.system_initialize.module_summary.installed_modules_count } };
