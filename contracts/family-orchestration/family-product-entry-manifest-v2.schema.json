@@ -132,6 +132,9 @@
     "task_lifecycle": {
       "$ref": "#/$defs/taskLifecycleSurface"
     },
+    "family_runtime_supervision": {
+      "$ref": "#/$defs/familyRuntimeSupervisionSurface"
+    },
     "persistence_policy": {
       "$ref": "#/$defs/persistencePolicySurface"
     },
@@ -456,6 +459,18 @@
       "properties": {
         "surface_kind": {
           "const": "task_lifecycle"
+        }
+      }
+    },
+    "familyRuntimeSupervisionSurface": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "surface_kind"
+      ],
+      "properties": {
+        "surface_kind": {
+          "const": "family_runtime_supervision"
         }
       }
     },
@@ -1296,6 +1311,50 @@
         "resume_surface": {
           "surface_kind": "product_entry_session",
           "command": "redcube product session --entry-session-id <entry-session-id>"
+        }
+      },
+      "family_runtime_supervision": {
+        "surface_kind": "family_runtime_supervision",
+        "version": "family-runtime-supervision.v1",
+        "target_domain_id": "redcube_ai",
+        "supervision_id": "redcube_managed_run_supervision",
+        "adapter_id": "redcube_product_entry_session",
+        "cadence": {
+          "interval_seconds": 300
+        },
+        "last_success": "2026-05-10T00:00:05Z",
+        "last_tick": "2026-05-10T00:00:00Z",
+        "lease_freshness": {
+          "state": "fresh",
+          "observed_at": "2026-05-10T00:00:08Z",
+          "max_age_seconds": 900
+        },
+        "slo_state": {
+          "state": "met",
+          "summary": "managed-run supervision projection is inside the domain-owned freshness SLO",
+          "breached_slo_ids": []
+        },
+        "repair_command": "redcube product session --entry-session-id <entry-session-id>",
+        "safe_reconcile_hint": "Re-read the RedCube-managed session and runtime supervision refs; OPL must not write deliverable or runtime truth.",
+        "domain_owned_source_refs": [
+          {
+            "ref_kind": "json_pointer",
+            "ref": "/progress_projection/runtime_refs_ref",
+            "role": "runtime_supervision_truth"
+          }
+        ],
+        "read_only_authority_boundary": {
+          "projection_owner": "one-person-lab",
+          "runtime_owner": "redcube_ai",
+          "scheduler_owner": "redcube_ai",
+          "authority": "read_only_projection",
+          "forbidden_authorities": [
+            "scheduler_owner",
+            "session_store_owner",
+            "memory_store_owner",
+            "quality_verdict_owner",
+            "artifact_authority"
+          ]
         }
       },
       "persistence_policy": {
