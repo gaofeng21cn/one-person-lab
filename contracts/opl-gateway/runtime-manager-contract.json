@@ -2,8 +2,8 @@
   "version": "v1",
   "contract_id": "opl_runtime_manager_contract",
   "contract_ref": "contracts/opl-gateway/runtime-manager-contract.json",
-  "scope": "opl_product_managed_adapter_over_external_runtime_kernel",
-  "description": "Freezes the first OPL Runtime Manager boundary. OPL manages provisioning, profile wiring, diagnostics, task registration hydration, status projection, optional native helper catalog, and high-frequency state indexes while Hermes-Agent remains the external runtime kernel owner.",
+  "scope": "opl_optional_product_managed_adapter_over_external_runtime_kernel",
+  "description": "Freezes the first OPL Runtime Manager boundary. OPL can manage explicit Hermes-Agent provider adapter provisioning, profile wiring, diagnostics, task registration hydration, status projection, optional native helper catalog, and high-frequency state indexes while Codex remains the default runtime/session path.",
   "owner_split": {
     "product_manager_owner": "one-person-lab",
     "runtime_kernel_owner": "upstream_hermes_agent",
@@ -15,8 +15,8 @@
     "concrete_executor_owner": "route_selected_by_domain_contract"
   },
   "manager_responsibilities": [
-    "provision_supported_hermes_runtime",
-    "pin_runtime_version_and_profile",
+    "optionally_provision_supported_hermes_runtime_when_explicitly_selected",
+    "pin_optional_runtime_version_and_profile",
     "hydrate_domain_task_registration_contracts",
     "project_runtime_status_into_opl_sessions_progress_artifacts",
     "provide_runtime_doctor_repair_resume_entrypoints",

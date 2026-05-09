@@ -228,7 +228,7 @@ export function runHermesCommand(
   if (!hermesBinary) {
     throw new GatewayContractError(
       'hermes_binary_not_found',
-      'Hermes binary is required for OPL Product Entry ask/chat commands.',
+      'Hermes binary is required only for explicitly selected Hermes-backed OPL Product Entry ask/chat commands.',
       {
         env_var: 'OPL_HERMES_BIN',
       },

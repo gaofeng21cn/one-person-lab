@@ -24,7 +24,7 @@ function writeExecutable(filePath: string, content: string) {
   fs.chmodSync(filePath, 0o755);
 }
 
-test('full internal manifest declares all first-run domain modules and Hermes lean runtime', () => {
+test('full internal manifest declares default domain modules and optional Hermes provider adapter', () => {
   const manifest = buildFullPackageManifest({
     version: '26.5.1',
     generatedAt: '2026-05-01T00:00:00.000Z',
@@ -70,6 +70,11 @@ test('full internal manifest declares all first-run domain modules and Hermes le
   assert.equal(manifest.components.officecli.required, true);
   assert.equal(manifest.components.officecli.role, 'office_document_cli_binary');
   assert.equal(manifest.components.skills.role, 'recommended_codex_skills_including_officecli_ui_ux');
+  assert.equal(manifest.components.hermes.required, false);
+  assert.equal(manifest.components.hermes.optional, true);
+  assert.equal(manifest.components.hermes.default_runtime, false);
+  assert.equal(manifest.components.hermes.explicit_activation_required, true);
+  assert.equal(manifest.components.hermes.role, 'optional_hosted_runtime_provider_adapter');
   assert.equal(manifest.components.hermes.profile, 'lean');
   assert.ok(manifest.components.hermes.excluded_capabilities.includes('web_ui'));
   assert.equal(manifest.distribution.github_release_upload, true);
@@ -173,7 +178,9 @@ test('readme documents GitHub Release first-install distribution and app update 
   assert.match(text, /ui-ux-pro-max/);
   assert.doesNotMatch(text, /Application Support\/OPL\/runtime\/26\.5\.1/);
   assert.match(text, /API key/);
-  assert.match(text, /确认 Codex、Hermes-Agent、MAS、MAG、RCA、officecli CLI 与推荐 skills 状态/);
+  assert.match(text, /默认 runtime\/session\/domain readiness 仍走 Codex \+ MAS local scheduler\/domain entries/);
+  assert.match(text, /确认 Codex、MAS、MAG、RCA、officecli CLI 与推荐 skills 状态/);
+  assert.match(text, /只有显式启用在线托管任务时才检查 Hermes-Agent/);
   assert.doesNotMatch(text, /MDS backend/);
   assert.match(text, /当前标准 GitHub DMG 的同等发布模式/);
   assert.match(text, /右键打开/);

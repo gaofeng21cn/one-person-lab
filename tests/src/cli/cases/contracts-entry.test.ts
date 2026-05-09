@@ -592,7 +592,7 @@ exit 1
 
     assert.equal(output.version, 'g2');
     assert.equal(output.runtime_manager.surface_id, 'opl_runtime_manager');
-    assert.equal(output.runtime_manager.layer_role, 'product_managed_adapter_over_external_kernel');
+    assert.equal(output.runtime_manager.layer_role, 'optional_product_managed_adapter_over_external_kernel');
     assert.equal(output.runtime_manager.status, 'ready');
     assert.equal(output.runtime_manager.owner_split.runtime_kernel_owner, 'upstream_hermes_agent');
     assert.equal(output.runtime_manager.owner_split.product_manager_owner, 'one-person-lab');

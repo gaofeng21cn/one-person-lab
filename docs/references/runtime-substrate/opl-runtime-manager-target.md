@@ -4,15 +4,15 @@
 
 `OPL Runtime Manager` 是 OPL 的产品级 runtime 管理与投影层。
 它不替代 `Hermes-Agent`，也不把 OPL 改写成自有长期在线 runtime kernel。
-Hermes 同时保留为外部 runtime substrate 与 online-management gateway；OPL 管理产品级安装、检查和投影，不拥有 gateway system service lifecycle。
+Hermes 只保留为显式可选 hosted/runtime provider adapter 与 online-management gateway；OPL 在显式启用后管理产品级安装、检查和投影，不拥有 gateway system service lifecycle。
 
 目标链路是：
 
-`OPL CLI / GUI / Product Entry -> OPL Runtime Manager -> external Hermes-Agent runtime substrate / Hermes gateway system service -> Domain Adapter -> MAS / MAG / RCA domain logic`
+`OPL CLI / GUI / Product Entry -> OPL Runtime Manager -> optional external Hermes-Agent provider adapter / Hermes gateway system service -> Domain Adapter -> MAS / MAG / RCA domain logic`
 
 ## Owner Split
 
-- `OPL`：产品入口、bootstrap、version pin、profile wiring、domain task registration hydration、诊断、恢复入口、native helper catalog、state index catalog，以及 Hermes gateway readiness 的触发、检查和报告
+- `OPL`：产品入口、bootstrap、version pin、profile wiring、domain task registration hydration、诊断、恢复入口、native helper catalog、state index catalog，以及显式 Hermes gateway readiness 的触发、检查和报告
 - `Hermes-Agent`：长期在线 session、scheduler、wakeup、interrupt/resume、memory、delivery/cron 与 online-management gateway；gateway system service 由 Hermes installer/gateway command 管理
 - `MAS / MAG / RCA`：domain-owned truth、gate、artifact、progress、review / publication / submission 判断
 - concrete executor：由 domain route contract 选择，默认仍可继承本机 `Codex CLI`
@@ -32,7 +32,7 @@ Hermes 同时保留为外部 runtime substrate 与 online-management gateway；O
 
 首启 readiness 口径：
 
-- `opl install` 默认安装或复用受支持的 Hermes runtime substrate。
+- `opl install` 默认不安装 Hermes；Hermes 只通过显式 engine/provider/runtime-manager 路径安装、复用或修复。
 - Codex CLI 与已准入 domain modules ready 时，OPL core/domain 入口可用。
 - Hermes gateway 未 loaded、starting 或 pending 只表示 online-management readiness 尚未完成，不应阻塞首屏核心/domain 工作。
 

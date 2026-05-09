@@ -205,7 +205,7 @@ export function buildInternalCommandSpecs(
     'runtime manager': {
       usage: 'opl runtime manager',
       summary:
-        'Show the OPL Runtime Manager boundary over the external Hermes runtime substrate.',
+        'Show the OPL Runtime Manager boundary for the optional external Hermes provider adapter.',
       examples: ['opl runtime manager'],
       handler: (args) => {
         assertNoArgs(args, commandSpecs['runtime manager']);
@@ -572,7 +572,7 @@ resume: {
     },
     'runtime repair-gateway': {
       usage: 'opl runtime repair-gateway',
-      summary: 'Reinstall and recheck the Hermes gateway service used by the OPL product shell.',
+      summary: 'Explicitly reinstall and recheck the optional Hermes gateway service used for online task management.',
       examples: ['opl runtime repair-gateway'],
       handler: () => runProductEntryRepairHermesGateway(),
     },

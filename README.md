@@ -32,7 +32,7 @@ For macOS desktop users, download the App directly:
 
 [Download One Person Lab for macOS](https://github.com/gaofeng21cn/one-person-lab/releases/latest)
 
-Open `One Person Lab.app`; on first launch it quietly checks the local environment, uses your home directory as the default workspace root, and installs or reuses missing OPL modules, recommended skills, companion tools such as the `officecli` binary, and the supported Hermes runtime substrate when it can do so safely. Core OPL and admitted domain work are available once Codex and the domain modules are ready; the Hermes online-management gateway can finish reaching ready state in the background.
+Open `One Person Lab.app`; on first launch it quietly checks the local environment, uses your home directory as the default workspace root, and installs or reuses missing OPL modules, recommended skills, and companion tools such as the `officecli` binary. Core OPL and admitted domain work are available once Codex and the domain modules are ready; Hermes is an explicit optional hosted/runtime provider adapter for online task management.
 
 If you prefer Terminal installation:
 
@@ -40,7 +40,7 @@ If you prefer Terminal installation:
 curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/install.sh | bash
 ```
 
-After installation, open `One Person Lab.app` and start general work, medical research, grant writing, or presentation/PPT work from the same interface. The App reuses the setup done by `opl install`, including any supported Hermes runtime already installed locally; it only asks for configuration when a required core dependency cannot be installed or detected automatically.
+After installation, open `One Person Lab.app` and start general work, medical research, grant writing, or presentation/PPT work from the same interface. The App reuses the setup done by `opl install`; it only asks for configuration when a required core dependency cannot be installed or detected automatically.
 
 Need Docker, Linux, or server deployment? See the [Docker and browser deployment reference](./docs/references/current-support/opl-docker-webui-deployment.md).
 
@@ -62,7 +62,7 @@ Need Docker, Linux, or server deployment? See the [Docker and browser deployment
 - Workspace-based work for tasks that need a real directory and persistent file context.
 - Specialized product families for domain-specific expert workflows.
 - Progress and file views that stay attached to ongoing work.
-- Central management for engines, modules, skills, GUI, the Hermes online-management gateway, and health status.
+- Central management for Codex, optional engines, modules, skills, GUI, and health status.
 
 ## For Agents And Technical Operators
 
@@ -71,12 +71,12 @@ Need Docker, Linux, or server deployment? See the [Docker and browser deployment
 
 ### One instruction for a Codex Agent
 
-> Install and configure this OPL repo: clone it, install the OPL CLI, run `opl install`, and ensure Codex CLI, the managed Hermes runtime/gateway status, MAS/MAG/RCA, recommended skills, required companion tools such as the `officecli` binary, the One Person Lab App, and the browser entry are ready; if anything is missing, fix it or report the exact blocker. Do not treat first-screen core/domain access as blocked solely because the Hermes online-management gateway has not finished loading.
+> Install and configure this OPL repo: clone it, install the OPL CLI, run `opl install`, and ensure Codex CLI, MAS/MAG/RCA, recommended skills, required companion tools such as the `officecli` binary, the One Person Lab App, and the browser entry are ready; if anything is missing, fix it or report the exact blocker. Treat Hermes-Agent only as an explicit optional hosted/runtime provider adapter for online task management.
 
 ### Common commands after installation
 
 ```bash
-opl system initialize   # Inspect the Codex version policy, managed Hermes runtime/gateway status, modules, skills, GUI, and workspace-root state
+opl system initialize   # Inspect Codex policy, optional engine status, modules, skills, GUI, and workspace-root state
 opl modules             # Check MAS/MAG/RCA modules and any MAS-declared optional companion provenance/audit refs
 opl module exec --module medautoscience -- doctor entry-modes
 opl skill sync          # Sync OPL family skills into the Codex-visible skill path
@@ -94,7 +94,7 @@ This repository tracks the shared OPL workbench layer, not the specialized domai
 
 For the MAS v2 alignment, `Med Auto Science` remains an independent medical research domain agent with a single domain app skill entry consumed by Codex and OPL. OPL owns the unified definitions, shared contract/index registration, module discovery, and projection consumption layer; it does not become the MAS runtime kernel, does not restore a MAS standalone release/install channel, and does not turn MAS projections into OPL-owned readiness or publication verdicts.
 
-The desktop GUI source is maintained in [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) as an internal OPL-branded app-shell build input. Users download One Person Lab App packages from this repository’s GitHub Releases; first-time macOS arm64 users can choose the `One-Person-Lab-Full-<version>-mac-arm64.dmg` asset with MAS/MAG/RCA, Hermes, `officecli`, and recommended companion skill payloads, while in-app updates continue to use the standard App assets and `latest*.yml` metadata. This repository provides the shared workbench contracts and product surfaces consumed by the app and Codex.
+The desktop GUI source is maintained in [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) as an internal OPL-branded app-shell build input. Users download One Person Lab App packages from this repository’s GitHub Releases; first-time macOS arm64 users can choose the `One-Person-Lab-Full-<version>-mac-arm64.dmg` asset with MAS/MAG/RCA, optional Hermes provider-adapter payload, `officecli`, and recommended companion skill payloads, while in-app updates continue to use the standard App assets and `latest*.yml` metadata. This repository provides the shared workbench contracts and product surfaces consumed by the app and Codex.
 
 ### How to read this repository
 
@@ -106,8 +106,8 @@ The desktop GUI source is maintained in [`opl-aion-shell`](https://github.com/ga
 
 - Default front doors are `opl`, `opl exec`, and `opl resume`. Unless a runtime or domain agent is explicitly selected, these paths keep Codex-default semantics.
 - OPL treats `Codex CLI` as a managed runtime dependency: `opl system` reports the selected binary, version, minimum-version policy, and PATH diagnostics. Health is based on the selected binary; non-selected PATH candidates are reported as diagnostics instead of blocking a compatible Codex CLI.
-- `opl install` installs or reuses a supported external Hermes runtime substrate. The Hermes online-management gateway is a system service managed by the Hermes installer/gateway command; OPL triggers setup, checks readiness, and reports status without owning that service lifecycle.
-- First launch separates core/domain readiness from online-management readiness. If Codex and admitted domain modules are ready, users can start work while Hermes gateway readiness is still pending or starting.
+- Hermes-Agent is an explicit optional hosted/runtime provider adapter. Use `opl engine install --engine hermes` or `opl runtime repair-gateway` when online task management is needed; default OPL runtime/session/domain readiness does not require Hermes.
+- First launch separates core/domain readiness from optional online-management readiness. If Codex and admitted domain modules are ready, users can start work while Hermes is absent, pending, or starting.
 - If an admitted domain repo is missing locally, run `opl module install --module <module_id>`.
 - When automation needs a domain CLI, run it through `opl module exec --module <module_id> -- <domain_cli_args...>` so the command is launched from the current OPL-managed module checkout instead of a stale global PATH tool.
 - The default workspace root is your home directory. The default local state directory is `~/Library/Application Support/OPL/state`. Set `OPL_STATE_DIR` to use another local state root.

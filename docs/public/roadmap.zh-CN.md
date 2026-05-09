@@ -71,7 +71,7 @@
 
 - `OPL` 是整个 family 的 Codex-default session/runtime 层、显式 activation 层，以及 shared modules / contracts / indexes owner
 - admitted domain 在这个壳层之下继续持有各自 authority
-- 默认 executor 仍是 `Codex CLI`，`OPL Runtime Manager` 只作为 external `Hermes-Agent` 之上的 product-managed 薄 adapter
+- 默认 executor 仍是 `Codex CLI`，`OPL Runtime Manager` 只作为显式可选 external `Hermes-Agent` 之上的 product-managed 薄 adapter
 - 旧 `OPL Gateway`、`opl web`、`Product API` 与 AionUI-first-shell 材料，除非被当前核心文档重新提升，否则按 compatibility 或 reference context 阅读
 - 未来 hosted / desktop 工作继续沿同一套 runtime / activation truth 演进
 - 新工作线会以边界清楚的 domain surface 进入家族体系

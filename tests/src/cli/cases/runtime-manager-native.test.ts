@@ -741,7 +741,7 @@ esac
   }
 }
 
-test('runtime manager reconcile recommends Hermes setup without taking kernel ownership', () => {
+test('runtime manager reconcile treats missing Hermes as optional provider unconfigured', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-reconcile-state-'));
 
   try {
@@ -753,10 +753,10 @@ test('runtime manager reconcile recommends Hermes setup without taking kernel ow
     });
     const reconcile = output.runtime_manager.reconcile;
 
-    assert.equal(output.runtime_manager.status, 'needs_runtime_setup');
+    assert.equal(output.runtime_manager.status, 'optional_provider_unconfigured');
     assert.equal(reconcile.surface_kind, 'opl_runtime_manager_reconcile');
     assert.equal(reconcile.overall_status, 'attention_needed');
-    assert.equal(reconcile.checked_surfaces.hermes_runtime, 'needs_runtime_setup');
+    assert.equal(reconcile.checked_surfaces.hermes_runtime, 'optional_provider_unconfigured');
     assert.equal(reconcile.non_goals.includes('does_not_schedule_tasks'), true);
     assert.deepEqual(
       reconcile.recommended_actions.map((action: { action_id: string; blocking: boolean }) => [
@@ -764,7 +764,6 @@ test('runtime manager reconcile recommends Hermes setup without taking kernel ow
         action.blocking,
       ]),
       [
-        ['install_or_start_hermes', true],
         ['repair_native_helpers', false],
         ['refresh_native_indexes', false],
       ],
@@ -860,7 +859,7 @@ exit 1
 
     assert.equal(action.mode, 'apply');
     assert.equal(action.dry_run, false);
-    assert.equal(action.before.reconcile.checked_surfaces.hermes_runtime, 'needs_runtime_setup');
+    assert.equal(action.before.reconcile.checked_surfaces.hermes_runtime, 'optional_provider_attention');
     assert.equal(action.after.reconcile.overall_status, 'ready');
     assert.deepEqual(action.after.reconcile.recommended_actions, []);
     assert.deepEqual(

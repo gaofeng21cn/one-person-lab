@@ -180,6 +180,7 @@ type RuntimeManagerActionMode = 'dry_run' | 'apply';
 type RuntimeManagerActionInput = {
   mode: RuntimeManagerActionMode;
   skipNativeHelpers?: boolean;
+  skipOnlineManagement?: boolean;
 };
 
 function isNativeHelperAction(actionId: string) {
@@ -190,15 +191,20 @@ function filterActionableRuntimeManagerActions(
   actions: ReturnType<typeof buildRuntimeManager>['runtime_manager']['reconcile']['recommended_actions'],
   input: RuntimeManagerActionInput,
 ) {
-  if (!input.skipNativeHelpers) {
-    return actions;
-  }
-
-  return actions.filter((action) => !isNativeHelperAction(action.action_id));
+  return actions.filter((action) => {
+    if (input.skipNativeHelpers && isNativeHelperAction(action.action_id)) {
+      return false;
+    }
+    if (input.skipOnlineManagement && action.action_id === 'repair_hermes_gateway') {
+      return false;
+    }
+    return true;
+  });
 }
 
 export function buildRuntimeManager(input: { persistNativeIndexes?: boolean } = {}) {
   const hermes = inspectHermesRuntime();
+  const hermesInstalled = Boolean(hermes.binary && hermes.version);
   const hermesReady = Boolean(hermes.binary && hermes.version && hermes.gateway_service.loaded);
   const nativeHelperProjection = buildNativeHelperProjection(DEFAULT_NATIVE_HELPERS, {
     persistIndexes: input.persistNativeIndexes,
@@ -209,8 +215,12 @@ export function buildRuntimeManager(input: { persistNativeIndexes?: boolean } = 
     version: 'g2',
     runtime_manager: {
       surface_id: 'opl_runtime_manager',
-      layer_role: 'product_managed_adapter_over_external_kernel',
-      status: hermesReady ? 'ready' : 'needs_runtime_setup',
+      layer_role: 'optional_product_managed_adapter_over_external_kernel',
+      status: hermesReady
+        ? 'ready'
+        : hermesInstalled
+          ? 'optional_provider_attention'
+          : 'optional_provider_unconfigured',
       owner_split: {
         product_manager_owner: 'one-person-lab',
         runtime_kernel_owner: 'upstream_hermes_agent',
@@ -218,8 +228,8 @@ export function buildRuntimeManager(input: { persistNativeIndexes?: boolean } = 
         concrete_executor_owner: 'route_selected_by_domain_contract',
       },
       responsibilities: [
-        'provision_supported_hermes_runtime',
-        'pin_runtime_version_and_profile',
+        'optionally_provision_supported_hermes_runtime_when_explicitly_selected',
+        'pin_optional_runtime_version_and_profile',
         'hydrate_domain_task_registration_contracts',
         'project_runtime_status_into_opl_sessions_progress_artifacts',
         'provide_runtime_doctor_repair_resume_entrypoints',
@@ -296,7 +306,7 @@ export function buildRuntimeManager(input: { persistNativeIndexes?: boolean } = 
           'Only promote beyond a thin manager if Hermes cannot express required task, wakeup, approval, audit, or product isolation contracts.',
       },
       notes: [
-        'Hermes-Agent remains the external long-running runtime substrate owner.',
+        'Hermes-Agent remains an explicit optional hosted/runtime provider adapter for long-running online management.',
         'OPL Runtime Manager is a product-managed adapter and projection layer.',
         'MAS, MAG, and RCA keep domain-owned truth and route-selected executor semantics.',
       ],
@@ -312,8 +322,8 @@ export function runRuntimeManagerAction(input: RuntimeManagerActionInput) {
     ...action,
     execution_status: 'not_executed',
     dry_run_note:
-      input.skipNativeHelpers
-        ? 'Dry run did not run native helper repair, did not write refreshed native indexes, and did not reinstall the Hermes gateway service. Native-helper recommendations were omitted by request.'
+      input.skipNativeHelpers || input.skipOnlineManagement
+        ? 'Dry run did not run native helper repair, did not write refreshed native indexes, and did not reinstall the Hermes gateway service. Requested recommendation classes were omitted.'
         : 'Dry run did not run native helper repair, did not write refreshed native indexes, and did not reinstall the Hermes gateway service.',
   }));
   const plannedNonBlockingActions = plannedActions.filter((action) => action.blocking === false);
@@ -420,8 +430,8 @@ export function runRuntimeManagerAction(input: RuntimeManagerActionInput) {
       mode: input.mode,
       dry_run: false,
       status,
-      note:
-        'Apply executed only Runtime Manager adapter actions backed by existing OPL helper and external Hermes gateway surfaces.',
+        note:
+          'Apply executed only Runtime Manager adapter actions backed by existing OPL helper and already-configured external Hermes gateway surfaces.',
       before: summarizeRuntimeManagerForAction(before),
       after: afterSummary,
       planned_actions: plannedActions,
@@ -502,15 +512,7 @@ function buildRuntimeManagerReconcile(
   const nativeRuntimeStatus = nativeHelperProjection.runtime.status;
   const indexFreshnessStatus = nativeHelperProjection.persistence.freshness.status;
 
-  if (!hermesInstalled) {
-    recommendedActions.push({
-      action_id: 'install_or_start_hermes',
-      priority: 'p0_runtime_substrate',
-      blocking: true,
-      command: 'opl engine install --engine hermes',
-      reason: 'Hermes-Agent is the external long-running runtime substrate and is not ready.',
-    });
-  } else if (!hermes.gateway_service.loaded) {
+  if (hermesInstalled && !hermes.gateway_service.loaded) {
     recommendedActions.push({
       action_id: 'repair_hermes_gateway',
       priority: 'p1_online_management',
@@ -546,9 +548,13 @@ function buildRuntimeManagerReconcile(
   return {
     surface_kind: 'opl_runtime_manager_reconcile',
     version: 'v1',
-    overall_status: hermesReady && recommendedActions.length === 0 ? 'ready' : 'attention_needed',
+    overall_status: recommendedActions.length === 0 ? 'ready' : 'attention_needed',
     checked_surfaces: {
-      hermes_runtime: hermesReady ? 'ready' : 'needs_runtime_setup',
+      hermes_runtime: hermesReady
+        ? 'ready'
+        : hermesInstalled
+          ? 'optional_provider_attention'
+          : 'optional_provider_unconfigured',
       native_helper_runtime: nativeRuntimeStatus,
       native_index_freshness: indexFreshnessStatus,
       domain_registration_registry: 'declared_projection_contracts',
