@@ -430,7 +430,6 @@ console.log(JSON.stringify({ sync: 'ok' }));
   };
   const remotes = {
     medautoscience: createGitModuleRemoteFixture('med-autoscience', { extraFiles: buildModuleFiles('mas') }),
-    meddeepscientist: createGitModuleRemoteFixture('med-deepscientist', { extraFiles: buildModuleFiles(null) }),
     medautogrant: createGitModuleRemoteFixture('med-autogrant', { extraFiles: buildModuleFiles('mag') }),
     redcube: createGitModuleRemoteFixture('redcube-ai', { extraFiles: buildModuleFiles('rca') }),
   };
@@ -444,7 +443,6 @@ console.log(JSON.stringify({ sync: 'ok' }));
     OPL_MODULES_ROOT: modulesRoot,
     OPL_MODULE_PATH_REDCUBE: redcubeExternalCheckout,
     OPL_MODULE_REPO_URL_MEDAUTOSCIENCE: remotes.medautoscience.remoteRoot,
-    OPL_MODULE_REPO_URL_MEDDEEPSCIENTIST: remotes.meddeepscientist.remoteRoot,
     OPL_MODULE_REPO_URL_MEDAUTOGRANT: remotes.medautogrant.remoteRoot,
     OPL_MODULE_REPO_URL_REDCUBE: remotes.redcube.remoteRoot,
     OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),
@@ -488,14 +486,14 @@ console.log(JSON.stringify({ sync: 'ok' }));
     assert.equal(output.system_action.status, 'manual_required');
     assert.deepEqual(output.system_action.details.summary, {
       total_targets_count: 4,
-      completed_targets_count: 3,
-      skipped_targets_count: 0,
+      completed_targets_count: 2,
+      skipped_targets_count: 1,
       manual_required_targets_count: 1,
     });
     assert.equal(targets.get('medautoscience')?.status, 'completed');
     assert.equal(targets.get('medautoscience')?.reason, 'module_update_available');
-    assert.equal(targets.get('meddeepscientist')?.status, 'completed');
-    assert.equal(targets.get('meddeepscientist')?.reason, 'module_missing');
+    assert.equal(targets.get('meddeepscientist')?.status, 'skipped');
+    assert.equal(targets.get('meddeepscientist')?.reason, 'optional_module_not_in_default_reconcile');
     assert.equal(targets.get('redcube')?.status, 'completed');
     assert.equal(targets.get('redcube')?.reason, 'module_reconcile_refresh');
     assert.equal(targets.get('medautogrant')?.status, 'manual_required');
@@ -504,8 +502,7 @@ console.log(JSON.stringify({ sync: 'ok' }));
     assert.match(turnkeyLog, /bootstrap:med-autoscience/);
     assert.match(turnkeyLog, /skill:med-autoscience/);
     assert.match(turnkeyLog, /health:med-autoscience/);
-    assert.match(turnkeyLog, /bootstrap:med-deepscientist/);
-    assert.match(turnkeyLog, /health:med-deepscientist/);
+    assert.doesNotMatch(turnkeyLog, /med-deepscientist/);
     assert.doesNotMatch(turnkeyLog, /bootstrap:external-redcube-ai/);
     assert.match(turnkeyLog, /skill:external-redcube-ai/);
     assert.match(turnkeyLog, /health:external-redcube-ai/);
@@ -517,7 +514,7 @@ console.log(JSON.stringify({ sync: 'ok' }));
     };
     const byId = new Map(modules.modules.items.map((entry) => [entry.module_id, entry]));
     assert.equal(byId.get('medautoscience')?.git?.head_sha, nextMasSha);
-    assert.equal(byId.get('meddeepscientist')?.installed, true);
+    assert.equal(byId.get('meddeepscientist')?.installed, false);
     assert.equal(byId.get('redcube')?.installed, true);
   } finally {
     for (const remote of Object.values(remotes)) {
@@ -531,9 +528,9 @@ test('system reconcile-modules promotes Full packaged module seeds to latest man
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-system-reconcile-full-seed-home-'));
   const modulesRoot = path.join(homeRoot, 'managed-modules');
   const buildFullSeedModule = (
-    moduleId: 'medautoscience' | 'meddeepscientist' | 'medautogrant' | 'redcube',
-    repoName: 'med-autoscience' | 'med-deepscientist' | 'med-autogrant' | 'redcube-ai',
-    packageName: 'mas' | 'mds' | 'mag' | 'rca',
+    moduleId: 'medautoscience' | 'medautogrant' | 'redcube',
+    repoName: 'med-autoscience' | 'med-autogrant' | 'redcube-ai',
+    packageName: 'mas' | 'mag' | 'rca',
     extraFiles: Record<string, string> = {},
   ) => {
     const remote = createGitModuleRemoteFixture(repoName, {
@@ -580,7 +577,6 @@ test('system reconcile-modules promotes Full packaged module seeds to latest man
       'plugins/mas/skills/mas/SKILL.md': '---\nname: mas\ndescription: MAS fixture.\n---\n\n# MAS\n',
       'scripts/install-codex-plugin.sh': '#!/usr/bin/env bash\nset -euo pipefail\nprintf \'{"sync":"ok"}\\n\'\n',
     }),
-    meddeepscientist: buildFullSeedModule('meddeepscientist', 'med-deepscientist', 'mds'),
     medautogrant: buildFullSeedModule('medautogrant', 'med-autogrant', 'mag', {
       'plugins/mag/.codex-plugin/plugin.json': JSON.stringify({ name: 'mag', skills: './skills/' }, null, 2),
       'plugins/mag/skills/mag/SKILL.md': '---\nname: mag\ndescription: MAG fixture.\n---\n\n# MAG\n',
@@ -600,11 +596,9 @@ test('system reconcile-modules promotes Full packaged module seeds to latest man
     HOME: homeRoot,
     OPL_MODULES_ROOT: modulesRoot,
     OPL_MODULE_PATH_MEDAUTOSCIENCE: packagedModules.medautoscience.packagedRoot,
-    OPL_MODULE_PATH_MEDDEEPSCIENTIST: packagedModules.meddeepscientist.packagedRoot,
     OPL_MODULE_PATH_MEDAUTOGRANT: packagedModules.medautogrant.packagedRoot,
     OPL_MODULE_PATH_REDCUBE: packagedModules.redcube.packagedRoot,
     OPL_MODULE_REPO_URL_MEDAUTOSCIENCE: packagedModules.medautoscience.remote.remoteRoot,
-    OPL_MODULE_REPO_URL_MEDDEEPSCIENTIST: packagedModules.meddeepscientist.remote.remoteRoot,
     OPL_MODULE_REPO_URL_MEDAUTOGRANT: packagedModules.medautogrant.remote.remoteRoot,
     OPL_MODULE_REPO_URL_REDCUBE: packagedModules.redcube.remote.remoteRoot,
     OPL_STATE_DIR: path.join(homeRoot, 'opl-state'),

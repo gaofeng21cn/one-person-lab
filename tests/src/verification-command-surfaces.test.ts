@@ -214,17 +214,21 @@ test('Full first-install release workflow builds without signing secrets and kee
   assert.match(workflow, /Checkout RCA/);
   assert.match(workflow, /Checkout OfficeCLI/);
   assert.match(workflow, /Checkout UI UX Pro Max skill/);
+  assert.doesNotMatch(workflow, /Checkout MDS/);
   assert.match(workflow, /gaofeng21cn\/med-autogrant/);
   assert.match(workflow, /gaofeng21cn\/redcube-ai/);
+  assert.doesNotMatch(workflow, /gaofeng21cn\/med-deepscientist/);
   assert.match(workflow, /iOfficeAI\/OfficeCLI/);
   assert.match(workflow, /nextlevelbuilder\/ui-ux-pro-max-skill/);
   assert.match(workflow, /uv sync --project med-autogrant --no-dev/);
+  assert.doesNotMatch(workflow, /uv sync --project med-deepscientist/);
   assert.match(workflow, /npm ci --prefix redcube-ai/);
   assert.match(workflow, /npm run --prefix redcube-ai build/);
   assert.match(workflow, /echo "\$HOME\/\.local\/bin" >> "\$GITHUB_PATH"/);
   assert.match(workflow, /officecli --version/);
   assert.match(workflow, /OPL_FULL_MAG_ROOT/);
   assert.match(workflow, /OPL_FULL_RCA_ROOT/);
+  assert.doesNotMatch(workflow, /OPL_FULL_MDS_ROOT/);
   assert.match(workflow, /OPL_FULL_OFFICECLI_ROOT/);
   assert.match(workflow, /OPL_FULL_UI_UX_PRO_MAX_ROOT/);
   assert.match(workflow, /npm --silent run packages:full-release/);
@@ -408,7 +412,19 @@ test('GUI release publisher uploads Full first-install assets only when explicit
   );
 
   fs.writeFileSync(path.join(fullDir, `One-Person-Lab-Full-${version}-mac-arm64.dmg`), 'full dmg');
-  fs.writeFileSync(path.join(fullDir, 'full-package-manifest.json'), '{"distribution":{"updater_metadata_allowed":false}}\n');
+  fs.writeFileSync(
+    path.join(fullDir, 'full-package-manifest.json'),
+    JSON.stringify({
+      generated_at: '2026-05-09T10:20:00.000Z',
+      distribution: { updater_metadata_allowed: false },
+      components: {
+        mas: { git_commit: 'massha123456' },
+        mag: { git_commit: 'magsha123456' },
+        rca: { git_commit: 'rcasha123456' },
+        officecli: { version: '1.0.73' },
+      },
+    }),
+  );
   fs.writeFileSync(path.join(fullDir, 'SHA256SUMS.txt'), 'abc  file\n');
   fs.writeFileSync(path.join(fullDir, 'README-Full-First-Install.txt'), 'readme\n');
 
@@ -653,7 +669,19 @@ test('GUI release publisher can upload only Full first-install assets for an exi
   );
 
   fs.writeFileSync(path.join(fullDir, `One-Person-Lab-Full-${version}-mac-arm64.dmg`), 'full dmg');
-  fs.writeFileSync(path.join(fullDir, 'full-package-manifest.json'), '{"distribution":{"updater_metadata_allowed":false}}\n');
+  fs.writeFileSync(
+    path.join(fullDir, 'full-package-manifest.json'),
+    `${JSON.stringify({
+      generated_at: '2026-05-09T10:20:00.000Z',
+      distribution: { updater_metadata_allowed: false },
+      components: {
+        mas: { git_commit: 'massha123456' },
+        mag: { git_commit: 'magsha123456' },
+        rca: { git_commit: 'rcasha123456' },
+        officecli: { version: '1.0.73' },
+      },
+    })}\n`,
+  );
   fs.writeFileSync(path.join(fullDir, 'SHA256SUMS.txt'), 'abc  file\n');
   fs.writeFileSync(path.join(fullDir, 'README-Full-First-Install.txt'), 'readme\n');
 
@@ -733,7 +761,19 @@ test('GUI release publisher appends Full purpose notes to an existing standard r
   );
 
   fs.writeFileSync(path.join(fullDir, `One-Person-Lab-Full-${version}-mac-arm64.dmg`), 'full dmg');
-  fs.writeFileSync(path.join(fullDir, 'full-package-manifest.json'), '{"distribution":{"updater_metadata_allowed":false}}\n');
+  fs.writeFileSync(
+    path.join(fullDir, 'full-package-manifest.json'),
+    `${JSON.stringify({
+      generated_at: '2026-05-09T10:20:00.000Z',
+      distribution: { updater_metadata_allowed: false },
+      components: {
+        mas: { git_commit: 'massha1' },
+        mag: { git_commit: 'magsha1' },
+        rca: { git_commit: 'rcasha1' },
+        officecli: { version: '1.0.73' },
+      },
+    })}\n`,
+  );
   fs.writeFileSync(path.join(fullDir, 'SHA256SUMS.txt'), 'abc  file\n');
   fs.writeFileSync(path.join(fullDir, 'README-Full-First-Install.txt'), 'readme\n');
 
@@ -767,13 +807,21 @@ test('GUI release publisher appends Full purpose notes to an existing standard r
   assert.ok(editCall, 'expected gh release edit to be called');
   const notes = editCall[editCall.indexOf('--notes') + 1];
   assert.match(notes, /Update guidance:/);
-  assert.match(notes, /Full first-install package:/);
+  assert.match(notes, /Full first-install package/);
   assert.match(notes, new RegExp(`One-Person-Lab-Full-${version}-mac-arm64\\.dmg`));
-  assert.match(notes, /reduce the time from first launch to the first MAS, MAG, or RCA task/);
-  assert.match(notes, /bundles the MAS\/MDS\/MAG\/RCA domain modules, Hermes runtime payload, OfficeCLI CLI binary, and recommended companion skills/);
-  assert.match(notes, /users still configure their API key normally/);
-  assert.match(notes, /not referenced by latest\*\.yml/);
-  assert.match(notes, /not used by the auto-updater/);
+  assert.match(notes, /fastest first setup/);
+  assert.match(notes, /preloads MAS, MAG, RCA, Hermes, OfficeCLI, and recommended companion skills/);
+  assert.match(notes, /users still only need to configure their API key/);
+  assert.match(notes, /not a separate update channel/);
+  assert.match(notes, /App auto-update still follows the standard latest\*\.yml metadata/);
+  assert.match(notes, /Bundled module versions/);
+  assert.match(notes, /MAS: 2026-05-09 18:20 Beijing time build, main @ massha1/);
+  assert.match(notes, /MAG: 2026-05-09 18:20 Beijing time build, main @ magsha1/);
+  assert.match(notes, /RCA: 2026-05-09 18:20 Beijing time build, main @ rcasha1/);
+  assert.match(notes, /OfficeCLI: 1\.0\.73/);
+  assert.doesNotMatch(notes, /MAS\/MDS\/MAG\/RCA/);
+  assert.doesNotMatch(notes, /Validation/);
+  assert.doesNotMatch(notes, /Published assets/);
 });
 
 test('GUI release publisher rejects updater metadata that points at Full assets', () => {

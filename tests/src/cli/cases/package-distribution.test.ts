@@ -116,7 +116,7 @@ test('packages manifest exposes package coordinates while marking module install
     output.packages_manifest.packages.modules.medautoscience.fallback_git.repo_url,
     'https://github.com/gaofeng21cn/med-autoscience.git',
   );
-  assert.deepEqual(output.packages_manifest.packages.modules.meddeepscientist.dependency_of, ['medautoscience']);
+  assert.equal(Object.hasOwn(output.packages_manifest.packages.modules, 'meddeepscientist'), false);
   assert.equal(
     output.packages_manifest.packages.modules.redcube.install_strategy,
     'extract_to_managed_modules_root',
@@ -130,7 +130,6 @@ test('package archive builder writes channel manifest checksums git source and r
 
   const fixtures = {
     medautoscience: createGitModuleRemoteFixture('med-autoscience'),
-    meddeepscientist: createGitModuleRemoteFixture('med-deepscientist'),
     medautogrant: createGitModuleRemoteFixture('med-autogrant'),
     redcube: createGitModuleRemoteFixture('redcube-ai'),
   };
@@ -154,7 +153,6 @@ test('package archive builder writes channel manifest checksums git source and r
     env: {
       ...process.env,
       OPL_MODULE_PATH_MEDAUTOSCIENCE: fixtures.medautoscience.sourceRoot,
-      OPL_MODULE_PATH_MEDDEEPSCIENTIST: fixtures.meddeepscientist.sourceRoot,
       OPL_MODULE_PATH_MEDAUTOGRANT: fixtures.medautogrant.sourceRoot,
       OPL_MODULE_PATH_REDCUBE: fixtures.redcube.sourceRoot,
     },

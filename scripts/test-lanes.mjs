@@ -42,6 +42,7 @@ const lanes = {
   regression: [
     nodeTest([
       'tests/src/cli.test.ts',
+      'tests/src/cli/cases/runtime-tray-mas-portal.test.ts',
       'tests/src/cli-codex-default-shell.test.ts',
       'tests/src/runtime-state-paths.test.ts',
       'tests/src/family-domain-catalog.test.ts',

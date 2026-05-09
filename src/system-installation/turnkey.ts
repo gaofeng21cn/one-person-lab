@@ -17,11 +17,11 @@ import {
   buildOplFirstRunLogSurface,
 } from './first-run-contract.ts';
 import { buildOplInitialize } from './initialize.ts';
-import { runOplModuleAction } from './modules.ts';
+import { DEFAULT_OPL_MODULE_IDS, runOplModuleAction } from './modules.ts';
 import { resolveProjectRoot, runCommand } from './shared.ts';
 import type { OplModuleId, OplTurnkeyInstallInput } from './shared.ts';
 
-const DEFAULT_MODULES: OplModuleId[] = ['medautoscience', 'meddeepscientist', 'medautogrant', 'redcube'];
+const DEFAULT_MODULES: OplModuleId[] = [...DEFAULT_OPL_MODULE_IDS];
 const DEFAULT_ENGINES = ['codex', 'hermes'] as const;
 
 function normalizeModuleId(raw: string): OplModuleId {

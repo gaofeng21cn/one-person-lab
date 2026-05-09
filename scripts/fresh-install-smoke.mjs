@@ -105,7 +105,6 @@ function createCodexConfig(homeDir) {
 function createGitModuleFixtures(modulesRoot) {
   const repoNames = [
     'med-autoscience',
-    'med-deepscientist',
     'med-autogrant',
     'redcube-ai',
   ];

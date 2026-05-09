@@ -31,6 +31,7 @@ import {
 } from './module-git.ts';
 
 type DomainModuleRuntimeSpec = DomainModuleSpec & {
+  default_install: boolean;
   bootstrap_command?: (checkoutPath: string) => { command: string; args: string[] } | null;
   health_check_command?: (checkoutPath: string) => { command: string; args: string[] } | null;
   exec_command?: (checkoutPath: string, args: string[]) => { command: string; args: string[] } | null;
@@ -60,6 +61,7 @@ const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
     repo_name: 'med-autoscience',
     repo_url: 'https://github.com/gaofeng21cn/med-autoscience.git',
     scope: 'domain_module',
+    default_install: true,
     description: 'Research Foundry in medicine: study execution, paper drafting, progress narration, and deliverable files.',
     bootstrap_command: (checkoutPath) => (
       resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-bootstrap.sh'))
@@ -78,7 +80,8 @@ const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
     repo_name: 'med-deepscientist',
     repo_url: 'https://github.com/gaofeng21cn/med-deepscientist.git',
     scope: 'runtime_dependency',
-    description: 'MAS-controlled deep-research backend companion for long-running scientific workflows.',
+    default_install: false,
+    description: 'Optional MAS-declared legacy oracle and backend audit companion; not part of the default OPL install.',
     bootstrap_command: (checkoutPath) => (
       resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-bootstrap.sh'))
       ?? buildPythonEditableBootstrapCommand(checkoutPath, '3.11')
@@ -91,6 +94,7 @@ const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
     repo_name: 'med-autogrant',
     repo_url: 'https://github.com/gaofeng21cn/med-autogrant.git',
     scope: 'domain_module',
+    default_install: true,
     description: 'Grant Foundry for proposal planning, critique, revision, and package assembly.',
     bootstrap_command: (checkoutPath) => (
       resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-bootstrap.sh'))
@@ -109,6 +113,7 @@ const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
     repo_name: 'redcube-ai',
     repo_url: 'https://github.com/gaofeng21cn/redcube-ai.git',
     scope: 'domain_module',
+    default_install: true,
     description: 'Presentation Ops module for slide decks and other visual deliverables.',
     bootstrap_command: (checkoutPath) => (
       resolveRepoOwnedScriptCommand(checkoutPath, path.join('scripts', 'opl-module-bootstrap.sh'))
@@ -122,6 +127,10 @@ const DOMAIN_MODULE_SPECS: DomainModuleRuntimeSpec[] = [
     skill_sync_domain: 'redcube',
   },
 ];
+
+export const DEFAULT_OPL_MODULE_IDS: readonly OplModuleId[] = DOMAIN_MODULE_SPECS
+  .filter((entry) => entry.default_install)
+  .map((entry) => entry.module_id);
 
 function resolveRepoRoot() {
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -320,6 +329,7 @@ function inspectModule(spec: DomainModuleSpec): ModuleInspection {
         module_id: spec.module_id,
         label: spec.label,
         scope: spec.scope,
+        default_install: spec.default_install,
         description: spec.description,
         repo_url: resolveModuleRepoUrl(spec),
         installed: true,
@@ -338,6 +348,7 @@ function inspectModule(spec: DomainModuleSpec): ModuleInspection {
         module_id: spec.module_id,
         label: spec.label,
         scope: spec.scope,
+        default_install: spec.default_install,
         description: spec.description,
         repo_url: resolveModuleRepoUrl(spec),
         installed: false,
@@ -363,6 +374,7 @@ function inspectModule(spec: DomainModuleSpec): ModuleInspection {
       module_id: spec.module_id,
       label: spec.label,
       scope: spec.scope,
+      default_install: spec.default_install,
       description: spec.description,
       repo_url: resolveModuleRepoUrl(spec),
       installed: true,
@@ -380,6 +392,7 @@ function inspectModule(spec: DomainModuleSpec): ModuleInspection {
     module_id: spec.module_id,
     label: spec.label,
     scope: spec.scope,
+    default_install: spec.default_install,
     description: spec.description,
     repo_url: resolveModuleRepoUrl(spec),
     installed: false,
@@ -429,6 +442,7 @@ function findModuleSpecOrThrow(moduleId: string): DomainModuleRuntimeSpec {
 
 export function buildOplModules() {
   const modules = DOMAIN_MODULE_SPECS.map((spec) => inspectModule(spec));
+  const defaultModules = modules.filter((entry) => entry.default_install);
   return {
     version: 'g2',
     modules: {
@@ -439,10 +453,16 @@ export function buildOplModules() {
         installed_modules_count: modules.filter((entry) => entry.installed).length,
         managed_modules_count: modules.filter((entry) => entry.install_origin === 'managed_root').length,
         healthy_modules_count: modules.filter((entry) => entry.health_status === 'ready').length,
+        default_modules_count: defaultModules.length,
+        installed_default_modules_count: defaultModules.filter((entry) => entry.installed).length,
+        managed_default_modules_count: defaultModules.filter((entry) => entry.install_origin === 'managed_root').length,
+        healthy_default_modules_count: defaultModules.filter((entry) => entry.health_status === 'ready').length,
+        optional_modules_count: modules.length - defaultModules.length,
       },
       modules,
       notes: [
-        'OPL-managed installs live under modules_root by default.',
+        'OPL-managed default installs live under modules_root by default.',
+        'MDS remains available only as an explicit MAS-declared diagnostic, intake, or parity-oracle companion; it is not installed during the default OPL first-run path.',
         'External sibling checkouts are still recognized so existing developer machines remain visible to the GUI without forcing a reinstall.',
       ],
     },

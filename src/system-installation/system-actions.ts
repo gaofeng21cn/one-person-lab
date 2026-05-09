@@ -127,6 +127,10 @@ function maybeUpdateModule(module: OplModuleStatus): SystemUpdateTargetResult {
 }
 
 function maybeReconcileModule(module: OplModuleStatus): SystemUpdateTargetResult {
+  if (!module.default_install) {
+    return buildSkippedUpdate('module', module.module_id, 'optional_module_not_in_default_reconcile');
+  }
+
   if (!module.installed || module.install_origin === 'missing') {
     const result = runOplModuleAction('install', module.module_id);
     return {
