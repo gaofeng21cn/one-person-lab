@@ -17,6 +17,8 @@ Hermes 只保留为显式可选 hosted/runtime provider adapter 与 online-manag
 - `MAS / MAG / RCA`：domain-owned truth、gate、artifact、progress、review / publication / submission 判断
 - concrete executor：由 domain route contract 选择，默认仍可继承本机 `Codex CLI`
 
+Family runtime supervision 的 owner split 更窄：domain 仓持有 wakeup / supervision truth、lease、SLO 与 repair command；`OPL Runtime Manager` 只读取 `family_runtime_supervision` surface 做 discovery、export、parity 与产品投影。`safe_reconcile_hint` 是路由提示，不是 OPL 写入 runtime truth 或启动 scheduler 的授权。
+
 ## 当前要落地的最小面
 
 1. `opl runtime manager`
@@ -42,6 +44,7 @@ v1 registry 只登记 MAS、MAG、RCA 已声明的 projection surface：
 
 - `skill_catalog.domain_projection.opl_runtime_manager_registration`
 - `runtime_continuity` / runtime-control projection
+- `family_runtime_supervision` read-only projection：adapter_id、cadence、last_success / last_tick、lease_freshness、SLO state、repair command、safe reconcile hint、domain-owned source refs 与 read-only authority boundary
 - artifact / attention / runtime health index input
 - domain-owned resume、progress、approval 或 review/publication truth ref
 
@@ -90,6 +93,7 @@ v1 registry 只登记 MAS、MAG、RCA 已声明的 projection surface：
 索引规则：
 
 - index 可以缓存与加速 OPL projection
+- runtime supervision index 只能缓存 `family_runtime_supervision` 的只读 projection 与 freshness 判断；修复必须回到 domain-owned repair command
 - 高频扫描、artifact manifest、session ledger/file state、目录 snapshot 与 large JSON validation 优先落在 Rust helper
 - index lifecycle 必须记录 TTL、diff history、failure log、last-success snapshot 与 freshness 状态；当前 helper 不可用时，OPL 需要明确报告是否还能临时信任上次成功快照
 - index 不得成为 domain-owned durable truth

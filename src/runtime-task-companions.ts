@@ -69,6 +69,49 @@ interface BuildFamilyOwnerRouteInput {
   projection_refs?: FamilyReference[];
 }
 
+interface BuildRuntimeSupervisionCadenceInput {
+  interval_seconds: number;
+  jitter_seconds?: number | null;
+  schedule_ref?: FamilyReference | null;
+}
+
+interface BuildRuntimeSupervisionLeaseFreshnessInput {
+  state: string;
+  observed_at: string;
+  max_age_seconds: number;
+  lease_ref?: FamilyReference | null;
+}
+
+interface BuildRuntimeSupervisionSloStateInput {
+  state: string;
+  summary: string;
+  breached_slo_ids?: string[];
+  slo_ref?: FamilyReference | null;
+}
+
+interface BuildRuntimeSupervisionAuthorityBoundaryInput {
+  projection_owner: string;
+  runtime_owner: string;
+  scheduler_owner: string;
+  authority: string;
+  forbidden_authorities: string[];
+}
+
+interface BuildFamilyRuntimeSupervisionInput {
+  target_domain_id: string;
+  supervision_id: string;
+  adapter_id: string;
+  cadence: BuildRuntimeSupervisionCadenceInput;
+  last_success: string;
+  last_tick: string;
+  lease_freshness: BuildRuntimeSupervisionLeaseFreshnessInput;
+  slo_state: BuildRuntimeSupervisionSloStateInput;
+  repair_command: string;
+  safe_reconcile_hint: string;
+  domain_owned_source_refs: FamilyReference[];
+  read_only_authority_boundary: BuildRuntimeSupervisionAuthorityBoundaryInput;
+}
+
 interface BuildTaskSurfaceDescriptorInput {
   surface_kind: string;
   summary: string;
@@ -193,6 +236,13 @@ function readStringList(value: unknown, field: string) {
     return [] as string[];
   }
   return value.map((entry, index) => requireString(entry, `${field}[${index}]`));
+}
+
+function requirePositiveInteger(value: unknown, field: string) {
+  if (!Number.isInteger(value) || Number(value) <= 0) {
+    throw new Error(`runtime/task companion ${field} 必须是正整数`);
+  }
+  return Number(value);
 }
 
 function normalizeRef(value: unknown, field: string) {
@@ -326,6 +376,79 @@ export function buildFamilyOwnerRoute(input: BuildFamilyOwnerRouteInput) {
     summary: requireString(input.summary, 'summary'),
     handoff_refs: normalizeRefs(input.handoff_refs, 'handoff_refs'),
     projection_refs: normalizeRefs(input.projection_refs, 'projection_refs'),
+  };
+}
+
+export function buildFamilyRuntimeSupervision(input: BuildFamilyRuntimeSupervisionInput) {
+  const domainOwnedSourceRefs = normalizeRefs(input.domain_owned_source_refs, 'domain_owned_source_refs');
+  if (domainOwnedSourceRefs.length === 0) {
+    throw new Error('runtime/task companion family_runtime_supervision 至少需要一个 domain-owned source ref');
+  }
+
+  const forbiddenAuthorities = readStringList(
+    input.read_only_authority_boundary?.forbidden_authorities,
+    'read_only_authority_boundary.forbidden_authorities',
+  );
+  if (forbiddenAuthorities.length === 0) {
+    throw new Error('runtime/task companion family_runtime_supervision 必须声明 forbidden authorities');
+  }
+  const authority = requireString(input.read_only_authority_boundary?.authority, 'read_only_authority_boundary.authority');
+  if (authority !== 'read_only_projection') {
+    throw new Error('runtime/task companion family_runtime_supervision.authority 必须是 read_only_projection');
+  }
+
+  return {
+    surface_kind: 'family_runtime_supervision',
+    version: 'family-runtime-supervision.v1',
+    target_domain_id: requireString(input.target_domain_id, 'target_domain_id'),
+    supervision_id: requireString(input.supervision_id, 'supervision_id'),
+    adapter_id: requireString(input.adapter_id, 'adapter_id'),
+    cadence: {
+      interval_seconds: requirePositiveInteger(input.cadence?.interval_seconds, 'cadence.interval_seconds'),
+      ...(input.cadence?.jitter_seconds === null || input.cadence?.jitter_seconds === undefined
+        ? {}
+        : { jitter_seconds: requirePositiveInteger(input.cadence.jitter_seconds, 'cadence.jitter_seconds') }),
+      ...(normalizeRef(input.cadence?.schedule_ref, 'cadence.schedule_ref')
+        ? { schedule_ref: normalizeRef(input.cadence.schedule_ref, 'cadence.schedule_ref') }
+        : {}),
+    },
+    last_success: requireString(input.last_success, 'last_success'),
+    last_tick: requireString(input.last_tick, 'last_tick'),
+    lease_freshness: {
+      state: requireString(input.lease_freshness?.state, 'lease_freshness.state'),
+      observed_at: requireString(input.lease_freshness?.observed_at, 'lease_freshness.observed_at'),
+      max_age_seconds: requirePositiveInteger(input.lease_freshness?.max_age_seconds, 'lease_freshness.max_age_seconds'),
+      ...(normalizeRef(input.lease_freshness?.lease_ref, 'lease_freshness.lease_ref')
+        ? { lease_ref: normalizeRef(input.lease_freshness.lease_ref, 'lease_freshness.lease_ref') }
+        : {}),
+    },
+    slo_state: {
+      state: requireString(input.slo_state?.state, 'slo_state.state'),
+      summary: requireString(input.slo_state?.summary, 'slo_state.summary'),
+      breached_slo_ids: readStringList(input.slo_state?.breached_slo_ids, 'slo_state.breached_slo_ids'),
+      ...(normalizeRef(input.slo_state?.slo_ref, 'slo_state.slo_ref')
+        ? { slo_ref: normalizeRef(input.slo_state.slo_ref, 'slo_state.slo_ref') }
+        : {}),
+    },
+    repair_command: requireString(input.repair_command, 'repair_command'),
+    safe_reconcile_hint: requireString(input.safe_reconcile_hint, 'safe_reconcile_hint'),
+    domain_owned_source_refs: domainOwnedSourceRefs,
+    read_only_authority_boundary: {
+      projection_owner: requireString(
+        input.read_only_authority_boundary?.projection_owner,
+        'read_only_authority_boundary.projection_owner',
+      ),
+      runtime_owner: requireString(
+        input.read_only_authority_boundary?.runtime_owner,
+        'read_only_authority_boundary.runtime_owner',
+      ),
+      scheduler_owner: requireString(
+        input.read_only_authority_boundary?.scheduler_owner,
+        'read_only_authority_boundary.scheduler_owner',
+      ),
+      authority,
+      forbidden_authorities: forbiddenAuthorities,
+    },
   };
 }
 

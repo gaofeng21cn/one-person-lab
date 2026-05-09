@@ -52,6 +52,8 @@
 
 ### control-plane-oriented
 
+- `family-runtime-supervision.schema.json`
+  - 冻结共享的只读 wakeup / supervision projection，覆盖 adapter id、cadence、last success / tick、lease freshness、SLO state、repair command、safe reconcile hint、domain-owned source refs 与 authority boundary
 - `family-persistence-policy.schema.json`
   - 冻结共享策略，用来区分 `file_authority`、`sqlite_sidecar_index`、`projection_cache` 与 `source_provenance_only`
 - `family-lifecycle-ledger.schema.json`
@@ -97,6 +99,12 @@ family-level persistence 与 lifecycle surface 只属于共享控制面合同。
   - 记录 route epoch、source fingerprint、next owner、allowed actions、idempotency key 与 handoff / projection refs
 
 `family-product-entry-manifest-v2.schema.json` 只增加这些 surface 的可选 discovery refs。它不要求 `MAG` 或 `RCA` 第一轮把运行状态迁移到 SQLite，也不把 `MAS` 的 publication evaluation、AI review、paper package 或 readiness authority 移出 `MAS`。
+
+## Runtime Supervision Freeze
+
+`family-runtime-supervision.schema.json` 冻结 family-level runtime wakeup / supervision 只读投影。它让 `MAS`、`MAG`、`RCA` 以及未来 admitted domain 用同一形状暴露 adapter id、cadence、latest tick、latest success、lease freshness、SLO state、repair command、safe reconcile hint 与 domain-owned source references。
+
+这个 surface 不是 scheduler contract。`OPL` 可以发现、导出、比较和投影它，用于 parity 与 operator visibility；`OPL` 不因此成为 domain scheduler、session store、memory owner、quality verdict owner、artifact authority 或 daemon owner。`repair_command` 与 `safe_reconcile_hint` 只是把修复动作路由回 domain-owned repair / supervision surface。
 
 ## Action Catalog Freeze
 
@@ -152,6 +160,7 @@ family-level persistence 与 lifecycle surface 只属于共享控制面合同。
 - [`family-action-graph.schema.json`](./family-action-graph.schema.json)
 - [`family-action-catalog.schema.json`](./family-action-catalog.schema.json)
 - [`family-human-gate.schema.json`](./family-human-gate.schema.json)
+- [`family-runtime-supervision.schema.json`](./family-runtime-supervision.schema.json)
 - [`family-persistence-policy.schema.json`](./family-persistence-policy.schema.json)
 - [`family-lifecycle-ledger.schema.json`](./family-lifecycle-ledger.schema.json)
 - [`family-owner-route.schema.json`](./family-owner-route.schema.json)

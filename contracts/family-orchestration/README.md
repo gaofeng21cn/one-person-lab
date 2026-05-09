@@ -52,6 +52,8 @@ These schemas therefore freeze interoperability surfaces, not a monolithic runti
 
 ### Control-plane-oriented
 
+- `family-runtime-supervision.schema.json`
+  - shared read-only wakeup / supervision projection for adapter id, cadence, last success / tick, lease freshness, SLO state, repair command, safe reconcile hint, domain-owned source refs, and authority boundary
 - `family-persistence-policy.schema.json`
   - shared policy that separates `file_authority`, `sqlite_sidecar_index`, `projection_cache`, and `source_provenance_only`
 - `family-lifecycle-ledger.schema.json`
@@ -95,6 +97,12 @@ The shared control surfaces are:
   - records route epoch, source fingerprint, next owner, allowed actions, idempotency key, and handoff / projection refs
 
 `family-product-entry-manifest-v2.schema.json` only adds optional discovery refs for these surfaces. It does not require `MAG` or `RCA` to migrate runtime state into SQLite, and it does not move `MAS` publication evaluation, AI review, paper package, or readiness authority out of `MAS`.
+
+## Runtime Supervision Freeze
+
+`family-runtime-supervision.schema.json` freezes the shared family-level runtime wakeup / supervision projection. It lets `MAS`, `MAG`, `RCA`, and future admitted domains expose one read-only surface for adapter id, cadence, latest tick, latest success, lease freshness, SLO state, repair command, safe reconcile hint, and domain-owned source references.
+
+This surface is not a scheduler contract. `OPL` may discover, export, compare, and project the surface for parity and operator visibility, but it must not become the domain scheduler, session store, memory owner, quality verdict owner, artifact authority, or daemon owner. `repair_command` and `safe_reconcile_hint` are route hints back to the domain-owned repair / supervision surface.
 
 ## Action Catalog Freeze
 
@@ -152,6 +160,7 @@ This directory does not:
 - [`family-action-graph.schema.json`](./family-action-graph.schema.json)
 - [`family-action-catalog.schema.json`](./family-action-catalog.schema.json)
 - [`family-human-gate.schema.json`](./family-human-gate.schema.json)
+- [`family-runtime-supervision.schema.json`](./family-runtime-supervision.schema.json)
 - [`family-persistence-policy.schema.json`](./family-persistence-policy.schema.json)
 - [`family-lifecycle-ledger.schema.json`](./family-lifecycle-ledger.schema.json)
 - [`family-owner-route.schema.json`](./family-owner-route.schema.json)
