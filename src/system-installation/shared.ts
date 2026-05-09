@@ -46,6 +46,7 @@ export type DomainModuleSpec = {
   repo_name: string;
   repo_url: string;
   scope: 'domain_module' | 'runtime_dependency';
+  default_install: boolean;
   description: string;
 };
 
@@ -112,6 +113,7 @@ export type ModuleInspection = {
   module_id: OplModuleId;
   label: string;
   scope: 'domain_module' | 'runtime_dependency';
+  default_install: boolean;
   description: string;
   repo_url: string;
   installed: boolean;

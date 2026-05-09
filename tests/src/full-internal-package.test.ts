@@ -33,7 +33,6 @@ test('full internal manifest declares all first-run domain modules and Hermes le
       codex: { source_path: '/codex', version: '0.125.0', size_bytes: 2 },
       hermes: { source_path: '/hermes', version: '0.8.0', git_commit: 'hermessha', size_bytes: 3 },
       mas: { source_path: '/mas', git_commit: 'massha', size_bytes: 4 },
-      mds: { source_path: '/mds', git_commit: 'mdssha', size_bytes: 5 },
       mag: { source_path: '/mag', git_commit: 'magsha', size_bytes: 6 },
       rca: { source_path: '/rca', git_commit: 'rcasha', size_bytes: 7 },
       node: { source_path: '/node', version: '22.16.0', size_bytes: 6 },
@@ -60,8 +59,8 @@ test('full internal manifest declares all first-run domain modules and Hermes le
   assert.equal(manifest.runtime.managed_modules_root_template, '~/Library/Application Support/OPL/state/modules');
   assert.equal(manifest.components.mas.required, true);
   assert.equal(manifest.components.mas.role, 'primary_domain_module');
-  assert.equal(manifest.components.mds.required, true);
-  assert.equal(manifest.components.mds.visible_in_first_run_ui, false);
+  assert.equal(manifest.components.mas.monolith_runtime, true);
+  assert.equal(Object.hasOwn(manifest.components, 'mds'), false);
   assert.equal(manifest.components.mag.required, true);
   assert.equal(manifest.components.mag.role, 'grant_domain_module');
   assert.equal(manifest.components.mag.visible_in_first_run_ui, true);
@@ -123,9 +122,8 @@ test('runtime staging excludes dev/runtime-heavy paths while preserving core ent
   assert.equal(shouldExcludeRuntimePath('hermes/ui/package.json'), true);
   assert.equal(shouldExcludeRuntimePath('hermes/tools/voice_mode.py'), true);
   assert.equal(shouldExcludeRuntimePath('hermes/.venv/bin/python3'), true);
-  assert.equal(shouldExcludeRuntimePath('modules/mds/src/ui/package.json'), true);
   assert.equal(shouldExcludeRuntimePath('modules/mas/.venv/bin/python3'), true);
-  assert.equal(shouldExcludeRuntimePath('modules/mds/.worktrees/runtime-worktree-storage-prune/src/ui/bin/ds'), true);
+  assert.equal(shouldExcludeRuntimePath('modules/mag/.worktrees/runtime-worktree-storage-prune/src/ui/bin/ds'), true);
   assert.equal(shouldExcludeRuntimePath('modules/mas/.codex/local.json'), true);
   assert.equal(shouldExcludeRuntimePath('modules/mas/.omx/state.json'), true);
   assert.equal(shouldExcludeRuntimePath('modules/mas/.git/HEAD'), true);
@@ -137,7 +135,6 @@ test('runtime staging excludes dev/runtime-heavy paths while preserving core ent
   assert.equal(shouldExcludeRuntimePath('hermes/hermes_cli/gateway.py'), false);
   assert.equal(shouldExcludeRuntimePath('hermes/hermes_cli/cron.py'), false);
   assert.equal(shouldExcludeRuntimePath('modules/mas/src/medautosci/__init__.py'), false);
-  assert.equal(shouldExcludeRuntimePath('modules/mds/src/med_deepscientist/__init__.py'), false);
   assert.equal(shouldExcludeRuntimePath('modules/mag/src/med_autogrant/__init__.py'), false);
   assert.equal(shouldExcludeRuntimePath('modules/rca/apps/redcube-cli/dist/cli.js'), false);
   assert.equal(shouldExcludeRuntimePath('modules/rca/packages/redcube-gateway/dist/index.js'), false);
@@ -176,7 +173,8 @@ test('readme documents GitHub Release first-install distribution and app update 
   assert.match(text, /ui-ux-pro-max/);
   assert.doesNotMatch(text, /Application Support\/OPL\/runtime\/26\.5\.1/);
   assert.match(text, /API key/);
-  assert.match(text, /确认 Codex、Hermes-Agent、MAS、MDS backend、MAG、RCA、officecli CLI 与推荐 skills 状态/);
+  assert.match(text, /确认 Codex、Hermes-Agent、MAS、MAG、RCA、officecli CLI 与推荐 skills 状态/);
+  assert.doesNotMatch(text, /MDS backend/);
   assert.match(text, /当前标准 GitHub DMG 的同等发布模式/);
   assert.match(text, /右键打开/);
 });
@@ -195,7 +193,6 @@ test('packaged module markers are staging sources until materialized into manage
     const runtimeModulesRoot = path.join(tempRoot, 'runtime', 'current', 'modules');
     const moduleSpecs = [
       ['medautoscience', 'med-autoscience', 'mas', 'abc123'],
-      ['meddeepscientist', 'med-deepscientist', 'mds', 'def456'],
       ['medautogrant', 'med-autogrant', 'mag', 'fed789'],
       ['redcube', 'redcube-ai', 'rca', 'cba987'],
     ] as const;
@@ -221,7 +218,6 @@ test('packaged module markers are staging sources until materialized into manage
     process.env.OPL_STATE_DIR = path.join(tempRoot, 'state');
     process.env.OPL_MODULES_ROOT = path.join(tempRoot, 'managed-modules');
     process.env.OPL_MODULE_PATH_MEDAUTOSCIENCE = path.join(runtimeModulesRoot, 'mas');
-    process.env.OPL_MODULE_PATH_MEDDEEPSCIENTIST = path.join(runtimeModulesRoot, 'mds');
     process.env.OPL_MODULE_PATH_MEDAUTOGRANT = path.join(runtimeModulesRoot, 'mag');
     process.env.OPL_MODULE_PATH_REDCUBE = path.join(runtimeModulesRoot, 'rca');
 
@@ -309,7 +305,6 @@ test('full runtime layer cache records miss then hit when zstd is available', ()
     for (const [name, executable] of [
       ['hermes-agent', 'hermes'],
       ['med-autoscience', 'mas'],
-      ['med-deepscientist', 'mds'],
       ['med-autogrant', 'mag'],
       ['redcube-ai', 'rca'],
     ]) {
@@ -370,8 +365,6 @@ test('full runtime layer cache records miss then hit when zstd is available', ()
           path.join(tmpRoot, 'hermes-agent'),
           '--mas-root',
           path.join(tmpRoot, 'med-autoscience'),
-          '--mds-root',
-          path.join(tmpRoot, 'med-deepscientist'),
           '--mag-root',
           path.join(tmpRoot, 'med-autogrant'),
           '--rca-root',
@@ -431,7 +424,6 @@ test('full runtime layer cache records miss then hit when zstd is available', ()
     assert.equal(fs.existsSync(path.join(runtimeRoot, 'skills', 'ui-ux-pro-max', 'data', 'palettes.json')), true);
     for (const [moduleDir, moduleId] of [
       ['mas', 'medautoscience'],
-      ['mds', 'meddeepscientist'],
       ['mag', 'medautogrant'],
       ['rca', 'redcube'],
     ]) {

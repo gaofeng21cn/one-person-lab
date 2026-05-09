@@ -8,7 +8,7 @@
 
 `one-person-lab` 主仓不 fork GUI codebase。它持有 OPL 的运行时真相、安装与环境管理能力、模块与 skill 同步、机器可读合同、release version、Packages 坐标，以及 App / WebUI 共同消费的 CLI-backed 产品表面。
 
-因此，未来切换到其他 GUI 的目标不是重写 OPL，而是替换当前 GUI adapter。只要新 GUI 消费同一组 OPL CLI / machine-readable surfaces，切换成本应主要集中在 UI adapter、打包和发布链路，不应扩散到 MAS/MDS/MAG/RCA 或 OPL runtime。
+因此，未来切换到其他 GUI 的目标不是重写 OPL，而是替换当前 GUI adapter。只要新 GUI 消费同一组 OPL CLI / machine-readable surfaces，切换成本应主要集中在 UI adapter、打包和发布链路，不应扩散到 MAS/MAG/RCA 或 OPL runtime；MDS 只保留为 MAS 显式声明的可选 companion。
 
 ## 当前分工
 
@@ -16,7 +16,7 @@
 
 - 定义 `OPL` 的 Codex-default session/runtime、显式 activation、domain agent registry、workspace/session/progress/artifact surface。
 - 提供 `opl install`、`opl system initialize`、`opl module *`、`opl skill *`、`opl packages manifest` 等 CLI-backed 能力。
-- 管理 `Codex CLI`、`Hermes-Agent`、MAS/MDS/MAG/RCA、推荐 skills、native helper、Packages 与 release version。
+- 管理 `Codex CLI`、`Hermes-Agent`、MAS/MAG/RCA、推荐 skills、native helper、Packages 与 release version；MDS 不作为默认安装模块。
 - 发布用户下载入口：One Person Lab App 的 release artifact 放在 `one-person-lab` GitHub Releases。
 - 为 GUI 提供可消费的机器可读输出；新增安装、修复、状态或更新能力时，先落到 CLI，再由 GUI 调用。
 

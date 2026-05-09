@@ -73,6 +73,9 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
   const endpoints = buildOplEndpoints();
   const environment = environmentPayload.system_environment;
   const moduleSummary = modulesPayload.modules.summary;
+  const defaultModuleTotal = moduleSummary.default_modules_count ?? moduleSummary.total_modules_count;
+  const defaultModuleInstalled = moduleSummary.installed_default_modules_count ?? moduleSummary.installed_modules_count;
+  const defaultModuleReady = moduleSummary.healthy_default_modules_count ?? moduleSummary.healthy_modules_count;
   const recommendedSkills = buildOplRecommendedSkills();
   const guiShell = buildOplGuiShellSurface(resolveProjectRoot());
   const codex = environment.core_engines.codex;
@@ -84,7 +87,7 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
     workspaceRoot.health_status === 'ready'
     && codexCliReady
     && codexConfigReady;
-  const domainReady = moduleSummary.installed_modules_count === moduleSummary.total_modules_count;
+  const domainReady = defaultModuleReady === defaultModuleTotal;
   const onlineManagementStatus = buildOnlineManagementStatus(hermes);
 
   const setWorkspaceRootAction = buildInitializeActionDescriptor({
@@ -266,11 +269,11 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
     {
       item_id: 'domain_modules',
       label: 'Domain Modules',
-      status: buildInitializeOptionalStatus(moduleSummary.installed_modules_count),
+      status: buildInitializeOptionalStatus(defaultModuleReady),
       required: true,
-      blocking: moduleSummary.installed_modules_count < moduleSummary.total_modules_count,
+      blocking: defaultModuleReady < defaultModuleTotal,
       section_id: 'modules',
-      detail_summary: `${moduleSummary.installed_modules_count}/${moduleSummary.total_modules_count} modules installed.`,
+      detail_summary: `${defaultModuleReady}/${defaultModuleTotal} default modules ready.`,
       endpoint: endpoints.modules,
       action_endpoint: endpoints.module_action,
       action: reviewModulesAction,
@@ -318,7 +321,7 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
       ? 'workspace_root'
       : (!codexCliReady || !codexConfigReady)
         ? 'environment'
-        : moduleSummary.installed_modules_count < moduleSummary.total_modules_count
+        : defaultModuleReady < defaultModuleTotal
           ? 'modules'
           : 'review';
   const recommendedNextAction =

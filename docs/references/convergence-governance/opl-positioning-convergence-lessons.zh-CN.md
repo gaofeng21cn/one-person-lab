@@ -204,7 +204,7 @@ MAS v2 alignment 是典型例子：
 当前稳定边界是：
 
 - 标准 App / updater：用户日常更新通道。
-- Full first-install：首次安装资产，可带 MAS/MDS/MAG/RCA、Hermes、OfficeCLI、companion skills，但不进入 `latest*.yml`。
+- Full first-install：首次安装资产，可带 MAS/MAG/RCA、Hermes、OfficeCLI、companion skills，但不进入 `latest*.yml`；MDS 只作为 MAS 显式可选 companion，不进入默认 Full payload。
 - Packages/GHCR：机器消费通道和后续分发目标。
 - Git checkout / sibling repo：当前正式 module 更新路径。
 

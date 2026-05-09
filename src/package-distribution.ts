@@ -5,7 +5,7 @@ import path from 'node:path';
 import { getOplReleaseRepo, getOplReleaseVersion } from './opl-release.ts';
 import { readBundledCodexDefaultProfile } from './local-codex-defaults.ts';
 
-type PackageModuleId = 'medautoscience' | 'meddeepscientist' | 'medautogrant' | 'redcube';
+type PackageModuleId = 'medautoscience' | 'medautogrant' | 'redcube';
 
 type PackageModuleSpec = {
   module_id: PackageModuleId;
@@ -14,7 +14,6 @@ type PackageModuleSpec = {
   repo_url: string;
   scope: 'domain_module' | 'runtime_dependency';
   package_name: string;
-  dependency_of?: PackageModuleId[];
 };
 
 type BuildPackageManifestInput = Partial<{
@@ -35,15 +34,6 @@ const MODULE_SPECS: PackageModuleSpec[] = [
     repo_url: 'https://github.com/gaofeng21cn/med-autoscience.git',
     scope: 'domain_module',
     package_name: 'med-autoscience',
-  },
-  {
-    module_id: 'meddeepscientist',
-    label: 'Med Deep Scientist',
-    repo_name: 'med-deepscientist',
-    repo_url: 'https://github.com/gaofeng21cn/med-deepscientist.git',
-    scope: 'runtime_dependency',
-    package_name: 'med-deepscientist',
-    dependency_of: ['medautoscience'],
   },
   {
     module_id: 'medautogrant',
@@ -189,7 +179,7 @@ export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
             },
             release_discipline: buildModuleReleaseDiscipline(spec, rollbackVersion),
             install_strategy: 'extract_to_managed_modules_root',
-            dependency_of: spec.dependency_of ?? [],
+            dependency_of: [],
           },
         ]),
       ),

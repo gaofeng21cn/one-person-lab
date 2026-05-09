@@ -238,8 +238,34 @@ function findFullPackageArtifacts(fullPackageDir, version, macArch) {
   if (manifest?.distribution?.updater_metadata_allowed !== false) {
     throw new Error('Full package manifest must declare distribution.updater_metadata_allowed=false.');
   }
+  assertFullPackageManifestHasReleaseNotesMetadata(manifest);
 
   return required.map((name) => path.join(fullPackageDir, name));
+}
+
+function assertFullPackageManifestHasReleaseNotesMetadata(manifest) {
+  const missing = [];
+  for (const key of ['mas', 'mag', 'rca']) {
+    const gitCommit = manifest?.components?.[key]?.git_commit;
+    if (typeof gitCommit !== 'string' || !gitCommit.trim()) {
+      missing.push(`components.${key}.git_commit`);
+    }
+  }
+  const officeCliVersion = manifest?.components?.officecli?.version;
+  if (typeof officeCliVersion !== 'string' || !officeCliVersion.trim()) {
+    missing.push('components.officecli.version');
+  }
+  if (missing.length > 0) {
+    throw new Error(`Full package manifest is missing release-note metadata: ${missing.join(', ')}`);
+  }
+}
+
+function readFullPackageManifest(fullPackageDir) {
+  const manifestPath = path.join(fullPackageDir || defaultFullPackageDir, 'full-package-manifest.json');
+  if (!fs.existsSync(manifestPath)) {
+    return null;
+  }
+  return JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 }
 
 function releaseExists(repo, tag) {
@@ -321,16 +347,64 @@ function buildUpdateGuidanceNotes(version) {
   ];
 }
 
-function buildFullPackageReleaseNotesSection(version) {
+function formatFriendlyTimestamp(value) {
+  if (!value) {
+    return 'this release build';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Shanghai',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).formatToParts(date).map((part) => [part.type, part.value]),
+  );
+  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute} Beijing time`;
+}
+
+function shortSha(value) {
+  return typeof value === 'string' && value.trim() ? value.trim().slice(0, 7) : null;
+}
+
+function buildBundledModuleNotes(manifest) {
+  if (!manifest?.components || typeof manifest.components !== 'object') {
+    return [];
+  }
+  const generatedAt = formatFriendlyTimestamp(manifest.generated_at);
+  const modules = [
+    ['MAS', manifest.components.mas],
+    ['MAG', manifest.components.mag],
+    ['RCA', manifest.components.rca],
+  ]
+    .map(([label, component]) => {
+      const sha = shortSha(component?.git_commit);
+      return sha ? `- ${label}: ${generatedAt} build, main @ ${sha}` : `- ${label}: ${generatedAt} build`;
+    });
+  const officeCliVersion = manifest.components.officecli?.version;
+  if (officeCliVersion) {
+    modules.push(`- OfficeCLI: ${String(officeCliVersion).split(/\r?\n/)[0]}`);
+  }
+  return modules;
+}
+
+function buildFullPackageReleaseNotesSection(version, manifest = null) {
+  const bundledModuleNotes = buildBundledModuleNotes(manifest);
   return [
-    'Full first-install package:',
-    `- New macOS arm64 users can download One-Person-Lab-Full-${version}-mac-arm64.dmg to reduce the time from first launch to the first MAS, MAG, or RCA task.`,
-    '- The Full package bundles the MAS/MDS/MAG/RCA domain modules, Hermes runtime payload, OfficeCLI CLI binary, and recommended companion skills used during first setup; users still configure their API key normally.',
-    '- Full assets are first-install downloads only. They are not referenced by latest*.yml and are not used by the auto-updater.',
+    'Full first-install package',
+    `- New macOS arm64 users can download One-Person-Lab-Full-${version}-mac-arm64.dmg when they want the fastest first setup. It preloads MAS, MAG, RCA, Hermes, OfficeCLI, and recommended companion skills; users still only need to configure their API key.`,
+    '- Full is a first-install download, not a separate update channel. App auto-update still follows the standard latest*.yml metadata and standard One Person Lab package.',
+    ...(bundledModuleNotes.length > 0 ? ['', 'Bundled module versions', ...bundledModuleNotes] : []),
   ];
 }
 
-function buildReleaseNotes(version, includeFullPackage, changeList) {
+function buildReleaseNotes(version, includeFullPackage, changeList, fullPackageManifest = null) {
   const notes = [
     `One Person Lab desktop GUI release ${version}`,
     '',
@@ -342,13 +416,13 @@ function buildReleaseNotes(version, includeFullPackage, changeList) {
   if (includeFullPackage) {
     notes.push(
       '',
-      ...buildFullPackageReleaseNotesSection(version),
+      ...buildFullPackageReleaseNotesSection(version, fullPackageManifest),
     );
   }
   return notes.join('\n');
 }
 
-function ensureFullPackageReleaseNotes(repo, tag, version) {
+function ensureFullPackageReleaseNotes(repo, tag, version, fullPackageManifest = null) {
   const current = spawnSync('gh', ['release', 'view', tag, '--repo', repo, '--json', 'body', '--jq', '.body'], {
     encoding: 'utf8',
     stdio: 'pipe',
@@ -358,27 +432,23 @@ function ensureFullPackageReleaseNotes(repo, tag, version) {
   }
 
   const currentNotes = current.stdout.trimEnd();
-  const assetName = `One-Person-Lab-Full-${version}-mac-arm64.dmg`;
+  const fullSection = buildFullPackageReleaseNotesSection(version, fullPackageManifest).join('\n');
   const missingUpdateGuidance = !current.stdout.includes('Update guidance:');
-  const missingFullSection = !current.stdout.includes(assetName) && !current.stdout.includes('Full first-install package:');
-  if (!missingUpdateGuidance && !missingFullSection) {
-    return;
-  }
+  const existingFullSection = /^Full first-install package:?[\s\S]*$/m.test(currentNotes);
+  let nextNotes = existingFullSection
+    ? currentNotes.replace(/^Full first-install package:?[\s\S]*$/m, fullSection)
+    : [
+        ...(currentNotes ? [currentNotes, ''] : []),
+        fullSection,
+      ].join('\n');
 
-  const appendedSections = [];
   if (missingUpdateGuidance) {
-    appendedSections.push(...buildUpdateGuidanceNotes(version));
+    nextNotes = [
+      nextNotes,
+      '',
+      ...buildUpdateGuidanceNotes(version),
+    ].join('\n');
   }
-  if (missingUpdateGuidance && missingFullSection) {
-    appendedSections.push('');
-  }
-  if (missingFullSection) {
-    appendedSections.push(...buildFullPackageReleaseNotesSection(version));
-  }
-  const nextNotes = [
-    ...(currentNotes ? [currentNotes, ''] : []),
-    ...appendedSections,
-  ].join('\n');
   run('gh', ['release', 'edit', tag, '--repo', repo, '--notes', nextNotes]);
 }
 
@@ -401,6 +471,7 @@ function main() {
   const fullPackageArtifacts = options.includeFullPackage
     ? findFullPackageArtifacts(options.fullPackageDir, options.version, options.macArch)
     : [];
+  const fullPackageManifest = options.includeFullPackage ? readFullPackageManifest(options.fullPackageDir) : null;
   const allArtifacts = [...artifacts, ...fullPackageArtifacts];
   const uploadArgs = ['release', 'upload', tag, ...allArtifacts, '--repo', options.releaseRepo, '--clobber'];
   const existingRelease = releaseExists(options.releaseRepo, tag);
@@ -408,6 +479,7 @@ function main() {
     options.version,
     options.includeFullPackage,
     options.fullPackageOnly ? ['Full first-install package assets for the existing standard release.'] : buildChangeList(options.shellRoot),
+    fullPackageManifest,
   );
 
   if (options.dryRun) {
@@ -446,7 +518,7 @@ function main() {
       releaseNotes,
     ]);
   } else if (options.includeFullPackage) {
-    ensureFullPackageReleaseNotes(options.releaseRepo, tag, options.version);
+    ensureFullPackageReleaseNotes(options.releaseRepo, tag, options.version, fullPackageManifest);
   }
   run('gh', uploadArgs);
 }
