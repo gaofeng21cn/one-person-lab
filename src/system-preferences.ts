@@ -5,6 +5,8 @@ import { GatewayContractError } from './contracts.ts';
 import { ensureOplStateDir, resolveOplStatePaths } from './runtime-state-paths.ts';
 
 export type OplUpdateChannel = 'stable' | 'preview';
+export type OplDeveloperSupervisorEnabled = 'auto' | 'on' | 'off';
+export type OplDeveloperSupervisorMode = 'external_observe' | 'developer_apply_safe';
 
 export type OplWorkspaceRoot = {
   version: 'g1';
@@ -26,6 +28,15 @@ type OplUpdateChannelFile = {
   version: 'g1';
   channel: OplUpdateChannel;
   updated_at: string;
+};
+
+export type OplDeveloperSupervisorConfigFile = {
+  version: 'g1';
+  enabled: OplDeveloperSupervisorEnabled;
+  mode: OplDeveloperSupervisorMode;
+  auto_enable_github_login: string;
+  updated_at: string;
+  source: 'default' | 'user_config';
 };
 
 function normalizeOptionalString(value: string | null | undefined) {
@@ -203,5 +214,83 @@ export function writeOplUpdateChannel(channel: OplUpdateChannel) {
     updated_at: nowIso(),
   };
   fs.writeFileSync(paths.update_channel_file, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+  return payload;
+}
+
+function normalizeDeveloperSupervisorEnabled(value: unknown): OplDeveloperSupervisorEnabled {
+  return value === 'on' || value === 'off' || value === 'auto' ? value : 'auto';
+}
+
+function normalizeDeveloperSupervisorMode(value: unknown): OplDeveloperSupervisorMode {
+  return value === 'developer_apply_safe' ? 'developer_apply_safe' : 'external_observe';
+}
+
+function normalizeAutoEnableGithubLogin(value: unknown): string {
+  return typeof value === 'string' && value.trim() ? value.trim() : 'gaofeng21cn';
+}
+
+function readDeveloperSupervisorConfigFile(): OplDeveloperSupervisorConfigFile | null {
+  const paths = ensureOplStateDir(resolveOplStatePaths());
+  if (!fs.existsSync(paths.developer_supervisor_config_file)) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(
+      fs.readFileSync(paths.developer_supervisor_config_file, 'utf8'),
+    ) as Partial<OplDeveloperSupervisorConfigFile>;
+    return {
+      version: 'g1',
+      enabled: normalizeDeveloperSupervisorEnabled(parsed.enabled),
+      mode: normalizeDeveloperSupervisorMode(parsed.mode),
+      auto_enable_github_login: normalizeAutoEnableGithubLogin(parsed.auto_enable_github_login),
+      updated_at:
+        typeof parsed.updated_at === 'string' && parsed.updated_at.trim().length > 0
+          ? parsed.updated_at
+          : nowIso(),
+      source: 'user_config',
+    };
+  } catch (error) {
+    throw new GatewayContractError(
+      'contract_shape_invalid',
+      'Existing OPL developer supervisor state is invalid JSON or has an invalid shape.',
+      {
+        file: paths.developer_supervisor_config_file,
+        cause: error instanceof Error ? error.message : 'Unknown developer supervisor parse failure.',
+      },
+    );
+  }
+}
+
+export function readOplDeveloperSupervisorConfig(): OplDeveloperSupervisorConfigFile {
+  const persisted = readDeveloperSupervisorConfigFile();
+  return persisted ?? {
+    version: 'g1',
+    enabled: 'auto',
+    mode: 'developer_apply_safe',
+    auto_enable_github_login: 'gaofeng21cn',
+    updated_at: nowIso(),
+    source: 'default',
+  };
+}
+
+export function writeOplDeveloperSupervisorConfig(input: Partial<{
+  enabled: OplDeveloperSupervisorEnabled;
+  mode: OplDeveloperSupervisorMode;
+  auto_enable_github_login: string;
+}>) {
+  const paths = ensureOplStateDir(resolveOplStatePaths());
+  const current = readOplDeveloperSupervisorConfig();
+  const payload: OplDeveloperSupervisorConfigFile = {
+    version: 'g1',
+    enabled: input.enabled ?? current.enabled,
+    mode: input.mode ?? current.mode,
+    auto_enable_github_login: normalizeAutoEnableGithubLogin(
+      input.auto_enable_github_login ?? current.auto_enable_github_login,
+    ),
+    updated_at: nowIso(),
+    source: 'user_config',
+  };
+  fs.writeFileSync(paths.developer_supervisor_config_file, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
   return payload;
 }

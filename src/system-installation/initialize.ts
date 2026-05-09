@@ -437,6 +437,10 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
             endpoint: endpoints.system_action,
           },
           {
+            action_id: 'developer_supervisor',
+            endpoint: endpoints.system_action,
+          },
+          {
             action_id: 'repair_native_helpers',
             endpoint: endpoints.system_action,
           },

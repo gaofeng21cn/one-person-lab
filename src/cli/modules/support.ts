@@ -39,6 +39,7 @@ export {
 } from './request-parsers.ts';
 export {
   assertNoArgs,
+  parseDeveloperSupervisorArgs,
   parseOplEngineArgs,
   parseOplModuleExecArgs,
   parseOplModuleArgs,
@@ -53,6 +54,7 @@ export type {
   CommandHandler,
   CommandSpec,
   DashboardCliInput,
+  DeveloperSupervisorCliInput,
   OplEngineCliInput,
   OplModuleExecCliInput,
   OplModuleCliInput,

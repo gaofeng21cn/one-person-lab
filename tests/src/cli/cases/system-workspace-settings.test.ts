@@ -85,3 +85,75 @@ test('system update-channel reports and persists the selected release channel', 
     fs.rmSync(homeRoot, { recursive: true, force: true });
   }
 });
+
+test('system developer-supervisor reports and persists the family developer mode config', () => {
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-developer-supervisor-home-'));
+  const stateDir = path.join(homeRoot, 'opl-state');
+
+  try {
+    const initial = runCli(
+      ['system', 'developer-supervisor'],
+      {
+        HOME: homeRoot,
+        OPL_STATE_DIR: stateDir,
+      },
+    ) as {
+      system_action: {
+        action: string;
+        status: string;
+        developer_supervisor: {
+          enabled: string;
+          mode: string;
+          auto_enable_github_login: string;
+          source: string;
+        };
+      };
+    };
+    assert.equal(initial.system_action.action, 'developer_supervisor');
+    assert.equal(initial.system_action.status, 'ready');
+    assert.equal(initial.system_action.developer_supervisor.enabled, 'auto');
+    assert.equal(initial.system_action.developer_supervisor.mode, 'developer_apply_safe');
+    assert.equal(initial.system_action.developer_supervisor.auto_enable_github_login, 'gaofeng21cn');
+    assert.equal(initial.system_action.developer_supervisor.source, 'default');
+
+    const updated = runCli(
+      [
+        'system',
+        'developer-supervisor',
+        '--enabled',
+        'on',
+        '--mode',
+        'developer_apply_safe',
+        '--auto-enable-github-login',
+        'gaofeng21cn',
+      ],
+      {
+        HOME: homeRoot,
+        OPL_STATE_DIR: stateDir,
+      },
+    ) as {
+      system_action: {
+        action: string;
+        status: string;
+        developer_supervisor: {
+          enabled: string;
+          mode: string;
+          auto_enable_github_login: string;
+          source: string;
+        };
+      };
+    };
+    assert.equal(updated.system_action.status, 'completed');
+    assert.equal(updated.system_action.developer_supervisor.enabled, 'on');
+    assert.equal(updated.system_action.developer_supervisor.mode, 'developer_apply_safe');
+    assert.equal(updated.system_action.developer_supervisor.source, 'user_config');
+
+    const persisted = JSON.parse(
+      fs.readFileSync(path.join(stateDir, 'developer-supervisor.json'), 'utf8'),
+    ) as { enabled: string; mode: string };
+    assert.equal(persisted.enabled, 'on');
+    assert.equal(persisted.mode, 'developer_apply_safe');
+  } finally {
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
