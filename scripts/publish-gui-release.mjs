@@ -398,7 +398,8 @@ function buildFullPackageReleaseNotesSection(version, manifest = null) {
   const bundledModuleNotes = buildBundledModuleNotes(manifest);
   return [
     'Full first-install package',
-    `- New macOS arm64 users can download One-Person-Lab-Full-${version}-mac-arm64.dmg when they want the fastest first setup. It preloads MAS, MAG, RCA, Hermes, OfficeCLI, and recommended companion skills; users still only need to configure their API key.`,
+    `- New macOS arm64 users can download One-Person-Lab-Full-${version}-mac-arm64.dmg when they want the fastest first setup. It preloads MAS, MAG, RCA, OfficeCLI, and recommended companion skills; users still only need to configure their API key.`,
+    '- Hermes is no longer bundled or installed by default. Install it explicitly only when hosted or online task management is needed.',
     '- Full is a first-install download, not a separate update channel. App auto-update still follows the standard latest*.yml metadata and standard One Person Lab package.',
     ...(bundledModuleNotes.length > 0 ? ['', 'Bundled module versions', ...bundledModuleNotes] : []),
   ];

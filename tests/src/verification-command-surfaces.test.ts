@@ -810,7 +810,8 @@ test('GUI release publisher appends Full purpose notes to an existing standard r
   assert.match(notes, /Full first-install package/);
   assert.match(notes, new RegExp(`One-Person-Lab-Full-${version}-mac-arm64\\.dmg`));
   assert.match(notes, /fastest first setup/);
-  assert.match(notes, /preloads MAS, MAG, RCA, Hermes, OfficeCLI, and recommended companion skills/);
+  assert.match(notes, /preloads MAS, MAG, RCA, OfficeCLI, and recommended companion skills/);
+  assert.match(notes, /Hermes is no longer bundled or installed by default/);
   assert.match(notes, /users still only need to configure their API key/);
   assert.match(notes, /not a separate update channel/);
   assert.match(notes, /App auto-update still follows the standard latest\*\.yml metadata/);
