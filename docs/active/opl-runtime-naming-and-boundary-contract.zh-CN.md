@@ -2,7 +2,7 @@
 
 # OPL Runtime 命名与边界合同
 
-> 当前状态说明（`2026-04-25`）：本文作为 gateway/federation 命名阶段留下的共享边界参考保留。当前默认公开口径是 `Codex-default session/runtime -> explicit OPL activation -> MAS/MAG/RCA domain-agent entry`。`MedDeepScientist` 继续作为 MAS 之下的受控 execution-plane/backend companion，不是 OPL 顶层 domain agent，也不是默认 OPL-managed module。除非当前核心文档显式提升，下文 `gateway / harness` 词汇均按内部兼容语言理解。
+> 当前状态说明（`2026-05-09`）：本文作为 gateway/federation 命名阶段留下的共享边界参考保留。当前默认公开口径是 `Codex-default session/runtime -> explicit OPL activation -> MAS/MAG/RCA domain-agent entry`。MAS monolith closeout 后，`MedDeepScientist` 不再是 MAS 默认 operation、diagnostic、runtime root 或 WebUI 依赖，只通过 MAS 显式声明的可选 backend audit、source provenance、historical fixture、explicit archive import、upstream intake 与 parity oracle reference 出现。除非当前核心文档显式提升，下文 `gateway / harness` 词汇均按内部兼容语言理解。
 
 ## 目的
 
@@ -21,7 +21,7 @@
 
 1. 四仓当前各自到底处在哪一层。
 2. `Codex-default host-agent runtime` 与未来 `managed runtime` 的关系是什么。
-3. `MedAutoScience` 与 `MedDeepScientist` 这类 “domain harness + 受控执行引擎” 组合，边界应如何稳定表达。
+3. `MedAutoScience` 这类已经退役外部 companion 的 domain，应如何描述剩余 provenance / audit / parity reference，而不重新制造第二个公开 owner。
 
 ## 适用范围
 
@@ -32,7 +32,7 @@
 - `redcube-ai`
 - `med-autogrant`
 
-它也约束 `OPL` 对 `MedDeepScientist` 这类 domain 下层执行引擎的描述方式。
+它也约束 `OPL` 对 `MedDeepScientist` 这类已退出默认 domain operation 的旧下层执行 companion 的描述方式。
 
 这份文档冻结的是命名与边界，不宣称当前已经实现：
 
@@ -85,7 +85,7 @@ Human / Agent
 | `Shared Domain Contract` | 多个 domain 共享的正式行为合同 | formal-entry matrix、`per-run handle`、durable report、gate semantics | domain object model |
 | `Domain Agent Entry` | 某个 domain agent 的稳定 app skill、CLI、MCP 或 product-entry surface | `MedAutoScience`、`MedAutoGrant`、`RedCube AI` | execution engine |
 | `Domain-Owned Truth Surface` | 某个 domain agent 的执行、治理、审计与交付真相 | `MedAutoScience`、`MedAutoGrant`、`RedCube AI` | 顶层 OPL runtime |
-| `Execution Plane` | 实际驱动 quest、run、session、worktree、watch、resume 的运行层 | `MedDeepScientist` 当前对 `MedAutoScience` 承担的运行层 | 顶层公开产品面 |
+| `Execution Plane` | 实际驱动 quest、run、session、worktree、watch、resume 的运行层 | MAS monolith closeout 后由 `MedAutoScience` 自己持有的 runtime surface | 顶层公开产品面 |
 | `Host-Agent Runtime` | execution plane 的本地宿主部署形态，由本机 host agent 驱动 | 当前 `Codex-default host-agent runtime` | 托管 runtime |
 | `Managed Runtime` | execution plane 的平台托管部署形态，生命周期、调度、隔离和恢复由平台负责 | future `managed web runtime` | domain gateway |
 | `Managed Execution Plane` | 对内架构词，指平台统一托管的 execution plane 本身 | future shared managed execution layer | 当前已经实现的公开主线 |
@@ -102,8 +102,8 @@ Human / Agent
 `MedDeepScientist` 不属于 `OPL` 顶层四仓中的一个平级 `domain repo`。
 当前更准确的表达是：
 
-- 它是 `MedAutoScience` 之下的 `controlled quest runtime`
-- 它承担 `MedAutoScience` 当前 execution plane 的主要实现
+- 它不是 MAS 默认 operation、diagnostic、runtime root 或 WebUI 依赖
+- 它只作为 MAS 显式声明的 source provenance、historical fixture、explicit archive import、backend audit、upstream intake 与 parity oracle reference 出现
 - 它不是 `OPL` 顶层的第五个 `Domain Harness OS`
 - 它也不是 `MedAutoScience` 的系统本体或公开入口
 
@@ -218,55 +218,57 @@ Human / Agent
 - 把多个 domain 压成同一个单体 runtime
 - 把当前公开真相误写成“已经有统一平台 runtime”
 
-## `MedAutoScience` 与 `MedDeepScientist` 的固定边界
+## `MedAutoScience` 与 `MedDeepScientist` 的已替代边界
+
+本节原本描述迁移期 `MedAutoScience` 与外部 `MedDeepScientist` execution plane 的分工。当前 MAS monolith closeout 已经替代这条默认 operation 分工。
 
 当前更准确的结构应写成：
 
 ```text
 Human / Agent
   -> MedAutoScience
-      -> runtime protocol / runtime transport
-          -> MedDeepScientist
-              -> quest runtime / daemon / worktrees
+      -> MAS-owned runtime / artifact / quality / progress surfaces
+          -> optional source-provenance, historical-fixture, archive-import, backend-audit, upstream-intake, or parity-oracle reference
 ```
 
 其中：
 
 - `MedAutoScience`
-  - 是医学 `Research Ops` 的 `Domain Gateway + Domain Harness OS`
-  - 是对外正式入口、领域合同 owner、governance owner、delivery owner
+  - 是独立医学研究 domain agent 与 MAS app skill owner
+  - 是对外正式入口、领域合同 owner、governance owner、runtime/progress owner 与 delivery owner
+  - 持有默认 operation、diagnostic、progress、artifact、quality 与 OPL handoff surface
 - `MedDeepScientist`
-  - 是 `MedAutoScience` 当前 execution plane 的主要实现
-  - 是 `controlled quest runtime`
+  - 不是 `MedAutoScience` 之下的默认 execution plane
+  - 不是 MAS 默认运行依赖、默认诊断依赖、runtime root 或 WebUI 依赖
+  - 只在 MAS 显式声明时作为 source provenance、historical fixture、explicit archive import、backend audit、upstream intake 与 parity oracle reference 出现
   - 不是 `MedAutoScience` 的系统本体
   - 不是 `OPL` 顶层平级 domain
-  - 不是未来 public product naming 的 owner
 
 ### 五个共享平面的当前分工
 
-| 平面 | `MedAutoScience` 固定职责 | `MedDeepScientist` 固定职责 |
+| 平面 | `MedAutoScience` 当前职责 | `MedDeepScientist` 剩余角色 |
 | --- | --- | --- |
-| `资产平面` | 医学 study / workspace / artifact 的领域 contract 与 canonical asset truth | 运行期工作副本、导入物、quest-local runtime 文件 |
-| `记忆平面` | 可复用医学研究记忆、controller summary、decision history | quest continuation 所需的运行时记忆与局部状态 |
-| `治理平面` | continue / stop / reframe、publication_eval、controller_decisions、fail-closed gate | quest / session / run 的运行时守卫与状态机 |
-| `交付平面` | manuscript、submission、formal report 与 delivery contract | runtime summary、handoff、escalation 与 completion hook |
-| `执行平面` | 对外 formal entry、runtime protocol adapter、handle mapping、controller orchestration | daemon、quest、run、worktree、watch、resume、runtime audit 的实际实现 |
+| `资产平面` | 医学 study / workspace / artifact 的领域 contract、canonical asset truth 与 artifact discovery | historical fixture 或 explicit archive import reference |
+| `记忆平面` | 可复用医学研究记忆、controller summary、decision history 与 calibration evidence | source provenance 或 upstream intake reference |
+| `治理平面` | continue / stop / reframe、publication_eval、controller_decisions、fail-closed gate 与 owner-route truth | 不持有 quality、publication 或 controller authority |
+| `交付平面` | manuscript、submission、formal report、delivery contract、package locator 与 rebuild proof | 仅作 historical behavior fixture |
+| `执行平面` | 默认 runtime operation、runtime status/progress、controller orchestration、diagnostic 与 OPL handoff | 仅作 parity oracle / backend audit reference |
 
-因此，不应把 `MedDeepScientist` 误写成五个平面的顶层 owner。
+因此，不应把 `MedDeepScientist` 继续写成 MAS 默认 execution 的当前实现。
 更准确的理解是：
 
-- `MedAutoScience` 拥有五个平面的医学领域语义与外部合同
-- `MedDeepScientist` 主要承担其中 execution plane 的实际运行实现
+- `MedAutoScience` 拥有五个平面的医学领域语义、外部合同和默认 runtime/progress/diagnostic surface
+- `MedDeepScientist` 留在默认路径之外，只在 MAS 显式声明时作为 reference 出现
 
-## `MedDeepScientist` 吸收到 `MedAutoScience` monorepo 时的固定规则
+## `MedDeepScientist` monolith absorb 后的固定规则
 
-未来如果进入 `monorepo / runtime core ingest / controlled cutover`，应遵守下面这些固定规则：
+MAS monolith closeout 已经完成默认依赖退役。仍需固定的规则是：
 
-1. 吸收的是 execution engine，不是把 `MedAutoScience` 降格成 runtime repo。
-2. 被吸收进去的 `MedDeepScientist` 应作为 `MedAutoScience` 内部 `runtime` 主模块的一部分存在，而不是重新抢占 public entrypoint 身份。
-3. cutover 前后应保持 `MedAutoScience -> MedDeepScientist` 当前稳定 runtime protocol 语义等价，而不是边迁边改写对外 contract。
-4. 先稳定 handle、durable surface、gate semantics 与 compatibility regression，再做 physical migration。
-5. 只有在 domain contract 已经稳定后，才允许把外部受控 runtime repo 逐步内收成 monorepo 内部模块。
+1. 被吸收的能力不得改变 `MedAutoScience` 的公开身份。
+2. MAS 默认 operation 不得要求外部 `MedDeepScientist` checkout、daemon、runtime root 或 WebUI。
+3. 可保留行为必须落到 MAS-owned runtime / artifact / quality / progress / diagnostic surface，或者保留为 fixture / provenance / reference 材料。
+4. 兼容性回归与 parity proof 可以引用 MDS fixture，但 MDS fixture 永远不能授权 medical quality、publication、controller 或 artifact authority。
+5. 未来 upstream intake 必须走 no-history、MAS-authored capability proof，不得把上游 contributor footprint 导入 MAS。
 
 这意味着未来理想结构更接近：
 
