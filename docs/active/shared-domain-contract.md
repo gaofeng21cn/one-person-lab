@@ -2,7 +2,7 @@
 
 # Shared Domain Contract
 
-> Current-status note (`2026-04-25`): this document is retained as a shared-boundary reference. The active public domain-agent set is `MAS`, `MAG`, and `RCA`; `MDS` is a MAS-controlled backend companion. Older `Domain Gateway` / `Domain Harness OS` wording below is compatibility language for internal boundaries, while current public docs should use independent `domain agent` and app-skill wording.
+> Current-status note (`2026-05-09`): this document is retained as a shared-boundary reference. The active public domain-agent set is `MAS`, `MAG`, and `RCA`; after the MAS monolith closeout, `MDS` appears only through MAS-declared optional backend-audit, source-provenance, historical-fixture, explicit archive-import, upstream-intake, and parity-oracle references. Older `Domain Gateway` / `Domain Harness OS` wording below is compatibility language for internal boundaries, while current public docs should use independent `domain agent` and app-skill wording.
 
 ## Purpose
 

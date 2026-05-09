@@ -9,7 +9,7 @@
 - `AGENTS.md` 只约束工作方式，不承载项目知识细节。
 - 项目知识默认从 `README*`、`docs/README*`、`docs/project.md`、`docs/status.md`、`docs/architecture.md`、`docs/invariants.md`、`docs/decisions.md` 读取。
 - `OPL` 是 one-person lab 的 `Codex-default session/runtime`、显式 activation 层，以及跨仓 shared modules / contracts / indexes 的归属层；它不是任何单一 domain 仓的别名，也不接管 domain truth。
-- 当前 active domain agent 仓是 `MAS`、`MAG`、`RCA`。`MDS` 是 `MAS` 之下的受控 runtime/backend companion，不作为 OPL 默认 active domain agent 或默认 OPL-managed domain module。
+- 当前 active domain agent 仓是 `MAS`、`MAG`、`RCA`。`MDS` 已随 MAS monolith closeout 降为 MAS 显式声明的 backend audit、source provenance、historical fixture、explicit archive import、upstream intake 与 parity oracle reference；它不作为 OPL 默认 active domain agent、默认安装依赖或默认 OPL-managed domain module。
 
 ## 开发原则
 

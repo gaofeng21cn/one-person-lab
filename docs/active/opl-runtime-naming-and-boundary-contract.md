@@ -2,7 +2,7 @@
 
 # OPL Runtime Naming And Boundary Contract
 
-> Current-status note (`2026-04-25`): this document is retained as a shared-boundary reference from the gateway/federation naming phase. Current default public wording is `Codex-default session/runtime -> explicit OPL activation -> MAS/MAG/RCA domain-agent entry`. `MedDeepScientist` remains a MAS-controlled execution-plane/backend companion, not a top-level OPL domain agent or default OPL-managed module. Read `gateway / harness` wording below as internal compatibility language unless a current core doc explicitly promotes it.
+> Current-status note (`2026-05-09`): this document is retained as a shared-boundary reference from the gateway/federation naming phase. Current default public wording is `Codex-default session/runtime -> explicit OPL activation -> MAS/MAG/RCA domain-agent entry`. After the MAS monolith closeout, `MedDeepScientist` is no longer a MAS default operation, diagnostic, runtime-root, or WebUI dependency; it appears only through MAS-declared optional backend-audit, source-provenance, historical-fixture, explicit archive-import, upstream-intake, and parity-oracle references. Read `gateway / harness` wording below as internal compatibility language unless a current core doc explicitly promotes it.
 
 ## Purpose
 
@@ -21,7 +21,7 @@ It answers three questions:
 
 1. Which layer each current repository actually belongs to.
 2. How `Codex-default host-agent runtime` relates to a future `managed runtime`.
-3. How a `domain harness + controlled execution engine` pair such as `MedAutoScience` and `MedDeepScientist` should be described without collapsing their boundary.
+3. How a domain that has retired an external companion, such as `MedAutoScience` after the MAS monolith closeout, should describe the remaining provenance/audit/parity references without reviving a second public owner.
 
 ## Scope
 
@@ -32,7 +32,7 @@ This contract governs the unified public naming and boundary wording for the cur
 - `redcube-ai`
 - `med-autogrant`
 
-It also governs how `OPL` describes lower-layer execution engines such as `MedDeepScientist`.
+It also governs how `OPL` describes former lower-layer execution companions such as `MedDeepScientist` after they have been retired from default domain operation.
 
 This document freezes naming and boundaries. It does not claim that the ecosystem already has:
 
@@ -85,7 +85,7 @@ Each layer answers a different question:
 | `Shared Domain Contract` | shared cross-domain contract for formal product behavior | formal-entry matrix, the `per-run handle`, durable report, gate semantics | domain object model |
 | `Domain Agent Entry` | stable public app-skill, CLI, MCP, or product-entry surface for one domain agent | `MedAutoScience`, `MedAutoGrant`, `RedCube AI` | execution engine |
 | `Domain-Owned Truth Surface` | execution, governance, audit, and delivery truth for one domain agent | `MedAutoScience`, `MedAutoGrant`, `RedCube AI` | top-level OPL runtime |
-| `Execution Plane` | the runtime layer that drives quests, runs, sessions, worktrees, watch, and resume | the layer currently carried by `MedDeepScientist` for `MedAutoScience` | top-level public product surface |
+| `Execution Plane` | the runtime layer that drives quests, runs, sessions, worktrees, watch, and resume | MAS-owned runtime surfaces for `MedAutoScience` after monolith closeout | top-level public product surface |
 | `Host-Agent Runtime` | a local deployment shape for the execution plane driven by a host agent on the user's machine | current `Codex-default host-agent runtime` | managed runtime |
 | `Managed Runtime` | a platform-managed deployment shape for the execution plane where lifecycle, scheduling, isolation, and recovery are platform-owned | future `managed web runtime` | domain gateway |
 | `Managed Execution Plane` | an internal architecture term for the platform-managed execution plane itself | a future shared managed execution layer | the already-implemented public mainline |
@@ -102,8 +102,8 @@ Each layer answers a different question:
 `MedDeepScientist` is not one more top-level peer `domain repo` inside `OPL`.
 The more accurate wording today is:
 
-- it is a `controlled quest runtime` under `MedAutoScience`
-- it carries the main implementation of the current `Execution Plane` for `MedAutoScience`
+- it is not a MAS default operation, diagnostic, runtime-root, or WebUI dependency
+- it is a MAS-declared optional source-provenance, historical-fixture, explicit archive-import, backend-audit, upstream-intake, and parity-oracle reference
 - it is not a fifth top-level `Domain Harness OS`
 - it is not the system identity or public entrypoint of `MedAutoScience`
 
@@ -219,55 +219,57 @@ This migration should not be described as:
 - collapsing multiple domains into one monolithic runtime
 - claiming that the current public truth already includes a unified platform runtime
 
-## Frozen Boundary Between `MedAutoScience` And `MedDeepScientist`
+## Superseded Boundary Between `MedAutoScience` And `MedDeepScientist`
+
+This section originally described the migration-era split between `MedAutoScience` and an external `MedDeepScientist` execution plane. The current MAS monolith closeout supersedes that split for default operation.
 
 The more accurate current structure is:
 
 ```text
 Human / Agent
   -> MedAutoScience
-      -> runtime protocol / runtime transport
-          -> MedDeepScientist
-              -> quest runtime / daemon / worktrees
+      -> MAS-owned runtime / artifact / quality / progress surfaces
+          -> optional source-provenance, historical-fixture, archive-import, backend-audit, upstream-intake, or parity-oracle reference
 ```
 
 Within that structure:
 
 - `MedAutoScience`
-  - is the `Domain Gateway + Domain Harness OS` for medical `Research Ops`
-  - is the formal public entry, domain-contract owner, governance owner, and delivery owner
+  - is the independent medical research domain agent and MAS app-skill owner
+  - is the formal public entry, domain-contract owner, governance owner, runtime/progress owner, and delivery owner
+  - owns the default operation, diagnostic, progress, artifact, quality, and OPL handoff surfaces
 - `MedDeepScientist`
-  - is the main current implementation of the `Execution Plane` under `MedAutoScience`
-  - is a `controlled quest runtime`
+  - is not a default execution plane under `MedAutoScience`
+  - is not a default MAS runtime dependency, diagnostic dependency, runtime root, or WebUI dependency
+  - is a source-provenance, historical-fixture, explicit archive-import, backend-audit, upstream-intake, and parity-oracle reference only when MAS declares that reference explicitly
   - is not the system identity of `MedAutoScience`
   - is not a top-level peer domain under `OPL`
-  - is not the owner of future public product naming
 
 ### Current five-plane split
 
-| Plane | Frozen responsibility of `MedAutoScience` | Frozen responsibility of `MedDeepScientist` |
+| Plane | Current responsibility of `MedAutoScience` | Remaining `MedDeepScientist` role |
 | --- | --- | --- |
-| `Asset Layer` | medical study, workspace, artifact contracts, and canonical asset truth | runtime working copies, imported runtime materials, quest-local files |
-| `Memory Layer` | reusable medical research memory, controller summaries, decision history | runtime memory and local quest continuation state |
-| `Governance Layer` | continue, stop, reframe, `publication_eval`, `controller_decisions`, fail-closed gates | quest, session, and run operational guards and state machines |
-| `Delivery Layer` | manuscript, submission, formal reports, and delivery contracts | runtime summaries, handoffs, escalation, and completion hooks |
-| `Execution Layer` | external formal entry, runtime-protocol adapter, handle mapping, and controller orchestration | the actual implementation of daemon, quest, run, worktree, watch, resume, and runtime audit |
+| `Asset Layer` | medical study, workspace, artifact contracts, canonical asset truth, and artifact discovery | historical fixture or explicit archive-import reference |
+| `Memory Layer` | reusable medical research memory, controller summaries, decision history, and calibration evidence | source-provenance or upstream-intake reference |
+| `Governance Layer` | continue, stop, reframe, `publication_eval`, `controller_decisions`, fail-closed gates, and owner-route truth | no quality, publication, or controller authority |
+| `Delivery Layer` | manuscript, submission, formal reports, delivery contracts, package locators, and rebuild proof | historical behavior fixture only |
+| `Execution Layer` | default runtime operation, runtime status/progress, controller orchestration, diagnostics, and OPL handoff | parity oracle / backend-audit reference only |
 
-So `MedDeepScientist` should not be described as the top-level owner of all five planes.
+So `MedDeepScientist` should not be described as the current implementation of MAS default execution.
 The more accurate reading is:
 
-- `MedAutoScience` owns the medical domain semantics and external contracts across the five planes
-- `MedDeepScientist` mainly carries the concrete implementation of the execution plane
+- `MedAutoScience` owns the medical domain semantics, external contracts, and default runtime/progress/diagnostic surfaces across the five planes
+- `MedDeepScientist` remains outside the default path and only appears as an explicit MAS-declared reference
 
-## Frozen Rules For Ingesting `MedDeepScientist` Into A `MedAutoScience` Monorepo
+## Frozen Rules For Past `MedDeepScientist` Monolith Absorb
 
-If the system later enters `monorepo / runtime core ingest / controlled cutover`, the following rules should stay fixed:
+The MAS monolith closeout has already completed the default-dependency retirement. The rules that remain fixed are:
 
-1. What gets absorbed is the execution engine, not the public identity of `MedAutoScience`.
-2. The ingested `MedDeepScientist` should live as part of an internal `runtime` module inside `MedAutoScience`, rather than reclaiming the public entrypoint role.
-3. The stable `MedAutoScience -> MedDeepScientist` runtime protocol should remain semantically equivalent across the cutover instead of being rewritten mid-migration.
-4. Handle semantics, durable surfaces, gate semantics, and compatibility regression should be stabilized before physical migration.
-5. Only after domain contracts are stable should the external controlled runtime repository be ingested as an internal runtime module.
+1. The absorbed capability never changes the public identity of `MedAutoScience`.
+2. Default MAS operation must not require an external `MedDeepScientist` checkout, daemon, runtime root, or WebUI.
+3. Retained behavior must land in MAS-owned runtime / artifact / quality / progress / diagnostic surfaces, or remain as fixture/provenance/reference material.
+4. Compatibility regression and parity proof may cite MDS fixtures, but MDS fixtures never grant medical quality, publication, controller, or artifact authority.
+5. Any future upstream intake must use no-history, MAS-authored capability proof and must not import upstream contributor footprint into MAS.
 
 That means the long-term shape is closer to:
 
