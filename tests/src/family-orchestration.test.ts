@@ -755,15 +755,17 @@ test('family manifest schema requires repo-owned runtime continuity discovery su
   const properties = schema.properties as Json;
   const runtimeControl = properties.runtime_control as Json;
   assert.equal(runtimeControl.$ref, '#/$defs/runtimeControlSurface');
+  assert.equal((properties.family_runtime_supervision as Json).$ref, '#/$defs/familyRuntimeSupervisionSurface');
   assert.equal((properties.persistence_policy as Json).$ref, '#/$defs/persistencePolicySurface');
   assert.equal((properties.lifecycle_ledger as Json).$ref, '#/$defs/lifecycleLedgerSurface');
   assert.equal((properties.owner_route as Json).$ref, '#/$defs/ownerRouteSurface');
 });
 
-test('family persistence lifecycle and owner-route schemas freeze shared control surfaces', () => {
+test('family persistence lifecycle owner-route and supervision schemas freeze shared control surfaces', () => {
   const persistenceSchema = readJson('contracts/family-orchestration/family-persistence-policy.schema.json');
   const lifecycleSchema = readJson('contracts/family-orchestration/family-lifecycle-ledger.schema.json');
   const ownerRouteSchema = readJson('contracts/family-orchestration/family-owner-route.schema.json');
+  const supervisionSchema = readJson('contracts/family-orchestration/family-runtime-supervision.schema.json');
 
   assert.deepEqual(
     (persistenceSchema.properties as Json).surface_kind,
@@ -788,4 +790,24 @@ test('family persistence lifecycle and owner-route schemas freeze shared control
   assert.ok(ownerRouteRequired.includes('route_epoch'));
   assert.ok(ownerRouteRequired.includes('source_fingerprint'));
   assert.ok(ownerRouteRequired.includes('idempotency_key'));
+
+  const supervisionRequired = supervisionSchema.required as string[];
+  assert.ok(supervisionRequired.includes('adapter_id'));
+  assert.ok(supervisionRequired.includes('cadence'));
+  assert.ok(supervisionRequired.includes('last_success'));
+  assert.ok(supervisionRequired.includes('last_tick'));
+  assert.ok(supervisionRequired.includes('lease_freshness'));
+  assert.ok(supervisionRequired.includes('slo_state'));
+  assert.ok(supervisionRequired.includes('repair_command'));
+  assert.ok(supervisionRequired.includes('safe_reconcile_hint'));
+  assert.ok(supervisionRequired.includes('domain_owned_source_refs'));
+  assert.ok(supervisionRequired.includes('read_only_authority_boundary'));
+  assert.deepEqual(
+    (supervisionSchema.properties as Json).surface_kind,
+    { const: 'family_runtime_supervision' },
+  );
+  assert.equal(
+    ((((supervisionSchema.properties as Json).read_only_authority_boundary as Json).properties as Json).authority as Json).const,
+    'read_only_projection',
+  );
 });

@@ -34,6 +34,7 @@
 - `family action graph`
 - `family human gate`
 - `family product-entry manifest v2`
+- `family runtime supervision`
 - `family persistence policy`
 - `family lifecycle ledger`
 - `family owner route`

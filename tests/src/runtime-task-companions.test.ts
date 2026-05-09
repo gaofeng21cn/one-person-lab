@@ -8,6 +8,7 @@ import {
   buildFamilyLifecycleLedger,
   buildFamilyOwnerRoute,
   buildFamilyPersistencePolicy,
+  buildFamilyRuntimeSupervision,
   buildProgressProjection,
   buildRuntimeInventory,
   buildSessionContinuity,
@@ -296,4 +297,64 @@ test('family owner route carries epoch, source fingerprint, and idempotency toke
   assert.equal(route.surface_kind, 'family_owner_route');
   assert.deepEqual(route.allowed_actions, ['resume_grant_user_loop']);
   assert.equal(route.idempotency_key, 'resume_grant_user_loop:abc123');
+});
+
+test('family runtime supervision helper projects wakeup freshness without authority transfer', () => {
+  const supervision = buildFamilyRuntimeSupervision({
+    target_domain_id: 'medautoscience',
+    supervision_id: 'mas_workspace_runtime_supervision',
+    adapter_id: 'local_launchd',
+    cadence: {
+      interval_seconds: 60,
+      jitter_seconds: 5,
+    },
+    last_tick: '2026-05-10T00:00:00Z',
+    last_success: '2026-05-10T00:00:05Z',
+    lease_freshness: {
+      state: 'fresh',
+      observed_at: '2026-05-10T00:00:08Z',
+      max_age_seconds: 180,
+    },
+    slo_state: {
+      state: 'met',
+      summary: 'supervision tick is inside the domain-owned freshness SLO',
+    },
+    repair_command: 'medautoscience runtime-ensure-supervision --profile <profile>',
+    safe_reconcile_hint: 'Run domain-owned supervision repair; do not write runtime truth from OPL.',
+    domain_owned_source_refs: [
+      {
+        ref_kind: 'repo_path',
+        ref: 'studies/<study_id>/artifacts/runtime/runtime_supervision/latest.json',
+        role: 'runtime_supervision_truth',
+      },
+    ],
+    read_only_authority_boundary: {
+      projection_owner: 'one-person-lab',
+      runtime_owner: 'medautoscience',
+      scheduler_owner: 'medautoscience',
+      authority: 'read_only_projection',
+      forbidden_authorities: [
+        'scheduler_owner',
+        'session_store_owner',
+        'memory_store_owner',
+        'quality_verdict_owner',
+        'artifact_authority',
+      ],
+    },
+  });
+
+  assert.equal(supervision.surface_kind, 'family_runtime_supervision');
+  assert.equal(supervision.adapter_id, 'local_launchd');
+  assert.equal(supervision.cadence.interval_seconds, 60);
+  assert.equal(supervision.lease_freshness.state, 'fresh');
+  assert.equal(supervision.slo_state.state, 'met');
+  assert.equal(supervision.domain_owned_source_refs[0]?.role, 'runtime_supervision_truth');
+  assert.equal(supervision.read_only_authority_boundary.authority, 'read_only_projection');
+  assert.deepEqual(supervision.read_only_authority_boundary.forbidden_authorities, [
+    'scheduler_owner',
+    'session_store_owner',
+    'memory_store_owner',
+    'quality_verdict_owner',
+    'artifact_authority',
+  ]);
 });
