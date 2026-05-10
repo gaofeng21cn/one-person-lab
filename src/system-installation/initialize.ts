@@ -89,7 +89,8 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
     && codexConfigReady;
   const domainReady = defaultModuleReady === defaultModuleTotal;
   const onlineManagementStatus = buildOnlineManagementStatus(hermes);
-  const fullReady = coreReady && domainReady && hermesReady;
+  const launchReady = coreReady && domainReady;
+  const fullReady = launchReady && hermesReady;
 
   const setWorkspaceRootAction = buildInitializeActionDescriptor({
     action_id: 'set_workspace_root',
@@ -237,8 +238,8 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
       item_id: 'hermes',
       label: 'Hermes Online Runtime',
       status: onlineManagementStatus,
-      required: true,
-      blocking: !hermesReady,
+      required: false,
+      blocking: false,
       section_id: 'environment',
       detail_summary: hermesReady
         ? `Hermes online runtime gateway is loaded from ${hermes.binary_path ?? 'unknown path'}.`
@@ -316,6 +317,8 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
   const overallState =
     fullReady
       ? 'ready_to_finalize'
+      : launchReady
+        ? 'ready_with_degraded_online_runtime'
       : 'attention_needed';
   const setupPhase: OplInitializePhase =
     workspaceRoot.health_status !== 'ready'
@@ -324,9 +327,7 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
         ? 'environment'
         : defaultModuleReady < defaultModuleTotal
           ? 'modules'
-          : !hermesReady
-            ? 'environment'
-            : 'review';
+          : 'review';
   const recommendedNextAction =
     setupPhase === 'workspace_root'
       ? setWorkspaceRootAction
@@ -371,12 +372,14 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
         core_ready: coreReady,
         domain_ready: domainReady,
         online_management_ready: hermesReady,
+        launch_ready: launchReady,
         full_ready: fullReady,
       },
       online_management: {
         surface_id: 'opl_online_management',
         status: onlineManagementStatus,
-        blocking: !hermesReady,
+        blocking: false,
+        full_online_blocking: !hermesReady,
         ready: hermesReady,
         capability_summary: hermesReady
           ? 'Hermes online runtime is ready for long-running gateway-backed family automation.'

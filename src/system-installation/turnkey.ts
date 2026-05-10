@@ -23,7 +23,7 @@ import { resolveProjectRoot, runCommand } from './shared.ts';
 import type { OplEngineId, OplModuleId, OplTurnkeyInstallInput } from './shared.ts';
 
 const DEFAULT_MODULES: OplModuleId[] = [...DEFAULT_OPL_MODULE_IDS];
-const DEFAULT_ENGINES: OplEngineId[] = ['codex', 'hermes'];
+const DEFAULT_ENGINES: OplEngineId[] = ['codex'];
 
 function extractFamilyRuntimeBridge(payload: ReturnType<typeof runFamilyRuntime>) {
   if ('family_runtime_bridge' in payload) {
@@ -324,12 +324,17 @@ export async function runOplTurnkeyInstall(
         skip_native_helper_repair: Boolean(input.skipNativeHelperRepair),
       }),
     );
+    const skipOnlineManagement = Boolean(
+      input.noOnlineRuntime
+      || input.skipEngines
+      || !selectedEngines.includes('hermes'),
+    );
     const runtimeManagerAction = runRuntimeManagerAction({
       mode: 'apply',
       skipNativeHelpers: Boolean(input.skipNativeHelperRepair),
-      skipOnlineManagement: Boolean(input.noOnlineRuntime),
+      skipOnlineManagement,
     });
-    const familyRuntimeBridge = input.noOnlineRuntime
+    const familyRuntimeBridge = skipOnlineManagement
       ? runFamilyRuntime(['status'])
       : runFamilyRuntime(['install']);
     const onlineManagementRepair = runtimeManagerAction.runtime_manager_action.executed_actions.find(
