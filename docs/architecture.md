@@ -4,7 +4,7 @@
 
 `OPL` 的当前主链路是：
 
-`Human / Codex / opl / GUI shell -> Codex-default Session Runtime -> OPL Activation Layer / Typed Family Queue -> Domain Capability Surface -> Domain Repository`
+`Human / Codex / opl / GUI shell -> Codex-default Session Runtime -> OPL Activation Layer / Stage Control Plane / Typed Family Queue -> Domain Capability Surface -> Domain Repository`
 
 ## 当前产品链路
 
@@ -19,6 +19,7 @@
 这里的核心点是：
 
 - `OPL` 当前主线以 `Codex-default session/runtime + explicit activation layer` 为 canonical truth
+- `OPL` 的 family-level agent framework 以 domain `stage` 为可观察、可编排的语义单元；`Codex CLI` 是 stage 内默认 concrete executor
 - 本地 `opl`、直接 `Codex` 使用、ACP-compatible 外部壳与基于开源 AionUI 定制的 `opl-aion-shell` 都消费同一套 runtime truth
 - `OPL Runtime Manager` 是 OPL 产品级管理/诊断/投影层；它管理受支持的外部 `Hermes-Agent` online substrate、typed family queue、domain dispatch 与 online runtime readiness，但不复制 runtime kernel
 - family-level runtime supervision 作为 domain-owned wakeup / supervision surface 的 discovery、export、parity、enqueue 与 projection；Hermes 提供 OPL-managed online wakeup substrate，`OPL` 不接管 domain scheduler、session、memory、quality 或 artifact authority
@@ -69,6 +70,7 @@
 - 引擎注册表
 - 模块注册表
 - 智能体注册表
+- stage descriptor、skill / prompt / evaluation refs、handoff envelope、receipt 与 authority boundary discovery
 - shared module / contract / index registration
 - family skill pack discovery / sync
 - 显式 domain contract dispatch
@@ -150,6 +152,8 @@
 
 `Family Stage Control Plane` 是 `MAS` stage 化经验上升后的 family 级 shared descriptor / discovery surface。它把程序责任限制在阶段目标、skill / prompt / evaluation refs、输入输出、handoff、receipt、projection 与 authority boundary 上，把阶段内部的专家拆解、创作、审核、修订和诊断继续交给 `Codex CLI` 与 domain-owned AI workflow。
 
+在顶层定位上，这就是 OPL 对标 DeerFlow、LangGraph、Temporal、Dify、AutoGen、CrewAI 等 agent / workflow framework 时的核心差异：这些框架通常以 LLM 调用、agent 节点、tool call 或 workflow activity 作为原子能力；OPL family framework 以 domain stage 作为语义调度单元，以 `Codex CLI` 这种强执行器作为默认原子执行能力。OPL 因此只提供 durable state、queue、handoff、approval、retry、projection 和 observability，不替 domain agent 生成领域判断。
+
 对 `MAS` 来说，这一层是对既有 route contract 和 stage-led policy 的 inventory / descriptor 映射，不是替换现有 stage、改变 stage 数量或重写 controller 流程。`scout`、`idea`、`baseline`、`experiment`、`analysis-campaign`、`write`、`review`、`decision/finalize` 等实际 route id 继续由 MAS 持有。
 
 边界如下：
@@ -180,6 +184,7 @@
 - `OPL` 不持有领域运行时所有权
 - `OPL` 不替代领域智能体自己的逻辑
 - `OPL` 负责 Codex-default session/runtime、activation layer、shared modules/contracts/indexes、统一入口与 projection surface
+- `OPL` 负责 stage-led family framework 支撑：stage descriptor、handoff、queue、wakeup、retry、approval、trace、projection 和 parity；domain agent 负责 stage pack、prompt/skill、quality gate、truth reducer 和交付 authority
 - `MAS`、`MAG`、`RCA` 作为独立 `domain agent`，可以通过 `OPL` activation 调用，也可以被 `Codex` 直接调用
 - 两条入口的工作逻辑保持一致
 - 对 `MAS` 来说，OPL projection 只携带 evidence、provenance、状态和路由信号；ready、submission、publication、quality 等最终判断仍回到 MAS-owned durable surfaces

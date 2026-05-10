@@ -43,6 +43,7 @@ These files give the fastest read on the current repo-tracked truth before you c
 - [Documentation Portfolio](./docs_portfolio_consolidation.md)
 - [Family Docs Lifecycle Governance Rollout](./references/convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.zh-CN.md)
 - [OPL Runtime Manager Target](./references/runtime-substrate/opl-runtime-manager-target.md)
+- [OPL Stage-Led Agent Framework Roadmap](./references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)
 
 ## Lifecycle Portfolio
 
@@ -91,6 +92,7 @@ They are repo-tracked support, not the default implementation basis.
 
 - [Reference Index](./references/README.md)
 - [OPL Runtime Manager target](./references/runtime-substrate/opl-runtime-manager-target.md)
+- [OPL stage-led agent framework roadmap](./references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)
 - [Docker WebUI deployment reference](./references/current-support/opl-docker-webui-deployment.md)
 - [OPL GUI shell adapter boundary](./references/current-support/opl-gui-shell-adapter-boundary.zh-CN.md)
 - [OPL fresh install and GUI first-launch testing](./references/current-support/opl-fresh-install-and-gui-first-launch-testing.zh-CN.md)
