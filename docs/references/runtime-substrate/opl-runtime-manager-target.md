@@ -19,7 +19,7 @@ Hermes 是 Full OPL family 的默认 online runtime substrate 与 online-managem
 
 Family runtime supervision 的 owner split 更窄：domain 仓持有 wakeup / supervision truth、lease、SLO 与 repair command；`OPL Runtime Manager` 只读取 `family_runtime_supervision` surface 做 discovery、export、parity 与产品投影。`safe_reconcile_hint` 是路由提示，不是 OPL 写入 runtime truth 或启动 scheduler 的授权。
 
-Domain task hydration 是另一个显式授权面：domain sidecar export 可以输出 `pending_family_tasks[]`，OPL 只把这些任务按 `dedupe_key` 写入 family queue，再调用对应 domain sidecar dispatch。OPL 不从 read-only status 自行生成 domain action。
+Domain task hydration 是另一个显式授权面：domain sidecar export 可以输出 `pending_family_tasks[]`，OPL 只把这些任务按 `dedupe_key` 写入 family queue，再调用对应 domain sidecar dispatch。OPL 不从 read-only status 自行生成 domain action。MAS paper autonomy tasks 现在作为该规则的参考实现：`paper_autonomy/repair-recheck`、`paper_autonomy/ai-reviewer-recheck`、`paper_autonomy/gate-replay` 和 `paper_autonomy/route-decision` 会在 OPL 队列与 dispatch 文件中保留 source refs、next owner、callable surface、source fingerprint 与 idempotency key，但实际 repair、AI reviewer、gate replay、route decision 仍由 MAS owner surface 执行和落账。
 
 ## 当前要落地的最小面
 

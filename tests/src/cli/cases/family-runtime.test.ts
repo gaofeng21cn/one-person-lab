@@ -250,6 +250,83 @@ echo '{"accepted":true,"surface_kind":"mas_family_sidecar_dispatch_receipt","wil
   }
 });
 
+test('family-runtime preserves MAS paper autonomy task projection through hydrate and dispatch', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-paper-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-paper-export-'));
+  const exportPath = path.join(fixtureRoot, 'export');
+  const dispatchPath = path.join(fixtureRoot, 'dispatch');
+  const dispatchedTaskPath = path.join(fixtureRoot, 'dispatched-task-path');
+  fs.writeFileSync(
+    exportPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+cat <<'JSON'
+{
+  "surface_kind": "mas_family_sidecar_export",
+  "pending_family_tasks": [
+    {
+      "domain_id": "medautoscience",
+      "task_kind": "paper_autonomy/repair-recheck",
+      "priority": 80,
+      "source": "mas-sidecar-export",
+      "dedupe_key": "reviewer_refinement_loop:unit-1:sha256:abc",
+      "dispatch_owner": "med-autoscience",
+      "profile_name": "dm-cvd",
+      "source_refs": ["studies/DM002/artifacts/publication_eval/latest.json"],
+      "payload": {
+        "profile": "/tmp/profile.toml",
+        "study_id": "DM002",
+        "repair_work_unit": {
+          "unit_id": "unit-1",
+          "work_unit_type": "text_repair",
+          "owner": "quality_repair_batch",
+          "callable_surface": "run_quality_repair_batch",
+          "source_fingerprint": "sha256:abc",
+          "source_refs": ["studies/DM002/paper/manuscript.md"]
+        }
+      }
+    }
+  ]
+}
+JSON
+`,
+    { mode: 0o755 },
+  );
+  fs.writeFileSync(
+    dispatchPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\\n' "$1" > ${shellSingleQuote(dispatchedTaskPath)}
+echo '{"accepted":true,"surface_kind":"mas_family_sidecar_dispatch_receipt","paper_autonomy_receipt":true}'
+`,
+    { mode: 0o755 },
+  );
+  try {
+    const tick = runCli(['family-runtime', 'tick', '--source', 'hermes-cron', '--hydrate'], familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportPath,
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatchPath,
+    }));
+    const queue = runCli(['family-runtime', 'queue', 'list'], familyRuntimeEnv(stateRoot));
+    const task = queue.family_runtime_queue.tasks[0];
+    const dispatchedTask = JSON.parse(fs.readFileSync(fs.readFileSync(dispatchedTaskPath, 'utf8').trim(), 'utf8'));
+
+    assert.equal(tick.family_runtime_tick.hydration.enqueued_count, 1);
+    assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');
+    assert.equal(task.task_kind, 'paper_autonomy/repair-recheck');
+    assert.equal(task.paper_autonomy.study_id, 'DM002');
+    assert.equal(task.paper_autonomy.next_owner, 'quality_repair_batch');
+    assert.equal(task.paper_autonomy.callable_surface, 'run_quality_repair_batch');
+    assert.equal(task.paper_autonomy.repair_command, 'medautosci sidecar dispatch --task <task.json> --format json');
+    assert.equal(task.paper_autonomy.authority_boundary.writes_mas_truth, false);
+    assert.deepEqual(task.payload.source_refs, ["studies/DM002/artifacts/publication_eval/latest.json"]);
+    assert.equal(dispatchedTask.paper_autonomy.next_owner, 'quality_repair_batch');
+    assert.equal(dispatchedTask.paper_autonomy.idempotency_key, 'reviewer_refinement_loop:unit-1:sha256:abc');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime hydration is idempotent and blocks exported forbidden writes', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-hydrate-idempotent-'));
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-export-idempotent-'));

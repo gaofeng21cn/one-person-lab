@@ -13,6 +13,7 @@ import {
   type FamilyRuntimeDomainId,
 } from './family-runtime-command.ts';
 import { ensureHermesBridge, inspectHermesBridge } from './family-runtime-hermes-bridge.ts';
+import { paperAutonomyProjection } from './family-runtime-paper-autonomy.ts';
 import { resolveOplStatePaths } from './runtime-state-paths.ts';
 
 const QUEUE_SCHEMA_VERSION = 1;
@@ -162,11 +163,13 @@ function openQueueDb() {
 }
 
 function taskToPayload(row: FamilyRuntimeTaskRow) {
+  const payload = JSON.parse(row.payload_json);
   return {
     task_id: row.task_id,
     domain_id: row.domain_id,
     task_kind: row.task_kind,
-    payload: JSON.parse(row.payload_json),
+    payload,
+    paper_autonomy: paperAutonomyProjection(row, payload),
     dedupe_key: row.dedupe_key,
     priority: row.priority,
     status: row.status,
@@ -421,6 +424,8 @@ function enqueueTask(db: DatabaseSync, input: EnqueueInput) {
 }
 
 function writeDispatchTask(paths: ReturnType<typeof familyRuntimePaths>, row: FamilyRuntimeTaskRow) {
+  const payload = JSON.parse(row.payload_json);
+  const taskPayload = taskToPayload(row);
   const dispatchPath = path.join(paths.dispatch_dir, `${row.task_id}.json`);
   fs.writeFileSync(
     dispatchPath,
@@ -428,7 +433,8 @@ function writeDispatchTask(paths: ReturnType<typeof familyRuntimePaths>, row: Fa
       task_id: row.task_id,
       domain_id: row.domain_id,
       task_kind: row.task_kind,
-      payload: JSON.parse(row.payload_json),
+      payload,
+      paper_autonomy: taskPayload.paper_autonomy,
       attempts: row.attempts,
       source: 'opl_family_runtime',
       authority_boundary: {
@@ -508,7 +514,12 @@ function toPendingTaskInputs(
     inputs.push({
       domainId: exportedDomain as FamilyRuntimeDomainId,
       taskKind,
-      payload,
+      payload: {
+        ...payload,
+        ...(Array.isArray(item.source_refs) ? { source_refs: item.source_refs } : {}),
+        ...(typeof item.dispatch_owner === 'string' ? { dispatch_owner: item.dispatch_owner } : {}),
+        ...(typeof item.profile_name === 'string' ? { profile_name: item.profile_name } : {}),
+      },
       dedupeKey: typeof item.dedupe_key === 'string' ? item.dedupe_key : undefined,
       priority: Number.isInteger(item.priority) ? item.priority as number : 0,
       source: typeof item.source === 'string' ? item.source : source,
