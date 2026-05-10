@@ -45,6 +45,7 @@ Do not add new loose Markdown files under `docs/references/` unless they are REA
 - [Four-repo docs sync summary, 2026-04-14](./convergence-governance/four-repo-doc-series-sync-summary-2026-04-14.md)
 - [OPL positioning and convergence lessons](./convergence-governance/opl-positioning-convergence-lessons.zh-CN.md)
 - [Family external orchestration learning board, 2026-04-30](./convergence-governance/family-external-orchestration-learning-board-2026-04-30.md)
+- [OPL family stage control plane adoption plan](./convergence-governance/family-stage-control-plane-adoption-plan.zh-CN.md)
 
 ## 2. Current Support
 

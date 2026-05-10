@@ -145,6 +145,8 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl system',
         'opl system initialize',
         'opl system reconcile-modules',
+        'opl actions list',
+        'opl stages list',
         'opl modules',
         'opl module install --module medautoscience',
         'opl module exec --module medautoscience -- doctor entry-modes',

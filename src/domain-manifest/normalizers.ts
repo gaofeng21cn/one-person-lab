@@ -4,6 +4,7 @@ import {
   validateSharedHandoff,
 } from '../family-entry-contracts.ts';
 import { normalizeFamilyActionCatalog } from '../family-action-catalog-contract.ts';
+import { normalizeFamilyStageControlPlane } from '../family-stage-control-plane-contract.ts';
 import { normalizeManagedRuntimeContract } from '../managed-runtime-contract.ts';
 import {
   normalizeArtifactInventory,
@@ -786,6 +787,7 @@ export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest
     ? manifest.family_orchestration
     : null;
   const familyActionCatalog = normalizeFamilyActionCatalog(manifest.family_action_catalog);
+  const familyStageControlPlane = normalizeFamilyStageControlPlane(manifest.family_stage_control_plane);
   const remainingGaps = readStringList(manifest.remaining_gaps);
   const rawProductEntryStatus = isRecord(manifest.product_entry_status) ? manifest.product_entry_status : null;
   const sessionContinuity = normalizeSessionContinuity(manifest.session_continuity, {
@@ -929,6 +931,7 @@ export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest
         }
       : null,
     family_action_catalog: familyActionCatalog,
+    family_stage_control_plane: familyStageControlPlane,
     runtime_inventory: runtimeInventory,
     task_lifecycle: taskLifecycle,
     runtime_control: runtimeControl,

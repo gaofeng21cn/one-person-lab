@@ -12,6 +12,10 @@ import {
   buildFamilyActionInspect,
   buildFamilyActionsList,
 } from '../../family-action-catalog.ts';
+import {
+  buildFamilyStageInspect,
+  buildFamilyStagesList,
+} from '../../family-stage-control-plane.ts';
 import type { GatewayContracts } from '../../types.ts';
 import {
   buildPublicEngineActionPayload,
@@ -516,6 +520,23 @@ export function buildPublicCommandSpecs(
       ],
       group: 'domain',
       handler: (args) => buildFamilyActionExport(getContracts(), args),
+    },
+    'stages list': {
+      usage: 'opl stages list',
+      summary: 'List family stage control-plane descriptors resolved from bound domain-owned manifests.',
+      examples: ['opl stages list'],
+      group: 'domain',
+      handler: (args) => {
+        assertNoArgs(args, publicCommandSpecs['stages list']);
+        return buildFamilyStagesList(getContracts());
+      },
+    },
+    'stages inspect': {
+      usage: 'opl stages inspect --domain <domain> --stage <stage_id>',
+      summary: 'Inspect one domain-owned family stage descriptor and its authority boundary.',
+      examples: ['opl stages inspect --domain medautoscience --stage manuscript_authoring'],
+      group: 'domain',
+      handler: (args) => buildFamilyStageInspect(getContracts(), args),
     },
     'contract validate': cloneCommandSpec(commandSpecs['validate-contracts'], {
       usage: 'opl contract validate',

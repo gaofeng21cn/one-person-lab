@@ -145,6 +145,24 @@
 - domain 仓继续持有 handler、runtime、controller truth、review truth、quality verdict 与 publication/deliverable authority。
 - 外部 `Ageniti` 的可取之处只被吸收到 contract 思路：单一 app action 定义派生多种调用面；OPL family 不引入 `@ageniti/core` runtime dependency。
 
+#### Family Stage Control Plane
+
+`Family Stage Control Plane` 是 `MAS` stage 化经验上升后的 family 级 shared descriptor / discovery surface。它把程序责任限制在阶段目标、skill / prompt / evaluation refs、输入输出、handoff、receipt、projection 与 authority boundary 上，把阶段内部的专家拆解、创作、审核、修订和诊断继续交给 `Codex CLI` 与 domain-owned AI workflow。
+
+对 `MAS` 来说，这一层是对既有 route contract 和 stage-led policy 的 inventory / descriptor 映射，不是替换现有 stage、改变 stage 数量或重写 controller 流程。`scout`、`idea`、`baseline`、`experiment`、`analysis-campaign`、`write`、`review`、`decision/finalize` 等实际 route id 继续由 MAS 持有。
+
+边界如下：
+
+- `family-action-graph` 继续描述 stage / action 拓扑、入口、出口、checkpoint 与 human gate。
+- `family-action-catalog` 继续描述可调用 action metadata 和多 surface descriptor。
+- `family-stage-control-plane` 只声明 stage descriptor、skill / prompt / evaluation refs、handoff refs 与 authority boundary，不新建完整流程引擎。
+- `opl stages list|inspect` 只做 discovery、inspection 与 parity，不执行 stage。
+- `OPL` 只做 shared vocabulary、manifest discovery、parity、projection 与 typed queue dispatch，不执行 stage 内部专家动作。
+- `MAS`、`RCA`、`MAG` 继续持有各自的写作、视觉设计、基金策略、审稿、publication / deliverable / package gate 与最终质量判断。
+- `MAS` 命名统一只能在 inventory 证明逻辑层级不变、原 route contract 可追溯、truth surface 不漂移后进行。
+
+当前参考计划是 [OPL Family stage control plane adoption plan](./references/convergence-governance/family-stage-control-plane-adoption-plan.zh-CN.md)。
+
 ### 5. Shell Projection Layer
 
 外部界面仓与 ACP-compatible 壳属于这一层。当前 GUI 适配仓是基于开源 AionUI 定制的 `opl-aion-shell`；它通过 ACP-compatible runtime surface 消费 OPL session/runtime truth，不拥有 runtime。
