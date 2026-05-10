@@ -10,6 +10,7 @@ import { humanizeStatusLabel, liveRouteStatusLabel, localizeRuntimeDisplayList, 
 import { buildMasPortalItems } from './runtime-tray-mas-portal.ts';
 import type { JsonRecord, MasWorkspaceProjectionRef, RuntimeTrayCommand, RuntimeTrayHealthStatus, RuntimeTrayItem, RuntimeTrayLane, RuntimeTraySourceRef } from './runtime-tray-snapshot-types.ts';
 import { fileSourceRef, firstString, firstStringFromList, nestedRecord, normalizeStatusCode, optionalBoolean, optionalString, readJsonRecord, shellArgument, sourceRef, stringListFromRecords, uniqueByRef, uniqueStrings } from './runtime-tray-snapshot-utils.ts';
+import { buildFamilyStageControlPlaneParity } from './family-stage-control-plane.ts';
 
 type HermesCronJob = {
   id?: unknown;
@@ -166,6 +167,7 @@ function buildResolvedItem(entry: DomainManifestCatalogEntry): RuntimeTrayItem |
   const session = manifest.session_continuity;
   const control = manifest.runtime_control;
   const artifacts = manifest.artifact_inventory;
+  const stagePlane = manifest.family_stage_control_plane;
   const status =
     firstString(task?.status, control?.status, progress?.current_status, session?.status)
     ?? firstStringFromList(statusCodes);
@@ -210,6 +212,7 @@ function buildResolvedItem(entry: DomainManifestCatalogEntry): RuntimeTrayItem |
         : noActionContext(localizedSummary ?? '当前无待处理事项。');
   const sourceRefs = uniqueByRef([
     sourceRef('/product_entry_manifest', 'domain_manifest', entry.project),
+    ...(stagePlane ? [sourceRef('/family_stage_control_plane', 'family_stage_control_plane')] : []),
     ...(progress ? [sourceRef('/progress_projection', 'progress_projection')] : []),
     ...(progress?.attention_items.length ? [sourceRef('/progress_projection/attention_items', 'attention_queue')] : []),
     ...(task ? [sourceRef('/task_lifecycle', 'task_lifecycle')] : []),
@@ -237,6 +240,38 @@ function buildResolvedItem(entry: DomainManifestCatalogEntry): RuntimeTrayItem |
     domain_owner: manifest.runtime_inventory?.domain_owner ?? entry.project,
     source_refs: sourceRefs,
     ...action,
+    ...(stagePlane
+      ? {
+        family_stage_control_plane: {
+          surface_kind: 'opl_runtime_stage_control_projection',
+          plane_id: stagePlane.plane_id,
+          target_domain_id: stagePlane.target_domain_id,
+          stage_count: stagePlane.stages.length,
+          parity: buildFamilyStageControlPlaneParity(stagePlane, manifest),
+          stages: stagePlane.stages.map((stage) => ({
+            stage_id: stage.stage_id,
+            goal: stage.goal,
+            owner: stage.owner,
+            skill_refs: stage.skills,
+            allowed_action_refs: stage.allowed_action_refs,
+            handoff: stage.handoff,
+            source_refs: stage.source_refs,
+            freshness: stage.freshness,
+            authority_boundary: stage.authority_boundary,
+          })),
+        },
+        family_stage_workbench: {
+          surface_kind: 'opl_family_stage_workbench_summary',
+          role: 'projection_display_only',
+          source_ref: '/family_stage_control_plane',
+          non_authority_flags: {
+            opl_schedules_stage: false,
+            opl_writes_domain_truth: false,
+            opl_issues_quality_verdict: false,
+          },
+        },
+      }
+      : {}),
   };
 }
 

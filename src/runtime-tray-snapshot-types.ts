@@ -55,6 +55,8 @@ export type RuntimeTrayItem = {
   portal_source_refs?: RuntimeTraySourceRef[];
   workbench_projection?: JsonRecord | null;
   workbench_projection_source_refs?: RuntimeTraySourceRef[];
+  family_stage_control_plane?: JsonRecord | null;
+  family_stage_workbench?: JsonRecord | null;
   study_workbench?: JsonRecord | null;
 };
 

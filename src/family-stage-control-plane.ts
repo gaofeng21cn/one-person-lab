@@ -30,6 +30,8 @@ export interface FamilyStageListEntry {
   owner: string;
   domain_stage_refs: string[];
   allowed_action_refs: string[];
+  source_ref_count: number;
+  freshness: JsonRecord | null;
 }
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -105,6 +107,8 @@ export function buildFamilyStageListEntry(
     owner: stage.owner,
     domain_stage_refs: stage.domain_stage_refs,
     allowed_action_refs: stage.allowed_action_refs,
+    source_ref_count: stage.source_refs.length,
+    freshness: stage.freshness,
   };
 }
 
@@ -230,6 +234,18 @@ export function buildFamilyStageInspect(contracts: GatewayContracts, args: strin
       target_domain_id: plane.target_domain_id,
       plane_id: plane.plane_id,
       stage,
+      workbench_projection: {
+        surface_kind: 'opl_family_stage_workbench_projection',
+        stage_id: stage.stage_id,
+        goal: stage.goal,
+        owner: stage.owner,
+        skill_refs: stage.skills,
+        allowed_action_refs: stage.allowed_action_refs,
+        handoff: stage.handoff,
+        source_refs: stage.source_refs,
+        freshness: stage.freshness,
+        authority_boundary: stage.authority_boundary,
+      },
       parity: buildFamilyStageControlPlaneParity(plane, entry.manifest),
     },
   };
