@@ -47,7 +47,7 @@
     "gateway_launchagent_label": "ai.hermes.gateway",
     "cron_job_name": "opl-family-runtime-tick",
     "cron_cadence": "every 1m",
-    "cron_script": "opl family-runtime tick --source hermes-cron",
+    "cron_script": "opl family-runtime tick --source hermes-cron --hydrate",
     "webhook_subscription": "opl-family-runtime-webhook",
     "repair_command": "opl family-runtime repair",
     "doctor_command": "opl family-runtime doctor"

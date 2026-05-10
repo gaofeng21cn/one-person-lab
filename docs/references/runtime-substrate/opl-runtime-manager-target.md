@@ -19,6 +19,8 @@ Hermes 是 Full OPL family 的默认 online runtime substrate 与 online-managem
 
 Family runtime supervision 的 owner split 更窄：domain 仓持有 wakeup / supervision truth、lease、SLO 与 repair command；`OPL Runtime Manager` 只读取 `family_runtime_supervision` surface 做 discovery、export、parity 与产品投影。`safe_reconcile_hint` 是路由提示，不是 OPL 写入 runtime truth 或启动 scheduler 的授权。
 
+Domain task hydration 是另一个显式授权面：domain sidecar export 可以输出 `pending_family_tasks[]`，OPL 只把这些任务按 `dedupe_key` 写入 family queue，再调用对应 domain sidecar dispatch。OPL 不从 read-only status 自行生成 domain action。
+
 ## 当前要落地的最小面
 
 1. `opl runtime manager`
@@ -37,6 +39,7 @@ Family runtime supervision 的 owner split 更窄：domain 仓持有 wakeup / su
 - `opl install` 默认安装/复用 Hermes online runtime；`--no-online-runtime` 只用于开发/离线 degraded diagnostics。
 - Codex CLI、已准入 domain modules 与 Hermes online runtime 三层都 ready 时，Full OPL readiness 才完整通过。
 - Hermes gateway 未 loaded、starting 或 pending 表示 Full online runtime degraded；本地 CLI/status/manifest 可继续输出诊断。
+- Hermes cron bridge 的 desired script 是 `opl family-runtime tick --source hermes-cron --hydrate`。没有 `--hydrate` 的 cron 只能消费已有队列，不能把 domain read-model blocker 自动转换成 executable task。
 
 ## Domain Registration Registry
 

@@ -19,7 +19,8 @@ export type EnqueueInput = {
 
 export type FamilyRuntimeCommandInput =
   | { mode: 'status' | 'doctor' | 'install' | 'repair' | 'notify_list' | 'events_export' | 'queue_list' }
-  | { mode: 'tick'; source?: string; limit?: number }
+  | { mode: 'tick'; source?: string; limit?: number; hydrate?: boolean }
+  | { mode: 'intake'; domainId?: FamilyRuntimeDomainId; source?: string }
   | { mode: 'enqueue'; input: EnqueueInput }
   | { mode: 'queue_inspect'; taskId: string }
   | { mode: 'approve'; taskId: string; decision: 'approve' | 'deny'; reason?: string };
@@ -115,10 +116,13 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
   if (mode === 'tick') {
     let source = 'manual';
     let limit = 10;
+    let hydrate = false;
     for (let index = 0; index < rest.length; index += 1) {
       const token = rest[index];
       const value = rest[index + 1];
-      if (token === '--source' && value) {
+      if (token === '--hydrate') {
+        hydrate = true;
+      } else if (token === '--source' && value) {
         source = value;
         index += 1;
       } else if (token === '--limit' && value) {
@@ -135,7 +139,27 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
         limit,
       });
     }
-    return { mode: 'tick', source, limit };
+    return { mode: 'tick', source, limit, hydrate };
+  }
+  if (mode === 'intake') {
+    let domainId: FamilyRuntimeDomainId | undefined;
+    let source = 'manual';
+    for (let index = 0; index < rest.length; index += 1) {
+      const token = rest[index];
+      const value = rest[index + 1];
+      if (token === '--domain' && value) {
+        domainId = assertDomainId(value);
+        index += 1;
+      } else if (token === '--source' && value) {
+        source = value;
+        index += 1;
+      } else {
+        throw new GatewayContractError('cli_usage_error', `Unknown family-runtime intake option: ${token}.`, {
+          option: token,
+        });
+      }
+    }
+    return { mode: 'intake', domainId, source };
   }
   if (mode === 'approve') {
     let taskId = '';
@@ -233,6 +257,6 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
     };
   }
   throw new GatewayContractError('unknown_command', `Unknown family-runtime subcommand: ${mode}.`, {
-    usage: 'opl family-runtime status|doctor|install|repair|tick|enqueue|queue list|queue inspect|approve|notify list|events export',
+    usage: 'opl family-runtime status|doctor|install|repair|intake|tick|enqueue|queue list|queue inspect|approve|notify list|events export',
   });
 }

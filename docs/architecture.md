@@ -81,8 +81,8 @@
 - `Hermes-Agent` online substrate 的 provision / version pin / profile wiring
 - Hermes online-management gateway readiness 的触发、检查与状态报告
 - `opl family-runtime` typed queue、idempotency、lease、retry、dead-letter、approval、local inbox 与 event export
-- Hermes cron/webhook bridge：`hermes cron -> opl family-runtime tick --source hermes-cron`，以及 webhook intake 到 OPL queue
-- domain task registration contract 的 hydration
+- Hermes cron/webhook bridge：`hermes cron -> opl family-runtime tick --source hermes-cron --hydrate`，以及 webhook intake 到 OPL queue
+- domain task registration contract 的 hydration；当前 MAS 通过 `pending_family_tasks[]` 把非终局、非 hard human gate 的 autonomy blocker 交给 OPL queue
 - family runtime supervision contract 的只读发现、导出、一致性检查与产品投影；其中 adapter_id、cadence、last_success / last_tick、lease_freshness、SLO state、repair command、safe reconcile hint 与 source refs 均来自 domain-owned surface
 - runtime status、session、progress、artifact、attention queue 的 OPL 产品级投影
 - `opl runtime manager`、doctor、repair、resume 等诊断和恢复入口
@@ -170,7 +170,7 @@
 - 默认执行器正式名称：`Codex CLI`
 - 默认执行模式：`autonomous`
 - 默认模型与默认 reasoning effort：继承本机 `Codex` 默认配置
-- `Hermes-Agent` 当前作为显式可选 hosted/runtime provider adapter / online-management gateway 保留；作为执行路线时仍是 `experimental`，仅在显式切换或长跑托管语境中进入
+- `Hermes-Agent` 当前作为 Full OPL online family runtime 的 required external substrate / online-management gateway 保留；作为 concrete executor 时仍是显式 route 选择，不替代 Codex CLI 默认执行语义
 
 ## 文档组织原则
 

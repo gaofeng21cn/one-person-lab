@@ -206,7 +206,7 @@ export function buildInternalCommandSpecs(
     'runtime manager': {
       usage: 'opl runtime manager',
       summary:
-        'Show the OPL Runtime Manager boundary for the optional external Hermes provider adapter.',
+        'Show the OPL Runtime Manager boundary for the required Full online Hermes substrate.',
       examples: ['opl runtime manager'],
       handler: (args) => {
         assertNoArgs(args, commandSpecs['runtime manager']);
@@ -244,14 +244,14 @@ export function buildInternalCommandSpecs(
     },
     'family-runtime': {
       usage:
-        'opl family-runtime status|doctor|install|repair|tick|enqueue|queue list|queue inspect|approve|notify list|events export [options]',
+        'opl family-runtime status|doctor|install|repair|intake|tick|enqueue|queue list|queue inspect|approve|notify list|events export [options]',
       summary:
         'Manage the Hermes-backed OPL family online runtime queue, bridge, notifications, approvals, and events.',
       examples: [
         'opl family-runtime status',
         'opl family-runtime install',
         'opl family-runtime enqueue --domain medautogrant --task-kind user-loop/wakeup --payload \'{"workspace":"/tmp/mag"}\' --dedupe-key mag-demo',
-        'opl family-runtime tick --source hermes-cron',
+        'opl family-runtime tick --source hermes-cron --hydrate',
         'opl family-runtime queue list',
       ],
       handler: (args) => runFamilyRuntime(args),

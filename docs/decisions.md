@@ -12,6 +12,7 @@
 - `Hermes-Agent` 是 Full OPL family readiness 的 required online substrate；Hermes 缺失或 gateway 未加载会使 Full readiness degraded / attention needed。
 - `Codex CLI` 仍是默认具体执行器；Hermes online substrate 不自动替换 domain-selected executor，也不成为 MAS/MAG/RCA truth owner。
 - 新增 `opl family-runtime` typed queue / bridge：队列位于 `${OPL_STATE_DIR}/family-runtime/queue.sqlite`，Hermes cron/webhook 负责唤醒，OPL tick 负责跨仓 dispatch 和本地 inbox/event 记录。
+- `opl family-runtime intake` 与 `opl family-runtime tick --hydrate` 会先读取 domain sidecar export 的 `pending_family_tasks[]`，按 dedupe key 入队，再在同一 tick 中派发已入队任务。Hermes cron 注册脚本必须使用 `opl family-runtime tick --source hermes-cron --hydrate`，否则只会消费已有队列而不会把 MAS/MAG/RCA read-model blocker 转成 executable task。
 - Full 首次安装包必须携带 Hermes payload、profile seed、CLI shim、LaunchAgent install/repair scripts、版本 manifest 与 checksum；标准 updater asset 可继续轻量。
 - `opl system initialize` 和 App 首启显示 Core ready、Domain modules ready、Hermes online runtime ready 三层状态；Full 完整通过要求三层都 ready。
 - 历史上“Hybrid optional Hermes provider adapter”的文档口径保留为 archive/decision history，不再作为当前安装或 readiness 行为。
@@ -188,6 +189,7 @@
 - native state index 的 lifecycle 必须输出 TTL、history、failure、last-success、freshness、结构化 diff 与 history GC preserved/removed reporting，避免 helper 短暂不可用或 history 被裁剪时丢失可审计状态
 - `opl runtime snapshot` 可以为桌面托盘投影 `attention_items`、`running_items`、`recent_items`，但只读取 domain-owned durable surfaces；为了托盘状态显示不新增本地 daemon
 - `Hermes-Agent` 继续是外部 online runtime substrate owner；`OPL Runtime Manager` 只做产品控制面、typed dispatch、诊断恢复和投影
+- `domain task registration hydration` 是 Runtime Manager 的一等职责：OPL 读取 domain-owned sidecar export 中显式授权的 `pending_family_tasks[]`，写入 OPL typed queue，并保持 retry / dead-letter / notification / approval 语义；OPL 不从 read-only projection 自行推断医学、基金或视觉交付任务。
 - Hermes online-management gateway 的 system service lifecycle 由 Hermes installer/gateway command 管理；OPL 只触发、检查和报告 readiness
 - `MAS`、`MAG`、`RCA` 继续持有 domain truth 与 route-selected executor 语义
 - 未来如需迁移到 OPL 自有完整 sidecar，必须先证明 `Hermes-Agent` 无法表达必要的 task、wakeup、approval、audit 或产品隔离合同

@@ -185,7 +185,7 @@
     "contract_ref": "contracts/opl-gateway/family-runtime-online-substrate-contract.json",
     "command": "opl family-runtime status",
     "state_path": "${OPL_STATE_DIR}/family-runtime/queue.sqlite",
-    "wakeup_bridge": "hermes cron -> opl family-runtime tick --source hermes-cron",
+    "wakeup_bridge": "hermes cron -> opl family-runtime tick --source hermes-cron --hydrate",
     "webhook_bridge": "hermes webhook -> opl family-runtime enqueue"
   },
   "tray_snapshot_projection": {
