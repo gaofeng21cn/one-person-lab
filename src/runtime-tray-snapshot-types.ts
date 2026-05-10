@@ -53,6 +53,9 @@ export type RuntimeTrayItem = {
   portal_payload_ref?: string | null;
   portal_freshness?: JsonRecord | null;
   portal_source_refs?: RuntimeTraySourceRef[];
+  workbench_projection?: JsonRecord | null;
+  workbench_projection_source_refs?: RuntimeTraySourceRef[];
+  study_workbench?: JsonRecord | null;
 };
 
 export type MasWorkspaceProjectionRef = {

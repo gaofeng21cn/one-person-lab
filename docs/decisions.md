@@ -107,7 +107,7 @@
 - `OPL` 持有 unified definitions、shared module/contract/index registration、module discovery 与 projection consumption surface；医学科研 runtime、controller truth、quality authority、publication gates 与 deliverable truth 继续由 `MAS` 持有。
 - `MDS` 不再作为 OPL 默认安装的 MAS 运行依赖；MAS 只可把它显式声明为 backend audit、source provenance、historical fixture、explicit archive import、upstream intake 或 parity oracle companion。
 - 公开文档与技术入口不得恢复 MAS 用户安装型 standalone GitHub Release / standalone product release 叙事；MAS 仍按 OPL Packages/GHCR-backed module 坐标与 git checkout / sibling repo 更新路径表达，MDS 只保留 MAS-declared optional companion 引用。
-- OPL 对 MAS progress、publication、quality、runtime control 等 projection 只做证据、provenance、状态和路由展示；不得把 projection 文案写成 OPL 持有的 ready verdict、submission-ready verdict、publication verdict 或质量裁决。
+- OPL 对 MAS progress、publication、quality、runtime control、`mas_opl_runtime_workbench_projection` 等 projection 只做证据、provenance、状态、App drilldown 和路由/transport metadata 展示；不得把 projection 文案写成 OPL 持有的 ready verdict、submission-ready verdict、publication verdict、质量裁决、runtime authority 或 artifact authority。
 - 本决策不修改 `contracts/` 与 projection contract；它只同步公开文档和核心 docs 的 MAS v2 wording。
 
 ## 2026-05-02
@@ -203,7 +203,7 @@
 - 本地 `structure` lane 是 blocking Sentrux gate；GitHub Sentrux Advisory workflow 继续作为非阻断 sidecar 信号存在，不替代 Verify workflow 的 structure gate
 - prebuild/cache 策略先按 manifest 和 `OPL_STATE_DIR` cache 落地，目标是让 fresh install 优先恢复匹配平台的 helper binary，只有缺失或无效时才走本地 Cargo build
 - native state index 的 lifecycle 必须输出 TTL、history、failure、last-success、freshness、结构化 diff 与 history GC preserved/removed reporting，避免 helper 短暂不可用或 history 被裁剪时丢失可审计状态
-- `opl runtime snapshot` 可以为桌面托盘投影 `attention_items`、`running_items`、`recent_items`，但只读取 domain-owned durable surfaces；为了托盘状态显示不新增本地 daemon
+- `opl runtime snapshot` 可以为桌面托盘和 App Runtime Workbench 投影 `attention_items`、`running_items`、`recent_items` 与 MAS study drilldown/read-only workbench 数据，但只读取 domain-owned durable surfaces；为了托盘状态显示或 App drilldown 不新增本地 daemon，也不把 MAS `mas_opl_runtime_workbench_projection` 升级为 OPL-owned study truth
 - `Hermes-Agent` 继续是外部 online runtime substrate owner；`OPL Runtime Manager` 只做产品控制面、typed dispatch、诊断恢复和投影
 - `domain task registration hydration` 是 Runtime Manager 的一等职责：OPL 读取 domain-owned sidecar export 中显式授权的 `pending_family_tasks[]`，写入 OPL typed queue，并保持 retry / dead-letter / notification / approval 语义；OPL 不从 read-only projection 自行推断医学、基金或视觉交付任务。
 - Hermes online-management gateway 的 system service lifecycle 由 Hermes installer/gateway command 管理；OPL 只触发、检查和报告 readiness
