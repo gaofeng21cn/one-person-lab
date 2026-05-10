@@ -587,7 +587,7 @@ resume: {
     },
     'runtime repair-gateway': {
       usage: 'opl runtime repair-gateway',
-      summary: 'Explicitly reinstall and recheck the optional Hermes gateway service used for online task management.',
+      summary: 'Reinstall and recheck the default Hermes gateway service used for OPL online family runtime.',
       examples: ['opl runtime repair-gateway'],
       handler: () => runProductEntryRepairHermesGateway(),
     },
