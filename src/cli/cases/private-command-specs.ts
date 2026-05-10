@@ -7,6 +7,7 @@ import { buildRuntimeTraySnapshot } from '../../runtime-tray-snapshot.ts';
 import { buildNativeIndexSummary } from '../../native-index-summary.ts';
 import { launchDomainEntry } from '../../domain-launch.ts';
 import { buildDomainManifestCatalog } from '../../domain-manifest/catalog-builder.ts';
+import { runFamilyRuntime } from '../../family-runtime.ts';
 import { buildOplDashboard, buildOplStart, buildProjectsOverview } from '../../management/runtime-dashboard.ts';
 import { buildRuntimeStatus } from '../../management/runtime.ts';
 import { buildWorkspaceStatus } from '../../management/workspace.ts';
@@ -240,6 +241,20 @@ export function buildInternalCommandSpecs(
         assertNoArgs(args, commandSpecs['runtime index']);
         return buildNativeIndexSummary();
       },
+    },
+    'family-runtime': {
+      usage:
+        'opl family-runtime status|doctor|install|repair|tick|enqueue|queue list|queue inspect|approve|notify list|events export [options]',
+      summary:
+        'Manage the Hermes-backed OPL family online runtime queue, bridge, notifications, approvals, and events.',
+      examples: [
+        'opl family-runtime status',
+        'opl family-runtime install',
+        'opl family-runtime enqueue --domain medautogrant --task-kind user-loop/wakeup --payload \'{"workspace":"/tmp/mag"}\' --dedupe-key mag-demo',
+        'opl family-runtime tick --source hermes-cron',
+        'opl family-runtime queue list',
+      ],
+      handler: (args) => runFamilyRuntime(args),
     },
     dashboard: {
       usage: 'opl status dashboard [--path <workspace_path>] [--sessions-limit <n>]',

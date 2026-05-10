@@ -32,7 +32,7 @@ For macOS desktop users, download the App directly:
 
 [Download One Person Lab for macOS](https://github.com/gaofeng21cn/one-person-lab/releases/latest)
 
-Open `One Person Lab.app`; on first launch it quietly checks the local environment, uses your home directory as the default workspace root, and installs or reuses missing OPL modules, recommended skills, and companion tools such as the `officecli` binary. Core OPL and admitted domain work are available once Codex and the domain modules are ready; Hermes is an explicit optional hosted/runtime provider adapter for online task management.
+Open `One Person Lab.app`; on first launch it quietly checks the local environment, uses your home directory as the default workspace root, and installs or reuses Codex, Hermes online runtime, OPL modules, recommended skills, and companion tools such as the `officecli` binary. Full OPL readiness requires Core ready, Domain modules ready, and Hermes online runtime ready. Local CLI/status/manifest diagnostics can still run in degraded mode when Hermes is temporarily unavailable.
 
 If you prefer Terminal installation:
 
@@ -62,7 +62,7 @@ Need Docker, Linux, or server deployment? See the [Docker and browser deployment
 - Workspace-based work for tasks that need a real directory and persistent file context.
 - Specialized product families for domain-specific expert workflows.
 - Progress and file views that stay attached to ongoing work.
-- Central management for Codex, optional engines, modules, skills, GUI, and health status.
+- Central management for Codex, Hermes online runtime, modules, skills, GUI, and health status.
 
 ## For Agents And Technical Operators
 
@@ -71,12 +71,14 @@ Need Docker, Linux, or server deployment? See the [Docker and browser deployment
 
 ### One instruction for a Codex Agent
 
-> Install and configure this OPL repo: clone it, install the OPL CLI, run `opl install`, and ensure Codex CLI, MAS/MAG/RCA, recommended skills, required companion tools such as the `officecli` binary, the One Person Lab App, and the browser entry are ready; if anything is missing, fix it or report the exact blocker. Treat Hermes-Agent only as an explicit optional hosted/runtime provider adapter for online task management.
+> Install and configure this OPL repo: clone it, install the OPL CLI, run `opl install`, and ensure Codex CLI, Hermes online runtime, MAS/MAG/RCA, recommended skills, required companion tools such as the `officecli` binary, the One Person Lab App, and the browser entry are ready; if anything is missing, fix it or report the exact blocker. Treat Hermes-Agent as the default online substrate for 24h family wakeup, queue delivery, sessions, approvals, notifications, and profile isolation while keeping domain truth in MAS/MAG/RCA.
 
 ### Common commands after installation
 
 ```bash
-opl system initialize   # Inspect Codex policy, optional engine status, modules, skills, GUI, and workspace-root state
+opl system initialize   # Inspect Codex policy, Hermes online runtime, modules, skills, GUI, and workspace-root state
+opl family-runtime status
+opl family-runtime repair
 opl modules             # Check MAS/MAG/RCA modules and any MAS-declared optional companion provenance/audit refs
 opl module exec --module medautoscience -- doctor entry-modes
 opl skill sync          # Sync OPL family skills into the Codex-visible skill path
@@ -94,7 +96,7 @@ This repository tracks the shared OPL workbench layer, not the specialized domai
 
 For the MAS v2 alignment, `Med Auto Science` remains an independent medical research domain agent with a single domain app skill entry consumed by Codex and OPL. OPL owns the unified definitions, shared contract/index registration, module discovery, and projection consumption layer; it does not become the MAS runtime kernel, does not restore a MAS standalone release/install channel, and does not turn MAS projections into OPL-owned readiness or publication verdicts.
 
-The desktop GUI source is maintained in [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) as an internal OPL-branded app-shell build input. Users download One Person Lab App packages from this repository’s GitHub Releases; first-time macOS arm64 users can choose the `One-Person-Lab-Full-<version>-mac-arm64.dmg` asset with MAS/MAG/RCA, `officecli`, and recommended companion skill payloads, while in-app updates continue to use the standard App assets and `latest*.yml` metadata. Hermes remains available only through explicit optional installation when hosted/online task management is needed. This repository provides the shared workbench contracts and product surfaces consumed by the app and Codex.
+The desktop GUI source is maintained in [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) as an internal OPL-branded app-shell build input. Users download One Person Lab App packages from this repository’s GitHub Releases; first-time macOS arm64 users can choose the `One-Person-Lab-Full-<version>-mac-arm64.dmg` asset with MAS/MAG/RCA, Hermes online runtime, `officecli`, and recommended companion skill payloads, while in-app updates continue to use the standard App assets and `latest*.yml` metadata. This repository provides the shared workbench contracts and product surfaces consumed by the app and Codex.
 
 ### How to read this repository
 
@@ -106,8 +108,10 @@ The desktop GUI source is maintained in [`opl-aion-shell`](https://github.com/ga
 
 - Default front doors are `opl`, `opl exec`, and `opl resume`. Unless a runtime or domain agent is explicitly selected, these paths keep Codex-default semantics.
 - OPL treats `Codex CLI` as a managed runtime dependency: `opl system` reports the selected binary, version, minimum-version policy, and PATH diagnostics. Health is based on the selected binary; non-selected PATH candidates are reported as diagnostics instead of blocking a compatible Codex CLI.
-- Hermes-Agent is an explicit optional hosted/runtime provider adapter. Use `opl engine install --engine hermes` or `opl runtime repair-gateway` when online task management is needed; default OPL runtime/session/domain readiness does not require Hermes.
-- First launch separates core/domain readiness from optional online-management readiness. If Codex and admitted domain modules are ready, users can start work while Hermes is absent, pending, or starting.
+- Hermes-Agent is the required online runtime substrate for Full OPL family readiness. OPL owns the typed family queue and domain dispatch bridge; Hermes owns gateway residency, cron/webhook wakeup, session store, delivery, approval transport, and profile isolation.
+- `Codex CLI` remains the default concrete executor unless a route explicitly chooses another executor. Hermes online substrate does not become MAS/MAG/RCA domain truth, quality authority, artifact authority, or publication/package gate.
+- Use `opl family-runtime status|doctor|repair|tick|enqueue|queue list|approve|notify list|events export` for the OPL family runtime bridge. `opl install --no-online-runtime` and `OPL_DISABLE_HERMES_ONLINE=1` are development/offline diagnostic modes and report degraded Full readiness.
+- First launch requires Core ready, Domain modules ready, and Hermes online runtime ready before Full readiness passes. Local CLI/status/manifest diagnostics can still report precise degraded state when Hermes is absent, pending, or starting.
 - If an admitted domain repo is missing locally, run `opl module install --module <module_id>`.
 - When automation needs a domain CLI, run it through `opl module exec --module <module_id> -- <domain_cli_args...>` so the command is launched from the current OPL-managed module checkout instead of a stale global PATH tool.
 - The default workspace root is your home directory. The default local state directory is `~/Library/Application Support/OPL/state`. Set `OPL_STATE_DIR` to use another local state root.

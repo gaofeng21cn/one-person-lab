@@ -741,7 +741,7 @@ esac
   }
 }
 
-test('runtime manager reconcile treats missing Hermes as optional provider unconfigured', () => {
+test('runtime manager reconcile treats missing Hermes as missing required online runtime', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-reconcile-state-'));
 
   try {
@@ -753,10 +753,10 @@ test('runtime manager reconcile treats missing Hermes as optional provider uncon
     });
     const reconcile = output.runtime_manager.reconcile;
 
-    assert.equal(output.runtime_manager.status, 'optional_provider_unconfigured');
+    assert.equal(output.runtime_manager.status, 'online_runtime_missing');
     assert.equal(reconcile.surface_kind, 'opl_runtime_manager_reconcile');
     assert.equal(reconcile.overall_status, 'attention_needed');
-    assert.equal(reconcile.checked_surfaces.hermes_runtime, 'optional_provider_unconfigured');
+    assert.equal(reconcile.checked_surfaces.hermes_runtime, 'online_runtime_missing');
     assert.equal(reconcile.non_goals.includes('does_not_schedule_tasks'), true);
     assert.deepEqual(
       reconcile.recommended_actions.map((action: { action_id: string; blocking: boolean }) => [
@@ -764,6 +764,7 @@ test('runtime manager reconcile treats missing Hermes as optional provider uncon
         action.blocking,
       ]),
       [
+        ['install_hermes_online_runtime', true],
         ['repair_native_helpers', false],
         ['refresh_native_indexes', false],
       ],
@@ -859,7 +860,7 @@ exit 1
 
     assert.equal(action.mode, 'apply');
     assert.equal(action.dry_run, false);
-    assert.equal(action.before.reconcile.checked_surfaces.hermes_runtime, 'optional_provider_attention');
+    assert.equal(action.before.reconcile.checked_surfaces.hermes_runtime, 'online_runtime_attention');
     assert.equal(action.after.reconcile.overall_status, 'ready');
     assert.deepEqual(action.after.reconcile.recommended_actions, []);
     assert.deepEqual(
@@ -882,7 +883,7 @@ exit 1
   }
 });
 
-test('runtime manager action marks Hermes gateway repair as non-blocking online management repair', () => {
+test('runtime manager action marks Hermes gateway repair as blocking online runtime repair', () => {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-online-action-'));
   const gatewayState = path.join(fixtureRoot, 'gateway-ready');
   const { fixtureRoot: hermesFixtureRoot, hermesPath } = createFakeHermesFixture(`
@@ -924,17 +925,17 @@ exit 1
     );
 
     assert.ok(plannedHermesRepair);
-    assert.equal(plannedHermesRepair.blocking, false);
-    assert.equal(plannedHermesRepair.action_lane, 'online_management');
-    assert.equal(plannedHermesRepair.capability, 'online_task_management');
+    assert.equal(plannedHermesRepair.blocking, true);
+    assert.equal(plannedHermesRepair.action_lane, 'online_runtime');
+    assert.equal(plannedHermesRepair.capability, 'online_family_runtime');
     assert.ok(executedHermesRepair);
     assert.equal(executedHermesRepair.status, 'completed');
-    assert.equal(executedHermesRepair.blocking, false);
-    assert.equal(executedHermesRepair.action_lane, 'online_management');
-    assert.equal(executedHermesRepair.capability, 'online_task_management');
+    assert.equal(executedHermesRepair.blocking, true);
+    assert.equal(executedHermesRepair.action_lane, 'online_runtime');
+    assert.equal(executedHermesRepair.capability, 'online_family_runtime');
     assert.equal(
       action.non_blocking_actions.some((entry: { action_id: string }) => entry.action_id === 'repair_hermes_gateway'),
-      true,
+      false,
     );
     assert.deepEqual(
       action.background_actions.map((entry: { action_id: string }) => entry.action_id),

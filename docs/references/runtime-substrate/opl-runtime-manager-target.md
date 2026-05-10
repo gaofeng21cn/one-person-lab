@@ -4,15 +4,15 @@
 
 `OPL Runtime Manager` 是 OPL 的产品级 runtime 管理与投影层。
 它不替代 `Hermes-Agent`，也不把 OPL 改写成自有长期在线 runtime kernel。
-Hermes 只保留为显式可选 hosted/runtime provider adapter 与 online-management gateway；OPL 在显式启用后管理产品级安装、检查和投影，不拥有 gateway system service lifecycle。
+Hermes 是 Full OPL family 的默认 online runtime substrate 与 online-management gateway；OPL 管理产品级安装、检查、typed queue 和投影，不拥有 gateway system service lifecycle。
 
 目标链路是：
 
-`OPL CLI / GUI / Product Entry -> OPL Runtime Manager -> optional external Hermes-Agent provider adapter / Hermes gateway system service -> Domain Adapter -> MAS / MAG / RCA domain logic`
+`OPL CLI / GUI / Product Entry -> OPL Runtime Manager / family-runtime queue -> required external Hermes-Agent online substrate / Hermes gateway system service -> Domain Adapter -> MAS / MAG / RCA domain logic`
 
 ## Owner Split
 
-- `OPL`：产品入口、bootstrap、version pin、profile wiring、domain task registration hydration、诊断、恢复入口、native helper catalog、state index catalog，以及显式 Hermes gateway readiness 的触发、检查和报告
+- `OPL`：产品入口、bootstrap、version pin、profile wiring、typed family queue、domain task registration hydration、诊断、恢复入口、native helper catalog、state index catalog，以及 Hermes gateway readiness 的触发、检查和报告
 - `Hermes-Agent`：长期在线 session、scheduler、wakeup、interrupt/resume、memory、delivery/cron 与 online-management gateway；gateway system service 由 Hermes installer/gateway command 管理
 - `MAS / MAG / RCA`：domain-owned truth、gate、artifact、progress、review / publication / submission 判断
 - concrete executor：由 domain route contract 选择，默认仍可继承本机 `Codex CLI`
@@ -34,9 +34,9 @@ Family runtime supervision 的 owner split 更窄：domain 仓持有 wakeup / su
 
 首启 readiness 口径：
 
-- `opl install` 默认不安装 Hermes；Hermes 只通过显式 engine/provider/runtime-manager 路径安装、复用或修复。
-- Codex CLI 与已准入 domain modules ready 时，OPL core/domain 入口可用。
-- Hermes gateway 未 loaded、starting 或 pending 只表示 online-management readiness 尚未完成，不应阻塞首屏核心/domain 工作。
+- `opl install` 默认安装/复用 Hermes online runtime；`--no-online-runtime` 只用于开发/离线 degraded diagnostics。
+- Codex CLI、已准入 domain modules 与 Hermes online runtime 三层都 ready 时，Full OPL readiness 才完整通过。
+- Hermes gateway 未 loaded、starting 或 pending 表示 Full online runtime degraded；本地 CLI/status/manifest 可继续输出诊断。
 
 ## Domain Registration Registry
 

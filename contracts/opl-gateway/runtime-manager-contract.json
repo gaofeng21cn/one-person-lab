@@ -2,11 +2,11 @@
   "version": "v1",
   "contract_id": "opl_runtime_manager_contract",
   "contract_ref": "contracts/opl-gateway/runtime-manager-contract.json",
-  "scope": "opl_optional_product_managed_adapter_over_external_runtime_kernel",
-  "description": "Freezes the first OPL Runtime Manager boundary. OPL can manage explicit Hermes-Agent provider adapter provisioning, profile wiring, diagnostics, task registration hydration, status projection, optional native helper catalog, and high-frequency state indexes while Codex remains the default runtime/session path.",
+  "scope": "opl_product_control_plane_over_required_hermes_online_runtime_substrate",
+  "description": "Freezes the OPL Runtime Manager boundary. Hermes-Agent is the required online runtime substrate for Full OPL family readiness; OPL owns the typed family queue, dispatch contracts, profile wiring, diagnostics, task registration hydration, status projection, optional native helper catalog, and high-frequency state indexes while domain repositories keep truth and quality authority.",
   "owner_split": {
-    "product_manager_owner": "one-person-lab",
-    "runtime_kernel_owner": "upstream_hermes_agent",
+    "product_control_plane_owner": "one-person-lab",
+    "online_runtime_substrate_owner": "upstream_hermes_agent",
     "domain_truth_owners": [
       "med-autoscience",
       "med-autogrant",
@@ -15,8 +15,10 @@
     "concrete_executor_owner": "route_selected_by_domain_contract"
   },
   "manager_responsibilities": [
-    "optionally_provision_supported_hermes_runtime_when_explicitly_selected",
-    "pin_optional_runtime_version_and_profile",
+    "provision_supported_hermes_runtime_for_full_online_family_runtime",
+    "pin_hermes_runtime_version_and_profile",
+    "own_typed_family_queue_and_domain_dispatch_contracts",
+    "wire_hermes_cron_webhook_delivery_and_approval_transport",
     "hydrate_domain_task_registration_contracts",
     "project_runtime_status_into_opl_sessions_progress_artifacts",
     "provide_runtime_doctor_repair_resume_entrypoints",
@@ -49,8 +51,9 @@
     ]
   },
   "non_goals": [
-    "not_a_scheduler_kernel",
-    "not_a_session_or_memory_store",
+    "not_a_domain_runtime_truth_owner",
+    "not_a_domain_quality_verdict_owner",
+    "not_a_domain_artifact_gate_owner",
     "not_a_domain_truth_owner",
     "not_a_concrete_executor",
     "not_a_private_fork_of_hermes_agent"
@@ -176,6 +179,14 @@
       "attention_queue_index",
       "runtime_health_snapshot_index"
     ]
+  },
+  "family_runtime_queue": {
+    "surface_kind": "opl_family_runtime_queue",
+    "contract_ref": "contracts/opl-gateway/family-runtime-online-substrate-contract.json",
+    "command": "opl family-runtime status",
+    "state_path": "${OPL_STATE_DIR}/family-runtime/queue.sqlite",
+    "wakeup_bridge": "hermes cron -> opl family-runtime tick --source hermes-cron",
+    "webhook_bridge": "hermes webhook -> opl family-runtime enqueue"
   },
   "tray_snapshot_projection": {
     "surface_kind": "opl_runtime_tray_snapshot",

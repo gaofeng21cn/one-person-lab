@@ -4,14 +4,15 @@
 
 ## 首启 readiness 模型
 
-首启展示需要把两类状态分开：
+首启展示需要把三层状态分开：
 
-- core/domain readiness：Codex CLI、workspace root、已准入 domain modules、推荐 skills 与 GUI shell 的可用性。
-- online-management readiness：显式可选 Hermes provider adapter 与 Hermes online-management gateway 的 readiness。
+- core readiness：Codex CLI、workspace root、推荐 skills 与 GUI shell 的可用性。
+- domain modules readiness：MAS/MAG/RCA 等已准入 domain modules 的可用性。
+- Hermes online runtime readiness：Hermes provider、profile、gateway、cron/webhook bridge 与 family-runtime queue 的可用性。
 
-`opl install` 默认不安装 Hermes。Hermes online-management gateway 是由 Hermes installer/gateway command 管理的可选系统服务；OPL 只在 `opl engine install --engine hermes`、`opl runtime repair-gateway` 或已安装 Hermes repair 路径中触发安装/启动、检查 readiness、记录日志并向 GUI 报告状态。
+`opl install` 默认安装/复用 Hermes。Hermes online-management gateway 是由 Hermes installer/gateway command 管理的 required online substrate；OPL 通过 `opl family-runtime install|repair`、`opl runtime manager action --apply`、`opl runtime repair-gateway` 或 engine install 路径触发安装/启动、检查 readiness、记录日志并向 GUI 报告状态。
 
-当 core/domain readiness 已经 ready 时，GUI 首屏应允许用户进入通用工作、医学研究、基金写作或汇报/PPT 工作。Hermes 缺失、gateway 尚未 loaded、仍在 starting，或需要稍后复查时，应展示为 optional online-management 状态，不应写成底层 Hermes runtime 未就绪并阻塞首屏。
+Full OPL readiness 需要 core、domain modules 与 Hermes online runtime 三层都 ready。Hermes 缺失、gateway 尚未 loaded、仍在 starting，或需要稍后复查时，应展示为 Full online runtime degraded；本地 CLI/status/manifest 仍可给出诊断，但不能把 Full readiness 写成完整通过。
 
 ## 本机 clean-room 层
 
@@ -36,7 +37,7 @@ npm run fresh-install:smoke
 - offline module install blocker
 
 这些场景断言 `opl system initialize` 的 `setup_flow.phase`、`blocking_items`、Codex 版本状态、模块安装计数，以及 GUI 可消费的首启合同字段。
-首启 blocker 文案应保留给 core/domain 无法自动修复的事项；Hermes 缺失或 gateway 未 loaded 只应进入 optional online-management readiness 或 attention 提示。
+首启 blocker 文案应覆盖 core、domain modules 与 Hermes online runtime 三层 required readiness；Hermes 缺失或 gateway 未 loaded 应进入 Full online runtime degraded / attention 提示。
 
 ## GUI / VM 层
 

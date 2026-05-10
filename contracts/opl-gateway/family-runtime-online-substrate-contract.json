@@ -1,0 +1,72 @@
+{
+  "version": "v1",
+  "contract_id": "opl_family_runtime_online_substrate_contract",
+  "contract_ref": "contracts/opl-gateway/family-runtime-online-substrate-contract.json",
+  "hermes_runtime_provider": "required_for_online_family_runtime",
+  "scope": "OPL family 24h online runtime substrate, typed queue, dispatch, notification, approval, and recovery bridge",
+  "owner_split": {
+    "online_runtime_substrate_owner": "upstream_hermes_agent",
+    "product_control_plane_owner": "one-person-lab",
+    "domain_truth_owners": [
+      "med-autoscience",
+      "med-autogrant",
+      "redcube-ai"
+    ]
+  },
+  "hermes_owned_capabilities": [
+    "gateway_residency",
+    "cron_wakeup",
+    "webhook_intake",
+    "session_store",
+    "delivery_transport",
+    "approval_transport",
+    "memory_profile_isolation"
+  ],
+  "opl_owned_capabilities": [
+    "typed_family_queue",
+    "domain_adapter_dispatch",
+    "local_inbox_notification_copy",
+    "family_runtime_events_export",
+    "repair_doctor_surface",
+    "runtime_manager_projection"
+  ],
+  "domain_owned_capabilities": [
+    "runtime_truth",
+    "quality_judgment",
+    "artifact_authority",
+    "publication_or_package_gate",
+    "worker_launch_decision"
+  ],
+  "state": {
+    "queue_database": "${OPL_STATE_DIR}/family-runtime/queue.sqlite",
+    "dispatch_task_dir": "${OPL_STATE_DIR}/family-runtime/dispatch",
+    "local_inbox_table": "notifications",
+    "events_table": "events"
+  },
+  "bridge": {
+    "gateway_launchagent_label": "ai.hermes.gateway",
+    "cron_job_name": "opl-family-runtime-tick",
+    "cron_cadence": "every 1m",
+    "cron_script": "opl family-runtime tick --source hermes-cron",
+    "webhook_subscription": "opl-family-runtime-webhook",
+    "repair_command": "opl family-runtime repair",
+    "doctor_command": "opl family-runtime doctor"
+  },
+  "degraded_diagnostic_mode": {
+    "env": "OPL_DISABLE_HERMES_ONLINE=1",
+    "cli_flag": "opl install --no-online-runtime",
+    "full_ready": false,
+    "allowed_surfaces": [
+      "local status",
+      "manifest",
+      "doctor diagnostics",
+      "queue read"
+    ]
+  },
+  "forbidden_authority": [
+    "OPL cannot write domain truth",
+    "OPL cannot clear domain quality gates",
+    "OPL cannot override artifact or publication authority",
+    "Hermes cannot become MAS/MAG/RCA truth owner"
+  ]
+}

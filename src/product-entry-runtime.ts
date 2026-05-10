@@ -31,23 +31,25 @@ export function buildProductEntryDoctor(validation: ContractValidationSummary) {
   const codex = resolveCodexBinary();
   const hermes = inspectHermesRuntime();
   const localEntryReady = Boolean(codex);
-  const ready = localEntryReady;
+  const onlineRuntimeReady = Boolean(hermes.binary && hermes.gateway_service.loaded);
+  const ready = localEntryReady && onlineRuntimeReady;
 
   return {
     version: 'g2',
     validation,
     product_entry: {
       entry_surface: 'opl_local_product_entry_shell',
-      runtime_substrate: 'codex_default_runtime',
+      runtime_substrate: 'codex_default_executor_with_hermes_online_runtime_substrate',
       ready,
       local_entry_ready: localEntryReady,
+      online_runtime_ready: onlineRuntimeReady,
       messaging_gateway_ready: hermes.gateway_service.loaded,
       hermes,
       issues: hermes.issues,
       notes: [
         'Codex-default local entry is provided through `opl`, `opl exec`, and `opl resume`.',
         'Use `opl skill sync` to register the family domain skill packs before default Codex sessions.',
-        'Hermes remains an explicit opt-in runtime via `--executor hermes`; its gateway only affects Hermes-backed lanes.',
+        'Hermes is the default online runtime substrate for Full OPL family readiness; `--executor hermes` remains a separate explicit executor route.',
       ],
     },
   };

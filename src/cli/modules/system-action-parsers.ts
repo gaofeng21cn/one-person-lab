@@ -93,6 +93,10 @@ function parseTurnkeyInstallArgs(
       parsed.skipEngines = true;
       continue;
     }
+    if (token === '--no-online-runtime') {
+      parsed.noOnlineRuntime = true;
+      continue;
+    }
     if (token === '--skip-gui-open') {
       parsed.skipGuiOpen = true;
       continue;

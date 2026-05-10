@@ -271,9 +271,10 @@ exit 1
 
     assert.equal(output.version, 'g2');
     assert.equal(output.product_entry.entry_surface, 'opl_local_product_entry_shell');
-    assert.equal(output.product_entry.runtime_substrate, 'codex_default_runtime');
+    assert.equal(output.product_entry.runtime_substrate, 'codex_default_executor_with_hermes_online_runtime_substrate');
     assert.equal(output.product_entry.ready, true);
     assert.equal(output.product_entry.local_entry_ready, true);
+    assert.equal(output.product_entry.online_runtime_ready, true);
     assert.equal(output.product_entry.messaging_gateway_ready, true);
     assert.equal(output.product_entry.hermes.binary.path, hermesPath);
     assert.equal(output.product_entry.hermes.version, 'Hermes Agent v9.9.9-test');
@@ -281,6 +282,7 @@ exit 1
     assert.match(output.product_entry.notes[0], /opl exec/);
     assert.match(output.product_entry.notes[0], /opl resume/);
     assert.match(output.product_entry.notes[1], /opl skill sync/);
+    assert.match(output.product_entry.notes[2], /default online runtime substrate/);
     assert.match(output.product_entry.notes[2], /--executor hermes/);
     assert.deepEqual(output.product_entry.issues, []);
     assert.equal(output.validation.status, 'valid');
@@ -302,9 +304,10 @@ exit 0
       PATH: fixtureRoot,
     });
 
-    assert.equal(output.product_entry.runtime_substrate, 'codex_default_runtime');
-    assert.equal(output.product_entry.ready, true);
+    assert.equal(output.product_entry.runtime_substrate, 'codex_default_executor_with_hermes_online_runtime_substrate');
+    assert.equal(output.product_entry.ready, false);
     assert.equal(output.product_entry.local_entry_ready, true);
+    assert.equal(output.product_entry.online_runtime_ready, false);
     assert.equal(output.product_entry.messaging_gateway_ready, false);
     assert.equal(output.product_entry.hermes.binary, null);
     assert.match(output.product_entry.notes[2], /--executor hermes/);
@@ -565,7 +568,7 @@ exit 1
   }
 });
 
-test('runtime manager reports OPL-managed adapter boundary over external Hermes', () => {
+test('runtime manager reports OPL control plane over required Hermes online substrate', () => {
   const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
 if [ "$1" = "version" ]; then
   echo "Hermes Agent v9.9.9-test"
@@ -592,11 +595,11 @@ exit 1
 
     assert.equal(output.version, 'g2');
     assert.equal(output.runtime_manager.surface_id, 'opl_runtime_manager');
-    assert.equal(output.runtime_manager.layer_role, 'optional_product_managed_adapter_over_external_kernel');
+    assert.equal(output.runtime_manager.layer_role, 'product_control_plane_over_required_hermes_online_runtime_substrate');
     assert.equal(output.runtime_manager.status, 'ready');
-    assert.equal(output.runtime_manager.owner_split.runtime_kernel_owner, 'upstream_hermes_agent');
-    assert.equal(output.runtime_manager.owner_split.product_manager_owner, 'one-person-lab');
-    assert.equal(output.runtime_manager.non_goals.includes('not_a_scheduler_kernel'), true);
+    assert.equal(output.runtime_manager.owner_split.online_runtime_substrate_owner, 'upstream_hermes_agent');
+    assert.equal(output.runtime_manager.owner_split.product_control_plane_owner, 'one-person-lab');
+    assert.equal(output.runtime_manager.non_goals.includes('not_a_domain_runtime_truth_owner'), true);
     assert.equal(output.runtime_manager.registration_registry.surface_kind, 'opl_runtime_manager_registration_registry');
     assert.equal(output.runtime_manager.registration_registry.domains.length, 3);
     assert.equal(

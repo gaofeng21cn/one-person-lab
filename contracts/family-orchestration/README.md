@@ -6,8 +6,9 @@ This directory freezes the machine-readable companion schemas for the family-lev
 
 These contracts absorb useful orchestration ideas from tools such as `CrewAI` in a contract-first way, but they do not make `CrewAI` a required runtime dependency and they do not replace the existing ownership split:
 
-- `Hermes-Agent` remains an explicit optional hosted/runtime provider adapter direction, not a family default runtime dependency
-- `Codex CLI` remains the default family executor name and `autonomous` remains the default route mode
+- `Hermes-Agent` is the default OPL family online runtime substrate for gateway residency, cron/webhook wakeup, session store, delivery, approval transport, and memory/profile isolation
+- `Codex CLI` remains the default concrete executor name and `autonomous` remains the default route mode unless a domain route explicitly selects another executor
+- `one-person-lab` owns the typed family queue and product control plane over Hermes, not a replacement runtime kernel
 - domain repositories remain the owners of durable truth, audit truth, and review truth
 
 They also absorb the useful `Ageniti` idea of deriving CLI, MCP, Skill, OpenAI, AI SDK, and product-entry descriptors from one app-action definition. OPL adopts that pattern as a family contract, not as a `@ageniti/core` runtime dependency.
@@ -22,6 +23,7 @@ They also absorb the useful `Ageniti` idea of deriving CLI, MCP, Skill, OpenAI, 
 
 Domain repositories continue to own:
 
+- actual domain dispatch acceptance or rejection
 - actual runtime event emission
 - actual checkpoint materialization
 - actual action-graph semantics
@@ -52,6 +54,8 @@ These schemas therefore freeze interoperability surfaces, not a monolithic runti
 
 ### Control-plane-oriented
 
+- `../opl-gateway/family-runtime-online-substrate-contract.json`
+  - active OPL-level contract for Hermes as the required Full online runtime substrate and for the OPL typed family queue / dispatch bridge
 - `family-runtime-supervision.schema.json`
   - shared read-only wakeup / supervision projection for adapter id, cadence, last success / tick, lease freshness, SLO state, repair command, safe reconcile hint, domain-owned source refs, and authority boundary
 - `family-persistence-policy.schema.json`
@@ -102,7 +106,7 @@ The shared control surfaces are:
 
 `family-runtime-supervision.schema.json` freezes the shared family-level runtime wakeup / supervision projection. It lets `MAS`, `MAG`, `RCA`, and future admitted domains expose one read-only surface for adapter id, cadence, latest tick, latest success, lease freshness, SLO state, repair command, safe reconcile hint, and domain-owned source references.
 
-This surface is not a scheduler contract. `OPL` may discover, export, compare, and project the surface for parity and operator visibility, but it must not become the domain scheduler, session store, memory owner, quality verdict owner, artifact authority, or daemon owner. `repair_command` and `safe_reconcile_hint` are route hints back to the domain-owned repair / supervision surface.
+This surface is not a domain scheduler contract. Hermes provides the OPL-managed online wakeup substrate; `OPL` may discover, export, compare, enqueue, tick, and project the surface for parity and operator visibility, but it must not become the domain scheduler, session store, memory owner, quality verdict owner, or artifact authority. `repair_command` and `safe_reconcile_hint` are route hints back to the domain-owned repair / supervision surface.
 
 ## Action Catalog Freeze
 

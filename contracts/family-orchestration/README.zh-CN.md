@@ -6,8 +6,9 @@
 
 这里吸收的是 `CrewAI` 一类编排框架里最值得复用的思想，但吸收方式是 contract-first，而不是把 `CrewAI` 直接引入为 family runtime dependency，也不是改写现有 owner split：
 
-- `Hermes-Agent` 继续只是显式可选 hosted/runtime provider adapter 方向，不是家族默认 runtime 依赖
-- `Codex CLI` 继续是家族默认执行器正式名称，`autonomous` 继续是默认路线模式
+- `Hermes-Agent` 是 OPL family 默认 online runtime substrate，负责 gateway 常驻、cron/webhook wakeup、session store、delivery、approval transport 与 memory/profile isolation
+- `Codex CLI` 继续是默认具体执行器正式名称，`autonomous` 继续是默认路线模式，除非 domain route 显式选择其他 executor
+- `one-person-lab` 持有 Hermes 之上的 typed family queue 与产品控制面，不复制 runtime kernel
 - 各 domain 仓继续持有 durable truth、audit truth 与 review truth
 
 这里也吸收 `Ageniti` 最有价值的思想：用一个 app action 定义派生 CLI、MCP、Skill、OpenAI、AI SDK 与 product-entry descriptor。OPL family 采用的是这个 contract 模式，不把 `@ageniti/core` 引入为 runtime dependency。
@@ -22,6 +23,7 @@
 
 各 domain 仓继续负责：
 
+- 真实 domain dispatch 的接受或拒绝
 - 真实 runtime event 的发出
 - 真实 checkpoint 的落地
 - 真实 action graph 的 domain 语义
@@ -52,6 +54,8 @@
 
 ### control-plane-oriented
 
+- `../opl-gateway/family-runtime-online-substrate-contract.json`
+  - 冻结 Hermes 作为 Full online runtime substrate 的必需角色，以及 OPL typed family queue / dispatch bridge
 - `family-runtime-supervision.schema.json`
   - 冻结共享的只读 wakeup / supervision projection，覆盖 adapter id、cadence、last success / tick、lease freshness、SLO state、repair command、safe reconcile hint、domain-owned source refs 与 authority boundary
 - `family-persistence-policy.schema.json`
@@ -104,7 +108,7 @@ family-level persistence 与 lifecycle surface 只属于共享控制面合同。
 
 `family-runtime-supervision.schema.json` 冻结 family-level runtime wakeup / supervision 只读投影。它让 `MAS`、`MAG`、`RCA` 以及未来 admitted domain 用同一形状暴露 adapter id、cadence、latest tick、latest success、lease freshness、SLO state、repair command、safe reconcile hint 与 domain-owned source references。
 
-这个 surface 不是 scheduler contract。`OPL` 可以发现、导出、比较和投影它，用于 parity 与 operator visibility；`OPL` 不因此成为 domain scheduler、session store、memory owner、quality verdict owner、artifact authority 或 daemon owner。`repair_command` 与 `safe_reconcile_hint` 只是把修复动作路由回 domain-owned repair / supervision surface。
+这个 surface 不是 domain scheduler contract。Hermes 提供 OPL-managed online wakeup substrate；`OPL` 可以发现、导出、比较、入队、tick 和投影它，用于 parity 与 operator visibility；`OPL` 不因此成为 domain scheduler、session store、memory owner、quality verdict owner 或 artifact authority。`repair_command` 与 `safe_reconcile_hint` 只是把修复动作路由回 domain-owned repair / supervision surface。
 
 ## Action Catalog Freeze
 
