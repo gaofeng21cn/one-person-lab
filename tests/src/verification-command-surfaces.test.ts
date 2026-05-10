@@ -210,22 +210,26 @@ test('Full first-install release workflow builds without signing secrets and kee
   assert.match(workflow, /actions\/cache\/restore@v4/);
   assert.match(workflow, /actions\/cache\/save@v4/);
   assert.match(workflow, /Reset Full runtime layer cache when forced/);
+  assert.match(workflow, /Checkout Hermes-Agent/);
   assert.match(workflow, /Checkout MAG/);
   assert.match(workflow, /Checkout RCA/);
   assert.match(workflow, /Checkout OfficeCLI/);
   assert.match(workflow, /Checkout UI UX Pro Max skill/);
   assert.doesNotMatch(workflow, /Checkout MDS/);
+  assert.match(workflow, /NousResearch\/hermes-agent/);
   assert.match(workflow, /gaofeng21cn\/med-autogrant/);
   assert.match(workflow, /gaofeng21cn\/redcube-ai/);
   assert.doesNotMatch(workflow, /gaofeng21cn\/med-deepscientist/);
   assert.match(workflow, /iOfficeAI\/OfficeCLI/);
   assert.match(workflow, /nextlevelbuilder\/ui-ux-pro-max-skill/);
+  assert.match(workflow, /uv sync --project _external\/hermes-agent --no-dev/);
   assert.match(workflow, /uv sync --project med-autogrant --no-dev/);
   assert.doesNotMatch(workflow, /uv sync --project med-deepscientist/);
   assert.match(workflow, /npm ci --prefix redcube-ai/);
   assert.match(workflow, /npm run --prefix redcube-ai build/);
   assert.match(workflow, /echo "\$HOME\/\.local\/bin" >> "\$GITHUB_PATH"/);
   assert.match(workflow, /officecli --version/);
+  assert.match(workflow, /OPL_FULL_HERMES_ROOT/);
   assert.match(workflow, /OPL_FULL_MAG_ROOT/);
   assert.match(workflow, /OPL_FULL_RCA_ROOT/);
   assert.doesNotMatch(workflow, /OPL_FULL_MDS_ROOT/);
@@ -421,6 +425,7 @@ test('GUI release publisher uploads Full first-install assets only when explicit
         mas: { git_commit: 'massha123456' },
         mag: { git_commit: 'magsha123456' },
         rca: { git_commit: 'rcasha123456' },
+        hermes: { git_commit: 'hermessha123456' },
         officecli: { version: '1.0.73' },
       },
     }),
@@ -678,6 +683,7 @@ test('GUI release publisher can upload only Full first-install assets for an exi
         mas: { git_commit: 'massha123456' },
         mag: { git_commit: 'magsha123456' },
         rca: { git_commit: 'rcasha123456' },
+        hermes: { git_commit: 'hermessha123456' },
         officecli: { version: '1.0.73' },
       },
     })}\n`,
@@ -770,6 +776,7 @@ test('GUI release publisher appends Full purpose notes to an existing standard r
         mas: { git_commit: 'massha1' },
         mag: { git_commit: 'magsha1' },
         rca: { git_commit: 'rcasha1' },
+        hermes: { git_commit: 'hermessha1' },
         officecli: { version: '1.0.73' },
       },
     })}\n`,
@@ -810,8 +817,9 @@ test('GUI release publisher appends Full purpose notes to an existing standard r
   assert.match(notes, /Full first-install package/);
   assert.match(notes, new RegExp(`One-Person-Lab-Full-${version}-mac-arm64\\.dmg`));
   assert.match(notes, /fastest first setup/);
-  assert.match(notes, /preloads MAS, MAG, RCA, OfficeCLI, and recommended companion skills/);
-  assert.match(notes, /Hermes is no longer bundled or installed by default/);
+  assert.match(notes, /preloads MAS, MAG, RCA, Hermes online runtime, OfficeCLI, and recommended companion skills/);
+  assert.match(notes, /Hermes-Agent is restored as the default online runtime substrate/);
+  assert.match(notes, /MDS remains retired and is not bundled as a default module or MAS runtime dependency/);
   assert.match(notes, /users still only need to configure their API key/);
   assert.match(notes, /not a separate update channel/);
   assert.match(notes, /App auto-update still follows the standard latest\*\.yml metadata/);
@@ -819,6 +827,7 @@ test('GUI release publisher appends Full purpose notes to an existing standard r
   assert.match(notes, /MAS: 2026-05-09 18:20 Beijing time build, main @ massha1/);
   assert.match(notes, /MAG: 2026-05-09 18:20 Beijing time build, main @ magsha1/);
   assert.match(notes, /RCA: 2026-05-09 18:20 Beijing time build, main @ rcasha1/);
+  assert.match(notes, /Hermes-Agent: 2026-05-09 18:20 Beijing time build, main @ hermess/);
   assert.match(notes, /OfficeCLI: 1\.0\.73/);
   assert.doesNotMatch(notes, /MAS\/MDS\/MAG\/RCA/);
   assert.doesNotMatch(notes, /Validation/);

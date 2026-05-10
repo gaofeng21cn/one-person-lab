@@ -245,7 +245,7 @@ function findFullPackageArtifacts(fullPackageDir, version, macArch) {
 
 function assertFullPackageManifestHasReleaseNotesMetadata(manifest) {
   const missing = [];
-  for (const key of ['mas', 'mag', 'rca']) {
+  for (const key of ['mas', 'mag', 'rca', 'hermes']) {
     const gitCommit = manifest?.components?.[key]?.git_commit;
     if (typeof gitCommit !== 'string' || !gitCommit.trim()) {
       missing.push(`components.${key}.git_commit`);
@@ -382,6 +382,7 @@ function buildBundledModuleNotes(manifest) {
     ['MAS', manifest.components.mas],
     ['MAG', manifest.components.mag],
     ['RCA', manifest.components.rca],
+    ['Hermes-Agent', manifest.components.hermes],
   ]
     .map(([label, component]) => {
       const sha = shortSha(component?.git_commit);
@@ -398,8 +399,9 @@ function buildFullPackageReleaseNotesSection(version, manifest = null) {
   const bundledModuleNotes = buildBundledModuleNotes(manifest);
   return [
     'Full first-install package',
-    `- New macOS arm64 users can download One-Person-Lab-Full-${version}-mac-arm64.dmg when they want the fastest first setup. It preloads MAS, MAG, RCA, OfficeCLI, and recommended companion skills; users still only need to configure their API key.`,
-    '- Hermes is no longer bundled or installed by default. Install it explicitly only when hosted or online task management is needed.',
+    `- New macOS arm64 users can download One-Person-Lab-Full-${version}-mac-arm64.dmg when they want the fastest first setup. It preloads MAS, MAG, RCA, Hermes online runtime, OfficeCLI, and recommended companion skills; users still only need to configure their API key.`,
+    '- Hermes-Agent is restored as the default online runtime substrate for OPL family wakeup, queue delivery, sessions, approvals, notifications, and profile isolation.',
+    '- MDS remains retired and is not bundled as a default module or MAS runtime dependency.',
     '- Full is a first-install download, not a separate update channel. App auto-update still follows the standard latest*.yml metadata and standard One Person Lab package.',
     ...(bundledModuleNotes.length > 0 ? ['', 'Bundled module versions', ...bundledModuleNotes] : []),
   ];

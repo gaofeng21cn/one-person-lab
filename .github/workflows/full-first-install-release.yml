@@ -43,6 +43,13 @@ jobs:
           ref: main
           path: opl-aion-shell
 
+      - name: Checkout Hermes-Agent
+        uses: actions/checkout@v4
+        with:
+          repository: NousResearch/hermes-agent
+          ref: main
+          path: _external/hermes-agent
+
       - name: Checkout MAS
         uses: actions/checkout@v4
         with:
@@ -138,6 +145,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          uv sync --project _external/hermes-agent --no-dev
           uv sync --project med-autoscience --no-dev
           uv sync --project med-autogrant --no-dev
           npm ci --prefix redcube-ai
@@ -152,6 +160,7 @@ jobs:
           cache_dir="$GITHUB_WORKSPACE/.opl-full-runtime-cache"
           export OPL_FULL_CODEX_ROOT="$(npm root -g)/@openai/codex"
           export OPL_FULL_UV_BIN="$(command -v uv)"
+          export OPL_FULL_HERMES_ROOT="$GITHUB_WORKSPACE/_external/hermes-agent"
           export OPL_FULL_MAS_ROOT="$GITHUB_WORKSPACE/med-autoscience"
           export OPL_FULL_MAG_ROOT="$GITHUB_WORKSPACE/med-autogrant"
           export OPL_FULL_RCA_ROOT="$GITHUB_WORKSPACE/redcube-ai"
@@ -241,6 +250,7 @@ jobs:
           ulimit -n 65536 || true
           export OPL_FULL_CODEX_ROOT="$(npm root -g)/@openai/codex"
           export OPL_FULL_UV_BIN="$(command -v uv)"
+          export OPL_FULL_HERMES_ROOT="$GITHUB_WORKSPACE/_external/hermes-agent"
           export OPL_FULL_MAS_ROOT="$GITHUB_WORKSPACE/med-autoscience"
           export OPL_FULL_MAG_ROOT="$GITHUB_WORKSPACE/med-autogrant"
           export OPL_FULL_RCA_ROOT="$GITHUB_WORKSPACE/redcube-ai"
