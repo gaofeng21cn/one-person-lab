@@ -15,11 +15,11 @@
 - `Presentation Ops`
 
 这个拆分定义的是顶层任务语义。
-在运行时，这些语义通过 `OPL Gateway` 路由到独立的 domain gateway，并保留清楚的 ownership 与 handoff 边界。
+在运行时，这些语义通过 Codex-default session/runtime 路径、按需显式进入 `OPL` activation，并路由到选定的 domain capability surface，同时保留清楚的 ownership 与 handoff 边界。
 
 在执行层面，这些 workstream 也共享同一条目标原则：
 
-- 采用带有显式 gateway/harness 分层的 `Agent-first` domain system
+- 采用以 stage 为编排单位、带有显式 domain-owned entry 与 harness 分层的 `Agent-first` domain system
 - 当前已收录的 domain 仓统一按 `Auto-only` 主线理解
 - 未来 `Human-in-the-loop` 产品应作为 sibling 或 upper-layer product 复用同一 substrate
 
@@ -36,7 +36,7 @@
 - 当前 under-definition workstream 仍缺哪些 admission boundary material 写成 machine-readable backlog
 
 它们可以描述 `IP Ops`、`Award Ops`、`Thesis Ops`、`Review Ops` 这类仍在定义中的 workstream，并把它们保持在明确的 candidate / onboarding 路径上。
-`Grant Ops` 已经注册到已收录的 `MedAutoGrant` domain gateway，而剩余 under-definition workstream 的 formal 收录、`G2` discovery readiness 与 `G3` routed-action readiness 仍然要通过单独的 onboarding evidence 获得。
+`Grant Ops` 已经注册到已收录的 `MedAutoGrant` domain surface，而剩余 under-definition workstream 的 formal 收录、`G2` discovery readiness 与 `G3` routed-action readiness 仍然要通过单独的 onboarding evidence 获得。
 
 在当前基线上，`candidate-domain definition` 由三部分共同构成：
 
@@ -67,7 +67,7 @@
 - 稿件
 - 投稿包
 
-当前承接这个工作流的 domain gateway 是：
+当前承接这个工作流的 domain surface 是：
 
 - [`MedAutoScience`](https://github.com/gaofeng21cn/med-autoscience)
 
@@ -101,7 +101,7 @@
 
 当前边界状态：
 
-- 当前生命周期状态：已注册 workstream，并直接映射到已收录的 `MedAutoGrant` domain gateway
+- 当前生命周期状态：已注册 workstream，并直接映射到已收录的 `MedAutoGrant` domain surface
 - formal 映射：`grant_ops -> medautogrant` 已经在 `G1` workstream/domain registry 中冻结
 - 当前公开入口：顶层 domain entry 已经是 `MedAutoGrant`，基金方向判断、申请书写作、作者侧模拟评审与修订 truth 都继续由它持有
 - 路由规则：successful handoff 仍然只能 targeting `domain_gateway`，并继续禁止 direct harness bypass
@@ -256,7 +256,7 @@ review artifact 的 truth 继续保持为 future domain-owned，直到 dedicated
 - 项目汇报 deck
 - 答辩 deck
 
-当前承接这个工作流的 domain gateway 是：
+当前承接这个工作流的 domain surface 是：
 
 - [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai)
 
@@ -277,4 +277,4 @@ review artifact 的 truth 继续保持为 future domain-owned，直到 dedicated
 - 同一套共享基础结构语言
 
 所以 `OPL` 的任务地图不是 feature list。
-它是 domain gateway 与 harness 之上的分工图。
+它是 domain surface 与 harness 之上的分工图。

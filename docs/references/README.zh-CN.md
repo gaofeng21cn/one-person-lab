@@ -65,6 +65,7 @@
 - [OPL managed runtime 三层合同](./runtime-substrate/opl-managed-runtime-three-layer-contract.zh-CN.md)
 - [OPL Runtime Manager 目标形态](./runtime-substrate/opl-runtime-manager-target.md)
 - [OPL stage-led agent framework roadmap](./runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)
+- [Temporal family runtime provider 落地计划](./runtime-substrate/temporal-family-runtime-provider-plan.zh-CN.md)
 - [Hermes-Agent runtime substrate benchmark](./runtime-substrate/hermes-agent-runtime-substrate-benchmark.md)
 - [Family executor adapter defaults](./runtime-substrate/family-executor-adapter-defaults.md)
 - [Hermes-Agent executor evaluation](./runtime-substrate/hermes-agent-executor-evaluation.md)

@@ -18,7 +18,7 @@ Human / Agent
   -> Codex-default session/runtime
       -> explicit OPL activation
           -> selected domain agent entry
-              -> Domain Harness OS / Review Surfaces / Deliveries / Audit Truth
+              -> domain-owned harness / review surfaces / deliveries / audit truth
 ```
 
 Today, the clearest mapped domains are:
@@ -112,7 +112,7 @@ The more durable direction is:
 - keep `Codex CLI` as the current formal executor
 - keep `MCP` as the supported protocol layer
 - keep domain-owned product entry surfaces as the ownership boundary for domain workflow, runtime truth, and delivery truth
-- keep `OPL Runtime Manager` as a thin product-managed adapter over external `Hermes-Agent`
+- keep `OPL Runtime Manager` as a thin product-managed adapter over the configured family runtime provider
 
 On that path:
 
@@ -125,8 +125,8 @@ On that path:
 That is how the ecosystem can grow into multiple vertical online agent products on one substrate rather than one giant runtime that swallows every domain.
 The full direction is not implemented yet, but it is the right structure to keep tightening toward.
 
-`Hermes-Agent` is an upstream external runtime project/service.
-`OPL Runtime Manager` may adapt product-managed runtime operations over that external project, but it must not be described as a scheduler, session store, memory owner, domain truth owner, or concrete executor owner.
+When `Hermes-Agent` appears in this context, it refers to the upstream external runtime project/service only. It remains a migration-period legacy/optional provider or explicit executor/proof lane, not the target default substrate once the Temporal-backed provider lands.
+`OPL Runtime Manager` may adapt product-managed runtime operations over a configured family runtime provider, but it must not be described as a scheduler, session store, memory owner, domain truth owner, or concrete executor owner.
 Rust native helper / index-only work may support native assistance and indexed discovery, but it must not become the owner of domain execution or truth.
 
 ## Operating Principles

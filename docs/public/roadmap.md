@@ -12,20 +12,20 @@ Today the public `OPL` surface centers on:
 - `Codex CLI` as the default executor path for `opl`, `opl exec`, and `opl resume`
 - explicit `OPL` activation for family-level semantics, domain discovery, and runtime switching
 - shared modules, contracts, and indexes above `MedAutoScience`, `MedAutoGrant`, and `RedCube AI`
-- `OPL Runtime Manager` as the product control plane over required external `Hermes-Agent` online substrate
+- `OPL Runtime Manager` as the product control plane over the configured family runtime provider
 - Rust native helper / index work limited to native assistance and indexed discovery, not domain truth or execution ownership
 
 ## Active Route
 
 The active route for `OPL` is:
 
-`Codex-default session/runtime -> explicit OPL activation / typed family queue -> Hermes online substrate -> selected domain agent entry`
+`Codex-default session/runtime -> explicit OPL activation / typed family queue -> configured family runtime provider -> selected domain agent entry`
 
 Current work on that route stays focused on four priorities:
 
 1. Keep `Codex CLI` as the default executor unless a user explicitly activates a different runtime.
 2. Make family-level sessions, progress, artifacts, and shared indexes the current `OPL` truth surface rather than a web/API shell.
-3. Treat `OPL Runtime Manager` as the product control plane and typed dispatch layer over external `Hermes-Agent`, not as a domain scheduler, domain truth owner, quality owner, artifact owner, or concrete executor owner.
+3. Treat `OPL Runtime Manager` as the product control plane and typed dispatch layer over the configured family runtime provider, not as a domain scheduler, domain truth owner, quality owner, artifact owner, or concrete executor owner.
 4. Keep public docs, contracts, and admitted-domain wording aligned with the real family topology.
 
 ## Near-Term Priorities
@@ -71,7 +71,7 @@ The roadmap is healthy when readers can immediately understand:
 
 - `OPL` is the Codex-default session/runtime layer, explicit activation layer, and shared modules/contracts/indexes owner for the family
 - admitted domains keep their own authority under that shell
-- the default executor remains `Codex CLI`, while `OPL Runtime Manager` is the product control plane over required `Hermes-Agent` online substrate
+- the default executor remains `Codex CLI`, while `OPL Runtime Manager` is the product control plane over the configured family runtime provider
 - legacy `OPL Gateway`, `opl web`, `Product API`, and AionUI-first-shell material is read as compatibility or reference context unless a current core document promotes it
 - future hosted and desktop work continues the same runtime/activation truth surfaces
 - new workstreams are entering as explicit domain surfaces with clear boundaries

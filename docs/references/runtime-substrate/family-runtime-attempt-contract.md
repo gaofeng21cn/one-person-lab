@@ -9,7 +9,7 @@
 - `OPL` owns：family contract vocabulary、shared indexes、operator projection、diagnostic freshness。
 - domain repo owns：runtime truth、route semantics、domain quality judgment、write authority。
 - `OPL Runtime Manager` reads domain-owned durable surfaces and produces observability-only projection。
-- `Hermes-Agent` is the required OPL family online runtime substrate for Full readiness, but it is still not a domain truth owner or domain scheduler authority。
+- The configured family runtime provider is the OPL online runtime substrate for Full readiness. The production target is a Temporal-backed provider; `Hermes-Agent` remains a legacy/optional provider or executor/proof lane during migration. No provider is a domain truth owner or domain scheduler authority。
 
 ## Attempt Record Fields
 

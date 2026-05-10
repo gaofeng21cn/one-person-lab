@@ -15,11 +15,11 @@
 - `Presentation Ops`
 
 This split defines top-level task semantics.
-At runtime, those semantics route through the `OPL Gateway` into independent domain gateways with explicit ownership and handoff boundaries.
+At runtime, those semantics route through the Codex-default session/runtime path, explicit `OPL` activation when needed, and the selected domain capability surface with explicit ownership and handoff boundaries.
 
 At the operating level, these workstreams also share one target doctrine:
 
-- use `Agent-first` domain systems with explicit gateway/harness layering
+- use stage-led, `Agent-first` domain systems with explicit domain-owned entry and harness layering
 - keep the current admitted domain repositories `Auto-only`
 - let any future `Human-in-the-loop` product reuse the same substrate as a sibling or upper-layer product
 
@@ -37,7 +37,7 @@ These companions materialize:
 - the missing admission-boundary materials for the current under-definition workstreams
 
 They may describe under-definition workstreams such as `IP Ops`, `Award Ops`, `Thesis Ops`, and `Review Ops`, while keeping them on an explicit candidate/onboarding path.
-`Grant Ops` is already registered to the admitted `MedAutoGrant` domain gateway, while formal admission, `G2` discovery readiness, and `G3` routed-action readiness for the remaining under-definition workstreams still come from dedicated onboarding evidence.
+`Grant Ops` is already registered to the admitted `MedAutoGrant` domain surface, while formal admission, `G2` discovery readiness, and `G3` routed-action readiness for the remaining under-definition workstreams still come from dedicated onboarding evidence.
 
 At the current baseline, `candidate-domain definition` is the composition of:
 
@@ -68,7 +68,7 @@ Typical delivery objects include:
 - manuscripts
 - submission packages
 
-The current domain gateway for this workstream is:
+The current domain surface for this workstream is:
 
 - [`MedAutoScience`](https://github.com/gaofeng21cn/med-autoscience)
 
@@ -102,7 +102,7 @@ Typical delivery objects include:
 
 Current boundary status:
 
-- current lifecycle state: registered workstream mapped directly to the admitted `MedAutoGrant` domain gateway
+- current lifecycle state: registered workstream mapped directly to the admitted `MedAutoGrant` domain surface
 - formal mapping: `grant_ops -> medautogrant` is already frozen in the `G1` workstream/domain registry
 - public entry: the top-level domain entry is `MedAutoGrant`, and grant-direction, proposal authoring, proposal-side reviewer simulation, and revision truth remain domain-owned there
 - routing rule: successful handoff remains `domain_gateway`-only, with no direct harness bypass
@@ -257,7 +257,7 @@ Typical delivery objects include:
 - project-report decks
 - defense decks
 
-The current domain gateway for this workstream is:
+The current domain surface for this workstream is:
 
 - [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai)
 
@@ -278,4 +278,4 @@ These workstreams belong in one `OPL` federation because they share:
 - the same shared-foundation language
 
 That is why the `OPL` task map is not a feature list.
-It is a division of labor above domain gateways and harnesses.
+It is a division of labor above domain surfaces and harnesses.
