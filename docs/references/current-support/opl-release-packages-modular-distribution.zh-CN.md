@@ -11,7 +11,7 @@
 | 分发对象 | 推荐渠道 | 是否打入桌面 App | 理由 |
 | --- | --- | --- | --- |
 | One Person Lab 桌面 App | GitHub Releases | 是 | 用户直接下载和安装 |
-| One Person Lab Full 首次安装包 | GitHub Releases 额外 asset | 只打入 Full 包，不进入标准更新包 | 新用户首次安装时减少 MAS/MAG/RCA、Hermes、officecli 与推荐 companion skills 配置等待；App 自动更新继续走标准包 |
+| One Person Lab Full 首次安装包 | GitHub Releases 额外 asset | 只打入 Full 包，不进入标准更新包 | 新用户首次安装时预置 MAS/MAG/RCA、Hermes online runtime、officecli 与推荐 companion skills；Full readiness 需要 Hermes online runtime ready，App 自动更新继续走标准包 |
 | OPL CLI / shared contracts / native helper | npm / 当前安装脚本；GitHub Packages 是后续机器通道 | 随一键安装获取 | App 不变时也需要独立修复和更新 |
 | MAS | 当前 git checkout / sibling repo；GHCR 模块包是后续机器通道 | 否 | domain agent 独立演进，按环境管理安装/更新 |
 | MDS | MAS 显式可选 companion；不进入默认 OPL package / Full payload | 否 | 仅作为 MAS-declared backend audit、provenance、historical fixture、intake 或 parity oracle 引用 |

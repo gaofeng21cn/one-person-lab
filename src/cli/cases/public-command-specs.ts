@@ -403,11 +403,11 @@ export function buildPublicCommandSpecs(
     }),
     'family-runtime': cloneCommandSpec(commandSpecs['family-runtime'], {
       usage:
-        'opl family-runtime status|doctor|install|repair|tick|enqueue|queue list|queue inspect|approve|notify list|events export [options]',
+        'opl family-runtime status|doctor|install|repair|intake|tick|enqueue|queue list|queue inspect|approve|notify list|events export [options]',
       examples: [
         'opl family-runtime status',
         'opl family-runtime repair',
-        'opl family-runtime tick --source hermes-cron',
+        'opl family-runtime tick --source hermes-cron --hydrate',
       ],
       group: 'runtime',
     }),

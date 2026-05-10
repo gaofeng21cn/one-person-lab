@@ -255,7 +255,7 @@ export function buildRuntimeManager(input: { persistNativeIndexes?: boolean } = 
         command: 'opl family-runtime status',
         state_path: '${OPL_STATE_DIR}/family-runtime/queue.sqlite',
         hermes_runtime_provider: 'required_for_online_family_runtime',
-        wakeup_bridge: 'hermes cron -> opl family-runtime tick --source hermes-cron',
+        wakeup_bridge: 'hermes cron -> opl family-runtime tick --source hermes-cron --hydrate',
         webhook_bridge: 'hermes webhook -> opl family-runtime enqueue',
       },
       hermes_runtime: {

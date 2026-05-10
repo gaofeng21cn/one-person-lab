@@ -7,6 +7,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { GatewayContractError } from './contracts.ts';
 import {
   DOMAIN_ADAPTERS,
+  FAMILY_RUNTIME_DOMAIN_IDS,
   parseFamilyRuntimeCommand,
   type EnqueueInput,
   type FamilyRuntimeDomainId,
@@ -450,6 +451,21 @@ function commandForDomain(domainId: FamilyRuntimeDomainId, taskPath: string) {
   return [...DOMAIN_ADAPTERS[domainId].dispatch_command, '--task', taskPath, '--format', 'json'];
 }
 
+function exportCommandForDomain(domainId: FamilyRuntimeDomainId) {
+  const override = process.env[`OPL_FAMILY_RUNTIME_${domainId.toUpperCase()}_EXPORT`]?.trim();
+  if (override) {
+    return override.split(/\s+/);
+  }
+  if (domainId === 'medautoscience') {
+    const profile = process.env.OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_PROFILE?.trim();
+    if (!profile) {
+      return null;
+    }
+    return ['medautosci', 'sidecar', 'export', '--profile', profile, '--format', 'json'];
+  }
+  return null;
+}
+
 function parseDispatchOutput(stdout: string) {
   const trimmed = stdout.trim();
   if (!trimmed) {
@@ -460,6 +476,117 @@ function parseDispatchOutput(stdout: string) {
   } catch {
     return { raw_stdout: trimmed };
   }
+}
+
+function toPendingTaskInputs(
+  domainId: FamilyRuntimeDomainId,
+  output: Record<string, unknown>,
+  source: string,
+) {
+  const tasks = Array.isArray(output.pending_family_tasks) ? output.pending_family_tasks : [];
+  const inputs: EnqueueInput[] = [];
+  const blocked: Array<{ reason: string; task: unknown }> = [];
+  for (const task of tasks) {
+    if (!task || typeof task !== 'object' || Array.isArray(task)) {
+      blocked.push({ reason: 'invalid_pending_task', task });
+      continue;
+    }
+    const item = task as Record<string, unknown>;
+    const exportedDomain = typeof item.domain_id === 'string' ? item.domain_id : domainId;
+    const taskKind = typeof item.task_kind === 'string' ? item.task_kind.trim() : '';
+    const payload = item.payload && typeof item.payload === 'object' && !Array.isArray(item.payload)
+      ? item.payload as Record<string, unknown>
+      : {};
+    if (!FAMILY_RUNTIME_DOMAIN_IDS.includes(exportedDomain as FamilyRuntimeDomainId) || !taskKind) {
+      blocked.push({ reason: 'invalid_domain_or_task_kind', task });
+      continue;
+    }
+    if (payload.domain_truth_write === true || payload.artifact_gate_override === true) {
+      blocked.push({ reason: 'domain_forbidden_write', task });
+      continue;
+    }
+    inputs.push({
+      domainId: exportedDomain as FamilyRuntimeDomainId,
+      taskKind,
+      payload,
+      dedupeKey: typeof item.dedupe_key === 'string' ? item.dedupe_key : undefined,
+      priority: Number.isInteger(item.priority) ? item.priority as number : 0,
+      source: typeof item.source === 'string' ? item.source : source,
+      requiresApproval: item.requires_approval === true,
+    });
+  }
+  return { inputs, blocked };
+}
+
+function hydrateDomainTasks(
+  db: DatabaseSync,
+  input: { domainId?: FamilyRuntimeDomainId; source: string },
+) {
+  const domains = input.domainId ? [input.domainId] : [...FAMILY_RUNTIME_DOMAIN_IDS];
+  const exports = [];
+  let enqueuedCount = 0;
+  let idempotentNoopCount = 0;
+  let blockedCount = 0;
+  for (const domainId of domains) {
+    const command = exportCommandForDomain(domainId);
+    if (!command) {
+      exports.push({ domain_id: domainId, status: 'skipped', reason: 'export_command_not_configured' });
+      continue;
+    }
+    const result = spawnSync(command[0], command.slice(1), {
+      cwd: process.cwd(),
+      encoding: 'utf8',
+      env: process.env,
+    });
+    const stdout = result.stdout ?? '';
+    const stderr = result.stderr ?? '';
+    const exitCode = result.status ?? (result.error ? 127 : 1);
+    if (exitCode !== 0) {
+      blockedCount += 1;
+      exports.push({
+        domain_id: domainId,
+        status: 'failed',
+        command_preview: command,
+        error: result.error?.message || stderr || stdout || `Domain export exited ${exitCode}.`,
+      });
+      continue;
+    }
+    const output = parseDispatchOutput(stdout);
+    const { inputs, blocked } = toPendingTaskInputs(domainId, output, input.source);
+    blockedCount += blocked.length;
+    const acceptedTasks = [];
+    for (const taskInput of inputs) {
+      const resultPayload = enqueueTask(db, taskInput);
+      acceptedTasks.push(resultPayload);
+      if (resultPayload.accepted) {
+        enqueuedCount += 1;
+      } else if (resultPayload.idempotent_noop) {
+        idempotentNoopCount += 1;
+      }
+    }
+    exports.push({
+      domain_id: domainId,
+      status: 'completed',
+      command_preview: command,
+      exported_count: inputs.length + blocked.length,
+      enqueued_count: acceptedTasks.filter((task) => task.accepted).length,
+      idempotent_noop_count: acceptedTasks.filter((task) => task.idempotent_noop).length,
+      blocked_count: blocked.length,
+      blocked,
+    });
+  }
+  insertEvent(db, {
+    eventType: 'domain_intake_completed',
+    source: input.source,
+    payload: { enqueued_count: enqueuedCount, idempotent_noop_count: idempotentNoopCount, blocked_count: blockedCount },
+  });
+  return {
+    source: input.source,
+    enqueued_count: enqueuedCount,
+    idempotent_noop_count: idempotentNoopCount,
+    blocked_count: blockedCount,
+    exports,
+  };
 }
 
 function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRuntimePaths>, row: FamilyRuntimeTaskRow) {
@@ -585,7 +712,16 @@ function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRuntimePa
   };
 }
 
-function runTick(db: DatabaseSync, paths: ReturnType<typeof familyRuntimePaths>, source: string, limit: number) {
+function runTick(
+  db: DatabaseSync,
+  paths: ReturnType<typeof familyRuntimePaths>,
+  source: string,
+  limit: number,
+  hydrate: boolean,
+) {
+  const hydration = hydrate
+    ? hydrateDomainTasks(db, { source: `${source}:hydrate` })
+    : { source, enqueued_count: 0, idempotent_noop_count: 0, blocked_count: 0, exports: [] };
   const rows = db.prepare(`
     SELECT * FROM tasks
     WHERE status IN ('queued', 'retry_waiting')
@@ -605,6 +741,7 @@ function runTick(db: DatabaseSync, paths: ReturnType<typeof familyRuntimePaths>,
   });
   return {
     source,
+    hydration,
     selected_count: rows.length,
     dispatches,
   };
@@ -741,7 +878,17 @@ export function runFamilyRuntime(args: string[]) {
         version: 'g2',
         family_runtime_tick: {
           surface_id: 'opl_family_runtime_tick',
-          ...runTick(db, paths, parsed.source ?? 'manual', parsed.limit ?? 10),
+          ...runTick(db, paths, parsed.source ?? 'manual', parsed.limit ?? 10, parsed.hydrate ?? false),
+          queue: queueSummary(db),
+        },
+      };
+    }
+    if (parsed.mode === 'intake') {
+      return {
+        version: 'g2',
+        family_runtime_intake: {
+          surface_id: 'opl_family_runtime_intake',
+          ...hydrateDomainTasks(db, { domainId: parsed.domainId, source: parsed.source ?? 'manual' }),
           queue: queueSummary(db),
         },
       };

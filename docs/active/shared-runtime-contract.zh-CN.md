@@ -140,7 +140,7 @@ persistence / lifecycle / owner-route surface 只属于控制面 discovery contr
 - `Shared Runtime Contract` 是当前共享边界下的参考合同，不是默认产品入口
 - runtime-oriented 的 family orchestration companion schemas 已经落在 `contracts/family-orchestration/`，先冻结共享 `event envelope + checkpoint lineage + product-entry runtime continuity discovery + persistence / lifecycle / owner-route discovery` 语义，而不是把它们误写成某个统一 runtime owner
 - 当前活跃四仓公开线是 `one-person-lab + MAS + MAG + RCA`；`MDS` 只保留为 MAS 声明的可选 companion diagnostic、intake 与 parity oracle 引用
-- 上游 `Hermes-Agent` 运行底座仍是这份合同的显式可选或未来实现方向，而不是默认 OPL 公开事实
+- 上游 `Hermes-Agent` 运行底座已成为 Full OPL online family runtime 的默认外部 substrate；它仍不持有 OPL session 入口、domain truth、质量裁决或 artifact authority
 
 ## 实现边界
 

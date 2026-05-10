@@ -186,6 +186,120 @@ test('family-runtime retries failed domain dispatch and then dead-letters', () =
   }
 });
 
+test('family-runtime tick hydrates MAS sidecar pending tasks before dispatch', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-hydrate-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-export-'));
+  const exportPath = path.join(fixtureRoot, 'export');
+  const dispatchPath = path.join(fixtureRoot, 'dispatch');
+  const dispatchedTaskPath = path.join(fixtureRoot, 'dispatched-task-path');
+  fs.writeFileSync(
+    exportPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+cat <<'JSON'
+{
+  "surface_kind": "mas_family_sidecar_export",
+  "pending_family_tasks": [
+    {
+      "domain_id": "medautoscience",
+      "task_kind": "runtime_supervisor/reconcile-apply",
+      "priority": 50,
+      "source": "mas-sidecar-export",
+      "dedupe_key": "mas:test:DM002:autonomy-continuation:slo_breach",
+      "payload": {
+        "profile": "/tmp/profile.toml",
+        "study_id": "DM002",
+        "continuation_reason": "slo_breach"
+      }
+    }
+  ]
+}
+JSON
+`,
+    { mode: 0o755 },
+  );
+  fs.writeFileSync(
+    dispatchPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\\n' "$1" > ${shellSingleQuote(dispatchedTaskPath)}
+echo '{"accepted":true,"surface_kind":"mas_family_sidecar_dispatch_receipt","will_start_llm_worker":true}'
+`,
+    { mode: 0o755 },
+  );
+  try {
+    const tick = runCli(['family-runtime', 'tick', '--source', 'test', '--hydrate'], familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportPath,
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatchPath,
+    }));
+    const queue = runCli(['family-runtime', 'queue', 'list'], familyRuntimeEnv(stateRoot));
+    const notifications = runCli(['family-runtime', 'notify', 'list'], familyRuntimeEnv(stateRoot));
+    const dispatchedTask = JSON.parse(fs.readFileSync(fs.readFileSync(dispatchedTaskPath, 'utf8').trim(), 'utf8'));
+
+    assert.equal(tick.family_runtime_tick.hydration.enqueued_count, 1);
+    assert.equal(tick.family_runtime_tick.selected_count, 1);
+    assert.equal(tick.family_runtime_tick.dispatches[0].status, 'succeeded');
+    assert.equal(queue.family_runtime_queue.queue.by_status.succeeded, 1);
+    assert.equal(queue.family_runtime_queue.tasks[0].dedupe_key, 'mas:test:DM002:autonomy-continuation:slo_breach');
+    assert.equal(dispatchedTask.task_kind, 'runtime_supervisor/reconcile-apply');
+    assert.equal(dispatchedTask.payload.study_id, 'DM002');
+    assert.equal(notifications.family_runtime_notifications.notifications.length, 2);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime hydration is idempotent and blocks exported forbidden writes', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-hydrate-idempotent-'));
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-mas-export-idempotent-'));
+  const exportPath = path.join(fixtureRoot, 'export');
+  fs.writeFileSync(
+    exportPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+cat <<'JSON'
+{
+  "pending_family_tasks": [
+    {
+      "domain_id": "medautoscience",
+      "task_kind": "runtime_supervisor/reconcile-apply",
+      "dedupe_key": "mas:test:DM003:autonomy-continuation:slo_breach",
+      "payload": {"profile": "/tmp/profile.toml", "study_id": "DM003"}
+    },
+    {
+      "domain_id": "medautoscience",
+      "task_kind": "artifact/override",
+      "dedupe_key": "mas:test:bad-write",
+      "payload": {"domain_truth_write": true}
+    }
+  ]
+}
+JSON
+`,
+    { mode: 0o755 },
+  );
+  try {
+    const first = runCli(['family-runtime', 'intake', '--domain', 'medautoscience'], familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportPath,
+    }));
+    const second = runCli(['family-runtime', 'intake', '--domain', 'medautoscience'], familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_EXPORT: exportPath,
+    }));
+    const queue = runCli(['family-runtime', 'queue', 'list'], familyRuntimeEnv(stateRoot));
+
+    assert.equal(first.family_runtime_intake.enqueued_count, 1);
+    assert.equal(first.family_runtime_intake.blocked_count, 1);
+    assert.equal(second.family_runtime_intake.enqueued_count, 0);
+    assert.equal(second.family_runtime_intake.idempotent_noop_count, 1);
+    assert.equal(queue.family_runtime_queue.queue.total, 1);
+    assert.equal(queue.family_runtime_queue.tasks[0].dedupe_key, 'mas:test:DM003:autonomy-continuation:slo_breach');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
 test('family-runtime blocks domain truth writes before dispatch', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-forbidden-'));
   try {
@@ -261,7 +375,7 @@ exit 1
     assert.equal(output.family_runtime_bridge.status, 'ready');
     assert.equal(output.family_runtime_bridge.bridge.cron_registered, true);
     assert.equal(output.family_runtime_bridge.bridge.webhook_registered, true);
-    assert.match(fs.readFileSync(path.join(stateRoot, 'cron.args'), 'utf8'), /opl family-runtime tick --source hermes-cron/);
+    assert.match(fs.readFileSync(path.join(stateRoot, 'cron.args'), 'utf8'), /opl family-runtime tick --source hermes-cron --hydrate/);
     assert.match(fs.readFileSync(path.join(stateRoot, 'cron.args'), 'utf8'), /create every 1m .* --name opl-family-runtime-tick/);
     assert.match(fs.readFileSync(path.join(stateRoot, 'webhook.args'), 'utf8'), /opl-family-runtime-webhook/);
     assert.match(

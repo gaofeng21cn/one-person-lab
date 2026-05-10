@@ -11,7 +11,7 @@ const DEFAULT_TICK_CADENCE = 'every 1m';
 const DEFAULT_TICK_PROMPT = 'Run the OPL family runtime tick and write receipts to the OPL local inbox.';
 
 function bridgeCommandPreview() {
-  return ['opl', 'family-runtime', 'tick', '--source', 'hermes-cron'];
+  return ['opl', 'family-runtime', 'tick', '--source', 'hermes-cron', '--hydrate'];
 }
 
 function cronCreateArgs(workdir?: string) {
