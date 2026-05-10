@@ -47,6 +47,8 @@
   - 冻结共享的 action graph topology、node、edge、human gate 与 checkpoint policy surface
 - `family-action-catalog.schema.json`
   - 冻结共享的 callable-action catalog，覆盖 action id、owner、effect、input/output schema refs、source command、supported surfaces、human gates、workspace locator fields 与 authority boundary
+- `family-stage-control-plane.schema.json`
+  - 冻结共享的 stage descriptor companion，覆盖 stage goal、domain stage refs、skill / prompt / evaluation refs、handoff refs 与 authority boundary
 - `family-human-gate.schema.json`
   - 冻结共享的 human-review gate request / decision / resume surface
 - `family-product-entry-manifest-v2.schema.json`
@@ -130,6 +132,14 @@ family-level persistence 与 lifecycle surface 只属于共享控制面合同。
 
 `MAG` 第一轮可以暴露 `descriptor_only=true`、`public_runtime=false` 的 MCP-compatible descriptor；只有 public MCP runtime entry 经过验证后，才能写成已落地 runtime。
 
+## Stage Control Plane Freeze
+
+`family-stage-control-plane.schema.json` 是从 MAS Stage-Led Autonomy 经验上升出来的 family stage descriptor companion。它只做 descriptor 和 projection，不是 workflow engine。
+
+这个 contract 记录 stage goal、domain-owned stage refs、输入/输出 refs、skill refs、prompt refs、evaluation refs、handoff metadata、allowed action refs 与 authority boundary。`OPL` 持有 schema、manifest discovery、parity check 和只读 `opl stages list|inspect` 命令。各 domain 仓继续持有实际 route contract、stage execution、review verdict、quality authority 与 artifacts。
+
+对 `MAS` 来说，这意味着在既有 `scout`、`idea`、`baseline`、`experiment`、`analysis-campaign`、`write`、`review`、`decision/finalize` route contract 之上做 inventory 与 descriptor projection，不重命名或替换这些 route。对 `RCA` 和 `MAG` 来说，第一轮吸收应保持为现有视觉交付与基金写作 surface 上的轻量 stage-pack projection。
+
 ## 这个目录不冻结什么
 
 这个目录不负责：
@@ -163,6 +173,7 @@ family-level persistence 与 lifecycle surface 只属于共享控制面合同。
 - [`family-checkpoint-lineage.schema.json`](./family-checkpoint-lineage.schema.json)
 - [`family-action-graph.schema.json`](./family-action-graph.schema.json)
 - [`family-action-catalog.schema.json`](./family-action-catalog.schema.json)
+- [`family-stage-control-plane.schema.json`](./family-stage-control-plane.schema.json)
 - [`family-human-gate.schema.json`](./family-human-gate.schema.json)
 - [`family-runtime-supervision.schema.json`](./family-runtime-supervision.schema.json)
 - [`family-persistence-policy.schema.json`](./family-persistence-policy.schema.json)

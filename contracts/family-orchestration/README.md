@@ -47,6 +47,8 @@ These schemas therefore freeze interoperability surfaces, not a monolithic runti
   - shared action-graph topology, node, edge, human-gate, and checkpoint-policy surface
 - `family-action-catalog.schema.json`
   - shared callable-action catalog for action id, owner, effect, input/output schema refs, source command, supported surfaces, human gates, workspace locator fields, and authority boundary
+- `family-stage-control-plane.schema.json`
+  - shared stage descriptor companion for stage goal, domain stage refs, skill / prompt / evaluation refs, handoff refs, and authority boundary
 - `family-human-gate.schema.json`
   - shared human-review gate request / decision / resume surface
 - `family-product-entry-manifest-v2.schema.json`
@@ -128,6 +130,14 @@ OPL owns the schema, TypeScript and Python mirror helpers, manifest discovery, p
 
 `MAG` may expose an MCP-compatible descriptor with `descriptor_only=true` and `public_runtime=false` until a verified public MCP runtime entry exists.
 
+## Stage Control Plane Freeze
+
+`family-stage-control-plane.schema.json` is the family stage descriptor companion raised from the MAS Stage-Led Autonomy experience. It is intentionally a descriptor and projection surface, not a workflow engine.
+
+The contract records stage goal, domain-owned stage refs, input/output refs, skill refs, prompt refs, evaluation refs, handoff metadata, allowed action refs, and authority boundaries. `OPL` owns schema, manifest discovery, parity checks, and read-only `opl stages list|inspect` commands. Domain repositories continue to own their actual route contracts, stage execution, review verdicts, quality authority, and artifacts.
+
+For `MAS`, this means inventory and descriptor projection over the existing `scout`, `idea`, `baseline`, `experiment`, `analysis-campaign`, `write`, `review`, and `decision/finalize` route contract. It does not rename or replace those routes. For `RCA` and `MAG`, first adoption should stay as light stage-pack projection over existing deliverable and grant-authoring surfaces.
+
 ## What This Directory Does Not Freeze
 
 This directory does not:
@@ -163,6 +173,7 @@ This directory does not:
 - [`family-checkpoint-lineage.schema.json`](./family-checkpoint-lineage.schema.json)
 - [`family-action-graph.schema.json`](./family-action-graph.schema.json)
 - [`family-action-catalog.schema.json`](./family-action-catalog.schema.json)
+- [`family-stage-control-plane.schema.json`](./family-stage-control-plane.schema.json)
 - [`family-human-gate.schema.json`](./family-human-gate.schema.json)
 - [`family-runtime-supervision.schema.json`](./family-runtime-supervision.schema.json)
 - [`family-persistence-policy.schema.json`](./family-persistence-policy.schema.json)

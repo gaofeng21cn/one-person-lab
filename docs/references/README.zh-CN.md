@@ -45,6 +45,7 @@
 - [四仓文档同步摘要，2026-04-14](./convergence-governance/four-repo-doc-series-sync-summary-2026-04-14.md)
 - [OPL 定位演化与收敛经验参考](./convergence-governance/opl-positioning-convergence-lessons.zh-CN.md)
 - [Family external orchestration learning board，2026-04-30](./convergence-governance/family-external-orchestration-learning-board-2026-04-30.md)
+- [OPL Family stage control plane adoption plan](./convergence-governance/family-stage-control-plane-adoption-plan.zh-CN.md)
 
 ## 二、当前支撑参考
 
