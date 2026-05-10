@@ -257,6 +257,25 @@ export function buildRuntimeManager(input: { persistNativeIndexes?: boolean } = 
         hermes_runtime_provider: 'required_for_online_family_runtime',
         wakeup_bridge: 'hermes cron -> opl family-runtime tick --source hermes-cron --hydrate',
         webhook_bridge: 'hermes webhook -> opl family-runtime enqueue',
+        mas_paper_autonomy_projection: {
+          supported_task_kinds: [
+            'paper_autonomy/repair-recheck',
+            'paper_autonomy/ai-reviewer-recheck',
+            'paper_autonomy/gate-replay',
+            'paper_autonomy/route-decision',
+          ],
+          state_projection: [
+            'study_id',
+            'next_owner',
+            'callable_surface',
+            'source_refs',
+            'source_fingerprint',
+            'idempotency_key',
+          ],
+          repair_command: 'medautosci sidecar dispatch --task <task.json> --format json',
+          authority_boundary:
+            'OPL projects and dispatches MAS paper autonomy tasks but never writes MAS truth, publication quality, artifact gates, or current_package.',
+        },
       },
       hermes_runtime: {
         binary: hermes.binary,
