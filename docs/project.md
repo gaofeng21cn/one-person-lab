@@ -2,12 +2,13 @@
 
 ## 项目是什么
 
-对外公开时，`One Person Lab` (`OPL`) 是一人课题组的 `Codex-default session runtime`、显式 `domain-agent activation` 层、Hermes-first online family runtime control plane，以及可选 GUI/API shells 背后的 shared projection/contract 层。
+对外公开时，`One Person Lab` (`OPL`) 是一人课题组的 Codex-first、stage-led family agent framework：它提供 `Codex-default session runtime`、显式 `domain-agent activation` 层、Hermes-first online family runtime control plane，以及可选 GUI/API shells 背后的 shared projection/contract 层。
 当前仓库跟踪：
 
 - `opl` / `opl exec` / `opl resume` 这组 CLI / shell 前门
 - Codex-default session/runtime 路径
 - domain-agent activation / dispatch 规格
+- stage descriptor、handoff envelope、receipt、projection 与 authority boundary 这组 family-level stage control 语言
 - `OPL Runtime Manager` 产品控制面：把外部 `Hermes-Agent` online runtime substrate 纳入 OPL 产品级 profile、typed family queue、domain dispatch、任务注册、诊断和状态投影
 - 执行引擎与模块注册表
 - 工作空间、会话、进度、交付物等接口面
@@ -15,7 +16,7 @@
 - OPL-branded AionUI GUI/WebUI 使用的 runtime/release surface
 
 图形界面外壳继续放在独立的界面仓中维护。
-各个领域仓继续作为独立 `domain agent` 仓，持有自己的智能体入口、领域逻辑、运行规则与交付物真相。
+各个领域仓继续作为独立 `domain agent` 仓，持有自己的 stage 语义、prompt、skill、领域逻辑、质量 gate、truth reducer、运行规则与交付物真相。
 
 ## 当前产品层级
 
@@ -46,6 +47,7 @@
 ## 作用边界
 
 - `OPL` 负责 Codex-default session/runtime、activation layer、release distribution surface，以及 shared modules / contracts / indexes
+- `OPL` 负责把 domain stage 表达成可发现、可恢复、可审计的 family-level work unit；stage 内部的专家拆解、创作、审核、修订和最终质量判断由 domain agent 与 `Codex CLI` 执行
 - `OPL Runtime Manager` 负责 Hermes online substrate provisioning、profile wiring、typed family queue、task registration hydration、diagnostics、status projection、native helper catalog 与 state index catalog
 - `OPL Runtime Manager` 不拥有 domain truth、domain quality authority、artifact gate、publication/package gate 或 concrete executor
 - Hermes online-management gateway 是 Full OPL family readiness 的 required 系统服务，由 Hermes installer/gateway command 管理；OPL 触发、检查并报告该 gateway 的 readiness
@@ -57,6 +59,7 @@
 - 外部界面仓负责 GUI 外壳；当前仓库只跟踪产品运行时与接口真相
 - `Med Auto Science`、`Med Auto Grant`、`RedCube AI` 等仓继续是独立 `domain agent`
 - 这些 `domain agent` 通过本地 CLI、程序/脚本与 repo-tracked contract 暴露稳定 capability surface；它们既可以通过 `OPL` activation 调用，也可以被 `Codex` 直接调用，工作逻辑保持一致
+- `MAS`、`MAG`、`RCA` 可以作为运行在 OPL family framework 上的 domain agents 被托管、唤醒和投影，但不是 OPL 内部模块；direct Codex app skill 调用仍是一等入口
 - `gateway / harness` 继续作为各 domain 仓内部的边界层语言存在，但不再是顶层公开主语
 
 ## 默认入口

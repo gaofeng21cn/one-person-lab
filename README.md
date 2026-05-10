@@ -8,8 +8,8 @@
 
 <h1 align="center">One Person Lab</h1>
 
-<p align="center"><strong>One workbench for serious research, grant, and presentation work</strong></p>
-<p align="center">Start expert work, keep progress visible, and collect deliverables in one trusted place.</p>
+<p align="center"><strong>A Codex-first, stage-led family agent framework for serious research, grant, and presentation work</strong></p>
+<p align="center">Start expert work, let Codex CLI execute domain stages, keep progress visible, and collect deliverables in one trusted place.</p>
 
 <p align="center">
   <img src="assets/branding/opl-workbench-overview.svg" alt="OPL workbench overview" width="100%" />
@@ -61,6 +61,7 @@ Need Docker, Linux, or server deployment? See the [Docker and browser deployment
 - General work for discussion, planning, reading, and common tasks.
 - Workspace-based work for tasks that need a real directory and persistent file context.
 - Specialized product families for domain-specific expert workflows.
+- Stage-led execution: OPL treats a domain stage as the observable work unit and `Codex CLI` as the default concrete executor inside that stage.
 - Progress and file views that stay attached to ongoing work.
 - Central management for Codex, Hermes online runtime, modules, skills, GUI, and health status.
 
@@ -94,6 +95,8 @@ This repository tracks the shared OPL workbench layer, not the specialized domai
 - Workspace, session, progress, and artifact discovery surfaces.
 - Shared contracts that let Research, Grant, and Presentation Foundries stay visible from one workbench.
 
+Architecturally, OPL is a Codex-first, stage-led family agent framework: OPL owns activation, typed family queue, durable session/runtime support, wakeup/retry/approval transport, shared discovery, and projection. Domain agents own their own stage semantics, prompts, skills, quality gates, truth reducers, and deliverable authority. This lets OPL support MAS/MAG/RCA without becoming their domain brain.
+
 For the MAS v2 alignment, `Med Auto Science` remains an independent medical research domain agent with a single domain app skill entry consumed by Codex and OPL. OPL owns the unified definitions, shared contract/index registration, module discovery, and projection consumption layer; it does not become the MAS runtime kernel, does not restore a MAS standalone release/install channel, and does not turn MAS projections into OPL-owned readiness or publication verdicts.
 
 The desktop GUI source is maintained in [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) as an internal OPL-branded app-shell build input. Users download One Person Lab App packages from this repository’s GitHub Releases; first-time macOS arm64 users can choose the `One-Person-Lab-Full-<version>-mac-arm64.dmg` asset with MAS/MAG/RCA, Hermes online runtime, `officecli`, and recommended companion skill payloads, while in-app updates continue to use the standard App assets and `latest*.yml` metadata. This repository provides the shared workbench contracts and product surfaces consumed by the app and Codex.
@@ -107,6 +110,7 @@ The desktop GUI source is maintained in [`opl-aion-shell`](https://github.com/ga
 ### Runtime notes
 
 - Default front doors are `opl`, `opl exec`, and `opl resume`. Unless a runtime or domain agent is explicitly selected, these paths keep Codex-default semantics.
+- OPL's orchestration unit is the domain `stage`; stage descriptors, handoff envelopes, receipts, and projection metadata live at the family framework layer, while stage internals remain domain-owned and Codex-executed.
 - OPL treats `Codex CLI` as a managed runtime dependency: `opl system` reports the selected binary, version, minimum-version policy, and PATH diagnostics. Health is based on the selected binary; non-selected PATH candidates are reported as diagnostics instead of blocking a compatible Codex CLI.
 - Hermes-Agent is the required online runtime substrate for Full OPL family readiness. OPL owns the typed family queue and domain dispatch bridge; Hermes owns gateway residency, cron/webhook wakeup, session store, delivery, approval transport, and profile isolation.
 - `Codex CLI` remains the default concrete executor unless a route explicitly chooses another executor. Hermes online substrate does not become MAS/MAG/RCA domain truth, quality authority, artifact authority, or publication/package gate.

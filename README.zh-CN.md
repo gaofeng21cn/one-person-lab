@@ -8,8 +8,8 @@
 
 <h1 align="center">One Person Lab</h1>
 
-<p align="center"><strong>一个面向严肃研究、基金申请和汇报交付的统一工作台</strong></p>
-<p align="center">从一个可信入口发起专业工作、查看进展，并持续收集交付物。</p>
+<p align="center"><strong>一个 Codex-first、stage-led 的家族智能体框架，服务严肃研究、基金申请和汇报交付</strong></p>
+<p align="center">从一个可信入口发起专业工作，让 Codex CLI 在领域 stage 内执行，持续查看进展并收集交付物。</p>
 
 <p align="center">
   <img src="assets/branding/opl-workbench-overview.svg" alt="OPL 工作台概览" width="100%" />
@@ -61,6 +61,7 @@ curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/ins
 - 普通工作：讨论、阅读、规划和通用任务。
 - 基于目录的工作：需要真实文件目录和持续上下文的任务。
 - 专业产品家族：面向特定领域的专门工作流。
+- Stage-led 执行：OPL 把领域 stage 作为可观察、可编排的工作单元，把 `Codex CLI` 作为 stage 内默认 concrete executor。
 - 进度与文件视图：持续挂在任务旁边，方便恢复和交付。
 - 环境与模块管理：统一查看 Codex、Hermes online runtime、模块、skills、GUI 和健康情况。
 
@@ -93,6 +94,8 @@ opl help --text         # 人类可读帮助；机器读取使用 opl help --jso
 - 提供工作空间、会话、进度与交付物的发现和组织能力。
 - 提供共享合同，让 Research、Grant 和 Presentation Foundry 能在同一个工作台里被看见。
 
+架构上，OPL 是 Codex-first、stage-led 的 family agent framework：OPL 持有 activation、typed family queue、durable session/runtime 支撑、wakeup/retry/approval transport、shared discovery 和 projection；各 domain agent 持有自己的 stage 语义、prompt、skill、质量 gate、truth reducer 与交付 authority。这样 OPL 能支撑 MAS/MAG/RCA，但不会变成它们的领域大脑。
+
 在 MAS v2 alignment 下，`Med Auto Science` 继续是独立医学科研 domain agent，并通过单一 domain app skill 被 Codex 与 OPL 消费。OPL 持有统一定义、shared contract/index 注册、模块发现和 projection 消费层；它不变成 MAS runtime kernel，不恢复 MAS standalone release / install 通道，也不把 MAS projection 写成 OPL 自己持有的 ready verdict 或投稿/发表裁决。
 
 桌面 GUI 由 [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) 作为 OPL 品牌 App 外壳维护。用户从这个仓库的 GitHub Releases 获取 One Person Lab App 包；macOS arm64 新用户可选择带 MAS/MAG/RCA、Hermes online runtime、`officecli` 以及推荐 companion skill payload 的 `One-Person-Lab-Full-<version>-mac-arm64.dmg` 首次安装资产，App 内更新继续只使用标准 App 资产和 `latest*.yml` metadata。这个仓库提供 App 和 Codex 共同消费的共享合同与产品表面。
@@ -106,6 +109,7 @@ opl help --text         # 人类可读帮助；机器读取使用 opl help --jso
 ### 运行说明
 
 - 默认前门是 `opl`、`opl exec` 和 `opl resume`。除非显式切换 runtime 或显式激活 domain agent，这几个入口都继承 Codex-default 语义。
+- OPL 的编排单元是 domain `stage`；stage descriptor、handoff envelope、receipt 和 projection metadata 属于 family framework 层，stage 内部执行仍由 domain 持有并交给 Codex 执行。
 - OPL 会把 `Codex CLI` 作为受管运行依赖检查：`opl system` 会报告实际选中的 binary、版本、最低版本策略和 PATH 诊断。健康状态以选中 binary 为准；非选中的 PATH 候选只作为诊断信息，不阻塞兼容的 Codex CLI。
 - Hermes-Agent 是 Full OPL family readiness 的必需 online runtime substrate。OPL 持有 typed family queue 和 domain dispatch bridge；Hermes 持有 gateway 常驻、cron/webhook wakeup、session store、delivery、approval transport 和 profile isolation。
 - `Codex CLI` 仍是默认具体执行器，除非 route 显式选择其他 executor。Hermes online substrate 不成为 MAS/MAG/RCA 的 domain truth、质量 authority、artifact authority 或 publication/package gate。

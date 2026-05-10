@@ -43,6 +43,7 @@
 - [文档组合治理](./docs_portfolio_consolidation.md)
 - [Family Docs 生命周期治理落地记录](./references/convergence-governance/family-docs-lifecycle-governance-rollout-2026-05-09.zh-CN.md)
 - [OPL Runtime Manager 目标形态](./references/runtime-substrate/opl-runtime-manager-target.md)
+- [OPL Stage-Led Agent Framework Roadmap](./references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)
 
 ## 生命周期组合
 
@@ -90,6 +91,7 @@
 
 - [参考级索引](./references/README.zh-CN.md)
 - [OPL Runtime Manager 目标形态](./references/runtime-substrate/opl-runtime-manager-target.md)
+- [OPL stage-led agent framework roadmap](./references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)
 - [Docker WebUI 部署参考](./references/current-support/opl-docker-webui-deployment.zh-CN.md)
 - [OPL GUI Shell Adapter 边界说明](./references/current-support/opl-gui-shell-adapter-boundary.zh-CN.md)
 - [OPL Fresh Install 与 GUI 首启测试参考](./references/current-support/opl-fresh-install-and-gui-first-launch-testing.zh-CN.md)
