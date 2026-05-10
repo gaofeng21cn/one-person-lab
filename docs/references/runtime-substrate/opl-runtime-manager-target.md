@@ -21,7 +21,7 @@ Family runtime supervision 的 owner split 更窄：domain 仓持有 wakeup / su
 
 Domain task hydration 是另一个显式授权面：domain sidecar export 可以输出 `pending_family_tasks[]`，OPL 只把这些任务按 `dedupe_key` 写入 family queue，再调用对应 domain sidecar dispatch。OPL 不从 read-only status 自行生成 domain action。MAS paper autonomy tasks 现在作为该规则的参考实现：`paper_autonomy/repair-recheck`、`paper_autonomy/ai-reviewer-recheck`、`paper_autonomy/gate-replay` 和 `paper_autonomy/route-decision` 会在 OPL 队列与 dispatch 文件中保留 source refs、next owner、callable surface、source fingerprint 与 idempotency key，但实际 repair、AI reviewer、gate replay、route decision 仍由 MAS owner surface 执行和落账。
 
-当前落地状态只覆盖 MAS paper autonomy queue bridge 的 repo-level surface：queue enqueue/list/inspect/tick、idempotency、retry/dead-letter、approval pause、local inbox、domain-forbidden-write guard 与 MAS paper autonomy projection 已有本仓测试覆盖。Hermes Full App packaging、真实 Hermes gateway stop/restart soak、MAG/RCA adapter parity、跨仓长期 notification/approval transport 和真实 MAS paper controlled apply 仍不是已完成状态；这些必须在对应 packaging / domain repo / E2E soak 中单独给出 evidence 后才能写成 Full online runtime ready。
+当前落地状态覆盖 OPL family-runtime 的 repo-level transport surface：queue enqueue/list/inspect/tick、idempotency、retry/dead-letter、approval pause、local inbox、domain-forbidden-write guard、MAS paper autonomy projection、MAG/RCA sidecar task hydration，以及 Hermes gateway stopped -> repair -> ready 的 fixture 验收。Hermes Full App packaging 已恢复为 Full first-install asset，MAG/RCA adapter parity 由各自 domain repo main 持有。仍未完成的是长时真实 Hermes gateway 24h soak，以及真实 MAS paper controlled apply 到最终投稿级交付；这些必须在对应真实环境 / domain truth 中单独给出 evidence 后才能写成 live-study 或长时运行 ready。
 
 ## 当前要落地的最小面
 
