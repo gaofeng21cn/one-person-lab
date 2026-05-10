@@ -5,7 +5,7 @@
 - narrative 协作规则看仓库根 `AGENTS.md`
 - 默认人类/AI 入口看 `README*` 与 `docs/README*`
 - 历史 gateway/federation 兼容合同入口看 `contracts/opl-gateway/README.md`
-- 当前公开默认主路径是 `external shell or CLI -> Codex-default OPL session runtime -> OPL typed family queue / activation layer -> configured family runtime provider -> selected domain agent entry`；Temporal-backed provider 是生产 substrate 候选，Hermes-Agent 只作为 `hermes_legacy` provider 或显式 executor/proof lane
+- 当前公开默认主路径是 `external shell or CLI -> Codex-default OPL session runtime -> OPL typed family queue / activation layer -> configured family runtime provider -> selected domain agent entry`；Full OPL family readiness 的 online runtime substrate 是已配置的 family runtime provider，Temporal-backed provider 是生产 substrate 候选，Hermes-Agent 只作为 `hermes_legacy` provider 或显式 executor/proof lane
 - 当前 active domain agent 集合是 `MAS`、`MAG`、`RCA`；`MDS` 只作为 `MAS` 下的显式可选 backend/audit/oracle companion 进入环境管理和投影，不作为默认安装依赖或顶层 domain-agent entry。
 - 已退役的旧入口词族不是 OPL 当前合同面；若只在历史 gateway 语料或 domain 仓内部 command/schema contract 中出现，必须按对应层级阅读。
 

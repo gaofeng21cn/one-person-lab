@@ -6,9 +6,9 @@ This directory freezes the machine-readable companion schemas for the family-lev
 
 These contracts absorb useful orchestration ideas from tools such as `CrewAI` in a contract-first way, but they do not make `CrewAI` a required runtime dependency and they do not replace the existing ownership split:
 
-- `Hermes-Agent` is the default OPL family online runtime substrate for gateway residency, cron/webhook wakeup, session store, delivery, approval transport, and memory/profile isolation
+- `Hermes-Agent` remains a migration-period legacy/optional provider or explicit executor/proof lane; the configured family runtime provider is the online runtime substrate for Full readiness, and a Temporal-backed provider is the production target for durable orchestration
 - `Codex CLI` remains the default concrete executor name and `autonomous` remains the default route mode unless a domain route explicitly selects another executor
-- `one-person-lab` owns the typed family queue and product control plane over Hermes, not a replacement runtime kernel
+- `one-person-lab` owns the typed family queue and product control plane over the configured family runtime provider, not a replacement runtime kernel
 - domain repositories remain the owners of durable truth, audit truth, and review truth
 
 They also absorb the useful `Ageniti` idea of deriving CLI, MCP, Skill, OpenAI, AI SDK, and product-entry descriptors from one app-action definition. OPL adopts that pattern as a family contract, not as a `@ageniti/core` runtime dependency.
@@ -57,7 +57,7 @@ These schemas therefore freeze interoperability surfaces, not a monolithic runti
 ### Control-plane-oriented
 
 - `../opl-gateway/family-runtime-online-substrate-contract.json`
-  - active OPL-level contract for Hermes as the required Full online runtime substrate and for the OPL typed family queue / dispatch bridge
+  - migration-period Hermes-first online substrate contract kept for compatibility/history; the active Full-readiness substrate is the configured family runtime provider, with Temporal as the production target
 - `family-runtime-supervision.schema.json`
   - shared read-only wakeup / supervision projection for adapter id, cadence, last success / tick, lease freshness, SLO state, repair command, safe reconcile hint, domain-owned source refs, and authority boundary
 - `family-persistence-policy.schema.json`
