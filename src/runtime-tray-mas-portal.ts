@@ -165,6 +165,153 @@ function buildPortalFields(
   };
 }
 
+function isValidMasWorkbenchProjection(projection: JsonRecord | null) {
+  const authority = nestedRecord(projection, 'authority');
+  return Boolean(
+    projection
+      && projection.surface_kind === 'mas_opl_runtime_workbench_projection'
+      && projection.schema_version === 1
+      && authority?.opl_role === 'projection_consumer_and_action_transport_only'
+      && authority.mas_truth_owner === true,
+  );
+}
+
+function laneForMasWorkbenchStudy(study: JsonRecord): RuntimeTrayLane {
+  const macroState = normalizeStatusCode(firstString(study.macro_state) ?? '');
+  const currentStage = normalizeStatusCode(firstString(study.current_stage) ?? '');
+  const workerState = normalizeStatusCode(firstString(study.worker_state) ?? '');
+  const activeRunId = firstString(study.active_run_id);
+  const freshness = nestedRecord(study, 'freshness');
+  const freshnessStatus = normalizeStatusCode(firstString(freshness?.status) ?? '');
+  const blockers = stringList(study.blocker_summary);
+
+  if (
+    blockers.length > 0
+      || ['attention', 'blocked', 'failed', 'human_gate', 'needs_attention', 'stale'].includes(macroState)
+      || ['blocked', 'failed', 'stale', 'missing'].includes(freshnessStatus)
+  ) {
+    return 'attention';
+  }
+
+  if (
+    ['parked', 'completed', 'manual_hold', 'awaiting_explicit_resume'].includes(macroState)
+      || ['parked', 'completed', 'manual_hold', 'awaiting_explicit_resume'].includes(currentStage)
+      || ['stopped', 'parked'].includes(workerState)
+  ) {
+    return 'recent';
+  }
+
+  if (
+    ['running', 'live', 'recovering', 'active'].includes(macroState)
+      || ['live', 'running', 'active'].includes(currentStage)
+      || ['running', 'active'].includes(workerState)
+      || Boolean(activeRunId)
+  ) {
+    return 'running';
+  }
+
+  return 'recent';
+}
+
+function actionForMasWorkbenchStudy(study: JsonRecord, lane: RuntimeTrayLane) {
+  const nextAction = firstString(study.next_action_summary, study.user_next);
+  if (lane === 'attention') {
+    return actionContext('opl', 'quality_gate', nextAction ?? 'MAS workbench 投影显示该论文线需要关注。');
+  }
+  if (lane === 'recent') {
+    return noActionContext(nextAction ?? 'MAS workbench 投影显示当前没有活跃运行任务。');
+  }
+  return runningActionContext(nextAction ?? 'MAS workbench 投影显示该论文线正在运行。');
+}
+
+function buildStudyWorkbenchProjection(study: JsonRecord, projection: JsonRecord) {
+  return {
+    ...study,
+    terminal: nestedRecord(projection, 'terminal'),
+    authority: nestedRecord(projection, 'authority'),
+  };
+}
+
+function buildMasWorkbenchStudyItem(
+  workspace: MasWorkspaceProjectionRef,
+  portalPayloadPath: string,
+  portalHtmlPath: string,
+  portalPayloadRef: string,
+  portalFreshness: JsonRecord | null,
+  portalSourceRefs: RuntimeTraySourceRef[],
+  projection: JsonRecord,
+  study: JsonRecord,
+): RuntimeTrayItem | null {
+  const studyId = firstString(study.study_id);
+  if (!studyId || studyId === 'workspace-overview') {
+    return null;
+  }
+
+  const lane = laneForMasWorkbenchStudy(study);
+  const recommendedCommands = recommendedCommandsForMasStudy(workspace.profile_ref, studyId);
+  const action = actionForMasWorkbenchStudy(study, lane);
+  const freshness = nestedRecord(study, 'freshness');
+  const links = nestedRecord(study, 'links');
+  const terminal = nestedRecord(projection, 'terminal');
+  const projectionSourceRefs = uniqueByRef([
+    sourceRef('/mas_opl_runtime_workbench_projection', 'mas_opl_runtime_workbench_projection'),
+    fileSourceRef(portalPayloadPath, 'mas_opl_runtime_workbench_projection', 'MAS OPL Runtime Workbench projection'),
+  ]);
+  const sourceRefs = stringList(study.source_refs, 12).map((ref) =>
+    fileSourceRef(
+      path.isAbsolute(ref) ? ref : path.join(workspace.workspace_root, ref),
+      'mas_workbench_study_source',
+      path.basename(ref),
+    )
+  );
+  const blockers = localizeRuntimeDisplayList(stringList(study.blocker_summary));
+  const summary = firstString(study.state_summary, freshness?.summary, study.user_next);
+  const status = firstString(study.current_stage, study.macro_state, study.worker_state);
+
+  return {
+    item_id: `medautoscience:workbench-study:${studyId}`,
+    project_id: 'medautoscience',
+    project_label: 'MAS',
+    lane,
+    title: firstString(study.display_title) ?? studyId,
+    status,
+    status_label: humanizeStatusLabel(status),
+    summary,
+    updated_at: firstString(study.last_seen_at, freshness?.latest_event_at),
+    command: recommendedCommands[0]?.command ?? null,
+    workspace_path: firstString(nestedRecord(projection, 'workspace')?.workspace_root) ?? workspace.workspace_root,
+    runtime_owner: 'upstream_hermes_agent',
+    domain_owner: 'med-autoscience',
+    source_refs: uniqueByRef([
+      ...workspace.source_refs,
+      fileSourceRef(portalPayloadPath, 'mas_progress_portal_payload', 'MAS Progress Portal payload'),
+      ...projectionSourceRefs,
+      ...sourceRefs,
+      ...portalSourceRefs,
+    ]),
+    ...action,
+    study_id: studyId,
+    workspace_label: firstString(nestedRecord(projection, 'workspace')?.profile_name) ?? workspace.profile_name,
+    detail_summary: summary,
+    next_action_summary: firstString(study.next_action_summary, study.user_next),
+    active_run_id: firstString(study.active_run_id),
+    browser_url: null,
+    quest_session_api_url: null,
+    health_status: firstString(study.worker_state, study.macro_state),
+    blockers,
+    recommended_commands: recommendedCommands,
+    ...buildPortalFields(portalHtmlPath, portalPayloadRef, portalFreshness, portalSourceRefs),
+    workbench_projection: projection,
+    workbench_projection_source_refs: projectionSourceRefs,
+    study_workbench: {
+      ...buildStudyWorkbenchProjection(study, projection),
+      links,
+      actions: nestedRecord(study, 'actions') ?? {},
+      terminal,
+    },
+  };
+}
+
 function buildMasPortalStudyItem(
   workspace: MasWorkspaceProjectionRef,
   portalPayloadPath: string,
@@ -304,19 +451,41 @@ export function buildMasPortalItems(workspace: MasWorkspaceProjectionRef): MasPo
   const portalFreshness = nestedRecord(validHandoff, 'freshness') ?? nestedRecord(payload, 'freshness');
   const portalSourceRefs = compactPortalSourceRefs(workspace.workspace_root, portalPayloadPath, validHandoff);
   const workspaceRecord = nestedRecord(payload, 'workspace');
-  const studyItems = jsonRecordList(workspaceRecord?.studies)
-    .map((study) =>
-      buildMasPortalStudyItem(
-        workspace,
-        portalPayloadPath,
-        portalHtmlPath,
-        portalPayloadRef,
-        portalFreshness,
-        portalSourceRefs,
-        study,
+  const workbenchProjection = nestedRecord(payload, 'mas_opl_runtime_workbench_projection');
+  const studyItems = isValidMasWorkbenchProjection(workbenchProjection)
+    ? jsonRecordList(workbenchProjection?.studies)
+      .map((study) =>
+        buildMasWorkbenchStudyItem(
+          workspace,
+          portalPayloadPath,
+          portalHtmlPath,
+          portalPayloadRef,
+          portalFreshness,
+          portalSourceRefs,
+          workbenchProjection as JsonRecord,
+          study,
+        )
       )
-    )
-    .filter((entry): entry is RuntimeTrayItem => Boolean(entry));
+      .filter((entry): entry is RuntimeTrayItem => Boolean(entry))
+    : jsonRecordList(workspaceRecord?.studies)
+      .map((study) =>
+        buildMasPortalStudyItem(
+          workspace,
+          portalPayloadPath,
+          portalHtmlPath,
+          portalPayloadRef,
+          portalFreshness,
+          portalSourceRefs,
+          study,
+        )
+      )
+      .filter((entry): entry is RuntimeTrayItem => Boolean(entry));
+  const projectionSourceRefs = isValidMasWorkbenchProjection(workbenchProjection)
+    ? [
+      sourceRef('/runtime_tray_snapshot/mas_opl_runtime_workbench_items', 'runtime_projection'),
+      fileSourceRef(portalPayloadPath, 'mas_opl_runtime_workbench_projection', 'MAS OPL Runtime Workbench projection'),
+    ]
+    : [];
   const alertItems = jsonRecordList(workspaceRecord?.workspace_alert_items)
     .map((alert, index) =>
       buildMasPortalWorkspaceAttentionItem(
@@ -337,6 +506,7 @@ export function buildMasPortalItems(workspace: MasWorkspaceProjectionRef): MasPo
     source_refs: [
       sourceRef('/runtime_tray_snapshot/mas_progress_portal_items', 'runtime_projection'),
       fileSourceRef(portalPayloadPath, 'mas_progress_portal_payload', 'MAS Progress Portal payload'),
+      ...projectionSourceRefs,
     ],
     portal_workspace_roots: new Set([path.resolve(workspace.workspace_root)]),
   };
