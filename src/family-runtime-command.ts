@@ -2,6 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { GatewayContractError } from './contracts.ts';
+import {
+  FAMILY_RUNTIME_PROVIDER_KINDS,
+  type FamilyRuntimeProviderKind,
+} from './family-runtime-providers.ts';
 
 export const FAMILY_RUNTIME_DOMAIN_IDS = ['medautoscience', 'medautogrant', 'redcube'] as const;
 
@@ -18,11 +22,33 @@ export type EnqueueInput = {
 };
 
 export type FamilyRuntimeCommandInput =
-  | { mode: 'status' | 'doctor' | 'install' | 'repair' | 'notify_list' | 'events_export' | 'queue_list' }
+  | {
+    mode: 'status' | 'doctor' | 'install' | 'repair';
+    providerKind?: FamilyRuntimeProviderKind;
+  }
+  | { mode: 'notify_list' | 'events_export' | 'queue_list' | 'attempt_list' }
   | { mode: 'tick'; source?: string; limit?: number; hydrate?: boolean }
   | { mode: 'intake'; domainId?: FamilyRuntimeDomainId; source?: string }
   | { mode: 'enqueue'; input: EnqueueInput }
   | { mode: 'queue_inspect'; taskId: string }
+  | { mode: 'attempt_inspect'; stageAttemptId: string }
+  | {
+    mode: 'attempt_create';
+    input: {
+      domainId: FamilyRuntimeDomainId;
+      stageId: string;
+      providerKind?: FamilyRuntimeProviderKind;
+      workspaceLocator: Record<string, unknown>;
+      sourceFingerprint?: string;
+      executorKind?: string;
+      taskId?: string;
+      retryBudget?: Record<string, unknown>;
+      checkpointRefs?: string[];
+      closeoutRefs?: string[];
+      humanGateRefs?: string[];
+      blockedReason?: string;
+    };
+  }
   | { mode: 'approve'; taskId: string; decision: 'approve' | 'deny'; reason?: string };
 
 export const DOMAIN_ADAPTERS: Record<FamilyRuntimeDomainId, {
@@ -82,18 +108,41 @@ function assertDomainId(value: string | undefined): FamilyRuntimeDomainId {
   });
 }
 
+function assertProviderKind(value: string | undefined): FamilyRuntimeProviderKind {
+  if (FAMILY_RUNTIME_PROVIDER_KINDS.includes(value as FamilyRuntimeProviderKind)) {
+    return value as FamilyRuntimeProviderKind;
+  }
+  throw new GatewayContractError('cli_usage_error', 'Unsupported family-runtime provider kind.', {
+    provider_kind: value ?? null,
+    allowed_provider_kinds: [...FAMILY_RUNTIME_PROVIDER_KINDS],
+  });
+}
+
+function parseProviderOnlyArgs(mode: 'status' | 'doctor' | 'install' | 'repair', args: string[]) {
+  let providerKind: FamilyRuntimeProviderKind | undefined;
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    const value = args[index + 1];
+    if (token === '--provider' && value) {
+      providerKind = assertProviderKind(value);
+      index += 1;
+    } else {
+      throw new GatewayContractError('cli_usage_error', `family-runtime ${mode} accepts only --provider.`, {
+        extra_args: args,
+        usage: `opl family-runtime ${mode} [--provider local_sqlite|hermes_legacy|temporal]`,
+      });
+    }
+  }
+  return { mode, providerKind };
+}
+
 export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandInput {
   const [mode, ...rest] = args;
   if (!mode || mode === 'status') {
-    return { mode: 'status' };
+    return parseProviderOnlyArgs('status', rest);
   }
   if (mode === 'doctor' || mode === 'install' || mode === 'repair') {
-    if (rest.length > 0) {
-      throw new GatewayContractError('cli_usage_error', `family-runtime ${mode} accepts no extra arguments.`, {
-        extra_args: rest,
-      });
-    }
-    return { mode };
+    return parseProviderOnlyArgs(mode, rest);
   }
   if (mode === 'notify' && rest[0] === 'list') {
     return { mode: 'notify_list' };
@@ -112,6 +161,121 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
       });
     }
     return { mode: 'queue_inspect', taskId };
+  }
+  if (mode === 'attempt' && rest[0] === 'list') {
+    if (rest.length > 1) {
+      throw new GatewayContractError('cli_usage_error', 'family-runtime attempt list accepts no extra arguments.', {
+        extra_args: rest.slice(1),
+      });
+    }
+    return { mode: 'attempt_list' };
+  }
+  if (mode === 'attempt' && rest[0] === 'inspect') {
+    const stageAttemptId = rest[1];
+    if (!stageAttemptId || rest.length > 2) {
+      throw new GatewayContractError('cli_usage_error', 'family-runtime attempt inspect requires one attempt id.', {
+        usage: 'opl family-runtime attempt inspect <stage_attempt_id>',
+      });
+    }
+    return { mode: 'attempt_inspect', stageAttemptId };
+  }
+  if (mode === 'attempt' && rest[0] === 'create') {
+    let domainId: FamilyRuntimeDomainId | undefined;
+    let stageId = '';
+    let providerKind: FamilyRuntimeProviderKind | undefined;
+    let workspaceLocator: string | undefined;
+    let workspaceLocatorFile: string | undefined;
+    let retryBudget: string | undefined;
+    let retryBudgetFile: string | undefined;
+    let sourceFingerprint: string | undefined;
+    let executorKind: string | undefined;
+    let taskId: string | undefined;
+    let blockedReason: string | undefined;
+    const checkpointRefs: string[] = [];
+    const closeoutRefs: string[] = [];
+    const humanGateRefs: string[] = [];
+    for (let index = 1; index < rest.length; index += 1) {
+      const token = rest[index];
+      const value = rest[index + 1];
+      if (token === '--domain' && value) {
+        domainId = assertDomainId(value);
+        index += 1;
+      } else if (token === '--stage' && value) {
+        stageId = value;
+        index += 1;
+      } else if (token === '--provider' && value) {
+        providerKind = assertProviderKind(value);
+        index += 1;
+      } else if (token === '--workspace-locator' && value) {
+        workspaceLocator = value;
+        index += 1;
+      } else if (token === '--workspace-locator-file' && value) {
+        workspaceLocatorFile = value;
+        index += 1;
+      } else if (token === '--retry-budget' && value) {
+        retryBudget = value;
+        index += 1;
+      } else if (token === '--retry-budget-file' && value) {
+        retryBudgetFile = value;
+        index += 1;
+      } else if (token === '--source-fingerprint' && value) {
+        sourceFingerprint = value;
+        index += 1;
+      } else if (token === '--executor-kind' && value) {
+        executorKind = value;
+        index += 1;
+      } else if (token === '--task' && value) {
+        taskId = value;
+        index += 1;
+      } else if (token === '--checkpoint-ref' && value) {
+        checkpointRefs.push(value);
+        index += 1;
+      } else if (token === '--closeout-ref' && value) {
+        closeoutRefs.push(value);
+        index += 1;
+      } else if (token === '--human-gate-ref' && value) {
+        humanGateRefs.push(value);
+        index += 1;
+      } else if (token === '--blocked-reason' && value) {
+        blockedReason = value;
+        index += 1;
+      } else {
+        throw new GatewayContractError('cli_usage_error', `Unknown family-runtime attempt create option: ${token}.`, {
+          option: token,
+        });
+      }
+    }
+    if (!domainId || !stageId) {
+      throw new GatewayContractError(
+        'cli_usage_error',
+        'family-runtime attempt create requires --domain and --stage.',
+        { required: ['--domain', '--stage'] },
+      );
+    }
+    if (!workspaceLocator && !workspaceLocatorFile) {
+      throw new GatewayContractError(
+        'cli_usage_error',
+        'family-runtime attempt create requires --workspace-locator or --workspace-locator-file.',
+        { required: ['--workspace-locator', '--workspace-locator-file'] },
+      );
+    }
+    return {
+      mode: 'attempt_create',
+      input: {
+        domainId,
+        stageId,
+        providerKind,
+        workspaceLocator: parsePayloadArg(workspaceLocator, workspaceLocatorFile),
+        sourceFingerprint,
+        executorKind,
+        taskId,
+        retryBudget: retryBudget || retryBudgetFile ? parsePayloadArg(retryBudget, retryBudgetFile) : undefined,
+        checkpointRefs,
+        closeoutRefs,
+        humanGateRefs,
+        blockedReason,
+      },
+    };
   }
   if (mode === 'tick') {
     let source = 'manual';
@@ -257,6 +421,6 @@ export function parseFamilyRuntimeCommand(args: string[]): FamilyRuntimeCommandI
     };
   }
   throw new GatewayContractError('unknown_command', `Unknown family-runtime subcommand: ${mode}.`, {
-    usage: 'opl family-runtime status|doctor|install|repair|intake|tick|enqueue|queue list|queue inspect|approve|notify list|events export',
+    usage: 'opl family-runtime status|doctor|install|repair|intake|tick|enqueue|attempt create|attempt list|attempt inspect|queue list|queue inspect|approve|notify list|events export',
   });
 }

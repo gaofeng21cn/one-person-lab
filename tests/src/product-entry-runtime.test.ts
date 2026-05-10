@@ -60,7 +60,7 @@ function withEnv<T>(updates: Record<string, string | undefined>, run: () => T): 
   }
 }
 
-test('product-entry runtime leaf exposes Codex-default executor over required Hermes online substrate', () => {
+test('product-entry runtime leaf exposes Codex-default executor over provider-backed family runtime', () => {
   const codexFixture = createFakeBinaryFixture('codex', `
 echo "unused"
 exit 0
@@ -74,6 +74,14 @@ if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
   echo "Gateway service is loaded"
   exit 0
 fi
+if [ "$1" = "cron" ] && [ "$2" = "list" ]; then
+  echo "Name: opl-family-runtime-tick"
+  exit 0
+fi
+if [ "$1" = "webhook" ] && [ "$2" = "list" ]; then
+  echo "opl-family-runtime-webhook"
+  exit 0
+fi
 echo "unexpected fake-hermes args: $*" >&2
 exit 1
 `);
@@ -83,19 +91,21 @@ exit 1
       {
         OPL_CODEX_BIN: codexFixture.binaryPath,
         OPL_HERMES_BIN: hermesFixture.binaryPath,
+        OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
       },
       () => buildProductEntryDoctor(validateGatewayContracts(contractsDir)),
     );
 
     assert.equal(doctor.product_entry.entry_surface, 'opl_local_product_entry_shell');
-    assert.equal(doctor.product_entry.runtime_substrate, 'codex_default_executor_with_hermes_online_runtime_substrate');
+    assert.equal(doctor.product_entry.runtime_substrate, 'codex_default_executor_with_provider_backed_family_runtime');
     assert.equal(doctor.product_entry.ready, true);
     assert.equal(doctor.product_entry.local_entry_ready, true);
     assert.equal(doctor.product_entry.online_runtime_ready, true);
+    assert.equal(doctor.product_entry.configured_provider, 'hermes_legacy');
     assert.equal(doctor.product_entry.messaging_gateway_ready, true);
     assert.equal(doctor.product_entry.hermes.binary?.path, hermesFixture.binaryPath);
-    assert.match(doctor.product_entry.notes.join('\n'), /default online runtime substrate/);
-    assert.match(doctor.product_entry.notes.join('\n'), /--executor hermes/);
+    assert.match(doctor.product_entry.notes.join('\n'), /configured family runtime provider/);
+    assert.match(doctor.product_entry.notes.join('\n'), /hermes_legacy provider/);
   } finally {
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
     fs.rmSync(hermesFixture.fixtureRoot, { recursive: true, force: true });

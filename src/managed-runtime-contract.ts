@@ -170,7 +170,7 @@ export function buildManagedRuntimeContract({
   supervision_status_surface,
   attention_queue_surface,
   recovery_contract_surface,
-  runtime_owner = 'upstream_hermes_agent',
+  runtime_owner = 'provider_backed_family_runtime',
   contract = readBundledManagedRuntimeThreeLayerContract(),
 }: BuildManagedRuntimeContractInput): NormalizedManagedRuntimeContract {
   return validateManagedRuntimeContract(

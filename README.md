@@ -80,6 +80,8 @@ Need Docker, Linux, or server deployment? See the [Docker and browser deployment
 opl system initialize   # Inspect Codex policy, family runtime provider, modules, skills, GUI, and workspace-root state
 opl family-runtime status
 opl family-runtime repair
+opl family-runtime attempt create --domain medautoscience --stage scout --provider local_sqlite --workspace-locator '{"workspace_root":"/path/to/workspace"}'
+opl family-runtime attempt list
 opl modules             # Check MAS/MAG/RCA modules and any MAS-declared optional companion provenance/audit refs
 opl module exec --module medautoscience -- doctor entry-modes
 opl skill sync          # Sync OPL family skills into the Codex-visible skill path
@@ -114,7 +116,7 @@ The desktop GUI source is maintained in [`opl-aion-shell`](https://github.com/ga
 - OPL treats `Codex CLI` as a managed runtime dependency: `opl system` reports the selected binary, version, minimum-version policy, and PATH diagnostics. Health is based on the selected binary; non-selected PATH candidates are reported as diagnostics instead of blocking a compatible Codex CLI.
 - The OPL family runtime is becoming provider-backed. Temporal is the preferred production substrate candidate for durable stage-attempt workflows, activity retry/timeout, human-gate signals, status queries, and execution history. Hermes-Agent remains a legacy/optional provider or explicit executor/proof lane during migration; it is not the target long-term session/wakeup substrate once the Temporal provider lands.
 - `Codex CLI` remains the default concrete executor unless a route explicitly chooses another executor. A family runtime provider does not become MAS/MAG/RCA domain truth, quality authority, artifact authority, or publication/package gate.
-- Use `opl family-runtime status|doctor|repair|intake|tick|enqueue|queue list|approve|notify list|events export` for the OPL family runtime bridge. `opl install --no-online-runtime` and provider-disable environment switches are development/offline diagnostic modes and report degraded Full readiness.
+- Use `opl family-runtime status|doctor|repair|intake|tick|enqueue|attempt create|attempt list|attempt inspect|queue list|approve|notify list|events export` for the OPL family runtime bridge and stage attempt ledger. `opl install --no-online-runtime` and provider-disable environment switches are development/offline diagnostic modes and report degraded Full readiness.
 - First launch requires Core ready, Domain modules ready, and the configured family runtime provider ready before Full readiness passes. During migration, local CLI/status/manifest diagnostics may still expose Hermes/local provider state as a legacy readiness signal.
 - If an admitted domain repo is missing locally, run `opl module install --module <module_id>`.
 - When automation needs a domain CLI, run it through `opl module exec --module <module_id> -- <domain_cli_args...>` so the command is launched from the current OPL-managed module checkout instead of a stale global PATH tool.

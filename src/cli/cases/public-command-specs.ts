@@ -100,7 +100,7 @@ export function buildPublicCommandSpecs(
   const installSpec: CommandSpec = {
     usage:
       'opl install [--modules <mas,mag,rca>] [--module <module_id>] [--skip-modules] [--skip-engines] [--skip-native-helper-repair] [--skip-gui-open] [--no-online-runtime]',
-    summary: 'One-shot install for Codex, Hermes online runtime, family modules, Codex skills, and the OPL GUI app.',
+    summary: 'One-shot install for Codex, the configured family runtime provider, family modules, Codex skills, and the OPL GUI app.',
     examples: [
       'opl install',
       'opl install --modules mas,mag,rca',

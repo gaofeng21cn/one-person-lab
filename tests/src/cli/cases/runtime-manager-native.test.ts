@@ -741,7 +741,7 @@ esac
   }
 }
 
-test('runtime manager reconcile treats missing Hermes as missing required online runtime', () => {
+test('runtime manager reconcile treats missing selected Hermes legacy provider as provider attention', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-reconcile-state-'));
 
   try {
@@ -749,14 +749,16 @@ test('runtime manager reconcile treats missing Hermes as missing required online
       OPL_HERMES_BIN: '',
       OPL_STATE_DIR: stateRoot,
       OPL_NATIVE_HELPER_BIN_DIR: path.join(stateRoot, 'missing-native-bin'),
+      OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
       PATH: '',
     });
     const reconcile = output.runtime_manager.reconcile;
 
-    assert.equal(output.runtime_manager.status, 'online_runtime_missing');
+    assert.equal(output.runtime_manager.status, 'provider_attention_needed');
     assert.equal(reconcile.surface_kind, 'opl_runtime_manager_reconcile');
     assert.equal(reconcile.overall_status, 'attention_needed');
-    assert.equal(reconcile.checked_surfaces.hermes_runtime, 'online_runtime_missing');
+    assert.equal(reconcile.checked_surfaces.provider_runtime, 'provider_attention_needed');
+    assert.equal(reconcile.checked_surfaces.hermes_legacy_runtime, 'online_runtime_missing');
     assert.equal(reconcile.non_goals.includes('does_not_schedule_tasks'), true);
     assert.deepEqual(
       reconcile.recommended_actions.map((action: { action_id: string; blocking: boolean }) => [
@@ -842,6 +844,18 @@ if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
   fi
   exit 0
 fi
+if [ "$1" = "cron" ] && [ "$2" = "list" ]; then
+  if [ -f "${gatewayState}" ]; then
+    echo "Name: opl-family-runtime-tick"
+  fi
+  exit 0
+fi
+if [ "$1" = "webhook" ] && [ "$2" = "list" ]; then
+  if [ -f "${gatewayState}" ]; then
+    echo "opl-family-runtime-webhook"
+  fi
+  exit 0
+fi
 echo "unexpected fake-hermes args: $*" >&2
 exit 1
 `);
@@ -852,6 +866,7 @@ exit 1
   try {
     const output = runCli(['runtime', 'manager', 'action', '--apply'], {
       OPL_HERMES_BIN: hermesPath,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
       OPL_STATE_DIR: stateRoot,
       OPL_NATIVE_HELPER_BIN_DIR: helperBinDir,
       OPL_NATIVE_HELPER_REPAIR_COMMAND: repairScript,
@@ -860,7 +875,8 @@ exit 1
 
     assert.equal(action.mode, 'apply');
     assert.equal(action.dry_run, false);
-    assert.equal(action.before.reconcile.checked_surfaces.hermes_runtime, 'online_runtime_attention');
+    assert.equal(action.before.reconcile.checked_surfaces.provider_runtime, 'provider_attention_needed');
+    assert.equal(action.before.reconcile.checked_surfaces.hermes_legacy_runtime, 'online_runtime_attention');
     assert.equal(action.after.reconcile.overall_status, 'ready');
     assert.deepEqual(action.after.reconcile.recommended_actions, []);
     assert.deepEqual(

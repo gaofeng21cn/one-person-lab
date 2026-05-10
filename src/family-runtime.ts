@@ -1,4 +1,3 @@
-import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -12,289 +11,58 @@ import {
   type EnqueueInput,
   type FamilyRuntimeDomainId,
 } from './family-runtime-command.ts';
-import { ensureHermesBridge, inspectHermesBridge } from './family-runtime-hermes-bridge.ts';
-import { paperAutonomyProjection } from './family-runtime-paper-autonomy.ts';
-import { resolveOplStatePaths } from './runtime-state-paths.ts';
+import {
+  ensureFamilyRuntimeProvider,
+  inspectFamilyRuntimeProviders,
+  resolveFamilyRuntimeProviderKind,
+} from './family-runtime-providers.ts';
+import {
+  createStageAttempt,
+  inspectStageAttempt,
+  listStageAttempts,
+  stageAttemptSummary,
+  updateStageAttemptsForTask,
+} from './family-runtime-stage-attempts.ts';
+import {
+  DEFAULT_MAX_ATTEMPTS,
+  QUEUE_SCHEMA_VERSION,
+  familyRuntimePaths,
+  inspectTask,
+  insertEvent,
+  insertNotification,
+  listEvents,
+  listNotifications,
+  listTasks,
+  nowIso,
+  openQueueDb,
+  queueSummary,
+  stableId,
+  taskToPayload,
+  type FamilyRuntimeTaskRow,
+  type FamilyRuntimeTaskStatus,
+} from './family-runtime-store.ts';
 
-const QUEUE_SCHEMA_VERSION = 1;
-const DEFAULT_MAX_ATTEMPTS = 3;
-
-type FamilyRuntimeTaskStatus =
-  | 'queued'
-  | 'waiting_approval'
-  | 'running'
-  | 'succeeded'
-  | 'retry_waiting'
-  | 'blocked'
-  | 'dead_letter'
-  | 'denied';
-
-type FamilyRuntimeTaskRow = {
-  task_id: string;
-  domain_id: FamilyRuntimeDomainId;
-  task_kind: string;
-  payload_json: string;
-  dedupe_key: string | null;
-  priority: number;
-  status: FamilyRuntimeTaskStatus;
-  attempts: number;
-  max_attempts: number;
-  source: string;
-  requires_approval: 0 | 1;
-  approved_at: string | null;
-  lease_owner: string | null;
-  lease_expires_at: string | null;
-  last_error: string | null;
-  dead_letter_reason: string | null;
-  created_at: string;
-  updated_at: string;
-};
-
-type FamilyRuntimeEventRow = {
-  event_id: string;
-  task_id: string | null;
-  domain_id: FamilyRuntimeDomainId | null;
-  event_type: string;
-  source: string;
-  payload_json: string;
-  created_at: string;
-};
-
-type FamilyRuntimeNotificationRow = {
-  notification_id: string;
-  task_id: string | null;
-  severity: string;
-  title: string;
-  body: string;
-  channel: string;
-  status: string;
-  payload_json: string;
-  created_at: string;
-};
-
-function nowIso() {
-  return new Date().toISOString();
-}
-
-function stableId(prefix: string, parts: unknown[]) {
-  const digest = crypto
-    .createHash('sha256')
-    .update(JSON.stringify(parts))
-    .digest('hex')
-    .slice(0, 24);
-  return `${prefix}_${digest}`;
-}
-
-function randomId(prefix: string) {
-  return `${prefix}_${crypto.randomUUID()}`;
-}
-
-function familyRuntimePaths() {
-  const stateDir = resolveOplStatePaths().state_dir;
-  const root = path.join(stateDir, 'family-runtime');
-  return {
-    state_dir: stateDir,
-    root,
-    queue_db: path.join(root, 'queue.sqlite'),
-    dispatch_dir: path.join(root, 'dispatch'),
-  };
-}
-
-function openQueueDb() {
-  const paths = familyRuntimePaths();
-  fs.mkdirSync(paths.root, { recursive: true });
-  fs.mkdirSync(paths.dispatch_dir, { recursive: true });
-  const db = new DatabaseSync(paths.queue_db);
-  db.exec(`
-    PRAGMA journal_mode = WAL;
-    CREATE TABLE IF NOT EXISTS meta (
-      key TEXT PRIMARY KEY,
-      value TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS tasks (
-      task_id TEXT PRIMARY KEY,
-      domain_id TEXT NOT NULL,
-      task_kind TEXT NOT NULL,
-      payload_json TEXT NOT NULL,
-      dedupe_key TEXT UNIQUE,
-      priority INTEGER NOT NULL,
-      status TEXT NOT NULL,
-      attempts INTEGER NOT NULL,
-      max_attempts INTEGER NOT NULL,
-      source TEXT NOT NULL,
-      requires_approval INTEGER NOT NULL,
-      approved_at TEXT,
-      lease_owner TEXT,
-      lease_expires_at TEXT,
-      last_error TEXT,
-      dead_letter_reason TEXT,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS events (
-      event_id TEXT PRIMARY KEY,
-      task_id TEXT,
-      domain_id TEXT,
-      event_type TEXT NOT NULL,
-      source TEXT NOT NULL,
-      payload_json TEXT NOT NULL,
-      created_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS notifications (
-      notification_id TEXT PRIMARY KEY,
-      task_id TEXT,
-      severity TEXT NOT NULL,
-      title TEXT NOT NULL,
-      body TEXT NOT NULL,
-      channel TEXT NOT NULL,
-      status TEXT NOT NULL,
-      payload_json TEXT NOT NULL,
-      created_at TEXT NOT NULL
-    );
-    CREATE INDEX IF NOT EXISTS idx_tasks_status_priority ON tasks(status, priority DESC, created_at ASC);
-    CREATE INDEX IF NOT EXISTS idx_events_created_at ON events(created_at);
-    CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at);
-  `);
-  db.prepare('INSERT OR REPLACE INTO meta(key, value) VALUES (?, ?)').run(
-    'schema_version',
-    String(QUEUE_SCHEMA_VERSION),
-  );
-  return { db, paths };
-}
-
-function taskToPayload(row: FamilyRuntimeTaskRow) {
-  const payload = JSON.parse(row.payload_json);
-  return {
-    task_id: row.task_id,
-    domain_id: row.domain_id,
-    task_kind: row.task_kind,
-    payload,
-    paper_autonomy: paperAutonomyProjection(row, payload),
-    dedupe_key: row.dedupe_key,
-    priority: row.priority,
-    status: row.status,
-    attempts: row.attempts,
-    max_attempts: row.max_attempts,
-    source: row.source,
-    requires_approval: Boolean(row.requires_approval),
-    approved_at: row.approved_at,
-    lease: row.lease_owner
-      ? {
-          lease_owner: row.lease_owner,
-          lease_expires_at: row.lease_expires_at,
-        }
-      : null,
-    last_error: row.last_error,
-    dead_letter_reason: row.dead_letter_reason,
-    created_at: row.created_at,
-    updated_at: row.updated_at,
-  };
-}
-
-function eventToPayload(row: FamilyRuntimeEventRow) {
-  return {
-    event_id: row.event_id,
-    task_id: row.task_id,
-    domain_id: row.domain_id,
-    event_type: row.event_type,
-    source: row.source,
-    payload: JSON.parse(row.payload_json),
-    created_at: row.created_at,
-  };
-}
-
-function notificationToPayload(row: FamilyRuntimeNotificationRow) {
-  return {
-    notification_id: row.notification_id,
-    task_id: row.task_id,
-    severity: row.severity,
-    title: row.title,
-    body: row.body,
-    channel: row.channel,
-    status: row.status,
-    payload: JSON.parse(row.payload_json),
-    created_at: row.created_at,
-  };
-}
-
-function insertEvent(
+function buildStatusPayload(
   db: DatabaseSync,
-  input: {
-    taskId?: string | null;
-    domainId?: FamilyRuntimeDomainId | null;
-    eventType: string;
-    source: string;
-    payload?: Record<string, unknown>;
-  },
+  paths = familyRuntimePaths(),
+  requestedProvider = resolveFamilyRuntimeProviderKind(),
 ) {
-  const createdAt = nowIso();
-  const event = {
-    event_id: randomId('evt'),
-    task_id: input.taskId ?? null,
-    domain_id: input.domainId ?? null,
-    event_type: input.eventType,
-    source: input.source,
-    payload_json: JSON.stringify(input.payload ?? {}),
-    created_at: createdAt,
-  };
-  db.prepare(`
-    INSERT INTO events(event_id, task_id, domain_id, event_type, source, payload_json, created_at)
-    VALUES (@event_id, @task_id, @domain_id, @event_type, @source, @payload_json, @created_at)
-  `).run(event);
-  return eventToPayload(event as FamilyRuntimeEventRow);
-}
-
-function insertNotification(
-  db: DatabaseSync,
-  input: {
-    taskId?: string | null;
-    severity: 'info' | 'warning' | 'error';
-    title: string;
-    body: string;
-    payload?: Record<string, unknown>;
-  },
-) {
-  const createdAt = nowIso();
-  const notification = {
-    notification_id: randomId('ntf'),
-    task_id: input.taskId ?? null,
-    severity: input.severity,
-    title: input.title,
-    body: input.body,
-    channel: 'local_inbox',
-    status: 'written',
-    payload_json: JSON.stringify(input.payload ?? {}),
-    created_at: createdAt,
-  };
-  db.prepare(`
-    INSERT INTO notifications(notification_id, task_id, severity, title, body, channel, status, payload_json, created_at)
-    VALUES (@notification_id, @task_id, @severity, @title, @body, @channel, @status, @payload_json, @created_at)
-  `).run(notification);
-  return notificationToPayload(notification as FamilyRuntimeNotificationRow);
-}
-
-function queueSummary(db: DatabaseSync) {
-  const rows = db.prepare(`
-    SELECT status, COUNT(*) AS count FROM tasks GROUP BY status ORDER BY status
-  `).all() as Array<{ status: FamilyRuntimeTaskStatus; count: number }>;
-  const byStatus = Object.fromEntries(rows.map((row) => [row.status, row.count]));
-  const total = rows.reduce((sum, row) => sum + row.count, 0);
-  return { total, by_status: byStatus };
-}
-
-function buildStatusPayload(db: DatabaseSync, paths = familyRuntimePaths()) {
-  const bridge = inspectHermesBridge();
-  const fullOnlineReady =
-    bridge.disabled === false
-    && bridge.gateway_ready
-    && bridge.cron_registered
-    && bridge.webhook_registered;
+  const selectedProvider = resolveFamilyRuntimeProviderKind(requestedProvider);
+  const providerRuntime = inspectFamilyRuntimeProviders(selectedProvider);
+  const provider = providerRuntime.providers[selectedProvider]
+    ?? (() => {
+      throw new GatewayContractError('contract_shape_invalid', 'Selected family runtime provider was not inspected.', {
+        selected_provider: selectedProvider,
+      });
+    })();
+  const fullOnlineReady = selectedProvider !== 'local_sqlite' && provider.ready;
 
   return {
     version: 'g2',
     family_runtime: {
       surface_id: 'opl_family_runtime',
-      hermes_runtime_provider: 'required_for_online_family_runtime',
+      provider_model: 'provider_backed_stage_attempt_runtime',
+      configured_provider: selectedProvider,
       state: {
         state_dir: paths.state_dir,
         runtime_dir: paths.root,
@@ -302,27 +70,19 @@ function buildStatusPayload(db: DatabaseSync, paths = familyRuntimePaths()) {
         queue_schema_version: QUEUE_SCHEMA_VERSION,
       },
       readiness: {
+        provider_ready: provider.ready,
         full_online_ready: fullOnlineReady,
-        degraded: !fullOnlineReady,
-        degraded_reason: fullOnlineReady
-          ? null
-          : bridge.disabled
-            ? 'hermes_online_disabled_for_development_or_offline_diagnostics'
-            : 'hermes_gateway_cron_or_webhook_not_ready',
+        durable_online_ready: fullOnlineReady,
+        degraded: !provider.ready,
+        degraded_reason: provider.degraded_reason,
       },
-      substrate_owner: {
-        hermes: [
-          'gateway_residency',
-          'cron_wakeup',
-          'webhook_intake',
-          'session_store',
-          'delivery_transport',
-          'approval_transport',
-          'memory_profile_isolation',
-        ],
+      provider_runtime: {
+        ...providerRuntime,
+        selected: provider,
       },
       opl_owner: {
         queue: 'typed_family_queue',
+        stage_attempt_ledger: 'provider_attempt_control_metadata_only',
         dispatch: 'domain_adapter_dispatch',
         notification_policy: 'all_delivery_events_are_written_to_local_inbox_first',
         forbidden_authority: [
@@ -333,7 +93,7 @@ function buildStatusPayload(db: DatabaseSync, paths = familyRuntimePaths()) {
       },
       domain_adapters: DOMAIN_ADAPTERS,
       queue: queueSummary(db),
-      hermes_bridge: bridge,
+      stage_attempts: stageAttemptSummary(db),
     },
   };
 }
@@ -438,7 +198,7 @@ function writeDispatchTask(paths: ReturnType<typeof familyRuntimePaths>, row: Fa
       attempts: row.attempts,
       source: 'opl_family_runtime',
       authority_boundary: {
-        hermes: 'online_runtime_substrate_only',
+        provider: 'stage_attempt_transport_and_control_metadata_only',
         opl: 'typed_queue_and_dispatch_only',
         domain: 'truth_quality_artifact_gate_owner',
       },
@@ -628,7 +388,12 @@ function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRuntimePa
       body: 'OPL queue cannot write domain truth, quality verdicts, or artifact gates.',
       payload: { reason: 'domain_forbidden_write' },
     });
-    return { task_id: row.task_id, status: 'blocked', reason: 'domain_forbidden_write' };
+    const stageAttempts = updateStageAttemptsForTask(db, {
+      taskId: row.task_id,
+      status: 'blocked',
+      blockedReason: 'domain_forbidden_write',
+    });
+    return { task_id: row.task_id, status: 'blocked', reason: 'domain_forbidden_write', stage_attempts: stageAttempts };
   }
 
   const leaseOwner = `opl-family-runtime:${process.pid}`;
@@ -646,6 +411,11 @@ function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRuntimePa
     eventType: 'task_dispatch_started',
     source: 'opl-family-runtime',
     payload: { attempt, lease_owner: leaseOwner, lease_expires_at: leaseExpiresAt },
+  });
+  const runningStageAttempts = updateStageAttemptsForTask(db, {
+    taskId: row.task_id,
+    status: 'running',
+    incrementAttempt: true,
   });
 
   const dispatchPath = writeDispatchTask(paths, { ...row, attempts: attempt });
@@ -683,7 +453,15 @@ function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRuntimePa
       body: `${row.domain_id}:${row.task_kind}`,
       payload: { output },
     });
-    return { task_id: row.task_id, status: 'succeeded', command_preview: command, output };
+    const closeoutRefs = Array.isArray(output.closeout_refs)
+      ? output.closeout_refs.filter((entry): entry is string => typeof entry === 'string' && Boolean(entry.trim()))
+      : undefined;
+    const stageAttempts = updateStageAttemptsForTask(db, {
+      taskId: row.task_id,
+      status: 'completed',
+      closeoutRefs,
+    });
+    return { task_id: row.task_id, status: 'succeeded', command_preview: command, output, stage_attempts: stageAttempts };
   }
 
   const errorMessage = result.error?.message || stderr || stdout || `Domain dispatch exited ${exitCode}.`;
@@ -714,12 +492,18 @@ function dispatchTask(db: DatabaseSync, paths: ReturnType<typeof familyRuntimePa
     body: errorMessage,
     payload: { attempt, max_attempts: row.max_attempts },
   });
+  const stageAttempts = updateStageAttemptsForTask(db, {
+    taskId: row.task_id,
+    status: nextStatus === 'dead_letter' ? 'dead_lettered' : 'failed',
+    blockedReason: nextStatus === 'dead_letter' ? 'retry_budget_exhausted' : errorMessage,
+  });
   return {
     task_id: row.task_id,
     status: nextStatus,
     command_preview: command,
     exit_code: exitCode,
     error: errorMessage,
+    stage_attempts: stageAttempts.length > 0 ? stageAttempts : runningStageAttempts,
   };
 }
 
@@ -802,76 +586,38 @@ function approveTask(
   );
 }
 
-function listTasks(db: DatabaseSync) {
-  return (db.prepare(`
-    SELECT * FROM tasks ORDER BY priority DESC, created_at ASC
-  `).all() as FamilyRuntimeTaskRow[]).map(taskToPayload);
-}
-
-function inspectTask(db: DatabaseSync, taskId: string) {
-  const task = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(taskId) as FamilyRuntimeTaskRow | undefined;
-  if (!task) {
-    throw new GatewayContractError('cli_usage_error', 'Family runtime task not found.', {
-      task_id: taskId,
-    });
-  }
-  const events = (db.prepare(`
-    SELECT * FROM events WHERE task_id = ? ORDER BY created_at ASC
-  `).all(taskId) as FamilyRuntimeEventRow[]).map(eventToPayload);
-  const notifications = (db.prepare(`
-    SELECT * FROM notifications WHERE task_id = ? ORDER BY created_at ASC
-  `).all(taskId) as FamilyRuntimeNotificationRow[]).map(notificationToPayload);
-  return {
-    task: taskToPayload(task),
-    events,
-    notifications,
-  };
-}
-
-function listEvents(db: DatabaseSync) {
-  return (db.prepare(`
-    SELECT * FROM events ORDER BY created_at ASC
-  `).all() as FamilyRuntimeEventRow[]).map(eventToPayload);
-}
-
-function listNotifications(db: DatabaseSync) {
-  return (db.prepare(`
-    SELECT * FROM notifications ORDER BY created_at ASC
-  `).all() as FamilyRuntimeNotificationRow[]).map(notificationToPayload);
-}
-
 export function runFamilyRuntime(args: string[]) {
   const parsed = parseFamilyRuntimeCommand(args);
   const { db, paths } = openQueueDb();
   try {
     if (parsed.mode === 'status') {
-      return buildStatusPayload(db, paths);
+      return buildStatusPayload(db, paths, resolveFamilyRuntimeProviderKind(parsed.providerKind));
     }
     if (parsed.mode === 'doctor') {
-      const status = buildStatusPayload(db, paths).family_runtime;
+      const status = buildStatusPayload(db, paths, resolveFamilyRuntimeProviderKind(parsed.providerKind)).family_runtime;
       return {
         version: 'g2',
         family_runtime_doctor: {
           surface_id: 'opl_family_runtime_doctor',
-          doctor_status: status.readiness.full_online_ready ? 'ready' : 'degraded',
-          blockers: status.hermes_bridge.issues,
-          repair_command: 'opl family-runtime repair',
+          doctor_status: status.readiness.provider_ready ? 'ready' : 'degraded',
+          blockers: status.readiness.degraded_reason ? [status.readiness.degraded_reason] : [],
+          repair_command: `opl family-runtime repair --provider ${status.configured_provider}`,
           status,
         },
       };
     }
     if (parsed.mode === 'install' || parsed.mode === 'repair') {
-      const bridge = ensureHermesBridge(parsed.mode);
+      const providerKind = resolveFamilyRuntimeProviderKind(parsed.providerKind);
+      const provider = ensureFamilyRuntimeProvider(providerKind, parsed.mode);
       insertEvent(db, {
-        eventType: `hermes_bridge_${parsed.mode}`,
+        eventType: `provider_${parsed.mode}`,
         source: 'opl-cli',
-        payload: { status: bridge.status, actions: bridge.actions },
+        payload: { provider_kind: providerKind, status: provider.status, actions: provider.actions },
       });
       return {
         version: 'g2',
-        family_runtime_bridge: {
-          surface_id: 'opl_family_runtime_hermes_bridge',
-          ...bridge,
+        family_runtime_provider: {
+          ...provider,
         },
       };
     }
@@ -920,6 +666,48 @@ export function runFamilyRuntime(args: string[]) {
         family_runtime_task: {
           surface_id: 'opl_family_runtime_task',
           ...inspectTask(db, parsed.taskId),
+        },
+      };
+    }
+    if (parsed.mode === 'attempt_create') {
+      const attempt = createStageAttempt(db, parsed.input);
+      insertEvent(db, {
+        taskId: attempt.task_id,
+        domainId: parsed.input.domainId,
+        eventType: 'stage_attempt_created',
+        source: 'opl-cli',
+        payload: {
+          stage_attempt_id: attempt.stage_attempt_id,
+          provider_kind: attempt.provider_kind,
+          stage_id: attempt.stage_id,
+          task_id: attempt.task_id,
+        },
+      });
+      return {
+        version: 'g2',
+        family_runtime_stage_attempt: {
+          surface_id: 'opl_family_runtime_stage_attempt',
+          created: true,
+          attempt,
+        },
+      };
+    }
+    if (parsed.mode === 'attempt_list') {
+      return {
+        version: 'g2',
+        family_runtime_stage_attempts: {
+          surface_id: 'opl_family_runtime_stage_attempts',
+          summary: stageAttemptSummary(db),
+          attempts: listStageAttempts(db),
+        },
+      };
+    }
+    if (parsed.mode === 'attempt_inspect') {
+      return {
+        version: 'g2',
+        family_runtime_stage_attempt: {
+          surface_id: 'opl_family_runtime_stage_attempt',
+          attempt: inspectStageAttempt(db, parsed.stageAttemptId),
         },
       };
     }

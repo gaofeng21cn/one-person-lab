@@ -39,16 +39,44 @@ function familyRuntimeEnv(stateRoot: string, extra: Record<string, string> = {})
   };
 }
 
-test('family-runtime status exposes Hermes-first online substrate and SQLite queue path', () => {
+test('family-runtime status exposes provider-backed stage attempt runtime and SQLite queue path', () => {
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-state-'));
   try {
     const output = runCli(['family-runtime', 'status'], familyRuntimeEnv(stateRoot));
-    assert.equal(output.family_runtime.hermes_runtime_provider, 'required_for_online_family_runtime');
+    assert.equal(output.family_runtime.provider_model, 'provider_backed_stage_attempt_runtime');
+    assert.equal(output.family_runtime.configured_provider, 'local_sqlite');
+    assert.deepEqual(output.family_runtime.provider_runtime.allowed_providers, [
+      'local_sqlite',
+      'hermes_legacy',
+      'temporal',
+    ]);
+    assert.equal(output.family_runtime.readiness.provider_ready, true);
     assert.equal(output.family_runtime.readiness.full_online_ready, false);
-    assert.equal(output.family_runtime.readiness.degraded_reason, 'hermes_online_disabled_for_development_or_offline_diagnostics');
+    assert.equal(output.family_runtime.readiness.degraded, false);
     assert.equal(output.family_runtime.state.queue_db, path.join(stateRoot, 'family-runtime', 'queue.sqlite'));
+    assert.equal(output.family_runtime.state.queue_schema_version, 2);
     assert.equal(fs.existsSync(output.family_runtime.state.queue_db), true);
     assert.equal(output.family_runtime.domain_adapters.medautogrant.truth_owner, 'med-autogrant');
+    assert.equal(output.family_runtime.stage_attempts.total, 0);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime local provider status does not inspect a bad Hermes binary path', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-local-provider-'));
+  try {
+    const output = runCli(
+      ['family-runtime', 'status', '--provider', 'local_sqlite'],
+      familyRuntimeEnv(stateRoot, {
+        OPL_HERMES_BIN: path.join(stateRoot, 'missing-hermes'),
+      }),
+    );
+
+    assert.equal(output.family_runtime.configured_provider, 'local_sqlite');
+    assert.equal(output.family_runtime.readiness.provider_ready, true);
+    assert.equal(output.family_runtime.provider_runtime.providers.local_sqlite.ready, true);
+    assert.equal(output.family_runtime.provider_runtime.providers.hermes_legacy, undefined);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
@@ -75,7 +103,8 @@ test('bin/opl routes family-runtime commands into the OPL CLI instead of Codex p
     assert.equal(result.status, 0, result.stderr);
     const output = JSON.parse(result.stdout);
     assert.equal(output.family_runtime.surface_id, 'opl_family_runtime');
-    assert.equal(output.family_runtime.hermes_runtime_provider, 'required_for_online_family_runtime');
+    assert.equal(output.family_runtime.provider_model, 'provider_backed_stage_attempt_runtime');
+    assert.equal(output.family_runtime.configured_provider, 'local_sqlite');
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
   }
@@ -163,6 +192,100 @@ test('family-runtime approval pauses dispatch until approved', () => {
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime stage attempt ledger tracks task dispatch lifecycle and closeout refs', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-attempt-'));
+  const dispatch = createDispatchFixture('echo \'{"accepted":true,"closeout_refs":["studies/DM002/stage_closeout/latest.json"]}\'');
+  try {
+    const enqueue = runCli([
+      'family-runtime',
+      'enqueue',
+      '--domain',
+      'medautoscience',
+      '--task-kind',
+      'stage/scout',
+      '--payload',
+      '{"study_id":"DM002"}',
+      '--dedupe-key',
+      'mas:DM002:stage:scout',
+    ], familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatch.dispatchPath,
+    }));
+    const taskId = enqueue.family_runtime_enqueue.task.task_id;
+    const created = runCli([
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'scout',
+      '--provider',
+      'local_sqlite',
+      '--workspace-locator',
+      '{"workspace_root":"/tmp/mas"}',
+      '--source-fingerprint',
+      'sha256:scout',
+      '--task',
+      taskId,
+    ], familyRuntimeEnv(stateRoot));
+    const tick = runCli(['family-runtime', 'tick', '--source', 'test'], familyRuntimeEnv(stateRoot, {
+      OPL_FAMILY_RUNTIME_MEDAUTOSCIENCE_DISPATCH: dispatch.dispatchPath,
+    }));
+    const inspected = runCli([
+      'family-runtime',
+      'attempt',
+      'inspect',
+      created.family_runtime_stage_attempt.attempt.stage_attempt_id,
+    ], familyRuntimeEnv(stateRoot));
+    const task = runCli(['family-runtime', 'queue', 'inspect', taskId], familyRuntimeEnv(stateRoot));
+
+    assert.equal(created.family_runtime_stage_attempt.attempt.status, 'queued');
+    assert.equal(tick.family_runtime_tick.dispatches[0].stage_attempts[0].status, 'completed');
+    assert.equal(inspected.family_runtime_stage_attempt.attempt.status, 'completed');
+    assert.equal(inspected.family_runtime_stage_attempt.attempt.attempt_count, 1);
+    assert.deepEqual(inspected.family_runtime_stage_attempt.attempt.closeout_refs, [
+      'studies/DM002/stage_closeout/latest.json',
+    ]);
+    assert.equal(task.family_runtime_task.stage_attempts.length, 1);
+    assert.equal(task.family_runtime_task.stage_attempts[0].stage_id, 'scout');
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+    fs.rmSync(dispatch.fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('family-runtime attempt create requires explicit workspace locator', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-runtime-attempt-locator-'));
+  try {
+    const result = spawnSync(process.execPath, [
+      '--experimental-strip-types',
+      path.join(repoRoot, 'src', 'cli.ts'),
+      'family-runtime',
+      'attempt',
+      'create',
+      '--domain',
+      'medautoscience',
+      '--stage',
+      'scout',
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        NODE_NO_WARNINGS: '1',
+        ...familyRuntimeEnv(stateRoot),
+      },
+    });
+    const output = JSON.parse(result.stdout || result.stderr);
+
+    assert.equal(result.status, 2);
+    assert.equal(output.error.code, 'cli_usage_error');
+    assert.match(output.error.message, /workspace-locator/);
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
 
@@ -463,9 +586,10 @@ exit 1
       OPL_HERMES_BIN: hermes.hermesPath,
     });
 
-    assert.equal(output.family_runtime_bridge.status, 'ready');
-    assert.equal(output.family_runtime_bridge.bridge.cron_registered, true);
-    assert.equal(output.family_runtime_bridge.bridge.webhook_registered, true);
+    assert.equal(output.family_runtime_provider.provider_kind, 'hermes_legacy');
+    assert.equal(output.family_runtime_provider.status, 'ready');
+    assert.equal(output.family_runtime_provider.bridge.cron_registered, true);
+    assert.equal(output.family_runtime_provider.bridge.webhook_registered, true);
     assert.match(fs.readFileSync(path.join(stateRoot, 'cron.args'), 'utf8'), /opl family-runtime tick --source hermes-cron --hydrate/);
     assert.match(fs.readFileSync(path.join(stateRoot, 'cron.args'), 'utf8'), /create every 1m .* --name opl-family-runtime-tick/);
     assert.match(fs.readFileSync(path.join(stateRoot, 'webhook.args'), 'utf8'), /opl-family-runtime-webhook/);
@@ -539,9 +663,9 @@ exit 1
       OPL_HERMES_BIN: hermes.hermesPath,
     });
     assert.equal(stopped.family_runtime.readiness.full_online_ready, false);
-    assert.equal(stopped.family_runtime.hermes_bridge.gateway_ready, false);
+    assert.equal(stopped.family_runtime.provider_runtime.selected.details.bridge.gateway_ready, false);
     assert.match(
-      stopped.family_runtime.hermes_bridge.issues.join('\n'),
+      stopped.family_runtime.provider_runtime.selected.details.bridge.issues.join('\n'),
       /Hermes gateway service is not currently loaded/,
     );
 
@@ -554,11 +678,12 @@ exit 1
       OPL_HERMES_BIN: hermes.hermesPath,
     });
 
-    assert.equal(repaired.family_runtime_bridge.status, 'ready');
+    assert.equal(repaired.family_runtime_provider.provider_kind, 'hermes_legacy');
+    assert.equal(repaired.family_runtime_provider.status, 'ready');
     assert.equal(ready.family_runtime.readiness.full_online_ready, true);
-    assert.equal(ready.family_runtime.hermes_bridge.gateway_ready, true);
-    assert.equal(ready.family_runtime.hermes_bridge.cron_registered, true);
-    assert.equal(ready.family_runtime.hermes_bridge.webhook_registered, true);
+    assert.equal(ready.family_runtime.provider_runtime.selected.details.bridge.gateway_ready, true);
+    assert.equal(ready.family_runtime.provider_runtime.selected.details.bridge.cron_registered, true);
+    assert.equal(ready.family_runtime.provider_runtime.selected.details.bridge.webhook_registered, true);
   } finally {
     fs.rmSync(stateRoot, { recursive: true, force: true });
     fs.rmSync(hermes.fixtureRoot, { recursive: true, force: true });

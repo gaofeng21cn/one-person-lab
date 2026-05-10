@@ -105,7 +105,7 @@ test('buildManagedRuntimeContract materializes canonical fail-closed rules and d
 
   assert.deepEqual(contract, {
     shared_contract_ref: 'contracts/opl-gateway/managed-runtime-three-layer-contract.json',
-    runtime_owner: 'upstream_hermes_agent',
+    runtime_owner: 'provider_backed_family_runtime',
     domain_owner: 'redcube_ai',
     executor_owner: 'codex_cli',
     supervision_status_surface: {

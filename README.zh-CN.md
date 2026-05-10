@@ -80,6 +80,8 @@ curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/ins
 opl system initialize   # 检查 Codex 策略、family runtime provider、模块、skills、GUI 和工作目录状态
 opl family-runtime status
 opl family-runtime repair
+opl family-runtime attempt create --domain medautoscience --stage scout --provider local_sqlite --workspace-locator '{"workspace_root":"/path/to/workspace"}'
+opl family-runtime attempt list
 opl modules             # 查看 MAS/MAG/RCA 模块，以及 MAS 声明的可选 companion diagnostic
 opl skill sync          # 把 OPL 家族 skills 同步到 Codex 可见路径
 opl help --text         # 人类可读帮助；机器读取使用 opl help --json
@@ -113,7 +115,7 @@ opl help --text         # 人类可读帮助；机器读取使用 opl help --jso
 - OPL 会把 `Codex CLI` 作为受管运行依赖检查：`opl system` 会报告实际选中的 binary、版本、最低版本策略和 PATH 诊断。健康状态以选中 binary 为准；非选中的 PATH 候选只作为诊断信息，不阻塞兼容的 Codex CLI。
 - OPL family runtime 正在收敛为 provider-backed。Temporal 是 durable stage-attempt workflow、activity retry/timeout、human-gate signal、status query 与 execution history 的首选生产 substrate 候选。Hermes-Agent 在迁移期保留为 legacy/optional provider 或显式 executor/proof lane；Temporal provider 落地后，它不再是目标长期 session/wakeup substrate。
 - `Codex CLI` 仍是默认具体执行器，除非 route 显式选择其他 executor。family runtime provider 不成为 MAS/MAG/RCA 的 domain truth、质量 authority、artifact authority 或 publication/package gate。
-- 使用 `opl family-runtime status|doctor|repair|tick|enqueue|queue list|approve|notify list|events export` 操作 OPL family runtime bridge。`opl install --no-online-runtime` 与 provider-disable 环境开关只用于开发/离线诊断，并输出 degraded Full readiness。
+- 使用 `opl family-runtime status|doctor|repair|intake|tick|enqueue|attempt create|attempt list|attempt inspect|queue list|approve|notify list|events export` 操作 OPL family runtime bridge 与 stage attempt ledger。`opl install --no-online-runtime` 与 provider-disable 环境开关只用于开发/离线诊断，并输出 degraded Full readiness。
 - 首次启动需要 Core ready、Domain modules ready、已配置的 family runtime provider ready 三层都通过，Full readiness 才算完整。迁移期本地 CLI/status/manifest 仍可能暴露 Hermes/local provider 状态作为 legacy readiness signal。
 - 如果某个 admitted domain repo 还没落地到本机，运行 `opl module install --module <module_id>`。
 - 默认本地状态目录是 `~/Library/Application Support/OPL/state`。如果需要改到其他本地状态根目录，直接设置 `OPL_STATE_DIR`。

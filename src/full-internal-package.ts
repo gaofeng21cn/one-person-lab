@@ -296,9 +296,9 @@ export function buildInternalPackageReadme(input: {
     '4. MAS/MAG/RCA 随包内容只作为首启安装源；初始化后会进入标准模块目录：',
     '   ~/Library/Application Support/OPL/state/modules/<repo-name>',
     '5. Full runtime 内置 officecli CLI binary 与 MAS/MAG/RCA、officecli、officecli-docx/pptx/xlsx、ui-ux-pro-max 等推荐 companion skills；App 初始化会把它们同步到 Codex 可见路径。',
-    '6. Full 包内置 Hermes online runtime substrate：pinned Hermes source/wheel/venv bootstrap、Hermes CLI shim、profile seed、LaunchAgent install/repair scripts、version manifest 与 checksum。',
-    '7. 在 App 里配置 Codex API key 后，进入 OPL 初始化页确认 Core ready、Domain modules ready、Hermes online runtime ready 三层状态；Full 完整通过要求三层都 ready。',
-    '8. Hermes gateway LaunchAgent label 固定为 ai.hermes.gateway；首启会通过 opl family-runtime doctor 读取完整在线 readiness。',
+    '6. Full 包内置 family runtime provider payload：当前迁移期可包含 Hermes legacy bridge payload；Temporal provider 落地后由 provider contract 接管生产 durable stage attempt。',
+    '7. 在 App 里配置 Codex API key 后，进入 OPL 初始化页确认 Core ready、Domain modules ready、family runtime provider ready 三层状态；Full 完整通过要求三层都 ready。',
+    '8. 首启会通过 opl family-runtime doctor/status 读取 provider-backed readiness；Hermes gateway LaunchAgent 只属于 hermes_legacy provider。',
     '9. 推荐先跑一次 MAS 最小 smoke：进入 Research Foundry，创建或读取一个 workspace 状态。',
     '',
     input.runtimeTarName

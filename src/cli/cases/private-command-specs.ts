@@ -206,7 +206,7 @@ export function buildInternalCommandSpecs(
     'runtime manager': {
       usage: 'opl runtime manager',
       summary:
-        'Show the OPL Runtime Manager boundary for the required Full online Hermes substrate.',
+        'Show the OPL Runtime Manager boundary for the configured provider-backed family runtime.',
       examples: ['opl runtime manager'],
       handler: (args) => {
         assertNoArgs(args, commandSpecs['runtime manager']);
@@ -244,13 +244,16 @@ export function buildInternalCommandSpecs(
     },
     'family-runtime': {
       usage:
-        'opl family-runtime status|doctor|install|repair|intake|tick|enqueue|queue list|queue inspect|approve|notify list|events export [options]',
+        'opl family-runtime status|doctor|install|repair|intake|tick|enqueue|attempt create|attempt list|attempt inspect|queue list|queue inspect|approve|notify list|events export [options]',
       summary:
-        'Manage the Hermes-backed OPL family online runtime queue, bridge, notifications, approvals, and events.',
+        'Manage the provider-backed OPL family runtime queue, stage attempts, notifications, approvals, and events.',
       examples: [
         'opl family-runtime status',
-        'opl family-runtime install',
+        'opl family-runtime status --provider temporal',
+        'opl family-runtime install --provider hermes_legacy',
         'opl family-runtime enqueue --domain medautogrant --task-kind user-loop/wakeup --payload \'{"workspace":"/tmp/mag"}\' --dedupe-key mag-demo',
+        'opl family-runtime attempt create --domain medautoscience --stage scout --provider local_sqlite --workspace-locator \'{"workspace_root":"/tmp/mas"}\'',
+        'opl family-runtime attempt list',
         'opl family-runtime tick --source hermes-cron --hydrate',
         'opl family-runtime queue list',
       ],

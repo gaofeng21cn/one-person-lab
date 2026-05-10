@@ -259,6 +259,14 @@ Launchd plist: /tmp/ai.hermes.gateway.plist
 EOF
   exit 0
 fi
+if [ "$1" = "cron" ] && [ "$2" = "list" ]; then
+  echo "Name: opl-family-runtime-tick"
+  exit 0
+fi
+if [ "$1" = "webhook" ] && [ "$2" = "list" ]; then
+  echo "opl-family-runtime-webhook"
+  exit 0
+fi
 echo "unexpected fake-hermes args: $*" >&2
 exit 1
 `);
@@ -267,11 +275,12 @@ exit 1
     const output = runCli(['doctor'], {
       OPL_CODEX_BIN: codexPath,
       OPL_HERMES_BIN: hermesPath,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
     });
 
     assert.equal(output.version, 'g2');
     assert.equal(output.product_entry.entry_surface, 'opl_local_product_entry_shell');
-    assert.equal(output.product_entry.runtime_substrate, 'codex_default_executor_with_hermes_online_runtime_substrate');
+    assert.equal(output.product_entry.runtime_substrate, 'codex_default_executor_with_provider_backed_family_runtime');
     assert.equal(output.product_entry.ready, true);
     assert.equal(output.product_entry.local_entry_ready, true);
     assert.equal(output.product_entry.online_runtime_ready, true);
@@ -282,8 +291,8 @@ exit 1
     assert.match(output.product_entry.notes[0], /opl exec/);
     assert.match(output.product_entry.notes[0], /opl resume/);
     assert.match(output.product_entry.notes[1], /opl skill sync/);
-    assert.match(output.product_entry.notes[2], /default online runtime substrate/);
-    assert.match(output.product_entry.notes[2], /--executor hermes/);
+    assert.match(output.product_entry.notes[2], /configured family runtime provider/);
+    assert.match(output.product_entry.notes[2], /hermes_legacy provider/);
     assert.deepEqual(output.product_entry.issues, []);
     assert.equal(output.validation.status, 'valid');
   } finally {
@@ -302,15 +311,17 @@ exit 0
     const output = runCli(['doctor'], {
       OPL_CODEX_BIN: codexPath,
       PATH: fixtureRoot,
+      OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
     });
 
-    assert.equal(output.product_entry.runtime_substrate, 'codex_default_executor_with_hermes_online_runtime_substrate');
+    assert.equal(output.product_entry.runtime_substrate, 'codex_default_executor_with_provider_backed_family_runtime');
     assert.equal(output.product_entry.ready, false);
     assert.equal(output.product_entry.local_entry_ready, true);
     assert.equal(output.product_entry.online_runtime_ready, false);
+    assert.equal(output.product_entry.configured_provider, 'hermes_legacy');
     assert.equal(output.product_entry.messaging_gateway_ready, false);
     assert.equal(output.product_entry.hermes.binary, null);
-    assert.match(output.product_entry.notes[2], /--executor hermes/);
+    assert.match(output.product_entry.notes[2], /configured family runtime provider/);
     assert.equal(
       output.product_entry.issues.includes(
         'Hermes binary not found. Set OPL_HERMES_BIN or install `hermes` into PATH.',
@@ -565,78 +576,6 @@ exit 1
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
     fs.rmSync(psFixture.fixtureRoot, { recursive: true, force: true });
-  }
-});
-
-test('runtime manager reports OPL control plane over required Hermes online substrate', () => {
-  const { fixtureRoot, hermesPath } = createFakeHermesFixture(`
-if [ "$1" = "version" ]; then
-  echo "Hermes Agent v9.9.9-test"
-  exit 0
-fi
-if [ "$1" = "gateway" ] && [ "$2" = "status" ]; then
-  cat <<'EOF'
-Launchd plist: /tmp/ai.hermes.gateway.plist
-✓ Service definition matches the current Hermes install
-✓ Gateway service is loaded
-EOF
-  exit 0
-fi
-echo "unexpected fake-hermes args: $*" >&2
-exit 1
-`);
-  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-runtime-manager-state-'));
-
-  try {
-    const output = runCli(['runtime', 'manager'], {
-      OPL_HERMES_BIN: hermesPath,
-      OPL_STATE_DIR: stateRoot,
-    });
-
-    assert.equal(output.version, 'g2');
-    assert.equal(output.runtime_manager.surface_id, 'opl_runtime_manager');
-    assert.equal(output.runtime_manager.layer_role, 'product_control_plane_over_required_hermes_online_runtime_substrate');
-    assert.equal(output.runtime_manager.status, 'ready');
-    assert.equal(output.runtime_manager.owner_split.online_runtime_substrate_owner, 'upstream_hermes_agent');
-    assert.equal(output.runtime_manager.owner_split.product_control_plane_owner, 'one-person-lab');
-    assert.equal(output.runtime_manager.non_goals.includes('not_a_domain_runtime_truth_owner'), true);
-    assert.equal(output.runtime_manager.registration_registry.surface_kind, 'opl_runtime_manager_registration_registry');
-    assert.equal(output.runtime_manager.registration_registry.domains.length, 3);
-    assert.equal(
-      output.runtime_manager.registration_registry.domains[0].expected_registration_surface.ref,
-      '/skill_catalog/skills/0/domain_projection/opl_runtime_manager_registration',
-    );
-    assert.deepEqual(
-      output.runtime_manager.registration_registry.domains[2].consumable_projection_refs.slice(-2),
-      ['/review_state', '/publication_projection'],
-    );
-    assert.equal(
-      output.runtime_manager.registration_registry.required_domain_registration_fields.includes('state_index_inputs'),
-      true,
-    );
-    assert.equal(output.runtime_manager.native_helper_target.status, 'contracted_optional_rust_helpers');
-    assert.equal(output.runtime_manager.native_helper_target.language, 'rust');
-    assert.equal(output.runtime_manager.native_helper_target.protocol.transport, 'cli_stdio');
-    assert.deepEqual(
-      output.runtime_manager.native_helper_target.helpers.map((helper: { helper_id: string }) => helper.helper_id),
-      ['opl-sysprobe', 'opl-doctor-native', 'opl-runtime-watch', 'opl-artifact-indexer', 'opl-state-indexer'],
-    );
-    assert.equal(output.runtime_manager.state_index_target.status, 'rust_helper_backed_contract_first');
-    assert.equal(
-      output.runtime_manager.state_index_target.index_catalog.artifact_projection_index.backing_helper_id,
-      'opl-artifact-indexer',
-    );
-    const nativeHelperContract = JSON.parse(
-      fs.readFileSync(path.join(repoRoot, 'contracts/opl-gateway/native-helper-contract.json'), 'utf8'),
-    );
-    assert.deepEqual(
-      nativeHelperContract.helpers.map((helper: { helper_id: string }) => helper.helper_id),
-      output.runtime_manager.native_helper_target.helpers.map((helper: { helper_id: string }) => helper.helper_id),
-    );
-    assert.equal(output.runtime_manager.future_sidecar_migration.enabled_now, false);
-  } finally {
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(stateRoot, { recursive: true, force: true });
   }
 });
 
