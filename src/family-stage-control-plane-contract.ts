@@ -14,7 +14,7 @@ export type FamilyStageKind =
 
 export interface FamilyStageSurfaceRef {
   ref_kind?: string;
-  ref: string;
+  ref: string | string[];
   role?: string;
   label?: string;
 }
@@ -34,6 +34,9 @@ export interface FamilyStageDescriptor {
   outputs: FamilyStageSurfaceRef[];
   evaluation: FamilyStageSurfaceRef[];
   handoff: JsonRecord | null;
+  source_refs: FamilyStageSurfaceRef[];
+  freshness: JsonRecord | null;
+  action_parity: JsonRecord | null;
   authority_boundary: JsonRecord;
 }
 
@@ -73,13 +76,25 @@ function readStringList(value: unknown) {
     .filter((entry): entry is string => Boolean(entry));
 }
 
+function normalizeRefValue(value: unknown, field: string) {
+  const text = optionalString(value);
+  if (text) {
+    return text;
+  }
+  const values = readStringList(value);
+  if (values.length > 0) {
+    return values;
+  }
+  throw new Error(`Missing required string or string-list field: ${field}`);
+}
+
 function normalizeSurfaceRef(value: unknown, field: string): FamilyStageSurfaceRef {
   if (!isRecord(value)) {
     throw new Error(`${field} must be an object.`);
   }
   return {
     ...(optionalString(value.ref_kind) ? { ref_kind: optionalString(value.ref_kind)! } : {}),
-    ref: requireString(value.ref, `${field}.ref`),
+    ref: normalizeRefValue(value.ref, `${field}.ref`),
     ...(optionalString(value.role) ? { role: optionalString(value.role)! } : {}),
     ...(optionalString(value.label) ? { label: optionalString(value.label)! } : {}),
   };
@@ -137,6 +152,9 @@ function normalizeFamilyStageDescriptor(value: unknown, field: string): FamilySt
     outputs: normalizeSurfaceRefs(value.outputs, `${field}.outputs`),
     evaluation: normalizeSurfaceRefs(value.evaluation, `${field}.evaluation`),
     handoff: isRecord(value.handoff) ? value.handoff : null,
+    source_refs: normalizeSurfaceRefs(value.source_refs, `${field}.source_refs`),
+    freshness: isRecord(value.freshness) ? value.freshness : null,
+    action_parity: isRecord(value.action_parity) ? value.action_parity : null,
     authority_boundary: boundary,
   };
 }
