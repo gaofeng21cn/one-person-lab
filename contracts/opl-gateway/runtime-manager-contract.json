@@ -1,12 +1,12 @@
 {
-  "version": "v1",
+  "version": "v2",
   "contract_id": "opl_runtime_manager_contract",
   "contract_ref": "contracts/opl-gateway/runtime-manager-contract.json",
-  "scope": "opl_product_control_plane_over_required_hermes_online_runtime_substrate",
-  "description": "Freezes the OPL Runtime Manager boundary. Hermes-Agent is the required online runtime substrate for Full OPL family readiness; OPL owns the typed family queue, dispatch contracts, profile wiring, diagnostics, task registration hydration, status projection, optional native helper catalog, and high-frequency state indexes while domain repositories keep truth and quality authority.",
+  "scope": "opl_product_control_plane_over_provider_backed_family_runtime",
+  "description": "Freezes the OPL Runtime Manager boundary. OPL owns provider selection, typed family queue, stage attempt ledger, dispatch contracts, profile wiring, diagnostics, task registration hydration, status projection, optional native helper catalog, and high-frequency state indexes while domain repositories keep truth and quality authority.",
   "owner_split": {
     "product_control_plane_owner": "one-person-lab",
-    "online_runtime_substrate_owner": "upstream_hermes_agent",
+    "online_runtime_substrate_owner": "provider_backed_family_runtime",
     "domain_truth_owners": [
       "med-autoscience",
       "med-autogrant",
@@ -14,11 +14,27 @@
     ],
     "concrete_executor_owner": "route_selected_by_domain_contract"
   },
+  "provider_runtime": {
+    "provider_model": "provider_backed_stage_attempt_runtime",
+    "allowed_providers": [
+      "local_sqlite",
+      "hermes_legacy",
+      "temporal"
+    ],
+    "default_resolution": {
+      "env": "OPL_FAMILY_RUNTIME_PROVIDER",
+      "offline_env": "OPL_DISABLE_HERMES_ONLINE=1 only affects explicitly selected hermes_legacy provider readiness",
+      "fallback": "local_sqlite"
+    },
+    "production_candidate": "temporal",
+    "legacy_provider": "hermes_legacy",
+    "local_provider": "local_sqlite"
+  },
   "manager_responsibilities": [
-    "provision_supported_hermes_runtime_for_full_online_family_runtime",
-    "pin_hermes_runtime_version_and_profile",
+    "select_supported_family_runtime_provider",
+    "project_provider_readiness_and_stage_attempt_history",
     "own_typed_family_queue_and_domain_dispatch_contracts",
-    "wire_hermes_cron_webhook_delivery_and_approval_transport",
+    "wire_provider_wakeup_signal_delivery_and_approval_transport",
     "hydrate_domain_task_registration_contracts",
     "project_runtime_status_into_opl_sessions_progress_artifacts",
     "provide_runtime_doctor_repair_resume_entrypoints",
@@ -56,7 +72,8 @@
     "not_a_domain_artifact_gate_owner",
     "not_a_domain_truth_owner",
     "not_a_concrete_executor",
-    "not_a_private_fork_of_hermes_agent"
+    "not_a_private_fork_of_hermes_agent",
+    "not_a_temporal_server_owner"
   ],
   "native_helper_target": {
     "status": "contracted_optional_rust_helpers",
@@ -185,8 +202,10 @@
     "contract_ref": "contracts/opl-gateway/family-runtime-online-substrate-contract.json",
     "command": "opl family-runtime status",
     "state_path": "${OPL_STATE_DIR}/family-runtime/queue.sqlite",
-    "wakeup_bridge": "hermes cron -> opl family-runtime tick --source hermes-cron --hydrate",
-    "webhook_bridge": "hermes webhook -> opl family-runtime enqueue"
+    "provider_model": "provider_backed_stage_attempt_runtime",
+    "stage_attempt_ledger": "${OPL_STATE_DIR}/family-runtime/queue.sqlite#stage_attempts",
+    "wakeup_bridge": "provider wakeup -> opl family-runtime tick --source <provider> --hydrate",
+    "webhook_bridge": "provider signal/webhook -> opl family-runtime enqueue"
   },
   "tray_snapshot_projection": {
     "surface_kind": "opl_runtime_tray_snapshot",
@@ -210,9 +229,9 @@
     ],
     "daemon_policy": {
       "local_daemon_added": false,
-      "runtime_kernel_owner": "upstream_hermes_agent",
-      "sidecar_promotion_gate": "Only promote beyond a thin manager if Hermes cannot express required task, wakeup, approval, audit, or product isolation contracts."
+      "runtime_kernel_owner": "provider_backed_family_runtime",
+      "sidecar_promotion_gate": "Only promote beyond provider adapters if supported providers cannot express required task, wakeup, approval, audit, or product isolation contracts."
     }
   },
-  "future_sidecar_promotion_gate": "Only promote beyond a thin manager if Hermes cannot express required task, wakeup, approval, audit, or product isolation contracts."
+  "future_sidecar_promotion_gate": "Only promote beyond provider adapters if supported providers cannot express required task, wakeup, approval, audit, or product isolation contracts."
 }

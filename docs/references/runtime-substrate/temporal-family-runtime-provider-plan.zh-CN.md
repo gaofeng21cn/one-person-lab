@@ -59,19 +59,24 @@ Provider 层不持有：
 
 ### P0. Provider Abstraction Freeze
 
+状态：已落地到可用机器面。
+
 交付：
 
-- 冻结 provider 枚举：`local_sqlite`、`hermes_legacy`、`temporal`。
-- 统一 provider readiness、attempt status、signal/query、receipt、dead-letter 字段。
-- `OPL Runtime Manager` 与 `opl family-runtime` 文案和输出改为 provider-backed 口径。
+- 已冻结 provider 枚举：`local_sqlite`、`hermes_legacy`、`temporal`。
+- 已统一 provider readiness、attempt status、receipt 与 dead-letter 字段；Temporal 先以 `skeleton_contract_ready` 暴露，真实 worker 仍属 P1。
+- `OPL Runtime Manager` 与 `opl family-runtime` 文案和输出已改为 provider-backed 口径。
+- `opl family-runtime attempt create|list|inspect` 已可写入 / 读取 SQLite stage attempt ledger。
 
 验收：
 
-- 现有 Hermes/local 路径能作为 `hermes_legacy` 或 `local_sqlite` provider 被识别。
-- 没有文档或合同把 Hermes 写成未来目标唯一 substrate。
+- 已通过 focused CLI / contract tests 验证现有 Hermes/local 路径能作为 `hermes_legacy` 或 `local_sqlite` provider 被识别。
+- 活跃合同不再把 Hermes 写成未来目标唯一 substrate；历史文档只保留 supersede 语境。
 - Direct Codex skill path 不受 provider abstraction 影响。
 
 ### P1. Temporal Stage Workflow Skeleton
+
+状态：未落地。当前只冻结了 Temporal provider contract surface；还没有引入 Temporal SDK、dev server、worker 或 workflow/activity 实现。
 
 交付：
 
@@ -113,6 +118,8 @@ Provider 层不持有：
 - MAG/RCA 质量与导出 verdict 仍回到各自 domain gate。
 
 ### P4. Visibility And Operator Console
+
+状态：部分落地。CLI 已显示 provider kind、attempt id、stage attempt summary、task-bound attempt refs；OPL App / GUI projection 仍待接入同一 ledger。
 
 交付：
 

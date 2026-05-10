@@ -133,6 +133,8 @@ Codex CLI 负责：
 
 ### Lane 2. Stage Attempt Ledger
 
+状态：已落地到 `opl family-runtime attempt create|list|inspect` 和 `${OPL_STATE_DIR}/family-runtime/queue.sqlite#stage_attempts`。当前实现覆盖本地 ledger、provider receipt、task-bound lifecycle projection；OPL App 展示仍属于后续 visibility lane。
+
 目标：把一次 stage 执行变成可恢复、可审计的 attempt。
 
 交付：

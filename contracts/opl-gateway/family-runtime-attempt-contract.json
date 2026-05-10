@@ -1,7 +1,13 @@
 {
   "contract_kind": "opl_family_runtime_attempt_contract.v1",
   "owner": "one-person-lab",
-  "scope": "family-level projection vocabulary for domain-owned runtime attempts",
+  "scope": "family-level provider-backed stage attempt ledger and projection vocabulary for domain-owned runtime attempts",
+  "provider_model": "provider_backed_stage_attempt_runtime",
+  "allowed_providers": [
+    "local_sqlite",
+    "hermes_legacy",
+    "temporal"
+  ],
   "observability_only": true,
   "opl_runtime_manager_role": [
     "read domain-owned durable surfaces",
@@ -19,12 +25,37 @@
   "attempt_states": [
     "unclaimed",
     "claimed",
+    "queued",
     "running",
+    "checkpointed",
     "retry_queued",
+    "human_gate",
     "released",
+    "completed",
     "succeeded",
     "failed",
-    "blocked"
+    "blocked",
+    "dead_lettered"
+  ],
+  "required_ledger_fields": [
+    "stage_attempt_id",
+    "provider_kind",
+    "workflow_id",
+    "domain_id",
+    "stage_id",
+    "workspace_locator",
+    "source_fingerprint",
+    "executor_kind",
+    "status",
+    "checkpoint_refs",
+    "closeout_refs",
+    "human_gate_refs",
+    "retry_budget",
+    "attempt_count",
+    "task_id",
+    "blocked_reason",
+    "provider_receipt",
+    "authority_boundary"
   ],
   "required_projection_fields": [
     "attempt_state",
@@ -54,4 +85,3 @@
     "redcube-ai"
   ]
 }
-

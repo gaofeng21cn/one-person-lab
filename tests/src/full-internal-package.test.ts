@@ -176,10 +176,10 @@ test('readme documents GitHub Release first-install distribution and app update 
   assert.match(text, /ui-ux-pro-max/);
   assert.doesNotMatch(text, /Application Support\/OPL\/runtime\/26\.5\.1/);
   assert.match(text, /API key/);
-  assert.match(text, /Full 包内置 Hermes online runtime substrate/);
-  assert.match(text, /确认 Core ready、Domain modules ready、Hermes online runtime ready 三层状态/);
+  assert.match(text, /Full 包内置 family runtime provider payload/);
+  assert.match(text, /确认 Core ready、Domain modules ready、family runtime provider ready 三层状态/);
   assert.match(text, /Full 完整通过要求三层都 ready/);
-  assert.match(text, /ai\.hermes\.gateway/);
+  assert.match(text, /hermes_legacy provider/);
   assert.doesNotMatch(text, /MDS backend/);
   assert.match(text, /当前标准 GitHub DMG 的同等发布模式/);
   assert.match(text, /右键打开/);

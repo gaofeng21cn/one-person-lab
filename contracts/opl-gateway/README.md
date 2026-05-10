@@ -9,8 +9,8 @@ It is still repo-tracked because parts of the corpus remain useful for:
 - schema archaeology
 - a small set of shared compatibility artifacts still referenced by repo-tracked tests or manifests
 
-Some gateway-first files remain compatibility material, but the Runtime Manager and family runtime contracts are active again for the Hermes-first online runtime line.
-The current mainline is `Codex-default executor + explicit OPL activation + Hermes online runtime substrate + family skill sync/discovery`.
+Some gateway-first files remain compatibility material, but the Runtime Manager and family runtime contracts are active for the provider-backed family runtime line.
+The current mainline is `Codex-default executor + explicit OPL activation + configured family runtime provider + family skill sync/discovery`.
 
 ## Current Truth Lives Elsewhere
 
@@ -28,7 +28,7 @@ Read the linked domain repositories when you need the current repo-owned capabil
 ## How To Read This Directory
 
 - `workstreams.json`, `domains.json`, `routing-vocabulary.json`, `handoff.schema.json`, `routed-actions.schema.json`, and `public-surface-index.json` are legacy gateway-first material.
-- `family-runtime-online-substrate-contract.json`, `managed-runtime-three-layer-contract.json`, and `runtime-manager-contract.json` are active machine-readable runtime/control-plane contracts.
+- `family-runtime-online-substrate-contract.json`, `managed-runtime-three-layer-contract.json`, and `runtime-manager-contract.json` are active machine-readable provider-backed runtime/control-plane contracts.
 - `family-executor-adapter-defaults.json` remains useful as a shared executor compatibility artifact.
 - onboarding, backlog, acceptance, example, and operating-record files remain reference-grade audit material.
 
@@ -63,5 +63,5 @@ Unless a newer core document explicitly promotes a file back into the active mai
 ## Reading Rule
 
 - treat gateway-first files as legacy compatibility material unless a newer core doc explicitly says otherwise
-- treat Runtime Manager and family runtime contracts as active for the Hermes-first online runtime line
+- treat Runtime Manager and family runtime contracts as active for the provider-backed family runtime line
 - keep domain truth owned by the linked domain repositories, not by this directory

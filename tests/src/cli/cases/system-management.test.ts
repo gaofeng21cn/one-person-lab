@@ -54,6 +54,14 @@ if [[ "$1" == "gateway" && "$2" == "status" ]]; then
   echo "Gateway service is loaded"
   exit 0
 fi
+if [[ "$1" == "cron" && "$2" == "list" ]]; then
+  echo "Name: opl-family-runtime-tick"
+  exit 0
+fi
+if [[ "$1" == "webhook" && "$2" == "list" ]]; then
+  echo "opl-family-runtime-webhook"
+  exit 0
+fi
 echo "Unsupported hermes fixture command: $*" >&2
 exit 1
 `);
@@ -102,6 +110,11 @@ exit 1
             update_summary: string | null;
             gateway_loaded: boolean;
             health_status: string;
+          };
+          family_runtime_provider: {
+            provider_kind: string;
+            health_status: string;
+            status: string;
           };
         };
         native_helpers: {
@@ -161,6 +174,8 @@ exit 1
     assert.equal(output.system.core_engines.hermes.update_summary, null);
     assert.equal(output.system.core_engines.hermes.gateway_loaded, true);
     assert.equal(output.system.core_engines.hermes.health_status, 'ready');
+    assert.equal(output.system.core_engines.family_runtime_provider.provider_kind, 'hermes_legacy');
+    assert.equal(output.system.core_engines.family_runtime_provider.health_status, 'ready');
     assert.equal(output.system.native_helpers.lifecycle.status, 'ready_to_build');
     assert.equal(output.system.native_helpers.lifecycle.commands.repair, 'npm run native:repair');
     assert.equal(output.system.native_helpers.runtime.discovery.repair_command, 'npm run native:repair');
@@ -332,6 +347,7 @@ exit 1
         HOME: homeRoot,
         CODEX_HOME: codexConfigFixture.codexHome,
         OPL_HERMES_BIN: hermesFixture.hermesPath,
+        OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
         OPL_STATE_DIR: stateDir,
         OPL_MODULES_ROOT: path.join(homeRoot, 'modules'),
         OPL_WORKSPACE_ROOT: workspaceRoot,
@@ -433,7 +449,7 @@ exit 1
     assert.equal(output.system_initialize.setup_flow.is_first_run, false);
     assert.equal(output.system_initialize.setup_flow.ready_to_launch, false);
     assert.equal(output.system_initialize.setup_flow.phase, 'modules');
-    assert.deepEqual(output.system_initialize.setup_flow.blocking_items, ['domain_modules']);
+    assert.deepEqual(output.system_initialize.setup_flow.blocking_items, ['family_runtime_provider', 'domain_modules']);
     assert.equal(
       output.system_initialize.setup_flow.progress.ready_required_count <
       output.system_initialize.setup_flow.progress.total_required_count,
@@ -516,7 +532,7 @@ exit 1
   }
 });
 
-test('system initialize reports unloaded Hermes gateway as Full readiness degradation only', () => {
+test('system initialize reports selected Hermes legacy provider as blocking Full readiness when gateway is unloaded', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-initialize-online-management-home-'));
   const stateDir = path.join(homeRoot, 'opl-state');
   const modulesRoot = path.join(homeRoot, 'modules');
@@ -556,6 +572,7 @@ exit 1
         HOME: homeRoot,
         CODEX_HOME: codexConfigFixture.codexHome,
         OPL_HERMES_BIN: hermesFixture.hermesPath,
+        OPL_FAMILY_RUNTIME_PROVIDER: 'hermes_legacy',
         OPL_STATE_DIR: stateDir,
         OPL_MODULES_ROOT: modulesRoot,
         OPL_WORKSPACE_ROOT: workspaceRoot,
@@ -569,6 +586,7 @@ exit 1
           domain_ready: boolean;
           online_management_ready: boolean;
           launch_ready: boolean;
+          family_runtime_provider_ready: boolean;
           full_ready: boolean;
         };
         setup_flow: {
@@ -579,6 +597,7 @@ exit 1
         online_management: {
           surface_id: string;
           status: string;
+          provider_kind: string;
           blocking: boolean;
           full_online_blocking: boolean;
           ready: boolean;
@@ -614,35 +633,37 @@ exit 1
       domain_ready: true,
       online_management_ready: false,
       launch_ready: true,
+      family_runtime_provider_ready: false,
       full_ready: false,
     });
-    assert.equal(output.system_initialize.setup_flow.phase, 'review');
-    assert.equal(output.system_initialize.setup_flow.ready_to_launch, true);
-    assert.deepEqual(output.system_initialize.setup_flow.blocking_items, []);
+    assert.equal(output.system_initialize.setup_flow.phase, 'environment');
+    assert.equal(output.system_initialize.setup_flow.ready_to_launch, false);
+    assert.deepEqual(output.system_initialize.setup_flow.blocking_items, ['family_runtime_provider']);
     assert.equal(output.system_initialize.online_management.surface_id, 'opl_online_management');
     assert.equal(output.system_initialize.online_management.status, 'initializing');
-    assert.equal(output.system_initialize.online_management.blocking, false);
+    assert.equal(output.system_initialize.online_management.provider_kind, 'hermes_legacy');
+    assert.equal(output.system_initialize.online_management.blocking, true);
     assert.equal(output.system_initialize.online_management.full_online_blocking, true);
     assert.equal(output.system_initialize.online_management.ready, false);
     assert.match(
       output.system_initialize.online_management.capability_summary,
-      /Full OPL readiness remains degraded/i,
+      /hermes_legacy/i,
     );
     assert.equal(output.system_initialize.online_management.repair_action.action_id, 'repair_hermes_gateway');
     assert.deepEqual(output.system_initialize.online_management.repair_action.payload_template, { action: 'repair' });
-    assert.equal(output.system_initialize.online_management.service_status.engine_id, 'hermes');
+    assert.equal(output.system_initialize.online_management.service_status.engine_id, 'hermes_legacy');
     assert.equal(output.system_initialize.online_management.service_status.installed, true);
     assert.equal(output.system_initialize.online_management.service_status.gateway_loaded, false);
     assert.equal(output.system_initialize.online_management.service_status.health_status, 'attention_needed');
     assert.equal(output.system_initialize.online_management.last_repair_result, null);
 
-    const onlineManagementItem = output.system_initialize.checklist.find((entry) => entry.item_id === 'hermes');
+    const onlineManagementItem = output.system_initialize.checklist.find((entry) => entry.item_id === 'family_runtime_provider');
     assert.ok(onlineManagementItem);
-    assert.equal(onlineManagementItem.label, 'Hermes Online Runtime');
-    assert.equal(onlineManagementItem.required, false);
-    assert.equal(onlineManagementItem.blocking, false);
-    assert.match(onlineManagementItem.detail_summary, /Full OPL online readiness waits for the gateway/i);
-    assert.equal(output.system_initialize.recommended_next_action.action_id, 'review_initialize');
+    assert.equal(onlineManagementItem.label, 'Family Runtime Provider');
+    assert.equal(onlineManagementItem.required, true);
+    assert.equal(onlineManagementItem.blocking, true);
+    assert.match(onlineManagementItem.detail_summary, /hermes_legacy/i);
+    assert.equal(output.system_initialize.recommended_next_action.action_id, 'repair_hermes_gateway');
   } finally {
     fs.rmSync(codexConfigFixture.codexHome, { recursive: true, force: true });
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
@@ -674,6 +695,18 @@ if [[ "$1" == "gateway" && "$2" == "status" ]]; then
     echo "Gateway service is loaded"
   else
     echo "Gateway service is not loaded"
+  fi
+  exit 0
+fi
+if [[ "$1" == "cron" && "$2" == "list" ]]; then
+  if [[ -f ${shellSingleQuote(gatewayState)} ]]; then
+    echo "Name: opl-family-runtime-tick"
+  fi
+  exit 0
+fi
+if [[ "$1" == "webhook" && "$2" == "list" ]]; then
+  if [[ -f ${shellSingleQuote(gatewayState)} ]]; then
+    echo "opl-family-runtime-webhook"
   fi
   exit 0
 fi
@@ -718,7 +751,8 @@ exit 1
           after: {
             reconcile: {
               checked_surfaces: {
-                hermes_runtime: string;
+                provider_runtime: string;
+                hermes_legacy_runtime: string;
               };
             };
           };
@@ -754,15 +788,19 @@ exit 1
     assert.deepEqual(output.install.non_blocking_actions, []);
     assert.deepEqual(output.install.background_actions, []);
     assert.equal(
-      output.install.runtime_manager_action.after.reconcile.checked_surfaces.hermes_runtime,
-      'online_runtime_attention',
+      output.install.runtime_manager_action.after.reconcile.checked_surfaces.provider_runtime,
+      'ready',
+    );
+    assert.equal(
+      output.install.runtime_manager_action.after.reconcile.checked_surfaces.hermes_legacy_runtime,
+      'online_runtime_missing',
     );
     assert.equal(output.install.system_initialize.core_engines.hermes.health_status, 'attention_needed');
     assert.equal(output.install.system_initialize.core_engines.hermes.gateway_loaded, false);
-    assert.equal(output.install.system_initialize.online_management.status, 'initializing');
+    assert.equal(output.install.system_initialize.online_management.status, 'ready');
     assert.equal(output.install.system_initialize.online_management.blocking, false);
-    assert.equal(output.install.system_initialize.online_management.full_online_blocking, true);
-    assert.equal(output.install.system_initialize.online_management.ready, false);
+    assert.equal(output.install.system_initialize.online_management.full_online_blocking, false);
+    assert.equal(output.install.system_initialize.online_management.ready, true);
     assert.equal(
       output.install.first_run_log_events.some((entry) =>
         entry.event_type === 'online_management_repair_started'

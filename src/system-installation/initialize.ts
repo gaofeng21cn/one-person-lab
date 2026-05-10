@@ -80,17 +80,22 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
   const guiShell = buildOplGuiShellSurface(resolveProjectRoot());
   const codex = environment.core_engines.codex;
   const hermes = environment.core_engines.hermes;
+  const familyRuntimeProvider = environment.core_engines.family_runtime_provider;
   const codexCliReady = codex.health_status === 'ready';
   const codexConfigReady = codex.config_status === 'detected' && codex.api_key_present === true;
-  const hermesReady = hermes.health_status === 'ready' && hermes.gateway_loaded === true;
+  const providerReady = familyRuntimeProvider.health_status === 'ready';
   const coreReady =
     workspaceRoot.health_status === 'ready'
     && codexCliReady
     && codexConfigReady;
   const domainReady = defaultModuleReady === defaultModuleTotal;
-  const onlineManagementStatus = buildOnlineManagementStatus(hermes);
+  const onlineManagementStatus = providerReady
+    ? 'ready'
+    : familyRuntimeProvider.provider_kind === 'temporal' && familyRuntimeProvider.status === 'contract_ready'
+      ? 'initializing'
+      : buildOnlineManagementStatus(hermes);
   const launchReady = coreReady && domainReady;
-  const fullReady = launchReady && hermesReady;
+  const fullReady = coreReady && domainReady && providerReady;
 
   const setWorkspaceRootAction = buildInitializeActionDescriptor({
     action_id: 'set_workspace_root',
@@ -129,14 +134,14 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
   const openEnvironmentAction = buildInitializeActionDescriptor({
     action_id: 'open_environment',
     label: 'Review environment',
-    description: 'Inspect Codex, Hermes, and managed paths before continuing.',
+    description: 'Inspect Codex, family runtime provider, Hermes legacy bridge, and managed paths before continuing.',
     section_id: 'environment',
     endpoint: endpoints.system_environment,
   });
   const installHermesAction = buildInitializeActionDescriptor({
     action_id: 'install_or_configure_hermes',
-    label: 'Install Hermes online runtime',
-    description: 'Install Hermes-Agent as the default online substrate for OPL family wakeup, queue delivery, sessions, approvals, and notifications.',
+    label: 'Install Hermes legacy provider',
+    description: 'Install Hermes-Agent only when the hermes_legacy provider is selected for migration-period wakeup and webhook support.',
     section_id: 'environment',
     endpoint: endpoints.engine_action,
     method: 'POST',
@@ -155,6 +160,13 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
     payload_template: {
       action: 'repair',
     },
+  });
+  const reviewFamilyRuntimeProviderAction = buildInitializeActionDescriptor({
+    action_id: 'review_family_runtime_provider',
+    label: 'Review family runtime provider',
+    description: 'Inspect the configured family runtime provider and report provider-specific setup requirements.',
+    section_id: 'environment',
+    endpoint: endpoints.system_environment,
   });
   const repairNativeHelpersAction = buildInitializeActionDescriptor({
     action_id: 'repair_native_helpers',
@@ -235,24 +247,26 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
       action: codexConfigReady ? openEnvironmentAction : configureCodexAction,
     },
     {
-      item_id: 'hermes',
-      label: 'Hermes Online Runtime',
+      item_id: 'family_runtime_provider',
+      label: 'Family Runtime Provider',
       status: onlineManagementStatus,
-      required: false,
-      blocking: false,
+      required: true,
+      blocking: !providerReady,
       section_id: 'environment',
-      detail_summary: hermesReady
-        ? `Hermes online runtime gateway is loaded from ${hermes.binary_path ?? 'unknown path'}.`
-        : hermes.installed
-          ? `Installed at ${hermes.binary_path ?? 'unknown path'}; Full OPL online readiness waits for the gateway to load.`
-          : 'Install Hermes-Agent to enable the Full OPL 24h online family runtime substrate.',
+      detail_summary: providerReady
+        ? `Provider ${familyRuntimeProvider.provider_kind} is ready for family runtime attempts.`
+        : familyRuntimeProvider.degraded_reason
+          ? `Provider ${familyRuntimeProvider.provider_kind} needs attention: ${familyRuntimeProvider.degraded_reason}.`
+          : `Provider ${familyRuntimeProvider.provider_kind} is not ready.`,
       endpoint: endpoints.system_environment,
-      action_endpoint: hermes.installed ? endpoints.system_action : endpoints.engine_action,
-      action: hermesReady
+      action_endpoint: familyRuntimeProvider.provider_kind === 'hermes_legacy'
+        ? (hermes.installed ? endpoints.system_action : endpoints.engine_action)
+        : endpoints.system_environment,
+      action: providerReady
         ? openEnvironmentAction
-        : hermes.installed
-          ? repairHermesGatewayAction
-          : installHermesAction,
+        : familyRuntimeProvider.provider_kind === 'hermes_legacy'
+          ? (hermes.installed ? repairHermesGatewayAction : installHermesAction)
+          : reviewFamilyRuntimeProviderAction,
     },
     {
       item_id: 'native_helpers',
@@ -327,7 +341,9 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
         ? 'environment'
         : defaultModuleReady < defaultModuleTotal
           ? 'modules'
-          : 'review';
+          : !providerReady
+            ? 'environment'
+            : 'review';
   const recommendedNextAction =
     setupPhase === 'workspace_root'
       ? setWorkspaceRootAction
@@ -336,8 +352,10 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
           ? installCodexAction
           : !codexConfigReady
             ? configureCodexAction
-            : !hermesReady
-              ? (hermes.installed ? repairHermesGatewayAction : installHermesAction)
+            : !providerReady
+              ? (familyRuntimeProvider.provider_kind === 'hermes_legacy'
+                ? (hermes.installed ? repairHermesGatewayAction : installHermesAction)
+                : reviewFamilyRuntimeProviderAction)
               : openEnvironmentAction)
         : setupPhase === 'modules'
           ? reviewModulesAction
@@ -371,28 +389,30 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
       readiness: {
         core_ready: coreReady,
         domain_ready: domainReady,
-        online_management_ready: hermesReady,
+        online_management_ready: providerReady,
         launch_ready: launchReady,
+        family_runtime_provider_ready: providerReady,
         full_ready: fullReady,
       },
       online_management: {
         surface_id: 'opl_online_management',
         status: onlineManagementStatus,
-        blocking: false,
-        full_online_blocking: !hermesReady,
-        ready: hermesReady,
-        capability_summary: hermesReady
-          ? 'Hermes online runtime is ready for long-running gateway-backed family automation.'
-          : hermes.installed
-            ? 'Hermes online runtime is installed but not fully loaded; Full OPL readiness remains degraded until repair completes.'
-            : 'Hermes online runtime is missing; local CLI/status diagnostics can continue but Full OPL online readiness is degraded.',
-        repair_action: hermesReady
+        provider_kind: familyRuntimeProvider.provider_kind,
+        blocking: !providerReady,
+        full_online_blocking: !providerReady,
+        ready: providerReady,
+        capability_summary: providerReady
+          ? `Family runtime provider ${familyRuntimeProvider.provider_kind} is ready for provider-backed stage attempts.`
+          : familyRuntimeProvider.degraded_reason
+            ? `Family runtime provider ${familyRuntimeProvider.provider_kind} is not ready: ${familyRuntimeProvider.degraded_reason}.`
+            : `Family runtime provider ${familyRuntimeProvider.provider_kind} is not ready.`,
+        repair_action: providerReady
           ? openEnvironmentAction
-          : hermes.installed
-            ? repairHermesGatewayAction
-            : installHermesAction,
+          : familyRuntimeProvider.provider_kind === 'hermes_legacy'
+            ? (hermes.installed ? repairHermesGatewayAction : installHermesAction)
+            : reviewFamilyRuntimeProviderAction,
         service_status: {
-          engine_id: 'hermes',
+          engine_id: familyRuntimeProvider.provider_kind,
           installed: hermes.installed,
           gateway_loaded: hermes.gateway_loaded,
           binary_path: hermes.binary_path,
@@ -470,7 +490,7 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
       notes: [
         'Initialize OPL reuses the same truth surfaces as long-lived settings management.',
         'Workspace root and update channel are stored in OPL-managed state files.',
-        'Hermes online runtime is required for Full OPL readiness. Local CLI/status surfaces can still report degraded diagnostics when Hermes is missing or disabled.',
+        'A configured family runtime provider is required for Full OPL readiness. Local CLI/status surfaces can still report degraded diagnostics when the online provider is missing or disabled.',
         'The OPL desktop GUI is an OPL-branded shell maintained in opl-aion-shell on top of the AionUI codebase; the upstream AionUI app is not itself the OPL GUI.',
       ],
     },

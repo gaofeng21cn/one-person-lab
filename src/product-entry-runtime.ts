@@ -3,6 +3,7 @@ import {
   resolveCodexBinary,
   runCodexCommand,
 } from './codex.ts';
+import { inspectFamilyRuntimeProvider, resolveFamilyRuntimeProviderKind } from './family-runtime-providers.ts';
 import {
   buildHermesCliPreview,
   buildHermesLogsArgs,
@@ -29,9 +30,11 @@ import {
 
 export function buildProductEntryDoctor(validation: ContractValidationSummary) {
   const codex = resolveCodexBinary();
+  const providerKind = resolveFamilyRuntimeProviderKind();
+  const provider = inspectFamilyRuntimeProvider(providerKind);
   const hermes = inspectHermesRuntime();
   const localEntryReady = Boolean(codex);
-  const onlineRuntimeReady = Boolean(hermes.binary && hermes.gateway_service.loaded);
+  const onlineRuntimeReady = provider.ready;
   const ready = localEntryReady && onlineRuntimeReady;
 
   return {
@@ -39,17 +42,19 @@ export function buildProductEntryDoctor(validation: ContractValidationSummary) {
     validation,
     product_entry: {
       entry_surface: 'opl_local_product_entry_shell',
-      runtime_substrate: 'codex_default_executor_with_hermes_online_runtime_substrate',
+      runtime_substrate: 'codex_default_executor_with_provider_backed_family_runtime',
       ready,
       local_entry_ready: localEntryReady,
       online_runtime_ready: onlineRuntimeReady,
-      messaging_gateway_ready: hermes.gateway_service.loaded,
+      configured_provider: providerKind,
+      messaging_gateway_ready: providerKind === 'hermes_legacy' ? hermes.gateway_service.loaded : provider.ready,
+      family_runtime_provider: provider,
       hermes,
-      issues: hermes.issues,
+      issues: provider.degraded_reason ? [provider.degraded_reason, ...hermes.issues] : hermes.issues,
       notes: [
         'Codex-default local entry is provided through `opl`, `opl exec`, and `opl resume`.',
         'Use `opl skill sync` to register the family domain skill packs before default Codex sessions.',
-        'Hermes is the default online runtime substrate for Full OPL family readiness; `--executor hermes` remains a separate explicit executor route.',
+        'Full OPL readiness uses the configured family runtime provider; Hermes is now the hermes_legacy provider or an explicit executor route.',
       ],
     },
   };

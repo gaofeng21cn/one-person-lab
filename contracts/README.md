@@ -5,7 +5,7 @@
 - narrative 协作规则看仓库根 `AGENTS.md`
 - 默认人类/AI 入口看 `README*` 与 `docs/README*`
 - 历史 gateway/federation 兼容合同入口看 `contracts/opl-gateway/README.md`
-- 当前公开默认主路径是 `external shell or CLI -> Codex-default OPL session runtime -> OPL typed family queue / activation layer -> selected domain agent entry`；`Hermes-Agent` 是 Full OPL family 的 required online runtime substrate 与 gateway
+- 当前公开默认主路径是 `external shell or CLI -> Codex-default OPL session runtime -> OPL typed family queue / activation layer -> configured family runtime provider -> selected domain agent entry`；Temporal-backed provider 是生产 substrate 候选，Hermes-Agent 只作为 `hermes_legacy` provider 或显式 executor/proof lane
 - 当前 active domain agent 集合是 `MAS`、`MAG`、`RCA`；`MDS` 只作为 `MAS` 下的显式可选 backend/audit/oracle companion 进入环境管理和投影，不作为默认安装依赖或顶层 domain-agent entry。
 - 已退役的旧入口词族不是 OPL 当前合同面；若只在历史 gateway 语料或 domain 仓内部 command/schema contract 中出现，必须按对应层级阅读。
 
@@ -13,8 +13,8 @@
 
 - `contracts/opl-gateway/*.json`：历史 gateway-first 阶段冻结的 gateway、admission、acceptance 与 supporting-surface compatibility contract
 - `contracts/opl-gateway/README.md`：这些 JSON contract 的人类可读说明
-- `contracts/opl-gateway/runtime-manager-contract.json`：当前 OPL Runtime Manager 产品控制面合同；它冻结 OPL 如何管理外部 `Hermes-Agent` online substrate、typed family queue、domain dispatch、可选 native helper lifecycle、高频状态索引、prebuild/cache 策略与 freshness 口径，同时明确不复制 runtime kernel
-- `contracts/opl-gateway/family-runtime-online-substrate-contract.json`：Hermes-first online substrate 合同；它冻结 Hermes / OPL / domain repos 的 owner split、queue state、cron/webhook bridge、degraded diagnostic mode 与 forbidden authority
+- `contracts/opl-gateway/runtime-manager-contract.json`：当前 OPL Runtime Manager 产品控制面合同；它冻结 OPL 如何管理 provider-backed family runtime、typed family queue、stage attempt ledger、domain dispatch、可选 native helper lifecycle、高频状态索引、prebuild/cache 策略与 freshness 口径，同时明确不复制 runtime kernel
+- `contracts/opl-gateway/family-runtime-online-substrate-contract.json`：provider-backed family runtime 合同；它冻结 `local_sqlite`、`hermes_legacy`、`temporal` 的 owner split、queue state、stage attempt ledger、degraded diagnostic mode 与 forbidden authority
 - `contracts/opl-gateway/native-helper-contract.json`：OPL Rust native helper 的 JSON stdio 合同；它冻结 `opl-sysprobe`、`opl-doctor-native`、`opl-runtime-watch`、`opl-artifact-indexer` 与 `opl-state-indexer` 的输入输出边界，以及 helper 的 build / doctor / repair / prebuild / package 分发面
 - `contracts/opl-gateway/fresh-install-test-matrix.json`：OPL fresh install 与 GUI 首启验证矩阵；它冻结 CLI clean-room 场景、首启 JSONL 日志、GUI accessibility labels 与 VM 工件要求
 - `contracts/family-orchestration/*.schema.json`：跨 active 四仓线（`one-person-lab` + `MAS` + `MAG` + `RCA`）统一的 family orchestration companion schemas

@@ -82,7 +82,8 @@
 
 - family runtime provider 的 provision / version pin / profile wiring
 - provider readiness 的触发、检查与状态报告；Temporal provider 是生产目标，Hermes gateway readiness 只属于迁移期 legacy/optional provider
-- `opl family-runtime` typed queue、idempotency、lease、retry、dead-letter、approval、local inbox 与 event export
+- `opl family-runtime` typed queue、stage attempt ledger、idempotency、lease、retry、dead-letter、approval、local inbox 与 event export
+- `opl family-runtime attempt create|list|inspect` 的 provider receipt 与 task-bound lifecycle projection；该 ledger 只记录 control metadata、checkpoint/closeout refs、human gate refs 与 blocked reason
 - provider wakeup bridge；迁移期 Hermes cron/webhook bridge 仍可使用 `hermes cron -> opl family-runtime tick --source hermes-cron --hydrate`，但不再是目标唯一 provider 形态
 - domain task registration contract 的 hydration；当前 MAS 通过 `pending_family_tasks[]` 把非终局、非 hard human gate 的 autonomy blocker 交给 OPL queue
 - family runtime supervision contract 的只读发现、导出、一致性检查与产品投影；其中 adapter_id、cadence、last_success / last_tick、lease_freshness、SLO state、repair command、safe reconcile hint 与 source refs 均来自 domain-owned surface
