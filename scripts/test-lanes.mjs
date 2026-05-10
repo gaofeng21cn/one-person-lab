@@ -33,6 +33,7 @@ const lanes = {
       'tests/src/native-helper-family-smoke.test.ts',
       'tests/src/native-helper-prebuild.test.ts',
       'tests/src/family-runtime-attempt-contract.test.ts',
+      'tests/src/cli/cases/family-runtime.test.ts',
       'tests/src/family-domain-quality-projection-contract.test.ts',
       'tests/src/family-incident-learning-loop.test.ts',
       'tests/src/family-product-operator-projection.test.ts',

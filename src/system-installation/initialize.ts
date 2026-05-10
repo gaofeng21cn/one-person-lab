@@ -61,7 +61,7 @@ function buildOnlineManagementStatus(input: {
   if (input.installed) {
     return 'initializing';
   }
-  return 'optional_unconfigured';
+  return 'missing';
 }
 
 export async function buildOplInitialize(contracts: GatewayContracts) {
@@ -89,6 +89,7 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
     && codexConfigReady;
   const domainReady = defaultModuleReady === defaultModuleTotal;
   const onlineManagementStatus = buildOnlineManagementStatus(hermes);
+  const fullReady = coreReady && domainReady && hermesReady;
 
   const setWorkspaceRootAction = buildInitializeActionDescriptor({
     action_id: 'set_workspace_root',
@@ -133,8 +134,8 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
   });
   const installHermesAction = buildInitializeActionDescriptor({
     action_id: 'install_or_configure_hermes',
-    label: 'Install online task management',
-    description: 'Explicitly install Hermes-Agent as an optional hosted/runtime provider adapter for online task management.',
+    label: 'Install Hermes online runtime',
+    description: 'Install Hermes-Agent as the default online substrate for OPL family wakeup, queue delivery, sessions, approvals, and notifications.',
     section_id: 'environment',
     endpoint: endpoints.engine_action,
     method: 'POST',
@@ -234,16 +235,16 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
     },
     {
       item_id: 'hermes',
-      label: 'Online Task Management',
+      label: 'Hermes Online Runtime',
       status: onlineManagementStatus,
-      required: false,
-      blocking: false,
+      required: true,
+      blocking: !hermesReady,
       section_id: 'environment',
       detail_summary: hermesReady
-        ? `Online task management gateway is loaded from ${hermes.binary_path ?? 'unknown path'}.`
+        ? `Hermes online runtime gateway is loaded from ${hermes.binary_path ?? 'unknown path'}.`
         : hermes.installed
-          ? `Installed at ${hermes.binary_path ?? 'unknown path'}; online task management is still initializing, while local Codex and OPL core features are available.`
-          : 'Optional online task management is not configured; install Hermes-Agent explicitly when hosted or long-running online automation is needed.',
+          ? `Installed at ${hermes.binary_path ?? 'unknown path'}; Full OPL online readiness waits for the gateway to load.`
+          : 'Install Hermes-Agent to enable the Full OPL 24h online family runtime substrate.',
       endpoint: endpoints.system_environment,
       action_endpoint: hermes.installed ? endpoints.system_action : endpoints.engine_action,
       action: hermesReady
@@ -313,7 +314,7 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
     .map((item) => item.item_id);
 
   const overallState =
-    coreReady && domainReady
+    fullReady
       ? 'ready_to_finalize'
       : 'attention_needed';
   const setupPhase: OplInitializePhase =
@@ -323,7 +324,9 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
         ? 'environment'
         : defaultModuleReady < defaultModuleTotal
           ? 'modules'
-          : 'review';
+          : !hermesReady
+            ? 'environment'
+            : 'review';
   const recommendedNextAction =
     setupPhase === 'workspace_root'
       ? setWorkspaceRootAction
@@ -332,7 +335,9 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
           ? installCodexAction
           : !codexConfigReady
             ? configureCodexAction
-            : openEnvironmentAction)
+            : !hermesReady
+              ? (hermes.installed ? repairHermesGatewayAction : installHermesAction)
+              : openEnvironmentAction)
         : setupPhase === 'modules'
           ? reviewModulesAction
           : reviewInitializeAction;
@@ -366,17 +371,18 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
         core_ready: coreReady,
         domain_ready: domainReady,
         online_management_ready: hermesReady,
+        full_ready: fullReady,
       },
       online_management: {
         surface_id: 'opl_online_management',
         status: onlineManagementStatus,
-        blocking: false,
+        blocking: !hermesReady,
         ready: hermesReady,
         capability_summary: hermesReady
-          ? 'Online task management is ready for long-running gateway-backed automation.'
+          ? 'Hermes online runtime is ready for long-running gateway-backed family automation.'
           : hermes.installed
-            ? 'Online task management is initializing; local Codex and core OPL features can continue.'
-            : 'Online task management is optional and unconfigured; local Codex, MAS local scheduling, and core OPL features can continue.',
+            ? 'Hermes online runtime is installed but not fully loaded; Full OPL readiness remains degraded until repair completes.'
+            : 'Hermes online runtime is missing; local CLI/status diagnostics can continue but Full OPL online readiness is degraded.',
         repair_action: hermesReady
           ? openEnvironmentAction
           : hermes.installed
@@ -461,7 +467,7 @@ export async function buildOplInitialize(contracts: GatewayContracts) {
       notes: [
         'Initialize OPL reuses the same truth surfaces as long-lived settings management.',
         'Workspace root and update channel are stored in OPL-managed state files.',
-        'Online task management is an explicit optional Hermes provider adapter; local Codex, MAS local scheduler, and OPL core readiness do not wait for Hermes.',
+        'Hermes online runtime is required for Full OPL readiness. Local CLI/status surfaces can still report degraded diagnostics when Hermes is missing or disabled.',
         'The OPL desktop GUI is an OPL-branded shell maintained in opl-aion-shell on top of the AionUI codebase; the upstream AionUI app is not itself the OPL GUI.',
       ],
     },

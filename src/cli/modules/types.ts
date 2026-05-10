@@ -128,6 +128,7 @@ type TurnkeyInstallCliInput = WebCliInput & {
   modules: string[];
   skipModules?: boolean;
   skipEngines?: boolean;
+  noOnlineRuntime?: boolean;
   skipNativeHelperRepair?: boolean;
   skipWebOpen?: boolean;
   skipGuiOpen?: boolean;

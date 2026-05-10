@@ -4,7 +4,7 @@
 
 `OPL` 的当前主链路是：
 
-`Human / Codex / opl / GUI shell -> Codex-default Session Runtime -> OPL Activation Layer -> Domain Capability Surface -> Domain Repository`
+`Human / Codex / opl / GUI shell -> Codex-default Session Runtime -> OPL Activation Layer / Typed Family Queue -> Domain Capability Surface -> Domain Repository`
 
 ## 当前产品链路
 
@@ -12,23 +12,23 @@
 
 `User / Codex / opl / External Shell -> Codex-default session/runtime path -> explicit OPL activation when needed -> selected domain capability surface -> domain runtime and deliverables`
 
-显式长跑托管任务与 online management 的目标链路在这个主链路下增加一层薄管理面：
+显式长跑托管任务与 online management 的目标链路在这个主链路下增加 Hermes-first 在线 substrate：
 
-`OPL Product Entry / GUI / CLI -> OPL Runtime Manager -> optional external Hermes-Agent provider adapter / Hermes gateway system service -> Domain Adapter -> selected domain capability surface -> domain runtime and deliverables`
+`OPL Product Entry / GUI / CLI -> OPL Runtime Manager / family-runtime queue -> required external Hermes-Agent online substrate / Hermes gateway system service -> Domain Adapter -> selected domain capability surface -> domain runtime and deliverables`
 
 这里的核心点是：
 
 - `OPL` 当前主线以 `Codex-default session/runtime + explicit activation layer` 为 canonical truth
 - 本地 `opl`、直接 `Codex` 使用、ACP-compatible 外部壳与基于开源 AionUI 定制的 `opl-aion-shell` 都消费同一套 runtime truth
-- `OPL Runtime Manager` 是 OPL 产品级管理/诊断/投影层；它只在显式启用时管理受支持的外部 `Hermes-Agent` provider adapter 与 online-management gateway readiness，但不复制 runtime kernel
-- family-level runtime supervision 只作为 domain-owned wakeup / supervision surface 的 discovery、export、parity 与 read-only projection；`OPL` 不新增 daemon，也不接管 domain scheduler、session、memory、quality 或 artifact authority
+- `OPL Runtime Manager` 是 OPL 产品级管理/诊断/投影层；它管理受支持的外部 `Hermes-Agent` online substrate、typed family queue、domain dispatch 与 online runtime readiness，但不复制 runtime kernel
+- family-level runtime supervision 作为 domain-owned wakeup / supervision surface 的 discovery、export、parity、enqueue 与 projection；Hermes 提供 OPL-managed online wakeup substrate，`OPL` 不接管 domain scheduler、session、memory、quality 或 artifact authority
 - `opl`、`opl exec`、`opl resume` 默认继承 `Codex CLI` 语义
-- `opl install` 默认安装或复用 Codex、MAS/MAG/RCA domain modules 与推荐 companion tools；Hermes 只能通过 `opl engine install --engine hermes`、`opl runtime repair-gateway` 或显式 provider adapter 配置进入
-- 首启 readiness 分为 core/domain readiness 与可选 online-management readiness；Codex 与已准入 domain 模块 ready 时，Hermes 缺失或 gateway 尚未 loaded 不阻塞核心入口
+- `opl install` 默认安装或复用 Codex、Hermes online runtime、MAS/MAG/RCA domain modules 与推荐 companion tools；`--no-online-runtime` 只用于开发/离线 degraded diagnostics
+- 首启 readiness 分为 Core、Domain modules、Hermes online runtime 三层；Full OPL readiness 要求三层都 ready
 - `opl skill sync` 把 family domain skill pack 注册到 Codex 环境，并按 workspace/worktree 布局自动发现 sibling repo；显式 runtime switch 或 domain contract 调用才进入 activation layer
 - `opl module install` 负责把缺失 domain repo 拉进 OPL-managed modules root，并串起 repo bootstrap、skill sync 与 health check 这条闭环安装线
 - `opl module exec` 负责把自动化 CLI 调用绑定到 OPL module registry 解析出的当前 checkout；domain CLI 从 repo checkout 内启动，避免把用户 PATH 上的旧全局 tool 当作执行真相
-- `Hermes-Agent` 保留为显式可选 hosted/runtime provider adapter；执行语义仅在显式 opt-in 或长跑托管语境中进入
+- `Hermes-Agent` 是默认 online runtime substrate；具体 executor 仍由 Codex default 或 domain route 选择
 - `MAS`、`MAG`、`RCA` 等领域智能体继续保持独立，并通过 CLI / 本地程序 / 脚本 / contract 暴露 capability surface
 - MAS v2 alignment 下，`MAS` 作为独立 domain agent 通过单一 MAS domain app skill 接入；`OPL` 只消费 MAS-owned entry/projection truth，不新增 MAS runtime kernel、standalone product release 或 OPL-owned readiness verdict
 
@@ -74,12 +74,14 @@
 - 显式 domain contract dispatch
 - domain capability surface discovery
 
-### 2.5 OPL Runtime Manager
+### 2.5 OPL Runtime Manager / Family Runtime Bridge
 
 负责：
 
-- 显式可选 `Hermes-Agent` provider adapter 的 provision / version pin / profile wiring
+- `Hermes-Agent` online substrate 的 provision / version pin / profile wiring
 - Hermes online-management gateway readiness 的触发、检查与状态报告
+- `opl family-runtime` typed queue、idempotency、lease、retry、dead-letter、approval、local inbox 与 event export
+- Hermes cron/webhook bridge：`hermes cron -> opl family-runtime tick --source hermes-cron`，以及 webhook intake 到 OPL queue
 - domain task registration contract 的 hydration
 - family runtime supervision contract 的只读发现、导出、一致性检查与产品投影；其中 adapter_id、cadence、last_success / last_tick、lease_freshness、SLO state、repair command、safe reconcile hint 与 source refs 均来自 domain-owned surface
 - runtime status、session、progress、artifact、attention queue 的 OPL 产品级投影
@@ -93,12 +95,12 @@
 
 不负责：
 
-- scheduler kernel
-- session / memory store
+- domain scheduler kernel
+- domain session / memory store
 - domain truth
 - concrete executor
 - domain wakeup / supervision scheduler
-- Hermes gateway system service lifecycle implementation
+- Hermes gateway system service lifecycle implementation beyond invoking Hermes-supported install/repair/status commands
 - 私有 fork / vendor 一份 `Hermes-Agent`
 
 这层让未来如果真的需要迁移到自有完整长期常驻 sidecar，已有 task registration、status projection、native helper、state index 与 domain owner 边界可以直接复用；但当前 promotion gate 是外部 `Hermes-Agent` 无法表达 OPL 必需的 task、wakeup、approval、audit 或产品隔离合同时，才进入完整 sidecar 评估。
@@ -108,7 +110,7 @@
 - `Codex CLI`
   - 默认交互与执行宿主
 - `Hermes-Agent`
-  - 显式可选 hosted/runtime provider adapter 与 online-management gateway owner；由 `OPL Runtime Manager` 做产品级管理和投影，执行语义只在显式切换或长跑托管时进入
+  - 默认 online runtime substrate 与 gateway owner；由 `OPL Runtime Manager` 做产品级管理和投影，具体执行语义只在显式切换 executor 或 domain route 选择时进入
 
 ### 4. Domain Capability Surface And Entry
 

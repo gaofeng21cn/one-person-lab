@@ -1,6 +1,6 @@
 # OPL Gateway Contracts
 
-This directory preserves the legacy gateway/federation contract corpus from the earlier gateway-first phase of `One Person Lab`.
+This directory preserves the OPL gateway, runtime, and family control-plane contract corpus.
 
 It is still repo-tracked because parts of the corpus remain useful for:
 
@@ -9,8 +9,8 @@ It is still repo-tracked because parts of the corpus remain useful for:
 - schema archaeology
 - a small set of shared compatibility artifacts still referenced by repo-tracked tests or manifests
 
-It is no longer the default public integration contract for today's `OPL`.
-The current mainline is `Codex-default session/runtime + explicit activation layer + family skill sync/discovery`.
+Some gateway-first files remain compatibility material, but the Runtime Manager and family runtime contracts are active again for the Hermes-first online runtime line.
+The current mainline is `Codex-default executor + explicit OPL activation + Hermes online runtime substrate + family skill sync/discovery`.
 
 ## Current Truth Lives Elsewhere
 
@@ -28,7 +28,8 @@ Read the linked domain repositories when you need the current repo-owned capabil
 ## How To Read This Directory
 
 - `workstreams.json`, `domains.json`, `routing-vocabulary.json`, `handoff.schema.json`, `routed-actions.schema.json`, and `public-surface-index.json` are legacy gateway-first material.
-- `managed-runtime-three-layer-contract.json`, `runtime-manager-contract.json`, and `family-executor-adapter-defaults.json` remain useful as shared compatibility artifacts.
+- `family-runtime-online-substrate-contract.json`, `managed-runtime-three-layer-contract.json`, and `runtime-manager-contract.json` are active machine-readable runtime/control-plane contracts.
+- `family-executor-adapter-defaults.json` remains useful as a shared executor compatibility artifact.
 - onboarding, backlog, acceptance, example, and operating-record files remain reference-grade audit material.
 
 Unless a newer core document explicitly promotes a file back into the active mainline, treat everything here as compatibility or historical support material.
@@ -44,6 +45,7 @@ Unless a newer core document explicitly promotes a file back into the active mai
 - `family-executor-adapter-defaults.json`
 - `managed-runtime-three-layer-contract.json`
 - `runtime-manager-contract.json`
+- `family-runtime-online-substrate-contract.json`
 - `fresh-install-test-matrix.json`
 - `governance-audit.schema.json`
 - `publish-promotion.schema.json`
@@ -60,6 +62,6 @@ Unless a newer core document explicitly promotes a file back into the active mai
 
 ## Reading Rule
 
-- treat this directory as legacy compatibility material unless a newer core doc explicitly says otherwise
-- do not use it as the default implementation basis for today's `OPL`
+- treat gateway-first files as legacy compatibility material unless a newer core doc explicitly says otherwise
+- treat Runtime Manager and family runtime contracts as active for the Hermes-first online runtime line
 - keep domain truth owned by the linked domain repositories, not by this directory

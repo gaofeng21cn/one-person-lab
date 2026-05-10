@@ -95,8 +95,8 @@ export function buildPublicCommandSpecs(
 
   const installSpec: CommandSpec = {
     usage:
-      'opl install [--modules <mas,mag,rca>] [--module <module_id>] [--skip-modules] [--skip-engines] [--skip-native-helper-repair] [--skip-gui-open]',
-    summary: 'One-shot install for the default Codex engine, family modules, Codex skills, and the OPL GUI app.',
+      'opl install [--modules <mas,mag,rca>] [--module <module_id>] [--skip-modules] [--skip-engines] [--skip-native-helper-repair] [--skip-gui-open] [--no-online-runtime]',
+    summary: 'One-shot install for Codex, Hermes online runtime, family modules, Codex skills, and the OPL GUI app.',
     examples: [
       'opl install',
       'opl install --modules mas,mag,rca',
@@ -400,6 +400,16 @@ export function buildPublicCommandSpecs(
       usage: 'opl status runtime [--limit <n>]',
       examples: ['opl status runtime', 'opl status runtime --limit 10'],
       group: 'status',
+    }),
+    'family-runtime': cloneCommandSpec(commandSpecs['family-runtime'], {
+      usage:
+        'opl family-runtime status|doctor|install|repair|tick|enqueue|queue list|queue inspect|approve|notify list|events export [options]',
+      examples: [
+        'opl family-runtime status',
+        'opl family-runtime repair',
+        'opl family-runtime tick --source hermes-cron',
+      ],
+      group: 'runtime',
     }),
     'status dashboard': cloneCommandSpec(commandSpecs.dashboard, {
       usage: 'opl status dashboard [--path <workspace_path>] [--sessions-limit <n>]',

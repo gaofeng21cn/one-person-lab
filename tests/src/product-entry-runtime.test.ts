@@ -60,7 +60,7 @@ function withEnv<T>(updates: Record<string, string | undefined>, run: () => T): 
   }
 }
 
-test('product-entry runtime leaf exposes Codex-default doctor without owning Hermes', () => {
+test('product-entry runtime leaf exposes Codex-default executor over required Hermes online substrate', () => {
   const codexFixture = createFakeBinaryFixture('codex', `
 echo "unused"
 exit 0
@@ -88,11 +88,13 @@ exit 1
     );
 
     assert.equal(doctor.product_entry.entry_surface, 'opl_local_product_entry_shell');
-    assert.equal(doctor.product_entry.runtime_substrate, 'codex_default_runtime');
+    assert.equal(doctor.product_entry.runtime_substrate, 'codex_default_executor_with_hermes_online_runtime_substrate');
     assert.equal(doctor.product_entry.ready, true);
     assert.equal(doctor.product_entry.local_entry_ready, true);
+    assert.equal(doctor.product_entry.online_runtime_ready, true);
     assert.equal(doctor.product_entry.messaging_gateway_ready, true);
     assert.equal(doctor.product_entry.hermes.binary?.path, hermesFixture.binaryPath);
+    assert.match(doctor.product_entry.notes.join('\n'), /default online runtime substrate/);
     assert.match(doctor.product_entry.notes.join('\n'), /--executor hermes/);
   } finally {
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });

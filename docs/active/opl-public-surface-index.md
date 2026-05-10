@@ -32,8 +32,8 @@ These documents define the current `OPL` mainline:
 - [Decisions](../decisions.md)
 - [Contracts Overview](../../contracts/README.md)
 
-These surfaces explain the default entry (`opl`, `opl exec`, `opl resume`), the current resource model (`workspaces / sessions / progress / artifacts`), and the rule that explicit activation or runtime switching is opt-in.
-They also keep `OPL Runtime Manager` scoped as a thin product-managed adapter over explicit optional external `Hermes-Agent`, with Rust native helper / index work limited to native assistance and indexed discovery.
+These surfaces explain the default entry (`opl`, `opl exec`, `opl resume`), the current resource model (`workspaces / sessions / progress / artifacts`), and the rule that explicit domain activation or executor switching is opt-in.
+They also keep `OPL Runtime Manager` scoped as the product control plane over required external `Hermes-Agent` online substrate, with typed family queue, bridge diagnostics, and Rust native helper / index work limited to native assistance and indexed discovery.
 
 ### 2. Linked domain capability surfaces
 

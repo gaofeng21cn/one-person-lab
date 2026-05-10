@@ -120,8 +120,8 @@ export function buildOplFreshInstallTestMatrix() {
         expected_phase: 'environment',
         expected_blockers: ['codex', 'codex_config', 'domain_modules'],
         expected_online_management: {
-          status: 'optional_unconfigured',
-          blocking: false,
+          status: 'missing',
+          blocking: true,
         },
       },
       {
@@ -131,8 +131,8 @@ export function buildOplFreshInstallTestMatrix() {
         expected_phase: 'environment',
         expected_blockers: ['codex_config', 'domain_modules'],
         expected_online_management: {
-          status: 'optional_unconfigured',
-          blocking: false,
+          status: 'missing',
+          blocking: true,
         },
       },
       {
@@ -142,8 +142,8 @@ export function buildOplFreshInstallTestMatrix() {
         expected_phase: 'environment',
         expected_blockers: ['codex', 'codex_config', 'domain_modules'],
         expected_online_management: {
-          status: 'optional_unconfigured',
-          blocking: false,
+          status: 'missing',
+          blocking: true,
         },
       },
       {
@@ -153,8 +153,8 @@ export function buildOplFreshInstallTestMatrix() {
         expected_phase: 'review',
         expected_blockers: [],
         expected_online_management: {
-          status: 'optional_unconfigured',
-          blocking: false,
+          status: 'missing',
+          blocking: true,
         },
       },
       {

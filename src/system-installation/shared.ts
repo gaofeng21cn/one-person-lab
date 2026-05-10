@@ -160,6 +160,7 @@ export type OplTurnkeyInstallInput = Partial<{
   basePath: string;
   skipModules: boolean;
   skipEngines: boolean;
+  noOnlineRuntime: boolean;
   skipNativeHelperRepair: boolean;
   skipWebOpen: boolean;
   skipGuiOpen: boolean;

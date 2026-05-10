@@ -187,6 +187,10 @@ function isNativeHelperAction(actionId: string) {
   return actionId === 'repair_native_helpers' || actionId === 'refresh_native_indexes';
 }
 
+function isOnlineRuntimeAction(actionId: string) {
+  return actionId === 'repair_hermes_gateway' || actionId === 'install_hermes_online_runtime';
+}
+
 function filterActionableRuntimeManagerActions(
   actions: ReturnType<typeof buildRuntimeManager>['runtime_manager']['reconcile']['recommended_actions'],
   input: RuntimeManagerActionInput,
@@ -195,7 +199,7 @@ function filterActionableRuntimeManagerActions(
     if (input.skipNativeHelpers && isNativeHelperAction(action.action_id)) {
       return false;
     }
-    if (input.skipOnlineManagement && action.action_id === 'repair_hermes_gateway') {
+    if (input.skipOnlineManagement && isOnlineRuntimeAction(action.action_id)) {
       return false;
     }
     return true;
@@ -215,21 +219,23 @@ export function buildRuntimeManager(input: { persistNativeIndexes?: boolean } = 
     version: 'g2',
     runtime_manager: {
       surface_id: 'opl_runtime_manager',
-      layer_role: 'optional_product_managed_adapter_over_external_kernel',
+      layer_role: 'product_control_plane_over_required_hermes_online_runtime_substrate',
       status: hermesReady
         ? 'ready'
         : hermesInstalled
-          ? 'optional_provider_attention'
-          : 'optional_provider_unconfigured',
+          ? 'online_runtime_attention'
+          : 'online_runtime_missing',
       owner_split: {
-        product_manager_owner: 'one-person-lab',
-        runtime_kernel_owner: 'upstream_hermes_agent',
+        product_control_plane_owner: 'one-person-lab',
+        online_runtime_substrate_owner: 'upstream_hermes_agent',
         domain_truth_owners: ADMITTED_DOMAIN_OWNERS,
         concrete_executor_owner: 'route_selected_by_domain_contract',
       },
       responsibilities: [
-        'optionally_provision_supported_hermes_runtime_when_explicitly_selected',
-        'pin_optional_runtime_version_and_profile',
+        'provision_supported_hermes_runtime_for_full_online_family_runtime',
+        'pin_hermes_runtime_version_and_profile',
+        'own_typed_family_queue_and_domain_dispatch_contracts',
+        'wire_hermes_cron_webhook_delivery_and_approval_transport',
         'hydrate_domain_task_registration_contracts',
         'project_runtime_status_into_opl_sessions_progress_artifacts',
         'provide_runtime_doctor_repair_resume_entrypoints',
@@ -237,12 +243,21 @@ export function buildRuntimeManager(input: { persistNativeIndexes?: boolean } = 
         'catalog_high_frequency_state_indexes',
       ],
       non_goals: [
-        'not_a_scheduler_kernel',
-        'not_a_session_or_memory_store',
+        'not_a_domain_runtime_truth_owner',
+        'not_a_domain_quality_verdict_owner',
+        'not_a_domain_artifact_gate_owner',
         'not_a_domain_truth_owner',
         'not_a_concrete_executor',
         'not_a_private_fork_of_hermes_agent',
       ],
+      family_runtime_queue: {
+        surface_kind: 'opl_family_runtime_queue',
+        command: 'opl family-runtime status',
+        state_path: '${OPL_STATE_DIR}/family-runtime/queue.sqlite',
+        hermes_runtime_provider: 'required_for_online_family_runtime',
+        wakeup_bridge: 'hermes cron -> opl family-runtime tick --source hermes-cron',
+        webhook_bridge: 'hermes webhook -> opl family-runtime enqueue',
+      },
       hermes_runtime: {
         binary: hermes.binary,
         version: hermes.version,
@@ -306,8 +321,8 @@ export function buildRuntimeManager(input: { persistNativeIndexes?: boolean } = 
           'Only promote beyond a thin manager if Hermes cannot express required task, wakeup, approval, audit, or product isolation contracts.',
       },
       notes: [
-        'Hermes-Agent remains an explicit optional hosted/runtime provider adapter for long-running online management.',
-        'OPL Runtime Manager is a product-managed adapter and projection layer.',
+        'Hermes-Agent is the default online runtime substrate for 24h family wakeup, delivery, approval, session, memory, cron, and webhook capability.',
+        'OPL Runtime Manager is the product control plane, typed queue, domain dispatch, and projection layer.',
         'MAS, MAG, and RCA keep domain-owned truth and route-selected executor semantics.',
       ],
     },
@@ -360,6 +375,20 @@ export function runRuntimeManagerAction(input: RuntimeManagerActionInput) {
   for (const action of actionableActions) {
     if (action.action_id === 'repair_hermes_gateway') {
       executedActions.push(runHermesGatewayAction());
+      continue;
+    }
+
+    if (action.action_id === 'install_hermes_online_runtime') {
+      executedActions.push({
+        action_id: action.action_id,
+        status: 'blocked_manual_install_required',
+        blocking: action.blocking,
+        action_lane: 'online_runtime',
+        capability: 'online_family_runtime',
+        command_preview: ['opl', 'engine', 'install', '--engine', 'hermes'],
+        note:
+          'Hermes is required for Full online family runtime readiness. Install Hermes first, then run `opl family-runtime repair`.',
+      });
       continue;
     }
 
@@ -477,24 +506,24 @@ function runHermesGatewayAction() {
     return {
       action_id: 'repair_hermes_gateway',
       status: repair.product_entry.gateway_service.loaded ? 'completed' : 'failed',
-      blocking: false,
-      action_lane: 'online_management',
-      capability: 'online_task_management',
+      blocking: true,
+      action_lane: 'online_runtime',
+      capability: 'online_family_runtime',
       command_preview: repair.product_entry.install_command_preview,
       note:
-        'Non-blocking online-management repair: local Codex and core OPL entry remain usable while Hermes gateway readiness is repaired.',
+        'Hermes gateway repair is required for Full OPL online family runtime readiness.',
       details: repair.product_entry,
     };
   } catch (error) {
     return {
       action_id: 'repair_hermes_gateway',
       status: 'failed',
-      blocking: false,
-      action_lane: 'online_management',
-      capability: 'online_task_management',
+      blocking: true,
+      action_lane: 'online_runtime',
+      capability: 'online_family_runtime',
       command_preview: ['hermes', 'gateway', 'install'],
       note:
-        'Non-blocking online-management repair failed; local Codex and core OPL entry remain usable.',
+        'Hermes gateway repair failed; Full OPL online family runtime readiness remains degraded.',
       details: {
         error: error instanceof Error ? error.message : String(error),
       },
@@ -515,13 +544,24 @@ function buildRuntimeManagerReconcile(
   if (hermesInstalled && !hermes.gateway_service.loaded) {
     recommendedActions.push({
       action_id: 'repair_hermes_gateway',
-      priority: 'p1_online_management',
-      blocking: false,
-      action_lane: 'online_management',
-      capability: 'online_task_management',
+      priority: 'p0_online_runtime',
+      blocking: true,
+      action_lane: 'online_runtime',
+      capability: 'online_family_runtime',
       command: 'opl runtime repair-gateway',
       reason:
-        'Online task management is initializing: Hermes-Agent is installed, but the external gateway service is not loaded. This does not block local Codex or core OPL readiness.',
+        'Hermes-Agent is installed, but the gateway service is not loaded. Full OPL online family readiness requires the gateway.',
+    });
+  } else if (!hermesInstalled) {
+    recommendedActions.push({
+      action_id: 'install_hermes_online_runtime',
+      priority: 'p0_online_runtime',
+      blocking: true,
+      action_lane: 'online_runtime',
+      capability: 'online_family_runtime',
+      command: 'opl engine install --engine hermes',
+      reason:
+        'Hermes-Agent is required for Full OPL online family runtime readiness.',
     });
   }
 
@@ -553,8 +593,8 @@ function buildRuntimeManagerReconcile(
       hermes_runtime: hermesReady
         ? 'ready'
         : hermesInstalled
-          ? 'optional_provider_attention'
-          : 'optional_provider_unconfigured',
+          ? 'online_runtime_attention'
+          : 'online_runtime_missing',
       native_helper_runtime: nativeRuntimeStatus,
       native_index_freshness: indexFreshnessStatus,
       domain_registration_registry: 'declared_projection_contracts',

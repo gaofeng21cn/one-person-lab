@@ -7,6 +7,7 @@ import { buildOplGuiShellSurface, syncOplCompanionSkills } from '../install-comp
 import { bootstrapLocalCodexDefaults } from '../local-codex-defaults.ts';
 import { runNativeHelperRepairAction } from '../native-helper-runtime.ts';
 import { runRuntimeManagerAction } from '../runtime-manager.ts';
+import { runFamilyRuntime } from '../family-runtime.ts';
 import type { GatewayContracts } from '../types.ts';
 
 import { runOplEngineAction } from './engine-actions.ts';
@@ -22,7 +23,17 @@ import { resolveProjectRoot, runCommand } from './shared.ts';
 import type { OplEngineId, OplModuleId, OplTurnkeyInstallInput } from './shared.ts';
 
 const DEFAULT_MODULES: OplModuleId[] = [...DEFAULT_OPL_MODULE_IDS];
-const DEFAULT_ENGINES: OplEngineId[] = ['codex'];
+const DEFAULT_ENGINES: OplEngineId[] = ['codex', 'hermes'];
+
+function extractFamilyRuntimeBridge(payload: ReturnType<typeof runFamilyRuntime>) {
+  if ('family_runtime_bridge' in payload) {
+    return payload.family_runtime_bridge;
+  }
+  if ('family_runtime' in payload) {
+    return payload.family_runtime;
+  }
+  return null;
+}
 
 function normalizeModuleId(raw: string): OplModuleId {
   const normalized = raw.trim().toLowerCase();
@@ -254,12 +265,14 @@ export async function runOplTurnkeyInstall(
   input: OplTurnkeyInstallInput = {},
 ) {
   const modules = normalizeModuleSelection(input.modules);
+  const selectedEngines: OplEngineId[] = input.noOnlineRuntime ? ['codex'] : [...DEFAULT_ENGINES];
   const firstRunLog = buildOplFirstRunLogSurface();
   const firstRunLogEvents = [
     appendOplFirstRunLogEvent('install_started', {
       selected_modules: input.skipModules ? [] : modules,
-      selected_engines: input.skipEngines ? [] : [...DEFAULT_ENGINES],
+      selected_engines: input.skipEngines ? [] : selectedEngines,
       skip_gui_open: Boolean(input.skipGuiOpen),
+      no_online_runtime: Boolean(input.noOnlineRuntime),
       skip_native_helper_repair: Boolean(input.skipNativeHelperRepair),
     }),
   ];
@@ -269,7 +282,7 @@ export async function runOplTurnkeyInstall(
     const environment = (await buildOplEnvironment(contracts)).system_environment;
     const engineActions = input.skipEngines
       ? []
-      : await Promise.all(DEFAULT_ENGINES.map(async (engineId) => {
+      : await Promise.all(selectedEngines.map(async (engineId) => {
         const engine = environment.core_engines[engineId];
         const shouldReuseExisting =
           engine.health_status === 'ready'
@@ -314,8 +327,11 @@ export async function runOplTurnkeyInstall(
     const runtimeManagerAction = runRuntimeManagerAction({
       mode: 'apply',
       skipNativeHelpers: Boolean(input.skipNativeHelperRepair),
-      skipOnlineManagement: true,
+      skipOnlineManagement: Boolean(input.noOnlineRuntime),
     });
+    const familyRuntimeBridge = input.noOnlineRuntime
+      ? runFamilyRuntime(['status'])
+      : runFamilyRuntime(['install']);
     const onlineManagementRepair = runtimeManagerAction.runtime_manager_action.executed_actions.find(
       (action) => action.action_id === 'repair_hermes_gateway',
     );
@@ -340,9 +356,9 @@ export async function runOplTurnkeyInstall(
           executed_actions: [{
             action_id: onlineManagementRepair.action_id,
             status: onlineManagementRepair.status,
-            blocking: onlineManagementRepair.blocking ?? false,
-            action_lane: onlineManagementRepair.action_lane ?? 'online_management',
-            capability: onlineManagementRepair.capability ?? 'online_task_management',
+            blocking: onlineManagementRepair.blocking ?? true,
+            action_lane: onlineManagementRepair.action_lane ?? 'online_runtime',
+            capability: onlineManagementRepair.capability ?? 'online_family_runtime',
           }],
         }),
       );
@@ -366,7 +382,7 @@ export async function runOplTurnkeyInstall(
       opl_install: {
         surface_id: 'opl_install',
         status: 'completed',
-        selected_engines: [...DEFAULT_ENGINES],
+        selected_engines: selectedEngines,
         selected_modules: modules,
         codex_config_bootstrap: codexConfigBootstrap,
         codex_plugin_registry: codexPluginRegistry,
@@ -376,6 +392,7 @@ export async function runOplTurnkeyInstall(
         runtime_manager_action: runtimeManagerAction.runtime_manager_action,
         background_actions: runtimeManagerAction.runtime_manager_action.background_actions,
         non_blocking_actions: runtimeManagerAction.runtime_manager_action.non_blocking_actions,
+        family_runtime_bridge: extractFamilyRuntimeBridge(familyRuntimeBridge),
         gui_open_action: guiOpenAction,
         gui_shell: buildOplGuiShellSurface(resolveProjectRoot()),
         native_helper_action: nativeHelperAction,
@@ -384,8 +401,8 @@ export async function runOplTurnkeyInstall(
         first_run_log: firstRunLog,
         first_run_log_events: firstRunLogEvents,
         notes: [
-          'This command is the user-facing one-shot path for OPL + Codex CLI + family modules + recommended Codex skills + desktop GUI. Hermes-Agent remains an explicit optional hosted/runtime provider adapter and is not installed by default.',
-          'Hermes gateway repair is reported only when an explicit or already-installed Hermes provider adapter needs non-blocking online-management repair; local Codex and core OPL entry can continue without Hermes.',
+          'This command is the user-facing one-shot path for OPL + Codex CLI + Hermes online runtime + family modules + recommended Codex skills + desktop GUI.',
+          'Full online family readiness requires Hermes gateway, cron wakeup, and webhook intake. --no-online-runtime is a development/offline diagnostic mode and reports degraded readiness.',
           'Recommended skill sync is conservative: existing user-managed skill directories are preserved, Superpowers stays on the current user profile by default, and missing optional skill sources are reported for Environment Management.',
           'GUI startup opens the installed One Person Lab app when present; otherwise it downloads and installs the matching one-person-lab release asset before opening the app. opl-aion-shell remains an internal GUI source/build input.',
         ],

@@ -1,6 +1,6 @@
 # OPL Gateway 合同
 
-这个目录保留的是 `One Person Lab` 早期 gateway-first 阶段留下来的 gateway / federation 合同语料。
+这个目录保留 `One Person Lab` 的 gateway、runtime 与 family control-plane 合同语料。
 
 它继续被仓库跟踪，是因为其中一部分内容仍然对下面几类工作有用：
 
@@ -9,8 +9,8 @@
 - schema 考古
 - 少量仍被 repo-tracked 测试或 manifest 引用的共享兼容工件
 
-但它已经不再是今天 `OPL` 的默认公开集成合同。
-当前主线已经收口为 `Codex-default session/runtime + explicit activation layer + family skill sync/discovery`。
+其中一部分 gateway-first 文件仍按兼容材料读取，但 Runtime Manager 与 family runtime 合同已经重新成为 Hermes-first online runtime 主线的活跃机器合同。
+当前主线是 `Codex-default executor + explicit OPL activation + Hermes online runtime substrate + family skill sync/discovery`。
 
 ## 当前真相应去哪里看
 
@@ -28,7 +28,8 @@
 ## 这个目录应该怎么读
 
 - `workstreams.json`、`domains.json`、`routing-vocabulary.json`、`handoff.schema.json`、`routed-actions.schema.json` 和 `public-surface-index.json` 都按旧的 gateway-first 语料理解。
-- `managed-runtime-three-layer-contract.json` 和 `family-executor-adapter-defaults.json` 仍然可以作为共享兼容工件继续使用。
+- `family-runtime-online-substrate-contract.json`、`managed-runtime-three-layer-contract.json` 和 `runtime-manager-contract.json` 是当前 Hermes-first online runtime 主线的活跃机器合同。
+- `family-executor-adapter-defaults.json` 继续作为共享 executor 兼容工件使用。
 - onboarding、backlog、acceptance、example 和 operating-record 相关文件继续作为 reference-grade 审计材料存在。
 
 除非新的核心文档显式把某个文件重新提升回活跃主线，否则这里的内容都应按 compatibility 或 historical support 理解。
@@ -43,6 +44,8 @@
 - `domain-onboarding-readiness.schema.json`
 - `family-executor-adapter-defaults.json`
 - `managed-runtime-three-layer-contract.json`
+- `runtime-manager-contract.json`
+- `family-runtime-online-substrate-contract.json`
 - `governance-audit.schema.json`
 - `publish-promotion.schema.json`
 - `acceptance-matrix.json`
@@ -58,6 +61,6 @@
 
 ## 阅读规则
 
-- 除非新的核心文档明确重新提升，否则默认把这个目录理解成旧兼容语料
-- 不把这里当成今天 `OPL` 的默认实现依据
+- gateway-first 文件除非新的核心文档明确重新提升，否则按旧兼容语料理解
+- Runtime Manager 与 family runtime 合同按 Hermes-first online runtime 主线活跃依据读取
 - domain truth 继续归对应 domain 仓所有，而不是归这个目录所有

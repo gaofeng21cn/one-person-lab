@@ -516,7 +516,7 @@ exit 1
   }
 });
 
-test('system initialize reports online management as non-blocking when Hermes gateway is unloaded', () => {
+test('system initialize reports Hermes online runtime as blocking Full readiness when gateway is unloaded', () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-initialize-online-management-home-'));
   const stateDir = path.join(homeRoot, 'opl-state');
   const modulesRoot = path.join(homeRoot, 'modules');
@@ -605,22 +605,23 @@ exit 1
       };
     };
 
-    assert.equal(output.system_initialize.overall_state, 'ready_to_finalize');
+    assert.equal(output.system_initialize.overall_state, 'attention_needed');
     assert.deepEqual(output.system_initialize.readiness, {
       core_ready: true,
       domain_ready: true,
       online_management_ready: false,
+      full_ready: false,
     });
-    assert.equal(output.system_initialize.setup_flow.phase, 'review');
-    assert.equal(output.system_initialize.setup_flow.ready_to_launch, true);
-    assert.deepEqual(output.system_initialize.setup_flow.blocking_items, []);
+    assert.equal(output.system_initialize.setup_flow.phase, 'environment');
+    assert.equal(output.system_initialize.setup_flow.ready_to_launch, false);
+    assert.deepEqual(output.system_initialize.setup_flow.blocking_items, ['hermes']);
     assert.equal(output.system_initialize.online_management.surface_id, 'opl_online_management');
     assert.equal(output.system_initialize.online_management.status, 'initializing');
-    assert.equal(output.system_initialize.online_management.blocking, false);
+    assert.equal(output.system_initialize.online_management.blocking, true);
     assert.equal(output.system_initialize.online_management.ready, false);
     assert.match(
       output.system_initialize.online_management.capability_summary,
-      /Local Codex and core OPL features can continue/i,
+      /Full OPL readiness remains degraded/i,
     );
     assert.equal(output.system_initialize.online_management.repair_action.action_id, 'repair_hermes_gateway');
     assert.deepEqual(output.system_initialize.online_management.repair_action.payload_template, { action: 'repair' });
@@ -632,11 +633,11 @@ exit 1
 
     const onlineManagementItem = output.system_initialize.checklist.find((entry) => entry.item_id === 'hermes');
     assert.ok(onlineManagementItem);
-    assert.equal(onlineManagementItem.label, 'Online Task Management');
-    assert.equal(onlineManagementItem.required, false);
-    assert.equal(onlineManagementItem.blocking, false);
-    assert.match(onlineManagementItem.detail_summary, /local Codex and OPL core features are available/i);
-    assert.equal(output.system_initialize.recommended_next_action.action_id, 'review_initialize');
+    assert.equal(onlineManagementItem.label, 'Hermes Online Runtime');
+    assert.equal(onlineManagementItem.required, true);
+    assert.equal(onlineManagementItem.blocking, true);
+    assert.match(onlineManagementItem.detail_summary, /Full OPL online readiness waits for the gateway/i);
+    assert.equal(output.system_initialize.recommended_next_action.action_id, 'repair_hermes_gateway');
   } finally {
     fs.rmSync(codexConfigFixture.codexHome, { recursive: true, force: true });
     fs.rmSync(codexFixture.fixtureRoot, { recursive: true, force: true });
@@ -646,7 +647,7 @@ exit 1
   }
 });
 
-test('opl install does not provision optional Hermes gateway by default', async () => {
+test('opl install provisions Hermes gateway by default for Full online runtime readiness', async () => {
   const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-hermes-home-'));
   const stateDir = path.join(homeRoot, 'opl-state');
   const codexConfigFixture = createCodexConfigFixture({
@@ -739,22 +740,33 @@ exit 1
       };
     };
 
-    assert.equal(fs.existsSync(gatewayState), false);
+    assert.equal(fs.existsSync(gatewayState), true);
     assert.equal(output.install.runtime_manager_action.status, 'completed');
-    assert.deepEqual(output.install.runtime_manager_action.executed_actions, []);
+    assert.deepEqual(
+      output.install.runtime_manager_action.executed_actions.map((entry) => [
+        entry.action_id,
+        entry.status,
+        entry.blocking,
+        entry.action_lane,
+        entry.capability,
+      ]),
+      [
+        ['repair_hermes_gateway', 'completed', true, 'online_runtime', 'online_family_runtime'],
+      ],
+    );
     assert.deepEqual(output.install.runtime_manager_action.non_blocking_actions, []);
     assert.deepEqual(output.install.runtime_manager_action.background_actions, []);
     assert.deepEqual(output.install.non_blocking_actions, []);
     assert.deepEqual(output.install.background_actions, []);
     assert.equal(
       output.install.runtime_manager_action.after.reconcile.checked_surfaces.hermes_runtime,
-      'optional_provider_attention',
+      'ready',
     );
-    assert.equal(output.install.system_initialize.core_engines.hermes.health_status, 'attention_needed');
-    assert.equal(output.install.system_initialize.core_engines.hermes.gateway_loaded, false);
-    assert.equal(output.install.system_initialize.online_management.status, 'initializing');
+    assert.equal(output.install.system_initialize.core_engines.hermes.health_status, 'ready');
+    assert.equal(output.install.system_initialize.core_engines.hermes.gateway_loaded, true);
+    assert.equal(output.install.system_initialize.online_management.status, 'ready');
     assert.equal(output.install.system_initialize.online_management.blocking, false);
-    assert.equal(output.install.system_initialize.online_management.ready, false);
+    assert.equal(output.install.system_initialize.online_management.ready, true);
     assert.equal(
       output.install.first_run_log_events.some((entry) =>
         entry.event_type === 'online_management_repair_started'
@@ -765,7 +777,7 @@ exit 1
       output.install.first_run_log_events.some((entry) =>
         entry.event_type === 'online_management_repair_completed'
       ),
-      false,
+      true,
     );
     assert.equal(
       output.install.first_run_log_events.some((entry) =>

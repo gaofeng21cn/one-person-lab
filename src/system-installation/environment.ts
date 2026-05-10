@@ -69,8 +69,9 @@ export async function buildOplEnvironment(contracts: GatewayContracts) {
           issues: codexIssues,
         },
         hermes: {
-          required: false,
-          capability_role: 'optional_online_management_provider_adapter',
+          required: true,
+          required_for: 'online_family_runtime',
+          capability_role: 'default_online_runtime_substrate',
           installed: Boolean(hermes.binary),
           version: hermes.version,
           version_raw_output: hermes.version_raw_output,
@@ -102,9 +103,9 @@ export async function buildOplEnvironment(contracts: GatewayContracts) {
         developer_supervisor_config_file: statePaths.developer_supervisor_config_file,
       },
       notes: [
-        'OPL owns the user-facing initialization surface and reports Codex readiness separately from optional Hermes online-management readiness.',
+        'OPL owns the user-facing initialization surface and reports Codex readiness separately from Hermes online family-runtime readiness.',
         'Codex CLI readiness and Codex API configuration are reported separately so first-run can guide missing API keys without copying secrets into logs.',
-        'Hermes-Agent is an explicit optional hosted/runtime provider adapter; missing Hermes does not block the Codex-default runtime or admitted domain module readiness.',
+        'Hermes-Agent is the default online runtime substrate for Full OPL readiness; missing Hermes keeps local CLI/status diagnostics available but marks online family runtime degraded.',
         'OPL reports native helper lifecycle readiness here; opl install can run the native repair path when helper binaries are missing.',
         'AionUI provides the GUI/WebUI shell; OPL no longer hosts a local Product API service on port 8787.',
         'Domain modules are tracked separately so the GUI can manage install and upgrade actions from one settings area.',

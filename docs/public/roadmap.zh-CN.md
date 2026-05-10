@@ -12,27 +12,27 @@
 - `Codex CLI` 作为 `opl`、`opl exec` 与 `opl resume` 的默认 executor 路径
 - 显式 `OPL` activation 承担 family-level 语义、domain discovery 与 runtime switch
 - `MedAutoScience`、`MedAutoGrant`、`RedCube AI` 之上的 shared modules、contracts 与 indexes
-- `OPL Runtime Manager` 作为 external `Hermes-Agent` 之上的 product-managed 薄 adapter
+- `OPL Runtime Manager` 作为 required external `Hermes-Agent` online substrate 之上的产品控制面
 - Rust native helper / index 工作只承担 native assistance 与 indexed discovery，不持有 domain truth 或 executor ownership
 
 ## 活跃路线
 
 当前活跃路线收口为：
 
-`Codex-default session/runtime -> explicit OPL activation -> selected domain agent entry -> optional product-managed runtime adapter`
+`Codex-default session/runtime -> explicit OPL activation / typed family queue -> Hermes online substrate -> selected domain agent entry`
 
 这条路线现在聚焦四件事：
 
 1. 保持 `Codex CLI` 作为默认 executor，除非用户显式 activation 到其他 runtime。
 2. 把 `OPL` 的当前 truth surface 收口到 family-level sessions、progress、artifacts 与 shared indexes，而不是 web / API 壳。
-3. 把 `OPL Runtime Manager` 理解成 external `Hermes-Agent` 之上的薄 adapter，不写成 scheduler、session store、memory owner、domain truth owner 或 concrete executor owner。
+3. 把 `OPL Runtime Manager` 理解成 external `Hermes-Agent` 之上的产品控制面与 typed dispatch 层，不写成 domain scheduler、domain truth owner、quality owner、artifact owner 或 concrete executor owner。
 4. 保持 public docs、contracts 与 admitted-domain wording 持续对齐真实家族拓扑。
 
 ## 近期重点
 
 - 保持旧 gateway / federation wording 只作为 compatibility / reference material，同时把 runtime / activation 语义写成主线
 - 保持 `Unified Harness Engineering Substrate`、`Shared Runtime Contract` 与 `Shared Domain Contract` 作为 domain 之上的共享边界
-- 保持 upstream `Hermes-Agent` external-kernel ownership 以及 `OPL Runtime Manager` product-managed adapter 语义的诚实表达
+- 保持 upstream `Hermes-Agent` online substrate ownership 以及 `OPL Runtime Manager` 产品控制面语义的诚实表达
 - 保持未来 hosted / desktop 入口继续围绕 Codex-default executor 路径背后的 runtime truth 演进
 - 保持 candidate domain 沿定义、审查与 onboarding 路径推进
 
@@ -71,7 +71,7 @@
 
 - `OPL` 是整个 family 的 Codex-default session/runtime 层、显式 activation 层，以及 shared modules / contracts / indexes owner
 - admitted domain 在这个壳层之下继续持有各自 authority
-- 默认 executor 仍是 `Codex CLI`，`OPL Runtime Manager` 只作为显式可选 external `Hermes-Agent` 之上的 product-managed 薄 adapter
+- 默认 executor 仍是 `Codex CLI`，`OPL Runtime Manager` 是 required `Hermes-Agent` online substrate 之上的产品控制面
 - 旧 `OPL Gateway`、`opl web`、`Product API` 与 AionUI-first-shell 材料，除非被当前核心文档重新提升，否则按 compatibility 或 reference context 阅读
 - 未来 hosted / desktop 工作继续沿同一套 runtime / activation truth 演进
 - 新工作线会以边界清楚的 domain surface 进入家族体系

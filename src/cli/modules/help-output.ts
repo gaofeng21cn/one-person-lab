@@ -37,6 +37,7 @@ const COMMAND_GROUP_SUMMARIES: Record<string, string> = {
   contract: '读取或验证 machine-readable contract / handoff surface。',
   session: '查看、恢复和审计会话。',
   runtime: '修复或检查底层 runtime 相关入口。',
+  'family-runtime': '管理 Hermes-backed family online runtime queue、dispatch、approval、notification 与事件。',
   legacy: '历史兼容命令。',
 };
 
@@ -134,6 +135,8 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl help',
         'opl',
         'opl install',
+        'opl family-runtime status',
+        'opl family-runtime repair',
         'opl install --modules mas,mag,rca',
         'opl doctor',
         'opl quality details --root . --format markdown',
