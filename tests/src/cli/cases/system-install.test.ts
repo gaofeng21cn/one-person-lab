@@ -208,6 +208,9 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
           items: Array<{ skill_id: string; status: string; action: string }>;
           summary: { total: number; tools_ready: number; tools_total: number };
         };
+        runtime_manager_action: {
+          executed_actions: Array<{ action_id: string }>;
+        };
         first_run_log: {
           surface_id: string;
           log_path: string;
@@ -256,6 +259,12 @@ printf 'health\n' >> ${JSON.stringify(turnkeyLogPath)}
     );
     assert.equal(output.install.companion_skill_sync.summary.tools_ready, 1);
     assert.equal(output.install.companion_skill_sync.summary.tools_total, 1);
+    assert.equal(
+      output.install.runtime_manager_action.executed_actions.some((entry) =>
+        entry.action_id === 'install_hermes_online_runtime' || entry.action_id === 'repair_hermes_gateway'
+      ),
+      false,
+    );
     for (const skillName of ['officecli', 'officecli-docx', 'officecli-pptx', 'officecli-xlsx', 'ui-ux-pro-max']) {
       const item = output.install.companion_skill_sync.items.find((entry) => entry.skill_id === skillName);
       assert.equal(item?.status, 'synced');
