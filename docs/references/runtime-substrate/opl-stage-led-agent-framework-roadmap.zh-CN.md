@@ -22,6 +22,7 @@ Date: `2026-05-10`
 - Temporal 把 durable workflow、activity、retry policy、signal/query 和 workflow history 作为可靠执行的基本单元。
 - OpenAI Agents SDK 把 handoff、guardrail 和 tracing 当作多 agent 运行的基础结构能力。
 - Cloudflare Agents 强调 durable identity、state、schedule 和 event-driven agent runtime。
+- Pydantic AI durable execution 把 long-running、async、human-in-the-loop 和 restart recovery 归入 durable agent 的生产可靠性问题。
 - Dify、AutoGen、CrewAI、DeerFlow 等系统说明了 workflow / agent team / research flow 的组织方式，但 OPL 应吸收工程模式，不把它们引入为 runtime 依赖。
 
 这些经验不支持让程序硬编码领域思路。更稳的结构是：durable state、typed handoff、checkpoint、retry/dead-letter、human gate、trace、projection 和 owner boundary 由 framework 提供；领域判断由 domain agent stage pack 和 Codex 执行器完成。
@@ -32,6 +33,7 @@ Date: `2026-05-10`
 - Temporal durable execution: <https://docs.temporal.io/>
 - OpenAI Agents SDK: <https://openai.github.io/openai-agents-python/>
 - Cloudflare Agents: <https://developers.cloudflare.com/agents/>
+- Pydantic AI durable execution: <https://pydantic.dev/docs/ai/integrations/durable_execution/overview/>
 - Dify workflow: <https://docs.dify.ai/>
 - AutoGen: <https://microsoft.github.io/autogen/>
 - CrewAI: <https://docs.crewai.com/>
@@ -210,4 +212,3 @@ Codex CLI 负责：
 2. 再把 Human Gate / Resume 与 Observability 接到 OPL App / CLI。
 3. MAS 做真实 paper line soak，MAG/RCA 做 controlled workspace proof。
 4. 最后清理旧的机械分流入口，只保留 router/audit/materializer 角色。
-
