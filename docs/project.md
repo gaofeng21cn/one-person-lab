@@ -2,14 +2,14 @@
 
 ## 项目是什么
 
-对外公开时，`One Person Lab` (`OPL`) 是一人课题组的 Codex-first、stage-led family agent framework：它提供 `Codex-default session runtime`、显式 `domain-agent activation` 层、Hermes-first online family runtime control plane，以及可选 GUI/API shells 背后的 shared projection/contract 层。
+对外公开时，`One Person Lab` (`OPL`) 是一人课题组的 Codex-first、stage-led family agent framework：它提供 `Codex-default session runtime`、显式 `domain-agent activation` 层、provider-backed family runtime control plane，以及可选 GUI/API shells 背后的 shared projection/contract 层。
 当前仓库跟踪：
 
 - `opl` / `opl exec` / `opl resume` 这组 CLI / shell 前门
 - Codex-default session/runtime 路径
 - domain-agent activation / dispatch 规格
 - stage descriptor、handoff envelope、receipt、projection 与 authority boundary 这组 family-level stage control 语言
-- `OPL Runtime Manager` 产品控制面：把外部 `Hermes-Agent` online runtime substrate 纳入 OPL 产品级 profile、typed family queue、domain dispatch、任务注册、诊断和状态投影
+- `OPL Runtime Manager` 产品控制面：把 family runtime provider 纳入 OPL 产品级 profile、typed family queue、domain dispatch、任务注册、诊断和状态投影；Temporal-backed provider 是当前生产 substrate 候选，Hermes/local provider 是迁移期 legacy/optional provider
 - 执行引擎与模块注册表
 - 工作空间、会话、进度、交付物等接口面
 - 跨仓共享的模块、机器可读合同与可发现索引
@@ -25,17 +25,17 @@
 1. 默认运行时层
    `OPL` 以 `Codex-default session runtime` 组织 `system / engines / modules / agents / workspaces / sessions / progress / artifacts` 这组顶层产品资源。
 2. 显式激活与在线控制面
-   `OPL` 负责 family skill pack 注册与同步、typed family queue、shared dispatch、family-level shared surfaces，以及把调用映射到各个 admitted domain 仓的稳定 capability surface；Hermes 提供 24h 在线 substrate。
+   `OPL` 负责 family skill pack 注册与同步、typed family queue、shared dispatch、family-level shared surfaces，以及把调用映射到各个 admitted domain 仓的稳定 capability surface；family runtime provider 提供 24h durable stage-attempt substrate。
 3. 可选外壳与投影层
    GUI shell 与其他兼容层继续围绕同一套 runtime/activation truth 做展示与投影，而不是重新定义默认交互合同。
 
-其中 `OPL Runtime Manager` 位于默认运行时层与显式激活层之间。它是产品级管理/投影层，不是新的 runtime kernel：默认具体 executor 仍归 `Codex` 或 domain route；`Hermes-Agent` 持有长期在线 session、scheduler、wakeup、interrupt/resume、memory、delivery/cron/webhook、approval transport 与 gateway；`OPL Runtime Manager` 负责把 Hermes 的受支持版本、profile、typed family queue、domain task registration、诊断、恢复入口、可选 native helper 与高频状态索引统一投影进 `sessions / progress / artifacts / attention queue`。
+其中 `OPL Runtime Manager` 位于默认运行时层与显式激活层之间。它是产品级管理/投影层，不是新的 domain runtime kernel：默认具体 executor 仍归 `Codex` 或 domain route；Temporal-backed provider 的目标职责是 durable workflow、activity retry/timeout、signal/query、history 与恢复；Hermes-Agent 在迁移期只保留 legacy/optional provider 或 executor/proof lane。`OPL Runtime Manager` 负责把 provider profile、typed family queue、domain task registration、诊断、恢复入口、可选 native helper 与高频状态索引统一投影进 `sessions / progress / artifacts / attention queue`。
 
 ## 项目目标
 
 - 给 `opl`、`opl exec`、`opl resume`、直接 `Codex` 使用和外部壳提供稳定一致的 Codex-default session/runtime 合同
-- 冻结 `OPL Runtime Manager` 的产品控制面合同，让 OPL 能管理外部 `Hermes-Agent` online substrate，而不复制一套 scheduler/session/memory kernel
-- 让 `opl install` 默认走 Codex + Hermes online runtime + MAS/MAG/RCA domain modules + 推荐 companion tools；`--no-online-runtime` 只用于开发/离线 degraded diagnostics
+- 冻结 `OPL Runtime Manager` 的产品控制面合同，让 OPL 能管理 provider-backed family runtime，而不复制一套 domain scheduler/session/memory kernel
+- 让 `opl install` 默认走 Codex + family runtime provider + MAS/MAG/RCA domain modules + 推荐 companion tools；`--no-online-runtime` 只用于开发/离线 degraded diagnostics
 - 以 contract-first 方式规划 `OPL native helper` 与高频文件/状态索引：只做系统探测、artifact discovery、状态投影加速，不替代 domain-owned durable truth
 - 把 domain app 以可同步的 skill pack 与稳定 contract 接入统一 activation layer
 - 统一管理执行引擎、模块、工作空间、会话、进度与交付物
@@ -48,12 +48,12 @@
 
 - `OPL` 负责 Codex-default session/runtime、activation layer、release distribution surface，以及 shared modules / contracts / indexes
 - `OPL` 负责把 domain stage 表达成可发现、可恢复、可审计的 family-level work unit；stage 内部的专家拆解、创作、审核、修订和最终质量判断由 domain agent 与 `Codex CLI` 执行
-- `OPL Runtime Manager` 负责 Hermes online substrate provisioning、profile wiring、typed family queue、task registration hydration、diagnostics、status projection、native helper catalog 与 state index catalog
+- `OPL Runtime Manager` 负责 family runtime provider provisioning、profile wiring、typed family queue、task registration hydration、diagnostics、status projection、native helper catalog 与 state index catalog
 - `OPL Runtime Manager` 不拥有 domain truth、domain quality authority、artifact gate、publication/package gate 或 concrete executor
-- Hermes online-management gateway 是 Full OPL family readiness 的 required 系统服务，由 Hermes installer/gateway command 管理；OPL 触发、检查并报告该 gateway 的 readiness
+- Full OPL family readiness 要求已配置的 family runtime provider ready。Temporal-backed provider 是生产目标；Hermes gateway readiness 只在迁移期作为 legacy/optional provider readiness 信号保留
 - `OPL` 的默认具体 executor 仍是 `Codex`
-- `Hermes-Agent` 是默认 online runtime substrate；执行语义只在显式切换 executor 或 domain route 选择时进入
-- Hermes 缺失或 gateway 未 loaded 表示 Full OPL readiness degraded；本地 CLI/status/manifest 可以继续报告诊断，但完整在线能力未通过
+- `Hermes-Agent` 不再是新的目标默认 session/wakeup substrate；它保留为 legacy/optional provider 或 route-selected executor/proof lane
+- family runtime provider 缺失或未 ready 表示 Full OPL readiness degraded；本地 CLI/status/manifest 可以继续报告诊断，但完整在线能力未通过
 - `OPL` 不持有领域运行时所有权
 - `OPL` 不替代各个领域仓的智能体逻辑
 - 外部界面仓负责 GUI 外壳；当前仓库只跟踪产品运行时与接口真相

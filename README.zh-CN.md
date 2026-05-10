@@ -32,7 +32,7 @@ macOS 桌面用户可以直接下载 App：
 
 [下载 One Person Lab for macOS](https://github.com/gaofeng21cn/one-person-lab/releases/latest)
 
-打开 `One Person Lab.app` 后，首次启动会准备本机环境，并帮助配置 Codex、Hermes online runtime、模块、skills、`officecli` 这类 companion CLI 工具和桌面工作台，不额外打开服务窗口。Full OPL readiness 需要 Core ready、Domain modules ready、Hermes online runtime ready 三层都通过。Hermes 暂不可用时，本地 CLI/status/manifest 仍可输出 degraded 诊断。
+打开 `One Person Lab.app` 后，首次启动会准备本机环境，并帮助配置 Codex、OPL family runtime provider、模块、skills、`officecli` 这类 companion CLI 工具和桌面工作台，不额外打开服务窗口。Full OPL readiness 需要 Core ready、Domain modules ready、已配置的 family runtime provider ready 三层都通过。生产目标是 Temporal-backed provider 承接 durable stage attempt；当前 Hermes/local provider 路径只作为迁移期 legacy 实现信号。
 
 如果你更习惯从终端安装：
 
@@ -63,7 +63,7 @@ curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/ins
 - 专业产品家族：面向特定领域的专门工作流。
 - Stage-led 执行：OPL 把领域 stage 作为可观察、可编排的工作单元，把 `Codex CLI` 作为 stage 内默认 concrete executor。
 - 进度与文件视图：持续挂在任务旁边，方便恢复和交付。
-- 环境与模块管理：统一查看 Codex、Hermes online runtime、模块、skills、GUI 和健康情况。
+- 环境与模块管理：统一查看 Codex、OPL family runtime provider、模块、skills、GUI 和健康情况。
 
 ## 给 Agent 和技术操作者的快速入口
 
@@ -72,12 +72,12 @@ curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/ins
 
 ### 交给 Codex Agent 的一句话
 
-> 安装并配置这个 OPL 仓库：clone 仓库、安装 OPL CLI、运行 `opl install`，并确保 Codex CLI、Hermes online runtime、MAS/MAG/RCA、推荐 skills、`officecli` 这类必要 companion CLI 工具、One Person Lab App 和浏览器入口都可用；如果缺任何东西，直接修复或报告精确阻塞点。Hermes-Agent 是 24h family wakeup、queue delivery、sessions、approval、notification 和 profile isolation 的默认在线 substrate；MAS/MAG/RCA 继续持有各自 domain truth。
+> 安装并配置这个 OPL 仓库：clone 仓库、安装 OPL CLI、运行 `opl install`，并确保 Codex CLI、已配置的 OPL family runtime provider、MAS/MAG/RCA、推荐 skills、`officecli` 这类必要 companion CLI 工具、One Person Lab App 和浏览器入口都可用；如果缺任何东西，直接修复或报告精确阻塞点。Temporal-backed provider 是 durable stage attempt、human-gate signal、retry、query 和 workflow history 的生产 substrate 候选；Hermes-Agent 在迁移期只作为 legacy/optional provider 或 executor/proof lane，MAS/MAG/RCA 继续持有各自 domain truth。
 
 ### 安装后常用命令
 
 ```bash
-opl system initialize   # 检查 Codex 策略、Hermes online runtime、模块、skills、GUI 和工作目录状态
+opl system initialize   # 检查 Codex 策略、family runtime provider、模块、skills、GUI 和工作目录状态
 opl family-runtime status
 opl family-runtime repair
 opl modules             # 查看 MAS/MAG/RCA 模块，以及 MAS 声明的可选 companion diagnostic
@@ -98,7 +98,7 @@ opl help --text         # 人类可读帮助；机器读取使用 opl help --jso
 
 在 MAS v2 alignment 下，`Med Auto Science` 继续是独立医学科研 domain agent，并通过单一 domain app skill 被 Codex 与 OPL 消费。OPL 持有统一定义、shared contract/index 注册、模块发现和 projection 消费层；它不变成 MAS runtime kernel，不恢复 MAS standalone release / install 通道，也不把 MAS projection 写成 OPL 自己持有的 ready verdict 或投稿/发表裁决。
 
-桌面 GUI 由 [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) 作为 OPL 品牌 App 外壳维护。用户从这个仓库的 GitHub Releases 获取 One Person Lab App 包；macOS arm64 新用户可选择带 MAS/MAG/RCA、Hermes online runtime、`officecli` 以及推荐 companion skill payload 的 `One-Person-Lab-Full-<version>-mac-arm64.dmg` 首次安装资产，App 内更新继续只使用标准 App 资产和 `latest*.yml` metadata。这个仓库提供 App 和 Codex 共同消费的共享合同与产品表面。
+桌面 GUI 由 [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) 作为 OPL 品牌 App 外壳维护。用户从这个仓库的 GitHub Releases 获取 One Person Lab App 包；macOS arm64 新用户可选择带 MAS/MAG/RCA、当前 family runtime provider payload、`officecli` 以及推荐 companion skill payload 的 `One-Person-Lab-Full-<version>-mac-arm64.dmg` 首次安装资产，App 内更新继续只使用标准 App 资产和 `latest*.yml` metadata。这个仓库提供 App 和 Codex 共同消费的共享合同与产品表面。
 
 ### 这个仓库怎么读
 
@@ -111,10 +111,10 @@ opl help --text         # 人类可读帮助；机器读取使用 opl help --jso
 - 默认前门是 `opl`、`opl exec` 和 `opl resume`。除非显式切换 runtime 或显式激活 domain agent，这几个入口都继承 Codex-default 语义。
 - OPL 的编排单元是 domain `stage`；stage descriptor、handoff envelope、receipt 和 projection metadata 属于 family framework 层，stage 内部执行仍由 domain 持有并交给 Codex 执行。
 - OPL 会把 `Codex CLI` 作为受管运行依赖检查：`opl system` 会报告实际选中的 binary、版本、最低版本策略和 PATH 诊断。健康状态以选中 binary 为准；非选中的 PATH 候选只作为诊断信息，不阻塞兼容的 Codex CLI。
-- Hermes-Agent 是 Full OPL family readiness 的必需 online runtime substrate。OPL 持有 typed family queue 和 domain dispatch bridge；Hermes 持有 gateway 常驻、cron/webhook wakeup、session store、delivery、approval transport 和 profile isolation。
-- `Codex CLI` 仍是默认具体执行器，除非 route 显式选择其他 executor。Hermes online substrate 不成为 MAS/MAG/RCA 的 domain truth、质量 authority、artifact authority 或 publication/package gate。
-- 使用 `opl family-runtime status|doctor|repair|tick|enqueue|queue list|approve|notify list|events export` 操作 OPL family runtime bridge。`opl install --no-online-runtime` 与 `OPL_DISABLE_HERMES_ONLINE=1` 只用于开发/离线诊断，并输出 degraded Full readiness。
-- 首次启动需要 Core ready、Domain modules ready、Hermes online runtime ready 三层都通过，Full readiness 才算完整。Hermes 缺失、pending 或 starting 时，本地 CLI/status/manifest 仍可输出精确 degraded 状态。
+- OPL family runtime 正在收敛为 provider-backed。Temporal 是 durable stage-attempt workflow、activity retry/timeout、human-gate signal、status query 与 execution history 的首选生产 substrate 候选。Hermes-Agent 在迁移期保留为 legacy/optional provider 或显式 executor/proof lane；Temporal provider 落地后，它不再是目标长期 session/wakeup substrate。
+- `Codex CLI` 仍是默认具体执行器，除非 route 显式选择其他 executor。family runtime provider 不成为 MAS/MAG/RCA 的 domain truth、质量 authority、artifact authority 或 publication/package gate。
+- 使用 `opl family-runtime status|doctor|repair|tick|enqueue|queue list|approve|notify list|events export` 操作 OPL family runtime bridge。`opl install --no-online-runtime` 与 provider-disable 环境开关只用于开发/离线诊断，并输出 degraded Full readiness。
+- 首次启动需要 Core ready、Domain modules ready、已配置的 family runtime provider ready 三层都通过，Full readiness 才算完整。迁移期本地 CLI/status/manifest 仍可能暴露 Hermes/local provider 状态作为 legacy readiness signal。
 - 如果某个 admitted domain repo 还没落地到本机，运行 `opl module install --module <module_id>`。
 - 默认本地状态目录是 `~/Library/Application Support/OPL/state`。如果需要改到其他本地状态根目录，直接设置 `OPL_STATE_DIR`。
 - 当前 active domain agents 是 [`Med Auto Science`](https://github.com/gaofeng21cn/med-autoscience)、[`Med Auto Grant`](https://github.com/gaofeng21cn/med-autogrant) 和 [`RedCube AI`](https://github.com/gaofeng21cn/redcube-ai)。

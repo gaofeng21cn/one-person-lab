@@ -19,11 +19,11 @@ Date: `2026-05-10`
 成熟系统给出的共同方向很一致：
 
 - LangGraph 把线程、checkpoint、persistence、human-in-the-loop 和 resume 作为长期 agent 的基础能力。
-- Temporal 把 durable workflow、activity、retry policy、signal/query 和 workflow history 作为可靠执行的基本单元。
+- Temporal 把 durable workflow、activity、retry policy、signal/query 和 workflow history 作为可靠执行的基本单元；它是 OPL family runtime provider 的生产 substrate 候选，而不只是参考对象。
 - OpenAI Agents SDK 把 handoff、guardrail 和 tracing 当作多 agent 运行的基础结构能力。
 - Cloudflare Agents 强调 durable identity、state、schedule 和 event-driven agent runtime。
 - Pydantic AI durable execution 把 long-running、async、human-in-the-loop 和 restart recovery 归入 durable agent 的生产可靠性问题。
-- Dify、AutoGen、CrewAI、DeerFlow 等系统说明了 workflow / agent team / research flow 的组织方式，但 OPL 应吸收工程模式，不把它们引入为 runtime 依赖。
+- Dify、AutoGen、CrewAI、DeerFlow 等系统说明了 workflow / agent team / research flow 的组织方式。OPL 应吸收这些工程模式；其中 Temporal 与这类 agent 框架不同，可以作为 durable execution substrate 被正式评估和接入。
 
 这些经验不支持让程序硬编码领域思路。更稳的结构是：durable state、typed handoff、checkpoint、retry/dead-letter、human gate、trace、projection 和 owner boundary 由 framework 提供；领域判断由 domain agent stage pack 和 Codex 执行器完成。
 
@@ -46,6 +46,7 @@ User / Codex App / OPL GUI / CLI
   -> OPL Codex-default session runtime
   -> OPL activation + stage control plane
   -> typed family queue / wakeup / approval / retry
+  -> family runtime provider (Temporal target; Hermes/local legacy)
   -> domain app skill or domain capability surface
   -> Codex CLI executing a domain-owned stage
   -> domain-owned quality gate / truth reducer / artifact authority
@@ -60,6 +61,34 @@ OPL 负责：
 - durable session/runtime status、attempt ledger、trace projection。
 - cross-domain progress、attention queue、artifact locator 和 operator dashboard。
 - parity helper、manifest validation、framework-level governance。
+
+## Temporal-Backed Runtime Provider
+
+Temporal provider 的定位是生产级 durable substrate，不是新的领域大脑。
+
+语义映射：
+
+- Temporal Workflow = `stage_attempt`。一次 scout、idea、analysis-campaign、review、decision 等 stage attempt 进入可恢复 workflow history。
+- Temporal Activity = `Codex CLI` stage execution、domain sidecar dispatch、artifact rebuild、review/gate replay 等可重试外部动作。
+- Temporal Signal = human gate、用户插入修改要求、approval、pause/resume/stop、milestone 后 reactivation intake。
+- Temporal Query = OPL App / CLI / Portal 读取 stage progress、attempt status、next owner、blocked reason、artifact refs。
+- Temporal retry / timeout / heartbeat / history = OPL durable execution 的生产可靠性底座。
+
+不迁移的内容：
+
+- MAS/MAG/RCA 的 domain truth、quality gate、artifact/package authority 不进入 Temporal。
+- Temporal 不生成研究方向、基金策略或视觉审美判断；这些仍由 domain stage pack、prompt/skill、AI reviewer/review gate 和 Codex CLI 执行器完成。
+- Temporal history 只能作为 runtime audit / replay evidence，不能替代 evidence ledger、review ledger、publication_eval、submission-ready gate 或 visual export gate。
+
+优先落地顺序：
+
+1. Provider abstraction freeze：把 OPL family runtime provider 显式枚举为 `local_sqlite | hermes_legacy | temporal`，并声明一致的 readiness、attempt、signal、query、receipt 字段。
+2. Temporal stage workflow schema：冻结 `stage_attempt_id`、domain id、stage id、workspace locator、source fingerprint、checkpoint refs、human gate refs、retry budget、closeout refs。
+3. Codex CLI activity runner：把 stage prompt/skill/context packet 作为 activity input，输出 typed closeout、artifact delta refs、receipt 和 next owner。
+4. Human gate signal/query/projection：把用户修改要求、approval、stop-loss、resume token 与 App 状态查询接入 Signal/Query。
+5. MAS paper-line pilot：选择真实 paper line 做 read-only / guarded apply soak，证明 `stage entry packet -> Codex activity -> closeout packet -> router receipt -> progress delta / human gate / stop-loss`。
+6. MAG/RCA controlled attempts：用 controlled workspace 或 fixture 证明 grant/visual stage attempt 可复用同一 provider abstraction。
+7. Hermes retirement：Temporal provider 通过 readiness、soak 与 direct skill parity 后，Hermes 退到 optional executor/proof backend、legacy compatibility provider 或可选安装模块。
 
 Domain agent 负责：
 

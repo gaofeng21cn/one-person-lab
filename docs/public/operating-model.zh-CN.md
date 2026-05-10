@@ -17,7 +17,7 @@ Human / Agent
   -> Codex-default session/runtime
       -> explicit OPL activation
           -> selected domain agent entry
-              -> Domain Harness OS / Review Surfaces / Deliveries / Audit Truth
+              -> domain-owned harness / review surfaces / deliveries / audit truth
 ```
 
 当前最清楚的三条映射是：
@@ -111,7 +111,7 @@ Agent 主要负责：
 - 当前继续以 `Codex CLI` 作为 formal executor
 - `MCP` 继续作为 supported protocol layer
 - domain-owned product entry surface 继续作为 domain workflow、runtime truth 与 delivery truth 的 ownership 边界
-- `OPL Runtime Manager` 只作为 external `Hermes-Agent` 之上的 product-managed 薄 adapter
+- `OPL Runtime Manager` 只作为已配置 family runtime provider 之上的 product-managed 薄 adapter
 
 在这条演进线上：
 
@@ -124,8 +124,8 @@ Agent 主要负责：
 因此，未来更像是“多个垂类在线 agent 产品复用同一 substrate”，而不是“一个顶层巨型 runtime 吞掉所有 domain”。
 这条方向当前还没有全部实现，但现在应该按这个结构推进。
 
-`Hermes-Agent` 是上游外部 runtime project / service。
-`OPL Runtime Manager` 可以在它之上适配 product-managed runtime operations，但不能写成 scheduler、session store、memory owner、domain truth owner 或 concrete executor owner。
+当这里提到 `Hermes-Agent` 时，指的只是不受 OPL 持有的上游外部 runtime project / service。它在迁移期保留为 legacy/optional provider 或显式 executor/proof lane；一旦 Temporal-backed provider 落地，它不再是目标默认 substrate。
+`OPL Runtime Manager` 可以在已配置 family runtime provider 之上适配 product-managed runtime operations，但不能写成 scheduler、session store、memory owner、domain truth owner 或 concrete executor owner。
 Rust native helper / index-only 工作可以支持 native assistance 与 indexed discovery，但不能成为 domain execution 或 truth 的 owner。
 
 ## 运行原则

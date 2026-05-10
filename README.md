@@ -32,7 +32,7 @@ For macOS desktop users, download the App directly:
 
 [Download One Person Lab for macOS](https://github.com/gaofeng21cn/one-person-lab/releases/latest)
 
-Open `One Person Lab.app`; on first launch it quietly checks the local environment, uses your home directory as the default workspace root, and installs or reuses Codex, Hermes online runtime, OPL modules, recommended skills, and companion tools such as the `officecli` binary. Full OPL readiness requires Core ready, Domain modules ready, and Hermes online runtime ready. Local CLI/status/manifest diagnostics can still run in degraded mode when Hermes is temporarily unavailable.
+Open `One Person Lab.app`; on first launch it quietly checks the local environment, uses your home directory as the default workspace root, and installs or reuses Codex, the OPL family runtime provider, OPL modules, recommended skills, and companion tools such as the `officecli` binary. Full OPL readiness requires Core ready, Domain modules ready, and a configured family runtime provider ready. The production target is a Temporal-backed provider for durable stage attempts; the current Hermes/local provider path is a migration/legacy implementation signal until that target lands.
 
 If you prefer Terminal installation:
 
@@ -63,7 +63,7 @@ Need Docker, Linux, or server deployment? See the [Docker and browser deployment
 - Specialized product families for domain-specific expert workflows.
 - Stage-led execution: OPL treats a domain stage as the observable work unit and `Codex CLI` as the default concrete executor inside that stage.
 - Progress and file views that stay attached to ongoing work.
-- Central management for Codex, Hermes online runtime, modules, skills, GUI, and health status.
+- Central management for Codex, the OPL family runtime provider, modules, skills, GUI, and health status.
 
 ## For Agents And Technical Operators
 
@@ -72,12 +72,12 @@ Need Docker, Linux, or server deployment? See the [Docker and browser deployment
 
 ### One instruction for a Codex Agent
 
-> Install and configure this OPL repo: clone it, install the OPL CLI, run `opl install`, and ensure Codex CLI, Hermes online runtime, MAS/MAG/RCA, recommended skills, required companion tools such as the `officecli` binary, the One Person Lab App, and the browser entry are ready; if anything is missing, fix it or report the exact blocker. Treat Hermes-Agent as the default online substrate for 24h family wakeup, queue delivery, sessions, approvals, notifications, and profile isolation while keeping domain truth in MAS/MAG/RCA.
+> Install and configure this OPL repo: clone it, install the OPL CLI, run `opl install`, and ensure Codex CLI, the configured OPL family runtime provider, MAS/MAG/RCA, recommended skills, required companion tools such as the `officecli` binary, the One Person Lab App, and the browser entry are ready; if anything is missing, fix it or report the exact blocker. Treat Temporal-backed execution as the production substrate candidate for durable stage attempts, human-gate signals, retries, queries, and history; treat Hermes-Agent as a legacy/optional provider or executor/proof lane during migration while keeping domain truth in MAS/MAG/RCA.
 
 ### Common commands after installation
 
 ```bash
-opl system initialize   # Inspect Codex policy, Hermes online runtime, modules, skills, GUI, and workspace-root state
+opl system initialize   # Inspect Codex policy, family runtime provider, modules, skills, GUI, and workspace-root state
 opl family-runtime status
 opl family-runtime repair
 opl modules             # Check MAS/MAG/RCA modules and any MAS-declared optional companion provenance/audit refs
@@ -99,7 +99,7 @@ Architecturally, OPL is a Codex-first, stage-led family agent framework: OPL own
 
 For the MAS v2 alignment, `Med Auto Science` remains an independent medical research domain agent with a single domain app skill entry consumed by Codex and OPL. OPL owns the unified definitions, shared contract/index registration, module discovery, and projection consumption layer; it does not become the MAS runtime kernel, does not restore a MAS standalone release/install channel, and does not turn MAS projections into OPL-owned readiness or publication verdicts.
 
-The desktop GUI source is maintained in [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) as an internal OPL-branded app-shell build input. Users download One Person Lab App packages from this repository’s GitHub Releases; first-time macOS arm64 users can choose the `One-Person-Lab-Full-<version>-mac-arm64.dmg` asset with MAS/MAG/RCA, Hermes online runtime, `officecli`, and recommended companion skill payloads, while in-app updates continue to use the standard App assets and `latest*.yml` metadata. This repository provides the shared workbench contracts and product surfaces consumed by the app and Codex.
+The desktop GUI source is maintained in [`opl-aion-shell`](https://github.com/gaofeng21cn/opl-aion-shell) as an internal OPL-branded app-shell build input. Users download One Person Lab App packages from this repository’s GitHub Releases; first-time macOS arm64 users can choose the `One-Person-Lab-Full-<version>-mac-arm64.dmg` asset with MAS/MAG/RCA, the current family runtime provider payload, `officecli`, and recommended companion skill payloads, while in-app updates continue to use the standard App assets and `latest*.yml` metadata. This repository provides the shared workbench contracts and product surfaces consumed by the app and Codex.
 
 ### How to read this repository
 
@@ -112,10 +112,10 @@ The desktop GUI source is maintained in [`opl-aion-shell`](https://github.com/ga
 - Default front doors are `opl`, `opl exec`, and `opl resume`. Unless a runtime or domain agent is explicitly selected, these paths keep Codex-default semantics.
 - OPL's orchestration unit is the domain `stage`; stage descriptors, handoff envelopes, receipts, and projection metadata live at the family framework layer, while stage internals remain domain-owned and Codex-executed.
 - OPL treats `Codex CLI` as a managed runtime dependency: `opl system` reports the selected binary, version, minimum-version policy, and PATH diagnostics. Health is based on the selected binary; non-selected PATH candidates are reported as diagnostics instead of blocking a compatible Codex CLI.
-- Hermes-Agent is the required online runtime substrate for Full OPL family readiness. OPL owns the typed family queue and domain dispatch bridge; Hermes owns gateway residency, cron/webhook wakeup, session store, delivery, approval transport, and profile isolation.
-- `Codex CLI` remains the default concrete executor unless a route explicitly chooses another executor. Hermes online substrate does not become MAS/MAG/RCA domain truth, quality authority, artifact authority, or publication/package gate.
-- Use `opl family-runtime status|doctor|repair|intake|tick|enqueue|queue list|approve|notify list|events export` for the OPL family runtime bridge. `opl install --no-online-runtime` and `OPL_DISABLE_HERMES_ONLINE=1` are development/offline diagnostic modes and report degraded Full readiness.
-- First launch requires Core ready, Domain modules ready, and Hermes online runtime ready before Full readiness passes. Local CLI/status/manifest diagnostics can still report precise degraded state when Hermes is absent, pending, or starting.
+- The OPL family runtime is becoming provider-backed. Temporal is the preferred production substrate candidate for durable stage-attempt workflows, activity retry/timeout, human-gate signals, status queries, and execution history. Hermes-Agent remains a legacy/optional provider or explicit executor/proof lane during migration; it is not the target long-term session/wakeup substrate once the Temporal provider lands.
+- `Codex CLI` remains the default concrete executor unless a route explicitly chooses another executor. A family runtime provider does not become MAS/MAG/RCA domain truth, quality authority, artifact authority, or publication/package gate.
+- Use `opl family-runtime status|doctor|repair|intake|tick|enqueue|queue list|approve|notify list|events export` for the OPL family runtime bridge. `opl install --no-online-runtime` and provider-disable environment switches are development/offline diagnostic modes and report degraded Full readiness.
+- First launch requires Core ready, Domain modules ready, and the configured family runtime provider ready before Full readiness passes. During migration, local CLI/status/manifest diagnostics may still expose Hermes/local provider state as a legacy readiness signal.
 - If an admitted domain repo is missing locally, run `opl module install --module <module_id>`.
 - When automation needs a domain CLI, run it through `opl module exec --module <module_id> -- <domain_cli_args...>` so the command is launched from the current OPL-managed module checkout instead of a stale global PATH tool.
 - The default workspace root is your home directory. The default local state directory is `~/Library/Application Support/OPL/state`. Set `OPL_STATE_DIR` to use another local state root.

@@ -3,17 +3,18 @@
 ## 定位
 
 `OPL Runtime Manager` 是 OPL 的产品级 runtime 管理与投影层。
-它不替代 `Hermes-Agent`，也不把 OPL 改写成自有长期在线 runtime kernel。
-Hermes 是 Full OPL family 的默认 online runtime substrate 与 online-management gateway；OPL 管理产品级安装、检查、typed queue 和投影，不拥有 gateway system service lifecycle。
+它不替代 family runtime provider，也不把 OPL 改写成自有长期在线 runtime kernel。
+目标形态是 provider-backed family runtime：Temporal-backed provider 是生产 substrate 候选，负责 durable stage attempt、retry/timeout、signal/query 与 workflow history；Hermes/local provider 只作为迁移期 legacy/optional provider 或 executor/proof lane 保留。OPL 管理产品级安装、检查、typed queue 和投影，不拥有 provider system service lifecycle。
 
 目标链路是：
 
-`OPL CLI / GUI / Product Entry -> OPL Runtime Manager / family-runtime queue -> required external Hermes-Agent online substrate / Hermes gateway system service -> Domain Adapter -> MAS / MAG / RCA domain logic`
+`OPL CLI / GUI / Product Entry -> OPL Runtime Manager / family-runtime queue -> configured family runtime provider -> Domain Adapter -> MAS / MAG / RCA domain logic`
 
 ## Owner Split
 
-- `OPL`：产品入口、bootstrap、version pin、profile wiring、typed family queue、domain task registration hydration、诊断、恢复入口、native helper catalog、state index catalog，以及 Hermes gateway readiness 的触发、检查和报告
-- `Hermes-Agent`：长期在线 session、scheduler、wakeup、interrupt/resume、memory、delivery/cron 与 online-management gateway；gateway system service 由 Hermes installer/gateway command 管理
+- `OPL`：产品入口、bootstrap、version pin、profile wiring、typed family queue、domain task registration hydration、诊断、恢复入口、native helper catalog、state index catalog，以及 provider readiness 的触发、检查和报告
+- `Temporal-backed provider`：目标生产 substrate；承接 stage attempt workflow、Codex/domain dispatch activity、retry/timeout、human gate signal、progress query、workflow history 与 replay/audit
+- `Hermes-Agent`：迁移期 legacy/optional provider、显式 executor/proof lane 或 Codex CLI fallback module；不再是 Temporal provider 落地后的目标 session/wakeup substrate
 - `MAS / MAG / RCA`：domain-owned truth、gate、artifact、progress、review / publication / submission 判断
 - concrete executor：由 domain route contract 选择，默认仍可继承本机 `Codex CLI`
 
@@ -21,12 +22,12 @@ Family runtime supervision 的 owner split 更窄：domain 仓持有 wakeup / su
 
 Domain task hydration 是另一个显式授权面：domain sidecar export 可以输出 `pending_family_tasks[]`，OPL 只把这些任务按 `dedupe_key` 写入 family queue，再调用对应 domain sidecar dispatch。OPL 不从 read-only status 自行生成 domain action。MAS paper autonomy tasks 现在作为该规则的参考实现：`paper_autonomy/repair-recheck`、`paper_autonomy/ai-reviewer-recheck`、`paper_autonomy/gate-replay` 和 `paper_autonomy/route-decision` 会在 OPL 队列与 dispatch 文件中保留 source refs、next owner、callable surface、source fingerprint 与 idempotency key，但实际 repair、AI reviewer、gate replay、route decision 仍由 MAS owner surface 执行和落账。
 
-当前落地状态覆盖 OPL family-runtime 的 repo-level transport surface：queue enqueue/list/inspect/tick、idempotency、retry/dead-letter、approval pause、local inbox、domain-forbidden-write guard、MAS paper autonomy projection、MAG/RCA sidecar task hydration，以及 Hermes gateway stopped -> repair -> ready 的 fixture 验收。Hermes Full App packaging 已恢复为 Full first-install asset，MAG/RCA adapter parity 由各自 domain repo main 持有。仍未完成的是长时真实 Hermes gateway 24h soak，以及真实 MAS paper controlled apply 到最终投稿级交付；这些必须在对应真实环境 / domain truth 中单独给出 evidence 后才能写成 live-study 或长时运行 ready。
+当前落地状态覆盖 OPL family-runtime 的 repo-level transport surface：queue enqueue/list/inspect/tick、idempotency、retry/dead-letter、approval pause、local inbox、domain-forbidden-write guard、MAS paper autonomy projection、MAG/RCA sidecar task hydration，以及 migration provider stopped -> repair -> ready 的 fixture 验收。MAG/RCA adapter parity 由各自 domain repo main 持有。仍未完成的是 Temporal-backed provider pilot、provider abstraction cutover、真实 provider long-run soak，以及真实 MAS paper controlled apply 到最终投稿级交付；这些必须在对应真实环境 / domain truth 中单独给出 evidence 后才能写成 live-study 或长时运行 ready。
 
 ## 当前要落地的最小面
 
 1. `opl runtime manager`
-   输出当前 owner split、Hermes readiness、domain registration registry、native helper lifecycle、native helper target、state index target 与 sidecar promotion gate。
+   输出当前 owner split、provider readiness、domain registration registry、native helper lifecycle、native helper target、state index target 与 sidecar promotion gate。
 2. `contracts/opl-gateway/runtime-manager-contract.json`
    冻结 Runtime Manager 的 machine-readable 合同，以及三类 domain registration surface 的必需字段。
 3. 核心 docs 对齐
@@ -38,10 +39,10 @@ Domain task hydration 是另一个显式授权面：domain sidecar export 可以
 
 首启 readiness 口径：
 
-- `opl install` 默认安装/复用 Hermes online runtime；`--no-online-runtime` 只用于开发/离线 degraded diagnostics。
-- Codex CLI、已准入 domain modules 与 Hermes online runtime 三层都 ready 时，Full OPL readiness 才完整通过。
-- Hermes gateway 未 loaded、starting 或 pending 表示 Full online runtime degraded；本地 CLI/status/manifest 可继续输出诊断。
-- Hermes cron bridge 的 desired script 是 `opl family-runtime tick --source hermes-cron --hydrate`。没有 `--hydrate` 的 cron 只能消费已有队列，不能把 domain read-model blocker 自动转换成 executable task。
+- `opl install` 默认安装/复用 family runtime provider；`--no-online-runtime` 只用于开发/离线 degraded diagnostics。
+- Codex CLI、已准入 domain modules 与 family runtime provider 三层都 ready 时，Full OPL readiness 才完整通过。
+- provider 未 ready 表示 Full online runtime degraded；本地 CLI/status/manifest 可继续输出诊断。
+- 迁移期 Hermes cron bridge 的 desired script 是 `opl family-runtime tick --source hermes-cron --hydrate`。没有 `--hydrate` 的 cron 只能消费已有队列，不能把 domain read-model blocker 自动转换成 executable task。Temporal provider 落地后，该 wakeup 语义应迁到 workflow/activity/signal/query contract。
 
 ## Domain Registration Registry
 
@@ -67,7 +68,7 @@ v1 registry 只登记 MAS、MAG、RCA 已声明的 projection surface：
 - `opl-artifact-indexer`：workspace artifact discovery
 - `opl-state-indexer`：session / progress / artifact projection index 与 large JSON validation
 
-这些 helper 不持有 domain truth，不直接执行 MAS/MAG/RCA 任务，不替代 `Hermes-Agent`。所有 helper 使用 `contracts/opl-gateway/native-helper-contract.json` 冻结 JSON stdin/stdout 边界，由 TypeScript / Python 调用方通过 contract 消费。
+这些 helper 不持有 domain truth，不直接执行 MAS/MAG/RCA 任务，不替代 family runtime provider。所有 helper 使用 `contracts/opl-gateway/native-helper-contract.json` 冻结 JSON stdin/stdout 边界，由 TypeScript / Python 调用方通过 contract 消费。
 
 当前 package lifecycle：
 
@@ -110,10 +111,10 @@ v1 registry 只登记 MAS、MAG、RCA 已声明的 projection surface：
 
 只有满足下面任一条件，才进入 sidecar 评估：
 
-- `Hermes-Agent` 无法表达 OPL 需要的 task registration / wakeup / approval / interrupt / audit contract
-- `Hermes-Agent` 无法满足本地/托管版的产品隔离与权限要求
-- OPL GUI 需要在 Hermes 未运行时持续维护本地 outbox、通知或恢复队列
+- Temporal/provider abstraction 无法表达 OPL 需要的 task registration / wakeup / approval / interrupt / audit contract
+- Temporal/provider abstraction 无法满足本地/托管版的产品隔离与权限要求
+- OPL GUI 需要在 provider 未运行时持续维护本地 outbox、通知或恢复队列
 - 上游升级、许可、稳定性或平台适配成为产品级风险
-- 跨 domain 事务性编排无法通过外部 runtime substrate 合理表达
+- 跨 domain 事务性编排无法通过 external runtime provider 合理表达
 
-在这些 gate 出现前，正确路线是 `external kernel, managed by OPL product packaging`。
+在这些 gate 出现前，正确路线是 `external provider, managed by OPL product packaging`，优先实现 Temporal-backed provider pilot。

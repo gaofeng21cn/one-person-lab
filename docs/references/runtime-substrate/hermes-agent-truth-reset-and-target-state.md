@@ -1,5 +1,7 @@
 # Hermes-Agent 真相重置与目标形态说明
 
+> 2026-05-10 更新：本文保留为 Hermes 相关历史和迁移边界说明。OPL family runtime 的新目标是 provider-backed runtime，其中 Temporal-backed provider 是生产 substrate 候选。`Hermes-Agent` 在新目标下退为 `hermes_legacy` provider、显式 executor/proof lane、Codex CLI 备线或可选安装模块；Temporal provider 落地后，它不再是目标 session/wakeup substrate。最新计划见 [Temporal Family Runtime Provider 落地计划](./temporal-family-runtime-provider-plan.zh-CN.md)。
+
 ## 1. 为什么要做这份重置
 
 这一轮返工的核心，不是“重新换一个更好听的命名”，而是纠正一条已经开始误导实现和文档的错误叙事：
@@ -61,15 +63,17 @@
 5. 文档、machine-readable contract、测试口径一致
    - README、核心 docs、program/specs、current-program pointer 与测试，不能再一边写 Hermes-Agent、一边仍靠 repo-local 假 substrate 兜底。
 
-## 4. 四仓的理想形态
+## 4. 历史 Hermes-first 理想形态
 
-### 4.1 OPL 的理想形态
+本节记录 2026-05-10 之前的 Hermes-first 迁移判断，已经被 provider-backed / Temporal target 决策 supersede。当前有效目标不再是让 Hermes-Agent 成为四仓统一默认 substrate，而是让 OPL family runtime 先形成 provider abstraction，并把 Temporal-backed provider 作为生产 substrate 候选；Hermes-Agent 保留为 `hermes_legacy` provider、显式 executor/proof lane、Codex CLI 备线或可选安装模块。
+
+### 4.1 OPL 的历史 Hermes-first 理想形态
 
 - `OPL` 只负责顶层 gateway / federation / shared-contract。
 - `OPL` 不拥有 domain runtime，也不复制 substrate。
 - `OPL` 定义统一的 `Shared Runtime Contract` / `Shared Domain Contract`，并明确哪些 domain 已经真正接入上游 `Hermes-Agent`。
 
-### 4.2 RedCube AI 的理想形态
+### 4.2 RedCube AI 的历史 Hermes-first 理想形态
 
 - 上游 `Hermes-Agent` 持有 session / run / event / watch / memory / schedule / supervision。
 - `RedCube AI` 只保留 visual domain logic：
@@ -78,13 +82,13 @@
   - audit / review / export / projection
   - domain-specific gate semantics
 
-### 4.3 Med Auto Science 的理想形态
+### 4.3 Med Auto Science 的历史 Hermes-first 理想形态
 
 - 上游 `Hermes-Agent` 持有 outer runtime substrate。
 - `MedAutoScience` 继续持有 study / workspace authority、publication gate、outer-loop judgment。
 - `MedDeepScientist` 逐步退成受控 research backend，随后再按能力边界继续吸收或替换。
 
-### 4.4 Med Auto Grant 的理想形态
+### 4.4 Med Auto Grant 的历史 Hermes-first 理想形态
 
 - 上游 `Hermes-Agent` 持有长期在线 runtime orchestration、session、resume、hosted handoff substrate。
 - `MedAutoGrant` 只保留：
@@ -106,7 +110,9 @@
 - 前期适配成本上升：要把当前仓内自写的 runtime 责任重新拆回 domain logic 与 substrate adapter 两层。
 - 迁移必须更诚实：尤其是 `MedAutoScience`，因为当前真实长跑执行仍与 `MedDeepScientist` 强耦合，不能靠文档硬切。
 
-## 7. 推荐迁移顺序
+## 7. 历史推荐迁移顺序
+
+本节同样保留为历史背景。当前迁移顺序以 [Temporal Family Runtime Provider 落地计划](./temporal-family-runtime-provider-plan.zh-CN.md) 为准：先冻结 provider abstraction，再做 Temporal stage workflow skeleton、MAS paper-line pilot、MAG/RCA controlled attempts、visibility，最后清理 Hermes-first 默认口径。
 
 ### 第一阶段：真相重置
 
