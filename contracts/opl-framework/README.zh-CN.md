@@ -1,6 +1,6 @@
 # OPL Framework 合同
 
-这个目录保留 `One Person Lab` 当前活跃的 framework、runtime 与 family control-plane 合同语料。
+这个目录保留 `OPL Framework` 当前活跃的 framework、runtime 与 family control-plane 合同语料。`One Person Lab App` 和 Foundry Agents 可以消费这些合同，但不在本目录定义自己的第二套运行时真相。
 
 它继续被仓库跟踪，是因为当前 framework 需要稳定的机器可读输入：
 
@@ -10,11 +10,11 @@
 - Runtime Manager readiness 与状态投影
 - 可选 native helper 生命周期检查
 
-当前主线是 `Codex-default executor + explicit OPL activation + configured family runtime provider + family skill sync/discovery`。
+当前主线是 `OPL Framework -> One Person Lab App / CLI -> Foundry Agents`。执行链路仍是 `Codex-default executor + explicit OPL activation + configured family runtime provider + family skill sync/discovery`。
 
 ## 当前真相应去哪里看
 
-当前 `OPL` 模型应优先回到：
+当前 `OPL Framework / App / Foundry Agents` 模型应优先回到：
 
 - `README*`
 - `docs/project.md`
@@ -51,3 +51,4 @@
 - 本目录按活跃 OPL framework contract set 读取
 - Runtime Manager、family runtime attempt 与 standard domain-agent skeleton 合同按 provider-backed family runtime 主线活跃依据读取
 - domain truth 继续归对应 domain 仓所有，而不是归这个目录所有
+- Foundry Agents 应声明并适配这些 framework contracts；不应 vendored / fork 一份 OPL runtime 作为独立真相

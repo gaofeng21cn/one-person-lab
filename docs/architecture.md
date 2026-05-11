@@ -2,25 +2,29 @@
 
 ## 顶层分层
 
-`OPL` 的目标不是只做入口聚合或工作台投影，而是完整的 Codex-first、stage-led family agent runtime framework。它允许使用外部 provider，但框架职责归 OPL：stage attempt lifecycle、typed queue、handoff、human gate、retry/dead-letter、observability、artifact/file lifecycle 与 operator projection。
+`OPL` 的目标不是只做入口聚合或工作台投影，而是完整的 Codex-first、stage-led family agent runtime framework。当前产品认知分成 `OPL Framework`、`One Person Lab App` 和 `Foundry Agents` 三层：Framework 负责开发与运行框架，App 负责普通用户工作台，Foundry Agents 负责领域智能体与交付权威。
+
+OPL Framework 允许使用外部 provider，但框架职责归 OPL：stage attempt lifecycle、typed queue、handoff、human gate、retry/dead-letter、observability、artifact/file lifecycle 与 operator projection。
 
 `OPL` 的当前主链路是：
 
-`Human / Codex / opl / GUI shell -> Codex-default Session Runtime -> OPL Activation Layer / Stage Control Plane / Typed Family Queue -> Domain Capability Surface -> Domain Repository`
+`Human / Codex / opl / One Person Lab App -> Codex-default Session Runtime -> OPL Activation Layer / Stage Control Plane / Typed Family Queue -> Domain Capability Surface -> Domain Repository`
 
 ## 当前产品链路
 
 当前仓库跟踪的产品链路是：
 
-`User / Codex / opl / External Shell -> Codex-default session/runtime path -> explicit OPL activation when needed -> configured family runtime provider when durable orchestration is needed -> selected domain capability surface -> domain runtime and deliverables`
+`User / Codex / opl / One Person Lab App / External Shell -> Codex-default session/runtime path -> explicit OPL activation when needed -> configured family runtime provider when durable orchestration is needed -> selected domain capability surface -> domain runtime and deliverables`
 
 显式长跑托管任务与 online management 的目标链路在这个主链路下增加 provider-backed family runtime substrate：
 
-`OPL Product Entry / GUI / CLI -> OPL Runtime Manager / family-runtime queue -> configured family runtime provider -> Domain Adapter -> selected domain capability surface -> domain runtime and deliverables`
+`OPL Product Entry / One Person Lab App / CLI -> OPL Runtime Manager / family-runtime queue -> configured family runtime provider -> Domain Adapter -> selected domain capability surface -> domain runtime and deliverables`
 
 这里的核心点是：
 
 - `OPL` 当前主线以 `Codex-default session/runtime + explicit activation layer` 为 canonical truth
+- `OPL Framework` 集成开发与运行：developer-facing CLI/contracts/package 入口和 runtime control plane 使用同一套 truth；不通过拆仓或复制 runtime 来制造第二框架
+- `One Person Lab App` 是 user-facing workbench：它消费 Framework 的 runtime/activation truth 和 domain-owned projection，不成为 domain runtime、quality verdict 或 artifact authority
 - `OPL` 的 family-level agent framework 以 domain `stage` 为可观察、可编排、可恢复、可审计的语义单元；`Codex CLI` 是 stage 内默认最小执行单元
 - 大型任务按接近人类专家实施的阶段推进：界定目标、准备材料、执行、审核、修订、交付收口；OPL 负责阶段生命周期与可见性，domain agent 负责领域判断和交付 authority
 - 本地 `opl`、直接 `Codex` 使用、ACP-compatible 外部壳与基于开源 AionUI 定制的 `opl-aion-shell` 都消费同一套 runtime truth
@@ -34,7 +38,7 @@
 - `opl module exec` 负责把自动化 CLI 调用绑定到 OPL module registry 解析出的当前 checkout；domain CLI 从 repo checkout 内启动，避免把用户 PATH 上的旧全局 tool 当作执行真相
 - `Codex CLI` 是默认 concrete executor；family runtime provider 负责 stage-attempt durability / wakeup / approval / retry / query transport，具体 executor 仍由 Codex default 或 domain stage 选择
 - `OPL Product Entry` 的普通 ask/chat/resume 路径只使用 Codex-default executor；`opl session list/logs` 和 runtime status 中的 Hermes 输出是 `hermes_legacy` diagnostics，不是默认 executor 或 runtime truth
-- `MAS`、`MAG`、`RCA` 等领域智能体继续保持独立，并通过 CLI / 本地程序 / 脚本 / contract 暴露 capability surface
+- `MAS`、`MAG`、`RCA` 等 Foundry Agents 继续保持独立，并通过 CLI / 本地程序 / 脚本 / contract 暴露 capability surface；它们以 OPL-compatible package / repo 接入，而不是内嵌一份 OPL runtime
 - MAS v2 alignment 下，`MAS` 作为独立 domain agent 通过单一 MAS domain app skill 接入；`OPL` 只消费 MAS-owned entry/projection truth，包括 `mas_opl_runtime_workbench_projection` 的 App drilldown/read-only workbench 投影，不新增 MAS runtime kernel、standalone product release 或 OPL-owned readiness verdict
 
 ## 当前主线资源
@@ -215,7 +219,7 @@
 - OPL App / GUI 已能消费 stage-attempt workbench 和 provider-level signal 传输，但仍需要真实 worker/domain 执行证明、domain/stage/blocker/memory refs 分组操作面，以及避免把 provider completion 写成 domain ready verdict 的持续 UI 验收。
 - MAS real paper line、MAG grant stage 和 RCA visual stage 仍需要真实或 controlled guarded apply soak，证明 OPL-hosted path 与 direct skill path 共享 domain owner receipts 且语义等价。
 
-所以，OPL 现在可以被描述为 `Codex-first, stage-led family framework control plane, Temporal provider minimal loop, Codex runner repo/test harness, typed closeout gate, and domain skeleton discovery / validation landed`。它的目标是完整智能体运行框架和高价值知识工作全自动交付，但当前不能描述为 `production Temporal-backed autonomous execution framework fully landed`；当前 standard skeleton 家族对齐也不能写成三仓全部 aligned，因为 MAS skeleton descriptor 仍缺失。
+所以，OPL 现在可以被描述为 `Codex-first, stage-led family framework control plane, Temporal provider minimal loop, Codex runner repo/test harness, typed closeout gate, and domain skeleton discovery / validation landed`。它的目标是完整智能体运行框架和高价值知识工作全自动交付，但当前不能描述为 `production Temporal-backed autonomous execution framework fully landed`；当前 standard skeleton 家族对齐已在 MAS/MAG/RCA 三仓达到 descriptor-level aligned，仍不能写成三仓 physical skeleton layout 已完成。
 
 ## 默认执行策略
 
@@ -227,6 +231,6 @@
 ## 文档组织原则
 
 - AI / 维护者优先读取核心五件套。
-- 对外公开面继续按四层系统组织。
+- 对外公开面继续按 `OPL Framework -> One Person Lab App -> Foundry Agents` 三层产品认知组织。
 - 机器合同、公开叙事、参考材料、历史记录分层维护。
 - 历史 `frontdoor` 时代的公开语义只保留在参考与历史层，不再进入当前主线。

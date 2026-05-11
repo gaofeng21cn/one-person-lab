@@ -83,7 +83,7 @@ Date: `2026-05-12`
 
 - `MAS` 和 `MAG` 已通过 `opl-harness-shared @ 2b08c7efd8acd80355e870087d4ce5be7b45d4d1` 消费 OPL Python shared package。
 - `RCA` 已通过 `opl-framework-shared @ 2b08c7efd8acd80355e870087d4ce5be7b45d4d1` 消费 OPL JS shared package。
-- Standard skeleton discovery 当前表现为三仓 descriptor-level aligned：fresh `opl agents list --json` 为 `aligned_count=3`、`missing_count=0`、`drift_detected_count=0`、`blocked_count=0`。OPL 消费的 aligned source fields 当前为 MAG `standard_domain_agent_skeleton`、RCA `standard_domain_agent_skeleton` 与 MAS `opl_domain_agent_skeleton_mapping` alias；三仓均带 artifact locator surface。
+- Standard skeleton discovery 当前表现为三仓 descriptor-level aligned：fresh `opl agents list --json` 为 `aligned_count=3`、`missing_count=0`、`drift_detected_count=0`、`blocked_count=0`。OPL 当前把 MAS、MAG、RCA 都识别为 `standard_domain_agent_skeleton` source field；旧 alias 读取能力只保留为兼容 discovery，不作为当前完成状态表述。三仓均带 artifact locator surface。
 - `MDS` 仍 pin 在较早的 `opl-harness-shared @ 8523f4ab76af486d44a1ccd3a88996ca860d2cc2`；这与它的 archive / diagnostic / upstream-intake 角色一致，不应被读成 active OPL domain adapter 已跟进。
 
 已落地的 framework 能力：
