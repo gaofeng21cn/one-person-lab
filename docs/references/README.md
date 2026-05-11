@@ -14,7 +14,7 @@ If you need to understand what `OPL` is today, go back to:
 - [invariants.md](../invariants.md)
 - [decisions.md](../decisions.md)
 - [docs_portfolio_consolidation.md](../docs_portfolio_consolidation.md)
-- current runtime / product-boundary spec status through the [Specs Index](../specs/README.md)
+- current or path-stable retained runtime / product-boundary specs through the [Specs Index](../specs/README.md)
 
 ## Directory Buckets
 

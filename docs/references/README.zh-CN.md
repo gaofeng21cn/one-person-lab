@@ -14,7 +14,7 @@
 - [invariants.md](../invariants.md)
 - [decisions.md](../decisions.md)
 - [docs_portfolio_consolidation.md](../docs_portfolio_consolidation.md)
-- 通过[规格索引](../specs/README.zh-CN.md)查看当前 runtime / product-boundary 规格状态
+- 通过[规格索引](../specs/README.zh-CN.md)查看当前仍生效或因路径稳定暂时保留的 runtime / product-boundary 规格
 
 ## 目录分区
 
