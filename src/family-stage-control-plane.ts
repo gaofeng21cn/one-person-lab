@@ -30,6 +30,7 @@ export interface FamilyStageListEntry {
   owner: string;
   domain_stage_refs: string[];
   allowed_action_refs: string[];
+  knowledge_ref_count: number;
   source_ref_count: number;
   freshness: JsonRecord | null;
 }
@@ -107,6 +108,7 @@ export function buildFamilyStageListEntry(
     owner: stage.owner,
     domain_stage_refs: stage.domain_stage_refs,
     allowed_action_refs: stage.allowed_action_refs,
+    knowledge_ref_count: stage.knowledge_refs.length,
     source_ref_count: stage.source_refs.length,
     freshness: stage.freshness,
   };
@@ -239,6 +241,7 @@ export function buildFamilyStageInspect(contracts: GatewayContracts, args: strin
         stage_id: stage.stage_id,
         goal: stage.goal,
         owner: stage.owner,
+        knowledge_refs: stage.knowledge_refs,
         skill_refs: stage.skills,
         allowed_action_refs: stage.allowed_action_refs,
         handoff: stage.handoff,

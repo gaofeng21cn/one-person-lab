@@ -54,6 +54,7 @@ Date: `2026-05-11`
 | --- | --- | --- |
 | 定位 / owner split | `landed` | OPL 作为 Codex-first、stage-led family agent framework；MAS/MAG/RCA 作为独立 domain agents；OPL 不持有 domain truth、quality verdict 或 artifact authority。 |
 | Shared contracts / schemas | `landed` | action catalog、stage control plane、runtime supervision、persistence / lifecycle / owner-route、standard skeleton 等 contract 已在 OPL shared layer 冻结。 |
+| Domain memory locator / receipt | `contract_landed_projection_pending` | `family-domain-memory-ref`、`family-domain-memory-writeback` 与 stage `knowledge_refs` 已冻结 locator/receipt 级合同；真实 retrieval、writeback apply、App 展示和跨 domain soak 仍需 domain descriptor 接入后验证。 |
 | Local queue / attempt ledger | `usable_dev_baseline` | `opl family-runtime` 已有 typed queue、pending task hydration、guarded dispatch、retry/dead-letter、local inbox 和 stage attempt ledger。 |
 | Domain descriptor / adapter | `landed_for_active_domains` | MAS/MAG/RCA 已在各自 main 暴露 stage/action/projection/skeleton adapter，OPL 当前真实 `opl agents list` 可校验三者 aligned。 |
 | Lifecycle primitives | `contract_and_locator_landed` | OPL 已有 locator-only lifecycle primitive；MAS 经验已被拆成 framework-generic / MAS-specific 方向，真实跨 domain cleanup/restore apply 仍需 soak。 |
@@ -521,6 +522,7 @@ Codex CLI 负责：
 交付：
 
 - 扩展 `family-stage-control-plane` descriptor，稳定 `stage_id`、`domain_owner`、`stage_kind`、`goal`、`required_inputs`、`expected_outputs`、`skill_refs`、`prompt_refs`、`evaluation_refs`、`handoff_refs`、`authority_boundary`。
+- 扩展可选 `knowledge_refs`，只指向 domain-owned memory / literature / failed-path / reusable-lesson locator，不承载正文或 verdict。
 - 把 descriptor 接入 `family-product-entry-manifest-v2` discovery。
 - 保持 `opl stages list|inspect` 只读，不执行 stage。
 

@@ -147,6 +147,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         'opl system reconcile-modules',
         'opl actions list',
         'opl agents list',
+        'opl domain-memory list',
         'opl stages list',
         'opl modules',
         'opl module install --module medautoscience',

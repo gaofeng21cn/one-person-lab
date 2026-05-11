@@ -129,6 +129,13 @@
             "$ref": "#/$defs/surface_ref"
           }
         },
+        "knowledge_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/surface_ref"
+          },
+          "description": "Domain-owned memory or knowledge locators that OPL may index and inject as references only; this does not grant OPL memory-store, domain-truth, quality-verdict, or artifact authority."
+        },
         "skills": {
           "type": "array",
           "items": {
