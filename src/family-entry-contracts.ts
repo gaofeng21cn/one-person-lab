@@ -534,7 +534,7 @@ export function buildFamilyUserInteractionContract(
     ]),
   );
   return buildUserInteractionContract({
-    entry_owner: optionalString(input.entry_owner) ?? 'opl_gateway_or_domain_gui',
+    entry_owner: optionalString(input.entry_owner) ?? 'opl_framework_or_domain_app',
     user_interaction_mode: optionalString(input.user_interaction_mode) ?? 'natural_language_entry',
     user_commands_required: input.user_commands_required ?? false,
     command_surfaces_for_agent_consumption_only:

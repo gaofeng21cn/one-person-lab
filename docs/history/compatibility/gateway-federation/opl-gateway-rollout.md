@@ -79,7 +79,7 @@ Completion signal:
 
 Current materialization target:
 
-- [OPL Gateway Contracts](../../../../contracts/opl-gateway/README.md)
+- [OPL Framework Contracts](../../../../contracts/opl-framework/README.md)
 
 ## Phase G2: Read-Only Entry Surface
 
@@ -89,7 +89,7 @@ Goal:
 
 Current frozen state:
 
-- under the `Phase 1` public mainline, the CLI-first / gateway contract baseline is already runnable
+- under the `Phase 1` public mainline, the CLI-first / framework contract baseline is already runnable
 - the completed `Phase 1 / G2 release-closeout` has already closed that baseline into one stable repo-tracked `G2 stable public baseline`
 - above that unchanged formal-entry baseline, the active public front door is now the landed local `opl` shell plus the `opl web` pilot and their machine-readable discovery / handoff surfaces
 - the completed repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` remains closed at the planning-contract boundary
@@ -108,7 +108,7 @@ Should support:
 Completion signal:
 
 - an agent can ask “what system should I use for this task?” and receive a stable top-level answer
-- the current G1 materialization is discoverable at [OPL Gateway Contracts](../../../../contracts/opl-gateway/README.md)
+- the current G1 materialization is discoverable at [OPL Framework Contracts](../../../../contracts/opl-framework/README.md)
 
 Detailed contract:
 

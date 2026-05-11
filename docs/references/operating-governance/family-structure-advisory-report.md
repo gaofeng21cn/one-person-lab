@@ -37,9 +37,9 @@ mechanical_residue:
 public_surface_risk:
 
 - `contracts/family-orchestration/family-product-entry-manifest-v2.schema.json`
-- `contracts/opl-gateway/domain-onboarding-readiness.schema.json`
-- `contracts/opl-gateway/public-surface-index.json`
-- `contracts/opl-gateway/candidate-domain-backlog.json`
+- `contracts/opl-framework/domain-onboarding-readiness.schema.json`
+- `contracts/opl-framework/public-surface-index.json`
+- `contracts/opl-framework/candidate-domain-backlog.json`
 
 These are large machine-readable public surfaces. They are not immediate split targets, but future edits should prefer schema modularity or generated/source separation over growing these files further.
 

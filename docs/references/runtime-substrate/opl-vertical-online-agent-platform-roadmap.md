@@ -14,7 +14,7 @@
 - `docs/unified-harness-engineering-substrate.md` / `docs/unified-harness-engineering-substrate.zh-CN.md`
 - `docs/roadmap.md` / `docs/roadmap.zh-CN.md`
 - `contracts/README.md`
-- `contracts/opl-gateway/README.md`
+- `contracts/opl-framework/README.md`
 
 ## 一句话结论
 

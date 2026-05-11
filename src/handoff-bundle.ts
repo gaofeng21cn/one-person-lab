@@ -4,7 +4,7 @@ import { buildDomainEntryParity, buildRecommendedEntrySurfaces } from './family-
 import { resolveWorkspaceLocator } from './workspace-registry.ts';
 import { buildOplRuntimeEndpoints } from './opl-runtime-paths/current.ts';
 import type { HandoffBundleResult } from './handoff-bundle-types.ts';
-import type { BoundaryExplanation, GatewayContracts, ResolutionResult } from './types.ts';
+import type { BoundaryExplanation, FrameworkContracts, ResolutionResult } from './types.ts';
 
 type BuildHandoffBundleOptions = {
   mode: string;
@@ -26,7 +26,7 @@ function resolveRoutedDomainId(routing: ResolutionResult) {
 }
 
 export function buildHandoffBundle(
-  contracts: GatewayContracts,
+  contracts: FrameworkContracts,
   options: BuildHandoffBundleOptions,
 ): HandoffBundleResult {
   const targetDomainId = resolveRoutedDomainId(options.routing);

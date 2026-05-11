@@ -5,11 +5,11 @@ import {
 } from './product-entry-parts/builders.ts';
 import type { ProductEntryCliInput } from './product-entry-parts/types.ts';
 import { explainDomainBoundary, resolveRequestSurface } from './resolver.ts';
-import type { GatewayContracts } from './types.ts';
+import type { FrameworkContracts } from './types.ts';
 
 export function buildProductEntryHandoffEnvelope(
   input: ProductEntryCliInput,
-  contracts: GatewayContracts,
+  contracts: FrameworkContracts,
 ) {
   const resolveInput = buildResolveRequestInput(input);
   const routing = resolveRequestSurface(resolveInput, contracts);

@@ -3,7 +3,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { DatabaseSync } from 'node:sqlite';
 
-import { GatewayContractError } from './contracts.ts';
+import { FrameworkContractError } from './contracts.ts';
 import {
   DOMAIN_ADAPTERS,
   FAMILY_RUNTIME_DOMAIN_IDS,
@@ -60,7 +60,7 @@ function buildStatusPayload(
   const providerRuntime = inspectFamilyRuntimeProviders(selectedProvider);
   const provider = providerRuntime.providers[selectedProvider]
     ?? (() => {
-      throw new GatewayContractError('contract_shape_invalid', 'Selected family runtime provider was not inspected.', {
+      throw new FrameworkContractError('contract_shape_invalid', 'Selected family runtime provider was not inspected.', {
         selected_provider: selectedProvider,
       });
     })();
@@ -573,7 +573,7 @@ function approveTask(
     | FamilyRuntimeTaskRow
     | undefined;
   if (!row) {
-    throw new GatewayContractError('cli_usage_error', 'Family runtime task not found.', {
+    throw new FrameworkContractError('cli_usage_error', 'Family runtime task not found.', {
       task_id: input.taskId,
     });
   }

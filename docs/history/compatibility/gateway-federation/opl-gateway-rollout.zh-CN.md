@@ -79,7 +79,7 @@ Human / Agent
 
 当前 materialization 目录：
 
-- [OPL Gateway Contracts](../../../../contracts/opl-gateway/README.zh-CN.md)
+- [OPL Framework Contracts](../../../../contracts/opl-framework/README.zh-CN.md)
 
 ## Phase G2：只读入口先落地
 
@@ -89,7 +89,7 @@ Human / Agent
 
 当前冻结状态：
 
-- `Phase 1` 公开主线下，CLI-first / gateway contract baseline 已可运行
+- `Phase 1` 公开主线下，CLI-first / framework contract baseline 已可运行
 - 已完成的 `Phase 1 / G2 release-closeout` 已把它收口成稳定、单一、repo-tracked 的 `G2 stable public baseline`
 - 在这条未变化的 formal-entry baseline 之上，当前活跃的公开前台已经是已落地的本地 `opl` shell、`opl web` pilot，以及围绕它们的 machine-readable discovery / handoff surface
 - 已完成的 repo-tracked `Phase 1 / G3 thin handoff planning freeze hardening` 继续停留在 planning-contract closeout 边界
@@ -108,7 +108,7 @@ Human / Agent
 完成信号：
 
 - Agent 可以先问“这类任务该用哪个系统”，并拿到稳定顶层答案
-- 当前 G1 materialization 可在 [OPL Gateway Contracts](../../../../contracts/opl-gateway/README.zh-CN.md) 找到
+- 当前 G1 materialization 可在 [OPL Framework Contracts](../../../../contracts/opl-framework/README.zh-CN.md) 找到
 
 详细契约：
 

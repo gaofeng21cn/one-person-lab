@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 
-import { GatewayContractError } from './contracts.ts';
+import { FrameworkContractError } from './contracts.ts';
 
 type CommandResult = {
   exitCode: number;
@@ -112,7 +112,7 @@ export function parseHermesProcessTable(output: string) {
 export function collectHermesProcessUsage() {
   const result = runCommand('ps', ['-axo', 'pid=,ppid=,pcpu=,pmem=,rss=,etime=,command=']);
   if (result.exitCode !== 0) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'hermes_command_failed',
       'Failed to collect process data for Hermes runtime status.',
       {

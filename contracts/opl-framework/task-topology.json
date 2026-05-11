@@ -1,0 +1,248 @@
+{
+  "version": "p19.stage-runtime",
+  "scope": "opl_stage_led_task_topology",
+  "description": "Machine-readable top-level task topology for OPL as a Codex-first, stage-led agent runtime framework. It lists admitted workstreams and under-definition candidates without recreating the retired gateway, federation, or routed-action interfaces.",
+  "non_goals": [
+    "domain_truth_registry",
+    "publication_or_export_gate",
+    "domain_artifact_store",
+    "generic_persona_router"
+  ],
+  "topology_rules": [
+    "large tasks are decomposed into human-expert-like stages",
+    "Codex CLI is the default minimum executor unit inside each stage",
+    "OPL may use configured external runtime providers for wakeup, queue, approval, and projection transport",
+    "MAS, MAG, and RCA remain independent domain agents with domain-owned truth and quality authority",
+    "candidate workstreams stay under definition until a real domain-agent boundary and stage capability package exists"
+  ],
+  "shared_foundation_reuse": [
+    "stage_descriptors",
+    "domain_agent_catalog",
+    "provider_backed_attempt_ledger",
+    "runtime_projection_surfaces",
+    "shared_skill_activation"
+  ],
+  "workstreams": [
+    {
+      "workstream_id": "research_ops",
+      "label": "Research Ops",
+      "boundary_state": "frozen",
+      "registry_state": "registered",
+      "routing_state": "domain_agent_entry_ready",
+      "current_domain_id": "medautoscience",
+      "entry_surface": "domain_agent_entry",
+      "formal_domain_required": false,
+      "delivery_objects": [
+        "analysis_package",
+        "evidence_package",
+        "manuscript",
+        "submission_package"
+      ],
+      "typical_tasks": [
+        "data_governance",
+        "research_question_formation",
+        "analysis_and_validation_progression",
+        "evidence_packaging",
+        "manuscript_and_submission_delivery"
+      ],
+      "reuse_dependencies": [
+        "stage_descriptors",
+        "runtime_projection_surfaces",
+        "shared_skill_activation"
+      ],
+      "family_boundary_notes": [],
+      "notes": "Currently selects the MedAutoScience domain-agent entry."
+    },
+    {
+      "workstream_id": "grant_ops",
+      "label": "Grant Ops",
+      "boundary_state": "frozen",
+      "registry_state": "registered",
+      "routing_state": "domain_agent_entry_ready",
+      "current_domain_id": "medautogrant",
+      "entry_surface": "domain_agent_entry",
+      "formal_domain_required": false,
+      "delivery_objects": [
+        "grant_direction_assessment",
+        "proposal_outline",
+        "proposal_draft",
+        "review_simulation_pack",
+        "proposal_revision_plan"
+      ],
+      "typical_tasks": [
+        "grant_direction_feasibility_assessment",
+        "proposal_structure_generation",
+        "background_innovation_and_technical_route_organization",
+        "reviewer_comment_simulation",
+        "proposal_iteration"
+      ],
+      "reuse_dependencies": [
+        "stage_descriptors",
+        "runtime_projection_surfaces",
+        "shared_skill_activation"
+      ],
+      "family_boundary_notes": [],
+      "notes": "Currently selects the MedAutoGrant domain-agent entry."
+    },
+    {
+      "workstream_id": "presentation_ops",
+      "label": "Presentation Ops",
+      "boundary_state": "frozen",
+      "registry_state": "registered",
+      "routing_state": "domain_agent_entry_ready",
+      "current_domain_id": "redcube",
+      "entry_surface": "domain_agent_entry",
+      "formal_domain_required": false,
+      "delivery_objects": [
+        "slide_deck",
+        "lecture_materials",
+        "defense_pack",
+        "visual_report"
+      ],
+      "typical_tasks": [
+        "deck_structure",
+        "slide_generation",
+        "visual_review",
+        "export_package"
+      ],
+      "reuse_dependencies": [
+        "stage_descriptors",
+        "runtime_projection_surfaces",
+        "shared_skill_activation"
+      ],
+      "family_boundary_notes": [
+        {
+          "family_id": "ppt_deck",
+          "relation": "direct_family_entry"
+        }
+      ],
+      "notes": "Currently selects the RedCube AI domain-agent entry."
+    },
+    {
+      "workstream_id": "thesis_ops",
+      "label": "Thesis Ops",
+      "boundary_state": "under_definition",
+      "registry_state": "not_registered",
+      "routing_state": "candidate_domain_agent_pending",
+      "current_domain_id": null,
+      "entry_surface": null,
+      "formal_domain_required": true,
+      "delivery_objects": [
+        "chapter_structure_plan",
+        "chapter_draft_set",
+        "cross_chapter_sync_pack",
+        "defense_preparation_pack"
+      ],
+      "typical_tasks": [
+        "chapter_structure_organization",
+        "reuse_of_existing_papers_and_figures",
+        "terminology_and_narrative_synchronization",
+        "defense_preparation"
+      ],
+      "reuse_dependencies": [
+        "stage_descriptors",
+        "formal_delivery_surfaces"
+      ],
+      "family_boundary_notes": [
+        {
+          "family_id": "thesis_foundry",
+          "relation": "candidate_family_only"
+        }
+      ],
+      "notes": "No active domain-agent entry is admitted yet."
+    },
+    {
+      "workstream_id": "review_ops",
+      "label": "Review Ops",
+      "boundary_state": "under_definition",
+      "registry_state": "not_registered",
+      "routing_state": "candidate_domain_agent_pending",
+      "current_domain_id": null,
+      "entry_surface": null,
+      "formal_domain_required": true,
+      "delivery_objects": [
+        "review_assignment_pack",
+        "response_strategy_pack",
+        "rebuttal_coordination_pack"
+      ],
+      "typical_tasks": [
+        "reviewer_role_work",
+        "response_coordination",
+        "revision_strategy"
+      ],
+      "reuse_dependencies": [
+        "stage_descriptors",
+        "review_memory"
+      ],
+      "family_boundary_notes": [
+        {
+          "family_id": "review_foundry",
+          "relation": "candidate_family_only"
+        }
+      ],
+      "notes": "Recognizable semantics only; no admitted domain-agent entry exists."
+    },
+    {
+      "workstream_id": "ip_ops",
+      "label": "IP Ops",
+      "boundary_state": "under_definition",
+      "registry_state": "not_registered",
+      "routing_state": "candidate_domain_agent_pending",
+      "current_domain_id": null,
+      "entry_surface": null,
+      "formal_domain_required": true,
+      "delivery_objects": [
+        "invention_disclosure",
+        "claims_outline",
+        "embodiment_pack"
+      ],
+      "typical_tasks": [
+        "patent_application_drafting",
+        "claim_boundary_review",
+        "technical_disclosure_packaging"
+      ],
+      "reuse_dependencies": [
+        "stage_descriptors",
+        "research_evidence"
+      ],
+      "family_boundary_notes": [
+        {
+          "family_id": "ip_foundry",
+          "relation": "candidate_family_only"
+        }
+      ],
+      "notes": "Recognizable semantics only; no admitted domain-agent entry exists."
+    },
+    {
+      "workstream_id": "award_ops",
+      "label": "Award Ops",
+      "boundary_state": "under_definition",
+      "registry_state": "not_registered",
+      "routing_state": "candidate_domain_agent_pending",
+      "current_domain_id": null,
+      "entry_surface": null,
+      "formal_domain_required": true,
+      "delivery_objects": [
+        "achievement_summary",
+        "contribution_ranking_pack",
+        "impact_evidence_pack"
+      ],
+      "typical_tasks": [
+        "award_material_planning",
+        "achievement_evidence_packaging",
+        "contribution_narrative_review"
+      ],
+      "reuse_dependencies": [
+        "stage_descriptors",
+        "research_evidence"
+      ],
+      "family_boundary_notes": [
+        {
+          "family_id": "award_foundry",
+          "relation": "candidate_family_only"
+        }
+      ],
+      "notes": "Recognizable semantics only; no admitted domain-agent entry exists."
+    }
+  ]
+}

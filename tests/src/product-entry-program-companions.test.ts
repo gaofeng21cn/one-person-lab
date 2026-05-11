@@ -185,7 +185,7 @@ test('product entry program companions normalize preflight and detailed readines
     current_step_id: 'stabilize_user_product_loop',
     current_readiness_summary: 'Current product loop still needs more proof.',
     north_star_topology: {
-      domain_gateway: 'Med Auto Science',
+      domain_agent_entry: 'Med Auto Science',
       default_runtime_owner: 'mas_runtime_core',
       source_provenance_role: 'explicit_archive_import_reference',
     },
@@ -199,7 +199,7 @@ test('product entry program companions normalize preflight and detailed readines
       }),
       buildProgramSequenceStep({
         step_id: 'physical_monorepo_absorb',
-        phase_id: 'phase_5_federation_platform_maturation',
+        phase_id: 'phase_5_stage_runtime_maturation',
         status: 'blocked_post_gate',
         summary: 'Absorb only after the earlier gates clear.',
       }),
@@ -207,7 +207,7 @@ test('product entry program companions normalize preflight and detailed readines
     completed_step_ids: [],
     remaining_step_ids: ['stabilize_user_product_loop', 'physical_monorepo_absorb'],
     promotion_gates: ['phase_2_user_product_loop'],
-    recommended_phase_command: 'uv run python -m med_autoscience.cli mainline-phase --phase phase_5_federation_platform_maturation',
+    recommended_phase_command: 'uv run python -m med_autoscience.cli mainline-phase --phase phase_5_stage_runtime_maturation',
   });
   assert.equal(platformTarget.surface_kind, 'phase5_platform_target');
   assert.equal(platformTarget.landing_sequence[0].step_id, 'stabilize_user_product_loop');

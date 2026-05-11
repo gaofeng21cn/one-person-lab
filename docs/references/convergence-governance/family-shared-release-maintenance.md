@@ -6,7 +6,7 @@
 
 - owner contract：`contracts/family-release/shared-owner-release.json`
 - Python shared package：`opl-harness-shared`
-- JS shared package：`opl-gateway-shared`
+- JS shared package：`opl-framework-shared`
 - evidence tests：`tests/src/family-shared-release-discipline.test.ts`
 
 ## Current Release

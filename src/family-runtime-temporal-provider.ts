@@ -5,7 +5,7 @@ import { Client, Connection } from '@temporalio/client';
 import { WorkflowIdConflictPolicy, WorkflowIdReusePolicy } from '@temporalio/common';
 import { NativeConnection, Worker } from '@temporalio/worker';
 
-import { GatewayContractError } from './contracts.ts';
+import { FrameworkContractError } from './contracts.ts';
 import * as activities from './family-runtime-temporal-activities.ts';
 import {
   buildTemporalStageAttemptWorkflowInput,
@@ -38,7 +38,7 @@ function workflowModulePath() {
 function requireTemporalAddress() {
   const address = resolveTemporalAddress();
   if (!address) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'contract_shape_invalid',
       'Temporal provider start/query/signal requires OPL_TEMPORAL_ADDRESS or TEMPORAL_ADDRESS.',
       {
@@ -71,7 +71,7 @@ function signalNameFor(kind: TemporalStageAttemptSignalKind) {
 
 export async function startTemporalStageAttemptWorkflow(attempt: StageAttemptPayload) {
   if (attempt.provider_kind !== 'temporal') {
-    throw new GatewayContractError('cli_usage_error', 'Temporal start requires a temporal stage attempt.', {
+    throw new FrameworkContractError('cli_usage_error', 'Temporal start requires a temporal stage attempt.', {
       stage_attempt_id: attempt.stage_attempt_id,
       provider_kind: attempt.provider_kind,
     });

@@ -37,14 +37,14 @@ The intended machine-readable surfaces are:
 These file paths are the canonical intent of the contract.
 They may be materialized later in a docs site, registry package, or gateway repo, but the contract shape should stay stable.
 
-For the current repository-local materialization, see [OPL Gateway Contracts](../../../../contracts/opl-gateway/README.md).
+For the current repository-local materialization, see [OPL Framework Contracts](../../../../contracts/opl-framework/README.md).
 
 Current repository materialization:
 
-- [`../contracts/opl-gateway/workstreams.json`](../../../../contracts/opl-gateway/workstreams.json)
-- [`../contracts/opl-gateway/domains.json`](../../../../contracts/opl-gateway/domains.json)
-- [`../contracts/opl-gateway/routing-vocabulary.json`](../../../../contracts/opl-gateway/routing-vocabulary.json)
-- [`../contracts/opl-gateway/handoff.schema.json`](../../../../contracts/opl-gateway/handoff.schema.json)
+- [`../contracts/opl-framework/workstreams.json`](../../../../contracts/opl-framework/workstreams.json)
+- [`../contracts/opl-framework/domains.json`](../../../../contracts/opl-framework/domains.json)
+- [`../contracts/opl-framework/routing-vocabulary.json`](../../../../contracts/opl-framework/routing-vocabulary.json)
+- [`../contracts/opl-framework/handoff.schema.json`](../../../../contracts/opl-framework/handoff.schema.json)
 
 ## Workstream Registry
 

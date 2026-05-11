@@ -1,4 +1,4 @@
-import type { GatewayContracts, GatewayContractsLoadOptions } from '../../types.ts';
+import type { FrameworkContracts, FrameworkContractsLoadOptions } from '../../types.ts';
 import type { CommandHandler, CommandSpec, ParsedCliInput } from './types.ts';
 import { buildUsageError } from './runtime-helpers.ts';
 
@@ -117,7 +117,7 @@ function buildRootHelp(commands: Record<string, CommandSpec>) {
         {
           option: '--contracts-dir <path>',
           summary:
-            'Use an explicit OPL contract root. When omitted, the CLI resolves from cwd, cwd/contracts/opl-gateway, or the active OPL CLI repo contracts root.',
+            'Use an explicit OPL contract root. When omitted, the CLI resolves from cwd, cwd/contracts/opl-framework, or the active OPL CLI repo contracts root.',
         },
       ],
       command_groups: Object.entries(grouped).map(([group_id, entries]) => ({
@@ -236,7 +236,7 @@ function formatHumanCommandHelp(payload: ReturnType<typeof buildCommandHelp>) {
   return `${lines.join('\n')}\n`;
 }
 
-function buildContractsContext(contracts: GatewayContracts) {
+function buildContractsContext(contracts: FrameworkContracts) {
   return {
     contracts_dir: contracts.contractsDir,
     contracts_root_source: contracts.contractsRootSource,
@@ -244,7 +244,7 @@ function buildContractsContext(contracts: GatewayContracts) {
 }
 
 function withContractsContext<T extends Record<string, unknown>>(
-  contracts: GatewayContracts,
+  contracts: FrameworkContracts,
   payload: T,
 ) {
   return {
@@ -256,7 +256,7 @@ function withContractsContext<T extends Record<string, unknown>>(
 
 function parseCliInput(argv: string[]): ParsedCliInput {
   const args = [...argv];
-  const loadOptions: GatewayContractsLoadOptions = {};
+  const loadOptions: FrameworkContractsLoadOptions = {};
   let helpRequested = false;
   let jsonOutput = false;
   let textOutput = false;
@@ -312,8 +312,8 @@ function parseCliInput(argv: string[]): ParsedCliInput {
           {
             usage: 'opl [--contracts-dir <path>] <command> [args]',
             examples: [
-              'opl --contracts-dir /path/to/contracts/opl-gateway validate-contracts',
-              'opl --contracts-dir /path/to/contracts/opl-gateway get-domain redcube',
+              'opl --contracts-dir /path/to/contracts/opl-framework validate-contracts',
+              'opl --contracts-dir /path/to/contracts/opl-framework get-domain redcube',
             ],
           },
           { option: '--contracts-dir' },

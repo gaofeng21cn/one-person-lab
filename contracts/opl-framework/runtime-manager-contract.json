@@ -1,7 +1,7 @@
 {
   "version": "v2",
   "contract_id": "opl_runtime_manager_contract",
-  "contract_ref": "contracts/opl-gateway/runtime-manager-contract.json",
+  "contract_ref": "contracts/opl-framework/runtime-manager-contract.json",
   "scope": "opl_product_control_plane_over_provider_backed_family_runtime",
   "description": "Freezes the OPL Runtime Manager boundary. OPL owns provider selection, typed family queue, stage attempt ledger, dispatch contracts, profile wiring, diagnostics, task registration hydration, status projection, optional native helper catalog, and high-frequency state indexes while domain repositories keep truth and quality authority.",
   "owner_split": {
@@ -42,7 +42,7 @@
     "catalog_high_frequency_state_indexes"
   ],
   "domain_registration_registry": {
-    "surface_kind": "opl_runtime_manager_registration_registry",
+    "surface_kind": "opl_stage_runtime_registration_registry",
     "version": "v1",
     "registration_status": "declared_projection_contracts",
     "source_of_truth_rule": "OPL indexes declared domain registration surfaces and must dereference domain-owned durable truth before acting.",
@@ -63,7 +63,7 @@
       "non_goals"
     ],
     "domain_surface_refs": [
-      "/skill_catalog/skills/0/domain_projection/opl_runtime_manager_registration"
+      "/skill_catalog/skills/0/domain_projection/opl_stage_runtime_registration"
     ]
   },
   "non_goals": [
@@ -78,7 +78,7 @@
   "native_helper_target": {
     "status": "contracted_optional_rust_helpers",
     "language": "rust",
-    "protocol_ref": "contracts/opl-gateway/native-helper-contract.json",
+    "protocol_ref": "contracts/opl-framework/native-helper-contract.json",
     "allowed_shape": "small_json_stdio_or_cli_helpers_managed_by_opl",
     "lifecycle": {
       "status_surface": "native_helper_target.lifecycle",
@@ -199,7 +199,7 @@
   },
   "family_runtime_queue": {
     "surface_kind": "opl_family_runtime_queue",
-    "contract_ref": "contracts/opl-gateway/family-runtime-online-substrate-contract.json",
+    "contract_ref": "contracts/opl-framework/family-runtime-online-substrate-contract.json",
     "command": "opl family-runtime status",
     "state_path": "${OPL_STATE_DIR}/family-runtime/queue.sqlite",
     "provider_model": "provider_backed_stage_attempt_runtime",

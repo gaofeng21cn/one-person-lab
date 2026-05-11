@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
-const domainsPath = path.join(repoRoot, 'contracts', 'opl-gateway', 'domains.json');
+const domainsPath = path.join(repoRoot, 'contracts', 'opl-framework', 'domains.json');
 const retiredBoundaryTermsField = ['legacy', 'boundary', 'terms'].join('_');
 
 type DomainDefinition = {

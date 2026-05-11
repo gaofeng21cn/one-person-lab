@@ -6,7 +6,7 @@
 
 **Historical goal:** 把 `opl` 升级成默认自然语言前台，同时补齐会话/运维入口、family entry 对齐文档与 MAS 顶层 cutover board。
 
-**Historical architecture:** 在不动 `Phase 1` gateway contract 的前提下，给 `OPL` 增加一个更完整的本地 front-door surface。入口层继续复用 Hermes 作为 session/logs/gateway/profile substrate，`OPL` 只负责 family routing、handoff 和产品壳语义。
+**Historical architecture:** 在不动 `Phase 1` framework contract 的前提下，给 `OPL` 增加一个更完整的本地 front-door surface。入口层继续复用 Hermes 作为 session/logs/gateway/profile substrate，`OPL` 只负责 family routing、handoff 和产品壳语义。
 
 **Historical tech stack:** TypeScript CLI, Node.js child_process, Hermes CLI integration, repo-tracked markdown docs, node:test
 

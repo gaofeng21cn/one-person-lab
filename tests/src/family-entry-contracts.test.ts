@@ -115,7 +115,7 @@ test('family entry contract helpers build and validate domain agent entry specs'
 
 test('family entry contract helpers build and validate gateway interaction payloads', () => {
   const contract = buildUserInteractionContract({
-    entry_owner: 'opl_gateway_or_domain_gui',
+    entry_owner: 'opl_framework_or_domain_app',
     user_interaction_mode: 'natural_language_entry',
     user_commands_required: false,
     command_surfaces_for_agent_consumption_only: true,
@@ -136,7 +136,7 @@ test('family entry contract helpers build and validate gateway interaction paylo
   assert.equal(validated.recommended_route_surface, 'product_entry_surface');
 });
 
-test('family entry contract helpers expose the default family gateway contract with extendable envelope fields', () => {
+test('family entry contract helpers expose the default family framework contract with extendable envelope fields', () => {
   const contract = buildFamilyUserInteractionContract({
     shared_downstream_entry: 'MedAutoScienceDomainEntry',
     extra_shared_handoff_envelope: ['entry_session_contract'],
@@ -147,7 +147,7 @@ test('family entry contract helpers expose the default family gateway contract w
     contract,
     'product_entry_manifest.user_interaction_contract',
   );
-  assert.equal(validated.entry_owner, 'opl_gateway_or_domain_gui');
+  assert.equal(validated.entry_owner, 'opl_framework_or_domain_app');
   assert.equal(validated.user_interaction_mode, 'natural_language_entry');
   assert.equal(validated.user_commands_required, false);
   assert.equal(validated.command_surfaces_for_agent_consumption_only, true);

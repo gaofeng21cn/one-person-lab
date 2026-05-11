@@ -14,12 +14,12 @@ const domains = [
     repo_name: 'med-autoscience',
     native_helper_consumption: {
       projection_kind: 'native_helper_consumption_contract',
-      declaration_file: 'contracts/opl-gateway/native-helper-contract.json',
+      declaration_file: 'contracts/opl-framework/native-helper-contract.json',
       registration_summary_paths: [
         ['indexable_runtime_surface_refs'],
         ['indexable_product_entry_surface_refs'],
       ],
-      proof_surface_ref: 'contracts/opl-gateway/native-helper-contract.json',
+      proof_surface_ref: 'contracts/opl-framework/native-helper-contract.json',
       proof_summary_paths: [
         ['contract_id'],
       ],
@@ -46,8 +46,8 @@ const domains = [
           group: 'registration',
           path: ['indexable_product_entry_surface_refs'],
           values: [
-            '/skill_catalog/skills/0/domain_projection/opl_runtime_manager_registration/domain_entry_surface',
-            '/skill_catalog/skills/0/domain_projection/opl_runtime_manager_registration/registration_surface',
+            '/skill_catalog/skills/0/domain_projection/opl_stage_runtime_registration/domain_entry_surface',
+            '/skill_catalog/skills/0/domain_projection/opl_stage_runtime_registration/registration_surface',
           ],
         },
         {
@@ -70,7 +70,7 @@ const domains = [
         ['runtime_owner', 'runtime_manager_boundary', 'manager_consumed_projection'],
         ['ideal_target', 'opl_runtime_manager', 'consumes_mag_surfaces'],
       ],
-      proof_surface_ref: 'skill_catalog.domain_projection.opl_runtime_manager_registration.native_helper_consumption.proof_surface',
+      proof_surface_ref: 'skill_catalog.domain_projection.opl_stage_runtime_registration.native_helper_consumption.proof_surface',
       proof_summary_paths: [
         ['runtime_owner', 'runtime_manager_boundary', 'manager_consumed_projection'],
         ['ideal_target', 'opl_runtime_manager', 'consumes_mag_surfaces'],
@@ -89,17 +89,17 @@ const domains = [
         {
           group: 'registration',
           path: ['runtime_owner', 'runtime_manager_boundary', 'manager_consumed_projection'],
-          values: ['skill_catalog.domain_projection.opl_runtime_manager_registration'],
+          values: ['skill_catalog.domain_projection.opl_stage_runtime_registration'],
         },
         {
           group: 'proof',
           path: ['runtime_owner', 'runtime_manager_boundary', 'manager_consumed_projection'],
-          values: ['skill_catalog.domain_projection.opl_runtime_manager_registration.native_helper_consumption.proof_surface'],
+          values: ['skill_catalog.domain_projection.opl_stage_runtime_registration.native_helper_consumption.proof_surface'],
         },
         {
           group: 'registration',
           path: ['ideal_target', 'opl_runtime_manager', 'consumes_mag_surfaces'],
-          values: ['opl_runtime_manager_registration', 'native_helper_consumption'],
+          values: ['opl_stage_runtime_registration', 'native_helper_consumption'],
         },
         {
           group: 'proof',
@@ -562,7 +562,7 @@ function createFixtureFamilyRoot() {
 
 function writeFixtureNativeHelperProjection(domain, repoPath) {
   if (domain.domain_id === 'medautoscience') {
-    const contractPath = path.join(repoPath, 'contracts', 'opl-gateway', 'native-helper-contract.json');
+    const contractPath = path.join(repoPath, 'contracts', 'opl-framework', 'native-helper-contract.json');
     fs.mkdirSync(path.dirname(contractPath), { recursive: true });
     fs.writeFileSync(contractPath, `${JSON.stringify({
       schema_version: 1,
@@ -579,8 +579,8 @@ function writeFixtureNativeHelperProjection(domain, repoPath) {
         '/runtime_inventory',
       ],
       indexable_product_entry_surface_refs: [
-        '/skill_catalog/skills/0/domain_projection/opl_runtime_manager_registration/domain_entry_surface',
-        '/skill_catalog/skills/0/domain_projection/opl_runtime_manager_registration/registration_surface',
+        '/skill_catalog/skills/0/domain_projection/opl_stage_runtime_registration/domain_entry_surface',
+        '/skill_catalog/skills/0/domain_projection/opl_stage_runtime_registration/registration_surface',
         '/artifact_inventory/artifact_surface',
         '/automation/automations/0',
       ],
@@ -621,8 +621,8 @@ function writeFixtureNativeHelperProjection(domain, repoPath) {
           'domain_entry_contract',
           'runtime_control.semantic_closure',
           'skill_catalog.domain_projection.runtime_continuity',
-          'skill_catalog.domain_projection.opl_runtime_manager_registration',
-          'skill_catalog.domain_projection.opl_runtime_manager_registration.native_helper_consumption.proof_surface',
+          'skill_catalog.domain_projection.opl_stage_runtime_registration',
+          'skill_catalog.domain_projection.opl_stage_runtime_registration.native_helper_consumption.proof_surface',
         ],
         manager_non_goals: [
           'grant-domain truth owner',
@@ -636,7 +636,7 @@ function writeFixtureNativeHelperProjection(domain, repoPath) {
         consumes_mag_surfaces: [
           'runtime_control',
           'runtime_continuity',
-          'opl_runtime_manager_registration',
+          'opl_stage_runtime_registration',
           'native_helper_consumption',
           'native_helper_consumption.proof_surface',
         ],

@@ -5,7 +5,7 @@ import {
 } from '../system-preferences.ts';
 import { readOplRuntimeModes } from '../runtime-modes.ts';
 import { buildOplGuiShellSurface, buildOplRecommendedSkills } from '../install-companions.ts';
-import type { GatewayContracts } from '../types.ts';
+import type { FrameworkContracts } from '../types.ts';
 
 import { buildOplEnvironment } from './environment.ts';
 import { buildOplModules } from './modules.ts';
@@ -64,7 +64,7 @@ function buildOnlineManagementStatus(input: {
   return 'missing';
 }
 
-export async function buildOplInitialize(contracts: GatewayContracts) {
+export async function buildOplInitialize(contracts: FrameworkContracts) {
   const environmentPayload = await buildOplEnvironment(contracts);
   const modulesPayload = buildOplModules();
   const settings = readOplRuntimeModes();

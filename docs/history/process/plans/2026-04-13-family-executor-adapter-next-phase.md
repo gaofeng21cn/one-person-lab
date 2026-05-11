@@ -25,10 +25,10 @@
 ### Task 2: Materialize The Family Executor Contract
 
 **Files:**
-- Create: `contracts/opl-gateway/family-executor-adapter-defaults.json`
-- Modify: `contracts/opl-gateway/README.md`
-- Modify: `contracts/opl-gateway/README.zh-CN.md`
-- Modify: `contracts/opl-gateway/public-surface-index.json`
+- Create: `contracts/opl-framework/family-executor-adapter-defaults.json`
+- Modify: `contracts/opl-framework/README.md`
+- Modify: `contracts/opl-framework/README.zh-CN.md`
+- Modify: `contracts/opl-framework/public-surface-index.json`
 - Modify: `tests/src/opl-domain-onboarding-execution-model-alignment.test.ts`
 
 - [ ] 新增 family-level machine-readable contract，冻结 `default_executor / default_model / default_reasoning_effort` 与三条 non-default route label

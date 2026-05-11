@@ -1,43 +1,37 @@
 **English** | [中文](./opl-domain-onboarding-contract.zh-CN.md)
 
-# OPL Domain Onboarding Contract
+# OPL Domain-Agent Admission Contract
 
-> Current-status note (`2026-05-07`): this document is active human-readable support for candidate-domain onboarding review. The active admitted-domain path is `Codex-default session/runtime -> explicit OPL activation -> selected domain agent entry`, with `MAS`, `MAG`, and `RCA` exposed as independent domain agents. Gateway / harness wording below is compatibility vocabulary for boundary review, not the current public first subject.
+> Current-status note (`2026-05-11`): this document is active human-readable support for candidate domain-agent admission review. The active admitted-domain path is `Codex-default session/runtime -> explicit OPL activation -> selected domain-agent entry`, with `MAS`, `MAG`, and `RCA` exposed as independent domain agents.
 
 ## Purpose
 
-This document preserves the domain-onboarding review contract from the gateway phase and applies it as current human-readable support for candidate-domain admission.
+This document defines the current review contract for admitting a new domain agent into the OPL framework.
 
-Its goal is to define when a new domain system may be formally admitted into the `OPL` federation without blurring ownership, routing, or truth boundaries.
+Its goal is to define when a new domain-agent system may be selected by the `OPL` stage-led framework without blurring ownership, stage selection, or truth boundaries.
 
 The target is not to add domain names early and clarify them later.
 The target is to require explicit boundary material before official inclusion.
 
-## Relationship To G1, G2, And G3
+## Relationship To Active Framework Contracts
 
-Domain onboarding still uses these compatibility references for historical boundary review:
+Domain-agent admission is reviewed against the active framework contract set:
 
-- [OPL Federation Contract](../history/compatibility/gateway-federation/opl-federation-contract.md)
-- [OPL Gateway Contract Surface](../history/compatibility/gateway-federation/opl-read-only-discovery-gateway.md)
-- [OPL Routed Action Gateway](../history/compatibility/gateway-federation/opl-routed-action-gateway.md)
 - [OPL Candidate Domain Backlog](../references/domain-admission/opl-candidate-domain-backlog.md)
-- the machine-readable contract surfaces in [`../contracts/opl-gateway/README.md`](../../contracts/opl-gateway/README.md)
+- the machine-readable contract surfaces in [`../contracts/opl-framework/README.md`](../../contracts/opl-framework/README.md)
 
-If the top-level registry, discovery, and routed-action layers are not stable, domain onboarding should not proceed.
+If the domain-agent identity, stage capability package, truth ownership, and product entry surfaces are not stable, admission should not proceed.
 
 ## Machine-Readable Companion
 
-- [`../contracts/opl-gateway/domain-onboarding-readiness.schema.json`](../../contracts/opl-gateway/domain-onboarding-readiness.schema.json)
-- [`../examples/opl-gateway/domain-onboarding-readiness.json`](../../examples/opl-gateway/domain-onboarding-readiness.json)
-- [`../contracts/opl-gateway/candidate-domain-backlog.json`](../../contracts/opl-gateway/candidate-domain-backlog.json)
+- [`../contracts/opl-framework/domains.json`](../../contracts/opl-framework/domains.json)
+- [`../contracts/opl-framework/workstreams.json`](../../contracts/opl-framework/workstreams.json)
+- [`../contracts/opl-framework/task-topology.json`](../../contracts/opl-framework/task-topology.json)
 
-This schema materializes the onboarding-readiness record as a non-executing contract surface.
-It does not admit domains automatically, and it does not replace the prose review gate in this document.
-The example record is illustrative only and does not count as a formal domain admission.
-The candidate-domain backlog is the upstream blocker surface for under-definition workstreams; it records what is still missing before an onboarding-readiness record can even exist. For the human-readable companion, see [OPL Candidate Domain Backlog](../references/domain-admission/opl-candidate-domain-backlog.md).
-`OPL` does not currently define a separate candidate-domain-definition contract between task topology, backlog, and onboarding; the existing three-layer composition is the current definition path unless a real missing boundary is proven.
-Public scaffolds or domain-direction hints may clarify a candidate path, but they still count only as top-level signal / domain-direction evidence until the real boundary package lands.
-This rule now applies to the remaining candidate workstreams only: `Grant Ops` has already moved onto the admitted `MedAutoGrant` domain gateway, while `IP Ops`, `Award Ops`, `Thesis Ops`, and `Review Ops` still require full onboarding packages before admission.
+These contracts materialize the admitted domain-agent catalog and stage topology as non-executing framework surfaces.
+They do not grant OPL domain truth, and they do not admit candidate workstreams automatically.
+Public scaffolds or domain-direction hints may clarify a candidate path, but they still count only as top-level signal until the real domain-agent boundary package lands.
+This rule now applies to the remaining candidate workstreams only: `Grant Ops` has moved onto the admitted `MedAutoGrant` domain-agent entry, while `IP Ops`, `Award Ops`, `Thesis Ops`, and `Review Ops` still require full admission packages.
 
 ## Execution-Model Review Companions
 
@@ -61,10 +55,10 @@ A new domain may be officially included in `OPL` only when:
 
 - its registry identity is explicit
 - its truth ownership is explicit
-- its public gateway / harness boundary is explicit
+- its public domain-agent entry and internal harness boundary are explicit
 - its review surfaces are explicit
 - its execution model is explicitly aligned with `OPL`'s `Codex CLI + autonomous mode + shared-base substrate layering` direction
-- top-level discovery and routing can point to it without prose-only guesswork
+- top-level stage selection can point to it without prose-only guesswork
 
 `OPL` must not accept “placeholder first, boundary later” onboarding.
 
@@ -84,20 +78,21 @@ This contract does not:
 
 A new domain must provide a complete registry package.
 
-#### Required domain registry entry
+#### Required domain-agent registry entry
 
-The domain entry must define all `G1` domain fields:
+The domain entry must define all active domain-agent fields:
 
 - `domain_id`
 - `label`
 - `project`
-- `role`
-- `gateway_surface`
-- `harness_surface`
+- `independent_domain_agent`
+- `single_app_skill`
+- `domain_truth_owner`
+- `opl_projection_role`
+- `runtime_dependency_boundary`
 - `standalone_allowed`
 - `owned_workstreams`
 - `non_opl_families`
-- `canonical_truth_owner`
 
 #### Required workstream registry entry
 
@@ -115,11 +110,11 @@ If the new domain owns a new OPL workstream, it must also provide a complete wor
 
 If the new domain becomes the owner of an already defined workstream, that ownership transfer must still be made explicit in the workstream registry.
 
-#### Required routing vocabulary impact
+#### Required stage vocabulary impact
 
 The onboarding package must state whether the new domain:
 
-- reuses the existing routing vocabulary without extension
+- reuses the existing stage vocabulary without extension
 - requires new `intent_id`, `delivery_kind`, `review_kind`, or other top-level vocabulary entries
 
 No vocabulary expansion may be implied only in prose.
@@ -130,11 +125,11 @@ A new domain must provide public, reviewable documentation that makes the bounda
 
 At minimum, the onboarding package must provide:
 
-- a public domain README or equivalent gateway entry document
-- an explicit statement that the domain is a `domain gateway` above its own `harness`
+- a public domain README or equivalent domain-agent entry document
+- an explicit statement of the public domain-agent entry and the internal harness/controller boundary below it
 - an explicit statement that the domain remains independently usable and is not merely an internal `OPL` module
 - an explanation of the workstream(s), deliverable objects, and review semantics the domain owns
-- an explanation of its stable agent runtime / gateway / tool / controller surface and the code-versus-Agent responsibility split
+- an explanation of its stable agent runtime / tool / controller surface and the code-versus-Agent responsibility split
 - enough public wording for `OPL` docs to link to the domain without inventing its identity
 
 ## 3. Truth Ownership Declaration
@@ -145,7 +140,7 @@ That declaration must be precise enough that readers can tell:
 
 - which runtime truth remains inside the domain
 - which run / delivery / audit / review records belong to the domain
-- what `OPL` may index or route across
+- what `OPL` may index, project, or select at stage boundaries
 - what `OPL` may not claim as canonical truth
 
 No domain may be officially admitted while truth ownership remains ambiguous.
@@ -159,7 +154,7 @@ The onboarding package must identify:
 - what human review surfaces exist
 - what publish or release gates exist
 - what quality-regression or comparable review hooks exist
-- how top-level `OPL` discovery and routed handoff refer to those review semantics
+- how top-level `OPL` stage selection and projection refer to those review semantics
 
 If a domain cannot explain how work is reviewed, it is not ready for official federation admission.
 
@@ -178,29 +173,29 @@ The onboarding package must identify:
 
 If a domain cannot explain how its execution model aligns with `OPL`'s shared operating pattern, it is not ready for official federation admission.
 
-## 6. Discovery Readiness Declaration
+## 6. Stage Selection Readiness Declaration
 
-A new domain must explicitly declare how `G2` read-only discovery reaches its public entry.
+A new domain must explicitly declare how OPL stage selection reaches its public entry.
 
 The onboarding package must identify:
 
-- which `domain_gateway` surface discovery points to
-- which workstream IDs become discoverable through that gateway entry
-- which wording keeps discovery at the read-only / public-entry layer without implying handoff readiness
+- which domain-agent entry surface stage selection points to
+- which workstream IDs become selectable through that entry
+- which wording keeps selection at the framework layer without implying OPL ownership of domain truth
 
 Top-level signal or domain-direction evidence alone does not satisfy this package.
 
-## 7. Routing Readiness Declaration
+## 7. Stage Execution Readiness Declaration
 
-A new domain must explicitly declare how `G3` routing would target the domain gateway once routing is actually activated.
+A new domain must explicitly declare how a selected stage enters the domain agent.
 
 The onboarding package must identify:
 
-- which `domain_gateway` surface is the only allowed successful routing target
-- which workstream IDs become routing-eligible
-- which explicit routing / handoff evidence keeps the no-bypass rule intact
+- which domain-agent entry is the only allowed successful stage target
+- which workstream IDs become stage-eligible
+- which explicit stage / handoff evidence keeps the no-bypass-to-internal-harness rule intact
 
-If the package cannot keep the only successful target at `domain_gateway`, it is not routing-ready.
+If the package cannot keep the only successful target at the public domain-agent entry, it is not stage-execution ready.
 Public scaffolds or direction hints alone do not satisfy this package.
 
 ## 8. Cross-Domain Wording Alignment
@@ -211,15 +206,15 @@ The onboarding package must identify:
 
 - which OPL public surfaces carry the linked role wording
 - which domain public surfaces carry the matching wording
-- which boundary statement keeps any signal-only scaffold from being misread as admission, discovery readiness, routing readiness, or handoff readiness
+- which boundary statement keeps any signal-only scaffold from being misread as admission, stage-selection readiness, stage-execution readiness, or handoff readiness
 
 If this wording cannot be reviewed explicitly, the domain remains below formal inclusion.
 
 For the current candidate path, `IP Ops`, `Award Ops`, `Review Ops`, and `Thesis Ops` remain below formal inclusion.
 `IP Ops` keeps patent truth and human/legal review gates outside `OPL` and outside `MedAutoGrant` until a future domain boundary package exists.
 `Award Ops` keeps award truth and human expert review gates outside `OPL` and outside `MedAutoGrant` until a future domain boundary package exists.
-`Review Ops` keeps `execution_model`, `discovery_readiness`, `routing_readiness`, and `cross_domain_wording` explicit as blocked packages, keeps review truth outside `OPL`, keeps no handoff-ready surface, and keeps any future successful handoff at `domain_gateway`-only / no-bypass.
-`Thesis Ops` also keeps `execution_model`, `discovery_readiness`, `routing_readiness`, and `cross_domain_wording` explicit as blocked packages; it remains distinct from `Research Ops` manuscript/submission flow and from `Presentation Ops` / `RedCube AI` deck production, keeps no handoff-ready surface, and keeps any future successful handoff at `domain_gateway`-only / no-bypass.
+`Review Ops` keeps `execution_model`, `stage_selection_readiness`, `stage_execution_readiness`, and `cross_domain_wording` explicit as blocked packages, keeps review truth outside `OPL`, and keeps no handoff-ready domain-agent entry.
+`Thesis Ops` also keeps `execution_model`, `stage_selection_readiness`, `stage_execution_readiness`, and `cross_domain_wording` explicit as blocked packages; it remains distinct from `Research Ops` manuscript/submission flow and from `Presentation Ops` / `RedCube AI` deck production, and keeps no handoff-ready domain-agent entry.
 
 ## Formal Inclusion Gate
 
@@ -234,11 +229,11 @@ A domain is formally includable in `OPL` only when all of the following are true
 3. **Truth ownership explicit**  
    Canonical truth remains inside the domain and is not silently rehomed to `OPL`.
 
-4. **Discovery ready**  
-   `G2` discovery can identify the domain, its owned workstream(s), and the correct entry surface.
+4. **Stage selection ready**
+   OPL stage selection can identify the domain, its owned workstream(s), and the correct public entry surface.
 
-5. **Routing ready**  
-   `G3` routed action semantics can route into the domain gateway with explicit evidence and without bypassing the domain gateway.
+5. **Stage execution ready**
+   Stage execution can enter the public domain-agent entry with explicit evidence and without bypassing the domain-owned harness/controller boundary.
 
 6. **Review ready**  
    The domain exposes explicit review semantics and not just an execution path.
@@ -257,9 +252,9 @@ The following are not allowed:
 
 - adding a domain name to `OPL` navigation before the boundary package exists
 - admitting a domain whose truth ownership is still “to be decided”
-- treating an existing domain harness as if it automatically defines a new domain gateway
+- treating an existing domain harness as if it automatically defines a new domain-agent entry
 - treating a family or profile name as if it automatically defines a top-level workstream
-- describing a domain as officially onboarded before discovery and routing surfaces are updated
+- describing a domain as officially onboarded before stage selection and execution surfaces are updated
 - allowing a domain to dodge the `Agent-first` / current-`Auto-only` / future-`Human-in-the-loop` layering question or to present a `fixed-code-first` mainline at admission time
 
 ## Minimal Onboarding Review Questions
@@ -267,11 +262,11 @@ The following are not allowed:
 Before official inclusion, the top-level review should be able to answer:
 
 - What workstream(s) does this domain own?
-- What gateway surface does it expose?
-- What harness surface sits below it?
+- What public domain-agent entry does it expose?
+- What harness/controller surface sits below it?
 - What truth remains canonical inside the domain?
 - What families are inside the domain but not automatically equal to an OPL workstream?
-- How does `OPL` discover and route into it?
+- How does `OPL` select and enter it at stage boundaries?
 - What stable agent runtime surface does it depend on?
 - How does the current `Auto-only` repository stay compatible with any future `Human-in-the-loop` sibling or upper-layer product?
 - Why is this a new domain rather than just a family inside an existing domain?

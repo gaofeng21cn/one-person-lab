@@ -133,11 +133,11 @@ test('inspectCurrentRepoFamilySharedAlignment resolves the owner repo from the c
   );
   write(
     path.join(repoRoot, 'packages/redcube-gateway/package.json'),
-    `{"dependencies":{"opl-gateway-shared":"git+https://github.com/gaofeng21cn/one-person-lab.git#${RELEASED_OWNER_COMMIT}"}}\n`,
+    `{"dependencies":{"opl-framework-shared":"git+https://github.com/gaofeng21cn/one-person-lab.git#${RELEASED_OWNER_COMMIT}"}}\n`,
   );
   write(
     path.join(repoRoot, 'package-lock.json'),
-    `{"packages":{"packages/redcube-gateway":{"dependencies":{"opl-gateway-shared":"git+https://github.com/gaofeng21cn/one-person-lab.git#${RELEASED_OWNER_COMMIT}"}}}}\n`,
+    `{"packages":{"packages/redcube-gateway":{"dependencies":{"opl-framework-shared":"git+https://github.com/gaofeng21cn/one-person-lab.git#${RELEASED_OWNER_COMMIT}"}}}}\n`,
   );
 
   const inspection = inspectCurrentRepoFamilySharedAlignment({

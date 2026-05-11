@@ -60,8 +60,8 @@ Effective default executor 的解析顺序固定为：
 
 这组默认值现在不再只停留在参考文档中，也已经同步冻结到：
 
-- `contracts/opl-gateway/family-executor-adapter-defaults.json`
-- `contracts/opl-gateway/domain-onboarding-readiness.schema.json` 的 `executionModelDeclaration`
+- `contracts/opl-framework/family-executor-adapter-defaults.json`
+- `contracts/opl-framework/domain-onboarding-readiness.schema.json` 的 `executionModelDeclaration`
 
 这意味着家族默认执行器不再只是“叙述口径”，而是已经有 repo-tracked 的 machine-readable 锚点。
 

@@ -1,4 +1,4 @@
-import { GatewayContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeHermesFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakePsFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadGatewayContracts, once, os, path, readJsonFixture, readJsonLine, repoRoot, resolveRequestSurface, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateGatewayContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
+import { FrameworkContractError, PassThrough, assert, buildManifestCommand, buildProjectProgressBrief, cliPath, contractsDir, createCodexConfigFixture, createContractsFixtureRoot, createFakeCodexFixture, createFakeHermesFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createFakePsFixture, createFakeShellCommandFixture, createFamilyContractsFixtureRoot, createFamilyLocatorResolverFixture, createGitModuleRemoteFixture, createMasWorkspaceFixture, explainDomainBoundary, familyManifestFixtureDir, fs, loadFamilyManifestFixtures, loadFrameworkContracts, once, os, path, readJsonFixture, readJsonLine, repoRoot, resolveRequestSurface, runCli, runCliAsync, runCliFailure, runCliFailureInCwd, runCliInCwd, runCliRaw, runCliViaEntryPathInCwd, shellSingleQuote, spawn, startCliServer, startFakeOplApiServer, stopCliPipeChild, stopCliServer, stopHttpServer, test, validateFrameworkContracts, writeJsonLine, assertContractsContext, assertNoContractsProvenance, assertMagActionGraph, assertMasActionGraph, assertRedcubeActionGraph } from '../helpers.ts';
 import { buildInternalCommandSpecs } from '../../../../src/cli/cases/private-command-specs.ts';
 import { buildPublicCommandSpecs } from '../../../../src/cli/cases/public-command-specs.ts';
 import { buildDomainManifestCatalog } from '../../../../src/management/domain-manifest-catalog.ts';
@@ -7,7 +7,7 @@ import { buildOplDashboard } from '../../../../src/management/runtime-dashboard.
 import { buildWorkspaceCatalog } from '../../../../src/workspace-registry.ts';
 
 test('public and internal command specs no longer carry removed UI adapter command ids', () => {
-  const contracts = loadGatewayContracts({ contractsDir });
+  const contracts = loadFrameworkContracts({ contractsDir });
   const internalSpecs = buildInternalCommandSpecs(
     {
       helpRequested: false,
@@ -39,7 +39,7 @@ test('public and internal command specs no longer carry removed UI adapter comma
 });
 
 test('current readiness projection is derived from current OPL surfaces', () => {
-  const contracts = loadGatewayContracts({ contractsDir });
+  const contracts = loadFrameworkContracts({ contractsDir });
   const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-current-readiness-state-'));
   const previousStateDir = process.env.OPL_STATE_DIR;
 
@@ -125,7 +125,7 @@ exit 1
       process.env.OPL_STATE_DIR = stateRoot;
       process.env.OPL_HERMES_BIN = hermesPath;
       process.env.PATH = `${psFixture.fixtureRoot}:${process.env.PATH ?? ''}`;
-      directDashboard = buildOplDashboard(loadGatewayContracts({ contractsDir }), {
+      directDashboard = buildOplDashboard(loadFrameworkContracts({ contractsDir }), {
         workspacePath: repoRoot,
         sessionsLimit: 1,
       });

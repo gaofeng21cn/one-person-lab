@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { GatewayContractError } from '../contracts.ts';
+import { FrameworkContractError } from '../contracts.ts';
 import type { OplUpdateChannel } from '../system-preferences.ts';
 
 export type OplModuleId =
@@ -188,7 +188,7 @@ export function runCommand(command: string, args: string[], cwd?: string): Comma
   });
 
   if (result.error) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'build_command_failed',
       `Failed to launch command: ${command} ${args.join(' ')}`,
       {
@@ -235,7 +235,7 @@ export function assertGitSuccess(
     return;
   }
 
-  throw new GatewayContractError(
+  throw new FrameworkContractError(
     'build_command_failed',
     message,
     {

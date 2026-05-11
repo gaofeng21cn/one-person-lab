@@ -49,8 +49,8 @@
 - [OPL 任务版图](../../../public/task-map.zh-CN.md)
 - [OPL Routed-Safety Example Corpus](../../../references/examples-corpora/opl-routed-safety-example-corpus.zh-CN.md)
 - [OPL Gateway 落地路线](./opl-gateway-rollout.zh-CN.md)
-- [OPL Gateway Contracts](../../../../contracts/opl-gateway/README.zh-CN.md)
-- [`acceptance-matrix.json`](../../../../contracts/opl-gateway/acceptance-matrix.json)
+- [OPL Framework Contracts](../../../../contracts/opl-framework/README.zh-CN.md)
+- [`acceptance-matrix.json`](../../../../contracts/opl-framework/acceptance-matrix.json)
 
 ## 配套参考 Surfaces
 
@@ -70,10 +70,10 @@
 
 `G1` 只有在下面全部成立时才算通过：
 
-1. `contracts/opl-gateway/workstreams.json` 存在，且是合法 JSON。
-2. `contracts/opl-gateway/domains.json` 存在，且是合法 JSON。
-3. `contracts/opl-gateway/routing-vocabulary.json` 存在，且是合法 JSON。
-4. `contracts/opl-gateway/handoff.schema.json` 存在，且是合法 JSON Schema JSON。
+1. `contracts/opl-framework/workstreams.json` 存在，且是合法 JSON。
+2. `contracts/opl-framework/domains.json` 存在，且是合法 JSON。
+3. `contracts/opl-framework/routing-vocabulary.json` 存在，且是合法 JSON。
+4. `contracts/opl-framework/handoff.schema.json` 存在，且是合法 JSON Schema JSON。
 5. workstream registry 显式编码了：
    - `research_ops -> medautoscience`
    - `presentation_ops -> redcube`
@@ -85,7 +85,7 @@
 
 ### 验证方式
 
-- 使用 `json.load` 解析 `contracts/opl-gateway/` 下所有 JSON / schema 文件。
+- 使用 `json.load` 解析 `contracts/opl-framework/` 下所有 JSON / schema 文件。
 - 检查 `workstreams.json`、`domains.json`、`routing-vocabulary.json` 与 `handoff.schema.json` 中的必需映射和边界字段。
 - 确认 contract README 将该目录描述为 machine-readable contract materialization，而不是 runtime。
 
@@ -146,7 +146,7 @@
 
 ### 验证方式
 
-- 解析 `contracts/opl-gateway/routed-actions.schema.json`。
+- 解析 `contracts/opl-framework/routed-actions.schema.json`。
 - 检查 `docs/opl-routed-action-gateway.md` 与 `.zh-CN.md` 中的全部必需操作和失败状态。
 - 用 `rg` 检查 planning gate / planning-level contract / planning dependency wording，并确认 routed-action prose 仍不是 launcher。
 - 用 `rg` 检查 no-bypass wording，并确认它被写成硬规则，而不是偏好建议。
@@ -157,8 +157,8 @@
 
 onboarding gate 只有在下面全部成立时才算通过：
 
-1. `contracts/opl-gateway/domain-onboarding-readiness.schema.json` 存在，且是合法 JSON Schema JSON。
-2. `examples/opl-gateway/domain-onboarding-readiness.json` 存在，且能通过该 schema 校验。
+1. `contracts/opl-framework/domain-onboarding-readiness.schema.json` 存在，且是合法 JSON Schema JSON。
+2. `examples/opl-framework/domain-onboarding-readiness.json` 存在，且能通过该 schema 校验。
 3. onboarding contract 要求新 domain 提供完整 `G1` registry material。
 4. onboarding contract 要求显式 public documentation surface。
 5. onboarding contract 要求显式 truth-ownership declaration。
@@ -182,7 +182,7 @@ onboarding gate 只有在下面全部成立时才算通过：
 
 ### 验证方式
 
-- 解析 `contracts/opl-gateway/domain-onboarding-readiness.schema.json`，并用 `examples/opl-gateway/domain-onboarding-readiness.json` 校验它。
+- 解析 `contracts/opl-framework/domain-onboarding-readiness.schema.json`，并用 `examples/opl-framework/domain-onboarding-readiness.json` 校验它。
 - 检查 `docs/opl-domain-onboarding-contract.md` 与 `.zh-CN.md` 是否覆盖全部 required gate。
 - 确认 onboarding gate 建立在 G1/G2/G3 之后，而不是替代它们。
 - 确认 onboarding contract 没有把 canonical truth 上收给 `OPL`。
@@ -194,7 +194,7 @@ onboarding gate 只有在下面全部成立时才算通过：
 `P5.M1` 只有在下面全部成立时才算通过：
 
 1. `docs/references/opl-governance-audit-operating-surface.md` 与 `.zh-CN.md` 存在。
-2. `contracts/opl-gateway/governance-audit.schema.json` 存在，且是合法 JSON Schema JSON。
+2. `contracts/opl-framework/governance-audit.schema.json` 存在，且是合法 JSON Schema JSON。
 3. governance / audit surface 只允许这些顶层 record kind：
    - `routing_audit`
    - `governance_decision`
@@ -208,7 +208,7 @@ onboarding gate 只有在下面全部成立时才算通过：
 
 ### 验证方式
 
-- 解析 `contracts/opl-gateway/governance-audit.schema.json`。
+- 解析 `contracts/opl-framework/governance-audit.schema.json`。
 - 检查 `docs/references/opl-governance-audit-operating-surface.md` 与 `.zh-CN.md` 中的 allowed record kind 和 no-truth-shift wording。
 - 确认 schema 使用了 kind-specific discrimination，且 `decision_source` 不包含 `opl_gateway`。
 - 确认 governance / audit wording 仍然位于 routed action 之后，而没有重新发明执行 runtime。
@@ -220,7 +220,7 @@ onboarding gate 只有在下面全部成立时才算通过：
 `P5.M2` 只有在下面全部成立时才算通过：
 
 1. `docs/references/opl-publish-promotion-operating-surface.md` 与 `.zh-CN.md` 存在。
-2. `contracts/opl-gateway/publish-promotion.schema.json` 存在，且是合法 JSON Schema JSON。
+2. `contracts/opl-framework/publish-promotion.schema.json` 存在，且是合法 JSON Schema JSON。
 3. publish / promotion surface 显式声明：只有在 domain-owned publish / release / export / submission outcome 已经存在之后，它才开始生效。
 4. publish / promotion 文档与 schema 只允许这些顶层 record kind：
    - `publish_outcome_index`
@@ -233,7 +233,7 @@ onboarding gate 只有在下面全部成立时才算通过：
 
 ### 验证方式
 
-- 解析 `contracts/opl-gateway/publish-promotion.schema.json`。
+- 解析 `contracts/opl-framework/publish-promotion.schema.json`。
 - 检查 `docs/references/opl-publish-promotion-operating-surface.md` 与 `.zh-CN.md` 中的 post-publish boundary 和 no-truth-shift wording。
 - 确认 schema 保持 kind-specific record 显式分离，且 `domain_truth_refs` 仍为 mandatory。
 - 确认 publish / promotion wording 没有把 `OPL` 变成 venue-submission runtime 或 public-channel posting runtime。
@@ -274,7 +274,7 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 `P7` 只有在下面全部成立时才算通过：
 
 1. `docs/references/opl-gateway-example-corpus.md` 与 `.zh-CN.md` 存在。
-2. `examples/opl-gateway/research-ops-submission.json` 与 `examples/opl-gateway/presentation-ops-publish.json` 存在，且是合法 JSON。
+2. `examples/opl-framework/research-ops-submission.json` 与 `examples/opl-framework/presentation-ops-publish.json` 存在，且是合法 JSON。
 3. example corpus 文档显式保持 illustrative、non-governing、non-executing 边界。
 4. research example 显式保持：
    - `research_ops -> medautoscience`
@@ -300,7 +300,7 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 
 `P8` 只有在下面全部成立时才算通过：
 
-1. `contracts/opl-gateway/public-surface-index.json` 存在，且是合法 JSON。
+1. `contracts/opl-framework/public-surface-index.json` 存在，且是合法 JSON。
 2. `docs/opl-public-surface-index.md` 与 `.zh-CN.md` 存在。
 3. public surface index 显式保持 machine-readable、non-executing。
 4. public surface index 显式区分：
@@ -320,7 +320,7 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 
 ### 验证方式
 
-- 解析 `contracts/opl-gateway/public-surface-index.json`。
+- 解析 `contracts/opl-framework/public-surface-index.json`。
 - 检查 category 引用、`routes_to` 目标，以及本地 `repo_path` refs 的结构完整性。
 - 检查 `docs/opl-public-surface-index.md` 与 `.zh-CN.md` 中的 no-runtime / no-truth-shift / no-internal-module wording。
 - 确认 `surfaces[*].surface_id` 保持唯一，且 `opl_candidate_domain_backlog` 恰好以 supporting/reference surface 身份出现，而不是 admitted domain 或 execution surface；同时 `opl_operating_model`、`opl_shared_foundation` 与 `opl_shared_foundation_ownership` 也都各自恰好出现一次，并保持为 OPL-owned 的 contract/reference surface。
@@ -334,7 +334,7 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 `P10` 只有在下面全部成立时才算通过：
 
 1. `docs/references/opl-routed-safety-example-corpus.md` 与 `.zh-CN.md` 存在。
-2. `examples/opl-gateway/ambiguous-task-routing.json`、`unknown-domain-routing.json` 与 `refusal-routing.json` 存在，且是合法 JSON。
+2. `examples/opl-framework/ambiguous-task-routing.json`、`unknown-domain-routing.json` 与 `refusal-routing.json` 存在，且是合法 JSON。
 3. 每个 routed-safety example 都保持在 routed boundary 之下：
    - 不生成 `build_handoff_payload`
    - 不暗示 hidden best-effort reroute
@@ -359,14 +359,14 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 
 1. `docs/references/opl-operating-example-corpus.md` 与 `.zh-CN.md` 存在。
 2. 六个独立 operating example 文件存在，且是合法 JSON：
-   - `examples/opl-gateway/governance-decision-record.json`
-   - `examples/opl-gateway/cross-domain-review-index.json`
-   - `examples/opl-gateway/publish-readiness-signal.json`
-   - `examples/opl-gateway/publish-outcome-index.json`
-   - `examples/opl-gateway/promotion-candidate-signal.json`
-   - `examples/opl-gateway/promotion-surface-index.json`
-3. governance 侧 example 直接通过 `contracts/opl-gateway/governance-audit.schema.json` 校验。
-4. publish / promotion 侧 example 直接通过 `contracts/opl-gateway/publish-promotion.schema.json` 校验。
+   - `examples/opl-framework/governance-decision-record.json`
+   - `examples/opl-framework/cross-domain-review-index.json`
+   - `examples/opl-framework/publish-readiness-signal.json`
+   - `examples/opl-framework/publish-outcome-index.json`
+   - `examples/opl-framework/promotion-candidate-signal.json`
+   - `examples/opl-framework/promotion-surface-index.json`
+3. governance 侧 example 直接通过 `contracts/opl-framework/governance-audit.schema.json` 校验。
+4. publish / promotion 侧 example 直接通过 `contracts/opl-framework/publish-promotion.schema.json` 校验。
 5. operating-example corpus 文档显式保持 illustrative、non-governing、non-executing。
 6. governance / audit 与 publish / promotion 文档都把该 corpus 指向为 canonical 的独立 machine-readable example surface。
 7. contract hub、public-surface index 与 acceptance surface 都把该 corpus 暴露为 supporting surface，而不是 runtime。
@@ -386,7 +386,7 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 
 `P13` 只有在下面全部成立时才算通过：
 
-1. `contracts/opl-gateway/operating-record-catalog.json` 存在，且是合法 JSON。
+1. `contracts/opl-framework/operating-record-catalog.json` 存在，且是合法 JSON。
 2. `docs/references/opl-operating-record-catalog.md` 与 `.zh-CN.md` 存在。
 3. catalog 覆盖全部已冻结 operating record kind：
    - `routing_audit`
@@ -404,7 +404,7 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 
 ### 验证方式
 
-- 使用 `json.load` 解析 `contracts/opl-gateway/operating-record-catalog.json`。
+- 使用 `json.load` 解析 `contracts/opl-framework/operating-record-catalog.json`。
 - 确认 catalog 覆盖且只覆盖已冻结 `P5.M1` / `P5.M2` record kind。
 - 检查每个 `schema_ref` 与 `example_ref` 是否都能解析到存在的本地工件。
 - 检查 `docs/references/opl-operating-record-catalog.md` 与 `.zh-CN.md` 中的 non-executing / no-truth-shift / domain_gateway-only wording。
@@ -416,7 +416,7 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 
 `P14` 只有在下面全部成立时才算通过：
 
-1. `contracts/opl-gateway/surface-lifecycle-map.json` 存在，且是合法 JSON。
+1. `contracts/opl-framework/surface-lifecycle-map.json` 存在，且是合法 JSON。
 2. `docs/references/opl-surface-lifecycle-map.md` 与 `.zh-CN.md` 存在。
 3. lifecycle map 恰好覆盖下面这些当前已冻结 surface：
    - `opl_operating_model`
@@ -439,7 +439,7 @@ wording-consistency gate 只有在下面全部成立时才算通过：
    - `opl_gateway_acceptance_spec`
 4. 每个 lifecycle entry 都保持 derived/reference-only，并且只携带 `layer_id`、`control_mode`、`truth_mode`、`requires_surfaces`、`enables_surfaces`、`follow_on_route_surface`、`governing_refs` 这类 surface-boundary field。
 5. 每个 `requires_surfaces` 与 `enables_surfaces` 目标都能解析到同一个 lifecycle map 中的已知 entry。
-6. lifecycle map 覆盖的每个 `surface_id` 都同时存在于 `contracts/opl-gateway/public-surface-index.json` 中。
+6. lifecycle map 覆盖的每个 `surface_id` 都同时存在于 `contracts/opl-framework/public-surface-index.json` 中。
 7. 每个 `governing_ref` 都能解析到存在的本地工件。
 8. `follow_on_route_surface` 始终只能是 `null` 或 `domain_gateway`。
 9. lifecycle map 保持 non-executing，不会升级成 workflow engine、transition authority，也不会升级成第二真相源或 runtime manifest。
@@ -447,7 +447,7 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 
 ### 验证方式
 
-- 使用 `json.load` 解析 `contracts/opl-gateway/surface-lifecycle-map.json`。
+- 使用 `json.load` 解析 `contracts/opl-framework/surface-lifecycle-map.json`。
 - 确认 lifecycle map 覆盖且只覆盖上面这组已冻结 surface。
 - 检查每个 `requires_surfaces` / `enables_surfaces` 目标都能在同一个 map 内解析，且每个 `governing_ref` 都能本地解析。
 - 确认每个 entry 都满足 `follow_on_route_surface in {null, domain_gateway}`。
@@ -459,7 +459,7 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 
 `P15` 只有在下面全部成立时才算通过：
 
-1. `contracts/opl-gateway/surface-authority-matrix.json` 存在，且是合法 JSON。
+1. `contracts/opl-framework/surface-authority-matrix.json` 存在，且是合法 JSON。
 2. `docs/references/opl-surface-authority-matrix.md` 与 `.zh-CN.md` 存在。
 3. authority matrix 恰好覆盖下面这组当前 authority-review surface：
    - `opl_operating_model`
@@ -485,7 +485,7 @@ wording-consistency gate 只有在下面全部成立时才算通过：
    - `redcube_public_gateway`
 4. 每个 matrix entry 都保持 derived/reference-only，并且只携带 `owner_scope`、`surface_role`、`route_authority`、`execution_authority`、`truth_authority`、`review_authority`、`publication_authority`、`allowed_follow_on_surface`、`forbidden_actions`、`governing_refs` 这类 authority-boundary field。
 5. 每个 `governing_ref` 都能解析到存在的本地工件。
-6. authority matrix 覆盖的每个 `surface_id` 都同时存在于 `contracts/opl-gateway/public-surface-index.json` 中。
+6. authority matrix 覆盖的每个 `surface_id` 都同时存在于 `contracts/opl-framework/public-surface-index.json` 中。
 7. 对每个 OPL-owned entry 来说，`execution_authority`、`truth_authority`、`review_authority` 与 `publication_authority` 都必须保持为 `none`。
 8. linked domain public-entry surface 仍保持 `owner_scope = domain`，并保留 domain-local routing/execution/truth/review/publication authority。
 9. `allowed_follow_on_surface` 始终只能是 `null` 或 `domain_gateway`。
@@ -493,7 +493,7 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 
 ### 验证方式
 
-- 使用 `json.load` 解析 `contracts/opl-gateway/surface-authority-matrix.json`。
+- 使用 `json.load` 解析 `contracts/opl-framework/surface-authority-matrix.json`。
 - 确认 authority matrix 覆盖且只覆盖上面这组已冻结 surface。
 - 检查每个 `governing_ref` 都能本地解析，且每个 `surface_id` 都出现在 public-surface index 中。
 - 确认每个 OPL-owned entry 都满足 `execution_authority = truth_authority = review_authority = publication_authority = none`。
@@ -506,7 +506,7 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 
 `P16` 只有在下面全部成立时才算通过：
 
-1. `contracts/opl-gateway/surface-review-matrix.json` 存在，且是合法 JSON。
+1. `contracts/opl-framework/surface-review-matrix.json` 存在，且是合法 JSON。
 2. `docs/references/opl-surface-review-matrix.md` 与 `.zh-CN.md` 存在。
 3. surface review matrix 精确覆盖当前这些 human-review surface：
    - `opl_public_readme`
@@ -535,9 +535,9 @@ wording-consistency gate 只有在下面全部成立时才算通过：
    - `opl_candidate_domain_backlog`
    - `opl_gateway_acceptance_spec`
 4. 每个 review entry 都保持 derived/reference-only，只携带 review-boundary 字段，例如 `owner_scope`、`surface_role`、`human_review_required`、`required_acceptance_gates`、`required_companion_surfaces`、`cross_domain_wording_check`、`publishability_stage` 与 `governing_refs`。
-5. 每个 `required_acceptance_gate` 都能在 `contracts/opl-gateway/acceptance-matrix.json` 中解析。
-6. 每个 `required_companion_surface` 都能在 `contracts/opl-gateway/public-surface-index.json` 中解析。
-7. review matrix 覆盖的每个 `surface_id` 都存在于 `contracts/opl-gateway/public-surface-index.json` 中，且 `review_entries[*].surface_id` 保持唯一。
+5. 每个 `required_acceptance_gate` 都能在 `contracts/opl-framework/acceptance-matrix.json` 中解析。
+6. 每个 `required_companion_surface` 都能在 `contracts/opl-framework/public-surface-index.json` 中解析。
+7. review matrix 覆盖的每个 `surface_id` 都存在于 `contracts/opl-framework/public-surface-index.json` 中，且 `review_entries[*].surface_id` 保持唯一。
 8. 每个 `governing_ref` 都能解析到存在的本地工件。
 9. 对全部已覆盖 OPL-owned surface，`human_review_required` 都保持 `true`。
 10. review matrix 保持 non-executing，不会变成 approval engine、publish controller 或 release engine，也不会把 domain review / publication authority 上收给 `OPL`。
@@ -545,7 +545,7 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 
 ### 验证方式
 
-- 使用 `json.load` 解析 `contracts/opl-gateway/surface-review-matrix.json`。
+- 使用 `json.load` 解析 `contracts/opl-framework/surface-review-matrix.json`。
 - 确认 review matrix 精确覆盖上面列出的冻结 surface 集合。
 - 检查每个 `required_acceptance_gate` 都能在当前 acceptance matrix 中解析，每个 `required_companion_surface` 都能在当前 public-surface index 中解析，`review_entries[*].surface_id` 保持唯一，且每个 `governing_ref` 都能在本地解析。
 - 确认所有已覆盖 OPL surface 都保持 `human_review_required = true`。
@@ -557,7 +557,7 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 
 `P17` 只有在下面全部成立时才算通过：
 
-1. `contracts/opl-gateway/task-topology.json` 存在，且是合法 JSON。
+1. `contracts/opl-framework/task-topology.json` 存在，且是合法 JSON。
 2. `docs/task-map.md` 与 `docs/task-map.zh-CN.md` 都存在，且都链接到 machine-readable task-topology 工件。
 3. task-topology 工件精确覆盖这些 workstream：
    - `research_ops`
@@ -569,15 +569,15 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 5. `presentation_ops` 仍保持 `registry_state = registered`、`routing_state = domain_gateway_ready`、`current_domain_id = redcube`、`entry_surface = domain_gateway`。
 6. `ip_ops`、`award_ops`、`thesis_ops`、`review_ops` 都仍保持 `boundary_state = under_definition`、`registry_state = not_registered`、`routing_state = unknown_domain_only`、`current_domain_id = null`、`entry_surface = null`。
 7. `presentation_ops` 保持 `ppt_deck` 为 direct map，同时把 `xiaohongshu` 留在同一 RedCube family/harness 语境里，但不自动等同于 `presentation_ops`。
-8. `contracts/opl-gateway/workstreams.json` 与 `domains.json` 仍只注册当前已收录 workstream / domain；task-topology 工件不会悄悄扩张 G1 registry。
-9. `contracts/opl-gateway/public-surface-index.json` 把 `opl_task_map` 暴露成 `opl_public_entry` surface。
-10. `contracts/opl-gateway/surface-review-matrix.json` 覆盖 `opl_task_map`，但不会把 task topology 变成 approval、onboarding、discovery 或 routing engine。
-11. `contracts/opl-gateway/candidate-domain-backlog.json` 仍与同一组 under-definition workstream 对齐，不会发明 admitted domain 或 routed-ready entry surface。
+8. `contracts/opl-framework/workstreams.json` 与 `domains.json` 仍只注册当前已收录 workstream / domain；task-topology 工件不会悄悄扩张 G1 registry。
+9. `contracts/opl-framework/public-surface-index.json` 把 `opl_task_map` 暴露成 `opl_public_entry` surface。
+10. `contracts/opl-framework/surface-review-matrix.json` 覆盖 `opl_task_map`，但不会把 task topology 变成 approval、onboarding、discovery 或 routing engine。
+11. `contracts/opl-framework/candidate-domain-backlog.json` 仍与同一组 under-definition workstream 对齐，不会发明 admitted domain 或 routed-ready entry surface。
 12. contract README、public-surface index docs、task-map docs、candidate-backlog docs 与 acceptance surfaces 都把仍在定义中的 workstream 写成语义候选，而不是正式收录 domain。
 
 ### 验证方式
 
-- 用 `json.load` 解析 `contracts/opl-gateway/task-topology.json`。
+- 用 `json.load` 解析 `contracts/opl-framework/task-topology.json`。
 - 确认上面列出的精确 workstream 集合，以及已注册与仍在定义中的 split。
 - 确认 `workstreams.json` 仍只包含 `research_ops` 与 `presentation_ops`，`domains.json` 仍只包含 `medautoscience` 与 `redcube`。
 - 确认 `opl_task_map` 能在 `public-surface-index.json` 与 `surface-review-matrix.json` 中解析。
@@ -590,7 +590,7 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 
 `P18` 只有在下面全部成立时才算通过：
 
-1. `contracts/opl-gateway/candidate-domain-backlog.json` 存在，且是合法 JSON。
+1. `contracts/opl-framework/candidate-domain-backlog.json` 存在，且是合法 JSON。
 2. `docs/references/opl-candidate-domain-backlog.md` 与 `docs/references/opl-candidate-domain-backlog.zh-CN.md` 都存在，且都链接到 machine-readable backlog 工件。
 3. candidate-domain backlog 精确覆盖这些 under-definition workstream：
    - `grant_ops`
@@ -633,13 +633,13 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 16. `Review Ops` 还必须在 task-map / candidate-backlog / domain-onboarding wording 中把 `execution_model`、`discovery_readiness`、`routing_readiness` 与 `cross_domain_wording` 显式保持为 blocked package，并确认任何 future successful target 仍只能是 `domain_gateway`-only / no-bypass。
 17. 任何 candidate entry 或 backlog rule 都不会把 `Thesis Ops`、`Review Ops` 折叠进 `MedAutoScience`、`MedAutoGrant` 或 `RedCube AI`；这些已收录 domain 仍保持独立的 gateway / harness surface。
 18. `required_evidence` 与 note 文本不会在 boundary package 存在之前预先分配未来的 `domain_id`、`gateway_surface` 或 `harness_surface` 元数据。
-19. `contracts/opl-gateway/public-surface-index.json`、`surface-review-matrix.json`、`surface-lifecycle-map.json` 与 `surface-authority-matrix.json` 都把 candidate-domain backlog 暴露为 supporting/reference surface。
+19. `contracts/opl-framework/public-surface-index.json`、`surface-review-matrix.json`、`surface-lifecycle-map.json` 与 `surface-authority-matrix.json` 都把 candidate-domain backlog 暴露为 supporting/reference surface。
 20. 在 `public-surface-index.json` 中，`opl_candidate_domain_backlog` 恰好出现一次；在 `surface-review-matrix.json` 中，对应 review entry 也恰好出现一次。
 21. contract README、task-map docs、domain-onboarding docs、public-surface index docs、review-matrix docs、lifecycle/authority docs 与 acceptance surfaces 都把这份 backlog 写成 reference-only、non-executing、non-admitting，且明确位于 onboarding gate 之下。
 
 ### 验证方式
 
-- 用 `json.load` 解析 `contracts/opl-gateway/candidate-domain-backlog.json`。
+- 用 `json.load` 解析 `contracts/opl-framework/candidate-domain-backlog.json`。
 - 确认上面列出的精确 workstream 集合，以及它与 `task-topology.json` 中 under-definition entry 的完全对齐。
 - 确认每条 backlog entry 都包含上面八类 `required_onboarding_materials` package、上面八项 `missing_boundary_materials` 检查，以及一个全部 blocked 的 `formal_inclusion_gate` 对象。
 - 确认所有 `readiness_flags` 都保持 `false`，并且不存在占位性的未来 `domain_id`、`gateway_surface` 或 `harness_surface` 字段。
@@ -672,7 +672,7 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 4. 任何 G4 candidate index 都不能被写成当前的 public-entry、discovery-ready、routed-action-ready、execution、truth-owner、approval、publish-control 或 release-control surface。
 5. G4 wording 必须把 canonical truth 留在拥有它的 domain，并把 `OPL` 保持在 top-level gateway / federation layer，而不是把它改写成 monolithic runtime 或 shared truth owner。
 6. G4 wording 不能把 `MedAutoScience` 或 `RedCube AI` 折叠成 `OPL` 的内部模块，也不能削弱它们作为 domain gateway / harness surface 的独立性。
-7. `contracts/opl-gateway/acceptance-matrix.json` 必须包含一个专门的 G4 gate，用来检查 rollout/spec boundary wording，并阻止任何 G4 candidate index 被提前写成已收录 surface。
+7. `contracts/opl-framework/acceptance-matrix.json` 必须包含一个专门的 G4 gate，用来检查 rollout/spec boundary wording，并阻止任何 G4 candidate index 被提前写成已收录 surface。
 
 ### 验证方式
 
@@ -680,7 +680,7 @@ wording-consistency gate 只有在下面全部成立时才算通过：
 - 确认 candidate 集合精确等于上面四个 G4 index，并且在中英文里都带有 roadmap-only / future-only / reference-only / non-admitting wording。
 - 确认两份 rollout 文档都没有把任何 G4 candidate index 升格成当前的 public-entry、discovery-ready、routed-action-ready、execution、truth-owner、approval、publish-control 或 release-control surface。
 - 确认 G4 wording 继续把 canonical truth 留在各自 domain 内，并在 top-level `OPL` gateway 之下保持 `MedAutoScience` / `RedCube AI` 的独立性。
-- 解析 `contracts/opl-gateway/acceptance-matrix.json`，确认专门的 G4 gate 覆盖 rollout/spec 文件，并明确阻止提前收录 wording。
+- 解析 `contracts/opl-framework/acceptance-matrix.json`，确认专门的 G4 gate 覆盖 rollout/spec 文件，并明确阻止提前收录 wording。
 
 ## 标准验证命令
 
@@ -689,7 +689,7 @@ git diff --check
 python3 - <<'PY'
 import json
 from pathlib import Path
-for path in sorted(list(Path('contracts/opl-gateway').glob('*.json')) + list(Path('examples/opl-gateway').glob('*.json'))):
+for path in sorted(list(Path('contracts/opl-framework').glob('*.json')) + list(Path('examples/opl-framework').glob('*.json'))):
     json.load(path.open())
     print('OK', path)
 PY
@@ -698,7 +698,7 @@ import json
 from pathlib import Path
 from jsonschema import Draft202012Validator, FormatChecker, RefResolver
 
-contracts = Path('contracts/opl-gateway')
+contracts = Path('contracts/opl-framework')
 routed_schema_path = contracts / 'routed-actions.schema.json'
 handoff_schema_path = contracts / 'handoff.schema.json'
 gov_schema_path = contracts / 'governance-audit.schema.json'
@@ -727,11 +727,11 @@ gov = Draft202012Validator(gov_schema, format_checker=FormatChecker())
 pub = Draft202012Validator(pub_schema, format_checker=FormatChecker())
 
 for rel in [
-    'examples/opl-gateway/research-ops-submission.json',
-    'examples/opl-gateway/presentation-ops-publish.json',
-    'examples/opl-gateway/ambiguous-task-routing.json',
-    'examples/opl-gateway/unknown-domain-routing.json',
-    'examples/opl-gateway/refusal-routing.json',
+    'examples/opl-framework/research-ops-submission.json',
+    'examples/opl-framework/presentation-ops-publish.json',
+    'examples/opl-framework/ambiguous-task-routing.json',
+    'examples/opl-framework/unknown-domain-routing.json',
+    'examples/opl-framework/refusal-routing.json',
 ]:
     data = json.loads(Path(rel).read_text())
     routed.validate(data['route_request'])
@@ -744,17 +744,17 @@ for rel in [
     print('examples schema OK', rel)
 
 for rel in [
-    'examples/opl-gateway/governance-decision-record.json',
-    'examples/opl-gateway/cross-domain-review-index.json',
-    'examples/opl-gateway/publish-readiness-signal.json',
+    'examples/opl-framework/governance-decision-record.json',
+    'examples/opl-framework/cross-domain-review-index.json',
+    'examples/opl-framework/publish-readiness-signal.json',
 ]:
     gov.validate(json.loads(Path(rel).read_text()))
     print('governance example OK', rel)
 
 for rel in [
-    'examples/opl-gateway/publish-outcome-index.json',
-    'examples/opl-gateway/promotion-candidate-signal.json',
-    'examples/opl-gateway/promotion-surface-index.json',
+    'examples/opl-framework/publish-outcome-index.json',
+    'examples/opl-framework/promotion-candidate-signal.json',
+    'examples/opl-framework/promotion-surface-index.json',
 ]:
     pub.validate(json.loads(Path(rel).read_text()))
     print('publish example OK', rel)
@@ -764,9 +764,9 @@ import json
 from pathlib import Path
 from jsonschema import Draft202012Validator, FormatChecker
 
-schema = json.loads(Path('contracts/opl-gateway/domain-onboarding-readiness.schema.json').read_text())
+schema = json.loads(Path('contracts/opl-framework/domain-onboarding-readiness.schema.json').read_text())
 Draft202012Validator.check_schema(schema)
-example = json.loads(Path('examples/opl-gateway/domain-onboarding-readiness.json').read_text())
+example = json.loads(Path('examples/opl-framework/domain-onboarding-readiness.json').read_text())
 Draft202012Validator(schema, format_checker=FormatChecker()).validate(example)
 print('onboarding readiness schema OK')
 PY
@@ -774,7 +774,7 @@ python3 - <<'PY'
 import json
 from pathlib import Path
 
-catalog = json.loads(Path('contracts/opl-gateway/operating-record-catalog.json').read_text())
+catalog = json.loads(Path('contracts/opl-framework/operating-record-catalog.json').read_text())
 expected = {
     'routing_audit',
     'governance_decision',
@@ -799,8 +799,8 @@ python3 - <<'PY'
 import json
 from pathlib import Path
 
-lifecycle = json.loads(Path('contracts/opl-gateway/surface-lifecycle-map.json').read_text())
-idx = json.loads(Path('contracts/opl-gateway/public-surface-index.json').read_text())
+lifecycle = json.loads(Path('contracts/opl-framework/surface-lifecycle-map.json').read_text())
+idx = json.loads(Path('contracts/opl-framework/public-surface-index.json').read_text())
 
 expected = {
     'opl_operating_model',
@@ -839,8 +839,8 @@ python3 - <<'PY'
 import json
 from pathlib import Path
 
-matrix = json.loads(Path('contracts/opl-gateway/surface-authority-matrix.json').read_text())
-idx = json.loads(Path('contracts/opl-gateway/public-surface-index.json').read_text())
+matrix = json.loads(Path('contracts/opl-framework/surface-authority-matrix.json').read_text())
+idx = json.loads(Path('contracts/opl-framework/public-surface-index.json').read_text())
 
 expected = {
     'opl_operating_model',
@@ -892,9 +892,9 @@ python3 - <<'PY'
 import json
 from pathlib import Path
 
-review = json.loads(Path('contracts/opl-gateway/surface-review-matrix.json').read_text())
-acceptance = json.loads(Path('contracts/opl-gateway/acceptance-matrix.json').read_text())
-idx = json.loads(Path('contracts/opl-gateway/public-surface-index.json').read_text())
+review = json.loads(Path('contracts/opl-framework/surface-review-matrix.json').read_text())
+acceptance = json.loads(Path('contracts/opl-framework/acceptance-matrix.json').read_text())
+idx = json.loads(Path('contracts/opl-framework/public-surface-index.json').read_text())
 
 expected = {
     'opl_public_readme',
@@ -952,12 +952,12 @@ python3 - <<'PY'
 import json
 from pathlib import Path
 
-task = json.loads(Path('contracts/opl-gateway/task-topology.json').read_text())
-backlog = json.loads(Path('contracts/opl-gateway/candidate-domain-backlog.json').read_text())
-public = json.loads(Path('contracts/opl-gateway/public-surface-index.json').read_text())
-review = json.loads(Path('contracts/opl-gateway/surface-review-matrix.json').read_text())
-lifecycle = json.loads(Path('contracts/opl-gateway/surface-lifecycle-map.json').read_text())
-authority = json.loads(Path('contracts/opl-gateway/surface-authority-matrix.json').read_text())
+task = json.loads(Path('contracts/opl-framework/task-topology.json').read_text())
+backlog = json.loads(Path('contracts/opl-framework/candidate-domain-backlog.json').read_text())
+public = json.loads(Path('contracts/opl-framework/public-surface-index.json').read_text())
+review = json.loads(Path('contracts/opl-framework/surface-review-matrix.json').read_text())
+lifecycle = json.loads(Path('contracts/opl-framework/surface-lifecycle-map.json').read_text())
+authority = json.loads(Path('contracts/opl-framework/surface-authority-matrix.json').read_text())
 task_map_en = Path('docs/task-map.md').read_text()
 task_map_zh = Path('docs/task-map.zh-CN.md').read_text()
 backlog_doc_en = Path('docs/references/opl-candidate-domain-backlog.md').read_text()
@@ -1079,7 +1079,7 @@ python3 - <<'PY'
 import json
 from pathlib import Path
 
-idx = json.loads(Path('contracts/opl-gateway/public-surface-index.json').read_text())
+idx = json.loads(Path('contracts/opl-framework/public-surface-index.json').read_text())
 category_ids = {category['category_id'] for category in idx['surface_categories']}
 surface_ids = [surface['surface_id'] for surface in idx['surfaces']]
 surface_id_set = set(surface_ids)
@@ -1227,8 +1227,8 @@ files = [
     Path('docs/opl-public-surface-index.zh-CN.md'),
     Path('docs/references/opl-gateway-acceptance-test-spec.md'),
     Path('docs/references/opl-gateway-acceptance-test-spec.zh-CN.md'),
-    Path('contracts/opl-gateway/README.md'),
-    Path('contracts/opl-gateway/README.zh-CN.md'),
+    Path('contracts/opl-framework/README.md'),
+    Path('contracts/opl-framework/README.zh-CN.md'),
 ]
 link_re = re.compile(r'\[[^\]]+\]\(([^)]+)\)')
 for path in files:
@@ -1241,8 +1241,8 @@ for path in files:
             raise SystemExit(f'missing link: {path} -> {raw}')
 print('links OK')
 PY
-rg -n "top-level blueprint only|不是统一运行时入口|本仓库本身不承担运行时角色"   ../README.md ../README.zh-CN.md   docs/gateway-federation.md docs/gateway-federation.zh-CN.md   docs/opl-federation-contract.md docs/opl-federation-contract.zh-CN.md   docs/opl-read-only-discovery-gateway.md docs/opl-read-only-discovery-gateway.zh-CN.md   docs/opl-routed-action-gateway.md docs/opl-routed-action-gateway.zh-CN.md   docs/opl-domain-onboarding-contract.md docs/opl-domain-onboarding-contract.zh-CN.md   docs/references/opl-candidate-domain-backlog.md docs/references/opl-candidate-domain-backlog.zh-CN.md   docs/references/opl-governance-audit-operating-surface.md docs/references/opl-governance-audit-operating-surface.zh-CN.md   docs/references/opl-publish-promotion-operating-surface.md docs/references/opl-publish-promotion-operating-surface.zh-CN.md   docs/references/opl-gateway-example-corpus.md docs/references/opl-gateway-example-corpus.zh-CN.md   docs/references/opl-routed-safety-example-corpus.md docs/references/opl-routed-safety-example-corpus.zh-CN.md   docs/references/opl-operating-example-corpus.md docs/references/opl-operating-example-corpus.zh-CN.md   docs/references/opl-operating-record-catalog.md docs/references/opl-operating-record-catalog.zh-CN.md   docs/operating-model.md docs/operating-model.zh-CN.md   docs/shared-foundation.md docs/shared-foundation.zh-CN.md   docs/shared-foundation-ownership.md docs/shared-foundation-ownership.zh-CN.md   docs/references/opl-surface-lifecycle-map.md docs/references/opl-surface-lifecycle-map.zh-CN.md   docs/references/opl-surface-authority-matrix.md docs/references/opl-surface-authority-matrix.zh-CN.md   docs/references/opl-surface-review-matrix.md docs/references/opl-surface-review-matrix.zh-CN.md   docs/task-map.md docs/task-map.zh-CN.md   docs/opl-public-surface-index.md docs/opl-public-surface-index.zh-CN.md   docs/references/opl-gateway-rollout.md docs/references/opl-gateway-rollout.zh-CN.md   docs/roadmap.md docs/roadmap.zh-CN.md   contracts/opl-gateway/README.md contracts/opl-gateway/README.zh-CN.md
-rg -n "roadmap-only|future-only|reference-only|non-admitting|public-entry|discovery-ready|routed-action-ready|execution|truth-owner|approval|publish-control|release-control|shared asset index|shared memory index|shared domain registry|shared publication / delivery catalog"   docs/references/opl-gateway-rollout.md docs/references/opl-gateway-rollout.zh-CN.md   docs/references/opl-gateway-acceptance-test-spec.md docs/references/opl-gateway-acceptance-test-spec.zh-CN.md   contracts/opl-gateway/acceptance-matrix.json
+rg -n "top-level blueprint only|不是统一运行时入口|本仓库本身不承担运行时角色"   ../README.md ../README.zh-CN.md   docs/gateway-federation.md docs/gateway-federation.zh-CN.md   docs/opl-federation-contract.md docs/opl-federation-contract.zh-CN.md   docs/opl-read-only-discovery-gateway.md docs/opl-read-only-discovery-gateway.zh-CN.md   docs/opl-routed-action-gateway.md docs/opl-routed-action-gateway.zh-CN.md   docs/opl-domain-onboarding-contract.md docs/opl-domain-onboarding-contract.zh-CN.md   docs/references/opl-candidate-domain-backlog.md docs/references/opl-candidate-domain-backlog.zh-CN.md   docs/references/opl-governance-audit-operating-surface.md docs/references/opl-governance-audit-operating-surface.zh-CN.md   docs/references/opl-publish-promotion-operating-surface.md docs/references/opl-publish-promotion-operating-surface.zh-CN.md   docs/references/opl-gateway-example-corpus.md docs/references/opl-gateway-example-corpus.zh-CN.md   docs/references/opl-routed-safety-example-corpus.md docs/references/opl-routed-safety-example-corpus.zh-CN.md   docs/references/opl-operating-example-corpus.md docs/references/opl-operating-example-corpus.zh-CN.md   docs/references/opl-operating-record-catalog.md docs/references/opl-operating-record-catalog.zh-CN.md   docs/operating-model.md docs/operating-model.zh-CN.md   docs/shared-foundation.md docs/shared-foundation.zh-CN.md   docs/shared-foundation-ownership.md docs/shared-foundation-ownership.zh-CN.md   docs/references/opl-surface-lifecycle-map.md docs/references/opl-surface-lifecycle-map.zh-CN.md   docs/references/opl-surface-authority-matrix.md docs/references/opl-surface-authority-matrix.zh-CN.md   docs/references/opl-surface-review-matrix.md docs/references/opl-surface-review-matrix.zh-CN.md   docs/task-map.md docs/task-map.zh-CN.md   docs/opl-public-surface-index.md docs/opl-public-surface-index.zh-CN.md   docs/references/opl-gateway-rollout.md docs/references/opl-gateway-rollout.zh-CN.md   docs/roadmap.md docs/roadmap.zh-CN.md   contracts/opl-framework/README.md contracts/opl-framework/README.zh-CN.md
+rg -n "roadmap-only|future-only|reference-only|non-admitting|public-entry|discovery-ready|routed-action-ready|execution|truth-owner|approval|publish-control|release-control|shared asset index|shared memory index|shared domain registry|shared publication / delivery catalog"   docs/references/opl-gateway-rollout.md docs/references/opl-gateway-rollout.zh-CN.md   docs/references/opl-gateway-acceptance-test-spec.md docs/references/opl-gateway-acceptance-test-spec.zh-CN.md   contracts/opl-framework/acceptance-matrix.json
 ```
 
 ## 完成定义

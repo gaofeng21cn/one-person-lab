@@ -8,9 +8,9 @@
 
 本投影只消费 repo-tracked family contracts 和 domain-owned source refs：
 
-- `contracts/opl-gateway/family-runtime-attempt-contract.json`
-- `contracts/opl-gateway/family-domain-quality-projection-contract.json`
-- `contracts/opl-gateway/family-incident-learning-loop.json`
+- `contracts/opl-framework/family-runtime-attempt-contract.json`
+- `contracts/opl-framework/family-domain-quality-projection-contract.json`
+- `contracts/opl-framework/family-incident-learning-loop.json`
 - domain-owned runtime / quality / incident refs from `MAS`、`MAG`、`RCA`
 
 ## Projection Fields

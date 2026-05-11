@@ -15,7 +15,7 @@ This package still does **not** activate a runtime.
 It still does **not** promote `OPL` into a runtime owner.
 It still applies to already admitted domains only.
 
-The machine-readable companion is [`../../contracts/opl-gateway/minimal-admitted-domain-federation-activation-package.json`](../../../../contracts/opl-gateway/minimal-admitted-domain-federation-activation-package.json).
+The machine-readable companion is [`../../contracts/opl-framework/minimal-admitted-domain-federation-activation-package.json`](../../../../contracts/opl-framework/minimal-admitted-domain-federation-activation-package.json).
 
 ## Why The Threshold Is Now Met
 
@@ -35,7 +35,7 @@ This package activates only the smallest contract-first federation follow-on:
 
 - strengthen top-level federation wording for already admitted domains only
 - make the two currently admitted domain surfaces explicit as the basis of the stronger federation expression
-- keep the `OPL` formal entry at the current local `TypeScript CLI`-first / gateway contract surface
+- keep the `OPL` formal entry at the current local `TypeScript CLI`-first / framework contract surface
 
 In other words, this is a docs+contracts+tests activation package, not a runtime package.
 

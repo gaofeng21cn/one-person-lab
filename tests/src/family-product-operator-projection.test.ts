@@ -17,12 +17,12 @@ function readJson(relativePath: string) {
 }
 
 test('family product operator projection consumes runtime, quality, and incident contracts', () => {
-  const contract = readJson('contracts/opl-gateway/family-product-operator-projection.json');
+  const contract = readJson('contracts/opl-framework/family-product-operator-projection.json');
 
   for (const source of [
-    'contracts/opl-gateway/family-runtime-attempt-contract.json',
-    'contracts/opl-gateway/family-domain-quality-projection-contract.json',
-    'contracts/opl-gateway/family-incident-learning-loop.json',
+    'contracts/opl-framework/family-runtime-attempt-contract.json',
+    'contracts/opl-framework/family-domain-quality-projection-contract.json',
+    'contracts/opl-framework/family-incident-learning-loop.json',
   ]) {
     assert.ok((contract.source_contracts as string[]).includes(source));
     assert.equal(fs.existsSync(path.join(repoRoot, source)), true);
@@ -30,7 +30,7 @@ test('family product operator projection consumes runtime, quality, and incident
 });
 
 test('family product operator projection answers operator status questions with source refs and owner split', () => {
-  const contract = readJson('contracts/opl-gateway/family-product-operator-projection.json');
+  const contract = readJson('contracts/opl-framework/family-product-operator-projection.json');
 
   for (const field of [
     'domain_id',
@@ -51,7 +51,7 @@ test('family product operator projection answers operator status questions with 
 });
 
 test('family product operator projection preserves Codex-default runtime and prevents local scheduler takeover', () => {
-  const contract = readJson('contracts/opl-gateway/family-product-operator-projection.json');
+  const contract = readJson('contracts/opl-framework/family-product-operator-projection.json');
 
   for (const semantic of [
     'Codex-default session/runtime',

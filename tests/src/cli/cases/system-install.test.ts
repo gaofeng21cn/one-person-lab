@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 
-import { assert, cliPath, contractsDir, createCodexConfigFixture, createFakeHermesFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createGitModuleRemoteFixture, fs, loadGatewayContracts, os, path, repoRoot, runCli, test } from '../helpers.ts';
+import { assert, cliPath, contractsDir, createCodexConfigFixture, createFakeHermesFixture, createFakeLaunchctlFixture, createFakeOpenFixture, createGitModuleRemoteFixture, fs, loadFrameworkContracts, os, path, repoRoot, runCli, test } from '../helpers.ts';
 import { buildInternalCommandSpecs } from '../../../../src/cli/cases/private-command-specs.ts';
 import { buildPublicCommandSpecs } from '../../../../src/cli/cases/public-command-specs.ts';
 
@@ -100,7 +100,7 @@ function disableRemoteCompanionInstall() {
 }
 
 test('public command specs expose the one-shot install command', () => {
-  const contracts = loadGatewayContracts({ contractsDir });
+  const contracts = loadFrameworkContracts({ contractsDir });
   const internalSpecs = buildInternalCommandSpecs(
     {
       helpRequested: false,

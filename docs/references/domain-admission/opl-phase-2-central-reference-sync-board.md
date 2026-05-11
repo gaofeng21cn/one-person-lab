@@ -63,7 +63,7 @@
 
 - `README*`
 - `docs/roadmap*`
-- `contracts/opl-gateway/README*`
+- `contracts/opl-framework/README*`
 - `docs/references/opl-gateway-acceptance-test-spec*`
 
 前提是这些文件确实已经和 admitted-domain 最新 absorbed delta 发生 repo-tracked drift。

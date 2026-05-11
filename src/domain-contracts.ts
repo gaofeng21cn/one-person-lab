@@ -1,5 +1,5 @@
 import {
-  GatewayContractError,
+  FrameworkContractError,
   expectBoolean,
   expectString,
   expectStringArray,
@@ -12,7 +12,7 @@ export function validateDomainsRegistry(
   value: unknown,
 ): DomainsRegistry {
   if (!isRecord(value)) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'contract_shape_invalid',
       'domains.json must contain an object root.',
       { file: filePath },
@@ -23,7 +23,7 @@ export function validateDomainsRegistry(
   const domains = value.domains;
 
   if (!Array.isArray(domains)) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'contract_shape_invalid',
       'domains.json must contain a domains array.',
       { file: filePath, field: 'domains' },
@@ -34,7 +34,7 @@ export function validateDomainsRegistry(
     version,
     domains: domains.map((entry, index) => {
       if (!isRecord(entry)) {
-        throw new GatewayContractError(
+        throw new FrameworkContractError(
           'contract_shape_invalid',
           'Each domain entry must be an object.',
           { file: filePath, index },
@@ -46,21 +46,21 @@ export function validateDomainsRegistry(
       const runtimeDependencyBoundary = entry.runtime_dependency_boundary;
 
       if (!isRecord(independentDomainAgent)) {
-        throw new GatewayContractError(
+        throw new FrameworkContractError(
           'contract_shape_invalid',
           'Domain field "independent_domain_agent" must be an object.',
           { file: filePath, field: 'independent_domain_agent' },
         );
       }
       if (!isRecord(singleAppSkill)) {
-        throw new GatewayContractError(
+        throw new FrameworkContractError(
           'contract_shape_invalid',
           'Domain field "single_app_skill" must be an object.',
           { file: filePath, field: 'single_app_skill' },
         );
       }
       if (!isRecord(runtimeDependencyBoundary)) {
-        throw new GatewayContractError(
+        throw new FrameworkContractError(
           'contract_shape_invalid',
           'Domain field "runtime_dependency_boundary" must be an object.',
           { file: filePath, field: 'runtime_dependency_boundary' },
@@ -68,7 +68,7 @@ export function validateDomainsRegistry(
       }
       const backendCompanions = runtimeDependencyBoundary.backend_companions;
       if (!Array.isArray(backendCompanions)) {
-        throw new GatewayContractError(
+        throw new FrameworkContractError(
           'contract_shape_invalid',
           'Domain field "runtime_dependency_boundary.backend_companions" must be an array.',
           {
@@ -160,7 +160,7 @@ export function validateDomainsRegistry(
           backend_companions: backendCompanions.map(
             (companion, companionIndex) => {
               if (!isRecord(companion)) {
-                throw new GatewayContractError(
+                throw new FrameworkContractError(
                   'contract_shape_invalid',
                   'Each backend companion entry must be an object.',
                   {

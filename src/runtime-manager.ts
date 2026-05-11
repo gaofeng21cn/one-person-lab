@@ -33,7 +33,7 @@ const DOMAIN_REGISTRATION_REGISTRY = [
     registration_id: 'mas.opl_runtime_manager.registration.v1',
     expected_registration_surface: {
       surface_kind: 'opl_runtime_manager_domain_registration',
-      ref: '/skill_catalog/skills/0/domain_projection/opl_runtime_manager_registration',
+      ref: '/skill_catalog/skills/0/domain_projection/opl_stage_runtime_registration',
       command: 'uv run python -m med_autoscience.cli skill-catalog --profile <profile> --format json',
     },
     consumable_projection_refs: [
@@ -56,7 +56,7 @@ const DOMAIN_REGISTRATION_REGISTRY = [
     registration_id: 'mag.opl_runtime_manager.registration.v1',
     expected_registration_surface: {
       surface_kind: 'opl_runtime_manager_domain_registration',
-      ref: '/skill_catalog/skills/0/domain_projection/opl_runtime_manager_registration',
+      ref: '/skill_catalog/skills/0/domain_projection/opl_stage_runtime_registration',
       command: 'uv run python -m med_autogrant skill-catalog --input <workspace.json> --format json',
     },
     consumable_projection_refs: [
@@ -79,7 +79,7 @@ const DOMAIN_REGISTRATION_REGISTRY = [
     registration_id: 'rca.opl_runtime_manager.registration.v1',
     expected_registration_surface: {
       surface_kind: 'opl_runtime_manager_domain_registration',
-      ref: '/skill_catalog/skills/0/domain_projection/opl_runtime_manager_registration',
+      ref: '/skill_catalog/skills/0/domain_projection/opl_stage_runtime_registration',
       command: 'redcube product manifest --workspace-root <workspace_root>',
     },
     consumable_projection_refs: [
@@ -118,7 +118,7 @@ const NATIVE_HELPERS = [
     binary: 'opl-sysprobe',
     crate: 'opl-native-helper',
     purpose: 'portable system, toolchain, and runtime dependency inspection',
-    contract_ref: 'contracts/opl-gateway/native-helper-contract.json#/helpers/opl-sysprobe',
+    contract_ref: 'contracts/opl-framework/native-helper-contract.json#/helpers/opl-sysprobe',
   },
   {
     helper_id: 'opl-doctor-native',
@@ -126,7 +126,7 @@ const NATIVE_HELPERS = [
     binary: 'opl-doctor-native',
     crate: 'opl-native-helper',
     purpose: 'native doctor snapshot for local toolchain and runtime readiness inputs',
-    contract_ref: 'contracts/opl-gateway/native-helper-contract.json#/helpers/opl-doctor-native',
+    contract_ref: 'contracts/opl-framework/native-helper-contract.json#/helpers/opl-doctor-native',
   },
   {
     helper_id: 'opl-runtime-watch',
@@ -134,7 +134,7 @@ const NATIVE_HELPERS = [
     binary: 'opl-runtime-watch',
     crate: 'opl-native-helper',
     purpose: 'snapshot watched runtime roots and emit deterministic change fingerprints',
-    contract_ref: 'contracts/opl-gateway/native-helper-contract.json#/helpers/opl-runtime-watch',
+    contract_ref: 'contracts/opl-framework/native-helper-contract.json#/helpers/opl-runtime-watch',
   },
   {
     helper_id: 'opl-artifact-indexer',
@@ -142,7 +142,7 @@ const NATIVE_HELPERS = [
     binary: 'opl-artifact-indexer',
     crate: 'opl-native-helper',
     purpose: 'fast workspace artifact discovery without owning domain truth',
-    contract_ref: 'contracts/opl-gateway/native-helper-contract.json#/helpers/opl-artifact-indexer',
+    contract_ref: 'contracts/opl-framework/native-helper-contract.json#/helpers/opl-artifact-indexer',
   },
   {
     helper_id: 'opl-state-indexer',
@@ -150,7 +150,7 @@ const NATIVE_HELPERS = [
     binary: 'opl-state-indexer',
     crate: 'opl-native-helper',
     purpose: 'high-frequency session, progress, artifact projection, and JSON validity indexing',
-    contract_ref: 'contracts/opl-gateway/native-helper-contract.json#/helpers/opl-state-indexer',
+    contract_ref: 'contracts/opl-framework/native-helper-contract.json#/helpers/opl-state-indexer',
   },
 ] as const;
 
@@ -300,7 +300,7 @@ export function buildRuntimeManager(input: { persistNativeIndexes?: boolean } = 
       provider_runtime: providers,
       reconcile,
       registration_registry: {
-        surface_kind: 'opl_runtime_manager_registration_registry',
+        surface_kind: 'opl_stage_runtime_registration_registry',
         version: 'v1',
         registration_status: 'declared_projection_contracts',
         source_of_truth_rule:

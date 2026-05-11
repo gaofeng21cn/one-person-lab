@@ -1,6 +1,6 @@
 # Historical OPL Phase 2 生态同步 Owner Line Brief
 
-> 历史 owner-line 简报，冻结于 `2026-04-13`。它保留当时的跨仓同步判断，供审计与回溯使用。当前有效真相以 `docs/project.md`、`docs/status.md`、`docs/references/ecosystem-status-matrix.md` 和 `contracts/opl-gateway/*.json` 为准。
+> 历史 owner-line 简报，冻结于 `2026-04-13`。它保留当时的跨仓同步判断，供审计与回溯使用。当前有效真相以 `docs/project.md`、`docs/status.md`、`docs/references/ecosystem-status-matrix.md` 和 `contracts/opl-framework/*.json` 为准。
 > 2026-05-02 退役更新：OMX 已退出当前 OPL 开发环境；本文件不得作为 OMX continuation、prompt 模板或 worktree 长跑入口使用。
 
 状态锚点：`2026-05-02`
@@ -23,8 +23,8 @@
 
 当前配套的 repo-tracked follow-on truth 固定为：
 
-- `contracts/opl-gateway/phase-2-central-reference-sync-board.json`
-- `contracts/opl-gateway/phase-2-admitted-domain-delta-intake-refresh.json`
+- `contracts/opl-framework/phase-2-central-reference-sync-board.json`
+- `contracts/opl-framework/phase-2-admitted-domain-delta-intake-refresh.json`
 - `docs/references/opl-phase-2-central-reference-sync-board.md`
 - `docs/references/opl-phase-2-admitted-domain-delta-intake-refresh.md`
 
@@ -63,7 +63,7 @@
    - `docs/references/contract-convergence-v1-execution-board.md`
    - `docs/references/runtime-alignment-taskboard.md`
    需要同步更新；
-2. 当前顶层 `README*`、`docs/roadmap*`、`contracts/opl-gateway/README*`、acceptance/reference surfaces 与 admitted-domain 最新真相出现漂移；
+2. 当前顶层 `README*`、`docs/roadmap*`、`contracts/opl-framework/README*`、acceptance/reference surfaces 与 admitted-domain 最新真相出现漂移；
 3. 当前 `OPL` 顶层关于 formal entry、no-bypass、candidate-domain blocked truth、federation wording 的 repo-tracked surfaces 之间出现不一致。
 
 如果上述条件都不满足，`OPL` 不应为了“保持在跑”而硬开一条 story-first 线。
@@ -98,9 +98,9 @@
 - admitted-domain 最新真相落地后，必要的：
   - `README*`
   - `docs/roadmap*`
-  - `contracts/opl-gateway/README*`
+  - `contracts/opl-framework/README*`
   - `docs/references/opl-gateway-acceptance-test-spec*`
-  - `contracts/opl-gateway/*` supporting surfaces
+  - `contracts/opl-framework/*` supporting surfaces
   的同步收紧
 
 ## Hard Boundaries

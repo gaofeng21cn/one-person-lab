@@ -53,7 +53,7 @@ test('built CLI entrypoint loads the emitted main module', () => {
   const result = runBuiltCli(['contract', 'validate']);
   const output = parseJsonOutput(result);
   const taskTopology = JSON.parse(
-    fs.readFileSync(path.join(repoRoot, 'contracts', 'opl-gateway', 'task-topology.json'), 'utf8'),
+    fs.readFileSync(path.join(repoRoot, 'contracts', 'opl-framework', 'task-topology.json'), 'utf8'),
   );
 
   assert.equal(output.version, 'g2');

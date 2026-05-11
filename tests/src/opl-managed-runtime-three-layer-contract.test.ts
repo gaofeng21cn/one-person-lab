@@ -53,7 +53,7 @@ test('shared managed runtime contract freezes the three-layer owner envelope and
 });
 
 test('family manifest fixtures consume the shared managed runtime three-layer contract consistently', () => {
-  const sharedContract = readJson('contracts/opl-gateway/managed-runtime-three-layer-contract.json');
+  const sharedContract = readJson('contracts/opl-framework/managed-runtime-three-layer-contract.json');
   const fixtures = {
     medautoscience: readJsonFixture('med-autoscience-product-entry-manifest.json'),
     redcube: readJsonFixture('redcube-product-entry-manifest.json'),
@@ -81,7 +81,7 @@ test('family manifest fixtures consume the shared managed runtime three-layer co
   for (const [key, manifest] of Object.entries(fixtures)) {
     const contract = normalizeManagedRuntimeContract(unwrapManifestFixture(manifest as Json).managed_runtime_contract);
     assert.ok(contract, `${key} fixture missing managed_runtime_contract`);
-    assert.equal(contract?.shared_contract_ref, 'contracts/opl-gateway/managed-runtime-three-layer-contract.json');
+    assert.equal(contract?.shared_contract_ref, 'contracts/opl-framework/managed-runtime-three-layer-contract.json');
     assert.equal(contract?.shared_contract_ref, sharedContract.contract_ref);
     assert.equal(contract?.runtime_owner, expectations[key as keyof typeof expectations].runtime_owner);
     assert.equal(contract?.domain_owner, expectations[key as keyof typeof expectations].domain_owner);
@@ -104,7 +104,7 @@ test('buildManagedRuntimeContract materializes canonical fail-closed rules and d
   });
 
   assert.deepEqual(contract, {
-    shared_contract_ref: 'contracts/opl-gateway/managed-runtime-three-layer-contract.json',
+    shared_contract_ref: 'contracts/opl-framework/managed-runtime-three-layer-contract.json',
     runtime_owner: 'provider_backed_family_runtime',
     domain_owner: 'redcube_ai',
     executor_owner: 'codex_cli',

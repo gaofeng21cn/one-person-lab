@@ -7,7 +7,7 @@
 This document freezes the `G2` target for the `OPL Gateway`.
 
 `G2` is the first phase where `OPL` becomes a real entry surface, but only in a read-only discovery sense.
-As of `2026-04-07`, the public `OPL` mainline remains `Phase 1`, and the repository already has a runnable local `TypeScript CLI`-first / gateway contract baseline; the current job is to close it into one stable repo-tracked `G2 stable public baseline`.
+As of `2026-04-07`, the public `OPL` mainline remains `Phase 1`, and the repository already has a runnable local `TypeScript CLI`-first / framework contract baseline; the current job is to close it into one stable repo-tracked `G2 stable public baseline`.
 
 The goal is not to mutate domain state.
 The goal is to let humans and agents ask the top-level gateway what system they should use, what a workstream means, and how a request maps into a domain.
@@ -19,10 +19,10 @@ The goal is to let humans and agents ask the top-level gateway what system they 
 That means this discovery gateway is defined on top of:
 
 - [OPL Federation Contract](./opl-federation-contract.md)
-- the [workstream registry](../../../../contracts/opl-gateway/workstreams.json)
-- the [domain registry](../../../../contracts/opl-gateway/domains.json)
-- the [routing vocabulary](../../../../contracts/opl-gateway/routing-vocabulary.json)
-- the materialized machine-readable artifacts in [`../contracts/opl-gateway/README.md`](../../../../contracts/opl-gateway/README.md)
+- the [workstream registry](../../../../contracts/opl-framework/workstreams.json)
+- the [domain registry](../../../../contracts/opl-framework/domains.json)
+- the [routing vocabulary](../../../../contracts/opl-framework/routing-vocabulary.json)
+- the materialized machine-readable artifacts in [`../contracts/opl-framework/README.md`](../../../../contracts/opl-framework/README.md)
 
 If `G1` is not frozen, `G2` should not proceed.
 
@@ -321,8 +321,8 @@ It may not mutate domain truth.
 
 ## Surface Shapes
 
-The current `Phase 1` delivery target uses a local `TypeScript CLI` as the current discovery transport for the gateway contract surface.
-At the development-control layer, the active path is Codex-only: standard Codex sessions handle planning, implementation, verification, and review against the frozen gateway contracts.
+The current `Phase 1` delivery target uses a local `TypeScript CLI` as the current discovery transport for the framework contract surface.
+At the development-control layer, the active path is Codex-only: standard Codex sessions handle planning, implementation, verification, and review against the frozen framework contracts.
 That development host choice does not make Codex the product runtime substrate owner of `OPL`; any honest upstream `Hermes-Agent` rollout still has to land inside a domain repository first.
 The legacy `Codex Host` / `OMX` split now survives only in Layer 3 historical migration references and does not redefine this public gateway surface.
 In that baseline, the discovery contract is exposed through commands such as:

@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { GatewayContractError } from '../contracts.ts';
+import { FrameworkContractError } from '../contracts.ts';
 import { normalizeCommandOutput } from '../runtime-observer.ts';
 
 export type CommandResult = {
@@ -120,7 +120,7 @@ export function normalizeWorkspacePath(workspacePath?: string) {
   const resolved = path.resolve(workspacePath ?? process.cwd());
 
   if (!fs.existsSync(resolved)) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'cli_usage_error',
       'workspace-status requires an existing path.',
       {
