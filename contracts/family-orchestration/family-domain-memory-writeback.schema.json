@@ -103,6 +103,39 @@
       },
       "additionalProperties": true
     },
+    "receipt_projection_status": {
+      "type": "object",
+      "description": "Operator-readable status for OPL projection of domain-owned proposal and router receipt refs. OPL cannot accept, reject, or apply memory writeback.",
+      "properties": {
+        "status": {
+          "enum": [
+            "proposal_and_receipt_refs_projected",
+            "receipt_projection_only",
+            "domain_router_pending",
+            "domain_router_receipt_available"
+          ]
+        },
+        "proposal_authority_owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "router_receipt_authority_owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "accepted_rejected_authority_owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "opl_can_accept_memory_write": {
+          "const": false
+        },
+        "opl_can_write_domain_truth": {
+          "const": false
+        }
+      },
+      "additionalProperties": true
+    },
     "rejected_writes": {
       "type": "array",
       "items": {
@@ -213,6 +246,14 @@
         "router_owner": "MedAutoScience",
         "decision": "routed",
         "next_owner": "MedAutoScience"
+      },
+      "receipt_projection_status": {
+        "status": "proposal_and_receipt_refs_projected",
+        "proposal_authority_owner": "MedAutoScience",
+        "router_receipt_authority_owner": "MedAutoScience",
+        "accepted_rejected_authority_owner": "MedAutoScience",
+        "opl_can_accept_memory_write": false,
+        "opl_can_write_domain_truth": false
       },
       "rejected_writes": [],
       "authority_boundary": {

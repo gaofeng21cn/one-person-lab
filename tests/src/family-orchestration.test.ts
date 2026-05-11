@@ -833,6 +833,7 @@ test('family domain memory contracts freeze locator and writeback receipt author
   assert.equal(Boolean((memoryRefSchema.properties as Json).seed_corpus_ref), true);
   assert.equal(Boolean((memoryRefSchema.properties as Json).writeback_receipt_locator_ref), true);
   assert.equal(Boolean((memoryRefSchema.properties as Json).migration_readiness), true);
+  assert.equal(Boolean((memoryRefSchema.properties as Json).receipt_projection), true);
   assert.equal(
     (((memoryRefSchema.properties as Json).authority_boundary as Json).properties as Json).opl_role !== undefined,
     true,
@@ -852,6 +853,9 @@ test('family domain memory contracts freeze locator and writeback receipt author
   assert.equal((memoryRefExample.seed_corpus_ref as Json).role, 'domain_owned_seed_corpus');
   assert.equal((memoryRefExample.writeback_receipt_locator_ref as Json).role, 'domain_owned_router_receipts');
   assert.equal((memoryRefExample.migration_readiness as Json).opl_apply_allowed, false);
+  assert.equal((memoryRefExample.receipt_projection as Json).accepted_rejected_authority_owner, 'MedAutoScience');
+  assert.equal((memoryRefExample.receipt_projection as Json).can_accept_memory_write, false);
+  assert.equal((memoryRefExample.receipt_projection as Json).can_write_domain_truth, false);
 
   assert.deepEqual(
     (writebackSchema.properties as Json).surface_kind,
@@ -859,7 +863,10 @@ test('family domain memory contracts freeze locator and writeback receipt author
   );
   assert.ok((writebackSchema.required as string[]).includes('proposal'));
   assert.ok((writebackSchema.required as string[]).includes('domain_router_receipt'));
+  assert.equal(Boolean((writebackSchema.properties as Json).receipt_projection_status), true);
   assert.equal((writebackExample.domain_router_receipt as Json).router_owner, 'MedAutoScience');
+  assert.equal((writebackExample.receipt_projection_status as Json).accepted_rejected_authority_owner, 'MedAutoScience');
+  assert.equal((writebackExample.receipt_projection_status as Json).opl_can_accept_memory_write, false);
   assert.equal((writebackExample.authority_boundary as Json).can_accept_memory_write, false);
   assert.equal((writebackExample.authority_boundary as Json).can_write_domain_truth, false);
 

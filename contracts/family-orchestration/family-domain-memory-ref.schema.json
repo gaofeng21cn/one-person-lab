@@ -85,6 +85,40 @@
       "type": "object",
       "additionalProperties": true
     },
+    "receipt_projection": {
+      "type": "object",
+      "description": "Descriptor-level projection of domain-owned writeback proposal and router receipt readiness. This does not grant OPL accept/reject or writeback apply authority.",
+      "properties": {
+        "status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scope": {
+          "type": "string",
+          "minLength": 1
+        },
+        "proposal_contract_ref": {
+          "$ref": "#/$defs/ref"
+        },
+        "router_receipt_contract_ref": {
+          "$ref": "#/$defs/ref"
+        },
+        "writeback_receipt_locator_ref": {
+          "$ref": "#/$defs/ref"
+        },
+        "accepted_rejected_authority_owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "can_accept_memory_write": {
+          "const": false
+        },
+        "can_write_domain_truth": {
+          "const": false
+        }
+      },
+      "additionalProperties": true
+    },
     "status": {
       "type": "string",
       "enum": [
@@ -123,6 +157,9 @@
             "type": "string"
           },
           "uniqueItems": true
+        },
+        "can_accept_memory_write": {
+          "const": false
         },
         "can_write_domain_truth": {
           "const": false
@@ -229,6 +266,26 @@
         "memory_body_migration": "domain_owned_workspace_apply_required",
         "opl_apply_allowed": false
       },
+      "receipt_projection": {
+        "status": "descriptor_receipt_projection_ready",
+        "scope": "locator_proposal_router_receipt_projection_only",
+        "proposal_contract_ref": {
+          "ref_kind": "surface_kind",
+          "ref": "stage_memory_closeout_packet"
+        },
+        "router_receipt_contract_ref": {
+          "ref_kind": "surface_kind",
+          "ref": "memory_write_router_receipt"
+        },
+        "writeback_receipt_locator_ref": {
+          "ref_kind": "workspace_locator",
+          "ref": "portfolio/research_memory/publication_route_memory/writeback_receipts",
+          "role": "domain_owned_router_receipts"
+        },
+        "accepted_rejected_authority_owner": "MedAutoScience",
+        "can_accept_memory_write": false,
+        "can_write_domain_truth": false
+      },
       "status": "active",
       "authority_boundary": {
         "opl_role": "locator_projection_owner",
@@ -239,6 +296,7 @@
           "quality_verdict_owner",
           "artifact_authority"
         ],
+        "can_accept_memory_write": false,
         "can_write_domain_truth": false,
         "can_authorize_quality_verdict": false,
         "can_write_artifacts": false
