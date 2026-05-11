@@ -8,11 +8,18 @@ quality_details_focus="${OPL_QUALITY_DETAILS_FOCUS:-auto}"
 
 emit_quality_details() {
   local reason="$1"
+  local resolved_compare_ref="$compare_ref"
 
   echo
   echo "## OPL quality details (${reason})"
-  if ! "$quality_details_bin" quality details --root . --format markdown --limit "$quality_details_limit" --focus "$quality_details_focus" --compare-ref "$compare_ref"; then
-    echo "::warning::OPL quality details failed for compare ref: ${compare_ref}" >&2
+  if ! git rev-parse --verify "${resolved_compare_ref}^{commit}" >/dev/null 2>&1; then
+    if git rev-parse --verify "HEAD^" >/dev/null 2>&1; then
+      echo "::notice::Compare ref ${compare_ref} is unavailable; using HEAD^ for quality details." >&2
+      resolved_compare_ref="HEAD^"
+    fi
+  fi
+  if ! "$quality_details_bin" quality details --root . --format markdown --limit "$quality_details_limit" --focus "$quality_details_focus" --compare-ref "$resolved_compare_ref"; then
+    echo "::warning::OPL quality details failed for compare ref: ${resolved_compare_ref}" >&2
   fi
 }
 
