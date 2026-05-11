@@ -30,7 +30,7 @@
 | --- | --- | --- |
 | 用户 | [仓库首页](../README.zh-CN.md) | 安装 OPL、启动 GUI 或网页入口，并按任务选择 Codex 或 domain agent |
 | 技术规划者、架构读者、方向同步读者 | [项目概览](./project.md)、[当前状态](./status.md)、[架构](./architecture.md)、[硬约束](./invariants.md)、[关键决策](./decisions.md)、[合同目录说明](../contracts/README.md) | 恢复当前边界、运行时模型和 admitted-domain split |
-| 开发者与维护者 | [文档组合治理](./docs_portfolio_consolidation.md)、[活跃支撑文档](./active/README.zh-CN.md)、[公开支撑文档](./public/README.zh-CN.md)、[规格索引](./specs/README.zh-CN.md)、[参考级索引](./references/README.zh-CN.md)、[历史归档索引](./history/README.zh-CN.md) | 查看生命周期角色、活跃支撑、公开支撑、保留规格、参考材料和退役路线 |
+| 开发者与维护者 | [文档组合治理](./docs_portfolio_consolidation.md)、[活跃支撑文档](./active/README.zh-CN.md)、[公开支撑文档](./public/README.zh-CN.md)、[规格索引](./specs/README.zh-CN.md)、[参考级索引](./references/README.zh-CN.md)、[历史归档索引](./history/README.zh-CN.md) | 查看生命周期角色、活跃支撑、公开支撑、当前规格入口、参考材料和退役路线 |
 
 ## 技术工作集
 
@@ -70,7 +70,7 @@ Hermes-first / Gateway / legacy local-runtime surface 的退役纪律。
 - `docs/` 根目录只保留文档索引、核心五件套和 [文档组合治理](./docs_portfolio_consolidation.md)。
 - `docs/active/` 承接当前 runtime、activation、onboarding 和 shared-boundary 的人读支撑。
 - `docs/public/` 承接仓库首页之后的公开产品方向支撑。
-- `docs/specs/` 承接仍然活跃或因路径稳定暂时保留的 runtime / product-boundary 规格，并写明当前 owner。
+- `docs/specs/` 只承接仍然活跃的 runtime / product-boundary 规格；当前为空时，说明规格真相已经收敛到核心五件套、`docs/active/`、runtime-substrate roadmap 和机器可读合同。
 - `docs/references/` 按用途承接支撑参考。
 - `docs/history/` 承接 dated snapshot、退役路径、来源归档和 tombstone。
 
@@ -136,7 +136,7 @@ Hermes-first / Gateway / legacy local-runtime surface 的退役纪律。
 - OPL 自己持有的机器可读产品资源： [合同目录说明](../contracts/README.md)
 - 已收录 domain 的 capability surface：各 domain 仓自己的 repo-owned surface 与 `opl skill sync`
 - 活跃 framework 合同：`contracts/opl-framework/*.json`
-- 路径稳定保留的 runtime / product-boundary 规格：[规格索引](./specs/README.zh-CN.md)
+- 当前 runtime / product-boundary 规格入口：[规格索引](./specs/README.zh-CN.md)
 - 已退役 gateway/federation 来源语料：[Gateway / Federation 来源归档](./history/compatibility/gateway-federation/README.zh-CN.md)
 - 参考级配套材料： [参考级索引](./references/README.zh-CN.md)
 - 历史与退役路线： [历史归档索引](./history/README.zh-CN.md) 与 [过程历史归档](./history/process/README.zh-CN.md)

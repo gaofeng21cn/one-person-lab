@@ -1,6 +1,6 @@
 # OPL Front Desk And Family Entry 设计
 
-> 已退役。这个设计属于 `frontdoor` 公开语义阶段，当前主线已经由 [`docs/specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md`](../../../specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md) 取代。保留本文只用于历史审计与迁移回顾。
+> 已退役。这个设计属于 `frontdoor` 公开语义阶段，后来曾被 [`2026-04-20 Product API / Domain Agent 边界设计`](./2026-04-20-opl-product-api-and-domain-agent-boundary-design.md) 取代；该 Product API 规格现在也已归档。当前主线以核心五件套、`docs/active/` 和 runtime-substrate roadmap 为准。保留本文只用于历史审计与迁移回顾。
 
 ## 背景
 

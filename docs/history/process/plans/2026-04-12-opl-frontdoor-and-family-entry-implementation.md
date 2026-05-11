@@ -1,6 +1,6 @@
 # Historical OPL Front Desk And Family Entry Implementation Plan
 
-> Superseded by [`docs/history/process/plans/2026-04-20-opl-product-api-reset-implementation.md`](./2026-04-20-opl-product-api-reset-implementation.md) and the current product boundary in [`docs/specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md`](../../../specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md). Keep this file only for archive and migration review.
+> Superseded by [`docs/history/process/plans/2026-04-20-opl-product-api-reset-implementation.md`](./2026-04-20-opl-product-api-reset-implementation.md) and the later [`Product API / Domain Agent boundary design`](../specs/2026-04-20-opl-product-api-and-domain-agent-boundary-design.md), which is now also archived. Current product boundary lives in the core five, `docs/active/`, and the runtime-substrate roadmap. Keep this file only for archive and migration review.
 
 > Historical completed plan. This document preserves one retired frontdoor-entry implementation slice from `2026-04-12`. Current truth now lives in `README.md`, `docs/project.md`, `docs/status.md`, and `docs/architecture.md`.
 

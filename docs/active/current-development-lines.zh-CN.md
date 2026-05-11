@@ -66,7 +66,7 @@ OPL 当前开发应按 framework-first 执行，而不是先拿单个 domain 的
 - `docs/active/development-document-portfolio*`：开发文档组合整理入口；旧开发文档按内容块吸收、保留、降级、退役或归档时先读这里。
 - `docs/references/runtime-substrate/`：runtime/provider/executor 参考、roadmap、Temporal provider 支撑计划、legacy migration material。
 - `docs/public/`：面向用户和外部读者的公开路线图与产品方向。
-- `docs/specs/`：仍稳定保留的 runtime/product-boundary 规格。
+- `docs/specs/`：仍活跃的 runtime/product-boundary 规格入口；当前为空时回到核心五件套、`docs/active/`、runtime-substrate roadmap 和机器可读合同。
 - `docs/history/`：退役路线、旧计划、dated snapshot、compatibility / frontdoor / gateway 归档。
 
 如果内容仍决定“接下来按什么顺序做、什么算完成”，优先放 `docs/active/` 或当前 roadmap owner；如果只是背景或对照，放 `docs/references/`；如果只保存来龙去脉，放 `docs/history/`。
