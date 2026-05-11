@@ -559,14 +559,14 @@ export function buildPublicCommandSpecs(
     },
     'domain-memory inspect': {
       usage: 'opl domain-memory inspect --domain <domain>',
-      summary: 'Inspect one domain-owned memory locator and its OPL non-authority boundary.',
+      summary: 'Inspect one domain-owned memory locator, receipt projection, and OPL non-authority boundary.',
       examples: ['opl domain-memory inspect --domain mas'],
       group: 'domain',
       handler: (args) => buildFamilyDomainMemoryInspect(getContracts(), args),
     },
     'domain-memory migration-plan': {
       usage: 'opl domain-memory migration-plan --domain <domain>',
-      summary: 'Project a domain-owned memory migration plan, seed corpus, and writeback receipt locator.',
+      summary: 'Project domain-owned migration, proposal contract, router receipt, and writeback receipt locators.',
       examples: ['opl domain-memory migration-plan --domain mas'],
       group: 'domain',
       handler: (args) => buildFamilyDomainMemoryMigrationPlan(getContracts(), args),

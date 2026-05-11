@@ -26,6 +26,7 @@ export interface FamilyDomainMemoryRef {
   provenance_refs: FamilyMemoryRefValue[];
   freshness: JsonRecord | null;
   migration_readiness: JsonRecord | null;
+  receipt_projection: JsonRecord | null;
   status: string | null;
   authority_boundary: JsonRecord;
 }
@@ -114,6 +115,12 @@ export function normalizeFamilyDomainMemoryRef(
   if (!forbidden.includes('memory_store_owner')) {
     throw new Error(`${field}.authority_boundary.forbidden_opl_authority must include memory_store_owner.`);
   }
+  if (authorityBoundary.can_accept_memory_write === true) {
+    throw new Error(`${field}.authority_boundary.can_accept_memory_write must remain false when provided.`);
+  }
+  if (authorityBoundary.can_write_domain_truth === true) {
+    throw new Error(`${field}.authority_boundary.can_write_domain_truth must remain false when provided.`);
+  }
   const stageApplicability = readStringList(value.stage_applicability);
   if (stageApplicability.length === 0) {
     throw new Error(`${field}.stage_applicability must contain at least one stage.`);
@@ -141,6 +148,7 @@ export function normalizeFamilyDomainMemoryRef(
     provenance_refs: normalizeRefs(value.provenance_refs, `${field}.provenance_refs`),
     freshness: isRecord(value.freshness) ? value.freshness : null,
     migration_readiness: isRecord(value.migration_readiness) ? value.migration_readiness : null,
+    receipt_projection: isRecord(value.receipt_projection) ? value.receipt_projection : null,
     status: optionalString(value.status),
     authority_boundary: authorityBoundary,
   };
