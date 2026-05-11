@@ -8,11 +8,11 @@
 
 - core readiness：Codex CLI、workspace root、推荐 skills 与 GUI shell 的可用性。
 - domain modules readiness：MAS/MAG/RCA 等已准入 domain modules 的可用性。
-- Hermes online runtime readiness：Hermes provider、profile、gateway、cron/webhook bridge 与 family-runtime queue 的可用性。
+- family runtime provider readiness：已配置 provider、profile、bridge / signal transport 与 family-runtime queue 的可用性。迁移期 `hermes_legacy` provider 仍可暴露 Hermes gateway、cron/webhook bridge 等诊断细项；生产目标是 Temporal-backed provider。
 
-`opl install` 默认安装/复用 Hermes。Hermes online-management gateway 是由 Hermes installer/gateway command 管理的 required online substrate；OPL 通过 `opl family-runtime install|repair`、`opl runtime manager action --apply`、`opl runtime repair-gateway` 或 engine install 路径触发安装/启动、检查 readiness、记录日志并向 GUI 报告状态。
+`opl install` 默认安装/复用已配置 family runtime provider。Temporal 是生产 substrate 候选；迁移期 `hermes_legacy` provider 仍可通过 Hermes installer/gateway command 管理，Hermes online-management gateway 只作为 legacy/optional provider 或显式 proof lane 使用。OPL 通过 `opl family-runtime install|repair`、`opl runtime manager action --apply`、`opl runtime repair-gateway`、provider-specific repair 或 engine install 路径触发安装/启动、检查 readiness、记录日志并向 GUI 报告状态。
 
-Full OPL readiness 需要 core、domain modules 与 Hermes online runtime 三层都 ready。Hermes 缺失、gateway 尚未 loaded、仍在 starting，或需要稍后复查时，应展示为 Full online runtime degraded；本地 CLI/status/manifest 仍可给出诊断，但不能把 Full readiness 写成完整通过。
+Full OPL readiness 需要 core、domain modules 与 family runtime provider 三层都 ready。provider 缺失、未 ready、桥接能力仍在 starting，或需要稍后复查时，应展示为 Full online runtime degraded；本地 CLI/status/manifest 仍可给出诊断，但不能把 Full readiness 写成完整通过。
 
 ## 本机 clean-room 层
 
@@ -37,7 +37,7 @@ npm run fresh-install:smoke
 - offline module install blocker
 
 这些场景断言 `opl system initialize` 的 `setup_flow.phase`、`blocking_items`、Codex 版本状态、模块安装计数，以及 GUI 可消费的首启合同字段。
-首启 blocker 文案应覆盖 core、domain modules 与 Hermes online runtime 三层 required readiness；Hermes 缺失或 gateway 未 loaded 应进入 Full online runtime degraded / attention 提示。
+首启 blocker 文案应覆盖 core、domain modules 与 family runtime provider 三层 required readiness；provider 缺失或未 ready 应进入 Full online runtime degraded / attention 提示。
 
 ## GUI / VM 层
 

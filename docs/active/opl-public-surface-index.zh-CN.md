@@ -33,7 +33,7 @@
 - [合同目录说明](../../contracts/README.md)
 
 这些界面解释默认入口（`opl`、`opl exec`、`opl resume`）、当前资源模型（`workspaces / sessions / progress / artifacts`），以及“只有显式 domain activation 或 executor switch 才进入 OPL 增量语义”这条规则。
-它们也把 `OPL Runtime Manager` 限定为 required external `Hermes-Agent` online substrate 之上的产品控制面，并把 typed family queue、bridge 诊断、Rust native helper / index 工作限定在产品调度、native assistance 与 indexed discovery。
+它们也把 `OPL Runtime Manager` 限定为已配置 provider-backed family runtime 之上的产品控制面，并把 typed family queue、bridge 诊断、Rust native helper / index 工作限定在产品调度、native assistance 与 indexed discovery。Temporal-backed provider 是生产 substrate 候选；`Hermes-Agent` 在迁移期只保留为 legacy/optional provider 或显式 executor/proof lane。
 
 ### 2. 已链接的 domain capability surface
 

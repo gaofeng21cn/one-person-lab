@@ -130,10 +130,10 @@ The desktop GUI source is maintained in [`opl-aion-shell`](https://github.com/ga
 
 ## Further Reading
 
-- [Roadmap](./docs/roadmap.md)
-- [Task map](./docs/task-map.md)
-- [Operating model](./docs/operating-model.md)
-- [Unified Harness Engineering Substrate](./docs/unified-harness-engineering-substrate.md)
+- [Roadmap](./docs/public/roadmap.md)
+- [Task map](./docs/public/task-map.md)
+- [Operating model](./docs/public/operating-model.md)
+- [Unified Harness Engineering Substrate](./docs/public/unified-harness-engineering-substrate.md)
 - [Documentation index](./docs/README.md)
 - [Project overview](./docs/project.md)
 - [Current status](./docs/status.md)

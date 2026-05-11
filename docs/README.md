@@ -45,6 +45,12 @@ These files give the fastest read on the current repo-tracked truth before you c
 - [OPL Runtime Manager Target](./references/runtime-substrate/opl-runtime-manager-target.md)
 - [OPL Stage-Led Agent Framework Roadmap](./references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)
 
+For OPL framework development after the 2026-05-11 architecture reset, use
+[OPL Stage-Led Agent Framework Roadmap](./references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md)
+as the master entry. It owns the current TypeScript control-plane decision,
+Temporal provider plan, domain-agent boundary, and retirement discipline for
+Hermes-first / Gateway / legacy local-runtime surfaces.
+
 ## Lifecycle Portfolio
 
 `docs/` is now managed by lifecycle state instead of a flat four-layer pile.

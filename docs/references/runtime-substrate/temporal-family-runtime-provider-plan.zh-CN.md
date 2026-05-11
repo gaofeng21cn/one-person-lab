@@ -6,6 +6,8 @@ State: `active_support`
 Machine boundary: 本文是人工可读开发计划。机器真相必须落在 `contracts/`、source code、CLI/API 行为、runtime ledger 或 domain-owned manifests。
 Date: `2026-05-10`
 
+Master entry: OPL family agent framework 的总开发入口是 `docs/references/runtime-substrate/opl-stage-led-agent-framework-roadmap.zh-CN.md`。本文只承接其中 `Master P1-P5` 的 Temporal provider 技术细化：provider skeleton、Codex stage activity、human-gate signal/query、visibility、domain soak 和 Hermes downgrade。跨仓定位、执行语言、依赖取舍、domain-agent 边界和旧面退役纪律以总入口为准。
+
 ## 结论
 
 OPL family runtime 的生产目标应从 Hermes-first online substrate 调整为 provider-backed runtime，其中 `temporal` 是优先生产候选。

@@ -10,6 +10,8 @@
 - domain-agent activation / dispatch 规格
 - stage descriptor、handoff envelope、receipt、projection 与 authority boundary 这组 family-level stage control 语言
 - `OPL Runtime Manager` 产品控制面：把 family runtime provider 纳入 OPL 产品级 profile、typed family queue、domain dispatch、任务注册、诊断和状态投影；Temporal-backed provider 是当前生产 substrate 候选，Hermes/local provider 是迁移期 legacy/optional provider
+- 智能体运行外围能力：stage attempt ledger、typed queue、checkpoint/closeout/receipt、artifact index、file lifecycle、retention、restore proof、migration ledger、workspace lifecycle、human gate / resume token 和 operator projection
+- 统一 `domain-agent skeleton`：domain 仓按 `agent/`、`contracts/`、`runtime/`、`docs/` 暴露 stage、prompt、Skill、knowledge、quality gate、sidecar、receipt schema、projection builder 和 artifact locator contract；真实运行产物必须落在 workspace / runtime artifact root，不落在开发仓源码目录
 - 执行引擎与模块注册表
 - 工作空间、会话、进度、交付物等接口面
 - 跨仓共享的模块、机器可读合同与可发现索引
@@ -35,6 +37,8 @@
 
 - 给 `opl`、`opl exec`、`opl resume`、直接 `Codex` 使用和外部壳提供稳定一致的 Codex-default session/runtime 合同
 - 冻结 `OPL Runtime Manager` 的产品控制面合同，让 OPL 能管理 provider-backed family runtime，而不复制一套 domain scheduler/session/memory kernel
+- 把 MAS 已验证的 SQLite / file lifecycle / restore proof / retention / artifact index 经验上收成 OPL framework primitives，并让 MAG/RCA 等 domain agent 可复用
+- 推进 MAS/MAG/RCA 按统一 domain-agent skeleton 做 descriptor、sidecar、receipt schema、projection builder、artifact locator contract 和 repo-source 目录结构收敛；业务内部允许保持领域差异
 - 让 `opl install` 默认走 Codex + family runtime provider + MAS/MAG/RCA domain modules + 推荐 companion tools；`--no-online-runtime` 只用于开发/离线 degraded diagnostics
 - 以 contract-first 方式规划 `OPL native helper` 与高频文件/状态索引：只做系统探测、artifact discovery、状态投影加速，不替代 domain-owned durable truth
 - 把 domain app 以可同步的 skill pack 与稳定 contract 接入统一 activation layer
@@ -48,6 +52,8 @@
 
 - `OPL` 负责 Codex-default session/runtime、activation layer、release distribution surface，以及 shared modules / contracts / indexes
 - `OPL` 负责把 domain stage 表达成可发现、可恢复、可审计的 family-level work unit；stage 内部的专家拆解、创作、审核、修订和最终质量判断由 domain agent 与 `Codex CLI` 执行
+- `OPL` 负责智能体运行外围：attempt、queue、checkpoint、receipt、artifact index、file lifecycle、retention、restore proof、workspace lifecycle、human gate 和 operator projection
+- `OPL` 负责定义并验证 standard domain-agent skeleton；domain repo 负责把自身 stage、prompt、Skill、knowledge、quality gate、domain truth authority refs 和 artifact locator contract 映射到这个 skeleton
 - `OPL Runtime Manager` 负责 family runtime provider provisioning、profile wiring、typed family queue、task registration hydration、diagnostics、status projection、native helper catalog 与 state index catalog
 - `OPL Runtime Manager` 不拥有 domain truth、domain quality authority、artifact gate、publication/package gate 或 concrete executor
 - Full OPL family readiness 要求已配置的 family runtime provider ready。Temporal-backed provider 是生产目标；Hermes gateway readiness 只在迁移期作为 legacy/optional provider readiness 信号保留
