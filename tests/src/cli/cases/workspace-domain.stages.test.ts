@@ -541,6 +541,51 @@ test('domain-agent skeleton inspection normalizes MAS MAG RCA adapter aliases', 
   }
 });
 
+test('domain-agent skeleton alias remains drifted without an artifact locator surface', () => {
+  const stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-family-agent-missing-locator-state-'));
+  const { fixtureContractsRoot } = createFamilyContractsFixtureRoot();
+  const fixtures = loadFamilyManifestFixtures();
+  const manifest = {
+    ...(fixtures.redcube as JsonRecord),
+    domain_agent_skeleton_adapter: {
+      surface_kind: 'domain_agent_skeleton_adapter',
+      adapter_id: 'rca.domain-agent.skeleton.adapter.v1',
+      repo_source_boundary: {
+        allowed_roots: [
+          { boundary_id: 'agent' },
+          { boundary_id: 'contracts' },
+          { boundary_id: 'runtime' },
+          { boundary_id: 'docs' },
+        ],
+        repo_tracks_runtime_artifact_blobs: false,
+        repo_tracks_receipt_instances: false,
+      },
+    },
+  };
+
+  try {
+    runCli([
+      'workspace',
+      'bind',
+      '--project',
+      'redcube',
+      '--path',
+      repoRoot,
+      '--manifest-command',
+      buildManifestCommand(manifest),
+    ], { OPL_CONTRACTS_DIR: fixtureContractsRoot, OPL_STATE_DIR: stateRoot });
+
+    const inspect = runCli(['agents', 'inspect', '--domain', 'rca'], {
+      OPL_CONTRACTS_DIR: fixtureContractsRoot,
+      OPL_STATE_DIR: stateRoot,
+    });
+    assert.equal(inspect.family_agent.skeleton_status, 'drift_detected');
+    assert.ok(inspect.family_agent.issues.includes('artifact_locator_surface_required'));
+  } finally {
+    fs.rmSync(stateRoot, { recursive: true, force: true });
+  }
+});
+
 test('family stage control plane resolves real MAS RCA MAG manifests when local checkouts are present', { skip: process.env.OPL_REAL_STAGE_SMOKE !== '1' }, () => {
   const roots = {
     mas: process.env.OPL_REAL_MAS_REPO ?? '/Users/gaofeng/workspace/med-autoscience/.worktrees/mas-stage-control-deep-adapter',
