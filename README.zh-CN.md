@@ -15,10 +15,6 @@
   <img src="assets/branding/opl-workbench-overview.png" alt="OPL 工作台概览" width="100%" />
 </p>
 
-<p align="center">
-  <img src="assets/branding/opl-architecture-plan.png" alt="OPL 架构与产品规划" width="100%" />
-</p>
-
 ## 为什么是 One Person Lab
 
 大多数智能体框架本质上是 workflow 系统：把任务拆成程序节点、工具调用、函数输入和 activity 输出。这种模式适合软件式自动化，但并不适合高价值知识交付。论文、基金、专利、审稿和高端汇报的难点，往往不是“下一步调用哪个工具”，而是当前处于哪个专家工作阶段、证据是否足够、质量怎么判断、结果能不能进入下一阶段。
@@ -26,6 +22,10 @@
 One Person Lab 把“专家阶段”作为核心运行单元。每个 stage 都带着目标、材料、质量标准、交接、回执和权威边界；stage 内部由领域智能体完成阅读、推理、写作、计算、审核和修订，再返回该领域持有的判断和交付物。OPL 负责让这些阶段可见、可恢复、可审计，并能继续推进。
 
 这就是 OPL 更适合高价值知识工作的原因：它不是把专业任务压平成机械流程图，而是把人类专家服务的交付逻辑产品化。
+
+<p align="center">
+  <img src="assets/branding/opl-architecture-plan.png" alt="OPL 架构与产品规划" width="100%" />
+</p>
 
 ## 新手可以直接做什么
 
