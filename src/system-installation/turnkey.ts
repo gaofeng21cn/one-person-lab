@@ -25,7 +25,7 @@ import type { OplEngineId, OplModuleId, OplTurnkeyInstallInput } from './shared.
 const DEFAULT_MODULES: OplModuleId[] = [...DEFAULT_OPL_MODULE_IDS];
 const DEFAULT_ENGINES: OplEngineId[] = ['codex'];
 
-function extractFamilyRuntimeBridge(payload: ReturnType<typeof runFamilyRuntime>) {
+function extractFamilyRuntimeBridge(payload: Awaited<ReturnType<typeof runFamilyRuntime>>) {
   if ('family_runtime_provider' in payload) {
     return payload.family_runtime_provider;
   }
@@ -335,8 +335,8 @@ export async function runOplTurnkeyInstall(
       skipOnlineManagement,
     });
     const familyRuntimeBridge = skipOnlineManagement
-      ? runFamilyRuntime(['status'])
-      : runFamilyRuntime(['install']);
+      ? await runFamilyRuntime(['status'])
+      : await runFamilyRuntime(['install']);
     const onlineManagementRepair = runtimeManagerAction.runtime_manager_action.executed_actions.find(
       (action) => action.action_id === 'repair_hermes_gateway',
     );
