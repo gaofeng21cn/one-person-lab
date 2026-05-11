@@ -149,11 +149,11 @@ export function buildFamilyDomainMemoryInspect(contracts: FrameworkContracts, ar
   };
 }
 
-export function buildFamilyDomainMemoryMigrationPlan(contracts: GatewayContracts, args: string[]) {
+export function buildFamilyDomainMemoryMigrationPlan(contracts: FrameworkContracts, args: string[]) {
   const inspected = buildFamilyDomainMemoryInspect(contracts, args).family_domain_memory;
   const descriptor = inspected.descriptor;
   if (!descriptor) {
-    throw new GatewayContractError(
+    throw new FrameworkContractError(
       'contract_shape_invalid',
       `Domain memory descriptor is missing for ${inspected.project_id}.`,
       {
