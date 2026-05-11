@@ -36,6 +36,7 @@ const lanes = {
       'tests/src/family-runtime-codex-stage-runner.test.ts',
       'tests/src/family-runtime-temporal-provider.test.ts',
       'tests/src/cli/cases/family-runtime.test.ts',
+      'tests/src/cli/cases/family-runtime-worker.test.ts',
       'tests/src/cli/cases/family-runtime-stage-attempts.test.ts',
       'tests/src/cli/cases/workspace-domain.test.ts',
       'tests/src/cli/cases/runtime-tray-stage-attempt-workbench.test.ts',
