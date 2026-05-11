@@ -87,13 +87,12 @@ export function inspectFamilyRuntimeProvider(kind: FamilyRuntimeProviderKind): F
     const address = temporalAddress();
     const workerReady = Boolean(address) && temporalWorkerConfigured();
     const workerReadiness = buildTemporalWorkerReadiness();
+    const degradedReason = workerReadiness.blockers[0] ?? null;
     return {
       provider_kind: kind,
       status: workerReady ? 'ready' : 'provider_code_landed_unconfigured',
       ready: workerReady,
-      degraded_reason: address
-        ? 'temporal_worker_not_confirmed'
-        : 'temporal_runtime_not_configured',
+      degraded_reason: degradedReason,
       capabilities: [
         'stage_attempt_workflow_provider_code',
         'codex_activity_provider_code',

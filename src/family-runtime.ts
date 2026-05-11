@@ -20,7 +20,10 @@ import {
   queryTemporalStageAttemptWorkflow,
   signalTemporalStageAttemptWorkflow,
   buildTemporalWorkerLifecycleContract,
+  inspectTemporalWorkerLifecycle,
+  startTemporalWorkerLifecycle,
   startTemporalStageAttemptWorkflow,
+  stopTemporalWorkerLifecycle,
 } from './family-runtime-temporal-provider.ts';
 import {
   createStageAttempt,
@@ -659,6 +662,77 @@ export async function runFamilyRuntime(args: string[]) {
         version: 'g2',
         family_runtime_provider: {
           ...provider,
+        },
+      };
+    }
+    if (parsed.mode === 'worker_status') {
+      const providerKind = resolveFamilyRuntimeProviderKind(parsed.providerKind);
+      if (providerKind !== 'temporal') {
+        throw new FrameworkContractError('cli_usage_error', 'family-runtime worker status currently supports only --provider temporal.', {
+          provider_kind: providerKind,
+          allowed_provider_kinds: ['temporal'],
+        });
+      }
+      return {
+        version: 'g2',
+        family_runtime_worker: {
+          surface_id: 'opl_family_runtime_worker',
+          action: 'status',
+          ...(await inspectTemporalWorkerLifecycle(paths)),
+        },
+      };
+    }
+    if (parsed.mode === 'worker_start') {
+      const providerKind = resolveFamilyRuntimeProviderKind(parsed.providerKind);
+      if (providerKind !== 'temporal') {
+        throw new FrameworkContractError('cli_usage_error', 'family-runtime worker start currently supports only --provider temporal.', {
+          provider_kind: providerKind,
+          allowed_provider_kinds: ['temporal'],
+        });
+      }
+      const result = await startTemporalWorkerLifecycle(paths, { detach: parsed.detach });
+      insertEvent(db, {
+        eventType: 'temporal_worker_start',
+        source: 'opl-cli',
+        payload: {
+          lifecycle_status: result.status.lifecycle_status,
+          start_status: result.start_status,
+          pid: result.status.managed_worker_pid,
+        },
+      });
+      return {
+        version: 'g2',
+        family_runtime_worker: {
+          surface_id: 'opl_family_runtime_worker',
+          action: 'start',
+          ...result,
+        },
+      };
+    }
+    if (parsed.mode === 'worker_stop') {
+      const providerKind = resolveFamilyRuntimeProviderKind(parsed.providerKind);
+      if (providerKind !== 'temporal') {
+        throw new FrameworkContractError('cli_usage_error', 'family-runtime worker stop currently supports only --provider temporal.', {
+          provider_kind: providerKind,
+          allowed_provider_kinds: ['temporal'],
+        });
+      }
+      const result = await stopTemporalWorkerLifecycle(paths);
+      insertEvent(db, {
+        eventType: 'temporal_worker_stop',
+        source: 'opl-cli',
+        payload: {
+          stop_status: result.stop_status,
+          stopped_pid: result.stopped_pid,
+          lifecycle_status: result.status.lifecycle_status,
+        },
+      });
+      return {
+        version: 'g2',
+        family_runtime_worker: {
+          surface_id: 'opl_family_runtime_worker',
+          action: 'stop',
+          ...result,
         },
       };
     }
