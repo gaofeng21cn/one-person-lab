@@ -811,3 +811,51 @@ test('family persistence lifecycle owner-route and supervision schemas freeze sh
     'read_only_projection',
   );
 });
+
+test('family domain memory contracts freeze locator and writeback receipt authority boundaries', () => {
+  const memoryRefSchema = readJson('contracts/family-orchestration/family-domain-memory-ref.schema.json');
+  const writebackSchema = readJson('contracts/family-orchestration/family-domain-memory-writeback.schema.json');
+  const stagePlaneSchema = readJson('contracts/family-orchestration/family-stage-control-plane.schema.json');
+  const memoryRefExample = readFirstSchemaExample(
+    'contracts/family-orchestration/family-domain-memory-ref.schema.json',
+  );
+  const writebackExample = readFirstSchemaExample(
+    'contracts/family-orchestration/family-domain-memory-writeback.schema.json',
+  );
+
+  assert.deepEqual(
+    (memoryRefSchema.properties as Json).surface_kind,
+    { const: 'family_domain_memory_ref' },
+  );
+  assert.ok((memoryRefSchema.required as string[]).includes('memory_pack_ref'));
+  assert.ok((memoryRefSchema.required as string[]).includes('stage_applicability'));
+  assert.equal(
+    (((memoryRefSchema.properties as Json).authority_boundary as Json).properties as Json).opl_role !== undefined,
+    true,
+  );
+  assert.deepEqual(
+    (((((memoryRefSchema.properties as Json).authority_boundary as Json).properties as Json).forbidden_opl_authority as Json).contains),
+    { const: 'memory_store_owner' },
+  );
+  assert.equal(
+    (((memoryRefExample.authority_boundary as Json).forbidden_opl_authority as string[]).includes('domain_truth_owner')),
+    true,
+  );
+  assert.equal((memoryRefExample.authority_boundary as Json).can_write_domain_truth, false);
+  assert.equal((memoryRefExample.authority_boundary as Json).can_authorize_quality_verdict, false);
+  assert.equal((memoryRefExample.authority_boundary as Json).can_write_artifacts, false);
+
+  assert.deepEqual(
+    (writebackSchema.properties as Json).surface_kind,
+    { const: 'family_domain_memory_writeback' },
+  );
+  assert.ok((writebackSchema.required as string[]).includes('proposal'));
+  assert.ok((writebackSchema.required as string[]).includes('domain_router_receipt'));
+  assert.equal((writebackExample.domain_router_receipt as Json).router_owner, 'MedAutoScience');
+  assert.equal((writebackExample.authority_boundary as Json).can_accept_memory_write, false);
+  assert.equal((writebackExample.authority_boundary as Json).can_write_domain_truth, false);
+
+  const stageDefs = stagePlaneSchema.$defs as Json;
+  const stageProps = ((stageDefs.stage as Json).properties as Json);
+  assert.deepEqual((stageProps.knowledge_refs as Json).items, { $ref: '#/$defs/surface_ref' });
+});

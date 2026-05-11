@@ -9,10 +9,10 @@ OPL 可以使用外部运行时 provider，但框架边界由本仓持有：`Cod
 - `opl` / `opl exec` / `opl resume` 这组 CLI / shell 前门
 - Codex-default session/runtime 路径
 - domain-agent activation / dispatch 规格
-- stage descriptor、handoff envelope、receipt、projection 与 authority boundary 这组 family-level stage control 语言
+- stage descriptor、domain memory locator、handoff envelope、receipt、projection 与 authority boundary 这组 family-level stage control 语言
 - `OPL Runtime Manager` 产品控制面：把 family runtime provider 纳入 OPL 产品级 profile、typed family queue、domain dispatch、任务注册、诊断和状态投影；Temporal-backed provider 是当前生产 substrate 候选，Hermes/local provider 是迁移期 legacy/optional provider
 - 智能体运行外围能力：stage attempt ledger、typed queue、checkpoint/closeout/receipt、artifact index、file lifecycle、retention、restore proof、migration ledger、workspace lifecycle、human gate / resume token 和 operator projection
-- 统一 `domain-agent skeleton`：domain 仓按 `agent/`、`contracts/`、`runtime/`、`docs/` 暴露 stage、prompt、Skill、knowledge、quality gate、sidecar、receipt schema、projection builder 和 artifact locator contract；真实运行产物必须落在 workspace / runtime artifact root，不落在开发仓源码目录
+- 统一 `domain-agent skeleton`：domain 仓按 `agent/`、`contracts/`、`runtime/`、`docs/` 暴露 stage、prompt、Skill、domain-owned knowledge/memory locator、quality gate、sidecar、receipt schema、projection builder 和 artifact locator contract；真实运行产物必须落在 workspace / runtime artifact root，不落在开发仓源码目录
 - 执行引擎与模块注册表
 - 工作空间、会话、进度、交付物等接口面
 - 跨仓共享的模块、机器可读合同与可发现索引
@@ -56,6 +56,7 @@ OPL 可以使用外部运行时 provider，但框架边界由本仓持有：`Cod
 
 - `OPL` 负责 Codex-default session/runtime、activation layer、release distribution surface，以及 shared modules / contracts / indexes
 - `OPL` 负责把 domain stage 表达成可发现、可恢复、可审计的 family-level work unit；stage 内部的专家拆解、创作、审核、修订和最终质量判断由 domain agent 与 `Codex CLI` 执行
+- `OPL` 负责发现和投影 domain-owned memory locator、stage `knowledge_refs` 与 writeback receipt refs；memory 正文、写回接受/拒绝、route 判断、quality verdict 和 artifact authority 继续由 domain agent 持有
 - `OPL` 负责智能体运行外围：attempt、queue、checkpoint、receipt、artifact index、file lifecycle、retention、restore proof、workspace lifecycle、human gate 和 operator projection
 - `OPL` 负责定义并验证 standard domain-agent skeleton；domain repo 负责把自身 stage、prompt、Skill、knowledge、quality gate、domain truth authority refs 和 artifact locator contract 映射到这个 skeleton
 - `OPL Runtime Manager` 负责 family runtime provider provisioning、profile wiring、typed family queue、task registration hydration、diagnostics、status projection、native helper catalog 与 state index catalog

@@ -28,6 +28,7 @@ export interface FamilyStageDescriptor {
   owner: string;
   domain_stage_refs: string[];
   inputs: FamilyStageSurfaceRef[];
+  knowledge_refs: FamilyStageSurfaceRef[];
   skills: FamilyStageSurfaceRef[];
   prompt_refs: FamilyStageSurfaceRef[];
   allowed_action_refs: string[];
@@ -146,6 +147,7 @@ function normalizeFamilyStageDescriptor(value: unknown, field: string): FamilySt
     owner: requireString(value.owner, `${field}.owner`),
     domain_stage_refs: readStringList(value.domain_stage_refs),
     inputs: normalizeSurfaceRefs(value.inputs, `${field}.inputs`),
+    knowledge_refs: normalizeSurfaceRefs(value.knowledge_refs, `${field}.knowledge_refs`),
     skills: normalizeSurfaceRefs(value.skills, `${field}.skills`),
     prompt_refs: normalizeSurfaceRefs(value.prompt_refs, `${field}.prompt_refs`),
     allowed_action_refs: readStringList(value.allowed_action_refs),

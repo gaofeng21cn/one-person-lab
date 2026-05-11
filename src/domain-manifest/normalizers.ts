@@ -5,6 +5,7 @@ import {
 } from '../family-entry-contracts.ts';
 import { normalizeFamilyActionCatalog } from '../family-action-catalog-contract.ts';
 import { normalizeFamilyStageControlPlane } from '../family-stage-control-plane-contract.ts';
+import { normalizeFamilyDomainMemoryRef } from '../family-domain-memory-contract.ts';
 import { normalizeManagedRuntimeContract } from '../managed-runtime-contract.ts';
 import {
   normalizeArtifactInventory,
@@ -788,6 +789,7 @@ export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest
     : null;
   const familyActionCatalog = normalizeFamilyActionCatalog(manifest.family_action_catalog);
   const familyStageControlPlane = normalizeFamilyStageControlPlane(manifest.family_stage_control_plane);
+  const domainMemoryDescriptor = normalizeFamilyDomainMemoryRef(manifest.domain_memory_descriptor);
   const skeletonCandidateFields = [
     'standard_domain_agent_skeleton',
     'opl_domain_agent_skeleton_mapping',
@@ -971,6 +973,7 @@ export function normalizeManifest(payload: JsonRecord): NormalizedDomainManifest
       : null,
     family_action_catalog: familyActionCatalog,
     family_stage_control_plane: familyStageControlPlane,
+    domain_memory_descriptor: domainMemoryDescriptor,
     standard_domain_agent_skeleton: standardDomainAgentSkeleton,
     standard_domain_agent_skeleton_source_field: standardDomainAgentSkeletonSourceField,
     runtime_inventory: runtimeInventory,
