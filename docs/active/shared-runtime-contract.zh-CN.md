@@ -98,14 +98,14 @@
 4. `family persistence policy`
    - 统一区分 domain-owned file authority、SQLite sidecar index、projection cache 与 historical/provenance reference 的控制面 surface
 5. `family lifecycle ledger`
-   - 统一 dry-run / apply / verify lifecycle action、manifest ref、checksum 与 restore proof 的 receipt surface
+   - 统一 dry-run / apply / verify lifecycle action、manifest ref、checksum 与 restore proof 的 receipt surface；stage attempt query 会投影 locator-only lifecycle refs，并把 retention / restore apply authority 保留在 domain
 6. `family owner route`
    - 统一 route epoch、source fingerprint、next owner、allowed actions、idempotency key 与 handoff / projection refs 的 owner-route surface
 
 这些 schema 位于 `contracts/family-orchestration/`。
 它们冻结的是多个 domain runtime 都能吸收的互操作语义，同时继续把 runtime ownership 与 durable truth 留在各自 domain 仓。
 
-persistence / lifecycle / owner-route surface 只属于控制面 discovery contract。它们不会把 `OPL` 改成 domain runtime owner、memory store、scheduler、publication-quality judge 或 artifact authority。
+persistence / lifecycle / owner-route surface 只属于控制面 discovery contract。它们不会把 `OPL` 改成 domain runtime owner、memory store、scheduler、publication-quality judge、cleanup executor、restore executor 或 artifact authority。
 
 ## 与 CrewAI 的关系
 
