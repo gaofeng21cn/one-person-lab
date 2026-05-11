@@ -66,7 +66,7 @@ Provider 层不持有：
 交付：
 
 - 已冻结 provider 枚举：`local_sqlite`、`hermes_legacy`、`temporal`。
-- 已统一 provider readiness、attempt status、receipt 与 dead-letter 字段；Temporal 先以 `skeleton_contract_ready` 暴露，真实 worker 仍属 P1。
+- 已统一 provider readiness、attempt status、receipt 与 dead-letter 字段；Temporal provider code 已落地，真实 server/worker deployment 与 domain soak 仍属 P1/P2 后续证据。
 - `OPL Runtime Manager` 与 `opl family-runtime` 文案和输出已改为 provider-backed 口径。
 - `opl family-runtime attempt create|list|inspect` 已可写入 / 读取 SQLite stage attempt ledger。
 
@@ -76,22 +76,23 @@ Provider 层不持有：
 - 活跃合同不再把 Hermes 写成未来目标唯一 substrate；历史文档只保留 supersede 语境。
 - Direct Codex skill path 不受 provider abstraction 影响。
 
-### P1. Temporal Stage Workflow Skeleton
+### P1. Temporal Stage Workflow Core
 
-状态：未落地。当前只冻结了 Temporal provider contract surface；还没有引入 Temporal SDK、dev server、worker 或 workflow/activity 实现。
+状态：已落地到 repo/test 可用实现。OPL 已引入 Temporal TypeScript SDK，新增真实 `StageAttemptWorkflow`、Codex / domain sidecar activity、human gate / user instruction / resume signal、stage attempt query、CLI `attempt start/query/signal` 和 worker helper；缺少 Temporal 地址时 CLI 明确 fail-closed。尚未完成的是生产 Temporal server/worker deployment、worker restart/re-query 证明、真实 activity retry 运行证据和 domain soak。
 
 交付：
 
-- `StageAttemptWorkflow`：输入 domain/stage/workspace/source fingerprint，输出 attempt receipt。
-- `CodexStageActivity`：以 stage packet / handoff envelope 为输入，调用 Codex CLI 或 domain sidecar。
-- `HumanGateSignal`、`UserInstructionSignal`、`ResumeSignal`。
-- `StageAttemptQuery`：返回 attempt status、freshness、next owner、blocked reason、refs。
+- 已完成：`StageAttemptWorkflow` 输入 domain/stage/workspace/source fingerprint，输出 provider state / attempt receipt，并保留 provider completion 与 domain ready verdict 边界。
+- 已完成：`CodexStageActivity` 与 `DomainSidecarDispatchActivity` 作为 Temporal activity stub，记录 checkpoint / closeout refs 和 authority boundary。
+- 已完成：`HumanGateSignal`、`UserInstructionSignal`、`ResumeSignal` 进入同一 workflow signal surface。
+- 已完成：`StageAttemptQuery` 返回 attempt status、freshness、next owner、blocked reason、refs。
+- 待完成：真实 Codex CLI long-running activity runner、domain sidecar live dispatch、worker restart / replay proof 和生产 retry/dead-letter 运行证据。
 
 验收：
 
-- 本地 Temporal dev server 或 test environment 能跑 fixture workflow。
+- 已通过 repo focused tests 证明 Temporal workflow/activity/signal/query contract 可执行。
 - Workflow 不写 MAS/MAG/RCA truth，只写 OPL attempt ledger / provider receipt。
-- Activity 幂等键和 source fingerprint 可阻止重复启动同一 intent。
+- Activity 幂等键和 source fingerprint 可阻止重复启动同一 intent；生产环境还需通过真实 worker / domain soak 复核。
 
 ### P2. MAS Paper-Line Pilot
 
@@ -121,7 +122,7 @@ Provider 层不持有：
 
 ### P4. Visibility And Operator Console
 
-状态：部分落地。CLI 已显示 provider kind、attempt id、stage attempt summary、task-bound attempt refs；OPL App / GUI projection 仍待接入同一 ledger。
+状态：部分落地。CLI 已显示 provider kind、attempt id、stage attempt summary、task-bound attempt refs；`opl runtime snapshot --json` 已输出 `stage_attempt_workbench`，Aion Runtime Attempt Workbench 已消费该只读投影。仍待完成的是同一 stage attempt ledger 的完整 workflow/activity/signal、dead-letter、人类 gate 操作面。
 
 交付：
 
