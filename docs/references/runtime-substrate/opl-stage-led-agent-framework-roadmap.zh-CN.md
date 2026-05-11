@@ -54,7 +54,7 @@ Date: `2026-05-11`
 | --- | --- | --- |
 | 定位 / owner split | `landed` | OPL 作为 Codex-first、stage-led family agent framework；MAS/MAG/RCA 作为独立 domain agents；OPL 不持有 domain truth、quality verdict 或 artifact authority。 |
 | Shared contracts / schemas | `landed` | action catalog、stage control plane、runtime supervision、persistence / lifecycle / owner-route、standard skeleton 等 contract 已在 OPL shared layer 冻结。 |
-| Domain memory locator / receipt / migration plan | `contract_landed_projection_ready` | `family-domain-memory-ref`、`family-domain-memory-writeback`、stage `knowledge_refs` 与 `opl domain-memory list|inspect|migration-plan` 已冻结 locator、receipt、seed corpus 和 migration plan 级只读投影；真实 retrieval、writeback apply、memory body migration、App 展示和跨 domain soak 仍需 domain router/apply receipt 验证。 |
+| Domain memory locator / receipt / migration plan | `contract_landed_mas_projection_ready_family_partial` | `family-domain-memory-ref`、`family-domain-memory-writeback`、stage `knowledge_refs` 与 `opl domain-memory list|inspect|migration-plan` 已冻结 locator、receipt、seed corpus 和 migration plan 级只读投影；MAS 当前已按标准 descriptor 被 OPL 解析，MAG/RCA 仍停在 domain-specific `domain_memory_descriptor_locator`，尚需适配到标准 `family_domain_memory_ref.v1`；真实 retrieval、writeback apply、memory body migration、App 展示和跨 domain soak 仍需 domain router/apply receipt 验证。 |
 | Local queue / attempt ledger | `usable_dev_baseline` | `opl family-runtime` 已有 typed queue、pending task hydration、guarded dispatch、retry/dead-letter、local inbox 和 stage attempt ledger。 |
 | Domain descriptor / adapter | `landed_for_active_domains` | MAS/MAG/RCA 已在各自 main 暴露 stage/action/projection/skeleton adapter，OPL 当前真实 `opl agents list` 可校验三者 aligned。 |
 | Lifecycle primitives | `contract_and_locator_landed` | OPL 已有 locator-only lifecycle primitive；MAS 经验已被拆成 framework-generic / MAS-specific 方向，真实跨 domain cleanup/restore apply 仍需 soak。 |
@@ -85,7 +85,7 @@ Date: `2026-05-11`
 - family action catalog、family stage control plane schema、family runtime supervision、persistence / lifecycle / owner-route schema 已在 OPL shared layer 冻结。
 - `opl actions list|inspect|export` 与 `opl stages list|inspect` 是只读 discovery / parity surface。
 - `opl agents list|inspect` 已能读取标准字段和三仓 adapter alias，并强制 artifact locator surface；缺少 locator 的 skeleton 仍保持 `drift_detected`，不会被 OPL 误判为可托管。
-- `opl domain-memory list|inspect|migration-plan` 已能读取 domain-owned memory descriptor，展示 migration plan ref、seed corpus ref、writeback receipt locator 和 readiness；OPL 只做发现/投影，不执行迁移、不接受写回、不读取 memory 正文。
+- `opl domain-memory list|inspect|migration-plan` 已能读取标准 domain-owned memory descriptor；当前 live binding 中 MAS resolved，MAG/RCA 的 domain-specific locator 尚未映射成标准 descriptor。该入口展示 migration plan ref、seed corpus ref、writeback receipt locator 和 readiness；OPL 只做发现/投影，不执行迁移、不接受写回、不读取 memory 正文。
 - `opl family-runtime` 已有 typed queue、MAS/MAG/RCA pending task intake、guarded dispatch、retry/dead-letter / local inbox 信号和 stage attempt local ledger。
 - `opl family-runtime attempt create|list|inspect|start|query|signal` 已能登记 provider-backed stage attempt，启动/查询/发送 Temporal workflow 信号，并在缺少 Temporal 地址时明确 fail-closed。
 - `opl runtime snapshot --json` 已输出 `stage_attempt_workbench`，Aion runtime workbench 已展示 provider completion 与 domain ready verdict 的边界。
