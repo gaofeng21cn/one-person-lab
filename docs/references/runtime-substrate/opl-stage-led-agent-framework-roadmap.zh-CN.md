@@ -118,7 +118,7 @@ Date: `2026-05-11`
 | Domain memory | MAS/MAG/RCA 标准 memory descriptor 均 resolved；还差真实 workspace/runtime memory body migration、accepted/rejected writeback receipt、stage entry 小集合 retrieval 和按 domain/stage 分组的 operator view。 |
 | Lifecycle primitives | OPL shared schema/locator 已有，MAS 经验已经分类为 framework_generic / mas_domain_specific；还差跨 domain cleanup/restore/retention 的 guarded apply proof。 |
 | Operator product experience | CLI/App 已能读 stage attempt workbench，Aion 已能发送 human gate / resume / dead-letter repair signal；还差真实 worker/domain 执行证明、provider deployment readiness、domain drilldown 与 memory refs 分组操作面。 |
-| 旧面退役 | 默认语义已从 Hermes/Gateway/MDS/local-manager 转向 Codex-first/provider-backed/stage-led；还差 active path residue scan 后的物理删除、history/tombstone 归档和兼容 alias fail-closed。 |
+| 旧面退役 | 默认语义已从 Hermes/Gateway/MDS/local-manager 转向 Codex-first/provider-backed/stage-led；public help / command spec 已不再把 Hermes executor、Gateway cron 或 compatibility alias 放在普通默认示例里。还差无 active caller 后的物理删除和 history/tombstone 归档。 |
 
 下一步不应再新增平行总计划。直接按以下闭环推进：
 
@@ -127,7 +127,7 @@ Date: `2026-05-11`
 3. `Domain memory apply proof`：保持 memory body 和 accept/reject 在 domain，完成 MAS/MAG/RCA 的真实或 controlled consumed-memory / writeback-receipt 证据。
 4. `Soak`：MAS real paper line read-only -> guarded apply；MAG/RCA OPL-hosted controlled stage attempt。
 5. `Directory standardization`：在 direct skill path、OPL-hosted path、restore/provenance proof 和 focused tests 都通过后，逐仓做 repo-source 物理目录重组。
-6. `Retirement cleanup`：只在上述 parity/soak 通过后删除 active-path 旧 vocabulary、compatibility alias、legacy manager 和非标准 skeleton 入口。
+6. `Retirement cleanup`：当前已先清理可安全落地的 active-path wording / public-help residue；物理删除旧 vocabulary、legacy manager 和非标准 skeleton 入口仍需等上述 parity/soak 和 no-active-caller 证据通过。
 
 ## 执行语言与依赖结论
 
@@ -376,7 +376,7 @@ Codex CLI 负责：
 
 | repo / surface | target role | move to OPL | retain in domain | retire / degrade rule |
 | --- | --- | --- | --- | --- |
-| `one-person-lab` | family agent framework | provider abstraction、Temporal workflow/activity/signal/query、typed queue、attempt ledger、human gate、operator projection、shared descriptor validation | 不持有任何 domain truth | Hermes-first、Gateway、old local-only runtime wording 进入 legacy/diagnostic/history；无 active caller 后删除 compatibility alias。 |
+| `one-person-lab` | family agent framework | provider abstraction、Temporal workflow/activity/signal/query、typed queue、attempt ledger、human gate、operator projection、shared descriptor validation | 不持有任何 domain truth | Hermes-first、Gateway、old local-only runtime wording 进入 legacy/diagnostic/history；public help 不再把这些面展示成默认路径；无 active caller 后删除残留 alias。 |
 | `one-person-lab` runtime/lifecycle layer | framework runtime substrate | SQLite/local provider patterns、file lifecycle、artifact index、retention、restore proof、migration ledger、workspace lifecycle、provider receipts | 不持有 domain artifact content 或 verdict | 以 MAS 现有经验为 reference implementation，抽象成 OPL shared contract/provider primitive。 |
 | `med-autoscience` | medical research domain agent | online wakeup、retry/dead-letter、stage attempt transport、provider readiness、operator workbench projection；framework-generic SQLite/file lifecycle lessons 上收到 OPL | study truth、publication gate、AI reviewer、evidence/review ledger、route decision、artifact/package authority、sidecar receipt refs | 按 `docs/program/opl_temporal_mas_runtime_retirement_program.md` 执行；Temporal/MAS paper soak 前不得删除 local diagnostics。 |
 | `med-autogrant` | grant domain agent | grant stage attempt transport、approval/retry/dead-letter、operator projection、standard skeleton adapter | fundability strategy、specific aims、proposal authoring、critique/revision、submission-ready export authority | 旧 local host-agent runtime、Gateway wording、Hermes proof lane 只能保留 provenance/proof；controlled stage attempt 与 skeleton parity 通过后继续物理清理。 |

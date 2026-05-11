@@ -68,6 +68,7 @@
 - [OPL Gateway 契约面](../history/compatibility/gateway-federation/opl-read-only-discovery-gateway.zh-CN.md)
 
 这些 surface 不能再作为今天 `OPL` 的活跃实现、测试或机器可读合同输入。
+本轮已落地的清理范围小于物理删除：当前 public help 和 active wording 不再把 Hermes executor、Gateway cron、frontdoor/local-manager 或 compatibility alias 展示成普通默认路径。Legacy `hermes_legacy` provider 诊断、历史 provenance 和测试 fixture 仍可保留旧名，但必须显式说明用途。
 
 ## 参考级配套材料
 
@@ -93,4 +94,5 @@
 - 它把当前 `Codex-default executor + activation + provider-backed stage runtime + shared modules/contracts/indexes + skill sync` 主线讲清楚
 - 它区分 OPL-owned 的 runtime/activation surface 与 repo-owned 的 domain capability surface
 - 它明确标出旧 gateway/federation 语料已经退到 reference/provenance 层
+- 它把保留的旧名限制在 `hermes_legacy` provider 诊断、provenance 或测试 fixture 语境
 - 它继续把 domain runtime truth、progress truth 与 artifact truth 放在对应 domain 仓自己名下
