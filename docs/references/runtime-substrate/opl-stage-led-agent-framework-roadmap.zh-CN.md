@@ -46,7 +46,7 @@ Date: `2026-05-11`
 
 ## 2026-05-11 当前落地评估
 
-结论：前一轮 stage-led / provider-backed 计划已经落到一批可调用 surface，并且 MAS/MAG/RCA 的 standard domain-agent skeleton adapter 已能被 OPL 真实发现和校验；Temporal TypeScript SDK、`StageAttemptWorkflow`、activity、signal/query、CLI start/query/signal、worker lifecycle contract、typed closeout ingestion、Codex stage runner repo/test harness、stage attempt workbench 和 Aion 白名单 signal bridge 均已落地。当前仍没有完成端到端生产闭环：真实 Temporal server/worker residency proof、真实 provider-hosted domain 长时 soak、human gate/resume 进入 domain revision/repair owner chain 的运行证明、domain memory writeback apply 证据和旧面物理退役仍未完成。
+结论：前一轮 stage-led / provider-backed 计划已经落到一批可调用 surface，并且 MAS/MAG/RCA 的 standard domain-agent skeleton adapter 已能被 OPL 真实发现和校验；Temporal TypeScript SDK、`StageAttemptWorkflow`、activity、signal/query、CLI start/query/signal、worker lifecycle contract、typed closeout ingestion、Codex stage runner repo/test harness、stage attempt workbench 和 Aion 白名单 signal bridge 均已落地。本轮新增了 typed closeout ledger 的严格幂等 / fail-closed 规则：同一 `closeout_id` 的同一 packet 重放是 no-op，冲突 packet 不会污染 closeout refs 或 activity ledger；Aion workbench 也已把 provider completion、domain ready verdict、human gate、dead letter、rejected writeback 拆成独立 operator 状态轴，并加严 human gate signal payload 必须绑定当前 `stage_attempt_id`。当前仍没有完成端到端生产闭环：真实 Temporal server/worker residency proof、真实 provider-hosted domain 长时 soak、human gate/resume 进入 domain revision/repair owner chain 的运行证明、domain memory writeback apply 证据和旧面物理退役仍未完成。
 
 2026-05-11 fresh CLI 读模型校准：
 
@@ -65,9 +65,9 @@ Date: `2026-05-11`
 | Domain descriptor / adapter | `landed_for_active_domains` | MAS/MAG/RCA 已在各自 main 暴露 stage/action/projection/skeleton adapter，OPL 当前真实 `opl agents list` 可校验三者 aligned。 |
 | Lifecycle primitives | `contract_and_locator_landed` | OPL 已有 locator-only lifecycle primitive；MAS 经验已被拆成 framework-generic / MAS-specific 方向，真实跨 domain cleanup/restore apply 仍需 soak。 |
 | Provider-backed execution | `production_provider_minimal_loop_landed` | Temporal SDK、workflow/activity/signal/query、worker lifecycle contract、CLI start/query/signal、provider receipt 和 fail-closed readiness 已落地；真实 Temporal server/worker residency proof、production retry 运行证据和 domain soak 仍未完成。 |
-| Codex stage activity runner | `live_runner_repo_test_harness_landed_production_soak_pending` | Activity 现能接 stage packet / checkpoint refs，支持 `dry_run`、`live_dry_run` 与 `codex_cli` runner mode；`codex_cli` path 已有进程启动、stdout event summary、timeout、process output summary、checkpoint heartbeat 和 typed closeout completion gate 的 repo/test harness。没有 typed closeout 的 domain dispatch 只能进入 checkpointed，不会被标成 completed。仍待完成的是生产级长时 domain activity soak、真实 token/cost/progress 观测校准和 MAS/MAG/RCA provider-hosted receipt evidence。 |
-| Human gate / resume | `ledger_and_aion_signal_transport_landed` | human gate refs、human gate ledger、user instruction ledger、resume ledger 已进入 attempt ledger/query/workbench；Aion workbench 可通过白名单 bridge 发送 provider-level human gate / resume / dead-letter repair signal；真实 worker/domain 执行证明仍未完成。 |
-| Operator visibility | `stage_attempt_ops_workbench_landed_descriptor_level` | `opl runtime snapshot --json` 已投影 `stage_attempt_workbench`，展示 provider run/activity/heartbeat、closeout、consumed memory、rejected writes、dead-letter task ledger 与 human gate signals；Aion runtime workbench 已接入 signal 操作；后续仍需按 domain/stage/blocker/memory refs 过滤和真实 domain soak。 |
+| Codex stage activity runner | `live_runner_repo_test_harness_landed_production_soak_pending` | Activity 现能接 stage packet / checkpoint refs，支持 `dry_run`、`live_dry_run` 与 `codex_cli` runner mode；`codex_cli` path 已有进程启动、stdout event summary、timeout、process output summary、checkpoint heartbeat 和 typed closeout completion gate 的 repo/test harness。没有 typed closeout 的 domain dispatch 只能进入 checkpointed，不会被标成 completed；typed closeout ledger 已对 `closeout_id` 重放做幂等处理，并对冲突 packet fail-closed。仍待完成的是生产级长时 domain activity soak、真实 token/cost/progress 观测校准和 MAS/MAG/RCA provider-hosted receipt evidence。 |
+| Human gate / resume | `ledger_and_aion_signal_transport_landed` | human gate refs、human gate ledger、user instruction ledger、resume ledger 已进入 attempt ledger/query/workbench；Aion workbench 可通过白名单 bridge 发送 provider-level human gate / resume / dead-letter repair signal，且 human gate payload 必须精确绑定当前 attempt id；真实 worker/domain 执行证明仍未完成。 |
+| Operator visibility | `stage_attempt_ops_workbench_landed_descriptor_level` | `opl runtime snapshot --json` 已投影 `stage_attempt_workbench`，展示 provider run/activity/heartbeat、closeout、consumed memory、rejected writes、dead-letter task ledger 与 human gate signals；Aion runtime workbench 已接入 signal 操作，并拆出 provider completion、domain ready verdict、human gate、dead letter、rejected writeback 五个 operator 状态轴；后续仍需按 domain/stage/blocker/memory refs 过滤和真实 domain soak。 |
 | Real domain soak / retirement | `domain_side_proofs_partial_provider_soak_not_complete` | MAS real paper line guarded apply 仍未闭合；MAG/RCA 已有 domain-side controlled attempt / memory writeback proof surface，但 OPL/Temporal-hosted controlled soak 仍未形成完整 provider evidence；旧 Hermes/Gateway/local-manager residue 物理退役仍是下一阶段。 |
 
 已落地的 OPL 层 shared module / contract 面包括：
@@ -83,7 +83,7 @@ Date: `2026-05-11`
 
 - `MAS` 和 `MAG` 已通过 `opl-harness-shared @ 2b08c7efd8acd80355e870087d4ce5be7b45d4d1` 消费 OPL Python shared package。
 - `RCA` 已通过 `opl-framework-shared @ 2b08c7efd8acd80355e870087d4ce5be7b45d4d1` 消费 OPL JS shared package。
-- MAS/MAG/RCA 的 skeleton adapter 已进入各自 main，并通过 OPL 真实 manifest smoke 对齐：`aligned_count=3`、`missing_count=0`、`drift_detected_count=0`、`blocked_count=0`。OPL 消费的 source fields 分别是 MAS `opl_domain_agent_skeleton_mapping`、MAG `domain_agent_skeleton_mapping`、RCA `domain_agent_skeleton_adapter`，且三者均带 artifact locator surface。
+- MAS/MAG/RCA 的 skeleton adapter 已进入各自 main，并通过 OPL 真实 manifest smoke 对齐：`aligned_count=3`、`missing_count=0`、`drift_detected_count=0`、`blocked_count=0`。OPL 消费的 source fields 分别是 MAS `opl_domain_agent_skeleton_mapping`、MAG `domain_agent_skeleton_mapping`、RCA `standard_domain_agent_skeleton`，且三者均带 artifact locator surface。
 - `MDS` 仍 pin 在较早的 `opl-harness-shared @ 8523f4ab76af486d44a1ccd3a88996ca860d2cc2`；这与它的 archive / diagnostic / upstream-intake 角色一致，不应被读成 active OPL domain adapter 已跟进。
 
 已落地的 framework 能力：
@@ -94,14 +94,14 @@ Date: `2026-05-11`
 - `opl domain-memory list|inspect|migration-plan` 已能读取标准 domain-owned memory descriptor；当前 live binding 中 MAS/MAG/RCA 均 resolved。该入口展示 migration plan ref、seed corpus ref、writeback receipt locator 和 readiness；OPL 只做发现/投影，不执行迁移、不接受写回、不读取 memory 正文。
 - `opl family-runtime` 已有 typed queue、MAS/MAG/RCA pending task intake、guarded dispatch、retry/dead-letter / local inbox 信号和 stage attempt local ledger。
 - `opl family-runtime attempt create|list|inspect|start|query|signal` 已能登记 provider-backed stage attempt，启动/查询/发送 Temporal workflow 信号，并在缺少 Temporal 地址时明确 fail-closed。
-- `opl runtime snapshot --json` 已输出 `stage_attempt_workbench`，Aion runtime workbench 已展示 provider completion 与 domain ready verdict 的边界。
+- `opl runtime snapshot --json` 已输出 `stage_attempt_workbench`，Aion runtime workbench 已展示 provider completion 与 domain ready verdict 的边界，并把 human gate、dead letter、rejected writeback 作为独立 operator closure axes。
 - MAS/MAG/RCA 已各自声明 stage/action/projection descriptor，OPL 只消费 descriptor，不写 domain truth。
 
 尚未完成的生产闭环：
 
 - Temporal provider code 已落地，但还没有以真实 Temporal server/worker deployment 作为默认 Full online runtime，也没有完成 worker restart/re-query 的真实环境证明。
 - Codex CLI stage activity runner 已从 dry-run receipt / fixture-run 推进到 `codex_cli` live process supervision 的 repo/test harness：能 spawn Codex CLI、记录 runner events、timeout、process output summary、checkpoint heartbeat，并要求 typed closeout 才能完成 attempt。尚未完成的是生产级长时 domain activity soak、真实 token/cost/progress 观测校准，以及真实 domain sidecar / Codex activity 产出 owner receipt 的连续 evidence。
-- OPL App 已有 stage attempt workbench，并能展示 provider completion 与 domain ready verdict 边界；human gate、resume、dead-letter repair 的 provider-level signal 操作已接入白名单 bridge。按 domain/stage/blocker/memory refs 过滤、真实 worker/domain 执行证明仍是后续 visibility/operation lane。
+- OPL App 已有 stage attempt workbench，并能展示 provider completion 与 domain ready verdict 边界；human gate、resume、dead-letter repair 的 provider-level signal 操作已接入白名单 bridge，其中 human gate signal payload 已限制为当前 attempt id。按 domain/stage/blocker/memory refs 过滤、真实 worker/domain 执行证明仍是后续 visibility/operation lane。
 - MAS 的真实 paper line 还没有完全证明 `stage entry packet -> Codex execution -> closeout packet -> router receipt -> progress delta / human gate / stop-loss` 的连续 guarded apply soak；MAG/RCA 已有 domain-side controlled proof surface，但仍需 OPL/Temporal-hosted controlled attempt 证据。
 - Hermes/local provider 仍作为迁移期实现信号和 legacy/optional provider 存在，active docs 和部分 domain code 中仍有旧 Hermes / Gateway / compatibility wording，需要按 retirement plan 清理。
 
@@ -450,6 +450,7 @@ Codex CLI 负责：
 
 - 已完成：stage packet ref、workspace locator、authority boundary 可进入 fixture activity input。
 - 已完成：typed closeout packet 强制要求 `closeout_refs`，并投影 consumed refs、consumed memory refs、writeback receipt refs、rejected writes、route impact、next owner、domain ready verdict。
+- 已完成：typed closeout ledger 对同一 `closeout_id` 的完全相同 packet 重放保持幂等，对同一 id 的冲突 packet fail-closed，避免污染 closeout refs、activity ledger 或 route impact。
 - 已完成：checkpoint refs、human gate ledger、user instruction ledger、resume ledger 和 dead-letter task ledger 进入 attempt ledger/query/workbench projection。
 - 已完成：缺少 typed closeout 的 domain dispatch 只进入 checkpointed，不能被标成 completed。
 - 已完成：`codex_cli` runner mode 可启动 Codex CLI、记录 stdout event summary、timeout、process output summary、checkpoint heartbeat，并保持 typed closeout required-for-completion。
@@ -518,13 +519,14 @@ Codex CLI 负责：
 
 ### Master P4. Operator Visibility
 
-状态：已落地 stage attempt workbench 核心投影与 Aion 白名单 signal bridge；真实 worker/domain 执行证明、按 refs 分组的操作体验和跨 domain soak 仍待完成。
+状态：已落地 stage attempt workbench 核心投影、Aion 白名单 signal bridge、attempt-bound human gate signal 校验，以及 provider completion / domain ready verdict / human gate / dead letter / rejected writeback 五轴状态显示；真实 worker/domain 执行证明、按 refs 分组的操作体验和跨 domain soak 仍待完成。
 
 目标：让 OPL App / CLI 能看懂 stage attempt 卡在哪里。
 
 交付：
 
 - OPL App / CLI 显示 provider kind、attempt id、stage、activity、heartbeat、consumed refs、consumed memory refs、writeback receipt refs、closeout refs、rejected writes、route impact、next owner、human gate、dead-letter reason。
+- Aion Runtime Workbench 已显示 provider completion、domain ready verdict、human gate、dead letter 和 rejected writeback 五个独立 operator 状态轴；signal bridge 只允许 snapshot 读取和受限 attempt signal，不开放任意 `family-runtime` fan-out。
 - 支持按 domain / workspace / stage / blocker / dead-letter 过滤。
 
 验收：
